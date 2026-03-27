@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Terms of Service — PromoNight</title>
+  <meta name="description" content="PromoNight Terms of Service — the rules for using our app and website." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html {
+      background-color: #07080c !important;
+      color: #e4e4e7;
+    }
+
+    body {
+      background-color: #07080c !important;
+      color: #e4e4e7;
+      font-family: 'Outfit', sans-serif;
+      min-height: 100vh;
+    }
+
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 40px;
+      border-bottom: 1px solid #1a1b22;
+      position: sticky;
+      top: 0;
+      background-color: #07080c;
+      backdrop-filter: blur(20px);
+      z-index: 100;
+    }
+
+    .nav-logo {
+      font-weight: 900;
+      font-size: 18px;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-decoration: none;
+    }
+
+    .nav-back {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: #a1a1aa;
+      text-decoration: none;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+    .nav-back:hover { color: #e4e4e7; }
+
+    .page {
+      max-width: 740px;
+      margin: 0 auto;
+      padding: 72px 32px 120px;
+    }
+
+    .page-tag {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      color: #ef4444;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      font-size: 40px;
+      font-weight: 900;
+      letter-spacing: -1.5px;
+      color: #fff;
+      margin-bottom: 12px;
+      line-height: 1.05;
+    }
+
+    .last-updated {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: #3f3f46;
+      margin-bottom: 56px;
+      padding-bottom: 32px;
+      border-bottom: 1px solid #1a1b22;
+    }
+
+    .intro {
+      font-size: 16px;
+      color: #a1a1aa;
+      line-height: 1.75;
+      margin-bottom: 52px;
+      padding: 24px 28px;
+      background-color: #0d0f16;
+      border-radius: 14px;
+      border-left: 3px solid #ef4444;
+    }
+
+    h2 {
+      font-size: 20px;
+      font-weight: 800;
+      color: #fff;
+      margin-top: 52px;
+      margin-bottom: 16px;
+      letter-spacing: -0.5px;
+    }
+
+    h2 .num {
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: #ef4444;
+      font-weight: 400;
+      display: block;
+      margin-bottom: 4px;
+      letter-spacing: 0.1em;
+    }
+
+    p {
+      font-size: 15px;
+      color: #a1a1aa;
+      line-height: 1.8;
+      margin-bottom: 16px;
+    }
+
+    ul {
+      padding-left: 0;
+      list-style: none;
+      margin-bottom: 16px;
+    }
+
+    li {
+      font-size: 15px;
+      color: #a1a1aa;
+      line-height: 1.75;
+      padding: 6px 0 6px 20px;
+      position: relative;
+    }
+
+    li::before {
+      content: '—';
+      position: absolute;
+      left: 0;
+      color: #ef4444;
+      font-family: 'DM Mono', monospace;
+    }
+
+    a {
+      color: #ef4444;
+      text-decoration: none;
+    }
+    a:hover { text-decoration: underline; }
+
+    .divider {
+      border: none;
+      border-top: 1px solid #1a1b22;
+      margin: 48px 0 0;
+    }
+
+    .contact-box {
+      margin-top: 56px;
+      background-color: #0d0f16;
+      border: 1px solid #1a1b22;
+      border-radius: 16px;
+      padding: 28px 32px;
+    }
+
+    .contact-box h3 {
+      font-size: 18px;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 10px;
+    }
+
+    .contact-box p { margin-bottom: 0; }
+
+    footer {
+      border-top: 1px solid #1a1b22;
+      background-color: #07080c;
+      padding: 28px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+      list-style: none;
+    }
+
+    .footer-links a {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: #3f3f46;
+      text-decoration: none;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .footer-links a:hover { color: #e4e4e7; }
+
+    .footer-copy {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      color: #3f3f46;
+    }
+
+    @media (max-width: 600px) {
+      nav { padding: 16px 20px; }
+      .page { padding: 48px 20px 80px; }
+      h1 { font-size: 30px; }
+      footer { flex-direction: column; gap: 16px; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="index.html" class="nav-logo">PROMONIGHT</a>
+    <a href="index.html" class="nav-back">← Back to Home</a>
+  </nav>
+
+  <div class="page">
+    <div class="page-tag">Legal</div>
+    <h1>Terms of Service</h1>
+    <div class="last-updated">Last updated: March 27, 2026</div>
+
+    <div class="intro">
+      By using PromoNight, you agree to these terms. Please read them — they're written plainly on purpose. If you disagree with any part of these terms, please do not use the Service.
+    </div>
+
+    <h2><span class="num">01 —</span> Acceptance of Terms</h2>
+    <p>These Terms of Service ("Terms") constitute a legally binding agreement between you and PromoNight ("we," "us," or "our") governing your use of our website at <a href="https://getpromonight.com">getpromonight.com</a> and our mobile application (collectively, the "Service"). By accessing or using the Service, you confirm that you are at least 13 years of age and agree to be bound by these Terms.</p>
+
+    <h2><span class="num">02 —</span> Description of Service</h2>
+    <p>PromoNight is a promotional calendar discovery app that aggregates and displays publicly available promotional event information for Major League Baseball games. The Service allows users to:</p>
+    <ul>
+      <li>Browse promotional events for MLB home games by team and date</li>
+      <li>Receive push notifications about upcoming promotional game nights</li>
+      <li>Access recurring deal information for their selected team</li>
+      <li>Click through to third-party ticket purchase platforms via affiliate links</li>
+    </ul>
+    <p>PromoNight is an independent service and is not affiliated with, endorsed by, or officially connected to Major League Baseball, any MLB team, StubHub, SeatGeek, or any other third-party platform referenced in the Service.</p>
+
+    <h2><span class="num">03 —</span> Accuracy of Information</h2>
+    <p>We work hard to keep promotional data accurate and up to date. However, we cannot guarantee that all promotional information displayed in the Service is complete, current, or error-free. Promotional events are subject to change, cancellation, or modification by teams without notice to us.</p>
+    <p>We are <strong style="color:#e4e4e7">not responsible</strong> for:</p>
+    <ul>
+      <li>Changes to promotional events after our data was last updated</li>
+      <li>Last-minute cancellations or modifications by teams</li>
+      <li>Inaccuracies in team-published promotional calendars that we relied upon</li>
+      <li>Any attendance or purchasing decisions made based on information in the Service</li>
+    </ul>
+    <p>Always verify promotional details directly with the team before purchasing tickets for the purpose of attending a promotional event.</p>
+
+    <h2><span class="num">04 —</span> Affiliate Links & Third-Party Services</h2>
+    <p>The Service contains links to third-party ticket platforms and fan gear retailers including StubHub, SeatGeek, and Fanatics. These are affiliate links, meaning we may earn a commission if you purchase tickets or merchandise through them. This comes at no additional cost to you.</p>
+    <p>When you click an affiliate link, you leave the PromoNight Service and are subject to the terms and privacy policies of the destination platform. We have no control over, and accept no responsibility for, the content, policies, or practices of any third-party websites or services linked from the Service.</p>
+
+    <h2><span class="num">05 —</span> User Accounts</h2>
+    <p>If you create an account, you are responsible for:</p>
+    <ul>
+      <li>Maintaining the confidentiality of your login credentials</li>
+      <li>All activity that occurs under your account</li>
+      <li>Notifying us promptly at <a href="/cdn-cgi/l/email-protection#ef878a838380af888a9b9f9d808280818688879bc18c8082"><span class="__cf_email__" data-cfemail="127a777e7e7d5275776662607d7f7d7c7b757a663c717d7f">[email&#160;protected]</span></a> if you suspect unauthorized use</li>
+    </ul>
+    <p>We reserve the right to suspend or terminate accounts that violate these Terms.</p>
+
+    <h2><span class="num">06 —</span> Acceptable Use</h2>
+    <p>You agree not to use the Service to:</p>
+    <ul>
+      <li>Scrape, crawl, or systematically extract data from the Service without our written permission</li>
+      <li>Attempt to gain unauthorized access to any portion of the Service or its infrastructure</li>
+      <li>Use the Service in any way that violates applicable local, national, or international laws or regulations</li>
+      <li>Reproduce or resell the Service or its content for commercial purposes without our authorization</li>
+      <li>Impersonate PromoNight, its employees, or any other person or entity</li>
+    </ul>
+
+    <h2><span class="num">07 —</span> Intellectual Property</h2>
+    <p>The PromoNight name, logo, app design, and original content are owned by PromoNight and protected by applicable intellectual property laws. You may not reproduce, distribute, or create derivative works from our original content without our express written permission.</p>
+    <p>Promotional information about MLB teams (team names, logos, schedules, event details) belongs to Major League Baseball and its member clubs. We display this information for informational, fan-facing purposes under the belief that this constitutes fair use and is consistent with teams' public disclosure of this information. If you are an MLB entity and have concerns, please contact us at <a href="/cdn-cgi/l/email-protection#6a020f0606052a0d0f1e1a1805070504030d021e44090507"><span class="__cf_email__" data-cfemail="3d55585151527d5a58494d4f52505253545a5549135e5250">[email&#160;protected]</span></a>.</p>
+
+    <h2><span class="num">08 —</span> Disclaimers</h2>
+    <p>THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED. TO THE FULLEST EXTENT PERMITTED BY LAW, WE DISCLAIM ALL WARRANTIES, INCLUDING IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.</p>
+    <p>We do not warrant that the Service will be uninterrupted, error-free, or free of viruses or other harmful components.</p>
+
+    <h2><span class="num">09 —</span> Limitation of Liability</h2>
+    <p>TO THE MAXIMUM EXTENT PERMITTED BY LAW, PROMONIGHT SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO LOSS OF PROFITS, DATA, OR GOODWILL, ARISING FROM YOUR USE OF OR INABILITY TO USE THE SERVICE.</p>
+    <p>Our total liability to you for any claims arising from these Terms or your use of the Service shall not exceed the greater of (a) the amount you paid us in the 12 months preceding the claim, or (b) $10 USD.</p>
+
+    <h2><span class="num">10 —</span> Indemnification</h2>
+    <p>You agree to indemnify and hold harmless PromoNight and its operators from any claims, damages, losses, or expenses (including reasonable attorneys' fees) arising from your violation of these Terms or your use of the Service.</p>
+
+    <h2><span class="num">11 —</span> Governing Law</h2>
+    <p>These Terms are governed by the laws of the United States and the State of Minnesota, without regard to conflict of law provisions. Any dispute arising from these Terms shall be resolved in the state or federal courts located in Minnesota, and you consent to the personal jurisdiction of such courts.</p>
+
+    <h2><span class="num">12 —</span> Changes to Terms</h2>
+    <p>We reserve the right to update these Terms at any time. When we do, we will update the "last updated" date at the top of this page. Your continued use of the Service after changes are posted constitutes your acceptance of the revised Terms. If you do not agree to the revised Terms, please stop using the Service.</p>
+
+    <h2><span class="num">13 —</span> Termination</h2>
+    <p>We reserve the right to suspend or terminate your access to the Service at any time, for any reason, with or without notice. You may stop using the Service at any time. All provisions of these Terms that by their nature should survive termination — including ownership, disclaimers, indemnity, and limitations of liability — shall survive.</p>
+
+    <hr class="divider" />
+
+    <div class="contact-box">
+      <h3>Questions about these terms?</h3>
+      <p>Email us at <a href="/cdn-cgi/l/email-protection#4c24292020230c2b29383c3e23212322252b2438622f2321"><span class="__cf_email__" data-cfemai
