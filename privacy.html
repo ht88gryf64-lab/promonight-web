@@ -1,326 +1,85 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Privacy Policy — PromoNight</title>
-  <meta name="description" content="PromoNight Privacy Policy — how we collect, use, and protect your information." />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    html {
-      background-color: #07080c !important;
-      color: #e4e4e7;
-    }
-
-    body {
-      background-color: #07080c !important;
-      color: #e4e4e7;
-      font-family: 'Outfit', sans-serif;
-      min-height: 100vh;
-    }
-
-    nav {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 18px 40px;
-      border-bottom: 1px solid #1a1b22;
-      position: sticky;
-      top: 0;
-      background-color: #07080c;
-      backdrop-filter: blur(20px);
-      z-index: 100;
-    }
-
-    .nav-logo {
-      font-weight: 900;
-      font-size: 18px;
-      letter-spacing: -0.5px;
-      background: linear-gradient(135deg, #ef4444, #dc2626);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      text-decoration: none;
-    }
-
-    .nav-back {
-      font-family: 'DM Mono', monospace;
-      font-size: 11px;
-      color: #a1a1aa;
-      text-decoration: none;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      transition: color 0.2s;
-    }
-    .nav-back:hover { color: #e4e4e7; }
-
-    .page {
-      max-width: 740px;
-      margin: 0 auto;
-      padding: 72px 32px 120px;
-    }
-
-    .page-tag {
-      font-family: 'DM Mono', monospace;
-      font-size: 10px;
-      color: #ef4444;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      margin-bottom: 16px;
-    }
-
-    h1 {
-      font-size: 40px;
-      font-weight: 900;
-      letter-spacing: -1.5px;
-      color: #fff;
-      margin-bottom: 12px;
-      line-height: 1.05;
-    }
-
-    .last-updated {
-      font-family: 'DM Mono', monospace;
-      font-size: 11px;
-      color: #3f3f46;
-      margin-bottom: 56px;
-      padding-bottom: 32px;
-      border-bottom: 1px solid #1a1b22;
-    }
-
-    .intro {
-      font-size: 16px;
-      color: #a1a1aa;
-      line-height: 1.75;
-      margin-bottom: 52px;
-      padding: 24px 28px;
-      background-color: #0d0f16;
-      border-radius: 14px;
-      border-left: 3px solid #ef4444;
-    }
-
-    h2 {
-      font-size: 20px;
-      font-weight: 800;
-      color: #fff;
-      margin-top: 52px;
-      margin-bottom: 16px;
-      letter-spacing: -0.5px;
-    }
-
-    h2 .num {
-      font-family: 'DM Mono', monospace;
-      font-size: 12px;
-      color: #ef4444;
-      font-weight: 400;
-      display: block;
-      margin-bottom: 4px;
-      letter-spacing: 0.1em;
-    }
-
-    p {
-      font-size: 15px;
-      color: #a1a1aa;
-      line-height: 1.8;
-      margin-bottom: 16px;
-    }
-
-    ul {
-      padding-left: 0;
-      list-style: none;
-      margin-bottom: 16px;
-    }
-
-    li {
-      font-size: 15px;
-      color: #a1a1aa;
-      line-height: 1.75;
-      padding: 6px 0 6px 20px;
-      position: relative;
-    }
-
-    li::before {
-      content: '—';
-      position: absolute;
-      left: 0;
-      color: #ef4444;
-      font-family: 'DM Mono', monospace;
-    }
-
-    a {
-      color: #ef4444;
-      text-decoration: none;
-    }
-    a:hover { text-decoration: underline; }
-
-    .divider {
-      border: none;
-      border-top: 1px solid #1a1b22;
-      margin: 48px 0 0;
-    }
-
-    .contact-box {
-      margin-top: 56px;
-      background-color: #0d0f16;
-      border: 1px solid #1a1b22;
-      border-radius: 16px;
-      padding: 28px 32px;
-    }
-
-    .contact-box h3 {
-      font-size: 18px;
-      font-weight: 800;
-      color: #fff;
-      margin-bottom: 10px;
-    }
-
-    .contact-box p {
-      margin-bottom: 0;
-    }
-
-    footer {
-      border-top: 1px solid #1a1b22;
-      background-color: #07080c;
-      padding: 28px 40px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: 0;
-    }
-
-    .footer-links {
-      display: flex;
-      gap: 24px;
-      list-style: none;
-    }
-
-    .footer-links {
-      display: flex;
-      gap: 24px;
-      list-style: none;
-    }
-
-    .footer-links a {
-      font-family: 'DM Mono', monospace;
-      font-size: 11px;
-      color: #3f3f46;
-      text-decoration: none;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-    .footer-links a:hover { color: #e4e4e7; }
-
-    .footer-copy {
-      font-family: 'DM Mono', monospace;
-      font-size: 10px;
-      color: #3f3f46;
-    }
-
-    @media (max-width: 600px) {
-      nav { padding: 16px 20px; }
-      .page { padding: 48px 20px 80px; }
-      h1 { font-size: 30px; }
-      footer { flex-direction: column; gap: 16px; text-align: center; }
-    }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy — PromoNight</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#060810;color:#e4e4e7;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.7;padding:48px 24px 96px}
+  .wrap{max-width:680px;margin:0 auto}
+  .logo{margin-bottom:48px}
+  .logo span{font-size:20px;font-weight:900;letter-spacing:-0.5px}
+  .logo .w{color:#fff}
+  .logo .r{color:#ef4444}
+  h1{font-size:28px;font-weight:800;color:#fff;margin-bottom:8px}
+  .updated{font-size:13px;color:#71717a;margin-bottom:40px}
+  h2{font-size:18px;font-weight:700;color:#fff;margin:36px 0 12px}
+  p,li{font-size:15px;color:#a1a1aa}
+  p{margin-bottom:16px}
+  ul{margin:0 0 16px 20px}
+  li{margin-bottom:6px}
+  a{color:#ef4444;text-decoration:none}
+  a:hover{text-decoration:underline}
+  .divider{border:none;border-top:1px solid #1a1a2e;margin:40px 0}
+</style>
 </head>
 <body>
+<div class="wrap">
 
-  <nav>
-    <a href="index.html" class="nav-logo">PROMONIGHT</a>
-    <a href="index.html" class="nav-back">← Back to Home</a>
-  </nav>
+<div class="logo"><span class="w">PROMO</span><span class="r">NIGHT</span></div>
 
-  <div class="page">
-    <div class="page-tag">Legal</div>
-    <h1>Privacy Policy</h1>
-    <div class="last-updated">Last updated: March 27, 2026</div>
+<h1>Privacy Policy</h1>
+<p class="updated">Last updated: March 29, 2026</p>
 
-    <div class="intro">
-      PromoNight is built to help baseball fans discover stadium promotions — not to harvest your data. This policy explains plainly what information we collect, how we use it, and what your rights are.
-    </div>
+<p>PromoNight ("we", "our", "the app") is a mobile application that helps fans discover promotional events at professional sports games. This policy explains what data we collect, how we use it, and your rights.</p>
 
-    <h2><span class="num">01 —</span> Who We Are</h2>
-    <p>PromoNight ("we," "us," or "our") operates the website at <a href="https://getpromonight.com">getpromonight.com</a> and the PromoNight mobile application (together, the "Service"). We are an independent developer based in the United States. You can reach us at <a href="/cdn-cgi/l/email-protection#2757554e5146445e674042535755484a48494e404f530944484a"><span class="__cf_email__" data-cfemail="10606279667173695077756460627f7d7f7e797778643e737f7d">[email&#160;protected]</span></a>.</p>
+<h2>1. Data We Collect</h2>
+<p>We collect the following information when you use PromoNight:</p>
+<ul>
+  <li><strong>Starred teams</strong> — the teams you follow, stored locally on your device and synced to our servers to personalize your experience.</li>
+  <li><strong>Notification preferences</strong> — whether you've enabled game-day alerts and your alert settings.</li>
+  <li><strong>Firebase Cloud Messaging (FCM) token</strong> — a device identifier used solely to deliver push notifications you've opted into.</li>
+  <li><strong>Analytics events</strong> — anonymous usage data such as which screens you view, buttons you tap, and features you use. This data is not tied to your personal identity.</li>
+  <li><strong>Purchase information</strong> — subscription status for PromoNight Pro, managed entirely through Apple App Store or Google Play.</li>
+</ul>
+<p>We do <strong>not</strong> collect your name, email address, phone number, or location unless you voluntarily provide it (e.g., contacting support).</p>
 
-    <h2><span class="num">02 —</span> Information We Collect</h2>
-    <p>We collect only what we need to operate the Service effectively:</p>
-    <ul>
-      <li><strong style="color:#e4e4e7">Account information.</strong> If you create an account, we collect your email address and any display name you provide.</li>
-      <li><strong style="color:#e4e4e7">Team preferences.</strong> The team(s) you select and any notification preferences you configure.</li>
-      <li><strong style="color:#e4e4e7">Usage data.</strong> Pages viewed, features used, dates tapped, and session duration — collected in aggregate to understand how fans use the app and improve it.</li>
-      <li><strong style="color:#e4e4e7">Device information.</strong> Device type, operating system, and app version for debugging and compatibility purposes.</li>
-      <li><strong style="color:#e4e4e7">Email address (waitlist).</strong> If you sign up for early access, we store your email address solely to notify you when the app launches.</li>
-      <li><strong style="color:#e4e4e7">Affiliate click data.</strong> If you click a ticket affiliate link (e.g., StubHub, SeatGeek), we may receive anonymized confirmation that a purchase was completed via our link for commission tracking. We do not receive your name, payment details, or order contents from these partners.</li>
-    </ul>
-    <p>We do <strong style="color:#e4e4e7">not</strong> collect: precise GPS location, contacts, camera access, payment information, or any sensitive personal data.</p>
+<h2>2. How We Use Your Data</h2>
+<ul>
+  <li><strong>Personalization</strong> — showing promos for your starred teams and tailoring the home feed.</li>
+  <li><strong>Notifications</strong> — sending game-day alerts for upcoming promotional events.</li>
+  <li><strong>Product improvement</strong> — understanding which features are used to make PromoNight better.</li>
+  <li><strong>Customer support</strong> — responding to inquiries you send us.</li>
+</ul>
 
-    <h2><span class="num">03 —</span> How We Use Your Information</h2>
-    <p>We use the information we collect to:</p>
-    <ul>
-      <li>Operate and improve the PromoNight Service</li>
-      <li>Send push notifications about upcoming promotions for your selected team(s), if you have opted in</li>
-      <li>Send transactional emails (e.g., launch announcements for waitlist subscribers)</li>
-      <li>Track affiliate commissions when users click through to ticket purchase partners</li>
-      <li>Analyze aggregate usage patterns to understand which features are most useful</li>
-      <li>Comply with applicable laws and respond to lawful requests</li>
-    </ul>
-    <p>We do <strong style="color:#e4e4e7">not</strong> sell your personal information to third parties. We do not use your data to serve behavioral advertising.</p>
+<h2>3. Third-Party Services</h2>
+<p>PromoNight integrates with the following third-party services:</p>
+<ul>
+  <li><strong>Firebase (Google)</strong> — for data storage (Firestore), push notifications (FCM), and analytics. Google's privacy policy applies: <a href="https://policies.google.com/privacy">policies.google.com/privacy</a>.</li>
+  <li><strong>Fanatics</strong> — merchandise links. When you tap "Fan Gear," you're directed to Fanatics. Their privacy policy governs any data collected on their site.</li>
+  <li><strong>SeatGeek &amp; StubHub</strong> — ticket marketplace links provided through the Impact affiliate network. Their respective privacy policies govern data collected when you visit their sites.</li>
+</ul>
+<p>We share your data with these services only as necessary to provide app functionality. We do not sell, rent, or trade your personal data to any third party.</p>
 
-    <h2><span class="num">04 —</span> Affiliate Links & Third-Party Partners</h2>
-    <p>PromoNight participates in affiliate programs with ticket platforms and fan gear retailers. When you click an affiliate link within our app or website, you will be directed to those platforms' own websites. Your interaction with those platforms is governed by their respective privacy policies:</p>
-    <ul>
-      <li>StubHub: <a href="https://www.stubhub.com/legal/privacy-policy" target="_blank" rel="noopener">stubhub.com/legal/privacy-policy</a></li>
-      <li>SeatGeek: <a href="https://seatgeek.com/privacy-policy" target="_blank" rel="noopener">seatgeek.com/privacy-policy</a></li>
-      <li>Fanatics: <a href="https://www.fanatics.com/privacy-policy" target="_blank" rel="noopener">fanatics.com/privacy-policy</a></li>
-    </ul>
-    <p>We may receive a commission when a qualifying purchase is made through our affiliate links. This commission does not affect the price you pay for tickets or merchandise.</p>
-    <p>We may also use the following third-party services to help operate PromoNight:</p>
-    <ul>
-      <li><strong style="color:#e4e4e7">Firebase (Google).</strong> For app infrastructure, authentication, and database hosting. <a href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener">Firebase Privacy</a></li>
-      <li><strong style="color:#e4e4e7">Analytics providers.</strong> We may use privacy-respecting analytics tools (e.g., PostHog) to understand aggregate usage. These tools do not track users across third-party sites.</li>
-    </ul>
+<h2>4. Data Retention &amp; Deletion</h2>
+<p>Your starred teams and notification preferences are stored on your device and in our database. Analytics data is retained in aggregate form.</p>
+<p>To delete your data, uninstall the app and your local data is removed immediately. To request deletion of server-side data (FCM token and preferences), contact us at <a href="mailto:privacy@getpromonight.com">privacy@getpromonight.com</a> and we will process your request within 30 days.</p>
 
-    <h2><span class="num">05 —</span> Data Retention</h2>
-    <p>We retain account information for as long as your account is active or as needed to provide the Service. Waitlist emails are deleted within 30 days of the app launching or upon your request. You may request deletion of your data at any time by emailing <a href="/cdn-cgi/l/email-protection#c7b7b5aeb1a6a4be87a0a2b3b7b5a8aaa8a9aea0afb3e9a4a8aa"><span class="__cf_email__" data-cfemail="c8b8baa1bea9abb188afadbcb8baa7a5a7a6a1afa0bce6aba7a5">[email&#160;protected]</span></a>.</p>
+<h2>5. Your Rights</h2>
+<p><strong>GDPR (European Union):</strong> You have the right to access, correct, delete, or export your personal data. You may also object to or restrict processing. Contact us to exercise these rights.</p>
+<p><strong>CCPA (California):</strong> You have the right to know what personal information we collect, request deletion, and opt out of the sale of personal information. We do not sell personal information.</p>
 
-    <h2><span class="num">06 —</span> Your Rights</h2>
-    <p>Depending on where you live, you may have rights including the right to access, correct, or delete your personal data. To exercise any of these rights, email us at <a href="/cdn-cgi/l/email-protection#7c0c0e150a1d1f053c1b19080c0e13111312151b1408521f1311"><span class="__cf_email__" data-cfemail="94e4e6fde2f5f7edd4f3f1e0e4e6fbf9fbfafdf3fce0baf7fbf9">[email&#160;protected]</span></a>. We will respond within 30 days.</p>
-    <ul>
-      <li><strong style="color:#e4e4e7">Access.</strong> Request a copy of the personal data we hold about you.</li>
-      <li><strong style="color:#e4e4e7">Correction.</strong> Ask us to correct inaccurate data.</li>
-      <li><strong style="color:#e4e4e7">Deletion.</strong> Ask us to delete your data. We will honor this unless we have a legal obligation to retain it.</li>
-      <li><strong style="color:#e4e4e7">Opt-out.</strong> Unsubscribe from marketing emails at any time via the unsubscribe link in any email, or by contacting us directly.</li>
-    </ul>
+<h2>6. Children's Privacy</h2>
+<p>PromoNight is not directed at children under 13. We do not knowingly collect personal data from children. If you believe a child has provided us with personal data, please contact us and we will delete it.</p>
 
-    <h2><span class="num">07 —</span> Children's Privacy</h2>
-    <p>PromoNight is not directed at children under the age of 13. We do not knowingly collect personal information from children under 13. If you believe a child under 13 has provided us personal information, please contact us and we will delete it promptly.</p>
+<h2>7. Changes to This Policy</h2>
+<p>We may update this policy from time to time. We will notify you of material changes by posting the updated policy in the app or on our website.</p>
 
-    <h2><span class="num">08 —</span> Security</h2>
-    <p>We implement reasonable technical and organizational measures to protect your information. However, no method of transmission over the internet is 100% secure. We encourage you to use a strong, unique password for any account you create with us.</p>
+<hr class="divider">
 
-    <h2><span class="num">09 —</span> Changes to This Policy</h2>
-    <p>We may update this Privacy Policy from time to time. When we do, we will update the "last updated" date at the top of this page. For material changes, we will notify users by email (if we have your address) or by a prominent notice in the app. Your continued use of the Service after changes are posted constitutes acceptance of the updated policy.</p>
+<p>Questions or requests? Contact us at <a href="mailto:privacy@getpromonight.com">privacy@getpromonight.com</a>.</p>
 
-    <hr class="divider" />
-
-    <div class="contact-box">
-      <h3>Questions about your privacy?</h3>
-      <p>We're happy to help. Email us at <a href="mailto:privacy@getpromonight.com">privacy@getpromonight.com</a> and we'll respond within 30 days.</p>
-    </div>
-  </div>
-
-  <footer>
-    <ul class="footer-links">
-      <li><a href="index.html">Home</a></li>
-      <li><a href="privacy.html">Privacy</a></li>
-      <li><a href="terms.html">Terms</a></li>
-    </ul>
-    <div class="footer-copy">© 2026 PromoNight</div>
-  </footer>
-
+</div>
 </body>
 </html>
