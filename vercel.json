@@ -1,0 +1,14 @@
+{
+  "redirects": [
+    {
+      "source": "/download",
+      "destination": "https://apps.apple.com/us/app/promonight/id6761309246",
+      "statusCode": 302
+    },
+    {
+      "source": "/download/android",
+      "destination": "/",
+      "statusCode": 302
+    }
+  ]
+}
