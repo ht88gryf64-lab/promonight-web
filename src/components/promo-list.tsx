@@ -1,84 +1,45 @@
-'use client';
-
-import { useState } from 'react';
+import Link from 'next/link';
 import { PromoBadge } from './promo-badge';
-import type { Promo, PromoType } from '@/lib/types';
-import { PROMO_TYPE_LABELS } from '@/lib/types';
-import { event } from '@/lib/analytics';
+import { TrackedAppLink } from './analytics-events';
+import type { Promo } from '@/lib/types';
 
-function formatPromoDate(dateStr: string): { day: string; weekday: string; month: string; full: string } {
+function formatPromoDate(dateStr: string): { day: string; weekday: string; month: string } {
   const date = new Date(dateStr + 'T12:00:00');
   return {
     day: date.getDate().toString(),
     weekday: date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase(),
     month: date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
-    full: date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }),
   };
 }
 
-const FILTER_TYPES: (PromoType | 'all')[] = ['all', 'giveaway', 'theme', 'food', 'kids'];
-
-export function PromoList({ promos, teamColor, teamSlug }: { promos: Promo[]; teamColor: string; teamSlug?: string }) {
-  const [filter, setFilter] = useState<PromoType | 'all'>('all');
-  const [showPast, setShowPast] = useState(false);
-
-  const today = new Date().toISOString().split('T')[0];
-
-  const filtered = promos.filter((p) => {
-    if (filter !== 'all' && p.type !== filter) return false;
-    if (!showPast && p.date < today) return false;
-    return true;
-  });
-
-  const upcomingCount = promos.filter((p) => p.date >= today).length;
-  const pastCount = promos.filter((p) => p.date < today).length;
-
+export function PromoList({
+  promos,
+  teamColor,
+  teamSlug,
+  teamName,
+  totalPromoCount,
+}: {
+  promos: Promo[];
+  teamColor: string;
+  teamSlug: string;
+  teamName: string;
+  totalPromoCount: number;
+}) {
   return (
     <section className="py-12 px-6">
       <div className="max-w-5xl mx-auto">
-        <div className="flex items-end justify-between mb-6">
-          <div>
-            <span className="font-mono text-[10px] tracking-[1.5px] uppercase text-accent-red">
-              Schedule
-            </span>
-            <h2 className="font-display text-3xl md:text-4xl tracking-[1px] mt-1">
-              {showPast ? 'PAST' : 'UPCOMING'} PROMOS
-            </h2>
-          </div>
-          <button
-            onClick={() => setShowPast(!showPast)}
-            className="text-text-muted text-xs font-mono hover:text-white transition-colors"
-          >
-            {showPast ? `Show Upcoming (${upcomingCount})` : `Show Past (${pastCount})`}
-          </button>
+        <div className="mb-6">
+          <span className="font-mono text-[10px] tracking-[1.5px] uppercase text-accent-red">
+            Coming up
+          </span>
+          <h2 className="font-display text-3xl md:text-4xl tracking-[1px] mt-1">
+            UPCOMING PROMOS
+          </h2>
         </div>
 
-        {/* Type filters */}
-        <div className="flex flex-wrap gap-2 mb-8">
-          {FILTER_TYPES.map((type) => {
-            const count =
-              type === 'all'
-                ? filtered.length
-                : promos.filter((p) => p.type === type && (showPast || p.date >= today)).length;
-            return (
-              <button
-                key={type}
-                onClick={() => { setFilter(type); if (teamSlug) event('promo_filter_used', { filter_type: type, team_slug: teamSlug }); }}
-                className={`px-4 py-1.5 rounded-full text-[11px] font-mono tracking-[0.5px] uppercase transition-colors border ${
-                  filter === type
-                    ? 'bg-accent-red text-white border-accent-red'
-                    : 'bg-transparent text-text-secondary border-border-subtle hover:border-border-hover'
-                }`}
-              >
-                {type === 'all' ? 'All' : PROMO_TYPE_LABELS[type]} ({count})
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Promo list */}
+        {/* Promo list — max 3 */}
         <div className="space-y-3">
-          {filtered.map((promo, i) => {
+          {promos.map((promo, i) => {
             const { day, weekday, month } = formatPromoDate(promo.date);
             const typeColor =
               promo.type === 'giveaway' ? '#34d399' :
@@ -132,12 +93,41 @@ export function PromoList({ promos, teamColor, teamSlug }: { promos: Promo[]; te
           })}
         </div>
 
-        {filtered.length === 0 && (
-          <div className="text-center py-16">
-            <p className="text-text-muted text-lg">No promos found</p>
-            <p className="text-text-dim text-sm mt-1">
-              {showPast ? 'No past promos match this filter' : 'Check back later for upcoming promos'}
+        {promos.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-text-muted text-lg">No upcoming promos yet</p>
+            <p className="text-text-dim text-sm mt-1">Check back later for the latest schedule</p>
+          </div>
+        )}
+
+        {/* See all promos CTA */}
+        {totalPromoCount > promos.length && (
+          <div className="mt-8 bg-bg-card border border-border-subtle rounded-2xl p-8 text-center">
+            <p className="font-display text-2xl md:text-3xl tracking-[1px] mb-2">
+              SEE ALL {totalPromoCount} PROMOS IN THE APP
             </p>
+            <p className="text-text-secondary text-sm mb-6 max-w-md mx-auto">
+              Get the full {teamName} promo calendar with push notifications, filters, and ticket links.
+            </p>
+            <div className="flex items-center justify-center gap-3 flex-wrap">
+              <TrackedAppLink
+                href="/download"
+                platform="ios"
+                section="promo_list_cta"
+                page={`team/${teamSlug}`}
+                className="inline-flex items-center gap-2 bg-accent-red text-white font-bold text-sm px-6 py-3 rounded-xl transition-all hover:-translate-y-0.5 hover:shadow-[0_0_30px_rgba(239,68,68,0.3)]"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+                Download for iOS
+              </TrackedAppLink>
+              <Link
+                href="/download/android"
+                className="inline-flex items-center gap-2 text-text-secondary font-mono text-sm px-6 py-3 rounded-xl border border-border-subtle hover:border-border-hover hover:text-white transition-all"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M17.523 2.082l1.478 2.563a.25.25 0 01-.433.25l-1.5-2.598C15.829 1.492 14.477 1 13 1h-2c-1.477 0-2.83.492-4.068 1.297l-1.5 2.598a.25.25 0 01-.433-.25L6.477 2.082C4.348 3.468 2.857 5.549 2.298 8H21.7c-.558-2.451-2.05-4.532-4.178-5.918zM9 6.5a.75.75 0 110-1.5.75.75 0 010 1.5zm6 0a.75.75 0 110-1.5.75.75 0 010 1.5zM2 17.5C2 20.538 4.462 23 7.5 23h9c3.038 0 5.5-2.462 5.5-5.5V9H2v8.5z"/></svg>
+                Google Play
+              </Link>
+            </div>
           </div>
         )}
       </div>

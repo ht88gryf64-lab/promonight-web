@@ -99,7 +99,13 @@ export default async function TeamPage({
         promoCounts={promoCounts}
       />
 
-      <PromoList promos={promos} teamColor={team.primaryColor} teamSlug={team.id} />
+      <PromoList
+        promos={upcoming.slice(0, 3)}
+        teamColor={team.primaryColor}
+        teamSlug={team.id}
+        teamName={`${team.city} ${team.name}`}
+        totalPromoCount={promos.length}
+      />
 
       {/* App CTA */}
       <TrackedCTA teamSlug={team.id}>
