@@ -13,6 +13,16 @@ const nextConfig: NextConfig = {
         destination: '/',
         permanent: false,
       },
+      {
+        source: '/privacy.html',
+        destination: '/privacy',
+        permanent: true,
+      },
+      {
+        source: '/terms.html',
+        destination: '/terms',
+        permanent: true,
+      },
     ];
   },
 };
