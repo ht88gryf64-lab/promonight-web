@@ -1,0 +1,16 @@
+{
+  "name": "PromoNight",
+  "short_name": "PromoNight",
+  "description": "Every Giveaway, Theme Night & Food Deal at Your Team's Games",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#060810",
+  "theme_color": "#060810",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
