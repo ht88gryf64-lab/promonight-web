@@ -4,7 +4,11 @@ import Link from 'next/link';
 import { getAllTeams, getTeamBySlug, getTeamPromos, getVenueForTeam } from '@/lib/data';
 import type { PromoType } from '@/lib/types';
 import { TeamHero } from '@/components/team-hero';
+import { TeamCalendar } from '@/components/team-calendar';
 import { PromoList } from '@/components/promo-list';
+import { TeamContentSections } from '@/components/team-content-sections';
+import { TeamFAQ } from '@/components/team-faq';
+import { TeamRelatedAggregators } from '@/components/team-related-aggregators';
 import { JsonLd } from '@/components/json-ld';
 import { TeamPageTracker, TrackedCTA, TrackedAppLink } from '@/components/analytics-events';
 
@@ -33,14 +37,16 @@ export async function generateMetadata({
   const upcoming = promos.filter((p) => p.date >= today);
   const giveaways = promos.filter((p) => p.type === 'giveaway').length;
 
-  const title = `${team.city} ${team.name} 2026 Promo Schedule — Giveaways, Theme Nights & Deals`;
-  const description = `Full list of ${team.city} ${team.name} promotional events${venue ? ` at ${venue.name}` : ''} in 2026. ${promos.length} promos including ${giveaways} giveaways, ${upcoming.length} upcoming. Track them all free on PromoNight.`;
+  const year = new Date().getFullYear();
+  const themes = promos.filter((p) => p.type === 'theme').length;
+  const title = `${team.city} ${team.name} ${year} Promo Schedule — Giveaways, Theme Nights & Deals`;
+  const description = `${team.city} ${team.name} ${year} promotional schedule: ${giveaways} giveaway night${giveaways !== 1 ? 's' : ''}, ${themes} theme night${themes !== 1 ? 's' : ''}, and food deals${venue ? ` at ${venue.name}` : ''}. See every bobblehead, jersey giveaway, and special event.`;
 
   return {
     title,
     description,
     openGraph: {
-      title: `${team.city} ${team.name} 2026 Promo Schedule`,
+      title: `${team.city} ${team.name} ${year} Promo Schedule`,
       description,
       url: `https://getpromonight.com/${team.sportSlug}/${team.id}`,
       type: 'website',
@@ -48,7 +54,7 @@ export async function generateMetadata({
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${team.city} ${team.name} 2026 Promo Schedule`,
+      title: `${team.city} ${team.name} ${year} Promo Schedule`,
       description,
       images: [`/api/og?team=${team.id}`],
     },
@@ -84,7 +90,7 @@ export default async function TeamPage({
 
   return (
     <>
-      <JsonLd team={team} promos={promos} venue={venue} />
+      <JsonLd team={team} promos={promos} venue={venue} promoCounts={promoCounts} />
       <TeamPageTracker
         teamSlug={team.id}
         sport={team.league}
@@ -99,6 +105,8 @@ export default async function TeamPage({
         promoCounts={promoCounts}
       />
 
+      <TeamCalendar promos={promos} teamName={`${team.city} ${team.name}`} />
+
       <PromoList
         promos={upcoming.slice(0, 3)}
         teamColor={team.primaryColor}
@@ -106,6 +114,8 @@ export default async function TeamPage({
         teamName={`${team.city} ${team.name}`}
         totalPromoCount={promos.length}
       />
+
+      <TeamRelatedAggregators promos={promos} />
 
       {/* App CTA */}
       <TrackedCTA teamSlug={team.id}>
@@ -133,28 +143,19 @@ export default async function TeamPage({
         </section>
       </TrackedCTA>
 
-      {/* SEO content block */}
-      <section className="py-12 px-6 border-t border-border-subtle">
-        <div className="max-w-3xl mx-auto text-text-secondary text-sm leading-relaxed space-y-4">
-          <p>
-            The {team.city} {team.name} have announced {promos.length} promotional events for the 2026 season
-            {venue ? ` at ${venue.name}` : ''}. This includes {promoCounts.giveaway} giveaway night{promoCounts.giveaway !== 1 ? 's' : ''} featuring
-            bobbleheads, replica jerseys, and collectible items, along with {promoCounts.theme} theme night{promoCounts.theme !== 1 ? 's' : ''} and {promoCounts.food} food
-            deal{promoCounts.food !== 1 ? 's' : ''}.
-          </p>
-          <p>
-            PromoNight tracks the complete {team.city} {team.name} promotional schedule so you never miss a giveaway or special event.
-            From bobblehead nights to dollar hot dog deals, we keep you updated on every promotion{venue ? ` at ${venue.name}` : ''}.
-            {upcoming.length > 0
-              ? ` There are currently ${upcoming.length} upcoming promo${upcoming.length !== 1 ? 's' : ''} on the schedule.`
-              : ''}
-          </p>
-          <p>
-            Download the PromoNight app to get push notifications before your favorite {team.name} promos, browse a visual promo calendar,
-            and discover the best games to attend this season. Available free on iOS.
-          </p>
-        </div>
-      </section>
+      <TeamContentSections
+        team={team}
+        promos={promos}
+        venue={venue}
+        promoCounts={promoCounts}
+      />
+
+      <TeamFAQ
+        team={team}
+        promos={promos}
+        venue={venue}
+        promoCounts={promoCounts}
+      />
     </>
   );
 }
