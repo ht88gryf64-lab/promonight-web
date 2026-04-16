@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     template: '%s | PromoNight',
   },
   description:
-    'Track every bobblehead giveaway, theme night, food deal, and promotion across 167 teams in MLB, NBA, NHL, NFL, MLS, and WNBA. Free app for iOS and Android.',
+    'PromoNight tracks every giveaway, theme night, food deal, and promotion across 167 teams in MLB, NBA, NFL, NHL, MLS, and WNBA. Never miss bobblehead night again.',
   openGraph: {
     type: 'website',
     siteName: 'PromoNight',
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${bebasNeue.variable} ${dmSans.variable} ${dmMono.variable}`}>
       <body className="relative">

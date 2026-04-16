@@ -1,19 +1,22 @@
 import Link from 'next/link';
 import { getAllTeams, getHighlightedPromos, getPromoCount, getTeamPromos } from '@/lib/data';
-import { TrendingPromos } from '@/components/trending-promos';
+import { HotPromosHero } from '@/components/hot-promos-hero';
+import { AppDownloadButtons } from '@/components/app-download-buttons';
+import { AppScreenshotStrip } from '@/components/app-screenshot-strip';
+import { IndieDeveloperBlock } from '@/components/indie-developer-block';
 import { TeamGrid } from '@/components/team-grid';
-import { TrackedAppLink } from '@/components/analytics-events';
+import { HomepageFAQ } from '@/components/homepage-faq';
+import { HomepageJsonLd } from '@/components/homepage-json-ld';
 
 export const revalidate = 3600;
 
 export default async function HomePage() {
-  const [promoCount, trendingPromos, teams] = await Promise.all([
+  const [promoCount, hotPromos, teams] = await Promise.all([
     getPromoCount(),
-    getHighlightedPromos(6),
+    getHighlightedPromos(8),
     getAllTeams(),
   ]);
 
-  // Get promo counts for popular teams (first 8 per league for display)
   const popularTeams = teams.slice(0, 32);
   const promoCounts: Record<string, number> = {};
   await Promise.all(
@@ -25,74 +28,58 @@ export default async function HomePage() {
 
   return (
     <>
-      {/* Hero */}
-      <section className="relative min-h-screen flex items-center justify-center text-center px-6 pt-20 pb-16 overflow-hidden">
-        {/* Background effects */}
-        <div className="absolute top-[20%] left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[radial-gradient(circle,rgba(239,68,68,0.1)_0%,transparent_70%)] pointer-events-none" />
+      <HomepageJsonLd />
+
+      {/* Hero: Hot promo feed */}
+      <section className="relative pt-28 pb-10 md:pb-14 px-6 overflow-hidden">
         <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            backgroundImage:
-              'linear-gradient(rgba(26,27,34,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(26,27,34,0.06) 1px, transparent 1px)',
-            backgroundSize: '60px 60px',
-            maskImage: 'radial-gradient(ellipse 80% 80% at 50% 50%, black 0%, transparent 100%)',
-          }}
+          className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-[radial-gradient(circle,rgba(239,68,68,0.08)_0%,transparent_70%)] pointer-events-none"
+          aria-hidden="true"
         />
 
-        <div className="relative z-10 max-w-3xl mx-auto">
-          {/* Live badge */}
-          <div className="animate-fade-up inline-flex items-center gap-2 bg-bg-card border border-accent-red-border rounded-full px-4 py-1.5 mb-8">
-            <span className="w-1.5 h-1.5 rounded-full bg-accent-red animate-pulse-dot" />
-            <span className="font-mono text-[10px] tracking-[0.1em] uppercase text-accent-red">
-              {promoCount.toLocaleString()} promos tracked across 167 teams
+        <div className="relative max-w-5xl mx-auto">
+          <div className="flex items-center gap-3 mb-4">
+            <span className="inline-flex items-center gap-2 bg-bg-card border border-accent-red-border rounded-full px-3 py-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-accent-red animate-pulse-dot" />
+              <span className="font-mono text-[10px] tracking-[0.1em] uppercase text-accent-red">
+                Live
+              </span>
+            </span>
+            <span className="font-mono text-[10px] tracking-[0.1em] uppercase text-text-muted">
+              {promoCount.toLocaleString()} promos / 167 teams
             </span>
           </div>
 
-          {/* Headline */}
-          <h1 className="animate-fade-up delay-1 font-display text-[clamp(48px,8vw,80px)] leading-[0.95] tracking-[1.5px] mb-6">
-            NEVER MISS<br />
+          <h1 className="font-display text-[clamp(36px,6vw,64px)] leading-[0.95] tracking-[1px] mb-8 max-w-3xl">
+            HOT TONIGHT{' '}
+            <span className="text-text-secondary">&</span>{' '}
             <span className="bg-gradient-to-r from-accent-red to-promo-food bg-clip-text text-transparent">
-              BOBBLEHEAD NIGHT
+              THIS WEEKEND
             </span>
-            <br />AGAIN
           </h1>
 
-          {/* Subtitle */}
-          <p className="animate-fade-up delay-2 text-text-secondary text-lg leading-relaxed max-w-xl mx-auto mb-10">
-            PromoNight tracks every giveaway, theme night, food deal, and promotion across MLB, NBA, NFL, NHL, MLS, and WNBA &mdash; so you always know when the good games are.
-          </p>
+          <HotPromosHero promos={hotPromos} />
 
-          {/* CTA buttons */}
-          <div className="animate-fade-up delay-3 flex items-center justify-center gap-4 flex-wrap mb-8">
-            <TrackedAppLink
-              href="/download"
-              platform="ios"
-              section="hero"
-              page="home"
-              className="inline-flex items-center gap-2 bg-accent-red text-white font-bold text-[15px] px-7 py-3.5 rounded-xl transition-all hover:-translate-y-0.5 hover:shadow-[0_0_40px_rgba(239,68,68,0.3)]"
-            >
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-              Download for iOS
-            </TrackedAppLink>
-            <Link
-              href="/teams"
-              className="inline-flex items-center gap-2 text-text-secondary font-mono text-sm px-6 py-3.5 rounded-xl border border-text-dim transition-all hover:border-text-secondary hover:text-white"
-            >
-              Browse Teams
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
-            </Link>
-          </div>
-
-          {/* Trust signals */}
-          <div className="animate-fade-up delay-4 flex items-center justify-center gap-6 text-text-muted text-sm">
-            <span>Free to use</span>
-            <span className="w-1 h-1 rounded-full bg-text-dim" />
-            <span>167 teams</span>
-            <span className="w-1 h-1 rounded-full bg-text-dim" />
-            <span>6 leagues</span>
+          <div className="mt-12 text-center">
+            <p className="text-text-secondary text-base md:text-lg max-w-2xl mx-auto leading-relaxed">
+              Every giveaway, theme night, and food deal at your team&apos;s games.
+              {' '}
+              <span className="text-white font-semibold">
+                {promoCount.toLocaleString()} promos across 167 teams.
+              </span>
+            </p>
+            <div className="mt-6">
+              <AppDownloadButtons section="hero" page="home" />
+              <p className="mt-3 text-text-muted text-xs font-mono tracking-[0.5px]">
+                Join the Android beta, open to all testers.
+              </p>
+            </div>
           </div>
         </div>
       </section>
+
+      {/* App screenshots strip */}
+      <AppScreenshotStrip />
 
       {/* How It Works */}
       <section className="py-20 px-6 border-t border-border-subtle">
@@ -143,11 +130,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Trending Promos */}
-      <section className="border-t border-border-subtle">
-        <TrendingPromos promos={trendingPromos} />
-      </section>
-
       {/* Find Your Team */}
       <section className="py-20 px-6 border-t border-border-subtle">
         <div className="max-w-6xl mx-auto">
@@ -183,6 +165,9 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* Indie developer narrative */}
+      <IndieDeveloperBlock />
+
       {/* Final CTA */}
       <section className="py-24 px-6 border-t border-border-subtle text-center">
         <div className="max-w-2xl mx-auto">
@@ -195,18 +180,12 @@ export default async function HomePage() {
           <p className="text-text-secondary text-lg mb-10 max-w-md mx-auto">
             Download PromoNight and never miss another bobblehead, jersey giveaway, or dollar hot dog night.
           </p>
-          <TrackedAppLink
-            href="/download"
-            platform="ios"
-            section="footer_cta"
-            page="home"
-            className="inline-flex items-center gap-2 bg-accent-red text-white font-bold text-[15px] px-8 py-4 rounded-xl transition-all hover:-translate-y-0.5 hover:shadow-[0_0_40px_rgba(239,68,68,0.3)]"
-          >
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-            Download for iOS
-          </TrackedAppLink>
+          <AppDownloadButtons section="footer_cta" page="home" />
         </div>
       </section>
+
+      {/* FAQ */}
+      <HomepageFAQ />
     </>
   );
 }

@@ -1,6 +1,10 @@
 import Link from 'next/link';
+import { getAllTeams } from '@/lib/data';
+import { FooterTeamSitemap } from './footer-team-sitemap';
 
-export function Footer() {
+export async function Footer() {
+  const teams = await getAllTeams();
+
   return (
     <footer className="relative z-[1] border-t border-border-subtle bg-bg">
       <div className="max-w-6xl mx-auto px-6 py-16">
@@ -16,22 +20,37 @@ export function Footer() {
             </p>
           </div>
 
-          {/* Leagues */}
+          {/* Browse */}
           <div>
             <h4 className="font-mono text-[10px] tracking-[1.5px] uppercase text-accent-red mb-4">
-              Leagues
+              Browse
             </h4>
             <ul className="space-y-2">
-              {['MLB', 'NBA', 'NFL', 'NHL', 'MLS', 'WNBA'].map((league) => (
-                <li key={league}>
-                  <Link
-                    href={`/teams?league=${league}`}
-                    className="text-text-secondary text-sm hover:text-white transition-colors"
-                  >
-                    {league}
-                  </Link>
-                </li>
-              ))}
+              <li>
+                <Link href="/promos/this-week" className="text-text-secondary text-sm hover:text-white transition-colors">
+                  Hot this week
+                </Link>
+              </li>
+              <li>
+                <Link href="/promos/bobbleheads" className="text-text-secondary text-sm hover:text-white transition-colors">
+                  Bobbleheads
+                </Link>
+              </li>
+              <li>
+                <Link href="/promos/jersey-giveaways" className="text-text-secondary text-sm hover:text-white transition-colors">
+                  Jersey giveaways
+                </Link>
+              </li>
+              <li>
+                <Link href="/promos/theme-nights" className="text-text-secondary text-sm hover:text-white transition-colors">
+                  Theme nights
+                </Link>
+              </li>
+              <li>
+                <Link href="/teams" className="text-text-secondary text-sm hover:text-white transition-colors">
+                  All teams
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -41,6 +60,16 @@ export function Footer() {
               Company
             </h4>
             <ul className="space-y-2">
+              <li>
+                <Link href="/about" className="text-text-secondary text-sm hover:text-white transition-colors">
+                  About
+                </Link>
+              </li>
+              <li>
+                <Link href="/download" className="text-text-secondary text-sm hover:text-white transition-colors">
+                  Download
+                </Link>
+              </li>
               <li>
                 <Link href="/privacy" className="text-text-secondary text-sm hover:text-white transition-colors">
                   Privacy Policy
@@ -59,6 +88,8 @@ export function Footer() {
             </ul>
           </div>
         </div>
+
+        <FooterTeamSitemap teams={teams} />
 
         <div className="mt-12 pt-8 border-t border-border-subtle">
           <p className="text-text-dim text-xs font-mono">
