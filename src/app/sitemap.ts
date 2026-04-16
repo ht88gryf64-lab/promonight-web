@@ -26,6 +26,42 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
     ...teamPages,
     {
+      url: 'https://getpromonight.com/about',
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    },
+    {
+      url: 'https://getpromonight.com/promos/this-week',
+      lastModified: new Date(),
+      changeFrequency: 'daily',
+      priority: 0.9,
+    },
+    {
+      url: 'https://getpromonight.com/promos/bobbleheads',
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
+    {
+      url: 'https://getpromonight.com/promos/jersey-giveaways',
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
+    {
+      url: 'https://getpromonight.com/promos/theme-nights',
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
+    {
+      url: 'https://getpromonight.com/download',
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    },
+    {
       url: 'https://getpromonight.com/privacy',
       lastModified: new Date(),
       changeFrequency: 'monthly',
