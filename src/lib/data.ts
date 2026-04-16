@@ -114,6 +114,95 @@ export async function getHighlightedPromos(limit: number = 6): Promise<PromoWith
   }
 }
 
+// Returns every promo (across all teams) within [startDate, endDate], inclusive.
+// Dates are YYYY-MM-DD strings. Used for cross-team aggregator pages.
+export async function getPromosInDateRange(
+  startDate: string,
+  endDate: string,
+): Promise<PromoWithTeam[]> {
+  const teams = await getAllTeams();
+  const teamById = new Map(teams.map((t) => [t.id, t]));
+
+  try {
+    const snapshot = await db
+      .collectionGroup('promos')
+      .where('date', '>=', startDate)
+      .where('date', '<=', endDate)
+      .orderBy('date', 'asc')
+      .get();
+
+    const results: PromoWithTeam[] = [];
+    for (const doc of snapshot.docs) {
+      const teamRef = doc.ref.parent.parent!;
+      const team = teamById.get(teamRef.id);
+      if (team) {
+        results.push({ ...mapPromoDoc(doc), team });
+      }
+    }
+    return results;
+  } catch {
+    const allPromos: PromoWithTeam[] = [];
+    await Promise.all(
+      teams.map(async (team) => {
+        const snapshot = await db
+          .collection('teams')
+          .doc(team.id)
+          .collection('promos')
+          .where('date', '>=', startDate)
+          .where('date', '<=', endDate)
+          .get();
+        for (const doc of snapshot.docs) {
+          allPromos.push({ ...mapPromoDoc(doc), team });
+        }
+      })
+    );
+    allPromos.sort((a, b) => a.date.localeCompare(b.date));
+    return allPromos;
+  }
+}
+
+// Returns every promo across all teams from `startDate` forward.
+// Used for aggregator pages that filter by keyword or type.
+export async function getPromosFromDate(startDate: string): Promise<PromoWithTeam[]> {
+  const teams = await getAllTeams();
+  const teamById = new Map(teams.map((t) => [t.id, t]));
+
+  try {
+    const snapshot = await db
+      .collectionGroup('promos')
+      .where('date', '>=', startDate)
+      .orderBy('date', 'asc')
+      .get();
+
+    const results: PromoWithTeam[] = [];
+    for (const doc of snapshot.docs) {
+      const teamRef = doc.ref.parent.parent!;
+      const team = teamById.get(teamRef.id);
+      if (team) {
+        results.push({ ...mapPromoDoc(doc), team });
+      }
+    }
+    return results;
+  } catch {
+    const allPromos: PromoWithTeam[] = [];
+    await Promise.all(
+      teams.map(async (team) => {
+        const snapshot = await db
+          .collection('teams')
+          .doc(team.id)
+          .collection('promos')
+          .where('date', '>=', startDate)
+          .get();
+        for (const doc of snapshot.docs) {
+          allPromos.push({ ...mapPromoDoc(doc), team });
+        }
+      })
+    );
+    allPromos.sort((a, b) => a.date.localeCompare(b.date));
+    return allPromos;
+  }
+}
+
 export async function getPromoCount(): Promise<number> {
   const snapshot = await db.collectionGroup('promos').count().get();
   return snapshot.data().count;
