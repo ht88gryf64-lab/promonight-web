@@ -121,11 +121,13 @@ export function PromoList({
                 Download for iOS
               </TrackedAppLink>
               <Link
-                href="/download/android"
+                href="https://play.google.com/apps/testing/com.promonight.app"
+                target="_blank"
+                rel="noopener"
                 className="inline-flex items-center gap-2 text-text-secondary font-mono text-sm px-6 py-3 rounded-xl border border-border-subtle hover:border-border-hover hover:text-white transition-all"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M17.523 2.082l1.478 2.563a.25.25 0 01-.433.25l-1.5-2.598C15.829 1.492 14.477 1 13 1h-2c-1.477 0-2.83.492-4.068 1.297l-1.5 2.598a.25.25 0 01-.433-.25L6.477 2.082C4.348 3.468 2.857 5.549 2.298 8H21.7c-.558-2.451-2.05-4.532-4.178-5.918zM9 6.5a.75.75 0 110-1.5.75.75 0 010 1.5zm6 0a.75.75 0 110-1.5.75.75 0 010 1.5zM2 17.5C2 20.538 4.462 23 7.5 23h9c3.038 0 5.5-2.462 5.5-5.5V9H2v8.5z"/></svg>
-                Google Play
+                Android Beta
               </Link>
             </div>
           </div>
