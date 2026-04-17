@@ -1,6 +1,7 @@
 import 'server-only';
 import { db } from './firebase';
 import type { Team, Promo, PromoWithTeam, Venue, PromoType } from './types';
+import { resolveIcon, dedupePromos } from './promo-helpers';
 
 function argbToHex(argb: number): string {
   const hex = (argb & 0x00ffffff).toString(16).padStart(6, '0');
@@ -24,15 +25,16 @@ function mapTeamDoc(doc: FirebaseFirestore.DocumentSnapshot): Team {
 
 function mapPromoDoc(doc: FirebaseFirestore.DocumentSnapshot): Promo {
   const data = doc.data()!;
+  const type = data.type as PromoType;
   return {
     date: data.date,
     time: data.time || '',
     opponent: data.opponent || '',
-    type: data.type as PromoType,
+    type,
     title: data.title,
     description: data.description || '',
     highlight: data.highlight || false,
-    icon: data.icon || '',
+    icon: resolveIcon(data.title, type, data.icon || ''),
     recurring: data.recurring || false,
   };
 }
@@ -57,7 +59,7 @@ export async function getTeamPromos(teamId: string): Promise<Promo[]> {
     .collection('promos')
     .orderBy('date', 'asc')
     .get();
-  return snapshot.docs.map(mapPromoDoc);
+  return dedupePromos(snapshot.docs.map(mapPromoDoc));
 }
 
 export async function getHighlightedPromos(limit: number = 6): Promise<PromoWithTeam[]> {
@@ -139,7 +141,7 @@ export async function getPromosInDateRange(
         results.push({ ...mapPromoDoc(doc), team });
       }
     }
-    return results;
+    return dedupePromos(results, (p) => p.team.id);
   } catch {
     const allPromos: PromoWithTeam[] = [];
     await Promise.all(
@@ -157,7 +159,7 @@ export async function getPromosInDateRange(
       })
     );
     allPromos.sort((a, b) => a.date.localeCompare(b.date));
-    return allPromos;
+    return dedupePromos(allPromos, (p) => p.team.id);
   }
 }
 
@@ -182,7 +184,7 @@ export async function getPromosFromDate(startDate: string): Promise<PromoWithTea
         results.push({ ...mapPromoDoc(doc), team });
       }
     }
-    return results;
+    return dedupePromos(results, (p) => p.team.id);
   } catch {
     const allPromos: PromoWithTeam[] = [];
     await Promise.all(
@@ -199,7 +201,7 @@ export async function getPromosFromDate(startDate: string): Promise<PromoWithTea
       })
     );
     allPromos.sort((a, b) => a.date.localeCompare(b.date));
-    return allPromos;
+    return dedupePromos(allPromos, (p) => p.team.id);
   }
 }
 

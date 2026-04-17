@@ -5,6 +5,44 @@ export function getCurrentYear(): number {
   return new Date().getFullYear();
 }
 
+export function resolveIcon(title: string, type: PromoType, iconFromData: string): string {
+  const t = (title || '').toLowerCase();
+
+  if (/fireworks/.test(t)) return '💥';
+
+  const looksLikeBobblehead = /bobblehead|figurine|figure|statue/.test(t);
+  const icon = (iconFromData || '').trim();
+
+  if (!icon || icon === '💥') {
+    if (looksLikeBobblehead) return '🎎';
+    if (type === 'giveaway') return '🎁';
+  }
+
+  if (!icon) {
+    if (type === 'theme') return '🎭';
+    if (type === 'kids') return '👦';
+    if (type === 'food') return '🌭';
+    return '🎁';
+  }
+
+  return icon;
+}
+
+export function dedupePromos<T extends { date: string; title: string }>(
+  promos: T[],
+  extraKey?: (p: T) => string,
+): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const p of promos) {
+    const key = `${extraKey ? extraKey(p) : ''}::${p.date}::${(p.title || '').trim().toLowerCase()}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(p);
+  }
+  return out;
+}
+
 export function formatDateReadable(dateStr: string): string {
   const date = new Date(dateStr + 'T12:00:00');
   return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
