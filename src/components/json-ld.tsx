@@ -1,12 +1,14 @@
-import type { Team, Promo, Venue } from '@/lib/types';
+import type { Team, Promo, PromoType, Venue } from '@/lib/types';
+import { generateTeamFAQs } from '@/lib/promo-helpers';
 
 interface JsonLdProps {
   team: Team;
   promos: Promo[];
   venue: Venue | null;
+  promoCounts: Record<PromoType, number>;
 }
 
-export function JsonLd({ team, promos, venue }: JsonLdProps) {
+export function JsonLd({ team, promos, venue, promoCounts }: JsonLdProps) {
   const today = new Date().toISOString().split('T')[0];
   const upcomingPromos = promos.filter((p) => p.date >= today);
 
@@ -32,12 +34,30 @@ export function JsonLd({ team, promos, venue }: JsonLdProps) {
     },
   }));
 
-  if (events.length === 0) return null;
+  const faqs = generateTeamFAQs(team, promos, venue, promoCounts);
+  const faqSchema = faqs.length > 0
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: faqs.map((faq) => ({
+          '@type': 'Question',
+          name: faq.question,
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: faq.answer,
+          },
+        })),
+      }
+    : null;
+
+  const schemas = [...events, ...(faqSchema ? [faqSchema] : [])];
+
+  if (schemas.length === 0) return null;
 
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(events) }}
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(schemas) }}
     />
   );
 }

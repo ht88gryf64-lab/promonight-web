@@ -55,8 +55,11 @@ export function TeamHero({ team, venue, promoCount, promoCounts }: TeamHeroProps
         <h1 className="font-display text-4xl md:text-6xl lg:text-7xl tracking-[1px] leading-[0.95] mb-2">
           {team.city.toUpperCase()} {team.name.toUpperCase()}
         </h1>
-        <p className="font-display text-2xl md:text-3xl tracking-[1px] text-text-secondary mb-6">
-          2026 PROMO SCHEDULE
+        <p className="font-display text-2xl md:text-3xl tracking-[1px] text-text-secondary mb-2">
+          {new Date().getFullYear()} PROMO SCHEDULE
+        </p>
+        <p className="text-text-muted text-xs font-mono tracking-[0.5px] mb-6">
+          Last updated {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
         </p>
 
         {/* Venue info */}
