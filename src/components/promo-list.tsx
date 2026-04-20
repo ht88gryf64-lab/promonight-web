@@ -120,15 +120,16 @@ export function PromoList({
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
                 Download for iOS
               </TrackedAppLink>
-              <Link
+              <TrackedAppLink
                 href="https://play.google.com/apps/testing/com.promonight.app"
-                target="_blank"
-                rel="noopener"
+                platform="android"
+                section="promo_list_cta"
+                page={`team/${teamSlug}`}
                 className="inline-flex items-center gap-2 text-text-secondary font-mono text-sm px-6 py-3 rounded-xl border border-border-subtle hover:border-border-hover hover:text-white transition-all"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M17.523 2.082l1.478 2.563a.25.25 0 01-.433.25l-1.5-2.598C15.829 1.492 14.477 1 13 1h-2c-1.477 0-2.83.492-4.068 1.297l-1.5 2.598a.25.25 0 01-.433-.25L6.477 2.082C4.348 3.468 2.857 5.549 2.298 8H21.7c-.558-2.451-2.05-4.532-4.178-5.918zM9 6.5a.75.75 0 110-1.5.75.75 0 010 1.5zm6 0a.75.75 0 110-1.5.75.75 0 010 1.5zM2 17.5C2 20.538 4.462 23 7.5 23h9c3.038 0 5.5-2.462 5.5-5.5V9H2v8.5z"/></svg>
                 Android Beta
-              </Link>
+              </TrackedAppLink>
             </div>
           </div>
         )}

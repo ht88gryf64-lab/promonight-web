@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { event } from '@/lib/analytics';
+import { trackInstallClick } from '@/lib/analytics';
 
 const BROWSE_LINKS = [
   { href: '/promos/this-week', label: 'Hot this week' },
@@ -80,7 +80,7 @@ export function Nav({ playoffsActive = false }: NavProps) {
         </Link>
         <Link
           href="/download"
-          onClick={() => event('app_store_click', { platform: 'ios', section: 'nav', page: 'global' })}
+          onClick={() => trackInstallClick({ platform: 'ios', section: 'nav', page: 'global' })}
           className="bg-accent-red hover:bg-accent-red-dim text-white font-body font-bold text-sm px-5 py-2.5 rounded-lg transition-all hover:-translate-y-0.5 hover:shadow-[0_0_30px_rgba(239,68,68,0.3)]"
         >
           Get the App
@@ -143,7 +143,7 @@ export function Nav({ playoffsActive = false }: NavProps) {
           </Link>
           <Link
             href="/download"
-            onClick={() => { setMenuOpen(false); event('app_store_click', { platform: 'ios', section: 'nav', page: 'global' }); }}
+            onClick={() => { setMenuOpen(false); trackInstallClick({ platform: 'ios', section: 'nav', page: 'global' }); }}
             className="bg-accent-red text-white font-bold text-sm px-5 py-2.5 rounded-lg text-center"
           >
             Get the App
