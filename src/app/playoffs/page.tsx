@@ -93,25 +93,32 @@ function buildFaqs(
 
   faqs.push({
     question: 'What giveaways are at playoff games tonight?',
-    answer: `PromoNight tracks ${totalPromos} scheduled playoff promotion${totalPromos !== 1 ? 's' : ''} across ${totalTeams} active teams. Each team section above lists the specific giveaways, watch parties, and fan events currently scheduled for their home playoff games. This page refreshes within an hour of the latest scanner update.`,
+    answer:
+      'Each team section above lists the giveaways scheduled for their home playoff games, with dates shown when known. Scroll to your team, or open the team page for the full calendar. The list refreshes within an hour of the latest scanner update.',
   });
 
   const rallyTeams: string[] = [];
+  // Tight regex: matches "rally towel" as a phrase OR the standalone word
+  // "towel" (word boundaries), not the bare word "rally" (which matches too
+  // many non-towel events like pre-playoff rallies and pep rallies).
+  const rallyTowelRe = /rally towel|\btowel\b/i;
   for (const league of ['NBA', 'NHL'] as const) {
     for (const { team, promos } of byLeague[league]) {
-      const hasRally = promos.some((p) =>
-        /rally towel|rally|towel/i.test(p.title) ||
-        /rally towel|rally|towel/i.test(p.description),
+      const hasTowel = promos.some(
+        (p) => rallyTowelRe.test(p.title) || rallyTowelRe.test(p.description),
       );
-      if (hasRally) rallyTeams.push(`${team.city} ${team.name}`);
+      if (hasTowel) rallyTeams.push(`${team.city} ${team.name}`);
     }
   }
   if (rallyTeams.length > 0) {
-    const list = rallyTeams.slice(0, 8).join(', ');
-    const more = rallyTeams.length > 8 ? `, and ${rallyTeams.length - 8} more` : '';
+    // Show the full list when 10 or fewer (avoids an awkward "and 1 more"
+    // tail); otherwise truncate at 8 with an "and X more" suffix.
+    const limit = rallyTeams.length <= 10 ? rallyTeams.length : 8;
+    const list = rallyTeams.slice(0, limit).join(', ');
+    const more = rallyTeams.length > limit ? `, and ${rallyTeams.length - limit} more` : '';
     faqs.push({
       question: 'Which teams are giving out rally towels in Round 1?',
-      answer: `${rallyTeams.length} active playoff team${rallyTeams.length !== 1 ? 's have' : ' has'} rally towel giveaways scheduled during Round 1: ${list}${more}. Specific sponsor partners and game-by-game designs vary by team.`,
+      answer: `${rallyTeams.length} active playoff team${rallyTeams.length !== 1 ? 's have' : ' has'} rally towel giveaways scheduled during Round 1: ${list}${more}. Sponsor partners and game-by-game designs vary by team.`,
     });
   }
 
@@ -133,18 +140,65 @@ function countWords(...strings: (string | undefined)[]): number {
 function pickHighlightExample(
   byLeague: Record<'NBA' | 'NHL', { team: Team; promos: PlayoffPromo[] }[]>,
 ): { title: string; teamName: string } | null {
+  // Pool all promos with their team names.
+  const all: { promo: PlayoffPromo; teamName: string }[] = [];
   for (const league of ['NBA', 'NHL'] as const) {
     for (const group of byLeague[league]) {
-      const hot = group.promos.find((p) => p.highlight && p.date);
-      if (hot) return { title: hot.title, teamName: group.team.name };
+      for (const promo of group.promos) {
+        all.push({ promo, teamName: group.team.name });
+      }
     }
   }
-  for (const league of ['NBA', 'NHL'] as const) {
-    for (const group of byLeague[league]) {
-      const hot = group.promos.find((p) => p.highlight);
-      if (hot) return { title: hot.title, teamName: group.team.name };
-    }
+
+  const today = new Date().toISOString().split('T')[0];
+
+  // (a) highlight + dated today-or-future, soonest first. Avoids picking a
+  //     past event (e.g. Cavs "Playoffs Tipoff Party" on Apr 14) as the lead
+  //     example once the playoffs are underway.
+  const upcomingHighlights = all
+    .filter(
+      (x) =>
+        x.promo.highlight &&
+        x.promo.date &&
+        (x.promo.date as string).slice(0, 10) >= today,
+    )
+    .sort((a, b) =>
+      (a.promo.date as string).localeCompare(b.promo.date as string),
+    );
+  if (upcomingHighlights.length > 0) {
+    return {
+      title: upcomingHighlights[0].promo.title,
+      teamName: upcomingHighlights[0].teamName,
+    };
   }
+
+  // (b) any highlight regardless of date (covers recurring marquee promos).
+  const anyHighlight = all.find((x) => x.promo.highlight);
+  if (anyHighlight) {
+    return {
+      title: anyHighlight.promo.title,
+      teamName: anyHighlight.teamName,
+    };
+  }
+
+  // (c) first giveaway-typed promo (most clickable category).
+  const firstGiveaway = all.find((x) => x.promo.type === 'giveaway');
+  if (firstGiveaway) {
+    return {
+      title: firstGiveaway.promo.title,
+      teamName: firstGiveaway.teamName,
+    };
+  }
+
+  // (d) any dated promo — last-resort fallback.
+  const firstDated = all.find((x) => !!x.promo.date);
+  if (firstDated) {
+    return {
+      title: firstDated.promo.title,
+      teamName: firstDated.teamName,
+    };
+  }
+
   return null;
 }
 
@@ -237,7 +291,7 @@ export default async function PlayoffsPage() {
             {example
               ? `, including "${example.title}" for the ${example.teamName}`
               : ''}
-            . Every giveaway, watch party, and rally towel currently scheduled is listed below, updated hourly from official team sources.
+            . Every scheduled giveaway, watch party, and rally towel is listed below. Updated hourly from official team sources.
           </p>
           <p className="font-mono text-[10px] tracking-[1.5px] uppercase text-text-muted mt-6">
             Last updated: {lastUpdated}

@@ -92,7 +92,7 @@ export function PlayoffSection({
           {opponent ? ` against the ${opponent}` : ''}. Their scheduled promotions during this round:
         </p>
         <p className="font-mono text-[10px] tracking-[1.5px] uppercase text-text-muted mb-8">
-          Playoffs last updated: {fullTimestamp(lastUpdated)}
+          Playoff data last updated: {fullTimestamp(lastUpdated)}
         </p>
 
         {dated.length > 0 && (
