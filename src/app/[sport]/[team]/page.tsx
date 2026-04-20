@@ -48,7 +48,7 @@ export async function generateMetadata({
     openGraph: {
       title: `${team.city} ${team.name} ${year} Promo Schedule`,
       description,
-      url: `https://getpromonight.com/${team.sportSlug}/${team.id}`,
+      url: `https://www.getpromonight.com/${team.sportSlug}/${team.id}`,
       type: 'website',
       images: [`/api/og?team=${team.id}`],
     },

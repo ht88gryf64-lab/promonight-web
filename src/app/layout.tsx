@@ -27,7 +27,7 @@ const dmMono = DM_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://getpromonight.com'),
+  metadataBase: new URL('https://www.getpromonight.com'),
   title: {
     default: 'PromoNight — Every Giveaway, Theme Night & Food Deal at Your Team\'s Games',
     template: '%s | PromoNight',
