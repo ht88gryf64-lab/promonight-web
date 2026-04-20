@@ -24,13 +24,7 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
   const bot = detectBot(userAgent);
   if (!bot) return NextResponse.next();
 
-  // DIAGNOSTIC: confirm bot branch is reached and capture any throw inside it.
-  console.info('MIDDLEWARE_BOT_HIT', {
-    bot,
-    ua: userAgent,
-    path: request.nextUrl.pathname,
-  });
-
+  // Error trap: keep bots at 200 even if logging ever regresses.
   try {
     const secret = process.env.CRAWLER_LOG_SECRET;
     if (!secret) {
