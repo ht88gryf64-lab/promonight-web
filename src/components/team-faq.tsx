@@ -1,15 +1,16 @@
 import type { Team, Promo, PromoType, Venue } from '@/lib/types';
-import { generateTeamFAQs } from '@/lib/promo-helpers';
+import { generateTeamFAQs, type PlayoffFAQContext } from '@/lib/promo-helpers';
 
 interface TeamFAQProps {
   team: Team;
   promos: Promo[];
   venue: Venue | null;
   promoCounts: Record<PromoType, number>;
+  playoffContext?: PlayoffFAQContext;
 }
 
-export function TeamFAQ({ team, promos, venue, promoCounts }: TeamFAQProps) {
-  const faqs = generateTeamFAQs(team, promos, venue, promoCounts);
+export function TeamFAQ({ team, promos, venue, promoCounts, playoffContext }: TeamFAQProps) {
+  const faqs = generateTeamFAQs(team, promos, venue, promoCounts, playoffContext);
 
   if (faqs.length === 0) return null;
 

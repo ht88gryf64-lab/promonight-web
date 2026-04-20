@@ -2,9 +2,14 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getAllPlayoffPromos } from '@/lib/data';
-import type { PlayoffPromo, Team } from '@/lib/types';
+import type { PlayoffPromo, Team, PlayoffConfig } from '@/lib/types';
 
 export const revalidate = 3600;
+
+const PAGE_URL = 'https://www.getpromonight.com/playoffs';
+// Launch date for the /playoffs hub. Static anchor for Article.datePublished;
+// dateModified refreshes with each scanner run.
+const PAGE_PUBLISHED = '2026-04-20T00:00:00-05:00';
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -63,6 +68,68 @@ function extractOpponent(gameInfo: string): string | null {
   return m ? m[1].trim().replace(/[.,]$/, '') : null;
 }
 
+function buildFaqs(
+  config: PlayoffConfig,
+  byLeague: Record<'NBA' | 'NHL', { team: Team; promos: PlayoffPromo[] }[]>,
+  totalPromos: number,
+  totalTeams: number,
+): { question: string; answer: string }[] {
+  const faqs: { question: string; answer: string }[] = [];
+
+  if (config.nbaActive) {
+    faqs.push({
+      question: 'When do the 2026 NBA playoffs start?',
+      answer:
+        'The 2026 NBA Playoffs began April 18, 2026, with the First Round. The full bracket runs through the NBA Finals in June. Every active team has home-game promotions scheduled during their series.',
+    });
+  }
+  if (config.nhlActive) {
+    faqs.push({
+      question: 'When do the 2026 NHL playoffs start?',
+      answer:
+        'The 2026 Stanley Cup Playoffs began April 18, 2026, with the First Round. The Stanley Cup Final is scheduled for June. Most active teams have rally towels or themed giveaways for every home playoff game.',
+    });
+  }
+
+  faqs.push({
+    question: 'What giveaways are at playoff games tonight?',
+    answer: `PromoNight tracks ${totalPromos} scheduled playoff promotion${totalPromos !== 1 ? 's' : ''} across ${totalTeams} active teams. Each team section above lists the specific giveaways, watch parties, and fan events currently scheduled for their home playoff games. This page refreshes within an hour of the latest scanner update.`,
+  });
+
+  const rallyTeams: string[] = [];
+  for (const league of ['NBA', 'NHL'] as const) {
+    for (const { team, promos } of byLeague[league]) {
+      const hasRally = promos.some((p) =>
+        /rally towel|rally|towel/i.test(p.title) ||
+        /rally towel|rally|towel/i.test(p.description),
+      );
+      if (hasRally) rallyTeams.push(`${team.city} ${team.name}`);
+    }
+  }
+  if (rallyTeams.length > 0) {
+    const list = rallyTeams.slice(0, 8).join(', ');
+    const more = rallyTeams.length > 8 ? `, and ${rallyTeams.length - 8} more` : '';
+    faqs.push({
+      question: 'Which teams are giving out rally towels in Round 1?',
+      answer: `${rallyTeams.length} active playoff team${rallyTeams.length !== 1 ? 's have' : ' has'} rally towel giveaways scheduled during Round 1: ${list}${more}. Specific sponsor partners and game-by-game designs vary by team.`,
+    });
+  }
+
+  faqs.push({
+    question: 'How do I find playoff promotions for my team?',
+    answer:
+      'Click any team name above to open that team\'s full promo page on PromoNight. Each team page shows the regular-season calendar plus a pinned playoff section with all scheduled giveaways, watch parties, and fan events. The PromoNight iOS and Android apps also push notifications before each game.',
+  });
+
+  return faqs;
+}
+
+function countWords(...strings: (string | undefined)[]): number {
+  return strings
+    .filter((s): s is string => !!s)
+    .reduce((acc, s) => acc + s.trim().split(/\s+/).length, 0);
+}
+
 function pickHighlightExample(
   byLeague: Record<'NBA' | 'NHL', { team: Team; promos: PlayoffPromo[] }[]>,
 ): { title: string; teamName: string } | null {
@@ -94,9 +161,69 @@ export default async function PlayoffsPage() {
   const lastUpdated = formatFullTimestamp(
     config.lastScanDate ?? config.updatedAt,
   );
+  const lastModifiedIso =
+    config.lastScanDate ?? config.updatedAt ?? PAGE_PUBLISHED;
+
+  const faqs = buildFaqs(config, byLeague, totalPromos, totalTeams);
+  const headline = '2026 NBA and NHL Playoff Promotions';
+  const description = `Every promotional event at 2026 NBA and NHL playoff games: ${totalPromos} scheduled giveaways, watch parties, and fan events across ${totalTeams} active teams. Updated hourly.`;
+
+  const articleSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline,
+    description,
+    datePublished: PAGE_PUBLISHED,
+    dateModified: lastModifiedIso,
+    author: {
+      '@type': 'Organization',
+      name: 'PromoNight',
+      url: 'https://www.getpromonight.com',
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'PromoNight',
+      url: 'https://www.getpromonight.com',
+      logo: {
+        '@type': 'ImageObject',
+        url: 'https://www.getpromonight.com/icon.png',
+      },
+    },
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': PAGE_URL,
+    },
+    url: PAGE_URL,
+    wordCount: countWords(
+      headline,
+      description,
+      ...faqs.flatMap((f) => [f.question, f.answer]),
+    ),
+  };
+
+  const faqSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((f) => ({
+      '@type': 'Question',
+      name: f.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: f.answer,
+      },
+    })),
+  };
 
   return (
     <div className="pt-24 pb-20 px-6">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
       <div className="max-w-5xl mx-auto">
         <header className="mb-12">
           <span className="font-mono text-[10px] tracking-[1.5px] uppercase text-accent-red">
@@ -138,6 +265,20 @@ export default async function PlayoffsPage() {
             No playoff promotions scheduled yet. Check back soon.
           </p>
         )}
+
+        <section className="mt-16 pt-10 border-t border-border-subtle">
+          <h2 className="font-display text-3xl md:text-4xl tracking-[1px] mb-8">
+            FREQUENTLY ASKED QUESTIONS
+          </h2>
+          <div className="space-y-6 max-w-3xl">
+            {faqs.map((f, i) => (
+              <div key={i}>
+                <h3 className="text-white font-semibold text-base mb-2">{f.question}</h3>
+                <p className="text-text-secondary text-sm leading-relaxed">{f.answer}</p>
+              </div>
+            ))}
+          </div>
+        </section>
       </div>
     </div>
   );

@@ -18,6 +18,7 @@ import { TeamFAQ } from '@/components/team-faq';
 import { TeamRelatedAggregators } from '@/components/team-related-aggregators';
 import { JsonLd } from '@/components/json-ld';
 import { PlayoffSection } from '@/components/playoff-section';
+import { extractPlayoffOpponent } from '@/lib/promo-helpers';
 import { TeamPageTracker, TrackedCTA, TrackedAppLink } from '@/components/analytics-events';
 
 export const revalidate = 21600;
@@ -107,6 +108,14 @@ export default async function TeamPage({
         : ''
     : '';
 
+  const playoffContext = inPlayoffs && playoffPromos.length > 0
+    ? {
+        promos: playoffPromos,
+        round: playoffRound,
+        opponent: extractPlayoffOpponent(playoffPromos),
+      }
+    : undefined;
+
   const promoCounts: Record<PromoType, number> = { giveaway: 0, theme: 0, kids: 0, food: 0 };
   for (const p of promos) {
     if (promoCounts[p.type] !== undefined) {
@@ -119,7 +128,14 @@ export default async function TeamPage({
 
   return (
     <>
-      <JsonLd team={team} promos={promos} venue={venue} promoCounts={promoCounts} />
+      <JsonLd
+        team={team}
+        promos={promos}
+        venue={venue}
+        promoCounts={promoCounts}
+        playoffPromos={inPlayoffs ? playoffPromos : undefined}
+        playoffContext={playoffContext}
+      />
       <TeamPageTracker
         teamSlug={team.id}
         sport={team.league}
@@ -193,6 +209,7 @@ export default async function TeamPage({
         promos={promos}
         venue={venue}
         promoCounts={promoCounts}
+        playoffContext={playoffContext}
       />
     </>
   );
