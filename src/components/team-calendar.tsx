@@ -26,6 +26,13 @@ function formatMonthLabel(year: number, month: number): string {
   });
 }
 
+function formatShortDate(dateStr: string): string {
+  return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
 export function TeamCalendar({ promos, teamName }: TeamCalendarProps) {
   const today = useMemo(() => {
     const d = new Date();
@@ -54,25 +61,30 @@ export function TeamCalendar({ promos, teamName }: TeamCalendarProps) {
     return set;
   }, [promos]);
 
-  // Default month: current month if it has promos, otherwise the next upcoming month
-  const defaultMonth = useMemo(() => {
-    if (monthsWithPromos.has(monthKey(today.year, today.month))) {
-      return { year: today.year, month: today.month };
-    }
-    const upcoming = promos.find((p) => p.date >= todayKey);
-    if (upcoming) {
-      const { year, month } = parseYMD(upcoming.date);
-      return { year, month };
-    }
-    if (promos.length > 0) {
-      const { year, month } = parseYMD(promos[0].date);
-      return { year, month };
-    }
-    return { year: today.year, month: today.month };
-  }, [monthsWithPromos, promos, today.year, today.month, todayKey]);
-
-  const [view, setView] = useState(defaultMonth);
+  const [view, setView] = useState({ year: today.year, month: today.month });
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+  const viewedMonthHasPromos = monthsWithPromos.has(monthKey(view.year, view.month));
+
+  // Earliest promo from today onward, for the empty-month hint
+  const nextUpcomingPromo = useMemo(() => {
+    let best: Promo | null = null;
+    for (const p of promos) {
+      if (p.date >= todayKey && (best === null || p.date < best.date)) {
+        best = p;
+      }
+    }
+    return best;
+  }, [promos, todayKey]);
+
+  const showEmptyMonthHint = !viewedMonthHasPromos && nextUpcomingPromo !== null;
+
+  const jumpToNextPromo = () => {
+    if (!nextUpcomingPromo) return;
+    const { year, month } = parseYMD(nextUpcomingPromo.date);
+    setSelectedDate(null);
+    setView({ year, month });
+  };
 
   const monthStart = new Date(view.year, view.month, 1);
   const monthEnd = new Date(view.year, view.month + 1, 0);
@@ -137,6 +149,21 @@ export function TeamCalendar({ promos, teamName }: TeamCalendarProps) {
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
             </button>
           </div>
+
+          {showEmptyMonthHint && nextUpcomingPromo && (
+            <button
+              onClick={jumpToNextPromo}
+              className="w-full mb-4 flex items-center justify-between gap-3 rounded-lg border border-border-subtle bg-white/[0.03] hover:bg-white/[0.06] hover:border-border-hover transition-colors px-3 py-2 text-left"
+            >
+              <span className="text-xs text-text-secondary">
+                No promos this month — next promo{' '}
+                <span className="text-white font-semibold">
+                  {formatShortDate(nextUpcomingPromo.date)}
+                </span>
+              </span>
+              <span className="text-accent-red text-sm" aria-hidden="true">→</span>
+            </button>
+          )}
 
           {/* Weekday header */}
           <div className="grid grid-cols-7 gap-1 mb-2">
