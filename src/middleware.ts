@@ -24,35 +24,58 @@ export async function middleware(request: NextRequest) {
   const bot = detectBot(userAgent);
   if (!bot) return NextResponse.next();
 
-  const secret = process.env.CRAWLER_LOG_SECRET;
-  if (!secret) {
-    // Env var not set — skip logging rather than fail open. Request still proceeds.
-    return NextResponse.next();
-  }
-
-  const origin = request.nextUrl.origin;
-  const payload = {
+  // DIAGNOSTIC: confirm bot branch is reached and capture any throw inside it.
+  console.info('MIDDLEWARE_BOT_HIT', {
     bot,
+    ua: userAgent,
     path: request.nextUrl.pathname,
-    userAgent: userAgent ?? '',
-    country: request.headers.get('x-vercel-ip-country') ?? null,
-    referer: request.headers.get('referer') ?? null,
-  };
-
-  // Fire-and-forget: never block the crawler's response on our own logging.
-  const logPromise = fetch(`${origin}/api/log-crawler-hit`, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-crawler-log-secret': secret,
-    },
-    body: JSON.stringify(payload),
-  }).catch(() => {
-    // swallow — logging errors must never affect the response
   });
 
-  // @ts-expect-error: waitUntil exists on Edge runtime's event object but Next types lag
-  request.waitUntil?.(logPromise);
+  try {
+    const secret = process.env.CRAWLER_LOG_SECRET;
+    if (!secret) {
+      // Env var not set — skip logging rather than fail open. Request still proceeds.
+      return NextResponse.next();
+    }
+
+    const origin = request.nextUrl.origin;
+    const payload = {
+      bot,
+      path: request.nextUrl.pathname,
+      userAgent: userAgent ?? '',
+      country: request.headers.get('x-vercel-ip-country') ?? null,
+      referer: request.headers.get('referer') ?? null,
+    };
+
+    // Fire-and-forget: never block the crawler's response on our own logging.
+    const logPromise = fetch(`${origin}/api/log-crawler-hit`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-crawler-log-secret': secret,
+      },
+      body: JSON.stringify(payload),
+    }).catch((err) => {
+      console.error('MIDDLEWARE_FETCH_ERR', {
+        message: err?.message,
+        name: err?.name,
+        bot,
+        path: request.nextUrl.pathname,
+      });
+    });
+
+    // @ts-expect-error: waitUntil exists on Edge runtime's event object but Next types lag
+    request.waitUntil?.(logPromise);
+  } catch (err) {
+    console.error('MIDDLEWARE_ERROR', {
+      message: (err as Error)?.message,
+      name: (err as Error)?.name,
+      stack: (err as Error)?.stack,
+      bot,
+      ua: userAgent,
+      path: request.nextUrl.pathname,
+    });
+  }
 
   return NextResponse.next();
 }
