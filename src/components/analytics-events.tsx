@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { event } from '@/lib/analytics';
+import { event, trackInstallClick } from '@/lib/analytics';
 
 // Fires team_page_view once on mount
 export function TeamPageTracker({
@@ -36,6 +36,8 @@ export function TrackedAppLink({
   page,
   className,
   children,
+  target,
+  rel,
 }: {
   href: string;
   platform: 'ios' | 'android';
@@ -43,13 +45,24 @@ export function TrackedAppLink({
   page: string;
   className?: string;
   children: React.ReactNode;
+  target?: string;
+  rel?: string;
 }) {
+  const isExternal = /^https?:\/\//.test(href);
+  const resolvedTarget = target ?? (isExternal ? '_blank' : undefined);
+  const resolvedRel = rel ?? (isExternal ? 'noopener' : undefined);
   const handleClick = () => {
-    event('app_store_click', { platform, section, page });
+    trackInstallClick({ platform, section, page });
   };
 
   return (
-    <Link href={href} onClick={handleClick} className={className}>
+    <Link
+      href={href}
+      onClick={handleClick}
+      className={className}
+      target={resolvedTarget}
+      rel={resolvedRel}
+    >
       {children}
     </Link>
   );

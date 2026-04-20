@@ -3,6 +3,7 @@ import Script from 'next/script';
 import { Bebas_Neue, DM_Sans, DM_Mono } from 'next/font/google';
 import { Nav } from '@/components/nav';
 import { Footer } from '@/components/footer';
+import { UTMCaptureProvider } from '@/components/utm-capture-provider';
 import { GA_MEASUREMENT_ID } from '@/lib/analytics';
 import { getPlayoffConfig } from '@/lib/data';
 import './globals.css';
@@ -84,6 +85,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             />
           </>
         )}
+        <UTMCaptureProvider />
         <Nav playoffsActive={playoffsActive} />
         <main className="relative z-[1]">{children}</main>
         <Footer />

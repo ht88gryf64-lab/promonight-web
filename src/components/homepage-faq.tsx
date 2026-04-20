@@ -1,8 +1,37 @@
+'use client';
+
+import { useEffect, useRef } from 'react';
 import { HOMEPAGE_FAQS } from './homepage-json-ld';
+import { event } from '@/lib/analytics';
 
 export function HomepageFAQ() {
+  const ref = useRef<HTMLElement>(null);
+  const fired = useRef(false);
+
+  useEffect(() => {
+    if (!ref.current || fired.current) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !fired.current) {
+          fired.current = true;
+          event('faq_section_reached', {
+            section_id: 'faq',
+            page:
+              typeof window !== 'undefined' ? window.location.pathname : '/',
+          });
+        }
+      },
+      { threshold: 0.5 }
+    );
+    observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <section className="py-20 px-6 border-t border-border-subtle">
+    <section
+      ref={ref}
+      className="py-20 px-6 border-t border-border-subtle"
+    >
       <div className="max-w-3xl mx-auto">
         <div className="text-center mb-12">
           <span className="font-mono text-[10px] tracking-[1.5px] uppercase text-accent-red">
