@@ -69,3 +69,49 @@ export const SPORT_ICONS: Record<string, string> = {
   MLS: '⚽',
   WNBA: '🏀',
 };
+
+// ── Playoff types ──────────────────────────────────────────────────────────
+// Field names match the Firestore `playoffPromos` collection exactly.
+// Timestamp fields are converted to ISO strings at the data-layer boundary.
+export type PlayoffPromoType = PromoType | 'event';
+
+export interface PlayoffPromo {
+  teamId: string;
+  league: 'NBA' | 'NHL';
+  round: string;
+  title: string;
+  description: string;
+  date: string | null;
+  gameInfo: string;
+  type: PlayoffPromoType;
+  recurring: boolean;
+  recurringDetail: string;
+  highlight: boolean;
+  isPlayoff: boolean;
+  teamName: string;
+  teamAbbr: string;
+  source: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PlayoffPromoWithTeam extends PlayoffPromo {
+  team: Team;
+  venue: Venue | null;
+}
+
+export interface PlayoffConfig {
+  playoffsActive: boolean;
+  nbaActive: boolean;
+  nhlActive: boolean;
+  nbaRound: string;
+  nhlRound: string;
+  activeTeamIds: string[];
+  eliminatedTeamIds: string[];
+  lastScanDate: string | null;
+  updatedAt: string | null;
+}
+
+export interface ActivePlayoffTeam extends Team {
+  round: string;
+}
