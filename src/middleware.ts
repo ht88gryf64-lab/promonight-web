@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, type NextFetchEvent } from 'next/server';
 
 const AI_BOT_PATTERNS: Array<{ bot: string; match: RegExp }> = [
   { bot: 'GPTBot', match: /GPTBot/i },
@@ -19,7 +19,7 @@ function detectBot(userAgent: string | null): string | null {
   return null;
 }
 
-export async function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest, event: NextFetchEvent) {
   const userAgent = request.headers.get('user-agent');
   const bot = detectBot(userAgent);
   if (!bot) return NextResponse.next();
@@ -64,8 +64,7 @@ export async function middleware(request: NextRequest) {
       });
     });
 
-    // @ts-expect-error: waitUntil exists on Edge runtime's event object but Next types lag
-    request.waitUntil?.(logPromise);
+    event.waitUntil(logPromise);
   } catch (err) {
     console.error('MIDDLEWARE_ERROR', {
       message: (err as Error)?.message,
