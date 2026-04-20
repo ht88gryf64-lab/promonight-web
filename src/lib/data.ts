@@ -1,4 +1,5 @@
 import 'server-only';
+import { cache } from 'react';
 import { Timestamp } from 'firebase-admin/firestore';
 import { db } from './firebase';
 import type {
@@ -299,7 +300,7 @@ function sortByDateThenCreated(a: PlayoffPromo, b: PlayoffPromo): number {
   return a.createdAt.localeCompare(b.createdAt);
 }
 
-export async function getPlayoffConfig(): Promise<PlayoffConfig | null> {
+export const getPlayoffConfig = cache(async (): Promise<PlayoffConfig | null> => {
   const doc = await db.collection('appConfig').doc('playoffs').get();
   if (!doc.exists) return null;
   const data = doc.data()!;
@@ -316,7 +317,7 @@ export async function getPlayoffConfig(): Promise<PlayoffConfig | null> {
     lastScanDate: tsToIso(data.lastScanDate),
     updatedAt: tsToIso(data.updatedAt),
   };
-}
+});
 
 export async function isTeamInPlayoffs(
   teamId: string,
