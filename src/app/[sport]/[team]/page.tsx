@@ -1,7 +1,14 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { getAllTeams, getTeamBySlug, getTeamPromos, getVenueForTeam } from '@/lib/data';
+import {
+  getAllTeams,
+  getTeamBySlug,
+  getTeamPromos,
+  getVenueForTeam,
+  getPlayoffConfig,
+  getPlayoffPromosForTeam,
+} from '@/lib/data';
 import type { PromoType } from '@/lib/types';
 import { TeamHero } from '@/components/team-hero';
 import { TeamCalendar } from '@/components/team-calendar';
@@ -10,6 +17,8 @@ import { TeamContentSections } from '@/components/team-content-sections';
 import { TeamFAQ } from '@/components/team-faq';
 import { TeamRelatedAggregators } from '@/components/team-related-aggregators';
 import { JsonLd } from '@/components/json-ld';
+import { PlayoffSection } from '@/components/playoff-section';
+import { extractPlayoffOpponent } from '@/lib/promo-helpers';
 import { TeamPageTracker, TrackedCTA, TrackedAppLink } from '@/components/analytics-events';
 
 export const revalidate = 21600;
@@ -73,10 +82,39 @@ export default async function TeamPage({
     notFound();
   }
 
-  const [promos, venue] = await Promise.all([
+  // TEMPORARY: skip playoff config lookup entirely for MLB teams. MLB
+  // playoffs are not yet supported by the scanner pipeline, so there is
+  // nothing for them in appConfig/playoffs — saves one Firestore read
+  // per MLB team-page revalidation. Remove this guard when MLB joins.
+  const shouldCheckPlayoffs = team.league !== 'MLB';
+
+  const [promos, venue, playoffConfig] = await Promise.all([
     getTeamPromos(team.id),
     getVenueForTeam(team.id),
+    shouldCheckPlayoffs ? getPlayoffConfig() : Promise.resolve(null),
   ]);
+
+  const inPlayoffs =
+    !!playoffConfig?.playoffsActive &&
+    playoffConfig.activeTeamIds.includes(team.id);
+  const playoffPromos = inPlayoffs
+    ? await getPlayoffPromosForTeam(team.id)
+    : [];
+  const playoffRound = inPlayoffs
+    ? team.league === 'NBA'
+      ? playoffConfig!.nbaRound
+      : team.league === 'NHL'
+        ? playoffConfig!.nhlRound
+        : ''
+    : '';
+
+  const playoffContext = inPlayoffs && playoffPromos.length > 0
+    ? {
+        promos: playoffPromos,
+        round: playoffRound,
+        opponent: extractPlayoffOpponent(playoffPromos),
+      }
+    : undefined;
 
   const promoCounts: Record<PromoType, number> = { giveaway: 0, theme: 0, kids: 0, food: 0 };
   for (const p of promos) {
@@ -90,7 +128,14 @@ export default async function TeamPage({
 
   return (
     <>
-      <JsonLd team={team} promos={promos} venue={venue} promoCounts={promoCounts} />
+      <JsonLd
+        team={team}
+        promos={promos}
+        venue={venue}
+        promoCounts={promoCounts}
+        playoffPromos={inPlayoffs ? playoffPromos : undefined}
+        playoffContext={playoffContext}
+      />
       <TeamPageTracker
         teamSlug={team.id}
         sport={team.league}
@@ -104,6 +149,15 @@ export default async function TeamPage({
         promoCount={promos.length}
         promoCounts={promoCounts}
       />
+
+      {inPlayoffs && playoffPromos.length > 0 && (
+        <PlayoffSection
+          team={team}
+          promos={playoffPromos}
+          round={playoffRound}
+          lastUpdated={playoffConfig!.lastScanDate}
+        />
+      )}
 
       <TeamCalendar promos={promos} teamName={`${team.city} ${team.name}`} />
 
@@ -155,6 +209,7 @@ export default async function TeamPage({
         promos={promos}
         venue={venue}
         promoCounts={promoCounts}
+        playoffContext={playoffContext}
       />
     </>
   );

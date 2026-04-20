@@ -4,6 +4,7 @@ import { Bebas_Neue, DM_Sans, DM_Mono } from 'next/font/google';
 import { Nav } from '@/components/nav';
 import { Footer } from '@/components/footer';
 import { GA_MEASUREMENT_ID } from '@/lib/analytics';
+import { getPlayoffConfig } from '@/lib/data';
 import './globals.css';
 
 const bebasNeue = Bebas_Neue({
@@ -47,6 +48,16 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Fail-closed: if the config read throws (Firestore outage, perms, etc.),
+  // hide the Playoffs link rather than 500-ing every page site-wide.
+  let playoffsActive = false;
+  try {
+    const config = await getPlayoffConfig();
+    playoffsActive = config?.playoffsActive === true;
+  } catch (err) {
+    console.error('getPlayoffConfig failed in layout:', err);
+  }
+
   return (
     <html lang="en" className={`${bebasNeue.variable} ${dmSans.variable} ${dmMono.variable}`}>
       <body className="relative">
@@ -73,7 +84,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             />
           </>
         )}
-        <Nav />
+        <Nav playoffsActive={playoffsActive} />
         <main className="relative z-[1]">{children}</main>
         <Footer />
       </body>

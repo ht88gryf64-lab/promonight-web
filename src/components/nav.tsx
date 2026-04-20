@@ -11,7 +11,11 @@ const BROWSE_LINKS = [
   { href: '/promos/theme-nights', label: 'Theme nights' },
 ];
 
-export function Nav() {
+interface NavProps {
+  playoffsActive?: boolean;
+}
+
+export function Nav({ playoffsActive = false }: NavProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [browseOpen, setBrowseOpen] = useState(false);
 
@@ -30,6 +34,14 @@ export function Nav() {
         >
           Teams
         </Link>
+        {playoffsActive && (
+          <Link
+            href="/playoffs"
+            className="font-mono text-[11px] tracking-[0.08em] uppercase text-accent-red hover:text-white transition-colors"
+          >
+            Playoffs
+          </Link>
+        )}
         <div
           className="relative"
           onMouseEnter={() => setBrowseOpen(true)}
@@ -96,6 +108,15 @@ export function Nav() {
           >
             Teams
           </Link>
+          {playoffsActive && (
+            <Link
+              href="/playoffs"
+              onClick={() => setMenuOpen(false)}
+              className="font-mono text-[11px] tracking-[0.08em] uppercase text-accent-red hover:text-white"
+            >
+              Playoffs
+            </Link>
+          )}
           <div className="border-t border-border-subtle pt-4">
             <div className="font-mono text-[10px] tracking-[1.5px] uppercase text-text-dim mb-3">
               Browse
