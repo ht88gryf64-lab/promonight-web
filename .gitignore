@@ -16,3 +16,6 @@ build/
 *.tsbuildinfo
 next-env.d.ts
 .vercel
+
+# cached fonts for OG image generator (scripts/generate-og.ts)
+scripts/.fonts/
