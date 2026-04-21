@@ -59,13 +59,22 @@ export async function generateMetadata({
       description,
       url: `https://www.getpromonight.com/${team.sportSlug}/${team.id}`,
       type: 'website',
-      images: [`/api/og?team=${team.id}`],
+      images: [
+        {
+          url: '/og-image.png',
+          width: 1200,
+          height: 630,
+          alt: 'PromoNight — Every giveaway, every team',
+        },
+      ],
     },
     twitter: {
       card: 'summary_large_image',
+      site: '@promo_night_app',
+      creator: '@promo_night_app',
       title: `${team.city} ${team.name} ${year} Promo Schedule`,
       description,
-      images: [`/api/og?team=${team.id}`],
+      images: ['/og-image.png'],
     },
   };
 }
