@@ -1,18 +1,17 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import Image from 'next/image';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { QrCode } from '@/components/qr-code';
 import { TrackedAppLink } from '@/components/analytics-events';
-import { IOS_APP_URL, ANDROID_BETA_URL } from '@/components/app-download-buttons';
+import { IOS_APP_URL, ANDROID_APP_URL } from '@/components/app-download-buttons';
 
 export const revalidate = 86400;
 
 export const metadata: Metadata = {
-  title: 'Download PromoNight — iOS & Android Beta',
+  title: 'Download PromoNight for iOS and Android',
   description:
-    'Download PromoNight on iOS or join the Android beta. Scan the QR code or tap a badge to install the app.',
+    'Download PromoNight from the App Store or Google Play. Scan the QR code or tap a badge to install the app on iOS or Android.',
   alternates: { canonical: 'https://www.getpromonight.com/download' },
 };
 
@@ -69,32 +68,35 @@ export default async function DownloadPage() {
         <div className="grid grid-cols-1 md:grid-cols-[auto,1fr] gap-10 md:gap-16 items-center mt-16 pt-16 border-t border-border-subtle">
           {/* Android column */}
           <div className="text-center">
-            <QrCode value={ANDROID_BETA_URL} size={200} caption="Scan for Android beta" />
+            <QrCode value={ANDROID_APP_URL} size={200} caption="Scan for Android" />
           </div>
 
           <div className="space-y-6">
             <div>
               <div className="font-mono text-[10px] tracking-[1.5px] uppercase text-text-muted mb-2">
-                Android &middot; Closed beta
+                Android
               </div>
               <h2 className="font-display text-3xl tracking-[1px] mb-3">
-                JOIN THE ANDROID BETA
+                GET IT ON GOOGLE PLAY
               </h2>
-              <p className="text-text-secondary text-sm mb-2">
-                The Android version is in closed testing. It&apos;s open to all testers right now. Tap the button, accept the beta invite, then install from Google Play.
+              <p className="text-text-secondary text-sm mb-5">
+                On your phone? Tap the badge. On desktop? Point your phone camera at the QR code.
               </p>
-              <p className="text-text-muted text-xs font-mono tracking-[0.5px] mb-5">
-                Beta builds may have rough edges. Feedback lands at hello@getpromonight.com.
-              </p>
-              <Link
-                href={ANDROID_BETA_URL}
-                target="_blank"
-                rel="noopener"
-                className="inline-flex items-center gap-2 bg-bg-card text-white font-bold text-[15px] px-7 py-3.5 rounded-xl border border-border-hover transition-all hover:-translate-y-0.5 hover:border-white"
+              <TrackedAppLink
+                href={ANDROID_APP_URL}
+                platform="android"
+                section="download_page"
+                page="download"
+                className="inline-flex items-center transition-all hover:-translate-y-0.5"
               >
-                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-1.0001 0-.5509.4482-.9993.9993-.9993.5511 0 .9993.4484.9993.9993 0 .5515-.4482 1.0001-.9993 1.0001m-11.046 0c-.5511 0-.9993-.4486-.9993-1.0001 0-.5509.4482-.9993.9993-.9993.5511 0 .9993.4484.9993.9993 0 .5515-.4482 1.0001-.9993 1.0001m11.4045-6.02l1.9973-3.4592a.416.416 0 00-.1521-.5676.416.416 0 00-.5676.1521l-2.0223 3.503C15.5902 8.2439 13.8533 7.8508 12 7.8508s-3.5902.3931-5.1367 1.0989L4.841 5.4467a.4161.4161 0 00-.5677-.1521.4157.4157 0 00-.1521.5676l1.9973 3.4592C2.6889 11.1867.3432 14.6589 0 18.761h24c-.3432-4.1021-2.6889-7.5743-6.1185-9.4396"/></svg>
-                Join the Android beta
-              </Link>
+                <Image
+                  src="/google-play-badge.png"
+                  alt="Get it on Google Play"
+                  width={60 * (646 / 250)}
+                  height={60}
+                  unoptimized
+                />
+              </TrackedAppLink>
             </div>
           </div>
         </div>

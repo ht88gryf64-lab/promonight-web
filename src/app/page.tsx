@@ -70,9 +70,6 @@ export default async function HomePage() {
             </p>
             <div className="mt-6">
               <AppDownloadButtons section="hero" page="home" />
-              <p className="mt-3 text-text-muted text-xs font-mono tracking-[0.5px]">
-                Join the Android beta, open to all testers.
-              </p>
             </div>
           </div>
         </div>

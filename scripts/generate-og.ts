@@ -5,7 +5,7 @@
  * Run with: npx tsx scripts/generate-og.ts
  *
  * Produces a 1200x630 PNG used by Open Graph / Twitter Card previews.
- * Left half: PROMONIGHT wordmark, headline, App Store tagline.
+ * Left half: PROMONIGHT wordmark, headline, availability tagline.
  * Right half: the home-screen app screenshot rendered as a tilted phone.
  *
  * Fonts are fetched from Google Fonts on first run and cached under
@@ -190,7 +190,7 @@ async function main() {
   // Tagline
   ctx.font = '500 24px "DM Sans"';
   ctx.fillStyle = 'rgba(255,255,255,0.65)';
-  ctx.fillText('Free on the App Store', leftX, wordmarkBaselineY + 220);
+  ctx.fillText('Free on iOS and Android', leftX, wordmarkBaselineY + 220);
 
   // --- Export ---
   const buf = await canvas.encode('png');
