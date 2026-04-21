@@ -39,9 +39,21 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     siteName: 'PromoNight',
+    url: 'https://www.getpromonight.com',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'PromoNight — Every giveaway, every team',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
+    site: '@promo_night_app',
+    creator: '@promo_night_app',
+    images: ['/og-image.png'],
   },
   other: {
     'impact-site-verification': 'fe7143b6-ec57-416e-afa7-a4e85008ce9a',
