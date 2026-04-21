@@ -19,3 +19,6 @@ next-env.d.ts
 
 # cached fonts for OG image generator (scripts/generate-og.ts)
 scripts/.fonts/
+
+# IndexNow key verification file — generated at prebuild from INDEXNOW_KEY env var
+public/*.txt

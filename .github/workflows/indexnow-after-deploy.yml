@@ -1,0 +1,30 @@
+name: IndexNow after Vercel prod deploy
+
+# Vercel reports deploy status to GitHub via a deployment_status event.
+# This workflow fires when a production deploy finishes successfully and
+# pings our /api/indexnow/deploy endpoint, which reads the sitemap and
+# submits every URL to IndexNow.
+
+on:
+  deployment_status:
+
+jobs:
+  ping-indexnow:
+    if: >
+      github.event.deployment_status.state == 'success' &&
+      github.event.deployment.environment == 'Production'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify /api/indexnow/deploy
+        env:
+          INDEXNOW_DEPLOY_SECRET: ${{ secrets.INDEXNOW_DEPLOY_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${INDEXNOW_DEPLOY_SECRET}" ]; then
+            echo "INDEXNOW_DEPLOY_SECRET not set in repo secrets"
+            exit 1
+          fi
+          curl -fsS -X POST \
+            -H "x-indexnow-secret: ${INDEXNOW_DEPLOY_SECRET}" \
+            -H "Content-Type: application/json" \
+            https://www.getpromonight.com/api/indexnow/deploy
