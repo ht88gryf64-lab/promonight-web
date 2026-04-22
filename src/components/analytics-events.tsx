@@ -34,6 +34,7 @@ export function TrackedAppLink({
   platform,
   section,
   page,
+  teamSlug,
   className,
   children,
   target,
@@ -43,6 +44,7 @@ export function TrackedAppLink({
   platform: 'ios' | 'android';
   section: string;
   page: string;
+  teamSlug?: string;
   className?: string;
   children: React.ReactNode;
   target?: string;
@@ -52,7 +54,7 @@ export function TrackedAppLink({
   const resolvedTarget = target ?? (isExternal ? '_blank' : undefined);
   const resolvedRel = rel ?? (isExternal ? 'noopener' : undefined);
   const handleClick = () => {
-    trackInstallClick({ platform, section, page });
+    trackInstallClick({ platform, section, page, teamSlug });
   };
 
   return (

@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
-import Script from 'next/script';
+import { Suspense } from 'react';
 import { Bebas_Neue, DM_Sans, DM_Mono } from 'next/font/google';
 import { Nav } from '@/components/nav';
 import { Footer } from '@/components/footer';
 import { UTMCaptureProvider } from '@/components/utm-capture-provider';
-import { GA_MEASUREMENT_ID } from '@/lib/analytics';
+import { AnalyticsProvider } from '@/components/analytics/AnalyticsProvider';
+import { PageViewTracker } from '@/components/analytics/PageViewTracker';
 import { getPlayoffConfig } from '@/lib/data';
 import './globals.css';
 
@@ -74,33 +75,17 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en" className={`${bebasNeue.variable} ${dmSans.variable} ${dmMono.variable}`}>
       <body className="relative">
-        {GA_MEASUREMENT_ID && (
-          <>
-            <Script
-              strategy="afterInteractive"
-              src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
-            />
-            <Script
-              id="ga4-init"
-              strategy="afterInteractive"
-              dangerouslySetInnerHTML={{
-                __html: `
-                  window.dataLayer = window.dataLayer || [];
-                  function gtag(){dataLayer.push(arguments);}
-                  gtag('js', new Date());
-                  gtag('config', '${GA_MEASUREMENT_ID}', {
-                    send_page_view: true,
-                    debug_mode: ${process.env.NODE_ENV === 'development'}
-                  });
-                `,
-              }}
-            />
-          </>
-        )}
-        <UTMCaptureProvider />
-        <Nav playoffsActive={playoffsActive} />
-        <main className="relative z-[1]">{children}</main>
-        <Footer />
+        <AnalyticsProvider>
+          {/* useSearchParams inside PageViewTracker requires a Suspense
+              boundary during prerender — this scope covers it. */}
+          <Suspense fallback={null}>
+            <PageViewTracker />
+          </Suspense>
+          <UTMCaptureProvider />
+          <Nav playoffsActive={playoffsActive} />
+          <main className="relative z-[1]">{children}</main>
+          <Footer />
+        </AnalyticsProvider>
       </body>
     </html>
   );

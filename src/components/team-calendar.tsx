@@ -1,13 +1,26 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import type { Promo, PromoType } from '@/lib/types';
+import type { Promo, PromoType, Team } from '@/lib/types';
 import { PROMO_TYPE_COLORS, PROMO_TYPE_LABELS } from '@/lib/types';
 import { PromoBadge } from './promo-badge';
+import { TicketsBlock } from './affiliates/TicketsBlock';
+import { normalizeSport, track } from '@/lib/analytics';
 
 interface TeamCalendarProps {
   promos: Promo[];
   teamName: string;
+  teamSlug?: string;
+  sport?: string;
+  /** Full Team object — optional to preserve back-compat. When present, the
+   *  selected-day detail renders per-promo Get-Tickets CTAs. */
+  team?: Team;
+}
+
+// Stable synthetic promo ID. Firestore promos don't carry a field-level id —
+// (team_slug, date, title) uniquely identifies a row in practice.
+function synthPromoId(teamSlug: string, promo: Promo): string {
+  return `${teamSlug}:${promo.date}:${promo.title}`;
 }
 
 function monthKey(year: number, month: number): string {
@@ -33,7 +46,7 @@ function formatShortDate(dateStr: string): string {
   });
 }
 
-export function TeamCalendar({ promos, teamName }: TeamCalendarProps) {
+export function TeamCalendar({ promos, teamName, teamSlug, sport, team }: TeamCalendarProps) {
   const today = useMemo(() => {
     const d = new Date();
     return { year: d.getFullYear(), month: d.getMonth(), day: d.getDate() };
@@ -194,9 +207,22 @@ export function TeamCalendar({ promos, teamName }: TeamCalendarProps) {
               return (
                 <button
                   key={i}
-                  onClick={() =>
-                    setSelectedDate(hasPromos && !isSelected ? cell.dateStr : null)
-                  }
+                  onClick={() => {
+                    const shouldOpen = hasPromos && !isSelected;
+                    setSelectedDate(shouldOpen ? cell.dateStr : null);
+                    if (shouldOpen && teamSlug) {
+                      const normalizedSport = normalizeSport(sport);
+                      for (const p of cell.promos) {
+                        track('promo_card_tap', {
+                          surface: 'web_team_page',
+                          promo_id: synthPromoId(teamSlug, p),
+                          team_slug: teamSlug,
+                          sport: normalizedSport,
+                          promo_type: p.type,
+                        });
+                      }
+                    }
+                  }}
                   disabled={!hasPromos}
                   className={`relative aspect-square rounded-lg flex flex-col items-center justify-center text-sm transition-colors ${
                     isSelected
@@ -290,6 +316,14 @@ export function TeamCalendar({ promos, teamName }: TeamCalendarProps) {
                       <div className="text-text-dim text-[10px] font-mono mt-1 uppercase tracking-[0.5px]">
                         vs {p.opponent}
                       </div>
+                    )}
+                    {team && teamSlug && (
+                      <TicketsBlock
+                        team={team}
+                        surface="web_team_page"
+                        placement="promo_card"
+                        promoId={`${teamSlug}:${p.date}:${p.title}`}
+                      />
                     )}
                   </div>
                 </div>

@@ -20,6 +20,12 @@ import { JsonLd } from '@/components/json-ld';
 import { PlayoffSection } from '@/components/playoff-section';
 import { extractPlayoffOpponent } from '@/lib/promo-helpers';
 import { TeamPageTracker, TrackedCTA, TrackedAppLink } from '@/components/analytics-events';
+import { EngagementTracker } from '@/components/analytics/EngagementTracker';
+import { TicketsBlock } from '@/components/affiliates/TicketsBlock';
+import { ParkingCTA } from '@/components/affiliates/ParkingCTA';
+import { HotelsCTA } from '@/components/affiliates/HotelsCTA';
+import { FanGearCTA } from '@/components/affiliates/FanGearCTA';
+import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
 
 export const revalidate = 21600;
 
@@ -151,6 +157,7 @@ export default async function TeamPage({
         teamName={`${team.city} ${team.name}`}
         promoCount={promos.length}
       />
+      <EngagementTracker teamSlug={team.id} sport={team.league} />
 
       <TeamHero
         team={team}
@@ -168,7 +175,32 @@ export default async function TeamPage({
         />
       )}
 
-      <TeamCalendar promos={promos} teamName={`${team.city} ${team.name}`} />
+      <TicketsBlock
+        team={team}
+        surface="web_team_page"
+        placement="team_page_hero"
+      />
+
+      {venue && (
+        <section className="py-8 px-6 border-t border-border-subtle">
+          <div className="max-w-3xl mx-auto">
+            <ParkingCTA
+              team={team}
+              surface="web_team_page"
+              venueName={venue.name}
+              placement="team_page_inline"
+            />
+          </div>
+        </section>
+      )}
+
+      <TeamCalendar
+        promos={promos}
+        teamName={`${team.city} ${team.name}`}
+        teamSlug={team.id}
+        sport={team.league}
+        team={team}
+      />
 
       <PromoList
         promos={upcoming.slice(0, 3)}
@@ -198,6 +230,7 @@ export default async function TeamPage({
               platform="ios"
               section="team_cta"
               page={`team/${team.id}`}
+              teamSlug={team.id}
               className="inline-flex items-center gap-2 bg-accent-red text-white font-bold text-sm px-7 py-3.5 rounded-xl transition-all hover:-translate-y-0.5 hover:shadow-[0_0_30px_rgba(239,68,68,0.3)]"
             >
               Download PromoNight
@@ -220,6 +253,24 @@ export default async function TeamPage({
         promoCounts={promoCounts}
         playoffContext={playoffContext}
       />
+
+      <HotelsCTA
+        team={team}
+        surface="web_team_page"
+        placement="team_page_footer"
+      />
+
+      <FanGearCTA
+        team={team}
+        surface="web_team_page"
+        placement="team_page_footer"
+      />
+
+      <section className="py-6 px-6 border-t border-border-subtle">
+        <div className="max-w-3xl mx-auto">
+          <AffiliateDisclosure />
+        </div>
+      </section>
     </>
   );
 }

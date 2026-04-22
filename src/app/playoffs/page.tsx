@@ -1,8 +1,12 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getAllPlayoffPromos } from '@/lib/data';
-import type { PlayoffPromo, Team, PlayoffConfig } from '@/lib/types';
+import { getAllPlayoffPromos, getVenueForTeam } from '@/lib/data';
+import type { PlayoffPromo, Team, Venue, PlayoffConfig } from '@/lib/types';
+import { TicketsBlock } from '@/components/affiliates/TicketsBlock';
+import { ParkingCTA } from '@/components/affiliates/ParkingCTA';
+import { HotelsCTA } from '@/components/affiliates/HotelsCTA';
+import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
 
 export const revalidate = 3600;
 
@@ -139,13 +143,13 @@ function countWords(...strings: (string | undefined)[]): number {
 
 function pickHighlightExample(
   byLeague: Record<'NBA' | 'NHL', { team: Team; promos: PlayoffPromo[] }[]>,
-): { title: string; teamName: string } | null {
-  // Pool all promos with their team names.
-  const all: { promo: PlayoffPromo; teamName: string }[] = [];
+): { title: string; teamName: string; team: Team } | null {
+  // Pool all promos with their team.
+  const all: { promo: PlayoffPromo; team: Team }[] = [];
   for (const league of ['NBA', 'NHL'] as const) {
     for (const group of byLeague[league]) {
       for (const promo of group.promos) {
-        all.push({ promo, teamName: group.team.name });
+        all.push({ promo, team: group.team });
       }
     }
   }
@@ -168,7 +172,8 @@ function pickHighlightExample(
   if (upcomingHighlights.length > 0) {
     return {
       title: upcomingHighlights[0].promo.title,
-      teamName: upcomingHighlights[0].teamName,
+      teamName: upcomingHighlights[0].team.name,
+      team: upcomingHighlights[0].team,
     };
   }
 
@@ -177,7 +182,8 @@ function pickHighlightExample(
   if (anyHighlight) {
     return {
       title: anyHighlight.promo.title,
-      teamName: anyHighlight.teamName,
+      teamName: anyHighlight.team.name,
+      team: anyHighlight.team,
     };
   }
 
@@ -186,7 +192,8 @@ function pickHighlightExample(
   if (firstGiveaway) {
     return {
       title: firstGiveaway.promo.title,
-      teamName: firstGiveaway.teamName,
+      teamName: firstGiveaway.team.name,
+      team: firstGiveaway.team,
     };
   }
 
@@ -195,7 +202,8 @@ function pickHighlightExample(
   if (firstDated) {
     return {
       title: firstDated.promo.title,
-      teamName: firstDated.teamName,
+      teamName: firstDated.team.name,
+      team: firstDated.team,
     };
   }
 
@@ -212,6 +220,17 @@ export default async function PlayoffsPage() {
   const nbaGroups = config.nbaActive ? byLeague.NBA : [];
   const nhlGroups = config.nhlActive ? byLeague.NHL : [];
   const example = pickHighlightExample(byLeague);
+
+  // Venue lookup for parking CTAs. Fetched once per ISR revalidate (1h).
+  // Missing venues fall back gracefully inside <ParkingCTA />.
+  const activeTeams = [
+    ...nbaGroups.map((g) => g.team),
+    ...nhlGroups.map((g) => g.team),
+  ];
+  const venueEntries = await Promise.all(
+    activeTeams.map(async (t) => [t.id, await getVenueForTeam(t.id)] as const),
+  );
+  const venuesByTeamId = new Map<string, Venue | null>(venueEntries);
   const lastUpdated = formatFullTimestamp(
     config.lastScanDate ?? config.updatedAt,
   );
@@ -298,11 +317,22 @@ export default async function PlayoffsPage() {
           </p>
         </header>
 
+        {example && (
+          <div className="mb-12 -mx-6">
+            <TicketsBlock
+              team={example.team}
+              surface="web_playoffs"
+              placement="playoffs_hub"
+            />
+          </div>
+        )}
+
         {nbaGroups.length > 0 && (
           <LeagueSection
             league="NBA"
             roundCode={config.nbaRound}
             groups={nbaGroups}
+            venuesByTeamId={venuesByTeamId}
           />
         )}
 
@@ -311,6 +341,7 @@ export default async function PlayoffsPage() {
             league="NHL"
             roundCode={config.nhlRound}
             groups={nhlGroups}
+            venuesByTeamId={venuesByTeamId}
           />
         )}
 
@@ -318,6 +349,31 @@ export default async function PlayoffsPage() {
           <p className="text-text-secondary text-center py-16">
             No playoff promotions scheduled yet. Check back soon.
           </p>
+        )}
+
+        {activeTeams.length > 0 && (
+          <section className="mt-16 pt-10 border-t border-border-subtle">
+            <span className="font-mono text-[10px] tracking-[1.5px] uppercase text-accent-red">
+              Visiting fans
+            </span>
+            <h2 className="font-display text-3xl md:text-4xl tracking-[1px] mb-3 mt-1">
+              PLAN YOUR PLAYOFF TRIP
+            </h2>
+            <p className="text-text-secondary text-sm md:text-base leading-relaxed max-w-3xl mb-8">
+              Traveling for a playoff game? Find a hotel in any active team&apos;s city.
+            </p>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {activeTeams.map((t) => (
+                <HotelsCTA
+                  key={t.id}
+                  team={t}
+                  surface="web_playoffs"
+                  placement="playoffs_hub"
+                  variant="card"
+                />
+              ))}
+            </div>
+          </section>
         )}
 
         <section className="mt-16 pt-10 border-t border-border-subtle">
@@ -333,6 +389,10 @@ export default async function PlayoffsPage() {
             ))}
           </div>
         </section>
+
+        <section className="mt-12 pt-6 border-t border-border-subtle">
+          <AffiliateDisclosure />
+        </section>
       </div>
     </div>
   );
@@ -342,10 +402,12 @@ function LeagueSection({
   league,
   roundCode,
   groups,
+  venuesByTeamId,
 }: {
   league: 'NBA' | 'NHL';
   roundCode: string;
   groups: { team: Team; promos: PlayoffPromo[] }[];
+  venuesByTeamId: Map<string, Venue | null>;
 }) {
   return (
     <section className="mt-12 pt-10 border-t border-border-subtle">
@@ -357,14 +419,27 @@ function LeagueSection({
       </h2>
       <div className="grid gap-6 md:grid-cols-2">
         {groups.map((g) => (
-          <TeamCard key={g.team.id} team={g.team} promos={g.promos} />
+          <TeamCard
+            key={g.team.id}
+            team={g.team}
+            promos={g.promos}
+            venue={venuesByTeamId.get(g.team.id) ?? null}
+          />
         ))}
       </div>
     </section>
   );
 }
 
-function TeamCard({ team, promos }: { team: Team; promos: PlayoffPromo[] }) {
+function TeamCard({
+  team,
+  promos,
+  venue,
+}: {
+  team: Team;
+  promos: PlayoffPromo[];
+  venue: Venue | null;
+}) {
   const opponent = promos
     .map((p) => extractOpponent(p.gameInfo))
     .find((o): o is string => !!o);
@@ -412,13 +487,20 @@ function TeamCard({ team, promos }: { team: Team; promos: PlayoffPromo[] }) {
         )}
       </ul>
 
-      <div className="mt-5 pt-4 border-t border-border-subtle">
+      <div className="mt-5 pt-4 border-t border-border-subtle space-y-2">
         <Link
           href={teamUrl}
-          className="font-mono text-[11px] tracking-[0.08em] uppercase text-accent-red hover:text-white transition-colors"
+          className="block font-mono text-[11px] tracking-[0.08em] uppercase text-accent-red hover:text-white transition-colors"
         >
           View full {team.name} promotions →
         </Link>
+        <ParkingCTA
+          team={team}
+          surface="web_playoffs"
+          venueName={venue?.name}
+          placement="playoffs_hub"
+          compact
+        />
       </div>
     </article>
   );
