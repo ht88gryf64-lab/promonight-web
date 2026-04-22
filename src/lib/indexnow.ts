@@ -1,4 +1,7 @@
-import 'server-only';
+// No `server-only` guard here so the file can be imported by CLI scripts
+// running under plain tsx/Node. Safe because INDEXNOW_KEY is unprefixed and
+// Next.js replaces it with undefined in any client bundle (the function
+// no-ops when the key is missing).
 
 const INDEXNOW_ENDPOINT = 'https://api.indexnow.org/IndexNow';
 const HOST = 'www.getpromonight.com';
