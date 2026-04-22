@@ -19,7 +19,8 @@ import { TeamRelatedAggregators } from '@/components/team-related-aggregators';
 import { JsonLd } from '@/components/json-ld';
 import { PlayoffSection } from '@/components/playoff-section';
 import { extractPlayoffOpponent } from '@/lib/promo-helpers';
-import { TeamPageTracker, TrackedCTA, TrackedAppLink } from '@/components/analytics-events';
+import { TeamPageTracker, TrackedCTA } from '@/components/analytics-events';
+import { AppDownloadButtons } from '@/components/app-download-buttons';
 import { EngagementTracker } from '@/components/analytics/EngagementTracker';
 import { TicketsBlock } from '@/components/affiliates/TicketsBlock';
 import { ParkingCTA } from '@/components/affiliates/ParkingCTA';
@@ -225,16 +226,11 @@ export default async function TeamPage({
             <p className="text-text-secondary text-sm mb-8">
               Track every {team.city} {team.name} giveaway, theme night, and food deal with push notifications and a personalized calendar.
             </p>
-            <TrackedAppLink
-              href="/download"
-              platform="ios"
+            <AppDownloadButtons
               section="team_cta"
               page={`team/${team.id}`}
               teamSlug={team.id}
-              className="inline-flex items-center gap-2 bg-accent-red text-white font-bold text-sm px-7 py-3.5 rounded-xl transition-all hover:-translate-y-0.5 hover:shadow-[0_0_30px_rgba(239,68,68,0.3)]"
-            >
-              Download PromoNight
-            </TrackedAppLink>
+            />
           </div>
         </section>
       </TrackedCTA>
@@ -256,6 +252,7 @@ export default async function TeamPage({
 
       <HotelsCTA
         team={team}
+        venue={venue}
         surface="web_team_page"
         placement="team_page_footer"
       />

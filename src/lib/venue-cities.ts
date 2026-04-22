@@ -1,12 +1,16 @@
 /**
- * Teams whose stadium sits in a different municipality than the team's brand
- * city. Used by <HotelsCTA> to route Booking.com searches to the actual
- * stadium area rather than the brand city a local might infer from the team
- * name (e.g. Cowboys fans need Arlington, not Dallas).
+ * Fallback city map for <HotelsCTA>, used ONLY when a team lacks venue
+ * coordinates in Firestore. Coordinates are the primary path now —
+ * buildBookingUrl routes to Booking.com's lat/lng search when available,
+ * which radiates ~5-10 mi around the venue and sidesteps the entire
+ * brand-city-vs-stadium-city string matching problem.
  *
- * Keyed by team slug (the Firestore doc id, also used as the URL segment).
- * Verified against the active team roster: entries where brand city already
- * equals stadium city are intentionally omitted — they would be no-ops.
+ * Don't expand this table — add venue coordinates to the team's Firestore
+ * venue doc instead. At audit time this table was the live fallback for
+ * ~26% of teams (all MLS, most NBA, most WNBA, a handful of NFL/NHL).
+ *
+ * Keyed by team slug (Firestore doc id, also the URL segment). Entries only
+ * exist where brand city differs from stadium city.
  */
 export const VENUE_CITY_OVERRIDES: Record<string, string> = {
   // NFL — brand cities rarely match stadium cities.

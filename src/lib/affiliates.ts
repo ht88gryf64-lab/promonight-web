@@ -168,13 +168,39 @@ export function buildSpotHeroUrl(opts: SpotHeroOpts): string {
 }
 
 export type BookingOpts = {
-  location: string; // city name, Booking.com searches fuzzy on this
+  /** Preferred: exact venue coordinates. Booking's coordinate search radiates
+   *  ~5-10 mi from the point — ideal for stadium-area hotel searches and
+   *  immune to the brand-city-vs-stadium-city string-matching problem. */
+  latitude?: number;
+  longitude?: number;
+  /** Fallback when coordinates aren't available. Free-form city/region query. */
+  location?: string;
   surface: AnalyticsSurface;
   promoId?: string | null;
 };
 
+function hasValidCoords(lat: number | undefined, lng: number | undefined): boolean {
+  return (
+    typeof lat === 'number' &&
+    typeof lng === 'number' &&
+    Number.isFinite(lat) &&
+    Number.isFinite(lng) &&
+    lat !== 0 &&
+    lng !== 0
+  );
+}
+
 export function buildBookingUrl(opts: BookingOpts): string {
-  const base = `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(opts.location)}`;
+  let base: string;
+  if (hasValidCoords(opts.latitude, opts.longitude)) {
+    base = `https://www.booking.com/searchresults.html?latitude=${opts.latitude}&longitude=${opts.longitude}`;
+  } else if (opts.location && opts.location.trim().length > 0) {
+    base = `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(opts.location)}`;
+  } else {
+    // Neither lat/lng nor location — land on Booking homepage; still tag so
+    // partner attribution works if the visitor converts.
+    base = 'https://www.booking.com/';
+  }
   return bookingUrl(base, {
     surface: opts.surface,
     promoId: opts.promoId,

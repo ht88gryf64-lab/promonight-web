@@ -367,6 +367,7 @@ export default async function PlayoffsPage() {
                 <HotelsCTA
                   key={t.id}
                   team={t}
+                  venue={venuesByTeamId.get(t.id) ?? null}
                   surface="web_playoffs"
                   placement="playoffs_hub"
                   variant="card"
