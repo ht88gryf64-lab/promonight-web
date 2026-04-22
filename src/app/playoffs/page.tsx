@@ -3,7 +3,6 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getAllPlayoffPromos, getVenueForTeam } from '@/lib/data';
 import type { PlayoffPromo, Team, Venue, PlayoffConfig } from '@/lib/types';
-import { TicketsBlock } from '@/components/affiliates/TicketsBlock';
 import { ParkingCTA } from '@/components/affiliates/ParkingCTA';
 import { HotelsCTA } from '@/components/affiliates/HotelsCTA';
 import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
@@ -143,7 +142,7 @@ function countWords(...strings: (string | undefined)[]): number {
 
 function pickHighlightExample(
   byLeague: Record<'NBA' | 'NHL', { team: Team; promos: PlayoffPromo[] }[]>,
-): { title: string; teamName: string; team: Team } | null {
+): { title: string; teamName: string } | null {
   // Pool all promos with their team.
   const all: { promo: PlayoffPromo; team: Team }[] = [];
   for (const league of ['NBA', 'NHL'] as const) {
@@ -173,7 +172,6 @@ function pickHighlightExample(
     return {
       title: upcomingHighlights[0].promo.title,
       teamName: upcomingHighlights[0].team.name,
-      team: upcomingHighlights[0].team,
     };
   }
 
@@ -183,7 +181,6 @@ function pickHighlightExample(
     return {
       title: anyHighlight.promo.title,
       teamName: anyHighlight.team.name,
-      team: anyHighlight.team,
     };
   }
 
@@ -193,7 +190,6 @@ function pickHighlightExample(
     return {
       title: firstGiveaway.promo.title,
       teamName: firstGiveaway.team.name,
-      team: firstGiveaway.team,
     };
   }
 
@@ -203,7 +199,6 @@ function pickHighlightExample(
     return {
       title: firstDated.promo.title,
       teamName: firstDated.team.name,
-      team: firstDated.team,
     };
   }
 
@@ -316,16 +311,6 @@ export default async function PlayoffsPage() {
             Last updated: {lastUpdated}
           </p>
         </header>
-
-        {example && (
-          <div className="mb-12 -mx-6">
-            <TicketsBlock
-              team={example.team}
-              surface="web_playoffs"
-              placement="playoffs_hub"
-            />
-          </div>
-        )}
 
         {nbaGroups.length > 0 && (
           <LeagueSection
