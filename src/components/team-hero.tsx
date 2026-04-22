@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import type { Team, Venue, PromoType } from '@/lib/types';
 import { SPORT_ICONS, PROMO_TYPE_LABELS } from '@/lib/types';
-import { AppDownloadButtons } from './app-download-buttons';
 
 interface TeamHeroProps {
   team: Team;
@@ -79,14 +78,6 @@ export function TeamHero({ team, venue, promoCount, promoCounts }: TeamHeroProps
           <StatBox label={PROMO_TYPE_LABELS.kids} value={promoCounts.kids.toString()} color="#60a5fa" />
         </div>
 
-        {/* CTA — shared component so iOS and Android visitors both see
-            their store badge. Renders centered by design. */}
-        <AppDownloadButtons
-          section="team_hero"
-          page={`team/${team.id}`}
-          teamSlug={team.id}
-          variant="compact"
-        />
       </div>
     </section>
   );
