@@ -13,7 +13,11 @@ export function FanGearCTA({
   placement?: string;
 }) {
   const teamName = `${team.city} ${team.name}`;
-  const href = buildFanaticsUrl({ team: teamName, surface });
+  const href = buildFanaticsUrl({
+    teamSlug: team.id,
+    league: team.league,
+    surface,
+  });
 
   return (
     <section className="py-10 px-6 border-t border-border-subtle">

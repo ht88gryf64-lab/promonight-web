@@ -187,8 +187,8 @@ export default async function TeamPage({
           <div className="max-w-3xl mx-auto">
             <ParkingCTA
               team={team}
+              venue={venue}
               surface="web_team_page"
-              venueName={venue.name}
               placement="team_page_inline"
             />
           </div>

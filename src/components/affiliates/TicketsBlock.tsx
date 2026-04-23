@@ -36,8 +36,7 @@ export function TicketsBlock({
     promoId,
   });
   const stubhubHref = buildStubHubUrl({
-    team: teamName,
-    event,
+    teamSlug: team.id,
     surface,
     promoId,
   });

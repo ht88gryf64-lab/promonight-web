@@ -119,18 +119,19 @@ export function buildSeatGeekUrl(opts: SeatGeekOpts): string {
 }
 
 export type StubHubOpts = {
-  team?: string; // display name e.g. 'Minnesota Twins'
-  event?: string; // optional event URL/path
+  /** Team slug (Firestore id), e.g. 'toronto-blue-jays'. StubHub's canonical
+   *  team-page format is `/{slug}-tickets/category/<id>`, but the numeric
+   *  category id is per-team and not easy to source. `/{slug}-schedule/` also
+   *  resolves to a real team page on StubHub and works without an id map. */
+  teamSlug?: string;
   surface: AnalyticsSurface;
   promoId?: string | null;
 };
 
 export function buildStubHubUrl(opts: StubHubOpts): string {
-  // StubHub's canonical team pages are slug-based and brittle across sports;
-  // the search endpoint is deterministic and returns the team page as the
-  // top hit for any real team name.
-  const query = opts.event || opts.team || '';
-  const base = `https://www.stubhub.com/find/s/?q=${encodeURIComponent(query)}`;
+  const base = opts.teamSlug
+    ? `https://www.stubhub.com/${encodeURIComponent(opts.teamSlug)}-schedule/`
+    : 'https://www.stubhub.com/';
   return stubHubUrl(base, {
     surface: opts.surface,
     promoId: opts.promoId,
@@ -138,15 +139,20 @@ export function buildStubHubUrl(opts: StubHubOpts): string {
 }
 
 export type FanaticsOpts = {
-  team: string; // display name e.g. 'Minnesota Twins'
+  /** Team slug (Firestore id), e.g. 'toronto-blue-jays'. Fanatics' canonical
+   *  team URLs are `/{league-lower}/{slug}/<opaque-id-suffix>` and the suffix
+   *  isn't derivable programmatically. The bare `/{league-lower}/{slug}/` path
+   *  redirects to the canonical team hub in every observed case. */
+  teamSlug: string;
+  /** League code, e.g. 'MLB' / 'NBA' — mapped to lowercase segment. */
+  league: string;
   surface: AnalyticsSurface;
   promoId?: string | null;
 };
 
 export function buildFanaticsUrl(opts: FanaticsOpts): string {
-  // Fanatics search returns the team hub as the top result and handles every
-  // team across the six supported leagues consistently.
-  const base = `https://www.fanatics.com/search?query=${encodeURIComponent(opts.team)}`;
+  const leagueSegment = opts.league.toLowerCase();
+  const base = `https://www.fanatics.com/${encodeURIComponent(leagueSegment)}/${encodeURIComponent(opts.teamSlug)}/`;
   return fanaticsUrl(base, {
     surface: opts.surface,
     promoId: opts.promoId,
@@ -154,13 +160,24 @@ export function buildFanaticsUrl(opts: FanaticsOpts): string {
 }
 
 export type SpotHeroOpts = {
-  venue: string; // venue name, used as search destination
+  /** Preferred — venue coordinates. SpotHero's /search?lat=&lng= endpoint
+   *  resolves to a list of stadium-area parking garages. */
+  latitude?: number;
+  longitude?: number;
+  /** Retained for call-site compatibility but unused: SpotHero's
+   *  ?destination=<name> query crashes their servers (real 500) and the
+   *  canonical /destination/<city>/<venue>-parking path requires a per-team
+   *  venue-slug map we don't maintain. When only a name is supplied we fall
+   *  back to the SpotHero homepage rather than ship a 500-ing link. */
+  venue?: string;
   surface: AnalyticsSurface;
   promoId?: string | null;
 };
 
 export function buildSpotHeroUrl(opts: SpotHeroOpts): string {
-  const base = `https://spothero.com/search?destination=${encodeURIComponent(opts.venue)}`;
+  const base = hasValidCoords(opts.latitude, opts.longitude)
+    ? `https://spothero.com/search?lat=${opts.latitude}&lng=${opts.longitude}`
+    : 'https://spothero.com/';
   return spotHeroUrl(base, {
     surface: opts.surface,
     promoId: opts.promoId,

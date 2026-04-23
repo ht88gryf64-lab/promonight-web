@@ -482,8 +482,8 @@ function TeamCard({
         </Link>
         <ParkingCTA
           team={team}
+          venue={venue}
           surface="web_playoffs"
-          venueName={venue?.name}
           placement="playoffs_hub"
           compact
         />
