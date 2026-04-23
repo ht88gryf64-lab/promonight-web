@@ -61,6 +61,9 @@ export async function generateMetadata({
   return {
     title,
     description,
+    alternates: {
+      canonical: `https://www.getpromonight.com/${team.sportSlug}/${team.id}`,
+    },
     openGraph: {
       title: `${team.city} ${team.name} ${year} Promo Schedule`,
       description,

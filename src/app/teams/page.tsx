@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   title: 'Browse All Teams — 167 Teams, 6 Leagues',
   description:
     'Find your team\'s promo schedule. Browse giveaways, theme nights, and food deals for all 167 teams across MLB, NBA, NHL, NFL, MLS, and WNBA.',
+  alternates: { canonical: 'https://www.getpromonight.com/teams' },
 };
 
 export default async function TeamsPage() {

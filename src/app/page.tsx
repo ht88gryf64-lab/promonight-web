@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getAllTeams, getHighlightedPromos, getPromoCount, getTeamPromos } from '@/lib/data';
 import { HotPromosHero } from '@/components/hot-promos-hero';
@@ -9,6 +10,10 @@ import { HomepageFAQ } from '@/components/homepage-faq';
 import { HomepageJsonLd } from '@/components/homepage-json-ld';
 
 export const revalidate = 3600;
+
+export const metadata: Metadata = {
+  alternates: { canonical: 'https://www.getpromonight.com' },
+};
 
 export default async function HomePage() {
   const [promoCount, hotPromos, teams] = await Promise.all([
