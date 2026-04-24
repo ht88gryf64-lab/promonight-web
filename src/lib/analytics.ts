@@ -25,7 +25,9 @@ export type AnalyticsEvent =
   | 'newsletter_signup'
   | 'search_query'
   | 'share_initiated'
-  | 'game_day_view';
+  | 'game_day_view'
+  | 'game_tap'
+  | 'away_game_expanded';
 
 export type AnalyticsSurface =
   | 'web_home'
@@ -137,6 +139,25 @@ export type GameDayViewProperties = {
   sport?: Sport;
 };
 
+export type GameTapProperties = {
+  surface: AnalyticsSurface;
+  team_slug: string;
+  sport?: Sport;
+  game_id: string;
+  is_home: boolean;
+  has_promo: boolean;
+  opponent_slug: string;
+};
+
+export type AwayGameExpandedProperties = {
+  surface: AnalyticsSurface;
+  team_slug: string;
+  sport?: Sport;
+  game_id: string;
+  opponent_slug: string;
+  has_promo: boolean;
+};
+
 export type EventPropertiesMap = {
   page_view: PageViewProperties;
   cta_click: CtaClickProperties;
@@ -148,6 +169,8 @@ export type EventPropertiesMap = {
   search_query: SearchQueryProperties;
   share_initiated: ShareInitiatedProperties;
   game_day_view: GameDayViewProperties;
+  game_tap: GameTapProperties;
+  away_game_expanded: AwayGameExpandedProperties;
 };
 
 // ── Utilities ────────────────────────────────────────────────────────────

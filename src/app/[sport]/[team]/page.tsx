@@ -8,6 +8,8 @@ import {
   getVenueForTeam,
   getPlayoffConfig,
   getPlayoffPromosForTeam,
+  getGamesForTeam,
+  enrichGamesForTeam,
 } from '@/lib/data';
 import type { PromoType } from '@/lib/types';
 import { TeamHero } from '@/components/team-hero';
@@ -153,6 +155,13 @@ export default async function TeamPage({
   const displayName = teamDisplayName(team);
   const recurringDeals = getRecurringDealsForTeam(team.id);
 
+  // MLB-only for now: full schedule overlays onto the calendar. Other leagues
+  // fall through to the legacy promo-only rendering inside TeamCalendar.
+  const games = await getGamesForTeam(team.id, team.sportSlug);
+  const gameContexts = games.length > 0
+    ? await enrichGamesForTeam(team.id, games, promos)
+    : undefined;
+
   return (
     <>
       <JsonLd
@@ -214,6 +223,7 @@ export default async function TeamPage({
         teamSlug={team.id}
         sport={team.league}
         team={team}
+        gameContexts={gameContexts}
       />
 
       <RecurringDealsSection

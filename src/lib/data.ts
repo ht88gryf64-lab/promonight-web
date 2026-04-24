@@ -13,6 +13,8 @@ import type {
   PlayoffPromoType,
   PlayoffConfig,
   ActivePlayoffTeam,
+  Game,
+  GameStatus,
 } from './types';
 import { resolveIcon, dedupePromos } from './promo-helpers';
 import { getVenueOverride } from './venue-overrides';
@@ -440,6 +442,120 @@ export async function getAllPlayoffPromos(): Promise<{
     totalPromos,
     totalTeams: grouped.size,
   };
+}
+
+// ── Games (MLB only for now) ───────────────────────────────────────────────
+
+function mapGameDoc(doc: FirebaseFirestore.DocumentSnapshot): Game {
+  const d = doc.data()!;
+  return {
+    id: d.id ?? doc.id,
+    league: d.league,
+    date: d.date,
+    gameTime: d.gameTime ?? '',
+    gameTimeTz: d.gameTimeTz ?? '',
+    homeTeamSlug: d.homeTeamSlug,
+    awayTeamSlug: d.awayTeamSlug,
+    venueName: d.venueName ?? '',
+    status: (d.status ?? 'scheduled') as GameStatus,
+    mlbGameId: d.mlbGameId ?? 0,
+    doubleheaderGame: d.doubleheaderGame,
+    isPostseason: d.isPostseason,
+  };
+}
+
+// Returns every game (home + away) involving `teamSlug`, sorted by date asc.
+// `league` is lowercase ('mlb'). Non-MLB leagues currently have no games data;
+// this returns an empty array for them rather than throwing.
+export async function getGamesForTeam(teamSlug: string, league: string): Promise<Game[]> {
+  if (league !== 'mlb') return [];
+  const [homeSnap, awaySnap] = await Promise.all([
+    db.collection('games')
+      .where('league', '==', league)
+      .where('homeTeamSlug', '==', teamSlug)
+      .get(),
+    db.collection('games')
+      .where('league', '==', league)
+      .where('awayTeamSlug', '==', teamSlug)
+      .get(),
+  ]);
+  const games = [...homeSnap.docs, ...awaySnap.docs].map(mapGameDoc);
+  // Stable sort by date then gameTime, doubleheader game 2 after game 1.
+  games.sort((a, b) => {
+    if (a.date !== b.date) return a.date.localeCompare(b.date);
+    const adh = a.doubleheaderGame ?? 0;
+    const bdh = b.doubleheaderGame ?? 0;
+    if (adh !== bdh) return adh - bdh;
+    return (a.gameTime || '').localeCompare(b.gameTime || '');
+  });
+  return games;
+}
+
+// Context attached to each game for calendar rendering. Home-game context is
+// the team's own promos. Away-game context pulls the home team's venue and any
+// promos at that home venue on the game date.
+export interface GameContext {
+  game: Game;
+  isHome: boolean;
+  opponentTeam: Team | null;
+  opponentVenue: Venue | null;
+  // Promos occurring at the home-venue on this game date. For home games this
+  // is the current team's own promos; for away games it's the opponent team's.
+  promos: Promo[];
+}
+
+// Enriches a list of games with opponent team + venue + the promos occurring
+// at the home-team's venue on that game date. Batches the team / venue / promo
+// reads by opponent slug so a full schedule (~162 games) resolves with O(30)
+// Firestore reads (opponent team + venue + promos) rather than O(N).
+export async function enrichGamesForTeam(
+  teamSlug: string,
+  games: Game[],
+  ownPromos: Promo[],
+): Promise<GameContext[]> {
+  const opponentSlugs = Array.from(new Set(
+    games.map((g) => (g.homeTeamSlug === teamSlug ? g.awayTeamSlug : g.homeTeamSlug)),
+  ));
+  const teamById = new Map<string, Team>();
+  const venueById = new Map<string, Venue | null>();
+  const promosByOppDate = new Map<string, Map<string, Promo[]>>();
+
+  await Promise.all(
+    opponentSlugs.map(async (slug) => {
+      const [team, venue, promos] = await Promise.all([
+        getTeamBySlug(slug),
+        getVenueForTeam(slug),
+        getTeamPromos(slug),
+      ]);
+      if (team) teamById.set(slug, team);
+      venueById.set(slug, venue);
+      const byDate = new Map<string, Promo[]>();
+      for (const p of promos) {
+        const list = byDate.get(p.date) ?? [];
+        list.push(p);
+        byDate.set(p.date, list);
+      }
+      promosByOppDate.set(slug, byDate);
+    }),
+  );
+
+  const ownPromosByDate = new Map<string, Promo[]>();
+  for (const p of ownPromos) {
+    const list = ownPromosByDate.get(p.date) ?? [];
+    list.push(p);
+    ownPromosByDate.set(p.date, list);
+  }
+
+  return games.map((g) => {
+    const isHome = g.homeTeamSlug === teamSlug;
+    const oppSlug = isHome ? g.awayTeamSlug : g.homeTeamSlug;
+    const opponentTeam = teamById.get(oppSlug) ?? null;
+    const opponentVenue = venueById.get(oppSlug) ?? null;
+    const promos = isHome
+      ? ownPromosByDate.get(g.date) ?? []
+      : promosByOppDate.get(oppSlug)?.get(g.date) ?? [];
+    return { game: g, isHome, opponentTeam, opponentVenue, promos };
+  });
 }
 
 export async function getTeamsWithPromoCounts(): Promise<(Team & { promoCount: number; promoCounts: Record<PromoType, number> })[]> {

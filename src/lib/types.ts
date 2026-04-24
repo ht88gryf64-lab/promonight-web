@@ -52,6 +52,25 @@ export interface Venue {
   nearby?: string;
 }
 
+export type GameStatus = 'scheduled' | 'postponed' | 'canceled' | 'completed';
+
+export interface Game {
+  id: string;
+  league: string; // 'mlb'
+  date: string; // YYYY-MM-DD (home-venue local date)
+  gameTime: string; // HH:MM local, optional
+  gameTimeTz: string; // IANA tz, optional
+  homeTeamSlug: string;
+  awayTeamSlug: string;
+  venueName: string;
+  status: GameStatus;
+  mlbGameId: number;
+  // Optional: doubleheader index (1 or 2 when two games on the same date).
+  doubleheaderGame?: number;
+  // True when the game is part of the postseason bracket.
+  isPostseason?: boolean;
+}
+
 export const PROMO_TYPE_COLORS: Record<PromoType, string> = {
   giveaway: '#34d399',
   theme: '#a78bfa',
