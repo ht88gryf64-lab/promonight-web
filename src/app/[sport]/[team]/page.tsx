@@ -13,12 +13,17 @@ import type { PromoType } from '@/lib/types';
 import { TeamHero } from '@/components/team-hero';
 import { TeamCalendar } from '@/components/team-calendar';
 import { PromoList } from '@/components/promo-list';
+import { RecurringDealsSection } from '@/components/recurring-deals-section';
+import { getRecurringDealsForTeam } from '@/lib/recurring-deals';
+import { ZeroPromoFallback } from '@/components/zero-promo-fallback';
+import { VenueInfoBlock } from '@/components/venue-info-block';
+import { AuthorityStats } from '@/components/authority-stats';
 import { TeamContentSections } from '@/components/team-content-sections';
 import { TeamFAQ } from '@/components/team-faq';
 import { TeamRelatedAggregators } from '@/components/team-related-aggregators';
 import { JsonLd } from '@/components/json-ld';
 import { PlayoffSection } from '@/components/playoff-section';
-import { extractPlayoffOpponent } from '@/lib/promo-helpers';
+import { extractPlayoffOpponent, teamDisplayName } from '@/lib/promo-helpers';
 import { TeamPageTracker, TrackedCTA } from '@/components/analytics-events';
 import { AppDownloadButtons } from '@/components/app-download-buttons';
 import { EngagementTracker } from '@/components/analytics/EngagementTracker';
@@ -55,10 +60,11 @@ export async function generateMetadata({
   const food = promos.filter((p) => p.type === 'food').length;
 
   const year = new Date().getFullYear();
-  const title = `${team.city} ${team.name} ${year} Promo Schedule: Giveaways, Theme Nights & Deals`;
+  const displayName = teamDisplayName(team);
+  const title = `${displayName} ${year} Promo Schedule: Giveaways, Theme Nights & Deals`;
   const plural = (n: number, s: string) => `${n} ${s}${n === 1 ? '' : 's'}`;
   const venueClause = venue ? ` at ${venue.name}` : '';
-  const description = `All ${year} ${team.city} ${team.name} ${team.league} promo nights${venueClause}: ${plural(giveaways, 'giveaway')}, ${plural(themes, 'theme night')}, ${plural(kids, 'kids day')}, and ${plural(food, 'food deal')}. Updated weekly.`;
+  const description = `All ${year} ${displayName} ${team.league} promo nights${venueClause}: ${plural(giveaways, 'giveaway')}, ${plural(themes, 'theme night')}, ${plural(kids, 'kids day')}, and ${plural(food, 'food deal')}. Updated weekly.`;
 
   return {
     title,
@@ -67,7 +73,7 @@ export async function generateMetadata({
       canonical: `https://www.getpromonight.com/${team.sportSlug}/${team.id}`,
     },
     openGraph: {
-      title: `${team.city} ${team.name} ${year} Promo Schedule`,
+      title: `${displayName} ${year} Promo Schedule`,
       description,
       url: `https://www.getpromonight.com/${team.sportSlug}/${team.id}`,
       type: 'website',
@@ -84,7 +90,7 @@ export async function generateMetadata({
       card: 'summary_large_image',
       site: '@promo_night_app',
       creator: '@promo_night_app',
-      title: `${team.city} ${team.name} ${year} Promo Schedule`,
+      title: `${displayName} ${year} Promo Schedule`,
       description,
       images: ['/og-image.png'],
     },
@@ -144,8 +150,8 @@ export default async function TeamPage({
     }
   }
 
-  const today = new Date().toISOString().split('T')[0];
-  const upcoming = promos.filter((p) => p.date >= today);
+  const displayName = teamDisplayName(team);
+  const recurringDeals = getRecurringDealsForTeam(team.id);
 
   return (
     <>
@@ -160,7 +166,7 @@ export default async function TeamPage({
       <TeamPageTracker
         teamSlug={team.id}
         sport={team.league}
-        teamName={`${team.city} ${team.name}`}
+        teamName={displayName}
         promoCount={promos.length}
       />
       <EngagementTracker teamSlug={team.id} sport={team.league} />
@@ -200,21 +206,39 @@ export default async function TeamPage({
         </section>
       )}
 
+      {venue && <VenueInfoBlock venue={venue} league={team.league} />}
+
       <TeamCalendar
         promos={promos}
-        teamName={`${team.city} ${team.name}`}
+        teamName={displayName}
         teamSlug={team.id}
         sport={team.league}
         team={team}
       />
 
-      <PromoList
-        promos={upcoming.slice(0, 3)}
-        teamColor={team.primaryColor}
-        teamSlug={team.id}
-        teamName={`${team.city} ${team.name}`}
-        totalPromoCount={promos.length}
+      <RecurringDealsSection
+        team={team}
+        deals={recurringDeals}
+        venueName={venue?.name ?? null}
       />
+
+      <AuthorityStats
+        team={team}
+        promos={promos}
+        promoCounts={promoCounts}
+        venue={venue}
+        teamName={displayName}
+      />
+
+      {promos.length === 0 ? (
+        <ZeroPromoFallback team={team} venue={venue} teamName={displayName} />
+      ) : (
+        <PromoList
+          promos={promos}
+          teamSlug={team.id}
+          teamName={displayName}
+        />
+      )}
 
       <TeamRelatedAggregators promos={promos} />
 
@@ -229,7 +253,7 @@ export default async function TeamPage({
               GET THE FULL {team.name.toUpperCase()} PROMO CALENDAR
             </h2>
             <p className="text-text-secondary text-sm mb-8">
-              Track every {team.city} {team.name} giveaway, theme night, and food deal with push notifications and a personalized calendar.
+              Track every {displayName} giveaway, theme night, and food deal with push notifications and a personalized calendar.
             </p>
             <AppDownloadButtons
               section="team_cta"

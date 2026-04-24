@@ -2,6 +2,7 @@ import type { Team } from '@/lib/types';
 import type { AnalyticsSurface } from '@/lib/analytics';
 import { buildFanaticsUrl } from '@/lib/affiliates';
 import { TrackedAffiliateLink } from '@/components/tracked-affiliate-link';
+import { teamDisplayName } from '@/lib/promo-helpers';
 
 export function FanGearCTA({
   team,
@@ -12,7 +13,7 @@ export function FanGearCTA({
   surface: AnalyticsSurface;
   placement?: string;
 }) {
-  const teamName = `${team.city} ${team.name}`;
+  const teamName = teamDisplayName(team);
   const href = buildFanaticsUrl({
     teamSlug: team.id,
     league: team.league,

@@ -1,5 +1,6 @@
 import { PromoBadge } from './promo-badge';
 import type { PromoWithTeam } from '@/lib/types';
+import { teamDisplayName } from '@/lib/promo-helpers';
 
 function formatDate(dateStr: string): { day: string; weekday: string; month: string } {
   const date = new Date(dateStr + 'T12:00:00');
@@ -59,7 +60,7 @@ export function HotPromosHero({ promos }: { promos: PromoWithTeam[] }) {
                 {promo.title}
               </div>
               <div className="text-text-secondary text-xs md:text-sm mt-1.5">
-                {promo.team.city} {promo.team.name}
+                {teamDisplayName(promo.team)}
                 {promo.opponent && <span className="text-text-dim"> vs {promo.opponent}</span>}
               </div>
             </div>

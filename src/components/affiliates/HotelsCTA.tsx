@@ -3,6 +3,7 @@ import type { AnalyticsSurface } from '@/lib/analytics';
 import { buildBookingUrl } from '@/lib/affiliates';
 import { VENUE_CITY_OVERRIDES } from '@/lib/venue-cities';
 import { TrackedAffiliateLink } from '@/components/tracked-affiliate-link';
+import { teamDisplayName } from '@/lib/promo-helpers';
 
 type HotelsCTAProps = {
   team: Team;
@@ -45,7 +46,7 @@ export function HotelsCTA({
   // Label: when routing by coords, name the venue so users see what's being
   // searched ("near Rogers Centre"). When falling back to city, name the city.
   const destinationLabel = useCoords
-    ? (venue!.name || `${team.city} ${team.name} stadium`)
+    ? (venue!.name || `${teamDisplayName(team)} stadium`)
     : fallbackCity;
   const linkPreposition = useCoords ? 'near' : 'in';
 
@@ -66,7 +67,7 @@ export function HotelsCTA({
     return (
       <div className="bg-bg-card border border-border-subtle rounded-xl p-5">
         <h3 className="font-display text-lg tracking-[0.5px] mb-1">
-          {team.city} {team.name}
+          {teamDisplayName(team)}
         </h3>
         <p className="text-text-secondary text-xs mb-4">
           Traveling for a {team.name} game? Find a hotel {linkPreposition} {destinationLabel}.
@@ -96,7 +97,7 @@ export function HotelsCTA({
           PLAN YOUR TRIP
         </h2>
         <p className="text-text-secondary text-sm leading-relaxed mb-5 max-w-xl">
-          Traveling to see the {team.city} {team.name}? Find a hotel {linkPreposition} {destinationLabel} and stay near the action.
+          Traveling to see the {teamDisplayName(team)}? Find a hotel {linkPreposition} {destinationLabel} and stay near the action.
         </p>
         <TrackedAffiliateLink
           href={href}

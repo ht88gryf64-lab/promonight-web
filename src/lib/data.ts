@@ -15,6 +15,7 @@ import type {
   ActivePlayoffTeam,
 } from './types';
 import { resolveIcon, dedupePromos } from './promo-helpers';
+import { getVenueOverride } from './venue-overrides';
 
 function tsToIso(v: unknown): string | null {
   if (!v) return null;
@@ -247,6 +248,7 @@ export async function getVenueForTeam(teamId: string): Promise<Venue | null> {
   if (snapshot.empty) return null;
 
   const data = snapshot.docs[0].data();
+  const override = getVenueOverride(teamId);
   return {
     name: data.name,
     address: data.address,
@@ -262,6 +264,12 @@ export async function getVenueForTeam(teamId: string): Promise<Venue | null> {
     gatesOpen: data.gatesOpen,
     league: data.league,
     teamId: data.teamId,
+    // Firestore takes precedence; overrides fill in when Firestore is empty.
+    parkingInfo: data.parkingInfo ?? override?.parkingInfo,
+    publicTransit: data.publicTransit ?? override?.publicTransit,
+    bagPolicyUrl: data.bagPolicyUrl ?? override?.bagPolicyUrl,
+    accessibility: data.accessibility ?? override?.accessibility,
+    nearby: data.nearby ?? override?.nearby,
   };
 }
 

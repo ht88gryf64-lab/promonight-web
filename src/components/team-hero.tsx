@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Team, Venue, PromoType } from '@/lib/types';
 import { SPORT_ICONS, PROMO_TYPE_LABELS } from '@/lib/types';
+import { teamDisplayName } from '@/lib/promo-helpers';
 
 interface TeamHeroProps {
   team: Team;
@@ -10,6 +11,7 @@ interface TeamHeroProps {
 }
 
 export function TeamHero({ team, venue, promoCount, promoCounts }: TeamHeroProps) {
+  const displayName = teamDisplayName(team);
   return (
     <section
       className="relative pt-28 pb-16 px-6 overflow-hidden"
@@ -34,7 +36,7 @@ export function TeamHero({ team, venue, promoCount, promoCounts }: TeamHeroProps
           <span>/</span>
           <Link href={`/teams?league=${team.league}`} className="hover:text-white transition-colors">{team.league}</Link>
           <span>/</span>
-          <span className="text-text-secondary">{team.city} {team.name}</span>
+          <span className="text-text-secondary">{displayName}</span>
         </div>
 
         {/* Sport badge */}
@@ -53,7 +55,7 @@ export function TeamHero({ team, venue, promoCount, promoCounts }: TeamHeroProps
 
         {/* Team name */}
         <h1 className="font-display text-4xl md:text-6xl lg:text-7xl tracking-[1px] leading-[0.95] mb-2">
-          {team.city.toUpperCase()} {team.name.toUpperCase()}
+          {displayName.toUpperCase()}
         </h1>
         <p className="font-display text-2xl md:text-3xl tracking-[1px] text-text-secondary mb-2">
           {new Date().getFullYear()} PROMO SCHEDULE

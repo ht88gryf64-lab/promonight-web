@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { PromoWithTeam } from '@/lib/types';
 import { PromoBadge } from './promo-badge';
 import { AppDownloadButtons } from './app-download-buttons';
+import { teamDisplayName } from '@/lib/promo-helpers';
 
 export interface AggregatorGroup {
   label: string;
@@ -103,7 +104,7 @@ export function AggregatorPage({
                               {p.title}
                             </div>
                             <div className="text-text-secondary text-xs mt-0.5">
-                              {p.team.city} {p.team.name}
+                              {teamDisplayName(p.team)}
                               {p.opponent && (
                                 <span className="text-text-dim"> vs {p.opponent}</span>
                               )}

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { PlayoffPromo, Team } from '@/lib/types';
+import { teamDisplayName } from '@/lib/promo-helpers';
 
 const ROUND_LABELS: Record<string, string> = {
   first_round: 'First Round',
@@ -85,10 +86,10 @@ export function PlayoffSection({
           2026 {team.league} Playoffs · {roundDisplay}
         </span>
         <h2 className="font-display text-3xl md:text-4xl tracking-[1px] mt-2 mb-4">
-          {team.city.toUpperCase()} {team.name.toUpperCase()} PLAYOFF PROMOTIONS
+          {teamDisplayName(team).toUpperCase()} PLAYOFF PROMOTIONS
         </h2>
         <p className="text-text-secondary text-base leading-relaxed max-w-3xl mb-3">
-          The {team.city} {team.name} are in the 2026 {roundDisplay.toLowerCase()} playoffs
+          The {teamDisplayName(team)} are in the 2026 {roundDisplay.toLowerCase()} playoffs
           {opponent ? ` against the ${opponent}` : ''}. Their scheduled promotions during this round:
         </p>
         <p className="font-mono text-[10px] tracking-[1.5px] uppercase text-text-muted mb-8">

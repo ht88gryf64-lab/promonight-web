@@ -5,6 +5,7 @@ import {
   formatDateReadable,
   getPromosByType,
   getTopGiveaway,
+  teamDisplayName,
 } from '@/lib/promo-helpers';
 
 interface TeamContentSectionsProps {
@@ -21,7 +22,7 @@ export function TeamContentSections({
   promoCounts,
 }: TeamContentSectionsProps) {
   const year = getCurrentYear();
-  const fullName = `${team.city} ${team.name}`;
+  const fullName = teamDisplayName(team);
   const venueName = venue?.name || 'their home stadium';
 
   return (
@@ -117,7 +118,7 @@ function GiveawaySection({
   count: number;
   year: number;
 }) {
-  const fullName = `${team.city} ${team.name}`;
+  const fullName = teamDisplayName(team);
   const giveaways = getPromosByType(promos, 'giveaway');
   const top = getTopGiveaway(promos);
 
@@ -159,7 +160,7 @@ function ThemeSection({
   count: number;
   year: number;
 }) {
-  const fullName = `${team.city} ${team.name}`;
+  const fullName = teamDisplayName(team);
   const themes = getPromosByType(promos, 'theme');
 
   return (
@@ -195,7 +196,7 @@ function FoodSection({
   venueName: string;
   count: number;
 }) {
-  const fullName = `${team.city} ${team.name}`;
+  const fullName = teamDisplayName(team);
   const foodDeals = getPromosByType(promos, 'food');
 
   return (
@@ -232,7 +233,7 @@ function KidsSection({
   count: number;
   year: number;
 }) {
-  const fullName = `${team.city} ${team.name}`;
+  const fullName = teamDisplayName(team);
   const kidsEvents = getPromosByType(promos, 'kids');
 
   return (

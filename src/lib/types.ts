@@ -43,6 +43,13 @@ export interface Venue {
   gatesOpen?: string;
   league: string;
   teamId: string;
+  // Optional venue-plan fields. Populated per-venue via data-ops; left empty
+  // for most teams. Render only when present.
+  parkingInfo?: string;
+  publicTransit?: string;
+  bagPolicyUrl?: string;
+  accessibility?: string;
+  nearby?: string;
 }
 
 export const PROMO_TYPE_COLORS: Record<PromoType, string> = {

@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getAllPlayoffPromos, getVenueForTeam } from '@/lib/data';
 import type { PlayoffPromo, Team, Venue, PlayoffConfig } from '@/lib/types';
+import { teamDisplayName } from '@/lib/promo-helpers';
 import { ParkingCTA } from '@/components/affiliates/ParkingCTA';
 import { HotelsCTA } from '@/components/affiliates/HotelsCTA';
 import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
@@ -118,7 +119,7 @@ function buildFaqs(
       const hasTowel = promos.some(
         (p) => rallyTowelRe.test(p.title) || rallyTowelRe.test(p.description),
       );
-      if (hasTowel) rallyTeams.push(`${team.city} ${team.name}`);
+      if (hasTowel) rallyTeams.push(teamDisplayName(team));
     }
   }
   if (rallyTeams.length > 0) {
@@ -446,7 +447,7 @@ function TeamCard({
       <div className="mb-4">
         <h3 className="font-display text-xl md:text-2xl tracking-[0.5px]">
           <Link href={teamUrl} className="hover:text-accent-red transition-colors">
-            {team.city} {team.name}
+            {teamDisplayName(team)}
           </Link>
         </h3>
         {opponent && (

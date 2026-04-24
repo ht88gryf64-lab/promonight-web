@@ -1,6 +1,22 @@
 import type { Team, Promo, PromoType, Venue, PlayoffPromo } from './types';
 import { PROMO_TYPE_LABELS } from './types';
 
+// Returns the display name for a team, avoiding the "Cincinnati FC Cincinnati"
+// doubled-city case for MLS clubs whose `name` already includes the city
+// (FC Cincinnati, FC Dallas, Atlanta United, etc.). When the city appears as a
+// whole word inside the name, the name alone is the brand — return just the
+// name. Otherwise, prepend the city as usual ("Kansas City" + "Royals").
+export function teamDisplayName(team: Pick<Team, 'city' | 'name'>): string {
+  const city = team.city?.trim() ?? '';
+  const name = team.name?.trim() ?? '';
+  if (!city) return name;
+  if (!name) return city;
+  const escaped = city.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const cityInName = new RegExp(`\\b${escaped}\\b`, 'i').test(name);
+  if (cityInName) return name;
+  return `${city} ${name}`;
+}
+
 const ROUND_LABELS: Record<string, string> = {
   first_round: 'First Round',
   conference_semifinals: 'Conference Semifinals',
@@ -141,6 +157,28 @@ export interface FAQItem {
   answer: string;
 }
 
+// League-specific generic gate-time answer. Teams vary by venue, but the
+// league cadence is consistent enough to cite; we point readers to the official
+// team site for game-day specifics.
+function gateTimesAnswer(league: string, venueName: string, fullName: string): string | null {
+  switch (league) {
+    case 'MLB':
+      return `Gates at ${venueName} typically open 90 minutes before first pitch on most ${fullName} home dates, with earlier openings (often two hours) on marquee giveaway nights so the first 15,000 – 25,000 fans can claim the item. Check the official team site for the specific day's open time.`;
+    case 'NBA':
+      return `Doors at ${venueName} typically open 90 minutes before tipoff for ${fullName} home games, sometimes earlier on major giveaway or theme nights. The official team site publishes the confirmed open time with each game's day-of details.`;
+    case 'NFL':
+      return `${venueName} gates typically open about two hours before kickoff for ${fullName} home games, with some gates (club / premium) opening earlier. Individual game-day gate times are posted on the official team site — tailgate and parking lots generally open several hours earlier.`;
+    case 'NHL':
+      return `Gates at ${venueName} typically open 75 – 90 minutes before puck drop for ${fullName} home games, with earlier openings on playoff nights and giveaway games. Confirm the exact open time for your game on the official team site.`;
+    case 'MLS':
+      return `Gates at ${venueName} typically open 60 – 90 minutes before kickoff for ${fullName} home matches, and earlier on supporter-group match days. The official team site confirms each match's open time.`;
+    case 'WNBA':
+      return `Doors at ${venueName} typically open 90 minutes before tipoff for ${fullName} home games. The official team site posts confirmed open times for each game's day-of schedule.`;
+    default:
+      return null;
+  }
+}
+
 export function generateTeamFAQs(
   team: Team,
   promos: Promo[],
@@ -149,7 +187,7 @@ export function generateTeamFAQs(
   playoff?: PlayoffFAQContext,
 ): FAQItem[] {
   const year = getCurrentYear();
-  const fullName = `${team.city} ${team.name}`;
+  const fullName = teamDisplayName(team);
   const venueName = venue?.name || 'their home stadium';
   const faqs: FAQItem[] = [];
 
@@ -215,6 +253,56 @@ export function generateTeamFAQs(
     question: `How can I track ${fullName} promotional events?`,
     answer: `PromoNight is a free app that tracks every giveaway, theme night, food deal, and promotion for the ${fullName} and 166 other teams across MLB, NBA, NFL, NHL, MLS, and WNBA. Download it on iOS or Android to get a calendar view of all upcoming promos and push notifications before game day.`,
   });
+
+  // 5b. Travel — gate times (always shown; league-specific generic answer)
+  const gateAnswer = gateTimesAnswer(team.league, venueName, fullName);
+  if (gateAnswer) {
+    faqs.push({
+      question: `What time do gates open at ${venueName}?`,
+      answer: gateAnswer,
+    });
+  }
+
+  // 5c. Travel — directions / parking (always shown)
+  {
+    const city = venue?.address?.split(',').slice(-3, -2)[0]?.trim() || team.city;
+    const addressClause = venue?.address ? `${venueName} is located at ${venue.address}.` : `${venueName} is in ${city}.`;
+    faqs.push({
+      question: `How do I get to ${venueName}?`,
+      answer: `${addressClause} Parking is available on-site on game days, and many fans reserve guaranteed spots in advance through SpotHero to avoid lot-closure surprises. Check the official ${team.name} site for public transit options — most major-league venues are served by bus or rail routes on game day.`,
+    });
+  }
+
+  // 5d. Travel — hotels (always shown)
+  faqs.push({
+    question: `Where should I stay near ${venueName}?`,
+    answer: `Several hotels sit within walking distance of ${venueName}, and more are a short rideshare away. For a ${fullName} game weekend, searching Booking.com for hotels near ${venueName} surfaces the best rates for your specific date — prices jump on marquee dates like giveaway nights and playoff games, so booking early helps.`,
+  });
+
+  // 5e. App — push notifications (always shown, distinct from #5's general pitch)
+  faqs.push({
+    question: `Can I get push notifications for ${team.name} promos?`,
+    answer: `Yes. The free PromoNight app sends push notifications the morning of every ${team.name} promo game — bobblehead giveaways, theme nights, food deals, and kids events. You can follow just the ${team.name} or multiple teams across MLB, NBA, NFL, NHL, MLS, and WNBA.`,
+  });
+
+  // 5f. App — away games (always shown)
+  faqs.push({
+    question: `Does PromoNight work for away games?`,
+    answer: `PromoNight tracks home-game promotions for all 167 teams across MLB, NBA, NFL, NHL, MLS, and WNBA. If you're traveling to see the ${team.name} play on the road, browse the home team's calendar on this site to see every promo scheduled at their venue during your trip.`,
+  });
+
+  // 5g. Data authority — update cadence (only when there's enough data to claim authority)
+  if (promos.length >= 10) {
+    const lastUpdated = new Date().toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+    faqs.push({
+      question: `How often are ${team.name} promo schedules updated?`,
+      answer: `This page is updated regularly throughout the ${year} ${team.league} season as the ${team.name} announce new giveaways, theme nights, and family events. The current schedule reflects ${promos.length} scheduled events. Last updated ${lastUpdated}.`,
+    });
+  }
 
   // 6. Playoff-specific questions (appended only when team is in the active playoff bracket)
   if (playoff && playoff.promos.length > 0) {

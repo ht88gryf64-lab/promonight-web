@@ -1,5 +1,5 @@
 import type { Team, Promo, PromoType, Venue, PlayoffPromo } from '@/lib/types';
-import { generateTeamFAQs, type PlayoffFAQContext } from '@/lib/promo-helpers';
+import { generateTeamFAQs, teamDisplayName, type PlayoffFAQContext } from '@/lib/promo-helpers';
 
 interface JsonLdProps {
   team: Team;
@@ -44,7 +44,7 @@ export function JsonLd({
     location: buildPlace(venue),
     organizer: {
       '@type': 'SportsTeam',
-      name: `${team.city} ${team.name}`,
+      name: teamDisplayName(team),
     },
   }));
 
@@ -66,7 +66,7 @@ export function JsonLd({
       location: buildPlace(venue),
       organizer: {
         '@type': 'SportsTeam',
-        name: `${team.city} ${team.name}`,
+        name: teamDisplayName(team),
       },
       offers: {
         '@type': 'Offer',
