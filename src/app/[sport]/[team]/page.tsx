@@ -49,14 +49,16 @@ export async function generateMetadata({
 
   const promos = await getTeamPromos(team.id);
   const venue = await getVenueForTeam(team.id);
-  const today = new Date().toISOString().split('T')[0];
-  const upcoming = promos.filter((p) => p.date >= today);
   const giveaways = promos.filter((p) => p.type === 'giveaway').length;
+  const themes = promos.filter((p) => p.type === 'theme').length;
+  const kids = promos.filter((p) => p.type === 'kids').length;
+  const food = promos.filter((p) => p.type === 'food').length;
 
   const year = new Date().getFullYear();
-  const themes = promos.filter((p) => p.type === 'theme').length;
-  const title = `${team.city} ${team.name} ${year} Promo Schedule — Giveaways, Theme Nights & Deals`;
-  const description = `${team.city} ${team.name} ${year} promotional schedule: ${giveaways} giveaway night${giveaways !== 1 ? 's' : ''}, ${themes} theme night${themes !== 1 ? 's' : ''}, and food deals${venue ? ` at ${venue.name}` : ''}. See every bobblehead, jersey giveaway, and special event.`;
+  const title = `${team.city} ${team.name} ${year} Promo Schedule: Giveaways, Theme Nights & Deals`;
+  const plural = (n: number, s: string) => `${n} ${s}${n === 1 ? '' : 's'}`;
+  const venueClause = venue ? ` at ${venue.name}` : '';
+  const description = `All ${year} ${team.city} ${team.name} ${team.league} promo nights${venueClause}: ${plural(giveaways, 'giveaway')}, ${plural(themes, 'theme night')}, ${plural(kids, 'kids day')}, and ${plural(food, 'food deal')}. Updated weekly.`;
 
   return {
     title,

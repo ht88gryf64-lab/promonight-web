@@ -2,8 +2,10 @@ import type { Metadata } from 'next';
 import { LegalLayout } from '@/components/legal-layout';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy',
-  description: 'PromoNight privacy policy — what data we collect, how we use it, and your rights.',
+  title: 'Privacy Policy — What PromoNight Collects and How It\'s Used',
+  description:
+    'PromoNight\'s privacy policy: anonymous user IDs, starred teams, purchase state, and analytics. Plain-English rundown of what leaves your device and how to opt out.',
+  alternates: { canonical: 'https://www.getpromonight.com/privacy' },
 };
 
 export default function PrivacyPage() {

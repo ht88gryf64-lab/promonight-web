@@ -19,8 +19,8 @@ function monthLabel(dateStr: string): string {
 const YEAR = new Date().getFullYear();
 
 export const metadata: Metadata = {
-  title: `Every Jersey, Hat & Apparel Giveaway in Pro Sports ${YEAR}`,
-  description: `Every jersey, cap, hat, jacket, shirt, and hoodie giveaway across MLB, NBA, NHL, NFL, MLS, and WNBA in ${YEAR}. Team, date, and opponent for each apparel night.`,
+  title: `${YEAR} Jersey & Apparel Giveaway Nights — Caps, Hoodies, Tees`,
+  description: `Every ${YEAR} jersey, cap, hat, jacket, shirt, and hoodie giveaway across pro sports. Capped promos for the first 10,000–25,000 fans — arrival time matters. Updated weekly.`,
   alternates: { canonical: 'https://www.getpromonight.com/promos/jersey-giveaways' },
 };
 

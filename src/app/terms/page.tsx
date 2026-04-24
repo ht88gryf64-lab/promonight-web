@@ -2,8 +2,10 @@ import type { Metadata } from 'next';
 import { LegalLayout } from '@/components/legal-layout';
 
 export const metadata: Metadata = {
-  title: 'Terms of Service',
-  description: 'PromoNight terms of service — rules and guidelines for using the app.',
+  title: 'Terms of Service — PromoNight Usage Rules and Disclaimers',
+  description:
+    'The rules for using PromoNight: as-is service, data accuracy disclaimers, subscription terms for PromoNight Pro, and the usual liability boilerplate.',
+  alternates: { canonical: 'https://www.getpromonight.com/terms' },
 };
 
 export default function TermsPage() {

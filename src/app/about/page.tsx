@@ -6,9 +6,9 @@ import { AppDownloadButtons } from '@/components/app-download-buttons';
 export const revalidate = 86400;
 
 export const metadata: Metadata = {
-  title: 'About PromoNight',
+  title: 'About PromoNight — The Indie App Behind the Promo Calendar',
   description:
-    'PromoNight is a free app that tracks every giveaway, theme night, and food deal across 167 pro sports teams. Built by a Minnesota sports fan who kept missing the good games.',
+    'PromoNight is an independent app built by a Minnesota sports fan who kept missing the good games. Free, not affiliated with any league — just a cleaner way to browse promos.',
   alternates: { canonical: 'https://www.getpromonight.com/about' },
 };
 
