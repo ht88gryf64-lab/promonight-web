@@ -10,6 +10,7 @@ import { HotelsCTA } from './affiliates/HotelsCTA';
 import { normalizeSport, track } from '@/lib/analytics';
 import { teamDisplayName } from '@/lib/promo-helpers';
 import type { GameContext } from '@/lib/data';
+import { Modal } from './ui/modal';
 
 interface TeamCalendarProps {
   promos: Promo[];
@@ -396,25 +397,44 @@ export function TeamCalendar({ promos, teamName, teamSlug, sport, team, gameCont
           </div>
         </div>
 
-        {/* Selected day detail */}
-        {selectedDate && hasGamesData && selectedGameCtxs.length > 0 && (
-          <GameDayDetail
-            dateStr={selectedDate}
-            contexts={selectedGameCtxs}
-            team={team ?? null}
-            teamSlug={teamSlug}
-          />
-        )}
-
-        {selectedDate && !hasGamesData && selectedPromos.length > 0 && (
-          <LegacyPromoDetail
-            dateStr={selectedDate}
-            promos={selectedPromos}
-            team={team ?? null}
-            teamSlug={teamSlug}
-          />
-        )}
       </div>
+
+      {/* Detail modal.
+       *
+       * Every game / promo day is SSR-rendered inside the dialog so crawlers
+       * see the full content (opponent venues, promos, affiliate CTAs) in the
+       * HTML source. The dialog is closed by default (UA display:none) and
+       * each child is gated by the `hidden` attribute, so only the active
+       * day is visible when the modal is open. Clicking a cell calls
+       * showModal() on the dialog; the browser provides focus trap + focus
+       * restore per spec. */}
+      <Modal
+        isOpen={!!selectedDate}
+        onClose={() => setSelectedDate(null)}
+        ariaLabel={selectedDate ? `Game details for ${dayHeader(selectedDate)}` : 'Game details'}
+      >
+        {hasGamesData
+          ? [...gameCtxsByDate.entries()].map(([date, ctxs]) => (
+              <div key={date} hidden={selectedDate !== date}>
+                <GameDayDetail
+                  dateStr={date}
+                  contexts={ctxs}
+                  team={team ?? null}
+                  teamSlug={teamSlug}
+                />
+              </div>
+            ))
+          : [...promosByDate.entries()].map(([date, list]) => (
+              <div key={date} hidden={selectedDate !== date}>
+                <LegacyPromoDetail
+                  dateStr={date}
+                  promos={list}
+                  team={team ?? null}
+                  teamSlug={teamSlug}
+                />
+              </div>
+            ))}
+      </Modal>
     </section>
   );
 }
