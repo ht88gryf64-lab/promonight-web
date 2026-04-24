@@ -74,6 +74,9 @@ function PromoRow({ promo, completed = false }: { promo: Promo; completed?: bool
   );
 }
 
+const UPCOMING_VISIBLE = 10;
+const COMPLETED_VISIBLE = 5;
+
 export function PromoList({
   promos,
   teamSlug,
@@ -87,10 +90,10 @@ export function PromoList({
   const upcoming = promos.filter((p) => p.date >= today);
   const past = promos.filter((p) => p.date < today).reverse(); // most-recent-first
 
-  // Split past into "recent" (≤30 days ago, visible) and "earlier" (wrapped in <details>).
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 86400_000).toISOString().split('T')[0];
-  const recentPast = past.filter((p) => p.date >= thirtyDaysAgo);
-  const earlierPast = past.filter((p) => p.date < thirtyDaysAgo);
+  const upcomingVisible = upcoming.slice(0, UPCOMING_VISIBLE);
+  const upcomingHidden = upcoming.slice(UPCOMING_VISIBLE);
+  const pastVisible = past.slice(0, COMPLETED_VISIBLE);
+  const pastHidden = past.slice(COMPLETED_VISIBLE);
 
   return (
     <section className="py-12 px-6">
@@ -104,17 +107,35 @@ export function PromoList({
           </h2>
           {upcoming.length > 0 && (
             <p className="text-text-muted text-xs font-mono tracking-[0.5px] mt-2">
-              {upcoming.length} upcoming {upcoming.length === 1 ? 'event' : 'events'} · full schedule below
+              {upcoming.length} upcoming {upcoming.length === 1 ? 'event' : 'events'}
+              {upcomingHidden.length > 0 ? ' · full schedule below' : ''}
             </p>
           )}
         </div>
 
         {upcoming.length > 0 ? (
-          <div className="space-y-3">
-            {upcoming.map((promo, i) => (
-              <PromoRow key={`u-${i}`} promo={promo} />
-            ))}
-          </div>
+          <>
+            <div className="space-y-3">
+              {upcomingVisible.map((promo, i) => (
+                <PromoRow key={`u-${i}`} promo={promo} />
+              ))}
+            </div>
+
+            {upcomingHidden.length > 0 && (
+              <details className="mt-3 group">
+                <summary className="cursor-pointer list-none inline-flex items-center gap-2 bg-bg-card border border-border-subtle hover:border-accent-red/60 rounded-full px-5 py-2.5 font-mono text-[11px] tracking-[1.5px] uppercase text-white transition-colors">
+                  <span className="inline-block transition-transform group-open:rotate-90" aria-hidden="true">▸</span>
+                  <span className="group-open:hidden">Show all {upcoming.length} upcoming promos</span>
+                  <span className="hidden group-open:inline">Hide {upcomingHidden.length} additional promos</span>
+                </summary>
+                <div className="mt-4 space-y-3">
+                  {upcomingHidden.map((promo, i) => (
+                    <PromoRow key={`uh-${i}`} promo={promo} />
+                  ))}
+                </div>
+              </details>
+            )}
+          </>
         ) : past.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-text-muted text-lg">No upcoming promos yet</p>
@@ -142,23 +163,22 @@ export function PromoList({
               </p>
             </div>
 
-            {recentPast.length > 0 && (
-              <div className="space-y-3">
-                {recentPast.map((promo, i) => (
-                  <PromoRow key={`rp-${i}`} promo={promo} completed />
-                ))}
-              </div>
-            )}
+            <div className="space-y-3">
+              {pastVisible.map((promo, i) => (
+                <PromoRow key={`rp-${i}`} promo={promo} completed />
+              ))}
+            </div>
 
-            {earlierPast.length > 0 && (
-              <details className="mt-4 group">
-                <summary className="cursor-pointer list-none inline-flex items-center gap-2 text-text-secondary text-sm font-mono tracking-[0.5px] uppercase hover:text-white transition-colors">
+            {pastHidden.length > 0 && (
+              <details className="mt-3 group">
+                <summary className="cursor-pointer list-none inline-flex items-center gap-2 bg-bg-card/50 border border-border-subtle hover:border-border-hover rounded-full px-5 py-2.5 font-mono text-[11px] tracking-[1.5px] uppercase text-text-secondary hover:text-white transition-colors">
                   <span className="inline-block transition-transform group-open:rotate-90" aria-hidden="true">▸</span>
-                  Show earlier completed promos ({earlierPast.length})
+                  <span className="group-open:hidden">Show earlier completed promos ({pastHidden.length})</span>
+                  <span className="hidden group-open:inline">Hide earlier completed promos</span>
                 </summary>
                 <div className="mt-4 space-y-3">
-                  {earlierPast.map((promo, i) => (
-                    <PromoRow key={`ep-${i}`} promo={promo} completed />
+                  {pastHidden.map((promo, i) => (
+                    <PromoRow key={`ph-${i}`} promo={promo} completed />
                   ))}
                 </div>
               </details>
