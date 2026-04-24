@@ -3,7 +3,15 @@
 // Next.js replaces it with undefined in any client bundle (the function
 // no-ops when the key is missing).
 
-const INDEXNOW_ENDPOINT = 'https://api.indexnow.org/IndexNow';
+// api.indexnow.org is the primary aggregator that fans submissions out to all
+// participating search engines. We also POST to www.bing.com/indexnow so
+// Bing's per-host Webmaster Tools dashboard registers the submission directly;
+// without it, Bing's UI keeps nagging "Set up IndexNow" even while submissions
+// via the aggregator succeed.
+const INDEXNOW_ENDPOINTS = [
+  { url: 'https://api.indexnow.org/IndexNow', label: 'api.indexnow.org' },
+  { url: 'https://www.bing.com/indexnow', label: 'bing.com' },
+] as const;
 const HOST = 'www.getpromonight.com';
 const MAX_URLS_PER_REQUEST = 10_000;
 
@@ -38,29 +46,39 @@ export async function submitToIndexNow(urls: string[]): Promise<void> {
   }
 
   for (const [i, chunk] of chunks.entries()) {
-    const body = {
+    const body = JSON.stringify({
       host: HOST,
       key,
       keyLocation,
       urlList: chunk,
-    };
-    try {
-      const res = await fetch(INDEXNOW_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      const chunkLabel = chunks.length > 1 ? ` (chunk ${i + 1}/${chunks.length})` : '';
-      if (res.ok) {
-        console.log(`[indexnow] submitted ${chunk.length} urls${chunkLabel}: ${res.status}`);
-      } else {
-        const text = await res.text().catch(() => '');
-        console.warn(
-          `[indexnow] submission failed${chunkLabel}: ${res.status} ${res.statusText} ${text}`,
-        );
-      }
-    } catch (err) {
-      console.warn(`[indexnow] network error on chunk ${i + 1}/${chunks.length}:`, err);
-    }
+    });
+    const chunkLabel = chunks.length > 1 ? ` (chunk ${i + 1}/${chunks.length})` : '';
+
+    await Promise.allSettled(
+      INDEXNOW_ENDPOINTS.map(async ({ url, label }) => {
+        try {
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body,
+          });
+          if (res.ok) {
+            console.log(
+              `[indexnow] ${label} submitted ${chunk.length} urls${chunkLabel}: ${res.status}`,
+            );
+          } else {
+            const text = await res.text().catch(() => '');
+            console.warn(
+              `[indexnow] ${label} submission failed${chunkLabel}: ${res.status} ${res.statusText} ${text}`,
+            );
+          }
+        } catch (err) {
+          console.warn(
+            `[indexnow] ${label} network error on chunk ${i + 1}/${chunks.length}:`,
+            err,
+          );
+        }
+      }),
+    );
   }
 }
