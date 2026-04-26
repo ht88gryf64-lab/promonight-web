@@ -2,12 +2,13 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import {
   getAllTeams,
+  getPlayoffPromosInDateRange,
   getPromoCount,
   getPromosFromDate,
   getPromosInDateRange,
 } from '@/lib/data';
 import type { PromoWithTeam, Team } from '@/lib/types';
-import { TonightStrip, pickTonight } from '@/components/tonight-strip';
+import { TonightStrip, pickHeroBuckets } from '@/components/tonight-strip';
 import { ThisWeekStrip } from '@/components/this-week-strip';
 import { BrowseCollections, type CollectionTile } from '@/components/browse-collections';
 import { TeamGrid } from '@/components/team-grid';
@@ -191,19 +192,26 @@ function rankTeamsByFuturePromos(
 
 export default async function HomePage() {
   const today = chicagoTodayYMD();
-  const tomorrow = plusDays(today, 1);
   const weekStart = plusDays(today, 2);
   const weekEnd = plusDays(today, 7);
   const tonightWindowEnd = plusDays(today, 14);
 
-  const [tonightWindow, allFuture, allTeams, promoCount] = await Promise.all([
-    getPromosInDateRange(today, tonightWindowEnd),
-    getPromosFromDate(today),
-    getAllTeams(),
-    getPromoCount(),
-  ]);
+  const [regularWindow, playoffWindow, allFuture, allTeams, promoCount] =
+    await Promise.all([
+      getPromosInDateRange(today, tonightWindowEnd),
+      getPlayoffPromosInDateRange(today, tonightWindowEnd),
+      getPromosFromDate(today),
+      getAllTeams(),
+      getPromoCount(),
+    ]);
 
-  const tonight = pickTonight(tonightWindow, today, tomorrow);
+  // Merge playoff promos into the hero stream. Both arrays are PromoWithTeam
+  // shape; pickHeroBuckets/pickThisWeek sort by date + league rank, so dedupe
+  // is not needed (playoff and regular promos live in disjoint Firestore
+  // collections).
+  const tonightWindow = [...regularWindow, ...playoffWindow];
+
+  const heroBuckets = pickHeroBuckets(tonightWindow, today);
   const weekPromos = pickThisWeek(tonightWindow, weekStart, weekEnd, 6);
   const collectionTiles = buildCollectionTiles(allFuture);
   const { sortedTeams, counts: teamPromoCounts } = rankTeamsByFuturePromos(
@@ -241,7 +249,7 @@ export default async function HomePage() {
             {promoCount.toLocaleString()} promos tracked · Last updated {lastUpdated}
           </p>
 
-          <TonightStrip variant={tonight.variant} promos={tonight.promos} />
+          <TonightStrip buckets={heroBuckets} />
 
           <div className="mt-8">
             <TrackedTapLink

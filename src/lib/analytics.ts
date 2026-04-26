@@ -36,7 +36,14 @@ export type AnalyticsEvent =
   | 'game_tap'
   | 'away_game_expanded';
 
-export type EyebrowState = 'TONIGHT' | 'TONIGHT_AND_TOMORROW' | 'COMING_UP';
+// `TONIGHT_AND_TOMORROW` is retained for backwards-compatibility with dashboards
+// that already segment on it; the bucketed hero (Phase 1.5) emits TONIGHT,
+// WEEKEND, and COMING_UP only.
+export type EyebrowState =
+  | 'TONIGHT'
+  | 'TONIGHT_AND_TOMORROW'
+  | 'WEEKEND'
+  | 'COMING_UP';
 
 export type AnalyticsSurface =
   | 'web_home'

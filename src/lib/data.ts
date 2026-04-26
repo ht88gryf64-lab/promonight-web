@@ -412,6 +412,74 @@ export async function getPlayoffPromosForTeam(
   return promos.map((p) => ({ ...p, team, venue }));
 }
 
+// Converts a playoff promo's ISO timestamp to a YYYY-MM-DD string in
+// America/Chicago — same anchor the homepage uses for "tonight" math, so a
+// late-night East-coast playoff game doesn't slide into the next day on the UTC
+// clock and miss the tonight bucket.
+function isoToChicagoYMD(iso: string): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Chicago',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date(iso));
+  const part = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
+  return `${part('year')}-${part('month')}-${part('day')}`;
+}
+
+function extractOpponentFromGameInfo(gameInfo: string): string {
+  const m = gameInfo.match(/\bvs\.?\s+([A-Z][^(,]+?)(?:\s*\(|$)/);
+  return m ? m[1].trim().replace(/[.,]$/, '') : '';
+}
+
+// Returns dated playoff promos within [startYMD, endYMD] inclusive, shimmed
+// into PromoWithTeam shape so the homepage hero can merge them with regular
+// promos. Recurring playoff promos (date === null) are intentionally excluded
+// — the hero is time-bucketed and only renders dated cards.
+//
+// PlayoffPromoType allows 'event' (watch parties, etc.) which isn't in the
+// regular PromoType union; we map 'event' -> 'theme' for visual badge purposes,
+// which is the closest fit in the existing color/icon system.
+export async function getPlayoffPromosInDateRange(
+  startYMD: string,
+  endYMD: string,
+): Promise<PromoWithTeam[]> {
+  const config = await getPlayoffConfig();
+  if (!config || !config.playoffsActive || config.activeTeamIds.length === 0) {
+    return [];
+  }
+  const activeIds = new Set(config.activeTeamIds);
+  const [snapshot, allTeams] = await Promise.all([
+    db.collection('playoffPromos').where('isPlayoff', '==', true).get(),
+    getAllTeams(),
+  ]);
+  const teamById = new Map(allTeams.map((t) => [t.id, t]));
+  const results: PromoWithTeam[] = [];
+  for (const doc of snapshot.docs) {
+    const p = mapPlayoffPromoDoc(doc);
+    if (!activeIds.has(p.teamId)) continue;
+    if (!p.date) continue;
+    const ymd = isoToChicagoYMD(p.date);
+    if (ymd < startYMD || ymd > endYMD) continue;
+    const team = teamById.get(p.teamId);
+    if (!team) continue;
+    const renderType: PromoType = p.type === 'event' ? 'theme' : p.type;
+    results.push({
+      date: ymd,
+      time: '',
+      opponent: extractOpponentFromGameInfo(p.gameInfo),
+      type: renderType,
+      title: p.title,
+      description: p.description,
+      highlight: p.highlight,
+      icon: resolveIcon(p.title, renderType, ''),
+      recurring: p.recurring,
+      team,
+    });
+  }
+  return results;
+}
+
 export async function getAllPlayoffPromos(): Promise<{
   config: PlayoffConfig | null;
   byLeague: Record<
