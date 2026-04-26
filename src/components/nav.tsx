@@ -81,7 +81,7 @@ export function Nav({ playoffsActive = false }: NavProps) {
         <Link
           href="/download"
           onClick={() => trackInstallClick({ platform: 'ios', section: 'nav', page: 'global' })}
-          className="bg-accent-red hover:bg-accent-red-dim text-white font-body font-bold text-sm px-5 py-2.5 rounded-lg transition-all hover:-translate-y-0.5 hover:shadow-[0_0_30px_rgba(239,68,68,0.3)]"
+          className="font-mono text-[11px] tracking-[0.08em] uppercase text-text-secondary hover:text-white transition-colors"
         >
           Get the App
         </Link>
@@ -144,7 +144,7 @@ export function Nav({ playoffsActive = false }: NavProps) {
           <Link
             href="/download"
             onClick={() => { setMenuOpen(false); trackInstallClick({ platform: 'ios', section: 'nav', page: 'global' }); }}
-            className="bg-accent-red text-white font-bold text-sm px-5 py-2.5 rounded-lg text-center"
+            className="font-mono text-[11px] tracking-[0.08em] uppercase text-text-secondary hover:text-white"
           >
             Get the App
           </Link>

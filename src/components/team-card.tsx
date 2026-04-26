@@ -9,9 +9,13 @@ interface TeamCardProps {
   team: Team;
   promoCount?: number;
   sourcePage?: string;
+  // Lets callers label the count to match the data source they're passing.
+  // Default is "promos" (all-time, used on /teams). Homepage passes
+  // "upcoming" because its count comes from the future-only fetch.
+  countLabel?: string;
 }
 
-export function TeamCard({ team, promoCount, sourcePage = 'unknown' }: TeamCardProps) {
+export function TeamCard({ team, promoCount, sourcePage = 'unknown', countLabel = 'promos' }: TeamCardProps) {
   return (
     <Link
       href={`/${team.sportSlug}/${team.id}`}
@@ -31,7 +35,7 @@ export function TeamCard({ team, promoCount, sourcePage = 'unknown' }: TeamCardP
         </span>
         {promoCount !== undefined && (
           <span className="text-text-dim text-[11px] font-mono">
-            {promoCount} promos
+            {promoCount} {countLabel}
           </span>
         )}
       </div>

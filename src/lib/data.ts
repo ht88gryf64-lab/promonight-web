@@ -86,6 +86,40 @@ export async function getTeamPromos(teamId: string): Promise<Promo[]> {
   return dedupePromos(snapshot.docs.map(mapPromoDoc));
 }
 
+export async function getPromosForDate(date: string): Promise<PromoWithTeam[]> {
+  const teams = await getAllTeams();
+  const teamById = new Map(teams.map((t) => [t.id, t]));
+  try {
+    const snapshot = await db
+      .collectionGroup('promos')
+      .where('date', '==', date)
+      .get();
+    const results: PromoWithTeam[] = [];
+    for (const doc of snapshot.docs) {
+      const teamRef = doc.ref.parent.parent!;
+      const team = teamById.get(teamRef.id);
+      if (team) results.push({ ...mapPromoDoc(doc), team });
+    }
+    return dedupePromos(results, (p) => p.team.id);
+  } catch {
+    const all: PromoWithTeam[] = [];
+    await Promise.all(
+      teams.map(async (team) => {
+        const snapshot = await db
+          .collection('teams')
+          .doc(team.id)
+          .collection('promos')
+          .where('date', '==', date)
+          .get();
+        for (const doc of snapshot.docs) {
+          all.push({ ...mapPromoDoc(doc), team });
+        }
+      })
+    );
+    return dedupePromos(all, (p) => p.team.id);
+  }
+}
+
 export async function getHighlightedPromos(limit: number = 6): Promise<PromoWithTeam[]> {
   const today = new Date().toISOString().split('T')[0];
 
