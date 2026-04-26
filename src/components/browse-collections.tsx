@@ -1,4 +1,5 @@
-import Link from 'next/link';
+import { TrackedTapLink } from './analytics/TrackedTapLink';
+import type { CollectionTileTapProperties } from '@/lib/analytics';
 
 export interface CollectionTile {
   href: string;
@@ -8,6 +9,9 @@ export interface CollectionTile {
   examples: string[];
   totalForOverflow: number;
   accentColor: string;
+  // Snake-case key the analytics event carries; should match the spec'd values
+  // 'bobbleheads' | 'jerseys' | 'theme_nights' | 'fireworks'.
+  trackName: CollectionTileTapProperties['collection_name'];
 }
 
 function summary(tile: CollectionTile): string {
@@ -43,9 +47,15 @@ export function BrowseCollections({ tiles }: { tiles: CollectionTile[] }) {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           {tiles.map((tile) => (
-            <Link
+            <TrackedTapLink
               key={tile.href}
               href={tile.href}
+              trackEvent="collection_tile_tap"
+              trackProps={{
+                surface: 'web_home',
+                collection_name: tile.trackName,
+                collection_count: tile.count,
+              }}
               className="group relative bg-bg-card border border-border-subtle rounded-2xl p-6 transition-all hover:-translate-y-0.5 hover:border-border-hover overflow-hidden"
               style={{ borderLeftWidth: '3px', borderLeftColor: tile.accentColor }}
             >
@@ -79,7 +89,7 @@ export function BrowseCollections({ tiles }: { tiles: CollectionTile[] }) {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
               </div>
-            </Link>
+            </TrackedTapLink>
           ))}
         </div>
       </div>

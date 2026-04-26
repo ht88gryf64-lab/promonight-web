@@ -18,16 +18,25 @@ export const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID || '
 export type AnalyticsEvent =
   | 'page_view'
   | 'cta_click'
+  | 'browse_all_teams_tap'
+  | 'this_week_see_all_tap'
+  | 'collection_tile_tap'
   | 'affiliate_click'
   | 'app_download_click'
   | 'promo_card_tap'
+  | 'tonight_card_tap'
+  | 'this_week_card_tap'
   | 'team_page_engaged'
+  | 'team_picker_tab_change'
+  | 'team_tile_tap'
   | 'newsletter_signup'
   | 'search_query'
   | 'share_initiated'
   | 'game_day_view'
   | 'game_tap'
   | 'away_game_expanded';
+
+export type EyebrowState = 'TONIGHT' | 'TONIGHT_AND_TOMORROW' | 'COMING_UP';
 
 export type AnalyticsSurface =
   | 'web_home'
@@ -71,6 +80,25 @@ export type CtaClickProperties = {
   sport?: Sport;
 };
 
+// Hero secondary CTA — "Browse all 167 teams →". Lives near cta_click since
+// it's a generic destination CTA, but kept as its own event so dashboards
+// don't have to filter cta_click by cta_id.
+export type BrowseAllTeamsTapProperties = {
+  surface: string; // currently always "hero"; future surfaces may differ
+};
+
+export type ThisWeekSeeAllTapProperties = {
+  // No metadata beyond the implicit page_path/device_class auto-attached by track().
+  // Kept as a typed shape so future fields slot in without a property migration.
+  surface: AnalyticsSurface;
+};
+
+export type CollectionTileTapProperties = {
+  surface: AnalyticsSurface;
+  collection_name: 'bobbleheads' | 'jerseys' | 'theme_nights' | 'fireworks';
+  collection_count: number;
+};
+
 export type AffiliatePartner =
   | 'seatgeek'
   | 'stubhub'
@@ -91,7 +119,10 @@ export type AffiliateClickProperties = {
 
 export type AppDownloadClickProperties = {
   surface: AnalyticsSurface;
-  store: 'ios' | 'android';
+  // 'unknown' is for nav links that route to /download without a platform
+  // hint; the destination page disambiguates. iOS/Android are direct store
+  // links from in-section CTAs.
+  store: 'ios' | 'android' | 'unknown';
   placement: string;
   team_slug?: string;
   sport?: Sport;
@@ -105,11 +136,54 @@ export type PromoCardTapProperties = {
   promo_type: string;
 };
 
+// Hero "Tonight" rail — fires when a tonight/tonight+tomorrow/coming-up card
+// is tapped. eyebrow_state lets dashboards segment by which cascade variant
+// the user actually saw above the cards.
+export type TonightCardTapProperties = {
+  surface: AnalyticsSurface;
+  team_id: string;
+  sport?: Sport;
+  promo_id: string;
+  promo_type: string;
+  is_highlight: boolean;
+  eyebrow_state: EyebrowState;
+};
+
+// "This Week" rail — same shape as tonight minus eyebrow_state, plus
+// days_out so dashboards can see whether near-week or far-week cards
+// drive more taps.
+export type ThisWeekCardTapProperties = {
+  surface: AnalyticsSurface;
+  team_id: string;
+  sport?: Sport;
+  promo_id: string;
+  promo_type: string;
+  is_highlight: boolean;
+  days_out: number;
+};
+
 export type TeamPageEngagedProperties = {
   surface: AnalyticsSurface;
   team_slug: string;
   sport?: Sport;
   scroll_depth_pct: number;
+};
+
+// Team-discovery family — these two events share a surface concept
+// (which team-picker did the user interact with). Surface is "homepage"
+// today; "teams_page" is reserved for when /teams gets the same picker.
+export type TeamPickerTabChangeProperties = {
+  surface: 'homepage' | 'teams_page';
+  from_league: string;
+  to_league: string;
+};
+
+export type TeamTileTapProperties = {
+  surface: 'homepage' | 'teams_page';
+  team_id: string;
+  league: string;
+  from_tab: string;
+  is_homepage_sample: boolean;
 };
 
 export type NewsletterSignupProperties = {
@@ -161,10 +235,17 @@ export type AwayGameExpandedProperties = {
 export type EventPropertiesMap = {
   page_view: PageViewProperties;
   cta_click: CtaClickProperties;
+  browse_all_teams_tap: BrowseAllTeamsTapProperties;
+  this_week_see_all_tap: ThisWeekSeeAllTapProperties;
+  collection_tile_tap: CollectionTileTapProperties;
   affiliate_click: AffiliateClickProperties;
   app_download_click: AppDownloadClickProperties;
   promo_card_tap: PromoCardTapProperties;
+  tonight_card_tap: TonightCardTapProperties;
+  this_week_card_tap: ThisWeekCardTapProperties;
   team_page_engaged: TeamPageEngagedProperties;
+  team_picker_tab_change: TeamPickerTabChangeProperties;
+  team_tile_tap: TeamTileTapProperties;
   newsletter_signup: NewsletterSignupProperties;
   search_query: SearchQueryProperties;
   share_initiated: ShareInitiatedProperties;
@@ -258,7 +339,9 @@ export const event = (
 };
 
 export type InstallClickPayload = {
-  platform: 'ios' | 'android';
+  // 'unknown' is for surfaces that route through /download (e.g. the nav)
+  // rather than directly to a store; the destination page picks the platform.
+  platform: 'ios' | 'android' | 'unknown';
   section: string;
   page: string;
   teamSlug?: string;

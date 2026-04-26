@@ -8,7 +8,7 @@ import { TicketsBlock } from './affiliates/TicketsBlock';
 import { ParkingCTA } from './affiliates/ParkingCTA';
 import { HotelsCTA } from './affiliates/HotelsCTA';
 import { normalizeSport, track } from '@/lib/analytics';
-import { teamDisplayName } from '@/lib/promo-helpers';
+import { teamDisplayName, synthPromoId } from '@/lib/promo-helpers';
 import type { GameContext } from '@/lib/data';
 import { Modal } from './ui/modal';
 
@@ -24,12 +24,6 @@ interface TeamCalendarProps {
    *  game — home and away — with away-game travel context. When absent,
    *  falls back to the legacy promo-only rendering. */
   gameContexts?: GameContext[];
-}
-
-// Stable synthetic promo ID. Firestore promos don't carry a field-level id —
-// (team_slug, date, title) uniquely identifies a row in practice.
-function synthPromoId(teamSlug: string, promo: Promo): string {
-  return `${teamSlug}:${promo.date}:${promo.title}`;
 }
 
 function monthKey(year: number, month: number): string {

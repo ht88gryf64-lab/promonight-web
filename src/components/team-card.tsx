@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import type { Team } from '@/lib/types';
 import { SPORT_ICONS } from '@/lib/types';
-import { event } from '@/lib/analytics';
+import { event, track } from '@/lib/analytics';
 
 interface TeamCardProps {
   team: Team;
@@ -13,13 +13,43 @@ interface TeamCardProps {
   // Default is "promos" (all-time, used on /teams). Homepage passes
   // "upcoming" because its count comes from the future-only fetch.
   countLabel?: string;
+  // Analytics surface for the new team_tile_tap event. Optional — when
+  // omitted (e.g. /teams page using TeamCard directly via TeamSearch) the
+  // new event does not fire and only the legacy event() emits.
+  tileSurface?: 'homepage' | 'teams_page';
+  fromTab?: string;
+  isHomepageSample?: boolean;
 }
 
-export function TeamCard({ team, promoCount, sourcePage = 'unknown', countLabel = 'promos' }: TeamCardProps) {
+export function TeamCard({
+  team,
+  promoCount,
+  sourcePage = 'unknown',
+  countLabel = 'promos',
+  tileSurface,
+  fromTab,
+  isHomepageSample,
+}: TeamCardProps) {
+  const handleClick = () => {
+    // TRANSITIONAL: legacy GA4-only team_card_click fires alongside the new
+    // dual-emit team_tile_tap. Drop legacy in follow-up PR after ~2 weeks
+    // once dashboards confirmed migrated.
+    event('team_card_click', { team_slug: team.id, sport: team.league, source_page: sourcePage });
+    if (tileSurface) {
+      track('team_tile_tap', {
+        surface: tileSurface,
+        team_id: team.id,
+        league: team.league,
+        from_tab: fromTab ?? 'unknown',
+        is_homepage_sample: !!isHomepageSample,
+      });
+    }
+  };
+
   return (
     <Link
       href={`/${team.sportSlug}/${team.id}`}
-      onClick={() => event('team_card_click', { team_slug: team.id, sport: team.league, source_page: sourcePage })}
+      onClick={handleClick}
       className="group block bg-bg-card border border-border-subtle rounded-2xl p-5 transition-all hover:-translate-y-0.5 hover:border-border-hover"
     >
       <div className="flex items-start justify-between mb-3">
