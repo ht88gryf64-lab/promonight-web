@@ -68,13 +68,55 @@ Tradeoff: brief flash on the very first visit (typically <100ms; reorder happens
 ### Privacy
 The API route reads only the derived geo headers (country code + state code). The IP itself is not read, logged, or persisted anywhere. The state code is cached in the visitor's own `localStorage`, never sent back to a server.
 
-## Curl verification (preview deploy)
+## Curl verification
 
-The preview deploy confirms the geo-aware API endpoint responds correctly to forged geo headers. With Option A the homepage HTML itself is geo-blind (alphabetical-by-rank); the reorder happens client-side after the API call.
+The preview URL (`promonight-8iqlga53m-btj8tk69dk-7318s-projects.vercel.app`) is gated by Vercel SSO with no automation-bypass token configured, so the curl tests below were run against a local production build (`npx next build && npx next start -p 3457`) on the same commit (`b52839f`). The API logic is identical — Vercel's edge geo headers are read via `next/headers`, which works the same locally and in preview.
+
+### `/api/geo-region` — header injection
 
 ```
-# placeholder — filled in below after the preview deploy goes Ready
+$ curl -s -H "x-vercel-ip-country-region: MN" -H "x-vercel-ip-country: US" http://localhost:3457/api/geo-region
+{"country":"US","region":"MN"}
+
+$ curl -s -H "x-vercel-ip-country-region: CA" -H "x-vercel-ip-country: US" http://localhost:3457/api/geo-region
+{"country":"US","region":"CA"}
+
+$ curl -s -H "x-vercel-ip-country-region: TX" -H "x-vercel-ip-country: US" http://localhost:3457/api/geo-region
+{"country":"US","region":"TX"}
+
+$ curl -s http://localhost:3457/api/geo-region
+{"country":null,"region":null}
 ```
+
+The reorder itself happens client-side, so the leading-teams swap can't be observed in the raw curl output. The mapping table in `src/lib/geo/state-to-teams.ts` ensures:
+- `MN` -> `[minnesota-twins, minnesota-wild, minnesota-timberwolves, minnesota-lynx, minnesota-vikings, minnesota-united, ...]` lead the grid
+- `CA` -> `[los-angeles-dodgers, san-francisco-giants, san-diego-padres, los-angeles-angels, ...]` lead the grid
+- `TX` -> `[houston-astros, texas-rangers, dallas-stars, dallas-mavericks, ...]` lead the grid
+
+Confirm visually in a browser by navigating to the preview URL with each region forged via a request-header tool, or by setting `localStorage.setItem('pn:geo:v1', JSON.stringify({region:'MN', ts:Date.now()}))` and reloading.
+
+### Cross-league hero — Phase 1 spot-check
+
+```
+$ curl -s http://localhost:3457/ | grep -oE 'tonight_card_tap[^}]+sport\\":\\"[a-z]+' | grep -oE 'sport\\":\\"[a-z]+' | sort | uniq -c | sort -rn
+   4 sport":"mlb
+   3 sport":"nba
+   1 sport":"mls
+```
+
+8 hero cards total — 4 MLB, 3 NBA playoff, 1 MLS. Compare to current production which is 22+ MLB and 0 anything else. Cross-league surfacing working.
+
+### Time bucket headings — Phase 2 spot-check
+
+```
+$ curl -s http://localhost:3457/ | grep -oE 'TONIGHT|THIS WEEKEND|COMING UP' | sort | uniq -c
+  10 TONIGHT
+
+$ curl -s http://localhost:3457/ | grep -oE "More upcoming this week" | head -1
+More upcoming this week
+```
+
+Sun 2026-04-26 had 5+ promos for today, so the picker collapsed to Tonight-only and surfaced the "More upcoming this week" fallback link, which is the documented behavior. Weekend and Coming Up buckets are correctly hidden in this saturated state.
 
 ## Open questions / follow-ups
 
