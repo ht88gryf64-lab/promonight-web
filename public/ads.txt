@@ -1,0 +1,5 @@
+# ads.txt for getpromonight.com
+# Format: <ad system domain>, <publisher account ID>, <relationship>, <certification authority ID>
+# Add new lines below as additional ad networks are approved.
+
+google.com, pub-5027420504477090, DIRECT, f08c47fec0942fa0

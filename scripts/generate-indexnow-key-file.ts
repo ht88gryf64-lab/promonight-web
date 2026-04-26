@@ -39,9 +39,12 @@ async function main() {
 
   // Remove any stale *.txt verification files from previous key values,
   // so the public/ directory only ever holds the current key.
+  // Keep checked-in *.txt files (ads.txt for AdSense verification, etc.) —
+  // those are not generated and must survive every build.
+  const KEEP_TXT = new Set(['ads.txt']);
   const entries = await readdir(PUBLIC_DIR);
   for (const name of entries) {
-    if (name.endsWith('.txt') && name !== `${key}.txt`) {
+    if (name.endsWith('.txt') && name !== `${key}.txt` && !KEEP_TXT.has(name)) {
       await unlink(join(PUBLIC_DIR, name));
       console.log(`[generate-indexnow-key-file] removed stale ${name}`);
     }

@@ -22,3 +22,8 @@ scripts/.fonts/
 
 # IndexNow key verification file — generated at prebuild from INDEXNOW_KEY env var
 public/*.txt
+# but DO commit ads.txt — required for AdSense verification, served at /ads.txt
+!public/ads.txt
+
+# throwaway promo-pipeline prototypes
+promo-pipeline/prototypes/
