@@ -80,7 +80,7 @@ export function Nav({ playoffsActive = false }: NavProps) {
         </Link>
         <Link
           href="/download"
-          onClick={() => trackInstallClick({ platform: 'ios', section: 'nav', page: 'global' })}
+          onClick={() => trackInstallClick({ platform: 'unknown', section: 'nav', page: 'global' })}
           className="font-mono text-[11px] tracking-[0.08em] uppercase text-text-secondary hover:text-white transition-colors"
         >
           Get the App
@@ -143,7 +143,7 @@ export function Nav({ playoffsActive = false }: NavProps) {
           </Link>
           <Link
             href="/download"
-            onClick={() => { setMenuOpen(false); trackInstallClick({ platform: 'ios', section: 'nav', page: 'global' }); }}
+            onClick={() => { setMenuOpen(false); trackInstallClick({ platform: 'unknown', section: 'nav', page: 'global' }); }}
             className="font-mono text-[11px] tracking-[0.08em] uppercase text-text-secondary hover:text-white"
           >
             Get the App

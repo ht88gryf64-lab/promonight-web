@@ -15,6 +15,7 @@ import { AppDownloadButtons } from '@/components/app-download-buttons';
 import { IndieDeveloperBlock } from '@/components/indie-developer-block';
 import { HomepageFAQ } from '@/components/homepage-faq';
 import { HomepageJsonLd } from '@/components/homepage-json-ld';
+import { TrackedTapLink } from '@/components/analytics/TrackedTapLink';
 
 // 1h — Tonight cards roll over daily, this section needs to be more time-sensitive
 // than the team pages.
@@ -106,6 +107,7 @@ function buildCollectionTiles(allFuture: PromoWithTeam[]): CollectionTile[] {
       examples: titles,
       totalForOverflow: total,
       accentColor: '#34d399',
+      trackName: 'bobbleheads',
     });
   }
   if (jerseys.length > 0) {
@@ -118,6 +120,7 @@ function buildCollectionTiles(allFuture: PromoWithTeam[]): CollectionTile[] {
       examples: titles,
       totalForOverflow: total,
       accentColor: '#22d3ee',
+      trackName: 'jerseys',
     });
   }
   if (themes.length > 0) {
@@ -130,6 +133,7 @@ function buildCollectionTiles(allFuture: PromoWithTeam[]): CollectionTile[] {
       examples: titles,
       totalForOverflow: total,
       accentColor: '#a78bfa',
+      trackName: 'theme_nights',
     });
   }
   if (fireworks.length > 0) {
@@ -142,6 +146,7 @@ function buildCollectionTiles(allFuture: PromoWithTeam[]): CollectionTile[] {
       examples: titles,
       totalForOverflow: total,
       accentColor: '#fb923c',
+      trackName: 'fireworks',
     });
   }
 
@@ -239,21 +244,23 @@ export default async function HomePage() {
           <TonightStrip variant={tonight.variant} promos={tonight.promos} />
 
           <div className="mt-8">
-            <Link
+            <TrackedTapLink
               href="/teams"
+              trackEvent="browse_all_teams_tap"
+              trackProps={{ surface: 'hero' }}
               className="inline-flex items-center gap-1.5 text-text-secondary hover:text-white text-sm font-mono tracking-[0.05em] transition-colors"
             >
               Browse all 167 teams
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
               </svg>
-            </Link>
+            </TrackedTapLink>
           </div>
         </div>
       </section>
 
       {/* This Week */}
-      <ThisWeekStrip promos={weekPromos} />
+      <ThisWeekStrip promos={weekPromos} today={today} />
 
       {/* Browse Collections */}
       <BrowseCollections tiles={collectionTiles} />
@@ -286,6 +293,7 @@ export default async function HomePage() {
             promoCounts={teamPromoCounts}
             limitOnAll={12}
             countLabel="upcoming"
+            surface="homepage"
           />
 
           <div className="mt-8 text-center md:hidden">
@@ -319,7 +327,7 @@ export default async function HomePage() {
               The PromoNight app sends a push the morning of every promo for
               your starred teams. Free to download. Web has everything else.
             </p>
-            <AppDownloadButtons section="hero" page="home" />
+            <AppDownloadButtons section="homepage_app_section" page="home" />
           </div>
         </div>
       </section>

@@ -1,7 +1,8 @@
-import Link from 'next/link';
 import type { PromoWithTeam } from '@/lib/types';
 import { PromoBadge } from './promo-badge';
-import { teamDisplayName } from '@/lib/promo-helpers';
+import { teamDisplayName, synthPromoId } from '@/lib/promo-helpers';
+import { normalizeSport } from '@/lib/analytics';
+import { TrackedTapLink } from './analytics/TrackedTapLink';
 
 function formatDayLabel(dateStr: string): string {
   return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', {
@@ -20,8 +21,18 @@ function formatDateParts(dateStr: string) {
   };
 }
 
-export function ThisWeekStrip({ promos }: { promos: PromoWithTeam[] }) {
+// `today` is YYYY-MM-DD in America/Chicago, passed by the homepage so the
+// strip can compute days_out without re-deriving "today" from a UTC clock.
+export function ThisWeekStrip({ promos, today }: { promos: PromoWithTeam[]; today: string }) {
   if (promos.length === 0) return null;
+
+  const daysBetween = (a: string, b: string): number => {
+    const [ay, am, ad] = a.split('-').map(Number);
+    const [by, bm, bd] = b.split('-').map(Number);
+    const da = Date.UTC(ay, am - 1, ad);
+    const db = Date.UTC(by, bm - 1, bd);
+    return Math.round((db - da) / 86400000);
+  };
 
   const byDate = new Map<string, PromoWithTeam[]>();
   for (const p of promos) {
@@ -43,15 +54,17 @@ export function ThisWeekStrip({ promos }: { promos: PromoWithTeam[] }) {
               MARQUEE PROMOS IN THE NEXT 7 DAYS
             </h2>
           </div>
-          <Link
+          <TrackedTapLink
             href="/promos/this-week"
+            trackEvent="this_week_see_all_tap"
+            trackProps={{ surface: 'web_home' }}
             className="flex-shrink-0 inline-flex items-center gap-1 text-accent-red text-sm font-mono hover:underline"
           >
             See all
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
             </svg>
-          </Link>
+          </TrackedTapLink>
         </div>
 
         <div className="space-y-8">
@@ -64,9 +77,19 @@ export function ThisWeekStrip({ promos }: { promos: PromoWithTeam[] }) {
                 {list.map((p, i) => {
                   const { day, weekday, month } = formatDateParts(p.date);
                   return (
-                    <Link
+                    <TrackedTapLink
                       key={`${p.team.id}-${i}`}
                       href={`/${p.team.sportSlug}/${p.team.id}`}
+                      trackEvent="this_week_card_tap"
+                      trackProps={{
+                        surface: 'web_home',
+                        team_id: p.team.id,
+                        sport: normalizeSport(p.team.league),
+                        promo_id: synthPromoId(p.team.id, p),
+                        promo_type: p.type,
+                        is_highlight: p.highlight,
+                        days_out: daysBetween(today, p.date),
+                      }}
                       className="group bg-bg-card border border-border-subtle rounded-xl p-4 flex items-center gap-4 hover:border-border-hover transition-colors"
                     >
                       <div className="flex-shrink-0 w-14 text-center">
@@ -99,7 +122,7 @@ export function ThisWeekStrip({ promos }: { promos: PromoWithTeam[] }) {
                           <span className="text-text-dim"> · {p.team.league}</span>
                         </div>
                       </div>
-                    </Link>
+                    </TrackedTapLink>
                   );
                 })}
               </div>

@@ -1,7 +1,9 @@
 import type { PromoWithTeam } from '@/lib/types';
 import { LEAGUE_ORDER } from '@/lib/types';
 import { PromoBadge } from './promo-badge';
-import { teamDisplayName } from '@/lib/promo-helpers';
+import { teamDisplayName, synthPromoId } from '@/lib/promo-helpers';
+import { normalizeSport, type EyebrowState } from '@/lib/analytics';
+import { TrackedTapLink } from './analytics/TrackedTapLink';
 
 export type TonightVariant = 'tonight' | 'tonight-tomorrow' | 'coming-up';
 
@@ -9,6 +11,13 @@ const EYEBROW: Record<TonightVariant, string> = {
   tonight: 'TONIGHT',
   'tonight-tomorrow': 'TONIGHT & TOMORROW',
   'coming-up': 'COMING UP',
+};
+
+// Variant -> snake-case state value plumbed into tonight_card_tap analytics.
+const EYEBROW_STATE: Record<TonightVariant, EyebrowState> = {
+  tonight: 'TONIGHT',
+  'tonight-tomorrow': 'TONIGHT_AND_TOMORROW',
+  'coming-up': 'COMING_UP',
 };
 
 const LEAGUE_RANK: Record<string, number> = Object.fromEntries(
@@ -100,9 +109,19 @@ export function TonightStrip({
                 promo.type === 'theme' ? '#a78bfa' :
                 promo.type === 'kids' ? '#60a5fa' : '#fb923c';
               return (
-                <a
+                <TrackedTapLink
                   key={`${promo.team.id}-${promo.date}-${i}`}
                   href={`/${promo.team.sportSlug}/${promo.team.id}`}
+                  trackEvent="tonight_card_tap"
+                  trackProps={{
+                    surface: 'web_home',
+                    team_id: promo.team.id,
+                    sport: normalizeSport(promo.team.league),
+                    promo_id: synthPromoId(promo.team.id, promo),
+                    promo_type: promo.type,
+                    is_highlight: promo.highlight,
+                    eyebrow_state: EYEBROW_STATE[variant],
+                  }}
                   className="group relative bg-bg-card border border-border-subtle rounded-2xl p-5 transition-all hover:-translate-y-0.5 hover:border-border-hover flex gap-4 overflow-hidden snap-start flex-shrink-0 w-[300px] md:w-[340px]"
                   style={{ borderLeftWidth: '3px', borderLeftColor: typeColor }}
                 >
@@ -147,7 +166,7 @@ export function TonightStrip({
                       )}
                     </div>
                   </div>
-                </a>
+                </TrackedTapLink>
               );
             })}
           </div>

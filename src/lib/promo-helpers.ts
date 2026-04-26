@@ -1,6 +1,14 @@
 import type { Team, Promo, PromoType, Venue, PlayoffPromo } from './types';
 import { PROMO_TYPE_LABELS } from './types';
 
+// Stable synthetic promo ID. Firestore promo subdocs do carry "p1"-style ids
+// but the data layer (mapPromoDoc) drops them — (team_slug, date, title)
+// uniquely identifies a promo in practice and is what we use everywhere
+// analytics needs a stable cross-surface key for the same promo.
+export function synthPromoId(teamSlug: string, promo: Pick<Promo, 'date' | 'title'>): string {
+  return `${teamSlug}:${promo.date}:${promo.title}`;
+}
+
 // Returns the display name for a team, avoiding the "Cincinnati FC Cincinnati"
 // doubled-city case for MLS clubs whose `name` already includes the city
 // (FC Cincinnati, FC Dallas, Atlanta United, etc.). When the city appears as a
