@@ -6,6 +6,7 @@ import { Footer } from '@/components/footer';
 import { UTMCaptureProvider } from '@/components/utm-capture-provider';
 import { AnalyticsProvider } from '@/components/analytics/AnalyticsProvider';
 import { PageViewTracker } from '@/components/analytics/PageViewTracker';
+import { AdProvider } from '@/components/ads/AdProvider';
 import { getPlayoffConfig } from '@/lib/data';
 import './globals.css';
 
@@ -76,15 +77,17 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en" className={`${bebasNeue.variable} ${dmSans.variable} ${dmMono.variable}`}>
       <body className="relative">
         <AnalyticsProvider>
-          {/* useSearchParams inside PageViewTracker requires a Suspense
-              boundary during prerender — this scope covers it. */}
-          <Suspense fallback={null}>
-            <PageViewTracker />
-          </Suspense>
-          <UTMCaptureProvider />
-          <Nav playoffsActive={playoffsActive} />
-          <main className="relative z-[1]">{children}</main>
-          <Footer />
+          <AdProvider>
+            {/* useSearchParams inside PageViewTracker requires a Suspense
+                boundary during prerender — this scope covers it. */}
+            <Suspense fallback={null}>
+              <PageViewTracker />
+            </Suspense>
+            <UTMCaptureProvider />
+            <Nav playoffsActive={playoffsActive} />
+            <main className="relative z-[1]">{children}</main>
+            <Footer />
+          </AdProvider>
         </AnalyticsProvider>
       </body>
     </html>

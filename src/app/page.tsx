@@ -17,6 +17,8 @@ import { IndieDeveloperBlock } from '@/components/indie-developer-block';
 import { HomepageFAQ } from '@/components/homepage-faq';
 import { HomepageJsonLd } from '@/components/homepage-json-ld';
 import { TrackedTapLink } from '@/components/analytics/TrackedTapLink';
+import { AdSlot } from '@/components/ads/AdSlot';
+import { AD_SLOTS } from '@/lib/ads/slots';
 
 // 1h — Tonight cards roll over daily, this section needs to be more time-sensitive
 // than the team pages.
@@ -267,11 +269,19 @@ export default async function HomePage() {
         </div>
       </section>
 
+      <section className="px-6 py-4">
+        <AdSlot config={AD_SLOTS.HEADER_LEADERBOARD} pageType="homepage" />
+      </section>
+
       {/* This Week */}
       <ThisWeekStrip promos={weekPromos} today={today} />
 
       {/* Browse Collections */}
       <BrowseCollections tiles={collectionTiles} />
+
+      <section className="px-6 py-6 border-t border-border-subtle">
+        <AdSlot config={AD_SLOTS.RECIRC_NATIVE} pageType="homepage" />
+      </section>
 
       {/* Find Your Team */}
       <section className="py-16 px-6 border-t border-border-subtle">
@@ -342,6 +352,10 @@ export default async function HomePage() {
 
       {/* FAQ */}
       <HomepageFAQ />
+
+      <section className="px-6 py-4">
+        <AdSlot config={AD_SLOTS.ADHESION_FOOTER} pageType="homepage" />
+      </section>
     </>
   );
 }

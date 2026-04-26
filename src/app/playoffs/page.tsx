@@ -7,6 +7,8 @@ import { teamDisplayName } from '@/lib/promo-helpers';
 import { ParkingCTA } from '@/components/affiliates/ParkingCTA';
 import { HotelsCTA } from '@/components/affiliates/HotelsCTA';
 import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
+import { AdSlot } from '@/components/ads/AdSlot';
+import { AD_SLOTS } from '@/lib/ads/slots';
 
 export const revalidate = 3600;
 
@@ -321,6 +323,10 @@ export default async function PlayoffsPage() {
           </p>
         </header>
 
+        <div className="my-6">
+          <AdSlot config={AD_SLOTS.HEADER_LEADERBOARD} pageType="playoffs_hub" />
+        </div>
+
         {nbaGroups.length > 0 && (
           <LeagueSection
             league="NBA"
@@ -330,6 +336,10 @@ export default async function PlayoffsPage() {
           />
         )}
 
+        <div className="my-8">
+          <AdSlot config={AD_SLOTS.IN_CONTENT_1} pageType="playoffs_hub" />
+        </div>
+
         {nhlGroups.length > 0 && (
           <LeagueSection
             league="NHL"
@@ -338,6 +348,10 @@ export default async function PlayoffsPage() {
             venuesByTeamId={venuesByTeamId}
           />
         )}
+
+        <div className="my-8">
+          <AdSlot config={AD_SLOTS.IN_CONTENT_2} pageType="playoffs_hub" />
+        </div>
 
         {nbaGroups.length === 0 && nhlGroups.length === 0 && (
           <p className="text-text-secondary text-center py-16">
@@ -371,6 +385,14 @@ export default async function PlayoffsPage() {
           </section>
         )}
 
+        <div className="my-8">
+          <AdSlot config={AD_SLOTS.IN_CONTENT_3} pageType="playoffs_hub" />
+        </div>
+
+        <div className="my-8">
+          <AdSlot config={AD_SLOTS.SIDEBAR_STICKY} pageType="playoffs_hub" />
+        </div>
+
         <section className="mt-16 pt-10 border-t border-border-subtle">
           <h2 className="font-display text-3xl md:text-4xl tracking-[1px] mb-8">
             FREQUENTLY ASKED QUESTIONS
@@ -388,6 +410,10 @@ export default async function PlayoffsPage() {
         <section className="mt-12 pt-6 border-t border-border-subtle">
           <AffiliateDisclosure />
         </section>
+
+        <div className="mt-6">
+          <AdSlot config={AD_SLOTS.ADHESION_FOOTER} pageType="playoffs_hub" />
+        </div>
       </div>
     </div>
   );

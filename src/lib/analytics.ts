@@ -34,7 +34,8 @@ export type AnalyticsEvent =
   | 'share_initiated'
   | 'game_day_view'
   | 'game_tap'
-  | 'away_game_expanded';
+  | 'away_game_expanded'
+  | 'ad_slot_viewed';
 
 // `TONIGHT_AND_TOMORROW` is retained for backwards-compatibility with dashboards
 // that already segment on it; the bucketed hero (Phase 1.5) emits TONIGHT,
@@ -239,6 +240,14 @@ export type AwayGameExpandedProperties = {
   has_promo: boolean;
 };
 
+// Fired the first time an ad slot enters the viewport. device_class is
+// auto-attached by track() so the slot only carries its identity and the
+// page context it was placed on.
+export type AdSlotViewedProperties = {
+  slot_id: string;
+  page_type: string;
+};
+
 export type EventPropertiesMap = {
   page_view: PageViewProperties;
   cta_click: CtaClickProperties;
@@ -259,6 +268,7 @@ export type EventPropertiesMap = {
   game_day_view: GameDayViewProperties;
   game_tap: GameTapProperties;
   away_game_expanded: AwayGameExpandedProperties;
+  ad_slot_viewed: AdSlotViewedProperties;
 };
 
 // ── Utilities ────────────────────────────────────────────────────────────

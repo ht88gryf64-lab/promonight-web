@@ -3,6 +3,8 @@ import type { PromoWithTeam } from '@/lib/types';
 import { PromoBadge } from './promo-badge';
 import { AppDownloadButtons } from './app-download-buttons';
 import { teamDisplayName } from '@/lib/promo-helpers';
+import { AdSlot } from './ads/AdSlot';
+import { AD_SLOTS } from '@/lib/ads/slots';
 
 export interface AggregatorGroup {
   label: string;
@@ -63,6 +65,14 @@ export function AggregatorPage({
           <p className="mt-5 text-text-secondary text-base leading-relaxed max-w-3xl">
             {lead}
           </p>
+        </div>
+
+        <div className="mb-10">
+          <AdSlot config={AD_SLOTS.HEADER_LEADERBOARD} pageType="promo_collection" />
+        </div>
+
+        <div className="mb-10">
+          <AdSlot config={AD_SLOTS.IN_CONTENT_1} pageType="promo_collection" />
         </div>
 
         {/* Groups */}
@@ -148,6 +158,10 @@ export function AggregatorPage({
             </div>
           </section>
         )}
+
+        <div className="mt-10">
+          <AdSlot config={AD_SLOTS.ADHESION_FOOTER} pageType="promo_collection" />
+        </div>
       </div>
     </div>
   );

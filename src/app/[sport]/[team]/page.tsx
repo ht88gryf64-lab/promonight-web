@@ -34,6 +34,8 @@ import { ParkingCTA } from '@/components/affiliates/ParkingCTA';
 import { HotelsCTA } from '@/components/affiliates/HotelsCTA';
 import { FanGearCTA } from '@/components/affiliates/FanGearCTA';
 import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
+import { AdSlot } from '@/components/ads/AdSlot';
+import { AD_SLOTS } from '@/lib/ads/slots';
 
 export const revalidate = 21600;
 
@@ -180,12 +182,20 @@ export default async function TeamPage({
       />
       <EngagementTracker teamSlug={team.id} sport={team.league} />
 
+      <section className="px-6 pt-24 pb-2">
+        <AdSlot config={AD_SLOTS.HEADER_LEADERBOARD} pageType="team_page" />
+      </section>
+
       <TeamHero
         team={team}
         venue={venue}
         promoCount={promos.length}
         promoCounts={promoCounts}
       />
+
+      <section className="px-6 py-4">
+        <AdSlot config={AD_SLOTS.TEAM_PAGE_AFTER_HERO} pageType="team_page" />
+      </section>
 
       {inPlayoffs && playoffPromos.length > 0 && (
         <PlayoffSection
@@ -289,6 +299,14 @@ export default async function TeamPage({
         playoffContext={playoffContext}
       />
 
+      <section className="px-6 py-6 border-t border-border-subtle">
+        <AdSlot config={AD_SLOTS.IN_CONTENT_1} pageType="team_page" />
+      </section>
+
+      <section className="px-6 py-6 border-t border-border-subtle">
+        <AdSlot config={AD_SLOTS.SIDEBAR_STICKY} pageType="team_page" />
+      </section>
+
       <HotelsCTA
         team={team}
         venue={venue}
@@ -306,6 +324,10 @@ export default async function TeamPage({
         <div className="max-w-3xl mx-auto">
           <AffiliateDisclosure />
         </div>
+      </section>
+
+      <section className="px-6 py-4">
+        <AdSlot config={AD_SLOTS.ADHESION_FOOTER} pageType="team_page" />
       </section>
     </>
   );
