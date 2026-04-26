@@ -1,188 +1,326 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { getAllTeams, getHighlightedPromos, getPromoCount, getTeamPromos } from '@/lib/data';
-import { HotPromosHero } from '@/components/hot-promos-hero';
-import { AppDownloadButtons } from '@/components/app-download-buttons';
-import { AppScreenshotStrip } from '@/components/app-screenshot-strip';
-import { IndieDeveloperBlock } from '@/components/indie-developer-block';
+import {
+  getAllTeams,
+  getPromoCount,
+  getPromosFromDate,
+  getPromosInDateRange,
+} from '@/lib/data';
+import type { PromoWithTeam, Team } from '@/lib/types';
+import { TonightStrip, pickTonight } from '@/components/tonight-strip';
+import { ThisWeekStrip } from '@/components/this-week-strip';
+import { BrowseCollections, type CollectionTile } from '@/components/browse-collections';
 import { TeamGrid } from '@/components/team-grid';
+import { AppDownloadButtons } from '@/components/app-download-buttons';
+import { IndieDeveloperBlock } from '@/components/indie-developer-block';
 import { HomepageFAQ } from '@/components/homepage-faq';
 import { HomepageJsonLd } from '@/components/homepage-json-ld';
 
+// 1h — Tonight cards roll over daily, this section needs to be more time-sensitive
+// than the team pages.
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
   alternates: { canonical: 'https://www.getpromonight.com' },
 };
 
+// Date math anchored to America/Chicago so the homepage doesn't say "tonight"
+// for a UTC-day-ahead date (cosmetic bug we hit on the team pages).
+function chicagoTodayYMD(): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Chicago',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  const part = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
+  return `${part('year')}-${part('month')}-${part('day')}`;
+}
+
+function plusDays(ymd: string, n: number): string {
+  const [y, m, d] = ymd.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d + n));
+  return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`;
+}
+
+function formatChicagoLong(ymd: string): string {
+  const [y, m, d] = ymd.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d, 12)).toLocaleDateString('en-US', {
+    timeZone: 'America/Chicago',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+const BOBBLEHEAD_RE = /bobblehead/i;
+const JERSEY_RE = /\b(jersey|jerseys|cap|caps|hat|hats|jacket|jackets|shirt|shirts|hoodie|hoodies)\b/i;
+const FIREWORKS_RE = /fireworks|postgame concert|post-game concert|pyro|light show/i;
+
+function topExamples(
+  pool: PromoWithTeam[],
+  desired: number,
+): { titles: string[]; total: number } {
+  const seen = new Set<string>();
+  const titles: string[] = [];
+  const dated = [...pool].sort((a, b) => a.date.localeCompare(b.date));
+  for (const p of dated) {
+    if (!p.highlight) continue;
+    if (seen.has(p.title)) continue;
+    seen.add(p.title);
+    titles.push(p.title);
+    if (titles.length === desired) break;
+  }
+  if (titles.length < desired) {
+    for (const p of dated) {
+      if (seen.has(p.title)) continue;
+      seen.add(p.title);
+      titles.push(p.title);
+      if (titles.length === desired) break;
+    }
+  }
+  return { titles, total: pool.length };
+}
+
+function buildCollectionTiles(allFuture: PromoWithTeam[]): CollectionTile[] {
+  const bobbleheads = allFuture.filter(
+    (p) => BOBBLEHEAD_RE.test(p.title) || BOBBLEHEAD_RE.test(p.description),
+  );
+  const jerseys = allFuture.filter(
+    (p) => JERSEY_RE.test(p.title) || JERSEY_RE.test(p.description),
+  );
+  const themes = allFuture.filter((p) => p.type === 'theme');
+  const fireworks = themes.filter(
+    (p) => FIREWORKS_RE.test(p.title) || FIREWORKS_RE.test(p.description),
+  );
+
+  const tiles: CollectionTile[] = [];
+
+  if (bobbleheads.length > 0) {
+    const { titles, total } = topExamples(bobbleheads, 3);
+    tiles.push({
+      href: '/promos/bobbleheads',
+      emoji: '🎁',
+      label: 'Bobbleheads',
+      count: total,
+      examples: titles,
+      totalForOverflow: total,
+      accentColor: '#34d399',
+    });
+  }
+  if (jerseys.length > 0) {
+    const { titles, total } = topExamples(jerseys, 3);
+    tiles.push({
+      href: '/promos/jersey-giveaways',
+      emoji: '👕',
+      label: 'Jerseys & Apparel',
+      count: total,
+      examples: titles,
+      totalForOverflow: total,
+      accentColor: '#22d3ee',
+    });
+  }
+  if (themes.length > 0) {
+    const { titles, total } = topExamples(themes, 3);
+    tiles.push({
+      href: '/promos/theme-nights',
+      emoji: '🎉',
+      label: 'Theme Nights',
+      count: total,
+      examples: titles,
+      totalForOverflow: total,
+      accentColor: '#a78bfa',
+    });
+  }
+  if (fireworks.length > 0) {
+    const { titles, total } = topExamples(fireworks, 3);
+    tiles.push({
+      href: '/promos/theme-nights',
+      emoji: '💥',
+      label: 'Fireworks Nights',
+      count: total,
+      examples: titles,
+      totalForOverflow: total,
+      accentColor: '#fb923c',
+    });
+  }
+
+  return tiles;
+}
+
+function pickThisWeek(
+  windowPromos: PromoWithTeam[],
+  startInclusive: string,
+  endInclusive: string,
+  limit: number,
+): PromoWithTeam[] {
+  return windowPromos
+    .filter((p) => p.highlight && p.date >= startInclusive && p.date <= endInclusive)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(0, limit);
+}
+
+// Ranks teams by future-promo count (not all-time). Drives the "popular"
+// sample shown on the All tab. Intentionally seasonal: a team with 100 past
+// promos but 0 upcoming won't appear here, since the homepage is forward-
+// looking. In spring this skews MLB-heavy because MLB schedules are denser
+// for the months ahead. If All-tab balance becomes a problem, options are
+// (a) take top-2-per-league across 6 leagues for 12 total, or (b) switch to
+// all-time totals via 167 separate getTeamPromos fetches.
+function rankTeamsByFuturePromos(
+  teams: Team[],
+  allFuture: PromoWithTeam[],
+): { sortedTeams: Team[]; counts: Record<string, number> } {
+  const counts: Record<string, number> = {};
+  for (const t of teams) counts[t.id] = 0;
+  for (const p of allFuture) {
+    if (counts[p.team.id] !== undefined) counts[p.team.id]++;
+  }
+  const sortedTeams = [...teams].sort((a, b) => {
+    const diff = (counts[b.id] ?? 0) - (counts[a.id] ?? 0);
+    if (diff !== 0) return diff;
+    return a.city.localeCompare(b.city);
+  });
+  return { sortedTeams, counts };
+}
+
 export default async function HomePage() {
-  const [promoCount, hotPromos, teams] = await Promise.all([
-    getPromoCount(),
-    getHighlightedPromos(8),
+  const today = chicagoTodayYMD();
+  const tomorrow = plusDays(today, 1);
+  const weekStart = plusDays(today, 2);
+  const weekEnd = plusDays(today, 7);
+  const tonightWindowEnd = plusDays(today, 14);
+
+  const [tonightWindow, allFuture, allTeams, promoCount] = await Promise.all([
+    getPromosInDateRange(today, tonightWindowEnd),
+    getPromosFromDate(today),
     getAllTeams(),
+    getPromoCount(),
   ]);
 
-  const popularTeams = teams.slice(0, 32);
-  const promoCounts: Record<string, number> = {};
-  await Promise.all(
-    popularTeams.map(async (t) => {
-      const promos = await getTeamPromos(t.id);
-      promoCounts[t.id] = promos.length;
-    })
+  const tonight = pickTonight(tonightWindow, today, tomorrow);
+  const weekPromos = pickThisWeek(tonightWindow, weekStart, weekEnd, 6);
+  const collectionTiles = buildCollectionTiles(allFuture);
+  const { sortedTeams, counts: teamPromoCounts } = rankTeamsByFuturePromos(
+    allTeams,
+    allFuture,
   );
+
+  // Order for league tabs: keep alphabetic-by-city within each league so the
+  // grid reads naturally. The "All" tab uses `sortedTeams` (popularity) by
+  // virtue of TeamGrid taking the prop's order on the All filter.
+  const teamsForGrid: Team[] = sortedTeams;
+
+  const lastUpdated = formatChicagoLong(today);
 
   return (
     <>
       <HomepageJsonLd />
 
-      {/* Hero: Hot promo feed */}
-      <section className="relative pt-28 pb-10 md:pb-14 px-6 overflow-hidden">
+      {/* Hero */}
+      <section className="relative pt-28 pb-12 md:pb-16 px-6 overflow-hidden">
         <div
           className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-[radial-gradient(circle,rgba(239,68,68,0.08)_0%,transparent_70%)] pointer-events-none"
           aria-hidden="true"
         />
 
         <div className="relative max-w-5xl mx-auto">
-          <div className="flex items-center gap-3 mb-4">
-            <span className="inline-flex items-center gap-2 bg-bg-card border border-accent-red-border rounded-full px-3 py-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-accent-red animate-pulse-dot" />
-              <span className="font-mono text-[10px] tracking-[0.1em] uppercase text-accent-red">
-                Live
-              </span>
-            </span>
-            <span className="font-mono text-[10px] tracking-[0.1em] uppercase text-text-muted">
-              {promoCount.toLocaleString()} promos / 167 teams
-            </span>
-          </div>
-
-          <h1 className="font-display text-[clamp(36px,6vw,64px)] leading-[0.95] tracking-[1px] mb-8 max-w-3xl">
-            HOT TONIGHT{' '}
-            <span className="text-text-secondary">&</span>{' '}
-            <span className="bg-gradient-to-r from-accent-red to-promo-food bg-clip-text text-transparent">
-              THIS WEEKEND
-            </span>
+          <h1 className="font-display text-[clamp(40px,7vw,72px)] leading-[0.95] tracking-[1px] mb-4 max-w-3xl">
+            EVERY PROMO AT EVERY GAME.
           </h1>
+          <p className="text-text-secondary text-lg md:text-xl leading-relaxed max-w-2xl mb-4">
+            167 teams, 6 leagues, updated daily. Find tonight&apos;s giveaways,
+            theme nights, and food deals.
+          </p>
+          <p className="font-mono text-[11px] tracking-[0.08em] uppercase text-text-muted mb-10">
+            {promoCount.toLocaleString()} promos tracked · Last updated {lastUpdated}
+          </p>
 
-          <HotPromosHero promos={hotPromos} />
+          <TonightStrip variant={tonight.variant} promos={tonight.promos} />
 
-          <div className="mt-12 text-center">
-            <p className="text-text-secondary text-base md:text-lg max-w-2xl mx-auto leading-relaxed">
-              Every giveaway, theme night, and food deal at your team&apos;s games.
-              {' '}
-              <span className="text-white font-semibold">
-                {promoCount.toLocaleString()} promos across 167 teams.
-              </span>
-            </p>
-            <div className="mt-6">
-              <AppDownloadButtons section="hero" page="home" />
-            </div>
+          <div className="mt-8">
+            <Link
+              href="/teams"
+              className="inline-flex items-center gap-1.5 text-text-secondary hover:text-white text-sm font-mono tracking-[0.05em] transition-colors"
+            >
+              Browse all 167 teams
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
           </div>
         </div>
       </section>
 
-      {/* App screenshots strip */}
-      <AppScreenshotStrip />
+      {/* This Week */}
+      <ThisWeekStrip promos={weekPromos} />
 
-      {/* How It Works */}
-      <section className="py-20 px-6 border-t border-border-subtle">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-14">
-            <span className="font-mono text-[10px] tracking-[1.5px] uppercase text-accent-red">
-              How it works
-            </span>
-            <h2 className="font-display text-4xl md:text-5xl tracking-[1px] mt-2">
-              THREE SIMPLE STEPS
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              {
-                step: '01',
-                icon: '🏟️',
-                title: 'Pick Your Teams',
-                desc: 'Follow your favorite teams across MLB, NBA, NFL, NHL, MLS, and WNBA. We track all 167.',
-              },
-              {
-                step: '02',
-                icon: '📅',
-                title: 'Browse the Calendar',
-                desc: 'See every upcoming giveaway, theme night, food deal, and kids event at a glance.',
-              },
-              {
-                step: '03',
-                icon: '🎟️',
-                title: 'Get Tickets & Go',
-                desc: 'Grab tickets to the games with the best promos. Never miss bobblehead night again.',
-              },
-            ].map((item) => (
-              <div
-                key={item.step}
-                className="bg-bg-card border border-border-subtle rounded-2xl p-8 text-center"
-              >
-                <div className="text-4xl mb-4">{item.icon}</div>
-                <div className="font-mono text-[10px] tracking-[1.5px] text-accent-red mb-2">
-                  STEP {item.step}
-                </div>
-                <h3 className="font-display text-2xl tracking-[0.5px] mb-3">{item.title}</h3>
-                <p className="text-text-secondary text-sm leading-relaxed">{item.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* Browse Collections */}
+      <BrowseCollections tiles={collectionTiles} />
 
       {/* Find Your Team */}
-      <section className="py-20 px-6 border-t border-border-subtle">
+      <section className="py-16 px-6 border-t border-border-subtle">
         <div className="max-w-6xl mx-auto">
-          <div className="flex items-end justify-between mb-10">
+          <div className="flex items-end justify-between mb-8 gap-4">
             <div>
               <span className="font-mono text-[10px] tracking-[1.5px] uppercase text-accent-red">
                 Find your team
               </span>
-              <h2 className="font-display text-4xl md:text-5xl tracking-[1px] mt-2">
-                167 TEAMS, 6 LEAGUES
+              <h2 className="font-display text-3xl md:text-4xl tracking-[1px] mt-2">
+                167 TEAMS ACROSS 6 LEAGUES
               </h2>
             </div>
             <Link
               href="/teams"
-              className="hidden md:inline-flex items-center gap-1 text-accent-red text-sm font-mono hover:underline"
+              className="hidden md:inline-flex items-center gap-1 text-accent-red text-sm font-mono hover:underline flex-shrink-0"
             >
-              View All
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
+              View all 167 teams
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
             </Link>
           </div>
 
-          <TeamGrid teams={teams} promoCounts={promoCounts} limit={16} />
+          <TeamGrid
+            teams={teamsForGrid}
+            promoCounts={teamPromoCounts}
+            limitOnAll={12}
+            countLabel="upcoming"
+          />
 
           <div className="mt-8 text-center md:hidden">
             <Link
               href="/teams"
               className="inline-flex items-center gap-1 text-accent-red text-sm font-mono hover:underline"
             >
-              View All 167 Teams
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
+              View all 167 teams
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
             </Link>
           </div>
         </div>
       </section>
 
-      {/* Indie developer narrative */}
+      {/* Built by Matt */}
       <IndieDeveloperBlock />
 
-      {/* Final CTA */}
-      <section className="py-24 px-6 border-t border-border-subtle text-center">
-        <div className="max-w-2xl mx-auto">
-          <span className="font-mono text-[10px] tracking-[1.5px] uppercase text-accent-red">
-            Ready?
-          </span>
-          <h2 className="font-display text-4xl md:text-6xl tracking-[1px] mt-2 mb-6">
-            STOP MISSING<br />THE GOOD GAMES
-          </h2>
-          <p className="text-text-secondary text-lg mb-10 max-w-md mx-auto">
-            Download PromoNight and never miss another bobblehead, jersey giveaway, or dollar hot dog night.
-          </p>
-          <AppDownloadButtons section="footer_cta" page="home" />
+      {/* App download — single small section */}
+      <section className="py-16 px-6 border-t border-border-subtle">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-bg-card border border-border-subtle rounded-2xl p-8 md:p-10">
+            <span className="font-mono text-[10px] tracking-[1.5px] uppercase text-accent-red">
+              Promo push
+            </span>
+            <h2 className="font-display text-2xl md:text-3xl tracking-[1px] mt-2 mb-4">
+              WANT NOTIFICATIONS THE MORNING OF EVERY PROMO?
+            </h2>
+            <p className="text-text-secondary text-sm md:text-base leading-relaxed max-w-2xl mb-6">
+              The PromoNight app sends a push the morning of every promo for
+              your starred teams. Free to download. Web has everything else.
+            </p>
+            <AppDownloadButtons section="hero" page="home" />
+          </div>
         </div>
       </section>
 

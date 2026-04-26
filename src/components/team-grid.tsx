@@ -9,13 +9,21 @@ interface TeamGridProps {
   teams: Team[];
   promoCounts?: Record<string, number>;
   limit?: number;
+  // When set, the "All" tab is capped at this count while league-specific
+  // tabs continue to show every team in the league. Lets the homepage show
+  // a curated sample on All without truncating the per-league views.
+  limitOnAll?: number;
+  // Forwarded to each TeamCard. Default "promos" matches all-time counts;
+  // pass "upcoming" when promoCounts come from a future-only fetch.
+  countLabel?: string;
 }
 
-export function TeamGrid({ teams, promoCounts, limit }: TeamGridProps) {
+export function TeamGrid({ teams, promoCounts, limit, limitOnAll, countLabel }: TeamGridProps) {
   const [activeLeague, setActiveLeague] = useState<string>('All');
 
   const filtered = activeLeague === 'All' ? teams : teams.filter((t) => t.league === activeLeague);
-  const displayed = limit ? filtered.slice(0, limit) : filtered;
+  const cap = activeLeague === 'All' && limitOnAll !== undefined ? limitOnAll : limit;
+  const displayed = cap ? filtered.slice(0, cap) : filtered;
 
   return (
     <div>
@@ -54,6 +62,7 @@ export function TeamGrid({ teams, promoCounts, limit }: TeamGridProps) {
             team={team}
             promoCount={promoCounts?.[team.id]}
             sourcePage="home"
+            countLabel={countLabel}
           />
         ))}
       </div>
