@@ -6,6 +6,7 @@ import type { PlayoffPromo, Team, Venue, PlayoffConfig } from '@/lib/types';
 import { teamDisplayName } from '@/lib/promo-helpers';
 import { ParkingCTA } from '@/components/affiliates/ParkingCTA';
 import { HotelsCTA } from '@/components/affiliates/HotelsCTA';
+import { TicketsBlock } from '@/components/affiliates/TicketsBlock';
 import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { AD_SLOTS } from '@/lib/ads/slots';
@@ -508,13 +509,16 @@ function TeamCard({
         )}
       </ul>
 
-      <div className="mt-5 pt-4 border-t border-border-subtle space-y-2">
-        <Link
-          href={teamUrl}
-          className="block font-mono text-[11px] tracking-[0.08em] uppercase text-accent-red hover:text-white transition-colors"
-        >
-          View full {team.name} promotions →
-        </Link>
+      <div className="mt-5 pt-4 border-t border-border-subtle space-y-4">
+        {/* Tickets is the primary CTA per playoff team (Phase 2.3 deviation:
+         *  /playoffs gets ~40% of site traffic and audit elevates tickets
+         *  from secondary to primary on this surface). */}
+        <TicketsBlock
+          team={team}
+          surface="web_playoffs"
+          placement="playoffs_hub"
+          variant="card"
+        />
         <ParkingCTA
           team={team}
           venue={venue}
@@ -522,6 +526,12 @@ function TeamCard({
           placement="playoffs_hub"
           compact
         />
+        <Link
+          href={teamUrl}
+          className="block font-mono text-[11px] tracking-[0.08em] uppercase text-accent-red hover:text-white transition-colors pt-1"
+        >
+          View full {team.name} promotions →
+        </Link>
       </div>
     </article>
   );
