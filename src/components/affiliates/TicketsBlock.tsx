@@ -26,7 +26,7 @@ type TicketsBlockProps = {
 };
 
 const buttonBase =
-  'inline-flex items-center justify-between gap-2 rounded-xl font-bold transition-all hover:-translate-y-0.5';
+  'flex items-center justify-between gap-2 rounded-xl font-bold transition-all hover:-translate-y-0.5';
 // Subtle ~8% top-to-bottom darken on the primary button — accent-red →
 // accent-red-dim — gives the fill a tactile depth without crossing into glossy.
 const primaryFill =
@@ -79,7 +79,7 @@ export function TicketsBlock({
 
   if (variant === 'card') {
     return (
-      <div className="space-y-2.5">
+      <div className="flex flex-col items-stretch gap-2.5">
         <span className="inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[1.5px] uppercase text-accent-red">
           <TicketIcon />
           Get tickets

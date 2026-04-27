@@ -11,9 +11,14 @@ type ParkingCTAProps = {
   venue?: Venue | null;
   placement?: string;
   /** When true, render the polished card row used in the game modal and on
-   *  /playoffs cards: small eyebrow + primary partner button. When false,
-   *  render the team-page bordered card with the descriptive sentence. */
+   *  /playoffs cards: small eyebrow + partner button. When false, render
+   *  the team-page bordered card with the descriptive sentence. */
   compact?: boolean;
+  /** Visual weight of the button in compact mode. Default 'primary' (filled
+   *  red gradient) preserves the modal's away-game look where parking is the
+   *  only red CTA on screen. /playoffs cards pass 'secondary' (outlined) so
+   *  parking doesn't compete with the tickets primary above it. */
+  tone?: 'primary' | 'secondary';
 };
 
 function hasCoords(v: Venue | null | undefined): v is Venue {
@@ -49,9 +54,11 @@ function ParkingIcon() {
 }
 
 const buttonBase =
-  'inline-flex items-center justify-between gap-2 rounded-xl font-bold transition-all hover:-translate-y-0.5';
+  'flex items-center justify-between gap-2 rounded-xl font-bold transition-all hover:-translate-y-0.5';
 const primaryFill =
   'bg-gradient-to-b from-accent-red to-accent-red-dim text-white hover:shadow-[0_0_30px_rgba(239,68,68,0.3)]';
+const secondaryFill =
+  'bg-bg-card border border-border-subtle text-white hover:border-border-hover';
 
 export function ParkingCTA({
   team,
@@ -59,6 +66,7 @@ export function ParkingCTA({
   venue,
   placement = 'team_page_inline',
   compact = false,
+  tone = 'primary',
 }: ParkingCTAProps) {
   // Button renders regardless of SpotHero env state — bare URL fallback
   // routes the user to SpotHero's coordinate search even pre-approval.
@@ -78,8 +86,13 @@ export function ParkingCTA({
     : buildSpotHeroUrl({ surface });
 
   if (compact) {
+    // flex-col + items-start rather than space-y-2.5 because the inline-flex
+    // <a> below sits inline with the eyebrow span on sm+ otherwise (the link's
+    // sm:w-auto stops it from forcing a line break the way a block element
+    // would). flex column makes the eyebrow and button stack on every width.
+    const fill = tone === 'secondary' ? secondaryFill : primaryFill;
     return (
-      <div className="space-y-2.5">
+      <div className="flex flex-col items-start gap-2.5">
         <span className="inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[1.5px] uppercase text-accent-red">
           <ParkingIcon />
           Find parking
@@ -91,7 +104,7 @@ export function ParkingCTA({
           sport={team.league}
           surface={surface}
           placement={placement}
-          className={`${buttonBase} text-sm px-4 py-2.5 ${primaryFill} w-full sm:w-auto sm:min-w-[200px]`}
+          className={`${buttonBase} text-sm px-4 py-2.5 ${fill} w-full sm:w-auto sm:min-w-[200px]`}
         >
           <span>SpotHero</span>
           <span aria-hidden="true" className="text-base leading-none opacity-70">›</span>
