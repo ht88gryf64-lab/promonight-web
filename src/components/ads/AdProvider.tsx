@@ -1,21 +1,12 @@
 import Script from 'next/script';
-
-type AdNetwork = 'adsense' | 'ezoic' | 'mediavine' | 'raptive' | 'none';
-
-function resolveNetwork(): AdNetwork {
-  const raw = process.env.NEXT_PUBLIC_AD_NETWORK?.toLowerCase();
-  if (raw === 'adsense' || raw === 'ezoic' || raw === 'mediavine' || raw === 'raptive') {
-    return raw;
-  }
-  return 'none';
-}
+import { resolveAdNetwork } from '@/lib/ads/network';
 
 // Injects the configured ad network's loader script at the document root.
-// Defaults to 'none' so dev environments and pre-approval production show
-// only AdSlot placeholders; flipping NEXT_PUBLIC_AD_NETWORK enables a network
-// without code changes.
+// Network resolution is shared with AdSlot via lib/ads/network so a single
+// env var (NEXT_PUBLIC_AD_NETWORK) controls both whether the loader runs
+// and whether slots reserve space. Defaults to 'none'.
 export function AdProvider({ children }: { children: React.ReactNode }) {
-  const network = resolveNetwork();
+  const network = resolveAdNetwork();
 
   if (network === 'adsense') {
     const pubId = process.env.NEXT_PUBLIC_ADSENSE_PUB_ID;

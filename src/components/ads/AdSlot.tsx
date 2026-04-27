@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { AdSlotConfig, AdSize } from '@/lib/ads/slots';
+import { resolveAdNetwork } from '@/lib/ads/network';
 import { track } from '@/lib/analytics';
 
 type Breakpoint = 'desktop' | 'tablet' | 'mobile';
@@ -33,6 +34,12 @@ export function AdSlot({
   pageType?: string;
   className?: string;
 }) {
+  // When no ad network can fill (no real slot IDs assigned, or network='none'),
+  // collapse the slot entirely. Previous behavior reserved space for an ad
+  // that can never paint, leaving ~250px-tall dead zones on every page.
+  // When real AdSense (or other) slot IDs are configured, the reservation
+  // and creative-injection logic re-engages.
+  const network = resolveAdNetwork();
   const ref = useRef<HTMLDivElement | null>(null);
   // Server render uses desktop dimensions to reserve roughly the right space;
   // the first client effect corrects to the actual breakpoint. Reserving any
@@ -98,6 +105,10 @@ export function AdSlot({
     obs.observe(el);
     return () => obs.disconnect();
   }, [config.id, pageType]);
+
+  // Network-level collapse — see top-of-component comment. Done after hooks
+  // to keep React's hook order stable when env-driven values change.
+  if (network === 'none') return null;
 
   const size = resolveSize(config, bp);
   // Hide entirely when no size is configured for this breakpoint (e.g. desktop-

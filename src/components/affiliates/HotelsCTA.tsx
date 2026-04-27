@@ -59,7 +59,7 @@ function BedIcon() {
 }
 
 const buttonBase =
-  'inline-flex items-center justify-between gap-2 rounded-xl font-bold transition-all hover:-translate-y-0.5';
+  'flex items-center justify-between gap-2 rounded-xl font-bold transition-all hover:-translate-y-0.5';
 const primaryFill =
   'bg-gradient-to-b from-accent-red to-accent-red-dim text-white hover:shadow-[0_0_30px_rgba(239,68,68,0.3)]';
 
@@ -100,8 +100,10 @@ export function HotelsCTA({
       });
 
   if (variant === 'modal-row') {
+    // flex-col + items-start rather than space-y-2.5 — see ParkingCTA for the
+    // inline-flex-link wrapping rationale.
     return (
-      <div className="space-y-2.5">
+      <div className="flex flex-col items-start gap-2.5">
         <span className="inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[1.5px] uppercase text-accent-red">
           <BedIcon />
           Book a hotel

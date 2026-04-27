@@ -509,10 +509,12 @@ function TeamCard({
         )}
       </ul>
 
-      <div className="mt-5 pt-4 border-t border-border-subtle space-y-4">
+      <div className="mt-5 pt-4 border-t border-border-subtle space-y-5">
         {/* Tickets is the primary CTA per playoff team (Phase 2.3 deviation:
          *  /playoffs gets ~40% of site traffic and audit elevates tickets
-         *  from secondary to primary on this surface). */}
+         *  from secondary to primary on this surface). Parking renders
+         *  secondary (outlined) so two filled-red buttons don't compete on
+         *  the same card. */}
         <TicketsBlock
           team={team}
           surface="web_playoffs"
@@ -525,10 +527,11 @@ function TeamCard({
           surface="web_playoffs"
           placement="playoffs_hub"
           compact
+          tone="secondary"
         />
         <Link
           href={teamUrl}
-          className="block font-mono text-[11px] tracking-[0.08em] uppercase text-accent-red hover:text-white transition-colors pt-1"
+          className="block font-mono text-[11px] tracking-[0.08em] uppercase text-text-secondary hover:text-white transition-colors pt-1"
         >
           View full {team.name} promotions →
         </Link>
