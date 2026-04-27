@@ -15,7 +15,13 @@ type HotelsCTAProps = {
    *  Rarely needed now that coordinates are primary. */
   city?: string;
   placement?: string;
-  variant?: 'card' | 'section';
+  /** 'modal-row': polished modal row — eyebrow + primary button only. The
+   *  surrounding modal card carries the team/venue context.
+   *  'card': descriptor card with team name + sentence + outlined button —
+   *  used in the /playoffs PLAN YOUR PLAYOFF TRIP grid where each card needs
+   *  team identity.
+   *  'section': full team-page section with prose. */
+  variant?: 'modal-row' | 'card' | 'section';
 };
 
 function hasCoords(v: Venue | null | undefined): v is Venue {
@@ -31,6 +37,32 @@ function hasCoords(v: Venue | null | undefined): v is Venue {
   );
 }
 
+function BedIcon() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M2 4v16" />
+      <path d="M2 8h18a2 2 0 0 1 2 2v10" />
+      <path d="M2 17h20" />
+      <path d="M6 8v3" />
+    </svg>
+  );
+}
+
+const buttonBase =
+  'inline-flex items-center justify-between gap-2 rounded-xl font-bold transition-all hover:-translate-y-0.5';
+const primaryFill =
+  'bg-gradient-to-b from-accent-red to-accent-red-dim text-white hover:shadow-[0_0_30px_rgba(239,68,68,0.3)]';
+
 export function HotelsCTA({
   team,
   surface,
@@ -39,6 +71,10 @@ export function HotelsCTA({
   placement = 'team_page_footer',
   variant = 'section',
 }: HotelsCTAProps) {
+  // Button renders regardless of Booking env state — bare URL fallback
+  // routes the user to Booking's coordinate/city search pre-approval.
+  // Tracking-active state is surfaced to PostHog via TrackedAffiliateLink.
+
   // Preferred: venue coordinates (exact stadium-area search).
   // Fallback: explicit prop > VENUE_CITY_OVERRIDES > team.city (brand city).
   const useCoords = hasCoords(venue);
@@ -62,6 +98,29 @@ export function HotelsCTA({
         surface,
         promoId: null,
       });
+
+  if (variant === 'modal-row') {
+    return (
+      <div className="space-y-2.5">
+        <span className="inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[1.5px] uppercase text-accent-red">
+          <BedIcon />
+          Book a hotel
+        </span>
+        <TrackedAffiliateLink
+          href={href}
+          partner="booking"
+          teamId={team.id}
+          sport={team.league}
+          surface={surface}
+          placement={placement}
+          className={`${buttonBase} text-sm px-4 py-2.5 ${primaryFill} w-full sm:w-auto sm:min-w-[200px]`}
+        >
+          <span>Booking.com</span>
+          <span aria-hidden="true" className="text-base leading-none opacity-70">›</span>
+        </TrackedAffiliateLink>
+      </div>
+    );
+  }
 
   if (variant === 'card') {
     return (

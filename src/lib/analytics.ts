@@ -123,6 +123,11 @@ export type AffiliateClickProperties = {
   team_slug?: string;
   sport?: Sport;
   is_hot_promo?: boolean;
+  // True when the outbound URL carries the partner's affiliate tracking ID
+  // (commissionable click). False when the click routes to a bare partner
+  // URL during the pre-approval phase. Lets dashboards quantify how much
+  // attributable revenue is being deferred until each partner approves.
+  affiliate_tracking_active?: boolean;
 };
 
 export type AppDownloadClickProperties = {
@@ -403,6 +408,7 @@ export type AffiliateClickPayload = {
   is_hot_promo: boolean;
   destination_url?: string;
   placement?: string;
+  affiliate_tracking_active?: boolean;
 };
 
 export const trackAffiliateClick = (payload: AffiliateClickPayload) => {
@@ -431,6 +437,7 @@ export const trackAffiliateClick = (payload: AffiliateClickPayload) => {
     team_slug: payload.team_id,
     sport: normalizeSport(payload.sport),
     is_hot_promo: payload.is_hot_promo,
+    affiliate_tracking_active: payload.affiliate_tracking_active,
   });
 };
 

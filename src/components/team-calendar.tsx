@@ -552,41 +552,45 @@ function GameDetailRow({
         </div>
       )}
 
-      {/* Tickets — always shown. For home games target current team; for away games target current team too (ticket market is keyed by team). */}
-      {team && (
-        <TicketsBlock
-          team={team}
-          surface="web_team_page"
-          placement={placement}
-          promoId={teamSlug ? `${teamSlug}:${game.date}:${game.id}` : undefined}
-        />
-      )}
-
-      {/* Away-game travel CTAs: parking + hotels at the home (opponent) venue. */}
-      {!isHome && opponentTeam && (
-        <div className="mt-3 space-y-3">
-          <ParkingCTA
-            team={opponentTeam}
-            venue={opponentVenue}
+      {/* CTA stack — tickets always; parking + hotels for away games where
+       *  the user is travelling to the opponent's venue. All three sections
+       *  use the polished `variant='card'` look so the modal reads as a
+       *  uniform stack regardless of which CTAs apply. */}
+      <div className="mt-4 space-y-4">
+        {team && (
+          <TicketsBlock
+            team={team}
             surface="web_team_page"
             placement={placement}
-            compact
-          />
-          <HotelsCTA
-            team={opponentTeam}
-            venue={opponentVenue}
-            surface="web_team_page"
-            placement={placement}
+            promoId={teamSlug ? `${teamSlug}:${game.date}:${game.id}` : undefined}
             variant="card"
           />
-          <a
-            href={`/${opponentTeam.sportSlug}/${opponentTeam.id}`}
-            className="inline-flex items-center gap-1 text-[11px] font-mono tracking-[0.08em] uppercase text-text-secondary hover:text-white transition-colors"
-          >
-            View {oppName} full schedule →
-          </a>
-        </div>
-      )}
+        )}
+        {!isHome && opponentTeam && (
+          <>
+            <ParkingCTA
+              team={opponentTeam}
+              venue={opponentVenue}
+              surface="web_team_page"
+              placement={placement}
+              compact
+            />
+            <HotelsCTA
+              team={opponentTeam}
+              venue={opponentVenue}
+              surface="web_team_page"
+              placement={placement}
+              variant="modal-row"
+            />
+            <a
+              href={`/${opponentTeam.sportSlug}/${opponentTeam.id}`}
+              className="inline-flex items-center gap-1 text-[11px] font-mono tracking-[0.08em] uppercase text-text-secondary hover:text-white transition-colors"
+            >
+              View {oppName} full schedule →
+            </a>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -640,12 +644,15 @@ function LegacyPromoDetail({
                 </div>
               )}
               {team && teamSlug && (
-                <TicketsBlock
-                  team={team}
-                  surface="web_team_page"
-                  placement="promo_card"
-                  promoId={`${teamSlug}:${p.date}:${p.title}`}
-                />
+                <div className="mt-3">
+                  <TicketsBlock
+                    team={team}
+                    surface="web_team_page"
+                    placement="promo_card"
+                    promoId={`${teamSlug}:${p.date}:${p.title}`}
+                    variant="card"
+                  />
+                </div>
               )}
             </div>
           </div>

@@ -1,9 +1,12 @@
 // Affiliate outbound URL generators with env-var-swappable tracking IDs and
-// surface-aware sub-ID tagging. Every builder returns a working direct URL
-// when the partner's env var is unset — the tracking ID simply doesn't get
-// injected, so clicks still land at the right destination (unpaid) until
-// programs approve. The sub-ID encodes ${surface}_${promoId ?? 'none'} so
-// partner reports can slice revenue by surface and promo without extra events.
+// surface-aware sub-ID tagging. The builders compose a destination URL and
+// inject the tracking ID when its env var is set; when the env var is unset
+// the URL is left untagged. CTA components are expected to call
+// `isPartnerActive(partner)` and skip rendering buttons whose env vars are
+// empty — otherwise high-intent traffic would land at the partner with no
+// commission attached (the SeatGeek-rejected case). The sub-ID encodes
+// ${surface}_${promoId ?? 'none'} so partner reports can slice revenue by
+// surface and promo without extra events.
 
 import type { AnalyticsSurface } from './analytics';
 
@@ -24,6 +27,28 @@ export type AffiliateLinkOptions = {
   surface: AnalyticsSurface;
   promoId?: string | null;
 };
+
+// Returns true when the partner's tracking-ID env var is set, i.e. when
+// outbound links carry commissionable tracking params. Buttons render
+// regardless of this state — distribution and habit formation outweigh
+// commission recoupment during the pre-approval phase, and bare URLs still
+// route the user to the right partner. The flag is surfaced on the
+// `affiliate_click` PostHog event as `affiliate_tracking_active` so we can
+// quantify pre-approval click loss without affecting routing behavior.
+export function isPartnerActive(partner: AffiliatePartner): boolean {
+  switch (partner) {
+    case 'seatgeek':
+      return SEATGEEK_AID.length > 0;
+    case 'stubhub':
+      return STUBHUB_RID.length > 0;
+    case 'fanatics':
+      return FANATICS_ID.length > 0;
+    case 'spothero':
+      return SPOTHERO_ID.length > 0;
+    case 'booking':
+      return BOOKING_AID.length > 0;
+  }
+}
 
 function subId(opts: AffiliateLinkOptions): string {
   return `${opts.surface}_${opts.promoId ?? 'none'}`;

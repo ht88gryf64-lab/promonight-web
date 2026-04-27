@@ -3,6 +3,7 @@
 import type { MouseEventHandler, ReactNode } from 'react';
 import {
   buildAffiliateUrl,
+  isPartnerActive,
   type AffiliatePartner as AffiliateUrlPartner,
 } from '@/lib/affiliates';
 import {
@@ -48,6 +49,9 @@ export function TrackedAffiliateLink({
     surface,
     promoId,
   });
+  // True when the partner's tracking-ID env var is set, i.e. the outbound
+  // URL is commissionable. False during pre-approval — click still fires.
+  const trackingActive = isPartnerActive(partner as AffiliateUrlPartner);
 
   const handleMouseDown: MouseEventHandler<HTMLAnchorElement> = () => {
     trackAffiliateClick({
@@ -59,6 +63,7 @@ export function TrackedAffiliateLink({
       is_hot_promo: promoId ? isHotPromo : false,
       destination_url: taggedHref,
       placement: placement ?? surface,
+      affiliate_tracking_active: trackingActive,
     });
   };
 
