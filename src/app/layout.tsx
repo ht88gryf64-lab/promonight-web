@@ -57,9 +57,6 @@ export const metadata: Metadata = {
     creator: '@promo_night_app',
     images: ['/og-image.png'],
   },
-  other: {
-    'impact-site-verification': 'fe7143b6-ec57-416e-afa7-a4e85008ce9a',
-  },
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -75,6 +72,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="en" className={`${bebasNeue.variable} ${dmSans.variable} ${dmMono.variable}`}>
+      <head>
+        {/* Impact site verification. Spread bypasses React's typed prop
+            check on <meta> so the attribute renders as `value=` exactly
+            as Impact's verifier requires (it does not accept `content=`). */}
+        <meta
+          name="impact-site-verification"
+          {...{ value: '5e39867e-e75b-4df9-af43-2661e840f8cd' }}
+        />
+      </head>
       <body className="relative">
         <AnalyticsProvider>
           <AdProvider>
