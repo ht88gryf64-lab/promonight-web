@@ -82,6 +82,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
       </head>
       <body className="relative">
+        <div style={{ display: 'none' }} aria-hidden="true">
+          Impact-Site-Verification: 0374f729-1b46-435a-8cf3-2f5ae8c12a0e
+        </div>
         <AnalyticsProvider>
           <AdProvider>
             {/* useSearchParams inside PageViewTracker requires a Suspense
