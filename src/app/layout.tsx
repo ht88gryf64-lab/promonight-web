@@ -78,7 +78,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             as Impact's verifier requires (it does not accept `content=`). */}
         <meta
           name="impact-site-verification"
-          {...{ value: '5e39867e-e75b-4df9-af43-2661e840f8cd' }}
+          {...{ value: 'ff9633f7-627d-4996-9b22-2f581e305e4f' }}
         />
       </head>
       <body className="relative">
