@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "audit:ticketmaster": "tsx --env-file=.env.local --require ./scripts/stub-server-only.cjs scripts/audit-ticketmaster-urls.ts"
+    "audit:ticketmaster": "tsx --env-file=.env.local --require ./scripts/stub-server-only.cjs scripts/audit-ticketmaster-urls.ts",
+    "map:ticketmaster": "tsx --env-file=.env.local --require ./scripts/stub-server-only.cjs scripts/ticketmaster-team-mapping.ts"
   },
   "dependencies": {
     "firebase-admin": "^13.0.0",

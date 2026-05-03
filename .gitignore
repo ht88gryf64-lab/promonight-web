@@ -23,6 +23,12 @@ scripts/.fonts/
 # generated audit output — regenerated via `npm run audit:ticketmaster`
 scripts/ticketmaster-url-audit.csv
 
+# generated Discovery API mapping — regenerated via `npm run map:ticketmaster`
+# CSV is reviewer-facing, JSON is consumed by follow-up code edits; neither
+# is canonical (Firestore is) so both stay out of git
+scripts/ticketmaster-team-mapping.csv
+scripts/ticketmaster-team-mapping.json
+
 # IndexNow key verification file — generated at prebuild from INDEXNOW_KEY env var
 public/*.txt
 # but DO commit ads.txt — required for AdSense verification, served at /ads.txt
