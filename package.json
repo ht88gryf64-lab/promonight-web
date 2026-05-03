@@ -7,7 +7,8 @@
     "prebuild": "tsx scripts/generate-indexnow-key-file.ts",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "audit:ticketmaster": "tsx --env-file=.env.local --require ./scripts/stub-server-only.cjs scripts/audit-ticketmaster-urls.ts"
   },
   "dependencies": {
     "firebase-admin": "^13.0.0",

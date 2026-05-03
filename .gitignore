@@ -20,6 +20,9 @@ next-env.d.ts
 # cached fonts for OG image generator (scripts/generate-og.ts)
 scripts/.fonts/
 
+# generated audit output — regenerated via `npm run audit:ticketmaster`
+scripts/ticketmaster-url-audit.csv
+
 # IndexNow key verification file — generated at prebuild from INDEXNOW_KEY env var
 public/*.txt
 # but DO commit ads.txt — required for AdSense verification, served at /ads.txt

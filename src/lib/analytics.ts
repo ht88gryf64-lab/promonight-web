@@ -112,7 +112,8 @@ export type AffiliatePartner =
   | 'stubhub'
   | 'fanatics'
   | 'spothero'
-  | 'booking';
+  | 'booking'
+  | 'ticketmaster';
 
 export type AffiliateClickProperties = {
   surface: AnalyticsSurface;

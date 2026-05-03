@@ -44,6 +44,10 @@ function mapTeamDoc(doc: FirebaseFirestore.DocumentSnapshot): Team {
     league: data.league,
     sportSlug: data.league.toLowerCase(),
     division: data.division,
+    ticketmasterSlug:
+      typeof data.ticketmasterSlug === 'string' && data.ticketmasterSlug.length > 0
+        ? data.ticketmasterSlug
+        : undefined,
   };
 }
 

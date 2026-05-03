@@ -15,13 +15,20 @@ const STUBHUB_RID = process.env.NEXT_PUBLIC_STUBHUB_RID ?? '';
 const FANATICS_ID = process.env.NEXT_PUBLIC_FANATICS_ID ?? '';
 const SPOTHERO_ID = process.env.NEXT_PUBLIC_SPOTHERO_ID ?? '';
 const BOOKING_AID = process.env.NEXT_PUBLIC_BOOKING_AID ?? '';
+// Impact wrap-link template for Ticketmaster. Placeholder tokens — `{TARGET}`
+// receives the URL-encoded destination (Ticketmaster team URL); `{SHARED_ID}`
+// receives the surface tag for partner-side reporting. When unset, the
+// Ticketmaster CTA falls back to a bare ticketmaster.com link with no
+// commission attribution — graceful pre-approval behavior.
+const TICKETMASTER_IMPACT_WRAP = process.env.NEXT_PUBLIC_TICKETMASTER_IMPACT_WRAP ?? '';
 
 export type AffiliatePartner =
   | 'seatgeek'
   | 'stubhub'
   | 'fanatics'
   | 'spothero'
-  | 'booking';
+  | 'booking'
+  | 'ticketmaster';
 
 export type AffiliateLinkOptions = {
   surface: AnalyticsSurface;
@@ -47,6 +54,8 @@ export function isPartnerActive(partner: AffiliatePartner): boolean {
       return SPOTHERO_ID.length > 0;
     case 'booking':
       return BOOKING_AID.length > 0;
+    case 'ticketmaster':
+      return TICKETMASTER_IMPACT_WRAP.length > 0;
   }
 }
 
@@ -63,6 +72,9 @@ function setParam(url: URL, key: string, value: string): void {
 // Used by <TrackedAffiliateLink>, which accepts a pre-built outbound URL and
 // re-tags it at render time. Idempotent with the typed builders below.
 
+/** @deprecated Affiliate program not currently approved. Retained so existing
+ *  imports (`buildAffiliateUrl`, legacy callsites) keep type-checking. The
+ *  active ticket partner is Ticketmaster — see `buildTicketmasterUrl`. */
 export function seatGeekUrl(rawUrl: string, opts: AffiliateLinkOptions): string {
   const url = new URL(rawUrl);
   setParam(url, 'aid', SEATGEEK_AID);
@@ -70,6 +82,9 @@ export function seatGeekUrl(rawUrl: string, opts: AffiliateLinkOptions): string 
   return url.toString();
 }
 
+/** @deprecated Affiliate program not currently approved. Retained so existing
+ *  imports (`buildAffiliateUrl`, legacy callsites) keep type-checking. The
+ *  active ticket partner is Ticketmaster — see `buildTicketmasterUrl`. */
 export function stubHubUrl(rawUrl: string, opts: AffiliateLinkOptions): string {
   const url = new URL(rawUrl);
   setParam(url, 'rid', STUBHUB_RID);
@@ -116,6 +131,12 @@ export function buildAffiliateUrl(
       return spotHeroUrl(rawUrl, opts);
     case 'booking':
       return bookingUrl(rawUrl, opts);
+    case 'ticketmaster':
+      // Ticketmaster URLs are wrap-resolved by `buildTicketmasterUrl` at the
+      // call site (where teamSlug + surface are known). Surface tracking
+      // rides inside the wrap template's SharedID, not on a query param —
+      // there's nothing to tag here, so pass the URL through unchanged.
+      return rawUrl;
   }
 }
 
@@ -130,6 +151,9 @@ export type SeatGeekOpts = {
   promoId?: string | null;
 };
 
+/** @deprecated Affiliate program not currently approved. Restore when
+ *  SeatGeek direct brand approval lands. The active ticket partner is
+ *  Ticketmaster — see `buildTicketmasterUrl`. */
 export function buildSeatGeekUrl(opts: SeatGeekOpts): string {
   const base = 'https://seatgeek.com';
   const path = opts.event
@@ -153,6 +177,9 @@ export type StubHubOpts = {
   promoId?: string | null;
 };
 
+/** @deprecated Affiliate program not currently approved. Restore when
+ *  StubHub direct brand approval lands. The active ticket partner is
+ *  Ticketmaster — see `buildTicketmasterUrl`. */
 export function buildStubHubUrl(opts: StubHubOpts): string {
   const base = opts.teamSlug
     ? `https://www.stubhub.com/${encodeURIComponent(opts.teamSlug)}-schedule/`
@@ -161,6 +188,44 @@ export function buildStubHubUrl(opts: StubHubOpts): string {
     surface: opts.surface,
     promoId: opts.promoId,
   });
+}
+
+export type TicketmasterOpts = {
+  /** PromoNight team slug (Firestore doc id), e.g. 'minnesota-twins'. */
+  teamSlug: string;
+  /** Optional override when the team's Ticketmaster URL slug differs from
+   *  PromoNight's internal slug. Most teams resolve fine with `teamSlug`
+   *  alone; the audit-ticketmaster-urls script identifies the exceptions. */
+  ticketmasterSlug?: string;
+  surface: AnalyticsSurface;
+  /** Promo id is accepted for parity with the other typed builders but the
+   *  Ticketmaster wrap template only carries one passthrough slot — surface
+   *  takes precedence; promo-level attribution rides PostHog's
+   *  `affiliate_click` event, not the wrap. */
+  promoId?: string | null;
+};
+
+// Builds the outbound Ticketmaster URL. When NEXT_PUBLIC_TICKETMASTER_IMPACT_WRAP
+// is unset (pre-approval / wrap-not-yet-issued), returns a bare team URL —
+// click still routes the user to the right place, just without commission
+// attribution. When set, the destination URL is folded into the Impact wrap
+// template and the surface name rides as SharedID for partner-side reporting.
+//
+// Slug strategy: Ticketmaster redirects {slug}-tickets to the canonical artist
+// page in nearly all cases, sparing us an artist-id mapping table. The
+// `ticketmasterSlug` override exists for the few teams whose canonical URL
+// slug diverges from PromoNight's internal slug.
+export function buildTicketmasterUrl(opts: TicketmasterOpts): string {
+  const slug = opts.ticketmasterSlug ?? opts.teamSlug;
+  const directUrl = `https://www.ticketmaster.com/${encodeURIComponent(slug)}-tickets`;
+
+  if (!TICKETMASTER_IMPACT_WRAP) {
+    return directUrl;
+  }
+
+  return TICKETMASTER_IMPACT_WRAP
+    .replace('{TARGET}', encodeURIComponent(directUrl))
+    .replace('{SHARED_ID}', encodeURIComponent(opts.surface));
 }
 
 export type FanaticsOpts = {

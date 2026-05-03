@@ -22,3 +22,28 @@ when retiring a CTA.
 | team_tile_homepage | homepage | find_your_team_grid | (team name) | /[sport]/[team] | team_tile_tap | 2026-04-25 | active |
 | app_download_homepage_section | homepage | promo_push_section | Download for iOS / Get it on Google Play | App Store / Play Store | app_download_click | 2026-04-25 | active |
 | app_download_nav | global | nav_top_right | Get the App | /download | app_download_click | 2026-04-25 | active |
+| ticketmaster_get_tickets_team_hero | team_page | tickets_block_hero | ticketmaster Get Tickets → | ticketmaster.com (Impact wrap when env set) | affiliate_click | 2026-05-03 | active |
+| ticketmaster_get_tickets_promo_card | team_page | tickets_block_promo_card | ticketmaster Get Tickets → | ticketmaster.com (Impact wrap when env set) | affiliate_click | 2026-05-03 | active |
+| ticketmaster_get_tickets_playoffs_card | playoffs_hub | tickets_block_playoffs_card | ticketmaster Get Tickets → | ticketmaster.com (Impact wrap when env set) | affiliate_click | 2026-05-03 | active |
+| ticketmaster_get_tickets_game_modal | team_page | tickets_block_game_modal | ticketmaster Get Tickets → | ticketmaster.com (Impact wrap when env set) | affiliate_click | 2026-05-03 | active |
+
+## Removed CTAs
+
+The previous SeatGeek + StubHub dual-button ticket CTAs (rendered in
+`TicketsBlock` as filled-red and outlined-secondary buttons across team
+pages, playoffs cards, and game-day modals) were retired on 2026-05-03 in
+favor of single-source Ticketmaster. Neither program had landed approval and
+the dual-CTA had become a high-intent leak. The URL builders
+(`buildSeatGeekUrl`, `buildStubHubUrl`) remain in `src/lib/affiliates.ts`
+marked `@deprecated` for type-checking compatibility but are no longer
+rendered by any user-facing surface. SG/SH rows were never registered here
+(the registry post-dates their addition), so there are no row-level
+deprecations to record — this paragraph is the historical note.
+
+The `ticketmaster_get_tickets_*` rows above all share `partner: 'ticketmaster'`
+and `event_name: 'affiliate_click'`. Surface and placement are passed
+through `affiliate_click` event properties so dashboards can slice by
+surface without needing distinct event names. The Impact wrap template is
+configured via the `NEXT_PUBLIC_TICKETMASTER_IMPACT_WRAP` env var; when
+unset, the CTA links direct to ticketmaster.com without commission
+attribution (graceful pre-approval fallback).

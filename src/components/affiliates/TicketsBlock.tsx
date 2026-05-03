@@ -1,7 +1,6 @@
 import type { Team } from '@/lib/types';
 import type { AnalyticsSurface } from '@/lib/analytics';
-import { buildSeatGeekUrl, buildStubHubUrl } from '@/lib/affiliates';
-import { TrackedAffiliateLink } from '@/components/tracked-affiliate-link';
+import { TicketmasterCTA } from './TicketmasterCTA';
 
 export type TicketsBlockPlacement =
   | 'team_page_hero'
@@ -16,23 +15,13 @@ type TicketsBlockProps = {
   surface: AnalyticsSurface;
   placement: TicketsBlockPlacement;
   promoId?: string | null;
-  /** Optional SeatGeek event slug / StubHub event id — reserved for when
-   *  per-event pages are wired; unused today. */
+  /** Reserved for when per-event Ticketmaster URLs are wired; unused today. */
   event?: string;
-  /** 'section' (default): full team-page section with eyebrow + h2 + buttons.
-   *  'card': modal/playoffs row look — eyebrow + buttons only, no h2; the
-   *  matchup/venue context is already supplied by the surrounding card. */
+  /** 'section' (default): full team-page section with eyebrow + h2 + CTA.
+   *  'card': modal/playoffs row look — eyebrow + CTA only, no h2; matchup
+   *  context is supplied by the surrounding card. */
   variant?: 'section' | 'card';
 };
-
-const buttonBase =
-  'flex items-center justify-between gap-2 rounded-xl font-bold transition-all hover:-translate-y-0.5';
-// Subtle ~8% top-to-bottom darken on the primary button — accent-red →
-// accent-red-dim — gives the fill a tactile depth without crossing into glossy.
-const primaryFill =
-  'bg-gradient-to-b from-accent-red to-accent-red-dim text-white hover:shadow-[0_0_30px_rgba(239,68,68,0.3)]';
-const secondaryFill =
-  'bg-bg-card border border-border-subtle text-white hover:border-border-hover';
 
 function TicketIcon() {
   return (
@@ -53,30 +42,19 @@ function TicketIcon() {
   );
 }
 
+// Single-source Ticketmaster CTA. The previous SeatGeek + StubHub button pair
+// was retired on 2026-05-03 — neither program had landed approval and the
+// dual-CTA had become a high-intent leak. Ticketmaster is the operating brand
+// across all surfaces; the underlying URL is wrap-resolved by
+// buildTicketmasterUrl when NEXT_PUBLIC_TICKETMASTER_IMPACT_WRAP is set, with
+// graceful pre-approval fallback to a bare ticketmaster.com link.
 export function TicketsBlock({
   team,
   surface,
   placement,
   promoId,
-  event,
   variant = 'section',
 }: TicketsBlockProps) {
-  // Buttons render regardless of env-var state — the URL builders return a
-  // bare partner URL when the affiliate ID is empty. Distribution and habit
-  // formation outweigh commission recoupment during the pre-approval phase.
-  // Tracking-active state is surfaced to PostHog via TrackedAffiliateLink.
-  const seatgeekHref = buildSeatGeekUrl({
-    team: team.id,
-    event,
-    surface,
-    promoId,
-  });
-  const stubhubHref = buildStubHubUrl({
-    teamSlug: team.id,
-    surface,
-    promoId,
-  });
-
   if (variant === 'card') {
     return (
       <div className="flex flex-col items-stretch gap-2.5">
@@ -84,34 +62,13 @@ export function TicketsBlock({
           <TicketIcon />
           Get tickets
         </span>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <TrackedAffiliateLink
-            href={seatgeekHref}
-            partner="seatgeek"
-            teamId={team.id}
-            sport={team.league}
-            promoId={promoId}
-            surface={surface}
-            placement={placement}
-            className={`${buttonBase} text-sm px-4 py-2.5 ${primaryFill}`}
-          >
-            <span>SeatGeek</span>
-            <span aria-hidden="true" className="text-base leading-none opacity-70">›</span>
-          </TrackedAffiliateLink>
-          <TrackedAffiliateLink
-            href={stubhubHref}
-            partner="stubhub"
-            teamId={team.id}
-            sport={team.league}
-            promoId={promoId}
-            surface={surface}
-            placement={placement}
-            className={`${buttonBase} text-sm px-4 py-2.5 ${secondaryFill}`}
-          >
-            <span>StubHub</span>
-            <span aria-hidden="true" className="text-base leading-none opacity-70">›</span>
-          </TrackedAffiliateLink>
-        </div>
+        <TicketmasterCTA
+          team={team}
+          surface={surface}
+          placement={placement}
+          promoId={promoId}
+          size="compact"
+        />
       </div>
     );
   }
@@ -131,31 +88,14 @@ export function TicketsBlock({
           </h2>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <TrackedAffiliateLink
-            href={seatgeekHref}
-            partner="seatgeek"
-            teamId={team.id}
-            sport={team.league}
-            promoId={promoId}
+        <div className="max-w-md">
+          <TicketmasterCTA
+            team={team}
             surface={surface}
             placement={placement}
-            className={`${buttonBase} text-sm px-6 py-3 ${primaryFill} min-w-[180px] justify-center`}
-          >
-            Get Tickets · SeatGeek
-          </TrackedAffiliateLink>
-          <TrackedAffiliateLink
-            href={stubhubHref}
-            partner="stubhub"
-            teamId={team.id}
-            sport={team.league}
             promoId={promoId}
-            surface={surface}
-            placement={placement}
-            className={`${buttonBase} text-sm px-6 py-3 ${secondaryFill} min-w-[180px] justify-center`}
-          >
-            Get Tickets · StubHub
-          </TrackedAffiliateLink>
+            size="full"
+          />
         </div>
       </div>
     </section>

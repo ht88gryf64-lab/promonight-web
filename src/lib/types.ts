@@ -10,6 +10,11 @@ export interface Team {
   league: string;
   sportSlug: string;
   division: string;
+  // Ticketmaster team-page slug. Defaults to `id` when undefined — set this
+  // only when the canonical Ticketmaster URL slug differs from PromoNight's
+  // internal slug. The audit-ticketmaster-urls script identifies the
+  // exceptions; populate from the audit CSV in a follow-up commit.
+  ticketmasterSlug?: string;
 }
 
 export interface Promo {
