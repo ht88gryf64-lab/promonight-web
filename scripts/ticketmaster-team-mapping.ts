@@ -12,8 +12,19 @@
  *   scripts/ticketmaster-team-mapping-rerun.csv
  *   scripts/ticketmaster-team-mapping-rerun.json
  *
+ * Diagnostic log (appended on every Discovery API failure):
+ *   scripts/ticketmaster-mapping-errors.log
+ *   Contains timestamp, team slug, query, redacted URL, HTTP status, body,
+ *   and message. The apikey is stripped before write.
+ *
  * Outputs are gitignored — regenerate via `npm run map:ticketmaster` /
  * `npm run map:ticketmaster:rerun`.
+ *
+ * Two-stage search per team:
+ *   1. Strict: query with the league's classification (Hockey/Baseball/etc).
+ *   2. Broad: same query without classification — used as a fallback when
+ *      strict errors persistently OR returns zero results. scoreMatch still
+ *      validates the sport on each candidate so confidence isn't diluted.
  *
  * Usage:
  *   echo "TICKETMASTER_API_KEY=<consumer-key>" >> .env.local
@@ -25,7 +36,7 @@
  * mode pages much slower (600ms delay) for headroom on transient errors,
  * with a single retry per team before giving up.
  */
-import { writeFileSync } from 'fs';
+import { writeFileSync, appendFileSync } from 'fs';
 import { join } from 'path';
 import type { Team } from '../src/lib/types';
 
@@ -124,6 +135,58 @@ interface TicketmasterAttraction {
   }>;
 }
 
+// Carries HTTP context out of searchAttractions so the catch block in
+// mapTeam can write a diagnostic record without re-fetching. Network
+// failures (DNS, TCP, etc.) leave status/body undefined.
+class DiscoveryApiError extends Error {
+  constructor(
+    message: string,
+    readonly url: string,
+    readonly status?: number,
+    readonly body?: string,
+  ) {
+    super(message);
+  }
+}
+
+const ERROR_LOG_PATH = join(process.cwd(), 'scripts/ticketmaster-mapping-errors.log');
+
+// Strip the API key from any URL before it reaches disk. The mapping log is
+// gitignored but local files still leak via shoulder-surfing, screenshots,
+// pasted snippets, etc. — redaction is the cheap defense.
+function redactApiKey(url: string): string {
+  return url.replace(/([?&]apikey=)[^&]+/gi, '$1<REDACTED>');
+}
+
+function logApiError(ctx: {
+  teamSlug: string;
+  query: string;
+  classification: string | undefined;
+  err: unknown;
+}): void {
+  const err = ctx.err;
+  const isDiscovery = err instanceof DiscoveryApiError;
+  const lines = [
+    `=== ${new Date().toISOString()} ===`,
+    `team_slug:      ${ctx.teamSlug}`,
+    `query:          ${ctx.query}`,
+    `classification: ${ctx.classification ?? '(none)'}`,
+    `url:            ${isDiscovery ? redactApiKey(err.url) : '(no url — pre-fetch failure)'}`,
+    `status:         ${isDiscovery && err.status !== undefined ? String(err.status) : '(no response)'}`,
+    `body:           ${
+      isDiscovery && err.body ? err.body.slice(0, 600).replace(/\n/g, ' ') : '(no body)'
+    }`,
+    `message:        ${err instanceof Error ? err.message : String(err)}`,
+    ``,
+  ];
+  try {
+    appendFileSync(ERROR_LOG_PATH, lines.join('\n'), 'utf8');
+  } catch {
+    // If the log write itself fails, don't crash the run — the error row
+    // in the CSV still records that something went wrong.
+  }
+}
+
 type MatchStatus = 'matched' | 'ambiguous' | 'no_match' | 'error';
 type MatchConfidence = 'high' | 'medium' | 'low' | 'none';
 
@@ -155,11 +218,25 @@ async function searchAttractions(
   }
 
   const url = `${DISCOVERY_API_BASE}/attractions.json?${params.toString()}`;
-  const res = await fetch(url);
+
+  let res: Response;
+  try {
+    res = await fetch(url);
+  } catch (networkErr) {
+    throw new DiscoveryApiError(
+      `Network error: ${networkErr instanceof Error ? networkErr.message : String(networkErr)}`,
+      url,
+    );
+  }
 
   if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Discovery API ${res.status}: ${body.slice(0, 200)}`);
+    const body = await res.text().catch(() => '');
+    throw new DiscoveryApiError(
+      `Discovery API ${res.status}: ${body.slice(0, 200)}`,
+      url,
+      res.status,
+      body,
+    );
   }
 
   const data = (await res.json()) as {
@@ -223,30 +300,75 @@ function scoreMatch(
 
 async function mapTeam(team: Team): Promise<TeamMappingRow> {
   const queryName = buildQueryName(team);
+  const classification = leagueToClassification(team.league);
   const baseRow = {
     internal_slug: team.id,
     team_name: queryName,
     league: team.league,
   };
 
-  const tryOnce = async () => {
-    const classification = leagueToClassification(team.league);
-    return searchAttractions(queryName, classification);
-  };
+  // Two-stage search:
+  //   1. Strict — query with the league's genre classification. Filters
+  //      out same-name cross-sport collisions ("Cardinals" — MLB vs NFL,
+  //      "Devils" — NHL vs anything).
+  //   2. Broad — same query without classification. Triggered when the
+  //      strict call (a) returns 0 results or (b) errors persistently.
+  //      scoreMatch still validates sport on each candidate so a broad
+  //      query doesn't dilute confidence; it just gives us more raw
+  //      candidates to filter through.
+  // Empirically the four NHL "common-noun nickname" teams (Bruins, Devils,
+  // Flyers, Capitals) errored consistently across two prior runs at
+  // different rate-limit delays — strongly suggesting a deterministic
+  // API-side reaction to the strict-filter request shape, not a transient.
+  const strictAttempt = async () => searchAttractions(queryName, classification);
+  const broadAttempt = async () => searchAttractions(queryName);
+
+  let usedFallback = false;
+  let firstErrorMessage = '';
 
   try {
-    let attractions: TicketmasterAttraction[];
+    let attractions: TicketmasterAttraction[] = [];
+
+    // Stage 1: strict
     try {
-      attractions = await tryOnce();
+      attractions = await strictAttempt();
     } catch (firstErr) {
-      if (!RERUN_MODE) throw firstErr;
-      console.log(
-        `    retrying after ${RETRY_DELAY_MS}ms (first attempt: ${
-          firstErr instanceof Error ? firstErr.message : String(firstErr)
-        })`,
-      );
-      await sleep(RETRY_DELAY_MS);
-      attractions = await tryOnce();
+      logApiError({ teamSlug: team.id, query: queryName, classification, err: firstErr });
+      firstErrorMessage = firstErr instanceof Error ? firstErr.message : String(firstErr);
+
+      // Rerun mode retries the strict query once before falling back, on
+      // the chance the failure was actually transient. Full-run goes
+      // straight to the broad fallback to keep total runtime short.
+      if (RERUN_MODE) {
+        console.log(`    strict attempt failed: ${firstErrorMessage}`);
+        console.log(`    retrying strict after ${RETRY_DELAY_MS}ms...`);
+        await sleep(RETRY_DELAY_MS);
+        try {
+          attractions = await strictAttempt();
+        } catch (secondErr) {
+          logApiError({ teamSlug: team.id, query: queryName, classification, err: secondErr });
+          console.log(
+            `    strict retry failed: ${
+              secondErr instanceof Error ? secondErr.message : String(secondErr)
+            }`,
+          );
+          console.log(`    falling back to broad query (no classification)...`);
+          attractions = await broadAttempt();
+          usedFallback = true;
+        }
+      } else {
+        console.log(`    strict failed; falling back to broad (no classification)...`);
+        attractions = await broadAttempt();
+        usedFallback = true;
+      }
+    }
+
+    // Stage 2: empty-results fallback. Strict call succeeded (no error) but
+    // returned nothing — drop the classification filter and try once more.
+    if (attractions.length === 0 && classification && !usedFallback) {
+      console.log(`    0 results with classification; falling back to broad query...`);
+      attractions = await broadAttempt();
+      usedFallback = true;
     }
 
     if (attractions.length === 0) {
@@ -257,7 +379,9 @@ async function mapTeam(team: Team): Promise<TeamMappingRow> {
         ticketmaster_attraction_id: null,
         ticketmaster_canonical_url: null,
         ticketmaster_matched_name: null,
-        notes: `No attractions returned (query="${queryName}")`,
+        notes: usedFallback
+          ? `No attractions returned (query="${queryName}", strict + broad both empty)`
+          : `No attractions returned (query="${queryName}")`,
       };
     }
 
@@ -290,6 +414,13 @@ async function mapTeam(team: Team): Promise<TeamMappingRow> {
       notes = `Best score only ${best.score} — likely wrong match, verify manually`;
     }
 
+    if (usedFallback) {
+      const prefix = firstErrorMessage
+        ? `via broad-query fallback after strict error (${firstErrorMessage})`
+        : `via broad-query fallback (strict returned 0 results)`;
+      notes = notes ? `${prefix}; ${notes}` : prefix;
+    }
+
     return {
       ...baseRow,
       match_status: status,
@@ -300,6 +431,7 @@ async function mapTeam(team: Team): Promise<TeamMappingRow> {
       notes,
     };
   } catch (err) {
+    logApiError({ teamSlug: team.id, query: queryName, classification, err });
     return {
       ...baseRow,
       match_status: 'error',
@@ -307,7 +439,9 @@ async function mapTeam(team: Team): Promise<TeamMappingRow> {
       ticketmaster_attraction_id: null,
       ticketmaster_canonical_url: null,
       ticketmaster_matched_name: null,
-      notes: `API error: ${err instanceof Error ? err.message : String(err)}`,
+      notes: `API error: ${
+        err instanceof Error ? err.message : String(err)
+      }${firstErrorMessage && firstErrorMessage !== (err instanceof Error ? err.message : '') ? ` (initial: ${firstErrorMessage})` : ''}`,
     };
   }
 }

@@ -31,6 +31,11 @@ scripts/ticketmaster-team-mapping.json
 scripts/ticketmaster-team-mapping-rerun.csv
 scripts/ticketmaster-team-mapping-rerun.json
 
+# error log written by the mapping script when the Discovery API returns
+# non-2xx or fetch throws — apikey is redacted before write, but keep it
+# out of git as a hygiene measure
+scripts/ticketmaster-mapping-errors.log
+
 # IndexNow key verification file — generated at prebuild from INDEXNOW_KEY env var
 public/*.txt
 # but DO commit ads.txt — required for AdSense verification, served at /ads.txt
