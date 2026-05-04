@@ -4,19 +4,26 @@
  * PromoNight via the Discovery API (the authorized data source — direct
  * scraping of ticketmaster.com is bot-blocked).
  *
- * Outputs:
- *   scripts/ticketmaster-team-mapping.csv   (human review — sort by confidence)
- *   scripts/ticketmaster-team-mapping.json  (machine-readable map for code)
+ * Outputs (full run):
+ *   scripts/ticketmaster-team-mapping.csv         (human review)
+ *   scripts/ticketmaster-team-mapping.json        (machine-readable map)
  *
- * Both outputs are gitignored — regenerate via `npm run map:ticketmaster`.
+ * Outputs (--rerun mode — only RERUN_SLUGS):
+ *   scripts/ticketmaster-team-mapping-rerun.csv
+ *   scripts/ticketmaster-team-mapping-rerun.json
+ *
+ * Outputs are gitignored — regenerate via `npm run map:ticketmaster` /
+ * `npm run map:ticketmaster:rerun`.
  *
  * Usage:
  *   echo "TICKETMASTER_API_KEY=<consumer-key>" >> .env.local
- *   npm run map:ticketmaster
+ *   npm run map:ticketmaster              # full run, all teams
+ *   npm run map:ticketmaster:rerun        # only the problem teams
  *
- * Rate limit: Discovery API is 5 req/sec, 5000/day. We pace at ~4.5 req/sec
- * with a 220ms inter-request delay so a 167-team run stays comfortably
- * under the daily cap and doesn't trip the per-second throttle.
+ * Rate limit: Discovery API is 5 req/sec, 5000/day. Full run paces at
+ * ~4.5 req/sec (220ms delay) to stay under the per-second cap. Rerun
+ * mode pages much slower (600ms delay) for headroom on transient errors,
+ * with a single retry per team before giving up.
  */
 import { writeFileSync } from 'fs';
 import { join } from 'path';
@@ -36,10 +43,75 @@ if (!API_KEY) {
 // hit and whose error message is most actionable).
 
 const DISCOVERY_API_BASE = 'https://app.ticketmaster.com/discovery/v2';
-const RATE_LIMIT_DELAY_MS = 220; // ~4.5 req/sec, under the 5/sec cap
+
+// Mode flags — `--rerun` flips both pacing and output paths.
+const RERUN_MODE = process.argv.includes('--rerun');
+
+const RATE_LIMIT_DELAY_MS = RERUN_MODE ? 600 : 220;
+const RESULT_SIZE = RERUN_MODE ? 50 : 20;
+const RETRY_DELAY_MS = 2000;
+
+// Slugs that errored or returned ambiguous matches in the prior full run
+// (4 NHL transient errors + 3 MLS query-construction edge cases). Looked up
+// from Firestore — these are the actual `team.id` values, not derived from
+// names. The override map below produces the right query strings so the
+// MLS three resolve cleanly once the rerun fires.
+const RERUN_SLUGS: ReadonlySet<string> = new Set([
+  'boston-bruins',
+  'new-jersey-devils',
+  'philadelphia-flyers',
+  'washington-capitals',
+  'lafc',
+  'inter-miami',
+  'houston-dynamo',
+]);
+
+// Per-team query overrides for cases where neither `team.name` nor
+// `${team.city} ${team.name}` produces a clean Discovery API match. These
+// happen when the team's actual name layout doesn't compose from the
+// PromoNight-internal city/name fields — usually MLS teams whose canonical
+// brand puts the locale on the opposite side of where PromoNight stores it.
+// Slug → canonical search keyword.
+const QUERY_OVERRIDES: Record<string, string> = {
+  lafc: 'LAFC',
+  'inter-miami': 'Inter Miami CF',
+  'sporting-kansas-city': 'Sporting Kansas City',
+  'real-salt-lake': 'Real Salt Lake',
+};
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Strip diacritics so "Montréal" (team.name for cf-montreal) folds into
+// "Montreal" (team.city) and the contains-check finds the duplication.
+function fold(s: string): string {
+  return s
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase();
+}
+
+// Builds the Discovery API search keyword for a team. Three rules, in order:
+//   1. If a per-slug override exists, use it. Catches LAFC, Inter Miami CF,
+//      Sporting Kansas City, Real Salt Lake — teams whose canonical brand
+//      layout doesn't compose from PromoNight's city/name fields.
+//   2. If team.name (accent-folded) already contains team.city, use name
+//      alone. Catches "Austin FC", "FC Dallas", "Toronto FC", "CF Montréal",
+//      etc. where naive concatenation produces "Austin Austin FC".
+//   3. Otherwise concatenate `${city} ${name}` — the standard case for
+//      teams like Minnesota Twins, Boston Bruins, Atlanta Hawks.
+export function buildQueryName(team: Pick<Team, 'id' | 'city' | 'name'>): string {
+  const override = QUERY_OVERRIDES[team.id];
+  if (override) return override;
+
+  const cityFolded = fold(team.city);
+  const nameFolded = fold(team.name);
+  if (cityFolded.length > 0 && nameFolded.includes(cityFolded)) {
+    return team.name;
+  }
+
+  return `${team.city} ${team.name}`.trim();
 }
 
 interface TicketmasterAttraction {
@@ -76,7 +148,7 @@ async function searchAttractions(
     keyword: query,
     locale: 'en-us',
     countryCode: 'US',
-    size: '20',
+    size: String(RESULT_SIZE),
   });
   if (classificationName) {
     params.append('classificationName', classificationName);
@@ -150,16 +222,32 @@ function scoreMatch(
 }
 
 async function mapTeam(team: Team): Promise<TeamMappingRow> {
-  const fullName = `${team.city} ${team.name}`.trim();
+  const queryName = buildQueryName(team);
   const baseRow = {
     internal_slug: team.id,
-    team_name: fullName,
+    team_name: queryName,
     league: team.league,
   };
 
-  try {
+  const tryOnce = async () => {
     const classification = leagueToClassification(team.league);
-    const attractions = await searchAttractions(fullName, classification);
+    return searchAttractions(queryName, classification);
+  };
+
+  try {
+    let attractions: TicketmasterAttraction[];
+    try {
+      attractions = await tryOnce();
+    } catch (firstErr) {
+      if (!RERUN_MODE) throw firstErr;
+      console.log(
+        `    retrying after ${RETRY_DELAY_MS}ms (first attempt: ${
+          firstErr instanceof Error ? firstErr.message : String(firstErr)
+        })`,
+      );
+      await sleep(RETRY_DELAY_MS);
+      attractions = await tryOnce();
+    }
 
     if (attractions.length === 0) {
       return {
@@ -169,13 +257,13 @@ async function mapTeam(team: Team): Promise<TeamMappingRow> {
         ticketmaster_attraction_id: null,
         ticketmaster_canonical_url: null,
         ticketmaster_matched_name: null,
-        notes: 'No attractions returned from Discovery API',
+        notes: `No attractions returned (query="${queryName}")`,
       };
     }
 
     const scored = attractions.map((a) => ({
       attraction: a,
-      score: scoreMatch({ fullName, nickname: team.name, league: team.league }, a),
+      score: scoreMatch({ fullName: queryName, nickname: team.name, league: team.league }, a),
     }));
     scored.sort((a, b) => b.score - a.score);
 
@@ -234,20 +322,41 @@ function csvEscape(value: string): string {
 async function main() {
   console.log('Loading teams from Firestore...');
   const { getAllTeams } = await import('../src/lib/data');
-  const teams = await getAllTeams();
-  if (teams.length === 0) {
+  const allTeams = await getAllTeams();
+  if (allTeams.length === 0) {
     console.error('No teams returned — Firestore credentials missing?');
     process.exit(1);
   }
-  console.log(`Loaded ${teams.length} teams. Querying Ticketmaster Discovery API...`);
+
+  const teams = RERUN_MODE
+    ? allTeams.filter((t) => RERUN_SLUGS.has(t.id))
+    : allTeams;
+
+  if (RERUN_MODE) {
+    const found = new Set(teams.map((t) => t.id));
+    const missing = [...RERUN_SLUGS].filter((s) => !found.has(s));
+    if (missing.length > 0) {
+      console.warn(`WARN: ${missing.length} rerun slug(s) not found in Firestore: ${missing.join(', ')}`);
+    }
+    console.log(
+      `Rerun mode — processing ${teams.length}/${RERUN_SLUGS.size} target slugs ` +
+        `(${RATE_LIMIT_DELAY_MS}ms delay, size=${RESULT_SIZE}, retry-on-error).`,
+    );
+  } else {
+    console.log(
+      `Loaded ${teams.length} teams. Querying Ticketmaster Discovery API ` +
+        `(${RATE_LIMIT_DELAY_MS}ms delay, size=${RESULT_SIZE}).`,
+    );
+  }
   console.log('');
 
   const results: TeamMappingRow[] = [];
 
   for (let i = 0; i < teams.length; i++) {
     const team = teams[i];
-    const label = `[${i + 1}/${teams.length}] ${team.league} ${team.city} ${team.name}`;
-    process.stdout.write(`${label.padEnd(56)} ... `);
+    const queryPreview = buildQueryName(team);
+    const label = `[${i + 1}/${teams.length}] ${team.league} ${team.id} → "${queryPreview}"`;
+    process.stdout.write(`${label.padEnd(70)} ... `);
 
     const row = await mapTeam(team);
     results.push(row);
@@ -277,7 +386,10 @@ async function main() {
       headers.map((h) => csvEscape(r[h] === null ? '' : String(r[h]))).join(','),
     ),
   ];
-  const csvPath = join(process.cwd(), 'scripts/ticketmaster-team-mapping.csv');
+  const csvBaseName = RERUN_MODE
+    ? 'ticketmaster-team-mapping-rerun.csv'
+    : 'ticketmaster-team-mapping.csv';
+  const csvPath = join(process.cwd(), 'scripts', csvBaseName);
   writeFileSync(csvPath, csvLines.join('\n') + '\n', 'utf8');
 
   // JSON output — keyed by internal_slug for direct lookup. Skip rows without
@@ -301,7 +413,10 @@ async function main() {
       };
     }
   }
-  const jsonPath = join(process.cwd(), 'scripts/ticketmaster-team-mapping.json');
+  const jsonBaseName = RERUN_MODE
+    ? 'ticketmaster-team-mapping-rerun.json'
+    : 'ticketmaster-team-mapping.json';
+  const jsonPath = join(process.cwd(), 'scripts', jsonBaseName);
   writeFileSync(jsonPath, JSON.stringify(jsonMap, null, 2) + '\n', 'utf8');
 
   // Summary
@@ -321,15 +436,27 @@ async function main() {
   console.log('Wrote:');
   console.log(`  ${csvPath} (review manually)`);
   console.log(`  ${jsonPath} (use for code)`);
-  console.log('');
-  console.log('Next steps:');
-  console.log('  1. Open the CSV.');
-  console.log('  2. Sort/filter by match_confidence — review every "low" and "medium" row.');
-  console.log('  3. Spot-check 5-10 "high" matches by clicking the URL.');
-  console.log('  4. For wrong matches, look up the right attraction at');
-  console.log('     https://developer.ticketmaster.com/api-explorer/v2/ and edit the JSON.');
-  console.log('  5. Send a follow-up Claude Code prompt to populate ticketmasterSlug');
-  console.log('     (and optionally ticketmasterAttractionId) on team docs from the JSON.');
+
+  if (RERUN_MODE) {
+    console.log('');
+    console.log('Rerun next steps:');
+    console.log('  1. Open the rerun CSV and confirm every row reads sensibly.');
+    console.log('  2. If matches look correct, merge the rerun JSON into');
+    console.log('     ticketmaster-team-mapping.json (or send a follow-up prompt).');
+    console.log('  3. Anything still ambiguous: look up the attraction at');
+    console.log('     https://developer.ticketmaster.com/api-explorer/v2/ and patch');
+    console.log('     ticketmaster-team-mapping.json directly.');
+  } else {
+    console.log('');
+    console.log('Next steps:');
+    console.log('  1. Open the CSV.');
+    console.log('  2. Sort/filter by match_confidence — review every "low" and "medium" row.');
+    console.log('  3. Spot-check 5-10 "high" matches by clicking the URL.');
+    console.log('  4. For wrong matches, look up the right attraction at');
+    console.log('     https://developer.ticketmaster.com/api-explorer/v2/ and edit the JSON.');
+    console.log('  5. Send a follow-up Claude Code prompt to populate ticketmasterSlug');
+    console.log('     (and optionally ticketmasterAttractionId) on team docs from the JSON.');
+  }
 }
 
 main().catch((err) => {

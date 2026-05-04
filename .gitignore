@@ -28,6 +28,8 @@ scripts/ticketmaster-url-audit.csv
 # is canonical (Firestore is) so both stay out of git
 scripts/ticketmaster-team-mapping.csv
 scripts/ticketmaster-team-mapping.json
+scripts/ticketmaster-team-mapping-rerun.csv
+scripts/ticketmaster-team-mapping-rerun.json
 
 # IndexNow key verification file — generated at prebuild from INDEXNOW_KEY env var
 public/*.txt
