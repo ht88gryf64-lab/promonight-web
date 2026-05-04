@@ -662,10 +662,11 @@
     "confidence": "high"
   },
   "new-york-red-bulls": {
-    "attractionId": "K8vZ917KCB0",
-    "url": "https://www.ticketmaster.com/new-york-red-bulls-ii-tickets/artist/2093852",
-    "matchedName": "New York Red Bulls II",
-    "confidence": "high"
+    "attractionId": "806601",
+    "url": "https://www.ticketmaster.com/new-york-red-bulls-tickets/artist/806601",
+    "matchedName": "New York Red Bulls",
+    "confidence": "verified_manual",
+    "notes": "Manually corrected — Discovery API initially matched the reserve team (Red Bulls II); senior team URL verified via Ticketmaster search."
   },
   "new-york-yankees": {
     "attractionId": "K8vZ9171okV",
