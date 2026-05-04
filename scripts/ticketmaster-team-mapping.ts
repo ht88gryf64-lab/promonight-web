@@ -158,25 +158,66 @@ function redactApiKey(url: string): string {
   return url.replace(/([?&]apikey=)[^&]+/gi, '$1<REDACTED>');
 }
 
+// `error_kind` triage values written to the log so you can grep:
+//   discovery_api_http     — Discovery API returned non-2xx
+//   discovery_api_network  — fetch() threw (DNS, TCP, AbortError, etc.)
+//   js_score_loop          — scoreMatch crashed on a specific attraction
+//   js_unknown             — JS error somewhere else in mapTeam (stack pinpoints)
+type ErrorKind =
+  | 'discovery_api_http'
+  | 'discovery_api_network'
+  | 'js_score_loop'
+  | 'js_unknown';
+
+function classifyError(err: unknown): ErrorKind {
+  if (err instanceof DiscoveryApiError) {
+    return err.status !== undefined ? 'discovery_api_http' : 'discovery_api_network';
+  }
+  return 'js_unknown';
+}
+
 function logApiError(ctx: {
   teamSlug: string;
+  team?: Pick<Team, 'id' | 'city' | 'name' | 'league' | 'sportSlug' | 'division' | 'abbreviation'>;
   query: string;
   classification: string | undefined;
   err: unknown;
+  /** Override the auto-classified kind. Use 'js_score_loop' when the throw
+   *  happens inside the per-attraction wrapper so the log explicitly says so. */
+  kind?: ErrorKind;
+  /** Full attraction object that triggered a scoreMatch crash. Only populated
+   *  for kind='js_score_loop'. */
+  offendingAttraction?: unknown;
 }): void {
   const err = ctx.err;
   const isDiscovery = err instanceof DiscoveryApiError;
+  const kind = ctx.kind ?? classifyError(err);
+  const stack = err instanceof Error && err.stack ? err.stack : '(no stack)';
+
   const lines = [
     `=== ${new Date().toISOString()} ===`,
     `team_slug:      ${ctx.teamSlug}`,
     `query:          ${ctx.query}`,
     `classification: ${ctx.classification ?? '(none)'}`,
-    `url:            ${isDiscovery ? redactApiKey(err.url) : '(no url — pre-fetch failure)'}`,
+    `error_kind:     ${kind}`,
+    `url:            ${
+      isDiscovery
+        ? redactApiKey(err.url)
+        : '(n/a — error was a JS exception, not a Discovery API response)'
+    }`,
     `status:         ${isDiscovery && err.status !== undefined ? String(err.status) : '(no response)'}`,
     `body:           ${
       isDiscovery && err.body ? err.body.slice(0, 600).replace(/\n/g, ' ') : '(no body)'
     }`,
     `message:        ${err instanceof Error ? err.message : String(err)}`,
+    `team_data:      ${ctx.team ? JSON.stringify(ctx.team) : '(not provided)'}`,
+    `offending_attraction: ${
+      ctx.offendingAttraction !== undefined
+        ? JSON.stringify(ctx.offendingAttraction).slice(0, 800)
+        : '(none)'
+    }`,
+    `stack:`,
+    ...stack.split('\n').map((l) => `  ${l}`),
     ``,
   ];
   try {
@@ -333,7 +374,7 @@ async function mapTeam(team: Team): Promise<TeamMappingRow> {
     try {
       attractions = await strictAttempt();
     } catch (firstErr) {
-      logApiError({ teamSlug: team.id, query: queryName, classification, err: firstErr });
+      logApiError({ teamSlug: team.id, team, query: queryName, classification, err: firstErr });
       firstErrorMessage = firstErr instanceof Error ? firstErr.message : String(firstErr);
 
       // Rerun mode retries the strict query once before falling back, on
@@ -346,7 +387,7 @@ async function mapTeam(team: Team): Promise<TeamMappingRow> {
         try {
           attractions = await strictAttempt();
         } catch (secondErr) {
-          logApiError({ teamSlug: team.id, query: queryName, classification, err: secondErr });
+          logApiError({ teamSlug: team.id, team, query: queryName, classification, err: secondErr });
           console.log(
             `    strict retry failed: ${
               secondErr instanceof Error ? secondErr.message : String(secondErr)
@@ -385,11 +426,48 @@ async function mapTeam(team: Team): Promise<TeamMappingRow> {
       };
     }
 
-    const scored = attractions.map((a) => ({
-      attraction: a,
-      score: scoreMatch({ fullName: queryName, nickname: team.name, league: team.league }, a),
-    }));
+    // Per-attraction try/catch so a single malformed attraction object
+    // (missing url, missing name, etc.) doesn't kill the whole team — and
+    // when it does kill scoreMatch, the catch logs the exact attraction
+    // payload so the next run pinpoints which API field is undefined.
+    const scored: Array<{ attraction: TicketmasterAttraction; score: number }> = [];
+    for (const a of attractions) {
+      try {
+        scored.push({
+          attraction: a,
+          score: scoreMatch(
+            { fullName: queryName, nickname: team.name, league: team.league },
+            a,
+          ),
+        });
+      } catch (scoreErr) {
+        logApiError({
+          teamSlug: team.id,
+          team,
+          query: queryName,
+          classification,
+          err: scoreErr,
+          kind: 'js_score_loop',
+          offendingAttraction: a,
+        });
+        // Skip this attraction; keep going so a single bad result doesn't
+        // sink the team. Equivalent to score=0, just without polluting the
+        // ranked list with a row that'd never win.
+      }
+    }
     scored.sort((a, b) => b.score - a.score);
+
+    if (scored.length === 0) {
+      return {
+        ...baseRow,
+        match_status: 'no_match',
+        match_confidence: 'none',
+        ticketmaster_attraction_id: null,
+        ticketmaster_canonical_url: null,
+        ticketmaster_matched_name: null,
+        notes: `${attractions.length} attractions returned but all crashed scoreMatch — see error log`,
+      };
+    }
 
     const best = scored[0];
     const second = scored[1];
@@ -431,7 +509,7 @@ async function mapTeam(team: Team): Promise<TeamMappingRow> {
       notes,
     };
   } catch (err) {
-    logApiError({ teamSlug: team.id, query: queryName, classification, err });
+    logApiError({ teamSlug: team.id, team, query: queryName, classification, err });
     return {
       ...baseRow,
       match_status: 'error',
