@@ -23,11 +23,17 @@ scripts/.fonts/
 # generated audit output — regenerated via `npm run audit:ticketmaster`
 scripts/ticketmaster-url-audit.csv
 
-# generated Discovery API mapping — regenerated via `npm run map:ticketmaster`
-# CSV is reviewer-facing, JSON is consumed by follow-up code edits; neither
-# is canonical (Firestore is) so both stay out of git
+# Discovery API mapping artifacts.
+# - Main JSON (ticketmaster-team-mapping.json) is TRACKED — it's the verified
+#   slug → attractionId/url table consumed by the team-data populate step.
+#   Manual patches (LAFC, Houston Dynamo) live in this file, so regenerating
+#   from scratch would lose them.
+# - CSVs are reviewer-facing artifacts, regenerable via `npm run audit:ticketmaster`
+#   / `npm run map:ticketmaster`, kept out of git.
+# - The rerun JSON is kept locally as a historical record of the manual fix
+#   pass; it's been merged into the main JSON, so committing both would be
+#   redundant.
 scripts/ticketmaster-team-mapping.csv
-scripts/ticketmaster-team-mapping.json
 scripts/ticketmaster-team-mapping-rerun.csv
 scripts/ticketmaster-team-mapping-rerun.json
 

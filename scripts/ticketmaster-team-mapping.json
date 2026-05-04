@@ -1,0 +1,1006 @@
+{
+  "anaheim-ducks": {
+    "attractionId": "K8vZ91713ef",
+    "url": "https://www.ticketmaster.com/anaheim-ducks-tickets/artist/805893",
+    "matchedName": "Anaheim Ducks",
+    "confidence": "high"
+  },
+  "arizona-cardinals": {
+    "attractionId": "K8vZ917198f",
+    "url": "https://www.ticketmaster.com/arizona-cardinals-tickets/artist/805894",
+    "matchedName": "Arizona Cardinals",
+    "confidence": "high"
+  },
+  "arizona-diamondbacks": {
+    "attractionId": "K8vZ9171bp7",
+    "url": "https://www.ticketmaster.com/arizona-diamondbacks-tickets/artist/805895",
+    "matchedName": "Arizona Diamondbacks",
+    "confidence": "high"
+  },
+  "atlanta-braves": {
+    "attractionId": "K8vZ9171oA7",
+    "url": "https://www.ticketmaster.com/atlanta-braves-tickets/artist/805896",
+    "matchedName": "Atlanta Braves",
+    "confidence": "high"
+  },
+  "atlanta-dream": {
+    "attractionId": "K8vZ917G1N0",
+    "url": "https://www.ticketmaster.com/atlanta-dream-tickets/artist/1205524",
+    "matchedName": "Atlanta Dream",
+    "confidence": "high"
+  },
+  "atlanta-falcons": {
+    "attractionId": "K8vZ9171ou0",
+    "url": "https://www.ticketmaster.com/atlanta-falcons-tickets/artist/805897",
+    "matchedName": "Atlanta Falcons",
+    "confidence": "high"
+  },
+  "atlanta-hawks": {
+    "attractionId": "K8vZ91718XV",
+    "url": "https://www.ticketmaster.com/atlanta-hawks-tickets/artist/805898",
+    "matchedName": "Atlanta Hawks",
+    "confidence": "high"
+  },
+  "atlanta-united": {
+    "attractionId": "K8vZ917f990",
+    "url": "https://www.ticketmaster.com/atlanta-united-fc-tickets/artist/2213124",
+    "matchedName": "Atlanta United FC",
+    "confidence": "high"
+  },
+  "austin-fc": {
+    "attractionId": "K8vZ917_FcV",
+    "url": "https://www.ticketmaster.com/austin-fc-tickets/artist/2772483",
+    "matchedName": "Austin FC",
+    "confidence": "high"
+  },
+  "baltimore-orioles": {
+    "attractionId": "K8vZ91718D7",
+    "url": "https://www.ticketmaster.com/baltimore-orioles-tickets/artist/805900",
+    "matchedName": "Baltimore Orioles",
+    "confidence": "high"
+  },
+  "baltimore-ravens": {
+    "attractionId": "K8vZ91719eV",
+    "url": "https://www.ticketmaster.com/baltimore-ravens-tickets/artist/805901",
+    "matchedName": "Baltimore Ravens",
+    "confidence": "high"
+  },
+  "boston-bruins": {
+    "attractionId": "K8vZ9171o27",
+    "url": "https://www.ticketmaster.com/boston-bruins-tickets/artist/805902",
+    "matchedName": "Boston Bruins",
+    "confidence": "high"
+  },
+  "boston-celtics": {
+    "attractionId": "K8vZ91718Xf",
+    "url": "https://www.ticketmaster.com/boston-celtics-tickets/artist/805903",
+    "matchedName": "Boston Celtics",
+    "confidence": "high"
+  },
+  "boston-red-sox": {
+    "attractionId": "K8vZ9171okf",
+    "url": "https://www.ticketmaster.com/boston-red-sox-tickets/artist/805904",
+    "matchedName": "Boston Red Sox",
+    "confidence": "high"
+  },
+  "brooklyn-nets": {
+    "attractionId": "K8vZ9171o5f",
+    "url": "https://www.ticketmaster.com/brooklyn-nets-tickets/artist/805983",
+    "matchedName": "Brooklyn Nets",
+    "confidence": "high"
+  },
+  "buffalo-bills": {
+    "attractionId": "K8vZ9171oGf",
+    "url": "https://www.ticketmaster.com/buffalo-bills-tickets/artist/805905",
+    "matchedName": "Buffalo Bills",
+    "confidence": "high"
+  },
+  "buffalo-sabres": {
+    "attractionId": "K8vZ9171oz7",
+    "url": "https://www.ticketmaster.com/buffalo-sabres-tickets/artist/805906",
+    "matchedName": "Buffalo Sabres",
+    "confidence": "high"
+  },
+  "calgary-flames": {
+    "attractionId": "K8vZ9171oB7",
+    "url": "https://www.ticketmaster.com/calgary-flames-tickets/artist/805907",
+    "matchedName": "Calgary Flames",
+    "confidence": "high"
+  },
+  "carolina-hurricanes": {
+    "attractionId": "K8vZ9171o2f",
+    "url": "https://www.ticketmaster.com/carolina-hurricanes-tickets/artist/805908",
+    "matchedName": "Carolina Hurricanes",
+    "confidence": "high"
+  },
+  "carolina-panthers": {
+    "attractionId": "K8vZ9171oPf",
+    "url": "https://www.ticketmaster.com/carolina-panthers-tickets/artist/805909",
+    "matchedName": "Carolina Panthers",
+    "confidence": "high"
+  },
+  "cf-montreal": {
+    "attractionId": "K8vZ9171rs7",
+    "url": "https://www.ticketmaster.com/cf-montreal-tickets/artist/806614",
+    "matchedName": "CF Montréal",
+    "confidence": "high"
+  },
+  "charlotte-fc": {
+    "attractionId": "K8vZ917_75f",
+    "url": "https://www.ticketmaster.com/charlotte-fc-tickets/artist/2765955",
+    "matchedName": "Charlotte FC",
+    "confidence": "high"
+  },
+  "charlotte-hornets": {
+    "attractionId": "K8vZ9175Nnf",
+    "url": "https://www.ticketmaster.com/charlotte-hornets-tickets/artist/931493",
+    "matchedName": "Charlotte Hornets",
+    "confidence": "high"
+  },
+  "chicago-bears": {
+    "attractionId": "K8vZ9171ou7",
+    "url": "https://www.ticketmaster.com/chicago-bears-tickets/artist/805912",
+    "matchedName": "Chicago Bears",
+    "confidence": "high"
+  },
+  "chicago-blackhawks": {
+    "attractionId": "K8vZ9171oz0",
+    "url": "https://www.ticketmaster.com/chicago-blackhawks-tickets/artist/805913",
+    "matchedName": "Chicago Blackhawks",
+    "confidence": "high"
+  },
+  "chicago-bulls": {
+    "attractionId": "K8vZ91718X0",
+    "url": "https://www.ticketmaster.com/chicago-bulls-tickets/artist/805914",
+    "matchedName": "Chicago Bulls",
+    "confidence": "high"
+  },
+  "chicago-cubs": {
+    "attractionId": "K8vZ9171oAf",
+    "url": "https://www.ticketmaster.com/chicago-cubs-tickets/artist/805915",
+    "matchedName": "Chicago Cubs",
+    "confidence": "high"
+  },
+  "chicago-fire": {
+    "attractionId": "K8vZ9171b3f",
+    "url": "https://www.ticketmaster.com/chicago-fire-fc-tickets/artist/805916",
+    "matchedName": "Chicago Fire FC",
+    "confidence": "high"
+  },
+  "chicago-sky": {
+    "attractionId": "K8vZ9175zE0",
+    "url": "https://www.ticketmaster.com/chicago-sky-tickets/artist/1020273",
+    "matchedName": "Chicago Sky",
+    "confidence": "high"
+  },
+  "chicago-white-sox": {
+    "attractionId": "K8vZ9171ok0",
+    "url": "https://www.ticketmaster.com/chicago-white-sox-tickets/artist/805917",
+    "matchedName": "Chicago White Sox",
+    "confidence": "high"
+  },
+  "cincinnati-bengals": {
+    "attractionId": "K8vZ9171ovV",
+    "url": "https://www.ticketmaster.com/cincinnati-bengals-tickets/artist/805918",
+    "matchedName": "Cincinnati Bengals",
+    "confidence": "high"
+  },
+  "cincinnati-reds": {
+    "attractionId": "K8vZ9171ok7",
+    "url": "https://www.ticketmaster.com/cincinnati-reds-tickets/artist/805919",
+    "matchedName": "Cincinnati Reds",
+    "confidence": "high"
+  },
+  "cleveland-browns": {
+    "attractionId": "K8vZ9171oV7",
+    "url": "https://www.ticketmaster.com/cleveland-browns-tickets/artist/805920",
+    "matchedName": "Cleveland Browns",
+    "confidence": "high"
+  },
+  "cleveland-cavaliers": {
+    "attractionId": "K8vZ9171oa7",
+    "url": "https://www.ticketmaster.com/cleveland-cavaliers-tickets/artist/805921",
+    "matchedName": "Cleveland Cavaliers",
+    "confidence": "high"
+  },
+  "cleveland-guardians": {
+    "attractionId": "K8vZ91718DV",
+    "url": "https://www.ticketmaster.com/cleveland-guardians-tickets/artist/805922",
+    "matchedName": "Cleveland Guardians",
+    "confidence": "high"
+  },
+  "colorado-avalanche": {
+    "attractionId": "K8vZ9171KM7",
+    "url": "https://www.ticketmaster.com/colorado-avalanche-tickets/artist/805924",
+    "matchedName": "Colorado Avalanche",
+    "confidence": "high"
+  },
+  "colorado-rapids": {
+    "attractionId": "K8vZ9171pM7",
+    "url": "https://www.ticketmaster.com/colorado-rapids-tickets/artist/805925",
+    "matchedName": "Colorado Rapids",
+    "confidence": "high"
+  },
+  "colorado-rockies": {
+    "attractionId": "K8vZ91718y0",
+    "url": "https://www.ticketmaster.com/colorado-rockies-tickets/artist/805926",
+    "matchedName": "Colorado Rockies",
+    "confidence": "high"
+  },
+  "columbus-blue-jackets": {
+    "attractionId": "K8vZ9171-C0",
+    "url": "https://www.ticketmaster.com/columbus-blue-jackets-tickets/artist/805927",
+    "matchedName": "Columbus Blue Jackets",
+    "confidence": "high"
+  },
+  "columbus-crew": {
+    "attractionId": "K8vZ9171pa0",
+    "url": "https://www.ticketmaster.com/columbus-crew-tickets/artist/805928",
+    "matchedName": "Columbus Crew",
+    "confidence": "high"
+  },
+  "connecticut-sun": {
+    "attractionId": "K8vZ91754g0",
+    "url": "https://www.ticketmaster.com/connecticut-sun-tickets/artist/860172",
+    "matchedName": "Connecticut Sun",
+    "confidence": "high"
+  },
+  "dallas-cowboys": {
+    "attractionId": "K8vZ9171oG0",
+    "url": "https://www.ticketmaster.com/dallas-cowboys-tickets/artist/805931",
+    "matchedName": "Dallas Cowboys",
+    "confidence": "high"
+  },
+  "dallas-mavericks": {
+    "attractionId": "K8vZ9171o17",
+    "url": "https://www.ticketmaster.com/dallas-mavericks-tickets/artist/805932",
+    "matchedName": "Dallas Mavericks",
+    "confidence": "high"
+  },
+  "dallas-stars": {
+    "attractionId": "K8vZ9171ozV",
+    "url": "https://www.ticketmaster.com/dallas-stars-tickets/artist/805933",
+    "matchedName": "Dallas Stars",
+    "confidence": "high"
+  },
+  "dallas-wings": {
+    "attractionId": "K8vZ917f82f",
+    "url": "https://www.ticketmaster.com/dallas-wings-tickets/artist/2198785",
+    "matchedName": "Dallas Wings",
+    "confidence": "high"
+  },
+  "dc-united": {
+    "attractionId": "K8vZ9171p5f",
+    "url": "https://www.ticketmaster.com/dc-united-tickets/artist/806390",
+    "matchedName": "D.C. United",
+    "confidence": "high"
+  },
+  "denver-broncos": {
+    "attractionId": "K8vZ9171og7",
+    "url": "https://www.ticketmaster.com/denver-broncos-tickets/artist/805934",
+    "matchedName": "Denver Broncos",
+    "confidence": "high"
+  },
+  "denver-nuggets": {
+    "attractionId": "K8vZ9171oaf",
+    "url": "https://www.ticketmaster.com/denver-nuggets-tickets/artist/805935",
+    "matchedName": "Denver Nuggets",
+    "confidence": "high"
+  },
+  "detroit-lions": {
+    "attractionId": "K8vZ9171oUf",
+    "url": "https://www.ticketmaster.com/detroit-lions-tickets/artist/805936",
+    "matchedName": "Detroit Lions",
+    "confidence": "high"
+  },
+  "detroit-pistons": {
+    "attractionId": "K8vZ91718T7",
+    "url": "https://www.ticketmaster.com/detroit-pistons-tickets/artist/805937",
+    "matchedName": "Detroit Pistons",
+    "confidence": "high"
+  },
+  "detroit-red-wings": {
+    "attractionId": "K8vZ9171o20",
+    "url": "https://www.ticketmaster.com/detroit-red-wings-tickets/artist/805938",
+    "matchedName": "Detroit Red Wings",
+    "confidence": "high"
+  },
+  "detroit-tigers": {
+    "attractionId": "K8vZ9171o67",
+    "url": "https://www.ticketmaster.com/detroit-tigers-tickets/artist/805940",
+    "matchedName": "Detroit Tigers",
+    "confidence": "high"
+  },
+  "edmonton-oilers": {
+    "attractionId": "K8vZ9171oy7",
+    "url": "https://www.ticketmaster.com/edmonton-oilers-tickets/artist/805943",
+    "matchedName": "Edmonton Oilers",
+    "confidence": "high"
+  },
+  "fc-cincinnati": {
+    "attractionId": "K8vZ917phjV",
+    "url": "https://www.ticketmaster.com/fc-cincinnati-tickets/artist/2427786",
+    "matchedName": "FC Cincinnati",
+    "confidence": "high"
+  },
+  "fc-dallas": {
+    "attractionId": "K8vZ9171paV",
+    "url": "https://www.ticketmaster.com/fc-dallas-tickets/artist/805930",
+    "matchedName": "FC Dallas",
+    "confidence": "high"
+  },
+  "florida-panthers": {
+    "attractionId": "K8vZ9171pMf",
+    "url": "https://www.ticketmaster.com/florida-panthers-tickets/artist/805945",
+    "matchedName": "Florida Panthers",
+    "confidence": "high"
+  },
+  "golden-state-valkyries": {
+    "attractionId": "K8vZ917qxG7",
+    "url": "https://www.ticketmaster.com/golden-state-valkyries-tickets/artist/3369949",
+    "matchedName": "Golden State Valkyries",
+    "confidence": "high"
+  },
+  "golden-state-warriors": {
+    "attractionId": "K8vZ9171oa0",
+    "url": "https://www.ticketmaster.com/golden-state-warriors-tickets/artist/805946",
+    "matchedName": "Golden State Warriors",
+    "confidence": "high"
+  },
+  "green-bay-packers": {
+    "attractionId": "K8vZ9171oC7",
+    "url": "https://www.ticketmaster.com/green-bay-packers-tickets/artist/805947",
+    "matchedName": "Green Bay Packers",
+    "confidence": "high"
+  },
+  "houston-astros": {
+    "attractionId": "K8vZ91718zV",
+    "url": "https://www.ticketmaster.com/houston-astros-tickets/artist/805948",
+    "matchedName": "Houston Astros",
+    "confidence": "high"
+  },
+  "houston-dynamo": {
+    "attractionId": "1017951",
+    "url": "https://www.ticketmaster.com/houston-dynamo-tickets/artist/1017951",
+    "matchedName": "Houston Dynamo",
+    "confidence": "verified_manual",
+    "notes": "Ticketmaster lists this team as 'Houston Dynamo' without 'FC' suffix; query 'Houston Dynamo FC' returned 0 results. URL manually verified via Ticketmaster search."
+  },
+  "houston-rockets": {
+    "attractionId": "K8vZ91718Tf",
+    "url": "https://www.ticketmaster.com/houston-rockets-tickets/artist/805950",
+    "matchedName": "Houston Rockets",
+    "confidence": "high"
+  },
+  "houston-texans": {
+    "attractionId": "K8vZ91756Kf",
+    "url": "https://www.ticketmaster.com/houston-texans-tickets/artist/821630",
+    "matchedName": "Houston Texans",
+    "confidence": "high"
+  },
+  "indiana-fever": {
+    "attractionId": "K8vZ9171-K7",
+    "url": "https://www.ticketmaster.com/indiana-fever-tickets/artist/805951",
+    "matchedName": "Indiana Fever",
+    "confidence": "high"
+  },
+  "indiana-pacers": {
+    "attractionId": "K8vZ9171o1f",
+    "url": "https://www.ticketmaster.com/indiana-pacers-tickets/artist/805952",
+    "matchedName": "Indiana Pacers",
+    "confidence": "high"
+  },
+  "indianapolis-colts": {
+    "attractionId": "K8vZ9171oV0",
+    "url": "https://www.ticketmaster.com/indianapolis-colts-tickets/artist/805953",
+    "matchedName": "Indianapolis Colts",
+    "confidence": "high"
+  },
+  "inter-miami": {
+    "attractionId": "K8vZ917bkC0",
+    "url": "https://www.ticketmaster.com/inter-miami-cf-tickets/artist/2641625",
+    "matchedName": "Inter Miami CF",
+    "confidence": "high"
+  },
+  "jacksonville-jaguars": {
+    "attractionId": "K8vZ9171poV",
+    "url": "https://www.ticketmaster.com/jacksonville-jaguars-tickets/artist/805954",
+    "matchedName": "Jacksonville Jaguars",
+    "confidence": "high"
+  },
+  "kansas-city-chiefs": {
+    "attractionId": "K8vZ9171oMf",
+    "url": "https://www.ticketmaster.com/kansas-city-chiefs-tickets/artist/805955",
+    "matchedName": "Kansas City Chiefs",
+    "confidence": "high"
+  },
+  "kansas-city-royals": {
+    "attractionId": "K8vZ9171oF7",
+    "url": "https://www.ticketmaster.com/kansas-city-royals-tickets/artist/805956",
+    "matchedName": "Kansas City Royals",
+    "confidence": "high"
+  },
+  "la-galaxy": {
+    "attractionId": "K8vZ9171p10",
+    "url": "https://www.ticketmaster.com/la-galaxy-tickets/artist/805960",
+    "matchedName": "LA Galaxy",
+    "confidence": "high"
+  },
+  "lafc": {
+    "attractionId": "K8vZ917p0D0",
+    "url": "https://www.ticketmaster.com/los-angeles-football-club-tickets/artist/2451856",
+    "matchedName": "Los Angeles Football Club",
+    "confidence": "verified_manual",
+    "notes": "Manually verified — query 'LAFC' did not match name 'Los Angeles Football Club' substring, but URL is correct LAFC attraction"
+  },
+  "las-vegas-aces": {
+    "attractionId": "K8vZ917plb7",
+    "url": "https://www.ticketmaster.com/las-vegas-aces-tickets/artist/2462412",
+    "matchedName": "Las Vegas Aces",
+    "confidence": "high"
+  },
+  "las-vegas-raiders": {
+    "attractionId": "K8vZ9171oVV",
+    "url": "https://www.ticketmaster.com/las-vegas-raiders-tickets/artist/805994",
+    "matchedName": "Las Vegas Raiders",
+    "confidence": "high"
+  },
+  "los-angeles-angels": {
+    "attractionId": "K8vZ91718D0",
+    "url": "https://www.ticketmaster.com/los-angeles-angels-tickets/artist/805892",
+    "matchedName": "Los Angeles Angels",
+    "confidence": "high"
+  },
+  "los-angeles-chargers": {
+    "attractionId": "K8vZ9171og0",
+    "url": "https://www.ticketmaster.com/los-angeles-chargers-tickets/artist/806013",
+    "matchedName": "Los Angeles Chargers",
+    "confidence": "high"
+  },
+  "los-angeles-clippers": {
+    "attractionId": "K8vZ9171o1V",
+    "url": "https://www.ticketmaster.com/la-clippers-tickets/artist/805958",
+    "matchedName": "LA Clippers",
+    "confidence": "high"
+  },
+  "los-angeles-dodgers": {
+    "attractionId": "K8vZ9171oA0",
+    "url": "https://www.ticketmaster.com/los-angeles-dodgers-tickets/artist/805959",
+    "matchedName": "Los Angeles Dodgers",
+    "confidence": "high"
+  },
+  "los-angeles-kings": {
+    "attractionId": "K8vZ9171ozf",
+    "url": "https://www.ticketmaster.com/los-angeles-kings-tickets/artist/805961",
+    "matchedName": "Los Angeles Kings",
+    "confidence": "high"
+  },
+  "los-angeles-lakers": {
+    "attractionId": "K8vZ91718T0",
+    "url": "https://www.ticketmaster.com/los-angeles-lakers-tickets/artist/805962",
+    "matchedName": "Los Angeles Lakers",
+    "confidence": "high"
+  },
+  "los-angeles-rams": {
+    "attractionId": "K8vZ91719t0",
+    "url": "https://www.ticketmaster.com/los-angeles-rams-tickets/artist/806024",
+    "matchedName": "Los Angeles Rams",
+    "confidence": "high"
+  },
+  "los-angeles-sparks": {
+    "attractionId": "K8vZ9171prV",
+    "url": "https://www.ticketmaster.com/los-angeles-sparks-tickets/artist/805963",
+    "matchedName": "Los Angeles Sparks",
+    "confidence": "high"
+  },
+  "memphis-grizzlies": {
+    "attractionId": "K8vZ9171Kg7",
+    "url": "https://www.ticketmaster.com/memphis-grizzlies-tickets/artist/806038",
+    "matchedName": "Memphis Grizzlies",
+    "confidence": "high"
+  },
+  "miami-dolphins": {
+    "attractionId": "K8vZ9171ogf",
+    "url": "https://www.ticketmaster.com/miami-dolphins-tickets/artist/805964",
+    "matchedName": "Miami Dolphins",
+    "confidence": "high"
+  },
+  "miami-heat": {
+    "attractionId": "K8vZ9171oZ7",
+    "url": "https://www.ticketmaster.com/miami-heat-tickets/artist/805966",
+    "matchedName": "Miami Heat",
+    "confidence": "high"
+  },
+  "miami-marlins": {
+    "attractionId": "K8vZ91718yf",
+    "url": "https://www.ticketmaster.com/miami-marlins-tickets/artist/805944",
+    "matchedName": "Miami Marlins",
+    "confidence": "high"
+  },
+  "milwaukee-brewers": {
+    "attractionId": "K8vZ91718H7",
+    "url": "https://www.ticketmaster.com/milwaukee-brewers-tickets/artist/805968",
+    "matchedName": "Milwaukee Brewers",
+    "confidence": "high"
+  },
+  "milwaukee-bucks": {
+    "attractionId": "K8vZ91718TV",
+    "url": "https://www.ticketmaster.com/milwaukee-bucks-tickets/artist/805969",
+    "matchedName": "Milwaukee Bucks",
+    "confidence": "high"
+  },
+  "minnesota-lynx": {
+    "attractionId": "K8vZ9171h3V",
+    "url": "https://www.ticketmaster.com/minnesota-lynx-tickets/artist/805970",
+    "matchedName": "Minnesota Lynx",
+    "confidence": "high"
+  },
+  "minnesota-timberwolves": {
+    "attractionId": "K8vZ9171o10",
+    "url": "https://www.ticketmaster.com/minnesota-timberwolves-tickets/artist/805971",
+    "matchedName": "Minnesota Timberwolves",
+    "confidence": "high"
+  },
+  "minnesota-twins": {
+    "attractionId": "K8vZ91718Hf",
+    "url": "https://www.ticketmaster.com/minnesota-twins-tickets/artist/805972",
+    "matchedName": "Minnesota Twins",
+    "confidence": "high"
+  },
+  "minnesota-united": {
+    "attractionId": "K8vZ917u2_V",
+    "url": "https://www.ticketmaster.com/minnesota-united-fc-tickets/artist/1501648",
+    "matchedName": "Minnesota United FC",
+    "confidence": "high"
+  },
+  "minnesota-vikings": {
+    "attractionId": "K8vZ9171oM7",
+    "url": "https://www.ticketmaster.com/minnesota-vikings-tickets/artist/805973",
+    "matchedName": "Minnesota Vikings",
+    "confidence": "high"
+  },
+  "minnesota-wild": {
+    "attractionId": "K8vZ9171-9f",
+    "url": "https://www.ticketmaster.com/minnesota-wild-tickets/artist/805974",
+    "matchedName": "Minnesota Wild",
+    "confidence": "high"
+  },
+  "montreal-canadiens": {
+    "attractionId": "K8vZ9171oyf",
+    "url": "https://www.ticketmaster.com/montreal-canadiens-tickets/artist/805975",
+    "matchedName": "Montreal Canadiens",
+    "confidence": "high"
+  },
+  "nashville-predators": {
+    "attractionId": "K8vZ9171_Y7",
+    "url": "https://www.ticketmaster.com/nashville-predators-tickets/artist/805978",
+    "matchedName": "Nashville Predators",
+    "confidence": "high"
+  },
+  "nashville-sc": {
+    "attractionId": "K8vZ917pPFf",
+    "url": "https://www.ticketmaster.com/nashville-sc-tickets/artist/2452438",
+    "matchedName": "Nashville SC",
+    "confidence": "high"
+  },
+  "new-england-patriots": {
+    "attractionId": "K8vZ9171ouf",
+    "url": "https://www.ticketmaster.com/new-england-patriots-tickets/artist/805980",
+    "matchedName": "New England Patriots",
+    "confidence": "high"
+  },
+  "new-england-revolution": {
+    "attractionId": "K8vZ9171pG7",
+    "url": "https://www.ticketmaster.com/new-england-revolution-tickets/artist/805981",
+    "matchedName": "New England Revolution",
+    "confidence": "high"
+  },
+  "new-jersey-devils": {
+    "attractionId": "K8vZ9171oyV",
+    "url": "https://www.ticketmaster.com/new-jersey-devils-tickets/artist/805982",
+    "matchedName": "New Jersey Devils",
+    "confidence": "high"
+  },
+  "new-orleans-pelicans": {
+    "attractionId": "K8vZ9171oaV",
+    "url": "https://www.ticketmaster.com/new-orleans-pelicans-tickets/artist/805910",
+    "matchedName": "New Orleans Pelicans",
+    "confidence": "high"
+  },
+  "new-orleans-saints": {
+    "attractionId": "K8vZ9171ouV",
+    "url": "https://www.ticketmaster.com/new-orleans-saints-tickets/artist/805984",
+    "matchedName": "New Orleans Saints",
+    "confidence": "high"
+  },
+  "new-york-city-fc": {
+    "attractionId": "K8vZ9173jR0",
+    "url": "https://www.ticketmaster.com/new-york-city-fc-tickets/artist/1991293",
+    "matchedName": "New York City FC",
+    "confidence": "high"
+  },
+  "new-york-giants": {
+    "attractionId": "K8vZ9171oCf",
+    "url": "https://www.ticketmaster.com/new-york-giants-tickets/artist/805985",
+    "matchedName": "New York Giants",
+    "confidence": "high"
+  },
+  "new-york-islanders": {
+    "attractionId": "K8vZ9171o_0",
+    "url": "https://www.ticketmaster.com/new-york-islanders-tickets/artist/805986",
+    "matchedName": "New York Islanders",
+    "confidence": "high"
+  },
+  "new-york-jets": {
+    "attractionId": "K8vZ9171oGV",
+    "url": "https://www.ticketmaster.com/new-york-jets-tickets/artist/805987",
+    "matchedName": "New York Jets",
+    "confidence": "high"
+  },
+  "new-york-knicks": {
+    "attractionId": "K8vZ9171o57",
+    "url": "https://www.ticketmaster.com/new-york-knicks-tickets/artist/805988",
+    "matchedName": "New York Knicks",
+    "confidence": "high"
+  },
+  "new-york-liberty": {
+    "attractionId": "K8vZ917192f",
+    "url": "https://www.ticketmaster.com/new-york-liberty-tickets/artist/805989",
+    "matchedName": "New York Liberty",
+    "confidence": "high"
+  },
+  "new-york-mets": {
+    "attractionId": "K8vZ91718B7",
+    "url": "https://www.ticketmaster.com/new-york-mets-tickets/artist/805990",
+    "matchedName": "New York Mets",
+    "confidence": "high"
+  },
+  "new-york-rangers": {
+    "attractionId": "K8vZ9171o87",
+    "url": "https://www.ticketmaster.com/new-york-rangers-tickets/artist/805991",
+    "matchedName": "New York Rangers",
+    "confidence": "high"
+  },
+  "new-york-red-bulls": {
+    "attractionId": "K8vZ917KCB0",
+    "url": "https://www.ticketmaster.com/new-york-red-bulls-ii-tickets/artist/2093852",
+    "matchedName": "New York Red Bulls II",
+    "confidence": "high"
+  },
+  "new-york-yankees": {
+    "attractionId": "K8vZ9171okV",
+    "url": "https://www.ticketmaster.com/new-york-yankees-tickets/artist/805992",
+    "matchedName": "New York Yankees",
+    "confidence": "high"
+  },
+  "oakland-athletics": {
+    "attractionId": "K8vZ9171o60",
+    "url": "https://www.ticketmaster.com/athletics-tickets/artist/805993",
+    "matchedName": "Athletics",
+    "confidence": "high"
+  },
+  "oklahoma-city-thunder": {
+    "attractionId": "K8vZ917GCg7",
+    "url": "https://www.ticketmaster.com/oklahoma-city-thunder-tickets/artist/1250512",
+    "matchedName": "Oklahoma City Thunder",
+    "confidence": "high"
+  },
+  "orlando-city": {
+    "attractionId": "K8vZ917uWt0",
+    "url": "https://www.ticketmaster.com/orlando-city-sc-tickets/artist/1550331",
+    "matchedName": "Orlando City SC",
+    "confidence": "high"
+  },
+  "orlando-magic": {
+    "attractionId": "K8vZ9171ov7",
+    "url": "https://www.ticketmaster.com/orlando-magic-tickets/artist/805995",
+    "matchedName": "Orlando Magic",
+    "confidence": "high"
+  },
+  "ottawa-senators": {
+    "attractionId": "K8vZ9171oB0",
+    "url": "https://www.ticketmaster.com/ottawa-senators-tickets/artist/805997",
+    "matchedName": "Ottawa Senators",
+    "confidence": "high"
+  },
+  "philadelphia-76ers": {
+    "attractionId": "K8vZ9171oZ0",
+    "url": "https://www.ticketmaster.com/philadelphia-76ers-tickets/artist/805998",
+    "matchedName": "Philadelphia 76ers",
+    "confidence": "high"
+  },
+  "philadelphia-eagles": {
+    "attractionId": "K8vZ9171oU0",
+    "url": "https://www.ticketmaster.com/philadelphia-eagles-tickets/artist/805999",
+    "matchedName": "Philadelphia Eagles",
+    "confidence": "high"
+  },
+  "philadelphia-flyers": {
+    "attractionId": "K8vZ9171oy0",
+    "url": "https://www.ticketmaster.com/philadelphia-flyers-tickets/artist/806000",
+    "matchedName": "Philadelphia Flyers",
+    "confidence": "high"
+  },
+  "philadelphia-phillies": {
+    "attractionId": "K8vZ91718B0",
+    "url": "https://www.ticketmaster.com/philadelphia-phillies-tickets/artist/806001",
+    "matchedName": "Philadelphia Phillies",
+    "confidence": "high"
+  },
+  "philadelphia-union": {
+    "attractionId": "K8vZ917G-z0",
+    "url": "https://www.ticketmaster.com/philadelphia-union-tickets/artist/1418418",
+    "matchedName": "Philadelphia Union",
+    "confidence": "high"
+  },
+  "phoenix-mercury": {
+    "attractionId": "K8vZ9171prf",
+    "url": "https://www.ticketmaster.com/phoenix-mercury-tickets/artist/806003",
+    "matchedName": "Phoenix Mercury",
+    "confidence": "high"
+  },
+  "phoenix-suns": {
+    "attractionId": "K8vZ9171oZf",
+    "url": "https://www.ticketmaster.com/phoenix-suns-tickets/artist/806004",
+    "matchedName": "Phoenix Suns",
+    "confidence": "high"
+  },
+  "pittsburgh-penguins": {
+    "attractionId": "K8vZ9171o8f",
+    "url": "https://www.ticketmaster.com/pittsburgh-penguins-tickets/artist/806005",
+    "matchedName": "Pittsburgh Penguins",
+    "confidence": "high"
+  },
+  "pittsburgh-pirates": {
+    "attractionId": "K8vZ9171oAV",
+    "url": "https://www.ticketmaster.com/pittsburgh-pirates-tickets/artist/806006",
+    "matchedName": "Pittsburgh Pirates",
+    "confidence": "high"
+  },
+  "pittsburgh-steelers": {
+    "attractionId": "K8vZ9171ogV",
+    "url": "https://www.ticketmaster.com/pittsburgh-steelers-tickets/artist/806007",
+    "matchedName": "Pittsburgh Steelers",
+    "confidence": "high"
+  },
+  "portland-timbers": {
+    "attractionId": "K8vZ9171mD0",
+    "url": "https://www.ticketmaster.com/portland-timbers-tickets/artist/806820",
+    "matchedName": "Portland Timbers",
+    "confidence": "high"
+  },
+  "portland-trail-blazers": {
+    "attractionId": "K8vZ9171oZV",
+    "url": "https://www.ticketmaster.com/portland-trail-blazers-tickets/artist/806009",
+    "matchedName": "Portland Trail Blazers",
+    "confidence": "high"
+  },
+  "real-salt-lake": {
+    "attractionId": "K8vZ9175Yd0",
+    "url": "https://www.ticketmaster.com/real-salt-lake-tickets/artist/959263",
+    "matchedName": "Real Salt Lake",
+    "confidence": "high"
+  },
+  "sacramento-kings": {
+    "attractionId": "K8vZ9171o50",
+    "url": "https://www.ticketmaster.com/sacramento-kings-tickets/artist/806010",
+    "matchedName": "Sacramento Kings",
+    "confidence": "high"
+  },
+  "san-antonio-spurs": {
+    "attractionId": "K8vZ9171ov0",
+    "url": "https://www.ticketmaster.com/san-antonio-spurs-tickets/artist/806012",
+    "matchedName": "San Antonio Spurs",
+    "confidence": "high"
+  },
+  "san-diego-fc": {
+    "attractionId": "K8vZ917jmf0",
+    "url": "https://www.ticketmaster.com/san-diego-fc-tickets/artist/3149423",
+    "matchedName": "San Diego FC",
+    "confidence": "high"
+  },
+  "san-diego-padres": {
+    "attractionId": "K8vZ91718BV",
+    "url": "https://www.ticketmaster.com/san-diego-padres-tickets/artist/806014",
+    "matchedName": "San Diego Padres",
+    "confidence": "high"
+  },
+  "san-francisco-49ers": {
+    "attractionId": "K8vZ9171oMV",
+    "url": "https://www.ticketmaster.com/san-francisco-49ers-tickets/artist/806015",
+    "matchedName": "San Francisco 49ers",
+    "confidence": "high"
+  },
+  "san-francisco-giants": {
+    "attractionId": "K8vZ91718Df",
+    "url": "https://www.ticketmaster.com/san-francisco-giants-tickets/artist/806016",
+    "matchedName": "San Francisco Giants",
+    "confidence": "high"
+  },
+  "san-jose-earthquakes": {
+    "attractionId": "K8vZ9171p57",
+    "url": "https://www.ticketmaster.com/san-jose-earthquakes-tickets/artist/806017",
+    "matchedName": "San Jose Earthquakes",
+    "confidence": "high"
+  },
+  "san-jose-sharks": {
+    "attractionId": "K8vZ9171oBf",
+    "url": "https://www.ticketmaster.com/san-jose-sharks-tickets/artist/806018",
+    "matchedName": "San Jose Sharks",
+    "confidence": "high"
+  },
+  "seattle-kraken": {
+    "attractionId": "K8vZ917_vgV",
+    "url": "https://www.ticketmaster.com/seattle-kraken-tickets/artist/2763657",
+    "matchedName": "Seattle Kraken",
+    "confidence": "high"
+  },
+  "seattle-mariners": {
+    "attractionId": "K8vZ9171o6f",
+    "url": "https://www.ticketmaster.com/seattle-mariners-tickets/artist/806019",
+    "matchedName": "Seattle Mariners",
+    "confidence": "high"
+  },
+  "seattle-seahawks": {
+    "attractionId": "K8vZ9171oU7",
+    "url": "https://www.ticketmaster.com/seattle-seahawks-tickets/artist/806020",
+    "matchedName": "Seattle Seahawks",
+    "confidence": "high"
+  },
+  "seattle-sounders": {
+    "attractionId": "K8vZ917G8RV",
+    "url": "https://www.ticketmaster.com/seattle-sounders-fc-tickets/artist/1292961",
+    "matchedName": "Seattle Sounders FC",
+    "confidence": "high"
+  },
+  "seattle-storm": {
+    "attractionId": "K8vZ9171xo0",
+    "url": "https://www.ticketmaster.com/seattle-storm-tickets/artist/806022",
+    "matchedName": "Seattle Storm",
+    "confidence": "high"
+  },
+  "sporting-kansas-city": {
+    "attractionId": "K8vZ9171bf7",
+    "url": "https://www.ticketmaster.com/sporting-kansas-city-tickets/artist/805957",
+    "matchedName": "Sporting Kansas City",
+    "confidence": "high"
+  },
+  "st-louis-blues": {
+    "attractionId": "K8vZ9171o2V",
+    "url": "https://www.ticketmaster.com/st-louis-blues-tickets/artist/806025",
+    "matchedName": "St. Louis Blues",
+    "confidence": "high"
+  },
+  "st-louis-cardinals": {
+    "attractionId": "K8vZ91718Bf",
+    "url": "https://www.ticketmaster.com/st-louis-cardinals-tickets/artist/806023",
+    "matchedName": "St. Louis Cardinals",
+    "confidence": "high"
+  },
+  "st-louis-city-sc": {
+    "attractionId": "K8vZ917hv9V",
+    "url": "https://www.ticketmaster.com/st-louis-city-sc-tickets/artist/2962724",
+    "matchedName": "St. Louis City SC",
+    "confidence": "high"
+  },
+  "tampa-bay-buccaneers": {
+    "attractionId": "K8vZ9171oCV",
+    "url": "https://www.ticketmaster.com/tampa-bay-buccaneers-tickets/artist/806026",
+    "matchedName": "Tampa Bay Buccaneers",
+    "confidence": "high"
+  },
+  "tampa-bay-lightning": {
+    "attractionId": "K8vZ9171oBV",
+    "url": "https://www.ticketmaster.com/tampa-bay-lightning-tickets/artist/806028",
+    "matchedName": "Tampa Bay Lightning",
+    "confidence": "high"
+  },
+  "tampa-bay-rays": {
+    "attractionId": "K8vZ9171b17",
+    "url": "https://www.ticketmaster.com/tampa-bay-rays-tickets/artist/806027",
+    "matchedName": "Tampa Bay Rays",
+    "confidence": "high"
+  },
+  "tennessee-titans": {
+    "attractionId": "K8vZ91719u7",
+    "url": "https://www.ticketmaster.com/tennessee-titans-tickets/artist/806030",
+    "matchedName": "Tennessee Titans",
+    "confidence": "high"
+  },
+  "texas-rangers": {
+    "attractionId": "K8vZ9171oF0",
+    "url": "https://www.ticketmaster.com/texas-rangers-tickets/artist/806031",
+    "matchedName": "Texas Rangers",
+    "confidence": "high"
+  },
+  "toronto-blue-jays": {
+    "attractionId": "K8vZ91718W0",
+    "url": "https://www.ticketmaster.com/toronto-blue-jays-tickets/artist/806032",
+    "matchedName": "Toronto Blue Jays",
+    "confidence": "high"
+  },
+  "toronto-fc": {
+    "attractionId": "K8vZ917Ges7",
+    "url": "https://www.ticketmaster.com/toronto-fc-tickets/artist/1110670",
+    "matchedName": "Toronto FC",
+    "confidence": "high"
+  },
+  "toronto-maple-leafs": {
+    "attractionId": "K8vZ9171o80",
+    "url": "https://www.ticketmaster.com/toronto-maple-leafs-tickets/artist/806033",
+    "matchedName": "Toronto Maple Leafs",
+    "confidence": "high"
+  },
+  "toronto-raptors": {
+    "attractionId": "K8vZ9171KC0",
+    "url": "https://www.ticketmaster.com/toronto-raptors-tickets/artist/806034",
+    "matchedName": "Toronto Raptors",
+    "confidence": "high"
+  },
+  "utah-hockey-club": {
+    "attractionId": "K8vZ917jBRf",
+    "url": "https://www.ticketmaster.com/utah-mammoth-tickets/artist/3170222",
+    "matchedName": "Utah Mammoth",
+    "confidence": "high"
+  },
+  "utah-jazz": {
+    "attractionId": "K8vZ9171o5V",
+    "url": "https://www.ticketmaster.com/utah-jazz-tickets/artist/806035",
+    "matchedName": "Utah Jazz",
+    "confidence": "high"
+  },
+  "vancouver-canucks": {
+    "attractionId": "K8vZ9171oH7",
+    "url": "https://www.ticketmaster.com/vancouver-canucks-tickets/artist/806037",
+    "matchedName": "Vancouver Canucks",
+    "confidence": "high"
+  },
+  "vancouver-whitecaps": {
+    "attractionId": "K8vZ9171mtV",
+    "url": "https://www.ticketmaster.com/vancouver-whitecaps-fc-tickets/artist/821721",
+    "matchedName": "Vancouver Whitecaps FC",
+    "confidence": "high"
+  },
+  "vegas-golden-knights": {
+    "attractionId": "K8vZ917pkPf",
+    "url": "https://www.ticketmaster.com/vegas-golden-knights-tickets/artist/2386258",
+    "matchedName": "Vegas Golden Knights",
+    "confidence": "high"
+  },
+  "washington-capitals": {
+    "attractionId": "K8vZ9171o8V",
+    "url": "https://www.ticketmaster.com/washington-capitals-tickets/artist/806039",
+    "matchedName": "Washington Capitals",
+    "confidence": "high"
+  },
+  "washington-commanders": {
+    "attractionId": "K8vZ9171oM0",
+    "url": "https://www.ticketmaster.com/washington-commanders-tickets/artist/806041",
+    "matchedName": "Washington Commanders",
+    "confidence": "high"
+  },
+  "washington-mystics": {
+    "attractionId": "K8vZ9171hKf",
+    "url": "https://www.ticketmaster.com/washington-mystics-tickets/artist/806040",
+    "matchedName": "Washington Mystics",
+    "confidence": "high"
+  },
+  "washington-nationals": {
+    "attractionId": "K8vZ9175lJ0",
+    "url": "https://www.ticketmaster.com/washington-nationals-tickets/artist/948674",
+    "matchedName": "Washington Nationals",
+    "confidence": "high"
+  },
+  "washington-wizards": {
+    "attractionId": "K8vZ9171oVf",
+    "url": "https://www.ticketmaster.com/washington-wizards-tickets/artist/806042",
+    "matchedName": "Washington Wizards",
+    "confidence": "high"
+  },
+  "winnipeg-jets": {
+    "attractionId": "K8vZ917Cly7",
+    "url": "https://www.ticketmaster.com/winnipeg-jets-tickets/artist/1613893",
+    "matchedName": "Winnipeg Jets",
+    "confidence": "high"
+  }
+}
