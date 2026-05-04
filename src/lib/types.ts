@@ -12,9 +12,17 @@ export interface Team {
   division: string;
   // Ticketmaster team-page slug. Defaults to `id` when undefined — set this
   // only when the canonical Ticketmaster URL slug differs from PromoNight's
-  // internal slug. The audit-ticketmaster-urls script identifies the
-  // exceptions; populate from the audit CSV in a follow-up commit.
+  // internal slug. Populated for all 167 teams by
+  // scripts/populate-ticketmaster-fields.ts from the merged mapping JSON.
   ticketmasterSlug?: string;
+  // Ticketmaster URL artist id — the numeric segment after `/artist/` in
+  // canonical team URLs (e.g. "805972" for Minnesota Twins, "2451856" for
+  // LAFC). NOTE: this is NOT the Discovery API's attraction id (those are
+  // K-prefixed strings like "K8vZ917p0D0") — they're different ID spaces
+  // within Ticketmaster's stack that happen to share a name. The builder
+  // uses this value to emit `/{slug}-tickets/artist/{id}` URLs which
+  // resolve directly without redirect.
+  ticketmasterAttractionId?: string;
 }
 
 export interface Promo {

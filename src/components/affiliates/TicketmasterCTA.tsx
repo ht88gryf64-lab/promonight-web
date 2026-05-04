@@ -27,6 +27,7 @@ export function TicketmasterCTA({ team, surface, placement, promoId, size = 'ful
   const href = buildTicketmasterUrl({
     teamSlug: team.id,
     ticketmasterSlug: team.ticketmasterSlug,
+    ticketmasterAttractionId: team.ticketmasterAttractionId,
     surface,
     promoId,
   });

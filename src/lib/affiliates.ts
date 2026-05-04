@@ -193,10 +193,16 @@ export function buildStubHubUrl(opts: StubHubOpts): string {
 export type TicketmasterOpts = {
   /** PromoNight team slug (Firestore doc id), e.g. 'minnesota-twins'. */
   teamSlug: string;
-  /** Optional override when the team's Ticketmaster URL slug differs from
-   *  PromoNight's internal slug. Most teams resolve fine with `teamSlug`
-   *  alone; the audit-ticketmaster-urls script identifies the exceptions. */
+  /** Ticketmaster URL slug. Set on the Team via Firestore for all 167 teams
+   *  by scripts/populate-ticketmaster-fields.ts. Equals teamSlug for most
+   *  teams; differs for a handful (e.g. lafc → 'los-angeles-football-club'). */
   ticketmasterSlug?: string;
+  /** Ticketmaster URL artist id — the numeric segment after `/artist/`. Set
+   *  on the Team via Firestore alongside ticketmasterSlug. When both are
+   *  present the builder emits the canonical `/artist/{id}` URL form which
+   *  resolves directly without redirect; when missing it falls back to the
+   *  legacy `{slug}-tickets` form (which Ticketmaster redirects). */
+  ticketmasterAttractionId?: string;
   surface: AnalyticsSurface;
   /** Promo id is accepted for parity with the other typed builders but the
    *  Ticketmaster wrap template only carries one passthrough slot — surface
@@ -211,13 +217,23 @@ export type TicketmasterOpts = {
 // attribution. When set, the destination URL is folded into the Impact wrap
 // template and the surface name rides as SharedID for partner-side reporting.
 //
-// Slug strategy: Ticketmaster redirects {slug}-tickets to the canonical artist
-// page in nearly all cases, sparing us an artist-id mapping table. The
-// `ticketmasterSlug` override exists for the few teams whose canonical URL
-// slug diverges from PromoNight's internal slug.
+// URL form selection (in priority order):
+//   1. Canonical: `/{ticketmasterSlug}-tickets/artist/{ticketmasterAttractionId}`
+//      — resolves directly without redirect. Used once both fields are
+//      populated on the Team via Firestore (the populate script does this
+//      for all 167 teams from scripts/ticketmaster-team-mapping.json).
+//   2. Slug-only:  `/{ticketmasterSlug}-tickets` — fallback for any team
+//      missing the artist id. Ticketmaster's slug → artist redirect handles it.
+//   3. Internal slug: `/{teamSlug}-tickets` — last-ditch fallback for teams
+//      that haven't been through the populate script. Same redirect path as #2.
 export function buildTicketmasterUrl(opts: TicketmasterOpts): string {
-  const slug = opts.ticketmasterSlug ?? opts.teamSlug;
-  const directUrl = `https://www.ticketmaster.com/${encodeURIComponent(slug)}-tickets`;
+  let directUrl: string;
+  if (opts.ticketmasterSlug && opts.ticketmasterAttractionId) {
+    directUrl = `https://www.ticketmaster.com/${encodeURIComponent(opts.ticketmasterSlug)}-tickets/artist/${encodeURIComponent(opts.ticketmasterAttractionId)}`;
+  } else {
+    const slug = opts.ticketmasterSlug ?? opts.teamSlug;
+    directUrl = `https://www.ticketmaster.com/${encodeURIComponent(slug)}-tickets`;
+  }
 
   if (!TICKETMASTER_IMPACT_WRAP) {
     return directUrl;
