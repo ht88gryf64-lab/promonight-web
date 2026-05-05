@@ -2,7 +2,7 @@
   "_meta": {
     "generatedAt": "2026-05-05T19:18:07.673980Z",
     "source": "Impact partner directory CSV export, AdType=TEXT_LINK, campaign=9663 (Fanatics), labelIds=164560",
-    "totalTeams": 168,
+    "totalTeams": 167,
     "leagues": [
       "MLB",
       "MLS",
@@ -16,7 +16,8 @@
       "Cleveland Guardians use Fanatics slug 'cleveland-indians' (pre-rebrand). Override applied.",
       "Arizona Coyotes still listed in Fanatics directory despite franchise relocation to Utah.",
       "76 college team links present in source export, omitted from this mapping.",
-      "Discovery session 2026-05-05 added 46 teams across MLS, WNBA, and 3 individual gaps via Google search + web_search tool."
+      "Discovery session 2026-05-05 added 46 teams across MLS, WNBA, and 3 individual gaps via Google search + web_search tool.",
+      "Removed arizona-coyotes 2026-05-05; franchise relocated to Utah and is no longer in PromoNight's DB."
     ],
     "lastUpdated": "2026-05-05T19:51:39Z"
   },
@@ -847,15 +848,6 @@
       "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620807/9663",
       "impactAdId": "620807",
       "name": "Anaheim Ducks Gear",
-      "confidence": "verified_directory",
-      "source": "impact_text_link_directory_export_2026-05-05"
-    },
-    "arizona-coyotes": {
-      "league": "NHL",
-      "fanaticsPath": "/nhl/arizona-coyotes/o-3540+t-47590551+z-98203-934124675",
-      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620810/9663",
-      "impactAdId": "620810",
-      "name": "Arizona Coyotes Gear",
       "confidence": "verified_directory",
       "source": "impact_text_link_directory_export_2026-05-05"
     },
