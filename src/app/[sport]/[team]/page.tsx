@@ -26,13 +26,12 @@ import { TeamRelatedAggregators } from '@/components/team-related-aggregators';
 import { JsonLd } from '@/components/json-ld';
 import { PlayoffSection } from '@/components/playoff-section';
 import { extractPlayoffOpponent, teamDisplayName } from '@/lib/promo-helpers';
-import { TeamPageTracker, TrackedCTA } from '@/components/analytics-events';
-import { AppDownloadButtons } from '@/components/app-download-buttons';
+import { TeamPageTracker } from '@/components/analytics-events';
 import { EngagementTracker } from '@/components/analytics/EngagementTracker';
-import { TicketsBlock } from '@/components/affiliates/TicketsBlock';
-import { ParkingCTA } from '@/components/affiliates/ParkingCTA';
-import { HotelsCTA } from '@/components/affiliates/HotelsCTA';
-import { FanGearCTA } from '@/components/affiliates/FanGearCTA';
+import { TicketmasterCTA } from '@/components/affiliates/TicketmasterCTA';
+import { FanaticsCTA } from '@/components/affiliates/FanaticsCTA';
+import { SpotHeroCTA } from '@/components/affiliates/SpotHeroCTA';
+import { BookingCTA } from '@/components/affiliates/BookingCTA';
 import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { AD_SLOTS } from '@/lib/ads/slots';
@@ -206,24 +205,73 @@ export default async function TeamPage({
         />
       )}
 
-      <TicketsBlock
-        team={team}
-        surface="web_team_page"
-        placement="team_page_hero"
-      />
-
-      {venue && (
-        <section className="py-8 px-6 border-t border-border-subtle">
-          <div className="max-w-3xl mx-auto">
-            <ParkingCTA
+      {/* GET TICKETS hero — hand-rolled section so the section H2 picks up
+       *  the new Outfit hero typography (TicketsBlock kept for /playoffs and
+       *  the team-calendar modal where the existing display-font H2 reads
+       *  fine). */}
+      <section className="py-8 px-6 border-t border-border-subtle">
+        <div className="max-w-3xl mx-auto">
+          <div className="mb-4">
+            <span className="font-mono text-[10px] tracking-[1.5px] uppercase text-accent-red">
+              Get tickets
+            </span>
+            <h2 className="font-outfit font-black text-[22px] tracking-[-0.5px] text-white mt-1.5">
+              {displayName.toUpperCase()} TICKETS
+            </h2>
+          </div>
+          <div className="max-w-md">
+            <TicketmasterCTA
               team={team}
-              venue={venue}
               surface="web_team_page"
-              placement="team_page_inline"
+              placement="team_page_hero"
+              size="full"
             />
           </div>
-        </section>
-      )}
+        </div>
+      </section>
+
+      {/* PREPARE FOR THE GAME cluster — Fanatics, SpotHero, Booking. The
+       *  branded cards replace the previous red-gradient inline parking CTA
+       *  + footer "PLAN YOUR TRIP" + footer "SHOP OFFICIAL GEAR" sections.
+       *  AT line is omitted when venue is null (no fabricated stadium
+       *  fallback). Cluster placement = "team_page_prepare" gives PostHog a
+       *  clean filter for cluster CTR vs the hero CTR. */}
+      <section className="py-8 px-6 border-t border-border-subtle">
+        <div className="max-w-3xl mx-auto">
+          <div className="mb-4">
+            <span className="font-mono text-[10px] tracking-[1.5px] uppercase text-accent-red">
+              Prepare for the game
+            </span>
+            {venue && (
+              <h2 className="font-outfit font-black text-[22px] tracking-[-0.5px] text-white mt-1.5 mb-1">
+                AT {venue.name.toUpperCase()}
+              </h2>
+            )}
+            <p className="font-sans text-[13px] text-[#888] leading-[1.5] mt-2">
+              Going to the game? Reserve parking, book a hotel, or grab fan gear.
+            </p>
+          </div>
+          <div className="max-w-md flex flex-col gap-2.5">
+            <FanaticsCTA
+              team={team}
+              surface="web_team_page"
+              placement="team_page_prepare"
+            />
+            <SpotHeroCTA
+              team={team}
+              surface="web_team_page"
+              placement="team_page_prepare"
+              venue={venue}
+            />
+            <BookingCTA
+              team={team}
+              surface="web_team_page"
+              placement="team_page_prepare"
+              venue={venue}
+            />
+          </div>
+        </div>
+      </section>
 
       {venue && <VenueInfoBlock venue={venue} league={team.league} />}
 
@@ -262,28 +310,6 @@ export default async function TeamPage({
 
       <TeamRelatedAggregators promos={promos} />
 
-      {/* App CTA */}
-      <TrackedCTA teamSlug={team.id}>
-        <section className="py-16 px-6 border-t border-border-subtle text-center">
-          <div className="max-w-xl mx-auto">
-            <span className="font-mono text-[10px] tracking-[1.5px] uppercase text-accent-red">
-              Get the app
-            </span>
-            <h2 className="font-display text-3xl md:text-4xl tracking-[1px] mt-2 mb-4">
-              GET THE FULL {team.name.toUpperCase()} PROMO CALENDAR
-            </h2>
-            <p className="text-text-secondary text-sm mb-8">
-              Track every {displayName} giveaway, theme night, and food deal with push notifications and a personalized calendar.
-            </p>
-            <AppDownloadButtons
-              section="team_cta"
-              page={`team/${team.id}`}
-              teamSlug={team.id}
-            />
-          </div>
-        </section>
-      </TrackedCTA>
-
       <TeamContentSections
         team={team}
         promos={promos}
@@ -306,19 +332,6 @@ export default async function TeamPage({
       <section className="px-6 py-6 border-t border-border-subtle">
         <AdSlot config={AD_SLOTS.SIDEBAR_STICKY} pageType="team_page" />
       </section>
-
-      <HotelsCTA
-        team={team}
-        venue={venue}
-        surface="web_team_page"
-        placement="team_page_footer"
-      />
-
-      <FanGearCTA
-        team={team}
-        surface="web_team_page"
-        placement="team_page_footer"
-      />
 
       <section className="py-6 px-6 border-t border-border-subtle">
         <div className="max-w-3xl mx-auto">

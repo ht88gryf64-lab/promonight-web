@@ -23,6 +23,7 @@
   --font-display: var(--font-bebas-neue), sans-serif;
   --font-body: var(--font-dm-sans), sans-serif;
   --font-mono: var(--font-dm-mono), monospace;
+  --font-outfit: var(--font-outfit), sans-serif;
 }
 
 /* Base styles */

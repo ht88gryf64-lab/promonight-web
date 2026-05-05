@@ -9,10 +9,10 @@
 // surface and promo without extra events.
 
 import type { AnalyticsSurface } from './analytics';
+import type { Team } from './types';
 
 const SEATGEEK_AID = process.env.NEXT_PUBLIC_SEATGEEK_AID ?? '';
 const STUBHUB_RID = process.env.NEXT_PUBLIC_STUBHUB_RID ?? '';
-const FANATICS_ID = process.env.NEXT_PUBLIC_FANATICS_ID ?? '';
 const SPOTHERO_ID = process.env.NEXT_PUBLIC_SPOTHERO_ID ?? '';
 const BOOKING_AID = process.env.NEXT_PUBLIC_BOOKING_AID ?? '';
 // Impact wrap-link template for Ticketmaster. Placeholder tokens — `{TARGET}`
@@ -21,6 +21,12 @@ const BOOKING_AID = process.env.NEXT_PUBLIC_BOOKING_AID ?? '';
 // Ticketmaster CTA falls back to a bare ticketmaster.com link with no
 // commission attribution — graceful pre-approval behavior.
 const TICKETMASTER_IMPACT_WRAP = process.env.NEXT_PUBLIC_TICKETMASTER_IMPACT_WRAP ?? '';
+// Same wrap pattern for Fanatics. When unset (today), buildFanaticsUrl emits
+// a direct fanatics.com URL with the canonical Impact attribution params
+// (SSAID + utm + irgwc + sharedid) — confirmed via a real test click that
+// returned a tracking pixel response. When set (after Mike confirms deep
+// linking works), the URL builder transparently switches to the wrap form.
+const FANATICS_IMPACT_WRAP = process.env.NEXT_PUBLIC_FANATICS_IMPACT_WRAP ?? '';
 
 export type AffiliatePartner =
   | 'seatgeek'
@@ -49,7 +55,12 @@ export function isPartnerActive(partner: AffiliatePartner): boolean {
     case 'stubhub':
       return STUBHUB_RID.length > 0;
     case 'fanatics':
-      return FANATICS_ID.length > 0;
+      // Bridge period: tracking is "active" only once the Impact wrap env
+      // var is set. The direct-URL SSAID path also attributes (SSAID is hard-
+      // coded in buildFanaticsUrl), but PostHog's affiliate_tracking_active
+      // flag flips on confirmed-wrap so the bridge vs wrap-active periods
+      // get a clean reporting boundary.
+      return FANATICS_IMPACT_WRAP.length > 0;
     case 'spothero':
       return SPOTHERO_ID.length > 0;
     case 'booking':
@@ -92,12 +103,14 @@ export function stubHubUrl(rawUrl: string, opts: AffiliateLinkOptions): string {
   return url.toString();
 }
 
-export function fanaticsUrl(rawUrl: string, opts: AffiliateLinkOptions): string {
-  const url = new URL(rawUrl);
-  // Fanatics runs on Impact; subId1 is the standard passthrough param.
-  setParam(url, 'clickref', FANATICS_ID);
-  setParam(url, 'subId1', subId(opts));
-  return url.toString();
+/** @deprecated Fanatics URLs are now wrap-resolved by `buildFanaticsUrl` at
+ *  the call site, where team + surface are known. The full URL ships from the
+ *  builder with all Impact attribution params embedded — there is nothing
+ *  left to tag here, so re-tag is a passthrough. Retained as a no-op so the
+ *  `buildAffiliateUrl('fanatics', ...)` switch case below stays self-evident
+ *  alongside the other partners. */
+export function fanaticsUrl(rawUrl: string, _opts: AffiliateLinkOptions): string {
+  return rawUrl;
 }
 
 export function spotHeroUrl(rawUrl: string, opts: AffiliateLinkOptions): string {
@@ -126,7 +139,8 @@ export function buildAffiliateUrl(
     case 'stubhub':
       return stubHubUrl(rawUrl, opts);
     case 'fanatics':
-      return fanaticsUrl(rawUrl, opts);
+      // Wrap-resolved by buildFanaticsUrl at the call site — passthrough.
+      return rawUrl;
     case 'spothero':
       return spotHeroUrl(rawUrl, opts);
     case 'booking':
@@ -244,25 +258,48 @@ export function buildTicketmasterUrl(opts: TicketmasterOpts): string {
     .replace('{SHARED_ID}', encodeURIComponent(opts.surface));
 }
 
-export type FanaticsOpts = {
-  /** Team slug (Firestore id), e.g. 'toronto-blue-jays'. Fanatics' canonical
-   *  team URLs are `/{league-lower}/{slug}/<opaque-id-suffix>` and the suffix
-   *  isn't derivable programmatically. The bare `/{league-lower}/{slug}/` path
-   *  redirects to the canonical team hub in every observed case. */
-  teamSlug: string;
-  /** League code, e.g. 'MLB' / 'NBA' — mapped to lowercase segment. */
-  league: string;
+// FanaticsOpts intentionally narrow: team's id + league are all the URL
+// builder needs. Surface rides as Impact's `sharedid` (direct path) or
+// {SHARED_ID} (wrap path) for partner-side reporting. promoId is dropped
+// because the Impact direct-attribution shape exposes one passthrough slot
+// and surface-level slicing is what affiliate reporting needs at this stage.
+// Per-promo attribution still rides PostHog's affiliate_click event.
+export interface FanaticsOpts {
+  team: Pick<Team, 'id' | 'league'>;
   surface: AnalyticsSurface;
-  promoId?: string | null;
-};
+}
 
+// Returns the outbound Fanatics URL.
+//
+// Pattern A (NEXT_PUBLIC_FANATICS_IMPACT_WRAP set): wrap the destination
+// through Impact's tracking domain, with {TARGET} and {SHARED_ID} swapped in.
+// This is the preferred shape once Mike confirms deep linking works on
+// the wrap.
+//
+// Pattern B (env unset, today's bridge state): emit a direct fanatics.com
+// URL with the canonical Impact attribution params (SSAID + utm + irgwc
+// + sharedid). Confirmed via a real test click that returned a tracking
+// pixel response — commission still attributes through this path.
 export function buildFanaticsUrl(opts: FanaticsOpts): string {
-  const leagueSegment = opts.league.toLowerCase();
-  const base = `https://www.fanatics.com/${encodeURIComponent(leagueSegment)}/${encodeURIComponent(opts.teamSlug)}/`;
-  return fanaticsUrl(base, {
-    surface: opts.surface,
-    promoId: opts.promoId,
+  const fanaticsPath = `/${opts.team.league.toLowerCase()}/${opts.team.id}`;
+  const directUrl = `https://www.fanatics.com${fanaticsPath}`;
+
+  if (FANATICS_IMPACT_WRAP) {
+    return FANATICS_IMPACT_WRAP
+      .replace('{TARGET}', encodeURIComponent(directUrl))
+      .replace('{SHARED_ID}', encodeURIComponent(opts.surface));
+  }
+
+  const params = new URLSearchParams({
+    utm_source: 'Impact',
+    utm_medium: 'affiliates',
+    _s: 'afl_impact',
+    afsrc: '1',
+    irgwc: '1',
+    SSAID: '7236189',
+    sharedid: opts.surface,
   });
+  return `${directUrl}?${params.toString()}`;
 }
 
 export type SpotHeroOpts = {
