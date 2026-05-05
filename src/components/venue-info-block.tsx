@@ -53,9 +53,6 @@ export function VenueInfoBlock({ venue, league }: { venue: Venue; league: string
           <span className="font-mono text-[10px] tracking-[1.5px] uppercase text-accent-red">
             Plan your visit
           </span>
-          <h2 className="font-display text-3xl md:text-4xl tracking-[1px] mt-1">
-            AT {venue.name.toUpperCase()}
-          </h2>
         </div>
 
         <div className="bg-bg-card border border-border-subtle rounded-2xl p-5 md:p-6 divide-y divide-border-subtle">
