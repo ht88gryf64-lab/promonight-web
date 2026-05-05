@@ -23,6 +23,16 @@ export interface Team {
   // uses this value to emit `/{slug}-tickets/artist/{id}` URLs which
   // resolve directly without redirect.
   ticketmasterAttractionId?: string;
+  // Canonical Fanatics team-store path. Shape:
+  // `/{league}/{slug}/o-N+t-N+z-N-N` (3 +-joined segments after the team
+  // slug, no `+d-`/`+f-` modifiers, no query string). Naive URLs like
+  // `fanatics.com/{league}/{slug}` 404 — only the canonical form
+  // resolves. Populated for all 167 teams by
+  // scripts/populate-fanatics-paths.ts from
+  // scripts/fanatics-team-mapping.json. The CTA component (FanaticsCTA)
+  // gates render on this field's presence; teams without a populated
+  // path are omitted from the cluster rather than linking to a 404.
+  fanaticsPath?: string;
 }
 
 export interface Promo {

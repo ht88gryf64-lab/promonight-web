@@ -28,16 +28,6 @@ const TICKETMASTER_IMPACT_WRAP = process.env.NEXT_PUBLIC_TICKETMASTER_IMPACT_WRA
 // linking works), the URL builder transparently switches to the wrap form.
 const FANATICS_IMPACT_WRAP = process.env.NEXT_PUBLIC_FANATICS_IMPACT_WRAP ?? '';
 
-// Fanatics CTA visibility flag. Independent of the URL pattern A/B routing
-// above — this only controls whether the team-page cluster renders the
-// FanaticsCTA at all. False today because Fanatics' Impact deep linking
-// is disabled at the program level: both the wrap and direct-SSAID URLs
-// homepage every click instead of resolving to the team-specific page.
-// Flip to 'true' once Impact confirms deep linking and the wrap env var
-// is set, so the rendered card matches the routing it claims to do.
-export const FANATICS_CTA_ENABLED =
-  process.env.NEXT_PUBLIC_FANATICS_CTA_ENABLED === 'true';
-
 export type AffiliatePartner =
   | 'seatgeek'
   | 'stubhub'
@@ -268,48 +258,43 @@ export function buildTicketmasterUrl(opts: TicketmasterOpts): string {
     .replace('{SHARED_ID}', encodeURIComponent(opts.surface));
 }
 
-// FanaticsOpts intentionally narrow: team's id + league are all the URL
-// builder needs. Surface rides as Impact's `sharedid` (direct path) or
-// {SHARED_ID} (wrap path) for partner-side reporting. promoId is dropped
-// because the Impact direct-attribution shape exposes one passthrough slot
-// and surface-level slicing is what affiliate reporting needs at this stage.
-// Per-promo attribution still rides PostHog's affiliate_click event.
+// FanaticsOpts: the canonical team-store path lives on the Team document
+// (populated by scripts/populate-fanatics-paths.ts from
+// scripts/fanatics-team-mapping.json). Surface rides as Impact's
+// `{SHARED_ID}` for partner-side reporting. The earlier SSAID/utm/irgwc
+// direct-URL pattern is gone: it depended on a naive
+// `fanatics.com/{league}/{slug}` URL that 404s, so all clicks landed on
+// the homepage. The FanaticsCTA component gates render on
+// `team.fanaticsPath` presence — when that's missing, the card doesn't
+// show at all, so this builder can assume the path is set.
 export interface FanaticsOpts {
-  team: Pick<Team, 'id' | 'league'>;
+  team: Pick<Team, 'fanaticsPath'>;
   surface: AnalyticsSurface;
 }
 
-// Returns the outbound Fanatics URL.
+// Composes the outbound Fanatics URL from the canonical fanaticsPath.
 //
-// Pattern A (NEXT_PUBLIC_FANATICS_IMPACT_WRAP set): wrap the destination
-// through Impact's tracking domain, with {TARGET} and {SHARED_ID} swapped in.
-// This is the preferred shape once Mike confirms deep linking works on
-// the wrap.
+// Wrap mode (NEXT_PUBLIC_FANATICS_IMPACT_WRAP set): wrap the canonical
+// destination through Impact's tracking domain. {TARGET} receives the
+// URL-encoded canonical URL; {SHARED_ID} receives the surface tag.
 //
-// Pattern B (env unset, today's bridge state): emit a direct fanatics.com
-// URL with the canonical Impact attribution params (SSAID + utm + irgwc
-// + sharedid). Confirmed via a real test click that returned a tracking
-// pixel response — commission still attributes through this path.
+// Bare mode (env unset): return the canonical URL untagged. Click still
+// routes the user to the right team store, just without commission
+// attribution. Same graceful pre-approval semantics as
+// buildTicketmasterUrl — see notes there.
 export function buildFanaticsUrl(opts: FanaticsOpts): string {
-  const fanaticsPath = `/${opts.team.league.toLowerCase()}/${opts.team.id}`;
-  const directUrl = `https://www.fanatics.com${fanaticsPath}`;
+  const path = opts.team.fanaticsPath ?? '';
+  // Defensive: caller (FanaticsCTA) is expected to gate render on
+  // fanaticsPath presence, so an empty path here means a logic bug
+  // upstream. Land on the homepage rather than emit a 404-ing URL.
+  if (!path) return 'https://www.fanatics.com';
+  const directUrl = `https://www.fanatics.com${path}`;
 
-  if (FANATICS_IMPACT_WRAP) {
-    return FANATICS_IMPACT_WRAP
-      .replace('{TARGET}', encodeURIComponent(directUrl))
-      .replace('{SHARED_ID}', encodeURIComponent(opts.surface));
-  }
+  if (!FANATICS_IMPACT_WRAP) return directUrl;
 
-  const params = new URLSearchParams({
-    utm_source: 'Impact',
-    utm_medium: 'affiliates',
-    _s: 'afl_impact',
-    afsrc: '1',
-    irgwc: '1',
-    SSAID: '7236189',
-    sharedid: opts.surface,
-  });
-  return `${directUrl}?${params.toString()}`;
+  return FANATICS_IMPACT_WRAP
+    .replace('{TARGET}', encodeURIComponent(directUrl))
+    .replace('{SHARED_ID}', encodeURIComponent(opts.surface));
 }
 
 export type SpotHeroOpts = {
