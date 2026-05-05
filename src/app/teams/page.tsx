@@ -5,9 +5,9 @@ import { TeamSearch } from '@/components/team-search';
 export const revalidate = 86400;
 
 export const metadata: Metadata = {
-  title: 'Browse All 167 Pro Sports Teams — Promo Calendars by League',
+  title: 'All 167 Pro Sports Teams: Promo Calendars by League',
   description:
-    'Pick a team to open its full promo calendar. 167 teams across MLB, NBA, NFL, NHL, MLS, and WNBA — giveaways, theme nights, food deals, and kids days in one directory.',
+    '167 pro sports teams across MLB, NBA, NFL, NHL, MLS, and WNBA. Giveaways, theme nights, food deals, and kids days in one team directory.',
   alternates: { canonical: 'https://www.getpromonight.com/teams' },
 };
 

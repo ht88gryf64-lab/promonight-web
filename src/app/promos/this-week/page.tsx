@@ -25,9 +25,9 @@ function formatLongDate(dateStr: string): string {
 }
 
 export const metadata: Metadata = {
-  title: 'Promos This Week — Live 7-Day Giveaway & Theme Night Tracker',
+  title: 'Promos This Week: 7-Day Giveaway Tracker',
   description:
-    'Highlighted promotional events across MLB, NBA, NHL, NFL, MLS, and WNBA in the next seven days. Bobbleheads, jerseys, theme nights, and food deals — updated daily.',
+    'Every promo across MLB, NBA, NHL, NFL, MLS, and WNBA in the next 7 days. Bobbleheads, jerseys, theme nights, food deals. Updated daily.',
   alternates: { canonical: 'https://www.getpromonight.com/promos/this-week' },
 };
 

@@ -38,7 +38,7 @@ async function teamMeta(team: Team): Promise<PageMeta> {
   const food = promos.filter((p) => p.type === 'food').length;
   const plural = (n: number, s: string) => `${n} ${s}${n === 1 ? '' : 's'}`;
   const venueClause = venue ? ` at ${venue.name}` : '';
-  const title = `${team.city} ${team.name} ${YEAR} Promo Schedule: Giveaways, Theme Nights & Deals`;
+  const title = `${team.city} ${team.name} Promo Schedule ${YEAR}`;
   const description = `All ${YEAR} ${team.city} ${team.name} ${team.league} promo nights${venueClause}: ${plural(giveaways, 'giveaway')}, ${plural(themes, 'theme night')}, ${plural(kids, 'kids day')}, and ${plural(food, 'food deal')}. Updated weekly.`;
   return {
     url: `${BASE}/${team.sportSlug}/${team.id}`,
@@ -53,9 +53,9 @@ async function teamMeta(team: Team): Promise<PageMeta> {
 // (which uses title.default and is not templated).
 const ROOT_TEMPLATE = ' | PromoNight';
 const HOMEPAGE_TITLE =
-  "PromoNight — Every Giveaway, Theme Night & Food Deal at Your Team's Games";
+  'PromoNight: Pro Sports Giveaways, Theme Nights & Food Deals';
 const HOMEPAGE_DESCRIPTION =
-  'PromoNight tracks every giveaway, theme night, food deal, and promotion across 167 teams in MLB, NBA, NFL, NHL, MLS, and WNBA. Never miss bobblehead night again.';
+  'PromoNight tracks every giveaway, theme night, and food deal across 167 teams in MLB, NBA, NFL, NHL, MLS, and WNBA. Never miss bobblehead night.';
 
 const STATIC_PAGES: PageMeta[] = [
   {
@@ -65,62 +65,61 @@ const STATIC_PAGES: PageMeta[] = [
   },
   {
     url: `${BASE}/teams`,
-    title: 'Browse All 167 Pro Sports Teams — Promo Calendars by League' + ROOT_TEMPLATE,
+    title: 'All 167 Pro Sports Teams: Promo Calendars by League' + ROOT_TEMPLATE,
     description:
-      'Pick a team to open its full promo calendar. 167 teams across MLB, NBA, NFL, NHL, MLS, and WNBA — giveaways, theme nights, food deals, and kids days in one directory.',
+      '167 pro sports teams across MLB, NBA, NFL, NHL, MLS, and WNBA. Giveaways, theme nights, food deals, and kids days in one team directory.',
   },
   {
     url: `${BASE}/playoffs`,
     title:
-      '2026 NBA & NHL Playoff Giveaways — Rally Towels, Tees & Watch Parties' +
-      ROOT_TEMPLATE,
+      '2026 NBA & NHL Playoff Giveaways & Watch Parties' + ROOT_TEMPLATE,
     description:
       'Every 2026 NBA and NHL playoff promotion: rally towels, T-shirt giveaways, watch parties, and fan events at active teams. Updated hourly from official sources.',
   },
   {
     url: `${BASE}/about`,
-    title: 'About PromoNight — The Indie App Behind the Promo Calendar' + ROOT_TEMPLATE,
+    title: 'About PromoNight: The Indie App Behind the Promo Calendar',
     description:
-      'PromoNight is an independent app built by a Minnesota sports fan who kept missing the good games. Free, not affiliated with any league — just a cleaner way to browse promos.',
+      'Independent app built by a Minnesota sports fan who kept missing the good games. Free, not affiliated with any league. A cleaner way to browse promos.',
   },
   {
     url: `${BASE}/download`,
-    title: 'Download PromoNight — Free on the App Store and Google Play' + ROOT_TEMPLATE,
+    title: 'Download PromoNight: Free on iOS & Android',
     description:
-      "Install PromoNight free on iOS or Android. Scan the QR code or tap a store badge to get push notifications for every giveaway and theme night at your team's home games.",
+      "Install PromoNight free on iOS or Android. Push alerts on every giveaway, theme night, and food deal at your team's home games.",
   },
   {
     url: `${BASE}/privacy`,
-    title: "Privacy Policy — What PromoNight Collects and How It's Used" + ROOT_TEMPLATE,
+    title: "Privacy Policy: What We Collect and How It's Used" + ROOT_TEMPLATE,
     description:
-      "PromoNight's privacy policy: anonymous user IDs, starred teams, purchase state, and analytics. Plain-English rundown of what leaves your device and how to opt out.",
+      'PromoNight privacy policy: what we collect on web and mobile, third-party services (analytics, affiliate networks, ads), and how to opt out.',
   },
   {
     url: `${BASE}/terms`,
-    title: 'Terms of Service — PromoNight Usage Rules and Disclaimers' + ROOT_TEMPLATE,
+    title: 'Terms of Service: Usage Rules and Disclaimers' + ROOT_TEMPLATE,
     description:
       'The rules for using PromoNight: as-is service, data accuracy disclaimers, subscription terms for PromoNight Pro, and the usual liability boilerplate.',
   },
   {
     url: `${BASE}/promos/this-week`,
-    title: 'Promos This Week — Live 7-Day Giveaway & Theme Night Tracker' + ROOT_TEMPLATE,
+    title: 'Promos This Week: 7-Day Giveaway Tracker' + ROOT_TEMPLATE,
     description:
-      'Highlighted promotional events across MLB, NBA, NHL, NFL, MLS, and WNBA in the next seven days. Bobbleheads, jerseys, theme nights, and food deals — updated daily.',
+      'Every promo across MLB, NBA, NHL, NFL, MLS, and WNBA in the next 7 days. Bobbleheads, jerseys, theme nights, food deals. Updated daily.',
   },
   {
     url: `${BASE}/promos/bobbleheads`,
-    title: `${YEAR} Bobblehead Giveaway Schedule — Pro Sports Player Figurine Nights${ROOT_TEMPLATE}`,
-    description: `Every ${YEAR} bobblehead giveaway across MLB, NBA, NHL, NFL, MLS, and WNBA. Player figurine nights grouped by month with team, date, and opponent. Updated weekly.`,
+    title: `${YEAR} Bobblehead Giveaways: Player Figurine Nights${ROOT_TEMPLATE}`,
+    description: `Every ${YEAR} bobblehead giveaway across MLB, NBA, NHL, NFL, MLS, and WNBA. Player figurines by month with team, date, and opponent. Updated weekly.`,
   },
   {
     url: `${BASE}/promos/jersey-giveaways`,
-    title: `${YEAR} Jersey & Apparel Giveaway Nights — Caps, Hoodies, Tees${ROOT_TEMPLATE}`,
-    description: `Every ${YEAR} jersey, cap, hat, jacket, shirt, and hoodie giveaway across pro sports. Capped promos for the first 10,000–25,000 fans — arrival time matters. Updated weekly.`,
+    title: `${YEAR} Jersey, Cap & Hoodie Giveaway Nights${ROOT_TEMPLATE}`,
+    description: `Every ${YEAR} jersey, cap, and apparel giveaway across pro sports. First 10,000 to 25,000 fans only. Arrive early. Updated weekly.`,
   },
   {
     url: `${BASE}/promos/theme-nights`,
-    title: `${YEAR} Theme Night Calendar — Star Wars, Heritage, Fireworks, Pop Culture${ROOT_TEMPLATE}`,
-    description: `Every ${YEAR} theme night across pro sports, grouped by category: Star Wars, heritage celebrations, fireworks, faith and community, and pop culture tie-ins. Updated weekly.`,
+    title: `${YEAR} Theme Nights: Star Wars, Heritage & Fireworks${ROOT_TEMPLATE}`,
+    description: `Every ${YEAR} theme night across pro sports by category: Star Wars, heritage, fireworks, faith and community, and pop culture tie-ins. Updated weekly.`,
   },
 ];
 

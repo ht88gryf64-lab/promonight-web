@@ -65,7 +65,7 @@ export async function generateMetadata({
 
   const year = new Date().getFullYear();
   const displayName = teamDisplayName(team);
-  const title = `${displayName} ${year} Promo Schedule: Giveaways, Theme Nights & Deals`;
+  const title = `${displayName} Promo Schedule ${year}`;
   const plural = (n: number, s: string) => `${n} ${s}${n === 1 ? '' : 's'}`;
   const venueClause = venue ? ` at ${venue.name}` : '';
   const description = `All ${year} ${displayName} ${team.league} promo nights${venueClause}: ${plural(giveaways, 'giveaway')}, ${plural(themes, 'theme night')}, ${plural(kids, 'kids day')}, and ${plural(food, 'food deal')}. Updated weekly.`;

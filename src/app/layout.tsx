@@ -33,11 +33,11 @@ const dmMono = DM_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.getpromonight.com'),
   title: {
-    default: 'PromoNight — Every Giveaway, Theme Night & Food Deal at Your Team\'s Games',
+    default: 'PromoNight: Pro Sports Giveaways, Theme Nights & Food Deals',
     template: '%s | PromoNight',
   },
   description:
-    'PromoNight tracks every giveaway, theme night, food deal, and promotion across 167 teams in MLB, NBA, NFL, NHL, MLS, and WNBA. Never miss bobblehead night again.',
+    'PromoNight tracks every giveaway, theme night, and food deal across 167 teams in MLB, NBA, NFL, NHL, MLS, and WNBA. Never miss bobblehead night.',
   openGraph: {
     type: 'website',
     siteName: 'PromoNight',
