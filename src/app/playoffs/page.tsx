@@ -20,14 +20,14 @@ const PAGE_PUBLISHED = '2026-04-20T00:00:00-05:00';
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
-    title: '2026 NBA & NHL Playoff Giveaways — Rally Towels, Tees & Watch Parties',
+    title: '2026 NBA & NHL Playoff Giveaways & Watch Parties',
     description:
       'Every 2026 NBA and NHL playoff promotion: rally towels, T-shirt giveaways, watch parties, and fan events at active teams. Updated hourly from official sources.',
     alternates: {
       canonical: 'https://www.getpromonight.com/playoffs',
     },
     openGraph: {
-      title: '2026 NBA & NHL Playoff Giveaways — Rally Towels, Tees & Watch Parties',
+      title: '2026 NBA & NHL Playoff Giveaways & Watch Parties',
       description:
         'Every 2026 NBA and NHL playoff promotion: rally towels, T-shirt giveaways, watch parties, and fan events at active teams. Updated hourly from official sources.',
       url: 'https://www.getpromonight.com/playoffs',

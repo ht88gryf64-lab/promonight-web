@@ -19,8 +19,8 @@ function monthLabel(dateStr: string): string {
 const YEAR = new Date().getFullYear();
 
 export const metadata: Metadata = {
-  title: `${YEAR} Bobblehead Giveaway Schedule — Pro Sports Player Figurine Nights`,
-  description: `Every ${YEAR} bobblehead giveaway across MLB, NBA, NHL, NFL, MLS, and WNBA. Player figurine nights grouped by month with team, date, and opponent. Updated weekly.`,
+  title: `${YEAR} Bobblehead Giveaways: Player Figurine Nights`,
+  description: `Every ${YEAR} bobblehead giveaway across MLB, NBA, NHL, NFL, MLS, and WNBA. Player figurines by month with team, date, and opponent. Updated weekly.`,
   alternates: { canonical: 'https://www.getpromonight.com/promos/bobbleheads' },
 };
 

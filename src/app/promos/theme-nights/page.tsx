@@ -53,8 +53,8 @@ const CATEGORIES: ThemeCategory[] = [
 ];
 
 export const metadata: Metadata = {
-  title: `${YEAR} Theme Night Calendar — Star Wars, Heritage, Fireworks, Pop Culture`,
-  description: `Every ${YEAR} theme night across pro sports, grouped by category: Star Wars, heritage celebrations, fireworks, faith and community, and pop culture tie-ins. Updated weekly.`,
+  title: `${YEAR} Theme Nights: Star Wars, Heritage & Fireworks`,
+  description: `Every ${YEAR} theme night across pro sports by category: Star Wars, heritage, fireworks, faith and community, and pop culture tie-ins. Updated weekly.`,
   alternates: { canonical: 'https://www.getpromonight.com/promos/theme-nights' },
 };
 

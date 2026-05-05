@@ -9,9 +9,9 @@ import { IOS_APP_URL, ANDROID_APP_URL } from '@/components/app-download-buttons'
 export const revalidate = 86400;
 
 export const metadata: Metadata = {
-  title: 'Download PromoNight — Free on the App Store and Google Play',
+  title: { absolute: 'Download PromoNight: Free on iOS & Android' },
   description:
-    'Install PromoNight free on iOS or Android. Scan the QR code or tap a store badge to get push notifications for every giveaway and theme night at your team\'s home games.',
+    'Install PromoNight free on iOS or Android. Push alerts on every giveaway, theme night, and food deal at your team\'s home games.',
   alternates: { canonical: 'https://www.getpromonight.com/download' },
 };
 
