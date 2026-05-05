@@ -52,6 +52,10 @@ function mapTeamDoc(doc: FirebaseFirestore.DocumentSnapshot): Team {
       typeof data.ticketmasterAttractionId === 'string' && data.ticketmasterAttractionId.length > 0
         ? data.ticketmasterAttractionId
         : undefined,
+    fanaticsPath:
+      typeof data.fanaticsPath === 'string' && data.fanaticsPath.length > 0
+        ? data.fanaticsPath
+        : undefined,
   };
 }
 

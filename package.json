@@ -11,7 +11,8 @@
     "audit:ticketmaster": "tsx --env-file=.env.local --require ./scripts/stub-server-only.cjs scripts/audit-ticketmaster-urls.ts",
     "map:ticketmaster": "tsx --env-file=.env.local --require ./scripts/stub-server-only.cjs scripts/ticketmaster-team-mapping.ts",
     "map:ticketmaster:rerun": "tsx --env-file=.env.local --require ./scripts/stub-server-only.cjs scripts/ticketmaster-team-mapping.ts --rerun",
-    "populate:ticketmaster": "tsx --env-file=.env.local --require ./scripts/stub-server-only.cjs scripts/populate-ticketmaster-fields.ts"
+    "populate:ticketmaster": "tsx --env-file=.env.local --require ./scripts/stub-server-only.cjs scripts/populate-ticketmaster-fields.ts",
+    "populate:fanatics": "tsx --env-file=.env.local --require ./scripts/stub-server-only.cjs scripts/populate-fanatics-paths.ts"
   },
   "dependencies": {
     "firebase-admin": "^13.0.0",

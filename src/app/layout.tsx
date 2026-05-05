@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
-import { Bebas_Neue, DM_Sans, DM_Mono } from 'next/font/google';
+import { Bebas_Neue, DM_Sans, DM_Mono, Outfit } from 'next/font/google';
 import { Nav } from '@/components/nav';
 import { Footer } from '@/components/footer';
 import { UTMCaptureProvider } from '@/components/utm-capture-provider';
@@ -27,6 +27,17 @@ const dmMono = DM_Mono({
   weight: ['400', '500'],
   subsets: ['latin'],
   variable: '--font-dm-mono',
+  display: 'swap',
+});
+
+// Outfit powers the affiliate CTA cluster (TicketmasterCTA, FanaticsCTA,
+// SpotHeroCTA, BookingCTA) and the section H2s above it. Weight set covers
+// what the cards need: 600 (CTA secondary text), 700 (Ticketmaster Get
+// Tickets), 800 (brand wordmarks), 900 (Fanatics F badge + section H2s).
+const outfit = Outfit({
+  weight: ['600', '700', '800', '900'],
+  subsets: ['latin'],
+  variable: '--font-outfit',
   display: 'swap',
 });
 
@@ -71,7 +82,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   }
 
   return (
-    <html lang="en" className={`${bebasNeue.variable} ${dmSans.variable} ${dmMono.variable}`}>
+    <html lang="en" className={`${bebasNeue.variable} ${dmSans.variable} ${dmMono.variable} ${outfit.variable}`}>
       <head>
         {/* Impact site verification. Spread bypasses React's typed prop
             check on <meta> so the attribute renders as `value=` exactly

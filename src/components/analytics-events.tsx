@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { event, trackInstallClick } from '@/lib/analytics';
 
@@ -70,31 +70,3 @@ export function TrackedAppLink({
   );
 }
 
-// Observes CTA visibility and fires once
-export function TrackedCTA({
-  teamSlug,
-  children,
-}: {
-  teamSlug: string;
-  children: React.ReactNode;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  const fired = useRef(false);
-
-  useEffect(() => {
-    if (!ref.current || fired.current) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !fired.current) {
-          fired.current = true;
-          event('cta_scroll_visible', { team_slug: teamSlug });
-        }
-      },
-      { threshold: 0.5 }
-    );
-    observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, [teamSlug]);
-
-  return <div ref={ref}>{children}</div>;
-}
