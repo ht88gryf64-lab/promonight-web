@@ -28,6 +28,16 @@ const TICKETMASTER_IMPACT_WRAP = process.env.NEXT_PUBLIC_TICKETMASTER_IMPACT_WRA
 // linking works), the URL builder transparently switches to the wrap form.
 const FANATICS_IMPACT_WRAP = process.env.NEXT_PUBLIC_FANATICS_IMPACT_WRAP ?? '';
 
+// Fanatics CTA visibility flag. Independent of the URL pattern A/B routing
+// above — this only controls whether the team-page cluster renders the
+// FanaticsCTA at all. False today because Fanatics' Impact deep linking
+// is disabled at the program level: both the wrap and direct-SSAID URLs
+// homepage every click instead of resolving to the team-specific page.
+// Flip to 'true' once Impact confirms deep linking and the wrap env var
+// is set, so the rendered card matches the routing it claims to do.
+export const FANATICS_CTA_ENABLED =
+  process.env.NEXT_PUBLIC_FANATICS_CTA_ENABLED === 'true';
+
 export type AffiliatePartner =
   | 'seatgeek'
   | 'stubhub'

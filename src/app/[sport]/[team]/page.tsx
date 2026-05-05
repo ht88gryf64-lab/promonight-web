@@ -33,6 +33,7 @@ import { FanaticsCTA } from '@/components/affiliates/FanaticsCTA';
 import { SpotHeroCTA } from '@/components/affiliates/SpotHeroCTA';
 import { BookingCTA } from '@/components/affiliates/BookingCTA';
 import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
+import { FANATICS_CTA_ENABLED } from '@/lib/affiliates';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { AD_SLOTS } from '@/lib/ads/slots';
 
@@ -252,11 +253,21 @@ export default async function TeamPage({
             </p>
           </div>
           <div className="max-w-md flex flex-col gap-2.5">
-            <FanaticsCTA
-              team={team}
-              surface="web_team_page"
-              placement="team_page_prepare"
-            />
+            {/* Fanatics CTA is gated on NEXT_PUBLIC_FANATICS_CTA_ENABLED.
+             *  Off today: Impact deep linking is disabled at the program
+             *  level so both wrap and direct-SSAID URLs land on the
+             *  fanatics.com homepage. Showing a "Shop Fan Gear" card that
+             *  homepages every click is bad UX, so we hide the card until
+             *  Impact confirms deep linking. URL builder logic stays in
+             *  place — flipping the flag without code change re-enables
+             *  the card with whichever URL pattern is active. */}
+            {FANATICS_CTA_ENABLED && (
+              <FanaticsCTA
+                team={team}
+                surface="web_team_page"
+                placement="team_page_prepare"
+              />
+            )}
             <SpotHeroCTA
               team={team}
               surface="web_team_page"
