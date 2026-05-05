@@ -1,0 +1,1446 @@
+{
+  "_meta": {
+    "generatedAt": "2026-05-05T19:18:07.673980Z",
+    "source": "Impact partner directory CSV export, AdType=TEXT_LINK, campaign=9663 (Fanatics), labelIds=164560",
+    "totalTeams": 168,
+    "leagues": [
+      "MLB",
+      "MLS",
+      "NBA",
+      "NFL",
+      "NHL",
+      "WNBA"
+    ],
+    "gaps": {},
+    "notes": [
+      "Cleveland Guardians use Fanatics slug 'cleveland-indians' (pre-rebrand). Override applied.",
+      "Arizona Coyotes still listed in Fanatics directory despite franchise relocation to Utah.",
+      "76 college team links present in source export, omitted from this mapping.",
+      "Discovery session 2026-05-05 added 46 teams across MLS, WNBA, and 3 individual gaps via Google search + web_search tool."
+    ],
+    "lastUpdated": "2026-05-05T19:51:39Z"
+  },
+  "teams": {
+    "arizona-diamondbacks": {
+      "league": "MLB",
+      "fanaticsPath": "/mlb/arizona-diamondbacks/o-1243+t-69009659+z-99690-503994801",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618795/9663",
+      "impactAdId": "618795",
+      "name": "Arizona Diamondbacks Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "atlanta-braves": {
+      "league": "MLB",
+      "fanaticsPath": "/mlb/atlanta-braves/o-1276+t-58999683+z-91996-3389985925",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618825/9663",
+      "impactAdId": "618825",
+      "name": "Atlanta Braves Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "baltimore-orioles": {
+      "league": "MLB",
+      "fanaticsPath": "/mlb/baltimore-orioles/o-5632+t-81776317+z-8571-3584894535",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618829/9663",
+      "impactAdId": "618829",
+      "name": "Baltimore Orioles Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "boston-red-sox": {
+      "league": "MLB",
+      "fanaticsPath": "/mlb/boston-red-sox/o-9043+t-36440786+z-8922-3205083707",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618830/9663",
+      "impactAdId": "618830",
+      "name": "Boston Red Sox Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "chicago-cubs": {
+      "league": "MLB",
+      "fanaticsPath": "/mlb/chicago-cubs/o-3443+t-25999766+z-97110-2817806339",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618853/9663",
+      "impactAdId": "618853",
+      "name": "Chicago Cubs Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "chicago-white-sox": {
+      "league": "MLB",
+      "fanaticsPath": "/mlb/chicago-white-sox/o-3498+t-03778634+z-95926-3872537457",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618854/9663",
+      "impactAdId": "618854",
+      "name": "Chicago White Sox Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "cincinnati-reds": {
+      "league": "MLB",
+      "fanaticsPath": "/mlb/cincinnati-reds/o-2354+t-03220802+z-95010-2613594857",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618856/9663",
+      "impactAdId": "618856",
+      "name": "Cincinnati Reds Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "cleveland-guardians": {
+      "league": "MLB",
+      "fanaticsPath": "/mlb/cleveland-indians/o-2321+t-81553103+z-92098-1304698692",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618858/9663",
+      "impactAdId": "618858",
+      "name": "Cleveland Indians Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05",
+      "notes": "Fanatics still uses 'cleveland-indians' slug; mapped to PromoNight slug 'cleveland-guardians'"
+    },
+    "colorado-rockies": {
+      "league": "MLB",
+      "fanaticsPath": "/mlb/colorado-rockies/o-2387+t-70661959+z-96499-1886547772",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618859/9663",
+      "impactAdId": "618859",
+      "name": "Colorado Rockies Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "detroit-tigers": {
+      "league": "MLB",
+      "fanaticsPath": "/mlb/detroit-tigers/o-2376+t-69117549+z-92031-1116528363",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618863/9663",
+      "impactAdId": "618863",
+      "name": "Detroit Tigers Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "houston-astros": {
+      "league": "MLB",
+      "fanaticsPath": "/mlb/houston-astros/o-3443+t-14555396+z-92721-4240067460",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618864/9663",
+      "impactAdId": "618864",
+      "name": "Houston Astros Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "kansas-city-royals": {
+      "league": "MLB",
+      "fanaticsPath": "/mlb/kansas-city-royals/o-3498+t-14332065+z-97786-3424704828",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618865/9663",
+      "impactAdId": "618865",
+      "name": "Kansas City Royals Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "los-angeles-angels": {
+      "league": "MLB",
+      "fanaticsPath": "/mlb/los-angeles-angels/o-9032+t-92995491+z-8406-2040426583",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618874/9663",
+      "impactAdId": "618874",
+      "name": "Los Angeles Angels Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "los-angeles-dodgers": {
+      "league": "MLB",
+      "fanaticsPath": "/mlb/los-angeles-dodgers/o-4510+t-14991099+z-94556-696061212",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618878/9663",
+      "impactAdId": "618878",
+      "name": "Los Angeles Dodgers Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "miami-marlins": {
+      "league": "MLB",
+      "fanaticsPath": "/mlb/miami-marlins/o-3465+t-47660926+z-91968-158054823",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618879/9663",
+      "impactAdId": "618879",
+      "name": "Miami Marlins Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "milwaukee-brewers": {
+      "league": "MLB",
+      "fanaticsPath": "/mlb/milwaukee-brewers/o-2354+t-69663283+z-95460-3155175317",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618881/9663",
+      "impactAdId": "618881",
+      "name": "Milwaukee Brewers Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "minnesota-twins": {
+      "league": "MLB",
+      "fanaticsPath": "/mlb/minnesota-twins/o-2321+t-92119851+z-8173-1236932534",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618882/9663",
+      "impactAdId": "618882",
+      "name": "Minnesota Twins Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "new-york-mets": {
+      "league": "MLB",
+      "fanaticsPath": "/mlb/new-york-mets/o-4521+t-36889897+z-96707-2229026929",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618884/9663",
+      "impactAdId": "618884",
+      "name": "New York Mets Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "new-york-yankees": {
+      "league": "MLB",
+      "fanaticsPath": "/mlb/new-york-yankees/o-3454+t-81553209+z-96106-209395844",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618885/9663",
+      "impactAdId": "618885",
+      "name": "New York Yankees Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "philadelphia-phillies": {
+      "league": "MLB",
+      "fanaticsPath": "/mlb/philadelphia-phillies/o-8921+t-47011101+z-774-3247407355",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618890/9663",
+      "impactAdId": "618890",
+      "name": "Philadelphia Phillies Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "pittsburgh-pirates": {
+      "league": "MLB",
+      "fanaticsPath": "/mlb/pittsburgh-pirates/o-1243+t-47568802+z-93814-2537653358",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618891/9663",
+      "impactAdId": "618891",
+      "name": "Pittsburgh Pirates Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "san-diego-padres": {
+      "league": "MLB",
+      "fanaticsPath": "/mlb/san-diego-padres/o-3454+t-47346626+z-99618-483804128",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618907/9663",
+      "impactAdId": "618907",
+      "name": "San Diego Padres Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "san-francisco-giants": {
+      "league": "MLB",
+      "fanaticsPath": "/mlb/san-francisco-giants/o-1298+t-47564438+z-93184-1198837480",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620691/9663",
+      "impactAdId": "620691",
+      "name": "San Francisco Giants Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "seattle-mariners": {
+      "league": "MLB",
+      "fanaticsPath": "/mlb/seattle-mariners/o-1232+t-47896628+z-777-2334863592",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620693/9663",
+      "impactAdId": "620693",
+      "name": "Seattle Mariners Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "st-louis-cardinals": {
+      "league": "MLB",
+      "fanaticsPath": "/mlb/st-louis-cardinals/o-3409+t-36014454+z-94916-1512014436",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620694/9663",
+      "impactAdId": "620694",
+      "name": "St. Louis Cardinals Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "tampa-bay-rays": {
+      "league": "MLB",
+      "fanaticsPath": "/mlb/tampa-bay-rays/o-3465+t-25904555+z-95687-894620644",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620695/9663",
+      "impactAdId": "620695",
+      "name": "Tampa Bay Rays Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "texas-rangers": {
+      "league": "MLB",
+      "fanaticsPath": "/mlb/texas-rangers/o-2365+t-70564589+z-90414-3607401710",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620696/9663",
+      "impactAdId": "620696",
+      "name": "Texas Rangers Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "toronto-blue-jays": {
+      "league": "MLB",
+      "fanaticsPath": "/mlb/toronto-blue-jays/o-2387+t-36456735+z-98324-2265281901",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620697/9663",
+      "impactAdId": "620697",
+      "name": "Toronto Blue Jays Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "washington-nationals": {
+      "league": "MLB",
+      "fanaticsPath": "/mlb/washington-nationals/o-5609+t-69783458+z-8514-1852408007",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620698/9663",
+      "impactAdId": "620698",
+      "name": "Washington Nationals Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "atlanta-hawks": {
+      "league": "NBA",
+      "fanaticsPath": "/nba/atlanta-hawks/o-3514+t-69583884+z-97568-1399419949",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620719/9663",
+      "impactAdId": "620719",
+      "name": "Atlanta Hawks Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "boston-celtics": {
+      "league": "NBA",
+      "fanaticsPath": "/nba/boston-celtics/o-2481+t-70361675+z-8593-1409122789",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620720/9663",
+      "impactAdId": "620720",
+      "name": "Boston Celtics Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "brooklyn-nets": {
+      "league": "NBA",
+      "fanaticsPath": "/nba/brooklyn-nets/o-4636+t-36149454+z-8926-3371486599",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620721/9663",
+      "impactAdId": "620721",
+      "name": "Brooklyn Nets Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "charlotte-hornets": {
+      "league": "NBA",
+      "fanaticsPath": "/nba/charlotte-hornets/o-1370+t-36478422+z-97232-1888588932",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620722/9663",
+      "impactAdId": "620722",
+      "name": "Charlotte Hornets Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "chicago-bulls": {
+      "league": "NBA",
+      "fanaticsPath": "/nba/chicago-bulls/o-1347+t-03699534+z-96954-476595177",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620723/9663",
+      "impactAdId": "620723",
+      "name": "Chicago Bulls Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "cleveland-cavaliers": {
+      "league": "NBA",
+      "fanaticsPath": "/nba/cleveland-cavaliers/o-2458+t-58586246+z-93751-67869620",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620724/9663",
+      "impactAdId": "620724",
+      "name": "Cleveland Cavaliers Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "dallas-mavericks": {
+      "league": "NBA",
+      "fanaticsPath": "/nba/dallas-mavericks/o-2436+t-36926236+z-90094-2747524752",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620725/9663",
+      "impactAdId": "620725",
+      "name": "Dallas Mavericks Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "denver-nuggets": {
+      "league": "NBA",
+      "fanaticsPath": "/nba/denver-nuggets/o-3514+t-03922859+z-91694-2622321290",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620726/9663",
+      "impactAdId": "620726",
+      "name": "Denver Nuggets Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "detroit-pistons": {
+      "league": "NBA",
+      "fanaticsPath": "/nba/detroit-pistons/o-3514+t-70145116+z-91824-3008069126",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620727/9663",
+      "impactAdId": "620727",
+      "name": "Detroit Pistons Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "golden-state-warriors": {
+      "league": "NBA",
+      "fanaticsPath": "/nba/golden-state-warriors/o-1325+t-81581774+z-8032-3559903835",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620728/9663",
+      "impactAdId": "620728",
+      "name": "Golden State Warriors Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "houston-rockets": {
+      "league": "NBA",
+      "fanaticsPath": "/nba/houston-rockets/o-1370+t-70815186+z-99476-2481511420",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620729/9663",
+      "impactAdId": "620729",
+      "name": "Houston Rockets Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "indiana-pacers": {
+      "league": "NBA",
+      "fanaticsPath": "/nba/indiana-pacers/o-3536+t-70250610+z-92195-436104972",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620730/9663",
+      "impactAdId": "620730",
+      "name": "Indiana Pacers Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "la-clippers": {
+      "league": "NBA",
+      "fanaticsPath": "/nba/la-clippers/o-2492+t-03038567+z-8169-4091905813",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620731/9663",
+      "impactAdId": "620731",
+      "name": "Los Angeles Clippers Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "los-angeles-lakers": {
+      "league": "NBA",
+      "fanaticsPath": "/nba/los-angeles-lakers/o-3503+t-14812913+z-8510-1310597031",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620732/9663",
+      "impactAdId": "620732",
+      "name": "Los Angeles Lakers Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "memphis-grizzlies": {
+      "league": "NBA",
+      "fanaticsPath": "/nba/memphis-grizzlies/o-8036+t-92149658+z-8631-2976648008",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620733/9663",
+      "impactAdId": "620733",
+      "name": "Memphis Grizzlies Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "miami-heat": {
+      "league": "NBA",
+      "fanaticsPath": "/nba/miami-heat/o-3581+t-47252993+z-91038-1198526463",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620734/9663",
+      "impactAdId": "620734",
+      "name": "Miami Heat Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "milwaukee-bucks": {
+      "league": "NBA",
+      "fanaticsPath": "/nba/milwaukee-bucks/o-2414+t-92690749+z-97337-2534252785",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620735/9663",
+      "impactAdId": "620735",
+      "name": "Milwaukee Bucks Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "minnesota-timberwolves": {
+      "league": "NBA",
+      "fanaticsPath": "/nba/minnesota-timberwolves/o-2492+t-14583073+z-97783-4003568531",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620736/9663",
+      "impactAdId": "620736",
+      "name": "Minnesota Timberwolves Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "new-orleans-pelicans": {
+      "league": "NBA",
+      "fanaticsPath": "/nba/new-orleans-pelicans/o-3592+t-58143085+z-97923-1466164038",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620737/9663",
+      "impactAdId": "620737",
+      "name": "New Orleans Pelicans Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "new-york-knicks": {
+      "league": "NBA",
+      "fanaticsPath": "/nba/new-york-knicks/o-3547+t-03921897+z-98083-920761899",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620738/9663",
+      "impactAdId": "620738",
+      "name": "New York Knicks Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "oklahoma-city-thunder": {
+      "league": "NBA",
+      "fanaticsPath": "/nba/oklahoma-city-thunder/o-2425+t-69694154+z-96324-2495356167",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620739/9663",
+      "impactAdId": "620739",
+      "name": "Oklahoma City Thunder Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "orlando-magic": {
+      "league": "NBA",
+      "fanaticsPath": "/nba/orlando-magic/o-1347+t-03582099+z-771-4200351768",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620740/9663",
+      "impactAdId": "620740",
+      "name": "Orlando Magic Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "philadelphia-76ers": {
+      "league": "NBA",
+      "fanaticsPath": "/nba/philadelphia-76ers/o-2414+t-70705312+z-98669-1218515703",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620741/9663",
+      "impactAdId": "620741",
+      "name": "Philadelphia 76ers Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "phoenix-suns": {
+      "league": "NBA",
+      "fanaticsPath": "/nba/phoenix-suns/o-2436+t-69707535+z-92265-815941973",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620742/9663",
+      "impactAdId": "620742",
+      "name": "Phoenix Suns Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "portland-trail-blazers": {
+      "league": "NBA",
+      "fanaticsPath": "/nba/portland-trail-blazers/o-6892+t-36259747+z-8142-1353843589",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620743/9663",
+      "impactAdId": "620743",
+      "name": "Portland Trail Blazers Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "sacramento-kings": {
+      "league": "NBA",
+      "fanaticsPath": "/nba/sacramento-kings/o-1358+t-92814248+z-97446-1012614619",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620744/9663",
+      "impactAdId": "620744",
+      "name": "Sacramento Kings Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "san-antonio-spurs": {
+      "league": "NBA",
+      "fanaticsPath": "/nba/san-antonio-spurs/o-2458+t-47923183+z-91498-1166816239",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620745/9663",
+      "impactAdId": "620745",
+      "name": "San Antonio Spurs Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "toronto-raptors": {
+      "league": "NBA",
+      "fanaticsPath": "/nba/toronto-raptors/o-2481+t-03259784+z-92420-1539341516",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620746/9663",
+      "impactAdId": "620746",
+      "name": "Toronto Raptors Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "utah-jazz": {
+      "league": "NBA",
+      "fanaticsPath": "/nba/utah-jazz/o-1303+t-70588641+z-90716-1445740311",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620747/9663",
+      "impactAdId": "620747",
+      "name": "Utah Jazz Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "washington-wizards": {
+      "league": "NBA",
+      "fanaticsPath": "/nba/washington-wizards/o-2481+t-14815375+z-98404-1128047923",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620748/9663",
+      "impactAdId": "620748",
+      "name": "Washington Wizards Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "arizona-cardinals": {
+      "league": "NFL",
+      "fanaticsPath": "/nfl/arizona-cardinals/o-3505+t-47267808+z-8157-2877955512",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618724/9663",
+      "impactAdId": "618724",
+      "name": "Arizona Cardinals Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "atlanta-falcons": {
+      "league": "NFL",
+      "fanaticsPath": "/nfl/atlanta-falcons/o-3527+t-69931287+z-91230-2469337799",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618725/9663",
+      "impactAdId": "618725",
+      "name": "Atlanta Falcons Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "baltimore-ravens": {
+      "league": "NFL",
+      "fanaticsPath": "/nfl/baltimore-ravens/o-8094+t-14047944+z-8091-2439080340",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618727/9663",
+      "impactAdId": "618727",
+      "name": "Baltimore Ravens Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "buffalo-bills": {
+      "league": "NFL",
+      "fanaticsPath": "/nfl/buffalo-bills/o-3561+t-81260256+z-91305-170679633",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618729/9663",
+      "impactAdId": "618729",
+      "name": "Buffalo Bills Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "carolina-panthers": {
+      "league": "NFL",
+      "fanaticsPath": "/nfl/carolina-panthers/o-2494+t-36373591+z-97408-1645713650",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618731/9663",
+      "impactAdId": "618731",
+      "name": "Carolina Panthers Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "chicago-bears": {
+      "league": "NFL",
+      "fanaticsPath": "/nfl/chicago-bears/o-1316+t-70263569+z-94989-2102481010",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618737/9663",
+      "impactAdId": "618737",
+      "name": "Chicago Bears Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "cincinnati-bengals": {
+      "league": "NFL",
+      "fanaticsPath": "/nfl/cincinnati-bengals/o-4649+t-36262404+z-8696-484609739",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618740/9663",
+      "impactAdId": "618740",
+      "name": "Cincinnati Bengals Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "cleveland-browns": {
+      "league": "NFL",
+      "fanaticsPath": "/nfl/cleveland-browns/o-6849+t-58265738+z-8598-2031156637",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618741/9663",
+      "impactAdId": "618741",
+      "name": "Cleveland Browns Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "dallas-cowboys": {
+      "league": "NFL",
+      "fanaticsPath": "/nfl/dallas-cowboys/o-2483+t-70824640+z-91962-661726589",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618744/9663",
+      "impactAdId": "618744",
+      "name": "Dallas Cowboys Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "denver-broncos": {
+      "league": "NFL",
+      "fanaticsPath": "/nfl/denver-broncos/o-1349+t-92827974+z-94977-1231541594",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618745/9663",
+      "impactAdId": "618745",
+      "name": "Denver Broncos Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "detroit-lions": {
+      "league": "NFL",
+      "fanaticsPath": "/nfl/detroit-lions/o-1338+t-47044664+z-90237-4014413019",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618753/9663",
+      "impactAdId": "618753",
+      "name": "Detroit Lions Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "green-bay-packers": {
+      "league": "NFL",
+      "fanaticsPath": "/nfl/green-bay-packers/o-3516+t-36593543+z-96868-3818790469",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618754/9663",
+      "impactAdId": "618754",
+      "name": "Green Bay Packers Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "houston-texans": {
+      "league": "NFL",
+      "fanaticsPath": "/nfl/houston-texans/o-4605+t-14713644+z-93083-3474378595",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618755/9663",
+      "impactAdId": "618755",
+      "name": "Houston Texans Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "indianapolis-colts": {
+      "league": "NFL",
+      "fanaticsPath": "/nfl/indianapolis-colts/o-2483+t-03378189+z-90650-4056854214",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618756/9663",
+      "impactAdId": "618756",
+      "name": "Indianapolis Colts Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "jacksonville-jaguars": {
+      "league": "NFL",
+      "fanaticsPath": "/nfl/jacksonville-jaguars/o-1361+t-03593668+z-92050-1242925020",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618757/9663",
+      "impactAdId": "618757",
+      "name": "Jacksonville Jaguars Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "kansas-city-chiefs": {
+      "league": "NFL",
+      "fanaticsPath": "/nfl/kansas-city-chiefs/o-2472+t-70269247+z-91896-1122630966",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618758/9663",
+      "impactAdId": "618758",
+      "name": "Kansas City Chiefs Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "las-vegas-raiders": {
+      "league": "NFL",
+      "fanaticsPath": "/nfl/las-vegas-raiders/o-1372+t-36710414+z-97915-2737086499",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618769/9663",
+      "impactAdId": "618769",
+      "name": "Las Vegas Raiders Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "los-angeles-chargers": {
+      "league": "NFL",
+      "fanaticsPath": "/nfl/los-angeles-chargers/o-2483+t-76443061+z-99415-1243559591",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618760/9663",
+      "impactAdId": "618760",
+      "name": "Los Angeles Chargers Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "los-angeles-rams": {
+      "league": "NFL",
+      "fanaticsPath": "/nfl/los-angeles-rams/o-1361+t-47485893+z-91373-2828045145",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618762/9663",
+      "impactAdId": "618762",
+      "name": "Los Angeles Rams Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "miami-dolphins": {
+      "league": "NFL",
+      "fanaticsPath": "/nfl/miami-dolphins/o-1327+t-92268105+z-95624-1241047254",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618763/9663",
+      "impactAdId": "618763",
+      "name": "Miami Dolphins Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "minnesota-vikings": {
+      "league": "NFL",
+      "fanaticsPath": "/nfl/minnesota-vikings/o-2461+t-14821440+z-90244-3974348289",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618764/9663",
+      "impactAdId": "618764",
+      "name": "Minnesota Vikings Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "new-england-patriots": {
+      "league": "NFL",
+      "fanaticsPath": "/nfl/new-england-patriots/o-3516+t-47484796+z-97035-898587176",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618765/9663",
+      "impactAdId": "618765",
+      "name": "New England Patriots Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "new-orleans-saints": {
+      "league": "NFL",
+      "fanaticsPath": "/nfl/new-orleans-saints/o-4661+t-69043653+z-789-201746202",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618766/9663",
+      "impactAdId": "618766",
+      "name": "New Orleans Saints Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "new-york-giants": {
+      "league": "NFL",
+      "fanaticsPath": "/nfl/new-york-giants/o-3572+t-79497891+z-97129-403843569",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618767/9663",
+      "impactAdId": "618767",
+      "name": "New York Giants Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "new-york-jets": {
+      "league": "NFL",
+      "fanaticsPath": "/nfl/new-york-jets/o-3572+t-03822655+z-96302-2218783509",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618768/9663",
+      "impactAdId": "618768",
+      "name": "New York Jets Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "philadelphia-eagles": {
+      "league": "NFL",
+      "fanaticsPath": "/nfl/philadelphia-eagles/o-2461+t-69263771+z-97651-2279483104",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618770/9663",
+      "impactAdId": "618770",
+      "name": "Philadelphia Eagles Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "pittsburgh-steelers": {
+      "league": "NFL",
+      "fanaticsPath": "/nfl/pittsburgh-steelers/o-2449+t-03379361+z-94360-2312615936",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618771/9663",
+      "impactAdId": "618771",
+      "name": "Pittsburgh Steelers Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "san-francisco-49ers": {
+      "league": "NFL",
+      "fanaticsPath": "/nfl/san-francisco-49ers/o-3527+t-25828229+z-90835-2969106188",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618772/9663",
+      "impactAdId": "618772",
+      "name": "San Francisco 49ers Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "seattle-seahawks": {
+      "league": "NFL",
+      "fanaticsPath": "/nfl/seattle-seahawks/o-1361+t-92938242+z-99944-1956564534",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618773/9663",
+      "impactAdId": "618773",
+      "name": "Seattle Seahawks Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "tampa-bay-buccaneers": {
+      "league": "NFL",
+      "fanaticsPath": "/nfl/tampa-bay-buccaneers/o-3550+t-92374956+z-91832-3593875222",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618774/9663",
+      "impactAdId": "618774",
+      "name": "Tampa Bay Buccaneers Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "tennessee-titans": {
+      "league": "NFL",
+      "fanaticsPath": "/nfl/tennessee-titans/o-1338+t-81159479+z-91046-2948908448",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618775/9663",
+      "impactAdId": "618775",
+      "name": "Tennessee Titans Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "washington-commanders": {
+      "league": "NFL",
+      "fanaticsPath": "/nfl/washington-commanders/o-2427+t-14262792+z-94782-1202728680",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/618776/9663",
+      "impactAdId": "618776",
+      "name": "Washington Commanders Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "anaheim-ducks": {
+      "league": "NHL",
+      "fanaticsPath": "/nhl/anaheim-ducks/o-2484+t-36931616+z-92003-656722331",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620807/9663",
+      "impactAdId": "620807",
+      "name": "Anaheim Ducks Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "arizona-coyotes": {
+      "league": "NHL",
+      "fanaticsPath": "/nhl/arizona-coyotes/o-3540+t-47590551+z-98203-934124675",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620810/9663",
+      "impactAdId": "620810",
+      "name": "Arizona Coyotes Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "boston-bruins": {
+      "league": "NHL",
+      "fanaticsPath": "/nhl/boston-bruins/o-1351+t-58714963+z-97651-3832109610",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620812/9663",
+      "impactAdId": "620812",
+      "name": "Boston Bruins Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "buffalo-sabres": {
+      "league": "NHL",
+      "fanaticsPath": "/nhl/buffalo-sabres/o-3584+t-81716197+z-96633-238441225",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620814/9663",
+      "impactAdId": "620814",
+      "name": "Buffalo Sabres Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "calgary-flames": {
+      "league": "NHL",
+      "fanaticsPath": "/nhl/calgary-flames/o-2439+t-14372743+z-92669-362021436",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620815/9663",
+      "impactAdId": "620815",
+      "name": "Calgary Flames Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "carolina-hurricanes": {
+      "league": "NHL",
+      "fanaticsPath": "/nhl/carolina-hurricanes/o-8040+t-14374022+z-8111-791538613",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620816/9663",
+      "impactAdId": "620816",
+      "name": "Carolina Hurricanes Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "chicago-blackhawks": {
+      "league": "NHL",
+      "fanaticsPath": "/nhl/chicago-blackhawks/o-2484+t-92044090+z-94923-4256246204",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620817/9663",
+      "impactAdId": "620817",
+      "name": "Chicago Blackhawks Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "colorado-avalanche": {
+      "league": "NHL",
+      "fanaticsPath": "/nhl/colorado-avalanche/o-2428+t-47710691+z-91289-1682938200",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620819/9663",
+      "impactAdId": "620819",
+      "name": "Colorado Avalanche Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "columbus-blue-jackets": {
+      "league": "NHL",
+      "fanaticsPath": "/nhl/columbus-blue-jackets/o-2484+t-69712892+z-95468-4133965700",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620820/9663",
+      "impactAdId": "620820",
+      "name": "Columbus Blue Jackets Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "dallas-stars": {
+      "league": "NHL",
+      "fanaticsPath": "/nhl/dallas-stars/o-4606+t-70158471+z-97115-2887103790",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620822/9663",
+      "impactAdId": "620822",
+      "name": "Dallas Stars Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "detroit-red-wings": {
+      "league": "NHL",
+      "fanaticsPath": "/nhl/detroit-red-wings/o-3584+t-47590627+z-99931-2285403423",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620823/9663",
+      "impactAdId": "620823",
+      "name": "Detroit Red Wings Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "edmonton-oilers": {
+      "league": "NHL",
+      "fanaticsPath": "/nhl/edmonton-oilers/o-3540+t-92604040+z-93658-1450513518",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620824/9663",
+      "impactAdId": "620824",
+      "name": "Edmonton Oilers Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "florida-panthers": {
+      "league": "NHL",
+      "fanaticsPath": "/nhl/florida-panthers/o-3573+t-97205191+z-90815-1131382442",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620825/9663",
+      "impactAdId": "620825",
+      "name": "Florida Panthers Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "los-angeles-kings": {
+      "league": "NHL",
+      "fanaticsPath": "/nhl/los-angeles-kings/o-1317+t-58601720+z-97228-2855689309",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620826/9663",
+      "impactAdId": "620826",
+      "name": "Los Angeles Kings Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "minnesota-wild": {
+      "league": "NHL",
+      "fanaticsPath": "/nhl/minnesota-wild/o-8028+t-14152854+z-780-3357145114",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620828/9663",
+      "impactAdId": "620828",
+      "name": "Minnesota Wild Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "montreal-canadiens": {
+      "league": "NHL",
+      "fanaticsPath": "/nhl/montreal-canadiens/o-3562+t-47488588+z-98865-3577326293",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620830/9663",
+      "impactAdId": "620830",
+      "name": "Montreal Canadiens Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "nashville-predators": {
+      "league": "NHL",
+      "fanaticsPath": "/nhl/nashville-predators/o-1351+t-14262956+z-97079-753665027",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620831/9663",
+      "impactAdId": "620831",
+      "name": "Nashville Predators Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "new-jersey-devils": {
+      "league": "NHL",
+      "fanaticsPath": "/nhl/new-jersey-devils/o-5751+t-92265202+z-8255-2698558152",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620833/9663",
+      "impactAdId": "620833",
+      "name": "New Jersey Devils Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "new-york-islanders": {
+      "league": "NHL",
+      "fanaticsPath": "/nhl/new-york-islanders/o-2473+t-58603003+z-91768-291658319",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620835/9663",
+      "impactAdId": "620835",
+      "name": "New York Islanders Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "new-york-rangers": {
+      "league": "NHL",
+      "fanaticsPath": "/nhl/new-york-rangers/o-3573+t-81710704+z-97242-1243133659",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620836/9663",
+      "impactAdId": "620836",
+      "name": "New York Rangers Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "ottawa-senators": {
+      "league": "NHL",
+      "fanaticsPath": "/nhl/ottawa-senators/o-3506+t-47373028+z-91828-3656624193",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620838/9663",
+      "impactAdId": "620838",
+      "name": "Ottawa Senators Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "philadelphia-flyers": {
+      "league": "NHL",
+      "fanaticsPath": "/nhl/philadelphia-flyers/o-2439+t-14823018+z-93388-1099004985",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620839/9663",
+      "impactAdId": "620839",
+      "name": "Philadelphia Flyers Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "pittsburgh-penguins": {
+      "league": "NHL",
+      "fanaticsPath": "/nhl/pittsburgh-penguins/o-1373+t-81827476+z-96532-1163722583",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620840/9663",
+      "impactAdId": "620840",
+      "name": "Pittsburgh Penguins Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "san-jose-sharks": {
+      "league": "NHL",
+      "fanaticsPath": "/nhl/san-jose-sharks/o-1351+t-25820800+z-94168-2122413453",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620841/9663",
+      "impactAdId": "620841",
+      "name": "San Jose Sharks Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "st-louis-blues": {
+      "league": "NHL",
+      "fanaticsPath": "/nhl/st-louis-blues/o-2406+t-92042034+z-8473-537240684",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620842/9663",
+      "impactAdId": "620842",
+      "name": "St. Louis Blues Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "tampa-bay-lightning": {
+      "league": "NHL",
+      "fanaticsPath": "/nhl/tampa-bay-lightning/o-3595+t-69049724+z-92526-4270306445",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620843/9663",
+      "impactAdId": "620843",
+      "name": "Tampa Bay Lightning Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "toronto-maple-leafs": {
+      "league": "NHL",
+      "fanaticsPath": "/nhl/toronto-maple-leafs/o-3540+t-70485373+z-91332-2646477230",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620844/9663",
+      "impactAdId": "620844",
+      "name": "Toronto Maple Leafs Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "vancouver-canucks": {
+      "league": "NHL",
+      "fanaticsPath": "/nhl/vancouver-canucks/o-2484+t-36934218+z-93633-314397336",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620845/9663",
+      "impactAdId": "620845",
+      "name": "Vancouver Canucks Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "vegas-golden-knights": {
+      "league": "NHL",
+      "fanaticsPath": "/nhl/vegas-golden-knights/o-3517+t-21557111+z-96650-1745939883",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620846/9663",
+      "impactAdId": "620846",
+      "name": "Vegas Golden Knights Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "washington-capitals": {
+      "league": "NHL",
+      "fanaticsPath": "/nhl/washington-capitals/o-9162+t-69371931+z-778-2543155003",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620847/9663",
+      "impactAdId": "620847",
+      "name": "Washington Capitals Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "winnipeg-jets": {
+      "league": "NHL",
+      "fanaticsPath": "/nhl/winnipeg-jets/o-1339+t-92606476+z-97939-4031069315",
+      "trackingLink": "https://fanatics.93n6tx.net/c/7236189/620848/9663",
+      "impactAdId": "620848",
+      "name": "Winnipeg Jets Gear",
+      "confidence": "verified_directory",
+      "source": "impact_text_link_directory_export_2026-05-05"
+    },
+    "oakland-athletics": {
+      "league": "MLB",
+      "fanaticsPath": "/mlb/oakland-athletics/o-1209+t-03905533+z-92858-339381394",
+      "name": "Oakland Athletics Gear",
+      "confidence": "verified_session_discovery",
+      "source": "discovery_session_2026-05-05"
+    },
+    "inter-miami-cf": {
+      "league": "MLS",
+      "fanaticsPath": "/mls/inter-miami-cf/o-3577+t-76706629+z-97877-2244091536",
+      "name": "Inter Miami CF Gear",
+      "confidence": "verified_session_discovery",
+      "source": "discovery_session_2026-05-05"
+    },
+    "atlanta-dream": {
+      "league": "WNBA",
+      "fanaticsPath": "/wnba/atlanta-dream/o-1460+t-69434525+z-92374-3568125624",
+      "name": "Atlanta Dream Gear",
+      "confidence": "verified_session_discovery",
+      "source": "discovery_session_2026-05-05"
+    },
+    "chicago-sky": {
+      "league": "WNBA",
+      "fanaticsPath": "/wnba/chicago-sky/o-2559+t-69106760+z-91608-4263507522",
+      "name": "Chicago Sky Gear",
+      "confidence": "verified_session_discovery",
+      "source": "discovery_session_2026-05-05"
+    },
+    "minnesota-lynx": {
+      "league": "WNBA",
+      "fanaticsPath": "/wnba/minnesota-lynx/o-3693+t-14981254+z-773-2726048771",
+      "name": "Minnesota Lynx Gear",
+      "confidence": "verified_session_discovery",
+      "source": "discovery_session_2026-05-05"
+    },
+    "seattle-kraken": {
+      "league": "NHL",
+      "fanaticsPath": "/nhl/seattle-kraken/o-2406+t-43433500+z-98423-3949641849",
+      "name": "Seattle Kraken Gear",
+      "confidence": "verified_session_discovery",
+      "source": "discovery_session_2026-05-05"
+    },
+    "utah-mammoth": {
+      "league": "NHL",
+      "fanaticsPath": "/nhl/utah-mammoth/o-3528+t-8357454616+z-9818-3541420422",
+      "name": "Utah Mammoth Gear",
+      "confidence": "verified_session_discovery",
+      "source": "discovery_session_2026-05-05"
+    },
+    "connecticut-sun": {
+      "league": "WNBA",
+      "fanaticsPath": "/wnba/connecticut-sun/o-4715+t-92547816+z-93624-729867934",
+      "name": "Connecticut Sun Gear",
+      "confidence": "verified_session_discovery",
+      "source": "discovery_session_2026-05-05"
+    },
+    "dallas-wings": {
+      "league": "WNBA",
+      "fanaticsPath": "/wnba/dallas-wings/o-1471+t-25092395+z-92906-162900988",
+      "name": "Dallas Wings Gear",
+      "confidence": "verified_session_discovery",
+      "source": "discovery_session_2026-05-05"
+    },
+    "golden-state-valkyries": {
+      "league": "WNBA",
+      "fanaticsPath": "/wnba/golden-state-valkyries/o-8126+t-46745985+z-8050-4214175585",
+      "name": "Golden State Valkyries Gear",
+      "confidence": "verified_session_discovery",
+      "source": "discovery_session_2026-05-05"
+    },
+    "indiana-fever": {
+      "league": "WNBA",
+      "fanaticsPath": "/wnba/indiana-fever/o-5837+t-69436785+z-8826-1776406336",
+      "name": "Indiana Fever Gear",
+      "confidence": "verified_session_discovery",
+      "source": "discovery_session_2026-05-05"
+    },
+    "las-vegas-aces": {
+      "league": "WNBA",
+      "fanaticsPath": "/wnba/las-vegas-aces/o-1482+t-87453972+z-90332-2920441961",
+      "name": "Las Vegas Aces Gear",
+      "confidence": "verified_session_discovery",
+      "source": "discovery_session_2026-05-05"
+    },
+    "los-angeles-sparks": {
+      "league": "WNBA",
+      "fanaticsPath": "/wnba/los-angeles-sparks/o-2537+t-03324564+z-8040-3865932782",
+      "name": "Los Angeles Sparks Gear",
+      "confidence": "verified_google_search",
+      "source": "discovery_session_2026-05-05"
+    },
+    "new-york-liberty": {
+      "league": "WNBA",
+      "fanaticsPath": "/wnba/new-york-liberty/o-1448+t-92983577+z-96745-4259593538",
+      "name": "New York Liberty Gear",
+      "confidence": "verified_google_search",
+      "source": "discovery_session_2026-05-05"
+    },
+    "phoenix-mercury": {
+      "league": "WNBA",
+      "fanaticsPath": "/wnba/phoenix-mercury/o-7048+t-25659123+z-8840-3801808752",
+      "name": "Phoenix Mercury Gear",
+      "confidence": "verified_google_search",
+      "source": "discovery_session_2026-05-05"
+    },
+    "seattle-storm": {
+      "league": "WNBA",
+      "fanaticsPath": "/wnba/seattle-storm/o-3604+t-03094693+z-92283-1157218896",
+      "name": "Seattle Storm Gear",
+      "confidence": "verified_google_search",
+      "source": "discovery_session_2026-05-05"
+    },
+    "washington-mystics": {
+      "league": "WNBA",
+      "fanaticsPath": "/wnba/washington-mystics/o-3604+t-92091317+z-94317-630925064",
+      "name": "Washington Mystics Gear",
+      "confidence": "verified_google_search",
+      "source": "discovery_session_2026-05-05"
+    },
+    "atlanta-united-fc": {
+      "league": "MLS",
+      "fanaticsPath": "/mls/atlanta-united-fc/o-1355+t-03121274+z-93648-1656080836",
+      "name": "Atlanta United FC Gear",
+      "confidence": "verified_google_search",
+      "source": "discovery_session_2026-05-05"
+    },
+    "austin-fc": {
+      "league": "MLS",
+      "fanaticsPath": "/mls/austin-fc/o-1333+t-32701197+z-90074-2612190885",
+      "name": "Austin FC Gear",
+      "confidence": "verified_google_search",
+      "source": "discovery_session_2026-05-05"
+    },
+    "cf-montreal": {
+      "league": "MLS",
+      "fanaticsPath": "/mls/cf-montreal/o-2499+t-25675796+z-97834-726755796",
+      "name": "CF Montreal Gear",
+      "confidence": "verified_google_search",
+      "source": "discovery_session_2026-05-05"
+    },
+    "charlotte-fc": {
+      "league": "MLS",
+      "fanaticsPath": "/mls/charlotte-fc/o-7933+t-65427121+z-764-2338734225",
+      "name": "Charlotte FC Gear",
+      "confidence": "verified_google_search",
+      "source": "discovery_session_2026-05-05"
+    },
+    "chicago-fire-fc": {
+      "league": "MLS",
+      "fanaticsPath": "/mls/chicago-fire/o-3588+t-58565619+z-91327-2577666847",
+      "name": "Chicago Fire FC Gear",
+      "confidence": "verified_google_search",
+      "source": "discovery_session_2026-05-05"
+    },
+    "colorado-rapids": {
+      "league": "MLS",
+      "fanaticsPath": "/mls/colorado-rapids/o-3522+t-58897854+z-91383-2402135378",
+      "name": "Colorado Rapids Gear",
+      "confidence": "verified_google_search",
+      "source": "discovery_session_2026-05-05"
+    },
+    "columbus-crew": {
+      "league": "MLS",
+      "fanaticsPath": "/mls/columbus-crew/o-2455+t-92345722+z-96722-1104442559",
+      "name": "Columbus Crew Gear",
+      "confidence": "verified_google_search",
+      "source": "discovery_session_2026-05-05"
+    },
+    "dc-united": {
+      "league": "MLS",
+      "fanaticsPath": "/mls/dc-united/o-2455+t-47450290+z-90814-1060664237",
+      "name": "D.C. United Gear",
+      "confidence": "verified_google_search",
+      "source": "discovery_session_2026-05-05"
+    },
+    "fc-cincinnati": {
+      "league": "MLS",
+      "fanaticsPath": "/mls/fc-cincinnati/o-1377+t-65804377+z-95516-2284996072",
+      "name": "FC Cincinnati Gear",
+      "confidence": "verified_google_search",
+      "source": "discovery_session_2026-05-05"
+    },
+    "houston-dynamo-fc": {
+      "league": "MLS",
+      "fanaticsPath": "/mls/houston-dynamo-fc/o-3566+t-47674692+z-90580-1137553623",
+      "name": "Houston Dynamo FC Gear",
+      "confidence": "verified_google_search",
+      "source": "discovery_session_2026-05-05"
+    },
+    "la-galaxy": {
+      "league": "MLS",
+      "fanaticsPath": "/mls/la-galaxy/o-6888+t-92902482+z-8553-2785146629",
+      "name": "La Galaxy Gear",
+      "confidence": "verified_google_search",
+      "source": "discovery_session_2026-05-05"
+    },
+    "lafc": {
+      "league": "MLS",
+      "fanaticsPath": "/mls/lafc/o-2488+t-25125738+z-98488-2046415463",
+      "name": "LAFC Gear",
+      "confidence": "verified_google_search",
+      "source": "discovery_session_2026-05-05"
+    },
+    "minnesota-united-fc": {
+      "league": "MLS",
+      "fanaticsPath": "/mls/minnesota-united-fc/o-1311+t-98001180+z-8285-3766705679",
+      "name": "Minnesota United FC Gear",
+      "confidence": "verified_google_search",
+      "source": "discovery_session_2026-05-05"
+    },
+    "nashville-sc": {
+      "league": "MLS",
+      "fanaticsPath": "/mls/nashville-sc/o-1322+t-87255807+z-98978-1561662958",
+      "name": "Nashville SC Gear",
+      "confidence": "verified_google_search",
+      "source": "discovery_session_2026-05-05"
+    },
+    "new-england-revolution": {
+      "league": "MLS",
+      "fanaticsPath": "/mls/new-england-revolution/o-3577+t-36234675+z-94241-3796964712",
+      "name": "New England Revolution Gear",
+      "confidence": "verified_google_search",
+      "source": "discovery_session_2026-05-05"
+    },
+    "new-york-city-fc": {
+      "league": "MLS",
+      "fanaticsPath": "/mls/new-york-city-fc/o-1300+t-69230232+z-93385-2634257827",
+      "name": "New York City FC Gear",
+      "confidence": "verified_google_search",
+      "source": "discovery_session_2026-05-05"
+    },
+    "new-york-red-bulls": {
+      "league": "MLS",
+      "fanaticsPath": "/mls/new-york-red-bulls/o-2488+t-92123622+z-97999-2543475619",
+      "name": "New York Red Bulls Gear",
+      "confidence": "verified_google_search",
+      "source": "discovery_session_2026-05-05"
+    },
+    "orlando-city-sc": {
+      "league": "MLS",
+      "fanaticsPath": "/mls/orlando-city-sc/o-1344+t-70233678+z-98075-3490170477",
+      "name": "Orlando City SC Gear",
+      "confidence": "verified_google_search",
+      "source": "discovery_session_2026-05-05"
+    },
+    "philadelphia-union": {
+      "league": "MLS",
+      "fanaticsPath": "/mls/philadelphia-union/o-2400+t-92128102+z-96353-1082316039",
+      "name": "Philadelphia Union Gear",
+      "confidence": "verified_google_search",
+      "source": "discovery_session_2026-05-05"
+    },
+    "portland-timbers": {
+      "league": "MLS",
+      "fanaticsPath": "/mls/portland-timbers/o-2499+t-69563614+z-95868-1752881252",
+      "name": "Portland Timbers Gear",
+      "confidence": "verified_google_search",
+      "source": "discovery_session_2026-05-05"
+    },
+    "real-salt-lake": {
+      "league": "MLS",
+      "fanaticsPath": "/mls/real-salt-lake/o-3599+t-25673626+z-98333-4294378559",
+      "name": "Real Salt Lake Gear",
+      "confidence": "verified_google_search",
+      "source": "discovery_session_2026-05-05"
+    },
+    "san-diego-fc": {
+      "league": "MLS",
+      "fanaticsPath": "/mls/san-diego-fc/o-7900+t-36869512+z-736-702708783",
+      "name": "San Diego FC Gear",
+      "confidence": "verified_google_search",
+      "source": "discovery_session_2026-05-05"
+    },
+    "san-jose-earthquakes": {
+      "league": "MLS",
+      "fanaticsPath": "/mls/san-jose-earthquakes/o-7933+t-58127005+z-8754-4202980274",
+      "name": "San Jose Earthquakes Gear",
+      "confidence": "verified_google_search",
+      "source": "discovery_session_2026-05-05"
+    },
+    "seattle-sounders-fc": {
+      "league": "MLS",
+      "fanaticsPath": "/mls/seattle-sounders-fc/o-2477+t-14896940+z-99268-4294915717",
+      "name": "Seattle Sounders FC Gear",
+      "confidence": "verified_google_search",
+      "source": "discovery_session_2026-05-05"
+    },
+    "sporting-kansas-city": {
+      "league": "MLS",
+      "fanaticsPath": "/mls/sporting-kansas-city/o-3588+t-03679207+z-91101-3858168827",
+      "name": "Sporting Kansas City Gear",
+      "confidence": "verified_google_search",
+      "source": "discovery_session_2026-05-05"
+    },
+    "st-louis-city-sc": {
+      "league": "MLS",
+      "fanaticsPath": "/mls/st-louis-city-sc/o-2422+t-09984570+z-95265-2627912546",
+      "name": "St. Louis CITY SC Gear",
+      "confidence": "verified_google_search",
+      "source": "discovery_session_2026-05-05"
+    },
+    "toronto-fc": {
+      "league": "MLS",
+      "fanaticsPath": "/mls/toronto-fc/o-1311+t-70677097+z-93361-2614871098",
+      "name": "Toronto FC Gear",
+      "confidence": "verified_google_search",
+      "source": "discovery_session_2026-05-05"
+    },
+    "vancouver-whitecaps-fc": {
+      "league": "MLS",
+      "fanaticsPath": "/mls/vancouver-whitecaps-fc/o-4611+t-92785876+z-93500-3816429169",
+      "name": "Vancouver Whitecaps FC Gear",
+      "confidence": "verified_google_search",
+      "source": "discovery_session_2026-05-05"
+    },
+    "fc-dallas": {
+      "league": "MLS",
+      "fanaticsPath": "/mls/fc-dallas/o-1322+t-14349179+z-98852-3554681276",
+      "name": "FC Dallas Gear",
+      "confidence": "verified_google_search",
+      "source": "discovery_session_2026-05-05"
+    }
+  }
+}
