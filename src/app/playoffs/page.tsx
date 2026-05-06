@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getAllPlayoffPromos, getVenueForTeam } from '@/lib/data';
 import type { PlayoffPromo, Team, Venue, PlayoffConfig } from '@/lib/types';
-import { teamDisplayName } from '@/lib/promo-helpers';
+import { teamDisplayName, roundLabel } from '@/lib/promo-helpers';
 import { ParkingCTA } from '@/components/affiliates/ParkingCTA';
 import { HotelsCTA } from '@/components/affiliates/HotelsCTA';
 import { TicketsBlock } from '@/components/affiliates/TicketsBlock';
@@ -45,18 +45,6 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 const LEAGUE_ICONS: Record<'NBA' | 'NHL', string> = { NBA: '🏀', NHL: '🏒' };
-
-const ROUND_LABELS: Record<string, string> = {
-  first_round: 'First Round',
-  conference_semifinals: 'Conference Semifinals',
-  conference_finals: 'Conference Finals',
-  nba_finals: 'NBA Finals',
-  stanley_cup_final: 'Stanley Cup Final',
-};
-
-function roundLabel(code: string): string {
-  return ROUND_LABELS[code] ?? code.replace(/_/g, ' ');
-}
 
 function formatShortDate(iso: string | null): string {
   if (!iso) return '';
@@ -243,6 +231,10 @@ export default async function PlayoffsPage() {
   );
   const lastModifiedIso =
     config.lastScanDate ?? config.updatedAt ?? PAGE_PUBLISHED;
+  const liveDuringLabel =
+    config.nbaRound === config.nhlRound
+      ? `Live during ${roundLabel(config.nbaRound)}`
+      : 'Live during the playoffs';
 
   const faqs = buildFaqs(config, byLeague, totalPromos, totalTeams);
   const headline = '2026 NBA and NHL Playoff Promotions';
@@ -307,7 +299,7 @@ export default async function PlayoffsPage() {
       <div className="max-w-5xl mx-auto">
         <header className="mb-12">
           <span className="font-mono text-[10px] tracking-[1.5px] uppercase text-accent-red">
-            Live during Round 1
+            {liveDuringLabel}
           </span>
           <h1 className="font-display text-4xl md:text-6xl tracking-[1px] mt-2 mb-6">
             2026 NBA AND NHL PLAYOFF PROMOTIONS

@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next';
-import { getAllTeams, getPlayoffConfig } from '@/lib/data';
+import { getAllTeams, getPlayoffConfig, getStillAlivePlayoffTeamIds } from '@/lib/data';
 
 const BASE_URL = 'https://www.getpromonight.com';
 
@@ -18,7 +18,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ? new Date(playoffConfig.updatedAt)
       : null;
   const activePlayoffIds = new Set(
-    playoffsActive ? playoffConfig!.activeTeamIds : [],
+    playoffsActive ? getStillAlivePlayoffTeamIds(playoffConfig!) : [],
   );
 
   const teamPages = teams.map((t) => {

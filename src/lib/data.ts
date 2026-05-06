@@ -375,22 +375,31 @@ export const getPlayoffConfig = cache(async (): Promise<PlayoffConfig | null> =>
   };
 });
 
+// Returns activeTeamIds minus eliminatedTeamIds. The scanner writes any team
+// that ever had a playoff promo doc into activeTeamIds, including ones that
+// have since been eliminated, so callers gating UI on "still alive in the
+// playoffs" must subtract eliminatedTeamIds.
+export function getStillAlivePlayoffTeamIds(config: PlayoffConfig): string[] {
+  const eliminated = new Set(config.eliminatedTeamIds ?? []);
+  return (config.activeTeamIds ?? []).filter((id) => !eliminated.has(id));
+}
+
 export async function isTeamInPlayoffs(
   teamId: string,
   config?: PlayoffConfig | null,
 ): Promise<boolean> {
   const cfg = config ?? (await getPlayoffConfig());
   if (!cfg || !cfg.playoffsActive) return false;
-  return cfg.activeTeamIds.includes(teamId);
+  return getStillAlivePlayoffTeamIds(cfg).includes(teamId);
 }
 
 export async function getActivePlayoffTeams(): Promise<ActivePlayoffTeam[]> {
   const config = await getPlayoffConfig();
-  if (!config || !config.playoffsActive || config.activeTeamIds.length === 0) {
-    return [];
-  }
+  if (!config || !config.playoffsActive) return [];
+  const aliveIds = getStillAlivePlayoffTeamIds(config);
+  if (aliveIds.length === 0) return [];
   const teamDocs = await Promise.all(
-    config.activeTeamIds.map((id) => db.collection('teams').doc(id).get()),
+    aliveIds.map((id) => db.collection('teams').doc(id).get()),
   );
   const results: ActivePlayoffTeam[] = [];
   for (const doc of teamDocs) {
@@ -457,10 +466,9 @@ export async function getPlayoffPromosInDateRange(
   endYMD: string,
 ): Promise<PromoWithTeam[]> {
   const config = await getPlayoffConfig();
-  if (!config || !config.playoffsActive || config.activeTeamIds.length === 0) {
-    return [];
-  }
-  const activeIds = new Set(config.activeTeamIds);
+  if (!config || !config.playoffsActive) return [];
+  const aliveIds = new Set(getStillAlivePlayoffTeamIds(config));
+  if (aliveIds.size === 0) return [];
   const [snapshot, allTeams] = await Promise.all([
     db.collection('playoffPromos').where('isPlayoff', '==', true).get(),
     getAllTeams(),
@@ -469,7 +477,7 @@ export async function getPlayoffPromosInDateRange(
   const results: PromoWithTeam[] = [];
   for (const doc of snapshot.docs) {
     const p = mapPlayoffPromoDoc(doc);
-    if (!activeIds.has(p.teamId)) continue;
+    if (!aliveIds.has(p.teamId)) continue;
     if (!p.date) continue;
     const ymd = isoToChicagoYMD(p.date);
     if (ymd < startYMD || ymd > endYMD) continue;
@@ -513,7 +521,7 @@ export async function getAllPlayoffPromos(): Promise<{
   };
   if (!config || !config.playoffsActive) return empty;
 
-  const activeIds = new Set(config.activeTeamIds);
+  const aliveIds = new Set(getStillAlivePlayoffTeamIds(config));
   const [snapshot, allTeams] = await Promise.all([
     db
       .collection('playoffPromos')
@@ -526,7 +534,7 @@ export async function getAllPlayoffPromos(): Promise<{
   const grouped = new Map<string, PlayoffPromo[]>();
   for (const doc of snapshot.docs) {
     const p = mapPlayoffPromoDoc(doc);
-    if (!activeIds.has(p.teamId)) continue;
+    if (!aliveIds.has(p.teamId)) continue;
     const arr = grouped.get(p.teamId) ?? [];
     arr.push(p);
     grouped.set(p.teamId, arr);
