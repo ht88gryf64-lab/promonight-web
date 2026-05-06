@@ -1,10 +1,9 @@
 import Link from 'next/link';
 import type { PromoWithTeam } from '@/lib/types';
-import { PromoBadge } from './promo-badge';
 import { AppDownloadButtons } from './app-download-buttons';
-import { teamDisplayName } from '@/lib/promo-helpers';
 import { AdSlot } from './ads/AdSlot';
 import { AD_SLOTS } from '@/lib/ads/slots';
+import { AggregatorPaginatedGroups } from './aggregator-paginated-groups';
 
 export interface AggregatorGroup {
   label: string;
@@ -19,15 +18,6 @@ export interface AggregatorPageProps {
   groups: AggregatorGroup[];
   faqs: { question: string; answer: string }[];
   emptyMessage?: string;
-}
-
-function formatDateParts(dateStr: string) {
-  const d = new Date(dateStr + 'T12:00:00');
-  return {
-    day: d.getDate().toString(),
-    weekday: d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase(),
-    month: d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
-  };
 }
 
 export function AggregatorPage({
@@ -75,60 +65,17 @@ export function AggregatorPage({
           <AdSlot config={AD_SLOTS.IN_CONTENT_1} pageType="promo_collection" />
         </div>
 
-        {/* Groups */}
+        {/* Groups — paginated client-side. Initial 50 promos render as DOM;
+         *  "Show more" appends additional 50 from the same prop array (no
+         *  network fetch). Trimming overflow promos was sized to keep
+         *  /promos/theme-nights and /promos/jersey-giveaways under Bing's 1MB
+         *  Site Scan limit. */}
         {totalCount === 0 ? (
           <div className="bg-bg-card border border-border-subtle rounded-2xl p-10 text-center">
             <p className="text-text-secondary">{emptyMessage ?? 'Nothing scheduled right now.'}</p>
           </div>
         ) : (
-          <div className="space-y-10">
-            {groups.map((group) =>
-              group.promos.length === 0 ? null : (
-                <section key={group.label}>
-                  <h2 className="font-display text-2xl md:text-3xl tracking-[1px] mb-4">
-                    {group.label}
-                  </h2>
-                  <div className="space-y-2">
-                    {group.promos.map((p, i) => {
-                      const { day, weekday, month } = formatDateParts(p.date);
-                      return (
-                        <Link
-                          key={`${group.label}-${i}`}
-                          href={`/${p.team.sportSlug}/${p.team.id}`}
-                          className="group bg-bg-card border border-border-subtle rounded-xl p-4 flex items-center gap-4 hover:border-border-hover transition-colors"
-                        >
-                          <div className="flex-shrink-0 w-14 text-center">
-                            <div className="font-mono text-[9px] tracking-[1px] text-text-muted">{month}</div>
-                            <div className="font-display text-2xl leading-none">{day}</div>
-                            <div className="font-mono text-[9px] tracking-[1px] text-text-dim">{weekday}</div>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex flex-wrap items-center gap-2 mb-1">
-                              <span className="text-base">{p.icon}</span>
-                              <PromoBadge type={p.type} />
-                              {p.highlight && (
-                                <span className="text-[10px] font-mono text-accent-red">HOT</span>
-                              )}
-                            </div>
-                            <div className="text-white font-semibold text-sm group-hover:text-accent-red transition-colors truncate">
-                              {p.title}
-                            </div>
-                            <div className="text-text-secondary text-xs mt-0.5">
-                              {teamDisplayName(p.team)}
-                              {p.opponent && (
-                                <span className="text-text-dim"> vs {p.opponent}</span>
-                              )}
-                              <span className="text-text-dim"> &middot; {p.team.league}</span>
-                            </div>
-                          </div>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </section>
-              ),
-            )}
-          </div>
+          <AggregatorPaginatedGroups groups={groups} />
         )}
 
         {/* CTA */}

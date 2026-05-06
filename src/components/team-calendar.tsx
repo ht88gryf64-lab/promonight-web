@@ -93,6 +93,27 @@ export function TeamCalendar({ promos, teamName, teamSlug, sport, team, gameCont
 
   const hasGamesData = !!gameContexts && gameContexts.length > 0;
 
+  // Window the SSR pre-rendered hidden detail blocks. Rendering all 162 games
+  // inflated MLB team pages above Bing's 1MB HTML soft limit (Site Scan flagged
+  // 24/30 teams). Pre-render only the next 30 days of upcoming games (hard cap
+  // 35 entries for dense doubleheader stretches); past games and games beyond
+  // the window mount their detail block on click from existing client state.
+  const PRERENDER_WINDOW_DAYS = 30;
+  const PRERENDER_MAX = 35;
+  const prerenderedDates = useMemo(() => {
+    if (!hasGamesData) return null;
+    const startMs = Date.UTC(today.year, today.month, today.day);
+    const endMs = startMs + PRERENDER_WINDOW_DAYS * 86_400_000;
+    const upcoming: string[] = [];
+    for (const date of gameCtxsByDate.keys()) {
+      const { year, month, day } = parseYMD(date);
+      const ms = Date.UTC(year, month, day);
+      if (ms >= startMs && ms <= endMs) upcoming.push(date);
+    }
+    upcoming.sort();
+    return new Set(upcoming.slice(0, PRERENDER_MAX));
+  }, [hasGamesData, gameCtxsByDate, today]);
+
   // Months that have *something* to show — a promo (legacy) or a game (MLB).
   const monthsWithContent = useMemo(() => {
     const set = new Set<string>();
@@ -408,16 +429,36 @@ export function TeamCalendar({ promos, teamName, teamSlug, sport, team, gameCont
         ariaLabel={selectedDate ? `Game details for ${dayHeader(selectedDate)}` : 'Game details'}
       >
         {hasGamesData
-          ? [...gameCtxsByDate.entries()].map(([date, ctxs]) => (
-              <div key={date} hidden={selectedDate !== date}>
-                <GameDayDetail
-                  dateStr={date}
-                  contexts={ctxs}
-                  team={team ?? null}
-                  teamSlug={teamSlug}
-                />
-              </div>
-            ))
+          ? (
+              <>
+                {[...gameCtxsByDate.entries()]
+                  .filter(([date]) => prerenderedDates!.has(date))
+                  .map(([date, ctxs]) => (
+                    <div key={date} hidden={selectedDate !== date}>
+                      <GameDayDetail
+                        dateStr={date}
+                        contexts={ctxs}
+                        team={team ?? null}
+                        teamSlug={teamSlug}
+                      />
+                    </div>
+                  ))}
+                {/* Lazy mount: dates outside the prerender window render only
+                 *  when the user clicks. SSR HTML and client first-render
+                 *  agree on omitting these (selectedDate starts null), so no
+                 *  hydration mismatch. */}
+                {selectedDate && !prerenderedDates!.has(selectedDate) && gameCtxsByDate.has(selectedDate) && (
+                  <div>
+                    <GameDayDetail
+                      dateStr={selectedDate}
+                      contexts={gameCtxsByDate.get(selectedDate)!}
+                      team={team ?? null}
+                      teamSlug={teamSlug}
+                    />
+                  </div>
+                )}
+              </>
+            )
           : [...promosByDate.entries()].map(([date, list]) => (
               <div key={date} hidden={selectedDate !== date}>
                 <LegacyPromoDetail
