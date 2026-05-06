@@ -10,6 +10,7 @@ import {
   getPlayoffPromosForTeam,
   getGamesForTeam,
   enrichGamesForTeam,
+  getStillAlivePlayoffTeamIds,
 } from '@/lib/data';
 import type { PromoType } from '@/lib/types';
 import { TeamHero } from '@/components/team-hero';
@@ -126,7 +127,7 @@ export default async function TeamPage({
 
   const inPlayoffs =
     !!playoffConfig?.playoffsActive &&
-    playoffConfig.activeTeamIds.includes(team.id);
+    getStillAlivePlayoffTeamIds(playoffConfig).includes(team.id);
   const playoffPromos = inPlayoffs
     ? await getPlayoffPromosForTeam(team.id)
     : [];
