@@ -40,7 +40,7 @@ type EventsNode = {
   kind: 'EventsNode';
   event: string;
   name: string;
-  math?: 'total';
+  math?: 'total' | 'dau' | 'weekly_active';
   properties?: PropertyFilter[];
 };
 
@@ -56,6 +56,16 @@ const funnelEvent = (event: string): EventsNode => ({
   kind: 'EventsNode',
   event,
   name: event,
+});
+
+const activeUsersEvent = (
+  event: string,
+  math: 'dau' | 'weekly_active',
+): EventsNode => ({
+  kind: 'EventsNode',
+  event,
+  name: event,
+  math,
 });
 
 type Breakdown = { type: 'event'; property: string };
@@ -212,6 +222,36 @@ const TILES: TileSpec[] = [
         interval: 'day',
         dateRange: { date_from: '-30d' },
         trendsFilter: { display: 'ActionsLineGraph', formula: 'A / B * 100' },
+      },
+    },
+  },
+  {
+    name: 'Daily active users',
+    description:
+      'Distinct users who fired at least one page_view that day. Charted daily over the last 30 days.',
+    query: {
+      kind: 'InsightVizNode',
+      source: {
+        kind: 'TrendsQuery',
+        series: [activeUsersEvent('page_view', 'dau')],
+        interval: 'day',
+        dateRange: { date_from: '-30d' },
+        trendsFilter: { display: 'ActionsLineGraph' },
+      },
+    },
+  },
+  {
+    name: 'Weekly active users',
+    description:
+      'Distinct users who fired at least one page_view in the trailing 7 days. Charted daily as a 7-day rolling window over the last 30 days.',
+    query: {
+      kind: 'InsightVizNode',
+      source: {
+        kind: 'TrendsQuery',
+        series: [activeUsersEvent('page_view', 'weekly_active')],
+        interval: 'day',
+        dateRange: { date_from: '-30d' },
+        trendsFilter: { display: 'ActionsLineGraph' },
       },
     },
   },
