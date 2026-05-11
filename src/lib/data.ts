@@ -52,6 +52,13 @@ function mapTeamDoc(doc: FirebaseFirestore.DocumentSnapshot): Team {
       typeof data.ticketmasterAttractionId === 'string' && data.ticketmasterAttractionId.length > 0
         ? data.ticketmasterAttractionId
         : undefined,
+    fanaticsUrl:
+      typeof data.fanaticsUrl === 'string' && data.fanaticsUrl.length > 0
+        ? data.fanaticsUrl
+        : undefined,
+    // TODO(fanatics-url-cleanup): drop fanaticsPath here once production has
+    // baked one deploy cycle on fanaticsUrl and the field is deleted from the
+    // team docs. Until then it's the read-path fallback in buildFanaticsUrl.
     fanaticsPath:
       typeof data.fanaticsPath === 'string' && data.fanaticsPath.length > 0
         ? data.fanaticsPath

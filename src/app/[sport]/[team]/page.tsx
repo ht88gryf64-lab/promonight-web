@@ -253,13 +253,13 @@ export default async function TeamPage({
             </p>
           </div>
           <div className="max-w-md flex flex-col gap-2.5">
-            {/* FanaticsCTA self-gates on team.fanaticsPath presence —
-             *  returns null for any team without a populated canonical
-             *  path (zero teams after the populate run, but defense-in-
-             *  depth for any future Firestore docs added before the
-             *  mapping JSON catches up). Naive URLs like
-             *  fanatics.com/{league}/{slug} 404, so unpopulated paths
-             *  must not render. */}
+            {/* FanaticsCTA self-gates on team.fanaticsUrl presence (legacy
+             *  team.fanaticsPath accepted as a fallback) — returns null for
+             *  any team without a populated canonical URL (zero teams after
+             *  the migration, but defense-in-depth for future Firestore docs
+             *  added before coverage catches up). Naive URLs like
+             *  fanatics.com/{league}/{slug} 404, so unpopulated teams must
+             *  not render. */}
             <FanaticsCTA
               team={team}
               surface="web_team_page"
