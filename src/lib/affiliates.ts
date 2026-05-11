@@ -258,21 +258,24 @@ export function buildTicketmasterUrl(opts: TicketmasterOpts): string {
     .replace('{SHARED_ID}', encodeURIComponent(opts.surface));
 }
 
-// FanaticsOpts: the canonical team-store path lives on the Team document
-// (populated by scripts/populate-fanatics-paths.ts from
-// scripts/fanatics-team-mapping.json). Surface rides as Impact's
-// `{SHARED_ID}` for partner-side reporting. The earlier SSAID/utm/irgwc
-// direct-URL pattern is gone: it depended on a naive
-// `fanatics.com/{league}/{slug}` URL that 404s, so all clicks landed on
-// the homepage. The FanaticsCTA component gates render on
-// `team.fanaticsPath` presence — when that's missing, the card doesn't
-// show at all, so this builder can assume the path is set.
+// FanaticsOpts: the canonical team-store URL lives on the Team document as
+// `fanaticsUrl` (populated by scripts/migrate-fanatics-path-to-url.ts).
+// `fanaticsPath` is the legacy root-relative form, accepted as a fallback
+// for one deploy cycle. Surface rides as Impact's `{SHARED_ID}` for
+// partner-side reporting. The FanaticsCTA component gates render on a
+// populated URL/path — when both are missing the card doesn't show at all,
+// so this builder's empty case is a defensive last resort.
 export interface FanaticsOpts {
-  team: Pick<Team, 'fanaticsPath'>;
+  team: Pick<Team, 'fanaticsUrl' | 'fanaticsPath'>;
   surface: AnalyticsSurface;
 }
 
-// Composes the outbound Fanatics URL from the canonical fanaticsPath.
+// Composes the outbound Fanatics URL from the canonical fanaticsUrl.
+//
+// Source precedence: prefer the fully-qualified `fanaticsUrl`. Fall back to
+// `'https://www.fanatics.com' + fanaticsPath` for any team doc not yet
+// migrated. TODO(fanatics-url-cleanup): drop the fanaticsPath fallback once
+// production has baked and the field is gone from the team docs.
 //
 // Wrap mode (NEXT_PUBLIC_FANATICS_IMPACT_WRAP set): wrap the canonical
 // destination through Impact's tracking domain. {TARGET} receives the
@@ -283,12 +286,13 @@ export interface FanaticsOpts {
 // attribution. Same graceful pre-approval semantics as
 // buildTicketmasterUrl — see notes there.
 export function buildFanaticsUrl(opts: FanaticsOpts): string {
-  const path = opts.team.fanaticsPath ?? '';
-  // Defensive: caller (FanaticsCTA) is expected to gate render on
-  // fanaticsPath presence, so an empty path here means a logic bug
-  // upstream. Land on the homepage rather than emit a 404-ing URL.
-  if (!path) return 'https://www.fanatics.com';
-  const directUrl = `https://www.fanatics.com${path}`;
+  const directUrl =
+    opts.team.fanaticsUrl ??
+    (opts.team.fanaticsPath ? `https://www.fanatics.com${opts.team.fanaticsPath}` : '');
+  // Defensive: caller (FanaticsCTA) is expected to gate render on a populated
+  // URL/path, so an empty directUrl here means a logic bug upstream. Land on
+  // the homepage rather than emit a 404-ing URL.
+  if (!directUrl) return 'https://www.fanatics.com';
 
   if (!FANATICS_IMPACT_WRAP) return directUrl;
 

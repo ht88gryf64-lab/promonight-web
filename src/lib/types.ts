@@ -23,15 +23,22 @@ export interface Team {
   // uses this value to emit `/{slug}-tickets/artist/{id}` URLs which
   // resolve directly without redirect.
   ticketmasterAttractionId?: string;
-  // Canonical Fanatics team-store path. Shape:
-  // `/{league}/{slug}/o-N+t-N+z-N-N` (3 +-joined segments after the team
-  // slug, no `+d-`/`+f-` modifiers, no query string). Naive URLs like
-  // `fanatics.com/{league}/{slug}` 404 — only the canonical form
-  // resolves. Populated for all 167 teams by
-  // scripts/populate-fanatics-paths.ts from
-  // scripts/fanatics-team-mapping.json. The CTA component (FanaticsCTA)
-  // gates render on this field's presence; teams without a populated
-  // path are omitted from the cluster rather than linking to a 404.
+  // Fully-qualified canonical Fanatics team-store URL —
+  // `https://www.fanatics.com/{league}/{slug}/o-N+t-N+z-N-N`. This is the
+  // field FanaticsCTA renders. Stored as a full URL (not a path) on purpose:
+  // the value travels on every Team object into the RSC Flight payload, and a
+  // bare path there gets resolved same-origin by crawlers/preloaders → 404 on
+  // getpromonight.com. An https:// URL can't be mistaken for an internal
+  // link. Populated by scripts/migrate-fanatics-path-to-url.ts from the
+  // legacy fanaticsPath. The CTA component (FanaticsCTA) gates render on this
+  // field's presence; teams without it are omitted from the cluster rather
+  // than linking to a 404.
+  fanaticsUrl?: string;
+  // Legacy root-relative Fanatics path — `/{league}/{slug}/o-N+t-N+z-N-N`.
+  // Superseded by fanaticsUrl; kept as a read-path fallback for one deploy
+  // cycle. TODO(fanatics-url-cleanup): remove this field, the mapTeamDoc
+  // mapping, and the buildFanaticsUrl fallback after the deploy bakes and a
+  // follow-up migration deletes it from the team docs.
   fanaticsPath?: string;
 }
 
