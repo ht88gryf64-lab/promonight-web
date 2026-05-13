@@ -68,9 +68,6 @@ export const metadata: Metadata = {
     creator: '@promo_night_app',
     images: ['/og-image.png'],
   },
-  other: {
-    'impact-site-verification': 'cd6719e8-e432-42a9-9ff5-1940dd89c019',
-  },
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -92,7 +89,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             as Impact's verifier requires (it does not accept `content=`). */}
         <meta
           name="impact-site-verification"
-          {...{ value: 'ff9633f7-627d-4996-9b22-2f581e305e4f' }}
+          {...{ value: 'cd6719e8-e432-42a9-9ff5-1940dd89c019' }}
         />
       </head>
       <body className="relative">
