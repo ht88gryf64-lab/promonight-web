@@ -68,6 +68,9 @@ export const metadata: Metadata = {
     creator: '@promo_night_app',
     images: ['/og-image.png'],
   },
+  other: {
+    'impact-site-verification': 'cd6719e8-e432-42a9-9ff5-1940dd89c019',
+  },
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
