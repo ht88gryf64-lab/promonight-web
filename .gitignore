@@ -49,3 +49,10 @@ public/*.txt
 
 # throwaway promo-pipeline prototypes
 promo-pipeline/prototypes/
+
+# Analytics snapshots — local only
+scripts/snapshots/
+
+# Service account credentials — never commit
+service-account*.json
+gcp-credentials*.json

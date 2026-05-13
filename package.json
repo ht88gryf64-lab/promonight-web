@@ -25,6 +25,7 @@
     "server-only": "^0.0.1"
   },
   "devDependencies": {
+    "@google-analytics/data": "^5.2.2",
     "@napi-rs/canvas": "^0.1.99",
     "@tailwindcss/postcss": "^4.1.0",
     "@types/node": "^22.0.0",
