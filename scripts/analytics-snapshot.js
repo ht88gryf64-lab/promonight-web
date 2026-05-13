@@ -17,13 +17,11 @@
  *   POSTHOG_HOST               Optional, defaults to https://us.i.posthog.com
  *
  * Run:
- *   node scripts/analytics-snapshot.js
+ *   node --env-file=.env.local scripts/analytics-snapshot.js
  *
  * Either credential set can be missing. Script will skip that source
  * and report on whichever it can reach.
  */
-
-require('dotenv').config({ path: '.env.local' });
 
 const fs = require('node:fs');
 const path = require('node:path');
