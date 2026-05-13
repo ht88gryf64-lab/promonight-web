@@ -7,10 +7,13 @@
  * Required env vars (in .env.local, NEVER commit):
  *
  *   GA4_PROPERTY_ID            Numeric GA4 property ID (Admin > Property Settings)
- *   GOOGLE_APPLICATION_CREDENTIALS  Path to service account JSON
+ *   GOOGLE_APPLICATION_CREDENTIALS  Optional: path to service account JSON
  *                              (create in GCP Console, grant 'Viewer' role on
  *                              the GA4 property at analytics.google.com >
- *                              Admin > Property access management)
+ *                              Admin > Property access management).
+ *                              If unset, the GA4 client falls back to
+ *                              Application Default Credentials from
+ *                              `gcloud auth application-default login`.
  *
  *   POSTHOG_PERSONAL_API_KEY   Personal API key from posthog.com/me/settings
  *   POSTHOG_PROJECT_ID         Numeric project ID (PostHog > Settings > Project)
@@ -32,10 +35,6 @@ async function fetchGA4() {
   const propertyId = process.env.GA4_PROPERTY_ID;
   if (!propertyId) {
     console.warn('[GA4] Skipping: GA4_PROPERTY_ID not set');
-    return null;
-  }
-  if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-    console.warn('[GA4] Skipping: GOOGLE_APPLICATION_CREDENTIALS not set');
     return null;
   }
 
