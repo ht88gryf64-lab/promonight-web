@@ -13,6 +13,13 @@ import {
 import { normalizeSport, track } from '@/lib/analytics';
 
 const STORAGE_KEY = 'promonight:starred_teams';
+const INTRO_FLAG_KEY = 'promonight:has_seen_my_teams_intro';
+export const SHOW_STAR_TOAST_EVENT = 'promonight:show-star-toast';
+
+export type ShowStarToastDetail = {
+  teamName: string;
+  placement: string;
+};
 
 export type TeamMeta = {
   name: string;
@@ -127,6 +134,25 @@ export function StarredTeamsProvider({ children }: { children: ReactNode }) {
         sport: normalizeSport(meta.sport),
         placement,
       });
+
+      // First-star education toast. Only fires when the user is going from
+      // unstarred → starred AND has never seen the intro before. The flag
+      // flips immediately so a rapid double-click can't show the toast twice.
+      if (!wasStarred) {
+        try {
+          const seen = window.localStorage.getItem(INTRO_FLAG_KEY);
+          if (!seen) {
+            window.localStorage.setItem(INTRO_FLAG_KEY, '1');
+            window.dispatchEvent(
+              new CustomEvent<ShowStarToastDetail>(SHOW_STAR_TOAST_EVENT, {
+                detail: { teamName: meta.name, placement },
+              }),
+            );
+          }
+        } catch {
+          // localStorage unavailable — skip the toast rather than fail the star.
+        }
+      }
     },
     [],
   );

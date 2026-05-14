@@ -8,6 +8,7 @@ import { AnalyticsProvider } from '@/components/analytics/AnalyticsProvider';
 import { PageViewTracker } from '@/components/analytics/PageViewTracker';
 import { AdProvider } from '@/components/ads/AdProvider';
 import { StarredTeamsProvider } from '@/hooks/use-starred-teams';
+import { PostStarToastHost } from '@/components/post-star-toast';
 import { getPlayoffConfig } from '@/lib/data';
 import './globals.css';
 
@@ -109,6 +110,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <Nav playoffsActive={playoffsActive} />
               <main className="relative z-[1]">{children}</main>
               <Footer />
+              <PostStarToastHost />
             </StarredTeamsProvider>
           </AdProvider>
         </AnalyticsProvider>

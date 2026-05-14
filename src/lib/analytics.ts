@@ -37,7 +37,10 @@ export type AnalyticsEvent =
   | 'away_game_expanded'
   | 'ad_slot_viewed'
   | 'team_starred'
-  | 'team_unstarred';
+  | 'team_unstarred'
+  | 'post_star_toast_shown'
+  | 'post_star_toast_clicked'
+  | 'post_star_toast_dismissed';
 
 // `TONIGHT_AND_TOMORROW` is retained for backwards-compatibility with dashboards
 // that already segment on it; the bucketed hero (Phase 1.5) emits TONIGHT,
@@ -268,6 +271,13 @@ export type TeamStarEventProperties = {
   placement: string;
 };
 
+// First-star education toast lifecycle. `placement` is the placement of the
+// star that triggered the toast (the user's very first star ever) so we can
+// see which surface drives initial adoption.
+export type PostStarToastEventProperties = {
+  placement: string;
+};
+
 export type EventPropertiesMap = {
   page_view: PageViewProperties;
   cta_click: CtaClickProperties;
@@ -291,6 +301,9 @@ export type EventPropertiesMap = {
   ad_slot_viewed: AdSlotViewedProperties;
   team_starred: TeamStarEventProperties;
   team_unstarred: TeamStarEventProperties;
+  post_star_toast_shown: PostStarToastEventProperties;
+  post_star_toast_clicked: PostStarToastEventProperties;
+  post_star_toast_dismissed: PostStarToastEventProperties;
 };
 
 // ── Utilities ────────────────────────────────────────────────────────────

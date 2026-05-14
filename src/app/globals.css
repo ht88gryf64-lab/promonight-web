@@ -73,6 +73,16 @@ body::before {
   100% { transform: scale(1); }
 }
 
+@keyframes toast-slide-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+@keyframes toast-slide-out {
+  from { opacity: 1; transform: translateX(-50%) translateY(0); }
+  to   { opacity: 0; transform: translateX(-50%) translateY(20px); }
+}
+
 .animate-fade-up {
   animation: fade-up 0.7s ease both;
 }
@@ -88,6 +98,14 @@ body::before {
 .animate-star-pop {
   animation: star-pop 240ms ease-out;
   transform-origin: center;
+}
+
+.animate-toast-in {
+  animation: toast-slide-in 180ms ease-out both;
+}
+
+.animate-toast-out {
+  animation: toast-slide-out 200ms ease-in both;
 }
 
 .delay-1 { animation-delay: 0.1s; }
