@@ -16,6 +16,9 @@ PromoNight is a mobile app and website that tracks every promotional event -- gi
 - Homepage: https://www.getpromonight.com/
 - Browse all teams: https://www.getpromonight.com/teams
 - Team pages: https://www.getpromonight.com/{sport}/{team-slug} (e.g., /mlb/minnesota-twins)
+- Best promo nights of the year, score-ranked: https://www.getpromonight.com/best-promos
+- Best bobblehead nights of the year, score-ranked: https://www.getpromonight.com/best-promos/bobbleheads
+- Team-by-team promo schedule rankings: https://www.getpromonight.com/team-rankings
 - Sitemap: https://www.getpromonight.com/sitemap.xml
 
 ## Organization

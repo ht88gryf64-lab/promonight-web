@@ -100,6 +100,28 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'weekly',
       priority: 0.8,
     },
+    // Scoring discovery pages (promo-pipeline PR #19 surfaced to web).
+    // /best-promos and /team-rankings are hub-tier pages at 0.9; the
+    // bobbleheads sub-page is 0.8 since it's a narrower slice of the
+    // same data. changefreq matches the weekly pipeline cadence.
+    {
+      url: `${BASE_URL}/best-promos`,
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.9,
+    },
+    {
+      url: `${BASE_URL}/best-promos/bobbleheads`,
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
+    {
+      url: `${BASE_URL}/team-rankings`,
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.9,
+    },
     {
       url: `${BASE_URL}/download`,
       lastModified: now,
