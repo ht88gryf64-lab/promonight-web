@@ -47,8 +47,8 @@ public/*.txt
 # but DO commit ads.txt — required for AdSense verification, served at /ads.txt
 !public/ads.txt
 
-# throwaway promo-pipeline prototypes
-promo-pipeline/prototypes/
+# Sibling tool workspace, not part of the web app build.
+promo-pipeline/
 
 # Analytics snapshots — local only
 scripts/snapshots/
