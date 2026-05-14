@@ -40,7 +40,8 @@ export type AnalyticsEvent =
   | 'team_unstarred'
   | 'post_star_toast_shown'
   | 'post_star_toast_clicked'
-  | 'post_star_toast_dismissed';
+  | 'post_star_toast_dismissed'
+  | 'teams_browser_view';
 
 // `TONIGHT_AND_TOMORROW` is retained for backwards-compatibility with dashboards
 // that already segment on it; the bucketed hero (Phase 1.5) emits TONIGHT,
@@ -278,6 +279,13 @@ export type PostStarToastEventProperties = {
   placement: string;
 };
 
+// /teams browser page view. `league_filter` is the active filter at the
+// moment the event fires — always "All" on initial render. Tab switches
+// after that go through team_picker_tab_change rather than re-firing this.
+export type TeamsBrowserViewProperties = {
+  league_filter: string;
+};
+
 export type EventPropertiesMap = {
   page_view: PageViewProperties;
   cta_click: CtaClickProperties;
@@ -304,6 +312,7 @@ export type EventPropertiesMap = {
   post_star_toast_shown: PostStarToastEventProperties;
   post_star_toast_clicked: PostStarToastEventProperties;
   post_star_toast_dismissed: PostStarToastEventProperties;
+  teams_browser_view: TeamsBrowserViewProperties;
 };
 
 // ── Utilities ────────────────────────────────────────────────────────────
