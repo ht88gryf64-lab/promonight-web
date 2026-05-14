@@ -67,6 +67,12 @@ body::before {
   50%       { transform: translateY(-8px); }
 }
 
+@keyframes star-pop {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
 .animate-fade-up {
   animation: fade-up 0.7s ease both;
 }
@@ -77,6 +83,11 @@ body::before {
 
 .animate-float {
   animation: float 5s ease-in-out infinite;
+}
+
+.animate-star-pop {
+  animation: star-pop 240ms ease-out;
+  transform-origin: center;
 }
 
 .delay-1 { animation-delay: 0.1s; }
