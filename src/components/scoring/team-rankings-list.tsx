@@ -1,8 +1,9 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import type { ScoredPromoWithTeam, TeamScoreWithTeam } from '@/lib/types';
+import { track } from '@/lib/analytics';
 import { TeamRankingRow } from './team-ranking-row';
 import { LeagueFilter, type LeagueFilterValue } from './league-filter';
 
@@ -26,13 +27,25 @@ export function TeamRankingsList({
     return teamScores.filter((t) => t.league === league);
   }, [teamScores, league]);
 
+  const handleLeagueChange = useCallback(
+    (from: LeagueFilterValue, to: LeagueFilterValue) => {
+      track('score_filter_changed', {
+        surface: 'team_rankings',
+        filter_type: 'league',
+        from,
+        to,
+      });
+    },
+    [],
+  );
+
   return (
     <div>
       <div className="mb-8">
         <div className="font-mono text-[10px] tracking-[1.5px] uppercase text-text-muted mb-2">
           Filter by league
         </div>
-        <LeagueFilter />
+        <LeagueFilter onChange={handleLeagueChange} />
       </div>
 
       <p className="font-mono text-[11px] text-text-dim mb-4">

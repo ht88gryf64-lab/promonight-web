@@ -6,6 +6,7 @@ import {
 } from '@/lib/data';
 import { BestPromosBrowser } from '@/components/scoring/best-promos-browser';
 import { ScoredJsonLd } from '@/components/scoring/scored-jsonld';
+import { ScoringPageViewTracker } from '@/components/scoring/scoring-page-view-tracker';
 
 export const revalidate = 86400;
 
@@ -176,10 +177,18 @@ export default async function BobbleheadsPage() {
             sponsor presence, and highlight tier.
           </p>
 
+          <ScoringPageViewTracker
+            pageTitle="Best Bobblehead Nights"
+            scoreCount={promos.length}
+            defaultLeague="All"
+            defaultRange="90d"
+          />
+
           <div className="mt-10">
             <BestPromosBrowser
               initialPromos={promos}
               ticketsPlacement="best_promos_bobbleheads_card"
+              trackingSurface="best_promos_bobbleheads"
               inlineAnswers={INLINE_ANSWERS}
             />
           </div>

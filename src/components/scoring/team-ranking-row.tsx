@@ -1,7 +1,7 @@
-import Link from 'next/link';
 import type { ScoredPromoWithTeam, TeamScoreWithTeam } from '@/lib/types';
 import { SPORT_ICONS } from '@/lib/types';
 import { teamDisplayName } from '@/lib/promo-helpers';
+import { TrackedTapLink } from '../analytics/TrackedTapLink';
 import { ScoreBadge } from './score-badge';
 
 type TeamRankingRowProps = {
@@ -24,8 +24,16 @@ export function TeamRankingRow({ rank, teamScore, topPromo }: TeamRankingRowProp
   const teamUrl = `/${team.sportSlug}/${team.id}`;
 
   return (
-    <Link
+    <TrackedTapLink
       href={teamUrl}
+      trackEvent="team_ranking_row_tap"
+      trackProps={{
+        surface: 'team_rankings',
+        team_id: team.id,
+        league: team.league,
+        team_score: teamScore.teamScore,
+        rank,
+      }}
       className="group flex items-center gap-4 px-4 py-3 border-b border-border-subtle hover:bg-bg-card-hover transition-colors"
     >
       <span className="font-display text-2xl text-text-muted w-9 text-right shrink-0">
@@ -51,6 +59,6 @@ export function TeamRankingRow({ rank, teamScore, topPromo }: TeamRankingRowProp
         )}
       </div>
       <ScoreBadge score={teamScore.teamScore} size="md" />
-    </Link>
+    </TrackedTapLink>
   );
 }

@@ -6,6 +6,7 @@ import {
 } from '@/lib/data';
 import { BestPromosBrowser } from '@/components/scoring/best-promos-browser';
 import { ScoredJsonLd } from '@/components/scoring/scored-jsonld';
+import { ScoringPageViewTracker } from '@/components/scoring/scoring-page-view-tracker';
 
 // Server-side fetch runs once per ISR revalidate window. The scoring
 // pipeline writes weekly (Tuesday scan); daily revalidate is cheap
@@ -179,10 +180,18 @@ export default async function BestPromosPage() {
             tier. The list refreshes weekly with each Tuesday scan.
           </p>
 
+          <ScoringPageViewTracker
+            pageTitle="Best Sports Promo Nights"
+            scoreCount={promos.length}
+            defaultLeague="All"
+            defaultRange="90d"
+          />
+
           <div className="mt-10">
             <BestPromosBrowser
               initialPromos={promos}
               ticketsPlacement="best_promos_card"
+              trackingSurface="best_promos"
               inlineAnswers={INLINE_ANSWERS}
             />
           </div>

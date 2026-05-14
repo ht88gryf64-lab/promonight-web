@@ -1,8 +1,9 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { ScoredPromoWithTeam } from '@/lib/types';
+import { track, type ScoringPageSurface } from '@/lib/analytics';
 import { ScoredPromoCard } from './scored-promo-card';
 import { LeagueFilter, type LeagueFilterValue } from './league-filter';
 import { DateRangeFilter, type DateRangeFilterValue } from './date-range-filter';
@@ -22,6 +23,11 @@ type BestPromosBrowserProps = {
     TicketsBlockPlacement,
     'best_promos_card' | 'best_promos_bobbleheads_card'
   >;
+  // Event-level surface tag for the three new typed events fired from
+  // this component (score_filter_changed, scored_promo_card_tap,
+  // load_more_tap). Excludes 'team_rankings' since this component never
+  // renders on that page.
+  trackingSurface: Exclude<ScoringPageSurface, 'team_rankings'>;
   // Inline question-based H2-with-answer blocks injected into the list per
   // the AI Citation Doctrine. Skipped at positions past the rendered count.
   inlineAnswers?: InlineAnswerBlock[];
@@ -46,6 +52,7 @@ function addDaysYMD(base: Date, days: number): string {
 export function BestPromosBrowser({
   initialPromos,
   ticketsPlacement,
+  trackingSurface,
   inlineAnswers = [],
 }: BestPromosBrowserProps) {
   const searchParams = useSearchParams();
@@ -90,20 +97,54 @@ export function BestPromosBrowser({
     [inlineAnswers],
   );
 
+  // Stable handlers so the filter chips don't churn on every render.
+  // Both fire `score_filter_changed` with the surface + filter_type
+  // before the URL update. The from/to values carry the chip transition.
+  const handleLeagueChange = useCallback(
+    (from: LeagueFilterValue, to: LeagueFilterValue) => {
+      track('score_filter_changed', {
+        surface: trackingSurface,
+        filter_type: 'league',
+        from,
+        to,
+      });
+    },
+    [trackingSurface],
+  );
+  const handleRangeChange = useCallback(
+    (from: DateRangeFilterValue, to: DateRangeFilterValue) => {
+      track('score_filter_changed', {
+        surface: trackingSurface,
+        filter_type: 'range',
+        from,
+        to,
+      });
+    },
+    [trackingSurface],
+  );
+
+  const handleLoadMore = () => {
+    track('load_more_tap', {
+      surface: trackingSurface,
+      current_count: visibleCount,
+    });
+    setVisibleCount((v) => v + PAGE_SIZE);
+  };
+
   return (
     <div>
       <div className="mb-6">
         <div className="font-mono text-[10px] tracking-[1.5px] uppercase text-text-muted mb-2">
           Filter by league
         </div>
-        <LeagueFilter />
+        <LeagueFilter onChange={handleLeagueChange} />
       </div>
 
       <div className="mb-8">
         <div className="font-mono text-[10px] tracking-[1.5px] uppercase text-text-muted mb-2">
           Filter by date range
         </div>
-        <DateRangeFilter />
+        <DateRangeFilter onChange={handleRangeChange} />
       </div>
 
       <p className="font-mono text-[11px] text-text-dim mb-4">
@@ -120,6 +161,7 @@ export function BestPromosBrowser({
                 promo={promo}
                 showTickets
                 ticketsPlacement={ticketsPlacement}
+                trackingSurface={trackingSurface}
               />
               {answerHere && (
                 <section className="my-8 border-t border-border-subtle pt-6">
@@ -149,7 +191,7 @@ export function BestPromosBrowser({
         <div className="mt-8 flex justify-center">
           <button
             type="button"
-            onClick={() => setVisibleCount((v) => v + PAGE_SIZE)}
+            onClick={handleLoadMore}
             className="px-6 py-3 rounded-full border border-border-subtle bg-bg-card text-white text-sm font-mono tracking-[1px] uppercase hover:border-accent-red hover:text-accent-red transition-colors"
           >
             Show {nextChunk} more · {remaining} remaining

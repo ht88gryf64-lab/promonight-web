@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getAllTeamScores, getTopPromosPerTeam } from '@/lib/data';
 import type { ScoredPromoWithTeam } from '@/lib/types';
 import { TeamRankingsList } from '@/components/scoring/team-rankings-list';
+import { ScoringPageViewTracker } from '@/components/scoring/scoring-page-view-tracker';
 import { teamDisplayName } from '@/lib/promo-helpers';
 
 export const revalidate = 86400;
@@ -208,6 +209,12 @@ export default async function TeamRankingsPage() {
             hot-promo bonus. Filter by league to compare within MLB, MLS,
             or WNBA only.
           </p>
+
+          <ScoringPageViewTracker
+            pageTitle="Team Rankings"
+            scoreCount={teamScores.length}
+            defaultLeague="All"
+          />
 
           <div className="mt-10">
             <TeamRankingsList

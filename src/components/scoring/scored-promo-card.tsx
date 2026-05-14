@@ -1,7 +1,8 @@
-import Link from 'next/link';
 import type { ScoredPromoWithTeam } from '@/lib/types';
+import type { ScoringPageSurface } from '@/lib/analytics';
 import { teamDisplayName } from '@/lib/promo-helpers';
 import { PromoBadge } from '../promo-badge';
+import { TrackedTapLink } from '../analytics/TrackedTapLink';
 import { TicketsBlock, type TicketsBlockPlacement } from '../affiliates/TicketsBlock';
 import { ScoreBadge } from './score-badge';
 
@@ -16,6 +17,9 @@ type ScoredPromoCardProps = {
     TicketsBlockPlacement,
     'best_promos_card' | 'best_promos_bobbleheads_card'
   >;
+  // Page-level surface tag for the scored_promo_card_tap event. Excludes
+  // 'team_rankings' since that page doesn't render this card.
+  trackingSurface: Exclude<ScoringPageSurface, 'team_rankings'>;
 };
 
 function formatDateParts(dateStr: string) {
@@ -41,6 +45,7 @@ export function ScoredPromoCard({
   promo,
   showTickets = false,
   ticketsPlacement = 'best_promos_card',
+  trackingSurface,
 }: ScoredPromoCardProps) {
   const { team, derivedSignals } = promo;
   const teamName = teamDisplayName(team);
@@ -51,8 +56,17 @@ export function ScoredPromoCard({
 
   return (
     <article className="bg-bg-card border border-border-subtle rounded-xl overflow-hidden hover:border-border-hover transition-colors">
-      <Link
+      <TrackedTapLink
         href={`/${team.sportSlug}/${team.id}`}
+        trackEvent="scored_promo_card_tap"
+        trackProps={{
+          surface: trackingSurface,
+          promo_id: promo.promoId,
+          team_id: team.id,
+          league: team.league,
+          score: promo.score,
+          item_type: itemType,
+        }}
         className="group flex items-start gap-4 p-4"
       >
         <div className="flex-shrink-0 w-14 text-center">
@@ -102,7 +116,7 @@ export function ScoredPromoCard({
         <div className="flex-shrink-0 self-start">
           <ScoreBadge score={promo.score} size="md" />
         </div>
-      </Link>
+      </TrackedTapLink>
       {showTickets && (
         <div className="px-4 pb-4 pt-3 border-t border-border-subtle">
           <TicketsBlock

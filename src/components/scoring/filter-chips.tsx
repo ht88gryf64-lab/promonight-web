@@ -17,6 +17,10 @@ type FilterChipsProps<T extends string> = {
   // ("All") and date range ("90d") the default is implicit.
   defaultValue: T;
   ariaLabel?: string;
+  // Fires before the URL update so callers can emit a typed analytics
+  // event with the from/to values. Optional; pages that don't need
+  // tracking can skip it.
+  onChange?: (from: T, to: T) => void;
 };
 
 export function FilterChips<T extends string>({
@@ -24,6 +28,7 @@ export function FilterChips<T extends string>({
   options,
   defaultValue,
   ariaLabel,
+  onChange,
 }: FilterChipsProps<T>) {
   const router = useRouter();
   const pathname = usePathname();
@@ -32,6 +37,10 @@ export function FilterChips<T extends string>({
 
   const handleClick = (next: T) => {
     if (next === current) return;
+    // Fire the analytics callback first so the from/to values reflect
+    // the chip transition cleanly. The URL update then triggers the
+    // page to re-render with the new filter.
+    onChange?.(current, next);
     const params = new URLSearchParams(searchParams.toString());
     if (next === defaultValue) {
       params.delete(paramKey);

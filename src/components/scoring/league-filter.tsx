@@ -14,13 +14,18 @@ const OPTIONS: readonly FilterChipOption<LeagueFilterValue>[] = [
 // URL-synced league chips. Default ('All') is implicit so a clean URL means
 // "all scored leagues." NBA / NHL intentionally absent; they're not in the
 // scoring scope and the option set is closed.
-export function LeagueFilter() {
+type LeagueFilterProps = {
+  onChange?: (from: LeagueFilterValue, to: LeagueFilterValue) => void;
+};
+
+export function LeagueFilter({ onChange }: LeagueFilterProps = {}) {
   return (
     <FilterChips
       paramKey="league"
       options={OPTIONS}
       defaultValue="All"
       ariaLabel="Filter by league"
+      onChange={onChange}
     />
   );
 }

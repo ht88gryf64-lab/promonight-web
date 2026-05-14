@@ -15,6 +15,19 @@ export function PageViewTracker() {
 
   useEffect(() => {
     if (!pathname) return;
+    // Scoring discovery pages fire their own extended page_view via
+    // ScoringPageViewTracker (carrying score_count + filter state derived
+    // from the URL at the moment of mount). Skip the global firing on
+    // those routes to avoid double-counting. The scoring pages also
+    // suppress the refire-on-searchParams-change semantics this tracker
+    // uses; their page_view is once-per-mount, with filter cadence after
+    // covered by the score_filter_changed event.
+    if (
+      pathname.startsWith('/best-promos') ||
+      pathname.startsWith('/team-rankings')
+    ) {
+      return;
+    }
     const qs = searchParams?.toString() ?? '';
     const key = qs ? `${pathname}?${qs}` : pathname;
     if (lastFiredKey.current === key) return;
