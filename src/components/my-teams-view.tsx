@@ -818,6 +818,106 @@ function ThisWeekSection({
   );
 }
 
+const COMING_UP_VISIBLE_DEFAULT = 6;
+// Below this threshold, render the full list and skip the expand control.
+// Stops a "Show 1 more" button from appearing when there's only one extra
+// row to reveal — the row isn't worth the friction of a tap.
+const COMING_UP_COLLAPSE_THRESHOLD = 7;
+// Generous upper bound on the collapsible inner height. 60-day windows
+// cap practical row counts; a `max-h-[5000px]` cap covers any plausible
+// list without needing to measure DOM heights.
+const COMING_UP_EXPANDED_MAX = 5000;
+
+type ComputedRow = {
+  promo: StarredPromo;
+  team: Team;
+  isNewDate: boolean;
+  showBorderTop: boolean;
+};
+
+function buildRows(
+  promos: StarredPromo[],
+  teamById: Map<string, Team>,
+): ComputedRow[] {
+  // Walk linearly so isNewDate stays correct across the visible/hidden chunk
+  // split — the 7th row (first in the hidden slice) must still see the 6th
+  // row's date when deciding whether to render its date column. Precomputing
+  // here keeps that invariant regardless of how the list is later sliced.
+  let lastDate = '';
+  const out: ComputedRow[] = [];
+  for (const promo of promos) {
+    const team = teamById.get(promo.teamSlug);
+    if (!team) continue;
+    const isNewDate = promo.date !== lastDate;
+    const showBorderTop = out.length > 0 && isNewDate;
+    out.push({ promo, team, isNewDate, showBorderTop });
+    lastDate = promo.date;
+  }
+  return out;
+}
+
+function ComingUpRow({
+  row,
+  todayYMD,
+}: {
+  row: ComputedRow;
+  todayYMD: string;
+}) {
+  const { promo, team, isNewDate, showBorderTop } = row;
+  return (
+    <Link
+      key={`${promo.teamSlug}-${promo.promoId}`}
+      href={`/${team.sportSlug}/${team.id}`}
+      onClick={() => trackPromoTap(promo, todayYMD)}
+      className={`flex items-center gap-3 px-4 py-3 hover:bg-bg-card-hover transition-colors ${showBorderTop ? 'border-t border-border-subtle' : ''}`}
+    >
+      <div className="w-[42px] shrink-0">
+        {isNewDate ? (
+          <div>
+            <div className="font-mono text-[9px] tracking-[1px] uppercase text-text-dim">
+              {formatShortDate(promo.date).split(' ')[0]}
+            </div>
+            <div className="font-outfit font-extrabold text-[18px] text-white leading-none">
+              {formatShortDate(promo.date).split(' ')[1]}
+            </div>
+          </div>
+        ) : null}
+      </div>
+      <div
+        aria-hidden="true"
+        className="flex items-center justify-center w-9 h-9 rounded-lg shrink-0 text-lg"
+        style={{ backgroundColor: PROMO_TYPE_COLORS[promo.type] + '22' }}
+      >
+        {promo.icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="font-outfit font-bold text-[14px] text-white leading-tight truncate">
+          {promo.title}
+          {promo.highlight && (
+            <span className="ml-1.5 inline-flex items-center px-1 py-0 rounded bg-accent-red/20 text-accent-red text-[8px] font-mono tracking-[1px] uppercase align-middle">
+              Hot
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2 mt-0.5">
+          <span
+            className="font-mono text-[9px] uppercase tracking-[0.5px]"
+            style={{ color: PROMO_TYPE_COLORS[promo.type] }}
+          >
+            {PROMO_TYPE_LABELS[promo.type]}
+          </span>
+          <span className="text-text-dim text-[10px]">
+            {team.abbreviation} · {team.name}
+          </span>
+        </div>
+      </div>
+      <span aria-hidden="true" className="text-text-dim text-lg shrink-0">
+        ›
+      </span>
+    </Link>
+  );
+}
+
 function ComingUpSection({
   promos,
   teamById,
@@ -827,79 +927,64 @@ function ComingUpSection({
   teamById: Map<string, Team>;
   todayYMD: string;
 }) {
-  // Group consecutive rows by date so the date column doesn't repeat on every
-  // row when several teams share a date.
-  let lastDate = '';
+  const rows = useMemo(
+    () => buildRows(promos, teamById),
+    [promos, teamById],
+  );
+  const [expanded, setExpanded] = useState(false);
+
+  const expandable = rows.length > COMING_UP_COLLAPSE_THRESHOLD;
+  const visibleCount = expandable ? COMING_UP_VISIBLE_DEFAULT : rows.length;
+  const hiddenRows = expandable ? rows.slice(visibleCount) : [];
+  const hiddenCount = hiddenRows.length;
+
+  if (rows.length === 0) return null;
+
   return (
-    <section className="mb-8">
+    <section className="mb-6">
       <div className="mb-3">
         <span className="font-mono text-[10px] tracking-[1.5px] uppercase text-text-dim">
           Coming up
         </span>
       </div>
       <div className="rounded-2xl border border-border-subtle bg-bg-card overflow-hidden">
-        {promos.map((promo, i) => {
-          const team = teamById.get(promo.teamSlug);
-          if (!team) return null;
-          const isNewDate = promo.date !== lastDate;
-          lastDate = promo.date;
-          return (
-            <Link
-              key={`${promo.teamSlug}-${promo.promoId}`}
-              href={`/${team.sportSlug}/${team.id}`}
-              onClick={() => trackPromoTap(promo, todayYMD)}
-              className={`flex items-center gap-3 px-4 py-3 hover:bg-bg-card-hover transition-colors ${i > 0 && isNewDate ? 'border-t border-border-subtle' : ''}`}
-            >
-              <div className="w-[42px] shrink-0">
-                {isNewDate ? (
-                  <div>
-                    <div className="font-mono text-[9px] tracking-[1px] uppercase text-text-dim">
-                      {formatShortDate(promo.date).split(' ')[0]}
-                    </div>
-                    <div className="font-outfit font-extrabold text-[18px] text-white leading-none">
-                      {formatShortDate(promo.date).split(' ')[1]}
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-              <div
-                aria-hidden="true"
-                className="flex items-center justify-center w-9 h-9 rounded-lg shrink-0 text-lg"
-                style={{ backgroundColor: PROMO_TYPE_COLORS[promo.type] + '22' }}
-              >
-                {promo.icon}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-outfit font-bold text-[14px] text-white leading-tight truncate">
-                  {promo.title}
-                  {promo.highlight && (
-                    <span className="ml-1.5 inline-flex items-center px-1 py-0 rounded bg-accent-red/20 text-accent-red text-[8px] font-mono tracking-[1px] uppercase align-middle">
-                      Hot
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span
-                    className="font-mono text-[9px] uppercase tracking-[0.5px]"
-                    style={{ color: PROMO_TYPE_COLORS[promo.type] }}
-                  >
-                    {PROMO_TYPE_LABELS[promo.type]}
-                  </span>
-                  <span className="text-text-dim text-[10px]">
-                    {team.abbreviation} · {team.name}
-                  </span>
-                </div>
-              </div>
-              <span
-                aria-hidden="true"
-                className="text-text-dim text-lg shrink-0"
-              >
-                ›
-              </span>
-            </Link>
-          );
-        })}
+        {rows.slice(0, visibleCount).map((row) => (
+          <ComingUpRow
+            key={`${row.promo.teamSlug}-${row.promo.promoId}`}
+            row={row}
+            todayYMD={todayYMD}
+          />
+        ))}
+        {expandable && (
+          <div
+            id="my-teams-coming-up-overflow"
+            className="overflow-hidden transition-[max-height] duration-[220ms] ease-out"
+            style={{
+              maxHeight: expanded ? COMING_UP_EXPANDED_MAX : 0,
+            }}
+            aria-hidden={!expanded}
+          >
+            {hiddenRows.map((row) => (
+              <ComingUpRow
+                key={`${row.promo.teamSlug}-${row.promo.promoId}`}
+                row={row}
+                todayYMD={todayYMD}
+              />
+            ))}
+          </div>
+        )}
       </div>
+      {expandable && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
+          aria-controls="my-teams-coming-up-overflow"
+          className="mt-3 block w-full py-3 rounded-xl border bg-[rgba(255,255,255,0.04)] border-[rgba(255,255,255,0.1)] text-white font-outfit font-bold text-[13px] hover:bg-[rgba(255,255,255,0.07)] transition-colors"
+        >
+          {expanded ? 'Show less ↑' : `Show ${hiddenCount} more →`}
+        </button>
+      )}
     </section>
   );
 }
