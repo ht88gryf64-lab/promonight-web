@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { Suspense } from 'react';
 import {
   getAllTeamScores,
   getScoredPromosByItemType,
@@ -177,20 +178,24 @@ export default async function BobbleheadsPage() {
             sponsor presence, and highlight tier.
           </p>
 
-          <ScoringPageViewTracker
-            pageTitle="Best Bobblehead Nights"
-            scoreCount={promos.length}
-            defaultLeague="All"
-            defaultRange="90d"
-          />
+          <Suspense fallback={null}>
+            <ScoringPageViewTracker
+              pageTitle="Best Bobblehead Nights"
+              scoreCount={promos.length}
+              defaultLeague="All"
+              defaultRange="90d"
+            />
+          </Suspense>
 
           <div className="mt-10">
-            <BestPromosBrowser
-              initialPromos={promos}
-              ticketsPlacement="best_promos_bobbleheads_card"
-              trackingSurface="best_promos_bobbleheads"
-              inlineAnswers={INLINE_ANSWERS}
-            />
+            <Suspense fallback={null}>
+              <BestPromosBrowser
+                initialPromos={promos}
+                ticketsPlacement="best_promos_bobbleheads_card"
+                trackingSurface="best_promos_bobbleheads"
+                inlineAnswers={INLINE_ANSWERS}
+              />
+            </Suspense>
           </div>
 
           <section className="mt-16 pt-10 border-t border-border-subtle">

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { Suspense } from 'react';
 import { getAllTeamScores, getTopPromosPerTeam } from '@/lib/data';
 import type { ScoredPromoWithTeam } from '@/lib/types';
 import { TeamRankingsList } from '@/components/scoring/team-rankings-list';
@@ -210,17 +211,21 @@ export default async function TeamRankingsPage() {
             or WNBA only.
           </p>
 
-          <ScoringPageViewTracker
-            pageTitle="Team Rankings"
-            scoreCount={teamScores.length}
-            defaultLeague="All"
-          />
+          <Suspense fallback={null}>
+            <ScoringPageViewTracker
+              pageTitle="Team Rankings"
+              scoreCount={teamScores.length}
+              defaultLeague="All"
+            />
+          </Suspense>
 
           <div className="mt-10">
-            <TeamRankingsList
-              teamScores={teamScores}
-              topPromos={topPromos}
-            />
+            <Suspense fallback={null}>
+              <TeamRankingsList
+                teamScores={teamScores}
+                topPromos={topPromos}
+              />
+            </Suspense>
           </div>
 
           <section className="mt-16 pt-10 border-t border-border-subtle">

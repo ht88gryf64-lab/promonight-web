@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { Suspense } from 'react';
 import {
   getAllTeamScores,
   getScoredPromosInDateRange,
@@ -180,20 +181,27 @@ export default async function BestPromosPage() {
             tier. The list refreshes weekly with each Tuesday scan.
           </p>
 
-          <ScoringPageViewTracker
-            pageTitle="Best Sports Promo Nights"
-            scoreCount={promos.length}
-            defaultLeague="All"
-            defaultRange="90d"
-          />
+          {/* useSearchParams inside both children requires a Suspense
+              boundary during prerender; matches the layout-level pattern
+              already in place for PageViewTracker. */}
+          <Suspense fallback={null}>
+            <ScoringPageViewTracker
+              pageTitle="Best Sports Promo Nights"
+              scoreCount={promos.length}
+              defaultLeague="All"
+              defaultRange="90d"
+            />
+          </Suspense>
 
           <div className="mt-10">
-            <BestPromosBrowser
-              initialPromos={promos}
-              ticketsPlacement="best_promos_card"
-              trackingSurface="best_promos"
-              inlineAnswers={INLINE_ANSWERS}
-            />
+            <Suspense fallback={null}>
+              <BestPromosBrowser
+                initialPromos={promos}
+                ticketsPlacement="best_promos_card"
+                trackingSurface="best_promos"
+                inlineAnswers={INLINE_ANSWERS}
+              />
+            </Suspense>
           </div>
 
           <section className="mt-16 pt-10 border-t border-border-subtle">
