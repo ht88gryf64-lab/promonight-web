@@ -9,6 +9,11 @@ import { useStarredTeams } from '@/hooks/use-starred-teams';
 import { StarToggle } from './star-toggle';
 import { track } from '@/lib/analytics';
 import { getInStateTeamSlugs } from '@/lib/geo/state-to-teams';
+import { TicketmasterCTA } from './affiliates/TicketmasterCTA';
+import { FanaticsCTA } from './affiliates/FanaticsCTA';
+import { SpotHeroCTA } from './affiliates/SpotHeroCTA';
+import { BookingCTA } from './affiliates/BookingCTA';
+import { AffiliateDisclosure } from './affiliates/AffiliateDisclosure';
 import type {
   StarredPromo,
   StarredPromosResponse,
@@ -581,12 +586,18 @@ function StateB({
         <StarredChipsStrip teams={starredTeams} />
 
         {tonight.length > 0 && (
-          <TonightSection
-            promo={tonight[0]}
-            team={teamById.get(tonight[0].teamSlug) ?? null}
-            venue={venues[tonight[0].teamSlug] ?? null}
-            todayYMD={todayYMD}
-          />
+          <>
+            <TonightSection
+              promo={tonight[0]}
+              team={teamById.get(tonight[0].teamSlug) ?? null}
+              venue={venues[tonight[0].teamSlug] ?? null}
+              todayYMD={todayYMD}
+            />
+            <AffiliateClusterSection
+              team={teamById.get(tonight[0].teamSlug) ?? null}
+              venue={venues[tonight[0].teamSlug] ?? null}
+            />
+          </>
         )}
 
         {thisWeek.length > 0 && (
@@ -890,6 +901,78 @@ function ComingUpSection({
         })}
       </div>
     </section>
+  );
+}
+
+// ─── Affiliate cluster (TONIGHT only) ──────────────────────────────────────
+// Reuses the existing team-page CTA components verbatim. surface tag is
+// web_my_teams so the affiliate_click event payload carries the right
+// attribution; placement strings distinguish the singular Get-Tickets hero
+// from the Prepare-for-the-Game cluster on the dashboards.
+//
+// All four cards always render here. Per the affiliate gating audit, the
+// team-page already renders SpotHero and Booking unconditionally with
+// direct-URL fallbacks — there is no feature flag to bypass, so this
+// page's behavior matches without a workaround. FanaticsCTA self-gates on
+// team.fanaticsUrl/fanaticsPath presence (data-level, not feature-level);
+// teams without those fields silently drop from the cluster, same as on
+// team pages.
+function AffiliateClusterSection({
+  team,
+  venue,
+}: {
+  team: Team | null;
+  venue: Venue | null;
+}) {
+  if (!team) return null;
+  const venueDisplay = venue?.name ?? null;
+
+  return (
+    <>
+      <section className="mb-6">
+        <div className="mb-3">
+          <span className="font-mono text-[9px] tracking-[1.5px] uppercase text-text-dim">
+            Get tickets
+          </span>
+        </div>
+        <TicketmasterCTA
+          team={team}
+          surface="web_my_teams"
+          placement="my_teams_tonight"
+          size="full"
+        />
+      </section>
+
+      <section className="mb-6">
+        <div className="mb-3">
+          <span className="font-mono text-[9px] tracking-[1.5px] uppercase text-text-dim">
+            {venueDisplay
+              ? `Prepare for the game at ${venueDisplay}`
+              : 'Prepare for the game'}
+          </span>
+        </div>
+        <div className="flex flex-col gap-2.5">
+          <FanaticsCTA
+            team={team}
+            surface="web_my_teams"
+            placement="my_teams_prepare"
+          />
+          <SpotHeroCTA
+            team={team}
+            surface="web_my_teams"
+            placement="my_teams_prepare"
+            venue={venue}
+          />
+          <BookingCTA
+            team={team}
+            surface="web_my_teams"
+            placement="my_teams_prepare"
+            venue={venue}
+          />
+        </div>
+        <AffiliateDisclosure className="mt-3 text-center" />
+      </section>
+    </>
   );
 }
 
