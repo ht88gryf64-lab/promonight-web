@@ -5,6 +5,7 @@ import { PromoBadge } from './promo-badge';
 import { teamDisplayName, synthPromoId } from '@/lib/promo-helpers';
 import { normalizeSport, type EyebrowState } from '@/lib/analytics';
 import { TrackedTapLink } from './analytics/TrackedTapLink';
+import { StarToggleInline } from './star-toggle';
 
 export interface HeroBuckets {
   tonight: PromoWithTeam[];
@@ -228,11 +229,20 @@ function BucketSection({ title, promos, eyebrowState, isFirst }: BucketSectionPr
                   <div className="text-white font-semibold text-sm md:text-base leading-snug group-hover:text-accent-red transition-colors line-clamp-2">
                     {promo.title}
                   </div>
-                  <div className="text-text-secondary text-xs mt-1.5 truncate">
-                    {teamDisplayName(promo.team)}
-                    {promo.opponent && (
-                      <span className="text-text-dim"> vs {promo.opponent}</span>
-                    )}
+                  <div className="mt-1.5 flex items-center gap-1.5 min-w-0">
+                    <StarToggleInline
+                      teamSlug={promo.team.id}
+                      teamName={teamDisplayName(promo.team)}
+                      league={promo.team.league}
+                      sport={promo.team.sportSlug}
+                      placement="homepage_tonight_inline"
+                    />
+                    <div className="text-text-secondary text-xs truncate min-w-0">
+                      {teamDisplayName(promo.team)}
+                      {promo.opponent && (
+                        <span className="text-text-dim"> vs {promo.opponent}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </TrackedTapLink>

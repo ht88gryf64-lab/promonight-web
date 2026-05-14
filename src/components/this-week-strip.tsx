@@ -3,6 +3,7 @@ import { PromoBadge } from './promo-badge';
 import { teamDisplayName, synthPromoId } from '@/lib/promo-helpers';
 import { normalizeSport } from '@/lib/analytics';
 import { TrackedTapLink } from './analytics/TrackedTapLink';
+import { StarToggleInline } from './star-toggle';
 
 function formatDayLabel(dateStr: string): string {
   return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', {
@@ -114,12 +115,21 @@ export function ThisWeekStrip({ promos, today }: { promos: PromoWithTeam[]; toda
                         <div className="text-white font-semibold text-sm group-hover:text-accent-red transition-colors truncate">
                           {p.title}
                         </div>
-                        <div className="text-text-secondary text-xs mt-0.5 truncate">
-                          {teamDisplayName(p.team)}
-                          {p.opponent && (
-                            <span className="text-text-dim"> vs {p.opponent}</span>
-                          )}
-                          <span className="text-text-dim"> · {p.team.league}</span>
+                        <div className="mt-0.5 flex items-center gap-1.5 min-w-0">
+                          <StarToggleInline
+                            teamSlug={p.team.id}
+                            teamName={teamDisplayName(p.team)}
+                            league={p.team.league}
+                            sport={p.team.sportSlug}
+                            placement="homepage_this_week_inline"
+                          />
+                          <div className="text-text-secondary text-xs truncate min-w-0">
+                            {teamDisplayName(p.team)}
+                            {p.opponent && (
+                              <span className="text-text-dim"> vs {p.opponent}</span>
+                            )}
+                            <span className="text-text-dim"> · {p.team.league}</span>
+                          </div>
                         </div>
                       </div>
                     </TrackedTapLink>

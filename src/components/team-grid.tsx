@@ -6,6 +6,7 @@ import type { Team } from '@/lib/types';
 import { LEAGUE_ORDER } from '@/lib/types';
 import { track } from '@/lib/analytics';
 import { getInStateTeamSlugs } from '@/lib/geo/state-to-teams';
+import { useStarredTeams } from '@/hooks/use-starred-teams';
 
 // localStorage key + TTL for the cached visitor region. Region rarely
 // changes for a given device; refreshing daily is plenty. Storing only the
@@ -91,6 +92,8 @@ export function TeamGrid({
   // hydrated markup identical to the SSR output (alphabetical-by-rank).
   // Populated in useEffect once the region is known, triggering a reorder.
   const [region, setRegion] = useState<string | null>(null);
+  const { starred, isHydrated } = useStarredTeams();
+  const starredSet = useMemo(() => new Set(starred), [starred]);
 
   useEffect(() => {
     const cached = readGeoCache();
@@ -115,10 +118,23 @@ export function TeamGrid({
     };
   }, []);
 
-  const orderedTeams = useMemo(
-    () => (region ? reorderByRegion(teams, region) : teams),
-    [teams, region],
-  );
+  const orderedTeams = useMemo(() => {
+    // Geo reorder first, then partition starred → unstarred. Within each
+    // partition the geo-reordered (or natural) order is preserved so a
+    // starred user from MN still sees Twins-then-Wild-then-Vikings ordering
+    // among their starred set, not an arbitrary one. Pre-hydration the
+    // starred set is empty so SSR and first-client-render produce the
+    // same DOM — no hydration mismatch.
+    const reordered = region ? reorderByRegion(teams, region) : teams;
+    if (!isHydrated || starredSet.size === 0) return reordered;
+    const starredPart: Team[] = [];
+    const unstarredPart: Team[] = [];
+    for (const t of reordered) {
+      if (starredSet.has(t.id)) starredPart.push(t);
+      else unstarredPart.push(t);
+    }
+    return [...starredPart, ...unstarredPart];
+  }, [teams, region, isHydrated, starredSet]);
 
   const filtered =
     activeLeague === 'All'
