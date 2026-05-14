@@ -8,7 +8,9 @@ export type TicketsBlockPlacement =
   | 'promo_card'
   | 'playoffs_hub'
   | 'home_game_card'
-  | 'away_game_card';
+  | 'away_game_card'
+  | 'best_promos_card'
+  | 'best_promos_bobbleheads_card';
 
 type TicketsBlockProps = {
   team: Team;

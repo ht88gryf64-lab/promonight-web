@@ -43,7 +43,11 @@ export type AnalyticsEvent =
   | 'post_star_toast_dismissed'
   | 'teams_browser_view'
   | 'my_teams_view'
-  | 'my_teams_promo_tap';
+  | 'my_teams_promo_tap'
+  | 'score_filter_changed'
+  | 'scored_promo_card_tap'
+  | 'team_ranking_row_tap'
+  | 'load_more_tap';
 
 // `TONIGHT_AND_TOMORROW` is retained for backwards-compatibility with dashboards
 // that already segment on it; the bucketed hero (Phase 1.5) emits TONIGHT,
@@ -62,6 +66,7 @@ export type AnalyticsSurface =
   | 'web_league_index'
   | 'web_article'
   | 'web_my_teams'
+  | 'web_best_promos'
   | 'web_other';
 
 export type Sport = 'mlb' | 'nba' | 'nhl' | 'nfl' | 'mls' | 'wnba';
@@ -86,6 +91,17 @@ export type PageViewProperties = {
   page_title: string;
   team_slug?: string;
   sport?: Sport;
+  // Scoring discovery page extensions, populated only on /best-promos,
+  // /best-promos/bobbleheads, and /team-rankings page views. Carry the
+  // URL-derived filter state at the moment of the page view so dashboards
+  // can segment URL-landed-with-params traffic (e.g. someone hitting
+  // /best-promos?league=MLB&range=30d from a Reddit link) distinctly
+  // from default views. Score count is the visible-list-cap at fetch time.
+  // Filter-change cadence post-load rides the score_filter_changed event,
+  // not a re-fired page_view.
+  score_count?: number;
+  league_filter?: string;
+  date_range_filter?: string;
 };
 
 export type CtaClickProperties = {
@@ -308,6 +324,55 @@ export type MyTeamsPromoTapProperties = {
   days_until: number;
 };
 
+// Event-level surface tag for the scoring discovery pages. Distinct from
+// the typed AnalyticsSurface enum (which uses 'web_best_promos' for all
+// three routes at the page-identity level); this tag is the finer-grained
+// page identifier so dashboards can split the cluster.
+export type ScoringPageSurface =
+  | 'best_promos'
+  | 'best_promos_bobbleheads'
+  | 'team_rankings';
+
+// Fires when a user toggles a league or date-range chip on /best-promos,
+// /best-promos/bobbleheads, or /team-rankings. `filter_type` disambiguates
+// which chip group fired, since the same event name covers both.
+export type ScoreFilterChangedProperties = {
+  surface: ScoringPageSurface;
+  filter_type: 'league' | 'range';
+  from: string;
+  to: string;
+};
+
+// Fires when a user taps a ScoredPromoCard on /best-promos or
+// /best-promos/bobbleheads. `team_rankings` is excluded since it has no
+// ScoredPromoCard surface.
+export type ScoredPromoCardTapProperties = {
+  surface: Exclude<ScoringPageSurface, 'team_rankings'>;
+  promo_id: string;
+  team_id: string;
+  league: string;
+  score: number;
+  item_type: string | null;
+};
+
+// Fires when a user taps a TeamRankingRow on /team-rankings. `rank`
+// reflects the visible (filter-aware) rank, not the global rank.
+export type TeamRankingRowTapProperties = {
+  surface: 'team_rankings';
+  team_id: string;
+  league: string;
+  team_score: number;
+  rank: number;
+};
+
+// Fires when the "Show N more" button is tapped on /best-promos or
+// /best-promos/bobbleheads. `current_count` is the visible count BEFORE
+// the click expands it.
+export type LoadMoreTapProperties = {
+  surface: Exclude<ScoringPageSurface, 'team_rankings'>;
+  current_count: number;
+};
+
 export type EventPropertiesMap = {
   page_view: PageViewProperties;
   cta_click: CtaClickProperties;
@@ -337,6 +402,10 @@ export type EventPropertiesMap = {
   teams_browser_view: TeamsBrowserViewProperties;
   my_teams_view: MyTeamsViewProperties;
   my_teams_promo_tap: MyTeamsPromoTapProperties;
+  score_filter_changed: ScoreFilterChangedProperties;
+  scored_promo_card_tap: ScoredPromoCardTapProperties;
+  team_ranking_row_tap: TeamRankingRowTapProperties;
+  load_more_tap: LoadMoreTapProperties;
 };
 
 // ── Utilities ────────────────────────────────────────────────────────────
@@ -514,6 +583,7 @@ const KNOWN_SURFACES: ReadonlySet<AnalyticsSurface> = new Set<AnalyticsSurface>(
   'web_league_index',
   'web_article',
   'web_my_teams',
+  'web_best_promos',
   'web_other',
 ]);
 
@@ -526,6 +596,7 @@ export function inferSurfaceFromPath(path: string): AnalyticsSurface {
   if (path.startsWith('/playoffs')) return 'web_playoffs';
   if (path.startsWith('/promos/')) return 'web_article';
   if (path.startsWith('/my-teams')) return 'web_my_teams';
+  if (path.startsWith('/best-promos') || path.startsWith('/team-rankings')) return 'web_best_promos';
   if (path.startsWith('/teams')) return 'web_league_index';
   // /[sport]/[team] — team pages. Sports are known; anything else falls through.
   const m = path.match(/^\/([a-z]+)(?:\/|$)/);
