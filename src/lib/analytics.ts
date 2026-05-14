@@ -35,7 +35,9 @@ export type AnalyticsEvent =
   | 'game_day_view'
   | 'game_tap'
   | 'away_game_expanded'
-  | 'ad_slot_viewed';
+  | 'ad_slot_viewed'
+  | 'team_starred'
+  | 'team_unstarred';
 
 // `TONIGHT_AND_TOMORROW` is retained for backwards-compatibility with dashboards
 // that already segment on it; the bucketed hero (Phase 1.5) emits TONIGHT,
@@ -254,6 +256,18 @@ export type AdSlotViewedProperties = {
   page_type: string;
 };
 
+// My Teams starring family. `placement` is a standardized string from the
+// star-placement enum (e.g. "team_page_hero", "homepage_tonight_inline") so
+// dashboards can compare star activity across surfaces without having to
+// derive intent from page_path alone.
+export type TeamStarEventProperties = {
+  team_slug: string;
+  team_name: string;
+  league: string;
+  sport?: Sport;
+  placement: string;
+};
+
 export type EventPropertiesMap = {
   page_view: PageViewProperties;
   cta_click: CtaClickProperties;
@@ -275,6 +289,8 @@ export type EventPropertiesMap = {
   game_tap: GameTapProperties;
   away_game_expanded: AwayGameExpandedProperties;
   ad_slot_viewed: AdSlotViewedProperties;
+  team_starred: TeamStarEventProperties;
+  team_unstarred: TeamStarEventProperties;
 };
 
 // ── Utilities ────────────────────────────────────────────────────────────
