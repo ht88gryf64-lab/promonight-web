@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Team } from '@/lib/types';
 import { LEAGUE_ORDER, SPORT_ICONS } from '@/lib/types';
 import { track } from '@/lib/analytics';
+import { useStarredTeams } from '@/hooks/use-starred-teams';
 import { StarToggle } from './star-toggle';
 
 interface TeamsBrowserProps {
@@ -17,6 +18,8 @@ type ActiveLeague = typeof ALL | (typeof LEAGUE_ORDER)[number];
 
 export function TeamsBrowser({ teams, promoCounts }: TeamsBrowserProps) {
   const [active, setActive] = useState<ActiveLeague>(ALL);
+  const { starred, isHydrated } = useStarredTeams();
+  const starredSet = useMemo(() => new Set(starred), [starred]);
 
   // Fires once on initial mount so dashboards can attribute /teams page
   // views distinctly from /teams?league=X reloads. Subsequent filter changes
@@ -25,10 +28,38 @@ export function TeamsBrowser({ teams, promoCounts }: TeamsBrowserProps) {
     track('teams_browser_view', { league_filter: ALL });
   }, []);
 
-  const filtered = useMemo(
-    () => (active === ALL ? teams : teams.filter((t) => t.league === active)),
-    [teams, active],
-  );
+  // Filter, partition, sort:
+  //
+  // 1. Apply the active league filter.
+  // 2. Partition the filtered set into starred + unstarred. Pre-hydration
+  //    the starred set is empty by definition, so everything lands in
+  //    `unstarred` and the SSR + first-client-render produce identical
+  //    HTML (no hydration mismatch). After hydration the partition
+  //    re-runs with the real starred set, briefly reflowing the grid for
+  //    starred users — accepted by the amendment spec.
+  // 3. Sort each partition alphabetically by `team.name` and concatenate.
+  //
+  // Note that this changes the zero-star default order from league+city
+  // (the historical getAllTeams() sort) to pure alphabetical by team
+  // name. The amendment specifies alphabetical-by-name in both
+  // partitions, which is consistent across all states only if zero-star
+  // users also get name-alphabetical rather than the city sort.
+  const byName = (a: Team, b: Team) => a.name.localeCompare(b.name);
+  const filtered = useMemo(() => {
+    const base = active === ALL ? teams : teams.filter((t) => t.league === active);
+    const starredPart: Team[] = [];
+    const unstarredPart: Team[] = [];
+    for (const t of base) {
+      if (isHydrated && starredSet.has(t.id)) {
+        starredPart.push(t);
+      } else {
+        unstarredPart.push(t);
+      }
+    }
+    starredPart.sort(byName);
+    unstarredPart.sort(byName);
+    return [...starredPart, ...unstarredPart];
+  }, [teams, active, isHydrated, starredSet]);
 
   const switchTab = (next: ActiveLeague) => {
     if (next === active) return;
