@@ -42,7 +42,8 @@ export type AnalyticsEvent =
   | 'post_star_toast_clicked'
   | 'post_star_toast_dismissed'
   | 'teams_browser_view'
-  | 'my_teams_view';
+  | 'my_teams_view'
+  | 'my_teams_promo_tap';
 
 // `TONIGHT_AND_TOMORROW` is retained for backwards-compatibility with dashboards
 // that already segment on it; the bucketed hero (Phase 1.5) emits TONIGHT,
@@ -297,6 +298,15 @@ export type MyTeamsViewProperties = {
   state: 'A' | 'B' | 'C';
 };
 
+// Tap on any promo card or row inside /my-teams. `days_until` is computed
+// against today's local date; 0 = tonight, positive = upcoming. Never
+// negative — the page only renders forward-looking promos.
+export type MyTeamsPromoTapProperties = {
+  team_slug: string;
+  promo_id: string;
+  days_until: number;
+};
+
 export type EventPropertiesMap = {
   page_view: PageViewProperties;
   cta_click: CtaClickProperties;
@@ -325,6 +335,7 @@ export type EventPropertiesMap = {
   post_star_toast_dismissed: PostStarToastEventProperties;
   teams_browser_view: TeamsBrowserViewProperties;
   my_teams_view: MyTeamsViewProperties;
+  my_teams_promo_tap: MyTeamsPromoTapProperties;
 };
 
 // ── Utilities ────────────────────────────────────────────────────────────
