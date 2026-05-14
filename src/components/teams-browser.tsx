@@ -28,23 +28,20 @@ export function TeamsBrowser({ teams, promoCounts }: TeamsBrowserProps) {
     track('teams_browser_view', { league_filter: ALL });
   }, []);
 
-  // Filter, partition, sort:
+  // Filter and partition:
   //
   // 1. Apply the active league filter.
-  // 2. Partition the filtered set into starred + unstarred. Pre-hydration
-  //    the starred set is empty by definition, so everything lands in
-  //    `unstarred` and the SSR + first-client-render produce identical
-  //    HTML (no hydration mismatch). After hydration the partition
-  //    re-runs with the real starred set, briefly reflowing the grid for
-  //    starred users — accepted by the amendment spec.
-  // 3. Sort each partition alphabetically by `team.name` and concatenate.
+  // 2. Partition the filtered set into starred + unstarred, preserving
+  //    each team's index from `teams` (which getAllTeams() ships sorted
+  //    by league then city). Concatenating the partitions yields the
+  //    historical natural order for zero-star users and "starred-first,
+  //    natural order within partition" for starred users.
   //
-  // Note that this changes the zero-star default order from league+city
-  // (the historical getAllTeams() sort) to pure alphabetical by team
-  // name. The amendment specifies alphabetical-by-name in both
-  // partitions, which is consistent across all states only if zero-star
-  // users also get name-alphabetical rather than the city sort.
-  const byName = (a: Team, b: Team) => a.name.localeCompare(b.name);
+  // Pre-hydration the starred set is empty by definition, so everything
+  // lands in `unstarred` and the SSR + first-client-render produce
+  // identical HTML (no hydration mismatch). After hydration the
+  // partition re-runs with the real starred set, briefly reflowing the
+  // grid for starred users.
   const filtered = useMemo(() => {
     const base = active === ALL ? teams : teams.filter((t) => t.league === active);
     const starredPart: Team[] = [];
@@ -56,8 +53,6 @@ export function TeamsBrowser({ teams, promoCounts }: TeamsBrowserProps) {
         unstarredPart.push(t);
       }
     }
-    starredPart.sort(byName);
-    unstarredPart.sort(byName);
     return [...starredPart, ...unstarredPart];
   }, [teams, active, isHydrated, starredSet]);
 
