@@ -27,16 +27,28 @@ export type TeamMeta = {
   sport: string;
 };
 
+// Canonical placement enum for the star-event family. Tier 1 (large 20px
+// star in a 28x28 button) lands on surfaces where the team itself is the
+// primary unit. Tier 2 (small inline star) lands inside dense promo lists
+// where the team is referenced contextually. Every <StarToggle> and
+// <StarToggleInline> call site must pass one of these strings; TypeScript
+// enforces the closed set.
+//
+// `playoffs_hub_promo_inline` was scoped in the original spec but dropped
+// in Checkpoint C: the parent team card already carries a Tier 1 star, so
+// inline stars on child promo entries would be redundant clutter on the
+// 40%-of-traffic /playoffs hub.
 export type StarPlacement =
+  // ── Tier 1 ────────────────────────────────────────────────────────────
   | 'team_page_hero'
   | 'teams_browser_card'
   | 'my_teams_featured'
   | 'playoffs_hub_team_card'
   | 'homepage_find_your_team'
+  // ── Tier 2 ────────────────────────────────────────────────────────────
   | 'homepage_tonight_inline'
   | 'homepage_this_week_inline'
   | 'promo_aggregator_inline'
-  | 'playoffs_hub_promo_inline'
   | 'footer_team_list';
 
 type StarredTeamsContextValue = {
