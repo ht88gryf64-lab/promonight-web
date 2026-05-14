@@ -562,6 +562,14 @@ function StateB({
     (t) => !teamsWithPromos.has(t.id),
   );
 
+  // Affiliate cluster anchor. Because `promos` is sorted asc, the first
+  // entry is either today's TONIGHT promo (when one exists) or the next
+  // soonest upcoming promo otherwise. Both branches of the spec's anchor
+  // rule collapse to the same selection.
+  const anchor: StarredPromo | null = promos[0] ?? null;
+  const anchorTeam = anchor ? teamById.get(anchor.teamSlug) ?? null : null;
+  const anchorVenue = anchor ? venues[anchor.teamSlug] ?? null : null;
+
   return (
     <div className="pt-28 pb-20 px-6">
       <div className="max-w-3xl mx-auto">
@@ -586,18 +594,12 @@ function StateB({
         <StarredChipsStrip teams={starredTeams} />
 
         {tonight.length > 0 && (
-          <>
-            <TonightSection
-              promo={tonight[0]}
-              team={teamById.get(tonight[0].teamSlug) ?? null}
-              venue={venues[tonight[0].teamSlug] ?? null}
-              todayYMD={todayYMD}
-            />
-            <AffiliateClusterSection
-              team={teamById.get(tonight[0].teamSlug) ?? null}
-              venue={venues[tonight[0].teamSlug] ?? null}
-            />
-          </>
+          <TonightSection
+            promo={tonight[0]}
+            team={teamById.get(tonight[0].teamSlug) ?? null}
+            venue={venues[tonight[0].teamSlug] ?? null}
+            todayYMD={todayYMD}
+          />
         )}
 
         {thisWeek.length > 0 && (
@@ -614,6 +616,10 @@ function StateB({
             teamById={teamById}
             todayYMD={todayYMD}
           />
+        )}
+
+        {anchorTeam && (
+          <AffiliateClusterSection team={anchorTeam} venue={anchorVenue} />
         )}
 
         {offseasonTeams.length > 0 && (
@@ -989,14 +995,19 @@ function ComingUpSection({
   );
 }
 
-// ─── Affiliate cluster (TONIGHT only) ──────────────────────────────────────
+// ─── Affiliate cluster (anchored below COMING UP) ──────────────────────────
+// Renders below the upcoming list whenever State B has at least one promo
+// in the 60-day window. The anchor is picked by State B (TONIGHT promo if
+// it exists, otherwise the soonest upcoming) and passed in as `team` +
+// `venue` so the CTA URL builders generate destinations for that game.
+//
 // Reuses the existing team-page CTA components verbatim. surface tag is
 // web_my_teams so the affiliate_click event payload carries the right
 // attribution; placement strings distinguish the singular Get-Tickets hero
 // from the Prepare-for-the-Game cluster on the dashboards.
 //
 // All four cards always render here. Per the affiliate gating audit, the
-// team-page already renders SpotHero and Booking unconditionally with
+// team page already renders SpotHero and Booking unconditionally with
 // direct-URL fallbacks — there is no feature flag to bypass, so this
 // page's behavior matches without a workaround. FanaticsCTA self-gates on
 // team.fanaticsUrl/fanaticsPath presence (data-level, not feature-level);
@@ -1006,10 +1017,9 @@ function AffiliateClusterSection({
   team,
   venue,
 }: {
-  team: Team | null;
+  team: Team;
   venue: Venue | null;
 }) {
-  if (!team) return null;
   const venueDisplay = venue?.name ?? null;
 
   return (
