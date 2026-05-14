@@ -83,25 +83,36 @@ export function StarToggle({
   );
 }
 
-// Tier 2: 20x20 button containing a 14px star. Used inside dense promo lists
-// where the team is referenced contextually rather than being the primary
-// unit. No pop animation — the surrounding row already has its own hover
-// feedback and a bouncing star inside a list reads as noise.
+type StarToggleInlineProps = CommonProps & {
+  // Icon size in pixels. Button hit area scales as size + 6 so the touch
+  // target stays usable: default 14 → 20x20 button, footer's 12 → 18x18.
+  // Use this only when the surrounding layout demands tighter density;
+  // most call sites should use the default.
+  size?: number;
+};
+
+// Tier 2: small inline star (default 14px) inside a square hit area. Used
+// inside dense promo lists where the team is referenced contextually
+// rather than being the primary unit. No pop animation — the surrounding
+// row already has its own hover feedback and a bouncing star inside a
+// list reads as noise.
 export function StarToggleInline({
   teamSlug,
   teamName,
   league,
   sport,
   placement,
-}: CommonProps) {
+  size = 14,
+}: StarToggleInlineProps) {
   const { toggleStar, isStarred, isHydrated } = useStarredTeams();
+  const buttonSize = size + 6;
 
   if (!isHydrated) {
     return (
       <span
         aria-hidden="true"
         className="inline-block"
-        style={{ width: 20, height: 20 }}
+        style={{ width: buttonSize, height: buttonSize }}
       />
     );
   }
@@ -122,9 +133,9 @@ export function StarToggleInline({
       aria-label={filled ? `Unstar ${teamName}` : `Star ${teamName}`}
       aria-pressed={filled}
       className="inline-flex items-center justify-center rounded-sm bg-transparent border-0 cursor-pointer p-0 focus:outline-none focus-visible:ring-1 focus-visible:ring-accent-red"
-      style={{ width: 20, height: 20, lineHeight: 0 }}
+      style={{ width: buttonSize, height: buttonSize, lineHeight: 0 }}
     >
-      <StarIcon filled={filled} size={14} surface="dark" />
+      <StarIcon filled={filled} size={size} surface="dark" />
     </button>
   );
 }

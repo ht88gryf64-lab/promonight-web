@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import type { Team } from '@/lib/types';
 import { LEAGUE_ORDER } from '@/lib/types';
+import { StarToggleInline } from './star-toggle';
 
 export function FooterTeamSitemap({ teams }: { teams: Team[] }) {
   const [open, setOpen] = useState(false);
@@ -65,13 +66,22 @@ export function FooterTeamSitemap({ teams }: { teams: Team[] }) {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-1.5">
             {activeList.map((t) => (
-              <Link
-                key={t.id}
-                href={`/${t.sportSlug}/${t.id}`}
-                className="text-text-secondary text-sm hover:text-white transition-colors truncate"
-              >
-                {t.city} {t.name}
-              </Link>
+              <div key={t.id} className="flex items-center gap-1.5 min-w-0">
+                <StarToggleInline
+                  teamSlug={t.id}
+                  teamName={`${t.city} ${t.name}`}
+                  league={t.league}
+                  sport={t.sportSlug}
+                  placement="footer_team_list"
+                  size={12}
+                />
+                <Link
+                  href={`/${t.sportSlug}/${t.id}`}
+                  className="text-text-secondary text-sm hover:text-white transition-colors truncate min-w-0"
+                >
+                  {t.city} {t.name}
+                </Link>
+              </div>
             ))}
           </div>
         </div>
