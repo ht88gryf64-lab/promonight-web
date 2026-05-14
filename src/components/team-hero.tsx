@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { Team, Venue, PromoType } from '@/lib/types';
 import { SPORT_ICONS, PROMO_TYPE_LABELS } from '@/lib/types';
 import { teamDisplayName } from '@/lib/promo-helpers';
+import { StarToggle } from './star-toggle';
 
 interface TeamHeroProps {
   team: Team;
@@ -53,10 +54,27 @@ export function TeamHero({ team, venue, promoCount, promoCounts }: TeamHeroProps
           </span>
         </div>
 
-        {/* Team name */}
-        <h1 className="font-display text-4xl md:text-6xl lg:text-7xl tracking-[1px] leading-[0.95] mb-2">
-          {displayName.toUpperCase()}
-        </h1>
+        {/* Team name with star toggle. StarToggle is a sibling of the H1
+            rather than a child so the heading stays free of nested
+            interactive content. Tier 1 sizing (28x28 / 20px icon) per the
+            star-placement spec; surface="dark" because the hero sits on
+            the team-color gradient and the unstarred outline needs the
+            translucent white stroke to read against any team's palette. */}
+        <div className="flex items-start gap-4 mb-2">
+          <h1 className="font-display text-4xl md:text-6xl lg:text-7xl tracking-[1px] leading-[0.95] flex-1 min-w-0">
+            {displayName.toUpperCase()}
+          </h1>
+          <div className="pt-2 md:pt-3 lg:pt-4 shrink-0">
+            <StarToggle
+              teamSlug={team.id}
+              teamName={displayName}
+              league={team.league}
+              sport={team.sportSlug}
+              placement="team_page_hero"
+              surface="dark"
+            />
+          </div>
+        </div>
         <p className="font-display text-2xl md:text-3xl tracking-[1px] text-text-secondary mb-2">
           {new Date().getFullYear()} PROMO SCHEDULE
         </p>

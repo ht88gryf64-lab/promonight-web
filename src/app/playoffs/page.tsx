@@ -10,6 +10,7 @@ import { TicketsBlock } from '@/components/affiliates/TicketsBlock';
 import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { AD_SLOTS } from '@/lib/ads/slots';
+import { StarToggle } from '@/components/star-toggle';
 
 export const revalidate = 3600;
 
@@ -462,8 +463,8 @@ function TeamCard({
   const teamUrl = `/${team.sportSlug}/${team.id}`;
 
   return (
-    <article className="bg-bg-card border border-border-subtle rounded-xl p-5 md:p-6 flex flex-col">
-      <div className="mb-4">
+    <article className="relative bg-bg-card border border-border-subtle rounded-xl p-5 md:p-6 flex flex-col">
+      <div className="mb-4 pr-12">
         <h3 className="font-display text-xl md:text-2xl tracking-[0.5px]">
           <Link href={teamUrl} className="hover:text-accent-red transition-colors">
             {teamDisplayName(team)}
@@ -474,6 +475,16 @@ function TeamCard({
             vs {opponent}
           </p>
         )}
+      </div>
+      <div className="absolute top-4 right-4 md:top-5 md:right-5">
+        <StarToggle
+          teamSlug={team.id}
+          teamName={teamDisplayName(team)}
+          league={team.league}
+          sport={team.sportSlug}
+          placement="playoffs_hub_team_card"
+          surface="dark"
+        />
       </div>
 
       <ul className="space-y-2 flex-1">

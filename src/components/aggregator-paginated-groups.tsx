@@ -6,6 +6,7 @@ import type { PromoWithTeam } from '@/lib/types';
 import { PromoBadge } from './promo-badge';
 import { teamDisplayName } from '@/lib/promo-helpers';
 import type { AggregatorGroup } from './aggregator-layout';
+import { StarToggleInline } from './star-toggle';
 
 const INITIAL_COUNT = 50;
 const STEP = 50;
@@ -36,6 +37,16 @@ export function AggregatorPaginatedGroups({ groups }: { groups: AggregatorGroup[
     remaining -= take.length;
   }
 
+  // Inline stars use a first-occurrence-only rule across the whole rendered
+  // list. Each team gets exactly one star in the page — on the row where it
+  // first appears as the user scrolls. The seenSlugs set is local to this
+  // render so a "Show more" click reruns the walk over the new visible set
+  // (which still places the star on the same earliest occurrence, since the
+  // first 50 entries don't shuffle when 50 more append). Mutating a local
+  // Set during the map is safe: it isn't user-observable state, just a
+  // render-pass accumulator.
+  const seenSlugs = new Set<string>();
+
   return (
     <>
       <div className="space-y-10">
@@ -47,6 +58,8 @@ export function AggregatorPaginatedGroups({ groups }: { groups: AggregatorGroup[
             <div className="space-y-2">
               {group.promos.map((p, i) => {
                 const { day, weekday, month } = formatDateParts(p.date);
+                const showStar = !seenSlugs.has(p.team.id);
+                if (showStar) seenSlugs.add(p.team.id);
                 return (
                   <Link
                     key={`${group.label}-${i}`}
@@ -69,12 +82,31 @@ export function AggregatorPaginatedGroups({ groups }: { groups: AggregatorGroup[
                       <div className="text-white font-semibold text-sm group-hover:text-accent-red transition-colors truncate">
                         {p.title}
                       </div>
-                      <div className="text-text-secondary text-xs mt-0.5">
-                        {teamDisplayName(p.team)}
-                        {p.opponent && (
-                          <span className="text-text-dim"> vs {p.opponent}</span>
+                      <div className="mt-0.5 flex items-center gap-1.5 min-w-0">
+                        {showStar ? (
+                          <StarToggleInline
+                            teamSlug={p.team.id}
+                            teamName={teamDisplayName(p.team)}
+                            league={p.team.league}
+                            sport={p.team.sportSlug}
+                            placement="promo_aggregator_inline"
+                          />
+                        ) : (
+                          // Empty same-size spacer keeps the team-name baseline
+                          // aligned with rows where the star renders.
+                          <span
+                            aria-hidden="true"
+                            className="inline-block"
+                            style={{ width: 20, height: 20 }}
+                          />
                         )}
-                        <span className="text-text-dim"> &middot; {p.team.league}</span>
+                        <div className="text-text-secondary text-xs truncate min-w-0">
+                          {teamDisplayName(p.team)}
+                          {p.opponent && (
+                            <span className="text-text-dim"> vs {p.opponent}</span>
+                          )}
+                          <span className="text-text-dim"> &middot; {p.team.league}</span>
+                        </div>
                       </div>
                     </div>
                   </Link>

@@ -3,6 +3,7 @@ import { PromoBadge } from './promo-badge';
 import { teamDisplayName, synthPromoId } from '@/lib/promo-helpers';
 import { normalizeSport } from '@/lib/analytics';
 import { TrackedTapLink } from './analytics/TrackedTapLink';
+import { StarToggleInline } from './star-toggle';
 
 function formatDayLabel(dateStr: string): string {
   return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', {
@@ -77,52 +78,65 @@ export function ThisWeekStrip({ promos, today }: { promos: PromoWithTeam[]; toda
                 {list.map((p, i) => {
                   const { day, weekday, month } = formatDateParts(p.date);
                   return (
-                    <TrackedTapLink
+                    <div
                       key={`${p.team.id}-${i}`}
-                      href={`/${p.team.sportSlug}/${p.team.id}`}
-                      trackEvent="this_week_card_tap"
-                      trackProps={{
-                        surface: 'web_home',
-                        team_id: p.team.id,
-                        sport: normalizeSport(p.team.league),
-                        promo_id: synthPromoId(p.team.id, p),
-                        promo_type: p.type,
-                        is_highlight: p.highlight,
-                        days_out: daysBetween(today, p.date),
-                      }}
-                      className="group bg-bg-card border border-border-subtle rounded-xl p-4 flex items-center gap-4 hover:border-border-hover transition-colors"
+                      className="relative bg-bg-card border border-border-subtle rounded-xl hover:border-border-hover transition-colors"
                     >
-                      <div className="flex-shrink-0 w-14 text-center">
-                        <div className="font-mono text-[9px] tracking-[1px] text-text-muted">
-                          {month}
+                      <TrackedTapLink
+                        href={`/${p.team.sportSlug}/${p.team.id}`}
+                        trackEvent="this_week_card_tap"
+                        trackProps={{
+                          surface: 'web_home',
+                          team_id: p.team.id,
+                          sport: normalizeSport(p.team.league),
+                          promo_id: synthPromoId(p.team.id, p),
+                          promo_type: p.type,
+                          is_highlight: p.highlight,
+                          days_out: daysBetween(today, p.date),
+                        }}
+                        className="group block p-4 pr-10 flex items-center gap-4"
+                      >
+                        <div className="flex-shrink-0 w-14 text-center">
+                          <div className="font-mono text-[9px] tracking-[1px] text-text-muted">
+                            {month}
+                          </div>
+                          <div className="font-display text-2xl leading-none">
+                            {day}
+                          </div>
+                          <div className="font-mono text-[9px] tracking-[1px] text-text-dim">
+                            {weekday}
+                          </div>
                         </div>
-                        <div className="font-display text-2xl leading-none">
-                          {day}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
+                            <span className="text-base">{p.icon}</span>
+                            <PromoBadge type={p.type} />
+                            {p.highlight && (
+                              <span className="text-[10px] font-mono text-accent-red">HOT</span>
+                            )}
+                          </div>
+                          <div className="text-white font-semibold text-sm group-hover:text-accent-red transition-colors truncate">
+                            {p.title}
+                          </div>
+                          <div className="text-text-secondary text-xs mt-0.5 truncate">
+                            {teamDisplayName(p.team)}
+                            {p.opponent && (
+                              <span className="text-text-dim"> vs {p.opponent}</span>
+                            )}
+                            <span className="text-text-dim"> · {p.team.league}</span>
+                          </div>
                         </div>
-                        <div className="font-mono text-[9px] tracking-[1px] text-text-dim">
-                          {weekday}
-                        </div>
+                      </TrackedTapLink>
+                      <div className="absolute top-1/2 -translate-y-1/2 right-3 z-10">
+                        <StarToggleInline
+                          teamSlug={p.team.id}
+                          teamName={teamDisplayName(p.team)}
+                          league={p.team.league}
+                          sport={p.team.sportSlug}
+                          placement="homepage_this_week_inline"
+                        />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-center gap-2 mb-1">
-                          <span className="text-base">{p.icon}</span>
-                          <PromoBadge type={p.type} />
-                          {p.highlight && (
-                            <span className="text-[10px] font-mono text-accent-red">HOT</span>
-                          )}
-                        </div>
-                        <div className="text-white font-semibold text-sm group-hover:text-accent-red transition-colors truncate">
-                          {p.title}
-                        </div>
-                        <div className="text-text-secondary text-xs mt-0.5 truncate">
-                          {teamDisplayName(p.team)}
-                          {p.opponent && (
-                            <span className="text-text-dim"> vs {p.opponent}</span>
-                          )}
-                          <span className="text-text-dim"> · {p.team.league}</span>
-                        </div>
-                      </div>
-                    </TrackedTapLink>
+                    </div>
                   );
                 })}
               </div>
