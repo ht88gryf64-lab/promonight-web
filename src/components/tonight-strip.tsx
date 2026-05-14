@@ -179,73 +179,77 @@ function BucketSection({ title, promos, eyebrowState, isFirst }: BucketSectionPr
                 ? '#60a5fa'
                 : '#fb923c';
             return (
-              <TrackedTapLink
+              <div
                 key={`${promo.team.id}-${promo.date}-${i}`}
-                href={`/${promo.team.sportSlug}/${promo.team.id}`}
-                trackEvent="tonight_card_tap"
-                trackProps={{
-                  surface: 'web_home',
-                  team_id: promo.team.id,
-                  sport: normalizeSport(promo.team.league),
-                  promo_id: synthPromoId(promo.team.id, promo),
-                  promo_type: promo.type,
-                  is_highlight: promo.highlight,
-                  eyebrow_state: eyebrowState,
-                }}
-                className="group relative bg-bg-card border border-border-subtle rounded-2xl p-5 transition-all hover:-translate-y-0.5 hover:border-border-hover flex gap-4 overflow-hidden snap-start flex-shrink-0 w-[300px] md:w-[340px]"
+                className="relative bg-bg-card border border-border-subtle rounded-2xl transition-all hover:-translate-y-0.5 hover:border-border-hover overflow-hidden snap-start flex-shrink-0 w-[300px] md:w-[340px]"
                 style={{ borderLeftWidth: '3px', borderLeftColor: typeColor }}
               >
-                {promo.highlight && (
-                  <div
-                    className="absolute top-0 right-0 w-24 h-24 pointer-events-none"
-                    style={{
-                      background:
-                        'radial-gradient(circle at top right, rgba(239,68,68,0.25) 0%, transparent 70%)',
-                    }}
-                    aria-hidden="true"
-                  />
-                )}
-                <div className="flex-shrink-0 w-14 text-center">
-                  <div className="font-mono text-[9px] tracking-[1px] text-text-muted">
-                    {month}
-                  </div>
-                  <div className="font-display text-3xl leading-none mt-0.5">
-                    {day}
-                  </div>
-                  <div className="font-mono text-[9px] tracking-[1px] text-text-dim mt-0.5">
-                    {weekday}
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0 relative">
-                  <div className="flex items-center gap-2 mb-2 flex-wrap">
-                    <span className="text-lg">{promo.icon}</span>
-                    <PromoBadge type={promo.type} />
-                    {promo.highlight && (
-                      <span className="text-[10px] font-mono text-accent-red">
-                        HOT
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-white font-semibold text-sm md:text-base leading-snug group-hover:text-accent-red transition-colors line-clamp-2">
-                    {promo.title}
-                  </div>
-                  <div className="mt-1.5 flex items-center gap-1.5 min-w-0">
-                    <StarToggleInline
-                      teamSlug={promo.team.id}
-                      teamName={teamDisplayName(promo.team)}
-                      league={promo.team.league}
-                      sport={promo.team.sportSlug}
-                      placement="homepage_tonight_inline"
+                <TrackedTapLink
+                  href={`/${promo.team.sportSlug}/${promo.team.id}`}
+                  trackEvent="tonight_card_tap"
+                  trackProps={{
+                    surface: 'web_home',
+                    team_id: promo.team.id,
+                    sport: normalizeSport(promo.team.league),
+                    promo_id: synthPromoId(promo.team.id, promo),
+                    promo_type: promo.type,
+                    is_highlight: promo.highlight,
+                    eyebrow_state: eyebrowState,
+                  }}
+                  className="group block p-5 pr-10 flex gap-4"
+                >
+                  {promo.highlight && (
+                    <div
+                      className="absolute top-0 right-0 w-24 h-24 pointer-events-none"
+                      style={{
+                        background:
+                          'radial-gradient(circle at top right, rgba(239,68,68,0.25) 0%, transparent 70%)',
+                      }}
+                      aria-hidden="true"
                     />
-                    <div className="text-text-secondary text-xs truncate min-w-0">
+                  )}
+                  <div className="flex-shrink-0 w-14 text-center">
+                    <div className="font-mono text-[9px] tracking-[1px] text-text-muted">
+                      {month}
+                    </div>
+                    <div className="font-display text-3xl leading-none mt-0.5">
+                      {day}
+                    </div>
+                    <div className="font-mono text-[9px] tracking-[1px] text-text-dim mt-0.5">
+                      {weekday}
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0 relative">
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      <span className="text-lg">{promo.icon}</span>
+                      <PromoBadge type={promo.type} />
+                      {promo.highlight && (
+                        <span className="text-[10px] font-mono text-accent-red">
+                          HOT
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-white font-semibold text-sm md:text-base leading-snug group-hover:text-accent-red transition-colors line-clamp-2">
+                      {promo.title}
+                    </div>
+                    <div className="text-text-secondary text-xs mt-1.5 truncate">
                       {teamDisplayName(promo.team)}
                       {promo.opponent && (
                         <span className="text-text-dim"> vs {promo.opponent}</span>
                       )}
                     </div>
                   </div>
+                </TrackedTapLink>
+                <div className="absolute top-2.5 right-2.5 z-10">
+                  <StarToggleInline
+                    teamSlug={promo.team.id}
+                    teamName={teamDisplayName(promo.team)}
+                    league={promo.team.league}
+                    sport={promo.team.sportSlug}
+                    placement="homepage_tonight_inline"
+                  />
                 </div>
-              </TrackedTapLink>
+              </div>
             );
           })}
         </div>
