@@ -52,11 +52,89 @@ export interface Promo {
   highlight: boolean;
   icon: string;
   recurring: boolean;
+  // Optional scoring + ingest-extended fields. Populated by the
+  // promo-pipeline scoring layer (PR #19) on MLB / MLS / WNBA promos.
+  // Absent on NBA / NHL promos (not in scoring scope) and on any promo
+  // ingested before the scoring layer ran.
+  score?: number;
+  scoreBreakdown?: ScoreBreakdown;
+  derivedSignals?: DerivedSignals;
+  scoredAt?: string;
+  attendanceCap?: number | null;
+  presentedBy?: string | null;
+  whileSuppliesLast?: boolean;
 }
 
 export interface PromoWithTeam extends Promo {
   team: Team;
 }
+
+// Five-component score breakdown the scoring pipeline writes alongside the
+// total `score`. Component values sum to the total. Names match the
+// pipeline's weight table exactly.
+export interface ScoreBreakdown {
+  baseType: number;
+  itemType: number;
+  highlight: number;
+  limitedQuantity: number;
+  sponsor: number;
+}
+
+// Per-promo derived signals the pipeline extracts (structured first, regex
+// fallback). `limitedQuantity` is a boolean, NOT an object as an earlier
+// brief draft assumed; the source ('structured' | 'regex' | 'none') lives
+// on `signalSources` as a sibling. `sponsor` and `itemType` carry the
+// extracted string values directly.
+export interface DerivedSignals {
+  itemType: string | null;
+  limitedQuantity: boolean;
+  quantityCap: number | null;
+  sponsor: string | null;
+  isGenericTitle: boolean;
+  signalSources: {
+    limitedQuantity: string;
+    sponsor: string;
+  };
+}
+
+// Promo with the scoring fields required (not optional). Use this for
+// scoring-page consumers that have already filtered to scored promos.
+export interface ScoredPromoWithTeam extends PromoWithTeam {
+  promoId: string;
+  score: number;
+  scoreBreakdown: ScoreBreakdown;
+  derivedSignals: DerivedSignals;
+  scoredAt: string;
+}
+
+// teamScores/{teamId} document shape after the canonical-team join.
+// `teamName` is intentionally NOT read from the Firestore doc because the
+// scoring pipeline writes inconsistent values (slug on May 12 rescores,
+// display name on May 11 backfill). We always look up the canonical
+// display name via the joined `team` object instead.
+export interface TeamScore {
+  teamId: string;
+  league: string;
+  teamScore: number;
+  promoCount: number;
+  averagePromoScore: number;
+  highlightCount: number;
+  varietyCount: number;
+  bonuses: { variety: number; hot: number };
+  computedAt: string;
+}
+
+export interface TeamScoreWithTeam extends TeamScore {
+  team: Team;
+}
+
+// Leagues currently in scope for the scoring layer. NBA and NHL are
+// intentionally excluded; their promos exist in Firestore without
+// score / scoreBreakdown / derivedSignals fields and don't appear in the
+// teamScores collection. Filtering at this set keeps the scoring-pages
+// code league-agnostic everywhere else.
+export const SCORED_LEAGUES = new Set(['MLB', 'MLS', 'WNBA'] as const);
+export type ScoredLeague = 'MLB' | 'MLS' | 'WNBA';
 
 export interface Venue {
   name: string;

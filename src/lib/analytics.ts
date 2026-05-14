@@ -62,6 +62,7 @@ export type AnalyticsSurface =
   | 'web_league_index'
   | 'web_article'
   | 'web_my_teams'
+  | 'web_best_promos'
   | 'web_other';
 
 export type Sport = 'mlb' | 'nba' | 'nhl' | 'nfl' | 'mls' | 'wnba';
@@ -514,6 +515,7 @@ const KNOWN_SURFACES: ReadonlySet<AnalyticsSurface> = new Set<AnalyticsSurface>(
   'web_league_index',
   'web_article',
   'web_my_teams',
+  'web_best_promos',
   'web_other',
 ]);
 
@@ -526,6 +528,7 @@ export function inferSurfaceFromPath(path: string): AnalyticsSurface {
   if (path.startsWith('/playoffs')) return 'web_playoffs';
   if (path.startsWith('/promos/')) return 'web_article';
   if (path.startsWith('/my-teams')) return 'web_my_teams';
+  if (path.startsWith('/best-promos') || path.startsWith('/team-rankings')) return 'web_best_promos';
   if (path.startsWith('/teams')) return 'web_league_index';
   // /[sport]/[team] — team pages. Sports are known; anything else falls through.
   const m = path.match(/^\/([a-z]+)(?:\/|$)/);

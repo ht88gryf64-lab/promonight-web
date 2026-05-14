@@ -15,7 +15,12 @@ import type {
   ActivePlayoffTeam,
   Game,
   GameStatus,
+  ScoredPromoWithTeam,
+  TeamScoreWithTeam,
+  ScoreBreakdown,
+  DerivedSignals,
 } from './types';
+import { SCORED_LEAGUES } from './types';
 import { resolveIcon, dedupePromos } from './promo-helpers';
 import { getVenueOverride } from './venue-overrides';
 
@@ -69,7 +74,7 @@ function mapTeamDoc(doc: FirebaseFirestore.DocumentSnapshot): Team {
 function mapPromoDoc(doc: FirebaseFirestore.DocumentSnapshot): Promo {
   const data = doc.data()!;
   const type = data.type as PromoType;
-  return {
+  const promo: Promo = {
     date: data.date,
     time: data.time || '',
     opponent: data.opponent || '',
@@ -80,6 +85,21 @@ function mapPromoDoc(doc: FirebaseFirestore.DocumentSnapshot): Promo {
     icon: resolveIcon(data.title, type, data.icon || ''),
     recurring: data.recurring || false,
   };
+  // Optional scoring + ingest-extended fields, read defensively. Missing on
+  // NBA / NHL promos and on any older docs.
+  if (typeof data.score === 'number') promo.score = data.score;
+  if (data.scoreBreakdown) promo.scoreBreakdown = data.scoreBreakdown as ScoreBreakdown;
+  if (data.derivedSignals) promo.derivedSignals = data.derivedSignals as DerivedSignals;
+  if (data.scoredAt) {
+    promo.scoredAt =
+      data.scoredAt instanceof Timestamp
+        ? data.scoredAt.toDate().toISOString()
+        : String(data.scoredAt);
+  }
+  if (data.attendanceCap !== undefined) promo.attendanceCap = data.attendanceCap;
+  if (data.presentedBy !== undefined) promo.presentedBy = data.presentedBy;
+  if (data.whileSuppliesLast !== undefined) promo.whileSuppliesLast = data.whileSuppliesLast;
+  return promo;
 }
 
 export async function getAllTeams(): Promise<Team[]> {
@@ -702,4 +722,248 @@ export async function getTeamsWithPromoCounts(): Promise<(Team & { promoCount: n
     })
   );
   return results;
+}
+
+// ── Scoring readers ────────────────────────────────────────────────────────
+// Surface the promo-pipeline scoring layer (PR #19 in promo-pipeline) to the
+// /best-promos, /best-promos/bobbleheads, and /team-rankings discovery pages.
+// All three readers filter to SCORED_LEAGUES (MLB / MLS / WNBA) so callers
+// never see NBA / NHL data and don't need to know about the exclusion.
+
+// Internal helper. Walks the collectionGroup once, returns enriched promos.
+// `dateRange` is inclusive on both ends. `itemTypeFilter`, when set, filters
+// to `derivedSignals.itemType === filter` (used by /best-promos/bobbleheads).
+async function fetchScoredPromos(
+  startDate: string,
+  endDate: string,
+  itemTypeFilter?: string,
+): Promise<ScoredPromoWithTeam[]> {
+  const teams = await getAllTeams();
+  const teamById = new Map(teams.map((t) => [t.id, t]));
+
+  // Primary path: composite collectionGroup query for the date range. This is
+  // the same path getPromosInDateRange uses, so the required index already
+  // exists in production. Fallback to per-team reads if the composite query
+  // throws (matches getPromosInDateRange's defensive pattern).
+  let docs: FirebaseFirestore.QueryDocumentSnapshot[] = [];
+  try {
+    const snapshot = await db
+      .collectionGroup('promos')
+      .where('date', '>=', startDate)
+      .where('date', '<=', endDate)
+      .orderBy('date', 'asc')
+      .get();
+    docs = snapshot.docs;
+  } catch (err) {
+    console.error('fetchScoredPromos collectionGroup failed, falling back', err);
+    const perTeam = await Promise.all(
+      teams.map(async (team) => {
+        const s = await db
+          .collection('teams')
+          .doc(team.id)
+          .collection('promos')
+          .where('date', '>=', startDate)
+          .where('date', '<=', endDate)
+          .get();
+        return s.docs;
+      }),
+    );
+    docs = perTeam.flat();
+  }
+
+  const out: ScoredPromoWithTeam[] = [];
+  for (const doc of docs) {
+    const teamRef = doc.ref.parent.parent;
+    if (!teamRef) continue;
+    const team = teamById.get(teamRef.id);
+    if (!team) continue;
+    if (!SCORED_LEAGUES.has(team.league as 'MLB' | 'MLS' | 'WNBA')) continue;
+
+    const data = doc.data();
+    if (typeof data.score !== 'number') continue;
+    if (!data.scoreBreakdown || !data.derivedSignals) continue;
+
+    if (itemTypeFilter) {
+      const itemType = data.derivedSignals.itemType;
+      if (itemType !== itemTypeFilter) continue;
+    }
+
+    const type = data.type as PromoType;
+    let scoredAtIso = '';
+    if (data.scoredAt instanceof Timestamp) {
+      scoredAtIso = data.scoredAt.toDate().toISOString();
+    } else if (typeof data.scoredAt === 'string') {
+      scoredAtIso = data.scoredAt;
+    }
+
+    out.push({
+      promoId: doc.id,
+      team,
+      date: data.date,
+      time: data.time || '',
+      opponent: data.opponent || '',
+      type,
+      title: data.title,
+      description: data.description || '',
+      highlight: data.highlight === true,
+      icon: resolveIcon(data.title, type, data.icon || ''),
+      recurring: data.recurring === true,
+      score: data.score,
+      scoreBreakdown: data.scoreBreakdown as ScoreBreakdown,
+      derivedSignals: data.derivedSignals as DerivedSignals,
+      scoredAt: scoredAtIso,
+      attendanceCap: data.attendanceCap ?? null,
+      presentedBy: data.presentedBy ?? null,
+      whileSuppliesLast: data.whileSuppliesLast === true,
+    });
+  }
+
+  // Sort by score desc with date asc as tiebreaker, then cap.
+  out.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    return a.date.localeCompare(b.date);
+  });
+  return out;
+}
+
+// Returns the top N scored promos in [start, end] across MLB / MLS / WNBA,
+// sorted by score desc then date asc. The default cap (300) is the
+// server-fetch bound for /best-promos; client-side pagination operates over
+// the returned array.
+export async function getScoredPromosInDateRange(
+  startDate: string,
+  endDate: string,
+  limit: number = 300,
+): Promise<ScoredPromoWithTeam[]> {
+  const all = await fetchScoredPromos(startDate, endDate);
+  return all.slice(0, limit);
+}
+
+// Same as above but pre-filtered to a specific derivedSignals.itemType.
+// Used by /best-promos/bobbleheads with filter='bobblehead'. No cap by
+// default since the bobblehead corpus is ~204 globally.
+export async function getScoredPromosByItemType(
+  startDate: string,
+  endDate: string,
+  itemType: string,
+  limit: number = 500,
+): Promise<ScoredPromoWithTeam[]> {
+  const all = await fetchScoredPromos(startDate, endDate, itemType);
+  return all.slice(0, limit);
+}
+
+// Returns all teamScores for scored leagues, joined against the canonical
+// `teams/{id}` doc for display name + colors. Sorted by teamScore desc.
+// Filters out any teamScores doc whose teamId doesn't resolve in `teams/`
+// (defense against orphan score rows after a schema migration).
+export async function getAllTeamScores(): Promise<TeamScoreWithTeam[]> {
+  const [scoresSnap, teams] = await Promise.all([
+    db.collection('teamScores').get(),
+    getAllTeams(),
+  ]);
+  const teamById = new Map(teams.map((t) => [t.id, t]));
+
+  const out: TeamScoreWithTeam[] = [];
+  for (const doc of scoresSnap.docs) {
+    const data = doc.data();
+    const teamId = (data.teamId as string) || doc.id;
+    const team = teamById.get(teamId);
+    if (!team) continue;
+    const league = data.league as string;
+    if (!SCORED_LEAGUES.has(league as 'MLB' | 'MLS' | 'WNBA')) continue;
+
+    let computedAtIso = '';
+    if (data.computedAt instanceof Timestamp) {
+      computedAtIso = data.computedAt.toDate().toISOString();
+    } else if (typeof data.computedAt === 'string') {
+      computedAtIso = data.computedAt;
+    }
+
+    out.push({
+      teamId,
+      league,
+      teamScore: typeof data.teamScore === 'number' ? data.teamScore : 0,
+      promoCount: typeof data.promoCount === 'number' ? data.promoCount : 0,
+      averagePromoScore:
+        typeof data.averagePromoScore === 'number' ? data.averagePromoScore : 0,
+      highlightCount:
+        typeof data.highlightCount === 'number' ? data.highlightCount : 0,
+      varietyCount: typeof data.varietyCount === 'number' ? data.varietyCount : 0,
+      bonuses: data.bonuses || { variety: 0, hot: 0 },
+      computedAt: computedAtIso,
+      team,
+    });
+  }
+
+  out.sort((a, b) => b.teamScore - a.teamScore);
+  return out;
+}
+
+// Returns the top upcoming scored promo per team across MLB / MLS / WNBA,
+// keyed by team slug. One collectionGroup query, bucketed in memory, vs the
+// 73 separate queries the rankings tease would otherwise require. Used by
+// /team-rankings for the "Top promo: X, score Y" line on each row.
+export async function getTopPromosPerTeam(
+  fromDate: string,
+): Promise<Map<string, ScoredPromoWithTeam>> {
+  const teams = await getAllTeams();
+  const teamById = new Map(teams.map((t) => [t.id, t]));
+
+  let docs: FirebaseFirestore.QueryDocumentSnapshot[] = [];
+  try {
+    const snapshot = await db
+      .collectionGroup('promos')
+      .where('date', '>=', fromDate)
+      .get();
+    docs = snapshot.docs;
+  } catch (err) {
+    console.error('getTopPromosPerTeam collectionGroup failed', err);
+    return new Map();
+  }
+
+  const topByTeam = new Map<string, ScoredPromoWithTeam>();
+  for (const doc of docs) {
+    const teamRef = doc.ref.parent.parent;
+    if (!teamRef) continue;
+    const team = teamById.get(teamRef.id);
+    if (!team) continue;
+    if (!SCORED_LEAGUES.has(team.league as 'MLB' | 'MLS' | 'WNBA')) continue;
+
+    const data = doc.data();
+    if (typeof data.score !== 'number') continue;
+    if (!data.scoreBreakdown || !data.derivedSignals) continue;
+
+    const existing = topByTeam.get(team.id);
+    if (existing && existing.score >= data.score) continue;
+
+    const type = data.type as PromoType;
+    let scoredAtIso = '';
+    if (data.scoredAt instanceof Timestamp) {
+      scoredAtIso = data.scoredAt.toDate().toISOString();
+    } else if (typeof data.scoredAt === 'string') {
+      scoredAtIso = data.scoredAt;
+    }
+
+    topByTeam.set(team.id, {
+      promoId: doc.id,
+      team,
+      date: data.date,
+      time: data.time || '',
+      opponent: data.opponent || '',
+      type,
+      title: data.title,
+      description: data.description || '',
+      highlight: data.highlight === true,
+      icon: resolveIcon(data.title, type, data.icon || ''),
+      recurring: data.recurring === true,
+      score: data.score,
+      scoreBreakdown: data.scoreBreakdown as ScoreBreakdown,
+      derivedSignals: data.derivedSignals as DerivedSignals,
+      scoredAt: scoredAtIso,
+      attendanceCap: data.attendanceCap ?? null,
+      presentedBy: data.presentedBy ?? null,
+      whileSuppliesLast: data.whileSuppliesLast === true,
+    });
+  }
+  return topByTeam;
 }
