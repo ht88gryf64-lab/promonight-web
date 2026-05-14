@@ -1,8 +1,10 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { trackInstallClick } from '@/lib/analytics';
+import { useStarredTeams } from '@/hooks/use-starred-teams';
 
 const BROWSE_LINKS = [
   { href: '/promos/this-week', label: 'Hot this week' },
@@ -18,6 +20,11 @@ interface NavProps {
 export function Nav({ playoffsActive = false }: NavProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [browseOpen, setBrowseOpen] = useState(false);
+  const pathname = usePathname();
+  const { count, isHydrated } = useStarredTeams();
+  const isMyTeamsActive = pathname === '/my-teams';
+  const showStarCount = isHydrated && count > 0;
+  const starCountLabel = `${count} starred team${count === 1 ? '' : 's'}`;
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-10 py-4 bg-bg/80 backdrop-blur-xl border-b border-border-subtle">
@@ -33,6 +40,19 @@ export function Nav({ playoffsActive = false }: NavProps) {
           className="font-mono text-[11px] tracking-[0.08em] uppercase text-text-secondary hover:text-white transition-colors"
         >
           Teams
+        </Link>
+        <Link
+          href="/my-teams"
+          aria-current={isMyTeamsActive ? 'page' : undefined}
+          className={`relative inline-flex items-center font-mono text-[11px] tracking-[0.08em] uppercase transition-colors ${isMyTeamsActive ? 'text-white' : 'text-text-secondary hover:text-white'}`}
+        >
+          My Teams
+          {showStarCount && (
+            <span
+              aria-label={starCountLabel}
+              className="ml-1.5 inline-block w-1.5 h-1.5 rounded-full bg-[#FBBF24]"
+            />
+          )}
         </Link>
         {playoffsActive && (
           <Link
@@ -107,6 +127,20 @@ export function Nav({ playoffsActive = false }: NavProps) {
             className="font-mono text-[11px] tracking-[0.08em] uppercase text-text-secondary hover:text-white"
           >
             Teams
+          </Link>
+          <Link
+            href="/my-teams"
+            onClick={() => setMenuOpen(false)}
+            aria-current={isMyTeamsActive ? 'page' : undefined}
+            className={`relative inline-flex items-center font-mono text-[11px] tracking-[0.08em] uppercase ${isMyTeamsActive ? 'text-white' : 'text-text-secondary hover:text-white'}`}
+          >
+            My Teams
+            {showStarCount && (
+              <span
+                aria-label={starCountLabel}
+                className="ml-1.5 inline-block w-1.5 h-1.5 rounded-full bg-[#FBBF24]"
+              />
+            )}
           </Link>
           {playoffsActive && (
             <Link
