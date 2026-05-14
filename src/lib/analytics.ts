@@ -41,7 +41,8 @@ export type AnalyticsEvent =
   | 'post_star_toast_shown'
   | 'post_star_toast_clicked'
   | 'post_star_toast_dismissed'
-  | 'teams_browser_view';
+  | 'teams_browser_view'
+  | 'my_teams_view';
 
 // `TONIGHT_AND_TOMORROW` is retained for backwards-compatibility with dashboards
 // that already segment on it; the bucketed hero (Phase 1.5) emits TONIGHT,
@@ -286,6 +287,16 @@ export type TeamsBrowserViewProperties = {
   league_filter: string;
 };
 
+// /my-teams page view. `state` reflects which of the three branches
+// rendered ("A" empty, "B" populated, "C" starred-but-quiet). Fires once
+// per hydrated render; state transitions (e.g. starring from State A
+// into State B/C) re-fire the event with the new state.
+export type MyTeamsViewProperties = {
+  starred_count: number;
+  has_tonight_promo: boolean;
+  state: 'A' | 'B' | 'C';
+};
+
 export type EventPropertiesMap = {
   page_view: PageViewProperties;
   cta_click: CtaClickProperties;
@@ -313,6 +324,7 @@ export type EventPropertiesMap = {
   post_star_toast_clicked: PostStarToastEventProperties;
   post_star_toast_dismissed: PostStarToastEventProperties;
   teams_browser_view: TeamsBrowserViewProperties;
+  my_teams_view: MyTeamsViewProperties;
 };
 
 // ── Utilities ────────────────────────────────────────────────────────────
