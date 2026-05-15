@@ -151,6 +151,14 @@ export interface Venue {
   gatesOpen?: string;
   league: string;
   teamId: string;
+  // Short team ids (`{nickname}-{league}`, e.g. `lac-nfl`, `clt-mls`) of
+  // other teams that play home games at this physical venue. One-way
+  // pointer today: only the team that owns the suffixed venue doc
+  // populates this; the canonical / unsuffixed doc does not list its
+  // co-tenants. May span leagues (NFL venue docs reference MLS co-tenants
+  // for stadiums like SoFi / MetLife / Soldier Field / Gillette).
+  // Not load-bearing for travel CTAs, which look up by team display name.
+  sharedTeams?: string[];
   // Optional venue-plan fields. Populated per-venue via data-ops; left empty
   // for most teams. Render only when present.
   parkingInfo?: string;
@@ -164,19 +172,41 @@ export type GameStatus = 'scheduled' | 'postponed' | 'canceled' | 'completed';
 
 export interface Game {
   id: string;
-  league: string; // 'mlb'
+  league: string; // 'mlb' | 'nfl'
   date: string; // YYYY-MM-DD (home-venue local date)
-  gameTime: string; // HH:MM local, optional
-  gameTimeTz: string; // IANA tz, optional
+  gameTime: string; // HH:MM. MLB: UTC. NFL: UTC, with timeTbd flagging placeholders.
+  gameTimeTz: string; // MLB: "UTC" (renderer converts to viewer local). NFL: IANA venue tz (renderer stays in venue tz).
   homeTeamSlug: string;
   awayTeamSlug: string;
   venueName: string;
   status: GameStatus;
-  mlbGameId: number;
+  // MLB-only fields.
+  mlbGameId?: number;
   // Optional: doubleheader index (1 or 2 when two games on the same date).
   doubleheaderGame?: number;
   // True when the game is part of the postseason bracket.
   isPostseason?: boolean;
+  // NFL-only fields (all optional so the type is shared across leagues).
+  // Populated by src/lib/ingest-nfl.ts.
+  season?: number;
+  seasonType?: 'regular' | 'preseason' | 'postseason';
+  week?: number;
+  // True when ESPN reports timeValid:false — kickoff time is a placeholder
+  // (typically 05:00Z = midnight Eastern) pending flex scheduling. UI
+  // renders "TBD" instead of the placeholder.
+  timeTbd?: boolean;
+  isInternational?: boolean;
+  // Short city label for the international-game badge ("London",
+  // "Mexico City"). Null for domestic games. See ESPN_VENUE_ID_TO_INFO
+  // in src/lib/ingest-nfl.ts for the normalization map.
+  internationalLocation?: string | null;
+  // Broadcast metadata. Network is the raw ESPN string ("NBC", "ESPN/ABC",
+  // "Netflix"); isPrimetime is derived from the approved network set and
+  // explicitly false for international games.
+  broadcast?: { network: string; isPrimetime: boolean } | null;
+  espnGameId?: string;
+  // ISO string at the data-layer boundary; stored as a Firestore Timestamp.
+  ingestedAt?: string;
 }
 
 export const PROMO_TYPE_COLORS: Record<PromoType, string> = {

@@ -157,7 +157,7 @@ export default async function TeamPage({
   const displayName = teamDisplayName(team);
   const recurringDeals = getRecurringDealsForTeam(team.id);
 
-  // MLB-only for now: full schedule overlays onto the calendar. Other leagues
+  // MLB + NFL today: full schedule overlays onto the calendar. Other leagues
   // fall through to the legacy promo-only rendering inside TeamCalendar.
   const games = await getGamesForTeam(team.id, team.sportSlug);
   const gameContexts = games.length > 0

@@ -11,6 +11,7 @@ import { normalizeSport, track } from '@/lib/analytics';
 import { teamDisplayName, synthPromoId } from '@/lib/promo-helpers';
 import type { GameContext } from '@/lib/data';
 import { Modal } from './ui/modal';
+import { formatGameTime } from '@/lib/format-game-time';
 
 interface TeamCalendarProps {
   promos: Promo[];
@@ -49,18 +50,9 @@ function formatShortDate(dateStr: string): string {
   });
 }
 
-function formatGameTime(tz: string, hhmm: string): string {
-  if (!hhmm) return '';
-  // Stored as UTC HH:MM — render the game start in the viewer's local tz so a
-  // Kansas City fan sees 6:10 PM rather than 23:10. Good-enough approximation
-  // until we store true home-venue local time.
-  if (tz === 'UTC' && /^\d{2}:\d{2}$/.test(hhmm)) {
-    const [h, m] = hhmm.split(':').map(Number);
-    const d = new Date(Date.UTC(2026, 0, 1, h, m, 0));
-    return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-  }
-  return hhmm;
-}
+// formatGameTime lives in src/lib/format-game-time.ts so the MLB-invariant
+// behavior is testable in isolation. See scripts/test-format-game-time.ts
+// for the assertion that pins MLB output bit-for-bit.
 
 export function TeamCalendar({ promos, teamName, teamSlug, sport, team, gameContexts }: TeamCalendarProps) {
   const today = useMemo(() => {
@@ -354,11 +346,28 @@ export function TeamCalendar({ promos, teamName, teamSlug, sport, team, gameCont
                 >
                   <span className={`${hasContent ? 'text-white' : ''} font-mono text-[11px] leading-none`}>{cell.day}</span>
 
-                  {/* Opponent abbreviation for MLB cells */}
+                  {/* NFL-only: Week N label. NFL has one game per week per
+                      team, so the cell has room for it; MLB cells stay
+                      unchanged. */}
+                  {firstGame?.game.league === 'nfl' && firstGame.game.week != null && (
+                    <span className="font-mono text-[7px] tracking-[0.5px] uppercase mt-0.5 leading-none text-text-dim">
+                      WK {firstGame.game.week}
+                    </span>
+                  )}
+
+                  {/* Opponent abbreviation for MLB + NFL cells */}
                   {hasGamesData && firstGame?.opponentTeam && (
                     <span className="font-mono text-[8px] tracking-[0.5px] uppercase mt-0.5 leading-none text-text-secondary">
                       {firstGame.isHome ? 'vs' : 'at'} {firstGame.opponentTeam.abbreviation}
                       {cell.gameCtxs.length > 1 ? ' +1' : ''}
+                    </span>
+                  )}
+
+                  {/* NFL-only: international location badge. Replaces the
+                      +1 doubleheader indicator which never applies to NFL. */}
+                  {firstGame?.game.league === 'nfl' && firstGame.game.isInternational && firstGame.game.internationalLocation && (
+                    <span className="font-mono text-[7px] tracking-[0.5px] uppercase mt-0.5 leading-none text-accent-red">
+                      {firstGame.game.internationalLocation}
                     </span>
                   )}
 
@@ -523,11 +532,26 @@ function GameDetailRow({
   showDate: boolean;
 }) {
   const { game, isHome, opponentTeam, opponentVenue, promos } = ctx;
-  const timeLabel = formatGameTime(game.gameTimeTz, game.gameTime);
+  // NFL games whose kickoff is still flex-pending render "TBD" rather than
+  // ESPN's 05:00Z (midnight Eastern) placeholder.
+  const timeLabel = game.timeTbd
+    ? 'TBD'
+    : formatGameTime(game.gameTimeTz, game.gameTime, game.date);
   const oppName = opponentTeam ? teamDisplayName(opponentTeam) : '';
   const oppSlug = isHome ? game.awayTeamSlug : game.homeTeamSlug;
 
   const placement = isHome ? 'home_game_card' : 'away_game_card';
+
+  // For international games (NFL-only today) the eyebrow flips to a
+  // neutral-site label rather than "Home game" / "At {opponentVenue.name}".
+  // The actual venue (Melbourne Cricket Ground etc.) is captured on
+  // game.venueName and could be surfaced as a follow-up; for now the
+  // city alone gives enough context.
+  const eyebrow = game.isInternational
+    ? `International · ${game.internationalLocation ?? game.venueName}`
+    : isHome
+      ? 'Home game'
+      : `At ${opponentVenue?.name || 'opponent venue'}`;
 
   return (
     <div
@@ -536,6 +560,7 @@ function GameDetailRow({
       {showDate && (
         <div className="font-mono text-[10px] tracking-[1px] uppercase text-accent-red mb-3">
           {dayHeader(dateStr)}
+          {game.league === 'nfl' && game.week != null && ` · Week ${game.week}`}
           {game.doubleheaderGame && ` · Doubleheader Game ${game.doubleheaderGame}`}
           {game.status !== 'scheduled' && ` · ${game.status.toUpperCase()}`}
           {game.isPostseason && ` · Playoffs`}
@@ -545,12 +570,17 @@ function GameDetailRow({
       <div className="flex items-start justify-between gap-3 mb-3">
         <div>
           <div className="font-mono text-[10px] tracking-[1.5px] uppercase text-text-muted">
-            {isHome ? 'Home game' : `At ${opponentVenue?.name || 'opponent venue'}`}
+            {eyebrow}
           </div>
           <div className="font-display text-lg md:text-xl tracking-[0.5px] text-white mt-1">
             {isHome ? 'vs' : 'at'} {oppName}
           </div>
-          {opponentVenue && !isHome && (
+          {game.isInternational && (
+            <div className="text-text-secondary text-xs mt-1">
+              {game.venueName}
+            </div>
+          )}
+          {!game.isInternational && opponentVenue && !isHome && (
             <div className="text-text-secondary text-xs mt-1">
               {opponentVenue.name}
               {opponentVenue.address ? ` · ${opponentVenue.address.split(',').slice(-3, -2)[0]?.trim() || opponentVenue.address}` : ''}
@@ -596,7 +626,14 @@ function GameDetailRow({
       {/* CTA stack — tickets always; parking + hotels for away games where
        *  the user is travelling to the opponent's venue. All three sections
        *  use the polished `variant='card'` look so the modal reads as a
-       *  uniform stack regardless of which CTAs apply. */}
+       *  uniform stack regardless of which CTAs apply.
+       *
+       *  Parking and Hotels suppress on international neutral-site games:
+       *  opponentVenue points to the opponent's HOME city (e.g. SoFi for a
+       *  49ers-at-Rams game), but the game is actually in Melbourne or
+       *  London. The CTAs would key on the wrong city, and SpotHero is
+       *  US-only. TicketsBlock keeps rendering because the team-page
+       *  Ticketmaster URL is valid regardless of game venue. */}
       <div className="mt-4 space-y-4">
         {team && (
           <TicketsBlock
@@ -609,20 +646,24 @@ function GameDetailRow({
         )}
         {!isHome && opponentTeam && (
           <>
-            <ParkingCTA
-              team={opponentTeam}
-              venue={opponentVenue}
-              surface="web_team_page"
-              placement={placement}
-              compact
-            />
-            <HotelsCTA
-              team={opponentTeam}
-              venue={opponentVenue}
-              surface="web_team_page"
-              placement={placement}
-              variant="modal-row"
-            />
+            {!game.isInternational && (
+              <ParkingCTA
+                team={opponentTeam}
+                venue={opponentVenue}
+                surface="web_team_page"
+                placement={placement}
+                compact
+              />
+            )}
+            {!game.isInternational && (
+              <HotelsCTA
+                team={opponentTeam}
+                venue={opponentVenue}
+                surface="web_team_page"
+                placement={placement}
+                variant="modal-row"
+              />
+            )}
             <a
               href={`/${opponentTeam.sportSlug}/${opponentTeam.id}`}
               className="inline-flex items-center gap-1 text-[11px] font-mono tracking-[0.08em] uppercase text-text-secondary hover:text-white transition-colors"
