@@ -23,6 +23,7 @@ import type {
 import { SCORED_LEAGUES } from './types';
 import { resolveIcon, dedupePromos } from './promo-helpers';
 import { getVenueOverride } from './venue-overrides';
+import { VENUE_LOCATIONS_STATIC } from './venue-locations';
 
 function tsToIso(v: unknown): string | null {
   if (!v) return null;
@@ -966,4 +967,99 @@ export async function getTopPromosPerTeam(
     });
   }
   return topByTeam;
+}
+
+// ── Schema location helper (Event JSON-LD on the scoring discovery pages) ─
+// Resolves a single team to the four fields a Schema.org PostalAddress
+// needs (locality, region, country, plus the venue Place name) via a
+// three-step fallback:
+//   1. getVenueForTeam: parse venue.address with the address regex below.
+//      Covers 49 of 73 scored teams (all MLB, plus the WNBA / MLS subset
+//      that has populated venue docs).
+//   2. VENUE_LOCATIONS_STATIC: tactical fallback for the 24 scored teams
+//      without venue docs (8 WNBA + 16 MLS as of 2026-05). Retired once
+//      the venues collection is complete.
+//   3. null: no usable location data. The schema renderer drops the
+//      location field for that item rather than fabricating one. One
+//      item failing validation is better than emitting incorrect schema.
+//
+// Returns a Map<teamSlug, SchemaLocation | null>. Pages call this once
+// per ISR revalidate with the unique team set in their scored list.
+
+export type SchemaLocation = {
+  venueName: string;
+  addressLocality: string;
+  addressRegion: string;
+  addressCountry: 'US' | 'CA';
+};
+
+const CANADIAN_PROVINCES: ReadonlySet<string> = new Set([
+  'AB', 'BC', 'MB', 'NB', 'NL', 'NS', 'NT', 'NU', 'ON', 'PE', 'QC', 'SK', 'YT',
+]);
+
+// Captures the LAST "{anything}, {locality}, {2 uppercase region}" segment
+// of an address. Walks all matches because some addresses (e.g., suite
+// numbers) place a "City, ST" string earlier than the final one. Verified
+// in Phase B against all 49 venue-having scored teams: 100% match.
+function parseVenueAddress(
+  address: string | null | undefined,
+): { addressLocality: string; addressRegion: string; addressCountry: 'US' | 'CA' } | null {
+  if (!address || typeof address !== 'string') return null;
+  const re = /,\s*([^,]+),\s*([A-Z]{2})\b/g;
+  let lastMatch: RegExpExecArray | null = null;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(address)) !== null) {
+    lastMatch = m;
+  }
+  if (!lastMatch) return null;
+  const locality = lastMatch[1].trim();
+  const region = lastMatch[2];
+  const addressCountry: 'US' | 'CA' = CANADIAN_PROVINCES.has(region) ? 'CA' : 'US';
+  return { addressLocality: locality, addressRegion: region, addressCountry };
+}
+
+export async function getSchemaLocationsForTeams(
+  teams: Team[],
+): Promise<Map<string, SchemaLocation>> {
+  // One full read of the venues collection rather than per-team queries.
+  // The collection has ~50 documents; the read cost is negligible and the
+  // alternative (49 individual where('team', '==', name) queries) would
+  // be wasteful.
+  const venuesSnap = await db.collection('venues').get();
+  const venuesByFullName = new Map<string, FirebaseFirestore.DocumentData>();
+  for (const doc of venuesSnap.docs) {
+    const data = doc.data();
+    if (typeof data.team === 'string') {
+      venuesByFullName.set(data.team, data);
+    }
+  }
+
+  const out = new Map<string, SchemaLocation>();
+  for (const team of teams) {
+    const fullName = `${team.city} ${team.name}`;
+    const venue = venuesByFullName.get(fullName);
+    if (venue && typeof venue.name === 'string' && typeof venue.address === 'string') {
+      const parsed = parseVenueAddress(venue.address);
+      if (parsed) {
+        out.set(team.id, {
+          venueName: venue.name,
+          ...parsed,
+        });
+        continue;
+      }
+    }
+    const staticEntry = VENUE_LOCATIONS_STATIC[team.id];
+    if (staticEntry) {
+      out.set(team.id, {
+        venueName: staticEntry.venueName,
+        addressLocality: staticEntry.addressLocality,
+        addressRegion: staticEntry.addressRegion,
+        addressCountry: staticEntry.addressCountry,
+      });
+      continue;
+    }
+    // No usable location data. Intentionally not adding an entry; the
+    // schema renderer omits the location field for this team's items.
+  }
+  return out;
 }

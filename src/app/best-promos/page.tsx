@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import {
   getAllTeamScores,
+  getSchemaLocationsForTeams,
   getScoredPromosInDateRange,
 } from '@/lib/data';
 import { BestPromosBrowser } from '@/components/scoring/best-promos-browser';
@@ -124,6 +125,16 @@ export default async function BestPromosPage() {
     getAllTeamScores(),
   ]);
 
+  // Resolve PostalAddress data for the unique teams in the ItemList
+  // payload (ITEMLIST_SCHEMA_CAP cards). Done after the promo fetch so we
+  // can scope the lookup to teams that actually appear in the schema,
+  // rather than fetching for every scored team unconditionally.
+  const itemListPromos = promos.slice(0, ITEMLIST_SCHEMA_CAP);
+  const uniqueTeams = Array.from(
+    new Map(itemListPromos.map((p) => [p.team.id, p.team])).values(),
+  );
+  const locationsByTeamId = await getSchemaLocationsForTeams(uniqueTeams);
+
   // Latest computedAt across all teamScores is the canonical "last
   // scored" stamp for the page. Falls back to today if the collection is
   // empty for some reason (which it shouldn't be in production).
@@ -151,7 +162,8 @@ export default async function BestPromosPage() {
         description={`Score-ranked list of ${promos.length} top promotional events across MLB, MLS, and WNBA in ${YEAR}.`}
         lastUpdated={latestComputedAt || new Date().toISOString()}
         faqs={FAQS}
-        itemListItems={promos.slice(0, ITEMLIST_SCHEMA_CAP)}
+        itemListItems={itemListPromos}
+        locationsByTeamId={locationsByTeamId}
       />
 
       <div className="pt-28 pb-20 px-6">

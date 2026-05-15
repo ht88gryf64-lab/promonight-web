@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import {
   getAllTeamScores,
+  getSchemaLocationsForTeams,
   getScoredPromosByItemType,
 } from '@/lib/data';
 import { BestPromosBrowser } from '@/components/scoring/best-promos-browser';
@@ -115,6 +116,12 @@ export default async function BobbleheadsPage() {
     getAllTeamScores(),
   ]);
 
+  const itemListPromos = promos.slice(0, ITEMLIST_SCHEMA_CAP);
+  const uniqueTeams = Array.from(
+    new Map(itemListPromos.map((p) => [p.team.id, p.team])).values(),
+  );
+  const locationsByTeamId = await getSchemaLocationsForTeams(uniqueTeams);
+
   const latestComputedAt = teamScores.reduce((acc, t) => {
     if (!t.computedAt) return acc;
     return !acc || t.computedAt > acc ? t.computedAt : acc;
@@ -139,7 +146,8 @@ export default async function BobbleheadsPage() {
         description={`Every bobblehead giveaway across MLB, MLS, and WNBA in ${YEAR}, ranked by score.`}
         lastUpdated={latestComputedAt || new Date().toISOString()}
         faqs={FAQS}
-        itemListItems={promos.slice(0, ITEMLIST_SCHEMA_CAP)}
+        itemListItems={itemListPromos}
+        locationsByTeamId={locationsByTeamId}
       />
 
       <div className="pt-28 pb-20 px-6">
