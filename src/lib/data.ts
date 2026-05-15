@@ -598,7 +598,7 @@ export async function getAllPlayoffPromos(): Promise<{
 
 function mapGameDoc(doc: FirebaseFirestore.DocumentSnapshot): Game {
   const d = doc.data()!;
-  return {
+  const game: Game = {
     id: d.id ?? doc.id,
     league: d.league,
     date: d.date,
@@ -608,17 +608,35 @@ function mapGameDoc(doc: FirebaseFirestore.DocumentSnapshot): Game {
     awayTeamSlug: d.awayTeamSlug,
     venueName: d.venueName ?? '',
     status: (d.status ?? 'scheduled') as GameStatus,
-    mlbGameId: d.mlbGameId ?? 0,
-    doubleheaderGame: d.doubleheaderGame,
-    isPostseason: d.isPostseason,
   };
+  // MLB-only fields. Read defensively so NFL docs (no mlbGameId) read cleanly.
+  if (typeof d.mlbGameId === 'number') game.mlbGameId = d.mlbGameId;
+  if (typeof d.doubleheaderGame === 'number') game.doubleheaderGame = d.doubleheaderGame;
+  if (typeof d.isPostseason === 'boolean') game.isPostseason = d.isPostseason;
+  // NFL-only fields. Same defensive reads so MLB docs are unaffected.
+  if (typeof d.season === 'number') game.season = d.season;
+  if (typeof d.seasonType === 'string') {
+    game.seasonType = d.seasonType as Game['seasonType'];
+  }
+  if (typeof d.week === 'number') game.week = d.week;
+  if (typeof d.timeTbd === 'boolean') game.timeTbd = d.timeTbd;
+  if (typeof d.isInternational === 'boolean') game.isInternational = d.isInternational;
+  if (d.internationalLocation === null || typeof d.internationalLocation === 'string') {
+    game.internationalLocation = d.internationalLocation;
+  }
+  if (d.broadcast === null || (typeof d.broadcast === 'object' && d.broadcast)) {
+    game.broadcast = d.broadcast as Game['broadcast'];
+  }
+  if (typeof d.espnGameId === 'string') game.espnGameId = d.espnGameId;
+  if (d.ingestedAt) game.ingestedAt = tsToIso(d.ingestedAt) ?? undefined;
+  return game;
 }
 
 // Returns every game (home + away) involving `teamSlug`, sorted by date asc.
-// `league` is lowercase ('mlb'). Non-MLB leagues currently have no games data;
-// this returns an empty array for them rather than throwing.
+// `league` is lowercase ('mlb' | 'nfl'). Other leagues currently have no
+// games data; this returns an empty array for them rather than throwing.
 export async function getGamesForTeam(teamSlug: string, league: string): Promise<Game[]> {
-  if (league !== 'mlb') return [];
+  if (league !== 'mlb' && league !== 'nfl') return [];
   const [homeSnap, awaySnap] = await Promise.all([
     db.collection('games')
       .where('league', '==', league)
