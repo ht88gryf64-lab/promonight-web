@@ -151,6 +151,14 @@ export interface Venue {
   gatesOpen?: string;
   league: string;
   teamId: string;
+  // Short team ids (`{nickname}-{league}`, e.g. `lac-nfl`, `clt-mls`) of
+  // other teams that play home games at this physical venue. One-way
+  // pointer today: only the team that owns the suffixed venue doc
+  // populates this; the canonical / unsuffixed doc does not list its
+  // co-tenants. May span leagues (NFL venue docs reference MLS co-tenants
+  // for stadiums like SoFi / MetLife / Soldier Field / Gillette).
+  // Not load-bearing for travel CTAs, which look up by team display name.
+  sharedTeams?: string[];
   // Optional venue-plan fields. Populated per-venue via data-ops; left empty
   // for most teams. Render only when present.
   parkingInfo?: string;
