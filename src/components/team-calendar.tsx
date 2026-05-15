@@ -626,7 +626,14 @@ function GameDetailRow({
       {/* CTA stack — tickets always; parking + hotels for away games where
        *  the user is travelling to the opponent's venue. All three sections
        *  use the polished `variant='card'` look so the modal reads as a
-       *  uniform stack regardless of which CTAs apply. */}
+       *  uniform stack regardless of which CTAs apply.
+       *
+       *  Parking and Hotels suppress on international neutral-site games:
+       *  opponentVenue points to the opponent's HOME city (e.g. SoFi for a
+       *  49ers-at-Rams game), but the game is actually in Melbourne or
+       *  London. The CTAs would key on the wrong city, and SpotHero is
+       *  US-only. TicketsBlock keeps rendering because the team-page
+       *  Ticketmaster URL is valid regardless of game venue. */}
       <div className="mt-4 space-y-4">
         {team && (
           <TicketsBlock
@@ -639,20 +646,24 @@ function GameDetailRow({
         )}
         {!isHome && opponentTeam && (
           <>
-            <ParkingCTA
-              team={opponentTeam}
-              venue={opponentVenue}
-              surface="web_team_page"
-              placement={placement}
-              compact
-            />
-            <HotelsCTA
-              team={opponentTeam}
-              venue={opponentVenue}
-              surface="web_team_page"
-              placement={placement}
-              variant="modal-row"
-            />
+            {!game.isInternational && (
+              <ParkingCTA
+                team={opponentTeam}
+                venue={opponentVenue}
+                surface="web_team_page"
+                placement={placement}
+                compact
+              />
+            )}
+            {!game.isInternational && (
+              <HotelsCTA
+                team={opponentTeam}
+                venue={opponentVenue}
+                surface="web_team_page"
+                placement={placement}
+                variant="modal-row"
+              />
+            )}
             <a
               href={`/${opponentTeam.sportSlug}/${opponentTeam.id}`}
               className="inline-flex items-center gap-1 text-[11px] font-mono tracking-[0.08em] uppercase text-text-secondary hover:text-white transition-colors"
