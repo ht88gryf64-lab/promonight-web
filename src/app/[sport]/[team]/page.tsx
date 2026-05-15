@@ -15,6 +15,7 @@ import {
 import type { PromoType } from '@/lib/types';
 import { TeamHero } from '@/components/team-hero';
 import { TeamCalendar } from '@/components/team-calendar';
+import { ScheduleReleaseVideoCard } from '@/components/ScheduleReleaseVideoCard';
 import { PromoList } from '@/components/promo-list';
 import { RecurringDealsSection } from '@/components/recurring-deals-section';
 import { getRecurringDealsForTeam } from '@/lib/recurring-deals';
@@ -282,6 +283,14 @@ export default async function TeamPage({
       </section>
 
       {venue && <VenueInfoBlock venue={venue} league={team.league} />}
+
+      {/* NFL-only: official team schedule release video. Render gate is
+       *  field presence on the team doc; MLB / NBA / NHL / MLS / WNBA
+       *  Team docs never carry scheduleReleaseVideo so they skip this
+       *  card naturally. Defensive league check belt-and-braces. */}
+      {team.league === 'NFL' && team.scheduleReleaseVideo && (
+        <ScheduleReleaseVideoCard video={team.scheduleReleaseVideo} teamSlug={team.id} />
+      )}
 
       <TeamCalendar
         promos={promos}
