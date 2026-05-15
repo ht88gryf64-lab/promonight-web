@@ -69,6 +69,27 @@ function mapTeamDoc(doc: FirebaseFirestore.DocumentSnapshot): Team {
       typeof data.fanaticsPath === 'string' && data.fanaticsPath.length > 0
         ? data.fanaticsPath
         : undefined,
+    scheduleReleaseVideo: readScheduleReleaseVideo(data.scheduleReleaseVideo),
+  };
+}
+
+// Defensive reader for the team-doc scheduleReleaseVideo field. Returns
+// undefined if any required sub-field is missing or malformed, which the
+// UI gates on for non-NFL teams (the field is absent everywhere else) and
+// for the 3 NFL teams marked pending (no upload from official channel in
+// window — see Phase 1 of nfl-schedule-release-videos branch).
+function readScheduleReleaseVideo(raw: unknown): Team['scheduleReleaseVideo'] {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const r = raw as Record<string, unknown>;
+  if (typeof r.url !== 'string' || r.url.length === 0) return undefined;
+  if (typeof r.title !== 'string') return undefined;
+  if (typeof r.publishedAt !== 'string') return undefined;
+  if (typeof r.channel !== 'string') return undefined;
+  return {
+    url: r.url,
+    title: r.title,
+    publishedAt: r.publishedAt,
+    channel: r.channel,
   };
 }
 

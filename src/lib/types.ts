@@ -40,6 +40,30 @@ export interface Team {
   // mapping, and the buildFanaticsUrl fallback after the deploy bakes and a
   // follow-up migration deletes it from the team docs.
   fanaticsPath?: string;
+  // Official team-produced schedule release video for the current season.
+  // NFL-only today; populated by scripts/populate-nfl-schedule-release-videos.ts.
+  // Absent on MLB / NBA / NHL / MLS / WNBA Team docs, which is what gates the
+  // ScheduleReleaseVideoCard render to NFL pages without an explicit league
+  // check. Re-run the populate script each season to refresh.
+  scheduleReleaseVideo?: ScheduleReleaseVideo;
+}
+
+export interface ScheduleReleaseVideo {
+  // Full https://www.youtube.com/watch?v=... URL. The card extracts the
+  // 11-char video id at render time to build the thumbnail src.
+  url: string;
+  // Exact YouTube title as captured at populate time. Surfaces in the card.
+  title: string;
+  // ISO timestamp from the YouTube page's uploadDate. Used by the UI for
+  // freshness signals and the populate script for re-run idempotency.
+  publishedAt: string;
+  // YouTube channel display name as it appears in the page metadata
+  // (ownerChannelName / JSON-LD). Mirrors the source verbatim, so for some
+  // teams this differs from the PromoNight team display name — e.g. the
+  // Las Vegas Raiders' channel is literally "Raiders". Not currently
+  // surfaced in the UI; retained as an audit-trail field for the populate
+  // script's verification step.
+  channel: string;
 }
 
 export interface Promo {
