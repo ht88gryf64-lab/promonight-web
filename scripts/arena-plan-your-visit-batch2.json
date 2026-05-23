@@ -1,0 +1,41 @@
+{
+  "_notes": "Batch 2 completes the eight NBA/NHL conference-final buildings. centre-bell and paycom-center are single-tenant and carry a researched gatesOpen. madison-square-garden and ball-arena are SHARED (Knicks/Rangers, Nuggets/Avalanche), so gatesOpen is intentionally OMITTED per the shared-doc rule: write only the five building-level fields and let the per-league VenueInfoBlock fallback supply gate cadence. paycom-center carries the oklahoma-city-thunder override block in venue-overrides.ts: write its fields to Firestore, then remove that override block after read-back confirms the page renders from Firestore, exactly like the Twins. bagPolicyUrl: ball-arena is confirmed exact; centre-bell, paycom-center, and madison-square-garden (plus rocket-arena from batch 1) are best-effort official pages, so run the curl-verify pass and substitute live equivalents for any 404, like the Mariners fix. No em dashes anywhere.",
+
+  "centre-bell": {
+    "venue": "Centre Bell",
+    "gatesOpen": "Doors generally open 90 minutes before puck drop, so a 7:00 PM game means a 5:30 PM open. Pregame warmups start about 30 minutes before the drop.",
+    "parkingInfo": "The Bell Centre Garage sits directly beneath the arena, with its entrance on Rue Saint-Antoine West a one-minute walk from the doors, and downtown garages run roughly 20 to 45 dollars on event nights. This is more of a downtown routing problem than a parking problem, so pick the garage that matches your exit route, or skip driving entirely.",
+    "publicTransit": "Transit is the easy choice here. The arena connects directly to the Lucien-L'Allier Metro station on the Orange Line, with Bonaventure a short walk away, and it ties into Montreal's Underground City so you can reach the gates without going outside in winter. STM bus routes 36, 61, 107, 150, and 178 stop nearby, and there are BIXI bike racks at the arena.",
+    "accessibility": "The arena is fully accessible, with accessible parking on level B at section B113 and wheelchair seating with a companion seat on level 100 (red) row N, which has direct access to street-level doors. Elevators, accessible restrooms, and assistive listening devices are available; for ticketing help call customer service at 1-877-668-8269.",
+    "bagPolicyUrl": "https://www.nhl.com/canadiens/fans/faq",
+    "nearby": "The arena sits in downtown Montreal and plugs into the Underground City, so food and drink are everywhere. Crescent Street and Rue de la Montagne, a few blocks east, are the classic pregame pub stretch, and the arena itself houses a long list of restaurants."
+  },
+
+  "paycom-center": {
+    "venue": "Paycom Center",
+    "gatesOpen": "Doors typically open about 90 minutes before tip-off; check the specific event page to confirm, since times can shift for big games.",
+    "parkingInfo": "Nearby garages include the Cox Convention Center Garage across the street and the Arena Parking Garage, with more surface lots west along Reno Avenue and over in Bricktown. Rates usually run about 10 to 20 dollars, higher for playoffs. Prepay through the Paycom Center parking site to lock in a spot on game nights. The arena is at 100 West Reno Avenue, just off Interstate 40.",
+    "publicTransit": "The OKC Streetcar is the easy option, with two stops right by the arena, one north on Reno Avenue and one southwest at Oklahoma City Boulevard and South Robinson, for a one-dollar ride or a three-dollar day pass. EMBARK also runs RAPID bus service plus a Game Day Shuttle from the Arts and Sheridan/Walker garages every 15 minutes starting two hours before tip.",
+    "accessibility": "Accessible parking is available in the nearby garages, and the arena is fully accessible throughout. Reach the Thunder guest relations team at fans@okcthunder.com or (405) 208-4800 for specific accommodations.",
+    "bagPolicyUrl": "https://www.paycomcenter.com/guest-services/faqs",
+    "nearby": "Bricktown, Oklahoma City's main entertainment district, is a short walk or one streetcar stop east and is packed with restaurants and bars along the canal, making it the go-to pregame spot. Scissortail Park and the rest of downtown are also close."
+  },
+
+  "madison-square-garden": {
+    "venue": "Madison Square Garden",
+    "parkingInfo": "There is no official MSG parking, and nearby private garages are limited and expensive, so reserving ahead through a service like SpotHero is wise. Transit is the better call here, since the arena sits directly above Penn Station.",
+    "publicTransit": "This is one of the most transit-connected arenas anywhere. MSG sits on top of Penn Station, so the 1, 2, 3 and A, C, E subway lines, plus LIRR, NJ Transit, and Amtrak, all let out beneath the building. Numerous Midtown bus routes, including the M5, M7, M20, and M34-SBS, stop nearby.",
+    "accessibility": "The arena is fully accessible, with accessible seating across levels and elevator access throughout; contact MSG guest services for specific needs. Note there is no bag or coat check, so plan to travel light.",
+    "bagPolicyUrl": "https://www.msg.com/policies",
+    "nearby": "You are in the middle of Midtown Manhattan, so options are endless. Koreatown's restaurant strip on West 32nd Street is a block away, Herald Square shopping is just east, and Hudson Yards is a short walk west. Expect crowds; this is one of the busiest blocks in the city."
+  },
+
+  "ball-arena": {
+    "venue": "Ball Arena",
+    "parkingInfo": "Paid lots (the Toyota-branded Camry, 4Runner, and Tundra lots) surround the arena and open three hours before events. Cards are accepted everywhere, with cash only at the Tundra lot. Prepay through Ticketmaster or LAZ to save; rates run around 30 dollars for Nuggets and Avalanche games and climb for playoffs. Take Interstate 25 to exit 210B at Auraria Parkway.",
+    "publicTransit": "RTD light rail drops you right beside the arena at the Ball Arena/Elitch Gardens station, served by the D, E, H, and W lines, with bus routes 10, 15, and 20 nearby. A three-hour transit pass is about 2.75 dollars through the RTD app. The Cherry Creek Trail and on-site bike racks make cycling easy, and rideshare pickup is in the 4Runner West lot at 5th and Walnut.",
+    "accessibility": "The arena is fully accessible and all RTD buses and trains accommodate mobility aids. See the arena's Accessibility Guide for seating, parking, and service details.",
+    "bagPolicyUrl": "https://www.ballarena.com/plan-your-visit/bag-policy/",
+    "nearby": "Ball Arena sits just west of downtown Denver in the Platte Valley, an easy walk to LoDo and Lower Highlands for pregame restaurants and bars. Confluence Park and the river trails are right next door."
+  }
+}
