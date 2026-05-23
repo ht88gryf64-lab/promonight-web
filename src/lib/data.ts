@@ -23,6 +23,7 @@ import type {
 import { SCORED_LEAGUES } from './types';
 import { resolveIcon, dedupePromos } from './promo-helpers';
 import { getVenueOverride } from './venue-overrides';
+import { VENUE_RESOLUTION_MAP } from './venue-resolution-map';
 import { VENUE_LOCATIONS_STATIC } from './venue-locations';
 
 function tsToIso(v: unknown): string | null {
@@ -342,9 +343,23 @@ export async function getVenueForTeam(teamId: string): Promise<Venue | null> {
     .limit(1)
     .get();
 
-  if (snapshot.empty) return null;
+  let data = snapshot.empty ? undefined : snapshot.docs[0].data();
 
-  const data = snapshot.docs[0].data();
+  // Fallback for the ~38 in-season (NBA/NHL/WNBA/MLS) teams the team-name
+  // query can't reach: co-tenants sharing one building doc, and clubs whose
+  // `{city} {name}` doesn't match the doc's `team` field. An explicit
+  // team-slug -> venue-slug map (venue-resolution-map.ts) is the source of
+  // truth; we never duplicate a shared building across per-team docs.
+  if (!data) {
+    const mappedVenueSlug = VENUE_RESOLUTION_MAP[teamId];
+    if (mappedVenueSlug) {
+      const mapped = await db.collection('venues').doc(mappedVenueSlug).get();
+      if (mapped.exists) data = mapped.data();
+    }
+  }
+
+  if (!data) return null;
+
   const override = getVenueOverride(teamId);
   return {
     name: data.name,
