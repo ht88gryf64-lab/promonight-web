@@ -1,0 +1,350 @@
+[
+  {
+    "teamSlug": "yankees",
+    "venue": "Yankee Stadium",
+    "planYourVisit": {
+      "gateTimes": "Gates open 90 minutes before first pitch for most games. Opening times can shift for doubleheaders, special events, and weather.",
+      "parking": "Stadium parking is limited and pricey, with the 164th Street Garage and River Avenue lots filling fast on big dates. Most fans skip driving and take the subway. Reserve pre-paid parking in advance if you do drive.",
+      "transit": "The 4, B, and D trains stop at 161st Street-Yankee Stadium, right outside the gates. Metro-North also runs to the Yankees-E. 153rd Street station on game days.",
+      "accessibility": "Yankee Stadium is fully ADA-accessible with wheelchair and companion seating on every level, elevators throughout, and accessible entry at all gates.",
+      "bagPolicy": { "label": "Official Yankee Stadium bag policy", "url": "https://www.mlb.com/yankees/ballpark/information/entry" },
+      "nearby": "The River Avenue strip under the 4 train is the classic pregame scene. Try Stan's Sports Bar, Billy's Sports Bar, or the Dugout, with the Hard Rock Cafe right at 161st and River."
+    }
+  },
+  {
+    "teamSlug": "dodgers",
+    "venue": "Dodger Stadium",
+    "planYourVisit": {
+      "gateTimes": "Parking and stadium gates open 2 hours and 30 minutes before first pitch. Early entry tickets get you in 3 hours early on select dates.",
+      "parking": "Lots are huge but fill on giveaway and marquee dates, and there is no re-entry once you exit. Buy parking in advance, and note that tailgating is not allowed at Chavez Ravine.",
+      "transit": "The free Dodger Stadium Express runs from Union Station starting about 90 minutes before first pitch, free for ticket holders, with a South Bay route on select games. The last return bus leaves roughly 45 minutes after the final out.",
+      "accessibility": "Dodger Stadium offers accessible parking across multiple lots and an ADA shuttle to the entry gates. Wheelchair and companion seating is available throughout the ballpark.",
+      "bagPolicy": { "label": "Official Dodger Stadium bag policy", "url": "https://www.mlb.com/dodgers/ballpark/information/security" },
+      "nearby": "Chavez Ravine sits apart from the city, so most pregame happens inside the gates or a short ride away in Echo Park, Chinatown, and along Sunset Boulevard."
+    }
+  },
+  {
+    "teamSlug": "cubs",
+    "venue": "Wrigley Field",
+    "planYourVisit": {
+      "gateTimes": "Gates open 90 minutes before first pitch for most games, and 2 hours early for Opening Day, Saturdays, and special occasions.",
+      "parking": "Neighborhood parking is scarce and runs roughly $45 to $60 on game days. Reserve ahead through SpotHero, or use the free remote lot and shuttle at 3900 N. Rockwell for night and weekend games.",
+      "transit": "Take the CTA Red Line to the Addison stop, one block from the gates. The Brown and Purple lines connect to the Red Line, and the 22 Clark and 152 Addison buses stop nearby.",
+      "accessibility": "Accessible parking is in the Toyota Camry Lot with a golf-cart shuttle to the Left Field Gate, reserved in advance. Wheelchair and companion seating is available throughout the park.",
+      "bagPolicy": { "label": "Official Wrigley Field bag policy", "url": "https://www.mlb.com/cubs/ballpark/information" },
+      "nearby": "Wrigleyville is the pregame. Try Murphy's Bleachers, the Cubby Bear, or Gallagher Way right outside the Marquee Gate."
+    }
+  },
+  {
+    "teamSlug": "redsox",
+    "venue": "Fenway Park",
+    "planYourVisit": {
+      "gateTimes": "All gates open 90 minutes before first pitch. Red Sox Nation members get early entry about 2.5 hours before for batting practice.",
+      "parking": "Parking around Fenway is extremely limited and can run $100 or more on game days. Driving is not recommended. Reserve a garage through SpotHero in advance if you have to.",
+      "transit": "Take the MBTA Green Line (B, C, or D branch) to Kenmore, a short walk to the park. The Framingham/Worcester commuter rail stops at Lansdowne, right beside the ballpark.",
+      "accessibility": "Fenway provides wheelchair-accessible and companion seating, accessible restrooms, and elevator access. Contact Red Sox guest services in advance to arrange accommodations.",
+      "bagPolicy": { "label": "Official Fenway Park bag policy", "url": "https://www.mlb.com/redsox/ballpark/information" },
+      "nearby": "Lansdowne Street behind the Green Monster is the pregame hub. Try the Bleacher Bar, Cask 'n Flagon, or Game On near Kenmore Square."
+    }
+  },
+  {
+    "teamSlug": "cardinals",
+    "venue": "Busch Stadium",
+    "planYourVisit": {
+      "gateTimes": "Gates open 90 minutes before first pitch Monday through Thursday, and 2 hours before Friday through Sunday.",
+      "parking": "Downtown garages and lots run roughly $10 to $40, with the Ballpark Village and All-Star lots closest and quickest to fill. Buy in advance for the best rates.",
+      "transit": "MetroLink's Stadium Station sits directly across 8th Street from the ballpark, served by the Red and Blue lines. More than a dozen MetroBus routes serve downtown, with free Park-Ride lots along the line.",
+      "accessibility": "Busch Stadium is fully ADA-accessible with wheelchair and companion seating throughout, elevators, and accessible entry at the gates.",
+      "bagPolicy": { "label": "Official Busch Stadium bag policy", "url": "https://www.mlb.com/cardinals/ballpark/information" },
+      "nearby": "Ballpark Village is steps away off the third-base side. Try the Budweiser Brew House, Cardinals Nation, or PBR St. Louis for pregame."
+    }
+  },
+  {
+    "teamSlug": "rays",
+    "venue": "Tropicana Field",
+    "planYourVisit": {
+      "gateTimes": "Gates open 90 minutes before first pitch. Parking gates open up to 4 hours before for tailgating.",
+      "parking": "Official lots ring the dome, with general parking in Lots 2, 6, and 7 closest to the gates. The lots are cashless, so bring a card, and prepaid runs about $15 to $25.",
+      "transit": "The SunRunner bus rapid transit line stops on the north side of the ballpark. The free Baseball Looper trolley runs from downtown St. Petersburg starting 90 minutes before first pitch, every 10 minutes.",
+      "accessibility": "Tropicana Field is fully accessible with wheelchair and companion seating, and accessible parking is available in Lots 1 and 7. Rideshare ADA drop-off is at Gate 4.",
+      "bagPolicy": { "label": "Official Tropicana Field bag policy", "url": "https://www.mlb.com/rays/ballpark/information" },
+      "nearby": "Downtown St. Petersburg sits about a mile east, where the bars and restaurants of Central Avenue and the Edge District are the main pregame draw. Many fans tailgate in the lots."
+    }
+  },
+  {
+    "teamSlug": "orioles",
+    "venue": "Oriole Park at Camden Yards",
+    "planYourVisit": {
+      "gateTimes": "Gates open 1 hour before first pitch, with parking lots opening 2 hours before.",
+      "parking": "General game-day parking is first-come in Lots B/C, F, G, and H, and most stadium lots are permit-only, so buy in advance. More than 30,000 garage and lot spaces sit within a mile downtown.",
+      "transit": "MTA Light RailLink stops at the Camden Yards station beside the ballpark. The Metro Subway and several bus lines also serve downtown, a short walk away.",
+      "accessibility": "Oriole Park is fully accessible with wheelchair and companion seating throughout, elevators, and accessible parking in Lots A and B. ADA and family lanes are available at the entry gates.",
+      "bagPolicy": { "label": "Official Oriole Park bag policy", "url": "https://www.mlb.com/orioles/ballpark/information/security" },
+      "nearby": "Pickles Pub sits across the street, and the Inner Harbor with its restaurants and bars is a short walk east. The rowhouse bars along Washington Boulevard are classic pregame stops."
+    }
+  },
+  {
+    "teamSlug": "bluejays",
+    "venue": "Rogers Centre",
+    "planYourVisit": {
+      "gateTimes": "Gates typically open 90 minutes to 2 hours before first pitch. Times can vary by game, so check before you go.",
+      "parking": "On-site underground parking is limited and first-come. Several private lots sit within walking distance, but most fans take transit given the downtown location.",
+      "transit": "Rogers Centre is a 10-minute walk from Union Station, the hub for GO Transit, the TTC subway, and the UP Express from Pearson Airport. The indoor PATH network connects it all in bad weather.",
+      "accessibility": "Rogers Centre offers accessible seating and a limited number of underground accessible parking spots with elevator access, which must be pre-purchased by calling the Blue Jays.",
+      "bagPolicy": { "label": "Official Rogers Centre bag policy", "url": "https://www.mlb.com/bluejays/ballpark/know-before-you-go" },
+      "nearby": "The stadium sits at Front and John beside the CN Tower. The Entertainment District just north is packed with bars and restaurants, and Real Sports at Maple Leaf Square is a popular pregame spot."
+    }
+  },
+  {
+    "teamSlug": "guardians",
+    "venue": "Progressive Field",
+    "planYourVisit": {
+      "gateTimes": "Gates typically open 90 minutes before first pitch, earlier for the home opener and select games.",
+      "parking": "Reserve a spot in advance through ParkMobile, with the Gateway East Garage on East Huron Road among the closest options. Plenty of downtown lots and garages are within a short walk.",
+      "transit": "RTA Rapid trains (Red, Blue, and Green lines) stop at Tower City Station, connected to the ballpark by a covered walkway. The HealthLine bus also runs nearby.",
+      "accessibility": "Progressive Field is fully accessible with wheelchair and companion seating throughout, elevators, and accessible entry at all gates.",
+      "bagPolicy": { "label": "Official Progressive Field bag policy", "url": "https://www.mlb.com/guardians/ballpark/know-before-you-go" },
+      "nearby": "The Gateway District around the park has plenty of pregame options, including the Thirsty Parrot and Winking Lizard Tavern, with the bars and restaurants of East 4th Street a short walk away."
+    }
+  },
+  {
+    "teamSlug": "tigers",
+    "venue": "Comerica Park",
+    "planYourVisit": {
+      "gateTimes": "Gates typically open 90 minutes before first pitch.",
+      "parking": "Lots and garages surround Comerica Park and fill across downtown on game days, so reserve ahead through ParkWhiz. A cheaper option is to park in Midtown or New Center and ride the QLine in.",
+      "transit": "The QLine streetcar runs free to the Grand Circus Park and Montcalm stations near the ballpark. DDOT and SMART buses serve downtown along major routes like Woodward and Gratiot.",
+      "accessibility": "Comerica Park is fully accessible with wheelchair and companion seating throughout, elevators, and accessible entry. Accessible parking is available in nearby lots.",
+      "bagPolicy": { "label": "Official Comerica Park bag policy", "url": "https://www.mlb.com/tigers/ballpark/information" },
+      "nearby": "Comerica sits in Detroit's sports and entertainment district near Ford Field. Pregame spots include Hockeytown Cafe, Cheli's Chili Bar, and the Elwood Bar & Grill just outside the gates."
+    }
+  },
+  {
+    "teamSlug": "royals",
+    "venue": "Kauffman Stadium",
+    "planYourVisit": {
+      "gateTimes": "Gates open 1 hour before first pitch Monday through Thursday, and 90 minutes before Friday through Sunday.",
+      "parking": "Kauffman sits in the Truman Sports Complex ringed by large surface lots. Prepaid general parking runs about $21, tailgating is allowed, and lots are split into East and West sides you cannot cross between.",
+      "transit": "Public transit is limited given the suburban location. The RideKC 47-Broadway bus line serves the complex, but most fans drive. The K shares the complex with Arrowhead Stadium.",
+      "accessibility": "Kauffman Stadium is fully accessible with wheelchair and companion seating on every level and complimentary guest-assistance shuttles from the lots to the gates.",
+      "bagPolicy": { "label": "Official Kauffman Stadium bag policy", "url": "https://www.mlb.com/royals/ballpark/security" },
+      "nearby": "The Truman Sports Complex is away from downtown with no walkable bars, so most fans tailgate. For pre- or post-game, the Power & Light District downtown is the go-to, about a 15-minute drive."
+    }
+  },
+  {
+    "teamSlug": "whitesox",
+    "venue": "Rate Field",
+    "planYourVisit": {
+      "gateTimes": "Gates open 90 minutes before first pitch.",
+      "parking": "Lots A through F surround the ballpark, with prepaid passes recommended for big games. The South Side lots are some of the best tailgating in baseball.",
+      "transit": "The CTA Red Line stops at Sox/35th right by the park, and the Green Line stops at 35th-Bronzeville-IIT. The Metra Rock Island line stops at the 35th Street Lou Jones station.",
+      "accessibility": "Rate Field is fully accessible with wheelchair and companion seating throughout, elevators, and accessible parking in Lot B near Gate 5.",
+      "bagPolicy": { "label": "Official Rate Field bag policy", "url": "https://www.mlb.com/whitesox/ballpark/information/guide" },
+      "nearby": "The immediate area is mostly industrial and light on bars, so the tailgate lots and the on-site ChiSox Bar & Grill carry the pregame. Bridgeport's restaurants are a short drive south."
+    }
+  },
+  {
+    "teamSlug": "astros",
+    "venue": "Daikin Park",
+    "planYourVisit": {
+      "gateTimes": "Gates typically open 90 minutes before first pitch.",
+      "parking": "Official lots can be reserved in advance through the Astros and SpotHero, with Lot C among the cheaper options around $15. Many downtown garages sit 3 to 5 blocks away.",
+      "transit": "METRORail's Green and Purple lines stop at Convention District Station, one block from the ballpark, with a transfer from the Red Line at Central Station downtown.",
+      "accessibility": "Daikin Park is fully accessible with wheelchair and companion seating throughout, elevators, and accessible parking in the official lots.",
+      "bagPolicy": { "label": "Official Daikin Park bag policy", "url": "https://www.mlb.com/astros/ballpark/information/guide" },
+      "nearby": "The ballpark anchors the east side of downtown by Union Station, with EaDo (East Downtown) just beyond. Crawford Street and Texas Avenue have the closest pregame bars and restaurants."
+    }
+  },
+  {
+    "teamSlug": "angels",
+    "venue": "Angel Stadium",
+    "planYourVisit": {
+      "gateTimes": "Gates open 90 minutes before first pitch, with the Home Plate gate opening 2 hours before and lots opening 2.5 hours before.",
+      "parking": "Angel Stadium is ringed by a large surface lot, with general parking around $20 to $30 and tailgating allowed in general lots, though Anaheim law prohibits alcohol in the lots. There is no in-and-out.",
+      "transit": "Metrolink and Amtrak stop at the ARTIC station across the lot, reached through the Douglass Road gate. The Angels Express train runs from LA Union Station for weekend and select games.",
+      "accessibility": "Angel Stadium is fully accessible with wheelchair and companion seating throughout and accessible parking in the surface lots.",
+      "bagPolicy": { "label": "Official Angel Stadium bag policy", "url": "https://www.mlb.com/angels/ballpark/information" },
+      "nearby": "The stadium is a drive-in venue with no walkable neighborhood, sitting near the Anaheim resort area and Disneyland. Most fans tailgate or head to the resort district before the game."
+    }
+  },
+  {
+    "teamSlug": "mariners",
+    "venue": "T-Mobile Park",
+    "planYourVisit": {
+      "gateTimes": "General gates open 90 minutes before first pitch, with the center field and bullpen gates opening 2 hours before.",
+      "parking": "The Mariners Garage on Edgar Martinez Drive opens 3 hours before games and is cashless, running roughly $20 to $50. Additional lots sit near Lumen Field next door.",
+      "transit": "Link light rail stops at Stadium Station a short walk away. The Sounder commuter rail serves King Street Station on select games, and ferries from across the Sound dock nearby at Colman Dock.",
+      "accessibility": "T-Mobile Park is fully accessible with wheelchair and companion seating throughout, elevators, accessible parking, and ACCESS paratransit loading on Occidental Avenue.",
+      "bagPolicy": { "label": "Official T-Mobile Park bag policy", "url": "https://www.mlb.com/mariners/ballpark/information" },
+      "nearby": "The SoDo and Pioneer Square neighborhoods have the closest pregame bars and restaurants, with plenty of spots on the walk up toward downtown. The retractable roof keeps games on whatever the weather."
+    }
+  },
+  {
+    "teamSlug": "rangers",
+    "venue": "Globe Life Field",
+    "planYourVisit": {
+      "gateTimes": "Gates open 1.5 hours before first pitch for day games, with parking lots opening 2 hours before.",
+      "parking": "Numbered lots surround the ballpark in the Arlington Entertainment District. General parking runs about $20 to $45, premium lots cost more, and all official lots are cashless, so reserve through ParkWhiz.",
+      "transit": "Arlington has no rail or major transit, so this is a drive-and-rideshare venue. The sanctioned rideshare zone is at the Chatman Cutoff on the east side.",
+      "accessibility": "Globe Life Field is fully accessible with wheelchair and companion seating, elevators and escalators, an ADA shuttle between lots and gates, and accessible parking in all general lots.",
+      "bagPolicy": { "label": "Official Globe Life Field bag policy", "url": "https://www.mlb.com/rangers/ballpark/guide" },
+      "nearby": "Texas Live! sits right next to the ballpark with bars and restaurants, and the wider Arlington Entertainment District includes AT&T Stadium. The retractable roof and air conditioning beat the Texas heat."
+    }
+  },
+  {
+    "teamSlug": "athletics",
+    "venue": "Sutter Health Park",
+    "planYourVisit": {
+      "gateTimes": "Gates open 1.5 hours before first pitch, and 2 hours before for season ticket members.",
+      "parking": "ACE Parking runs preferred lots in West Sacramento's Bridge District with over 5,000 spaces, most dedicated to the ballpark. Pre-purchase through SacPark, and note tailgating is allowed but alcohol is not, per city ordinance.",
+      "transit": "The ballpark sits across the Tower Bridge from downtown Sacramento. SacRT light rail and the Capitol Corridor train serve the downtown side, a walk across the river to the gates.",
+      "accessibility": "Sutter Health Park is accessible with wheelchair and companion seating, and primary ADA parking is in the Green VIP Lot. A bike valet is available near the gates.",
+      "bagPolicy": { "label": "Official Sutter Health Park bag policy", "url": "https://www.mlb.com/athletics/ballpark/information/guide" },
+      "nearby": "The Athletics are calling this West Sacramento ballpark home temporarily. The Bridge District has a handful of spots, and downtown Sacramento's restaurants and bars are a short walk across the Tower Bridge."
+    }
+  },
+  {
+    "teamSlug": "braves",
+    "venue": "Truist Park",
+    "planYourVisit": {
+      "gateTimes": "Gates open 2 hours before first pitch, and 90 minutes before on Thursday games.",
+      "parking": "Decks and lots surround the park, with The Battery's Red, Green, and Purple decks offering 2 free hours. Pre-purchase is strongly recommended, with prices running roughly $28 to $75.",
+      "transit": "There is no rail to Truist Park. CobbLinc buses and a free Cumberland shuttle run from the Cumberland Transfer Center, reached on foot via a pedestrian bridge over I-75.",
+      "accessibility": "Truist Park is fully accessible with wheelchair and companion seating throughout, and ADA carts run from Lot 29 to the Third Base Gate starting 2.5 hours before first pitch.",
+      "bagPolicy": { "label": "Official Truist Park bag policy", "url": "https://www.mlb.com/braves/ballpark/bag-policy" },
+      "nearby": "The Battery Atlanta wraps the ballpark with bars, restaurants, and live music, including Terrapin Taproom and the Coca-Cola Roxy. It is the pregame, no car required once you arrive."
+    }
+  },
+  {
+    "teamSlug": "marlins",
+    "venue": "loanDepot Park",
+    "planYourVisit": {
+      "gateTimes": "General gates open 90 minutes before first pitch, with premium and member gates opening earlier.",
+      "parking": "Four garages and west surface lots surround the ballpark, using license-plate entry with dynamic pricing around $15 to $30. Pay on arrival or reserve ahead.",
+      "transit": "Take Metrorail to Culmer or Civic Center Station and connect by Metrobus, or ride the free Little Havana trolley. Rideshare drop-offs are near the stadium entrances.",
+      "accessibility": "loanDepot Park is accessible with wheelchair and companion seating, though not all main entrances are accessible, so check the gate guide before arriving. The retractable roof keeps games comfortable.",
+      "bagPolicy": { "label": "Official loanDepot Park bag policy", "url": "https://www.mlb.com/marlins/ballpark/information" },
+      "nearby": "Built on the old Orange Bowl site in Little Havana, the ballpark puts you near Calle Ocho (SW 8th Street), where Cuban restaurants and cafes like Versailles and Ball & Chain make for a lively pregame."
+    }
+  },
+  {
+    "teamSlug": "mets",
+    "venue": "Citi Field",
+    "planYourVisit": {
+      "gateTimes": "Gates open about 90 minutes before first pitch, with parking lots opening an hour before that.",
+      "parking": "Six lots surround the ballpark, running roughly $40 to $60, with prepaid passes cheaper online. The lots are cashless. Cheaper street and off-site parking sits within a 10 to 15 minute walk.",
+      "transit": "The 7 subway and the LIRR Port Washington Branch both stop right at Mets-Willets Point beside the stadium. New for 2026, LIRR day passes to the ballpark are $5 off.",
+      "accessibility": "Citi Field is fully accessible with wheelchair and companion seating throughout, accessible parking in the main lots, and Access-A-Ride service at the Bullpen Gate.",
+      "bagPolicy": { "label": "Official Citi Field bag policy", "url": "https://www.mlb.com/mets/ballpark/information/guide" },
+      "nearby": "Citi Field sits at the edge of Flushing Meadows Corona Park in Queens. Downtown Flushing, one stop east on the 7, is a destination for some of the city's best Asian food before or after the game."
+    }
+  },
+  {
+    "teamSlug": "nationals",
+    "venue": "Nationals Park",
+    "planYourVisit": {
+      "gateTimes": "Gates open 90 minutes before first pitch.",
+      "parking": "More than a dozen lots and garages surround the park, including the Geico Garage and Garage C, which fill fast on busy days, so buy in advance. Garage C has a free bike valet.",
+      "transit": "The Metro Green Line stops at Navy Yard-Ballpark one block from the center field gate. The Capitol South station (Orange, Blue, Silver) is about a mile away, and the DC Circulator runs from Union Station.",
+      "accessibility": "Nationals Park is fully accessible with wheelchair and companion seating, accessible parking, and ADA and family lanes at the Home Plate and Center Field gates.",
+      "bagPolicy": { "label": "Official Nationals Park bag policy", "url": "https://www.mlb.com/nationals/ballpark/information" },
+      "nearby": "The Capitol Riverfront and Navy Yard neighborhood around the park is full of bars and restaurants along Half and M Streets, with the Anacostia riverfront just beyond the outfield."
+    }
+  },
+  {
+    "teamSlug": "phillies",
+    "venue": "Citizens Bank Park",
+    "planYourVisit": {
+      "gateTimes": "Gates open 90 minutes before first pitch, with the Third Base and Left Field gates opening earlier, 2 hours before on weekdays and 2.5 hours on weekends.",
+      "parking": "Sports Complex lots ring the park, with Lots K and M closest and A, B, and C the popular tailgate lots. Weeknight rates run about $25 to $30 and climb for marquee games. Lots are cashless.",
+      "transit": "SEPTA's Broad Street Line runs to NRG Station, a short walk from the gates, with Sports Express service on big days.",
+      "accessibility": "Citizens Bank Park is fully accessible with wheelchair and companion seating throughout, accessible parking, and Go-Ahead Entry at multiple gates for faster access.",
+      "bagPolicy": { "label": "Official Citizens Bank Park bag policy", "url": "https://www.mlb.com/phillies/ballpark/information" },
+      "nearby": "The park sits in the South Philadelphia Sports Complex alongside the Eagles and Flyers/76ers venues. Xfinity Live!, the Broad Street Bullies Pub, and the tailgate lots are the heart of the pregame."
+    }
+  },
+  {
+    "teamSlug": "brewers",
+    "venue": "American Family Field",
+    "planYourVisit": {
+      "gateTimes": "Gates open 90 minutes before first pitch.",
+      "parking": "Large surface lots surround the ballpark, opening 2.5 to 3 hours before games. Pre-purchase for the best rate. The tailgating here is among the best in baseball.",
+      "transit": "Transit options are limited. MCTS bus routes serve the area, but this is primarily a drive-in venue, so plan to park and tailgate.",
+      "accessibility": "American Family Field is fully accessible with wheelchair and companion seating throughout, elevators, and accessible parking in the surface lots.",
+      "bagPolicy": { "label": "Official American Family Field bag policy", "url": "https://www.mlb.com/brewers/ballpark/information" },
+      "nearby": "The ballpark sits west of downtown Milwaukee, so the tailgate lots are the pregame scene. The fan-shaped retractable roof keeps games on rain or shine, and downtown bars are a short drive east."
+    }
+  },
+  {
+    "teamSlug": "pirates",
+    "venue": "PNC Park",
+    "planYourVisit": {
+      "gateTimes": "Gates typically open 90 minutes before first pitch, earlier for the home opener.",
+      "parking": "North Shore lots and garages run about $18 to $29, or park downtown across the river for cheaper rates and walk over. Reserve through ParkMobile or ParkPGH.",
+      "transit": "The free T light rail runs from downtown to the North Side station outside the Home Plate Gate. On game days the Roberto Clemente Bridge closes to cars so fans can walk across from downtown.",
+      "accessibility": "PNC Park is fully accessible with wheelchair and companion seating throughout, accessible parking in all lots, and the T light rail drops off right at the Home Plate Gate.",
+      "bagPolicy": { "label": "Official PNC Park bag policy", "url": "https://www.mlb.com/pirates/ballpark/information" },
+      "nearby": "The walk across the Clemente Bridge from downtown is the signature approach, with skyline and river views. The North Shore around the park and downtown across the Allegheny both have plenty of pregame spots."
+    }
+  },
+  {
+    "teamSlug": "reds",
+    "venue": "Great American Ball Park",
+    "planYourVisit": {
+      "gateTimes": "Gates typically open 90 minutes before first pitch, earlier for Opening Day.",
+      "parking": "The Reds garage runs about $17 and the East Garage about $14, with more riverfront lots nearby. Lots are cashless, so bring a card.",
+      "transit": "The Cincinnati Bell Connector streetcar is free and stops at The Banks (Station 1), steps from the ballpark, on a loop through downtown and Over-the-Rhine.",
+      "accessibility": "Great American Ball Park is fully accessible with wheelchair and companion seating throughout, elevators, and accessible parking in both the Reds and East garages.",
+      "bagPolicy": { "label": "Official Great American Ball Park bag policy", "url": "https://www.mlb.com/reds/ballpark/information/guide" },
+      "nearby": "The Banks entertainment district sits right in front of the park with bars and restaurants like the Moerlein Lager House, and Smale Riverfront Park lines the Ohio River just beyond."
+    }
+  },
+  {
+    "teamSlug": "dbacks",
+    "venue": "Chase Field",
+    "planYourVisit": {
+      "gateTimes": "Gates open 1.5 hours before first pitch Sunday through Thursday, and 2 hours before on Friday and Saturday.",
+      "parking": "There is no on-site parking. Pre-book a nearby spot through ParkWhiz (roughly $10 to $24), or use downtown garages, lots, and metered street parking within a few blocks.",
+      "transit": "Valley Metro light rail stops at 3rd Street/Jefferson right outside the ballpark, with direct service from Sky Harbor airport. Trains run 45 minutes after the final out.",
+      "accessibility": "Chase Field is fully accessible with wheelchair and companion seating throughout, and OpenGate screening lets fans enter without unloading bags or pockets.",
+      "bagPolicy": { "label": "Official Chase Field bag policy", "url": "https://www.mlb.com/dbacks/ballpark/information/know-before-you-go" },
+      "nearby": "Chase Field sits in downtown Phoenix near Footprint Center, with restaurants and bars within a few blocks. The retractable roof, air conditioning, and right-field pool make it a true desert ballpark."
+    }
+  },
+  {
+    "teamSlug": "rockies",
+    "venue": "Coors Field",
+    "planYourVisit": {
+      "gateTimes": "Gates typically open 90 minutes to 2 hours before first pitch, with parking lots opening 2.5 hours before.",
+      "parking": "Official Lots A and B hold more than 4,300 spaces, are credit-card only, and have no tailgating or alcohol allowed. Pre-purchase through LAZ, or find cheaper lots around LoDo.",
+      "transit": "RTD rail (A, B, C, E, and W lines) runs to Union Station, a short walk from the ballpark, with buses serving downtown as well.",
+      "accessibility": "Coors Field is fully accessible with wheelchair and companion seating throughout, roughly 300 accessible spaces in Lot A, and a shuttle from the lot to Gate A.",
+      "bagPolicy": { "label": "Official Coors Field bag policy", "url": "https://www.mlb.com/rockies/ballpark/information" },
+      "nearby": "Coors Field anchors LoDo (Lower Downtown), one of baseball's best ballpark neighborhoods. McGregor Square next door plus the bars and rooftops along Blake Street make for a lively pregame."
+    }
+  },
+  {
+    "teamSlug": "padres",
+    "venue": "Petco Park",
+    "planYourVisit": {
+      "gateTimes": "Gates typically open 1.5 to 2 hours before first pitch.",
+      "parking": "There is no free on-site parking. Pre-book a garage like the 6th & K Parkade across from the main gate, the Convention Center garage, or the Padres Parkade, or reserve through SpotHero.",
+      "transit": "All three MTS Trolley lines (Green, Blue, and Orange) stop within blocks at 12th & Imperial, Gaslamp Quarter, and Park & Market. The COASTER train serves North County to Santa Fe Depot.",
+      "accessibility": "Petco Park is fully accessible with wheelchair and companion seating throughout, accessible parking, and Lock & Go lockers for storing items you cannot bring in.",
+      "bagPolicy": { "label": "Official Petco Park bag policy", "url": "https://www.mlb.com/padres/ballpark/entry-policies" },
+      "nearby": "Petco sits at the edge of the Gaslamp Quarter, San Diego's densest cluster of bars and restaurants, with the East Village just beyond. The Park at the Park behind center field is a casual pregame spot."
+    }
+  },
+  {
+    "teamSlug": "giants",
+    "venue": "Oracle Park",
+    "planYourVisit": {
+      "gateTimes": "Gates open 90 minutes before first pitch Monday through Friday, and 2 hours before on weekends. The Willie Mays gate opens 2 hours before.",
+      "parking": "On-site parking is limited (Lot A at Pier 48 and the 153 Townsend garage), so reserve through SpotHero. Nearby garages and lots can run cheaper than on-site.",
+      "transit": "Muni Metro light rail stops at King & 2nd by the park, Caltrain is a short walk at 4th & King, and BART connects via Muni from Embarcadero or Montgomery. SF Bay Ferry docks behind center field.",
+      "accessibility": "Oracle Park is fully accessible with wheelchair and companion seating, wheelchair escorts from any gate, accessible parking at Lot A/Pier 48, and an accessibility shuttle.",
+      "bagPolicy": { "label": "Official Oracle Park bag policy", "url": "https://www.mlb.com/giants/ballpark/information" },
+      "nearby": "The waterfront setting is the draw, with McCovey Cove and its kayakers behind right field and the Bay Bridge beyond. South Beach and SoMa have the closest bars and restaurants. Bring layers, as it gets chilly."
+    }
+  }
+]
