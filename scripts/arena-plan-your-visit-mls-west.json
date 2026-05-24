@@ -1,0 +1,146 @@
+{
+  "_notes": "MLS Western Conference soccer-specific venues. All 14 are single-tenant (BC Place co-tenants with BC Lions CFL, and Snapdragon Stadium with SDSU -- neither CFL nor SDSU is tracked in PromoNight, so both carry gatesOpen). SLUG CHECKS needed: childrens-mercy-park (may vary), bmo-stadium (renamed from banc-of-california-stadium 2023 -- confirm slug), inter-co-stadium is in the East batch not here. NAME FIX needed: citypark.name -> 'Energizer Park' (renamed from CITYPARK in 2025; slug stays citypark). UNUSUAL BAG POLICIES: q2-stadium has a no-bag policy -- bags larger than 8x5x1 are prohibited (no clear-bag option; lockers $10 at NW and SW gates); america-first-field also strict (bags larger than 4x6x2 prohibited, even smaller than Austin); bmo-stadium requires CLEAR bags for everything, opaque clutches are not allowed (most venues permit opaque small clutches). All bagPolicyUrl values need the curl-verify pass. No em dashes anywhere.",
+
+  "q2-stadium": {
+    "venue": "Q2 Stadium",
+    "gatesOpen": "Gates open 90 minutes before kickoff for Austin FC home matches.",
+    "parkingInfo": "Three on-site lots serve Q2 Stadium: SciPlay Lot (west), East Lot (northeast), and Southwest Lot. All lots require advance mobile purchase through the Austin FC app or SeatGeek; no day-of walk-up sales. Lots sell out for high-demand matches. From US-183 North, exit at Braker Lane east; from MoPac (Loop 1), exit Braker Lane east. Rideshare drop-off is on North Burnet Road at Braker Lane. Bag lockers are available at the NW and SW gates for $10 per locker if you need to store items.",
+    "publicTransit": "CapMetro MetroRail Red Line has a McKalla Station directly adjacent to Q2 Stadium, making the train the easiest way to attend a match without driving. From downtown Austin, the ride is under 20 minutes. CapMetro buses also connect to the Burnet Road corridor. CapMetro schedules are at capmetro.org. Lyft is the official rideshare partner.",
+    "accessibility": "Accessible seating is available on all levels. Accessible parking spaces are in all three stadium lots. Wheelchair-friendly gate access and restrooms are located throughout the stadium. Contact Q2 Stadium guest services through austinfc.com for specific accommodation requests.",
+    "bagPolicyUrl": "https://www.austinfc.com/stadium/bag-policy",
+    "nearby": "Q2 Stadium is in the McKalla Place area of North Austin. The Domain, Austin's upscale shopping and dining district, is about 10 minutes north by rideshare, with dozens of restaurant and bar options. The Bouldin Creek and South Congress neighborhoods are 20 minutes south. Most fans plan pregame dining off-site given the limited walkable options immediately around the stadium."
+  },
+
+  "dicks-sporting-goods-park": {
+    "venue": "Dick's Sporting Goods Park",
+    "gatesOpen": "Gates open 90 minutes before kickoff for Colorado Rapids matches.",
+    "parkingInfo": "Dick's Sporting Goods Park has substantial on-site parking across several surrounding lots, with free general parking available for most matches (one of the few MLS venues offering complimentary parking). Premium lots closer to the gates are available for an additional fee. From I-270, take the Commerce City exit east to the stadium at 6000 Victory Way, Commerce City. From I-76, follow East 96th Avenue or similar Commerce City routes.",
+    "publicTransit": "The stadium is in Commerce City, northeast of downtown Denver, so driving is the primary way most fans arrive. RTD Bus Route 83 provides a connection but service is infrequent on matchdays; check rtd-denver.com for schedules. Rideshare is a practical option from central Denver (approximately 20 to 30 minutes).",
+    "accessibility": "Accessible seating and ADA parking are available throughout the venue. Contact the Colorado Rapids at coloradorapids.com for specific accommodation requests ahead of matchday.",
+    "bagPolicyUrl": "https://www.coloradorapids.com/stadium/bag-policy",
+    "nearby": "Dick's Sporting Goods Park is in Commerce City, a suburb northeast of Denver with limited dining immediately around the venue. Most fans plan pregame food in the Denver metro before heading out. The stadium sits adjacent to the Colorado Rapids training complex and the broader youth soccer campus."
+  },
+
+  "toyota-stadium": {
+    "venue": "Toyota Stadium",
+    "gatesOpen": "Gates open 90 minutes before kickoff for FC Dallas home matches.",
+    "parkingInfo": "Toyota Stadium has large adjacent parking lots with thousands of spaces. General lots are cashless; advance purchase through the FC Dallas app or SeatGeek is recommended for preferred sections. From the Dallas North Tollway (DNT), take the Eldorado Pkwy exit in Frisco; the stadium is at 9200 World Cup Way. From US-75 (Central Expressway), exit Stacy Road or Eldorado west to the stadium. Tailgating is permitted in designated lots.",
+    "publicTransit": "DART light rail (Red Line) can get you to the Frisco area, and shuttle service sometimes supplements DART for high-profile FC Dallas matches. Check dart.org and the FC Dallas matchday guide for the most current service. Rideshare from Dallas or Plano (about 30 minutes) is a practical option. Frisco is primarily a drive-to suburb.",
+    "accessibility": "Toyota Stadium has ADA-compliant seating throughout and accessible parking near the main entrance. The venue is also the home of the National Soccer Hall of Fame, which has full accessibility. Contact FC Dallas at fcdallas.com for accommodation requests.",
+    "bagPolicyUrl": "https://www.fcdallas.com/toyota-stadium/bag-policy",
+    "nearby": "Toyota Stadium is the anchor of the Frisco sports and entertainment corridor. Pizza Hut Park and the Dr Pepper StarCenter are nearby. The Toyota Stadium complex includes the National Soccer Hall of Fame, open before and after matches. The Frisco Square area to the north has restaurants and shopping within a short drive."
+  },
+
+  "shell-energy-stadium": {
+    "venue": "Shell Energy Stadium",
+    "gatesOpen": "Gates open 90 minutes before kickoff for Houston Dynamo and Houston Dash home matches.",
+    "parkingInfo": "Multiple parking lots and garages are available within walking distance in the EaDo neighborhood. SpotHero and ParkMobile offer advance-purchase reservations at a discount over walk-up rates. The stadium address is 2200 Texas Avenue at the corner of Leeland Street. Day-of street parking in EaDo fills quickly for high-demand matches; advance reservation is strongly recommended. METRORail is a reliable alternative to dealing with parking.",
+    "publicTransit": "The METRORail Purple and Green Lines both serve the EaDo/Stadium station, which is directly adjacent to Shell Energy Stadium, making transit a practical option from downtown Houston and beyond. The ride from downtown takes about 5 to 10 minutes. Check ridemetro.org for schedules and fares. Lyft is the official rideshare partner.",
+    "accessibility": "Shell Energy Stadium has ADA-accessible seating throughout and accessible gates at all entry points. Accessible parking is available in nearby lots; contact guest services for designated accessible areas. Contact the Dynamo and Dash at houstondynamo.com for specific accommodations.",
+    "bagPolicyUrl": "https://www.houstondynamo.com/stadium/bag-policy",
+    "nearby": "Shell Energy Stadium is in the East Downtown (EaDo) neighborhood, Houston's most active emerging food and entertainment district. St. Emanuel Street and Congress Avenue have a strong restaurant and bar scene within a short walk. Minute Maid Park (Astros) is visible from the stadium, and the George R. Brown Convention Center is blocks away."
+  },
+
+  "dignity-health-sports-park": {
+    "venue": "Dignity Health Sports Park",
+    "gatesOpen": "Gates open 90 minutes before kickoff for LA Galaxy home matches.",
+    "parkingInfo": "On-site parking surrounds Dignity Health Sports Park in Carson with multiple general and premium lots. Advance purchase through the LA Galaxy app or SeatGeek is recommended; lots can sell out for high-profile matchups. The stadium address is 18400 Avalon Boulevard, Carson. From I-110 (Harbor Freeway), exit Avalon Boulevard south; from I-405, take the Avalon exit. Cash is not accepted in the lots.",
+    "publicTransit": "Dignity Health Sports Park is in a suburban location in Carson, between Los Angeles and Long Beach. The Metro Green Line (E Line) has an Avalon Station a manageable distance away; the Torrance Transit Bus Route 8 and LA Metro buses provide additional connections but service frequency varies. Most fans drive or take rideshare (approximately 20 to 30 minutes from downtown LA or Long Beach). Check metro.net for transit options.",
+    "accessibility": "Accessible seating and ADA parking are available throughout. Wheelchair-accessible gates and restrooms serve all areas of the venue. Contact LA Galaxy at lagalaxy.com for specific accommodation requests.",
+    "bagPolicyUrl": "https://www.lagalaxy.com/stadium/bag-policy",
+    "nearby": "Dignity Health Sports Park is in Carson with limited immediate walkable dining options. The South Bay region of LA has several commercial corridors nearby. The campus also includes the StubHub Center tennis facility. Most fans plan pregame dining in Torrance, Long Beach, or the LAX corridor before arriving."
+  },
+
+  "bmo-stadium": {
+    "venue": "BMO Stadium",
+    "gatesOpen": "Gates open 90 minutes before kickoff for LAFC home matches.",
+    "parkingInfo": "Multiple parking structures and surface lots are available in the USC campus and South LA area surrounding BMO Stadium. Advance purchase through the LAFC app or ParkWhiz is recommended. The stadium address is 3939 S Figueroa Street in South Los Angeles, adjacent to Exposition Park. The I-110 (Harbor Freeway) passes directly by the stadium; exits at Exposition Boulevard or Martin Luther King Jr. Boulevard are closest.",
+    "publicTransit": "The Metro E Line (Expo Line) is the recommended transit option; the Jefferson/USC and Vermont/USC stations are both a manageable walk from the stadium. The Silver Line (J Line) and multiple Metro bus routes also serve the area. Metro is generally the fastest way into and out of the stadium on matchdays. Check metro.net for fares and schedules. BMO Stadium strongly encourages transit over driving.",
+    "accessibility": "BMO Stadium has ADA-accessible seating on all levels and accessible gates at all entry points. Elevators are located throughout the venue. Contact LAFC guest services at lafc.com for specific accommodation requests ahead of matchday.",
+    "bagPolicyUrl": "https://www.lafc.com/bmo-stadium/bag-policy",
+    "nearby": "BMO Stadium sits on the edge of Exposition Park, home to the Natural History Museum of LA County, the California Science Center, and the LA Memorial Coliseum. The USC campus is adjacent. The Figueroa Corridor, downtown LA, and the Arts District are a short drive or Metro ride away. LAFC matchdays have a strong supporter culture with pregame gatherings near the stadium."
+  },
+
+  "allianz-field": {
+    "venue": "Allianz Field",
+    "gatesOpen": "Gates open 90 minutes before kickoff for Minnesota United home matches.",
+    "parkingInfo": "Multiple parking lots serve Allianz Field in the Midway area between Minneapolis and Saint Paul. The Midpoint Center lot (directly adjacent) is the nearest option; additional lots are available on University Avenue NE and at the nearby shopping centers. Advance purchase via ParkMobile or the Minnesota United app is strongly recommended. Some street parking is available in Midway neighborhoods, though residential permit zones limit options near the stadium. From I-94, exit Snelling Avenue north about two miles to the stadium at 1897 University Avenue NE.",
+    "publicTransit": "The Metro Green Line LRT stops at Snelling Avenue Station, directly adjacent to Allianz Field. It is the easiest way to attend a match from both Minneapolis and Saint Paul -- the ride from either downtown is about 20 minutes or less. Buses on Snelling Avenue and University Avenue supplement light rail. Metro Transit info at metrotransit.org. Allianz Field is one of the best-connected venues in MLS for transit.",
+    "accessibility": "Accessible seating is available throughout Allianz Field and ADA-compliant gates are at all entry points. Accessible parking is in the Midpoint Center lot with designated spaces. Assistive listening devices are available; contact Minnesota United at mnufc.com ahead of your visit for specific accommodations.",
+    "bagPolicyUrl": "https://www.mnufc.com/allianz-field/bag-policy",
+    "nearby": "Allianz Field is in the Midway neighborhood, a vibrant commercial corridor on University Avenue midway between downtown Minneapolis and Saint Paul. Multiple bars and restaurants are within walking distance on University Avenue and Snelling. The Green Line LRT connects the stadium to both downtowns and to the full Metro Transit network, making postgame dining anywhere along the Green Line simple."
+  },
+
+  "providence-park": {
+    "venue": "Providence Park",
+    "gatesOpen": "Gates open 90 minutes before kickoff for Portland Timbers and Portland Thorns home matches.",
+    "parkingInfo": "Parking options near Providence Park in downtown Portland are numerous but expensive on matchdays. The SmartPark garages (city-operated, metered) and private lots throughout the downtown core are within a 5 to 15 minute walk. Driving to Portland Timbers matches is actively discouraged given downtown congestion; transit is strongly preferred. Rideshare pickup and drop-off are on adjacent streets; post-match rideshare demand causes significant waits.",
+    "publicTransit": "Providence Park is one of the best transit-accessible stadiums in North America. The MAX Light Rail Kings Hill/SW 18th Ave Station is immediately adjacent to the stadium, serving the Blue, Orange, and Red Lines. Multiple TriMet bus routes also stop nearby. From downtown Portland, the ride is 5 to 10 minutes. Check trimet.org for fares, routes, and schedules. Many fans purchase an all-day pass for the full matchday experience.",
+    "accessibility": "Providence Park is a historic venue (renovated 2019) with ADA-accessible seating, elevators, and accessible gates throughout. The main accessible entrance is off SW Morrison Street. Contact the Portland Timbers at timbers.com for specific accommodation requests ahead of matchday.",
+    "bagPolicyUrl": "https://www.timbers.com/stadium/bag-policy",
+    "nearby": "Providence Park is in the heart of downtown Portland, surrounded by some of the best dining and bar options in the Pacific Northwest. The Pearl District (10 minutes on foot or one MAX stop), Old Town, and the Mississippi Ave neighborhood (accessible by MAX) are all excellent pregame destinations. The stadium has a strong supporter culture with organized pregame marches from nearby bars."
+  },
+
+  "america-first-field": {
+    "venue": "America First Field",
+    "gatesOpen": "Gates open 90 minutes before kickoff for Real Salt Lake and Utah Royals home matches.",
+    "parkingInfo": "Four to five stadium lots surrounding America First Field in Sandy, UT offer $10 to $20 per vehicle on matchdays. Advance purchase when buying tickets is strongly recommended, as lots fill for high-demand matches. From I-15, take Exit 295 (10600 S / Sandy) east to State Street, then south to the stadium at 9256 South State Street. Note that Sandy is about 18 miles south of downtown Salt Lake City; plan commute time accordingly.",
+    "publicTransit": "UTA TRAX light rail is the recommended way to attend RSL matches. The Sandy Expo Center Station (Draper Town Center Line and Lehi to Downtown/Airport Line, depending on configuration) is directly adjacent to the stadium. From downtown Salt Lake City, the TRAX ride takes approximately 30 to 35 minutes. Check rideuta.com for fares, routes, and schedules. TRAX service runs extended hours on matchdays.",
+    "accessibility": "America First Field has ADA-accessible seating throughout and accessible gates at all entry points. Accessible parking is in the lots nearest the main entrance. Contact Real Salt Lake at rsl.com for specific accommodation requests ahead of matchday.",
+    "bagPolicyUrl": "https://americafirstfield.com/stadium-info/",
+    "nearby": "America First Field is in Sandy, south of the Salt Lake Valley. The immediately surrounding area is primarily commercial and residential. Salt Lake City's downtown dining and entertainment scene is about 30 minutes by TRAX north. The Jordan Commons movie and entertainment complex is a short drive away."
+  },
+
+  "snapdragon-stadium": {
+    "venue": "Snapdragon Stadium",
+    "gatesOpen": "Gates open 90 minutes before kickoff for San Diego FC home matches.",
+    "parkingInfo": "Multiple on-site lots and a stadium parking structure serve Snapdragon Stadium in the Mission Valley neighborhood of San Diego. Premium and general lots require advance purchase through the San Diego FC app or SeatGeek; walk-up availability varies. The stadium address is 2001 Greg Sherwood Way in Mission Valley, directly off I-8 between the I-805 and I-15. From I-8, take Exit 9 (Friars Road) and follow the directional signage.",
+    "publicTransit": "The MTS Green Line (Mission Valley West Trolley) has a Snapdragon Stadium station directly at the venue. From downtown San Diego, the trolley ride takes approximately 20 to 25 minutes. The Green Line connects to the Blue Line at Old Town and to the UC San Diego campus. Check sdmts.com for fares, schedules, and connections. Transit is the preferred way to attend San Diego FC matches given limited post-match parking exit capacity.",
+    "accessibility": "Snapdragon Stadium is a modern venue (opened 2022) with full ADA compliance throughout. Accessible seating, parking, restrooms, and gates are available at all areas. Contact San Diego FC at sandiegofc.com for specific accommodation requests.",
+    "bagPolicyUrl": "https://www.sandiegofc.com/stadium/bag-policy",
+    "nearby": "Snapdragon Stadium is in Mission Valley, centrally located between downtown San Diego, Mission Hills, and North Park. Fashion Valley Mall and Hazard Center are within walking distance, offering multiple restaurant and shopping options. Old Town San Diego (historic park and dining district) is a short trolley ride north on the Green Line."
+  },
+
+  "paypal-park": {
+    "venue": "PayPal Park",
+    "gatesOpen": "Gates open 90 minutes before kickoff for San Jose Earthquakes home matches.",
+    "parkingInfo": "On-site lots surrounding PayPal Park provide parking for most Earthquakes home matches. Advance purchase via SeatGeek or ParkMobile is recommended for high-demand matchups. The stadium address is 1123 Coleman Avenue, San Jose. From US-101, take the Coleman Avenue exit (Exit 391); the stadium is about one mile from the freeway.",
+    "publicTransit": "VTA Light Rail has a dedicated Earthquakes Stadium station directly at PayPal Park, making the light rail the easiest way to attend a match without dealing with parking. Multiple VTA bus routes also serve the Coleman Avenue and Airport Boulevard corridor. From downtown San Jose, the light rail ride takes approximately 15 to 20 minutes. Check vta.org for schedules and fares.",
+    "accessibility": "PayPal Park has ADA-accessible seating on all levels and accessible entry points at all gates. Accessible parking is in the designated lots nearest the main entry. Contact San Jose Earthquakes at sjearthquakes.com for specific accommodation requests.",
+    "bagPolicyUrl": "https://www.sjearthquakes.com/stadium/bag-policy",
+    "nearby": "PayPal Park is in the North San Jose and Mineta Airport corridor. SAP Center (home of the San Jose Sharks) is nearby, and the Guadalupe River Trail provides a walking route toward downtown. The San Jose downtown dining and bar scene (Santana Row, the SoFA District) is about 15 minutes by VTA light rail."
+  },
+
+  "childrens-mercy-park": {
+    "_slugNote": "Verify slug in inventory. Possible slugs: childrens-mercy-park, children-mercy-park, or sporting-park (the original name before 2015 naming rights deal). Confirm before writing.",
+    "venue": "Children's Mercy Park",
+    "gatesOpen": "Gates open 90 minutes before kickoff for Sporting KC home matches.",
+    "parkingInfo": "Children's Mercy Park is surrounded by extensive on-site parking in Wyandotte County, Kansas, at 1 Sporting Way. General lots are available; premium lots closer to the main entrance can be purchased in advance through the Sporting KC app. The Legends Outlets Kansas City shopping and dining complex is adjacent to the stadium and provides supplemental parking and pedestrian access. From I-70, take Exit 411B (Parallel Parkway) and follow directional signage to Sporting Way.",
+    "publicTransit": "Children's Mercy Park is in suburban Kansas City, Kansas, and transit options are limited. Kansas City Area Transportation Authority (KCATA) bus routes connect to the broader metro area but service frequency is low on matchdays. Rideshare from downtown Kansas City (approximately 15 to 20 minutes) is the most practical non-driving option. Check kcata.org for current route information.",
+    "accessibility": "Accessible seating and ADA parking are available throughout the venue. All gates have accessible entry points and the stadium has accessible restrooms throughout. Contact Sporting KC at sportingkc.com for specific accommodation requests ahead of matchday.",
+    "bagPolicyUrl": "https://www.sportingkc.com/stadium/bag-policy",
+    "nearby": "Children's Mercy Park is directly adjacent to Legends Outlets Kansas City, an outdoor shopping and dining complex with multiple restaurants and bars accessible before and after the match. The Wyandotte County area also has the Hollywood Casino and the Kansas Speedway within the broader Village West development. Downtown Kansas City, MO and its extensive restaurant scene is about 20 minutes by rideshare."
+  },
+
+  "citypark": {
+    "_nameFix": "Energizer Park",
+    "venue": "Energizer Park",
+    "gatesOpen": "Gates open 90 minutes before kickoff for St. Louis City SC home matches.",
+    "parkingInfo": "Energizer Park is in Midtown St. Louis at 2019 Market Street, with the CITY Parking Garage at 1950 Olive Street (one block east) serving as the primary adjacent structure. Multiple additional public garages and surface lots are in the downtown and Midtown St. Louis area within a 10 to 15 minute walk. Advance purchase via ParkMobile is recommended. Day-of street parking on Market Street and adjacent blocks fills before kickoff.",
+    "publicTransit": "MetroLink light rail (Red and Blue Lines) serves Union Station, approximately a 10 to 15 minute walk from Energizer Park. The venue is also accessible by multiple Metro bus routes on Market Street and nearby corridors. Check metrostlouis.org for fares and schedules. Rideshare drop-off is available along Market Street.",
+    "accessibility": "Energizer Park has ADA-accessible seating on all levels and accessible entry at designated gates. Accessible parking is available in the CITY Parking Garage adjacent to the stadium. Assistive listening devices and other accessibility services are available; contact St. Louis City SC at stlcitysc.com for specific accommodations.",
+    "bagPolicyUrl": "https://www.stlcitysc.com/matchday/",
+    "nearby": "Energizer Park is in Midtown St. Louis, surrounded by a rapidly developing urban neighborhood. The St. Louis Wheel, City Museum, and the Cortex innovation district are nearby. Market Street connects to downtown St. Louis to the east, with the Gateway Arch National Park and Ballpark Village about 15 minutes by rideshare. Local bars and restaurants in the Midtown and Grand Center neighborhoods are developing quickly alongside the stadium."
+  },
+
+  "bc-place": {
+    "_slugNote": "BC Place co-tenants with the BC Lions (CFL). CFL is not tracked in PromoNight so BC Place is treated as a single-tenant venue for Vancouver Whitecaps, and gatesOpen is included. Confirm slug in inventory.",
+    "venue": "BC Place",
+    "gatesOpen": "Gates open 90 minutes before kickoff for Vancouver Whitecaps FC home matches.",
+    "parkingInfo": "BC Place is in downtown Vancouver adjacent to the Expo 86 grounds. The BC Place Garage below the stadium and nearby PavCo lots offer limited on-site parking; spaces must be purchased in advance and are expensive. Street parking in the surrounding areas is metered. Transit is the recommended way to attend Whitecaps matches, and most Vancouver fans do not drive.",
+    "publicTransit": "BC Place has direct SkyTrain access from two lines. The Stadium-Chinatown Station (Expo Line and Millennium Line) is immediately adjacent to BC Place, making it arguably the easiest-to-reach major stadium in Canada by transit. From downtown Vancouver, the ride is 5 minutes or less. The Canada Line at Yaletown-Roundhouse Station is also nearby. TransLink info at translink.ca. Multiple bus routes serve the Pacific Boulevard and Georgia Street corridors.",
+    "accessibility": "BC Place is a fully accessible modern venue (retractable roof) with elevators, accessible seating, ADA restrooms, and accessible gates at all entry points. Wheelchair spaces and companion seats are available on all concourse levels. Contact BC Place guest services or the Vancouver Whitecaps at whitecapsfc.com for specific accommodation requests.",
+    "bagPolicyUrl": "https://www.whitecapsfc.com/stadium/bag-policy",
+    "nearby": "BC Place is in the heart of downtown Vancouver, steps from the Yaletown neighborhood (one of the city's top restaurant and bar districts), False Creek waterfront, and Science World. Robson Street and Granville Street entertainment corridors are within easy walking distance. The Rogers Arena (Canucks) is a few blocks north. The SkyTrain puts all of Metro Vancouver within reach for pregame and postgame options."
+  }
+}

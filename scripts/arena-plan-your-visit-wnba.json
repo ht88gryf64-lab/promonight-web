@@ -1,0 +1,53 @@
+{
+  "_notes": "WNBA batch. All five venues are single-tenant WNBA-only arenas, so all carry a researched gatesOpen. NAME FIX: entertainment-sports-arena.name must update to 'CareFirst Arena' (Events DC renamed it from Entertainment & Sports Arena in February 2025; slug stays entertainment-sports-arena). All other names are current. bagPolicyUrl: mohegan-sun-arena policies page is directly sourced and solid; the rest are best-effort official pages and should ride the curl-verify pass before execute. michelob-ultra-arena has an unusual 30-minute door policy (not the standard hour), verified from the official Aces arena page and a multi-source travel review; this is genuinely worth surfacing to fans. No em dashes anywhere.",
+
+  "college-park-center": {
+    "venue": "College Park Center",
+    "gatesOpen": "Doors open one hour before tipoff for all Dallas Wings games.",
+    "parkingInfo": "Parking decks sit on the north side of the building. From I-20, exit Cooper Street (FM 157) north about four miles to UTA Boulevard, right on UTA, right on South Center Street. From I-30, exit Center Street south about two miles to 600 South Center Street. The parking garages will be on your right. Drop-off and pick-up are at Gate 1 (Spaniolo Drive and Third Street) and Moritz Plaza (Spaniolo Drive and Second Street).",
+    "publicTransit": "College Park Center is a campus-embedded arena on the UT Arlington grounds between Dallas and Fort Worth, so most fans drive. Rideshare drop-off is available at Gate 1 and Moritz Plaza. UTA campus shuttles run during the semester.",
+    "accessibility": "The arena is fully accessible and was the first WNBA venue to earn KultureCity Sensory Inclusive certification. One elevator is inside Gate 1 and two are on the main concourse near sections 104-105 and 110. Accessible seating is available; contact tickets@dallaswings.com with questions.",
+    "bagPolicyUrl": "https://www.utacollegepark.com/dallaswingsinfo.php",
+    "nearby": "College Park Center sits in suburban Arlington, the heart of the DFW sports triangle. AT&T Stadium (Cowboys), Globe Life Field (Rangers), and Six Flags are all within a couple of miles, so there are plenty of pregame and postgame restaurant and bar options in that corridor along I-30."
+  },
+
+  "entertainment-sports-arena": {
+    "venue": "CareFirst Arena",
+    "gatesOpen": "Doors open one hour before tipoff for Washington Mystics games.",
+    "parkingInfo": "A garage and a surface lot sit directly next to the arena at about 20 dollars prepaid or day-of. Street parking is limited. The post-game garage exit can back up significantly (allow 20 to 30 minutes), so transit is the better call for most fans. The arena is about a mile off Interstate 295 via local roads.",
+    "publicTransit": "This is one of the easiest transit calls in the WNBA. Take the DC Metro Green Line toward Branch Avenue to the Congress Heights station, then walk about five minutes: through the kiss-and-ride lot, right on Oak Drive SE, and the arena is directly ahead. WMATA info at wmata.com or 202-637-7000. Lyft is the arena's rideshare partner.",
+    "accessibility": "Escort service is available: meet at the entry doors and staff will assist to your seat and back to the exit. Contact guest services ahead at eventsdc.com for specific accommodations.",
+    "bagPolicyUrl": "https://eventsdc.com/venue/carefirst-arena/venue-faqs",
+    "nearby": "CareFirst Arena sits in the Congress Heights neighborhood of Southeast DC on the grounds of the former St. Elizabeth's Hospital campus, an area that is actively redeveloping. The Green Line puts all of DC within reach, including Navy Yard for pregame dining, which is three stops north."
+  },
+
+  "michelob-ultra-arena": {
+    "venue": "Michelob ULTRA Arena",
+    "gatesOpen": "Doors open 30 minutes before tipoff for Aces games, which is earlier than most WNBA venues. The Aces page recommends arriving at the venue 30 to 60 minutes before game time to get through security comfortably.",
+    "parkingInfo": "The Excalibur self-parking garage is the official option; buy in advance through ParkMobile (same-day walk-up pricing is higher). Mandalay Bay Resort's own self-parking is also connected. The arena address is 3950 South Las Vegas Blvd, with resort signage directing drivers from the Strip. Lyft and Uber are everywhere in Las Vegas and are a solid alternative to parking.",
+    "publicTransit": "The RTC Deuce and SDX bus lines stop at Mandalay Bay on the Strip, and the arena sits inside the resort, so walking from Strip hotels is common. No dedicated light rail serves this part of the Strip.",
+    "accessibility": "Accessible seating is available throughout the 12,000-seat arena. Contact the Aces at 702-939-9191 for specific accommodation requests. The resort's valet service is available 24 hours.",
+    "bagPolicyUrl": "https://aces.wnba.com/michelob-ultra-arena",
+    "nearby": "The arena is inside Mandalay Bay Resort, so the Shoppes at Mandalay Place is right outside the arena doors, with Slice of Vegas and Hussong's Mexican Cantina as go-to pregame options. The entire Las Vegas Strip is steps away with unlimited dining and entertainment options."
+  },
+
+  "mohegan-sun-arena": {
+    "venue": "Mohegan Sun Arena",
+    "gatesOpen": "The venue recommends arriving at least 40 to 70 minutes before tipoff to allow time for security. Check the event page for the exact door time for each game.",
+    "parkingInfo": "Parking is free at Mohegan Sun, with over 13,000 spaces across the Indian Summer, Riverview, and Winter Parking Garages. The Riverview Garage is closest to the box office and arena entrance. Premium reserved spots in the Riverview Garage ground floor can be added when buying tickets. Tesla chargers are available on level 4 of the Indian Summer Garage, level 3 of Riverview, and level 2 of the Winter Garage.",
+    "publicTransit": "Mohegan Sun is in rural Uncasville, Connecticut, so most fans drive. The arena is on I-395 south (exit 9, CT-2A East toward Ledyard). Limited shuttle options from nearby areas; check the Connecticut Sun FAQ at sun.wnba.com for current transportation resources.",
+    "accessibility": "Wheelchairs are available at coat-check locations at each of the arena's three entrances, and motorized scooter rentals are available through the Transportation Services Reservation Center. Contact the venue at least two weeks ahead for specific accommodations.",
+    "bagPolicyUrl": "https://mohegansun.com/poi/venues/mohegan-sun-arena/policies.html",
+    "nearby": "The arena is embedded in the Mohegan Sun Casino and Resort, so restaurants, bars, the Wolf Den performance stage, and the Shops at Mohegan Sun are all on-site. The resort is a destination in itself; plan to arrive early and enjoy the complex before the game."
+  },
+
+  "wintrust-arena": {
+    "venue": "Wintrust Arena",
+    "gatesOpen": "Doors open 60 minutes before tipoff for Chicago Sky games. Skyrider season-ticket members enter 90 minutes before through the dedicated Skyrider Entrance off Cermak Road on the ground level.",
+    "parkingInfo": "Lot A (2301 South Prairie Avenue, at Martin Luther King Jr. Drive) is the official game-day lot at 22 dollars per vehicle, with 2,100 spaces and covered walkways directly into the arena. Lot B at 31st Street (3050 South Moe Drive) is an open-air overflow lot at 18 dollars. From the Kennedy Expressway (I-90/94), exit at 18th Street, head east to State Street, turn south to Cermak Road. The arena address is 200 East Cermak Road.",
+    "publicTransit": "The CTA Green Line stops at Cermak-McCormick Place station (Cermak and State), a 2.5-block walk west of the arena. The Red Line Cermak-Chinatown stop is four blocks west. Multiple CTA bus routes serve the area. No official taxi stand; the arena concierge can direct you.",
+    "accessibility": "Wheelchair-accessible seating is on both the 100 and 200 levels, with accessible parking in Lot A. Assisted Listening Devices are available at Guest Services on the southeast exterior of the arena. Wintrust Arena is a fully cashless venue.",
+    "bagPolicyUrl": "https://sky.wnba.com/clear-bag-policy",
+    "nearby": "Wintrust Arena sits on the McCormick Place convention campus in the South Loop, with the Museum Campus (Field Museum, Shedd Aquarium, Adler Planetarium) and the lakefront a short walk east. Chinatown is two Red Line stops west and is the easy pregame dining destination from this location."
+  }
+}

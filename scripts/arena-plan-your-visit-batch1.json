@@ -1,0 +1,43 @@
+{
+  "_notes": "Batch 1: single-tenant NBA/NHL conference-final arenas, hosting imminent home games. Keyed by venue slug exactly as in the resolution inventory. Fields are the flat Firestore field names (write 1:1, no mapping). All four are single-tenant, so each carries a researched gatesOpen. bagPolicyUrl values are best-effort official pages; run the same curl-verify pass used for MLB Phase 2 before writing, and substitute the live equivalent for any 404 (Mariners precedent). No em dashes anywhere.",
+
+  "lenovo-center": {
+    "venue": "Lenovo Center",
+    "gatesOpen": "Parking lots open three hours before puck drop and tailgating is allowed, so Canes fans can make a night of it in the lots. Arena doors typically open about 90 minutes before game time, earlier for big giveaway nights.",
+    "parkingInfo": "More than 8,000 spaces fill the lots surrounding the arena. Parking is cashless, so pay by card or mobile wallet, and prepaying through Ticketmaster or ParkWhiz beats paying at the gate. Paved lots go fast; arriving under 30 minutes before puck drop usually means an unpaved overflow lot.",
+    "publicTransit": "Most fans drive, since transit options are limited. Rideshare drop-off and pickup is at Gate C off Trinity Road, and drivers should not turn into any other gate or lot. GoRaleigh buses serve the wider area but do not stop at the door.",
+    "accessibility": "The arena is fully accessible, with accessible parking available by displaying a placard to lot staff, plus elevators and escalators throughout. An ADA guide and a free Kid Check wristband program are available at Guest Services on the main concourse at Section 127.",
+    "bagPolicyUrl": "https://www.nhl.com/hurricanes/arena/gameday-procedures",
+    "nearby": "The arena sits beside Carter-Finley Stadium on the west side of Raleigh, away from downtown, so most pregame food and drink happens as tailgating in the lots. For a sit-down meal, head about 15 minutes east to downtown Raleigh or the Glenwood South district."
+  },
+
+  "frost-bank-center": {
+    "venue": "Frost Bank Center",
+    "gatesOpen": "Doors open one hour before tip-off for most Spurs games, and the event-day box office opens three hours before. No Bag express lanes are available, so traveling light gets you in faster.",
+    "parkingInfo": "On-site lots ring the arena and are cashless, so pay by card or tap-to-pay; prepaying through Ticketmaster is recommended. Tailgating is not permitted. The building sits about ten minutes east of downtown off Interstate 35 at exit 159B.",
+    "publicTransit": "Most visitors drive. VIA Metropolitan Transit runs special-event bus service to Spurs games from park-and-ride lots around the city, and routes 24 and 222 serve the area. Rideshare pickup is in Lot 5 near Section 125 after events.",
+    "accessibility": "Restrooms on every level meet or exceed ADA standards, accessible parking is available in select lots, and a Sensory Room on the Balcony Level at Section 230 offers a quiet space (request access through Guest Services at Section 101 or 207). Strollers can be checked at Guest Services on the Plaza Level.",
+    "bagPolicyUrl": "https://www.frostbankcenter.com/arena/arena-policies",
+    "nearby": "The arena is on the east side, a short drive from downtown San Antonio and the River Walk, where most pregame dining lives. There is little walkable food right by the building, so plan to eat downtown before heading over."
+  },
+
+  "t-mobile-arena": {
+    "venue": "T-Mobile Arena",
+    "gatesOpen": "Doors typically open about 90 minutes before puck drop, and Vegas leans hard into its pregame show, so arrive early. The bag policy is strict (small clutches only), so travel light; paid Binbox lockers sit on Toshiba Plaza if you need them.",
+    "parkingInfo": "The arena has no lot of its own; fans park in the nearby MGM Resorts garages at New York-New York, Park MGM, Aria, and Excalibur. Parking is cashless and prepaying is cheaper, with prepaid spots available up to seven hours before the game. A free MGM Rewards membership can lower or waive the rate.",
+    "publicTransit": "The arena is walkable from New York-New York, Park MGM, Aria, and Excalibur. The Las Vegas Monorail and the RTC Deuce bus run along the Strip, and the RTC Game Day Express offers round-trip service to Golden Knights games. Rideshare drop-off is on the ground level of the New York-New York garage, with pickup at New York-New York or Park MGM.",
+    "accessibility": "T-Mobile Arena is fully accessible, with accessible seating and services throughout; contact arena Guest Services for specific needs. Note the building enforces a strict no-re-entry policy for all events.",
+    "bagPolicyUrl": "https://www.t-mobilearena.com/plan-your-visit/bag-check-policy",
+    "nearby": "The Park, an open-air dining and entertainment district anchored by spots like Beerhaus, sits right outside the arena between New York-New York and Park MGM. The full Strip is steps away, so pregame and postgame options are endless."
+  },
+
+  "rocket-arena": {
+    "venue": "Rocket Arena",
+    "gatesOpen": "Doors typically open 60 to 90 minutes before tip-off. The enclosed RTA Walkway from Tower City opens four hours before Cavs games, so transit riders can get in early and stay out of the weather.",
+    "parkingInfo": "Two connected on-site garages, the Great Day Improvements Garage (formerly Gateway East) and the JACK Cleveland Casino Garage, hold about 3,300 cars and link to the arena by enclosed walkway. Surface lots run by LAZ Parking sit within a 5 to 10 minute walk. Prepay through ParkMobile or LAZ for the best rate. On nights the Guardians also play next door, the Great Day garage takes prepaid passes only.",
+    "publicTransit": "RTA rapid transit is the easy way in: take the Red, Blue, or Green line to Tower City Station, then the enclosed 1,050-foot Walkway straight into the arena lobby. RTA rail stations offer more than 7,000 free parking spaces. Lyft is the arena's official rideshare partner.",
+    "accessibility": "Both on-site garages have accessible spaces and passenger elevators to the arena's ground level, and the Great Day Improvements Garage has a connecting bridge into the building from Garage Level 3. The arena is fully accessible throughout.",
+    "bagPolicyUrl": "https://www.rocketarena.com/plan-your-visit/a-z-guide",
+    "nearby": "The arena anchors the Gateway District downtown, right next to Progressive Field. East 4th Street, a pedestrian block packed with restaurants and bars, is a short walk away and is the go-to for pregame food. The JACK Cleveland Casino sits next door."
+  }
+}

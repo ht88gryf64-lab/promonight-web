@@ -1,0 +1,108 @@
+{
+  "_notes": "MLS Eastern Conference soccer-specific venues. All 10 are single-tenant MLS stadiums, so all include gatesOpen. NAME FIXES needed before execute: (1) lower-com-field.name -> 'ScottsMiracle-Gro Field' (renamed November 2025); (2) red-bull-arena.name -> 'Sports Illustrated Stadium' (renamed December 2024). UNUSUAL BAG POLICIES: scottsmiracle-gro-field has a no-bag policy except bags smaller than 5x8x1 (not a standard clear-bag) -- bag check tent at NW Gate. sports-illustrated-stadium allows bags up to 14x14x6. Nu Stadium (Inter Miami) slug is UNKNOWN -- Inter Miami moved from Chase Stadium/DRV PNK Stadium in Fort Lauderdale to Nu Stadium at Miami Freedom Park on April 4 2026. Claude Code must identify the current Inter Miami venue slug before writing (may be drv-pnk-stadium, chase-stadium, or a new nu-stadium slug). The slug used below as 'nu-stadium' is a placeholder. All bagPolicyUrl values need the curl-verify pass. No em dashes anywhere.",
+
+  "tql-stadium": {
+    "venue": "TQL Stadium",
+    "gatesOpen": "Gates open 90 minutes before kickoff for all FC Cincinnati matches.",
+    "parkingInfo": "Multiple lots serve TQL Stadium in the West End neighborhood, all cashless with mobile-pass purchase via the FC Cincinnati app. Pre-match road closures around Wade Street and Liberty Street are common; check the current matchday parking page at fccincinnati.com/matchday for match-specific maps. Six gates are distributed around the stadium so fans can enter from the side closest to their section.",
+    "publicTransit": "TQL Stadium is in Cincinnati's West End, walkable from downtown and accessible by Metro (TANK) bus routes. The stadium is about 10 minutes on foot from Findlay Market in Over-the-Rhine, making that area a natural pre-match stop. Rideshare drop-off zones are available on designated streets near the venue.",
+    "accessibility": "All six gates have accessible entry points. Reverse ATMs for fans who bring cash are located at the team store, sections 103 and 125. ADA seating is available on all levels; contact GuestExperience@tqlstadium.com for requests.",
+    "bagPolicyUrl": "https://tqlstadium.com/bag-policy",
+    "nearby": "West End sits directly adjacent to Over-the-Rhine (OTR), one of Cincinnati's best dining and bar neighborhoods. The march from Washington Park at the corner of Vine and 14th Street is a pregame tradition for supporters."
+  },
+
+  "lower-com-field": {
+    "_nameFix": "ScottsMiracle-Gro Field",
+    "venue": "ScottsMiracle-Gro Field",
+    "gatesOpen": "Gates open 90 minutes before kickoff for Columbus Crew matches.",
+    "parkingInfo": "On-site parking at ScottsMiracle-Gro Field is limited. Arena District garages and surface lots within a 10-minute walk typically run $15-25 on matchdays; advance purchase through ParkMobile is strongly recommended. A pedestrian bridge over the Olentangy River provides direct access from the Olentangy Trail for cyclists, with free bike valet from Franklinton Cycle Works at the east end of the bridge starting four hours before kickoff.",
+    "publicTransit": "COTA Bus Route 8 serves the stadium directly, and the CBUS circulator connects the stadium to the Short North and downtown Columbus. Most downtown hotels are a 5-15 minute walk from ScottsMiracle-Gro Field via the Arena District. Rideshare pickup and drop-off are available near the northwest corner of the stadium.",
+    "accessibility": "The Koorsen Guest Services Center behind Section 112 on the Main Concourse can assist with accessibility needs and questions. The venue is fully cashless. Accessible seating is available on all levels.",
+    "bagPolicyUrl": "https://www.columbuscrew.com/matchday/bag-policy",
+    "nearby": "ScottsMiracle-Gro Field anchors the Astor Park development in downtown Columbus's Arena District, surrounded by restaurants and bars. The Short North arts and entertainment corridor is a short rideshare away and is the best pregame option for dining."
+  },
+
+  "audi-field": {
+    "venue": "Audi Field",
+    "gatesOpen": "Gates open 90 minutes before kickoff for DC United matches.",
+    "parkingInfo": "Parking near Audi Field is limited and driving is not recommended. SpotHero is the official advance-parking partner with rates up to 50 percent off drive-up prices. Residential street parking near the stadium is essentially unavailable. Rideshare pickup after the match is at the designated zone on Potomac Avenue toward Nationals Park; pickups are not permitted on South Capitol Street.",
+    "publicTransit": "The Navy Yard-Ballpark Metro station (Green Line) is the recommended approach, with the most sidewalk capacity on the walk to the stadium. Waterfront station also works (one stop south) but routes through quiet residential streets. The free bike valet at the southwest corner (2nd and T Streets SW) opens with the gates. Lime bikes and Capitol Bikeshare are available nearby.",
+    "accessibility": "Accessible seating and ADA-compliant gates are available at all stadium entrances. Bike valet opens when gates open and runs at least one hour after the match. Contact DC United guest services for specific ADA accommodations.",
+    "bagPolicyUrl": "https://audifield.com/plan-your-visit/",
+    "nearby": "Audi Field is in the Buzzard Point area of Southwest DC, a goal kick from Nationals Park. The Wharf -- a major waterfront development with dozens of restaurants and bars -- is about a 15-minute walk or short rideshare north along the Potomac."
+  },
+
+  "nu-stadium": {
+    "_slugNote": "PLACEHOLDER SLUG. Claude Code must identify the actual Inter Miami venue slug before writing. Previous venue was Chase Stadium (also called DRV PNK Stadium) in Fort Lauderdale. The new venue (Nu Stadium at Miami Freedom Park) opened April 4 2026. If the slug is drv-pnk-stadium or chase-stadium, update name to Nu Stadium. If a new nu-stadium slug exists, use that. Address: 1900 NW 37th Ave, Miami FL 33125.",
+    "_nameFix": "Nu Stadium",
+    "venue": "Nu Stadium",
+    "gatesOpen": "Gates open 90 minutes before kickoff for Inter Miami CF matches. Check intermiamicf.com/matchday for the exact gate time for each event.",
+    "parkingInfo": "On-site parking at Nu Stadium requires advance purchase through the Inter Miami CF app or at intermiamicf.com/nu-stadium/parking. No day-of on-site purchases are available on matchday. A garage and multiple lots are on site; spaces sell out on high-demand nights. An Audi VIP parking lot is also available for qualifying guests. The stadium is at 1900 NW 37th Avenue in the Grapeland Heights neighborhood, adjacent to Miami International Airport.",
+    "publicTransit": "Tri-Rail commuter rail stops directly at the Miami Intermodal Center (MIC) adjacent to Nu Stadium, connecting to Metrorail and the MIA Mover. This is the recommended way to reach the stadium. Fans who arrive by public transit and show their match ticket plus proof of transit at Fan Services receive a $10 food and beverage credit inside the stadium.",
+    "accessibility": "Nu Stadium is a purpose-built soccer venue opened in 2026 with full ADA compliance throughout. For specific accommodations, contact guestservices@intermiamicf.com in advance.",
+    "bagPolicyUrl": "https://www.intermiamicf.com/matchday/clear-bag-policy",
+    "nearby": "Nu Stadium is the centerpiece of Miami Freedom Park, a 131-acre mixed-use development in Grapeland Heights next to Miami International Airport. The complex is still developing, with restaurants and entertainment opening in phases. Downtown Miami, Wynwood, and Brickell are a short Uber ride away."
+  },
+
+  "saputo-stadium": {
+    "venue": "Saputo Stadium",
+    "gatesOpen": "Gates open 90 minutes before kickoff for CF Montreal matches.",
+    "parkingInfo": "Parking is available in lots on the Parc Maisonneuve and Olympic Park grounds surrounding the stadium. Advance purchase is recommended for high-demand matches. Street parking in the Rosemont and Hochelaga-Maisonneuve neighborhoods provides additional options.",
+    "publicTransit": "The STM Metro Pie-IX station (Blue Line) provides direct access to Saputo Stadium with a walkable path to the entrance. Multiple bus routes also serve the Olympic Park area. Rideshare drop-off and pickup are available near the stadium.",
+    "accessibility": "The stadium is accessible with seating available throughout. Contact CF Montreal at cfmontreal.com for specific accessibility accommodations ahead of matchday.",
+    "bagPolicyUrl": "https://www.cfmontreal.com/en/matchday",
+    "nearby": "Saputo Stadium sits in the Parc Maisonneuve area of Montreal, adjacent to the Olympic Park complex including Stade Olympique, the Biodome, Jardin Botanique, and Insectarium. The Rosemont-La Petite-Patrie neighborhood has a strong dining and cafe scene accessible by Metro."
+  },
+
+  "geodis-park": {
+    "venue": "GEODIS Park",
+    "gatesOpen": "Gates open 90 minutes before kickoff for all Nashville SC home matches.",
+    "parkingInfo": "Multiple paved lots surround GEODIS Park at 501 Benton Avenue in The Nations neighborhood. Tailgating is permitted in all paved lots. Spaces sell out quickly; advance purchase is strongly recommended through the Nashville SC app. Walk Bike Nashville provides free bike valet at Gate C on Benton Avenue on matchdays.",
+    "publicTransit": "GEODIS Park is in The Nations neighborhood, about 2.5 miles from downtown Nashville. The city's WeGo bus network serves the broader area, though rideshare is the most practical non-driving option for most fans. Designated rideshare pickup and drop-off areas are near the stadium.",
+    "accessibility": "Wheelchair-accessible seating is available on all levels. Locker rentals for prohibited items are on the north side of Benton Avenue between Gates B and C. Detailed ADA information is at nashvillesc.com/geodispark/know-before-you-go.",
+    "bagPolicyUrl": "https://geodispark.com/bag-policy",
+    "nearby": "GEODIS Park is in The Nations, one of Nashville's fastest-growing food and entertainment neighborhoods. Charlotte Avenue runs through the area with numerous bars and restaurants. Broadway and Honky Tonk Row are about 15 minutes by rideshare from the stadium."
+  },
+
+  "red-bull-arena": {
+    "_nameFix": "Sports Illustrated Stadium",
+    "venue": "Sports Illustrated Stadium",
+    "gatesOpen": "Gates open 90 minutes before kickoff for General Admission at New York Red Bulls matches.",
+    "parkingInfo": "Driving to Sports Illustrated Stadium is possible but not ideal given Harrison's limited street grid. Harrison Public Parking ranges from $15-30 per vehicle on matchdays. Rideshare surge pricing post-match can be significant; PATH is almost always faster and cheaper for the trip back.",
+    "publicTransit": "PATH train to Harrison Station is the clear choice. From Newark Penn Station it's a 2-minute PATH connection; from Manhattan's World Trade Center take the Newark-bound train to Harrison (second-to-last stop, about 20 minutes). Harrison Station is a 10-minute walk to the stadium on Frank E. Rodgers Boulevard. NJ Transit Bus 40 also stops at Harrison Station. A complimentary shuttle runs from Newark Broad Street Station and Newark Penn Station on select match days.",
+    "accessibility": "Accessible seating and ADA parking are available. The accessible drop-off zone is near the main entrance on Frank E. Rodgers Boulevard. Contact Red Bulls guest services at rbny.com for accommodations.",
+    "bagPolicyUrl": "https://www.newyorkredbulls.com/news/red-bull-arena-policies",
+    "nearby": "Harrison, NJ is a transit-convenient but modest neighborhood directly adjacent to the stadium. Newark's Ironbound district -- one of the best Portuguese and Brazilian restaurant corridors in the US -- is a short PATH ride away and is the ideal pregame option."
+  },
+
+  "inter-co-stadium": {
+    "_slugNote": "Check actual slug in inventory. May be 'exploria-stadium' (original name before rename to Inter&Co Stadium in 2022) or 'inter-co-stadium'. Confirm before writing.",
+    "venue": "Inter&Co Stadium",
+    "gatesOpen": "Gates open 90 minutes before kickoff for Orlando City matches. Check orlandocitysc.com/matchday for exact times for each home game.",
+    "parkingInfo": "Advance parking is available through ParkWhiz at multiple lots in downtown Orlando near the stadium. Game-day lots fill quickly for high-profile matches; book in advance. Rideshare drop-off and pickup are on designated streets at Gates A (Church Street), B (West Pine Street), and C (West Central Street). The Orlando City fan zone outside Gates B and C opens on matchday.",
+    "publicTransit": "Inter&Co Stadium is in downtown Orlando and benefits from several transit options. SunRail commuter rail stops downtown, the LYMMO free bus circulator serves the downtown core, and Lynx bus routes are accessible nearby. The stadium is walkable from the Church Street Station area and surrounding downtown hotels.",
+    "accessibility": "The stadium has accessible entry at all four gates and ADA seating throughout. Contact Orlando City guest services for specific accommodation requests.",
+    "bagPolicyUrl": "https://www.interco-stadium.com/arrival",
+    "nearby": "Inter&Co Stadium is in the heart of downtown Orlando, steps from the Church Street entertainment district and Lake Eola Park. Dozens of restaurants and bars are within walking distance, and the downtown area is lively on Orlando City matchdays."
+  },
+
+  "subaru-park": {
+    "venue": "Subaru Park",
+    "gatesOpen": "Gates open 60 to 90 minutes before kickoff for Philadelphia Union matches.",
+    "parkingInfo": "Official lots A, G, and L are $30 per vehicle cashless; advance purchase is recommended as lots fill fast and post-match traffic can be slow. Subaru owners get free parking in Lot G for the first 70 arrivals per match (look for signage on Seaport Drive). Tailgating is allowed in the lots but space is limited. The stadium address is 1 Stadium Drive, Chester, PA.",
+    "publicTransit": "Take the SEPTA Wilmington/Newark Regional Rail line to Chester Transportation Center (6th and Welsh Street), about 30 minutes from Suburban Station in Philadelphia. A free shuttle to Subaru Park runs every 20 minutes starting four hours before kickoff, with the last return announced from the field during the match. Routes 37, 109, and 113 buses also serve the Chester area.",
+    "accessibility": "ADA parking is in the lot near the Independence Blue Cross Gate on the north side. Accessible seating is available throughout; contact the Union box office at 877-216-7336 for reservations.",
+    "bagPolicyUrl": "https://www.philadelphiaunion.com/stadium/guide",
+    "nearby": "Subaru Park is in Chester, PA, an industrial riverfront community with limited dining immediately around the stadium. The Larimer Beer Company near the Union training complex is the closest option. Fans typically eat and drink before arriving -- the view of the Commodore Barry Bridge from the stadium seats is the real attraction."
+  },
+
+  "bmo-field": {
+    "venue": "BMO Field",
+    "gatesOpen": "Gates open 90 minutes before kickoff for Toronto FC matches.",
+    "parkingInfo": "Exhibition Place lots are available for CAD $30 per vehicle for TFC matches. Post-game exit can be slow; the venue strongly recommends transit over driving. Parking fills quickly for high-profile matches; advance purchase through the venue is advised.",
+    "publicTransit": "GO Transit trains stop at Exhibition GO Station right next to the stadium and are the easiest option from downtown Toronto and the broader GO network. TTC streetcar routes 509 (Harbourfront) and 511 (Bathurst) both serve Exhibition Loop, a short walk from the gates. Cycling to the venue is also popular, with bike racks throughout Exhibition Place.",
+    "accessibility": "Gate 5 provides accessible entry and elevators connect all levels. Staff assistance is available on request and service animals are welcome throughout. BMO Field is undergoing a $146-million renovation ahead of FIFA 2026 World Cup -- check the TFC matchday guide for any temporary changes to access points.",
+    "bagPolicyUrl": "https://www.torontofc.ca/stadium/bag-policy",
+    "nearby": "BMO Field is on the Exhibition Place grounds along Toronto's waterfront, adjacent to Ontario Place. The Entertainment District and the downtown waterfront are a short streetcar or rideshare ride. The Exhibition grounds themselves have space for pre-match gatherings on event days."
+  }
+}
