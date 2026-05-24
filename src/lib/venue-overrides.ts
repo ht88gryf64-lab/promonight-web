@@ -14,18 +14,6 @@ export interface VenueOverride {
 }
 
 export const VENUE_OVERRIDES: Record<string, VenueOverride> = {
-  'minnesota-twins': {
-    parkingInfo:
-      'Target Field ramps sell out on giveaway and marquee dates. Pre-paid parking is the safest bet — reserve a spot in advance rather than circling the ramps.',
-    publicTransit:
-      'METRO Blue and Green lines stop at Target Field Station, directly connected to the stadium. Northstar commuter rail also terminates at the stadium.',
-    bagPolicyUrl:
-      'https://www.mlb.com/twins/ballpark/information/guide#bag-policy',
-    accessibility:
-      'Target Field is fully ADA-accessible with wheelchair seating throughout, elevators to every level, and accessible parking in Ramp A.',
-    nearby:
-      'The North Loop and Warehouse District are steps from the ballpark — try Modist Brewing, The Freehouse, or Red Cow for pregame bites.',
-  },
   'kansas-city-royals': {
     parkingInfo:
       'General-parking lots around Kauffman Stadium fill up quickly on giveaway nights and fireworks games. Reserve pre-paid parking or arrive 90+ minutes early.',
