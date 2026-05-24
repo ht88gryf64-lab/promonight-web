@@ -1,0 +1,53 @@
+{
+  "_notes": "MLS venues that are shared with active NFL teams. These five buildings OMIT gatesOpen because MLS uses the same venue-doc fallback pattern established for NBA/NHL shared venues (VenueInfoBlock supplies per-sport gate cadence). If Claude Code's Step 0 diagnostic confirms that VenueInfoBlock does NOT have an MLS-specific kickoff fallback, add researched gatesOpen to each record (standard is 90 minutes before kickoff for MLS at these venues) and re-run. Shared teams listed in _teams for diagnostic context only. No em dashes anywhere. All bagPolicyUrl values need the curl-verify pass.",
+
+  "mercedes-benz-stadium": {
+    "_teams": ["Atlanta United (MLS)", "Atlanta Falcons (NFL)"],
+    "venue": "Mercedes-Benz Stadium",
+    "parkingInfo": "Mercedes-Benz Stadium is in the Downtown-West End corridor of Atlanta. The stadium has limited on-site parking; the primary parking is in surface lots and garages spread around the Vine City and English Avenue neighborhoods, ranging from $25 to $50 on matchdays with advance purchase strongly recommended via ParkWhiz or Falcons/United apps. MARTA is the recommended approach for most fans. From I-20, take the James Jackson Pkwy exit; from I-75/85, take the Williams Street exit.",
+    "publicTransit": "MARTA heavy rail is the best way to reach Mercedes-Benz Stadium. The Vine City Station (Red and Gold Lines) and the GWCC/CNN Center Station (the same lines, one stop east) are both within easy walking distance of the stadium. From the Airport Station (Red and Gold Line), the ride takes about 25 minutes. Check itsmarta.com for schedules and fares. MARTA service extends after the final whistle.",
+    "accessibility": "Mercedes-Benz Stadium is a fully accessible modern venue with elevators, accessible seating on all levels, ADA parking in designated lots, and accessible gates at all entry points. The 1916 Mercedes-Benz Stadium app offers accessibility resources. Contact Atlanta United or the stadium at mercedesbenzstadium.com for specific accommodations.",
+    "bagPolicyUrl": "https://mercedesbenzstadium.com/clear-bag-policy/",
+    "nearby": "Mercedes-Benz Stadium is in the Vine City and English Avenue neighborhoods, adjacent to the Georgia World Congress Center and Centennial Olympic Park. The park, the National Center for Civil and Human Rights, Georgia Aquarium, World of Coca-Cola, and the College Football Hall of Fame are all within walking distance. The city of Atlanta's Gulch development and downtown dining are a short rideshare away."
+  },
+
+  "bank-of-america-stadium": {
+    "_teams": ["Charlotte FC (MLS)", "Carolina Panthers (NFL)"],
+    "venue": "Bank of America Stadium",
+    "parkingInfo": "Bank of America Stadium is in downtown Charlotte at 800 South Mint Street. Multiple parking decks and surface lots in the Uptown and South End areas are within a 5 to 15 minute walk; advance purchase via ParkMobile or the team apps is strongly recommended on matchdays as lots fill for high-demand events. Several garages are within two blocks of the stadium on Morehead Street and South Graham Street. Driving to the stadium is possible but post-match traffic is significant.",
+    "publicTransit": "The LYNX Blue Line light rail (Charlotte Area Transit System, or CATS) has a Bank of America Stadium Station directly at the venue, making transit a reliable and fast option from across the Charlotte metro. The Blue Line runs from I-485/South Boulevard in the south to UNC Charlotte in the north, and the stadium stop is centrally located in Uptown. Check charlottenc.gov/cats for schedules and fares.",
+    "accessibility": "Bank of America Stadium has ADA-accessible seating throughout and accessible gates at all entry points. Accessible parking is available in designated lots adjacent to the stadium. Elevators serve all levels. Contact Charlotte FC at charlottefc.com for specific accommodation requests ahead of matchday.",
+    "bagPolicyUrl": "https://www.charlottefc.com/stadium/bag-policy",
+    "nearby": "Bank of America Stadium is in the heart of Uptown Charlotte, surrounded by bars, restaurants, and hotels. The South End neighborhood (along the LYNX Blue Line, two to three stops south) is Charlotte's most vibrant food and entertainment district. Romare Bearden Park is directly across Graham Street from the stadium and often hosts pregame gatherings."
+  },
+
+  "soldier-field": {
+    "_teams": ["Chicago Fire FC (MLS)", "Chicago Bears (NFL)"],
+    "venue": "Soldier Field",
+    "parkingInfo": "Soldier Field is on the Museum Campus along Chicago's lakefront, with Museum Campus parking lots serving as the primary vehicle option. These lots are expensive on matchdays ($40 to $60 or more) and sell out for big events; advance purchase via the team apps or SpotHero is essential. Additional parking is available in the South Loop garages along Michigan Avenue and Columbus Drive, typically a 15 to 20 minute walk to the gates. Post-match exit can be slow due to lakefront road configurations.",
+    "publicTransit": "Transit to Soldier Field is excellent from across Chicago. The CTA Green Line Roosevelt Station is the closest elevated stop, with a roughly 15-minute walk south to the stadium via the lakefront path. CTA Bus Routes 3, 4, and 130 (Museum Campus express) provide direct connections from downtown and the Loop. Metra Electric Line to Museum Campus/11th Street Station is adjacent to the north parking lot. The lakefront bike path is also a popular way to arrive. Check transitchicago.com for details.",
+    "accessibility": "Soldier Field has ADA-accessible seating on all levels, accessible parking in designated Museum Campus lots, and accessible entry at all stadium gates. Elevators connect all concourse levels. Contact Chicago Fire FC at chicagofirefc.com or Soldier Field guest services for specific accommodation requests.",
+    "bagPolicyUrl": "https://www.chicagofirefc.com/stadium/bag-policy",
+    "nearby": "Soldier Field is on the Museum Campus, adjacent to the Field Museum of Natural History, the Shedd Aquarium, and the Adler Planetarium. Grant Park and Millennium Park are a 15-minute walk north along the lakefront. The South Loop neighborhood (east of Michigan Avenue) has restaurants and bars within a 10 to 15 minute walk. The Museum Campus area is quiet on non-event days but fills with pregame activity on matchdays."
+  },
+
+  "gillette-stadium": {
+    "_teams": ["New England Revolution (MLS)", "New England Patriots (NFL)"],
+    "venue": "Gillette Stadium",
+    "parkingInfo": "Gillette Stadium is in suburban Foxborough, Massachusetts, about 25 miles south of Boston. On-site parking is abundant (over 20,000 spaces in surrounding lots) but sells out for high-demand matches; advance purchase through the Revolution or Patriots apps is strongly recommended. Lots open several hours before kickoff. Parking rates range from standard lots ($25 to $35) to premium lots closer to the gates ($50 and up). From I-495, take Exit 14A (Route 1 North) and follow directional signage to the stadium.",
+    "publicTransit": "MBTA Commuter Rail (Providence/Stoughton Line) operates special game-day service with a stop at Foxboro Station, directly adjacent to the stadium. This service runs from South Station in downtown Boston on most match days; check mbta.com or the Revolution matchday guide for the event-specific schedule and purchase tickets in advance. The commuter rail is the most reliable non-driving option. Bus service to Foxborough is limited.",
+    "accessibility": "Gillette Stadium has ADA-accessible seating throughout, accessible parking in designated areas closest to the accessible gates, and elevators connecting all stadium levels. Contact the New England Revolution at revolutionsoccer.net for specific accommodation requests.",
+    "bagPolicyUrl": "https://www.gillettestadium.com/the-stadium/clear-bag-policy/",
+    "nearby": "Gillette Stadium is the anchor of the Patriot Place development, an outdoor shopping and entertainment complex with more than a dozen restaurant and dining options within walking distance of the stadium gates. A hotel, movie theater, and retail stores are also part of the complex. Downtown Foxborough has limited additional options; Boston's full dining scene is accessible by commuter rail."
+  },
+
+  "lumen-field": {
+    "_teams": ["Seattle Sounders FC (MLS)", "Seattle Seahawks (NFL)"],
+    "venue": "Lumen Field",
+    "parkingInfo": "Lumen Field is in the SODO (South of Downtown) neighborhood of Seattle. Multiple lots and garages are available within walking distance, with advance purchase via ParkMobile, SpotHero, or the Sounders and Seahawks apps strongly recommended. Prices range from $30 to $60 or more on matchdays; day-of walk-up lots are more expensive and limited. Post-match traffic in the I-5 and I-90 corridors can be significant; transit is the most efficient way out of the area.",
+    "publicTransit": "Link Light Rail (Sound Transit) stops at Stadium Station, directly adjacent to Lumen Field. From Sea-Tac Airport, the ride takes approximately 30 minutes; from Capitol Hill, less than 10 minutes. The 1 Line (the primary north-south line) connects the stadium to most of the Seattle metro. King County Metro bus routes serve the SODO and adjacent Pioneer Square neighborhood. Check soundtransit.org and kingcounty.gov/metro for routes and fares. King County Water Taxi also connects West Seattle to the SODO waterfront for fans from that area.",
+    "accessibility": "Lumen Field has ADA-accessible seating on all levels and accessible gates at all entry points. Accessible parking is available in designated lots adjacent to the stadium. Elevators serve all levels. Contact Seattle Sounders FC at soundersfc.com for specific accommodation requests ahead of matchday.",
+    "bagPolicyUrl": "https://www.soundersfc.com/stadium/bag-policy",
+    "nearby": "Lumen Field is in SODO, steps from T-Mobile Park (Mariners) and a short walk north to Pioneer Square, one of Seattle's best bar and restaurant neighborhoods. Occidental Square and the cobblestone streets of Pioneer Square have dozens of pre- and post-match options. The historic Pike Place Market is about 15 minutes on foot or a few minutes by Link light rail."
+  }
+}
