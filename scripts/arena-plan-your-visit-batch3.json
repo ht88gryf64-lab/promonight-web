@@ -1,0 +1,43 @@
+{
+  "_notes": "Batch 3: four single-tenant NHL arenas, all six fields including a researched gatesOpen. NAME FIX: amalie-arena.name must update to 'Benchmark International Arena' (Tampa renamed it from Amalie Arena in 2025); slug stays amalie-arena, same display-name-only fix class as footprint-center and Rate Field. bagPolicyUrl: amerant-bank-arena and bridgestone-arena are confirmed official; amalie-arena and enterprise-center are best-effort (amalie's site URLs may have moved with the rename), so the curl-verify pass should find the live bag/security page and substitute. No em dashes anywhere.",
+
+  "amalie-arena": {
+    "venue": "Benchmark International Arena",
+    "gatesOpen": "Doors open one hour before Lightning games. Chase Club, VIP Lounge, and Executive Suite ticket holders get in 90 minutes before puck drop.",
+    "parkingInfo": "There is no dedicated arena garage; the building is embedded in downtown Tampa's Channel District, surrounded by independently run garages and lots like the adjacent Channelside garage (entered from Florida Avenue just south of Channelside Drive), the Pam Iorio and South Regional garages, and the Tampa Convention Center garage. Walks run 3 to 15 minutes and prices vary, so prepay a spot online before you go. Ongoing nearby development is steadily shrinking the options.",
+    "publicTransit": "The TECO Line Streetcar stops right at the arena's door on Channelside Drive, runs to downtown and Ybor City, and has been free to ride since 2018, with extended hours on Lightning nights. HART buses 8, 19, and 30 serve the area, with route 30 stopping in front. There is also a rideshare drop-off circle on the north side along Channelside Drive.",
+    "accessibility": "Wheelchair spaces and companion seats are available on all levels, with accessible parking in every lot and drop-off zones near the main entrances. The arena provides assistive listening devices, ASL interpretation with advance notice, sensory kits, and accessible restrooms; contact guest services ahead for specific accommodations.",
+    "bagPolicyUrl": "https://www.nhl.com/lightning/arena",
+    "nearby": "The Channel District wraps the arena with restaurants and bars within a two to five minute walk, including Sparkman Wharf and Channelside Bay Plaza, and the Florida Aquarium is right next door. The Tampa Riverwalk and historic Ybor City are an easy streetcar ride away."
+  },
+
+  "amerant-bank-arena": {
+    "venue": "Amerant Bank Arena",
+    "gatesOpen": "Doors open 60 minutes before puck drop for regular-season Panthers games, and the parking lots open two hours before.",
+    "parkingInfo": "Parking is all on-site, with about 7,045 spaces in the lots and garage ringing the building, which sits in suburban Sunrise off the Sawgrass Expressway and I-595. Lots open two hours before puck drop and close an hour after, the experience is cashless, and prepaying online is the easy move since walk-up event rates can run high. Accessible spaces sit north and south of the main entrance.",
+    "publicTransit": "Transit options are limited out here, so most fans drive. Lyft is the arena's official rideshare partner, with marked pickup and drop-off zones. Pedestrians should enter the grounds via Gate 6 and use the sidewalk to the stairs at the front.",
+    "accessibility": "Accessible parking is offered first-come near the north and south of the main entrance with a proper placard, and disabled guests can enter through Gates 1, 2, 5, and 7. Bag lockers sit outside the main entrance at the bottom of the Publix Plaza stairs.",
+    "bagPolicyUrl": "https://www.amerantbankarena.com/plan-your-visit/fan-safety-guidelines",
+    "nearby": "The arena sits right beside Sawgrass Mills, one of the country's largest outlet malls, plus the adjacent Colonnade Outlets, so pregame food and shopping are a short walk away. The surrounding area is suburban, so the mall is your main dining hub before the game."
+  },
+
+  "bridgestone-arena": {
+    "venue": "Bridgestone Arena",
+    "gatesOpen": "Doors typically open 90 minutes before Predators games, though times can vary by event.",
+    "parkingInfo": "Metropolis is the Predators' official parking provider, with dozens of garages a short walk away, including Fifth + Broadway, Nashville Yards, Pinnacle at Symphony Place, and the Music City Center garages; prepay to lock in a rate. For a budget option, park at Lot R and ride the free shuttle or walk the John Seigenthaler Pedestrian Bridge (10 to 12 minutes), with the shuttle running every 15 to 20 minutes starting two hours before the game. The arena is at 501 Broadway, off I-40, I-24, and I-65.",
+    "publicTransit": "WeGo Public Transit runs many routes through downtown from its WeGo Central hub, with a flat 2 dollar one-way fare and a Route 18 express to the airport. Nashville BCycle e-bikes are scattered downtown, and Lyft is the official rideshare partner.",
+    "accessibility": "The arena offers ADA-compliant parking, elevators, ramps, and accessible seating, plus assistive listening and captioning services and ADA restrooms throughout. A Mother's Lounge sits on the Club Level near Section 213, and First Aid is at Sections 111 and 312.",
+    "bagPolicyUrl": "https://www.bridgestonearena.com/a-to-z-guide",
+    "nearby": "You could not ask for a better location: Bridgestone sits right on Lower Broadway, so Nashville's honky-tonks, live-music bars, and restaurants are literally outside the door. The Fifth + Broadway dining hall and the Ryman Auditorium are steps away."
+  },
+
+  "enterprise-center": {
+    "venue": "Enterprise Center",
+    "gatesOpen": "Most entrances open 90 minutes before Blues games, with season ticket holders let in 15 minutes earlier.",
+    "parkingInfo": "About 6,500 spaces sit within roughly 1,800 feet of the building, including the 1,270-car Kiel Center Garage attached immediately to the west. SpotHero is the official parking partner for prepaid spots, metered street parking is around, and rates generally run 20 to 35 dollars. Note that 14th Street closes at door time, so have rideshares use Market Street or Clark Avenue. The address is 1401 Clark Avenue, off I-64.",
+    "publicTransit": "MetroLink light rail is the easiest car-free option: exit at the Civic Center Station just off 14th and Spruce and the arena is right there, for 2.50 dollars a ride or 5 dollars a day. The Civic Center MetroBus Transfer Center one block away serves 16 routes, and Amtrak stops at nearby Union Station.",
+    "accessibility": "The Kiel Center Garage has 24 ADA spaces next to the elevators on every level, with oversized-van spaces on level one, and accessible parking is available across the surrounding lots. A drop-off for guests with disabilities is on Clark Avenue at the south end of the building, and all three street-level entrances are accessible.",
+    "bagPolicyUrl": "https://www.enterprisecenter.com/arena-info/a-z-guide",
+    "nearby": "The arena is in the heart of downtown St. Louis, walkable to Union Station and the bars and restaurants of Laclede's Landing, with plenty of pregame spots across downtown. Ballpark Village near Busch Stadium is a short trip east for more options."
+  }
+}

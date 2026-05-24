@@ -62,18 +62,6 @@ export const VENUE_OVERRIDES: Record<string, VenueOverride> = {
     nearby:
       'Globe Life Field (Rangers) is across the parking lot. Texas Live! is the adjacent entertainment complex — restaurants and bars open hours before kickoff.',
   },
-  'oklahoma-city-thunder': {
-    parkingInfo:
-      'Paycom Center parking lots fill up fast on Thunder game nights. Nearby garages (Arts District, Cox Convention Center) offer cheaper alternatives within a short walk.',
-    publicTransit:
-      'OKC Streetcar stops directly at Paycom Center (Arena Station) and connects Bricktown and downtown — a frequent ride on game nights.',
-    bagPolicyUrl:
-      'https://www.nba.com/thunder/tickets/arena-policies',
-    accessibility:
-      'Paycom Center is fully ADA-accessible with wheelchair seating on every level, elevator access, and designated accessible parking.',
-    nearby:
-      'Bricktown is a five-minute walk — try Bricktown Brewery, Mickey Mantle\'s Steakhouse, or Fassler Hall for pregame.',
-  },
 };
 
 export function getVenueOverride(teamId: string): VenueOverride | undefined {
