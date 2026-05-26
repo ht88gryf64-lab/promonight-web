@@ -237,10 +237,18 @@ export type SearchQueryProperties = {
   result_count?: number;
 };
 
+// Share channel the user picked inside the ShareSheet. `sms` and `x` replace
+// the older `twitter`/`facebook` shape — the web share suite (src/components/
+// share) standardized on these five surfaces.
+export type ShareChannel = 'copy_link' | 'sms' | 'x' | 'email' | 'native';
+
 export type ShareInitiatedProperties = {
   surface: AnalyticsSurface;
-  platform: 'twitter' | 'copy_link' | 'native' | 'facebook' | 'email';
-  page_type: string;
+  channel: ShareChannel;
+  // Where the share button lives, e.g. "promo_card", "game_card".
+  placement: string;
+  promo_title?: string;
+  promo_type?: string;
   team_slug?: string;
   sport?: Sport;
 };

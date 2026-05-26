@@ -8,6 +8,7 @@ import { AnalyticsProvider } from '@/components/analytics/AnalyticsProvider';
 import { PageViewTracker } from '@/components/analytics/PageViewTracker';
 import { AdProvider } from '@/components/ads/AdProvider';
 import { StarredTeamsProvider } from '@/hooks/use-starred-teams';
+import { ShareProvider } from '@/components/share';
 import { PostStarToastHost } from '@/components/post-star-toast';
 import { getPlayoffConfig } from '@/lib/data';
 import './globals.css';
@@ -101,16 +102,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <AnalyticsProvider>
           <AdProvider>
             <StarredTeamsProvider>
-              {/* useSearchParams inside PageViewTracker requires a Suspense
-                  boundary during prerender — this scope covers it. */}
-              <Suspense fallback={null}>
-                <PageViewTracker />
-              </Suspense>
-              <UTMCaptureProvider />
-              <Nav playoffsActive={playoffsActive} />
-              <main className="relative z-[1]">{children}</main>
-              <Footer />
-              <PostStarToastHost />
+              <ShareProvider>
+                {/* useSearchParams inside PageViewTracker requires a Suspense
+                    boundary during prerender — this scope covers it. */}
+                <Suspense fallback={null}>
+                  <PageViewTracker />
+                </Suspense>
+                <UTMCaptureProvider />
+                <Nav playoffsActive={playoffsActive} />
+                <main className="relative z-[1]">{children}</main>
+                <Footer />
+                <PostStarToastHost />
+              </ShareProvider>
             </StarredTeamsProvider>
           </AdProvider>
         </AnalyticsProvider>
