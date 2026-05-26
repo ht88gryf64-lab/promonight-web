@@ -1,6 +1,17 @@
 import { PromoBadge } from './promo-badge';
 import { AppDownloadButtons } from './app-download-buttons';
+import { ShareButton, formatShareDate, type ShareItem } from './share';
 import type { Promo, PromoType } from '@/lib/types';
+
+// Fields shared by every promo row's ShareItem — the per-promo bits (icon,
+// title, date, type) are filled in per row.
+type PromoShareContext = {
+  teamName: string;
+  teamSlug: string;
+  sport: string;
+  primaryColor?: string;
+  venueName?: string | null;
+};
 
 function formatPromoDate(dateStr: string): { day: string; weekday: string; month: string } {
   const date = new Date(dateStr + 'T12:00:00');
@@ -18,26 +29,52 @@ const TYPE_COLORS: Record<PromoType, string> = {
   food: '#fb923c',
 };
 
-function PromoRow({ promo, completed = false }: { promo: Promo; completed?: boolean }) {
+function PromoRow({
+  promo,
+  share,
+  completed = false,
+}: {
+  promo: Promo;
+  share: PromoShareContext;
+  completed?: boolean;
+}) {
   const { day, weekday, month } = formatPromoDate(promo.date);
   const typeColor = TYPE_COLORS[promo.type];
 
+  const shareItem: ShareItem = {
+    icon: promo.icon,
+    promoTitle: promo.title,
+    teamName: share.teamName,
+    date: formatShareDate(promo.date),
+    venue: share.venueName ?? null,
+    sport: share.sport,
+    teamSlug: share.teamSlug,
+    promoType: promo.type,
+    primaryColor: share.primaryColor ?? null,
+  };
+
   return (
     <div
-      className={`group bg-bg-card border border-border-subtle rounded-2xl p-4 md:p-5 transition-all flex gap-4 ${
+      className={`group relative bg-bg-card border border-border-subtle rounded-2xl p-4 md:p-5 transition-all flex gap-4 ${
         completed
           ? 'opacity-60 hover:opacity-80'
           : 'hover:border-border-hover'
       }`}
       style={{ borderLeftWidth: '3px', borderLeftColor: typeColor }}
     >
+      <ShareButton
+        item={shareItem}
+        placement="promo_card"
+        className="absolute top-2.5 right-2.5 inline-flex items-center justify-center w-8 h-8 rounded-full text-text-muted hover:text-white hover:bg-white/10 active:bg-white/[0.15] transition-colors"
+        label={`Share ${promo.title}`}
+      />
       <div className="flex-shrink-0 w-14 text-center">
         <div className="font-mono text-[9px] tracking-[1px] text-text-muted">{month}</div>
         <div className="font-display text-3xl leading-none">{day}</div>
         <div className="font-mono text-[9px] tracking-[1px] text-text-dim">{weekday}</div>
       </div>
 
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 pr-8">
         <div className="flex flex-wrap items-center gap-2 mb-1.5">
           <span className="text-lg" aria-hidden="true">{promo.icon}</span>
           <PromoBadge type={promo.type} />
@@ -81,11 +118,24 @@ export function PromoList({
   promos,
   teamSlug,
   teamName,
+  sport,
+  primaryColor,
+  venueName,
 }: {
   promos: Promo[];
   teamSlug: string;
   teamName: string;
+  sport: string;
+  primaryColor?: string;
+  venueName?: string | null;
 }) {
+  const share: PromoShareContext = {
+    teamName,
+    teamSlug,
+    sport,
+    primaryColor,
+    venueName,
+  };
   const today = new Date().toISOString().split('T')[0];
   const upcoming = promos.filter((p) => p.date >= today);
   const past = promos.filter((p) => p.date < today).reverse(); // most-recent-first
@@ -117,7 +167,7 @@ export function PromoList({
           <>
             <div className="space-y-3">
               {upcomingVisible.map((promo, i) => (
-                <PromoRow key={`u-${i}`} promo={promo} />
+                <PromoRow key={`u-${i}`} promo={promo} share={share} />
               ))}
             </div>
 
@@ -130,7 +180,7 @@ export function PromoList({
                 </summary>
                 <div className="mt-4 space-y-3">
                   {upcomingHidden.map((promo, i) => (
-                    <PromoRow key={`uh-${i}`} promo={promo} />
+                    <PromoRow key={`uh-${i}`} promo={promo} share={share} />
                   ))}
                 </div>
               </details>
@@ -165,7 +215,7 @@ export function PromoList({
 
             <div className="space-y-3">
               {pastVisible.map((promo, i) => (
-                <PromoRow key={`rp-${i}`} promo={promo} completed />
+                <PromoRow key={`rp-${i}`} promo={promo} share={share} completed />
               ))}
             </div>
 
@@ -178,7 +228,7 @@ export function PromoList({
                 </summary>
                 <div className="mt-4 space-y-3">
                   {pastHidden.map((promo, i) => (
-                    <PromoRow key={`ph-${i}`} promo={promo} completed />
+                    <PromoRow key={`ph-${i}`} promo={promo} share={share} completed />
                   ))}
                 </div>
               </details>

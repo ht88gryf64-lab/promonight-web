@@ -322,6 +322,9 @@ export default async function TeamPage({
           promos={promos}
           teamSlug={team.id}
           teamName={displayName}
+          sport={team.sportSlug}
+          primaryColor={team.primaryColor}
+          venueName={venue?.name ?? null}
         />
       )}
 

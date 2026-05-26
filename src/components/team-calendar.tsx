@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from 'react';
 import type { Promo, PromoType, Team, Venue } from '@/lib/types';
-import { PROMO_TYPE_COLORS, PROMO_TYPE_LABELS } from '@/lib/types';
+import { PROMO_TYPE_COLORS, PROMO_TYPE_LABELS, SPORT_ICONS } from '@/lib/types';
 import { PromoBadge } from './promo-badge';
+import { ShareButton, formatShareDate, type ShareItem } from './share';
 import { TicketsBlock } from './affiliates/TicketsBlock';
 import { ParkingCTA } from './affiliates/ParkingCTA';
 import { HotelsCTA } from './affiliates/HotelsCTA';
@@ -449,6 +450,7 @@ export function TeamCalendar({ promos, teamName, teamSlug, sport, team, gameCont
                         contexts={ctxs}
                         team={team ?? null}
                         teamSlug={teamSlug}
+                        teamName={teamName}
                       />
                     </div>
                   ))}
@@ -463,6 +465,7 @@ export function TeamCalendar({ promos, teamName, teamSlug, sport, team, gameCont
                       contexts={gameCtxsByDate.get(selectedDate)!}
                       team={team ?? null}
                       teamSlug={teamSlug}
+                      teamName={teamName}
                     />
                   </div>
                 )}
@@ -496,11 +499,13 @@ function GameDayDetail({
   contexts,
   team,
   teamSlug,
+  teamName,
 }: {
   dateStr: string;
   contexts: GameContext[];
   team: Team | null;
   teamSlug?: string;
+  teamName: string;
 }) {
   return (
     <div className="mt-4 space-y-4">
@@ -511,6 +516,7 @@ function GameDayDetail({
           ctx={c}
           team={team}
           teamSlug={teamSlug}
+          teamName={teamName}
           showDate={i === 0}
         />
       ))}
@@ -523,12 +529,14 @@ function GameDetailRow({
   ctx,
   team,
   teamSlug,
+  teamName,
   showDate,
 }: {
   dateStr: string;
   ctx: GameContext;
   team: Team | null;
   teamSlug?: string;
+  teamName: string;
   showDate: boolean;
 }) {
   const { game, isHome, opponentTeam, opponentVenue, promos } = ctx;
@@ -552,6 +560,23 @@ function GameDetailRow({
     : isHome
       ? 'Home game'
       : `At ${opponentVenue?.name || 'opponent venue'}`;
+
+  // Share payload for this game. Gated on `team` (always present on team
+  // pages); leads with the matchup, falls back to the sport emoji when the
+  // game carries no promo of its own.
+  const shareItem: ShareItem | null = team
+    ? {
+        icon: promos[0]?.icon ?? SPORT_ICONS[team.league] ?? '🎟️',
+        promoTitle: `${isHome ? 'vs' : 'at'} ${oppName}`.trim(),
+        teamName,
+        date: formatShareDate(dateStr),
+        venue: game.venueName || null,
+        sport: team.sportSlug,
+        teamSlug: team.id,
+        promoType: promos[0]?.type ?? 'game',
+        primaryColor: team.primaryColor,
+      }
+    : null;
 
   return (
     <div
@@ -587,9 +612,18 @@ function GameDetailRow({
             </div>
           )}
         </div>
-        {timeLabel && (
-          <div className="font-mono text-xs text-text-dim whitespace-nowrap">{timeLabel}</div>
-        )}
+        <div className="flex flex-col items-end gap-2 flex-shrink-0">
+          {shareItem && (
+            <ShareButton
+              item={shareItem}
+              placement="game_card"
+              label={`Share ${isHome ? 'vs' : 'at'} ${oppName}`}
+            />
+          )}
+          {timeLabel && (
+            <div className="font-mono text-xs text-text-dim whitespace-nowrap">{timeLabel}</div>
+          )}
+        </div>
       </div>
 
       {promos.length > 0 && (
