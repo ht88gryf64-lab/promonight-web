@@ -48,6 +48,16 @@ export async function generateStaticParams() {
   }));
 }
 
+// Trim a string back to the last word boundary at or before `max` so a long
+// {team}+{venue} description never cuts a word in half when it overflows the
+// meta-description budget. Returns the string unchanged when it already fits.
+function truncateAtWord(s: string, max: number): string {
+  if (s.length <= max) return s;
+  const slice = s.slice(0, max);
+  const lastSpace = slice.lastIndexOf(' ');
+  return (lastSpace > 0 ? slice.slice(0, lastSpace) : slice).trimEnd();
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -57,19 +67,36 @@ export async function generateMetadata({
   const team = await getTeamBySlug(teamSlug);
   if (!team) return {};
 
-  const promos = await getTeamPromos(team.id);
   const venue = await getVenueForTeam(team.id);
-  const giveaways = promos.filter((p) => p.type === 'giveaway').length;
-  const themes = promos.filter((p) => p.type === 'theme').length;
-  const kids = promos.filter((p) => p.type === 'kids').length;
-  const food = promos.filter((p) => p.type === 'food').length;
 
-  const year = new Date().getFullYear();
+  // Hardcoded, NOT new Date().getFullYear(): an auto-rolling year would flip
+  // every title to "...2027" at midnight on Jan 1 — before the 2027 promo data
+  // exists and before the season starts — misleading users and search engines.
+  // Bumping the season year is a deliberate edit made when 2027 content is ready.
+  const year = 2026;
   const displayName = teamDisplayName(team);
-  const title = `${displayName} Promo Schedule ${year}`;
-  const plural = (n: number, s: string) => `${n} ${s}${n === 1 ? '' : 's'}`;
-  const venueClause = venue ? ` at ${venue.name}` : '';
-  const description = `All ${year} ${displayName} ${team.league} promo nights${venueClause}: ${plural(giveaways, 'giveaway')}, ${plural(themes, 'theme night')}, ${plural(kids, 'kids day')}, and ${plural(food, 'food deal')}. Updated weekly.`;
+
+  // The root layout's title.template ("%s | PromoNight") appends the brand to
+  // every string title, so this bare value renders as
+  // `${displayName} Promos & Giveaways ${year} | PromoNight` — the 60-char SEO
+  // target. Do NOT add "| PromoNight" here or it doubles.
+  const title = `${displayName} Promos & Giveaways ${year}`;
+
+  // OG/Twitter titles are NOT processed by the layout title.template, so spell
+  // the "| PromoNight" suffix out here to match the rendered <title> byte-for-
+  // byte and keep the brand on shared social cards.
+  const socialTitle = `${title} | PromoNight`;
+
+  // Meta description capped at 155 chars. The {team}+{venue} prefix is
+  // variable-length, so the longest venues (e.g. "GEHA Field at Arrowhead
+  // Stadium") can overflow; truncateAtWord trims to a word boundary. Falls back
+  // to a venue-free sentence when the team has no resolved venue.
+  const description = truncateAtWord(
+    venue
+      ? `${displayName} ${year} promos: giveaways, bobbleheads, theme nights & food deals at ${venue.name}. Find the best games to attend this season.`
+      : `${displayName} ${year} promos: giveaways, bobbleheads, theme nights & food deals. Find the best games to attend this season.`,
+    155,
+  );
 
   return {
     title,
@@ -78,8 +105,9 @@ export async function generateMetadata({
       canonical: `https://www.getpromonight.com/${team.sportSlug}/${team.id}`,
     },
     openGraph: {
-      title: `${displayName} ${year} Promo Schedule`,
+      title: socialTitle,
       description,
+      siteName: 'PromoNight',
       url: `https://www.getpromonight.com/${team.sportSlug}/${team.id}`,
       type: 'website',
       images: [
@@ -95,7 +123,7 @@ export async function generateMetadata({
       card: 'summary_large_image',
       site: '@promo_night_app',
       creator: '@promo_night_app',
-      title: `${displayName} ${year} Promo Schedule`,
+      title: socialTitle,
       description,
       images: ['/og-image.png'],
     },
