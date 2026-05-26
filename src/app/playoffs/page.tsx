@@ -23,6 +23,9 @@ export async function generateMetadata(): Promise<Metadata> {
   // The root layout's title.template ("%s | PromoNight") appends the brand, so
   // this bare title renders as "Playoff Promos & Giveaways 2026 | PromoNight".
   const title = 'Playoff Promos & Giveaways 2026';
+  // OG title is not processed by the layout title.template, so include the
+  // "| PromoNight" suffix to match the rendered <title> and brand shared cards.
+  const socialTitle = `${title} | PromoNight`;
   const description =
     "Every MLB and NHL playoff promo schedule for 2026. Giveaways, bobbleheads & theme nights across all active playoff teams. See what's on tonight.";
   return {
@@ -32,8 +35,9 @@ export async function generateMetadata(): Promise<Metadata> {
       canonical: 'https://www.getpromonight.com/playoffs',
     },
     openGraph: {
-      title,
+      title: socialTitle,
       description,
+      siteName: 'PromoNight',
       url: 'https://www.getpromonight.com/playoffs',
       type: 'website',
       images: [

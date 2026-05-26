@@ -82,6 +82,11 @@ export async function generateMetadata({
   // target. Do NOT add "| PromoNight" here or it doubles.
   const title = `${displayName} Promos & Giveaways ${year}`;
 
+  // OG/Twitter titles are NOT processed by the layout title.template, so spell
+  // the "| PromoNight" suffix out here to match the rendered <title> byte-for-
+  // byte and keep the brand on shared social cards.
+  const socialTitle = `${title} | PromoNight`;
+
   // Meta description capped at 155 chars. The {team}+{venue} prefix is
   // variable-length, so the longest venues (e.g. "GEHA Field at Arrowhead
   // Stadium") can overflow; truncateAtWord trims to a word boundary. Falls back
@@ -100,8 +105,9 @@ export async function generateMetadata({
       canonical: `https://www.getpromonight.com/${team.sportSlug}/${team.id}`,
     },
     openGraph: {
-      title,
+      title: socialTitle,
       description,
+      siteName: 'PromoNight',
       url: `https://www.getpromonight.com/${team.sportSlug}/${team.id}`,
       type: 'website',
       images: [
@@ -117,7 +123,7 @@ export async function generateMetadata({
       card: 'summary_large_image',
       site: '@promo_night_app',
       creator: '@promo_night_app',
-      title,
+      title: socialTitle,
       description,
       images: ['/og-image.png'],
     },
