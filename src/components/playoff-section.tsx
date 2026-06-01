@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { PlayoffPromo, Team } from '@/lib/types';
-import { teamDisplayName } from '@/lib/promo-helpers';
+import { teamDisplayName, extractOpponent } from '@/lib/promo-helpers';
 
 const ROUND_LABELS: Record<string, string> = {
   first_round: 'First Round',
@@ -36,11 +36,6 @@ function fullTimestamp(iso: string | null): string {
   });
 }
 
-function extractOpponent(gameInfo: string): string | null {
-  const m = gameInfo.match(/\bvs\.?\s+([A-Z][^(,]+?)(?:\s*\(|$)/);
-  return m ? m[1].trim().replace(/[.,]$/, '') : null;
-}
-
 function typeColor(type: string): string {
   switch (type) {
     case 'giveaway':
@@ -71,9 +66,19 @@ export function PlayoffSection({
 
   const dated = promos.filter((p) => p.date);
   const recurring = promos.filter((p) => !p.date);
-  const opponent = promos
-    .map((p) => extractOpponent(p.gameInfo))
-    .find((o): o is string => !!o);
+  // Opponent label = the LATEST dated promo's opponent (the current-round
+  // matchup), not the earliest. Promos may span multiple rounds; sort dated
+  // promos newest-first and take the first parseable opponent. Fall back to
+  // any promo (covers recurring-only sets) so behavior is otherwise unchanged.
+  const opponent =
+    [...promos]
+      .filter((p) => p.date)
+      .sort((a, b) => (b.date as string).localeCompare(a.date as string))
+      .map((p) => extractOpponent(p.gameInfo))
+      .find((o): o is string => !!o) ??
+    promos
+      .map((p) => extractOpponent(p.gameInfo))
+      .find((o): o is string => !!o);
   const roundDisplay = roundLabel(round);
 
   return (
