@@ -92,12 +92,29 @@ export function JsonLd({
       }
     : null;
 
+  // Page-level WebPage entity. dateModified is dynamic (new Date()), so each
+  // ISR revalidation refreshes the timestamp Google sees for freshness;
+  // datePublished is a static launch anchor. Always emitted, so every team
+  // page carries a structured-data freshness signal even with zero promos.
+  const webPage = {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    '@id': teamUrl,
+    url: teamUrl,
+    name: `${teamDisplayName(team)} Promos & Giveaways 2026`,
+    datePublished: '2025-12-01',
+    dateModified: new Date().toISOString(),
+  };
+
   const schemas = [
+    webPage,
     ...events,
     ...playoffEvents,
     ...(faqSchema ? [faqSchema] : []),
   ];
 
+  // webPage is always present, so this is unreachable today; kept as a
+  // defensive guard in case the schema set is ever made conditional again.
   if (schemas.length === 0) return null;
 
   // Emit one <script> per entity (Google Rich Results Test's code-paste parser
