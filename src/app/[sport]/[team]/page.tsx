@@ -67,7 +67,10 @@ export async function generateMetadata({
   const team = await getTeamBySlug(teamSlug);
   if (!team) return {};
 
-  const venue = await getVenueForTeam(team.id);
+  const [venue, promos] = await Promise.all([
+    getVenueForTeam(team.id),
+    getTeamPromos(team.id),
+  ]);
 
   // Hardcoded, NOT new Date().getFullYear(): an auto-rolling year would flip
   // every title to "...2027" at midnight on Jan 1 — before the 2027 promo data
@@ -87,16 +90,53 @@ export async function generateMetadata({
   // byte and keep the brand on shared social cards.
   const socialTitle = `${title} | PromoNight`;
 
-  // Meta description capped at 155 chars. The {team}+{venue} prefix is
-  // variable-length, so the longest venues (e.g. "GEHA Field at Arrowhead
-  // Stadium") can overflow; truncateAtWord trims to a word boundary. Falls back
-  // to a venue-free sentence when the team has no resolved venue.
-  const description = truncateAtWord(
-    venue
-      ? `${displayName} ${year} promos: giveaways, bobbleheads, theme nights & food deals at ${venue.name}. Find the best games to attend this season.`
-      : `${displayName} ${year} promos: giveaways, bobbleheads, theme nights & food deals. Find the best games to attend this season.`,
-    155,
-  );
+  // Meta description: front-load the next upcoming promos so the Google
+  // snippet stays fresh on every ISR revalidation. Built from getTeamPromos
+  // (date-ascending). Capped at 250 chars; the "See the full schedule" closer
+  // is appended only when it fits, and a promo is dropped rather than cut
+  // mid-title (two clean names beat three with the third truncated). `year`
+  // stays hardcoded (never getFullYear()) — same rationale as the title above.
+  // Falls back to an evergreen sentence when there are no upcoming promos (or,
+  // defensively, when not even the first promo fits the budget).
+  const DESC_MAX = 250;
+  const todayStr = new Date().toISOString().split('T')[0];
+  const monthDay = (d: string) =>
+    new Date(d + 'T12:00:00').toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    });
+
+  const fallbackDescription = venue
+    ? `${displayName} ${year} promotional schedule — bobbleheads, giveaways, theme nights, and food deals at ${venue.name}. Updated weekly.`
+    : `${displayName} ${year} promotional schedule — bobbleheads, giveaways, theme nights, and food deals. Updated weekly.`;
+
+  const upcomingForDesc = promos
+    .filter((p) => p.date >= todayStr)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(0, 3);
+
+  let rawDescription = fallbackDescription;
+  if (upcomingForDesc.length > 0) {
+    const prefix = `Upcoming ${displayName} promos: `;
+    const closer = ` See the full ${year} schedule at PromoNight.`;
+    const fits: string[] = [];
+    let len = prefix.length;
+    for (const p of upcomingForDesc) {
+      const entry = `${monthDay(p.date)} — ${p.title}`;
+      const sep = fits.length === 0 ? '' : ', ';
+      // +1 reserves the period that closes the promo list; a promo that would
+      // push past DESC_MAX is dropped, not truncated mid-title.
+      if (len + sep.length + entry.length + 1 > DESC_MAX) break;
+      fits.push(entry);
+      len += sep.length + entry.length;
+    }
+    if (fits.length > 0) {
+      const listBody = `${prefix}${fits.join(', ')}.`;
+      rawDescription =
+        (listBody + closer).length <= DESC_MAX ? listBody + closer : listBody;
+    }
+  }
+  const description = truncateAtWord(rawDescription, DESC_MAX);
 
   return {
     title,
