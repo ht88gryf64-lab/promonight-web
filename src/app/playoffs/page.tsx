@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getAllPlayoffPromos, getVenueForTeam } from '@/lib/data';
 import type { PlayoffPromo, Team, Venue, PlayoffConfig } from '@/lib/types';
-import { teamDisplayName, roundLabel } from '@/lib/promo-helpers';
+import { teamDisplayName, roundLabel, extractOpponent } from '@/lib/promo-helpers';
 import { ParkingCTA } from '@/components/affiliates/ParkingCTA';
 import { HotelsCTA } from '@/components/affiliates/HotelsCTA';
 import { TicketsBlock } from '@/components/affiliates/TicketsBlock';
@@ -72,11 +72,6 @@ function formatFullTimestamp(iso: string | null): string {
     minute: '2-digit',
     timeZoneName: 'short',
   });
-}
-
-function extractOpponent(gameInfo: string): string | null {
-  const m = gameInfo.match(/\bvs\.?\s+([A-Z][^(,]+?)(?:\s*\(|$)/);
-  return m ? m[1].trim().replace(/[.,]$/, '') : null;
 }
 
 function buildFaqs(
@@ -462,9 +457,19 @@ function TeamCard({
   promos: PlayoffPromo[];
   venue: Venue | null;
 }) {
-  const opponent = promos
-    .map((p) => extractOpponent(p.gameInfo))
-    .find((o): o is string => !!o);
+  // Opponent label = the LATEST dated promo's opponent (the current-round
+  // matchup), not the earliest. Promos may span multiple rounds; sort dated
+  // promos newest-first and take the first parseable opponent. Fall back to
+  // any promo (covers recurring-only sets) so behavior is otherwise unchanged.
+  const opponent =
+    [...promos]
+      .filter((p) => p.date)
+      .sort((a, b) => (b.date as string).localeCompare(a.date as string))
+      .map((p) => extractOpponent(p.gameInfo))
+      .find((o): o is string => !!o) ??
+    promos
+      .map((p) => extractOpponent(p.gameInfo))
+      .find((o): o is string => !!o);
   const visible = promos.slice(0, 4);
   const remaining = Math.max(0, promos.length - visible.length);
   const teamUrl = `/${team.sportSlug}/${team.id}`;

@@ -37,6 +37,15 @@ export function roundLabel(code: string): string {
   return ROUND_LABELS[code] ?? code.replace(/_/g, ' ');
 }
 
+// Parses the opponent team name out of a single playoff promo's gameInfo
+// string (e.g. "Game 1 vs New York Knicks (Finals)" → "New York Knicks").
+// Returns null when there's no parseable "vs" clause. Shared by the /playoffs
+// hub TeamCard and the team-page PlayoffSection.
+export function extractOpponent(gameInfo: string): string | null {
+  const m = gameInfo.match(/\bvs\.?\s+([A-Z][^(,]+?)(?:\s*\(|$)/);
+  return m ? m[1].trim().replace(/[.,]$/, '') : null;
+}
+
 // Returns an opponent only when all gameInfo matches across the team's playoff
 // promos agree. 0 matches or 2+ distinct matches → null (drop opponent clause
 // rather than hallucinate one). Today OKC has one distinct match ("Phoenix
