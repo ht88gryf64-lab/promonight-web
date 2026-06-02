@@ -87,6 +87,13 @@ export interface Promo {
   attendanceCap?: number | null;
   presentedBy?: string | null;
   whileSuppliesLast?: boolean;
+  // Secondary classification flag: marks a promo as a gate giveaway even when
+  // its primary `type` is something else. Today this is set only on the two
+  // Twins kids gate giveaways (Kids Opening Day Beanie, Kids Appreciation Widget
+  // Hat), which stay typed 'kids' so the FAQ kids list keeps them while still
+  // counting toward the giveaway tally. Absent on every other promo, so reads
+  // are a no-op outside the flagged Twins docs.
+  isGiveaway?: boolean;
 }
 
 export interface PromoWithTeam extends Promo {

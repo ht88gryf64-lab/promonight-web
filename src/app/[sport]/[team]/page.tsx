@@ -221,6 +221,13 @@ export default async function TeamPage({
     if (promoCounts[p.type] !== undefined) {
       promoCounts[p.type]++;
     }
+    // A promo flagged isGiveaway counts toward the giveaway tally even when its
+    // primary type is something else. The two Twins kids gate giveaways are
+    // typed 'kids' (so the FAQ kids list keeps them) but are genuine
+    // first-N-fans gate giveaways. No-op for promos without the flag.
+    if (p.isGiveaway && p.type !== 'giveaway') {
+      promoCounts.giveaway++;
+    }
   }
 
   const displayName = teamDisplayName(team);
