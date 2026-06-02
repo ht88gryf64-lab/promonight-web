@@ -122,6 +122,7 @@ function mapPromoDoc(doc: FirebaseFirestore.DocumentSnapshot): Promo {
   if (data.attendanceCap !== undefined) promo.attendanceCap = data.attendanceCap;
   if (data.presentedBy !== undefined) promo.presentedBy = data.presentedBy;
   if (data.whileSuppliesLast !== undefined) promo.whileSuppliesLast = data.whileSuppliesLast;
+  if (data.isGiveaway !== undefined) promo.isGiveaway = data.isGiveaway;
   return promo;
 }
 

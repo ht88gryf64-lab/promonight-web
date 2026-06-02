@@ -203,7 +203,12 @@ export function generateTeamFAQs(
   promoCounts: Record<PromoType, number>,
   playoff?: PlayoffFAQContext,
 ): FAQItem[] {
-  const year = getCurrentYear();
+  // Hardcoded 2026 season year, NOT getCurrentYear(): the page title and meta
+  // description already hardcode 2026, and an auto-rolling getFullYear() would
+  // flip every FAQ "{year} season" string to the next year at midnight on Jan 1,
+  // before that season's promo data exists. Keep these FAQs consistent with the
+  // title; bump deliberately when 2027 content is ready.
+  const year = 2026;
   const fullName = teamDisplayName(team);
   const venueName = venue?.name || 'their home stadium';
   const faqs: FAQItem[] = [];
