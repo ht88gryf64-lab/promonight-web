@@ -20,10 +20,33 @@
   --color-promo-kids: #60a5fa;
   --color-promo-food: #fb923c;
 
+  /* ── Redesign v2 (gated, team page only) ──────────────────────────────────
+   * NEW token names. They coexist with the live --color-* / --color-promo-*
+   * tokens above and NEVER override them — the live dark page keeps reading the
+   * originals. The category mapping intentionally flips the live giveaway/food
+   * hues: redesign giveaway is ORANGE, food is GREEN (theme purple, kids blue
+   * unchanged). Jersey maps to giveaway → orange. */
+  --color-rd-cream: #f7f3ea;        /* cream page surface */
+  --color-rd-card: #ffffff;         /* white card */
+  --color-rd-ink: #211d18;          /* warm charcoal — house dark + primary text */
+  --color-rd-ink-soft: #6f665a;     /* muted body text */
+  --color-rd-ink-faint: #9a9081;    /* eyebrows, captions */
+  --color-rd-line: rgba(33, 29, 24, 0.10);
+  --color-rd-line-strong: rgba(33, 29, 24, 0.16);
+  --color-rd-red: #da2d20;          /* brand red ticket CTA */
+  --color-rd-red-dark: #b21d12;
+  --color-rd-cat-giveaway: #f97316; /* orange (live = green) */
+  --color-rd-cat-theme: #7c3aed;    /* purple */
+  --color-rd-cat-food: #16a34a;     /* green (live = orange) */
+  --color-rd-cat-kids: #2563eb;     /* blue */
+
   --font-display: var(--font-bebas-neue), sans-serif;
   --font-body: var(--font-dm-sans), sans-serif;
   --font-mono: var(--font-dm-mono), monospace;
   --font-outfit: var(--font-outfit), sans-serif;
+  /* Archivo (redesign). --font-archivo is set by next/font on the team-page
+   * wrapper, NOT on <html>, so this resolves only inside the redesigned tree. */
+  --font-rd: var(--font-archivo), system-ui, sans-serif;
 }
 
 /* Base styles */
@@ -186,4 +209,36 @@ body::before {
 ::-webkit-scrollbar-thumb {
   background: #333;
   border-radius: 3px;
+}
+
+/* ── Redesign v2 utilities (gated, team page only) ─────────────────────────
+ * Scoped to the .rd-root wrapper the team page mounts when the gate is on, so
+ * none of this affects the live dark page. The wrapper also carries next/font's
+ * --font-archivo, so var(--font-rd) resolves to Archivo here and nowhere else. */
+.rd-root {
+  font-family: var(--font-rd);
+  color: var(--color-rd-ink);
+  background-color: var(--color-rd-cream);
+  /* Sit above the body's fixed noise overlay (z-0) so the cream surface reads
+   * clean. The global <main> is z-[1]; this wrapper is its child. */
+  position: relative;
+  z-index: 1;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Heavy EXPANDED display cut — Archivo width axis at 125%. For lockups and
+ * featured headlines. The family (font-rd / Archivo) is inherited from .rd-root. */
+.rd-display {
+  font-weight: 800;
+  font-stretch: 125%;
+  letter-spacing: -0.005em;
+  line-height: 0.95;
+}
+
+/* Scoreboard numerals — heaviest expanded cut, tabular figures. */
+.rd-numerals {
+  font-weight: 900;
+  font-stretch: 125%;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
