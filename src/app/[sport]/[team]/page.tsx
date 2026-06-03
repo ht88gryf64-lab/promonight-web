@@ -37,6 +37,8 @@ import { BookingCTA } from '@/components/affiliates/BookingCTA';
 import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { AD_SLOTS } from '@/lib/ads/slots';
+import { isRedesignEnabled } from '@/lib/redesign';
+import { RedesignTeamPage } from '@/components/redesign/RedesignTeamPage';
 
 export const revalidate = 21600;
 
@@ -239,6 +241,29 @@ export default async function TeamPage({
   const gameContexts = games.length > 0
     ? await enrichGamesForTeam(team.id, games, promos)
     : undefined;
+
+  // Preview-gated redesign. Gate ON (every non-production Vercel env + local
+  // dev, or the NEXT_PUBLIC_REDESIGN_V2 launch flag) renders the new template
+  // from the SAME data fetched above. Gate OFF renders the live template below,
+  // unchanged. The data fetching is identical on both paths.
+  if (isRedesignEnabled()) {
+    return (
+      <RedesignTeamPage
+        team={team}
+        venue={venue}
+        promos={promos}
+        promoCounts={promoCounts}
+        displayName={displayName}
+        gameContexts={gameContexts}
+        playoffsActive={!!playoffConfig?.playoffsActive}
+        inPlayoffs={inPlayoffs}
+        playoffPromos={playoffPromos}
+        playoffRound={playoffRound}
+        playoffLastUpdated={playoffConfig?.lastScanDate ?? null}
+        playoffContext={playoffContext}
+      />
+    );
+  }
 
   return (
     <>

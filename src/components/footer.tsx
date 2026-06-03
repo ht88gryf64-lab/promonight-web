@@ -1,11 +1,13 @@
 import Link from 'next/link';
 import { getAllTeams } from '@/lib/data';
 import { FooterTeamSitemap } from './footer-team-sitemap';
+import { RedesignChromeGate } from './redesign/RedesignChromeGate';
 
 export async function Footer() {
   const teams = await getAllTeams();
 
   return (
+    <RedesignChromeGate>
     <footer className="relative z-[1] border-t border-border-subtle bg-bg">
       <div className="max-w-6xl mx-auto px-6 py-16">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
@@ -98,5 +100,6 @@ export async function Footer() {
         </div>
       </div>
     </footer>
+    </RedesignChromeGate>
   );
 }
