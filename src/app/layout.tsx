@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
-import Script from 'next/script';
 import { Bebas_Neue, DM_Sans, DM_Mono, Outfit } from 'next/font/google';
 import { Nav } from '@/components/nav';
 import { Footer } from '@/components/footer';
@@ -88,6 +87,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en" className={`${bebasNeue.variable} ${dmSans.variable} ${dmMono.variable} ${outfit.variable}`}>
       <head>
+        <script
+          data-grow-initializer=""
+          dangerouslySetInnerHTML={{
+            __html: `!(function(){window.growMe||((window.growMe=function(e){window.growMe._.push(e);}),(window.growMe._=[]));var e=document.createElement("script");(e.type="text/javascript"),(e.src="https://faves.grow.me/main.js"),(e.defer=!0),e.setAttribute("data-grow-faves-site-id","U2l0ZTphZmY4ODEzZi02MzdhLTQ2YTMtYjg4YS02Yzg5NDdjZjYyYjA=");var t=document.getElementsByTagName("script")[0];t.parentNode.insertBefore(e,t);})();`,
+          }}
+        />
         {/* Impact site verification. Spread bypasses React's typed prop
             check on <meta> so the attribute renders as `value=` exactly
             as Impact's verifier requires (it does not accept `content=`). */}
@@ -118,14 +123,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </StarredTeamsProvider>
           </AdProvider>
         </AnalyticsProvider>
-        <Script
-          id="grow-me"
-          data-grow-initializer=""
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `!(function(){window.growMe||((window.growMe=function(e){window.growMe._.push(e);}),(window.growMe._=[]));var e=document.createElement("script");(e.type="text/javascript"),(e.src="https://faves.grow.me/main.js"),(e.defer=!0),e.setAttribute("data-grow-faves-site-id","U2l0ZTphZmY4ODEzZi02MzdhLTQ2YTMtYjg4YS02Yzg5NDdjZjYyYjA=");var t=document.getElementsByTagName("script")[0];t.parentNode.insertBefore(e,t);})();`,
-          }}
-        />
       </body>
     </html>
   );
