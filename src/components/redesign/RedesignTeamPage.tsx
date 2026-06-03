@@ -18,6 +18,7 @@ import { EngagementTracker } from '@/components/analytics/EngagementTracker';
 import { TeamContentSections } from '@/components/team-content-sections';
 import { TeamFAQ } from '@/components/team-faq';
 import { PlayoffSection } from '@/components/playoff-section';
+import { ScheduleReleaseVideoCard } from '@/components/ScheduleReleaseVideoCard';
 import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
 import { TicketmasterCTA } from '@/components/affiliates/TicketmasterCTA';
 import { AdSlot } from '@/components/ads/AdSlot';
@@ -155,6 +156,12 @@ export function RedesignTeamPage({
        *  playoff section) rendered verbatim so its output is equivalent to the
        *  live page; the charcoal backing makes the light-on-dark text readable. */}
       <div className="bg-rd-ink text-white">
+        {/* NFL-only schedule-release video — reused verbatim (dark-styled, so it
+         *  reads on this charcoal band) to preserve its cta_click event + the
+         *  content. Same NFL + field-presence gate as the live page. */}
+        {team.league === 'NFL' && team.scheduleReleaseVideo && (
+          <ScheduleReleaseVideoCard video={team.scheduleReleaseVideo} teamSlug={team.id} />
+        )}
         {inPlayoffs && playoffPromos.length > 0 && (
           <PlayoffSection
             team={team}

@@ -227,8 +227,9 @@ body::before {
 }
 
 /* Heavy EXPANDED display cut — Archivo width axis at 125%. For lockups and
- * featured headlines. The family (font-rd / Archivo) is inherited from .rd-root. */
-.rd-display {
+ * featured headlines. Descendant-scoped under .rd-root so the utility can never
+ * affect the live page even if the class name were reused elsewhere. */
+.rd-root .rd-display {
   font-weight: 800;
   font-stretch: 125%;
   letter-spacing: -0.005em;
@@ -236,7 +237,7 @@ body::before {
 }
 
 /* Scoreboard numerals — heaviest expanded cut, tabular figures. */
-.rd-numerals {
+.rd-root .rd-numerals {
   font-weight: 900;
   font-stretch: 125%;
   font-variant-numeric: tabular-nums;
