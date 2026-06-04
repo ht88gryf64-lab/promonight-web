@@ -1,6 +1,7 @@
 import type { Team, Venue, Promo, PromoType, PlayoffPromo } from '@/lib/types';
 import type { GameContext } from '@/lib/data';
 import type { PlayoffFAQContext } from '@/lib/promo-helpers';
+import type { RecurringDeal } from '@/lib/recurring-deals';
 
 import { archivo } from './fonts';
 import { BrandBar } from './BrandBar';
@@ -11,16 +12,20 @@ import { AffiliateRail } from './AffiliateRail';
 import { ExploreCard } from './ExploreCard';
 import { Footer } from './Footer';
 
-// Reused verbatim from the live template so SEO + analytics are preserved.
+// Reused components — light variant (default 'dark' is the untouched gate-off
+// path). SEO + analytics preserved; restyled into the cream flow (no dark band).
 import { JsonLd } from '@/components/json-ld';
 import { TeamPageTracker } from '@/components/analytics-events';
 import { EngagementTracker } from '@/components/analytics/EngagementTracker';
 import { TeamContentSections } from '@/components/team-content-sections';
 import { TeamFAQ } from '@/components/team-faq';
+import { AuthorityStats } from '@/components/authority-stats';
+import { RecurringDealsSection } from '@/components/recurring-deals-section';
+import { TeamRelatedAggregators } from '@/components/team-related-aggregators';
+import { PromoList } from '@/components/promo-list';
 import { PlayoffSection } from '@/components/playoff-section';
 import { ScheduleReleaseVideoCard } from '@/components/ScheduleReleaseVideoCard';
 import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
-import { TicketmasterCTA } from '@/components/affiliates/TicketmasterCTA';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { AD_SLOTS } from '@/lib/ads/slots';
 
@@ -31,6 +36,7 @@ export interface RedesignTeamPageProps {
   promoCounts: Record<PromoType, number>;
   displayName: string;
   gameContexts?: GameContext[];
+  recurringDeals: RecurringDeal[];
   playoffsActive: boolean;
   inPlayoffs: boolean;
   playoffPromos: PlayoffPromo[];
@@ -40,12 +46,13 @@ export interface RedesignTeamPageProps {
 }
 
 /**
- * Gate-ON team page. Assembles the new light template from the redesign
- * components, fed by the SAME data the page already fetched. The SEO + analytics
- * surfaces (JsonLd, TeamPageTracker, EngagementTracker, TeamContentSections,
- * TeamFAQ, the five AdSlots) are reused verbatim so their output is equivalent
- * to the live page. The dark-styled reused content (question-H2s, FAQ) is housed
- * in a charcoal band so it renders readable on the otherwise-light page.
+ * Gate-ON team page. Everything lives in the light "house" (cream surface, white
+ * cards, warm-charcoal ink) — no dark content band. The single tickets CTA is in
+ * the affiliate stack (the hero Get Tickets button was removed). On mobile the
+ * affiliate stack sits directly below the hero (above the calendar); on desktop
+ * it is the sticky-free right sidebar. The reused SEO/analytics surfaces (JsonLd,
+ * trackers, TeamContentSections question-H2s, TeamFAQ, the five AdSlots, the full
+ * PromoList) are preserved and rendered in their light variants.
  */
 export function RedesignTeamPage({
   team,
@@ -54,6 +61,7 @@ export function RedesignTeamPage({
   promoCounts,
   displayName,
   gameContexts,
+  recurringDeals,
   playoffsActive,
   inPlayoffs,
   playoffPromos,
@@ -65,7 +73,7 @@ export function RedesignTeamPage({
 
   return (
     <div className={`${archivo.variable} rd-root min-h-screen`}>
-      {/* SEO + analytics — reused verbatim, invisible chrome. */}
+      {/* SEO + analytics — reused verbatim, invisible. */}
       <JsonLd
         team={team}
         promos={promos}
@@ -84,38 +92,56 @@ export function RedesignTeamPage({
 
       <BrandBar playoffsActive={playoffsActive} />
 
-      {/* Header leaderboard ad (page_type team_page → ad_slot_viewed preserved). */}
       <div className="mx-auto max-w-6xl px-6 pt-4">
         <AdSlot config={AD_SLOTS.HEADER_LEADERBOARD} pageType="team_page" />
       </div>
 
+      {/* Hero — no Get Tickets button (the affiliate stack is the single tickets CTA). */}
       <Hero
         tint={team.primaryColor}
         eyebrow={eyebrow}
         title={displayName.toUpperCase()}
         subtitle="Promos & Giveaways 2026"
         venueLine={venue?.name ?? undefined}
-        primaryCta={
-          <TicketmasterCTA
-            team={team}
-            surface="web_team_page"
-            placement="team_page_hero"
-            size="full"
-          />
-        }
-        scoreboard={
-          <StatScoreboard counts={promoCounts} gamesCount={gameContexts?.length} />
-        }
+        scoreboard={<StatScoreboard counts={promoCounts} gamesCount={gameContexts?.length} />}
       />
 
       <div className="mx-auto max-w-6xl px-6 py-4">
         <AdSlot config={AD_SLOTS.TEAM_PAGE_AFTER_HERO} pageType="team_page" />
       </div>
 
-      {/* Two-column on desktop; single column on mobile. */}
-      <div className="mx-auto max-w-6xl px-6 pb-12">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_336px] gap-8">
-          <main className="min-w-0 space-y-8">
+      {/* NFL schedule-release video (light) — preserves cta_click. */}
+      {team.league === 'NFL' && team.scheduleReleaseVideo && (
+        <div className="mx-auto max-w-6xl px-6">
+          <ScheduleReleaseVideoCard video={team.scheduleReleaseVideo} teamSlug={team.id} variant="light" />
+        </div>
+      )}
+
+      {/* Playoffs (light), full-width when active. */}
+      {inPlayoffs && playoffPromos.length > 0 && (
+        <div className="mx-auto max-w-6xl px-6">
+          <PlayoffSection
+            team={team}
+            promos={playoffPromos}
+            round={playoffRound}
+            lastUpdated={playoffLastUpdated}
+            variant="light"
+          />
+        </div>
+      )}
+
+      {/* Two-column. Mobile order: affiliate stack first (directly below hero,
+       *  so tickets stay near the top), then the main column. Desktop: main on
+       *  the left, affiliate stack + explore on the right. */}
+      <div className="mx-auto max-w-6xl px-6 pb-8">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_336px] lg:items-start">
+          <aside className="order-1 space-y-6 lg:order-2">
+            <AffiliateRail team={team} venue={venue} />
+            <ExploreCard team={team} />
+            <AdSlot config={AD_SLOTS.SIDEBAR_STICKY} pageType="team_page" />
+          </aside>
+
+          <main className="order-2 min-w-0 lg:order-1">
             <SeasonExplorer
               promos={promos}
               promoCounts={promoCounts}
@@ -125,69 +151,63 @@ export function RedesignTeamPage({
               team={team}
               gameContexts={gameContexts}
             />
-            <AdSlot config={AD_SLOTS.IN_CONTENT_1} pageType="team_page" />
-          </main>
 
-          <aside className="space-y-6 lg:sticky lg:top-20 self-start">
-            {/* Tickets */}
-            <div className="rounded-2xl border border-rd-line bg-rd-card p-5">
-              <div className="font-rd text-[11px] uppercase tracking-[0.14em] text-rd-ink-faint mb-3">
-                Tickets
-              </div>
-              <TicketmasterCTA
-                team={team}
-                surface="web_team_page"
-                placement="team_page_sidebar"
-                size="full"
-              />
+            {/* Full promo list — upcoming + completed, with show-all. */}
+            <PromoList
+              promos={promos}
+              teamSlug={team.id}
+              teamName={displayName}
+              sport={team.sportSlug}
+              primaryColor={team.primaryColor}
+              venueName={venue?.name ?? null}
+              variant="light"
+            />
+
+            <AuthorityStats
+              team={team}
+              promos={promos}
+              promoCounts={promoCounts}
+              venue={venue}
+              teamName={displayName}
+              variant="light"
+            />
+
+            <RecurringDealsSection
+              team={team}
+              deals={recurringDeals}
+              venueName={venue?.name ?? null}
+              variant="light"
+            />
+
+            <TeamContentSections
+              team={team}
+              promos={promos}
+              venue={venue}
+              promoCounts={promoCounts}
+              variant="light"
+            />
+
+            <TeamRelatedAggregators promos={promos} variant="light" />
+
+            <TeamFAQ
+              team={team}
+              promos={promos}
+              venue={venue}
+              promoCounts={promoCounts}
+              playoffContext={playoffContext}
+              variant="light"
+            />
+
+            <div className="py-6">
+              <AdSlot config={AD_SLOTS.IN_CONTENT_1} pageType="team_page" />
             </div>
-
-            {/* Plan your visit (parking / hotels / fan gear / gate time) */}
-            <AffiliateRail team={team} venue={venue} />
-
-            <ExploreCard team={team} />
-
-            <AdSlot config={AD_SLOTS.SIDEBAR_STICKY} pageType="team_page" />
-          </aside>
+          </main>
         </div>
       </div>
 
-      {/* Dark content band — reused dark-styled SEO content (question-H2s, FAQ,
-       *  playoff section) rendered verbatim so its output is equivalent to the
-       *  live page; the charcoal backing makes the light-on-dark text readable. */}
-      <div className="bg-rd-ink text-white">
-        {/* NFL-only schedule-release video — reused verbatim (dark-styled, so it
-         *  reads on this charcoal band) to preserve its cta_click event + the
-         *  content. Same NFL + field-presence gate as the live page. */}
-        {team.league === 'NFL' && team.scheduleReleaseVideo && (
-          <ScheduleReleaseVideoCard video={team.scheduleReleaseVideo} teamSlug={team.id} />
-        )}
-        {inPlayoffs && playoffPromos.length > 0 && (
-          <PlayoffSection
-            team={team}
-            promos={playoffPromos}
-            round={playoffRound}
-            lastUpdated={playoffLastUpdated}
-          />
-        )}
-        <TeamContentSections
-          team={team}
-          promos={promos}
-          venue={venue}
-          promoCounts={promoCounts}
-        />
-        <TeamFAQ
-          team={team}
-          promos={promos}
-          venue={venue}
-          promoCounts={promoCounts}
-          playoffContext={playoffContext}
-        />
-        <div className="py-8 px-6">
-          <div className="max-w-3xl mx-auto">
-            <AffiliateDisclosure />
-          </div>
-        </div>
+      {/* Fine print — minimal treatment in the cream flow (reads fine at #444). */}
+      <div className="mx-auto max-w-6xl px-6 pb-8">
+        <AffiliateDisclosure className="text-center" />
       </div>
 
       <div className="mx-auto max-w-6xl px-6 py-4">

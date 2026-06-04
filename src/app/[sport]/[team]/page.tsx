@@ -255,6 +255,7 @@ export default async function TeamPage({
         promoCounts={promoCounts}
         displayName={displayName}
         gameContexts={gameContexts}
+        recurringDeals={recurringDeals}
         playoffsActive={!!playoffConfig?.playoffsActive}
         inPlayoffs={inPlayoffs}
         playoffPromos={playoffPromos}

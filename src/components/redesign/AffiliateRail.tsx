@@ -1,19 +1,20 @@
 import type { Team, Venue } from '@/lib/types';
-import { IconClock } from '@tabler/icons-react';
+import { TicketmasterCTA } from '@/components/affiliates/TicketmasterCTA';
 import { SpotHeroCTA } from '@/components/affiliates/SpotHeroCTA';
 import { BookingCTA } from '@/components/affiliates/BookingCTA';
 import { FanaticsCTA } from '@/components/affiliates/FanaticsCTA';
+import { VenueInfoBlock } from '@/components/venue-info-block';
 
-// AffiliateRail — the "plan your visit" affiliate row on the redesigned
-// team page (parking, hotels, fan gear, plus a non-affiliate gate-time chip).
+// AffiliateRail — the "plan your visit" module. The single tickets CTA lives
+// here now (the hero Get Tickets button was removed), so this is the one place
+// tickets are offered on the gate-on page.
 //
-// Affiliate tracking is preserved by REUSE: SpotHeroCTA / BookingCTA /
-// FanaticsCTA each render a TrackedAffiliateLink that fires the
-// `affiliate_click` analytics event on mousedown internally. This component
-// only lays them out — it does NOT build affiliate URLs or tracking. The
-// surface is fixed to "web_team_page" and the placement to
-// "team_page_prepare" so reporting stays consistent with the live page.
-
+// The four affiliate CTAs are already full-width white-card rows (icon · label ·
+// arrow); they are stacked VERTICALLY full-width (not in a grid). Affiliate
+// tracking is preserved by reuse — each fires `affiliate_click` on mousedown via
+// tracked-affiliate-link. Surface stays "web_team_page". Below the buttons, the
+// full VenueInfoBlock (light) extends downward with gate times, parking,
+// transit, bag policy, etc.
 export interface AffiliateRailProps {
   team: Team;
   venue: Venue | null;
@@ -21,58 +22,29 @@ export interface AffiliateRailProps {
 }
 
 export function AffiliateRail({ team, venue, className }: AffiliateRailProps) {
-  const gatesOpen = venue?.gatesOpen;
-
   return (
     <section className={className}>
-      <h2 className="font-rd uppercase tracking-wide text-rd-ink-faint text-[11px] font-semibold mb-4">
+      <h2 className="mb-3 font-rd text-[11px] font-semibold uppercase tracking-[0.14em] text-rd-ink-faint">
         Plan your visit
       </h2>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        {/* Parking — tracked SpotHero affiliate CTA */}
-        <SpotHeroCTA
-          team={team}
-          venue={venue}
-          surface="web_team_page"
-          placement="team_page_prepare"
-        />
-
-        {/* Hotels — tracked Booking.com affiliate CTA */}
-        <BookingCTA
-          team={team}
-          venue={venue}
-          surface="web_team_page"
-          placement="team_page_prepare"
-        />
-
-        {/* Fan gear — tracked Fanatics affiliate CTA (self-gates on
-            team.fanaticsUrl and may render null) */}
-        <FanaticsCTA
-          team={team}
-          surface="web_team_page"
-          placement="team_page_prepare"
-        />
-
-        {/* Gate time — NON-affiliate info chip, only when gatesOpen is set */}
-        {gatesOpen ? (
-          <div className="bg-rd-card rounded-2xl border border-rd-line p-5 flex items-start gap-3">
-            <IconClock
-              size={22}
-              stroke={1.75}
-              className="text-rd-ink-soft shrink-0 mt-0.5"
-            />
-            <div className="min-w-0">
-              <div className="font-rd uppercase text-[11px] tracking-[0.14em] text-rd-ink-faint">
-                Gate time
-              </div>
-              <div className="font-rd text-rd-ink mt-1">
-                Gates open {gatesOpen}
-              </div>
-            </div>
-          </div>
-        ) : null}
+      <div className="flex flex-col gap-2.5">
+        {/* Tickets — the single tickets CTA (locked team_page_sidebar placement) */}
+        <TicketmasterCTA team={team} surface="web_team_page" placement="team_page_sidebar" size="full" />
+        {/* Parking */}
+        <SpotHeroCTA team={team} venue={venue} surface="web_team_page" placement="team_page_prepare" />
+        {/* Hotels */}
+        <BookingCTA team={team} venue={venue} surface="web_team_page" placement="team_page_prepare" />
+        {/* Fan gear — self-gates on team.fanaticsUrl, may render null */}
+        <FanaticsCTA team={team} surface="web_team_page" placement="team_page_prepare" />
       </div>
+
+      {/* Full venue & game-day detail flows below the buttons */}
+      {venue && (
+        <div className="mt-6">
+          <VenueInfoBlock venue={venue} league={team.league} variant="light" />
+        </div>
+      )}
     </section>
   );
 }
