@@ -106,33 +106,12 @@ export function RedesignTeamPage({
         scoreboard={<StatScoreboard counts={promoCounts} gamesCount={gameContexts?.length} />}
       />
 
-      <div className="mx-auto max-w-6xl px-6 py-4">
-        <AdSlot config={AD_SLOTS.TEAM_PAGE_AFTER_HERO} pageType="team_page" />
-      </div>
-
-      {/* NFL schedule-release video (light) — preserves cta_click. */}
-      {team.league === 'NFL' && team.scheduleReleaseVideo && (
-        <div className="mx-auto max-w-6xl px-6">
-          <ScheduleReleaseVideoCard video={team.scheduleReleaseVideo} teamSlug={team.id} variant="light" />
-        </div>
-      )}
-
-      {/* Playoffs (light), full-width when active. */}
-      {inPlayoffs && playoffPromos.length > 0 && (
-        <div className="mx-auto max-w-6xl px-6">
-          <PlayoffSection
-            team={team}
-            promos={playoffPromos}
-            round={playoffRound}
-            lastUpdated={playoffLastUpdated}
-            variant="light"
-          />
-        </div>
-      )}
-
-      {/* Two-column. Mobile order: affiliate stack first (directly below hero,
-       *  so tickets stay near the top), then the main column. Desktop: main on
-       *  the left, affiliate stack + explore on the right. */}
+      {/* Two-column. Mobile order: the affiliate stack (tickets) sits DIRECTLY
+       *  below the hero (order-1), above everything else; then the main column.
+       *  Desktop: main on the left, affiliate stack + explore as the right
+       *  sidebar. The after-hero ad, NFL video, and playoff section live at the
+       *  top of the main column so they never push the tickets CTA down on
+       *  mobile. */}
       <div className="mx-auto max-w-6xl px-6 pb-8">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_336px] lg:items-start">
           <aside className="order-1 space-y-6 lg:order-2">
@@ -142,6 +121,26 @@ export function RedesignTeamPage({
           </aside>
 
           <main className="order-2 min-w-0 lg:order-1">
+            <div className="pb-4">
+              <AdSlot config={AD_SLOTS.TEAM_PAGE_AFTER_HERO} pageType="team_page" />
+            </div>
+
+            {/* NFL schedule-release video (light) — preserves cta_click. */}
+            {team.league === 'NFL' && team.scheduleReleaseVideo && (
+              <ScheduleReleaseVideoCard video={team.scheduleReleaseVideo} teamSlug={team.id} variant="light" />
+            )}
+
+            {/* Playoffs (light), when active. */}
+            {inPlayoffs && playoffPromos.length > 0 && (
+              <PlayoffSection
+                team={team}
+                promos={playoffPromos}
+                round={playoffRound}
+                lastUpdated={playoffLastUpdated}
+                variant="light"
+              />
+            )}
+
             <SeasonExplorer
               promos={promos}
               promoCounts={promoCounts}

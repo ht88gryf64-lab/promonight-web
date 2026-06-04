@@ -1,8 +1,8 @@
-import { IconFlame } from '@tabler/icons-react';
 import { PromoBadge } from './promo-badge';
 import { AppDownloadButtons } from './app-download-buttons';
 import { ShareButton, formatShareDate, type ShareItem } from './share';
-import { categoryFor } from '@/components/redesign/categories';
+import { RedesignPromoRow } from '@/components/redesign/RedesignPromoRow';
+import { LazyPromoRows } from '@/components/redesign/LazyPromoRows';
 import type { Promo, PromoType } from '@/lib/types';
 
 // Fields shared by every promo row's ShareItem — the per-promo bits (icon,
@@ -35,12 +35,10 @@ function PromoRow({
   promo,
   share,
   completed = false,
-  variant = 'dark',
 }: {
   promo: Promo;
   share: PromoShareContext;
   completed?: boolean;
-  variant?: 'dark' | 'light';
 }) {
   const { day, weekday, month } = formatPromoDate(promo.date);
   const typeColor = TYPE_COLORS[promo.type];
@@ -56,71 +54,6 @@ function PromoRow({
     promoType: promo.type,
     primaryColor: share.primaryColor ?? null,
   };
-
-  if (variant === 'light') {
-    const cat = categoryFor(promo.type);
-    const { color, label, Icon } = cat;
-    return (
-      <div
-        className={`group relative bg-rd-card border border-rd-line rounded-2xl p-4 md:p-5 transition-colors flex gap-4 ${
-          completed ? 'opacity-60 hover:opacity-80' : 'hover:border-rd-line-strong'
-        }`}
-        style={{ borderLeftWidth: '3px', borderLeftColor: color }}
-      >
-        <ShareButton
-          item={shareItem}
-          placement="promo_card"
-          className="absolute top-2.5 right-2.5 inline-flex items-center justify-center w-8 h-8 rounded-full text-rd-ink-faint hover:text-rd-ink hover:bg-rd-cream active:bg-rd-line transition-colors"
-          label={`Share ${promo.title}`}
-        />
-        <div className="flex-shrink-0 w-14 text-center">
-          <div className="font-rd uppercase text-[10px] tracking-[0.1em] text-rd-ink-faint">{month}</div>
-          <div className="rd-numerals text-3xl leading-none text-rd-ink">{day}</div>
-          <div className="font-rd uppercase text-[10px] tracking-[0.1em] text-rd-ink-faint">{weekday}</div>
-        </div>
-
-        <div className="flex-1 min-w-0 pr-8">
-          <div className="flex flex-wrap items-center gap-2 mb-1.5">
-            <span className="text-lg" aria-hidden="true">{promo.icon}</span>
-            <span
-              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
-              style={{ backgroundColor: `${color}1a`, color }}
-            >
-              <Icon size={12} stroke={2.25} />
-              <span>{label}</span>
-            </span>
-            {completed && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-rd tracking-[0.05em] uppercase text-rd-ink-faint border border-rd-line rounded-full px-2 py-0.5">
-                Completed
-              </span>
-            )}
-            {!completed && promo.highlight && (
-              <span className="inline-flex items-center gap-0.5 text-[10px] font-rd font-semibold uppercase tracking-[0.05em] text-rd-red">
-                <IconFlame size={12} stroke={2.25} />
-                HOT
-              </span>
-            )}
-            {promo.time && (
-              <span className="text-rd-ink-faint text-[10px] font-rd">{promo.time}</span>
-            )}
-          </div>
-          <div className="text-rd-ink font-semibold text-sm md:text-base">
-            {promo.title}
-          </div>
-          {promo.description && (
-            <p className="text-rd-ink-soft text-xs md:text-sm mt-1">
-              {promo.description}
-            </p>
-          )}
-          {promo.opponent && (
-            <div className="mt-2 inline-flex items-center gap-1.5 text-rd-ink-faint text-[10px] font-rd tracking-[0.05em] uppercase">
-              vs {promo.opponent}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div
@@ -239,23 +172,17 @@ export function PromoList({
             <>
               <div className="space-y-3">
                 {upcomingVisible.map((promo, i) => (
-                  <PromoRow key={`u-${i}`} promo={promo} share={share} variant="light" />
+                  <RedesignPromoRow key={`u-${i}`} promo={promo} share={share} />
                 ))}
               </div>
 
               {upcomingHidden.length > 0 && (
-                <details className="mt-3 group">
-                  <summary className="cursor-pointer list-none inline-flex items-center gap-2 bg-rd-card border border-rd-line hover:border-rd-line-strong rounded-full px-5 py-2.5 font-rd text-[11px] uppercase tracking-[0.1em] text-rd-ink transition-colors">
-                    <span className="inline-block transition-transform group-open:rotate-90" aria-hidden="true">▸</span>
-                    <span className="group-open:hidden">Show all {upcoming.length} upcoming promos</span>
-                    <span className="hidden group-open:inline">Hide {upcomingHidden.length} additional promos</span>
-                  </summary>
-                  <div className="mt-4 space-y-3">
-                    {upcomingHidden.map((promo, i) => (
-                      <PromoRow key={`uh-${i}`} promo={promo} share={share} variant="light" />
-                    ))}
-                  </div>
-                </details>
+                <LazyPromoRows
+                  promos={upcomingHidden}
+                  share={share}
+                  showLabel={`Show all ${upcoming.length} upcoming promos`}
+                  hideLabel={`Hide ${upcomingHidden.length} additional promos`}
+                />
               )}
             </>
           ) : past.length === 0 ? (
@@ -287,23 +214,18 @@ export function PromoList({
 
               <div className="space-y-3">
                 {pastVisible.map((promo, i) => (
-                  <PromoRow key={`rp-${i}`} promo={promo} share={share} completed variant="light" />
+                  <RedesignPromoRow key={`rp-${i}`} promo={promo} share={share} completed />
                 ))}
               </div>
 
               {pastHidden.length > 0 && (
-                <details className="mt-3 group">
-                  <summary className="cursor-pointer list-none inline-flex items-center gap-2 bg-rd-card border border-rd-line hover:border-rd-line-strong rounded-full px-5 py-2.5 font-rd text-[11px] uppercase tracking-[0.1em] text-rd-ink-soft hover:text-rd-ink transition-colors">
-                    <span className="inline-block transition-transform group-open:rotate-90" aria-hidden="true">▸</span>
-                    <span className="group-open:hidden">Show earlier completed promos ({pastHidden.length})</span>
-                    <span className="hidden group-open:inline">Hide earlier completed promos</span>
-                  </summary>
-                  <div className="mt-4 space-y-3">
-                    {pastHidden.map((promo, i) => (
-                      <PromoRow key={`ph-${i}`} promo={promo} share={share} completed variant="light" />
-                    ))}
-                  </div>
-                </details>
+                <LazyPromoRows
+                  promos={pastHidden}
+                  share={share}
+                  completed
+                  showLabel={`Show earlier completed promos (${pastHidden.length})`}
+                  hideLabel="Hide earlier completed promos"
+                />
               )}
             </div>
           )}
