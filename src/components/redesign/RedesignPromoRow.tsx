@@ -69,7 +69,7 @@ export function RedesignPromoRow({
 
       <div className="min-w-0 flex-1 pr-8">
         <div className="mb-1.5 flex flex-wrap items-center gap-2">
-          <span className="text-lg" aria-hidden="true">{promo.icon}</span>
+          <Icon size={18} stroke={2} className="shrink-0" style={{ color }} aria-hidden />
           <span
             className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
             style={{ backgroundColor: `${color}1a`, color }}

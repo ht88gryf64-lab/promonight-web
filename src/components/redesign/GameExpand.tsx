@@ -15,8 +15,9 @@ import { IconFlame, IconMapPin, IconArrowRight } from '@tabler/icons-react';
 // SAME affiliate components (TicketsBlock / ParkingCTA / HotelsCTA) with the
 // SAME props and the SAME international-suppression rules, so affiliate_click
 // fires identically; SAME ShareButton (placement 'game_card') so share_initiated
-// is preserved. Only the surrounding presentation is the new light theme — the
-// reused CTAs keep their dark styling, deliberately housed in a charcoal tray.
+// is preserved. The whole expand is one continuous light card — the reused
+// affiliate CTAs (white Ticketmaster card, brand-red parking/hotels buttons)
+// sit on the light surface, separated by a hairline.
 
 function dayHeader(dateStr: string): string {
   return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', {
@@ -26,11 +27,13 @@ function dayHeader(dateStr: string): string {
   });
 }
 
-/** Dark CTA tray — the reused affiliate components (accent-red / white) read as
- *  intentional against warm charcoal instead of clashing on a white card. */
+/** CTA section — sits directly on the light card, separated by a hairline so
+ *  the whole expand reads as one continuous light surface. The reused affiliate
+ *  components (white Ticketmaster card, brand-red parking/hotels buttons) read
+ *  fine on the cream/white surface. */
 function CtaTray({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mt-4 rounded-xl bg-rd-ink p-4 space-y-4">{children}</div>
+    <div className="mt-4 space-y-4 border-t border-rd-line pt-4">{children}</div>
   );
 }
 
@@ -38,7 +41,8 @@ function PromoLine({ promo }: { promo: Promo }) {
   const cat = categoryFor(promo.type);
   return (
     <div className="flex gap-3" style={{ borderLeft: `3px solid ${cat.color}`, paddingLeft: 12 }}>
-      <span className="text-xl leading-none mt-0.5" aria-hidden="true">{promo.icon}</span>
+      <cat.Icon size={20} stroke={2} className="mt-0.5 shrink-0" style={{ color: cat.color }} aria-hidden />
+
       <div className="flex-1 min-w-0">
         <div className="flex flex-wrap items-center gap-2 mb-1">
           <span
@@ -202,7 +206,7 @@ function GameExpandRow({
             )}
             <a
               href={`/${opponentTeam.sportSlug}/${opponentTeam.id}`}
-              className="inline-flex items-center gap-1 text-[11px] font-rd tracking-[0.08em] uppercase text-white/60 hover:text-white transition-colors"
+              className="inline-flex items-center gap-1 text-[11px] font-rd tracking-[0.08em] uppercase text-rd-ink-soft hover:text-rd-ink transition-colors"
             >
               View {oppName} full schedule
               <IconArrowRight size={13} stroke={2} />

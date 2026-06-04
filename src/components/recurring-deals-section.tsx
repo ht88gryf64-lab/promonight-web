@@ -1,5 +1,21 @@
+import { IconCup, IconBeer, IconBalloon, IconTicket, IconMusic } from '@tabler/icons-react';
 import type { Team } from '@/lib/types';
-import { iconFor, type RecurringDeal } from '@/lib/recurring-deals';
+import { iconFor, type RecurringDeal, type RecurringDealCategory } from '@/lib/recurring-deals';
+
+// Recurring-deal category → Tabler icon for the LIGHT template. The dark
+// (gate-off) template keeps the emoji from iconFor() unchanged.
+const DEAL_ICON: Record<RecurringDealCategory, { Icon: typeof IconCup; color: string }> = {
+  food: { Icon: IconCup, color: '#16a34a' },
+  drink: { Icon: IconBeer, color: '#d97706' },
+  kids: { Icon: IconBalloon, color: '#2563eb' },
+  ticket: { Icon: IconTicket, color: '#da2d20' },
+  music: { Icon: IconMusic, color: '#7c3aed' },
+};
+
+function RecurringDealIcon({ category }: { category: RecurringDealCategory }) {
+  const { Icon, color } = DEAL_ICON[category];
+  return <Icon size={24} stroke={2} style={{ color }} aria-hidden />;
+}
 
 export function RecurringDealsSection({
   team,
@@ -36,8 +52,8 @@ export function RecurringDealsSection({
                 key={i}
                 className="bg-rd-card border border-rd-line rounded-2xl p-4 md:p-5 flex gap-4"
               >
-                <div className="flex-shrink-0 text-2xl leading-none pt-0.5" aria-hidden="true">
-                  {iconFor(deal.category)}
+                <div className="flex-shrink-0 pt-0.5">
+                  <RecurringDealIcon category={deal.category} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-rd font-semibold text-rd-ink text-base">{deal.title}</div>
