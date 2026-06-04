@@ -207,26 +207,19 @@ export function PromoList({
                 <h3 className="rd-display text-2xl md:text-3xl text-rd-ink-soft mt-1">
                   COMPLETED {new Date().getFullYear()} PROMOS
                 </h3>
-                <p className="text-rd-ink-faint text-xs font-rd tracking-[0.02em] mt-2">
-                  {past.length} completed {past.length === 1 ? 'event' : 'events'} this season
-                </p>
               </div>
 
-              <div className="space-y-3">
-                {pastVisible.map((promo, i) => (
-                  <RedesignPromoRow key={`rp-${i}`} promo={promo} share={share} completed />
-                ))}
-              </div>
-
-              {pastHidden.length > 0 && (
-                <LazyPromoRows
-                  promos={pastHidden}
-                  share={share}
-                  completed
-                  showLabel={`Show earlier completed promos (${pastHidden.length})`}
-                  hideLabel="Hide earlier completed promos"
-                />
-              )}
+              {/* Completed promos are fully collapsed behind the expander. The
+               *  count lives in the (server-rendered) button label so the
+               *  data-completeness signal is in the HTML; the rows themselves
+               *  lazy-mount on click and stay out of the SSR HTML / page weight. */}
+              <LazyPromoRows
+                promos={past}
+                share={share}
+                completed
+                showLabel={`Show ${past.length} completed ${past.length === 1 ? 'promo' : 'promos'}`}
+                hideLabel={`Hide completed ${past.length === 1 ? 'promo' : 'promos'}`}
+              />
             </div>
           )}
 
