@@ -1,6 +1,8 @@
+import { IconFlame } from '@tabler/icons-react';
 import { PromoBadge } from './promo-badge';
 import { AppDownloadButtons } from './app-download-buttons';
 import { ShareButton, formatShareDate, type ShareItem } from './share';
+import { categoryFor } from '@/components/redesign/categories';
 import type { Promo, PromoType } from '@/lib/types';
 
 // Fields shared by every promo row's ShareItem — the per-promo bits (icon,
@@ -33,10 +35,12 @@ function PromoRow({
   promo,
   share,
   completed = false,
+  variant = 'dark',
 }: {
   promo: Promo;
   share: PromoShareContext;
   completed?: boolean;
+  variant?: 'dark' | 'light';
 }) {
   const { day, weekday, month } = formatPromoDate(promo.date);
   const typeColor = TYPE_COLORS[promo.type];
@@ -52,6 +56,71 @@ function PromoRow({
     promoType: promo.type,
     primaryColor: share.primaryColor ?? null,
   };
+
+  if (variant === 'light') {
+    const cat = categoryFor(promo.type);
+    const { color, label, Icon } = cat;
+    return (
+      <div
+        className={`group relative bg-rd-card border border-rd-line rounded-2xl p-4 md:p-5 transition-colors flex gap-4 ${
+          completed ? 'opacity-60 hover:opacity-80' : 'hover:border-rd-line-strong'
+        }`}
+        style={{ borderLeftWidth: '3px', borderLeftColor: color }}
+      >
+        <ShareButton
+          item={shareItem}
+          placement="promo_card"
+          className="absolute top-2.5 right-2.5 inline-flex items-center justify-center w-8 h-8 rounded-full text-rd-ink-faint hover:text-rd-ink hover:bg-rd-cream active:bg-rd-line transition-colors"
+          label={`Share ${promo.title}`}
+        />
+        <div className="flex-shrink-0 w-14 text-center">
+          <div className="font-rd uppercase text-[10px] tracking-[0.1em] text-rd-ink-faint">{month}</div>
+          <div className="rd-numerals text-3xl leading-none text-rd-ink">{day}</div>
+          <div className="font-rd uppercase text-[10px] tracking-[0.1em] text-rd-ink-faint">{weekday}</div>
+        </div>
+
+        <div className="flex-1 min-w-0 pr-8">
+          <div className="flex flex-wrap items-center gap-2 mb-1.5">
+            <span className="text-lg" aria-hidden="true">{promo.icon}</span>
+            <span
+              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
+              style={{ backgroundColor: `${color}1a`, color }}
+            >
+              <Icon size={12} stroke={2.25} />
+              <span>{label}</span>
+            </span>
+            {completed && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-rd tracking-[0.05em] uppercase text-rd-ink-faint border border-rd-line rounded-full px-2 py-0.5">
+                Completed
+              </span>
+            )}
+            {!completed && promo.highlight && (
+              <span className="inline-flex items-center gap-0.5 text-[10px] font-rd font-semibold uppercase tracking-[0.05em] text-rd-red">
+                <IconFlame size={12} stroke={2.25} />
+                HOT
+              </span>
+            )}
+            {promo.time && (
+              <span className="text-rd-ink-faint text-[10px] font-rd">{promo.time}</span>
+            )}
+          </div>
+          <div className="text-rd-ink font-semibold text-sm md:text-base">
+            {promo.title}
+          </div>
+          {promo.description && (
+            <p className="text-rd-ink-soft text-xs md:text-sm mt-1">
+              {promo.description}
+            </p>
+          )}
+          {promo.opponent && (
+            <div className="mt-2 inline-flex items-center gap-1.5 text-rd-ink-faint text-[10px] font-rd tracking-[0.05em] uppercase">
+              vs {promo.opponent}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -121,6 +190,7 @@ export function PromoList({
   sport,
   primaryColor,
   venueName,
+  variant = 'dark',
 }: {
   promos: Promo[];
   teamSlug: string;
@@ -128,6 +198,7 @@ export function PromoList({
   sport: string;
   primaryColor?: string;
   venueName?: string | null;
+  variant?: 'dark' | 'light';
 }) {
   const share: PromoShareContext = {
     teamName,
@@ -144,6 +215,118 @@ export function PromoList({
   const upcomingHidden = upcoming.slice(UPCOMING_VISIBLE);
   const pastVisible = past.slice(0, COMPLETED_VISIBLE);
   const pastHidden = past.slice(COMPLETED_VISIBLE);
+
+  if (variant === 'light') {
+    return (
+      <section className="py-12 px-6">
+        <div className="max-w-5xl mx-auto">
+          <div className="mb-6">
+            <span className="font-rd text-[11px] uppercase tracking-[0.14em] text-rd-ink-faint">
+              Coming up
+            </span>
+            <h2 className="rd-display text-3xl md:text-4xl text-rd-ink mt-1">
+              UPCOMING PROMOS
+            </h2>
+            {upcoming.length > 0 && (
+              <p className="text-rd-ink-faint text-xs font-rd tracking-[0.02em] mt-2">
+                {upcoming.length} upcoming {upcoming.length === 1 ? 'event' : 'events'}
+                {upcomingHidden.length > 0 ? ' · full schedule below' : ''}
+              </p>
+            )}
+          </div>
+
+          {upcoming.length > 0 ? (
+            <>
+              <div className="space-y-3">
+                {upcomingVisible.map((promo, i) => (
+                  <PromoRow key={`u-${i}`} promo={promo} share={share} variant="light" />
+                ))}
+              </div>
+
+              {upcomingHidden.length > 0 && (
+                <details className="mt-3 group">
+                  <summary className="cursor-pointer list-none inline-flex items-center gap-2 bg-rd-card border border-rd-line hover:border-rd-line-strong rounded-full px-5 py-2.5 font-rd text-[11px] uppercase tracking-[0.1em] text-rd-ink transition-colors">
+                    <span className="inline-block transition-transform group-open:rotate-90" aria-hidden="true">▸</span>
+                    <span className="group-open:hidden">Show all {upcoming.length} upcoming promos</span>
+                    <span className="hidden group-open:inline">Hide {upcomingHidden.length} additional promos</span>
+                  </summary>
+                  <div className="mt-4 space-y-3">
+                    {upcomingHidden.map((promo, i) => (
+                      <PromoRow key={`uh-${i}`} promo={promo} share={share} variant="light" />
+                    ))}
+                  </div>
+                </details>
+              )}
+            </>
+          ) : past.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-rd-ink-soft text-lg">No upcoming promos yet</p>
+              <p className="text-rd-ink-faint text-sm mt-1">Check back later for the latest schedule</p>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-rd-ink-soft text-sm">
+                No upcoming {teamName} promos scheduled right now. See completed {new Date().getFullYear()} promos below.
+              </p>
+            </div>
+          )}
+
+          {past.length > 0 && (
+            <div className="mt-12">
+              <div className="mb-4">
+                <span className="font-rd text-[11px] uppercase tracking-[0.14em] text-rd-ink-faint">
+                  Already happened
+                </span>
+                <h3 className="rd-display text-2xl md:text-3xl text-rd-ink-soft mt-1">
+                  COMPLETED {new Date().getFullYear()} PROMOS
+                </h3>
+                <p className="text-rd-ink-faint text-xs font-rd tracking-[0.02em] mt-2">
+                  {past.length} completed {past.length === 1 ? 'event' : 'events'} this season
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                {pastVisible.map((promo, i) => (
+                  <PromoRow key={`rp-${i}`} promo={promo} share={share} completed variant="light" />
+                ))}
+              </div>
+
+              {pastHidden.length > 0 && (
+                <details className="mt-3 group">
+                  <summary className="cursor-pointer list-none inline-flex items-center gap-2 bg-rd-card border border-rd-line hover:border-rd-line-strong rounded-full px-5 py-2.5 font-rd text-[11px] uppercase tracking-[0.1em] text-rd-ink-soft hover:text-rd-ink transition-colors">
+                    <span className="inline-block transition-transform group-open:rotate-90" aria-hidden="true">▸</span>
+                    <span className="group-open:hidden">Show earlier completed promos ({pastHidden.length})</span>
+                    <span className="hidden group-open:inline">Hide earlier completed promos</span>
+                  </summary>
+                  <div className="mt-4 space-y-3">
+                    {pastHidden.map((promo, i) => (
+                      <PromoRow key={`ph-${i}`} promo={promo} share={share} completed variant="light" />
+                    ))}
+                  </div>
+                </details>
+              )}
+            </div>
+          )}
+
+          {/* Soft app pitch — no paywall */}
+          <div className="mt-10 bg-rd-card border border-rd-line rounded-2xl p-6 text-center">
+            <p className="text-rd-ink-soft text-sm mb-1">
+              Want push notifications the morning of every {teamName} promo?
+            </p>
+            <p className="text-rd-ink-faint text-xs mb-5">
+              The free PromoNight app sends alerts for giveaways, theme nights, and food deals — optional, not required to use this site.
+            </p>
+            <AppDownloadButtons
+              section="promo_list_app_pitch"
+              page={`team/${teamSlug}`}
+              teamSlug={teamSlug}
+              variant="compact"
+            />
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="py-12 px-6">

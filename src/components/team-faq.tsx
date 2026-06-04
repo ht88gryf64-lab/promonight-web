@@ -7,12 +7,37 @@ interface TeamFAQProps {
   venue: Venue | null;
   promoCounts: Record<PromoType, number>;
   playoffContext?: PlayoffFAQContext;
+  variant?: 'dark' | 'light';
 }
 
-export function TeamFAQ({ team, promos, venue, promoCounts, playoffContext }: TeamFAQProps) {
+export function TeamFAQ({ team, promos, venue, promoCounts, playoffContext, variant = 'dark' }: TeamFAQProps) {
   const faqs = generateTeamFAQs(team, promos, venue, promoCounts, playoffContext);
 
   if (faqs.length === 0) return null;
+
+  if (variant === 'light') {
+    return (
+      <section className="py-10">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="rd-display text-3xl md:text-4xl text-rd-ink mb-8">
+            FREQUENTLY ASKED QUESTIONS
+          </h2>
+          <div className="space-y-6">
+            {faqs.map((faq, i) => (
+              <div key={i}>
+                <h3 className="font-rd font-semibold text-base text-rd-ink mb-2">
+                  {faq.question}
+                </h3>
+                <p className="text-rd-ink-soft text-sm leading-relaxed">
+                  {faq.answer}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="py-12 px-6 border-t border-border-subtle">
