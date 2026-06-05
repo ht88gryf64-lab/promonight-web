@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { trackInstallClick } from '@/lib/analytics';
 import { useStarredTeams } from '@/hooks/use-starred-teams';
-import { isRedesignEnabledClient, isTeamRoute } from '@/lib/redesign';
 
 const BROWSE_LINKS = [
   { href: '/promos/this-week', label: 'Hot this week' },
@@ -27,10 +26,9 @@ export function Nav({ playoffsActive = false }: NavProps) {
   const showStarCount = isHydrated && count > 0;
   const starCountLabel = `${count} starred team${count === 1 ? '' : 's'}`;
 
-  // Self-suppress on team routes when the redesign gate is on — the redesigned
-  // team page renders its own light BrandBar instead. Zero effect when the gate
-  // is off or on any non-team route. (All hooks are called above this return.)
-  if (isRedesignEnabledClient() && isTeamRoute(pathname)) return null;
+  // The old dark Nav now only renders on gate-off (the layout swaps in the light
+  // BrandBar when the gate is on), so the team-route self-suppression that once
+  // prevented double chrome is no longer needed.
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-10 py-4 bg-bg/80 backdrop-blur-xl border-b border-border-subtle">

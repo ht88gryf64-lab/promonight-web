@@ -4,13 +4,11 @@ import type { PlayoffFAQContext } from '@/lib/promo-helpers';
 import type { RecurringDeal } from '@/lib/recurring-deals';
 
 import { archivo } from './fonts';
-import { BrandBar } from './BrandBar';
 import { Hero } from './Hero';
 import { StatScoreboard } from './StatScoreboard';
 import { SeasonExplorer } from './SeasonExplorer';
 import { AffiliateRail } from './AffiliateRail';
 import { ExploreCard } from './ExploreCard';
-import { Footer } from './Footer';
 
 // Reused components — light variant (default 'dark' is the untouched gate-off
 // path). SEO + analytics preserved; restyled into the cream flow (no dark band).
@@ -63,7 +61,6 @@ export function RedesignTeamPage({
   displayName,
   gameContexts,
   recurringDeals,
-  playoffsActive,
   inPlayoffs,
   playoffPromos,
   playoffRound,
@@ -91,7 +88,8 @@ export function RedesignTeamPage({
       />
       <EngagementTracker teamSlug={team.id} sport={team.league} />
 
-      <BrandBar playoffsActive={playoffsActive} />
+      {/* Chrome (BrandBar + Footer) is rendered globally by app/layout.tsx when
+          the gate is on — this component renders only its content sections. */}
 
       <div className="mx-auto max-w-6xl px-6 pt-4">
         <AdSlot config={AD_SLOTS.HEADER_LEADERBOARD} pageType="team_page" />
@@ -247,8 +245,6 @@ export function RedesignTeamPage({
       <div className="mx-auto max-w-6xl px-6 py-4">
         <AdSlot config={AD_SLOTS.ADHESION_FOOTER} pageType="team_page" />
       </div>
-
-      <Footer />
     </div>
   );
 }
