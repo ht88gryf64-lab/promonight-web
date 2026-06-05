@@ -39,7 +39,11 @@ export function Hero(props: HeroProps) {
         }}
       />
 
-      <div className="relative z-10 mx-auto max-w-6xl px-6 py-12 md:py-16">
+      {/* Bottom padding is tighter on the single-column view (mobile + tablet,
+          < lg) so the dark hero doesn't leave an oversized empty band under the
+          scoreboard before the calendar that now sits directly beneath it. At lg
+          (the two-column desktop layout) it stays py-16 exactly — pt-16 + pb-16. */}
+      <div className="relative z-10 mx-auto max-w-6xl px-6 pt-12 md:pt-16 pb-8 lg:pb-16">
         {eyebrow ? (
           <p className="font-rd text-[11px] uppercase tracking-[0.14em] text-white/60">
             {eyebrow}
