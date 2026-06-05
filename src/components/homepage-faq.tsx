@@ -4,7 +4,8 @@ import { useEffect, useRef } from 'react';
 import { HOMEPAGE_FAQS } from './homepage-json-ld';
 import { event } from '@/lib/analytics';
 
-export function HomepageFAQ() {
+export function HomepageFAQ({ variant = 'dark' }: { variant?: 'dark' | 'light' }) {
+  const light = variant === 'light';
   const ref = useRef<HTMLElement>(null);
   const fired = useRef(false);
 
@@ -30,24 +31,30 @@ export function HomepageFAQ() {
   return (
     <section
       ref={ref}
-      className="py-20 px-6 border-t border-border-subtle"
+      className={`py-20 px-6 border-t ${light ? 'border-rd-line' : 'border-border-subtle'}`}
     >
       <div className="max-w-3xl mx-auto">
         <div className="text-center mb-12">
-          <span className="font-mono text-[10px] tracking-[1.5px] uppercase text-accent-red">
+          <span className={light ? 'font-rd text-[10px] tracking-[1.5px] uppercase text-rd-ink-faint' : 'font-mono text-[10px] tracking-[1.5px] uppercase text-accent-red'}>
             FAQ
           </span>
-          <h2 className="font-display text-4xl md:text-5xl tracking-[1px] mt-2">
-            FREQUENTLY ASKED QUESTIONS
-          </h2>
+          {light ? (
+            <h2 className="rd-display text-4xl md:text-5xl text-rd-ink mt-2">
+              FREQUENTLY ASKED QUESTIONS
+            </h2>
+          ) : (
+            <h2 className="font-display text-4xl md:text-5xl tracking-[1px] mt-2">
+              FREQUENTLY ASKED QUESTIONS
+            </h2>
+          )}
         </div>
         <div className="space-y-8">
           {HOMEPAGE_FAQS.map((faq, i) => (
             <div key={i}>
-              <h3 className="text-white font-semibold text-base mb-2">
+              <h3 className={light ? 'font-rd text-base font-semibold text-rd-ink mb-2' : 'text-white font-semibold text-base mb-2'}>
                 {faq.question}
               </h3>
-              <p className="text-text-secondary text-sm leading-relaxed">
+              <p className={light ? 'text-rd-ink-soft text-sm leading-relaxed' : 'text-text-secondary text-sm leading-relaxed'}>
                 {faq.answer}
               </p>
             </div>

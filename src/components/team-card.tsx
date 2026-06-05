@@ -24,6 +24,10 @@ interface TeamCardProps {
   // site (homepage Find Your Team grid) so /teams' new TeamsBrowser card
   // and any future caller can override without disturbing the homepage.
   starPlacement?: StarPlacement;
+  // 'dark' (default) is the live card, byte-identical when the gate is off.
+  // 'light' re-skins it into the redesign cream/white house. Same markup +
+  // events; only the surface classes change.
+  variant?: 'dark' | 'light';
 }
 
 export function TeamCard({
@@ -35,7 +39,9 @@ export function TeamCard({
   fromTab,
   isHomepageSample,
   starPlacement = 'homepage_find_your_team',
+  variant = 'dark',
 }: TeamCardProps) {
+  const light = variant === 'light';
   const handleClick = () => {
     // TRANSITIONAL: legacy GA4-only team_card_click fires alongside the new
     // dual-emit team_tile_tap. Drop legacy in follow-up PR after ~2 weeks
@@ -56,7 +62,13 @@ export function TeamCard({
   // `<StarToggle>` so the star button isn't nested inside an anchor.
   // Mirrors the pattern used by `<TeamBrowserCard>` on /teams.
   return (
-    <article className="group relative bg-bg-card border border-border-subtle rounded-2xl transition-all hover:-translate-y-0.5 hover:border-border-hover">
+    <article
+      className={
+        light
+          ? 'group relative rounded-2xl border transition-all hover:-translate-y-0.5 bg-rd-card border-rd-line hover:border-rd-line-strong'
+          : 'group relative bg-bg-card border border-border-subtle rounded-2xl transition-all hover:-translate-y-0.5 hover:border-border-hover'
+      }
+    >
       <Link
         href={`/${team.sportSlug}/${team.id}`}
         onClick={handleClick}
@@ -74,14 +86,14 @@ export function TeamCard({
             {SPORT_ICONS[team.league]} {team.league}
           </span>
           {promoCount !== undefined && (
-            <span className="text-text-dim text-[11px] font-mono">
+            <span className={light ? 'text-rd-ink-faint text-[11px] font-mono' : 'text-text-dim text-[11px] font-mono'}>
               {promoCount} {countLabel}
             </span>
           )}
         </div>
-        <div className="text-white font-body">
-          <div className="text-text-secondary text-xs">{team.city}</div>
-          <div className="text-lg font-bold group-hover:text-white transition-colors">
+        <div className={light ? 'font-rd' : 'text-white font-body'}>
+          <div className={light ? 'text-rd-ink-soft text-xs' : 'text-text-secondary text-xs'}>{team.city}</div>
+          <div className={light ? 'text-lg font-bold text-rd-ink transition-colors' : 'text-lg font-bold group-hover:text-white transition-colors'}>
             {team.name}
           </div>
         </div>
@@ -97,7 +109,7 @@ export function TeamCard({
           league={team.league}
           sport={team.sportSlug}
           placement={starPlacement}
-          surface="dark"
+          surface={light ? 'light' : 'dark'}
         />
       </div>
     </article>

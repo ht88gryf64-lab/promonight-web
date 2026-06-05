@@ -1,4 +1,4 @@
-import { Archivo } from 'next/font/google';
+import { archivoHouse } from './fonts-house';
 import { BrandBar } from './BrandBar';
 import { Footer } from './Footer';
 
@@ -6,23 +6,14 @@ import { Footer } from './Footer';
 //
 // next/font emits a font-preload <link> on every route that can REACH the font in
 // its module graph (not just where it renders). Because this module is imported
-// by the root layout, mounting the redesign font here would otherwise add an
-// Archivo preload to EVERY page — including gate-off pages, breaking byte-identity.
-// So the chrome uses its OWN `preload: false` Archivo instance: same family/axes
-// as the team page's (fonts.ts), but it adds NO preload <link> anywhere. Gate-off
-// <head> is therefore byte-identical to before, and the team page keeps its own
-// preheated (preload:true) instance with no first-paint flash. On gate-on the
-// wordmark/links pick up Archivo via display:swap.
-const archivoChrome = Archivo({
-  subsets: ['latin'],
-  axes: ['wdth'],
-  variable: '--font-archivo',
-  display: 'swap',
-  preload: false,
-});
+// by the root layout, a preload:true font here would add an Archivo preload to
+// EVERY page — including gate-off pages, breaking byte-identity. So the chrome
+// uses the shared `archivoHouse` (preload:false) instance from fonts.ts: it adds
+// NO preload <link> anywhere, so gate-off <head> stays byte-identical. On gate-on
+// the wordmark/links pick up Archivo via display:swap.
 
-// Each slot wraps its chrome in `${archivoChrome.variable} rd-root contents`:
-//   - archivoChrome.variable → defines --font-archivo so font-rd / rd-display resolve
+// Each slot wraps its chrome in `${archivoHouse.variable} rd-root contents`:
+//   - archivoHouse.variable  → defines --font-archivo so font-rd / rd-display resolve
 //   - rd-root                → scopes the .rd-root token + .rd-display descendant rules
 //   - contents               → display:contents, so no cream box is painted and the
 //                              sticky BrandBar still references the tall <body>; the
@@ -30,7 +21,7 @@ const archivoChrome = Archivo({
 
 export function RedesignBrandBar({ playoffsActive }: { playoffsActive?: boolean }) {
   return (
-    <div className={`${archivoChrome.variable} rd-root contents`}>
+    <div className={`${archivoHouse.variable} rd-root contents`}>
       <BrandBar playoffsActive={playoffsActive} />
     </div>
   );
@@ -38,7 +29,7 @@ export function RedesignBrandBar({ playoffsActive }: { playoffsActive?: boolean 
 
 export function RedesignFooterSlot() {
   return (
-    <div className={`${archivoChrome.variable} rd-root contents`}>
+    <div className={`${archivoHouse.variable} rd-root contents`}>
       <Footer />
     </div>
   );

@@ -19,3 +19,9 @@ export const archivo = Archivo({
   variable: '--font-archivo',
   display: 'swap',
 });
+
+// NOTE: the preload:false sibling for the global chrome + redesign homepage lives
+// in its OWN module (./fonts-house) ON PURPOSE. next/font preloads a font on every
+// route that can REACH it in the module graph, so if the preload:false instance
+// shared this file, importing it would also pull THIS preload:true `archivo` into
+// the chrome/homepage graph and re-add an Archivo preload to gate-off pages.

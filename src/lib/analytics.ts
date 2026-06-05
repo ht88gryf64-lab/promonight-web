@@ -128,7 +128,16 @@ export type ThisWeekSeeAllTapProperties = {
 
 export type CollectionTileTapProperties = {
   surface: AnalyticsSurface;
-  collection_name: 'bobbleheads' | 'jerseys' | 'theme_nights' | 'fireworks';
+  // Legacy (gate-off homepage) tiles + the redesign's consolidated four-tile set
+  // (gate-on homepage): giveaways / theme_nights / food_deals / hot_this_week.
+  collection_name:
+    | 'bobbleheads'
+    | 'jerseys'
+    | 'theme_nights'
+    | 'fireworks'
+    | 'giveaways'
+    | 'food_deals'
+    | 'hot_this_week';
   collection_count: number;
 };
 
