@@ -49,8 +49,9 @@ export interface RedesignTeamPageProps {
  * Gate-ON team page. Everything lives in the light "house" (cream surface, white
  * cards, warm-charcoal ink) — no dark content band. The single tickets CTA is in
  * the affiliate stack (the hero Get Tickets button was removed). On mobile the
- * affiliate stack sits directly below the hero (above the calendar); on desktop
- * it is the sticky-free right sidebar. The reused SEO/analytics surfaces (JsonLd,
+ * sections weave into one column (hero · calendar · affiliate stack · plan-your-
+ * day venue · promos · recurring · explore · SEO block); on desktop the affiliate
+ * stack + explore are the sticky-free right sidebar. The reused SEO/analytics surfaces (JsonLd,
  * trackers, TeamContentSections question-H2s, TeamFAQ, the five AdSlots, the full
  * PromoList) are preserved and rendered in their light variants.
  */
@@ -106,98 +107,132 @@ export function RedesignTeamPage({
         scoreboard={<StatScoreboard counts={promoCounts} gamesCount={gameContexts?.length} />}
       />
 
-      {/* Two-column. Mobile order: the affiliate stack (tickets) sits DIRECTLY
-       *  below the hero (order-1), above everything else; then the main column.
-       *  Desktop: main on the left, affiliate stack + explore as the right
-       *  sidebar. The after-hero ad, NFL video, and playoff section live at the
-       *  top of the main column so they never push the tickets CTA down on
-       *  mobile. */}
+      {/* Responsive weave — one DOM, two layouts.
+       *
+       *  DESKTOP (lg+): the exact two-column layout is unchanged. The
+       *  <aside>/<main> wrappers are restored at lg (`lg:block`), so their
+       *  children flow in source order inside the right sidebar / left main
+       *  column and every `order-[n]` utility below goes INERT (order only
+       *  affects flex/grid items). Source order == today's desktop order, so
+       *  the desktop render is byte-for-byte identical.
+       *
+       *  MOBILE (<lg): both wrappers collapse to `display:contents`, so every
+       *  section becomes a direct item of this single-column grid and the
+       *  `order-[n]` values weave the sidebar pieces into the main flow:
+       *    calendar · affiliate stack · plan-your-day venue · upcoming promos ·
+       *    recurring deals · explore + browse · by-the-numbers · capsules · FAQ.
+       *  DOM order is left untouched (sidebar grouped first, then main), so
+       *  crawlers and screen readers still get the upcoming-promos and venue
+       *  content in the body — never pushed to the end of the HTML.
+       *
+       *  Mobile row-gap is dropped (`gap-x-8` keeps only the desktop column
+       *  gap) because each main section self-spaces with its own py-* ; the one
+       *  exception is the affiliate stack, which gets `mt-10` to clear the
+       *  calendar above it (reset to `lg:mt-0` back in the sidebar). */}
       <div className="mx-auto max-w-6xl px-6 pb-8">
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_336px] lg:items-start">
-          <aside className="order-1 space-y-6 lg:order-2">
-            <AffiliateRail team={team} venue={venue} />
-            <ExploreCard team={team} />
-            <AdSlot config={AD_SLOTS.SIDEBAR_STICKY} pageType="team_page" />
+        <div className="grid grid-cols-1 gap-x-8 lg:grid-cols-[1fr_336px] lg:items-start">
+          <aside className="contents lg:block lg:space-y-6 lg:order-2 [&>*]:min-w-0">
+            <AffiliateRail team={team} venue={venue} className="order-[20] mt-10 lg:mt-0" />
+            <ExploreCard team={team} className="order-[60]" />
+            <AdSlot config={AD_SLOTS.SIDEBAR_STICKY} pageType="team_page" className="order-[62]" />
           </aside>
 
-          <main className="order-2 min-w-0 lg:order-1">
-            <div className="pb-4">
+          <main className="contents lg:block lg:min-w-0 lg:order-1 [&>*]:min-w-0">
+            <div className="order-[30] pb-4">
               <AdSlot config={AD_SLOTS.TEAM_PAGE_AFTER_HERO} pageType="team_page" />
             </div>
 
             {/* NFL schedule-release video (light) — preserves cta_click. */}
             {team.league === 'NFL' && team.scheduleReleaseVideo && (
-              <ScheduleReleaseVideoCard video={team.scheduleReleaseVideo} teamSlug={team.id} variant="light" />
+              <div className="order-[31]">
+                <ScheduleReleaseVideoCard video={team.scheduleReleaseVideo} teamSlug={team.id} variant="light" />
+              </div>
             )}
 
             {/* Playoffs (light), when active. */}
             {inPlayoffs && playoffPromos.length > 0 && (
-              <PlayoffSection
-                team={team}
-                promos={playoffPromos}
-                round={playoffRound}
-                lastUpdated={playoffLastUpdated}
-                variant="light"
-              />
+              <div className="order-[32]">
+                <PlayoffSection
+                  team={team}
+                  promos={playoffPromos}
+                  round={playoffRound}
+                  lastUpdated={playoffLastUpdated}
+                  variant="light"
+                />
+              </div>
             )}
 
-            <SeasonExplorer
-              promos={promos}
-              promoCounts={promoCounts}
-              teamName={displayName}
-              teamSlug={team.id}
-              sport={team.league}
-              team={team}
-              gameContexts={gameContexts}
-            />
+            <div className="order-[10]">
+              <SeasonExplorer
+                promos={promos}
+                promoCounts={promoCounts}
+                teamName={displayName}
+                teamSlug={team.id}
+                sport={team.league}
+                team={team}
+                gameContexts={gameContexts}
+              />
+            </div>
 
             {/* Full promo list — upcoming + completed, with show-all. */}
-            <PromoList
-              promos={promos}
-              teamSlug={team.id}
-              teamName={displayName}
-              sport={team.sportSlug}
-              primaryColor={team.primaryColor}
-              venueName={venue?.name ?? null}
-              variant="light"
-            />
+            <div className="order-[40]">
+              <PromoList
+                promos={promos}
+                teamSlug={team.id}
+                teamName={displayName}
+                sport={team.sportSlug}
+                primaryColor={team.primaryColor}
+                venueName={venue?.name ?? null}
+                variant="light"
+              />
+            </div>
 
-            <AuthorityStats
-              team={team}
-              promos={promos}
-              promoCounts={promoCounts}
-              venue={venue}
-              teamName={displayName}
-              variant="light"
-            />
+            <div className="order-[70]">
+              <AuthorityStats
+                team={team}
+                promos={promos}
+                promoCounts={promoCounts}
+                venue={venue}
+                teamName={displayName}
+                variant="light"
+              />
+            </div>
 
-            <RecurringDealsSection
-              team={team}
-              deals={recurringDeals}
-              venueName={venue?.name ?? null}
-              variant="light"
-            />
+            <div className="order-[50]">
+              <RecurringDealsSection
+                team={team}
+                deals={recurringDeals}
+                venueName={venue?.name ?? null}
+                variant="light"
+              />
+            </div>
 
-            <TeamContentSections
-              team={team}
-              promos={promos}
-              venue={venue}
-              promoCounts={promoCounts}
-              variant="light"
-            />
+            <div className="order-[71]">
+              <TeamContentSections
+                team={team}
+                promos={promos}
+                venue={venue}
+                promoCounts={promoCounts}
+                variant="light"
+              />
+            </div>
 
-            <TeamRelatedAggregators promos={promos} variant="light" />
+            <div className="order-[61]">
+              <TeamRelatedAggregators promos={promos} variant="light" />
+            </div>
 
-            <TeamFAQ
-              team={team}
-              promos={promos}
-              venue={venue}
-              promoCounts={promoCounts}
-              playoffContext={playoffContext}
-              variant="light"
-            />
+            <div className="order-[72]">
+              <TeamFAQ
+                team={team}
+                promos={promos}
+                venue={venue}
+                promoCounts={promoCounts}
+                playoffContext={playoffContext}
+                variant="light"
+              />
+            </div>
 
-            <div className="py-6">
+            <div className="order-[80] py-6">
               <AdSlot config={AD_SLOTS.IN_CONTENT_1} pageType="team_page" />
             </div>
           </main>
