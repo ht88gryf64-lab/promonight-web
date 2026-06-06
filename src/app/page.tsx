@@ -220,10 +220,8 @@ function buildRedesignCollectionTiles(allFuture: PromoWithTeam[]): RedesignColle
     tiles.push({ key: 'giveaway', label: 'Giveaways', count: giveawayCount, href: giveawayHref, trackName: 'giveaways' });
   if (themeCount > 0)
     tiles.push({ key: 'theme', label: 'Theme nights', count: themeCount, href: '/promos/theme-nights', trackName: 'theme_nights' });
-  // No dedicated /promos/food-deals (or kids) route exists yet — point the food
-  // tile at the /best-promos collection index as the closest browse destination.
   if (foodCount > 0)
-    tiles.push({ key: 'food', label: 'Food deals', count: foodCount, href: '/best-promos', trackName: 'food_deals' });
+    tiles.push({ key: 'food', label: 'Food deals', count: foodCount, href: '/promos/food-deals', trackName: 'food_deals' });
   if (hotCount > 0)
     tiles.push({ key: 'hot', label: 'Hot this week', count: hotCount, href: '/promos/this-week', trackName: 'hot_this_week' });
 
