@@ -59,9 +59,10 @@ function tileVisual(key: PromoType | 'hot'): { color: string; Icon: TablerIcon }
   return { color: meta.color, Icon: meta.Icon };
 }
 
-// Small dark mini-card for the hero teaser (top-2 tonight). Category chip carries
-// the color; no single-sided border accent. Fires tonight_card_tap (TONIGHT).
-function HeroTonightCard({ promo }: { promo: PromoWithTeam }) {
+// Small dark mini-card for the hero teaser. Category chip carries the color; no
+// single-sided border accent. Fires tonight_card_tap (TONIGHT). `className` lets
+// the hero hide cards 3-4 below the desktop breakpoint (mobile shows 2).
+function HeroTonightCard({ promo, className = '' }: { promo: PromoWithTeam; className?: string }) {
   const meta = RD_CATEGORIES[promo.type];
   const teamName = teamDisplayName(promo.team);
   return (
@@ -77,7 +78,7 @@ function HeroTonightCard({ promo }: { promo: PromoWithTeam }) {
         is_highlight: promo.highlight,
         eyebrow_state: 'TONIGHT',
       }}
-      className="group block rounded-2xl border border-white/10 bg-white/[0.06] p-4 transition-colors hover:border-white/20 hover:bg-white/[0.09]"
+      className={`group block rounded-2xl border border-white/10 bg-white/[0.06] p-4 transition-colors hover:border-white/20 hover:bg-white/[0.09] ${className}`}
     >
       <span
         className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
@@ -108,7 +109,9 @@ export function RedesignHomePage({
   today,
 }: RedesignHomePageProps) {
   const tonight = heroBuckets.tonight;
-  const heroTonight = tonight.slice(0, 2);
+  // Up to 4 tonight promos in the hero. Cards 3-4 are hidden below `lg`, so
+  // mobile/tablet shows the same 2 cards as before; desktop shows a 2x2 grid.
+  const heroTonight = tonight.slice(0, 4);
 
   // This Week grouped by date (mirrors the live strip's structure).
   const weekByDate = new Map<string, PromoWithTeam[]>();
@@ -161,7 +164,11 @@ export function RedesignHomePage({
               </div>
               <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {heroTonight.map((promo, i) => (
-                  <HeroTonightCard key={`${promo.team.id}-${i}`} promo={promo} />
+                  <HeroTonightCard
+                    key={`${promo.team.id}-${i}`}
+                    promo={promo}
+                    className={i >= 2 ? 'hidden lg:block' : ''}
+                  />
                 ))}
               </div>
               <TrackedTapLink
@@ -252,39 +259,10 @@ export function RedesignHomePage({
         </div>
       </section>
 
-      {/* TONIGHT (body) — full list of tonight's promos */}
-      {tonight.length > 0 && (
-        <section className="px-6 pb-4">
-          <div className="mx-auto max-w-5xl">
-            <span className="inline-flex items-center gap-1.5 font-rd text-[11px] uppercase tracking-[0.14em] text-rd-ink-faint">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-rd-red" />
-              Live tonight
-            </span>
-            <h2 className="rd-display mt-1 text-3xl text-rd-ink md:text-4xl">
-              {tonight.length} PROMO{tonight.length === 1 ? '' : 'S'}
-            </h2>
-            <div className="mt-6 space-y-2.5">
-              {tonight.map((promo, i) => (
-                <LightHomePromoCard
-                  key={`${promo.team.id}-t-${i}`}
-                  promo={promo}
-                  trackEvent="tonight_card_tap"
-                  trackProps={{
-                    surface: 'web_home',
-                    team_id: promo.team.id,
-                    sport: normalizeSport(promo.team.league),
-                    promo_id: synthPromoId(promo.team.id, promo),
-                    promo_type: promo.type,
-                    is_highlight: promo.highlight,
-                    eyebrow_state: 'TONIGHT',
-                  }}
-                  starPlacement="homepage_tonight_inline"
-                />
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
+      {/* The body "Live tonight" list was removed: the hero now carries tonight on
+          both viewports (up to 4 cards), so the block was redundant. tonight_card_tap
+          still fires from the hero cards + the see-all link; the crawl path to the
+          full tonight list is preserved via the hero "See all" link to this-week. */}
 
       {/* THIS WEEK */}
       {weekGroups.length > 0 && (
@@ -314,7 +292,7 @@ export function RedesignHomePage({
                   <h3 className="mb-3 font-rd text-[11px] uppercase tracking-[0.1em] text-rd-ink-faint">
                     {dayLabel(date)}
                   </h3>
-                  <div className="space-y-2.5">
+                  <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
                     {list.map((promo, i) => (
                       <LightHomePromoCard
                         key={`${promo.team.id}-w-${i}`}
