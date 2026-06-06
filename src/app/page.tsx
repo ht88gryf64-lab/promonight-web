@@ -19,6 +19,11 @@ import { HomepageJsonLd } from '@/components/homepage-json-ld';
 import { TrackedTapLink } from '@/components/analytics/TrackedTapLink';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { AD_SLOTS } from '@/lib/ads/slots';
+import { isRedesignEnabled } from '@/lib/redesign';
+import {
+  RedesignHomePage,
+  type RedesignCollectionTile,
+} from '@/components/redesign/RedesignHomePage';
 
 // 1h — Tonight cards roll over daily, this section needs to be more time-sensitive
 // than the team pages.
@@ -192,6 +197,37 @@ function rankTeamsByFuturePromos(
   return { sortedTeams, counts };
 }
 
+// Redesign Browse-Collections: four consolidated category tiles (gate-on only).
+// The legacy buildCollectionTiles() above is untouched and still drives the
+// byte-identical gate-off homepage. Tiles with a zero count are dropped.
+function buildRedesignCollectionTiles(allFuture: PromoWithTeam[]): RedesignCollectionTile[] {
+  const giveawayCount = allFuture.filter((p) => p.type === 'giveaway').length;
+  const themeCount = allFuture.filter((p) => p.type === 'theme').length;
+  const foodCount = allFuture.filter((p) => p.type === 'food').length;
+  const hotCount = allFuture.filter((p) => p.highlight).length;
+
+  // Giveaways links to the better-stocked of the two giveaway collections.
+  const bobbleheads = allFuture.filter(
+    (p) => BOBBLEHEAD_RE.test(p.title) || BOBBLEHEAD_RE.test(p.description),
+  ).length;
+  const jerseys = allFuture.filter(
+    (p) => JERSEY_RE.test(p.title) || JERSEY_RE.test(p.description),
+  ).length;
+  const giveawayHref = bobbleheads >= jerseys ? '/promos/bobbleheads' : '/promos/jersey-giveaways';
+
+  const tiles: RedesignCollectionTile[] = [];
+  if (giveawayCount > 0)
+    tiles.push({ key: 'giveaway', label: 'Giveaways', count: giveawayCount, href: giveawayHref, trackName: 'giveaways' });
+  if (themeCount > 0)
+    tiles.push({ key: 'theme', label: 'Theme nights', count: themeCount, href: '/promos/theme-nights', trackName: 'theme_nights' });
+  if (foodCount > 0)
+    tiles.push({ key: 'food', label: 'Food deals', count: foodCount, href: '/promos/food-deals', trackName: 'food_deals' });
+  if (hotCount > 0)
+    tiles.push({ key: 'hot', label: 'Hot this week', count: hotCount, href: '/promos/this-week', trackName: 'hot_this_week' });
+
+  return tiles;
+}
+
 export default async function HomePage() {
   const today = chicagoTodayYMD();
   const weekStart = plusDays(today, 2);
@@ -227,6 +263,24 @@ export default async function HomePage() {
   const teamsForGrid: Team[] = sortedTeams;
 
   const lastUpdated = formatChicagoLong(today);
+
+  // Gate-ON: render the redesigned light homepage from the SAME computed data,
+  // preserving every analytics event. Gate-OFF falls through to the existing
+  // dark homepage below, byte-identical.
+  if (isRedesignEnabled()) {
+    return (
+      <RedesignHomePage
+        heroBuckets={heroBuckets}
+        weekPromos={weekPromos}
+        collectionTiles={buildRedesignCollectionTiles(allFuture)}
+        teamsForGrid={teamsForGrid}
+        teamPromoCounts={teamPromoCounts}
+        promoCount={promoCount}
+        lastUpdated={lastUpdated}
+        today={today}
+      />
+    );
+  }
 
   return (
     <>

@@ -3,6 +3,8 @@ import { Suspense } from 'react';
 import { Bebas_Neue, DM_Sans, DM_Mono, Outfit } from 'next/font/google';
 import { Nav } from '@/components/nav';
 import { Footer } from '@/components/footer';
+import { isRedesignEnabled } from '@/lib/redesign';
+import { RedesignBrandBar, RedesignFooterSlot } from '@/components/redesign/GlobalChrome';
 import { UTMCaptureProvider } from '@/components/utm-capture-provider';
 import { AnalyticsProvider } from '@/components/analytics/AnalyticsProvider';
 import { PageViewTracker } from '@/components/analytics/PageViewTracker';
@@ -84,6 +86,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     console.error('getPlayoffConfig failed in layout:', err);
   }
 
+  // Global chrome gate (server-side, matching the team-page template branch).
+  // When ON, the light BrandBar/Footer are the chrome on EVERY page; when OFF
+  // the layout renders the old dark Nav/Footer exactly as before. The chrome's
+  // Archivo instance is preload:false (see GlobalChrome) so this global mount
+  // adds no font-preload <link> to any page and gate-off <head> stays identical.
+  const redesign = isRedesignEnabled();
+
   return (
     <html lang="en" className={`${bebasNeue.variable} ${dmSans.variable} ${dmMono.variable} ${outfit.variable}`}>
       <head>
@@ -115,9 +124,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   <PageViewTracker />
                 </Suspense>
                 <UTMCaptureProvider />
-                <Nav playoffsActive={playoffsActive} />
+                {redesign ? (
+                  <RedesignBrandBar playoffsActive={playoffsActive} />
+                ) : (
+                  <Nav playoffsActive={playoffsActive} />
+                )}
                 <main className="relative z-[1]">{children}</main>
-                <Footer />
+                {redesign ? <RedesignFooterSlot /> : <Footer />}
                 <PostStarToastHost />
               </ShareProvider>
             </StarredTeamsProvider>

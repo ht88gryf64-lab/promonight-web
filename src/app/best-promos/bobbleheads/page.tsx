@@ -9,6 +9,8 @@ import {
 import { BestPromosBrowser } from '@/components/scoring/best-promos-browser';
 import { ScoredJsonLd } from '@/components/scoring/scored-jsonld';
 import { ScoringPageViewTracker } from '@/components/scoring/scoring-page-view-tracker';
+import { isRedesignEnabled } from '@/lib/redesign';
+import { archivoHouse } from '@/components/redesign/fonts-house';
 
 export const revalidate = 86400;
 
@@ -137,6 +139,67 @@ export default async function BobbleheadsPage() {
         day: 'numeric',
         year: 'numeric',
       });
+
+  if (isRedesignEnabled()) {
+    return (
+      <>
+        <ScoredJsonLd
+          url={PAGE_URL}
+          title={`Best Bobblehead Nights of ${YEAR}`}
+          description={`Every bobblehead giveaway across MLB, MLS, and WNBA in ${YEAR}, ranked by score.`}
+          lastUpdated={latestComputedAt || new Date().toISOString()}
+          faqs={FAQS}
+          itemListItems={itemListPromos}
+          locationsByTeamId={locationsByTeamId}
+        />
+        <div className={`${archivoHouse.variable} rd-root min-h-screen`}>
+          <section className="relative overflow-hidden text-white" style={{ backgroundColor: '#1d1714' }}>
+            <div aria-hidden className="absolute inset-0 z-0 opacity-70" style={{ backgroundImage: 'radial-gradient(120% 80% at 100% 0%, rgba(211,17,69,0.22) 0%, transparent 60%)' }} />
+            <div className="relative z-10 mx-auto max-w-4xl px-6 pb-12 pt-16 md:pb-14 md:pt-20">
+              <div className="mb-5 flex items-center gap-2 font-rd text-xs text-white/45">
+                <Link href="/" className="transition-colors hover:text-white/80">Home</Link>
+                <span>/</span>
+                <Link href="/best-promos" className="transition-colors hover:text-white/80">Best promos</Link>
+                <span>/</span>
+                <span className="text-white/60">Bobbleheads</span>
+              </div>
+              <p className="font-rd text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: '#ff5a78' }}>Bobbleheads of {YEAR}</p>
+              <h1 className="rd-display mt-1 text-4xl uppercase leading-[0.95] text-white md:text-6xl">BEST BOBBLEHEAD NIGHTS OF {YEAR}</h1>
+              <p className="mt-3 font-rd text-[11px] uppercase tracking-[0.12em] text-white/45">Last updated {lastUpdatedDisplay} · {promos.length} bobbleheads ranked</p>
+            </div>
+          </section>
+
+          <div className="mx-auto max-w-4xl px-6 pb-20 pt-10">
+            <p className="rounded-2xl border border-rd-line bg-rd-card p-5 font-rd text-[15px] leading-relaxed text-rd-ink-soft">
+              The {promos.length} top-scored bobblehead giveaways of {YEAR} are ranked below across MLB, MLS, and WNBA. MLB clubs run the majority of bobblehead programs, but the two highest-scoring entries are Washington Mystics bobblehead nights tied at 100. Every listed event is scored on attendance cap, item value, sponsor presence, and highlight tier.
+            </p>
+
+            <Suspense fallback={null}>
+              <ScoringPageViewTracker pageTitle="Best Bobblehead Nights" scoreCount={promos.length} defaultLeague="All" defaultRange="90d" />
+            </Suspense>
+
+            <div className="mt-8">
+              <Suspense fallback={null}>
+                <BestPromosBrowser initialPromos={promos} ticketsPlacement="best_promos_bobbleheads_card" trackingSurface="best_promos_bobbleheads" inlineAnswers={INLINE_ANSWERS} variant="light" />
+              </Suspense>
+            </div>
+
+            <section className="mt-16">
+              <h2 className="rd-display mb-8 text-3xl uppercase text-rd-ink md:text-4xl">FREQUENTLY ASKED QUESTIONS</h2>
+              <div className="max-w-3xl space-y-6">
+                {FAQS.map((f, i) => (
+                  <div key={i}>
+                    <h3 className="font-rd text-base font-semibold text-rd-ink">{f.question}</h3>
+                    <p className="mt-1.5 font-rd text-sm leading-relaxed text-rd-ink-soft">{f.answer}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>

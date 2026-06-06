@@ -131,6 +131,8 @@ export default async function ThemeNightsPage() {
         groups={groups}
         faqs={faqs}
         emptyMessage="No upcoming theme nights are currently tracked."
+        accentKey="theme"
+        collection="theme-nights"
       />
     </>
   );

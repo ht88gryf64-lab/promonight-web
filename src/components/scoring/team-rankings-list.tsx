@@ -13,12 +13,15 @@ type TeamRankingsListProps = {
   // or all past), the entry is absent; TeamRankingRow renders without the
   // tease line in that case.
   topPromos: Record<string, ScoredPromoWithTeam>;
+  variant?: 'dark' | 'light';
 };
 
 export function TeamRankingsList({
   teamScores,
   topPromos,
+  variant = 'dark',
 }: TeamRankingsListProps) {
+  const light = variant === 'light';
   const searchParams = useSearchParams();
   const league = (searchParams.get('league') || 'All') as LeagueFilterValue;
 
@@ -42,31 +45,32 @@ export function TeamRankingsList({
   return (
     <div>
       <div className="mb-8">
-        <div className="font-mono text-[10px] tracking-[1.5px] uppercase text-text-muted mb-2">
+        <div className={light ? 'font-rd text-[10px] tracking-[0.1em] uppercase text-rd-ink-faint mb-2' : 'font-mono text-[10px] tracking-[1.5px] uppercase text-text-muted mb-2'}>
           Filter by league
         </div>
-        <LeagueFilter onChange={handleLeagueChange} />
+        <LeagueFilter onChange={handleLeagueChange} variant={variant} />
       </div>
 
-      <p className="font-mono text-[11px] text-text-dim mb-4">
+      <p className={light ? 'font-rd text-[11px] text-rd-ink-faint mb-4' : 'font-mono text-[11px] text-text-dim mb-4'}>
         {filtered.length} team{filtered.length === 1 ? '' : 's'} ranked
         {league !== 'All' ? ` in ${league}` : ''}
       </p>
 
-      <div className="bg-bg-card border border-border-subtle rounded-2xl overflow-hidden">
+      <div className={light ? 'bg-rd-card border border-rd-line rounded-2xl overflow-hidden' : 'bg-bg-card border border-border-subtle rounded-2xl overflow-hidden'}>
         {filtered.map((teamScore, i) => (
           <TeamRankingRow
             key={teamScore.teamId}
             rank={i + 1}
             teamScore={teamScore}
             topPromo={topPromos[teamScore.teamId] ?? null}
+            variant={variant}
           />
         ))}
       </div>
 
       {filtered.length === 0 && (
-        <div className="bg-bg-card border border-border-subtle rounded-2xl p-10 text-center">
-          <p className="text-text-secondary">
+        <div className={light ? 'bg-rd-card border border-rd-line rounded-2xl p-10 text-center' : 'bg-bg-card border border-border-subtle rounded-2xl p-10 text-center'}>
+          <p className={light ? 'text-rd-ink-soft' : 'text-text-secondary'}>
             No teams scored in this league yet.
           </p>
         </div>

@@ -16,9 +16,10 @@ const OPTIONS: readonly FilterChipOption<DateRangeFilterValue>[] = [
 // the scoring pipeline only writes ~6 months out in any case.
 type DateRangeFilterProps = {
   onChange?: (from: DateRangeFilterValue, to: DateRangeFilterValue) => void;
+  variant?: 'dark' | 'light';
 };
 
-export function DateRangeFilter({ onChange }: DateRangeFilterProps = {}) {
+export function DateRangeFilter({ onChange, variant = 'dark' }: DateRangeFilterProps = {}) {
   return (
     <FilterChips
       paramKey="range"
@@ -26,6 +27,7 @@ export function DateRangeFilter({ onChange }: DateRangeFilterProps = {}) {
       defaultValue="90d"
       ariaLabel="Filter by date range"
       onChange={onChange}
+      variant={variant}
     />
   );
 }

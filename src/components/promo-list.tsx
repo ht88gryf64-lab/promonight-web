@@ -1,6 +1,8 @@
 import { PromoBadge } from './promo-badge';
 import { AppDownloadButtons } from './app-download-buttons';
 import { ShareButton, formatShareDate, type ShareItem } from './share';
+import { RedesignPromoRow } from '@/components/redesign/RedesignPromoRow';
+import { LazyPromoRows } from '@/components/redesign/LazyPromoRows';
 import type { Promo, PromoType } from '@/lib/types';
 
 // Fields shared by every promo row's ShareItem — the per-promo bits (icon,
@@ -121,6 +123,7 @@ export function PromoList({
   sport,
   primaryColor,
   venueName,
+  variant = 'dark',
 }: {
   promos: Promo[];
   teamSlug: string;
@@ -128,6 +131,7 @@ export function PromoList({
   sport: string;
   primaryColor?: string;
   venueName?: string | null;
+  variant?: 'dark' | 'light';
 }) {
   const share: PromoShareContext = {
     teamName,
@@ -144,6 +148,100 @@ export function PromoList({
   const upcomingHidden = upcoming.slice(UPCOMING_VISIBLE);
   const pastVisible = past.slice(0, COMPLETED_VISIBLE);
   const pastHidden = past.slice(COMPLETED_VISIBLE);
+
+  if (variant === 'light') {
+    return (
+      <section className="py-12 px-6">
+        <div className="max-w-5xl mx-auto">
+          <div className="mb-6">
+            <span className="font-rd text-[11px] uppercase tracking-[0.14em] text-rd-ink-faint">
+              Coming up
+            </span>
+            <h2 className="rd-display text-3xl md:text-4xl text-rd-ink mt-1">
+              UPCOMING PROMOS
+            </h2>
+            {upcoming.length > 0 && (
+              <p className="text-rd-ink-faint text-xs font-rd tracking-[0.02em] mt-2">
+                {upcoming.length} upcoming {upcoming.length === 1 ? 'event' : 'events'}
+                {upcomingHidden.length > 0 ? ' · full schedule below' : ''}
+              </p>
+            )}
+          </div>
+
+          {upcoming.length > 0 ? (
+            <>
+              <div className="space-y-3">
+                {upcomingVisible.map((promo, i) => (
+                  <RedesignPromoRow key={`u-${i}`} promo={promo} share={share} />
+                ))}
+              </div>
+
+              {upcomingHidden.length > 0 && (
+                <LazyPromoRows
+                  promos={upcomingHidden}
+                  share={share}
+                  showLabel={`Show all ${upcoming.length} upcoming promos`}
+                  hideLabel={`Hide ${upcomingHidden.length} additional promos`}
+                />
+              )}
+            </>
+          ) : past.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-rd-ink-soft text-lg">No upcoming promos yet</p>
+              <p className="text-rd-ink-faint text-sm mt-1">Check back later for the latest schedule</p>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-rd-ink-soft text-sm">
+                No upcoming {teamName} promos scheduled right now. See completed {new Date().getFullYear()} promos below.
+              </p>
+            </div>
+          )}
+
+          {past.length > 0 && (
+            <div className="mt-12">
+              <div className="mb-4">
+                <span className="font-rd text-[11px] uppercase tracking-[0.14em] text-rd-ink-faint">
+                  Already happened
+                </span>
+                <h3 className="rd-display text-2xl md:text-3xl text-rd-ink-soft mt-1">
+                  COMPLETED {new Date().getFullYear()} PROMOS
+                </h3>
+              </div>
+
+              {/* Completed promos are fully collapsed behind the expander. The
+               *  count lives in the (server-rendered) button label so the
+               *  data-completeness signal is in the HTML; the rows themselves
+               *  lazy-mount on click and stay out of the SSR HTML / page weight. */}
+              <LazyPromoRows
+                promos={past}
+                share={share}
+                completed
+                showLabel={`Show ${past.length} completed ${past.length === 1 ? 'promo' : 'promos'}`}
+                hideLabel={`Hide completed ${past.length === 1 ? 'promo' : 'promos'}`}
+              />
+            </div>
+          )}
+
+          {/* Soft app pitch — no paywall */}
+          <div className="mt-10 bg-rd-card border border-rd-line rounded-2xl p-6 text-center">
+            <p className="text-rd-ink-soft text-sm mb-1">
+              Want push notifications the morning of every {teamName} promo?
+            </p>
+            <p className="text-rd-ink-faint text-xs mb-5">
+              The free PromoNight app sends alerts for giveaways, theme nights, and food deals — optional, not required to use this site.
+            </p>
+            <AppDownloadButtons
+              section="promo_list_app_pitch"
+              page={`team/${teamSlug}`}
+              teamSlug={teamSlug}
+              variant="compact"
+            />
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="py-12 px-6">

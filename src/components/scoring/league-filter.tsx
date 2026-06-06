@@ -16,9 +16,10 @@ const OPTIONS: readonly FilterChipOption<LeagueFilterValue>[] = [
 // scoring scope and the option set is closed.
 type LeagueFilterProps = {
   onChange?: (from: LeagueFilterValue, to: LeagueFilterValue) => void;
+  variant?: 'dark' | 'light';
 };
 
-export function LeagueFilter({ onChange }: LeagueFilterProps = {}) {
+export function LeagueFilter({ onChange, variant = 'dark' }: LeagueFilterProps = {}) {
   return (
     <FilterChips
       paramKey="league"
@@ -26,6 +27,7 @@ export function LeagueFilter({ onChange }: LeagueFilterProps = {}) {
       defaultValue="All"
       ariaLabel="Filter by league"
       onChange={onChange}
+      variant={variant}
     />
   );
 }

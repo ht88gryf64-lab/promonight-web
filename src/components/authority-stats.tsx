@@ -1,3 +1,4 @@
+import { IconChartBar } from '@tabler/icons-react';
 import type { Promo, PromoType, Team, Venue } from '@/lib/types';
 import { getCurrentYear } from '@/lib/promo-helpers';
 
@@ -22,12 +23,14 @@ export function AuthorityStats({
   promoCounts,
   venue,
   teamName,
+  variant = 'dark',
 }: {
   team: Team;
   promos: Promo[];
   promoCounts: Record<PromoType, number>;
   venue: Venue | null;
   teamName: string;
+  variant?: 'dark' | 'light';
 }) {
   if (promos.length < 15) return null;
 
@@ -107,6 +110,29 @@ export function AuthorityStats({
   if (topWeekday && topWeekday[1] >= 4 && topWeekdayGiveaways >= 2) {
     sentences.push(
       `${WEEKDAYS[topWeekday[0]]} home games are the most promo-heavy — ${topWeekday[1]} scheduled events with ${topWeekdayGiveaways} giveaway${topWeekdayGiveaways === 1 ? '' : 's'}.`,
+    );
+  }
+
+  if (variant === 'light') {
+    return (
+      <section className="py-10">
+        <div className="mb-5">
+          <span className="inline-flex items-center gap-1.5 font-rd text-[11px] uppercase tracking-[0.14em] text-rd-ink-faint">
+            <IconChartBar size={13} stroke={2.25} />
+            By the numbers
+          </span>
+          <h2 className="rd-display text-3xl md:text-4xl text-rd-ink mt-1">
+            {teamName.toUpperCase()} PROMO PATTERNS
+          </h2>
+        </div>
+        <div className="bg-rd-card border border-rd-line rounded-2xl p-6 space-y-3">
+          {sentences.map((s, i) => (
+            <p key={i} className="text-rd-ink-soft text-sm md:text-base leading-relaxed">
+              {s}
+            </p>
+          ))}
+        </div>
+      </section>
     );
   }
 

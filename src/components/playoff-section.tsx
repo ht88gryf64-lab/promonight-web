@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { IconArrowRight } from '@tabler/icons-react';
 import type { PlayoffPromo, Team } from '@/lib/types';
 import { teamDisplayName, extractOpponent } from '@/lib/promo-helpers';
 
@@ -49,11 +50,28 @@ function typeColor(type: string): string {
   }
 }
 
+// Redesign light category dot color. Mirrors the RD_CATEGORIES hexes; falls
+// back to the redesign neutral ink-faint for non-categorized types (e.g.
+// 'event'), matching the dark default-case behavior.
+function typeColorLight(type: string): string {
+  switch (type) {
+    case 'giveaway':
+      return '#f97316';
+    case 'theme':
+      return '#7c3aed';
+    case 'food':
+      return '#16a34a';
+    default:
+      return '#9a9081';
+  }
+}
+
 interface PlayoffSectionProps {
   team: Team;
   promos: PlayoffPromo[];
   round: string;
   lastUpdated: string | null;
+  variant?: 'dark' | 'light';
 }
 
 export function PlayoffSection({
@@ -61,6 +79,7 @@ export function PlayoffSection({
   promos,
   round,
   lastUpdated,
+  variant = 'dark',
 }: PlayoffSectionProps) {
   if (promos.length === 0) return null;
 
@@ -80,6 +99,61 @@ export function PlayoffSection({
       .map((p) => extractOpponent(p.gameInfo))
       .find((o): o is string => !!o);
   const roundDisplay = roundLabel(round);
+
+  if (variant === 'light') {
+    return (
+      <section className="py-10">
+        <div className="max-w-5xl mx-auto rounded-2xl bg-rd-red/[0.04] px-6 py-10 md:px-8 md:py-12">
+          <span className="font-rd text-[11px] uppercase tracking-[0.14em] text-rd-ink-faint">
+            2026 {team.league} Playoffs · {roundDisplay}
+          </span>
+          <h2 className="rd-display text-rd-ink text-3xl md:text-4xl mt-2 mb-4">
+            {teamDisplayName(team).toUpperCase()} PLAYOFF PROMOTIONS
+          </h2>
+          <p className="text-rd-ink-soft text-base leading-relaxed max-w-3xl mb-3">
+            The {teamDisplayName(team)} are in the 2026 {roundDisplay.toLowerCase()} playoffs
+            {opponent ? ` against the ${opponent}` : ''}. Their scheduled promotions during this round:
+          </p>
+          <p className="font-rd text-[11px] uppercase tracking-[0.14em] text-rd-ink-faint mb-8">
+            Playoff data last updated: {fullTimestamp(lastUpdated)}
+          </p>
+
+          {dated.length > 0 && (
+            <div className="space-y-3 mb-6">
+              {dated.map((p, i) => (
+                <PlayoffPromoRowLight key={`d${i}`} promo={p} />
+              ))}
+            </div>
+          )}
+
+          {recurring.length > 0 && (
+            <div>
+              {dated.length > 0 && (
+                <p className="font-rd text-[11px] uppercase tracking-[0.14em] text-rd-ink-faint mb-3 mt-4">
+                  Recurring
+                </p>
+              )}
+              <div className="space-y-3">
+                {recurring.map((p, i) => (
+                  <PlayoffPromoRowLight key={`r${i}`} promo={p} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="mt-10 pt-6 border-t border-rd-line">
+            <Link
+              href="/playoffs"
+              className="inline-flex items-center gap-1 font-rd text-[11px] tracking-[0.08em] uppercase text-rd-red"
+            >
+              See all playoff teams
+              <IconArrowRight size={14} stroke={2} />
+            </Link>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section
@@ -168,6 +242,45 @@ function PromoRow({ promo }: { promo: PlayoffPromo }) {
         )}
         {promo.gameInfo && (
           <p className="font-mono text-[10px] tracking-[0.08em] uppercase text-text-muted mt-2">
+            {promo.gameInfo}
+          </p>
+        )}
+      </div>
+    </article>
+  );
+}
+
+function PlayoffPromoRowLight({ promo }: { promo: PlayoffPromo }) {
+  return (
+    <article className="bg-rd-card border border-rd-line rounded-xl p-4 md:p-5 flex gap-4">
+      <span
+        className="inline-block w-2 h-2 rounded-full shrink-0 mt-2"
+        style={{ backgroundColor: typeColorLight(promo.type) }}
+        aria-hidden
+      />
+      <div className="flex-1 min-w-0">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 mb-1">
+          <h3 className="font-rd font-semibold text-base leading-tight text-rd-ink">
+            {promo.title}
+            {promo.highlight && (
+              <span className="ml-2 inline-block font-rd text-[9px] tracking-[0.14em] uppercase text-rd-red align-middle">
+                Hot
+              </span>
+            )}
+          </h3>
+          <span className="font-rd text-[10px] tracking-[0.1em] uppercase text-rd-ink-faint whitespace-nowrap">
+            {promo.date
+              ? shortDate(promo.date)
+              : promo.recurringDetail || 'recurring'}
+          </span>
+        </div>
+        {promo.description && (
+          <p className="text-rd-ink-soft text-sm leading-relaxed mt-1">
+            {promo.description}
+          </p>
+        )}
+        {promo.gameInfo && (
+          <p className="font-rd text-[10px] tracking-[0.08em] uppercase text-rd-ink-faint mt-2">
             {promo.gameInfo}
           </p>
         )}

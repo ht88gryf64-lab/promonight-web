@@ -77,6 +77,10 @@ interface TeamGridProps {
   // /teams adopts this picker. Drives both team_picker_tab_change and the
   // surface field forwarded to each TeamCard's team_tile_tap.
   surface?: 'homepage' | 'teams_page';
+  // 'dark' (default) is the live picker, byte-identical when the gate is off.
+  // 'light' re-skins the tabs (charcoal-active pills) + cards for the redesign;
+  // all geo/starred logic + analytics events are unchanged.
+  variant?: 'dark' | 'light';
 }
 
 export function TeamGrid({
@@ -86,7 +90,21 @@ export function TeamGrid({
   limitOnAll,
   countLabel,
   surface = 'homepage',
+  variant = 'dark',
 }: TeamGridProps) {
+  const light = variant === 'light';
+  const tabClass = (isActive: boolean) =>
+    light
+      ? `rounded-full border px-4 py-1.5 font-rd text-[12px] font-semibold uppercase tracking-[0.08em] transition-colors ${
+          isActive
+            ? 'border-rd-ink bg-rd-ink text-white'
+            : 'border-rd-line-strong bg-rd-card text-rd-ink-soft hover:border-rd-ink hover:text-rd-ink'
+        }`
+      : `px-4 py-1.5 rounded-full text-[11px] font-mono tracking-[0.5px] uppercase transition-colors border ${
+          isActive
+            ? 'bg-accent-red text-white border-accent-red'
+            : 'bg-transparent text-text-secondary border-border-subtle hover:border-border-hover'
+        }`;
   const [activeLeague, setActiveLeague] = useState<string>('All');
   // Starts null on the server and on initial client render to keep the
   // hydrated markup identical to the SSR output (alphabetical-by-rank).
@@ -162,26 +180,11 @@ export function TeamGrid({
     <div>
       {/* Filter tabs */}
       <div className="flex flex-wrap gap-2 mb-8">
-        <button
-          onClick={() => switchTab('All')}
-          className={`px-4 py-1.5 rounded-full text-[11px] font-mono tracking-[0.5px] uppercase transition-colors border ${
-            activeLeague === 'All'
-              ? 'bg-accent-red text-white border-accent-red'
-              : 'bg-transparent text-text-secondary border-border-subtle hover:border-border-hover'
-          }`}
-        >
+        <button onClick={() => switchTab('All')} className={tabClass(activeLeague === 'All')}>
           All
         </button>
         {LEAGUE_ORDER.map((league) => (
-          <button
-            key={league}
-            onClick={() => switchTab(league)}
-            className={`px-4 py-1.5 rounded-full text-[11px] font-mono tracking-[0.5px] uppercase transition-colors border ${
-              activeLeague === league
-                ? 'bg-accent-red text-white border-accent-red'
-                : 'bg-transparent text-text-secondary border-border-subtle hover:border-border-hover'
-            }`}
-          >
+          <button key={league} onClick={() => switchTab(league)} className={tabClass(activeLeague === league)}>
             {league}
           </button>
         ))}
@@ -199,6 +202,7 @@ export function TeamGrid({
             tileSurface={surface}
             fromTab={activeLeague}
             isHomepageSample={isHomepageSample}
+            variant={variant}
           />
         ))}
       </div>

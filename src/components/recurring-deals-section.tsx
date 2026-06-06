@@ -1,16 +1,78 @@
+import { IconCup, IconBeer, IconBalloon, IconTicket, IconMusic } from '@tabler/icons-react';
 import type { Team } from '@/lib/types';
-import { iconFor, type RecurringDeal } from '@/lib/recurring-deals';
+import { iconFor, type RecurringDeal, type RecurringDealCategory } from '@/lib/recurring-deals';
+
+// Recurring-deal category → Tabler icon for the LIGHT template. The dark
+// (gate-off) template keeps the emoji from iconFor() unchanged.
+const DEAL_ICON: Record<RecurringDealCategory, { Icon: typeof IconCup; color: string }> = {
+  food: { Icon: IconCup, color: '#16a34a' },
+  drink: { Icon: IconBeer, color: '#d97706' },
+  kids: { Icon: IconBalloon, color: '#2563eb' },
+  ticket: { Icon: IconTicket, color: '#da2d20' },
+  music: { Icon: IconMusic, color: '#7c3aed' },
+};
+
+function RecurringDealIcon({ category }: { category: RecurringDealCategory }) {
+  const { Icon, color } = DEAL_ICON[category];
+  return <Icon size={24} stroke={2} style={{ color }} aria-hidden />;
+}
 
 export function RecurringDealsSection({
   team,
   deals,
   venueName,
+  variant = 'dark',
 }: {
   team: Team;
   deals: RecurringDeal[];
   venueName: string | null;
+  variant?: 'dark' | 'light';
 }) {
   if (deals.length === 0) return null;
+
+  if (variant === 'light') {
+    return (
+      <section className="py-10 px-6">
+        <div className="max-w-3xl mx-auto">
+          <div className="mb-5">
+            <span className="font-rd text-[11px] uppercase tracking-[0.14em] text-rd-ink-faint">
+              Every home game
+            </span>
+            <h2 className="rd-display text-3xl md:text-4xl text-rd-ink mt-1">
+              EVERY GAME DEALS
+            </h2>
+            <p className="text-rd-ink-soft text-sm mt-2">
+              Recurring food, drink, and family deals that happen at {team.name} home games{venueName ? ` at ${venueName}` : ''} — regardless of the promo calendar.
+            </p>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            {deals.map((deal, i) => (
+              <div
+                key={i}
+                className="bg-rd-card border border-rd-line rounded-2xl p-4 md:p-5 flex gap-4"
+              >
+                <div className="flex-shrink-0 pt-0.5">
+                  <RecurringDealIcon category={deal.category} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-rd font-semibold text-rd-ink text-base">{deal.title}</div>
+                  <div className="font-rd text-[10px] tracking-[0.5px] uppercase text-rd-ink-faint mt-1">
+                    {deal.frequency}
+                  </div>
+                  {deal.description && (
+                    <p className="text-rd-ink-soft text-sm mt-2 leading-relaxed">
+                      {deal.description}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="py-10 px-6 border-t border-border-subtle">

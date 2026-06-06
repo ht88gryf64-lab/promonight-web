@@ -7,12 +7,14 @@ import {
   getTopGiveaway,
   teamDisplayName,
 } from '@/lib/promo-helpers';
+import { RD_CATEGORIES } from '@/components/redesign/categories';
 
 interface TeamContentSectionsProps {
   team: Team;
   promos: Promo[];
   venue: Venue | null;
   promoCounts: Record<PromoType, number>;
+  variant?: 'dark' | 'light';
 }
 
 export function TeamContentSections({
@@ -20,10 +22,96 @@ export function TeamContentSections({
   promos,
   venue,
   promoCounts,
+  variant = 'dark',
 }: TeamContentSectionsProps) {
   const year = getCurrentYear();
   const fullName = teamDisplayName(team);
   const venueName = venue?.name || 'their home stadium';
+
+  if (variant === 'light') {
+    return (
+      <section className="py-10">
+        <div className="max-w-3xl mx-auto space-y-10">
+          {/* Giveaways */}
+          {promoCounts.giveaway > 0 && (
+            <div>
+              <LightSectionHeader category="giveaway">
+                What giveaways are the {team.name} doing in {year}?
+              </LightSectionHeader>
+              <GiveawaySection
+                team={team}
+                promos={promos}
+                venueName={venueName}
+                count={promoCounts.giveaway}
+                year={year}
+                variant="light"
+              />
+            </div>
+          )}
+
+          {/* Theme Nights */}
+          {promoCounts.theme > 0 && (
+            <div>
+              <LightSectionHeader category="theme">
+                What are the best {team.name} theme nights in {year}?
+              </LightSectionHeader>
+              <ThemeSection
+                team={team}
+                promos={promos}
+                venueName={venueName}
+                count={promoCounts.theme}
+                year={year}
+                variant="light"
+              />
+            </div>
+          )}
+
+          {/* Food Deals */}
+          {promoCounts.food > 0 && (
+            <div>
+              <LightSectionHeader category="food">
+                What food deals does {venueName} offer?
+              </LightSectionHeader>
+              <FoodSection
+                team={team}
+                promos={promos}
+                venueName={venueName}
+                count={promoCounts.food}
+                variant="light"
+              />
+            </div>
+          )}
+
+          {/* Kids Events */}
+          {promoCounts.kids > 0 && (
+            <div>
+              <LightSectionHeader category="kids">
+                When are {team.name} kids and family events in {year}?
+              </LightSectionHeader>
+              <KidsSection
+                team={team}
+                promos={promos}
+                venueName={venueName}
+                count={promoCounts.kids}
+                year={year}
+                variant="light"
+              />
+            </div>
+          )}
+
+          {/* PromoNight plug — always shown */}
+          <div>
+            <h2 className="rd-display text-2xl md:text-3xl text-rd-ink mb-4">
+              How do I find {fullName} promotional events?
+            </h2>
+            <p className="text-rd-ink-soft text-sm leading-relaxed">
+              PromoNight is a free app that tracks every {fullName} giveaway, theme night, food deal, and kids event in one place. Download PromoNight on iOS or Android to browse the full {year} promo calendar, set push notifications for your favorite events, and never miss a promotion at {venueName}.
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="py-12 px-6 border-t border-border-subtle">
@@ -105,22 +193,71 @@ export function TeamContentSections({
   );
 }
 
+function LightSectionHeader({
+  category,
+  children,
+}: {
+  category: PromoType;
+  children: React.ReactNode;
+}) {
+  const { color, Icon } = RD_CATEGORIES[category];
+  return (
+    <div className="flex items-start gap-3 mb-4">
+      <span
+        className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+        style={{ backgroundColor: `${color}1a`, color }}
+      >
+        <Icon size={18} stroke={2.25} />
+      </span>
+      <h2 className="rd-display text-2xl md:text-3xl text-rd-ink">{children}</h2>
+    </div>
+  );
+}
+
 function GiveawaySection({
   team,
   promos,
   venueName,
   count,
   year,
+  variant = 'dark',
 }: {
   team: Team;
   promos: Promo[];
   venueName: string;
   count: number;
   year: number;
+  variant?: 'dark' | 'light';
 }) {
   const fullName = teamDisplayName(team);
   const giveaways = getPromosByType(promos, 'giveaway');
   const top = getTopGiveaway(promos);
+
+  if (variant === 'light') {
+    return (
+      <div className="text-rd-ink-soft text-sm leading-relaxed space-y-3">
+        <p>
+          The {fullName} have {count} giveaway night{count !== 1 ? 's' : ''} scheduled for the {year} season at {venueName}.
+          {top
+            ? ` Highlights include ${top.title} on ${formatDateReadable(top.date)}${top.opponent ? ` against the ${top.opponent}` : ''}.`
+            : ''}
+        </p>
+        <ul className="space-y-1.5 list-disc list-inside text-rd-ink-soft">
+          {giveaways.slice(0, 6).map((p, i) => (
+            <li key={i}>
+              <span className="text-rd-ink font-medium">{formatDateReadable(p.date)}</span> — {p.title}
+              {p.opponent ? ` (vs ${p.opponent})` : ''}
+            </li>
+          ))}
+          {giveaways.length > 6 && (
+            <li className="text-rd-ink-faint">
+              ...and {giveaways.length - 6} more giveaway{giveaways.length - 6 !== 1 ? 's' : ''}
+            </li>
+          )}
+        </ul>
+      </div>
+    );
+  }
 
   return (
     <div className="text-text-secondary text-sm leading-relaxed space-y-3">
@@ -153,15 +290,40 @@ function ThemeSection({
   venueName,
   count,
   year,
+  variant = 'dark',
 }: {
   team: Team;
   promos: Promo[];
   venueName: string;
   count: number;
   year: number;
+  variant?: 'dark' | 'light';
 }) {
   const fullName = teamDisplayName(team);
   const themes = getPromosByType(promos, 'theme');
+
+  if (variant === 'light') {
+    return (
+      <div className="text-rd-ink-soft text-sm leading-relaxed space-y-3">
+        <p>
+          The {fullName} have {count} theme night{count !== 1 ? 's' : ''} scheduled at {venueName} during the {year} season. Theme nights include special entertainment, themed merchandise, and unique game-day experiences.
+        </p>
+        <ul className="space-y-1.5 list-disc list-inside text-rd-ink-soft">
+          {themes.slice(0, 6).map((p, i) => (
+            <li key={i}>
+              <span className="text-rd-ink font-medium">{formatDateReadable(p.date)}</span> — {p.title}
+              {p.opponent ? ` (vs ${p.opponent})` : ''}
+            </li>
+          ))}
+          {themes.length > 6 && (
+            <li className="text-rd-ink-faint">
+              ...and {themes.length - 6} more theme night{themes.length - 6 !== 1 ? 's' : ''}
+            </li>
+          )}
+        </ul>
+      </div>
+    );
+  }
 
   return (
     <div className="text-text-secondary text-sm leading-relaxed space-y-3">
@@ -190,14 +352,38 @@ function FoodSection({
   promos,
   venueName,
   count,
+  variant = 'dark',
 }: {
   team: Team;
   promos: Promo[];
   venueName: string;
   count: number;
+  variant?: 'dark' | 'light';
 }) {
   const fullName = teamDisplayName(team);
   const foodDeals = getPromosByType(promos, 'food');
+
+  if (variant === 'light') {
+    return (
+      <div className="text-rd-ink-soft text-sm leading-relaxed space-y-3">
+        <p>
+          {venueName} has {count} food deal event{count !== 1 ? 's' : ''} during {fullName} games. These include discounted concessions, pregame specials, and recurring weekly deals.
+        </p>
+        <ul className="space-y-1.5 list-disc list-inside text-rd-ink-soft">
+          {foodDeals.slice(0, 6).map((p, i) => (
+            <li key={i}>
+              <span className="text-rd-ink font-medium">{formatDateReadable(p.date)}</span> — {p.title}
+            </li>
+          ))}
+          {foodDeals.length > 6 && (
+            <li className="text-rd-ink-faint">
+              ...and {foodDeals.length - 6} more food deal{foodDeals.length - 6 !== 1 ? 's' : ''}
+            </li>
+          )}
+        </ul>
+      </div>
+    );
+  }
 
   return (
     <div className="text-text-secondary text-sm leading-relaxed space-y-3">
@@ -226,15 +412,39 @@ function KidsSection({
   venueName,
   count,
   year,
+  variant = 'dark',
 }: {
   team: Team;
   promos: Promo[];
   venueName: string;
   count: number;
   year: number;
+  variant?: 'dark' | 'light';
 }) {
   const fullName = teamDisplayName(team);
   const kidsEvents = getPromosByType(promos, 'kids');
+
+  if (variant === 'light') {
+    return (
+      <div className="text-rd-ink-soft text-sm leading-relaxed space-y-3">
+        <p>
+          The {fullName} have {count} kids and family event{count !== 1 ? 's' : ''} at {venueName} in {year}. Family events are designed to make game day fun for fans of all ages.
+        </p>
+        <ul className="space-y-1.5 list-disc list-inside text-rd-ink-soft">
+          {kidsEvents.slice(0, 6).map((p, i) => (
+            <li key={i}>
+              <span className="text-rd-ink font-medium">{formatDateReadable(p.date)}</span> — {p.title}
+            </li>
+          ))}
+          {kidsEvents.length > 6 && (
+            <li className="text-rd-ink-faint">
+              ...and {kidsEvents.length - 6} more family event{kidsEvents.length - 6 !== 1 ? 's' : ''}
+            </li>
+          )}
+        </ul>
+      </div>
+    );
+  }
 
   return (
     <div className="text-text-secondary text-sm leading-relaxed space-y-3">

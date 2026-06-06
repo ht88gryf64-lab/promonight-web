@@ -1,3 +1,4 @@
+import { IconClock } from '@tabler/icons-react';
 import type { Venue } from '@/lib/types';
 
 function gateTimesFallback(league: string): string {
@@ -18,7 +19,15 @@ function gateTimesFallback(league: string): string {
   }
 }
 
-export function VenueInfoBlock({ venue, league }: { venue: Venue; league: string }) {
+export function VenueInfoBlock({
+  venue,
+  league,
+  variant = 'dark',
+}: {
+  venue: Venue;
+  league: string;
+  variant?: 'dark' | 'light';
+}) {
   // Venue plan always has *something* to show — the generic league cadence
   // covers gate times when the venue record doesn't. Render whenever we have
   // at least a venue name.
@@ -45,6 +54,54 @@ export function VenueInfoBlock({ venue, league }: { venue: Venue; league: string
     });
   }
   if (venue.nearby) rows.push({ label: 'Nearby', content: venue.nearby });
+
+  if (variant === 'light') {
+    const lightRows: { label: string; content: React.ReactNode }[] = [];
+    lightRows.push({ label: 'Gate times', content: gate });
+    if (venue.parkingInfo) lightRows.push({ label: 'Parking', content: venue.parkingInfo });
+    if (venue.publicTransit) lightRows.push({ label: 'Transit', content: venue.publicTransit });
+    if (venue.accessibility) lightRows.push({ label: 'Accessibility', content: venue.accessibility });
+    if (venue.bagPolicyUrl) {
+      lightRows.push({
+        label: 'Bag policy',
+        content: (
+          <a
+            href={venue.bagPolicyUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-rd-red hover:underline"
+          >
+            Official {venue.name} bag policy ↗
+          </a>
+        ),
+      });
+    }
+    if (venue.nearby) lightRows.push({ label: 'Nearby', content: venue.nearby });
+
+    return (
+      <div>
+        <div className="mb-2 flex items-center gap-1.5">
+          <IconClock size={13} stroke={2.25} className="text-rd-ink-faint" />
+          <span className="font-rd text-[11px] uppercase tracking-[0.14em] text-rd-ink-faint">
+            Game day
+          </span>
+        </div>
+
+        <div className="bg-rd-card border border-rd-line rounded-2xl divide-y divide-rd-line">
+          {lightRows.map((row, i) => (
+            <div key={i} className="px-5 py-4">
+              <div className="font-rd text-[10px] uppercase tracking-wide text-rd-ink-faint">
+                {row.label}
+              </div>
+              <div className="mt-1 text-rd-ink-soft text-sm leading-relaxed">
+                {row.content}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <section className="py-10 px-6 border-t border-border-subtle">

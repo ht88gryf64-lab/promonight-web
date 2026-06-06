@@ -81,6 +81,8 @@ export default async function JerseyGiveawaysPage() {
         groups={groups}
         faqs={faqs}
         emptyMessage="No upcoming jersey or apparel giveaways are currently tracked."
+        accentKey="giveaway"
+        collection="jersey-giveaways"
       />
     </>
   );

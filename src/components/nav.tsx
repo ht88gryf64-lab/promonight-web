@@ -26,6 +26,10 @@ export function Nav({ playoffsActive = false }: NavProps) {
   const showStarCount = isHydrated && count > 0;
   const starCountLabel = `${count} starred team${count === 1 ? '' : 's'}`;
 
+  // The old dark Nav now only renders on gate-off (the layout swaps in the light
+  // BrandBar when the gate is on), so the team-route self-suppression that once
+  // prevented double chrome is no longer needed.
+
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-10 py-4 bg-bg/80 backdrop-blur-xl border-b border-border-subtle">
       <Link href="/" className="font-display text-xl tracking-wider">

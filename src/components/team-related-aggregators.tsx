@@ -1,10 +1,17 @@
 import Link from 'next/link';
+import { IconChevronRight } from '@tabler/icons-react';
 import type { Promo } from '@/lib/types';
 
 const BOBBLEHEAD_RE = /bobblehead/i;
 const JERSEY_RE = /\b(jersey|cap|hat|jacket|shirt|hoodie)\b/i;
 
-export function TeamRelatedAggregators({ promos }: { promos: Promo[] }) {
+export function TeamRelatedAggregators({
+  promos,
+  variant = 'dark',
+}: {
+  promos: Promo[];
+  variant?: 'dark' | 'light';
+}) {
   const bobbleheads = promos.filter(
     (p) => BOBBLEHEAD_RE.test(p.title) || BOBBLEHEAD_RE.test(p.description),
   ).length;
@@ -40,6 +47,38 @@ export function TeamRelatedAggregators({ promos }: { promos: Promo[] }) {
     href: '/promos/this-week',
     hint: 'All leagues',
   });
+
+  if (variant === 'light') {
+    return (
+      <section className="py-10">
+        <span className="font-rd text-[11px] uppercase tracking-[0.14em] text-rd-ink-faint">
+          Browse by type
+        </span>
+        <h2 className="rd-display text-2xl md:text-3xl text-rd-ink mt-1 mb-5">
+          SEE IT ACROSS ALL TEAMS
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {items.map((it) => (
+            <Link
+              key={it.href}
+              href={it.href}
+              className="group bg-rd-card border border-rd-line rounded-xl p-4 flex items-center justify-between hover:border-rd-line-strong transition-colors"
+            >
+              <div>
+                <div className="font-rd font-semibold text-rd-ink group-hover:text-rd-red transition-colors">
+                  {it.label}
+                </div>
+                <div className="text-rd-ink-faint text-xs mt-0.5">
+                  {it.hint}
+                </div>
+              </div>
+              <IconChevronRight size={18} stroke={2} className="text-rd-ink-faint shrink-0" />
+            </Link>
+          ))}
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="py-12 px-6 border-t border-border-subtle">

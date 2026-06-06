@@ -6,6 +6,8 @@ import type { ScoredPromoWithTeam } from '@/lib/types';
 import { TeamRankingsList } from '@/components/scoring/team-rankings-list';
 import { ScoringPageViewTracker } from '@/components/scoring/scoring-page-view-tracker';
 import { teamDisplayName } from '@/lib/promo-helpers';
+import { isRedesignEnabled } from '@/lib/redesign';
+import { archivoHouse } from '@/components/redesign/fonts-house';
 
 export const revalidate = 86400;
 
@@ -164,20 +166,69 @@ export default async function TeamRankingsPage() {
     })),
   };
 
+  const Schemas = (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }} />
+    </>
+  );
+
+  if (isRedesignEnabled()) {
+    return (
+      <>
+        {Schemas}
+        <div className={`${archivoHouse.variable} rd-root min-h-screen`}>
+          <section className="relative overflow-hidden text-white" style={{ backgroundColor: '#1d1714' }}>
+            <div aria-hidden className="absolute inset-0 z-0 opacity-70" style={{ backgroundImage: 'radial-gradient(120% 80% at 100% 0%, rgba(211,17,69,0.22) 0%, transparent 60%)' }} />
+            <div className="relative z-10 mx-auto max-w-4xl px-6 pb-12 pt-16 md:pb-14 md:pt-20">
+              <div className="mb-5 flex items-center gap-2 font-rd text-xs text-white/45">
+                <Link href="/" className="transition-colors hover:text-white/80">Home</Link>
+                <span>/</span>
+                <span className="text-white/60">Team rankings</span>
+              </div>
+              <p className="font-rd text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: '#ff5a78' }}>Team rankings {YEAR}</p>
+              <h1 className="rd-display mt-1 text-4xl uppercase leading-[0.95] text-white md:text-6xl">BEST SPORTS PROMO SCHEDULES OF {YEAR}</h1>
+              <p className="mt-3 font-rd text-[11px] uppercase tracking-[0.12em] text-white/45">Last updated {lastUpdatedDisplay} · {teamScores.length} teams ranked</p>
+            </div>
+          </section>
+
+          <div className="mx-auto max-w-4xl px-6 pb-20 pt-10">
+            <p className="rounded-2xl border border-rd-line bg-rd-card p-5 font-rd text-[15px] leading-relaxed text-rd-ink-soft">
+              All {teamScores.length} scored teams across MLB, MLS, and WNBA are ranked below by promo schedule strength
+              {topTeam ? `, with ${teamDisplayName(topTeam.team)} leading at score ${topTeam.teamScore}` : ''}. Each ranking combines the team&apos;s average promo score, the number of highlighted promos, a schedule variety bonus, and a hot-promo bonus. Filter by league to compare within MLB, MLS, or WNBA only.
+            </p>
+
+            <Suspense fallback={null}>
+              <ScoringPageViewTracker pageTitle="Team Rankings" scoreCount={teamScores.length} defaultLeague="All" />
+            </Suspense>
+
+            <div className="mt-8">
+              <Suspense fallback={null}>
+                <TeamRankingsList teamScores={teamScores} topPromos={topPromos} variant="light" />
+              </Suspense>
+            </div>
+
+            <section className="mt-16">
+              <h2 className="rd-display mb-8 text-3xl uppercase text-rd-ink md:text-4xl">FREQUENTLY ASKED QUESTIONS</h2>
+              <div className="max-w-3xl space-y-6">
+                {FAQS.map((f, i) => (
+                  <div key={i}>
+                    <h3 className="font-rd text-base font-semibold text-rd-ink">{f.question}</h3>
+                    <p className="mt-1.5 font-rd text-sm leading-relaxed text-rd-ink-soft">{f.answer}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }}
-      />
+      {Schemas}
 
       <div className="pt-28 pb-20 px-6">
         <div className="max-w-4xl mx-auto">

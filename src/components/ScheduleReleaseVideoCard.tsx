@@ -1,5 +1,6 @@
 'use client';
 
+import { IconExternalLink } from '@tabler/icons-react';
 import { track } from '@/lib/analytics';
 import type { ScheduleReleaseVideo } from '@/lib/types';
 
@@ -19,6 +20,7 @@ import type { ScheduleReleaseVideo } from '@/lib/types';
 interface ScheduleReleaseVideoCardProps {
   video: ScheduleReleaseVideo;
   teamSlug: string;
+  variant?: 'dark' | 'light';
 }
 
 // Pulls the 11-char YouTube video id out of standard watch URLs and
@@ -68,7 +70,7 @@ function ExternalLinkIcon() {
   );
 }
 
-export function ScheduleReleaseVideoCard({ video, teamSlug }: ScheduleReleaseVideoCardProps) {
+export function ScheduleReleaseVideoCard({ video, teamSlug, variant = 'dark' }: ScheduleReleaseVideoCardProps) {
   const videoId = extractVideoId(video.url);
   if (!videoId) return null;
 
@@ -87,6 +89,61 @@ export function ScheduleReleaseVideoCard({ video, teamSlug }: ScheduleReleaseVid
       sport: 'nfl',
     });
   };
+
+  if (variant === 'light') {
+    return (
+      <section className="py-10 px-6">
+        <div className="max-w-3xl mx-auto">
+          <div className="mb-4">
+            <span className="font-rd text-[11px] uppercase tracking-[0.14em] text-rd-ink-faint">
+              Schedule Release
+            </span>
+            <h2 className="rd-display text-2xl md:text-3xl text-rd-ink mt-1">
+              2026 SEASON REVEAL
+            </h2>
+          </div>
+
+          <a
+            href={video.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={handleClick}
+            className="group block bg-rd-card border border-rd-line rounded-2xl overflow-hidden transition-colors hover:border-rd-line-strong"
+          >
+            <div className="flex flex-col md:flex-row">
+              <div className="relative md:w-2/5 aspect-video md:aspect-auto bg-rd-cream overflow-hidden">
+                {/* Plain img: YouTube serves the thumbnail from its own CDN
+                 *  with aggressive caching. No Next/image optimization
+                 *  coupling needed for content we don't host. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={thumbnailUrl}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="w-14 h-14 rounded-full bg-rd-ink/70 group-hover:bg-rd-red transition-colors flex items-center justify-center shadow-lg">
+                    <PlayIcon />
+                  </span>
+                </div>
+              </div>
+              <div className="flex-1 p-5 md:p-6 flex flex-col justify-center">
+                <h3 className="font-rd font-semibold text-lg md:text-xl text-rd-ink leading-tight">
+                  {video.title}
+                </h3>
+                <span className="inline-flex items-center gap-1.5 mt-3 text-sm font-rd font-medium text-rd-red">
+                  Watch the 2026 schedule release
+                  <IconExternalLink size={15} stroke={2} />
+                </span>
+              </div>
+            </div>
+          </a>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="py-8 px-6 border-t border-border-subtle">

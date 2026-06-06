@@ -11,6 +11,8 @@ import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure
 import { AdSlot } from '@/components/ads/AdSlot';
 import { AD_SLOTS } from '@/lib/ads/slots';
 import { StarToggle } from '@/components/star-toggle';
+import { isRedesignEnabled } from '@/lib/redesign';
+import { archivoHouse } from '@/components/redesign/fonts-house';
 
 export const revalidate = 3600;
 
@@ -289,6 +291,97 @@ export default async function PlayoffsPage() {
     })),
   };
 
+  if (isRedesignEnabled()) {
+    return (
+      <div className={`${archivoHouse.variable} rd-root min-h-screen`}>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+
+        <section className="relative overflow-hidden text-white" style={{ backgroundColor: '#1d1714' }}>
+          <div aria-hidden className="absolute inset-0 z-0 opacity-70" style={{ backgroundImage: 'radial-gradient(120% 80% at 100% 0%, rgba(211,17,69,0.22) 0%, transparent 60%)' }} />
+          <div className="relative z-10 mx-auto max-w-5xl px-6 pb-12 pt-16 md:pb-14 md:pt-20">
+            <p className="font-rd text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: '#ff5a78' }}>{liveDuringLabel}</p>
+            <h1 className="rd-display mt-1 text-4xl uppercase leading-[0.95] text-white md:text-6xl">2026 NBA AND NHL PLAYOFF PROMOTIONS</h1>
+            <p className="mt-4 max-w-3xl font-rd text-base leading-relaxed text-white/70 md:text-lg">
+              The 2026 NBA and NHL playoffs feature {totalPromos} promotional events across {totalTeams} teams
+              {example ? `, including "${example.title}" for the ${example.teamName}` : ''}
+              . Every scheduled giveaway, watch party, and rally towel is listed below. Updated hourly from official team sources.
+            </p>
+            <p className="mt-6 font-rd text-[11px] uppercase tracking-[0.12em] text-white/45">Last updated: {lastUpdated}</p>
+          </div>
+        </section>
+
+        <div className="mx-auto max-w-5xl px-6 pb-20 pt-8">
+          <div className="mb-2">
+            <AdSlot config={AD_SLOTS.HEADER_LEADERBOARD} pageType="playoffs_hub" />
+          </div>
+
+          {nbaGroups.length > 0 && (
+            <LeagueSection league="NBA" roundCode={config.nbaRound} groups={nbaGroups} venuesByTeamId={venuesByTeamId} light />
+          )}
+
+          <div className="my-8">
+            <AdSlot config={AD_SLOTS.IN_CONTENT_1} pageType="playoffs_hub" />
+          </div>
+
+          {nhlGroups.length > 0 && (
+            <LeagueSection league="NHL" roundCode={config.nhlRound} groups={nhlGroups} venuesByTeamId={venuesByTeamId} light />
+          )}
+
+          <div className="my-8">
+            <AdSlot config={AD_SLOTS.IN_CONTENT_2} pageType="playoffs_hub" />
+          </div>
+
+          {nbaGroups.length === 0 && nhlGroups.length === 0 && (
+            <p className="py-16 text-center text-rd-ink-soft">No playoff promotions scheduled yet. Check back soon.</p>
+          )}
+
+          {activeTeams.length > 0 && (
+            <section className="mt-16 border-t border-rd-line pt-10">
+              <span className="font-rd text-[11px] font-semibold uppercase tracking-[0.14em] text-rd-ink-faint">Visiting fans</span>
+              <h2 className="rd-display mb-3 mt-1 text-3xl uppercase text-rd-ink md:text-4xl">PLAN YOUR PLAYOFF TRIP</h2>
+              <p className="mb-8 max-w-3xl font-rd text-sm leading-relaxed text-rd-ink-soft md:text-base">
+                Traveling for a playoff game? Find a hotel in any active team&apos;s city.
+              </p>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {activeTeams.map((t) => (
+                  <HotelsCTA key={t.id} team={t} venue={venuesByTeamId.get(t.id) ?? null} surface="web_playoffs" placement="playoffs_hub" variant="card" />
+                ))}
+              </div>
+            </section>
+          )}
+
+          <div className="my-8">
+            <AdSlot config={AD_SLOTS.IN_CONTENT_3} pageType="playoffs_hub" />
+          </div>
+          <div className="my-8">
+            <AdSlot config={AD_SLOTS.SIDEBAR_STICKY} pageType="playoffs_hub" />
+          </div>
+
+          <section className="mt-16 border-t border-rd-line pt-10">
+            <h2 className="rd-display mb-8 text-3xl uppercase text-rd-ink md:text-4xl">FREQUENTLY ASKED QUESTIONS</h2>
+            <div className="max-w-3xl space-y-6">
+              {faqs.map((f, i) => (
+                <div key={i}>
+                  <h3 className="font-rd text-base font-semibold text-rd-ink">{f.question}</h3>
+                  <p className="mt-1.5 font-rd text-sm leading-relaxed text-rd-ink-soft">{f.answer}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="mt-12 border-t border-rd-line pt-6">
+            <AffiliateDisclosure />
+          </section>
+
+          <div className="mt-6">
+            <AdSlot config={AD_SLOTS.ADHESION_FOOTER} pageType="playoffs_hub" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="pt-24 pb-20 px-6">
       <script
@@ -420,12 +513,32 @@ function LeagueSection({
   roundCode,
   groups,
   venuesByTeamId,
+  light = false,
 }: {
   league: 'NBA' | 'NHL';
   roundCode: string;
   groups: { team: Team; promos: PlayoffPromo[] }[];
   venuesByTeamId: Map<string, Venue | null>;
+  light?: boolean;
 }) {
+  if (light) {
+    return (
+      <section className="mt-12 border-t border-rd-line pt-10">
+        <div className="mb-8">
+          <span className="font-rd text-[11px] font-semibold uppercase tracking-[0.14em] text-rd-ink-faint">
+            {LEAGUE_ICONS[league]} {league}
+          </span>
+          <h2 className="rd-display mt-1 text-3xl uppercase text-rd-ink md:text-4xl">{roundLabel(roundCode)}</h2>
+        </div>
+        <div className="grid gap-6 md:grid-cols-2">
+          {groups.map((g) => (
+            <TeamCard key={g.team.id} team={g.team} promos={g.promos} venue={venuesByTeamId.get(g.team.id) ?? null} light />
+          ))}
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="mt-12 pt-10 border-t border-border-subtle">
       <h2 className="font-display text-3xl md:text-4xl tracking-[1px] mb-8">
@@ -452,10 +565,12 @@ function TeamCard({
   team,
   promos,
   venue,
+  light = false,
 }: {
   team: Team;
   promos: PlayoffPromo[];
   venue: Venue | null;
+  light?: boolean;
 }) {
   // Opponent label = the LATEST dated promo's opponent (the current-round
   // matchup), not the earliest. Promos may span multiple rounds; sort dated
@@ -473,6 +588,48 @@ function TeamCard({
   const visible = promos.slice(0, 4);
   const remaining = Math.max(0, promos.length - visible.length);
   const teamUrl = `/${team.sportSlug}/${team.id}`;
+
+  if (light) {
+    return (
+      <article className="relative flex flex-col overflow-hidden rounded-2xl border border-rd-line bg-rd-card">
+        <div className="h-1 w-full" style={{ backgroundColor: team.primaryColor }} aria-hidden />
+        <div className="flex flex-1 flex-col p-5 md:p-6">
+          <div className="mb-4 pr-12">
+            <h3 className="rd-display text-xl uppercase text-rd-ink md:text-2xl">
+              <Link href={teamUrl} className="transition-colors hover:text-rd-red">{teamDisplayName(team)}</Link>
+            </h3>
+            {opponent && (
+              <p className="mt-1 font-rd text-[10px] uppercase tracking-[0.12em] text-rd-ink-faint">vs {opponent}</p>
+            )}
+          </div>
+          <div className="absolute right-4 top-5 md:right-5 md:top-6">
+            <StarToggle teamSlug={team.id} teamName={teamDisplayName(team)} league={team.league} sport={team.sportSlug} placement="playoffs_hub_team_card" surface="light" />
+          </div>
+
+          <ul className="flex-1 space-y-2">
+            {visible.map((p, i) => (
+              <li key={i} className="flex items-baseline gap-3 text-sm">
+                <span className="mt-1.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: promoTypeColor(p.type) }} aria-hidden />
+                <span className="flex-1 leading-snug text-rd-ink">{p.title}</span>
+                <span className="shrink-0 whitespace-nowrap font-rd text-[10px] uppercase tracking-[0.08em] text-rd-ink-faint">
+                  {p.date ? formatShortDate(p.date) : p.recurring ? 'recurring' : ''}
+                </span>
+              </li>
+            ))}
+            {remaining > 0 && <li className="pl-4 text-xs text-rd-ink-faint">+ {remaining} more</li>}
+          </ul>
+
+          <div className="mt-5 space-y-5 border-t border-rd-line pt-4">
+            <TicketsBlock team={team} surface="web_playoffs" placement="playoffs_hub" variant="card" />
+            <ParkingCTA team={team} venue={venue} surface="web_playoffs" placement="playoffs_hub" compact tone="secondary" />
+            <Link href={teamUrl} className="block pt-1 font-rd text-[11px] uppercase tracking-[0.08em] text-rd-ink-soft transition-colors hover:text-rd-ink">
+              View full {team.name} promotions →
+            </Link>
+          </div>
+        </div>
+      </article>
+    );
+  }
 
   return (
     <article className="relative bg-bg-card border border-border-subtle rounded-xl p-5 md:p-6 flex flex-col">

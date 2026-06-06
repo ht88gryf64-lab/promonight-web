@@ -1,6 +1,14 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  env: {
+    // Mirror the server-only VERCEL_ENV into a client-readable variable so the
+    // redesign gate (lib/redesign.ts) computes the SAME result on the client
+    // (global-chrome suppression) as on the server (template branch). Empty
+    // string when unset (local dev) → !== 'production' → gate on, matching the
+    // server's `VERCEL_ENV !== 'production'`. NEXT_PUBLIC, carries no secret.
+    NEXT_PUBLIC_VERCEL_ENV: process.env.VERCEL_ENV ?? '',
+  },
   async redirects() {
     return [
       {

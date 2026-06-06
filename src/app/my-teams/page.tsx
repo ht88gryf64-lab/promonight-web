@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { getAllTeams } from '@/lib/data';
 import { MyTeamsView } from '@/components/my-teams-view';
+import { isRedesignEnabled } from '@/lib/redesign';
+import { archivoHouse } from '@/components/redesign/fonts-house';
 
 // Personalization destination. Starred list lives in localStorage, so the
 // page itself has no useful indexable content for an anonymous crawler — but
@@ -20,5 +22,19 @@ export default async function MyTeamsPage() {
   // resolve team metadata (color, name, sport) for both featured-state
   // suggestions and starred-list rendering without a second round-trip.
   const teams = await getAllTeams();
+
+  // Gate-on: wrap the client view in the light-house root so its `rd-*`,
+  // `font-rd`, and `rd-display` descendant rules resolve and `--font-archivo`
+  // is in scope. The gate decision is made here (server) and passed as a fixed
+  // prop, so the client renders one variant consistently on SSR + hydration —
+  // no client-gate flicker. Gate-off path is byte-identical to before.
+  if (isRedesignEnabled()) {
+    return (
+      <div className={`${archivoHouse.variable} rd-root min-h-screen`}>
+        <MyTeamsView teams={teams} variant="light" />
+      </div>
+    );
+  }
+
   return <MyTeamsView teams={teams} />;
 }
