@@ -90,6 +90,8 @@ export default async function ThisWeekPage() {
         groups={groups}
         faqs={faqs}
         emptyMessage="No hot promos scheduled in the next seven days. Check back tomorrow as new events are added."
+        accentKey="mixed"
+        collection="this-week"
       />
     </>
   );

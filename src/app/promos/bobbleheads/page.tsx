@@ -80,6 +80,8 @@ export default async function BobbleheadsPage() {
         groups={groups}
         faqs={faqs}
         emptyMessage="No upcoming bobblehead nights are currently tracked. Teams typically announce more through the season."
+        accentKey="giveaway"
+        collection="bobbleheads"
       />
     </>
   );

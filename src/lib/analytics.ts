@@ -47,7 +47,8 @@ export type AnalyticsEvent =
   | 'score_filter_changed'
   | 'scored_promo_card_tap'
   | 'team_ranking_row_tap'
-  | 'load_more_tap';
+  | 'load_more_tap'
+  | 'league_filter_change';
 
 // `TONIGHT_AND_TOMORROW` is retained for backwards-compatibility with dashboards
 // that already segment on it; the bucketed hero (Phase 1.5) emits TONIGHT,
@@ -423,6 +424,17 @@ export type EventPropertiesMap = {
   scored_promo_card_tap: ScoredPromoCardTapProperties;
   team_ranking_row_tap: TeamRankingRowTapProperties;
   load_more_tap: LoadMoreTapProperties;
+  league_filter_change: LeagueFilterChangeProperties;
+};
+
+// Redesigned collection pages (gate-on /promos/*): the league chips are newly
+// interactive, so they emit this dual-emit event. `collection` is the page slug
+// (e.g. 'bobbleheads'); `from_league`/`to_league` are 'All' or a league code.
+export type LeagueFilterChangeProperties = {
+  surface: AnalyticsSurface;
+  collection: string;
+  from_league: string;
+  to_league: string;
 };
 
 // ── Utilities ────────────────────────────────────────────────────────────
