@@ -21,6 +21,9 @@ type FilterChipsProps<T extends string> = {
   // event with the from/to values. Optional; pages that don't need
   // tracking can skip it.
   onChange?: (from: T, to: T) => void;
+  // 'dark' (default) is byte-identical when the gate is off; 'light' is the
+  // cream-house pill (charcoal-active) matching the other redesigned pages.
+  variant?: 'dark' | 'light';
 };
 
 export function FilterChips<T extends string>({
@@ -29,6 +32,7 @@ export function FilterChips<T extends string>({
   defaultValue,
   ariaLabel,
   onChange,
+  variant = 'dark',
 }: FilterChipsProps<T>) {
   const router = useRouter();
   const pathname = usePathname();
@@ -64,11 +68,19 @@ export function FilterChips<T extends string>({
             type="button"
             onClick={() => handleClick(opt.value)}
             aria-pressed={active}
-            className={`px-4 py-1.5 rounded-full text-[11px] font-mono tracking-[0.5px] uppercase transition-colors border ${
-              active
-                ? 'bg-accent-red text-white border-accent-red'
-                : 'bg-transparent text-text-secondary border-border-subtle hover:border-border-hover'
-            }`}
+            className={
+              variant === 'light'
+                ? `rounded-full border px-4 py-1.5 font-rd text-[12px] font-semibold uppercase tracking-[0.08em] transition-colors ${
+                    active
+                      ? 'border-rd-ink bg-rd-ink text-white'
+                      : 'border-rd-line-strong bg-rd-card text-rd-ink-soft hover:border-rd-ink hover:text-rd-ink'
+                  }`
+                : `px-4 py-1.5 rounded-full text-[11px] font-mono tracking-[0.5px] uppercase transition-colors border ${
+                    active
+                      ? 'bg-accent-red text-white border-accent-red'
+                      : 'bg-transparent text-text-secondary border-border-subtle hover:border-border-hover'
+                  }`
+            }
           >
             {opt.label}
           </button>
