@@ -7,16 +7,23 @@ import { LEAGUE_ORDER, SPORT_ICONS } from '@/lib/types';
 import { track } from '@/lib/analytics';
 import { useStarredTeams } from '@/hooks/use-starred-teams';
 import { StarToggle } from './star-toggle';
+import { TeamCard } from './team-card';
 
 interface TeamsBrowserProps {
   teams: Team[];
   promoCounts: Record<string, number>;
+  // 'dark' (default) is the live browser, byte-identical when the gate is off.
+  // 'light' re-skins the pills + swaps in the homepage's light TeamCard. Same
+  // geo/star logic + the same teams_browser_view / team_picker_tab_change events;
+  // the light cards additionally fire team_tile_tap (surface 'teams_page').
+  variant?: 'dark' | 'light';
 }
 
 const ALL = 'All' as const;
 type ActiveLeague = typeof ALL | (typeof LEAGUE_ORDER)[number];
 
-export function TeamsBrowser({ teams, promoCounts }: TeamsBrowserProps) {
+export function TeamsBrowser({ teams, promoCounts, variant = 'dark' }: TeamsBrowserProps) {
+  const light = variant === 'light';
   const [active, setActive] = useState<ActiveLeague>(ALL);
   const { starred, isHydrated } = useStarredTeams();
   const starredSet = useMemo(() => new Set(starred), [starred]);
@@ -74,6 +81,7 @@ export function TeamsBrowser({ teams, promoCounts }: TeamsBrowserProps) {
           label={`All (${teams.length})`}
           active={active === ALL}
           onClick={() => switchTab(ALL)}
+          light={light}
         />
         {LEAGUE_ORDER.map((league) => {
           const count = teams.filter((t) => t.league === league).length;
@@ -83,6 +91,7 @@ export function TeamsBrowser({ teams, promoCounts }: TeamsBrowserProps) {
               label={`${league} (${count})`}
               active={active === league}
               onClick={() => switchTab(league)}
+              light={light}
             />
           );
         })}
@@ -90,18 +99,32 @@ export function TeamsBrowser({ teams, promoCounts }: TeamsBrowserProps) {
 
       {/* Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-        {filtered.map((team) => (
-          <TeamBrowserCard
-            key={team.id}
-            team={team}
-            promoCount={promoCounts[team.id] ?? 0}
-          />
-        ))}
+        {filtered.map((team) =>
+          light ? (
+            <TeamCard
+              key={team.id}
+              team={team}
+              promoCount={promoCounts[team.id] ?? 0}
+              countLabel="promos"
+              tileSurface="teams_page"
+              fromTab={active}
+              starPlacement="teams_browser_card"
+              sourcePage="teams"
+              variant="light"
+            />
+          ) : (
+            <TeamBrowserCard
+              key={team.id}
+              team={team}
+              promoCount={promoCounts[team.id] ?? 0}
+            />
+          ),
+        )}
       </div>
 
       {filtered.length === 0 && (
         <div className="text-center py-16">
-          <p className="text-text-muted text-lg">No teams in this league.</p>
+          <p className={light ? 'text-rd-ink-faint text-lg' : 'text-text-muted text-lg'}>No teams in this league.</p>
         </div>
       )}
     </div>
@@ -112,21 +135,31 @@ function FilterPill({
   label,
   active,
   onClick,
+  light = false,
 }: {
   label: string;
   active: boolean;
   onClick: () => void;
+  light?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`px-4 py-1.5 rounded-full text-[11px] font-mono tracking-[0.5px] uppercase transition-colors border ${
-        active
-          ? 'bg-accent-red text-white border-accent-red'
-          : 'bg-transparent text-text-secondary border-border-subtle hover:border-border-hover'
-      }`}
+      className={
+        light
+          ? `rounded-full border px-4 py-1.5 font-rd text-[12px] font-semibold uppercase tracking-[0.08em] transition-colors ${
+              active
+                ? 'border-rd-ink bg-rd-ink text-white'
+                : 'border-rd-line-strong bg-rd-card text-rd-ink-soft hover:border-rd-ink hover:text-rd-ink'
+            }`
+          : `px-4 py-1.5 rounded-full text-[11px] font-mono tracking-[0.5px] uppercase transition-colors border ${
+              active
+                ? 'bg-accent-red text-white border-accent-red'
+                : 'bg-transparent text-text-secondary border-border-subtle hover:border-border-hover'
+            }`
+      }
     >
       {label}
     </button>
