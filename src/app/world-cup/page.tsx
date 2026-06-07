@@ -248,13 +248,11 @@ export default async function WorldCupPage() {
               meantime, browse jersey giveaways across the league.
             </p>
           )}
-          {/* TODO(soccer-jersey-route): repoint to /promos/soccer-jersey-nights once that
-              route exists; it does not yet, so this links to the existing jersey hub. */}
           <Link
-            href="/promos/jersey-giveaways"
+            href="/promos/soccer-jersey-nights"
             className="mt-4 inline-block rounded-xl border border-rd-line-strong px-4 py-2.5 font-rd text-[12px] font-semibold uppercase tracking-[0.08em] text-rd-ink-soft transition-colors hover:border-rd-ink hover:text-rd-ink"
           >
-            All jersey giveaways →
+            All soccer jersey nights →
           </Link>
         </section>
 
