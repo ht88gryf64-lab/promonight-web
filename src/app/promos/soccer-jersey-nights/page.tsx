@@ -60,7 +60,7 @@ const FAQS: { question: string; answer: string }[] = [
   {
     question: 'Which MLB teams have soccer jersey giveaways in 2026?',
     answer:
-      'A large share of the league is in. Confirmed MLB soccer jersey nights include the Yankees, Mets, Dodgers, Red Sox, Cubs, Braves, Astros, Mariners, Giants, Orioles, Blue Jays, Diamondbacks, Rockies, Nationals, Pirates, and Cardinals. The full upcoming list, with dates, is above and updates as more are announced.',
+      'A large share of the league is in, more than a dozen teams in all. Confirmed soccer jersey nights include the Yankees, Mets, Dodgers, Red Sox, Cubs, Braves, Astros, Mariners, Giants, Angels, Orioles, and Blue Jays. The full upcoming list, with exact dates, is above and updates as more teams are announced.',
   },
   {
     question: 'When are the soccer jersey nights during the World Cup?',
