@@ -68,6 +68,7 @@ export type AnalyticsSurface =
   | 'web_article'
   | 'web_my_teams'
   | 'web_best_promos'
+  | 'web_world_cup'
   | 'web_other';
 
 export type Sport = 'mlb' | 'nba' | 'nhl' | 'nfl' | 'mls' | 'wnba';
@@ -613,6 +614,7 @@ const KNOWN_SURFACES: ReadonlySet<AnalyticsSurface> = new Set<AnalyticsSurface>(
   'web_article',
   'web_my_teams',
   'web_best_promos',
+  'web_world_cup',
   'web_other',
 ]);
 
@@ -623,6 +625,7 @@ function isKnownSurface(s: string): s is AnalyticsSurface {
 export function inferSurfaceFromPath(path: string): AnalyticsSurface {
   if (!path || path === '/') return 'web_home';
   if (path.startsWith('/playoffs')) return 'web_playoffs';
+  if (path.startsWith('/world-cup')) return 'web_world_cup';
   if (path.startsWith('/promos/')) return 'web_article';
   if (path.startsWith('/my-teams')) return 'web_my_teams';
   if (path.startsWith('/best-promos') || path.startsWith('/team-rankings')) return 'web_best_promos';
