@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { IconGift, IconConfetti, IconCup, IconFlame, type Icon as TablerIcon } from '@tabler/icons-react';
 import type { PromoWithTeam } from '@/lib/types';
 import { AppDownloadButtons } from './app-download-buttons';
@@ -30,6 +31,10 @@ export interface AggregatorPageProps {
   accentKey?: AggregatorAccentKey;
   /** Redesign-only: page slug for the league_filter_change payload. */
   collection?: string;
+  /** Redesign-only optional slot rendered right after the intro capsule (e.g.
+   *  a cross-link callout). Undefined for every existing page, so their output
+   *  is unchanged. */
+  afterIntro?: ReactNode;
 }
 
 const ACCENTS: Record<AggregatorAccentKey, { color: string; Icon: TablerIcon }> = {
@@ -54,6 +59,7 @@ function RedesignAggregatorPage({
   emptyMessage,
   accentKey = 'mixed',
   collection = 'collection',
+  afterIntro,
 }: AggregatorPageProps) {
   const totalCount = groups.reduce((acc, g) => acc + g.promos.length, 0);
   const { color, Icon } = ACCENTS[accentKey];
@@ -94,6 +100,8 @@ function RedesignAggregatorPage({
         <p className="rounded-2xl border border-rd-line bg-rd-card p-5 font-rd text-[15px] leading-relaxed text-rd-ink-soft">
           {lead}
         </p>
+
+        {afterIntro}
 
         <div className="my-8">
           <AdSlot config={AD_SLOTS.HEADER_LEADERBOARD} pageType="promo_collection" />
