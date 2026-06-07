@@ -20,10 +20,16 @@ import { WorldCupAnnouncementBar } from '../world-cup/announcement-bar';
 //                              sticky BrandBar still references the tall <body>; the
 //                              page body (old dark pages) is left completely untouched.
 
-export function RedesignBrandBar({ playoffsActive }: { playoffsActive?: boolean }) {
+export function RedesignBrandBar({
+  playoffsActive,
+  worldCupActive,
+}: {
+  playoffsActive?: boolean;
+  worldCupActive?: boolean;
+}) {
   return (
     <div className={`${archivoHouse.variable} rd-root contents`}>
-      <BrandBar playoffsActive={playoffsActive} />
+      <BrandBar playoffsActive={playoffsActive} worldCupActive={worldCupActive} />
     </div>
   );
 }

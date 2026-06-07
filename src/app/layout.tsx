@@ -134,7 +134,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 <UTMCaptureProvider />
                 {worldCupActive && <RedesignAnnouncementSlot />}
                 {redesign ? (
-                  <RedesignBrandBar playoffsActive={playoffsActive} />
+                  <RedesignBrandBar playoffsActive={playoffsActive} worldCupActive={worldCupActive} />
                 ) : (
                   <Nav playoffsActive={playoffsActive} />
                 )}
