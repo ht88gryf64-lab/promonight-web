@@ -3,7 +3,7 @@ import { IconBallFootball, IconStarFilled } from '@tabler/icons-react';
 import type { Venue } from '@/lib/types';
 import type { WorldCupCityData, WorldCupTeamData } from '@/lib/world-cup-data';
 import { categoryFor } from '@/components/redesign/categories';
-import { isSoccerJerseyPromo } from '@/lib/world-cup-jersey';
+import { isSoccerJerseyPromo } from '@/lib/soccer-jersey';
 import { TicketmasterCTA } from '@/components/affiliates/TicketmasterCTA';
 import { SpotHeroCTA } from '@/components/affiliates/SpotHeroCTA';
 import { BookingCTA } from '@/components/affiliates/BookingCTA';
@@ -69,7 +69,7 @@ function PromoBadge({ type, title, soccer }: { type: 'giveaway' | 'theme' | 'kid
   );
 }
 
-function GameRow({ ctx }: { ctx: WorldCupTeamData['homeGames'][number] }) {
+function GameRow({ ctx, league }: { ctx: WorldCupTeamData['homeGames'][number]; league?: string }) {
   const { weekday, mon, day } = ymd(ctx.game.date);
   const opponent = ctx.opponentTeam?.name ?? ctx.game.awayTeamSlug;
   return (
@@ -84,7 +84,7 @@ function GameRow({ ctx }: { ctx: WorldCupTeamData['homeGames'][number] }) {
         {ctx.promos.length > 0 && (
           <div className="mt-1 flex flex-wrap gap-1.5">
             {ctx.promos.map((p, i) => (
-              <PromoBadge key={i} type={p.type} title={p.title} soccer={isSoccerJerseyPromo(p)} />
+              <PromoBadge key={i} type={p.type} title={p.title} soccer={isSoccerJerseyPromo(p, league)} />
             ))}
           </div>
         )}
@@ -108,7 +108,7 @@ function TeamGames({ team }: { team: WorldCupTeamData }) {
       {team.homeGames.length > 0 ? (
         <div className="divide-y divide-rd-line border-t border-rd-line">
           {team.homeGames.map((ctx) => (
-            <GameRow key={`${ctx.game.date}-${ctx.game.doubleheaderGame ?? 0}`} ctx={ctx} />
+            <GameRow key={`${ctx.game.date}-${ctx.game.doubleheaderGame ?? 0}`} ctx={ctx} league={team.team?.league} />
           ))}
         </div>
       ) : (
