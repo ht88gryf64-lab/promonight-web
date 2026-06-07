@@ -16,7 +16,7 @@ import {
   type GameContext,
 } from './data';
 import type { Team, Venue, Promo } from './types';
-import { isSoccerJerseyPromo } from './world-cup-jersey';
+import { isSoccerJerseyPromo } from './soccer-jersey';
 import {
   WORLD_CUP_CITIES,
   WORLD_CUP_WINDOW_START,
@@ -112,7 +112,7 @@ export async function getWorldCupData(): Promise<WorldCupData> {
     for (const teamData of cityData.teams) {
       for (const ctx of teamData.homeGames) {
         for (const promo of ctx.promos) {
-          if (!isSoccerJerseyPromo(promo)) continue;
+          if (!isSoccerJerseyPromo(promo, teamData.team?.league)) continue;
           const key = `${teamData.ref.slug}:${promo.date}:${promo.title}`;
           if (seen.has(key)) continue;
           seen.add(key);

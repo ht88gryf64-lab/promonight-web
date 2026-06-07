@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
+import { IconChevronRight } from '@tabler/icons-react';
 import { getPromosFromDate } from '@/lib/data';
 import { AggregatorPage, AggregatorJsonLd, type AggregatorGroup } from '@/components/aggregator-layout';
 
@@ -83,6 +85,15 @@ export default async function JerseyGiveawaysPage() {
         emptyMessage="No upcoming jersey or apparel giveaways are currently tracked."
         accentKey="giveaway"
         collection="jersey-giveaways"
+        afterIntro={
+          <Link
+            href="/promos/soccer-jersey-nights"
+            className="mt-6 inline-flex items-center gap-1.5 rounded-full border border-rd-line-strong px-4 py-2 font-rd text-[12px] font-semibold uppercase tracking-[0.08em] text-rd-ink-soft transition-colors hover:border-rd-ink hover:text-rd-ink"
+          >
+            See soccer jersey nights
+            <IconChevronRight size={14} stroke={2.5} aria-hidden />
+          </Link>
+        }
       />
     </>
   );
