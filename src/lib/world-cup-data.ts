@@ -16,6 +16,7 @@ import {
   type GameContext,
 } from './data';
 import type { Team, Venue, Promo } from './types';
+import { isSoccerJerseyPromo } from './world-cup-jersey';
 import {
   WORLD_CUP_CITIES,
   WORLD_CUP_WINDOW_START,
@@ -53,19 +54,6 @@ export interface WorldCupData {
   soccerJerseyEntries: SoccerJerseyEntry[];
   /** Count of distinct home games across all cities (for the intro capsule). */
   totalHomeGames: number;
-}
-
-// Soccer-jersey-night detection. A promo qualifies ONLY when its text carries
-// BOTH a jersey signal AND a soccer / World Cup signal. This is deliberately
-// strict so a generic baseball jersey giveaway is never mislabeled as a soccer
-// jersey night. There is no jersey promo type, so this is text-based.
-const JERSEY_SIGNAL = /\b(jersey|kit|shirt|sweater|maillot|camiseta)\b/i;
-const SOCCER_SIGNAL =
-  /\b(soccer|f[uú]tbol|world cup|fifa|copa|nutmeg|pitch)\b|\bfc\b|footballer/i;
-
-function isSoccerJerseyPromo(promo: Promo): boolean {
-  const text = `${promo.title} ${promo.description}`;
-  return JERSEY_SIGNAL.test(text) && SOCCER_SIGNAL.test(text);
 }
 
 function inWindow(date: string): boolean {
