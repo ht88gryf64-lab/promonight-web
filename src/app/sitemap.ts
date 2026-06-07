@@ -123,6 +123,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.9,
     },
     {
+      // World Cup host-city travel hub. Hub-tier 0.9; weekly is fine since the
+      // editorial city map is static and the MLB game/promo overlay revalidates
+      // on the page itself (6h ISR). The IndexNow deploy hook submits this URL
+      // automatically on each successful Production deploy.
+      url: `${BASE_URL}/world-cup`,
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.9,
+    },
+    {
       url: `${BASE_URL}/download`,
       lastModified: now,
       changeFrequency: 'monthly',
