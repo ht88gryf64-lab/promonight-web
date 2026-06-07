@@ -4,7 +4,8 @@ import { Bebas_Neue, DM_Sans, DM_Mono, Outfit } from 'next/font/google';
 import { Nav } from '@/components/nav';
 import { Footer } from '@/components/footer';
 import { isRedesignEnabled } from '@/lib/redesign';
-import { RedesignBrandBar, RedesignFooterSlot } from '@/components/redesign/GlobalChrome';
+import { isWorldCupActive } from '@/lib/world-cup-active';
+import { RedesignBrandBar, RedesignFooterSlot, RedesignAnnouncementSlot } from '@/components/redesign/GlobalChrome';
 import { UTMCaptureProvider } from '@/components/utm-capture-provider';
 import { AnalyticsProvider } from '@/components/analytics/AnalyticsProvider';
 import { PageViewTracker } from '@/components/analytics/PageViewTracker';
@@ -96,6 +97,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // Archivo instance is preload:false (see GlobalChrome) so this global mount
   // adds no font-preload <link> to any page and gate-off <head> stays identical.
   const redesign = isRedesignEnabled();
+  // Server-evaluated so the strip and nav link auto-expire after the final
+  // (within one ISR revalidate). Not gated on the redesign: redesign is live.
+  const worldCupActive = isWorldCupActive();
 
   return (
     <html lang="en" className={`${bebasNeue.variable} ${dmSans.variable} ${dmMono.variable} ${outfit.variable}`}>
@@ -128,8 +132,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   <PageViewTracker />
                 </Suspense>
                 <UTMCaptureProvider />
+                {worldCupActive && <RedesignAnnouncementSlot />}
                 {redesign ? (
-                  <RedesignBrandBar playoffsActive={playoffsActive} />
+                  <RedesignBrandBar playoffsActive={playoffsActive} worldCupActive={worldCupActive} />
                 ) : (
                   <Nav playoffsActive={playoffsActive} />
                 )}

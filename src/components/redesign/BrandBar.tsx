@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Button } from '@/components/redesign/Button';
+import { WorldCupNavLink } from '@/components/world-cup/nav-link';
 
 // Redesign v2 top bar. Replaces the global dark nav on gated team pages with a
 // light, sticky, translucent cream bar carrying the PromoNight wordmark, a
@@ -7,6 +8,7 @@ import { Button } from '@/components/redesign/Button';
 
 export interface BrandBarProps {
   playoffsActive?: boolean;
+  worldCupActive?: boolean;
 }
 
 interface NavLink {
@@ -18,12 +20,18 @@ const LINK_CLASS =
   'font-rd text-[12px] uppercase tracking-[0.12em] text-rd-ink-soft ' +
   'hover:text-rd-ink transition-colors';
 
-export function BrandBar({ playoffsActive = false }: BrandBarProps) {
+// Subtle red accent so the World Cup link stands out from the ink-soft links.
+const WC_LINK_CLASS =
+  'font-rd text-[12px] uppercase tracking-[0.12em] text-rd-red ' +
+  'hover:text-rd-red-dark transition-colors';
+
+export function BrandBar({ playoffsActive = false, worldCupActive = false }: BrandBarProps) {
+  // World Cup sits after Playoffs and before About; About is rendered last
+  // separately so the conditional World Cup link can slot in ahead of it.
   const links: NavLink[] = [
     { label: 'Teams', href: '/teams' },
     { label: 'My Teams', href: '/my-teams' },
     ...(playoffsActive ? [{ label: 'Playoffs', href: '/playoffs' }] : []),
-    { label: 'About', href: '/about' },
   ];
 
   return (
@@ -45,6 +53,10 @@ export function BrandBar({ playoffsActive = false }: BrandBarProps) {
                 {link.label}
               </Link>
             ))}
+            {worldCupActive && <WorldCupNavLink className={WC_LINK_CLASS} />}
+            <Link href="/about" className={LINK_CLASS}>
+              About
+            </Link>
           </div>
 
           <Button href="/download" variant="primary" size="sm">

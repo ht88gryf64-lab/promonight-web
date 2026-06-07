@@ -1,6 +1,7 @@
 import { archivoHouse } from './fonts-house';
 import { BrandBar } from './BrandBar';
 import { Footer } from './Footer';
+import { WorldCupAnnouncementBar } from '../world-cup/announcement-bar';
 
 // Gate-ON global chrome slots, mounted by app/layout.tsx.
 //
@@ -19,10 +20,29 @@ import { Footer } from './Footer';
 //                              sticky BrandBar still references the tall <body>; the
 //                              page body (old dark pages) is left completely untouched.
 
-export function RedesignBrandBar({ playoffsActive }: { playoffsActive?: boolean }) {
+export function RedesignBrandBar({
+  playoffsActive,
+  worldCupActive,
+}: {
+  playoffsActive?: boolean;
+  worldCupActive?: boolean;
+}) {
   return (
     <div className={`${archivoHouse.variable} rd-root contents`}>
-      <BrandBar playoffsActive={playoffsActive} />
+      <BrandBar playoffsActive={playoffsActive} worldCupActive={worldCupActive} />
+    </div>
+  );
+}
+
+// Site-wide announcement strip slot. Wrapped in the same archivoHouse + rd-root
+// context as the BrandBar so font-rd and the rd-* tokens resolve; `contents`
+// means no box is painted, so the strip itself spans full width at the very top
+// of the body. Mounted above the BrandBar in app/layout.tsx, gated by
+// isWorldCupActive().
+export function RedesignAnnouncementSlot() {
+  return (
+    <div className={`${archivoHouse.variable} rd-root contents`}>
+      <WorldCupAnnouncementBar />
     </div>
   );
 }
