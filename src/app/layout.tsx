@@ -73,6 +73,10 @@ export const metadata: Metadata = {
     creator: '@promo_night_app',
     images: ['/og-image.png'],
   },
+  // FlexOffers affiliate-network site ownership verification.
+  other: {
+    'fo-verify': 'b823c9f6-a5b9-4492-9bac-65ea29c2cd38',
+  },
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
