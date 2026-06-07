@@ -43,7 +43,7 @@ const FAQS: { question: string; answer: string }[] = [
   {
     question: 'Can I catch an MLB game while I am in town for the World Cup?',
     answer:
-      'Yes. Every US host city has a Major League Baseball team near the stadium, several within walking distance, so you can pair a World Cup match with a ballgame. The best overlap is the group stage, June 11 to early July. The MLB All-Star break, around July 13 to 16, pauses all baseball during the semi-finals and final.',
+      'Yes. Every US host city has a Major League Baseball team near the stadium, several within walking distance, so you can pair a World Cup match with a ballgame. The best overlap is the group stage, June 11 to early July. The MLB All-Star break, around July 13 to 16, pauses all baseball during the semi-finals, then games resume on July 17, before the final.',
   },
   {
     question: 'When and where is the 2026 World Cup final?',
@@ -58,7 +58,7 @@ const FAQS: { question: string; answer: string }[] = [
   {
     question: 'What is the best time to combine a World Cup trip with baseball?',
     answer:
-      'The group stage, June 11 to early July, is the best window to pair the World Cup with a local MLB home game, because teams are playing a full schedule. From about July 13 to 16 the MLB All-Star break pauses every game, so mid-July host cities show no home dates even as the World Cup reaches its semi-finals and final.',
+      'The group stage, June 11 to early July, is the best window to pair the World Cup with a local MLB home game, because teams are playing a full schedule. From about July 13 to 16 the MLB All-Star break pauses every game, so mid-July host cities show no home dates during the semi-finals. Baseball resumes July 17, so a ballgame can still bookend the July 19 final.',
   },
 ];
 
@@ -154,8 +154,9 @@ export default async function WorldCupPage() {
           <p className="mt-4 font-rd text-[15px] leading-relaxed text-rd-ink-soft">
             The best window to pair the two is the group stage, June 11 to early July, when MLB teams
             are playing a full schedule. The MLB All-Star break, around July 13 to 16, pauses every
-            baseball game during the World Cup semi-finals and final, so some mid-July host cities
-            show no home games. Each city card below maps the World Cup venue to its nearest ballpark,
+            baseball game during the World Cup semi-finals, so some mid-July host cities show no home
+            games in that stretch. Baseball resumes July 17, in time to bookend the July 19 final.
+            Each city card below maps the World Cup venue to its nearest ballpark,
             the home games that line up, and the giveaways on those dates.
           </p>
         </div>
@@ -179,8 +180,8 @@ export default async function WorldCupPage() {
             </h2>
             <p className="mt-3 max-w-3xl font-rd text-[15px] leading-relaxed text-white/75 md:text-base">
               Philadelphia hosts a World Cup Round of 16 at Lincoln Financial Field on July 4, 2026,
-              Independence Day and America&apos;s 250th, the first World Cup knockout match ever
-              played on the Fourth, in the city where the country was founded. Ten days later the MLB
+              Independence Day and America&apos;s 250th birthday, the first World Cup knockout match
+              ever played on the Fourth, in the city where the country was founded. Ten days later the MLB
               All-Star Game comes to Citizens Bank Park next door on July 14. Two majors, one South
               Philadelphia complex, ten days apart.
             </p>
