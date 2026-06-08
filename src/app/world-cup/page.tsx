@@ -102,6 +102,36 @@ export default async function WorldCupPage() {
     })),
   };
 
+  // SocialEvent JSON-LD for fan festivals with a concrete single venue and date
+  // window: the single-venue cities, both NY/NJ fan zones, and the LA Coliseum
+  // opening week. Distributed programs (SF Bay Area, Seattle) and the vague
+  // citywide LA phase carry no startDate, so they are skipped. Emitted alongside
+  // CollectionPage + FAQPage, not replacing them.
+  const fanFestEvents = data.cities.flatMap((c) => {
+    const f = c.city.fanFestival;
+    const cityName = c.city.city.split(' / ')[0];
+    return (f.venues ?? [])
+      .filter((v) => v.startDate)
+      .map((v) => ({
+        '@context': 'https://schema.org',
+        '@type': 'SocialEvent',
+        name: `${v.name} — FIFA World Cup 2026 Fan Festival`,
+        description: `Official FIFA World Cup 2026 Fan Festival in ${cityName}. ${f.admission}.`,
+        startDate: v.startDate,
+        ...(v.endDate ? { endDate: v.endDate } : {}),
+        eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+        eventStatus: 'https://schema.org/EventScheduled',
+        isAccessibleForFree: true,
+        location: {
+          '@type': 'Place',
+          name: v.name,
+          address: cityName,
+        },
+        organizer: { '@type': 'Organization', name: 'FIFA', url: 'https://www.fifa.com' },
+        url: f.officialUrl,
+      }));
+  });
+
   const jersey = data.soccerJerseyEntries;
 
   return (
@@ -114,6 +144,12 @@ export default async function WorldCupPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
       />
+      {fanFestEvents.length > 0 && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(fanFestEvents) }}
+        />
+      )}
 
       {/* Charcoal hero */}
       <section className="relative overflow-hidden text-white" style={{ backgroundColor: '#1d1714' }}>
