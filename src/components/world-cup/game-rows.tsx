@@ -36,17 +36,21 @@ function ymd(date: string): { weekday: string; mon: string; day: number } {
   };
 }
 
+// Overflow-safe promo pill. max-w-full keeps a single pill within the
+// (min-w-0) game-info column; flex-wrap + overflow-wrap let a long title and the
+// soccer "WC JERSEY" sub-pill wrap to a new line on narrow widths instead of
+// bleeding past the card's right padding. rounded-2xl reads cleanly when wrapped.
 function PromoBadge({ type, title, soccer }: { type: PromoType; title: string; soccer: boolean }) {
   const { color, Icon } = categoryFor(type);
   return (
     <span
-      className={`inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 font-rd text-[11px] font-semibold ${soccer ? 'ring-1 ring-rd-red' : ''}`}
+      className={`inline-flex max-w-full flex-wrap items-center gap-1 rounded-2xl px-2 py-0.5 font-rd text-[11px] font-semibold ${soccer ? 'ring-1 ring-rd-red' : ''}`}
       style={{ backgroundColor: `${color}1a`, color }}
     >
       <Icon size={12} stroke={2.25} className="shrink-0" />
-      <span className="truncate">{title}</span>
+      <span className="min-w-0 [overflow-wrap:anywhere]">{title}</span>
       {soccer && (
-        <span className="ml-0.5 inline-flex items-center gap-0.5 rounded-full bg-rd-red px-1.5 text-[9px] uppercase tracking-[0.06em] text-white">
+        <span className="ml-0.5 inline-flex shrink-0 items-center gap-0.5 rounded-full bg-rd-red px-1.5 text-[9px] uppercase tracking-[0.06em] text-white">
           <IconBallFootball size={9} stroke={2.5} /> WC jersey
         </span>
       )}
@@ -78,7 +82,7 @@ function GameRowButton({
         <div className="font-rd text-[9px] uppercase tracking-[0.08em] text-rd-ink-faint">{mon}</div>
       </div>
       <div className="min-w-0 flex-1">
-        <div className="font-rd text-sm font-semibold text-rd-ink">vs {opponent}</div>
+        <div className="font-rd text-sm font-semibold text-rd-ink [overflow-wrap:anywhere]">vs {opponent}</div>
         {ctx.promos.length > 0 && (
           <div className="mt-1 flex flex-wrap gap-1.5">
             {ctx.promos.map((p, i) => (

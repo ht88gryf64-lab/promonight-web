@@ -45,14 +45,18 @@ function routingVenue(team: WorldCupTeamData, fallbackLat: number, fallbackLng: 
 function TeamGames({ team, citySlug }: { team: WorldCupTeamData; citySlug: string }) {
   return (
     <div>
-      <div className="mb-1 flex items-baseline justify-between gap-3">
+      {/* Stack the relationship line below the team name on mobile (full width,
+          wrapping); inline-right only from sm up, capped so it never bleeds. */}
+      <div className="mb-1 flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
         <Link
           href={`/mlb/${team.ref.slug}`}
           className="font-rd text-base font-bold text-rd-ink transition-colors hover:text-rd-red"
         >
           {team.ref.display}
         </Link>
-        <span className="shrink-0 text-right font-rd text-[11px] text-rd-ink-faint">{team.ref.relationship}</span>
+        <span className="font-rd text-[11px] text-rd-ink-faint [overflow-wrap:anywhere] sm:max-w-[55%] sm:text-right">
+          {team.ref.relationship}
+        </span>
       </div>
       {team.homeGames.length > 0 && team.team ? (
         <WorldCupGameRows
