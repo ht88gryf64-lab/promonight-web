@@ -1,7 +1,9 @@
 import Link from 'next/link';
-import { IconStarFilled } from '@tabler/icons-react';
+import { IconStarFilled, IconMapPin, IconExternalLink } from '@tabler/icons-react';
 import type { Venue } from '@/lib/types';
 import type { WorldCupCityData, WorldCupTeamData } from '@/lib/world-cup-data';
+import type { WorldCupFanFestival } from '@/data/world-cup-cities';
+import { TrackedLink } from '@/components/analytics/TrackedLink';
 import { TicketmasterCTA } from '@/components/affiliates/TicketmasterCTA';
 import { SpotHeroCTA } from '@/components/affiliates/SpotHeroCTA';
 import { BookingCTA } from '@/components/affiliates/BookingCTA';
@@ -91,6 +93,70 @@ function WorldCupRail({ team, venue }: { team: WorldCupTeamData; venue: Venue | 
   );
 }
 
+// Official Fan Festival / fan zones for the city. Server-rendered so crawlers
+// see the festival content; only the official-link click is a client leaf
+// (TrackedLink fires cta_click). No new affiliate CTAs — the official link is
+// a non-commercial FIFA / host-committee URL, not an affiliate partner.
+function WhereToWatch({ festival, citySlug }: { festival: WorldCupFanFestival; citySlug: string }) {
+  const { headline, admission, officialUrl, venues, distributed, highlights, note } = festival;
+  return (
+    <div className="border-t border-rd-line px-5 py-5 md:px-6">
+      <p className="mb-3 font-rd text-[11px] font-semibold uppercase tracking-[0.12em] text-rd-ink-faint">
+        Where to watch
+      </p>
+      <div className="rounded-xl border border-rd-line bg-rd-cream px-4 py-4">
+        <h4 className="font-rd text-sm font-bold text-rd-ink [overflow-wrap:anywhere]">{headline}</h4>
+
+        {venues && venues.length > 0 && (
+          <ul className="mt-2.5 space-y-2">
+            {venues.map((v, i) => (
+              <li key={i} className="flex items-start gap-2">
+                <IconMapPin size={14} stroke={2} className="mt-0.5 shrink-0 text-rd-red" />
+                <div className="min-w-0">
+                  <div className="font-rd text-[13px] font-semibold text-rd-ink [overflow-wrap:anywhere]">{v.name}</div>
+                  <div className="font-rd text-[12px] text-rd-ink-soft [overflow-wrap:anywhere]">{v.dates}</div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {distributed && highlights && highlights.length > 0 && (
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
+            {highlights.map((h, i) => (
+              <span
+                key={i}
+                className="inline-flex max-w-full items-center rounded-full bg-rd-card px-2.5 py-0.5 font-rd text-[11px] text-rd-ink-soft ring-1 ring-rd-line [overflow-wrap:anywhere]"
+              >
+                {h}
+              </span>
+            ))}
+          </div>
+        )}
+
+        <p className="mt-3 font-rd text-[12px] leading-relaxed text-rd-ink-soft [overflow-wrap:anywhere]">
+          <span className="font-semibold text-rd-ink">Admission:</span> {admission}
+        </p>
+        {note && (
+          <p className="mt-1.5 font-rd text-[12px] leading-relaxed text-rd-ink-faint [overflow-wrap:anywhere]">{note}</p>
+        )}
+
+        <TrackedLink
+          href={officialUrl}
+          external
+          ctaId={`world_cup_fanfest:${citySlug}`}
+          ctaLabel={headline}
+          surface="web_world_cup"
+          className="mt-3 inline-flex items-center gap-1 font-rd text-[12px] font-semibold uppercase tracking-[0.08em] text-rd-red transition-colors hover:text-rd-ink"
+        >
+          Official fan festival site
+          <IconExternalLink size={13} stroke={2} className="shrink-0" />
+        </TrackedLink>
+      </div>
+    </div>
+  );
+}
+
 export function WorldCupHostCard({ data }: { data: WorldCupCityData }) {
   const { city, teams, hasAnyGames } = data;
   const primary = teams[0];
@@ -158,6 +224,9 @@ export function WorldCupHostCard({ data }: { data: WorldCupCityData }) {
 
         <WorldCupRail team={primary} venue={railVenue} />
       </div>
+
+      {/* Where to watch the World Cup itself: official Fan Festival / fan zones. */}
+      <WhereToWatch festival={city.fanFestival} citySlug={city.slug} />
     </article>
   );
 }
