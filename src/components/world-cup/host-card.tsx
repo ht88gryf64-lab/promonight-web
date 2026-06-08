@@ -1,27 +1,16 @@
 import Link from 'next/link';
-import { IconBallFootball, IconStarFilled } from '@tabler/icons-react';
+import { IconStarFilled } from '@tabler/icons-react';
 import type { Venue } from '@/lib/types';
 import type { WorldCupCityData, WorldCupTeamData } from '@/lib/world-cup-data';
-import { categoryFor } from '@/components/redesign/categories';
-import { isSoccerJerseyPromo } from '@/lib/soccer-jersey';
 import { TicketmasterCTA } from '@/components/affiliates/TicketmasterCTA';
 import { SpotHeroCTA } from '@/components/affiliates/SpotHeroCTA';
 import { BookingCTA } from '@/components/affiliates/BookingCTA';
 import { FanaticsCTA } from '@/components/affiliates/FanaticsCTA';
 import { VenueInfoBlock } from '@/components/venue-info-block';
+import { WorldCupGameRows } from './game-rows';
 
 const WC_SURFACE = 'web_world_cup' as const;
 const WC_PLACEMENT = 'world_cup_card';
-
-function ymd(date: string): { weekday: string; mon: string; day: number } {
-  const [y, m, d] = date.split('-').map(Number);
-  const dt = new Date(y, m - 1, d);
-  return {
-    weekday: dt.toLocaleDateString('en-US', { weekday: 'short' }),
-    mon: dt.toLocaleDateString('en-US', { month: 'short' }),
-    day: d,
-  };
-}
 
 function longDate(date: string): string {
   const [y, m, d] = date.split('-').map(Number);
@@ -51,49 +40,7 @@ function routingVenue(team: WorldCupTeamData, fallbackLat: number, fallbackLng: 
   };
 }
 
-function PromoBadge({ type, title, soccer }: { type: 'giveaway' | 'theme' | 'kids' | 'food'; title: string; soccer: boolean }) {
-  const { color, label, Icon } = categoryFor(type);
-  return (
-    <span
-      className={`inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 font-rd text-[11px] font-semibold ${soccer ? 'ring-1 ring-rd-red' : ''}`}
-      style={{ backgroundColor: `${color}1a`, color }}
-    >
-      <Icon size={12} stroke={2.25} className="shrink-0" />
-      <span className="truncate">{title}</span>
-      {soccer && (
-        <span className="ml-0.5 inline-flex items-center gap-0.5 rounded-full bg-rd-red px-1.5 text-[9px] uppercase tracking-[0.06em] text-white">
-          <IconBallFootball size={9} stroke={2.5} /> WC jersey
-        </span>
-      )}
-    </span>
-  );
-}
-
-function GameRow({ ctx, league }: { ctx: WorldCupTeamData['homeGames'][number]; league?: string }) {
-  const { weekday, mon, day } = ymd(ctx.game.date);
-  const opponent = ctx.opponentTeam?.name ?? ctx.game.awayTeamSlug;
-  return (
-    <div className="flex items-start gap-3 py-2.5">
-      <div className="w-11 shrink-0 text-center">
-        <div className="font-rd text-[10px] uppercase tracking-[0.08em] text-rd-ink-faint">{weekday}</div>
-        <div className="rd-numerals text-lg leading-none text-rd-ink">{day}</div>
-        <div className="font-rd text-[9px] uppercase tracking-[0.08em] text-rd-ink-faint">{mon}</div>
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="font-rd text-sm font-semibold text-rd-ink">vs {opponent}</div>
-        {ctx.promos.length > 0 && (
-          <div className="mt-1 flex flex-wrap gap-1.5">
-            {ctx.promos.map((p, i) => (
-              <PromoBadge key={i} type={p.type} title={p.title} soccer={isSoccerJerseyPromo(p, league)} />
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function TeamGames({ team }: { team: WorldCupTeamData }) {
+function TeamGames({ team, citySlug }: { team: WorldCupTeamData; citySlug: string }) {
   return (
     <div>
       <div className="mb-1 flex items-baseline justify-between gap-3">
@@ -105,12 +52,14 @@ function TeamGames({ team }: { team: WorldCupTeamData }) {
         </Link>
         <span className="shrink-0 text-right font-rd text-[11px] text-rd-ink-faint">{team.ref.relationship}</span>
       </div>
-      {team.homeGames.length > 0 ? (
-        <div className="divide-y divide-rd-line border-t border-rd-line">
-          {team.homeGames.map((ctx) => (
-            <GameRow key={`${ctx.game.date}-${ctx.game.doubleheaderGame ?? 0}`} ctx={ctx} league={team.team?.league} />
-          ))}
-        </div>
+      {team.homeGames.length > 0 && team.team ? (
+        <WorldCupGameRows
+          games={team.homeGames}
+          team={team.team}
+          teamSlug={team.ref.slug}
+          teamName={team.team.name}
+          citySlug={citySlug}
+        />
       ) : (
         <p className="border-t border-rd-line pt-2 font-rd text-[13px] text-rd-ink-soft">
           No {team.ref.display} home games during the World Cup window. They are on the road or in the All-Star break.
@@ -173,7 +122,7 @@ export function WorldCupHostCard({ data }: { data: WorldCupCityData }) {
           {hasAnyGames ? (
             <div className="space-y-5">
               {teams.map((team) => (
-                <TeamGames key={team.ref.slug} team={team} />
+                <TeamGames key={team.ref.slug} team={team} citySlug={city.slug} />
               ))}
             </div>
           ) : (

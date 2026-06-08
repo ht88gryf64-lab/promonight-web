@@ -1,4 +1,5 @@
 import type { GameContext } from '@/lib/data';
+import type { AnalyticsSurface } from '@/lib/analytics';
 import type { Promo, Team } from '@/lib/types';
 import { SPORT_ICONS } from '@/lib/types';
 import { ShareButton, formatShareDate, type ShareItem } from '@/components/share';
@@ -78,6 +79,7 @@ function GameExpandRow({
   teamSlug,
   teamName,
   showDate,
+  surface = 'web_team_page',
 }: {
   dateStr: string;
   ctx: GameContext;
@@ -85,6 +87,10 @@ function GameExpandRow({
   teamSlug?: string;
   teamName: string;
   showDate: boolean;
+  /** Attribution surface for the reused affiliate CTAs. Defaults to the
+   *  team-page value so existing call sites are unchanged; the World Cup host
+   *  card passes 'web_world_cup' so its modal CTA clicks attribute to the hub. */
+  surface?: AnalyticsSurface;
 }) {
   const { game, isHome, opponentTeam, opponentVenue, promos } = ctx;
   const timeLabel = game.timeTbd ? 'TBD' : formatGameTime(game.gameTimeTz, game.gameTime, game.date);
@@ -178,7 +184,7 @@ function GameExpandRow({
         {team && (
           <TicketsBlock
             team={team}
-            surface="web_team_page"
+            surface={surface}
             placement={placement}
             promoId={teamSlug ? `${teamSlug}:${game.date}:${game.id}` : undefined}
             variant="card"
@@ -190,7 +196,7 @@ function GameExpandRow({
               <ParkingCTA
                 team={opponentTeam}
                 venue={opponentVenue}
-                surface="web_team_page"
+                surface={surface}
                 placement={placement}
                 compact
               />
@@ -199,7 +205,7 @@ function GameExpandRow({
               <HotelsCTA
                 team={opponentTeam}
                 venue={opponentVenue}
-                surface="web_team_page"
+                surface={surface}
                 placement={placement}
                 variant="modal-row"
               />
@@ -225,12 +231,15 @@ export function GameExpand({
   team,
   teamSlug,
   teamName,
+  surface = 'web_team_page',
 }: {
   dateStr: string;
   contexts: GameContext[];
   team: Team | null;
   teamSlug?: string;
   teamName: string;
+  /** Forwarded to the reused affiliate CTAs. Defaults to the team-page value. */
+  surface?: AnalyticsSurface;
 }) {
   return (
     <div className="space-y-4">
@@ -243,6 +252,7 @@ export function GameExpand({
           teamSlug={teamSlug}
           teamName={teamName}
           showDate={i === 0}
+          surface={surface}
         />
       ))}
     </div>
