@@ -279,6 +279,11 @@ export type GameTapProperties = {
   is_home: boolean;
   has_promo: boolean;
   opponent_slug: string;
+  // Optional surface context. The team-page calendar omits both (the event is
+  // self-describing via surface + path); the World Cup host card sets them so a
+  // game-open from a city card is distinguishable in dashboards.
+  placement?: string;
+  city?: string;
 };
 
 export type AwayGameExpandedProperties = {

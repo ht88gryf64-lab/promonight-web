@@ -1,27 +1,18 @@
 import Link from 'next/link';
-import { IconBallFootball, IconStarFilled } from '@tabler/icons-react';
+import { IconStarFilled, IconMapPin, IconExternalLink } from '@tabler/icons-react';
 import type { Venue } from '@/lib/types';
 import type { WorldCupCityData, WorldCupTeamData } from '@/lib/world-cup-data';
-import { categoryFor } from '@/components/redesign/categories';
-import { isSoccerJerseyPromo } from '@/lib/soccer-jersey';
+import type { WorldCupFanFestival } from '@/data/world-cup-cities';
+import { TrackedLink } from '@/components/analytics/TrackedLink';
 import { TicketmasterCTA } from '@/components/affiliates/TicketmasterCTA';
 import { SpotHeroCTA } from '@/components/affiliates/SpotHeroCTA';
 import { BookingCTA } from '@/components/affiliates/BookingCTA';
 import { FanaticsCTA } from '@/components/affiliates/FanaticsCTA';
 import { VenueInfoBlock } from '@/components/venue-info-block';
+import { WorldCupGameRows } from './game-rows';
 
 const WC_SURFACE = 'web_world_cup' as const;
 const WC_PLACEMENT = 'world_cup_card';
-
-function ymd(date: string): { weekday: string; mon: string; day: number } {
-  const [y, m, d] = date.split('-').map(Number);
-  const dt = new Date(y, m - 1, d);
-  return {
-    weekday: dt.toLocaleDateString('en-US', { weekday: 'short' }),
-    mon: dt.toLocaleDateString('en-US', { month: 'short' }),
-    day: d,
-  };
-}
 
 function longDate(date: string): string {
   const [y, m, d] = date.split('-').map(Number);
@@ -51,66 +42,30 @@ function routingVenue(team: WorldCupTeamData, fallbackLat: number, fallbackLng: 
   };
 }
 
-function PromoBadge({ type, title, soccer }: { type: 'giveaway' | 'theme' | 'kids' | 'food'; title: string; soccer: boolean }) {
-  const { color, label, Icon } = categoryFor(type);
-  return (
-    <span
-      className={`inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 font-rd text-[11px] font-semibold ${soccer ? 'ring-1 ring-rd-red' : ''}`}
-      style={{ backgroundColor: `${color}1a`, color }}
-    >
-      <Icon size={12} stroke={2.25} className="shrink-0" />
-      <span className="truncate">{title}</span>
-      {soccer && (
-        <span className="ml-0.5 inline-flex items-center gap-0.5 rounded-full bg-rd-red px-1.5 text-[9px] uppercase tracking-[0.06em] text-white">
-          <IconBallFootball size={9} stroke={2.5} /> WC jersey
-        </span>
-      )}
-    </span>
-  );
-}
-
-function GameRow({ ctx, league }: { ctx: WorldCupTeamData['homeGames'][number]; league?: string }) {
-  const { weekday, mon, day } = ymd(ctx.game.date);
-  const opponent = ctx.opponentTeam?.name ?? ctx.game.awayTeamSlug;
-  return (
-    <div className="flex items-start gap-3 py-2.5">
-      <div className="w-11 shrink-0 text-center">
-        <div className="font-rd text-[10px] uppercase tracking-[0.08em] text-rd-ink-faint">{weekday}</div>
-        <div className="rd-numerals text-lg leading-none text-rd-ink">{day}</div>
-        <div className="font-rd text-[9px] uppercase tracking-[0.08em] text-rd-ink-faint">{mon}</div>
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="font-rd text-sm font-semibold text-rd-ink">vs {opponent}</div>
-        {ctx.promos.length > 0 && (
-          <div className="mt-1 flex flex-wrap gap-1.5">
-            {ctx.promos.map((p, i) => (
-              <PromoBadge key={i} type={p.type} title={p.title} soccer={isSoccerJerseyPromo(p, league)} />
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function TeamGames({ team }: { team: WorldCupTeamData }) {
+function TeamGames({ team, citySlug }: { team: WorldCupTeamData; citySlug: string }) {
   return (
     <div>
-      <div className="mb-1 flex items-baseline justify-between gap-3">
+      {/* Stack the relationship line below the team name on mobile (full width,
+          wrapping); inline-right only from sm up, capped so it never bleeds. */}
+      <div className="mb-1 flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
         <Link
           href={`/mlb/${team.ref.slug}`}
           className="font-rd text-base font-bold text-rd-ink transition-colors hover:text-rd-red"
         >
           {team.ref.display}
         </Link>
-        <span className="shrink-0 text-right font-rd text-[11px] text-rd-ink-faint">{team.ref.relationship}</span>
+        <span className="font-rd text-[11px] text-rd-ink-faint [overflow-wrap:anywhere] sm:max-w-[55%] sm:text-right">
+          {team.ref.relationship}
+        </span>
       </div>
-      {team.homeGames.length > 0 ? (
-        <div className="divide-y divide-rd-line border-t border-rd-line">
-          {team.homeGames.map((ctx) => (
-            <GameRow key={`${ctx.game.date}-${ctx.game.doubleheaderGame ?? 0}`} ctx={ctx} league={team.team?.league} />
-          ))}
-        </div>
+      {team.homeGames.length > 0 && team.team ? (
+        <WorldCupGameRows
+          games={team.homeGames}
+          team={team.team}
+          teamSlug={team.ref.slug}
+          teamName={team.team.name}
+          citySlug={citySlug}
+        />
       ) : (
         <p className="border-t border-rd-line pt-2 font-rd text-[13px] text-rd-ink-soft">
           No {team.ref.display} home games during the World Cup window. They are on the road or in the All-Star break.
@@ -138,6 +93,70 @@ function WorldCupRail({ team, venue }: { team: WorldCupTeamData; venue: Venue | 
           <VenueInfoBlock venue={team.venue} league="MLB" variant="light" />
         </div>
       )}
+    </div>
+  );
+}
+
+// Official Fan Festival / fan zones for the city. Server-rendered so crawlers
+// see the festival content; only the official-link click is a client leaf
+// (TrackedLink fires cta_click). No new affiliate CTAs — the official link is
+// a non-commercial FIFA / host-committee URL, not an affiliate partner.
+function WhereToWatch({ festival, citySlug }: { festival: WorldCupFanFestival; citySlug: string }) {
+  const { headline, admission, officialUrl, venues, distributed, highlights, note } = festival;
+  return (
+    <div className="border-t border-rd-line px-5 py-5 md:px-6">
+      <p className="mb-3 font-rd text-[11px] font-semibold uppercase tracking-[0.12em] text-rd-ink-faint">
+        Where to watch
+      </p>
+      <div className="rounded-xl border border-rd-line bg-rd-cream px-4 py-4">
+        <h4 className="font-rd text-sm font-bold text-rd-ink [overflow-wrap:anywhere]">{headline}</h4>
+
+        {venues && venues.length > 0 && (
+          <ul className="mt-2.5 space-y-2">
+            {venues.map((v, i) => (
+              <li key={i} className="flex items-start gap-2">
+                <IconMapPin size={14} stroke={2} className="mt-0.5 shrink-0 text-rd-red" />
+                <div className="min-w-0">
+                  <div className="font-rd text-[13px] font-semibold text-rd-ink [overflow-wrap:anywhere]">{v.name}</div>
+                  <div className="font-rd text-[12px] text-rd-ink-soft [overflow-wrap:anywhere]">{v.dates}</div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {distributed && highlights && highlights.length > 0 && (
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
+            {highlights.map((h, i) => (
+              <span
+                key={i}
+                className="inline-flex max-w-full items-center rounded-full bg-rd-card px-2.5 py-0.5 font-rd text-[11px] text-rd-ink-soft ring-1 ring-rd-line [overflow-wrap:anywhere]"
+              >
+                {h}
+              </span>
+            ))}
+          </div>
+        )}
+
+        <p className="mt-3 font-rd text-[12px] leading-relaxed text-rd-ink-soft [overflow-wrap:anywhere]">
+          <span className="font-semibold text-rd-ink">Admission:</span> {admission}
+        </p>
+        {note && (
+          <p className="mt-1.5 font-rd text-[12px] leading-relaxed text-rd-ink-faint [overflow-wrap:anywhere]">{note}</p>
+        )}
+
+        <TrackedLink
+          href={officialUrl}
+          external
+          ctaId={`world_cup_fanfest:${citySlug}`}
+          ctaLabel={headline}
+          surface="web_world_cup"
+          className="mt-3 inline-flex items-center gap-1 font-rd text-[12px] font-semibold uppercase tracking-[0.08em] text-rd-red transition-colors hover:text-rd-ink"
+        >
+          Official fan festival site
+          <IconExternalLink size={13} stroke={2} className="shrink-0" />
+        </TrackedLink>
+      </div>
     </div>
   );
 }
@@ -173,7 +192,7 @@ export function WorldCupHostCard({ data }: { data: WorldCupCityData }) {
           {hasAnyGames ? (
             <div className="space-y-5">
               {teams.map((team) => (
-                <TeamGames key={team.ref.slug} team={team} />
+                <TeamGames key={team.ref.slug} team={team} citySlug={city.slug} />
               ))}
             </div>
           ) : (
@@ -209,6 +228,9 @@ export function WorldCupHostCard({ data }: { data: WorldCupCityData }) {
 
         <WorldCupRail team={primary} venue={railVenue} />
       </div>
+
+      {/* Where to watch the World Cup itself: official Fan Festival / fan zones. */}
+      <WhereToWatch festival={city.fanFestival} citySlug={city.slug} />
     </article>
   );
 }

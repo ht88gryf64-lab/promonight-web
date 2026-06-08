@@ -36,6 +36,39 @@ export interface WorldCupSpecialEvent {
   note: string;
 }
 
+/** A single official fan-festival / fan-zone venue and its window. */
+export interface WorldCupFanFestVenue {
+  /** Venue name, e.g. "City Hall Plaza, Boston". */
+  name: string;
+  /** Human date window for display, e.g. "June 12 to 27, 2026". */
+  dates: string;
+  /** ISO start/end of the operating window. Present ONLY when the venue has a
+   *  single concrete contiguous window — these drive the SocialEvent JSON-LD.
+   *  Omitted for vague phases (e.g. the LA citywide phase) so they are skipped. */
+  startDate?: string;
+  endDate?: string;
+}
+
+/** Official FIFA Fan Festival / host-committee fan zone(s) for a host city.
+ *  Three shapes: single venue, phased/dual (NY/NJ, LA), or distributed
+ *  (SF Bay Area, Seattle). Source of truth is each entry's officialUrl. */
+export interface WorldCupFanFestival {
+  /** Festival headline, e.g. "FIFA Fan Festival at City Hall Plaza". */
+  headline: string;
+  /** Admission summary, e.g. "Free, advance registration required". */
+  admission: string;
+  /** Official host-committee URL — re-verify close to kickoff. */
+  officialUrl: string;
+  /** One venue (most cities) or two (phased/dual: NY/NJ, LA). */
+  venues?: WorldCupFanFestVenue[];
+  /** True for region-wide programs with no single central festival. */
+  distributed?: boolean;
+  /** A few highlight locations, for distributed festivals. */
+  highlights?: string[];
+  /** Optional clarifying note (cancellation, ticketed concerts, etc.). */
+  note?: string;
+}
+
 export interface WorldCupCity {
   /** Short stable key, used for React keys and in-page anchors. */
   slug: string;
@@ -66,6 +99,8 @@ export interface WorldCupCity {
   secondaryTeam?: WorldCupTeamRef;
   /** Optional non-MLB special event row (Philadelphia: the MLB All-Star Game). */
   specialEvent?: WorldCupSpecialEvent;
+  /** Official Fan Festival / fan zones for the "Where to watch" block. */
+  fanFestival: WorldCupFanFestival;
 }
 
 export const WORLD_CUP_WINDOW_START = '2026-06-11';
@@ -103,6 +138,26 @@ export const WORLD_CUP_CITIES: WorldCupCity[] = [
       ballpark: 'Citi Field',
       relationship: 'About 15 miles from MetLife Stadium',
     },
+    fanFestival: {
+      headline: 'Two official fan zones (no single central festival)',
+      admission: 'Free',
+      officialUrl: 'https://nynjfwc26.com/fan-zones/',
+      venues: [
+        {
+          name: 'Fan Zone Queens, USTA Billie Jean King National Tennis Center',
+          dates: 'June 17 to 28, 2026',
+          startDate: '2026-06-17',
+          endDate: '2026-06-28',
+        },
+        {
+          name: 'Fan Village at Rockefeller Center',
+          dates: 'July 4 to 19, 2026',
+          startDate: '2026-07-04',
+          endDate: '2026-07-19',
+        },
+      ],
+      note: 'The original Liberty State Park festival was cancelled.',
+    },
   },
   {
     slug: 'dallas',
@@ -123,6 +178,19 @@ export const WORLD_CUP_CITIES: WorldCupCity[] = [
       ballpark: 'Globe Life Field',
       relationship: 'Same Arlington complex as AT&T Stadium, a short walk away',
     },
+    fanFestival: {
+      headline: 'FIFA Fan Festival at Fair Park',
+      admission: 'Free, advance registration; paid GA+ and Legend upgrades',
+      officialUrl: 'https://www.dallasfwc26.com/our-venues/fan-festival/',
+      venues: [
+        {
+          name: 'Fair Park, Dallas',
+          dates: 'June 11 to July 19, 2026 (match days)',
+          startDate: '2026-06-11',
+          endDate: '2026-07-19',
+        },
+      ],
+    },
   },
   {
     slug: 'atlanta',
@@ -141,6 +209,19 @@ export const WORLD_CUP_CITIES: WorldCupCity[] = [
       display: 'Braves',
       ballpark: 'Truist Park',
       relationship: 'About 13 miles from Mercedes-Benz Stadium',
+    },
+    fanFestival: {
+      headline: 'FIFA Fan Festival at Centennial Olympic Park',
+      admission: 'Free, advance ticket required',
+      officialUrl: 'https://atlantafwc26.com/fan-fest/',
+      venues: [
+        {
+          name: 'Centennial Olympic Park',
+          dates: '20 days (match days plus the day before each match)',
+          startDate: '2026-06-14',
+          endDate: '2026-07-15',
+        },
+      ],
     },
   },
   {
@@ -162,6 +243,19 @@ export const WORLD_CUP_CITIES: WorldCupCity[] = [
       ballpark: 'loanDepot park',
       relationship: 'About 15 miles from Hard Rock Stadium',
     },
+    fanFestival: {
+      headline: 'FIFA Fan Festival at Bayfront Park',
+      admission: 'Free, walk-in, no registration',
+      officialUrl: 'https://miamifwc26.com/fan-festival/',
+      venues: [
+        {
+          name: 'Bayfront Park, Miami',
+          dates: 'June 13 to July 5, 2026',
+          startDate: '2026-06-13',
+          endDate: '2026-07-05',
+        },
+      ],
+    },
   },
   {
     slug: 'los-angeles',
@@ -180,6 +274,23 @@ export const WORLD_CUP_CITIES: WorldCupCity[] = [
       display: 'Dodgers',
       ballpark: 'Dodger Stadium',
       relationship: 'About 12 miles from SoFi Stadium',
+    },
+    fanFestival: {
+      headline: 'FIFA Fan Festival at the LA Memorial Coliseum, then citywide fan zones',
+      admission: 'Free',
+      officialUrl: 'https://losangelesfwc26.com/fifa-fan-festival-los-angeles/',
+      venues: [
+        {
+          name: 'LA Memorial Coliseum',
+          dates: 'June 11 to 15, 2026 (opening week)',
+          startDate: '2026-06-11',
+          endDate: '2026-06-15',
+        },
+        {
+          name: 'Citywide fan zones',
+          dates: 'Rest of the tournament',
+        },
+      ],
     },
   },
   {
@@ -200,6 +311,19 @@ export const WORLD_CUP_CITIES: WorldCupCity[] = [
       ballpark: 'Fenway Park',
       relationship: 'About 25 miles north of Gillette Stadium in Foxborough',
     },
+    fanFestival: {
+      headline: 'FIFA Fan Festival at City Hall Plaza',
+      admission: 'Free, advance registration required',
+      officialUrl: 'https://bostonfwc26.com/fifa-fan-festival/',
+      venues: [
+        {
+          name: 'City Hall Plaza, Boston',
+          dates: 'June 12 to 27, 2026',
+          startDate: '2026-06-12',
+          endDate: '2026-06-27',
+        },
+      ],
+    },
   },
   {
     slug: 'kansas-city',
@@ -218,6 +342,19 @@ export const WORLD_CUP_CITIES: WorldCupCity[] = [
       display: 'Royals',
       ballpark: 'Kauffman Stadium',
       relationship: 'Shares the Truman Sports Complex with Arrowhead Stadium, right next door',
+    },
+    fanFestival: {
+      headline: 'FIFA Fan Festival at the National WWI Museum and Memorial',
+      admission: 'Free, advance digital pass required',
+      officialUrl: 'https://kansascityfwc26.com/fifa-fan-festival/',
+      venues: [
+        {
+          name: 'National WWI Museum and Memorial',
+          dates: '18 days (Jun 11 to 14, 16, 19 to 21, 24 to 27; Jul 3 to 5, 9 to 11)',
+          startDate: '2026-06-11',
+          endDate: '2026-07-11',
+        },
+      ],
     },
   },
   {
@@ -238,6 +375,19 @@ export const WORLD_CUP_CITIES: WorldCupCity[] = [
       ballpark: 'Daikin Park',
       relationship: 'About 7 miles from NRG Stadium',
     },
+    fanFestival: {
+      headline: 'FIFA Fan Festival in EaDo (East Downtown)',
+      admission: 'Free, walk-in, first-come',
+      officialUrl: 'https://www.fwc26houston.com/fifafanfestivalhou',
+      venues: [
+        {
+          name: 'EaDo, East Downtown Houston',
+          dates: 'June 11 to July 19, 2026 (34 days)',
+          startDate: '2026-06-11',
+          endDate: '2026-07-19',
+        },
+      ],
+    },
   },
   {
     slug: 'seattle',
@@ -256,6 +406,19 @@ export const WORLD_CUP_CITIES: WorldCupCity[] = [
       display: 'Mariners',
       ballpark: 'T-Mobile Park',
       relationship: 'Next door to Lumen Field in the SoDo district',
+    },
+    fanFestival: {
+      headline: 'Distributed fan zones plus the Seattle Unity Loop celebrations',
+      admission: 'Free',
+      officialUrl: 'https://www.seattlefwc26.org/fan-zones',
+      distributed: true,
+      highlights: [
+        'Seattle Center',
+        'Pacific Place / Seattle Soccer House',
+        'Waterfront Park / Pier 62',
+        'Victory Hall, SODO',
+      ],
+      note: 'Nine official Washington State fan zones plus four free city-center venues on the Unity Loop.',
     },
   },
   {
@@ -283,6 +446,20 @@ export const WORLD_CUP_CITIES: WorldCupCity[] = [
       venue: 'Citizens Bank Park',
       note: 'Ten days after the World Cup Round of 16 at the Linc, the city hosts the MLB All-Star Game next door.',
     },
+    fanFestival: {
+      headline: 'FIFA Fan Festival at Lemon Hill, Fairmount Park',
+      admission: 'Free general admission',
+      officialUrl: 'https://phillyfwc26.com/fifa-fan-fest',
+      venues: [
+        {
+          name: 'Lemon Hill, Fairmount Park',
+          dates: 'June 11 to July 19, 2026 (39 days)',
+          startDate: '2026-06-11',
+          endDate: '2026-07-19',
+        },
+      ],
+      note: 'Non-match-day concerts are separately ticketed.',
+    },
   },
   {
     slug: 'san-francisco-bay-area',
@@ -301,6 +478,19 @@ export const WORLD_CUP_CITIES: WorldCupCity[] = [
       display: 'Giants',
       ballpark: 'Oracle Park',
       relationship: "About 45 miles north of Levi's Stadium, in San Francisco",
+    },
+    fanFestival: {
+      headline: 'BAHC Live! Fan Zones, 30+ venues region-wide',
+      admission: 'Free',
+      officialUrl: 'https://www.sfbayareafwc26.com/bay-area-events',
+      distributed: true,
+      highlights: [
+        'Mission Rock / China Basin Park (Giants)',
+        'Thrive City at Chase Center (Warriors)',
+        'PIER 39',
+        'San Pedro Square, San Jose',
+      ],
+      note: 'No single central festival; official fan zones across San Francisco, Silicon Valley, and the East Bay.',
     },
   },
 ];
