@@ -265,6 +265,12 @@ export type FollowPageViewProperties = {
 export type TeamsStarredProperties = {
   surface: CaptureSurface;
   team_count: number;
+  // True when the starred team is one of the visitor's geo "near you" teams,
+  // i.e. membership in the server-computed near set, so the lift from geo
+  // ordering is measurable. False when there is no geo signal or the team is not
+  // near. Membership-based, so it stays true even if the team happened to be
+  // starred via search rather than from the rendered "Teams near you" group.
+  near_you: boolean;
 };
 
 export type NewsletterSignupProperties = {
