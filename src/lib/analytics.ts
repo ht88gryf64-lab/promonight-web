@@ -52,7 +52,8 @@ export type AnalyticsEvent =
   | 'scored_promo_card_tap'
   | 'team_ranking_row_tap'
   | 'load_more_tap'
-  | 'league_filter_change';
+  | 'league_filter_change'
+  | 'resale_click';
 
 // `TONIGHT_AND_TOMORROW` is retained for backwards-compatibility with dashboards
 // that already segment on it; the bucketed hero (Phase 1.5) emits TONIGHT,
@@ -436,6 +437,20 @@ export type LoadMoreTapProperties = {
   current_count: number;
 };
 
+// Outbound resale-marketplace click (eBay) on a completed promo. Distinct from
+// affiliate_click: that event covers forward-looking partner CTAs (tickets,
+// merch, parking) while resale_click covers the post-event secondary market,
+// so dashboards can split the two revenue motions without filtering on partner.
+export type ResaleClickProperties = {
+  surface: AnalyticsSurface;
+  partner: 'ebay';
+  placement: 'bobbleheads_hub' | 'team_page';
+  promo_id: string;
+  team_slug: string;
+  sport?: Sport;
+  destination_url: string;
+};
+
 export type EventPropertiesMap = {
   page_view: PageViewProperties;
   cta_click: CtaClickProperties;
@@ -473,6 +488,7 @@ export type EventPropertiesMap = {
   team_ranking_row_tap: TeamRankingRowTapProperties;
   load_more_tap: LoadMoreTapProperties;
   league_filter_change: LeagueFilterChangeProperties;
+  resale_click: ResaleClickProperties;
 };
 
 // Redesigned collection pages (gate-on /promos/*): the league chips are newly

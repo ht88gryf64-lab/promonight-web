@@ -180,6 +180,7 @@ export function RedesignTeamPage({
                 promos={promos}
                 teamSlug={team.id}
                 teamName={displayName}
+                teamNickname={team.name}
                 sport={team.sportSlug}
                 primaryColor={team.primaryColor}
                 venueName={venue?.name ?? null}

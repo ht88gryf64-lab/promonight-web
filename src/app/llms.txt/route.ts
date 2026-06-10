@@ -7,6 +7,7 @@ PromoNight is a mobile app and website that tracks every promotional event -- gi
 
 - Team promo schedules: Complete lists of upcoming promotional events for each of 167 teams
 - Giveaway calendars: Bobblehead nights, jersey giveaways, and collectible item schedules
+- Completed giveaways: Past bobblehead promos stay listed on team pages and the bobblehead calendar with current eBay resale availability
 - Theme nights: Star Wars nights, pride nights, faith nights, and other themed game events
 - Food deals: Dollar hot dog nights, pregame happy hours, and recurring concession specials
 - Kids events: Family days, kids run the bases, and youth-focused promotions
