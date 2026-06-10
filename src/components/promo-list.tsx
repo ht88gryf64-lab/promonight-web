@@ -1,8 +1,11 @@
+import type { ReactNode } from 'react';
 import { PromoBadge } from './promo-badge';
 import { AppPushPitch } from './app-push-pitch';
 import { ShareButton, formatShareDate, type ShareItem } from './share';
+import { EbayResaleLink } from './affiliates/EbayResaleLink';
 import { RedesignPromoRow } from '@/components/redesign/RedesignPromoRow';
 import { LazyPromoRows } from '@/components/redesign/LazyPromoRows';
+import { isBobbleheadGiveaway, isEbayResaleActive } from '@/lib/ebay';
 import type { Promo, PromoType } from '@/lib/types';
 
 // Fields shared by every promo row's ShareItem — the per-promo bits (icon,
@@ -35,10 +38,12 @@ function PromoRow({
   promo,
   share,
   completed = false,
+  resaleSlot,
 }: {
   promo: Promo;
   share: PromoShareContext;
   completed?: boolean;
+  resaleSlot?: ReactNode;
 }) {
   const { day, weekday, month } = formatPromoDate(promo.date);
   const typeColor = TYPE_COLORS[promo.type];
@@ -108,6 +113,7 @@ function PromoRow({
             vs {promo.opponent}
           </div>
         )}
+        {resaleSlot && <div>{resaleSlot}</div>}
       </div>
     </div>
   );
@@ -116,10 +122,13 @@ function PromoRow({
 const UPCOMING_VISIBLE = 10;
 const COMPLETED_VISIBLE = 5;
 
+const RESALE_LIFT_VISIBLE = 3;
+
 export function PromoList({
   promos,
   teamSlug,
   teamName,
+  teamNickname,
   sport,
   primaryColor,
   venueName,
@@ -129,6 +138,9 @@ export function PromoList({
   promos: Promo[];
   teamSlug: string;
   teamName: string;
+  /** Short brand name (Team.name, e.g. "Yankees") for the eBay resale search
+   *  query. Falls back to teamName, which over-specifies the query slightly. */
+  teamNickname?: string;
   sport: string;
   primaryColor?: string;
   venueName?: string | null;
@@ -153,6 +165,29 @@ export function PromoList({
   const upcomingHidden = upcoming.slice(UPCOMING_VISIBLE);
   const pastVisible = past.slice(0, COMPLETED_VISIBLE);
   const pastHidden = past.slice(COMPLETED_VISIBLE);
+
+  // Completed bobblehead giveaways are exempt from the light variant's full
+  // collapse: up to 3 (most recent) render above the expander carrying the
+  // eBay resale CTA, which only earns when its row is actually visible. The
+  // lift is gated on the campid being set so an unset env var leaves the page
+  // exactly as it was. Everything else stays behind the expander unchanged.
+  const pastResale = isEbayResaleActive()
+    ? past.filter(isBobbleheadGiveaway).slice(0, RESALE_LIFT_VISIBLE)
+    : [];
+  const pastCollapsed =
+    pastResale.length > 0 ? past.filter((p) => !pastResale.includes(p)) : past;
+
+  const resaleSlotFor = (promo: Promo, slotVariant: 'light' | 'dark') => (
+    <EbayResaleLink
+      promo={promo}
+      teamSlug={teamSlug}
+      teamNickname={teamNickname ?? teamName}
+      sport={sport}
+      placement="team_page"
+      surface="web_team_page"
+      variant={slotVariant}
+    />
+  );
 
   if (variant === 'light') {
     return (
@@ -214,17 +249,36 @@ export function PromoList({
                 </h3>
               </div>
 
+              {/* Lifted resale rows are the bounded exception to the collapse
+               *  below: at most RESALE_LIFT_VISIBLE rows, so the 1MB SSR-HTML
+               *  concern the collapse exists for stays handled. */}
+              {pastResale.length > 0 && (
+                <div className="mb-3 space-y-3">
+                  {pastResale.map((promo, i) => (
+                    <RedesignPromoRow
+                      key={`rb-${i}`}
+                      promo={promo}
+                      share={share}
+                      completed
+                      resaleSlot={resaleSlotFor(promo, 'light')}
+                    />
+                  ))}
+                </div>
+              )}
+
               {/* Completed promos are fully collapsed behind the expander. The
                *  count lives in the (server-rendered) button label so the
                *  data-completeness signal is in the HTML; the rows themselves
                *  lazy-mount on click and stay out of the SSR HTML / page weight. */}
-              <LazyPromoRows
-                promos={past}
-                share={share}
-                completed
-                showLabel={`Show ${past.length} completed ${past.length === 1 ? 'promo' : 'promos'}`}
-                hideLabel={`Hide completed ${past.length === 1 ? 'promo' : 'promos'}`}
-              />
+              {pastCollapsed.length > 0 && (
+                <LazyPromoRows
+                  promos={pastCollapsed}
+                  share={share}
+                  completed
+                  showLabel={`Show ${pastCollapsed.length} ${pastResale.length > 0 ? 'more ' : ''}completed ${pastCollapsed.length === 1 ? 'promo' : 'promos'}`}
+                  hideLabel={`Hide completed ${pastCollapsed.length === 1 ? 'promo' : 'promos'}`}
+                />
+              )}
             </div>
           )}
 
@@ -304,9 +358,17 @@ export function PromoList({
               </p>
             </div>
 
+            {/* No lift here (rollback-only path): recent completed rows are
+             *  already visible, so qualifying rows just carry the CTA in place. */}
             <div className="space-y-3">
               {pastVisible.map((promo, i) => (
-                <PromoRow key={`rp-${i}`} promo={promo} share={share} completed />
+                <PromoRow
+                  key={`rp-${i}`}
+                  promo={promo}
+                  share={share}
+                  completed
+                  resaleSlot={resaleSlotFor(promo, 'dark')}
+                />
               ))}
             </div>
 
@@ -319,7 +381,13 @@ export function PromoList({
                 </summary>
                 <div className="mt-4 space-y-3">
                   {pastHidden.map((promo, i) => (
-                    <PromoRow key={`ph-${i}`} promo={promo} share={share} completed />
+                    <PromoRow
+                      key={`ph-${i}`}
+                      promo={promo}
+                      share={share}
+                      completed
+                      resaleSlot={resaleSlotFor(promo, 'dark')}
+                    />
                   ))}
                 </div>
               </details>

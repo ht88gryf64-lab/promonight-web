@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { IconFlame } from '@tabler/icons-react';
 import { ShareButton, formatShareDate, type ShareItem } from '@/components/share';
 import { categoryFor } from './categories';
@@ -28,10 +29,15 @@ export function RedesignPromoRow({
   promo,
   share,
   completed = false,
+  resaleSlot,
 }: {
   promo: Promo;
   share: PromoRowShare;
   completed?: boolean;
+  /** Optional trailing CTA (e.g. the eBay resale link on lifted completed
+   *  bobblehead rows). Rendered after the opponent line; undefined leaves the
+   *  row byte-identical to before the slot existed. */
+  resaleSlot?: ReactNode;
 }) {
   const { day, weekday, month } = formatPromoDate(promo.date);
   const { color, label, Icon } = categoryFor(promo.type);
@@ -101,6 +107,7 @@ export function RedesignPromoRow({
             vs {promo.opponent}
           </div>
         )}
+        {resaleSlot && <div>{resaleSlot}</div>}
       </div>
     </div>
   );
