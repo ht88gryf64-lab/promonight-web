@@ -337,3 +337,34 @@ export async function unsubscribeByManageToken(token: string): Promise<{ found: 
   });
   return { found: true };
 }
+
+// All confirmed subscribers, for the weekly send. Pending and unsubscribed are
+// excluded by the status filter, so the send never reaches them. Single read:
+// fine at the free-tier scale (~100/day); add pagination if the list ever grows
+// past a few thousand.
+export async function getConfirmedSubscribers(): Promise<Subscriber[]> {
+  const snap = await db
+    .collection(SUBSCRIBERS)
+    .where('status', '==', 'confirmed')
+    .get();
+  return snap.docs.map(mapSubscriberDoc);
+}
+
+// Atomically claim the weekly send for a window (keyed by its start date) so a
+// second execute in the same window is a no-op rather than a duplicate blast.
+// Returns true if THIS call won the claim (proceed to send), false if the window
+// was already executed. `force` overrides for a deliberate operator re-run. The
+// read-before-write transaction avoids the check-then-set race.
+export async function claimDigestRun(windowStart: string, force = false): Promise<boolean> {
+  const ref = db.collection('digestRuns').doc(windowStart);
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (snap.exists && snap.data()?.executedAt && !force) return false;
+    tx.set(
+      ref,
+      { executedAt: FieldValue.serverTimestamp(), window: windowStart },
+      { merge: true },
+    );
+    return true;
+  });
+}

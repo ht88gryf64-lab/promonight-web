@@ -1,4 +1,5 @@
 import 'server-only';
+import type { DigestPromo, DigestCollection } from './digest';
 
 // Transactional email via the Resend REST API. Intentionally dependency-free
 // (a single POST), so there is no SDK to add. RESEND_API_KEY is piped to Vercel
@@ -14,6 +15,13 @@ import 'server-only';
 // not invent a domain here.
 export const SENDER_FROM = 'PromoNight <REPLACE_WITH_VERIFIED_SENDER@example.com>';
 // =============================================================================
+
+// True once SENDER_FROM has been changed off the placeholder. The cron execute
+// path refuses to send until this is true so we never attempt a live send from
+// the unverified placeholder address.
+export function isSenderConfigured(): boolean {
+  return !SENDER_FROM.includes('REPLACE') && !SENDER_FROM.includes('example.com');
+}
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.getpromonight.com';
 const RESEND_ENDPOINT = 'https://api.resend.com/emails';
@@ -154,5 +162,177 @@ export async function sendConfirmationEmail(sub: {
       'List-Unsubscribe': `<${unsub}>`,
       'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
     },
+  });
+}
+
+// ── Weekly digest emails ────────────────────────────────────────────────────
+// Both the personalized and generic digests are bulk sends, so each one carries
+// the RFC 8058 one-click List-Unsubscribe headers with the RECIPIENT'S OWN
+// manage token (Gmail/Yahoo bulk-sender rules require this). The visible
+// unsubscribe + manage links use the same token, pointing at the safe
+// preferences flow. Both digests point their footer link at the preferences
+// page (preferencesUrl), framed "Manage your teams" (personalized) or "Star your
+// teams to personalize" (generic) per the settled architecture.
+
+function listUnsubHeaders(manageToken: string): Record<string, string> {
+  const unsub = unsubscribeUrl(manageToken);
+  return {
+    'List-Unsubscribe': `<${unsub}>`,
+    'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+  };
+}
+
+function formatDigestDate(ymd: string): string {
+  const [y, m, d] = ymd.split('-').map(Number);
+  // Format in UTC from the bare Y-M-D so the weekday/label never shifts by tz.
+  const date = new Date(Date.UTC(y, m - 1, d));
+  return date.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
+function promoRowHtml(p: DigestPromo): string {
+  const teamUrl = `${SITE_URL}/${p.sportSlug}/${p.teamId}`;
+  const meta = [p.opponent ? `vs ${esc(p.opponent)}` : '', p.time ? esc(p.time) : '']
+    .filter(Boolean)
+    .join(' &middot; ');
+  return `
+          <tr><td style="padding:12px 0;border-bottom:1px solid #efe9dd;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+              <td width="64" valign="top" style="font-size:12px;color:#8a8276;line-height:1.35;">${esc(formatDigestDate(p.date))}</td>
+              <td valign="top">
+                <a href="${teamUrl}" style="color:#1d1714;text-decoration:none;font-weight:600;font-size:15px;">${esc(p.icon)} ${esc(p.title)}</a>
+                <div style="font-size:12px;color:#8a8276;margin-top:3px;">${esc(p.leagueIcon)} ${esc(p.teamName)}${meta ? ` &middot; ${meta}` : ''}${p.highlight ? ' &middot; <span style="color:#d31145;font-weight:600;">Hot</span>' : ''}</div>
+              </td>
+            </tr></table>
+          </td></tr>`;
+}
+
+function digestShellHtml(opts: {
+  heading: string;
+  sub: string;
+  bodyHtml: string;
+  footerHtml: string;
+}): string {
+  return `<!doctype html>
+<html lang="en">
+<body style="margin:0;padding:0;background:#f4f1ea;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f1ea;">
+    <tr><td align="center" style="padding:32px 16px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e6e1d6;">
+        <tr><td style="background:#1d1714;padding:24px 32px;">
+          <span style="font-size:20px;font-weight:800;letter-spacing:-0.5px;color:#ffffff;">PROMO<span style="color:#ff5a4d;">NIGHT</span></span>
+        </td></tr>
+        <tr><td style="padding:28px 32px 6px;">
+          <h1 style="margin:0 0 4px;font-size:20px;line-height:1.25;color:#1d1714;">${esc(opts.heading)}</h1>
+          <p style="margin:0;font-size:14px;color:#6b6459;">${esc(opts.sub)}</p>
+        </td></tr>
+        <tr><td style="padding:6px 32px 24px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${opts.bodyHtml}</table>
+        </td></tr>
+        <tr><td style="padding:20px 32px;border-top:1px solid #e6e1d6;">${opts.footerHtml}</td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+function personalizedFooterHtml(manageToken: string): string {
+  const manage = preferencesUrl(manageToken);
+  const unsub = `${manage}&unsub=1`;
+  return `<p style="margin:0;font-size:12px;line-height:1.6;color:#8a8276;">You are getting this because you follow these teams on PromoNight. <a href="${manage}" style="color:#8a8276;">Manage your teams</a> &middot; <a href="${unsub}" style="color:#8a8276;">Unsubscribe</a></p>`;
+}
+
+function genericFooterHtml(manageToken: string): string {
+  const manage = preferencesUrl(manageToken);
+  const unsub = `${manage}&unsub=1`;
+  return `<p style="margin:0;font-size:12px;line-height:1.6;color:#8a8276;"><a href="${manage}" style="color:#d31145;font-weight:600;">Star your teams to personalize</a> this email. &middot; <a href="${unsub}" style="color:#8a8276;">Unsubscribe</a></p>`;
+}
+
+export async function sendPersonalizedDigest(args: {
+  email: string;
+  manageToken: string;
+  promos: DigestPromo[];
+  // True pre-cap count, so the heading is honest and an overflow note shows
+  // when the list was truncated rather than silently dropping later promos.
+  total: number;
+}): Promise<SendResult> {
+  const overflow = Math.max(0, args.total - args.promos.length);
+  const overflowHtml =
+    overflow > 0
+      ? `<tr><td style="padding:14px 0 0;font-size:13px;color:#6b6459;">and ${overflow} more this week. <a href="${SITE_URL}" style="color:#d31145;text-decoration:none;">See all on PromoNight</a></td></tr>`
+      : '';
+  const html = digestShellHtml({
+    heading: 'Your teams this week',
+    sub: `${args.total} promo${args.total === 1 ? '' : 's'} coming up for the teams you follow.`,
+    bodyHtml: args.promos.map(promoRowHtml).join('') + overflowHtml,
+    footerHtml: personalizedFooterHtml(args.manageToken),
+  });
+  const manage = preferencesUrl(args.manageToken);
+  const text = [
+    'Your teams this week on PromoNight',
+    '',
+    ...args.promos.map(
+      (p) => `- ${formatDigestDate(p.date)}: ${p.title} (${p.teamName}) ${SITE_URL}/${p.sportSlug}/${p.teamId}`,
+    ),
+    ...(overflow > 0 ? [`...and ${overflow} more this week: ${SITE_URL}`] : []),
+    '',
+    `Manage your teams: ${manage}`,
+    `Unsubscribe: ${manage}&unsub=1`,
+  ].join('\n');
+
+  return sendEmail({
+    to: args.email,
+    subject: "Your teams' promos this week on PromoNight",
+    html,
+    text,
+    headers: listUnsubHeaders(args.manageToken),
+  });
+}
+
+export async function sendGenericDigest(args: {
+  email: string;
+  manageToken: string;
+  featured: DigestPromo[];
+  collections: DigestCollection[];
+}): Promise<SendResult> {
+  const collectionsHtml =
+    `<tr><td style="padding:16px 0 0;">` +
+    args.collections
+      .map(
+        (c) =>
+          `<a href="${SITE_URL}${c.href}" style="display:inline-block;margin:0 8px 8px 0;padding:7px 12px;border:1px solid #e6e1d6;border-radius:999px;color:#1d1714;text-decoration:none;font-size:13px;">${esc(c.label)}</a>`,
+      )
+      .join('') +
+    `</td></tr>`;
+  const html = digestShellHtml({
+    heading: "This week's hottest promos",
+    sub: 'The biggest giveaways, theme nights, and food deals across the leagues this week.',
+    bodyHtml: args.featured.map(promoRowHtml).join('') + collectionsHtml,
+    footerHtml: genericFooterHtml(args.manageToken),
+  });
+  const manage = preferencesUrl(args.manageToken);
+  const text = [
+    "This week's hottest promos on PromoNight",
+    '',
+    ...args.featured.map((p) => `- ${formatDigestDate(p.date)}: ${p.title} (${p.teamName})`),
+    '',
+    'Browse:',
+    ...args.collections.map((c) => `- ${c.label}: ${SITE_URL}${c.href}`),
+    '',
+    `Star your teams to personalize: ${manage}`,
+    `Unsubscribe: ${manage}&unsub=1`,
+  ].join('\n');
+
+  return sendEmail({
+    to: args.email,
+    subject: "This week's hottest pro sports promos",
+    html,
+    text,
+    headers: listUnsubHeaders(args.manageToken),
   });
 }
