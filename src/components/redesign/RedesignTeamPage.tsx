@@ -26,6 +26,7 @@ import { ScheduleReleaseVideoCard } from '@/components/ScheduleReleaseVideoCard'
 import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { AD_SLOTS } from '@/lib/ads/slots';
+import { FollowCTA } from '@/components/follow/FollowCTA';
 
 export interface RedesignTeamPageProps {
   team: Team;
@@ -235,6 +236,12 @@ export function RedesignTeamPage({
             </div>
           </main>
         </div>
+      </div>
+
+      {/* Stronger email-capture CTA on the highest-intent surface: pre-stars
+          this team and tags the funnel web_team_page. */}
+      <div className="mx-auto max-w-6xl px-6 pb-8">
+        <FollowCTA surface="web_team_page" team={team} />
       </div>
 
       {/* Fine print — minimal treatment in the cream flow (reads fine at #444). */}

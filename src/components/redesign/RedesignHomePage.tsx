@@ -17,6 +17,7 @@ import type { HeroBuckets } from '@/components/tonight-strip';
 import { HomepageJsonLd } from '@/components/homepage-json-ld';
 import { TeamGrid } from '@/components/team-grid';
 import { AppDownloadButtons } from '@/components/app-download-buttons';
+import { FollowCTA } from '@/components/follow/FollowCTA';
 import { IndieDeveloperBlock } from '@/components/indie-developer-block';
 import { HomepageFAQ } from '@/components/homepage-faq';
 import { TrackedTapLink } from '@/components/analytics/TrackedTapLink';
@@ -349,6 +350,13 @@ export function RedesignHomePage({
             surface="homepage"
             variant="light"
           />
+        </div>
+      </section>
+
+      {/* EMAIL CAPTURE: primary web conversion; tags the funnel web_homepage. */}
+      <section className="px-6 pb-4">
+        <div className="mx-auto max-w-3xl">
+          <FollowCTA surface="web_homepage" />
         </div>
       </section>
 
