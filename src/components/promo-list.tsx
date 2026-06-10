@@ -177,17 +177,21 @@ export function PromoList({
   const pastCollapsed =
     pastResale.length > 0 ? past.filter((p) => !pastResale.includes(p)) : past;
 
-  const resaleSlotFor = (promo: Promo, slotVariant: 'light' | 'dark') => (
-    <EbayResaleLink
-      promo={promo}
-      teamSlug={teamSlug}
-      teamNickname={teamNickname ?? teamName}
-      sport={sport}
-      placement="team_page"
-      surface="web_team_page"
-      variant={slotVariant}
-    />
-  );
+  // Resolves to undefined (not a null-rendering element) for non-qualifying
+  // rows, so the rows' `resaleSlot &&` wrapper never emits an empty div and
+  // an unset campid leaves the rendered HTML identical to before.
+  const resaleSlotFor = (promo: Promo, slotVariant: 'light' | 'dark') =>
+    isEbayResaleActive() && isBobbleheadGiveaway(promo) ? (
+      <EbayResaleLink
+        promo={promo}
+        teamSlug={teamSlug}
+        teamNickname={teamNickname ?? teamName}
+        sport={sport}
+        placement="team_page"
+        surface="web_team_page"
+        variant={slotVariant}
+      />
+    ) : undefined;
 
   if (variant === 'light') {
     return (
