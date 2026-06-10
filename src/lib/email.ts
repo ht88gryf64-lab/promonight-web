@@ -7,14 +7,14 @@ import type { DigestPromo, DigestCollection } from './digest';
 // throwing, which keeps local dev and the build green and lets the Phase B
 // verification exercise the token endpoints directly.
 
-// =============================================================================
-// TODO(user): SET THIS BEFORE SHIPPING PHASE B LIVE.
-// Replace with your verified Resend sending domain + from address, e.g.
-// 'PromoNight <promos@mail.getpromonight.com>'. Resend rejects sends from an
-// unverified domain, so confirmation emails will fail until this is real. Do
-// not invent a domain here.
-export const SENDER_FROM = 'PromoNight <REPLACE_WITH_VERIFIED_SENDER@example.com>';
-// =============================================================================
+// Verified Resend sending domain + from address.
+export const SENDER_FROM = 'PromoNight <promos@mail.getpromonight.com>';
+
+// CAN-SPAM requires a visible physical postal address in every commercial email.
+// Single source of truth, rendered in the HTML and text footers of all three
+// emails (confirmation, personalized digest, generic digest).
+export const SENDER_POSTAL_ADDRESS =
+  'Kovalik Digital LLC, 1250 Wayzata Blvd E, Unit #1856, Wayzata, MN 55391';
 
 // True once SENDER_FROM has been changed off the placeholder. The cron execute
 // path refuses to send until this is true so we never attempt a live send from
@@ -94,6 +94,11 @@ function esc(s: string): string {
     .replace(/"/g, '&quot;');
 }
 
+// CAN-SPAM postal-address line, shared by every email footer (HTML side).
+function postalHtml(): string {
+  return `<div style="margin-top:10px;font-size:11px;line-height:1.5;color:#a39b8d;">${esc(SENDER_POSTAL_ADDRESS)}</div>`;
+}
+
 function confirmationHtml(email: string, confirm: string, manageUnsub: string): string {
   return `<!doctype html>
 <html lang="en">
@@ -125,6 +130,7 @@ function confirmationHtml(email: string, confirm: string, manageUnsub: string): 
             You received this because someone entered this address on getpromonight.com. If that
             was not you, ignore this email or <a href="${manageUnsub}" style="color:#8a8276;">unsubscribe</a>.
           </p>
+          ${postalHtml()}
         </td></tr>
       </table>
     </td></tr>
@@ -150,6 +156,8 @@ export async function sendConfirmationEmail(sub: {
     '',
     'If you did not sign up, ignore this email or unsubscribe:',
     manageUnsub,
+    '',
+    SENDER_POSTAL_ADDRESS,
   ].join('\n');
 
   return sendEmail({
@@ -244,13 +252,13 @@ function digestShellHtml(opts: {
 function personalizedFooterHtml(manageToken: string): string {
   const manage = preferencesUrl(manageToken);
   const unsub = `${manage}&unsub=1`;
-  return `<p style="margin:0;font-size:12px;line-height:1.6;color:#8a8276;">You are getting this because you follow these teams on PromoNight. <a href="${manage}" style="color:#8a8276;">Manage your teams</a> &middot; <a href="${unsub}" style="color:#8a8276;">Unsubscribe</a></p>`;
+  return `<p style="margin:0;font-size:12px;line-height:1.6;color:#8a8276;">You are getting this because you follow these teams on PromoNight. <a href="${manage}" style="color:#8a8276;">Manage your teams</a> &middot; <a href="${unsub}" style="color:#8a8276;">Unsubscribe</a></p>${postalHtml()}`;
 }
 
 function genericFooterHtml(manageToken: string): string {
   const manage = preferencesUrl(manageToken);
   const unsub = `${manage}&unsub=1`;
-  return `<p style="margin:0;font-size:12px;line-height:1.6;color:#8a8276;"><a href="${manage}" style="color:#d31145;font-weight:600;">Star your teams to personalize</a> this email. &middot; <a href="${unsub}" style="color:#8a8276;">Unsubscribe</a></p>`;
+  return `<p style="margin:0;font-size:12px;line-height:1.6;color:#8a8276;"><a href="${manage}" style="color:#d31145;font-weight:600;">Star your teams to personalize</a> this email. &middot; <a href="${unsub}" style="color:#8a8276;">Unsubscribe</a></p>${postalHtml()}`;
 }
 
 export async function sendPersonalizedDigest(args: {
@@ -283,6 +291,8 @@ export async function sendPersonalizedDigest(args: {
     '',
     `Manage your teams: ${manage}`,
     `Unsubscribe: ${manage}&unsub=1`,
+    '',
+    SENDER_POSTAL_ADDRESS,
   ].join('\n');
 
   return sendEmail({
@@ -326,6 +336,8 @@ export async function sendGenericDigest(args: {
     '',
     `Star your teams to personalize: ${manage}`,
     `Unsubscribe: ${manage}&unsub=1`,
+    '',
+    SENDER_POSTAL_ADDRESS,
   ].join('\n');
 
   return sendEmail({

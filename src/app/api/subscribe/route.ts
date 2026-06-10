@@ -6,14 +6,16 @@
  * valid generic signup; a non-empty array is a personalized digest. On a
  * duplicate email we update teams and re-arm confirmation rather than erroring.
  *
- * Phase A has no Resend dependency, so this route only writes the record. The
- * confirmation email is wired into the `needsConfirmation` branch in Phase B.
+ * On a new or re-armed (pending) record it sends the single-opt-in confirmation
+ * email; an already-confirmed re-submit merges teams silently. Per-IP rate
+ * limited (Firestore-backed) on top of the per-email confirmation cooldown.
  */
 
 import { NextResponse } from 'next/server';
 import { isValidEmail, sanitizeTeams, upsertSubscriber } from '@/lib/subscribers';
 import { coerceCaptureSurface } from '@/lib/follow-surface';
 import { sendConfirmationEmail } from '@/lib/email';
+import { checkSubscribeRateLimit, clientIp } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -25,6 +27,18 @@ interface SubscribeBody {
 }
 
 export async function POST(request: Request) {
+  // Per-IP flood protection (5 POSTs / 10 min). Checked before any work so it
+  // also caps Firestore writes and confirmation-email sends to arbitrary
+  // addresses. The per-email cooldown in upsertSubscriber is the complementary
+  // single-address layer.
+  const rate = await checkSubscribeRateLimit(clientIp(request));
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { ok: false, error: 'rate_limited' },
+      { status: 429, headers: { 'Retry-After': String(rate.retryAfterSec) } },
+    );
+  }
+
   let body: SubscribeBody;
   try {
     body = (await request.json()) as SubscribeBody;
