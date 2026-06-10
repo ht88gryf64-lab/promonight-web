@@ -188,7 +188,21 @@ export function RedesignTeamPage({
               />
             </div>
 
-            <div className="order-[70]">
+            {/* Email + app conversion pairing, sitting immediately after the
+                completed-promos list and immediately before By the Numbers, on
+                both the desktop source order and the mobile order weave (the
+                pairing is order-[41], By the Numbers is order-[42], both right
+                after PromoList's order-[40]). Email first (pre-stars this team,
+                tags web_team_page, fires email_cta_click), then the app push
+                pitch moved out of PromoList. */}
+            <div className="order-[41]">
+              <div className="mx-auto max-w-3xl px-6 py-8">
+                <FollowCTA surface="web_team_page" team={team} />
+                <AppPushPitch variant="light" teamName={displayName} teamSlug={team.id} />
+              </div>
+            </div>
+
+            <div className="order-[42]">
               <AuthorityStats
                 team={team}
                 promos={promos}
@@ -222,17 +236,7 @@ export function RedesignTeamPage({
               <TeamRelatedAggregators promos={promos} variant="light" />
             </div>
 
-            {/* Email + app conversion pairing, lifted directly above the FAQ.
-                Email first (pre-stars this team, tags web_team_page, fires
-                email_cta_click), then the app push pitch moved out of PromoList. */}
             <div className="order-[72]">
-              <div className="mx-auto max-w-3xl px-6 py-8">
-                <FollowCTA surface="web_team_page" team={team} />
-                <AppPushPitch variant="light" teamName={displayName} teamSlug={team.id} />
-              </div>
-            </div>
-
-            <div className="order-[73]">
               <TeamFAQ
                 team={team}
                 promos={promos}
