@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { getPromosFromDate } from '@/lib/data';
 import { AggregatorPage, AggregatorJsonLd, type AggregatorGroup } from '@/components/aggregator-layout';
+import { PastBobbleheadsSection } from '@/components/redesign/PastBobbleheadsSection';
 
 export const revalidate = 21600;
 
@@ -25,12 +26,18 @@ export const metadata: Metadata = {
 };
 
 export default async function BobbleheadsPage() {
-  const all = await getPromosFromDate(todayYMD());
+  // Fetch the whole season (Jan 1 forward), not just today forward: completed
+  // bobbleheads feed the "Earlier this season" resale section while upcoming
+  // ones drive the month groups exactly as before.
+  const all = await getPromosFromDate(`${YEAR}-01-01`);
   const re = /bobblehead/i;
   const bobbleheads = all.filter((p) => re.test(p.title) || re.test(p.description));
+  const today = todayYMD();
+  const upcoming = bobbleheads.filter((p) => p.date >= today);
+  const past = bobbleheads.filter((p) => p.date < today).reverse(); // most-recent-first
 
   const byMonth = new Map<string, typeof bobbleheads>();
-  for (const p of bobbleheads) {
+  for (const p of upcoming) {
     const key = p.date.slice(0, 7); // YYYY-MM
     const list = byMonth.get(key) ?? [];
     list.push(p);
@@ -82,6 +89,7 @@ export default async function BobbleheadsPage() {
         emptyMessage="No upcoming bobblehead nights are currently tracked. Teams typically announce more through the season."
         accentKey="giveaway"
         collection="bobbleheads"
+        afterList={past.length > 0 ? <PastBobbleheadsSection promos={past} /> : undefined}
       />
     </>
   );

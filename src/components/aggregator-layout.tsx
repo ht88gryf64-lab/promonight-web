@@ -36,6 +36,10 @@ export interface AggregatorPageProps {
    *  a cross-link callout). Undefined for every existing page, so their output
    *  is unchanged. */
   afterIntro?: ReactNode;
+  /** Redesign-only optional slot rendered right after the promo list (e.g. the
+   *  bobbleheads "Earlier this season" resale section). Same contract as
+   *  afterIntro: undefined leaves existing pages unchanged. */
+  afterList?: ReactNode;
 }
 
 const ACCENTS: Record<AggregatorAccentKey, { color: string; Icon: TablerIcon }> = {
@@ -61,6 +65,7 @@ function RedesignAggregatorPage({
   accentKey = 'mixed',
   collection = 'collection',
   afterIntro,
+  afterList,
 }: AggregatorPageProps) {
   const totalCount = groups.reduce((acc, g) => acc + g.promos.length, 0);
   const { color, Icon } = ACCENTS[accentKey];
@@ -121,6 +126,8 @@ function RedesignAggregatorPage({
             initialCount={350}
           />
         )}
+
+        {afterList}
 
         {/* CTA */}
         <div className="mt-16 rounded-2xl border border-rd-line bg-rd-card p-8 text-center">
