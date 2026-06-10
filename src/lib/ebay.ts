@@ -33,7 +33,7 @@ export function isBobbleheadGiveaway(promo: Pick<Promo, 'type' | 'title'>): bool
 function resaleQuery(promo: Pick<Promo, 'date' | 'title'>, teamNickname: string): string {
   const item = promo.title
     .replace(/bobbleheads?/gi, ' ')
-    .replace(/giveaway/gi, ' ')
+    .replace(/giveaways?/gi, ' ')
     .replace(/\s+/g, ' ')
     .trim();
   return [promo.date.slice(0, 4), teamNickname, item, 'bobblehead']
