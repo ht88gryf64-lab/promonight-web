@@ -9,6 +9,7 @@ import { AggregatorPaginatedGroups } from './aggregator-paginated-groups';
 import { isRedesignEnabled } from '@/lib/redesign';
 import { archivoHouse } from './redesign/fonts-house';
 import { RedesignAggregatorList } from './redesign/RedesignAggregatorList';
+import { FollowCTA } from './follow/FollowCTA';
 
 export interface AggregatorGroup {
   label: string;
@@ -131,6 +132,9 @@ function RedesignAggregatorPage({
             <AppDownloadButtons section="aggregator_cta" page={title.toLowerCase().replace(/\s+/g, '_')} variant="compact" />
           </div>
         </div>
+
+        {/* Email-capture entry; tags the funnel web_aggregator. */}
+        <FollowCTA surface="web_aggregator" className="mt-6" />
 
         {/* FAQ */}
         {faqs.length > 0 && (

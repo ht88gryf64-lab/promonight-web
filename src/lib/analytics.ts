@@ -10,6 +10,7 @@
 
 import { flattenUTMsForEvent, getStoredUTMs } from './utm-capture';
 import { readAttribution } from './attribution';
+import type { CaptureSurface } from './follow-surface';
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -29,6 +30,9 @@ export type AnalyticsEvent =
   | 'team_page_engaged'
   | 'team_picker_tab_change'
   | 'team_tile_tap'
+  | 'email_cta_click'
+  | 'follow_page_view'
+  | 'teams_starred'
   | 'newsletter_signup'
   | 'search_query'
   | 'share_initiated'
@@ -236,9 +240,38 @@ export type TeamTileTapProperties = {
   is_homepage_sample: boolean;
 };
 
+// ── Email capture funnel ───────────────────────────────────────────────────
+// Four snake_case events dual-emitted through track() (PostHog + GA4):
+//   email_cta_click → follow_page_view → teams_starred → newsletter_signup
+// `surface` uses the CaptureSurface vocabulary (web_team_page / web_homepage /
+// web_playoffs_hub / web_aggregator / web_other) rather than the broader
+// AnalyticsSurface enum, so a funnel click joins cleanly to the
+// `subscribers.source` it eventually writes. See lib/follow-surface.ts.
+
+export type EmailCtaClickProperties = {
+  surface: CaptureSurface;
+  // Pre-starred team carried from a team-page CTA, so dashboards can see which
+  // team drove a team-page entry without parsing the destination URL.
+  team_slug?: string;
+};
+
+export type FollowPageViewProperties = {
+  surface: CaptureSurface;
+  // How many teams the page loaded pre-selected from entry context (1 for a
+  // team-page entry, 0 for hub/homepage/aggregator).
+  seeded_team_count: number;
+};
+
+export type TeamsStarredProperties = {
+  surface: CaptureSurface;
+  team_count: number;
+};
+
 export type NewsletterSignupProperties = {
-  surface: AnalyticsSurface;
-  placement: string;
+  surface: CaptureSurface;
+  team_count: number;
+  // Retained optional fields for forward-compat with a future multi-list split.
+  placement?: string;
   list_id?: string;
 };
 
@@ -411,6 +444,9 @@ export type EventPropertiesMap = {
   team_page_engaged: TeamPageEngagedProperties;
   team_picker_tab_change: TeamPickerTabChangeProperties;
   team_tile_tap: TeamTileTapProperties;
+  email_cta_click: EmailCtaClickProperties;
+  follow_page_view: FollowPageViewProperties;
+  teams_starred: TeamsStarredProperties;
   newsletter_signup: NewsletterSignupProperties;
   search_query: SearchQueryProperties;
   share_initiated: ShareInitiatedProperties;

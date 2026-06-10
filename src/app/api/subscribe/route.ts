@@ -1,0 +1,58 @@
+/**
+ * POST /api/subscribe
+ *
+ * Combined capture-form submit. Creates or upserts a single `subscribers`
+ * record (one per email, keyed by email hash). An empty `teams` array is a
+ * valid generic signup; a non-empty array is a personalized digest. On a
+ * duplicate email we update teams and re-arm confirmation rather than erroring.
+ *
+ * Phase A has no Resend dependency, so this route only writes the record. The
+ * confirmation email is wired into the `needsConfirmation` branch in Phase B.
+ */
+
+import { NextResponse } from 'next/server';
+import { isValidEmail, sanitizeTeams, upsertSubscriber } from '@/lib/subscribers';
+import { coerceCaptureSurface } from '@/lib/follow-surface';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+interface SubscribeBody {
+  email?: unknown;
+  teams?: unknown;
+  source?: unknown;
+}
+
+export async function POST(request: Request) {
+  let body: SubscribeBody;
+  try {
+    body = (await request.json()) as SubscribeBody;
+  } catch {
+    return NextResponse.json({ ok: false, error: 'invalid_json' }, { status: 400 });
+  }
+
+  if (typeof body.email !== 'string' || !isValidEmail(body.email)) {
+    return NextResponse.json({ ok: false, error: 'invalid_email' }, { status: 400 });
+  }
+
+  const teams = sanitizeTeams(body.teams);
+  const source = coerceCaptureSurface(body.source);
+
+  try {
+    const result = await upsertSubscriber({ email: body.email, teams, source });
+
+    // Phase B: when result.needsConfirmation, send the single-opt-in
+    // confirmation email here via Resend before responding.
+
+    return NextResponse.json({
+      ok: true,
+      status: result.status,
+      created: result.created,
+      team_count: result.teams.length,
+    });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error(`[api:subscribe] ${message}`);
+    return NextResponse.json({ ok: false, error: 'server_error' }, { status: 500 });
+  }
+}

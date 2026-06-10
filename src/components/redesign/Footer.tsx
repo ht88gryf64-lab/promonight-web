@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { FollowFooterCTA } from '@/components/follow/FollowFooterCTA';
 
 // Redesign v2 footer. The light team-page redesign uses a cream page with white
 // cards, but the footer is the one intentionally-dark surface: warm charcoal
@@ -81,6 +82,7 @@ export function Footer({ year }: FooterProps) {
               Every giveaway, theme night, food deal, and promotion across 167 teams
               in MLB, NBA, NHL, NFL, MLS, and WNBA.
             </p>
+            <FollowFooterCTA />
           </div>
 
           {/* Link columns */}
