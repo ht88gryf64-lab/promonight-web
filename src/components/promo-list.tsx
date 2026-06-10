@@ -1,5 +1,5 @@
 import { PromoBadge } from './promo-badge';
-import { AppDownloadButtons } from './app-download-buttons';
+import { AppPushPitch } from './app-push-pitch';
 import { ShareButton, formatShareDate, type ShareItem } from './share';
 import { RedesignPromoRow } from '@/components/redesign/RedesignPromoRow';
 import { LazyPromoRows } from '@/components/redesign/LazyPromoRows';
@@ -124,6 +124,7 @@ export function PromoList({
   primaryColor,
   venueName,
   variant = 'dark',
+  showAppPitch = true,
 }: {
   promos: Promo[];
   teamSlug: string;
@@ -132,6 +133,10 @@ export function PromoList({
   primaryColor?: string;
   venueName?: string | null;
   variant?: 'dark' | 'light';
+  // When false, the trailing app push pitch is suppressed (the team page renders
+  // it separately in the email+app pairing). Default true keeps every other
+  // surface unchanged.
+  showAppPitch?: boolean;
 }) {
   const share: PromoShareContext = {
     teamName,
@@ -223,21 +228,9 @@ export function PromoList({
             </div>
           )}
 
-          {/* Soft app pitch — no paywall */}
-          <div className="mt-10 bg-rd-card border border-rd-line rounded-2xl p-6 text-center">
-            <p className="text-rd-ink-soft text-sm mb-1">
-              Want push notifications the morning of every {teamName} promo?
-            </p>
-            <p className="text-rd-ink-faint text-xs mb-5">
-              The free PromoNight app sends alerts for giveaways, theme nights, and food deals — optional, not required to use this site.
-            </p>
-            <AppDownloadButtons
-              section="promo_list_app_pitch"
-              page={`team/${teamSlug}`}
-              teamSlug={teamSlug}
-              variant="compact"
-            />
-          </div>
+          {showAppPitch && (
+            <AppPushPitch variant="light" teamName={teamName} teamSlug={teamSlug} />
+          )}
         </div>
       </section>
     );
@@ -334,21 +327,9 @@ export function PromoList({
           </div>
         )}
 
-        {/* Soft app pitch — no paywall */}
-        <div className="mt-10 bg-bg-card/50 border border-border-subtle rounded-2xl p-6 text-center">
-          <p className="text-text-secondary text-sm mb-1">
-            Want push notifications the morning of every {teamName} promo?
-          </p>
-          <p className="text-text-muted text-xs mb-5">
-            The free PromoNight app sends alerts for giveaways, theme nights, and food deals — optional, not required to use this site.
-          </p>
-          <AppDownloadButtons
-            section="promo_list_app_pitch"
-            page={`team/${teamSlug}`}
-            teamSlug={teamSlug}
-            variant="compact"
-          />
-        </div>
+        {showAppPitch && (
+          <AppPushPitch variant="dark" teamName={teamName} teamSlug={teamSlug} />
+        )}
       </div>
     </section>
   );

@@ -27,6 +27,7 @@ import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure
 import { AdSlot } from '@/components/ads/AdSlot';
 import { AD_SLOTS } from '@/lib/ads/slots';
 import { FollowCTA } from '@/components/follow/FollowCTA';
+import { AppPushPitch } from '@/components/app-push-pitch';
 
 export interface RedesignTeamPageProps {
   team: Team;
@@ -183,6 +184,7 @@ export function RedesignTeamPage({
                 primaryColor={team.primaryColor}
                 venueName={venue?.name ?? null}
                 variant="light"
+                showAppPitch={false}
               />
             </div>
 
@@ -220,7 +222,17 @@ export function RedesignTeamPage({
               <TeamRelatedAggregators promos={promos} variant="light" />
             </div>
 
+            {/* Email + app conversion pairing, lifted directly above the FAQ.
+                Email first (pre-stars this team, tags web_team_page, fires
+                email_cta_click), then the app push pitch moved out of PromoList. */}
             <div className="order-[72]">
+              <div className="mx-auto max-w-3xl px-6 py-8">
+                <FollowCTA surface="web_team_page" team={team} />
+                <AppPushPitch variant="light" teamName={displayName} teamSlug={team.id} />
+              </div>
+            </div>
+
+            <div className="order-[73]">
               <TeamFAQ
                 team={team}
                 promos={promos}
@@ -236,12 +248,6 @@ export function RedesignTeamPage({
             </div>
           </main>
         </div>
-      </div>
-
-      {/* Stronger email-capture CTA on the highest-intent surface: pre-stars
-          this team and tags the funnel web_team_page. */}
-      <div className="mx-auto max-w-6xl px-6 pb-8">
-        <FollowCTA surface="web_team_page" team={team} />
       </div>
 
       {/* Fine print — minimal treatment in the cream flow (reads fine at #444). */}
