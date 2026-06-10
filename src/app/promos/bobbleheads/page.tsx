@@ -68,6 +68,11 @@ export default async function BobbleheadsPage() {
       answer:
         'MLB teams typically lead; the Dodgers, Giants, and Guardians are consistently among the most active bobblehead programs. Counts vary season to season as teams announce more promos after opening day.',
     },
+    {
+      question: 'What if I miss a bobblehead giveaway?',
+      answer:
+        "Most giveaway bobbleheads show up on eBay's resale market within days of the game, often the same night. Prices vary widely with the player, the production run, and whether the box is unopened. PromoNight links recent past bobblehead giveaways on this page and on each team's schedule page directly to current eBay listings, so you can check resale availability if you missed the gates.",
+    },
   ];
 
   return (

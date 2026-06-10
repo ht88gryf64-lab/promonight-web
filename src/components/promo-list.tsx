@@ -168,12 +168,11 @@ export function PromoList({
 
   // Completed bobblehead giveaways are exempt from the light variant's full
   // collapse: up to 3 (most recent) render above the expander carrying the
-  // eBay resale CTA, which only earns when its row is actually visible. The
-  // lift is gated on the campid being set so an unset env var leaves the page
-  // exactly as it was. Everything else stays behind the expander unchanged.
-  const pastResale = isEbayResaleActive()
-    ? past.filter(isBobbleheadGiveaway).slice(0, RESALE_LIFT_VISIBLE)
-    : [];
+  // eBay resale CTA. The lifted rows are content and render regardless of the
+  // campid (same contract as the hub's Earlier-this-season section) — only the
+  // CTA itself is env-gated, so unsetting the var never silently changes page
+  // content. Everything else stays behind the expander unchanged.
+  const pastResale = past.filter(isBobbleheadGiveaway).slice(0, RESALE_LIFT_VISIBLE);
   const pastCollapsed =
     pastResale.length > 0 ? past.filter((p) => !pastResale.includes(p)) : past;
 
