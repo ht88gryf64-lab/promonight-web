@@ -1,11 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type { Team } from '@/lib/types';
-import { LEAGUE_ORDER, SPORT_ICONS } from '@/lib/types';
 import { track } from '@/lib/analytics';
 import type { CaptureSurface } from '@/lib/follow-surface';
-import { StarIcon } from '@/components/star-icon';
+import { TeamStarPicker } from './TeamStarPicker';
 
 // Combined capture form: star teams (optional) + email, single submit. The
 // team selection is the form's OWN state (a plain slug array), independent of
@@ -30,11 +29,8 @@ export function FollowForm({ teams, initialTeam, surface }: FollowFormProps) {
     initialTeam && teams.some((t) => t.id === initialTeam) ? [initialTeam] : [],
   );
   const [email, setEmail] = useState('');
-  const [query, setQuery] = useState('');
   const [status, setStatus] = useState<SubmitStatus>('idle');
   const [errorMsg, setErrorMsg] = useState('');
-
-  const teamById = useMemo(() => new Map(teams.map((t) => [t.id, t])), [teams]);
 
   // follow_page_view fires once on mount, carrying how many teams entry context
   // pre-selected. Ref guard so React strict-mode's double-mount doesn't double
@@ -50,20 +46,6 @@ export function FollowForm({ teams, initialTeam, surface }: FollowFormProps) {
     // selected is intentionally read once at mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const grouped = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const matches = (t: Team) =>
-      !q ||
-      t.name.toLowerCase().includes(q) ||
-      t.city.toLowerCase().includes(q) ||
-      t.league.toLowerCase().includes(q) ||
-      t.abbreviation.toLowerCase().includes(q);
-    return LEAGUE_ORDER.map((league) => ({
-      league,
-      teams: teams.filter((t) => t.league === league && matches(t)),
-    })).filter((g) => g.teams.length > 0);
-  }, [teams, query]);
 
   // Compute the next set OUTSIDE setState so the analytics side effect isn't
   // double-invoked under strict mode. Fire teams_starred only on an add (the
@@ -131,90 +113,8 @@ export function FollowForm({ teams, initialTeam, surface }: FollowFormProps) {
         </span>
       </div>
 
-      <label className="sr-only" htmlFor="team-search">
-        Search teams
-      </label>
-      <input
-        id="team-search"
-        type="text"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search 167 teams…"
-        autoComplete="off"
-        className="mb-3 w-full rounded-xl border border-rd-line-strong bg-rd-cream px-4 py-2.5 font-rd text-sm text-rd-ink placeholder:text-rd-ink-faint focus:border-rd-ink focus:outline-none"
-      />
-
-      {selected.length > 0 && (
-        <div className="mb-3 flex flex-wrap gap-2">
-          {selected.map((slug) => {
-            const t = teamById.get(slug);
-            if (!t) return null;
-            return (
-              <button
-                key={slug}
-                type="button"
-                onClick={() => toggle(slug)}
-                aria-label={`Remove ${t.name}`}
-                className="inline-flex items-center gap-1.5 rounded-full border border-rd-line-strong bg-rd-cream px-2.5 py-1 font-rd text-[12px] font-semibold text-rd-ink transition-colors hover:border-rd-ink"
-              >
-                <span aria-hidden="true">{SPORT_ICONS[t.league]}</span>
-                {t.name}
-                <span aria-hidden="true" className="text-rd-ink-faint">
-                  ✕
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      <div className="mb-5 max-h-72 overflow-y-auto rounded-xl border border-rd-line bg-rd-cream/40 p-2">
-        {grouped.length === 0 ? (
-          <p className="px-2 py-6 text-center font-rd text-sm text-rd-ink-soft">
-            No teams match “{query.trim()}”.
-          </p>
-        ) : (
-          grouped.map((group) => (
-            <div key={group.league} className="mb-2 last:mb-0">
-              <div className="px-2 py-1 font-rd text-[10px] font-semibold uppercase tracking-[0.12em] text-rd-ink-faint">
-                {SPORT_ICONS[group.league]} {group.league}
-              </div>
-              <div className="space-y-1">
-                {group.teams.map((t) => {
-                  const on = selected.includes(t.id);
-                  return (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => toggle(t.id)}
-                      aria-pressed={on}
-                      className={`flex w-full items-center gap-3 rounded-lg border px-3 py-2 text-left transition-colors ${
-                        on
-                          ? 'border-rd-red bg-rd-red/5'
-                          : 'border-transparent bg-rd-card hover:border-rd-line-strong'
-                      }`}
-                    >
-                      <span
-                        aria-hidden="true"
-                        className="h-7 w-1 shrink-0 rounded-full"
-                        style={{ backgroundColor: t.primaryColor }}
-                      />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate font-rd text-sm font-bold text-rd-ink">
-                          {t.city} {t.name}
-                        </span>
-                        <span className="block font-rd text-[10px] uppercase tracking-[0.08em] text-rd-ink-faint">
-                          {t.abbreviation}
-                        </span>
-                      </span>
-                      <StarIcon filled={on} size={20} surface="light" />
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))
-        )}
+      <div className="mb-5">
+        <TeamStarPicker teams={teams} selected={selected} onToggle={toggle} />
       </div>
 
       {/* Step 2: email */}

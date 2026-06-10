@@ -13,6 +13,7 @@
 import { NextResponse } from 'next/server';
 import { isValidEmail, sanitizeTeams, upsertSubscriber } from '@/lib/subscribers';
 import { coerceCaptureSurface } from '@/lib/follow-surface';
+import { sendConfirmationEmail } from '@/lib/email';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -41,8 +42,23 @@ export async function POST(request: Request) {
   try {
     const result = await upsertSubscriber({ email: body.email, teams, source });
 
-    // Phase B: when result.needsConfirmation, send the single-opt-in
-    // confirmation email here via Resend before responding.
+    // Single opt-in: send the confirmation email ONLY when a (re)confirmation is
+    // due, i.e. the resulting status is pending (new signup, or a pending /
+    // unsubscribed record re-armed). An already-confirmed subscriber re-submitting
+    // via /follow has needsConfirmation=false, so their teams merge silently with
+    // no email. Failures are logged but never fail the signup, the record exists
+    // and a re-submit re-triggers.
+    if (result.needsConfirmation) {
+      try {
+        await sendConfirmationEmail({
+          email: result.email,
+          confirmToken: result.confirmToken,
+          manageToken: result.manageToken,
+        });
+      } catch (e) {
+        console.error('[api:subscribe] confirmation send threw', e);
+      }
+    }
 
     return NextResponse.json({
       ok: true,
