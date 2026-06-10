@@ -386,6 +386,49 @@ export async function getVenueForTeam(teamId: string): Promise<Venue | null> {
   };
 }
 
+export interface TeamCoords {
+  lat: number;
+  lng: number;
+}
+
+// Home-venue coordinates for every team that has them, in ONE bulk venues read
+// (vs 167 getVenueForTeam calls). Reuses the same venue lat/lng the affiliate
+// CTAs route on. Join is by full team name ("{city} {name}"), with the
+// VENUE_RESOLUTION_MAP slug fallback for shared buildings / name mismatches.
+// Teams with no resolvable venue are simply absent from the map (callers keep
+// them in the default list, never dropped).
+export async function getTeamVenueCoords(teams: Team[]): Promise<Map<string, TeamCoords>> {
+  const fullNameToId = new Map<string, string>();
+  for (const t of teams) fullNameToId.set(`${t.city} ${t.name}`, t.id);
+
+  const snapshot = await db.collection('venues').get();
+  const coords = new Map<string, TeamCoords>();
+  const venueSlugToCoords = new Map<string, TeamCoords>();
+
+  for (const doc of snapshot.docs) {
+    const data = doc.data();
+    const { lat, lng } = data;
+    if (typeof lat !== 'number' || typeof lng !== 'number') continue;
+    if (lat === 0 && lng === 0) continue; // null-island guard for missing data
+    venueSlugToCoords.set(doc.id, { lat, lng });
+    if (typeof data.team === 'string') {
+      const id = fullNameToId.get(data.team);
+      if (id && !coords.has(id)) coords.set(id, { lat, lng });
+    }
+  }
+
+  // Fallback for teams the name join missed (co-tenants, name mismatches).
+  for (const t of teams) {
+    if (coords.has(t.id)) continue;
+    const venueSlug = VENUE_RESOLUTION_MAP[t.id];
+    if (!venueSlug) continue;
+    const c = venueSlugToCoords.get(venueSlug);
+    if (c) coords.set(t.id, c);
+  }
+
+  return coords;
+}
+
 // ── Playoff data layer ─────────────────────────────────────────────────────
 
 function mapPlayoffPromoDoc(

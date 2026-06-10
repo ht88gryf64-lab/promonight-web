@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { getAllTeams } from '@/lib/data';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 import { coerceCaptureSurface } from '@/lib/follow-surface';
+import { getNearTeamIds } from '@/lib/geo/near-teams';
 import { FollowForm } from '@/components/follow/FollowForm';
 
 // Combined capture page. Server-rendered: loads all teams for the selector and
@@ -23,7 +24,9 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-export const revalidate = 3600;
+// Per-request: getNearTeamIds reads the live Vercel geo headers, and the page
+// already reads searchParams, so it renders dynamically.
+export const dynamic = 'force-dynamic';
 
 export default async function FollowPage({
   searchParams,
@@ -39,6 +42,10 @@ export default async function FollowPage({
   const seededTeam =
     typeof team === 'string' ? teams.find((t) => t.id === team) ?? null : null;
   const initialTeam = seededTeam?.id ?? null;
+
+  // Soft geo ordering: nearest teams float to the top of the picker. Empty when
+  // there is no usable geo signal (default order, no group). Never filters.
+  const nearTeamIds = await getNearTeamIds(teams);
 
   return (
     <div className={`${archivoHouse.variable} rd-root min-h-screen`}>
@@ -73,7 +80,12 @@ export default async function FollowPage({
       </section>
 
       <div className="mx-auto max-w-2xl px-6 pb-20 pt-8">
-        <FollowForm teams={teams} initialTeam={initialTeam} surface={surface} />
+        <FollowForm
+          teams={teams}
+          initialTeam={initialTeam}
+          surface={surface}
+          nearTeamIds={nearTeamIds}
+        />
       </div>
     </div>
   );

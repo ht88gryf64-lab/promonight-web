@@ -22,15 +22,22 @@ interface FollowFormProps {
   // Slug pre-starred from entry context (team-page CTA). null for hub/homepage.
   initialTeam: string | null;
   surface: CaptureSurface;
+  // Ordered "near you" team slugs from server-side geo. Floated to the top of
+  // the picker and used to tag the teams_starred event. Empty = no geo group.
+  nearTeamIds: string[];
 }
 
-export function FollowForm({ teams, initialTeam, surface }: FollowFormProps) {
+export function FollowForm({ teams, initialTeam, surface, nearTeamIds }: FollowFormProps) {
   const [selected, setSelected] = useState<string[]>(() =>
     initialTeam && teams.some((t) => t.id === initialTeam) ? [initialTeam] : [],
   );
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<SubmitStatus>('idle');
   const [errorMsg, setErrorMsg] = useState('');
+
+  // Membership lookup for the geo "near you" set, so a star can be tagged with
+  // whether geo proximity surfaced the team.
+  const nearSet = new Set(nearTeamIds);
 
   // follow_page_view fires once on mount, carrying how many teams entry context
   // pre-selected. Ref guard so React strict-mode's double-mount doesn't double
@@ -55,7 +62,11 @@ export function FollowForm({ teams, initialTeam, surface }: FollowFormProps) {
     const next = isOn ? selected.filter((s) => s !== slug) : [...selected, slug];
     setSelected(next);
     if (!isOn) {
-      track('teams_starred', { surface, team_count: next.length });
+      track('teams_starred', {
+        surface,
+        team_count: next.length,
+        near_you: nearSet.has(slug),
+      });
     }
   };
 
@@ -114,7 +125,12 @@ export function FollowForm({ teams, initialTeam, surface }: FollowFormProps) {
       </div>
 
       <div className="mb-5">
-        <TeamStarPicker teams={teams} selected={selected} onToggle={toggle} />
+        <TeamStarPicker
+          teams={teams}
+          selected={selected}
+          onToggle={toggle}
+          nearTeamIds={nearTeamIds}
+        />
       </div>
 
       {/* Step 2: email */}
