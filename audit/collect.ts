@@ -131,8 +131,16 @@ export const SCHEMA_TEMPLATES: Array<{
 export interface LeagueCompleteness {
   league: string;
   teamCount: number;
-  /** Mean of per-team rubric totals, 0..10, rounded to 1 decimal. */
+  /** Overall: mean of per-team rubric totals, 0..10, rounded to 1 decimal. */
   score: number;
+  /**
+   * Structural /10: the season-independent subset only (venue resolved + PYV +
+   * gates + recurring = 5.0 max), normalized x2 to a /10 scale. Lets you read a
+   * league's structural data quality without the current-season promo signal.
+   */
+  structuralScore: number;
+  /** offseason when the league has 0 upcoming promos as of the generation date. */
+  season: 'in-season' | 'offseason';
   /** Fraction (0..1) of the league's teams satisfying each rubric dimension. */
   dimensionCoverage: Record<keyof typeof RUBRIC, number>;
 }
@@ -410,7 +418,7 @@ function inspectTechnical(repoRoot: string): AuditData['technical'] {
   };
 }
 
-function inspectKnownBugs(repoRoot: string): { bugs: AuditData['knownBugs']; ogScanFindings: string[] } {
+function inspectKnownBugs(repoRoot: string): AuditData['knownBugs'] {
   const bugs: AuditData['knownBugs'] = [];
 
   // Bug: /playoffs openGraph defined without an images array (blanks the
@@ -441,19 +449,26 @@ function inspectKnownBugs(repoRoot: string): { bugs: AuditData['knownBugs']; ogS
     evidence: 'Per-venue factual freshness; requires manual/external verification',
   });
 
-  // Supplementary: scan every page that DEFINES an openGraph block for a
-  // missing images array (the same bug class as playoffs-og-image).
-  const ogScanFindings: string[] = [];
+  // Scan every page that DEFINES an openGraph block for a missing images array
+  // (the same bug class as playoffs-og-image) and surface each as an open bug
+  // so it renders under section 6. playoffs is handled above, so skip it here.
   for (const file of findPageFiles(repoRoot)) {
+    const route = fileToRoute(file);
+    if (route === '/playoffs') continue;
     const src = readFileSafe(repoRoot, file);
     const definesOg = /openGraph:\s*\{/.test(src);
     const hasImages = /openGraph:\s*\{[\s\S]*?images:\s*\[/.test(src);
     if (definesOg && !hasImages) {
-      ogScanFindings.push(`${fileToRoute(file)} defines openGraph without an images array (og-image blank risk)`);
+      bugs.push({
+        id: `og-image-missing:${route}`,
+        description: `${route} openGraph defined without an images array (blanks inherited og-image; same class as the playoffs fix)`,
+        status: 'open',
+        evidence: `${file}: openGraph block has no images array`,
+      });
     }
   }
 
-  return { bugs, ogScanFindings };
+  return bugs;
 }
 
 // ── Main collector ───────────────────────────────────────────────────────────
@@ -573,10 +588,19 @@ export async function collectAuto(deps: CollectDeps = {}): Promise<AuditData> {
     (Object.keys(RUBRIC) as Array<keyof typeof RUBRIC>).forEach((k) => {
       cov[k] = e.teams ? round1((e.dims[k] / e.teams) * 100) / 100 : 0;
     });
+    // Structural points = the season-independent dimensions only (max 5/team),
+    // summed across the league via the per-dimension counts, meaned, then x2.
+    const structuralSum =
+      e.dims.venueResolved * RUBRIC.venueResolved.points +
+      e.dims.pyvDetail * RUBRIC.pyvDetail.points +
+      e.dims.gates * RUBRIC.gates.points +
+      e.dims.recurring * RUBRIC.recurring.points;
     return {
       league,
       teamCount: e.teams,
       score: e.teams ? round1(e.sum / e.teams) : 0,
+      structuralScore: e.teams ? round1((structuralSum / e.teams) * 2) : 0,
+      season: (upcomingByLeague[league] ?? 0) === 0 ? ('offseason' as const) : ('in-season' as const),
       dimensionCoverage: cov,
     };
   });
@@ -586,7 +610,7 @@ export async function collectAuto(deps: CollectDeps = {}): Promise<AuditData> {
   const aggregatorPages = inspectAggregatorPages(repoRoot);
   const schemaPresence = inspectSchema(repoRoot);
   const technical = inspectTechnical(repoRoot);
-  const { bugs, ogScanFindings } = inspectKnownBugs(repoRoot);
+  const bugs = inspectKnownBugs(repoRoot);
 
   // ── Findings (surfaced gaps) ──
   const findings: string[] = [];
@@ -618,7 +642,6 @@ export async function collectAuto(deps: CollectDeps = {}): Promise<AuditData> {
   for (const b of bugs) {
     if (b.status === 'open') findings.push(`Open bug: ${b.description}`);
   }
-  findings.push(...ogScanFindings);
   findings.push(
     'Rubric note: this /10 is a NEW field-presence standard (signed off 2026-06-12); it does not reproduce the April editorial scores.',
   );
