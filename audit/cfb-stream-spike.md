@@ -299,3 +299,74 @@ The honest catch: **`cfbGame` is ~80% the repo's existing `Game` type** (`homeTe
 - **Source/claim mismatch (Tennessee Texas time):** value correct (noon) but cited to a stale May designation, not the June 10 time release — the pipeline must store the *source that actually carries the value*, not a plausible-looking adjacent URL.
 - **Stale framing input (Boise = "Mountain West"):** even the task brief was a realignment cycle behind — conference must be season-versioned and never trusted from a label.
 - **Verification gap:** the independent verify pass was cut off by a session limit; re-running it (resume the `wpjowojau` workflow — extracts are cached) is the recommended next step before any of this data is trusted for production.
+
+---
+
+# Verification Pass Results
+
+*Appended 2026-06-12. Method: resumed the cached `wpjowojau` workflow (`wf_911f411d-cff`) — extract stage returned from cache; the verify stage was rewritten to an adversarial, falsify-first, class-by-class check and ran live. Each verify agent re-fetched **independent** primary sources (home-school official sites, opponent athletics sites, Wikipedia, governor's office press releases — not the extractor's cited URLs). I also ran my own first-hand checks on the two sharpest targets. This pass is adversarial: a claim earned VERIFIED only when an independent fetch confirmed the value; kickoff/TV that couldn't be confirmed as officially announced was DOWNGRADED to TBD.*
+
+## Tally
+
+| School | Claims checked | VERIFIED | DOWNGRADED | FALSIFIED |
+|---|---|---|---|---|
+| Tennessee | 16 | 14 | 0 | 1 |
+| Kansas State | 21 | 21* | 0 | 0 |
+| Notre Dame | 28 | 22 | 5 | 1 |
+| Boise State | 39 | 31 | 2 | 6 |
+| **Total** | **104** | **88** | **7** | **8** |
+
+\* includes a "Senior Day" the verifier VERIFIED as a theme game; I override that to **not-a-theme-game** (see self-check) — so K-State has **0 confirmed fan theme games**, as my own check found.
+
+≈ **85% of claims survived independent check, ~15% failed (downgraded or false)** — and crucially, *the failures were rated HIGH by the extractor too.*
+
+## What the pass caught (the failures that matter)
+
+| Claim | Extractor rating | Independent finding | Verdict | Source(s) actually checked |
+|---|---|---|---|---|
+| **Boise kickoff times (6 games)** | HIGH | **Systematic +2h error**: Oregon 3:30→1:30, Memphis 6:00→4:00, S.Dakota 10:00→8:00, Colo St 6:00→4:00, Oregon St 6:00→4:00, SDSU 9:30→7:30 (all MT) | **FALSIFIED** | Wikipedia 2026 BSU + goducks/goyotes/csurams/osubeavers official sites |
+| **ND North Carolina = conferenceGame** | HIGH | ND is **FBS Independent → zero conference games**; UNC falsely flagged | **FALSIFIED** | ESPN + Wikipedia 2026 ND |
+| **ND week numbers (Miami/BC/SMU/Syracuse)** | HIGH | Off-by-one (10–13 should be 9–12); extractor double-counted the bye | **DOWNGRADED** | ESPN 2026 ND schedule |
+| **TN-Vanderbilt "Dooley-Fulmer Trophy / Third Sat. in November"** | HIGH | **No such trophy exists**; rivalry is officially un-named/un-trophied; "Third Saturday" = the *Alabama* rivalry | **FALSIFIED** | Wikipedia TN-Vandy + Saturday Down South |
+| **Milk Can `originYear` 1977** | HIGH | 1977 = series start; **trophy created 2005** | **DOWNGRADED** | Wikipedia BSU-Fresno rivalry |
+| **Governor's Trophy `originYear` 1971** | HIGH | 1971 = series; **trophy created 2001** (dormant until 2031) | **DOWNGRADED** | gov.idaho.gov + Wikipedia |
+| **K-State "Senior Day" as theme game** | (verifier-introduced) | Generic roster ceremony, not a fan theme; extractor's `themeGames` was correctly empty | **OVERRIDDEN → drop** | my own check + kstatesports |
+
+## Survivors (high-trust, FBS-reproducible)
+
+Schedule core (date/opponent/home-away/venue) — **VERIFIED across all 4 schools**. TV networks — reliable. Conference affiliation — all 4 verified (incl. Boise = Pac-12, ND = Independent). Colors, venue basics — verified. **Real theme games verified:** Tennessee's full slate (Checker Neyland/Texas + Salute to Service + Champions Weekend + Homecoming + Senior Day, all on the 247Sports designations article) and Notre Dame's Shamrock Series @ Lambeau; "The Shirt" correctly held as historical-apparel-only. Major rivalry names/trophies/pairings verified (Megaphone, Shillelagh, Legends, Frank Leahy Bowl, Sunflower Showdown/Governor's Cup, Farmageddon). Governor's Trophy dormant-in-2026 status verified (next meeting 2031).
+
+## Per-class calibration
+
+- **Schedule core:** reliable (1 ND conference-game falsification, 4 ND week downgrades — both *derived* fields, not source-copied facts).
+- **Kickoff times:** **worst class.** Boise's were systematically 2h wrong and rated HIGH. Do not trust without re-fetch + explicit timezone handling.
+- **TV networks:** reliable.
+- **Theme games:** real ones verified; corrupted/none cases correctly resolved to none.
+- **Rivalries:** names/pairings/trophies reliable; `originYear` is ambiguous (series vs trophy) → 2 downgrades + 1 outright fabrication.
+- **Conference:** all verified.
+
+## Calibrated verdict on extractor reliability (feeds the anti-hallucination spec)
+
+**The extractor's HIGH rating carries almost no signal.** It was applied uniformly; ~85% of HIGH claims were correct, but the ~15% that were wrong were *also* HIGH — there is no internal way to tell them apart. Failure modes observed:
+1. **Timezone conversion** (Boise +2h, systematic, 6 games) — the highest-volume error.
+2. **Derived-field hallucination** — ND `conferenceGame=yes` on an independent; ND week off-by-one from a double-counted bye.
+3. **Entity conflation** — rivalry series-start vs trophy-creation year.
+4. **Outright fabrication** — the Dooley-Fulmer Trophy.
+5. **Mis-citation** — correct value, wrong source (Tennessee week 1–3 times are real but were cited to Wikipedia, not the official 5/27 release that carries them).
+
+**Pipeline requirements this implies:** (1) normalize + re-verify every kickoff time against the **home-school official site** with explicit tz, never accept ESPN-rendered times verbatim; (2) **hard-gate derived fields** — `conferenceGame` from a conference-membership table (not inference), `week` from date math (not source copy); (3) split rivalry origin into `seriesStartYear` + `trophyYear`; (4) treat the extractor's confidence as *unverified* until an independent second source confirms; (5) store the source that **actually carries** each value, audited.
+
+## Do NOT trust for production without a human/second-source look
+
+- **All Boise State kickoff times** (systematic +2h; re-pull from official school sites).
+- **Notre Dame `conferenceGame` flags** (independent → force all to non-conference) and **week numbers** (recompute from dates).
+- **Tennessee-Vanderbilt "Dooley-Fulmer Trophy"** — delete; fabricated.
+- **All rivalry `originYear` values** — disambiguate series vs trophy.
+- **Any kickoff time** the extractor rated HIGH without an independent official-source confirmation.
+- **K-State "Senior Day"** — a generic designation, not a theme game; do not model as one.
+
+## Adversarial self-check (independence)
+
+Every VERIFIED verdict traces to an **independent fetch this run**, not the extractor's cache: the agents retrieved e.g. `goducks.com`, `goyotes.com`, `osubeavers.com`, `csurams.com`, `gov.idaho.gov`, `gillettestadium.com`, `riceowls.com`, plus Wikipedia season pages; I personally fetched the TN-Vandy trophy and K-State theme-game sources. None of the extractor's own cited URLs were used as the *sole* basis for any VERIFIED.
+
+I also did **not** take my own verifier at face value in two places: (a) it VERIFIED a K-State "Senior Day" as a theme game — I overrode it to *drop*, because a senior-day roster ceremony is not a fan theme and the extractor's `themeGames` field was correctly empty; (b) Tennessee's week 1–3 kickoff times are genuinely announced (news corroboration), so they stay VERIFIED, but I flag that the extractor **mis-cited** them to Wikipedia rather than the official release — value right, provenance wrong. Both adjustments are reflected in the tally note above.
