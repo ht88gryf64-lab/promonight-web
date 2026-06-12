@@ -56,3 +56,7 @@ scripts/snapshots/
 # Service account credentials — never commit
 service-account*.json
 gcp-credentials*.json
+
+# Site-audit dry-run output (audit/generate-site-audit.ts). The canonical file
+# is docs/SITE-AUDIT.md; the .generated.md is a transient dry-run artifact.
+docs/SITE-AUDIT.generated.md

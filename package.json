@@ -16,7 +16,8 @@
     "populate:plan-your-visit": "tsx --env-file=.env.local --require ./scripts/stub-server-only.cjs scripts/populate-plan-your-visit.ts",
     "migrate:fanatics-url": "tsx --env-file=.env.local --require ./scripts/stub-server-only.cjs scripts/migrate-fanatics-path-to-url.ts",
     "populate:arena-venue-fixes": "tsx --env-file=.env.local --require ./scripts/stub-server-only.cjs scripts/populate-arena-venue-fixes.ts",
-    "populate:arena-plan-your-visit": "tsx --env-file=.env.local --require ./scripts/stub-server-only.cjs scripts/populate-arena-plan-your-visit.ts"
+    "populate:arena-plan-your-visit": "tsx --env-file=.env.local --require ./scripts/stub-server-only.cjs scripts/populate-arena-plan-your-visit.ts",
+    "audit:generate": "tsx --env-file=.env.local --require ./scripts/stub-server-only.cjs audit/generate-site-audit.ts"
   },
   "dependencies": {
     "@tabler/icons-react": "^3.44.0",
