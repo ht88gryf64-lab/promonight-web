@@ -139,23 +139,29 @@ Action rule: rewrite only C's, attempt feature capture on B's, route A's to auth
 ### Title rewrite status
 - Shipped June 3. Aggregate MLB CTR 0.73% -> 0.86% (modest, real). 6x team-to-team variance. Red Sox cluster NOT fixed (core giveaway queries 0.26%). Most June click growth came from Google volume, not the rewrite. CTR lever partly pulled (winning teams), partly latent (C-bucket stuck teams), partly unwinnable (A-bucket).
 
-## 3. Data completeness by league [AUTO - STALE, last confirmed 2026-04-24, NEEDS REFRESH]
+## 3. Data completeness by league [AUTO, generated 2026-06-12]
 
-Last-known scores from the April improvement-plan audit. Re-run the Claude Code audit script against Firestore to refresh.
-- MLB: 8/10
-- MLS: 5/10
-- NBA: 4/10
-- WNBA: 2/10
-- NFL: 1/10
-NFL completeness is the dominant 6-month forecast lever (season starts September; Rams page already converts ~7.9% on low volume).
+Per-league data completeness from the field-presence rubric (see `audit/README.md`). **Overall /10** is the signed-off score; **Structural /10** is the season-independent subset (venue resolved + PYV detail + gates + recurring), normalized ×2.
 
-## 4. Content coverage [AUTO - STALE, last confirmed 2026-04-24, NEEDS REFRESH]
+| League | Overall /10 | Structural /10 | Season |
+|--------|-------------|----------------|--------|
+| MLB | 9.6 | 9.2 | in-season |
+| NBA | 2.4 | 4.8 | offseason |
+| NFL | 2.1 | 4.3 | offseason |
+| NHL | 2.7 | 5.3 | offseason |
+| MLS | 8.1 | 8.8 | in-season |
+| WNBA | 7.0 | 5.9 | in-season |
 
-- Recurring every-game deals: ~6/167 teams populated (UI renders well, data is the gap)
-- Venue detail (parking/transit/bag policy): ~5/167 populated
-- Page inventory: ~181 pages (last count April; likely higher now)
-- Aggregator pages live and verified June 2026: /world-cup (comprehensive, 11 host cities), /promos/soccer-jersey-nights (18 promos cross-league), /promos/bobbleheads, /promos/jersey-giveaways, /promos/theme-nights, /promos/this-week
-- World Cup window June 11 - July 19: hub and soccer aggregator both built; priority is fast indexing (IndexNow dual-endpoint + GSC/Bing requests), not building.
+Overall reflects current-season promo presence (5 of 10 points require upcoming promos). Leagues flagged `offseason` had 0 upcoming promos as of 2026-06-12, so their Overall is mostly venue coverage — read **Structural /10** for the season-independent picture.
+
+## 4. Content coverage [AUTO, generated 2026-06-12]
+
+- Recurring every-game deals: 6/167 teams populated
+- Venue detail (parking + transit + bag policy): 81/167 populated; gate times: 70/167
+- Affiliate readiness: Ticketmaster 167/167, Fanatics 167/167
+- Promo coverage: 983 upcoming across 167 teams, 2625 all-time
+- Page inventory: 189 routes (167 team pages + 22 others)
+- Aggregator pages live (9): /best-promos, /best-promos/bobbleheads, /promos/bobbleheads, /promos/food-deals, /promos/jersey-giveaways, /promos/soccer-jersey-nights, /promos/theme-nights, /promos/this-week, /world-cup
 
 ## 5. Monetization [MANUAL - NEEDS CONFIRM]
 
@@ -169,16 +175,23 @@ NFL completeness is the dominant 6-month forecast lever (season starts September
 - Newsletter: Resend system, sending domain mail.getpromonight.com, in phased build. Subscriber count: CONFIRM (likely pre-launch/0). Capture wired on /world-cup and aggregator pages (web_world_cup, web_aggregator sources).
 - Pro subs: RevenueCat, $5.99/season single sport, $9.99/year all sports.
 
-## 6. Technical health [AUTO - NEEDS REFRESH]
+## 6. Technical health [AUTO, generated 2026-06-12]
 
-- Canonical: www is canonical. Re-confirm apex/www consistency across sitemap, metadata, redirects (the Bing deindex root cause was a mismatch here).
-- Sitemap: confirm single canonical sitemap, lastmod accuracy, non-www sitemap removed.
-- Schema: aggregator pattern is CollectionPage + ItemList + FAQPage. Confirm per-template presence.
-- IndexNow: dual-endpoint (api.indexnow.org + www.bing.com/indexnow) required for Bing credit.
-- Known open bugs:
-  - /playoffs/page.tsx openGraph defined without images, blanking inherited og-image. One-line fix (add images array). Same class as the team-pages fix in PR #2.
-  - /world-cup hub: Boston Red Sox card lists "Fri 17 Jul vs Rays" twice (duplicate row).
-- Stale transit data pass outstanding: verify across all teams (Northstar/Target Field false claim was the flagged example; Northstar shut down Jan 4 2026).
+- Canonical: www is canonical and consistent across metadataBase, sitemap, and robots (verified 2026-06-12).
+- Sitemap: single canonical sitemap at https://www.getpromonight.com/sitemap.xml; no non-www duplicate.
+- robots.txt: allows GPTBot, ClaudeBot, PerplexityBot, Google-Extended, ChatGPT-User, Applebot-Extended.
+- llms.txt: present.
+- Schema presence per template:
+  - team: Event + FAQPage + WebPage ✓
+  - aggregator (/promos/*): Article + FAQPage — GAP: missing CollectionPage + ItemList (expected CollectionPage + ItemList + FAQPage)
+  - best-promos: Article + FAQPage + ItemList ✓
+  - world-cup: CollectionPage + FAQPage ✓
+  - playoffs: Article + FAQPage + WebPage ✓
+- Known bugs:
+  - [RESOLVED] /playoffs openGraph defined without images array (blanks inherited og-image)
+  - [MANUAL] /world-cup Boston Red Sox card lists "Fri 17 Jul vs Rays" twice (duplicate row)
+  - [MANUAL] Stale transit-data pass outstanding (e.g. Northstar/Target Field; Northstar shut down 2026-01-04)
+  - [OPEN] /follow openGraph defined without an images array (blanks inherited og-image; same class as the playoffs fix)
 
 ## Technical caveats [MANUAL]
 
