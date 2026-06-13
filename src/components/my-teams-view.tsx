@@ -12,7 +12,7 @@ import { getInStateTeamSlugs } from '@/lib/geo/state-to-teams';
 import { TicketmasterCTA } from './affiliates/TicketmasterCTA';
 import { FanaticsCTA } from './affiliates/FanaticsCTA';
 import { SpotHeroCTA } from './affiliates/SpotHeroCTA';
-import { BookingCTA } from './affiliates/BookingCTA';
+import { ExpediaCTA } from './affiliates/ExpediaCTA';
 import { AffiliateDisclosure } from './affiliates/AffiliateDisclosure';
 import type {
   StarredPromo,
@@ -1675,7 +1675,7 @@ function AffiliateClusterSection({
               placement="my_teams_prepare"
               venue={venue}
             />
-            <BookingCTA
+            <ExpediaCTA
               team={team}
               surface="web_my_teams"
               placement="my_teams_prepare"
@@ -1724,7 +1724,7 @@ function AffiliateClusterSection({
             placement="my_teams_prepare"
             venue={venue}
           />
-          <BookingCTA
+          <ExpediaCTA
             team={team}
             surface="web_my_teams"
             placement="my_teams_prepare"

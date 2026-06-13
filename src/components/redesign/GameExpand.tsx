@@ -207,6 +207,7 @@ function GameExpandRow({
                 venue={opponentVenue}
                 surface={surface}
                 placement={placement}
+                gameDate={game.date}
                 variant="modal-row"
               />
             )}

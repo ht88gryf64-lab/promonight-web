@@ -14,7 +14,6 @@ import type { Team } from './types';
 const SEATGEEK_AID = process.env.NEXT_PUBLIC_SEATGEEK_AID ?? '';
 const STUBHUB_RID = process.env.NEXT_PUBLIC_STUBHUB_RID ?? '';
 const SPOTHERO_ID = process.env.NEXT_PUBLIC_SPOTHERO_ID ?? '';
-const BOOKING_AID = process.env.NEXT_PUBLIC_BOOKING_AID ?? '';
 // Impact wrap-link template for Ticketmaster. Placeholder tokens — `{TARGET}`
 // receives the URL-encoded destination (Ticketmaster team URL); `{SHARED_ID}`
 // receives the surface tag for partner-side reporting. When unset, the
@@ -33,7 +32,6 @@ export type AffiliatePartner =
   | 'stubhub'
   | 'fanatics'
   | 'spothero'
-  | 'booking'
   | 'expedia'
   | 'ticketmaster';
 
@@ -64,8 +62,6 @@ export function isPartnerActive(partner: AffiliatePartner): boolean {
       return FANATICS_IMPACT_WRAP.length > 0;
     case 'spothero':
       return SPOTHERO_ID.length > 0;
-    case 'booking':
-      return BOOKING_AID.length > 0;
     case 'expedia':
       // Partnerize camref is a hardcoded constant baked into the URL — the
       // outbound link is always commissionable, so tracking is always active.
@@ -126,13 +122,6 @@ export function spotHeroUrl(rawUrl: string, opts: AffiliateLinkOptions): string 
   return url.toString();
 }
 
-export function bookingUrl(rawUrl: string, opts: AffiliateLinkOptions): string {
-  const url = new URL(rawUrl);
-  setParam(url, 'aid', BOOKING_AID);
-  setParam(url, 'label', subId(opts));
-  return url.toString();
-}
-
 export function buildAffiliateUrl(
   partner: AffiliatePartner,
   rawUrl: string,
@@ -148,8 +137,6 @@ export function buildAffiliateUrl(
       return rawUrl;
     case 'spothero':
       return spotHeroUrl(rawUrl, opts);
-    case 'booking':
-      return bookingUrl(rawUrl, opts);
     case 'expedia':
       // The Partnerize tracking template (camref/creativeref/adref) is already
       // baked into the URL by buildExpediaHotelLink — passthrough, do NOT
@@ -336,18 +323,6 @@ export function buildSpotHeroUrl(opts: SpotHeroOpts): string {
   });
 }
 
-export type BookingOpts = {
-  /** Preferred: exact venue coordinates. Booking's coordinate search radiates
-   *  ~5-10 mi from the point — ideal for stadium-area hotel searches and
-   *  immune to the brand-city-vs-stadium-city string-matching problem. */
-  latitude?: number;
-  longitude?: number;
-  /** Fallback when coordinates aren't available. Free-form city/region query. */
-  location?: string;
-  surface: AnalyticsSurface;
-  promoId?: string | null;
-};
-
 function hasValidCoords(lat: number | undefined, lng: number | undefined): boolean {
   return (
     typeof lat === 'number' &&
@@ -357,23 +332,6 @@ function hasValidCoords(lat: number | undefined, lng: number | undefined): boole
     lat !== 0 &&
     lng !== 0
   );
-}
-
-export function buildBookingUrl(opts: BookingOpts): string {
-  let base: string;
-  if (hasValidCoords(opts.latitude, opts.longitude)) {
-    base = `https://www.booking.com/searchresults.html?latitude=${opts.latitude}&longitude=${opts.longitude}`;
-  } else if (opts.location && opts.location.trim().length > 0) {
-    base = `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(opts.location)}`;
-  } else {
-    // Neither lat/lng nor location — land on Booking homepage; still tag so
-    // partner attribution works if the visitor converts.
-    base = 'https://www.booking.com/';
-  }
-  return bookingUrl(base, {
-    surface: opts.surface,
-    promoId: opts.promoId,
-  });
 }
 
 // ── Expedia (Partnerize) hotel deep links ────────────────────────────────────
