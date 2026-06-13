@@ -54,7 +54,7 @@ export default function PrivacyPage() {
         <li><strong>Vercel</strong> &mdash; website hosting and CDN. Standard server logs (IP, user-agent, request paths) are processed by Vercel as part of serving the site.</li>
         <li><strong>Affiliate networks</strong> &mdash; we participate in affiliate programs operated by Awin, Partnerize, Impact, CJ Affiliate, FlexOffers, and similar networks. When you click an outbound affiliate link, the destination partner and the network drop their own cookies on the destination site to attribute any subsequent purchase. We are not in control of those cookies.</li>
         <li><strong>Ad networks</strong> &mdash; see Section 5.</li>
-        <li><strong>Ticketmaster, Fanatics, SpotHero, Booking.com, and other linked partners</strong> &mdash; ticket, merchandise, parking, and hotel marketplaces we link out to. Their privacy policies govern any data collected on their sites.</li>
+        <li><strong>Ticketmaster, Fanatics, SpotHero, Expedia, and other linked partners</strong> &mdash; ticket, merchandise, parking, and hotel marketplaces we link out to. Their privacy policies govern any data collected on their sites.</li>
       </ul>
       <p>
         When you tap or click links to third-party sites, you leave PromoNight and become subject to the terms and privacy policies of those platforms. We are not responsible for their practices and encourage you to review their policies.

@@ -695,6 +695,7 @@ function GameDetailRow({
                 venue={opponentVenue}
                 surface="web_team_page"
                 placement={placement}
+                gameDate={game.date}
                 variant="modal-row"
               />
             )}

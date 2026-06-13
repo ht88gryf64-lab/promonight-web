@@ -1,7 +1,7 @@
 import type { Team, Venue } from '@/lib/types';
 import { TicketmasterCTA } from '@/components/affiliates/TicketmasterCTA';
 import { SpotHeroCTA } from '@/components/affiliates/SpotHeroCTA';
-import { BookingCTA } from '@/components/affiliates/BookingCTA';
+import { ExpediaCTA } from '@/components/affiliates/ExpediaCTA';
 import { FanaticsCTA } from '@/components/affiliates/FanaticsCTA';
 import { VenueInfoBlock } from '@/components/venue-info-block';
 
@@ -34,7 +34,7 @@ export function AffiliateRail({ team, venue, className }: AffiliateRailProps) {
         {/* Parking */}
         <SpotHeroCTA team={team} venue={venue} surface="web_team_page" placement="team_page_prepare" />
         {/* Hotels */}
-        <BookingCTA team={team} venue={venue} surface="web_team_page" placement="team_page_prepare" />
+        <ExpediaCTA team={team} venue={venue} surface="web_team_page" placement="team_page_prepare" />
         {/* Fan gear — self-gates on team.fanaticsUrl, may render null */}
         <FanaticsCTA team={team} surface="web_team_page" placement="team_page_prepare" />
       </div>

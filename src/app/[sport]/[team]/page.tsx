@@ -33,7 +33,7 @@ import { EngagementTracker } from '@/components/analytics/EngagementTracker';
 import { TicketmasterCTA } from '@/components/affiliates/TicketmasterCTA';
 import { FanaticsCTA } from '@/components/affiliates/FanaticsCTA';
 import { SpotHeroCTA } from '@/components/affiliates/SpotHeroCTA';
-import { BookingCTA } from '@/components/affiliates/BookingCTA';
+import { ExpediaCTA } from '@/components/affiliates/ExpediaCTA';
 import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { AD_SLOTS } from '@/lib/ads/slots';
@@ -333,7 +333,7 @@ export default async function TeamPage({
         </div>
       </section>
 
-      {/* PREPARE FOR THE GAME cluster — Fanatics, SpotHero, Booking. The
+      {/* PREPARE FOR THE GAME cluster — Fanatics, SpotHero, Expedia. The
        *  branded cards replace the previous red-gradient inline parking CTA
        *  + footer "PLAN YOUR TRIP" + footer "SHOP OFFICIAL GEAR" sections.
        *  AT line is omitted when venue is null (no fabricated stadium
@@ -373,7 +373,7 @@ export default async function TeamPage({
               placement="team_page_prepare"
               venue={venue}
             />
-            <BookingCTA
+            <ExpediaCTA
               team={team}
               surface="web_team_page"
               placement="team_page_prepare"

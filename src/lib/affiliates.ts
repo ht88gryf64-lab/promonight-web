@@ -14,7 +14,6 @@ import type { Team } from './types';
 const SEATGEEK_AID = process.env.NEXT_PUBLIC_SEATGEEK_AID ?? '';
 const STUBHUB_RID = process.env.NEXT_PUBLIC_STUBHUB_RID ?? '';
 const SPOTHERO_ID = process.env.NEXT_PUBLIC_SPOTHERO_ID ?? '';
-const BOOKING_AID = process.env.NEXT_PUBLIC_BOOKING_AID ?? '';
 // Impact wrap-link template for Ticketmaster. Placeholder tokens — `{TARGET}`
 // receives the URL-encoded destination (Ticketmaster team URL); `{SHARED_ID}`
 // receives the surface tag for partner-side reporting. When unset, the
@@ -33,7 +32,7 @@ export type AffiliatePartner =
   | 'stubhub'
   | 'fanatics'
   | 'spothero'
-  | 'booking'
+  | 'expedia'
   | 'ticketmaster';
 
 export type AffiliateLinkOptions = {
@@ -63,8 +62,10 @@ export function isPartnerActive(partner: AffiliatePartner): boolean {
       return FANATICS_IMPACT_WRAP.length > 0;
     case 'spothero':
       return SPOTHERO_ID.length > 0;
-    case 'booking':
-      return BOOKING_AID.length > 0;
+    case 'expedia':
+      // Partnerize camref is a hardcoded constant baked into the URL — the
+      // outbound link is always commissionable, so tracking is always active.
+      return true;
     case 'ticketmaster':
       return TICKETMASTER_IMPACT_WRAP.length > 0;
   }
@@ -121,13 +122,6 @@ export function spotHeroUrl(rawUrl: string, opts: AffiliateLinkOptions): string 
   return url.toString();
 }
 
-export function bookingUrl(rawUrl: string, opts: AffiliateLinkOptions): string {
-  const url = new URL(rawUrl);
-  setParam(url, 'aid', BOOKING_AID);
-  setParam(url, 'label', subId(opts));
-  return url.toString();
-}
-
 export function buildAffiliateUrl(
   partner: AffiliatePartner,
   rawUrl: string,
@@ -143,8 +137,11 @@ export function buildAffiliateUrl(
       return rawUrl;
     case 'spothero':
       return spotHeroUrl(rawUrl, opts);
-    case 'booking':
-      return bookingUrl(rawUrl, opts);
+    case 'expedia':
+      // The Partnerize tracking template (camref/creativeref/adref) is already
+      // baked into the URL by buildExpediaHotelLink — passthrough, do NOT
+      // re-tag the way Booking's aid was injected.
+      return rawUrl;
     case 'ticketmaster':
       // Ticketmaster URLs are wrap-resolved by `buildTicketmasterUrl` at the
       // call site (where teamSlug + surface are known). Surface tracking
@@ -326,18 +323,6 @@ export function buildSpotHeroUrl(opts: SpotHeroOpts): string {
   });
 }
 
-export type BookingOpts = {
-  /** Preferred: exact venue coordinates. Booking's coordinate search radiates
-   *  ~5-10 mi from the point — ideal for stadium-area hotel searches and
-   *  immune to the brand-city-vs-stadium-city string-matching problem. */
-  latitude?: number;
-  longitude?: number;
-  /** Fallback when coordinates aren't available. Free-form city/region query. */
-  location?: string;
-  surface: AnalyticsSurface;
-  promoId?: string | null;
-};
-
 function hasValidCoords(lat: number | undefined, lng: number | undefined): boolean {
   return (
     typeof lat === 'number' &&
@@ -349,19 +334,74 @@ function hasValidCoords(lat: number | undefined, lng: number | undefined): boole
   );
 }
 
-export function buildBookingUrl(opts: BookingOpts): string {
-  let base: string;
-  if (hasValidCoords(opts.latitude, opts.longitude)) {
-    base = `https://www.booking.com/searchresults.html?latitude=${opts.latitude}&longitude=${opts.longitude}`;
-  } else if (opts.location && opts.location.trim().length > 0) {
-    base = `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(opts.location)}`;
-  } else {
-    // Neither lat/lng nor location — land on Booking homepage; still tag so
-    // partner attribution works if the visitor converts.
-    base = 'https://www.booking.com/';
+// ── Expedia (Partnerize) hotel deep links ────────────────────────────────────
+// Expedia runs on Partnerize. The whole tracking template is baked into the
+// wrapper URL — there is NO env var and NO render-time re-tag (buildAffiliateUrl
+// passes 'expedia' through unchanged). The wrapper wraps a DOUBLE-encoded
+// Expedia Hotel-Search URL as `landingPage`: the inner URL is encoded once
+// (space->%20, comma->%2C), then the entire inner URL is encoded AGAIN
+// (%20->%2520, %2C->%252C). Confirmed-working reference structure:
+//   https://expedia.com/affiliate?siteid=1&landingPage=<DOUBLE_ENCODED>&camref=1011l5KcC9&creativeref=1100l68075&adref=PZPbSQWcB2
+const EXPEDIA = {
+  base: 'https://expedia.com/affiliate',
+  siteid: '1',
+  camref: '1011l5KcC9',
+  creativeref: '1100l68075',
+  adref: 'PZPbSQWcB2',
+  hotelSearch: 'https://www.expedia.com/Hotel-Search',
+} as const;
+
+export type ExpediaHotelLinkOpts = {
+  venueName: string;
+  city: string;
+  /** latLong is included ONLY when both coords are finite & nonzero. */
+  lat?: number | null;
+  lng?: number | null;
+  /** YYYY-MM-DD. Both required for a dated search; omit both for undated. */
+  checkIn?: string | null;
+  checkOut?: string | null;
+  /** Partnerize sub-tracking, e.g. "web_away_game_minnesota-twins". */
+  pubref: string;
+};
+
+/** Add one calendar day to a YYYY-MM-DD date (UTC, off-by-one safe). */
+export function nextDayISO(date: string): string {
+  const d = new Date(`${date}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+export function buildExpediaHotelLink(opts: ExpediaHotelLinkOpts): string {
+  const coords = hasValidCoords(opts.lat ?? undefined, opts.lng ?? undefined);
+  const dated = Boolean(opts.checkIn && opts.checkOut);
+
+  // Inner Hotel-Search params, each value encoded ONCE. encodeURIComponent
+  // yields space->%20 and comma->%2C (NOT URLSearchParams' '+').
+  const inner: Array<[string, string]> = [['destination', `${opts.venueName}, ${opts.city}`]];
+  if (coords) inner.push(['latLong', `${opts.lat},${opts.lng}`]);
+  if (dated) {
+    inner.push(['startDate', opts.checkIn!], ['endDate', opts.checkOut!], ['d1', opts.checkIn!], ['d2', opts.checkOut!]);
   }
-  return bookingUrl(base, {
-    surface: opts.surface,
-    promoId: opts.promoId,
-  });
+  inner.push(
+    ['flexibility', '0_DAY'],
+    ['adults', '2'],
+    ['rooms', '1'],
+    ['sort', 'RECOMMENDED'],
+    ['categorySearch', 'hotels_option'],
+    ['useRewards', 'false'],
+  );
+  const innerUrl = `${EXPEDIA.hotelSearch}?${inner.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&')}`;
+
+  // Wrapper. landingPage = the inner URL encoded AGAIN (the required double
+  // encode). Built as a string (NOT URLSearchParams) so the already-encoded
+  // landingPage is not re-encoded a third time and the param order stays
+  // byte-identical to the confirmed reference.
+  return (
+    `${EXPEDIA.base}?siteid=${EXPEDIA.siteid}` +
+    `&landingPage=${encodeURIComponent(innerUrl)}` +
+    `&camref=${EXPEDIA.camref}` +
+    `&creativeref=${EXPEDIA.creativeref}` +
+    `&adref=${EXPEDIA.adref}` +
+    `&pubref=${encodeURIComponent(opts.pubref)}`
+  );
 }

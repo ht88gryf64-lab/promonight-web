@@ -153,7 +153,7 @@ export type AffiliatePartner =
   | 'stubhub'
   | 'fanatics'
   | 'spothero'
-  | 'booking'
+  | 'expedia'
   | 'ticketmaster';
 
 export type AffiliateClickProperties = {

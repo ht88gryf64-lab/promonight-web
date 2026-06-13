@@ -6,7 +6,7 @@ import type { WorldCupFanFestival } from '@/data/world-cup-cities';
 import { TrackedLink } from '@/components/analytics/TrackedLink';
 import { TicketmasterCTA } from '@/components/affiliates/TicketmasterCTA';
 import { SpotHeroCTA } from '@/components/affiliates/SpotHeroCTA';
-import { BookingCTA } from '@/components/affiliates/BookingCTA';
+import { ExpediaCTA } from '@/components/affiliates/ExpediaCTA';
 import { FanaticsCTA } from '@/components/affiliates/FanaticsCTA';
 import { VenueInfoBlock } from '@/components/venue-info-block';
 import { WorldCupGameRows } from './game-rows';
@@ -85,7 +85,7 @@ function WorldCupRail({ team, venue }: { team: WorldCupTeamData; venue: Venue | 
       <div className="flex flex-col gap-2.5">
         <TicketmasterCTA team={team.team} surface={WC_SURFACE} placement={WC_PLACEMENT} size="full" />
         <SpotHeroCTA team={team.team} venue={venue} surface={WC_SURFACE} placement={WC_PLACEMENT} />
-        <BookingCTA team={team.team} venue={venue} surface={WC_SURFACE} placement={WC_PLACEMENT} />
+        <ExpediaCTA team={team.team} venue={venue} surface={WC_SURFACE} placement={WC_PLACEMENT} />
         <FanaticsCTA team={team.team} surface={WC_SURFACE} placement={WC_PLACEMENT} />
       </div>
       {team.venue && (
