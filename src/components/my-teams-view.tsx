@@ -1621,7 +1621,7 @@ function ComingUpSection({
 // from the Prepare-for-the-Game cluster on the dashboards.
 //
 // All four cards always render here. Per the affiliate gating audit, the
-// team page already renders SpotHero and Booking unconditionally with
+// team page already renders SpotHero and Expedia unconditionally with
 // direct-URL fallbacks — there is no feature flag to bypass, so this
 // page's behavior matches without a workaround. FanaticsCTA self-gates on
 // team.fanaticsUrl/fanaticsPath presence (data-level, not feature-level);

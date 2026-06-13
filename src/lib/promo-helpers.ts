@@ -298,7 +298,7 @@ export function generateTeamFAQs(
   // 5d. Travel — hotels (always shown)
   faqs.push({
     question: `Where should I stay near ${venueName}?`,
-    answer: `Several hotels sit within walking distance of ${venueName}, and more are a short rideshare away. For a ${fullName} game weekend, searching Booking.com for hotels near ${venueName} surfaces the best rates for your specific date — prices jump on marquee dates like giveaway nights and playoff games, so booking early helps.`,
+    answer: `Several hotels sit within walking distance of ${venueName}, and more are a short rideshare away. For a ${fullName} game weekend, searching Expedia for hotels near ${venueName} surfaces the best rates for your specific date — prices jump on marquee dates like giveaway nights and playoff games, so booking early helps.`,
   });
 
   // 5e. App — push notifications (always shown, distinct from #5's general pitch)

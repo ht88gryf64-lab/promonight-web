@@ -333,7 +333,7 @@ export default async function TeamPage({
         </div>
       </section>
 
-      {/* PREPARE FOR THE GAME cluster — Fanatics, SpotHero, Booking. The
+      {/* PREPARE FOR THE GAME cluster — Fanatics, SpotHero, Expedia. The
        *  branded cards replace the previous red-gradient inline parking CTA
        *  + footer "PLAN YOUR TRIP" + footer "SHOP OFFICIAL GEAR" sections.
        *  AT line is omitted when venue is null (no fabricated stadium
