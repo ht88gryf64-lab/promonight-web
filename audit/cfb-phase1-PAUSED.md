@@ -1,61 +1,58 @@
 # CFB Phase 1 — PAUSED (resume state)
 
-**Paused:** 2026-06-12 · Cold-resume marker for the CFB stream build. Read this, then `audit/cfb-stream-build-spec.md` (the locked spec) and `audit/cfb-phase1-verify.md` (the gate report).
+**Paused:** 2026-06-13 · Cold-resume marker. Read this, then `audit/cfb-stream-build-spec.md` (locked spec) and `audit/cfb-phase1-verify.md` (gate report — the "Re-gate after deterministic FIX 3" section is authoritative).
 
 ---
 
 ## 1. Where we stopped
 
-**Phase 1 gate reached and held.** Schema + schedule parser + blind verify stage built and run for the 4 spike schools only.
+**Phase 1 is GREEN.** The deterministic, harness-confirmed verify is built and proven. Last commit **`429e32d`** on branch **`cfb-phase1`**. **No push, no merge, no Phase 2 started.** (Lineage: `cfb-phase1` off `cfb-data-spike` — both local-only.)
 
-- **Branch:** `cfb-phase1`, branched off `cfb-data-spike` (which is itself NOT merged/pushed — it holds the spike + verification pass, commits `40f266d`, `fd4bec9`).
-- **3 Phase-1 commits** on top of that base:
-  - `677dba8` — docs(cfb): commit locked build spec into repo (step 0)
-  - `a80d534` — feat(cfb): Part A — five forked collection types + rule gates
-  - `808b748` — feat(cfb): Parts B–D — schedule parser, blind verify stage, gate + report
-  - _(this PAUSED note is committed on top as the resume marker)_
-- **No push. No merge. No UI. No expansion to the 25-school anchor list.**
+Key files: `src/lib/cfb/{types,rules}.ts`; `scripts/cfb/lib/{anthropic,guards,schools,pipeline,corroborate}.ts` (`corroborate.ts` is the FIX-3 deterministic second source); `scripts/cfb/run-phase1.ts` (orchestrator; `--no-llm`, `--corroborate-only`); `scripts/cfb/gate-fixtures.ts`; `audit/cfb-phase1-verify.md`.
 
-Key files: `src/lib/cfb/types.ts` (5 forked types), `src/lib/cfb/rules.ts` (derived-field gates), `scripts/cfb/lib/{anthropic,guards,schools,pipeline}.ts`, `scripts/cfb/run-phase1.ts` (orchestrator), `scripts/cfb/gate-fixtures.ts` (standalone deterministic guard proof), `audit/cfb-phase1-verify.md` (report).
-
-Re-run the pipeline (idempotent — clears `cfbGames` first):
+Re-run / re-check (idempotent):
 ```
+# full live: parse (LLM) + deterministic harness corroboration + report
 npx tsx --env-file=.env.local --require ./scripts/stub-server-only.cjs scripts/cfb/run-phase1.ts
-# ANTHROPIC_API_KEY is read at runtime from promo-pipeline/.env.local (gitignored); promo-pipeline is untouched.
-# --no-llm runs the gate proof + schema seed + report without live extraction.
+# determinism re-check (no LLM): re-corroborate the EXISTING stored games
+npx tsx --env-file=.env.local --require ./scripts/stub-server-only.cjs scripts/cfb/run-phase1.ts --corroborate-only
 ```
 
-## 2. Gate status
+## 2. Gate result (final, from stored data)
 
-- **47 games / 22 verified / 13 downgraded / 12 flagged-for-human** (last run `bg6hagggi`).
-- **Firestore independently confirmed to match the report** (queried `cfbGames`: 47 total, 22 `verified=true`, verdicts `{verified:22, downgraded:13, flagged-for-human:12}`).
-- **Idempotency held** — the run logged "cleared 48 stale cfbGames"; collection no longer accumulates across runs (doc IDs shift with the parser's week assignment, so the run clears `cfbGames` before writing).
-- Five collections populated: `cfbSchools` 4, `cfbVenues` 4, `cfbRivalries` 2 (with `seriesStartYear`/`trophyCreatedYear` **split**), `cfbTraditions` 2, `cfbGames` 47.
-- **5/5 anti-hallucination guards proven firing on known-bad data: 16/16 deterministic checks** (`scripts/cfb/gate-fixtures.ts` and the report's guard section).
-- Verify stage is **structurally** blind: `blindVerifySchool(school, skeleton)` accepts only `{date, homeTeam, awayTeam}` — no field exists for the parser's kickoff/tz/network/conference.
-- **HIGH-survival rate this run: 46.8% (22/47)** vs ~85% spike baseline. NOTE: this metric is **noisy across runs** (observed 13.9% → 23.4% → 46.8% over three live runs, driven by LLM nondeterminism + transient API/official-site fetch outcomes). It is **not** a stable Phase-2 gate signal on its own — gate Phase 2 on the deterministic guard proof + a hard-data-scoped survival metric (see §3).
+**Two back-to-back runs both `18 verified / 3 conflict / 28 non-verified`, identical, no retry.** Breakdown:
+- **18 verified** — each with **2 independent domains** (official athletics site + `en.wikipedia.org`), kickoff **value** confirmed (`fieldConfirmed=kickoff`), zero one-domain verifications.
+- **3 genuine timezone-boundary conflicts** — Oregon / Fresno / Washington State @ Boise (~1h, parser `PT` vs Wikipedia `MT`).
+- **14 honest-unannounced TBD** — kickoff genuinely not yet announced on either source.
+- **14 no-independent-2nd-source** — **13 are Kansas State** (its parser used Wikipedia, and the official site is crawler-blocked, so no independent code-fetchable second domain) + **1 is ND-Wisconsin** (neutral-site Shamrock Series row the Wikipedia parser doesn't extract).
 
-## 3. What the gate still owes before Phase 2 (open asks)
+## 3. The three hard bars
 
-1. **Downgrade/flag breakdown BY REASON (not yet computed — do this first on resume).** The 25 non-verified games (13 downgraded + 12 flagged) must be split into:
-   - (a) honest **"TBD because genuinely unannounced"** — parser and independent verify both returned TBD / one returned TBD conservatively (kickoff not yet officially set this far out). These are *cheap* — no human judgment needed, they resolve themselves as the season nears.
-   - (b) **"flagged because sources disagreed, or the value exists but couldn't be confirmed"** — real value conflict (e.g. `kickoff mismatch 2.0h`) or unestablished provenance (`<2 source domains`, `citation unverifiable` — official sites block Node fetch). These are the *expensive* ones that gate the 25-school human-review load.
-   - **Source of truth:** `cfbGames.verification.flags[]` in Firestore. Tally flag strings: `kickoff presence mismatch ...=TBD` → bucket (a); `kickoff mismatch Nh` → bucket (b, conflict); `only N independent source domain(s)` / `citation unverifiable` → bucket (b, provenance). This number decides whether the 25-school wedge human-review load is light or heavy.
-   - Recommended refinement: compute the survival metric on **stable hard-data fields** (date / opponent / home-away / venue) separately from volatile kickoff times — that is the number that should actually gate Phase 2.
+- **Determinism — PASS** (two runs match exactly, no retry).
+- **Single-source proof from stored data — PASS** (every verified game shows ≥2 distinct independent domains; zero on one domain).
+- **Zero tooling-driven non-verifications — PASS** (the verify agent is removed from the gate; nothing flags for harness flakiness).
 
-2. **Two load-bearing proofs to state explicitly in `audit/cfb-phase1-verify.md`:**
-   - (a) **Boise timezone guard caught the +2h, with before/after** — ALREADY PRESENT in the report (section "Boise timezone case — before/after", 6/6 rows `🚩 +2h CAUGHT`). ✅ done; just confirm it stays.
-   - (b) **Zero claims reached `verified:true` on a single source** — STRUCTURALLY guaranteed by `guardSecondSource` (requires ≥2 distinct source domains) + `diffGame` (returns `verified` only when that guard passes), but **not yet stated explicitly** in the report. OWED: add an explicit statement AND back it empirically (query the 22 `verified=true` games, confirm each has ≥2 distinct source domains across `source` + `verification.sourcesChecked`).
+The **fourth clause** ("remaining friction is just conflicts + TBDs") has the **14-game no-2nd-source residue**, which is **correct-but-conservative** — constraint 3 staying flagged rather than verifying on a single domain. **Not a bug.**
 
-## 4. What Phase 2 will be (do NOT start it)
+## 4. Decision deemed made
 
-**Pipeline to 25 (hard data).** Run schedule + venue + colors + rivalry facts across all 25 anchor schools (build spec §2 list), verify pass on each. Produce a per-school coverage + verification report (claims / verified / downgraded / flagged-for-human, per school). **No pages built.** Stop-and-report gate (build spec §8, Phase 2).
+**Phase 1 is green.** The no-2nd-source residue is a **source-independence limitation to fix at the FRONT of Phase 2**, not a reason to re-gate Phase 1 a fourth time.
 
-Do not start Phase 2 in this resume without an explicit go. The 25-school list is fixed in the build spec; Phase 1 deliberately did NOT touch it.
+## 5. What Phase 2 will be (do NOT start it)
 
-## 5. State hygiene (confirmed at pause)
+Three parts, one pass, no pages built:
+- **(a) Source-independence fix.** Prefer the **official athletics site** as the parser source (frees Wikipedia as the independent corroborator); add **Sports-Reference** as a second code-parseable corroborating source so no school is stranded; teach the Wikipedia parser the **neutral-site row** (ND-Wisconsin class).
+- **(b) Full 25-school anchor-list run** (schedule + venue + colors + rivalry facts), harness-confirmed verify on each. The 25-school list is fixed in `audit/cfb-stream-build-spec.md` §2.
+- **(c) Per-school gate.** Report **per-school verified rate AND no-2nd-source rate**; **stop/flag any school under a minimum corroboration floor** rather than calling it covered.
 
-- **Working tree clean** — `git status` empty: nothing uncommitted, nothing staged.
-- **Untracked files:** none in the repo (the workflow scripts used during the spike live under the session transcript dir, not the repo).
-- **No secrets tracked or committed.** Only `.env.example` and `.env.local.example` (placeholder templates) are tracked; the real `.env.local` and `promo-pipeline/.env.local` are gitignored and untracked. No `sk-ant-…` or service-account literals are committed — `scripts/cfb/run-phase1.ts` reads `ANTHROPIC_API_KEY` from `promo-pipeline/.env.local` at runtime (the only grep hit is the env-var *name* inside a read-regex, not a value).
-- **Not pushed, not merged.** `cfb-phase1` is local-only.
+## 6. Two open decisions owed by Matt before the Phase 2 draft
+
+1. **Confirm:** fold the source-independence fix into Phase 2 (vs re-gating Phase 1 a fourth time). _Leaning yes._
+2. **Set the corroboration floor:** the minimum per-school verified rate below which Phase 2 flags a school for human review rather than shipping it. _Suggested start: under 50% verified = flagged_ — Matt to confirm the number, accounting for June honest-TBD noise (many kickoffs legitimately unannounced this far out).
+
+## 7. State hygiene (confirmed at pause)
+
+- **Working tree clean** — `git status` empty: nothing staged, nothing uncommitted.
+- **Untracked files:** none in the repo.
+- **No secrets staged or committed** — only `.env.example` and `.env.local.example` (placeholder templates) are tracked; real `.env.local` and `promo-pipeline/.env.local` are gitignored. The only `ANTHROPIC_API_KEY` grep hit is the env-var *name* in `run-phase1.ts`'s runtime read-regex, not a value.
+- **Not pushed, not merged** — `cfb-phase1` is local-only at `429e32d`.
