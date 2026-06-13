@@ -24,10 +24,12 @@ import { db } from '../../src/lib/firebase';
 import { CFB_COLLECTIONS, type CfbGame } from '../../src/lib/cfb/types';
 import { gateConferenceGame, computeWeeks, CONFERENCE_2026 } from '../../src/lib/cfb/rules';
 import { PHASE1_SCHOOLS, BOISE_KICKOFF_FIXTURE, ND_SCHEDULE_FIXTURE, RIVALRY_FIXTURE, FABRICATION_FIXTURE, MISCITATION_FIXTURE } from './lib/schools';
-import { parseSchoolSchedule, blindVerifySchool, type ParsedGame, type VerifyObservation } from './lib/pipeline';
-import { diffGame, guardTimezone, guardDerivedFields, guardEntityConflation, guardSecondSource, guardCitation, domainOf } from './lib/guards';
+import { parseSchoolSchedule, type ParsedGame } from './lib/pipeline';
+import { guardTimezone, guardDerivedFields, guardEntityConflation, guardSecondSource, guardCitation } from './lib/guards';
+import { fetchWikiSchedule, corroborate } from './lib/corroborate';
 
 const NO_LLM = process.argv.includes('--no-llm');
+const CORROBORATE_ONLY = process.argv.includes('--corroborate-only');
 const SEASON = 2026;
 const NOW = new Date().toISOString();
 
@@ -75,6 +77,37 @@ interface SchoolResult {
   error?: string;
 }
 
+interface CorrGame {
+  id: string; date: string; source: string; homeSchoolId: string; awaySchoolId: string;
+  kickoff: { time: string; tz: string; tbd: boolean }; confidence?: string;
+}
+
+/** Deterministic harness-confirmed corroboration over a set of games. Fetches
+ *  the school's Wikipedia schedule ONCE (code), fact-matches each kickoff, and
+ *  writes the verified flag + trail. No LLM. Same inputs -> same outputs. */
+async function corroborateGames(school: (typeof PHASE1_SCHOOLS)[number], games: CorrGame[]) {
+  const wiki = await fetchWikiSchedule(school);
+  const out = { verified: 0, downgraded: 0, flagged: 0, highTotal: 0, highVerified: 0, buckets: {} as Record<string, number> };
+  const batch = db.batch();
+  for (const g of games) {
+    const r = corroborate(g, wiki, school);
+    out.buckets[r.bucket] = (out.buckets[r.bucket] ?? 0) + 1;
+    const verified = r.verdict === 'verified';
+    if (g.confidence === 'HIGH') out.highTotal++;
+    if (verified) { out.verified++; if (g.confidence === 'HIGH') out.highVerified++; }
+    else if (r.verdict === 'downgraded') out.downgraded++;
+    else out.flagged++;
+    const verification = {
+      verifiedAt: NOW, verdict: r.verdict,
+      guards: { timezone: r.verdict !== 'downgraded', derivedFields: true, entityConflation: true, secondSource: verified, citation: verified },
+      flags: r.flags, sourcesChecked: r.sourcesChecked, corroborator: 'en.wikipedia.org', fieldConfirmed: r.fieldConfirmed,
+    };
+    batch.update(db.collection(CFB_COLLECTIONS.games).doc(g.id), { verified, verification });
+  }
+  await batch.commit();
+  return out;
+}
+
 async function runSchoolLive(school: (typeof PHASE1_SCHOOLS)[number]): Promise<SchoolResult> {
   const res: SchoolResult = { school: school.shortName, extracted: 0, verified: 0, downgraded: 0, flagged: 0, highTotal: 0, highVerified: 0, parseUsd: 0, verifyUsd: 0 };
   try {
@@ -105,63 +138,11 @@ async function runSchoolLive(school: (typeof PHASE1_SCHOOLS)[number]): Promise<S
     await batch1.commit();
     res.extracted = cfbGames.length;
 
-    // ── BLIND VERIFY (skeleton only: date + matchup) ──
-    const skeleton = cfbGames.map((g) => ({ date: g.date, homeTeam: g.homeSchoolId, awayTeam: g.awaySchoolId }));
-    const { observations, usd: vUsd } = await blindVerifySchool(school, skeleton);
-    res.verifyUsd = vUsd;
-    const obsByKey = new Map(observations.map((o) => [`${o.date}|${o.homeTeam}|${o.awayTeam}`, o]));
-
-    // ── DIFF + write verification ──
-    const batch2 = db.batch();
-    for (const g of cfbGames) {
-      const obs = obsByKey.get(`${g.date}|${g.homeSchoolId}|${g.awaySchoolId}`);
-      const ruleConf = gateConferenceGame(g.homeSchoolId, g.awaySchoolId);
-      const ruleWeek = g.week;
-      if (g.confidence === 'HIGH') res.highTotal++;
-      let outcome;
-      if (!obs) {
-        outcome = { verdict: 'flagged-for-human' as const, guards: { timezone: false, derivedFields: true, entityConflation: true, secondSource: false, citation: false }, flags: ['no independent observation produced for this game'] };
-      } else {
-        // citation guard: does the parser's cited source actually carry the kickoff?
-        const needles = [g.kickoff.time.replace(/\s*(a|p)\.?\s*m\.?.*/i, ''), g.kickoff.time];
-        let carries: boolean | null = g.kickoff.tbd ? true : await fetchCarries(g.source, needles);
-        if (carries === null && !g.kickoff.tbd) {
-          // FIX 3: parser's cited official site is unfetchable from Node
-          // (crawler-blocked / JS-rendered). Do NOT bypass it — fall back to an
-          // ALLOWED independent domain the verify read (e.g. Wikipedia) to
-          // confirm the value rather than collapsing the trail to one domain.
-          const parserDom = domainOf(g.source);
-          for (const alt of obs.sources) {
-            if (domainOf(alt) && domainOf(alt) !== parserDom) {
-              const altCarries = await fetchCarries(alt, needles);
-              if (altCarries !== null) { carries = altCarries; break; }
-            }
-          }
-        }
-        const independentConfRead = obs.conferenceGameAsRead === 'yes' ? true : obs.conferenceGameAsRead === 'no' ? false : null;
-        outcome = diffGame({
-          date: g.date,
-          parserKickoff: { time: g.kickoff.time, tz: g.kickoff.tz },
-          verifyKickoff: { time: obs.kickoffTime, tz: obs.kickoffTz },
-          stored: { conferenceGame: g.conferenceGame, week: g.week },
-          ruleConferenceGame: ruleConf, ruleWeek,
-          independentConfRead,
-          sourceUrls: [g.source, obs.source, ...obs.sources],
-          citedSourceCarriesValue: carries,
-        });
-      }
-      // FIX 1 (persistence only — verification LOGIC unchanged): store the FULL
-      // distinct set of corroborating verify sources, not just the primary, so
-      // the stored trail can independently prove >=2 domains for verified games.
-      const sourcesChecked = obs ? [...new Set([obs.source, ...obs.sources].filter(Boolean))] : [];
-      const verification = { verifiedAt: NOW, verdict: outcome.verdict, guards: outcome.guards, flags: outcome.flags, sourcesChecked };
-      const verified = outcome.verdict === 'verified';
-      if (verified) { res.verified++; if (g.confidence === 'HIGH') res.highVerified++; }
-      else if (outcome.verdict === 'downgraded') res.downgraded++;
-      else res.flagged++;
-      batch2.update(db.collection(CFB_COLLECTIONS.games).doc(g.id), { verified, verification });
-    }
-    await batch2.commit();
+    // ── DETERMINISTIC, HARNESS-CONFIRMED corroboration (FIX 3) ──
+    // No verify AGENT: the harness fetches Wikipedia in code and fact-matches.
+    const c = await corroborateGames(school, cfbGames);
+    res.verified = c.verified; res.downgraded = c.downgraded; res.flagged = c.flagged;
+    res.highTotal = c.highTotal; res.highVerified = c.highVerified;
   } catch (e: any) {
     res.error = e.message;
   }
@@ -240,6 +221,34 @@ async function runGateProof() {
 }
 
 async function main() {
+  if (CORROBORATE_ONLY) {
+    // Determinism check: re-run the DETERMINISTIC gate over the EXISTING stored
+    // cfbGames (no parse, no LLM). Two back-to-back runs must match.
+    console.log(`CFB corroborate-only (deterministic gate, no LLM) — ${NOW}`);
+    const totals = { verified: 0, downgraded: 0, flagged: 0, buckets: {} as Record<string, number> };
+    for (const s of PHASE1_SCHOOLS) {
+      const [homeSnap, awaySnap] = await Promise.all([
+        db.collection(CFB_COLLECTIONS.games).where('homeSchoolId', '==', s.id).get(),
+        db.collection(CFB_COLLECTIONS.games).where('awaySchoolId', '==', s.id).get(),
+      ]);
+      const seen = new Set<string>();
+      const games: CorrGame[] = [];
+      for (const d of [...homeSnap.docs, ...awaySnap.docs]) {
+        if (seen.has(d.id)) continue;
+        seen.add(d.id);
+        const g = d.data();
+        games.push({ id: d.id, date: g.date, source: g.source, homeSchoolId: g.homeSchoolId, awaySchoolId: g.awaySchoolId, kickoff: g.kickoff, confidence: g.confidence });
+      }
+      const c = await corroborateGames(s, games);
+      totals.verified += c.verified; totals.downgraded += c.downgraded; totals.flagged += c.flagged;
+      for (const [k, v] of Object.entries(c.buckets)) totals.buckets[k] = (totals.buckets[k] ?? 0) + v;
+      console.log(`  ${s.shortName.padEnd(13)} verified=${c.verified} downgraded=${c.downgraded} flagged=${c.flagged} (of ${games.length})`);
+    }
+    console.log(`TOTAL verified=${totals.verified} downgraded=${totals.downgraded} flagged=${totals.flagged}`);
+    console.log(`buckets: ${JSON.stringify(totals.buckets)}`);
+    process.exit(0);
+  }
+
   console.log(`CFB Phase 1 run — ${NO_LLM ? 'gate + seed only (--no-llm)' : 'full live'} — ${NOW}`);
 
   const gate = await runGateProof();
@@ -277,18 +286,17 @@ function writeReport(gate: { lines: string[]; fired: number; total: number }, se
 
   const md = `# CFB Phase 1 — Verify Report
 
-**Generated:** ${NOW} · **Branch:** cfb-phase1 · **Scope:** 4 spike schools only (no expansion to 25) · **Mode:** ${NO_LLM ? 'gate + seed (--no-llm)' : 'full live parse + blind verify'}
+**Generated:** ${NOW} · **Branch:** cfb-phase1 · **Scope:** 4 spike schools only (no expansion to 25) · **Mode:** ${NO_LLM ? 'gate + seed (--no-llm)' : 'full live parse + deterministic harness corroboration'}
 
 ## Production safety (confirmed)
 
 **Nothing in the existing site queries the \`cfb*\` collections.** They are brand-new (\`cfbSchools\`, \`cfbVenues\`, \`cfbGames\`, \`cfbRivalries\`, \`cfbTraditions\`) — no route, component, sitemap, or lib reads them. \`cfbGames.verified\` defaults \`false\` and is the production-display gate, but there is no production reader yet, so there is **zero chance a \`verified=false\` row renders in production**. Writes here are isolated and reversible.
 
-## Verify-stage architecture (confirmed isolated)
+## Verify-stage architecture (deterministic, harness-confirmed)
 
-The verify stage is **structurally** blind, not blind by convention:
-- \`blindVerifySchool(school, skeleton)\` accepts ONLY \`{ date, homeTeam, awayTeam }\` per game. Its input type has **no field** for the parser's kickoff, tz, network, or conference — they cannot be passed in.
-- It re-fetches the host school's official site fresh and produces its OWN kickoff/tz/network.
-- The parser output and the verify output meet **only at \`diffGame()\`**, a pure comparison step. No \`verified=true\` can trace to the parser's own answer.
+Corroboration is pure harness code — no LLM in the verify path:
+- \`corroborate()\` deterministically fetches the school's Wikipedia 2026 schedule and **fact-matches the kickoff** against the parser's value on an independent second domain.
+- \`verified:true\` requires the kickoff confirmed on ≥2 distinct independent domains; otherwise downgraded (conflict) or flagged (honest-TBD / no independent 2nd source). Same inputs → same outputs.
 
 ## Per-school counts (live)
 

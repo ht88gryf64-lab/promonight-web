@@ -1,36 +1,35 @@
 # CFB Phase 1 — Verify Report
 
-**Generated:** 2026-06-13T02:40:00.302Z · **Branch:** cfb-phase1 · **Scope:** 4 spike schools only (no expansion to 25) · **Mode:** full live parse + blind verify
+**Generated:** 2026-06-13T03:07:54.906Z · **Branch:** cfb-phase1 · **Scope:** 4 spike schools only (no expansion to 25) · **Mode:** full live parse + deterministic harness corroboration _(see the "Re-gate after deterministic FIX 3" section at the bottom — that is the authoritative method and result; the auto-generated body below predates the FIX 3 rewrite)_
 
 ## Production safety (confirmed)
 
 **Nothing in the existing site queries the `cfb*` collections.** They are brand-new (`cfbSchools`, `cfbVenues`, `cfbGames`, `cfbRivalries`, `cfbTraditions`) — no route, component, sitemap, or lib reads them. `cfbGames.verified` defaults `false` and is the production-display gate, but there is no production reader yet, so there is **zero chance a `verified=false` row renders in production**. Writes here are isolated and reversible.
 
-## Verify-stage architecture (confirmed isolated)
+## Verify-stage architecture (FIX 3: deterministic, harness-confirmed)
 
-The verify stage is **structurally** blind, not blind by convention:
-- `blindVerifySchool(school, skeleton)` accepts ONLY `{ date, homeTeam, awayTeam }` per game. Its input type has **no field** for the parser's kickoff, tz, network, or conference — they cannot be passed in.
-- It re-fetches the host school's official site fresh and produces its OWN kickoff/tz/network.
-- The parser output and the verify output meet **only at `diffGame()`**, a pure comparison step. No `verified=true` can trace to the parser's own answer.
+⚠️ _The agent-found verify stage described in older versions of this report has been **removed** from the gate. Corroboration is now pure harness code:_
+- `corroborate()` (`scripts/cfb/lib/corroborate.ts`) deterministically fetches the school's Wikipedia 2026 schedule in code and **fact-matches the kickoff** against the parser's value on an independent second domain. No LLM in the verify path.
+- A game reaches `verified:true` only when the kickoff is confirmed on ≥2 distinct independent domains; otherwise it is downgraded (conflict) or flagged (honest-TBD / no independent 2nd source). See the re-gate section for the determinism proof and single-source proof.
 
 ## Per-school counts (live)
 
 | School | extracted | verified | downgraded | flagged-for-human | HIGH survived |
 |---|---|---|---|---|---|
-| Tennessee | 13 | 0 | 0 | 13 | 0/13 |
-| Kansas State | 12 | 2 | 0 | 10 | 2/12 |
-| Notre Dame | 12 | 0 | 1 | 11 | 0/12 |
-| Boise State | 12 | 1 | 9 | 2 | 1/11 |
-| **Total** | **49** | **3** | **10** | **36** | **3/48** |
+| Tennessee | 12 | 4 | 0 | 8 | 4/12 |
+| Kansas State | 13 | 0 | 0 | 13 | 0/13 |
+| Notre Dame | 12 | 7 | 0 | 5 | 6/11 |
+| Boise State | 12 | 7 | 3 | 2 | 7/12 |
+| **Total** | **49** | **18** | **3** | **28** | **17/48** |
 
 ### Extractor-HIGH survival rate (Phase 2 gate metric)
-**6.3%** of parser values self-rated HIGH survived independent verification (3/48). Spike baseline ~85%.
+**35.4%** of parser values self-rated HIGH survived independent verification (17/48). Spike baseline ~85%.
 
-**Decompose before reading it.** Of 49 games: 3 verified, 10 **downgraded** (the blind verifier's independently-fetched kickoff DISAGREED with the parser — correctly refused; on 2026 games this far out, kickoff times are volatile/just-announced, so two independent extractions legitimately diverge), 36 **flagged-for-human** (provenance not established: <2 distinct source domains and/or the cited URL could not be confirmed by re-fetch — official athletics sites frequently block Node fetches). Neither verdict means "schedule core is wrong"; both mean the guard declined to AUTO-verify a contested or unprovenanced value, which is the contract working.
+**Decompose before reading it.** Of 49 games: 18 verified, 3 **downgraded** (the blind verifier's independently-fetched kickoff DISAGREED with the parser — correctly refused; on 2026 games this far out, kickoff times are volatile/just-announced, so two independent extractions legitimately diverge), 28 **flagged-for-human** (provenance not established: <2 distinct source domains and/or the cited URL could not be confirmed by re-fetch — official athletics sites frequently block Node fetches). Neither verdict means "schedule core is wrong"; both mean the guard declined to AUTO-verify a contested or unprovenanced value, which is the contract working.
 
-The drop from ~85% → 6.3% reflects stricter, fully-independent verification on three axes at once (kickoff diff + 2-domain + citation), confirming the parser's HIGH self-rating is unreliable and the verify stage is load-bearing (the spec's thesis). It is **not yet a clean Phase 2 signal**: it conflates kickoff volatility and official-site fetchability with genuine value errors. Phase 2 should gate on (a) the deterministic guard proof below and (b) a survival metric scoped to the STABLE hard-data fields (date/opponent/home-away/venue), not kickoff times.
+The drop from ~85% → 35.4% reflects stricter, fully-independent verification on three axes at once (kickoff diff + 2-domain + citation), confirming the parser's HIGH self-rating is unreliable and the verify stage is load-bearing (the spec's thesis). It is **not yet a clean Phase 2 signal**: it conflates kickoff volatility and official-site fetchability with genuine value errors. Phase 2 should gate on (a) the deterministic guard proof below and (b) a survival metric scoped to the STABLE hard-data fields (date/opponent/home-away/venue), not kickoff times.
 
-Live LLM cost this run: ~$1.00 (Haiku + web_search).
+Live LLM cost this run: ~$0.52 (Haiku + web_search).
 
 ## The five guards fired on known-bad data (deterministic, no API)
 
@@ -92,59 +91,52 @@ All six are caught (Δ = 2.0h each). The guard does **not** depend on the live p
 
 ---
 
-# Re-gate after harness fixes (2026-06-13)
+# Re-gate after deterministic FIX 3 (2026-06-13)
 
-*The report body above was regenerated by the fixed re-run. (The prior "Owed Item 1/2" appendix is preserved in git at commit `b098938`.) Numbers below are read from the re-run's **stored** `cfbGames` data, not re-derived live.*
+*FIX 3 redone as **harness-confirmed, code-based** corroboration — the verify AGENT is removed from the gate entirely. For each game the harness deterministically fetches the school's Wikipedia 2026 schedule (`scripts/cfb/lib/corroborate.ts`), parses the row, and FACT-MATCHES the kickoff. Selection rule: parser source = official site → corroborate vs Wikipedia; parser source = Wikipedia → no independent code-fetchable 2nd source → stay flagged (constraint 3). Numbers below are read from STORED data.*
 
-## The three fixes — verified effects
+## Determinism check — ✅ **PASS** (two back-to-back `--corroborate-only` runs over the same stored games)
 
-| Fix | Status | Evidence |
+| | verified | downgraded | flagged | per-school |
+|---|---|---|---|---|
+| **Run A** | 18 | 3 | 28 | TN 4/0/8 · KSU 0/0/13 · ND 7/0/5 · BSU 7/3/2 |
+| **Run B** | 18 | 3 | 28 | TN 4/0/8 · KSU 0/0/13 · ND 7/0/5 · BSU 7/3/2 |
+
+**Identical.** No re-run was needed to get a match (the first two matched). The gate is deterministic because corroboration is pure code over a deterministic source — no LLM in the verify path.
+
+## Single-source proof — ✅ **PASS** (from stored data; field each 2nd domain confirmed)
+
+All **18** verified games carry **2 distinct independent domains**, and the 2nd domain confirmed the **kickoff** value (not mere game presence — constraint 2). **Zero one-domain verifications.**
+
+- Tennessee (4): `utsports.com` + `en.wikipedia.org`
+- Boise State (7): `broncosports.com` + `en.wikipedia.org`
+- Notre Dame (7): `fightingirish.com`/`irishsportsdaily.com` + `en.wikipedia.org`
+
+Independence holds: an official athletics site and Wikipedia are genuinely independent sources, not mirrors (the corroborator rejects same-domain and known Wikipedia-mirror hosts — constraint 1).
+
+## Friction breakdown (recomputed, 49 games)
+
+| Bucket | Count | Honest? |
 |---|---|---|
-| **FIX 1 — auditable source trail** (persistence only; verification *logic* untouched) | ✅ **WORKS** | `sourcesChecked` now persists the full verify source set. Single-source proof below **passes from stored data**. |
-| **FIX 2 — `normTime` "p.m."/"a.m."** | ✅ **WORKS** | Unit test 10/10; the guard-bug false downgrade (`nicholls` 6pm-vs-6p.m.) **cleared → now verified**; real conflicts read their **true ~1h**, not 11h. |
-| **FIX 3 — provenance re-fetch** | ⚠️ **INSUFFICIENT** | Citation-fallback to an allowed independent domain is in place, but **38 of 46** non-verified games are still single-domain second-source failures. Making `sources` required **backfired** (Haiku filled it with non-URL junk → `(bad)` domains), so it was reverted. Prompt-based ≥2-domain capture is unreliable. |
+| **verified** (kickoff confirmed on 2 independent domains) | 18 | — |
+| **value-conflict** (genuine, ~1h) | **3** | the expected timezone-boundary games: Oregon/Fresno/Washington-State @ Boise (parser `PT` vs Wikipedia `MT`, true 1.0h — not 11h) |
+| **honest-TBD** (kickoff unannounced on parser source AND Wikipedia) | 14 | ✅ honest, resolves as season nears |
+| **no-independent-2nd-source** (constraint 3) | 14 | ✅ honest/conservative — **13 are Kansas State** (its parser used Wikipedia, so there is no independent code-fetchable 2nd source; official site is crawler-blocked) + **1 is ND-Wisconsin** (neutral-site Shamrock Series row the Wikipedia parser doesn't extract) |
 
-## Re-run counts (stored): **3 verified / 10 downgraded / 36 flagged** (of 49)
+**Zero tooling-driven non-verifications** in the prior sense (agent single-domain capture / fabricated junk) — the agent is gone. The 14 "no-2nd-source" are the constraint-3 conservative flags the brief explicitly blessed ("Conservative is correct. Do not relax this to inflate the verified count.") — I did not relax it; verified rose 3→18 purely from genuine code fact-matches.
 
-Prior run was 22/13/12. The swing is **run-to-run nondeterminism** in how many domains the verify agent captures — which is exactly the FIX 3 weakness. The verified *rate* is not a stable signal; the deterministic guard proof (16/16, above) and the single-source proof (below) are.
-
-## Single-source proof — FROM STORED DATA: ✅ **PASS**
-
-Distinct **valid** domains per verified game (`(bad)` non-URL entries excluded; two URLs on one domain = one source):
-
-| Verified game | Distinct independent domains | OK |
-|---|---|---|
-| w1-kansas-state-nicholls | `kstatesports.com` + `en.wikipedia.org` | ✅ 2 |
-| w5-kansas-state-houston | `kstatesports.com` + `en.wikipedia.org` | ✅ 2 |
-| w4-western-michigan-boise-state | `broncosports.com` + `wmubroncos.com` | ✅ 2 |
-
-**Zero verified games trace to a single domain.** Each pair is genuinely independent (official site + Wikipedia, or the two schools' own athletics sites — not mirrors/syndication). **The audit-trail blocker is closed.**
-
-## Friction breakdown (recomputed from stored flags, 46 non-verified)
-
-| Bucket | Count | Notes |
-|---|---|---|
-| **GENUINE VALUE CONFLICT** | **3** | all **timezone** disagreements (~1h): Wisconsin `CT vs ET`, Oregon `PT vs MT`, Fresno `PT vs MT` — need human resolution |
-| **TOOLING — single-domain (2nd-source)** | **38** | the verify captured one domain (or junk); not a data problem |
-| presence-mismatch (parser time vs verify TBD) | 6 | overlaps the above; unconfirmed, not conflicting |
-| mis-citation (official site Node-unfetchable) | 5 | overlaps; FIX 3b helps but doesn't fully clear |
-| no independent observation | 1 | verify dropped a game |
-
-**Target was "only ~2 conflicts + ~3 eyeballs remain." NOT met:** 3 genuine conflicts, but **the bulk (38) is still single-domain tooling**, not resolved.
-
-## Load-bearing guards still fire
-- **Boise timezone**: 16/16 deterministic fixtures fire (above); with the `normTime` fix the real ~1h conflicts now surface honestly (Wisconsin/Oregon/Fresno), and the false 12h is gone.
-- **Notre Dame `conferenceGame`**: independently re-checked from stored data — **all 12 ND games `null`**, gate held.
-
-## Firestore ↔ report match
-Independently queried: `cfbGames` total **49**, verified **3**, non-verified **46**; `sourcesChecked` now carries multi-entry trails. Matches the regenerated report body. ✓
+## Guards still fire
+- Boise timezone: the genuine conflicts now surface at their **true ~1h** (PT/MT boundary), not 11h; the 16/16 deterministic fixtures still fire (above).
+- Notre Dame `conferenceGame`: independently re-checked from stored data — **all 12 ND games `null`**.
 
 ## Adversarial self-check
-1. **FIX 1 changed only persistence**, not logic — `diffGame`/`guardSecondSource` untouched; only `sourcesChecked` now stores the full set. (And the logic *does* require ≥2 distinct domains — verified, no contract violation.)
-2. **Single-source proof is from STORED data** (`source` + persisted `sourcesChecked`), not live re-derivation.
-3. **Distinct domains only** — `(bad)` junk and same-domain duplicates excluded; that's how the 38 single-domain failures were even identified.
-4. **No mirrored/syndicated 2nd source** among the 3 verified — each is two genuinely independent orgs (official + Wikipedia, or two schools' sites).
-5. **`normTime` fix did not falsely equate different times** — the real Boise/tz conflicts still register ~1h (unit-tested + live), and `nicholls` 6pm-vs-6p.m. correctly reads as equal.
+1. **Corroboration is HARNESS CODE**, not the agent — `corroborate()` is a pure function; `blindVerifySchool` is no longer in the gate path. ✅
+2. **The 2nd domain carries the VALUE** — `fieldConfirmed=kickoff` on all 18; the fact-match compares normalized kickoff *times*, not game existence. ✅
+3. **No mirror/syndication** — all 2nd domains are `en.wikipedia.org` paired with an official athletics site; mirror hosts are rejected. ✅
+4. **The two determinism runs matched exactly** (18/3/28), no retry to force a match. ✅
+5. **Verified did NOT rise by relaxing constraint 3** — the 14 no-2nd-source stayed flagged (Kansas State is 0-verified precisely because constraint 3 was enforced). ✅
 
-## Verdict: **Phase 2 is NOT green**
-Single-source proof **passes**, and FIX 1/FIX 2 are solid — but the remaining friction is **still tooling-dominated** (38 single-domain), not just the 3 genuine conflicts + eyeballs. Per the brief's own bar ("green only if remaining friction is just genuine conflicts/eyeballs, not tooling"), **Phase 2 waits**. **FIX 3 must be redone as a deterministic, code-based independent 2nd source** (fetch a fetchable source distinct from each game's parser domain — Wikipedia when the parser is an official site, an official/ESPN source when the parser is Wikipedia — and confirm the schedule fact carries there), rather than relying on the verify agent's prompt compliance. That is a real design step (it changes second-source corroboration from agent-found to harness-confirmed) and is flagged for an explicit decision before re-running.
+## Verdict
+The three hard bars are **met**: determinism runs match exactly, the single-source proof passes from stored data, and agent-tooling non-verifications are zero. The remaining friction is **3 genuine timezone conflicts + 14 honest-TBD + 14 honest "no-independent-2nd-source"** — none of it is the old tooling.
+
+**The one residue worth your call before greening Phase 2:** the deterministic corroborator code-parses **Wikipedia** as its independent source, so a school whose **parser** also used Wikipedia (Kansas State, 13 games) has no second code-fetchable independent source → 0 verified, flagged honestly. That is correct-but-conservative, not a bug. To give those schools coverage, the clean Phase-2-prep fix is to make the **parser prefer the official site** (freeing Wikipedia to corroborate) and/or add a second code-parseable independent source (e.g. Sports-Reference); also extend the Wikipedia parser to the neutral-site row (ND-Wisconsin). With those, the no-2nd-source bucket collapses toward zero. **Flagging for your decision; not starting Phase 2.**
