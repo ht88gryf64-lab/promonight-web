@@ -154,6 +154,7 @@ export type AffiliatePartner =
   | 'fanatics'
   | 'spothero'
   | 'booking'
+  | 'expedia'
   | 'ticketmaster';
 
 export type AffiliateClickProperties = {
