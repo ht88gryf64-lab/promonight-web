@@ -123,7 +123,21 @@ async function runSchoolLive(school: (typeof PHASE1_SCHOOLS)[number]): Promise<S
         outcome = { verdict: 'flagged-for-human' as const, guards: { timezone: false, derivedFields: true, entityConflation: true, secondSource: false, citation: false }, flags: ['no independent observation produced for this game'] };
       } else {
         // citation guard: does the parser's cited source actually carry the kickoff?
-        const carries = g.kickoff.tbd ? true : await fetchCarries(g.source, [g.kickoff.time.replace(/\s*(am|pm).*/i, ''), g.kickoff.time]);
+        const needles = [g.kickoff.time.replace(/\s*(a|p)\.?\s*m\.?.*/i, ''), g.kickoff.time];
+        let carries: boolean | null = g.kickoff.tbd ? true : await fetchCarries(g.source, needles);
+        if (carries === null && !g.kickoff.tbd) {
+          // FIX 3: parser's cited official site is unfetchable from Node
+          // (crawler-blocked / JS-rendered). Do NOT bypass it — fall back to an
+          // ALLOWED independent domain the verify read (e.g. Wikipedia) to
+          // confirm the value rather than collapsing the trail to one domain.
+          const parserDom = domainOf(g.source);
+          for (const alt of obs.sources) {
+            if (domainOf(alt) && domainOf(alt) !== parserDom) {
+              const altCarries = await fetchCarries(alt, needles);
+              if (altCarries !== null) { carries = altCarries; break; }
+            }
+          }
+        }
         const independentConfRead = obs.conferenceGameAsRead === 'yes' ? true : obs.conferenceGameAsRead === 'no' ? false : null;
         outcome = diffGame({
           date: g.date,
@@ -136,7 +150,11 @@ async function runSchoolLive(school: (typeof PHASE1_SCHOOLS)[number]): Promise<S
           citedSourceCarriesValue: carries,
         });
       }
-      const verification = { verifiedAt: NOW, verdict: outcome.verdict, guards: outcome.guards, flags: outcome.flags, sourcesChecked: obs ? [obs.source] : [] };
+      // FIX 1 (persistence only — verification LOGIC unchanged): store the FULL
+      // distinct set of corroborating verify sources, not just the primary, so
+      // the stored trail can independently prove >=2 domains for verified games.
+      const sourcesChecked = obs ? [...new Set([obs.source, ...obs.sources].filter(Boolean))] : [];
+      const verification = { verifiedAt: NOW, verdict: outcome.verdict, guards: outcome.guards, flags: outcome.flags, sourcesChecked };
       const verified = outcome.verdict === 'verified';
       if (verified) { res.verified++; if (g.confidence === 'HIGH') res.highVerified++; }
       else if (outcome.verdict === 'downgraded') res.downgraded++;

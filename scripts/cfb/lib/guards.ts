@@ -27,16 +27,18 @@ export function ianaOffsetMinutes(iana: string, date: string): number {
   return sign * (parseInt(m[2], 10) * 60 + parseInt(m[3] ?? '0', 10));
 }
 
-function normTime(t: string): string {
-  // Accept "13:30", "1:30 PM", "1:30 PM MT" -> "HH:MM" 24h, or "TBD".
+export function normTime(t: string): string {
+  // Accept "13:30", "1:30 PM", "1:30 p.m.", "1:30P.M. MT" -> "HH:MM" 24h, or "TBD".
   if (!t || /tbd|n\/?f|tba/i.test(t)) return 'TBD';
-  const m = t.match(/(\d{1,2}):(\d{2})\s*(am|pm)?/i);
+  // Meridiem marker allowing periods/spaces: "PM", "pm", "p.m.", "p m", "P.M.".
+  // Falls back to a bare HH:MM (24h or no marker) match.
+  const m = t.match(/(\d{1,2}):(\d{2})\s*([ap])\.?\s*m\.?/i) ?? t.match(/(\d{1,2}):(\d{2})/);
   if (!m) return 'TBD';
   let h = parseInt(m[1], 10);
   const min = m[2];
-  const ap = (m[3] || '').toLowerCase();
-  if (ap === 'pm' && h !== 12) h += 12;
-  if (ap === 'am' && h === 12) h = 0;
+  const ap = (m[3] ?? '').toLowerCase(); // 'a' | 'p' | ''
+  if (ap === 'p' && h !== 12) h += 12;
+  if (ap === 'a' && h === 12) h = 0;
   return `${String(h).padStart(2, '0')}:${min}`;
 }
 

@@ -117,10 +117,11 @@ export interface VerifyObservation {
 const VERIFY_SYSTEM = `You are an INDEPENDENT verifier for college-football kickoff data. You are given ONLY a list of games (date + the two teams). You have NOT been told any kickoff time, timezone, TV network, or conference status — produce them yourself from primary sources.
 
 RULES:
-- Today is 2026-06-12. For each game, independently find the kickoff time and TV network from the HOST (home) school's official athletics site; cross-check Wikipedia. If a value is not officially announced, return "TBD" — do not guess.
+- Today is 2026-06-12. For each game, independently find the kickoff time and TV network. Read the HOST (home) school's official athletics site AND at least one INDEPENDENT source — the Wikipedia "2026 <team> football team" page and/or ESPN, which carry full 2026 schedules with announced times and are reliably readable. Do NOT return "TBD" if a reputable independent source has the announced time; return "TBD" only when the time is genuinely not yet announced anywhere.
+- 'sources' MUST list at least TWO DISTINCT source DOMAINS you actually read for the game (e.g. the official site AND en.wikipedia.org). Corroborate the date/opponent across two domains even when the kickoff is TBD. Two URLs on the SAME domain do not count as two.
 - Report the kickoff timezone you actually read (kickoff_tz: ET/CT/MT/PT). Never convert.
 - conference_game_as_read: report ONLY what a source explicitly states about whether it is a conference game ("yes"/"no"), else "unknown". (Do not reason about it yourself.)
-- 'source' = the URL you actually read for that game.
+- 'source' = the primary URL; 'sources' = all distinct domains read.
 - Use web_search. Be precise; this is an audit.`;
 
 const verifyReturnTool = {
@@ -144,6 +145,10 @@ const verifyReturnTool = {
             source: { type: 'string', description: 'primary URL read' },
             sources: { type: 'array', items: { type: 'string' }, description: 'ALL distinct URLs you read for this game (official + Wikipedia + any other)' },
           },
+          // NOTE: 'sources' is intentionally NOT required — forcing it made the
+          // Haiku verifier fill it with non-URL junk ("(bad)" domains). It stays
+          // optional/encouraged; reliable >=2-domain provenance needs a
+          // deterministic code-based 2nd source (see report re-gate notes).
           required: ['date', 'home_team', 'away_team', 'kickoff_time', 'kickoff_tz', 'conference_game_as_read', 'source'],
         },
       },
@@ -160,7 +165,7 @@ export async function blindVerifySchool(
   const list = skeleton
     .map((g) => `- ${g.date}: ${g.awayTeam} at ${g.homeTeam}`)
     .join('\n');
-  const user = `Independently verify kickoff times and TV networks for these ${school.name} 2026 games. You are NOT told the times — find them yourself.\n\n${list}\n\nStart at the host school's official site, cross-check Wikipedia.`;
+  const user = `Independently verify kickoff times and TV networks for these ${school.name} 2026 games. You are NOT told the times — find them yourself.\n\n${list}\n\nFor each game, read the host school's official site AND an independent source (the Wikipedia "2026 ${school.shortName} football team" page and/or ESPN), and record at least two distinct domains in 'sources'.`;
   let res = await extract({ system: VERIFY_SYSTEM, user, returnTool: verifyReturnTool, model: HAIKU, maxTokens: 6000 });
   if (!res.data?.games?.length) {
     const s = await extract({ system: VERIFY_SYSTEM, user, returnTool: verifyReturnTool, model: SONNET, maxTokens: 6000 });
