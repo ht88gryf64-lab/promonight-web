@@ -81,6 +81,7 @@ export default async function ThisWeekPage() {
         description={lead}
         lastUpdated={lastUpdated}
         faqs={faqs}
+        groups={groups}
       />
       <AggregatorPage
         eyebrow="This week"
