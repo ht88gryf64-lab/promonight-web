@@ -3,7 +3,7 @@ import { pageOpenGraph } from '@/lib/og';
 import { getPromosInDateRange } from '@/lib/data';
 import { AggregatorPage, AggregatorJsonLd, type AggregatorGroup } from '@/components/aggregator-layout';
 
-export const revalidate = 3600;
+export const revalidate = 21600;
 
 function todayYMD(): string {
   const d = new Date();
