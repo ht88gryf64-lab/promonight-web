@@ -40,7 +40,7 @@ import { AD_SLOTS } from '@/lib/ads/slots';
 import { isRedesignEnabled } from '@/lib/redesign';
 import { RedesignTeamPage } from '@/components/redesign/RedesignTeamPage';
 
-export const revalidate = 21600;
+export const revalidate = 86400;
 
 export async function generateStaticParams() {
   const teams = await getAllTeams();

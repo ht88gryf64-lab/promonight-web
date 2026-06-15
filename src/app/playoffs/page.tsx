@@ -27,7 +27,7 @@ import { archivoHouse } from '@/components/redesign/fonts-house';
 import { CHAMPIONS, isChampionsCelebrationActive } from '@/lib/champions-data';
 import { ChampionsCelebration } from '@/components/champions/champions-celebration';
 
-export const revalidate = 3600;
+export const revalidate = 21600;
 
 const PAGE_URL = 'https://www.getpromonight.com/playoffs';
 // Launch date for the /playoffs hub. Static anchor for Article.datePublished;

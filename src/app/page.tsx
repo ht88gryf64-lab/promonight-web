@@ -25,9 +25,11 @@ import {
   type RedesignCollectionTile,
 } from '@/components/redesign/RedesignHomePage';
 
-// 1h — Tonight cards roll over daily, this section needs to be more time-sensitive
-// than the team pages.
-export const revalidate = 3600;
+// 6h fallback. Home is the only indexed route whose "Tonight" cards go stale on a
+// pure date rollover (no data write), so 6h bounds that staleness. On-demand
+// /api/revalidate stays the real freshness path; promote to 86400 once the
+// promo-pipeline /-coverage check confirms / is in the pushed revalidate path set.
+export const revalidate = 21600;
 
 export const metadata: Metadata = {
   alternates: { canonical: 'https://www.getpromonight.com' },
