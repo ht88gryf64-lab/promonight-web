@@ -76,6 +76,7 @@ export default async function JerseyGiveawaysPage() {
         description={lead}
         lastUpdated={todayYMD()}
         faqs={faqs}
+        groups={groups}
       />
       <AggregatorPage
         eyebrow="Apparel giveaways"

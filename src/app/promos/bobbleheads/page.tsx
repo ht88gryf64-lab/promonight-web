@@ -85,6 +85,7 @@ export default async function BobbleheadsPage() {
         description={lead}
         lastUpdated={todayYMD()}
         faqs={faqs}
+        groups={groups}
       />
       <AggregatorPage
         eyebrow="Bobbleheads"

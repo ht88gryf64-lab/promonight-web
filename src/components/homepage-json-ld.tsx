@@ -54,20 +54,11 @@ export function HomepageJsonLd() {
       description:
         'Track every giveaway, theme night, food deal, and promotion across 167 professional sports teams.',
     },
-    {
-      '@context': 'https://schema.org',
-      '@type': 'SoftwareApplication',
-      name: 'PromoNight',
-      operatingSystem: 'iOS, Android',
-      applicationCategory: 'SportsApplication',
-      description:
-        'Track every giveaway, theme night, food deal, and promotion across 167 teams in MLB, NBA, NFL, NHL, MLS, and WNBA.',
-      offers: {
-        '@type': 'Offer',
-        price: '0',
-        priceCurrency: 'USD',
-      },
-    },
+    // SoftwareApplication intentionally omitted: Google's Software App rich
+    // result requires aggregateRating (or review) alongside offers, and we have
+    // no legitimate rating data to publish. Emitting it caused the homepage
+    // rich-results validation error. Re-add with real ratings if/when we have
+    // them.
     {
       '@context': 'https://schema.org',
       '@type': 'FAQPage',
@@ -82,10 +73,16 @@ export function HomepageJsonLd() {
     },
   ];
 
+  // One script tag per entity (house pattern), rather than a single array.
   return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(schemas) }}
-    />
+    <>
+      {schemas.map((schema, i) => (
+        <script
+          key={i}
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+        />
+      ))}
+    </>
   );
 }

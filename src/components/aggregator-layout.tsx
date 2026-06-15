@@ -266,31 +266,47 @@ export function AggregatorJsonLd({
   description,
   lastUpdated,
   faqs,
+  groups,
 }: {
   url: string;
   title: string;
   description: string;
   lastUpdated: string;
   faqs: { question: string; answer: string }[];
+  groups: AggregatorGroup[];
 }) {
+  // These are promo-collection pages, so the aggregator pattern is
+  // CollectionPage + ItemList (the promos) + FAQPage, not Article. The
+  // ItemList is capped so the JSON-LD stays well under Bing's 1MB ceiling
+  // (see the list-trim note in the page bodies).
+  const ITEMLIST_CAP = 50;
+  const items = groups.flatMap((g) => g.promos).slice(0, ITEMLIST_CAP);
+
   const schemas: Record<string, unknown>[] = [
     {
       '@context': 'https://schema.org',
-      '@type': 'Article',
-      headline: title,
+      '@type': 'CollectionPage',
+      name: title,
       description,
       url,
       dateModified: lastUpdated,
-      author: {
-        '@type': 'Organization',
+      isPartOf: {
+        '@type': 'WebSite',
         name: 'PromoNight',
         url: 'https://www.getpromonight.com',
       },
-      publisher: {
-        '@type': 'Organization',
-        name: 'PromoNight',
-        url: 'https://www.getpromonight.com',
-      },
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'ItemList',
+      name: title,
+      numberOfItems: items.length,
+      itemListElement: items.map((p, i) => ({
+        '@type': 'ListItem',
+        position: i + 1,
+        name: `${p.team.city} ${p.team.name}: ${p.title}`,
+        url: `https://www.getpromonight.com/${p.team.sportSlug}/${p.team.id}`,
+      })),
     },
   ];
 
@@ -306,10 +322,16 @@ export function AggregatorJsonLd({
     });
   }
 
+  // One script tag per entity (house pattern).
   return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(schemas) }}
-    />
+    <>
+      {schemas.map((schema, i) => (
+        <script
+          key={i}
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+        />
+      ))}
+    </>
   );
 }

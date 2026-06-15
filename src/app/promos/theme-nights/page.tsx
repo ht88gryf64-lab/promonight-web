@@ -124,6 +124,7 @@ export default async function ThemeNightsPage() {
         description={lead}
         lastUpdated={todayYMD()}
         faqs={faqs}
+        groups={groups}
       />
       <AggregatorPage
         eyebrow="Theme nights"

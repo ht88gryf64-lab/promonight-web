@@ -72,6 +72,7 @@ export default async function FoodDealsPage() {
         description={lead}
         lastUpdated={todayYMD()}
         faqs={faqs}
+        groups={groups}
       />
       <AggregatorPage
         eyebrow="Food deals"
