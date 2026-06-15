@@ -35,7 +35,7 @@ function addDaysYMD(base: Date, days: number): string {
 // "MLB Bobblehead Nights") because the top of the actual list is WNBA;
 // MLB dominance is communicated by the list itself rather than the title.
 export const metadata: Metadata = {
-  title: `Best Bobblehead Nights of ${YEAR}: Ranked Player Figurine Giveaways`,
+  title: `Best Bobblehead Nights of ${YEAR}: Ranked by Score`,
   description: `Every bobblehead giveaway across MLB, MLS, and WNBA in ${YEAR} ranked 0 to 100 by attendance cap and sponsor. Two Washington Mystics bobblehead nights tied at 100; MLB cluster at 98 follows. Updated weekly.`,
   alternates: { canonical: PAGE_URL },
   openGraph: {
