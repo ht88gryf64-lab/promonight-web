@@ -118,7 +118,7 @@ export function ScheduleReleaseVideoCard({ video, teamSlug, variant = 'dark' }: 
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={thumbnailUrl}
-                  alt=""
+                  alt={`${video.title} - YouTube video thumbnail`}
                   loading="lazy"
                   decoding="async"
                   className="absolute inset-0 w-full h-full object-cover"
@@ -172,7 +172,7 @@ export function ScheduleReleaseVideoCard({ video, teamSlug, variant = 'dark' }: 
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={thumbnailUrl}
-                alt=""
+                alt={`${video.title} - YouTube video thumbnail`}
                 loading="lazy"
                 decoding="async"
                 className="absolute inset-0 w-full h-full object-cover"
