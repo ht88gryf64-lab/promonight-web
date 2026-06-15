@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { pageOpenGraph } from '@/lib/og';
 import { getPromosInDateRange } from '@/lib/data';
 import { AggregatorPage, AggregatorJsonLd, type AggregatorGroup } from '@/components/aggregator-layout';
 
@@ -29,6 +30,7 @@ export const metadata: Metadata = {
   description:
     'Every promo across MLB, NBA, NHL, NFL, MLS, and WNBA in the next 7 days. Bobbleheads, jerseys, theme nights, food deals. Updated daily.',
   alternates: { canonical: 'https://www.getpromonight.com/promos/this-week' },
+  openGraph: pageOpenGraph('/promos/this-week'),
 };
 
 export default async function ThisWeekPage() {

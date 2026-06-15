@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { pageOpenGraph } from '@/lib/og';
 import { LegalLayout } from '@/components/legal-layout';
 
 export const metadata: Metadata = {
@@ -6,6 +7,7 @@ export const metadata: Metadata = {
   description:
     'The rules for using PromoNight: as-is service, data accuracy disclaimers, subscription terms for PromoNight Pro, and the usual liability boilerplate.',
   alternates: { canonical: 'https://www.getpromonight.com/terms' },
+  openGraph: pageOpenGraph('/terms'),
 };
 
 export default function TermsPage() {
