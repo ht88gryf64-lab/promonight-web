@@ -9,9 +9,10 @@ import {
 } from '@/lib/analytics';
 import type { ShareItem } from './types';
 
-// Share links intentionally point at the bare apex (no www) to match the
-// brand string used in the share copy itself.
-const SHARE_ORIGIN = 'https://getpromonight.com';
+// Share links point at the canonical www host. The bare apex 301-redirects
+// (http apex -> https apex -> https www), so linking www directly saves shared
+// URLs a redirect hop without touching the platform redirect config.
+const SHARE_ORIGIN = 'https://www.getpromonight.com';
 
 // X copy must stay well under the 280 limit; the brief pins it under 240 so a
 // quote-tweet prefix still fits.
