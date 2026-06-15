@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { pageOpenGraph } from '@/lib/og';
 import { getAllTeams, getTeamPromos } from '@/lib/data';
 import { TeamsBrowser } from '@/components/teams-browser';
 import { isRedesignEnabled } from '@/lib/redesign';
@@ -18,6 +19,7 @@ export const metadata: Metadata = {
   title: `Browse All ${TEAM_COUNT} Pro Sports Teams · Promo Calendars by League`,
   description: `Browse all ${TEAM_COUNT} pro sports teams across ${LEAGUE_SET} in ${new Date().getFullYear()}. Star your teams to follow ${PROMO_TYPES} as they're announced.`,
   alternates: { canonical: 'https://www.getpromonight.com/teams' },
+  openGraph: pageOpenGraph('/teams'),
 };
 
 export default async function TeamsPage() {

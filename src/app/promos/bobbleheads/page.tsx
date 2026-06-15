@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { pageOpenGraph } from '@/lib/og';
 import { getPromosFromDate } from '@/lib/data';
 import { AggregatorPage, AggregatorJsonLd, type AggregatorGroup } from '@/components/aggregator-layout';
 import { PastBobbleheadsSection } from '@/components/redesign/PastBobbleheadsSection';
@@ -23,6 +24,7 @@ export const metadata: Metadata = {
   title: `${YEAR} Bobblehead Giveaways: Player Figurine Nights`,
   description: `Every ${YEAR} bobblehead giveaway across MLB, NBA, NHL, NFL, MLS, and WNBA. Player figurines by month with team, date, and opponent. Updated weekly.`,
   alternates: { canonical: 'https://www.getpromonight.com/promos/bobbleheads' },
+  openGraph: pageOpenGraph('/promos/bobbleheads'),
 };
 
 export default async function BobbleheadsPage() {

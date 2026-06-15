@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { pageOpenGraph } from '@/lib/og';
 import Image from 'next/image';
 import { existsSync } from 'fs';
 import { join } from 'path';
@@ -15,6 +16,7 @@ export const metadata: Metadata = {
   description:
     'Install PromoNight free on iOS or Android. Push alerts on every giveaway, theme night, and food deal at your team\'s home games.',
   alternates: { canonical: 'https://www.getpromonight.com/download' },
+  openGraph: pageOpenGraph('/download'),
 };
 
 export default async function DownloadPage() {

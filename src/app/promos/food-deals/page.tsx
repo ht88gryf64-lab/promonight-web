@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { pageOpenGraph } from '@/lib/og';
 import { getPromosFromDate } from '@/lib/data';
 import { AggregatorPage, AggregatorJsonLd, type AggregatorGroup } from '@/components/aggregator-layout';
 
@@ -22,6 +23,7 @@ export const metadata: Metadata = {
   title: `${YEAR} Ballpark Food Deals: Discount Concession Nights`,
   description: `Every ${YEAR} food-deal promo across MLB, NBA, NHL, NFL, MLS, and WNBA. Dollar dogs, half-price concessions, and value menus by month with team, date, and opponent. Updated weekly.`,
   alternates: { canonical: 'https://www.getpromonight.com/promos/food-deals' },
+  openGraph: pageOpenGraph('/promos/food-deals'),
 };
 
 export default async function FoodDealsPage() {

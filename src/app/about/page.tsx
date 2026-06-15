@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { pageOpenGraph } from '@/lib/og';
 import Link from 'next/link';
 import { AvatarMatt } from '@/components/avatar-matt';
 import { AppDownloadButtons } from '@/components/app-download-buttons';
@@ -12,6 +13,7 @@ export const metadata: Metadata = {
   description:
     'Independent app built by a Minnesota sports fan who kept missing the good games. Free, not affiliated with any league. A cleaner way to browse promos.',
   alternates: { canonical: 'https://www.getpromonight.com/about' },
+  openGraph: pageOpenGraph('/about'),
 };
 
 const ABOUT_FAQS = [

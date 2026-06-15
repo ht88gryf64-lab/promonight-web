@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { pageOpenGraph } from '@/lib/og';
 import { LegalLayout } from '@/components/legal-layout';
 
 export const metadata: Metadata = {
@@ -6,6 +7,7 @@ export const metadata: Metadata = {
   description:
     'PromoNight privacy policy: what we collect on web and mobile, third-party services (analytics, affiliate networks, ads), and how to opt out.',
   alternates: { canonical: 'https://www.getpromonight.com/privacy' },
+  openGraph: pageOpenGraph('/privacy'),
 };
 
 export default function PrivacyPage() {
