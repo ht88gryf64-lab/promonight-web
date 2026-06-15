@@ -188,6 +188,14 @@ export default async function BestPromosPage() {
               The {promos.length} best-scored sports promo nights of {YEAR} are ranked below from 100 down. Every entry pulls from official MLB, MLS, and WNBA team-promotion announcements and is scored 0 to 100 on attendance cap, item value, sponsor presence, and highlight tier. The list refreshes weekly with each Tuesday scan.
             </p>
 
+            <p className="mt-4 font-rd text-sm text-rd-ink-soft">
+              Looking for one category?{' '}
+              <Link href="/best-promos/bobbleheads" className="font-semibold text-rd-red hover:underline">
+                See the bobblehead-only ranking
+              </Link>
+              .
+            </p>
+
             <Suspense fallback={null}>
               <ScoringPageViewTracker pageTitle="Best Sports Promo Nights" scoreCount={promos.length} defaultLeague="All" defaultRange="90d" />
             </Suspense>
