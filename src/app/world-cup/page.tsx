@@ -12,12 +12,12 @@ const PAGE_URL = 'https://www.getpromonight.com/world-cup';
 export const revalidate = 21600;
 
 export const metadata: Metadata = {
-  title: 'World Cup 2026 Host Cities: MLB Games to Catch Between Matches',
+  title: 'World Cup 2026: 11 US Host Cities & MLB Ballparks',
   description:
     'A fan guide to all 11 US World Cup 2026 host cities, June 11 to July 19. Find the local MLB ballpark in each city, the home games that line up with the World Cup, giveaway and theme nights, plus tickets, parking, and hotels.',
   alternates: { canonical: PAGE_URL },
   openGraph: {
-    title: 'World Cup 2026 Host Cities: MLB Games to Catch Between Matches',
+    title: 'World Cup 2026: 11 US Host Cities & MLB Ballparks',
     description:
       'All 11 US World Cup host cities mapped to their local MLB ballparks and home games, June 11 to July 19, 2026.',
     url: PAGE_URL,
@@ -76,7 +76,7 @@ export default async function WorldCupPage() {
   const collectionSchema = {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
-    name: 'World Cup 2026 Host Cities: MLB Games to Catch Between Matches',
+    name: 'World Cup 2026: 11 US Host Cities & MLB Ballparks',
     description:
       'All 11 US World Cup 2026 host cities mapped to their local MLB ballparks and home games, June 11 to July 19, 2026.',
     url: PAGE_URL,
