@@ -44,7 +44,7 @@ export const VENUE_OVERRIDES: Record<string, VenueOverride> = {
     publicTransit:
       'Trinity Railway Express does not serve AT&T Stadium directly. Most fans drive; rideshare drop-off zones are set up on game days but expect significant traffic 2+ hours pre-kickoff.',
     bagPolicyUrl:
-      'https://www.dallascowboys.com/stadium/gameday/stadium-policies',
+      'https://www.dallascowboys.com/bag-policy',
     accessibility:
       'AT&T Stadium offers accessible seating, elevators to every level, and wheelchair-accessible shuttle service from designated parking lots.',
     nearby:
