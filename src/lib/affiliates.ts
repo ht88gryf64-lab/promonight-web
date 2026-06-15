@@ -341,9 +341,12 @@ function hasValidCoords(lat: number | undefined, lng: number | undefined): boole
 // Expedia Hotel-Search URL as `landingPage`: the inner URL is encoded once
 // (space->%20, comma->%2C), then the entire inner URL is encoded AGAIN
 // (%20->%2520, %2C->%252C). Confirmed-working reference structure:
-//   https://expedia.com/affiliate?siteid=1&landingPage=<DOUBLE_ENCODED>&camref=1011l5KcC9&creativeref=1100l68075&adref=PZPbSQWcB2
+//   https://www.expedia.com/affiliate?siteid=1&landingPage=<DOUBLE_ENCODED>&camref=1011l5KcC9&creativeref=1100l68075&adref=PZPbSQWcB2
 const EXPEDIA = {
-  base: 'https://expedia.com/affiliate',
+  // www, not apex: the apex /affiliate path 301-redirects to www, so building
+  // with www removes a redirect hop on every hotel CTA. All tracking params
+  // (camref/creativeref/adref/pubref) are unchanged and survive identically.
+  base: 'https://www.expedia.com/affiliate',
   siteid: '1',
   camref: '1011l5KcC9',
   creativeref: '1100l68075',
