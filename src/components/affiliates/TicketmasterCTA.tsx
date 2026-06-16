@@ -1,6 +1,7 @@
+import Image from 'next/image';
 import type { Team } from '@/lib/types';
 import type { AnalyticsSurface } from '@/lib/analytics';
-import { buildTicketmasterUrl } from '@/lib/affiliates';
+import { buildTicketmasterUrl, buildTicketNetworkLink, TICKET_VENDOR } from '@/lib/affiliates';
 import { TrackedAffiliateLink } from '@/components/tracked-affiliate-link';
 
 // Branded white-card CTA that visually breaks from PromoNight's red/dark
@@ -28,13 +29,32 @@ type Props = {
 };
 
 export function TicketmasterCTA({ team, surface, placement, promoId, size = 'full' }: Props) {
-  const href = buildTicketmasterUrl({
-    teamSlug: team.id,
-    ticketmasterSlug: team.ticketmasterSlug,
-    ticketmasterAttractionId: team.ticketmasterAttractionId,
-    surface,
-    promoId,
-  });
+  // Active ticket vendor (TICKET_VENDOR). Both link-builders are kept wired so
+  // flipping the flag in affiliates.ts is a one-line rollback to Ticketmaster.
+  const vendor = TICKET_VENDOR;
+
+  // subId1 surface segment for TicketNetwork: away-game CTAs attribute to
+  // 'web_away_game' (mirrors lib/hotel-link.ts); every other placement uses the
+  // page surface. team.id is appended by the builder for cross-partner joins.
+  const tnSurface: AnalyticsSurface | 'web_away_game' =
+    placement === 'away_game_card' ? 'web_away_game' : surface;
+
+  const href =
+    vendor === 'ticketnetwork'
+      ? buildTicketNetworkLink({ team, surface: tnSurface })
+      : buildTicketmasterUrl({
+          teamSlug: team.id,
+          ticketmasterSlug: team.ticketmasterSlug,
+          ticketmasterAttractionId: team.ticketmasterAttractionId,
+          surface,
+          promoId,
+        });
+
+  // Graceful fallback — never render a broken ticket link (e.g. a team whose
+  // TicketNetwork slug can't be resolved). Hide the CTA entirely.
+  if (!href) return null;
+
+  const partner = vendor === 'ticketnetwork' ? 'ticketnetwork' : 'ticketmaster';
 
   // Full = mockup hero spec (px-[18px] py-4 = 16x18, gap-3, shadow 0 4px
   // 16px). Compact tightens for inline placements where the card sits in a
@@ -46,11 +66,15 @@ export function TicketmasterCTA({ team, surface, placement, promoId, size = 'ful
   const cardShadow = size === 'compact'
     ? 'shadow-[0_3px_12px_rgba(0,60,113,0.12)]'
     : 'shadow-[0_4px_16px_rgba(0,60,113,0.12)]';
+  // Logo footprint matches the ticketmaster wordmark height; width keeps the
+  // asset's native 150x40 aspect ratio (3.75:1) so it isn't distorted.
+  const logoHeight = size === 'compact' ? 16 : 20;
+  const logoWidth = Math.round(logoHeight * (150 / 40));
 
   return (
     <TrackedAffiliateLink
       href={href}
-      partner="ticketmaster"
+      partner={partner}
       teamId={team.id}
       sport={team.league}
       promoId={promoId}
@@ -60,12 +84,22 @@ export function TicketmasterCTA({ team, surface, placement, promoId, size = 'ful
       rel="noopener noreferrer sponsored"
       className={`group flex items-center w-full rounded-[14px] bg-white border-[1.5px] border-[#003C71] ${padding} ${cardShadow} transition-all hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(0,60,113,0.22)]`}
     >
-      <span
-        className={`font-outfit font-extrabold italic lowercase text-[#003C71] ${wordmarkSize}`}
-        style={{ letterSpacing: '-0.3px' }}
-      >
-        ticketmaster
-      </span>
+      {vendor === 'ticketnetwork' ? (
+        // White-background logo blends into the white card (no recolor/distort).
+        <Image
+          src="/affiliates/ticketnetwork-logo.png"
+          alt="TicketNetwork"
+          width={logoWidth}
+          height={logoHeight}
+        />
+      ) : (
+        <span
+          className={`font-outfit font-extrabold italic lowercase text-[#003C71] ${wordmarkSize}`}
+          style={{ letterSpacing: '-0.3px' }}
+        >
+          ticketmaster
+        </span>
+      )}
       <span className={`font-outfit font-bold text-[#0a0a0a] ${ctaSize}`}>
         Get Tickets
       </span>
