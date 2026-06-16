@@ -7,6 +7,7 @@ import { archivo } from './fonts';
 import { Hero } from './Hero';
 import { StatScoreboard } from './StatScoreboard';
 import { SeasonExplorer } from './SeasonExplorer';
+import { UpcomingPromoModalProvider } from './UpcomingPromoModal';
 import { AffiliateRail } from './AffiliateRail';
 import { ExploreCard } from './ExploreCard';
 
@@ -174,19 +175,27 @@ export function RedesignTeamPage({
               />
             </div>
 
-            {/* Full promo list — upcoming + completed, with show-all. */}
+            {/* Full promo list — upcoming + completed, with show-all. The
+                upcoming rows open the shared game modal (same body the calendar
+                expands inline); the provider holds one Modal for the list.
+                showTeamLink defaults false — the user is already on this team's
+                page. */}
             <div className="order-[40]">
-              <PromoList
-                promos={promos}
-                teamSlug={team.id}
-                teamName={displayName}
-                teamNickname={team.name}
-                sport={team.sportSlug}
-                primaryColor={team.primaryColor}
-                venueName={venue?.name ?? null}
-                variant="light"
-                showAppPitch={false}
-              />
+              <UpcomingPromoModalProvider>
+                <PromoList
+                  promos={promos}
+                  teamSlug={team.id}
+                  teamName={displayName}
+                  teamNickname={team.name}
+                  sport={team.sportSlug}
+                  primaryColor={team.primaryColor}
+                  venueName={venue?.name ?? null}
+                  variant="light"
+                  showAppPitch={false}
+                  team={team}
+                  gameContexts={gameContexts}
+                />
+              </UpcomingPromoModalProvider>
             </div>
 
             {/* Email + app conversion pairing, sitting immediately after the

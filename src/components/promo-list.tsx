@@ -6,7 +6,8 @@ import { EbayResaleLink } from './affiliates/EbayResaleLink';
 import { RedesignPromoRow } from '@/components/redesign/RedesignPromoRow';
 import { LazyPromoRows } from '@/components/redesign/LazyPromoRows';
 import { isBobbleheadGiveaway, isEbayResaleActive } from '@/lib/ebay';
-import type { Promo, PromoType } from '@/lib/types';
+import type { Promo, PromoType, Team } from '@/lib/types';
+import type { GameContext } from '@/lib/data';
 
 // Fields shared by every promo row's ShareItem — the per-promo bits (icon,
 // title, date, type) are filled in per row.
@@ -134,6 +135,8 @@ export function PromoList({
   venueName,
   variant = 'dark',
   showAppPitch = true,
+  team,
+  gameContexts,
 }: {
   promos: Promo[];
   teamSlug: string;
@@ -149,6 +152,13 @@ export function PromoList({
   // it separately in the email+app pairing). Default true keeps every other
   // surface unchanged.
   showAppPitch?: boolean;
+  /** Full team object — enables the upcoming rows to open the shared game modal
+   *  (light variant only). Absent → rows render static, as before. */
+  team?: Team;
+  /** The team's already-resolved season GameContexts (same set the calendar
+   *  uses). Reused here to map each upcoming promo's date to its home-game
+   *  context(s) with ZERO additional Firestore reads. */
+  gameContexts?: GameContext[];
 }) {
   const share: PromoShareContext = {
     teamName,
@@ -157,6 +167,21 @@ export function PromoList({
     primaryColor,
     venueName,
   };
+  // Map each date to its HOME-game context(s) from the calendar's already-
+  // resolved set (the promo lives at the home venue). Built in memory — no
+  // extra Firestore reads. Drives the upcoming rows' modal content; absent for
+  // game-less leagues, where rows fall back to the legacy promo body.
+  const homeCtxByDate = new Map<string, GameContext[]>();
+  if (gameContexts) {
+    for (const c of gameContexts) {
+      if (!c.isHome) continue;
+      const list = homeCtxByDate.get(c.game.date) ?? [];
+      list.push(c);
+      homeCtxByDate.set(c.game.date, list);
+    }
+  }
+  const contextsFor = (p: Promo): GameContext[] | null => homeCtxByDate.get(p.date) ?? null;
+
   const today = new Date().toISOString().split('T')[0];
   const upcoming = promos.filter((p) => p.date >= today);
   const past = promos.filter((p) => p.date < today).reverse(); // most-recent-first
@@ -215,7 +240,14 @@ export function PromoList({
             <>
               <div className="space-y-3">
                 {upcomingVisible.map((promo, i) => (
-                  <RedesignPromoRow key={`u-${i}`} promo={promo} share={share} />
+                  <RedesignPromoRow
+                    key={`u-${i}`}
+                    promo={promo}
+                    share={share}
+                    team={team}
+                    contexts={contextsFor(promo)}
+                    interactive
+                  />
                 ))}
               </div>
 
@@ -225,6 +257,9 @@ export function PromoList({
                   share={share}
                   showLabel={`Show all ${upcoming.length} upcoming promos`}
                   hideLabel={`Hide ${upcomingHidden.length} additional promos`}
+                  team={team}
+                  contexts={upcomingHidden.map(contextsFor)}
+                  interactive
                 />
               )}
             </>

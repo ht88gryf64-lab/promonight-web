@@ -1,13 +1,22 @@
+'use client';
+
 import type { ReactNode } from 'react';
 import { IconFlame } from '@tabler/icons-react';
 import { ShareButton, formatShareDate, type ShareItem } from '@/components/share';
 import { categoryFor } from './categories';
-import type { Promo } from '@/lib/types';
+import type { Promo, Team } from '@/lib/types';
+import type { GameContext } from '@/lib/data';
+import { useUpcomingPromoModal, type UpcomingPromoSurface } from './UpcomingPromoModal';
 
 // One light-theme promo row (used by the gate-on PromoList for both the
 // server-rendered visible rows and the client lazy-mounted hidden rows). Keeps
 // the promo_card ShareButton so share_initiated is preserved on every rendered
 // row.
+//
+// When `interactive` (the upcoming-promos list, wired with a `team`), the whole
+// row opens the shared game modal — same body the calendar uses inline. The
+// ShareButton stops propagation, so it never opens the modal. Non-interactive
+// rows (completed list) render exactly as before.
 export type PromoRowShare = {
   teamName: string;
   teamSlug: string;
@@ -30,6 +39,10 @@ export function RedesignPromoRow({
   share,
   completed = false,
   resaleSlot,
+  team,
+  contexts,
+  interactive = false,
+  surface = 'web_team_page_promolist',
 }: {
   promo: Promo;
   share: PromoRowShare;
@@ -38,7 +51,17 @@ export function RedesignPromoRow({
    *  bobblehead rows). Rendered after the opponent line; undefined leaves the
    *  row byte-identical to before the slot existed. */
   resaleSlot?: ReactNode;
+  /** Full team object — required for the modal opener (the shared body's
+   *  ticket CTA). Present only on the interactive upcoming rows. */
+  team?: Team;
+  /** Resolved home-game context(s) for this row's date; null/absent → the modal
+   *  renders the legacy promo body (game-less leagues / no home game). */
+  contexts?: GameContext[] | null;
+  /** When true (and `team` present), the whole row opens the shared game modal. */
+  interactive?: boolean;
+  surface?: UpcomingPromoSurface;
 }) {
+  const openModal = useUpcomingPromoModal();
   const { day, weekday, month } = formatPromoDate(promo.date);
   const { color, label, Icon } = categoryFor(promo.type);
 
@@ -54,11 +77,35 @@ export function RedesignPromoRow({
     primaryColor: share.primaryColor ?? null,
   };
 
+  const openable = interactive && !!team;
+  const open = () => {
+    if (team) openModal({ promo: { ...promo, team }, contexts: contexts ?? null, surface });
+  };
+
+  const interactiveProps = openable
+    ? {
+        role: 'button' as const,
+        tabIndex: 0,
+        onClick: open,
+        onKeyDown: (e: React.KeyboardEvent) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            open();
+          }
+        },
+      }
+    : {};
+
   return (
     <div
-      className={`group relative flex gap-4 rounded-2xl border border-rd-line bg-rd-card p-4 transition-colors md:p-5 ${
-        completed ? 'opacity-60 hover:opacity-80' : 'hover:border-rd-line-strong'
-      }`}
+      {...interactiveProps}
+      className={[
+        'group relative flex gap-4 rounded-2xl border border-rd-line bg-rd-card p-4 transition-colors md:p-5',
+        completed ? 'opacity-60 hover:opacity-80' : 'hover:border-rd-line-strong',
+        openable ? 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rd-red focus-visible:ring-offset-2' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
       style={{ borderLeftWidth: '3px', borderLeftColor: color }}
     >
       <ShareButton

@@ -90,7 +90,7 @@ export function RedesignHomePage({
     });
 
   return (
-    <UpcomingPromoModalProvider>
+    <UpcomingPromoModalProvider showTeamLink>
     <div className={`${archivoHouse.variable} rd-root min-h-screen`}>
       <HomepageJsonLd />
 

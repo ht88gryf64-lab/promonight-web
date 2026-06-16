@@ -6,39 +6,63 @@ import type { GameContext } from '@/lib/data';
 import { normalizeSport, track } from '@/lib/analytics';
 import { synthPromoId, teamDisplayName } from '@/lib/promo-helpers';
 import { Modal } from '@/components/ui/modal';
-import { GameDayDetail, LegacyPromoDetail, dayHeader } from '@/components/shared/game-day-detail';
+import { GameExpand, LegacyPromoExpand } from './GameExpand';
 
-// Which homepage rail opened the modal — drives analytics `surface` and the
-// affiliate-CTA attribution inside the reused modal body.
-export type UpcomingPromoSurface = 'web_home_tonight' | 'web_home_this_week';
+// Which surface opened the modal — drives analytics `surface` and the affiliate
+// attribution inside the shared body. Homepage rails + the team-page list all
+// feed this one provider.
+export type UpcomingPromoSurface =
+  | 'web_home_tonight'
+  | 'web_home_this_week'
+  | 'web_team_page_promolist';
 
 export type UpcomingPromoModalItem = {
   promo: PromoWithTeam;
   // Resolved home-game context(s) for MLB/NFL promos; null for game-less leagues
   // (NBA/NHL/MLS/WNBA) and dates with no matching home game — those render the
-  // legacy promo detail, exactly as the team-page calendar does.
+  // legacy promo detail, exactly as the redesign calendar does.
   contexts: GameContext[] | null;
   surface: UpcomingPromoSurface;
 };
 
-// Single shared modal for the whole homepage. Both card types (hero Tonight and
-// the This Week list) call the `open` returned by useUpcomingPromoModal(); there
-// is exactly one Modal instance and one piece of selected state, mirroring how
-// TeamCalendar holds one Modal for the whole calendar.
+// Light date header for the dialog's accessible name. Inlined so the homepage /
+// team-page modal does not import anything from the legacy game-day-detail.tsx.
+function dayHeader(dateStr: string): string {
+  return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+
+// One shared modal per page. Every opener (hero Tonight card, This Week card,
+// team-page promo row) calls the `open` from useUpcomingPromoModal(); there is
+// exactly one Modal instance and one piece of selected state, mirroring how the
+// calendar holds one expand for the whole grid. It renders the SAME redesign
+// body (GameExpand / LegacyPromoExpand) the calendar uses inline.
 const OpenContext = createContext<(item: UpcomingPromoModalItem) => void>(() => {});
 
 export function useUpcomingPromoModal(): (item: UpcomingPromoModalItem) => void {
   return useContext(OpenContext);
 }
 
-export function UpcomingPromoModalProvider({ children }: { children: React.ReactNode }) {
+export function UpcomingPromoModalProvider({
+  children,
+  showTeamLink = false,
+}: {
+  children: React.ReactNode;
+  /** When true, the body renders a "View full schedule" link to the team's own
+   *  page. Set true OFF the team page (homepage); false on the team-page list
+   *  (the user is already there). Explicit, not inferred from surface. */
+  showTeamLink?: boolean;
+}) {
   const [selected, setSelected] = useState<UpcomingPromoModalItem | null>(null);
 
   const open = useCallback((item: UpcomingPromoModalItem) => {
     setSelected(item);
 
-    // Fire the SAME modal-open events the calendar fires (team-calendar.tsx
-    // onCellClick), with the homepage surface. Home games only here, so no
+    // Fire the SAME modal-open events the calendar fires (CalendarGrid
+    // onCellClick), with this surface. Home games only here, so no
     // away_game_expanded — matching the calendar's home-game branch.
     const { promo, contexts, surface } = item;
     const teamSlug = promo.team.id;
@@ -74,25 +98,29 @@ export function UpcomingPromoModalProvider({ children }: { children: React.React
       <Modal
         isOpen={!!selected}
         onClose={close}
+        variant="light"
+        size="fit"
         ariaLabel={selected ? `Game details for ${dayHeader(selected.promo.date)}` : 'Game details'}
       >
         {selected &&
           (selected.contexts && selected.contexts.length > 0 ? (
-            <GameDayDetail
+            <GameExpand
               dateStr={selected.promo.date}
               contexts={selected.contexts}
               team={selected.promo.team}
               teamSlug={selected.promo.team.id}
               teamName={teamDisplayName(selected.promo.team)}
               surface={selected.surface}
+              showTeamLink={showTeamLink}
             />
           ) : (
-            <LegacyPromoDetail
+            <LegacyPromoExpand
               dateStr={selected.promo.date}
               promos={[selected.promo]}
               team={selected.promo.team}
               teamSlug={selected.promo.team.id}
               surface={selected.surface}
+              showTeamLink={showTeamLink}
             />
           ))}
       </Modal>
