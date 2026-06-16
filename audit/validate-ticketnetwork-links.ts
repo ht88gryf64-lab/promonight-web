@@ -116,27 +116,27 @@ function classify(
   if (outcome.inconclusive) {
     return { verdict: 'INCONCLUSIVE', redirectedAway: false, note: outcome.note };
   }
-  // Did a 200 redirect us away from the requested performer path (soft-404 /
-  // bounce to search/home)? Flag for eyeballing, but treat a 200 as a pass.
-  const reqPath = pathOf(landing);
-  const finalPath = pathOf(outcome.finalUrl);
-  const redirectedAway =
-    finalPath.length > 0 && finalPath !== reqPath && !finalPath.includes(`${reqPath.split('/').pop()}`);
+  // Soft-404 detection: a 200 that bounced AWAY from the requested performer
+  // (to the homepage, search, or a different performer) is a redirect-to-error,
+  // NOT a real pass — the whole point of this validator is to catch those. We
+  // look for the requested `{slug}-tickets` token anywhere in the FINAL url: a
+  // home/search bounce yields an empty-or-'/' path (token absent → flagged),
+  // while a legit canonical / trailing-slash redirect keeps the token (pass).
+  const reqToken = pathOf(landing).split('/').pop() ?? '';
+  const finalUrl = outcome.finalUrl ?? '';
+  const redirectedAway = reqToken.length > 0 && !finalUrl.includes(reqToken);
 
   const ok = outcome.status !== null && outcome.status >= 200 && outcome.status < 300;
-  if (ok) {
-    const note = redirectedAway ? `200 but redirected to ${finalPath} — verify soft-404` : '';
-    return {
-      verdict: hasOverride ? 'OVERRIDE_OK' : 'PASS',
-      redirectedAway,
-      note,
-    };
+  if (ok && !redirectedAway) {
+    return { verdict: hasOverride ? 'OVERRIDE_OK' : 'PASS', redirectedAway: false, note: '' };
   }
-  // Non-2xx, non-inconclusive → a real failure.
-  const note = `HTTP ${outcome.status ?? '??'}`;
+  // Either a non-2xx, or a 200 that bounced away (soft-404) → a real failure.
+  const note = redirectedAway
+    ? `soft-404: HTTP ${outcome.status ?? '??'} bounced to ${pathOf(finalUrl) || '/ (homepage)'}`
+    : `HTTP ${outcome.status ?? '??'}`;
   return {
     verdict: hasOverride ? 'OVERRIDE_BROKEN' : 'NEEDS_OVERRIDE',
-    redirectedAway: false,
+    redirectedAway,
     note,
   };
 }
@@ -166,10 +166,18 @@ function parseArgs() {
     const hit = argv.find((a) => a.startsWith(`${key}=`));
     return hit ? hit.split('=')[1] : undefined;
   };
+  // Positive-integer flags only. A NaN / 0 / negative value (e.g. a typo like
+  // --concurrency=0) falls back to the default rather than silently spawning
+  // zero workers (which would leave the results array full of holes and crash
+  // the report loop).
+  const posInt = (raw: string | undefined, fallback: number): number => {
+    const n = raw === undefined ? fallback : Number(raw);
+    return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
+  };
   return {
     mlbOnly: has('--mlb-only'),
-    limit: val('--limit') ? Number(val('--limit')) : undefined,
-    concurrency: val('--concurrency') ? Number(val('--concurrency')) : 6,
+    limit: val('--limit') ? posInt(val('--limit'), 0) || undefined : undefined,
+    concurrency: posInt(val('--concurrency'), 6),
   };
 }
 
