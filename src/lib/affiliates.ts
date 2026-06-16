@@ -33,7 +33,17 @@ export type AffiliatePartner =
   | 'fanatics'
   | 'spothero'
   | 'expedia'
-  | 'ticketmaster';
+  | 'ticketmaster'
+  | 'ticketnetwork';
+
+// ── Ticket vendor switch ─────────────────────────────────────────────────
+// Single source of truth for which ticket marketplace the "Get Tickets" CTA
+// routes to. Flip to 'ticketmaster' to instantly roll back to the Ticketmaster
+// CTA — all Ticketmaster link-building code (buildTicketmasterUrl, the env
+// wrap, the isPartnerActive/buildAffiliateUrl cases) is retained behind this
+// flag, so reverting the sole-vendor swap is a one-line change. TicketmasterCTA
+// reads this to choose the builder, the partner tag, and the card brand mark.
+export const TICKET_VENDOR: 'ticketnetwork' | 'ticketmaster' = 'ticketnetwork';
 
 export type AffiliateLinkOptions = {
   surface: AnalyticsSurface;
@@ -68,6 +78,11 @@ export function isPartnerActive(partner: AffiliatePartner): boolean {
       return true;
     case 'ticketmaster':
       return TICKETMASTER_IMPACT_WRAP.length > 0;
+    case 'ticketnetwork':
+      // The Impact tracking prefix + property IDs are hardcoded constants baked
+      // into every TicketNetwork link (no env var) — the outbound link is always
+      // commissionable, so tracking is always active (same model as Expedia).
+      return true;
   }
 }
 
@@ -147,6 +162,11 @@ export function buildAffiliateUrl(
       // call site (where teamSlug + surface are known). Surface tracking
       // rides inside the wrap template's SharedID, not on a query param —
       // there's nothing to tag here, so pass the URL through unchanged.
+      return rawUrl;
+    case 'ticketnetwork':
+      // TicketNetwork links are fully assembled by `buildTicketNetworkLink`
+      // at the call site — the Impact prefix, property IDs, and subId1 are
+      // already baked in. Do NOT re-tag; pass the URL through unchanged.
       return rawUrl;
   }
 }
@@ -253,6 +273,72 @@ export function buildTicketmasterUrl(opts: TicketmasterOpts): string {
   return TICKETMASTER_IMPACT_WRAP
     .replace('{TARGET}', encodeURIComponent(directUrl))
     .replace('{SHARED_ID}', encodeURIComponent(opts.surface));
+}
+
+// ── TicketNetwork (Impact) ───────────────────────────────────────────────
+// Active ticket vendor when TICKET_VENDOR === 'ticketnetwork'. Unlike
+// Ticketmaster (whose Impact wrap template is injected via an env var),
+// TicketNetwork's Impact tracking link is a FIXED prefix + constant property
+// IDs — there is NO env var and NO render-time re-tag (buildAffiliateUrl passes
+// 'ticketnetwork' through unchanged). The tracked link wraps a TicketNetwork
+// performer landing page as the `u` query param.
+//
+// Final structure — byte-identical to the validated reference (Twins,
+// web_team_page surface):
+//   https://ticketnetwork.lusg.net/c/7236189/120057/2322?u=<ENCODED_LANDING>&partnerpropertyid=8313917&MediaPartnerPropertyId=8313917&subId1=web_team_page_minnesota-twins
+// Built as a raw string (NOT URLSearchParams) so the param order and the single
+// encodeURIComponent of the landing URL stay byte-exact.
+const TICKETNETWORK = {
+  prefix: 'https://ticketnetwork.lusg.net/c/7236189/120057/2322',
+  // Same value rides both partnerpropertyid and MediaPartnerPropertyId.
+  partnerPropertyId: '8313917',
+  performerHost: 'https://www.ticketnetwork.com',
+  defaultPath: '/e/performers/',
+} as const;
+
+// Landing-page overrides, keyed by PromoNight team.id. Default rule:
+// `${performerHost}/e/performers/${team.id}-tickets`. An entry overrides the
+// slug and/or the path segment when TicketNetwork lists a team differently.
+// Populate from audit/validate-ticketnetwork-links.ts, which HTTP-checks the
+// default-rule landing for every team and flags any that need an override.
+const TICKETNETWORK_OVERRIDES: Record<string, { slug?: string; path?: string }> = {
+  // The Athletics are listed as 'athletics' under /performers/ (no /e/ segment).
+  'oakland-athletics': { slug: 'athletics', path: '/performers/' },
+};
+
+// Resolves the TicketNetwork performer landing page (the decoded `u` target)
+// for a team, applying any override. Returns null when no slug resolves so
+// callers never emit a broken ticket link. Exported for the validate-on-build
+// script, which HTTP-checks these landing URLs.
+export function ticketNetworkLandingUrl(team: Pick<Team, 'id'>): string | null {
+  const override = TICKETNETWORK_OVERRIDES[team.id];
+  const slug = override?.slug ?? team.id;
+  if (!slug) return null;
+  const path = override?.path ?? TICKETNETWORK.defaultPath;
+  return `${TICKETNETWORK.performerHost}${path}${slug}-tickets`;
+}
+
+export type TicketNetworkLinkOpts = {
+  team: Pick<Team, 'id'>;
+  /** subId1 surface segment, already including the `web_` prefix
+   *  (e.g. 'web_team_page'). Away-game CTAs pass 'web_away_game' so attribution
+   *  matches the Expedia pubref convention (see lib/hotel-link.ts). */
+  surface: AnalyticsSurface | 'web_away_game';
+};
+
+// Assembles the full tracked TicketNetwork link. Returns null when the landing
+// page can't be resolved (graceful fallback — the CTA must not render a broken
+// <a>). subId1 uses team.id (matches analytics team_slug + the Expedia pubref
+// for cross-partner joinability) even when the landing slug is overridden.
+export function buildTicketNetworkLink(opts: TicketNetworkLinkOpts): string | null {
+  const landing = ticketNetworkLandingUrl(opts.team);
+  if (!landing) return null;
+  return (
+    `${TICKETNETWORK.prefix}?u=${encodeURIComponent(landing)}` +
+    `&partnerpropertyid=${TICKETNETWORK.partnerPropertyId}` +
+    `&MediaPartnerPropertyId=${TICKETNETWORK.partnerPropertyId}` +
+    `&subId1=${opts.surface}_${opts.team.id}`
+  );
 }
 
 // FanaticsOpts: the canonical team-store URL lives on the Team document as

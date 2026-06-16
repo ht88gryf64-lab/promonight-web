@@ -165,7 +165,8 @@ export type AffiliatePartner =
   | 'fanatics'
   | 'spothero'
   | 'expedia'
-  | 'ticketmaster';
+  | 'ticketmaster'
+  | 'ticketnetwork';
 
 export type AffiliateClickProperties = {
   surface: AnalyticsSurface;
