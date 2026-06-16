@@ -1,13 +1,20 @@
 import { notFound } from 'next/navigation';
 import { getAllTeams } from '@/lib/data';
-import { buildTicketmasterUrl, isPartnerActive } from '@/lib/affiliates';
+import {
+  buildTicketmasterUrl,
+  buildTicketNetworkLink,
+  ticketNetworkLandingUrl,
+  isPartnerActive,
+  TICKET_VENDOR,
+} from '@/lib/affiliates';
 
 export const dynamic = 'force-dynamic';
 
-// Dev-only spot-check page for the Ticketmaster CTA URL builder. Renders one
-// row per team with its generated outbound URL, the slug used, and whether
-// the Impact wrap env var is wired. Use to eyeball a sample of URLs before
-// pushing changes to the URL builder.
+// Dev-only spot-check page for the ticket CTA URL builders. Renders one row per
+// team with its generated outbound URLs (Ticketmaster per-surface + the
+// TicketNetwork landing/tracked link), the slug used, and whether the
+// Ticketmaster Impact wrap env var is wired. Use to eyeball a sample of URLs
+// before pushing changes to the URL builders.
 //
 // Gated to non-production via NODE_ENV. The page is also unindexed (the dev/
 // directory is excluded from the sitemap and robots), but the runtime gate
@@ -27,6 +34,18 @@ export default async function AffiliateCheckPage() {
   return (
     <main style={{ padding: 24, fontFamily: 'monospace', color: '#0a0a0a', background: '#fff' }}>
       <h1 style={{ fontSize: 22, marginBottom: 12 }}>Affiliate URL spot-check</h1>
+
+      <section style={{ marginBottom: 24, padding: 16, border: '1px solid #ddd', borderRadius: 6 }}>
+        <h2 style={{ fontSize: 16, marginBottom: 8 }}>Active ticket vendor</h2>
+        <p>
+          <strong>TICKET_VENDOR:</strong>{' '}
+          <span style={{ color: TICKET_VENDOR === 'ticketnetwork' ? '#0a7d3a' : '#9a4400' }}>
+            {TICKET_VENDOR}
+          </span>{' '}
+          — the &quot;Get Tickets&quot; CTA routes to this vendor across all surfaces. Flip{' '}
+          <code>TICKET_VENDOR</code> in <code>src/lib/affiliates.ts</code> to roll back.
+        </p>
+      </section>
 
       <section style={{ marginBottom: 24, padding: 16, border: '1px solid #ddd', borderRadius: 6 }}>
         <h2 style={{ fontSize: 16, marginBottom: 8 }}>Ticketmaster wrap status</h2>
@@ -59,9 +78,11 @@ export default async function AffiliateCheckPage() {
             <th style={cellStyle}>team</th>
             <th style={cellStyle}>internal slug</th>
             <th style={cellStyle}>tm slug override</th>
+            <th style={cellStyle}>tn landing (resolved)</th>
+            <th style={cellStyle}>tn tracked (web_team_page)</th>
             {surfaces.map((s) => (
               <th key={s} style={cellStyle}>
-                {s}
+                tm: {s}
               </th>
             ))}
           </tr>
@@ -75,6 +96,24 @@ export default async function AffiliateCheckPage() {
               </td>
               <td style={cellStyle}>{t.id}</td>
               <td style={cellStyle}>{t.ticketmasterSlug ?? '—'}</td>
+              <td style={cellStyle}>{ticketNetworkLandingUrl(t) ?? '—'}</td>
+              <td style={cellStyle}>
+                {(() => {
+                  const tn = buildTicketNetworkLink({ team: t, surface: 'web_team_page' });
+                  return tn ? (
+                    <a
+                      href={tn}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: '#024BAA', wordBreak: 'break-all' }}
+                    >
+                      {tn}
+                    </a>
+                  ) : (
+                    '—'
+                  );
+                })()}
+              </td>
               {surfaces.map((s) => {
                 const url = buildTicketmasterUrl({
                   teamSlug: t.id,
