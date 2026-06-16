@@ -74,6 +74,10 @@ export type AnalyticsSurface =
   | 'web_home_tonight'
   | 'web_home_this_week'
   | 'web_team_page'
+  // Team-page "Upcoming promos" list rows (RedesignPromoRow) that open the same
+  // shared game modal as the calendar. Distinct from web_team_page (the calendar
+  // grid) so dashboards can separate list-driven taps from calendar-driven ones.
+  | 'web_team_page_promolist'
   | 'web_promo_detail'
   | 'web_playoffs'
   | 'web_league_index'
@@ -680,6 +684,7 @@ const KNOWN_SURFACES: ReadonlySet<AnalyticsSurface> = new Set<AnalyticsSurface>(
   'web_home_tonight',
   'web_home_this_week',
   'web_team_page',
+  'web_team_page_promolist',
   'web_promo_detail',
   'web_playoffs',
   'web_league_index',
