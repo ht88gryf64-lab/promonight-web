@@ -8,6 +8,7 @@ import { HotelsCTA } from '@/components/affiliates/HotelsCTA';
 import { teamDisplayName } from '@/lib/promo-helpers';
 import type { GameContext } from '@/lib/data';
 import { formatGameTime } from '@/lib/format-game-time';
+import type { AnalyticsSurface } from '@/lib/analytics';
 
 // Shared modal-body renderers for a single calendar day. Extracted verbatim from
 // team-calendar.tsx so the homepage's Upcoming-Promos modal renders byte-identical
@@ -32,12 +33,17 @@ export function GameDayDetail({
   team,
   teamSlug,
   teamName,
+  surface = 'web_team_page',
 }: {
   dateStr: string;
   contexts: GameContext[];
   team: Team | null;
   teamSlug?: string;
   teamName: string;
+  /** Attribution surface for the affiliate CTAs, and the gate for the
+   *  off-team-page "View full schedule" link. Defaults to the team page so the
+   *  calendar's existing use is byte-identical. */
+  surface?: AnalyticsSurface;
 }) {
   return (
     <div className="mt-4 space-y-4">
@@ -49,9 +55,18 @@ export function GameDayDetail({
           team={team}
           teamSlug={teamSlug}
           teamName={teamName}
+          surface={surface}
           showDate={i === 0}
         />
       ))}
+      {team && surface !== 'web_team_page' && (
+        <a
+          href={`/${team.sportSlug}/${team.id}`}
+          className="inline-flex items-center gap-1 text-[11px] font-mono tracking-[0.08em] uppercase text-text-secondary hover:text-white transition-colors"
+        >
+          View full schedule →
+        </a>
+      )}
     </div>
   );
 }
@@ -63,6 +78,7 @@ export function GameDetailRow({
   teamSlug,
   teamName,
   showDate,
+  surface = 'web_team_page',
 }: {
   dateStr: string;
   ctx: GameContext;
@@ -70,6 +86,9 @@ export function GameDetailRow({
   teamSlug?: string;
   teamName: string;
   showDate: boolean;
+  /** Attribution surface for the affiliate CTAs in this row. Defaults to the
+   *  team page so the calendar's existing use is byte-identical. */
+  surface?: AnalyticsSurface;
 }) {
   const { game, isHome, opponentTeam, opponentVenue, promos } = ctx;
   // NFL games whose kickoff is still flex-pending render "TBD" rather than
@@ -204,7 +223,7 @@ export function GameDetailRow({
         {team && (
           <TicketsBlock
             team={team}
-            surface="web_team_page"
+            surface={surface}
             placement={placement}
             promoId={teamSlug ? `${teamSlug}:${game.date}:${game.id}` : undefined}
             variant="card"
@@ -216,7 +235,7 @@ export function GameDetailRow({
               <ParkingCTA
                 team={opponentTeam}
                 venue={opponentVenue}
-                surface="web_team_page"
+                surface={surface}
                 placement={placement}
                 compact
               />
@@ -225,7 +244,7 @@ export function GameDetailRow({
               <HotelsCTA
                 team={opponentTeam}
                 venue={opponentVenue}
-                surface="web_team_page"
+                surface={surface}
                 placement={placement}
                 gameDate={game.date}
                 variant="modal-row"
@@ -249,11 +268,16 @@ export function LegacyPromoDetail({
   promos,
   team,
   teamSlug,
+  surface = 'web_team_page',
 }: {
   dateStr: string;
   promos: Promo[];
   team: Team | null;
   teamSlug?: string;
+  /** Attribution surface for the affiliate CTA, and the gate for the
+   *  off-team-page "View full schedule" link. Defaults to the team page so the
+   *  calendar's existing use is byte-identical. */
+  surface?: AnalyticsSurface;
 }) {
   return (
     <div className="mt-4 bg-bg-card border border-accent-red/30 rounded-2xl p-5">
@@ -296,7 +320,7 @@ export function LegacyPromoDetail({
                 <div className="mt-3">
                   <TicketsBlock
                     team={team}
-                    surface="web_team_page"
+                    surface={surface}
                     placement="promo_card"
                     promoId={`${teamSlug}:${p.date}:${p.title}`}
                     variant="card"
@@ -307,6 +331,16 @@ export function LegacyPromoDetail({
           </div>
         ))}
       </div>
+      {team && surface !== 'web_team_page' && (
+        <div className="mt-4">
+          <a
+            href={`/${team.sportSlug}/${team.id}`}
+            className="inline-flex items-center gap-1 text-[11px] font-mono tracking-[0.08em] uppercase text-text-secondary hover:text-white transition-colors"
+          >
+            View full schedule →
+          </a>
+        </div>
+      )}
     </div>
   );
 }

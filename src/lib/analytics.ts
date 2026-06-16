@@ -66,6 +66,13 @@ export type EyebrowState =
 
 export type AnalyticsSurface =
   | 'web_home'
+  // Homepage upcoming-promo cards that open the shared game modal. Split by
+  // bucket so dashboards can tell the hero "Tonight" rail from the "This Week"
+  // list. game_tap / promo_card_tap carry these; the affiliate CTAs inside the
+  // reused modal body attribute to them too (so a ticket click from the
+  // homepage modal is not mislabeled web_team_page).
+  | 'web_home_tonight'
+  | 'web_home_this_week'
   | 'web_team_page'
   | 'web_promo_detail'
   | 'web_playoffs'
@@ -670,6 +677,8 @@ export const trackAffiliateClick = (payload: AffiliateClickPayload) => {
 
 const KNOWN_SURFACES: ReadonlySet<AnalyticsSurface> = new Set<AnalyticsSurface>([
   'web_home',
+  'web_home_tonight',
+  'web_home_this_week',
   'web_team_page',
   'web_promo_detail',
   'web_playoffs',

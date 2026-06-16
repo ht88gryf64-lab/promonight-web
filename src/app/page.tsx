@@ -1,12 +1,15 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import {
+  enrichGamesForTeam,
   getAllTeams,
+  getGamesForTeam,
   getPlayoffPromosInDateRange,
   getPromoCount,
   getPromosFromDate,
   getPromosInDateRange,
 } from '@/lib/data';
+import type { GameContext } from '@/lib/data';
 import type { PromoWithTeam, Team } from '@/lib/types';
 import { TonightStrip, pickHeroBuckets } from '@/components/tonight-strip';
 import { ThisWeekStrip } from '@/components/this-week-strip';
@@ -230,6 +233,55 @@ function buildRedesignCollectionTiles(allFuture: PromoWithTeam[]): RedesignColle
   return tiles;
 }
 
+// Resolve the bounded upcoming-promo set (hero Tonight + This Week) to the
+// home-game GameContext(s) the shared modal body renders, so a homepage card
+// opens the same modal as the team-page calendar. Date-scoped: getGamesForTeam
+// runs once per unique MLB/NFL team (full schedule), then enrichGamesForTeam
+// touches ONLY the promo's date (one opponent) — never the whole season.
+// Game-less leagues (NBA/NHL/MLS/WNBA) get no entry and fall back to the legacy
+// promo detail, exactly as the calendar does. Called inside the redesign branch
+// only, so the gate-off path adds no reads; runs in the ISR render (revalidate
+// 21600), so reads are amortized per-regeneration, not per-request.
+async function resolveCardContexts(
+  promos: PromoWithTeam[],
+): Promise<Map<string, GameContext[]>> {
+  const result = new Map<string, GameContext[]>();
+
+  // Unique MLB/NFL teams only — getGamesForTeam returns [] for other leagues.
+  const teams = new Map<string, Team>();
+  for (const p of promos) {
+    if (p.team.league === 'mlb' || p.team.league === 'nfl') teams.set(p.team.id, p.team);
+  }
+  if (teams.size === 0) return result;
+
+  const gamesByTeam = new Map<string, Awaited<ReturnType<typeof getGamesForTeam>>>();
+  await Promise.all(
+    [...teams.values()].map(async (t) => {
+      gamesByTeam.set(t.id, await getGamesForTeam(t.id, t.league));
+    }),
+  );
+
+  // One enrichment per unique (team, date) — the modal renders the whole day.
+  const keys = new Map<string, { team: Team; date: string }>();
+  for (const p of promos) {
+    if (p.team.league !== 'mlb' && p.team.league !== 'nfl') continue;
+    keys.set(`${p.team.id}:${p.date}`, { team: p.team, date: p.date });
+  }
+
+  await Promise.all(
+    [...keys.entries()].map(async ([key, { team, date }]) => {
+      const games = gamesByTeam.get(team.id) ?? [];
+      // Home games on the promo date — the promo lives at the home venue.
+      const dayHomeGames = games.filter((g) => g.date === date && g.homeTeamSlug === team.id);
+      if (dayHomeGames.length === 0) return; // no home game -> legacy promo detail
+      const dayPromos = promos.filter((p) => p.team.id === team.id && p.date === date);
+      result.set(key, await enrichGamesForTeam(team.id, dayHomeGames, dayPromos));
+    }),
+  );
+
+  return result;
+}
+
 export default async function HomePage() {
   const today = chicagoTodayYMD();
   const weekStart = plusDays(today, 2);
@@ -270,6 +322,10 @@ export default async function HomePage() {
   // preserving every analytics event. Gate-OFF falls through to the existing
   // dark homepage below, byte-identical.
   if (isRedesignEnabled()) {
+    const resolvedContexts = await resolveCardContexts([
+      ...heroBuckets.tonight,
+      ...weekPromos,
+    ]);
     return (
       <RedesignHomePage
         heroBuckets={heroBuckets}
@@ -279,7 +335,7 @@ export default async function HomePage() {
         teamPromoCounts={teamPromoCounts}
         promoCount={promoCount}
         lastUpdated={lastUpdated}
-        today={today}
+        resolvedContexts={resolvedContexts}
       />
     );
   }

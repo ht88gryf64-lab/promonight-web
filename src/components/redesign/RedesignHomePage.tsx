@@ -6,12 +6,13 @@ import {
   type Icon as TablerIcon,
 } from '@tabler/icons-react';
 import type { PromoType, PromoWithTeam, Team } from '@/lib/types';
-import { normalizeSport } from '@/lib/analytics';
-import { synthPromoId, teamDisplayName } from '@/lib/promo-helpers';
+import type { GameContext } from '@/lib/data';
 
 import { archivoHouse } from './fonts-house';
 import { RD_CATEGORIES } from './categories';
+import { HeroTonightCard } from './HeroTonightCard';
 import { LightHomePromoCard } from './LightHomePromoCard';
+import { UpcomingPromoModalProvider } from './UpcomingPromoModal';
 
 import type { HeroBuckets } from '@/components/tonight-strip';
 import { HomepageJsonLd } from '@/components/homepage-json-ld';
@@ -42,61 +43,18 @@ export interface RedesignHomePageProps {
   teamPromoCounts: Record<string, number>;
   promoCount: number;
   lastUpdated: string;
-  /** YYYY-MM-DD (America/Chicago), for this_week days_out. */
-  today: string;
+  /** Resolved home-game context(s) for the upcoming-promo cards, keyed
+   *  `${team.id}:${date}`. Built server-side in page.tsx (MLB/NFL only); promos
+   *  with no entry render the legacy promo detail in the modal. */
+  resolvedContexts: Map<string, GameContext[]>;
 }
 
 const HERO_INK = '#1d1714'; // charcoal, matching the team-page hero base
-
-function daysBetween(a: string, b: string): number {
-  const [ay, am, ad] = a.split('-').map(Number);
-  const [by, bm, bd] = b.split('-').map(Number);
-  return Math.round((Date.UTC(by, bm - 1, bd) - Date.UTC(ay, am - 1, ad)) / 86400000);
-}
 
 function tileVisual(key: PromoType | 'hot'): { color: string; Icon: TablerIcon } {
   if (key === 'hot') return { color: '#da2d20', Icon: IconFlame };
   const meta = RD_CATEGORIES[key];
   return { color: meta.color, Icon: meta.Icon };
-}
-
-// Small dark mini-card for the hero teaser. Category chip carries the color; no
-// single-sided border accent. Fires tonight_card_tap (TONIGHT). `className` lets
-// the hero hide cards 3-4 below the desktop breakpoint (mobile shows 2).
-function HeroTonightCard({ promo, className = '' }: { promo: PromoWithTeam; className?: string }) {
-  const meta = RD_CATEGORIES[promo.type];
-  const teamName = teamDisplayName(promo.team);
-  return (
-    <TrackedTapLink
-      href={`/${promo.team.sportSlug}/${promo.team.id}`}
-      trackEvent="tonight_card_tap"
-      trackProps={{
-        surface: 'web_home',
-        team_id: promo.team.id,
-        sport: normalizeSport(promo.team.league),
-        promo_id: synthPromoId(promo.team.id, promo),
-        promo_type: promo.type,
-        is_highlight: promo.highlight,
-        eyebrow_state: 'TONIGHT',
-      }}
-      className={`group block rounded-2xl border border-white/10 bg-white/[0.06] p-4 transition-colors hover:border-white/20 hover:bg-white/[0.09] ${className}`}
-    >
-      <span
-        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
-        style={{ backgroundColor: `${meta.color}22`, color: meta.color }}
-      >
-        <meta.Icon size={12} stroke={2.25} />
-        <span>{meta.label}</span>
-      </span>
-      <div className="mt-2 line-clamp-2 font-rd text-[15px] font-semibold leading-snug text-white">
-        {promo.title}
-      </div>
-      <div className="mt-1 truncate font-rd text-xs text-white/55">
-        {teamName}
-        {promo.time ? ` · ${promo.time}` : ''}
-      </div>
-    </TrackedTapLink>
-  );
 }
 
 export function RedesignHomePage({
@@ -107,8 +65,10 @@ export function RedesignHomePage({
   teamPromoCounts,
   promoCount,
   lastUpdated,
-  today,
+  resolvedContexts,
 }: RedesignHomePageProps) {
+  const contextsFor = (p: PromoWithTeam): GameContext[] | null =>
+    resolvedContexts.get(`${p.team.id}:${p.date}`) ?? null;
   const tonight = heroBuckets.tonight;
   // Up to 4 tonight promos in the hero. Cards 3-4 are hidden below `lg`, so
   // mobile/tablet shows the same 2 cards as before; desktop shows a 2x2 grid.
@@ -130,6 +90,7 @@ export function RedesignHomePage({
     });
 
   return (
+    <UpcomingPromoModalProvider>
     <div className={`${archivoHouse.variable} rd-root min-h-screen`}>
       <HomepageJsonLd />
 
@@ -168,22 +129,15 @@ export function RedesignHomePage({
                   <HeroTonightCard
                     key={`${promo.team.id}-${i}`}
                     promo={promo}
+                    contexts={contextsFor(promo)}
                     className={i >= 2 ? 'hidden lg:block' : ''}
                   />
                 ))}
               </div>
               <TrackedTapLink
                 href="/promos/this-week"
-                trackEvent="tonight_card_tap"
-                trackProps={{
-                  surface: 'web_home',
-                  team_id: heroTonight[0].team.id,
-                  sport: normalizeSport(heroTonight[0].team.league),
-                  promo_id: synthPromoId(heroTonight[0].team.id, heroTonight[0]),
-                  promo_type: heroTonight[0].type,
-                  is_highlight: heroTonight[0].highlight,
-                  eyebrow_state: 'TONIGHT',
-                }}
+                trackEvent="this_week_see_all_tap"
+                trackProps={{ surface: 'web_home' }}
                 className="mt-4 inline-flex items-center gap-1.5 font-rd text-[12px] font-semibold uppercase tracking-[0.1em] text-rd-red transition-opacity hover:opacity-80"
               >
                 See all {tonight.length} promo{tonight.length === 1 ? '' : 's'} tonight
@@ -261,9 +215,10 @@ export function RedesignHomePage({
       </section>
 
       {/* The body "Live tonight" list was removed: the hero now carries tonight on
-          both viewports (up to 4 cards), so the block was redundant. tonight_card_tap
-          still fires from the hero cards + the see-all link; the crawl path to the
-          full tonight list is preserved via the hero "See all" link to this-week. */}
+          both viewports (up to 4 cards), so the block was redundant. Hero cards open
+          the shared game modal (no tonight_card_tap; game_tap/promo_card_tap fire on
+          open). The crawl path to the full tonight list is preserved via the hero
+          "See all" link to this-week (now this_week_see_all_tap). */}
 
       {/* THIS WEEK */}
       {weekGroups.length > 0 && (
@@ -298,16 +253,8 @@ export function RedesignHomePage({
                       <LightHomePromoCard
                         key={`${promo.team.id}-w-${i}`}
                         promo={promo}
-                        trackEvent="this_week_card_tap"
-                        trackProps={{
-                          surface: 'web_home',
-                          team_id: promo.team.id,
-                          sport: normalizeSport(promo.team.league),
-                          promo_id: synthPromoId(promo.team.id, promo),
-                          promo_type: promo.type,
-                          is_highlight: promo.highlight,
-                          days_out: daysBetween(today, promo.date),
-                        }}
+                        contexts={contextsFor(promo)}
+                        surface="web_home_this_week"
                         starPlacement="homepage_this_week_inline"
                       />
                     ))}
@@ -389,5 +336,6 @@ export function RedesignHomePage({
         <AdSlot config={AD_SLOTS.ADHESION_FOOTER} pageType="homepage" />
       </div>
     </div>
+    </UpcomingPromoModalProvider>
   );
 }
