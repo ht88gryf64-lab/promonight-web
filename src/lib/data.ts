@@ -21,7 +21,7 @@ import type {
   DerivedSignals,
 } from './types';
 import { SCORED_LEAGUES } from './types';
-import { resolveIcon, dedupePromos } from './promo-helpers';
+import { resolveIcon, dedupePromos, isVisiblePromo } from './promo-helpers';
 import { getVenueOverride } from './venue-overrides';
 import { VENUE_RESOLUTION_MAP } from './venue-resolution-map';
 import { VENUE_LOCATIONS_STATIC } from './venue-locations';
@@ -94,7 +94,7 @@ function readScheduleReleaseVideo(raw: unknown): Team['scheduleReleaseVideo'] {
   };
 }
 
-function mapPromoDoc(doc: FirebaseFirestore.DocumentSnapshot): Promo {
+export function mapPromoDoc(doc: FirebaseFirestore.DocumentSnapshot): Promo {
   const data = doc.data()!;
   const type = data.type as PromoType;
   const promo: Promo = {
@@ -123,6 +123,10 @@ function mapPromoDoc(doc: FirebaseFirestore.DocumentSnapshot): Promo {
   if (data.presentedBy !== undefined) promo.presentedBy = data.presentedBy;
   if (data.whileSuppliesLast !== undefined) promo.whileSuppliesLast = data.whileSuppliesLast;
   if (data.isGiveaway !== undefined) promo.isGiveaway = data.isGiveaway;
+  // Carry the soft-delete marker through the shaper so the downstream
+  // isVisiblePromo filter has the field to read. Without this the filter
+  // would silently pass every doc.
+  if (data.tombstoned !== undefined) promo.tombstoned = data.tombstoned;
   return promo;
 }
 
@@ -146,7 +150,7 @@ export async function getTeamPromos(teamId: string): Promise<Promo[]> {
     .collection('promos')
     .orderBy('date', 'asc')
     .get();
-  return dedupePromos(snapshot.docs.map(mapPromoDoc));
+  return dedupePromos(snapshot.docs.map(mapPromoDoc).filter(isVisiblePromo));
 }
 
 export async function getPromosForDate(date: string): Promise<PromoWithTeam[]> {
@@ -163,7 +167,7 @@ export async function getPromosForDate(date: string): Promise<PromoWithTeam[]> {
       const team = teamById.get(teamRef.id);
       if (team) results.push({ ...mapPromoDoc(doc), team });
     }
-    return dedupePromos(results, (p) => p.team.id);
+    return dedupePromos(results.filter(isVisiblePromo), (p) => p.team.id);
   } catch {
     const all: PromoWithTeam[] = [];
     await Promise.all(
@@ -179,7 +183,7 @@ export async function getPromosForDate(date: string): Promise<PromoWithTeam[]> {
         }
       })
     );
-    return dedupePromos(all, (p) => p.team.id);
+    return dedupePromos(all.filter(isVisiblePromo), (p) => p.team.id);
   }
 }
 
@@ -208,7 +212,7 @@ export async function getHighlightedPromos(limit: number = 6): Promise<PromoWith
         });
       }
     }
-    return results;
+    return results.filter(isVisiblePromo);
   } catch {
     // Fallback: sample highlighted promos from a few teams
     const teams = await getAllTeams();
@@ -233,7 +237,7 @@ export async function getHighlightedPromos(limit: number = 6): Promise<PromoWith
     );
 
     allHighlighted.sort((a, b) => a.date.localeCompare(b.date));
-    return allHighlighted.slice(0, limit);
+    return allHighlighted.filter(isVisiblePromo).slice(0, limit);
   }
 }
 
@@ -262,7 +266,7 @@ export async function getPromosInDateRange(
         results.push({ ...mapPromoDoc(doc), team });
       }
     }
-    return dedupePromos(results, (p) => p.team.id);
+    return dedupePromos(results.filter(isVisiblePromo), (p) => p.team.id);
   } catch {
     const allPromos: PromoWithTeam[] = [];
     await Promise.all(
@@ -280,7 +284,7 @@ export async function getPromosInDateRange(
       })
     );
     allPromos.sort((a, b) => a.date.localeCompare(b.date));
-    return dedupePromos(allPromos, (p) => p.team.id);
+    return dedupePromos(allPromos.filter(isVisiblePromo), (p) => p.team.id);
   }
 }
 
@@ -305,7 +309,7 @@ export async function getPromosFromDate(startDate: string): Promise<PromoWithTea
         results.push({ ...mapPromoDoc(doc), team });
       }
     }
-    return dedupePromos(results, (p) => p.team.id);
+    return dedupePromos(results.filter(isVisiblePromo), (p) => p.team.id);
   } catch {
     const allPromos: PromoWithTeam[] = [];
     await Promise.all(
@@ -322,11 +326,14 @@ export async function getPromosFromDate(startDate: string): Promise<PromoWithTea
       })
     );
     allPromos.sort((a, b) => a.date.localeCompare(b.date));
-    return dedupePromos(allPromos, (p) => p.team.id);
+    return dedupePromos(allPromos.filter(isVisiblePromo), (p) => p.team.id);
   }
 }
 
 export async function getPromoCount(): Promise<number> {
+  // count() aggregate: there are no documents to array-filter and we never use
+  // a Firestore inequality on tombstoned, so this may over-count by the
+  // tombstoned total. Acceptable for a cosmetic homepage stat; not converted.
   const snapshot = await db.collectionGroup('promos').count().get();
   return snapshot.data().count;
 }
@@ -879,6 +886,9 @@ async function fetchScoredPromos(
     if (!SCORED_LEAGUES.has(team.league as 'MLB' | 'MLS' | 'WNBA')) continue;
 
     const data = doc.data();
+    // Visibility guard before building the scored object: only true hides;
+    // absent and false pass (same predicate as isVisiblePromo).
+    if (data.tombstoned === true) continue;
     if (typeof data.score !== 'number') continue;
     if (!data.scoreBreakdown || !data.derivedSignals) continue;
 
@@ -1029,6 +1039,9 @@ export async function getTopPromosPerTeam(
     if (!SCORED_LEAGUES.has(team.league as 'MLB' | 'MLS' | 'WNBA')) continue;
 
     const data = doc.data();
+    // Visibility guard before building the scored object: only true hides;
+    // absent and false pass (same predicate as isVisiblePromo).
+    if (data.tombstoned === true) continue;
     if (typeof data.score !== 'number') continue;
     if (!data.scoreBreakdown || !data.derivedSignals) continue;
 

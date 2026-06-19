@@ -94,6 +94,11 @@ export interface Promo {
   // counting toward the giveaway tally. Absent on every other promo, so reads
   // are a no-op outside the flagged Twins docs.
   isGiveaway?: boolean;
+  // Soft-delete marker written by the v2 scanner/migration. Absent on every
+  // live promo today; only `true` hides a promo. Filtered in app code via
+  // isVisiblePromo (never a Firestore inequality). Inherited by PromoWithTeam
+  // and ScoredPromoWithTeam.
+  tombstoned?: boolean;
 }
 
 export interface PromoWithTeam extends Promo {
