@@ -136,6 +136,12 @@ export function dedupePromos<T extends { date: string; title: string }>(
   return out;
 }
 
+// Visibility predicate for a soft-deleted (tombstoned) promo. This is an
+// app-code array filter ONLY: absent and false are visible, only true is
+// hidden. It is never used as a Firestore inequality, which would drop
+// field-absent docs and break the "absent = visible" rule.
+export const isVisiblePromo = (p: { tombstoned?: boolean }): boolean => p.tombstoned !== true;
+
 export function formatDateReadable(dateStr: string): string {
   const date = new Date(dateStr + 'T12:00:00');
   return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
