@@ -32,7 +32,13 @@ function monthKey(year: number, month: number): string {
   return `${year}-${String(month + 1).padStart(2, '0')}`;
 }
 
-function parseYMD(dateStr: string): { year: number; month: number; day: number } {
+const YMD_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+// Null-safe: a promo/game can carry a null/blank/undated date (an undated
+// recurring-style event); it has no calendar cell, so this returns null and
+// callers skip it rather than crashing on null.split.
+function parseYMD(dateStr: string | null | undefined): { year: number; month: number; day: number } | null {
+  if (!dateStr || !YMD_RE.test(dateStr)) return null;
   const [y, m, d] = dateStr.split('-').map(Number);
   return { year: y, month: m - 1, day: d };
 }
@@ -65,6 +71,7 @@ export function TeamCalendar({ promos, teamName, teamSlug, sport, team, gameCont
   const promosByDate = useMemo(() => {
     const map = new Map<string, Promo[]>();
     for (const p of promos) {
+      if (!p.date || !YMD_RE.test(p.date)) continue; // undated event: no calendar cell
       const list = map.get(p.date) ?? [];
       list.push(p);
       map.set(p.date, list);
@@ -77,6 +84,7 @@ export function TeamCalendar({ promos, teamName, teamSlug, sport, team, gameCont
     const map = new Map<string, GameContext[]>();
     if (!gameContexts) return map;
     for (const c of gameContexts) {
+      if (!c.game.date || !YMD_RE.test(c.game.date)) continue; // undated game: no calendar cell
       const list = map.get(c.game.date) ?? [];
       list.push(c);
       map.set(c.game.date, list);
@@ -99,8 +107,9 @@ export function TeamCalendar({ promos, teamName, teamSlug, sport, team, gameCont
     const endMs = startMs + PRERENDER_WINDOW_DAYS * 86_400_000;
     const upcoming: string[] = [];
     for (const date of gameCtxsByDate.keys()) {
-      const { year, month, day } = parseYMD(date);
-      const ms = Date.UTC(year, month, day);
+      const ymd = parseYMD(date);
+      if (!ymd) continue;
+      const ms = Date.UTC(ymd.year, ymd.month, ymd.day);
       if (ms >= startMs && ms <= endMs) upcoming.push(date);
     }
     upcoming.sort();
@@ -111,13 +120,15 @@ export function TeamCalendar({ promos, teamName, teamSlug, sport, team, gameCont
   const monthsWithContent = useMemo(() => {
     const set = new Set<string>();
     for (const p of promos) {
-      const { year, month } = parseYMD(p.date);
-      set.add(monthKey(year, month));
+      const ymd = parseYMD(p.date);
+      if (!ymd) continue;
+      set.add(monthKey(ymd.year, ymd.month));
     }
     if (gameContexts) {
       for (const c of gameContexts) {
-        const { year, month } = parseYMD(c.game.date);
-        set.add(monthKey(year, month));
+        const ymd = parseYMD(c.game.date);
+        if (!ymd) continue;
+        set.add(monthKey(ymd.year, ymd.month));
       }
     }
     return set;
@@ -147,9 +158,10 @@ export function TeamCalendar({ promos, teamName, teamSlug, sport, team, gameCont
 
   const jumpToNext = () => {
     if (!nextUpcomingKey) return;
-    const { year, month } = parseYMD(nextUpcomingKey);
+    const ymd = parseYMD(nextUpcomingKey);
+    if (!ymd) return;
     setSelectedDate(null);
-    setView({ year, month });
+    setView({ year: ymd.year, month: ymd.month });
   };
 
   const monthStart = new Date(view.year, view.month, 1);
