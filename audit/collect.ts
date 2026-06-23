@@ -26,7 +26,6 @@ import {
   getVenueForTeam as defaultGetVenueForTeam,
 } from '../src/lib/data';
 import {
-  RECURRING_DEALS,
   getRecurringDealsForTeam as defaultGetRecurringDealsForTeam,
   type RecurringDeal,
 } from '../src/lib/recurring-deals';
@@ -209,7 +208,7 @@ export interface CollectDeps {
   getPromosFromDate?: (startDate: string) => Promise<PromoWithTeam[]>;
   getPromoCount?: () => Promise<number>;
   getVenueForTeam?: (teamId: string) => Promise<Venue | null>;
-  getRecurringDealsForTeam?: (teamId: string) => RecurringDeal[];
+  getRecurringDealsForTeam?: (teamId: string) => Promise<RecurringDeal[]>;
   recurringDealsKeys?: string[];
 }
 
@@ -494,7 +493,6 @@ export async function collectAuto(deps: CollectDeps = {}): Promise<AuditData> {
   const getPromoCount = deps.getPromoCount ?? defaultGetPromoCount;
   const getVenueForTeam = deps.getVenueForTeam ?? defaultGetVenueForTeam;
   const getRecurringDealsForTeam = deps.getRecurringDealsForTeam ?? defaultGetRecurringDealsForTeam;
-  const recurringDealsKeys = deps.recurringDealsKeys ?? Object.keys(RECURRING_DEALS);
 
   // ── Firestore reads ──
   const teams = await getAllTeams();
@@ -517,7 +515,15 @@ export async function collectAuto(deps: CollectDeps = {}): Promise<AuditData> {
   const venues = await mapLimit(teams, 25, (t) => getVenueForTeam(t.id));
 
   // ── Per-team rubric + coverage tallies ──
-  const recurringSlugs = new Set(recurringDealsKeys.filter((id) => getRecurringDealsForTeam(id).length > 0));
+  // Recurring deals are now in Firestore (per team), so the candidate set is all
+  // teams (not the old hardcoded map's keys). Read concurrently; a team counts as
+  // having recurring deals when its (visible) set is non-empty.
+  const recurringDealsKeys = deps.recurringDealsKeys ?? teams.map((t) => t.id);
+  const recurringCounts = await mapLimit(recurringDealsKeys, 25, async (id) => ({
+    id,
+    n: (await getRecurringDealsForTeam(id)).length,
+  }));
+  const recurringSlugs = new Set(recurringCounts.filter((x) => x.n > 0).map((x) => x.id));
 
   const byLeague = new Map<string, { teams: number; sum: number; dims: Record<keyof typeof RUBRIC, number> }>();
   const ensureLeague = (lg: string) => {

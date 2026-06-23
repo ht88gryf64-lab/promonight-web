@@ -1,18 +1,23 @@
-// Recurring every-game deals — deals that happen on a weekly cadence at every
-// home game, independent of the promo calendar. These live here (not in
-// Firestore) as a starter list; migrate to a `recurringDeals` collection when
-// cross-surface (app + web) reads are needed.
-//
-// Scope: flagship teams with well-known recurring concession / ticket deals.
-// Long-tail teams populated separately via data-ops.
+// Recurring every-game deals: deals that happen on a weekly cadence at every
+// home game, independent of the promo calendar. As of the 2b cutover these are
+// read from Firestore (teams/{teamId}/recurringDeals), written by the
+// promo-pipeline recurring writer. The previous hardcoded RECURRING_DEALS
+// starter map is gone; the data source is now Firestore, mirroring how dated
+// promos are read in data.ts (getTeamPromos).
+
+import 'server-only';
+import { cache } from 'react';
+import { db } from './firebase';
 
 export type RecurringDealCategory = 'food' | 'drink' | 'kids' | 'ticket' | 'music';
 
 export interface RecurringDeal {
+  id: string;
   title: string;
   frequency: string;
   description?: string;
   category: RecurringDealCategory;
+  tombstoned?: boolean;
 }
 
 const ICONS: Record<RecurringDealCategory, string> = {
@@ -23,98 +28,47 @@ const ICONS: Record<RecurringDealCategory, string> = {
   music: '🎵',
 };
 
+const VALID_CATEGORIES = new Set<RecurringDealCategory>(['food', 'drink', 'kids', 'ticket', 'music']);
+
 export function iconFor(category: RecurringDealCategory): string {
   return ICONS[category];
 }
 
-// Key: team slug (matches Firestore team doc id).
-export const RECURRING_DEALS: Record<string, RecurringDeal[]> = {
-  'minnesota-twins': [
-    {
-      title: '$1 Hot Dogs',
-      frequency: 'Every Tuesday home game',
-      description: 'Dollar Dog Tuesdays: $1 hot dogs at concession stands throughout Target Field.',
-      category: 'food',
-    },
-    {
-      title: '$2 Beers',
-      frequency: 'Friday & Saturday Happy Hour',
-      description: 'Discounted domestic drafts during the first 90 minutes after gates open.',
-      category: 'drink',
-    },
-    {
-      title: 'Friday Happy Hour',
-      frequency: 'Friday home games',
-      description: '$2 hot dogs, $2 snacks, and live music.',
-      category: 'food',
-    },
-    {
-      title: 'Free Kids Ice Cream',
-      frequency: 'Every Sunday, 12 & under',
-      description: 'Free ice cream for kids 12 and under at Sunday home games.',
-      category: 'kids',
-    },
-  ],
-  'kansas-city-royals': [
-    {
-      title: '$1 Hot Dogs',
-      frequency: 'Every Monday home game',
-      description: 'Buck Night Mondays — $1 hot dogs at Kauffman Stadium concession stands.',
-      category: 'food',
-    },
-    {
-      title: 'Buck Night Sodas',
-      frequency: 'Every Monday home game',
-      description: '$1 fountain drinks paired with the Monday hot-dog deal.',
-      category: 'drink',
-    },
-    {
-      title: 'Family Sunday',
-      frequency: 'Every Sunday home game',
-      description: 'Discounted family ticket + concession bundles — check the team site for specifics.',
-      category: 'kids',
-    },
-  ],
-  'pittsburgh-pirates': [
-    {
-      title: '$2 Tuesdays',
-      frequency: 'Every Tuesday home game',
-      description: 'Select $2 hot dogs and $2 domestic drafts at designated PNC Park concession stands.',
-      category: 'food',
-    },
-    {
-      title: 'Dollar Dog Night',
-      frequency: 'Select home games',
-      description: 'Dollar hot dogs at select Pirates home dates — check the monthly schedule.',
-      category: 'food',
-    },
-  ],
-  'milwaukee-brewers': [
-    {
-      title: '$1 Hot Dogs',
-      frequency: 'Monday home games vs AL opponents',
-      description: 'Select Monday games at American Family Field feature dollar hot dogs at concession stands.',
-      category: 'food',
-    },
-  ],
-  'cleveland-guardians': [
-    {
-      title: 'Dollar Dog Night',
-      frequency: 'Select home games',
-      description: '$1 hot dogs at designated Progressive Field concession stands on promo nights.',
-      category: 'food',
-    },
-  ],
-  'cincinnati-reds': [
-    {
-      title: '$1 Hot Dogs',
-      frequency: 'Select Tuesday home games',
-      description: 'Dollar hot dogs at designated concession stands during Buck Night Tuesdays.',
-      category: 'food',
-    },
-  ],
-};
-
-export function getRecurringDealsForTeam(teamId: string): RecurringDeal[] {
-  return RECURRING_DEALS[teamId] ?? [];
+// Map a Firestore recurringDeals doc to a RecurringDeal. Carries doc.id into id
+// (cards key by it), reads the body fields, and ignores the scanner provenance
+// fields (occurrences / sourceDates / recurrence / sourceUrl / price). Mirrors
+// mapPromoDoc's defensive style; an unknown category falls back to 'food' so the
+// icon lookup can never index undefined.
+function mapRecurringDealDoc(doc: FirebaseFirestore.DocumentSnapshot): RecurringDeal {
+  const d = doc.data() ?? {};
+  const category = VALID_CATEGORIES.has(d.category) ? (d.category as RecurringDealCategory) : 'food';
+  const deal: RecurringDeal = {
+    id: doc.id,
+    title: typeof d.title === 'string' ? d.title : '',
+    frequency: typeof d.frequency === 'string' ? d.frequency : '',
+    category,
+  };
+  if (typeof d.description === 'string' && d.description.trim()) deal.description = d.description;
+  if (d.tombstoned === true) deal.tombstoned = true;
+  return deal;
 }
+
+// Visibility predicate: the recurring equivalent of isVisiblePromo. Absent and
+// false are visible; only an explicit true hides. App-side array filter (never a
+// Firestore inequality, which would drop field-absent docs).
+const isVisibleRecurring = (d: RecurringDeal): boolean => d.tombstoned !== true;
+
+// Read a team's recurring deals from teams/{teamId}/recurringDeals. Async +
+// wrapped in React cache() (request-deduped) and SSG/ISR-safe, the same shape as
+// getTeamPromos. Tombstoned docs are filtered out app-side. Returns [] for a team
+// with no recurring deals, which the section component renders as nothing.
+export const getRecurringDealsForTeam = cache(
+  async (teamId: string): Promise<RecurringDeal[]> => {
+    const snapshot = await db
+      .collection('teams')
+      .doc(teamId)
+      .collection('recurringDeals')
+      .get();
+    return snapshot.docs.map(mapRecurringDealDoc).filter(isVisibleRecurring);
+  },
+);
