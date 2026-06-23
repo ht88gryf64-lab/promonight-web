@@ -48,7 +48,7 @@ April editorial scores.
 | Venue resolved                         | `getVenueForTeam` non-null with `address` + finite non-zero coords | 2.0    |
 | Venue PYV detail                       | effective `parkingInfo` **&&** `publicTransit` **&&** `bagPolicyUrl` | 2.0  |
 | Gate times                             | `gatesOpen` set                                                   | 0.5    |
-| Recurring every-game deals             | team present in `RECURRING_DEALS` (repo map)                       | 0.5    |
+| Recurring every-game deals             | team has >=1 visible `teams/{id}/recurringDeals` doc (Firestore, tombstone-filtered) | 0.5 |
 | **Total**                              |                                                                    | **10.0** |
 
 - **Structural /10** = the season-independent subset only (venue resolved + PYV
@@ -60,8 +60,9 @@ April editorial scores.
   that is what Structural /10 is for.
 
 ### Coverage counts (`X/167`)
-- **Recurring deals** — teams with a non-empty `RECURRING_DEALS` entry (repo
-  map, _not_ the Firestore `Promo.recurring` flag).
+- **Recurring deals**: teams with at least one visible doc in the Firestore
+  `teams/{id}/recurringDeals` subcollection (tombstone-filtered; _not_ the
+  `Promo.recurring` flag).
 - **Venue detail** — teams whose **effective** venue (Firestore + venue
   overrides) has `parkingInfo` **&&** `publicTransit` **&&** `bagPolicyUrl`;
   gate-times reported separately.
