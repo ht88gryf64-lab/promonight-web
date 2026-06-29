@@ -9,9 +9,9 @@ import { TrackedAffiliateLink } from '@/components/tracked-affiliate-link';
 // from PromoNight's red/dark theme to signal "external destination". Visual
 // spec mirrors the CTACluster.jsx mockup hero: white card, 1.5px navy (#003C71)
 // border, brand mark (Ticketmaster italic Outfit wordmark in brand navy /
-// TicketNetwork logo) and a navy tap arrow. No "Get Tickets" descriptor — the
-// brand mark plus the stacked-button context communicates the action; the arrow
-// is kept as a tap affordance (mobile-first).
+// TicketNetwork logo), a "Get Tickets" descriptor, and a navy tap arrow —
+// matching the SpotHero / Fanatics card pattern (brand mark + descriptor +
+// arrow).
 //
 // Ticketmaster leads because it is the better-converting partner; its outbound
 // URL is wrap-resolved by buildTicketmasterUrl when NEXT_PUBLIC_TICKETMASTER_-
@@ -69,6 +69,7 @@ export function TicketmasterCTA({ team, surface, placement, promoId, size = 'ful
   // context (modal, playoff card).
   const padding = size === 'compact' ? 'px-3.5 py-2.5 gap-2.5' : 'px-[18px] py-4 gap-3';
   const wordmarkSize = size === 'compact' ? 'text-[15px]' : 'text-[17px]';
+  const ctaSize = size === 'compact' ? 'text-[14px]' : 'text-[16px]';
   const arrowSize = size === 'compact' ? 'text-[15px]' : 'text-[18px]';
   const cardShadow = size === 'compact'
     ? 'shadow-[0_3px_12px_rgba(0,60,113,0.12)]'
@@ -107,6 +108,9 @@ export function TicketmasterCTA({ team, surface, placement, promoId, size = 'ful
           >
             ticketmaster
           </span>
+          <span className={`font-outfit font-bold text-[#0a0a0a] ${ctaSize}`}>
+            Get Tickets
+          </span>
           <span aria-hidden="true" className={arrowClass}>
             →
           </span>
@@ -135,6 +139,9 @@ export function TicketmasterCTA({ team, surface, placement, promoId, size = 'ful
             width={logoWidth}
             height={logoHeight}
           />
+          <span className={`font-outfit font-bold text-[#0a0a0a] ${ctaSize}`}>
+            Get Tickets
+          </span>
           <span aria-hidden="true" className={arrowClass}>
             →
           </span>
