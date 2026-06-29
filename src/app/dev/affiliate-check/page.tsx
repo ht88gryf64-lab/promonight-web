@@ -36,14 +36,19 @@ export default async function AffiliateCheckPage() {
       <h1 style={{ fontSize: 22, marginBottom: 12 }}>Affiliate URL spot-check</h1>
 
       <section style={{ marginBottom: 24, padding: 16, border: '1px solid #ddd', borderRadius: 6 }}>
-        <h2 style={{ fontSize: 16, marginBottom: 8 }}>Active ticket vendor</h2>
+        <h2 style={{ fontSize: 16, marginBottom: 8 }}>Ticket CTA vendors</h2>
         <p>
-          <strong>TICKET_VENDOR:</strong>{' '}
+          The ticket CTA renders <strong>both vendors stacked</strong> across all surfaces —
+          Ticketmaster on top, TicketNetwork below — each firing{' '}
+          <code>affiliate_click</code> with its own <code>partner</code> value.
+        </p>
+        <p style={{ marginTop: 8 }}>
+          <strong>TICKET_VENDOR (legacy):</strong>{' '}
           <span style={{ color: TICKET_VENDOR === 'ticketnetwork' ? '#0a7d3a' : '#9a4400' }}>
             {TICKET_VENDOR}
           </span>{' '}
-          — the &quot;Get Tickets&quot; CTA routes to this vendor across all surfaces. Flip{' '}
-          <code>TICKET_VENDOR</code> in <code>src/lib/affiliates.ts</code> to roll back.
+          — historical sole-vendor switch in <code>src/lib/affiliates.ts</code>; no longer gates
+          rendering now that both vendors render.
         </p>
       </section>
 
