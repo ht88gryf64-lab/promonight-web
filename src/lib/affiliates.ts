@@ -36,13 +36,14 @@ export type AffiliatePartner =
   | 'ticketmaster'
   | 'ticketnetwork';
 
-// ── Ticket vendor switch ─────────────────────────────────────────────────
-// Single source of truth for which ticket marketplace the "Get Tickets" CTA
-// routes to. Flip to 'ticketmaster' to instantly roll back to the Ticketmaster
-// CTA — all Ticketmaster link-building code (buildTicketmasterUrl, the env
-// wrap, the isPartnerActive/buildAffiliateUrl cases) is retained behind this
-// flag, so reverting the sole-vendor swap is a one-line change. TicketmasterCTA
-// reads this to choose the builder, the partner tag, and the card brand mark.
+// ── Ticket vendor (historical sole-vendor switch) ────────────────────────
+// The ticket CTA now renders BOTH vendors stacked — Ticketmaster on top,
+// TicketNetwork below (see components/affiliates/TicketmasterCTA.tsx) — so this
+// constant no longer gates which vendor renders. It is retained as the record
+// of the prior single-vendor era and for the /dev/affiliate-check diagnostics
+// readout. Both link builders (buildTicketmasterUrl + the env wrap,
+// buildTicketNetworkLink) and the per-partner isPartnerActive/buildAffiliateUrl
+// cases remain wired and exercised by the stacked CTA.
 export const TICKET_VENDOR: 'ticketnetwork' | 'ticketmaster' = 'ticketnetwork';
 
 export type AffiliateLinkOptions = {
