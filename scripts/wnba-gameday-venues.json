@@ -68,5 +68,15 @@
     "accessibility": "Accessible seating with companion seats is on every level, elevators serve Sections 1, 11, and 20, and Guest Services at the main entrance assists with wheelchair access and assistive listening.",
     "bagPolicyUrl": "https://www.barclayscenter.com/arena/policies",
     "nearby": "Prospect Heights, Fort Greene, and Downtown Brooklyn surround the arena with dining and nightlife. Bags larger than 10x6x2 and hard-sided bags are not permitted; small clutches are allowed."
+  },
+
+  "footprint-center": {
+    "venue": "Mortgage Matchup Center (phoenix-mercury, shared with Suns; name already correct in Firestore)",
+    "gatesOpen": "Doors typically open 90 minutes before tip-off.",
+    "parkingInfo": "Several downtown Phoenix garages and lots sit within walking distance; prepay through ParkWhiz for the easiest arrival. Event parking generally opens about 30 minutes before doors. Rates and availability vary by event.",
+    "publicTransit": "Valley Metro light rail runs right past the arena, with the closest stops at 3rd Street/Jefferson and 3rd Street/Washington. Through the RailRide program, any valid arena or Ticketmaster event ticket is free light rail fare on event day, from four hours before through the end of service.",
+    "accessibility": "The arena is fully ADA-compliant; contact the box office or venue for accessible seating and accommodations.",
+    "bagPolicyUrl": "https://mortgagematchupcenter.com/plan-your-visit/",
+    "nearby": "CityScape and the Legends Entertainment District sit steps away for pre and post-game food and drinks, with Roosevelt Row's murals and breweries a short trip north. Bags over 14x14x6 and backpacks are prohibited; clutches under 4x6 use the express entry lanes."
   }
 }
