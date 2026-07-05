@@ -87,5 +87,15 @@
     "accessibility": "ADA parking sits in the Arena and 1st Ave N garages, and the arena is designed to exceed accessibility standards; see the venue guide for seating and services.",
     "bagPolicyUrl": "https://climatepledgearena.com/arena-guide/",
     "nearby": "The arena anchors the 74-acre Seattle Center campus at the base of the Space Needle, with Uptown and Belltown dining a short walk away. Small clutches under about 4x6x1.5 enter any door; larger bags go through x-ray at designated entries."
+  },
+
+  "state-farm-arena": {
+    "venue": "State Farm Arena (atlanta-dream, shared with Hawks)",
+    "gatesOpen": "Doors typically open 90 minutes before tip-off.",
+    "parkingInfo": "Official decks are the Sapphire Deck (closest, sky-bridge connected), the Diamond Deck (VIP), and the Ruby Lot, roughly $20 to $40 and bookable via ParkMobile. Downtown decks near CNN Center and Mercedes-Benz Stadium run a few dollars cheaper a short covered walk away.",
+    "publicTransit": "The arena sits directly on top of an on-site MARTA station (now SEC District Station, formerly Dome/GWCC/CNN Center) on the Blue and Green lines, so you walk from the platform into the concourse. Fare is $2.50 one-way via Breeze card. From the airport, take the Red or Gold line to Five Points and transfer.",
+    "accessibility": "ADA parking is available in the Sapphire, Diamond, and Ruby locations on a first-come basis, and a Sensory Room plus sensory bags are available; ask a Guest Experience team member.",
+    "bagPolicyUrl": "https://www.statefarmarena.com/plan-your-visit/policies",
+    "nearby": "Centennial Olympic Park, the World of Coca-Cola, and the CNN Center are all a short walk, with the Omni Hotel adjacent via Gate 7. Bags over 14x14x6, backpacks, and hard-sided bags are prohibited; bag check is by Gate 2."
   }
 }
