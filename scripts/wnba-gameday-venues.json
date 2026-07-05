@@ -58,5 +58,15 @@
     "accessibility": "Guests needing an elevator should park in Ramp A or B and enter at skyway level; the ADA drop-off is at 1st Avenue and 6th Street by the Life Time Lobby.",
     "bagPolicyUrl": "https://www.targetcenter.com/plan-your-visit-1/a-z-guide",
     "nearby": "The arena sits in the Warehouse and Entertainment District with restaurants and bars steps away; the Loews, Marriott City Center, and Hampton Inn are all within a couple of blocks. Bags must be no larger than 5x9, and bag check is available for a fee."
+  },
+
+  "barclays-center": {
+    "venue": "Barclays Center (new-york-liberty, shared with Nets)",
+    "gatesOpen": "Doors typically open 90 minutes before tip-off.",
+    "parkingInfo": "There is no arena-owned lot. Nearby garages on Dean and Pacific Streets run roughly $30 to $60; SpotHero is an official partner for prepaid spots. Public transit is strongly recommended over driving.",
+    "publicTransit": "The arena sits directly above the Atlantic Avenue-Barclays Center station, served by the 2, 3, 4, 5, B, D, N, Q, and R trains (with C and G nearby), plus LIRR into Atlantic Terminal. From Manhattan the 2/3 express or D/N/Q reaches it in about 15 minutes with no transfer.",
+    "accessibility": "Accessible seating with companion seats is on every level, elevators serve Sections 1, 11, and 20, and Guest Services at the main entrance assists with wheelchair access and assistive listening.",
+    "bagPolicyUrl": "https://www.barclayscenter.com/arena/policies",
+    "nearby": "Prospect Heights, Fort Greene, and Downtown Brooklyn surround the arena with dining and nightlife. Bags larger than 10x6x2 and hard-sided bags are not permitted; small clutches are allowed."
   }
 }
