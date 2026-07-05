@@ -1,6 +1,17 @@
 {
   "_notes": "WNBA GAME DAY batch. Values verbatim from docs/wnba-gameday-venue-research.md (verified 2026-07-05). One key per venues/{doc id}. 10 docs: 2 standalone expansion arenas (coca-cola-coliseum, moda-center-portland-fire) + 8 shared NBA/NHL buildings. The `venue` field is a display annotation and is never written. Name corrections dropped in Phase 1 (footprint-center + entertainment-sports-arena already correct in Firestore). Mystics skipped (already 6/6). Two dead bag links replaced with confirmed-200 official pages: chase-center and climate-pledge-arena. gatesOpen omitted on crypto-com-arena (Kings) and climate-pledge-arena (Kraken) so the NHL co-tenant page keeps correct 'puck drop' wording; their WNBA pages use the 90-minute fallback. No em dashes.",
 
+  "_template_future_expansion": {
+    "_comment": "SEED TEMPLATE for future WNBA expansion teams. When a new team launches, its venue doc gets base fields but NOT these six game-day fields (the same gap the team-doc affiliate-field seed hit). Copy this block, rename the key to the venues/{doc id} it serves, fill every field from verified official sources, then run populate-wnba-gameday-venues.ts (dry-run, then --execute). Keys starting with _ are skipped by the loader and never written.",
+    "venue": "<Display Name> (<team-slug>, standalone | shared with <co-tenant>)",
+    "gatesOpen": "OMIT this key entirely when the building has an NHL co-tenant (the per-league fallback then gives correct 'puck drop' wording on the hockey page). Otherwise: 'Doors typically open N minutes before tip-off.'",
+    "parkingInfo": "<verified official parking guidance>",
+    "publicTransit": "<verified official transit guidance>",
+    "accessibility": "<verified official accessibility guidance>",
+    "bagPolicyUrl": "<official bag-policy page, verified 200 in a real browser (curl 406/404 is unreliable behind arena WAFs)>",
+    "nearby": "<nearby food, drink, hotels>"
+  },
+
   "coca-cola-coliseum": {
     "venue": "Coca-Cola Coliseum (toronto-tempo, standalone)",
     "gatesOpen": "Doors typically open 75 minutes before tip-off.",

@@ -7,6 +7,12 @@
 // Source of every value: docs/wnba-gameday-venue-research.md (verbatim). Data
 // lives in scripts/wnba-gameday-venues.json (one key per venue doc id).
 //
+// SEED for future expansion teams: this batch is the canonical home for WNBA
+// venue game-day content. When a new expansion team launches, add its venue to
+// wnba-gameday-venues.json (copy the `_template_future_expansion` block, which
+// the loader skips) and re-run this script. That closes the same gap the
+// team-doc affiliate-field seed hit, where new teams shipped with empty fields.
+//
 // Usage:
 //   tsx --env-file=.env.local --require ./scripts/stub-server-only.cjs \
 //     scripts/populate-wnba-gameday-venues.ts            # dry-run (default)
