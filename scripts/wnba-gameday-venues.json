@@ -39,5 +39,14 @@
     "accessibility": "Wheelchair escorts are available on request at entrances, elevators and escalators connect all levels via the pedestrian bridge, and gender-neutral and family restrooms plus mothers' rooms are on multiple levels.",
     "bagPolicyUrl": "https://www.gainbridgefieldhouse.com/plan-your-visit/a-z-guide",
     "nearby": "The Fieldhouse sits in the heart of downtown Indy with restaurants and bars within walking distance. It is cashless, and bags are limited to 6x10x2 with no backpacks or hard-sided bags."
+  },
+
+  "crypto-com-arena": {
+    "venue": "Crypto.com Arena (los-angeles-sparks, shared with Kings [NHL]); gatesOpen intentionally omitted (NHL co-tenant), WNBA page uses 90-min fallback",
+    "parkingInfo": "The arena's own lots hold about 3,300 spaces at roughly $30 to $50; the West Garage (Lot W) offers a flat event rate and stay-as-late-as-you-want convenience. More than 10,000 additional spaces sit within a 7 to 10-minute walk. Prepay via SpotHero or ParkWhiz for better rates; no in-and-out privileges.",
+    "publicTransit": "The Metro A and E lines stop at Pico Station, a 1 to 2-block walk to the arena; from downtown transfer at 7th St/Metro Center. DASH Route F and several Metro bus lines also stop near L.A. LIVE. Load your TAP card before the event to skip post-game lines.",
+    "accessibility": "Designated accessible and van-accessible parking is available in the garages for vehicles with a valid placard, on a first-come basis; see the arena parking map and A-Z Guide.",
+    "bagPolicyUrl": "https://www.cryptoarena.com/general-info-faq",
+    "nearby": "L.A. LIVE next door has restaurants, bars, and the Microsoft Theater. The bag policy is strict: clutches and wallets under 5x9x1 only, no backpacks, purses, clear bags, or fanny packs; Binbox lockers by the Kobe Bryant Entrance hold larger items. Cashless venue."
   }
 }
