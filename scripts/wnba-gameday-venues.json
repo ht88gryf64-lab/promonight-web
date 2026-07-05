@@ -9,5 +9,15 @@
     "accessibility": "Barrier-free accessible seating is sold through Ticketmaster, with sections marked by an \"A.\" Contact Fan Services in advance for specific accommodations.",
     "bagPolicyUrl": "https://www.coca-colacoliseum.com/plan-your-visit/knowbeforeyougo",
     "nearby": "Liberty Village, an easy walk north, is the closest food and drink district (Local Public Eatery, Brazen Head, and more). Hotel X Toronto sits inside Exhibition Place for a walk-to-court stay. The venue is cashless with no re-entry."
+  },
+
+  "moda-center-portland-fire": {
+    "venue": "Moda Center (portland-fire, standalone)",
+    "gatesOpen": "Doors typically open 90 minutes before tip-off.",
+    "parkingInfo": "Four Rose Quarter garages (the Garden garage is attached to the arena, plus East and West Broadway and the Annex) and the Benton surface lot offer 2,500-plus spaces, roughly $18 to $35 on event nights, bookable through Ticketmaster. The U-Store Rose Quarter lot is the cheaper walkable option at about $5 to $8. The off-site NE 7th lots are Blazers-only.",
+    "publicTransit": "MAX Light Rail is the easiest option: the Blue, Green, Red, and Yellow lines all stop at the Rose Quarter Transit Center directly next to the arena, with extra trains on event nights. TriMet buses (4, 8, 35, 44, 77, 85) also serve the transit center. Pay by contactless tap or Hop Fastpass; an adult day pass runs about $5.60.",
+    "accessibility": "The arena is KultureCity Sensory Inclusive certified and offers OneCourt haptic devices for blind and low-vision fans, with accessible parking in every garage.",
+    "bagPolicyUrl": "https://www.rosequarter.com/plan-your-visit",
+    "nearby": "The Lloyd District has pre and post-game food plus free weeknight street parking after 7pm; Spirit of '77 and the game-day Dr. Jack's brewpub are close by. Hotel Eastlund is about a 5-minute walk. The campus is cashless and EV charging is complimentary with paid parking."
   }
 }
