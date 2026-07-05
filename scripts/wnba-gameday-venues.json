@@ -19,5 +19,15 @@
     "accessibility": "The arena is KultureCity Sensory Inclusive certified and offers OneCourt haptic devices for blind and low-vision fans, with accessible parking in every garage.",
     "bagPolicyUrl": "https://www.rosequarter.com/plan-your-visit",
     "nearby": "The Lloyd District has pre and post-game food plus free weeknight street parking after 7pm; Spirit of '77 and the game-day Dr. Jack's brewpub are close by. Hotel Eastlund is about a 5-minute walk. The campus is cashless and EV charging is complimentary with paid parking."
+  },
+
+  "chase-center": {
+    "venue": "Chase Center (golden-state-valkyries, shared with Warriors)",
+    "gatesOpen": "Doors typically open 90 minutes before tip-off.",
+    "parkingInfo": "There is no free arena lot. The Mercedes-Benz Garage prepaid pass via Ticketmaster is premium-priced; nearby UCSF Mission Bay lots run about $20 to $30 a short walk away. Mission Bay street parking is permit-only and aggressively enforced, so prepay or take transit.",
+    "publicTransit": "The Muni Metro T Third line stops at UCSF/Chase Center right at the south entrance, and your event ticket doubles as a free all-day Muni pass. Connect from BART at Embarcadero or Montgomery to the T Third, or from Caltrain at 4th and King (about a 12-minute walk). Ferry service to Pier 48 1/2 runs on some game days.",
+    "accessibility": "Accessible parking, seating, hearing assistance, and service-animal details are covered in the arena's A-to-Z Guide; contact guest experiences for specifics.",
+    "bagPolicyUrl": "https://www.chasecenter.com/fan-safety-bag-policy/",
+    "nearby": "The surrounding Thrive City has restaurants and bars open on event days, and Oracle Park is a 12 to 15-minute walk for double-headers. Bags are limited to 14x6x14 with no backpacks, and a bag valet operates on 16th Street."
   }
 }
