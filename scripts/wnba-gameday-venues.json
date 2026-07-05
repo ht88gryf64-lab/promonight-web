@@ -29,5 +29,15 @@
     "accessibility": "Accessible parking, seating, hearing assistance, and service-animal details are covered in the arena's A-to-Z Guide; contact guest experiences for specifics.",
     "bagPolicyUrl": "https://www.chasecenter.com/fan-safety-bag-policy/",
     "nearby": "The surrounding Thrive City has restaurants and bars open on event days, and Oracle Park is a 12 to 15-minute walk for double-headers. Bags are limited to 14x6x14 with no backpacks, and a bag valet operates on 16th Street."
+  },
+
+  "gainbridge-fieldhouse": {
+    "venue": "Gainbridge Fieldhouse (indiana-fever, shared with Pacers)",
+    "gatesOpen": "Doors typically open 60 minutes before tip-off.",
+    "parkingInfo": "The Virginia Avenue Garage connects to the arena by a third-floor sky bridge (about 2,200 spaces) and is the closest option; book via ParkWhiz, the venue's recommended platform. Nearby CityWay North (~$12) and lots on Alabama and Pearl (~$10) are cheaper. Downtown meters are free on Sundays.",
+    "publicTransit": "IndyGo buses serve the area, with the Julia M. Carson Transit Center about two blocks away and the IndyGo Red Line running through downtown; the two-hour fare is $1.75. Amtrak's Cardinal line stops at Union Station, roughly a 10-minute walk.",
+    "accessibility": "Wheelchair escorts are available on request at entrances, elevators and escalators connect all levels via the pedestrian bridge, and gender-neutral and family restrooms plus mothers' rooms are on multiple levels.",
+    "bagPolicyUrl": "https://www.gainbridgefieldhouse.com/plan-your-visit/a-z-guide",
+    "nearby": "The Fieldhouse sits in the heart of downtown Indy with restaurants and bars within walking distance. It is cashless, and bags are limited to 6x10x2 with no backpacks or hard-sided bags."
   }
 }
