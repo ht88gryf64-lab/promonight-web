@@ -78,5 +78,14 @@
     "accessibility": "The arena is fully ADA-compliant; contact the box office or venue for accessible seating and accommodations.",
     "bagPolicyUrl": "https://mortgagematchupcenter.com/plan-your-visit/",
     "nearby": "CityScape and the Legends Entertainment District sit steps away for pre and post-game food and drinks, with Roosevelt Row's murals and breweries a short trip north. Bags over 14x14x6 and backpacks are prohibited; clutches under 4x6 use the express entry lanes."
+  },
+
+  "climate-pledge-arena": {
+    "venue": "Climate Pledge Arena (seattle-storm, shared with Kraken [NHL]); gatesOpen intentionally omitted (NHL co-tenant), WNBA page uses 90-min fallback",
+    "parkingInfo": "Three garages serve the arena: the Arena Garage (accessed by underground tunnel, complimentary EV charging), the 1st Ave N Garage, and the Seattle Center 5th Ave N Garage, commonly $20 to $55; prepurchase through the Kraken + CPA app. The closest ADA parking is in the Arena and 1st Ave N garages.",
+    "publicTransit": "Every event ticket includes a free King County transit pass valid two hours before and after. The Seattle Center Monorail is a 90-second ride from Westlake downtown; Link light rail riders transfer to the Monorail at Westlake, and King County Metro buses serve the Seattle Center campus.",
+    "accessibility": "ADA parking sits in the Arena and 1st Ave N garages, and the arena is designed to exceed accessibility standards; see the venue guide for seating and services.",
+    "bagPolicyUrl": "https://climatepledgearena.com/arena-guide/",
+    "nearby": "The arena anchors the 74-acre Seattle Center campus at the base of the Space Needle, with Uptown and Belltown dining a short walk away. Small clutches under about 4x6x1.5 enter any door; larger bags go through x-ray at designated entries."
   }
 }
