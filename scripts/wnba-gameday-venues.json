@@ -1,0 +1,13 @@
+{
+  "_notes": "WNBA GAME DAY batch. Values verbatim from docs/wnba-gameday-venue-research.md (verified 2026-07-05). One key per venues/{doc id}. 10 docs: 2 standalone expansion arenas (coca-cola-coliseum, moda-center-portland-fire) + 8 shared NBA/NHL buildings. The `venue` field is a display annotation and is never written. Name corrections dropped in Phase 1 (footprint-center + entertainment-sports-arena already correct in Firestore). Mystics skipped (already 6/6). Two dead bag links replaced with confirmed-200 official pages: chase-center and climate-pledge-arena. gatesOpen omitted on crypto-com-arena (Kings) and climate-pledge-arena (Kraken) so the NHL co-tenant page keeps correct 'puck drop' wording; their WNBA pages use the 90-minute fallback. No em dashes.",
+
+  "coca-cola-coliseum": {
+    "venue": "Coca-Cola Coliseum (toronto-tempo, standalone)",
+    "gatesOpen": "Doors typically open 75 minutes before tip-off.",
+    "parkingInfo": "Exhibition Place operates roughly 5,000 shared parking spaces adjacent to the arena, commonly around $18, but they fill fast and tighten sharply when other Exhibition Place events run. Transit is the recommended arrival. Accessible parking is available through Exhibition Place.",
+    "publicTransit": "Transit is the easiest way in. Exhibition GO Station sits steps from the arena, one stop west of Union on the Lakeshore West line. TTC riders can take the 29 bus south to Exhibition or the 509/511 streetcar corridor. PRESTO offers up to 15 percent off select home games with code PRESTOTEMPO.",
+    "accessibility": "Barrier-free accessible seating is sold through Ticketmaster, with sections marked by an \"A.\" Contact Fan Services in advance for specific accommodations.",
+    "bagPolicyUrl": "https://www.coca-colacoliseum.com/plan-your-visit/knowbeforeyougo",
+    "nearby": "Liberty Village, an easy walk north, is the closest food and drink district (Local Public Eatery, Brazen Head, and more). Hotel X Toronto sits inside Exhibition Place for a walk-to-court stay. The venue is cashless with no re-entry."
+  }
+}
