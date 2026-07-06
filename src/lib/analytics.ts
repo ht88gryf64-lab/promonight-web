@@ -81,6 +81,14 @@ export type AnalyticsSurface =
   | 'web_promo_detail'
   | 'web_playoffs'
   | 'web_league_index'
+  // MLB league hub (/mlb) and its interactive sub-surfaces. Distinct from the
+  // generic web_league_index (which covers /teams and any bare /{sport}) so
+  // PostHog and GA4 can break the hub out by module: the this-week rail, the
+  // browse-by-promo-type links, and the division team grid / selector.
+  | 'web_mlb_hub'
+  | 'web_mlb_hub_this_week'
+  | 'web_mlb_hub_promo_type'
+  | 'web_mlb_hub_team_card'
   | 'web_article'
   | 'web_my_teams'
   | 'web_best_promos'
@@ -689,6 +697,13 @@ const KNOWN_SURFACES: ReadonlySet<AnalyticsSurface> = new Set<AnalyticsSurface>(
   'web_promo_detail',
   'web_playoffs',
   'web_league_index',
+  // Keep in lockstep with the AnalyticsSurface union above: adding a surface
+  // there but not here makes isKnownSurface() return false and silently
+  // downgrades legacy affiliate clicks to web_other.
+  'web_mlb_hub',
+  'web_mlb_hub_this_week',
+  'web_mlb_hub_promo_type',
+  'web_mlb_hub_team_card',
   'web_article',
   'web_my_teams',
   'web_best_promos',
@@ -708,6 +723,9 @@ export function inferSurfaceFromPath(path: string): AnalyticsSurface {
   if (path.startsWith('/my-teams')) return 'web_my_teams';
   if (path.startsWith('/best-promos') || path.startsWith('/team-rankings')) return 'web_best_promos';
   if (path.startsWith('/teams')) return 'web_league_index';
+  // The bare /mlb league hub gets its own surface. /mlb/{team} is a team page
+  // and is handled by the generic sport match below (it returns web_team_page).
+  if (path === '/mlb') return 'web_mlb_hub';
   // /[sport]/[team] — team pages. Sports are known; anything else falls through.
   const m = path.match(/^\/([a-z]+)(?:\/|$)/);
   if (m && ['mlb', 'nba', 'nhl', 'nfl', 'mls', 'wnba'].includes(m[1])) {
