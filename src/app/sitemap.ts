@@ -68,6 +68,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'weekly',
       priority: 0.9,
     },
+    {
+      // MLB league hub. Daily changefreq because MLB promos run a daily cadence
+      // and the hub's this-week rail turns over each day; hub-tier priority.
+      url: `${BASE_URL}/mlb`,
+      lastModified: now,
+      changeFrequency: 'daily',
+      priority: 0.9,
+    },
     ...playoffHubEntries,
     ...teamPages,
     {
