@@ -7,7 +7,7 @@ import { IconMapPin } from '@tabler/icons-react';
 
 export interface HeroProps {
   tint: string; // team primaryColor hex (e.g. "#002B5C"); may be any hex
-  eyebrow?: string; // e.g. "MLB · AL Central"
+  eyebrow?: React.ReactNode; // e.g. "MLB · AL Central"; the league may be a hub link
   title: string; // the lockup, e.g. "MINNESOTA TWINS"
   subtitle?: string; // e.g. "Promos & Giveaways 2026"
   venueLine?: string; // e.g. "Target Field · Minneapolis, MN"
