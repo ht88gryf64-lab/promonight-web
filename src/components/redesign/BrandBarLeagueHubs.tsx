@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { IconChevronDown } from '@tabler/icons-react';
-import { LEAGUE_HUBS } from '@/lib/league-hubs';
+import { LEAGUE_HUBS, hubAriaLabel } from '@/lib/league-hubs';
 
 // "League hubs" dropdown for the redesign top bar. Lists only live hubs from the
 // LEAGUE_HUBS registry (MLB today; the list grows as hubs ship). Keyboard
@@ -67,10 +67,11 @@ export function BrandBarLeagueHubs() {
           <Link
             key={hub.href}
             href={hub.href}
+            aria-label={hubAriaLabel(hub)}
             onClick={() => setOpen(false)}
             className="block rounded-lg px-3 py-2 font-rd text-[13px] normal-case tracking-normal text-rd-ink-soft transition-colors hover:bg-rd-cream hover:text-rd-ink"
           >
-            {hub.label} promotional schedule hub
+            {hub.label}
           </Link>
         ))}
       </div>

@@ -13,3 +13,13 @@ export interface LeagueHub {
 export const LEAGUE_HUBS: LeagueHub[] = [
   { league: 'MLB', label: 'MLB', href: '/mlb', sportSlug: 'mlb' },
 ];
+
+// Short vs descriptive are separate concerns: `label` is the SHORT visible menu
+// text ("MLB"), and this helper derives the DESCRIPTIVE accessible name used as
+// the link's aria-label ("MLB promotional schedule"), so the internal link
+// stays descriptive for crawlers and screen readers while the visible text
+// stays short. A future hub only adds its short label (e.g. "WNBA" / "MLS");
+// the descriptive aria is derived the same way, with no per-entry duplication.
+export function hubAriaLabel(hub: LeagueHub): string {
+  return `${hub.label} promotional schedule`;
+}
