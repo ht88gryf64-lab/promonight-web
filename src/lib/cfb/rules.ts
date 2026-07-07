@@ -7,38 +7,62 @@
 //   - Notre Dame week numbers off-by-one (the extractor double-counted the bye).
 // Both are eliminated by computing, not reading.
 
-// 2026 conference membership — the rule's source of truth. Covers the 4 spike
-// schools and every opponent on their 2026 schedules. Season-scoped on purpose
-// (Washington State is Pac-12 here, so it is a CONFERENCE game for Boise but a
-// NON-conference game for Kansas State — the same opponent, gated correctly by
-// rule rather than read from either school's page).
+// 2026 conference membership — the rule's source of truth. Season-scoped on
+// purpose (realignment). Keys are CANONICAL slugs (slugifySchool of the common
+// name); normalize opponent slugs via SLUG_ALIASES before lookup. Covers all 86
+// source-map schools accurately + their common FBS opponents. UNKNOWN opponents
+// fall through gateConferenceGame's safe default (non-conference) — an omission
+// under-tags a conference game (transparent in the gate) but never mis-asserts
+// one. Extend as new opponents surface. (Same opponent gates differently per
+// school: Washington State is Pac-12, a conference game for Boise but not for
+// Kansas State — gated by rule, not read from either page.)
 export const CONFERENCE_2026: Record<string, string> = {
-  // SEC
-  tennessee: 'SEC', texas: 'SEC', auburn: 'SEC', arkansas: 'SEC', alabama: 'SEC',
-  'south-carolina': 'SEC', kentucky: 'SEC', 'texas-am': 'SEC', lsu: 'SEC', vanderbilt: 'SEC',
-  georgia: 'SEC', oklahoma: 'SEC', florida: 'SEC', 'ole-miss': 'SEC',
-  // Big 12
-  'kansas-state': 'Big 12', cincinnati: 'Big 12', houston: 'Big 12', kansas: 'Big 12',
-  'arizona-state': 'Big 12', colorado: 'Big 12', 'oklahoma-state': 'Big 12', tcu: 'Big 12',
-  arizona: 'Big 12', 'iowa-state': 'Big 12', utah: 'Big 12', byu: 'Big 12',
-  // Pac-12 (rebuilt, 2026)
-  'boise-state': 'Pac-12', 'utah-state': 'Pac-12', 'fresno-state': 'Pac-12',
-  'washington-state': 'Pac-12', 'colorado-state': 'Pac-12', 'oregon-state': 'Pac-12',
-  'san-diego-state': 'Pac-12',
-  // Big Ten
-  oregon: 'Big Ten', wisconsin: 'Big Ten', 'michigan-state': 'Big Ten', purdue: 'Big Ten',
-  'ohio-state': 'Big Ten', michigan: 'Big Ten', 'penn-state': 'Big Ten', usc: 'Big Ten',
-  nebraska: 'Big Ten',
-  // ACC
-  'georgia-tech': 'ACC', 'north-carolina': 'ACC', stanford: 'ACC', miami: 'ACC',
-  'boston-college': 'ACC', smu: 'ACC', syracuse: 'ACC', clemson: 'ACC', 'florida-state': 'ACC',
-  // AAC
-  tulane: 'AAC', memphis: 'AAC', navy: 'AAC', rice: 'AAC',
-  // Other G5 / FCS (non-conference for any Power-4 / Pac-12 school here)
-  'kennesaw-state': 'CUSA', 'western-michigan': 'MAC', 'texas-state': 'Sun Belt',
+  // ── SEC (16) ──
+  alabama: 'SEC', georgia: 'SEC', lsu: 'SEC', tennessee: 'SEC', texas: 'SEC', oklahoma: 'SEC',
+  auburn: 'SEC', florida: 'SEC', 'texas-am': 'SEC', 'ole-miss': 'SEC', 'mississippi-state': 'SEC',
+  arkansas: 'SEC', kentucky: 'SEC', 'south-carolina': 'SEC', missouri: 'SEC', vanderbilt: 'SEC',
+  // ── Big Ten (18) ──
+  'ohio-state': 'Big Ten', michigan: 'Big Ten', 'penn-state': 'Big Ten', oregon: 'Big Ten',
+  usc: 'Big Ten', ucla: 'Big Ten', washington: 'Big Ten', wisconsin: 'Big Ten', nebraska: 'Big Ten',
+  iowa: 'Big Ten', 'michigan-state': 'Big Ten', minnesota: 'Big Ten', illinois: 'Big Ten',
+  indiana: 'Big Ten', maryland: 'Big Ten', rutgers: 'Big Ten', northwestern: 'Big Ten', purdue: 'Big Ten',
+  // ── ACC (17) ──
+  clemson: 'ACC', 'florida-state': 'ACC', miami: 'ACC', 'north-carolina': 'ACC', 'nc-state': 'ACC',
+  virginia: 'ACC', 'virginia-tech': 'ACC', louisville: 'ACC', pittsburgh: 'ACC', duke: 'ACC',
+  'wake-forest': 'ACC', 'georgia-tech': 'ACC', 'boston-college': 'ACC', syracuse: 'ACC',
+  california: 'ACC', stanford: 'ACC', smu: 'ACC',
+  // ── Big 12 (16) ──
+  utah: 'Big 12', 'kansas-state': 'Big 12', 'oklahoma-state': 'Big 12', kansas: 'Big 12',
+  baylor: 'Big 12', tcu: 'Big 12', 'texas-tech': 'Big 12', 'iowa-state': 'Big 12',
+  cincinnati: 'Big 12', ucf: 'Big 12', houston: 'Big 12', byu: 'Big 12', 'west-virginia': 'Big 12',
+  arizona: 'Big 12', 'arizona-state': 'Big 12', colorado: 'Big 12',
+  // ── Independent ──
+  'notre-dame': 'Independent', uconn: 'Independent',
+  // ── Pac-12 (rebuilt 2026: WSU/OSU + adds) ──
+  'boise-state': 'Pac-12', 'fresno-state': 'Pac-12', 'san-diego-state': 'Pac-12',
+  'washington-state': 'Pac-12', 'oregon-state': 'Pac-12', 'utah-state': 'Pac-12',
+  'colorado-state': 'Pac-12', 'texas-state': 'Pac-12',
+  // ── AAC ──
+  memphis: 'AAC', army: 'AAC', navy: 'AAC', tulane: 'AAC', 'south-florida': 'AAC',
+  'east-carolina': 'AAC', temple: 'AAC', tulsa: 'AAC', 'north-texas': 'AAC', charlotte: 'AAC',
+  'florida-atlantic': 'AAC', uab: 'AAC', rice: 'AAC', utsa: 'AAC',
+  // ── Sun Belt ──
+  'appalachian-state': 'Sun Belt', 'james-madison': 'Sun Belt', 'coastal-carolina': 'Sun Belt',
+  marshall: 'Sun Belt', 'georgia-southern': 'Sun Belt', 'georgia-state': 'Sun Belt', troy: 'Sun Belt',
+  'south-alabama': 'Sun Belt', louisiana: 'Sun Belt', 'louisiana-monroe': 'Sun Belt',
+  'arkansas-state': 'Sun Belt', 'old-dominion': 'Sun Belt', 'southern-miss': 'Sun Belt',
+  // ── Mountain West ──
+  'air-force': 'MWC', unlv: 'MWC', 'northern-illinois': 'MWC', wyoming: 'MWC', nevada: 'MWC',
+  'new-mexico': 'MWC', 'san-jose-state': 'MWC', hawaii: 'MWC', utep: 'MWC',
+  // ── MAC ──
+  toledo: 'MAC', akron: 'MAC', 'ball-state': 'MAC', 'bowling-green': 'MAC', buffalo: 'MAC',
+  'central-michigan': 'MAC', 'eastern-michigan': 'MAC', 'kent-state': 'MAC', 'miami-oh': 'MAC',
+  ohio: 'MAC', 'western-michigan': 'MAC', umass: 'MAC',
+  // ── Conference USA ──
+  liberty: 'CUSA', 'jacksonville-state': 'CUSA', 'sam-houston': 'CUSA', 'new-mexico-state': 'CUSA',
+  'western-kentucky': 'CUSA', 'middle-tennessee': 'CUSA', 'louisiana-tech': 'CUSA', 'kennesaw-state': 'CUSA',
+  // ── FCS / common non-FBS (non-conference for any FBS school) ──
   furman: 'FCS', nicholls: 'FCS', 'south-dakota': 'FCS',
-  // Independent
-  'notre-dame': 'Independent',
 };
 
 /** Lowercase, hyphenate, strip punctuation. "Texas A&M" -> "texas-am". */
