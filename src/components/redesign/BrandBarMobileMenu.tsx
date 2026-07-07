@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { IconMenu2 } from '@tabler/icons-react';
 import { Modal } from '@/components/ui/modal';
@@ -34,6 +34,25 @@ export function BrandBarMobileMenu({
 }) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
+
+  // Auto-close (and release Modal's body scroll-lock) when the viewport crosses
+  // to md+, where the desktop nav takes over. Without this, a rotate/resize past
+  // the md breakpoint while the sheet is open hides the md:hidden dialog with
+  // `open` still true, so Modal's [isOpen] effect never re-runs and body scroll
+  // stays locked until reload.
+  useEffect(() => {
+    if (!open) return;
+    const mq = window.matchMedia('(min-width: 768px)');
+    if (mq.matches) {
+      setOpen(false);
+      return;
+    }
+    const onChange = (e: MediaQueryListEvent) => {
+      if (e.matches) setOpen(false);
+    };
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, [open]);
 
   // Close the sheet whenever a link inside it is tapped (delegated), so a client
   // navigation dismisses the overlay. Esc + backdrop close are handled by Modal
