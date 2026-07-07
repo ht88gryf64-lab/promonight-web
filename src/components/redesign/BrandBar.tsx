@@ -61,13 +61,18 @@ export function BrandBar({ playoffsActive = false, worldCupActive = false }: Bra
             </Link>
           </div>
 
-          {/* League hubs: a single always-visible dropdown, so it is reachable
-              on mobile too (the redesign top bar has no separate mobile menu). */}
-          <BrandBarLeagueHubs />
+          {/* League hubs dropdown and the app CTA are desktop-only (md+); on
+              mobile both live inside the hamburger sheet, so the mobile bar is
+              just wordmark + hamburger. */}
+          <div className="hidden md:block">
+            <BrandBarLeagueHubs />
+          </div>
 
-          <Button href="/download" variant="primary" size="sm">
-            Get the App
-          </Button>
+          <div className="hidden md:block">
+            <Button href="/download" variant="primary" size="sm">
+              Get the App
+            </Button>
+          </div>
 
           {/* Mobile hamburger + fullscreen nav sheet (md:hidden). */}
           <BrandBarMobileMenu playoffsActive={playoffsActive} worldCupActive={worldCupActive} />

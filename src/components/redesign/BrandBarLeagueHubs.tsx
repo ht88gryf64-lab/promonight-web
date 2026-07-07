@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { IconChevronDown } from '@tabler/icons-react';
 import { LEAGUE_HUBS, hubAriaLabel } from '@/lib/league-hubs';
+import { LeagueChip } from './LeagueChip';
 
 // "League hubs" dropdown for the redesign top bar. Lists only live hubs from the
 // LEAGUE_HUBS registry (MLB today; the list grows as hubs ship). Keyboard
@@ -69,9 +70,10 @@ export function BrandBarLeagueHubs() {
             href={hub.href}
             aria-label={hubAriaLabel(hub)}
             onClick={() => setOpen(false)}
-            className="block rounded-lg px-3 py-2 font-rd text-[13px] normal-case tracking-normal text-rd-ink-soft transition-colors hover:bg-rd-cream hover:text-rd-ink"
+            className="flex items-center gap-2.5 rounded-lg px-3 py-2 font-rd text-[13px] normal-case tracking-normal text-rd-ink-soft transition-colors hover:bg-rd-cream hover:text-rd-ink"
           >
-            {hub.label}
+            <LeagueChip accent={hub.accent} label={hub.label} size={22} />
+            <span>{hub.label}</span>
           </Link>
         ))}
       </div>
