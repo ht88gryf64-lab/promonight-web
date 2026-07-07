@@ -3,6 +3,7 @@ import type { GameContext } from '@/lib/data';
 import type { PlayoffFAQContext } from '@/lib/promo-helpers';
 import type { RecurringDeal } from '@/lib/recurring-deals';
 
+import Link from 'next/link';
 import { archivo } from './fonts';
 import { Hero } from './Hero';
 import { StatScoreboard } from './StatScoreboard';
@@ -70,7 +71,27 @@ export function RedesignTeamPage({
   playoffLastUpdated,
   playoffContext,
 }: RedesignTeamPageProps) {
-  const eyebrow = [team.league, team.division].filter(Boolean).join(' · ');
+  // The league segment links up to the league hub when one exists (MLB today),
+  // so the team page and the /mlb hub form a reciprocal loop (hub links down to
+  // teams, team links up to hub). Leagues without a hub keep a plain-text league
+  // segment so there is never a dead link.
+  const leagueHubHref = team.league === 'MLB' ? '/mlb' : null;
+  const eyebrow = (
+    <>
+      {leagueHubHref ? (
+        <Link
+          href={leagueHubHref}
+          aria-label={`${team.league} promotions and giveaways hub`}
+          className="underline-offset-2 transition-colors hover:text-white hover:underline"
+        >
+          {team.league}
+        </Link>
+      ) : (
+        team.league
+      )}
+      {team.division ? <> · {team.division}</> : null}
+    </>
+  );
 
   return (
     <div className={`${archivo.variable} rd-root min-h-screen`}>
