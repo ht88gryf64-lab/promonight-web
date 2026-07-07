@@ -10,6 +10,8 @@
 
 import { extract, HAIKU, SONNET } from './anthropic';
 import { slugifySchool } from '../../../src/lib/cfb/rules';
+import { fetchMarkdown, type FirecrawlClient, type FetchResult } from './firecrawl-fetch';
+import { normalizeSlug } from './schools-2026';
 import type { CfbSchoolConfig } from './schools';
 
 export interface ParsedGame {
@@ -26,14 +28,15 @@ export interface ParsedGame {
   confidence: 'HIGH' | 'MEDIUM' | 'LOW' | 'NF';
 }
 
-const PARSER_SYSTEM = `You are a college-football SCHEDULE PARSER. Extract the 2026 regular-season schedule for one school as precise structured rows.
+const PARSER_SYSTEM = `You are a college-football SCHEDULE PARSER. You are given the RENDERED MARKDOWN of ONE school's OFFICIAL athletics-site 2026 football schedule page. Extract the 2026 regular-season schedule as precise structured rows FROM THE PROVIDED MARKDOWN ONLY.
 
 ANTI-HALLUCINATION RULES (hard):
-- Today is 2026-06-12. Many kickoff times and TV networks are NOT announced this far out. If a time or network is not officially announced, output "TBD" — NEVER invent, infer, or carry over a prior year.
-- For any kickoff time you DO report, store the timezone it is stated in (kickoff_tz: "ET"/"CT"/"MT"/"PT"). Never convert. If unsure of the tz, use the home venue's local tz.
-- 'source' (the URL you actually read) and 'confidence' are REQUIRED on every row.
-- Do NOT output conference-game status or week numbers — those are computed downstream by rule, not by you. (They are not in your output schema; do not try.)
-- Use the web_search tool: prefer the official athletics site, then Wikipedia ("2026 <school> football team"), then ESPN.`;
+- Parse ONLY what the provided markdown shows. Do NOT use outside knowledge, do NOT invent games not present, do NOT web-search.
+- Today is 2026-07-07. If a kickoff time or TV network is not present in the markdown, output "TBD" — never invent, infer, or carry over a prior year. (Many are legitimately unannounced this far out.)
+- For any kickoff time present, store the timezone it is stated in (kickoff_tz: "ET"/"CT"/"MT"/"PT"). Never convert. If a time is present but its tz is unlabeled, use the home venue tz given in the prompt.
+- Guard against a STALE-YEAR page: only extract the 2026 schedule. If the visible schedule is a prior season, return an empty games array.
+- 'confidence' is REQUIRED per row (HIGH when the row is clearly on the page; lower when ambiguous). 'source' is set by the harness — do not worry about it.
+- Do NOT output conference-game status or week numbers — those are computed downstream by rule, not by you.`;
 
 const parserReturnTool = {
   name: 'return_schedule',
@@ -67,30 +70,62 @@ const parserReturnTool = {
   },
 };
 
-export async function parseSchoolSchedule(school: CfbSchoolConfig): Promise<{ games: ParsedGame[]; usd: number }> {
-  const user = `Extract the 2026 regular-season football schedule for the ${school.name}.
-school_id (echo back): ${school.id}
-Begin by web-searching the official athletics site (${school.officialDomain}) 2026 football schedule, then cross-check Wikipedia.`;
-  let res = await extract({ system: PARSER_SYSTEM, user, returnTool: parserReturnTool, model: HAIKU, maxTokens: 6000 });
+// Minimal parse target — satisfied by BOTH the Phase-1 CfbSchoolConfig and the
+// Phase-2 CfbSchoolConfig2026. officialScheduleUrl is optional (derived from the
+// domain when absent) so the frozen Phase-1 config still works.
+export interface ParseTarget {
+  id: string;
+  name: string;
+  officialDomain: string;
+  officialScheduleUrl?: string;
+  venueTz: string;
+}
+
+export interface ParseOutcome {
+  games: ParsedGame[];
+  usd: number;
+  fetch: { ok: boolean; url: string; reason?: string; charCount?: number };
+}
+
+/**
+ * PART A source-independence fix: fetch the OFFICIAL athletics-site schedule page
+ * via Firecrawl, then Haiku parses THAT markdown (no web_search). `source` is set
+ * deterministically to the official URL — so the parser's domain is ALWAYS the
+ * official site, which frees Wikipedia to be the independent code corroborator
+ * (corroborate.ts) and collapses the Phase-1 "parser used Wikipedia" no-2nd-source
+ * residue. opts.client / opts.fetchResult allow zero-credit dependency injection.
+ */
+export async function parseSchoolSchedule(
+  school: ParseTarget,
+  opts: { client?: FirecrawlClient; fetchResult?: FetchResult } = {},
+): Promise<ParseOutcome> {
+  const url = school.officialScheduleUrl || `https://${school.officialDomain}/sports/football/schedule`;
+  const fetched = opts.fetchResult ?? (await fetchMarkdown(url, opts.client ? { client: opts.client } : {}));
+  if (fetched.ok === false) return { games: [], usd: 0, fetch: { ok: false, url, reason: fetched.reason } };
+  const md = fetched.markdown;
+
+  const user = `Parse the 2026 football schedule for ${school.name} from THIS official athletics-site page markdown. Home venue timezone: ${school.venueTz} (use only to fill an unlabeled kickoff tz). Echo school_id "${school.id}".\n\n<official-markdown>\n${md.slice(0, 60000)}\n</official-markdown>`;
+
+  let res = await extract({ system: PARSER_SYSTEM, user, returnTool: parserReturnTool, model: HAIKU, maxTokens: 6000, webSearch: false });
   if (!res.data?.games?.length) {
     // Sonnet fallback (build spec: Haiku with Sonnet fallback).
-    const s = await extract({ system: PARSER_SYSTEM, user, returnTool: parserReturnTool, model: SONNET, maxTokens: 6000 });
+    const s = await extract({ system: PARSER_SYSTEM, user, returnTool: parserReturnTool, model: SONNET, maxTokens: 6000, webSearch: false });
     res = { data: s.data, usd: res.usd + s.usd, stop: s.stop };
   }
   const rows: ParsedGame[] = (res.data?.games ?? []).map((g: any) => ({
     date: String(g.date),
-    homeTeam: slugifySchool(g.home_team),
-    awayTeam: slugifySchool(g.away_team),
+    homeTeam: normalizeSlug(slugifySchool(g.home_team)),
+    awayTeam: normalizeSlug(slugifySchool(g.away_team)),
     neutralSite: Boolean(g.neutral_site),
     venue: String(g.venue ?? ''),
     kickoffTime: String(g.kickoff_time ?? 'TBD'),
     kickoffTz: String(g.kickoff_tz ?? school.venueTz),
     tvNetwork: String(g.tv_network ?? 'TBD'),
     tvConfirmed: Boolean(g.tv_confirmed),
-    source: String(g.source ?? ''),
+    source: url, // DETERMINISTIC: the official URL fetched, not whatever the LLM echoes
     confidence: ['HIGH', 'MEDIUM', 'LOW', 'NF'].includes(g.confidence) ? g.confidence : 'LOW',
   }));
-  return { games: rows, usd: res.usd };
+  return { games: rows, usd: res.usd, fetch: { ok: true, url, charCount: md.length } };
 }
 
 // ── BLIND VERIFY ─────────────────────────────────────────────────────────────

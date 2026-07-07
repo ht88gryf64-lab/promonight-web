@@ -31,11 +31,14 @@ const MONTH_RE = '(?:January|February|March|April|May|June|July|August|September
 const WIKI_MIRRORS = ['wikipedia.org', 'wikiwand.com', 'dbpedia.org', 'fandom.com', 'wikimedia.org', 'everybodywiki.com'];
 
 const strip = (s: string) => s.replace(/<[^>]+>/g, ' ').replace(/&#?\w+;/g, ' ').replace(/\s+/g, ' ').trim();
-const isDate = (c: string) => new RegExp('^' + MONTH_RE + '\\s+\\d{1,2}$').test(c.trim());
-const isTime = (c: string) => /^(\d{1,2}:\d{2}\s*[ap]\.?m\.?)$/i.test(c.trim());
+// SEARCH (not anchored) for a "Month DD" — Wikipedia's opener date cell is
+// polluted with day-of-week + template debris ("Sunday …}]]}'>September 6"), so
+// requiring the whole cell to EQUAL the date dropped the neutral-site row.
+const isDate = (c: string) => new RegExp(MONTH_RE + '\\s+\\d{1,2}', 'i').test(c);
+const isTime = (c: string) => /\d{1,2}:\d{2}\s*[ap]\.?\s*m\.?/i.test(c.trim());
 
 function toIso(dateCell: string, season: number): string | null {
-  const m = dateCell.trim().match(new RegExp('^(' + MONTH_RE + ')\\s+(\\d{1,2})$', 'i'));
+  const m = dateCell.match(new RegExp('(' + MONTH_RE + ')\\s+(\\d{1,2})', 'i'));
   if (!m) return null;
   const mm = MONTHS[m[1].toLowerCase()];
   return mm ? `${season}-${mm}-${String(parseInt(m[2], 10)).padStart(2, '0')}` : null;
@@ -47,10 +50,19 @@ export interface WikiSchedule {
   byDate: Map<string, { time: string; opp: string; ha: 'H' | 'A' }>;
 }
 
+// A school config carrying enough to locate its Wikipedia team page. The Phase-2
+// config supplies the resolved `wikiTeamPage` title (robust for App State etc.);
+// the frozen Phase-1 config has only `name`, so we fall back to constructing it.
+type WikiTarget = { name: string; wikiTeamPage?: string | null };
+
 /** Deterministic: fetch + parse the school's Wikipedia 2026 schedule into a
- *  date-keyed map. Same page -> same parse. */
-export async function fetchWikiSchedule(school: CfbSchoolConfig, season = 2026): Promise<WikiSchedule> {
-  const url = `https://en.wikipedia.org/wiki/${season}_${school.name.replace(/ /g, '_')}_football_team`;
+ *  date-keyed map. Same page -> same parse. Style/script/comment blocks are
+ *  stripped first — an inline <style> in the OPENER's first cell (the neutral-site
+ *  Shamrock Series row) was clobbering the date cell and dropping the row. */
+export async function fetchWikiSchedule(school: WikiTarget, season = 2026): Promise<WikiSchedule> {
+  const url = school.wikiTeamPage
+    ? `https://en.wikipedia.org/wiki/${encodeURIComponent(school.wikiTeamPage.replace(/ /g, '_'))}`
+    : `https://en.wikipedia.org/wiki/${season}_${school.name.replace(/ /g, '_')}_football_team`;
   const byDate = new Map<string, { time: string; opp: string; ha: 'H' | 'A' }>();
   let html = '';
   try {
@@ -60,6 +72,12 @@ export async function fetchWikiSchedule(school: CfbSchoolConfig, season = 2026):
   } catch {
     return { url, fetched: false, byDate };
   }
+  // Remove <style>/<script>/comment BLOCKS (content included) so their text does
+  // not leak into a table cell and defeat the date-cell match.
+  html = html
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<!--[\s\S]*?-->/g, ' ');
   for (const [, rowHtml] of html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/g)) {
     const cells = [...rowHtml.matchAll(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/g)].map((m) => strip(m[1]));
     const di = cells.findIndex(isDate);
@@ -93,7 +111,7 @@ export interface CorroborationResult {
 export function corroborate(
   game: { date: string; source: string; homeSchoolId: string; awaySchoolId: string; kickoff: { time: string; tz: string; tbd: boolean } },
   wiki: WikiSchedule,
-  school: CfbSchoolConfig,
+  school: { venueTz: string },
 ): CorroborationResult {
   const parserDom = domainOf(game.source);
   const WIKI_DOM = 'en.wikipedia.org';

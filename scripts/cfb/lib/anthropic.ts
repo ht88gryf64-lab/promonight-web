@@ -53,19 +53,24 @@ export interface ExtractOpts {
   model?: string;
   maxTokens?: number;
   maxTurns?: number;
+  /** default true. When false, no web_search tool is offered — the model parses
+   *  ONLY the text given in `user` (Phase 2 parser: parse the Firecrawl'd official
+   *  markdown, source is fixed by code = the official URL, no wandering the web). */
+  webSearch?: boolean;
 }
 
-/** Run a web_search-driven extraction that ends in a forced structured-tool
- *  call. Returns the tool input (the structured data) + total USD cost. */
+/** Run an extraction that ends in a forced structured-tool call. With
+ *  webSearch:true (default) the model may web_search first; with webSearch:false
+ *  it parses only the provided text. Returns the tool input + total USD cost. */
 export async function extract(opts: ExtractOpts): Promise<{ data: any | null; usd: number; stop: string }> {
   const model = opts.model ?? HAIKU;
-  const tools = [
-    { type: 'web_search_20250305', name: 'web_search', max_uses: MAX_WEB_SEARCHES },
-    opts.returnTool,
-  ];
+  const useWebSearch = opts.webSearch !== false;
+  const tools = useWebSearch
+    ? [{ type: 'web_search_20250305', name: 'web_search', max_uses: MAX_WEB_SEARCHES }, opts.returnTool]
+    : [opts.returnTool];
   const messages: any[] = [{ role: 'user', content: opts.user }];
   let usd = 0;
-  const maxTurns = opts.maxTurns ?? 6;
+  const maxTurns = opts.maxTurns ?? (useWebSearch ? 6 : 2);
   for (let turn = 0; turn < maxTurns; turn++) {
     const lastTurn = turn === maxTurns - 1;
     const body: any = { model, system: opts.system, messages, tools, max_tokens: opts.maxTokens ?? 4096 };
