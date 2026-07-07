@@ -64,14 +64,20 @@ export async function fetchWikiSchedule(school: WikiTarget, season = 2026): Prom
     ? `https://en.wikipedia.org/wiki/${encodeURIComponent(school.wikiTeamPage.replace(/ /g, '_'))}`
     : `https://en.wikipedia.org/wiki/${season}_${school.name.replace(/ /g, '_')}_football_team`;
   const byDate = new Map<string, { time: string; opp: string; ha: 'H' | 'A' }>();
+  // Wikipedia rate-limits User-Agent-less requests under load — set a UA and retry
+  // transient failures (429/5xx/network) so a blip does not falsely strand a school
+  // as no-2nd-source. A genuine 404 (the not-yet-created G5 pages) returns immediately.
+  const UA = 'cfb-phase2/1.0 (research; mkovalik32@gmail.com)';
   let html = '';
-  try {
-    const r = await fetch(url);
-    if (!r.ok) return { url, fetched: false, byDate };
-    html = await r.text();
-  } catch {
-    return { url, fetched: false, byDate };
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const r = await fetch(url, { headers: { 'User-Agent': UA } });
+      if (r.ok) { html = await r.text(); break; }
+      if (r.status === 404) return { url, fetched: false, byDate };
+    } catch { /* transient — retry */ }
+    await new Promise((res) => setTimeout(res, 400 * (attempt + 1)));
   }
+  if (!html) return { url, fetched: false, byDate };
   // Remove <style>/<script>/comment BLOCKS (content included) so their text does
   // not leak into a table cell and defeat the date-cell match.
   html = html
