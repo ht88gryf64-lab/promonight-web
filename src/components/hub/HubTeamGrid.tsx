@@ -5,35 +5,8 @@ import type { MlbDivisionGroup } from '@/lib/data';
 import type { Team } from '@/lib/types';
 import { track } from '@/lib/analytics';
 import { IconChevronRight } from '@tabler/icons-react';
+import { chipInk } from '@/lib/chip-contrast';
 import { HubTeamSelector, ALL_DIVISIONS } from './HubTeamSelector';
-
-// Relative luminance (WCAG) of a #rrggbb color.
-function relLuminance(hex: string): number {
-  const h = hex.replace('#', '');
-  if (h.length < 6) return 0;
-  const toLin = (c: number) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
-  const r = toLin(parseInt(h.slice(0, 2), 16) / 255);
-  const g = toLin(parseInt(h.slice(2, 4), 16) / 255);
-  const b = toLin(parseInt(h.slice(4, 6), 16) / 255);
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
-
-// Pick the chip text color (white or near-black ink) that gives the HIGHER
-// contrast against the team's brand color, so a chip is never unreadable,
-// whether the brand color is dark navy or a bright cyan/gold. Max-contrast is
-// stronger than a single luminance threshold for mid-brightness colors.
-const CHIP_INK_DARK = '#1a1613';
-function chipInk(bgHex: string): string {
-  const bg = relLuminance(bgHex);
-  const contrast = (a: number, b: number) => {
-    const hi = Math.max(a, b);
-    const lo = Math.min(a, b);
-    return (hi + 0.05) / (lo + 0.05);
-  };
-  const white = 1.0;
-  const dark = relLuminance(CHIP_INK_DARK);
-  return contrast(bg, white) >= contrast(bg, dark) ? '#ffffff' : CHIP_INK_DARK;
-}
 
 function TeamCard({ team }: { team: Team }) {
   const name = `${team.city} ${team.name}`;
