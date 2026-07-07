@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Button } from '@/components/redesign/Button';
 import { WorldCupNavLink } from '@/components/world-cup/nav-link';
 import { BrandBarLeagueHubs } from './BrandBarLeagueHubs';
+import { BrandBarMobileMenu } from './BrandBarMobileMenu';
 
 // Redesign v2 top bar. Replaces the global dark nav on gated team pages with a
 // light, sticky, translucent cream bar carrying the PromoNight wordmark, a
@@ -67,6 +68,9 @@ export function BrandBar({ playoffsActive = false, worldCupActive = false }: Bra
           <Button href="/download" variant="primary" size="sm">
             Get the App
           </Button>
+
+          {/* Mobile hamburger + fullscreen nav sheet (md:hidden). */}
+          <BrandBarMobileMenu playoffsActive={playoffsActive} worldCupActive={worldCupActive} />
         </div>
       </nav>
     </header>
