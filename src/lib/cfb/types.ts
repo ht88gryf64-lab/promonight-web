@@ -55,6 +55,12 @@ export interface CfbVenue {
   parking?: string;
   transit?: string;
   gatesOpenRule?: string;
+  // Verify-gate (decision record §5): the pipeline PROPOSES the venue from the
+  // Wikipedia infobox stadium hyperlink; an editor confirms it at destination time.
+  // Never trusted for a destination page while false. `proposedFrom` records how
+  // it was resolved (season-infobox / program-infobox hyperlink).
+  humanConfirmed?: boolean;
+  proposedFrom?: string;
   source: string;
   updatedAt: string;
 }
