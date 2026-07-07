@@ -7,6 +7,11 @@
 import { db } from '@/lib/firebase';
 import type { CfbSchool, CfbVenue, CfbGame, CfbRivalry } from '@/lib/cfb/types';
 import { CFB_COLLECTIONS } from '@/lib/cfb/types';
+// Reuse the pipeline's SINGLE time parser (guards.ts). normTime honors the AM/PM
+// meridiem and returns 24-hour "HH:MM". The display layer must NOT re-derive AM/PM
+// with its own parser (that was the bug); it consumes normTime's output. One parser,
+// used everywhere — the display and the verify stage cannot drift.
+import { normTime } from '../../../scripts/cfb/lib/guards';
 
 const TZ_ABBR: Record<string, string> = {
   'America/New_York': 'ET', 'America/Chicago': 'CT', 'America/Denver': 'MT',
@@ -51,15 +56,29 @@ function prettifySlug(slug: string): string {
     .replace(/\bTbd\b|\bTba\b/i, 'TBA');
 }
 
+// FIX 1: format ONLY what normTime parsed. normTime("7:00 PM") -> "19:00" (24h),
+// so `h >= 12` is now a correct 24-hour test (the old code read the 12-hour "7" and
+// mislabeled it AM). Handles both stored shapes — 12-hour-with-meridiem ("7:00 PM",
+// the current stored form) and bare 24-hour ("19:00").
 function to12h(time: string, tz: string): string | null {
-  const m = time.match(/^(\d{1,2}):(\d{2})/);
-  if (!m) return null;
-  let h = parseInt(m[1], 10);
-  const min = m[2];
+  const hhmm = normTime(time); // 24h "HH:MM" or "TBD"
+  if (hhmm === 'TBD') return null;
+  const [hStr, min] = hhmm.split(':');
+  let h = parseInt(hStr, 10); // 0..23
   const ap = h >= 12 ? 'PM' : 'AM';
   if (h === 0) h = 12; else if (h > 12) h -= 12;
   const abbr = TZ_ABBR[tz] || tz;
   return `${h}:${min} ${ap} ${abbr}`;
+}
+
+// A rendered kickoff in the 1:00–6:00 AM local window is categorically impossible
+// for CFB (earliest real kickoffs are ~11 AM local) — such a value is almost
+// certainly a bug (storage corruption or a render regression). FIX 2 lives here at
+// the DISPLAY layer because that is where the meridiem bug was; a storage-verify
+// guard cannot catch a render regression. Zero false positives: no CFB game exists
+// in this window.
+function isImpossibleAmRender(display: string): boolean {
+  return /^[1-6]:\d{2} AM\b/.test(display);
 }
 
 // The verify-gate: an announced time shows ONLY when the game is verified AND not
@@ -69,6 +88,11 @@ function kickoffDisplay(g: CfbGame): { display: string; verified: boolean } {
   const tbd = g.kickoff?.tbd || !g.kickoff?.time || /tbd|tba/i.test(g.kickoff?.time || '');
   if (g.verified && !tbd) {
     const t = to12h(g.kickoff.time, g.kickoff.tz);
+    if (t && isImpossibleAmRender(t)) {
+      // Better to show TBA than an impossible time; flag it so it is visible.
+      console.warn(`[cfb-kickoff-guard] suspect kickoff "${g.kickoff.time}" (${g.kickoff.tz}) -> "${t}" for game ${g.id}; rendering TBA`);
+      return { display: 'Kickoff TBA', verified: false };
+    }
     if (t) return { display: t, verified: true };
   }
   return { display: 'Kickoff TBA', verified: false };

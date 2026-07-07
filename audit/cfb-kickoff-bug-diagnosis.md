@@ -79,3 +79,26 @@ The display bug is in a **different layer** — `src/lib/cfb/data.ts`'s `to12h`,
 ---
 
 **STOP — diagnosis only. No fix, no writes, no page change, no push.** Fix is a separate go.
+
+---
+
+## Follow-up — fix applied (2026-07-07, display layer only, no pipeline re-run)
+
+**FIX 1** — `to12h` (`src/lib/cfb/data.ts`) now consumes `normTime` (imported from `scripts/cfb/lib/guards.ts` — the pipeline's single time parser, which already honors the AM/PM meridiem and returns 24-hour `HH:MM`). The display no longer re-derives AM/PM; `h >= 12` is now a correct 24-hour test. One parser, used everywhere — display and verify cannot drift. Handles both stored shapes (12-hour-with-meridiem "7:00 PM" and bare 24-hour "19:00").
+
+**FIX 2** — display-layer sanity guard `isImpossibleAmRender`: any rendered kickoff in the **1:00–6:00 AM** local window (`/^[1-6]:\d{2} AM\b/`) falls back to "Kickoff TBA" and logs `[cfb-kickoff-guard]`. Lives at the display layer (where the bug was); a storage-verify guard cannot catch a render regression. Zero false positives — no CFB game kicks off in that window (earliest real ≈ 11 AM local).
+
+**Before → after** (verified via `getCfbSchoolPage` on live Firestore + the built prerendered HTML across all 86 pages):
+
+| Game | stored | before | after |
+|---|---|---|---|
+| minnesota / eastern-illinois | `7:00 PM` CT | 7:00 **AM** CT | **7:00 PM CT** ✓ |
+| minnesota / mississippi-state | `2:30 PM` CT | 2:30 **AM** CT | **2:30 PM CT** ✓ |
+| alabama @ kentucky | `3:30 PM` ET | 3:30 **AM** ET | **3:30 PM ET** ✓ |
+
+Spot-check (AM/noon that survived the bug by coincidence): kentucky/south-alabama `12:45 PM` ET renders **12:45 PM ET** (still correct). Full-build scan: **0 impossible 1–6 AM renders across all 86 pages** (26 verified-time renders). No Firestore write, no pipeline re-run — storage was already correct.
+
+## Adversarial self-check (fix)
+1. **Reused normTime, or a second parser?** Reused `normTime` (imported from guards.ts). `to12h` only FORMATS its 24-hour output; no second AM/PM derivation exists.
+2. **AM/noon cases that survived the bug still correct?** Yes — 12:45 PM (noon-ish) still renders 12:45 PM; the 24h path handles AM (11:00 AM → 11:00 AM), noon (12:00 PM), and midnight (00:00 → 12:00 AM) correctly.
+3. **Does the 1–6 AM guard fire on any legit value?** No — scanned all 86 pages, 0 renders in 1–6 AM after the fix. The window is categorically empty for CFB (earliest real ≈ 11 AM local), so the guard only ever catches an impossible render/storage value, never a real early kickoff.
