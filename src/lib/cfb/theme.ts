@@ -46,6 +46,15 @@ export interface CfbTheme {
   accent: string; // readable accent on the dark PromoNight base
   accentOn: string; // text color to place ON the accent (#fff or #111)
   onDark: string; // a version of the team color guaranteed readable as text on dark chrome
+  // Immersive environment (contrast-safe): a team-color radial WASH over the dark
+  // base + a secondary GLOW. Wash alpha is scaled DOWN for light primaries so white
+  // hero text always holds contrast. Signature card = a saturated primary gradient
+  // (cardFrom->cardTo) with onPrimary the contrast-safe text on it.
+  wash: string; // rgba() for the hero radial wash
+  glow: string; // rgba() secondary glow
+  cardFrom: string; // signature-card gradient start (hex)
+  cardTo: string; // signature-card gradient end (hex)
+  onPrimary: string; // text on a saturated primary surface (#fff or #111)
 }
 
 const DARK_BASE: [number, number, number] = [17, 17, 17]; // PromoNight dark chrome (~#111)
@@ -80,7 +89,24 @@ export function resolveCfbTheme(primaryHex: string | null, secondaryHex: string 
   const accentRgb = onDarkRgb || parseHex(SAFE_ACCENT)!;
   const accentOn = contrastRatio(accentRgb, [255, 255, 255]) >= contrastRatio(accentRgb, [17, 17, 17]) ? '#FFFFFF' : '#111111';
 
-  return { primary: primaryStr, secondary: secondaryStr, accent, accentOn, onDark: accent };
+  // Immersive wash: cap alpha by primary luminance so white hero text always holds
+  // contrast (a bright maize primary gets a low-alpha wash; a dark navy a stronger one).
+  const pRgb = primary || parseHex(SAFE_ACCENT)!;
+  const sRgb = secondary || accentRgb;
+  const pLum = luminance(pRgb);
+  const washAlpha = pLum > 0.6 ? 0.16 : pLum > 0.35 ? 0.26 : 0.42;
+  const rgba = (c: [number, number, number], a: number) => `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${a})`;
+  const wash = rgba(pRgb, washAlpha);
+  const glow = rgba(sRgb, washAlpha * 0.55);
+  const cardFrom = toHex(pRgb);
+  const onPrimary = contrastRatio(pRgb, [255, 255, 255]) >= contrastRatio(pRgb, [17, 17, 17]) ? '#FFFFFF' : '#111111';
+  // Signature-card gradient end. When onPrimary is DARK (a light primary — maize,
+  // orange), darken only slightly so the dark text holds at BOTH stops; when white
+  // (a dark primary — navy, maroon), darken more for depth (white stays readable).
+  // Keeps the destination signature card contrast-safe across the whole gradient.
+  const cardTo = toHex(darken(pRgb, onPrimary === '#111111' ? 0.18 : 0.4));
+
+  return { primary: primaryStr, secondary: secondaryStr, accent, accentOn, onDark: accent, wash, glow, cardFrom, cardTo, onPrimary };
 }
 
 /** CSS custom properties for the route root (server-rendered; no flash). */
@@ -91,5 +117,10 @@ export function cfbThemeVars(theme: CfbTheme): Record<string, string> {
     '--cfb-accent': theme.accent,
     '--cfb-accent-on': theme.accentOn,
     '--cfb-on-dark': theme.onDark,
+    '--cfb-wash': theme.wash,
+    '--cfb-glow': theme.glow,
+    '--cfb-card-from': theme.cardFrom,
+    '--cfb-card-to': theme.cardTo,
+    '--cfb-on-primary': theme.onPrimary,
   };
 }

@@ -70,6 +70,7 @@ export type AnalyticsSurface =
   | 'web_promo_detail'
   | 'web_playoffs'
   | 'web_league_index'
+  | 'web_cfb'
   | 'web_article'
   | 'web_my_teams'
   | 'web_best_promos'

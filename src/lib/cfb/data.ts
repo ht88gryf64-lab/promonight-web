@@ -30,6 +30,11 @@ export interface CfbGameView {
   kickoffVerified: boolean;
   networkDisplay: string | null; // only when broadcast.confirmed
   rivalry: { name: string; trophy: string | null } | null; // tag-as-fact, crown none
+  // Road-trip planner (away games only): the opponent's school+venue, present only
+  // when the opponent is one of the 86 tracked schools AND has a resolved venue.
+  // Used to build the SITE-STANDARD hotels/parking CTAs near the destination stadium.
+  awaySchool: CfbSchool | null;
+  awayVenue: CfbVenue | null;
 }
 
 export interface CfbSchoolPage {
@@ -115,9 +120,10 @@ export async function getCfbSchoolPage(id: string): Promise<CfbSchoolPage | null
   if (!schoolDoc.exists) return null;
   const school = schoolDoc.data() as CfbSchool;
 
-  const [venueDoc, schoolsSnap, rivalriesSnap, homeSnap, awaySnap] = await Promise.all([
+  const [venueDoc, schoolsSnap, venuesSnap, rivalriesSnap, homeSnap, awaySnap] = await Promise.all([
     school.venueId ? db.collection(CFB_COLLECTIONS.venues).doc(school.venueId).get() : Promise.resolve(null),
     db.collection(CFB_COLLECTIONS.schools).get(),
+    db.collection(CFB_COLLECTIONS.venues).get(),
     db.collection(CFB_COLLECTIONS.rivalries).get(),
     db.collection(CFB_COLLECTIONS.games).where('homeSchoolId', '==', id).get(),
     db.collection(CFB_COLLECTIONS.games).where('awaySchoolId', '==', id).get(),
@@ -125,7 +131,14 @@ export async function getCfbSchoolPage(id: string): Promise<CfbSchoolPage | null
 
   const venue = venueDoc && venueDoc.exists ? (venueDoc.data() as CfbVenue) : null;
   const nameById = new Map<string, string>();
-  for (const d of schoolsSnap.docs) nameById.set(d.id, (d.data() as CfbSchool).shortName || (d.data() as CfbSchool).name);
+  const schoolById = new Map<string, CfbSchool>();
+  for (const d of schoolsSnap.docs) {
+    const s = d.data() as CfbSchool;
+    nameById.set(d.id, s.shortName || s.name);
+    schoolById.set(d.id, s);
+  }
+  const venueById = new Map<string, CfbVenue>();
+  for (const d of venuesSnap.docs) venueById.set(d.id, d.data() as CfbVenue);
   const rivalryById = new Map<string, CfbRivalry>();
   for (const d of rivalriesSnap.docs) rivalryById.set(d.id, d.data() as CfbRivalry);
 
@@ -139,12 +152,18 @@ export async function getCfbSchoolPage(id: string): Promise<CfbSchoolPage | null
     const opponentId = isHome ? g.awaySchoolId : g.homeSchoolId;
     const kd = kickoffDisplay(g);
     const riv = g.rivalryId ? rivalryById.get(g.rivalryId) : null;
+    // Road-trip planner: for a true away game (not home, not neutral), resolve the
+    // opponent's school+venue so the template can render hotels/parking near the
+    // destination stadium. Only when the opponent is a tracked school with a venue.
+    const oppSchool = !isHome && !g.neutralSite ? schoolById.get(opponentId) || null : null;
+    const oppVenue = oppSchool?.venueId ? venueById.get(oppSchool.venueId) || null : null;
     games.push({
       id: g.id, date: g.date, week: g.week, isHome, neutralSite: !!g.neutralSite,
       opponentId, opponentName: nameById.get(opponentId) || prettifySlug(opponentId),
       kickoffDisplay: kd.display, kickoffVerified: kd.verified,
       networkDisplay: g.broadcast?.confirmed && g.broadcast.network && !/tbd/i.test(g.broadcast.network) ? g.broadcast.network : null,
       rivalry: riv ? { name: riv.name, trophy: riv.trophy } : null,
+      awaySchool: oppSchool, awayVenue: oppVenue,
     });
   }
   games.sort((a, b) => a.date.localeCompare(b.date));
