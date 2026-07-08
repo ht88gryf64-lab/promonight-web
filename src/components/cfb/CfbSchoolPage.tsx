@@ -42,7 +42,7 @@ function fmtDayLong(iso: string): string {
 function Eyebrow({ children, right }: { children: ReactNode; right?: ReactNode }) {
   return (
     <div className="mb-4 flex items-baseline justify-between gap-3">
-      <div className="text-[11px] font-semibold uppercase" style={{ fontFamily: MONO, letterSpacing: '0.18em', color: 'var(--cfb-accent)' }}>
+      <div className="text-[12px] font-normal uppercase" style={{ fontFamily: MONO, letterSpacing: '0.166em', color: 'var(--cfb-accent)' }}>
         {children}
       </div>
       {right && (
@@ -133,7 +133,7 @@ export function CfbSchoolPage({ data }: { data: CfbSchoolPageData }) {
           )}
           <h1
             className="mt-1 font-black text-white"
-            style={{ fontFamily: SANS, fontSize: 'clamp(3rem, 9vw, 5.25rem)', lineHeight: 0.92, letterSpacing: '-0.03em' }}
+            style={{ fontFamily: SANS, fontSize: 'clamp(3rem, 9vw, 5.25rem)', lineHeight: 0.92, letterSpacing: '-0.036em' }}
           >
             {school.name}
           </h1>
@@ -167,11 +167,14 @@ export function CfbSchoolPage({ data }: { data: CfbSchoolPageData }) {
                   color: 'var(--cfb-on-primary)',
                 }}
               >
-                <div className="text-[11px] font-bold uppercase" style={{ fontFamily: MONO, letterSpacing: '0.14em', color: 'var(--cfb-accent)' }}>
+                {/* Eyebrow carries the matchup + date (mono); the marquee serif below
+                    takes the EVOCATIVE name (rivalry trophy) so the two never duplicate.
+                    accent-card = the accent lifted to read on the saturated gradient. */}
+                <div className="text-[11px] font-bold uppercase" style={{ fontFamily: MONO, letterSpacing: '0.14em', color: 'var(--cfb-accent-card)' }}>
                   Your signature game · {fmtDayLong(sig.date)} · {sig.isHome ? 'vs' : 'at'} {sig.opponentName}
                 </div>
                 <div className="mt-2.5 italic text-white" style={{ fontFamily: SERIF, fontSize: 'clamp(2rem, 5vw, 2.9rem)', lineHeight: 0.98 }}>
-                  {sig.isHome ? 'vs' : 'at'} {sig.opponentName}
+                  {sig.rivalry ? (sig.rivalry.trophy || sig.rivalry.name) : `${sig.isHome ? 'vs' : 'at'} ${sig.opponentName}`}
                 </div>
                 {sig.kickoffVerified && <div className="mt-1 text-[13px] text-white/80" style={{ fontFamily: MONO }}>{sig.kickoffDisplay}</div>}
                 {/* Inline Get Tickets — SITE-STANDARD, on a neutral dark inset so it reads over the saturated gradient. */}
@@ -213,7 +216,7 @@ export function CfbSchoolPage({ data }: { data: CfbSchoolPageData }) {
           <div className="overflow-hidden rounded-2xl" style={{ background: '#0c0b12', border: '1px solid rgba(255,255,255,0.06)' }}>
             {games.map((g, i) => <ScheduleRow key={g.id} g={g} last={i === games.length - 1} />)}
           </div>
-          <p className="mt-2.5 text-[11px] text-white/35" style={{ fontFamily: MONO }}>Kickoff times show once announced and confirmed on a second source; until then, Kickoff TBA.</p>
+          <p className="mt-2.5 text-[11px] text-white/55" style={{ fontFamily: MONO }}>Kickoff times show once announced and confirmed on a second source; until then, Kickoff TBA.</p>
         </section>
 
         {/* ── ROAD TRIPS — per-away-game SITE-STANDARD clusters keyed to the
@@ -259,15 +262,17 @@ export function CfbSchoolPage({ data }: { data: CfbSchoolPageData }) {
           </section>
         )}
 
-        {/* ── GAMEDAY & TRADITIONS (editorial, destination-only) ── */}
-        {(editorial.traditions.length > 0 || editorial.gamedayCulture) && (
+        {/* ── GAMEDAY & TRADITIONS (editorial, destination-only) ── Gated SOLELY on
+            what it paints (gamedayCulture) so the labeled section can never orphan.
+            Phase 4 TODO: when editorial.traditions gets a defined shape, render the
+            mockup's per-tradition card grid (Instrument Serif italic title + body,
+            accent left-border) here and re-add `traditions.length > 0` to the gate. */}
+        {editorial.gamedayCulture && (
           <section className="mt-11">
             <Eyebrow>Gameday &amp; Traditions</Eyebrow>
-            {editorial.gamedayCulture && (
-              <div className="rounded-2xl p-6" style={{ background: '#0c0b12', border: '1px solid rgba(255,255,255,0.06)', borderLeft: '3px solid var(--cfb-accent)' }}>
-                <p className="text-[13.5px] leading-relaxed text-white/70" style={{ fontFamily: SANS }}>{editorial.gamedayCulture}</p>
-              </div>
-            )}
+            <div className="rounded-2xl p-6" style={{ background: '#0c0b12', border: '1px solid rgba(255,255,255,0.06)', borderLeft: '3px solid var(--cfb-accent)' }}>
+              <p className="text-[13.5px] leading-relaxed text-white/70" style={{ fontFamily: SANS }}>{editorial.gamedayCulture}</p>
+            </div>
           </section>
         )}
 

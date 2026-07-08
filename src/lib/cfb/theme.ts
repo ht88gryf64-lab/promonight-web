@@ -67,11 +67,54 @@ function darkenToLuma(rgb: [number, number, number], maxL: number): [number, num
   for (let i = 0; i < 18 && luminance(c) > maxL; i++) c = darken(c, 0.1);
   return c;
 }
-// Lighten (preserving hue) until the color reads on `base` at `min` contrast.
+// Lighten (toward white) until the color reads on `base` at `min` contrast. Used
+// for card-safe label text (readability > vividness for tiny text).
 function lightenToContrast(rgb: [number, number, number], base: [number, number, number], min: number): [number, number, number] {
   let c = rgb;
   for (let i = 0; i < 18 && contrastRatio(c, base) < min; i++) c = lighten(c, 0.12);
   return c;
+}
+
+function rgbToHsl([r, g, b]: [number, number, number]): [number, number, number] {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0; const l = (max + min) / 2; const d = max - min;
+  if (d) {
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      default: h = (r - g) / d + 4;
+    }
+    h /= 6;
+  }
+  return [h, s, l];
+}
+function hslToRgb([h, s, l]: [number, number, number]): [number, number, number] {
+  if (!s) { const v = Math.round(l * 255); return [v, v, v]; }
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  const p = 2 * l - q;
+  const hk = (t: number) => {
+    if (t < 0) t += 1; if (t > 1) t -= 1;
+    if (t < 1 / 6) return p + (q - p) * 6 * t;
+    if (t < 1 / 2) return q;
+    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+    return p;
+  };
+  return [Math.round(hk(h + 1 / 3) * 255), Math.round(hk(h) * 255), Math.round(hk(h - 1 / 3) * 255)] as [number, number, number];
+}
+// Lift a too-dark team color into a VIVID readable accent, keeping its hue and
+// boosting saturation (navy→sky blue, purple→lavender) instead of graying it
+// toward white. Raises lightness until it clears `min` contrast on `base`.
+function vividAccent(rgb: [number, number, number], base: [number, number, number], min: number): [number, number, number] {
+  const [h, s0] = rgbToHsl(rgb);
+  const s = Math.min(1, Math.max(s0, 0.55));
+  let out = hslToRgb([h, s, 0.62]);
+  for (let l = 0.55; l <= 0.9; l += 0.04) {
+    out = hslToRgb([h, s, l]);
+    if (contrastRatio(out, base) >= min) break;
+  }
+  return out;
 }
 const rgba = (c: [number, number, number], a: number) => `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${a})`;
 
@@ -80,6 +123,7 @@ export interface CfbTheme {
   primaryDeep: string; // darkened primary (depth)
   accent: string; // team-colored, readable-on-dark accent (text/labels/tags)
   accentInk: string; // text ON the accent when used as a fill
+  accentCard: string; // accent lifted to read on the (saturated) signature-card gradient
   heroWash: string; // full radial-gradient() — the immersive primary wash
   heroGlow: string; // full radial-gradient() — the accent glow
   cardFrom: string; // signature-card gradient start (dark-safe)
@@ -93,6 +137,7 @@ export interface CfbTheme {
 const DARK_BASE: [number, number, number] = [17, 17, 17]; // conservative floor base
 const SAFE_ACCENT = '#E8A317'; // warm gold fallback for truly neutral palettes
 const MIN_ACCENT = 4.5; // accent doubles as small mono-label text → AA (4.5:1) on dark
+const ACCENT_VIVID = 5.2; // lifted-hue accents aim above the floor → vivid, not slate-on-the-line
 const WASH_MAX_LUMA = 0.13; // wash top color ceiling → white hero text holds (~5.8:1)
 
 /**
@@ -112,19 +157,25 @@ export function resolveCfbTheme(primaryHex: string | null, secondaryHex: string 
   } else if (!isNearNeutral(pRgb) && contrastRatio(pRgb, DARK_BASE) >= MIN_ACCENT) {
     accentRgb = pRgb; // chromatic primary that reads (Michigan maize)
   } else if (!isNearNeutral(pRgb)) {
-    accentRgb = lightenToContrast(pRgb, DARK_BASE, MIN_ACCENT); // lift primary hue (navy→blue, purple→lavender)
+    accentRgb = vividAccent(pRgb, DARK_BASE, ACCENT_VIVID); // lift primary hue, vivid (navy→sky, purple→lavender)
   } else if (sRgb && !isNearNeutral(sRgb)) {
-    accentRgb = lightenToContrast(sRgb, DARK_BASE, MIN_ACCENT); // lift secondary hue
+    accentRgb = vividAccent(sRgb, DARK_BASE, ACCENT_VIVID); // lift secondary hue, vivid
   } else {
     accentRgb = parseHex(SAFE_ACCENT)!; // truly neutral palette (white/black)
   }
   const accent = toHex(accentRgb);
   const accentInk = contrastRatio(accentRgb, [255, 255, 255]) >= contrastRatio(accentRgb, [17, 17, 17]) ? '#FFFFFF' : '#111111';
 
-  // ── HERO WASH — immersive, dark-safe. Keep full color for dark primaries; darken
-  //    the wash color for light primaries so white hero text always holds. ──
-  const washTop = darkenToLuma(pRgb, WASH_MAX_LUMA);
+  // ── HERO WASH — immersive, dark-safe. The wash HUE cascades like the accent so a
+  //    neutral (white/black) primary with a chromatic secondary still carries a team
+  //    color instead of collapsing to gray; only a fully-neutral palette goes gray.
+  //    The wash COLOR is then darkened for light primaries so white hero text holds. ──
+  const washSource = !isNearNeutral(pRgb) ? pRgb : (sRgb && !isNearNeutral(sRgb) ? sRgb : pRgb);
+  const washTop = darkenToLuma(washSource, WASH_MAX_LUMA);
   const washDeep = darken(washTop, 0.5);
+  // Accent lifted to read as small text ON the saturated card gradient (accent on
+  // a bright-primary card can dip below AA; this variant never does).
+  const accentCard = toHex(lightenToContrast(accentRgb, washTop, MIN_ACCENT + 0.1));
   const heroWash = `radial-gradient(ellipse 92% 72% at 28% -12%, ${toHex(washTop)} 0%, ${rgba(washDeep, 0.87)} 34%, transparent 76%)`;
   const heroGlow = `radial-gradient(ellipse 60% 50% at 86% 8%, ${rgba(accentRgb, 0.16)} 0%, transparent 60%)`;
 
@@ -138,6 +189,7 @@ export function resolveCfbTheme(primaryHex: string | null, secondaryHex: string 
     primaryDeep: toHex(darken(pRgb, 0.55)),
     accent,
     accentInk,
+    accentCard,
     heroWash,
     heroGlow,
     cardFrom,
@@ -156,6 +208,7 @@ export function cfbThemeVars(theme: CfbTheme): Record<string, string> {
     '--cfb-primary-deep': theme.primaryDeep,
     '--cfb-accent': theme.accent,
     '--cfb-accent-ink': theme.accentInk,
+    '--cfb-accent-card': theme.accentCard,
     '--cfb-accent-on': theme.accentInk, // legacy alias (contribute flow)
     '--cfb-hero-wash': theme.heroWash,
     '--cfb-hero-glow': theme.heroGlow,
