@@ -46,6 +46,13 @@ export interface CfbVenue {
   city: string;
   state: string;
   capacity: number; // CFB needs this; repo Venue has no capacity field
+  // Capacity audit trail (backfill pass): populated only when 2 independent
+  // sources (Wikipedia infobox + an official athletics/stadium page) corroborate
+  // the figure. Same 2-source discipline as rivalry tags — a wrong capacity on a
+  // travel page is the venue-panel equivalent of a wrong kickoff.
+  capacityVerified?: boolean;
+  capacitySources?: string[]; // [wikipediaUrl, officialUrl]
+  capacityVerifiedAt?: string; // ISO
   lat: number;
   lng: number;
   homeSchoolId: string;
