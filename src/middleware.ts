@@ -54,33 +54,41 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
       return NextResponse.next();
     }
 
-    const origin = request.nextUrl.origin;
-    const payload = {
-      bot,
-      path: request.nextUrl.pathname,
-      userAgent: userAgent ?? '',
-      country: request.headers.get('x-vercel-ip-country') ?? null,
-      referer: request.headers.get('referer') ?? null,
-    };
-
-    // Fire-and-forget: never block the crawler's response on our own logging.
-    const logPromise = fetch(`${origin}/api/log-crawler-hit`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-crawler-log-secret': secret,
-      },
-      body: JSON.stringify(payload),
-    }).catch((err) => {
-      console.error('MIDDLEWARE_FETCH_ERR', {
-        message: err?.message,
-        name: err?.name,
+    // Sample 1-in-10 bot hits. The crawler-hit signal is statistical (which bots
+    // crawl which paths, and roughly how often) rather than a per-request audit,
+    // so a 10% sample preserves the insight while spawning the /api/log-crawler-hit
+    // Node function — and its Firestore write — on only ~10% of bot GETs. Gating
+    // here (not inside the route) means the skipped 90% never invoke the function
+    // at all. Treat stored counts as a 10% sample (×10 for true volume).
+    if (Math.random() < 0.1) {
+      const origin = request.nextUrl.origin;
+      const payload = {
         bot,
         path: request.nextUrl.pathname,
-      });
-    });
+        userAgent: userAgent ?? '',
+        country: request.headers.get('x-vercel-ip-country') ?? null,
+        referer: request.headers.get('referer') ?? null,
+      };
 
-    event.waitUntil(logPromise);
+      // Fire-and-forget: never block the crawler's response on our own logging.
+      const logPromise = fetch(`${origin}/api/log-crawler-hit`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-crawler-log-secret': secret,
+        },
+        body: JSON.stringify(payload),
+      }).catch((err) => {
+        console.error('MIDDLEWARE_FETCH_ERR', {
+          message: err?.message,
+          name: err?.name,
+          bot,
+          path: request.nextUrl.pathname,
+        });
+      });
+
+      event.waitUntil(logPromise);
+    }
   } catch (err) {
     console.error('MIDDLEWARE_ERROR', {
       message: (err as Error)?.message,
@@ -98,6 +106,6 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
 export const config = {
   matcher: [
     // Run on pages; skip API, Next internals, and common static assets.
-    '/((?!api/|_next/|_static/|favicon.ico|robots.txt|sitemap.xml|llms.txt|.*\\.(?:png|jpg|jpeg|gif|webp|avif|svg|ico|css|js|map|txt|xml)$).*)',
+    '/((?!api/|_next/|_static/|favicon.ico|robots.txt|sitemap.xml|llms.txt|.*\\.(?:png|jpg|jpeg|gif|webp|avif|svg|ico|css|js|map|txt|xml|json|webmanifest)$).*)',
   ],
 };

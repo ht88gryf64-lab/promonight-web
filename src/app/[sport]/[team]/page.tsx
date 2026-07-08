@@ -33,14 +33,14 @@ import { EngagementTracker } from '@/components/analytics/EngagementTracker';
 import { TicketmasterCTA } from '@/components/affiliates/TicketmasterCTA';
 import { FanaticsCTA } from '@/components/affiliates/FanaticsCTA';
 import { SpotHeroCTA } from '@/components/affiliates/SpotHeroCTA';
-import { BookingCTA } from '@/components/affiliates/BookingCTA';
+import { ExpediaCTA } from '@/components/affiliates/ExpediaCTA';
 import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { AD_SLOTS } from '@/lib/ads/slots';
 import { isRedesignEnabled } from '@/lib/redesign';
 import { RedesignTeamPage } from '@/components/redesign/RedesignTeamPage';
 
-export const revalidate = 21600;
+export const revalidate = 86400;
 
 export async function generateStaticParams() {
   const teams = await getAllTeams();
@@ -94,13 +94,14 @@ export async function generateMetadata({
 
   // Meta description: front-load the next upcoming promos so the Google
   // snippet stays fresh on every ISR revalidation. Built from getTeamPromos
-  // (date-ascending). Capped at 250 chars; the "See the full schedule" closer
+  // (date-ascending). Capped at 160 chars to fit Google's snippet width; the
+  // "See the full schedule" closer
   // is appended only when it fits, and a promo is dropped rather than cut
   // mid-title (two clean names beat three with the third truncated). `year`
   // stays hardcoded (never getFullYear()) — same rationale as the title above.
   // Falls back to an evergreen sentence when there are no upcoming promos (or,
   // defensively, when not even the first promo fits the budget).
-  const DESC_MAX = 250;
+  const DESC_MAX = 160;
   const todayStr = new Date().toISOString().split('T')[0];
   const monthDay = (d: string) =>
     new Date(d + 'T12:00:00').toLocaleDateString('en-US', {
@@ -109,8 +110,8 @@ export async function generateMetadata({
     });
 
   const fallbackDescription = venue
-    ? `${displayName} ${year} promotional schedule — bobbleheads, giveaways, theme nights, and food deals at ${venue.name}. Updated weekly.`
-    : `${displayName} ${year} promotional schedule — bobbleheads, giveaways, theme nights, and food deals. Updated weekly.`;
+    ? `${displayName} ${year} promotional schedule - bobbleheads, giveaways, theme nights, and food deals at ${venue.name}. Updated weekly.`
+    : `${displayName} ${year} promotional schedule - bobbleheads, giveaways, theme nights, and food deals. Updated weekly.`;
 
   const upcomingForDesc = promos
     .filter((p) => p.date >= todayStr)
@@ -124,7 +125,7 @@ export async function generateMetadata({
     const fits: string[] = [];
     let len = prefix.length;
     for (const p of upcomingForDesc) {
-      const entry = `${monthDay(p.date)} — ${p.title}`;
+      const entry = `${monthDay(p.date)} - ${p.title}`;
       const sep = fits.length === 0 ? '' : ', ';
       // +1 reserves the period that closes the promo list; a promo that would
       // push past DESC_MAX is dropped, not truncated mid-title.
@@ -233,7 +234,7 @@ export default async function TeamPage({
   }
 
   const displayName = teamDisplayName(team);
-  const recurringDeals = getRecurringDealsForTeam(team.id);
+  const recurringDeals = await getRecurringDealsForTeam(team.id);
 
   // MLB + NFL today: full schedule overlays onto the calendar. Other leagues
   // fall through to the legacy promo-only rendering inside TeamCalendar.
@@ -333,7 +334,7 @@ export default async function TeamPage({
         </div>
       </section>
 
-      {/* PREPARE FOR THE GAME cluster — Fanatics, SpotHero, Booking. The
+      {/* PREPARE FOR THE GAME cluster — Fanatics, SpotHero, Expedia. The
        *  branded cards replace the previous red-gradient inline parking CTA
        *  + footer "PLAN YOUR TRIP" + footer "SHOP OFFICIAL GEAR" sections.
        *  AT line is omitted when venue is null (no fabricated stadium
@@ -373,7 +374,7 @@ export default async function TeamPage({
               placement="team_page_prepare"
               venue={venue}
             />
-            <BookingCTA
+            <ExpediaCTA
               team={team}
               surface="web_team_page"
               placement="team_page_prepare"

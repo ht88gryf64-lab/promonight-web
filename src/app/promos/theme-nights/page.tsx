@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { pageOpenGraph } from '@/lib/og';
 import { getPromosFromDate } from '@/lib/data';
 import { AggregatorPage, AggregatorJsonLd, type AggregatorGroup } from '@/components/aggregator-layout';
 import type { PromoWithTeam } from '@/lib/types';
@@ -56,6 +57,7 @@ export const metadata: Metadata = {
   title: `${YEAR} Theme Nights: Star Wars, Heritage & Fireworks`,
   description: `Every ${YEAR} theme night across pro sports by category: Star Wars, heritage, fireworks, faith and community, and pop culture tie-ins. Updated weekly.`,
   alternates: { canonical: 'https://www.getpromonight.com/promos/theme-nights' },
+  openGraph: pageOpenGraph('/promos/theme-nights'),
 };
 
 function formatDateParts(dateStr: string) {
@@ -122,6 +124,7 @@ export default async function ThemeNightsPage() {
         description={lead}
         lastUpdated={todayYMD()}
         faqs={faqs}
+        groups={groups}
       />
       <AggregatorPage
         eyebrow="Theme nights"

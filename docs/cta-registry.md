@@ -26,6 +26,10 @@ when retiring a CTA.
 | ticketmaster_get_tickets_promo_card | team_page | tickets_block_promo_card | ticketmaster Get Tickets → | ticketmaster.com (Impact wrap when env set) | affiliate_click | 2026-05-03 | active |
 | ticketmaster_get_tickets_playoffs_card | playoffs_hub | tickets_block_playoffs_card | ticketmaster Get Tickets → | ticketmaster.com (Impact wrap when env set) | affiliate_click | 2026-05-03 | active |
 | ticketmaster_get_tickets_game_modal | team_page | tickets_block_game_modal | ticketmaster Get Tickets → | ticketmaster.com (Impact wrap when env set) | affiliate_click | 2026-05-03 | active |
+| ticketnetwork_tickets_team_hero | team_page | tickets_block_hero | TicketNetwork logo → | ticketnetwork.com (Impact tracked) | affiliate_click | 2026-06-28 | active |
+| ticketnetwork_tickets_promo_card | team_page | tickets_block_promo_card | TicketNetwork logo → | ticketnetwork.com (Impact tracked) | affiliate_click | 2026-06-28 | active |
+| ticketnetwork_tickets_playoffs_card | playoffs_hub | tickets_block_playoffs_card | TicketNetwork logo → | ticketnetwork.com (Impact tracked) | affiliate_click | 2026-06-28 | active |
+| ticketnetwork_tickets_game_modal | team_page | tickets_block_game_modal | TicketNetwork logo → | ticketnetwork.com (Impact tracked) | affiliate_click | 2026-06-28 | active |
 
 ## Removed CTAs
 
@@ -47,3 +51,30 @@ surface without needing distinct event names. The Impact wrap template is
 configured via the `NEXT_PUBLIC_TICKETMASTER_IMPACT_WRAP` env var; when
 unset, the CTA links direct to ticketmaster.com without commission
 attribution (graceful pre-approval fallback).
+
+## 2026-06-28 — Ticket CTA re-stacked (Ticketmaster + TicketNetwork)
+
+The ticket CTA now renders **both vendors stacked — Ticketmaster on top,
+TicketNetwork below** — across every ticket surface, via the single shared
+leaf `components/affiliates/TicketmasterCTA.tsx`. Timeline:
+
+- **2026-06-16** the CTA was flag-swapped to TicketNetwork only (the
+  `TICKET_VENDOR` constant; this era was never row-registered).
+- **2026-06-28** Ticketmaster was re-enabled *alongside* TicketNetwork as a
+  stacked two-button CTA. `TICKET_VENDOR` no longer gates rendering — both
+  vendors render; each button is independently null-guarded.
+
+Each button fires `affiliate_click` (PostHog + GA4 dual-emit) with a distinct
+`partner` value (`'ticketmaster'` / `'ticketnetwork'`) and the page `surface`
+passed straight through (`web_team_page`, `web_team_page_promolist`, etc.), so
+the two partners are sliceable without distinct event names. The same leaf also
+renders on the live team page via `AffiliateRail` (placement
+`team_page_sidebar`) — not separately row-registered here.
+
+**Label change:** the buttons now show the **brand mark + arrow only**
+(Ticketmaster wordmark / TicketNetwork logo, navy tap arrow); the literal
+"Get Tickets" descriptor text was dropped. The Ticketmaster Impact wrap is set
+in Production, so prod TM clicks are commissionable
+(`affiliate_tracking_active: true`); preview/dev builds fall back to a bare
+ticketmaster.com link. TicketNetwork is always commissionable (hardcoded
+Impact prefix + property IDs).

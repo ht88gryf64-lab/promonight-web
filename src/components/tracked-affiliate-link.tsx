@@ -25,6 +25,11 @@ export type TrackedAffiliateLinkProps = {
   children: ReactNode;
   target?: string;
   rel?: string;
+  /** Accessible name for the link. Set when the visible content is a brand
+   *  mark only (logo/wordmark) with no action text — e.g. the stacked ticket
+   *  CTA buttons, which render the partner brand + arrow but no "Get Tickets"
+   *  copy. Falls through to the inner content's accessible name when unset. */
+  ariaLabel?: string;
 };
 
 // Fires on mousedown (not click) so the event is captured even when the
@@ -44,6 +49,7 @@ export function TrackedAffiliateLink({
   children,
   target = '_blank',
   rel = 'noopener sponsored',
+  ariaLabel,
 }: TrackedAffiliateLinkProps) {
   const taggedHref = buildAffiliateUrl(partner as AffiliateUrlPartner, href, {
     surface,
@@ -74,6 +80,7 @@ export function TrackedAffiliateLink({
       className={className}
       target={target}
       rel={rel}
+      aria-label={ariaLabel}
     >
       {children}
     </a>

@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: true },
 };
 
-export const revalidate = 3600;
+export const revalidate = 86400;
 
 export default async function MyTeamsPage() {
   // All 167 teams pass through the server boundary so the client view can

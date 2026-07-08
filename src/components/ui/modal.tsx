@@ -12,6 +12,11 @@ interface ModalProps {
    *  'light' renders the cream redesign surface so light redesign content
    *  (e.g. the World Cup game-detail expand) reads correctly. */
   variant?: 'dark' | 'light';
+  /** Sizing. 'full' (default) is fullscreen on mobile / max-w-xl centered on
+   *  desktop — preserved for every existing caller. 'fit' is content-height and
+   *  centered at ALL breakpoints (no fullscreen-mobile panel), for short
+   *  detail content like the redesign game modal. */
+  size?: 'full' | 'fit';
 }
 
 // Modal overlay built on the native HTML <dialog> element. The browser provides
@@ -21,9 +26,10 @@ interface ModalProps {
 //
 // Content is always in the DOM — when the dialog is closed the UA applies
 // display: none, but crawlers still see everything in the HTML source.
-export function Modal({ isOpen, onClose, children, ariaLabel, variant = 'dark' }: ModalProps) {
+export function Modal({ isOpen, onClose, children, ariaLabel, variant = 'dark', size = 'full' }: ModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const light = variant === 'light';
+  const fit = size === 'fit';
 
   // Open / close side effect. Kept separate from event wiring so each effect
   // has one job.
@@ -73,7 +79,10 @@ export function Modal({ isOpen, onClose, children, ariaLabel, variant = 'dark' }
     <dialog
       ref={dialogRef}
       aria-label={ariaLabel}
-      className={`
+      className={
+        fit
+          ? `m-0 p-0 w-[calc(100vw-2rem)] max-w-lg h-auto max-h-[85vh] ${light ? 'bg-rd-cream text-rd-ink border-rd-line' : 'bg-bg-card text-white border-border-subtle'} rounded-2xl border overflow-hidden backdrop:bg-black/60 backdrop:backdrop-blur-[2px]`
+          : `
         m-0 p-0
         w-full h-full sm:w-auto sm:h-auto
         sm:max-w-xl sm:w-[min(540px,calc(100vw-2rem))]
@@ -82,10 +91,11 @@ export function Modal({ isOpen, onClose, children, ariaLabel, variant = 'dark' }
         sm:rounded-2xl border-0 sm:border
         overflow-hidden
         backdrop:bg-black/60 backdrop:backdrop-blur-[2px]
-      `}
+      `
+      }
       style={{ position: 'fixed', inset: 0, margin: 'auto' }}
     >
-      <div className="relative w-full h-full sm:h-auto sm:max-h-[85vh] overflow-y-auto">
+      <div className={fit ? 'relative w-full h-auto max-h-[85vh] overflow-y-auto' : 'relative w-full h-full sm:h-auto sm:max-h-[85vh] overflow-y-auto'}>
         <button
           type="button"
           aria-label="Close"

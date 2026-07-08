@@ -37,7 +37,7 @@ const dmMono = DM_Mono({
 });
 
 // Outfit powers the affiliate CTA cluster (TicketmasterCTA, FanaticsCTA,
-// SpotHeroCTA, BookingCTA) and the section H2s above it. Weight set covers
+// SpotHeroCTA, ExpediaCTA) and the section H2s above it. Weight set covers
 // what the cards need: 600 (CTA secondary text), 700 (Ticketmaster Get
 // Tickets), 800 (brand wordmarks), 900 (Fanatics F badge + section H2s).
 const outfit = Outfit({

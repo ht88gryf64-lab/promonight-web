@@ -1,55 +1,34 @@
+import type { ReactNode } from 'react';
 import type { Team, Venue } from '@/lib/types';
 import type { AnalyticsSurface } from '@/lib/analytics';
-import { buildBookingUrl } from '@/lib/affiliates';
-import { VENUE_CITY_OVERRIDES } from '@/lib/venue-cities';
+import { resolveHotelLink } from '@/lib/hotel-link';
 import { TrackedAffiliateLink } from '@/components/tracked-affiliate-link';
 import { teamDisplayName } from '@/lib/promo-helpers';
+
+// PromoNight hotel CTA, fulfilled by Expedia (Partnerize). Purple promo-palette
+// accent + a small "via Expedia" tag — reads as a PromoNight CTA, not an
+// Expedia ad. Server-rendered (no client widget); the click instrumentation
+// rides on the client <TrackedAffiliateLink> child.
 
 type HotelsCTAProps = {
   team: Team;
   surface: AnalyticsSurface;
-  /** Venue for the team. When supplied with valid lat/lng, Booking routes via
-   *  coordinates (stadium-area search, ~5-10 mi radius). Fallback below. */
+  /** Venue for the team. Valid lat/lng -> precise stadium-area search; absent
+   *  -> city-level search (never a broken button). */
   venue?: Venue | null;
-  /** Optional explicit city. Overrides VENUE_CITY_OVERRIDES and team.city.
-   *  Rarely needed now that coordinates are primary. */
-  city?: string;
+  /** Away-game date (YYYY-MM-DD). Present -> dated single-night search +
+   *  web_away_game pubref. Absent -> undated search + {surface} pubref. */
+  gameDate?: string | null;
   placement?: string;
-  /** 'modal-row': polished modal row — eyebrow + primary button only. The
-   *  surrounding modal card carries the team/venue context.
-   *  'card': descriptor card with team name + sentence + outlined button —
-   *  used in the /playoffs PLAN YOUR PLAYOFF TRIP grid where each card needs
-   *  team identity.
+  /** 'modal-row': polished modal row (eyebrow + button), away-game module.
+   *  'card': descriptor card with team identity (/playoffs trip grid).
    *  'section': full team-page section with prose. */
   variant?: 'modal-row' | 'card' | 'section';
 };
 
-function hasCoords(v: Venue | null | undefined): v is Venue {
-  if (!v) return false;
-  const { lat, lng } = v;
-  return (
-    typeof lat === 'number' &&
-    typeof lng === 'number' &&
-    Number.isFinite(lat) &&
-    Number.isFinite(lng) &&
-    lat !== 0 &&
-    lng !== 0
-  );
-}
-
 function BedIcon() {
   return (
-    <svg
-      width="13"
-      height="13"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M2 4v16" />
       <path d="M2 8h18a2 2 0 0 1 2 2v10" />
       <path d="M2 17h20" />
@@ -58,68 +37,63 @@ function BedIcon() {
   );
 }
 
+function fmtShort(iso: string): string {
+  return new Date(`${iso}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+}
+
 const buttonBase =
   'flex items-center justify-between gap-2 rounded-xl font-bold transition-all hover:-translate-y-0.5';
+// Promo-palette purple (the promo-dot theme color #a78bfa), NOT a partner brand color.
 const primaryFill =
-  'bg-gradient-to-b from-accent-red to-accent-red-dim text-white hover:shadow-[0_0_30px_rgba(239,68,68,0.3)]';
+  'bg-promo-theme text-white hover:shadow-[0_0_30px_rgba(167,139,250,0.35)]';
 
 export function HotelsCTA({
   team,
   surface,
   venue,
-  city,
+  gameDate,
   placement = 'team_page_footer',
   variant = 'section',
 }: HotelsCTAProps) {
-  // Button renders regardless of Booking env state — bare URL fallback
-  // routes the user to Booking's coordinate/city search pre-approval.
-  // Tracking-active state is surfaced to PostHog via TrackedAffiliateLink.
+  const link = resolveHotelLink({ team, venue, surface, gameDate });
+  // Hide rather than render a broken button when there's neither coords nor a
+  // resolvable city (same spirit as the Game Day no-data state).
+  if (!link) return null;
 
-  // Preferred: venue coordinates (exact stadium-area search).
-  // Fallback: explicit prop > VENUE_CITY_OVERRIDES > team.city (brand city).
-  const useCoords = hasCoords(venue);
-  const fallbackCity = city ?? VENUE_CITY_OVERRIDES[team.id] ?? team.city;
-  // Label: when routing by coords, name the venue so users see what's being
-  // searched ("near Rogers Centre"). When falling back to city, name the city.
-  const destinationLabel = useCoords
-    ? (venue!.name || `${teamDisplayName(team)} stadium`)
-    : fallbackCity;
-  const linkPreposition = useCoords ? 'near' : 'in';
+  const { href, venueName, checkIn, checkOut } = link;
+  const meta = checkIn && checkOut ? `${fmtShort(checkIn)}–${fmtShort(checkOut)} · 2 guests` : '2 guests';
 
-  const href = useCoords
-    ? buildBookingUrl({
-        latitude: venue!.lat,
-        longitude: venue!.lng,
-        surface,
-        promoId: null,
-      })
-    : buildBookingUrl({
-        location: fallbackCity,
-        surface,
-        promoId: null,
-      });
+  const tracked = (className: string, children: ReactNode) => (
+    <TrackedAffiliateLink
+      href={href}
+      partner="expedia"
+      teamId={team.id}
+      sport={team.league}
+      surface={surface}
+      placement={placement}
+      className={className}
+    >
+      {children}
+    </TrackedAffiliateLink>
+  );
 
   if (variant === 'modal-row') {
-    // flex-col + items-start rather than space-y-2.5 — see ParkingCTA for the
-    // inline-flex-link wrapping rationale.
     return (
       <div className="flex flex-col items-start gap-2.5">
-        <span className="inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[1.5px] uppercase text-accent-red">
+        <span className="inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[1.5px] uppercase text-promo-theme">
           <BedIcon />
           Book a hotel
         </span>
-        <TrackedAffiliateLink
-          href={href}
-          partner="booking"
-          teamId={team.id}
-          sport={team.league}
-          surface={surface}
-          placement={placement}
-          className={`${buttonBase} text-sm px-4 py-2.5 ${primaryFill} w-full sm:w-auto sm:min-w-[200px]`}
-        >
-          <span>Booking.com</span>
-          <span aria-hidden="true" className="text-base leading-none opacity-70">›</span>
-        </TrackedAffiliateLink>
+        {tracked(
+          `${buttonBase} text-sm px-4 py-2.5 ${primaryFill} w-full sm:w-auto sm:min-w-[220px]`,
+          <>
+            <span className="flex flex-col items-start leading-tight text-left">
+              <span>Find hotels near {venueName}</span>
+              <span className="text-[10px] font-medium opacity-85">{meta} · via Expedia</span>
+            </span>
+            <span aria-hidden="true" className="text-base leading-none opacity-70">›</span>
+          </>,
+        )}
       </div>
     );
   }
@@ -127,23 +101,15 @@ export function HotelsCTA({
   if (variant === 'card') {
     return (
       <div className="bg-bg-card border border-border-subtle rounded-xl p-5">
-        <h3 className="font-display text-lg tracking-[0.5px] mb-1">
-          {teamDisplayName(team)}
-        </h3>
-        <p className="text-text-secondary text-xs mb-4">
-          Traveling for a {team.name} game? Find a hotel {linkPreposition} {destinationLabel}.
-        </p>
-        <TrackedAffiliateLink
-          href={href}
-          partner="booking"
-          teamId={team.id}
-          sport={team.league}
-          surface={surface}
-          placement={placement}
-          className="inline-flex items-center gap-2 bg-bg-card border border-border-subtle text-white font-semibold text-xs px-4 py-2 rounded-xl transition-all hover:-translate-y-0.5 hover:border-border-hover"
-        >
-          Find Hotels {linkPreposition} {destinationLabel} →
-        </TrackedAffiliateLink>
+        <h3 className="font-display text-lg tracking-[0.5px] mb-1">{teamDisplayName(team)}</h3>
+        <p className="text-text-secondary text-xs mb-4">Traveling for a {team.name} game? Find a hotel near {venueName}.</p>
+        {tracked(
+          'inline-flex flex-col items-start gap-0.5 bg-bg-card border border-promo-theme/40 text-white font-semibold text-xs px-4 py-2.5 rounded-xl transition-all hover:-translate-y-0.5 hover:border-promo-theme',
+          <>
+            <span>Find hotels near {venueName} →</span>
+            <span className="text-[10px] font-medium text-text-secondary">{meta} · via Expedia</span>
+          </>,
+        )}
       </div>
     );
   }
@@ -151,26 +117,20 @@ export function HotelsCTA({
   return (
     <section className="py-12 px-6 border-t border-border-subtle">
       <div className="max-w-3xl mx-auto">
-        <span className="font-mono text-[10px] tracking-[1.5px] uppercase text-accent-red">
-          Visiting fans
-        </span>
-        <h2 className="font-display text-2xl md:text-3xl tracking-[1px] mt-1 mb-3">
-          PLAN YOUR TRIP
-        </h2>
+        <span className="font-mono text-[10px] tracking-[1.5px] uppercase text-promo-theme">Visiting fans</span>
+        <h2 className="font-display text-2xl md:text-3xl tracking-[1px] mt-1 mb-3">PLAN YOUR TRIP</h2>
         <p className="text-text-secondary text-sm leading-relaxed mb-5 max-w-xl">
-          Traveling to see the {teamDisplayName(team)}? Find a hotel {linkPreposition} {destinationLabel} and stay near the action.
+          Traveling to see the {teamDisplayName(team)}? Find a hotel near {venueName} and stay near the action.
         </p>
-        <TrackedAffiliateLink
-          href={href}
-          partner="booking"
-          teamId={team.id}
-          sport={team.league}
-          surface={surface}
-          placement={placement}
-          className="inline-flex items-center gap-2 bg-accent-red text-white font-bold text-sm px-6 py-3 rounded-xl transition-all hover:-translate-y-0.5 hover:shadow-[0_0_30px_rgba(239,68,68,0.3)]"
-        >
-          Find Hotels {linkPreposition} {destinationLabel}
-        </TrackedAffiliateLink>
+        {tracked(
+          `${buttonBase} inline-flex text-sm px-6 py-3 ${primaryFill}`,
+          <>
+            <span className="flex flex-col items-start leading-tight text-left">
+              <span>Find hotels near {venueName}</span>
+              <span className="text-[10px] font-medium opacity-85">{meta} · via Expedia</span>
+            </span>
+          </>,
+        )}
       </div>
     </section>
   );

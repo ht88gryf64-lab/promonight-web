@@ -207,6 +207,7 @@ function GameExpandRow({
                 venue={opponentVenue}
                 surface={surface}
                 placement={placement}
+                gameDate={game.date}
                 variant="modal-row"
               />
             )}
@@ -232,6 +233,7 @@ export function GameExpand({
   teamSlug,
   teamName,
   surface = 'web_team_page',
+  showTeamLink = false,
 }: {
   dateStr: string;
   contexts: GameContext[];
@@ -240,6 +242,12 @@ export function GameExpand({
   teamName: string;
   /** Forwarded to the reused affiliate CTAs. Defaults to the team-page value. */
   surface?: AnalyticsSurface;
+  /** When true, render a "View full schedule" link to the team's own page.
+   *  Set by callers OFF the team page (the homepage modal); the team-page list
+   *  and the calendar's inline expand leave it false — the user is already on
+   *  the team page. Gated explicitly (not inferred from surface) because the
+   *  team-page list surface is also on the team page. */
+  showTeamLink?: boolean;
 }) {
   return (
     <div className="space-y-4">
@@ -255,6 +263,15 @@ export function GameExpand({
           surface={surface}
         />
       ))}
+      {showTeamLink && team && (
+        <a
+          href={`/${team.sportSlug}/${team.id}`}
+          className="inline-flex items-center gap-1 text-[11px] font-rd tracking-[0.08em] uppercase text-rd-ink-soft hover:text-rd-ink transition-colors"
+        >
+          View full schedule
+          <IconArrowRight size={13} stroke={2} />
+        </a>
+      )}
     </div>
   );
 }
@@ -265,11 +282,19 @@ export function LegacyPromoExpand({
   promos,
   team,
   teamSlug,
+  surface = 'web_team_page',
+  showTeamLink = false,
 }: {
   dateStr: string;
   promos: Promo[];
   team: Team | null;
   teamSlug?: string;
+  /** Attribution surface for the reused affiliate CTA. Defaults to the team-page
+   *  value so the calendar's inline use is unchanged. */
+  surface?: AnalyticsSurface;
+  /** See GameExpand — explicit "View full schedule" gate for off-team-page
+   *  callers (the homepage modal). */
+  showTeamLink?: boolean;
 }) {
   return (
     <div className="rounded-2xl bg-rd-card border border-rd-red/30 p-5">
@@ -289,7 +314,7 @@ export function LegacyPromoExpand({
               <CtaTray>
                 <TicketsBlock
                   team={team}
-                  surface="web_team_page"
+                  surface={surface}
                   placement="promo_card"
                   promoId={`${teamSlug}:${p.date}:${p.title}`}
                   variant="card"
@@ -299,6 +324,17 @@ export function LegacyPromoExpand({
           </div>
         ))}
       </div>
+      {showTeamLink && team && (
+        <div className="mt-4">
+          <a
+            href={`/${team.sportSlug}/${team.id}`}
+            className="inline-flex items-center gap-1 text-[11px] font-rd tracking-[0.08em] uppercase text-rd-ink-soft hover:text-rd-ink transition-colors"
+          >
+            View full schedule
+            <IconArrowRight size={13} stroke={2} />
+          </a>
+        </div>
+      )}
     </div>
   );
 }

@@ -14,7 +14,6 @@ import type { Team } from './types';
 const SEATGEEK_AID = process.env.NEXT_PUBLIC_SEATGEEK_AID ?? '';
 const STUBHUB_RID = process.env.NEXT_PUBLIC_STUBHUB_RID ?? '';
 const SPOTHERO_ID = process.env.NEXT_PUBLIC_SPOTHERO_ID ?? '';
-const BOOKING_AID = process.env.NEXT_PUBLIC_BOOKING_AID ?? '';
 // Impact wrap-link template for Ticketmaster. Placeholder tokens — `{TARGET}`
 // receives the URL-encoded destination (Ticketmaster team URL); `{SHARED_ID}`
 // receives the surface tag for partner-side reporting. When unset, the
@@ -33,8 +32,19 @@ export type AffiliatePartner =
   | 'stubhub'
   | 'fanatics'
   | 'spothero'
-  | 'booking'
-  | 'ticketmaster';
+  | 'expedia'
+  | 'ticketmaster'
+  | 'ticketnetwork';
+
+// ── Ticket vendor (historical sole-vendor switch) ────────────────────────
+// The ticket CTA now renders BOTH vendors stacked — Ticketmaster on top,
+// TicketNetwork below (see components/affiliates/TicketmasterCTA.tsx) — so this
+// constant no longer gates which vendor renders. It is retained as the record
+// of the prior single-vendor era and for the /dev/affiliate-check diagnostics
+// readout. Both link builders (buildTicketmasterUrl + the env wrap,
+// buildTicketNetworkLink) and the per-partner isPartnerActive/buildAffiliateUrl
+// cases remain wired and exercised by the stacked CTA.
+export const TICKET_VENDOR: 'ticketnetwork' | 'ticketmaster' = 'ticketnetwork';
 
 export type AffiliateLinkOptions = {
   surface: AnalyticsSurface;
@@ -63,10 +73,17 @@ export function isPartnerActive(partner: AffiliatePartner): boolean {
       return FANATICS_IMPACT_WRAP.length > 0;
     case 'spothero':
       return SPOTHERO_ID.length > 0;
-    case 'booking':
-      return BOOKING_AID.length > 0;
+    case 'expedia':
+      // Partnerize camref is a hardcoded constant baked into the URL — the
+      // outbound link is always commissionable, so tracking is always active.
+      return true;
     case 'ticketmaster':
       return TICKETMASTER_IMPACT_WRAP.length > 0;
+    case 'ticketnetwork':
+      // The Impact tracking prefix + property IDs are hardcoded constants baked
+      // into every TicketNetwork link (no env var) — the outbound link is always
+      // commissionable, so tracking is always active (same model as Expedia).
+      return true;
   }
 }
 
@@ -121,13 +138,6 @@ export function spotHeroUrl(rawUrl: string, opts: AffiliateLinkOptions): string 
   return url.toString();
 }
 
-export function bookingUrl(rawUrl: string, opts: AffiliateLinkOptions): string {
-  const url = new URL(rawUrl);
-  setParam(url, 'aid', BOOKING_AID);
-  setParam(url, 'label', subId(opts));
-  return url.toString();
-}
-
 export function buildAffiliateUrl(
   partner: AffiliatePartner,
   rawUrl: string,
@@ -143,13 +153,21 @@ export function buildAffiliateUrl(
       return rawUrl;
     case 'spothero':
       return spotHeroUrl(rawUrl, opts);
-    case 'booking':
-      return bookingUrl(rawUrl, opts);
+    case 'expedia':
+      // The Partnerize tracking template (camref/creativeref/adref) is already
+      // baked into the URL by buildExpediaHotelLink — passthrough, do NOT
+      // re-tag the way Booking's aid was injected.
+      return rawUrl;
     case 'ticketmaster':
       // Ticketmaster URLs are wrap-resolved by `buildTicketmasterUrl` at the
       // call site (where teamSlug + surface are known). Surface tracking
       // rides inside the wrap template's SharedID, not on a query param —
       // there's nothing to tag here, so pass the URL through unchanged.
+      return rawUrl;
+    case 'ticketnetwork':
+      // TicketNetwork links are fully assembled by `buildTicketNetworkLink`
+      // at the call site — the Impact prefix, property IDs, and subId1 are
+      // already baked in. Do NOT re-tag; pass the URL through unchanged.
       return rawUrl;
   }
 }
@@ -258,6 +276,72 @@ export function buildTicketmasterUrl(opts: TicketmasterOpts): string {
     .replace('{SHARED_ID}', encodeURIComponent(opts.surface));
 }
 
+// ── TicketNetwork (Impact) ───────────────────────────────────────────────
+// Active ticket vendor when TICKET_VENDOR === 'ticketnetwork'. Unlike
+// Ticketmaster (whose Impact wrap template is injected via an env var),
+// TicketNetwork's Impact tracking link is a FIXED prefix + constant property
+// IDs — there is NO env var and NO render-time re-tag (buildAffiliateUrl passes
+// 'ticketnetwork' through unchanged). The tracked link wraps a TicketNetwork
+// performer landing page as the `u` query param.
+//
+// Final structure — byte-identical to the validated reference (Twins,
+// web_team_page surface):
+//   https://ticketnetwork.lusg.net/c/7236189/120057/2322?u=<ENCODED_LANDING>&partnerpropertyid=8313917&MediaPartnerPropertyId=8313917&subId1=web_team_page_minnesota-twins
+// Built as a raw string (NOT URLSearchParams) so the param order and the single
+// encodeURIComponent of the landing URL stay byte-exact.
+const TICKETNETWORK = {
+  prefix: 'https://ticketnetwork.lusg.net/c/7236189/120057/2322',
+  // Same value rides both partnerpropertyid and MediaPartnerPropertyId.
+  partnerPropertyId: '8313917',
+  performerHost: 'https://www.ticketnetwork.com',
+  defaultPath: '/e/performers/',
+} as const;
+
+// Landing-page overrides, keyed by PromoNight team.id. Default rule:
+// `${performerHost}/e/performers/${team.id}-tickets`. An entry overrides the
+// slug and/or the path segment when TicketNetwork lists a team differently.
+// Populate from audit/validate-ticketnetwork-links.ts, which HTTP-checks the
+// default-rule landing for every team and flags any that need an override.
+const TICKETNETWORK_OVERRIDES: Record<string, { slug?: string; path?: string }> = {
+  // The Athletics are listed as 'athletics' under /performers/ (no /e/ segment).
+  'oakland-athletics': { slug: 'athletics', path: '/performers/' },
+};
+
+// Resolves the TicketNetwork performer landing page (the decoded `u` target)
+// for a team, applying any override. Returns null when no slug resolves so
+// callers never emit a broken ticket link. Exported for the validate-on-build
+// script, which HTTP-checks these landing URLs.
+export function ticketNetworkLandingUrl(team: Pick<Team, 'id'>): string | null {
+  const override = TICKETNETWORK_OVERRIDES[team.id];
+  const slug = override?.slug ?? team.id;
+  if (!slug) return null;
+  const path = override?.path ?? TICKETNETWORK.defaultPath;
+  return `${TICKETNETWORK.performerHost}${path}${slug}-tickets`;
+}
+
+export type TicketNetworkLinkOpts = {
+  team: Pick<Team, 'id'>;
+  /** subId1 surface segment, already including the `web_` prefix
+   *  (e.g. 'web_team_page'). Away-game CTAs pass 'web_away_game' so attribution
+   *  matches the Expedia pubref convention (see lib/hotel-link.ts). */
+  surface: AnalyticsSurface | 'web_away_game';
+};
+
+// Assembles the full tracked TicketNetwork link. Returns null when the landing
+// page can't be resolved (graceful fallback — the CTA must not render a broken
+// <a>). subId1 uses team.id (matches analytics team_slug + the Expedia pubref
+// for cross-partner joinability) even when the landing slug is overridden.
+export function buildTicketNetworkLink(opts: TicketNetworkLinkOpts): string | null {
+  const landing = ticketNetworkLandingUrl(opts.team);
+  if (!landing) return null;
+  return (
+    `${TICKETNETWORK.prefix}?u=${encodeURIComponent(landing)}` +
+    `&partnerpropertyid=${TICKETNETWORK.partnerPropertyId}` +
+    `&MediaPartnerPropertyId=${TICKETNETWORK.partnerPropertyId}` +
+    `&subId1=${opts.surface}_${opts.team.id}`
+  );
+}
+
 // FanaticsOpts: the canonical team-store URL lives on the Team document as
 // `fanaticsUrl` (populated by scripts/migrate-fanatics-path-to-url.ts).
 // `fanaticsPath` is the legacy root-relative form, accepted as a fallback
@@ -326,18 +410,6 @@ export function buildSpotHeroUrl(opts: SpotHeroOpts): string {
   });
 }
 
-export type BookingOpts = {
-  /** Preferred: exact venue coordinates. Booking's coordinate search radiates
-   *  ~5-10 mi from the point — ideal for stadium-area hotel searches and
-   *  immune to the brand-city-vs-stadium-city string-matching problem. */
-  latitude?: number;
-  longitude?: number;
-  /** Fallback when coordinates aren't available. Free-form city/region query. */
-  location?: string;
-  surface: AnalyticsSurface;
-  promoId?: string | null;
-};
-
 function hasValidCoords(lat: number | undefined, lng: number | undefined): boolean {
   return (
     typeof lat === 'number' &&
@@ -349,19 +421,77 @@ function hasValidCoords(lat: number | undefined, lng: number | undefined): boole
   );
 }
 
-export function buildBookingUrl(opts: BookingOpts): string {
-  let base: string;
-  if (hasValidCoords(opts.latitude, opts.longitude)) {
-    base = `https://www.booking.com/searchresults.html?latitude=${opts.latitude}&longitude=${opts.longitude}`;
-  } else if (opts.location && opts.location.trim().length > 0) {
-    base = `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(opts.location)}`;
-  } else {
-    // Neither lat/lng nor location — land on Booking homepage; still tag so
-    // partner attribution works if the visitor converts.
-    base = 'https://www.booking.com/';
+// ── Expedia (Partnerize) hotel deep links ────────────────────────────────────
+// Expedia runs on Partnerize. The whole tracking template is baked into the
+// wrapper URL — there is NO env var and NO render-time re-tag (buildAffiliateUrl
+// passes 'expedia' through unchanged). The wrapper wraps a DOUBLE-encoded
+// Expedia Hotel-Search URL as `landingPage`: the inner URL is encoded once
+// (space->%20, comma->%2C), then the entire inner URL is encoded AGAIN
+// (%20->%2520, %2C->%252C). Confirmed-working reference structure:
+//   https://www.expedia.com/affiliate?siteid=1&landingPage=<DOUBLE_ENCODED>&camref=1011l5KcC9&creativeref=1100l68075&adref=PZPbSQWcB2
+const EXPEDIA = {
+  // www, not apex: the apex /affiliate path 301-redirects to www, so building
+  // with www removes a redirect hop on every hotel CTA. All tracking params
+  // (camref/creativeref/adref/pubref) are unchanged and survive identically.
+  base: 'https://www.expedia.com/affiliate',
+  siteid: '1',
+  camref: '1011l5KcC9',
+  creativeref: '1100l68075',
+  adref: 'PZPbSQWcB2',
+  hotelSearch: 'https://www.expedia.com/Hotel-Search',
+} as const;
+
+export type ExpediaHotelLinkOpts = {
+  venueName: string;
+  city: string;
+  /** latLong is included ONLY when both coords are finite & nonzero. */
+  lat?: number | null;
+  lng?: number | null;
+  /** YYYY-MM-DD. Both required for a dated search; omit both for undated. */
+  checkIn?: string | null;
+  checkOut?: string | null;
+  /** Partnerize sub-tracking, e.g. "web_away_game_minnesota-twins". */
+  pubref: string;
+};
+
+/** Add one calendar day to a YYYY-MM-DD date (UTC, off-by-one safe). */
+export function nextDayISO(date: string): string {
+  const d = new Date(`${date}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+export function buildExpediaHotelLink(opts: ExpediaHotelLinkOpts): string {
+  const coords = hasValidCoords(opts.lat ?? undefined, opts.lng ?? undefined);
+  const dated = Boolean(opts.checkIn && opts.checkOut);
+
+  // Inner Hotel-Search params, each value encoded ONCE. encodeURIComponent
+  // yields space->%20 and comma->%2C (NOT URLSearchParams' '+').
+  const inner: Array<[string, string]> = [['destination', `${opts.venueName}, ${opts.city}`]];
+  if (coords) inner.push(['latLong', `${opts.lat},${opts.lng}`]);
+  if (dated) {
+    inner.push(['startDate', opts.checkIn!], ['endDate', opts.checkOut!], ['d1', opts.checkIn!], ['d2', opts.checkOut!]);
   }
-  return bookingUrl(base, {
-    surface: opts.surface,
-    promoId: opts.promoId,
-  });
+  inner.push(
+    ['flexibility', '0_DAY'],
+    ['adults', '2'],
+    ['rooms', '1'],
+    ['sort', 'RECOMMENDED'],
+    ['categorySearch', 'hotels_option'],
+    ['useRewards', 'false'],
+  );
+  const innerUrl = `${EXPEDIA.hotelSearch}?${inner.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&')}`;
+
+  // Wrapper. landingPage = the inner URL encoded AGAIN (the required double
+  // encode). Built as a string (NOT URLSearchParams) so the already-encoded
+  // landingPage is not re-encoded a third time and the param order stays
+  // byte-identical to the confirmed reference.
+  return (
+    `${EXPEDIA.base}?siteid=${EXPEDIA.siteid}` +
+    `&landingPage=${encodeURIComponent(innerUrl)}` +
+    `&camref=${EXPEDIA.camref}` +
+    `&creativeref=${EXPEDIA.creativeref}` +
+    `&adref=${EXPEDIA.adref}` +
+    `&pubref=${encodeURIComponent(opts.pubref)}`
+  );
 }

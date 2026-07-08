@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { Button } from '@/components/redesign/Button';
 import { WorldCupNavLink } from '@/components/world-cup/nav-link';
+import { BrandBarLeagueHubs } from './BrandBarLeagueHubs';
+import { BrandBarMobileMenu } from './BrandBarMobileMenu';
 
 // Redesign v2 top bar. Replaces the global dark nav on gated team pages with a
 // light, sticky, translucent cream bar carrying the PromoNight wordmark, a
@@ -46,7 +48,7 @@ export function BrandBar({ playoffsActive = false, worldCupActive = false }: Bra
           <span className="text-rd-red">NIGHT</span>
         </Link>
 
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4 sm:gap-6">
           <div className="hidden items-center gap-6 md:flex">
             {links.map((link) => (
               <Link key={link.href} href={link.href} className={LINK_CLASS}>
@@ -59,9 +61,21 @@ export function BrandBar({ playoffsActive = false, worldCupActive = false }: Bra
             </Link>
           </div>
 
-          <Button href="/download" variant="primary" size="sm">
-            Get the App
-          </Button>
+          {/* League hubs dropdown and the app CTA are desktop-only (md+); on
+              mobile both live inside the hamburger sheet, so the mobile bar is
+              just wordmark + hamburger. */}
+          <div className="hidden md:block">
+            <BrandBarLeagueHubs />
+          </div>
+
+          <div className="hidden md:block">
+            <Button href="/download" variant="primary" size="sm">
+              Get the App
+            </Button>
+          </div>
+
+          {/* Mobile hamburger + fullscreen nav sheet (md:hidden). */}
+          <BrandBarMobileMenu playoffsActive={playoffsActive} worldCupActive={worldCupActive} />
         </div>
       </nav>
     </header>

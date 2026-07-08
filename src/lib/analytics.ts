@@ -66,11 +66,32 @@ export type EyebrowState =
 
 export type AnalyticsSurface =
   | 'web_home'
+  // Homepage upcoming-promo cards that open the shared game modal. Split by
+  // bucket so dashboards can tell the hero "Tonight" rail from the "This Week"
+  // list. game_tap / promo_card_tap carry these; the affiliate CTAs inside the
+  // reused modal body attribute to them too (so a ticket click from the
+  // homepage modal is not mislabeled web_team_page).
+  | 'web_home_tonight'
+  | 'web_home_this_week'
   | 'web_team_page'
+  // Team-page "Upcoming promos" list rows (RedesignPromoRow) that open the same
+  // shared game modal as the calendar. Distinct from web_team_page (the calendar
+  // grid) so dashboards can separate list-driven taps from calendar-driven ones.
+  | 'web_team_page_promolist'
   | 'web_promo_detail'
   | 'web_playoffs'
   | 'web_league_index'
+  // College Football team pages (/cfb/[school]) and their affiliate CTAs, so
+  // PostHog + GA4 can slice CFB clicks out from the pro surfaces.
   | 'web_cfb'
+  // MLB league hub (/mlb) and its interactive sub-surfaces. Distinct from the
+  // generic web_league_index (which covers /teams and any bare /{sport}) so
+  // PostHog and GA4 can break the hub out by module: the this-week rail, the
+  // browse-by-promo-type links, and the division team grid / selector.
+  | 'web_mlb_hub'
+  | 'web_mlb_hub_this_week'
+  | 'web_mlb_hub_promo_type'
+  | 'web_mlb_hub_team_card'
   | 'web_article'
   | 'web_my_teams'
   | 'web_best_promos'
@@ -154,8 +175,9 @@ export type AffiliatePartner =
   | 'stubhub'
   | 'fanatics'
   | 'spothero'
-  | 'booking'
-  | 'ticketmaster';
+  | 'expedia'
+  | 'ticketmaster'
+  | 'ticketnetwork';
 
 export type AffiliateClickProperties = {
   surface: AnalyticsSurface;
@@ -671,10 +693,21 @@ export const trackAffiliateClick = (payload: AffiliateClickPayload) => {
 
 const KNOWN_SURFACES: ReadonlySet<AnalyticsSurface> = new Set<AnalyticsSurface>([
   'web_home',
+  'web_home_tonight',
+  'web_home_this_week',
   'web_team_page',
+  'web_team_page_promolist',
   'web_promo_detail',
   'web_playoffs',
   'web_league_index',
+  // Keep in lockstep with the AnalyticsSurface union above: adding a surface
+  // there but not here makes isKnownSurface() return false and silently
+  // downgrades legacy affiliate clicks to web_other.
+  'web_cfb',
+  'web_mlb_hub',
+  'web_mlb_hub_this_week',
+  'web_mlb_hub_promo_type',
+  'web_mlb_hub_team_card',
   'web_article',
   'web_my_teams',
   'web_best_promos',
@@ -694,6 +727,12 @@ export function inferSurfaceFromPath(path: string): AnalyticsSurface {
   if (path.startsWith('/my-teams')) return 'web_my_teams';
   if (path.startsWith('/best-promos') || path.startsWith('/team-rankings')) return 'web_best_promos';
   if (path.startsWith('/teams')) return 'web_league_index';
+  // College Football team pages — their own surface (pageviews + any path-inferred
+  // click), so CFB never attributes to a pro sport surface.
+  if (path.startsWith('/cfb')) return 'web_cfb';
+  // The bare /mlb league hub gets its own surface. /mlb/{team} is a team page
+  // and is handled by the generic sport match below (it returns web_team_page).
+  if (path === '/mlb') return 'web_mlb_hub';
   // /[sport]/[team] — team pages. Sports are known; anything else falls through.
   const m = path.match(/^\/([a-z]+)(?:\/|$)/);
   if (m && ['mlb', 'nba', 'nhl', 'nfl', 'mls', 'wnba'].includes(m[1])) {

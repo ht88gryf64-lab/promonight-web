@@ -3,10 +3,12 @@ import type { GameContext } from '@/lib/data';
 import type { PlayoffFAQContext } from '@/lib/promo-helpers';
 import type { RecurringDeal } from '@/lib/recurring-deals';
 
+import Link from 'next/link';
 import { archivo } from './fonts';
 import { Hero } from './Hero';
 import { StatScoreboard } from './StatScoreboard';
 import { SeasonExplorer } from './SeasonExplorer';
+import { UpcomingPromoModalProvider } from './UpcomingPromoModal';
 import { AffiliateRail } from './AffiliateRail';
 import { ExploreCard } from './ExploreCard';
 
@@ -69,7 +71,27 @@ export function RedesignTeamPage({
   playoffLastUpdated,
   playoffContext,
 }: RedesignTeamPageProps) {
-  const eyebrow = [team.league, team.division].filter(Boolean).join(' · ');
+  // The league segment links up to the league hub when one exists (MLB today),
+  // so the team page and the /mlb hub form a reciprocal loop (hub links down to
+  // teams, team links up to hub). Leagues without a hub keep a plain-text league
+  // segment so there is never a dead link.
+  const leagueHubHref = team.league === 'MLB' ? '/mlb' : null;
+  const eyebrow = (
+    <>
+      {leagueHubHref ? (
+        <Link
+          href={leagueHubHref}
+          aria-label={`${team.league} promotions and giveaways hub`}
+          className="underline-offset-2 transition-colors hover:text-white hover:underline"
+        >
+          {team.league}
+        </Link>
+      ) : (
+        team.league
+      )}
+      {team.division ? <> · {team.division}</> : null}
+    </>
+  );
 
   return (
     <div className={`${archivo.variable} rd-root min-h-screen`}>
@@ -174,19 +196,27 @@ export function RedesignTeamPage({
               />
             </div>
 
-            {/* Full promo list — upcoming + completed, with show-all. */}
+            {/* Full promo list — upcoming + completed, with show-all. The
+                upcoming rows open the shared game modal (same body the calendar
+                expands inline); the provider holds one Modal for the list.
+                showTeamLink defaults false — the user is already on this team's
+                page. */}
             <div className="order-[40]">
-              <PromoList
-                promos={promos}
-                teamSlug={team.id}
-                teamName={displayName}
-                teamNickname={team.name}
-                sport={team.sportSlug}
-                primaryColor={team.primaryColor}
-                venueName={venue?.name ?? null}
-                variant="light"
-                showAppPitch={false}
-              />
+              <UpcomingPromoModalProvider>
+                <PromoList
+                  promos={promos}
+                  teamSlug={team.id}
+                  teamName={displayName}
+                  teamNickname={team.name}
+                  sport={team.sportSlug}
+                  primaryColor={team.primaryColor}
+                  venueName={venue?.name ?? null}
+                  variant="light"
+                  showAppPitch={false}
+                  team={team}
+                  gameContexts={gameContexts}
+                />
+              </UpcomingPromoModalProvider>
             </div>
 
             {/* Email + app conversion pairing, sitting immediately after the

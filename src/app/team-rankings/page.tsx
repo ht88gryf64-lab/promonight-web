@@ -21,7 +21,7 @@ function localYMD(d: Date): string {
 // Three-variable rule: team count, league set, top score / top team name
 // are all interpolated below. Distinct from /best-promos and /bobbleheads.
 export const metadata: Metadata = {
-  title: `Best Sports Promo Schedules of ${YEAR}: Team-by-Team Rankings`,
+  title: `Best Sports Promo Schedules of ${YEAR}: Team Rankings`,
   description: `All 73 MLB, MLS, and WNBA teams ranked by ${YEAR} promo schedule strength. Texas Rangers leads at score 96; Seattle Storm tops WNBA at 94 and Orlando City tops MLS at 85. Each ranking factors variety, highlights, and the share of major giveaways. Updated weekly.`,
   alternates: { canonical: PAGE_URL },
   openGraph: {

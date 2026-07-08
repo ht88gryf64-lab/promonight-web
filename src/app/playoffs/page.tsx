@@ -1,8 +1,19 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getAllPlayoffPromos, getVenueForTeam } from '@/lib/data';
-import type { PlayoffPromo, Team, Venue, PlayoffConfig } from '@/lib/types';
+import {
+  getAllPlayoffPromos,
+  getVenueForTeam,
+  getPlayoffConfig,
+  getPlayoffPromosForTeam,
+} from '@/lib/data';
+import type {
+  PlayoffPromo,
+  PlayoffPromoWithTeam,
+  Team,
+  Venue,
+  PlayoffConfig,
+} from '@/lib/types';
 import { teamDisplayName, roundLabel, extractOpponent } from '@/lib/promo-helpers';
 import { ParkingCTA } from '@/components/affiliates/ParkingCTA';
 import { HotelsCTA } from '@/components/affiliates/HotelsCTA';
@@ -13,8 +24,10 @@ import { AD_SLOTS } from '@/lib/ads/slots';
 import { StarToggle } from '@/components/star-toggle';
 import { isRedesignEnabled } from '@/lib/redesign';
 import { archivoHouse } from '@/components/redesign/fonts-house';
+import { CHAMPIONS, isChampionsCelebrationActive } from '@/lib/champions-data';
+import { ChampionsCelebration } from '@/components/champions/champions-celebration';
 
-export const revalidate = 3600;
+export const revalidate = 21600;
 
 const PAGE_URL = 'https://www.getpromonight.com/playoffs';
 // Launch date for the /playoffs hub. Static anchor for Article.datePublished;
@@ -22,6 +35,37 @@ const PAGE_URL = 'https://www.getpromonight.com/playoffs';
 const PAGE_PUBLISHED = '2026-04-20T00:00:00-05:00';
 
 export async function generateMetadata(): Promise<Metadata> {
+  // Offseason champions mode swaps in champions-focused metadata. Mirrors the
+  // page's playoffsActive === false gate and auto-reverts next season.
+  const cfg = await getPlayoffConfig().catch(() => null);
+  if (cfg && cfg.playoffsActive === false && isChampionsCelebrationActive()) {
+    const champTitle = '2026 NBA and NHL Champions: Knicks, Hurricanes';
+    const champDescription =
+      'Honoring the New York Knicks (2026 NBA Champions) and Carolina ' +
+      'Hurricanes (2026 Stanley Cup Champions). Parade details, championship ' +
+      'moments, and every playoff giveaway from both runs.';
+    return {
+      title: champTitle,
+      description: champDescription,
+      alternates: { canonical: 'https://www.getpromonight.com/playoffs' },
+      openGraph: {
+        title: `${champTitle} | PromoNight`,
+        description: champDescription,
+        siteName: 'PromoNight',
+        url: 'https://www.getpromonight.com/playoffs',
+        type: 'website',
+        images: [
+          {
+            url: '/og-image.png',
+            width: 1200,
+            height: 630,
+            alt: 'PromoNight 2026 NBA and NHL champions',
+          },
+        ],
+      },
+    };
+  }
+
   // The root layout's title.template ("%s | PromoNight") appends the brand, so
   // this bare title renders as "Playoff Promos & Giveaways 2026 | PromoNight".
   const title = 'Playoff Promos & Giveaways 2026';
@@ -213,8 +257,16 @@ function pickHighlightExample(
 export default async function PlayoffsPage() {
   const { config, byLeague, totalPromos, totalTeams } = await getAllPlayoffPromos();
 
-  if (!config || !config.playoffsActive) {
+  if (!config) {
     notFound();
+  }
+
+  // Offseason: when playoffs are inactive, /playoffs hosts the champions
+  // celebration (auto-hiding at CHAMPIONS_DISPLAY_UNTIL) and an offseason
+  // placeholder instead of 404ing. The live-playoffs hub below only renders
+  // while playoffsActive is true (returns next spring).
+  if (!config.playoffsActive) {
+    return <PlayoffsOffseason />;
   }
 
   const nbaGroups = config.nbaActive ? byLeague.NBA : [];
@@ -723,4 +775,59 @@ function promoTypeColor(type: string): string {
     default:
       return 'var(--color-text-muted)';
   }
+}
+
+// Offseason view: champions celebration (while inside the displayUntil window)
+// plus an offseason placeholder. Rendered in place of the live hub whenever
+// playoffsActive is false. Uses the light redesign surface, which is the live
+// design site-wide.
+async function PlayoffsOffseason() {
+  const showChampions = isChampionsCelebrationActive();
+
+  // Championship-run promo highlights. getPlayoffPromosForTeam is NOT gated on
+  // playoffsActive, so the historical run docs still resolve in the offseason.
+  const promosByTeam: Record<string, PlayoffPromoWithTeam[]> = {};
+  if (showChampions) {
+    const entries = await Promise.all(
+      CHAMPIONS.map(
+        async (c) =>
+          [c.teamId, await getPlayoffPromosForTeam(c.teamId)] as const,
+      ),
+    );
+    for (const [id, promos] of entries) promosByTeam[id] = promos;
+  }
+
+  return (
+    <div className={`${archivoHouse.variable} rd-root min-h-screen`}>
+      {showChampions && (
+        <ChampionsCelebration
+          champions={CHAMPIONS}
+          promosByTeam={promosByTeam}
+        />
+      )}
+
+      <div className="mx-auto max-w-5xl px-6 pb-20 pt-12">
+        <section className="rounded-2xl border border-rd-line bg-rd-card p-6 md:p-8">
+          <span className="font-rd text-[11px] font-semibold uppercase tracking-[0.14em] text-rd-ink-faint">
+            Offseason
+          </span>
+          <h2 className="rd-display mt-1 text-2xl uppercase text-rd-ink md:text-3xl">
+            Playoffs return in October with MLB
+          </h2>
+          <p className="mt-2 max-w-3xl font-rd text-[15px] leading-relaxed text-rd-ink-soft">
+            The 2026 NBA and NHL playoffs are complete. Postseason promo coverage
+            picks back up in October when the MLB playoffs begin, and returns for
+            the NBA and NHL next spring. In the meantime, browse giveaways and
+            theme nights across every team.
+          </p>
+          <Link
+            href="/"
+            className="mt-4 inline-block rounded-xl border border-rd-line-strong px-4 py-2.5 font-rd text-[12px] font-semibold uppercase tracking-[0.08em] text-rd-ink-soft transition-colors hover:border-rd-ink hover:text-rd-ink"
+          >
+            Browse all promos →
+          </Link>
+        </section>
+      </div>
+    </div>
+  );
 }

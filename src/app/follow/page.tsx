@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { DEFAULT_OG_IMAGE } from '@/lib/og';
 import { getAllTeams } from '@/lib/data';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 import { coerceCaptureSurface } from '@/lib/follow-surface';
@@ -20,6 +21,7 @@ export const metadata: Metadata = {
     description:
       'One weekly email with every giveaway, theme night, and food deal for the teams you star.',
     url: 'https://www.getpromonight.com/follow',
+    images: [DEFAULT_OG_IMAGE],
   },
   robots: { index: true, follow: true },
 };

@@ -141,7 +141,7 @@ export const WORLD_CUP_CITIES: WorldCupCity[] = [
     fanFestival: {
       headline: 'Two official fan zones (no single central festival)',
       admission: 'Free',
-      officialUrl: 'https://nynjfwc26.com/fan-zones/',
+      officialUrl: 'https://nynjfwc26.com/fan-events/',
       venues: [
         {
           name: 'Fan Zone Queens, USTA Billie Jean King National Tennis Center',
@@ -181,7 +181,7 @@ export const WORLD_CUP_CITIES: WorldCupCity[] = [
     fanFestival: {
       headline: 'FIFA Fan Festival at Fair Park',
       admission: 'Free, advance registration; paid GA+ and Legend upgrades',
-      officialUrl: 'https://www.dallasfwc26.com/our-venues/fan-festival/',
+      officialUrl: 'https://www.dallasfwc26.com/home/fifafanfestival-dallas/',
       venues: [
         {
           name: 'Fair Park, Dallas',

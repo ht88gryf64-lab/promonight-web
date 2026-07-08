@@ -1,7 +1,7 @@
 /**
  * Fallback city map for <HotelsCTA>, used ONLY when a team lacks venue
  * coordinates in Firestore. Coordinates are the primary path now —
- * buildBookingUrl routes to Booking.com's lat/lng search when available,
+ * buildExpediaHotelLink routes to Expedia's lat/lng search when available,
  * which radiates ~5-10 mi around the venue and sidesteps the entire
  * brand-city-vs-stadium-city string matching problem.
  *

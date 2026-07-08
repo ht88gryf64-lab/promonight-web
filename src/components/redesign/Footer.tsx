@@ -36,6 +36,15 @@ const COMPANY_LINKS: FooterLink[] = [
   { label: 'Contact', href: 'mailto:hello@getpromonight.com', external: true },
 ];
 
+// Discovery hubs. Gives the previously-orphaned scoring pages, the World Cup
+// hub, and the /follow funnel a clean dofollow incoming link on every page.
+const DISCOVER_LINKS: FooterLink[] = [
+  { label: 'Best promos', href: '/best-promos' },
+  { label: 'Team rankings', href: '/team-rankings' },
+  { label: 'World Cup 2026', href: '/world-cup' },
+  { label: 'Follow your teams', href: '/follow' },
+];
+
 function FooterColumn({ heading, links }: { heading: string; links: FooterLink[] }) {
   return (
     <div>
@@ -71,7 +80,7 @@ export function Footer({ year }: FooterProps) {
   return (
     <footer className="w-full border-t border-rd-line-strong bg-rd-ink text-white">
       <div className="mx-auto max-w-6xl px-6 py-14">
-        <div className="grid gap-12 md:grid-cols-[minmax(0,1.4fr)_repeat(2,minmax(0,1fr))]">
+        <div className="grid gap-12 md:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,1fr))]">
           {/* Brand block */}
           <div className="max-w-sm">
             <p className="rd-display text-2xl leading-none">
@@ -87,6 +96,7 @@ export function Footer({ year }: FooterProps) {
 
           {/* Link columns */}
           <FooterColumn heading="Browse" links={BROWSE_LINKS} />
+          <FooterColumn heading="Discover" links={DISCOVER_LINKS} />
           <FooterColumn heading="Company" links={COMPANY_LINKS} />
         </div>
 

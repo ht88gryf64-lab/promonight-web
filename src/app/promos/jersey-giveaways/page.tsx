@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { pageOpenGraph } from '@/lib/og';
 import Link from 'next/link';
 import { IconChevronRight } from '@tabler/icons-react';
 import { getPromosFromDate } from '@/lib/data';
@@ -24,6 +25,7 @@ export const metadata: Metadata = {
   title: `${YEAR} Jersey, Cap & Hoodie Giveaway Nights`,
   description: `Every ${YEAR} jersey, cap, and apparel giveaway across pro sports. First 10,000 to 25,000 fans only. Arrive early. Updated weekly.`,
   alternates: { canonical: 'https://www.getpromonight.com/promos/jersey-giveaways' },
+  openGraph: pageOpenGraph('/promos/jersey-giveaways'),
 };
 
 export default async function JerseyGiveawaysPage() {
@@ -74,6 +76,7 @@ export default async function JerseyGiveawaysPage() {
         description={lead}
         lastUpdated={todayYMD()}
         faqs={faqs}
+        groups={groups}
       />
       <AggregatorPage
         eyebrow="Apparel giveaways"

@@ -136,6 +136,12 @@ export function dedupePromos<T extends { date: string; title: string }>(
   return out;
 }
 
+// Visibility predicate for a soft-deleted (tombstoned) promo. This is an
+// app-code array filter ONLY: absent and false are visible, only true is
+// hidden. It is never used as a Firestore inequality, which would drop
+// field-absent docs and break the "absent = visible" rule.
+export const isVisiblePromo = (p: { tombstoned?: boolean }): boolean => p.tombstoned !== true;
+
 export function formatDateReadable(dateStr: string): string {
   const date = new Date(dateStr + 'T12:00:00');
   return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
@@ -298,7 +304,7 @@ export function generateTeamFAQs(
   // 5d. Travel — hotels (always shown)
   faqs.push({
     question: `Where should I stay near ${venueName}?`,
-    answer: `Several hotels sit within walking distance of ${venueName}, and more are a short rideshare away. For a ${fullName} game weekend, searching Booking.com for hotels near ${venueName} surfaces the best rates for your specific date — prices jump on marquee dates like giveaway nights and playoff games, so booking early helps.`,
+    answer: `Several hotels sit within walking distance of ${venueName}, and more are a short rideshare away. For a ${fullName} game weekend, searching Expedia for hotels near ${venueName} surfaces the best rates for your specific date — prices jump on marquee dates like giveaway nights and playoff games, so booking early helps.`,
   });
 
   // 5e. App — push notifications (always shown, distinct from #5's general pitch)

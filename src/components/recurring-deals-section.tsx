@@ -47,9 +47,9 @@ export function RecurringDealsSection({
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
-            {deals.map((deal, i) => (
+            {deals.map((deal) => (
               <div
-                key={i}
+                key={deal.id}
                 className="bg-rd-card border border-rd-line rounded-2xl p-4 md:p-5 flex gap-4"
               >
                 <div className="flex-shrink-0 pt-0.5">
@@ -90,9 +90,9 @@ export function RecurringDealsSection({
         </div>
 
         <div className="grid gap-3 md:grid-cols-2">
-          {deals.map((deal, i) => (
+          {deals.map((deal) => (
             <div
-              key={i}
+              key={deal.id}
               className="bg-bg-card border border-border-subtle rounded-2xl p-4 md:p-5 flex gap-4"
             >
               <div className="flex-shrink-0 text-2xl leading-none pt-0.5" aria-hidden="true">

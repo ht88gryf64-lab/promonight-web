@@ -1,8 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import type { Promo } from '@/lib/types';
+import type { Promo, Team } from '@/lib/types';
+import type { GameContext } from '@/lib/data';
 import { RedesignPromoRow, type PromoRowShare } from './RedesignPromoRow';
+import type { UpcomingPromoSurface } from './UpcomingPromoModal';
 
 // Lazy-mounts the hidden ("show all") promo rows. The rows are passed as DATA
 // and rendered client-side only after the toggle is opened, so they are NOT in
@@ -16,12 +18,22 @@ export function LazyPromoRows({
   completed = false,
   showLabel,
   hideLabel,
+  team,
+  contexts,
+  interactive = false,
+  surface,
 }: {
   promos: Promo[];
   share: PromoRowShare;
   completed?: boolean;
   showLabel: string;
   hideLabel: string;
+  /** Forwarded to the rows when they should open the shared game modal. */
+  team?: Team;
+  /** Per-row resolved contexts, parallel to `promos`. */
+  contexts?: (GameContext[] | null)[];
+  interactive?: boolean;
+  surface?: UpcomingPromoSurface;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -39,7 +51,16 @@ export function LazyPromoRows({
       {open && (
         <div className="mt-4 space-y-3">
           {promos.map((promo, i) => (
-            <RedesignPromoRow key={i} promo={promo} share={share} completed={completed} />
+            <RedesignPromoRow
+              key={i}
+              promo={promo}
+              share={share}
+              completed={completed}
+              team={team}
+              contexts={contexts?.[i] ?? null}
+              interactive={interactive}
+              surface={surface}
+            />
           ))}
         </div>
       )}
