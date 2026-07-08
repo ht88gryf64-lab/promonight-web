@@ -23,6 +23,13 @@ export interface Team {
   // uses this value to emit `/{slug}-tickets/artist/{id}` URLs which
   // resolve directly without redirect.
   ticketmasterAttractionId?: string;
+  // TicketNetwork performer slug. Defaults to `id` when undefined (see
+  // ticketNetworkLandingUrl). Mirrors ticketmasterSlug: set this only when the
+  // TicketNetwork performer slug differs from PromoNight's internal id — e.g.
+  // CFB schools whose id is a short common name ("minnesota") but whose TN
+  // performer is the full team slug ("minnesota-golden-gophers"). Pro teams
+  // leave it unset and fall through to the id-based default rule.
+  ticketNetworkSlug?: string;
   // Fully-qualified canonical Fanatics team-store URL —
   // `https://www.fanatics.com/{league}/{slug}/o-N+t-N+z-N-N`. This is the
   // field FanaticsCTA renders. Stored as a full URL (not a path) on purpose:

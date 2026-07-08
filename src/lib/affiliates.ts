@@ -311,16 +311,20 @@ const TICKETNETWORK_OVERRIDES: Record<string, { slug?: string; path?: string }> 
 // for a team, applying any override. Returns null when no slug resolves so
 // callers never emit a broken ticket link. Exported for the validate-on-build
 // script, which HTTP-checks these landing URLs.
-export function ticketNetworkLandingUrl(team: Pick<Team, 'id'>): string | null {
+export function ticketNetworkLandingUrl(team: Pick<Team, 'id' | 'ticketNetworkSlug'>): string | null {
   const override = TICKETNETWORK_OVERRIDES[team.id];
-  const slug = override?.slug ?? team.id;
+  // Slug precedence mirrors ticketmasterSlug: an explicit ticketNetworkSlug on
+  // the Team (e.g. a CFB school's full football slug) wins over the id-based
+  // default, so a short id like "minnesota" resolves the TN performer
+  // "minnesota-golden-gophers" instead of the ambiguous "minnesota".
+  const slug = team.ticketNetworkSlug ?? override?.slug ?? team.id;
   if (!slug) return null;
   const path = override?.path ?? TICKETNETWORK.defaultPath;
   return `${TICKETNETWORK.performerHost}${path}${slug}-tickets`;
 }
 
 export type TicketNetworkLinkOpts = {
-  team: Pick<Team, 'id'>;
+  team: Pick<Team, 'id' | 'ticketNetworkSlug'>;
   /** subId1 surface segment, already including the `web_` prefix
    *  (e.g. 'web_team_page'). Away-game CTAs pass 'web_away_game' so attribution
    *  matches the Expedia pubref convention (see lib/hotel-link.ts). */

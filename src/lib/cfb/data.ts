@@ -29,7 +29,10 @@ export interface CfbGameView {
   kickoffDisplay: string; // "7:30 PM ET" only when verified+announced; else "Kickoff TBA"
   kickoffVerified: boolean;
   networkDisplay: string | null; // only when broadcast.confirmed
-  rivalry: { name: string; trophy: string | null } | null; // tag-as-fact, crown none
+  // tag-as-fact, crown none. sourceUrl = the stored corroborating trophy-article
+  // URL (cfbRivalries.source — the trophy's own Wikipedia page, never the list),
+  // surfaced so the tag can link out; null when no valid URL is stored.
+  rivalry: { name: string; trophy: string | null; sourceUrl: string | null } | null;
   // Road-trip planner (away games only): the opponent's school+venue, present only
   // when the opponent is one of the 86 tracked schools AND has a resolved venue.
   // Used to build the SITE-STANDARD hotels/parking CTAs near the destination stadium.
@@ -51,6 +54,21 @@ export interface CfbSchoolPage {
     venueInTheirWords: string | null;
     contributor: { name: string; credit: string } | null;
   };
+}
+
+// Extract the trophy's OWN article link from the stored rivalry provenance.
+// cfbRivalries.source is a provenance TRAIL, not a single URL — the re-extraction
+// stores "<master list URL> + <trophy/rivalry article URL>". We surface the
+// trophy's own article (the specific corroborating second source), never the
+// generic list page. Returns null (→ plain-text tag, never a broken link) when
+// no non-list en.wikipedia article is present.
+function safeHttpUrl(source: string | null | undefined): string | null {
+  if (!source) return null;
+  const urls = source.match(/https:\/\/en\.wikipedia\.org\/wiki\/[^\s"]+/g);
+  if (!urls) return null;
+  const trophy = urls.find((u) => !/\/wiki\/List_of/i.test(u));
+  if (!trophy) return null;
+  try { new URL(trophy); return trophy; } catch { return null; }
 }
 
 function prettifySlug(slug: string): string {
@@ -162,7 +180,7 @@ export async function getCfbSchoolPage(id: string): Promise<CfbSchoolPage | null
       opponentId, opponentName: nameById.get(opponentId) || prettifySlug(opponentId),
       kickoffDisplay: kd.display, kickoffVerified: kd.verified,
       networkDisplay: g.broadcast?.confirmed && g.broadcast.network && !/tbd/i.test(g.broadcast.network) ? g.broadcast.network : null,
-      rivalry: riv ? { name: riv.name, trophy: riv.trophy } : null,
+      rivalry: riv ? { name: riv.name, trophy: riv.trophy, sourceUrl: safeHttpUrl(riv.source) } : null,
       awaySchool: oppSchool, awayVenue: oppVenue,
     });
   }

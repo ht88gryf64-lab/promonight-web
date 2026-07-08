@@ -24,7 +24,11 @@ export function toAffiliateTeam(school: CfbSchool, city?: string | null): Team {
     league: 'ncaaf',
     sportSlug: 'cfb',
     division: school.conferenceBySeason?.['2026'] || '',
+    // Both ticket vendors resolve to the FULL football slug ("minnesota-golden-
+    // gophers"), not the short school id — so TM and TicketNetwork both land on
+    // the team, not the pro club / an ambiguous performer.
     ticketmasterSlug: slugifySchool(fullName),
+    ticketNetworkSlug: slugifySchool(fullName),
   } as Team;
 }
 
