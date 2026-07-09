@@ -10,6 +10,7 @@
 
 import type { AnalyticsSurface } from './analytics';
 import type { Team } from './types';
+import { FANATICS_AD_IDS } from './fanatics-ad-ids';
 
 const SEATGEEK_AID = process.env.NEXT_PUBLIC_SEATGEEK_AID ?? '';
 const STUBHUB_RID = process.env.NEXT_PUBLIC_STUBHUB_RID ?? '';
@@ -20,12 +21,6 @@ const SPOTHERO_ID = process.env.NEXT_PUBLIC_SPOTHERO_ID ?? '';
 // Ticketmaster CTA falls back to a bare ticketmaster.com link with no
 // commission attribution — graceful pre-approval behavior.
 const TICKETMASTER_IMPACT_WRAP = process.env.NEXT_PUBLIC_TICKETMASTER_IMPACT_WRAP ?? '';
-// Same wrap pattern for Fanatics. When unset (today), buildFanaticsUrl emits
-// a direct fanatics.com URL with the canonical Impact attribution params
-// (SSAID + utm + irgwc + sharedid) — confirmed via a real test click that
-// returned a tracking pixel response. When set (after Mike confirms deep
-// linking works), the URL builder transparently switches to the wrap form.
-const FANATICS_IMPACT_WRAP = process.env.NEXT_PUBLIC_FANATICS_IMPACT_WRAP ?? '';
 
 export type AffiliatePartner =
   | 'seatgeek'
@@ -65,12 +60,11 @@ export function isPartnerActive(partner: AffiliatePartner): boolean {
     case 'stubhub':
       return STUBHUB_RID.length > 0;
     case 'fanatics':
-      // Bridge period: tracking is "active" only once the Impact wrap env
-      // var is set. The direct-URL SSAID path also attributes (SSAID is hard-
-      // coded in buildFanaticsUrl), but PostHog's affiliate_tracking_active
-      // flag flips on confirmed-wrap so the bridge vs wrap-active periods
-      // get a clean reporting boundary.
-      return FANATICS_IMPACT_WRAP.length > 0;
+      // The Impact /c/ prefix, account, campaign and adIds are hardcoded
+      // constants baked into every Fanatics link (no env var), so the outbound
+      // link is always commissionable and tracking is always active (same
+      // model as TicketNetwork and Expedia).
+      return true;
     case 'spothero':
       return SPOTHERO_ID.length > 0;
     case 'expedia':
@@ -120,12 +114,11 @@ export function stubHubUrl(rawUrl: string, opts: AffiliateLinkOptions): string {
   return url.toString();
 }
 
-/** @deprecated Fanatics URLs are now wrap-resolved by `buildFanaticsUrl` at
- *  the call site, where team + surface are known. The full URL ships from the
- *  builder with all Impact attribution params embedded — there is nothing
- *  left to tag here, so re-tag is a passthrough. Retained as a no-op so the
- *  `buildAffiliateUrl('fanatics', ...)` switch case below stays self-evident
- *  alongside the other partners. */
+/** @deprecated Fanatics links are fully assembled by `buildFanaticsUrl` at the
+ *  call site, where team + surface are known. The Impact `/c/` prefix, adId
+ *  and subId1 are already baked in, and re-tagging would corrupt the encoded
+ *  `u` param. Retained as a no-op so the `buildAffiliateUrl('fanatics', ...)`
+ *  switch case below stays self-evident alongside the other partners. */
 export function fanaticsUrl(rawUrl: string, _opts: AffiliateLinkOptions): string {
   return rawUrl;
 }
@@ -149,7 +142,9 @@ export function buildAffiliateUrl(
     case 'stubhub':
       return stubHubUrl(rawUrl, opts);
     case 'fanatics':
-      // Wrap-resolved by buildFanaticsUrl at the call site — passthrough.
+      // Fanatics links are fully assembled by `buildFanaticsUrl` at the call
+      // site: the Impact prefix, adId, and subId1 are already baked in. Do
+      // NOT re-tag; re-encoding would corrupt the `u` deep-link param.
       return rawUrl;
     case 'spothero':
       return spotHeroUrl(rawUrl, opts);
@@ -346,47 +341,114 @@ export function buildTicketNetworkLink(opts: TicketNetworkLinkOpts): string | nu
   );
 }
 
+// ── Fanatics (Impact) ────────────────────────────────────────────────────
+// Same model as TicketNetwork above: a FIXED Impact `/c/` prefix with constant
+// account + campaign ids, NO env var, and NO render-time re-tag
+// (buildAffiliateUrl passes 'fanatics' through unchanged). The canonical team
+// store URL rides as the `u` deep-link param.
+//
+// Links previously pointed straight at www.fanatics.com, which fired PostHog
+// `affiliate_click` but logged nothing in Impact: the click never crossed an
+// Impact redirect, so no irclickid was ever minted. Routing through `/c/`
+// is what makes the click attributable.
+//
+// Only the adId segment varies per team; see FANATICS_AD_IDS. Teams with no
+// mapped adId use genericAdId, which deep-links and attributes identically.
+//
+// Final structure, byte-identical to the validated reference (Twins,
+// web_team_page surface):
+//   https://fanatics.93n6tx.net/c/7236189/618882/9663?subId1=web_team_page_minnesota-twins&u=<ENCODED_DESTINATION>
+// Built as a raw string (NOT URLSearchParams) so the single encodeURIComponent
+// of the destination stays byte-exact: the store paths contain '+' catalog
+// separators that MUST survive as %2B, and URLSearchParams would emit '+' for
+// spaces and re-encode the '%' of an already-encoded value.
+const FANATICS = {
+  origin: 'https://fanatics.93n6tx.net',
+  account: '7236189',
+  campaignId: '9663',
+  // Used when a team has no entry in FANATICS_AD_IDS: Impact's generic
+  // Fanatics tracking link. Deep-links via `u` exactly like the per-team ads.
+  genericAdId: '586570',
+  storeOrigin: 'https://www.fanatics.com',
+} as const;
+
+// Session-scoped params that Fanatics and Impact append to a URL as you browse.
+// They are meaningless (and actively harmful) baked into a stored destination:
+// a stale irclickid inside `u` can misattribute the click to whoever earned it
+// originally. Today all 169 stored fanaticsUrl values are clean; this strip is
+// defense-in-depth against a future copy-paste out of a live browsing session.
+const FANATICS_RUNTIME_PARAMS = ['_ref', 'irclickid', 'irgwc', 'afsrc', '_s', 'ssaid'];
+
+/** Strips session tracking params from a stored destination. Matching is
+ *  case-insensitive (SSAID ships uppercase); `utm_*` is stripped by prefix.
+ *  A destination with no query string is returned untouched, so the common
+ *  case stays byte-identical to what Firestore holds. Unparseable input is
+ *  passed through rather than dropped, on the grounds that a broken link beats
+ *  no link at all. */
+export function stripFanaticsRuntimeParams(rawUrl: string): string {
+  // Short-circuit the common case. Every stored fanaticsUrl is query-less, and
+  // round-tripping through URL would silently normalize it (a bare origin gains
+  // a trailing slash, hosts lowercase, default ports vanish). Returning early
+  // makes "byte-identical" a property of the code, not an accident of the data.
+  if (!rawUrl.includes('?')) return rawUrl;
+
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    return rawUrl;
+  }
+  // Snapshot the keys: deleting while iterating searchParams skips entries.
+  for (const key of [...url.searchParams.keys()]) {
+    const k = key.toLowerCase();
+    if (k.startsWith('utm_') || FANATICS_RUNTIME_PARAMS.includes(k)) {
+      url.searchParams.delete(key);
+    }
+  }
+  // Drop the '?' that URL leaves behind once the last param is deleted.
+  if ([...url.searchParams.keys()].length === 0) url.search = '';
+  return url.toString();
+}
+
 // FanaticsOpts: the canonical team-store URL lives on the Team document as
 // `fanaticsUrl` (populated by scripts/migrate-fanatics-path-to-url.ts).
 // `fanaticsPath` is the legacy root-relative form, accepted as a fallback
-// for one deploy cycle. Surface rides as Impact's `{SHARED_ID}` for
-// partner-side reporting. The FanaticsCTA component gates render on a
-// populated URL/path — when both are missing the card doesn't show at all,
-// so this builder's empty case is a defensive last resort.
+// for one deploy cycle. `id` selects the per-team adId and rides subId1 for
+// cross-partner joins. The FanaticsCTA component gates render on a populated
+// URL/path. When both are missing the card doesn't show at all (this is what
+// omits the 86 CFB schools, whose adapter never sets either field), so this
+// builder's empty case is a defensive last resort.
 export interface FanaticsOpts {
-  team: Pick<Team, 'fanaticsUrl' | 'fanaticsPath'>;
+  team: Pick<Team, 'id' | 'fanaticsUrl' | 'fanaticsPath'>;
   surface: AnalyticsSurface;
 }
 
-// Composes the outbound Fanatics URL from the canonical fanaticsUrl.
+// Assembles the full tracked Fanatics link.
 //
 // Source precedence: prefer the fully-qualified `fanaticsUrl`. Fall back to
 // `'https://www.fanatics.com' + fanaticsPath` for any team doc not yet
 // migrated. TODO(fanatics-url-cleanup): drop the fanaticsPath fallback once
 // production has baked and the field is gone from the team docs.
 //
-// Wrap mode (NEXT_PUBLIC_FANATICS_IMPACT_WRAP set): wrap the canonical
-// destination through Impact's tracking domain. {TARGET} receives the
-// URL-encoded canonical URL; {SHARED_ID} receives the surface tag.
-//
-// Bare mode (env unset): return the canonical URL untagged. Click still
-// routes the user to the right team store, just without commission
-// attribution. Same graceful pre-approval semantics as
-// buildTicketmasterUrl — see notes there.
+// subId1 mirrors buildTicketNetworkLink exactly (`${surface}_${team.id}`), so
+// Fanatics and TicketNetwork revenue joins on the same key in Impact reports.
+// Per-promo attribution stays on PostHog's affiliate_click event.
 export function buildFanaticsUrl(opts: FanaticsOpts): string {
-  const directUrl =
+  const rawUrl =
     opts.team.fanaticsUrl ??
-    (opts.team.fanaticsPath ? `https://www.fanatics.com${opts.team.fanaticsPath}` : '');
+    (opts.team.fanaticsPath ? `${FANATICS.storeOrigin}${opts.team.fanaticsPath}` : '');
   // Defensive: caller (FanaticsCTA) is expected to gate render on a populated
-  // URL/path, so an empty directUrl here means a logic bug upstream. Land on
-  // the homepage rather than emit a 404-ing URL.
-  if (!directUrl) return 'https://www.fanatics.com';
+  // URL/path, so an empty rawUrl here means a logic bug upstream. Land on the
+  // store homepage rather than emit a 404-ing URL, still through Impact so
+  // the click is attributed even in the bug case.
+  const destination = stripFanaticsRuntimeParams(rawUrl || FANATICS.storeOrigin);
+  const adId = FANATICS_AD_IDS[opts.team.id] ?? FANATICS.genericAdId;
 
-  if (!FANATICS_IMPACT_WRAP) return directUrl;
-
-  return FANATICS_IMPACT_WRAP
-    .replace('{TARGET}', encodeURIComponent(directUrl))
-    .replace('{SHARED_ID}', encodeURIComponent(opts.surface));
+  return (
+    `${FANATICS.origin}/c/${FANATICS.account}/${adId}/${FANATICS.campaignId}` +
+    `?subId1=${opts.surface}_${opts.team.id}` +
+    `&u=${encodeURIComponent(destination)}`
+  );
 }
 
 export type SpotHeroOpts = {
