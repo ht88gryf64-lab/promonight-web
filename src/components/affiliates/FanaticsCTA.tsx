@@ -15,12 +15,11 @@ import { TrackedAffiliateLink } from '@/components/tracked-affiliate-link';
 // only the canonical URL resolves, so linking without a populated one is
 // broken-by-design.
 //
-// URL routing: buildFanaticsUrl wraps the canonical path through Impact
-// when NEXT_PUBLIC_FANATICS_IMPACT_WRAP is set; otherwise returns the
-// bare canonical URL (link routes to the team store, no commission
-// attribution). PostHog `affiliate_tracking_active` flips false → true
-// at the moment the env var is set, giving a clean reporting boundary
-// between the bridge period and the wrap-active period.
+// URL routing: buildFanaticsUrl always wraps the canonical store URL through
+// Impact's `/c/` redirect, carrying the destination in the `u` deep-link
+// param. There is no env var and no bare-URL fallback: an unwrapped
+// fanatics.com href fires PostHog `affiliate_click` but mints no irclickid,
+// so Impact logs nothing.
 
 type Props = {
   team: Team;
