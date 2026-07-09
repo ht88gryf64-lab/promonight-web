@@ -55,6 +55,12 @@ export interface CfbVenue {
   capacityVerifiedAt?: string; // ISO
   lat: number;
   lng: number;
+  // Coordinate audit trail (backfill pass): populated only when 2 independent
+  // sources (Wikipedia article coord + OpenStreetMap) agree within tolerance.
+  // Wrong stadium coords send Expedia/SpotHero to the wrong place.
+  coordsVerified?: boolean;
+  coordsSources?: string[]; // [wikipediaUrl, osmUrl]
+  coordsVerifiedAt?: string; // ISO
   homeSchoolId: string;
   sharedSchoolIds: string[];
   // Prose, editorial — populated in the editorial pass, not the pipeline.
