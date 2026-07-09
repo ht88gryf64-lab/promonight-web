@@ -7,6 +7,21 @@ import type { Team, Venue } from '@/lib/types';
 import type { CfbSchool, CfbVenue } from '@/lib/cfb/types';
 import { slugifySchool } from '@/lib/cfb/rules';
 
+// TicketNetwork slug overrides (audit/cfb-affiliate-validation.md). TN fuzzy-serves
+// a 200 for unknown slugs, so the default `slugifySchool(name+mascot)` lands on the
+// WRONG performer for these 6 — verified by RENDERED title/body, not a 200 (e.g.
+// "ole-miss-rebels" → "Gay Ole Opry", "nc-state-wolfpack" → "NC State Symphonic
+// Band"). These are the confirmed-correct TN performer slugs. Same idea as the pro
+// TICKETNETWORK_OVERRIDES table, but applied to the CFB ticketNetworkSlug.
+const CFB_TN_SLUG_OVERRIDES: Record<string, string> = {
+  'ole-miss': 'mississippi-rebels',
+  'nc-state': 'north-carolina-state-wolfpack',
+  'south-florida': 'south-florida-bulls',
+  army: 'army-west-point-black-knights',
+  smu: 'smu-mustangs-football',
+  'appalachian-state': 'appalachian-state-mountaineers',
+};
+
 /** cfbSchool -> a Team-shaped object for the affiliate CTAs. The CTAs use a subset
  *  (name/id/city/ticketmasterSlug); the rest are filled with CFB values. TM has no
  *  attraction id for CFB, so buildTicketmasterUrl falls back to `/{slug}-tickets` —
@@ -28,7 +43,7 @@ export function toAffiliateTeam(school: CfbSchool, city?: string | null): Team {
     // gophers"), not the short school id — so TM and TicketNetwork both land on
     // the team, not the pro club / an ambiguous performer.
     ticketmasterSlug: slugifySchool(fullName),
-    ticketNetworkSlug: slugifySchool(fullName),
+    ticketNetworkSlug: CFB_TN_SLUG_OVERRIDES[school.id] ?? slugifySchool(fullName),
   } as Team;
 }
 
