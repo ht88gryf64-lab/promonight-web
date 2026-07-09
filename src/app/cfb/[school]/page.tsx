@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import type { CSSProperties } from 'react';
 import { notFound } from 'next/navigation';
 import { getAllCfbSchoolIds, getCfbSchoolPage } from '@/lib/cfb/data';
+import { buildCfbTeamMetadata } from '@/lib/cfb/metadata';
 import { resolveCfbTheme, cfbThemeVars } from '@/lib/cfb/theme';
 import { CfbSchoolPage } from '@/components/cfb/CfbSchoolPage';
 
@@ -16,16 +17,9 @@ export async function generateMetadata({ params }: { params: Promise<{ school: s
   const { school } = await params;
   const data = await getCfbSchoolPage(school);
   if (!data) return {};
-  const year = 2026; // hardcoded, never getFullYear() (feedback_hardcode_season_year_in_seo_copy)
-  const s = data.school;
-  const venue = data.venue;
-  const title = `${s.name} Football ${year} Schedule & Gameday`;
-  const desc = `${s.name} ${year} football schedule${venue ? ` at ${venue.name}` : ''} — every game, opponents, rivalry games with trophies, and gameday info for planning a ${s.shortName} Saturday.`;
-  return {
-    title,
-    description: desc.length > 250 ? desc.slice(0, 247).trimEnd() + '…' : desc,
-    alternates: { canonical: `/cfb/${school}` },
-  };
+  // Tier-derived, rivalry/travel-angled, within engine limits (§12/§13). Hardcoded
+  // 2026 lives in the helper (never getFullYear() — feedback_hardcode_season_year).
+  return buildCfbTeamMetadata(data);
 }
 
 // Quality floor (decision record §4): a page indexes only if it carries enough

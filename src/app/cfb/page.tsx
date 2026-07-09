@@ -1,5 +1,5 @@
-import type { Metadata } from 'next';
 import { getCfbHubData } from '@/lib/cfb/hub-data';
+import { buildCfbHubMetadata } from '@/lib/cfb/metadata';
 import { instrumentSerif } from '@/components/cfb/fonts';
 import { NationalBlock, WeekCard, ThemeCard } from '@/components/cfb/hub/blocks';
 import { CfbHubBrowse } from '@/components/cfb/hub/CfbHubBrowse';
@@ -15,13 +15,9 @@ const SERIF = 'var(--font-cfb-serif), Georgia, serif';
 const MONO = 'var(--font-mono), ui-monospace, monospace';
 const SANS = 'var(--font-outfit), system-ui, sans-serif';
 
-export const metadata: Metadata = {
-  // Rivalry-first per §13 (schedule head terms are unwinnable; rivalry/theme are the wedge).
-  title: 'College Football 2026: Rivalries, Road Trips & Gameday',
-  description:
-    'Every 2026 college football rivalry game with trophies, theme nights, and gameday plans for 86 teams — The Game, Iron Bowl, Red River, and every Saturday that matters.',
-  alternates: { canonical: '/cfb' },
-};
+// Rivalry-first per §13 (schedule head terms unwinnable; rivalry/theme are the
+// wedge). Tier + OG handled in one place with the team pages.
+export const metadata = buildCfbHubMetadata();
 
 function SectionLabel({ children, sub, right }: { children: React.ReactNode; sub?: string; right?: string }) {
   return (
