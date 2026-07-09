@@ -42,6 +42,10 @@ export interface RedesignHomePageProps {
   teamsForGrid: Team[];
   teamPromoCounts: Record<string, number>;
   promoCount: number;
+  /** Total pro teams, DERIVED from getAllTeams().length in page.tsx (never
+   *  hardcoded) — the "N teams" headline. CFB is a separate stream and is not
+   *  counted here. */
+  teamCount: number;
   lastUpdated: string;
   /** Resolved home-game context(s) for the upcoming-promo cards, keyed
    *  `${team.id}:${date}`. Built server-side in page.tsx (MLB/NFL only); promos
@@ -64,6 +68,7 @@ export function RedesignHomePage({
   teamsForGrid,
   teamPromoCounts,
   promoCount,
+  teamCount,
   lastUpdated,
   resolvedContexts,
 }: RedesignHomePageProps) {
@@ -109,7 +114,7 @@ export function RedesignHomePage({
             Every promo at every game.
           </h1>
           <p className="mt-4 max-w-2xl font-rd text-lg text-white/70">
-            167 teams · 6 leagues · updated daily. Find tonight&apos;s giveaways, theme
+            {teamCount} teams · 6 leagues · updated daily. Find tonight&apos;s giveaways, theme
             nights, and food deals.
           </p>
           <p className="mt-3 font-rd text-[11px] uppercase tracking-[0.12em] text-white/45">
@@ -153,7 +158,7 @@ export function RedesignHomePage({
               trackProps={{ surface: 'hero' }}
               className="inline-flex items-center gap-1.5 font-rd text-sm text-white/65 transition-colors hover:text-white"
             >
-              Browse all 167 teams
+              Browse all {teamCount} teams
               <IconArrowRight size={15} stroke={2} />
             </TrackedTapLink>
           </div>
@@ -284,7 +289,7 @@ export function RedesignHomePage({
               href="/teams"
               className="hidden shrink-0 items-center gap-1 font-rd text-sm font-semibold text-rd-red hover:underline md:inline-flex"
             >
-              View all 167 teams
+              View all {teamCount} teams
               <IconArrowRight size={15} stroke={2.25} />
             </Link>
           </div>

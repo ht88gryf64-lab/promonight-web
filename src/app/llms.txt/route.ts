@@ -1,11 +1,11 @@
 export function GET() {
   const content = `# PromoNight
 
-PromoNight is a mobile app and website that tracks every promotional event -- giveaways, theme nights, food deals, and kids events -- across 167 professional sports teams in MLB, NBA, NFL, NHL, MLS, and WNBA.
+PromoNight is a mobile app and website that tracks every promotional event -- giveaways, theme nights, food deals, and kids events -- across 169 professional sports teams in MLB, NBA, NFL, NHL, MLS, and WNBA.
 
 ## Content Categories
 
-- Team promo schedules: Complete lists of upcoming promotional events for each of 167 teams
+- Team promo schedules: Complete lists of upcoming promotional events for each of 169 teams
 - Giveaway calendars: Bobblehead nights, jersey giveaways, and collectible item schedules
 - Completed giveaways: Past bobblehead promos stay listed on team pages and the bobblehead calendar with current eBay resale availability
 - Theme nights: Star Wars nights, pride nights, faith nights, and other themed game events

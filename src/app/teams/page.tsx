@@ -9,18 +9,23 @@ export const revalidate = 86400;
 
 // Description carries four distinct variables (count, league set, year,
 // promo-type list) so the metadata three-variable rule holds without
-// reusing copy from another page.
-const TEAM_COUNT = 167;
+// reusing copy from another page. The count is DERIVED from getAllTeams()
+// (never hardcoded) so it can't go stale; the season year is hardcoded
+// deliberately (never getFullYear() in SEO copy).
 const LEAGUE_SET = 'MLB, NBA, NHL, NFL, MLS, and WNBA';
 const PROMO_TYPES =
   'bobblehead nights, jersey giveaways, theme nights, and food deals';
+const SEASON_YEAR = 2026;
 
-export const metadata: Metadata = {
-  title: `All ${TEAM_COUNT} Pro Sports Teams · Promo Calendars by League`,
-  description: `Browse all ${TEAM_COUNT} pro sports teams across ${LEAGUE_SET} in ${new Date().getFullYear()}. Star your teams to follow ${PROMO_TYPES} as they're announced.`,
-  alternates: { canonical: 'https://www.getpromonight.com/teams' },
-  openGraph: pageOpenGraph('/teams'),
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const teamCount = (await getAllTeams()).length;
+  return {
+    title: `All ${teamCount} Pro Sports Teams · Promo Calendars by League`,
+    description: `Browse all ${teamCount} pro sports teams across ${LEAGUE_SET} in ${SEASON_YEAR}. Star your teams to follow ${PROMO_TYPES} as they're announced.`,
+    alternates: { canonical: 'https://www.getpromonight.com/teams' },
+    openGraph: pageOpenGraph('/teams'),
+  };
+}
 
 export default async function TeamsPage() {
   const teams = await getAllTeams();
@@ -50,7 +55,7 @@ export default async function TeamsPage() {
               FIND YOUR TEAM
             </h1>
             <p className="mt-3 max-w-xl font-rd text-base text-white/65">
-              {TEAM_COUNT} teams across {LEAGUE_SET}. Star your teams to follow their promos.
+              {teams.length} teams across {LEAGUE_SET}. Star your teams to follow their promos.
             </p>
           </div>
         </section>
@@ -73,7 +78,7 @@ export default async function TeamsPage() {
             FIND YOUR TEAM
           </h1>
           <p className="text-text-secondary mt-3 max-w-xl">
-            Browse {TEAM_COUNT} teams across {LEAGUE_SET}. Star your teams to
+            Browse {teams.length} teams across {LEAGUE_SET}. Star your teams to
             follow their promos.
           </p>
         </div>

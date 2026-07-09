@@ -53,6 +53,7 @@ export type AnalyticsEvent =
   | 'team_ranking_row_tap'
   | 'load_more_tap'
   | 'league_filter_change'
+  | 'cfb_conf_nav'
   | 'resale_click';
 
 // `TONIGHT_AND_TOMORROW` is retained for backwards-compatibility with dashboards
@@ -511,7 +512,17 @@ export type EventPropertiesMap = {
   team_ranking_row_tap: TeamRankingRowTapProperties;
   load_more_tap: LoadMoreTapProperties;
   league_filter_change: LeagueFilterChangeProperties;
+  cfb_conf_nav: CfbConfNavProperties;
   resale_click: ResaleClickProperties;
+};
+
+// Fires when a user taps a conference chip (or "View the full hub") in the CFB
+// sub-row of the pro team browser (home / /teams). CFB routes OUT to the /cfb
+// hub, so this marks the hand-off. `conf` is a conference slug ('sec',
+// 'big-ten', …) or 'all' for the full-hub link.
+export type CfbConfNavProperties = {
+  surface: 'homepage' | 'teams_page';
+  conf: string;
 };
 
 // Redesigned collection pages (gate-on /promos/*): the league chips are newly

@@ -96,7 +96,7 @@ export default async function ThemeNightsPage() {
     });
   }
 
-  const lead = `Every theme night scheduled across MLB, NBA, NHL, NFL, MLS, and WNBA in ${YEAR}. Grouped by theme category, from Star Wars nights and fireworks spectaculars to heritage and community celebrations. ${themes.length} theme nights currently tracked across 167 teams.`;
+  const lead = `Every theme night scheduled across MLB, NBA, NHL, NFL, MLS, and WNBA in ${YEAR}. Grouped by theme category, from Star Wars nights and fireworks spectaculars to heritage and community celebrations. ${themes.length} theme nights currently tracked across 169 teams.`;
 
   const faqs = [
     {

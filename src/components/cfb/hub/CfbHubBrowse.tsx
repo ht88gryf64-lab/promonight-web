@@ -7,9 +7,10 @@
 // conference. This is a client component, but Next SSRs its initial markup, so
 // all 86 links are present in the served HTML.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import type { HubTeam } from '@/lib/cfb/hub-data';
+import { bucketForConfSlug } from '@/lib/cfb/conferences';
 
 const GOLD = '#FFB71E';
 const MONO = 'var(--font-mono), ui-monospace, monospace';
@@ -19,6 +20,16 @@ export function CfbHubBrowse({ browse, total }: { browse: { bucket: string; team
   const [q, setQ] = useState('');
   const buckets = ['All', ...browse.map((b) => b.bucket)];
   const query = q.trim().toLowerCase();
+
+  // Honor a /cfb?conf=<slug> deep link (the pro-browser conference sub-row links
+  // here). Read client-side from the URL so the page stays STATICALLY rendered
+  // (all 86 links in the SSR HTML for crawlability) — the param only sets the
+  // initial visibility filter after hydration. Unknown/missing slug -> "All".
+  useEffect(() => {
+    const slug = new URLSearchParams(window.location.search).get('conf');
+    const bucket = bucketForConfSlug(slug);
+    if (bucket && browse.some((b) => b.bucket === bucket)) setConf(bucket);
+  }, [browse]);
 
   const chip = (t: HubTeam, bucket: string) => {
     const show = (conf === 'All' || conf === bucket) && (query === '' || t.name.toLowerCase().includes(query) || t.shortName.toLowerCase().includes(query));

@@ -19,7 +19,7 @@ export async function Footer() {
               <span className="text-accent-red">NIGHT</span>
             </div>
             <p className="text-text-secondary text-sm leading-relaxed max-w-sm">
-              Track every giveaway, theme night, food deal, and promotion across 167 teams in MLB, NBA, NHL, NFL, MLS, and WNBA.
+              Track every giveaway, theme night, food deal, and promotion across 169 teams in MLB, NBA, NHL, NFL, MLS, and WNBA.
             </p>
           </div>
 

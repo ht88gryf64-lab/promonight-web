@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 export const revalidate = 86400;
 
 export default async function MyTeamsPage() {
-  // All 167 teams pass through the server boundary so the client view can
+  // All 169 teams pass through the server boundary so the client view can
   // resolve team metadata (color, name, sport) for both featured-state
   // suggestions and starred-list rendering without a second round-trip.
   const teams = await getAllTeams();

@@ -334,6 +334,7 @@ export default async function HomePage() {
         teamsForGrid={teamsForGrid}
         teamPromoCounts={teamPromoCounts}
         promoCount={promoCount}
+        teamCount={allTeams.length}
         lastUpdated={lastUpdated}
         resolvedContexts={resolvedContexts}
       />
@@ -356,7 +357,7 @@ export default async function HomePage() {
             EVERY PROMO AT EVERY GAME.
           </h1>
           <p className="text-text-secondary text-lg md:text-xl leading-relaxed max-w-2xl mb-4">
-            167 teams, 6 leagues, updated daily. Find tonight&apos;s giveaways,
+            {allTeams.length} teams, 6 leagues, updated daily. Find tonight&apos;s giveaways,
             theme nights, and food deals.
           </p>
           <p className="font-mono text-[11px] tracking-[0.08em] uppercase text-text-muted mb-10">
@@ -372,7 +373,7 @@ export default async function HomePage() {
               trackProps={{ surface: 'hero' }}
               className="inline-flex items-center gap-1.5 text-text-secondary hover:text-white text-sm font-mono tracking-[0.05em] transition-colors"
             >
-              Browse all 167 teams
+              Browse all {allTeams.length} teams
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
               </svg>
@@ -404,14 +405,14 @@ export default async function HomePage() {
                 Find your team
               </span>
               <h2 className="font-display text-3xl md:text-4xl tracking-[1px] mt-2">
-                167 TEAMS ACROSS 6 LEAGUES
+                {allTeams.length} TEAMS ACROSS 6 LEAGUES
               </h2>
             </div>
             <Link
               href="/teams"
               className="hidden md:inline-flex items-center gap-1 text-accent-red text-sm font-mono hover:underline flex-shrink-0"
             >
-              View all 167 teams
+              View all {allTeams.length} teams
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
               </svg>
@@ -431,7 +432,7 @@ export default async function HomePage() {
               href="/teams"
               className="inline-flex items-center gap-1 text-accent-red text-sm font-mono hover:underline"
             >
-              View all 167 teams
+              View all {allTeams.length} teams
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
               </svg>

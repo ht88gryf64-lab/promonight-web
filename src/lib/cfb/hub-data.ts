@@ -12,6 +12,7 @@
 
 import { db } from '@/lib/firebase';
 import { CFB_COLLECTIONS, type CfbSchool, type CfbGame, type CfbRivalry } from '@/lib/cfb/types';
+import { CFB_CONF_BUCKET_ORDER, type CfbConfBucket } from '@/lib/cfb/conferences';
 
 // ── CT-anchored date helpers (same anchor as the homepage; no scrape) ──
 function chicagoTodayYMD(): string {
@@ -34,9 +35,10 @@ function daysBetween(from: string, to: string): number {
   return Math.round((Date.UTC(by, bm - 1, bd) - Date.UTC(ay, am - 1, ad)) / 86400000);
 }
 
-// ── conference bucketing (mockup's 6 buckets) ──
-const CONF_BUCKET_ORDER = ['SEC', 'Big Ten', 'ACC', 'Big 12', 'Group of 5', 'Independents'] as const;
-function bucketFor(conf: string): (typeof CONF_BUCKET_ORDER)[number] {
+// ── conference bucketing (mockup's 6 buckets) ── order + slugs are single-
+// sourced in lib/cfb/conferences.ts (shared with the pro-browser sub-row).
+const CONF_BUCKET_ORDER = CFB_CONF_BUCKET_ORDER;
+function bucketFor(conf: string): CfbConfBucket {
   const c = (conf || '').toLowerCase();
   if (c.includes('sec')) return 'SEC';
   if (c.includes('big ten') || c.includes('b1g')) return 'Big Ten';
