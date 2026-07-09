@@ -22,7 +22,7 @@ export const LEAGUE_HUB_REGISTRY: LeagueHub[] = [
   { league: 'NBA', label: 'NBA', href: '/nba', sportSlug: 'nba', accent: '#b5642e', live: false },
   { league: 'NHL', label: 'NHL', href: '/nhl', sportSlug: 'nhl', accent: '#4a4f57', live: false },
   { league: 'NFL', label: 'NFL', href: '/nfl', sportSlug: 'nfl', accent: '#5f6b57', live: false },
-  { league: 'CFB', label: 'CFB', href: '/cfb', sportSlug: 'cfb', accent: '#9a7d2e', live: false },
+  { league: 'CFB', label: 'CFB', href: '/cfb', sportSlug: 'cfb', accent: '#9a7d2e', live: true },
 ];
 
 // The live hubs shown in menus (the BrandBarLeagueHubs desktop dropdown + the
