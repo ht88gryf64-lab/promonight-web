@@ -4,6 +4,7 @@
 // announced time — a verified=false value (the flagged date-error games) or an
 // unannounced July kickoff never shows a contradicted/unconfirmed time.
 
+import { cache } from 'react';
 import { db } from '@/lib/firebase';
 import type { CfbSchool, CfbVenue, CfbGame, CfbRivalry } from '@/lib/cfb/types';
 import { CFB_COLLECTIONS } from '@/lib/cfb/types';
@@ -121,51 +122,111 @@ function kickoffDisplay(g: CfbGame): { display: string; verified: boolean } {
   return { display: 'Kickoff TBA', verified: false };
 }
 
+// ── Read-efficiency layer (CFB-isolated; MLB path untouched) ─────────────────
+// The /cfb build renders 86 school pages, each calling getCfbSchoolPage TWICE
+// (generateMetadata + Page). The naive reader did a FULL-collection read of
+// schools+venues+rivalries AND two games queries PER call → ~68,500 Firestore
+// reads/build and full-collection latency on every page (the prerender-timeout
+// root cause). The three static collections (schools 86, venues 86, rivalries
+// 212) and the games collection (670) are identical for every school, so we read
+// each ONCE and reuse it.
+//
+// Two cache layers, both process-local:
+//  • React cache() on getCfbSchoolPage — dedupes the generateMetadata+Page
+//    double-call within ONE page render (the house pattern; see getMlbSlate).
+//  • A module-level TTL cache on the four collections — reuses the single read
+//    ACROSS all 86 pages within a build (React cache() resets per page during
+//    SSG, so it alone can't do cross-page). TTL = the page's own ISR window
+//    (21600s), so at runtime each server instance re-reads on the same cadence
+//    the page revalidates — never staler than the page itself. A build is a
+//    short-lived process with an empty cache, so it never serves stale data
+//    ACROSS builds; each `next build` reads fresh.
+const STATIC_TTL_MS = 21600 * 1000; // matches `export const revalidate = 21600`
+
+function makeCollectionLoader<T>(read: () => Promise<T>): () => Promise<T> {
+  let cached: { at: number; data: T } | null = null;
+  let inflight: Promise<T> | null = null;
+  return async () => {
+    // Firestore emulator/prod clock only; Date.now() is fine at runtime (this
+    // module never executes inside a Workflow script sandbox).
+    if (cached && Date.now() - cached.at < STATIC_TTL_MS) return cached.data;
+    if (inflight) return inflight; // coalesce concurrent first-callers (build fan-out)
+    inflight = (async () => {
+      const data = await read();
+      cached = { at: Date.now(), data };
+      inflight = null;
+      return data;
+    })();
+    return inflight;
+  };
+}
+
+// Each loader preserves Firestore's default document-name ordering (the same
+// order the old per-page `.get()` / `.where().get()` calls returned), and stamps
+// id = docId so downstream keying is byte-identical to the old maps.
+const loadSchools = makeCollectionLoader<Array<CfbSchool & { id: string }>>(async () => {
+  const snap = await db.collection(CFB_COLLECTIONS.schools).get();
+  return snap.docs.map((d) => ({ ...(d.data() as CfbSchool), id: d.id }));
+});
+const loadVenues = makeCollectionLoader<Array<CfbVenue & { id: string }>>(async () => {
+  const snap = await db.collection(CFB_COLLECTIONS.venues).get();
+  return snap.docs.map((d) => ({ ...(d.data() as CfbVenue), id: d.id }));
+});
+const loadRivalries = makeCollectionLoader<Array<CfbRivalry & { id: string }>>(async () => {
+  const snap = await db.collection(CFB_COLLECTIONS.rivalries).get();
+  return snap.docs.map((d) => ({ ...(d.data() as CfbRivalry), id: d.id }));
+});
+const loadGames = makeCollectionLoader<Array<{ docId: string; data: CfbGame }>>(async () => {
+  const snap = await db.collection(CFB_COLLECTIONS.games).get();
+  return snap.docs.map((d) => ({ docId: d.id, data: d.data() as CfbGame }));
+});
+
 /** All school ids — for generateStaticParams. */
 export async function getAllCfbSchoolIds(): Promise<string[]> {
-  const snap = await db.collection(CFB_COLLECTIONS.schools).get();
-  return snap.docs.map((d) => d.id);
+  const schools = await loadSchools();
+  return schools.map((s) => s.id);
 }
 
 export async function getCfbSchool(id: string): Promise<CfbSchool | null> {
-  const doc = await db.collection(CFB_COLLECTIONS.schools).doc(id).get();
-  return doc.exists ? (doc.data() as CfbSchool) : null;
+  const schools = await loadSchools();
+  return schools.find((s) => s.id === id) ?? null;
 }
 
-/** Full page payload for one school. */
-export async function getCfbSchoolPage(id: string): Promise<CfbSchoolPage | null> {
-  const schoolDoc = await db.collection(CFB_COLLECTIONS.schools).doc(id).get();
-  if (!schoolDoc.exists) return null;
-  const school = schoolDoc.data() as CfbSchool;
-
-  const [venueDoc, schoolsSnap, venuesSnap, rivalriesSnap, homeSnap, awaySnap] = await Promise.all([
-    school.venueId ? db.collection(CFB_COLLECTIONS.venues).doc(school.venueId).get() : Promise.resolve(null),
-    db.collection(CFB_COLLECTIONS.schools).get(),
-    db.collection(CFB_COLLECTIONS.venues).get(),
-    db.collection(CFB_COLLECTIONS.rivalries).get(),
-    db.collection(CFB_COLLECTIONS.games).where('homeSchoolId', '==', id).get(),
-    db.collection(CFB_COLLECTIONS.games).where('awaySchoolId', '==', id).get(),
+/** Full page payload for one school. Wrapped in React cache() so the
+ *  generateMetadata + Page double-call within one render shares a single build. */
+export const getCfbSchoolPage = cache(async (id: string): Promise<CfbSchoolPage | null> => {
+  const [schools, venues, rivalries, allGames] = await Promise.all([
+    loadSchools(), loadVenues(), loadRivalries(), loadGames(),
   ]);
 
-  const venue = venueDoc && venueDoc.exists ? (venueDoc.data() as CfbVenue) : null;
-  const nameById = new Map<string, string>();
   const schoolById = new Map<string, CfbSchool>();
-  for (const d of schoolsSnap.docs) {
-    const s = d.data() as CfbSchool;
-    nameById.set(d.id, s.shortName || s.name);
-    schoolById.set(d.id, s);
+  const nameById = new Map<string, string>();
+  for (const s of schools) {
+    schoolById.set(s.id, s);
+    nameById.set(s.id, s.shortName || s.name);
   }
-  const venueById = new Map<string, CfbVenue>();
-  for (const d of venuesSnap.docs) venueById.set(d.id, d.data() as CfbVenue);
-  const rivalryById = new Map<string, CfbRivalry>();
-  for (const d of rivalriesSnap.docs) rivalryById.set(d.id, d.data() as CfbRivalry);
+  const school = schoolById.get(id);
+  if (!school) return null;
 
+  const venueById = new Map<string, CfbVenue>();
+  for (const v of venues) venueById.set(v.id, v);
+  const rivalryById = new Map<string, CfbRivalry>();
+  for (const r of rivalries) rivalryById.set(r.id, r);
+
+  const venue = school.venueId ? venueById.get(school.venueId) || null : null;
+
+  // Reproduce the old ordering EXACTLY: home games (doc-name order) then away
+  // games (doc-name order), deduped by docId, then a stable date sort. loadGames
+  // preserves doc-name order, so filtering yields the same pre-sort sequence the
+  // old two `.where().get()` queries did.
+  const homeGames = allGames.filter((x) => x.data.homeSchoolId === id);
+  const awayGames = allGames.filter((x) => x.data.awaySchoolId === id);
   const seen = new Set<string>();
   const games: CfbGameView[] = [];
-  for (const d of [...homeSnap.docs, ...awaySnap.docs]) {
-    if (seen.has(d.id)) continue;
-    seen.add(d.id);
-    const g = d.data() as CfbGame;
+  for (const x of [...homeGames, ...awayGames]) {
+    if (seen.has(x.docId)) continue;
+    seen.add(x.docId);
+    const g = x.data;
     const isHome = g.homeSchoolId === id;
     const opponentId = isHome ? g.awaySchoolId : g.homeSchoolId;
     const kd = kickoffDisplay(g);
@@ -193,4 +254,4 @@ export async function getCfbSchoolPage(id: string): Promise<CfbSchoolPage | null
     // them. Phase 4 populates these as a DATA change (no template change).
     editorial: { signatureGameId: null, traditions: [], gamedayCulture: null, whyYouGo: null, venueInTheirWords: null, contributor: null },
   };
-}
+});
