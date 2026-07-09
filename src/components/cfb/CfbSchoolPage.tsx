@@ -24,97 +24,17 @@
 // as plain text when no valid source URL is stored.
 
 import Link from 'next/link';
-import type { ReactNode } from 'react';
-import type { CfbSchoolPage as CfbSchoolPageData, CfbGameView } from '@/lib/cfb/data';
+import type { CfbSchoolPage as CfbSchoolPageData } from '@/lib/cfb/data';
 import { CfbThemePersist } from './CfbThemePersist';
+import { CfbSchedule } from './CfbSchedule';
 import { instrumentSerif } from './fonts';
 import { toAffiliateTeam, toAffiliateVenue, getKicker } from '@/lib/cfb/page-extras';
+import { venueCity } from '@/lib/cfb/venue-cities';
 import { TicketmasterCTA } from '@/components/affiliates/TicketmasterCTA';
 import { SpotHeroCTA } from '@/components/affiliates/SpotHeroCTA';
 import { ExpediaCTA } from '@/components/affiliates/ExpediaCTA';
 import { FanaticsCTA } from '@/components/affiliates/FanaticsCTA';
-
-const SERIF = 'var(--font-cfb-serif), Georgia, serif';
-const MONO = 'var(--font-mono), ui-monospace, monospace';
-const SANS = 'var(--font-outfit), system-ui, sans-serif';
-
-type RivalryTag = NonNullable<CfbGameView['rivalry']>;
-
-function fmtMonthDay(iso: string): string {
-  return new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
-}
-function fmtDayLong(iso: string): string {
-  const d = new Date(iso + 'T12:00:00');
-  const wd = d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
-  return `${wd} · ${fmtMonthDay(iso)}`;
-}
-
-// Accent-colored mono section label (+ optional right-aligned meta), mockup style.
-function Eyebrow({ children, right }: { children: ReactNode; right?: ReactNode }) {
-  return (
-    <div className="mb-4 flex items-baseline justify-between gap-3">
-      <div className="text-[12px] font-normal uppercase" style={{ fontFamily: MONO, letterSpacing: '0.166em', color: 'var(--cfb-accent)' }}>
-        {children}
-      </div>
-      {right && (
-        <div className="shrink-0 text-[10px] uppercase text-white/35" style={{ fontFamily: MONO, letterSpacing: '0.1em' }}>
-          {right}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Trophy/rivalry tag — FACT, crown none. Links to the trophy's OWN Wikipedia
-// article (stored corroborating source) in a new tab; plain <span> when no valid
-// source URL is stored (never a broken link). Same pill treatment either way.
-function TrophyTag({ rivalry, tiny }: { rivalry: RivalryTag; tiny?: boolean }) {
-  const label = rivalry.trophy || rivalry.name;
-  const title = rivalry.trophy ? `${rivalry.name} — ${rivalry.trophy}` : rivalry.name;
-  const cls = `rounded-full px-2 py-0.5 ${tiny ? 'text-[9px]' : 'text-[10px]'} font-bold uppercase`;
-  const style = { fontFamily: MONO, letterSpacing: '0.03em', background: 'var(--cfb-accent)', color: 'var(--cfb-accent-ink)' };
-  if (rivalry.sourceUrl) {
-    return (
-      <a
-        href={rivalry.sourceUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        title={`${title} — Wikipedia`}
-        className={`${cls} transition-opacity hover:opacity-80`}
-        style={style}
-      >
-        {label}
-      </a>
-    );
-  }
-  return <span className={cls} style={style} title={title}>{label}</span>;
-}
-
-function ScheduleRow({ g, last }: { g: CfbGameView; last: boolean }) {
-  return (
-    <div
-      className="grid grid-cols-[64px_1fr_auto] items-center gap-3 px-4 py-3.5 sm:gap-5 sm:px-6"
-      style={{ borderBottom: last ? 'none' : '1px solid rgba(255,255,255,0.05)', background: g.rivalry ? 'var(--cfb-tint)' : 'transparent' }}
-    >
-      <div className="text-[12px] text-white/55" style={{ fontFamily: MONO }}>{fmtMonthDay(g.date)}</div>
-      <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
-        <span className="text-[10px] uppercase text-white/35" style={{ fontFamily: MONO }}>{g.isHome ? (g.neutralSite ? 'N' : 'VS') : 'AT'}</span>
-        <span className="text-[15px] font-bold text-white sm:text-[17px]" style={{ fontFamily: SANS }}>{g.opponentName}</span>
-        {g.rivalry && <TrophyTag rivalry={g.rivalry} />}
-      </div>
-      <div className="text-right" style={{ fontFamily: MONO }}>
-        {g.kickoffVerified ? (
-          <>
-            <div className="text-[13px] font-bold text-white">{g.kickoffDisplay}</div>
-            {g.networkDisplay && <div className="mt-0.5 text-[10px] text-white/40">{g.networkDisplay}</div>}
-          </>
-        ) : (
-          <div className="text-[12px] text-white/40">{g.kickoffDisplay}</div>
-        )}
-      </div>
-    </div>
-  );
-}
+import { SERIF, MONO, SANS, fmtMonthDay, fmtDayLong, Eyebrow } from './cfb-bits';
 
 export function CfbSchoolPage({ data }: { data: CfbSchoolPageData }) {
   const { school, venue, games, editorial } = data;
@@ -125,12 +45,12 @@ export function CfbSchoolPage({ data }: { data: CfbSchoolPageData }) {
   const conf = school.conferenceBySeason?.['2026'] || '';
 
   // Affiliate adapters — the shared CTAs render UNCHANGED with these. Both ticket
-  // vendors + hotels/parking resolve the school's own team/venue.
-  const affTeam = toAffiliateTeam(school, venue?.city ?? null);
-  const affVenue = venue ? toAffiliateVenue(venue, school) : null;
-
-  // Road-trip planner: away games at a tracked opponent with a resolved venue.
-  const roadTrips = games.filter((g) => !g.isHome && !g.neutralSite && g.awayVenue && g.awaySchool);
+  // vendors + hotels/parking resolve the school's own team/venue. Pass the CLEAN
+  // city (venueCity map) not the raw junk city field, so the hotel/parking search
+  // destination reads "Husky Stadium, Seattle" rather than a scraped address.
+  const heroCity = venueCity(venue);
+  const affTeam = toAffiliateTeam(school, heroCity);
+  const affVenue = venue ? toAffiliateVenue({ ...venue, city: heroCity ?? '', state: '' }, school) : null;
 
   const sig = editorial.signatureGameId ? games.find((g) => g.id === editorial.signatureGameId) : null;
   const nextHome = games.find((g) => g.isHome && !g.neutralSite);
@@ -190,10 +110,10 @@ export function CfbSchoolPage({ data }: { data: CfbSchoolPageData }) {
                 <div className="text-[11px] uppercase" style={{ fontFamily: MONO, letterSpacing: '0.166em', color: 'var(--cfb-accent)' }}>About the venue</div>
                 <div className="mt-3 italic leading-tight text-white" style={{ fontFamily: SERIF, fontSize: '1.55rem' }}>{venue.name}</div>
                 <dl className="mt-4 space-y-3">
-                  {(venue.city || venue.state) && (
+                  {venueCity(venue) && (
                     <div>
                       <dt className="text-[10px] uppercase" style={{ fontFamily: MONO, letterSpacing: '0.1em', color: 'var(--cfb-accent)' }}>Location</dt>
-                      <dd className="mt-0.5 text-[14px] text-white/85" style={{ fontFamily: SANS }}>{[venue.city, venue.state].filter(Boolean).join(', ')}</dd>
+                      <dd className="mt-0.5 text-[14px] text-white/85" style={{ fontFamily: SANS }}>{venueCity(venue)}</dd>
                     </div>
                   )}
                   {venue.capacity > 0 && (
@@ -269,54 +189,14 @@ export function CfbSchoolPage({ data }: { data: CfbSchoolPageData }) {
           </div>
         </section>
 
-        {/* ── SCHEDULE — always present ── */}
+        {/* ── SCHEDULE — always present. Rows are CLICKABLE and open the gameday
+            modal (CfbSchedule); per-game tickets/hotels/parking live in that modal,
+            never stacked inline. ── */}
         <section className="mt-11">
           <Eyebrow>2026 Schedule</Eyebrow>
-          <div className="overflow-hidden rounded-2xl" style={{ background: '#0c0b12', border: '1px solid rgba(255,255,255,0.06)' }}>
-            {games.map((g, i) => <ScheduleRow key={g.id} g={g} last={i === games.length - 1} />)}
-          </div>
-          <p className="mt-2.5 text-[11px] text-white/55" style={{ fontFamily: MONO }}>Kickoff times show once announced and confirmed on a second source; until then, Kickoff TBA.</p>
+          <CfbSchedule games={games} school={school} venue={venue} />
+          <p className="mt-2.5 text-[11px] text-white/55" style={{ fontFamily: MONO }}>Tap any game for its venue, kickoff, and gameday links. Kickoff times show once announced and confirmed on a second source; until then, Kickoff TBA.</p>
         </section>
-
-        {/* ── ROAD TRIPS — per-away-game clusters keyed to the DESTINATION (host
-            tickets + hotels/parking near the away stadium), using the SAME shared
-            components. CFB placement (never away_game_card) keeps TN/hotels attributed
-            to web_cfb. Hidden when no away game resolves to a venue. ── */}
-        {roadTrips.length > 0 && (
-          <section className="mt-11">
-            <Eyebrow>Road trips worth the drive</Eyebrow>
-            <p className="-mt-2 mb-5 text-[13px] text-white/45" style={{ fontFamily: SANS }}>Away games with tickets, hotels, and parking pre-loaded near the stadium.</p>
-            <div className="grid gap-4 lg:grid-cols-2">
-              {roadTrips.map((g) => {
-                const destTeam = toAffiliateTeam(g.awaySchool!, g.awayVenue!.city ?? null);
-                const destVenue = toAffiliateVenue(g.awayVenue!, g.awaySchool!);
-                const town = [g.awayVenue!.city, g.awayVenue!.state].filter(Boolean).join(', ');
-                return (
-                  <div key={g.id} className="rounded-2xl p-5 sm:p-6" style={{ background: '#0e0d14', border: '1px solid rgba(255,255,255,0.07)' }}>
-                    <div className="mb-4 flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-[17px] font-bold text-white sm:text-[18px]" style={{ fontFamily: SANS }}>at {g.opponentName}</span>
-                          {g.rivalry && <TrophyTag rivalry={g.rivalry} tiny />}
-                        </div>
-                        {town && <div className="mt-0.5 italic" style={{ fontFamily: SERIF, fontSize: '1.25rem', color: 'var(--cfb-accent)' }}>{town}</div>}
-                        <div className="mt-1 text-[11px] text-white/40" style={{ fontFamily: MONO }}>{g.awayVenue!.name}</div>
-                      </div>
-                      <div className="shrink-0 rounded-md px-2.5 py-1 text-[10px] font-semibold uppercase text-white" style={{ fontFamily: MONO, letterSpacing: '0.04em', background: 'var(--cfb-primary)' }}>
-                        {fmtMonthDay(g.date)}
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-2.5">
-                      <TicketmasterCTA team={destTeam} surface="web_cfb" placement="cfb_road_trip" size="compact" />
-                      <SpotHeroCTA team={destTeam} venue={destVenue} surface="web_cfb" placement="cfb_road_trip" size="compact" />
-                      <ExpediaCTA team={destTeam} venue={destVenue} surface="web_cfb" placement="cfb_road_trip" size="compact" />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        )}
 
         {/* ── GAMEDAY & TRADITIONS (editorial, destination-only) ── Gated SOLELY on
             what it paints (gamedayCulture) so the labeled section can never orphan.

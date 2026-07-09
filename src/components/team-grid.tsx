@@ -104,12 +104,12 @@ export function TeamGrid({
   const cfbLive = isCfbHubLive();
   const tabClass = (isActive: boolean) =>
     light
-      ? `rounded-full border px-4 py-1.5 font-rd text-[12px] font-semibold uppercase tracking-[0.08em] transition-colors ${
+      ? `cursor-pointer rounded-full border px-4 py-1.5 font-rd text-[12px] font-semibold uppercase tracking-[0.08em] transition-colors ${
           isActive
             ? 'border-rd-ink bg-rd-ink text-white'
             : 'border-rd-line-strong bg-rd-card text-rd-ink-soft hover:border-rd-ink hover:text-rd-ink'
         }`
-      : `px-4 py-1.5 rounded-full text-[11px] font-mono tracking-[0.5px] uppercase transition-colors border ${
+      : `cursor-pointer px-4 py-1.5 rounded-full text-[11px] font-mono tracking-[0.5px] uppercase transition-colors border ${
           isActive
             ? 'bg-accent-red text-white border-accent-red'
             : 'bg-transparent text-text-secondary border-border-subtle hover:border-border-hover'
