@@ -1,5 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { getAllTeams, getPlayoffConfig, getStillAlivePlayoffTeamIds } from '@/lib/data';
+import { getAllCfbSchoolIds } from '@/lib/cfb/data';
+import { isCfbHubLive } from '@/lib/league-hubs';
 
 const BASE_URL = 'https://www.getpromonight.com';
 
@@ -40,6 +42,29 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     };
   });
 
+  // CFB vertical: the /cfb hub + 86 team pages. Gated on the SAME
+  // LEAGUE_HUB_REGISTRY live flag as the nav (so the sitemap follows go-live),
+  // and fail-closed on a read error like the playoff hub. Flows to the IndexNow
+  // deploy hook automatically (getAllSitemapUrls -> sitemap()).
+  const cfbLive = isCfbHubLive();
+  const cfbSchoolIds = cfbLive ? await getAllCfbSchoolIds().catch(() => []) : [];
+  const cfbHubEntries = cfbLive
+    ? [
+        {
+          url: `${BASE_URL}/cfb`,
+          lastModified: now,
+          changeFrequency: 'weekly' as const,
+          priority: 0.9,
+        },
+      ]
+    : [];
+  const cfbTeamPages = cfbSchoolIds.map((id) => ({
+    url: `${BASE_URL}/cfb/${id}`,
+    lastModified: now,
+    changeFrequency: 'weekly' as const,
+    priority: 0.8,
+  }));
+
   // Only include the /playoffs hub in the sitemap when playoffs are active.
   // When playoffsActive flips to false, next sitemap regeneration drops it.
   const playoffHubEntries = playoffsActive
@@ -76,8 +101,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'daily',
       priority: 0.9,
     },
+    ...cfbHubEntries,
     ...playoffHubEntries,
     ...teamPages,
+    ...cfbTeamPages,
     {
       url: `${BASE_URL}/about`,
       lastModified: now,
