@@ -6,6 +6,7 @@
 import type { Team, Venue } from '@/lib/types';
 import type { CfbSchool, CfbVenue } from '@/lib/cfb/types';
 import { slugifySchool } from '@/lib/cfb/rules';
+import { CFB_FANATICS_STORES } from '@/lib/cfb/fanatics-stores';
 
 // TicketNetwork slug overrides (audit/cfb-affiliate-validation.md). TN fuzzy-serves
 // a 200 for unknown slugs, so the default `slugifySchool(name+mascot)` lands on the
@@ -44,6 +45,10 @@ export function toAffiliateTeam(school: CfbSchool, city?: string | null): Team {
     // the team, not the pro club / an ambiguous performer.
     ticketmasterSlug: slugifySchool(fullName),
     ticketNetworkSlug: CFB_TN_SLUG_OVERRIDES[school.id] ?? slugifySchool(fullName),
+    // Deep-linked Fanatics college store (discovered, right-school-validated).
+    // buildFanaticsUrl wraps it in the Impact /c/ redirect with subId1=web_cfb_{id}.
+    // Undefined for any unmapped school → FanaticsCTA renders null (no broken link).
+    fanaticsUrl: CFB_FANATICS_STORES[school.id],
   } as Team;
 }
 

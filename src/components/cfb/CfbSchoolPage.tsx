@@ -11,8 +11,9 @@
 //
 // AFFILIATE CTAs = the SAME SHARED components the pro team pages use (one source of
 // truth, no drift copies): TicketmasterCTA (Ticketmaster + TicketNetwork stacked),
-// SpotHeroCTA, ExpediaCTA (hotels), FanaticsCTA (self-gates to null for CFB — no
-// college mapping). They render UNCHANGED; only PLACEMENT matches the mockup. CFB
+// SpotHeroCTA, ExpediaCTA (hotels), FanaticsCTA (deep-linked to the school's
+// discovered Fanatics college store via CFB_FANATICS_STORES). They render
+// UNCHANGED; only PLACEMENT matches the mockup. CFB
 // passes its OWN venue (name + coords) so hotels/parking name the school's stadium,
 // and surface="web_cfb" (+ CFB placements, never away_game_card) so every CFB click
 // attributes to web_cfb, not a pro surface.
