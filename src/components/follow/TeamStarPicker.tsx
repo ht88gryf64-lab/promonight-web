@@ -15,7 +15,7 @@ import { StarIcon } from '@/components/star-icon';
 // Optional geo ordering: `nearTeamIds` floats the visitor's nearest teams into
 // a "Teams near you" group at the top. It is a SOFT reorder only, shown when not
 // searching; the near teams are lifted out of their league groups so they appear
-// once, never hidden, and search always spans all 167 teams.
+// once, never hidden, and search always spans all 169 teams.
 
 interface TeamStarPickerProps {
   teams: Team[];
@@ -68,7 +68,7 @@ export function TeamStarPicker({
   teams,
   selected,
   onToggle,
-  searchPlaceholder = 'Search 167 teams…',
+  searchPlaceholder = 'Search 169 teams…',
   nearTeamIds = [],
 }: TeamStarPickerProps) {
   const [query, setQuery] = useState('');

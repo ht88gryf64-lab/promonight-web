@@ -85,7 +85,7 @@ export default async function AboutPage() {
 
           <div className="mx-auto max-w-3xl px-6 pb-20 pt-10 font-rd">
             <p className="text-rd-ink-soft text-base leading-relaxed mb-12">
-              PromoNight is a free iOS and Android app that tracks every promotional event at professional sports games across MLB, NBA, NHL, NFL, MLS, and WNBA. It covers giveaway nights, theme nights, food deals, and kids events across all 167 teams in one calendar view. It was built by a solo indie developer in Minneapolis who got tired of missing bobblehead night.
+              PromoNight is a free iOS and Android app that tracks every promotional event at professional sports games across MLB, NBA, NHL, NFL, MLS, and WNBA. It covers giveaway nights, theme nights, food deals, and kids events across all 169 teams in one calendar view. It was built by a solo indie developer in Minneapolis who got tired of missing bobblehead night.
             </p>
 
             <section className="mb-12">
@@ -99,7 +99,7 @@ export default async function AboutPage() {
 
             <section className="mb-12">
               <h2 className="rd-display text-2xl md:text-3xl uppercase text-rd-ink mb-4">What PromoNight covers</h2>
-              <p className="text-rd-ink-soft text-[15px] leading-relaxed mb-4">PromoNight tracks four categories of promotions across 167 teams:</p>
+              <p className="text-rd-ink-soft text-[15px] leading-relaxed mb-4">PromoNight tracks four categories of promotions across 169 teams:</p>
               <ul className="space-y-3 text-rd-ink-soft text-[15px] leading-relaxed list-disc pl-6">
                 <li><strong className="text-rd-ink">Giveaways</strong> - bobbleheads, jerseys, caps, replica trophies, collectibles. The stuff people plan their season around.</li>
                 <li><strong className="text-rd-ink">Theme nights</strong> - Star Wars, Harry Potter, heritage nights, pride celebrations, fireworks, concerts. The reason tonight&apos;s game is different from last Tuesday&apos;s.</li>
@@ -147,7 +147,7 @@ export default async function AboutPage() {
 
             <div className="mt-12 rounded-2xl border border-rd-line bg-rd-card p-8 text-center">
               <h2 className="rd-display text-2xl md:text-3xl uppercase text-rd-ink mb-3">DOWNLOAD PROMONIGHT</h2>
-              <p className="text-rd-ink-soft text-sm mb-6">Free. 167 teams. 2,700+ promos.</p>
+              <p className="text-rd-ink-soft text-sm mb-6">Free. 169 teams. 2,700+ promos.</p>
               <div className="flex justify-center">
                 <AppDownloadButtons section="about_cta" page="about" variant="compact" />
               </div>
@@ -188,7 +188,7 @@ export default async function AboutPage() {
           </div>
 
           <p className="text-text-secondary text-base leading-relaxed mb-12">
-            PromoNight is a free iOS and Android app that tracks every promotional event at professional sports games across MLB, NBA, NHL, NFL, MLS, and WNBA. It covers giveaway nights, theme nights, food deals, and kids events across all 167 teams in one calendar view. It was built by a solo indie developer in Minneapolis who got tired of missing bobblehead night.
+            PromoNight is a free iOS and Android app that tracks every promotional event at professional sports games across MLB, NBA, NHL, NFL, MLS, and WNBA. It covers giveaway nights, theme nights, food deals, and kids events across all 169 teams in one calendar view. It was built by a solo indie developer in Minneapolis who got tired of missing bobblehead night.
           </p>
 
           <section className="mb-12">
@@ -213,7 +213,7 @@ export default async function AboutPage() {
               What PromoNight covers
             </h2>
             <p className="text-text-secondary text-[15px] leading-relaxed mb-4">
-              PromoNight tracks four categories of promotions across 167 teams:
+              PromoNight tracks four categories of promotions across 169 teams:
             </p>
             <ul className="space-y-3 text-text-secondary text-[15px] leading-relaxed list-disc pl-6">
               <li>
@@ -308,7 +308,7 @@ export default async function AboutPage() {
               DOWNLOAD PROMONIGHT
             </h2>
             <p className="text-text-secondary text-sm mb-6">
-              Free. 167 teams. 2,700+ promos.
+              Free. 169 teams. 2,700+ promos.
             </p>
             <AppDownloadButtons section="about_cta" page="about" variant="compact" />
           </div>

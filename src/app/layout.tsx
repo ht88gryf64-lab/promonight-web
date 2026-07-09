@@ -54,7 +54,7 @@ export const metadata: Metadata = {
     template: '%s | PromoNight',
   },
   description:
-    'PromoNight tracks every giveaway, theme night, and food deal across 167 teams in MLB, NBA, NFL, NHL, MLS, and WNBA. Never miss bobblehead night.',
+    'PromoNight tracks every giveaway, theme night, and food deal across 169 teams in MLB, NBA, NFL, NHL, MLS, and WNBA. Never miss bobblehead night.',
   openGraph: {
     type: 'website',
     siteName: 'PromoNight',

@@ -88,7 +88,7 @@ export function Footer({ year }: FooterProps) {
               <span style={{ color: RED_ON_DARK }}>NIGHT</span>
             </p>
             <p className="mt-4 font-rd text-sm leading-relaxed text-white/55">
-              Every giveaway, theme night, food deal, and promotion across 167 teams
+              Every giveaway, theme night, food deal, and promotion across 169 teams
               in MLB, NBA, NHL, NFL, MLS, and WNBA.
             </p>
             <FollowFooterCTA />

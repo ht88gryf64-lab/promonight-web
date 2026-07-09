@@ -53,6 +53,7 @@ export type AnalyticsEvent =
   | 'team_ranking_row_tap'
   | 'load_more_tap'
   | 'league_filter_change'
+  | 'cfb_conf_nav'
   | 'resale_click';
 
 // `TONIGHT_AND_TOMORROW` is retained for backwards-compatibility with dashboards
@@ -81,6 +82,9 @@ export type AnalyticsSurface =
   | 'web_promo_detail'
   | 'web_playoffs'
   | 'web_league_index'
+  // College Football team pages (/cfb/[school]) and their affiliate CTAs, so
+  // PostHog + GA4 can slice CFB clicks out from the pro surfaces.
+  | 'web_cfb'
   // MLB league hub (/mlb) and its interactive sub-surfaces. Distinct from the
   // generic web_league_index (which covers /teams and any bare /{sport}) so
   // PostHog and GA4 can break the hub out by module: the this-week rail, the
@@ -508,7 +512,17 @@ export type EventPropertiesMap = {
   team_ranking_row_tap: TeamRankingRowTapProperties;
   load_more_tap: LoadMoreTapProperties;
   league_filter_change: LeagueFilterChangeProperties;
+  cfb_conf_nav: CfbConfNavProperties;
   resale_click: ResaleClickProperties;
+};
+
+// Fires when a user taps a conference chip (or "View the full hub") in the CFB
+// sub-row of the pro team browser (home / /teams). CFB routes OUT to the /cfb
+// hub, so this marks the hand-off. `conf` is a conference slug ('sec',
+// 'big-ten', …) or 'all' for the full-hub link.
+export type CfbConfNavProperties = {
+  surface: 'homepage' | 'teams_page';
+  conf: string;
 };
 
 // Redesigned collection pages (gate-on /promos/*): the league chips are newly
@@ -700,6 +714,7 @@ const KNOWN_SURFACES: ReadonlySet<AnalyticsSurface> = new Set<AnalyticsSurface>(
   // Keep in lockstep with the AnalyticsSurface union above: adding a surface
   // there but not here makes isKnownSurface() return false and silently
   // downgrades legacy affiliate clicks to web_other.
+  'web_cfb',
   'web_mlb_hub',
   'web_mlb_hub_this_week',
   'web_mlb_hub_promo_type',
@@ -723,6 +738,9 @@ export function inferSurfaceFromPath(path: string): AnalyticsSurface {
   if (path.startsWith('/my-teams')) return 'web_my_teams';
   if (path.startsWith('/best-promos') || path.startsWith('/team-rankings')) return 'web_best_promos';
   if (path.startsWith('/teams')) return 'web_league_index';
+  // College Football team pages — their own surface (pageviews + any path-inferred
+  // click), so CFB never attributes to a pro sport surface.
+  if (path.startsWith('/cfb')) return 'web_cfb';
   // The bare /mlb league hub gets its own surface. /mlb/{team} is a team page
   // and is handled by the generic sport match below (it returns web_team_page).
   if (path === '/mlb') return 'web_mlb_hub';

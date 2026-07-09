@@ -6,6 +6,8 @@ import type { Team } from '@/lib/types';
 import { LEAGUE_ORDER, SPORT_ICONS } from '@/lib/types';
 import { track } from '@/lib/analytics';
 import { useStarredTeams } from '@/hooks/use-starred-teams';
+import { isCfbHubLive } from '@/lib/league-hubs';
+import { CfbConferenceSubRow } from '@/components/cfb/CfbConferenceSubRow';
 import { StarToggle } from './star-toggle';
 import { TeamCard } from './team-card';
 
@@ -20,10 +22,15 @@ interface TeamsBrowserProps {
 }
 
 const ALL = 'All' as const;
-type ActiveLeague = typeof ALL | (typeof LEAGUE_ORDER)[number];
+// 'CFB' is a college-hub entry point, not a pro league: selecting it reveals the
+// conference sub-row (which routes to /cfb), never filters pro cards, and CFB is
+// never in the "All" total. Gated on the same registry `live` flag as the nav.
+const CFB_CHIP = 'CFB' as const;
+type ActiveLeague = typeof ALL | (typeof LEAGUE_ORDER)[number] | typeof CFB_CHIP;
 
 export function TeamsBrowser({ teams, promoCounts, variant = 'dark' }: TeamsBrowserProps) {
   const light = variant === 'light';
+  const cfbLive = isCfbHubLive();
   const [active, setActive] = useState<ActiveLeague>(ALL);
   const { starred, isHydrated } = useStarredTeams();
   const starredSet = useMemo(() => new Set(starred), [starred]);
@@ -95,37 +102,52 @@ export function TeamsBrowser({ teams, promoCounts, variant = 'dark' }: TeamsBrow
             />
           );
         })}
-      </div>
-
-      {/* Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-        {filtered.map((team) =>
-          light ? (
-            <TeamCard
-              key={team.id}
-              team={team}
-              promoCount={promoCounts[team.id] ?? 0}
-              countLabel="promos"
-              tileSurface="teams_page"
-              fromTab={active}
-              starPlacement="teams_browser_card"
-              sourcePage="teams"
-              variant="light"
-            />
-          ) : (
-            <TeamBrowserCard
-              key={team.id}
-              team={team}
-              promoCount={promoCounts[team.id] ?? 0}
-            />
-          ),
+        {cfbLive && (
+          <FilterPill
+            label={CFB_CHIP}
+            active={active === CFB_CHIP}
+            onClick={() => switchTab(CFB_CHIP)}
+            light={light}
+          />
         )}
       </div>
 
-      {filtered.length === 0 && (
-        <div className="text-center py-16">
-          <p className={light ? 'text-rd-ink-faint text-lg' : 'text-text-muted text-lg'}>No teams in this league.</p>
-        </div>
+      {active === CFB_CHIP ? (
+        /* CFB: college-hub entry point (routes to /cfb), never inline pro cards. */
+        <CfbConferenceSubRow surface="teams_page" light={light} />
+      ) : (
+        <>
+          {/* Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {filtered.map((team) =>
+              light ? (
+                <TeamCard
+                  key={team.id}
+                  team={team}
+                  promoCount={promoCounts[team.id] ?? 0}
+                  countLabel="promos"
+                  tileSurface="teams_page"
+                  fromTab={active}
+                  starPlacement="teams_browser_card"
+                  sourcePage="teams"
+                  variant="light"
+                />
+              ) : (
+                <TeamBrowserCard
+                  key={team.id}
+                  team={team}
+                  promoCount={promoCounts[team.id] ?? 0}
+                />
+              ),
+            )}
+          </div>
+
+          {filtered.length === 0 && (
+            <div className="text-center py-16">
+              <p className={light ? 'text-rd-ink-faint text-lg' : 'text-text-muted text-lg'}>No teams in this league.</p>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -149,12 +171,12 @@ function FilterPill({
       aria-pressed={active}
       className={
         light
-          ? `rounded-full border px-4 py-1.5 font-rd text-[12px] font-semibold uppercase tracking-[0.08em] transition-colors ${
+          ? `cursor-pointer rounded-full border px-4 py-1.5 font-rd text-[12px] font-semibold uppercase tracking-[0.08em] transition-colors ${
               active
                 ? 'border-rd-ink bg-rd-ink text-white'
                 : 'border-rd-line-strong bg-rd-card text-rd-ink-soft hover:border-rd-ink hover:text-rd-ink'
             }`
-          : `px-4 py-1.5 rounded-full text-[11px] font-mono tracking-[0.5px] uppercase transition-colors border ${
+          : `cursor-pointer px-4 py-1.5 rounded-full text-[11px] font-mono tracking-[0.5px] uppercase transition-colors border ${
               active
                 ? 'bg-accent-red text-white border-accent-red'
                 : 'bg-transparent text-text-secondary border-border-subtle hover:border-border-hover'

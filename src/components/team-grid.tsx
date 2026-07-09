@@ -7,6 +7,14 @@ import { LEAGUE_ORDER } from '@/lib/types';
 import { track } from '@/lib/analytics';
 import { getInStateTeamSlugs } from '@/lib/geo/state-to-teams';
 import { useStarredTeams } from '@/hooks/use-starred-teams';
+import { isCfbHubLive } from '@/lib/league-hubs';
+import { CfbConferenceSubRow } from '@/components/cfb/CfbConferenceSubRow';
+
+// The CFB chip is a college-hub entry point, not a pro-league filter: it routes
+// into /cfb (via the conference sub-row) rather than filtering the pro grid, and
+// college teams are never counted in the pro "All" total. Gated on the SAME
+// registry `live` flag as the nav hub, so one flip lights up every surface.
+const CFB_CHIP = 'CFB' as const;
 
 // localStorage key + TTL for the cached visitor region. Region rarely
 // changes for a given device; refreshing daily is plenty. Storing only the
@@ -93,14 +101,15 @@ export function TeamGrid({
   variant = 'dark',
 }: TeamGridProps) {
   const light = variant === 'light';
+  const cfbLive = isCfbHubLive();
   const tabClass = (isActive: boolean) =>
     light
-      ? `rounded-full border px-4 py-1.5 font-rd text-[12px] font-semibold uppercase tracking-[0.08em] transition-colors ${
+      ? `cursor-pointer rounded-full border px-4 py-1.5 font-rd text-[12px] font-semibold uppercase tracking-[0.08em] transition-colors ${
           isActive
             ? 'border-rd-ink bg-rd-ink text-white'
             : 'border-rd-line-strong bg-rd-card text-rd-ink-soft hover:border-rd-ink hover:text-rd-ink'
         }`
-      : `px-4 py-1.5 rounded-full text-[11px] font-mono tracking-[0.5px] uppercase transition-colors border ${
+      : `cursor-pointer px-4 py-1.5 rounded-full text-[11px] font-mono tracking-[0.5px] uppercase transition-colors border ${
           isActive
             ? 'bg-accent-red text-white border-accent-red'
             : 'bg-transparent text-text-secondary border-border-subtle hover:border-border-hover'
@@ -188,24 +197,34 @@ export function TeamGrid({
             {league}
           </button>
         ))}
+        {cfbLive && (
+          <button onClick={() => switchTab(CFB_CHIP)} className={tabClass(activeLeague === CFB_CHIP)}>
+            {CFB_CHIP}
+          </button>
+        )}
       </div>
 
-      {/* Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {displayed.map((team) => (
-          <TeamCard
-            key={team.id}
-            team={team}
-            promoCount={promoCounts?.[team.id]}
-            sourcePage="home"
-            countLabel={countLabel}
-            tileSurface={surface}
-            fromTab={activeLeague}
-            isHomepageSample={isHomepageSample}
-            variant={variant}
-          />
-        ))}
-      </div>
+      {/* CFB: college-hub entry point (routes to /cfb), never inline pro cards. */}
+      {activeLeague === CFB_CHIP ? (
+        <CfbConferenceSubRow surface={surface} light={light} />
+      ) : (
+        /* Grid */
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {displayed.map((team) => (
+            <TeamCard
+              key={team.id}
+              team={team}
+              promoCount={promoCounts?.[team.id]}
+              sourcePage="home"
+              countLabel={countLabel}
+              tileSurface={surface}
+              fromTab={activeLeague}
+              isHomepageSample={isHomepageSample}
+              variant={variant}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

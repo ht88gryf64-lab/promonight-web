@@ -29,6 +29,19 @@ export const LEAGUE_HUB_REGISTRY: LeagueHub[] = [
 // mobile sheet). Consumers import this; it grows automatically as `live` flips.
 export const LEAGUE_HUBS: LeagueHub[] = LEAGUE_HUB_REGISTRY.filter((h) => h.live);
 
+// Direct handle to a single hub by league code — for surfaces that gate their
+// OWN CFB entry point on the SAME `live` flag the nav uses (the team-browser
+// CFB chip + conference sub-row). Flipping CFB `live` to true lights up the nav
+// AND the browser chips from this one registry edit. `getLeagueHub('CFB')?.live`
+// is the single source; never hardcode a separate CFB-visible boolean.
+export function getLeagueHub(league: string): LeagueHub | undefined {
+  return LEAGUE_HUB_REGISTRY.find((h) => h.league === league);
+}
+
+// Convenience for the pro browsers: is the CFB hub live? (Same flag as the nav.)
+export const CFB_HUB = getLeagueHub('CFB');
+export const isCfbHubLive = (): boolean => CFB_HUB?.live === true;
+
 // `label` is the SHORT visible text; hubAriaLabel derives the DESCRIPTIVE
 // accessible name ('MLB promotional schedule') so a link stays descriptive for
 // crawlers and screen readers while the visible text stays short. A future hub

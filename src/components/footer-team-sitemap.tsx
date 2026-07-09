@@ -31,7 +31,7 @@ export function FooterTeamSitemap({ teams }: { teams: Team[] }) {
         aria-expanded={open}
       >
         <h4 className="font-mono text-[10px] tracking-[1.5px] uppercase text-accent-red">
-          All 167 teams
+          All 169 teams
         </h4>
         <span className="text-text-muted text-xs font-mono">
           {open ? 'Hide' : 'Expand'}

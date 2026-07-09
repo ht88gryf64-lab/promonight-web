@@ -4,12 +4,12 @@ const HOMEPAGE_FAQS: FAQItem[] = [
   {
     question: 'What is PromoNight?',
     answer:
-      'PromoNight is a free mobile app that tracks every promotional event at professional sports games across MLB, NBA, NFL, NHL, MLS, and WNBA. It shows giveaway nights, theme nights, food deals, and kids events for all 167 teams in one calendar view.',
+      'PromoNight is a free mobile app that tracks every promotional event at professional sports games across MLB, NBA, NFL, NHL, MLS, and WNBA. It shows giveaway nights, theme nights, food deals, and kids events for all 169 teams in one calendar view.',
   },
   {
     question: 'How many teams does PromoNight cover?',
     answer:
-      'PromoNight tracks promotional schedules for 167 teams across six professional sports leagues: 30 MLB teams, 30 NBA teams, 32 NFL teams, 32 NHL teams, 29 MLS teams, and 13 WNBA teams (plus 1 expansion team).',
+      'PromoNight tracks promotional schedules for 169 teams across six professional sports leagues: 30 MLB teams, 30 NBA teams, 32 NFL teams, 32 NHL teams, 30 MLS teams, and 15 WNBA teams.',
   },
   {
     question: 'Is PromoNight free?',
@@ -39,7 +39,7 @@ export function HomepageJsonLd() {
       url: 'https://www.getpromonight.com',
       logo: 'https://www.getpromonight.com/logo.png',
       description:
-        'PromoNight tracks every giveaway, theme night, food deal, and promotion across 167 professional sports teams in MLB, NBA, NFL, NHL, MLS, and WNBA.',
+        'PromoNight tracks every giveaway, theme night, food deal, and promotion across 169 professional sports teams in MLB, NBA, NFL, NHL, MLS, and WNBA.',
       email: 'hello@getpromonight.com',
       sameAs: [
         'https://x.com/promo_night_app',
@@ -52,7 +52,7 @@ export function HomepageJsonLd() {
       name: 'PromoNight',
       url: 'https://www.getpromonight.com',
       description:
-        'Track every giveaway, theme night, food deal, and promotion across 167 professional sports teams.',
+        'Track every giveaway, theme night, food deal, and promotion across 169 professional sports teams.',
     },
     // SoftwareApplication intentionally omitted: Google's Software App rich
     // result requires aggregateRating (or review) alongside offers, and we have

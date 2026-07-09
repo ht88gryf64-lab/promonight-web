@@ -316,7 +316,7 @@ export function generateTeamFAQs(
   // 5f. App — away games (always shown)
   faqs.push({
     question: `Does PromoNight work for away games?`,
-    answer: `PromoNight tracks home-game promotions for all 167 teams across MLB, NBA, NFL, NHL, MLS, and WNBA. If you're traveling to see the ${team.name} play on the road, browse the home team's calendar on this site to see every promo scheduled at their venue during your trip.`,
+    answer: `PromoNight tracks home-game promotions for all 169 teams across MLB, NBA, NFL, NHL, MLS, and WNBA. If you're traveling to see the ${team.name} play on the road, browse the home team's calendar on this site to see every promo scheduled at their venue during your trip.`,
   });
 
   // 5g. Data authority — update cadence (only when there's enough data to claim authority)

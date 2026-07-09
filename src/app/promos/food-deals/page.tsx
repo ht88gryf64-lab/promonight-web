@@ -45,7 +45,7 @@ export default async function FoodDealsPage() {
       promos: list.sort((a, b) => a.date.localeCompare(b.date)),
     }));
 
-  const lead = `Every food-deal promotion scheduled across MLB, NBA, NHL, NFL, MLS, and WNBA in ${YEAR}. Dollar-dog nights, half-price concessions, and value menus with the team, date, and opponent for each, grouped by month. ${foods.length} food deal${foods.length !== 1 ? 's' : ''} currently tracked across 167 teams.`;
+  const lead = `Every food-deal promotion scheduled across MLB, NBA, NHL, NFL, MLS, and WNBA in ${YEAR}. Dollar-dog nights, half-price concessions, and value menus with the team, date, and opponent for each, grouped by month. ${foods.length} food deal${foods.length !== 1 ? 's' : ''} currently tracked across 169 teams.`;
 
   const faqs = [
     {

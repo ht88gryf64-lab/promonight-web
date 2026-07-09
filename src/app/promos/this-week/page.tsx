@@ -55,7 +55,7 @@ export default async function ThisWeekPage() {
 
   const lastUpdated = todayYMD();
 
-  const lead = `Every highlighted promotional event across MLB, NBA, NHL, NFL, MLS, and WNBA in the next seven days. Giveaways, theme nights, bobbleheads, and food deals at all 167 teams, grouped by day. Updated daily based on the live PromoNight database.`;
+  const lead = `Every highlighted promotional event across MLB, NBA, NHL, NFL, MLS, and WNBA in the next seven days. Giveaways, theme nights, bobbleheads, and food deals at all 169 teams, grouped by day. Updated daily based on the live PromoNight database.`;
 
   const faqs = [
     {
@@ -71,7 +71,7 @@ export default async function ThisWeekPage() {
     {
       question: 'How do I see promos for just my team?',
       answer:
-        'Visit the team page directly from any promo in the list, or browse all 167 teams from the PromoNight app. The app offers push notifications the morning of a promo day.',
+        'Visit the team page directly from any promo in the list, or browse all 169 teams from the PromoNight app. The app offers push notifications the morning of a promo day.',
     },
   ];
 

@@ -414,7 +414,7 @@ function StateA({
             href="/teams"
             className="block w-full rounded-xl border border-rd-line-strong py-3 text-center font-rd text-[12px] font-semibold uppercase tracking-[0.08em] text-rd-ink-soft transition-colors hover:border-rd-ink hover:text-rd-ink"
           >
-            Browse all 167 teams →
+            Browse all 169 teams →
           </Link>
         </div>
       </div>
@@ -450,7 +450,7 @@ function StateA({
           href="/teams"
           className="block w-full text-center py-3 rounded-xl border border-border-subtle text-text-secondary text-sm font-mono tracking-[0.08em] uppercase hover:border-border-hover hover:text-white transition-colors"
         >
-          Browse all 167 teams →
+          Browse all 169 teams →
         </Link>
       </div>
     </div>
