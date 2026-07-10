@@ -23,7 +23,9 @@ export function ContributeForm({ schoolId, schoolName }: { schoolId: string; sch
     try {
       const r = await fetch('/api/cfb/contribute', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const j = await r.json();
-      if (j.ok) setState('done');
+      // Gate the thank-you on the transport AND the body. The server only sends
+      // ok:true after a write it confirmed, so success here always means stored.
+      if (r.ok && j.ok) setState('done');
       else { setState('error'); setErr(j.error === 'contact_required' ? 'Add an email or LinkedIn so we can credit you.' : j.error === 'content_required' ? 'Tell us at least one thing about gameday.' : 'Something went wrong — try again.'); }
     } catch { setState('error'); setErr('Network error — try again.'); }
   }
