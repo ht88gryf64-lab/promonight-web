@@ -12,7 +12,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { isValidEmail, sanitizeTeams, upsertSubscriber } from '@/lib/subscribers';
+import { isValidEmail, sanitizeTeams, upsertSubscriber, type SubscriberGeo } from '@/lib/subscribers';
 import { coerceCaptureSurface } from '@/lib/follow-surface';
 import { sendConfirmationEmail } from '@/lib/email';
 import { checkSubscribeRateLimit, clientIp } from '@/lib/rate-limit';
@@ -24,6 +24,31 @@ interface SubscribeBody {
   email?: unknown;
   teams?: unknown;
   source?: unknown;
+}
+
+// Read the approximate location Vercel attaches at the edge, the same headers
+// /follow uses for geo ordering. Additive: any header may be absent (local dev,
+// non-Vercel) and the sanitizer downstream drops anything invalid. The city
+// header is URL-encoded by Vercel, so it is decoded defensively.
+function readVercelGeo(request: Request): SubscriberGeo {
+  const h = request.headers;
+  const rawCity = h.get('x-vercel-ip-city');
+  let geoCity: string | null = null;
+  if (rawCity) {
+    try {
+      geoCity = decodeURIComponent(rawCity);
+    } catch {
+      geoCity = rawCity;
+    }
+  }
+  const lat = h.get('x-vercel-ip-latitude');
+  const lng = h.get('x-vercel-ip-longitude');
+  return {
+    geoCity,
+    geoRegion: h.get('x-vercel-ip-country-region'),
+    geoLat: lat !== null && lat !== '' ? Number(lat) : null,
+    geoLng: lng !== null && lng !== '' ? Number(lng) : null,
+  };
 }
 
 export async function POST(request: Request) {
@@ -52,9 +77,10 @@ export async function POST(request: Request) {
 
   const teams = sanitizeTeams(body.teams);
   const source = coerceCaptureSurface(body.source);
+  const geo = readVercelGeo(request);
 
   try {
-    const result = await upsertSubscriber({ email: body.email, teams, source });
+    const result = await upsertSubscriber({ email: body.email, teams, source, geo });
 
     // Single opt-in: send the confirmation email ONLY when a (re)confirmation is
     // due, i.e. the resulting status is pending (new signup, or a pending /

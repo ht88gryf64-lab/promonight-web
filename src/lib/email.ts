@@ -229,6 +229,10 @@ function formatDigestDate(ymd: string): string {
 // reports; forwarding it into the on-page CTAs would be a separate page change.)
 export const EMAIL_SURFACE_PERSONALIZED = 'web_email_personalized';
 export const EMAIL_SURFACE_GENERIC = 'web_email_generic';
+// The empty-window variant (a personalized subscriber whose teams are quiet):
+// its promo links, whether the local section or the national fallback, carry
+// this surface so its ticket clicks separate from the other two variants.
+export const EMAIL_SURFACE_EMPTY = 'web_email_empty';
 
 // Team-page URL for a promo, tagged with the email surface via the subId1
 // `${surface}_${team.id}` convention. team.id already sits in the path; keeping
@@ -376,35 +380,54 @@ export async function sendPersonalizedDigest(args: {
   });
 }
 
-export async function sendGenericDigest(args: {
-  email: string;
-  manageToken: string;
-  featured: DigestPromo[];
-  collections: DigestCollection[];
-}): Promise<SendResult> {
+// ── Shared hot-promos body ───────────────────────────────────────────────────
+// The national "hottest promos" body: featured promo rows plus the aggregator
+// collection pills. Extracted so the generic digest AND the empty-window
+// fallback render an identical body from one source (surface differs so ticket
+// clicks attribute to the right variant).
+function hotPromosBodyHtml(
+  featured: DigestPromo[],
+  collections: DigestCollection[],
+  surface: string,
+): string {
   const collectionsHtml =
     `<tr><td style="padding:16px 0 0;">` +
-    args.collections
+    collections
       .map(
         (c) =>
           `<a href="${SITE_URL}${c.href}" style="display:inline-block;margin:0 8px 8px 0;padding:7px 12px;border:1px solid #e6e1d6;border-radius:999px;color:#1d1714;text-decoration:none;font-size:13px;">${esc(c.label)}</a>`,
       )
       .join('') +
     `</td></tr>`;
+  return featured.map((p) => promoRowHtml(p, surface)).join('') + collectionsHtml;
+}
+
+function hotPromosBodyText(featured: DigestPromo[], collections: DigestCollection[]): string[] {
+  return [
+    ...featured.map((p) => `- ${formatDigestDate(p.date)}: ${p.title} (${p.teamName})`),
+    '',
+    'Browse:',
+    ...collections.map((c) => `- ${c.label}: ${SITE_URL}${c.href}`),
+  ];
+}
+
+export async function sendGenericDigest(args: {
+  email: string;
+  manageToken: string;
+  featured: DigestPromo[];
+  collections: DigestCollection[];
+}): Promise<SendResult> {
   const html = digestShellHtml({
     heading: "This week's hottest promos",
     sub: 'The biggest giveaways, theme nights, and food deals across the leagues this week.',
-    bodyHtml: args.featured.map((p) => promoRowHtml(p, EMAIL_SURFACE_GENERIC)).join('') + collectionsHtml,
+    bodyHtml: hotPromosBodyHtml(args.featured, args.collections, EMAIL_SURFACE_GENERIC),
     footerHtml: genericFooterHtml(args.manageToken),
   });
   const manage = preferencesUrl(args.manageToken);
   const text = [
     "This week's hottest promos on PromoNight",
     '',
-    ...args.featured.map((p) => `- ${formatDigestDate(p.date)}: ${p.title} (${p.teamName})`),
-    '',
-    'Browse:',
-    ...args.collections.map((c) => `- ${c.label}: ${SITE_URL}${c.href}`),
+    ...hotPromosBodyText(args.featured, args.collections),
     '',
     `Star your teams to personalize: ${manage}`,
     `Unsubscribe: ${manage}&unsub=1`,
@@ -415,6 +438,92 @@ export async function sendGenericDigest(args: {
   return sendEmail({
     to: args.email,
     subject: "This week's hottest pro sports promos",
+    html,
+    text,
+    headers: listUnsubHeaders(args.manageToken),
+  });
+}
+
+// ── Empty-window variant ─────────────────────────────────────────────────────
+// A personalized subscriber whose followed teams have NOTHING in the window.
+// Instead of skipping, send a personalized opener naming their team(s), then a
+// LOCAL section of nearby promos when the geo cascade found any, else the same
+// national hot-promos body the generic digest uses (reused, not duplicated).
+
+// "the Minnesota Twins" / "the A and B" / "the A, B, and C". One leading "the".
+function naturalTeamList(names: string[]): string {
+  if (names.length === 0) return 'your teams';
+  let joined: string;
+  if (names.length === 1) joined = names[0];
+  else if (names.length === 2) joined = `${names[0]} and ${names[1]}`;
+  else joined = `${names.slice(0, -1).join(', ')}, and ${names[names.length - 1]}`;
+  return `the ${joined}`;
+}
+
+// Local section: a place-headed sub-header ("Happening around Minneapolis this
+// week") over the nearby promo rows.
+function localSectionHtml(city: string | null, promos: DigestPromo[], surface: string): string {
+  const label = city ? `Happening around ${esc(city)} this week` : 'Happening near you this week';
+  const header = `<tr><td style="padding:2px 0 10px;font-size:13px;font-weight:700;color:#1d1714;">${label}</td></tr>`;
+  return header + promos.map((p) => promoRowHtml(p, surface)).join('');
+}
+
+export async function sendEmptyWindowDigest(args: {
+  email: string;
+  manageToken: string;
+  // Display names of the followed teams, for the opener.
+  teamNames: string[];
+  // City label for the local section heading (null falls back to "near you").
+  anchorCity: string | null;
+  // Nearby promos from the geo cascade. Empty => render the national fallback.
+  localPromos: DigestPromo[];
+  // National hot-promos, used as the fallback body when localPromos is empty.
+  featured: DigestPromo[];
+  collections: DigestCollection[];
+}): Promise<SendResult> {
+  const surface = EMAIL_SURFACE_EMPTY;
+  const teamList = naturalTeamList(args.teamNames);
+  const hasLocal = args.localPromos.length > 0;
+  const heading = `Nothing on the calendar for ${teamList} this week`;
+  const sub = hasLocal
+    ? args.anchorCity
+      ? `But there is plenty happening around ${args.anchorCity}.`
+      : 'But there is plenty happening near you.'
+    : "Here are this week's hottest promos across the leagues instead.";
+
+  const bodyHtml = hasLocal
+    ? localSectionHtml(args.anchorCity, args.localPromos, surface)
+    : hotPromosBodyHtml(args.featured, args.collections, surface);
+  const html = digestShellHtml({
+    heading,
+    sub,
+    bodyHtml,
+    footerHtml: personalizedFooterHtml(args.manageToken),
+  });
+
+  const manage = preferencesUrl(args.manageToken);
+  const bodyText = hasLocal
+    ? [
+        `Happening around ${args.anchorCity ?? 'you'} this week:`,
+        ...args.localPromos.map(
+          (p) => `- ${formatDigestDate(p.date)}: ${p.title} (${p.teamName}) ${teamPromoUrl(p, surface)}`,
+        ),
+      ]
+    : ["This week's hottest promos across the leagues:", ...hotPromosBodyText(args.featured, args.collections)];
+  const text = [
+    `Nothing on the calendar for ${teamList} this week.`,
+    '',
+    ...bodyText,
+    '',
+    `Manage your teams: ${manage}`,
+    `Unsubscribe: ${manage}&unsub=1`,
+    '',
+    SENDER_POSTAL_ADDRESS,
+  ].join('\n');
+
+  return sendEmail({
+    to: args.email,
+    subject: 'Your teams are quiet this week on PromoNight',
     html,
     text,
     headers: listUnsubHeaders(args.manageToken),

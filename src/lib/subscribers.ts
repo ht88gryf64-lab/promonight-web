@@ -27,6 +27,13 @@ export interface Subscriber {
   createdAt: string | null;
   confirmedAt: string | null;
   updatedAt: string | null;
+  // Approximate location captured from the Vercel edge geo headers at signup
+  // (additive; absent on records created before geo capture). Powers the
+  // empty-window digest's local section. null when not captured.
+  geoCity: string | null;
+  geoRegion: string | null;
+  geoLat: number | null;
+  geoLng: number | null;
 }
 
 const SUBSCRIBERS = 'subscribers';
@@ -89,10 +96,48 @@ export function sanitizeTeams(teams: unknown): string[] {
   return out;
 }
 
+// Approximate location from the Vercel edge geo headers, threaded from the
+// subscribe route. All optional; captured only at first signup.
+export interface SubscriberGeo {
+  geoCity?: string | null;
+  geoRegion?: string | null;
+  geoLat?: number | null;
+  geoLng?: number | null;
+}
+
+// Normalize untrusted geo into stored fields, all null when absent/invalid. A
+// null-island (0,0) or a non-finite coord is dropped so it can never anchor a
+// local section on the equator.
+function sanitizeGeo(geo: SubscriberGeo | null | undefined): {
+  geoCity: string | null;
+  geoRegion: string | null;
+  geoLat: number | null;
+  geoLng: number | null;
+} {
+  const city =
+    typeof geo?.geoCity === 'string' && geo.geoCity.trim().length > 0
+      ? geo.geoCity.trim().slice(0, 120)
+      : null;
+  const region =
+    typeof geo?.geoRegion === 'string' && geo.geoRegion.trim().length > 0
+      ? geo.geoRegion.trim().slice(0, 40)
+      : null;
+  let lat = typeof geo?.geoLat === 'number' && Number.isFinite(geo.geoLat) ? geo.geoLat : null;
+  let lng = typeof geo?.geoLng === 'number' && Number.isFinite(geo.geoLng) ? geo.geoLng : null;
+  if (lat === 0 && lng === 0) {
+    lat = null;
+    lng = null;
+  }
+  return { geoCity: city, geoRegion: region, geoLat: lat, geoLng: lng };
+}
+
 export interface UpsertSubscriberInput {
   email: string;
   teams: string[];
   source: CaptureSurface | string;
+  // Additive: stored only on a brand-new record (signup), never backfilled onto
+  // an existing one.
+  geo?: SubscriberGeo | null;
 }
 
 export interface UpsertSubscriberResult {
@@ -155,6 +200,8 @@ export async function upsertSubscriber(
         createdAt: now,
         confirmedAt: null,
         updatedAt: now,
+        // Captured once, at signup. Existing records are never backfilled.
+        ...sanitizeGeo(input.geo),
       });
       return {
         id,
@@ -254,6 +301,10 @@ function mapSubscriberDoc(doc: FirebaseFirestore.DocumentSnapshot): Subscriber {
     createdAt: tsToIso(d.createdAt),
     confirmedAt: tsToIso(d.confirmedAt),
     updatedAt: tsToIso(d.updatedAt),
+    geoCity: typeof d.geoCity === 'string' ? d.geoCity : null,
+    geoRegion: typeof d.geoRegion === 'string' ? d.geoRegion : null,
+    geoLat: typeof d.geoLat === 'number' ? d.geoLat : null,
+    geoLng: typeof d.geoLng === 'number' ? d.geoLng : null,
   };
 }
 
