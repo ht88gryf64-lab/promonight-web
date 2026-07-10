@@ -350,6 +350,76 @@ export async function getConfirmedSubscribers(): Promise<Subscriber[]> {
   return snap.docs.map(mapSubscriberDoc);
 }
 
+// ── Send-time inbox dedup ────────────────────────────────────────────────────
+// Two DIFFERENT subscriber docs can still deliver to ONE inbox. The doc id is
+// sha256(normalizeEmail), so case/whitespace variants already collapse to a
+// single doc, but Gmail treats `john.doe+promos@gmail.com` and `johndoe@gmail.com`
+// as the same mailbox and those hash differently, so they can persist as two
+// docs. The digest send collapses the confirmed set to one record per delivering
+// inbox so a duplicate can never produce two emails to the same person.
+
+// Canonical delivery key for an address. Everything is trim+lowercased (via
+// normalizeEmail); for gmail.com / googlemail.com ONLY, the local part also has
+// any +suffix stripped and all dots removed, and googlemail folds to gmail, so
+// every alias of one Gmail mailbox maps to one key. Other providers are left
+// exact, since dots and +tags are not universally aliases elsewhere.
+export function deliveryInboxKey(email: string): string {
+  const e = normalizeEmail(email);
+  const at = e.lastIndexOf('@');
+  if (at <= 0) return e;
+  let local = e.slice(0, at);
+  let domain = e.slice(at + 1);
+  if (domain === 'googlemail.com') domain = 'gmail.com';
+  if (domain === 'gmail.com') {
+    const plus = local.indexOf('+');
+    if (plus >= 0) local = local.slice(0, plus);
+    local = local.replace(/\./g, '');
+  }
+  return `${local}@${domain}`;
+}
+
+// Milliseconds for the recency tie-break; null/unparseable sort oldest.
+function updatedAtMillis(sub: Subscriber): number {
+  if (!sub.updatedAt) return -Infinity;
+  const t = Date.parse(sub.updatedAt);
+  return Number.isFinite(t) ? t : -Infinity;
+}
+
+// True when `candidate` should win its inbox group over the current `incumbent`.
+// Precedence: a record WITH followed teams beats one without (so a personalized
+// subscriber is never dropped in favor of an empty duplicate), then the most
+// recently updated, then a stable lexicographic id tiebreak so the outcome is
+// deterministic regardless of input order.
+function preferSubscriber(candidate: Subscriber, incumbent: Subscriber): boolean {
+  const cHasTeams = candidate.teams.length > 0 ? 1 : 0;
+  const iHasTeams = incumbent.teams.length > 0 ? 1 : 0;
+  if (cHasTeams !== iHasTeams) return cHasTeams > iHasTeams;
+  const cUpdated = updatedAtMillis(candidate);
+  const iUpdated = updatedAtMillis(incumbent);
+  if (cUpdated !== iUpdated) return cUpdated > iUpdated;
+  return candidate.id < incumbent.id;
+}
+
+// Collapse a subscriber set to one record per delivering inbox, applying the
+// keep-rule above within each colliding group. First-seen inbox order is
+// preserved. Pure and side-effect free: reads no Firestore and writes nothing,
+// so it is safe to run on the dry-run path exactly as on the execute path.
+export function dedupeByDeliveryInbox(subs: Subscriber[]): Subscriber[] {
+  const best = new Map<string, Subscriber>();
+  const order: string[] = [];
+  for (const sub of subs) {
+    const key = deliveryInboxKey(sub.email);
+    const incumbent = best.get(key);
+    if (!incumbent) {
+      best.set(key, sub);
+      order.push(key);
+    } else if (preferSubscriber(sub, incumbent)) {
+      best.set(key, sub);
+    }
+  }
+  return order.map((key) => best.get(key)!);
+}
+
 // Atomically claim the weekly send for a window (keyed by its start date) so a
 // second execute in the same window is a no-op rather than a duplicate blast.
 // Returns true if THIS call won the claim (proceed to send), false if the window

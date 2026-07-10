@@ -24,7 +24,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { claimDigestRun, getConfirmedSubscribers } from '@/lib/subscribers';
+import { claimDigestRun, dedupeByDeliveryInbox, getConfirmedSubscribers } from '@/lib/subscribers';
 import {
   digestWindow,
   fetchWindowPromos,
@@ -66,6 +66,14 @@ export async function GET(request: Request) {
   const startedAt = Date.now();
 
   const subscribers = await getConfirmedSubscribers();
+  // Collapse the confirmed set to one record per delivering inbox BEFORE the
+  // plan is built, so a duplicate (e.g. a Gmail dot / +suffix alias that hashes
+  // to a separate doc) can never produce two emails to the same person. The
+  // keep-rule prefers a record with followed teams over an empty one, so a
+  // personalized subscriber is never dropped for an empty duplicate. Applied on
+  // both the dry-run and execute paths so the plan reflects real recipients.
+  const recipients = dedupeByDeliveryInbox(subscribers);
+  const collapsedDuplicates = subscribers.length - recipients.length;
   const { start, end } = digestWindow(new Date());
   const windowPromos = await fetchWindowPromos(start, end);
   const generic = genericFeatured(windowPromos);
@@ -79,7 +87,7 @@ export async function GET(request: Request) {
   }[] = [];
   const skippedEmpty: string[] = [];
 
-  for (const sub of subscribers) {
+  for (const sub of recipients) {
     if (sub.teams.length > 0) {
       const { promos, total: promoTotal } = personalizedFor(windowPromos, sub.teams);
       if (promoTotal === 0) {
@@ -102,6 +110,8 @@ export async function GET(request: Request) {
     mode: execute ? 'execute' : 'dry-run',
     window: { start, end },
     confirmedSubscribers: subscribers.length,
+    dedupedRecipients: recipients.length,
+    collapsedDuplicates,
     total,
     personalized: personalizedCount,
     generic: genericCount,
