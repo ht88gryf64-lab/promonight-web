@@ -6,12 +6,17 @@
  * it NEVER auto-publishes, NEVER flips editorialStatus, NEVER writes cfbSchools.
  * Graduating a school (review -> publish -> auto->destination) is an operational
  * human step, not an automated path. Per-IP flood limited + honeypot.
+ *
+ * After the write commits, the full submission is emailed to the owner as a
+ * best-effort notification. The write is the only thing that can fail the
+ * request; a mail failure is logged and the user still sees success.
  */
 
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { clientIp, checkSubscribeRateLimit } from '@/lib/rate-limit';
 import { isValidEmail } from '@/lib/subscribers';
+import { sendContributionNotification } from '@/lib/cfb/notify';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -56,17 +61,38 @@ export async function POST(request: Request) {
   const hasContent = Object.values(content).some((v) => v.length > 0);
   if (!hasContent) return NextResponse.json({ ok: false, error: 'content_required' }, { status: 400 });
 
+  const submittedAt = new Date().toISOString();
+  const userAgent = (request.headers.get('user-agent') || '').slice(0, 300);
+
+  let docId: string;
   try {
     // DRAFT in the review queue. status stays 'pending-review'; a human reviews,
     // fact-checks (rivalry/transit claims, originality), then publishes + graduates.
-    await db.collection('cfbContributions').add({
+    const ref = await db.collection('cfbContributions').add({
       schoolId, name, contact, content,
       status: 'pending-review', autoPublished: false,
-      submittedAt: new Date().toISOString(),
-      userAgent: (request.headers.get('user-agent') || '').slice(0, 300),
+      submittedAt, userAgent,
     });
-    return NextResponse.json({ ok: true, queued: true });
-  } catch {
+    docId = ref.id;
+  } catch (e) {
+    console.error('[api:cfb-contribute] write failed', e instanceof Error ? e.message : e);
     return NextResponse.json({ ok: false, error: 'server_error' }, { status: 500 });
   }
+
+  // The submission is durably committed above. Everything past this point is
+  // best-effort: an owner notification must never fail the request or imply the
+  // write was lost. Isolated from the write's try/catch on purpose, so a mail
+  // error cannot be mistaken for a storage error and turn a 200 into a 500.
+  try {
+    const res = await sendContributionNotification({
+      docId, schoolId, name, contact, content, submittedAt, userAgent,
+    });
+    if (!res.ok && !res.skipped) {
+      console.error(`[api:cfb-contribute] notify failed for ${docId}: ${res.error}`);
+    }
+  } catch (e) {
+    console.error(`[api:cfb-contribute] notify threw for ${docId}`, e instanceof Error ? e.message : e);
+  }
+
+  return NextResponse.json({ ok: true, queued: true });
 }

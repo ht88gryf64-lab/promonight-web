@@ -40,14 +40,24 @@ interface SendArgs {
   html: string;
   text: string;
   headers?: Record<string, string>;
+  // Resend takes Reply-To as a top-level `reply_to` field and IGNORES it when
+  // passed inside `headers`, so it gets a first-class arg.
+  replyTo?: string;
+  // Abort the send after this many ms. Callers on a user-facing request path
+  // MUST set this: a degraded Resend otherwise holds the response open until
+  // the platform kills the function. Omitted (cron/background) = unbounded,
+  // which is the long-standing digest behavior.
+  timeoutMs?: number;
 }
 
-export async function sendEmail({ to, subject, html, text, headers }: SendArgs): Promise<SendResult> {
+export async function sendEmail({ to, subject, html, text, headers, replyTo, timeoutMs }: SendArgs): Promise<SendResult> {
   const key = process.env.RESEND_API_KEY;
   if (!key) {
     console.warn(`[email] RESEND_API_KEY not set, skipping send to ${to}`);
     return { ok: false, skipped: true };
   }
+  const controller = timeoutMs ? new AbortController() : undefined;
+  const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : undefined;
   try {
     const res = await fetch(RESEND_ENDPOINT, {
       method: 'POST',
@@ -55,7 +65,10 @@ export async function sendEmail({ to, subject, html, text, headers }: SendArgs):
         Authorization: `Bearer ${key}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ from: SENDER_FROM, to, subject, html, text, headers }),
+      // `reply_to` is dropped from the payload when undefined, so existing
+      // callers that omit it are unaffected.
+      body: JSON.stringify({ from: SENDER_FROM, to, subject, html, text, headers, reply_to: replyTo }),
+      signal: controller?.signal,
     });
     if (!res.ok) {
       const body = await res.text().catch(() => '');
@@ -65,8 +78,11 @@ export async function sendEmail({ to, subject, html, text, headers }: SendArgs):
     const data = (await res.json().catch(() => ({}))) as { id?: string };
     return { ok: true, id: data.id };
   } catch (e) {
+    const timedOut = e instanceof Error && e.name === 'AbortError';
     console.error('[email] Resend send error', e instanceof Error ? e.message : e);
-    return { ok: false, error: 'send_exception' };
+    return { ok: false, error: timedOut ? 'send_timeout' : 'send_exception' };
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -86,7 +102,7 @@ export function preferencesUrl(manageToken: string): string {
 
 // ── Confirmation email ──────────────────────────────────────────────────────
 
-function esc(s: string): string {
+export function esc(s: string): string {
   return s
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
