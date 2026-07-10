@@ -6,7 +6,7 @@
       "schedule": "0 10 * * 1"
     },
     {
-      "path": "/api/cron/weekly-digest",
+      "path": "/api/cron/weekly-digest?execute=true",
       "schedule": "0 17 * * 2"
     }
   ]
