@@ -218,8 +218,29 @@ function formatDigestDate(ymd: string): string {
   });
 }
 
-function promoRowHtml(p: DigestPromo): string {
-  const teamUrl = `${SITE_URL}/${p.sportSlug}/${p.teamId}`;
+// ── Email attribution surfaces ──────────────────────────────────────────────
+// Per-promo links land on the team page. They carry the affiliate subId1
+// convention (`${surface}_${team.id}`, see lib/affiliates.ts) as a query param
+// so email-driven sessions are sliceable in PostHog on the same join key the
+// on-page ticket / gear CTAs stamp onto their outbound partner URLs. The two
+// digests use distinct surfaces so personalized and generic traffic separate.
+// (The team page is statically generated and stamps its own web_team_page
+// subId1 onto the partner links, so this tag reaches PostHog, not the partner
+// reports; forwarding it into the on-page CTAs would be a separate page change.)
+export const EMAIL_SURFACE_PERSONALIZED = 'web_email_personalized';
+export const EMAIL_SURFACE_GENERIC = 'web_email_generic';
+
+// Team-page URL for a promo, tagged with the email surface via the subId1
+// `${surface}_${team.id}` convention. team.id already sits in the path; keeping
+// it in the subId1 value too makes the token byte-identical to the affiliate
+// subId1 so both join on one key. Sport slugs and team ids are lowercase-hyphen,
+// so the value is already URL-safe.
+function teamPromoUrl(p: DigestPromo, surface: string): string {
+  return `${SITE_URL}/${p.sportSlug}/${p.teamId}?subId1=${surface}_${p.teamId}`;
+}
+
+function promoRowHtml(p: DigestPromo, surface: string): string {
+  const teamUrl = teamPromoUrl(p, surface);
   const meta = [p.opponent ? `vs ${esc(p.opponent)}` : '', p.time ? esc(p.time) : '']
     .filter(Boolean)
     .join(' &middot; ');
@@ -235,19 +256,52 @@ function promoRowHtml(p: DigestPromo): string {
           </td></tr>`;
 }
 
+// The digest is a white rounded card floating on a beige field. The dark brand
+// header is the top of that card (rounded via the card's overflow:hidden), not
+// a separate band. The card is WIDENED to dominate: it caps at DIGEST_MAX_WIDTH
+// (~700px, up from the old 520 inset) and the beige is reduced to a thin, even
+// frame (DIGEST_FRAME_PAD) so it reads as a slim border rather than a wide band.
+const DIGEST_PAGE_BG = '#f4f1ea'; // beige outer frame
+const DIGEST_CARD_BG = '#ffffff'; // white card
+const DIGEST_BAR_BG = '#1d1714'; // dark header, top of the card
+const DIGEST_MAX_WIDTH = 700; // card cap on wide desktop
+const DIGEST_FRAME_PAD = '12px'; // thin even beige gutter around the card
+
+/**
+ * White rounded card on a beige field:
+ *
+ *   card top  brand header  background #1d1714, rounded via overflow:hidden
+ *   card body heading / promo body / footer  on white
+ *
+ * The beige page shows only as a thin even DIGEST_FRAME_PAD gutter around the
+ * card, so the card dominates. The card fills its container (width:100%) and
+ * caps + centers at DIGEST_MAX_WIDTH on wide desktop (max-width + margin:0 auto
+ * + the outer cell's align="center"); on mobile it fills the screen with the
+ * beige frame collapsing to a minimal DIGEST_FRAME_PAD edge. header and card
+ * share one width because the header is the card's first row.
+ *
+ * Outlook on Windows (the Word engine) honors `width` but IGNORES `max-width`,
+ * so the card is wrapped in an mso-conditional "ghost table" fixed at
+ * DIGEST_MAX_WIDTH; only Outlook reads the `[if mso]` comments, so it caps +
+ * centers the card there while every other client renders the fluid card.
+ * bgcolor mirrors each background as an attribute for older clients.
+ */
 function digestShellHtml(opts: {
   heading: string;
   sub: string;
   bodyHtml: string;
   footerHtml: string;
 }): string {
+  const msoOpen = `<!--[if mso]><table role="presentation" align="center" width="${DIGEST_MAX_WIDTH}" cellpadding="0" cellspacing="0" border="0"><tr><td width="${DIGEST_MAX_WIDTH}"><![endif]-->`;
+  const msoClose = `<!--[if mso]></td></tr></table><![endif]-->`;
   return `<!doctype html>
 <html lang="en">
-<body style="margin:0;padding:0;background:#f4f1ea;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f1ea;">
-    <tr><td align="center" style="padding:32px 16px;">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e6e1d6;">
-        <tr><td style="background:#1d1714;padding:24px 32px;">
+<body style="margin:0;padding:0;width:100%;background:${DIGEST_PAGE_BG};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${DIGEST_PAGE_BG}" style="width:100%;background:${DIGEST_PAGE_BG};">
+    <tr><td align="center" style="padding:${DIGEST_FRAME_PAD};">
+      ${msoOpen}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="${DIGEST_CARD_BG}" style="width:100%;max-width:${DIGEST_MAX_WIDTH}px;margin:0 auto;background:${DIGEST_CARD_BG};border-radius:16px;overflow:hidden;border:1px solid #e6e1d6;">
+        <tr><td bgcolor="${DIGEST_BAR_BG}" style="background:${DIGEST_BAR_BG};padding:24px 32px;">
           <span style="font-size:20px;font-weight:800;letter-spacing:-0.5px;color:#ffffff;">PROMO<span style="color:#ff5a4d;">NIGHT</span></span>
         </td></tr>
         <tr><td style="padding:28px 32px 6px;">
@@ -255,10 +309,11 @@ function digestShellHtml(opts: {
           <p style="margin:0;font-size:14px;color:#6b6459;">${esc(opts.sub)}</p>
         </td></tr>
         <tr><td style="padding:6px 32px 24px;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${opts.bodyHtml}</table>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${opts.bodyHtml}</table>
         </td></tr>
         <tr><td style="padding:20px 32px;border-top:1px solid #e6e1d6;">${opts.footerHtml}</td></tr>
       </table>
+      ${msoClose}
     </td></tr>
   </table>
 </body>
@@ -293,7 +348,8 @@ export async function sendPersonalizedDigest(args: {
   const html = digestShellHtml({
     heading: 'Your teams this week',
     sub: `${args.total} promo${args.total === 1 ? '' : 's'} coming up for the teams you follow.`,
-    bodyHtml: args.promos.map(promoRowHtml).join('') + overflowHtml,
+    bodyHtml:
+      args.promos.map((p) => promoRowHtml(p, EMAIL_SURFACE_PERSONALIZED)).join('') + overflowHtml,
     footerHtml: personalizedFooterHtml(args.manageToken),
   });
   const manage = preferencesUrl(args.manageToken);
@@ -301,7 +357,7 @@ export async function sendPersonalizedDigest(args: {
     'Your teams this week on PromoNight',
     '',
     ...args.promos.map(
-      (p) => `- ${formatDigestDate(p.date)}: ${p.title} (${p.teamName}) ${SITE_URL}/${p.sportSlug}/${p.teamId}`,
+      (p) => `- ${formatDigestDate(p.date)}: ${p.title} (${p.teamName}) ${teamPromoUrl(p, EMAIL_SURFACE_PERSONALIZED)}`,
     ),
     ...(overflow > 0 ? [`...and ${overflow} more this week: ${SITE_URL}`] : []),
     '',
@@ -338,7 +394,7 @@ export async function sendGenericDigest(args: {
   const html = digestShellHtml({
     heading: "This week's hottest promos",
     sub: 'The biggest giveaways, theme nights, and food deals across the leagues this week.',
-    bodyHtml: args.featured.map(promoRowHtml).join('') + collectionsHtml,
+    bodyHtml: args.featured.map((p) => promoRowHtml(p, EMAIL_SURFACE_GENERIC)).join('') + collectionsHtml,
     footerHtml: genericFooterHtml(args.manageToken),
   });
   const manage = preferencesUrl(args.manageToken);
