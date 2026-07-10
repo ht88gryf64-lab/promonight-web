@@ -3,6 +3,11 @@ import { headers } from 'next/headers';
 import type { Team } from '@/lib/types';
 import { getTeamVenueCoords, type TeamCoords } from '@/lib/data';
 import { getInStateTeamSlugs } from '@/lib/geo/state-to-teams';
+import { haversineKm } from '@/lib/geo/distance';
+
+// Re-exported so existing importers/tests keep resolving it from here; the
+// implementation now lives in geo/distance.ts (shared with local-promos.ts).
+export { haversineKm };
 
 // Geo-aware ordering input for the /follow team picker. Soft signal only: it
 // produces an ORDERED list of "near you" team slugs; the caller floats them to
@@ -17,22 +22,6 @@ const NEAR_COUNT = 8;
 // ~500 miles. Beyond this we treat a team as "not near", so a non-US visitor
 // (nearest US venue thousands of km away) gets no "near you" group.
 const NEAR_MAX_KM = 800;
-const EARTH_RADIUS_KM = 6371;
-
-function toRad(deg: number): number {
-  return (deg * Math.PI) / 180;
-}
-
-// Great-circle distance in km. Pure; exported for tests.
-export function haversineKm(aLat: number, aLng: number, bLat: number, bLng: number): number {
-  const dLat = toRad(bLat - aLat);
-  const dLng = toRad(bLng - aLng);
-  const lat1 = toRad(aLat);
-  const lat2 = toRad(bLat);
-  const h =
-    Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
-  return 2 * EARTH_RADIUS_KM * Math.asin(Math.min(1, Math.sqrt(h)));
-}
 
 // Rank teams by venue distance from the visitor; nearest first, within range,
 // capped. Pure; exported for tests.

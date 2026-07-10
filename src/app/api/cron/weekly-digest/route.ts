@@ -4,16 +4,19 @@
  * Weekly send. Iterates CONFIRMED subscribers only (pending + unsubscribed are
  * excluded at the query). One email per subscriber:
  *   - teams non-empty  -> personalized digest of their teams' promos in the next
- *     7 days. If that set is EMPTY, the subscriber is SKIPPED for the week (no
- *     empty send) and counted in the dry-run output.
+ *     7 days. If that set is EMPTY, the subscriber gets the empty-window variant
+ *     instead of being skipped: a personalized opener plus a local section of
+ *     nearby promos (geo cascade: stored signup geo -> followed-team market
+ *     proxy -> national fallback), counted in the dry-run by cascade level.
  *   - teams empty      -> generic "hot promos" email built from the same window
  *     data, with links to the aggregator pages.
  *
  * Auth: CRON_SECRET bearer, same as /api/cron/mlb-schedule.
  *
  * DRY-RUN BY DEFAULT. The route logs and returns the full plan (totals,
- * personalized vs generic counts, skip count, free-tier check) but sends
- * NOTHING. A live send requires BOTH the cron secret AND ?execute=true. The
+ * personalized / generic / empty-window counts with the empty-window cascade
+ * breakdown, free-tier check) but sends NOTHING. A live send requires BOTH the
+ * cron secret AND ?execute=true. The
  * scheduled Vercel cron (vercel.json) hits the bare path, so it stays in
  * dry-run until the path is changed to add ?execute=true.
  *
@@ -24,7 +27,12 @@
  */
 
 import { NextResponse } from 'next/server';
-import { claimDigestRun, getConfirmedSubscribers } from '@/lib/subscribers';
+import {
+  claimDigestRun,
+  dedupeByDeliveryInbox,
+  getConfirmedSubscribers,
+  type Subscriber,
+} from '@/lib/subscribers';
 import {
   digestWindow,
   fetchWindowPromos,
@@ -33,7 +41,14 @@ import {
   DIGEST_COLLECTIONS,
   type DigestPromo,
 } from '@/lib/digest';
-import { isSenderConfigured, sendGenericDigest, sendPersonalizedDigest } from '@/lib/email';
+import { getAllTeams, getTeamVenueCoords, getSchemaLocationsForTeams } from '@/lib/data';
+import { resolveLocalAnchor, buildTeamCityMap, type CascadeLevel } from '@/lib/geo/local-promos';
+import {
+  isSenderConfigured,
+  sendEmptyWindowDigest,
+  sendGenericDigest,
+  sendPersonalizedDigest,
+} from '@/lib/email';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -48,6 +63,15 @@ interface PlanItem {
   manageToken: string;
   type: 'personalized' | 'generic';
   promoCount: number;
+}
+
+interface EmptyPlanItem {
+  email: string;
+  manageToken: string;
+  teamNames: string[];
+  anchorCity: string | null;
+  localPromos: DigestPromo[];
+  level: CascadeLevel;
 }
 
 export async function GET(request: Request) {
@@ -66,6 +90,14 @@ export async function GET(request: Request) {
   const startedAt = Date.now();
 
   const subscribers = await getConfirmedSubscribers();
+  // Collapse the confirmed set to one record per delivering inbox BEFORE the
+  // plan is built, so a duplicate (e.g. a Gmail dot / +suffix alias that hashes
+  // to a separate doc) can never produce two emails to the same person. The
+  // keep-rule prefers a record with followed teams over an empty one, so a
+  // personalized subscriber is never dropped for an empty duplicate. Applied on
+  // both the dry-run and execute paths so the plan reflects real recipients.
+  const recipients = dedupeByDeliveryInbox(subscribers);
+  const collapsedDuplicates = subscribers.length - recipients.length;
   const { start, end } = digestWindow(new Date());
   const windowPromos = await fetchWindowPromos(start, end);
   const generic = genericFeatured(windowPromos);
@@ -77,14 +109,15 @@ export async function GET(request: Request) {
     promos: DigestPromo[];
     total: number;
   }[] = [];
-  const skippedEmpty: string[] = [];
+  const emptyWindowSubs: Subscriber[] = [];
 
-  for (const sub of subscribers) {
+  for (const sub of recipients) {
     if (sub.teams.length > 0) {
       const { promos, total: promoTotal } = personalizedFor(windowPromos, sub.teams);
       if (promoTotal === 0) {
-        // Followed teams have nothing in the window -> no empty send this week.
-        skippedEmpty.push(sub.email);
+        // Followed teams are quiet this window. Instead of skipping, this
+        // subscriber gets the empty-window variant, resolved below.
+        emptyWindowSubs.push(sub);
         continue;
       }
       personalizedPlan.push({ email: sub.email, manageToken: sub.manageToken, promos, total: promoTotal });
@@ -94,18 +127,64 @@ export async function GET(request: Request) {
     }
   }
 
+  // Resolve each empty-window recipient through the local-anchor cascade. The
+  // team / venue-coord / venue-city maps are read once, and only when at least
+  // one subscriber actually needs them.
+  const emptyPlan: EmptyPlanItem[] = [];
+  if (emptyWindowSubs.length > 0) {
+    const allTeams = await getAllTeams();
+    const coords = await getTeamVenueCoords(allTeams);
+    const cityByTeamId = buildTeamCityMap(allTeams, await getSchemaLocationsForTeams(allTeams));
+    const nameById = new Map(allTeams.map((t) => [t.id, `${t.city} ${t.name}`]));
+    for (const sub of emptyWindowSubs) {
+      const { anchor, localPromos, level } = resolveLocalAnchor({
+        stored: {
+          geoCity: sub.geoCity,
+          geoRegion: sub.geoRegion,
+          geoLat: sub.geoLat,
+          geoLng: sub.geoLng,
+        },
+        followedTeamIds: sub.teams,
+        windowPromos,
+        coords,
+        cityByTeamId,
+      });
+      emptyPlan.push({
+        email: sub.email,
+        manageToken: sub.manageToken,
+        teamNames: sub.teams.map((id) => nameById.get(id) ?? id),
+        anchorCity: anchor.city,
+        localPromos,
+        level,
+      });
+    }
+  }
+
   const personalizedCount = plan.filter((p) => p.type === 'personalized').length;
   const genericCount = plan.filter((p) => p.type === 'generic').length;
-  const total = plan.length;
+  const emptyCount = emptyPlan.length;
+  // Every confirmed recipient now gets an email (the empty-window variant
+  // replaces the old skip), so total spans all three variants.
+  const total = personalizedCount + genericCount + emptyCount;
+  const emptyWindowByLevel = emptyPlan.reduce(
+    (acc, e) => {
+      acc[e.level] += 1;
+      return acc;
+    },
+    { 'stored-geo': 0, 'team-proxy': 0, 'national-fallback': 0 } as Record<CascadeLevel, number>,
+  );
 
   const summary = {
     mode: execute ? 'execute' : 'dry-run',
     window: { start, end },
     confirmedSubscribers: subscribers.length,
+    dedupedRecipients: recipients.length,
+    collapsedDuplicates,
     total,
     personalized: personalizedCount,
     generic: genericCount,
-    skippedEmpty: skippedEmpty.length,
+    emptyWindow: emptyCount,
+    emptyWindowByLevel,
     freeTierCap: FREE_TIER_DAILY,
     withinFreeTier: total <= FREE_TIER_DAILY,
   };
@@ -114,8 +193,10 @@ export async function GET(request: Request) {
   for (const p of plan) {
     console.log(`[cron:weekly-digest] -> ${p.type} ${p.email} (${p.promoCount} promos)`);
   }
-  for (const e of skippedEmpty) {
-    console.log(`[cron:weekly-digest] skip(empty-window) ${e}`);
+  for (const e of emptyPlan) {
+    console.log(
+      `[cron:weekly-digest] -> empty-window ${e.email} [${e.level}] ${e.localPromos.length} local (${e.anchorCity ?? 'no city'})`,
+    );
   }
   if (!summary.withinFreeTier) {
     console.warn(
@@ -127,8 +208,17 @@ export async function GET(request: Request) {
     return NextResponse.json({
       ok: true,
       ...summary,
-      recipients: plan.map((p) => ({ email: p.email, type: p.type, promoCount: p.promoCount })),
-      skippedEmails: skippedEmpty,
+      recipients: [
+        ...plan.map((p) => ({ email: p.email, type: p.type, promoCount: p.promoCount })),
+        ...emptyPlan.map((e) => ({
+          email: e.email,
+          type: 'empty-window' as const,
+          level: e.level,
+          localPromoCount: e.localPromos.length,
+          anchorCity: e.anchorCity,
+          teams: e.teamNames,
+        })),
+      ],
     });
   }
 
@@ -211,6 +301,29 @@ export async function GET(request: Request) {
     } catch (e) {
       failed++;
       console.error(`[cron:weekly-digest] generic send threw ${p.email}: ${e instanceof Error ? e.message : e}`);
+    }
+  }
+  for (const e of emptyPlan) {
+    try {
+      const res = await sendEmptyWindowDigest({
+        email: e.email,
+        manageToken: e.manageToken,
+        teamNames: e.teamNames,
+        anchorCity: e.anchorCity,
+        localPromos: e.localPromos,
+        featured: generic,
+        collections: DIGEST_COLLECTIONS,
+      });
+      if (res.ok) sent++;
+      else {
+        failed++;
+        console.error(`[cron:weekly-digest] empty-window send failed ${e.email}: ${res.error ?? 'unknown'}`);
+      }
+    } catch (err) {
+      failed++;
+      console.error(
+        `[cron:weekly-digest] empty-window send threw ${e.email}: ${err instanceof Error ? err.message : err}`,
+      );
     }
   }
 
