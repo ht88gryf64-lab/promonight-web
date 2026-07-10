@@ -218,8 +218,29 @@ function formatDigestDate(ymd: string): string {
   });
 }
 
-function promoRowHtml(p: DigestPromo): string {
-  const teamUrl = `${SITE_URL}/${p.sportSlug}/${p.teamId}`;
+// ── Email attribution surfaces ──────────────────────────────────────────────
+// Per-promo links land on the team page. They carry the affiliate subId1
+// convention (`${surface}_${team.id}`, see lib/affiliates.ts) as a query param
+// so email-driven sessions are sliceable in PostHog on the same join key the
+// on-page ticket / gear CTAs stamp onto their outbound partner URLs. The two
+// digests use distinct surfaces so personalized and generic traffic separate.
+// (The team page is statically generated and stamps its own web_team_page
+// subId1 onto the partner links, so this tag reaches PostHog, not the partner
+// reports; forwarding it into the on-page CTAs would be a separate page change.)
+export const EMAIL_SURFACE_PERSONALIZED = 'web_email_personalized';
+export const EMAIL_SURFACE_GENERIC = 'web_email_generic';
+
+// Team-page URL for a promo, tagged with the email surface via the subId1
+// `${surface}_${team.id}` convention. team.id already sits in the path; keeping
+// it in the subId1 value too makes the token byte-identical to the affiliate
+// subId1 so both join on one key. Sport slugs and team ids are lowercase-hyphen,
+// so the value is already URL-safe.
+function teamPromoUrl(p: DigestPromo, surface: string): string {
+  return `${SITE_URL}/${p.sportSlug}/${p.teamId}?subId1=${surface}_${p.teamId}`;
+}
+
+function promoRowHtml(p: DigestPromo, surface: string): string {
+  const teamUrl = teamPromoUrl(p, surface);
   const meta = [p.opponent ? `vs ${esc(p.opponent)}` : '', p.time ? esc(p.time) : '']
     .filter(Boolean)
     .join(' &middot; ');
@@ -235,34 +256,37 @@ function promoRowHtml(p: DigestPromo): string {
           </td></tr>`;
 }
 
-// Page background and brand-bar background, shared by the shell's two
-// full-width bands so the bands and the <body> can never drift apart.
-const DIGEST_PAGE_BG = '#f4f1ea';
+// The whole digest is ONE centered column capped at DIGEST_MAX_WIDTH: a dark
+// brand header row stacked directly on the white body, with no inset card, no
+// border, no rounded corner, no drop shadow, and no beige outer field. The page
+// and the column are the same white (DIGEST_SURFACE_BG), so the column has no
+// visible margin band on wide screens.
+const DIGEST_SURFACE_BG = '#ffffff';
 const DIGEST_BAR_BG = '#1d1714';
-// The content column caps here on wide viewports and fills the viewport below
-// it. The full-width bands around it are what make the email span edge to edge.
 const DIGEST_MAX_WIDTH = 600;
 
 /**
- * Two stacked full-width bands, each centering one width-capped column:
+ * One continuous, edge-to-edge column, capped and centered at DIGEST_MAX_WIDTH:
  *
- *   band 1  brand bar   background #1d1714 edge to edge, brand mark capped
- *   band 2  content     background #f4f1ea edge to edge, white card capped
+ *   row 1  brand header  background #1d1714, full column width
+ *   rows   heading / promo body / footer  on the white surface
  *
- * Each band is its own `width="100%"` table so its background paints the entire
- * email width no matter how wide the reading pane is. The inner column carries
- * `width:100%` + `max-width`, so it fills a narrow viewport and caps on a wide
- * one. Centering in standards-compliant clients is `align="center"` on the band
- * cell plus `margin:0 auto` on the column; bgcolor duplicates each background as
- * an attribute so the bands paint in older clients too.
+ * No inset card, border, rounded corner, drop shadow, or colored outer field:
+ * the page background and the column are the same white, so the dark header and
+ * the white body share one exact width with no margin band around them. The
+ * outer table centers the column on wide viewports (align="center" + the
+ * column's margin:0 auto) and the column fills the viewport edge to edge on
+ * narrow ones (width:100% + max-width, zero outer side padding). Per-row
+ * horizontal padding keeps text off the column edge while the column background
+ * itself runs to the edge.
  *
- * Outlook on Windows (the Word engine) is the exception: it honors `width` but
- * IGNORES `max-width`, so a `width:100%` column there would stretch full bleed
- * with no cap and `align="center"` cannot center a 100%-wide child. Each inner
- * column is therefore wrapped in an mso-conditional "ghost table" fixed at
- * DIGEST_MAX_WIDTH and centered. Only Outlook reads the `[if mso]` comments, so
- * the ghost table pins + centers the column there while every other client
- * renders the fluid `width:100%`/`max-width` column and never sees the ghost.
+ * Outlook on Windows (the Word engine) honors `width` but IGNORES `max-width`,
+ * so a `width:100%` column there would stretch full bleed with no cap and
+ * `align="center"` cannot center a 100%-wide child. The column is wrapped in an
+ * mso-conditional "ghost table" fixed at DIGEST_MAX_WIDTH; only Outlook reads
+ * the `[if mso]` comments, so it caps + centers the column there while every
+ * other client renders the fluid `width:100%`/`max-width` column. bgcolor
+ * mirrors each background as an attribute for older clients.
  */
 function digestShellHtml(opts: {
   heading: string;
@@ -274,22 +298,14 @@ function digestShellHtml(opts: {
   const msoClose = `<!--[if mso]></td></tr></table><![endif]-->`;
   return `<!doctype html>
 <html lang="en">
-<body style="margin:0;padding:0;width:100%;background:${DIGEST_PAGE_BG};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${DIGEST_BAR_BG}" style="width:100%;background:${DIGEST_BAR_BG};">
-    <tr><td align="center" bgcolor="${DIGEST_BAR_BG}" style="background:${DIGEST_BAR_BG};padding:0;">
+<body style="margin:0;padding:0;width:100%;background:${DIGEST_SURFACE_BG};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${DIGEST_SURFACE_BG}" style="width:100%;background:${DIGEST_SURFACE_BG};">
+    <tr><td align="center" style="padding:0;">
       ${msoOpen}
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" align="center" style="width:100%;max-width:${DIGEST_MAX_WIDTH}px;margin:0 auto;">
-        <tr><td style="padding:24px 32px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="${DIGEST_SURFACE_BG}" style="width:100%;max-width:${DIGEST_MAX_WIDTH}px;margin:0 auto;background:${DIGEST_SURFACE_BG};">
+        <tr><td bgcolor="${DIGEST_BAR_BG}" style="background:${DIGEST_BAR_BG};padding:24px 32px;">
           <span style="font-size:20px;font-weight:800;letter-spacing:-0.5px;color:#ffffff;">PROMO<span style="color:#ff5a4d;">NIGHT</span></span>
         </td></tr>
-      </table>
-      ${msoClose}
-    </td></tr>
-  </table>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${DIGEST_PAGE_BG}" style="width:100%;background:${DIGEST_PAGE_BG};">
-    <tr><td align="center" bgcolor="${DIGEST_PAGE_BG}" style="background:${DIGEST_PAGE_BG};padding:24px 16px 32px;">
-      ${msoOpen}
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#ffffff" style="width:100%;max-width:${DIGEST_MAX_WIDTH}px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e6e1d6;">
         <tr><td style="padding:28px 32px 6px;">
           <h1 style="margin:0 0 4px;font-size:20px;line-height:1.25;color:#1d1714;">${esc(opts.heading)}</h1>
           <p style="margin:0;font-size:14px;color:#6b6459;">${esc(opts.sub)}</p>
@@ -334,7 +350,8 @@ export async function sendPersonalizedDigest(args: {
   const html = digestShellHtml({
     heading: 'Your teams this week',
     sub: `${args.total} promo${args.total === 1 ? '' : 's'} coming up for the teams you follow.`,
-    bodyHtml: args.promos.map(promoRowHtml).join('') + overflowHtml,
+    bodyHtml:
+      args.promos.map((p) => promoRowHtml(p, EMAIL_SURFACE_PERSONALIZED)).join('') + overflowHtml,
     footerHtml: personalizedFooterHtml(args.manageToken),
   });
   const manage = preferencesUrl(args.manageToken);
@@ -342,7 +359,7 @@ export async function sendPersonalizedDigest(args: {
     'Your teams this week on PromoNight',
     '',
     ...args.promos.map(
-      (p) => `- ${formatDigestDate(p.date)}: ${p.title} (${p.teamName}) ${SITE_URL}/${p.sportSlug}/${p.teamId}`,
+      (p) => `- ${formatDigestDate(p.date)}: ${p.title} (${p.teamName}) ${teamPromoUrl(p, EMAIL_SURFACE_PERSONALIZED)}`,
     ),
     ...(overflow > 0 ? [`...and ${overflow} more this week: ${SITE_URL}`] : []),
     '',
@@ -379,7 +396,7 @@ export async function sendGenericDigest(args: {
   const html = digestShellHtml({
     heading: "This week's hottest promos",
     sub: 'The biggest giveaways, theme nights, and food deals across the leagues this week.',
-    bodyHtml: args.featured.map(promoRowHtml).join('') + collectionsHtml,
+    bodyHtml: args.featured.map((p) => promoRowHtml(p, EMAIL_SURFACE_GENERIC)).join('') + collectionsHtml,
     footerHtml: genericFooterHtml(args.manageToken),
   });
   const manage = preferencesUrl(args.manageToken);
