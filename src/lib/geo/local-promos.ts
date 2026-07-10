@@ -35,19 +35,32 @@ export interface StoredGeo {
   geoLng?: number | null;
 }
 
-// Best available human city label per team for the "Happening around {city}"
-// heading: the venue's parsed locality when we have it (e.g. Minneapolis for the
-// Twins), else the team's own city field, which for most leagues is the metro
-// (Dallas, Los Angeles). Some co-tenant / name-mismatch venues have no parsed
-// locality, so the team.city fallback keeps the heading from going blank.
+// Best human city label per team for the "Happening around {city}" heading.
+// League-aware because team.city and the venue's locality disagree in opposite
+// directions per league:
+//   - MLB team.city is often a STATE (Minnesota, Texas, Arizona), so the venue
+//     locality (Minneapolis, Arlington, Phoenix) reads better.
+//   - NFL / NBA / MLS / NHL / WNBA team.city is the recognizable METRO (Los
+//     Angeles, New York), while the venue often sits in a suburb (Inglewood,
+//     Harrison, East Rutherford), so team.city reads better.
+// So MLB prefers the venue locality and every other league prefers team.city;
+// each falls back to the other when its preferred value is missing, which keeps
+// the heading from ever going blank. The ~150km promo search is unaffected: it
+// always uses the real venue coordinates, this only changes the display label.
 export function buildTeamCityMap(
-  teams: ReadonlyArray<{ id: string; city: string }>,
+  teams: ReadonlyArray<{ id: string; city: string; league?: string }>,
   venueLocalities: Map<string, { addressLocality?: string | null }>,
 ): Map<string, string> {
   const map = new Map<string, string>();
   for (const t of teams) {
-    const locality = venueLocalities.get(t.id)?.addressLocality;
-    map.set(t.id, locality && locality.length > 0 ? locality : t.city);
+    const venueCity =
+      typeof venueLocalities.get(t.id)?.addressLocality === 'string' &&
+      (venueLocalities.get(t.id)?.addressLocality?.length ?? 0) > 0
+        ? (venueLocalities.get(t.id)?.addressLocality as string)
+        : null;
+    const teamCity = t.city && t.city.length > 0 ? t.city : null;
+    const label = t.league === 'MLB' ? venueCity ?? teamCity : teamCity ?? venueCity;
+    if (label) map.set(t.id, label);
   }
   return map;
 }
@@ -89,16 +102,18 @@ export interface ResolvedLocal {
 
 /**
  * Resolve the empty-window anchor via the three-level cascade and return the
- * local promos it surfaces:
+ * local promos it surfaces. Each level is tried only if the previous one found
+ * NOTHING nearby, so a stored geo that happens to be quiet does not shortcut
+ * past a followed-team market that has content:
  *
- *   1. stored-geo   the subscriber's captured signup geo, if valid
- *   2. team-proxy   the followed team whose home market has the MOST promos in
- *                   the window (so the local section leads with the market that
- *                   actually has content); its venue city labels the section
- *   3. none         no stored geo and no followed team has venue coords
- *
- * `level` collapses to 'national-fallback' whenever the resolved anchor has zero
- * local promos, since the email then renders the national hot-promos body.
+ *   1. stored-geo   the subscriber's captured signup geo, if valid AND it has
+ *                   >=1 nearby promo
+ *   2. team-proxy   else the followed team whose home market has the MOST promos
+ *                   in the window (leads the local section with the market that
+ *                   actually has content), if that market has >=1
+ *   3. national     else no local section: the email renders the national
+ *                   hot-promos body. The reported anchor is the most specific
+ *                   one tried (stored geo preferred) purely for dry-run context.
  */
 export function resolveLocalAnchor(opts: {
   stored: StoredGeo | null | undefined;
@@ -109,13 +124,16 @@ export function resolveLocalAnchor(opts: {
 }): ResolvedLocal {
   const { stored, followedTeamIds, windowPromos, coords, cityByTeamId } = opts;
 
-  // Level 1: stored subscriber geo.
+  // Level 1: stored subscriber geo. Use it only when it actually surfaces nearby
+  // promos; if it is present but empty, remember the anchor and fall through to
+  // the team proxy before giving up to national.
+  let storedAnchor: LocalAnchor | null = null;
   if (stored && hasValidCoords(stored.geoLat, stored.geoLng)) {
     const lat = stored.geoLat as number;
     const lng = stored.geoLng as number;
     const localPromos = promosWithinKm(lat, lng, windowPromos, coords);
-    const anchor: LocalAnchor = { source: 'stored-geo', lat, lng, city: stored.geoCity ?? null };
-    return { anchor, localPromos, level: localPromos.length > 0 ? 'stored-geo' : 'national-fallback' };
+    storedAnchor = { source: 'stored-geo', lat, lng, city: stored.geoCity ?? null };
+    if (localPromos.length > 0) return { anchor: storedAnchor, localPromos, level: 'stored-geo' };
   }
 
   // Level 2: team-market proxy. Consider every followed team with venue coords
@@ -131,15 +149,18 @@ export function resolveLocalAnchor(opts: {
       best = { lat: c.lat, lng: c.lng, city: cityByTeamId.get(id) ?? null, localPromos };
     }
   }
-  if (best) {
+  if (best && best.localPromos.length > 0) {
     const anchor: LocalAnchor = { source: 'team-proxy', lat: best.lat, lng: best.lng, city: best.city };
-    return { anchor, localPromos: best.localPromos, level: best.localPromos.length > 0 ? 'team-proxy' : 'national-fallback' };
+    return { anchor, localPromos: best.localPromos, level: 'team-proxy' };
   }
 
-  // Level 3: no anchor at all.
-  return {
-    anchor: { source: 'none', lat: null, lng: null, city: null },
-    localPromos: [],
-    level: 'national-fallback',
-  };
+  // Level 3: national fallback. Neither anchor surfaced anything, so there is no
+  // local section. Report the most specific anchor we tried (stored geo first,
+  // else the team market) so the dry-run keeps context.
+  const fallbackAnchor: LocalAnchor =
+    storedAnchor ??
+    (best
+      ? { source: 'team-proxy', lat: best.lat, lng: best.lng, city: best.city }
+      : { source: 'none', lat: null, lng: null, city: null });
+  return { anchor: fallbackAnchor, localPromos: [], level: 'national-fallback' };
 }
