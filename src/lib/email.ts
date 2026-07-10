@@ -256,37 +256,35 @@ function promoRowHtml(p: DigestPromo, surface: string): string {
           </td></tr>`;
 }
 
-// The whole digest is ONE centered column capped at DIGEST_MAX_WIDTH: a dark
-// brand header row stacked directly on the white body, with no inset card, no
-// border, no rounded corner, no drop shadow, and no beige outer field. The page
-// and the column are the same white (DIGEST_SURFACE_BG), so the column has no
-// visible margin band on wide screens.
-const DIGEST_SURFACE_BG = '#ffffff';
-const DIGEST_BAR_BG = '#1d1714';
-const DIGEST_MAX_WIDTH = 600;
+// The digest is a white rounded card floating on a beige field. The dark brand
+// header is the top of that card (rounded via the card's overflow:hidden), not
+// a separate band. The card is WIDENED to dominate: it caps at DIGEST_MAX_WIDTH
+// (~700px, up from the old 520 inset) and the beige is reduced to a thin, even
+// frame (DIGEST_FRAME_PAD) so it reads as a slim border rather than a wide band.
+const DIGEST_PAGE_BG = '#f4f1ea'; // beige outer frame
+const DIGEST_CARD_BG = '#ffffff'; // white card
+const DIGEST_BAR_BG = '#1d1714'; // dark header, top of the card
+const DIGEST_MAX_WIDTH = 700; // card cap on wide desktop
+const DIGEST_FRAME_PAD = '12px'; // thin even beige gutter around the card
 
 /**
- * One continuous, edge-to-edge column, capped and centered at DIGEST_MAX_WIDTH:
+ * White rounded card on a beige field:
  *
- *   row 1  brand header  background #1d1714, full column width
- *   rows   heading / promo body / footer  on the white surface
+ *   card top  brand header  background #1d1714, rounded via overflow:hidden
+ *   card body heading / promo body / footer  on white
  *
- * No inset card, border, rounded corner, drop shadow, or colored outer field:
- * the page background and the column are the same white, so the dark header and
- * the white body share one exact width with no margin band around them. The
- * outer table centers the column on wide viewports (align="center" + the
- * column's margin:0 auto) and the column fills the viewport edge to edge on
- * narrow ones (width:100% + max-width, zero outer side padding). Per-row
- * horizontal padding keeps text off the column edge while the column background
- * itself runs to the edge.
+ * The beige page shows only as a thin even DIGEST_FRAME_PAD gutter around the
+ * card, so the card dominates. The card fills its container (width:100%) and
+ * caps + centers at DIGEST_MAX_WIDTH on wide desktop (max-width + margin:0 auto
+ * + the outer cell's align="center"); on mobile it fills the screen with the
+ * beige frame collapsing to a minimal DIGEST_FRAME_PAD edge. header and card
+ * share one width because the header is the card's first row.
  *
  * Outlook on Windows (the Word engine) honors `width` but IGNORES `max-width`,
- * so a `width:100%` column there would stretch full bleed with no cap and
- * `align="center"` cannot center a 100%-wide child. The column is wrapped in an
- * mso-conditional "ghost table" fixed at DIGEST_MAX_WIDTH; only Outlook reads
- * the `[if mso]` comments, so it caps + centers the column there while every
- * other client renders the fluid `width:100%`/`max-width` column. bgcolor
- * mirrors each background as an attribute for older clients.
+ * so the card is wrapped in an mso-conditional "ghost table" fixed at
+ * DIGEST_MAX_WIDTH; only Outlook reads the `[if mso]` comments, so it caps +
+ * centers the card there while every other client renders the fluid card.
+ * bgcolor mirrors each background as an attribute for older clients.
  */
 function digestShellHtml(opts: {
   heading: string;
@@ -298,11 +296,11 @@ function digestShellHtml(opts: {
   const msoClose = `<!--[if mso]></td></tr></table><![endif]-->`;
   return `<!doctype html>
 <html lang="en">
-<body style="margin:0;padding:0;width:100%;background:${DIGEST_SURFACE_BG};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${DIGEST_SURFACE_BG}" style="width:100%;background:${DIGEST_SURFACE_BG};">
-    <tr><td align="center" style="padding:0;">
+<body style="margin:0;padding:0;width:100%;background:${DIGEST_PAGE_BG};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${DIGEST_PAGE_BG}" style="width:100%;background:${DIGEST_PAGE_BG};">
+    <tr><td align="center" style="padding:${DIGEST_FRAME_PAD};">
       ${msoOpen}
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="${DIGEST_SURFACE_BG}" style="width:100%;max-width:${DIGEST_MAX_WIDTH}px;margin:0 auto;background:${DIGEST_SURFACE_BG};">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="${DIGEST_CARD_BG}" style="width:100%;max-width:${DIGEST_MAX_WIDTH}px;margin:0 auto;background:${DIGEST_CARD_BG};border-radius:16px;overflow:hidden;border:1px solid #e6e1d6;">
         <tr><td bgcolor="${DIGEST_BAR_BG}" style="background:${DIGEST_BAR_BG};padding:24px 32px;">
           <span style="font-size:20px;font-weight:800;letter-spacing:-0.5px;color:#ffffff;">PROMO<span style="color:#ff5a4d;">NIGHT</span></span>
         </td></tr>
