@@ -39,19 +39,18 @@ export default async function Page({ params }: { params: Promise<{ school: strin
   const theme = resolveCfbTheme(data.school.primaryColor, data.school.secondaryColor);
   const vars = cfbThemeVars(theme) as CSSProperties;
 
-  // Structured data — the corroborated rivalry games with trophy names are citable.
+  // Structured data: a standalone SportsTeam object. We intentionally do NOT emit a
+  // nested SportsEvent[] schedule. Google's Event rules require every event to carry a
+  // location with both name and address; away games have no resolved venue and home
+  // games carry only a stadium name, so emitting events tripped a Google rich-results
+  // validation notice on all 86 pages. SportsTeam alone is not a rich-result type, so
+  // it produces no such error. data.games still drives the visible schedule below.
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'SportsTeam',
     name: data.school.name,
     sport: 'American Football',
     ...(data.venue ? { location: { '@type': 'StadiumOrArena', name: data.venue.name, ...(data.venue.city ? { address: [data.venue.city, data.venue.state].filter(Boolean).join(', ') } : {}) } } : {}),
-    event: data.games.slice(0, 20).map((g) => ({
-      '@type': 'SportsEvent',
-      name: `${data.school.shortName} ${g.isHome ? 'vs' : 'at'} ${g.opponentName}${g.rivalry ? ` (${g.rivalry.trophy || g.rivalry.name})` : ''}`,
-      startDate: g.date,
-      ...(g.isHome && data.venue ? { location: { '@type': 'StadiumOrArena', name: data.venue.name } } : {}),
-    })),
   };
 
   return (
