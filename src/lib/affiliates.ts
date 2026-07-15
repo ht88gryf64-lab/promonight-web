@@ -218,6 +218,9 @@ export function buildStubHubUrl(opts: StubHubOpts): string {
 }
 
 export type TicketmasterOpts = {
+  /** Venue hub only: building slug, appended to the SharedID so attribution is
+   *  per-building (web_venue_{slug}). Omitted by every other surface. */
+  venueSlug?: string;
   /** PromoNight team slug (Firestore doc id), e.g. 'minnesota-twins'. */
   teamSlug: string;
   /** Ticketmaster URL slug. Set on the Team via Firestore for all 167 teams
@@ -268,7 +271,10 @@ export function buildTicketmasterUrl(opts: TicketmasterOpts): string {
 
   return TICKETMASTER_IMPACT_WRAP
     .replace('{TARGET}', encodeURIComponent(directUrl))
-    .replace('{SHARED_ID}', encodeURIComponent(opts.surface));
+    .replace(
+      '{SHARED_ID}',
+      encodeURIComponent(opts.venueSlug ? `${opts.surface}_${opts.venueSlug}` : opts.surface),
+    );
 }
 
 // ── TicketNetwork (Impact) ───────────────────────────────────────────────
@@ -320,6 +326,9 @@ export function ticketNetworkLandingUrl(team: Pick<Team, 'id' | 'ticketNetworkSl
 
 export type TicketNetworkLinkOpts = {
   team: Pick<Team, 'id' | 'ticketNetworkSlug'>;
+  /** Venue hub only: building slug, inserted before team.id so subId1 is
+   *  web_venue_{slug}_{teamId}. Omitted by every other surface. */
+  venueSlug?: string;
   /** subId1 surface segment, already including the `web_` prefix
    *  (e.g. 'web_team_page'). Away-game CTAs pass 'web_away_game' so attribution
    *  matches the Expedia pubref convention (see lib/hotel-link.ts). */
@@ -337,7 +346,7 @@ export function buildTicketNetworkLink(opts: TicketNetworkLinkOpts): string | nu
     `${TICKETNETWORK.prefix}?u=${encodeURIComponent(landing)}` +
     `&partnerpropertyid=${TICKETNETWORK.partnerPropertyId}` +
     `&MediaPartnerPropertyId=${TICKETNETWORK.partnerPropertyId}` +
-    `&subId1=${opts.surface}_${opts.team.id}`
+    `&subId1=${opts.venueSlug ? `${opts.surface}_${opts.venueSlug}` : opts.surface}_${opts.team.id}`
   );
 }
 

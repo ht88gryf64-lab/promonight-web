@@ -93,6 +93,10 @@ export type AnalyticsSurface =
   | 'web_mlb_hub_this_week'
   | 'web_mlb_hub_promo_type'
   | 'web_mlb_hub_team_card'
+  // Venue logistics hub (/venues/[slug]). Per-building attribution rides in the
+  // affiliate subId via promoId={buildingSlug}, so the surface stays one enum
+  // value while reports still slice by building.
+  | 'web_venue'
   | 'web_article'
   | 'web_my_teams'
   | 'web_best_promos'

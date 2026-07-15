@@ -38,12 +38,16 @@ type Props = {
   surface: AnalyticsSurface;
   placement: string;
   promoId?: string | null;
+  /** Venue hub only: building slug, threaded into the affiliate subId so ticket
+   *  attribution is per-building (web_venue_{slug} / web_venue_{slug}_{teamId}).
+   *  Omitted by every other surface, whose subId stays unchanged. */
+  venueSlug?: string;
   /** 'full' (default) — team-page hero / sidebar / standalone use.
    *  'compact' — tighter padding + gap, fits inside playoff cards / modal stacks. */
   size?: 'full' | 'compact';
 };
 
-export function TicketmasterCTA({ team, surface, placement, promoId, size = 'full' }: Props) {
+export function TicketmasterCTA({ team, surface, placement, promoId, venueSlug, size = 'full' }: Props) {
   // subId1 surface segment for TicketNetwork: away-game CTAs attribute to
   // 'web_away_game' (mirrors lib/hotel-link.ts); every other placement uses the
   // page surface. team.id is appended by the builder for cross-partner joins.
@@ -52,13 +56,14 @@ export function TicketmasterCTA({ team, surface, placement, promoId, size = 'ful
     placement === 'away_game_card' ? 'web_away_game' : surface;
 
   const ticketmasterHref = buildTicketmasterUrl({
+    venueSlug,
     teamSlug: team.id,
     ticketmasterSlug: team.ticketmasterSlug,
     ticketmasterAttractionId: team.ticketmasterAttractionId,
     surface,
     promoId,
   });
-  const ticketNetworkHref = buildTicketNetworkLink({ team, surface: tnSurface });
+  const ticketNetworkHref = buildTicketNetworkLink({ team, surface: tnSurface, venueSlug });
 
   // Graceful fallback — never render a broken ticket link. If neither vendor
   // resolves, hide the CTA entirely; otherwise render whichever buttons resolve.

@@ -1,6 +1,10 @@
 import 'server-only';
 import { cache } from 'react';
 import { db } from './firebase';
+import type { Team } from './types';
+import { getTeamBySlug } from './data';
+import { getCfbSchool } from './cfb/data';
+import { toAffiliateTeam } from './cfb/page-extras';
 
 // Read layer for the venue logistics hub (/venues/[slug]). Reads the venueHubs
 // collection ONLY. The legacy `venues` collection and getVenueForTeam are
@@ -159,3 +163,77 @@ export function cityState(v: Pick<VenueHub, 'city' | 'state'>): string | null {
   if (v.city && v.state) return `${v.city}, ${v.state}`;
   return v.city || v.state || null;
 }
+
+// ── indexing floor (locked) ─────────────────────────────────────────────────
+// A building enters the sitemap / gets index:true only when it has coordinates
+// AND at least two of (bag policy, parking, transit) AND is verified. Below the
+// floor the page still renders what it has, but emits noindex.
+type IndexFloorFields = Pick<
+  VenueHub,
+  | 'lat' | 'lng' | 'verified' | 'clearBagRequired' | 'bagMaxDimensions' | 'bagPolicyUrl'
+  | 'bagPolicyNotes' | 'parkingLots' | 'parkingLotMapUrl' | 'publicTransit'
+>;
+export function venueHubIsIndexable(v: IndexFloorFields): boolean {
+  const hasGeo = v.lat !== null && v.lng !== null;
+  const hasBag = v.clearBagRequired !== null || !!v.bagMaxDimensions || !!v.bagPolicyUrl || !!v.bagPolicyNotes;
+  const hasParking = (v.parkingLots?.length ?? 0) > 0 || !!v.parkingLotMapUrl;
+  const hasTransit = !!v.publicTransit && ((v.publicTransit.lines?.length ?? 0) > 0 || !!v.publicTransit.notes);
+  const twoOfThree = [hasBag, hasParking, hasTransit].filter(Boolean).length >= 2;
+  return hasGeo && twoOfThree && v.verified === true;
+}
+
+/** All 222 building slugs, for generateStaticParams. */
+export const getAllVenueHubSlugs = cache(async (): Promise<string[]> => {
+  const snap = await db.collection('venueHubs').get();
+  return snap.docs.map((d) => d.id);
+});
+
+export interface VenueHubSitemapEntry {
+  slug: string;
+  lastModified: Date;
+}
+/** Indexable buildings only, with an accurate lastmod from the doc's updatedAt. */
+export const getIndexableVenueHubSitemapEntries = cache(async (): Promise<VenueHubSitemapEntry[]> => {
+  const snap = await db.collection('venueHubs').get();
+  const out: VenueHubSitemapEntry[] = [];
+  for (const doc of snap.docs) {
+    const d = doc.data();
+    const fields: IndexFloorFields = {
+      lat: typeof d.lat === 'number' ? d.lat : null,
+      lng: typeof d.lng === 'number' ? d.lng : null,
+      verified: d.verified === true,
+      clearBagRequired: typeof d.clearBagRequired === 'boolean' ? d.clearBagRequired : null,
+      bagMaxDimensions: d.bagMaxDimensions ?? null,
+      bagPolicyUrl: d.bagPolicyUrl ?? null,
+      bagPolicyNotes: d.bagPolicyNotes ?? null,
+      parkingLots: Array.isArray(d.parkingLots) ? d.parkingLots : [],
+      parkingLotMapUrl: d.parkingLotMapUrl ?? null,
+      publicTransit: d.publicTransit ?? null,
+    };
+    if (!venueHubIsIndexable(fields)) continue;
+    // updatedAt is a Firestore Timestamp; fall back to now if absent.
+    const ts = d.updatedAt;
+    const lastModified = ts && typeof ts.toDate === 'function' ? ts.toDate() : new Date();
+    out.push({ slug: doc.id, lastModified });
+  }
+  return out;
+});
+
+// ── ticket CTA team resolution ──────────────────────────────────────────────
+// Tickets are building-agnostic (the CTA renders on every hub), but the ticket
+// LINK needs a concrete team. Resolve the first tenant that yields one, pro
+// tenants first (a shared NFL/CFB building links NFL tickets), CFB via the
+// affiliate-team shim so the vendor slugs resolve to the football program.
+export const resolveTicketTeam = cache(async (hub: VenueHub): Promise<Team | null> => {
+  const ordered = [...hub.tenants].sort((a, b) => Number(a.league === 'CFB') - Number(b.league === 'CFB'));
+  for (const t of ordered) {
+    if (t.league === 'CFB') {
+      const school = await getCfbSchool(t.teamId);
+      if (school) return toAffiliateTeam(school, hub.city);
+    } else {
+      const team = await getTeamBySlug(t.teamId);
+      if (team) return team;
+    }
+  }
+  return null;
+});

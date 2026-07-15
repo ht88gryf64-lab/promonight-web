@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
+import type { Team } from '@/lib/types';
 import type { HubFaqItem } from '@/components/hub/HubFaq';
 import { HubFaq } from '@/components/hub/HubFaq';
+import { TicketmasterCTA } from '@/components/affiliates/TicketmasterCTA';
 import { VenueHubJsonLd } from './VenueHubJsonLd';
 import {
   type VenueHub,
@@ -69,7 +71,15 @@ function ExpediaSlot() {
   );
 }
 
-export function VenueHubView({ hub, canonicalUrl }: { hub: VenueHub; canonicalUrl: string }) {
+export function VenueHubView({
+  hub,
+  canonicalUrl,
+  ticketTeam,
+}: {
+  hub: VenueHub;
+  canonicalUrl: string;
+  ticketTeam: Team | null;
+}) {
   const short = displayVenueName(hub.name);
   const loc = cityState(hub);
   const tenantNames = hub.tenantOverlays.map((t) => t.displayName);
@@ -104,6 +114,14 @@ export function VenueHubView({ hub, canonicalUrl }: { hub: VenueHub; canonicalUr
     faqs.push({ question: `Can you bring outside food into ${short}?`, answer: foodAns });
   }
   const gateTenants = hub.tenantOverlays.filter((t) => t.verified && t.gatesOpen?.ruleText);
+  // Lot-open time (from the tenant overlay's tailgateWindow) rendered in PARKING
+  // context, never as a gate. Labeled per tenant only when more than one has one.
+  const lotOpenTenants = hub.tenantOverlays.filter((t) => t.verified && t.tailgateWindow);
+  const lotOpenLines = lotOpenTenants.map((t) => ({
+    key: t.teamId,
+    label: lotOpenTenants.length > 1 ? t.displayName : null,
+    text: t.tailgateWindow as string,
+  }));
   if (gateTenants.length) {
     const gateAns =
       gateTenants.length === 1
@@ -213,6 +231,18 @@ export function VenueHubView({ hub, canonicalUrl }: { hub: VenueHub; canonicalUr
                 <Card>
                   <CardLabel>Reserve parking near {short}</CardLabel>
                   <SpotHeroSlot />
+                  {/* Lot-open time near the widget, in PARKING context. Never mapped
+                      into a gate row: a lot-opening time is not a gate-opening time. */}
+                  {lotOpenLines.length ? (
+                    <div className="mt-2 space-y-0.5">
+                      {lotOpenLines.map((l) => (
+                        <p key={l.key} className="font-rd text-[12px] text-rd-ink-soft">
+                          {l.label ? <strong>{l.label}. </strong> : null}
+                          {l.text}
+                        </p>
+                      ))}
+                    </div>
+                  ) : null}
                   {hub.parkingLotMapUrl ? (
                     <div className="mt-2 font-rd text-[11px]">
                       <a href={hub.parkingLotMapUrl} className="font-semibold text-rd-red" target="_blank" rel="noopener noreferrer">
@@ -269,20 +299,22 @@ export function VenueHubView({ hub, canonicalUrl }: { hub: VenueHub; canonicalUr
           </div>
         </div>
 
+        {/* Tickets CTA, directly ABOVE the FAQ. Building-agnostic: renders on every
+            hub, held or not. Ticketmaster primary + TicketNetwork below, both routed
+            through Impact with subId web_venue_{slug}(_teamId) and dual-emitting
+            affiliate_click to PostHog + GA4 via TrackedAffiliateLink. */}
+        {ticketTeam ? (
+          <Card>
+            <CardLabel>Get tickets</CardLabel>
+            <TicketmasterCTA team={ticketTeam} surface="web_venue" placement="venue_hub" venueSlug={hub.slug} promoId={hub.slug} />
+          </Card>
+        ) : null}
+
         {/* FAQ (overflow bag text lands here) */}
         {faqs.length ? (
           <Card tint>
             <HubFaq faqs={faqs} />
           </Card>
-        ) : null}
-
-        {/* tickets CTA */}
-        {primaryTenant ? (
-          <div className="py-1.5 text-center">
-            <span className="inline-block rounded-lg bg-rd-red px-5 py-2.5 font-rd text-[13px] font-bold text-white">
-              {primaryTenant} tickets &rsaquo;
-            </span>
-          </div>
         ) : null}
 
         {/* held building: hero shows, facts do not (rule 2) */}
