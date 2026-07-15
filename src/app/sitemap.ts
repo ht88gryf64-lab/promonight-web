@@ -2,6 +2,7 @@ import type { MetadataRoute } from 'next';
 import { getAllTeams, getPlayoffConfig, getStillAlivePlayoffTeamIds } from '@/lib/data';
 import { getAllCfbSchoolIds } from '@/lib/cfb/data';
 import { isCfbHubLive } from '@/lib/league-hubs';
+import { getIndexableVenueHubSitemapEntries } from '@/lib/venue-hub';
 
 const BASE_URL = 'https://www.getpromonight.com';
 
@@ -65,6 +66,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
+  // Venue logistics hubs (/venues/[slug]). Only buildings that clear the indexing
+  // floor (lat/lng + two of bag/parking/transit + verified) are listed; the rest
+  // render but stay noindex and out of the sitemap. lastmod is the doc's real
+  // updatedAt, not sitemap-generation time. Fail-closed on a read error. Flows to
+  // the IndexNow deploy hook automatically (getAllSitemapUrls -> sitemap()).
+  const venueEntries = await getIndexableVenueHubSitemapEntries().catch(() => []);
+  const venuePages = venueEntries.map((v) => ({
+    url: `${BASE_URL}/venues/${v.slug}`,
+    lastModified: v.lastModified,
+    changeFrequency: 'weekly' as const,
+    priority: 0.7,
+  }));
+
   // Only include the /playoffs hub in the sitemap when playoffs are active.
   // When playoffsActive flips to false, next sitemap regeneration drops it.
   const playoffHubEntries = playoffsActive
@@ -105,6 +119,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...playoffHubEntries,
     ...teamPages,
     ...cfbTeamPages,
+    ...venuePages,
     {
       url: `${BASE_URL}/about`,
       lastModified: now,
