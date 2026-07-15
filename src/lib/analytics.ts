@@ -23,6 +23,7 @@ export type AnalyticsEvent =
   | 'this_week_see_all_tap'
   | 'collection_tile_tap'
   | 'affiliate_click'
+  | 'venue_hub_click'
   | 'app_download_click'
   | 'promo_card_tap'
   | 'tonight_card_tap'
@@ -479,8 +480,24 @@ export type ResaleClickProperties = {
   destination_url: string;
 };
 
+// venue_hub_click: the INTERNAL routing click from a team page into that team's
+// building hub (/venues/{slug}). Not an affiliate motion — it measures the
+// team-page-to-hub internal-link thesis (pages per session), so it carries the
+// team AND the destination building. Team is known here, so team_slug is the
+// team (unlike the hub's own building-keyed affiliate sub-IDs).
+export type VenueHubClickProperties = {
+  surface: AnalyticsSurface;
+  team_slug: string;
+  sport?: Sport;
+  placement: string;
+  building_slug: string;
+  building_name: string;
+  destination_url: string;
+};
+
 export type EventPropertiesMap = {
   page_view: PageViewProperties;
+  venue_hub_click: VenueHubClickProperties;
   cta_click: CtaClickProperties;
   browse_all_teams_tap: BrowseAllTeamsTapProperties;
   this_week_see_all_tap: ThisWeekSeeAllTapProperties;
