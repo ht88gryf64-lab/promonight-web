@@ -14,7 +14,6 @@ import { FANATICS_AD_IDS } from './fanatics-ad-ids';
 
 const SEATGEEK_AID = process.env.NEXT_PUBLIC_SEATGEEK_AID ?? '';
 const STUBHUB_RID = process.env.NEXT_PUBLIC_STUBHUB_RID ?? '';
-const SPOTHERO_ID = process.env.NEXT_PUBLIC_SPOTHERO_ID ?? '';
 // Impact wrap-link template for Ticketmaster. Placeholder tokens — `{TARGET}`
 // receives the URL-encoded destination (Ticketmaster team URL); `{SHARED_ID}`
 // receives the surface tag for partner-side reporting. When unset, the
@@ -66,7 +65,10 @@ export function isPartnerActive(partner: AffiliatePartner): boolean {
       // model as TicketNetwork and Expedia).
       return true;
     case 'spothero':
-      return SPOTHERO_ID.length > 0;
+      // HasOffers aff_c prefix + aff_id=2427 are hardcoded constants (no env
+      // var), so the outbound link is always commissionable — same model as
+      // Fanatics / Expedia / TicketNetwork.
+      return true;
     case 'expedia':
       // Partnerize camref is a hardcoded constant baked into the URL — the
       // outbound link is always commissionable, so tracking is always active.
@@ -123,13 +125,6 @@ export function fanaticsUrl(rawUrl: string, _opts: AffiliateLinkOptions): string
   return rawUrl;
 }
 
-export function spotHeroUrl(rawUrl: string, opts: AffiliateLinkOptions): string {
-  const url = new URL(rawUrl);
-  // SpotHero runs on CJ Affiliate; pid is the partner ID, sid is the passthrough.
-  setParam(url, 'pid', SPOTHERO_ID);
-  setParam(url, 'sid', subId(opts));
-  return url.toString();
-}
 
 export function buildAffiliateUrl(
   partner: AffiliatePartner,
@@ -147,7 +142,9 @@ export function buildAffiliateUrl(
       // NOT re-tag; re-encoding would corrupt the `u` deep-link param.
       return rawUrl;
     case 'spothero':
-      return spotHeroUrl(rawUrl, opts);
+      // SpotHero links are fully assembled by `buildSpotHeroUrl` (the aff_c
+      // tracker with aff_id + aff_sub baked in). Do NOT re-tag; passthrough.
+      return rawUrl;
     case 'expedia':
       // The Partnerize tracking template (camref/creativeref/adref) is already
       // baked into the URL by buildExpediaHotelLink — passthrough, do NOT
@@ -466,27 +463,35 @@ export function buildFanaticsUrl(opts: FanaticsOpts): string {
 
 export type SpotHeroOpts = {
   /** Preferred — venue coordinates. SpotHero's /search?lat=&lng= endpoint
-   *  resolves to a list of stadium-area parking garages. */
+   *  resolves to a list of stadium-area parking garages. Absent -> homepage. */
   latitude?: number;
   longitude?: number;
-  /** Retained for call-site compatibility but unused: SpotHero's
-   *  ?destination=<name> query crashes their servers (real 500) and the
-   *  canonical /destination/<city>/<venue>-parking path requires a per-team
-   *  venue-slug map we don't maintain. When only a name is supplied we fall
-   *  back to the SpotHero homepage rather than ship a 500-ing link. */
-  venue?: string;
-  surface: AnalyticsSurface;
-  promoId?: string | null;
+  /** Per-surface sub-ID, e.g. "web_team_page_minnesota-twins" or
+   *  "web_venue_arrowhead-stadium". Rides aff_c as `aff_sub`, which the HasOffers
+   *  tracker records as the ~secondary_publisher / per-surface breakdown field.
+   *  Confirmed live via the aff_c format=json echo: aff_sub populates it;
+   *  aff_sub2/aff_sub3/sub_aff do NOT. */
+  subKey: string;
 };
 
+// SpotHero attribution runs on HasOffers (aff_id=2427), NOT CJ. The outbound link
+// is the aff_c click tracker over HTTPS, which sets the affiliate session cookie
+// and 302s via `url=` to the coordinate search. The old CJ pid/sid builder shipped
+// with pid UNSET, so every SpotHero click across the site was unattributed; this
+// replaces it. The aff_c prefix + aff_id are hardcoded constants (always
+// commissionable), same model as Fanatics / Expedia / TicketNetwork.
+const SPOTHERO_AFF_C = 'https://tracking.spothero.com/aff_c';
 export function buildSpotHeroUrl(opts: SpotHeroOpts): string {
-  const base = hasValidCoords(opts.latitude, opts.longitude)
+  const destination = hasValidCoords(opts.latitude, opts.longitude)
     ? `https://spothero.com/search?lat=${opts.latitude}&lng=${opts.longitude}`
     : 'https://spothero.com/';
-  return spotHeroUrl(base, {
-    surface: opts.surface,
-    promoId: opts.promoId,
+  const params = new URLSearchParams({
+    offer_id: '1',
+    aff_id: '2427',
+    aff_sub: opts.subKey,
+    url: destination,
   });
+  return `${SPOTHERO_AFF_C}?${params.toString()}`;
 }
 
 function hasValidCoords(lat: number | undefined, lng: number | undefined): boolean {

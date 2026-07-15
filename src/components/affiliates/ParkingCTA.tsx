@@ -77,13 +77,15 @@ export function ParkingCTA({
   // have no venue doc (all MLS today, most NBA, most WNBA).
   const label = venue?.name || teamName;
 
+  // Per-surface sub-ID, e.g. web_team_page_{teamId}. Rides aff_c as aff_sub.
+  const subKey = `${surface}_${team.id}`;
   const href = hasCoords(venue)
     ? buildSpotHeroUrl({
         latitude: venue.lat,
         longitude: venue.lng,
-        surface,
+        subKey,
       })
-    : buildSpotHeroUrl({ surface });
+    : buildSpotHeroUrl({ subKey });
 
   if (compact) {
     // flex-col + items-start rather than space-y-2.5 because the inline-flex
