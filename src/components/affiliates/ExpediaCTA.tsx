@@ -1,6 +1,6 @@
 import type { Team, Venue } from '@/lib/types';
 import type { AnalyticsSurface } from '@/lib/analytics';
-import { resolveHotelLink } from '@/lib/hotel-link';
+import { resolveHotelLink, resolveVenueHotelLink } from '@/lib/hotel-link';
 import { TrackedAffiliateLink } from '@/components/tracked-affiliate-link';
 
 // Team-page PREPARE-FOR-THE-GAME cluster hotel card. Same card SHAPE as the
@@ -15,6 +15,16 @@ type Props = {
   surface: AnalyticsSurface;
   placement: string;
   venue?: Venue | null;
+  /** Venue-hub mode: building slug. When set, the link is keyed to the BUILDING
+   *  (pubref web_venue_{slug}) and the search uses the building overrides below
+   *  instead of the team/venue. `team` is still used for the tracking event. */
+  venueSlug?: string;
+  building?: {
+    name: string;
+    city: string | null;
+    lat: number | null;
+    lng: number | null;
+  };
   /** 'full' (default) — team-page cluster card. 'compact' — modal/playoff. */
   size?: 'full' | 'compact';
 };
@@ -30,8 +40,18 @@ function BedIcon() {
   );
 }
 
-export function ExpediaCTA({ team, surface, placement, venue, size = 'full' }: Props) {
-  const link = resolveHotelLink({ team, venue, surface });
+export function ExpediaCTA({ team, surface, placement, venue, venueSlug, building, size = 'full' }: Props) {
+  const link =
+    venueSlug && building
+      ? resolveVenueHotelLink({
+          venueSlug,
+          venueName: building.name,
+          city: building.city,
+          lat: building.lat,
+          lng: building.lng,
+          surface,
+        })
+      : resolveHotelLink({ team, venue, surface });
   if (!link) return null;
 
   const padding = size === 'compact' ? 'px-3 py-2.5' : 'px-4 py-3.5';

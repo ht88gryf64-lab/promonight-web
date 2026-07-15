@@ -20,6 +20,13 @@ type Props = {
   /** Venue for the team. When supplied with valid lat/lng, the URL routes
    *  via stadium-area parking search. Fallback below. */
   venue?: Venue | null;
+  /** Venue-hub mode: building slug. When set, aff_sub becomes
+   *  `${surface}_${venueSlug}` (e.g. web_venue_arrowhead-stadium) — building-
+   *  keyed, never tenant-keyed — mirroring the ticket CTA's venueSlug scheme. */
+  venueSlug?: string;
+  /** Venue-hub mode: coordinate source when there is no team Venue doc (the hub
+   *  passes the building's own lat/lng). Takes precedence over `venue`. */
+  coords?: { lat: number; lng: number } | null;
   /** 'full' (default) — team-page cluster card.
    *  'compact' — tighter padding for modal stacks / playoff cards. */
   size?: 'full' | 'compact';
@@ -38,11 +45,14 @@ function hasCoords(v: Venue | null | undefined): v is Venue {
   );
 }
 
-export function SpotHeroCTA({ team, surface, placement, venue, size = 'full' }: Props) {
-  // Per-surface sub-ID, e.g. web_team_page_{teamId}. Rides aff_c as aff_sub.
-  const subKey = `${surface}_${team.id}`;
-  const href = hasCoords(venue)
-    ? buildSpotHeroUrl({ latitude: venue.lat, longitude: venue.lng, subKey })
+export function SpotHeroCTA({ team, surface, placement, venue, venueSlug, coords, size = 'full' }: Props) {
+  // Per-surface sub-ID. Team-page: web_team_page_{teamId}. Venue hub: the
+  // building-keyed web_venue_{buildingSlug}. Rides aff_c as aff_sub.
+  const subKey = venueSlug ? `${surface}_${venueSlug}` : `${surface}_${team.id}`;
+  // Coordinate source: an explicit hub coords override wins, else the team Venue.
+  const point = coords ?? (hasCoords(venue) ? { lat: venue.lat, lng: venue.lng } : null);
+  const href = point
+    ? buildSpotHeroUrl({ latitude: point.lat, longitude: point.lng, subKey })
     : buildSpotHeroUrl({ subKey });
 
   const padding = size === 'compact' ? 'px-3 py-2.5' : 'px-4 py-3.5';

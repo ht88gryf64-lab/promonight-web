@@ -78,3 +78,39 @@ export function resolveHotelLink(input: HotelLinkInput): HotelLink | null {
 
   return { href, venueName, city, hasCoords, dated, checkIn, checkOut };
 }
+
+export interface VenueHotelLinkInput {
+  /** Building slug — pubref becomes `${surface}_${venueSlug}` (e.g.
+   *  web_venue_arrowhead-stadium), building-keyed, never tenant-keyed. */
+  venueSlug: string;
+  /** Display building name for the search + the CTA label. */
+  venueName: string;
+  city: string | null;
+  lat: number | null;
+  lng: number | null;
+  surface: AnalyticsSurface;
+}
+
+/** Venue-hub variant of resolveHotelLink: keyed to a BUILDING, not a team.
+ *  Always undated (a hub is not tied to one game). Reuses buildExpediaHotelLink
+ *  with the building's own venueName/city/coords and pubref web_venue_{slug}.
+ *  Returns null only when there is neither coords nor a city (defensive). */
+export function resolveVenueHotelLink(input: VenueHotelLinkInput): HotelLink | null {
+  const { venueSlug, venueName, city, lat, lng, surface } = input;
+  const hasCoords = coordsOk({ lat, lng } as Venue);
+  const resolvedCity = city ?? '';
+  if (!hasCoords && !resolvedCity) return null;
+
+  const pubref = `${surface}_${venueSlug}`;
+  const href = buildExpediaHotelLink({
+    venueName,
+    city: resolvedCity,
+    lat: hasCoords ? lat : null,
+    lng: hasCoords ? lng : null,
+    checkIn: null,
+    checkOut: null,
+    pubref,
+  });
+
+  return { href, venueName, city: resolvedCity, hasCoords, dated: false, checkIn: null, checkOut: null };
+}

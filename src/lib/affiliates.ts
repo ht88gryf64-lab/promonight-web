@@ -70,8 +70,9 @@ export function isPartnerActive(partner: AffiliatePartner): boolean {
       // Fanatics / Expedia / TicketNetwork.
       return true;
     case 'expedia':
-      // Partnerize camref is a hardcoded constant baked into the URL — the
-      // outbound link is always commissionable, so tracking is always active.
+      // The Expedia in-house affiliate camref is a hardcoded constant baked into
+      // the URL — the outbound link is always commissionable, so tracking is
+      // always active.
       return true;
     case 'ticketmaster':
       return TICKETMASTER_IMPACT_WRAP.length > 0;
@@ -146,9 +147,9 @@ export function buildAffiliateUrl(
       // tracker with aff_id + aff_sub baked in). Do NOT re-tag; passthrough.
       return rawUrl;
     case 'expedia':
-      // The Partnerize tracking template (camref/creativeref/adref) is already
-      // baked into the URL by buildExpediaHotelLink — passthrough, do NOT
-      // re-tag the way Booking's aid was injected.
+      // The Expedia in-house affiliate template (camref/creativeref/adref) is
+      // already baked into the URL by buildExpediaHotelLink — passthrough, do
+      // NOT re-tag the way Booking's aid was injected.
       return rawUrl;
     case 'ticketmaster':
       // Ticketmaster URLs are wrap-resolved by `buildTicketmasterUrl` at the
@@ -505,13 +506,15 @@ function hasValidCoords(lat: number | undefined, lng: number | undefined): boole
   );
 }
 
-// ── Expedia (Partnerize) hotel deep links ────────────────────────────────────
-// Expedia runs on Partnerize. The whole tracking template is baked into the
-// wrapper URL — there is NO env var and NO render-time re-tag (buildAffiliateUrl
-// passes 'expedia' through unchanged). The wrapper wraps a DOUBLE-encoded
-// Expedia Hotel-Search URL as `landingPage`: the inner URL is encoded once
-// (space->%20, comma->%2C), then the entire inner URL is encoded AGAIN
-// (%20->%2520, %2C->%252C). Confirmed-working reference structure:
+// ── Expedia (in-house affiliate) hotel deep links ────────────────────────────
+// Expedia runs its OWN in-house affiliate program on expedia.com/affiliate (NOT
+// Partnerize). camref/creativeref/adref/pubref are Expedia's own affiliate
+// template params. The whole template is baked into the wrapper URL — there is
+// NO env var and NO render-time re-tag (buildAffiliateUrl passes 'expedia'
+// through unchanged). The wrapper wraps a DOUBLE-encoded Expedia Hotel-Search
+// URL as `landingPage`: the inner URL is encoded once (space->%20, comma->%2C),
+// then the entire inner URL is encoded AGAIN (%20->%2520, %2C->%252C).
+// Confirmed-working reference structure:
 //   https://www.expedia.com/affiliate?siteid=1&landingPage=<DOUBLE_ENCODED>&camref=1011l5KcC9&creativeref=1100l68075&adref=PZPbSQWcB2
 const EXPEDIA = {
   // www, not apex: the apex /affiliate path 301-redirects to www, so building
@@ -534,7 +537,8 @@ export type ExpediaHotelLinkOpts = {
   /** YYYY-MM-DD. Both required for a dated search; omit both for undated. */
   checkIn?: string | null;
   checkOut?: string | null;
-  /** Partnerize sub-tracking, e.g. "web_away_game_minnesota-twins". */
+  /** Expedia in-house affiliate sub-tracking (pubref), e.g.
+   *  "web_away_game_minnesota-twins" or "web_venue_arrowhead-stadium". */
   pubref: string;
 };
 
