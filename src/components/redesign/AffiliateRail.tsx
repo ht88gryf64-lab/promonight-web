@@ -46,7 +46,13 @@ export async function AffiliateRail({ team, venue, className }: AffiliateRailPro
         {/* Fan gear — self-gates on team.fanaticsUrl, may render null */}
         <FanaticsCTA team={team} surface="web_team_page" placement="team_page_prepare" />
         {/* Routing into the building's full gameday hub — internal link, first-
-            party venue_hub_click event (not affiliate). Gated on the floor above. */}
+            party venue_hub_click event (not affiliate). Gated on the floor above.
+            NOTE: this lives on the redesign AffiliateRail, which the team page
+            renders when isRedesignEnabled() is true — the live path in every
+            environment today (prod flag on + all non-prod). So the team->hub
+            links are coupled to the redesign flag: if that flag ever moves or the
+            legacy dark [sport]/[team] path is revived, this block (and the
+            internal-link routing it drives) does NOT render there unless ported. */}
         {showHubLink ? (
           <VenueHubLink
             teamId={team.id}
