@@ -214,6 +214,63 @@ export const getAllVenueHubSlugs = cache(async (): Promise<string[]> => {
   return snap.docs.map((d) => d.id);
 });
 
+// ── team -> building routing (team-page logistics block) ─────────────────────
+
+export interface TeamVenueHubLink {
+  /** Building hub slug -> /venues/{slug}. */
+  slug: string;
+  /** Sponsor-stripped building name for the CTA copy. */
+  displayName: string;
+  /** Above the indexing floor (verified + 2-of-3). The team-page routing block
+   *  renders ONLY when this is true — a held building has nothing useful yet, so
+   *  no dead-end link into an empty hub. */
+  indexable: boolean;
+}
+
+/** teamId -> its building hub. The team<->building relationship is the building
+ *  doc's `tenants` array (asserted 1:1 team->building at Unit 2); this reads it,
+ *  it does NOT re-derive from venue names or coords. Built from the building
+ *  docs alone (tenants + all floor fields live on the doc — no per-hub tenants
+ *  subcollection read), and cached so the whole 169-page build shares one pass. */
+export const getTeamVenueHubMap = cache(async (): Promise<Map<string, TeamVenueHubLink>> => {
+  const snap = await db.collection('venueHubs').get();
+  const map = new Map<string, TeamVenueHubLink>();
+  for (const doc of snap.docs) {
+    const d = doc.data();
+    const tenants: VenueHubTenantRef[] = Array.isArray(d.tenants) ? d.tenants : [];
+    if (tenants.length === 0) continue;
+    const indexable = venueHubIsIndexable({
+      lat: typeof d.lat === 'number' ? d.lat : null,
+      lng: typeof d.lng === 'number' ? d.lng : null,
+      verified: d.verified === true,
+      clearBagRequired: typeof d.clearBagRequired === 'boolean' ? d.clearBagRequired : null,
+      bagMaxDimensions: d.bagMaxDimensions ?? null,
+      bagPolicyUrl: d.bagPolicyUrl ?? null,
+      bagPolicyNotes: d.bagPolicyNotes ?? null,
+      parkingLots: Array.isArray(d.parkingLots) ? d.parkingLots : [],
+      parkingLotMapUrl: d.parkingLotMapUrl ?? null,
+      publicTransit: d.publicTransit ?? null,
+    });
+    const link: TeamVenueHubLink = {
+      slug: d.slug,
+      displayName: displayVenueName(d.name),
+      indexable,
+    };
+    for (const t of tenants) {
+      if (t?.teamId) map.set(t.teamId, link);
+    }
+  }
+  return map;
+});
+
+/** Resolve a single team to its building hub (null when the team is not a
+ *  venueHubs tenant). Does NOT floor-gate — the caller renders the routing block
+ *  only when the returned link.indexable is true. */
+export const getVenueHubForTeam = cache(async (teamId: string): Promise<TeamVenueHubLink | null> => {
+  const map = await getTeamVenueHubMap();
+  return map.get(teamId) ?? null;
+});
+
 export interface VenueHubSitemapEntry {
   slug: string;
   lastModified: Date;

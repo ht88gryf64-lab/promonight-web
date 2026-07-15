@@ -4,6 +4,8 @@ import { SpotHeroCTA } from '@/components/affiliates/SpotHeroCTA';
 import { ExpediaCTA } from '@/components/affiliates/ExpediaCTA';
 import { FanaticsCTA } from '@/components/affiliates/FanaticsCTA';
 import { VenueInfoBlock } from '@/components/venue-info-block';
+import { VenueHubLink } from '@/components/venue-hub/VenueHubLink';
+import { getVenueHubForTeam } from '@/lib/venue-hub';
 
 // AffiliateRail — the "plan your visit" module. The single tickets CTA lives
 // here now (the hero Get Tickets button was removed), so this is the one place
@@ -21,7 +23,13 @@ export interface AffiliateRailProps {
   className?: string;
 }
 
-export function AffiliateRail({ team, venue, className }: AffiliateRailProps) {
+export async function AffiliateRail({ team, venue, className }: AffiliateRailProps) {
+  // Resolve this team to its building hub (via venueHubs.tenants). The routing
+  // CTA renders ONLY when that hub is above the indexing floor — a held/noindex
+  // building has nothing useful yet, so no dead-end link into an empty hub.
+  const hub = await getVenueHubForTeam(team.id);
+  const showHubLink = hub !== null && hub.indexable;
+
   return (
     <section className={className}>
       <h2 className="mb-3 font-rd text-[11px] font-semibold uppercase tracking-[0.14em] text-rd-ink-faint">
@@ -37,6 +45,16 @@ export function AffiliateRail({ team, venue, className }: AffiliateRailProps) {
         <ExpediaCTA team={team} venue={venue} surface="web_team_page" placement="team_page_prepare" />
         {/* Fan gear — self-gates on team.fanaticsUrl, may render null */}
         <FanaticsCTA team={team} surface="web_team_page" placement="team_page_prepare" />
+        {/* Routing into the building's full gameday hub — internal link, first-
+            party venue_hub_click event (not affiliate). Gated on the floor above. */}
+        {showHubLink ? (
+          <VenueHubLink
+            teamId={team.id}
+            league={team.league}
+            buildingSlug={hub.slug}
+            buildingDisplayName={hub.displayName}
+          />
+        ) : null}
       </div>
 
       {/* Full venue & game-day detail flows below the buttons */}
