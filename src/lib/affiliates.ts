@@ -345,8 +345,12 @@ export function buildTicketNetworkLink(opts: TicketNetworkLinkOpts): string | nu
   return (
     `${TICKETNETWORK.prefix}?u=${encodeURIComponent(landing)}` +
     `&partnerpropertyid=${TICKETNETWORK.partnerPropertyId}` +
+    // Venue hub keys on the BUILDING, not the tenant: a hub does not know which
+    // tenant a fan arrived from, and a shared building has no single answer, so
+    // the subId is web_venue_{slug} with NO team suffix. Team-keyed attribution
+    // (surface_team.id) is for the team-page block, where the team is known.
     `&MediaPartnerPropertyId=${TICKETNETWORK.partnerPropertyId}` +
-    `&subId1=${opts.venueSlug ? `${opts.surface}_${opts.venueSlug}` : opts.surface}_${opts.team.id}`
+    `&subId1=${opts.venueSlug ? `${opts.surface}_${opts.venueSlug}` : `${opts.surface}_${opts.team.id}`}`
   );
 }
 
