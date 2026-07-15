@@ -432,6 +432,13 @@ export function stripFanaticsRuntimeParams(rawUrl: string): string {
 export interface FanaticsOpts {
   team: Pick<Team, 'id' | 'fanaticsUrl' | 'fanaticsPath'>;
   surface: AnalyticsSurface;
+  /** Venue hub only: building slug. When set, subId1 is building-keyed
+   *  (`${surface}_${venueSlug}`, e.g. web_venue_metlife-stadium) with NO tenant
+   *  suffix — the hub can't know which of a multi-tenant building's teams the
+   *  fan came for, so attribution keys to the building, exactly like the ticket
+   *  CTA (buildTicketNetworkLink). The store `u` + adId stay tenant-resolved.
+   *  Omitted by every other surface. */
+  venueSlug?: string;
 }
 
 // Assembles the full tracked Fanatics link.
@@ -441,9 +448,10 @@ export interface FanaticsOpts {
 // migrated. TODO(fanatics-url-cleanup): drop the fanaticsPath fallback once
 // production has baked and the field is gone from the team docs.
 //
-// subId1 mirrors buildTicketNetworkLink exactly (`${surface}_${team.id}`), so
-// Fanatics and TicketNetwork revenue joins on the same key in Impact reports.
-// Per-promo attribution stays on PostHog's affiliate_click event.
+// subId1 mirrors buildTicketNetworkLink exactly — `${surface}_${team.id}`, or
+// the building-keyed `${surface}_${venueSlug}` on the venue hub — so Fanatics and
+// TicketNetwork revenue joins on the same key in Impact reports. Per-promo
+// attribution stays on PostHog's affiliate_click event.
 export function buildFanaticsUrl(opts: FanaticsOpts): string {
   const rawUrl =
     opts.team.fanaticsUrl ??
@@ -455,9 +463,13 @@ export function buildFanaticsUrl(opts: FanaticsOpts): string {
   const destination = stripFanaticsRuntimeParams(rawUrl || FANATICS.storeOrigin);
   const adId = FANATICS_AD_IDS[opts.team.id] ?? FANATICS.genericAdId;
 
+  const subId1 = opts.venueSlug
+    ? `${opts.surface}_${opts.venueSlug}`
+    : `${opts.surface}_${opts.team.id}`;
+
   return (
     `${FANATICS.origin}/c/${FANATICS.account}/${adId}/${FANATICS.campaignId}` +
-    `?subId1=${opts.surface}_${opts.team.id}` +
+    `?subId1=${subId1}` +
     `&u=${encodeURIComponent(destination)}`
   );
 }

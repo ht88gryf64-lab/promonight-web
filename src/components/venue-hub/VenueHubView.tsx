@@ -320,7 +320,7 @@ export function VenueHubView({
             <CardLabel>Get tickets</CardLabel>
             <TicketmasterCTA team={ticketTeam} surface="web_venue" placement="venue_hub" venueSlug={hub.slug} promoId={hub.slug} />
             <div className="mt-2">
-              <FanaticsCTA team={ticketTeam} surface="web_venue" placement="venue_hub" />
+              <FanaticsCTA team={ticketTeam} surface="web_venue" placement="venue_hub" venueSlug={hub.slug} />
             </div>
           </Card>
         ) : null}
