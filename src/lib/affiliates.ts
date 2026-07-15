@@ -14,7 +14,6 @@ import { FANATICS_AD_IDS } from './fanatics-ad-ids';
 
 const SEATGEEK_AID = process.env.NEXT_PUBLIC_SEATGEEK_AID ?? '';
 const STUBHUB_RID = process.env.NEXT_PUBLIC_STUBHUB_RID ?? '';
-const SPOTHERO_ID = process.env.NEXT_PUBLIC_SPOTHERO_ID ?? '';
 // Impact wrap-link template for Ticketmaster. Placeholder tokens — `{TARGET}`
 // receives the URL-encoded destination (Ticketmaster team URL); `{SHARED_ID}`
 // receives the surface tag for partner-side reporting. When unset, the
@@ -66,10 +65,14 @@ export function isPartnerActive(partner: AffiliatePartner): boolean {
       // model as TicketNetwork and Expedia).
       return true;
     case 'spothero':
-      return SPOTHERO_ID.length > 0;
+      // HasOffers aff_c prefix + aff_id=2427 are hardcoded constants (no env
+      // var), so the outbound link is always commissionable — same model as
+      // Fanatics / Expedia / TicketNetwork.
+      return true;
     case 'expedia':
-      // Partnerize camref is a hardcoded constant baked into the URL — the
-      // outbound link is always commissionable, so tracking is always active.
+      // The Expedia in-house affiliate camref is a hardcoded constant baked into
+      // the URL — the outbound link is always commissionable, so tracking is
+      // always active.
       return true;
     case 'ticketmaster':
       return TICKETMASTER_IMPACT_WRAP.length > 0;
@@ -123,13 +126,6 @@ export function fanaticsUrl(rawUrl: string, _opts: AffiliateLinkOptions): string
   return rawUrl;
 }
 
-export function spotHeroUrl(rawUrl: string, opts: AffiliateLinkOptions): string {
-  const url = new URL(rawUrl);
-  // SpotHero runs on CJ Affiliate; pid is the partner ID, sid is the passthrough.
-  setParam(url, 'pid', SPOTHERO_ID);
-  setParam(url, 'sid', subId(opts));
-  return url.toString();
-}
 
 export function buildAffiliateUrl(
   partner: AffiliatePartner,
@@ -147,11 +143,13 @@ export function buildAffiliateUrl(
       // NOT re-tag; re-encoding would corrupt the `u` deep-link param.
       return rawUrl;
     case 'spothero':
-      return spotHeroUrl(rawUrl, opts);
+      // SpotHero links are fully assembled by `buildSpotHeroUrl` (the aff_c
+      // tracker with aff_id + aff_sub baked in). Do NOT re-tag; passthrough.
+      return rawUrl;
     case 'expedia':
-      // The Partnerize tracking template (camref/creativeref/adref) is already
-      // baked into the URL by buildExpediaHotelLink — passthrough, do NOT
-      // re-tag the way Booking's aid was injected.
+      // The Expedia in-house affiliate template (camref/creativeref/adref) is
+      // already baked into the URL by buildExpediaHotelLink — passthrough, do
+      // NOT re-tag the way Booking's aid was injected.
       return rawUrl;
     case 'ticketmaster':
       // Ticketmaster URLs are wrap-resolved by `buildTicketmasterUrl` at the
@@ -434,6 +432,13 @@ export function stripFanaticsRuntimeParams(rawUrl: string): string {
 export interface FanaticsOpts {
   team: Pick<Team, 'id' | 'fanaticsUrl' | 'fanaticsPath'>;
   surface: AnalyticsSurface;
+  /** Venue hub only: building slug. When set, subId1 is building-keyed
+   *  (`${surface}_${venueSlug}`, e.g. web_venue_metlife-stadium) with NO tenant
+   *  suffix — the hub can't know which of a multi-tenant building's teams the
+   *  fan came for, so attribution keys to the building, exactly like the ticket
+   *  CTA (buildTicketNetworkLink). The store `u` + adId stay tenant-resolved.
+   *  Omitted by every other surface. */
+  venueSlug?: string;
 }
 
 // Assembles the full tracked Fanatics link.
@@ -443,9 +448,10 @@ export interface FanaticsOpts {
 // migrated. TODO(fanatics-url-cleanup): drop the fanaticsPath fallback once
 // production has baked and the field is gone from the team docs.
 //
-// subId1 mirrors buildTicketNetworkLink exactly (`${surface}_${team.id}`), so
-// Fanatics and TicketNetwork revenue joins on the same key in Impact reports.
-// Per-promo attribution stays on PostHog's affiliate_click event.
+// subId1 mirrors buildTicketNetworkLink exactly — `${surface}_${team.id}`, or
+// the building-keyed `${surface}_${venueSlug}` on the venue hub — so Fanatics and
+// TicketNetwork revenue joins on the same key in Impact reports. Per-promo
+// attribution stays on PostHog's affiliate_click event.
 export function buildFanaticsUrl(opts: FanaticsOpts): string {
   const rawUrl =
     opts.team.fanaticsUrl ??
@@ -457,36 +463,48 @@ export function buildFanaticsUrl(opts: FanaticsOpts): string {
   const destination = stripFanaticsRuntimeParams(rawUrl || FANATICS.storeOrigin);
   const adId = FANATICS_AD_IDS[opts.team.id] ?? FANATICS.genericAdId;
 
+  const subId1 = opts.venueSlug
+    ? `${opts.surface}_${opts.venueSlug}`
+    : `${opts.surface}_${opts.team.id}`;
+
   return (
     `${FANATICS.origin}/c/${FANATICS.account}/${adId}/${FANATICS.campaignId}` +
-    `?subId1=${opts.surface}_${opts.team.id}` +
+    `?subId1=${subId1}` +
     `&u=${encodeURIComponent(destination)}`
   );
 }
 
 export type SpotHeroOpts = {
   /** Preferred — venue coordinates. SpotHero's /search?lat=&lng= endpoint
-   *  resolves to a list of stadium-area parking garages. */
+   *  resolves to a list of stadium-area parking garages. Absent -> homepage. */
   latitude?: number;
   longitude?: number;
-  /** Retained for call-site compatibility but unused: SpotHero's
-   *  ?destination=<name> query crashes their servers (real 500) and the
-   *  canonical /destination/<city>/<venue>-parking path requires a per-team
-   *  venue-slug map we don't maintain. When only a name is supplied we fall
-   *  back to the SpotHero homepage rather than ship a 500-ing link. */
-  venue?: string;
-  surface: AnalyticsSurface;
-  promoId?: string | null;
+  /** Per-surface sub-ID, e.g. "web_team_page_minnesota-twins" or
+   *  "web_venue_arrowhead-stadium". Rides aff_c as `aff_sub`, which the HasOffers
+   *  tracker records as the ~secondary_publisher / per-surface breakdown field.
+   *  Confirmed live via the aff_c format=json echo: aff_sub populates it;
+   *  aff_sub2/aff_sub3/sub_aff do NOT. */
+  subKey: string;
 };
 
+// SpotHero attribution runs on HasOffers (aff_id=2427), NOT CJ. The outbound link
+// is the aff_c click tracker over HTTPS, which sets the affiliate session cookie
+// and 302s via `url=` to the coordinate search. The old CJ pid/sid builder shipped
+// with pid UNSET, so every SpotHero click across the site was unattributed; this
+// replaces it. The aff_c prefix + aff_id are hardcoded constants (always
+// commissionable), same model as Fanatics / Expedia / TicketNetwork.
+const SPOTHERO_AFF_C = 'https://tracking.spothero.com/aff_c';
 export function buildSpotHeroUrl(opts: SpotHeroOpts): string {
-  const base = hasValidCoords(opts.latitude, opts.longitude)
+  const destination = hasValidCoords(opts.latitude, opts.longitude)
     ? `https://spothero.com/search?lat=${opts.latitude}&lng=${opts.longitude}`
     : 'https://spothero.com/';
-  return spotHeroUrl(base, {
-    surface: opts.surface,
-    promoId: opts.promoId,
+  const params = new URLSearchParams({
+    offer_id: '1',
+    aff_id: '2427',
+    aff_sub: opts.subKey,
+    url: destination,
   });
+  return `${SPOTHERO_AFF_C}?${params.toString()}`;
 }
 
 function hasValidCoords(lat: number | undefined, lng: number | undefined): boolean {
@@ -500,13 +518,15 @@ function hasValidCoords(lat: number | undefined, lng: number | undefined): boole
   );
 }
 
-// ── Expedia (Partnerize) hotel deep links ────────────────────────────────────
-// Expedia runs on Partnerize. The whole tracking template is baked into the
-// wrapper URL — there is NO env var and NO render-time re-tag (buildAffiliateUrl
-// passes 'expedia' through unchanged). The wrapper wraps a DOUBLE-encoded
-// Expedia Hotel-Search URL as `landingPage`: the inner URL is encoded once
-// (space->%20, comma->%2C), then the entire inner URL is encoded AGAIN
-// (%20->%2520, %2C->%252C). Confirmed-working reference structure:
+// ── Expedia (in-house affiliate) hotel deep links ────────────────────────────
+// Expedia runs its OWN in-house affiliate program on expedia.com/affiliate (NOT
+// Partnerize). camref/creativeref/adref/pubref are Expedia's own affiliate
+// template params. The whole template is baked into the wrapper URL — there is
+// NO env var and NO render-time re-tag (buildAffiliateUrl passes 'expedia'
+// through unchanged). The wrapper wraps a DOUBLE-encoded Expedia Hotel-Search
+// URL as `landingPage`: the inner URL is encoded once (space->%20, comma->%2C),
+// then the entire inner URL is encoded AGAIN (%20->%2520, %2C->%252C).
+// Confirmed-working reference structure:
 //   https://www.expedia.com/affiliate?siteid=1&landingPage=<DOUBLE_ENCODED>&camref=1011l5KcC9&creativeref=1100l68075&adref=PZPbSQWcB2
 const EXPEDIA = {
   // www, not apex: the apex /affiliate path 301-redirects to www, so building
@@ -529,7 +549,8 @@ export type ExpediaHotelLinkOpts = {
   /** YYYY-MM-DD. Both required for a dated search; omit both for undated. */
   checkIn?: string | null;
   checkOut?: string | null;
-  /** Partnerize sub-tracking, e.g. "web_away_game_minnesota-twins". */
+  /** Expedia in-house affiliate sub-tracking (pubref), e.g.
+   *  "web_away_game_minnesota-twins" or "web_venue_arrowhead-stadium". */
   pubref: string;
 };
 

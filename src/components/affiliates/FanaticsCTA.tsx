@@ -25,19 +25,23 @@ type Props = {
   team: Team;
   surface: AnalyticsSurface;
   placement: string;
+  /** Venue hub only: building slug. When set, subId1 is building-keyed
+   *  (web_venue_{slug}), no tenant suffix — consistent with the ticket CTA on
+   *  multi-tenant buildings. The store link + adId stay tenant-resolved. */
+  venueSlug?: string;
   /** 'full' (default) — team-page cluster card.
    *  'compact' — tighter padding for modal stacks / playoff cards. */
   size?: 'full' | 'compact';
 };
 
-export function FanaticsCTA({ team, surface, placement, size = 'full' }: Props) {
+export function FanaticsCTA({ team, surface, placement, venueSlug, size = 'full' }: Props) {
   // Gate render on canonical URL presence (legacy path accepted as a
   // fallback). After the migration all 167 teams should have a fanaticsUrl;
   // this null-return is a defense-in-depth safety net for teams added to
   // Firestore before being covered.
   if (!team.fanaticsUrl && !team.fanaticsPath) return null;
 
-  const href = buildFanaticsUrl({ team, surface });
+  const href = buildFanaticsUrl({ team, surface, venueSlug });
 
   const padding = size === 'compact' ? 'px-3 py-2.5' : 'px-4 py-3.5';
 

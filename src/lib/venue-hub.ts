@@ -164,6 +164,32 @@ export function cityState(v: Pick<VenueHub, 'city' | 'state'>): string | null {
   return v.city || v.state || null;
 }
 
+// ── SpotHero coverage gate ───────────────────────────────────────────────────
+// SpotHero operates across the entire US and a SUBSET of Canadian metros. A
+// building in a city SpotHero doesn't serve would deep-link to an EMPTY
+// coordinate search, so the hub must degrade those to the no-inventory state
+// rather than ship a dead search page. All 222 venueHubs are US or Canadian
+// (no other countries), so the gate is: US buildings are always covered;
+// Canadian buildings are covered only in the metros SpotHero lists a live city
+// directory for. Verified live 2026-07-15 against spothero.com/city/*-parking:
+// Toronto, Vancouver, Ottawa, Winnipeg, Calgary, Edmonton all resolve with
+// bookable inventory (Toronto: "Parking From CA$4"); MONTREAL 404s (not served),
+// so centre-bell + saputo-stadium degrade to no-data.
+const CANADIAN_PROVINCES = new Set([
+  'ontario', 'quebec', 'british columbia', 'alberta', 'manitoba', 'saskatchewan',
+  'nova scotia', 'new brunswick', 'newfoundland and labrador', 'prince edward island',
+]);
+const SPOTHERO_CANADA_CITIES = new Set([
+  'toronto', 'vancouver', 'ottawa', 'winnipeg', 'calgary', 'edmonton',
+]);
+export function spotHeroCovers(v: Pick<VenueHub, 'city' | 'state'>): boolean {
+  const state = (v.state ?? '').trim().toLowerCase();
+  const city = (v.city ?? '').trim().toLowerCase();
+  if (CANADIAN_PROVINCES.has(state)) return SPOTHERO_CANADA_CITIES.has(city);
+  // Anything not identified as Canadian is a US building — SpotHero's core market.
+  return true;
+}
+
 // ── indexing floor (locked) ─────────────────────────────────────────────────
 // A building enters the sitemap / gets index:true only when it has coordinates
 // AND at least two of (bag policy, parking, transit) AND is verified. Below the

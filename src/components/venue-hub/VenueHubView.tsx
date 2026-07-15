@@ -3,12 +3,16 @@ import type { Team } from '@/lib/types';
 import type { HubFaqItem } from '@/components/hub/HubFaq';
 import { HubFaq } from '@/components/hub/HubFaq';
 import { TicketmasterCTA } from '@/components/affiliates/TicketmasterCTA';
+import { FanaticsCTA } from '@/components/affiliates/FanaticsCTA';
+import { SpotHeroCTA } from '@/components/affiliates/SpotHeroCTA';
+import { ExpediaCTA } from '@/components/affiliates/ExpediaCTA';
 import { VenueHubJsonLd } from './VenueHubJsonLd';
 import {
   type VenueHub,
   displayVenueName,
   leadSentences,
   cityState,
+  spotHeroCovers,
 } from '@/lib/venue-hub';
 
 // House Light venue logistics hub. Server component. Reads only the VenueHub it is
@@ -46,29 +50,6 @@ function CardLabel({ children }: { children: ReactNode }) {
 
 function inches(n: number): string {
   return Number.isInteger(n) ? `${n}"` : `${n}"`;
-}
-
-// ── stubbed embeds (labeled placeholders, per Phase 1 spec) ──────────────────
-function SpotHeroSlot() {
-  return (
-    <div className="overflow-hidden rounded-[10px] border border-dashed border-rd-line-strong bg-[#f3efe6]">
-      <div className="flex h-[104px] items-center justify-center bg-[linear-gradient(135deg,#e7ede2,#dbe6df)]">
-        <span className="rounded-md bg-white/80 px-2 py-1 font-rd text-[11px] font-semibold text-rd-ink-soft">
-          SpotHero widget placeholder
-        </span>
-      </div>
-      <div className="border-t border-rd-line px-3 py-2 font-rd text-[12px] text-rd-ink-soft">
-        Live parking prices and reservations land here.
-      </div>
-    </div>
-  );
-}
-function ExpediaSlot() {
-  return (
-    <div className="rounded-[10px] border border-dashed border-rd-line-strong bg-[#f3efe6] px-3 py-3 font-rd text-[12px] text-rd-ink-soft">
-      Expedia hotel rates placeholder. Nearby stays and nightly prices land here.
-    </div>
-  );
 }
 
 export function VenueHubView({
@@ -133,13 +114,19 @@ export function VenueHubView({
     const lotNames = hub.parkingLots.slice(0, 8).map((l) => l.name).join(', ');
     faqs.push({
       question: primaryTenant ? `Where do you park for a ${primaryTenant} game?` : `Where do you park at ${short}?`,
-      answer: `${short} has on-site lots${lotNames ? ` including ${lotNames}` : ''}. Reserve a nearby spot in advance through the parking widget on this page.`,
+      answer: `${short} has on-site lots${lotNames ? ` including ${lotNames}` : ''}. Reserve a nearby spot in advance through SpotHero on this page.`,
     });
   }
 
   // ── parking card (rule 4: empty-venue) ──
   const hasParkingData = verified && (hub.parkingLots.length > 0 || hub.parkingLotMapUrl);
-  const widgetHasInventory = true; // stub always has mock inventory; real widget will report this
+  // Building coordinate point (null when a verified building has no geo).
+  const point = hub.lat !== null && hub.lng !== null ? { lat: hub.lat, lng: hub.lng } : null;
+  // SpotHero renders only where SpotHero actually operates (US + covered Canada
+  // metros), with coords, and with a team to attribute the click to. Anywhere it
+  // does not cover (e.g. Montreal) degrades to the no-inventory state below —
+  // never a dead search page.
+  const canSpotHero = spotHeroCovers(hub) && point !== null && ticketTeam !== null;
 
   // ── getting-in rows ──
   const gettingRows: { label: string; body: ReactNode }[] = [];
@@ -184,129 +171,157 @@ export function VenueHubView({
         </div>
       </section>
 
-      <div className="mx-auto max-w-[980px] px-3 py-4 md:px-8 md:py-6">
-        <div className="md:grid md:grid-cols-[1.15fr_.85fr] md:gap-4">
-          {/* main column */}
-          <div>
-            {/* 2. Bag policy capsule */}
-            {hasBag ? (
-              <Card accent>
-                <CardLabel>What size bag can I bring?</CardLabel>
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <div className="rounded-lg bg-rd-ink px-3.5 py-2.5 text-center text-white">
-                    {dims ? (
-                      <div className="text-xl font-extrabold leading-none">
-                        {inches(dims.w)} x {inches(dims.h)} x {inches(dims.d)}
-                      </div>
-                    ) : (
-                      <div className="text-base font-extrabold leading-none">Clear bag</div>
-                    )}
-                    <div className="mt-1 font-rd text-[10px] tracking-[0.1em] text-white/75">
-                      {hub.clearBagRequired ? 'CLEAR BAG REQUIRED' : hub.clearBagRequired === false ? 'NO BAGS ALLOWED' : 'BAG POLICY'}
-                    </div>
+      {/* Single-column stack ordered by VISIT intent (NOT the team-page ticket-
+          first order): bag -> parking -> hotels -> food -> getting in -> tickets
+          -> FAQ. A venue visitor settles logistics (what can I bring, where do I
+          park, where do I stay, what do I eat, how do I get in) before buying the
+          seat, so the affiliate CTAs sit in that arrival order and tickets +
+          gear (the trip-completing buys) sit last, above the FAQ. */}
+      <div className="mx-auto max-w-[720px] px-3 py-4 md:px-8 md:py-6">
+        {/* 1. Bag policy capsule */}
+        {hasBag ? (
+          <Card accent>
+            <CardLabel>What size bag can I bring?</CardLabel>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <div className="rounded-lg bg-rd-ink px-3.5 py-2.5 text-center text-white">
+                {dims ? (
+                  <div className="text-xl font-extrabold leading-none">
+                    {inches(dims.w)} x {inches(dims.h)} x {inches(dims.d)}
                   </div>
-                  <div className="min-w-[180px] flex-1 font-rd text-[13px] leading-[1.5] text-rd-ink">
-                    {bagSplit.lead ? <span>{bagSplit.lead}</span> : <span>Review the official bag policy before you arrive.</span>}
-                    {noOutsideFood ? (
-                      <>
-                        {' '}
-                        <strong>No outside food or drink.</strong>
-                      </>
-                    ) : null}
-                    {bagPolicyLink ? (
-                      <div className="mt-1 text-[11px]">
-                        <a href={bagPolicyLink} className="font-semibold text-rd-red" target="_blank" rel="noopener noreferrer">
-                          Official bag policy &rsaquo;
-                        </a>
-                      </div>
-                    ) : null}
-                  </div>
+                ) : (
+                  <div className="text-base font-extrabold leading-none">Clear bag</div>
+                )}
+                <div className="mt-1 font-rd text-[10px] tracking-[0.1em] text-white/75">
+                  {hub.clearBagRequired ? 'CLEAR BAG REQUIRED' : hub.clearBagRequired === false ? 'NO BAGS ALLOWED' : 'BAG POLICY'}
                 </div>
-              </Card>
-            ) : null}
+              </div>
+              <div className="min-w-[180px] flex-1 font-rd text-[13px] leading-[1.5] text-rd-ink">
+                {bagSplit.lead ? <span>{bagSplit.lead}</span> : <span>Review the official bag policy before you arrive.</span>}
+                {noOutsideFood ? (
+                  <>
+                    {' '}
+                    <strong>No outside food or drink.</strong>
+                  </>
+                ) : null}
+                {bagPolicyLink ? (
+                  <div className="mt-1 text-[11px]">
+                    <a href={bagPolicyLink} className="font-semibold text-rd-red" target="_blank" rel="noopener noreferrer">
+                      Official bag policy &rsaquo;
+                    </a>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </Card>
+        ) : null}
 
-            {/* 3. Parking */}
-            {verified ? (
-              hasParkingData || widgetHasInventory ? (
-                <Card>
-                  <CardLabel>Reserve parking near {short}</CardLabel>
-                  <SpotHeroSlot />
-                  {/* Lot-open time near the widget, in PARKING context. Never mapped
-                      into a gate row: a lot-opening time is not a gate-opening time. */}
-                  {lotOpenLines.length ? (
-                    <div className="mt-2 space-y-0.5">
-                      {lotOpenLines.map((l) => (
-                        <p key={l.key} className="font-rd text-[12px] text-rd-ink-soft">
-                          {l.label ? <strong>{l.label}. </strong> : null}
-                          {l.text}
-                        </p>
-                      ))}
-                    </div>
-                  ) : null}
-                  {hub.parkingLotMapUrl ? (
-                    <div className="mt-2 font-rd text-[11px]">
-                      <a href={hub.parkingLotMapUrl} className="font-semibold text-rd-red" target="_blank" rel="noopener noreferrer">
-                        Official parking lot map &rsaquo;
-                      </a>
-                    </div>
-                  ) : null}
-                </Card>
+        {/* 2. Parking — native SpotHero CTA (blue, aff_c, aff_sub web_venue_{slug}).
+            Rule 4: off-coverage or no-inventory degrades to the no-data state,
+            never a dead search page. */}
+        {verified ? (
+          canSpotHero || hasParkingData ? (
+            <Card>
+              <CardLabel>Reserve parking near {short}</CardLabel>
+              {canSpotHero && ticketTeam ? (
+                <SpotHeroCTA
+                  team={ticketTeam}
+                  surface="web_venue"
+                  placement="venue_hub"
+                  venueSlug={hub.slug}
+                  coords={point}
+                />
               ) : (
-                <Card>
-                  <CardLabel>Parking</CardLabel>
-                  <p className="font-rd text-[13px] leading-relaxed text-rd-ink-soft">
-                    We do not have verified parking details for {short} yet.{' '}
+                <p className="font-rd text-[13px] leading-relaxed text-rd-ink-soft">
+                  SpotHero does not list reservable parking near {short} yet.
+                  {hub.parkingLotMapUrl ? ' Use the official lot map below.' : ' '}
+                  {!hub.parkingLotMapUrl ? (
                     <a href={CONTACT_URL} className="font-semibold text-rd-red">
                       Know the lots? Tell us &rsaquo;
                     </a>
-                  </p>
-                </Card>
-              )
-            ) : null}
-
-            {/* 6. Getting in (desktop keeps it in the main column) */}
-            {gettingRows.length ? (
-              <Card>
-                <CardLabel>Getting in</CardLabel>
-                <div className="grid grid-cols-1 gap-2.5 font-rd text-[13px] leading-[1.5] text-rd-ink md:grid-cols-2">
-                  {gettingRows.map((r) => (
-                    <div key={r.label}>
-                      <strong>{r.label}.</strong> {r.body}
-                    </div>
+                  ) : null}
+                </p>
+              )}
+              {/* Lot-open time near the CTA, in PARKING context. Never mapped into a
+                  gate row: a lot-opening time is not a gate-opening time. */}
+              {lotOpenLines.length ? (
+                <div className="mt-2 space-y-0.5">
+                  {lotOpenLines.map((l) => (
+                    <p key={l.key} className="font-rd text-[12px] text-rd-ink-soft">
+                      {l.label ? <strong>{l.label}. </strong> : null}
+                      {l.text}
+                    </p>
                   ))}
                 </div>
-              </Card>
-            ) : null}
-          </div>
+              ) : null}
+              {hub.parkingLotMapUrl ? (
+                <div className="mt-2 font-rd text-[11px]">
+                  <a href={hub.parkingLotMapUrl} className="font-semibold text-rd-red" target="_blank" rel="noopener noreferrer">
+                    Official parking lot map &rsaquo;
+                  </a>
+                </div>
+              ) : null}
+            </Card>
+          ) : (
+            <Card>
+              <CardLabel>Parking</CardLabel>
+              <p className="font-rd text-[13px] leading-relaxed text-rd-ink-soft">
+                We do not have verified parking details for {short} yet.{' '}
+                <a href={CONTACT_URL} className="font-semibold text-rd-red">
+                  Know the lots? Tell us &rsaquo;
+                </a>
+              </p>
+            </Card>
+          )
+        ) : null}
 
-          {/* side column */}
-          <div>
-            {/* 4. Hotels (Expedia stub, always offered) */}
-            {verified ? (
-              <Card>
-                <CardLabel>Hotels near the stadium</CardLabel>
-                <ExpediaSlot />
-              </Card>
-            ) : null}
+        {/* 3. Hotels — native Expedia CTA (pubref web_venue_{slug}, building coords). */}
+        {verified && ticketTeam ? (
+          <Card>
+            <CardLabel>Hotels near {short}</CardLabel>
+            <ExpediaCTA
+              team={ticketTeam}
+              surface="web_venue"
+              placement="venue_hub"
+              venueSlug={hub.slug}
+              building={{ name: short, city: hub.city, lat: hub.lat, lng: hub.lng }}
+            />
+          </Card>
+        ) : null}
 
-            {/* 5. Food (renders only if present) */}
-            {verified && hub.food ? (
-              <Card>
-                <CardLabel>Food worth the line</CardLabel>
-                <p className="font-rd text-[13px] leading-relaxed text-rd-ink">{hub.food}</p>
-              </Card>
-            ) : null}
-          </div>
-        </div>
+        {/* 4. Food (renders only if present) */}
+        {verified && hub.food ? (
+          <Card>
+            <CardLabel>Food worth the line</CardLabel>
+            <p className="font-rd text-[13px] leading-relaxed text-rd-ink">{hub.food}</p>
+          </Card>
+        ) : null}
 
-        {/* Tickets CTA, directly ABOVE the FAQ. Building-agnostic: renders on every
-            hub, held or not. Ticketmaster primary + TicketNetwork below, both routed
-            through Impact with subId web_venue_{slug}(_teamId) and dual-emitting
-            affiliate_click to PostHog + GA4 via TrackedAffiliateLink. */}
+        {/* 5. Getting in */}
+        {gettingRows.length ? (
+          <Card>
+            <CardLabel>Getting in</CardLabel>
+            <div className="grid grid-cols-1 gap-2.5 font-rd text-[13px] leading-[1.5] text-rd-ink md:grid-cols-2">
+              {gettingRows.map((r) => (
+                <div key={r.label}>
+                  <strong>{r.label}.</strong> {r.body}
+                </div>
+              ))}
+            </div>
+          </Card>
+        ) : null}
+
+        {/* 6. Tickets + gear, directly ABOVE the FAQ. Building-agnostic: renders on
+            every hub, held or not. Ticketmaster primary + TicketNetwork below, both
+            routed through Impact with subId web_venue_{slug}(_teamId); Fanatics is
+            the trip-completing gear buy (self-gates on the tenant's fanaticsUrl).
+            All dual-emit affiliate_click to PostHog + GA4 via TrackedAffiliateLink. */}
         {ticketTeam ? (
           <Card>
             <CardLabel>Get tickets</CardLabel>
             <TicketmasterCTA team={ticketTeam} surface="web_venue" placement="venue_hub" venueSlug={hub.slug} promoId={hub.slug} />
+            <div className="mt-2">
+              <FanaticsCTA team={ticketTeam} surface="web_venue" placement="venue_hub" venueSlug={hub.slug} />
+            </div>
           </Card>
         ) : null}
 
