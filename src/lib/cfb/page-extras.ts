@@ -5,8 +5,59 @@
 
 import type { Team, Venue } from '@/lib/types';
 import type { CfbSchool, CfbVenue } from '@/lib/cfb/types';
+import type { CfbSchoolPage } from '@/lib/cfb/data';
 import { slugifySchool } from '@/lib/cfb/rules';
 import { CFB_FANATICS_STORES } from '@/lib/cfb/fanatics-stores';
+
+// Prose date for the rivalry sentences — em-dash-free (house rule), comma only:
+// "Saturday, November 28".
+function proseDate(iso: string): string {
+  return new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+}
+
+/**
+ * Rivalry-section prose — closes Google's "Missing: rivalry" gap. One em-dash-free
+ * sentence per tagged rivalry game, DATA-DERIVED ONLY (cfbRivalries name/trophy +
+ * schedule, never invented): each uses the word "rivalry" and names the rival
+ * explicitly. Extracted as a pure function so the template renders it and the
+ * metadata gate verifies the exact same output.
+ *
+ * Rules:
+ *  - Deduped by opponent + rivalry name (a school can carry the same matchup twice —
+ *    e.g. a neutral-site home/away pair — and would otherwise repeat a sentence).
+ *  - `ident` prefers an EVOCATIVE rivalry name ("The Game", "Iron Bowl") over an
+ *    obscure trophy; falls to the trophy ("Golden Hat", "Paul Bunyan's Axe"); a bare
+ *    "SchoolA–SchoolB" label is NOT evocative, so it is dropped (the rival is already
+ *    named), and a name that already contains "rivalr" is not echoed.
+ *  - Venue is named ONLY for a true home or away game (opponent venue for aways),
+ *    never a neutral site (Red River at the Cotton Bowl is neither team's stadium).
+ */
+export function buildRivalrySentences(data: CfbSchoolPage): string[] {
+  const { school, venue } = data;
+  const ourName = school.shortName || school.name;
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const g of data.games) {
+    if (!g.rivalry) continue;
+    const key = `${g.opponentId}|${g.rivalry.name}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const rival = g.opponentName;
+    const nm = (g.rivalry.name || '').trim();
+    const tr = (g.rivalry.trophy || '').trim();
+    const isLabel = (str: string) => /–/.test(str) && (str.includes(ourName) || str.includes(rival));
+    let ident = '';
+    if (nm && nm !== tr && !isLabel(nm) && !/rivalr/i.test(nm)) ident = nm; // evocative name
+    else if (tr && !isLabel(tr)) ident = tr; // trophy
+    else if (nm && !isLabel(nm) && !/rivalr/i.test(nm)) ident = nm; // name === trophy ("Illibuck")
+    const identClause = ident ? `, known as ${ident},` : '';
+    const where = g.isHome && !g.neutralSite && venue ? ` at ${venue.name}`
+      : !g.isHome && !g.neutralSite && g.awayVenue ? ` at ${g.awayVenue.name}`
+      : '';
+    out.push(`The ${ourName} vs ${rival} rivalry${identClause} is played on ${proseDate(g.date)}${where}.`);
+  }
+  return out;
+}
 
 // TicketNetwork slug overrides (audit/cfb-affiliate-validation.md). TN fuzzy-serves
 // a 200 for unknown slugs, so the default `slugifySchool(name+mascot)` lands on the
