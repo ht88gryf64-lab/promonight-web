@@ -26,7 +26,7 @@ export function fmtDayLong(iso: string): string {
 // source URL is stored (never a broken link). Same pill treatment either way.
 export function TrophyTag({ rivalry, tiny }: { rivalry: RivalryTag; tiny?: boolean }) {
   const label = rivalry.trophy || rivalry.name;
-  const title = rivalry.trophy ? `${rivalry.name} — ${rivalry.trophy}` : rivalry.name;
+  const title = rivalry.trophy ? `${rivalry.name} · ${rivalry.trophy}` : rivalry.name;
   const cls = `rounded-full px-2 py-0.5 ${tiny ? 'text-[9px]' : 'text-[10px]'} font-bold uppercase`;
   const style = { fontFamily: MONO, letterSpacing: '0.03em', background: 'var(--cfb-accent)', color: 'var(--cfb-accent-ink)' };
   if (rivalry.sourceUrl) {
@@ -35,7 +35,7 @@ export function TrophyTag({ rivalry, tiny }: { rivalry: RivalryTag; tiny?: boole
         href={rivalry.sourceUrl}
         target="_blank"
         rel="noopener noreferrer"
-        title={`${title} — Wikipedia`}
+        title={`${title} · Wikipedia`}
         className={`${cls} transition-opacity hover:opacity-80`}
         style={style}
       >

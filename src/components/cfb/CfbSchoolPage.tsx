@@ -243,7 +243,7 @@ export function CfbSchoolPage({ data }: { data: CfbSchoolPageData }) {
                         href={riv.sourceUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        title={`${titleText} — Wikipedia`}
+                        title={`${titleText} · Wikipedia`}
                         className="italic leading-tight text-white underline decoration-transparent underline-offset-4 transition-colors hover:decoration-[color:var(--cfb-accent)]"
                         style={titleStyle}
                       >

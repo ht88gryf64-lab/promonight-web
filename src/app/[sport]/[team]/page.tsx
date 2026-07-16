@@ -158,7 +158,7 @@ export async function generateMetadata({
           url: '/og-image.png',
           width: 1200,
           height: 630,
-          alt: 'PromoNight — Every giveaway, every team',
+          alt: 'PromoNight: Every giveaway, every team',
         },
       ],
     },
