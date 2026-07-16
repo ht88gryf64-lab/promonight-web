@@ -24,6 +24,7 @@ export type AnalyticsEvent =
   | 'collection_tile_tap'
   | 'affiliate_click'
   | 'venue_hub_click'
+  | 'hub_to_team'
   | 'app_download_click'
   | 'promo_card_tap'
   | 'tonight_card_tap'
@@ -495,9 +496,26 @@ export type VenueHubClickProperties = {
   destination_url: string;
 };
 
+// hub_to_team: the RETURN routing click from a venue hub back INTO a tenant
+// team's page (/{sport}/{slug} or /cfb/{slug}). The mirror of venue_hub_click:
+// it measures the hub-to-team internal-link direction (closing the loop) so the
+// return traffic is measured the same way the forward traffic is. building is
+// known here (the hub surface); team_slug is the destination tenant. sport is
+// undefined for CFB tenants (normalizeSport only covers the six pro leagues).
+export type HubToTeamClickProperties = {
+  surface: AnalyticsSurface;
+  team_slug: string;
+  sport?: Sport;
+  placement: string;
+  building_slug: string;
+  building_name: string;
+  destination_url: string;
+};
+
 export type EventPropertiesMap = {
   page_view: PageViewProperties;
   venue_hub_click: VenueHubClickProperties;
+  hub_to_team: HubToTeamClickProperties;
   cta_click: CtaClickProperties;
   browse_all_teams_tap: BrowseAllTeamsTapProperties;
   this_week_see_all_tap: ThisWeekSeeAllTapProperties;

@@ -340,6 +340,40 @@ export const resolveTicketTeam = cache(async (hub: VenueHub): Promise<Team | nul
   return null;
 });
 
+// ── tenant -> team-page return links (hub -> team, closes the internal loop) ─
+// The forward direction (team -> hub) is getVenueHubForTeam + VenueHubLink. This
+// is the reverse: every tenant of a building resolved to its own page so the hub
+// links BACK to the teams that play there. Pro tenants resolve to /{sport}/{slug}
+// via getTeamBySlug; CFB tenants to /cfb/{slug} via getCfbSchool. A tenant whose
+// page does NOT resolve is skipped (no dead links) rather than rendered blind.
+export interface TenantTeamLink {
+  teamId: string;
+  league: League;
+  /** /{sportSlug}/{id} for a pro team, /cfb/{id} for a CFB school. */
+  href: string;
+  /** Team / school display name for the link label. */
+  name: string;
+  /** CFB pages are gameday/schedule, not promo schedules — drives the framing. */
+  isCfb: boolean;
+}
+
+export const resolveTenantTeamLinks = cache(async (hub: VenueHub): Promise<TenantTeamLink[]> => {
+  const out: TenantTeamLink[] = [];
+  const seen = new Set<string>();
+  for (const t of hub.tenants) {
+    if (!t?.teamId || seen.has(t.teamId)) continue;
+    seen.add(t.teamId);
+    if (t.league === 'CFB') {
+      const school = await getCfbSchool(t.teamId);
+      if (school) out.push({ teamId: t.teamId, league: t.league, href: `/cfb/${school.id}`, name: school.name, isCfb: true });
+    } else {
+      const team = await getTeamBySlug(t.teamId);
+      if (team) out.push({ teamId: t.teamId, league: t.league, href: `/${team.sportSlug}/${team.id}`, name: team.name, isCfb: false });
+    }
+  }
+  return out;
+});
+
 // ── season year (deliberate, never getFullYear) ─────────────────────────────
 // Site-wide convention: the season year is a hardcoded named constant, bumped
 // deliberately when next-season content is ready — an auto-rolling
