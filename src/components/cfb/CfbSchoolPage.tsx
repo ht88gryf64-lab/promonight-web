@@ -28,7 +28,7 @@ import type { CfbSchoolPage as CfbSchoolPageData } from '@/lib/cfb/data';
 import { CfbThemePersist } from './CfbThemePersist';
 import { CfbSchedule } from './CfbSchedule';
 import { instrumentSerif } from './fonts';
-import { toAffiliateTeam, toAffiliateVenue, getKicker } from '@/lib/cfb/page-extras';
+import { toAffiliateTeam, toAffiliateVenue, getKicker, buildRivalrySentences } from '@/lib/cfb/page-extras';
 import { venueCity } from '@/lib/cfb/venue-cities';
 import { TicketmasterCTA } from '@/components/affiliates/TicketmasterCTA';
 import { SpotHeroCTA } from '@/components/affiliates/SpotHeroCTA';
@@ -43,6 +43,10 @@ export function CfbSchoolPage({ data }: { data: CfbSchoolPageData }) {
   const roadCount = games.filter((g) => !g.isHome && !g.neutralSite).length;
   const kicker = getKicker(school.id);
   const conf = school.conferenceBySeason?.['2026'] || '';
+
+  // Rivalry-section prose (pure, data-derived; see buildRivalrySentences). Closes
+  // Google's "Missing: rivalry" gap: each sentence uses "rivalry" and names the rival.
+  const rivalrySentences = buildRivalrySentences(data);
 
   // Affiliate adapters — the shared CTAs render UNCHANGED with these. Both ticket
   // vendors + hotels/parking resolve the school's own team/venue. Pass the CLEAN
@@ -211,11 +215,18 @@ export function CfbSchoolPage({ data }: { data: CfbSchoolPageData }) {
           </section>
         )}
 
-        {/* ── RIVALRIES — tag as fact, CROWN NONE (equal weight). The trophy name
-            links to its own Wikipedia article (stored source) when available. ── */}
+        {/* ── RIVALRY GAMES — generated prose (uses the word "rivalry" + names the
+            rival, closing Google's "Missing: rivalry" gap) leads the fact tags below.
+            Prose is DATA-DERIVED (cfbRivalries + schedule), never invented. Cards crown
+            none; the trophy name links to its own Wikipedia article when available. ── */}
         {rivalryGames.length > 0 && (
           <section className="mt-11">
-            <Eyebrow>Rivalries</Eyebrow>
+            <Eyebrow>Rivalry Games</Eyebrow>
+            {rivalrySentences.length > 0 && (
+              <p className="mb-6 max-w-3xl text-[13.5px] leading-relaxed text-white/70" style={{ fontFamily: SANS }}>
+                {rivalrySentences.join(' ')}
+              </p>
+            )}
             <div className={`grid gap-3.5 ${rivalryGames.length > 1 ? 'sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
               {rivalryGames.map((g) => {
                 const riv = g.rivalry!;

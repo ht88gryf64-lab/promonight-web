@@ -1,8 +1,13 @@
-// CFB metadata (decision record §12 + §13). Templated, TIER-DERIVED (reads
-// editorialStatus, so a school's description auto-enriches on graduation — no
-// hand edit), rivalry/travel-angled (the winnable wedge; §13), within engine
-// limits (title ≤60, description ≤160 — Google's ceilings; Bing follows). OG
-// uses the house /og-image.png so no CFB page ships a blanked image.
+// CFB metadata (decision record §12 + §13; re-optimized on Ahrefs data, Jul 2026).
+// Templated, TIER-DERIVED (reads editorialStatus, so a school's description auto-
+// enriches on graduation — no hand edit). "Schedule" is MANDATORY in every title:
+// "[school] football schedule 2026" is the head term with real volume (Ohio State
+// 10k, Alabama 8.3k, Notre Dame 7.8k), so it never gets dropped for a trophy token —
+// the token is featured only when it also fits. Descriptions NAME THE RIVAL SCHOOL
+// (where the rivalry volume actually is — "ohio state michigan rivalry" 900/mo, not
+// the generic "rivalry games" 10/mo) and carry "[stadium] parking" (a KD-1 logistics
+// term). Within engine limits (rendered title ≤60, description ≤155). OG uses the
+// house /og-image.png so no CFB page ships a blanked image.
 
 import type { Metadata } from 'next';
 import type { CfbSchoolPage } from '@/lib/cfb/data';
@@ -12,7 +17,7 @@ import type { CfbSchoolPage } from '@/lib/cfb/data';
 // (pro pages verified 44–58). So the FIELD budget must leave room for the brand.
 const BRAND_SUFFIX = ' | PromoNight';
 const TITLE_MAX = 60 - BRAND_SUFFIX.length; // 47 → rendered ≤60
-const DESC_MAX = 160;
+const DESC_MAX = 155; // hard cap (Google truncates ~155); every school verified ≤155
 const YEAR = 2026;
 const BASE = 'https://www.getpromonight.com';
 const OG_IMAGE = { url: '/og-image.png', width: 1200, height: 630, alt: 'PromoNight — Every giveaway, every team' };
@@ -48,26 +53,34 @@ const MARQUEE: Marquee[] = [
   { re: /keg of nails/i, token: 'Keg of Nails', name: 'the Keg of Nails', rank: 40 },
 ];
 
-export interface FeaturedRivalry { token: string | null; name: string | null; source: 'marquee' | 'trophy' | 'none' }
+// `rival` = the featured rivalry's OPPONENT school (resolved, display-name form).
+// It is what the description leads with ("The Game vs Michigan") — the §13 volume
+// term names BOTH schools. Null only when a school has no 2026 rivalry game.
+export interface FeaturedRivalry { token: string | null; name: string | null; source: 'marquee' | 'trophy' | 'none'; rival: string | null }
 
 /** Select the featured rivalry from a school's 2026 rivalry games (§13 priority:
- *  best marquee, else the most recognizable trophy, else none). */
+ *  best marquee, else the most recognizable trophy, else none). Tracks the winning
+ *  tag so the RIVAL SCHOOL rides along (the description names it). */
 export function selectFeaturedRivalry(data: CfbSchoolPage): FeaturedRivalry {
-  const tags = data.games.filter((g) => g.rivalry).map((g) => ({ trophy: g.rivalry!.trophy, name: g.rivalry!.name }));
-  if (tags.length === 0) return { token: null, name: null, source: 'none' };
-  // best marquee across all this school's rivalry tags
+  const tags = data.games
+    .filter((g) => g.rivalry)
+    .map((g) => ({ trophy: g.rivalry!.trophy, name: g.rivalry!.name, rival: g.opponentName }));
+  if (tags.length === 0) return { token: null, name: null, source: 'none', rival: null };
+  // best marquee across all this school's rivalry tags — track the winning tag so we
+  // can surface the rival (opponentName is already resolved: nameById || prettifySlug).
   let best: Marquee | null = null;
+  let bestTag: (typeof tags)[number] | null = null;
   for (const t of tags) {
     const hay = `${t.trophy ?? ''} ${t.name}`;
-    for (const m of MARQUEE) if (m.re.test(hay) && (!best || m.rank > best.rank)) best = m;
+    for (const m of MARQUEE) if (m.re.test(hay) && (!best || m.rank > best.rank)) { best = m; bestTag = t; }
   }
-  if (best) return { token: best.token, name: best.name, source: 'marquee' };
+  if (best && bestTag) return { token: best.token, name: best.name, source: 'marquee', rival: bestTag.rival };
   // no marquee → most recognizable trophy (prefer a tag that carries a trophy name).
   // No length cap: the title fallback chain drops the token when it won't fit, so a
   // short-named school still gets its trophy featured (Toledo → "Battle of I-75 Trophy").
-  const withTrophy = tags.find((t) => t.trophy);
-  const pick = withTrophy?.trophy ?? tags[0].trophy ?? tags[0].name;
-  return { token: pick, name: pick, source: 'trophy' };
+  const pickTag = tags.find((t) => t.trophy) ?? tags[0];
+  const pick = pickTag.trophy ?? pickTag.name;
+  return { token: pick, name: pick, source: 'trophy', rival: pickTag.rival };
 }
 
 function firstFit(cands: string[], max: number): string {
@@ -86,45 +99,60 @@ export function buildCfbTeamMetadata(data: CfbSchoolPage): Metadata {
   const fullName = `${s.name} ${s.mascot}`.trim();
   const feat = selectFeaturedRivalry(data);
   const hasRivalry = feat.source !== 'none';
-  const venueClause = venue ? ` at ${venue.name}` : '';
-  const rivalryPhrase = feat.name ? `${feat.name} and rivalry games` : 'rivalry games';
+  const stadium = venue?.name ?? null;
+  const rival = feat.rival;
 
-  // ── TITLE (≤60), rivalry-featured with a graceful fallback chain. A school with
-  //    NO rivalry games (none tracked in 2026) never claims "Rivalries" (no over-claim). ──
-  // Lead with the trophy (the wedge), not "Schedule" (budget-eating, and the
-  // schedule head term is unwinnable per §13). Fallback drops to a generic-but-
-  // accurate "Rivalries" only when the trophy can't fit the field budget.
+  // ── TITLE (field ≤47 → rendered ≤60 after the ' | PromoNight' template). "Schedule"
+  //    is MANDATORY in every candidate — it is the head term with real volume. The
+  //    trophy token is featured only when it FITS alongside "Schedule"; when it will
+  //    not, we drop the TOKEN (never "Schedule"), keeping a truthful "Rivalries" hook,
+  //    then "& Gameday", then bare. A school with NO 2026 rivalry game never claims
+  //    "Rivalries" (no over-claim) — it takes the no-rivalry chain. ──
   const titleCands = hasRivalry
     ? [
-        `${s.name} Football ${YEAR}: ${feat.token} & Gameday`,
-        `${s.name} Football ${YEAR}: ${feat.token}`,
-        `${s.name} Football ${YEAR}: Rivalries & Gameday`,
-        `${s.name} Football ${YEAR}: Rivalries`,
-        `${s.name} Football ${YEAR} Schedule`,
+        `${s.name} Football Schedule ${YEAR}: ${feat.token} & Gameday`,
+        `${s.name} Football Schedule ${YEAR}: ${feat.token}`,
+        `${s.name} Football Schedule ${YEAR}: Rivalries & Gameday`,
+        `${s.name} Football Schedule ${YEAR}: Rivalries`,
+        `${s.name} Football Schedule ${YEAR} & Gameday`,
+        `${s.name} Football Schedule ${YEAR}`,
       ]
     : [
-        `${s.name} Football ${YEAR}: Schedule & Gameday`,
-        `${s.name} Football ${YEAR} Schedule`,
+        `${s.name} Football Schedule ${YEAR} & Gameday`,
+        `${s.name} Football Schedule ${YEAR}`,
       ];
   const title = firstFit(titleCands, TITLE_MAX);
 
-  // ── DESCRIPTION (≤160), TIER-DERIVED. Auto promises only what the page has
-  //    (schedule, rivalry games, venue, tickets/parking/hotels). Destination may
-  //    promise gameday guide + tailgating — dormant until a school graduates. ──
-  const rivClause = hasRivalry ? `, ${rivalryPhrase},` : ',';
+  // ── DESCRIPTION (≤155), TIER-DERIVED, and NAMES THE RIVAL SCHOOL (that is where the
+  //    volume is — "ohio state michigan rivalry" 900/mo, not the generic "rivalry
+  //    games" 10/mo). Carries "[stadium] parking" (a KD-1 logistics term). A generic
+  //    "SchoolA–SchoolB" rivalry label collapses to "the {rival} rivalry" (no redundant
+  //    echo, and it still lands the word "rivalry"). AUTO promises only what the page
+  //    has (schedule, the rivalry, venue, tickets/parking/hotels); DESTINATION (dormant)
+  //    may add a gameday guide + tailgating. ──
+  const stadClause = stadium ? `${stadium} parking` : 'parking';
+  const genericLabel = hasRivalry && rival != null && feat.name != null
+    && /–/.test(feat.name) && (feat.name.includes(rival) || feat.name.includes(s.name));
+  const rivalClause = !hasRivalry || rival == null
+    ? ''
+    : genericLabel
+      ? `the ${rival} rivalry, `
+      : `${feat.name} vs ${rival}, `;
   const descCands = isDestination
     ? [
-        `${fullName} ${YEAR}: ${rivalryPhrase}, a gameday guide, tailgating, plus tickets, parking and hotels${venueClause}.`,
-        `${fullName} ${YEAR}: ${rivalryPhrase}, gameday guide and tailgating, plus tickets, parking and hotels.`,
-        `${fullName} ${YEAR}: ${rivalryPhrase}, gameday guide, tickets and travel${venueClause}.`,
-        `${s.name} ${YEAR}: ${rivalryPhrase}, gameday guide, tickets and travel.`,
+        `${fullName} ${YEAR} football schedule, ${rivalClause}a gameday guide and tailgating, plus tickets, ${stadClause} and hotels.`,
+        `${fullName} ${YEAR} football schedule, ${rivalClause}gameday guide, tickets, ${stadClause} and hotels.`,
+        `${s.name} ${YEAR} football schedule, ${rivalClause}gameday guide, tailgating, tickets and travel.`,
+        `${s.name} ${YEAR} football schedule, gameday guide, tickets, ${stadClause} and hotels.`,
+        `${s.name} ${YEAR} football schedule, gameday guide, tickets, parking and hotels.`,
       ]
     : [
-        `${fullName} ${YEAR} schedule${rivClause} plus tickets, parking and hotels for every home game${venueClause}.`,
-        `${fullName} ${YEAR} schedule${rivClause} plus tickets, parking and hotels for every home game.`,
-        `${fullName} ${YEAR} schedule${rivClause} plus tickets, parking and hotels${venueClause}.`,
-        `${s.name} ${YEAR} football schedule${rivClause} plus tickets, parking and hotels.`,
-        `${s.name} ${YEAR} football schedule, plus gameday tickets, parking and hotels.`,
+        `${fullName} ${YEAR} football schedule, ${rivalClause}plus tickets, ${stadClause} and hotels for every home game.`,
+        `${fullName} ${YEAR} football schedule, ${rivalClause}plus tickets, ${stadClause} and hotels.`,
+        `${s.name} ${YEAR} football schedule, ${rivalClause}plus tickets, ${stadClause} and hotels.`,
+        `${s.name} ${YEAR} football schedule, ${rivalClause}plus tickets, parking and hotels.`,
+        `${s.name} ${YEAR} football schedule, plus tickets, ${stadClause} and hotels for every home game.`,
+        `${s.name} ${YEAR} football schedule, plus tickets, parking and hotels.`,
       ];
   const description = firstFit(descCands, DESC_MAX);
 
@@ -145,8 +173,9 @@ export function buildCfbHubMetadata(): Metadata {
   // Lead with the exact §13 winnable phrase "college football rivalries"; ≤47 so
   // the rendered <title> (+ ' | PromoNight') stays ≤60. Avoids the schedule head term.
   const title = 'College Football Rivalries & Gameday 2026'; // 41 field → 54 rendered
+  // Em-dash-free (house rule: avoid em dashes in user-facing copy); colon + commas.
   const description =
-    'College football rivalries, trophy games and theme nights for 2026 — The Game, Iron Bowl, Red River — plus schedules and gameday plans for all 86 teams.';
+    'College football rivalries, trophy games and theme nights for 2026: The Game, Iron Bowl, Red River, plus schedules and gameday plans for all 86 teams.';
   const socialTitle = `${title} | PromoNight`;
   const url = `${BASE}/cfb`;
   return {
