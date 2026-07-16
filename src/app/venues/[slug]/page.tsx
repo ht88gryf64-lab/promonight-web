@@ -6,8 +6,8 @@ import {
   getAllVenueHubSlugs,
   venueHubIsIndexable,
   resolveTicketTeam,
-  displayVenueName,
-  cityState,
+  venueHubTitle,
+  venueHubDescription,
 } from '@/lib/venue-hub';
 import { VenueHubView } from '@/components/venue-hub/VenueHubView';
 
@@ -30,18 +30,17 @@ export async function generateMetadata({
   const { slug } = await params;
   const hub = await getVenueHub(slug);
   if (!hub) return {};
-  const short = displayVenueName(hub.name);
-  const loc = cityState(hub);
   const canonical = `${BASE_URL}/venues/${slug}`;
   // INDEXING FLOOR (locked): below the floor the page renders what it has but
   // emits noindex (follow, so outbound links are still crawled).
   const indexable = venueHubIsIndexable(hub);
   return {
-    // Title names the queries, not the venue.
-    title: `${short} Parking, Bag Policy and Gameday Guide`,
-    description: `Bag policy, parking, gate times, transit, and tailgating for ${short}${
-      loc ? ` in ${loc}` : ''
-    }. Reserve nearby parking and plan your gameday visit.`,
+    // League-split, query-led title (bare value; the root layout's
+    // title.template appends " | PromoNight"). Season year is a deliberate
+    // constant, never getFullYear() — see SEASON_YEAR in lib/venue-hub.
+    title: venueHubTitle(hub),
+    // Per-building answer-first description generated from verified facts.
+    description: venueHubDescription(hub),
     alternates: { canonical },
     robots: indexable ? undefined : { index: false, follow: true },
   };
