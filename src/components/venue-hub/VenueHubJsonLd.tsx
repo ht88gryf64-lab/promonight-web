@@ -5,6 +5,7 @@ import type { HubFaqItem } from '@/components/hub/HubFaq';
 // (the FAQ is also where overflow bag-policy text lands).
 export function VenueHubJsonLd({
   name,
+  description,
   url,
   city,
   state,
@@ -13,6 +14,9 @@ export function VenueHubJsonLd({
   faqs,
 }: {
   name: string;
+  /** Same string as the page <meta name="description">, so the structured data
+   *  and the rendered meta stay identical. */
+  description?: string;
   url: string;
   city: string | null;
   state: string | null;
@@ -26,6 +30,7 @@ export function VenueHubJsonLd({
     name,
     url,
   };
+  if (description) place.description = description;
   if (city || state) {
     place.address = {
       '@type': 'PostalAddress',
