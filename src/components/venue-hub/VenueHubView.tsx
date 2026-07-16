@@ -8,8 +8,10 @@ import { SpotHeroCTA } from '@/components/affiliates/SpotHeroCTA';
 import { ExpediaCTA } from '@/components/affiliates/ExpediaCTA';
 import { VenueHubJsonLd } from './VenueHubJsonLd';
 import { VenuePhotoHero } from './VenuePhotoHero';
+import { HubTeamLink } from './HubTeamLink';
 import {
   type VenueHub,
+  type TenantTeamLink,
   displayVenueName,
   leadSentences,
   cityState,
@@ -86,10 +88,12 @@ export function VenueHubView({
   hub,
   canonicalUrl,
   ticketTeam,
+  tenantLinks,
 }: {
   hub: VenueHub;
   canonicalUrl: string;
   ticketTeam: Team | null;
+  tenantLinks: TenantTeamLink[];
 }) {
   const short = displayVenueName(hub.name);
   const loc = cityState(hub);
@@ -237,6 +241,31 @@ export function VenueHubView({
             </div>
           ) : null}
         </div>
+      </div>
+    </Card>
+  ) : null;
+
+  // Teams that play here: the RETURN internal links (hub -> team pages), closing
+  // the loop the hub otherwise leaves open. Building-agnostic (renders on held
+  // buildings too — who plays here is known regardless of fact verification).
+  // Each row is a crawlable <Link> firing hub_to_team. Only resolved tenants
+  // appear, so there are no dead links.
+  const teamsCard = tenantLinks.length ? (
+    <Card>
+      <CardLabel>Teams that play here</CardLabel>
+      <div className="grid gap-2">
+        {tenantLinks.map((t) => (
+          <HubTeamLink
+            key={t.teamId}
+            teamId={t.teamId}
+            league={t.league}
+            href={t.href}
+            name={t.name}
+            isCfb={t.isCfb}
+            buildingSlug={hub.slug}
+            buildingName={short}
+          />
+        ))}
       </div>
     </Card>
   ) : null;
@@ -405,6 +434,9 @@ export function VenueHubView({
           {/* main column */}
           <div className="min-w-0">
             {bagCard}
+            {/* Return links: prominent (first for held buildings, which have no
+                bag capsule), high in the DOM for link equity + AI crawlers. */}
+            {teamsCard}
             {/* mobile: Plan-your-visit sits directly under the bag capsule */}
             {planCard ? <div className="lg:hidden">{planCard}</div> : null}
             {gettingInCard}

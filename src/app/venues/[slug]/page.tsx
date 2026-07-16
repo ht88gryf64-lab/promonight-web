@@ -6,6 +6,7 @@ import {
   getAllVenueHubSlugs,
   venueHubIsIndexable,
   resolveTicketTeam,
+  resolveTenantTeamLinks,
   venueHubTitle,
   venueHubDescription,
 } from '@/lib/venue-hub';
@@ -50,10 +51,15 @@ export default async function VenueHubPage({ params }: { params: Promise<{ slug:
   const { slug } = await params;
   const hub = await getVenueHub(slug);
   if (!hub) notFound();
-  const ticketTeam = await resolveTicketTeam(hub);
+  const [ticketTeam, tenantLinks] = await Promise.all([resolveTicketTeam(hub), resolveTenantTeamLinks(hub)]);
   return (
     <div className={`${archivoHouse.variable} rd-root min-h-screen`}>
-      <VenueHubView hub={hub} canonicalUrl={`${BASE_URL}/venues/${slug}`} ticketTeam={ticketTeam} />
+      <VenueHubView
+        hub={hub}
+        canonicalUrl={`${BASE_URL}/venues/${slug}`}
+        ticketTeam={ticketTeam}
+        tenantLinks={tenantLinks}
+      />
     </div>
   );
 }
