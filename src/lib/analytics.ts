@@ -95,6 +95,17 @@ export type AnalyticsSurface =
   | 'web_mlb_hub_this_week'
   | 'web_mlb_hub_promo_type'
   | 'web_mlb_hub_team_card'
+  // WNBA + MLS league hubs (/wnba, /mls) and their interactive sub-surfaces,
+  // mirroring the MLB hub split so each league's hub taps, promo-type links, and
+  // team grid / selector break out separately in PostHog + GA4.
+  | 'web_wnba_hub'
+  | 'web_wnba_hub_this_week'
+  | 'web_wnba_hub_promo_type'
+  | 'web_wnba_hub_team_card'
+  | 'web_mls_hub'
+  | 'web_mls_hub_this_week'
+  | 'web_mls_hub_promo_type'
+  | 'web_mls_hub_team_card'
   // Venue logistics hub (/venues/[slug]). Per-building attribution rides in the
   // affiliate subId via promoId={buildingSlug}, so the surface stays one enum
   // value while reports still slice by building.
@@ -169,6 +180,7 @@ export type CollectionTileTapProperties = {
   collection_name:
     | 'bobbleheads'
     | 'jerseys'
+    | 'soccer_jerseys'
     | 'theme_nights'
     | 'fireworks'
     | 'giveaways'
@@ -758,6 +770,14 @@ const KNOWN_SURFACES: ReadonlySet<AnalyticsSurface> = new Set<AnalyticsSurface>(
   'web_mlb_hub_this_week',
   'web_mlb_hub_promo_type',
   'web_mlb_hub_team_card',
+  'web_wnba_hub',
+  'web_wnba_hub_this_week',
+  'web_wnba_hub_promo_type',
+  'web_wnba_hub_team_card',
+  'web_mls_hub',
+  'web_mls_hub_this_week',
+  'web_mls_hub_promo_type',
+  'web_mls_hub_team_card',
   'web_article',
   'web_my_teams',
   'web_best_promos',
@@ -780,9 +800,11 @@ export function inferSurfaceFromPath(path: string): AnalyticsSurface {
   // College Football team pages — their own surface (pageviews + any path-inferred
   // click), so CFB never attributes to a pro sport surface.
   if (path.startsWith('/cfb')) return 'web_cfb';
-  // The bare /mlb league hub gets its own surface. /mlb/{team} is a team page
-  // and is handled by the generic sport match below (it returns web_team_page).
+  // The bare league-hub paths get their own surface. /{sport}/{team} is a team
+  // page and is handled by the generic sport match below (web_team_page).
   if (path === '/mlb') return 'web_mlb_hub';
+  if (path === '/wnba') return 'web_wnba_hub';
+  if (path === '/mls') return 'web_mls_hub';
   // /[sport]/[team] — team pages. Sports are known; anything else falls through.
   const m = path.match(/^\/([a-z]+)(?:\/|$)/);
   if (m && ['mlb', 'nba', 'nhl', 'nfl', 'mls', 'wnba'].includes(m[1])) {
