@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { getAllTeams, getPlayoffConfig, getStillAlivePlayoffTeamIds } from '@/lib/data';
 import { getAllCfbSchoolIds } from '@/lib/cfb/data';
-import { isCfbHubLive } from '@/lib/league-hubs';
+import { isCfbHubLive, getLeagueHub } from '@/lib/league-hubs';
 import { getIndexableVenueHubSitemapEntries } from '@/lib/venue-hub';
 
 const BASE_URL = 'https://www.getpromonight.com';
@@ -66,6 +66,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
+  // WNBA + MLS league hubs. Gated on the SAME LEAGUE_HUB_REGISTRY live flag as
+  // the nav (so the sitemap follows go-live), mirroring the CFB pattern above.
+  // Fail-closed: a hub URL is emitted only once its route ships (live flips true),
+  // so there is never a sitemap entry pointing at a route that does not exist.
+  // Daily changefreq like /mlb: both run a daily promo cadence and their
+  // this-week rail turns over each day. Team pages for these leagues already flow
+  // through teamPages above (every getAllTeams doc, any league).
+  const leagueHubEntries = (['WNBA', 'MLS'] as const)
+    .map((lg) => getLeagueHub(lg))
+    .filter((hub): hub is NonNullable<typeof hub> => hub?.live === true)
+    .map((hub) => ({
+      url: `${BASE_URL}${hub.href}`,
+      lastModified: now,
+      changeFrequency: 'daily' as const,
+      priority: 0.9,
+    }));
+
   // Venue logistics hubs (/venues/[slug]). Only buildings that clear the indexing
   // floor (lat/lng + two of bag/parking/transit + verified) are listed; the rest
   // render but stay noindex and out of the sitemap. lastmod is the doc's real
@@ -116,6 +133,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.9,
     },
     ...cfbHubEntries,
+    ...leagueHubEntries,
     ...playoffHubEntries,
     ...teamPages,
     ...cfbTeamPages,

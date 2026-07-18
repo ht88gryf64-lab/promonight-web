@@ -4,6 +4,7 @@ import type { PlayoffFAQContext } from '@/lib/promo-helpers';
 import type { RecurringDeal } from '@/lib/recurring-deals';
 
 import Link from 'next/link';
+import { getLeagueHub } from '@/lib/league-hubs';
 import { archivo } from './fonts';
 import { Hero } from './Hero';
 import { StatScoreboard } from './StatScoreboard';
@@ -71,11 +72,16 @@ export function RedesignTeamPage({
   playoffLastUpdated,
   playoffContext,
 }: RedesignTeamPageProps) {
-  // The league segment links up to the league hub when one exists (MLB today),
-  // so the team page and the /mlb hub form a reciprocal loop (hub links down to
-  // teams, team links up to hub). Leagues without a hub keep a plain-text league
+  // The league segment links up to the league hub, but ONLY when that hub is
+  // live, so the team page and its hub form a reciprocal loop (hub links down to
+  // teams, team links up to hub). The `?.live` gate is load-bearing: WNBA/MLS
+  // (and every future league) already sit in LEAGUE_HUB_REGISTRY, so linking
+  // without it would point published team pages at routes before they exist.
+  // Gating on `live` ties every league's up-link to the same one-line flag flip
+  // that lights the nav. Leagues whose hub is not live keep a plain-text league
   // segment so there is never a dead link.
-  const leagueHubHref = team.league === 'MLB' ? '/mlb' : null;
+  const leagueHub = getLeagueHub(team.league);
+  const leagueHubHref = leagueHub?.live ? leagueHub.href : null;
   const eyebrow = (
     <>
       {leagueHubHref ? (
