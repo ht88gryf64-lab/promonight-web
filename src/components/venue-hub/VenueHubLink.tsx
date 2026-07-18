@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { track, normalizeSport } from '@/lib/analytics';
+import { track, normalizeSport, type AnalyticsSurface } from '@/lib/analytics';
 
 // Internal routing CTA from a team page into that team's building hub
 // (/venues/{slug}). This is the internal link that turns team-page traffic into
@@ -16,6 +16,10 @@ type Props = {
   league: string;
   buildingSlug: string;
   buildingDisplayName: string;
+  // Attribution surface for the fired venue_hub_click. Defaults to the pro
+  // team-page value so existing callers (AffiliateRail) are unchanged; CFB pages
+  // pass 'web_cfb_venue_link' so team-page-to-hub routing splits by origin.
+  surface?: AnalyticsSurface;
 };
 
 function GuideIcon() {
@@ -37,7 +41,7 @@ function GuideIcon() {
   );
 }
 
-export function VenueHubLink({ teamId, league, buildingSlug, buildingDisplayName }: Props) {
+export function VenueHubLink({ teamId, league, buildingSlug, buildingDisplayName, surface = 'web_team_page' }: Props) {
   const href = `/venues/${buildingSlug}`;
 
   // Fire on mousedown (not click) so the event lands even when the navigation
@@ -45,7 +49,7 @@ export function VenueHubLink({ teamId, league, buildingSlug, buildingDisplayName
   // affiliate-link tracking convention.
   const fire = () => {
     track('venue_hub_click', {
-      surface: 'web_team_page',
+      surface,
       team_slug: teamId,
       sport: normalizeSport(league),
       placement: 'team_page_plan_your_visit',

@@ -87,6 +87,12 @@ export type AnalyticsSurface =
   // College Football team pages (/cfb/[school]) and their affiliate CTAs, so
   // PostHog + GA4 can slice CFB clicks out from the pro surfaces.
   | 'web_cfb'
+  // The internal routing click FROM a CFB team page INTO that school's venue hub
+  // (/venues/{slug}), fired by VenueHubLink with this surface. Split from web_cfb
+  // (the CFB affiliate motions) so the team-page-to-hub internal-link thesis is
+  // measured on its own, mirroring how pro pages fire venue_hub_click as
+  // web_team_page.
+  | 'web_cfb_venue_link'
   // MLB league hub (/mlb) and its interactive sub-surfaces. Distinct from the
   // generic web_league_index (which covers /teams and any bare /{sport}) so
   // PostHog and GA4 can break the hub out by module: the this-week rail, the
