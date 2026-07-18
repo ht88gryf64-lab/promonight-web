@@ -4,7 +4,7 @@ import type { AnalyticsSurface } from '@/lib/analytics';
 import { buildTicketmasterUrl, buildTicketNetworkLink } from '@/lib/affiliates';
 import { TrackedAffiliateLink } from '@/components/tracked-affiliate-link';
 
-// Stacked two-button ticket CTA — Ticketmaster on top, TicketNetwork below.
+// Stacked two-button ticket CTA — TicketNetwork on top, Ticketmaster below.
 // Each button is an independent branded white-card link that visually breaks
 // from PromoNight's red/dark theme to signal "external destination". Visual
 // spec mirrors the CTACluster.jsx mockup hero: white card, 1.5px navy (#003C71)
@@ -13,12 +13,15 @@ import { TrackedAffiliateLink } from '@/components/tracked-affiliate-link';
 // matching the SpotHero / Fanatics card pattern (brand mark + descriptor +
 // arrow).
 //
-// Ticketmaster leads because it is the better-converting partner; its outbound
-// URL is wrap-resolved by buildTicketmasterUrl when NEXT_PUBLIC_TICKETMASTER_-
-// IMPACT_WRAP is set (Production), with graceful pre-approval fallback to a bare
-// ticketmaster.com link. TicketNetwork is always commissionable (hardcoded
-// Impact prefix + property IDs). Each button is null-guarded so a vendor whose
-// link can't be resolved drops cleanly, leaving the other.
+// TicketNetwork leads because it monetizes better per click (~$0.25/click vs
+// Ticketmaster's ~$0.15/click over the trailing 30 days), so it holds the top
+// intercept slot; it is always commissionable (hardcoded Impact prefix +
+// property IDs). Ticketmaster sits second for primary-intent buyers and the
+// occasional large order; its outbound URL is wrap-resolved by
+// buildTicketmasterUrl when NEXT_PUBLIC_TICKETMASTER_IMPACT_WRAP is set
+// (Production), with graceful pre-approval fallback to a bare ticketmaster.com
+// link. Each button is null-guarded so a vendor whose link can't be resolved
+// drops cleanly, leaving the other.
 //
 // Both buttons fire `affiliate_click` (PostHog + GA4 dual-emit) via
 // TrackedAffiliateLink, with distinct `partner` values ('ticketmaster' /
@@ -92,38 +95,10 @@ export function TicketmasterCTA({ team, surface, placement, promoId, venueSlug, 
 
   return (
     <div className={`flex w-full flex-col ${stackGap}`}>
-      {/* Ticketmaster — top (better-converting partner). */}
-      {ticketmasterHref && (
-        <TrackedAffiliateLink
-          href={ticketmasterHref}
-          partner="ticketmaster"
-          teamId={team.id}
-          sport={team.league}
-          promoId={promoId}
-          surface={surface}
-          placement={placement}
-          target="_blank"
-          rel="noopener noreferrer sponsored"
-          ariaLabel="Get tickets on Ticketmaster"
-          className={cardClass}
-        >
-          <span
-            className={`font-outfit font-extrabold italic lowercase text-[#003C71] ${wordmarkSize}`}
-            style={{ letterSpacing: '-0.3px' }}
-          >
-            ticketmaster
-          </span>
-          <span className={`font-outfit font-bold text-[#0a0a0a] ${ctaSize}`}>
-            Get Tickets
-          </span>
-          <span aria-hidden="true" className={arrowClass}>
-            →
-          </span>
-        </TrackedAffiliateLink>
-      )}
-
-      {/* TicketNetwork — below. White-background logo blends into the white
-          card (no recolor/distort). */}
+      {/* TicketNetwork — top (better-monetizing partner: ~$0.25/click vs
+          Ticketmaster's ~$0.15/click over the trailing 30 days, so it holds the
+          top intercept slot). White-background logo blends into the white card
+          (no recolor/distort). */}
       {ticketNetworkHref && (
         <TrackedAffiliateLink
           href={ticketNetworkHref}
@@ -144,6 +119,37 @@ export function TicketmasterCTA({ team, surface, placement, promoId, venueSlug, 
             width={logoWidth}
             height={logoHeight}
           />
+          <span className={`font-outfit font-bold text-[#0a0a0a] ${ctaSize}`}>
+            Get Tickets
+          </span>
+          <span aria-hidden="true" className={arrowClass}>
+            →
+          </span>
+        </TrackedAffiliateLink>
+      )}
+
+      {/* Ticketmaster — below (primary-intent buyers and the occasional large
+          order). */}
+      {ticketmasterHref && (
+        <TrackedAffiliateLink
+          href={ticketmasterHref}
+          partner="ticketmaster"
+          teamId={team.id}
+          sport={team.league}
+          promoId={promoId}
+          surface={surface}
+          placement={placement}
+          target="_blank"
+          rel="noopener noreferrer sponsored"
+          ariaLabel="Get tickets on Ticketmaster"
+          className={cardClass}
+        >
+          <span
+            className={`font-outfit font-extrabold italic lowercase text-[#003C71] ${wordmarkSize}`}
+            style={{ letterSpacing: '-0.3px' }}
+          >
+            ticketmaster
+          </span>
           <span className={`font-outfit font-bold text-[#0a0a0a] ${ctaSize}`}>
             Get Tickets
           </span>

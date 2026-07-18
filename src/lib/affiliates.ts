@@ -31,8 +31,8 @@ export type AffiliatePartner =
   | 'ticketnetwork';
 
 // ── Ticket vendor (historical sole-vendor switch) ────────────────────────
-// The ticket CTA now renders BOTH vendors stacked — Ticketmaster on top,
-// TicketNetwork below (see components/affiliates/TicketmasterCTA.tsx) — so this
+// The ticket CTA now renders BOTH vendors stacked — TicketNetwork on top,
+// Ticketmaster below (see components/affiliates/TicketmasterCTA.tsx) — so this
 // constant no longer gates which vendor renders. It is retained as the record
 // of the prior single-vendor era and for the /dev/affiliate-check diagnostics
 // readout. Both link builders (buildTicketmasterUrl + the env wrap,
