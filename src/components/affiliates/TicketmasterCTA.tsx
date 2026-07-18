@@ -123,7 +123,7 @@ export function TicketmasterCTA({
   const cardBase =
     'group flex items-center rounded-[14px] bg-white border-[1.5px] border-[#003C71] transition-all hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(0,60,113,0.22)]';
   const cardClass = inline
-    ? `${cardBase} ${cardShadow} min-h-[40px] flex-1 basis-0 min-w-0 justify-center gap-1.5 overflow-hidden px-2 py-2.5`
+    ? `${cardBase} ${cardShadow} min-h-[40px] flex-1 basis-0 min-w-0 justify-center gap-1.5 overflow-hidden px-2 py-1`
     : `${cardBase} ${cardShadow} w-full ${padding}`;
   const arrowClass = inline
     ? `ml-auto hidden text-[#003C71] @[22rem]/cta:inline ${arrowSize} leading-none transition-transform group-hover:translate-x-0.5`

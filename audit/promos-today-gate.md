@@ -1,8 +1,16 @@
 # /promos/today — Phase 3 verification gate
 
-Branch: `feature/promos-today` (off `main` @ `939c9c5`). Status: **built + verified, holding for merge decision. NOT pushed, NOT merged.**
+Branch: `feature/promos-today` (off `main` @ `939c9c5`). Status: **built + verified, holding for merge decision.**
 
 Verified 2026-07-18 against a local `next dev` build with live Firestore data (today = Saturday, July 18; MLB + WNBA in season, MLS none today). Headless checks driven by `puppeteer-core` against the installed Chrome (installed `--no-save`; `package.json`/lockfile untouched).
+
+## Pre-merge review fixes (round 2)
+
+Three fixes applied after the first preview review, then re-verified (see updated results below):
+
+1. **Full-width layout (desktop).** Page containers widened from `max-w-3xl` to **`max-w-5xl`** (matching team pages / the team-page promo list). Measured desktop row width at 1280px = **976px** (was ~720px in the narrow column).
+2. **Cards now reuse the exact team-page row.** The bespoke card is gone; each today promo renders through the actual **`RedesignPromoRow`** — date stamp (JUL 18 / SAT), category icon, Giveaways + HOT tags, title, **full description**, "VS OPPONENT", share icon — so it is guaranteed identical to team pages and stays in sync. The compact inline CTA row is **appended below** the row. `RedesignPromoRow` gained an additive `href` prop (a stretched deep-link overlay) so the row body navigates to the team promo anchor while the share button and the appended CTA row stay independently clickable; team-page behavior is unchanged when `href` is absent. Single-column list (`space-y-4`), not a 2-up grid.
+3. **Compact CTA height.** Inline buttons trimmed from 48px to **40px** (the accessibility floor), `min-h-[40px]` preserved. No-wrap-to-360px and TN/TM/SpotHero order unchanged.
 
 ## Build / type
 
@@ -42,8 +50,10 @@ Row order: **TicketNetwork, Ticketmaster, SpotHero** (TN-first on every surface,
 | Single line, no wrap | PASS | PASS |
 | TicketNetwork leftmost | PASS | PASS |
 | SpotHero rightmost | PASS | PASS |
-| Tap height ≥ 40px | PASS (48px) | PASS (48px) |
+| Tap height ≥ 40px | PASS (40px) | PASS (40px) |
+| Compact height ≤ 44px | PASS (40px) | PASS (40px) |
 | No horizontal page scroll | PASS | PASS |
+| Desktop full width (1280px row) | 976px (`max-w-5xl`) | — |
 
 Verified order at 360px: `['TicketNetwork', 'Ticketmaster', 'SpotHero']`. Screenshots (`scratchpad/card-360.png`, `card-390.png`) confirm legible brand-mark compression: TicketNetwork logo / `ticketmaster` wordmark / "P SpotHero" with descriptors hidden at 360; at wider widths the "Get Tickets" / "Reserve Parking" descriptors reveal via container query. Structural no-wrap guarantee: `flex-nowrap` + `flex-1 basis-0 min-w-0` + `overflow-hidden` (fixed a grid `min-width:auto` overflow that initially pushed the page to 408px).
 
@@ -51,7 +61,7 @@ Verified order at 360px: `['TicketNetwork', 'Ticketmaster', 'SpotHero']`. Screen
 
 | Check | Result |
 |---|---|
-| Card body click → team page promo anchor | Landed on `/mlb/arizona-diamondbacks#promo-2026-07-18-geraldo-perdomo-audio-bobble` ✅ |
+| Card body click → team page promo anchor | Row-body tap (via `RedesignPromoRow` stretched `href`) landed on `/mlb/arizona-diamondbacks#promo-2026-07-18-geraldo-perdomo-audio-bobble` ✅ |
 | CTA click → affiliate out, NOT card nav | Leftmost (TicketNetwork) opened `ticketnetwork.com/...` popup; page stayed on `/promos/today` ✅ |
 
 Implemented with a stretched-link `::after` (card body) + `relative z-10` CTA row (independent affiliate links), so no nested anchors and no JS propagation handling.

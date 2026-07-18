@@ -68,7 +68,7 @@ export function SpotHeroCTA({ team, surface, placement, venue, venueSlug, coords
     : buildSpotHeroUrl({ subKey });
 
   const inline = layout === 'inline';
-  const padding = inline ? 'px-2 py-2.5' : size === 'compact' ? 'px-3 py-2.5' : 'px-4 py-3.5';
+  const padding = inline ? 'px-2 py-1' : size === 'compact' ? 'px-3 py-2.5' : 'px-4 py-3.5';
 
   const cardBase =
     'group flex items-center rounded-[14px] bg-white border-[1.5px] border-[#1271eb] shadow-[0_3px_12px_rgba(18,113,235,0.12)] transition-all hover:-translate-y-0.5 hover:shadow-[0_5px_16px_rgba(18,113,235,0.22)]';

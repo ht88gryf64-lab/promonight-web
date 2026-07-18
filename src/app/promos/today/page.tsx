@@ -97,11 +97,11 @@ export default async function PromosTodayPage() {
 
       <DailyBoardHero dateLabel={formatBoardDate(todayYMD)} answer={answer} />
 
-      <div className="mx-auto max-w-3xl px-6 pt-6">
+      <div className="mx-auto max-w-5xl px-6 pt-6">
         <AdSlot config={AD_SLOTS.HEADER_LEADERBOARD} pageType="promo_collection" />
       </div>
 
-      <main className="mx-auto max-w-3xl space-y-10 px-4 pb-16 pt-8 sm:px-6">
+      <main className="mx-auto max-w-5xl space-y-10 px-4 pb-16 pt-8 sm:px-6">
         {hasToday &&
           todayGroups.map((g) => (
             <TodayLeagueSection

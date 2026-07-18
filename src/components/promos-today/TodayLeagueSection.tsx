@@ -46,13 +46,12 @@ export function TodayLeagueSection({
         )}
       </div>
 
-      <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+      <div className="mt-4 space-y-4">
         {promos.map((p) => (
           <TodayPromoCard
             key={`${p.team.id}-${p.date}-${p.title}`}
             promo={p}
             venue={venueByTeam.get(p.team.id) ?? null}
-            accent={accent}
             surface={surface}
             dimmed={dimmed}
           />

@@ -14,7 +14,7 @@ export function DailyBoardHero({ dateLabel, answer }: { dateLabel: string; answe
             'radial-gradient(120% 80% at 100% 0%, rgba(218,45,32,0.15) 0%, transparent 60%)',
         }}
       />
-      <div className="relative z-10 mx-auto max-w-3xl px-6 pb-12 pt-14 md:pb-14 md:pt-16">
+      <div className="relative z-10 mx-auto max-w-5xl px-6 pb-12 pt-14 md:pb-14 md:pt-16">
         <div className="mb-4 flex items-center gap-2 font-rd text-[11px] font-semibold uppercase tracking-[0.2em] text-white/60">
           <span className="relative flex h-2 w-2" aria-hidden>
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rd-red opacity-60" />
