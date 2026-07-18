@@ -12,6 +12,30 @@ Three fixes applied after the first preview review, then re-verified (see update
 2. **Cards now reuse the exact team-page row.** The bespoke card is gone; each today promo renders through the actual **`RedesignPromoRow`** — date stamp (JUL 18 / SAT), category icon, Giveaways + HOT tags, title, **full description**, "VS OPPONENT", share icon — so it is guaranteed identical to team pages and stays in sync. The compact inline CTA row is **appended below** the row. `RedesignPromoRow` gained an additive `href` prop (a stretched deep-link overlay) so the row body navigates to the team promo anchor while the share button and the appended CTA row stay independently clickable; team-page behavior is unchanged when `href` is absent. Single-column list (`space-y-4`), not a 2-up grid.
 3. **Compact CTA height.** Inline buttons trimmed from 48px to **40px** (the accessibility floor), `min-h-[40px]` preserved. No-wrap-to-360px and TN/TM/SpotHero order unchanged.
 
+## League filter pills (round 3)
+
+Added client-side league filter pills below the hero, above the first section.
+
+- **Dynamic set** = the UNION of today's + tomorrow's leagues, deduped, in `LEAGUE_HUB_REGISTRY` order, derived by re-grouping the **already-fetched** today/tomorrow promos (`groupPromosByLeague([...today, ...tomorrow])`) — **no new query**. Season-aware by construction: a league's pill appears the moment one of its promos is dated today/tomorrow, no code change (NFL/CFB in the fall included automatically). Plus an **All** pill (default active). Pills render only when the union has ≥2 leagues.
+- **Behavior**: pills toggle a `hidden` class on the tagged section wrappers **client-side** — no navigation, no route, no scroll, no effect on ISR/caching. Sections are server-rendered (SSR emits every card; crawlers see the full board); the pill only flips visibility. Styling matches the existing aggregator chip (`RedesignAggregatorList`): House Light, active = charcoal `bg-rd-ink text-white`, inactive = outline. Pill bar is `overflow-x:auto` (horizontally scrollable on mobile when the set is wide). Emits the dual-emit `league_filter_change` event.
+- **Per-league empty state**: when a filter is active and the league has promos on one day but not the other, the day without promos shows an honest **"No [League] promos [today/tomorrow]"** placeholder (`LeagueDayEmpty`) instead of a blank — filtering never yields a thin view.
+
+Verification (headless):
+
+| Check | Result |
+|---|---|
+| Pills = union only (`All, MLB, WNBA`) | PASS |
+| All shows both leagues | PASS |
+| Filter MLB hides WNBA (both today + tomorrow sections) | PASS |
+| Filter WNBA hides MLB | PASS |
+| All resets | PASS |
+| Filtered league visible in BOTH sections (today + tomorrow) | PASS (2 wrappers) |
+| Pill bar `overflow-x: auto` (mobile scroll) | PASS |
+| No new query (derived from fetched data) | PASS (by construction) |
+| Per-league empty state (mocked WNBA today-only) | PASS — "No WNBA promos tomorrow." placeholder shown, not blank |
+
+No regressions: CTA no-wrap TN-first @40px at 360/390, card-body deep-link nav, CTA affiliate popup, web_today dual-emit, deep-link highlight, desktop full-width — all still PASS after the restructure.
+
 ## Build / type
 
 | Check | Result |

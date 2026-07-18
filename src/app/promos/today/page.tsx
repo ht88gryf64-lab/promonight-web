@@ -16,7 +16,8 @@ import { AdSlot } from '@/components/ads/AdSlot';
 import { AD_SLOTS } from '@/lib/ads/slots';
 import { DailyBoardHero } from '@/components/promos-today/DailyBoardHero';
 import { TodayLeagueSection } from '@/components/promos-today/TodayLeagueSection';
-import { TomorrowSection } from '@/components/promos-today/TomorrowSection';
+import { TodayBoardFilter } from '@/components/promos-today/TodayBoardFilter';
+import { LeagueDayEmpty } from '@/components/promos-today/LeagueDayEmpty';
 import {
   groupPromosByLeague,
   buildAnswerSentence,
@@ -59,6 +60,18 @@ export default async function PromosTodayPage() {
 
   const todayGroups = groupPromosByLeague(today);
   const tomorrowGroups = groupPromosByLeague(tomorrow);
+  const todayByLeague = new Map(todayGroups.map((g) => [g.league, g]));
+  const tomorrowByLeague = new Map(tomorrowGroups.map((g) => [g.league, g]));
+
+  // Filter pill set: the UNION of today's and tomorrow's leagues, deduped and in
+  // registry order. Derived by re-grouping the already-fetched promos (no extra
+  // query). Season-aware by construction: a league appears the moment one of its
+  // promos is dated today or tomorrow, with no code change.
+  const filterLeagues = groupPromosByLeague([...today, ...tomorrow]).map((g) => ({
+    league: g.league,
+    label: g.label,
+    accent: g.accent,
+  }));
 
   // Soonest upcoming date strictly after tomorrow — only needed for the pointer
   // line when tomorrow is also empty, so it is fetched lazily.
@@ -101,30 +114,93 @@ export default async function PromosTodayPage() {
         <AdSlot config={AD_SLOTS.HEADER_LEADERBOARD} pageType="promo_collection" />
       </div>
 
-      <main className="mx-auto max-w-5xl space-y-10 px-4 pb-16 pt-8 sm:px-6">
-        {hasToday &&
-          todayGroups.map((g) => (
-            <TodayLeagueSection
-              key={g.league}
-              group={g}
-              venueByTeam={venueByTeam}
-              surface="web_today"
-            />
-          ))}
+      <main className="mx-auto max-w-5xl px-4 pb-16 pt-8 sm:px-6">
+        {filterLeagues.length === 0 ? (
+          // Both days empty. The hero already answers honestly; keep the page
+          // useful with a pointer to the soonest date + the 7-day view.
+          <p className="font-rd text-[14px] leading-relaxed text-rd-ink-soft">
+            {soonestDateLabel
+              ? `No promos scheduled today or tomorrow. Next up: ${soonestDateLabel}. `
+              : 'No promos scheduled right now. '}
+            <Link href="/promos/this-week" className="font-semibold text-rd-red hover:underline">
+              See the full week &rarr;
+            </Link>
+          </p>
+        ) : (
+          <TodayBoardFilter leagues={filterLeagues} surface="web_today">
+            {/* TODAY — one wrapper per pill-set league: its cards, or a "no
+                [league] promos today" placeholder (hidden until that league is
+                filtered) so filtering never yields a blank day. */}
+            {filterLeagues.map((L) => {
+              const g = todayByLeague.get(L.league);
+              return g ? (
+                <div key={`t-${L.league}`} data-filter-league={L.league} data-filter-empty="false">
+                  <TodayLeagueSection group={g} venueByTeam={venueByTeam} surface="web_today" />
+                </div>
+              ) : (
+                <div
+                  key={`t-${L.league}`}
+                  data-filter-league={L.league}
+                  data-filter-empty="true"
+                  className="hidden"
+                >
+                  <LeagueDayEmpty label={L.label} accent={L.accent} day="today" />
+                </div>
+              );
+            })}
 
-        <TomorrowSection
-          dateLabel={formatBoardDate(tomorrowYMD)}
-          groups={tomorrowGroups}
-          venueByTeam={venueByTeam}
-          hasPromos={hasTomorrow}
-          // Dim tomorrow only when today carried promos (today stays the hero).
-          // When today is empty, tomorrow is the primary content at full prominence.
-          dimmed={hasToday}
-          soonestDateLabel={soonestDateLabel}
-        />
+            {/* TOMORROW — same per-league treatment, dimmed when today has promos
+                (today stays the hero); full prominence when today is empty. */}
+            <section className="border-t border-rd-line pt-8">
+              <div className="mb-1 font-rd text-[11px] font-semibold uppercase tracking-[0.14em] text-rd-ink-faint">
+                Tomorrow
+              </div>
+              <h2 className="rd-display text-xl text-rd-ink md:text-2xl">
+                {formatBoardDate(tomorrowYMD)}
+              </h2>
+              <div className="mt-5 flex flex-col gap-8">
+                {filterLeagues.map((L) => {
+                  const g = tomorrowByLeague.get(L.league);
+                  return g ? (
+                    <div key={`m-${L.league}`} data-filter-league={L.league} data-filter-empty="false">
+                      <TodayLeagueSection
+                        group={g}
+                        venueByTeam={venueByTeam}
+                        surface="web_today"
+                        dimmed={hasToday}
+                      />
+                    </div>
+                  ) : (
+                    <div
+                      key={`m-${L.league}`}
+                      data-filter-league={L.league}
+                      data-filter-empty="true"
+                      className="hidden"
+                    >
+                      <LeagueDayEmpty label={L.label} accent={L.accent} day="tomorrow" />
+                    </div>
+                  );
+                })}
+                {!hasTomorrow && (
+                  <p
+                    data-filter-pointer
+                    className="font-rd text-[14px] leading-relaxed text-rd-ink-soft"
+                  >
+                    {soonestDateLabel
+                      ? `No promos scheduled tomorrow. Next up: ${soonestDateLabel}. `
+                      : 'No promos scheduled tomorrow. '}
+                    <Link href="/promos/this-week" className="font-semibold text-rd-red hover:underline">
+                      See the full week &rarr;
+                    </Link>
+                  </p>
+                )}
+              </div>
+            </section>
+          </TodayBoardFilter>
+        )}
 
         {/* Cross-link to the 7-day view (Mockup A footer). */}
-        <div className="flex items-center justify-between gap-4 rounded-2xl border border-rd-line bg-rd-card p-5">
+        <div className="mt-10 flex items-center justify-between gap-4 rounded-2xl border border-rd-line bg-rd-card p-5">
           <div>
             <div className="rd-display text-lg text-rd-ink">Planning ahead?</div>
             <p className="font-rd text-[13px] text-rd-ink-soft">
