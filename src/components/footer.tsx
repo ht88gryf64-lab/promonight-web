@@ -30,6 +30,11 @@ export async function Footer() {
             </h4>
             <ul className="space-y-2">
               <li>
+                <Link href="/promos/today" className="text-text-secondary text-sm hover:text-white transition-colors">
+                  Promos today
+                </Link>
+              </li>
+              <li>
                 <Link href="/promos/this-week" className="text-text-secondary text-sm hover:text-white transition-colors">
                   Hot this week
                 </Link>

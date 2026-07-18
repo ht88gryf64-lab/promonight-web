@@ -8,6 +8,10 @@
     {
       "path": "/api/cron/weekly-digest?execute=true",
       "schedule": "0 17 * * 2"
+    },
+    {
+      "path": "/api/cron/indexnow-daily",
+      "schedule": "10 6 * * *"
     }
   ]
 }

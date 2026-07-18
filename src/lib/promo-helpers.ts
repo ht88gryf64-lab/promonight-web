@@ -9,6 +9,32 @@ export function synthPromoId(teamSlug: string, promo: Pick<Promo, 'date' | 'titl
   return `${teamSlug}:${promo.date}:${promo.title}`;
 }
 
+// Tiny deterministic string hash (base36). Only a slug fallback for anchor ids
+// when a title has no slug-able characters (emoji-only), never a security key.
+function anchorHash(s: string): string {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+}
+
+// URL-safe anchor id for deep-linking a promo card to the exact promo on its
+// team page (/[sport]/[team]#promo-{id}). Derived from (date, title) — the
+// identity dedupePromos already treats as unique per team — so the link SOURCE
+// (the /promos/today card) and the link TARGET (the team-page RedesignPromoRow)
+// compute the SAME id from the same fields, with no Firestore doc id threaded
+// through the data layer. Team is implicit in the URL path, so it is not part of
+// the id. Used with the `promo-` prefix at the callsite: id={`promo-${...}`}.
+export function promoAnchorId(promo: Pick<Promo, 'date' | 'title'>): string {
+  const slug = (promo.title || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60)
+    .replace(/-+$/g, '');
+  const safe = slug || `x${anchorHash(promo.title || '')}`;
+  return `${promo.date}-${safe}`;
+}
+
 // Returns the display name for a team, avoiding the "Cincinnati FC Cincinnati"
 // doubled-city case for MLS clubs whose `name` already includes the city
 // (FC Cincinnati, FC Dallas, Atlanta United, etc.). When the city appears as a

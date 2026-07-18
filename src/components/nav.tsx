@@ -7,6 +7,7 @@ import { trackInstallClick } from '@/lib/analytics';
 import { useStarredTeams } from '@/hooks/use-starred-teams';
 
 const BROWSE_LINKS = [
+  { href: '/promos/today', label: 'Promos today' },
   { href: '/promos/this-week', label: 'Hot this week' },
   { href: '/promos/bobbleheads', label: 'Every bobblehead' },
   { href: '/promos/jersey-giveaways', label: 'Jersey & apparel' },

@@ -4,6 +4,7 @@ import { instrumentSerif } from '@/components/cfb/fonts';
 import { NationalBlock, WeekCard, ThemeCard } from '@/components/cfb/hub/blocks';
 import { CfbHubBrowse } from '@/components/cfb/hub/CfbHubBrowse';
 import { CfbHubSearch } from '@/components/cfb/hub/CfbHubSearch';
+import { CfbTodaySlot } from '@/components/cfb/hub/CfbTodaySlot';
 
 // ISR — same 21600s window the homepage/playoffs use for date-rollover safety;
 // the §14a Monday-AM weekly-rail cutover lands overnight within this window.
@@ -65,6 +66,9 @@ export default async function CfbHub() {
       </header>
 
       <div className="mx-auto max-w-6xl px-5 pb-24 sm:px-10">
+
+        {/* Persistent today-slot — CFB's positive bridge to the daily pro board. */}
+        <CfbTodaySlot />
 
         {/* ── THIS WEEK · RIVALRY GAMES rail (§14a — rolls Monday AM) ── */}
         {data.weekly.games.length > 0 && (

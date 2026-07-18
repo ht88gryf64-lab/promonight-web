@@ -43,6 +43,7 @@ export function RedesignPromoRow({
   contexts,
   interactive = false,
   surface = 'web_team_page_promolist',
+  anchorId,
 }: {
   promo: Promo;
   share: PromoRowShare;
@@ -60,6 +61,10 @@ export function RedesignPromoRow({
   /** When true (and `team` present), the whole row opens the shared game modal. */
   interactive?: boolean;
   surface?: UpcomingPromoSurface;
+  /** DOM id for deep-linking (e.g. "promo-2026-07-18-slider-bobblehead"). When a
+   *  /promos/today card links to /[sport]/[team]#promo-…, the arrival highlighter
+   *  scrolls to and flashes this row. Undefined leaves the row id-less as before. */
+  anchorId?: string;
 }) {
   const openModal = useUpcomingPromoModal();
   const { day, weekday, month } = formatPromoDate(promo.date);
@@ -99,8 +104,9 @@ export function RedesignPromoRow({
   return (
     <div
       {...interactiveProps}
+      id={anchorId}
       className={[
-        'group relative flex gap-4 rounded-2xl border border-rd-line bg-rd-card p-4 transition-colors md:p-5',
+        'group relative flex scroll-mt-24 gap-4 rounded-2xl border border-rd-line bg-rd-card p-4 transition-colors md:p-5',
         completed ? 'opacity-60 hover:opacity-80' : 'hover:border-rd-line-strong',
         openable ? 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rd-red focus-visible:ring-offset-2' : '',
       ]

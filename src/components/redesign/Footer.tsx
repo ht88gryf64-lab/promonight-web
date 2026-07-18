@@ -21,6 +21,7 @@ interface FooterLink {
 }
 
 const BROWSE_LINKS: FooterLink[] = [
+  { label: 'Promos today', href: '/promos/today' },
   { label: 'Hot this week', href: '/promos/this-week' },
   { label: 'Bobbleheads', href: '/promos/bobbleheads' },
   { label: 'Jersey giveaways', href: '/promos/jersey-giveaways' },
