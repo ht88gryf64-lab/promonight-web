@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { MlbDivisionGroup } from '@/lib/data';
+import type { HubTeamGroup } from '@/lib/data';
 import type { Team } from '@/lib/types';
 import { track } from '@/lib/analytics';
 import { IconChevronRight } from '@tabler/icons-react';
@@ -46,7 +46,7 @@ function TeamCard({ team }: { team: Team }) {
 // the elements in the DOM: it never conditionally renders or lazy-fetches, so
 // filtering to one division cannot remove a link from the source. Client
 // component only because the selector holds interactive state.
-export function HubTeamGrid({ groups }: { groups: MlbDivisionGroup[] }) {
+export function HubTeamGrid({ groups }: { groups: HubTeamGroup[] }) {
   const [active, setActive] = useState<string>(ALL_DIVISIONS);
 
   const handleSelect = (division: string) => {
@@ -60,9 +60,9 @@ export function HubTeamGrid({ groups }: { groups: MlbDivisionGroup[] }) {
     setActive(division);
   };
 
-  const conferences: { key: 'AL' | 'NL'; label: string; groups: MlbDivisionGroup[] }[] = [
-    { key: 'AL', label: 'American League', groups: groups.filter((g) => g.conference === 'AL') },
-    { key: 'NL', label: 'National League', groups: groups.filter((g) => g.conference === 'NL') },
+  const conferences: { key: 'AL' | 'NL'; label: string; groups: HubTeamGroup[] }[] = [
+    { key: 'AL', label: 'American League', groups: groups.filter((g) => g.superGroup === 'AL') },
+    { key: 'NL', label: 'National League', groups: groups.filter((g) => g.superGroup === 'NL') },
   ];
 
   return (
@@ -84,7 +84,7 @@ export function HubTeamGrid({ groups }: { groups: MlbDivisionGroup[] }) {
           // active and it belongs to the other conference. Child links stay in
           // the DOM either way (display:none, still crawlable).
           const confHidden =
-            active !== ALL_DIVISIONS && !conf.groups.some((g) => g.division === active);
+            active !== ALL_DIVISIONS && !conf.groups.some((g) => g.key === active);
           return (
             <div key={conf.key} className={confHidden ? 'hidden' : ''}>
               <p className="font-rd text-[11px] font-semibold uppercase tracking-[0.14em] text-rd-ink-faint">
@@ -92,10 +92,10 @@ export function HubTeamGrid({ groups }: { groups: MlbDivisionGroup[] }) {
               </p>
               <div className="mt-4 grid gap-x-6 gap-y-8 md:grid-cols-3">
                 {conf.groups.map((g) => {
-                  const divHidden = active !== ALL_DIVISIONS && active !== g.division;
+                  const divHidden = active !== ALL_DIVISIONS && active !== g.key;
                   return (
-                    <div key={g.division} className={divHidden ? 'hidden' : ''}>
-                      <h3 className="rd-display text-base text-rd-ink">{g.division}</h3>
+                    <div key={g.key} className={divHidden ? 'hidden' : ''}>
+                      <h3 className="rd-display text-base text-rd-ink">{g.key}</h3>
                       <ul className="mt-3 space-y-2">
                         {g.teams.map((t) => (
                           <li key={t.id}>

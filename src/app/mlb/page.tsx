@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { pageOpenGraph } from '@/lib/og';
-import { getMlbSlate, getMlbHubStats, getMlbTeamsByDivision } from '@/lib/data';
+import { getLeagueSlate, getLeagueHubStats, getLeagueTeamsGrouped } from '@/lib/data';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 import { AggregatorJsonLd, type AggregatorGroup } from '@/components/aggregator-layout';
 import { AdSlot } from '@/components/ads/AdSlot';
@@ -72,9 +72,9 @@ function todayYMD(): string {
 
 export default async function MlbHubPage() {
   const [slate, stats, divisions] = await Promise.all([
-    getMlbSlate(),
-    getMlbHubStats(),
-    getMlbTeamsByDivision(),
+    getLeagueSlate('MLB'),
+    getLeagueHubStats('MLB'),
+    getLeagueTeamsGrouped('MLB'),
   ]);
 
   // ItemList source for the CollectionPage JSON-LD: the current MLB slate.
