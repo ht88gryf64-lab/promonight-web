@@ -5,13 +5,20 @@ import type { LeagueHubStats } from '@/lib/data';
 // teamScores is stale or missing, and "teams with a promo this week" is dropped
 // when it would read zero, so the hub never shows a broken or unimpressive stat.
 // Sits inside the dark hero, so text is white.
-export function HubStatBar({ stats }: { stats: LeagueHubStats }) {
+export function HubStatBar({
+  stats,
+  leagueLabel,
+}: {
+  stats: LeagueHubStats;
+  /** League code shown in the "X promos tracked" stat, e.g. 'MLB' / 'WNBA'. */
+  leagueLabel: string;
+}) {
   const items: { value: string; label: string }[] = [];
 
   if (stats.totalPromos != null) {
     items.push({
       value: stats.totalPromos.toLocaleString('en-US'),
-      label: 'MLB promos tracked',
+      label: `${leagueLabel} promos tracked`,
     });
   }
   if (stats.teamsWithPromosThisWeek > 0) {

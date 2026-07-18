@@ -7,12 +7,20 @@ export interface HubFaqItem {
   answer: string;
 }
 
-export function HubFaq({ faqs }: { faqs: HubFaqItem[] }) {
+export function HubFaq({
+  faqs,
+  // Defaults to the original id so existing non-hub callers (VenueHubView) render
+  // unchanged; the league hubs pass their own per-league id.
+  sectionId = 'mlb-hub-faq',
+}: {
+  faqs: HubFaqItem[];
+  sectionId?: string;
+}) {
   if (faqs.length === 0) return null;
   return (
-    <section aria-labelledby="mlb-hub-faq" className="border-t border-rd-line pt-10">
+    <section aria-labelledby={sectionId} className="border-t border-rd-line pt-10">
       <p
-        id="mlb-hub-faq"
+        id={sectionId}
         className="font-rd text-[11px] font-semibold uppercase tracking-[0.14em] text-rd-ink-faint"
       >
         Frequently asked
