@@ -17,8 +17,8 @@ export interface LeagueHub {
 // true (one line) when a hub route ships. Order = the intended menu order.
 export const LEAGUE_HUB_REGISTRY: LeagueHub[] = [
   { league: 'MLB', label: 'MLB', href: '/mlb', sportSlug: 'mlb', accent: '#7c4a3a', live: true },
-  { league: 'WNBA', label: 'WNBA', href: '/wnba', sportSlug: 'wnba', accent: '#c9581f', live: false },
-  { league: 'MLS', label: 'MLS', href: '/mls', sportSlug: 'mls', accent: '#3f7d5a', live: false },
+  { league: 'WNBA', label: 'WNBA', href: '/wnba', sportSlug: 'wnba', accent: '#c9581f', live: true },
+  { league: 'MLS', label: 'MLS', href: '/mls', sportSlug: 'mls', accent: '#3f7d5a', live: true },
   { league: 'NBA', label: 'NBA', href: '/nba', sportSlug: 'nba', accent: '#b5642e', live: false },
   { league: 'NHL', label: 'NHL', href: '/nhl', sportSlug: 'nhl', accent: '#4a4f57', live: false },
   { league: 'NFL', label: 'NFL', href: '/nfl', sportSlug: 'nfl', accent: '#5f6b57', live: false },
