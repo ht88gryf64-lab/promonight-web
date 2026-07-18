@@ -63,6 +63,7 @@ export function BrandBarMobileMenu({
 
   // Canonical BrandBar link order + conditionals (mirrors BrandBar.tsx).
   const links = [
+    { label: 'Today', href: '/promos/today' },
     { label: 'Teams', href: '/teams' },
     { label: 'My Teams', href: '/my-teams' },
     ...(playoffsActive ? [{ label: 'Playoffs', href: '/playoffs' }] : []),

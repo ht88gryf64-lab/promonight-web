@@ -5,7 +5,9 @@ import { ShareButton, formatShareDate, type ShareItem } from './share';
 import { EbayResaleLink } from './affiliates/EbayResaleLink';
 import { RedesignPromoRow } from '@/components/redesign/RedesignPromoRow';
 import { LazyPromoRows } from '@/components/redesign/LazyPromoRows';
+import { PromoArrivalHighlight } from '@/components/redesign/PromoArrivalHighlight';
 import { isBobbleheadGiveaway, isEbayResaleActive } from '@/lib/ebay';
+import { promoAnchorId } from '@/lib/promo-helpers';
 import type { Promo, PromoType, Team } from '@/lib/types';
 import type { GameContext } from '@/lib/data';
 
@@ -220,6 +222,7 @@ export function PromoList({
   if (variant === 'light') {
     return (
       <section className="py-12 px-6">
+        <PromoArrivalHighlight />
         <div className="max-w-5xl mx-auto">
           <div className="mb-6">
             <span className="font-rd text-[11px] uppercase tracking-[0.14em] text-rd-ink-faint">
@@ -247,6 +250,7 @@ export function PromoList({
                     team={team}
                     contexts={contextsFor(promo)}
                     interactive
+                    anchorId={`promo-${promoAnchorId(promo)}`}
                   />
                 ))}
               </div>

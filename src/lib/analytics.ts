@@ -116,6 +116,12 @@ export type AnalyticsSurface =
   // affiliate subId via promoId={buildingSlug}, so the surface stays one enum
   // value while reports still slice by building.
   | 'web_venue'
+  // /promos/today "Daily Board" — the today + tomorrow promo cards and their
+  // inline Ticketmaster / TicketNetwork / SpotHero CTAs, so today-page conversion
+  // is directly comparable to web_team_page / web_team_page_promolist in PostHog
+  // + GA4. Tomorrow cards share this surface (a planner buying tomorrow's tickets
+  // tonight is the same funnel).
+  | 'web_today'
   | 'web_article'
   | 'web_my_teams'
   | 'web_best_promos'
@@ -784,6 +790,7 @@ const KNOWN_SURFACES: ReadonlySet<AnalyticsSurface> = new Set<AnalyticsSurface>(
   'web_mls_hub_this_week',
   'web_mls_hub_promo_type',
   'web_mls_hub_team_card',
+  'web_today',
   'web_article',
   'web_my_teams',
   'web_best_promos',
@@ -799,6 +806,7 @@ export function inferSurfaceFromPath(path: string): AnalyticsSurface {
   if (!path || path === '/') return 'web_home';
   if (path.startsWith('/playoffs')) return 'web_playoffs';
   if (path.startsWith('/world-cup')) return 'web_world_cup';
+  if (path.startsWith('/promos/today')) return 'web_today';
   if (path.startsWith('/promos/')) return 'web_article';
   if (path.startsWith('/my-teams')) return 'web_my_teams';
   if (path.startsWith('/best-promos') || path.startsWith('/team-rankings')) return 'web_best_promos';

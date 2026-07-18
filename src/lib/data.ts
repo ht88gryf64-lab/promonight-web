@@ -187,6 +187,51 @@ export async function getPromosForDate(date: string): Promise<PromoWithTeam[]> {
   }
 }
 
+// America/Chicago YMD, optionally offset by whole days. The single national
+// "today" boundary for the /promos/today board — mirrors the homepage + league
+// hub anchors so the page never shows tomorrow's date late-night on the East
+// coast or lags the day rollover. Offset math is pure calendar arithmetic
+// (Date.UTC), DST-safe because it never touches wall-clock time.
+export function promoBoardChicagoYMD(offsetDays = 0): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Chicago',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  const part = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
+  const base = `${part('year')}-${part('month')}-${part('day')}`;
+  if (!offsetDays) return base;
+  const [y, m, d] = base.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d + offsetDays));
+  return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`;
+}
+
+// All-league promos dated exactly today (Chicago-anchored). cache()-wrapped so
+// the /promos/today page and every per-league hub today-module share ONE query
+// per request. getPromosForDate dedupes only exact (team, date, title) repeats,
+// so two different promos at the same game both survive — the right density for a
+// daily board.
+export const getTodayPromos = cache(async (): Promise<PromoWithTeam[]> => {
+  return getPromosForDate(promoBoardChicagoYMD(0));
+});
+
+// All-league promos dated exactly tomorrow. Same single-date query path as
+// getTodayPromos, just the next Chicago calendar day — no separate tomorrow query
+// logic.
+export const getTomorrowPromos = cache(async (): Promise<PromoWithTeam[]> => {
+  return getPromosForDate(promoBoardChicagoYMD(1));
+});
+
+// Today's promos narrowed to one league. The shared "promos dated today for
+// league X" primitive behind BOTH the /promos/today league sections and the
+// persistent per-league hub today-module (league lives on the parent team; the
+// promo doc carries no league field). League-agnostic: any league present in the
+// data with a today-dated promo flows through with no per-league code.
+export async function getLeagueTodayPromos(league: string): Promise<PromoWithTeam[]> {
+  return (await getTodayPromos()).filter((p) => p.team.league === league);
+}
+
 export async function getHighlightedPromos(limit: number = 6): Promise<PromoWithTeam[]> {
   const today = new Date().toISOString().split('T')[0];
 

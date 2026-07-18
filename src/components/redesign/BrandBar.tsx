@@ -31,6 +31,7 @@ export function BrandBar({ playoffsActive = false, worldCupActive = false }: Bra
   // World Cup sits after Playoffs and before About; About is rendered last
   // separately so the conditional World Cup link can slot in ahead of it.
   const links: NavLink[] = [
+    { label: 'Today', href: '/promos/today' },
     { label: 'Teams', href: '/teams' },
     { label: 'My Teams', href: '/my-teams' },
     ...(playoffsActive ? [{ label: 'Playoffs', href: '/playoffs' }] : []),

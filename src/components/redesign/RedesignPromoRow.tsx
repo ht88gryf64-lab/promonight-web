@@ -1,6 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import Link from 'next/link';
 import { IconFlame } from '@tabler/icons-react';
 import { ShareButton, formatShareDate, type ShareItem } from '@/components/share';
 import { categoryFor } from './categories';
@@ -43,6 +44,8 @@ export function RedesignPromoRow({
   contexts,
   interactive = false,
   surface = 'web_team_page_promolist',
+  anchorId,
+  href,
 }: {
   promo: Promo;
   share: PromoRowShare;
@@ -60,6 +63,16 @@ export function RedesignPromoRow({
   /** When true (and `team` present), the whole row opens the shared game modal. */
   interactive?: boolean;
   surface?: UpcomingPromoSurface;
+  /** DOM id for deep-linking (e.g. "promo-2026-07-18-slider-bobblehead"). When a
+   *  /promos/today card links to /[sport]/[team]#promo-…, the arrival highlighter
+   *  scrolls to and flashes this row. Undefined leaves the row id-less as before. */
+  anchorId?: string;
+  /** When set, the whole row becomes a link to this href via a stretched
+   *  pseudo-overlay (used by /promos/today to deep-link each card to its team
+   *  page promo anchor). Takes precedence over `interactive` (no modal). The
+   *  ShareButton stays above the overlay, so sharing still works; any appended
+   *  CTA row is rendered outside the row and is unaffected. */
+  href?: string;
 }) {
   const openModal = useUpcomingPromoModal();
   const { day, weekday, month } = formatPromoDate(promo.date);
@@ -77,7 +90,9 @@ export function RedesignPromoRow({
     primaryColor: share.primaryColor ?? null,
   };
 
-  const openable = interactive && !!team;
+  // `href` (deep-link) takes precedence over the modal: a linked row navigates
+  // instead of opening the game modal.
+  const openable = interactive && !!team && !href;
   const open = () => {
     if (team) openModal({ promo: { ...promo, team }, contexts: contexts ?? null, surface });
   };
@@ -99,15 +114,27 @@ export function RedesignPromoRow({
   return (
     <div
       {...interactiveProps}
+      id={anchorId}
       className={[
-        'group relative flex gap-4 rounded-2xl border border-rd-line bg-rd-card p-4 transition-colors md:p-5',
+        'group relative flex scroll-mt-24 gap-4 rounded-2xl border border-rd-line bg-rd-card p-4 transition-colors md:p-5',
         completed ? 'opacity-60 hover:opacity-80' : 'hover:border-rd-line-strong',
         openable ? 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rd-red focus-visible:ring-offset-2' : '',
+        href ? 'cursor-pointer' : '',
       ]
         .filter(Boolean)
         .join(' ')}
       style={{ borderLeftWidth: '3px', borderLeftColor: color }}
     >
+      {/* Stretched deep-link overlay. Positioned first in DOM so the ShareButton
+          (a later positioned sibling) paints above it and stays clickable; the
+          static row content sits below it, so a body tap navigates. */}
+      {href && (
+        <Link
+          href={href}
+          aria-label={promo.title}
+          className="absolute inset-0 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rd-red focus-visible:ring-offset-2"
+        />
+      )}
       <ShareButton
         item={shareItem}
         placement="promo_card"

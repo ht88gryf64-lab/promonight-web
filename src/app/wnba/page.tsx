@@ -1,12 +1,13 @@
 import type { Metadata } from 'next';
 import { pageOpenGraph } from '@/lib/og';
-import { getLeagueSlate, getLeagueHubStats, getLeagueTeamsGrouped, getLeagueSuperGroups } from '@/lib/data';
+import { getLeagueSlate, getLeagueHubStats, getLeagueTeamsGrouped, getLeagueSuperGroups, getLeagueTodayPromos } from '@/lib/data';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 import { AggregatorJsonLd, type AggregatorGroup } from '@/components/aggregator-layout';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { AD_SLOTS } from '@/lib/ads/slots';
 import { HubHero } from '@/components/hub/HubHero';
 import { HubStatBar } from '@/components/hub/HubStatBar';
+import { HubTodayPromos } from '@/components/hub/HubTodayPromos';
 import { HubThisWeek } from '@/components/hub/HubThisWeek';
 import { HubBrowseByType, type HubBrowseTile } from '@/components/hub/HubBrowseByType';
 import { HubTeamGrid } from '@/components/hub/HubTeamGrid';
@@ -82,10 +83,11 @@ function todayYMD(): string {
 }
 
 export default async function WnbaHubPage() {
-  const [slate, stats, conferences] = await Promise.all([
+  const [slate, stats, conferences, today] = await Promise.all([
     getLeagueSlate('WNBA'),
     getLeagueHubStats('WNBA'),
     getLeagueTeamsGrouped('WNBA'),
+    getLeagueTodayPromos('WNBA'),
   ]);
 
   // ItemList source for the CollectionPage JSON-LD: the current WNBA slate.
@@ -117,6 +119,13 @@ export default async function WnbaHubPage() {
       </div>
 
       <main className="mx-auto max-w-6xl space-y-16 px-6 pb-20 pt-12">
+        <HubTodayPromos
+          slate={today}
+          label="WNBA"
+          accent={ACCENT}
+          sectionId="wnba-today"
+          surface="web_wnba_hub"
+        />
         <HubThisWeek
           slate={slate}
           heading="This week across WNBA"
