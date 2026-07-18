@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import type { CSSProperties } from 'react';
 import { notFound } from 'next/navigation';
 import { getAllCfbSchoolIds, getCfbSchoolPage } from '@/lib/cfb/data';
+import { getVenueHubForTeam } from '@/lib/venue-hub';
 import { buildCfbTeamMetadata } from '@/lib/cfb/metadata';
 import { resolveCfbTheme, cfbThemeVars } from '@/lib/cfb/theme';
 import { CfbSchoolPage } from '@/components/cfb/CfbSchoolPage';
@@ -36,6 +37,13 @@ export default async function Page({ params }: { params: Promise<{ school: strin
   const data = await getCfbSchoolPage(school);
   if (!data) notFound();
 
+  // Resolve this school to its venue logistics hub (/venues/{slug}) via the hub's
+  // tenants[] array — the SAME reader the pro team pages use through AffiliateRail.
+  // Resolved here (not inside getCfbSchoolPage) to avoid a cfb/data <-> venue-hub
+  // import cycle. The link renders only when the hub is above the indexing floor
+  // (getVenueHubForTeam carries that flag); CfbSchoolPage gates on it.
+  const venueHubLink = await getVenueHubForTeam(data.school.id);
+
   const theme = resolveCfbTheme(data.school.primaryColor, data.school.secondaryColor);
   const vars = cfbThemeVars(theme) as CSSProperties;
 
@@ -57,7 +65,7 @@ export default async function Page({ params }: { params: Promise<{ school: strin
     <div style={vars} data-cfb-noindex={belowIndexFloor(data) ? 'true' : undefined}>
       {belowIndexFloor(data) && <meta name="robots" content="noindex,follow" />}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <CfbSchoolPage data={data} />
+      <CfbSchoolPage data={data} venueHubLink={venueHubLink} />
     </div>
   );
 }

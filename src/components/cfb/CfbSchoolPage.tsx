@@ -34,9 +34,11 @@ import { TicketmasterCTA } from '@/components/affiliates/TicketmasterCTA';
 import { SpotHeroCTA } from '@/components/affiliates/SpotHeroCTA';
 import { ExpediaCTA } from '@/components/affiliates/ExpediaCTA';
 import { FanaticsCTA } from '@/components/affiliates/FanaticsCTA';
+import { VenueHubLink } from '@/components/venue-hub/VenueHubLink';
+import type { TeamVenueHubLink } from '@/lib/venue-hub';
 import { SERIF, MONO, SANS, fmtMonthDay, fmtDayLong, Eyebrow } from './cfb-bits';
 
-export function CfbSchoolPage({ data }: { data: CfbSchoolPageData }) {
+export function CfbSchoolPage({ data, venueHubLink }: { data: CfbSchoolPageData; venueHubLink: TeamVenueHubLink | null }) {
   const { school, venue, games, editorial } = data;
   const rivalryGames = games.filter((g) => g.rivalry);
   const homeCount = games.filter((g) => g.isHome && !g.neutralSite).length;
@@ -191,6 +193,24 @@ export function CfbSchoolPage({ data }: { data: CfbSchoolPageData }) {
               <FanaticsCTA team={affTeam} surface="web_cfb" placement="cfb_gameday" />
             </div>
           </div>
+          {/* Internal routing into this school's venue logistics hub
+              (/venues/{slug}) — the link that clears the Ahrefs orphan flag on the
+              CFB venue pages. Reuses the pro VenueHubLink (light rd-card, same as
+              the affiliate CTAs above). Conditional-render discipline: shown ONLY
+              when the hub is above the indexing floor; a held/noindex hub or a
+              school with no hub renders nothing (no dead-end link, no empty state).
+              Fires venue_hub_click with surface web_cfb_venue_link. */}
+          {venueHubLink?.indexable && (
+            <div className="mt-2.5">
+              <VenueHubLink
+                teamId={school.id}
+                league="CFB"
+                buildingSlug={venueHubLink.slug}
+                buildingDisplayName={venueHubLink.displayName}
+                surface="web_cfb_venue_link"
+              />
+            </div>
+          )}
         </section>
 
         {/* ── SCHEDULE — always present. Rows are CLICKABLE and open the gameday
