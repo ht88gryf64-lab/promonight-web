@@ -1,17 +1,24 @@
-import type { MlbHubStats } from '@/lib/data';
+import type { LeagueHubStats } from '@/lib/data';
 
 // Authority stat bar. Renders only the stats that are actually present. The
 // score-derived stats (total promos tracked, average per team) are null when
 // teamScores is stale or missing, and "teams with a promo this week" is dropped
 // when it would read zero, so the hub never shows a broken or unimpressive stat.
 // Sits inside the dark hero, so text is white.
-export function HubStatBar({ stats }: { stats: MlbHubStats }) {
+export function HubStatBar({
+  stats,
+  leagueLabel,
+}: {
+  stats: LeagueHubStats;
+  /** League code shown in the "X promos tracked" stat, e.g. 'MLB' / 'WNBA'. */
+  leagueLabel: string;
+}) {
   const items: { value: string; label: string }[] = [];
 
-  if (stats.totalMlbPromos != null) {
+  if (stats.totalPromos != null) {
     items.push({
-      value: stats.totalMlbPromos.toLocaleString('en-US'),
-      label: 'MLB promos tracked',
+      value: stats.totalPromos.toLocaleString('en-US'),
+      label: `${leagueLabel} promos tracked`,
     });
   }
   if (stats.teamsWithPromosThisWeek > 0) {

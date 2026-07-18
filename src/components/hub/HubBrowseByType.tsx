@@ -1,57 +1,41 @@
 import type { PromoWithTeam, PromoType } from '@/lib/types';
 import { categoryFor } from '@/components/redesign/categories';
 import { TrackedTapLink } from '@/components/analytics/TrackedTapLink';
+import type { AnalyticsSurface, CollectionTileTapProperties } from '@/lib/analytics';
 import { IconArrowRight } from '@tabler/icons-react';
 
-// Browse-by-promo-type tiles. Each links to an existing cross-league collection
-// page (a strong internal link from the hub) and fires collection_tile_tap on
-// the web_mlb_hub_promo_type surface. collection_count carries the number of
-// matching promos in the current MLB slate, for the analytics payload only.
-type Tile = {
+// A browse-by-promo-type tile, supplied per league by the hub page. Each links to
+// an existing cross-league collection page (a strong internal link from the hub)
+// and fires collection_tile_tap on the hub's promo-type surface. collection_count
+// carries the number of matching promos in the current slate, for the analytics
+// payload only (MLB: bobbleheads/jerseys/theme/this-week; WNBA:
+// theme/jerseys/bobbleheads; MLS: soccer-jerseys/theme).
+export type HubBrowseTile = {
   href: string;
   label: string;
-  collectionName: 'bobbleheads' | 'jerseys' | 'theme_nights' | 'hot_this_week';
+  collectionName: CollectionTileTapProperties['collection_name'];
   accentType: PromoType;
-  count: number;
 };
 
-export function HubBrowseByType({ slate }: { slate: PromoWithTeam[] }) {
+export function HubBrowseByType({
+  slate,
+  tiles,
+  sectionId,
+  surface,
+}: {
+  slate: PromoWithTeam[];
+  tiles: HubBrowseTile[];
+  sectionId: string;
+  surface: AnalyticsSurface;
+}) {
   const countType = (t: PromoType) => slate.filter((p) => p.type === t).length;
-
-  const tiles: Tile[] = [
-    {
-      href: '/promos/bobbleheads',
-      label: 'Bobblehead giveaways',
-      collectionName: 'bobbleheads',
-      accentType: 'giveaway',
-      count: countType('giveaway'),
-    },
-    {
-      href: '/promos/jersey-giveaways',
-      label: 'Jersey giveaways',
-      collectionName: 'jerseys',
-      accentType: 'giveaway',
-      count: countType('giveaway'),
-    },
-    {
-      href: '/promos/theme-nights',
-      label: 'Theme nights',
-      collectionName: 'theme_nights',
-      accentType: 'theme',
-      count: countType('theme'),
-    },
-    {
-      href: '/promos/this-week',
-      label: 'Everything this week',
-      collectionName: 'hot_this_week',
-      accentType: 'giveaway',
-      count: slate.length,
-    },
-  ];
+  // "Everything this week" counts the whole slate; every type tile counts its type.
+  const tileCount = (tile: HubBrowseTile) =>
+    tile.collectionName === 'hot_this_week' ? slate.length : countType(tile.accentType);
 
   return (
-    <section aria-labelledby="mlb-browse-type">
-      <h2 id="mlb-browse-type" className="rd-display text-2xl text-rd-ink md:text-3xl">
+    <section aria-labelledby={sectionId}>
+      <h2 id={sectionId} className="rd-display text-2xl text-rd-ink md:text-3xl">
         Browse by promo type
       </h2>
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -63,9 +47,9 @@ export function HubBrowseByType({ slate }: { slate: PromoWithTeam[] }) {
               href={tile.href}
               trackEvent="collection_tile_tap"
               trackProps={{
-                surface: 'web_mlb_hub_promo_type',
+                surface,
                 collection_name: tile.collectionName,
-                collection_count: tile.count,
+                collection_count: tileCount(tile),
               }}
               className="group flex items-center justify-between rounded-2xl border border-rd-line bg-rd-card p-5 transition-colors hover:border-rd-line-strong"
             >

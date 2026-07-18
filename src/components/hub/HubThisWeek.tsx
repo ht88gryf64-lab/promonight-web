@@ -1,7 +1,7 @@
 import type { PromoWithTeam } from '@/lib/types';
 import { categoryFor } from '@/components/redesign/categories';
 import { teamDisplayName, synthPromoId } from '@/lib/promo-helpers';
-import { normalizeSport } from '@/lib/analytics';
+import { normalizeSport, type AnalyticsSurface } from '@/lib/analytics';
 import { TrackedTapLink } from '@/components/analytics/TrackedTapLink';
 import { TicketsBlock } from '@/components/affiliates/TicketsBlock';
 import { IconFlame, IconArrowRight } from '@tabler/icons-react';
@@ -44,7 +44,20 @@ function formatDayLabel(dateStr: string): string {
 // TicketsBlock (variant='card', the wrapper-less form GameExpand uses that
 // reads on cream). Server component; taps and ticket clicks fire via client
 // leaves (TrackedTapLink / TicketsBlock's TrackedAffiliateLink).
-export function HubThisWeek({ slate }: { slate: PromoWithTeam[] }) {
+export function HubThisWeek({
+  slate,
+  heading,
+  sectionId,
+  surface,
+}: {
+  slate: PromoWithTeam[];
+  /** Section heading, e.g. "This week across MLB". */
+  heading: string;
+  /** DOM id / aria-labelledby anchor, e.g. "mlb-this-week". */
+  sectionId: string;
+  /** Analytics surface for the card taps and the reused TicketsBlock. */
+  surface: AnalyticsSurface;
+}) {
   if (slate.length === 0) return null;
 
   const today = chicagoTodayYMD();
@@ -59,10 +72,10 @@ export function HubThisWeek({ slate }: { slate: PromoWithTeam[] }) {
   const groups = Array.from(byDate.entries()).sort(([a], [b]) => a.localeCompare(b));
 
   return (
-    <section aria-labelledby="mlb-this-week">
+    <section aria-labelledby={sectionId}>
       <div className="flex items-end justify-between gap-4">
-        <h2 id="mlb-this-week" className="rd-display text-2xl text-rd-ink md:text-3xl">
-          This week across MLB
+        <h2 id={sectionId} className="rd-display text-2xl text-rd-ink md:text-3xl">
+          {heading}
         </h2>
         <a
           href="/promos/this-week"
@@ -93,7 +106,7 @@ export function HubThisWeek({ slate }: { slate: PromoWithTeam[] }) {
                       href={`/${p.team.sportSlug}/${p.team.id}`}
                       trackEvent="this_week_card_tap"
                       trackProps={{
-                        surface: 'web_mlb_hub_this_week',
+                        surface,
                         team_id: p.team.id,
                         sport: normalizeSport(p.team.league),
                         promo_id: synthPromoId(p.team.id, p),
@@ -131,7 +144,7 @@ export function HubThisWeek({ slate }: { slate: PromoWithTeam[] }) {
                     <div className="border-t border-rd-line px-5 py-4">
                       <TicketsBlock
                         team={p.team}
-                        surface="web_mlb_hub_this_week"
+                        surface={surface}
                         placement="promo_card"
                         promoId={`${p.team.id}:${p.date}:${p.title}`}
                         variant="card"

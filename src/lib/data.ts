@@ -1175,17 +1175,18 @@ export async function getSchemaLocationsForTeams(
   return out;
 }
 
-// MLB league-hub data layer.
-// Read-side helpers for the /mlb hub. MLB-concrete on purpose; the hub
-// components stay structurally general so a second league can reuse them.
+// League-hub data layer.
+// Read-side helpers shared by every league hub (/mlb, /wnba, /mls). The slate
+// window and stats math are league-neutral; per-league taxonomy (division vs
+// conference grouping and optional super-headers) is driven by HUB_GROUPING.
 
-const MLB_LEAGUE = 'MLB';
-
-// America/Chicago-anchored "today" (YYYY-MM-DD), mirroring the homepage anchor
-// in src/app/page.tsx so the hub's "this week" window agrees with the homepage
-// rather than drifting a UTC day. Kept local to the data layer on purpose: a
-// route page is the wrong place for a lib module to reach into for a helper.
-function mlbChicagoTodayYMD(): string {
+// Single shared America/Chicago anchor for every hub's rolling window, mirroring
+// the homepage anchor in src/app/page.tsx so the hub's "this week" window agrees
+// with the homepage rather than drifting a UTC day. One anchor for all leagues
+// on purpose: a per-league timezone would only nudge the far boundary day and
+// would desync the hubs from the homepage. Kept local to the data layer: a route
+// page is the wrong place for a lib module to reach into for a helper.
+function hubTodayChicagoYMD(): string {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/Chicago',
     year: 'numeric',
@@ -1196,103 +1197,140 @@ function mlbChicagoTodayYMD(): string {
   return `${part('year')}-${part('month')}-${part('day')}`;
 }
 
-function mlbPlusDays(ymd: string, n: number): string {
+function hubPlusDays(ymd: string, n: number): string {
   const [y, m, d] = ymd.split('-').map(Number);
   const dt = new Date(Date.UTC(y, m - 1, d + n));
   return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`;
 }
 
-// Rolling forward 7-day slate of MLB promos (today through today+7, Chicago
-// anchored). Reuses the cross-team date-range query and narrows to MLB in
-// memory (promo docs carry no league field; league lives on the parent team),
-// the same shape fetchScoredPromos uses. MLB runs a daily cadence, so this is a
-// rolling window, not a fixed Tuesday week. getPromosInDateRange already dedupes
-// to one promo per team, which is the right density for a cross-team rail.
-// Wrapped in cache() so the page and getMlbHubStats share one query per request.
-export const getMlbSlate = cache(async (): Promise<PromoWithTeam[]> => {
-  const today = mlbChicagoTodayYMD();
-  const end = mlbPlusDays(today, 7);
+// Rolling forward 7-day slate of a league's promos (today through today+7,
+// Chicago anchored). Reuses the cross-team date-range query and narrows to the
+// league in memory (promo docs carry no league field; league lives on the parent
+// team), the same shape fetchScoredPromos uses. Every hub league runs a daily
+// cadence, so this is a rolling window, not a fixed weekly slate.
+// getPromosInDateRange already dedupes to one promo per team, the right density
+// for a cross-team rail. Wrapped in cache() and keyed on `league`, so the page
+// and getLeagueHubStats share one query per request for the same league.
+export const getLeagueSlate = cache(async (league: string): Promise<PromoWithTeam[]> => {
+  const today = hubTodayChicagoYMD();
+  const end = hubPlusDays(today, 7);
   const all = await getPromosInDateRange(today, end);
-  return all.filter((p) => p.team.league === MLB_LEAGUE);
+  return all.filter((p) => p.team.league === league);
 });
 
-export interface MlbHubStats {
-  // null when teamScores has no usable MLB rows (stale or missing). The hub
-  // omits the stat rather than rendering a zero or broken number.
-  totalMlbPromos: number | null;
+export interface LeagueHubStats {
+  // null when teamScores has no usable rows for the league (stale or missing).
+  // The hub omits the stat rather than rendering a zero or broken number.
+  totalPromos: number | null;
   teamsWithPromosThisWeek: number;
   avgPerTeam: number | null;
 }
 
-// Authority stats for the hub. totalMlbPromos sums teamScores.promoCount over
-// MLB rows (a collectionGroup count() cannot be scoped to a league). avgPerTeam
-// is computed in memory from that total over the MLB team count, NOT from
-// teamScores.averagePromoScore (which is average promo score, not promos per
-// team). teamsWithPromosThisWeek is the distinct MLB team count in the slate.
-export async function getMlbHubStats(): Promise<MlbHubStats> {
+// Authority stats for a league hub. totalPromos sums teamScores.promoCount over
+// the league's rows (a collectionGroup count() cannot be scoped to a league).
+// avgPerTeam is computed in memory from that total over the league's team count,
+// NOT from teamScores.averagePromoScore (which is average promo score, not
+// promos per team). teamsWithPromosThisWeek is the distinct team count in the
+// slate. getAllTeamScores is already scoped to SCORED_LEAGUES (MLB/MLS/WNBA), so
+// WNBA and MLS rows are present today.
+export async function getLeagueHubStats(league: string): Promise<LeagueHubStats> {
   const [scores, slate, teams] = await Promise.all([
     getAllTeamScores(),
-    getMlbSlate(),
+    getLeagueSlate(league),
     getAllTeams(),
   ]);
-  const mlbTeamCount = teams.filter((t) => t.league === MLB_LEAGUE).length;
-  const mlbScores = scores.filter((s) => s.league === MLB_LEAGUE);
-  const summed = mlbScores.reduce((sum, s) => sum + s.promoCount, 0);
-  // "Stale or missing" is treated as: no MLB score rows, or a zero total.
-  // In that case omit the score-derived stats instead of showing a broken zero.
-  const hasUsableScores = mlbScores.length > 0 && summed > 0;
-  const totalMlbPromos = hasUsableScores ? summed : null;
+  const teamCount = teams.filter((t) => t.league === league).length;
+  const leagueScores = scores.filter((s) => s.league === league);
+  const summed = leagueScores.reduce((sum, s) => sum + s.promoCount, 0);
+  // "Stale or missing" is treated as: no score rows, or a zero total. In that
+  // case omit the score-derived stats instead of showing a broken zero.
+  const hasUsableScores = leagueScores.length > 0 && summed > 0;
+  const totalPromos = hasUsableScores ? summed : null;
   const teamsWithPromosThisWeek = new Set(slate.map((p) => p.team.id)).size;
   const avgPerTeam =
-    hasUsableScores && mlbTeamCount > 0 ? summed / mlbTeamCount : null;
-  return { totalMlbPromos, teamsWithPromosThisWeek, avgPerTeam };
+    hasUsableScores && teamCount > 0 ? summed / teamCount : null;
+  return { totalPromos, teamsWithPromosThisWeek, avgPerTeam };
 }
 
-export interface MlbDivisionGroup {
-  division: string; // e.g. "AL East"
-  conference: 'AL' | 'NL';
+// A grouped bucket of a league's teams for the hub "browse by team" grid. `key`
+// is the group's display label and selector chip value (e.g. "AL East" or
+// "Eastern"). `superGroup` is the super-header band this group sits under ("AL"
+// / "NL" for MLB); null for leagues that group flat (WNBA / MLS).
+export interface HubTeamGroup {
+  key: string;
+  superGroup: string | null;
   teams: Team[];
 }
 
-// Canonical display order for the six MLB divisions.
-const MLB_DIVISION_ORDER = [
-  'AL East',
-  'AL Central',
-  'AL West',
-  'NL East',
-  'NL Central',
-  'NL West',
-] as const;
+// A super-header band rendered above the groups (MLB's AL / NL). The list is
+// empty for leagues that group flat.
+export interface HubSuperGroup {
+  key: string;
+  label: string;
+}
 
-// Buckets MLB teams by their `division` field (seeded 30/30 as "AL East" ...
-// "NL West"), deriving AL vs NL from the division prefix (there is no separate
-// conference field). Returned in canonical division order, teams alphabetized
-// within each division. Any division value outside the canonical six is
-// appended at the end so a team is never silently dropped (the hub needs every
-// team link in the DOM for crawlability).
-export async function getMlbTeamsByDivision(): Promise<MlbDivisionGroup[]> {
+// Per-league grouping spec. `groupOrder` is the canonical display order of the
+// buckets teams fall into via team.division. `superGroups` + `superGroupOf`, when
+// set, add the two-band super-header layer (MLB AL / NL); omitting them makes the
+// league render its groups as top-level buckets. Keyed by league code, aligned
+// with LEAGUE_HUB_REGISTRY.
+interface HubGroupingSpec {
+  groupOrder: string[];
+  superGroups?: HubSuperGroup[];
+  superGroupOf?: (groupKey: string) => string;
+}
+
+const HUB_GROUPING: Record<string, HubGroupingSpec> = {
+  MLB: {
+    groupOrder: ['AL East', 'AL Central', 'AL West', 'NL East', 'NL Central', 'NL West'],
+    superGroups: [
+      { key: 'AL', label: 'American League' },
+      { key: 'NL', label: 'National League' },
+    ],
+    superGroupOf: (key) => (key.startsWith('NL') ? 'NL' : 'AL'),
+  },
+  // WNBA and MLS both seed team.division as "Eastern" / "Western" (15/15 and
+  // 30/30). No AL/NL-style super-header: the two conferences ARE the top-level
+  // buckets, so groupOrder alone drives the grid.
+  WNBA: { groupOrder: ['Eastern', 'Western'] },
+  MLS: { groupOrder: ['Eastern', 'Western'] },
+};
+
+// The super-header bands for a league (empty when the league groups flat).
+// Exported so the hub page can hand them to HubTeamGrid without re-deriving.
+export function getLeagueSuperGroups(league: string): HubSuperGroup[] {
+  return HUB_GROUPING[league]?.superGroups ?? [];
+}
+
+// Buckets a league's teams by their `division` field into ordered HubTeamGroups,
+// tagging each with its super-header key (or null). Groups are returned in the
+// spec's canonical order, teams alphabetized within each group. Any bucket key
+// outside the canonical order is appended at the end so a team is never silently
+// dropped (the hub needs every team link in the DOM for crawlability).
+export async function getLeagueTeamsGrouped(league: string): Promise<HubTeamGroup[]> {
   const teams = await getAllTeams();
-  const mlb = teams.filter((t) => t.league === MLB_LEAGUE);
+  const inLeague = teams.filter((t) => t.league === league);
+  const spec = HUB_GROUPING[league] ?? { groupOrder: [] };
 
-  const byDivision = new Map<string, Team[]>();
-  for (const t of mlb) {
+  const byKey = new Map<string, Team[]>();
+  for (const t of inLeague) {
     const key = t.division || 'Other';
-    const list = byDivision.get(key) ?? [];
+    const list = byKey.get(key) ?? [];
     list.push(t);
-    byDivision.set(key, list);
+    byKey.set(key, list);
   }
 
-  const canonical = new Set<string>(MLB_DIVISION_ORDER);
-  const extraKeys = [...byDivision.keys()].filter((k) => !canonical.has(k)).sort();
-  const orderedKeys = [...MLB_DIVISION_ORDER, ...extraKeys];
+  const canonical = new Set<string>(spec.groupOrder);
+  const extraKeys = [...byKey.keys()].filter((k) => !canonical.has(k)).sort();
+  const orderedKeys = [...spec.groupOrder, ...extraKeys];
 
-  const groups: MlbDivisionGroup[] = [];
-  for (const division of orderedKeys) {
-    const list = byDivision.get(division);
+  const groups: HubTeamGroup[] = [];
+  for (const key of orderedKeys) {
+    const list = byKey.get(key);
     if (!list || list.length === 0) continue;
     list.sort((a, b) => `${a.city} ${a.name}`.localeCompare(`${b.city} ${b.name}`));
-    const conference: 'AL' | 'NL' = division.startsWith('NL') ? 'NL' : 'AL';
-    groups.push({ division, conference, teams: list });
+    const superGroup = spec.superGroupOf ? spec.superGroupOf(key) : null;
+    groups.push({ key, superGroup, teams: list });
   }
   return groups;
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import type { MlbDivisionGroup } from '@/lib/data';
+import type { HubTeamGroup } from '@/lib/data';
 
 // Segmented division filter for the team grid. Presentational: the parent
 // (HubTeamGrid) owns the active state and fires analytics; this component only
@@ -13,10 +13,16 @@ export function HubTeamSelector({
   groups,
   active,
   onSelect,
+  selectorLabel,
+  allLabel,
 }: {
-  groups: MlbDivisionGroup[];
+  groups: HubTeamGroup[];
   active: string;
   onSelect: (division: string) => void;
+  /** aria-label for the chip group, e.g. "Filter teams by division" / "by conference". */
+  selectorLabel: string;
+  /** Label for the default "show everything" chip, e.g. "All divisions" / "All teams". */
+  allLabel: string;
 }) {
   const chip = (key: string, label: string) => {
     const isActive = active === key;
@@ -39,9 +45,9 @@ export function HubTeamSelector({
   };
 
   return (
-    <div className="flex flex-wrap gap-2" role="group" aria-label="Filter teams by division">
-      {chip(ALL_DIVISIONS, 'All divisions')}
-      {groups.map((g) => chip(g.division, g.division))}
+    <div className="flex flex-wrap gap-2" role="group" aria-label={selectorLabel}>
+      {chip(ALL_DIVISIONS, allLabel)}
+      {groups.map((g) => chip(g.key, g.key))}
     </div>
   );
 }

@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import type { MlbDivisionGroup } from '@/lib/data';
+import type { HubTeamGroup, HubSuperGroup } from '@/lib/data';
 import type { Team } from '@/lib/types';
-import { track } from '@/lib/analytics';
+import { track, type AnalyticsSurface } from '@/lib/analytics';
 import { IconChevronRight } from '@tabler/icons-react';
 import { chipInk } from '@/lib/chip-contrast';
 import { HubTeamSelector, ALL_DIVISIONS } from './HubTeamSelector';
@@ -39,63 +39,109 @@ function TeamCard({ team }: { team: Team }) {
   );
 }
 
-// Division team grid. ALL 30 team links are rendered in the DOM at all times.
-// The initial server render is the full, unfiltered grid (active = "all"), so
-// every anchor is present in view-source and crawlable. The selector toggles
-// VISIBILITY only, via the Tailwind `hidden` class (display:none) which keeps
-// the elements in the DOM: it never conditionally renders or lazy-fetches, so
-// filtering to one division cannot remove a link from the source. Client
-// component only because the selector holds interactive state.
-export function HubTeamGrid({ groups }: { groups: MlbDivisionGroup[] }) {
+// Team grid for a league hub. EVERY team link is rendered in the DOM at all
+// times. The initial server render is the full, unfiltered grid (active =
+// "all"), so every anchor is present in view-source and crawlable. The selector
+// toggles VISIBILITY only, via the Tailwind `hidden` class (display:none) which
+// keeps the elements in the DOM: it never conditionally renders or lazy-fetches,
+// so filtering to one group cannot remove a link from the source. Groups render
+// under optional super-header bands (MLB AL/NL) or flat (WNBA/MLS Eastern/
+// Western). Client component only because the selector holds interactive state.
+export function HubTeamGrid({
+  groups,
+  superGroups,
+  sectionId,
+  surface,
+  collection,
+  intro,
+  selectorLabel,
+  allLabel,
+}: {
+  groups: HubTeamGroup[];
+  /** Super-header bands (MLB AL/NL). Empty => render groups flat (WNBA/MLS). */
+  superGroups: HubSuperGroup[];
+  /** DOM id / aria-labelledby anchor, e.g. "mlb-browse-team". */
+  sectionId: string;
+  /** Analytics surface for the selector filter-change event. */
+  surface: AnalyticsSurface;
+  /** Analytics collection tag for the filter-change event, e.g. "mlb_hub". */
+  collection: string;
+  /** Intro copy under the heading. */
+  intro: string;
+  selectorLabel: string;
+  allLabel: string;
+}) {
   const [active, setActive] = useState<string>(ALL_DIVISIONS);
 
   const handleSelect = (division: string) => {
     if (division === active) return;
     track('league_filter_change', {
-      surface: 'web_mlb_hub_team_card',
-      collection: 'mlb_hub',
+      surface,
+      collection,
       from_league: active,
       to_league: division,
     });
     setActive(division);
   };
 
-  const conferences: { key: 'AL' | 'NL'; label: string; groups: MlbDivisionGroup[] }[] = [
-    { key: 'AL', label: 'American League', groups: groups.filter((g) => g.conference === 'AL') },
-    { key: 'NL', label: 'National League', groups: groups.filter((g) => g.conference === 'NL') },
-  ];
+  // When the league has super-headers (MLB AL/NL), render each as a band that
+  // filters its member groups. Otherwise render one label-less band holding
+  // every group, so WNBA/MLS show their conferences (Eastern/Western) as
+  // top-level buckets with no super-header wrapper.
+  const bands: { key: string; label: string | null; groups: HubTeamGroup[] }[] =
+    superGroups.length > 0
+      ? superGroups.map((sg) => ({
+          key: sg.key,
+          label: sg.label,
+          groups: groups.filter((g) => g.superGroup === sg.key),
+        }))
+      : [{ key: 'all', label: null, groups }];
 
   return (
-    <section aria-labelledby="mlb-browse-team">
-      <h2 id="mlb-browse-team" className="rd-display text-2xl text-rd-ink md:text-3xl">
+    <section aria-labelledby={sectionId}>
+      <h2 id={sectionId} className="rd-display text-2xl text-rd-ink md:text-3xl">
         Browse by team
       </h2>
       <p className="mt-2 max-w-2xl font-rd text-[15px] text-rd-ink-soft">
-        All 30 MLB clubs by division. Open any team for its full 2026 promotional schedule.
+        {intro}
       </p>
 
       <div className="mt-6">
-        <HubTeamSelector groups={groups} active={active} onSelect={handleSelect} />
+        <HubTeamSelector
+          groups={groups}
+          active={active}
+          onSelect={handleSelect}
+          selectorLabel={selectorLabel}
+          allLabel={allLabel}
+        />
       </div>
 
       <div className="mt-8 space-y-10">
-        {conferences.map((conf) => {
-          // Hide the whole conference block only when a specific division is
-          // active and it belongs to the other conference. Child links stay in
-          // the DOM either way (display:none, still crawlable).
-          const confHidden =
-            active !== ALL_DIVISIONS && !conf.groups.some((g) => g.division === active);
+        {bands.map((band) => {
+          // Hide a whole band only when a specific group is active and belongs to
+          // another band. Child links stay in the DOM either way (display:none,
+          // still crawlable).
+          const bandHidden =
+            active !== ALL_DIVISIONS && !band.groups.some((g) => g.key === active);
           return (
-            <div key={conf.key} className={confHidden ? 'hidden' : ''}>
-              <p className="font-rd text-[11px] font-semibold uppercase tracking-[0.14em] text-rd-ink-faint">
-                {conf.label}
-              </p>
-              <div className="mt-4 grid gap-x-6 gap-y-8 md:grid-cols-3">
-                {conf.groups.map((g) => {
-                  const divHidden = active !== ALL_DIVISIONS && active !== g.division;
+            <div key={band.key} className={bandHidden ? 'hidden' : ''}>
+              {band.label ? (
+                <p className="font-rd text-[11px] font-semibold uppercase tracking-[0.14em] text-rd-ink-faint">
+                  {band.label}
+                </p>
+              ) : null}
+              <div
+                className={
+                  band.label
+                    ? 'mt-4 grid gap-x-6 gap-y-8 md:grid-cols-3'
+                    : 'grid gap-x-6 gap-y-8 md:grid-cols-3'
+                }
+              >
+                {band.groups.map((g) => {
+                  const divHidden = active !== ALL_DIVISIONS && active !== g.key;
                   return (
-                    <div key={g.division} className={divHidden ? 'hidden' : ''}>
-                      <h3 className="rd-display text-base text-rd-ink">{g.division}</h3>
+                    <div key={g.key} className={divHidden ? 'hidden' : ''}>
+                      <h3 className="rd-display text-base text-rd-ink">{g.key}</h3>
                       <ul className="mt-3 space-y-2">
                         {g.teams.map((t) => (
                           <li key={t.id}>

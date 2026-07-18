@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { pageOpenGraph } from '@/lib/og';
-import { getMlbSlate, getMlbHubStats, getMlbTeamsByDivision } from '@/lib/data';
+import { getLeagueSlate, getLeagueHubStats, getLeagueTeamsGrouped, getLeagueSuperGroups } from '@/lib/data';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 import { AggregatorJsonLd, type AggregatorGroup } from '@/components/aggregator-layout';
 import { AdSlot } from '@/components/ads/AdSlot';
@@ -8,9 +8,20 @@ import { AD_SLOTS } from '@/lib/ads/slots';
 import { HubHero } from '@/components/hub/HubHero';
 import { HubStatBar } from '@/components/hub/HubStatBar';
 import { HubThisWeek } from '@/components/hub/HubThisWeek';
-import { HubBrowseByType } from '@/components/hub/HubBrowseByType';
+import { HubBrowseByType, type HubBrowseTile } from '@/components/hub/HubBrowseByType';
 import { HubTeamGrid } from '@/components/hub/HubTeamGrid';
 import { HubFaq, type HubFaqItem } from '@/components/hub/HubFaq';
+
+// League hub accent (house palette, mirrors LEAGUE_HUB_REGISTRY MLB entry).
+const ACCENT = '#7c4a3a';
+
+// Browse-by-promo-type tiles for the MLB hub.
+const BROWSE_TILES: HubBrowseTile[] = [
+  { href: '/promos/bobbleheads', label: 'Bobblehead giveaways', collectionName: 'bobbleheads', accentType: 'giveaway' },
+  { href: '/promos/jersey-giveaways', label: 'Jersey giveaways', collectionName: 'jerseys', accentType: 'giveaway' },
+  { href: '/promos/theme-nights', label: 'Theme nights', collectionName: 'theme_nights', accentType: 'theme' },
+  { href: '/promos/this-week', label: 'Everything this week', collectionName: 'hot_this_week', accentType: 'giveaway' },
+];
 
 // 6h ISR, matching the homepage and aggregator pages. On-demand /api/revalidate
 // stays the real freshness path when the pipeline writes new MLB promos.
@@ -72,9 +83,9 @@ function todayYMD(): string {
 
 export default async function MlbHubPage() {
   const [slate, stats, divisions] = await Promise.all([
-    getMlbSlate(),
-    getMlbHubStats(),
-    getMlbTeamsByDivision(),
+    getLeagueSlate('MLB'),
+    getLeagueHubStats('MLB'),
+    getLeagueTeamsGrouped('MLB'),
   ]);
 
   // ItemList source for the CollectionPage JSON-LD: the current MLB slate.
@@ -96,8 +107,9 @@ export default async function MlbHubPage() {
         title={`MLB PROMOTIONS ${YEAR}`}
         subtitle="Every giveaway, bobblehead night, theme night, and food deal across all 30 MLB clubs, grouped by division."
         freshness="Schedules refreshed every 6 hours."
+        accent={ACCENT}
       >
-        <HubStatBar stats={stats} />
+        <HubStatBar stats={stats} leagueLabel="MLB" />
       </HubHero>
 
       <div className="mx-auto max-w-6xl px-6 pt-6">
@@ -105,12 +117,31 @@ export default async function MlbHubPage() {
       </div>
 
       <main className="mx-auto max-w-6xl space-y-16 px-6 pb-20 pt-12">
-        <HubThisWeek slate={slate} />
+        <HubThisWeek
+          slate={slate}
+          heading="This week across MLB"
+          sectionId="mlb-this-week"
+          surface="web_mlb_hub_this_week"
+        />
         <AdSlot config={AD_SLOTS.IN_CONTENT_1} pageType="mlb_hub" />
-        <HubBrowseByType slate={slate} />
-        <HubTeamGrid groups={divisions} />
+        <HubBrowseByType
+          slate={slate}
+          tiles={BROWSE_TILES}
+          sectionId="mlb-browse-type"
+          surface="web_mlb_hub_promo_type"
+        />
+        <HubTeamGrid
+          groups={divisions}
+          superGroups={getLeagueSuperGroups('MLB')}
+          sectionId="mlb-browse-team"
+          surface="web_mlb_hub_team_card"
+          collection="mlb_hub"
+          intro="All 30 MLB clubs by division. Open any team for its full 2026 promotional schedule."
+          selectorLabel="Filter teams by division"
+          allLabel="All divisions"
+        />
         <AdSlot config={AD_SLOTS.IN_CONTENT_2} pageType="mlb_hub" />
-        <HubFaq faqs={FAQS} />
+        <HubFaq faqs={FAQS} sectionId="mlb-hub-faq" />
       </main>
     </div>
   );
