@@ -18,14 +18,30 @@ PromoNight is in a confirmed growth phase as of mid June 2026. The May 1-8 Bing 
 
 ## 1. Traffic and search [LIVE, as of 2026-06-10]
 
-### PostHog (authoritative human number)
+### PostHog [FLOOR, under-counts humans; see reconciliation note below]
 - May MAU: 1,016 (true organic ~850-900 after removing a May 26 Reddit referral spike)
 - June: tracking to ~1,500-1,700 MAU
 - DAU baseline early June: ~54/day, climbing
 - DAU/MAU ratio: ~3.5% (one-and-done discovery traffic; DAU sits near MAU/30, confirming near-zero return visitation)
 - Daily DAU by channel (June 1-4): Bing 15, Google 12, Direct 15, Yahoo 7, DDG 3
 - Google overtook Bing in PostHog unique users on June 3-4 for the first time
-- Note: GA4 runs ~10x PostHog even with Singapore excluded (9,813 vs ~1,000). GA4 is not the planning number. Servable ad pageviews track PostHog, not GA4.
+- GA4 vs PostHog reconciliation [measured 2026-07-26, window 2026-07-20 to 2026-07-26]:
+  the "~10x" figure from the June read is STALE and was never re-measured until now.
+  Live gap is 1.7x, not 10x. Same 7-day window, both raw:
+    GA4 property 534233585    page_view  5,291  (== screenPageViews, single hostname)
+    PostHog project 393054    page_view  3,122  (raw, unfiltered)
+  Diagnosis inverted from the prior assumption. GA4 is NOT inflated 10x; PostHog is
+  UNDER-counting humans. Confirmed causes: events fired before posthog-js finishes its
+  dynamic import drop for PostHog but reach GA4; the PageViewTracker requestIdleCallback
+  deferral has no timeout and drops page_view on fast bounces ($pageleave 3,332 vs
+  page_view 3,122, ~6% on its own); PostHog's UA filtering catches some bots GA4 keeps;
+  ad-blocker loss hits PostHog harder than GA4. GA4's one automatic page_view line at
+  5,291 with no second pageview-shaped stream RULES OUT Enhanced Measurement history-event
+  double-firing and rules out Grow.me as a phantom source.
+  Neither counter is truth. GA4 5,291 is closer to real human pageviews than PostHog 3,122,
+  but carries its own bot leakage. A server-truth-human counter (middleware, in build) will
+  establish the third number, which becomes the Raptive-facing figure.
+  Property ID 534233585 confirmed to map to measurement ID G-N2M0M355LX.
 
 ### Bing Search [LIVE, daily June 1-10]
 - Clicks: settled to ~37/day weekday after a June 1-4 peak of 41.5; recent 4-day avg ~28/day
