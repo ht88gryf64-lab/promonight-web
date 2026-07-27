@@ -111,8 +111,12 @@ export async function POST(request: Request) {
         });
         if (sent.ok) {
           // Only a DELIVERED link may suppress a later teams-adding submit, so
-          // the stamp is the gate on that suppressor. Never throws.
-          await markConfirmationSent(result.id);
+          // the stamp is the gate on that suppressor. The token goes with it:
+          // this write lands after the send, by which time a competing submit
+          // may already have rotated the record's token, and the gate compares
+          // the two so a stamp for a superseded token counts for nothing.
+          // Never throws.
+          await markConfirmationSent(result.id, result.confirmToken);
         } else {
           // sendEmail returns {ok:false} rather than throwing on a missing API
           // key, a Resend non-2xx or a timeout, so without this the failure is

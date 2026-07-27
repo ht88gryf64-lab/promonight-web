@@ -26,11 +26,14 @@ export interface Subscriber {
   // the relevant lifecycle step lands.
   createdAt: string | null;
   confirmedAt: string | null;
-  // When a confirmation email was last ACCEPTED by the provider for the current
-  // confirmToken. null means no link has been delivered for the token on the
-  // record right now, either because the send failed or because the token was
-  // just rotated. The teams_only suppressor keys on this.
+  // When a confirmation email was last ACCEPTED by the provider, and the token
+  // that send carried. Read as a pair: the stamp counts only when
+  // confirmationSentFor still equals confirmToken. Both null means no link has
+  // been delivered for the token on the record right now, either because the
+  // send failed or because the token was just rotated. The teams_only suppressor
+  // keys on the pair.
   confirmationSentAt: string | null;
+  confirmationSentFor: string | null;
   updatedAt: string | null;
   // Approximate location captured from the Vercel edge geo headers at signup
   // (additive; absent on records created before geo capture). Powers the
@@ -82,6 +85,40 @@ function newToken(): string {
   // 24 random bytes → 32-char URL-safe string. Two independent tokens per
   // subscriber so the manage link can't be derived from the confirm link.
   return randomBytes(24).toString('base64url');
+}
+
+// ── Delivery marker ─────────────────────────────────────────────────────────
+// confirmationSentAt and confirmationSentFor are ONE unit and are never written
+// separately. The stamp alone proves only that some link went out at some point;
+// the token it names is what makes it mean "the link for the token this record
+// holds RIGHT NOW was delivered". That distinction is load-bearing, because the
+// stamp is a second write issued after the send resolves, so a slower send can
+// land its stamp after a later submit has already rotated the token away.
+//
+// Every write of either field goes through these helpers. Assigning one without
+// the other would silently degrade the gate back to time-only and reopen exactly
+// that race, so do not set these fields inline.
+function deliveryCleared(): { confirmationSentAt: null; confirmationSentFor: null } {
+  return { confirmationSentAt: null, confirmationSentFor: null };
+}
+
+function deliveryStamped(confirmToken: string): {
+  confirmationSentAt: FieldValue;
+  confirmationSentFor: string;
+} {
+  return {
+    confirmationSentAt: FieldValue.serverTimestamp(),
+    confirmationSentFor: confirmToken,
+  };
+}
+
+// True only when the stamp vouches for the token the record currently holds.
+function hasDeliveredCurrentToken(data: FirebaseFirestore.DocumentData): boolean {
+  return (
+    data.confirmationSentAt != null &&
+    typeof data.confirmationSentFor === 'string' &&
+    data.confirmationSentFor === data.confirmToken
+  );
 }
 
 // Keep only well-formed, deduplicated slugs, order-stable, capped. Empty array
@@ -217,10 +254,10 @@ export async function upsertSubscriber(
         manageToken,
         createdAt: now,
         confirmedAt: null,
-        // Not delivered yet. The caller stamps this only once a send succeeds,
-        // so the invariant holds from creation: a non-null confirmationSentAt
-        // means the CURRENT confirmToken reached the user.
-        confirmationSentAt: null,
+        // Not delivered yet. The caller stamps only once a send succeeds, so the
+        // invariant holds from creation: a stamp naming the current confirmToken
+        // means that token reached the user.
+        ...deliveryCleared(),
         updatedAt: now,
         // Captured once, at signup. Existing records are never backfilled.
         ...sanitizeGeo(input.geo),
@@ -314,16 +351,21 @@ export async function upsertSubscriber(
     // branch also catches unsubscribed, and a resubmit there is a deliberate
     // resubscribe that must resurrect with a fresh token and a real email.
     //
-    // confirmationSentAt is the load-bearing conjunct. The condition for
-    // suppressing is "a confirmation link was DELIVERED", not "a token exists":
-    // sendEmail never throws, it returns {ok:false} on a missing API key, a
-    // Resend non-2xx, or a timeout, so a token can exist having never reached
-    // the user. Keying on the delivery stamp means a failed or skipped send
-    // leaves it unset and the very next submit, including a teams-adding one,
-    // rotates and re-sends. Records predating this field have it unset and so
-    // fall to the resend path, which costs at most one extra confirmation email
-    // for a record that was already stranded.
-    const confirmationDelivered = data.confirmationSentAt != null;
+    // The delivery marker is the load-bearing conjunct. The condition for
+    // suppressing is "the link for THIS token was delivered", not "a token
+    // exists" and not "some link went out once":
+    //   - sendEmail never throws, it returns {ok:false} on a missing API key, a
+    //     Resend non-2xx, or a timeout, so a token can exist having never
+    //     reached the user.
+    //   - the stamp is written after the send resolves, so a slower send can
+    //     stamp after a later submit already rotated its token away. Comparing
+    //     confirmationSentFor to the current confirmToken is what makes that
+    //     late stamp count for nothing.
+    // A failed or skipped send leaves the pair cleared, so the very next submit,
+    // including a teams-adding one, rotates and re-sends. Records predating the
+    // fields have them unset and fall to the resend path, which costs at most
+    // one extra confirmation email for a record that was already stranded.
+    const confirmationDelivered = hasDeliveredCurrentToken(data);
     const teamsOnlyUpdate =
       data.status === 'pending' &&
       hasUsableToken &&
@@ -350,11 +392,9 @@ export async function upsertSubscriber(
       manageToken,
       updatedAt: now,
       // Rotating mints a token that has definitionally not been delivered yet,
-      // so the delivery stamp must not carry over from the previous one. Without
-      // this, a rotate whose send then failed would leave a stale stamp against
-      // a brand-new undelivered token, and the next teams-adding submit would
-      // suppress on it. Re-stamped by the caller only when a send succeeds.
-      ...(suppressionReason === null ? { confirmationSentAt: null } : {}),
+      // so the delivery marker must not carry over from the previous one.
+      // Cleared as a pair; re-stamped by the caller only when a send succeeds.
+      ...(suppressionReason === null ? deliveryCleared() : {}),
     });
     return {
       id,
@@ -371,24 +411,28 @@ export async function upsertSubscriber(
 }
 
 /**
- * Stamp the moment a confirmation email was accepted by the provider.
+ * Record that a confirmation email carrying `confirmToken` was accepted by the
+ * provider.
  *
  * Deliberately NOT part of upsertSubscriber's transaction: that transaction has
  * to commit before the send is attempted, so at commit time we cannot yet know
  * whether the mail went out. This is the second write, issued by the caller only
  * after sendConfirmationEmail reports ok.
  *
- * A targeted single-field update, never a read-modify-write, so it cannot
- * clobber a concurrent teams merge landing between the transaction and this
- * call. Never throws: the signup already succeeded and the record already
- * exists, so a failed stamp degrades to one redundant confirmation email on the
- * user's next submit, which is strictly better than failing the request.
+ * The token is recorded alongside the timestamp precisely BECAUSE this write is
+ * late. If a competing submit rotated the token while the send was in flight,
+ * this stamp names a token the record no longer holds, and the gate compares the
+ * two and correctly declines to treat it as delivered. That keeps the write
+ * targeted: no read, no compare-and-set, no read-modify-write, so it still
+ * cannot clobber a concurrent teams merge.
+ *
+ * Never throws: the signup already succeeded and the record already exists, so a
+ * failed stamp degrades to one redundant confirmation email on the user's next
+ * submit, which is strictly better than failing the request.
  */
-export async function markConfirmationSent(id: string): Promise<void> {
+export async function markConfirmationSent(id: string, confirmToken: string): Promise<void> {
   try {
-    await db.collection(SUBSCRIBERS).doc(id).update({
-      confirmationSentAt: FieldValue.serverTimestamp(),
-    });
+    await db.collection(SUBSCRIBERS).doc(id).update(deliveryStamped(confirmToken));
   } catch (e) {
     console.error(
       '[subscribers] confirmationSentAt stamp failed',
@@ -425,6 +469,8 @@ function mapSubscriberDoc(doc: FirebaseFirestore.DocumentSnapshot): Subscriber {
     createdAt: tsToIso(d.createdAt),
     confirmedAt: tsToIso(d.confirmedAt),
     confirmationSentAt: tsToIso(d.confirmationSentAt),
+    confirmationSentFor:
+      typeof d.confirmationSentFor === 'string' ? d.confirmationSentFor : null,
     updatedAt: tsToIso(d.updatedAt),
     geoCity: typeof d.geoCity === 'string' ? d.geoCity : null,
     geoRegion: typeof d.geoRegion === 'string' ? d.geoRegion : null,
