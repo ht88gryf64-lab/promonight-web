@@ -13,11 +13,14 @@
 //    the human count an UPPER BOUND on human traffic, never an exact count.
 //    Report it as "server-observed, bot-filtered, upper bound".
 //
-// 2. Headless Chrome and Playwright with a clean user agent are UNCATCHABLE by
-//    user agent. They present a UA byte-identical to real Chrome, so they land
-//    permanently in `human`. This is the hard floor on precision here and no
-//    pattern list can raise it. Catching those needs a different signal
-//    entirely (TLS fingerprint, behavioral, or a challenge).
+// 2. Automation splits into two cases and only one is catchable.
+//    CATCHABLE: headless Chrome left at its DEFAULT user agent advertises the
+//    `HeadlessChrome` token, which is what Puppeteer and Playwright chromium
+//    send unless the operator overrides it. v2 files those as `unknown`.
+//    UNCATCHABLE: a deliberately overridden clean user agent is byte-identical
+//    to real Chrome, so it lands permanently in `human`. That is the hard floor
+//    on precision here and no pattern list can raise it. Closing it needs a
+//    different signal entirely (TLS fingerprint, behavioral, or a challenge).
 //
 // 3. `human_document` is the metric that compares to GA4 page_view.
 //    `total` is NOT the Raptive number and must never be quoted as one.
@@ -35,8 +38,11 @@
 //    classifier versions are not comparable.
 
 // Bump on any pattern change. Stamped onto every counter document so a
-// version straddling a change is visible rather than silently mixed.
-export const CLASSIFIER_VERSION = 'v1';
+// version straddling a change is visible rather than silently mixed. Record
+// each bump with its date in requestCounters/_meta.
+//   v1  initial taxonomy, never reached production data
+//   v2  adds the HeadlessChrome token to `unknown`
+export const CLASSIFIER_VERSION = 'v2';
 
 export type TrafficClass =
   | 'ai_crawler'
@@ -80,17 +86,23 @@ const SEO_TOOL =
   /AhrefsBot|SemrushBot|DotBot|MJ12bot|BLEXBot|DataForSeoBot|Screaming Frog|SerpstatBot|ZoominfoBot|Barkrowler/i;
 
 // Catch-all for non-human agents that are not worth naming individually:
-// generic self-identifying bots, scripted HTTP clients, and link unfurlers.
-// Unfurlers (Twitterbot, Slackbot, LinkedInBot, TelegramBot) already match the
-// bare `bot` alternative; they are listed explicitly so the intent is legible
-// at the callsite rather than implied.
+// generic self-identifying bots, scripted HTTP clients, link unfurlers, and
+// default-UA headless browsers. Unfurlers (Twitterbot, Slackbot, LinkedInBot,
+// TelegramBot) already match the bare `bot` alternative; they are listed
+// explicitly so the intent is legible at the callsite rather than implied.
+//
+// `HeadlessChrome` belongs here rather than in a crawler class on purpose: the
+// token says the client is AUTOMATED but says nothing about who is driving it
+// or why, and `unknown` is exactly the bucket for "not a human, not attributable
+// to a named agent". Zero false-positive risk was verified against every
+// mainstream browser UA: no real browser carries the token.
 //
 // A rare false positive here is acceptable. `bot` as a substring can in
 // principle appear inside an unrelated product name, which would move a human
 // into `unknown`. That is the safe direction of error per note 4 above: it
 // tightens the human upper bound rather than inflating it.
 const GENERIC_NON_HUMAN =
-  /bot|crawler|spider|scraper|http-client|curl|wget|python-requests|axios|Go-http-client|facebookexternalhit|Twitterbot|Slackbot|LinkedInBot|WhatsApp|TelegramBot/i;
+  /bot|crawler|spider|scraper|http-client|curl|wget|python-requests|axios|Go-http-client|facebookexternalhit|Twitterbot|Slackbot|LinkedInBot|WhatsApp|TelegramBot|HeadlessChrome/i;
 
 // ── Classification ────────────────────────────────────────────────────────
 

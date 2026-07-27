@@ -174,6 +174,12 @@ const UNKNOWN_UAS: Array<[label: string, ua: string]> = [
   ['LinkedInBot', 'LinkedInBot/1.0 (compatible; Mozilla/5.0; Jakarta Commons-HttpClient/3.1 +http://www.linkedin.com)'],
   ['WhatsApp', 'WhatsApp/2.23.20.0'],
   ['TelegramBot', 'TelegramBot (like TwitterBot)'],
+  // v2. Default-UA headless browsers. Automated, but not attributable to a
+  // named agent, which is what unknown is for.
+  [
+    'HeadlessChrome (Puppeteer default)',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/128.0.0.0 Safari/537.36',
+  ],
 ];
 
 test('unknown: every fixture classifies as unknown', () => {
@@ -245,14 +251,14 @@ test('human: AppleWebKit does not trip the Applebot pattern', () => {
   assert.strictEqual(classifyTraffic(safari), 'human');
 });
 
-test('human: headless Chrome with a clean UA classifies as human (KNOWN AND EXPECTED)', () => {
-  // THIS IS NOT A BUG. Playwright and Puppeteer can present a user agent that
-  // is byte-identical to real Chrome. No user-agent list can separate them, so
-  // they land in `human` permanently. This is the hard floor on precision and
-  // the reason the human count is documented as an UPPER BOUND rather than an
-  // exact human number. See note 2 in the module header.
+test('human: headless Chrome with an OVERRIDDEN clean UA is human (KNOWN AND EXPECTED)', () => {
+  // THIS IS NOT A BUG. Playwright and Puppeteer can be told to present a user
+  // agent byte-identical to real Chrome. No user-agent list can separate those
+  // from a person, so they land in `human` permanently. This is the hard floor
+  // on precision and the reason the human count is documented as an UPPER
+  // BOUND rather than an exact human number. See note 2 in the module header.
   //
-  // Catching these would require a different signal entirely: TLS
+  // Closing this would require a different signal entirely: TLS
   // fingerprinting, behavioral analysis, or an interactive challenge. None of
   // those are in scope for the counter.
   const cleanHeadless =
@@ -260,19 +266,39 @@ test('human: headless Chrome with a clean UA classifies as human (KNOWN AND EXPE
   assert.strictEqual(
     classifyTraffic(cleanHeadless),
     'human',
-    'a clean-UA headless browser is indistinguishable from a human by UA alone',
+    'an overridden-UA headless browser is indistinguishable from a human by UA alone',
+  );
+});
+
+test('unknown: DEFAULT-UA headless Chrome is unknown (v2 behavior)', () => {
+  // The other half of the automation problem, and the catchable half. Puppeteer
+  // and Playwright chromium both advertise "HeadlessChrome" unless the operator
+  // overrides the UA, so the default case is detectable and v2 detects it.
+  //
+  // It is classified `unknown` rather than a crawler class deliberately: the
+  // token proves the client is automated but says nothing about who is driving
+  // it. v1 classified these as human; that was the reason for the v2 bump.
+  const puppeteerDefault =
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/128.0.0.0 Safari/537.36';
+  assert.strictEqual(classifyTraffic(puppeteerDefault), 'unknown');
+
+  const playwrightLinux =
+    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/124.0.6367.207 Safari/537.36';
+  assert.strictEqual(classifyTraffic(playwrightLinux), 'unknown');
+
+  // Case-insensitive, since the token's casing is not guaranteed downstream.
+  assert.strictEqual(
+    classifyTraffic('Mozilla/5.0 headlesschrome/120.0.0.0 Safari/537.36'),
+    'unknown',
   );
 
-  // A headless browser that leaves the default token in place IS catchable,
-  // because "HeadlessChrome" contains no bot marker but Chrome's own headless
-  // build advertises itself. It currently falls to human as well, which is
-  // worth knowing: the token is not in any pattern list.
-  const sloppyHeadless =
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/128.0.0.0 Safari/537.36';
+  // And the guard that matters: it must NOT drag ordinary Chrome along with it.
   assert.strictEqual(
-    classifyTraffic(sloppyHeadless),
+    classifyTraffic(
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+    ),
     'human',
-    'documents current behavior: the HeadlessChrome token is NOT matched by v1',
+    'plain Chrome must stay human',
   );
 });
 
@@ -517,5 +543,7 @@ test('CLASSIFIER_VERSION is a non-empty string', () => {
   // versions are not comparable, so this must never be blank.
   assert.strictEqual(typeof CLASSIFIER_VERSION, 'string');
   assert.ok(CLASSIFIER_VERSION.length > 0);
-  assert.strictEqual(CLASSIFIER_VERSION, 'v1');
+  // v2 adds the HeadlessChrome token to `unknown`. If you change a pattern,
+  // bump this and add a dated row to requestCounters/_meta.
+  assert.strictEqual(CLASSIFIER_VERSION, 'v2');
 });
