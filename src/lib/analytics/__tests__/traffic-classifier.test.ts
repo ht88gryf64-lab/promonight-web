@@ -502,6 +502,72 @@ test('classifyRequestType: BOTH headers present is prefetch, not soft_nav', () =
   assert.strictEqual(classifyRequestType(headers), 'prefetch');
 });
 
+test('classifyRequestType: browser speculation is prefetch, not document', () => {
+  // Chrome and Edge omnibox preloading, Google's SERP private prefetch proxy,
+  // and Firefox link prefetch all fetch pages nobody is looking at yet. They
+  // arrive as full document requests with a real browser UA and NEITHER of
+  // Next's router headers, so without a speculation check they would be counted
+  // in human_document, which is the bucket the headline number comes from.
+  assert.strictEqual(
+    classifyRequestType(new Headers({ 'sec-purpose': 'prefetch' })),
+    'prefetch',
+    'sec-purpose: prefetch',
+  );
+  // Token list, so a value equality check would miss these.
+  assert.strictEqual(
+    classifyRequestType(new Headers({ 'sec-purpose': 'prefetch;prerender' })),
+    'prefetch',
+    'sec-purpose token list with prerender',
+  );
+  assert.strictEqual(
+    classifyRequestType(new Headers({ 'sec-purpose': 'prefetch;anonymous-client-ip' })),
+    'prefetch',
+    'Google SERP prefetch proxy shape',
+  );
+  // Legacy spellings.
+  assert.strictEqual(
+    classifyRequestType(new Headers({ purpose: 'prefetch' })),
+    'prefetch',
+    'legacy Chrome Purpose header',
+  );
+  assert.strictEqual(
+    classifyRequestType(new Headers({ 'x-moz': 'prefetch' })),
+    'prefetch',
+    'Firefox X-moz header',
+  );
+  // Case-insensitive on both the name and the value.
+  assert.strictEqual(
+    classifyRequestType(new Headers({ 'Sec-Purpose': 'Prefetch' })),
+    'prefetch',
+  );
+
+  // And the guard that matters: an ordinary navigation must stay a document.
+  assert.strictEqual(
+    classifyRequestType(new Headers({ accept: 'text/html', 'sec-fetch-mode': 'navigate' })),
+    'document',
+    'a real navigation is still a document',
+  );
+  // A speculation header with an unrelated value must not trip it.
+  assert.strictEqual(
+    classifyRequestType(new Headers({ 'sec-purpose': 'something-else' })),
+    'document',
+  );
+});
+
+test('classifyRequestType: speculation wins over the Next router headers', () => {
+  // A speculative fetch of a soft navigation is still nobody looking at a page.
+  assert.strictEqual(
+    classifyRequestType(new Headers({ 'sec-purpose': 'prefetch', rsc: '1' })),
+    'prefetch',
+  );
+  assert.strictEqual(
+    classifyRequestType(
+      new Headers({ 'sec-purpose': 'prefetch', rsc: '1', 'next-router-prefetch': '1' }),
+    ),
+    'prefetch',
+  );
+});
+
 test('classifyRequestType: header names are case-insensitive', () => {
   // Proven against a real Headers instance rather than a hand-rolled fake, so
   // the guarantee comes from the platform and not from the test.
