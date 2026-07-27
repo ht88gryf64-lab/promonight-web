@@ -27,116 +27,17 @@
 import { test, mock, beforeEach } from 'node:test';
 import assert from 'node:assert';
 import { Timestamp } from 'firebase-admin/firestore';
+import {
+  coll,
+  fakeDb,
+  lastWrite,
+  resetFirestore,
+  state,
+  type Data,
+} from './support/fake-firestore';
 
-// ── fake Firestore ──────────────────────────────────────────────────────────
-// Supports the exact surface subscribers.ts uses: collection().doc(),
-// runTransaction with tx.get/set/update, and where().limit().get() for the
-// token lookups. Writes are applied immediately rather than buffered to a
-// commit; upsertSubscriber does a single read at the top of the transaction and
-// never reads back, so the difference is not observable here.
-
-type Data = Record<string, unknown>;
-type WriteCall = { op: 'set' | 'update'; collection: string; doc: string; data: Data };
-type DocRef = {
-  __collection: string;
-  __id: string;
-  id: string;
-  update(data: Data): Promise<void>;
-};
-
-let store: Map<string, Map<string, Data>>;
-let writes: WriteCall[];
-
-function coll(name: string): Map<string, Data> {
-  let c = store.get(name);
-  if (!c) {
-    c = new Map();
-    store.set(name, c);
-  }
-  return c;
-}
-
-function record(op: 'set' | 'update', collection: string, doc: string, data: Data): void {
-  writes.push({ op, collection, doc, data });
-}
-
-function applyWrite(op: 'set' | 'update', collection: string, id: string, data: Data): void {
-  const c = coll(collection);
-  c.set(id, op === 'set' ? { ...data } : { ...(c.get(id) ?? {}), ...data });
-  record(op, collection, id, data);
-}
-
-function makeRef(collection: string, id: string): DocRef {
-  return {
-    __collection: collection,
-    __id: id,
-    id,
-    async update(data: Data) {
-      applyWrite('update', collection, id, data);
-    },
-  };
-}
-
-function snapFor(collection: string, id: string) {
-  const data = coll(collection).get(id);
-  return {
-    id,
-    exists: data !== undefined,
-    data: () => data,
-    ref: makeRef(collection, id),
-  };
-}
-
-function makeQuery(collection: string, field: string, value: unknown) {
-  let cap = Infinity;
-  const q = {
-    limit(n: number) {
-      cap = n;
-      return q;
-    },
-    async get() {
-      const docs = [...coll(collection).entries()]
-        .filter(([, d]) => d[field] === value)
-        .slice(0, cap)
-        .map(([id]) => snapFor(collection, id));
-      return { empty: docs.length === 0, docs };
-    },
-  };
-  return q;
-}
-
-const fakeDb = {
-  collection(name: string) {
-    return {
-      doc(id: string) {
-        return makeRef(name, id);
-      },
-      where(field: string, _op: string, value: unknown) {
-        return makeQuery(name, field, value);
-      },
-    };
-  },
-  async runTransaction<T>(fn: (tx: FakeTx) => Promise<T>): Promise<T> {
-    const tx: FakeTx = {
-      async get(ref: DocRef) {
-        return snapFor(ref.__collection, ref.__id);
-      },
-      set(ref: DocRef, data: Data) {
-        applyWrite('set', ref.__collection, ref.__id, data);
-      },
-      update(ref: DocRef, data: Data) {
-        applyWrite('update', ref.__collection, ref.__id, data);
-      },
-    };
-    return fn(tx);
-  },
-};
-
-type FakeTx = {
-  get(ref: DocRef): Promise<ReturnType<typeof snapFor>>;
-  set(ref: DocRef, data: Data): void;
-  update(ref: DocRef, data: Data): void;
-};
+// The Firestore double lives in ./support/fake-firestore.ts because the
+// subscribe-route test needs the same one.
 
 mock.module('server-only', { namedExports: {} });
 mock.module(new URL('../firebase.ts', import.meta.url).href, { namedExports: { db: fakeDb } });
@@ -166,16 +67,15 @@ async function seed(overrides: Data): Promise<string> {
     source: 'web_team_page',
     confirmToken: SEEDED_CONFIRM,
     manageToken: SEEDED_MANAGE,
+    // The default fixture is a record whose confirmation link WAS delivered,
+    // since that is the ordinary post-signup state. Cases that need the
+    // undelivered state override this to null.
+    confirmationSentAt: Timestamp.fromMillis(Date.now() - 120_000),
     updatedAt: OUTSIDE_COOLDOWN(),
     ...overrides,
   });
-  writes = [];
+  state.writes = [];
   return id;
-}
-
-function lastWrite(): WriteCall {
-  assert.ok(writes.length > 0, 'expected at least one write');
-  return writes[writes.length - 1];
 }
 
 function stored(id: string): Data {
@@ -185,8 +85,7 @@ function stored(id: string): Data {
 }
 
 beforeEach(() => {
-  store = new Map();
-  writes = [];
+  resetFirestore();
 });
 
 // ── the fix: suppression path ───────────────────────────────────────────────
@@ -394,6 +293,134 @@ test('submitted teams that sanitize away to nothing: no growth, still a resend',
   assert.notStrictEqual(r.confirmToken, SEEDED_CONFIRM);
   assert.deepStrictEqual(r.teams, ['twins']);
 });
+
+// ── Finding 2: suppression requires a DELIVERED link, not just a token ──────
+
+test('pending + adds a slug + confirmationSentAt PRESENT: suppressed', async () => {
+  // The positive control for the delivery gate. Explicit rather than relying on
+  // the fixture default, so the pairing with the next case is readable.
+  const { upsertSubscriber } = await lib();
+  await seed({ confirmationSentAt: Timestamp.fromMillis(Date.now() - 60_000) });
+
+  const r = await upsertSubscriber({ email: EMAIL, teams: ['yankees'], source: 'web_team_page' });
+
+  assert.strictEqual(r.suppressionReason, 'teams_only');
+  assert.strictEqual(r.needsConfirmation, false);
+  assert.strictEqual(r.confirmToken, SEEDED_CONFIRM);
+});
+
+test('pending + adds a slug + confirmationSentAt ABSENT: rotates and re-sends', async () => {
+  // FINDING 2 REGRESSION GUARD. A token can exist having never reached the user,
+  // because sendEmail returns {ok:false} instead of throwing on a missing API
+  // key, a Resend non-2xx, or a timeout. Suppressing on token-existence stranded
+  // that subscriber permanently, since no teams-adding submit would ever
+  // re-send. This must fail against the pre-Finding-2 head.
+  const { upsertSubscriber } = await lib();
+  const id = await seed({ confirmationSentAt: null });
+
+  const r = await upsertSubscriber({ email: EMAIL, teams: ['yankees'], source: 'web_team_page' });
+
+  assert.strictEqual(r.suppressionReason, null, 'an undelivered link must not suppress');
+  assert.strictEqual(r.needsConfirmation, true, 'the user must get a real email');
+  assert.notStrictEqual(r.confirmToken, SEEDED_CONFIRM, 'token rotates');
+  assert.deepStrictEqual(r.teams, ['twins', 'yankees'], 'teams still merge');
+  assert.strictEqual(lastWrite().data.confirmToken, r.confirmToken);
+  assert.strictEqual(stored(id).confirmToken, r.confirmToken);
+});
+
+test('records predating confirmationSentAt (field missing) fall to the resend path', async () => {
+  const { upsertSubscriber } = await lib();
+  const id = await seed({});
+  const d = coll('subscribers').get(id) as Data;
+  delete d.confirmationSentAt;
+
+  const r = await upsertSubscriber({ email: EMAIL, teams: ['yankees'], source: 'web_team_page' });
+
+  assert.strictEqual(r.suppressionReason, null);
+  assert.strictEqual(r.needsConfirmation, true);
+});
+
+test('a rotate clears confirmationSentAt so a stale stamp cannot suppress later', async () => {
+  // Without this the invariant breaks: rotate mints an undelivered token, and if
+  // that send then fails the OLD stamp would still be sitting on the doc, so the
+  // next teams-adding submit would suppress against a link nobody received.
+  const { upsertSubscriber } = await lib();
+  const id = await seed({});
+
+  // A no-growth submit takes the resend path and rotates.
+  const r = await upsertSubscriber({ email: EMAIL, teams: ['twins'], source: 'web_team_page' });
+  assert.strictEqual(r.suppressionReason, null);
+
+  assert.strictEqual(lastWrite().data.confirmationSentAt, null, 'WRITE must clear the stamp');
+  assert.strictEqual(stored(id).confirmationSentAt, null);
+
+  // And the follow-up teams-adding submit must therefore re-send, not suppress.
+  const r2 = await upsertSubscriber({ email: EMAIL, teams: ['yankees'], source: 'web_team_page' });
+  assert.strictEqual(r2.suppressionReason, null, 'no stale stamp to suppress on');
+  assert.strictEqual(r2.needsConfirmation, true);
+});
+
+test('a suppressing update does NOT clear confirmationSentAt', async () => {
+  const { upsertSubscriber } = await lib();
+  const stamp = Timestamp.fromMillis(Date.now() - 60_000);
+  const id = await seed({ confirmationSentAt: stamp });
+
+  const r = await upsertSubscriber({ email: EMAIL, teams: ['yankees'], source: 'web_team_page' });
+
+  assert.strictEqual(r.suppressionReason, 'teams_only');
+  assert.ok(!('confirmationSentAt' in lastWrite().data), 'stamp must be left alone');
+  assert.strictEqual(stored(id).confirmationSentAt, stamp);
+});
+
+test('markConfirmationSent writes exactly one field and never throws', async () => {
+  const { markConfirmationSent, subscriberDocId } = await lib();
+  const id = await seed({ confirmationSentAt: null });
+
+  await markConfirmationSent(id);
+
+  const w = lastWrite();
+  assert.strictEqual(w.op, 'update');
+  assert.strictEqual(w.doc, subscriberDocId(EMAIL));
+  assert.deepStrictEqual(
+    Object.keys(w.data),
+    ['confirmationSentAt'],
+    'targeted single-field update, never a read-modify-write',
+  );
+  assert.ok(stored(id).confirmationSentAt != null);
+
+  // A write failure must be swallowed: the signup already succeeded.
+  state.failNextUpdate = new Error('firestore unavailable');
+  await assert.doesNotReject(() => markConfirmationSent(id));
+});
+
+// ── Finding 1: the guard matches the resolver ───────────────────────────────
+
+// Non-empty strings that findByToken would refuse to even query for. The old
+// length > 0 guard accepted every one of these, preserved them, and suppressed
+// the email, leaving a record that could never confirm. Must fail against the
+// pre-Finding-1 head.
+for (const [label, badToken] of [
+  ['whitespace-only', '                    '],
+  ['under 16 chars', 'tooShort'],
+  ['character outside the alphabet', 'has.a.dot.in.it.here'],
+  ['over 128 chars', 'a'.repeat(129)],
+] as const) {
+  test(`pending + adds a slug + ${label} confirmToken: rotates and sends`, async () => {
+    const { upsertSubscriber, confirmSubscriberByToken } = await lib();
+    const id = await seed({ confirmToken: badToken });
+
+    const r = await upsertSubscriber({ email: EMAIL, teams: ['yankees'], source: 'web_team_page' });
+
+    assert.strictEqual(r.suppressionReason, null, 'an unresolvable token must not be preserved');
+    assert.strictEqual(r.needsConfirmation, true);
+    assert.notStrictEqual(r.confirmToken, badToken);
+    assert.strictEqual(stored(id).confirmToken, r.confirmToken);
+
+    // The replacement must be one the resolver actually accepts.
+    const found = await confirmSubscriberByToken(r.confirmToken);
+    assert.strictEqual(found.found, true, 'the minted token must resolve');
+  });
+}
 
 test('merge truncated at MAX_TEAMS so length does not grow: still a resend', async () => {
   // Locks in the Phase A point B reasoning: the length comparison asks whether
