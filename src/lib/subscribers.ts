@@ -265,11 +265,20 @@ export async function upsertSubscriber(
     // sha256(normalizeEmail(email)), so a record reached by this lookup is by
     // construction the same address that was submitted.
     //
-    // Both suppressors require a usable stored token. Preserving a missing or
-    // empty one while skipping the email would strand the subscriber with no
-    // way to confirm, so the guard is shared rather than duplicated.
+    // Both suppressors require a usable stored token. Preserving an unusable one
+    // while skipping the email would strand the subscriber with no way to
+    // confirm, so the guard is shared rather than duplicated.
+    //
+    // "Usable" is deliberately TOKEN_RE, the exact predicate findByToken applies
+    // before it will even query. A weaker check (length > 0) would accept
+    // non-empty strings that can never resolve, e.g. whitespace-only, shorter
+    // than 16, or carrying a character outside the token alphabet. Nothing in
+    // this module writes such a value, since newToken() is always 32 base64url
+    // chars, but a doc edited by hand or by a future migration could hold one,
+    // and preserving it would convert a self-healing state into a permanent one.
+    // TOKEN_RE is declared below; its TDZ is long resolved by call time.
     const hasUsableToken =
-      typeof data.confirmToken === 'string' && data.confirmToken.length > 0;
+      typeof data.confirmToken === 'string' && TOKEN_RE.test(data.confirmToken);
 
     // 'cooldown': we just sent a confirmation to this address, so a rapid
     // re-submit must not be usable to bomb it.
