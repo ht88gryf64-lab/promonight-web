@@ -90,13 +90,18 @@ test('a successful send stamps confirmationSentAt with a targeted write', async 
   assert.strictEqual(sendCalls.length, 1, 'exactly one confirmation email');
   assert.ok(subscriberDoc().confirmationSentAt != null, 'delivery stamped');
 
-  const stamp = writesTo('subscribers').filter((w) => 'confirmationSentAt' in w.data).pop();
+  const stamp = writesTo('subscribers').filter((w) => w.data.confirmationSentAt != null).pop();
   assert.ok(stamp, 'expected a stamp write');
   assert.strictEqual(stamp.op, 'update');
   assert.deepStrictEqual(
-    Object.keys(stamp.data),
-    ['confirmationSentAt'],
-    'targeted single-field update so it cannot clobber a concurrent teams merge',
+    Object.keys(stamp.data).sort(),
+    ['confirmationSentAt', 'confirmationSentFor'],
+    'the delivery pair, written together, and still targeted so it cannot clobber a teams merge',
+  );
+  assert.strictEqual(
+    stamp.data.confirmationSentFor,
+    subscriberDoc().confirmToken,
+    'the stamp names the token that was actually sent',
   );
 });
 

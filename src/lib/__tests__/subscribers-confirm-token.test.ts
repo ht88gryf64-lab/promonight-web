@@ -68,9 +68,12 @@ async function seed(overrides: Data): Promise<string> {
     confirmToken: SEEDED_CONFIRM,
     manageToken: SEEDED_MANAGE,
     // The default fixture is a record whose confirmation link WAS delivered,
-    // since that is the ordinary post-signup state. Cases that need the
-    // undelivered state override this to null.
+    // since that is the ordinary post-signup state. The pair must agree: the
+    // stamp vouches for the token named in confirmationSentFor, so it has to be
+    // the seeded confirmToken or the gate correctly refuses to suppress. Cases
+    // that need the undelivered state override both to null.
     confirmationSentAt: Timestamp.fromMillis(Date.now() - 120_000),
+    confirmationSentFor: SEEDED_CONFIRM,
     updatedAt: OUTSIDE_COOLDOWN(),
     ...overrides,
   });
@@ -351,8 +354,12 @@ test('a rotate clears confirmationSentAt so a stale stamp cannot suppress later'
   const r = await upsertSubscriber({ email: EMAIL, teams: ['twins'], source: 'web_team_page' });
   assert.strictEqual(r.suppressionReason, null);
 
+  // Both halves, together. If a rotate cleared only one, the gate would read a
+  // half-cleared marker and could suppress against an undelivered token.
   assert.strictEqual(lastWrite().data.confirmationSentAt, null, 'WRITE must clear the stamp');
+  assert.strictEqual(lastWrite().data.confirmationSentFor, null, 'and the token it named');
   assert.strictEqual(stored(id).confirmationSentAt, null);
+  assert.strictEqual(stored(id).confirmationSentFor, null);
 
   // And the follow-up teams-adding submit must therefore re-send, not suppress.
   const r2 = await upsertSubscriber({ email: EMAIL, teams: ['yankees'], source: 'web_team_page' });
@@ -372,25 +379,92 @@ test('a suppressing update does NOT clear confirmationSentAt', async () => {
   assert.strictEqual(stored(id).confirmationSentAt, stamp);
 });
 
-test('markConfirmationSent writes exactly one field and never throws', async () => {
+test('markConfirmationSent writes the delivery pair together and never throws', async () => {
   const { markConfirmationSent, subscriberDocId } = await lib();
-  const id = await seed({ confirmationSentAt: null });
+  const id = await seed({ confirmationSentAt: null, confirmationSentFor: null });
 
-  await markConfirmationSent(id);
+  await markConfirmationSent(id, SEEDED_CONFIRM);
 
   const w = lastWrite();
   assert.strictEqual(w.op, 'update');
   assert.strictEqual(w.doc, subscriberDocId(EMAIL));
   assert.deepStrictEqual(
-    Object.keys(w.data),
-    ['confirmationSentAt'],
-    'targeted single-field update, never a read-modify-write',
+    Object.keys(w.data).sort(),
+    ['confirmationSentAt', 'confirmationSentFor'],
+    'the pair is written as one unit, and still no read-modify-write',
   );
   assert.ok(stored(id).confirmationSentAt != null);
+  assert.strictEqual(stored(id).confirmationSentFor, SEEDED_CONFIRM);
 
   // A write failure must be swallowed: the signup already succeeded.
   state.failNextUpdate = new Error('firestore unavailable');
-  await assert.doesNotReject(() => markConfirmationSent(id));
+  await assert.doesNotReject(() => markConfirmationSent(id, SEEDED_CONFIRM));
+});
+
+// ── the gate is token-scoped, not merely time-scoped ────────────────────────
+
+test('stamp naming the CURRENT token suppresses as intended', async () => {
+  const { upsertSubscriber } = await lib();
+  await seed({
+    confirmationSentAt: Timestamp.fromMillis(Date.now() - 60_000),
+    confirmationSentFor: SEEDED_CONFIRM,
+  });
+
+  const r = await upsertSubscriber({ email: EMAIL, teams: ['yankees'], source: 'web_team_page' });
+
+  assert.strictEqual(r.suppressionReason, 'teams_only');
+  assert.strictEqual(r.confirmToken, SEEDED_CONFIRM);
+});
+
+test('stamp naming a STALE token rotates and sends', async () => {
+  // A timestamp alone proves only that some link went out once, not that the
+  // link for the token currently on the record did.
+  const { upsertSubscriber } = await lib();
+  const id = await seed({
+    confirmationSentAt: Timestamp.fromMillis(Date.now() - 60_000),
+    confirmationSentFor: 'aSupersededTokenValue0123456789ab',
+  });
+
+  const r = await upsertSubscriber({ email: EMAIL, teams: ['yankees'], source: 'web_team_page' });
+
+  assert.strictEqual(r.suppressionReason, null, 'the stamp does not vouch for this token');
+  assert.strictEqual(r.needsConfirmation, true);
+  assert.notStrictEqual(r.confirmToken, SEEDED_CONFIRM);
+  assert.strictEqual(stored(id).confirmToken, r.confirmToken);
+});
+
+test('THE LATE-STAMP RACE: a stamp for a superseded token must not suppress', async () => {
+  // Request A rotates to tokenA and its send succeeds, but the stamp is a second
+  // write issued after the send resolves. While that send is in flight, request
+  // B adds a team, sees no delivery marker, rotates to tokenB, and ITS send
+  // fails so it never stamps. A's stamp then lands late, vouching for tokenA,
+  // which is no longer the token on the record. A time-only gate reads that as
+  // "delivered" and strands the subscriber holding the undelivered tokenB.
+  const { upsertSubscriber, markConfirmationSent } = await lib();
+  const id = await seed({ confirmationSentAt: null, confirmationSentFor: null });
+
+  const a = await upsertSubscriber({ email: EMAIL, teams: ['twins'], source: 'web_team_page' });
+  const tokenA = a.confirmToken;
+  assert.strictEqual(a.suppressionReason, null, 'A rotates');
+
+  const b = await upsertSubscriber({ email: EMAIL, teams: ['yankees'], source: 'web_team_page' });
+  const tokenB = b.confirmToken;
+  assert.strictEqual(b.suppressionReason, null, 'B rotates, nothing delivered yet');
+  assert.notStrictEqual(tokenB, tokenA);
+
+  // A's send succeeded, so A stamps, late, for the token IT sent.
+  await markConfirmationSent(id, tokenA);
+  assert.strictEqual(stored(id).confirmToken, tokenB, 'tokenB is what the record holds');
+
+  const c = await upsertSubscriber({ email: EMAIL, teams: ['red-sox'], source: 'web_team_page' });
+
+  assert.strictEqual(
+    c.suppressionReason,
+    null,
+    'tokenB was never delivered, so this must not suppress',
+  );
+  assert.strictEqual(c.needsConfirmation, true);
+  assert.notStrictEqual(c.confirmToken, tokenB, 'and the dead token is replaced');
 });
 
 // ── Finding 1: the guard matches the resolver ───────────────────────────────
