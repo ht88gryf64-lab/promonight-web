@@ -68,6 +68,20 @@ const BUCKET_SHAPE =
   'write-contention headroom: one document per day would put every write on a ' +
   'single Firestore document, whose sustained limit is about 1 write per second.';
 
+const SPECULATION_NOTE =
+  'Browser and intermediary speculative preloads (sec-purpose, purpose, x-moz: ' +
+  'Chrome and Edge omnibox preloading, Google SERP prefetch, Firefox link ' +
+  'prefetch) are EXCLUDED from human_document and human_soft_nav, the two buckets ' +
+  'that form the GA4 comparator. With a browser user agent they are counted as ' +
+  'human_prefetch instead, so they remain visible rather than dropped. GA4 does ' +
+  'not count a pure prefetch either, because the browser fetches the bytes ' +
+  'without executing any JavaScript, so the counter and GA4 agree on excluding ' +
+  'it from the pageview comparison. ONE CAVEAT: a Chrome PRERENDER ' +
+  '(sec-purpose: prefetch;prerender) does execute JavaScript in a hidden ' +
+  'document, so it can fire a GA4 page_view while the counter files it as ' +
+  'human_prefetch. Treat prerender as a known small source of GA4 running above ' +
+  'the counter, not as a counter defect.';
+
 const SAMPLING_NOTE =
   'The counter is FULL RATE with no sampling on any class. The only sampled path ' +
   'is the unknownUserAgents diagnostic collection, at 1 percent of unknown-class ' +
@@ -131,6 +145,7 @@ async function main() {
     quoteAs: QUOTE_AS,
     divergenceFromLegacyDetectBot: DIVERGENCE_NOTE,
     bucketShape: BUCKET_SHAPE,
+    speculationNote: SPECULATION_NOTE,
     samplingNote: SAMPLING_NOTE,
     knownGaps: KNOWN_GAPS,
     classifierVersion: CLASSIFIER_VERSION,
