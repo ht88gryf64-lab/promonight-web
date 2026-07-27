@@ -273,6 +273,15 @@ export async function upsertSubscriber(
 
     // 'cooldown': we just sent a confirmation to this address, so a rapid
     // re-submit must not be usable to bomb it.
+    //
+    // KNOWN ISSUE (predates the teams_only fix, deliberately left alone for
+    // scope discipline): this cooldown applies to unsubscribed records too, so
+    // an unsubscribe followed by a resubscribe within 30 seconds resurrects the
+    // record to pending but sends NO confirmation email. The user sees a success
+    // state and never receives a link. Rare, since it needs a resubscribe inside
+    // the cooldown window, and not urgent, but it should not disappear quietly.
+    // Narrowing the cooldown to pending-only is a separate change with its own
+    // reasoning about confirmation-email bombing of unsubscribed addresses.
     const coolingDown = withinResendCooldown(data.updatedAt) && hasUsableToken;
 
     // 'teams_only': a PENDING record whose merged team set actually grew. That
