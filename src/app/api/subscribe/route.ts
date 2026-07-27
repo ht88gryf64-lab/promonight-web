@@ -4,11 +4,14 @@
  * Combined capture-form submit. Creates or upserts a single `subscribers`
  * record (one per email, keyed by email hash). An empty `teams` array is a
  * valid generic signup; a non-empty array is a personalized digest. On a
- * duplicate email we update teams and re-arm confirmation rather than erroring.
+ * duplicate email we update teams rather than erroring.
  *
- * On a new or re-armed (pending) record it sends the single-opt-in confirmation
- * email; an already-confirmed re-submit merges teams silently. Per-IP rate
- * limited (Firestore-backed) on top of the per-email confirmation cooldown.
+ * A new record always gets the confirmation email. A pending re-submit gets one
+ * only when it is a genuine resend request: a submit that merely ADDS teams
+ * keeps the token already in the user's inbox and sends nothing, as does one
+ * inside the per-email cooldown. An unsubscribed re-submit always re-confirms,
+ * and an already-confirmed re-submit merges teams silently. Per-IP rate limited
+ * (Firestore-backed) on top of the per-email confirmation cooldown.
  */
 
 import { NextResponse } from 'next/server';
@@ -82,12 +85,12 @@ export async function POST(request: Request) {
   try {
     const result = await upsertSubscriber({ email: body.email, teams, source, geo });
 
-    // Single opt-in: send the confirmation email ONLY when a (re)confirmation is
-    // due, i.e. the resulting status is pending (new signup, or a pending /
-    // unsubscribed record re-armed). An already-confirmed subscriber re-submitting
-    // via /follow has needsConfirmation=false, so their teams merge silently with
-    // no email. Failures are logged but never fail the signup, the record exists
-    // and a re-submit re-triggers.
+    // Send the confirmation email ONLY when upsertSubscriber says one is due.
+    // needsConfirmation is false for an already-confirmed re-submit, and for the
+    // two pending suppressors (see suppressionReason), so neither un-confirms a
+    // subscriber nor rotates a token out from under a link already emailed.
+    // Failures are logged but never fail the signup, the record exists and a
+    // re-submit re-triggers.
     if (result.needsConfirmation) {
       try {
         await sendConfirmationEmail({
@@ -98,6 +101,15 @@ export async function POST(request: Request) {
       } catch (e) {
         console.error('[api:subscribe] confirmation send threw', e);
       }
+    } else if (result.suppressionReason) {
+      // Info level so "no duplicate confirmations are firing" stays verifiable
+      // in the Vercel logs without an analytics dependency. teams_only is the
+      // expected steady state for a surface that adds teams after signup;
+      // cooldown is a rapid repeat submit of the same address. No email is
+      // logged: the reason and status are the whole signal.
+      console.info(
+        `[api:subscribe] confirmation suppressed reason=${result.suppressionReason} status=${result.status}`,
+      );
     }
 
     return NextResponse.json({

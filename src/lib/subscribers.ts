@@ -156,14 +156,27 @@ export interface UpsertSubscriberResult {
   // caller doesn't need a second read.
   confirmToken: string;
   manageToken: string;
+  // Why a pending/unsubscribed re-submit did NOT send a confirmation, so the
+  // caller can log the two suppressors apart. Set on the pending branch only:
+  // 'cooldown' is a repeat submit of the same address moments ago,
+  // 'teams_only' is a pending record that just gained a team (a preferences
+  // update, not a request for a new link). null on that branch when a
+  // confirmation IS sent; absent on the new-record and confirmed branches,
+  // which never suppress.
+  suppressionReason?: 'cooldown' | 'teams_only' | null;
 }
 
 /**
  * Create or update a subscriber from a capture-form submit.
  *
  * - New email → pending record with fresh tokens.
- * - Existing non-confirmed (pending/unsubscribed) → teams merged, status reset
- *   to pending, confirmToken regenerated (re-trigger confirmation).
+ * - Existing pending → teams merged. The confirmToken is preserved (and no
+ *   confirmation resent) when the submit only ADDS teams, or when it lands
+ *   inside the resend cooldown; otherwise it rotates and a fresh confirmation
+ *   goes out. See the suppression block below for why.
+ * - Existing unsubscribed → teams merged, status reset to pending,
+ *   confirmToken regenerated (re-trigger confirmation). A resubmit here is a
+ *   deliberate resubscribe, so it always re-confirms.
  * - Existing confirmed → teams merged in place, still confirmed, no new
  *   confirmation.
  *
@@ -242,15 +255,51 @@ export async function upsertSubscriber(
       };
     }
 
-    // pending or unsubscribed → re-arm confirmation, unless we just sent one to
-    // this address moments ago. Within the cooldown, reuse the existing (still
-    // valid) confirm token and suppress the resend so a rapid re-submit can't be
-    // used to bomb the address; outside it, rotate the token and resend.
-    const coolingDown =
-      withinResendCooldown(data.updatedAt) &&
-      typeof data.confirmToken === 'string' &&
-      data.confirmToken.length > 0;
-    const confirmToken = coolingDown ? (data.confirmToken as string) : newToken();
+    // pending or unsubscribed → re-arm confirmation, unless one of the two
+    // suppressors below applies. Rotating confirmToken orphans the link already
+    // sitting in the user's inbox, because confirmSubscriberByToken resolves a
+    // record BY confirmToken (see findByToken), so every suppressor must also
+    // preserve the existing token rather than mint a new one.
+    //
+    // There is deliberately no email-equality check here: the doc id is
+    // sha256(normalizeEmail(email)), so a record reached by this lookup is by
+    // construction the same address that was submitted.
+    //
+    // Both suppressors require a usable stored token. Preserving a missing or
+    // empty one while skipping the email would strand the subscriber with no
+    // way to confirm, so the guard is shared rather than duplicated.
+    const hasUsableToken =
+      typeof data.confirmToken === 'string' && data.confirmToken.length > 0;
+
+    // 'cooldown': we just sent a confirmation to this address, so a rapid
+    // re-submit must not be usable to bomb it.
+    const coolingDown = withinResendCooldown(data.updatedAt) && hasUsableToken;
+
+    // 'teams_only': a PENDING record whose merged team set actually grew. That
+    // is a preferences update (a capture surface adding a team after signup),
+    // not a request for a new confirmation link. Comparing the sanitized arrays
+    // rather than the submitted one means a re-submit carrying only teams the
+    // record already has, or an empty array, does NOT qualify and stays on the
+    // resend path. At the MAX_TEAMS ceiling the merge cannot grow, so it
+    // correctly falls through to resend as well.
+    //
+    // Status is tested for 'pending' EXPLICITLY, not for "not confirmed": this
+    // branch also catches unsubscribed, and a resubmit there is a deliberate
+    // resubscribe that must resurrect with a fresh token and a real email.
+    const teamsOnlyUpdate =
+      data.status === 'pending' && hasUsableToken && mergedTeams.length > existingTeams.length;
+
+    // teams_only is reported ahead of cooldown when both hold, so a rapid
+    // add-a-team submit is attributed to the reason that distinguishes it.
+    // Behavior is identical either way; only the reported label differs.
+    const suppressionReason: 'cooldown' | 'teams_only' | null = teamsOnlyUpdate
+      ? 'teams_only'
+      : coolingDown
+        ? 'cooldown'
+        : null;
+
+    // Safe cast: both suppressors require hasUsableToken.
+    const confirmToken = suppressionReason ? (data.confirmToken as string) : newToken();
     tx.update(ref, {
       teams: mergedTeams,
       status: 'pending',
@@ -266,9 +315,10 @@ export async function upsertSubscriber(
       status: 'pending',
       teams: mergedTeams,
       created: false,
-      needsConfirmation: !coolingDown,
+      needsConfirmation: suppressionReason === null,
       confirmToken,
       manageToken,
+      suppressionReason,
     };
   });
 }
