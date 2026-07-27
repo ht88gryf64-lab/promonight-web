@@ -12,10 +12,21 @@
  * inside the per-email cooldown. An unsubscribed re-submit always re-confirms,
  * and an already-confirmed re-submit merges teams silently. Per-IP rate limited
  * (Firestore-backed) on top of the per-email confirmation cooldown.
+ *
+ * Suppressing a resend requires that a link was actually DELIVERED, tracked by
+ * confirmationSentAt, which this route stamps in a second write once the sender
+ * reports success. A failed or skipped send leaves it unset so the next submit
+ * re-sends rather than stranding the subscriber.
  */
 
 import { NextResponse } from 'next/server';
-import { isValidEmail, sanitizeTeams, upsertSubscriber, type SubscriberGeo } from '@/lib/subscribers';
+import {
+  isValidEmail,
+  markConfirmationSent,
+  sanitizeTeams,
+  upsertSubscriber,
+  type SubscriberGeo,
+} from '@/lib/subscribers';
 import { coerceCaptureSurface } from '@/lib/follow-surface';
 import { sendConfirmationEmail } from '@/lib/email';
 import { checkSubscribeRateLimit, clientIp } from '@/lib/rate-limit';
@@ -93,11 +104,27 @@ export async function POST(request: Request) {
     // re-submit re-triggers.
     if (result.needsConfirmation) {
       try {
-        await sendConfirmationEmail({
+        const sent = await sendConfirmationEmail({
           email: result.email,
           confirmToken: result.confirmToken,
           manageToken: result.manageToken,
         });
+        if (sent.ok) {
+          // Only a DELIVERED link may suppress a later teams-adding submit, so
+          // the stamp is the gate on that suppressor. Never throws.
+          await markConfirmationSent(result.id);
+        } else {
+          // sendEmail returns {ok:false} rather than throwing on a missing API
+          // key, a Resend non-2xx or a timeout, so without this the failure is
+          // invisible: the subscriber sits pending holding a link that was never
+          // delivered. confirmationSentAt stays unset, so their next submit
+          // rotates and re-sends.
+          console.error(
+            `[api:subscribe] confirmation send failed reason=${
+              sent.skipped ? 'skipped_no_api_key' : (sent.error ?? 'unknown')
+            }`,
+          );
+        }
       } catch (e) {
         console.error('[api:subscribe] confirmation send threw', e);
       }
