@@ -7,6 +7,19 @@
 // asserts on what was WRITTEN to the doc, not only on the returned object.
 // Several cases return near-identical shapes while writing different tokens.
 //
+// READ THIS BEFORE TRUSTING THE COUNT. Breadth here is not depth. Only TWO of
+// these cases encode the bug and fail against the pre-fix module for a
+// substantive reason:
+//   1. "pending + adds a slug + outside cooldown" fails on the rotated token.
+//   2. "a token preserved through a teams-only update still confirms" fails on
+//      the dead link.
+// The other nine assert behavior that did NOT change. They fail against the
+// pre-fix module only because suppressionReason did not exist yet; their
+// behavioral assertions pass on both versions. That is correct for a regression
+// guard, but it means a green run of the other nine is evidence that nothing
+// drifted, not evidence that the fix works. If you are changing the suppression
+// logic, the two above are the ones that have to keep you honest.
+//
 // firebase + server-only are module-mocked, same pattern as
 // src/lib/__tests__/tombstone-filter.test.ts. Run with:
 //   node --import tsx --experimental-test-module-mocks --test <this file>
