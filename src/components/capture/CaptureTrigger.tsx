@@ -40,19 +40,35 @@ interface CaptureTriggerProps {
 // never fire until they happened to tap again.
 const TICK_MS = 5_000;
 
+// NO BOT FILTERING, DELIBERATELY DEFERRED. The repo has a classifyTraffic
+// classifier, but it lives in middleware.ts and api/log-request and is not
+// reachable from client code, so using it here would mean new plumbing.
+//
+// More importantly, filtering now would be guessing at a problem this phase
+// exists to reveal. The engine already demands 45 seconds of VISIBLE engaged
+// time plus several discrete gesture bursts, which excludes essentially every
+// crawler; what it does not exclude is a scripted browser that clicks four game
+// cells over 45 seconds. If that traffic is material it will show up as an
+// implausibly high shown rate in the Phase 2 read, and an implausible rate is
+// itself the signal to act on. Read the numbers first, then filter if they
+// demand it. The absence of filtering here is a decision, not an oversight.
+
 export function CaptureTrigger({ pageType, teamId }: CaptureTriggerProps) {
   const pathname = usePathname();
 
   // Everything the engine needs lives in refs, not state: this component never
   // re-renders, and nothing it does should ever cause a render.
   //
-  // All three are keyed by PATHNAME rather than being plain booleans. The App
-  // Router reuses this component instance when navigating between two pages of
-  // the same route segment, say one team page to another, so a boolean set on
-  // the first page would still be set on the second: a page that had already
-  // fired would silently stop the next page from ever reporting. Keying on the
-  // path resets them per page while still surviving the effect re-running for
-  // the SAME path, which is what StrictMode does in development.
+  // All three are keyed by PATHNAME rather than being plain booleans, and that
+  // is load-bearing rather than tidiness. The App Router reuses this component
+  // instance when navigating between two pages of the SAME route segment, say
+  // one team page to another, so a boolean set on the first page would still be
+  // set on the second. Every second and subsequent team page in a session would
+  // then have gone unreported, and the fire rate would have read low for a
+  // reason that had nothing to do with the thresholds, which is precisely the
+  // number this phase exists to measure. Keying on the path resets them per
+  // page while still surviving the effect re-running for the SAME path, which
+  // is what StrictMode does in development.
   const countedPathRef = useRef<string | null>(null);
   const firedPathRef = useRef<string | null>(null);
   const suppressedPathRef = useRef<string | null>(null);
