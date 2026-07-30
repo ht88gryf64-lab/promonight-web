@@ -165,8 +165,25 @@ exactly this reasoning. A hang now surfaces as
 `{ok: false, error: 'send_timeout'}`, which `route.ts` logs at error level and
 which leaves `confirmationSentAt` unset so the next submit re-sends.
 
+**Observed historical rate: zero.** On 2026-07-30 all 25 `pending` records were
+cross-referenced against Resend's delivered-message list. Eighteen are
+resolvable and **all eighteen received a delivered confirmation, each sent
+roughly 300ms after its record was created**. They are ordinary non-clickers,
+not victims. The remaining seven are **unresolvable, not undelivered**: Resend's
+list only reaches back to 2026-07-10 16:08 UTC and backward pagination stopped
+there, and all seven predate that boundary, so they are unknown rather than
+dropped. The only observed occurrence of this bug is the one on 2026-07-30
+described above, on a test address that self-rescued by resubmitting. No
+re-send campaign was run, so no CAN-SPAM question arose.
+
+The fix is still warranted. A failure mode that is invisible in every system at
+once cannot be measured by waiting for reports of it, and the one time it fired
+it was caught only by luck. But the measured rate is zero out of eighteen
+measurable signups, so this was a latent hazard rather than an ongoing leak.
+
 **Severity: High before the fix.** Silent and unalertable, on the first-ever
-signup path, which is the least forgiving moment in the funnel.
+signup path, which is the least forgiving moment in the funnel. Rated on blast
+radius per occurrence, not on observed frequency.
 
 **Do NOT "fix" the digest sends.** `sendPersonalizedDigest`,
 `sendGenericDigest` and `sendEmptyWindowDigest` remain deliberately unbounded.
