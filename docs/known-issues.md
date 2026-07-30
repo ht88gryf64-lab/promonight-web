@@ -139,8 +139,9 @@ this document agree.
 
 ## 5. Unbounded sends on a user-facing request path
 
-**Status: fix committed on `feature/bound-confirmation-send` (`43cc5be`), not yet
-merged. Mark resolved at merge.**
+**Status: RESOLVED.** Fixed in `43cc5be`, merged to `main` in `d719ddc` on
+2026-07-30. Kept here rather than deleted, per the convention at the top of this
+file, because the incident and its reasoning are the durable part.
 
 **What happened.** On 2026-07-30 at 15:04:07 UTC a first-ever signup created its
 subscriber document and then sent nothing. No confirmation email, no Resend
