@@ -329,8 +329,9 @@ export async function upsertSubscriber(
     // 'cooldown': we just sent a confirmation to this address, so a rapid
     // re-submit must not be usable to bomb it.
     //
-    // KNOWN ISSUE (predates the teams_only fix, deliberately left alone for
-    // scope discipline): this cooldown applies to unsubscribed records too, so
+    // KNOWN ISSUE, tracked as entry 4 in docs/known-issues.md (predates the
+    // teams_only fix, deliberately left alone for scope discipline): this
+    // cooldown applies to unsubscribed records too, so
     // an unsubscribe followed by a resubscribe within 30 seconds resurrects the
     // record to pending but sends NO confirmation email. The user sees a success
     // state and never receives a link. Rare, since it needs a resubscribe inside
