@@ -9,6 +9,11 @@
 // through `track()` so the canonical events start flowing immediately.
 
 import { flattenUTMsForEvent, getStoredUTMs } from './utm-capture';
+// Type-only, so there is no runtime dependency and no cycle: the capture
+// modules do not import analytics. One definition each, shared.
+import type { TriggerSignal } from './capture/gesture-counter';
+import type { SuppressionReason } from './capture/suppression';
+import type { CaptureVariant } from './capture/variant';
 import { readAttribution } from './attribution';
 import type { CaptureSurface } from './follow-surface';
 
@@ -41,6 +46,8 @@ export type AnalyticsEvent =
   | 'game_day_view'
   | 'game_tap'
   | 'away_game_expanded'
+  | 'capture_prompt_shown'
+  | 'capture_prompt_suppressed'
   | 'ad_slot_viewed'
   | 'team_starred'
   | 'team_unstarred'
@@ -536,6 +543,43 @@ export type HubToTeamClickProperties = {
   destination_url: string;
 };
 
+// ── Engagement capture trigger (Phase 1: telemetry only) ─────────────────
+// Emitted by the trigger engine before any UI exists, so the thresholds can be
+// validated against live traffic rather than guessed. `shown` means the trigger
+// FIRED, not that anything was rendered: in Phase 1 nothing is, and in Phase 2
+// the control arm still will not be. That is what makes the arms comparable.
+//
+// `surface` is the single capture-funnel surface for this feature. The page it
+// fired on is `page_type`, which is an analytics dimension rather than a stored
+// source tag, so one surface value covers every page type.
+export type CapturePromptContext = {
+  surface: 'web_engagement_capture';
+  page_type: CapturePageType;
+  // Null on aggregators, which have no page-level team. page_type carries the
+  // distinction.
+  team_id: string | null;
+  variant: CaptureVariant;
+};
+
+export type CapturePageType = 'team_page' | 'aggregator' | 'venue_page';
+
+export type CapturePromptShownProperties = CapturePromptContext & {
+  trigger_signal: TriggerSignal;
+  // Gestures, not events, for the signal that tripped. See gesture-counter.ts.
+  trigger_count: number;
+  // Engaged seconds, which excludes time spent backgrounded.
+  seconds_on_page: number;
+};
+
+export type CapturePromptSuppressedProperties = CapturePromptContext & {
+  suppression_reason: SuppressionReason;
+  // Null when suppression was decided before any threshold was crossed, which
+  // is the common case.
+  trigger_signal: TriggerSignal | null;
+  trigger_count: number;
+  seconds_on_page: number;
+};
+
 export type EventPropertiesMap = {
   page_view: PageViewProperties;
   venue_hub_click: VenueHubClickProperties;
@@ -561,6 +605,8 @@ export type EventPropertiesMap = {
   game_day_view: GameDayViewProperties;
   game_tap: GameTapProperties;
   away_game_expanded: AwayGameExpandedProperties;
+  capture_prompt_shown: CapturePromptShownProperties;
+  capture_prompt_suppressed: CapturePromptSuppressedProperties;
   ad_slot_viewed: AdSlotViewedProperties;
   team_starred: TeamStarEventProperties;
   team_unstarred: TeamStarEventProperties;
@@ -617,6 +663,47 @@ function analyticsDebugEnabled(): boolean {
   return process.env.NEXT_PUBLIC_ANALYTICS_DEBUG === 'true';
 }
 
+// ── Client-only event subscribers ────────────────────────────────────────
+// A module-level registry so a single root client component can observe every
+// tracked event without touching a single call site. The alternative, adding a
+// hook call next to each track() call, would mean editing CalendarGrid,
+// team-calendar, UpcomingPromoModal and VenueHubLink for a feature none of them
+// know about, and re-editing them for the next observer.
+//
+// CLIENT ONLY, and the guard below is what enforces it: track() early-returns
+// before this point when `window` is undefined, so a subscriber can never run
+// during SSR and can never cause a hydration divergence. Subscribers must
+// therefore register in an effect, not during render.
+//
+// Subscribers are notified AFTER the sinks, and each is isolated, because an
+// observer must never be able to break the analytics it is observing.
+
+export type AnalyticsSubscriber = (
+  eventName: AnalyticsEvent,
+  props: Record<string, unknown>,
+) => void;
+
+const subscribers = new Set<AnalyticsSubscriber>();
+
+/** Returns an unsubscribe function, so an effect cleanup is a one-liner. */
+export function subscribeToAnalytics(fn: AnalyticsSubscriber): () => void {
+  subscribers.add(fn);
+  return () => {
+    subscribers.delete(fn);
+  };
+}
+
+function notifySubscribers(eventName: AnalyticsEvent, props: Record<string, unknown>): void {
+  for (const fn of subscribers) {
+    try {
+      fn(eventName, props);
+    } catch {
+      // One bad subscriber must not stop the others, and must never surface to
+      // the user. Analytics is best effort in both directions.
+    }
+  }
+}
+
 // ── Core track() ─────────────────────────────────────────────────────────
 
 export function track<E extends AnalyticsEvent>(
@@ -658,6 +745,10 @@ export function track<E extends AnalyticsEvent>(
     // eslint-disable-next-line no-console
     console.log('[analytics]', eventName, enriched);
   }
+
+  // Last, and after both sinks, so an observer can neither delay nor prevent
+  // the events it is watching.
+  notifySubscribers(eventName, enriched);
 }
 
 // ── Legacy helpers ───────────────────────────────────────────────────────

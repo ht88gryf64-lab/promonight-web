@@ -18,6 +18,8 @@ import { ExploreCard } from './ExploreCard';
 import { JsonLd } from '@/components/json-ld';
 import { TeamPageTracker } from '@/components/analytics-events';
 import { EngagementTracker } from '@/components/analytics/EngagementTracker';
+import { CaptureTrigger } from '@/components/capture/CaptureTrigger';
+import { isCaptureTriggerEnabled } from '@/lib/capture/gate';
 import { TeamContentSections } from '@/components/team-content-sections';
 import { TeamFAQ } from '@/components/team-faq';
 import { AuthorityStats } from '@/components/authority-stats';
@@ -117,6 +119,15 @@ export function RedesignTeamPage({
         promoCount={promos.length}
       />
       <EngagementTracker teamSlug={team.id} sport={team.league} />
+      {/* Engagement capture trigger. Telemetry only: renders nothing, in this
+          phase and in the control arm of every later one. team.id is threaded
+          from here because no page-level client context holds it. Gated
+          server-side so OFF means it never enters the tree at all. NOTE this
+          whole template is behind isRedesignEnabled(), so the trigger does not
+          exist on the legacy team-page branch. */}
+      {isCaptureTriggerEnabled() && (
+        <CaptureTrigger pageType="team_page" teamId={team.id} />
+      )}
 
       {/* Chrome (BrandBar + Footer) is rendered globally by app/layout.tsx when
           the gate is on — this component renders only its content sections. */}
