@@ -15,6 +15,13 @@ export const CAPTURE_SURFACES = [
   'web_homepage',
   'web_playoffs_hub',
   'web_aggregator',
+  // The engagement-triggered capture sheet. ONE value for the whole feature:
+  // which page it fired on is an analytics dimension (page_type on the
+  // capture_prompt_* events), not a stored source tag, so team pages and
+  // aggregators share this. Nothing writes it until the sheet submits in
+  // Phase 2; it is added now so the vocabulary is in place and the analytics
+  // and subscriber sides cannot drift apart later.
+  'web_engagement_capture',
   // Fallback for entry points that can't resolve a more specific surface (the
   // global footer CTA on a route none of the above match). Never the seed for
   // a primary placement; only a safety net so a stray click still records.

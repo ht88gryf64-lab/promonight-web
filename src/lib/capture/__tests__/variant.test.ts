@@ -8,7 +8,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import { createSafeStorage, KEY_VARIANT, type StorageLike } from '../storage';
-import { resolveVariant, isCaptureVariant } from '../variant';
+import { resolveVariant, isCaptureArm } from '../variant';
 
 function memStorage(seed: Record<string, string> = {}): StorageLike {
   const map = new Map(Object.entries(seed));
@@ -91,19 +91,29 @@ test('a corrupt stored arm is replaced rather than trusted', () => {
   assert.strictEqual(raw.getItem(KEY_VARIANT), 'variant_a');
 });
 
-test('unavailable storage falls back to control without throwing', () => {
+test('a hostile store yields unassigned, NOT control', () => {
+  // Reporting these as control would silently inflate the control arm on the
+  // balance chart, and the only defence would be every future reader
+  // remembering to filter by suppression_reason first. A distinct value makes
+  // the contamination impossible rather than documented.
   const s = createSafeStorage(hostileStorage());
   assert.doesNotThrow(() => resolveVariant(s, () => 0.9));
-  assert.strictEqual(resolveVariant(s, () => 0.9), 'control');
+  assert.strictEqual(resolveVariant(s, () => 0.9), 'unassigned');
+  assert.strictEqual(resolveVariant(s, () => 0.1), 'unassigned', 'never an arm, either way');
 });
 
-test('a store that silently discards writes yields control, not a fresh arm each load', () => {
+test('absent storage yields unassigned', () => {
+  assert.strictEqual(resolveVariant(createSafeStorage(null), () => 0.9), 'unassigned');
+});
+
+test('a store that discards writes yields unassigned, not a fresh arm each load', () => {
   // Quota exhaustion is the realistic case. Without the read-back this would
-  // hand out a new arm on every page and quietly corrupt the split.
+  // hand out a new arm on every page and quietly corrupt the split. With it,
+  // the honest answer is that no durable assignment exists.
   const s = createSafeStorage(amnesiacStorage());
-  const arms = new Set<string>();
-  for (let i = 0; i < 10; i++) arms.add(resolveVariant(s, () => (i % 2 === 0 ? 0.1 : 0.9)));
-  assert.deepStrictEqual([...arms], ['control'], 'stable, never reassigning');
+  const reported = new Set<string>();
+  for (let i = 0; i < 10; i++) reported.add(resolveVariant(s, () => (i % 2 === 0 ? 0.1 : 0.9)));
+  assert.deepStrictEqual([...reported], ['unassigned'], 'stable, and never an arm');
 });
 
 test('a real coin lands both arms and roughly evenly', () => {
@@ -120,11 +130,12 @@ test('a real coin lands both arms and roughly evenly', () => {
   assert.ok(treatment > 800 && treatment < 1200, `variant_a=${treatment} outside a sane band`);
 });
 
-test('isCaptureVariant rejects anything outside the two arms', () => {
-  assert.strictEqual(isCaptureVariant('control'), true);
-  assert.strictEqual(isCaptureVariant('variant_a'), true);
-  assert.strictEqual(isCaptureVariant('variant_b'), false);
-  assert.strictEqual(isCaptureVariant(null), false);
-  assert.strictEqual(isCaptureVariant(undefined), false);
-  assert.strictEqual(isCaptureVariant(1), false);
+test('isCaptureArm accepts only the two arms, and never unassigned', () => {
+  assert.strictEqual(isCaptureArm('control'), true);
+  assert.strictEqual(isCaptureArm('variant_a'), true);
+  assert.strictEqual(isCaptureArm('unassigned'), false, 'unassigned is not an arm');
+  assert.strictEqual(isCaptureArm('variant_b'), false);
+  assert.strictEqual(isCaptureArm(null), false);
+  assert.strictEqual(isCaptureArm(undefined), false);
+  assert.strictEqual(isCaptureArm(1), false);
 });

@@ -10,6 +10,8 @@ import { isRedesignEnabled } from '@/lib/redesign';
 import { archivoHouse } from './redesign/fonts-house';
 import { RedesignAggregatorList } from './redesign/RedesignAggregatorList';
 import { FollowCTA } from './follow/FollowCTA';
+import { CaptureTrigger } from './capture/CaptureTrigger';
+import { isCaptureTriggerEnabled } from '@/lib/capture/gate';
 
 export interface AggregatorGroup {
   label: string;
@@ -139,6 +141,14 @@ function RedesignAggregatorPage({
             <AppDownloadButtons section="aggregator_cta" page={title.toLowerCase().replace(/\s+/g, '_')} variant="compact" />
           </div>
         </div>
+
+        {/* Engagement capture trigger. Telemetry only, renders nothing.
+            teamId is null here: aggregators have no page-level team, and
+            page_type carries the distinction. Redesign branch only, matching
+            where FollowCTA lives. */}
+        {isCaptureTriggerEnabled() && (
+          <CaptureTrigger pageType="aggregator" teamId={null} />
+        )}
 
         {/* Email-capture entry; tags the funnel web_aggregator. */}
         <FollowCTA surface="web_aggregator" className="mt-6" />
