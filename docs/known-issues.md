@@ -126,3 +126,52 @@ confirmation-email bombing of unsubscribed addresses.
 **Severity: Low.** It needs a resubscribe inside a 30-second window, which is
 rare, and the user recovers by submitting again. Recorded so the code comment and
 this document agree.
+
+---
+
+## 5. Unbounded sends on a user-facing request path
+
+**Status: fix committed on `feature/bound-confirmation-send` (`43cc5be`), not yet
+merged. Mark resolved at merge.**
+
+**What happened.** On 2026-07-30 at 15:04:07 UTC a first-ever signup created its
+subscriber document and then sent nothing. No confirmation email, no Resend
+message record, no error in the Vercel runtime logs, and no request log line for
+the POST at all. The visitor saw the normal success card promising an email that
+never arrived. The record sat `pending` holding a token nobody had received. It
+was only noticed because the visitor happened to resubmit two and a half minutes
+later, which took the resend path and mailed successfully.
+
+**Root cause.** `sendEmail` arms an `AbortController` only when the caller passes
+`timeoutMs` (`src/lib/email.ts:59-60`), and its own interface documents that
+callers on a user-facing request path MUST set it (`:46-49`).
+`sendConfirmationEmail` did not. The signup send was therefore unbounded, and
+`POST /api/subscribe` awaits it before returning (`route.ts:107`), so a hung
+Resend keeps the invocation alive until the platform kills it. A killed
+invocation runs no `catch`, flushes no `console.error`, writes no request log
+line and leaves no Resend record. The failure is invisible in every system at
+once, which is what made it worse than an ordinary send error.
+
+**Why it matters.** A signup that silently sends nothing is worse than one that
+fails loudly: there is no signal to alert on, nothing in Resend to reconcile
+against, and the only recovery is the visitor spontaneously trying again. The
+`confirmationSentAt` delivery gate added the same day means such a record does
+self-heal on any subsequent submit, including a teams-adding one, but nothing
+prompts the visitor to make that submit.
+
+**The fix.** Pass `timeoutMs: 8_000` from `sendConfirmationEmail`, matching
+`src/lib/cfb/notify.ts:18-20`, which already bounds the contribution notice on
+exactly this reasoning. A hang now surfaces as
+`{ok: false, error: 'send_timeout'}`, which `route.ts` logs at error level and
+which leaves `confirmationSentAt` unset so the next submit re-sends.
+
+**Severity: High before the fix.** Silent and unalertable, on the first-ever
+signup path, which is the least forgiving moment in the funnel.
+
+**Do NOT "fix" the digest sends.** `sendPersonalizedDigest`,
+`sendGenericDigest` and `sendEmptyWindowDigest` remain deliberately unbounded.
+They run only from the CRON_SECRET-gated weekly cron
+(`src/app/api/cron/weekly-digest/route.ts:78-82`, `277`, `290`, `308`), where no
+user is waiting on a response and a bounded send would abort legitimate slow
+batches. Unbounded is correct there and is the documented intent at
+`src/lib/email.ts:46-49`.
