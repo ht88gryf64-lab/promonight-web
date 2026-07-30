@@ -255,14 +255,29 @@ function SuccessCard({
     // The send did not go out. Naming the retry is only honest because a failed
     // send leaves the delivery marker unset, so a resubmit genuinely re-sends
     // rather than being swallowed by the resend cooldown.
+    //
+    // DO NOT "improve" this toward a more precise statement of what went wrong.
+    // "We could not confirm your link went out" is more literally accurate and
+    // produces worse outcomes. The dominant failure here is an 8s abort, and an
+    // abort can happen AFTER Resend accepted the message, in which case the
+    // email is already on its way. Copy that reads as failure pushes the visitor
+    // into an immediate retry, and an immediate retry rotates the token and
+    // kills the link that was about to land, so they end up with two emails and
+    // a dead one. This wording steers them to wait first and retry only if
+    // nothing arrives, which resolves cleanly whichever way the abort went.
+    // Accuracy about our internal state is worth less than steering the visitor
+    // into the sequence that works.
     return shell(
       <>
         <h2 className="rd-display mt-3 text-2xl uppercase text-rd-ink">
           You&apos;re almost in
         </h2>
         <p className="mx-auto mt-2 max-w-md font-rd text-rd-ink-soft">
-          We&apos;re still sending your confirmation link to <strong>{email}</strong>. If it
-          does not arrive in a few minutes, submit again and we will resend it.
+          Your confirmation link for <strong>{email}</strong> may take a minute to
+          arrive. If it does not, submit again and we will resend it.
+        </p>
+        <p className="mx-auto mt-4 max-w-md font-rd text-[12px] text-rd-ink-faint">
+          Check your spam folder too.
         </p>
       </>,
     );
