@@ -144,6 +144,16 @@ export class GestureCounter {
    * The first signal to reach its threshold, or null. Evaluated in precedence
    * order so a visitor who crosses two at once is attributed to the stronger
    * intent signal, which is what the Phase 2 read needs to be meaningful.
+   *
+   * INTERPRETATION CAVEAT, for whoever reads the trigger_signal chart. This
+   * resolves SIMULTANEOUS crossings by precedence, not by which threshold was
+   * crossed first, so the distribution slightly OVER-REPRESENTS
+   * away_game_expanded and under-represents game_tap. A visitor who crosses
+   * both in the same session is recorded as an away expansion regardless of
+   * order. That is deliberate: crossing order would need per-signal timestamps
+   * for a rare case, and determinism matters more than order for a chart whose
+   * question is which intent signal drives capture. Do not read the split as a
+   * clean measure of which signal fires earliest.
    */
   triggeredSignal(): TriggerSignal | null {
     const ordered: TriggerSignal[] = ['away_game_expanded', 'promo_card_tap', 'game_tap'];
