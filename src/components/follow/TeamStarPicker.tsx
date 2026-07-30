@@ -12,6 +12,17 @@ import { StarIcon } from '@/components/star-icon';
 // `onToggle`. Shared by the capture form and the preferences page so the star
 // UI stays identical in both.
 //
+// KEEP THIS COMPONENT SELECTION-AGNOSTIC. It must never read
+// useStarredTeams, localStorage, or any other source of a default selection.
+// It is shared: PreferencesForm renders it over the subscriber record, and
+// FollowForm renders it over the SIGNUP selection, whose `selected` becomes the
+// `teams` array in the POST to /api/subscribe. Seeding here would therefore
+// change what every brand-new signup enrols with on any device carrying local
+// stars, silently and everywhere at once. The engagement capture sheet will
+// reuse this same picker, which widens that blast radius rather than narrowing
+// it. Seeding belongs in the specific parent that wants it, and today that is
+// PreferencesForm alone (see resolvePickerSelection there).
+//
 // Optional geo ordering: `nearTeamIds` floats the visitor's nearest teams into
 // a "Teams near you" group at the top. It is a SOFT reorder only, shown when not
 // searching; the near teams are lifted out of their league groups so they appear

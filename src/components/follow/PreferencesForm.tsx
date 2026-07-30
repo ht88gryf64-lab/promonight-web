@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { Team } from '@/lib/types';
+import { useStarredTeamsOptional } from '@/hooks/use-starred-teams';
 import { TeamStarPicker } from './TeamStarPicker';
 
 // Token-authenticated team management. The save REPLACES the teams array with
@@ -21,6 +22,65 @@ interface PreferencesFormProps {
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
+export interface PickerSelection {
+  selected: string[];
+  // True only when the local stars actually contributed a team the record did
+  // not already hold. Silent otherwise, which is the common case: explaining an
+  // event that did not happen is its own small lie.
+  showDeviceNote: boolean;
+}
+
+/**
+ * Resolve what the picker shows, from the record, the local stars and any edit
+ * the user has already made. Pure so it is testable without a render harness
+ * (see docs/known-issues.md entry 6).
+ *
+ * Precedence: a user edit wins over everything, always. `edited` being non-null
+ * is the only condition, so it does not matter whether the edit arrived before
+ * or after hydration, nor whether a cross-tab write changed `starred`
+ * afterwards. That matters because `starred` is NOT write-once: the provider
+ * re-reads it on any `storage` event (src/hooks/use-starred-teams.tsx:108-128),
+ * so an effect-based seed could wipe an in-progress edit mid-session. Deriving
+ * instead of seeding makes that impossible by construction rather than by
+ * timing.
+ *
+ * HAZARD, and why the isHydrated branch is written this way: useStarredTeams
+ * starts at `[]` with isHydrated false and reads localStorage in a mount effect
+ * (use-starred-teams.tsx:89-90, 101-106). Unioning during that window would read
+ * `[]` on EVERY device, including the one holding the stars. Falling back to
+ * initialTeams instead means the picker never displays fewer teams than the
+ * record holds, at any point in the page's life. That is the whole guard: Save
+ * REPLACES the teams array, so a picker that renders a shrunken set for even one
+ * frame is a set the user can commit and lose data to.
+ *
+ * Asymmetric filtering, deliberate: additions from localStorage are restricted
+ * to teams the picker can actually render, but `initialTeams` is passed through
+ * untouched. Filtering additions keeps "what you see checked" equal to "what
+ * Save sends". Filtering initialTeams would silently drop a slug the record
+ * holds but the current team list does not, and Save would then delete it.
+ * Never shrink the record's own set.
+ */
+export function resolvePickerSelection(args: {
+  initialTeams: string[];
+  starred: string[];
+  knownTeamIds: ReadonlySet<string>;
+  isHydrated: boolean;
+  edited: string[] | null;
+}): PickerSelection {
+  const { initialTeams, starred, knownTeamIds, isHydrated, edited } = args;
+
+  if (edited !== null) return { selected: edited, showDeviceNote: false };
+  if (!isHydrated) return { selected: initialTeams, showDeviceNote: false };
+
+  const have = new Set(initialTeams);
+  const additions = starred.filter((slug) => !have.has(slug) && knownTeamIds.has(slug));
+  if (additions.length === 0) return { selected: initialTeams, showDeviceNote: false };
+
+  // Record's own teams first, additions appended, matching the merge order the
+  // capture path already uses in sanitizeTeams.
+  return { selected: [...initialTeams, ...additions], showDeviceNote: true };
+}
+
 export function PreferencesForm({
   teams,
   token,
@@ -28,14 +88,38 @@ export function PreferencesForm({
   email,
   autoConfirmUnsub = false,
 }: PreferencesFormProps) {
-  const [selected, setSelected] = useState<string[]>(initialTeams);
+  // null until the user touches the picker. Once set it wins permanently, so no
+  // later hydration or cross-tab write can overwrite an edit in progress.
+  const [edited, setEdited] = useState<string[] | null>(null);
   const [status, setStatus] = useState<SaveStatus>('idle');
   const [confirmingUnsub, setConfirmingUnsub] = useState(autoConfirmUnsub);
   const [unsubscribed, setUnsubscribed] = useState(false);
 
+  // Optional on purpose. Seeding is an enhancement; managing teams and
+  // unsubscribing are not. This page is the only route a subscriber has to
+  // either, and unsubscribe access is a legal obligation, so a missing provider
+  // must degrade to the unseeded form rather than throw. With a null context the
+  // values below are ([], false), which drives resolvePickerSelection down its
+  // not-hydrated branch and yields exactly today's behavior: picker seeded from
+  // the record alone, Save working, unsubscribe working.
+  const stars = useStarredTeamsOptional();
+  const starred = stars?.starred ?? [];
+  const isHydrated = stars?.isHydrated ?? false;
+  const knownTeamIds = useMemo(() => new Set(teams.map((t) => t.id)), [teams]);
+
+  const { selected, showDeviceNote } = resolvePickerSelection({
+    initialTeams,
+    starred,
+    knownTeamIds,
+    isHydrated,
+    edited,
+  });
+
   const toggle = (slug: string) => {
-    setSelected((prev) =>
-      prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug],
+    // Computed from the DISPLAYED selection, not from `edited`, which is null
+    // until the first toggle. Reading `edited` here would toggle against null.
+    setEdited(
+      selected.includes(slug) ? selected.filter((s) => s !== slug) : [...selected, slug],
     );
     if (status === 'saved') setStatus('idle');
   };
@@ -98,6 +182,11 @@ export function PreferencesForm({
         <span className="font-rd text-[11px] text-rd-ink-soft">{selected.length} selected</span>
       </div>
 
+      {showDeviceNote && (
+        <p className="mb-2 font-rd text-[12px] text-rd-ink-faint">
+          Includes teams you follow on this device.
+        </p>
+      )}
       <TeamStarPicker teams={teams} selected={selected} onToggle={toggle} />
 
       {selected.length === 0 && (

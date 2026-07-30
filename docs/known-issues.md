@@ -249,3 +249,38 @@ not smuggled in as a rider on a copy change to one card.
 **Severity: Low.** No user impact today, and the highest-risk logic in the
 affected component is covered by a pure unit test. Recorded so the gap is tracked
 rather than rediscovered.
+
+---
+
+## 7. On-site stars still diverge from the emailed teams after confirming
+
+**What it is.** Teams starred on the site live in `promonight:starred_teams`
+(`src/hooks/use-starred-teams.tsx:15`) and never reach the Firestore `teams`
+array on their own. Nothing in the star path writes to the subscriber record;
+`toggleStar` (`:130`) writes localStorage and fires analytics, and that is all.
+
+The confirm-time seed narrows this but does not close it. Landing on
+`/preferences` unions the local stars into the picker
+(`src/components/follow/PreferencesForm.tsx`), so the user can see and commit
+them, but **only a deliberate Save persists anything**, and the seed only runs on
+a `/preferences` visit. A subscriber who confirms, then stars three more teams
+while browsing, and never returns to `/preferences`, keeps those three in
+localStorage forever and receives a digest that knows nothing about them.
+
+**Why it matters.** The two stores answer the same user-facing question, "which
+teams do I follow", and give different answers indefinitely. The site UI says one
+thing and the weekly email says another. Because
+`setSubscriberTeamsByManageToken` REPLACES rather than merges
+(`src/lib/subscribers.ts`), the divergence is also load-bearing: any future
+feature that writes the teams array from one store without consulting the other
+deletes data held by the other.
+
+**Deliberately not solved.** Closing it properly means either writing to the
+record whenever a star is toggled, which needs an authenticated path that an
+anonymous browsing session does not have, or a background reconcile, which
+reintroduces the auto-write blast radius that the seed design exists to avoid.
+Both are larger decisions than the seed.
+
+**Severity: Low.** No data is lost and nothing is silently wrong inside either
+store; they are simply not the same store. The user-visible effect is a digest
+that under-reflects what they follow.
