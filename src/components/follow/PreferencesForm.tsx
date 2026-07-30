@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import type { Team } from '@/lib/types';
-import { useStarredTeams } from '@/hooks/use-starred-teams';
+import { useStarredTeamsOptional } from '@/hooks/use-starred-teams';
 import { TeamStarPicker } from './TeamStarPicker';
 
 // Token-authenticated team management. The save REPLACES the teams array with
@@ -95,7 +95,16 @@ export function PreferencesForm({
   const [confirmingUnsub, setConfirmingUnsub] = useState(autoConfirmUnsub);
   const [unsubscribed, setUnsubscribed] = useState(false);
 
-  const { starred, isHydrated } = useStarredTeams();
+  // Optional on purpose. Seeding is an enhancement; managing teams and
+  // unsubscribing are not. This page is the only route a subscriber has to
+  // either, and unsubscribe access is a legal obligation, so a missing provider
+  // must degrade to the unseeded form rather than throw. With a null context the
+  // values below are ([], false), which drives resolvePickerSelection down its
+  // not-hydrated branch and yields exactly today's behavior: picker seeded from
+  // the record alone, Save working, unsubscribe working.
+  const stars = useStarredTeamsOptional();
+  const starred = stars?.starred ?? [];
+  const isHydrated = stars?.isHydrated ?? false;
   const knownTeamIds = useMemo(() => new Set(teams.map((t) => t.id)), [teams]);
 
   const { selected, showDeviceNote } = resolvePickerSelection({

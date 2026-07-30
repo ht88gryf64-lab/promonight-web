@@ -51,6 +51,17 @@ test('isHydrated false with an empty record still yields the record, not a guess
   assert.deepStrictEqual(r.selected, []);
 });
 
+test('a MISSING provider degrades to the unseeded form, not a throw', () => {
+  // PreferencesForm reads the stars through useStarredTeamsOptional, so a null
+  // context maps to ([], false) rather than throwing. Those are the arguments
+  // asserted here. The page must still render, because it is the only route a
+  // subscriber has to unsubscribe and error.tsx offers no way through: its "Try
+  // again" calls reset(), which re-renders the same tree and would throw again.
+  const r = resolve({ starred: [], isHydrated: false, initialTeams: ['minnesota-twins'] });
+  assert.deepStrictEqual(r.selected, ['minnesota-twins'], 'exactly today behavior');
+  assert.strictEqual(r.showDeviceNote, false);
+});
+
 // ── the union ───────────────────────────────────────────────────────────────
 
 test('isHydrated true with no local stars yields initialTeams unchanged', () => {

@@ -199,3 +199,25 @@ export function useStarredTeams(): StarredTeamsContextValue {
   }
   return ctx;
 }
+
+/**
+ * Non-throwing variant, for surfaces where stars are an ENHANCEMENT and the page
+ * must render regardless.
+ *
+ * useStarredTeams above keeps throwing, which is correct for every consumer that
+ * cannot do its job without stars: a loud failure in development beats a star
+ * button that silently does nothing. This variant exists for the opposite case.
+ *
+ * The one caller today is the preferences page. It is token-gated and it is the
+ * only route a subscriber has for managing teams or unsubscribing, and
+ * unsubscribe access is a legal obligation rather than a convenience. A throw
+ * there does not degrade to a lesser page, it degrades to src/app/error.tsx,
+ * whose "Try again" calls reset() and re-renders the same tree, so a
+ * deterministic throw like a missing provider would loop on the error page
+ * forever with no way through to unsubscribe.
+ *
+ * Returning null lets that caller fall back to its unseeded behavior instead.
+ */
+export function useStarredTeamsOptional(): StarredTeamsContextValue | null {
+  return useContext(StarredTeamsContext);
+}
