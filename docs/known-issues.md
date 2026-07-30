@@ -111,11 +111,19 @@ unsubscribes and immediately resubscribes has their record resurrected to
 `pending` but receives no confirmation link. They see a success state, no email
 arrives, and they stay unconfirmed until they submit again outside the window.
 
-**Where it lives.** `src/lib/subscribers.ts:340`, the `coolingDown` expression,
-carrying a `KNOWN ISSUE` comment at `:332-339` describing the same behavior.
-`RESEND_COOLDOWN_MS` is at `:60` and `withinResendCooldown` at `:62-67`. The
-suppression takes effect through `needsConfirmation` at `:405`, consumed by
-`src/app/api/subscribe/route.ts:105`.
+**Where it lives.** `src/lib/subscribers.ts:354-355`, the `coolingDown`
+expression, carrying a `KNOWN ISSUE` comment at `:347-353` describing the same
+behavior. `RESEND_COOLDOWN_MS` is at `:60` and `withinResendCooldown` at
+`:62-67`. The suppression takes effect through `needsConfirmation` at `:420`,
+consumed by `src/app/api/subscribe/route.ts:105`.
+
+**NOT resolved by the delivery conjunct.** `coolingDown` now also requires
+`hasDeliveredCurrentToken(data)` (`:334`, `:354-355`), which fixed the adjacent
+case where a FAILED send blocked a prompt retry. It does not fix this one. An
+unsubscribed record can carry a delivery stamp matching the token it currently
+holds, left over from a send that genuinely went out earlier, so
+`confirmationDelivered` stays true and the cooldown still fires. Different
+cause, still open.
 
 **Why it matters.** It is a silent dead end on a path the user explicitly chose.
 It predates the confirmation-token work on `feature/confirm-token-preserve` and
