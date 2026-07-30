@@ -617,6 +617,47 @@ function analyticsDebugEnabled(): boolean {
   return process.env.NEXT_PUBLIC_ANALYTICS_DEBUG === 'true';
 }
 
+// ── Client-only event subscribers ────────────────────────────────────────
+// A module-level registry so a single root client component can observe every
+// tracked event without touching a single call site. The alternative, adding a
+// hook call next to each track() call, would mean editing CalendarGrid,
+// team-calendar, UpcomingPromoModal and VenueHubLink for a feature none of them
+// know about, and re-editing them for the next observer.
+//
+// CLIENT ONLY, and the guard below is what enforces it: track() early-returns
+// before this point when `window` is undefined, so a subscriber can never run
+// during SSR and can never cause a hydration divergence. Subscribers must
+// therefore register in an effect, not during render.
+//
+// Subscribers are notified AFTER the sinks, and each is isolated, because an
+// observer must never be able to break the analytics it is observing.
+
+export type AnalyticsSubscriber = (
+  eventName: AnalyticsEvent,
+  props: Record<string, unknown>,
+) => void;
+
+const subscribers = new Set<AnalyticsSubscriber>();
+
+/** Returns an unsubscribe function, so an effect cleanup is a one-liner. */
+export function subscribeToAnalytics(fn: AnalyticsSubscriber): () => void {
+  subscribers.add(fn);
+  return () => {
+    subscribers.delete(fn);
+  };
+}
+
+function notifySubscribers(eventName: AnalyticsEvent, props: Record<string, unknown>): void {
+  for (const fn of subscribers) {
+    try {
+      fn(eventName, props);
+    } catch {
+      // One bad subscriber must not stop the others, and must never surface to
+      // the user. Analytics is best effort in both directions.
+    }
+  }
+}
+
 // ── Core track() ─────────────────────────────────────────────────────────
 
 export function track<E extends AnalyticsEvent>(
@@ -658,6 +699,10 @@ export function track<E extends AnalyticsEvent>(
     // eslint-disable-next-line no-console
     console.log('[analytics]', eventName, enriched);
   }
+
+  // Last, and after both sinks, so an observer can neither delay nor prevent
+  // the events it is watching.
+  notifySubscribers(eventName, enriched);
 }
 
 // ── Legacy helpers ───────────────────────────────────────────────────────
