@@ -171,7 +171,14 @@ signup path, which is the least forgiving moment in the funnel.
 **Do NOT "fix" the digest sends.** `sendPersonalizedDigest`,
 `sendGenericDigest` and `sendEmptyWindowDigest` remain deliberately unbounded.
 They run only from the CRON_SECRET-gated weekly cron
-(`src/app/api/cron/weekly-digest/route.ts:78-82`, `277`, `290`, `308`), where no
-user is waiting on a response and a bounded send would abort legitimate slow
-batches. Unbounded is correct there and is the documented intent at
-`src/lib/email.ts:46-49`.
+(`src/app/api/cron/weekly-digest/route.ts:78-82`, `277`, `290`, `308`).
+
+**The rule is about who is waiting, not about batch size.** Each digest message
+is its own `sendEmail` call, so a timeout there would bound one message and not
+the batch; batch safety is not the argument and must not be used as one. The
+argument is that on a cron path nobody is waiting on the response, so a hang
+costs an invocation rather than a person's signup, and the failure is
+recoverable on the next weekly run. On a request path a hang costs the visitor
+their signup with no trace, which is why those must be bounded. Apply that test,
+not a batch-versus-single test, when deciding whether a new send needs a
+timeout.
