@@ -102,6 +102,21 @@ export async function POST(request: Request) {
     // subscriber nor rotates a token out from under a link already emailed.
     // Failures are logged but never fail the signup, the record exists and a
     // re-submit re-triggers.
+    // What the client is told about the confirmation email, so the success card
+    // can stop promising a message that was not sent. Three outcomes, mapped
+    // from the branches below:
+    //   'sent'       a confirmation went out on this request.
+    //   'failed'     one was due and did not go out. The record exists and the
+    //                delivery marker is unset, so a resubmit really does resend,
+    //                which is what the copy tells the visitor to do.
+    //   'not_needed' none was due. Covers BOTH a suppressed re-submit, which
+    //                still holds a delivered and current link, and an
+    //                already-confirmed re-submit, which needs no link at all.
+    // The client separates those last two on `status`, which is already in this
+    // response: suppressed is 'pending', already-confirmed is 'confirmed'. No
+    // extra field is needed to tell them apart.
+    let confirmation: 'sent' | 'not_needed' | 'failed' = 'not_needed';
+
     if (result.needsConfirmation) {
       try {
         const sent = await sendConfirmationEmail({
@@ -109,6 +124,7 @@ export async function POST(request: Request) {
           confirmToken: result.confirmToken,
           manageToken: result.manageToken,
         });
+        confirmation = sent.ok ? 'sent' : 'failed';
         if (sent.ok) {
           // Only a DELIVERED link may suppress a later teams-adding submit, so
           // the stamp is the gate on that suppressor. The token goes with it:
@@ -130,6 +146,9 @@ export async function POST(request: Request) {
           );
         }
       } catch (e) {
+        // A throw is a failed send like any other: nothing was delivered and
+        // nothing was stamped, so the visitor must be told the truth.
+        confirmation = 'failed';
         console.error('[api:subscribe] confirmation send threw', e);
       }
     } else if (result.suppressionReason) {
@@ -148,6 +167,7 @@ export async function POST(request: Request) {
       status: result.status,
       created: result.created,
       team_count: result.teams.length,
+      confirmation,
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);

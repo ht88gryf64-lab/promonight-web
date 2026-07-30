@@ -86,6 +86,7 @@ test('a successful send stamps confirmationSentAt with a targeted write', async 
     status: 'pending',
     created: true,
     team_count: 1,
+    confirmation: 'sent',
   });
   assert.strictEqual(sendCalls.length, 1, 'exactly one confirmation email');
   assert.ok(subscriberDoc().confirmationSentAt != null, 'delivery stamped');
@@ -196,6 +197,65 @@ test('after a successful send, a teams-ADDING resubmit suppresses and keeps the 
   assert.deepStrictEqual(subscriberDoc().teams, ['twins', 'yankees']);
 });
 
+// ── the confirmation enum ───────────────────────────────────────────────────
+// Every branch must report what actually happened, because the success copy is
+// chosen from this value. A wrong value here is a lie rendered to a user.
+
+for (const [label, result, expected] of [
+  ['a provider error', { ok: false, error: 'resend_429' }, 'failed'],
+  ['a timeout', { ok: false, error: 'send_timeout' }, 'failed'],
+  ['a skipped send', { ok: false, skipped: true }, 'failed'],
+] as const) {
+  test(`${label} reports confirmation=${expected}`, async () => {
+    sendResult = result;
+    const { POST } = await import('../route');
+
+    const res = await POST(post({ email: EMAIL, teams: ['twins'], source: 'web_team_page' }));
+
+    assert.strictEqual((await res.json()).confirmation, expected);
+  });
+}
+
+test('a send that throws reports confirmation=failed', async () => {
+  sendThrows = new Error('socket hang up');
+  const { POST } = await import('../route');
+
+  const res = await POST(post({ email: EMAIL, teams: ['twins'], source: 'web_team_page' }));
+
+  assert.strictEqual((await res.json()).confirmation, 'failed');
+});
+
+test('an already-confirmed re-submit reports not_needed WITH status confirmed', async () => {
+  // The pair the client splits on. status is what separates this from a
+  // suppressed re-submit, and it is already in the response, so no extra field
+  // was needed.
+  const { POST } = await import('../route');
+  const { confirmSubscriberByToken } = await import('../../../../lib/subscribers');
+
+  await POST(post({ email: EMAIL, teams: ['twins'], source: 'web_team_page' }));
+  const token = subscriberDoc().confirmToken as string;
+  await confirmSubscriberByToken(token);
+  sendCalls = [];
+
+  const res = await POST(post({ email: EMAIL, teams: ['yankees'], source: 'web_team_page' }));
+  const body = await res.json();
+
+  assert.strictEqual(body.confirmation, 'not_needed');
+  assert.strictEqual(body.status, 'confirmed', 'this is what selects the already-subscribed copy');
+  assert.strictEqual(sendCalls.length, 0, 'and nothing was sent');
+});
+
+test('a suppressed re-submit reports not_needed WITH status pending', async () => {
+  const { POST } = await import('../route');
+
+  await POST(post({ email: EMAIL, teams: ['twins'], source: 'web_team_page' }));
+  const res = await POST(post({ email: EMAIL, teams: ['yankees'], source: 'web_team_page' }));
+  const body = await res.json();
+
+  assert.strictEqual(body.confirmation, 'not_needed');
+  assert.strictEqual(body.status, 'pending', 'which renders the confident copy, not already-subscribed');
+});
+
 test('the suppressed response is byte-identical to a sending one apart from created', async () => {
   const { POST } = await import('../route');
   await POST(post({ email: EMAIL, teams: ['twins'], source: 'web_team_page' }));
@@ -208,5 +268,6 @@ test('the suppressed response is byte-identical to a sending one apart from crea
     status: 'pending',
     created: false,
     team_count: 2,
+    confirmation: 'not_needed',
   });
 });

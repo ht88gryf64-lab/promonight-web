@@ -326,19 +326,33 @@ export async function upsertSubscriber(
     const hasUsableToken =
       typeof data.confirmToken === 'string' && TOKEN_RE.test(data.confirmToken);
 
+    // Did a confirmation link for the token this record CURRENTLY holds actually
+    // reach the user? Both suppressors below depend on it, so it is computed
+    // once and shared. Two suppressors with different notions of "did we reach
+    // this person" is precisely the inconsistency that produced the stranding
+    // bug, so they are deliberately kept on one definition.
+    const confirmationDelivered = hasDeliveredCurrentToken(data);
+
     // 'cooldown': we just sent a confirmation to this address, so a rapid
     // re-submit must not be usable to bomb it.
     //
-    // KNOWN ISSUE, tracked as entry 4 in docs/known-issues.md (predates the
-    // teams_only fix, deliberately left alone for scope discipline): this
-    // cooldown applies to unsubscribed records too, so
-    // an unsubscribe followed by a resubscribe within 30 seconds resurrects the
-    // record to pending but sends NO confirmation email. The user sees a success
-    // state and never receives a link. Rare, since it needs a resubscribe inside
-    // the cooldown window, and not urgent, but it should not disappear quietly.
-    // Narrowing the cooldown to pending-only is a separate change with its own
-    // reasoning about confirmation-email bombing of unsubscribed addresses.
-    const coolingDown = withinResendCooldown(data.updatedAt) && hasUsableToken;
+    // The delivery conjunct is what makes that true rather than merely likely.
+    // Without it the cooldown suppresses on "we wrote to this record recently",
+    // which is not the same question: a send that failed or was aborted still
+    // stamps updatedAt, so a visitor retrying promptly after a failure got
+    // silence and no email. That is exactly the sequence the honest failure copy
+    // invites, since it tells them to submit again. The copy is only true if the
+    // retry works, so the cooldown must only fire when a link really went out.
+    //
+    // KNOWN ISSUE, tracked as entry 4 in docs/known-issues.md, NOT fixed by this
+    // conjunct: an unsubscribe followed by a resubscribe within 30 seconds still
+    // sends no confirmation. That record can carry a delivered stamp matching its
+    // current token from an earlier send, so confirmationDelivered stays true and
+    // the cooldown still fires. Different cause, still open. Narrowing the
+    // cooldown to pending-only is a separate change with its own reasoning about
+    // confirmation-email bombing of unsubscribed addresses.
+    const coolingDown =
+      withinResendCooldown(data.updatedAt) && hasUsableToken && confirmationDelivered;
 
     // 'teams_only': a PENDING record whose merged team set actually grew. That
     // is a preferences update (a capture surface adding a team after signup),
@@ -366,7 +380,7 @@ export async function upsertSubscriber(
     // including a teams-adding one, rotates and re-sends. Records predating the
     // fields have them unset and fall to the resend path, which costs at most
     // one extra confirmation email for a record that was already stranded.
-    const confirmationDelivered = hasDeliveredCurrentToken(data);
+    // confirmationDelivered is computed above, shared with the cooldown.
     const teamsOnlyUpdate =
       data.status === 'pending' &&
       hasUsableToken &&

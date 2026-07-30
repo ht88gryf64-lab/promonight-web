@@ -111,11 +111,19 @@ unsubscribes and immediately resubscribes has their record resurrected to
 `pending` but receives no confirmation link. They see a success state, no email
 arrives, and they stay unconfirmed until they submit again outside the window.
 
-**Where it lives.** `src/lib/subscribers.ts:340`, the `coolingDown` expression,
-carrying a `KNOWN ISSUE` comment at `:332-339` describing the same behavior.
-`RESEND_COOLDOWN_MS` is at `:60` and `withinResendCooldown` at `:62-67`. The
-suppression takes effect through `needsConfirmation` at `:405`, consumed by
-`src/app/api/subscribe/route.ts:105`.
+**Where it lives.** `src/lib/subscribers.ts:354-355`, the `coolingDown`
+expression, carrying a `KNOWN ISSUE` comment at `:347-353` describing the same
+behavior. `RESEND_COOLDOWN_MS` is at `:60` and `withinResendCooldown` at
+`:62-67`. The suppression takes effect through `needsConfirmation` at `:420`,
+consumed by `src/app/api/subscribe/route.ts:105`.
+
+**NOT resolved by the delivery conjunct.** `coolingDown` now also requires
+`hasDeliveredCurrentToken(data)` (`:334`, `:354-355`), which fixed the adjacent
+case where a FAILED send blocked a prompt retry. It does not fix this one. An
+unsubscribed record can carry a delivery stamp matching the token it currently
+holds, left over from a send that genuinely went out earlier, so
+`confirmationDelivered` stays true and the cooldown still fires. Different
+cause, still open.
 
 **Why it matters.** It is a silent dead end on a path the user explicitly chose.
 It predates the confirmation-token work on `feature/confirm-token-preserve` and
@@ -131,8 +139,9 @@ this document agree.
 
 ## 5. Unbounded sends on a user-facing request path
 
-**Status: fix committed on `feature/bound-confirmation-send` (`43cc5be`), not yet
-merged. Mark resolved at merge.**
+**Status: RESOLVED.** Fixed in `43cc5be`, merged to `main` in `d719ddc` on
+2026-07-30. Kept here rather than deleted, per the convention at the top of this
+file, because the incident and its reasoning are the durable part.
 
 **What happened.** On 2026-07-30 at 15:04:07 UTC a first-ever signup created its
 subscriber document and then sent nothing. No confirmation email, no Resend
@@ -199,3 +208,44 @@ recoverable on the next weekly run. On a request path a hang costs the visitor
 their signup with no trace, which is why those must be bounded. Apply that test,
 not a batch-versus-single test, when deciding whether a new send needs a
 timeout.
+
+---
+
+## 6. No render-test coverage for client components
+
+**What it is.** The repo has no way to render a React component in a test. There
+is no testing-library, jsdom, happy-dom, vitest or jest in `package.json`; the
+runner is `node --test` over `src/**/*.test.ts`. So component markup, conditional
+rendering and copy strings are never exercised by the suite.
+
+**Where it shows.** Most visibly in the signup success card,
+`src/components/follow/FollowForm.tsx`. It has three copy variants and the choice
+between them is user-visible and easy to get wrong. The branching was therefore
+extracted into the pure `successVariant()` and tested directly in
+`src/components/follow/__tests__/success-variant.test.ts`; the copy strings
+themselves stay inline in the JSX and are untested.
+
+**Why it matters.** The tested part is the part that can be logically wrong, so
+this is a reasonable split rather than a hole left open by accident. But nothing
+catches a variant wired to the wrong copy block, a typo in a user-facing string,
+or a regression in what the card renders. The same gap applies to every other
+client component in the repo.
+
+**The sharpest evidence, from this branch.** The failure variant originally
+shipped with the clause "We're still sending your confirmation link", which is
+false: after an 8s abort nothing is in flight. Changing that wording broke no
+test, because no test asserts copy strings. **Nothing in the suite would have
+caught shipping a user-facing sentence that was untrue.** The catch came entirely
+from the Phase 3 adversarial review, which is a process control rather than an
+automated one, and process controls are exactly what erode when a track goes
+quiet. That is the strongest argument for eventually closing this gap, and it
+will be far less obvious to a future reader than it is today.
+
+**Deliberately not fixed here.** Adding a render harness means adding a test
+dependency, a DOM shim and a second runner configuration. That is a tooling
+decision worth making on its own merits, weighed across the whole component tree,
+not smuggled in as a rider on a copy change to one card.
+
+**Severity: Low.** No user impact today, and the highest-risk logic in the
+affected component is covered by a pure unit test. Recorded so the gap is tracked
+rather than rediscovered.

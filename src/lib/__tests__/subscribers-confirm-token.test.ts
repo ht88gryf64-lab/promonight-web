@@ -467,6 +467,73 @@ test('THE LATE-STAMP RACE: a stamp for a superseded token must not suppress', as
   assert.notStrictEqual(c.confirmToken, tokenB, 'and the dead token is replaced');
 });
 
+// ── the cooldown also requires a DELIVERED link ─────────────────────────────
+// Both suppressors now ask the same question. These two cases are a pair: the
+// first proves a failed send no longer blocks a prompt retry, the second proves
+// the cooldown still does its anti-spam job when the send succeeded. Passing
+// only the first would mean the cooldown had been switched off entirely.
+
+test('retry inside the cooldown after a FAILED send rotates and re-sends', async () => {
+  // The exact production sequence the honest failure copy invites. A brand-new
+  // signup commits, the send fails or aborts so nothing is stamped, and the
+  // visitor resubmits promptly. Before the delivery conjunct this was suppressed
+  // as 'cooldown' and they got silence, which would make "submit again and we
+  // will resend it" a second lie. Must fail against d719ddc.
+  const { upsertSubscriber, subscriberDocId } = await lib();
+  const first = await upsertSubscriber({ email: EMAIL, teams: ['twins'], source: 'web_team_page' });
+  assert.strictEqual(first.needsConfirmation, true, 'a new record always wants a send');
+
+  // The send failed, so markConfirmationSent was never called and the pair stays
+  // cleared. updatedAt is what a Firestore read would return 15s later.
+  const id = subscriberDocId(EMAIL);
+  const d = coll('subscribers').get(id) as Data;
+  assert.strictEqual(d.confirmationSentAt, null, 'precondition: nothing delivered');
+  d.updatedAt = INSIDE_COOLDOWN();
+
+  const retry = await upsertSubscriber({ email: EMAIL, teams: ['twins'], source: 'web_team_page' });
+
+  assert.strictEqual(retry.suppressionReason, null, 'an undelivered link must not cool down');
+  assert.strictEqual(retry.needsConfirmation, true, 'the retry must actually send');
+  assert.notStrictEqual(retry.confirmToken, first.confirmToken, 'and rotate to a fresh token');
+});
+
+test('retry inside the cooldown after a SUCCESSFUL send still suppresses', async () => {
+  // The anti-spam case the cooldown exists for. A delivered link plus a rapid
+  // re-submit must stay suppressed, otherwise the conjunct has disabled the
+  // cooldown rather than corrected it.
+  const { upsertSubscriber, markConfirmationSent, subscriberDocId } = await lib();
+  const first = await upsertSubscriber({ email: EMAIL, teams: ['twins'], source: 'web_team_page' });
+
+  // The send succeeded, so the route stamps the pair for the token it sent.
+  const id = subscriberDocId(EMAIL);
+  await markConfirmationSent(id, first.confirmToken);
+  const d = coll('subscribers').get(id) as Data;
+  d.updatedAt = INSIDE_COOLDOWN();
+
+  const retry = await upsertSubscriber({ email: EMAIL, teams: ['twins'], source: 'web_team_page' });
+
+  assert.strictEqual(retry.suppressionReason, 'cooldown', 'still reported as cooldown');
+  assert.strictEqual(retry.needsConfirmation, false, 'no duplicate email');
+  assert.strictEqual(retry.confirmToken, first.confirmToken, 'the delivered token survives');
+  assert.strictEqual(stored(id).confirmToken, first.confirmToken);
+});
+
+test('cooldown does not fire when the stamp names a SUPERSEDED token', async () => {
+  // The cooldown inherits the token-scoping too: a stamp from an earlier send
+  // does not vouch for the token the record holds now.
+  const { upsertSubscriber } = await lib();
+  await seed({
+    updatedAt: INSIDE_COOLDOWN(),
+    confirmationSentAt: Timestamp.fromMillis(Date.now() - 5_000),
+    confirmationSentFor: 'aSupersededTokenValue0123456789ab',
+  });
+
+  const r = await upsertSubscriber({ email: EMAIL, teams: ['twins'], source: 'web_team_page' });
+
+  assert.strictEqual(r.suppressionReason, null);
+  assert.strictEqual(r.needsConfirmation, true);
+});
+
 // ── Finding 1: the guard matches the resolver ───────────────────────────────
 
 // Non-empty strings that findByToken would refuse to even query for. The old
