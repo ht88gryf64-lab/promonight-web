@@ -126,3 +126,76 @@ confirmation-email bombing of unsubscribed addresses.
 **Severity: Low.** It needs a resubscribe inside a 30-second window, which is
 rare, and the user recovers by submitting again. Recorded so the code comment and
 this document agree.
+
+---
+
+## 5. Unbounded sends on a user-facing request path
+
+**Status: fix committed on `feature/bound-confirmation-send` (`43cc5be`), not yet
+merged. Mark resolved at merge.**
+
+**What happened.** On 2026-07-30 at 15:04:07 UTC a first-ever signup created its
+subscriber document and then sent nothing. No confirmation email, no Resend
+message record, no error in the Vercel runtime logs, and no request log line for
+the POST at all. The visitor saw the normal success card promising an email that
+never arrived. The record sat `pending` holding a token nobody had received. It
+was only noticed because the visitor happened to resubmit two and a half minutes
+later, which took the resend path and mailed successfully.
+
+**Root cause.** `sendEmail` arms an `AbortController` only when the caller passes
+`timeoutMs` (`src/lib/email.ts:59-60`), and its own interface documents that
+callers on a user-facing request path MUST set it (`:46-49`).
+`sendConfirmationEmail` did not. The signup send was therefore unbounded, and
+`POST /api/subscribe` awaits it before returning (`route.ts:107`), so a hung
+Resend keeps the invocation alive until the platform kills it. A killed
+invocation runs no `catch`, flushes no `console.error`, writes no request log
+line and leaves no Resend record. The failure is invisible in every system at
+once, which is what made it worse than an ordinary send error.
+
+**Why it matters.** A signup that silently sends nothing is worse than one that
+fails loudly: there is no signal to alert on, nothing in Resend to reconcile
+against, and the only recovery is the visitor spontaneously trying again. The
+`confirmationSentAt` delivery gate added the same day means such a record does
+self-heal on any subsequent submit, including a teams-adding one, but nothing
+prompts the visitor to make that submit.
+
+**The fix.** Pass `timeoutMs: 8_000` from `sendConfirmationEmail`, matching
+`src/lib/cfb/notify.ts:18-20`, which already bounds the contribution notice on
+exactly this reasoning. A hang now surfaces as
+`{ok: false, error: 'send_timeout'}`, which `route.ts` logs at error level and
+which leaves `confirmationSentAt` unset so the next submit re-sends.
+
+**Observed historical rate: zero.** On 2026-07-30 all 25 `pending` records were
+cross-referenced against Resend's delivered-message list. Eighteen are
+resolvable and **all eighteen received a delivered confirmation, each sent
+roughly 300ms after its record was created**. They are ordinary non-clickers,
+not victims. The remaining seven are **unresolvable, not undelivered**: Resend's
+list only reaches back to 2026-07-10 16:08 UTC and backward pagination stopped
+there, and all seven predate that boundary, so they are unknown rather than
+dropped. The only observed occurrence of this bug is the one on 2026-07-30
+described above, on a test address that self-rescued by resubmitting. No
+re-send campaign was run, so no CAN-SPAM question arose.
+
+The fix is still warranted. A failure mode that is invisible in every system at
+once cannot be measured by waiting for reports of it, and the one time it fired
+it was caught only by luck. But the measured rate is zero out of eighteen
+measurable signups, so this was a latent hazard rather than an ongoing leak.
+
+**Severity: High before the fix.** Silent and unalertable, on the first-ever
+signup path, which is the least forgiving moment in the funnel. Rated on blast
+radius per occurrence, not on observed frequency.
+
+**Do NOT "fix" the digest sends.** `sendPersonalizedDigest`,
+`sendGenericDigest` and `sendEmptyWindowDigest` remain deliberately unbounded.
+They run only from the CRON_SECRET-gated weekly cron
+(`src/app/api/cron/weekly-digest/route.ts:78-82`, `277`, `290`, `308`).
+
+**The rule is about who is waiting, not about batch size.** Each digest message
+is its own `sendEmail` call, so a timeout there would bound one message and not
+the batch; batch safety is not the argument and must not be used as one. The
+argument is that on a cron path nobody is waiting on the response, so a hang
+costs an invocation rather than a person's signup, and the failure is
+recoverable on the next weekly run. On a request path a hang costs the visitor
+their signup with no trace, which is why those must be bounded. Apply that test,
+not a batch-versus-single test, when deciding whether a new send needs a
+timeout.
