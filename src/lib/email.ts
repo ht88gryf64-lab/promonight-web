@@ -155,6 +155,21 @@ function confirmationHtml(email: string, confirm: string, manageUnsub: string): 
 </html>`;
 }
 
+// This send sits on the signup request, so it is bounded, matching the CFB
+// contribution notice (src/lib/cfb/notify.ts:18-20) which uses the same value
+// for the same reason. Keep the two in step.
+//
+// The subscriber record is already committed by the time we get here, so a slow
+// Resend must not hold the response open. Unbounded, a degraded Resend keeps
+// the invocation alive until the platform kills it, and a killed invocation
+// runs no catch, flushes no console.error, writes no request log line and
+// leaves no Resend record: the signup vanishes with no trace anywhere. That is
+// what silently dropped a first-ever signup on 2026-07-30
+// (docs/known-issues.md entry 5). Bounded, the same failure surfaces as
+// {ok:false, error:'send_timeout'}, which the route logs at error level and
+// which leaves confirmationSentAt unset so the next submit re-sends.
+const CONFIRMATION_SEND_TIMEOUT_MS = 8_000;
+
 export async function sendConfirmationEmail(sub: {
   email: string;
   confirmToken: string;
@@ -186,6 +201,7 @@ export async function sendConfirmationEmail(sub: {
       'List-Unsubscribe': `<${unsub}>`,
       'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
     },
+    timeoutMs: CONFIRMATION_SEND_TIMEOUT_MS,
   });
 }
 
