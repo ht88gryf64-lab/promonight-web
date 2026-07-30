@@ -26,6 +26,14 @@ export interface Subscriber {
   // the relevant lifecycle step lands.
   createdAt: string | null;
   confirmedAt: string | null;
+  // When a confirmation email was last ACCEPTED by the provider, and the token
+  // that send carried. Read as a pair: the stamp counts only when
+  // confirmationSentFor still equals confirmToken. Both null means no link has
+  // been delivered for the token on the record right now, either because the
+  // send failed or because the token was just rotated. The teams_only suppressor
+  // keys on the pair.
+  confirmationSentAt: string | null;
+  confirmationSentFor: string | null;
   updatedAt: string | null;
   // Approximate location captured from the Vercel edge geo headers at signup
   // (additive; absent on records created before geo capture). Powers the
@@ -77,6 +85,40 @@ function newToken(): string {
   // 24 random bytes → 32-char URL-safe string. Two independent tokens per
   // subscriber so the manage link can't be derived from the confirm link.
   return randomBytes(24).toString('base64url');
+}
+
+// ── Delivery marker ─────────────────────────────────────────────────────────
+// confirmationSentAt and confirmationSentFor are ONE unit and are never written
+// separately. The stamp alone proves only that some link went out at some point;
+// the token it names is what makes it mean "the link for the token this record
+// holds RIGHT NOW was delivered". That distinction is load-bearing, because the
+// stamp is a second write issued after the send resolves, so a slower send can
+// land its stamp after a later submit has already rotated the token away.
+//
+// Every write of either field goes through these helpers. Assigning one without
+// the other would silently degrade the gate back to time-only and reopen exactly
+// that race, so do not set these fields inline.
+function deliveryCleared(): { confirmationSentAt: null; confirmationSentFor: null } {
+  return { confirmationSentAt: null, confirmationSentFor: null };
+}
+
+function deliveryStamped(confirmToken: string): {
+  confirmationSentAt: FieldValue;
+  confirmationSentFor: string;
+} {
+  return {
+    confirmationSentAt: FieldValue.serverTimestamp(),
+    confirmationSentFor: confirmToken,
+  };
+}
+
+// True only when the stamp vouches for the token the record currently holds.
+function hasDeliveredCurrentToken(data: FirebaseFirestore.DocumentData): boolean {
+  return (
+    data.confirmationSentAt != null &&
+    typeof data.confirmationSentFor === 'string' &&
+    data.confirmationSentFor === data.confirmToken
+  );
 }
 
 // Keep only well-formed, deduplicated slugs, order-stable, capped. Empty array
@@ -156,14 +198,27 @@ export interface UpsertSubscriberResult {
   // caller doesn't need a second read.
   confirmToken: string;
   manageToken: string;
+  // Why a pending/unsubscribed re-submit did NOT send a confirmation, so the
+  // caller can log the two suppressors apart. Set on the pending branch only:
+  // 'cooldown' is a repeat submit of the same address moments ago,
+  // 'teams_only' is a pending record that just gained a team (a preferences
+  // update, not a request for a new link). null on that branch when a
+  // confirmation IS sent; absent on the new-record and confirmed branches,
+  // which never suppress.
+  suppressionReason?: 'cooldown' | 'teams_only' | null;
 }
 
 /**
  * Create or update a subscriber from a capture-form submit.
  *
  * - New email → pending record with fresh tokens.
- * - Existing non-confirmed (pending/unsubscribed) → teams merged, status reset
- *   to pending, confirmToken regenerated (re-trigger confirmation).
+ * - Existing pending → teams merged. The confirmToken is preserved (and no
+ *   confirmation resent) when the submit only ADDS teams, or when it lands
+ *   inside the resend cooldown; otherwise it rotates and a fresh confirmation
+ *   goes out. See the suppression block below for why.
+ * - Existing unsubscribed → teams merged, status reset to pending,
+ *   confirmToken regenerated (re-trigger confirmation). A resubmit here is a
+ *   deliberate resubscribe, so it always re-confirms.
  * - Existing confirmed → teams merged in place, still confirmed, no new
  *   confirmation.
  *
@@ -199,6 +254,10 @@ export async function upsertSubscriber(
         manageToken,
         createdAt: now,
         confirmedAt: null,
+        // Not delivered yet. The caller stamps only once a send succeeds, so the
+        // invariant holds from creation: a stamp naming the current confirmToken
+        // means that token reached the user.
+        ...deliveryCleared(),
         updatedAt: now,
         // Captured once, at signup. Existing records are never backfilled.
         ...sanitizeGeo(input.geo),
@@ -242,15 +301,89 @@ export async function upsertSubscriber(
       };
     }
 
-    // pending or unsubscribed → re-arm confirmation, unless we just sent one to
-    // this address moments ago. Within the cooldown, reuse the existing (still
-    // valid) confirm token and suppress the resend so a rapid re-submit can't be
-    // used to bomb the address; outside it, rotate the token and resend.
-    const coolingDown =
-      withinResendCooldown(data.updatedAt) &&
-      typeof data.confirmToken === 'string' &&
-      data.confirmToken.length > 0;
-    const confirmToken = coolingDown ? (data.confirmToken as string) : newToken();
+    // pending or unsubscribed → re-arm confirmation, unless one of the two
+    // suppressors below applies. Rotating confirmToken orphans the link already
+    // sitting in the user's inbox, because confirmSubscriberByToken resolves a
+    // record BY confirmToken (see findByToken), so every suppressor must also
+    // preserve the existing token rather than mint a new one.
+    //
+    // There is deliberately no email-equality check here: the doc id is
+    // sha256(normalizeEmail(email)), so a record reached by this lookup is by
+    // construction the same address that was submitted.
+    //
+    // Both suppressors require a usable stored token. Preserving an unusable one
+    // while skipping the email would strand the subscriber with no way to
+    // confirm, so the guard is shared rather than duplicated.
+    //
+    // "Usable" is deliberately TOKEN_RE, the exact predicate findByToken applies
+    // before it will even query. A weaker check (length > 0) would accept
+    // non-empty strings that can never resolve, e.g. whitespace-only, shorter
+    // than 16, or carrying a character outside the token alphabet. Nothing in
+    // this module writes such a value, since newToken() is always 32 base64url
+    // chars, but a doc edited by hand or by a future migration could hold one,
+    // and preserving it would convert a self-healing state into a permanent one.
+    // TOKEN_RE is declared below; its TDZ is long resolved by call time.
+    const hasUsableToken =
+      typeof data.confirmToken === 'string' && TOKEN_RE.test(data.confirmToken);
+
+    // 'cooldown': we just sent a confirmation to this address, so a rapid
+    // re-submit must not be usable to bomb it.
+    //
+    // KNOWN ISSUE, tracked as entry 4 in docs/known-issues.md (predates the
+    // teams_only fix, deliberately left alone for scope discipline): this
+    // cooldown applies to unsubscribed records too, so
+    // an unsubscribe followed by a resubscribe within 30 seconds resurrects the
+    // record to pending but sends NO confirmation email. The user sees a success
+    // state and never receives a link. Rare, since it needs a resubscribe inside
+    // the cooldown window, and not urgent, but it should not disappear quietly.
+    // Narrowing the cooldown to pending-only is a separate change with its own
+    // reasoning about confirmation-email bombing of unsubscribed addresses.
+    const coolingDown = withinResendCooldown(data.updatedAt) && hasUsableToken;
+
+    // 'teams_only': a PENDING record whose merged team set actually grew. That
+    // is a preferences update (a capture surface adding a team after signup),
+    // not a request for a new confirmation link. Comparing the sanitized arrays
+    // rather than the submitted one means a re-submit carrying only teams the
+    // record already has, or an empty array, does NOT qualify and stays on the
+    // resend path. At the MAX_TEAMS ceiling the merge cannot grow, so it
+    // correctly falls through to resend as well.
+    //
+    // Status is tested for 'pending' EXPLICITLY, not for "not confirmed": this
+    // branch also catches unsubscribed, and a resubmit there is a deliberate
+    // resubscribe that must resurrect with a fresh token and a real email.
+    //
+    // The delivery marker is the load-bearing conjunct. The condition for
+    // suppressing is "the link for THIS token was delivered", not "a token
+    // exists" and not "some link went out once":
+    //   - sendEmail never throws, it returns {ok:false} on a missing API key, a
+    //     Resend non-2xx, or a timeout, so a token can exist having never
+    //     reached the user.
+    //   - the stamp is written after the send resolves, so a slower send can
+    //     stamp after a later submit already rotated its token away. Comparing
+    //     confirmationSentFor to the current confirmToken is what makes that
+    //     late stamp count for nothing.
+    // A failed or skipped send leaves the pair cleared, so the very next submit,
+    // including a teams-adding one, rotates and re-sends. Records predating the
+    // fields have them unset and fall to the resend path, which costs at most
+    // one extra confirmation email for a record that was already stranded.
+    const confirmationDelivered = hasDeliveredCurrentToken(data);
+    const teamsOnlyUpdate =
+      data.status === 'pending' &&
+      hasUsableToken &&
+      confirmationDelivered &&
+      mergedTeams.length > existingTeams.length;
+
+    // teams_only is reported ahead of cooldown when both hold, so a rapid
+    // add-a-team submit is attributed to the reason that distinguishes it.
+    // Behavior is identical either way; only the reported label differs.
+    const suppressionReason: 'cooldown' | 'teams_only' | null = teamsOnlyUpdate
+      ? 'teams_only'
+      : coolingDown
+        ? 'cooldown'
+        : null;
+
+    // Safe cast: both suppressors require hasUsableToken.
+    const confirmToken = suppressionReason ? (data.confirmToken as string) : newToken();
     tx.update(ref, {
       teams: mergedTeams,
       status: 'pending',
@@ -259,6 +392,10 @@ export async function upsertSubscriber(
       confirmedAt: null,
       manageToken,
       updatedAt: now,
+      // Rotating mints a token that has definitionally not been delivered yet,
+      // so the delivery marker must not carry over from the previous one.
+      // Cleared as a pair; re-stamped by the caller only when a send succeeds.
+      ...(suppressionReason === null ? deliveryCleared() : {}),
     });
     return {
       id,
@@ -266,11 +403,43 @@ export async function upsertSubscriber(
       status: 'pending',
       teams: mergedTeams,
       created: false,
-      needsConfirmation: !coolingDown,
+      needsConfirmation: suppressionReason === null,
       confirmToken,
       manageToken,
+      suppressionReason,
     };
   });
+}
+
+/**
+ * Record that a confirmation email carrying `confirmToken` was accepted by the
+ * provider.
+ *
+ * Deliberately NOT part of upsertSubscriber's transaction: that transaction has
+ * to commit before the send is attempted, so at commit time we cannot yet know
+ * whether the mail went out. This is the second write, issued by the caller only
+ * after sendConfirmationEmail reports ok.
+ *
+ * The token is recorded alongside the timestamp precisely BECAUSE this write is
+ * late. If a competing submit rotated the token while the send was in flight,
+ * this stamp names a token the record no longer holds, and the gate compares the
+ * two and correctly declines to treat it as delivered. That keeps the write
+ * targeted: no read, no compare-and-set, no read-modify-write, so it still
+ * cannot clobber a concurrent teams merge.
+ *
+ * Never throws: the signup already succeeded and the record already exists, so a
+ * failed stamp degrades to one redundant confirmation email on the user's next
+ * submit, which is strictly better than failing the request.
+ */
+export async function markConfirmationSent(id: string, confirmToken: string): Promise<void> {
+  try {
+    await db.collection(SUBSCRIBERS).doc(id).update(deliveryStamped(confirmToken));
+  } catch (e) {
+    console.error(
+      '[subscribers] confirmationSentAt stamp failed',
+      e instanceof Error ? e.message : e,
+    );
+  }
 }
 
 // ── Read + lifecycle by token (Phase B) ────────────────────────────────────
@@ -300,6 +469,9 @@ function mapSubscriberDoc(doc: FirebaseFirestore.DocumentSnapshot): Subscriber {
     manageToken: typeof d.manageToken === 'string' ? d.manageToken : '',
     createdAt: tsToIso(d.createdAt),
     confirmedAt: tsToIso(d.confirmedAt),
+    confirmationSentAt: tsToIso(d.confirmationSentAt),
+    confirmationSentFor:
+      typeof d.confirmationSentFor === 'string' ? d.confirmationSentFor : null,
     updatedAt: tsToIso(d.updatedAt),
     geoCity: typeof d.geoCity === 'string' ? d.geoCity : null,
     geoRegion: typeof d.geoRegion === 'string' ? d.geoRegion : null,
