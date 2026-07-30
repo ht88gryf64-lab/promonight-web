@@ -231,6 +231,16 @@ catches a variant wired to the wrong copy block, a typo in a user-facing string,
 or a regression in what the card renders. The same gap applies to every other
 client component in the repo.
 
+**The sharpest evidence, from this branch.** The failure variant originally
+shipped with the clause "We're still sending your confirmation link", which is
+false: after an 8s abort nothing is in flight. Changing that wording broke no
+test, because no test asserts copy strings. **Nothing in the suite would have
+caught shipping a user-facing sentence that was untrue.** The catch came entirely
+from the Phase 3 adversarial review, which is a process control rather than an
+automated one, and process controls are exactly what erode when a track goes
+quiet. That is the strongest argument for eventually closing this gap, and it
+will be far less obvious to a future reader than it is today.
+
 **Deliberately not fixed here.** Adding a render harness means adding a test
 dependency, a DOM shim and a second runner configuration. That is a tooling
 decision worth making on its own merits, weighed across the whole component tree,
