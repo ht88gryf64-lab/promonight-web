@@ -17,6 +17,36 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type SubmitStatus = 'idle' | 'submitting' | 'success' | 'error';
 
+// What /api/subscribe reports about the confirmation email.
+export type ConfirmationOutcome = 'sent' | 'not_needed' | 'failed';
+
+// Which success copy to render. A failed send is NOT an error state: the request
+// succeeded and the record exists, so it is a variant of success.
+export type SuccessVariant = 'confident' | 'failed' | 'already_subscribed';
+
+/**
+ * Pick the success copy from what the API reported.
+ *
+ * 'not_needed' splits on status, which the response already carries:
+ *   pending   a suppressed re-submit. A link was delivered for the token the
+ *             record still holds (both suppressors now require that), so it is
+ *             live and usable and the confident copy is true.
+ *   confirmed nothing was sent and nothing needs to be. Promising a link here
+ *             is false in every clause, which is what this split fixes.
+ *
+ * An unknown or missing value falls back to 'confident', which is exactly
+ * today's behavior, so a client running against an older deploy degrades to what
+ * it did before rather than to a wrong failure message.
+ */
+export function successVariant(
+  confirmation: ConfirmationOutcome | undefined,
+  status: string | undefined,
+): SuccessVariant {
+  if (confirmation === 'failed') return 'failed';
+  if (confirmation === 'not_needed' && status === 'confirmed') return 'already_subscribed';
+  return 'confident';
+}
+
 interface FollowFormProps {
   teams: Team[];
   // Slug pre-starred from entry context (team-page CTA). null for hub/homepage.
@@ -33,6 +63,7 @@ export function FollowForm({ teams, initialTeam, surface, nearTeamIds }: FollowF
   );
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<SubmitStatus>('idle');
+  const [variant, setVariant] = useState<SuccessVariant>('confident');
   const [errorMsg, setErrorMsg] = useState('');
 
   // Membership lookup for the geo "near you" set, so a star can be tagged with
@@ -87,13 +118,17 @@ export function FollowForm({ teams, initialTeam, surface, nearTeamIds }: FollowF
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: trimmed, teams: selected, source: surface }),
       });
-      const data: { ok?: boolean; error?: string } | null = await res
-        .json()
-        .catch(() => null);
+      const data: {
+        ok?: boolean;
+        error?: string;
+        status?: string;
+        confirmation?: ConfirmationOutcome;
+      } | null = await res.json().catch(() => null);
       if (!res.ok || !data?.ok) {
         throw new Error(data?.error ?? `status ${res.status}`);
       }
       track('newsletter_signup', { surface, team_count: selected.length });
+      setVariant(successVariant(data.confirmation, data.status));
       setStatus('success');
     } catch {
       setStatus('error');
@@ -102,7 +137,7 @@ export function FollowForm({ teams, initialTeam, surface, nearTeamIds }: FollowF
   };
 
   if (status === 'success') {
-    return <SuccessCard email={email.trim()} count={selected.length} />;
+    return <SuccessCard email={email.trim()} count={selected.length} variant={variant} />;
   }
 
   const submitLabel =
@@ -181,23 +216,73 @@ export function FollowForm({ teams, initialTeam, surface, nearTeamIds }: FollowF
   );
 }
 
-function SuccessCard({ email, count }: { email: string; count: number }) {
-  return (
+function SuccessCard({
+  email,
+  count,
+  variant,
+}: {
+  email: string;
+  count: number;
+  variant: SuccessVariant;
+}) {
+  const shell = (children: React.ReactNode) => (
     <div className="rounded-2xl border border-rd-line bg-rd-card p-8 text-center">
       <div aria-hidden="true" className="text-4xl">
         ✉️
       </div>
+      {children}
+    </div>
+  );
+
+  if (variant === 'already_subscribed') {
+    // Nothing was sent and nothing needs to be. Deliberately says nothing about
+    // whether teams changed, because the merge may or may not have grown and
+    // this card does not know which. Both sentences are true either way.
+    return shell(
+      <>
+        <h2 className="rd-display mt-3 text-2xl uppercase text-rd-ink">
+          You&apos;re already subscribed
+        </h2>
+        <p className="mx-auto mt-2 max-w-md font-rd text-rd-ink-soft">
+          We&apos;ve got your teams saved. Your next{' '}
+          {count > 0 ? 'personalized' : 'weekly'} promo email is on its way as usual.
+        </p>
+      </>,
+    );
+  }
+
+  if (variant === 'failed') {
+    // The send did not go out. Naming the retry is only honest because a failed
+    // send leaves the delivery marker unset, so a resubmit genuinely re-sends
+    // rather than being swallowed by the resend cooldown.
+    return shell(
+      <>
+        <h2 className="rd-display mt-3 text-2xl uppercase text-rd-ink">
+          You&apos;re almost in
+        </h2>
+        <p className="mx-auto mt-2 max-w-md font-rd text-rd-ink-soft">
+          We&apos;re still sending your confirmation link to <strong>{email}</strong>. If it
+          does not arrive in a few minutes, submit again and we will resend it.
+        </p>
+      </>,
+    );
+  }
+
+  // Confident: a link is live and usable, either sent on this request or already
+  // delivered for the token this record still holds. "We sent", not "we just
+  // sent", because on the suppressed path it went out earlier rather than now.
+  return shell(
+    <>
       <h2 className="rd-display mt-3 text-2xl uppercase text-rd-ink">
         You&apos;re almost in
       </h2>
       <p className="mx-auto mt-2 max-w-md font-rd text-rd-ink-soft">
-        We just sent a confirmation link to <strong>{email}</strong>. Tap it to
-        start getting{' '}
-        {count > 0 ? 'your personalized' : 'the weekly'} promo email.
+        We sent a confirmation link to <strong>{email}</strong>. Tap it to start
+        getting {count > 0 ? 'your personalized' : 'the weekly'} promo email.
       </p>
       <p className="mx-auto mt-4 max-w-md font-rd text-[12px] text-rd-ink-faint">
         Didn&apos;t get it? Check spam, or it may take a minute to arrive.
       </p>
-    </div>
+    </>,
   );
 }
