@@ -207,3 +207,34 @@ recoverable on the next weekly run. On a request path a hang costs the visitor
 their signup with no trace, which is why those must be bounded. Apply that test,
 not a batch-versus-single test, when deciding whether a new send needs a
 timeout.
+
+---
+
+## 6. No render-test coverage for client components
+
+**What it is.** The repo has no way to render a React component in a test. There
+is no testing-library, jsdom, happy-dom, vitest or jest in `package.json`; the
+runner is `node --test` over `src/**/*.test.ts`. So component markup, conditional
+rendering and copy strings are never exercised by the suite.
+
+**Where it shows.** Most visibly in the signup success card,
+`src/components/follow/FollowForm.tsx`. It has three copy variants and the choice
+between them is user-visible and easy to get wrong. The branching was therefore
+extracted into the pure `successVariant()` and tested directly in
+`src/components/follow/__tests__/success-variant.test.ts`; the copy strings
+themselves stay inline in the JSX and are untested.
+
+**Why it matters.** The tested part is the part that can be logically wrong, so
+this is a reasonable split rather than a hole left open by accident. But nothing
+catches a variant wired to the wrong copy block, a typo in a user-facing string,
+or a regression in what the card renders. The same gap applies to every other
+client component in the repo.
+
+**Deliberately not fixed here.** Adding a render harness means adding a test
+dependency, a DOM shim and a second runner configuration. That is a tooling
+decision worth making on its own merits, weighed across the whole component tree,
+not smuggled in as a rider on a copy change to one card.
+
+**Severity: Low.** No user impact today, and the highest-risk logic in the
+affected component is covered by a pure unit test. Recorded so the gap is tracked
+rather than rediscovered.
