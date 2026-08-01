@@ -25,8 +25,11 @@ import { useEffect } from 'react';
 // this and never touches the expander. The aria-expanded check means an
 // already-open list is never toggled shut. If the row is still missing after
 // expanding — a genuinely absent promo, e.g. a stale link to something past or
-// tombstoned — we fall back to the original graceful no-op and the visitor lands
-// at the top of the page.
+// tombstoned — we collapse the list again and fall back to the original graceful
+// no-op, so the visitor lands at the top of a page that looks exactly as it
+// would have with no hash at all. The brief expand/collapse is confined to that
+// error path; a permanently expanded list on every stale deep link would be the
+// worse trade.
 
 // ~30 frames (half a second at 60fps) is far more than a client re-render needs,
 // and it costs nothing when the row appears on the first retry.
@@ -74,8 +77,16 @@ export function PromoArrivalHighlight() {
 
       let frames = 0;
       const retry = () => {
+        // Found: leave the list open. The visitor is looking at a row inside it.
         if (tryFlash(id)) return;
-        if (++frames > MAX_RETRY_FRAMES) return;
+        if (++frames > MAX_RETRY_FRAMES) {
+          // Genuinely absent. Put the list back the way we found it: a failed
+          // lookup the visitor never asked for must leave no trace, and a stale
+          // link should show the team page in its normal collapsed state rather
+          // than silently expanded to every upcoming promo.
+          expander.click();
+          return;
+        }
         raf = window.requestAnimationFrame(retry);
       };
       raf = window.requestAnimationFrame(retry);
