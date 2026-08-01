@@ -75,7 +75,13 @@ export function VenueHubPromoCard({
   };
 
   return (
-    <div onClick={fire}>
+    // Column so the row (always the last child) can take the leftover height and
+    // match its neighbours. The row's own inner layout is a flex ROW with the
+    // default stretch alignment, so its date stamp and text column start at the
+    // top of whatever height they are given: a short promo gets its slack at the
+    // bottom, not a vertically centered block that floats differently on every
+    // card. The team marker, when present, keeps its natural height.
+    <div onClick={fire} className="flex flex-col [&>*:last-child]:flex-1">
       {showTeamMarker ? (
         <div className="mb-1.5 flex items-center gap-1.5 px-0.5">
           {/* Hairline ring so a near-white team color still reads on cream. */}

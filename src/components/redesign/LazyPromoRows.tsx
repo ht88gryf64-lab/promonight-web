@@ -22,6 +22,7 @@ export function LazyPromoRows({
   contexts,
   interactive = false,
   surface,
+  anchorIds,
 }: {
   promos: Promo[];
   share: PromoRowShare;
@@ -34,6 +35,14 @@ export function LazyPromoRows({
   contexts?: (GameContext[] | null)[];
   interactive?: boolean;
   surface?: UpcomingPromoSurface;
+  /** Per-row deep-link DOM ids, parallel to `promos` (same convention as
+   *  `contexts`). Passed for the UPCOMING group only: those rows are deep-link
+   *  targets from other surfaces, so they need their anchor even though they
+   *  mount late. Its presence also tags the toggle below with
+   *  `data-promo-anchors`, which is how PromoArrivalHighlight finds the one
+   *  expander worth opening when an arriving #promo- hash matches no row that is
+   *  in the DOM yet. Absent on the completed group, whose rows are not linkable. */
+  anchorIds?: (string | undefined)[];
 }) {
   const [open, setOpen] = useState(false);
 
@@ -43,6 +52,7 @@ export function LazyPromoRows({
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
+        data-promo-anchors={anchorIds ? '' : undefined}
         className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-rd-line bg-rd-card px-5 py-2.5 font-rd text-[11px] uppercase tracking-[0.1em] text-rd-ink-soft transition-colors hover:border-rd-line-strong hover:text-rd-ink"
       >
         <span className={`inline-block transition-transform ${open ? 'rotate-90' : ''}`} aria-hidden="true">▸</span>
@@ -60,6 +70,7 @@ export function LazyPromoRows({
               contexts={contexts?.[i] ?? null}
               interactive={interactive}
               surface={surface}
+              anchorId={anchorIds?.[i]}
             />
           ))}
         </div>

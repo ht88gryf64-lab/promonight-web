@@ -49,12 +49,20 @@ export function HubPromosThisWeek({
           {items.map((item) => (
             <div
               key={`${item.team.id}-${item.promo.date}-${item.promo.title}`}
-              /* Fixed width = the peek that signals overflow. items-stretch keeps
-                 every card the same height as the tallest; the descriptor clamp
-                 bounds that height so one long description cannot make the whole
-                 block tall. The clamp targets the row's description <p>, which is
-                 the row's only paragraph, so the card is otherwise untouched. */
-              className="w-[82%] max-w-[330px] shrink-0 snap-start sm:w-[330px] [&_p]:line-clamp-2"
+              /* Fixed width = the peek that signals overflow, and every item the
+                 same width.
+                 UNIFORM HEIGHT BY STRETCH, never a fixed px height: items-stretch
+                 on the row above sizes every item to the tallest, and `flex-col`
+                 plus `[&>*]:flex-1` pushes that height down into the card itself
+                 so the white card fills the item instead of shrink-wrapping its
+                 content. Nothing clips, because the tallest card still defines the
+                 height; a two-line title or an extra tag just makes every card in
+                 the strip taller together.
+                 The clamp bounds that tallest card. It targets the row's
+                 description <p>, the row's only paragraph, and it is scoped to
+                 this wrapper — the team page and league hub uses of the same row
+                 component never see it. */
+              className="flex w-[82%] max-w-[330px] shrink-0 snap-start flex-col sm:w-[330px] [&>*]:flex-1 [&_p]:line-clamp-2"
             >
               <VenueHubPromoCard
                 promo={item.promo}
