@@ -7,6 +7,7 @@ import {
   venueHubIsIndexable,
   resolveTicketTeam,
   resolveTenantTeamLinks,
+  getVenueHubWeekPromos,
   venueHubTitle,
   venueHubDescription,
 } from '@/lib/venue-hub';
@@ -51,7 +52,13 @@ export default async function VenueHubPage({ params }: { params: Promise<{ slug:
   const { slug } = await params;
   const hub = await getVenueHub(slug);
   if (!hub) notFound();
-  const [ticketTeam, tenantLinks] = await Promise.all([resolveTicketTeam(hub), resolveTenantTeamLinks(hub)]);
+  // weekPromos is 1-3 per-tenant reads (getTeamPromos, the team page's own
+  // read), never a collectionGroup scan. See getVenueHubWeekPromos.
+  const [ticketTeam, tenantLinks, weekPromos] = await Promise.all([
+    resolveTicketTeam(hub),
+    resolveTenantTeamLinks(hub),
+    getVenueHubWeekPromos(hub),
+  ]);
   return (
     <div className={`${archivoHouse.variable} rd-root min-h-screen`}>
       <VenueHubView
@@ -59,6 +66,7 @@ export default async function VenueHubPage({ params }: { params: Promise<{ slug:
         canonicalUrl={`${BASE_URL}/venues/${slug}`}
         ticketTeam={ticketTeam}
         tenantLinks={tenantLinks}
+        weekPromos={weekPromos}
       />
     </div>
   );

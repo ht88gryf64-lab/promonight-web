@@ -30,6 +30,7 @@ export type AnalyticsEvent =
   | 'affiliate_click'
   | 'venue_hub_click'
   | 'hub_to_team'
+  | 'venue_hub_promo_click'
   | 'app_download_click'
   | 'promo_card_tap'
   | 'tonight_card_tap'
@@ -544,6 +545,32 @@ export type HubToTeamClickProperties = {
   destination_url: string;
 };
 
+// venue_hub_promo_click: a tap on a card in the venue hub "Promos this week"
+// scroller. The third internal-routing event in the family, and the most
+// specific: venue_hub_click measures team page -> building, hub_to_team measures
+// building -> team page, and this measures building -> ONE PROMO's anchor on the
+// team page. It therefore carries the promo identity on top of the building and
+// destination team the other two already carry.
+//
+// promo_id is synthPromoId (teamSlug:date:title). The read path drops the
+// Firestore promo doc id, so that composite IS the app-wide promo identity for
+// analytics, and it joins cleanly to promo_card_tap / this_week_card_tap on
+// other surfaces.
+export type VenueHubPromoClickProperties = {
+  surface: AnalyticsSurface;
+  team_slug: string;
+  sport?: Sport;
+  placement: string;
+  building_slug: string;
+  building_name: string;
+  promo_id: string;
+  promo_type: string;
+  is_highlight: boolean;
+  // 0 = a promo tonight. The scroller only ever holds 0..7.
+  days_out: number;
+  destination_url: string;
+};
+
 // ── Engagement capture trigger (Phase 1: telemetry only) ─────────────────
 // Emitted by the trigger engine before any UI exists, so the thresholds can be
 // validated against live traffic rather than guessed. `shown` means the trigger
@@ -624,6 +651,7 @@ export type EventPropertiesMap = {
   page_view: PageViewProperties;
   venue_hub_click: VenueHubClickProperties;
   hub_to_team: HubToTeamClickProperties;
+  venue_hub_promo_click: VenueHubPromoClickProperties;
   cta_click: CtaClickProperties;
   browse_all_teams_tap: BrowseAllTeamsTapProperties;
   this_week_see_all_tap: ThisWeekSeeAllTapProperties;
