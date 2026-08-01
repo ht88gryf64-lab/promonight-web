@@ -9,9 +9,11 @@ import { ExpediaCTA } from '@/components/affiliates/ExpediaCTA';
 import { VenueHubJsonLd } from './VenueHubJsonLd';
 import { VenuePhotoHero } from './VenuePhotoHero';
 import { HubTeamLink } from './HubTeamLink';
+import { HubPromosThisWeek } from './HubPromosThisWeek';
 import {
   type VenueHub,
   type TenantTeamLink,
+  type VenueHubWeekPromo,
   displayVenueName,
   leadSentences,
   cityState,
@@ -89,11 +91,15 @@ export function VenueHubView({
   canonicalUrl,
   ticketTeam,
   tenantLinks,
+  weekPromos,
 }: {
   hub: VenueHub;
   canonicalUrl: string;
   ticketTeam: Team | null;
   tenantLinks: TenantTeamLink[];
+  /** Tenant promos in the next 7 days, already merged and date-sorted. Empty is
+   *  the common off-season case and renders nothing (see HubPromosThisWeek). */
+  weekPromos: VenueHubWeekPromo[];
 }) {
   const short = displayVenueName(hub.name);
   const loc = cityState(hub);
@@ -434,6 +440,16 @@ export function VenueHubView({
           {/* main column */}
           <div className="min-w-0">
             {bagCard}
+            {/* Promos this week: directly under the bag capsule and above
+                parking. The capsule stays first because it is the SEO answer the
+                page ranks for; a live promo is the highest-intent time-sensitive
+                content on the page, so it sits as high as it can without
+                displacing that. Self-conditional (null on an empty 7-day
+                window), which is what lets parking move up on off-season
+                buildings with no extra branching here. Building-agnostic, like
+                the teams block below it: promos are PromoNight data, not a venue
+                fact, so they do not sit behind hub.verified. */}
+            <HubPromosThisWeek items={weekPromos} buildingSlug={hub.slug} buildingName={short} />
             {/* Return links: prominent (first for held buildings, which have no
                 bag capsule), high in the DOM for link equity + AI crawlers. */}
             {teamsCard}

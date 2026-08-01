@@ -264,6 +264,11 @@ export function PromoList({
                   team={team}
                   contexts={upcomingHidden.map(contextsFor)}
                   interactive
+                  /* Same id formula as the visible rows above. Without these the
+                     hidden rows are unreachable by fragment, which is what made a
+                     deep link into a week with more than UPCOMING_VISIBLE promos
+                     land at the top of the page. */
+                  anchorIds={upcomingHidden.map((p) => `promo-${promoAnchorId(p)}`)}
                 />
               )}
             </>

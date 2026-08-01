@@ -1,8 +1,8 @@
 import 'server-only';
 import { cache } from 'react';
 import { db } from './firebase';
-import type { Team } from './types';
-import { getTeamBySlug } from './data';
+import type { Promo, Team } from './types';
+import { getTeamBySlug, getTeamPromos, promoBoardChicagoYMD } from './data';
 import { getCfbSchool } from './cfb/data';
 import { toAffiliateTeam } from './cfb/page-extras';
 
@@ -372,6 +372,79 @@ export const resolveTenantTeamLinks = cache(async (hub: VenueHub): Promise<Tenan
     }
   }
   return out;
+});
+
+// ── this-week promos (the PromoNight-native hook on a logistics page) ───────
+// PER-TENANT READS ONLY. getTeamPromos is the team page's OWN read
+// (teams/{teamId}/promos, orderBy date asc), so every promo object here is the
+// exact shape the team page renders, with isVisiblePromo (tombstoned !== true)
+// and dedupePromos already applied inside it. Deliberately NOT
+// getPromosInDateRange or any other collectionGroup query: those are all-league
+// scans, and this runs on 222 SSG building pages, where per-tenant is 1-3 doc
+// reads apiece instead.
+//
+// CFB tenants are skipped rather than read: college pages are gameday/schedule
+// and carry no teams/{id}/promos subcollection at all, so the read would always
+// come back empty while still costing a round trip on shared NFL/CFB buildings.
+export interface VenueHubWeekPromo {
+  promo: Promo;
+  /** The tenant this promo belongs to. Drives the deep link, the share payload,
+   *  and the multi-tenant per-card team marker. */
+  team: Team;
+  /** Whole days from today to the promo date, 0 = today. Computed here, where
+   *  the window anchor already exists, so no surface has to re-derive "today". */
+  daysOut: number;
+}
+
+/** Window length in days past today, inclusive on both ends. */
+const WEEK_PROMO_DAYS = 7;
+
+function daysBetweenYMD(a: string, b: string): number {
+  const [ay, am, ad] = a.split('-').map(Number);
+  const [by, bm, bd] = b.split('-').map(Number);
+  return Math.round((Date.UTC(by, bm - 1, bd) - Date.UTC(ay, am - 1, ad)) / 86400000);
+}
+
+/** Every tenant's promos in [today, today+7], merged into ONE date-sorted list.
+ *  Empty array when the building has no promos in the window, which is what the
+ *  caller conditional-renders on (an off-season arena shows no block at all). */
+export const getVenueHubWeekPromos = cache(async (hub: VenueHub): Promise<VenueHubWeekPromo[]> => {
+  // Chicago-anchored, the same national "today" boundary the league hubs and the
+  // daily board use, so a late-night East-coast visitor never sees the window
+  // roll a day early.
+  const start = promoBoardChicagoYMD(0);
+  const end = promoBoardChicagoYMD(WEEK_PROMO_DAYS);
+
+  const seen = new Set<string>();
+  const proTenants = hub.tenants.filter((t) => {
+    if (!t?.teamId || t.league === 'CFB' || seen.has(t.teamId)) return false;
+    seen.add(t.teamId);
+    return true;
+  });
+  if (proTenants.length === 0) return [];
+
+  const perTenant = await Promise.all(
+    proTenants.map(async (t) => {
+      const [team, promos] = await Promise.all([getTeamBySlug(t.teamId), getTeamPromos(t.teamId)]);
+      if (!team) return [];
+      // In-memory window filter: YYYY-MM-DD string compare, the same date math
+      // the team page's upcoming/past split and the league hub slates use.
+      return promos
+        .filter((p) => p.date >= start && p.date <= end)
+        .map((promo) => ({ promo, team, daysOut: daysBetweenYMD(start, promo.date) }));
+    }),
+  );
+
+  const merged = perTenant.flat();
+  // Date first (the fan reads the scroller chronologically); team then title
+  // only to keep same-day ordering stable across rebuilds.
+  merged.sort(
+    (a, b) =>
+      a.promo.date.localeCompare(b.promo.date) ||
+      a.team.id.localeCompare(b.team.id) ||
+      a.promo.title.localeCompare(b.promo.title),
+  );
+  return merged;
 });
 
 // ── season year (deliberate, never getFullYear) ─────────────────────────────
