@@ -46,6 +46,7 @@ export type AnalyticsEvent =
   | 'game_day_view'
   | 'game_tap'
   | 'away_game_expanded'
+  | 'capture_threshold_met'
   | 'capture_prompt_shown'
   | 'capture_prompt_suppressed'
   | 'ad_slot_viewed'
@@ -563,6 +564,45 @@ export type CapturePromptContext = {
 
 export type CapturePageType = 'team_page' | 'aggregator' | 'venue_page';
 
+// capture_threshold_met: a PROBE, not a decision. It fires when the gesture
+// threshold and 30 engaged seconds are both met, while shown and suppressed
+// remain decided at 45. Nothing about the prompt changes when it fires.
+//
+// It exists to size one population that the first read could not see at all:
+// visitors who qualify and then leave between 30 and 45 seconds. They emitted
+// nothing before, so the cost of the 45-second floor was unmeasurable, and
+// lowering the floor to find out would have been a guess with no way to check
+// it afterwards.
+//
+// THE READ IS A SUBTRACTION OVER DISTINCT SESSIONS, NOT OVER RAW EVENT COUNTS.
+// Suppressed visitors never emit the probe, so they belong on neither side of
+// it. But the probe is guarded per pageview, exactly like shown and suppressed,
+// while only ONE prompt is ever allowed per session, so raw counts would divide
+// a per-pageview numerator by a per-session denominator. A visitor who qualifies
+// on page one, leaves at 40 seconds, then qualifies again on page two and is
+// shown there emits two probes and one shown; a raw difference books them as a
+// loss, when in truth lowering the floor would have gained nothing from them
+// because they were prompted anyway. Count DISTINCT sessions that emitted a
+// probe minus distinct sessions that emitted shown.
+//
+// That error runs UP, and removing first_pageview is what makes multi-page
+// qualification possible at all, so it grows with the very change being
+// measured. The opposite error exists and is far smaller: the probe guard is a
+// single pathname slot, so a visitor who probes page A, visits page B without
+// qualifying, and returns to A gets no second probe for A while still emitting
+// shown there. Both need a multi-page session, and the first read had 1.39
+// pageviews per session with 72 distinct people behind 74 qualifying events, so
+// neither is material yet. The diagnostic is cheap: compare the probe event
+// count against the count of distinct sessions that probed. If they diverge,
+// use distinct sessions and nothing else.
+export type CaptureThresholdMetProperties = CapturePromptContext & {
+  trigger_signal: TriggerSignal;
+  trigger_count: number;
+  // Engaged seconds at the probe, so the distribution between 30 and 45 is
+  // visible rather than just the count.
+  seconds_on_page: number;
+};
+
 export type CapturePromptShownProperties = CapturePromptContext & {
   trigger_signal: TriggerSignal;
   // Gestures, not events, for the signal that tripped. See gesture-counter.ts.
@@ -605,6 +645,7 @@ export type EventPropertiesMap = {
   game_day_view: GameDayViewProperties;
   game_tap: GameTapProperties;
   away_game_expanded: AwayGameExpandedProperties;
+  capture_threshold_met: CaptureThresholdMetProperties;
   capture_prompt_shown: CapturePromptShownProperties;
   capture_prompt_suppressed: CapturePromptSuppressedProperties;
   ad_slot_viewed: AdSlotViewedProperties;

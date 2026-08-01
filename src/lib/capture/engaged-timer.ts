@@ -75,3 +75,24 @@ export class EngagedTimer {
 // crossed AND this much engaged time. The floor is what keeps a fast scroller
 // who happens to trip a counter from seeing anything.
 export const ENGAGED_FLOOR_MS = 45_000;
+
+// A MEASUREMENT FLOOR, NOT A DECISION FLOOR. Nothing is shown or suppressed at
+// this mark; it only stamps capture_threshold_met, the probe that sizes how many
+// otherwise-eligible visitors leave between here and ENGAGED_FLOOR_MS.
+//
+// The first read could not answer that question: every visitor who reached 45s
+// was reported, and every visitor who did not was invisible, so the cost of the
+// floor could not be separated from the cost of anything else. Two counts and a
+// subtraction can answer it.
+//
+// The first read did say the floor is the BINDING constraint, which is what
+// makes the question worth asking: median seconds_on_page was exactly 45 for
+// both the shown and the suppressed events. Not near 45, exactly 45. The
+// gestures were therefore already done and those visitors were being held only
+// by the clock, so whoever is lost between 30 and 45 is lost to this constant
+// and to nothing else.
+//
+// The floor itself is deliberately UNCHANGED while this is measured: moving it
+// in the same phase would confound the retune with the removal of
+// first_pageview and neither result could be attributed.
+export const PROBE_FLOOR_MS = 30_000;

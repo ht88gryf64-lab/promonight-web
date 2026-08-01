@@ -7,22 +7,27 @@ import {
   track,
   type CapturePageType,
 } from '@/lib/analytics';
-import { ENGAGED_FLOOR_MS, EngagedTimer } from '@/lib/capture/engaged-timer';
+import { EngagedTimer } from '@/lib/capture/engaged-timer';
 import { GestureCounter } from '@/lib/capture/gesture-counter';
 import { isCaptureTriggerEnabledClient } from '@/lib/capture/gate';
 import { browserStorage } from '@/lib/capture/storage';
 import {
-  evaluateSuppression,
-  markShown,
-  recordPageview,
-  type SuppressionReason,
-} from '@/lib/capture/suppression';
+  createGuards,
+  evaluateTrigger,
+  isSettled,
+  type CaptureGuards,
+} from '@/lib/capture/trigger-engine';
 import { resolveVariant } from '@/lib/capture/variant';
 
-// The trigger engine. RENDERS NOTHING, in this phase and in the control arm of
-// every later one. Its entire job is to decide when a prompt WOULD fire and to
-// say so in telemetry, so the thresholds are validated against live traffic
-// before any sheet is built.
+// The trigger engine's WIRING. RENDERS NOTHING, in this phase and in the control
+// arm of every later one. Its entire job is to decide when a prompt WOULD fire
+// and to say so in telemetry, so the thresholds are validated against live
+// traffic before any sheet is built.
+//
+// The decision itself lives in lib/capture/trigger-engine.ts, where a test can
+// reach it. What is left here is the part that genuinely needs React and the
+// DOM: the analytics subscriber, the visibilitychange listener, the tick, and
+// the per-pathname lifetime of the counter and timer.
 //
 // Mounted per page rather than in the root layout, because it needs the page's
 // team and page type, and because in the App Router a route change unmounts and
@@ -34,10 +39,12 @@ interface CaptureTriggerProps {
   teamId: string | null;
 }
 
-// Re-checked on a timer as well as on every event, because the engaged-time
-// floor can be the last condition to be met: a visitor can cross a threshold at
-// 20 seconds and then simply keep reading. Without a tick, that visitor would
-// never fire until they happened to tap again.
+// Re-checked on a timer as well as on every event, because an engaged-time floor
+// can be the last condition to be met: a visitor can cross a threshold at 20
+// seconds and then simply keep reading. Without a tick, that visitor would never
+// fire until they happened to tap again. 5s is well under the 15s gap between
+// the probe floor and the decision floor, so neither is missed by more than one
+// tick's worth of overshoot.
 const TICK_MS = 5_000;
 
 // NO BOT FILTERING, DELIBERATELY DEFERRED. The repo has a classifyTraffic
@@ -59,35 +66,20 @@ export function CaptureTrigger({ pageType, teamId }: CaptureTriggerProps) {
   // Everything the engine needs lives in refs, not state: this component never
   // re-renders, and nothing it does should ever cause a render.
   //
-  // All three are keyed by PATHNAME rather than being plain booleans, and that
-  // is load-bearing rather than tidiness. The App Router reuses this component
-  // instance when navigating between two pages of the SAME route segment, say
-  // one team page to another, so a boolean set on the first page would still be
-  // set on the second. Every second and subsequent team page in a session would
-  // then have gone unreported, and the fire rate would have read low for a
-  // reason that had nothing to do with the thresholds, which is precisely the
-  // number this phase exists to measure. Keying on the path resets them per
-  // page while still surviving the effect re-running for the SAME path, which
-  // is what StrictMode does in development.
-  const countedPathRef = useRef<string | null>(null);
-  const firedPathRef = useRef<string | null>(null);
-  const suppressedPathRef = useRef<string | null>(null);
+  // The guards must OUTLIVE the effect, which is the whole reason they are a ref
+  // rather than a local. StrictMode re-runs the effect for the same path in
+  // development, and a fresh set of guards each time would report every event
+  // twice. See trigger-engine.ts for why they are keyed by pathname.
+  const guardsRef = useRef<CaptureGuards>(createGuards());
 
   useEffect(() => {
     // The kill switch. OFF means nothing below runs: no subscriber, no timer,
     // no storage access, no events.
     if (!isCaptureTriggerEnabledClient()) return;
 
+    const guards = guardsRef.current;
     const local = browserStorage('local');
     const session = browserStorage('session');
-
-    // One pageview per path per mount. StrictMode remounts the same instance in
-    // development, so a bare increment would double-count every page locally
-    // and make the first_pageview rule untestable by hand.
-    if (countedPathRef.current !== pathname) {
-      countedPathRef.current = pathname;
-      recordPageview(session);
-    }
 
     const variant = resolveVariant(local);
     const counter = new GestureCounter();
@@ -108,51 +100,41 @@ export function CaptureTrigger({ pageType, teamId }: CaptureTriggerProps) {
       tickId = undefined;
     };
 
-    const reportSuppressed = (reason: SuppressionReason) => {
-      // Once per page. The engine re-evaluates on every event and every tick,
-      // and a suppressed visitor stays suppressed, so without this a single
-      // page could emit hundreds of identical events.
-      if (suppressedPathRef.current === pathname) return;
-      suppressedPathRef.current = pathname;
-      stopTicking();
-      const signal = counter.triggeredSignal();
-      track('capture_prompt_suppressed', {
-        ...context,
-        suppression_reason: reason,
-        trigger_signal: signal,
-        trigger_count: signal ? counter.countFor(signal) : 0,
-        seconds_on_page: timer.elapsedSeconds(),
-      });
-    };
-
     const evaluate = () => {
-      if (firedPathRef.current === pathname) return;
-      if (suppressedPathRef.current === pathname) return;
+      const emissions = evaluateTrigger({
+        pathname,
+        guards,
+        counter,
+        timer,
+        local,
+        session,
+        now: Date.now(),
+      });
 
-      // Both conditions, threshold AND floor, before anything is reported. A
-      // visitor who has met neither is not suppressed, they are simply not
-      // there yet, and reporting that would drown the suppression chart.
-      const signal = counter.triggeredSignal();
-      if (!signal) return;
-      if (!timer.hasReached(ENGAGED_FLOOR_MS)) return;
-
-      const reason = evaluateSuppression({ pathname, local, session, now: Date.now() });
-      if (reason) {
-        reportSuppressed(reason);
-        return;
+      for (const e of emissions) {
+        // Each event is claimed inside evaluateTrigger before it is returned, so
+        // the subscriber this track() call notifies re-enters evaluate() and
+        // finds nothing left to report.
+        if (e.event === 'capture_prompt_suppressed') {
+          track(e.event, {
+            ...context,
+            suppression_reason: e.reason,
+            trigger_signal: e.signal,
+            trigger_count: e.count,
+            seconds_on_page: e.seconds,
+          });
+        } else {
+          track(e.event, {
+            ...context,
+            trigger_signal: e.signal,
+            trigger_count: e.count,
+            seconds_on_page: e.seconds,
+          });
+        }
       }
 
-      firedPathRef.current = pathname;
-      stopTicking();
-      // Recorded at SHOWN, so a visitor who navigates away mid-prompt is not
-      // shown it again on the next pageview.
-      markShown(session);
-      track('capture_prompt_shown', {
-        ...context,
-        trigger_signal: signal,
-        trigger_count: counter.countFor(signal),
-        seconds_on_page: timer.elapsedSeconds(),
-      });
+      // Nothing further can change for this page once it is shown or suppressed.
+      if (isSettled(guards, pathname)) stopTicking();
     };
 
     const unsubscribe = subscribeToAnalytics((eventName, props) => {
@@ -178,7 +160,9 @@ export function CaptureTrigger({ pageType, teamId }: CaptureTriggerProps) {
       stopTicking();
     };
     // pathname is the route identity. A change means a new page, which must get
-    // a fresh counter, a fresh timer and its own pageview.
+    // a fresh counter and a fresh timer. The guards deliberately do NOT reset:
+    // they are keyed by path, so the new page gets its own slots out of the same
+    // object that still remembers what the previous page reported.
   }, [pathname, pageType, teamId]);
 
   return null;

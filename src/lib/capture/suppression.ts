@@ -1,16 +1,17 @@
 // Why a prompt was not shown, as one deterministic reason.
 //
-// Several reasons routinely apply at once: a subscribed visitor on their first
-// pageview of a session on /follow matches three. The reason that gets reported
-// therefore has to be fixed rather than incidental, or the suppression_reason
-// distribution is a chart of evaluation order rather than of user state.
+// Several reasons routinely apply at once: a subscribed visitor who was already
+// shown a prompt this session, on /follow, matches three. The reason that gets
+// reported therefore has to be fixed rather than incidental, or the
+// suppression_reason distribution is a chart of evaluation order rather than of
+// user state.
 //
 // ORDER: DURABILITY FIRST. Checks run from the most durable and user-scoped to
 // the most transient, and the FIRST match is reported. So "this person will
-// never see this" beats "this person is not eligible yet", which is the more
-// truthful attribution and the more useful chart. Putting first_pageview early,
-// for instance, would mask already_subscribed on every first pageview and hide
-// how much of the audience is already captured.
+// never see this" beats "this person is not eligible right now", which is the
+// more truthful attribution and the more useful chart. Putting
+// session_already_shown before already_subscribed, for instance, would mask how
+// much of the audience is already captured behind a per-session accident.
 
 import {
   KEY_DISMISSED_AT,
@@ -25,8 +26,7 @@ export type SuppressionReason =
   | 'already_subscribed'
   | 'recently_dismissed'
   | 'session_signup'
-  | 'session_already_shown'
-  | 'first_pageview';
+  | 'session_already_shown';
 
 /** Evaluation order. Exported so the test can assert it rather than restate it. */
 export const SUPPRESSION_ORDER: readonly SuppressionReason[] = [
@@ -36,7 +36,6 @@ export const SUPPRESSION_ORDER: readonly SuppressionReason[] = [
   'recently_dismissed',
   'session_signup',
   'session_already_shown',
-  'first_pageview',
 ];
 
 export const DISMISSAL_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
@@ -62,8 +61,6 @@ export function isExcludedPath(pathname: string): boolean {
 // ── Session state ───────────────────────────────────────────────────────────
 
 export interface CaptureSession {
-  /** Pageviews in this session, including the current one. */
-  pageviews: number;
   /**
    * Whether a prompt has been SHOWN this session. Set at shown, never at
    * dismissed: a slow reader who navigates away mid-prompt has still seen it,
@@ -74,7 +71,7 @@ export interface CaptureSession {
   signup: boolean;
 }
 
-const EMPTY_SESSION: CaptureSession = { pageviews: 0, shown: false, signup: false };
+const EMPTY_SESSION: CaptureSession = { shown: false, signup: false };
 
 export function readSession(session: SafeStorage): CaptureSession {
   const raw = session.get(KEY_SESSION);
@@ -83,8 +80,10 @@ export function readSession(session: SafeStorage): CaptureSession {
     const parsed: unknown = JSON.parse(raw);
     if (typeof parsed !== 'object' || parsed === null) return { ...EMPTY_SESSION };
     const p = parsed as Partial<CaptureSession>;
+    // Unknown keys are ignored rather than rejected, so a session written by the
+    // pre-retune build (which carried a `pageviews` counter) still reads as a
+    // valid session for the visitors who were mid-session at deploy time.
     return {
-      pageviews: typeof p.pageviews === 'number' && p.pageviews >= 0 ? p.pageviews : 0,
       shown: p.shown === true,
       signup: p.signup === true,
     };
@@ -96,13 +95,6 @@ export function readSession(session: SafeStorage): CaptureSession {
 
 export function writeSession(session: SafeStorage, next: CaptureSession): void {
   session.set(KEY_SESSION, JSON.stringify(next));
-}
-
-export function recordPageview(session: SafeStorage): CaptureSession {
-  const current = readSession(session);
-  const next = { ...current, pageviews: current.pageviews + 1 };
-  writeSession(session, next);
-  return next;
 }
 
 export function markShown(session: SafeStorage): void {
@@ -165,9 +157,36 @@ export function evaluateSuppression(input: SuppressionInput): SuppressionReason 
   const s = readSession(session);
   if (s.signup) return 'session_signup';
   if (s.shown) return 'session_already_shown';
-  // recordPageview runs before this, so the current pageview is included. One
-  // means this is the session's first, and the first is never interrupted.
-  if (s.pageviews <= 1) return 'first_pageview';
+
+  // REMOVED HERE: `first_pageview`, which suppressed anyone still on the first
+  // pageview of their session, along with the per-session pageview counter that
+  // existed only to feed it.
+  //
+  // WHY, from the first 19 hours of Phase 1 telemetry (2026-07-30 17:22:13Z
+  // onward): 253 sessions, 352 pageviews, 1.39 pageviews per session. 29
+  // evaluations met the gesture threshold and the engaged-time floor. 2 were
+  // shown, 27 were suppressed, and ALL 27 were first_pageview. Zero came from
+  // any other reason. That is a 0.8% fire rate against a 30-45% target, and one
+  // of the 27 had been on the page for 816 seconds.
+  //
+  // Those are the internal-traffic-filtered figures, which is the view the
+  // decision was made on. Re-querying that window in raw SQL gives 260 sessions,
+  // 365 pageviews, 30 evaluations and 28 suppressions instead, because
+  // execute-sql does not apply the project's test-account filter. Same
+  // conclusion either way; the small gap is our own browsing, not a discrepancy.
+  //
+  // The rule was a proxy for "do not be load-adjacent", and at 1.39 pageviews
+  // per session it is a proxy that eliminates 93% of everyone who qualifies. The
+  // 45-second engaged-time floor plus the multi-gesture threshold measure the
+  // same thing directly and far better: somebody who has spent 45 visible
+  // seconds and made four deliberate taps is definitionally not experiencing a
+  // load-triggered popup. The proxy was redundant with the real guard, so the
+  // real guard is what remains.
+  //
+  // Nothing else read the pageview counter, so recordPageview() and the
+  // CaptureSession.pageviews field went with it. `shown` and `signup` are now
+  // the only session state, and the session key is written only when one of
+  // those actually happens.
 
   return null;
 }
