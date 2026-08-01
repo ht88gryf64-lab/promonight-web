@@ -332,6 +332,37 @@ test('one session across two pages emits TWO probes and ONE shown', () => {
   assert.strictEqual(readSession(h.session).shown, true);
 });
 
+test('once a prompt is shown, later pages in the session emit no probe at all', () => {
+  // The end-to-end version of the suppression gate, driven through the real
+  // markShown write rather than a seeded session. evaluateSuppression runs
+  // BEFORE the probe is emitted and the probe is gated on its result
+  // (trigger-engine.ts, `const reason = ...` then `if (!reason && ...)`), so a
+  // visitor shown on page A cannot probe on page B. This is what stops the
+  // probe count from running away once the session cap is finally written, and
+  // it is why the upward bias is bounded by one prompt per session.
+  const h = harness();
+
+  h.taps(4).advance(41); // page A, 45s
+  assert.deepStrictEqual(h.events(), ['capture_threshold_met', 'capture_prompt_shown']);
+  assert.strictEqual(readSession(h.session).shown, true, 'the session cap is now written');
+
+  h.navigate(PATH_B);
+  h.taps(4).advance(26); // page B, threshold plus 30s: fully qualified but capped
+  assert.deepStrictEqual(h.events(), [], 'no probe once the session has been shown');
+  assert.strictEqual(h.guards.probed, PATH_A, 'the probe slot never advanced to B');
+
+  h.advance(15); // page B, 45s
+  assert.deepStrictEqual(h.evaluate(), [
+    {
+      event: 'capture_prompt_suppressed',
+      reason: 'session_already_shown',
+      signal: 'game_tap',
+      count: 4,
+      seconds: 45,
+    },
+  ]);
+});
+
 test('a same-path revisit does not re-probe, so that direction understates instead', () => {
   // The opposite and much rarer error. guards.probed is a single slot, so a
   // return to a path that already probed emits shown with no matching probe.
