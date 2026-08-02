@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { track } from '@/lib/analytics';
+import { resolveBrowserVariant } from '@/lib/capture/variant';
 
 type Props = {
   pageTitle: string;
@@ -56,6 +57,10 @@ export function ScoringPageViewTracker({
       score_count: scoreCount,
       league_filter: leagueFilter,
       date_range_filter: dateRangeFilter,
+      // The scoring routes suppress the global PageViewTracker, so this is the
+      // only page_view they emit. Without the arm here those pageviews would be
+      // a silent hole in the denominator rather than a visible one.
+      variant: resolveBrowserVariant(),
     });
     // searchParams + defaultLeague + defaultRange are intentionally not in
     // the deps array: this is a fire-once-on-mount tracker, and re-reading

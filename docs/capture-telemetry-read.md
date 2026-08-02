@@ -110,6 +110,195 @@ read compares are 45 (current) and 30 (the probe).
 If an intermediate floor becomes interesting, that needs a second probe at that
 mark, not an interpolation of this one.
 
+## The arm, and where it is stamped
+
+The arm is assigned EAGERLY, on a browser's first pageview, before any behaviour is
+observable (`src/components/capture/CaptureTrigger.tsx`, the `resolveVariant` call
+sits above the counter, the timer and the subscriber). It is written once to
+`localStorage` under `promonight:capture_variant` and never reassigned.
+
+Until 2026-08-01 it was REPORTED only by the three capture events, all of which
+need the gesture threshold and 30 engaged seconds to fire. That made the arm
+visible for about a ninth of the browsers that had one: 117 arms observed against
+809 browsers with a pageview, over the first 57 hours. Two consequences, both bad:
+
+- Assignment balance could only be checked on the qualifying subset, so a question
+  answerable in an hour took a day of waiting instead.
+- A per-1,000-VISITORS rate was not computable at all. You cannot split a
+  denominator by an arm the visitor never reported.
+
+`page_view` and `newsletter_signup` now carry `variant` as well. Both resolve
+through `resolveBrowserVariant()` in `src/lib/capture/variant.ts`, which wraps the
+same `resolveVariant` the trigger uses and adds no logic: there is still exactly
+one flip site, so two callers racing on a brand-new browser cannot produce two
+arms.
+
+`newsletter_signup` is stamped for a separate and sharper reason. The alternative
+was to recover the arm by joining a signup back to that browser's capture events,
+and measured against the first 57 hours that join yields a numerator of exactly
+ZERO: all five signups in the window came from browsers that never emitted a
+capture event. The numerator has to be labelled at source or it does not exist.
+
+Two things to know before reading any of it:
+
+- **`unassigned` now appears on real traffic, and that is expected.** The capture
+  events could barely carry it, because a storage-less browser is suppressed for
+  `storage_unavailable` before reaching a shown event. A pageview has no such
+  filter. Exclude `unassigned` from both arms when computing a rate; never fold it
+  into control.
+- **The kill switch gates the pageview stamp too.** `gate.ts` promises OFF means
+  no storage touched, so `resolveBrowserVariant()` returns `unassigned` without
+  reading or writing anything when the trigger is disabled. Both causes of
+  `unassigned` therefore look identical on the event. Time-bound every arm query
+  to a window where the gate was on, which you need to do anyway.
+
+## Checking that assignment is even
+
+The reason the stamp exists. One query, over a day of pageviews, gives roughly
+800 flips instead of 45:
+
+```sql
+SELECT
+    properties.variant AS arm,
+    uniq(person_id) AS browsers,
+    count() AS pageviews
+FROM events
+WHERE timestamp >= toDateTime('PICK_A_BOUND_INSIDE_THE_LIVE_WINDOW')
+  AND event = 'page_view'
+GROUP BY arm
+ORDER BY arm
+```
+
+Read `browsers`, not `pageviews`. The randomization unit is the browser; one
+browser emits many pageviews and they all carry the same arm, so counting events
+treats one flip as many and makes any deviation look far more significant than it
+is. That error is what produced the false alarm logged at the bottom of this file.
+
+At 800 browsers, a fair coin lands within roughly 372-428 control 95% of the time.
+Anything outside that band is worth investigating; anything inside it is not.
+
+## Phase 2 metric definitions
+
+Both are per PERSON. Never per session, never per event.
+
+The randomization unit must equal the analysis unit. The arm lives in
+`localStorage` (`KEY_VARIANT`), which is a property of the browser profile and
+survives tab close, navigation and session rotation. `sessionStorage`
+(`KEY_SESSION`) is a treatment-delivery cap — it controls how often a prompt may
+appear within a tab — not a randomization unit. Analysing per session gives
+several correlated observations per randomized unit and understates variance,
+which INFLATES significance. Analysing per event does the same, worse.
+
+The units also line up exactly, which is worth knowing rather than assuming:
+`person_profiles: 'identified_only'` is set with no `identify()` call anywhere, so
+PostHog's `person_id` is a deterministic UUIDv5 of the anonymous `distinct_id`,
+and that id and the arm share a storage lifetime — both die when localStorage is
+cleared. Verified empirically on 2026-08-01: 0 of 117 browsers ever reported two
+arms.
+
+### Primary: signups per 1,000 QUALIFYING browsers
+
+The honest primary, because it is the population at risk of seeing the sheet. A
+browser that never crosses the threshold was never going to be prompted in either
+arm, so including it dilutes both arms with visitors the treatment cannot reach
+and shrinks the measured effect toward zero for a reason that has nothing to do
+with whether the sheet works.
+
+```sql
+SELECT
+    arm,
+    countIf(qualified) AS qualifying_browsers,
+    countIf(qualified AND signed_up) AS signups,
+    round(countIf(qualified AND signed_up) / countIf(qualified) * 1000, 1) AS per_1k
+FROM (
+    SELECT
+        person_id,
+        -- The browser's arm, ignoring events that carry none. One browser has
+        -- exactly one arm, so any event that carries a real one will do.
+        anyIf(properties.variant, properties.variant IN ('control', 'variant_a')) AS arm,
+        maxIf(1, event IN (
+            'capture_threshold_met', 'capture_prompt_shown', 'capture_prompt_suppressed'
+        )) = 1 AS qualified,
+        maxIf(1, event = 'newsletter_signup') = 1 AS signed_up
+    FROM events
+    WHERE timestamp >= toDateTime('PHASE_2_START')
+      AND event IN (
+          'capture_threshold_met', 'capture_prompt_shown', 'capture_prompt_suppressed',
+          'newsletter_signup', 'page_view'
+      )
+    GROUP BY person_id
+)
+WHERE arm IN ('control', 'variant_a')
+GROUP BY arm
+ORDER BY arm
+```
+
+### Secondary: signups per 1,000 visitors
+
+Computable only since the `page_view` stamp. Report it alongside the primary, not
+instead of it: it is the number that answers "what did this do to the business",
+while the primary answers "does the sheet work on the people who see it". Same
+query with `qualified` swapped for a pageview test:
+
+```sql
+        maxIf(1, event = 'page_view') = 1 AS visited
+```
+
+and the rate taken over `countIf(visited)`.
+
+Do not mix the two denominators in one chart, and label whichever you quote. They
+differ by roughly a factor of ten (9.4% of browsers qualified in the first
+post-retune window), so an unlabelled rate is unreadable a month later.
+
+## Investigation log: the 2026-08-01 arm skew
+
+Recorded because the SHAPE of the correction is the part that gets lost.
+
+**The alarm.** `capture_prompt_shown` in the first post-retune window split 31
+control / 9 variant_a, called out as a 1-in-1000 outcome, against a pre-retune
+window cited as an unremarkable 16 / 13.
+
+**Three errors in the framing, all real:**
+
+1. The 1-in-1000 assumed 40 independent Bernoulli trials. The randomization unit
+   is the browser and the counting unit was the event, so independence did not
+   hold and the statistic did not apply. It happened to land near the right answer
+   anyway, because there turned out to be almost no clustering: exactly 1.000
+   shown events per browser in both arms.
+2. "If the probe splits evenly but shown does not, the bug is downstream of
+   assignment" is incoherent. The arm is resolved once and frozen into the context
+   object every emission spreads, and nothing in the repo branches on it, so there
+   is no downstream that could change it.
+3. **The baseline was a different measurement.** The cited 16 / 13 is 29 QUALIFYING
+   EVALUATIONS (shown + suppressed) from the first 19 hours, of which 27 were
+   `first_pageview` suppressions. Across the entire pre-retune window
+   `capture_prompt_shown` fired three times: 2 control, 1 variant_a. There was no
+   pre-retune baseline for that event to compare against.
+
+**And the finding that error 3 nearly buried.** Correcting the baseline did not
+dissolve the inflection, it relocated it. Comparing like for like — distinct
+persons across all capture events — pre-retune ran 32 / 40 (44.4% control) and
+post-retune ran 34 / 11 (75.6% control), a two-proportion z of 3.30, p ≈ 0.001.
+The original evidence was invalid AND a correct version of it existed and still
+showed the shift. Verify a bad baseline; do not discard the question with it.
+
+**Verdict: bad luck.** Every mechanism the code allows was eliminated positively,
+not by absence: zero-byte diff on `variant.ts` and `storage.ts` across the retune,
+uniform flip, no reassignment path, arm inert, assignment eager and therefore
+independent of qualification, 0 of 117 browsers carrying two arms, 0 `unassigned`
+anywhere, max 3 capture events per browser, single production host so the
+test-account filter was a no-op, ordinary consumer traffic with no bot signature,
+and both arms behaviourally identical (median 45s, mean trigger count 3.59 vs
+3.60). Adjusted for the window having been chosen after seeing the anomaly, call
+it roughly p ≈ 0.005.
+
+**The instrument, not the wait.** The response was to stamp the arm on `page_view`
+rather than wait for another 45 browsers, because 800 flips a day settles the
+question outright and the same change unblocks the Phase 2 denominator. If the
+`page_view` balance ever comes back outside the band above, the code explanation
+is exhausted and the next place to look is outside this repo: something patching
+`Math.random` before `variant.ts` reads it.
+
 ## Related
 
 - `src/lib/capture/trigger-engine.ts` — the decision, both floors, the guards

@@ -157,6 +157,28 @@ export type CommonEventProperties = {
 export type PageViewProperties = {
   surface: AnalyticsSurface;
   page_title: string;
+  // The A/B arm, on EVERY pageview rather than only on the three capture events.
+  //
+  // WHY IT IS HERE. The arm is assigned eagerly, on a browser's first pageview,
+  // but it was only ever REPORTED by the capture events, which need the gesture
+  // threshold and 30 engaged seconds to fire. In the first 57 hours of Phase 1
+  // that meant 117 arms visible out of 809 browsers: assignment was being judged
+  // on a ninth of the flips it had actually made. It also left a
+  // per-1,000-VISITORS rate uncomputable, because a denominator cannot be split
+  // by an arm the visitor never reported. Stamping it here answers both from
+  // traffic that already exists rather than from waiting for more.
+  //
+  // REQUIRED, not optional, so a future page_view call site cannot omit it and
+  // leave the denominator quietly partial. There is no chart on which a missing
+  // arm looks different from an arm that was never assigned.
+  //
+  // 'unassigned' IS EXPECTED HERE and is not a finding. The capture events can
+  // barely carry it, because a storage-less browser is suppressed for
+  // storage_unavailable before it ever reaches a shown event; a pageview has no
+  // such filter, so those browsers now report honestly rather than not at all.
+  // Exclude them from both arms when computing a rate. Never fold them into
+  // control: that is the exact contamination the third value exists to prevent.
+  variant: CaptureVariant;
   team_slug?: string;
   sport?: Sport;
   // Scoring discovery page extensions, populated only on /best-promos,
@@ -340,6 +362,12 @@ export type TeamsStarredProperties = {
 export type NewsletterSignupProperties = {
   surface: CaptureSurface;
   team_count: number;
+  // The arm on the CONVERSION itself, so the Phase 2 numerator is labelled at
+  // source instead of being recovered by joining a signup back to that browser's
+  // capture events. That join drops every signup from a browser that never
+  // qualified, which is most of them, and it makes the numerator depend on the
+  // capture telemetry staying correct rather than on the signup being labelled.
+  variant: CaptureVariant;
   // Retained optional fields for forward-compat with a future multi-list split.
   placement?: string;
   list_id?: string;
