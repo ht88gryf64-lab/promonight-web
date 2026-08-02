@@ -49,11 +49,46 @@ export type StarPlacement =
   | 'homepage_tonight_inline'
   | 'homepage_this_week_inline'
   | 'promo_aggregator_inline'
-  | 'footer_team_list';
+  | 'footer_team_list'
+  // ── Engagement capture sheet ──────────────────────────────────────────
+  // TWO literals, not one, because the two stars this sheet writes are not
+  // the same act. `capture_sheet_context` is automatic: submitting the form
+  // stars the team whose page it fired on. `capture_sheet_chip` is a tap the
+  // visitor performed. Both genuinely change the starred set, so both emit
+  // team_starred and neither is suppressed; the split is what lets a reader
+  // of the placement breakdown tell a deliberate star from a side effect
+  // without joining back to the capture funnel to find out.
+  | 'capture_sheet_context'
+  | 'capture_sheet_chip';
+
+/**
+ * Per-call behavior switches. Optional and defaulted, so every existing call
+ * site keeps its exact behavior.
+ */
+export type ToggleStarOptions = {
+  /**
+   * Skip the first-star education toast for this call only. The flag itself is
+   * left UNSET, so the next star from anywhere else still earns the toast: this
+   * suppresses a collision, it does not consume the education.
+   *
+   * The one caller is the engagement capture sheet. PostStarToastHost renders
+   * the toast at `fixed bottom-5 left-1/2`, which is exactly where that sheet
+   * sits on a phone, so a first-ever star from inside the sheet would drop a
+   * toast on top of the sheet that caused it. The sheet's own success copy
+   * ("We've added the ... to your teams here") already says what the toast
+   * would have said.
+   */
+  suppressIntroToast?: boolean;
+};
 
 type StarredTeamsContextValue = {
   starred: string[];
-  toggleStar: (slug: string, meta: TeamMeta, placement: StarPlacement) => void;
+  toggleStar: (
+    slug: string,
+    meta: TeamMeta,
+    placement: StarPlacement,
+    options?: ToggleStarOptions,
+  ) => void;
   isStarred: (slug: string) => boolean;
   isHydrated: boolean;
   count: number;
@@ -128,7 +163,7 @@ export function StarredTeamsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const toggleStar = useCallback(
-    (slug: string, meta: TeamMeta, placement: StarPlacement) => {
+    (slug: string, meta: TeamMeta, placement: StarPlacement, options?: ToggleStarOptions) => {
       const current = starredRef.current;
       const wasStarred = current.includes(slug);
       const next = wasStarred
@@ -150,7 +185,7 @@ export function StarredTeamsProvider({ children }: { children: ReactNode }) {
       // First-star education toast. Only fires when the user is going from
       // unstarred → starred AND has never seen the intro before. The flag
       // flips immediately so a rapid double-click can't show the toast twice.
-      if (!wasStarred) {
+      if (!wasStarred && !options?.suppressIntroToast) {
         try {
           const seen = window.localStorage.getItem(INTRO_FLAG_KEY);
           if (!seen) {
