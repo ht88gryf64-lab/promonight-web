@@ -329,6 +329,11 @@ export type TeamTileTapProperties = {
 // ── Email capture funnel ───────────────────────────────────────────────────
 // Four snake_case events dual-emitted through track() (PostHog + GA4):
 //   email_cta_click → follow_page_view → teams_starred → newsletter_signup
+//
+// ALL FOUR CARRY `variant`, and it has to be all four. The point of labelling
+// the funnel with the arm is to see WHERE an arm loses people; a step without it
+// is a hole that no step-to-step rate can be computed across, which is the one
+// question the labelling exists to answer.
 // `surface` uses the CaptureSurface vocabulary (web_team_page / web_homepage /
 // web_playoffs_hub / web_aggregator / web_other) rather than the broader
 // AnalyticsSurface enum, so a funnel click joins cleanly to the
@@ -339,6 +344,12 @@ export type EmailCtaClickProperties = {
   // Pre-starred team carried from a team-page CTA, so dashboards can see which
   // team drove a team-page entry without parsing the destination URL.
   team_slug?: string;
+  // The funnel's ENTRY step, so this is the arm's first observation for anyone
+  // who converts. Resolved at click time inside the EmailCtaLink client leaf:
+  // both call sites reach it through a server component, which cannot read
+  // localStorage, and resolving during render would make a storage write a
+  // render side effect.
+  variant: CaptureVariant;
 };
 
 export type FollowPageViewProperties = {
@@ -346,6 +357,7 @@ export type FollowPageViewProperties = {
   // How many teams the page loaded pre-selected from entry context (1 for a
   // team-page entry, 0 for hub/homepage/aggregator).
   seeded_team_count: number;
+  variant: CaptureVariant;
 };
 
 export type TeamsStarredProperties = {
@@ -357,6 +369,7 @@ export type TeamsStarredProperties = {
   // near. Membership-based, so it stays true even if the team happened to be
   // starred via search rather than from the rendered "Teams near you" group.
   near_you: boolean;
+  variant: CaptureVariant;
 };
 
 export type NewsletterSignupProperties = {

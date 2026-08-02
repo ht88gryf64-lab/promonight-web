@@ -133,11 +133,37 @@ same `resolveVariant` the trigger uses and adds no logic: there is still exactly
 one flip site, so two callers racing on a brand-new browser cannot produce two
 arms.
 
-`newsletter_signup` is stamped for a separate and sharper reason. The alternative
-was to recover the arm by joining a signup back to that browser's capture events,
-and measured against the first 57 hours that join yields a numerator of exactly
-ZERO: all five signups in the window came from browsers that never emitted a
-capture event. The numerator has to be labelled at source or it does not exist.
+**The four email-funnel events — `email_cta_click`, `follow_page_view`,
+`teams_starred`, `newsletter_signup` — carry it too, and it has to be all four.**
+The point of labelling the funnel is to see WHERE an arm loses people. A single
+unstamped step is a hole no step-to-step rate can be computed across, which
+disables the one question the labelling exists to answer.
+
+**The direct stamp on `newsletter_signup` is MANDATORY, not preferable, and this
+is the number that settles it.** The alternative on the table was recovering the
+arm by joining a signup back to that browser's capture events. Measured against
+the first 57 hours, that join yields a numerator of **exactly zero**: all five
+signups in the window came from browsers that never emitted a capture event, so
+every one of them is dropped by the join. Not "a smaller numerator" — no
+numerator. Anyone reaching for the join again should re-run this before assuming
+it degrades gracefully, because it does not degrade, it returns nothing:
+
+```sql
+SELECT qualified, count() AS signup_browsers
+FROM (
+    SELECT
+        person_id,
+        maxIf(1, event IN (
+            'capture_threshold_met', 'capture_prompt_shown', 'capture_prompt_suppressed'
+        )) = 1 AS qualified,
+        maxIf(1, event = 'newsletter_signup') = 1 AS signed_up
+    FROM events
+    WHERE timestamp >= toDateTime('PICK_A_BOUND')
+    GROUP BY person_id
+)
+WHERE signed_up
+GROUP BY qualified
+```
 
 Two things to know before reading any of it:
 

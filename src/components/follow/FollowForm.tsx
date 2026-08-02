@@ -81,6 +81,7 @@ export function FollowForm({ teams, initialTeam, surface, nearTeamIds }: FollowF
     track('follow_page_view', {
       surface,
       seeded_team_count: selected.length,
+      variant: resolveBrowserVariant(),
     });
     // selected is intentionally read once at mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -98,6 +99,7 @@ export function FollowForm({ teams, initialTeam, surface, nearTeamIds }: FollowF
         surface,
         team_count: next.length,
         near_you: nearSet.has(slug),
+        variant: resolveBrowserVariant(),
       });
     }
   };

@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { TrackedTapLink } from '@/components/analytics/TrackedTapLink';
+import { EmailCtaLink } from '@/components/follow/EmailCtaLink';
 import { inferCaptureSurface } from '@/lib/follow-surface';
 
 // Site-wide email entry, rendered in the global footer (every page). Because it
@@ -22,15 +22,14 @@ export function FollowFooterCTA() {
       <p className="font-rd text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">
         Free weekly email
       </p>
-      <TrackedTapLink
-        trackEvent="email_cta_click"
-        trackProps={{ surface }}
+      <EmailCtaLink
+        surface={surface}
         href={`/follow?source=${surface}`}
         className="mt-2 inline-flex items-center gap-1.5 font-rd text-sm font-semibold transition-opacity hover:opacity-80"
         style={{ color: RED_ON_DARK }}
       >
         Get every giveaway in your inbox →
-      </TrackedTapLink>
+      </EmailCtaLink>
     </div>
   );
 }
