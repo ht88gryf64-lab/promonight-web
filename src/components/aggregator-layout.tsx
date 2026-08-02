@@ -11,6 +11,7 @@ import { archivoHouse } from './redesign/fonts-house';
 import { RedesignAggregatorList } from './redesign/RedesignAggregatorList';
 import { FollowCTA } from './follow/FollowCTA';
 import { CaptureTrigger } from './capture/CaptureTrigger';
+import { EMPTY_CHIP_POOL } from '@/lib/capture/chips';
 import { isCaptureTriggerEnabled } from '@/lib/capture/gate';
 
 export interface AggregatorGroup {
@@ -142,12 +143,14 @@ function RedesignAggregatorPage({
           </div>
         </div>
 
-        {/* Engagement capture trigger. Telemetry only, renders nothing.
-            teamId is null here: aggregators have no page-level team, and
-            page_type carries the distinction. Redesign branch only, matching
-            where FollowCTA lives. */}
+        {/* Engagement capture trigger. Renders the capture sheet in variant_a and
+            nothing at all in control. team is null here: aggregators have no
+            page-level team, and page_type carries the distinction. The chip pool
+            is empty for the same reason, so an aggregator sheet is the prompt and
+            the confirmation with no chip row, which is what the aggregator copy
+            is written for. Redesign branch only, matching where FollowCTA lives. */}
         {isCaptureTriggerEnabled() && (
-          <CaptureTrigger pageType="aggregator" teamId={null} />
+          <CaptureTrigger pageType="aggregator" team={null} pool={EMPTY_CHIP_POOL} />
         )}
 
         {/* Email-capture entry; tags the funnel web_aggregator. */}

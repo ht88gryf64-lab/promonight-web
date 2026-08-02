@@ -357,3 +357,55 @@ fix the one that matters.
 counts that exist are real. The consequence is that a headline number is wrong by
 a large factor in a known direction, and it is currently trusted as though it
 were not.
+
+---
+
+## 9. `rd-ink-faint` fails contrast on the surface it is most used on
+
+**What it is.** `--color-rd-ink-faint: #9a9081` (`src/app/globals.css:33`, commented
+"eyebrows, captions") does not meet WCAG AA for normal-size text against either
+redesign surface:
+
+| Foreground | Surface | Ratio | AA (4.5:1 normal) |
+| --- | --- | --- | --- |
+| `#9a9081` | `rd-card` `#ffffff` | **3.14:1** | fails normal, passes large-text only |
+| `#9a9081` | `rd-cream` `#f7f3ea` | **2.84:1** | fails both |
+
+The other two ink tokens are fine and are not in question: `rd-ink` `#211d18` is
+16.75:1 / 15.13:1 and `rd-ink-soft` `#6f665a` is 5.64:1 / 5.09:1. This is one
+token, not a palette problem.
+
+**Where it shows.** 158 occurrences across 58 files, so it is a site-wide
+property of the shipped design system rather than anything one feature owns.
+Most uses are the intended one: 11px uppercase eyebrows and captions, which at
+that weight still fail the normal-text threshold because 11px is nowhere near
+the 18.66px/14pt-bold "large text" cut-off. Three uses are
+`placeholder:text-rd-ink-faint` on form inputs, including the engagement capture
+sheet's email field, the `/follow` signup field and the preferences form.
+
+**How it surfaced.** The adversarial review of the capture sheet
+(`feature/engagement-capture-sheet`) raised it against that sheet's email
+placeholder. The finding was refuted **as a defect of that branch** and confirmed
+as a property of the tokens: the sheet uses `placeholder:text-rd-ink-faint`
+exactly as `FollowForm` and `PreferencesForm` already do, so it inherits the
+ratio rather than introducing it. Recorded here so the refutation does not read
+as "not a problem".
+
+**Why it is not fixed here.** Darkening the token is a one-line change with a
+158-site blast radius across every redesigned surface, and eyebrows and captions
+are load-bearing in that visual language: the hierarchy between `rd-ink`,
+`rd-ink-soft` and `rd-ink-faint` is what makes the cream house read as calm
+rather than flat. Getting `#9a9081` to 4.5:1 on cream needs roughly `#767065`,
+which is close enough to `rd-ink-soft` (`#6f665a`) to collapse two tiers into
+one. That is a design decision about the palette, taken across the whole tree
+with eyes on it, not a rider on a capture-sheet branch.
+
+**If it is fixed, the cheap first move** is the three placeholders, which are the
+only uses that are genuinely *interactive* text rather than decoration, and which
+can move to `rd-ink-soft` on their own without touching the eyebrow hierarchy at
+all.
+
+**Severity: Low.** No functional failure and no information is available only
+through these strings; every one of them labels content that is also present in
+full-contrast text next to it. It is a legibility tax on low-vision users and a
+standing AA gap, tracked so it is a decision rather than an oversight.
