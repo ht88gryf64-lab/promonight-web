@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type { Team } from '@/lib/types';
 import { track } from '@/lib/analytics';
+import { resolveBrowserVariant } from '@/lib/capture/variant';
 import type { CaptureSurface } from '@/lib/follow-surface';
 import { TeamStarPicker } from './TeamStarPicker';
 
@@ -80,6 +81,7 @@ export function FollowForm({ teams, initialTeam, surface, nearTeamIds }: FollowF
     track('follow_page_view', {
       surface,
       seeded_team_count: selected.length,
+      variant: resolveBrowserVariant(),
     });
     // selected is intentionally read once at mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -97,6 +99,7 @@ export function FollowForm({ teams, initialTeam, surface, nearTeamIds }: FollowF
         surface,
         team_count: next.length,
         near_you: nearSet.has(slug),
+        variant: resolveBrowserVariant(),
       });
     }
   };
@@ -127,7 +130,14 @@ export function FollowForm({ teams, initialTeam, surface, nearTeamIds }: FollowF
       if (!res.ok || !data?.ok) {
         throw new Error(data?.error ?? `status ${res.status}`);
       }
-      track('newsletter_signup', { surface, team_count: selected.length });
+      track('newsletter_signup', {
+        surface,
+        team_count: selected.length,
+        // Called inline rather than bound to a local. This component already has
+        // a `variant` in scope for the success copy (SuccessVariant), and a
+        // second one under the same name would shadow it for the next reader.
+        variant: resolveBrowserVariant(),
+      });
       setVariant(successVariant(data.confirmation, data.status));
       setStatus('success');
     } catch {

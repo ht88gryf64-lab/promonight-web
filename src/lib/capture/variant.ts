@@ -15,7 +15,8 @@
 // "sessions that reached the trigger" against "all sessions" and the lift would
 // be unmeasurable.
 
-import { KEY_VARIANT, type SafeStorage } from './storage';
+import { isCaptureTriggerEnabledClient } from './gate';
+import { browserStorage, KEY_VARIANT, type SafeStorage } from './storage';
 
 /** The two experiment arms. Exactly two, forever: this is what gets compared. */
 export type CaptureArm = 'control' | 'variant_a';
@@ -68,4 +69,45 @@ export function resolveVariant(local: SafeStorage, random: () => number = Math.r
   // coin happened to pick.
   const confirmed = local.get(KEY_VARIANT);
   return isCaptureArm(confirmed) ? confirmed : 'unassigned';
+}
+
+/**
+ * This browser's arm, for callers that hold no SafeStorage handle of their own.
+ *
+ * ADDS NO LOGIC, DELIBERATELY. The flip, the write and the read-back all still
+ * happen in exactly one place, resolveVariant above. This is a handle-getter, not
+ * a second assignment path: two callers racing on a brand-new browser cannot
+ * produce two different arms, because the first to run persists one and every
+ * later call returns it from storage at the `isCaptureArm(stored)` line.
+ *
+ * CaptureTrigger deliberately does NOT use this. It already builds a local
+ * SafeStorage for the trigger engine and passes that same handle to
+ * resolveVariant, so routing it through here would probe storage twice per mount
+ * for an identical answer.
+ *
+ * SAFE ON THE PAGEVIEW PATH, which is the reason it exists. browserStorage
+ * returns an unavailable store during SSR and in browsers that refuse storage,
+ * and resolveVariant answers 'unassigned' for those instead of throwing, so this
+ * needs no guard at the call site and cannot break a page that merely rendered.
+ */
+export function resolveBrowserVariant(): CaptureVariant {
+  // THE KILL SWITCH IS CHECKED HERE, AND IT HAS TO BE.
+  //
+  // gate.ts promises that OFF means "no storage touched", and calls that a kill
+  // switch rather than a feature flag. CaptureTrigger honours that by checking
+  // before it builds any storage at all. This function is reached from the
+  // PAGEVIEW path instead, which has no such check of its own and runs on every
+  // route in the app, so without this line an emergency rollback would still be
+  // writing an arm into every visitor's localStorage. That is precisely the
+  // promise the gate file makes, and breaking it silently is worse than the
+  // stamping is useful.
+  //
+  // Off therefore reports 'unassigned': there is genuinely no arm on the event.
+  // The two causes of that value, storage refused and feature disabled, are not
+  // distinguishable on the event, which is acceptable only because they cannot
+  // co-occur with a live experiment: when the gate is off no capture event is
+  // emitted at all, so any arm-balance read is already time-bounded to a window
+  // where the gate was on. Bound the query, as the runbook says to.
+  if (!isCaptureTriggerEnabledClient()) return 'unassigned';
+  return resolveVariant(browserStorage('local'));
 }

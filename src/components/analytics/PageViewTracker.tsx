@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { inferSurfaceFromPath, track } from '@/lib/analytics';
+import { resolveBrowserVariant } from '@/lib/capture/variant';
 
 // Fires page_view on initial load and on every App Router navigation.
 // Title is captured after React has updated <head>, so we read it via rAF +
@@ -38,6 +39,12 @@ export function PageViewTracker() {
       track('page_view', {
         surface: inferSurfaceFromPath(pathname),
         page_title: title,
+        // Resolved here rather than in the effect body so it shares the fate of
+        // the event it labels: if the deferral is cancelled, nothing was read and
+        // nothing was written. The value does not depend on the timing, because
+        // an arm already in storage is returned unchanged and a browser with no
+        // arm yet gets the same coin whenever it is asked.
+        variant: resolveBrowserVariant(),
       });
     };
 
