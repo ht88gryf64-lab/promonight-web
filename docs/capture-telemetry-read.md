@@ -309,6 +309,65 @@ Do not mix the two denominators in one chart, and label whichever you quote. The
 differ by roughly a factor of ten (9.4% of browsers qualified in the first
 post-retune window), so an unlabelled rate is unreadable a month later.
 
+### Why the primary uses a qualifying BOOLEAN and not a shown count
+
+Because a shown count is not symmetric across the arms, and the boolean is.
+
+Only `variant_a` can be dismissed or submitted, and those two actions are the
+only writers of the durable suppressors: `promonight:capture_dismissed_at` (30
+days) and `promonight:subscribed` (permanent). Control has nothing to dismiss and
+nothing to submit, so a control browser writes neither and keeps reaching
+`capture_prompt_shown` session after session, while a `variant_a` browser that
+dismissed once stops. Over any window longer than a session, control accumulates
+more `capture_prompt_shown` events per browser, and the gap grows with the
+window.
+
+The `qualified` boolean above sidesteps that entirely: it counts a browser once
+if it ever emitted `capture_threshold_met`, `capture_prompt_shown` OR
+`capture_prompt_suppressed`. A suppressed browser still emits, with reason
+`recently_dismissed` or `already_subscribed`, so it stays in the denominator
+exactly as a control browser does.
+
+Divide by `count(capture_prompt_shown)`, or by distinct sessions that were shown,
+and the asymmetry lands on `variant_a` and understates it by a factor that
+depends on how long the query ran. Do not.
+
+## Phase 2 sheet events
+
+Three events, all `variant_a` only, because control renders nothing to dismiss,
+submit or tap. Each carries the standard capture context (`surface`, `page_type`,
+`team_id`, `variant`).
+
+| Event | Fires when | Notes |
+| --- | --- | --- |
+| `capture_prompt_dismissed` | the sheet is closed from the PROMPT state | `dismiss_method` is `x`, `backdrop` or `escape` |
+| `capture_prompt_submitted` | `/api/subscribe` accepted the POST | `email_domain`, plus `chip_count` and `chip_sources` for what the success state was about to offer |
+| `capture_prompt_team_added` | a success-state chip is tapped ON | `added_team_id`, `chip_position`, `source_team_id`, `chip_source` |
+
+`capture_prompt_dismissed` is NOT emitted from the success state, and not while a
+submit is in flight. Closing a confirmation is not rejecting a prompt, so folding
+the two together would inflate the dismiss rate by exactly the people who
+converted. The consequence is that dismissed and submitted are disjoint and
+`shown = dismissed + submitted + abandoned` holds with nobody double counted; the
+cost is that "closed the confirmation" is not observable at all, which is
+deliberate.
+
+The sheet also fires `newsletter_signup` with `surface = web_engagement_capture`
+on a successful submit. That is what makes it visible to the primary metric
+above, which counts conversions on that event, and to every existing signup
+dashboard. `capture_prompt_submitted` is the funnel-internal twin, not a
+replacement.
+
+Chip uptake is `capture_prompt_team_added` over the `chip_count` on
+`capture_prompt_submitted`. Per-rule uptake needs `chip_source` on the adds
+against `chip_sources` on the submits; that is the read that answers whether the
+venue-city sourcing rule earns its place, since it fires on only a handful of
+teams (see `src/lib/capture/chips.ts` on why the table is thin).
+
+`added_team_id` and not `team_id` for the chipped team: `team_id` means the PAGE
+team on every other event in this family, and one property meaning two things
+across a family is how a dashboard lies quietly.
+
 ## Investigation log: the 2026-08-01 arm skew
 
 Recorded because the SHAPE of the correction is the part that gets lost.
