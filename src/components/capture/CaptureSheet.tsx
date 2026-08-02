@@ -159,13 +159,27 @@ export function CaptureSheet({ open, onDismiss, labelledBy, children }: CaptureS
       if (modalDialogIsOpen()) return;
       const target = e.target as Node | null;
       if (target && panelRef.current?.contains(target)) return;
-      // A TAP ON A CONTROL IS NOT A DISMISSAL. Without this, the first thing a
-      // visitor does after the sheet arrives, opening the next game cell to keep
-      // browsing, would close it AND book a rejection AND open a 30-day
-      // suppression window, all off the back of continued engagement. A backdrop
-      // tap means a tap on the page's dead space, which is what is left once
-      // controls are excluded, and it is the only one of the three dismissal
-      // paths that can be triggered by accident.
+      // A TAP ON A CONTROL IS NOT A DISMISSAL, AND THIS LINE IS WHY THE
+      // EXPERIMENT CAN BE BELIEVED.
+      //
+      // Without it, the first thing an engaged visitor does after the sheet
+      // arrives, opening the next game cell to carry on browsing, closes it,
+      // emits capture_prompt_dismissed, and writes a 30-day suppression marker.
+      // Continued engagement would be recorded as rejection.
+      //
+      // The damage is not a dented dismiss rate, it is a biased sample. The
+      // visitors who keep tapping after 45 seconds are the most interested ones
+      // on the page, which is to say the ones most likely to convert. They would
+      // be dismissed fastest, suppressed for a month, and so removed from the
+      // treatment arm first and hardest. variant_a would be measured on the
+      // people who stopped engaging, the sheet would be understated by an
+      // unknown amount, and the result would arrive as a clean, plausible null
+      // with nothing anywhere to indicate it was wrong.
+      //
+      // A backdrop tap therefore means a tap on the page's dead space, which is
+      // what is left once controls are excluded. It is also the only one of the
+      // three dismissal paths that can fire by accident, so it is the only one
+      // that needs a rule about intent at all.
       if (target instanceof Element && target.closest(INTERACTIVE_SELECTOR)) return;
       requestDismiss('backdrop');
     };

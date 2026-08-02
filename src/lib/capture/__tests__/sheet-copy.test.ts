@@ -111,11 +111,36 @@ test('the shape check mirrors the server length cap', () => {
 test('team names join without an Oxford comma', () => {
   assert.strictEqual(joinTeamNames([]), '');
   assert.strictEqual(joinTeamNames(['Guardians']), 'Guardians');
-  assert.strictEqual(joinTeamNames(['Guardians', 'Tigers']), 'Guardians and Tigers');
+  assert.strictEqual(joinTeamNames(['Guardians', 'Padres']), 'Guardians and Padres');
+});
+
+test('the list is capped at two names and then counts', () => {
+  // Unbounded is the one input that can push the pinned container past its
+  // budget, and a confirmation the visitor has to scroll to finish reading is
+  // worse than one that summarises.
   assert.strictEqual(
-    joinTeamNames(['Guardians', 'Tigers', 'Twins']),
-    'Guardians, Tigers and Twins',
+    joinTeamNames(['Guardians', 'Padres', 'Tigers']),
+    'Guardians, Padres and 1 more',
   );
+  assert.strictEqual(
+    joinTeamNames(['Guardians', 'Padres', 'Tigers', 'White Sox']),
+    'Guardians, Padres and 2 more',
+  );
+});
+
+test('the cap bounds width, which naming a third team would not', () => {
+  // "and 1 more" is shorter than the longest nicknames in the league set, so a
+  // special case for exactly three would reintroduce the variance the cap
+  // exists to remove.
+  const capped = joinTeamNames(['Golden Knights', 'Timberwolves', 'Diamondbacks']);
+  assert.strictEqual(capped, 'Golden Knights, Timberwolves and 1 more');
+  assert.ok(capped.length < 'Golden Knights, Timberwolves and Diamondbacks'.length);
+});
+
+test('the longest possible list stays bounded', () => {
+  // Four teams is the ceiling: the page team plus the three-chip cap.
+  const worst = joinTeamNames(['Trail Blazers', 'Golden Knights', 'Timberwolves', 'Diamondbacks']);
+  assert.strictEqual(worst, 'Trail Blazers, Golden Knights and 2 more');
 });
 
 // ── Success ─────────────────────────────────────────────────────────────────
@@ -182,12 +207,12 @@ test('the confirmation line rewrites as chips are tapped', () => {
   const three = successCopy({
     ...BASE,
     variant: 'confident',
-    starredNames: ['Guardians', 'Tigers', 'Twins'],
+    starredNames: ['Guardians', 'Padres', 'Tigers'],
   });
   assert.strictEqual(one.starredLine, "We've added the Guardians to your teams here.");
   assert.strictEqual(
     three.starredLine,
-    "We've added the Guardians, Tigers and Twins to your teams here.",
+    "We've added the Guardians, Padres and 1 more to your teams here.",
   );
   // Only the line changes. The heading and body are untouched, so the rewrite
   // cannot move anything above it.

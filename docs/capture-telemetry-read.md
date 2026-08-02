@@ -352,11 +352,29 @@ converted. The consequence is that dismissed and submitted are disjoint and
 cost is that "closed the confirmation" is not observable at all, which is
 deliberate.
 
-The sheet also fires `newsletter_signup` with `surface = web_engagement_capture`
-on a successful submit. That is what makes it visible to the primary metric
-above, which counts conversions on that event, and to every existing signup
-dashboard. `capture_prompt_submitted` is the funnel-internal twin, not a
-replacement.
+### Correction to the Phase 2 spec: the sheet must fire `newsletter_signup`
+
+The Phase 2 instruction listed the sheet's events as `capture_prompt_dismissed`,
+`capture_prompt_submitted` and `capture_prompt_team_added`, and did not mention
+`newsletter_signup`. Building only those three would have been wrong, and wrong
+in a way that produced a believable number rather than an error.
+
+The primary metric above counts conversions as
+`maxIf(1, event = 'newsletter_signup')` per person. `capture_prompt_submitted`
+appears nowhere in it. A sheet that emitted only the funnel-internal event would
+have contributed zero conversions to the query the experiment is decided on, so
+`variant_a` would have measured no lift **no matter how well the sheet
+performed**, and the obvious reading of that result is "the sheet does not work".
+
+So the sheet fires both, on a successful submit: `newsletter_signup` with
+`surface = web_engagement_capture` for the primary metric and every existing
+signup dashboard, and `capture_prompt_submitted` as the funnel-internal twin
+carrying `email_domain` and the chip exposure. Neither replaces the other.
+
+The general rule this is an instance of: when a new surface converts, it joins
+the metric's event, and the surface enum is what distinguishes it. Adding a
+parallel event instead makes the surface invisible to every read that already
+exists.
 
 Chip uptake is `capture_prompt_team_added` over the `chip_count` on
 `capture_prompt_submitted`. Per-rule uptake needs `chip_source` on the adds

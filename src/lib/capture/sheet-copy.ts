@@ -123,16 +123,31 @@ export interface SuccessCopy {
   starredLine: string | null;
 }
 
+/** Names spelled out before the tail becomes a count. */
+export const MAX_NAMED_TEAMS = 2;
+
 /**
- * "the Guardians", "the Guardians and Tigers", "the Guardians, Tigers and
- * Twins". Short names, no Oxford comma, matching the house voice in the prompt
- * body above.
+ * "Guardians", "Guardians and Padres", "Guardians, Padres and 2 more". Short
+ * names, no Oxford comma, matching the house voice in the prompt body above.
+ *
+ * CAPPED AT TWO NAMES, AND THE CAP IS THE POINT. This line is rewritten in
+ * place inside a container whose height is pinned, so an unbounded list is the
+ * one input that can push it past its budget: four teams named in full is a
+ * sentence long enough to need a scrollbar, and a confirmation the visitor has
+ * to scroll to finish reading is worse than a confirmation that summarises.
+ *
+ * The cap also bounds the WIDTH, which naming a third team would not. "and 1
+ * more" is shorter than "and Diamondbacks" and shorter than "and Trail
+ * Blazers", so spelling out a third name when there are exactly three would
+ * reintroduce the variance this exists to remove. One rule for every count,
+ * predictable at any team-name length.
  */
 export function joinTeamNames(names: readonly string[]): string {
   if (names.length === 0) return '';
   if (names.length === 1) return names[0];
   if (names.length === 2) return `${names[0]} and ${names[1]}`;
-  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+  const named = names.slice(0, MAX_NAMED_TEAMS).join(', ');
+  return `${named} and ${names.length - MAX_NAMED_TEAMS} more`;
 }
 
 export interface SuccessCopyInput {
