@@ -422,13 +422,30 @@ is fixed at merge time; the only thing the data supplies is which branch fires.
 
 **Two weeks from the MERGE deployment going Ready. Not from the branch date, not
 from the first commit.** `NEXT_PUBLIC_*` values are inlined at build time, so the
-sheet does not exist for any visitor until that build is serving. Take the lower
-bound from the deployment's `ready` timestamp and paste it into every query in
-this section as `PHASE_4_START`.
+sheet does not exist for any visitor until that build is serving.
 
-The synthetic events from browser verification are dated 2026-08-02 and are
-described in the caveat above. Any correct bound excludes them automatically;
-this is the reason the bound is not optional.
+That deployment is `dpl_6zGLLdts27kEQb5JpVZS8F3TUHpW`, merge commit `427f98c`,
+and it went Ready at:
+
+> ### `PHASE_4_START = 2026-08-02T23:24:34Z`
+>
+> Day 1 smoke test: 2026-08-03T23:24:34Z
+> Day 14 read: **2026-08-16T23:24:34Z**
+
+Every query below is already bounded at that timestamp. It is the `ready` value
+and not `createdAt`: the build began at 23:21:55 and took 159 seconds, and no
+visitor could reach the sheet during those 159 seconds.
+
+The synthetic events from browser verification are described in the caveat
+above. They share a DATE with this bound, which is why the bound carries a time:
+they run from roughly 15:00Z to 23:00Z on 2026-08-02 and the window opens at
+23:24:34Z, so a bound of `2026-08-02` alone would include them and a bound of
+`2026-08-02 23:24:34` excludes them. Use the time.
+
+The final positive control, run against production a few minutes AFTER this
+bound to prove the merged bundle renders the sheet, emitted nothing: PostHog
+ingest was blocked at the network layer for that run, as for every verification
+pass since the first. It contributes no events and no person to either arm.
 
 Keep the project's test-account filter on, as everywhere else in this runbook.
 
@@ -468,7 +485,7 @@ FROM (
         )) = 1 AS qualified,
         maxIf(1, event = 'newsletter_signup') = 1 AS signed_up
     FROM events
-    WHERE timestamp >= toDateTime('PHASE_4_START')
+    WHERE timestamp >= toDateTime('2026-08-02 23:24:34')
       AND event IN (
           'capture_threshold_met', 'capture_prompt_shown', 'capture_prompt_suppressed',
           'newsletter_signup', 'page_view'
@@ -522,7 +539,7 @@ FROM (
     FROM (
         SELECT *, countIf(event = 'page_view') OVER (PARTITION BY properties.$session_id) AS pv_in_session
         FROM events
-        WHERE timestamp >= toDateTime('PHASE_4_START')
+        WHERE timestamp >= toDateTime('2026-08-02 23:24:34')
           AND event IN ('page_view', 'team_page_engaged', 'affiliate_click',
                         'capture_threshold_met', 'capture_prompt_shown', 'capture_prompt_suppressed')
     )
@@ -533,7 +550,7 @@ GROUP BY arm ORDER BY arm
 ```
 
 The 1.65 pages-per-visitor baseline is the pre-sheet figure. Re-derive it from
-the same query run over the two weeks BEFORE `PHASE_4_START` rather than trusting
+the same query run over the two weeks BEFORE 2026-08-02T23:24:34Z rather than trusting
 the number here, because it drifts with traffic mix and a stale baseline turns a
 seasonal dip into a false guardrail breach.
 
@@ -547,13 +564,13 @@ without a second event.
 -- What was offered
 SELECT properties.chip_count AS chips_offered, properties.chip_sources AS sources, count()
 FROM events
-WHERE event = 'capture_prompt_submitted' AND timestamp >= toDateTime('PHASE_4_START')
+WHERE event = 'capture_prompt_submitted' AND timestamp >= toDateTime('2026-08-02 23:24:34')
 GROUP BY chips_offered, sources ORDER BY chips_offered
 
 -- What was taken
 SELECT properties.chip_position AS pos, properties.chip_source AS rule, count()
 FROM events
-WHERE event = 'capture_prompt_team_added' AND timestamp >= toDateTime('PHASE_4_START')
+WHERE event = 'capture_prompt_team_added' AND timestamp >= toDateTime('2026-08-02 23:24:34')
 GROUP BY pos, rule ORDER BY pos
 ```
 
@@ -573,7 +590,7 @@ chips are decoration.
 SELECT properties.dismiss_method AS method, count() AS n,
        round(count() / sum(count()) OVER () * 100, 1) AS pct
 FROM events
-WHERE event = 'capture_prompt_dismissed' AND timestamp >= toDateTime('PHASE_4_START')
+WHERE event = 'capture_prompt_dismissed' AND timestamp >= toDateTime('2026-08-02 23:24:34')
 GROUP BY method ORDER BY n DESC
 ```
 
@@ -608,7 +625,7 @@ So: over records created since `PHASE_4_START`, compare the confirm rate of
 over the same window, which is the control-equivalent path (a CTA into `/follow`).
 
 ```
-subscribers where createdAt >= PHASE_4_START
+subscribers where createdAt >= 2026-08-02T23:24:34Z
   group by source
   rate = count(status == 'confirmed') / count(*)
 ```
