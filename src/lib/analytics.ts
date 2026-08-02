@@ -11,6 +11,7 @@
 import { flattenUTMsForEvent, getStoredUTMs } from './utm-capture';
 // Type-only, so there is no runtime dependency and no cycle: the capture
 // modules do not import analytics. One definition each, shared.
+import type { ChipSource } from './capture/chips';
 import type { TriggerSignal } from './capture/gesture-counter';
 import type { SuppressionReason } from './capture/suppression';
 import type { CaptureVariant } from './capture/variant';
@@ -50,6 +51,9 @@ export type AnalyticsEvent =
   | 'capture_threshold_met'
   | 'capture_prompt_shown'
   | 'capture_prompt_suppressed'
+  | 'capture_prompt_dismissed'
+  | 'capture_prompt_submitted'
+  | 'capture_prompt_team_added'
   | 'ad_slot_viewed'
   | 'team_starred'
   | 'team_unstarred'
@@ -671,6 +675,37 @@ export type CaptureThresholdMetProperties = CapturePromptContext & {
   seconds_on_page: number;
 };
 
+// DO NOT USE THE RAW SHOWN COUNT AS THE DENOMINATOR WHEN COMPARING THE ARMS.
+//
+// Both arms emit this on identical terms, at the same instant, from the same
+// engine. What differs is what happens AFTER it, and that feeds back into how
+// often it can fire again. Only variant_a can be dismissed or submitted, and
+// those are the two actions that write the durable suppressors:
+// promonight:capture_dismissed_at silences a browser for 30 days,
+// promonight:subscribed permanently. Control has nothing to dismiss and nothing
+// to submit, writes neither, and so keeps reaching shown session after session
+// while a variant_a browser that dismissed once stops. Over any window longer
+// than a session, control accumulates more shown events per browser, and the gap
+// widens with the window.
+//
+// THE DOCUMENTED READ IS ALREADY IMMUNE TO THIS, and that is not luck. The
+// primary metric in docs/capture-telemetry-read.md is per PERSON over a
+// QUALIFYING boolean: a browser counts once if it ever emitted threshold_met,
+// shown OR suppressed. A suppressed browser still emits, with reason
+// recently_dismissed or already_subscribed, so it stays in the qualifying
+// population in exactly the way a control browser does. The denominator is
+// symmetric because it is a boolean per browser rather than a count of events.
+//
+// The trap is only reachable by leaving that read: divide conversions by
+// COUNT(capture_prompt_shown), or by distinct sessions that were shown, and the
+// asymmetry lands directly on variant_a and understates it by a factor that
+// depends on how long the query window was. That is the worst kind of error,
+// invisible and directional and different every time someone re-runs it.
+//
+// Equalising it in code would mean giving control a 30-day cooldown after a
+// prompt it can neither see nor act on, which changes control behaviour. The
+// experiment is specified on control being untouched, so this is resolved in the
+// read and pinned here so the next person to write a query sees it.
 export type CapturePromptShownProperties = CapturePromptContext & {
   trigger_signal: TriggerSignal;
   // Gestures, not events, for the signal that tripped. See gesture-counter.ts.
@@ -686,6 +721,90 @@ export type CapturePromptSuppressedProperties = CapturePromptContext & {
   trigger_signal: TriggerSignal | null;
   trigger_count: number;
   seconds_on_page: number;
+};
+
+// ── Engagement capture sheet (Phase 2: the rendered arm) ──────────────────
+// The three events below only ever come from variant_a, because control renders
+// nothing to dismiss, submit or tap. Control still emits capture_prompt_shown on
+// exactly the terms it always has.
+//
+// That does NOT make raw shown counts comparable across arms, and the trap is
+// spelled out in full above CapturePromptShownProperties. Read it before using
+// shown as a denominator: the arms diverge in how OFTEN it can fire, because
+// only variant_a can write the suppressors that stop it firing again.
+
+/**
+ * How the visitor got rid of the sheet.
+ *
+ * 'backdrop' is a tap outside the panel on mobile. There is no scrim element to
+ * tap: a real backdrop would have to swallow pointer events and the sheet is
+ * required to leave the page behind scrollable, so the dismissal is detected as
+ * an outside tap instead. Desktop has no equivalent, by design, which is why the
+ * X is the affordance that carries weight there.
+ */
+export type CaptureDismissMethod = 'x' | 'backdrop' | 'escape';
+
+/**
+ * EMITTED FROM THE PROMPT STATE ONLY, deliberately. Closing a confirmation is
+ * not rejecting a prompt, and folding the two together would inflate the dismiss
+ * rate by exactly the number of people who converted. A dismissal landing while
+ * a submit is still in flight is skipped for the same reason: it would otherwise
+ * pair with the submitted event that arrives moments later. Dismissed and
+ * submitted are therefore disjoint, and shown decomposes cleanly into dismissed
+ * plus submitted plus abandoned with nobody counted twice.
+ */
+export type CapturePromptDismissedProperties = CapturePromptContext & {
+  dismiss_method: CaptureDismissMethod;
+};
+
+/**
+ * A submit the API accepted. Fired after the response, not on the tap, so it
+ * counts records created rather than buttons pressed.
+ *
+ * `email_domain` is the part after the @, lowercased. The address itself is
+ * never in an event; the domain is what a read needs (disposable-domain share,
+ * corporate vs consumer) and carries no identity on its own.
+ *
+ * The two chip fields are EXPOSURE, and they are here rather than on their own
+ * event because this is the only moment chips are chosen. capture_prompt_added
+ * reports which rule produced an add; without a count of what was offered, and
+ * of which rules offered it, that is a numerator with no denominator and
+ * "should the venue-city rule stay" cannot be answered.
+ */
+export type CapturePromptSubmittedProperties = CapturePromptContext & {
+  email_domain: string;
+  /** How many chips the success state offered. 0..3. */
+  chip_count: number;
+  /** Their sources in rendered order, comma joined, e.g. "opponent,opponent,venue_city". */
+  chip_sources: string;
+};
+
+/**
+ * A chip tapped in the success state, on the ADD only. Un-starring a chip emits
+ * nothing: the funnel question is what the chips gained, and a flip back to off
+ * is already visible as the absence of an add.
+ *
+ * `team_id` on this event is the PAGE team, unchanged from every other capture
+ * event, because one property meaning two different things across a family is
+ * how a dashboard silently lies. The chipped team is `added_team_id`.
+ */
+export type CapturePromptTeamAddedProperties = CapturePromptContext & {
+  /** The team the chip added. */
+  added_team_id: string;
+  /** 0-based position in the rendered row, so chip order can be read against uptake. */
+  chip_position: number;
+  /**
+   * The team this chip was derived FROM: the page team for both sourcing rules
+   * today. Null on an aggregator, which has no page team to derive from.
+   */
+  source_team_id: string | null;
+  /**
+   * Which sourcing rule produced the chip. Not in the original spec and added
+   * anyway, because without it the two rules are indistinguishable in the data
+   * and "should we keep the venue-city rule" is unanswerable. One property, new
+   * event, no back-compat cost.
+   */
+  chip_source: ChipSource;
 };
 
 export type EventPropertiesMap = {
@@ -717,6 +836,9 @@ export type EventPropertiesMap = {
   capture_threshold_met: CaptureThresholdMetProperties;
   capture_prompt_shown: CapturePromptShownProperties;
   capture_prompt_suppressed: CapturePromptSuppressedProperties;
+  capture_prompt_dismissed: CapturePromptDismissedProperties;
+  capture_prompt_submitted: CapturePromptSubmittedProperties;
+  capture_prompt_team_added: CapturePromptTeamAddedProperties;
   ad_slot_viewed: AdSlotViewedProperties;
   team_starred: TeamStarEventProperties;
   team_unstarred: TeamStarEventProperties;
