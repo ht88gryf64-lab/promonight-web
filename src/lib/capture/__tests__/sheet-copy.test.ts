@@ -268,3 +268,121 @@ test('no user-facing string carries an em dash', () => {
   strings.push(...Object.values(ERROR_COPY));
   for (const s of strings) assert.doesNotMatch(s, /—/);
 });
+
+// ── Line budget ─────────────────────────────────────────────────────────────
+//
+// THE CONSTRAINT THIS GUARDS, because a failing assertion below is meaningless
+// without it.
+//
+// The success card's container height is pinned to whatever the PROMPT state
+// rendered at, so the success state cannot grow: whatever does not fit is
+// clipped behind a scroll. On the 330px desktop corner card that container is
+// 118px of text, and 118px is exactly a heading on one line plus a body on two
+// plus a confirmation line on two. There is no room for a third line ANYWHERE
+// in that block. The card is the tight case; the 390px bottom sheet is wider
+// and therefore looser, so passing here passes there.
+//
+// This already went wrong once. The confident body used to echo the visitor's
+// email address, which is an unbreakable token of unbounded length, and at
+// 282px it pushed the body to three lines and clipped 16px off the tail of the
+// confirmation. The address came out of that string; these numbers stop it
+// coming back some other way.
+//
+// THE CEILINGS BELOW ARE MEASURED, not estimated. Taken on the deployed
+// production build at 1280x900 by substituting progressively longer strings
+// into the live card and reading offsetHeight, so they are real Archivo metrics
+// in the real 288px content box, not a characters-per-line guess:
+//
+//   heading       32 characters is the first length that wraps to 2 lines
+//   body          99 characters is the first length that wraps to 3 lines
+//   confirmation  94 characters is the first length that wraps to 3 lines
+//
+// CHARACTER COUNT IS A PROXY AND A SLIGHTLY LOOSE ONE. Wrapping is decided by
+// where word boundaries fall, not by length: the old 95-character body took
+// three lines while today's 96-character failed body takes two, because the
+// long unbreakable token landed differently. So these bounds carry deliberate
+// headroom rather than sitting on the measured edge. If you trip one, the fix
+// is to re-measure in a real browser, not to raise the number.
+//
+// FONT LOADING, RECORDED AND NOT DEFENDED AGAINST. Archivo arrives through
+// next/font on the .rd-root wrapper. If it ever failed to load, the fallback
+// (system-ui) has different metrics and could wrap differently, which no static
+// assertion here can catch. Judged not worth defending: a font failure degrades
+// the whole redesigned page, not only this card.
+
+/** First length that wraps to a second line, measured. One less is the budget. */
+const HEADING_TWO_LINE_AT = 32;
+/** First length that wraps to a third line, measured. */
+const BODY_THREE_LINE_AT = 99;
+const CONFIRMATION_THREE_LINE_AT = 94;
+
+// Derived from a read of all 169 team documents on 2026-08-02. Adding a team
+// with a longer name than these is exactly the change that should re-run this
+// file, which is why they are named rather than inlined.
+const LONGEST_DISPLAY_NAME = 'New England Revolution'; // 22 chars
+const LONGEST_SHORT_NAMES = ['Golden Knights', 'FC Cincinnati']; // 14 and 13
+
+test('every success heading stays on one line at the 330px card width', () => {
+  const headings = (['confident', 'failed', 'already_subscribed'] as const).flatMap((variant) =>
+    [LONGEST_DISPLAY_NAME, null].map(
+      (teamName) => successCopy({ ...BASE, variant, teamName }).heading,
+    ),
+  );
+  for (const h of headings) {
+    assert.ok(
+      h.length < HEADING_TWO_LINE_AT,
+      `heading "${h}" is ${h.length} chars; ${HEADING_TWO_LINE_AT} wraps to two lines and the ` +
+        `pinned container has no room for the extra line`,
+    );
+  }
+});
+
+test('every success body stays within two lines at the 330px card width', () => {
+  // The worst case each template can produce, built from the real maxima rather
+  // than from whichever team someone happened to test on.
+  const cases = [
+    { what: 'confident, longest team name', variant: 'confident', teamName: LONGEST_DISPLAY_NAME },
+    { what: 'confident, aggregator', variant: 'confident', teamName: null },
+    { what: 'already subscribed', variant: 'already_subscribed', teamName: LONGEST_DISPLAY_NAME },
+  ] as const;
+
+  for (const c of cases) {
+    const { body } = successCopy({ ...BASE, variant: c.variant, teamName: c.teamName });
+    assert.ok(
+      body.length < BODY_THREE_LINE_AT,
+      `${c.what}: body is ${body.length} chars; ${BODY_THREE_LINE_AT} wraps to a third line, ` +
+        `which the pinned container clips. Body was: "${body}"`,
+    );
+  }
+});
+
+test('the confirmation line stays within two lines at its longest', () => {
+  // Page team plus three chips is the ceiling, and the join caps the names at
+  // two before it starts counting, so this is the longest string that template
+  // can ever produce.
+  const starredNames = [...LONGEST_SHORT_NAMES, 'Timberwolves', 'Trail Blazers'];
+  const { starredLine } = successCopy({ ...BASE, variant: 'confident', starredNames });
+  assert.ok(starredLine !== null);
+  assert.ok(
+    starredLine.length < CONFIRMATION_THREE_LINE_AT,
+    `confirmation line is ${starredLine.length} chars; ${CONFIRMATION_THREE_LINE_AT} wraps to a ` +
+      `third line. Line was: "${starredLine}"`,
+  );
+});
+
+test('the failed body is the one string with an unbounded term', () => {
+  // It still names the address on purpose: that is the path where the address
+  // is most likely to be the thing that went wrong. So unlike the other two it
+  // cannot be bounded by the team list, and a long enough address WILL take a
+  // third line and clip. Asserted here so the trade is visible rather than
+  // discovered later.
+  const fixed = successCopy({ ...BASE, variant: 'failed', email: '' }).body.length;
+  const headroom = BODY_THREE_LINE_AT - 1 - fixed;
+  assert.ok(
+    headroom >= 24,
+    `the failed body's fixed text is ${fixed} chars, leaving only ${headroom} for the address ` +
+      `before it takes a third line. Ordinary addresses no longer fit; shorten the copy.`,
+  );
+  // A representative address fits; an unusually long one does not, by design.
+  assert.ok(successCopy({ ...BASE, variant: 'failed' }).body.length < BODY_THREE_LINE_AT);
+});
