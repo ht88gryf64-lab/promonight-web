@@ -180,8 +180,20 @@ Two things to know before reading any of it:
 
 ## Checking that assignment is even
 
-The reason the stamp exists. One query, over a day of pageviews, gives roughly
-800 flips instead of 45:
+The reason the stamp exists. One query over a day of pageviews gives roughly 350
+flips instead of 45. Measured on the days before the stamp shipped: 316 browsers
+emitted `page_view` on 2026-07-31, 377 on 2026-08-01.
+
+(An earlier draft of this file said 800 a day. That was wrong. It came from
+reading an 809-browser total that spanned 57 hours as though it were a daily rate.
+The corrected figure does not change the decision below, but it does change how
+long you wait for the wider ones.)
+
+Bound the query at the deploy: **2026-08-02T02:20:00Z**, when
+`dpl_9afFEEMUZX2Brfpupxx4GbLurAQk` went Ready. Pageviews from the previous bundle
+carry no `variant` key at all, which is distinct from `unassigned` and will group
+under an empty value. That is the old bundle draining out of CDN caches, not a
+finding.
 
 ```sql
 SELECT
@@ -200,8 +212,29 @@ browser emits many pageviews and they all carry the same arm, so counting events
 treats one flip as many and makes any deviation look far more significant than it
 is. That error is what produced the false alarm logged at the bottom of this file.
 
-At 800 browsers, a fair coin lands within roughly 372-428 control 95% of the time.
-Anything outside that band is worth investigating; anything inside it is not.
+Where a fair coin lands 95% of the time, by sample size:
+
+| browsers | roughly | control, 95% band |
+| --- | --- | --- |
+| 350 | one day | 157-193 |
+| 700 | two days | 324-376 |
+| 1050 | three days | 493-557 |
+
+**One day settles the question that prompted this and settles it outright.** A true
+75/25 assignment would put about 262 of 350 in control, roughly nine standard
+deviations outside the band. Nothing subtle is being asked of the first read.
+
+One day does NOT settle a small tilt. Distinguishing a true 56/44 from a fair coin
+has only about 60% power at 350 browsers and needs three to four days. Do not read
+"inside the band at n=350" as proof the coin is exactly fair; read it as proof it
+is not 75/25, which is the claim on the table.
+
+One caveat on the denominator, which does not bias the arm but does explain a gap:
+`page_view` is deferred behind `requestIdleCallback`, so a browser that leaves
+before the callback runs is assigned but never reports. Over the pre-stamp window
+`$web_vitals` saw 1249 browsers against `page_view`'s 809. Idle-callback timing is
+independent of the arm, so the sample stays unbiased; it is just smaller than total
+traffic.
 
 ## Phase 2 metric definitions
 
