@@ -179,10 +179,18 @@ test('a failed send does not render the confident copy', () => {
   const failed = successCopy({ ...BASE, variant: 'failed' });
   const confident = successCopy({ ...BASE, variant: 'confident' });
   assert.notStrictEqual(failed.body, confident.body);
-  assert.match(failed.body, /may take a minute to arrive/);
+  assert.match(failed.body, /may take a minute/);
   // Steers to wait, then resubmit. An immediate retry rotates the token and
-  // kills a link that may already be in flight.
-  assert.match(failed.body, /submit again and we will resend it/);
+  // kills a link that may already be in flight. Shorter than FollowForm's
+  // wording because this container's height is pinned, but the steer, and its
+  // order, are what the assertion is for.
+  assert.match(failed.body, /submit again/);
+  assert.ok(
+    failed.body.indexOf('minute') < failed.body.indexOf('submit again'),
+    'wait must come before retry',
+  );
+  // The longest of the three bodies still has to fit the pinned height.
+  assert.ok(failed.body.length <= 100, `failed body too long: ${failed.body.length}`);
 });
 
 test('an already-confirmed resubmit promises no link at all', () => {

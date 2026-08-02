@@ -206,7 +206,10 @@ export function CaptureSheet({ open, onDismiss, labelledBy, children }: CaptureS
       // keeps the X pinned: an absolutely positioned child of a scrolling box
       // scrolls away with the content, and "always visible" has to survive a
       // 320px screen in landscape as well as a tall one.
-      className={`${closing ? 'capture-panel-out' : 'capture-panel'} fixed bottom-0 left-0 right-0 z-[90] flex max-h-[34vh] flex-col overflow-hidden rounded-t-3xl border border-rd-line bg-rd-card px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-4 text-left shadow-2xl sm:bottom-6 sm:left-auto sm:right-6 sm:max-h-[70vh] sm:w-[330px] sm:rounded-2xl sm:pb-5`}
+      //
+      // NO HORIZONTAL PADDING HERE. It lives on the scroller instead, which is
+      // not a cosmetic choice: see the note on that element.
+      className={`${closing ? 'capture-panel-out' : 'capture-panel'} fixed bottom-0 left-0 right-0 z-[90] flex max-h-[34vh] flex-col overflow-hidden rounded-t-3xl border border-rd-line bg-rd-card pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-4 text-left shadow-2xl sm:bottom-6 sm:left-auto sm:right-6 sm:max-h-[70vh] sm:w-[330px] sm:rounded-2xl sm:pb-5`}
     >
       <button
         type="button"
@@ -227,7 +230,22 @@ export function CaptureSheet({ open, onDismiss, labelledBy, children }: CaptureS
           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
-      <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+      {/* THE PADDING BELONGS TO THE SCROLLER, NOT THE PANEL, AND IT IS A FOCUS
+          RING THAT DECIDES IT.
+          overflow-y: auto forces overflow-x to compute to auto as well, so this
+          element clips on BOTH axes. Tailwind's focus ring is a box-shadow,
+          which an ancestor's clip box cuts. With the padding on the panel this
+          wrapper's content edges sat exactly on the controls' edges, so the
+          submit button, flush right in a full-width form, lost all 4px of its
+          ring on the visible side, and the first and last chip lost one edge
+          each. That is the only focus indicator those controls have, since both
+          set focus-visible:outline-none and the stylesheet defines no fallback.
+          Moving the inset inside the clip box gives every ring 20px of room.
+          This is also how ui/modal.tsx does it; putting the padding on the
+          panel inverted that and is what introduced the clipping.
+          pb-1 covers the fourth edge: the chip row is the last child, and the
+          content height is pinned to within a couple of pixels of this box. */}
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-1">{children}</div>
     </div>
   );
 }

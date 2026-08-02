@@ -180,7 +180,12 @@ export function successCopy(input: SuccessCopyInput): SuccessCopy {
   if (variant === 'failed') {
     return {
       heading: 'Almost in',
-      body: `Your confirmation link for ${email} may take a minute to arrive. If it does not, submit again and we will resend it.`,
+      // TIGHTER THAN FollowForm's WORDING, AND IT HAS TO BE. This is the
+      // longest of the three bodies, the container height is pinned to what the
+      // prompt rendered at, and at full length it pushes the confirmation line
+      // below into a scroll on a 390px screen. The steer is what matters and it
+      // is preserved exactly: wait first, resubmit only if nothing arrives.
+      body: `Your link for ${email} may take a minute. If it does not arrive, submit again.`,
       starredLine,
     };
   }
