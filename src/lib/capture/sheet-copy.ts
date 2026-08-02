@@ -202,16 +202,34 @@ export function successCopy(input: SuccessCopyInput): SuccessCopy {
 
   // Confident: a link is live and usable, sent on this request or already
   // delivered for the token the record still holds.
+  //
+  // NO ECHOED ADDRESS HERE, AND IT IS NOT ONLY A LAYOUT FIX. An email address is
+  // an unbreakable token of unbounded length, so it alone decides how many lines
+  // this body takes, and it decides differently at every viewport width. It sent
+  // the body to three lines in the 282px desktop card while fitting in two at
+  // 390px, which clipped the confirmation line below it. Any width not yet
+  // measured is a width where that can happen again.
+  //
+  // It also removes the address from rendered page text on the path that runs
+  // for nearly every successful submit. Session replay masks form inputs and not
+  // text, so echoing it here put it in recordings; not echoing it means there is
+  // nothing to mask rather than something masked.
+  //
+  // The reassurance lost is small: they typed the address seconds earlier and it
+  // is still in the field behind this card. The failed variant above DOES still
+  // name it, deliberately, because on that path the address is the thing most
+  // likely to be wrong and worth checking. That is why the ph-no-capture class
+  // on the body element has to stay.
   if (!teamName) {
     return {
       heading: 'Almost in',
-      body: `Tap the link we sent to ${email}. You can pick your teams from there.`,
+      body: 'Tap the link we just sent you. You can pick your teams from there.',
       starredLine,
     };
   }
   return {
     heading: 'Almost in',
-    body: `Tap the link we sent to ${email} to start getting ${teamName} promos.`,
+    body: `Tap the link we just sent you to start getting ${teamName} promos.`,
     starredLine,
   };
 }

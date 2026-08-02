@@ -386,6 +386,32 @@ teams (see `src/lib/capture/chips.ts` on why the table is thin).
 team on every other event in this family, and one property meaning two things
 across a family is how a dashboard lies quietly.
 
+### Caveat: a handful of synthetic sheet events on 2026-08-02
+
+Browser verification of the sheet ran against a local dev server that carried the
+production `NEXT_PUBLIC_POSTHOG_KEY`, so a small number of real capture events
+were emitted to this project from `localhost` on 2026-08-02, before the sheet was
+merged and before any Phase 2 read window opens. They look like genuine
+`variant_a` funnels: `capture_prompt_shown`, `capture_prompt_submitted`,
+`capture_prompt_team_added` ×3, `newsletter_signup`, `team_starred`.
+
+Roughly a dozen events across four runs, all from one browser profile on one
+machine. **Not purged**, deliberately: deleting events from a live project is a
+riskier operation than the distortion they cause, and they sit entirely before
+the measurement window.
+
+Two things follow. Bound every Phase 2 query at or after the merge timestamp, as
+this runbook already says to for the Phase 1 retune. And if a stray `variant_a`
+funnel shows up dated 2026-08-02 with `page_path` on a team page and no matching
+production deployment, that is what it is.
+
+The Firestore side was cleaned rather than caveated: those runs created one real
+pending subscriber (`source: web_engagement_capture`), which was deleted the same
+day after a scan confirmed it was the only one. A test record with that source
+would otherwise have landed directly in the Phase 2 numerator, which is the one
+place it does real harm. Later verification passes stubbed `/api/subscribe` and
+blocked PostHog ingest at the network layer, so they wrote nothing.
+
 ## Investigation log: the 2026-08-01 arm skew
 
 Recorded because the SHAPE of the correction is the part that gets lost.

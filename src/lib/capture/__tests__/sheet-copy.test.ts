@@ -156,7 +156,7 @@ test('the confident team-page success points at the link and names the team', ()
   assert.strictEqual(copy.heading, 'Almost in');
   assert.strictEqual(
     copy.body,
-    'Tap the link we sent to matt@example.com to start getting Cleveland Guardians promos.',
+    'Tap the link we just sent you to start getting Cleveland Guardians promos.',
   );
   assert.strictEqual(copy.starredLine, "We've added the Guardians to your teams here.");
 });
@@ -170,9 +170,27 @@ test('the confident aggregator success sends them to the link to pick teams', ()
   });
   assert.strictEqual(
     copy.body,
-    'Tap the link we sent to matt@example.com. You can pick your teams from there.',
+    'Tap the link we just sent you. You can pick your teams from there.',
   );
   assert.strictEqual(copy.starredLine, null);
+});
+
+test('the confident bodies never echo the address', () => {
+  // An address is an unbreakable token of unbounded length, so it alone decides
+  // the line count, and it decides differently at every width. It is also the
+  // only PII this card could put into a session recording. Both problems go away
+  // by not printing it, rather than by masking it.
+  for (const teamName of ['Cleveland Guardians', 'Portland Trail Blazers', null]) {
+    const copy = successCopy({ ...BASE, variant: 'confident', teamName });
+    assert.doesNotMatch(copy.body, /@/);
+    assert.doesNotMatch(copy.body, /matt/);
+  }
+});
+
+test('the failed body still names the address, deliberately', () => {
+  // The exception, and the reason ph-no-capture stays on the body element: on a
+  // failed send the address is the thing most likely to be wrong.
+  assert.match(successCopy({ ...BASE, variant: 'failed' }).body, /matt@example\.com/);
 });
 
 test('a failed send does not render the confident copy', () => {
