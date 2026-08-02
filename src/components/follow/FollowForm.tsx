@@ -4,6 +4,11 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type { Team } from '@/lib/types';
 import { track } from '@/lib/analytics';
 import { resolveBrowserVariant } from '@/lib/capture/variant';
+import {
+  successVariant,
+  type ConfirmationOutcome,
+  type SuccessVariant,
+} from '@/lib/subscribe-outcome';
 import type { CaptureSurface } from '@/lib/follow-surface';
 import { TeamStarPicker } from './TeamStarPicker';
 
@@ -18,35 +23,11 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type SubmitStatus = 'idle' | 'submitting' | 'success' | 'error';
 
-// What /api/subscribe reports about the confirmation email.
-export type ConfirmationOutcome = 'sent' | 'not_needed' | 'failed';
-
-// Which success copy to render. A failed send is NOT an error state: the request
-// succeeded and the record exists, so it is a variant of success.
-export type SuccessVariant = 'confident' | 'failed' | 'already_subscribed';
-
-/**
- * Pick the success copy from what the API reported.
- *
- * 'not_needed' splits on status, which the response already carries:
- *   pending   a suppressed re-submit. A link was delivered for the token the
- *             record still holds (both suppressors now require that), so it is
- *             live and usable and the confident copy is true.
- *   confirmed nothing was sent and nothing needs to be. Promising a link here
- *             is false in every clause, which is what this split fixes.
- *
- * An unknown or missing value falls back to 'confident', which is exactly
- * today's behavior, so a client running against an older deploy degrades to what
- * it did before rather than to a wrong failure message.
- */
-export function successVariant(
-  confirmation: ConfirmationOutcome | undefined,
-  status: string | undefined,
-): SuccessVariant {
-  if (confirmation === 'failed') return 'failed';
-  if (confirmation === 'not_needed' && status === 'confirmed') return 'already_subscribed';
-  return 'confident';
-}
+// successVariant and its two types now live in lib/subscribe-outcome.ts, so the
+// engagement capture sheet can read the same rule without importing this
+// component. Re-exported unchanged: every existing importer, including
+// __tests__/success-variant.test.ts, keeps working through this path.
+export { successVariant, type ConfirmationOutcome, type SuccessVariant };
 
 interface FollowFormProps {
   teams: Team[];
