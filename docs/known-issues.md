@@ -284,3 +284,76 @@ Both are larger decisions than the seed.
 **Severity: Low.** No data is lost and nothing is silently wrong inside either
 store; they are simply not the same store. The user-visible effect is a digest
 that under-reflects what they follow.
+
+---
+
+## 8. `page_view` undercounts human traffic by roughly a third
+
+**What it is.** Two events that both fire once per pageview, measured over the
+same window, disagree about how many browsers were there. Over
+2026-07-30T17:22:13Z to 2026-08-02T01:02:00Z, PostHog project 393054:
+
+| event | distinct browsers (`uniq(person_id)`) | events |
+| --- | --- | --- |
+| `$web_vitals` | **1249** | 2487 |
+| `page_view` | **809** | 1311 |
+
+That is a 35% shortfall in browsers (`(1249 - 809) / 1249`). Read the browser
+column, not the event column: `$web_vitals` can fire more than once per pageview
+as metrics settle, so the event-level ratio is confounded and the browser-level
+one is not.
+
+`$web_vitals` is itself a floor, not a ceiling — it also needs the page to live
+long enough to report metrics — so the true gap against real pageviews is at
+least this large.
+
+**Where it lives.** `src/components/analytics/PageViewTracker.tsx`. Two
+independent candidate mechanisms, and this entry deliberately does not claim
+which dominates, because that has not been measured:
+
+1. **The idle deferral.** `fire()` is handed to `requestIdleCallback` (`:49-53`),
+   with a 50ms `setTimeout` fallback, so `<title>` is populated before it is read.
+   A browser that leaves before the callback runs emits nothing at all. The
+   fallback path also clears its timeout on unmount.
+2. **The PostHog load race, which may be the larger of the two.** `track()`
+   reads `window.posthog` and silently skips the PostHog sink when it is not yet
+   defined (`src/lib/analytics.ts`, the `if (ph && typeof ph.capture === 'function')`
+   guard). PostHog is loaded by a dynamic `import('posthog-js')` in
+   `AnalyticsProvider.tsx:32`. Any `page_view` that fires before that import
+   resolves is dropped with no error and no retry. `$web_vitals` cannot lose this
+   race, because posthog-js emits it itself and therefore only after it has
+   loaded — which is exactly why the two events diverge.
+
+**Why it matters.**
+
+- **It bears on the GA4/PostHog reconciliation.** `docs/SITE-AUDIT.md` already
+  names this deferral as a suspected cause of PostHog under-counting humans
+  relative to GA4, with a measured 1.7x gap, but records it as a suspicion. This
+  is a direct measurement of the same effect from a second event on the same
+  page, and it is the first number that separates "PostHog sees fewer people"
+  from "our `page_view` emitter loses events".
+- **It bears on any traffic figure submitted to Raptive.** A pageview counter
+  that drops roughly a third of its events is the wrong number to put in front of
+  an ad partner. Whatever figure is eventually submitted should not come from
+  `page_view` as it stands, and if a PostHog-derived number is used at all, the
+  shortfall has to be quantified first.
+- **It bounds the A/B assignment-balance sample.** The arm is stamped on
+  `page_view` (`docs/capture-telemetry-read.md`), so the balance read sees ~350
+  browsers a day rather than the full traffic. This does not bias the read —
+  idle timing and import latency are both independent of which arm a browser
+  holds — but it makes the sample smaller than traffic, and the runbook's sample
+  sizes already account for it.
+
+**Deliberately not solved.** Both candidate mechanisms have real fixes (queue
+events until the PostHog instance exists and flush on load; fire on `pagehide`
+as a backstop for early exits), and both are analytics-wide changes that would
+shift every historical series' baseline the day they ship. Neither should be
+bundled into a capture-telemetry branch. Measure which mechanism dominates first
+— the discriminating query is `page_view` volume against
+`$web_vitals` volume split by connection speed or by time-to-first-event — then
+fix the one that matters.
+
+**Severity: Medium.** Nothing user-facing is broken and no data is corrupted; the
+counts that exist are real. The consequence is that a headline number is wrong by
+a large factor in a known direction, and it is currently trusted as though it
+were not.
