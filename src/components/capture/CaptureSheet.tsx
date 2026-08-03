@@ -60,15 +60,25 @@ import type { CaptureDismissMethod } from '@/lib/analytics';
 // yields the same bound. An edge control has no such symmetry — it is the first
 // thing to go one way and the last the other.
 //
-// ALL FIGURES ARE W = 393, THE iPHONE 15 PRO. They are not constants; recompute
-// for another width. `right` and the flex centring both resolve against the
-// panel's PADDING box, inside its 1px border, so the usable box is [1, 392].
-//   handle  56px box centred at 196.5 -> far edge 224.5 -> holds to 393/224.5 = 1.75
-//   X       right-3, 44px box         -> far edge 380   -> holds to 393/380  = 1.03
-//   X       right-1.5, as shipped     -> far edge 386   -> holds to 393/386  = 1.02
-// In the sm: corner card on a landscape iPhone 15 Pro (W = 852, panel [498,828])
-// the handle holds to 852/691 = 1.23 and the X to 852/815 = 1.05. Both branches
-// therefore clear the 1.14 a 14px input forces, and only via the handle.
+// THESE NUMBERS ARE MEASURED ON REAL WEBKIT, NOT DERIVED. iPhone 15 Pro
+// simulator, iOS 26.5, driven through initial-scale. They are not constants;
+// recompute for another width.
+//
+// PORTRAIT, layout viewport 393:
+//   handle  56px box centred at 196.5 -> far edge 224.5 -> holds to 1.75
+//   X       right-3, 44px box         -> far edge 380   -> holds to 1.03
+// Measured: at scale 1.75 visualViewport.width is 225 and the handle is visible;
+// at 1.80 it is 218 and the handle is gone. The X is already gone at 1.14.
+//
+// LANDSCAPE corner card. The layout viewport is 734, NOT the 852 the device is
+// wide: with no viewport-fit=cover iOS lays the page out INSIDE the 59pt
+// landscape safe areas, and 852 - 2*59 = 734. Panel [380, 710].
+//   handle  far edge 573 -> holds to 1.28
+//   X       far edge 697 -> holds to 1.05
+// Measured: visible at 1.23, gone at 1.30.
+//
+// Both branches clear the 1.14 that a 14px input forces, and in both it is the
+// handle that clears it and not the X.
 //
 // The handle is the dismissal. The X is the familiar affordance kept for
 // pointers and for anyone who looks for it in the corner.

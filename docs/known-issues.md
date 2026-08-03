@@ -474,6 +474,37 @@ edge:
   not just its resting state. The resting sheet is correct; the bug only exists
   once something has raised the page scale.
 
+**Measured on real WebKit, 2026-08-03.** iPhone 15 Pro simulator, iOS 26.5,
+driven through `initial-scale` because a pinch is not scriptable. The state under
+test is "layout viewport wider than visual viewport", and `initial-scale`,
+focus auto-zoom and a pinch all produce it through the same viewport machinery.
+
+| page scale | `visualViewport.width` | panel `rect.width` | healthy | handle | X |
+| --- | --- | --- | --- | --- | --- |
+| 1.00 | 393 | 393 | yes | visible | visible |
+| 1.14 | 344 | 393 | **no** | visible | **gone** |
+| 1.23 | 320 | 393 | no | visible | gone |
+| 1.50 | 262 | 393 | no | visible | gone |
+| 1.75 | 225 | 393 | no | visible | gone |
+| 1.80 | 218 | 393 | no | **gone** | gone |
+
+`rect.width` is 393 in every row. That is the whole lesson in one column: the
+number the original verification trusted is constant across the healthy and the
+broken state, and only `visualViewport.width` moves.
+
+Focus auto-zoom confirmed directly by tapping: a 14px field takes the page to
+**scale 1.1425** (predicted 16/14 = 1.1429), a 16px field leaves it at **1.000**.
+That is the 16px threshold, measured rather than assumed.
+
+**The keyboard does NOT hide the sheet, and an earlier claim here that it did was
+wrong.** Focusing the sheet's own email field on iOS 26.5 leaves `innerHeight` at
+695 while `visualViewport.height` drops to 385 — the layout viewport genuinely
+does not shrink — but WebKit *repositions the fixed panel into the visual
+viewport*, and the whole sheet renders above the keyboard: heading, body, field,
+submit, X and handle. The "fixed bottom-0 sits behind the keyboard" folklore does
+not reproduce on current mobile Safari. It may still hold in in-app WebViews and
+on older iOS; neither was tested.
+
 **Severity: High.** A prompt with no reachable dismiss is the exact shape
 Google's intrusive-interstitial penalty targets, and it shipped to all traffic
 undetected because the verification method could not see it. The sheet was
