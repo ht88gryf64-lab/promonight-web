@@ -151,14 +151,24 @@ test('path inference maps the routes it claims to map', () => {
 });
 
 test('the league hubs and CFB fall to web_other, which is a KNOWN gap', () => {
-  // Documented rather than asserted-as-correct. On /mlb, /wnba and /mls the
-  // in-content CTA passes web_aggregator explicitly (aggregator-layout.tsx)
-  // while the footer on the same page infers web_other, so those two entry
-  // points on one page disagree. CFB pages have no sport-slug entry at all.
+  // Documented rather than asserted-as-correct. /mlb, /wnba and /mls are one
+  // segment so they miss the two-segment team-page rule, and inferCaptureSurface
+  // has no 'cfb' in its sport list, so all 86 CFB school pages miss it too.
+  // None of those routes has an in-content CTA or a capture sheet: they import
+  // AggregatorJsonLd from aggregator-layout, not AggregatorPage, so the global
+  // footer is their ONLY capture entry, and it labels every one of them
+  // web_other.
   //
-  // This test exists so the disagreement is visible in the suite rather than
-  // discovered in a dashboard. If inferCaptureSurface is ever fixed to close
-  // the gap, this test SHOULD fail and be updated to the new mapping.
+  // So the gap is not two entry points disagreeing on one page. It is a real
+  // chunk of the site whose only signup path is untagged. It does not affect
+  // the sheet-vs-static-CTA read (web_other is on the static side either way);
+  // it does dilute any per-source breakdown.
+  //
+  // The fix is NOT adding 'cfb' to the sport list, which would fold 86
+  // sheet-less pages into web_team_page, the sheet's own comparison group. It
+  // is new surfaces. This test exists so the gap is visible in the suite rather
+  // than discovered in a dashboard; if inference is ever fixed, it SHOULD fail
+  // and be updated to the new mapping.
   assert.strictEqual(inferCaptureSurface('/mlb'), 'web_other');
   assert.strictEqual(inferCaptureSurface('/wnba'), 'web_other');
   assert.strictEqual(inferCaptureSurface('/mls'), 'web_other');

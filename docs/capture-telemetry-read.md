@@ -213,12 +213,62 @@ works because the source tags are genuinely disjoint end to end.
 | `web_team_page` | the in-content team-page CTA, and the global footer CTA on a team route | `RedesignTeamPage.tsx`, `FollowFooterCTA.tsx` |
 | `web_homepage` | the homepage CTA, and the footer on `/` | `RedesignHomePage.tsx`, `FollowFooterCTA.tsx` |
 | `web_aggregator` | the in-content CTA on aggregator pages, and the footer on `/promos/*` and `/best-promos` | `aggregator-layout.tsx`, `FollowFooterCTA.tsx` |
-| `web_playoffs_hub` | the footer on `/playoffs*` | `FollowFooterCTA.tsx` |
+| `web_playoffs_hub` | the footer on `/playoffs*`, and only the footer | `FollowFooterCTA.tsx` |
 | `web_other` | the footer on any route none of the above match | `lib/follow-surface.ts` |
+
+**`web_other` is bigger than "safety net" implies, and it is four things at
+once**: the footer tag on roughly twenty routes, the fallback for junk input,
+the value a forged `?source=` is demoted to, and the read-back for a stored
+source that is missing or unrecognised. In PostHog you can separate those with a
+`page_path` breakdown, because `track()` stamps the path on every event. On the
+Firestore record you cannot: there is no path and no page type stored. Treat
+`web_other` as uninterpretable on the Firestore side.
+
+The largest single contributor is a real gap rather than junk: **the league hubs
+(`/mlb`, `/wnba`, `/mls`) and every CFB page infer `web_other`.** They are
+one-segment or non-sport paths, so they miss the two-segment team-page rule, and
+none of them carries an in-content CTA or a capture sheet, so the footer is
+their only capture entry. Closing it needs new surface values, not adding `cfb`
+to the sport list, which would fold 86 sheet-less pages into `web_team_page` and
+contaminate the sheet's own comparison group.
+
+**Where the sheet actually mounts**, which is narrower than "aggregator pages"
+suggests: the team-page template, and the six `/promos/*` collection pages that
+render `AggregatorPage`. It does NOT mount on `/promos/today`, on `/best-promos`,
+or on the league hubs, all of which are still tagged `web_aggregator` or
+`web_other` by the footer. So a `web_aggregator` signup is not necessarily a
+sheet signup, which is exactly why `web_engagement_capture` is a separate value
+rather than a flag on the aggregator tag.
 
 The vocabulary is defined once, in `src/lib/follow-surface.ts`, and is shared by
 the PostHog event property `surface` and the Firestore `subscribers.source`
 field, so a `newsletter_signup` joins cleanly to the record it created.
+
+### Three things about the tags that will produce a wrong number
+
+**1. `properties.surface` is the tag. `properties.source` is NOT.** `track()`
+stamps an attribution `source` on every event: `utm_source`, or the referrer
+host, or `direct`. It has nothing to do with this vocabulary.
+`WHERE properties.source = 'web_engagement_capture'` returns zero rows and no
+error. The queries in this file alias `properties.surface AS source` for
+readability because the Firestore FIELD is called `source`; do not carry the
+alias back into a `WHERE`.
+
+**2. Always pin the event name.** `surface` carries four unrelated vocabularies
+across this app: `CaptureSurface` (this one), the much larger `AnalyticsSurface`
+used by pageviews and affiliate clicks, a scoring-page enum, and a couple of bare
+literals. `web_team_page` and `web_other` are members of BOTH `CaptureSurface`
+and `AnalyticsSurface`, and page and affiliate volume dwarfs funnel volume on
+those values. An unfiltered `GROUP BY surface` is not a funnel breakdown, it is
+a mixture. The same applies to `page_type`, which the ad-slot events also carry
+with their own vocabulary.
+
+**3. The whole team-page funnel sits behind `NEXT_PUBLIC_REDESIGN_V2`.** The
+sheet, the in-content CTA and the global footer CTA all live inside the redesign
+tree. Turning that flag off, which is the documented redesign rollback, does not
+degrade the tags, it removes all three at once and the team-page arm of this
+comparison goes to zero. If the flag is flipped during a read window, that is a
+window boundary, not a result.
 
 ### The query
 
@@ -372,12 +422,24 @@ Two reasons it has to come from Firestore:
    Person-level attribution in PostHog would silently drop exactly the people who
    did the right thing.
 2. **`source` is the tag, and it is enough.** `web_engagement_capture` means the
-   sheet by construction. Nothing else writes it: the sheet POSTs it directly to
+   sheet: no other path in the app writes it. The sheet POSTs it directly to
    `/api/subscribe`, and the `/follow` page cannot be talked into it by a crafted
    `?source=` param, because that boundary coerces through `coerceEntrySurface`,
-   which excludes it (`src/lib/follow-surface.ts`). This used to be true by
+   which excludes it (`src/lib/follow-surface.ts`). That used to be true by
    convention; it is now true by construction, and
    `src/lib/__tests__/follow-surface.test.ts` fails if it stops being.
+
+   **It is not an authenticity guarantee, and do not read it as one.**
+   `/api/subscribe` takes `source` from an untrusted request body by design:
+   that POST IS the sheet's submit and nothing distinguishes it from a
+   hand-rolled one. Narrowing it would unlabel every real sheet conversion, so
+   it stays wide, and the per-IP rate limit (5 POSTs / 10 min) is the only thing
+   in the way. **The tell is direction.** Forged records are Firestore-only,
+   because `newsletter_signup` is emitted client-side by the sheet itself. So
+   Firestore running AHEAD of PostHog on this surface means forgery. Firestore
+   running BEHIND is the ordinary creation-only undercount described below.
+   Those two are the same magnitude of gap pointing opposite ways; check the
+   sign before diagnosing either.
 
 So: over records created since `ALL_TRAFFIC_START`, compare the confirm rate of
 `web_engagement_capture` against the confirm rate of the other `web_*` sources

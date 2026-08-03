@@ -23,6 +23,7 @@ import {
   SUBMIT_LABEL,
   type CaptureErrorKind,
 } from '@/lib/capture/sheet-copy';
+import { sheetSignupProperties } from '@/lib/capture/signup-event';
 import { browserStorage, KEY_DISMISSED_AT, KEY_SUBSCRIBED } from '@/lib/capture/storage';
 import { markSignup } from '@/lib/capture/suppression';
 import { CaptureSheet } from './CaptureSheet';
@@ -221,18 +222,10 @@ export function CaptureCard({ context, team, pool, expandedOpponentIds }: Captur
     // dashboard; web_engagement_capture was added to the CaptureSurface union for
     // precisely this submit.
     //
-    // page_type rides along because `surface` alone cannot separate the sheet's
-    // two placements: the team-page sheet and the aggregator sheet both write
-    // web_engagement_capture, and only the team-page one has a team and a chip
-    // row. It is recoverable by joining to capture_prompt_submitted, which fires
-    // on exactly these submits and carries page_type — but a join is a thing a
-    // reader has to remember, and this makes the split a GROUP BY.
-    track('newsletter_signup', {
-      surface: context.surface,
-      team_count: teams.length,
-      variant: context.variant,
-      page_type: context.page_type,
-    });
+    // The payload is built in lib/capture/signup-event.ts so a test can assert
+    // it carries page_type, which is the only thing separating this sheet's two
+    // placements in the read and is optional on the event type. See that file.
+    track('newsletter_signup', sheetSignupProperties(context, teams.length));
 
     // Mirror the page team into My Teams. Guarded on isStarred because
     // toggleStar TOGGLES: calling it for a team the visitor already starred
