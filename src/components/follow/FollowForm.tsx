@@ -263,9 +263,34 @@ function SuccessCard({
         <h2 className="rd-display mt-3 text-2xl uppercase text-rd-ink">
           You&apos;re almost in
         </h2>
+        {/* THE RULE, STATED ONCE, HERE, BECAUSE THIS IS THE FIRST SUCCESS CARD
+            ANYONE COPIES.
+            Session replay is on for every route (AnalyticsProvider is mounted in
+            the root layout) and its ONLY masking is
+            session_recording: { maskAllInputs: true }. No maskTextSelector, no
+            maskInputOptions, no route-level opt-out.
+            maskAllInputs masks THE VALUE OF A FORM FIELD as it is typed. It does
+            NOT mask text the app renders into the DOM. rrweb serializes text
+            nodes verbatim. So `<input value={email}>` is safe and `<p>{email}</p>`
+            is not, and the difference is invisible when you are looking at a
+            success state that reads back what someone just typed.
+            IF YOU RENDER A VISITOR-SUPPLIED VALUE AS TEXT, PUT ph-no-capture ON
+            THE SMALLEST ELEMENT THAT WRAPS IT. Visitor-supplied means anything
+            they typed or chose, or that came back from a round-trip carrying what
+            they typed. A team name out of Firestore is not visitor-supplied just
+            because they picked that page.
+            The capture sheet is masked differently ON PURPOSE and it is not an
+            inconsistency to tidy up: its confident and almost variants do not
+            echo the address at all, so there is nothing to mask, and only its
+            FAILED variant names it — deliberately, because a failed send is the
+            one path where the address is the thing most likely to be wrong and
+            worth checking. Its ph-no-capture sits on the whole body paragraph
+            because that one variant is the reason the class exists there. See
+            src/lib/capture/sheet-copy.ts and its test. Do not "fix" that. */}
         <p className="mx-auto mt-2 max-w-md font-rd text-rd-ink-soft">
-          Your confirmation link for <strong>{email}</strong> may take a minute to
-          arrive. If it does not, submit again and we will resend it.
+          Your confirmation link for <strong className="ph-no-capture">{email}</strong>{' '}
+          may take a minute to arrive. If it does not, submit again and we will
+          resend it.
         </p>
         <p className="mx-auto mt-4 max-w-md font-rd text-[12px] text-rd-ink-faint">
           Check your spam folder too.
@@ -282,9 +307,13 @@ function SuccessCard({
       <h2 className="rd-display mt-3 text-2xl uppercase text-rd-ink">
         You&apos;re almost in
       </h2>
+      {/* ph-no-capture: rendered address, see the rule on the almost-in card
+          above. This is the variant nearly every successful submit lands on, so
+          it is the one that put the most addresses into recordings. */}
       <p className="mx-auto mt-2 max-w-md font-rd text-rd-ink-soft">
-        We sent a confirmation link to <strong>{email}</strong>. Tap it to start
-        getting {count > 0 ? 'your personalized' : 'the weekly'} promo email.
+        We sent a confirmation link to <strong className="ph-no-capture">{email}</strong>.
+        Tap it to start getting {count > 0 ? 'your personalized' : 'the weekly'}{' '}
+        promo email.
       </p>
       <p className="mx-auto mt-4 max-w-md font-rd text-[12px] text-rd-ink-faint">
         Didn&apos;t get it? Check spam, or it may take a minute to arrive.

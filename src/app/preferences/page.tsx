@@ -92,9 +92,14 @@ export default async function PreferencesPage({
       <Shell>
         <div className="rounded-2xl border border-rd-line bg-rd-card p-8 text-center">
           <h2 className="rd-display text-2xl uppercase text-rd-ink">You&apos;re unsubscribed</h2>
+          {/* ph-no-capture: this one is SERVER-rendered, so the address is in
+              the initial HTML and lands in replay's very first DOM snapshot
+              rather than in a later mutation. Same defect as the client cards in
+              follow/PreferencesForm.tsx, one step earlier. Full rule in
+              follow/FollowForm.tsx. */}
           <p className="mx-auto mt-2 max-w-md font-rd text-rd-ink-soft">
-            {subscriber.email} is no longer receiving PromoNight emails. Changed your
-            mind?{' '}
+            <span className="ph-no-capture">{subscriber.email}</span> is no longer
+            receiving PromoNight emails. Changed your mind?{' '}
             <a href="/follow" className="font-semibold text-rd-red underline">
               Re-subscribe
             </a>
