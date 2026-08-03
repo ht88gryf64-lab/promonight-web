@@ -512,6 +512,37 @@ export async function getSubscriberByManageToken(token: string): Promise<Subscri
   return doc ? mapSubscriberDoc(doc) : null;
 }
 
+/**
+ * READ-ONLY resolution of a confirm token, and the manage token it unlocks.
+ *
+ * Exists so GET /api/confirm can decide whether a link is real WITHOUT
+ * confirming anybody. The old GET handler called confirmSubscriberByToken,
+ * which writes status:'confirmed', so a mail-security scanner prefetching the
+ * link in a confirmation email opted the human in before they had clicked
+ * anything. That is a consent problem rather than a bug: it manufactures
+ * affirmative consent that was never given, and it does it unevenly, since
+ * corporate scanners prefetch and consumer inboxes largely do not.
+ *
+ * Returns the manageToken alongside so the caller can mint the session in the
+ * same round trip once a human has actually acted.
+ */
+export async function getConfirmCandidateByToken(token: string): Promise<{
+  found: boolean;
+  alreadyConfirmed: boolean;
+  manageToken: string | null;
+  email: string | null;
+} | null> {
+  const doc = await findByToken('confirmToken', token);
+  if (!doc) return null;
+  const d = doc.data();
+  return {
+    found: true,
+    alreadyConfirmed: d.status === 'confirmed',
+    manageToken: typeof d.manageToken === 'string' ? d.manageToken : null,
+    email: typeof d.email === 'string' ? d.email : null,
+  };
+}
+
 export interface ConfirmResult {
   found: boolean;
   alreadyConfirmed: boolean;
