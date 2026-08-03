@@ -468,10 +468,82 @@ export function isCfbOnlyHub(hub: Pick<VenueHub, 'tenants'>): boolean {
  *  there are no dimensions. */
 export function dimsString(dims: BagMaxDimensions | null): string | null {
   if (!dims) return null;
+  // A ZERO is not a dimension. `typeof 0 === 'number'` let a stored d:0 through,
+  // so coca-cola-coliseum rendered "16.5cm x 11.5cm x 0cm". Omit a zero depth
+  // exactly as null is omitted, and treat a zero width or height as no usable
+  // dimensions at all rather than printing "0"".
+  if (!dims.w || !dims.h) return null;
   const u = dims.unit === 'cm' ? 'cm' : '"';
   const parts = [dims.w, dims.h];
-  if (typeof dims.d === 'number') parts.push(dims.d);
+  if (typeof dims.d === 'number' && dims.d !== 0) parts.push(dims.d);
   return parts.map((n) => `${n}${u}`).join(' x ');
+}
+
+// ── gate sentence helpers ───────────────────────────────────────────────────
+
+/** Drop ONE trailing sentence terminator so a template can append its own without
+ *  producing "..". The stored data legitimately ends in a period (76 verified
+ *  gatesOpen.ruleText values and 46 gateVariance values do), and the CFB write
+ *  added more, so the fix belongs in the template and never in Firestore.
+ *  Leaves "..." alone, and leaves a closing bracket or quote intact. */
+export function stripTrailingPeriod(s: string): string {
+  const t = s.trim();
+  if (t.endsWith('...')) return t;
+  return t.replace(/[.]$/, '');
+}
+
+/** Crude suffix trim so "diners" matches "dining" and "gates" matches "gate".
+ *  Not a real stemmer, and it does not need to be: it only has to stop a pure
+ *  restatement reading as new information because of a plural or a participle. */
+function stem(w: string): string {
+  return w.replace(/(?:ings?|ers?|es|s)$/, '');
+}
+
+/** Numbers carry the facts in gate copy: opening times, gate numbers, tiers.
+ *  Kept separate from words and matched exactly, never stemmed. */
+function numberTokens(s: string): Set<string> {
+  return new Set([...s.toLowerCase().matchAll(/\d+(?:[.:]\d+)?/g)].map((m) => m[0]));
+}
+
+function wordTokens(s: string): Set<string> {
+  return new Set([...s.toLowerCase().matchAll(/[a-z]{4,}/g)].map((m) => stem(m[0])));
+}
+
+/** True when `candidate` adds NO information `existing` does not already carry, so
+ *  rendering both back to back would repeat the same sentence. Used for two
+ *  separate pairs that both duplicate in the live data: a tenant's gateVariance
+ *  against its gatesOpen.ruleText, and a tenant's bagPolicyException against the
+ *  building's bagPolicyNotes.
+ *
+ *  Two tests, and the numeric one is a hard gate:
+ *    1. EVERY number in the candidate must already appear in `existing`. One new
+ *       figure means a new fact, so the candidate is kept. This is what protects
+ *       memorial-stadium-lincoln (student gates at 2.5 hours, band at 45 minutes,
+ *       gates 1, 6, 8, 17, 18, 19, 21 closing) and chase-field (Advantage Members'
+ *       30-minute early entry, the 20-Year Club).
+ *    2. At least 80 percent of its significant words must already appear. A pure
+ *       restatement rewords rather than adds, so it clears this easily;
+ *       barclays-center's "Crown Club diners may enter two hours before tip-off"
+ *       against a ruleText saying "Fans dining in Crown Club may enter two hours
+ *       before tip-off" differs only by diners/dining and is caught by the stem.
+ *       Measured: it suppresses 11 of 59 gate variances and 9 of 25 bag
+ *       exceptions, and the highest-scoring RETAINED gate pair sits at 0.75, so
+ *       the 0.80 cutoff falls in a gap rather than through a cluster.
+ *
+ *  Erring toward KEEPING is deliberate: a repeated sentence reads clumsily, a
+ *  dropped one loses a fact a fan may have travelled on. */
+const RESTATEMENT_WORD_OVERLAP = 0.8;
+export function isRestatement(existing: string, candidate: string): boolean {
+  const cNums = numberTokens(candidate);
+  const eNums = numberTokens(existing);
+  for (const n of cNums) if (!eNums.has(n)) return false;
+
+  const cWords = wordTokens(candidate);
+  if (cWords.size === 0) return true;
+  const eWords = wordTokens(existing);
+  let hit = 0;
+  for (const w of cWords) if (eWords.has(w)) hit++;
+  return hit / cWords.size >= RESTATEMENT_WORD_OVERLAP;
 }
 
 export interface BagCapsule {
@@ -526,11 +598,134 @@ export function venueHubTitle(hub: Pick<VenueHub, 'name' | 'tenants'>): string {
   return `${head} | ${SEASON_YEAR} Gameday Guide`;
 }
 
+// ── bag copy, generated from the policy data (spec section 6) ───────────────
+// Everything a page says about bags derives from `clearBagRequired`, never from a
+// template. The FAQ used to hardcode "{venue} requires a clear bag no larger than
+// {dims}" for any building with bag data, which asserted a requirement 45
+// buildings' own sources did not support, inside FAQPage schema, on the highest
+// value query cluster the venue thesis has.
+//
+// Five cases, keyed on the boolean:
+//   true            state the requirement and the dimensions, plus the clutch
+//                   exception where a tenant overlay carries one
+//   false           state the size limit and what IS permitted, and never use
+//                   "clear bag" as a requirement
+//   null + dims     the size limit only, silent on clarity in both directions
+//   null, no dims,
+//   notes present   render the notes, assert no size limit and nothing on clarity
+//   no data at all  say the venue has not published a policy, point at the source
+//
+// Rule 1.7: an event-level override is never the venue policy. The assertion comes
+// from the stored baseline boolean; any override lives in the notes as prose.
+
+/** Short one-sentence form for the meta description. Keyed on the same boolean as
+ *  the FAQ so the two can never contradict each other on the same page. */
 function bagAnswer(hub: VenueHub, dims: string | null): string {
   if (hub.bagsProhibited === true) return 'No bags are permitted inside.';
   if (hub.clearBagRequired === true) return dims ? `A clear bag up to ${dims} is required.` : 'A clear bag is required.';
-  if (dims) return `Single-compartment bags up to ${dims} are allowed.`;
+  if (hub.clearBagRequired === false) {
+    return dims ? `Bags up to ${dims} are allowed and do not have to be clear.` : 'A clear bag is not required.';
+  }
+  // clearBagRequired null. Say NOTHING about clarity in either direction (1.6).
+  if (dims) return `Bags up to ${dims} are allowed.`;
   return 'See the full bag policy before you go.';
+}
+
+export interface BagFaqAnswers {
+  /** Answer to "What size bag can I bring into {venue}?". Null when there is no
+   *  bag data at all AND no policy URL, so the question is dropped entirely. */
+  size: string | null;
+  /** Answer to "Does {venue} require a clear bag?". NULL when clearBagRequired is
+   *  null, which omits the question rather than answering it ambiguously. */
+  clarity: string | null;
+}
+
+type BagFacts = Pick<
+  VenueHub,
+  'name' | 'bagMaxDimensions' | 'clearBagRequired' | 'bagsProhibited' | 'bagPolicyNotes' | 'bagPolicyUrl'
+>;
+
+/** Bag FAQ copy. `tenantExceptions` are the verified tenant overlays'
+ *  `bagPolicyException` strings, which is the input for the clutch exception in
+ *  the clear-bag-required case and was previously read and never rendered. */
+export function bagFaqAnswers(hub: BagFacts, tenantExceptions: string[] = []): BagFaqAnswers {
+  const short = displayVenueName(hub.name);
+  const dims = dimsString(hub.bagMaxDimensions);
+  const notes = hub.bagPolicyNotes?.trim() || null;
+  // A tenant exception that merely restates the building's own notes is dropped:
+  // on 9 of the 25 buildings that carry both, the overlay is the building policy
+  // reworded for one tenant's matchdays, and rendering both put the same clutch
+  // and medical carve-out in the answer twice. The information is not lost, it is
+  // already in `notes`, which is rendered immediately before it.
+  const trimmedExceptions = tenantExceptions.map((e) => e.trim()).filter(Boolean);
+  const exception = trimmedExceptions.filter((e) => !(notes && isRestatement(notes, e))).join(' ') || null;
+  // Whether an exception EXISTS is a separate question from whether its prose is
+  // worth printing again. The clarity answer's "Limited exceptions apply" keys on
+  // existence, so suppressing duplicate prose does not silently turn it off.
+  const hasException = trimmedExceptions.length > 0;
+  const join = (...parts: (string | null)[]) => parts.filter(Boolean).join(' ').replace(/\s{2,}/g, ' ').trim();
+
+  // DIVISION OF LABOUR between the two answers. `size` is the substantive one and
+  // carries the long prose (bagPolicyNotes runs to a 387 char median, 877 max;
+  // bagPolicyException to a 192 char median). `clarity` answers a yes/no and stays
+  // short. Neither repeats the other's prose: an FAQPage answer has to stand alone
+  // in a rich result, but rendering the same 600 character note twice on one page
+  // is the duplication defect being fixed in the gate copy on this same branch,
+  // and it is no more acceptable here.
+  if (hub.bagsProhibited === true) {
+    return {
+      size: join(`${short} does not permit bags inside.`, notes, exception),
+      // Silent when the stored boolean itself claims a clear bag IS required:
+      // the two fields then contradict each other, and the page declines to pick
+      // a winner rather than asserting either.
+      clarity:
+        hub.clearBagRequired === true
+          ? null
+          : `No. ${short} does not permit bags at all, so nothing is carried in, clear or otherwise.`,
+    };
+  }
+
+  if (hub.clearBagRequired === true) {
+    return {
+      size: join(`${short} requires a clear bag${dims ? ` no larger than ${dims}` : ''}.`, notes, exception),
+      // "Limited exceptions apply" is all the exception text supports without
+      // reading it: the stored strings carve out medical, childcare, dietary and
+      // clutch cases in varying combinations, so naming any category here would
+      // assert something a given building's own source may not say.
+      clarity: join(
+        `Yes. ${short} enforces a clear bag policy${dims ? `, and a clear bag may be no larger than ${dims}` : ''}.`,
+        hasException ? 'Limited exceptions apply.' : null,
+      ),
+    };
+  }
+
+  if (hub.clearBagRequired === false) {
+    return {
+      size: join(
+        dims
+          ? `Bags up to ${dims} are allowed at ${short}, and they do not have to be clear.`
+          : `${short} does not require a clear bag.`,
+        notes,
+      ),
+      clarity: join(`No. ${short} does not require a clear bag.`, dims ? `Bags up to ${dims} are permitted.` : null),
+    };
+  }
+
+  // clearBagRequired is null from here down: the source never said either way, so
+  // neither does the page. No clarity question is emitted at all.
+  if (dims) return { size: join(`Bags up to ${dims} are allowed at ${short}.`, notes), clarity: null };
+  if (notes) return { size: notes, clarity: null };
+  if (hub.bagPolicyUrl) {
+    // Deliberately does NOT say "linked on this page": the bag card, and with it
+    // the Official bag policy link, is gated on hasBag, which is false in exactly
+    // this case. Promising a link that does not render would be a new false
+    // statement in place of the one this function removes.
+    return {
+      size: `${short} has not published a bag size limit we could verify. Check the venue's official bag policy before you travel.`,
+      clarity: null,
+    };
+  }
+  return { size: null, clarity: null };
 }
 
 function joinList(items: string[]): string {

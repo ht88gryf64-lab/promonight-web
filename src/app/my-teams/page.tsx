@@ -3,6 +3,7 @@ import { getAllTeams } from '@/lib/data';
 import { MyTeamsView } from '@/components/my-teams-view';
 import { isRedesignEnabled } from '@/lib/redesign';
 import { archivoHouse } from '@/components/redesign/fonts-house';
+import { pageOpenGraph } from '@/lib/og';
 
 // Personalization destination. Starred list lives in localStorage, so the
 // page itself has no useful indexable content for an anonymous crawler — but
@@ -12,6 +13,7 @@ export const metadata: Metadata = {
   title: 'Your Teams',
   description:
     'Your personalized promo calendar across every starred pro sports team.',
+  openGraph: pageOpenGraph('/my-teams'),
   robots: { index: false, follow: true },
 };
 

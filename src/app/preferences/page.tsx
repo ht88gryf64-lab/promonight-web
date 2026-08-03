@@ -5,6 +5,7 @@ import { getSubscriberByManageToken } from '@/lib/subscribers';
 import { MANAGE_COOKIE } from '@/lib/manage-session';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 import { PreferencesForm } from '@/components/follow/PreferencesForm';
+import { pageOpenGraph } from '@/lib/og';
 
 // Token-authenticated preferences page. Never indexed, never cached: the URL
 // carries a per-subscriber manage token. Global chrome (brand bar + footer)
@@ -12,6 +13,7 @@ import { PreferencesForm } from '@/components/follow/PreferencesForm';
 // the light-house scope, matching /follow.
 export const metadata: Metadata = {
   title: 'Manage Your Teams',
+  openGraph: pageOpenGraph('/preferences'),
   robots: { index: false, follow: false },
 };
 

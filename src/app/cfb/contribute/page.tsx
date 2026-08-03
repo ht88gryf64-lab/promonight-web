@@ -5,12 +5,16 @@ import { getCfbSchool } from '@/lib/cfb/data';
 import { resolveCfbTheme, cfbThemeVars } from '@/lib/cfb/theme';
 import { archivo } from '@/components/redesign/fonts';
 import { ContributeForm } from '@/components/cfb/ContributeForm';
+import { pageOpenGraph } from '@/lib/og';
 import type { CSSProperties } from 'react';
 
 export const dynamic = 'force-dynamic'; // reads ?school= at request time
 
 export const metadata: Metadata = {
-  title: 'Contribute — College Football Gameday',
+  // Colon, not an em dash: this is a rendered page title, so the house
+  // no-em-dash-in-user-facing-copy rule applies.
+  title: 'Contribute: College Football Gameday',
+  openGraph: pageOpenGraph('/cfb/contribute'),
   robots: { index: false, follow: true }, // a submission form is not an index target
 };
 

@@ -21,6 +21,9 @@ import {
   dimsString,
   bagCapsule,
   venueHubDescription,
+  bagFaqAnswers,
+  stripTrailingPeriod,
+  isRestatement,
 } from '@/lib/venue-hub';
 
 // House Light venue logistics hub. Server component (the photo hero's onError
@@ -115,6 +118,10 @@ export function VenueHubView({
       hub.clearBagRequired !== null ||
       hub.bagsProhibited === true ||
       !!hub.bagPolicyNotes);
+  // The FAQ has one more entry point than the capsule: a building with only a
+  // policy URL has nothing to put in the capsule but can still answer "has this
+  // venue published a bag policy", which is the fifth case in bagFaqAnswers.
+  const hasBagFaq = hasBag || (verified && !!hub.bagPolicyUrl);
   const cap = bagCapsule(hub);
   const dimStr = dimsString(hub.bagMaxDimensions);
   const bagSplit = hub.bagPolicyNotes ? leadSentences(hub.bagPolicyNotes, 2) : { lead: '', overflow: '' };
@@ -123,15 +130,21 @@ export function VenueHubView({
 
   // ── FAQ (rule: overflow bag text + long-tail queries land here) ──
   const faqs: HubFaqItem[] = [];
-  if (hasBag) {
-    const bagAnswer = [
-      dimStr ? `${short} requires a clear bag no larger than ${dimStr}.` : `${short} enforces a clear bag policy.`,
-      hub.bagPolicyNotes || '',
-    ]
-      .filter(Boolean)
-      .join(' ')
-      .trim();
-    if (bagAnswer) faqs.push({ question: `What size bag can I bring into ${short}?`, answer: bagAnswer });
+  // Bag copy is GENERATED from the policy data by bagFaqAnswers, never templated
+  // here. The string this replaced asserted "requires a clear bag no larger than
+  // {dims}" for any building with bag data, which was false on 45 of them and sat
+  // inside FAQPage schema. See lib/venue-hub bagFaqAnswers for the five cases.
+  // The clutch exception comes from the VERIFIED tenant overlays' bagPolicyException,
+  // which was declared and read but never rendered until now.
+  if (hasBagFaq) {
+    const tenantExceptions = hub.tenantOverlays
+      .filter((t) => t.verified && t.bagPolicyException)
+      .map((t) => t.bagPolicyException as string);
+    const bag = bagFaqAnswers(hub, tenantExceptions);
+    if (bag.size) faqs.push({ question: `What size bag can I bring into ${short}?`, answer: bag.size });
+    // Emitted ONLY when clearBagRequired is a boolean. On null the question is
+    // dropped rather than answered, because the source said neither.
+    if (bag.clarity) faqs.push({ question: `Does ${short} require a clear bag?`, answer: bag.clarity });
   }
   if (verified && (hub.outsideFoodAllowed !== null || hub.outsideFoodRules)) {
     const foodAns =
@@ -149,10 +162,13 @@ export function VenueHubView({
     text: t.tailgateWindow as string,
   }));
   if (gateTenants.length) {
+    // stripTrailingPeriod before appending: the stored ruleText legitimately ends
+    // in a period, and appending a second produced "games.." on 74 pages before
+    // the CFB write and more after it.
     const gateAns =
       gateTenants.length === 1
-        ? `${gateTenants[0].gatesOpen!.ruleText}.`
-        : gateTenants.map((t) => `${t.displayName}: ${t.gatesOpen!.ruleText}.`).join(' ');
+        ? `${stripTrailingPeriod(gateTenants[0].gatesOpen!.ruleText!)}.`
+        : gateTenants.map((t) => `${t.displayName}: ${stripTrailingPeriod(t.gatesOpen!.ruleText!)}.`).join(' ');
     faqs.push({ question: `When do gates open at ${short}?`, answer: gateAns });
   }
   if (verified && (hub.parkingLots.length > 0 || hub.parkingLotMapUrl)) {
@@ -171,9 +187,17 @@ export function VenueHubView({
   // ── getting-in rows ──
   const gettingRows: { label: string; body: ReactNode }[] = [];
   for (const t of gateTenants) {
+    const rule = stripTrailingPeriod(t.gatesOpen!.ruleText!);
+    // The variance is rendered ONLY when it adds something the ruleText does not
+    // already say. Both used to render unconditionally on 46 pages, which read as
+    // the same sentence twice at target-field and barclays-center, while at
+    // memorial-stadium-lincoln and chase-field the variance carries premium,
+    // student and early-entry detail the ruleText omits. Containment decides.
+    const variance =
+      t.gateVariance && !isRestatement(rule, t.gateVariance) ? stripTrailingPeriod(t.gateVariance) : null;
     gettingRows.push({
       label: gateTenants.length > 1 ? `Gates (${t.displayName})` : 'Gates',
-      body: `${t.gatesOpen!.ruleText}.${t.gateVariance ? ` ${t.gateVariance}.` : ''}`,
+      body: `${rule}.${variance ? ` ${variance}.` : ''}`,
     });
   }
   if (verified && hub.publicTransit && (hub.publicTransit.lines.length > 0 || hub.publicTransit.notes)) {
