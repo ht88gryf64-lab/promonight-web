@@ -3,6 +3,53 @@ import {
   classifyRequestType,
   classifyTraffic,
 } from '@/lib/analytics/traffic-classifier';
+import {
+  MANAGE_COOKIE,
+  MANAGE_TOKEN_RE,
+  manageCookieOptions,
+} from '@/lib/manage-session';
+
+/**
+ * Pages whose ?token= is exchanged for a cookie before any HTML is produced.
+ *
+ * /confirm is deliberately NOT here. It is only ever reached by a redirect from
+ * GET /api/confirm, which sets its own cookie on the way past: api/ is excluded
+ * from this middleware's matcher, so the route handler has to do it there
+ * anyway, and doing it twice would mean two places to keep in step.
+ */
+const TOKEN_EXCHANGE_PATHS = new Set(['/preferences']);
+
+/**
+ * Swap `?token=` for an httpOnly cookie and redirect to the bare path.
+ *
+ * Returns null when there is nothing to do, which is every request except the
+ * one hop straight out of an email.
+ *
+ * A malformed token is redirected WITHOUT a cookie rather than passed through.
+ * The destination page renders its own "link not valid" state, so a junk token
+ * gets the same answer it always did, and we never write a cookie we know
+ * Firestore would reject.
+ */
+function maybeExchangeManageToken(request: NextRequest): NextResponse | null {
+  const { pathname, searchParams } = request.nextUrl;
+  if (!TOKEN_EXCHANGE_PATHS.has(pathname)) return null;
+
+  const token = searchParams.get('token');
+  if (!token) return null;
+
+  const url = request.nextUrl.clone();
+  url.searchParams.delete('token');
+
+  const response = NextResponse.redirect(url);
+  if (MANAGE_TOKEN_RE.test(token)) {
+    response.cookies.set(
+      MANAGE_COOKIE,
+      token,
+      manageCookieOptions(request.nextUrl.protocol === 'https:'),
+    );
+  }
+  return response;
+}
 
 // Dead-URL trap. Team.fanaticsPath used to ride into the RSC payload as a
 // root-relative string `/{league}/{slug}/o-N+t-N+z-N-N`; crawlers/preloaders
@@ -108,6 +155,26 @@ function countRequest(
 }
 
 export async function middleware(request: NextRequest, event: NextFetchEvent) {
+  // TOKEN EXCHANGE, FIRST AND BEFORE THE COUNTER.
+  //
+  // /preferences?token=... is the link in every email we have ever sent, so the
+  // URL shape cannot change. What changes is that it never reaches the browser:
+  // the token moves into an httpOnly cookie here and the visitor is redirected
+  // to a bare /preferences, so the document that loads (and that rrweb
+  // snapshots, and that page_path reports to PostHog and GA4) carries no
+  // credential. See src/lib/manage-session.ts for why this cannot live in the
+  // page or on the client.
+  //
+  // Ahead of countRequest deliberately: this request is immediately redirected
+  // and the visitor's real page request arrives a moment later, so counting both
+  // would double-count one visit.
+  //
+  // The non-secret params are preserved. `confirmed` and `unsub` are UI intent,
+  // not credentials, and dropping `unsub` would break the one-click unsubscribe
+  // journey the footer link depends on.
+  const exchange = maybeExchangeManageToken(request);
+  if (exchange) return exchange;
+
   if (FANATICS_LEAK_PATH.test(request.nextUrl.pathname)) {
     return new NextResponse(GONE_HTML, {
       status: 410,

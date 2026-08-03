@@ -15,14 +15,41 @@
  */
 
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { unsubscribeByManageToken } from '@/lib/subscribers';
+import { MANAGE_COOKIE } from '@/lib/manage-session';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+/**
+ * THE QUERY-STRING TOKEN ON THIS ROUTE IS AN RFC 8058 REQUIREMENT. DO NOT
+ * "CLEAN IT UP" TO MATCH /api/preferences.
+ *
+ * Everything else on this branch moved the manage token out of URLs and into an
+ * httpOnly cookie. This one endpoint cannot follow, because its caller is not a
+ * browser. `List-Unsubscribe-Post: List-Unsubscribe=One-Click` (src/lib/email.ts)
+ * makes Gmail, Yahoo and Apple Mail POST to the `List-Unsubscribe` URL directly,
+ * server to server, with no cookie jar and no session. Requiring a cookie here
+ * would silently break one-click unsubscribe, which is a CAN-SPAM problem and a
+ * bulk-sender-requirements problem that shows up as a deliverability collapse
+ * long before anyone notices the button stopped working.
+ *
+ * It is an acceptable exception on the merits, not just by necessity: this
+ * endpoint is single-purpose, idempotent, and discloses nothing. It returns
+ * {ok:true} and no subscriber data, so a token replayed against it can only do
+ * the thing the token holder was already offered a one-click button for.
+ *
+ * Order matters. The cookie is checked FIRST so the in-page confirm button uses
+ * it, and the query string is the fallback that mail providers land on.
+ */
 async function readToken(request: Request): Promise<string> {
+  const fromCookie = (await cookies()).get(MANAGE_COOKIE)?.value;
+  if (fromCookie) return fromCookie;
+
   const fromQuery = new URL(request.url).searchParams.get('token');
   if (fromQuery) return fromQuery;
+
   try {
     const body = (await request.json()) as { token?: unknown };
     return typeof body?.token === 'string' ? body.token : '';

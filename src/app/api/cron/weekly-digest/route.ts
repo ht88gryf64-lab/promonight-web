@@ -31,6 +31,7 @@ import {
   claimDigestRun,
   dedupeByDeliveryInbox,
   getConfirmedSubscribers,
+  subscriberDocId,
   type Subscriber,
 } from '@/lib/subscribers';
 import {
@@ -190,14 +191,34 @@ export async function GET(request: Request) {
   };
 
   console.log(`[cron:weekly-digest] ${JSON.stringify(summary)}`);
-  for (const p of plan) {
-    console.log(`[cron:weekly-digest] -> ${p.type} ${p.email} (${p.promoCount} promos)`);
-  }
-  for (const e of emptyPlan) {
-    console.log(
-      `[cron:weekly-digest] -> empty-window ${e.email} [${e.level}] ${e.localPromos.length} local (${e.anchorCity ?? 'no city'})`,
-    );
-  }
+
+  // COUNTS, NEVER ADDRESSES. These two lines used to log one line per recipient
+  // with the raw email on it, on every run, including dry runs, which meant the
+  // full subscriber list accumulated in the function logs of a route that runs
+  // weekly forever. Log retention is not a place we control or audit, and a
+  // recipient list is the single most sensitive thing this cron holds.
+  //
+  // The per-recipient loop existed to answer "did the right people get the right
+  // thing", and the aggregates below answer that without naming anyone: the
+  // promo-count spread tells you whether personalization actually differentiated,
+  // and the empty-window split tells you whether the fallback path is firing for
+  // the reason you think. If you ever need to debug ONE subscriber, look them up
+  // by the sha256 doc id rather than reinstating this.
+  const promoCounts = plan.map((p) => p.promoCount).sort((a, b) => a - b);
+  const spread =
+    promoCounts.length > 0
+      ? {
+          min: promoCounts[0],
+          median: promoCounts[Math.floor(promoCounts.length / 2)],
+          max: promoCounts[promoCounts.length - 1],
+        }
+      : null;
+  const emptyWithCity = emptyPlan.filter((e) => e.anchorCity).length;
+  console.log(
+    `[cron:weekly-digest] promoCountSpread=${JSON.stringify(spread)} ` +
+      `emptyWindow=${emptyPlan.length} withAnchorCity=${emptyWithCity} ` +
+      `withoutAnchorCity=${emptyPlan.length - emptyWithCity}`,
+  );
   if (!summary.withinFreeTier) {
     console.warn(
       `[cron:weekly-digest] WARNING: ${total} recipients exceeds the ${FREE_TIER_DAILY}/day free-tier cap`,
@@ -278,11 +299,11 @@ export async function GET(request: Request) {
       if (res.ok) sent++;
       else {
         failed++;
-        console.error(`[cron:weekly-digest] personalized send failed ${item.email}: ${res.error ?? 'unknown'}`);
+        console.error(`[cron:weekly-digest] personalized send failed sub=${subscriberDocId(item.email)}: ${res.error ?? 'unknown'}`);
       }
     } catch (e) {
       failed++;
-      console.error(`[cron:weekly-digest] personalized send threw ${item.email}: ${e instanceof Error ? e.message : e}`);
+      console.error(`[cron:weekly-digest] personalized send threw sub=${subscriberDocId(item.email)}: ${e instanceof Error ? e.message : e}`);
     }
   }
   for (const p of plan.filter((x) => x.type === 'generic')) {
@@ -296,11 +317,11 @@ export async function GET(request: Request) {
       if (res.ok) sent++;
       else {
         failed++;
-        console.error(`[cron:weekly-digest] generic send failed ${p.email}: ${res.error ?? 'unknown'}`);
+        console.error(`[cron:weekly-digest] generic send failed sub=${subscriberDocId(p.email)}: ${res.error ?? 'unknown'}`);
       }
     } catch (e) {
       failed++;
-      console.error(`[cron:weekly-digest] generic send threw ${p.email}: ${e instanceof Error ? e.message : e}`);
+      console.error(`[cron:weekly-digest] generic send threw sub=${subscriberDocId(p.email)}: ${e instanceof Error ? e.message : e}`);
     }
   }
   for (const e of emptyPlan) {
@@ -317,12 +338,12 @@ export async function GET(request: Request) {
       if (res.ok) sent++;
       else {
         failed++;
-        console.error(`[cron:weekly-digest] empty-window send failed ${e.email}: ${res.error ?? 'unknown'}`);
+        console.error(`[cron:weekly-digest] empty-window send failed sub=${subscriberDocId(e.email)}: ${res.error ?? 'unknown'}`);
       }
     } catch (err) {
       failed++;
       console.error(
-        `[cron:weekly-digest] empty-window send threw ${e.email}: ${err instanceof Error ? err.message : err}`,
+        `[cron:weekly-digest] empty-window send threw sub=${subscriberDocId(e.email)}: ${err instanceof Error ? err.message : err}`,
       );
     }
   }
