@@ -12,7 +12,6 @@ import { TeamStarPicker } from './TeamStarPicker';
 
 interface PreferencesFormProps {
   teams: Team[];
-  token: string;
   initialTeams: string[];
   email: string;
   // True when arriving from the email's unsubscribe link (?unsub=1): opens the
@@ -83,7 +82,6 @@ export function resolvePickerSelection(args: {
 
 export function PreferencesForm({
   teams,
-  token,
   initialTeams,
   email,
   autoConfirmUnsub = false,
@@ -128,10 +126,16 @@ export function PreferencesForm({
     if (status === 'saving') return;
     setStatus('saving');
     try {
+      // NO TOKEN IN THE BODY. The credential rides in the httpOnly pn_manage
+      // cookie, which this component cannot read and therefore cannot leak into
+      // a log, an error boundary or a replay recording. The browser attaches it
+      // automatically; sameSite lax means a cross-site POST does not get it,
+      // which is the CSRF defence this endpoint previously did not have.
       const res = await fetch('/api/preferences', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, teams: selected }),
+        body: JSON.stringify({ teams: selected }),
+        credentials: 'same-origin',
       });
       const data: { ok?: boolean } | null = await res.json().catch(() => null);
       if (!res.ok || !data?.ok) throw new Error();
@@ -143,10 +147,13 @@ export function PreferencesForm({
 
   const unsubscribe = async () => {
     try {
+      // Same: cookie, not body. The route still accepts a query-string token
+      // as well, but that path exists for RFC 8058 one-click and not for this
+      // call. See the note in api/unsubscribe/route.ts.
       const res = await fetch('/api/unsubscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token }),
+        credentials: 'same-origin',
       });
       if (!res.ok) throw new Error();
       setUnsubscribed(true);
