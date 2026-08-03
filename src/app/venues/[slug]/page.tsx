@@ -12,6 +12,7 @@ import {
   venueHubDescription,
 } from '@/lib/venue-hub';
 import { VenueHubView } from '@/components/venue-hub/VenueHubView';
+import { canonicalOpenGraph } from '@/lib/og';
 
 // SSG/ISR, same pattern as the team pages. 24h ISR; on-demand revalidate stays
 // the real freshness path when the sweep writes new venue facts.
@@ -44,6 +45,9 @@ export async function generateMetadata({
     // Per-building answer-first description generated from verified facts.
     description: venueHubDescription(hub),
     alternates: { canonical },
+    // Without this the page inherits the root layout's openGraph wholesale and
+    // every one of the 222 buildings shares the homepage og:url.
+    openGraph: canonicalOpenGraph(canonical),
     robots: indexable ? undefined : { index: false, follow: true },
   };
 }

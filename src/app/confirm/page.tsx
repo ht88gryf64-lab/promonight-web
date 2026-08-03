@@ -4,6 +4,7 @@ import { getConfirmCandidateByToken } from '@/lib/subscribers';
 import { CONFIRM_COOKIE } from '@/lib/manage-session';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 import { ConfirmButton } from '@/components/follow/ConfirmButton';
+import { pageOpenGraph } from '@/lib/og';
 
 // The human-action interstitial for double opt-in.
 //
@@ -16,6 +17,7 @@ import { ConfirmButton } from '@/components/follow/ConfirmButton';
 // emailed link, and its content depends on a cookie.
 export const metadata: Metadata = {
   title: 'Confirm Your Subscription',
+  openGraph: pageOpenGraph('/confirm'),
   robots: { index: false, follow: false },
 };
 
