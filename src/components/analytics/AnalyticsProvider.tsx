@@ -95,6 +95,12 @@ export function AnalyticsProvider({ children }: { children: React.ReactNode }) {
           // to move. Sampling therefore lives in PostHog project settings, under
           // Session Replay, which is the supported surface for it.
           //
+          // SO: SAMPLING IS NOT UNSET, IT IS SET SOMEWHERE ELSE. It is 0.25,
+          // configured at
+          // https://us.posthog.com/project/393054/settings/environment-replay
+          // and not in this file. Do not read the absence of a sampleRate here
+          // as "we record everything" and do not add one to "fix" it.
+          //
           // It is a COST decision, recorded here because the reason has to
           // survive somewhere in the repo: July 2026 recorded 12,723 sessions
           // against a 5,000/month free tier, which billed $38.62, and the run

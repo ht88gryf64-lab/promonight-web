@@ -513,3 +513,52 @@ switched off in production at `2026-08-03T02:27:15.563Z`
 `dpl_AE6YihV4ZCYmabTAHyt56ZfBxheK`) pending a fix. The narrower lesson is the
 one-line `text-[14px]` -> `text-[16px]` change at
 `src/components/capture/CaptureCard.tsx:379`; the durable lesson is this entry.
+
+---
+
+## 11. RESOLVED: `GET /api/confirm` opted people in without a click
+
+**What it was.** `GET /api/confirm?token=<confirmToken>` flipped the subscriber
+record to `confirmed` and stamped `confirmedAt`. Mail-security gateways
+(Proofpoint, Mimecast, Defender Safe Links and the rest) prefetch every in-body
+URL at delivery, so a scanner could complete a confirmation for a human who had
+not clicked anything.
+
+**Why it was worse than a bug.** It manufactured consent. The record asserted an
+affirmative action that never happened, which is a different CAN-SPAM exposure
+from the one the branch set out to fix. It also corrupted the confirm-rate metric
+by mixing scanner behaviour with human behaviour, and it would have done so
+unevenly, because the rate would drift with customer mix rather than with
+anything about the product.
+
+**WHY IT STAYED HIDDEN, which is the part worth keeping.** It was measured before
+it was fixed, read-only, and the measurement came back clean: of 30 confirmed
+subscribers, ZERO confirmed within 5 seconds of creation. Minimum gap 10.4s,
+median 49.9s. Nothing needed remediating and no metric needed correcting.
+
+That is not because the code was safe. It is because **19 of 30 confirmations
+were on `gmail.com`**, and consumer mail does not prefetch. The subscriber base
+was small and consumer-heavy, which is exactly the mix that hides this. The first
+corporate signup wave is when it would have started firing.
+
+And it would not have looked like a problem. Scanner confirmations land in the
+`confirmed` bucket, so the symptom is **the confirm rate going up**. Someone
+reading that number would have recorded an improvement and gone looking for what
+they did right. A defect whose first symptom is a metric improving is worth more
+attention than one that throws.
+
+**Fixed on `feature/preferences-token-exchange`.** `GET` is now read-only: it
+resolves the token through `getConfirmCandidateByToken`, sets an httpOnly cookie
+and redirects to `/confirm`, where a button POSTs to do the write. A scanner
+follows URLs; it does not press buttons and does not issue an XHR off a click
+handler. That asymmetry is the entire defence, so the write must never move back
+into a `GET` for convenience. The sibling route `/api/unsubscribe` had reasoned
+this through already and refused to write on `GET`; the two now agree.
+
+**The measurement is repeatable.** Compare `confirmedAt` against `createdAt` per
+confirmed record and bucket the gap. Anything at or under about 5 seconds is not
+a human. Split by email domain, because that is where the signal will appear
+first.
+
+**Severity: Medium, resolved.** No records were affected, so this is recorded as
+a near miss rather than an incident.

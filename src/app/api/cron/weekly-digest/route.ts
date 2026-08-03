@@ -31,6 +31,7 @@ import {
   claimDigestRun,
   dedupeByDeliveryInbox,
   getConfirmedSubscribers,
+  subscriberDocId,
   type Subscriber,
 } from '@/lib/subscribers';
 import {
@@ -298,11 +299,11 @@ export async function GET(request: Request) {
       if (res.ok) sent++;
       else {
         failed++;
-        console.error(`[cron:weekly-digest] personalized send failed ${item.email}: ${res.error ?? 'unknown'}`);
+        console.error(`[cron:weekly-digest] personalized send failed sub=${subscriberDocId(item.email)}: ${res.error ?? 'unknown'}`);
       }
     } catch (e) {
       failed++;
-      console.error(`[cron:weekly-digest] personalized send threw ${item.email}: ${e instanceof Error ? e.message : e}`);
+      console.error(`[cron:weekly-digest] personalized send threw sub=${subscriberDocId(item.email)}: ${e instanceof Error ? e.message : e}`);
     }
   }
   for (const p of plan.filter((x) => x.type === 'generic')) {
@@ -316,11 +317,11 @@ export async function GET(request: Request) {
       if (res.ok) sent++;
       else {
         failed++;
-        console.error(`[cron:weekly-digest] generic send failed ${p.email}: ${res.error ?? 'unknown'}`);
+        console.error(`[cron:weekly-digest] generic send failed sub=${subscriberDocId(p.email)}: ${res.error ?? 'unknown'}`);
       }
     } catch (e) {
       failed++;
-      console.error(`[cron:weekly-digest] generic send threw ${p.email}: ${e instanceof Error ? e.message : e}`);
+      console.error(`[cron:weekly-digest] generic send threw sub=${subscriberDocId(p.email)}: ${e instanceof Error ? e.message : e}`);
     }
   }
   for (const e of emptyPlan) {
@@ -337,12 +338,12 @@ export async function GET(request: Request) {
       if (res.ok) sent++;
       else {
         failed++;
-        console.error(`[cron:weekly-digest] empty-window send failed ${e.email}: ${res.error ?? 'unknown'}`);
+        console.error(`[cron:weekly-digest] empty-window send failed sub=${subscriberDocId(e.email)}: ${res.error ?? 'unknown'}`);
       }
     } catch (err) {
       failed++;
       console.error(
-        `[cron:weekly-digest] empty-window send threw ${e.email}: ${err instanceof Error ? err.message : err}`,
+        `[cron:weekly-digest] empty-window send threw sub=${subscriberDocId(e.email)}: ${err instanceof Error ? err.message : err}`,
       );
     }
   }
