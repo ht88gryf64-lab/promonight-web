@@ -34,6 +34,10 @@ const REPLAY_EXCLUDED_PATHS = new Set(['/preferences', '/confirm']);
 function useSessionReplayRouteExclusion() {
   const pathname = usePathname();
   useEffect(() => {
+    // Covers CLIENT-SIDE navigation into an excluded route, where posthog is
+    // already loaded. The FIRST load of an excluded route is handled in the
+    // `loaded` callback instead, because this effect runs before the dynamic
+    // import resolves. Both are needed; see the note there.
     const ph = (window as unknown as { posthog?: {
       stopSessionRecording?: () => void;
       startSessionRecording?: () => void;
@@ -114,6 +118,21 @@ export function AnalyticsProvider({ children }: { children: React.ReactNode }) {
           // below can go". Sampling reduces exposure proportionally. It closes
           // nothing: at 0.25, a quarter of visits to a credential-bearing page
           // are still recorded in full.
+          // PREVENT THE START, DO NOT RACE A STOP.
+          //
+          // Calling stopSessionRecording() from the `loaded` callback is not
+          // enough and this was demonstrated, not reasoned about: on a preview,
+          // /preferences came back with recording stopped and /confirm came back
+          // recording, from identical code. PostHog's remote config arrives
+          // AFTER `loaded` and can start the recorder, so a stop issued there
+          // wins or loses on timing. A recording that exists at all is a
+          // failure here, so a coin flip is not a control.
+          //
+          // disable_session_recording is evaluated at init, before the recorder
+          // is ever constructed, so there is nothing to race.
+          disable_session_recording: REPLAY_EXCLUDED_PATHS.has(
+            window.location.pathname,
+          ),
           session_recording: {
             maskAllInputs: true,
           },
@@ -121,6 +140,24 @@ export function AnalyticsProvider({ children }: { children: React.ReactNode }) {
             // Expose on window so the framework-agnostic track() can reach it
             // without importing posthog-js (keeps analytics.ts SSR-safe).
             (window as unknown as { posthog?: unknown }).posthog = instance;
+
+            // STOP HERE TOO, NOT ONLY IN THE PATHNAME EFFECT, AND THIS IS THE
+            // CASE THAT ACTUALLY MATTERS.
+            //
+            // The effect below runs on mount, which happens BEFORE this dynamic
+            // import resolves, so on a fresh load of an excluded route it finds
+            // no window.posthog, bails, and never re-runs (its only dependency
+            // is the pathname, which did not change). The recorder then starts
+            // normally and the exclusion silently does nothing.
+            //
+            // That is not hypothetical. It was the first behaviour observed on
+            // a real browser against a preview: URL clean, cookie httpOnly, and
+            // sessionRecordingStarted() still true on /preferences. A direct
+            // load from an emailed link is the ONLY way anyone reaches these
+            // routes, so the missed case was the entire case.
+            if (REPLAY_EXCLUDED_PATHS.has(window.location.pathname)) {
+              instance.stopSessionRecording();
+            }
           },
         });
       })
