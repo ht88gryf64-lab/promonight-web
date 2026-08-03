@@ -261,8 +261,13 @@ Three regimes, and mixing them is the easiest way to produce a wrong number.
 | Regime | From | To | Who saw the sheet |
 | --- | --- | --- | --- |
 | Pre-sheet | (open) | `2026-08-02T23:24:34Z` | nobody |
-| Half traffic | `2026-08-02T23:24:34Z` | `ALL_TRAFFIC_START` | `variant_a` only |
-| All traffic | `ALL_TRAFFIC_START` | (open) | everyone who qualifies |
+| Half traffic | `2026-08-02T23:24:34Z` | `2026-08-03T02:09:23Z` | `variant_a` only |
+| All traffic | `2026-08-03T02:09:23Z` | (open) | everyone who qualifies |
+
+The half-traffic regime lasted **2 hours 45 minutes** in total. It is far too
+short to carry any read on its own; what it holds is recorded in
+[the half-traffic reading](#half-traffic-reading) and should be treated as a
+record that we looked, not as a result.
 
 > ### `PHASE_4_START = 2026-08-02T23:24:34Z`
 >
@@ -271,12 +276,18 @@ Three regimes, and mixing them is the easiest way to produce a wrong number.
 > value and not `createdAt`: the build began at 23:21:55 and took 159 seconds,
 > and no visitor could reach the sheet during those 159 seconds.
 
-> ### `ALL_TRAFFIC_START = PENDING_MERGE_DEPLOY`
+> ### `ALL_TRAFFIC_START = 2026-08-03T02:09:23Z`
 >
-> The `ready` timestamp of the deployment that merges the arm check removal.
-> **Fill this in from the Vercel deployment, not from the merge commit date**,
-> for the same reason: `NEXT_PUBLIC_*` values are inlined at build time, so the
-> change does not exist for any visitor until that build is serving.
+> The first moment any qualifying visitor could see the sheet regardless of arm.
+> Deployment `dpl_6x98e4YHf1D1P1aCmgsHttXYGh8F`, merge commit `c8e0596`.
+>
+> It is the `ready` value and not `createdAt`: the build began at 02:06:46Z and
+> took 157 seconds, and no visitor could reach the un-gated sheet during those
+> 157 seconds. `NEXT_PUBLIC_*` values are inlined at build time, so the change
+> did not exist for anyone until that build was serving.
+
+**Everything before that timestamp is half traffic. Everything after is full.**
+No query may straddle it without splitting on it.
 
 The half-traffic window is not a baseline for anything pre/post. It is diluted
 by roughly half, so a guardrail computed across it understates any real effect by
