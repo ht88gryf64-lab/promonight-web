@@ -106,7 +106,21 @@ export function VenueHubView({
 }) {
   const short = displayVenueName(hub.name);
   const loc = cityState(hub);
-  const tenantNames = hub.tenantOverlays.map((t) => t.displayName);
+  // The overlay's stored displayName is the raw slug on 73 of 186 verified
+  // tenants, nearly all CFB ("penn-state", "unlv", "purdue"), because
+  // getVenueHub falls back to teamId when the field is absent. That leaked into
+  // the page subtitle, the parking FAQ question and the multi-tenant gate labels.
+  //
+  // Resolve ONLY that case, keyed on displayName being literally the slug.
+  // Preferring the resolved name unconditionally is wrong: for pro tenants
+  // getTeamBySlug().name is the nickname, so it would rewrite the perfectly good
+  // stored "Pittsburgh Steelers" to "Steelers" and "Minnesota United FC" to
+  // "United FC" across all 222 buildings. Title-casing the slug is not an option
+  // either: it yields "Unlv" and "Tcu".
+  const resolvedNames = new Map(tenantLinks.map((l) => [l.teamId, l.name]));
+  const tenantName = (t: { teamId: string; displayName: string }) =>
+    (t.displayName === t.teamId ? resolvedNames.get(t.teamId) : null) ?? t.displayName;
+  const tenantNames = hub.tenantOverlays.map(tenantName);
   const primaryTenant = tenantNames[0] ?? null;
   const verified = hub.verified;
   const subtitle = [loc, ...tenantNames].filter(Boolean).join(' · ');
@@ -158,7 +172,7 @@ export function VenueHubView({
   const lotOpenTenants = hub.tenantOverlays.filter((t) => t.verified && t.tailgateWindow);
   const lotOpenLines = lotOpenTenants.map((t) => ({
     key: t.teamId,
-    label: lotOpenTenants.length > 1 ? t.displayName : null,
+    label: lotOpenTenants.length > 1 ? tenantName(t) : null,
     text: t.tailgateWindow as string,
   }));
   if (gateTenants.length) {
@@ -168,7 +182,7 @@ export function VenueHubView({
     const gateAns =
       gateTenants.length === 1
         ? `${stripTrailingPeriod(gateTenants[0].gatesOpen!.ruleText!)}.`
-        : gateTenants.map((t) => `${t.displayName}: ${stripTrailingPeriod(t.gatesOpen!.ruleText!)}.`).join(' ');
+        : gateTenants.map((t) => `${tenantName(t)}: ${stripTrailingPeriod(t.gatesOpen!.ruleText!)}.`).join(' ');
     faqs.push({ question: `When do gates open at ${short}?`, answer: gateAns });
   }
   if (verified && (hub.parkingLots.length > 0 || hub.parkingLotMapUrl)) {
@@ -196,7 +210,7 @@ export function VenueHubView({
     const variance =
       t.gateVariance && !isRestatement(rule, t.gateVariance) ? stripTrailingPeriod(t.gateVariance) : null;
     gettingRows.push({
-      label: gateTenants.length > 1 ? `Gates (${t.displayName})` : 'Gates',
+      label: gateTenants.length > 1 ? `Gates (${tenantName(t)})` : 'Gates',
       body: `${rule}.${variance ? ` ${variance}.` : ''}`,
     });
   }
