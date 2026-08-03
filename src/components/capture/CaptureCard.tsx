@@ -37,16 +37,18 @@ import { CaptureSheet } from './CaptureSheet';
 // error line is a permanently reserved row rather than an element that appears,
 // for the same reason one step earlier.
 //
-// MOUNTED ONLY IN variant_a. Nothing in this file runs for control, which keeps
-// emitting capture_prompt_shown on exactly the terms it always has.
+// MOUNTED FOR EVERY QUALIFYING VISITOR since the A/B was dropped. It used to be
+// variant_a only; see the header of CaptureTrigger.tsx for why that went away.
+// The `variant` on context is still stamped on every event below and still
+// gates nothing.
 //
-// ONE CONSEQUENCE WORTH KNOWING, because it originates here rather than in the
-// arm that shows it: the two durable suppressors are written by this component
-// and by nothing else, so only variant_a browsers ever go quiet after a
-// dismissal or a submit. Raw shown COUNTS are therefore not comparable across
-// arms. The documented per-person read is unaffected, because a suppressed
-// browser still emits; the argument is above CapturePromptShownProperties in
-// lib/analytics.ts and the query is in docs/capture-telemetry-read.md.
+// ONE CONSEQUENCE WORTH KNOWING, because it originates here: the two durable
+// suppressors (promonight:capture_dismissed_at, promonight:subscribed) are
+// written by this component and by nothing else. Now that every qualifying
+// browser can reach it, they are written uniformly, so raw capture_prompt_shown
+// counts decay the same way for everyone instead of splitting by arm. Reads
+// still go per PERSON over the qualifying boolean; see
+// docs/capture-telemetry-read.md.
 
 /** Shape of the /api/subscribe response this component reads. */
 interface SubscribeResponse {
@@ -212,17 +214,24 @@ export function CaptureCard({ context, team, pool, expandedOpponentIds }: Captur
     });
 
     // ALSO the cross-surface signup event, and this one is load-bearing rather
-    // than a nicety. The Phase 2 primary metric in docs/capture-telemetry-read.md
-    // counts conversions as `maxIf(1, event = 'newsletter_signup')` per person.
+    // than a nicety. Signups-by-source in docs/capture-telemetry-read.md counts
+    // conversions as `newsletter_signup` per person and splits them on `surface`.
     // Emitting only capture_prompt_submitted would leave the sheet's conversions
-    // out of the exact query the experiment is decided on, so the treatment arm
-    // would measure zero lift no matter how well it worked. It is also what every
-    // existing signup dashboard counts, and web_engagement_capture was added to
-    // the CaptureSurface union for precisely this submit.
+    // out of the read the sheet is judged by, and out of every existing signup
+    // dashboard; web_engagement_capture was added to the CaptureSurface union for
+    // precisely this submit.
+    //
+    // page_type rides along because `surface` alone cannot separate the sheet's
+    // two placements: the team-page sheet and the aggregator sheet both write
+    // web_engagement_capture, and only the team-page one has a team and a chip
+    // row. It is recoverable by joining to capture_prompt_submitted, which fires
+    // on exactly these submits and carries page_type — but a join is a thing a
+    // reader has to remember, and this makes the split a GROUP BY.
     track('newsletter_signup', {
       surface: context.surface,
       team_count: teams.length,
       variant: context.variant,
+      page_type: context.page_type,
     });
 
     // Mirror the page team into My Teams. Guarded on isStarred because

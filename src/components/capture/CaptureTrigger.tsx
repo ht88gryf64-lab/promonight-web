@@ -23,19 +23,28 @@ import {
 import { resolveVariant } from '@/lib/capture/variant';
 
 // The trigger engine's WIRING. Its job is to decide when a prompt fires, say so
-// in telemetry, and, in variant_a only, put the sheet on screen.
+// in telemetry, and put the sheet on screen for every visitor who qualifies.
 //
-// CONTROL STILL RENDERS NOTHING, and that is the entire basis of the
-// experiment. It runs the same counter, the same timer and the same suppression
-// check, and emits capture_prompt_shown at the same instant on the same terms;
-// it simply stops there. Nothing below may make control behave differently from
-// the way it behaved through the whole telemetry-only phase.
+// THE A/B WAS DROPPED BEFORE ANY OF IT WAS READ, and this is the line that
+// changed: the sheet no longer checks the arm before rendering. Two weeks at
+// half traffic gave roughly 230 qualifying browsers per arm, which resolves a
+// large effect and nothing smaller, so the likely outcome was "underpowered,
+// extend" — a month of showing the sheet to half the people who could see it to
+// answer a question the source tags already answer. web_engagement_capture and
+// web_team_page separate the sheet from the static CTA without an experiment.
 //
-// That symmetry is in WHEN the event fires, not in how many times a browser can
-// fire it: only variant_a writes the dismissal and subscribed suppressors, so raw
-// shown counts drift apart over a multi-session window. The documented
-// per-person read is unaffected. See the note above CapturePromptShownProperties
-// in lib/analytics.ts before writing any arm comparison.
+// THE ARM IS STILL RESOLVED AND STILL STAMPED, DELIBERATELY. resolveVariant
+// below and the `variant` on every event it spreads are INERT: nothing in this
+// repo branches on them any more. They are kept because the flip, the storage
+// key, the read-back and the stamping on page_view / newsletter_signup /
+// follow_page_view / the capture_* family are the expensive part of running an
+// experiment, and they cost nothing to leave in place. Ripping them out costs a
+// branch now and another branch the first time we want to test something.
+//
+// One consequence of the drop, since it removes a caveat rather than adding
+// one: both dismissal and submission now happen in every browser, so the two
+// durable suppressors are written uniformly and raw capture_prompt_shown counts
+// no longer drift between arms. There are no arms to compare.
 //
 // The decision itself lives in lib/capture/trigger-engine.ts, where a test can
 // reach it. What is left here is the part that genuinely needs React and the
@@ -98,7 +107,7 @@ export function CaptureTrigger({ pageType, team, pool }: CaptureTriggerProps) {
   const teamId = team?.id ?? null;
 
   // Everything the ENGINE needs lives in refs, not state. This component renders
-  // exactly once more than it used to, when variant_a is shown; nothing the
+  // exactly once more than it used to, when the sheet is shown; nothing the
   // counter, the timer or the guards do may cause a render, because a render per
   // tracked event on a page the visitor is reading is a cost with no benefit.
   //
@@ -113,7 +122,7 @@ export function CaptureTrigger({ pageType, team, pool }: CaptureTriggerProps) {
   // calendar needed no new prop and no new event to make chips possible.
   const opponentsRef = useRef<string[]>([]);
 
-  // Non-null only while variant_a has a sheet up. Null for control, always.
+  // Non-null only while a sheet is up.
   const [sheet, setSheet] = useState<OpenSheet | null>(null);
 
   useEffect(() => {
@@ -132,6 +141,11 @@ export function CaptureTrigger({ pageType, team, pool }: CaptureTriggerProps) {
     const local = browserStorage('local');
     const session = browserStorage('session');
 
+    // RETAINED DELIBERATELY, AND IT GATES NOTHING. The A/B was dropped before it
+    // was read (see the header). This call still assigns and persists a stable
+    // arm and still stamps it onto every capture event, so the instrumentation
+    // for the next experiment is already live and already balanced; no code path
+    // below reads it. Do not delete it to tidy up.
     const variant = resolveVariant(local);
     const counter = new GestureCounter();
     const timer = new EngagedTimer({
@@ -183,16 +197,17 @@ export function CaptureTrigger({ pageType, team, pool }: CaptureTriggerProps) {
           });
         }
 
-        // THE ONLY BEHAVIORAL DIFFERENCE BETWEEN THE ARMS, and it is downstream
-        // of the event rather than upstream of it: the arm is decided, reported
-        // and settled by the block above regardless, so control emits the same
-        // shown event at the same instant on the same terms. All this adds is a
-        // render for the arm that has something to render.
+        // EVERY QUALIFYING VISITOR, no arm check. This used to read
+        // `&& variant === 'variant_a'`; dropping that clause is the whole of the
+        // experiment removal on the rendering side. The shown event still fires
+        // first and on exactly the terms it always has, so nothing about the
+        // trigger telemetry moved — the render simply no longer asks who is
+        // allowed to see it.
         //
         // The opponent list is COPIED here rather than passed by reference. It
         // keeps mutating for as long as the page is up, and the chips are meant
         // to describe what the visitor had done by the time the sheet appeared.
-        if (e.event === 'capture_prompt_shown' && variant === 'variant_a') {
+        if (e.event === 'capture_prompt_shown') {
           setSheet({ context, expandedOpponentIds: [...opponentsRef.current] });
         }
       }
@@ -250,9 +265,8 @@ export function CaptureTrigger({ pageType, team, pool }: CaptureTriggerProps) {
  * game's opponent is the visiting club, and someone who opened that cell looked
  * at that matchup just as deliberately.
  *
- * Runs for BOTH ARMS. It writes a ref and nothing else: no event, no render, no
- * storage. Making it conditional on the arm would put an `if` on the hot path
- * for no gain and one more place for the arms to diverge.
+ * Writes a ref and nothing else: no event, no render, no storage. Cheap enough
+ * to run unconditionally, which is what it did through the experiment too.
  */
 function rememberOpponent(
   ref: { current: string[] },

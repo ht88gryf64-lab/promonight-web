@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { DEFAULT_OG_IMAGE } from '@/lib/og';
 import { getAllTeams } from '@/lib/data';
 import { archivoHouse } from '@/components/redesign/fonts-house';
-import { coerceCaptureSurface } from '@/lib/follow-surface';
+import { coerceEntrySurface } from '@/lib/follow-surface';
 import { getNearTeamIds } from '@/lib/geo/near-teams';
 import { FollowForm } from '@/components/follow/FollowForm';
 
@@ -37,7 +37,11 @@ export default async function FollowPage({
 }) {
   const { team, source } = await searchParams;
   const teams = await getAllTeams();
-  const surface = coerceCaptureSurface(source);
+  // coerceEntrySurface, not coerceCaptureSurface: the capture sheet never links
+  // here, so `?source=web_engagement_capture` is always spurious and must not be
+  // allowed to tag a /follow signup with the sheet's source. See
+  // lib/follow-surface.ts.
+  const surface = coerceEntrySurface(source);
 
   // Only pre-star a slug that resolves to a real team, so a stale or hand-typed
   // ?team= can't seed a phantom selection.

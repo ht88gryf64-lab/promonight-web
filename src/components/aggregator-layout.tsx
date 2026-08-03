@@ -143,12 +143,15 @@ function RedesignAggregatorPage({
           </div>
         </div>
 
-        {/* Engagement capture trigger. Renders the capture sheet in variant_a and
-            nothing at all in control. team is null here: aggregators have no
-            page-level team, and page_type carries the distinction. The chip pool
-            is empty for the same reason, so an aggregator sheet is the prompt and
-            the confirmation with no chip row, which is what the aggregator copy
-            is written for. Redesign branch only, matching where FollowCTA lives. */}
+        {/* Engagement capture trigger. Renders the capture sheet for every
+            qualifying visitor. team is null here: aggregators have no page-level
+            team, and page_type='aggregator' carries the distinction onto every
+            capture event AND onto newsletter_signup, which is what separates this
+            placement from the team-page one inside the shared
+            web_engagement_capture source. The chip pool is empty for the same
+            reason, so an aggregator sheet is the prompt and the confirmation with
+            no chip row, which is what the aggregator copy is written for.
+            Redesign branch only, matching where FollowCTA lives. */}
         {isCaptureTriggerEnabled() && (
           <CaptureTrigger pageType="aggregator" team={null} pool={EMPTY_CHIP_POOL} />
         )}

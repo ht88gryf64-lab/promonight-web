@@ -163,6 +163,12 @@ export type PageViewProperties = {
   page_title: string;
   // The A/B arm, on EVERY pageview rather than only on the three capture events.
   //
+  // INERT AS OF THE CAPTURE-SHEET EXPERIMENT BEING DROPPED, AND RETAINED ON
+  // PURPOSE. Nothing branches on this value today. It stays because a stamped,
+  // balanced, browser-stable arm on the widest event in the app is the whole
+  // denominator half of any future test, and because the reason it was added is
+  // a mistake worth not repeating.
+  //
   // WHY IT IS HERE. The arm is assigned eagerly, on a browser's first pageview,
   // but it was only ever REPORTED by the capture events, which need the gesture
   // threshold and 30 engaged seconds to fire. In the first 57 hours of Phase 1
@@ -180,7 +186,7 @@ export type PageViewProperties = {
   // barely carry it, because a storage-less browser is suppressed for
   // storage_unavailable before it ever reaches a shown event; a pageview has no
   // such filter, so those browsers now report honestly rather than not at all.
-  // Exclude them from both arms when computing a rate. Never fold them into
+  // Exclude them from either arm when computing a rate. Never fold them into
   // control: that is the exact contamination the third value exists to prevent.
   variant: CaptureVariant;
   team_slug?: string;
@@ -379,12 +385,20 @@ export type TeamsStarredProperties = {
 export type NewsletterSignupProperties = {
   surface: CaptureSurface;
   team_count: number;
-  // The arm on the CONVERSION itself, so the Phase 2 numerator is labelled at
-  // source instead of being recovered by joining a signup back to that browser's
-  // capture events. That join drops every signup from a browser that never
-  // qualified, which is most of them, and it makes the numerator depend on the
-  // capture telemetry staying correct rather than on the signup being labelled.
+  // The arm on the CONVERSION itself. Retained after the A/B was dropped and
+  // now purely forward-looking: nothing branches on it, but the next experiment
+  // gets a labelled numerator on day one instead of having to recover the arm by
+  // joining a signup back to that browser's capture events. That join drops
+  // every signup from a browser that never qualified, which is most of them.
   variant: CaptureVariant;
+  // WHICH PLACEMENT OF THE SHEET CONVERTED. Set only by the capture sheet, which
+  // is the one surface with two placements behind a single source value: the
+  // team-page sheet and the aggregator sheet both write
+  // surface='web_engagement_capture', and the aggregator one carries no team and
+  // no chip row, so folding them together hides a materially different product
+  // inside one number. Absent on every /follow signup, where `surface` alone is
+  // already unambiguous.
+  page_type?: CapturePageType;
   // Retained optional fields for forward-compat with a future multi-list split.
   placement?: string;
   list_id?: string;
@@ -616,15 +630,19 @@ export type VenueHubPromoClickProperties = {
   destination_url: string;
 };
 
-// ── Engagement capture trigger (Phase 1: telemetry only) ─────────────────
-// Emitted by the trigger engine before any UI exists, so the thresholds can be
-// validated against live traffic rather than guessed. `shown` means the trigger
-// FIRED, not that anything was rendered: in Phase 1 nothing is, and in Phase 2
-// the control arm still will not be. That is what makes the arms comparable.
+// ── Engagement capture trigger ────────────────────────────────────────────
+// Emitted by the trigger engine. `shown` means the trigger FIRED, which is not
+// quite the same as "a sheet appeared": the event is emitted first and the
+// render happens off the back of it, and it went out unchanged through the
+// telemetry-only phase when nothing rendered at all. Keeping that separation is
+// what makes trigger rates comparable across every phase this feature has had.
 //
-// `surface` is the single capture-funnel surface for this feature. The page it
-// fired on is `page_type`, which is an analytics dimension rather than a stored
-// source tag, so one surface value covers every page type.
+// `surface` is the single capture-funnel surface for this feature and is the
+// same value the sheet's submit stores on the subscriber record. WHICH PAGE it
+// fired on is `page_type` — an analytics dimension, not a second source tag — so
+// one surface value covers the team-page sheet and the aggregator sheet, and
+// page_type is the only thing that tells them apart. It therefore rides on
+// newsletter_signup too; see NewsletterSignupProperties.
 export type CapturePromptContext = {
   surface: 'web_engagement_capture';
   page_type: CapturePageType;
@@ -675,37 +693,31 @@ export type CaptureThresholdMetProperties = CapturePromptContext & {
   seconds_on_page: number;
 };
 
-// DO NOT USE THE RAW SHOWN COUNT AS THE DENOMINATOR WHEN COMPARING THE ARMS.
+// DO NOT USE THE RAW SHOWN COUNT AS A DENOMINATOR ACROSS TIME.
 //
-// Both arms emit this on identical terms, at the same instant, from the same
-// engine. What differs is what happens AFTER it, and that feeds back into how
-// often it can fire again. Only variant_a can be dismissed or submitted, and
-// those are the two actions that write the durable suppressors:
-// promonight:capture_dismissed_at silences a browser for 30 days,
-// promonight:subscribed permanently. Control has nothing to dismiss and nothing
-// to submit, writes neither, and so keeps reaching shown session after session
-// while a variant_a browser that dismissed once stops. Over any window longer
-// than a session, control accumulates more shown events per browser, and the gap
-// widens with the window.
+// The arm-vs-arm version of this warning is gone with the experiment: the sheet
+// now renders for every qualifying visitor, so the two durable suppressors
+// (promonight:capture_dismissed_at for 30 days, promonight:subscribed
+// permanently) are written by every browser that dismisses or submits rather
+// than by half of them. There is no asymmetry left between arms because there
+// are no arms being compared.
 //
-// THE DOCUMENTED READ IS ALREADY IMMUNE TO THIS, and that is not luck. The
-// primary metric in docs/capture-telemetry-read.md is per PERSON over a
-// QUALIFYING boolean: a browser counts once if it ever emitted threshold_met,
-// shown OR suppressed. A suppressed browser still emits, with reason
-// recently_dismissed or already_subscribed, so it stays in the qualifying
-// population in exactly the way a control browser does. The denominator is
-// symmetric because it is a boolean per browser rather than a count of events.
+// WHAT SURVIVES IS THE SAME TRAP POINTED AT A DIFFERENT AXIS. Those suppressors
+// still make shown counts decay within a cohort: a browser that dismisses once
+// stops emitting for a month, so shown-per-browser falls the longer a window
+// runs and falls further in a window that starts at launch than in one that
+// starts later. A pre/post or over-time comparison built on COUNT(shown) is
+// therefore reading the suppression schedule, not behaviour.
 //
-// The trap is only reachable by leaving that read: divide conversions by
-// COUNT(capture_prompt_shown), or by distinct sessions that were shown, and the
-// asymmetry lands directly on variant_a and understates it by a factor that
-// depends on how long the query window was. That is the worst kind of error,
-// invisible and directional and different every time someone re-runs it.
+// THE DOCUMENTED READS ARE ALREADY IMMUNE, and that is not luck. They are per
+// PERSON over a QUALIFYING boolean: a browser counts once if it ever emitted
+// threshold_met, shown OR suppressed. A suppressed browser still emits, with
+// reason recently_dismissed or already_subscribed, so it never leaves the
+// denominator. The denominator is symmetric because it is a boolean per browser
+// rather than a count of events.
 //
-// Equalising it in code would mean giving control a 30-day cooldown after a
-// prompt it can neither see nor act on, which changes control behaviour. The
-// experiment is specified on control being untouched, so this is resolved in the
-// read and pinned here so the next person to write a query sees it.
+// See docs/capture-telemetry-read.md before writing anything that divides by
+// this event.
 export type CapturePromptShownProperties = CapturePromptContext & {
   trigger_signal: TriggerSignal;
   // Gestures, not events, for the signal that tripped. See gesture-counter.ts.
@@ -723,15 +735,15 @@ export type CapturePromptSuppressedProperties = CapturePromptContext & {
   seconds_on_page: number;
 };
 
-// ── Engagement capture sheet (Phase 2: the rendered arm) ──────────────────
-// The three events below only ever come from variant_a, because control renders
-// nothing to dismiss, submit or tap. Control still emits capture_prompt_shown on
-// exactly the terms it always has.
+// ── Engagement capture sheet ───────────────────────────────────────────────
+// The three events below come from the sheet, which since the A/B was dropped
+// renders for every qualifying visitor rather than for one arm. They still carry
+// `variant`, inherited from the shared CapturePromptContext, and it still gates
+// nothing.
 //
-// That does NOT make raw shown counts comparable across arms, and the trap is
+// Raw shown counts are still not a safe denominator over time; the reason is
 // spelled out in full above CapturePromptShownProperties. Read it before using
-// shown as a denominator: the arms diverge in how OFTEN it can fire, because
-// only variant_a can write the suppressors that stop it firing again.
+// shown as a denominator.
 
 /**
  * How the visitor got rid of the sheet.
