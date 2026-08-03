@@ -695,8 +695,20 @@ flight, so dismissed and submitted are disjoint and `shown = dismissed +
 submitted + abandoned` holds with nobody double counted. The cost is that
 "closed the confirmation" is not observable at all, which is deliberate.
 
-Read `escape` and `backdrop` as impatience and `x` as a considered no. A row
-dominated by `backdrop` means people are batting it away mid-task.
+Read `escape` and `backdrop` as impatience. `x` and `handle` are BOTH deliberate
+closes; sum them for a considered-no rate. A row dominated by `backdrop` means
+people are batting it away mid-task.
+
+**Do not read the `handle`-vs-`x` split as sentiment.** It is an affordance
+question, not an attitude one. Before this split existed, `x` was the only
+deliberate-close control and so was a complete partition of considered-no; it is
+not any more, and a `x` row that collapses after 2026-08-03 is that split, not a
+change in how people feel about the sheet. The handle also renders at every
+width — `CaptureSheet.tsx` deliberately does not `sm:hidden` it — so desktop
+pointer clicks land in the same bucket and are not evidence about iOS
+reachability. Split on device before inferring anything. And the handle is
+tap-only while looking like something you drag, so a low `handle` share is a
+floor on reach-for behaviour rather than a measurement of it.
 
 <a id="guardrails-pre-post"></a>
 
@@ -868,7 +880,7 @@ Three events, each carrying the standard capture context (`surface`,
 
 | Event | Fires when | Notes |
 | --- | --- | --- |
-| `capture_prompt_dismissed` | the sheet is closed from the PROMPT state | `dismiss_method` is `x`, `backdrop` or `escape` |
+| `capture_prompt_dismissed` | the sheet is closed from the PROMPT state | `dismiss_method` is `x`, `handle`, `backdrop` or `escape`. `handle` exists only from 2026-08-03; rows before that date cannot contain it |
 | `capture_prompt_submitted` | `/api/subscribe` accepted the POST | `email_domain`, plus `chip_count` and `chip_sources` for what the success state was about to offer |
 | `capture_prompt_team_added` | a success-state chip is tapped ON | `added_team_id`, `chip_position`, `source_team_id`, `chip_source` |
 

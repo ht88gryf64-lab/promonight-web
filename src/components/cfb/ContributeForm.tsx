@@ -39,7 +39,14 @@ export function ContributeForm({ schoolId, schoolName }: { schoolId: string; sch
     );
   }
 
-  const field = 'w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-white placeholder:text-white/30 focus:border-white/30 focus:outline-none';
+  // text-base is NOT decoration. Every control here is nested inside a
+  // `block text-sm` label, and Tailwind's preflight gives form controls
+  // `font: inherit`, so without this they all compute to 14px. iOS Safari zooms
+  // the page whenever a text control under 16px takes focus and does not zoom
+  // back out on blur, and that scale then follows the visitor through
+  // same-document navigation onto every other page. See the note in
+  // capture/CaptureCard.tsx.
+  const field = 'w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-base text-white placeholder:text-white/30 focus:border-white/30 focus:outline-none';
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       {/* honeypot — visually hidden, off-tab; bots fill it, humans don't */}

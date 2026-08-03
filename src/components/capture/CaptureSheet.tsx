@@ -34,6 +34,51 @@ import type { CaptureDismissMethod } from '@/lib/analytics';
 // visitor can still reach and reads as broken. So "backdrop tap" on mobile is
 // implemented as an outside tap on the document instead: same gesture, same
 // dismissal, nothing between the visitor and the page.
+//
+// TWO VISIBLE DISMISSALS, AND THE HANDLE IS THE ONE THAT SURVIVES A SCALED PAGE.
+// This panel is position:fixed sized by left:0/right:0, so its width is the
+// LAYOUT viewport. iOS implements page zoom as a transform of the VISUAL
+// viewport with no relayout, so at any page scale above 1 the panel keeps its
+// full layout width while only width/scale of it is on screen, anchored at the
+// left. Anything near the RIGHT edge leaves the display first. That is not
+// hypothetical: it shipped, and the X — then 6px from the edge — was completely
+// gone on a real iPhone 15 Pro. See docs/known-issues.md entry 10.
+//
+// THE SCALE WAS ALREADY THERE WHEN THE SHEET ARRIVED, which is the detail that
+// decides the design. The reporter had not touched the sheet: iOS zooms on focus
+// for any text control under 16px and does NOT zoom back out on blur, and page
+// scale survives same-document App Router navigation. So a visitor taps a search
+// box on one page, carries 1.14 with them, and meets this sheet already scaled.
+// Raising this sheet's own email field to 16px therefore does nothing for the
+// case that was actually reported — only the other inputs and a dismissal that
+// survives scale do. Do not let the 16px change read as the fix.
+//
+// A control whose far edge sits at x stays visible while x <= W/scale, with the
+// window pinned to the left edge, which is where iOS leaves it after a focus
+// zoom. Centre is the position that degrades symmetrically: panned fully right
+// instead, a centred control needs W - W/scale <= centre - halfWidth, which
+// yields the same bound. An edge control has no such symmetry — it is the first
+// thing to go one way and the last the other.
+//
+// ALL FIGURES ARE W = 393, THE iPHONE 15 PRO. They are not constants; recompute
+// for another width. `right` and the flex centring both resolve against the
+// panel's PADDING box, inside its 1px border, so the usable box is [1, 392].
+//   handle  56px box centred at 196.5 -> far edge 224.5 -> holds to 393/224.5 = 1.75
+//   X       right-3, 44px box         -> far edge 380   -> holds to 393/380  = 1.03
+//   X       right-1.5, as shipped     -> far edge 386   -> holds to 393/386  = 1.02
+// In the sm: corner card on a landscape iPhone 15 Pro (W = 852, panel [498,828])
+// the handle holds to 852/691 = 1.23 and the X to 852/815 = 1.05. Both branches
+// therefore clear the 1.14 a 14px input forces, and only via the handle.
+//
+// The handle is the dismissal. The X is the familiar affordance kept for
+// pointers and for anyone who looks for it in the corner.
+//
+// WHAT WAS DELIBERATELY NOT DONE: no visualViewport resize/scroll subscription.
+// It would size the panel correctly at every scale, but it puts two live
+// listeners on a component whose whole premise is staying out of the visitor's
+// way, to buy scales above 1.75 that a reader does not reach. And NOT
+// maximum-scale/user-scalable=no, which is a WCAG 2.1 SC 1.4.4 failure and does
+// nothing for a visitor who arrives already zoomed.
 
 /** Kept in sync with the .capture-panel-out durations in globals.css. */
 const EXIT_MS = 180;
@@ -179,7 +224,7 @@ export function CaptureSheet({ open, onDismiss, labelledBy, children }: CaptureS
       //
       // A backdrop tap therefore means a tap on the page's dead space, which is
       // what is left once controls are excluded. It is also the only one of the
-      // three dismissal paths that can fire by accident, so it is the only one
+      // four dismissal paths that can fire by accident, so it is the only one
       // that needs a rule about intent at all.
       if (target instanceof Element && target.closest(INTERACTIVE_SELECTOR)) return;
       requestDismiss('backdrop');
@@ -210,15 +255,62 @@ export function CaptureSheet({ open, onDismiss, labelledBy, children }: CaptureS
       //
       // NO HORIZONTAL PADDING HERE. It lives on the scroller instead, which is
       // not a cosmetic choice: see the note on that element.
-      className={`${closing ? 'capture-panel-out' : 'capture-panel'} fixed bottom-0 left-0 right-0 z-[90] flex max-h-[34vh] flex-col overflow-hidden rounded-t-3xl border border-rd-line bg-rd-card pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-4 text-left shadow-2xl sm:bottom-6 sm:left-auto sm:right-6 sm:max-h-[70vh] sm:w-[330px] sm:rounded-2xl sm:pb-5`}
+      //
+      // max(34vh,240px) AND NOT A BARE 34vh. The handle costs 36px of flow, and
+      // 34vh of a 568px iPhone SE is 193px, which is not enough to hold the
+      // prompt: the submit button lost 41% of its height below the internal fold
+      // and the always-rendered error row went to zero visible pixels, so the
+      // copy that row exists to reserve space for became unreadable on exactly
+      // the devices with the least room. 240px fits the 239px natural height at
+      // both 568 and 667 viewport heights. Tall phones are untouched — 34vh of
+      // an 852px iPhone 15 Pro is 290px and already wins the max().
+      //
+      // THE TRADEOFF IS REAL AND IS THE POINT: 240px is 42% of a 568px viewport
+      // where 34vh was 34%. A taller sheet on the smallest phones is worse than
+      // a shorter one, and it is still better than a sheet whose submit button
+      // is cut in half. If this needs to come back down, the honest lever is
+      // less content, not a smaller dismissal.
+      className={`${closing ? 'capture-panel-out' : 'capture-panel'} fixed bottom-0 left-0 right-0 z-[90] flex max-h-[max(34vh,240px)] flex-col overflow-hidden rounded-t-3xl border border-rd-line bg-rd-card pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-2 text-left shadow-2xl sm:bottom-6 sm:left-auto sm:right-6 sm:max-h-[70vh] sm:w-[330px] sm:rounded-2xl sm:pb-5`}
     >
+      {/* THE GRAB HANDLE, WHICH IS A DISMISS BUTTON AND NOT DECORATION.
+          Centred, because centre is the only horizontal position that survives
+          a scaled visual viewport in both pan directions (see the header).
+          Rendered at every width rather than sm:hidden: a phone in landscape is
+          wider than 640px and gets the corner-card branch, whose X fails at
+          scale 1.05, so hiding the handle there would leave exactly the case
+          that needs it uncovered.
+          aria-hidden + tabIndex -1 because it is the SAME action as the X, which
+          is already labelled: a screen reader announcing "Close, Close" is worse
+          than announcing it once, and keyboard users have both the X and Escape.
+          This is a touch affordance, and only a touch affordance. */}
+      <button
+        type="button"
+        aria-hidden="true"
+        tabIndex={-1}
+        onClick={() => requestDismiss('handle')}
+        className="mx-auto mb-1 flex h-8 w-14 shrink-0 items-center justify-center rounded-full"
+      >
+        {/* rd-ink-faint, NOT rd-line-strong. rd-line-strong is
+            rgba(33,29,24,0.16), which composites to #dbdbda on the card and
+            gives 1.39:1 — it fails WCAG 2.1 SC 1.4.11 (3:1 for the visual
+            information identifying a control) by more than a factor of two, and
+            it would make the dismissal this whole change designates as THE
+            dismissal the least visible control in the sheet. That is the bug we
+            are fixing, relocated. rd-ink-faint is #9a9081 = 3.14:1, the same
+            ratio as the X glyph below, so both dismissals are equally findable.
+            The population browsing at page scale > 1 skews low-vision, which is
+            exactly the population a 1.39:1 bar does not exist for. */}
+        <span className="h-1 w-9 rounded-full bg-rd-ink-faint" />
+      </button>
       <button
         type="button"
         aria-label="Close"
         onClick={() => requestDismiss('x')}
-        // 44x44, always rendered, never hover-revealed. On desktop it is the
-        // only dismissal a pointer user has.
-        className="absolute right-1.5 top-1.5 flex h-11 w-11 items-center justify-center rounded-full text-rd-ink-faint transition-colors hover:bg-rd-ink/[0.06] hover:text-rd-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rd-red focus-visible:ring-offset-2 focus-visible:ring-offset-rd-card"
+        // 44x44, always rendered, never hover-revealed. right-3 rather than
+        // right-1.5: 6px was the least forgiving position on the panel for any
+        // viewport-narrowing effect. Moving it to 12px is cheap and buys a
+        // little (scale 1.03 instead of 1.02); it is NOT the fix, the handle is.
+        className="absolute right-3 top-1.5 flex h-11 w-11 items-center justify-center rounded-full text-rd-ink-faint transition-colors hover:bg-rd-ink/[0.06] hover:text-rd-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rd-red focus-visible:ring-offset-2 focus-visible:ring-offset-rd-card"
       >
         <svg
           className="h-4 w-4"

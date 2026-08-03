@@ -347,11 +347,23 @@ function PromptBody({
 
   return (
     <>
-      {/* pr-10 clears the close button, which is absolutely positioned over
-          this corner and must never sit on top of the heading. */}
+      {/* pr-12 clears the close button, which is absolutely positioned over
+          this corner and must never sit on top of the heading.
+          MEASURE FROM THE SCROLLER, NOT THE PANEL. This heading is a child of
+          the panel's px-5 scroller (CaptureSheet.tsx), so on a 393px panel its
+          content box is [21, 372], not [0, 393]. The X's 44px box, at right-3
+          inside a 1px border, reaches 57px in from the panel edge, i.e. to
+          x = 336. pr-12 puts the text boundary at 372 - 48 = 324, clearing the
+          BUTTON box by 12px. Clearing the box and not just the 16px glyph is the
+          requirement: the button paints a hover background and a focus ring over
+          whatever is under it. pr-10 also cleared it, by 4px; 48px is the margin
+          this is willing to keep, and the two headings must not disagree.
+          Vertically it is genuinely still load-bearing even with the handle
+          above: the heading's first line starts 44px down and the X (top-1.5,
+          44px tall) ends at 50px, so the button overhangs that line by 6px. */}
       <h2
         id={headingId}
-        className="pr-10 font-rd text-[15px] font-semibold leading-snug text-rd-ink"
+        className="pr-12 font-rd text-[15px] font-semibold leading-snug text-rd-ink"
       >
         {copy.heading}
       </h2>
@@ -376,7 +388,15 @@ function PromptBody({
           onChange={(e) => onEmailChange(e.target.value)}
           disabled={submitting}
           placeholder="you@example.com"
-          className="min-w-0 flex-1 rounded-lg border border-rd-line-strong bg-white px-3 py-2.5 font-rd text-[14px] text-rd-ink placeholder:text-rd-ink-faint focus:border-rd-red focus:outline-none focus:ring-2 focus:ring-rd-red/20 disabled:opacity-60"
+          // 16px IS LOAD-BEARING, NOT A TYPE CHOICE. iOS Safari zooms the page
+          // when a text-entry control under 16px takes focus, by roughly
+          // 16/font-size. That zoom is a transform of the VISUAL viewport with
+          // no relayout, so this sheet — position:fixed, sized by left:0/right:0
+          // against the LAYOUT viewport — stays full width while only part of it
+          // is on screen, and its right edge leaves the display. At 14px the
+          // scale was 16/14 = 1.14, which put the close button entirely
+          // off-screen on a real iPhone. Do not take this back below 16px.
+          className="min-w-0 flex-1 rounded-lg border border-rd-line-strong bg-white px-3 py-2.5 font-rd text-[16px] text-rd-ink placeholder:text-rd-ink-faint focus:border-rd-red focus:outline-none focus:ring-2 focus:ring-rd-red/20 disabled:opacity-60"
         />
         <button
           type="submit"
@@ -442,7 +462,7 @@ function SuccessBody({
       <div className="min-h-0 flex-1 overflow-y-auto">
         <h2
           id={headingId}
-          className="pr-10 font-rd text-[15px] font-semibold leading-snug text-rd-ink"
+          className="pr-12 font-rd text-[15px] font-semibold leading-snug text-rd-ink"
         >
           {copy.heading}
         </h2>

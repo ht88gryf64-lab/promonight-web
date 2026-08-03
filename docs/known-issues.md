@@ -409,3 +409,76 @@ all.
 through these strings; every one of them labels content that is also present in
 full-contrast text next to it. It is a legibility tax on low-vision users and a
 standing AA gap, tracked so it is a decision rather than an oversight.
+
+---
+
+## 10. Desktop Chrome device emulation is not sufficient verification for the capture sheet
+
+**What it is.** On 2026-08-03 the engagement capture sheet was reported
+overflowing the viewport on a real iPhone in production, with the close button
+pushed off-screen to the right. Every verification pass the sheet had ever been
+through measured 390x844 in desktop Chrome device emulation and reported the
+panel at exactly 390px wide, full-bleed. Those measurements were arithmetically
+correct and causally blind: **390px is the reading produced by both the healthy
+and the broken state.**
+
+**Where it lives.** The measurement, not the markup. The panel is
+`src/components/capture/CaptureSheet.tsx:213`
+(`fixed bottom-0 left-0 right-0 ... overflow-hidden`) and the close button is
+`:221` (`absolute right-1.5 top-1.5 h-11 w-11`, so it occupies layout x
+340..384 on a 390px panel). Nothing in `src/` reads `window.visualViewport` —
+grep returns zero hits — so the divergence that produces the bug has never been
+observable by any check the repo runs.
+
+**Why it matters.** `position: fixed` with `left:0; right:0` is laid out against
+the **layout** viewport. iOS Safari implements page zoom as a transform of the
+**visual** viewport and does not re-run layout, so at any page scale above 1 the
+panel stays 390 CSS px while only 390/scale of it is on screen. The close button
+begins clipping at scale 1.016, its glyph begins clipping at 1.054, and the
+glyph is gone entirely by 1.11. Focusing a sub-16px text input auto-zooms to
+roughly 16/14 = 1.14 on iOS, which is past all three.
+
+**The zoom does not have to come from the sheet.** iOS does not zoom back out on
+blur, and page scale survives same-document App Router navigation, so a visitor
+who taps a 14px search box on one page carries 1.14 onto every page after it.
+That is what happened here: the reporter had not touched the sheet when it
+arrived already broken.
+
+The instruments the verification used — `getBoundingClientRect().width`,
+`offsetWidth`, `window.innerWidth`, `documentElement.clientWidth` — are all
+expressed in layout-viewport CSS px and are **unchanged by page scale**. All of
+them return 390 under both hypotheses. Chrome DevTools device emulation compounds
+this: it emulates screen size, DPR, touch and user-agent, but not WebKit's
+viewport machinery. It has no pinch gesture, does not implement iOS focus
+auto-zoom, and holds `visualViewport.scale` at 1 permanently, so the broken state
+is not merely unmeasured there, it is **unreachable**.
+
+Emulation is also blind to `env(safe-area-inset-*)` (reports 0), to Safari's
+minimum-font-size setting, and to in-app WebViews. None of those explain this
+incident, but each is a class of defect emulation cannot falsify.
+
+**The rule this establishes.** Never again assert that this class of bug is
+absent because a width measured 390. For any component anchored to a viewport
+edge:
+
+- The diagnostic instruments are `window.visualViewport.scale`, `.width` and
+  `.offsetLeft`, read alongside the element's `getBoundingClientRect()`. A
+  healthy state is `visualViewport.width === rect.width`. A divergence is the
+  bug, and it is invisible to every other measurement.
+- Verification must happen on a **real iPhone or a real device lab**, not
+  desktop device emulation. The iOS Simulator plus Safari's Web Inspector is
+  acceptable because it runs real WebKit; Chrome DevTools device mode and
+  Playwright's bundled WebKit are not, because neither implements focus
+  auto-zoom or pinch.
+- The pass must include the focused state of every text input in the component,
+  not just its resting state. The resting sheet is correct; the bug only exists
+  once something has raised the page scale.
+
+**Severity: High.** A prompt with no reachable dismiss is the exact shape
+Google's intrusive-interstitial penalty targets, and it shipped to all traffic
+undetected because the verification method could not see it. The sheet was
+switched off in production at `2026-08-03T02:27:15.563Z`
+(`NEXT_PUBLIC_CAPTURE_TRIGGER=false`, deployment
+`dpl_AE6YihV4ZCYmabTAHyt56ZfBxheK`) pending a fix. The narrower lesson is the
+one-line `text-[14px]` -> `text-[16px]` change at
+`src/components/capture/CaptureCard.tsx:379`; the durable lesson is this entry.

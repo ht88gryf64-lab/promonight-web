@@ -753,8 +753,23 @@ export type CapturePromptSuppressedProperties = CapturePromptContext & {
  * required to leave the page behind scrollable, so the dismissal is detected as
  * an outside tap instead. Desktop has no equivalent, by design, which is why the
  * X is the affordance that carries weight there.
+ *
+ * 'handle' is the grab handle at the top centre of the panel, added because the
+ * X alone is not reachable at page scales above 1.02: it sits 12px from the
+ * panel's right edge, and on iOS a scaled page keeps this position:fixed panel
+ * at LAYOUT-viewport width while showing only part of it.
+ *
+ * IT IS SPLIT OUT FROM 'x' SO THE TWO CAN BE COUNTED SEPARATELY, AND THAT IS
+ * ALL IT PROVES. The event carries no page scale, so a handle dismissal does
+ * NOT establish that the X was unreachable for that visitor — the handle also
+ * renders on desktop, where a pointer user may simply prefer it. Read the
+ * handle-vs-x split as an affordance preference and split it by device before
+ * inferring anything about reachability. The converse is weaker still: the
+ * handle is tap-only and looks like something you drag, so a LOW handle share
+ * is not evidence the X was fine. Sum 'x' and 'handle' for a considered-no
+ * rate; neither one alone is a reachability metric.
  */
-export type CaptureDismissMethod = 'x' | 'backdrop' | 'escape';
+export type CaptureDismissMethod = 'x' | 'handle' | 'backdrop' | 'escape';
 
 /**
  * EMITTED FROM THE PROMPT STATE ONLY, deliberately. Closing a confirmation is
