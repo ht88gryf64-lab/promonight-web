@@ -46,15 +46,76 @@ month of half-delivery.
    instead of against a control arm. Losing the control arm loses the
    comparison; it does not lose the ability to notice a break.
 
-**The one thing to do before the evidence expires.** The half-traffic window,
-`2026-08-02T23:24:34Z` to `ALL_TRAFFIC_START`, contains a genuine randomized
-control group. It is underpowered for signups, which is why the experiment was
-dropped, but it is the only unconfounded guardrail read that will ever exist for
-this feature: seasonality, traffic mix and news cycles all cancel inside it and
-none of them cancel in a pre/post. Run the arm-split guardrail query in
-[Guardrails](#guardrails-pre-post) over that window once, as a one-time sanity
-check, and write the four numbers down. It costs one query and it cannot be
-reconstructed later.
+**The one thing to do before the evidence expires — DONE, see below.** The
+half-traffic window contains a genuine randomized control group. It is
+underpowered, which is why the experiment was dropped, but it is the only
+unconfounded guardrail read that will ever exist for this feature: seasonality,
+traffic mix and news cycles all cancel inside it and none of them cancel in a
+pre/post. It was run once before merge and the numbers are recorded in
+[the half-traffic reading](#half-traffic-reading) below.
+
+## The half-traffic guardrail reading, taken 2026-08-03
+
+<a id="half-traffic-reading"></a>
+
+**A MEASUREMENT, NOT A VERDICT. It is far too small to conclude anything, and it
+is recorded because it cannot be reconstructed, not because it settles
+anything.** Read the sample sizes before the percentages.
+
+Taken at `2026-08-03T01:49Z`, over the whole half-traffic window to that point:
+`2026-08-02T23:24:34Z` to `2026-08-03T01:49:18Z`. **That is 2 hours and 25
+minutes of traffic, not a day.** Raw `execute-sql`, so the project's test-account
+filter is off and our own browsing is included; at this sample size that matters
+more than it usually does.
+
+| Guardrail | control | variant_a | Direction | Threshold | Fisher p |
+| --- | --- | --- | --- | --- | --- |
+| Engaged rate | 40.0% (10/25) | 26.7% (4/15) | worse | down >10% rel | 0.502 |
+| Affiliate per 100 pv | 7.89% (3/38) | 0.0% (0/28) | worse | down >10% rel | 0.256 |
+| Single-pv session rate | 72.0% (18/25) | 42.9% (6/14) | better | up >5pp abs | 0.095 |
+| Pages per visitor | 1.52 | 1.87 | better | down >10% rel | — |
+
+Browsers: 25 control, 15 variant_a in the guardrail population; 24 / 14 on
+`page_view` specifically, which is a fair-coin two-tailed p of 0.143 and so
+unremarkable.
+
+**Verdict: no guardrail breach detected at n=40, and n=40 cannot detect anything
+short of catastrophic.** Nothing here is close to significant. Two of the four
+metrics cross their threshold BY THE LETTER — engaged rate down 33% relative and
+affiliate down 100% relative — and both are noise: the affiliate "breach" is
+three clicks against zero, where the rate itself predicts 2.2 expected clicks in
+`variant_a`, and observing zero is entirely ordinary. The other two moved the
+good way by margins equally meaningless.
+
+**That two thresholds fired on noise is itself the useful finding.** These
+thresholds were written for a two-week window and they are not usable at a
+two-hour one. Anyone running the pre/post version on day 1 will see the same
+thing. Check the counts, not the percentages, and do not act on a relative
+threshold until the denominators are in the hundreds.
+
+Three things worth keeping from the same read:
+
+- **Only 4 browsers were ever shown a prompt, and only 1 of those rendered a
+  sheet.** Six `capture_prompt_shown` events fired, 5 in control and 1 in
+  `variant_a`. The 5 control ones showed nothing, by design. Under the merged
+  code all 6 would have rendered.
+- **Zero submits and zero dismissals, ever.** `capture_prompt_submitted` and
+  `capture_prompt_dismissed` are not in the project taxonomy at all, so no
+  visitor has yet interacted with a sheet in production. Every chip, dismissal
+  and confirm-rate query in this file is therefore querying an empty set until
+  that changes.
+- **`affiliate_click` carries no `variant`, exactly as the structural note
+  says.** All 7 affiliate clicks in the window group under an empty arm on the
+  event; 3 of them belong to persons resolvable as control from their other
+  events, 0 to `variant_a`, and 4 to persons carrying no arm at all. The
+  per-person resolution in the guardrail query is what recovers them, and it
+  recovers only 3 of 7. At scale that loss is proportionate and harmless; at n=7
+  it is most of the data.
+
+One query gotcha, since it cost a run: aliasing an outer aggregate to the same
+name as the inner column (`sum(affiliate_clicks) AS affiliate_clicks`) fails with
+"aggregate function found inside another aggregate function". Give the outer
+totals distinct names.
 
 ## The three trigger events
 
