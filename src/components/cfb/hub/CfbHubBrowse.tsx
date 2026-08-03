@@ -65,7 +65,9 @@ export function CfbHubBrowse({ browse, total }: { browse: { bucket: string; team
           onChange={(e) => setQ(e.target.value)}
           placeholder="Filter teams…"
           aria-label="Filter teams by name"
-          className="ml-auto w-40 rounded-md border border-white/12 bg-white/[0.04] px-3 py-2 text-sm text-white placeholder:text-white/35 focus:border-white/30 focus:outline-none"
+          // text-base (16px), not text-sm: below 16 iOS Safari zooms the page on
+          // focus. See the note in capture/CaptureCard.tsx.
+          className="ml-auto w-40 rounded-md border border-white/12 bg-white/[0.04] px-3 py-2 text-base text-white placeholder:text-white/35 focus:border-white/30 focus:outline-none"
         />
       </div>
       {/* ALL teams from ALL buckets render here always — filter is visibility only */}

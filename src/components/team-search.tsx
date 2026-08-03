@@ -52,7 +52,9 @@ export function TeamSearch({ teams, promoCounts, initialLeague }: TeamSearchProp
           placeholder="Search teams..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="w-full bg-bg-card border border-border-subtle rounded-xl pl-11 pr-4 py-3 text-sm text-white placeholder:text-text-dim focus:outline-none focus:border-border-hover transition-colors"
+          // text-base (16px), not text-sm: below 16 iOS Safari zooms the page on
+          // focus. See the note in capture/CaptureCard.tsx.
+          className="w-full bg-bg-card border border-border-subtle rounded-xl pl-11 pr-4 py-3 text-base text-white placeholder:text-text-dim focus:outline-none focus:border-border-hover transition-colors"
         />
       </div>
 

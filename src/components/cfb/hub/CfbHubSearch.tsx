@@ -26,7 +26,9 @@ export function CfbHubSearch({ teams }: { teams: { id: string; name: string }[] 
           onBlur={() => setTimeout(() => setOpen(false), 150)}
           placeholder="Find your team…"
           aria-label="Find your team"
-          className="w-full bg-transparent text-[14px] text-white placeholder:text-white/45 focus:outline-none"
+          // 16px, not 14: below 16 iOS Safari zooms the page on focus. See the
+          // note on the capture sheet's email field in capture/CaptureCard.tsx.
+          className="w-full bg-transparent text-[16px] text-white placeholder:text-white/45 focus:outline-none"
         />
       </div>
       {open && matches.length > 0 && (

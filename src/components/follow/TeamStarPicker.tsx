@@ -128,7 +128,9 @@ export function TeamStarPicker({
         onChange={(e) => setQuery(e.target.value)}
         placeholder={searchPlaceholder}
         autoComplete="off"
-        className="mb-3 w-full rounded-xl border border-rd-line-strong bg-rd-cream px-4 py-2.5 font-rd text-sm text-rd-ink placeholder:text-rd-ink-faint focus:border-rd-ink focus:outline-none"
+        // text-base (16px), not text-sm: below 16 iOS Safari zooms the page on
+        // focus. See the note in capture/CaptureCard.tsx.
+        className="mb-3 w-full rounded-xl border border-rd-line-strong bg-rd-cream px-4 py-2.5 font-rd text-base text-rd-ink placeholder:text-rd-ink-faint focus:border-rd-ink focus:outline-none"
       />
 
       {selected.length > 0 && (
