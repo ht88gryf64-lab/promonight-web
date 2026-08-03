@@ -132,6 +132,40 @@ has run for a day, those two events existing is the smoke test that the sheet is
 not merely rendering but usable; their continued absence would mean the sheet
 appears and nothing can be done with it, which no unit test catches.
 
+<a id="smoke-test"></a>
+
+### The smoke test — due `2026-08-04T12:24:50Z`
+
+24 hours after `LIVE_FIXED_START`. **Existence, not rates.** No thresholds, no
+decision rule, no guardrail reading — Rule 0 runs continuously against the
+matched-length baseline and is not part of this.
+
+1. **Do `capture_prompt_submitted` and `capture_prompt_dismissed` exist in the
+   taxonomy yet?** They never have. Check the event names resolve at all before
+   reading any count, because an empty result and a nonexistent event look
+   identical and imply opposite actions.
+2. **Are they firing since `LIVE_FIXED_START`?** A count above zero for each is
+   the pass. Zero after a day of full traffic means the sheet renders and cannot
+   be interacted with, which is the failure no test catches.
+3. **The `dismiss_method` distribution.** New, and the reason it is in a smoke
+   test rather than a read: `handle` did not exist before `LIVE_FIXED_START` and
+   is now the primary dismissal. Whether visitors actually reach for it, versus
+   the X, versus backdrop, is the first evidence the affordance works at scale
+   rather than for one person who knew what he was looking for.
+
+```sql
+SELECT properties.dismiss_method AS method, count() AS n, uniq(person_id) AS browsers
+FROM events
+WHERE event = 'capture_prompt_dismissed'
+  AND timestamp >= toDateTime('2026-08-03T12:24:50Z')
+GROUP BY method ORDER BY n DESC
+```
+
+Read the counts, never the percentages — the denominators will be tiny. A
+`handle` row that exists at all is the signal. Its SHARE means nothing yet, and
+per the note on `CaptureDismissMethod` the handle also renders on desktop, so
+split by device before inferring anything about the iOS case it was built for.
+
 ### Two things about the query itself
 
 - **`affiliate_click` carries no `variant`, exactly as the structural note
@@ -256,18 +290,35 @@ do not compare a filtered number against a raw one.
 
 ## The windows, and what bounds them
 
-Three regimes, and mixing them is the easiest way to produce a wrong number.
+Five regimes, and mixing them is the easiest way to produce a wrong number.
 
 | Regime | From | To | Who saw the sheet |
 | --- | --- | --- | --- |
 | Pre-sheet | (open) | `2026-08-02T23:24:34Z` | nobody |
 | Half traffic | `2026-08-02T23:24:34Z` | `2026-08-03T02:09:23Z` | `variant_a` only |
-| All traffic | `2026-08-03T02:09:23Z` | (open) | everyone who qualifies |
+| **All traffic, BROKEN on iOS** | `2026-08-03T02:09:23Z` | `2026-08-03T02:27:15.563Z` | everyone who qualifies, **and iOS visitors could not dismiss it** |
+| Dark | `2026-08-03T02:27:15.563Z` | `2026-08-03T12:24:50.550Z` | nobody |
+| All traffic, fixed | `2026-08-03T12:24:50.550Z` | (open) | everyone who qualifies |
 
 The half-traffic regime lasted **2 hours 45 minutes** in total. It is far too
 short to carry any read on its own; what it holds is recorded in
 [the half-traffic reading](#half-traffic-reading) and should be treated as a
 record that we looked, not as a result.
+
+**The broken window is 17 minutes 53 seconds long and it is not a normal window.**
+It is recorded rather than folded into the all-traffic regime because during it
+the sheet rendered with no reachable dismissal on any iOS browser at page scale
+above 1.02: `position: fixed` sized against the layout viewport, iOS zoom being a
+visual-viewport transform, and the close X sitting 6px from the panel's right
+edge. See `docs/known-issues.md` entry 10. Anyone reading signup, dismissal or
+guardrail data that touches 02:09:23Z–02:27:15Z needs to know the prompt was
+undismissable on iOS for that entire window. Do not treat any behaviour inside it
+as a preference. A signup there may be a visitor who could not find the way out.
+
+The **dark** window is not a pre/post baseline either. The sheet did not render at
+all, so it looks like the pre-sheet regime in the events and is not: browsers that
+dismissed or subscribed in the three regimes before it still carry their
+suppressors through it.
 
 > ### `PHASE_4_START = 2026-08-02T23:24:34Z`
 >
@@ -285,9 +336,44 @@ record that we looked, not as a result.
 > took 157 seconds, and no visitor could reach the un-gated sheet during those
 > 157 seconds. `NEXT_PUBLIC_*` values are inlined at build time, so the change
 > did not exist for anyone until that build was serving.
+>
+> **HISTORICAL. DO NOT USE THIS AS A QUERY BOUND.** The window it opens ran for
+> 17m53s and was broken on iOS throughout. `LIVE_FIXED_START` below is the bound
+> every query in this runbook now takes. This constant is kept so the broken
+> window has a name and cannot be silently absorbed into the clean one.
 
-**Everything before that timestamp is half traffic. Everything after is full.**
-No query may straddle it without splitting on it.
+> ### `TRIGGER_OFF = 2026-08-03T02:27:15.563Z`
+>
+> The sheet went dark. `NEXT_PUBLIC_CAPTURE_TRIGGER` set to `false` for
+> Production and rebuilt, deployment `dpl_AE6YihV4ZCYmabTAHyt56ZfBxheK`. Killed
+> on a report that the panel overflowed the viewport on a real iPhone 15 Pro with
+> the close button off-screen — the shape Google's intrusive-interstitial penalty
+> targets, with the Raptive window opening 2026-09-27.
+>
+> Verified dark rather than assumed: the gate is server-side, so with the flag
+> off the RSC payload carries no chip pool. `venueCity` and `opponents` were
+> present on the previous build and absent on this one, on both a team page and
+> an `AggregatorPage` aggregator.
+
+> ### `LIVE_FIXED_START = 2026-08-03T12:24:50.550Z`
+>
+> **The bound every query below takes.** The sheet live to all traffic with a
+> dismissal that survives a scaled viewport. Deployment
+> `dpl_4GepqQLoZfXe5b2XJH5Sin9jz5TG`, merge commit `95fdbf9`. `ready`, not
+> `createdAt`: the build began at 12:21:49Z and took 181 seconds.
+>
+> Same positive control, run in the other direction: `venueCity` and `opponents`
+> are present again on both surfaces.
+>
+> What changed under it: every text input is now >=16px so iOS cannot auto-zoom
+> on focus, and the dismissal is a centred grab handle that holds to page scale
+> 1.75 in portrait and 1.28 in the landscape corner card, against the X's 1.03.
+> Measured on real WebKit, not derived. A new `handle` value joins
+> `dismiss_method`; it cannot appear before this timestamp.
+
+**Everything before `ALL_TRAFFIC_START` is half traffic. Everything after
+`LIVE_FIXED_START` is full traffic on a sheet that works.** The three regimes in
+between are short, and no query may straddle any of them without splitting on it.
 
 The half-traffic window is not a baseline for anything pre/post. It is diluted
 by roughly half, so a guardrail computed across it understates any real effect by
@@ -396,7 +482,7 @@ SELECT
     uniq(person_id)            AS browsers,
     count()                    AS signups
 FROM events
-WHERE timestamp >= toDateTime('ALL_TRAFFIC_START')
+WHERE timestamp >= toDateTime('LIVE_FIXED_START')
   AND event = 'newsletter_signup'
 GROUP BY day, source, placement
 ORDER BY day, source
@@ -413,7 +499,7 @@ SELECT
     uniq(person_id) AS browsers,
     count()         AS signups
 FROM events
-WHERE timestamp >= toDateTime('ALL_TRAFFIC_START')
+WHERE timestamp >= toDateTime('LIVE_FIXED_START')
   AND event = 'newsletter_signup'
 GROUP BY path
 ```
@@ -471,7 +557,7 @@ FROM (
         maxIf(1, event = 'newsletter_signup'
                  AND properties.surface != 'web_engagement_capture') = 1 AS signed_up_via_cta
     FROM events
-    WHERE timestamp >= toDateTime('ALL_TRAFFIC_START')
+    WHERE timestamp >= toDateTime('LIVE_FIXED_START')
       AND event IN (
           'capture_threshold_met', 'capture_prompt_shown', 'capture_prompt_suppressed',
           'newsletter_signup', 'page_view'
@@ -587,12 +673,12 @@ Two reasons it has to come from Firestore:
    Those two are the same magnitude of gap pointing opposite ways; check the
    sign before diagnosing either.
 
-So: over records created since `ALL_TRAFFIC_START`, compare the confirm rate of
+So: over records created since `LIVE_FIXED_START`, compare the confirm rate of
 `web_engagement_capture` against the confirm rate of the other `web_*` sources
 over the same window.
 
 ```
-subscribers where createdAt >= ALL_TRAFFIC_START
+subscribers where createdAt >= LIVE_FIXED_START
   group by source
   rate = count(status == 'confirmed') / count(*)
 ```
@@ -648,13 +734,13 @@ without a second event.
 -- What was offered
 SELECT properties.chip_count AS chips_offered, properties.chip_sources AS sources, count()
 FROM events
-WHERE event = 'capture_prompt_submitted' AND timestamp >= toDateTime('ALL_TRAFFIC_START')
+WHERE event = 'capture_prompt_submitted' AND timestamp >= toDateTime('LIVE_FIXED_START')
 GROUP BY chips_offered, sources ORDER BY chips_offered
 
 -- What was taken
 SELECT properties.chip_position AS pos, properties.chip_source AS rule, count()
 FROM events
-WHERE event = 'capture_prompt_team_added' AND timestamp >= toDateTime('ALL_TRAFFIC_START')
+WHERE event = 'capture_prompt_team_added' AND timestamp >= toDateTime('LIVE_FIXED_START')
 GROUP BY pos, rule ORDER BY pos
 ```
 
@@ -685,7 +771,7 @@ reason that has nothing to do with whether chips work.
 SELECT properties.dismiss_method AS method, count() AS n,
        round(count() / sum(count()) OVER () * 100, 1) AS pct
 FROM events
-WHERE event = 'capture_prompt_dismissed' AND timestamp >= toDateTime('ALL_TRAFFIC_START')
+WHERE event = 'capture_prompt_dismissed' AND timestamp >= toDateTime('LIVE_FIXED_START')
 GROUP BY method ORDER BY n DESC
 ```
 
@@ -781,7 +867,7 @@ have "down more than 10% relative" thresholds. Run naively on day 1, this
 reverts a healthy feature.
 
 **The rule: at a day-N check, the baseline is the N days immediately before
-`ALL_TRAFFIC_START`, not the full fourteen.** The fourteen-day `BASELINE` above
+`LIVE_FIXED_START`, not the full fourteen.** The fourteen-day `BASELINE` above
 is the comparator for the day-14 read and for nothing else. Same length, same
 day-of-week coverage where possible, since weekend traffic differs.
 
