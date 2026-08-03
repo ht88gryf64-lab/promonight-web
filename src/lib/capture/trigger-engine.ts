@@ -109,11 +109,18 @@ export function evaluateTrigger(input: EvaluateTriggerInput): CaptureEmission[] 
   // numerator of a rate they are not part of.
   //
   // That gate is what lets the probe be subtracted from capture_prompt_shown at
-  // all. Anyone who emits the probe is eligible by construction, and in this
-  // phase nothing can suppress them in the next fifteen seconds (nothing
-  // renders, so no dismissal or signup can happen, and only one trigger is
-  // mounted per page). So WITHIN ONE PAGEVIEW the only way to emit the probe and
+  // all. Anyone who emits the probe is eligible by construction, and nothing can
+  // suppress them in the next fifteen seconds: the sheet is rendered off the
+  // BACK of the shown event, so between the 30s probe and the 45s decision there
+  // is still nothing on screen to dismiss or submit, and only one trigger is
+  // mounted per page. So WITHIN ONE PAGEVIEW the only way to emit the probe and
   // not the shown is to have left.
+  //
+  // That argument used to rest on "nothing renders at all", which was true in
+  // the telemetry-only phase and is not true now. It survives the sheet because
+  // what it actually needs is narrower: nothing renders BEFORE the shown event.
+  // A visitor already carrying a suppressor from an earlier page or session is
+  // caught by evaluateSuppression above, ahead of the probe.
   //
   // Across a session that no longer holds, because this guard is per pathname
   // while the one-prompt-per-session cap is written by markShown at the 45s

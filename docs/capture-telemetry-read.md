@@ -98,7 +98,9 @@ SELECT
     countIf(event = 'capture_threshold_met') AS raw_probe_events,
     countIf(event = 'capture_prompt_shown') AS raw_shown_events
 FROM events
-WHERE timestamp >= toDateTime('PENDING_PRODUCTION_DEPLOY')  -- see note below
+-- The retune's own production deploy, which is EARLIER than every window in
+-- "The windows, and what bounds them" below: this read predates the sheet.
+WHERE timestamp >= toDateTime('RETUNE_DEPLOY_READY')
   AND event IN ('capture_threshold_met', 'capture_prompt_shown')
 ```
 
@@ -192,6 +194,21 @@ The half-traffic window is not a baseline for anything pre/post. It is diluted
 by roughly half, so a guardrail computed across it understates any real effect by
 about a factor of two and a signups rate across it understates the sheet's reach
 by the same. Either bound a query inside one regime or split the arm.
+
+**The regimes leak forward, and a timestamp bound cannot stop them.** The two
+durable suppressors are browser state, not events: `promonight:subscribed` is
+permanent and `promonight:capture_dismissed_at` lasts 30 days. Every `variant_a`
+browser that dismissed or submitted during the half-traffic window carries that
+suppressor into the all-traffic window and is silent there. So for the first
+month of all-traffic reads, the qualifying population is missing a slice of
+exactly the browsers that had already engaged with the sheet — which biases the
+early signups rate DOWN, since the people most likely to convert already did.
+
+Nothing in the data marks them, so this is a caveat rather than a filter. It
+decays to nothing by roughly `ALL_TRAFFIC_START + 30 days` for the dismissal
+half and never for the subscribed half, though the subscribed half is small and
+is a conversion that already counted once. Weight an early read accordingly and
+do not read a soft first week as the sheet failing.
 
 The synthetic events from browser verification, described in the caveat below,
 share a DATE with `PHASE_4_START`, which is why that bound carries a time: they
@@ -322,19 +339,34 @@ so PostHog's `person_id` is a deterministic UUIDv5 of the anonymous
 `distinct_id`, and that id and the arm share a storage lifetime. Verified
 empirically on 2026-08-01: 0 of 117 browsers ever reported two arms.
 
+**Each path gets its own denominator, and they are not the same denominator.**
+The sheet is normalised over browsers that QUALIFIED, because that is the only
+population it can reach. The static CTAs are normalised over browsers that
+VISITED, because that is the population they are on the page for. Reporting a
+rate for one and a raw count for the other is not a comparison, and reporting
+both over the same denominator answers neither question.
+
 ```sql
 SELECT
     countIf(qualified)                                   AS qualifying_browsers,
+    countIf(visited)                                     AS visiting_browsers,
     countIf(qualified AND signed_up_via_sheet)           AS sheet_signups,
+    countIf(visited AND signed_up_via_cta)               AS cta_signups,
     round(countIf(qualified AND signed_up_via_sheet)
           / countIf(qualified) * 1000, 1)                AS sheet_per_1k_qualifying,
-    countIf(signed_up_via_cta)                           AS cta_signups
+    round(countIf(visited AND signed_up_via_cta)
+          / countIf(visited) * 1000, 1)                  AS cta_per_1k_visiting,
+    -- The sheet on the SAME denominator as the CTA. This is the pair that is
+    -- directly comparable; the two above are each path judged on its own terms.
+    round(countIf(visited AND signed_up_via_sheet)
+          / countIf(visited) * 1000, 1)                  AS sheet_per_1k_visiting
 FROM (
     SELECT
         person_id,
         maxIf(1, event IN (
             'capture_threshold_met', 'capture_prompt_shown', 'capture_prompt_suppressed'
         )) = 1 AS qualified,
+        maxIf(1, event = 'page_view') = 1 AS visited,
         maxIf(1, event = 'newsletter_signup'
                  AND properties.surface = 'web_engagement_capture') = 1 AS signed_up_via_sheet,
         maxIf(1, event = 'newsletter_signup'
@@ -349,13 +381,21 @@ FROM (
 )
 ```
 
-Swap `qualified` for `maxIf(1, event = 'page_view') = 1` to get the
-per-1,000-VISITORS version, which answers "what did this do to the business"
-rather than "does the sheet work on the people who see it".
+Three rates, and you have to say which one you are quoting.
+`sheet_per_1k_qualifying` answers "does the sheet work on the people who see
+it". `sheet_per_1k_visiting` and `cta_per_1k_visiting` are the pair that answer
+"what did each path do to the business", and only those two may be put side by
+side.
 
-Do not mix the two denominators in one chart, and label whichever you quote.
-They differ by roughly a factor of ten (9.4% of browsers qualified in the first
-post-retune window), so an unlabelled rate is unreadable a month later.
+Never put `sheet_per_1k_qualifying` next to `cta_per_1k_visiting`. The
+denominators differ by roughly a factor of ten (9.4% of browsers qualified in
+the first post-retune window), so that pairing overstates the sheet by about 10x
+and looks entirely plausible.
+
+`qualified` is a subset of `visited` in practice but not by construction:
+`page_view` is deferred behind `requestIdleCallback` while the capture events
+need 30+ engaged seconds, so a browser that qualifies has almost certainly
+reported a pageview. Almost. Do not write a query that assumes the containment.
 
 ### Why the denominator is a qualifying BOOLEAN and not a shown count
 
@@ -463,9 +503,17 @@ confirmation. That is a retune, not a revert.
 
 ### The caveat that will bite: `source` is creation-only
 
-`upsertSubscriber` writes `source` on the `!snap.exists` branch and nowhere
-else (`src/lib/subscribers.ts`). An existing subscriber who converts again
-through the sheet keeps whatever source their record was created with.
+`upsertSubscriber` sets `source` from the request on the `!snap.exists` branch
+only (`src/lib/subscribers.ts`). The pending/unsubscribed branch does write the
+field, but as `data.source ?? source` — the stored value always wins — and the
+already-confirmed branch does not touch it at all. So an existing subscriber who
+converts again through the sheet keeps whatever source their record was created
+with.
+
+The one exception is the `??`: a legacy record carrying NO source picks one up
+from the next submit, and that submit could be years after the record was made.
+Those are pre-`source` records, so they predate every window here and the
+`createdAt >=` bound excludes them anyway.
 
 Consequences, both real:
 
@@ -562,21 +610,55 @@ interesting and changes nothing.
 > ### `BASELINE = 2026-07-19T23:24:34Z` to `2026-08-02T23:24:34Z`
 >
 > The fourteen days immediately before the sheet first rendered for anyone.
+> **The comparator for the day-14 read.** For an earlier check, use the matched
+> shorter window ending at `2026-08-02T23:24:34Z` — see the section below.
 
-That window is clean: the capture trigger telemetry was live throughout it, but
-it rendered nothing, so no guardrail in it was touched by the sheet. Do not use
-the half-traffic window as a baseline. It is half-treated, so it flatters the
-post window by roughly a factor of two and will hide a real breach.
+That window is clean in the only sense that matters here: **nothing rendered in
+it.** The capture trigger telemetry went live partway through, around
+2026-07-30, and telemetry is not treatment — it emits events and touches no
+guardrail. Every one of these fourteen days is a day on which no visitor saw a
+sheet.
+
+Do not use the half-traffic window as a baseline. It is half-treated, so it
+flatters the post window by roughly a factor of two and will hide a real breach.
 
 **Re-derive the baseline from the query below rather than trusting any number
 written here.** Traffic mix drifts, and a stale baseline turns a seasonal dip
 into a false guardrail breach. The pre-sheet pages-per-visitor figure on record
 is 1.65; treat it as a sanity check on your re-derivation, not as the baseline.
 
+### MATCH THE WINDOW LENGTHS. Two of the four metrics are otherwise meaningless
+
+**This is the trap in the whole pre/post reframe, and it fires in the direction
+of a false REVERT on day 1.**
+
+Two of the four metrics grow with window length for reasons that have nothing to
+do with the sheet:
+
+- **`pages_per_visitor`** is `sum(pageviews) / count(distinct persons)`. Over a
+  longer window the same person returns and accumulates more pageviews, so the
+  ratio rises monotonically with the window.
+- **`engaged_pct`** is the share of persons with at least one
+  `team_page_engaged`. More days means more chances to have one, so it rises too.
+
+The other two are ratios of two quantities that scale together and are roughly
+window-invariant.
+
+So comparing a three-day post window against a fourteen-day baseline shows
+`pages_per_visitor` and `engaged_pct` **down by a large margin, always, in every
+possible world**, including one where the sheet did nothing at all. Both of those
+have "down more than 10% relative" thresholds. Run naively on day 1, this
+reverts a healthy feature.
+
+**The rule: at a day-N check, the baseline is the N days immediately before
+`ALL_TRAFFIC_START`, not the full fourteen.** The fourteen-day `BASELINE` above
+is the comparator for the day-14 read and for nothing else. Same length, same
+day-of-week coverage where possible, since weekend traffic differs.
+
 ### The query, run twice
 
-Run it once with the `BASELINE` bounds and once from `ALL_TRAFFIC_START`, and
-compare the four columns.
+Run it once over the matched-length baseline window and once over the post
+window, and compare the four columns.
 
 ```sql
 SELECT
@@ -592,7 +674,9 @@ FROM (
         countIf(event = 'page_view')                          AS pageviews,
         countIf(event = 'affiliate_click')                     AS affiliate_clicks,
         uniqIf(properties.$session_id, event = 'page_view')   AS sessions,
-        countIf(pv_in_session = 1)                            AS single_pv_sessions
+        -- uniqIf, NOT countIf. See the note below; this one is easy to get
+        -- wrong and wrong in a way that reads as good news.
+        uniqIf(properties.$session_id, pv_in_session = 1)     AS single_pv_sessions
     FROM (
         SELECT *, countIf(event = 'page_view') OVER (PARTITION BY properties.$session_id) AS pv_in_session
         FROM events
@@ -603,6 +687,20 @@ FROM (
     GROUP BY person_id
 )
 ```
+
+**Why `single_pv_sessions` is `uniqIf` and not `countIf`, since an earlier
+version of this file had it wrong.** `pv_in_session` is a window function, so it
+is attached to EVERY event row in the session, not just the pageview.
+`countIf(pv_in_session = 1)` therefore counts rows: a session with one pageview
+and three affiliate clicks contributes **four**. Against a denominator of
+distinct sessions, that is not a rate and can exceed 100%.
+
+The damage is worse than a wrong number. The numerator moves with affiliate
+click volume, so if affiliate clicks collapse — the exact harm the affiliate
+guardrail exists to catch — the bounce proxy falls too and reads as an
+improvement. Two guardrails that are supposed to be independent end up coupled,
+and coupled in the direction that hides the breach. `uniqIf` counts each
+qualifying session once regardless of what else happened in it.
 
 ### What pre/post cannot do, stated plainly
 
@@ -618,10 +716,22 @@ in it, and check the other three. One guardrail moving alone is more likely to
 be a confound; three moving together is more likely to be the sheet.
 
 The one comparison that has no confound is the half-traffic window's arm split,
-which is why the note at the top says to run it once before it is diluted. Add
-`anyIf(properties.variant, properties.variant IN ('control', 'variant_a')) AS arm`
-to the inner `GROUP BY person_id` and `WHERE arm IN (...) GROUP BY arm` outside
-it, bounded to `2026-08-02T23:24:34Z` through `ALL_TRAFFIC_START`.
+which is why the note at the top says to run it once. To build it from the query
+above:
+
+1. Add `anyIf(properties.variant, properties.variant IN ('control', 'variant_a')) AS arm`
+   to the inner `GROUP BY person_id`.
+2. Add `WHERE arm IN ('control', 'variant_a') GROUP BY arm` outside it.
+3. **Add the three `capture_*` events back to the inner event filter.** They are
+   not in the list above because the pre/post read has no arm to resolve, but
+   they carry `variant` and dropping them shrinks the pool of events an arm can
+   be recovered from. In practice `page_view` covers nearly everyone, so this
+   changes little — but "nearly" is not a thing to leave to chance in a read
+   that cannot be re-run.
+4. Bound it to `2026-08-02T23:24:34Z` through `ALL_TRAFFIC_START`.
+
+Then apply the window-length rule: both arms come from the same window here, so
+it does not bite, which is precisely what makes this comparison worth the query.
 
 ### Structural note: the arm is not on the guardrail events
 
