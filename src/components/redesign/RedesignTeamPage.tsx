@@ -119,13 +119,13 @@ export function RedesignTeamPage({
         promoCount={promos.length}
       />
       <EngagementTracker teamSlug={team.id} sport={team.league} />
-      {/* Engagement capture trigger. Renders the capture sheet in variant_a and
-          nothing at all in control, which still emits the same telemetry it
-          always has. The team and the schedule are threaded from here because no
-          page-level client context holds either, and the host resolves the chip
-          candidates from them server-side. Gated so OFF means it never enters
-          the tree at all. NOTE this whole template is behind isRedesignEnabled(),
-          so the trigger does not exist on the legacy team-page branch. */}
+      {/* Engagement capture trigger. Renders the capture sheet for every
+          qualifying visitor. The team and the schedule are threaded from here
+          because no page-level client context holds either, and the host resolves
+          the chip candidates from them server-side. Gated so OFF means it never
+          enters the tree at all. NOTE this whole template is behind
+          isRedesignEnabled(), so the trigger does not exist on the legacy
+          team-page branch. */}
       {isCaptureTriggerEnabled() && (
         <CaptureTriggerHost pageType="team_page" team={team} gameContexts={gameContexts} />
       )}

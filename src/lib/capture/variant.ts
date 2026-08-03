@@ -1,35 +1,48 @@
 // A/B arm assignment, without PostHog experiments.
 //
+// NOTHING CURRENTLY BRANCHES ON THE ARM, AND THAT IS ON PURPOSE. The capture
+// sheet's A/B was dropped before it was read (the reasoning is in
+// docs/capture-telemetry-read.md, "Why the experiment was dropped"), so the
+// sheet renders for every qualifying visitor and no caller compares the value
+// this file returns. What survives is the MACHINERY: a stable browser-scoped
+// coin flip, a persisted assignment that never reflips, and a value stamped onto
+// page_view, newsletter_signup, follow_page_view and the capture_* family.
+//
+// KEEP IT. It costs one localStorage read per mount and it is the entire setup
+// cost of the next experiment, already live and already accumulating a balanced
+// assignment. Deleting it to tidy up buys nothing and has to be rebuilt, plus
+// re-verified, the first time we want to test anything. Anyone wiring a real
+// experiment starts by branching on resolveVariant and time-bounding the read to
+// their own window; every browser assigned before that point carries an arm that
+// meant nothing, which is exactly why the bound is mandatory.
+//
 // The repo has zero feature-flag wiring: no bootstrap, no onFeatureFlags, no
 // posthog-node, and the posthog-js instance only appears on window after an
 // async import resolves post-hydration. Reading a flag would mean either
 // blocking on that import or accepting an undefined arm on first paint, and
 // adding server-side flags would mean a new dependency and a rendering strategy
 // change for 167 statically generated pages. A coin flip in localStorage costs
-// none of that and answers the only question Phase 2 asks.
-//
-// TWO ARMS, and CONTROL IS NOT INERT. Control runs the full counter, the full
-// timer and the full suppression check, and emits capture_prompt_shown exactly
-// as the variant does. It simply would not render a sheet once one exists. That
-// is what makes the arms comparable: without it, Phase 2 would be comparing
-// "sessions that reached the trigger" against "all sessions" and the lift would
-// be unmeasurable.
+// none of that.
 
 import { isCaptureTriggerEnabledClient } from './gate';
 import { browserStorage, KEY_VARIANT, type SafeStorage } from './storage';
 
-/** The two experiment arms. Exactly two, forever: this is what gets compared. */
+/**
+ * The two arms. Names retained from the capture-sheet experiment so the values
+ * already in every visitor's localStorage stay valid; they carry no meaning
+ * beyond "one of two even halves" until something branches on them again.
+ */
 export type CaptureArm = 'control' | 'variant_a';
 
 /**
  * What actually gets REPORTED on a capture event. The arms plus 'unassigned',
  * which is not an arm and never appears on a shown event.
  *
- * 'unassigned' exists so a storage-less browser cannot contaminate the control
- * arm. Reporting those sessions as 'control' would have worked only if every
- * future reader remembered to filter them out by suppression_reason first, and
- * a caveat in this file is not where someone reading an arm-balance chart will
- * be looking. A distinct value makes the contamination impossible instead of
+ * 'unassigned' exists so a storage-less browser cannot contaminate an arm.
+ * Reporting those sessions as 'control' would have worked only if every future
+ * reader remembered to filter them out by suppression_reason first, and a caveat
+ * in this file is not where someone reading an arm-balance chart will be
+ * looking. A distinct value makes the contamination impossible instead of
  * documented.
  */
 export type CaptureVariant = CaptureArm | 'unassigned';

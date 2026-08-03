@@ -159,8 +159,8 @@ export function CaptureSheet({ open, onDismiss, labelledBy, children }: CaptureS
       if (modalDialogIsOpen()) return;
       const target = e.target as Node | null;
       if (target && panelRef.current?.contains(target)) return;
-      // A TAP ON A CONTROL IS NOT A DISMISSAL, AND THIS LINE IS WHY THE
-      // EXPERIMENT CAN BE BELIEVED.
+      // A TAP ON A CONTROL IS NOT A DISMISSAL, AND THIS LINE IS WHY THE NUMBERS
+      // CAN BE BELIEVED.
       //
       // Without it, the first thing an engaged visitor does after the sheet
       // arrives, opening the next game cell to carry on browsing, closes it,
@@ -170,11 +170,12 @@ export function CaptureSheet({ open, onDismiss, labelledBy, children }: CaptureS
       // The damage is not a dented dismiss rate, it is a biased sample. The
       // visitors who keep tapping after 45 seconds are the most interested ones
       // on the page, which is to say the ones most likely to convert. They would
-      // be dismissed fastest, suppressed for a month, and so removed from the
-      // treatment arm first and hardest. variant_a would be measured on the
-      // people who stopped engaging, the sheet would be understated by an
-      // unknown amount, and the result would arrive as a clean, plausible null
-      // with nothing anywhere to indicate it was wrong.
+      // be dismissed fastest and suppressed for a month, so the population still
+      // reachable by the sheet would decay toward the people least likely to
+      // sign up. The sheet would be understated by an unknown amount and the
+      // result would arrive as a clean, plausible null with nothing anywhere to
+      // indicate it was wrong. Dropping the A/B did not retire this argument: it
+      // is about who remains eligible over time, not about comparing two arms.
       //
       // A backdrop tap therefore means a tap on the page's dead space, which is
       // what is left once controls are excluded. It is also the only one of the
