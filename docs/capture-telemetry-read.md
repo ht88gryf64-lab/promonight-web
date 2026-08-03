@@ -54,68 +54,95 @@ traffic mix and news cycles all cancel inside it and none of them cancel in a
 pre/post. It was run once before merge and the numbers are recorded in
 [the half-traffic reading](#half-traffic-reading) below.
 
-## The half-traffic guardrail reading, taken 2026-08-03
+## The half-traffic reading: a record that we looked, 2026-08-03
 
 <a id="half-traffic-reading"></a>
 
-**A MEASUREMENT, NOT A VERDICT. It is far too small to conclude anything, and it
-is recorded because it cannot be reconstructed, not because it settles
-anything.** Read the sample sizes before the percentages.
+> ### THE FINDING IS ABOUT THE THRESHOLDS, NOT ABOUT THE SHEET
+>
+> **Two of the four guardrails cross their REVERT threshold in the table below,
+> and both crossings are pure noise.** The affiliate one reads "down 100%
+> relative" and is three clicks against zero, on a denominator where the control
+> rate itself predicts 2.2 expected clicks — observing zero is entirely
+> ordinary. The engaged one reads "down 33% relative" and is 4 of 15 against 10
+> of 25.
+>
+> Thresholds written for a two-week window are not merely imprecise at two
+> hours. **They are actively misleading**, because they produce confident,
+> plausible, one-sided breach signals out of nothing. Anyone glancing at this
+> table cold will read two breaches. There are none.
+>
+> This is the same failure class the matched-length baseline rule exists to
+> prevent, arriving by the other door: there, a short post window manufactures a
+> breach against a long baseline; here, a small sample manufactures one against
+> a threshold calibrated for a large one. **Do not act on a relative threshold
+> until the denominators are in the hundreds. Read the counts, never the
+> percentages.**
+
+**THIS IS NOT A MEASUREMENT. It is a record that we looked.** It resolves
+nothing and was never going to. It exists because the half-traffic window is the
+only randomized comparison this feature will ever have, and merging ends it
+permanently — so the choice was between capturing something uninterpretable and
+capturing nothing. Anyone citing this section as evidence for or against the
+sheet has misread it.
 
 Taken at `2026-08-03T01:49Z`, over the whole half-traffic window to that point:
 `2026-08-02T23:24:34Z` to `2026-08-03T01:49:18Z`. **That is 2 hours and 25
-minutes of traffic, not a day.** Raw `execute-sql`, so the project's test-account
-filter is off and our own browsing is included; at this sample size that matters
+minutes of traffic.** An earlier draft of this file called it roughly a day; it
+was never close to a day, and the distinction is the whole reason the numbers
+below cannot be read as a result. Raw `execute-sql`, so the project's
+test-account filter is off and our own browsing is included; at n=40 that matters
 more than it usually does.
 
 | Guardrail | control | variant_a | Direction | Threshold | Fisher p |
 | --- | --- | --- | --- | --- | --- |
-| Engaged rate | 40.0% (10/25) | 26.7% (4/15) | worse | down >10% rel | 0.502 |
-| Affiliate per 100 pv | 7.89% (3/38) | 0.0% (0/28) | worse | down >10% rel | 0.256 |
+| Engaged rate | 40.0% (10/25) | 26.7% (4/15) | worse — NOISE | down >10% rel | 0.502 |
+| Affiliate per 100 pv | 7.89% (3/38) | 0.0% (0/28) | worse — NOISE | down >10% rel | 0.256 |
 | Single-pv session rate | 72.0% (18/25) | 42.9% (6/14) | better | up >5pp abs | 0.095 |
 | Pages per visitor | 1.52 | 1.87 | better | down >10% rel | — |
 
 Browsers: 25 control, 15 variant_a in the guardrail population; 24 / 14 on
-`page_view` specifically, which is a fair-coin two-tailed p of 0.143 and so
-unremarkable.
+`page_view` specifically, a fair-coin two-tailed p of 0.143 and so unremarkable.
 
-**Verdict: no guardrail breach detected at n=40, and n=40 cannot detect anything
-short of catastrophic.** Nothing here is close to significant. Two of the four
-metrics cross their threshold BY THE LETTER — engaged rate down 33% relative and
-affiliate down 100% relative — and both are noise: the affiliate "breach" is
-three clicks against zero, where the rate itself predicts 2.2 expected clicks in
-`variant_a`, and observing zero is entirely ordinary. The other two moved the
-good way by margins equally meaningless.
+**No guardrail breach detected at n=40, and n=40 cannot detect anything short of
+catastrophic.** Nothing here is close to significant; the largest p is 0.502 and
+the smallest 0.095.
 
-**That two thresholds fired on noise is itself the useful finding.** These
-thresholds were written for a two-week window and they are not usable at a
-two-hour one. Anyone running the pre/post version on day 1 will see the same
-thing. Check the counts, not the percentages, and do not act on a relative
-threshold until the denominators are in the hundreds.
+### Nobody has ever used a sheet. Read this before running any query below
 
-Three things worth keeping from the same read:
+**`capture_prompt_submitted` and `capture_prompt_dismissed` DO NOT EXIST in the
+project taxonomy as of 2026-08-03.** Not "are rare" — the event names have never
+been seen. PostHog returns a did-you-mean suggestion for them.
 
-- **Only 4 browsers were ever shown a prompt, and only 1 of those rendered a
-  sheet.** Six `capture_prompt_shown` events fired, 5 in control and 1 in
-  `variant_a`. The 5 control ones showed nothing, by design. Under the merged
-  code all 6 would have rendered.
-- **Zero submits and zero dismissals, ever.** `capture_prompt_submitted` and
-  `capture_prompt_dismissed` are not in the project taxonomy at all, so no
-  visitor has yet interacted with a sheet in production. Every chip, dismissal
-  and confirm-rate query in this file is therefore querying an empty set until
-  that changes.
+Across the entire half-traffic window, 6 `capture_prompt_shown` events fired
+across 4 browsers, 5 in control and 1 in `variant_a`. The 5 control ones rendered
+nothing, by design. **So exactly one browser has ever had a sheet appear, and
+none has ever submitted or dismissed one.**
+
+The consequence, and the reason this warning is here rather than in a footnote:
+
+> **The chip funnel, the dismissal read, and the Firestore confirm rate all
+> return EMPTY today, and empty means "nobody has seen it yet", NOT "nobody
+> converted".** Those two look identical in a result set and imply opposite
+> actions. Before drawing any conclusion from a zero, check whether the event
+> exists in the taxonomy at all.
+
+This is expected right now and stops being expected quickly. Once full traffic
+has run for a day, those two events existing is the smoke test that the sheet is
+not merely rendering but usable; their continued absence would mean the sheet
+appears and nothing can be done with it, which no unit test catches.
+
+### Two things about the query itself
+
 - **`affiliate_click` carries no `variant`, exactly as the structural note
   says.** All 7 affiliate clicks in the window group under an empty arm on the
-  event; 3 of them belong to persons resolvable as control from their other
-  events, 0 to `variant_a`, and 4 to persons carrying no arm at all. The
-  per-person resolution in the guardrail query is what recovers them, and it
-  recovers only 3 of 7. At scale that loss is proportionate and harmless; at n=7
-  it is most of the data.
-
-One query gotcha, since it cost a run: aliasing an outer aggregate to the same
-name as the inner column (`sum(affiliate_clicks) AS affiliate_clicks`) fails with
-"aggregate function found inside another aggregate function". Give the outer
-totals distinct names.
+  event; 3 belong to persons resolvable as control from their other events, 0 to
+  `variant_a`, and 4 to persons carrying no arm at all. Per-person resolution
+  recovers 3 of 7. At scale that loss is proportionate and harmless; at n=7 it is
+  most of the data.
+- Aliasing an outer aggregate to the same name as the inner column
+  (`sum(affiliate_clicks) AS affiliate_clicks`) fails with "aggregate function
+  found inside another aggregate function". Give the outer totals distinct names.
 
 ## The three trigger events
 
@@ -511,6 +538,13 @@ backfilled, exactly as `source` and the geo fields are.
 unchanged by dropping the experiment, and it is still the read most likely to
 catch a real failure.
 
+> **Returns empty as of 2026-08-03.** No sheet had ever been submitted in
+> production, so no subscriber record carried
+> `source: web_engagement_capture` — the one created during browser
+> verification was deleted the same day. A missing row here today means the
+> sheet has not been used, not that it fails to convert. See
+> [the half-traffic reading](#half-traffic-reading).
+
 The failure mode it exists for: the sheet captures well, the chips sit directly
 under an unfinished task, attention goes to tapping chips instead of tapping the
 link in the email, and fewer records ever confirm. Every other metric on this
@@ -589,6 +623,12 @@ Consequences, both real:
 
 ## The chip funnel: do the chips earn their pixels
 
+> **Returns empty as of 2026-08-03, and empty means "not yet seen", not "chips
+> do not work".** `capture_prompt_submitted` and `capture_prompt_team_added` had
+> never fired in production at that date; `capture_prompt_submitted` was not in
+> the taxonomy at all. See [the half-traffic reading](#half-traffic-reading).
+> Confirm the events exist before interpreting a zero here.
+
 `chip_count` and `chip_sources` are stamped on `capture_prompt_submitted`, which
 fires once per successful submit, so exposure and uptake are both available
 without a second event.
@@ -623,6 +663,12 @@ exposure side and nothing to the uptake side, which drags the average down for a
 reason that has nothing to do with whether chips work.
 
 ## Dismissal: is the sheet read as intrusive
+
+> **Returns empty as of 2026-08-03.** `capture_prompt_dismissed` was not in the
+> project taxonomy at that date — no visitor had ever dismissed a sheet, because
+> only one browser had ever been shown one. A zero dismiss rate today is not a
+> sheet nobody minds; it is a sheet nobody has met. See
+> [the half-traffic reading](#half-traffic-reading).
 
 ```sql
 SELECT properties.dismiss_method AS method, count() AS n,
