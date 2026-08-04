@@ -9,6 +9,7 @@ import { archivo } from './fonts';
 import { Hero } from './Hero';
 import { StatScoreboard } from './StatScoreboard';
 import { SeasonExplorer } from './SeasonExplorer';
+import { ScheduleBlock } from './ScheduleBlock';
 import { UpcomingPromoModalProvider } from './UpcomingPromoModal';
 import { AffiliateRail } from './AffiliateRail';
 import { ExploreCard } from './ExploreCard';
@@ -84,6 +85,19 @@ export function RedesignTeamPage({
   // segment so there is never a dead link.
   const leagueHub = getLeagueHub(team.league);
   const leagueHubHref = leagueHub?.live ? leagueHub.href : null;
+
+  // Zero-promo gates. Two, not one: 38 team pages hold no promos at all, but
+  // only the 32 NFL ones have schedule data behind them (getGamesForTeam returns
+  // an empty array for every league but mlb and nfl), so gating the schedule on
+  // the promo condition alone would render an empty shell on the other six.
+  // Both gates are false on all 131 populated pages, which is what keeps their
+  // markup on the existing code path.
+  const hasNoPromos =
+    promoCounts.giveaway === 0 &&
+    promoCounts.theme === 0 &&
+    promoCounts.food === 0 &&
+    promoCounts.kids === 0;
+  const showSchedule = hasNoPromos && (gameContexts?.length ?? 0) > 0;
   const eyebrow = (
     <>
       {leagueHubHref ? (
@@ -202,17 +216,37 @@ export function RedesignTeamPage({
               </div>
             )}
 
-            <div className="order-[10]">
-              <SeasonExplorer
-                promos={promos}
-                promoCounts={promoCounts}
-                teamName={displayName}
-                teamSlug={team.id}
-                sport={team.league}
-                team={team}
-                gameContexts={gameContexts}
-              />
-            </div>
+            {/* Full-slate schedule, on zero-promo pages that have games. Sits at
+                order-[33] so the tier-high after-hero ad slot at order-[30]
+                keeps its position. */}
+            {showSchedule && gameContexts && (
+              <div className="order-[33]">
+                <ScheduleBlock contexts={gameContexts} team={team} teamName={displayName} />
+              </div>
+            )}
+
+            {/* Season calendar. Superseded by ScheduleBlock on the zero-promo
+                schedule pages: with no promos the category chips are inert in
+                every month, the grid renders a disabled cell for every day, and
+                the empty-month hint prints "No games this month" underneath a
+                stat band reading 17 Games. Rendering both would ship three
+                components disagreeing about whether the team has a season, and
+                would also put two emitters of away_game_expanded on one page
+                with identical payloads, which cannot be untangled after
+                ingestion. */}
+            {!showSchedule && (
+              <div className="order-[10]">
+                <SeasonExplorer
+                  promos={promos}
+                  promoCounts={promoCounts}
+                  teamName={displayName}
+                  teamSlug={team.id}
+                  sport={team.league}
+                  team={team}
+                  gameContexts={gameContexts}
+                />
+              </div>
+            )}
 
             {/* Full promo list — upcoming + completed, with show-all. The
                 upcoming rows open the shared game modal (same body the calendar
