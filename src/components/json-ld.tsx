@@ -76,7 +76,27 @@ export function JsonLd({
       eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
     }));
 
-  const faqs = generateTeamFAQs(team, promos, venue, promoCounts, playoffContext);
+  // Brand-named questions are dropped from the STRUCTURED DATA only. The
+  // visible FAQ (team-faq.tsx) calls the same generator unfiltered and is
+  // unchanged, so the schema stays a strict subset of what the page shows,
+  // which is the safe direction: the policy failure is schema asserting
+  // content the page does not display.
+  //
+  // Without this, Google receives "Does PromoNight work for away games?" as a
+  // declared FAQ on a Los Angeles Rams page. Every one of the 169 teams carries
+  // exactly one such question, so this changes the FAQPage payload on all of
+  // them by design, populated pages included. That is the deliberate scope:
+  // gating it on zero-promo pages would de-brand structured data only where
+  // there is no content, which is incoherent.
+  //
+  // The payload cannot empty. Five slots are unconditional and a sixth (gate
+  // times) covers all six leagues, so the floor across all 169 teams is 6
+  // before this filter and 5 after, and the faqs.length > 0 guard below never
+  // fires. That argument holds for a blacklist only; an allowlist could reach 0
+  // and would silently drop the whole entity.
+  const faqs = generateTeamFAQs(team, promos, venue, promoCounts, playoffContext).filter(
+    (faq) => !faq.brandPromo,
+  );
   const faqSchema = faqs.length > 0
     ? {
         '@context': 'https://schema.org',
