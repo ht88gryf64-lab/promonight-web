@@ -69,6 +69,26 @@ Any verification script that fetches a preview MUST assert a control marker
 (`rd-root` plus a page-specific string) before grading. Without it a login page
 grades as "feature absent", which happened once on this branch.
 
+## Confirm the deployment is serving before revalidating
+
+Never `POST /api/revalidate` immediately after a push. Wait until production is
+actually serving the new build, confirmed by fetching a page cache-busted and
+asserting on a string only the new code emits.
+
+**Why:** `revalidatePath` flushes the ISR cache and the next request re-renders
+from whatever build is live. Flush before the new deployment rolls and you
+re-cache the OLD content, and the route still answers `{"ok":true,"revalidated":38}`
+because it counts paths it processed, not paths that changed. The response
+cannot tell you that you flushed the wrong build.
+
+Measured on the merge that produced these notes: the Rams page was still serving
+an 8-hour-old snapshot (`age: 29365`) for roughly 3 minutes after `git push`
+returned. A flush in that window would have been a silent no-op reported as a
+success.
+
+Check the count against what you sent, too, rather than trusting `ok:true`.
+Both flushes here matched exactly: 38 sent / 38 revalidated, then 169 / 169.
+
 ## Debts taken on knowingly
 
 ### The copy promises something the repo does not yet keep
