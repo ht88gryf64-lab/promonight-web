@@ -20,7 +20,7 @@ import type {
   ScoreBreakdown,
   DerivedSignals,
 } from './types';
-import { SCORED_LEAGUES } from './types';
+import { SCORED_LEAGUES, isRegularSeasonGame } from './types';
 import { resolveIcon, dedupePromos, isVisiblePromo } from './promo-helpers';
 import { getVenueOverride } from './venue-overrides';
 import { VENUE_RESOLUTION_MAP } from './venue-resolution-map';
@@ -779,7 +779,12 @@ export async function getGamesForTeam(teamSlug: string, league: string): Promise
       .where('awayTeamSlug', '==', teamSlug)
       .get(),
   ]);
-  const games = [...homeSnap.docs, ...awaySnap.docs].map(mapGameDoc);
+  // Regular season only. See isRegularSeasonGame for why this cannot be a
+  // Firestore .where(): MLB docs have no seasonType, and an equality filter on
+  // an absent field would drop all 2455 of them. Inert until preseason data is
+  // ingested, which is the point: it can land ahead of that ingest, so the
+  // Games tile and the team-page schedule never see a preseason row.
+  const games = [...homeSnap.docs, ...awaySnap.docs].map(mapGameDoc).filter(isRegularSeasonGame);
   // Stable sort by date then gameTime, doubleheader game 2 after game 1.
   games.sort((a, b) => {
     if (a.date !== b.date) return a.date.localeCompare(b.date);
