@@ -187,7 +187,16 @@ export function RedesignTeamPage({
       <div className="mx-auto max-w-6xl px-6 pb-8">
         <div className="grid grid-cols-1 gap-x-8 lg:grid-cols-[1fr_336px] lg:items-start">
           <aside className="contents lg:block lg:space-y-6 lg:order-2 [&>*]:min-w-0">
-            <AffiliateRail team={team} venue={venue} className="order-[20] mt-10 lg:mt-0" />
+            {/* mt-10 exists to clear the calendar above it on mobile. On the
+                zero-promo schedule pages the calendar is gone and ScheduleBlock
+                sits there instead, carrying its own py-12, so the extra margin
+                would double the gap. Gated rather than deleted: the populated
+                branch emits the identical class string it always has. */}
+            <AffiliateRail
+              team={team}
+              venue={venue}
+              className={showSchedule ? 'order-[20] lg:mt-0' : 'order-[20] mt-10 lg:mt-0'}
+            />
             <ExploreCard team={team} className="order-[60]" />
             <AdSlot config={AD_SLOTS.SIDEBAR_STICKY} pageType="team_page" className="order-[62]" />
           </aside>
@@ -217,11 +226,17 @@ export function RedesignTeamPage({
               </div>
             )}
 
-            {/* Full-slate schedule, on zero-promo pages that have games. Sits at
-                order-[33] so the tier-high after-hero ad slot at order-[30]
-                keeps its position. */}
+            {/* Full-slate schedule, on zero-promo pages that have games.
+                order-[11] puts it exactly where the calendar it supersedes sat.
+                The calendar held order-[10], the lowest value in the weave, so
+                anything higher would silently promote AffiliateRail (order-[20])
+                to first in the mobile column and land a visitor arriving from a
+                promo query on an affiliate stack before any content. The
+                after-hero ad slot at order-[30] is demoted on these 32 pages,
+                which costs nothing today: AdSlot returns null while the ad
+                network is unset, so no ad renders on any page. */}
             {showSchedule && gameContexts && (
-              <div className="order-[33]">
+              <div className="order-[11]">
                 <ScheduleBlock contexts={gameContexts} team={team} teamName={displayName} />
               </div>
             )}

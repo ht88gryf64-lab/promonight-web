@@ -145,8 +145,14 @@ export function ScheduleBlock({ contexts, team, teamName }: ScheduleBlockProps) 
         <div className="font-rd text-[11px] uppercase tracking-[0.14em] text-rd-ink-faint">
           2026 season
         </div>
+        {/* "Game Schedule", not "Schedule". The zero-promo copy block below
+            carries a shared H2 reading "{YEAR} {TEAM} PROMO SCHEDULE", and two
+            headings a word apart on one page is confusing. Disambiguating from
+            THIS side keeps the blast radius to the 32 NFL pages: the shared H2
+            also renders on 6 non-NFL pages, and "PROMO SCHEDULE" is the closest
+            on-page string to the query this page already ranks for. */}
         <h2 className="rd-display mt-1 text-2xl text-rd-ink md:text-3xl">
-          {teamName} 2026 Schedule
+          {teamName} 2026 Game Schedule
         </h2>
         <p className="mt-2 max-w-2xl font-rd text-sm leading-relaxed text-rd-ink-soft">
           Every game of the 2026 regular season, week by week. Open a row for tickets, and for
