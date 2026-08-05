@@ -1,13 +1,20 @@
 import type { Team, Promo, PromoType, Venue } from '@/lib/types';
 import { PROMO_TYPE_LABELS } from '@/lib/types';
 import {
-  getCurrentYear,
   formatDateReadable,
   getPromosByType,
   getTopGiveaway,
   teamDisplayName,
 } from '@/lib/promo-helpers';
 import { RD_CATEGORIES } from '@/components/redesign/categories';
+
+// Hardcoded, never derived from the clock. See the same rule at
+// generateTeamFAQs in promo-helpers.ts: the page title and meta description
+// already hardcode 2026, so a getFullYear() here flips this copy to the next
+// season at midnight on Jan 1, months before that season's data exists, and
+// leaves one page asserting two different years.
+const SEASON_YEAR = 2026;
+
 
 interface TeamContentSectionsProps {
   team: Team;
@@ -24,7 +31,7 @@ export function TeamContentSections({
   promoCounts,
   variant = 'dark',
 }: TeamContentSectionsProps) {
-  const year = getCurrentYear();
+  const year = SEASON_YEAR;
   const fullName = teamDisplayName(team);
   const venueName = venue?.name || 'their home stadium';
 

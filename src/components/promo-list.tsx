@@ -11,6 +11,12 @@ import { promoAnchorId } from '@/lib/promo-helpers';
 import type { Promo, PromoType, Team } from '@/lib/types';
 import type { GameContext } from '@/lib/data';
 
+// Hardcoded, never derived from the clock. These strings label promos that
+// have ALREADY HAPPENED, so a getFullYear() here was the worst of the year
+// drifts on the page: at midnight on Jan 1 it would have rendered "COMPLETED
+// 2027 PROMOS" over a list of 2026 events, under a title still reading 2026.
+const SEASON_YEAR = 2026;
+
 // Fields shared by every promo row's ShareItem — the per-promo bits (icon,
 // title, date, type) are filled in per row.
 type PromoShareContext = {
@@ -280,7 +286,7 @@ export function PromoList({
           ) : (
             <div className="text-center py-8">
               <p className="text-rd-ink-soft text-sm">
-                No upcoming {teamName} promos scheduled right now. See completed {new Date().getFullYear()} promos below.
+                No upcoming {teamName} promos scheduled right now. See completed {SEASON_YEAR} promos below.
               </p>
             </div>
           )}
@@ -292,7 +298,7 @@ export function PromoList({
                   Already happened
                 </span>
                 <h3 className="rd-display text-2xl md:text-3xl text-rd-ink-soft mt-1">
-                  COMPLETED {new Date().getFullYear()} PROMOS
+                  COMPLETED {SEASON_YEAR} PROMOS
                 </h3>
               </div>
 
@@ -386,7 +392,7 @@ export function PromoList({
         ) : (
           <div className="text-center py-8">
             <p className="text-text-muted text-sm">
-              No upcoming {teamName} promos scheduled right now. See completed {new Date().getFullYear()} promos below.
+              No upcoming {teamName} promos scheduled right now. See completed {SEASON_YEAR} promos below.
             </p>
           </div>
         )}
@@ -398,7 +404,7 @@ export function PromoList({
                 Already happened
               </span>
               <h3 className="font-display text-2xl md:text-3xl tracking-[1px] mt-1 text-text-secondary">
-                COMPLETED {new Date().getFullYear()} PROMOS
+                COMPLETED {SEASON_YEAR} PROMOS
               </h3>
               <p className="text-text-muted text-xs font-mono tracking-[0.5px] mt-2">
                 {past.length} completed {past.length === 1 ? 'event' : 'events'} this season
