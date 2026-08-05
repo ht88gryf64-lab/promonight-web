@@ -27,6 +27,7 @@ import { AuthorityStats } from '@/components/authority-stats';
 import { RecurringDealsSection } from '@/components/recurring-deals-section';
 import { TeamRelatedAggregators } from '@/components/team-related-aggregators';
 import { PromoList } from '@/components/promo-list';
+import { ZeroPromoFallback } from '@/components/zero-promo-fallback';
 import { PlayoffSection } from '@/components/playoff-section';
 import { ScheduleReleaseVideoCard } from '@/components/ScheduleReleaseVideoCard';
 import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
@@ -254,21 +255,38 @@ export function RedesignTeamPage({
                 showTeamLink defaults false — the user is already on this team's
                 page. */}
             <div className="order-[40]">
-              <UpcomingPromoModalProvider>
-                <PromoList
-                  promos={promos}
-                  teamSlug={team.id}
-                  teamName={displayName}
-                  teamNickname={team.name}
-                  sport={team.sportSlug}
-                  primaryColor={team.primaryColor}
-                  venueName={venue?.name ?? null}
-                  variant="light"
-                  showAppPitch={false}
+              {hasNoPromos ? (
+                /* League-contextual copy REPLACES the list on the 38 zero-promo
+                   pages. Replace rather than sit alongside: both blocks render
+                   the same "Coming up" eyebrow and a competing H2 about the same
+                   absent thing, and the branch being replaced is the dead-end
+                   "No upcoming promos yet". It also means promo-list.tsx is not
+                   edited at all, and that file serves all 131 populated pages.
+                   PromoArrivalHighlight goes with it, which is inert here: it is
+                   a deep-link scroll effect with no promo rows to anchor to. */
+                <ZeroPromoFallback
                   team={team}
-                  gameContexts={gameContexts}
+                  venue={venue}
+                  teamName={displayName}
+                  variant="light"
                 />
-              </UpcomingPromoModalProvider>
+              ) : (
+                <UpcomingPromoModalProvider>
+                  <PromoList
+                    promos={promos}
+                    teamSlug={team.id}
+                    teamName={displayName}
+                    teamNickname={team.name}
+                    sport={team.sportSlug}
+                    primaryColor={team.primaryColor}
+                    venueName={venue?.name ?? null}
+                    variant="light"
+                    showAppPitch={false}
+                    team={team}
+                    gameContexts={gameContexts}
+                  />
+                </UpcomingPromoModalProvider>
+              )}
             </div>
 
             {/* Email + app conversion pairing, sitting immediately after the
