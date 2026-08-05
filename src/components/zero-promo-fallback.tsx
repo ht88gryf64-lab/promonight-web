@@ -15,11 +15,25 @@ type LeagueCopy = {
 // when a team has 0 known promos scheduled. Server-rendered so AI crawlers and
 // search engines see the content.
 const LEAGUE_COPY: Record<string, LeagueCopy> = {
+  // NFL is the only league whose zero-promo pages render a full 18-week slate
+  // directly ABOVE this block, so this copy deliberately names no venue, no
+  // direction and no module. Each of those was a defect in the version it
+  // replaces, and each is fixed by deletion rather than by rewording, so none
+  // can regress:
+  //   - a single home venue is false for the 8 clubs with a neutral-site
+  //     international home game (the Rams open at the Melbourne Cricket
+  //     Ground, which the schedule row above names)
+  //   - "from the links below" pointed at the affiliate stack, which is
+  //     order-[20], ABOVE this on mobile and beside it on desktop
+  //   - "listed above" would be coupled to a layout that has already moved once
+  // The claim is scoped to OUR data ("PromoNight has no confirmed ... listed"),
+  // not to what the clubs have announced. Nothing in this repo ingests NFL
+  // promos, so a claim about what 32 real organizations have or have not
+  // announced is one we cannot support.
   NFL: {
     cadence: 'preseason to September',
-    paragraphs: ({ teamName, venueName, city, year }) => [
-      `NFL teams typically announce promotional schedules closer to the season opener in September. Once the ${teamName} reveal their ${year} promo calendar, you'll find every giveaway, theme night, and kids event on this page.`,
-      `In the meantime, the ${teamName} play their home schedule at ${venueName}${city ? ` in ${city}` : ''}. Plan a visit with tickets, parking, and hotels from the links below — or download the free PromoNight app to get notified the moment any ${teamName} promo is announced.`,
+    paragraphs: ({ teamName, year }) => [
+      `PromoNight has no confirmed ${year} ${teamName} promotions listed yet. NFL teams typically announce giveaways, theme nights, and kids events close to the September opener, then keep adding dates through the season. Confirmed ${teamName} promos will appear here, with the home date each one runs on.`,
     ],
   },
   WNBA: {
