@@ -226,32 +226,35 @@ export function RedesignTeamPage({
               </div>
             )}
 
-            {/* Full-slate schedule, on zero-promo pages that have games.
-                order-[11] puts it exactly where the calendar it supersedes sat.
-                The calendar held order-[10], the lowest value in the weave, so
-                anything higher would silently promote AffiliateRail (order-[20])
-                to first in the mobile column and land a visitor arriving from a
-                promo query on an affiliate stack before any content. The
-                after-hero ad slot at order-[30] is demoted on these 32 pages,
-                which costs nothing today: AdSlot returns null while the ad
-                network is unset, so no ad renders on any page. */}
-            {showSchedule && gameContexts && (
-              <div className="order-[11]">
-                <ScheduleBlock contexts={gameContexts} team={team} teamName={displayName} />
-              </div>
-            )}
+            {/* Season slot. ONE wrapper holding exactly one of two mutually
+                exclusive blocks, because under supersede they are mutually
+                exclusive by definition. Two separate conditionals would encode
+                that as a coincidence rather than a fact, and would also emit an
+                extra serialized `false` child into the RSC payload of all 131
+                populated pages, shifting every sibling's internal reference path
+                by one index. Inert, but not byte-identical, and there is no
+                reason to accept it.
 
-            {/* Season calendar. Superseded by ScheduleBlock on the zero-promo
-                schedule pages: with no promos the category chips are inert in
-                every month, the grid renders a disabled cell for every day, and
-                the empty-month hint prints "No games this month" underneath a
-                stat band reading 17 Games. Rendering both would ship three
-                components disagreeing about whether the team has a season, and
-                would also put two emitters of away_game_expanded on one page
-                with identical payloads, which cannot be untangled after
-                ingestion. */}
-            {!showSchedule && (
-              <div className="order-[10]">
+                order-[11] on the schedule puts it exactly where the calendar it
+                supersedes sat. The calendar held order-[10], the lowest value in
+                the weave, so anything higher would silently promote
+                AffiliateRail (order-[20]) to first in the mobile column and land
+                a visitor arriving from a promo query on an affiliate stack
+                before any content. The after-hero ad slot at order-[30] is
+                demoted on those 32 pages, which costs nothing today: AdSlot
+                returns null while the ad network is unset.
+
+                The calendar is superseded rather than stacked because with no
+                promos its category chips are inert in every month, its grid
+                renders a disabled cell for every day, and its empty-month hint
+                prints "No games this month" underneath a stat band reading 17
+                Games. Rendering both would also put two emitters of
+                away_game_expanded on one page with identical payloads, which
+                cannot be untangled after ingestion. */}
+            <div className={showSchedule ? 'order-[11]' : 'order-[10]'}>
+              {showSchedule && gameContexts ? (
+                <ScheduleBlock contexts={gameContexts} team={team} teamName={displayName} />
+              ) : (
                 <SeasonExplorer
                   promos={promos}
                   promoCounts={promoCounts}
@@ -261,8 +264,8 @@ export function RedesignTeamPage({
                   team={team}
                   gameContexts={gameContexts}
                 />
-              </div>
-            )}
+              )}
+            </div>
 
             {/* Full promo list — upcoming + completed, with show-all. The
                 upcoming rows open the shared game modal (same body the calendar
