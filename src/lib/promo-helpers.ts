@@ -204,6 +204,21 @@ export function getTopGiveaway(promos: Promo[]): Promo | null {
 export interface FAQItem {
   question: string;
   answer: string;
+  // Marks a FAQ whose QUESTION names the product rather than the team, so the
+  // JSON-LD emitter can drop it from FAQPage structured data while the visible
+  // FAQ keeps it. Optional, so the homepage FAQ literals and every other push
+  // site below are unaffected.
+  //
+  // A flag rather than a string test or a slot index, both of which were
+  // considered and rejected. A /PromoNight/ test on the question is correct
+  // today but silently over-catches a future legitimate brand question and is
+  // blind to a promotional question phrased without the word. An index is worse
+  // still: this slot lands at index 5 on a zero-promo page and index 9 on a
+  // populated one, because the four data-gated slots above it are skipped, so
+  // an index rule tuned on an NFL page would delete a venue FAQ on an MLB page.
+  // Setting the flag at the push site keeps the intent next to the copy it
+  // describes and survives arbitrary rewording.
+  brandPromo?: true;
 }
 
 // League-specific generic gate-time answer. Teams vary by venue, but the
@@ -340,7 +355,13 @@ export function generateTeamFAQs(
   });
 
   // 5f. App — away games (always shown)
+  // brandPromo: the QUESTION names the product, not the team. Google receives
+  // this as a declared FAQ on a team page, so it is filtered out of the
+  // FAQPage payload in json-ld.tsx while staying in the visible FAQ. If a
+  // future slot is added whose question is about PromoNight rather than about
+  // the team, flag it here too.
   faqs.push({
+    brandPromo: true,
     question: `Does PromoNight work for away games?`,
     answer: `PromoNight tracks home-game promotions for all 169 teams across MLB, NBA, NFL, NHL, MLS, and WNBA. If you're traveling to see the ${team.name} play on the road, browse the home team's calendar on this site to see every promo scheduled at their venue during your trip.`,
   });
