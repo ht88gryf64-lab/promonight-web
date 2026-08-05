@@ -252,6 +252,21 @@ export interface Game {
   ingestedAt?: string;
 }
 
+// Which games a team page counts and renders. Regular season only.
+//
+// This is an APP-CODE ARRAY FILTER, never a Firestore .where(). MLB game docs
+// carry no seasonType field at all (2455 of 2455 absent), and a Firestore
+// equality on an absent field drops the doc, so a query-level filter would
+// return ZERO MLB games. Absent means keep, the same contract isVisiblePromo
+// uses for tombstoned.
+//
+// Filtered on the VALUE, never on a count. NFL preseason is not uniform: most
+// clubs play 3 preseason games, but the two Hall of Fame Game participants play
+// 4, so any check written against a fixed total is wrong for those two teams the
+// moment preseason data lands.
+export const isRegularSeasonGame = (g: Pick<Game, 'seasonType'>): boolean =>
+  g.seasonType === undefined || g.seasonType === 'regular';
+
 export const PROMO_TYPE_COLORS: Record<PromoType, string> = {
   giveaway: '#34d399',
   theme: '#a78bfa',
