@@ -69,6 +69,31 @@ Any verification script that fetches a preview MUST assert a control marker
 (`rd-root` plus a page-specific string) before grading. Without it a login page
 grades as "feature absent", which happened once on this branch.
 
+## House convention: optional-field filters are app-code, absent means keep
+
+**Any filter on an OPTIONAL field is an app-code array filter with
+absent-means-keep. Never a Firestore equality, unless the field is provably
+present on every doc in the collection.**
+
+Two instances now, and the second nearly shipped as a silent outage:
+
+- `isVisiblePromo` (`promo-helpers.ts`) on `tombstoned`. Absent and `false` are
+  visible; only `true` hides. Its own comment already warns that a Firestore
+  inequality would drop field-absent docs.
+- `isRegularSeasonGame` (`types.ts`) on `seasonType`. **MLB game docs carry no
+  `seasonType` at all, 2455 of 2455 absent.** Measured:
+  `.where('seasonType','==','regular')` on MLB returns **0 of 2455**. The
+  obvious-looking query-level implementation would have zeroed the schedule and
+  the Games tile on every MLB team page, and it would have looked correct in
+  review, because it reads like the plainly right way to write it.
+
+The failure mode is asymmetric and that is why the convention is absolute. A
+query-level filter that is wrong returns an empty set, which renders as "no
+data" rather than as an error, on pages that are otherwise healthy. Nothing
+throws. Verify field presence with a count before filtering on it, and prefer
+the array filter even when the field looks universal, because "looks universal"
+is what 2455 absent docs looked like from the NFL side.
+
 ## Confirm the deployment is serving before revalidating
 
 Never `POST /api/revalidate` immediately after a push. Wait until production is
