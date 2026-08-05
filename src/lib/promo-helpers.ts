@@ -120,10 +120,6 @@ export interface PlayoffFAQContext {
   opponent: string | null;
 }
 
-export function getCurrentYear(): number {
-  return new Date().getFullYear();
-}
-
 export function resolveIcon(title: string, type: PromoType, iconFromData: string): string {
   const t = (title || '').toLowerCase();
 

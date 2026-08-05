@@ -9,6 +9,7 @@ import { archivo } from './fonts';
 import { Hero } from './Hero';
 import { StatScoreboard } from './StatScoreboard';
 import { SeasonExplorer } from './SeasonExplorer';
+import { ScheduleBlock } from './ScheduleBlock';
 import { UpcomingPromoModalProvider } from './UpcomingPromoModal';
 import { AffiliateRail } from './AffiliateRail';
 import { ExploreCard } from './ExploreCard';
@@ -26,6 +27,7 @@ import { AuthorityStats } from '@/components/authority-stats';
 import { RecurringDealsSection } from '@/components/recurring-deals-section';
 import { TeamRelatedAggregators } from '@/components/team-related-aggregators';
 import { PromoList } from '@/components/promo-list';
+import { ZeroPromoFallback } from '@/components/zero-promo-fallback';
 import { PlayoffSection } from '@/components/playoff-section';
 import { ScheduleReleaseVideoCard } from '@/components/ScheduleReleaseVideoCard';
 import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
@@ -84,6 +86,19 @@ export function RedesignTeamPage({
   // segment so there is never a dead link.
   const leagueHub = getLeagueHub(team.league);
   const leagueHubHref = leagueHub?.live ? leagueHub.href : null;
+
+  // Zero-promo gates. Two, not one: 38 team pages hold no promos at all, but
+  // only the 32 NFL ones have schedule data behind them (getGamesForTeam returns
+  // an empty array for every league but mlb and nfl), so gating the schedule on
+  // the promo condition alone would render an empty shell on the other six.
+  // Both gates are false on all 131 populated pages, which is what keeps their
+  // markup on the existing code path.
+  const hasNoPromos =
+    promoCounts.giveaway === 0 &&
+    promoCounts.theme === 0 &&
+    promoCounts.food === 0 &&
+    promoCounts.kids === 0;
+  const showSchedule = hasNoPromos && (gameContexts?.length ?? 0) > 0;
   const eyebrow = (
     <>
       {leagueHubHref ? (
@@ -172,7 +187,16 @@ export function RedesignTeamPage({
       <div className="mx-auto max-w-6xl px-6 pb-8">
         <div className="grid grid-cols-1 gap-x-8 lg:grid-cols-[1fr_336px] lg:items-start">
           <aside className="contents lg:block lg:space-y-6 lg:order-2 [&>*]:min-w-0">
-            <AffiliateRail team={team} venue={venue} className="order-[20] mt-10 lg:mt-0" />
+            {/* mt-10 exists to clear the calendar above it on mobile. On the
+                zero-promo schedule pages the calendar is gone and ScheduleBlock
+                sits there instead, carrying its own py-12, so the extra margin
+                would double the gap. Gated rather than deleted: the populated
+                branch emits the identical class string it always has. */}
+            <AffiliateRail
+              team={team}
+              venue={venue}
+              className={showSchedule ? 'order-[20] lg:mt-0' : 'order-[20] mt-10 lg:mt-0'}
+            />
             <ExploreCard team={team} className="order-[60]" />
             <AdSlot config={AD_SLOTS.SIDEBAR_STICKY} pageType="team_page" className="order-[62]" />
           </aside>
@@ -202,16 +226,45 @@ export function RedesignTeamPage({
               </div>
             )}
 
-            <div className="order-[10]">
-              <SeasonExplorer
-                promos={promos}
-                promoCounts={promoCounts}
-                teamName={displayName}
-                teamSlug={team.id}
-                sport={team.league}
-                team={team}
-                gameContexts={gameContexts}
-              />
+            {/* Season slot. ONE wrapper holding exactly one of two mutually
+                exclusive blocks, because under supersede they are mutually
+                exclusive by definition. Two separate conditionals would encode
+                that as a coincidence rather than a fact, and would also emit an
+                extra serialized `false` child into the RSC payload of all 131
+                populated pages, shifting every sibling's internal reference path
+                by one index. Inert, but not byte-identical, and there is no
+                reason to accept it.
+
+                order-[11] on the schedule puts it exactly where the calendar it
+                supersedes sat. The calendar held order-[10], the lowest value in
+                the weave, so anything higher would silently promote
+                AffiliateRail (order-[20]) to first in the mobile column and land
+                a visitor arriving from a promo query on an affiliate stack
+                before any content. The after-hero ad slot at order-[30] is
+                demoted on those 32 pages, which costs nothing today: AdSlot
+                returns null while the ad network is unset.
+
+                The calendar is superseded rather than stacked because with no
+                promos its category chips are inert in every month, its grid
+                renders a disabled cell for every day, and its empty-month hint
+                prints "No games this month" underneath a stat band reading 17
+                Games. Rendering both would also put two emitters of
+                away_game_expanded on one page with identical payloads, which
+                cannot be untangled after ingestion. */}
+            <div className={showSchedule ? 'order-[11]' : 'order-[10]'}>
+              {showSchedule && gameContexts ? (
+                <ScheduleBlock contexts={gameContexts} team={team} teamName={displayName} />
+              ) : (
+                <SeasonExplorer
+                  promos={promos}
+                  promoCounts={promoCounts}
+                  teamName={displayName}
+                  teamSlug={team.id}
+                  sport={team.league}
+                  team={team}
+                  gameContexts={gameContexts}
+                />
+              )}
             </div>
 
             {/* Full promo list — upcoming + completed, with show-all. The
@@ -220,21 +273,38 @@ export function RedesignTeamPage({
                 showTeamLink defaults false — the user is already on this team's
                 page. */}
             <div className="order-[40]">
-              <UpcomingPromoModalProvider>
-                <PromoList
-                  promos={promos}
-                  teamSlug={team.id}
-                  teamName={displayName}
-                  teamNickname={team.name}
-                  sport={team.sportSlug}
-                  primaryColor={team.primaryColor}
-                  venueName={venue?.name ?? null}
-                  variant="light"
-                  showAppPitch={false}
+              {hasNoPromos ? (
+                /* League-contextual copy REPLACES the list on the 38 zero-promo
+                   pages. Replace rather than sit alongside: both blocks render
+                   the same "Coming up" eyebrow and a competing H2 about the same
+                   absent thing, and the branch being replaced is the dead-end
+                   "No upcoming promos yet". It also means promo-list.tsx is not
+                   edited at all, and that file serves all 131 populated pages.
+                   PromoArrivalHighlight goes with it, which is inert here: it is
+                   a deep-link scroll effect with no promo rows to anchor to. */
+                <ZeroPromoFallback
                   team={team}
-                  gameContexts={gameContexts}
+                  venue={venue}
+                  teamName={displayName}
+                  variant="light"
                 />
-              </UpcomingPromoModalProvider>
+              ) : (
+                <UpcomingPromoModalProvider>
+                  <PromoList
+                    promos={promos}
+                    teamSlug={team.id}
+                    teamName={displayName}
+                    teamNickname={team.name}
+                    sport={team.sportSlug}
+                    primaryColor={team.primaryColor}
+                    venueName={venue?.name ?? null}
+                    variant="light"
+                    showAppPitch={false}
+                    team={team}
+                    gameContexts={gameContexts}
+                  />
+                </UpcomingPromoModalProvider>
+              )}
             </div>
 
             {/* Email + app conversion pairing, sitting immediately after the

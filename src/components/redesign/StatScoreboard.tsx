@@ -5,6 +5,29 @@ import { RD_CATEGORIES, RD_CATEGORY_ORDER } from './categories';
 // Redesign v2 hero scoreboard. The four category counts (giveaway, theme, food,
 // kids) plus an optional "Games" tile, rendered as translucent panels that sit
 // on the DARK hero. Presentational and static — no state, no events.
+//
+// TWO DEGENERATE SHAPES EXIST AND BOTH ARE INTENTIONAL. Neither was overlooked.
+//
+//   Shape A, the 32 NFL zero-promo pages: four zeros plus a Games tile reading
+//   17. The Games number is deliberately NOT relabelled to home games and NOT
+//   reduced. The page renders the full 18-week slate, home and away, so 17 is
+//   the count of game rows the reader can see and the tile agrees with them. A
+//   home-only count would disagree with the list and would also move all 30 MLB
+//   pages, which is a separate change with its own gate.
+//
+//   Shape B, the 6 non-NFL zero-promo pages (4 NBA, 1 NHL, 1 MLS): four zeros
+//   and no Games tile at all, because getGamesForTeam short-circuits for every
+//   league but mlb and nfl, so gameContexts is undefined. The grid then holds 4
+//   tiles in a lg:grid-cols-5 track and leaves one column empty. HANDLING SHAPE
+//   B MEANS DELIBERATELY DOING NOTHING: that 4-in-5 layout is already the
+//   shipping status quo on all 101 populated non-MLB, non-NFL team pages.
+//
+// The Games tile is guarded on a POSITIVE count, not merely on the value being
+// a number. Today gamesCount cannot be 0 (the page passes gameContexts?.length,
+// and gameContexts is undefined rather than [] when a team has no games), so
+// the guard is a no-op on all 169 pages. It exists so a future caller that
+// passes an empty array cannot produce a five-zero band, which would read as
+// broken rather than as empty.
 
 export interface StatScoreboardProps {
   counts: Record<PromoType, number>; // promoCounts from the page
@@ -56,7 +79,7 @@ export function StatScoreboard({ counts, gamesCount, className = '' }: StatScore
           />
         );
       })}
-      {typeof gamesCount === 'number' && (
+      {typeof gamesCount === 'number' && gamesCount > 0 && (
         <StatTile
           count={gamesCount}
           label="Games"

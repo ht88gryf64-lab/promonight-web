@@ -1,6 +1,12 @@
 import { IconChartBar } from '@tabler/icons-react';
 import type { Promo, PromoType, Team, Venue } from '@/lib/types';
-import { getCurrentYear } from '@/lib/promo-helpers';
+
+// Hardcoded, never derived from the clock. See the same rule at
+// generateTeamFAQs in promo-helpers.ts: the page title and meta description
+// already hardcode 2026, so a getFullYear() here flips this copy to the next
+// season at midnight on Jan 1, months before that season's data exists, and
+// leaves one page asserting two different years.
+const SEASON_YEAR = 2026;
 
 const HOME_GAMES_BY_LEAGUE: Record<string, number> = {
   MLB: 81,
@@ -34,7 +40,7 @@ export function AuthorityStats({
 }) {
   if (promos.length < 15) return null;
 
-  const year = getCurrentYear();
+  const year = SEASON_YEAR;
   const homeGames = HOME_GAMES_BY_LEAGUE[team.league] ?? 0;
   const venueName = venue?.name ?? 'their home venue';
 

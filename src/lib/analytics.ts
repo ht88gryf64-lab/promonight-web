@@ -455,6 +455,13 @@ export type AwayGameExpandedProperties = {
   game_id: string;
   opponent_slug: string;
   has_promo: boolean;
+  // Optional emitter context, mirroring GameTapProperties.placement above. The
+  // team-page calendar omits it, so its payload is unchanged and every event
+  // recorded before this field existed reads as placement-unset. ScheduleBlock
+  // sets it so the two team-page emitters of this event stay separable in
+  // PostHog; without it both send an identical payload from the same surface
+  // and the same path, and the blend cannot be undone after ingestion.
+  placement?: string;
 };
 
 // Fired the first time an ad slot enters the viewport. device_class is
