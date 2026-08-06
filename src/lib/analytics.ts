@@ -1140,7 +1140,14 @@ export const trackAffiliateClick = (payload: AffiliateClickPayload) => {
 
 // ── Surface + sport inference ────────────────────────────────────────────
 
-const KNOWN_SURFACES: ReadonlySet<AnalyticsSurface> = new Set<AnalyticsSurface>([
+// Every AnalyticsSurface member, in union order. Feeds KNOWN_SURFACES below,
+// and the compile-time assertion after the array turns an omission into a tsc
+// error (so `next build` fails) instead of what an omission used to do:
+// silently downgrade that surface's canonical affiliate_click to web_other in
+// trackAffiliateClick, with no runtime signal. The hand-kept pair drifted three
+// times (web_cfb, web_cfb_venue_link, web_venue — the last mislabeling every
+// venue-hub affiliate click from 2026-07-15 until this list was derived).
+const KNOWN_SURFACE_VALUES = [
   'web_home',
   'web_home_tonight',
   'web_home_this_week',
@@ -1149,29 +1156,50 @@ const KNOWN_SURFACES: ReadonlySet<AnalyticsSurface> = new Set<AnalyticsSurface>(
   'web_promo_detail',
   'web_playoffs',
   'web_league_index',
-  // Keep in lockstep with the AnalyticsSurface union above: adding a surface
-  // there but not here makes isKnownSurface() return false and silently
-  // downgrades legacy affiliate clicks to web_other.
   'web_cfb',
+  'web_cfb_venue_link',
   'web_mlb_hub',
   'web_mlb_hub_this_week',
   'web_mlb_hub_promo_type',
   'web_mlb_hub_team_card',
+  'web_mlb_hub_venues',
   'web_wnba_hub',
   'web_wnba_hub_this_week',
   'web_wnba_hub_promo_type',
   'web_wnba_hub_team_card',
+  'web_wnba_hub_venues',
   'web_mls_hub',
   'web_mls_hub_this_week',
   'web_mls_hub_promo_type',
   'web_mls_hub_team_card',
+  'web_mls_hub_venues',
+  'web_cfb_hub_venues',
+  'web_venue_index',
+  'web_venue',
   'web_today',
   'web_article',
   'web_my_teams',
   'web_best_promos',
   'web_world_cup',
   'web_other',
-]);
+] as const satisfies readonly AnalyticsSurface[];
+
+// Compile-time lockstep guard. `satisfies` above rejects typos/non-members;
+// this rejects omissions: if the union gains a member missing from the array,
+// MissingKnownSurface is that literal (not never) and the assignment fails tsc
+// with an error message that names it.
+type MissingKnownSurface = Exclude<
+  AnalyticsSurface,
+  (typeof KNOWN_SURFACE_VALUES)[number]
+>;
+const _everySurfaceIsKnown: MissingKnownSurface extends never
+  ? true
+  : MissingKnownSurface = true;
+void _everySurfaceIsKnown;
+
+const KNOWN_SURFACES: ReadonlySet<AnalyticsSurface> = new Set(
+  KNOWN_SURFACE_VALUES,
+);
 
 function isKnownSurface(s: string): s is AnalyticsSurface {
   return KNOWN_SURFACES.has(s as AnalyticsSurface);
