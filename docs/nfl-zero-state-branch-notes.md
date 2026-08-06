@@ -173,6 +173,35 @@ Deployed and verified on production, cache-busted. The 32 NFL pages render the
 Games tile at 17 with 18 schedule rows (17 games plus the bye) and zero
 preseason markers.
 
+### The preseason ingest is DONE. Do not re-run it.
+
+`feature/nfl-preseason-ingest` executed in the promo-pipeline session. It is a
+Firestore WRITE, and it has already happened, so treat this section as a record
+rather than as a pending step.
+
+Result: 49 CREATE / 0 MODIFY, 49 upserted, 0 errors. NFL game docs went from
+**272 to 321**, and `seasonType` is now explicit on all 321. Independently
+re-measured from this repo rather than transcribed: `{"preseason": 49,
+"regular": 272}`, zero docs with the field absent.
+
+**The `seasonType` filter is therefore no longer inert. It is load-bearing**,
+dropping 49 docs on every read. Raw docs per team are now 20 for 30 clubs and
+**21 for `arizona-cardinals` and `carolina-panthers`** (the Hall of Fame Game),
+and all 32 still render 17.
+
+Verified against renders created AFTER the ingest, `age=0` with
+`x-vercel-cache: revalidated`, on `arizona-cardinals`, `carolina-panthers` and
+`los-angeles-rams`: stat band `[0,0,0,0,17]`, 18 rows, 17 game rows, weeks 1-18,
+zero preseason markers.
+
+That last distinction is the point, and it nearly went unnoticed. A first pass
+showed the correct output on pages at `age: 36113`, roughly ten hours old, which
+predates the ingest. Those renders were produced when only 272 docs existed, and
+a pre-ingest render also outputs 17 because the filter was inert then. **A
+correct-looking result from a stale render proves nothing about the new data.**
+The paths were flushed (32 sent, 32 revalidated) and re-checked at `age=0`
+before any of the above was written down. See method rule 3.
+
 ## Method established, carry forward
 
 These cost real time to discover. Reuse them rather than rediscovering them.
@@ -201,11 +230,24 @@ These cost real time to discover. Reuse them rather than rediscovering them.
    trap fires at small numbers, for example a render at `age` 821s cannot
    reflect a write made 772s ago. For an INERT change there is no visible string
    to wait on, so the readiness signal is the **build id** in the served HTML.
-   Note it appears in two encodings and a page may carry only one: an HTML
-   comment right after the doctype, and `\"b\":\"<id>\"` inside the flight
-   payload. Check both before concluding a page is on a different build.
 
-4. **Optional-field filters are app-code with absent-means-keep, never a
+   The same arithmetic applies to DATA writes, not just deploys, and there it is
+   harder to catch: an inert-then-load-bearing change renders identically before
+   and after the write, so a stale render looks like a pass. It happened on this
+   lane, with the preseason ingest, at `age: 36113`. When the check is about
+   data, flush the paths and re-read at `age=0` with
+   `x-vercel-cache: revalidated` before believing the result.
+
+4. **Read BOTH encodings of the build id before concluding a deploy has not
+   rolled.** The Next build id appears as an HTML comment right after the
+   doctype and as `\"b\":\"<id>\"` inside the flight payload, and **a page may
+   carry only one**. Checking a single form can make a page look like it is on a
+   different deploy than it is. Observed on `/nfl/seattle-seahawks`, which omits
+   the comment form while `/nfl/los-angeles-rams` carries it, both on build
+   `5_a09WeNkEcxVO3JiI3J6`. This is a readiness check, and readiness checks gate
+   other work, so a false negative here stalls whatever is waiting on it.
+
+5. **Optional-field filters are app-code with absent-means-keep, never a
    Firestore equality**, unless the field is provably present on every doc. See
    the house-convention section above for the measurement that established it.
 
