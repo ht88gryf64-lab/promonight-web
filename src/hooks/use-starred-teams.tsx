@@ -42,6 +42,7 @@ export type StarPlacement =
   // ── Tier 1 ────────────────────────────────────────────────────────────
   | 'team_page_hero'
   | 'teams_browser_card'
+  | 'team_page_rivals_card'
   | 'my_teams_featured'
   | 'playoffs_hub_team_card'
   | 'homepage_find_your_team'

@@ -17,7 +17,7 @@ interface TeamCardProps {
   countLabel?: string;
   // Analytics surface for the new team_tile_tap event. Optional — when
   // omitted, the new event does not fire and only the legacy event() emits.
-  tileSurface?: 'homepage' | 'teams_page';
+  tileSurface?: 'homepage' | 'teams_page' | 'team_page';
   fromTab?: string;
   isHomepageSample?: boolean;
   // Tier 1 StarToggle placement. Default matches the only current call

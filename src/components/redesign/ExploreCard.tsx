@@ -4,6 +4,7 @@ import {
   IconFlame,
   IconShirt,
   IconConfetti,
+  IconCup,
   IconList,
   IconChevronRight,
   type Icon,
@@ -32,7 +33,10 @@ export function ExploreCard({ team, className = '' }: ExploreCardProps) {
     { href: '/promos/this-week', label: 'Hot this week', Icon: IconFlame },
     { href: '/promos/jersey-giveaways', label: 'Jersey & apparel giveaways', Icon: IconShirt },
     { href: '/promos/theme-nights', label: 'Theme nights', Icon: IconConfetti },
-    { href: '/teams', label: `All ${team.league} teams`, Icon: IconList },
+    { href: '/promos/food-deals', label: 'Food deals', Icon: IconCup },
+    // League-scoped so the label is honest: /teams reads ?league= client-side
+    // and pre-selects the pill (the SSR grid stays the full All view).
+    { href: `/teams?league=${team.league}`, label: `All ${team.league} teams`, Icon: IconList },
   ];
 
   return (

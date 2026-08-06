@@ -5,12 +5,18 @@ import type { GameContext } from '@/lib/data';
 import type { Team } from '@/lib/types';
 import { normalizeSport, track } from '@/lib/analytics';
 import { GameExpand } from './GameExpand';
-import { IconChevronDown } from '@tabler/icons-react';
+import { IconChevronDown, IconArrowRight } from '@tabler/icons-react';
 
 // One expandable game row inside ScheduleBlock. Deliberately thin: every label
 // is computed by the server parent and passed in as a string, so the row text
 // (week, date, matchup, venue, kickoff) is in the crawlable HTML and this file
-// holds nothing but open state, the click handler, and the analytics call.
+// holds nothing but open state, the click handlers, and the analytics calls.
+//
+// Away rows additionally carry an always-visible opponent anchor UNDER the
+// toggle button, a sibling of it, never inside it (an <a> may not nest in a
+// <button>). It exists because the expand is lazy-mounted (see below), which
+// leaves zero cross-team links in the SSR HTML of a zero-promo page; this
+// anchor is the crawlable, tap-visible path to the opponent's page.
 //
 // GameExpand is LAZY MOUNTED, never server-rendered-and-hidden. That is load
 // bearing for two reasons:
@@ -35,6 +41,11 @@ export interface ScheduleRowProps {
   venueLabel: string;
   /** "International, Melbourne" style tag, or null for a domestic game. */
   locationLabel: string | null;
+  /** Away rows only: opponent team-page href + display name for the visible
+      anchor under the toggle. Null/omitted renders no anchor (home rows, and
+      away rows whose opponent doc is missing). */
+  opponentHref?: string | null;
+  opponentName?: string | null;
   team: Team | null;
   teamSlug: string;
   teamName: string;
@@ -50,6 +61,8 @@ export function ScheduleRow({
   kickoffLabel,
   venueLabel,
   locationLabel,
+  opponentHref,
+  opponentName,
   team,
   teamSlug,
   teamName,
@@ -150,6 +163,34 @@ export function ScheduleRow({
         </span>
       </button>
 
+      {/* Sibling of the button, never a child: the opponent link must be a
+          real crawlable anchor and an <a> cannot nest inside a <button>.
+          Rides team_tile_tap (team-discovery family) rather than a new event
+          name; from_tab separates it from the rivals grid on the same page.
+          Plain <a> is a full-document navigation, so the event fires on
+          mousedown (not click) to land before teardown — mirrors the
+          VenueHubLink / affiliate-link tracking convention. */}
+      {opponentHref && opponentName && (
+        <div className="border-t border-rd-line px-4 pb-2.5 pt-2 sm:px-5">
+          <a
+            href={opponentHref}
+            onMouseDown={() => {
+              track('team_tile_tap', {
+                surface: 'team_page',
+                team_id: isHome ? game.awayTeamSlug : game.homeTeamSlug,
+                league: sport,
+                from_tab: 'schedule_away_row',
+                is_homepage_sample: false,
+              });
+            }}
+            className="inline-flex items-center gap-1 font-rd text-[11px] uppercase tracking-[0.08em] text-rd-ink-soft transition-colors hover:text-rd-ink"
+          >
+            {opponentName} schedule
+            <IconArrowRight size={13} stroke={2} aria-hidden />
+          </a>
+        </div>
+      )}
+
       {open && (
         <div className="border-t border-rd-line px-3 pb-4 pt-4 sm:px-4">
           <GameExpand
@@ -158,6 +199,7 @@ export function ScheduleRow({
             team={team}
             teamSlug={teamSlug}
             teamName={teamName}
+            showOpponentLink={!opponentHref}
           />
         </div>
       )}

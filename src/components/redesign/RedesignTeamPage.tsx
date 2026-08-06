@@ -10,6 +10,8 @@ import { Hero } from './Hero';
 import { StatScoreboard } from './StatScoreboard';
 import { SeasonExplorer } from './SeasonExplorer';
 import { ScheduleBlock } from './ScheduleBlock';
+import { DivisionRivals } from './DivisionRivals';
+import { getDivisionRivals } from '@/lib/division-rivals';
 import { UpcomingPromoModalProvider } from './UpcomingPromoModal';
 import { AffiliateRail } from './AffiliateRail';
 import { ExploreCard } from './ExploreCard';
@@ -99,6 +101,12 @@ export function RedesignTeamPage({
     promoCounts.food === 0 &&
     promoCounts.kids === 0;
   const showSchedule = hasNoPromos && (gameContexts?.length ?? 0) > 0;
+
+  // Same-division rivals, free from gameContexts (opponent Team docs are
+  // already fetched by enrichGamesForTeam). Empty on leagues without game
+  // docs, and the block below is gated on length so those pages carry no
+  // stray wrapper div.
+  const rivals = getDivisionRivals(team, gameContexts);
   const eyebrow = (
     <>
       {leagueHubHref ? (
@@ -340,6 +348,18 @@ export function RedesignTeamPage({
                 variant="light"
               />
             </div>
+
+            {/* Cross-team rivals grid. order-[55] weaves it after recurring
+                deals and before the sidebar's Explore card on mobile; on
+                desktop (order utilities inert) this source position puts it
+                between recurring deals and the SEO capsules. MLB + NFL only
+                today: rivals derive from gameContexts, so leagues without
+                game docs render nothing here. */}
+            {rivals.length > 0 && (
+              <div className="order-[55]">
+                <DivisionRivals team={team} rivals={rivals} />
+              </div>
+            )}
 
             <div className="order-[71]">
               <TeamContentSections

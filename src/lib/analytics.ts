@@ -320,16 +320,18 @@ export type TeamPageEngagedProperties = {
 };
 
 // Team-discovery family — these two events share a surface concept
-// (which team-picker did the user interact with). Surface is "homepage"
-// today; "teams_page" is reserved for when /teams gets the same picker.
+// (which team-picker did the user interact with). "homepage" and
+// "teams_page" are the grid pickers; "team_page" is the internal-linking
+// surfaces on a team page itself (division-rivals cards, schedule-row
+// opponent links), distinguished from each other by from_tab.
 export type TeamPickerTabChangeProperties = {
-  surface: 'homepage' | 'teams_page';
+  surface: 'homepage' | 'teams_page' | 'team_page';
   from_league: string;
   to_league: string;
 };
 
 export type TeamTileTapProperties = {
-  surface: 'homepage' | 'teams_page';
+  surface: 'homepage' | 'teams_page' | 'team_page';
   team_id: string;
   league: string;
   from_tab: string;
@@ -492,8 +494,10 @@ export type PostStarToastEventProperties = {
 };
 
 // /teams browser page view. `league_filter` is the active filter at the
-// moment the event fires — always "All" on initial render. Tab switches
-// after that go through team_picker_tab_change rather than re-firing this.
+// moment the event fires — "All" on a bare visit, or the league a valid
+// ?league= deep link pre-selected (team-page ExploreCard links arrive this
+// way). Tab switches after that go through team_picker_tab_change rather
+// than re-firing this.
 export type TeamsBrowserViewProperties = {
   league_filter: string;
 };
@@ -894,9 +898,11 @@ export type EventPropertiesMap = {
 // Fires when a user taps a conference chip (or "View the full hub") in the CFB
 // sub-row of the pro team browser (home / /teams). CFB routes OUT to the /cfb
 // hub, so this marks the hand-off. `conf` is a conference slug ('sec',
-// 'big-ten', …) or 'all' for the full-hub link.
+// 'big-ten', …) or 'all' for the full-hub link. 'team_page' exists only
+// because the sub-row inherits TeamGrid's widened surface union; no team-page
+// caller renders the sub-row today.
 export type CfbConfNavProperties = {
-  surface: 'homepage' | 'teams_page';
+  surface: 'homepage' | 'teams_page' | 'team_page';
   conf: string;
 };
 
