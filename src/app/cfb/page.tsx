@@ -1,4 +1,6 @@
 import { getCfbHubData } from '@/lib/cfb/hub-data';
+import { getVenueLinksForTeams } from '@/lib/venue-hub';
+import { HubVenueLinks } from '@/components/hub/HubVenueLinks';
 import { buildCfbHubMetadata } from '@/lib/cfb/metadata';
 import { instrumentSerif } from '@/components/cfb/fonts';
 import { NationalBlock, WeekCard, ThemeCard } from '@/components/cfb/hub/blocks';
@@ -35,6 +37,8 @@ function SectionLabel({ children, sub, right }: { children: React.ReactNode; sub
 export default async function CfbHub() {
   const data = await getCfbHubData();
   const allTeams = data.browse.flatMap((b) => b.teams.map((t) => ({ id: t.id, name: t.name })));
+  // Indexable stadium guides for the schools we cover (deduped by building).
+  const venueLinks = await getVenueLinksForTeams(allTeams.map((t) => t.id));
   const weeklyLabel = data.weekly.label === 'this-week' ? 'THIS WEEK · RIVALRY GAMES' : 'NEXT UP · RIVALRY GAMES';
   const weeklyRight = data.weekly.label === 'this-week' && data.weekly.week
     ? `UPDATES MONDAY AM · WEEK ${data.weekly.week}`
@@ -105,6 +109,21 @@ export default async function CfbHub() {
             <CfbHubBrowse browse={data.browse} total={data.totalTeams} />
           </div>
         </section>
+
+        {/* ── STADIUM GUIDES (venue inbound links; only verified buildings) ── */}
+        {venueLinks.length > 0 && (
+          <section className="mt-14">
+            <SectionLabel sub="Bag policies, parking, and gate times for the stadiums we have verified.">STADIUM GUIDES</SectionLabel>
+            <div className="mt-5">
+              <HubVenueLinks
+                venues={venueLinks}
+                surface="web_cfb_hub_venues"
+                placement="league_hub_venue_links"
+                dark
+              />
+            </div>
+          </section>
+        )}
       </div>
     </main>
   );

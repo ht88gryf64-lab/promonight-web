@@ -86,14 +86,26 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Venue logistics hubs (/venues/[slug]). Only buildings that clear the indexing
   // floor (lat/lng + two of bag/parking/transit + verified) are listed; the rest
   // render but stay noindex and out of the sitemap. lastmod is the doc's real
-  // updatedAt, not sitemap-generation time. Fail-closed on a read error. Flows to
-  // the IndexNow deploy hook automatically (getAllSitemapUrls -> sitemap()).
-  const venueEntries = await getIndexableVenueHubSitemapEntries().catch(() => []);
+  // updatedAt, not sitemap-generation time. Flows to the IndexNow deploy hook
+  // automatically (getAllSitemapUrls -> sitemap()).
+  //
+  // FAIL LOUDLY. This read used to be `.catch(() => [])`, which on any Firestore
+  // error served a complete-looking sitemap silently missing all 150+ venue URLs
+  // (and the IndexNow hook, walking this same function, skipped them too). The
+  // set comes from a single collection get, so partial success is impossible:
+  // the honest outcomes are the full venue set or a failed render (build fails /
+  // the previously generated sitemap keeps serving), never a silent hole.
+  const venueEntries = await getIndexableVenueHubSitemapEntries().catch((err) => {
+    console.error('[sitemap] venueHubs read failed; refusing to serve a sitemap missing the venue set', err);
+    throw err;
+  });
   const venuePages = venueEntries.map((v) => ({
     url: `${BASE_URL}/venues/${v.slug}`,
     lastModified: v.lastModified,
     changeFrequency: 'weekly' as const,
-    priority: 0.7,
+    // 0.8 as of the inbound-links slice: venue pages now carry real internal
+    // signal (league hubs + /venues index + footer path), same tier as teams.
+    priority: 0.8,
   }));
 
   // Only include the /playoffs hub in the sitemap when playoffs are active.
@@ -123,6 +135,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: now,
       changeFrequency: 'weekly',
       priority: 0.9,
+    },
+    {
+      // /venues index: directory page over every indexable building, linked
+      // sitewide from the footer. 0.8 (not hub-tier 0.9) until it earns signal.
+      url: `${BASE_URL}/venues`,
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.8,
     },
     {
       // MLB league hub. Daily changefreq because MLB promos run a daily cadence
