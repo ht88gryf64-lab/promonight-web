@@ -15,8 +15,18 @@ depth gains are expected or claimed from this slice.
    `getAllSitemapUrls`) silently skipped them too. The set comes from a single
    collection read, so partial success is impossible; the read now logs
    `[sitemap] venueHubs read failed` and rethrows, so a failure is a failed
-   render (build failure at deploy time, stale-but-complete sitemap at runtime)
-   instead of a silent 150-URL hole.
+   render instead of a silent 150-URL hole. Concrete consequences per surface:
+   - Build time: the build fails (sitemap.xml is statically generated; the
+     prerender-manifest lists it with no revalidation, so the deployed artifact
+     can never break at runtime).
+   - IndexNow deploy hook (`/api/indexnow/deploy` walks the same `sitemap()`
+     via `getAllSitemapUrls`, force-dynamic): a Firestore blip at hook time now
+     returns 500 and submits ZERO URLs for that deploy, where the old code
+     silently submitted a partial list. The `indexnow-after-deploy` workflow
+     run goes red (that IS the alert; there was none before), the deploy
+     itself is unaffected (the hook fires post-deploy), and the next deploy
+     resubmits everything. All-or-nothing here is intentional: a partial
+     IndexNow submission is the same silent-hole disease.
    Sibling instance NOT changed in this slice: the CFB school-id read at
    `sitemap.ts` (`getAllCfbSchoolIds().catch(() => [])`) has the same silent
    drop shape for the 86 CFB team pages.

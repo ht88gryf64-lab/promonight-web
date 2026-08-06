@@ -281,8 +281,12 @@ export const getTeamVenueHubMap = cache(async (): Promise<Map<string, TeamVenueH
     if (tenants.length === 0) continue;
     const indexable = venueHubIsIndexable(readIndexFloorFields(d));
     const link: TeamVenueHubLink = {
-      slug: d.slug,
-      displayName: displayVenueName(d.name),
+      // doc.id, not the stored `slug` field: doc.id is the routing truth
+      // (getVenueHub fetches by id, generateStaticParams/sitemap emit ids), so
+      // the hub/team-page hrefs can never diverge from the URLs the sitemap
+      // and /venues index advertise.
+      slug: doc.id,
+      displayName: displayVenueName(typeof d.name === 'string' ? d.name : doc.id),
       indexable,
       city: typeof d.city === 'string' ? d.city : null,
     };
@@ -323,8 +327,11 @@ export const getIndexableVenueHubSitemapEntries = cache(async (): Promise<VenueH
 // ── venue inbound links (league hubs + /venues index) ───────────────────────
 
 /** A league's team ids -> their indexable building links, deduped by building
- *  and name-sorted. Rides the cached getTeamVenueHubMap pass: zero extra reads
- *  beyond the one collection get the team pages already share. */
+ *  and name-sorted. Costs one venueHubs collection get (~222 docs) per render
+ *  pass that was not already paying it: hub pages regenerate on their own ISR
+ *  schedule, so React cache() shares the read within a hub render but NOT with
+ *  team-page renders. At 6h ISR that is ~4 extra collection gets per hub per
+ *  day; do not treat this as free on a high-traffic dynamic path. */
 export async function getVenueLinksForTeams(teamIds: string[]): Promise<HubVenueLink[]> {
   const map = await getTeamVenueHubMap();
   return collectVenueLinksForTeams(map, teamIds);

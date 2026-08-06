@@ -92,7 +92,7 @@ export default async function WnbaHubPage() {
     getLeagueTodayPromos('WNBA'),
   ]);
   // Indexable venue guides for this league's teams (deduped by building).
-  // Rides the render-pass-cached venueHubs read, so no extra Firestore cost.
+  // One venueHubs collection get per hub regeneration (see getVenueLinksForTeams).
   const venueLinks = await getVenueLinksForTeams(
     conferences.flatMap((g) => g.teams.map((t) => t.id)),
   );

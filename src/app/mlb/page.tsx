@@ -92,7 +92,7 @@ export default async function MlbHubPage() {
     getLeagueTodayPromos('MLB'),
   ]);
   // Indexable ballpark guides for this league's teams (deduped by building).
-  // Rides the render-pass-cached venueHubs read, so no extra Firestore cost.
+  // One venueHubs collection get per hub regeneration (see getVenueLinksForTeams).
   const venueLinks = await getVenueLinksForTeams(
     divisions.flatMap((g) => g.teams.map((t) => t.id)),
   );
