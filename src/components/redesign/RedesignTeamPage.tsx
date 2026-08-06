@@ -104,9 +104,24 @@ export function RedesignTeamPage({
 
   // Same-division rivals, free from gameContexts (opponent Team docs are
   // already fetched by enrichGamesForTeam). Empty on leagues without game
-  // docs, and the block below is gated on length so those pages carry no
+  // docs, and the mounts below are gated on length so those pages carry no
   // stray wrapper div.
+  //
+  // One block, two mount points, exactly one renders. Placement is
+  // branch-dependent by design: zero-promo pages have no promo content to
+  // protect, so the grid mounts HIGH (order-[12], directly under the
+  // schedule) where it is the most useful thing on the page; populated
+  // pages keep promo content first for the head query and mount it
+  // immediately after the promo list (order-[41], ahead of the follow
+  // pairing at 42). Desktop ignores order-*, so the same hasNoPromos
+  // branch also picks the SOURCE position at the two mounts below.
   const rivals = getDivisionRivals(team, gameContexts);
+  const rivalsBlock =
+    rivals.length > 0 ? (
+      <div className={hasNoPromos ? 'order-[12]' : 'order-[41]'}>
+        <DivisionRivals team={team} rivals={rivals} />
+      </div>
+    ) : null;
   const eyebrow = (
     <>
       {leagueHubHref ? (
@@ -275,6 +290,9 @@ export function RedesignTeamPage({
               )}
             </div>
 
+            {/* Rivals, zero-promo mount: directly under the schedule. */}
+            {hasNoPromos ? rivalsBlock : null}
+
             {/* Full promo list — upcoming + completed, with show-all. The
                 upcoming rows open the shared game modal (same body the calendar
                 expands inline); the provider holds one Modal for the list.
@@ -315,21 +333,26 @@ export function RedesignTeamPage({
               )}
             </div>
 
-            {/* Email + app conversion pairing, sitting immediately after the
-                completed-promos list and immediately before By the Numbers, on
+            {/* Rivals, populated mount: immediately after the promo list,
+                ahead of every conversion/browse module. */}
+            {hasNoPromos ? null : rivalsBlock}
+
+            {/* Email + app conversion pairing, sitting after the promo slot
+                and the rivals grid, immediately before By the Numbers, on
                 both the desktop source order and the mobile order weave (the
-                pairing is order-[41], By the Numbers is order-[42], both right
-                after PromoList's order-[40]). Email first (pre-stars this team,
-                tags web_team_page, fires email_cta_click), then the app push
-                pitch moved out of PromoList. */}
-            <div className="order-[41]">
+                pairing is order-[42], By the Numbers is order-[43]; rivals
+                holds order-[41] right after PromoList's order-[40]). Email
+                first (pre-stars this team, tags web_team_page, fires
+                email_cta_click), then the app push pitch moved out of
+                PromoList. */}
+            <div className="order-[42]">
               <div className="mx-auto max-w-3xl px-6 py-8">
                 <FollowCTA surface="web_team_page" team={team} />
                 <AppPushPitch variant="light" teamName={displayName} teamSlug={team.id} />
               </div>
             </div>
 
-            <div className="order-[42]">
+            <div className="order-[43]">
               <AuthorityStats
                 team={team}
                 promos={promos}
@@ -348,18 +371,6 @@ export function RedesignTeamPage({
                 variant="light"
               />
             </div>
-
-            {/* Cross-team rivals grid. order-[55] weaves it after recurring
-                deals and before the sidebar's Explore card on mobile; on
-                desktop (order utilities inert) this source position puts it
-                between recurring deals and the SEO capsules. MLB + NFL only
-                today: rivals derive from gameContexts, so leagues without
-                game docs render nothing here. */}
-            {rivals.length > 0 && (
-              <div className="order-[55]">
-                <DivisionRivals team={team} rivals={rivals} />
-              </div>
-            )}
 
             <div className="order-[71]">
               <TeamContentSections
