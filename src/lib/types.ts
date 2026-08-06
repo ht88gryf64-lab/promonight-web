@@ -94,6 +94,11 @@ export interface Promo {
   attendanceCap?: number | null;
   presentedBy?: string | null;
   whileSuppliesLast?: boolean;
+  // NFL week number stamped by the promo-pipeline spine join. PRESEASON WEEKS
+  // COLLIDE with regular-season weeks 1-4 and the promo doc carries no
+  // seasonType, so this is never a bucketing key on its own — pair it with the
+  // joined game's seasonType via src/lib/nfl-week.ts. Absent outside NFL.
+  week?: number;
   // Secondary classification flag: marks a promo as a gate giveaway even when
   // its primary `type` is something else. Today this is set only on the two
   // Twins kids gate giveaways (Kids Opening Day Beanie, Kids Appreciation Widget

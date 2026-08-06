@@ -21,6 +21,14 @@ import type {
   DerivedSignals,
 } from './types';
 import { SCORED_LEAGUES, isRegularSeasonGame } from './types';
+import {
+  buildWeekBuckets,
+  selectWeekContext,
+  joinPromosToGames,
+  clubRegularSeasonCounts,
+  type NflWeekContext,
+  type NflClubCounts,
+} from './nfl-week';
 import { resolveIcon, dedupePromos, isVisiblePromo } from './promo-helpers';
 import { getVenueOverride } from './venue-overrides';
 import { VENUE_RESOLUTION_MAP } from './venue-resolution-map';
@@ -122,6 +130,7 @@ export function mapPromoDoc(doc: FirebaseFirestore.DocumentSnapshot): Promo {
   if (data.attendanceCap !== undefined) promo.attendanceCap = data.attendanceCap;
   if (data.presentedBy !== undefined) promo.presentedBy = data.presentedBy;
   if (data.whileSuppliesLast !== undefined) promo.whileSuppliesLast = data.whileSuppliesLast;
+  if (typeof data.week === 'number') promo.week = data.week;
   if (data.isGiveaway !== undefined) promo.isGiveaway = data.isGiveaway;
   // Carry the soft-delete marker through the shaper so the downstream
   // isVisiblePromo filter has the field to read. Without this the filter
@@ -1384,3 +1393,75 @@ export async function getLeagueTeamsGrouped(league: string): Promise<HubTeamGrou
   }
   return groups;
 }
+
+// ── NFL week-indexed hub data ──────────────────────────────────────────────
+// Composes the pure bucket machinery in src/lib/nfl-week.ts (which carries the
+// Tuesday fixed-week cadence spec) with the cached Firestore reads. The week
+// container deliberately follows the spine through preseason, explicitly
+// labeled; every QUANTITATIVE surface filters to regular season. That split is
+// the (seasonType, week) invariant — tested in __tests__/nfl-week.test.ts, not
+// a convention.
+
+// One league-wide games read, ALL season types, sorted by date. Consumers must
+// key on (seasonType, week) pairs — never week alone (preseason weeks 1-4
+// collide with regular weeks 1-4) — and quantitative consumers apply
+// isRegularSeasonGame. cache()-wrapped so the week slate and club counts share
+// one Firestore read per request.
+export const getLeagueGames = cache(async (league: string): Promise<Game[]> => {
+  if (league !== 'mlb' && league !== 'nfl') return [];
+  const snap = await db.collection('games').where('league', '==', league).get();
+  const games = snap.docs.map(mapGameDoc);
+  games.sort(
+    (a, b) => a.date.localeCompare(b.date) || (a.gameTime || '').localeCompare(b.gameTime || ''),
+  );
+  return games;
+});
+
+export interface NflWeekSlate {
+  context: NflWeekContext;
+  // This week's promos joined per game id (the context bucket's games carry
+  // the render order). `unmatchedPromos` are in-window NFL promos that joined
+  // no bucket game — spine drift, surfaced instead of silently dropped.
+  promosByGameId: Record<string, PromoWithTeam[]>;
+  unmatchedPromos: PromoWithTeam[];
+}
+
+// The current NFL week's container data: bucket (current / next-up /
+// offseason) plus the week's promos attached to their games by the spine join.
+export const getNflWeekSlate = cache(async (): Promise<NflWeekSlate> => {
+  const games = await getLeagueGames('nfl');
+  const buckets = buildWeekBuckets(games);
+  const context = selectWeekContext(buckets, hubTodayChicagoYMD());
+  if (!context.bucket) return { context, promosByGameId: {}, unmatchedPromos: [] };
+  // Promo dates are venue-local while the window is ET-derived; no normal NFL
+  // kickoff pattern moves a stored date outside its own Tue-Mon window (the
+  // widest skews — late Pacific Sunday games, the one-day-early TBD stored
+  // dates — stay inside). The range still unions in the bucket's own stored
+  // game dates so a game POSTPONED past the window (2010 Vikings-Eagles
+  // Tuesday precedent) keeps its promos joinable instead of silently
+  // vanishing without ever reaching unmatchedPromos.
+  const gameDates = context.bucket.games.map((g) => g.date).sort();
+  const rangeStart =
+    gameDates[0] < context.bucket.windowStartYmd ? gameDates[0] : context.bucket.windowStartYmd;
+  const lastGameDate = gameDates[gameDates.length - 1];
+  const rangeEnd =
+    lastGameDate > context.bucket.windowEndYmd ? lastGameDate : context.bucket.windowEndYmd;
+  const inWindow = await getPromosInDateRange(rangeStart, rangeEnd);
+  const nflPromos = inWindow.filter((p) => p.team.league === 'NFL');
+  const { byGameId, unmatched } = joinPromosToGames(context.bucket.games, nflPromos);
+  return { context, promosByGameId: byGameId, unmatchedPromos: unmatched };
+});
+
+// Per-club regular-season counts for the hub team grid: season-total and
+// remaining home games for every club (the schedule-only clubs get honest
+// "9 home games" rows), promo counts only where a promo joins a
+// regular-season home game — so preseason-dated promos never inflate a card.
+// One promo fetch spanning the spine's own date range.
+export const getNflClubCounts = cache(async (): Promise<Record<string, NflClubCounts>> => {
+  const games = await getLeagueGames('nfl');
+  if (games.length === 0) return {};
+  const dates = games.map((g) => g.date).sort();
+  const promos = await getPromosInDateRange(dates[0], dates[dates.length - 1]);
+  const nflPromos = promos.filter((p) => p.team.league === 'NFL');
+  return clubRegularSeasonCounts(games, nflPromos, hubTodayChicagoYMD());
+});
