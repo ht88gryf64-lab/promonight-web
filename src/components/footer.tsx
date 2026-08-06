@@ -59,6 +59,11 @@ export async function Footer() {
                   All teams
                 </Link>
               </li>
+              <li>
+                <Link href="/venues" className="text-text-secondary text-sm hover:text-white transition-colors">
+                  Stadium guides
+                </Link>
+              </li>
             </ul>
           </div>
 

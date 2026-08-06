@@ -38,10 +38,14 @@ const COMPANY_LINKS: FooterLink[] = [
 ];
 
 // Discovery hubs. Gives the previously-orphaned scoring pages, the World Cup
-// hub, and the /follow funnel a clean dofollow incoming link on every page.
+// hub, the /venues directory, and the /follow funnel a clean dofollow incoming
+// link on every page. The stadium-guides entry is the sitewide path into the
+// venue cluster: every indexable venue page is two clicks from any page via
+// footer -> /venues -> venue.
 const DISCOVER_LINKS: FooterLink[] = [
   { label: 'Best promos', href: '/best-promos' },
   { label: 'Team rankings', href: '/team-rankings' },
+  { label: 'Stadium guides', href: '/venues' },
   { label: 'World Cup 2026', href: '/world-cup' },
   { label: 'Follow your teams', href: '/follow' },
 ];

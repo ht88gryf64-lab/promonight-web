@@ -114,6 +114,11 @@ export type AnalyticsSurface =
   | 'web_mlb_hub_this_week'
   | 'web_mlb_hub_promo_type'
   | 'web_mlb_hub_team_card'
+  // Venue-guide link sections: one per league hub (mirroring the per-module hub
+  // split above, plus web_cfb_hub_venues below) and one for the /venues index,
+  // so hub-origin and index-origin venue_hub_click volumes break out from the
+  // team-page origin (web_team_page / web_cfb_venue_link).
+  | 'web_mlb_hub_venues'
   // WNBA + MLS league hubs (/wnba, /mls) and their interactive sub-surfaces,
   // mirroring the MLB hub split so each league's hub taps, promo-type links, and
   // team grid / selector break out separately in PostHog + GA4.
@@ -121,10 +126,14 @@ export type AnalyticsSurface =
   | 'web_wnba_hub_this_week'
   | 'web_wnba_hub_promo_type'
   | 'web_wnba_hub_team_card'
+  | 'web_wnba_hub_venues'
   | 'web_mls_hub'
   | 'web_mls_hub_this_week'
   | 'web_mls_hub_promo_type'
   | 'web_mls_hub_team_card'
+  | 'web_mls_hub_venues'
+  | 'web_cfb_hub_venues'
+  | 'web_venue_index'
   // Venue logistics hub (/venues/[slug]). Per-building attribution rides in the
   // affiliate subId via promoId={buildingSlug}, so the surface stays one enum
   // value while reports still slice by building.
@@ -584,14 +593,17 @@ export type ResaleClickProperties = {
   destination_url: string;
 };
 
-// venue_hub_click: the INTERNAL routing click from a team page into that team's
-// building hub (/venues/{slug}). Not an affiliate motion — it measures the
-// team-page-to-hub internal-link thesis (pages per session), so it carries the
-// team AND the destination building. Team is known here, so team_slug is the
-// team (unlike the hub's own building-keyed affiliate sub-IDs).
+// venue_hub_click: the INTERNAL routing click into a building hub
+// (/venues/{slug}). Not an affiliate motion: it measures the into-hub
+// internal-link thesis, so it carries the destination building plus the origin.
+// team_slug is the origin team when the click starts on a team page
+// (placement 'team_page_plan_your_visit'); it is ABSENT when the click starts
+// on a league hub or the /venues index (placements 'league_hub_venue_links' /
+// 'venues_index'), where no single team is the origin. Slice those by
+// surface + placement instead.
 export type VenueHubClickProperties = {
   surface: AnalyticsSurface;
-  team_slug: string;
+  team_slug?: string;
   sport?: Sport;
   placement: string;
   building_slug: string;

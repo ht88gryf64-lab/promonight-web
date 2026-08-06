@@ -11,7 +11,9 @@ import { HubTodayPromos } from '@/components/hub/HubTodayPromos';
 import { HubThisWeek } from '@/components/hub/HubThisWeek';
 import { HubBrowseByType, type HubBrowseTile } from '@/components/hub/HubBrowseByType';
 import { HubTeamGrid } from '@/components/hub/HubTeamGrid';
+import { HubVenueLinks } from '@/components/hub/HubVenueLinks';
 import { HubFaq, type HubFaqItem } from '@/components/hub/HubFaq';
+import { getVenueLinksForTeams } from '@/lib/venue-hub';
 
 // League hub accent (house palette, mirrors LEAGUE_HUB_REGISTRY WNBA entry).
 const ACCENT = '#c9581f';
@@ -89,6 +91,11 @@ export default async function WnbaHubPage() {
     getLeagueTeamsGrouped('WNBA'),
     getLeagueTodayPromos('WNBA'),
   ]);
+  // Indexable venue guides for this league's teams (deduped by building).
+  // Rides the render-pass-cached venueHubs read, so no extra Firestore cost.
+  const venueLinks = await getVenueLinksForTeams(
+    conferences.flatMap((g) => g.teams.map((t) => t.id)),
+  );
 
   // ItemList source for the CollectionPage JSON-LD: the current WNBA slate.
   const jsonLdGroups: AggregatorGroup[] = [{ label: 'This week across WNBA', promos: slate }];
@@ -148,6 +155,14 @@ export default async function WnbaHubPage() {
           intro="All 15 WNBA teams by conference. Open any team for its full 2026 promotional schedule."
           selectorLabel="Filter teams by conference"
           allLabel="All teams"
+        />
+        <HubVenueLinks
+          venues={venueLinks}
+          heading="WNBA arena guides"
+          intro="Bag policies, parking, and gate times for the arenas we have verified. The logistics half of the promo trip."
+          sectionId="wnba-venue-guides"
+          surface="web_wnba_hub_venues"
+          placement="league_hub_venue_links"
         />
         <AdSlot config={AD_SLOTS.IN_CONTENT_2} pageType="wnba_hub" />
         <HubFaq faqs={FAQS} sectionId="wnba-hub-faq" />

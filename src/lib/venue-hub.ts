@@ -5,6 +5,7 @@ import type { Promo, Team } from './types';
 import { getTeamBySlug, getTeamPromos, promoBoardChicagoYMD } from './data';
 import { getCfbSchool } from './cfb/data';
 import { toAffiliateTeam } from './cfb/page-extras';
+import { collectVenueLinksForTeams, type HubVenueLink, type VenueIndexEntry } from './venue-index';
 
 // Read layer for the venue logistics hub (/venues/[slug]). Reads the venueHubs
 // collection ONLY. The legacy `venues` collection and getVenueForTeam are
@@ -227,6 +228,24 @@ export function venueHubIsIndexable(v: IndexFloorFields): boolean {
   return hasGeo && twoOfThree && v.verified === true;
 }
 
+/** Floor fields from a raw building doc, with the same defensive coercions the
+ *  full getVenueHub mapper applies. Shared by every reader that computes
+ *  indexability from doc data without paying the full-hub mapping cost. */
+function readIndexFloorFields(d: FirebaseFirestore.DocumentData): IndexFloorFields {
+  return {
+    lat: typeof d.lat === 'number' ? d.lat : null,
+    lng: typeof d.lng === 'number' ? d.lng : null,
+    verified: d.verified === true,
+    clearBagRequired: typeof d.clearBagRequired === 'boolean' ? d.clearBagRequired : null,
+    bagMaxDimensions: d.bagMaxDimensions ?? null,
+    bagPolicyUrl: d.bagPolicyUrl ?? null,
+    bagPolicyNotes: d.bagPolicyNotes ?? null,
+    parkingLots: Array.isArray(d.parkingLots) ? d.parkingLots : [],
+    parkingLotMapUrl: d.parkingLotMapUrl ?? null,
+    publicTransit: d.publicTransit ?? null,
+  };
+}
+
 /** All 222 building slugs, for generateStaticParams. */
 export const getAllVenueHubSlugs = cache(async (): Promise<string[]> => {
   const snap = await db.collection('venueHubs').get();
@@ -244,6 +263,8 @@ export interface TeamVenueHubLink {
    *  renders ONLY when this is true — a held building has nothing useful yet, so
    *  no dead-end link into an empty hub. */
   indexable: boolean;
+  /** For the hub/index link sub-line; null when the doc lacks a city. */
+  city: string | null;
 }
 
 /** teamId -> its building hub. The team<->building relationship is the building
@@ -258,22 +279,12 @@ export const getTeamVenueHubMap = cache(async (): Promise<Map<string, TeamVenueH
     const d = doc.data();
     const tenants: VenueHubTenantRef[] = Array.isArray(d.tenants) ? d.tenants : [];
     if (tenants.length === 0) continue;
-    const indexable = venueHubIsIndexable({
-      lat: typeof d.lat === 'number' ? d.lat : null,
-      lng: typeof d.lng === 'number' ? d.lng : null,
-      verified: d.verified === true,
-      clearBagRequired: typeof d.clearBagRequired === 'boolean' ? d.clearBagRequired : null,
-      bagMaxDimensions: d.bagMaxDimensions ?? null,
-      bagPolicyUrl: d.bagPolicyUrl ?? null,
-      bagPolicyNotes: d.bagPolicyNotes ?? null,
-      parkingLots: Array.isArray(d.parkingLots) ? d.parkingLots : [],
-      parkingLotMapUrl: d.parkingLotMapUrl ?? null,
-      publicTransit: d.publicTransit ?? null,
-    });
+    const indexable = venueHubIsIndexable(readIndexFloorFields(d));
     const link: TeamVenueHubLink = {
       slug: d.slug,
       displayName: displayVenueName(d.name),
       indexable,
+      city: typeof d.city === 'string' ? d.city : null,
     };
     for (const t of tenants) {
       if (t?.teamId) map.set(t.teamId, link);
@@ -300,23 +311,45 @@ export const getIndexableVenueHubSitemapEntries = cache(async (): Promise<VenueH
   const out: VenueHubSitemapEntry[] = [];
   for (const doc of snap.docs) {
     const d = doc.data();
-    const fields: IndexFloorFields = {
-      lat: typeof d.lat === 'number' ? d.lat : null,
-      lng: typeof d.lng === 'number' ? d.lng : null,
-      verified: d.verified === true,
-      clearBagRequired: typeof d.clearBagRequired === 'boolean' ? d.clearBagRequired : null,
-      bagMaxDimensions: d.bagMaxDimensions ?? null,
-      bagPolicyUrl: d.bagPolicyUrl ?? null,
-      bagPolicyNotes: d.bagPolicyNotes ?? null,
-      parkingLots: Array.isArray(d.parkingLots) ? d.parkingLots : [],
-      parkingLotMapUrl: d.parkingLotMapUrl ?? null,
-      publicTransit: d.publicTransit ?? null,
-    };
-    if (!venueHubIsIndexable(fields)) continue;
+    if (!venueHubIsIndexable(readIndexFloorFields(d))) continue;
     // updatedAt is a Firestore Timestamp; fall back to now if absent.
     const ts = d.updatedAt;
     const lastModified = ts && typeof ts.toDate === 'function' ? ts.toDate() : new Date();
     out.push({ slug: doc.id, lastModified });
+  }
+  return out;
+});
+
+// ── venue inbound links (league hubs + /venues index) ───────────────────────
+
+/** A league's team ids -> their indexable building links, deduped by building
+ *  and name-sorted. Rides the cached getTeamVenueHubMap pass: zero extra reads
+ *  beyond the one collection get the team pages already share. */
+export async function getVenueLinksForTeams(teamIds: string[]): Promise<HubVenueLink[]> {
+  const map = await getTeamVenueHubMap();
+  return collectVenueLinksForTeams(map, teamIds);
+}
+
+/** Every indexable building, shaped for the /venues index page. One collection
+ *  pass, cached per render pass like the other readers. Leagues come from the
+ *  doc's tenants array, so a shared building carries every hosting league. */
+export const getVenueIndexEntries = cache(async (): Promise<VenueIndexEntry[]> => {
+  const snap = await db.collection('venueHubs').get();
+  const out: VenueIndexEntry[] = [];
+  for (const doc of snap.docs) {
+    const d = doc.data();
+    if (!venueHubIsIndexable(readIndexFloorFields(d))) continue;
+    const tenants: VenueHubTenantRef[] = Array.isArray(d.tenants) ? d.tenants : [];
+    const leagues = [...new Set(
+      tenants.map((t) => t?.league).filter((l): l is League => typeof l === 'string'),
+    )];
+    out.push({
+      slug: doc.id,
+      name: displayVenueName(typeof d.name === 'string' ? d.name : doc.id),
+      city: typeof d.city === 'string' ? d.city : null,
+      state: typeof d.state === 'string' ? d.state : null,
+      leagues,
+    });
   }
   return out;
 });
