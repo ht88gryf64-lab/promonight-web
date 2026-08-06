@@ -149,3 +149,80 @@ number of clubs as the opener approaches.
 declared and never destructured in `RedesignTeamPage`, the hardcoded `NFL: 9` in
 `authority-stats.tsx`, and the MLB doubleheader / home-games denominator
 question.
+
+---
+
+# CLOSEOUT
+
+This lane is closed. Everything below is so the next session does not re-derive
+it.
+
+## Shipped
+
+Three merge commits on `main`, each independently revertible. That was
+deliberate: the FAQ change is site-wide structured data and the other two are
+NFL-scoped, so a problem in one does not force reverting the others.
+
+| Commit | What |
+|---|---|
+| `4ab8226` | `ScheduleBlock` (full 18-week slate, week-first, bye as a row), `ZeroPromoFallback` mounted with a light variant, the `extractCity` fix, `order-[11]`, and every clock-derived season year removed |
+| `b0aabd6` | FAQPage brand-question filter, all 169 pages, flag-based on `FAQItem.brandPromo` |
+| `7583724` | `seasonType` filter on `getGamesForTeam`, app-code array filter with absent-means-keep |
+
+Deployed and verified on production, cache-busted. The 32 NFL pages render the
+Games tile at 17 with 18 schedule rows (17 games plus the bye) and zero
+preseason markers.
+
+## Method established, carry forward
+
+These cost real time to discover. Reuse them rather than rediscovering them.
+
+1. **Byte-identity cannot be verified across a date boundary at any
+   normalization depth.** Six clock-dependent surfaces bake into the prerendered
+   HTML and the count grew twice during this lane, because each new surface is
+   only discovered when a diff fails. A normalization list is a lagging
+   indicator by construction. **Rebuild the baseline the same day** and
+   normalize only genuine build artifacts. A gate run near midnight UTC must
+   rebuild the baseline.
+
+2. **Any script fetching a URL must assert a control marker before grading.**
+   A Vercel login page graded as "feature absent" across five URLs once on this
+   lane, and the output looked exactly like a failed feature. Assert on a string
+   only the real page emits (`rd-root` plus something page-specific) and fail
+   loudly if it is missing.
+
+3. **Confirm the deployment is serving before revalidating.** Flushing first
+   re-caches the OLD build, and `/api/revalidate` still answers
+   `{"ok":true,"revalidated":N}` because it counts paths processed, not paths
+   changed. The response cannot tell you that you flushed the wrong build. The
+   general test is arithmetic: **if a response's `age` exceeds the seconds
+   elapsed since a write, that render predates the write.** Measured here at
+   `age: 29365` roughly three minutes after `git push` returned, but the same
+   trap fires at small numbers, for example a render at `age` 821s cannot
+   reflect a write made 772s ago. For an INERT change there is no visible string
+   to wait on, so the readiness signal is the **build id** in the served HTML.
+   Note it appears in two encodings and a page may carry only one: an HTML
+   comment right after the doctype, and `\"b\":\"<id>\"` inside the flight
+   payload. Check both before concluding a page is on a different build.
+
+4. **Optional-field filters are app-code with absent-means-keep, never a
+   Firestore equality**, unless the field is provably present on every doc. See
+   the house-convention section above for the measurement that established it.
+
+## Open tickets, none urgent
+
+- **`cf-montreal` renders "MONTREAL CF MONTRÉAL".** The fix is in
+  `teamDisplayName`, which reaches 30 routes including CFB, venues, every hub
+  and every aggregator. Standalone change, not worth that blast radius inside a
+  page-level fix.
+- **Sitemap `lastmod` stamps all 169 team pages at generation time**, so it is
+  uninformative on every team page, always. That is a standing weakness in the
+  freshness signal to Bing, which weights recency. A fix would stamp it from the
+  underlying data (latest promo write or schedule change). Unscoped;
+  `src/app/sitemap.ts` is already on the deferral list for the hub work.
+- **`LEAGUE_COPY.NFL` says "Confirmed promos will appear here."** Nothing in
+  this repo ingests NFL promos, so it is a promise the codebase does not yet
+  keep. `feature/nfl-scanner` is at G4, so the expectation is that this
+  RESOLVES rather than needs removing. If that branch slips past the September
+  opener, the sentence comes out.
+- The deferral list above is unchanged.
