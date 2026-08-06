@@ -562,3 +562,248 @@ first.
 
 **Severity: Medium, resolved.** No records were affected, so this is recorded as
 a near miss rather than an incident.
+
+---
+
+## 12. Preseason-dated promos render with no schedule row behind them on 10 NFL team pages
+
+**What it is.** 17 live promos across 10 NFL clubs (bears x2, seahawks x2,
+texans x2, colts x2, jaguars x2, raiders x2, steelers x2, cardinals, vikings,
+49ers), dated 2026-08-13..2026-08-29, sit on preseason home games. The team
+page's upcoming-promos list renders all 17 as ordinary rows, but every
+schedule-joined surface on the same page denies the date exists: the season
+calendar renders those days as disabled cells with no category dot and no
+click (August is the DEFAULT month view right now, so the current live render
+is an entirely inert grid directly above a list advertising August events),
+the row's modal falls back to the promo-only legacy body instead of the game
+body, and the Games stat counts 17 regular-season games as if August held
+nothing. The promos are real — the pipeline deliberately ingested preseason
+(promo-pipeline session, 2026-08-05: 49 game docs, seasonType `preseason`,
+NFL games 272 to 321) because clubs publish exactly these family promos.
+
+**Where it lives.** The value filter is `isRegularSeasonGame`
+(`src/lib/types.ts:267-268`), applied in `getGamesForTeam` at
+`src/lib/data.ts:787`, so every downstream date-join is built from a game set
+with the 49 preseason docs already dropped: the calendar's
+`gameCtxsByDate` (`src/components/redesign/CalendarGrid.tsx:83-93`), and the
+list's `homeCtxByDate` (`src/components/promo-list.tsx:182-191`, `contextsFor`
+at `:191` returning null). `getTeamPromos` (`src/lib/data.ts:146-154`) has no
+game awareness at all, which is why the promos sail through. The calendar's
+specific denials: `hasContent = hasGamesData ? !!firstGame : hasPromos`
+(`CalendarGrid.tsx:309`), dots from `firstGame?.promos` only (`:316`), the
+detail area maps only `gameCtxsByDate` when `hasGamesData` (`:431-465`), and
+`nextUpcomingKey` considers only game dates (`:139-151`). The modal fallback is
+`UpcomingPromoModal.tsx:105-125`. The Games stat is
+`RedesignTeamPage.tsx:185`. Note the filter was merged as a deliberate
+pre-ingest guard (`aa677cb`, merge `7583724`); the ingest then ran from the
+still-unmerged `feature/nfl-preseason-ingest` (`ccf4e54`, closeout `3ef077d`),
+and the sequel — rendering preseason in some deliberate form — never landed.
+
+**Why it matters.** The page contradicts itself: the list says an event exists
+on Aug 15, the calendar four hundred pixels up says the day is empty, and
+nothing explains the difference. Clicking through the calendar can never find
+the promo. It also splits analytics: these rows fire `promo_card_tap` where
+every game-backed row fires `game_tap`, so per-game engagement reads
+undercount exactly the family-audience promos NFL clubs actually publish.
+Bounded to the schedule-joined surfaces: the today board, digests, venue
+hubs, aggregators and JSON-LD all render promos without a games join and are
+internally consistent.
+
+**Candidate fix shapes.**
+
+1. **Calendar-side join to promos (web only, keep the filter).** When
+   `hasGamesData`, let a promo-bearing date be a live cell: `hasContent`
+   gains `|| hasPromos`, dots gain `cell.promos`, and the detail area renders
+   `LegacyPromoExpand` for a selected date with promos but no game contexts
+   (the component and its analytics path already exist; `CalendarGrid.tsx:309`,
+   `:316`, `:431-465`, plus `nextUpcomingKey` at `:139-151`). Effort **M**.
+   Cheapest consistent state; generalizes to any promo whose date lacks a
+   home game (which is also this bug's detection surface). Does not give
+   preseason rows a game body, opponent, or schedule presence.
+2. **Thread preseason through as first-class, tagged schedule data.** Pass
+   `seasonType` to the UI, render preseason cells/rows with an explicit
+   Preseason badge, and keep the Games stat and ScheduleBlock's bye
+   computation regular-season-only. Effort **L**. Full fidelity and matches
+   the recorded pipeline decision that preseason is in scope — but the
+   filter's own comment documents the trap: preseason week numbering (HOF
+   clubs play 4) collides with the regular week grid, and the consumer set is
+   wide (ScheduleBlock, StatScoreboard, capture chips, homepage
+   `resolveCardContexts`, `away_game_expanded` volume).
+3. **Suppress preseason promos on team pages until 2 lands.** Dominated:
+   promo docs carry no seasonType marker (pipeline `SIGNATURE_FIELDS` has
+   only `week`/`date`), so identifying them web-side needs the very games
+   join being avoided, and it hides real content against the recorded
+   decision in `ccf4e54`.
+
+**Risks and couplings.** Any shape changes prerendered HTML on 10+ pages —
+rebuild byte-identity baselines same-day, and revalidate the pages (ISR
+86400). Shape 1 is a client-component change; SSR/client first render must
+keep agreeing on the omitted lazy-mount details (the existing hydration
+contract at `CalendarGrid.tsx:446-448`). Analytics dashboards reading
+`game_tap` alone will see `promo_card_tap` volume appear on game-mode
+calendars. Self-resolving for 2026 after Aug 29, and returns every preseason.
+
+**Severity: Medium.** User-visible contradiction on 10 live pages today, in
+the default calendar month, but the content itself renders in the list and
+nothing is lost or corrupted.
+
+---
+
+## 13. Jets "Inspire Change" promo stores the wrong opponent (Patriots for Raiders)
+
+**What it is.** `teams/new-york-jets/promos/20c8842bebdf87aa` ("Inspire
+Change", date 2026-11-01, week 8, type theme) stores `opponent: "Patriots"`.
+Three independent witnesses say Raiders: the game doc
+`nfl-2026-11-01-las-vegas-raiders-at-new-york-jets` (week 8, away
+`las-vegas-raiders`), the promo's own `week: 8`, and sibling promo
+`7c8e5fa03534836e` ("Las Vegas Raiders Game", same date, same `sourceUrl`,
+`opponent: "Raiders"`). The only Patriots visit is
+`nfl-2026-12-27-new-england-patriots-at-new-york-jets`, week 16. Extraction
+mis-association from the club's game-themes article
+(`newyorkjets.com/news/jets-2026-game-themes-giveaways-07-22-2026`); the
+pipeline's week cross-check passed because only the opponent is wrong.
+
+**Where it shows.** Everywhere `promo.opponent` renders: the Jets team-page
+row prints "vs Patriots" (`src/components/redesign/RedesignPromoRow.tsx:179-183`)
+while the same row's click opens the shared game modal on the Raiders game
+(`src/components/promo-list.tsx:182-191` finds the Nov 1 home context;
+`UpcomingPromoModal.tsx:105-115` renders it), and the calendar's Nov 1 cell
+shows "vs LV" (`CalendarGrid.tsx:348-353`) — the contradiction is one click
+apart on one page. Also the SEO prose "(vs Patriots)"
+(`src/components/team-content-sections.tsx:249-344`), the theme-nights
+aggregator (`src/components/aggregator-paginated-groups.tsx:105-106`), the
+today board on 2026-11-01 (same row component), the weekly digest email
+(`src/lib/email.ts:264`, cron live in execute mode per entry 1), and the app
+API (`src/app/api/my-teams/promos/route.ts:63`).
+
+**The correction path.** One-doc hand-fix script following the
+`scripts/populate-arena-venue-fixes.ts` convention: dry-run default,
+`--execute` flag, idempotent (re-run prints no-op), logged before/after,
+invoked via `tsx --env-file=.env.local --require ./scripts/stub-server-only.cjs`.
+One field on one doc: `opponent: "Patriots" -> "Raiders"`. Then POST
+`/api/revalidate` for `/nfl/new-york-jets` (page is ISR 86400, so the wrong
+string otherwise lives up to a day past the write). The fix is
+rescan-stable: `opponent` is in the pipeline's HOLD bucket
+(`promo-pipeline/lib/scanner/promo-diff.js:32`), so a future scan
+re-extracting "Patriots" HOLDs as `field-mod:opponent` rather than reverting
+— but it will keep holding on every scan until the guard below or the source
+association is fixed, which is recurring review noise, not data risk.
+
+**The pipeline guard (separate change, separate repo).** The spine join
+already holds the authoritative opponent and does not check it:
+`joinPromo` in `promo-pipeline/lib/scanner/season-gate.js` returns
+`opponent: game.awayTeamSlug` (`:139`, `:161`) and cross-checks only `week`
+(the 7.3 `WEEK_DISAGREE` HOLD at `:146-153`). Shapes:
+
+1. **Cross-check and HOLD**, mirroring 7.3: extracted opponent display name
+   vs spine away slug; mismatch HOLDs. Needs a nickname-to-slug map
+   (club names live in `team-configs/nfl.js`) and tests beside
+   `test/season-gate.test.js`. Effort **S-M**. Consistent with the pipeline's
+   "two sources disagreeing establishes nothing" doctrine.
+2. **Overwrite from the spine**: writer stamps opponent from
+   `game.awayTeamSlug` regardless of extraction. Fixes the class silently but
+   needs slug-to-display-name mapping for every league sharing the writer,
+   and destroys exactly the disagreement signal shape 1 surfaces.
+3. **Verify-only warning** in `verify-promo.js` (report, never HOLD).
+   Cheapest, but this incident shows the mismatch survives to production, so
+   a warning nobody gates on may just be noise.
+
+**Risks and couplings.** The data fix itself is trivially bounded (one field,
+one doc) and is warranted regardless of which guard shape is chosen — the
+page currently states a falsehood and demonstrates the truth one click away.
+Time matters mildly: the promo enters digest windows and the today board
+around 2026-11-01. The guard touches the shared season-gate used by the
+weekly autonomous scans; scope it regular-season-first (the 7.3.2 preseason
+carve-out is precedent for how cross-checks get scoped). No byte-identity
+concern beyond the one page's ISR re-render.
+
+**Severity: Medium.** A factually wrong opponent is live on a team page, its
+aggregators, and the digest path; blast radius is one doc, and the modal
+already shows the correct game.
+
+---
+
+## 14. Ten TBD NFL games at non-Eastern venues store a one-day-early date
+
+**What it is.** When ESPN has not set a kickoff (`timeValid: false`), its
+API carries a placeholder time of 05:00Z — midnight Eastern on the true game
+date. Ingest derives the stored `date` as the VENUE-local day of that
+instant, so for Central/Mountain/Pacific venues the placeholder resolves to
+23:00/22:00/21:00 the PREVIOUS local day and the stored date lands one day
+early. Verified against all 24 `timeTbd` NFL docs: the 12 at Eastern venues
+(including both Indianapolis games — `America/Indiana/Indianapolis` is
+Eastern) are correct; the 10 at non-Eastern venues are all wrong. The 10:
+`nfl-2026-12-26-washington-commanders-at-minnesota-vikings` (wk16, true
+12-27), `nfl-2027-01-02-kansas-city-chiefs-at-los-angeles-chargers` (wk17,
+true 01-03), and eight wk18 docs stored 2027-01-09 (true 01-10):
+bears-at-vikings, lions-at-packers, raiders-at-chiefs, chargers-at-broncos,
+49ers-at-cardinals, seahawks-at-rams, buccaneers-at-saints,
+titans-at-texans.
+
+**Where it lives.** `src/lib/ingest-nfl.ts:313`
+(`const localDate = ymdInTz(event.date, venueInfo.tz)`), with `ymdInTz` at
+`:214-228` and `timeTbd` computed only afterwards at `:322`. The ingest
+already knows the time is a placeholder but derives the date from it anyway.
+The display side half-knows: `ScheduleBlock.tsx:196-198` refuses to format
+the placeholder TIME ("the stored 05:00 placeholder is a valid-looking UTC
+time, so formatting it would print a confident wrong kickoff") but prints the
+stored DATE unguarded at `:215` — the identical defect one field over.
+
+**Where it shows.** 17 live team pages, split by template: 8 zero-promo pages
+(commanders, chargers, lions, packers, broncos, buccaneers, saints, titans)
+print the wrong date in the crawlable ScheduleBlock; 9 populated pages
+(vikings, chiefs, bears, raiders, 49ers, cardinals, seahawks, rams, texans)
+place the game on the wrong CalendarGrid cell (`CalendarGrid.tsx:83-93` keys
+on `game.date`) and print the wrong day in the expand header
+(`GameExpand.tsx:23-29`).
+
+**Candidate fix shapes.**
+
+1. **Correct at ingest.** When `timeTbd`, derive the stored date in
+   `America/New_York` (the placeholder IS midnight ET on the provisional
+   date) — hoist the `timeTbd` computation above `:313` and switch the zone.
+   Then re-run `scripts/ingest-nfl-schedule.ts --execute` (manual, no cron)
+   and **delete the 10 stale docs**: the date is baked into the doc id
+   (`:328`) and writes are merge-only upserts (`:381-397`), so the corrected
+   docs get NEW ids and the wrong ones are stranded, rendering as phantom
+   duplicate games on every affected page. Finish with `/api/revalidate` for
+   the 17 pages. Effort **M**. Within this shape, "suppress until timeValid"
+   is dominated: ScheduleBlock invents "Bye week, no game" rows for missing
+   weeks (`ScheduleBlock.tsx:96-105`), so suppression converts a wrong date
+   into a false bye label.
+2. **Correct at display.** When `timeTbd`, render the row's date as
+   provisional ("Jan 10, date/time TBD" or week-only) in ScheduleBlock — and
+   equivalently in the expand header; a calendar cell cannot render "date
+   TBD" at all, a cell IS a date. Effort **S** for ScheduleBlock alone, **M**
+   for all surfaces. Honest for wk18, where the Sat/Sun split genuinely is
+   undecided — but it leaves the wrong date in Firestore, where the pipeline
+   spine reads it: season-gate joins promos BY DATE and returns `game.date`
+   as authoritative, so a club promo published for the true date HOLDs as
+   NO_MATCH and one joined through the wrong doc inherits the wrong date (no
+   current promo sits on the 10 dates — verified — but wk16-18 promos will as
+   clubs publish). It also leaves the wrong doc ids, so the duplicate-doc
+   hazard below still fires.
+3. **Both.** Shape 1 for the data plus shape 2's provisional wording as a
+   display hedge for the flex window. Effort **M**.
+
+**The structural hazard either way.** Ingest has no delete path. ANY
+correction that changes a game's date — this fix, and every future flex move
+— mints a new doc id and strands the old doc, and the routine post-flex
+re-ingest will therefore create duplicates from these 10 docs even if
+nothing else is done. Whichever shape is chosen should ship with a stale-doc
+sweep (e.g. dedupe on `espnGameId`, keep newest `ingestedAt`), because the
+next flex announcement turns this Medium into a live incident on a normal
+path.
+
+**Risks and couplings.** Re-ingest is a prod Firestore write from a manual
+script — dry-run first, per the script's own contract. Doc-id churn touches
+anything keyed on game id (analytics `game_id` payloads change for the 10).
+17 pages of prerendered HTML change: rebuild byte-identity baselines
+same-day and revalidate (ISR 86400). Sequence ahead of any preseason
+schedule-threading work (entry 12, shape 2) so that builds on corrected
+dates.
+
+**Severity: Medium.** Wrong dates in crawlable HTML on 17 live pages, but
+wk16-18 is months out and times will be flexed before then; the escalation
+risk is the stranded-doc duplicate mechanism, which is why this is recorded
+now rather than at flex time.
