@@ -80,6 +80,7 @@ function GameExpandRow({
   teamName,
   showDate,
   surface = 'web_team_page',
+  showOpponentLink = true,
 }: {
   dateStr: string;
   ctx: GameContext;
@@ -91,6 +92,11 @@ function GameExpandRow({
    *  team-page value so existing call sites are unchanged; the World Cup host
    *  card passes 'web_world_cup' so its modal CTA clicks attribute to the hub. */
   surface?: AnalyticsSurface;
+  /** ScheduleRow passes false: it renders its own always-visible (and
+   *  tracked) opponent anchor above this expand, and two near-identical
+   *  links to one destination in a single li is screen-reader stutter with
+   *  split instrumentation. Every other caller keeps the link. */
+  showOpponentLink?: boolean;
 }) {
   const { game, isHome, opponentTeam, opponentVenue, promos } = ctx;
   const timeLabel = game.timeTbd ? 'TBD' : formatGameTime(game.gameTimeTz, game.gameTime, game.date);
@@ -211,13 +217,15 @@ function GameExpandRow({
                 variant="modal-row"
               />
             )}
-            <a
-              href={`/${opponentTeam.sportSlug}/${opponentTeam.id}`}
-              className="inline-flex items-center gap-1 text-[11px] font-rd tracking-[0.08em] uppercase text-rd-ink-soft hover:text-rd-ink transition-colors"
-            >
-              View {oppName} full schedule
-              <IconArrowRight size={13} stroke={2} />
-            </a>
+            {showOpponentLink && (
+              <a
+                href={`/${opponentTeam.sportSlug}/${opponentTeam.id}`}
+                className="inline-flex items-center gap-1 text-[11px] font-rd tracking-[0.08em] uppercase text-rd-ink-soft hover:text-rd-ink transition-colors"
+              >
+                View {oppName} full schedule
+                <IconArrowRight size={13} stroke={2} />
+              </a>
+            )}
           </>
         )}
       </CtaTray>
@@ -234,6 +242,7 @@ export function GameExpand({
   teamName,
   surface = 'web_team_page',
   showTeamLink = false,
+  showOpponentLink = true,
 }: {
   dateStr: string;
   contexts: GameContext[];
@@ -248,6 +257,9 @@ export function GameExpand({
    *  the team page. Gated explicitly (not inferred from surface) because the
    *  team-page list surface is also on the team page. */
   showTeamLink?: boolean;
+  /** See GameExpandRow — ScheduleRow passes false because it renders its own
+   *  tracked opponent anchor outside the expand. */
+  showOpponentLink?: boolean;
 }) {
   return (
     <div className="space-y-4">
@@ -261,6 +273,7 @@ export function GameExpand({
           teamName={teamName}
           showDate={i === 0}
           surface={surface}
+          showOpponentLink={showOpponentLink}
         />
       ))}
       {showTeamLink && team && (

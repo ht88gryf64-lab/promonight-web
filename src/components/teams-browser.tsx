@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import type { Team } from '@/lib/types';
 import { LEAGUE_ORDER, SPORT_ICONS } from '@/lib/types';
 import { track } from '@/lib/analytics';
@@ -28,6 +29,21 @@ const ALL = 'All' as const;
 const CFB_CHIP = 'CFB' as const;
 type ActiveLeague = typeof ALL | (typeof LEAGUE_ORDER)[number] | typeof CFB_CHIP;
 
+// The ?league= subscription, quarantined in a null-rendering child so the
+// useSearchParams static-generation bailout stops at ITS Suspense boundary
+// instead of swallowing the browser: the 167-card grid must stay in the
+// prerendered HTML. Reading window.location once on mount is not enough — a
+// same-route client navigation (BrandBar "Teams" tap while a filter is
+// active, back/forward) never remounts this tree, and the pill would desync
+// from the URL.
+function LeagueParamReader({ onParam }: { onParam: (param: string | null) => void }) {
+  const league = useSearchParams().get('league');
+  useEffect(() => {
+    onParam(league);
+  }, [league, onParam]);
+  return null;
+}
+
 export function TeamsBrowser({ teams, promoCounts, variant = 'dark' }: TeamsBrowserProps) {
   const light = variant === 'light';
   const cfbLive = isCfbHubLive();
@@ -35,12 +51,36 @@ export function TeamsBrowser({ teams, promoCounts, variant = 'dark' }: TeamsBrow
   const { starred, isHydrated } = useStarredTeams();
   const starredSet = useMemo(() => new Set(starred), [starred]);
 
-  // Fires once on initial mount so dashboards can attribute /teams page
-  // views distinctly from /teams?league=X reloads. Subsequent filter changes
-  // ride team_picker_tab_change, which already covers tab cadence.
-  useEffect(() => {
-    track('teams_browser_view', { league_filter: ALL });
-  }, []);
+  // URL -> state sync, reactive for the life of the page (arrival deep link,
+  // same-route nav to bare /teams, back/forward, and the replaceState echo of
+  // a pill tap). SSR and first client render stay All, so hydration matches
+  // and the full grid stays in the prerendered HTML; a valid param flips the
+  // pill right after. The sync never fires team_picker_tab_change (it is not
+  // a user tap); the first invocation fires teams_browser_view with the
+  // resolved arrival filter so dashboards can attribute /teams views
+  // distinctly from /teams?league=X arrivals.
+  const paramToLeague = useCallback(
+    (param: string | null): ActiveLeague => {
+      if (param && (LEAGUE_ORDER as readonly string[]).includes(param)) {
+        return param as ActiveLeague;
+      }
+      if (param === CFB_CHIP && cfbLive) return CFB_CHIP;
+      return ALL;
+    },
+    [cfbLive],
+  );
+  const viewFired = useRef(false);
+  const syncFromParam = useCallback(
+    (param: string | null) => {
+      const league = paramToLeague(param);
+      setActive(league);
+      if (!viewFired.current) {
+        viewFired.current = true;
+        track('teams_browser_view', { league_filter: league });
+      }
+    },
+    [paramToLeague],
+  );
 
   // Filter and partition:
   //
@@ -78,10 +118,18 @@ export function TeamsBrowser({ teams, promoCounts, variant = 'dark' }: TeamsBrow
       to_league: next,
     });
     setActive(next);
+    // Keep the URL in step with the pill so refresh, share, and back/forward
+    // restore what the user is looking at. replaceState, not push: a filter
+    // flip is not a new history entry. Next syncs this with useSearchParams,
+    // which echoes through LeagueParamReader as a no-op setActive.
+    window.history.replaceState(null, '', next === ALL ? '/teams' : `/teams?league=${next}`);
   };
 
   return (
     <div>
+      <Suspense fallback={null}>
+        <LeagueParamReader onParam={syncFromParam} />
+      </Suspense>
       {/* League filter pills */}
       <div className="flex flex-wrap gap-2 mb-8">
         <FilterPill

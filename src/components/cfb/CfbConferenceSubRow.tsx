@@ -16,7 +16,7 @@ export function CfbConferenceSubRow({
   surface,
 }: {
   light?: boolean;
-  surface: 'homepage' | 'teams_page';
+  surface: 'homepage' | 'teams_page' | 'team_page';
 }) {
   const pill = light
     ? 'rounded-full border px-4 py-1.5 font-rd text-[12px] font-semibold uppercase tracking-[0.08em] transition-colors border-rd-line-strong bg-rd-card text-rd-ink-soft hover:border-rd-ink hover:text-rd-ink'

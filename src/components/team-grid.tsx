@@ -81,10 +81,11 @@ interface TeamGridProps {
   // Forwarded to each TeamCard. Default "promos" matches all-time counts;
   // pass "upcoming" when promoCounts come from a future-only fetch.
   countLabel?: string;
-  // Surface for analytics. "homepage" today; "teams_page" reserved for when
-  // /teams adopts this picker. Drives both team_picker_tab_change and the
-  // surface field forwarded to each TeamCard's team_tile_tap.
-  surface?: 'homepage' | 'teams_page';
+  // Surface for analytics. "homepage" and "teams_page" are the grid pickers;
+  // "team_page" is the team-page internal-linking surfaces. Drives both
+  // team_picker_tab_change and the surface field forwarded to each
+  // TeamCard's team_tile_tap.
+  surface?: 'homepage' | 'teams_page' | 'team_page';
   // 'dark' (default) is the live picker, byte-identical when the gate is off.
   // 'light' re-skins the tabs (charcoal-active pills) + cards for the redesign;
   // all geo/starred logic + analytics events are unchanged.

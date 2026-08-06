@@ -181,6 +181,15 @@ export function ScheduleBlock({ contexts, team, teamName }: ScheduleBlockProps) 
             const { game, isHome, opponentTeam } = ctx;
             const oppName = opponentTeam ? teamDisplayName(opponentTeam) : 'TBD';
 
+            // Away rows get a visible opponent anchor under the toggle. Home
+            // rows do not: home is this team's own surface, and the away
+            // expand (parking/hotels) is where cross-team travel intent lives.
+            // Computed here so the row stays a strings-only client component.
+            const opponentHref =
+              !isHome && opponentTeam
+                ? `/${opponentTeam.sportSlug}/${opponentTeam.id}`
+                : null;
+
             // Kickoff: branch on timeTbd BEFORE formatting. The stored 05:00
             // placeholder is a valid-looking UTC time, so formatting it would
             // print a confident wrong kickoff that no field can flag.
@@ -208,6 +217,8 @@ export function ScheduleBlock({ contexts, team, teamName }: ScheduleBlockProps) 
                 kickoffLabel={kickoffLabel}
                 venueLabel={venueLabel}
                 locationLabel={locationLabel}
+                opponentHref={opponentHref}
+                opponentName={opponentHref ? oppName : null}
                 team={team}
                 teamSlug={team.id}
                 teamName={teamName}
