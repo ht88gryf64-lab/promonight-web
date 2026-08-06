@@ -44,11 +44,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   });
 
   // CFB vertical: the /cfb hub + 86 team pages. Gated on the SAME
-  // LEAGUE_HUB_REGISTRY live flag as the nav (so the sitemap follows go-live),
-  // and fail-closed on a read error like the playoff hub. Flows to the IndexNow
-  // deploy hook automatically (getAllSitemapUrls -> sitemap()).
+  // LEAGUE_HUB_REGISTRY live flag as the nav (so the sitemap follows go-live).
+  // Flows to the IndexNow deploy hook automatically (getAllSitemapUrls ->
+  // sitemap()).
+  //
+  // FAIL LOUDLY, same treatment as the venueHubs read below: this used to be
+  // `.catch(() => [])`, which on any Firestore error served a complete-looking
+  // sitemap silently missing all 86 CFB team pages (and the IndexNow hook
+  // skipped them too). A single collection read cannot partially succeed, so
+  // the honest outcomes are the full CFB set or a failed render (build failure
+  // at deploy time; the deployed sitemap.xml is static and cannot break at
+  // runtime), never a silent hole.
   const cfbLive = isCfbHubLive();
-  const cfbSchoolIds = cfbLive ? await getAllCfbSchoolIds().catch(() => []) : [];
+  const cfbSchoolIds = cfbLive
+    ? await getAllCfbSchoolIds().catch((err) => {
+        console.error('[sitemap] cfbSchools read failed; refusing to serve a sitemap missing the CFB set', err);
+        throw err;
+      })
+    : [];
   const cfbHubEntries = cfbLive
     ? [
         {
