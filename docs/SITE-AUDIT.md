@@ -45,10 +45,10 @@ PromoNight is in a confirmed growth phase as of mid June 2026. The May 1-8 Bing 
 
 ### MEASUREMENT BOUNDARY: analytics instrumentation fixes [MANUAL, added 2026-08-07]
 
-- Deploy timestamp: PENDING MERGE. Stamp the exact production deploy time (UTC) of
-  branch feature/analytics-instrumentation here the moment it ships; every statement
-  in this block keys off that instant. DO NOT let this branch deploy without filling
-  this line in.
+- Deploy timestamp: 2026-08-07T16:59:27Z (UTC). That is the instant production
+  deployment dpl_5nCMhRV3woWGWqHXt4okZTuKiTMj (merge commit c42d376) reached READY
+  and took the getpromonight.com alias. Every statement in this block keys off that
+  instant: events before it are the old instrumentation, events after it are the new.
 - What changed at the boundary (two fixes, one deploy, deliberately inseparable):
   1. page_view deferral fix: PageViewTracker's requestIdleCallback now has a 500ms
      deadline plus a pagehide/visibilitychange flush and a sent-latch, and teardown
