@@ -43,6 +43,53 @@ PromoNight is in a confirmed growth phase as of mid June 2026. The May 1-8 Bing 
   establish the third number, which becomes the Raptive-facing figure.
   Property ID 534233585 confirmed to map to measurement ID G-N2M0M355LX.
 
+### MEASUREMENT BOUNDARY: analytics instrumentation fixes [MANUAL, added 2026-08-07]
+
+- Deploy timestamp: PENDING MERGE. Stamp the exact production deploy time (UTC) of
+  branch feature/analytics-instrumentation here the moment it ships; every statement
+  in this block keys off that instant. DO NOT let this branch deploy without filling
+  this line in.
+- What changed at the boundary (two fixes, one deploy, deliberately inseparable):
+  1. page_view deferral fix: PageViewTracker's requestIdleCallback now has a 500ms
+     deadline plus a pagehide/visibilitychange flush and a sent-latch, and teardown
+     emits bypass PostHog's batch queue (sendBeacon + send_instantly; posthog-js's
+     own unload handler drains the queue first, so a batched capture would die with
+     the page). Fast-bounce visits that previously produced $pageleave with no
+     page_view now record their view. Also fixes the scoring-route return leg
+     (A -> /best-promos -> A fired nothing on the return; it now fires).
+     KNOWN RESIDUAL: bfcache back-forward restores still produce $pageleave without
+     a page_view (nothing re-arms the tracker on pageshow/persisted; pre-existing
+     behavior, deliberately out of scope here). $pageleave can therefore still
+     slightly exceed page_view on mobile-heavy days AFTER the deploy; do not read
+     that residual as the fix failing.
+  2. GA4 attribution split: track() no longer sends source / source_medium /
+     source_campaign to GA4 (PostHog keeps them). A GA4 event param literally named
+     'source' was overriding native attribution with the pn_attribution cookie's
+     vocabulary.
+- TREND COMPARISONS ACROSS THIS BOUNDARY ARE INVALID, on two axes at once:
+  - LEVEL: PostHog page_view steps UP an estimated 5-8% overnight (recovered fast
+    bounces). GA4 page_view also steps up (same recovered events; both sinks lost
+    them when the idle callback never ran). A week-over-week read that crosses the
+    boundary reads as growth that is actually measurement.
+  - GA4 SOURCE MIX: the polluted buckets (www.google.com/*, bare 'direct'/*, blank
+    mediums, and part of the (not set) population) stop being fed and their sessions
+    reappear inside google/organic, bing/organic, (direct)/(none). Roughly 15% of
+    sessions re-shuffle across source labels. Any GA4 source/channel trend crossing
+    the boundary compares different labeling regimes, not different behavior.
+- THE ~1.65x GA4-over-PostHog PAGE_VIEW RATIO WILL NOT CLOSE, and that is expected,
+  not a failed fix. The dominant cause of the gap is NOT the deferral: it is the
+  posthog-js pre-init drop window. track() silently drops the PostHog branch (no
+  queue, no retry) for any event fired before the posthog-js dynamic import resolves,
+  while the inline gtag stub queues the same event into dataLayer from hydration.
+  Early events on first visits and slow connections therefore reach GA4 and never
+  reach PostHog. Fixing that (a pre-init buffer in track()) is a DOCUMENTED FOLLOW-UP,
+  deliberately out of scope for this branch. Until it ships: GA4 remains the
+  canonical traffic number (the Raptive-facing figure), PostHog remains the floor.
+- Minor known quirks, noted not fixed: ScheduleRow's away-row team_tile_tap fires on
+  onMouseDown, so desktop right-clicks over-count slightly and keyboard activation
+  emits nothing. Immaterial at current volume; re-check before reading small
+  from_tab counts as CTR.
+
 ### Bing Search [LIVE, daily June 1-10]
 - Clicks: settled to ~37/day weekday after a June 1-4 peak of 41.5; recent 4-day avg ~28/day
 - Impressions: ~1,300/day
