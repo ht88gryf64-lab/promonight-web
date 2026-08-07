@@ -17,16 +17,18 @@ import { TrackedTapLink } from '@/components/analytics/TrackedTapLink';
 // primetime group (splitPrimetime).
 //
 // CARD TREATMENT lifted from the CFB WeekCard/DiagonalFill pair
-// (src/components/cfb/hub/blocks.tsx): diagonal 62/38 split with the HOME
-// wedge LEFT (dominant — the matchup anchor points at the home page and only
-// the home club's promos can land on the game), two stacked primary→secondary
-// fades, the §14b seam hairline when the primaries sit too close in luminance
-// (rivalryBlockColors returns `divider` — this is what keeps Raiders-at-
-// Steelers-class pairings readable; no contrast fallback exists by ruling),
-// and the bottom-heavy scrim. NOTE THE DELIBERATE DIVERGENCE: the TITLE reads
-// natural order "Broncos at Chiefs" (away first) while the WEDGES are
-// home-left — title order and wedge order disagree by design, per ruling;
-// this is not a bug. Cards are dark islands on the cream page, same as CFB.
+// (src/components/cfb/hub/blocks.tsx): diagonal 62/38 split, two stacked
+// primary→secondary fades, the §14b seam hairline when the primaries sit too
+// close in luminance (rivalryBlockColors returns `divider` — what keeps
+// near-black pairings readable; no contrast fallback exists by ruling), and
+// the bottom-heavy scrim. WEDGE ORDER (settled 2026-08-07, third ruling, on
+// evidence): the wedge FOLLOWS THE TITLE — AWAY left, HOME right, corner
+// labels in the same order. CFB titles use a directionless separator
+// ("California · UCLA") so its home-left wedge cannot contradict them; NFL
+// titles use "at", which encodes direction, and a home-left wedge read
+// against "Seahawks at Broncos" put the card in the opposite order to its
+// own title. All three — corners, wedges, title — now read the same
+// direction. Cards are dark islands on the cream page, same as CFB.
 //
 // Light-theme adaptations (ruled): section headings use the redesign's ink
 // heading scale, never CFB's amber mono caps; the on-card meta line tone is
@@ -88,10 +90,11 @@ function formatWindow(startYmd: string, endYmd: string): string {
   return `${f(startYmd).toUpperCase()} – ${f(endYmd).toUpperCase()}`;
 }
 
-// The CFB DiagonalFill, home-left. `divider` fires on close primary luminance
-// (the black-on-black seam mechanism, carried over unchanged).
+// The CFB DiagonalFill with the NFL wedge order: LEFT wedge = away team,
+// right field = home team, matching the title's "away at home". `divider`
+// fires on close primary luminance (the seam mechanism, carried unchanged).
 function DiagonalFill({ home, away }: { home: Team; away: Team }) {
-  const { pa, pb, sa, sb, divider } = rivalryBlockColors(home, away);
+  const { pa, pb, sa, sb, divider } = rivalryBlockColors(away, home);
   return (
     <>
       <div
@@ -176,8 +179,8 @@ function NflGameCard({
       }`}
     >
       <DiagonalFill home={home} away={away} />
-      <CornerName team={home} side="left" />
-      <CornerName team={away} side="right" />
+      <CornerName team={away} side="left" />
+      <CornerName team={home} side="right" />
       <div className="absolute inset-x-0 bottom-0 z-10 p-3.5">
         <div
           className="text-[9px] font-bold tracking-wider"
