@@ -2,7 +2,10 @@
 //
 // Every event in the app goes through `track(event, props)`. The function
 // auto-attaches page_path, device_class and the first-party source_* triplet
-// so call sites only pass event-specific properties.
+// so call sites only pass event-specific properties. The source_* triplet is
+// PostHog-only: the GA4 sink strips it before emitting, because a GA4 event
+// parameter named `source` overrides GA4's native session attribution (see
+// the comment inside track()).
 //
 // Legacy helpers (`event`, `pageview`, `trackInstallClick`, `trackAffiliateClick`)
 // are preserved so existing dashboards keep getting data — they now also feed
@@ -1052,7 +1055,26 @@ export function track<E extends AnalyticsEvent>(
 
   try {
     if (typeof window.gtag === 'function') {
-      window.gtag('event', eventName, enriched);
+      // GA4 gets the payload MINUS the attribution triplet, and that is the
+      // whole point of this block. GA4's ingestion treats an event parameter
+      // literally named `source` as manual traffic-source input (the bare
+      // source/medium/campaign names are Google's cross-platform manual
+      // campaign vocabulary) and stamps session_source with it VERBATIM,
+      // overriding GA4's own classification. That is where the polluted
+      // "www.google.com / organic" and bare "direct" session buckets came
+      // from: they are this cookie's vocabulary, which native GA4 processing
+      // ("google", "(direct)") can never produce. Roughly 15% of sessions
+      // were misattributed. source_medium/source_campaign map to nothing
+      // server-side, but they ride along in the strip so a null cookie read
+      // can no longer ship gtag's null-coerced empty strings either.
+      //
+      // PostHog keeps all three (they are its first-party channel model),
+      // and subscribers keep all three. Only the GA4 sink narrows.
+      const ga4Payload: Record<string, unknown> = { ...enriched };
+      delete ga4Payload.source;
+      delete ga4Payload.source_medium;
+      delete ga4Payload.source_campaign;
+      window.gtag('event', eventName, ga4Payload);
     }
   } catch {
     // Same — swallow.
