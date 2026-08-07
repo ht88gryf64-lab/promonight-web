@@ -83,10 +83,12 @@ export const TRACKED_SCHEMA_TYPES = [
 ] as const;
 
 // Per-template schema registry: which source files emit a template's JSON-LD,
-// and the EXPECTED tracked types. For `aggregator`, `expected` is the target
-// pattern from the audit doc / task brief (CollectionPage+ItemList+FAQPage);
-// the actual emission is Article+FAQPage, so this template surfaces a gap by
-// design (decision 5: record actual-vs-expected, do not fix the schema here).
+// and the EXPECTED tracked types. The registry records actual-vs-expected and
+// never fixes schema itself (decision 5). The old aggregator gap
+// (Article+FAQPage instead of CollectionPage+ItemList+FAQPage) was closed by
+// commit 09308df on 2026-06-15; the remaining known deviation is
+// /promos/today, which omits FAQPage because the page passes an empty faqs
+// array.
 export const SCHEMA_TEMPLATES: Array<{
   template: string;
   pageGlob: string;

@@ -18,10 +18,19 @@ import { archivoHouse } from '@/components/redesign/fonts-house';
 export const revalidate = 86400;
 
 const PAGE_URL = 'https://www.getpromonight.com/best-promos';
-const YEAR = new Date().getFullYear();
+// Season year is hardcoded deliberately (house SEO-copy rule: never
+// getFullYear() in titles or descriptions); bump when next-season content
+// is ready so the whole page flips at once.
+const SEASON_YEAR = 2026;
 const SERVER_FETCH_CAP = 300;
 const SERVER_FETCH_DAYS = 180;
+// The crawlable default view: the browser mounts with range '90d' and
+// server-renders its first PAGE_SIZE (50) cards. ITEMLIST_SCHEMA_CAP and
+// DEFAULT_VIEW_DAYS mirror those two values so the ItemList entries are
+// exactly the server-rendered cards and every declared count matches the
+// served DOM.
 const ITEMLIST_SCHEMA_CAP = 50;
+const DEFAULT_VIEW_DAYS = 90;
 
 function localYMD(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -32,16 +41,18 @@ function addDaysYMD(base: Date, days: number): string {
   return localYMD(d);
 }
 
-// Metadata interpolates four distinct variables (count, league set, year,
-// top score) per the three-variable rule so the title and description
-// can't collide with /best-promos/bobbleheads or /team-rankings.
+// Title and description carry no promo count: the old hardcoded cap
+// promised 300 while the served DOM carried fewer, and a live count would
+// churn the title every regeneration. Distinctness vs
+// /best-promos/bobbleheads and /team-rankings comes from the league set,
+// the score mechanics, and the phrasing.
 export const metadata: Metadata = {
-  title: `Best Sports Promo Nights of ${YEAR}: ${SERVER_FETCH_CAP} Top-Rated Giveaways`,
-  description: `Score-ranked list of ${SERVER_FETCH_CAP} top promotional events across MLB, MLS, and WNBA in ${YEAR}. Bobbleheads, jerseys, and theme nights ranked 0 to 100 by attendance cap, item value, sponsor presence, and highlight tier. Top score 100. Updated weekly.`,
+  title: `Best Sports Promo Nights of ${SEASON_YEAR}: Score-Ranked Giveaways`,
+  description: `Score-ranked promo nights across MLB, MLS, and WNBA in ${SEASON_YEAR}. Bobbleheads, jerseys, and theme nights ranked 0 to 100 by attendance cap, item value, sponsor presence, and highlight tier. Top score 100. Updated weekly.`,
   alternates: { canonical: PAGE_URL },
   openGraph: {
-    title: `Best Sports Promo Nights of ${YEAR}`,
-    description: `Score-ranked list of ${SERVER_FETCH_CAP} top promotional events across MLB, MLS, and WNBA. Updated weekly.`,
+    title: `Best Sports Promo Nights of ${SEASON_YEAR}`,
+    description: `Score-ranked promo nights across MLB, MLS, and WNBA. Updated weekly.`,
     url: PAGE_URL,
     type: 'website',
     images: [
@@ -49,7 +60,7 @@ export const metadata: Metadata = {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'PromoNight — score-ranked sports promos',
+        alt: 'PromoNight: score-ranked sports promos',
       },
     ],
   },
@@ -131,7 +142,13 @@ export default async function BestPromosPage() {
   // payload (ITEMLIST_SCHEMA_CAP cards). Done after the promo fetch so we
   // can scope the lookup to teams that actually appear in the schema,
   // rather than fetching for every scored team unconditionally.
-  const itemListPromos = promos.slice(0, ITEMLIST_SCHEMA_CAP);
+  // The ItemList mirrors the browser's server-rendered default view
+  // (90-day window, first 50 cards): the schema declares exactly the
+  // promos a crawler sees in the prerendered DOM.
+  const defaultViewEndYMD = addDaysYMD(now, DEFAULT_VIEW_DAYS);
+  const itemListPromos = promos
+    .filter((p) => p.date <= defaultViewEndYMD)
+    .slice(0, ITEMLIST_SCHEMA_CAP);
   const uniqueTeams = Array.from(
     new Map(itemListPromos.map((p) => [p.team.id, p.team])).values(),
   );
@@ -161,8 +178,8 @@ export default async function BestPromosPage() {
       <>
         <ScoredJsonLd
           url={PAGE_URL}
-          title={`Best Sports Promo Nights of ${YEAR}`}
-          description={`Score-ranked list of ${promos.length} top promotional events across MLB, MLS, and WNBA in ${YEAR}.`}
+          title={`Best Sports Promo Nights of ${SEASON_YEAR}`}
+          description={`Score-ranked list of ${promos.length} top promotional events across MLB, MLS, and WNBA in ${SEASON_YEAR}.`}
           lastUpdated={latestComputedAt || new Date().toISOString()}
           faqs={FAQS}
           itemListItems={itemListPromos}
@@ -177,15 +194,15 @@ export default async function BestPromosPage() {
                 <span>/</span>
                 <span className="text-white/60">Best promos</span>
               </div>
-              <p className="font-rd text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: '#ff5a78' }}>Best of {YEAR}</p>
-              <h1 className="rd-display mt-1 text-4xl uppercase leading-[0.95] text-white md:text-6xl">BEST SPORTS PROMO NIGHTS OF {YEAR}</h1>
+              <p className="font-rd text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: '#ff5a78' }}>Best of {SEASON_YEAR}</p>
+              <h1 className="rd-display mt-1 text-4xl uppercase leading-[0.95] text-white md:text-6xl">BEST SPORTS PROMO NIGHTS OF {SEASON_YEAR}</h1>
               <p className="mt-3 font-rd text-[11px] uppercase tracking-[0.12em] text-white/45">Last updated {lastUpdatedDisplay} · {promos.length} promos ranked</p>
             </div>
           </section>
 
           <div className="mx-auto max-w-4xl px-6 pb-20 pt-10">
             <p className="rounded-2xl border border-rd-line bg-rd-card p-5 font-rd text-[15px] leading-relaxed text-rd-ink-soft">
-              The {promos.length} best-scored sports promo nights of {YEAR} are ranked below from 100 down. Every entry pulls from official MLB, MLS, and WNBA team-promotion announcements and is scored 0 to 100 on attendance cap, item value, sponsor presence, and highlight tier. The list refreshes weekly with each Tuesday scan.
+              The {promos.length} best-scored sports promo nights of {SEASON_YEAR} are ranked below from 100 down. Every entry pulls from official MLB, MLS, and WNBA team-promotion announcements and is scored 0 to 100 on attendance cap, item value, sponsor presence, and highlight tier. The list refreshes weekly with each Tuesday scan.
             </p>
 
             <p className="mt-4 font-rd text-sm text-rd-ink-soft">
@@ -201,9 +218,7 @@ export default async function BestPromosPage() {
             </Suspense>
 
             <div className="mt-8">
-              <Suspense fallback={null}>
-                <BestPromosBrowser initialPromos={promos} ticketsPlacement="best_promos_card" trackingSurface="best_promos" inlineAnswers={INLINE_ANSWERS} variant="light" />
-              </Suspense>
+              <BestPromosBrowser initialPromos={promos} serverTodayYMD={todayYMD} ticketsPlacement="best_promos_card" trackingSurface="best_promos" inlineAnswers={INLINE_ANSWERS} variant="light" />
             </div>
 
             <section className="mt-16">
@@ -227,8 +242,8 @@ export default async function BestPromosPage() {
     <>
       <ScoredJsonLd
         url={PAGE_URL}
-        title={`Best Sports Promo Nights of ${YEAR}`}
-        description={`Score-ranked list of ${promos.length} top promotional events across MLB, MLS, and WNBA in ${YEAR}.`}
+        title={`Best Sports Promo Nights of ${SEASON_YEAR}`}
+        description={`Score-ranked list of ${promos.length} top promotional events across MLB, MLS, and WNBA in ${SEASON_YEAR}.`}
         lastUpdated={latestComputedAt || new Date().toISOString()}
         faqs={FAQS}
         itemListItems={itemListPromos}
@@ -246,25 +261,27 @@ export default async function BestPromosPage() {
           </div>
 
           <span className="font-mono text-[10px] tracking-[1.5px] uppercase text-accent-red">
-            Best of {YEAR}
+            Best of {SEASON_YEAR}
           </span>
           <h1 className="font-display text-4xl md:text-6xl tracking-[1px] mt-2">
-            BEST SPORTS PROMO NIGHTS OF {YEAR}
+            BEST SPORTS PROMO NIGHTS OF {SEASON_YEAR}
           </h1>
           <p className="font-mono text-[10px] tracking-[1.5px] uppercase text-text-muted mt-3">
             Last updated {lastUpdatedDisplay} · {promos.length} promos ranked
           </p>
           <p className="mt-5 text-text-secondary text-base leading-relaxed max-w-3xl">
-            The {promos.length} best-scored sports promo nights of {YEAR} are
+            The {promos.length} best-scored sports promo nights of {SEASON_YEAR} are
             ranked below from 100 down. Every entry pulls from official MLB,
             MLS, and WNBA team-promotion announcements and is scored 0 to 100
             on attendance cap, item value, sponsor presence, and highlight
             tier. The list refreshes weekly with each Tuesday scan.
           </p>
 
-          {/* useSearchParams inside both children requires a Suspense
-              boundary during prerender; matches the layout-level pattern
-              already in place for PageViewTracker. */}
+          {/* useSearchParams inside ScoringPageViewTracker requires a
+              Suspense boundary during prerender; matches the layout-level
+              pattern for PageViewTracker. The browser no longer needs one:
+              its params reader is quarantined internally so the ranked
+              list stays in the prerendered HTML. */}
           <Suspense fallback={null}>
             <ScoringPageViewTracker
               pageTitle="Best Sports Promo Nights"
@@ -275,14 +292,13 @@ export default async function BestPromosPage() {
           </Suspense>
 
           <div className="mt-10">
-            <Suspense fallback={null}>
-              <BestPromosBrowser
-                initialPromos={promos}
-                ticketsPlacement="best_promos_card"
-                trackingSurface="best_promos"
-                inlineAnswers={INLINE_ANSWERS}
-              />
-            </Suspense>
+            <BestPromosBrowser
+              initialPromos={promos}
+              serverTodayYMD={todayYMD}
+              ticketsPlacement="best_promos_card"
+              trackingSurface="best_promos"
+              inlineAnswers={INLINE_ANSWERS}
+            />
           </div>
 
           <section className="mt-16 pt-10 border-t border-border-subtle">

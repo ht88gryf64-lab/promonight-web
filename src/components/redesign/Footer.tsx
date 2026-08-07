@@ -26,6 +26,7 @@ const BROWSE_LINKS: FooterLink[] = [
   { label: 'Bobbleheads', href: '/promos/bobbleheads' },
   { label: 'Jersey giveaways', href: '/promos/jersey-giveaways' },
   { label: 'Theme nights', href: '/promos/theme-nights' },
+  { label: 'Food deals', href: '/promos/food-deals' },
   { label: 'All teams', href: '/teams' },
 ];
 

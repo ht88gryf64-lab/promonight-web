@@ -55,6 +55,11 @@ export async function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/promos/food-deals" className="text-text-secondary text-sm hover:text-white transition-colors">
+                  Food deals
+                </Link>
+              </li>
+              <li>
                 <Link href="/teams" className="text-text-secondary text-sm hover:text-white transition-colors">
                   All teams
                 </Link>

@@ -1,12 +1,12 @@
 'use client';
 
-import { useSearchParams } from 'next/navigation';
-import { useCallback, useMemo, useState } from 'react';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import type { ScoredPromoWithTeam } from '@/lib/types';
 import { track, type ScoringPageSurface } from '@/lib/analytics';
 import { ScoredPromoCard } from './scored-promo-card';
-import { LeagueFilter, type LeagueFilterValue } from './league-filter';
-import { DateRangeFilter, type DateRangeFilterValue } from './date-range-filter';
+import { LeagueFilter, LEAGUE_FILTER_VALUES, type LeagueFilterValue } from './league-filter';
+import { DateRangeFilter, DATE_RANGE_FILTER_VALUES, type DateRangeFilterValue } from './date-range-filter';
 import type { TicketsBlockPlacement } from '../affiliates/TicketsBlock';
 
 type InlineAnswerBlock = {
@@ -19,6 +19,10 @@ type InlineAnswerBlock = {
 
 type BestPromosBrowserProps = {
   initialPromos: ScoredPromoWithTeam[];
+  // The YMD the page fetched against. The browser's date window is anchored
+  // here rather than to a render-time clock so the prerendered HTML and the
+  // hydration render agree byte-for-byte; ISR re-anchors it with the data.
+  serverTodayYMD: string;
   ticketsPlacement: Extract<
     TicketsBlockPlacement,
     'best_promos_card' | 'best_promos_bobbleheads_card'
@@ -43,17 +47,36 @@ const RANGE_DAYS: Record<DateRangeFilterValue, number> = {
   season: 180,
 };
 
-function localYMD(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+function addDaysToYMD(ymd: string, days: number): string {
+  const [y, m, d] = ymd.split('-').map(Number);
+  const next = new Date(y, m - 1, d + days);
+  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`;
 }
-function addDaysYMD(base: Date, days: number): string {
-  const d = new Date(base);
-  d.setDate(d.getDate() + days);
-  return localYMD(d);
+
+// The ?league=/?range= subscription, quarantined in a null-rendering child
+// so the useSearchParams static-generation bailout stops at ITS Suspense
+// boundary instead of swallowing the browser: the ranked card list must
+// stay in the prerendered HTML (the old page-level boundary left zero
+// cards in served HTML). Reading window.location once on mount is not
+// enough: back/forward and same-route client navigations never remount
+// this tree, and the chips would desync from the URL.
+function ScoreParamsReader({
+  onParams,
+}: {
+  onParams: (league: string | null, range: string | null) => void;
+}) {
+  const searchParams = useSearchParams();
+  const league = searchParams.get('league');
+  const range = searchParams.get('range');
+  useEffect(() => {
+    onParams(league, range);
+  }, [league, range, onParams]);
+  return null;
 }
 
 export function BestPromosBrowser({
   initialPromos,
+  serverTodayYMD,
   ticketsPlacement,
   trackingSurface,
   inlineAnswers = [],
@@ -63,27 +86,41 @@ export function BestPromosBrowser({
   const labelClass = light
     ? 'font-rd text-[10px] tracking-[0.1em] uppercase text-rd-ink-faint mb-2'
     : 'font-mono text-[10px] tracking-[1.5px] uppercase text-text-muted mb-2';
-  const searchParams = useSearchParams();
-  const league = (searchParams.get('league') || 'All') as LeagueFilterValue;
-  const range = (searchParams.get('range') || '90d') as DateRangeFilterValue;
+  const pathname = usePathname();
+
+  // SSR and the first client render stay on the defaults so hydration
+  // matches and the default ranked list stays in the prerendered HTML; a
+  // valid URL param flips the chips right after via ScoreParamsReader.
+  const [league, setLeague] = useState<LeagueFilterValue>('All');
+  const [range, setRange] = useState<DateRangeFilterValue>('90d');
+
+  const syncFromParams = useCallback(
+    (leagueParam: string | null, rangeParam: string | null) => {
+      setLeague(
+        leagueParam && (LEAGUE_FILTER_VALUES as readonly string[]).includes(leagueParam)
+          ? (leagueParam as LeagueFilterValue)
+          : 'All',
+      );
+      setRange(
+        rangeParam && (DATE_RANGE_FILTER_VALUES as readonly string[]).includes(rangeParam)
+          ? (rangeParam as DateRangeFilterValue)
+          : '90d',
+      );
+    },
+    [],
+  );
 
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
-  // Date stamps recomputed at render time. Stable enough across normal
-  // session lengths; a session left open past midnight will re-derive on
-  // the next interaction and shift the window forward.
   const filtered = useMemo(() => {
-    const now = new Date();
-    const startYMD = localYMD(now);
-    const endYMD = addDaysYMD(now, RANGE_DAYS[range] ?? 90);
-
+    const endYMD = addDaysToYMD(serverTodayYMD, RANGE_DAYS[range] ?? 90);
     return initialPromos.filter((p) => {
       if (league !== 'All' && p.team.league !== league) return false;
-      if (p.date < startYMD) return false;
+      if (p.date < serverTodayYMD) return false;
       if (p.date > endYMD) return false;
       return true;
     });
-  }, [initialPromos, league, range]);
+  }, [initialPromos, serverTodayYMD, league, range]);
 
   // Reset visible count when filters change so the user doesn't see a tiny
   // visible window if they narrow filters with N previously loaded.
@@ -105,30 +142,57 @@ export function BestPromosBrowser({
     [inlineAnswers],
   );
 
-  // Stable handlers so the filter chips don't churn on every render.
-  // Both fire `score_filter_changed` with the surface + filter_type
-  // before the URL update. The from/to values carry the chip transition.
-  const handleLeagueChange = useCallback(
-    (from: LeagueFilterValue, to: LeagueFilterValue) => {
+  // Chip taps own the URL here (the chips render in controlled mode with
+  // no URL hooks). Same contract FilterChips implements for the URL-synced
+  // pages: default values are removed for clean URLs, unrelated params
+  // (utm etc.) are preserved, and replaceState (not push) keeps the back
+  // stack clean. Next syncs replaceState into useSearchParams, which
+  // echoes through ScoreParamsReader as a no-op state set.
+  const applyFilterParam = useCallback(
+    (paramKey: 'league' | 'range', next: string, defaultValue: string) => {
+      const params = new URLSearchParams(window.location.search);
+      if (next === defaultValue) {
+        params.delete(paramKey);
+      } else {
+        params.set(paramKey, next);
+      }
+      const qs = params.toString();
+      window.history.replaceState(null, '', qs ? `${pathname}?${qs}` : pathname);
+    },
+    [pathname],
+  );
+
+  // Both handlers fire `score_filter_changed` with the surface +
+  // filter_type before the URL update. The from/to values carry the chip
+  // transition. The URL-echo path (ScoreParamsReader) never tracks: it is
+  // not a user tap.
+  const handleLeagueSelect = useCallback(
+    (next: LeagueFilterValue) => {
+      if (next === league) return;
       track('score_filter_changed', {
         surface: trackingSurface,
         filter_type: 'league',
-        from,
-        to,
+        from: league,
+        to: next,
       });
+      setLeague(next);
+      applyFilterParam('league', next, 'All');
     },
-    [trackingSurface],
+    [league, trackingSurface, applyFilterParam],
   );
-  const handleRangeChange = useCallback(
-    (from: DateRangeFilterValue, to: DateRangeFilterValue) => {
+  const handleRangeSelect = useCallback(
+    (next: DateRangeFilterValue) => {
+      if (next === range) return;
       track('score_filter_changed', {
         surface: trackingSurface,
         filter_type: 'range',
-        from,
-        to,
+        from: range,
+        to: next,
       });
+      setRange(next);
+      applyFilterParam('range', next, '90d');
     },
-    [trackingSurface],
+    [range, trackingSurface, applyFilterParam],
   );
 
   const handleLoadMore = () => {
@@ -141,14 +205,18 @@ export function BestPromosBrowser({
 
   return (
     <div>
+      <Suspense fallback={null}>
+        <ScoreParamsReader onParams={syncFromParams} />
+      </Suspense>
+
       <div className="mb-6">
         <div className={labelClass}>Filter by league</div>
-        <LeagueFilter onChange={handleLeagueChange} variant={variant} />
+        <LeagueFilter value={league} onSelect={handleLeagueSelect} variant={variant} />
       </div>
 
       <div className="mb-8">
         <div className={labelClass}>Filter by date range</div>
-        <DateRangeFilter onChange={handleRangeChange} variant={variant} />
+        <DateRangeFilter value={range} onSelect={handleRangeSelect} variant={variant} />
       </div>
 
       <p className={light ? 'font-rd text-[11px] text-rd-ink-faint mb-4' : 'font-mono text-[11px] text-text-dim mb-4'}>
