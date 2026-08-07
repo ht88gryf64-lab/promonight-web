@@ -237,6 +237,26 @@ export function joinPromosToGames(
   return { byGameId, unmatched };
 }
 
+// ── Primetime subsection split ─────────────────────────────────────────────
+
+// Splits a bucket's games for the week container: `rest` renders as the main
+// slate, `primetime` as the labeled Primetime subsection inside the same
+// container (the approved shape: This Week stays the complete container, so a
+// fan scanning for the Sunday night game finds it inside, under its label).
+// REGULAR SEASON ONLY: preseason buckets return everything in `rest` — 19 of
+// the 22 preseason primetime flags are Friday-afternoon NFL Net airings, so a
+// preseason "Primetime" subsection would be noise wearing a label. Order is
+// preserved from bucket.games (kickoff-instant sorted).
+export function splitPrimetime(bucket: NflWeekBucket): { primetime: Game[]; rest: Game[] } {
+  if (bucket.seasonType !== 'regular') return { primetime: [], rest: bucket.games };
+  const primetime: Game[] = [];
+  const rest: Game[] = [];
+  for (const g of bucket.games) {
+    (g.broadcast?.isPrimetime === true ? primetime : rest).push(g);
+  }
+  return { primetime, rest };
+}
+
 // ── Per-club regular-season counts ─────────────────────────────────────────
 
 export interface NflClubCounts {
@@ -249,6 +269,16 @@ export interface NflClubCounts {
   // quantitative surface on the honest regular-season corpus.
   promos: number;
   promosRemaining: number;
+}
+
+// Team-card subtitle for the hub grid: promo count where promos exist, honest
+// home-game count where they do not ("9 home games" is correct in August and
+// matches what the team page says — never an apology). Counts are the
+// regular-season-only numbers from clubRegularSeasonCounts, so a
+// preseason-joined promo can never inflate a card.
+export function clubCardSubtitle(c: NflClubCounts): string {
+  if (c.promos > 0) return c.promos === 1 ? '1 promo this season' : `${c.promos} promos this season`;
+  return c.homeGames === 1 ? '1 home game' : `${c.homeGames} home games`;
 }
 
 export function clubRegularSeasonCounts(

@@ -9,6 +9,8 @@ import {
   selectWeekContext,
   joinPromosToGames,
   clubRegularSeasonCounts,
+  splitPrimetime,
+  clubCardSubtitle,
 } from '../nfl-week';
 
 // The (seasonType, week) invariant and the Tuesday fixed-week rollover, as
@@ -262,6 +264,65 @@ describe('joinPromosToGames', () => {
     const joined = joinPromosToGames(games, [promo('minnesota-vikings', '2026-12-26', 'Holiday Night')]);
     assert.deepEqual(Object.keys(joined.byGameId), ['real']);
     assert.equal(joined.unmatched.length, 0);
+  });
+});
+
+describe('splitPrimetime — the subsection is a grouping decision, regular season only', () => {
+  test('a regular week splits primetime out, preserving kickoff order in both groups', () => {
+    const [bucket] = buildWeekBuckets([
+      game({ id: 'tnf', date: '2026-10-08', gameTime: '00:15', week: 5, broadcast: { network: 'Prime Video', isPrimetime: true } }),
+      game({ id: 'early', date: '2026-10-11', gameTime: '17:00', week: 5, broadcast: { network: 'FOX', isPrimetime: false } }),
+      game({ id: 'snf', date: '2026-10-11', gameTime: '00:20', week: 5, broadcast: { network: 'NBC', isPrimetime: true } }),
+    ]);
+    const { primetime, rest } = splitPrimetime(bucket);
+    assert.deepEqual(primetime.map((g) => g.id), ['tnf', 'snf']);
+    assert.deepEqual(rest.map((g) => g.id), ['early']);
+  });
+
+  test('a preseason bucket NEVER yields a primetime subsection, whatever the flags say', () => {
+    // 19 of the 22 preseason primetime flags are Friday NFL Net airings — a
+    // labeled Primetime subsection there would be noise. The container still
+    // renders the games; they just stay in the main slate.
+    const [bucket] = buildWeekBuckets([
+      game({ id: 'p1', date: '2026-08-13', seasonType: 'preseason', week: 2, broadcast: { network: 'NFL Net', isPrimetime: true } }),
+      game({ id: 'p2', date: '2026-08-14', seasonType: 'preseason', week: 2, broadcast: { network: 'CBS', isPrimetime: false } }),
+    ]);
+    const { primetime, rest } = splitPrimetime(bucket);
+    assert.equal(primetime.length, 0);
+    assert.deepEqual(rest.map((g) => g.id), ['p1', 'p2']);
+  });
+
+  test('broadcast-null games (the 24 TBD docs) fall in rest, never primetime', () => {
+    const [bucket] = buildWeekBuckets([
+      game({ id: 'tbd', date: '2027-01-09', gameTime: '05:00', gameTimeTz: 'America/Chicago', week: 18, timeTbd: true, broadcast: null }),
+    ]);
+    const { primetime, rest } = splitPrimetime(bucket);
+    assert.equal(primetime.length, 0);
+    assert.equal(rest.length, 1);
+  });
+});
+
+describe('clubCardSubtitle', () => {
+  test('promo count where promos exist, home-game count where they do not', () => {
+    assert.equal(
+      clubCardSubtitle({ homeGames: 9, homeGamesRemaining: 9, promos: 17, promosRemaining: 17 }),
+      '17 promos this season',
+    );
+    assert.equal(
+      clubCardSubtitle({ homeGames: 9, homeGamesRemaining: 9, promos: 0, promosRemaining: 0 }),
+      '9 home games',
+    );
+  });
+
+  test('singular forms', () => {
+    assert.equal(
+      clubCardSubtitle({ homeGames: 9, homeGamesRemaining: 1, promos: 1, promosRemaining: 1 }),
+      '1 promo this season',
+    );
+    assert.equal(
+      clubCardSubtitle({ homeGames: 1, homeGamesRemaining: 0, promos: 0, promosRemaining: 0 }),
+      '1 home game',
+    );
   });
 });
 

@@ -8,7 +8,7 @@ import { IconChevronRight } from '@tabler/icons-react';
 import { chipInk } from '@/lib/chip-contrast';
 import { HubTeamSelector, ALL_DIVISIONS } from './HubTeamSelector';
 
-function TeamCard({ team }: { team: Team }) {
+function TeamCard({ team, subtitle }: { team: Team; subtitle?: string }) {
   const name = `${team.city} ${team.name}`;
   return (
     <a
@@ -26,7 +26,7 @@ function TeamCard({ team }: { team: Team }) {
       <span className="min-w-0 flex-1">
         <span className="block truncate font-rd text-[15.5px] font-semibold text-rd-ink">{name}</span>
         <span className="block font-rd text-[12.5px] text-rd-ink-faint transition-colors group-hover:text-rd-red">
-          Promotional schedule
+          {subtitle ?? 'Promotional schedule'}
         </span>
       </span>
       <IconChevronRight
@@ -56,6 +56,7 @@ export function HubTeamGrid({
   intro,
   selectorLabel,
   allLabel,
+  subtitleByTeamId,
 }: {
   groups: HubTeamGroup[];
   /** Super-header bands (MLB AL/NL). Empty => render groups flat (WNBA/MLS). */
@@ -70,6 +71,11 @@ export function HubTeamGrid({
   intro: string;
   selectorLabel: string;
   allLabel: string;
+  /** Optional per-team card subtitle (e.g. NFL's "17 promos this season" /
+   *  "9 home games" counts). Teams without an entry keep the default
+   *  "Promotional schedule" line, so hubs that omit the prop render
+   *  byte-identically to before it existed. */
+  subtitleByTeamId?: Record<string, string>;
 }) {
   const [active, setActive] = useState<string>(ALL_DIVISIONS);
 
@@ -145,7 +151,7 @@ export function HubTeamGrid({
                       <ul className="mt-3 space-y-2">
                         {g.teams.map((t) => (
                           <li key={t.id}>
-                            <TeamCard team={t} />
+                            <TeamCard team={t} subtitle={subtitleByTeamId?.[t.id]} />
                           </li>
                         ))}
                       </ul>
