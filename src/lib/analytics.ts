@@ -1020,10 +1020,31 @@ export function track<E extends AnalyticsEvent>(
 
   try {
     // PostHog — loaded lazily so SSR and no-key environments stay clean.
-    const ph = (window as unknown as { posthog?: { capture?: (n: string, p?: unknown) => void } })
-      .posthog;
+    const ph = (window as unknown as {
+      posthog?: { capture?: (n: string, p?: unknown, o?: unknown) => void };
+    }).posthog;
     if (ph && typeof ph.capture === 'function') {
-      ph.capture(eventName, enriched);
+      if (
+        typeof document !== 'undefined' &&
+        document.visibilityState === 'hidden'
+      ) {
+        // Teardown emit (the page_view flush fires from pagehide or the
+        // hidden transition, where visibilityState is already 'hidden').
+        // posthog-js's OWN pagehide handler registered at init runs before
+        // any per-navigation listener, captures $pageleave, and drains the
+        // batch queue via sendBeacon; a plain capture() here would enqueue
+        // into the drained queue behind a flush timer a dying page never
+        // runs, so the event would reach GA4 and silently miss PostHog,
+        // preserving the exact pageleave-without-pageview anomaly the flush
+        // exists to fix. send_instantly bypasses the batch; sendBeacon
+        // survives the unload.
+        ph.capture(eventName, enriched, {
+          transport: 'sendBeacon',
+          send_instantly: true,
+        });
+      } else {
+        ph.capture(eventName, enriched);
+      }
     }
   } catch {
     // Never crash the app over analytics.
