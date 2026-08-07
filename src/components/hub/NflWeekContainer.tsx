@@ -231,7 +231,7 @@ function NflGameCard({
         )}
         {logisticsParts.length > 0 ? (
           <div
-            className="mt-1.5 text-[9px] tracking-wide text-white/75"
+            className="mt-1.5 line-clamp-2 text-[9px] tracking-wide text-white/75"
             style={{ fontFamily: MONO, textShadow: '0 1px 3px #000' }}
           >
             {logisticsParts.join(' · ')}
