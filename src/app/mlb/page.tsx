@@ -115,7 +115,7 @@ export default async function MlbHubPage() {
         eyebrow="MLB League Hub"
         title={`MLB PROMOTIONS ${YEAR}`}
         subtitle="Every giveaway, bobblehead night, theme night, and food deal across all 30 MLB clubs, grouped by division."
-        freshness="Schedules refreshed every 6 hours."
+        freshness="Rechecked weekly and updated as clubs announce promotions."
         accent={ACCENT}
       >
         <HubStatBar stats={stats} leagueLabel="MLB" />

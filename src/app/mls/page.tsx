@@ -115,7 +115,7 @@ export default async function MlsHubPage() {
         eyebrow="MLS League Hub"
         title={`MLS PROMOTIONS ${YEAR}`}
         subtitle="Every jersey giveaway, scarf night, and theme night across all 30 MLS clubs, grouped by conference."
-        freshness="Schedules refreshed every 6 hours."
+        freshness="Rechecked weekly in season and updated as clubs announce promotions."
         accent={ACCENT}
       >
         <HubStatBar stats={stats} leagueLabel="MLS" />
