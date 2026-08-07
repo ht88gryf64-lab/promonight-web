@@ -7,6 +7,7 @@ import {
   gameEtYmd,
   buildWeekBuckets,
   selectWeekContext,
+  selectDisplayBucket,
   joinPromosToGames,
   clubRegularSeasonCounts,
   splitPrimetime,
@@ -234,6 +235,46 @@ describe('selectWeekContext — Tuesday rollover', () => {
     const ctx = selectWeekContext(buckets, '2027-03-01');
     assert.equal(ctx.mode, 'offseason');
     assert.equal(ctx.bucket, null);
+  });
+});
+
+describe('selectDisplayBucket — content-aware hero selection', () => {
+  const buckets = buildWeekBuckets([
+    game({ id: 'hof', date: '2026-08-06', seasonType: 'preseason', week: 1 }),
+    ...Array.from({ length: 16 }, (_, i) =>
+      game({ id: `p2-${i}`, date: '2026-08-13', seasonType: 'preseason', week: 2 })),
+    ...Array.from({ length: 14 }, (_, i) =>
+      game({ id: `r7-${i}`, date: '2026-10-22', seasonType: 'regular', week: 7 })),
+  ]);
+
+  test('a one-game zero-promo current bucket is not the hero: advance to the next promo-carrying bucket', () => {
+    const ctx = selectDisplayBucket(buckets, { 'p2-3': [{}] }, '2026-08-06');
+    assert.equal(ctx.mode, 'next-up');
+    assert.equal(ctx.bucket?.key, 'preseason:2');
+  });
+
+  test('with no promos anywhere, a thin current bucket still advances to the next bucket', () => {
+    const ctx = selectDisplayBucket(buckets, {}, '2026-08-06');
+    assert.equal(ctx.mode, 'next-up');
+    assert.equal(ctx.bucket?.key, 'preseason:2');
+  });
+
+  test('a promo-less REAL week is never skipped: 14 games stand on schedule value alone', () => {
+    const ctx = selectDisplayBucket(buckets, {}, '2026-10-22');
+    assert.equal(ctx.mode, 'current');
+    assert.equal(ctx.bucket?.key, 'regular:7');
+  });
+
+  test('a thin current bucket with no future buckets stays current rather than vanishing', () => {
+    const only = buildWeekBuckets([game({ id: 'last', date: '2027-01-10', week: 18 })]);
+    const ctx = selectDisplayBucket(only, {}, '2027-01-10');
+    assert.equal(ctx.mode, 'current');
+  });
+
+  test('calendar gaps and offseason pass through unchanged', () => {
+    assert.equal(selectDisplayBucket(buckets, {}, '2026-09-02').mode, 'next-up');
+    assert.equal(selectDisplayBucket(buckets, {}, '2027-03-01').mode, 'offseason');
+    assert.deepEqual(selectDisplayBucket([], {}, '2026-08-06'), { mode: 'offseason', bucket: null });
   });
 });
 

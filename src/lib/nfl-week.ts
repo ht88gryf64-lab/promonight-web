@@ -191,6 +191,29 @@ export interface NflWeekContext {
   bucket: NflWeekBucket | null;
 }
 
+// Content-aware display selection. selectWeekContext is calendar-truth; this
+// layer decides what the HERO should be: a current bucket that is THIN — zero
+// joined promos AND fewer than 4 games (the Hall-of-Fame week is 1 game,
+// 0 promos; every real preseason/regular week has 13-16) — makes a dead hero,
+// so the display advances to the next future bucket, preferring one that
+// carries promos, presented honestly as next-up. Real weeks are never skipped:
+// the games-count guard means a promo-less regular week still renders as
+// current (schedule value stands on its own at 13+ games).
+export function selectDisplayBucket(
+  buckets: NflWeekBucket[],
+  promosByGameId: Record<string, unknown[]>,
+  todayYmd: string,
+): NflWeekContext {
+  const joinedCount = (b: NflWeekBucket) =>
+    b.games.reduce((n, g) => n + (promosByGameId[g.id]?.length ?? 0), 0);
+  const base = selectWeekContext(buckets, todayYmd);
+  if (base.mode !== 'current' || !base.bucket) return base;
+  if (joinedCount(base.bucket) > 0 || base.bucket.games.length >= 4) return base;
+  const future = buckets.filter((b) => b.windowStartYmd > base.bucket!.windowStartYmd);
+  const next = future.find((b) => joinedCount(b) > 0) ?? future[0];
+  return next ? { mode: 'next-up', bucket: next } : base;
+}
+
 export function selectWeekContext(buckets: NflWeekBucket[], todayYmd: string): NflWeekContext {
   for (const b of buckets) {
     if (todayYmd >= b.windowStartYmd && todayYmd <= b.windowEndYmd) {

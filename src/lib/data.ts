@@ -24,6 +24,7 @@ import { SCORED_LEAGUES, isRegularSeasonGame } from './types';
 import {
   buildWeekBuckets,
   selectWeekContext,
+  selectDisplayBucket,
   joinPromosToGames,
   clubRegularSeasonCounts,
   type NflWeekContext,
@@ -1446,25 +1447,27 @@ export interface NflWeekSlate {
 export const getNflWeekSlate = cache(async (): Promise<NflWeekSlate> => {
   const games = await getLeagueGames('nfl');
   const buckets = buildWeekBuckets(games);
-  const context = selectWeekContext(buckets, hubTodayChicagoYMD());
-  if (!context.bucket) return { context, promosByGameId: {}, unmatchedPromos: [] };
-  // Promo dates are venue-local while the window is ET-derived; no normal NFL
-  // kickoff pattern moves a stored date outside its own Tue-Mon window (the
-  // widest skews — late Pacific Sunday games, the one-day-early TBD stored
-  // dates — stay inside). The range still unions in the bucket's own stored
-  // game dates so a game POSTPONED past the window (2010 Vikings-Eagles
-  // Tuesday precedent) keeps its promos joinable instead of silently
-  // vanishing without ever reaching unmatchedPromos.
-  const gameDates = context.bucket.games.map((g) => g.date).sort();
-  const rangeStart =
-    gameDates[0] < context.bucket.windowStartYmd ? gameDates[0] : context.bucket.windowStartYmd;
-  const lastGameDate = gameDates[gameDates.length - 1];
-  const rangeEnd =
-    lastGameDate > context.bucket.windowEndYmd ? lastGameDate : context.bucket.windowEndYmd;
-  const inWindow = await getPromosInDateRange(rangeStart, rangeEnd);
-  const nflPromos = inWindow.filter((p) => p.team.league === 'NFL');
-  const { byGameId, unmatched } = joinPromosToGames(context.bucket.games, nflPromos);
-  return { context, promosByGameId: byGameId, unmatchedPromos: unmatched };
+  if (games.length === 0) {
+    return { context: { mode: 'offseason', bucket: null }, promosByGameId: {}, unmatchedPromos: [] };
+  }
+  // One spine-wide promo fetch (same range/cost class as getNflClubCounts,
+  // shared per request via cache()), joined against EVERY game: the display
+  // selection needs per-bucket promo knowledge to skip a thin hero (the
+  // Hall-of-Fame week is 1 game, 0 promos), and joining by (team, stored
+  // date) makes window-edge skew and postponements moot — a promo attaches
+  // to its game wherever the game sits.
+  const dates = games.map((g) => g.date).sort();
+  const all = await getPromosInDateRange(dates[0], dates[dates.length - 1]);
+  const nflPromos = all.filter((p) => p.team.league === 'NFL');
+  const { byGameId, unmatched } = joinPromosToGames(games, nflPromos);
+  const context = selectDisplayBucket(buckets, byGameId, hubTodayChicagoYMD());
+  if (!context.bucket) return { context, promosByGameId: {}, unmatchedPromos: unmatched };
+  const bucketIds = new Set(context.bucket.games.map((g) => g.id));
+  const promosByGameId: Record<string, PromoWithTeam[]> = {};
+  for (const [id, list] of Object.entries(byGameId)) {
+    if (bucketIds.has(id)) promosByGameId[id] = list;
+  }
+  return { context, promosByGameId, unmatchedPromos: unmatched };
 });
 
 // Per-club regular-season counts for the hub team grid: season-total and

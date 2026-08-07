@@ -3,13 +3,13 @@ import { pageOpenGraph } from '@/lib/og';
 import {
   getNflWeekSlate,
   getNflClubCounts,
-  getLeagueHubStats,
   getLeagueTeamsGrouped,
   getLeagueSuperGroups,
   getLeagueTodayPromos,
   getAllTeams,
 } from '@/lib/data';
-import { clubCardSubtitle } from '@/lib/nfl-week';
+import { clubCardSubtitle, splitPrimetime } from '@/lib/nfl-week';
+import type { LeagueHubStats } from '@/lib/data';
 import type { Team } from '@/lib/types';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 import { AggregatorJsonLd, type AggregatorGroup } from '@/components/aggregator-layout';
@@ -18,12 +18,12 @@ import { AD_SLOTS } from '@/lib/ads/slots';
 import { HubHero } from '@/components/hub/HubHero';
 import { HubStatBar } from '@/components/hub/HubStatBar';
 import { HubTodayPromos } from '@/components/hub/HubTodayPromos';
-import { NflWeekContainer, type RowVenueLink } from '@/components/hub/NflWeekContainer';
+import { NflWeekContainer, type RowVenueLink, type PrimetimeLogistics } from '@/components/hub/NflWeekContainer';
 import { HubBrowseByType, type HubBrowseTile } from '@/components/hub/HubBrowseByType';
 import { HubTeamGrid } from '@/components/hub/HubTeamGrid';
 import { HubVenueLinks } from '@/components/hub/HubVenueLinks';
 import { HubFaq, type HubFaqItem } from '@/components/hub/HubFaq';
-import { getVenueLinksForTeams, getTeamVenueHubMap } from '@/lib/venue-hub';
+import { getVenueLinksForTeams, getTeamVenueHubMap, getVenueHub } from '@/lib/venue-hub';
 
 // League hub accent (house palette, mirrors LEAGUE_HUB_REGISTRY NFL entry).
 const ACCENT = '#5f6b57';
@@ -94,10 +94,9 @@ function todayYMD(): string {
 }
 
 export default async function NflHubPage() {
-  const [slate, counts, stats, divisions, today, teams, venueMap] = await Promise.all([
+  const [slate, counts, divisions, today, teams, venueMap] = await Promise.all([
     getNflWeekSlate(),
     getNflClubCounts(),
-    getLeagueHubStats('NFL'),
     getLeagueTeamsGrouped('NFL'),
     getLeagueTodayPromos('NFL'),
     getAllTeams(),
@@ -127,6 +126,39 @@ export default async function NflHubPage() {
   }
 
   const weekPromos = Object.values(slate.promosByGameId).flat();
+  // WINDOW UNIFICATION: the stat bar reads the SAME bucket the container
+  // displays, never the rolling 7-day slate — two components must not report
+  // different weeks. Score-derived stats stay null (no NFL scoring by ruling);
+  // the count is omitted (0 -> stat hidden) when the display is next-up,
+  // because "this week" must not count next week's promos.
+  const stats: LeagueHubStats = {
+    totalPromos: null,
+    teamsWithPromosThisWeek:
+      slate.context.mode === 'current' ? new Set(weekPromos.map((p) => p.team.id)).size : 0,
+    avgPerTeam: null,
+  };
+  // Verified primetime logistics: building facts + the home club's VERIFIED
+  // tenant overlay only. Absent parts are omitted; a gate time is never
+  // invented.
+  const logisticsByGameId: Record<string, PrimetimeLogistics> = {};
+  if (slate.context.bucket) {
+    const { primetime } = splitPrimetime(slate.context.bucket);
+    for (const g of primetime) {
+      const link = venueByTeam[g.homeTeamSlug];
+      if (!link) continue;
+      const hub = await getVenueHub(link.slug);
+      if (!hub) continue;
+      const overlay = hub.tenantOverlays.find(
+        (t) => t.teamId === g.homeTeamSlug && t.verified && t.gatesOpen?.ruleText,
+      );
+      const lotNote = hub.parkingLots.find((l) => /open/i.test(l.notes ?? ''))?.notes ?? undefined;
+      const entry: PrimetimeLogistics = {};
+      if (overlay?.gatesOpen?.ruleText) entry.gateText = overlay.gatesOpen.ruleText;
+      if (lotNote) entry.lotText = lotNote;
+      if (hub.publicTransit?.lines?.[0]) entry.transitText = hub.publicTransit.lines[0];
+      if (entry.gateText || entry.lotText || entry.transitText) logisticsByGameId[g.id] = entry;
+    }
+  }
   const jsonLdGroups: AggregatorGroup[] = [
     { label: slate.context.bucket ? `${slate.context.bucket.label} across the NFL` : 'NFL promotions', promos: weekPromos },
   ];
@@ -185,6 +217,7 @@ export default async function NflHubPage() {
             slate={slate}
             teamsById={teamsById}
             venueByTeam={venueByTeam}
+            logisticsByGameId={logisticsByGameId}
             sectionId="nfl-this-week"
             surface="web_nfl_hub_this_week"
             primetimeSurface="web_nfl_hub_primetime"
