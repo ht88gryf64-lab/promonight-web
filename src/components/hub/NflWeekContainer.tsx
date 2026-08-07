@@ -43,9 +43,11 @@ const SERIF = 'Georgia, serif'; // CFB serif var is not loaded on this page; Geo
 const MONO = 'var(--font-mono), ui-monospace, monospace';
 const AMBER = '#FFB71E';
 const MUTED = 'rgba(255,255,255,0.72)';
-// META COMPARE (preview-only): 'compare' alternates amber/muted across cards
-// so one preview shows both; the winner gets hardcoded before merge.
-const META_TONE: 'amber' | 'muted' | 'compare' = 'compare';
+// Meta-line tone: MUTED won the on-preview comparison (2026-08-07, ruled
+// lean confirmed): amber pulled the eye to the least important line and
+// imported CFB's accent into the light system; muted keeps the card's
+// hierarchy title-first. AMBER retained here only as the comparison record.
+const META_TONE: 'amber' | 'muted' = 'muted';
 
 export interface RowVenueLink {
   slug: string;
@@ -280,12 +282,11 @@ export function NflWeekContainer({
   const { primetime, rest } = splitPrimetime(bucket);
   void chicagoTodayYMD; // retained for parity with sibling hub components
 
-  const cardFor = (g: Game, i: number, cardSurface: AnalyticsSurface, wide: boolean) => {
+  const cardFor = (g: Game, cardSurface: AnalyticsSurface, wide: boolean) => {
     const home = teamsById[g.homeTeamSlug];
     const away = teamsById[g.awayTeamSlug];
     if (!home || !away) return null;
-    const metaAmber =
-      META_TONE === 'compare' ? i % 2 === 0 : META_TONE === 'amber';
+    const metaAmber = META_TONE === 'amber';
     return (
       <NflGameCard
         key={g.id}
@@ -317,7 +318,7 @@ export function NflWeekContainer({
         </p>
       ) : null}
       <div className="mt-4 flex gap-3 overflow-x-auto pb-2">
-        {rest.map((g, i) => cardFor(g, i, surface, false))}
+        {rest.map((g) => cardFor(g, surface, false))}
       </div>
 
       {primetime.length > 0 ? (
@@ -328,7 +329,7 @@ export function NflWeekContainer({
             label="NIGHT GAMES · GATES, LOTS AND TRANSIT RUN LATER"
           />
           <div className="mt-4 flex gap-3 overflow-x-auto pb-2">
-            {primetime.map((g, i) => cardFor(g, i, primetimeSurface, true))}
+            {primetime.map((g) => cardFor(g, primetimeSurface, true))}
           </div>
         </div>
       ) : null}
