@@ -803,7 +803,58 @@ same-day and revalidate (ISR 86400). Sequence ahead of any preseason
 schedule-threading work (entry 12, shape 2) so that builds on corrected
 dates.
 
-**Severity: Medium.** Wrong dates in crawlable HTML on 17 live pages, but
-wk16-18 is months out and times will be flexed before then; the escalation
-risk is the stranded-doc duplicate mechanism, which is why this is recorded
-now rather than at flex time.
+**Severity: escalated Medium → High, 2026-08-07.** The phantom mechanism is
+not a display bug, on two grounds established by the sweep scoping (session
+2026-08-06/07):
+
+- **A phantom is duplicate monetized affiliate surface on a live page.**
+  CalendarGrid renders two clickable cells for one game, and each cell's
+  expand carries the full CTA tray (TicketsBlock / ParkingCTA / HotelsCTA,
+  `GameExpand.tsx:6-8`) — the phantom sells tickets, parking and hotels
+  against a game date that does not exist. `getGamesForTeam` has no date
+  bound, so a phantom persists indefinitely until deleted.
+- **A phantom can corrupt promo data, not just render it.** The pipeline's
+  season-gate treats its date join as authoritative
+  (`promo-pipeline/lib/scanner/season-gate.js:155-165`, rewrite at
+  `:186-190`): a promo whose published date matches the phantom's stale date
+  gets its date/week rewritten TO the phantom's, and an either-or flex date
+  matching both twins trips an `AMBIGUOUS` HOLD — both failure modes landing
+  exactly when clubs publish flex-window promos, in the December–January
+  window when all 24 TBD games receive dates.
+
+By this file's own scale that is High: a real incident on a normal path —
+the routine post-flex re-ingest — at a known date.
+
+**Sweep decision (approved 2026-08-07).** The reconcile lives INSIDE the
+ingest run, not in a separate script: the phantom is minted by the ingest
+run itself, and a separate script on a manual January workflow is the step
+that gets skipped. Shape: post-upsert tiered reconcile diffing the
+triple-scoped doc set (`league` + `season` + `seasonType`) against the run's
+in-memory prepared set — tier 1 auto-deletes proven re-dated twins (same
+`espnGameId`, different id; `espnGameId` verified present and unique on
+321/321 NFL docs, absent on all MLB docs; newest-`ingestedAt` wins is
+well-defined because the upsert rewrites it every run), tier 2
+(`espnGameId` matching nothing fetched) is report-only behind a separate
+`--prune-unknown` flag. Hard requirements of that PR:
+
+- The `--year` flag ships WITH the sweep, not after.
+  `scripts/ingest-nfl-schedule.ts` passes no year and `ingestNflSchedule`
+  defaults to the current UTC year (`ingest-nfl.ts:253`), so every January
+  flex re-run silently fetches the near-empty next season — harmless under
+  merge-only upserts, catastrophic under reconcile-delete.
+- Snapshot-first JSON before any delete, dry-run default with `--execute`,
+  and a prepared-count floor that aborts the run — the same discipline as
+  the promo writer.
+
+**Deadline.** Merged and dry-run-rehearsed BEFORE the corrective re-ingest
+that fixes this entry's 10 wrong-date docs (that fix is itself the first
+phantom-minting event, so the sweep is part of the same PR), and in no case
+later than ~Dec 1, 2026, ahead of the first flex announcements. The wk18
+Sat/Sun split lands ~Jan 3-4, 2027 — 16 simultaneous potential re-datings,
+which is also exactly when the `--year` default bug fires.
+
+Provenance correction from the scoping pass: the 49 preseason docs were
+written by THIS repo's preseason ingest variant on the unmerged branch
+`feature/nfl-preseason-ingest` (`ccf4e54`, run 2026-08-05), not by
+promo-pipeline, which only reads `games`. The sweep must scope on
+`seasonType` so a regular-season reconcile can never touch them.
