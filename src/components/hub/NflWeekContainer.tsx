@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import type { Team, Game, PromoWithTeam } from '@/lib/types';
 import type { NflWeekSlate } from '@/lib/data';
 import { splitPrimetime, gameEtYmd } from '@/lib/nfl-week';
@@ -242,6 +242,25 @@ function NflGameCard({
   );
 }
 
+// Scroll affordance (ruled fix): the rail full-bleeds past the page padding so
+// a partial card PEEKS at the viewport edge, and a cream fade overlays the cut
+// so mid-word clipping reads as a scroll edge, not a broken layout. The
+// scrollbar is hidden (.no-scrollbar) - the global webkit thumb is #333 on a
+// dark track, which blended on CFB's dark page but read as a heavy design bar
+// on cream; the peek + fade carry the affordance instead.
+function Rail({ children }: { children: ReactNode }) {
+  return (
+    <div className="relative -mx-6">
+      <div className="no-scrollbar mt-4 flex gap-3 overflow-x-auto px-6 pb-2">{children}</div>
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 right-0 w-12"
+        style={{ background: 'linear-gradient(270deg, #f7f3ea 8%, rgba(247,243,234,0) 100%)' }}
+      />
+    </div>
+  );
+}
+
 function RailHeading({ id, title, label }: { id: string; title: string; label: string }) {
   return (
     <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
@@ -314,12 +333,14 @@ export function NflWeekContainer({
       />
       {slate.context.mode === 'next-up' ? (
         <p className="mt-2 font-rd text-[14px] text-rd-ink-soft">
-          No NFL games this week. Here is the next slate.
+          {slate.context.nextUpReason === 'played'
+            ? 'This week\u2019s slate has wrapped. Here is what is next.'
+            : slate.context.nextUpReason === 'thin'
+              ? 'This week\u2019s light slate carries no promos yet. Here is what is next.'
+              : 'No NFL games this week. Here is the next slate.'}
         </p>
       ) : null}
-      <div className="mt-4 flex gap-3 overflow-x-auto pb-2">
-        {rest.map((g) => cardFor(g, surface, false))}
-      </div>
+      <Rail>{rest.map((g) => cardFor(g, surface, false))}</Rail>
 
       {primetime.length > 0 ? (
         <div className="mt-8">
@@ -328,9 +349,7 @@ export function NflWeekContainer({
             title="Primetime"
             label="NIGHT GAMES · GATES, LOTS AND TRANSIT RUN LATER"
           />
-          <div className="mt-4 flex gap-3 overflow-x-auto pb-2">
-            {primetime.map((g) => cardFor(g, primetimeSurface, true))}
-          </div>
+          <Rail>{primetime.map((g) => cardFor(g, primetimeSurface, true))}</Rail>
         </div>
       ) : null}
     </section>

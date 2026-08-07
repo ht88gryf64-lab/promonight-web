@@ -189,6 +189,13 @@ export interface NflWeekContext {
   // 'offseason': no bucket contains today and none starts later.
   mode: 'current' | 'next-up' | 'offseason';
   bucket: NflWeekBucket | null;
+  // Why a next-up display is showing, so the copy can be TRUE (fix for the
+  // false "No NFL games this week" over the played Hall of Fame Game):
+  // 'gap'    - no bucket contains today (the Labor-Day week, Sep 1-7 2026);
+  // 'played' - today's bucket exists but every game is already played;
+  // 'thin'   - today's bucket exists with unplayed games but a thin
+  //            promo-less slate declined as hero (HOF week, Tue-Thu).
+  nextUpReason?: 'gap' | 'played' | 'thin';
 }
 
 // Content-aware display selection. selectWeekContext is calendar-truth; this
@@ -211,7 +218,9 @@ export function selectDisplayBucket(
   if (joinedCount(base.bucket) > 0 || base.bucket.games.length >= 4) return base;
   const future = buckets.filter((b) => b.windowStartYmd > base.bucket!.windowStartYmd);
   const next = future.find((b) => joinedCount(b) > 0) ?? future[0];
-  return next ? { mode: 'next-up', bucket: next } : base;
+  if (!next) return base;
+  const allPlayed = base.bucket.games.every((g) => gameEtYmd(g) < todayYmd);
+  return { mode: 'next-up', bucket: next, nextUpReason: allPlayed ? 'played' : 'thin' };
 }
 
 export function selectWeekContext(buckets: NflWeekBucket[], todayYmd: string): NflWeekContext {
@@ -221,7 +230,7 @@ export function selectWeekContext(buckets: NflWeekBucket[], todayYmd: string): N
     }
   }
   for (const b of buckets) {
-    if (b.windowStartYmd > todayYmd) return { mode: 'next-up', bucket: b };
+    if (b.windowStartYmd > todayYmd) return { mode: 'next-up', bucket: b, nextUpReason: 'gap' };
   }
   return { mode: 'offseason', bucket: null };
 }

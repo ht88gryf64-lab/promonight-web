@@ -259,6 +259,15 @@ describe('selectDisplayBucket — content-aware hero selection', () => {
     assert.equal(ctx.bucket?.key, 'preseason:2');
   });
 
+  test('the next-up REASON distinguishes played, thin, and gap - the copy must never be false', () => {
+    // Day after the HOF game: games existed this week, all played.
+    assert.equal(selectDisplayBucket(buckets, {}, '2026-08-07').nextUpReason, 'played');
+    // Day before the HOF game: unplayed but thin and promo-less.
+    assert.equal(selectDisplayBucket(buckets, {}, '2026-08-05').nextUpReason, 'thin');
+    // Labor-Day week: genuinely no games in any bucket containing today.
+    assert.equal(selectDisplayBucket(buckets, {}, '2026-09-02').nextUpReason, 'gap');
+  });
+
   test('a promo-less REAL week is never skipped: 14 games stand on schedule value alone', () => {
     const ctx = selectDisplayBucket(buckets, {}, '2026-10-22');
     assert.equal(ctx.mode, 'current');

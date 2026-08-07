@@ -179,7 +179,7 @@ export default async function NflHubPage() {
         eyebrow="NFL League Hub"
         title={`NFL PROMOTIONS ${YEAR}`}
         subtitle="Theme nights, giveaways, and kids days across all 32 clubs, organized by NFL week with the stadium guide one tap from every game."
-        freshness="Schedules refreshed every 6 hours."
+        freshness="Updated as clubs announce promotions."
         accent={ACCENT}
       >
         <HubStatBar stats={stats} leagueLabel="NFL" />
