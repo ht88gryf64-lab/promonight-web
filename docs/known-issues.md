@@ -858,3 +858,31 @@ written by THIS repo's preseason ingest variant on the unmerged branch
 `feature/nfl-preseason-ingest` (`ccf4e54`, run 2026-08-05), not by
 promo-pipeline, which only reads `games`. The sweep must scope on
 `seasonType` so a regular-season reconcile can never touch them.
+
+---
+
+## 15. Three live hubs claim "Schedules refreshed every 6 hours" on an ISR-only basis
+
+**What it is.** The /mlb, /wnba, and /mls hub heroes each render the freshness
+line "Schedules refreshed every 6 hours." The 6-hour figure describes the
+pages' ISR interval (`revalidate = 21600`), not any data cadence: no 6-hour
+ingest exists for any league. The only scheduled schedule ingest anywhere is
+`mlb-schedule` (weekly, Mon 10:00 UTC, `vercel.json`); promo freshness comes
+from the weekly per-league scanner crons plus on-demand revalidation. The
+line reads as a data-freshness promise and was ruled false on exactly this
+basis for /nfl (2026-08-07), whose hero now says "Updated as clubs announce
+promotions."
+
+**Where it lives.** `src/app/mlb/page.tsx:118`, and the same `freshness`
+prop on the WNBA and MLS hub pages (line-for-line parallel files).
+
+**Why it matters.** Three live pages make a claim we ruled false on the
+fourth. Same class as the promise scoped out of LEAGUE_COPY: copy that
+describes infrastructure the site does not run.
+
+**Fix shape and effort: S (<1h).** Replace the string on the three pages
+(the /nfl wording or per-league equivalents), deploy; no data or component
+work. Byte-identity note: changes prerendered HTML on three hub pages.
+
+**Severity: Low.** No functional consequence; a truthfulness fix on live
+copy, recorded so it does not sit.

@@ -249,6 +249,16 @@ body::before {
   color: #fff;
 }
 
+/* Rail scrollbar suppression: horizontal card rails carry their affordance as
+   an edge peek + fade; the global #333 thumb reads as a heavy bar on cream. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

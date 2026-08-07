@@ -1,43 +1,70 @@
+import Link from 'next/link';
+import type { CSSProperties, ReactNode } from 'react';
 import type { Team, Game, PromoWithTeam } from '@/lib/types';
 import type { NflWeekSlate } from '@/lib/data';
 import { splitPrimetime, gameEtYmd } from '@/lib/nfl-week';
+import { rivalryBlockColors } from '@/lib/cfb/hub-theme';
 import { formatGameTime } from '@/lib/format-game-time';
-import { categoryFor } from '@/components/redesign/categories';
-import { promoAnchorId, synthPromoId } from '@/lib/promo-helpers';
 import { normalizeSport, type AnalyticsSurface } from '@/lib/analytics';
 import { TrackedTapLink } from '@/components/analytics/TrackedTapLink';
-import { IconChevronRight, IconMoonStars } from '@tabler/icons-react';
 
-// The week-indexed This Week container for /nfl. One container holds the WHOLE
-// week (label truth: a fan scanning This Week always finds every game), with
-// primetime games grouped into a labeled subsection inside it — the approved
-// shape, chosen because clubs promote primetime at their base rate (24 observed
-// vs 23.4 expected) and the subsection eliminates the mislabeled-partition
-// problem instead of renaming around it. A week with no primetime home game
-// simply has no subsection.
+// Partition rails for /nfl (supersedes the subsection shape by explicit
+// ruling): Rail 1 "This week" holds every game EXCEPT primetime; Rail 2
+// "Primetime" holds the night games, ADJACENT with no module between — that
+// adjacency is the accepted mitigation for the label risk of excluding
+// primetime from a rail named "This week". A week with no primetime home game
+// renders rail 1 only; preseason buckets return a structurally empty
+// primetime group (splitPrimetime).
 //
-// LINK ARCHITECTURE (ruled): per-noun anchors, never competing buttons. The
-// matchup noun links the HOME team page (/{sportSlug}/{homeTeamId}); the venue
-// noun links the building hub (/venues/{slug}) and DEGRADES TO PLAIN TEXT when
-// the building is below the venue-index floor (4 NFL buildings today) — the
-// same link-when-live pattern as the team-page eyebrow; never a dead anchor.
-// Joined promos render beneath the row as deep links to the team page's own
-// promo anchor (#promo-..., PromoArrivalHighlight handles arrival).
+// CARD TREATMENT lifted from the CFB WeekCard/DiagonalFill pair
+// (src/components/cfb/hub/blocks.tsx): diagonal 62/38 split, two stacked
+// primary→secondary fades, the §14b seam hairline when the primaries sit too
+// close in luminance (rivalryBlockColors returns `divider` — what keeps
+// near-black pairings readable; no contrast fallback exists by ruling), and
+// the bottom-heavy scrim. WEDGE ORDER (settled 2026-08-07, third ruling, on
+// evidence): the wedge FOLLOWS THE TITLE — AWAY left, HOME right, corner
+// labels in the same order. CFB titles use a directionless separator
+// ("California · UCLA") so its home-left wedge cannot contradict them; NFL
+// titles use "at", which encodes direction, and a home-left wedge read
+// against "Seahawks at Broncos" put the card in the opposite order to its
+// own title. All three — corners, wedges, title — now read the same
+// direction. Cards are dark islands on the cream page, same as CFB.
 //
-// NO AFFILIATE CTAs ON ROWS — text and links only. ScheduleRow's lazy-mount
-// reasoning applies verbatim: an always-present tray swamps the crawlable body
-// of the page and this surface's job is routing, not conversion.
+// Light-theme adaptations (ruled): section headings use the redesign's ink
+// heading scale, never CFB's amber mono caps; the on-card meta line tone is
+// under comparison (META_TONE) — amber vs a muted white — reported at the
+// gate before this merges.
 //
-// Server component; every anchor is SSR-crawlable. Events fire via the
-// TrackedTapLink client leaf: game_tap on the matchup, venue_hub_click on the
-// venue, this_week_card_tap on promo deep links.
+// Anchors, per-noun as ruled: corner names → their team pages (CFB pattern),
+// serif-italic title → HOME team page (game_tap), venue line → venue hub
+// (venue_hub_click), degrading to plain text where the building is below the
+// venue-index floor (exactly one club today: Bills/Highmark). No nesting —
+// every anchor is an absolute or flow sibling. No affiliate CTAs on cards.
 
-/** Serializable venue-link subset for a game row (from getTeamVenueHubMap,
- *  keyed by HOME team slug; absent when the club has no building doc). */
+const SERIF = 'Georgia, serif'; // CFB serif var is not loaded on this page; Georgia is its stack fallback
+const MONO = 'var(--font-mono), ui-monospace, monospace';
+const AMBER = '#FFB71E';
+const MUTED = 'rgba(255,255,255,0.72)';
+// Meta-line tone: MUTED won the on-preview comparison (2026-08-07, ruled
+// lean confirmed): amber pulled the eye to the least important line and
+// imported CFB's accent into the light system; muted keeps the card's
+// hierarchy title-first. AMBER retained here only as the comparison record.
+const META_TONE: 'amber' | 'muted' = 'muted';
+
 export interface RowVenueLink {
   slug: string;
   displayName: string;
   indexable: boolean;
+}
+
+/** Verified logistics facts for a primetime card's bottom line. Assembled by
+ *  the page from venueHubs building + verified tenant overlays; every part is
+ *  optional and the line renders only the parts that exist — a gate time is
+ *  never invented. */
+export interface PrimetimeLogistics {
+  gateText?: string;
+  lotText?: string;
+  transitText?: string;
 }
 
 function chicagoTodayYMD(): string {
@@ -51,92 +78,138 @@ function chicagoTodayYMD(): string {
   return `${part('year')}-${part('month')}-${part('day')}`;
 }
 
-function daysBetween(a: string, b: string): number {
-  const [ay, am, ad] = a.split('-').map(Number);
-  const [by, bm, bd] = b.split('-').map(Number);
-  return Math.round((Date.UTC(by, bm - 1, bd) - Date.UTC(ay, am - 1, ad)) / 86400000);
-}
-
 function formatDayLabel(ymd: string): string {
-  return new Date(ymd + 'T12:00:00').toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  });
+  return new Date(ymd + 'T12:00:00')
+    .toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+    .toUpperCase();
 }
 
 function formatWindow(startYmd: string, endYmd: string): string {
   const f = (ymd: string) =>
     new Date(ymd + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  return `${f(startYmd)} – ${f(endYmd)}`;
+  return `${f(startYmd).toUpperCase()} – ${f(endYmd).toUpperCase()}`;
 }
 
-function GameRow({
+// The CFB DiagonalFill with the NFL wedge order: LEFT wedge = away team,
+// right field = home team, matching the title's "away at home". `divider`
+// fires on close primary luminance (the seam mechanism, carried unchanged).
+function DiagonalFill({ home, away }: { home: Team; away: Team }) {
+  const { pa, pb, sa, sb, divider } = rivalryBlockColors(away, home);
+  return (
+    <>
+      <div
+        className="absolute inset-0"
+        style={{ background: `linear-gradient(180deg, ${pb} 0%, ${pb} 45%, ${sb} 112%)` }}
+      />
+      <div
+        className="absolute inset-0"
+        style={{
+          background: `linear-gradient(180deg, ${pa} 0%, ${pa} 45%, ${sa} 112%)`,
+          clipPath: 'polygon(0 0, 62% 0, 38% 100%, 0 100%)',
+        }}
+      />
+      {divider && (
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              'linear-gradient(105deg, transparent 49.5%, rgba(255,255,255,0.5) 49.7%, rgba(255,255,255,0.5) 50.3%, transparent 50.5%)',
+          }}
+        />
+      )}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            'linear-gradient(180deg, rgba(0,0,0,0.14) 0%, rgba(0,0,0,0.3) 40%, rgba(0,0,0,0.88) 100%)',
+        }}
+      />
+    </>
+  );
+}
+
+function CornerName({ team, side }: { team: Team; side: 'left' | 'right' }) {
+  return (
+    <Link
+      href={`/${team.sportSlug}/${team.id}`}
+      className="absolute top-3 z-10 text-[10px] font-bold uppercase text-white hover:underline sm:text-[11px]"
+      style={{ fontFamily: MONO, textShadow: '0 1px 4px #000', [side]: 14 } as CSSProperties}
+    >
+      {team.name}
+    </Link>
+  );
+}
+
+function NflGameCard({
   game,
   home,
   away,
   venue,
-  promos,
+  promoCount,
   surface,
-  todayYmd,
-  utcTodayYmd,
-  showNetwork,
+  wide,
+  logistics,
+  metaAmber,
 }: {
   game: Game;
-  home: Team | undefined;
-  away: Team | undefined;
+  home: Team;
+  away: Team;
   venue: RowVenueLink | undefined;
-  promos: PromoWithTeam[];
+  promoCount: number;
   surface: AnalyticsSurface;
-  todayYmd: string;
-  utcTodayYmd: string;
-  showNetwork: boolean;
+  wide: boolean;
+  logistics?: PrimetimeLogistics;
+  metaAmber: boolean;
 }) {
-  // Display day: the stored venue-local date, EXCEPT for TBD docs, where the
-  // stored date is derived from ESPN's 05:00Z placeholder and lands one day
-  // early at non-Eastern venues — gameEtYmd self-corrects those (known-issues
-  // entry 14). Kickoff renders venue-local, "not yet set" discipline for TBD.
   const dayYmd = game.timeTbd ? gameEtYmd(game) : game.date;
   const kickoff = game.timeTbd
-    ? 'Kickoff TBD'
-    : formatGameTime(game.gameTimeTz, game.gameTime, game.date);
-  const matchupLabel = `${away?.name ?? game.awayTeamSlug} at ${home?.name ?? game.homeTeamSlug}`;
+    ? 'KICKOFF TBD'
+    : formatGameTime(game.gameTimeTz, game.gameTime, game.date).toUpperCase();
+  const metaColor = metaAmber ? AMBER : MUTED;
   const venueName = venue?.displayName || game.venueName;
+  const logisticsParts = wide
+    ? [logistics?.gateText, logistics?.lotText, logistics?.transitText, game.broadcast?.network]
+        .filter((s): s is string => !!s && s.length > 0)
+    : [];
 
   return (
-    <li className="rounded-2xl border border-rd-line bg-rd-card p-4">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        {home ? (
-          <TrackedTapLink
-            href={`/${home.sportSlug}/${home.id}`}
-            aria-label={`${matchupLabel}: ${home.city} ${home.name} promotions and schedule`}
-            trackEvent="game_tap"
-            trackProps={{
-              surface,
-              team_slug: home.id,
-              sport: normalizeSport(home.league),
-              game_id: game.id,
-              is_home: true,
-              has_promo: promos.length > 0,
-              opponent_slug: game.awayTeamSlug,
-              placement: 'nfl_week_game_row',
-            }}
-            className="font-rd text-[15.5px] font-semibold text-rd-ink hover:text-rd-red"
-          >
-            {matchupLabel}
-          </TrackedTapLink>
-        ) : (
-          <span className="font-rd text-[15.5px] font-semibold text-rd-ink">{matchupLabel}</span>
-        )}
-        <span className="font-rd text-[12.5px] text-rd-ink-soft">
+    <div
+      className={`relative shrink-0 overflow-hidden rounded-xl border border-white/10 ${
+        wide ? 'h-[170px] min-w-[360px] sm:min-w-[400px]' : 'h-[150px] min-w-[280px]'
+      }`}
+    >
+      <DiagonalFill home={home} away={away} />
+      <CornerName team={away} side="left" />
+      <CornerName team={home} side="right" />
+      <div className="absolute inset-x-0 bottom-0 z-10 p-3.5">
+        <div
+          className="text-[9px] font-bold tracking-wider"
+          style={{ fontFamily: MONO, color: metaColor, textShadow: '0 1px 3px #000' }}
+        >
           {formatDayLabel(dayYmd)} · {kickoff}
-          {showNetwork && game.broadcast?.network ? (
-            <span className="text-rd-ink-faint"> · {game.broadcast.network}</span>
-          ) : null}
-        </span>
-      </div>
-
-      <div className="mt-1 font-rd text-[13px] text-rd-ink-soft">
+          {promoCount > 0
+            ? ` · ${promoCount} ${promoCount === 1 ? 'PROMO' : 'PROMOS'}`
+            : ''}
+        </div>
+        <TrackedTapLink
+          href={`/${home.sportSlug}/${home.id}`}
+          aria-label={`${away.name} at ${home.name}: ${home.city} ${home.name} promotions and schedule`}
+          trackEvent="game_tap"
+          trackProps={{
+            surface,
+            team_slug: home.id,
+            sport: normalizeSport(home.league),
+            game_id: game.id,
+            is_home: true,
+            has_promo: promoCount > 0,
+            opponent_slug: game.awayTeamSlug,
+            placement: 'nfl_week_game_card',
+          }}
+          className="mt-1 block italic text-white hover:underline"
+          style={{ fontFamily: SERIF, fontSize: wide ? 22 : 19, lineHeight: 1.05, textShadow: '0 1px 4px #000' }}
+        >
+          {away.name} at {home.name}
+        </TrackedTapLink>
         {venue && venue.indexable ? (
           <TrackedTapLink
             href={`/venues/${venue.slug}`}
@@ -144,69 +217,66 @@ function GameRow({
             trackEvent="venue_hub_click"
             trackProps={{
               surface,
-              placement: 'nfl_week_game_row',
+              placement: 'nfl_week_game_card',
               building_slug: venue.slug,
               building_name: venue.displayName,
               destination_url: `/venues/${venue.slug}`,
             }}
-            className="font-semibold text-rd-red hover:underline"
+            className="mt-1 inline-block text-[11px] font-semibold text-white/85 underline-offset-2 hover:underline"
+            style={{ textShadow: '0 1px 3px #000' }}
           >
             {venueName} ›
           </TrackedTapLink>
         ) : (
-          // Below the indexing floor (or no building doc): plain text, never a
-          // dead anchor — the link-when-live pattern from the team-page eyebrow.
-          <span>{venueName}</span>
+          <div className="mt-1 text-[11px] text-white/70" style={{ textShadow: '0 1px 3px #000' }}>
+            {venueName}
+          </div>
         )}
+        {logisticsParts.length > 0 ? (
+          <div
+            className="mt-1.5 line-clamp-2 text-[9px] tracking-wide text-white/75"
+            style={{ fontFamily: MONO, textShadow: '0 1px 3px #000' }}
+          >
+            {logisticsParts.join(' · ')}
+          </div>
+        ) : null}
       </div>
+    </div>
+  );
+}
 
-      {promos.length > 0 ? (
-        <ul className="mt-2 space-y-1 border-t border-rd-line pt-2">
-          {promos.map((p) => {
-            const cat = categoryFor(p.type);
-            // The #promo- fragment only resolves for UPCOMING promos: the team
-            // page assigns anchor ids on its upcoming split only (UTC-day
-            // boundary, promo-list.tsx), and past promos render unanchored in
-            // "Already happened". The week window holds already-played games
-            // Fri-Mon, so a past-dated promo here degrades to plain text —
-            // never a dead fragment, and no negative days_out events. The
-            // boundary mirrors the team page's (UTC), not the hub's Chicago
-            // anchor, because the DESTINATION decides whether the anchor
-            // exists.
-            const isPast = p.date < utcTodayYmd;
-            return (
-              <li key={synthPromoId(p.team.id, p)}>
-                {isPast ? (
-                  <span className="inline-flex items-center gap-1.5 font-rd text-[13px] text-rd-ink-faint">
-                    <cat.Icon size={13} stroke={2.25} style={{ color: cat.color }} aria-hidden />
-                    <span>{p.title}</span>
-                  </span>
-                ) : (
-                  <TrackedTapLink
-                    href={`/${p.team.sportSlug}/${p.team.id}#promo-${promoAnchorId(p)}`}
-                    trackEvent="this_week_card_tap"
-                    trackProps={{
-                      surface,
-                      team_id: p.team.id,
-                      sport: normalizeSport(p.team.league),
-                      promo_id: synthPromoId(p.team.id, p),
-                      promo_type: p.type,
-                      is_highlight: p.highlight,
-                      days_out: daysBetween(todayYmd, p.date),
-                    }}
-                    className="group inline-flex items-center gap-1.5 font-rd text-[13px] text-rd-ink-soft hover:text-rd-red"
-                  >
-                    <cat.Icon size={13} stroke={2.25} style={{ color: cat.color }} aria-hidden />
-                    <span className="group-hover:underline">{p.title}</span>
-                    <IconChevronRight size={13} stroke={2} aria-hidden className="text-rd-line-strong" />
-                  </TrackedTapLink>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
-    </li>
+// Scroll affordance (ruled fix): the rail full-bleeds past the page padding so
+// a partial card PEEKS at the viewport edge, and a cream fade overlays the cut
+// so mid-word clipping reads as a scroll edge, not a broken layout. The
+// scrollbar is hidden (.no-scrollbar) - the global webkit thumb is #333 on a
+// dark track, which blended on CFB's dark page but read as a heavy design bar
+// on cream; the peek + fade carry the affordance instead.
+function Rail({ children }: { children: ReactNode }) {
+  return (
+    <div className="relative -mx-6">
+      <div className="no-scrollbar mt-4 flex gap-3 overflow-x-auto px-6 pb-2">{children}</div>
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 right-0 w-12"
+        style={{ background: 'linear-gradient(270deg, #f7f3ea 8%, rgba(247,243,234,0) 100%)' }}
+      />
+    </div>
+  );
+}
+
+function RailHeading({ id, title, label }: { id: string; title: string; label: string }) {
+  return (
+    <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+      <h2 id={id} className="rd-display text-2xl text-rd-ink md:text-3xl">
+        {title}
+      </h2>
+      <span
+        className="text-[12px] tracking-[0.06em] text-rd-ink-faint"
+        style={{ fontFamily: MONO }}
+      >
+        {label}
+      </span>
+    </div>
   );
 }
 
@@ -214,78 +284,75 @@ export function NflWeekContainer({
   slate,
   teamsById,
   venueByTeam,
+  logisticsByGameId,
   sectionId,
   surface,
   primetimeSurface,
 }: {
   slate: NflWeekSlate;
-  /** Every NFL team keyed by slug (for matchup names + hrefs). */
   teamsById: Record<string, Team>;
-  /** Home-team slug -> building hub link (absent = no doc; indexable gates the anchor). */
   venueByTeam: Record<string, RowVenueLink>;
-  /** DOM id / aria-labelledby anchor, e.g. "nfl-this-week". */
+  /** Verified primetime logistics per game id (absent parts omitted, never invented). */
+  logisticsByGameId: Record<string, PrimetimeLogistics>;
   sectionId: string;
-  /** Container surface (web_nfl_hub_this_week). */
   surface: AnalyticsSurface;
-  /** Primetime subsection surface (web_nfl_hub_primetime). */
   primetimeSurface: AnalyticsSurface;
 }) {
   const bucket = slate.context.bucket;
-  // Offseason: nothing to render — the page owns any zero-state copy.
   if (!bucket) return null;
 
   const { primetime, rest } = splitPrimetime(bucket);
-  const todayYmd = chicagoTodayYMD();
-  // UTC day, matching the team page's upcoming/past promo split — see the
-  // deep-link degrade in GameRow.
-  const utcTodayYmd = new Date().toISOString().slice(0, 10);
-  const heading =
-    slate.context.mode === 'next-up' ? `Next up: ${bucket.label}` : `${bucket.label} across the NFL`;
+  void chicagoTodayYMD; // retained for parity with sibling hub components
 
-  const rowFor = (g: Game, rowSurface: AnalyticsSurface, showNetwork: boolean) => (
-    <GameRow
-      key={g.id}
-      game={g}
-      home={teamsById[g.homeTeamSlug]}
-      away={teamsById[g.awayTeamSlug]}
-      venue={venueByTeam[g.homeTeamSlug]}
-      promos={slate.promosByGameId[g.id] ?? []}
-      surface={rowSurface}
-      todayYmd={todayYmd}
-      utcTodayYmd={utcTodayYmd}
-      showNetwork={showNetwork}
-    />
-  );
+  const cardFor = (g: Game, cardSurface: AnalyticsSurface, wide: boolean) => {
+    const home = teamsById[g.homeTeamSlug];
+    const away = teamsById[g.awayTeamSlug];
+    if (!home || !away) return null;
+    const metaAmber = META_TONE === 'amber';
+    return (
+      <NflGameCard
+        key={g.id}
+        game={g}
+        home={home}
+        away={away}
+        venue={venueByTeam[g.homeTeamSlug]}
+        promoCount={slate.promosByGameId[g.id]?.length ?? 0}
+        surface={cardSurface}
+        wide={wide}
+        logistics={logisticsByGameId[g.id]}
+        metaAmber={metaAmber}
+      />
+    );
+  };
+
+  const weekLabelText = `${bucket.label.toUpperCase()} · ${formatWindow(bucket.windowStartYmd, bucket.windowEndYmd)}`;
 
   return (
     <section aria-labelledby={sectionId}>
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h2 id={sectionId} className="rd-display text-2xl text-rd-ink md:text-3xl">
-          {heading}
-        </h2>
-        <span className="font-rd text-[13px] text-rd-ink-faint">
-          {formatWindow(bucket.windowStartYmd, bucket.windowEndYmd)}
-        </span>
-      </div>
+      <RailHeading
+        id={sectionId}
+        title={slate.context.mode === 'next-up' ? 'Next up' : 'This week'}
+        label={weekLabelText}
+      />
       {slate.context.mode === 'next-up' ? (
         <p className="mt-2 font-rd text-[14px] text-rd-ink-soft">
-          No NFL games this week. Here is the next slate.
+          {slate.context.nextUpReason === 'played'
+            ? 'This week\u2019s slate has wrapped. Here is what is next.'
+            : slate.context.nextUpReason === 'thin'
+              ? 'This week\u2019s light slate carries no promos yet. Here is what is next.'
+              : 'No NFL games this week. Here is the next slate.'}
         </p>
       ) : null}
-
-      <ul className="mt-5 space-y-3">{rest.map((g) => rowFor(g, surface, false))}</ul>
+      <Rail>{rest.map((g) => cardFor(g, surface, false))}</Rail>
 
       {primetime.length > 0 ? (
         <div className="mt-8">
-          <h3 className="flex items-center gap-2 rd-display text-lg text-rd-ink">
-            <IconMoonStars size={19} stroke={2} aria-hidden className="text-rd-red" />
-            Primetime
-          </h3>
-          <p className="mt-1 font-rd text-[13px] text-rd-ink-soft">
-            Night kickoffs change the logistics: gate times, parking windows and last-train
-            questions. Every guide is one tap away.
-          </p>
-          <ul className="mt-4 space-y-3">{primetime.map((g) => rowFor(g, primetimeSurface, true))}</ul>
+          <RailHeading
+            id={`${sectionId}-primetime`}
+            title="Primetime"
+            label="NIGHT GAMES · GATES, LOTS AND TRANSIT RUN LATER"
+          />
+          <Rail>{primetime.map((g) => cardFor(g, primetimeSurface, true))}</Rail>
         </div>
       ) : null}
     </section>
