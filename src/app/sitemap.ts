@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { getAllTeams, getPlayoffConfig, getStillAlivePlayoffTeamIds } from '@/lib/data';
 import { getAllCfbSchoolIds } from '@/lib/cfb/data';
-import { isCfbHubLive, getLeagueHub } from '@/lib/league-hubs';
+import { isCfbHubLive, LEAGUE_HUBS } from '@/lib/league-hubs';
 import { getIndexableVenueHubSitemapEntries } from '@/lib/venue-hub';
 
 const BASE_URL = 'https://www.getpromonight.com';
@@ -43,10 +43,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     };
   });
 
-  // CFB vertical: the /cfb hub + 86 team pages. Gated on the SAME
-  // LEAGUE_HUB_REGISTRY live flag as the nav (so the sitemap follows go-live).
-  // Flows to the IndexNow deploy hook automatically (getAllSitemapUrls ->
-  // sitemap()).
+  // CFB team pages (the /cfb hub entry itself comes from the registry loop
+  // below). Gated on the SAME LEAGUE_HUB_REGISTRY live flag as the nav (so the
+  // sitemap follows go-live). Flows to the IndexNow deploy hook automatically
+  // (getAllSitemapUrls -> sitemap()).
   //
   // FAIL LOUDLY, same treatment as the venueHubs read below: this used to be
   // `.catch(() => [])`, which on any Firestore error served a complete-looking
@@ -62,16 +62,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         throw err;
       })
     : [];
-  const cfbHubEntries = cfbLive
-    ? [
-        {
-          url: `${BASE_URL}/cfb`,
-          lastModified: now,
-          changeFrequency: 'weekly' as const,
-          priority: 0.9,
-        },
-      ]
-    : [];
   const cfbTeamPages = cfbSchoolIds.map((id) => ({
     url: `${BASE_URL}/cfb/${id}`,
     lastModified: now,
@@ -79,22 +69,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
-  // WNBA + MLS league hubs. Gated on the SAME LEAGUE_HUB_REGISTRY live flag as
-  // the nav (so the sitemap follows go-live), mirroring the CFB pattern above.
-  // Fail-closed: a hub URL is emitted only once its route ships (live flips true),
-  // so there is never a sitemap entry pointing at a route that does not exist.
-  // Daily changefreq like /mlb: both run a daily promo cadence and their
-  // this-week rail turns over each day. Team pages for these leagues already flow
-  // through teamPages above (every getAllTeams doc, any league).
-  const leagueHubEntries = (['WNBA', 'MLS'] as const)
-    .map((lg) => getLeagueHub(lg))
-    .filter((hub): hub is NonNullable<typeof hub> => hub?.live === true)
-    .map((hub) => ({
-      url: `${BASE_URL}${hub.href}`,
-      lastModified: now,
-      changeFrequency: 'daily' as const,
-      priority: 0.9,
-    }));
+  // League hubs, from the registry — every live hub, one loop. Gated on the
+  // SAME LEAGUE_HUB_REGISTRY live flag as the nav, so the sitemap follows
+  // go-live and a hub URL is never emitted for a route that does not exist.
+  // This loop replaces the per-league special cases (an /mlb literal, a
+  // WNBA/MLS tuple, a CFB hub-entry branch) whose failure mode was silent:
+  // flipping a new hub live lit the nav and every team-page up-link while the
+  // hub URL stayed out of the sitemap AND out of the IndexNow deploy hook,
+  // which walks this same function. NFL — and NBA/NHL behind it — now reach
+  // both with no sitemap edit. Per-hub cadence comes from the registry (CFB
+  // weekly; default daily — promo-cadence hubs turn their this-week rail over
+  // each day). Team pages for every pro league already flow through teamPages
+  // above (every getAllTeams doc, any league); CFB team pages have their own
+  // fail-loud branch below.
+  const leagueHubEntries = LEAGUE_HUBS.map((hub) => ({
+    url: `${BASE_URL}${hub.href}`,
+    lastModified: now,
+    changeFrequency: hub.sitemapChangeFrequency ?? ('daily' as const),
+    priority: 0.9,
+  }));
 
   // Venue logistics hubs (/venues/[slug]). Only buildings that clear the indexing
   // floor (lat/lng + two of bag/parking/transit + verified) are listed; the rest
@@ -157,15 +150,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'weekly',
       priority: 0.8,
     },
-    {
-      // MLB league hub. Daily changefreq because MLB promos run a daily cadence
-      // and the hub's this-week rail turns over each day; hub-tier priority.
-      url: `${BASE_URL}/mlb`,
-      lastModified: now,
-      changeFrequency: 'daily',
-      priority: 0.9,
-    },
-    ...cfbHubEntries,
     ...leagueHubEntries,
     ...playoffHubEntries,
     ...teamPages,
