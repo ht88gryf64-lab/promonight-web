@@ -863,6 +863,15 @@ promo-pipeline, which only reads `games`. The sweep must scope on
 
 ## 15. Three live hubs claim "Schedules refreshed every 6 hours" on an ISR-only basis
 
+**Status: RESOLVED.** Fixed in `feature/hub-freshness-truth`, merged to main
+in `a182ad3` on 2026-08-07 and prod-verified on all three hubs. Verified
+mechanisms before the change, per the /nfl precedent: MLB promo scan weekly
+year-round (Tue 08:00 UTC) plus the weekly Monday schedule ingest; WNBA
+weekly May-Sept; MLS weekly Feb-Nov; all three scan workflows revalidate on
+prod writes. Lines now read "Rechecked weekly and updated as clubs announce
+promotions." (MLB) and the "in season" variant (WNBA, MLS). Site-wide grep
+found the 6-hour string nowhere else and no other unbacked cadence claims.
+
 **What it is.** The /mlb, /wnba, and /mls hub heroes each render the freshness
 line "Schedules refreshed every 6 hours." The 6-hour figure describes the
 pages' ISR interval (`revalidate = 21600`), not any data cadence: no 6-hour
