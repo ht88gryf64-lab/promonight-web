@@ -246,7 +246,7 @@ Overall reflects current-season promo presence (5 of 10 points require upcoming 
 - llms.txt: present.
 - Schema presence per template:
   - team: Event + FAQPage + WebPage ✓
-  - aggregator (/promos/*): Article + FAQPage — GAP: missing CollectionPage + ItemList (expected CollectionPage + ItemList + FAQPage)
+  - aggregator (/promos/*): CollectionPage + FAQPage + ItemList ✓
   - best-promos: Article + FAQPage + ItemList ✓
   - world-cup: CollectionPage + FAQPage ✓
   - playoffs: Article + FAQPage + WebPage ✓
@@ -262,6 +262,7 @@ Durable technical guardrails relocated here so they survive [AUTO] regeneration 
 
 - apex/www canonical mismatch was the root cause of the May 2026 Bing deindex. Re-confirm apex/www consistency on any redirect, canonical, or sitemap change.
 - IndexNow requires dual-endpoint submission (api.indexnow.org + www.bing.com/indexnow) for Bing to credit it.
+- Aggregator schema history: section 6 carried a stale GAP line ("missing CollectionPage + ItemList") from 2026-06-12 until 2026-08-07; commit 09308df (2026-06-15) had already rewritten AggregatorJsonLd to CollectionPage + ItemList + FAQPage. Two deviations the source-scanning generator cannot see: /promos/today omits FAQPage at runtime (the page passes faqs={[]}), and the /best-promos pages emit Article instead of CollectionPage by design.
 
 ## 7. Regeneration pipeline
 

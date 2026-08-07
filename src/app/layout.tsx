@@ -49,8 +49,12 @@ const outfit = Outfit({
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.getpromonight.com'),
+  // The default title deliberately carries no category-page head terms
+  // ("Theme Nights", "Food Deals"): those made Google test the homepage
+  // against queries /promos/theme-nights and /promos/food-deals should own,
+  // splitting signal both ways. Brand + the winnable niche only.
   title: {
-    default: 'PromoNight: Pro Sports Giveaways, Theme Nights & Food Deals',
+    default: 'PromoNight: Pro Sports Giveaway & Promo Night Tracker',
     template: '%s | PromoNight',
   },
   description:
