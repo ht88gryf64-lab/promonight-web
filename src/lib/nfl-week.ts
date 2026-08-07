@@ -6,8 +6,9 @@ import { isRegularSeasonGame } from './types';
 // Firestore; the data layer (src/lib/data.ts) composes these with the cached
 // league-wide games read.
 //
-// CADENCE SPEC (recorded here because hub-system-build-spec.md is not in this
-// repo — the 2026-08-06 build brief is currently its only other home): NFL and
+// CADENCE SPEC (authoritative source: promo-pipeline/docs/hub-system-build-spec.md
+// §"cadence split", committed there 2026-08-07; restated here because this
+// module is where the rollover is implemented): NFL and
 // CFB roll their hub week on a FIXED boundary rather than a rolling 7-day
 // window. NFL's boundary is TUESDAY: the hub shows week N from Tuesday through
 // the following Monday night, so Monday Night Football stays inside the week
