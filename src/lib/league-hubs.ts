@@ -11,6 +11,12 @@ export interface LeagueHub {
   sportSlug: string; // lowercased slug used in team URLs, e.g. 'mlb'
   accent: string; // locked house-palette hex for the LeagueChip background
   live: boolean; // only live hubs render in menus (the list grows as hubs ship)
+  // Sitemap changefreq for the hub URL. Absent means 'daily' (promo-cadence
+  // hubs turn their this-week rail over each day); CFB is 'weekly'. Lives here
+  // because this registry is the single source of truth for hub go-live — the
+  // sitemap iterates LEAGUE_HUBS, so flipping `live` is genuinely the whole
+  // go-live edit.
+  sitemapChangeFrequency?: 'daily' | 'weekly';
 }
 
 // Full house-palette registry. Accent colors are the locked set; flip `live` to
@@ -21,8 +27,8 @@ export const LEAGUE_HUB_REGISTRY: LeagueHub[] = [
   { league: 'MLS', label: 'MLS', href: '/mls', sportSlug: 'mls', accent: '#3f7d5a', live: true },
   { league: 'NBA', label: 'NBA', href: '/nba', sportSlug: 'nba', accent: '#b5642e', live: false },
   { league: 'NHL', label: 'NHL', href: '/nhl', sportSlug: 'nhl', accent: '#4a4f57', live: false },
-  { league: 'NFL', label: 'NFL', href: '/nfl', sportSlug: 'nfl', accent: '#5f6b57', live: false },
-  { league: 'CFB', label: 'CFB', href: '/cfb', sportSlug: 'cfb', accent: '#9a7d2e', live: true },
+  { league: 'NFL', label: 'NFL', href: '/nfl', sportSlug: 'nfl', accent: '#5f6b57', live: true },
+  { league: 'CFB', label: 'CFB', href: '/cfb', sportSlug: 'cfb', accent: '#9a7d2e', live: true, sitemapChangeFrequency: 'weekly' },
 ];
 
 // The live hubs shown in menus (the BrandBarLeagueHubs desktop dropdown + the

@@ -43,7 +43,12 @@ import {
 // Affiliate attribution and analytics are UNCHANGED by the layout: every CTA is
 // the same component with the same web_venue_{slug} props as before.
 
-const CONTACT_URL = 'https://www.getpromonight.com/contact';
+// The site's one contact affordance (Footer "Contact", /about) — a mailto, not
+// a route. The previous value here was https://www.getpromonight.com/contact,
+// which has never existed as a route: every empty-parking fallback rendered a
+// dead link as its only next step. If a real contact/contribute route ever
+// ships, update the Footer and this constant together.
+const CONTACT_URL = 'mailto:hello@getpromonight.com';
 
 function Card({ children, accent, tint }: { children: ReactNode; accent?: boolean; tint?: boolean }) {
   return (

@@ -132,6 +132,18 @@ export type AnalyticsSurface =
   | 'web_mls_hub_promo_type'
   | 'web_mls_hub_team_card'
   | 'web_mls_hub_venues'
+  // NFL league hub (/nfl) and its interactive sub-surfaces, mirroring the
+  // MLB/WNBA/MLS hub split. The NFL hub is week-indexed, so
+  // web_nfl_hub_this_week is the hero container (not a mid-page rail) and
+  // web_nfl_hub_primetime is the primetime subsection inside it, split out so
+  // its card taps and affiliate CTAs break out from the hero's in PostHog +
+  // GA4.
+  | 'web_nfl_hub'
+  | 'web_nfl_hub_this_week'
+  | 'web_nfl_hub_primetime'
+  | 'web_nfl_hub_promo_type'
+  | 'web_nfl_hub_team_card'
+  | 'web_nfl_hub_venues'
   | 'web_cfb_hub_venues'
   | 'web_venue_index'
   // Venue logistics hub (/venues/[slug]). Per-building attribution rides in the
@@ -1173,6 +1185,12 @@ const KNOWN_SURFACE_VALUES = [
   'web_mls_hub_promo_type',
   'web_mls_hub_team_card',
   'web_mls_hub_venues',
+  'web_nfl_hub',
+  'web_nfl_hub_this_week',
+  'web_nfl_hub_primetime',
+  'web_nfl_hub_promo_type',
+  'web_nfl_hub_team_card',
+  'web_nfl_hub_venues',
   'web_cfb_hub_venues',
   'web_venue_index',
   'web_venue',
@@ -1222,6 +1240,10 @@ export function inferSurfaceFromPath(path: string): AnalyticsSurface {
   if (path === '/mlb') return 'web_mlb_hub';
   if (path === '/wnba') return 'web_wnba_hub';
   if (path === '/mls') return 'web_mls_hub';
+  // Without this, bare /nfl falls through to the generic sport match below
+  // (whose allowlist includes 'nfl') and infers web_league_index for hub
+  // pageviews — the third, untypechecked edit site for a new hub surface.
+  if (path === '/nfl') return 'web_nfl_hub';
   // /[sport]/[team] — team pages. Sports are known; anything else falls through.
   const m = path.match(/^\/([a-z]+)(?:\/|$)/);
   if (m && ['mlb', 'nba', 'nhl', 'nfl', 'mls', 'wnba'].includes(m[1])) {
