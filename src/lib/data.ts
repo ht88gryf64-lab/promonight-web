@@ -1353,6 +1353,21 @@ const HUB_GROUPING: Record<string, HubGroupingSpec> = {
   // buckets, so groupOrder alone drives the grid.
   WNBA: { groupOrder: ['Eastern', 'Western'] },
   MLS: { groupOrder: ['Eastern', 'Western'] },
+  // NFL mirrors the MLB shape: 8 divisions under two super-header bands.
+  // Division strings verified against the teams collection 2026-08-06:
+  // exactly these 8 values, 4 clubs each, same "ABBREV Region" style as
+  // MLB's "AL East". Long band labels match how MLB renders AL/NL.
+  NFL: {
+    groupOrder: [
+      'AFC East', 'AFC North', 'AFC South', 'AFC West',
+      'NFC East', 'NFC North', 'NFC South', 'NFC West',
+    ],
+    superGroups: [
+      { key: 'AFC', label: 'American Football Conference' },
+      { key: 'NFC', label: 'National Football Conference' },
+    ],
+    superGroupOf: (key) => (key.startsWith('NFC') ? 'NFC' : 'AFC'),
+  },
 };
 
 // The super-header bands for a league (empty when the league groups flat).
