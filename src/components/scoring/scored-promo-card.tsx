@@ -107,7 +107,7 @@ export function ScoredPromoCard({
             </div>
             {(quantityCap || sponsor) && (
               <div className="mt-1.5 font-rd text-[11px] text-rd-ink-faint">
-                {quantityCap && <span>First {quantityCap.toLocaleString()} fans</span>}
+                {quantityCap && <span>First {quantityCap.toLocaleString('en-US')} fans</span>}
                 {quantityCap && sponsor && <span className="mx-1.5">·</span>}
                 {sponsor && <span>Presented by {sponsor}</span>}
               </div>
@@ -178,7 +178,7 @@ export function ScoredPromoCard({
           {(quantityCap || sponsor) && (
             <div className="text-text-muted text-[11px] font-mono mt-1.5">
               {quantityCap && (
-                <span>First {quantityCap.toLocaleString()} fans</span>
+                <span>First {quantityCap.toLocaleString('en-US')} fans</span>
               )}
               {quantityCap && sponsor && <span className="mx-1.5">·</span>}
               {sponsor && <span>Presented by {sponsor}</span>}

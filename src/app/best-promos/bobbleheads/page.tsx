@@ -15,10 +15,19 @@ import { archivoHouse } from '@/components/redesign/fonts-house';
 export const revalidate = 86400;
 
 const PAGE_URL = 'https://www.getpromonight.com/best-promos/bobbleheads';
-const YEAR = new Date().getFullYear();
+// Season year is hardcoded deliberately (house SEO-copy rule: never
+// getFullYear() in titles or descriptions); bump when next-season content
+// is ready so the whole page flips at once.
+const SEASON_YEAR = 2026;
 const SERVER_FETCH_DAYS = 180;
 const SERVER_FETCH_CAP = 500;
+// The crawlable default view: the browser mounts with range '90d' and
+// server-renders its first PAGE_SIZE (50) cards. ITEMLIST_SCHEMA_CAP and
+// DEFAULT_VIEW_DAYS mirror those two values so the ItemList entries are
+// exactly the server-rendered cards and every declared count matches the
+// served DOM.
 const ITEMLIST_SCHEMA_CAP = 50;
+const DEFAULT_VIEW_DAYS = 90;
 
 function localYMD(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -29,18 +38,19 @@ function addDaysYMD(base: Date, days: number): string {
   return localYMD(d);
 }
 
-// Distinct interpolation set vs /best-promos: count is bobblehead-specific
-// (~204 in the corpus), top-of-list is the WNBA Mystics duo at 100, item
-// type is named in the title. Title leads with "Bobblehead Nights" (not
-// "MLB Bobblehead Nights") because the top of the actual list is WNBA;
-// MLB dominance is communicated by the list itself rather than the title.
+// Distinct vs /best-promos via the item-type scope: the title names
+// bobbleheads and leads with "Bobblehead Nights" (not "MLB Bobblehead
+// Nights") because top scorers shift between leagues as scans land. The
+// description states the ranking mechanics only; point-in-time facts
+// (which teams lead, tie scores) belong in the live list, not in static
+// metadata that ISR never recomputes.
 export const metadata: Metadata = {
-  title: `Best Bobblehead Nights of ${YEAR}: Ranked by Score`,
-  description: `Every bobblehead giveaway across MLB, MLS, and WNBA in ${YEAR} ranked 0 to 100 by attendance cap and sponsor. Two Washington Mystics bobblehead nights tied at 100; MLB cluster at 98 follows. Updated weekly.`,
+  title: `Best Bobblehead Nights of ${SEASON_YEAR}: Ranked by Score`,
+  description: `Every bobblehead giveaway across MLB, MLS, and WNBA in ${SEASON_YEAR}, ranked 0 to 100 by attendance cap, item value, sponsor presence, and highlight tier. Updated weekly.`,
   alternates: { canonical: PAGE_URL },
   openGraph: {
-    title: `Best Bobblehead Nights of ${YEAR}`,
-    description: `Every bobblehead giveaway across MLB, MLS, and WNBA in ${YEAR}, ranked by score. Updated weekly.`,
+    title: `Best Bobblehead Nights of ${SEASON_YEAR}`,
+    description: `Every bobblehead giveaway across MLB, MLS, and WNBA in ${SEASON_YEAR}, ranked by score. Updated weekly.`,
     url: PAGE_URL,
     type: 'website',
     images: [
@@ -48,7 +58,7 @@ export const metadata: Metadata = {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'PromoNight — ranked bobblehead nights',
+        alt: 'PromoNight: ranked bobblehead nights',
       },
     ],
   },
@@ -118,7 +128,13 @@ export default async function BobbleheadsPage() {
     getAllTeamScores(),
   ]);
 
-  const itemListPromos = promos.slice(0, ITEMLIST_SCHEMA_CAP);
+  // The ItemList mirrors the browser's server-rendered default view
+  // (90-day window, first 50 cards): the schema declares exactly the
+  // promos a crawler sees in the prerendered DOM.
+  const defaultViewEndYMD = addDaysYMD(now, DEFAULT_VIEW_DAYS);
+  const itemListPromos = promos
+    .filter((p) => p.date <= defaultViewEndYMD)
+    .slice(0, ITEMLIST_SCHEMA_CAP);
   const uniqueTeams = Array.from(
     new Map(itemListPromos.map((p) => [p.team.id, p.team])).values(),
   );
@@ -145,8 +161,8 @@ export default async function BobbleheadsPage() {
       <>
         <ScoredJsonLd
           url={PAGE_URL}
-          title={`Best Bobblehead Nights of ${YEAR}`}
-          description={`Every bobblehead giveaway across MLB, MLS, and WNBA in ${YEAR}, ranked by score.`}
+          title={`Best Bobblehead Nights of ${SEASON_YEAR}`}
+          description={`Every bobblehead giveaway across MLB, MLS, and WNBA in ${SEASON_YEAR}, ranked by score.`}
           lastUpdated={latestComputedAt || new Date().toISOString()}
           faqs={FAQS}
           itemListItems={itemListPromos}
@@ -163,15 +179,15 @@ export default async function BobbleheadsPage() {
                 <span>/</span>
                 <span className="text-white/60">Bobbleheads</span>
               </div>
-              <p className="font-rd text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: '#ff5a78' }}>Bobbleheads of {YEAR}</p>
-              <h1 className="rd-display mt-1 text-4xl uppercase leading-[0.95] text-white md:text-6xl">BEST BOBBLEHEAD NIGHTS OF {YEAR}</h1>
+              <p className="font-rd text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: '#ff5a78' }}>Bobbleheads of {SEASON_YEAR}</p>
+              <h1 className="rd-display mt-1 text-4xl uppercase leading-[0.95] text-white md:text-6xl">BEST BOBBLEHEAD NIGHTS OF {SEASON_YEAR}</h1>
               <p className="mt-3 font-rd text-[11px] uppercase tracking-[0.12em] text-white/45">Last updated {lastUpdatedDisplay} · {promos.length} bobbleheads ranked</p>
             </div>
           </section>
 
           <div className="mx-auto max-w-4xl px-6 pb-20 pt-10">
             <p className="rounded-2xl border border-rd-line bg-rd-card p-5 font-rd text-[15px] leading-relaxed text-rd-ink-soft">
-              The {promos.length} top-scored bobblehead giveaways of {YEAR} are ranked below across MLB, MLS, and WNBA. MLB clubs run the majority of bobblehead programs, but the two highest-scoring entries are Washington Mystics bobblehead nights tied at 100. Every listed event is scored on attendance cap, item value, sponsor presence, and highlight tier.
+              The {promos.length} top-scored bobblehead giveaways of {SEASON_YEAR} are ranked below across MLB, MLS, and WNBA. MLB clubs run the majority of bobblehead programs, but the two highest-scoring entries are Washington Mystics bobblehead nights tied at 100. Every listed event is scored on attendance cap, item value, sponsor presence, and highlight tier.
             </p>
 
             <Suspense fallback={null}>
@@ -179,9 +195,7 @@ export default async function BobbleheadsPage() {
             </Suspense>
 
             <div className="mt-8">
-              <Suspense fallback={null}>
-                <BestPromosBrowser initialPromos={promos} ticketsPlacement="best_promos_bobbleheads_card" trackingSurface="best_promos_bobbleheads" inlineAnswers={INLINE_ANSWERS} variant="light" />
-              </Suspense>
+              <BestPromosBrowser initialPromos={promos} serverTodayYMD={todayYMD} ticketsPlacement="best_promos_bobbleheads_card" trackingSurface="best_promos_bobbleheads" inlineAnswers={INLINE_ANSWERS} variant="light" />
             </div>
 
             <section className="mt-16">
@@ -205,8 +219,8 @@ export default async function BobbleheadsPage() {
     <>
       <ScoredJsonLd
         url={PAGE_URL}
-        title={`Best Bobblehead Nights of ${YEAR}`}
-        description={`Every bobblehead giveaway across MLB, MLS, and WNBA in ${YEAR}, ranked by score.`}
+        title={`Best Bobblehead Nights of ${SEASON_YEAR}`}
+        description={`Every bobblehead giveaway across MLB, MLS, and WNBA in ${SEASON_YEAR}, ranked by score.`}
         lastUpdated={latestComputedAt || new Date().toISOString()}
         faqs={FAQS}
         itemListItems={itemListPromos}
@@ -231,17 +245,17 @@ export default async function BobbleheadsPage() {
           </div>
 
           <span className="font-mono text-[10px] tracking-[1.5px] uppercase text-accent-red">
-            Bobbleheads of {YEAR}
+            Bobbleheads of {SEASON_YEAR}
           </span>
           <h1 className="font-display text-4xl md:text-6xl tracking-[1px] mt-2">
-            BEST BOBBLEHEAD NIGHTS OF {YEAR}
+            BEST BOBBLEHEAD NIGHTS OF {SEASON_YEAR}
           </h1>
           <p className="font-mono text-[10px] tracking-[1.5px] uppercase text-text-muted mt-3">
             Last updated {lastUpdatedDisplay} · {promos.length} bobbleheads
             ranked
           </p>
           <p className="mt-5 text-text-secondary text-base leading-relaxed max-w-3xl">
-            The {promos.length} top-scored bobblehead giveaways of {YEAR} are
+            The {promos.length} top-scored bobblehead giveaways of {SEASON_YEAR} are
             ranked below across MLB, MLS, and WNBA. MLB clubs run the
             majority of bobblehead programs, but the two highest-scoring
             entries are Washington Mystics bobblehead nights tied at 100.
@@ -259,14 +273,13 @@ export default async function BobbleheadsPage() {
           </Suspense>
 
           <div className="mt-10">
-            <Suspense fallback={null}>
-              <BestPromosBrowser
-                initialPromos={promos}
-                ticketsPlacement="best_promos_bobbleheads_card"
-                trackingSurface="best_promos_bobbleheads"
-                inlineAnswers={INLINE_ANSWERS}
-              />
-            </Suspense>
+            <BestPromosBrowser
+              initialPromos={promos}
+              serverTodayYMD={todayYMD}
+              ticketsPlacement="best_promos_bobbleheads_card"
+              trackingSurface="best_promos_bobbleheads"
+              inlineAnswers={INLINE_ANSWERS}
+            />
           </div>
 
           <section className="mt-16 pt-10 border-t border-border-subtle">
