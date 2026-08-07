@@ -115,7 +115,7 @@ export default async function WnbaHubPage() {
         eyebrow="WNBA League Hub"
         title={`WNBA PROMOTIONS ${YEAR}`}
         subtitle="Every theme night, jersey giveaway, and bobblehead across all 15 WNBA teams, grouped by conference."
-        freshness="Schedules refreshed every 6 hours."
+        freshness="Rechecked weekly in season and updated as clubs announce promotions."
         accent={ACCENT}
       >
         <HubStatBar stats={stats} leagueLabel="WNBA" />
