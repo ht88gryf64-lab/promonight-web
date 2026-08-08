@@ -137,9 +137,12 @@ export function VenueHubView({
       hub.clearBagRequired !== null ||
       hub.bagsProhibited === true ||
       !!hub.bagPolicyNotes);
-  // The FAQ has one more entry point than the capsule: a building with only a
-  // policy URL has nothing to put in the capsule but can still answer "has this
-  // venue published a bag policy", which is the fifth case in bagFaqAnswers.
+  // A building with only a policy URL has no FACT to put in the capsule, but it
+  // can still answer "has this venue published a bag policy" (the fifth case in
+  // bagFaqAnswers) and it can still send the reader to the venue's own page. So
+  // this, not hasBag, is what gates both the FAQ and the card: hasBag remains the
+  // narrower test for whether a bag fact exists at all, which is what
+  // venueHubIsIndexable and the capsule copy care about.
   const hasBagFaq = hasBag || (verified && !!hub.bagPolicyUrl);
   const cap = bagCapsule(hub);
   const dimStr = dimsString(hub.bagMaxDimensions);
@@ -262,7 +265,13 @@ export function VenueHubView({
 
   // ── reusable cards (rail on desktop, inline on mobile — rendered once each,
   //    the DOM copy visible at each breakpoint is toggled with lg: utilities) ──
-  const bagCard = hasBag ? (
+  // Gated on hasBagFaq, not hasBag: a building whose only bag fact is a policy
+  // URL has nothing to put in the capsule but still has somewhere to send the
+  // reader, and sending them to the venue's own page is the whole value of the
+  // empty state. bagCapsule returns the neutral BAG POLICY label with no size and
+  // no clarity claim when the three fact fields are null, so widening the gate
+  // asserts nothing new.
+  const bagCard = hasBagFaq ? (
     <Card accent>
       <CardLabel>What size bag can I bring?</CardLabel>
       <div className="flex flex-wrap items-center gap-2.5">
