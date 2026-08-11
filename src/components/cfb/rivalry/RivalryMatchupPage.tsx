@@ -173,8 +173,12 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
         </nav>
 
         {/* 2. H1: the rivalry name leads, the trophy is not the headline */}
+        {/* The display name, not rivalry.name: the H1 is a search target, and
+            cfbRivalries.name holds the trophy or historical name, which is not
+            always what anyone searches. The trophy block below still shows
+            rivalry.trophy, so nothing is lost. */}
         <h1 className="mt-3 text-3xl font-extrabold leading-tight sm:text-4xl">
-          {rivalry.name} {SEASON}
+          {data.displayName} {SEASON}
         </h1>
 
         {/* 3. matchup line */}

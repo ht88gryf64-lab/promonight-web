@@ -25,10 +25,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     };
   }
 
-  // Phase 1C fills this in properly (rivalry name leads, trophy is not the
-  // headline). Scaffold keeps a real title so the miss path above stays the
-  // only branch that can produce an empty one.
-  return { title: `${data.rivalry.name} 2026` };
+  // displayName, not rivalry.name, so the title matches the H1 exactly. The
+  // rivalry name leads and the trophy is never the headline.
+  return { title: `${data.displayName} 2026` };
 }
 
 export default async function Page({ params }: { params: Promise<{ slug: string }> }) {

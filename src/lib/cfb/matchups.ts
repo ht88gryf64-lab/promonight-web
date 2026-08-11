@@ -18,50 +18,14 @@ import type { CfbGame, CfbRivalry, CfbSchool, CfbVenue } from '@/lib/cfb/types';
 import { getCfbCorpus, getCfbSchoolPage } from '@/lib/cfb/data';
 import { getVenueHub, getVenueHubForTeam, venueHubIsIndexable } from '@/lib/venue-hub';
 import { buildRivalrySentences } from '@/lib/cfb/page-extras';
+import { MATCHUP_REGISTRY, type MatchupRegistryEntry } from '@/lib/cfb/matchup-registry';
+import { resolveMatchupDisplayName, findDisplayNameCollisions } from '@/lib/cfb/display-name';
 
-export interface MatchupRegistryEntry {
-  /** URL slug: /cfb/rivalries/{slug} */
-  slug: string;
-  /** cfbRivalries doc id. */
-  rivalryId: string;
-}
+// Re-exported so existing importers keep one entry point.
+export { MATCHUP_REGISTRY, resolveMatchupDisplayName, findDisplayNameCollisions };
+export type { MatchupRegistryEntry };
 
-/** Build order is search demand, highest first. Every entry was verified in the
- *  Phase 1A audit to resolve against a real cfbRivalries doc. */
-export const MATCHUP_REGISTRY: readonly MatchupRegistryEntry[] = [
-  { slug: 'iron-bowl', rivalryId: 'alabama--auburn' },
-  { slug: 'egg-bowl', rivalryId: 'mississippi-state--ole-miss' },
-  { slug: 'apple-cup', rivalryId: 'washington--washington-state' },
-  { slug: 'the-game', rivalryId: 'michigan--ohio-state' },
-  { slug: 'red-river-rivalry', rivalryId: 'oklahoma--texas' },
-  { slug: 'florida-georgia', rivalryId: 'florida--georgia' },
-  { slug: 'magnolia-bowl', rivalryId: 'lsu--ole-miss' },
-  { slug: 'palmetto-bowl', rivalryId: 'clemson--south-carolina' },
-  { slug: 'sunflower-showdown', rivalryId: 'kansas--kansas-state' },
-  { slug: 'third-saturday-in-october', rivalryId: 'alabama--tennessee' },
-  { slug: 'lone-star-showdown', rivalryId: 'texas--texas-am' },
-  { slug: 'paul-bunyans-axe', rivalryId: 'minnesota--wisconsin' },
-  { slug: 'little-brown-jug', rivalryId: 'michigan--minnesota' },
-  { slug: 'floyd-of-rosedale', rivalryId: 'iowa--minnesota' },
-  { slug: 'old-oaken-bucket', rivalryId: 'indiana--purdue' },
-  { slug: 'clean-old-fashioned-hate', rivalryId: 'georgia--georgia-tech' },
-  { slug: 'deep-souths-oldest-rivalry', rivalryId: 'auburn--georgia' },
-  { slug: 'holy-war', rivalryId: 'byu--utah' },
-  { slug: 'big-game', rivalryId: 'california--stanford' },
-  { slug: 'territorial-cup', rivalryId: 'arizona--arizona-state' },
-  { slug: 'heroes-trophy', rivalryId: 'iowa--nebraska' },
-  { slug: 'cy-hawk-trophy', rivalryId: 'iowa--iowa-state' },
-  { slug: 'megaphone-trophy', rivalryId: 'michigan-state--notre-dame' },
-  { slug: 'legends-trophy', rivalryId: 'notre-dame--stanford' },
-  { slug: 'victory-bell-ucla-usc', rivalryId: 'ucla--usc' },
-  { slug: 'victory-bell-duke-unc', rivalryId: 'duke--north-carolina' },
-  { slug: 'golden-boot', rivalryId: 'arkansas--lsu' },
-  { slug: 'commonwealth-cup', rivalryId: 'virginia--virginia-tech' },
-  { slug: 'land-of-lincoln-trophy', rivalryId: 'illinois--northwestern' },
-  { slug: 'illibuck', rivalryId: 'illinois--ohio-state' },
-  { slug: 'farmageddon', rivalryId: 'iowa-state--kansas-state' },
-  { slug: 'governors-cup', rivalryId: 'kentucky--louisville' },
-] as const;
+
 
 const BY_SLUG = new Map(MATCHUP_REGISTRY.map((e) => [e.slug, e]));
 
@@ -108,6 +72,8 @@ export interface MatchupSibling {
 
 export interface MatchupPage {
   slug: string;
+  /** What the page leads with: the registry override, else the rivalry name. */
+  displayName: string;
   rivalry: CfbRivalry & { id: string };
   /** The 2026 meeting, or null when the rivalry is dormant this season. */
   game: (CfbGame & { id: string }) | null;
@@ -160,7 +126,9 @@ export const getMatchupIndex = cache(async (): Promise<Array<{ slug: string; nam
     const first = rivalry.schoolIds.map((id) => schoolById.get(id)).find(Boolean);
     out.push({
       slug: e.slug,
-      name: rivalry.name,
+      // The display name, so the sibling rail and the /cfb/rivalries index show
+      // the same string the destination page leads with.
+      name: resolveMatchupDisplayName(e, rivalry.name),
       date: game?.data.date ?? null,
       conference: first?.conferenceBySeason?.['2026'] ?? null,
       schoolIds: rivalry.schoolIds,
@@ -282,6 +250,7 @@ export const getMatchupPage = cache(async (slug: string): Promise<MatchupPage | 
 
   return {
     slug,
+    displayName: resolveMatchupDisplayName(entry, rivalry.name),
     rivalry,
     game: game ? { ...game.data, id: game.docId } : null,
     schools: [schoolA, schoolB],

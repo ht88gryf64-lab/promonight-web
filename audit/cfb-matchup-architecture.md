@@ -945,3 +945,38 @@ reports 12 degradations: 8 `broadcast.network` (for example "NBC and Peacock" to
 These are reported as DEGRADE rather than LOSS because a different non-null value
 does not empty a page, and mixing them into the LOSS tier would bury the alarm
 that matters.
+
+### Matchup page residue, logged not fixed
+
+**8 matchup pages render 3 trip steps, all missing Gates and bags**, because the
+building's `venueHubs` doc sits below the index floor. Six buildings:
+
+| Building | Why it fails the floor | Pages affected |
+|---|---|---|
+| `bill-snyder-family-football-stadium` | verified, fails 2-of-3 facts | sunflower-showdown |
+| `memorial-stadium-indiana-university` | verified, fails 2-of-3 facts | old-oaken-bucket |
+| `california-memorial-stadium` | verified, fails 2-of-3 facts | big-game |
+| `kinnick-stadium` | verified, fails 2-of-3 facts | heroes-trophy, cy-hawk-trophy |
+| `sanford-stadium` | `verified:false` | clean-old-fashioned-hate, deep-souths-oldest-rivalry |
+| `martin-stadium-northwestern-university` | `verified:false` | land-of-lincoln-trophy |
+
+`sanford-stadium` backs two pages, both Georgia rivalries. This is a venueHubs
+DATA gap, not a gating defect: the gate is working exactly as designed and
+refusing to link into a hub with nothing in it. It belongs in a venue data pass.
+
+**`legends-trophy` is the only page falling through to the nearest-date rail
+tier**, so its heading reads "More rivalries" rather than "More rivalry week".
+
+**`buildRivalrySentences` filters any name matching `/rivalr/i`**
+(`page-extras.ts:52`), so `deep-souths-oldest-rivalry` renders without an
+identifier clause: "The Auburn vs Georgia rivalry is played on Saturday, October
+17 at Sanford Stadium." Flat, not wrong. The generator is deliberately untouched.
+
+### Operational trap: zsh does not word-split an unquoted variable
+
+`"--execute --resume"` passed as `$a` arrives as a SINGLE argument, so
+`args.includes('--execute')` reads false and the run silently proceeds as a full
+DRY parse of all 86 schools. This has now cost this project twice, once in
+Firecrawl credits and once in a five-minute stall during the Phase 1E gate.
+Always pass writer flags explicitly rather than through a loop variable, or use
+`${=a}` if a loop is unavoidable.
