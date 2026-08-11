@@ -2,9 +2,11 @@
 // field picker live in src/lib/cfb/human-owned.ts so the app and the tests share
 // one definition; this module adds only the parts that touch the database.
 
-import { HUMAN_OWNED_FIELDS, pickHumanOwned } from '../../../src/lib/cfb/human-owned';
+import {
+  HUMAN_OWNED_FIELDS, pickHumanOwned, MACHINE_OWNED_CRITICAL, findCriticalLosses,
+} from '../../../src/lib/cfb/human-owned';
 
-export { HUMAN_OWNED_FIELDS, pickHumanOwned };
+export { HUMAN_OWNED_FIELDS, pickHumanOwned, MACHINE_OWNED_CRITICAL, findCriticalLosses };
 
 /** One doc that would lose human-owned data if the collection were wiped. */
 export interface HumanOwnedHit {

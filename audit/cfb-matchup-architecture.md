@@ -862,3 +862,47 @@ matchup pages), degraded `broadcast.network` from "NBC and Peacock" to "NBC" on
 ended at size 0, so `tagRivalry` returns null in a scoped run. All 14 docs were
 restored from snapshot. The preservation allowlist protects the two fields it
 names; it does not make a scoped re-run safe.
+
+### tagRivalry loses rivalry context under scoping. Open, not chased.
+
+`scripts/cfb/run-phase2.ts` calls `tagRivalry(home, away)` at `:79` to attach
+`rivalryId`. Under `--only=<school>` it returns null for every game and the run
+reports `rivalries=0`, so the rebuild nulls a field the entire
+`/cfb/rivalries` family keys on.
+
+Measured on notre-dame at the Phase 1A gate, 5 of 14 docs lost `rivalryId`:
+
+| Doc | Lost tag | Backs |
+|---|---|---|
+| `2026-2026-09-19-notre-dame-michigan-state` | `michigan-state--notre-dame` | `megaphone-trophy` |
+| `2026-2026-10-10-notre-dame-stanford` | `notre-dame--stanford` | `legends-trophy` |
+| `2026-2026-10-31-navy-notre-dame` | `navy--notre-dame` | not in the registry |
+| `2026-2026-09-26-purdue-notre-dame` | `notre-dame--purdue` | not in the registry |
+| `2026-2026-11-14-notre-dame-boston-college` | `boston-college--notre-dame` | not in the registry |
+
+The same run also degraded `broadcast.network` (for example "NBC and Peacock" to
+"NBC") on 7 docs and flipped `kickoff.tz` from a real zone to TBD on 4 TBD games.
+All 14 docs were restored from snapshot.
+
+WHY it happens is unknown and was deliberately not chased: it is real work and it
+is not what stands between the project and the pages. Phase 1B-C contains the
+blast radius instead. A scoped `--execute` now exits 1 unless `--force-scoped` is
+passed, and `MACHINE_OWNED_CRITICAL` tripwires every `rivalryId` about to go from
+populated to null, in dry and execute alike. `rivalryId` is deliberately NOT in
+`HUMAN_OWNED_FIELDS`: preserving a stale machine-derived tag that the fresh parse
+disagrees with would be worse than losing it.
+
+### Settled: the canonical-doc rule for duplicate pairs
+
+Amended after the Phase 1A write. The rule is now, in order:
+
+1. `broadcast.confirmed` true wins
+2. the normalized `H:MM AM/PM` kickoff shape wins
+3. `verified: true` wins
+4. the school the official sources designate as home wins
+
+Adding `verified` as step 3 reproduces all 8 verdicts with no deviation. Under
+the previous three-step rule, UNC vs TCU fell through to designated home (TCU),
+which would have kept a `verified:false` doc storing "11:00 AM ET" for a game
+that kicks at 11:00 AM CT, rendering "Kickoff TBA" and a wrong time. Step 3
+changes only that pair and agrees with step 2 everywhere else.

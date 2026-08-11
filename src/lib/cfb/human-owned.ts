@@ -21,6 +21,38 @@ export const HUMAN_OWNED_FIELDS = ['tombstoned', 'neutralVenueHubSlug'] as const
 
 export type HumanOwnedField = (typeof HUMAN_OWNED_FIELDS)[number];
 
+/** Machine-derived fields whose LOSS is a silent, high-blast-radius failure.
+ *
+ *  These are NOT preserved. They are machine-owned, and carrying a stale value
+ *  forward would be worse than losing it: a rivalryId that no longer reflects
+ *  the parse is a lie, whereas a null one is merely absent. So the writer does
+ *  not protect them. It TRIPWIRES on them, naming every doc where the field is
+ *  about to go from populated to null, so the loss is seen rather than papered
+ *  over.
+ *
+ *  rivalryId earns its place because the entire /cfb/rivalries family keys on
+ *  it: getMatchupPage finds a matchup's game by rivalryId, so nulling it on a
+ *  doc silently empties the corresponding matchup page. A scoped run-phase2 run
+ *  was observed nulling it on 5 of 14 notre-dame docs, two of which back
+ *  registry pages. */
+export const MACHINE_OWNED_CRITICAL = ['rivalryId'] as const;
+
+/** Fields in MACHINE_OWNED_CRITICAL that are populated on `existing` and null or
+ *  absent on `incoming`. Empty when nothing is being lost. */
+export function findCriticalLosses(
+  existing: Record<string, unknown> | undefined | null,
+  incoming: Record<string, unknown>,
+): Array<{ field: string; was: unknown }> {
+  if (!existing) return [];
+  const out: Array<{ field: string; was: unknown }> = [];
+  for (const f of MACHINE_OWNED_CRITICAL) {
+    const had = existing[f] !== null && existing[f] !== undefined;
+    const has = incoming[f] !== null && incoming[f] !== undefined;
+    if (had && !has) out.push({ field: f, was: existing[f] });
+  }
+  return out;
+}
+
 /** Visibility predicate for a tombstoned game. This is an app-code array filter
  *  ONLY: absent and false are visible, only true is hidden. It is never used as
  *  a Firestore inequality, which would drop field-absent docs and break the

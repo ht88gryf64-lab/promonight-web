@@ -2,17 +2,34 @@
 // CFB Phase 2 orchestrator — the 86-school hard-data run (decision record §6/§7).
 //
 //   npx tsx --require ./scripts/stub-server-only.cjs scripts/cfb/run-phase2.ts --execute --resume
-//   ... --execute --only=lsu,notre-dame     # subset
-//   ... --execute --limit=5                  # first 5 (smoke)
+//   ... --only=lsu,notre-dame                # DRY only, a scoped execute is refused
+//   ... --limit=5                            # DRY only, a scoped execute is refused
 //   ... --execute                            # FULL run: WIPES cfb* first, see below
 //   (omit --execute for a DRY run: everything except Firestore writes)
 //
-// THE BARE --execute IS THE DESTRUCTIVE ONE. With no --resume, --only or
-// --limit it calls clearCollections() and deletes cfbGames, cfbVenues,
-// cfbSchools and cfbRivalries before rebuilding. Prefer --resume or --only for
-// routine runs; both skip the wipe. The wipe now REFUSES when any doc carries a
-// human-owned field (tombstoned, neutralVenueHubSlug) and needs --force-wipe to
-// proceed, because those fields cannot be rebuilt from any schedule page.
+// TWO GUARDS, both of which exist because a re-run destroys data that no
+// schedule page can rebuild.
+//
+// 1. A SCOPED EXECUTE IS REFUSED. --execute with --only or --limit exits 1
+//    unless --force-scoped is also passed. A scoped run does not assemble the
+//    rivalry context, so tagRivalry returns null for every game and the rebuild
+//    nulls rivalryId, degrades broadcast.network and flips kickoff.tz to TBD.
+//    Measured on notre-dame: rivalries=0 and 5 of 14 docs lost rivalryId, two of
+//    them backing registry matchup pages. The /cfb/rivalries family keys on that
+//    field, so each loss silently empties a page. --execute --resume is the safe
+//    routine invocation; it is scoped by checkpoint, not by --only, and keeps
+//    the full target list.
+//
+// 2. THE BARE --execute IS THE DESTRUCTIVE ONE. With no --resume, --only or
+//    --limit it calls clearCollections() and deletes cfbGames, cfbVenues,
+//    cfbSchools and cfbRivalries before rebuilding. The wipe REFUSES when any
+//    doc carries a human-owned field (tombstoned, neutralVenueHubSlug) and needs
+//    --force-wipe to proceed, because those cannot be rebuilt from any source.
+//
+// Field ownership lives in src/lib/cfb/human-owned.ts: HUMAN_OWNED_FIELDS are
+// carried across a rebuild, MACHINE_OWNED_CRITICAL are tripwired and reported
+// but deliberately NOT preserved, since a stale machine value is worse than an
+// absent one.
 //
 // Per school: Firecrawl-fetch the OFFICIAL schedule -> Haiku parse (source =
 // official domain) -> build cfbGames (verified=false) -> corroborate in HARNESS
@@ -45,15 +62,21 @@ import { fetchWikiSchedule, corroborate } from './lib/corroborate';
 import { resolveVenue } from './lib/venue';
 import { resolveColors } from './lib/colors';
 import { tagRivalry, type RivalryEntry } from './lib/rivalry';
-import { pickHumanOwned, assertWipeSafe, HUMAN_OWNED_FIELDS } from './lib/human-owned';
+import {
+  pickHumanOwned, assertWipeSafe, findCriticalLosses,
+  HUMAN_OWNED_FIELDS, MACHINE_OWNED_CRITICAL,
+} from './lib/human-owned';
 
 const args = process.argv.slice(2);
 const EXECUTE = args.includes('--execute');
 const RESUME = args.includes('--resume');
 const FORCE_WIPE = args.includes('--force-wipe');
+const FORCE_SCOPED = args.includes('--force-scoped');
 
 /** Every human-owned field carried forward across a re-run, for the run report. */
 const preserved: string[] = [];
+/** Every doc where a MACHINE_OWNED_CRITICAL field is about to be lost. */
+const criticalLosses: string[] = [];
 const LIMIT = Number((args.find((a) => a.startsWith('--limit=')) || '').replace('--limit=', '')) || 0;
 const ONLY = (args.find((a) => a.startsWith('--only=')) || '').replace('--only=', '');
 const onlySet = ONLY ? new Set(ONLY.split(',')) : null;
@@ -139,11 +162,22 @@ async function runSchool(cfg: CfbSchoolConfig2026): Promise<SchoolResult> {
   );
   const carriedByGameId = new Map<string, Record<string, unknown>>();
   for (let i = 0; i < games.length; i++) {
-    const carried = pickHumanOwned(existingGames[i].exists ? existingGames[i].data() : undefined);
+    const stored = existingGames[i].exists ? existingGames[i].data() : undefined;
+    const carried = pickHumanOwned(stored);
     if (Object.keys(carried).length) {
       carriedByGameId.set(games[i].id, carried);
       preserved.push(`${games[i].id} ${JSON.stringify(carried)}`);
       console.log(`    PRESERVE ${games[i].id} ${JSON.stringify(carried)}${EXECUTE ? '' : ' (dry, would carry forward)'}`);
+    }
+
+    // TRIPWIRE, not preservation. A machine-derived field that the fresh parse
+    // could not reproduce is a real signal, and carrying the stale value forward
+    // would hide it. Name every loss instead, in dry and execute alike.
+    const losses = findCriticalLosses(stored, games[i] as unknown as Record<string, unknown>);
+    for (const l of losses) {
+      const line = `${games[i].id} ${l.field}: ${JSON.stringify(l.was)} -> null`;
+      criticalLosses.push(line);
+      console.log(`    !! LOSING ${line}`);
     }
   }
 
@@ -192,7 +226,44 @@ async function main() {
   const state = RESUME ? loadState() : {};
   if (RESUME) targets = targets.filter((s) => !state[s.id]);
 
+  // A SCOPED execute loses rivalry tagging. Measured on notre-dame: the run
+  // reported rivalries=0 and nulled rivalryId on 5 of 14 docs, two of which back
+  // registry matchup pages. tagRivalry needs context a scoped run does not
+  // assemble. Until that is understood, a scoped write is refused.
+  if (EXECUTE && (onlySet || LIMIT) && !FORCE_SCOPED) {
+    console.error([
+      '',
+      'REFUSING A SCOPED EXECUTE.',
+      `  --only=${ONLY || '(unset)'}   --limit=${LIMIT || '(unset)'}`,
+      '',
+      'A scoped run does not assemble the rivalry context, so tagRivalry returns null',
+      'for every game and the rebuild DESTROYS machine-derived fields that the parse',
+      'cannot reproduce under scoping. Fields at risk, measured on notre-dame:',
+      '',
+      `  rivalryId         nulled on 5 of 14 docs, including michigan-state--notre-dame`,
+      '                    and notre-dame--stanford, which back the megaphone-trophy and',
+      '                    legends-trophy pages. The whole /cfb/rivalries family keys on',
+      '                    this field, so nulling it silently empties a matchup page.',
+      '  broadcast.network degraded, for example "NBC and Peacock" to "NBC" on 7 docs.',
+      '  kickoff.tz        flipped from a real zone to TBD on 4 TBD games.',
+      '',
+      'The human-owned allowlist does NOT cover these. It protects tombstoned and',
+      'neutralVenueHubSlug only; everything above is machine-owned and unprotected.',
+      '',
+      'Use the safe routine invocation instead:',
+      '    npx tsx --require ./scripts/stub-server-only.cjs scripts/cfb/run-phase2.ts --execute --resume',
+      '',
+      'Or drop --execute to dry-run the scope and see the tripwire output first.',
+      'Or pass --force-scoped if you accept the loss and intend to repair it after.',
+      '',
+    ].join('\n'));
+    process.exit(1);
+  }
+
   console.log(`CFB Phase 2 run — ${EXECUTE ? 'EXECUTE (writing cfb*)' : 'DRY (no writes)'} — ${targets.length} schools — ${NOW}`);
+  if (EXECUTE && (onlySet || LIMIT) && FORCE_SCOPED) {
+    console.log('!!! --force-scoped: writing a scoped run that is known to null rivalryId. Repair after. !!!');
+  }
   if (EXECUTE && !RESUME && !onlySet && !LIMIT) { await clearCollections(); }
 
   const results: SchoolResult[] = [];
@@ -224,6 +295,13 @@ async function main() {
     preserved.forEach((p) => console.log(`  ${p}`));
   } else {
     console.log(`\nPRESERVED 0 human-owned fields (none of the rewritten docs carried any).`);
+  }
+
+  if (criticalLosses.length) {
+    console.log(`\n!!! ${EXECUTE ? 'LOST' : 'WOULD LOSE'} ${criticalLosses.length} machine-owned critical field(s) [${MACHINE_OWNED_CRITICAL.join(', ')}]:`);
+    criticalLosses.forEach((c) => console.log(`  ${c}`));
+    console.log('!!! These are NOT preserved by design: a stale machine value is worse than an absent one.');
+    console.log('!!! rivalryId backs the /cfb/rivalries family, so each loss above empties a matchup page.');
   }
   console.log(`state -> ${STATE_FILE}`);
   process.exit(0);
