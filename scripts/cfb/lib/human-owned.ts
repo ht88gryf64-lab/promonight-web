@@ -3,10 +3,16 @@
 // one definition; this module adds only the parts that touch the database.
 
 import {
-  HUMAN_OWNED_FIELDS, pickHumanOwned, MACHINE_OWNED_CRITICAL, findCriticalLosses,
+  HUMAN_OWNED_FIELDS, pickHumanOwned,
+  MACHINE_OWNED_CRITICAL, MACHINE_OWNED_DEGRADE,
+  findCriticalLosses, findFieldDrift,
 } from '../../../src/lib/cfb/human-owned';
 
-export { HUMAN_OWNED_FIELDS, pickHumanOwned, MACHINE_OWNED_CRITICAL, findCriticalLosses };
+export {
+  HUMAN_OWNED_FIELDS, pickHumanOwned,
+  MACHINE_OWNED_CRITICAL, MACHINE_OWNED_DEGRADE,
+  findCriticalLosses, findFieldDrift,
+};
 
 /** One doc that would lose human-owned data if the collection were wiped. */
 export interface HumanOwnedHit {

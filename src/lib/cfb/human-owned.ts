@@ -37,6 +37,36 @@ export type HumanOwnedField = (typeof HUMAN_OWNED_FIELDS)[number];
  *  registry pages. */
 export const MACHINE_OWNED_CRITICAL = ['rivalryId'] as const;
 
+/** Machine-derived fields that DEGRADE rather than disappear.
+ *
+ *  A different non-null value is not a loss, so these get their own tier. They
+ *  were observed drifting on a scoped re-run: broadcast.network went from
+ *  "NBC and Peacock" to "NBC" and from "ABC or ESPN" to "TBD", and kickoff.tz
+ *  flipped from a real zone to TBD on TBD games. Neither empties a page the way
+ *  a lost rivalryId does, so mixing them into the LOSS tier would bury the
+ *  alarm that matters. Two tiers keep both readable. */
+export const MACHINE_OWNED_DEGRADE = ['broadcast.network', 'kickoff.tz'] as const;
+
+/** Read a dotted path. Both degrade fields are nested one level. */
+function atPath(obj: Record<string, unknown> | undefined | null, path: string): unknown {
+  if (!obj) return undefined;
+  let cur: unknown = obj;
+  for (const seg of path.split('.')) {
+    if (cur === null || cur === undefined || typeof cur !== 'object') return undefined;
+    cur = (cur as Record<string, unknown>)[seg];
+  }
+  return cur;
+}
+
+export type FieldDriftTier = 'LOSS' | 'DEGRADE';
+
+export interface FieldDrift {
+  field: string;
+  tier: FieldDriftTier;
+  was: unknown;
+  now: unknown;
+}
+
 /** Fields in MACHINE_OWNED_CRITICAL that are populated on `existing` and null or
  *  absent on `incoming`. Empty when nothing is being lost. */
 export function findCriticalLosses(
@@ -49,6 +79,32 @@ export function findCriticalLosses(
     const had = existing[f] !== null && existing[f] !== undefined;
     const has = incoming[f] !== null && incoming[f] !== undefined;
     if (had && !has) out.push({ field: f, was: existing[f] });
+  }
+  return out;
+}
+
+/** Both tiers in one pass.
+ *   LOSS    a critical field going from populated to null or absent.
+ *   DEGRADE a degrade-tier field changing to a DIFFERENT non-null value.
+ *  A degrade-tier field going fully null is reported as DEGRADE too, since these
+ *  are not page-emptying, but an unchanged value is never reported. */
+export function findFieldDrift(
+  existing: Record<string, unknown> | undefined | null,
+  incoming: Record<string, unknown>,
+): FieldDrift[] {
+  if (!existing) return [];
+  const out: FieldDrift[] = [];
+  for (const l of findCriticalLosses(existing, incoming)) {
+    out.push({ field: l.field, tier: 'LOSS', was: l.was, now: null });
+  }
+  for (const f of MACHINE_OWNED_DEGRADE) {
+    const was = atPath(existing, f);
+    const now = atPath(incoming, f);
+    const had = was !== null && was !== undefined;
+    if (!had) continue;
+    if (JSON.stringify(was) !== JSON.stringify(now)) {
+      out.push({ field: f, tier: 'DEGRADE', was, now: now ?? null });
+    }
   }
   return out;
 }

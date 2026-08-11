@@ -906,3 +906,42 @@ the previous three-step rule, UNC vs TCU fell through to designated home (TCU),
 which would have kept a `verified:false` doc storing "11:00 AM ET" for a game
 that kicks at 11:00 AM CT, rendering "Kickoff TBA" and a wrong time. Step 3
 changes only that pair and agrees with step 2 everywhere else.
+
+### The Phase 2 writer is quarantined. Full 86-school evidence.
+
+A dry run over all 86 schools, with NO scoping of any kind, cost $2.54 and wrote
+nothing. It measured the rebuild dropping most of the rivalry tagging in the
+corpus.
+
+| Measure | Value |
+|---|---|
+| Game docs that would lose `rivalryId` | **80** |
+| Distinct rivalries affected | **79** |
+| Live docs currently carrying a `rivalryId` | 108 |
+| Share of all rivalry tags lost | **74.1%** |
+| Rivalries the run itself assembled | **28** |
+| Tripwire lines emitted | 148 |
+
+**Nine of the 32 registry matchup pages would silently empty**, because
+`getMatchupPage` finds a matchup's game by `rivalryId`:
+
+`washington--washington-state`, `lsu--ole-miss`, `texas--texas-am`,
+`iowa--minnesota`, `auburn--georgia`, `michigan-state--notre-dame`,
+`notre-dame--stanford`, `duke--north-carolina`, `illinois--ohio-state`
+
+This is NOT a scoping bug. Phase 1B-C refused a scoped execute on the
+notre-dame evidence and pointed at `--execute --resume` as the safe path. The
+full-run measurement proved that pointer wrong: `tagRivalry` is failing broadly
+and the scoped case was only where it surfaced first. Phase 1E therefore refuses
+every `--execute`, with `--force-unsafe-write` as the loud override.
+
+`tagRivalry` itself is UNDIAGNOSED and deliberately untouched. It is its own
+piece of work with its own gate.
+
+The degrade tier was added at the same time and immediately confirmed the two
+fields that had been suspected but never measured. On notre-dame alone a dry run
+reports 12 degradations: 8 `broadcast.network` (for example "NBC and Peacock" to
+"NBC", and "ABC or ESPN" to "TBD") and 4 `kickoff.tz` (a real zone to "TBD").
+These are reported as DEGRADE rather than LOSS because a different non-null value
+does not empty a page, and mixing them into the LOSS tier would bury the alarm
+that matters.
