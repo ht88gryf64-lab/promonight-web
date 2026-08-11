@@ -27,9 +27,11 @@ import { PHASE1_SCHOOLS, BOISE_KICKOFF_FIXTURE, ND_SCHEDULE_FIXTURE, RIVALRY_FIX
 import { parseSchoolSchedule, type ParsedGame } from './lib/pipeline';
 import { guardTimezone, guardDerivedFields, guardEntityConflation, guardSecondSource, guardCitation } from './lib/guards';
 import { fetchWikiSchedule, corroborate } from './lib/corroborate';
+import { assertWipeSafe } from './lib/human-owned';
 
 const NO_LLM = process.argv.includes('--no-llm');
 const CORROBORATE_ONLY = process.argv.includes('--corroborate-only');
+const FORCE_WIPE = process.argv.includes('--force-wipe');
 const SEASON = 2026;
 const NOW = new Date().toISOString();
 
@@ -53,6 +55,9 @@ function gameId(g: { homeTeam: string; awayTeam: string; week: number }) {
  *  accumulate (doc IDs shift when the parser's week assignment moves). Phase 1
  *  only has the 4 spike schools in this collection. */
 async function clearGames() {
+  // Same refusal as the Phase 2 wipe: a delete leaves nothing to read the
+  // human-owned fields back from, so stop rather than lose hand-researched data.
+  await assertWipeSafe(db, [CFB_COLLECTIONS.games], FORCE_WIPE);
   const snap = await db.collection(CFB_COLLECTIONS.games).get();
   let b = db.batch();
   let n = 0;

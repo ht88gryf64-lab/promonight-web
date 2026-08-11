@@ -1,11 +1,18 @@
 /* eslint-disable no-console */
 // CFB Phase 2 orchestrator — the 86-school hard-data run (decision record §6/§7).
 //
-//   npx tsx --require ./scripts/stub-server-only.cjs scripts/cfb/run-phase2.ts --execute
+//   npx tsx --require ./scripts/stub-server-only.cjs scripts/cfb/run-phase2.ts --execute --resume
 //   ... --execute --only=lsu,notre-dame     # subset
 //   ... --execute --limit=5                  # first 5 (smoke)
-//   ... --execute --resume                   # skip schools already checkpointed
+//   ... --execute                            # FULL run: WIPES cfb* first, see below
 //   (omit --execute for a DRY run: everything except Firestore writes)
+//
+// THE BARE --execute IS THE DESTRUCTIVE ONE. With no --resume, --only or
+// --limit it calls clearCollections() and deletes cfbGames, cfbVenues,
+// cfbSchools and cfbRivalries before rebuilding. Prefer --resume or --only for
+// routine runs; both skip the wipe. The wipe now REFUSES when any doc carries a
+// human-owned field (tombstoned, neutralVenueHubSlug) and needs --force-wipe to
+// proceed, because those fields cannot be rebuilt from any schedule page.
 //
 // Per school: Firecrawl-fetch the OFFICIAL schedule -> Haiku parse (source =
 // official domain) -> build cfbGames (verified=false) -> corroborate in HARNESS
@@ -38,10 +45,15 @@ import { fetchWikiSchedule, corroborate } from './lib/corroborate';
 import { resolveVenue } from './lib/venue';
 import { resolveColors } from './lib/colors';
 import { tagRivalry, type RivalryEntry } from './lib/rivalry';
+import { pickHumanOwned, assertWipeSafe, HUMAN_OWNED_FIELDS } from './lib/human-owned';
 
 const args = process.argv.slice(2);
 const EXECUTE = args.includes('--execute');
 const RESUME = args.includes('--resume');
+const FORCE_WIPE = args.includes('--force-wipe');
+
+/** Every human-owned field carried forward across a re-run, for the run report. */
+const preserved: string[] = [];
 const LIMIT = Number((args.find((a) => a.startsWith('--limit=')) || '').replace('--limit=', '')) || 0;
 const ONLY = (args.find((a) => a.startsWith('--only=')) || '').replace('--only=', '');
 const onlySet = ONLY ? new Set(ONLY.split(',')) : null;
@@ -116,6 +128,25 @@ async function runSchool(cfg: CfbSchoolConfig2026): Promise<SchoolResult> {
     } as any;
   }
 
+  // Read-then-preserve, computed in BOTH modes. A bare set() replaces the whole
+  // document, which is right for every machine-owned field but destroys the two
+  // a human decides. Carry those forward explicitly. An allowlist, not
+  // { merge: true }: merge would preserve stale machine fields forever too.
+  // The read runs in DRY as well so a dry run reports exactly what a real run
+  // would carry, which is the only way to see the risk before committing to it.
+  const existingGames = await Promise.all(
+    games.map((g) => db.collection(CFB_COLLECTIONS.games).doc(g.id).get()),
+  );
+  const carriedByGameId = new Map<string, Record<string, unknown>>();
+  for (let i = 0; i < games.length; i++) {
+    const carried = pickHumanOwned(existingGames[i].exists ? existingGames[i].data() : undefined);
+    if (Object.keys(carried).length) {
+      carriedByGameId.set(games[i].id, carried);
+      preserved.push(`${games[i].id} ${JSON.stringify(carried)}`);
+      console.log(`    PRESERVE ${games[i].id} ${JSON.stringify(carried)}${EXECUTE ? '' : ' (dry, would carry forward)'}`);
+    }
+  }
+
   if (EXECUTE) {
     // cfbSchools (colors proposed), cfbVenues (proposed), cfbGames (verified flags set)
     const b = db.batch();
@@ -130,7 +161,9 @@ async function runSchool(cfg: CfbSchoolConfig2026): Promise<SchoolResult> {
       lat: venue.lat, lng: venue.lng, homeSchoolId: cfg.id, sharedSchoolIds: [],
       humanConfirmed: false, proposedFrom: venue.proposedFrom, source: venue.source, updatedAt: NOW,
     });
-    for (const g of games) b.set(db.collection(CFB_COLLECTIONS.games).doc(g.id), g);
+    for (const g of games) {
+      b.set(db.collection(CFB_COLLECTIONS.games).doc(g.id), { ...g, ...(carriedByGameId.get(g.id) ?? {}) });
+    }
     await b.commit();
   }
   return res;
@@ -138,8 +171,13 @@ async function runSchool(cfg: CfbSchoolConfig2026): Promise<SchoolResult> {
 
 function domainOf(url: string): string { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; } }
 
+const WIPE_COLLECTIONS = [CFB_COLLECTIONS.games, CFB_COLLECTIONS.venues, CFB_COLLECTIONS.schools, CFB_COLLECTIONS.rivalries];
+
 async function clearCollections() {
-  for (const col of [CFB_COLLECTIONS.games, CFB_COLLECTIONS.venues, CFB_COLLECTIONS.schools, CFB_COLLECTIONS.rivalries]) {
+  // Preservation cannot defend a wipe: after the delete there is nothing left to
+  // read the human-owned fields back from. Refuse instead, unless forced.
+  await assertWipeSafe(db, WIPE_COLLECTIONS, FORCE_WIPE);
+  for (const col of WIPE_COLLECTIONS) {
     const snap = await db.collection(col).get();
     let b = db.batch(); let n = 0;
     for (const d of snap.docs) { b.delete(d.ref); if (++n % 400 === 0) { await b.commit(); b = db.batch(); } }
@@ -181,6 +219,12 @@ async function main() {
   const tot = results.reduce((a, r) => ({ e: a.e + r.extracted, v: a.v + r.verified, usd: a.usd + r.parseUsd }), { e: 0, v: 0, usd: 0 });
   const no2nd = results.reduce((a, r) => a + (r.buckets['no-2nd-source'] || 0), 0);
   console.log(`\nTOTAL games=${tot.e} verified=${tot.v} no-2nd-source=${no2nd} rivalries=${rivalryDocs.size} usd=$${tot.usd.toFixed(2)}`);
+  if (preserved.length) {
+    console.log(`\n${EXECUTE ? 'PRESERVED' : 'WOULD PRESERVE'} ${preserved.length} human-owned field set(s) across the rebuild [${HUMAN_OWNED_FIELDS.join(', ')}]:`);
+    preserved.forEach((p) => console.log(`  ${p}`));
+  } else {
+    console.log(`\nPRESERVED 0 human-owned fields (none of the rewritten docs carried any).`);
+  }
   console.log(`state -> ${STATE_FILE}`);
   process.exit(0);
 }
