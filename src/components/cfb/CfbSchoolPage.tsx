@@ -26,6 +26,7 @@
 import Link from 'next/link';
 import { matchupEntryForRivalryId } from '@/lib/cfb/matchup-registry';
 import { resolveMatchupDisplayName } from '@/lib/cfb/display-name';
+import { selectRailChips } from '@/lib/cfb/rivalry-rail';
 import type { CfbSchoolPage as CfbSchoolPageData } from '@/lib/cfb/data';
 import { CfbThemePersist } from './CfbThemePersist';
 import { CfbSchedule } from './CfbSchedule';
@@ -38,7 +39,7 @@ import { ExpediaCTA } from '@/components/affiliates/ExpediaCTA';
 import { FanaticsCTA } from '@/components/affiliates/FanaticsCTA';
 import { VenueHubLink } from '@/components/venue-hub/VenueHubLink';
 import type { TeamVenueHubLink } from '@/lib/venue-hub';
-import { SERIF, MONO, SANS, fmtMonthDay, fmtDayLong, Eyebrow } from './cfb-bits';
+import { SERIF, MONO, SANS, fmtMonthDay, fmtDayLong, Eyebrow, TAP_TARGET_24 } from './cfb-bits';
 
 export function CfbSchoolPage({ data, venueHubLink }: { data: CfbSchoolPageData; venueHubLink: TeamVenueHubLink | null }) {
   const { school, venue, games, editorial } = data;
@@ -59,6 +60,10 @@ export function CfbSchoolPage({ data, venueHubLink }: { data: CfbSchoolPageData;
   const heroCity = venueCity(venue);
   const affTeam = toAffiliateTeam(school, heroCity);
   const affVenue = venue ? toAffiliateVenue({ ...venue, city: heroCity ?? '', state: '' }, school) : null;
+
+  // Rail chips: rivalries with a matchup page, soonest first, capped at 4. Empty
+  // for the 41 schools with none, which omits the rail entirely.
+  const railChips = selectRailChips(games);
 
   const sig = editorial.signatureGameId ? games.find((g) => g.id === editorial.signatureGameId) : null;
   const nextHome = games.find((g) => g.isHome && !g.neutralSite);
@@ -139,6 +144,43 @@ export function CfbSchoolPage({ data, venueHubLink }: { data: CfbSchoolPageData;
       </header>
 
       <div className="mx-auto max-w-6xl px-5 pb-24 sm:px-8">
+
+        {/* ── RIVALRY RAIL. The jump into the matchup pages. Sits directly under
+            the hero because the in-context links (the trophy tags and the rivalry
+            cards) land 1.2 to 2.1 folds down on mobile, behind the whole
+            schedule. Chips are date-ordered and capped at 4 (selectRailChips);
+            only rivalries that HAVE a page appear, so a chip never links nowhere.
+            OMITTED ENTIRELY for the 41 schools with none: no label, no empty
+            state, no reserved space, so the common case reads as a page that was
+            never going to have one rather than as a rail that failed to load.
+            This is a jump, not a duplicate; the rivalry cards below are
+            unchanged. ── */}
+        {railChips.length > 0 && (
+          <nav aria-label={`${school.shortName} rivalry guides`} className="mt-7">
+            <div className="mb-2.5 text-[10px] uppercase" style={{ fontFamily: MONO, letterSpacing: '0.14em', color: 'var(--cfb-accent)' }}>
+              {railChips.length > 1 ? 'Rivalry guides' : 'Rivalry guide'}
+            </div>
+            {/* Horizontal scroller rather than a wrapping row: at 390px four chips
+                exceed the viewport, and a scroller degrades better than a second
+                line that pushes the gameday block down. no-scrollbar because the
+                global webkit thumb paints a light bar across a dark rail (same
+                reason NflWeekContainer uses it); the clipped chip at the right
+                edge is the scroll affordance. */}
+            <div className="no-scrollbar flex gap-2.5 overflow-x-auto pb-1">
+              {railChips.map((c) => (
+                <Link
+                  key={c.slug}
+                  href={`/cfb/rivalries/${c.slug}`}
+                  className="inline-flex min-h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border border-white/15 px-4 text-[13px] font-bold text-white transition-colors hover:border-white/30 hover:bg-white/10"
+                  style={{ fontFamily: SANS }}
+                >
+                  {c.label}
+                  <span className="text-[10px] font-normal text-white/45" style={{ fontFamily: MONO }}>{fmtMonthDay(c.date)}</span>
+                </Link>
+              ))}
+            </div>
+          </nav>
+        )}
 
         {/* ── SIGNATURE GAME + WHY YOU GO (editorial, destination-only) ── */}
         {(sig || editorial.whyYouGo) && (
@@ -292,7 +334,9 @@ export function CfbSchoolPage({ data, venueHubLink }: { data: CfbSchoolPageData;
                       {/* The card is a plain div, so an anchor nests cleanly here.
                           An untracked opponent has no page and stays plain text. */}
                       {g.opponentTracked ? (
-                        <Link href={`/cfb/${g.opponentId}`} className="underline decoration-transparent underline-offset-2 transition-colors hover:decoration-[color:var(--cfb-accent)] hover:text-white">
+                        // 13px type renders a 17px-tall target, so TAP_TARGET_24
+                        // carries the rest. The name keeps its exact size.
+                        <Link href={`/cfb/${g.opponentId}`} className={`${TAP_TARGET_24} underline decoration-transparent underline-offset-2 transition-colors hover:decoration-[color:var(--cfb-accent)] hover:text-white`}>
                           {g.opponentName}
                         </Link>
                       ) : (
