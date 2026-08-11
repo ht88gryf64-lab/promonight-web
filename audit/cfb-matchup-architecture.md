@@ -980,3 +980,100 @@ DRY parse of all 86 schools. This has now cost this project twice, once in
 Firecrawl credits and once in a five-minute stall during the Phase 1E gate.
 Always pass writer flags explicitly rather than through a loop variable, or use
 `${=a}` if a loop is unavoidable.
+
+---
+
+## Open items, Phase 2C closeout
+
+Logged at the final gate, before the merge to main. None of these blocked the
+merge; each is a judgment call or a pre-existing condition that should not be
+rediscovered later as a surprise.
+
+### Rail placement cost, revisit with data
+
+The rivalry rail adds a uniform **101px** and pushes the first ticket CTA below
+the 844px fold on **7 of the 45** rail schools: kansas, alabama, oklahoma,
+texas, mississippi-state, louisville, kansas-state. Three of those (alabama,
+oklahoma, texas) are among the highest-volume schools in the corpus.
+
+This is **accepted as a judgment call, not a measured win**. What it buys is a
+matchup link at roughly y=700 instead of y=1737, and the affiliate rail plus the
+matchup page's own tickets step both still persist below. What it costs is an
+above-the-fold ticket CTA on seven pages.
+
+Revisit once the matchup pages have GSC data. If they earn clicks, the rail is
+justified. If they do not, moving the rail below the gameday block costs about
+300px of link position and restores the CTA. The move is a single JSX
+relocation in `CfbSchoolPage.tsx`; nothing else depends on the rail's position.
+
+### The rail cap of 4 does not currently bind
+
+`RAIL_MAX_CHIPS` bounds rivalries **with a matchup page**, not rivalries. So
+Alabama shows 2 of its 5 and Auburn 2 of its 7. The widest school today is 3
+chips (iowa, georgia, minnesota). The cap and its test are in place and correct;
+they are simply inert until the registry grows past 4 rivalries for one school.
+
+### The /cfb hub serves two nested `<main>` elements
+
+The layout emits one and the page emits another. Invalid HTML, pre-existing,
+unrelated to this branch. It will affect anything that selects `main`, including
+measurement scripts and any future reader-mode or extraction logic. Found while
+measuring the hub for Phase 2B, fixed nowhere.
+
+### TrophyTag renders an `<a>` inside a `<button>` on schedule rows
+
+Invalid HTML with undefined activation behaviour. Pre-existing: it was the
+Wikipedia link before Phase 2 changed the href. On /cfb/alabama it affects 5 of
+16 rows, of which 3 were already nested before this branch. Phase 2 changed
+hrefs without adding nesting, and Phase 2B deliberately left it alone. Unpicking
+it means reworking the row affordance, which belongs in a component pass over
+the whole row rather than in a linking change.
+
+### Schedule-row opponent links are permanently out of scope
+
+Decided in Phase 2B. The row is a `<button>` that opens the gameday modal, so an
+opponent anchor would nest a second `<a>` inside it, and the rivalry card
+further down already carries that exact destination. The trade was a duplicate
+link for invalid nesting on every row. See the comment at
+`src/components/cfb/CfbSchedule.tsx:37`.
+
+### The 32 matchup pages ship with no meta description
+
+`generateMetadata` in `src/app/cfb/rivalries/[slug]/page.tsx` returns only a
+`title`, so all 32 pages inherit the sitewide description from
+`src/app/layout.tsx:60`. They are titled and indexable, but 32 brand-new URLs
+share one generic description, which means Google will most likely generate its
+own snippet for each. The index page `/cfb/rivalries` does set its own
+description. Worth a small follow-up: the matchup data already carries both
+school names, the date and the venue, which is more than enough for a truthful
+per-page description.
+
+### The revalidate PATH_RE widening has an uncommitted counterpart in promo-pipeline
+
+`src/app/api/revalidate/route.ts` widened `PATH_RE` from two segments to three
+so `/cfb/rivalries/<slug>` validates. The pipeline keeps its own copy at
+`promo-pipeline/lib/revalidate-notify.js:22`, and **that change is currently an
+uncommitted working-tree edit in the other repo**. The web side is safe on its
+own, since widening only makes the endpoint accept more, and nothing in the CFB
+rivalry family depends on pipeline-driven revalidation today. But the two copies
+must be committed together or a future pipeline run from committed code will
+silently drop any three-segment path with only a warn line in a log.
+
+### `revalidate-path-re.test.ts` depends on a sibling repo checkout
+
+Two of its five tests read
+`../promonight/promo-pipeline/lib/revalidate-notify.js` to assert the two copies
+have not diverged. That path only resolves on a machine with both repos checked
+out as siblings, so the test throws on a fresh clone of this repo alone. It is
+deliberately left as-is: making it skip when the file is absent would disable
+exactly the divergence guard that matters. Note that this repo's CI does not run
+the test suite (`.github/workflows/` contains only `indexnow-after-deploy.yml`),
+so nothing breaks today.
+
+### `audit/venue-manifest.json` was swept into commit 7d60eb4 and untracked again
+
+A 7184-line generated venue manifest, unrelated to the matchup work, was picked
+up by an over-broad `git add` during the Phase 1A write. It was untracked at the
+start of the session, this document already described it as untracked, and no
+code reads it. Removed from tracking before the merge so it does not land in
+main; the file remains on disk.
