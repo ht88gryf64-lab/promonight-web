@@ -34,7 +34,11 @@ export interface CfbGameView {
   // tag-as-fact, crown none. sourceUrl = the stored corroborating trophy-article
   // URL (cfbRivalries.source — the trophy's own Wikipedia page, never the list),
   // surfaced so the tag can link out; null when no valid URL is stored.
-  rivalry: { name: string; trophy: string | null; sourceUrl: string | null } | null;
+  rivalry: { id: string; name: string; trophy: string | null; sourceUrl: string | null } | null;
+  /** True when opponentId is one of the 86 tracked cfbSchools. An untracked
+   *  opponent has no page, so it renders as plain text rather than a dead link,
+   *  the same rule the matchup pages use for washington-state. */
+  opponentTracked: boolean;
   // Road-trip planner (away games only): the opponent's school+venue, present only
   // when the opponent is one of the 86 tracked schools AND has a resolved venue.
   // Used to build the SITE-STANDARD hotels/parking CTAs near the destination stadium.
@@ -260,7 +264,8 @@ export const getCfbSchoolPage = cache(async (id: string): Promise<CfbSchoolPage 
       opponentId, opponentName: nameById.get(opponentId) || prettifySlug(opponentId),
       kickoffDisplay: kd.display, kickoffVerified: kd.verified,
       networkDisplay: g.broadcast?.confirmed && g.broadcast.network && !/tbd/i.test(g.broadcast.network) ? g.broadcast.network : null,
-      rivalry: riv ? { name: riv.name, trophy: riv.trophy, sourceUrl: safeHttpUrl(riv.source) } : null,
+      rivalry: riv ? { id: riv.id, name: riv.name, trophy: riv.trophy, sourceUrl: safeHttpUrl(riv.source) } : null,
+      opponentTracked: schoolById.has(opponentId),
       awaySchool: oppSchool, awayVenue: oppVenue,
     });
   }

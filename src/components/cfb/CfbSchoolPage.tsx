@@ -24,6 +24,8 @@
 // as plain text when no valid source URL is stored.
 
 import Link from 'next/link';
+import { matchupEntryForRivalryId } from '@/lib/cfb/matchup-registry';
+import { resolveMatchupDisplayName } from '@/lib/cfb/display-name';
 import type { CfbSchoolPage as CfbSchoolPageData } from '@/lib/cfb/data';
 import { CfbThemePersist } from './CfbThemePersist';
 import { CfbSchedule } from './CfbSchedule';
@@ -250,7 +252,12 @@ export function CfbSchoolPage({ data, venueHubLink }: { data: CfbSchoolPageData;
             <div className={`grid gap-3.5 ${rivalryGames.length > 1 ? 'sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
               {rivalryGames.map((g) => {
                 const riv = g.rivalry!;
-                const titleText = riv.trophy || riv.name;
+                // Rivalry name leads, trophy demoted to the secondary line, and
+                // the name resolves through the registry so it matches the
+                // matchup page exactly.
+                const rivEntry = matchupEntryForRivalryId(riv.id);
+                const titleText = resolveMatchupDisplayName(rivEntry, riv.name);
+                const matchupHref = rivEntry ? `/cfb/rivalries/${rivEntry.slug}` : null;
                 const titleStyle = { fontFamily: SERIF, fontSize: '1.4rem' } as const;
                 return (
                   <div
@@ -258,7 +265,15 @@ export function CfbSchoolPage({ data, venueHubLink }: { data: CfbSchoolPageData;
                     className="rounded-2xl p-5 sm:p-6"
                     style={{ background: 'linear-gradient(135deg, var(--cfb-rivalry-from), #08070d)', border: '1px solid var(--cfb-rivalry-border)' }}
                   >
-                    {riv.sourceUrl ? (
+                    {matchupHref ? (
+                      <Link
+                        href={matchupHref}
+                        className="italic leading-tight text-white underline decoration-transparent underline-offset-4 transition-colors hover:decoration-[color:var(--cfb-accent)]"
+                        style={titleStyle}
+                      >
+                        {titleText}
+                      </Link>
+                    ) : riv.sourceUrl ? (
                       <a
                         href={riv.sourceUrl}
                         target="_blank"
@@ -272,9 +287,20 @@ export function CfbSchoolPage({ data, venueHubLink }: { data: CfbSchoolPageData;
                     ) : (
                       <div className="italic leading-tight text-white" style={titleStyle}>{titleText}</div>
                     )}
-                    <div className="mt-1.5 text-[13px] text-white/55" style={{ fontFamily: SANS }}>{g.isHome ? 'vs' : 'at'} {g.opponentName}</div>
-                    {riv.trophy && riv.name !== riv.trophy && (
-                      <div className="mt-2 text-[9px] uppercase text-white/40" style={{ fontFamily: MONO, letterSpacing: '0.06em' }}>{riv.name}</div>
+                    <div className="mt-1.5 text-[13px] text-white/55" style={{ fontFamily: SANS }}>
+                      {g.isHome ? 'vs' : 'at'}{' '}
+                      {/* The card is a plain div, so an anchor nests cleanly here.
+                          An untracked opponent has no page and stays plain text. */}
+                      {g.opponentTracked ? (
+                        <Link href={`/cfb/${g.opponentId}`} className="underline decoration-transparent underline-offset-2 transition-colors hover:decoration-[color:var(--cfb-accent)] hover:text-white">
+                          {g.opponentName}
+                        </Link>
+                      ) : (
+                        g.opponentName
+                      )}
+                    </div>
+                    {riv.trophy && riv.trophy !== titleText && (
+                      <div className="mt-2 text-[9px] uppercase text-white/40" style={{ fontFamily: MONO, letterSpacing: '0.06em' }}>{riv.trophy}</div>
                     )}
                   </div>
                 );

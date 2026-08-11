@@ -7,7 +7,7 @@ import type { MatchupRegistryEntry } from '@/lib/cfb/matchup-registry';
  *  the rivalry doc's own name. Drives the H1, the title and the rail label so
  *  all three stay in step. */
 export function resolveMatchupDisplayName(
-  entry: Pick<MatchupRegistryEntry, 'displayName'> | undefined,
+  entry: Pick<MatchupRegistryEntry, 'displayName'> | null | undefined,
   rivalryName: string,
 ): string {
   return entry?.displayName?.trim() || rivalryName;

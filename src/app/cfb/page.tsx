@@ -3,6 +3,7 @@ import { getVenueLinksForTeams } from '@/lib/venue-hub';
 import { HubVenueLinks } from '@/components/hub/HubVenueLinks';
 import { buildCfbHubMetadata } from '@/lib/cfb/metadata';
 import { instrumentSerif } from '@/components/cfb/fonts';
+import Link from 'next/link';
 import { NationalBlock, WeekCard, ThemeCard } from '@/components/cfb/hub/blocks';
 import { CfbHubBrowse } from '@/components/cfb/hub/CfbHubBrowse';
 import { CfbHubSearch } from '@/components/cfb/hub/CfbHubSearch';
@@ -89,6 +90,17 @@ export default async function CfbHub() {
           <SectionLabel sub="The games people plan their whole fall around.">THE RIVALRIES THAT DEFINE THE SEASON</SectionLabel>
           <div className="mt-5 grid gap-4 lg:grid-cols-2">
             {data.national.map((b) => <NationalBlock key={b.key} block={b} />)}
+          </div>
+          {/* The four blocks above are curated. This is the way into the other
+              28, and the breadcrumb destination every matchup page points at. */}
+          <div className="mt-5">
+            <Link
+              href="/cfb/rivalries"
+              className="inline-flex min-h-11 items-center rounded-lg border border-white/20 px-5 text-[13px] font-bold text-white transition-colors hover:bg-white/10"
+              style={{ fontFamily: SANS }}
+            >
+              All 32 rivalries, in date order →
+            </Link>
           </div>
         </section>
 

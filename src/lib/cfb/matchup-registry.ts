@@ -71,3 +71,30 @@ export const MATCHUP_REGISTRY: readonly MatchupRegistryEntry[] = [
   { slug: 'farmageddon', rivalryId: 'iowa-state--kansas-state' },
   { slug: 'governors-cup', rivalryId: 'kentucky--louisville' },
 ] as const;
+
+const BY_RIVALRY_ID = new Map(MATCHUP_REGISTRY.map((e) => [e.rivalryId, e]));
+
+/** The registry entry for a cfbRivalries doc id, or null when that rivalry has
+ *  no matchup page.
+ *
+ *  Resolve through the REGISTRY, never by slugifying the rivalry name: three
+ *  rivalries are named "Victory Bell" and three more "Florida Cup", so a derived
+ *  slug would point several schools at one wrong page. */
+export function matchupEntryForRivalryId(rivalryId: string | null | undefined): MatchupRegistryEntry | null {
+  if (!rivalryId) return null;
+  return BY_RIVALRY_ID.get(rivalryId) ?? null;
+}
+
+/** Convenience for callers that only need the href. */
+export function matchupHrefForRivalryId(rivalryId: string | null | undefined): string | null {
+  const e = matchupEntryForRivalryId(rivalryId);
+  return e ? `/cfb/rivalries/${e.slug}` : null;
+}
+
+const BY_SLUG_REG = new Map(MATCHUP_REGISTRY.map((e) => [e.slug, e]));
+
+/** The registry entry for a matchup slug, or null. */
+export function matchupEntryForSlug(slug: string | null | undefined): MatchupRegistryEntry | null {
+  if (!slug) return null;
+  return BY_SLUG_REG.get(slug) ?? null;
+}

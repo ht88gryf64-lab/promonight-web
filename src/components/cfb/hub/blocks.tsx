@@ -47,12 +47,31 @@ function DiagonalFill({ a, b, fadeStart, dividerAlpha }: { a: HubTeam; b: HubTea
 
 export function NationalBlock({ block }: { block: HubNationalBlock }) {
   const { home, away } = block; // hub-data already resolved home-left / neutral→alphabetical
+  // The block itself is a link to the matchup page. The two corner names stay
+  // their own links to the school pages, so one block emits three destinations
+  // rather than one. The corner anchors are absolutely positioned SIBLINGS of
+  // this overlay, never children of it, so no anchor nests inside another.
   return (
     <div className="relative h-[200px] overflow-hidden rounded-2xl border border-white/10">
       <DiagonalFill a={home} b={away} fadeStart={40} dividerAlpha={0.55} />
+      {/* Stacking, deliberately: the fills paint first, this overlay sits above
+          them so the whole card is clickable, the caption sits above the overlay
+          but is pointer-events-none so clicks fall through to it, and the corner
+          names sit above everything at z-10 so they keep their own targets. */}
+      <Link
+        href={`/cfb/rivalries/${block.matchupSlug}`}
+        className="absolute inset-0 z-[1]"
+        aria-label={`${block.name} 2026`}
+      >
+        {/* The name renders visibly in the caption below, but that caption is a
+            SIBLING of this anchor, so the link itself carried no text. Repeat it
+            here for crawlers. aria-label wins for assistive tech, so this does
+            not double-announce. */}
+        <span className="sr-only">{block.name} 2026</span>
+      </Link>
       <CornerName team={home} side="left" />
       <CornerName team={away} side="right" />
-      <div className="absolute inset-x-0 bottom-0 p-5">
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] p-5">
         <div className="text-[10px] tracking-wider text-white/85" style={{ fontFamily: MONO, textShadow: '0 1px 3px #000' }}>{fmtDate(block.date)} · {block.host.toUpperCase()}{block.est ? ` · EST. ${block.est}` : ''}</div>
         {block.trophy && (
           <div className="mt-2 inline-block rounded-full px-2.5 py-0.5 text-[10px] font-bold" style={{ fontFamily: MONO, color: '#08070d', background: GOLD }}>{block.trophy}</div>

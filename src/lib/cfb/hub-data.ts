@@ -11,6 +11,8 @@
 // the window) → falls back to the soonest upcoming rivalry games.
 
 import { db } from '@/lib/firebase';
+import { matchupEntryForSlug } from '@/lib/cfb/matchup-registry';
+import { resolveMatchupDisplayName } from '@/lib/cfb/display-name';
 import { CFB_COLLECTIONS, type CfbSchool, type CfbGame, type CfbRivalry } from '@/lib/cfb/types';
 import { CFB_CONF_BUCKET_ORDER, type CfbConfBucket } from '@/lib/cfb/conferences';
 
@@ -50,12 +52,18 @@ function bucketFor(conf: string): CfbConfBucket {
 
 // ── curated national rivalries (§9 curated layer). Colors + date + home wired
 //    from real data; name/host/est/blurb are the human-curated editorial. ──
-interface NationalCurated { key: string; aId: string; bId: string; name: string; trophy?: string; host: string; est: string; neutral: boolean; blurb: string; fallbackDate: string; }
+interface NationalCurated {
+  key: string; aId: string; bId: string; name: string; trophy?: string;
+  host: string; est: string; neutral: boolean; blurb: string; fallbackDate: string;
+  /** Registry slug for the matchup page this block links to. The curated `key`
+   *  is NOT the slug: it predates the registry and two of them differ. */
+  matchupSlug: string;
+}
 const NATIONAL_CURATED: NationalCurated[] = [
-  { key: 'the-game', aId: 'ohio-state', bId: 'michigan', name: 'The Game', host: 'rotates', est: '1897', neutral: false, blurb: 'The one that decides the Big Ten and, most years, a playoff seed.', fallbackDate: '2026-11-28' },
-  { key: 'iron-bowl', aId: 'alabama', bId: 'auburn', name: 'Iron Bowl', host: 'rotates', est: '1893', neutral: false, blurb: 'The state of Alabama stops. Nothing else in the sport feels quite like it.', fallbackDate: '2026-11-28' },
-  { key: 'red-river', aId: 'texas', bId: 'oklahoma', name: 'Red River Rivalry', trophy: 'Golden Hat', host: 'Dallas (neutral)', est: '1900', neutral: true, blurb: 'Cotton Bowl, split stadium, State Fair outside. A neutral-site classic.', fallbackDate: '2026-10-10' },
-  { key: 'cocktail-party', aId: 'georgia', bId: 'florida', name: 'The Cocktail Party', host: 'Jacksonville', est: '1904', neutral: true, blurb: "World's Largest Outdoor Cocktail Party. Neutral-site, all day, all in.", fallbackDate: '2026-10-31' },
+  { key: 'the-game', matchupSlug: 'the-game', aId: 'ohio-state', bId: 'michigan', name: 'The Game', host: 'rotates', est: '1897', neutral: false, blurb: 'The one that decides the Big Ten and, most years, a playoff seed.', fallbackDate: '2026-11-28' },
+  { key: 'iron-bowl', matchupSlug: 'iron-bowl', aId: 'alabama', bId: 'auburn', name: 'Iron Bowl', host: 'rotates', est: '1893', neutral: false, blurb: 'The state of Alabama stops. Nothing else in the sport feels quite like it.', fallbackDate: '2026-11-28' },
+  { key: 'red-river', matchupSlug: 'red-river-rivalry', aId: 'texas', bId: 'oklahoma', name: 'Red River Rivalry', trophy: 'Golden Hat', host: 'Dallas (neutral)', est: '1900', neutral: true, blurb: 'Cotton Bowl, split stadium, State Fair outside. A neutral-site classic.', fallbackDate: '2026-10-10' },
+  { key: 'cocktail-party', matchupSlug: 'florida-georgia', aId: 'georgia', bId: 'florida', name: 'The Cocktail Party', host: 'Jacksonville', est: '1904', neutral: true, blurb: "World's Largest Outdoor Cocktail Party. Neutral-site, all day, all in.", fallbackDate: '2026-10-31' },
 ];
 // pairings flagged NATIONAL on the weekly rail (school-id pairs, order-independent)
 const NATIONAL_PAIRS = new Set(NATIONAL_CURATED.map((n) => [n.aId, n.bId].sort().join('|')));
@@ -139,7 +147,11 @@ export async function getCfbHubData(): Promise<CfbHubData> {
   // National blocks: curated selection, real colors + date + home resolution.
   const gameByPair = new Map<string, HubRivalryGame>();
   for (const g of games) gameByPair.set([g.home.id, g.away.id].sort().join('|'), g);
-  const national: HubNationalBlock[] = NATIONAL_CURATED.map((n) => {
+  const national: HubNationalBlock[] = NATIONAL_CURATED.map((curated) => {
+    // The registry display name WINS over the curated string, so the block and
+    // the page it links to always agree. "The Cocktail Party" becomes
+    // "Florida vs Georgia"; the other three have no override and keep theirs.
+    const n = { ...curated, name: resolveMatchupDisplayName(matchupEntryForSlug(curated.matchupSlug), curated.name) };
     const g = gameByPair.get([n.aId, n.bId].sort().join('|'));
     let home: HubTeam, away: HubTeam, date: string;
     if (g) {

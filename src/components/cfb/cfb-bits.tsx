@@ -3,6 +3,9 @@
 // client-only APIs, so it renders correctly in either context. Extracted so the
 // date formatters + the trophy tag are a single source across the two files.
 
+import Link from 'next/link';
+import { matchupEntryForRivalryId } from '@/lib/cfb/matchup-registry';
+import { resolveMatchupDisplayName } from '@/lib/cfb/display-name';
 import type { ReactNode } from 'react';
 import type { CfbGameView } from '@/lib/cfb/data';
 
@@ -25,10 +28,27 @@ export function fmtDayLong(iso: string): string {
 // article (stored corroborating source) in a new tab; plain <span> when no valid
 // source URL is stored (never a broken link). Same pill treatment either way.
 export function TrophyTag({ rivalry, tiny }: { rivalry: RivalryTag; tiny?: boolean }) {
-  const label = rivalry.trophy || rivalry.name;
-  const title = rivalry.trophy ? `${rivalry.name} · ${rivalry.trophy}` : rivalry.name;
+  // The RIVALRY NAME is the visible text, not the trophy. The name is the term
+  // people search; the trophy was in the tooltip. Resolved through the registry
+  // so a school page and its matchup page never disagree about what a rivalry is
+  // called (Okefenokee Oar renders as "Florida vs Georgia" in both places).
+  const entry = matchupEntryForRivalryId(rivalry.id);
+  const label = resolveMatchupDisplayName(entry, rivalry.name);
+  const title = rivalry.trophy && rivalry.trophy !== label ? `${label} · ${rivalry.trophy}` : label;
   const cls = `rounded-full px-2 py-0.5 ${tiny ? 'text-[9px]' : 'text-[10px]'} font-bold uppercase`;
   const style = { fontFamily: MONO, letterSpacing: '0.03em', background: 'var(--cfb-accent)', color: 'var(--cfb-accent-ink)' };
+
+  // Where we have a matchup page, send people there: same tab, internal link.
+  // Where we do not, the Wikipedia link stays exactly as it was. The external
+  // link is not removed as a class of behaviour, only superseded where we have
+  // somewhere better to send someone.
+  if (entry) {
+    return (
+      <Link href={`/cfb/rivalries/${entry.slug}`} title={title} className={`${cls} transition-opacity hover:opacity-80`} style={style}>
+        {label}
+      </Link>
+    );
+  }
   if (rivalry.sourceUrl) {
     return (
       <a
