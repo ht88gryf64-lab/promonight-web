@@ -138,6 +138,13 @@ async function runSchoolLive(school: (typeof PHASE1_SCHOOLS)[number]): Promise<S
     const batch1 = db.batch();
     for (const g of cfbGames) {
       const { _parser, ...doc } = g;
+      // Bare set(), no human-owned preservation, UNLIKE run-phase2.ts. Harmless
+      // today for exactly one reason: gameId() above builds ids as
+      // SEASON-wWEEK-home-away, which matches nothing in the live corpus (Phase 2
+      // writes SEASON-DATE-home-away), so this can only create Phase 1 spike docs
+      // and can never overwrite a doc carrying tombstoned or neutralVenueHubSlug.
+      // If the id shape ever converges with Phase 2's, add the read-then-preserve
+      // from run-phase2.ts here before running this again.
       batch1.set(db.collection(CFB_COLLECTIONS.games).doc(g.id), doc);
     }
     await batch1.commit();

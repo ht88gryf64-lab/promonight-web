@@ -8,6 +8,7 @@ import { cache } from 'react';
 import { db } from '@/lib/firebase';
 import type { CfbSchool, CfbVenue, CfbGame, CfbRivalry } from '@/lib/cfb/types';
 import { CFB_COLLECTIONS } from '@/lib/cfb/types';
+import { isVisibleGame } from '@/lib/cfb/human-owned';
 // Reuse the pipeline's SINGLE time parser (guards.ts). normTime honors the AM/PM
 // meridiem and returns 24-hour "HH:MM". The display layer must NOT re-derive AM/PM
 // with its own parser (that was the bug); it consumes normTime's output. One parser,
@@ -178,8 +179,26 @@ const loadRivalries = makeCollectionLoader<Array<CfbRivalry & { id: string }>>(a
 });
 const loadGames = makeCollectionLoader<Array<{ docId: string; data: CfbGame }>>(async () => {
   const snap = await db.collection(CFB_COLLECTIONS.games).get();
-  return snap.docs.map((d) => ({ docId: d.id, data: d.data() as CfbGame }));
+  return snap.docs
+    .map((d) => ({ docId: d.id, data: d.data() as CfbGame }))
+    // Tombstoned docs are redundant duplicates, hidden not deleted. Same shape
+    // as isVisiblePromo (src/lib/promo-helpers.ts:165): an app-code filter where
+    // absent and false are both visible and only true hides. Never a Firestore
+    // .where(), which would drop every doc that lacks the field.
+    .filter((g) => isVisibleGame(g.data));
 });
+
+/** The four CFB collections behind one call, sharing the same TTL cache the
+ *  school pages use. Exposed so the matchup family (src/lib/cfb/matchups.ts)
+ *  reads through the identical loaders rather than opening its own passes, which
+ *  would double the Firestore reads per build and could see a different
+ *  tombstone state mid-render. */
+export async function getCfbCorpus() {
+  const [schools, venues, rivalries, games] = await Promise.all([
+    loadSchools(), loadVenues(), loadRivalries(), loadGames(),
+  ]);
+  return { schools, venues, rivalries, games };
+}
 
 /** All school ids — for generateStaticParams. */
 export async function getAllCfbSchoolIds(): Promise<string[]> {

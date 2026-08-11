@@ -21,6 +21,12 @@ export const HUMAN_OWNED_FIELDS = ['tombstoned', 'neutralVenueHubSlug'] as const
 
 export type HumanOwnedField = (typeof HUMAN_OWNED_FIELDS)[number];
 
+/** Visibility predicate for a tombstoned game. This is an app-code array filter
+ *  ONLY: absent and false are visible, only true is hidden. It is never used as
+ *  a Firestore inequality, which would drop field-absent docs and break the
+ *  "absent = visible" rule. Mirrors isVisiblePromo (src/lib/promo-helpers.ts). */
+export const isVisibleGame = (g: { tombstoned?: boolean }): boolean => g.tombstoned !== true;
+
 /** The human-owned fields actually present on a stored doc. Absent fields are
  *  omitted entirely so a spread never writes undefined into Firestore. */
 export function pickHumanOwned(existing: Record<string, unknown> | undefined | null): Record<string, unknown> {

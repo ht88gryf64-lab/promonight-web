@@ -142,6 +142,25 @@ export interface CfbGame {
   // Verify contract.
   verified: boolean; // false until independent pass confirms; gates production display
   verification: CfbVerification | null;
+
+  // ── HUMAN-OWNED. Never emitted by the parser, never re-derivable from a
+  //    schedule page. The Phase 2 writer carries these across a rebuild via the
+  //    allowlist in src/lib/cfb/human-owned.ts. See that file for why an
+  //    allowlist and not { merge: true }.
+  /** Soft delete for a redundant duplicate doc. Absent and false are both
+   *  visible; only true hides. Filtered in app code (loadGames), never as a
+   *  Firestore inequality, which would drop field-absent docs. Written by
+   *  scripts/cfb/run-phase2-reconcile.ts. */
+  tombstoned?: boolean;
+  /** For a neutralSite game, the building it is actually played in, as a
+   *  venueHubs DOC ID (for example "mercedes-benz-stadium").
+   *
+   *  NOT a cfbVenues id. cfbVenues holds exactly one campus stadium per school
+   *  and contains no neutral-site buildings, so `venueId` cannot express a
+   *  neutral site and stays empty for these games by design
+   *  (scripts/cfb/run-phase2.ts:83 and :99). Keeping the two namespaces
+   *  separate means venueId's meaning never depends on the neutralSite flag. */
+  neutralVenueHubSlug?: string;
 }
 
 // ── cfbRivalries/{rivalryId} ─────────────────────────────────────────────────
