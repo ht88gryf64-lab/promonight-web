@@ -829,3 +829,36 @@ outside the 32-name matchup build list, so neither blocks the family.
 the notable one: `washington-state` is not among the 86, so that side renders
 with no name, colors or venue. The decision is that these ship with one school
 linked and the other as plain text, no link and no color.
+
+### Affiliate and typing defects, from the Phase 1B-B audits
+
+**Expedia destination malforms when coords are present and city is empty.**
+`affiliates.ts:570` builds `` `${opts.venueName}, ${opts.city}` ``, so an empty city
+yields `"Kinnick Stadium, "` with a trailing comma, and the label at
+`hotel-link.ts:63` yields a double space. `resolveHotelLink` only returns null
+when coords AND city are both absent (`hotel-link.ts:61`), so this state renders
+rather than hiding. CFB hits it whenever `venueCity()` misses
+(`venue-cities.ts:106-109`).
+
+**`CfbSchool.primaryColor` is typed non-nullable but is not validated.**
+`types.ts:30-31` declares `primaryColor: string`, while `loadSchools`
+(`data.ts:168-171`) casts Firestore documents straight through with an unchecked
+`as CfbSchool`. `appalachian-state` is `null` at runtime and silently resolves to
+`SAFE_ACCENT` (`theme.ts:150`), so a school themed from the fallback is
+indistinguishable from one themed from its real colors.
+
+**Ticketmaster SharedID carries no team suffix.** `affiliates.ts:274` passes the
+bare surface string when there is no `venueSlug`, unlike TicketNetwork
+(`affiliates.ts:351`), SpotHero (`SpotHeroCTA.tsx:63`) and Expedia
+(`hotel-link.ts:67`), which all append `_{team.id}`. Ticketmaster attribution is
+therefore surface-level only on every page.
+
+**`run-phase2.ts --execute --only=<school>` is not idempotent on machine-owned
+fields.** Proven on notre-dame during the Phase 1A gate: the two human-owned
+fields survived, but the re-parse nulled `rivalryId` on 5 of 14 docs (including
+`michigan-state--notre-dame` and `notre-dame--stanford`, which back registry
+matchup pages), degraded `broadcast.network` from "NBC and Peacock" to "NBC" on
+7 docs, and flipped `kickoff.tz` from ET to TBD on 4 TBD games. `rivalryDocs`
+ended at size 0, so `tagRivalry` returns null in a scoped run. All 14 docs were
+restored from snapshot. The preservation allowlist protects the two fields it
+names; it does not make a scoped re-run safe.
