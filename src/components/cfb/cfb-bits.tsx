@@ -3,6 +3,9 @@
 // client-only APIs, so it renders correctly in either context. Extracted so the
 // date formatters + the trophy tag are a single source across the two files.
 
+import Link from 'next/link';
+import { matchupEntryForRivalryId } from '@/lib/cfb/matchup-registry';
+import { resolveMatchupDisplayName } from '@/lib/cfb/display-name';
 import type { ReactNode } from 'react';
 import type { CfbGameView } from '@/lib/cfb/data';
 
@@ -11,6 +14,18 @@ export const MONO = 'var(--font-mono), ui-monospace, monospace';
 export const SANS = 'var(--font-outfit), system-ui, sans-serif';
 
 export type RivalryTag = NonNullable<CfbGameView['rivalry']>;
+
+/** Lifts a short text link to a 24px tap target without touching how it looks.
+ *
+ *  WCAG 2.5.8 wants 24x24. Our small CFB links render 17px to 19px tall because
+ *  they are set in 10px to 13px type, and growing the font to fix that would
+ *  change the design. A centered, invisible pseudo-element carries the extra
+ *  hit area instead: the painted box, the padding and the font all stay exactly
+ *  as they were, and only the clickable region grows. Note that this does NOT
+ *  change getBoundingClientRect on the anchor, so it has to be verified by
+ *  hit-testing (elementFromPoint), not by reading the border box. */
+export const TAP_TARGET_24 =
+  "relative before:absolute before:inset-x-0 before:top-1/2 before:h-6 before:-translate-y-1/2 before:content-['']";
 
 export function fmtMonthDay(iso: string): string {
   return new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
@@ -25,10 +40,35 @@ export function fmtDayLong(iso: string): string {
 // article (stored corroborating source) in a new tab; plain <span> when no valid
 // source URL is stored (never a broken link). Same pill treatment either way.
 export function TrophyTag({ rivalry, tiny }: { rivalry: RivalryTag; tiny?: boolean }) {
-  const label = rivalry.trophy || rivalry.name;
-  const title = rivalry.trophy ? `${rivalry.name} · ${rivalry.trophy}` : rivalry.name;
+  // The RIVALRY NAME is the visible text, not the trophy. The name is the term
+  // people search; the trophy was in the tooltip. Resolved through the registry
+  // so a school page and its matchup page never disagree about what a rivalry is
+  // called (Okefenokee Oar renders as "Florida vs Georgia" in both places).
+  const entry = matchupEntryForRivalryId(rivalry.id);
+  const label = resolveMatchupDisplayName(entry, rivalry.name);
+  const title = rivalry.trophy && rivalry.trophy !== label ? `${label} · ${rivalry.trophy}` : label;
+
+  // The pill paints 19px tall, under the 24px minimum. That was tolerable when
+  // it pointed at Wikipedia; it is now the primary inbound path to the matchup
+  // pages on a surface that is effectively all mobile. TAP_TARGET_24 applies
+  // only to the linked variants, since a plain span has no target. Where the
+  // label wraps to two lines the element already clears 24px on its own and the
+  // pseudo-element sits harmlessly inside it.
   const cls = `rounded-full px-2 py-0.5 ${tiny ? 'text-[9px]' : 'text-[10px]'} font-bold uppercase`;
+  const hit = TAP_TARGET_24;
   const style = { fontFamily: MONO, letterSpacing: '0.03em', background: 'var(--cfb-accent)', color: 'var(--cfb-accent-ink)' };
+
+  // Where we have a matchup page, send people there: same tab, internal link.
+  // Where we do not, the Wikipedia link stays exactly as it was. The external
+  // link is not removed as a class of behaviour, only superseded where we have
+  // somewhere better to send someone.
+  if (entry) {
+    return (
+      <Link href={`/cfb/rivalries/${entry.slug}`} title={title} className={`${cls} ${hit} transition-opacity hover:opacity-80`} style={style}>
+        {label}
+      </Link>
+    );
+  }
   if (rivalry.sourceUrl) {
     return (
       <a
@@ -36,7 +76,7 @@ export function TrophyTag({ rivalry, tiny }: { rivalry: RivalryTag; tiny?: boole
         target="_blank"
         rel="noopener noreferrer"
         title={`${title} · Wikipedia`}
-        className={`${cls} transition-opacity hover:opacity-80`}
+        className={`${cls} ${hit} transition-opacity hover:opacity-80`}
         style={style}
       >
         {label}

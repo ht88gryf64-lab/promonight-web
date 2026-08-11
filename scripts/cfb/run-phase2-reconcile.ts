@@ -2,10 +2,14 @@
 // CFB Phase 2 RECONCILE (verify-stage cleanup over stored data). Fixes three
 // data-quality issues the raw run surfaced, IN PLACE (no re-parse, no LLM):
 //   1. Placeholder opponents — the parser occasionally emits a conditional slot
-//      (conference championship / playoff / TBD) as a real game. Delete these.
-//   2. Duplicate matchups — Haiku sometimes emits the same game twice on
-//      different dates (Georgia Tech: Colorado 09-03 AND 09-05). Keep the date a
-//      Wikipedia schedule corroborates; delete the spurious duplicate.
+//      (conference championship / playoff / TBD) as a real game. Tombstone these.
+//   2. Duplicate matchups. Two shapes, both collapsed on a SORTED school pair:
+//      (a) the same matchup emitted twice on different dates (Georgia Tech:
+//          Colorado 09-03 AND 09-05), and
+//      (b) the same matchup emitted twice with home and away swapped, because
+//          both schools' schedule pages claim the game and each names itself
+//          home. An ordered key could never see (b).
+//      Keep the best-corroborated doc; tombstone the rest.
 //   3. Shared-with-G5 last-writer-wins — a game between a fetchable school and a
 //      pending-publish G5 got corroborated from the G5's (unfetchable) side and
 //      stored as no-2nd-source. Re-corroborate each game against BOTH teams'
@@ -19,6 +23,7 @@ loadKey('FIRECRAWL_API_KEY', ['../promonight/promo-pipeline/.env', 'promo-pipeli
 
 import { db } from '../../src/lib/firebase';
 import { CFB_COLLECTIONS } from '../../src/lib/cfb/types';
+import { matchupKey } from '../../src/lib/cfb/rules';
 import { SCHOOLS_2026_BY_ID } from './lib/schools-2026';
 import { fetchWikiSchedule, corroborate, type WikiSchedule } from './lib/corroborate';
 
@@ -33,13 +38,17 @@ const RANK: Record<string, number> = { verified: 5, 'honest-tbd': 4, unconfirmed
 
 async function main() {
   const snap = await db.collection(CFB_COLLECTIONS.games).get();
-  const games = snap.docs.map((d) => ({ _id: d.id, ...(d.data() as any) }));
-  console.log(`reconcile — ${games.length} game docs — ${EXECUTE ? 'EXECUTE' : 'DRY'}`);
+  const all = snap.docs.map((d) => ({ _id: d.id, ...(d.data() as any) }));
+  // Already-tombstoned docs are settled. Re-processing them would re-rank them
+  // against live docs and could resurrect one into the keep set.
+  const games = all.filter((g) => g.tombstoned !== true);
+  const alreadyTombstoned = all.length - games.length;
+  console.log(`reconcile: ${games.length} live game docs (${alreadyTombstoned} already tombstoned, skipped) [${EXECUTE ? 'EXECUTE' : 'DRY'}]`);
 
   // ── 1. placeholder filter ──
   const placeholders = games.filter((g) => PLACEHOLDER.test(g.awaySchoolId) || PLACEHOLDER.test(g.homeSchoolId));
   const real = games.filter((g) => !placeholders.includes(g));
-  console.log(`placeholders to delete: ${placeholders.length} [${placeholders.slice(0, 6).map((g) => `${g.awaySchoolId}@${g.homeSchoolId}`).join(', ')}${placeholders.length > 6 ? ' …' : ''}]`);
+  console.log(`placeholders to tombstone: ${placeholders.length} [${placeholders.slice(0, 6).map((g) => `${g.awaySchoolId}@${g.homeSchoolId}`).join(', ')}${placeholders.length > 6 ? ' ...' : ''}]`);
 
   // ── wiki cache (fetchable schools only; throttled sequential + UA/retry) ──
   const need = new Set<string>();
@@ -67,17 +76,54 @@ async function main() {
   }
 
   // ── 2. dedup by matchup (keep the corroborated date) ──
+  // The key is SORTED, so a home/away swap collapses to one group. An ordered
+  // key treated "florida|georgia" and "georgia|florida" as two different
+  // matchups, which is exactly how 7 swap duplicates survived every prior pass:
+  // two schedule sources each claim the game, each names itself home, and the
+  // parser stores both.
   const byMatch = new Map<string, any[]>();
-  for (const g of real) { const k = [g.homeSchoolId, g.awaySchoolId].join('|'); (byMatch.get(k) || byMatch.set(k, []).get(k))!.push(g); }
+  for (const g of real) { const k = matchupKey(g.homeSchoolId, g.awaySchoolId); (byMatch.get(k) || byMatch.set(k, []).get(k))!.push(g); }
   const keep: any[] = []; const dropDup: any[] = [];
-  for (const [, grp] of byMatch) {
+  const ambiguous: string[] = [];
+  let swapGroups = 0; let dateGroups = 0;
+  for (const [k, grp] of byMatch) {
     if (grp.length === 1) { keep.push(grp[0]); continue; }
-    // rank each dup by its corroboration; keep the best (real) date
-    const scored = grp.map((g) => ({ g, c: corrBoth(g) })).sort((a, b) => RANK[b.c.bucket] - RANK[a.c.bucket]);
+
+    // Classify the group so the log says which defect it is closing.
+    const dates = new Set(grp.map((g) => g.date));
+    const orderings = new Set(grp.map((g) => `${g.homeSchoolId}>${g.awaySchoolId}`));
+    if (dates.size === 1 && orderings.size > 1) swapGroups++;
+    else if (dates.size > 1 && orderings.size === 1) dateGroups++;
+    else {
+      // Both the date AND the home/away designation differ. Two schedule sources
+      // disagreeing looks identical to two genuine meetings (a regular-season
+      // game plus a conference championship rematch). Collapsing blind could
+      // hide a real fixture, so flag it for a human instead of guessing.
+      ambiguous.push(`${k}: dates=${JSON.stringify([...dates])} orderings=${JSON.stringify([...orderings])} docs=${grp.map((g) => g._id).join(', ')}`);
+    }
+
+    // Rank by corroboration, then apply the canonical tiebreak used in the
+    // Phase 1A audit so a same-date swap resolves deterministically:
+    // confirmed broadcast wins, then the normalized "H:MM AM/PM" kickoff shape.
+    const NORMAL_KICKOFF = /^\d{1,2}:\d{2} (AM|PM)$/;
+    const scored = grp
+      .map((g) => ({ g, c: corrBoth(g) }))
+      .sort((a, b) => {
+        const byBucket = RANK[b.c.bucket] - RANK[a.c.bucket];
+        if (byBucket !== 0) return byBucket;
+        const conf = Number(b.g.broadcast?.confirmed === true) - Number(a.g.broadcast?.confirmed === true);
+        if (conf !== 0) return conf;
+        return Number(NORMAL_KICKOFF.test(b.g.kickoff?.time ?? '')) - Number(NORMAL_KICKOFF.test(a.g.kickoff?.time ?? ''));
+      });
     keep.push(scored[0].g);
     for (const s of scored.slice(1)) dropDup.push(s.g);
   }
-  console.log(`duplicate matchups: ${dropDup.length} to delete [${dropDup.slice(0, 6).map((g) => `${g.awaySchoolId}@${g.homeSchoolId} ${g.date}`).join(', ')}${dropDup.length > 6 ? ' …' : ''}]`);
+  console.log(`duplicate matchups: ${dropDup.length} to tombstone (${swapGroups} home/away swap, ${dateGroups} same-matchup-two-dates) [${dropDup.slice(0, 6).map((g) => `${g.awaySchoolId}@${g.homeSchoolId} ${g.date}`).join(', ')}${dropDup.length > 6 ? ' ...' : ''}]`);
+  if (ambiguous.length) {
+    console.log(`\n!!! ${ambiguous.length} AMBIGUOUS group(s): date AND home/away both differ. Could be a genuine rematch, not a duplicate.`);
+    ambiguous.forEach((a) => console.log(`    ${a}`));
+    console.log('    These were still collapsed by corroboration rank. Review before trusting the result.\n');
+  }
 
   // ── 3. re-corroborate kept games against both teams' wikis; set verified ──
   const buckets: Record<string, number> = {};
@@ -108,12 +154,15 @@ async function main() {
   if (EXECUTE) {
     let b = db.batch(); let n = 0;
     const commit = async () => { await b.commit(); b = db.batch(); n = 0; };
-    for (const g of [...placeholders, ...dropDup]) { b.delete(db.collection(CFB_COLLECTIONS.games).doc(g._id)); if (++n >= 400) await commit(); }
+    // Tombstone, never delete. A hidden doc stays auditable and recoverable; a
+    // deleted one is gone with no snapshot. The reader filters tombstoned docs
+    // out of getCfbSchoolPage, so the render effect is identical.
+    for (const g of [...placeholders, ...dropDup]) { b.update(db.collection(CFB_COLLECTIONS.games).doc(g._id), { tombstoned: true }); if (++n >= 400) await commit(); }
     for (const u of updates) { b.update(db.collection(CFB_COLLECTIONS.games).doc(u.id), { verified: u.verified, verification: u.verification }); if (++n >= 400) await commit(); }
     if (n) await b.commit();
-    console.log(`EXECUTED: deleted ${placeholders.length + dropDup.length}, updated ${updates.length}`);
+    console.log(`EXECUTED: tombstoned ${placeholders.length + dropDup.length}, updated ${updates.length}`);
   } else {
-    console.log('DRY — no writes. Re-run with --execute to apply.');
+    console.log('DRY. No writes. Re-run with --execute to apply.');
   }
   process.exit(0);
 }

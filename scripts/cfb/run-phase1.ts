@@ -27,9 +27,11 @@ import { PHASE1_SCHOOLS, BOISE_KICKOFF_FIXTURE, ND_SCHEDULE_FIXTURE, RIVALRY_FIX
 import { parseSchoolSchedule, type ParsedGame } from './lib/pipeline';
 import { guardTimezone, guardDerivedFields, guardEntityConflation, guardSecondSource, guardCitation } from './lib/guards';
 import { fetchWikiSchedule, corroborate } from './lib/corroborate';
+import { assertWipeSafe } from './lib/human-owned';
 
 const NO_LLM = process.argv.includes('--no-llm');
 const CORROBORATE_ONLY = process.argv.includes('--corroborate-only');
+const FORCE_WIPE = process.argv.includes('--force-wipe');
 const SEASON = 2026;
 const NOW = new Date().toISOString();
 
@@ -53,6 +55,9 @@ function gameId(g: { homeTeam: string; awayTeam: string; week: number }) {
  *  accumulate (doc IDs shift when the parser's week assignment moves). Phase 1
  *  only has the 4 spike schools in this collection. */
 async function clearGames() {
+  // Same refusal as the Phase 2 wipe: a delete leaves nothing to read the
+  // human-owned fields back from, so stop rather than lose hand-researched data.
+  await assertWipeSafe(db, [CFB_COLLECTIONS.games], FORCE_WIPE);
   const snap = await db.collection(CFB_COLLECTIONS.games).get();
   let b = db.batch();
   let n = 0;
@@ -133,6 +138,13 @@ async function runSchoolLive(school: (typeof PHASE1_SCHOOLS)[number]): Promise<S
     const batch1 = db.batch();
     for (const g of cfbGames) {
       const { _parser, ...doc } = g;
+      // Bare set(), no human-owned preservation, UNLIKE run-phase2.ts. Harmless
+      // today for exactly one reason: gameId() above builds ids as
+      // SEASON-wWEEK-home-away, which matches nothing in the live corpus (Phase 2
+      // writes SEASON-DATE-home-away), so this can only create Phase 1 spike docs
+      // and can never overwrite a doc carrying tombstoned or neutralVenueHubSlug.
+      // If the id shape ever converges with Phase 2's, add the read-then-preserve
+      // from run-phase2.ts here before running this again.
       batch1.set(db.collection(CFB_COLLECTIONS.games).doc(g.id), doc);
     }
     await batch1.commit();

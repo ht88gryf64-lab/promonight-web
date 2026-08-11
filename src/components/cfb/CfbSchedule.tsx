@@ -34,7 +34,22 @@ function ScheduleRow({ g, last, onOpen }: { g: CfbGameView; last: boolean; onOpe
       <div className="text-[12px] text-white/55" style={{ fontFamily: MONO }}>{fmtMonthDay(g.date)}</div>
       <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
         <span className="text-[10px] uppercase text-white/35" style={{ fontFamily: MONO }}>{g.isHome ? (g.neutralSite ? 'N' : 'VS') : 'AT'}</span>
+        {/* DECIDED, Phase 2B: the opponent name here stays PLAIN TEXT, permanently.
+            Do not link it and do not unwrap the row into a non-button affordance
+            to make room for a link. This row is a <button> that opens the gameday
+            modal, so an opponent anchor would nest a second <a> inside it, and the
+            rivalry card further down the page already carries that exact
+            destination. The trade was a duplicate link for invalid nesting on
+            every row, which is not worth it. Re-opening this needs a reason
+            beyond "the opponent should be clickable". */}
         <span className="text-[15px] font-bold text-white sm:text-[17px]" style={{ fontFamily: SANS }}>{g.opponentName}</span>
+        {/* KNOWN, not fixed here: this anchor nests inside the row <button>, which
+            is invalid HTML. It predates the matchup pages (it was the Wikipedia
+            link) and 5 of 16 rows on /cfb/alabama already carry it. Phase 2
+            changed the href, not the nesting, and Phase 2B deliberately left it
+            alone: unpicking it means reworking the row affordance itself, which
+            belongs in a component pass over the whole row, not in a linking
+            change. Tracked so this reads as a decision, not an oversight. */}
         {g.rivalry && <TrophyTag rivalry={g.rivalry} />}
       </div>
       <div className="text-right" style={{ fontFamily: MONO }}>

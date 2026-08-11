@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { getAllTeams, getPlayoffConfig, getStillAlivePlayoffTeamIds } from '@/lib/data';
 import { getAllCfbSchoolIds } from '@/lib/cfb/data';
+import { getAllMatchupSlugs } from '@/lib/cfb/matchups';
 import { isCfbHubLive, LEAGUE_HUBS } from '@/lib/league-hubs';
 import { getIndexableVenueHubSitemapEntries } from '@/lib/venue-hub';
 
@@ -68,6 +69,36 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     changeFrequency: 'weekly' as const,
     priority: 0.8,
   }));
+
+  // CFB rivalry matchup pages (/cfb/rivalries/[slug]). Gated on the SAME
+  // isCfbHubLive() flag as the school block above, so the whole CFB surface
+  // appears and disappears together.
+  //
+  // No fail-loud branch is needed here and none is possible: the slug set is a
+  // curated static registry (src/lib/cfb/matchups.ts), not a Firestore read, so
+  // there is no partial-success mode to guard against. If the registry is
+  // empty the family is simply absent, which is a code change, not a silent
+  // data hole.
+  //
+  // These URLs auto-propagate to IndexNow through getAllSitemapUrls
+  // (src/lib/sitemap-urls.ts), and src/lib/indexnow.ts hard-throws on any host
+  // that is not www.getpromonight.com, so BASE_URL has to stay the www apex.
+  const cfbMatchupPages = cfbLive
+    ? [
+        {
+          url: `${BASE_URL}/cfb/rivalries`,
+          lastModified: now,
+          changeFrequency: 'weekly' as const,
+          priority: 0.8,
+        },
+        ...getAllMatchupSlugs().map((slug) => ({
+          url: `${BASE_URL}/cfb/rivalries/${slug}`,
+          lastModified: now,
+          changeFrequency: 'weekly' as const,
+          priority: 0.8,
+        })),
+      ]
+    : [];
 
   // League hubs, from the registry — every live hub, one loop. Gated on the
   // SAME LEAGUE_HUB_REGISTRY live flag as the nav, so the sitemap follows
@@ -154,6 +185,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...playoffHubEntries,
     ...teamPages,
     ...cfbTeamPages,
+    ...cfbMatchupPages,
     ...venuePages,
     {
       url: `${BASE_URL}/about`,

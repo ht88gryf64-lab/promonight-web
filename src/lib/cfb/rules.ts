@@ -111,6 +111,20 @@ export function computeWeeks<T extends { date: string }>(games: T[]): (T & { wee
 }
 
 /** Convenience: is this school independent for the season? */
+/** Dedupe key for a fixture: the school pair, SORTED so home/away order cannot
+ *  split one game into two.
+ *
+ *  An ordered key is why 7 duplicate pairs survived every prior reconcile pass.
+ *  Both schools publish the game on their own schedule page and each names
+ *  itself the home team, so the parser stores "florida|georgia" and
+ *  "georgia|florida" and sees two different matchups. Sorting collapses them.
+ *
+ *  The key deliberately omits the date, because the other duplicate shape this
+ *  pass exists to catch is the same matchup emitted on two different dates. */
+export function matchupKey(homeSchoolId: string, awaySchoolId: string): string {
+  return [homeSchoolId, awaySchoolId].slice().sort().join('|');
+}
+
 export function isIndependent(schoolId: string, table: Record<string, string> = CONFERENCE_2026): boolean {
   return table[schoolId] === 'Independent';
 }

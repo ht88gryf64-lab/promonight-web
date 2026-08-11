@@ -30,7 +30,13 @@ import { revalidatePath } from 'next/cache';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const PATH_RE = /^\/[a-z0-9-]+(?:\/[a-z0-9-]+)?$/;
+// One to THREE segments, lowercase alphanumeric and hyphen only, no trailing
+// slash. Widened from two to three for /cfb/rivalries/<slug>. The charset is
+// unchanged, so uppercase, underscores, dots and query strings still fail.
+// The pipeline keeps its own copy of this pattern in
+// promo-pipeline/lib/revalidate-notify.js; both must be widened together or the
+// client silently drops paths this endpoint would accept.
+const PATH_RE = /^\/[a-z0-9-]+(?:\/[a-z0-9-]+){0,2}$/;
 const MAX_PATHS = 100;
 
 export async function POST(request: Request) {

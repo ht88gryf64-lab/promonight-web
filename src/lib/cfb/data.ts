@@ -8,6 +8,7 @@ import { cache } from 'react';
 import { db } from '@/lib/firebase';
 import type { CfbSchool, CfbVenue, CfbGame, CfbRivalry } from '@/lib/cfb/types';
 import { CFB_COLLECTIONS } from '@/lib/cfb/types';
+import { isVisibleGame } from '@/lib/cfb/human-owned';
 // Reuse the pipeline's SINGLE time parser (guards.ts). normTime honors the AM/PM
 // meridiem and returns 24-hour "HH:MM". The display layer must NOT re-derive AM/PM
 // with its own parser (that was the bug); it consumes normTime's output. One parser,
@@ -33,7 +34,11 @@ export interface CfbGameView {
   // tag-as-fact, crown none. sourceUrl = the stored corroborating trophy-article
   // URL (cfbRivalries.source — the trophy's own Wikipedia page, never the list),
   // surfaced so the tag can link out; null when no valid URL is stored.
-  rivalry: { name: string; trophy: string | null; sourceUrl: string | null } | null;
+  rivalry: { id: string; name: string; trophy: string | null; sourceUrl: string | null } | null;
+  /** True when opponentId is one of the 86 tracked cfbSchools. An untracked
+   *  opponent has no page, so it renders as plain text rather than a dead link,
+   *  the same rule the matchup pages use for washington-state. */
+  opponentTracked: boolean;
   // Road-trip planner (away games only): the opponent's school+venue, present only
   // when the opponent is one of the 86 tracked schools AND has a resolved venue.
   // Used to build the SITE-STANDARD hotels/parking CTAs near the destination stadium.
@@ -178,8 +183,26 @@ const loadRivalries = makeCollectionLoader<Array<CfbRivalry & { id: string }>>(a
 });
 const loadGames = makeCollectionLoader<Array<{ docId: string; data: CfbGame }>>(async () => {
   const snap = await db.collection(CFB_COLLECTIONS.games).get();
-  return snap.docs.map((d) => ({ docId: d.id, data: d.data() as CfbGame }));
+  return snap.docs
+    .map((d) => ({ docId: d.id, data: d.data() as CfbGame }))
+    // Tombstoned docs are redundant duplicates, hidden not deleted. Same shape
+    // as isVisiblePromo (src/lib/promo-helpers.ts:165): an app-code filter where
+    // absent and false are both visible and only true hides. Never a Firestore
+    // .where(), which would drop every doc that lacks the field.
+    .filter((g) => isVisibleGame(g.data));
 });
+
+/** The four CFB collections behind one call, sharing the same TTL cache the
+ *  school pages use. Exposed so the matchup family (src/lib/cfb/matchups.ts)
+ *  reads through the identical loaders rather than opening its own passes, which
+ *  would double the Firestore reads per build and could see a different
+ *  tombstone state mid-render. */
+export async function getCfbCorpus() {
+  const [schools, venues, rivalries, games] = await Promise.all([
+    loadSchools(), loadVenues(), loadRivalries(), loadGames(),
+  ]);
+  return { schools, venues, rivalries, games };
+}
 
 /** All school ids — for generateStaticParams. */
 export async function getAllCfbSchoolIds(): Promise<string[]> {
@@ -241,7 +264,8 @@ export const getCfbSchoolPage = cache(async (id: string): Promise<CfbSchoolPage 
       opponentId, opponentName: nameById.get(opponentId) || prettifySlug(opponentId),
       kickoffDisplay: kd.display, kickoffVerified: kd.verified,
       networkDisplay: g.broadcast?.confirmed && g.broadcast.network && !/tbd/i.test(g.broadcast.network) ? g.broadcast.network : null,
-      rivalry: riv ? { name: riv.name, trophy: riv.trophy, sourceUrl: safeHttpUrl(riv.source) } : null,
+      rivalry: riv ? { id: riv.id, name: riv.name, trophy: riv.trophy, sourceUrl: safeHttpUrl(riv.source) } : null,
+      opponentTracked: schoolById.has(opponentId),
       awaySchool: oppSchool, awayVenue: oppVenue,
     });
   }
