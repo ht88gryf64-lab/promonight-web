@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getAllMatchupSlugs, getMatchupPage } from '@/lib/cfb/matchups';
+import { RivalryMatchupPage } from '@/components/cfb/rivalry/RivalryMatchupPage';
 
 export const revalidate = 21600; // ISR, same cadence as the CFB hub and school pages
 
@@ -35,8 +36,9 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
   const data = await getMatchupPage(slug);
   if (!data) notFound();
 
-  // SCAFFOLD ONLY. Phase 1C builds the locked layout: breadcrumb, H1, matchup
-  // line, fact card above 844px, two school cards, the four-step Plan the trip
-  // timeline, the trophy block, and the rivalry-week rail.
-  return null;
+  // Deliberately does NOT mount CfbThemePersist and does NOT theme itself in
+  // either school's colour. A rivalry has two schools, so a single-school
+  // persist write would be ambiguous, and theming in one school's colour picks
+  // a side. The schools appear only as the two accents.
+  return <RivalryMatchupPage data={data} />;
 }

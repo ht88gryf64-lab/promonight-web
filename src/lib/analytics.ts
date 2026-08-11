@@ -109,6 +109,12 @@ export type AnalyticsSurface =
   // measured on its own, mirroring how pro pages fire venue_hub_click as
   // web_team_page.
   | 'web_cfb_venue_link'
+  // CFB rivalry matchup pages (/cfb/rivalries/[slug]) and the affiliate steps in
+  // their Plan the trip timeline. Split from web_cfb because the matchup family
+  // is a different intent: trip planning against a single dated fixture, not a
+  // season schedule. Its affiliate sub-IDs are keyed on the RIVALRY SLUG rather
+  // than a team id, since a matchup has two schools and neither owns the click.
+  | 'web_cfb_rivalry'
   // MLB league hub (/mlb) and its interactive sub-surfaces. Distinct from the
   // generic web_league_index (which covers /teams and any bare /{sport}) so
   // PostHog and GA4 can break the hub out by module: the this-week rail, the
@@ -1213,6 +1219,7 @@ const KNOWN_SURFACE_VALUES = [
   'web_league_index',
   'web_cfb',
   'web_cfb_venue_link',
+  'web_cfb_rivalry',
   'web_mlb_hub',
   'web_mlb_hub_this_week',
   'web_mlb_hub_promo_type',
@@ -1275,6 +1282,13 @@ export function inferSurfaceFromPath(path: string): AnalyticsSurface {
   if (path.startsWith('/my-teams')) return 'web_my_teams';
   if (path.startsWith('/best-promos') || path.startsWith('/team-rankings')) return 'web_best_promos';
   if (path.startsWith('/teams')) return 'web_league_index';
+  // MUST precede the /cfb branch below. /cfb/rivalries/{slug} starts with /cfb,
+  // so without this the whole matchup family mis-tags as web_cfb and the trip
+  // intent is invisible. This is the third, UNTYPECHECKED edit site for a new
+  // CFB surface: the lockstep guard below catches a missing union member or a
+  // missing KNOWN_SURFACE_VALUES entry, but nothing catches a missing branch
+  // here, which fails silently as mis-attribution rather than as web_other.
+  if (path.startsWith('/cfb/rivalries')) return 'web_cfb_rivalry';
   // College Football team pages — their own surface (pageviews + any path-inferred
   // click), so CFB never attributes to a pro sport surface.
   if (path.startsWith('/cfb')) return 'web_cfb';

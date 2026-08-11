@@ -108,13 +108,22 @@ export function buildCfbTeamMetadata(data: CfbSchoolPage): Metadata {
   //    not, we drop the TOKEN (never "Schedule"), keeping a truthful "Rivalries" hook,
   //    then "& Gameday", then bare. A school with NO 2026 rivalry game never claims
   //    "Rivalries" (no over-claim) — it takes the no-rivalry chain. ──
+  // INVERTED: the rivalry token LEADS and "Football Schedule YEAR" is demoted to
+  // a trailing qualifier. Schedule-intent queries are unwinnable, sitting at
+  // position 34 to 56 against Google's own sports panel, so leading with
+  // "Football Schedule" spends the most valuable characters in the title on a
+  // term we cannot rank for. The rivalry token is the term that does rank: GSC
+  // shows these pages at 3.7 to 9.3 on rivalry and trophy queries with no
+  // deliberate targeting at all. A school with no 2026 rivalry game has no token
+  // to lead with and keeps the schedule-first shape.
   const titleCands = hasRivalry
     ? [
-        `${s.name} Football Schedule ${YEAR}: ${feat.token} & Gameday`,
-        `${s.name} Football Schedule ${YEAR}: ${feat.token}`,
-        `${s.name} Football Schedule ${YEAR}: Rivalries & Gameday`,
-        `${s.name} Football Schedule ${YEAR}: Rivalries`,
-        `${s.name} Football Schedule ${YEAR} & Gameday`,
+        `${s.name} ${feat.token} ${YEAR}: Gameday & Football Schedule`,
+        `${s.name} ${feat.token} ${YEAR}: Football Schedule`,
+        `${s.name} ${feat.token} ${YEAR}`,
+        `${s.name} Rivalries ${YEAR}: Football Schedule & Gameday`,
+        `${s.name} Rivalries ${YEAR}: Football Schedule`,
+        `${s.name} Rivalries ${YEAR}`,
         `${s.name} Football Schedule ${YEAR}`,
       ]
     : [
