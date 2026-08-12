@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getAllMatchupSlugs, getMatchupPage } from '@/lib/cfb/matchups';
+import { buildCfbMatchupMetadata } from '@/lib/cfb/metadata';
 import { RivalryMatchupPage } from '@/components/cfb/rivalry/RivalryMatchupPage';
 
 export const revalidate = 21600; // ISR, same cadence as the CFB hub and school pages
@@ -25,9 +26,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     };
   }
 
-  // displayName, not rivalry.name, so the title matches the H1 exactly. The
-  // rivalry name leads and the trophy is never the headline.
-  return { title: `${data.displayName} 2026` };
+  // displayName, not rivalry.name, so title, H1 and description all agree. The
+  // builder also supplies the canonical and a self-referencing og:url, which
+  // this route shipped without.
+  return buildCfbMatchupMetadata(data);
 }
 
 export default async function Page({ params }: { params: Promise<{ slug: string }> }) {

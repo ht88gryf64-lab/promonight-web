@@ -11,6 +11,8 @@
 
 import type { Metadata } from 'next';
 import type { CfbSchoolPage } from '@/lib/cfb/data';
+import type { MatchupPage } from '@/lib/cfb/matchups';
+import { buildMatchupDescription, prettySchoolId } from '@/lib/cfb/matchup-description';
 
 // The root layout title template appends ' | PromoNight' (13 chars) to every
 // page title. The house standard keeps the RENDERED <title> (field + brand) ≤60
@@ -187,6 +189,74 @@ export function buildCfbHubMetadata(): Metadata {
     'College football rivalries, trophy games and theme nights for 2026: The Game, Iron Bowl, Red River, plus schedules and gameday plans for all 86 teams.';
   const socialTitle = `${title} | PromoNight`;
   const url = `${BASE}/cfb`;
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: { title: socialTitle, description, siteName: 'PromoNight', url, type: 'website', images: [OG_IMAGE] },
+    twitter: { card: 'summary_large_image', site: '@promo_night_app', creator: '@promo_night_app', title: socialTitle, description, images: [OG_IMAGE.url] },
+  };
+}
+
+// ── RIVALRY MATCHUP pages (/cfb/rivalries/[slug]) and their index. ──
+//
+// These shipped with title only, which left all 33 URLs with NO canonical, an
+// og:url pointing at the site root, and the root layout's description, which
+// names six pro leagues and no college football. The canonical is the load
+// bearing one: an apex/www mismatch is the documented root cause of the May 2026
+// Bing deindex, and these were the newest pages on the site.
+//
+// Both builders emit the FULL openGraph object rather than just a url. Next
+// shallow-merges metadata, so a page that sets `openGraph: { url }` REPLACES the
+// layout's openGraph wholesale and silently drops og:title and og:image.
+
+/** Kickoff exactly as the page renders it, or null when it is not announced.
+ *  Mirrors RivalryMatchupPage so the description can never claim a time the
+ *  fact card does not show. */
+function renderedKickoff(game: MatchupPage['game']): string | null {
+  if (!game || game.kickoff?.tbd || !game.kickoff?.time) return null;
+  if (/tbd/i.test(game.kickoff.time)) return null;
+  const tz = game.kickoff.tz && game.kickoff.tz !== 'TBD' ? ` ${game.kickoff.tz}` : '';
+  return `${game.kickoff.time}${tz}`;
+}
+
+export function buildCfbMatchupMetadata(data: MatchupPage): Metadata {
+  // displayName, never rivalry.name, so title, H1 and description agree.
+  const title = `${data.displayName} ${YEAR}`;
+  const [a, b] = data.schools;
+  const [aId, bId] = data.rivalry.schoolIds;
+
+  const description = buildMatchupDescription({
+    displayName: data.displayName,
+    // An untracked school still gets a real name from its id, so the pairing
+    // never renders as a gap.
+    schoolA: a?.name ?? prettySchoolId(aId),
+    schoolB: b?.name ?? prettySchoolId(bId),
+    date: data.game?.date ?? null,
+    kickoff: renderedKickoff(data.game),
+    venueName: data.resolvedVenue?.name ?? null,
+    venueCity: data.resolvedVenue?.city ?? null,
+  });
+
+  const socialTitle = `${title} | PromoNight`;
+  const url = `${BASE}/cfb/rivalries/${data.slug}`;
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: { title: socialTitle, description, siteName: 'PromoNight', url, type: 'website', images: [OG_IMAGE] },
+    twitter: { card: 'summary_large_image', site: '@promo_night_app', creator: '@promo_night_app', title: socialTitle, description, images: [OG_IMAGE.url] },
+  };
+}
+
+export function buildCfbRivalryIndexMetadata(): Metadata {
+  // Description unchanged from what the route already shipped; this builder only
+  // adds the canonical and the self-referencing og:url it was missing.
+  const title = 'College Football Rivalries 2026';
+  const description =
+    'Every major college football rivalry in 2026: the date, the kickoff, the stadium and how to plan the trip.';
+  const socialTitle = `${title} | PromoNight`;
+  const url = `${BASE}/cfb/rivalries`;
   return {
     title,
     description,

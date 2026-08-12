@@ -1,16 +1,15 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getMatchupIndexRows } from '@/lib/cfb/matchups';
+import { buildCfbRivalryIndexMetadata } from '@/lib/cfb/metadata';
 
 export const revalidate = 21600; // ISR, same cadence as the CFB hub
 
-export const metadata: Metadata = {
-  // Hardcoded season year by house rule: never getFullYear() in SEO copy, bump
-  // deliberately when next-season content is ready.
-  title: 'College Football Rivalries 2026',
-  description:
-    'Every major college football rivalry in 2026: the date, the kickoff, the stadium and how to plan the trip.',
-};
+// Hardcoded season year by house rule: never getFullYear() in SEO copy, bump
+// deliberately when next-season content is ready. Moved into the shared builder
+// so this page picks up the canonical and self-referencing og:url it shipped
+// without; the title and description are unchanged.
+export const metadata: Metadata = buildCfbRivalryIndexMetadata();
 
 function monthDay(date: string): string {
   return new Date(`${date}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });

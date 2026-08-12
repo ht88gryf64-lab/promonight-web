@@ -18,6 +18,7 @@ import type { CfbGame, CfbRivalry, CfbSchool, CfbVenue } from '@/lib/cfb/types';
 import { getCfbCorpus, getCfbSchoolPage } from '@/lib/cfb/data';
 import { getVenueHub, getVenueHubForTeam, venueHubIsIndexable } from '@/lib/venue-hub';
 import { buildRivalrySentences } from '@/lib/cfb/page-extras';
+import { venueCity } from '@/lib/cfb/venue-cities';
 import { MATCHUP_REGISTRY, type MatchupRegistryEntry } from '@/lib/cfb/matchup-registry';
 import { resolveMatchupDisplayName, findDisplayNameCollisions } from '@/lib/cfb/display-name';
 
@@ -199,7 +200,13 @@ export const getMatchupPage = cache(async (slug: string): Promise<MatchupPage | 
     const hub = homeSchool ? await getVenueHubForTeam(homeSchool.id) : null;
     resolvedVenue = {
       name: venue.name,
-      city: venue.city ?? null,
+      // venueCity(), NEVER the raw cfbVenues.city, which is junk for 59 of the
+      // 86 venues. Reading it raw shipped "Notre Dame Stadium | coordinates ="
+      // to the fact card on legends-trophy and megaphone-trophy. The map returns
+      // null for an unmapped id, so the caller falls back to name only. The
+      // school pages and the schedule modal have always gone through this;
+      // this reader was the one place that did not.
+      city: venueCity(venue) ?? null,
       state: venue.state ?? null,
       lat: venue.lat ?? null,
       lng: venue.lng ?? null,

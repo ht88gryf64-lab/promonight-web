@@ -1077,3 +1077,66 @@ up by an over-broad `git add` during the Phase 1A write. It was untracked at the
 start of the session, this document already described it as untracked, and no
 code reads it. Removed from tracking before the merge so it does not land in
 main; the file remains on disk.
+
+---
+
+## Title inversion outcome, HYPOTHESIS TO TEST
+
+Logged after the Phase 2C merge went live. This is a bet with a review date, not
+a settled result.
+
+**44 of 86 school-page titles no longer contain "Football Schedule" at all.**
+They fell through to the third candidate (`{school} {token} {year}`) because the
+longer forms exceed the 47-character field budget once the rivalry token leads.
+That is the candidate chain working exactly as designed, and it is half the
+corpus rather than an edge case.
+
+The four shapes now in production:
+
+| shape | schools | example |
+| --- | --- | --- |
+| token + ": Gameday & Football Schedule" | 2 | BYU Holy War 2026: Gameday & Football Schedule |
+| token + ": Football Schedule" | 39 | Kansas Border War 2026: Football Schedule |
+| token only | 44 | Iowa State Cy-Hawk Trophy 2026 |
+| schedule-first, no rivalry | 1 | Northern Illinois Football Schedule 2026 |
+
+**The bet:** a rivalry term we can win beats a schedule term Google's own sports
+panel owns. The supporting evidence is that schedule-intent queries sit at
+position 34 to 56 while these pages already rank 3.7 to 9.3 on rivalry and
+trophy queries with no deliberate targeting.
+
+**The review:** read GSC at 2 and 4 weeks post-deploy. If impressions on those
+44 fall without a matching rise in rivalry-term clicks, either the title budget
+needs raising or the candidate order needs revisiting. Do not act on week-1
+noise, and do not treat a fall in schedule impressions as failure on its own;
+the whole point is that those impressions were not converting.
+
+**Northern Illinois is the only school with no 2026 rivalry game**, and so the
+only one that retains the schedule-first title shape. It is the control.
+
+**The inversion changed `<title>` only.** School-page H1s remain the bare school
+name ("Alabama"). Only the matchup pages carry a rivalry-named H1. Anything
+verifying this work must read the title tag, not the H1.
+
+## Metadata gaps found after the merge, fixed on feature/cfb-rivalry-metadata
+
+The 33 URLs shipped with `generateMetadata` returning only `{ title }`. Three
+consequences, none of them visible without reading the served HTML:
+
+- **No canonical on any of the 33.** The apex/www canonical mismatch is the
+  documented root cause of the May 2026 Bing deindex, and these were the newest
+  and least established pages on the site.
+- **`og:url` pointed at the site root** rather than the page, on all 33.
+- **The description was inherited from the root layout**, which names MLB, NBA,
+  NFL, NHL, MLS and WNBA, mentions no college football, and ends on bobbleheads.
+
+A fourth, found while building the descriptions and fixed at the source:
+**`getMatchupPage` read the raw `cfbVenues.city`**, which is junk for 59 of the
+86 venues. Two pages were live rendering "Notre Dame Stadium | coordinates ="
+in the fact card (`legends-trophy`, `megaphone-trophy`). The reader now goes
+through `venueCity()` like every other CFB surface already did.
+
+Note for anyone adding page-level Open Graph later: Next shallow-merges
+metadata, so a route that sets `openGraph: { url }` REPLACES the layout's
+openGraph object wholesale and silently drops `og:title` and `og:image`. Both
+new builders emit the full object for that reason.
