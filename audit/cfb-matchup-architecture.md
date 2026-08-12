@@ -1140,3 +1140,55 @@ Note for anyone adding page-level Open Graph later: Next shallow-merges
 metadata, so a route that sets `openGraph: { url }` REPLACES the layout's
 openGraph object wholesale and silently drops `og:title` and `og:image`. Both
 new builders emit the full object for that reason.
+
+---
+
+## Open items added after the metadata merge (63efa7b, 2026-08-12)
+
+### cfbVenues.city is junk on 59 of 86 docs, and those records are unrepaired
+
+The raw `city` field holds street addresses, "University of X" run-ons, wiki
+fragments, bracketed URLs and empties. Two examples of the shape:
+`ross-ade-stadium.city` is a street address with a bracketed campus-directory
+URL, and `notre-dame-stadium.city` is the literal string
+`| coordinates         =`, a leaked wikitext row.
+
+Every CFB surface now routes around it through `venueCity()`
+(`src/lib/cfb/venue-cities.ts`), a hand-verified id-to-city map, and the last
+reader that did not, `getMatchupPage`, was fixed in this merge. The map returns
+null for an unmapped id so a caller falls back to the venue name alone and never
+renders the raw field.
+
+**The underlying records are still wrong.** What exists today is a complete
+read-side workaround, not a repair. The consequences of leaving it:
+
+- Every new CFB reader is one missed `venueCity()` call away from shipping
+  wikitext to a live page. That is exactly how `legends-trophy` and
+  `megaphone-trophy` reached production rendering
+  "Notre Dame Stadium | coordinates =".
+- The map has to be hand-extended for any venue added later, and nothing fails
+  loudly when it is not: an unmapped id degrades silently to name-only.
+- Anything reading `cfbVenues` directly, outside the app, gets the junk.
+
+**Group this with the venueHubs index-floor work.** Both are the same class of
+problem, a venue-data pass rather than an app-code pass, both touch the same
+buildings, and doing them together means one verification sweep over the venue
+corpus instead of two.
+
+### Next shallow-merges metadata, so partial openGraph objects are destructive
+
+A route that sets `openGraph: { url }` does NOT merge that url into the layout's
+Open Graph block. It REPLACES the entire object, silently dropping `og:title`
+and `og:image`.
+
+Adding only the url, which is the obvious reading of "set og:url", would have
+blanked the social image on all 33 rivalry URLs, and nothing would have failed:
+no type error, no build warning, no test. The only symptom is a link preview
+that renders as a bare text card.
+
+**Any future page-level Open Graph must emit the FULL object**: title,
+description, siteName, url, type and images. `buildCfbMatchupMetadata` and
+`buildCfbRivalryIndexMetadata` do this, matching `buildCfbTeamMetadata` and
+`buildCfbHubMetadata`, which is why all four CFB surfaces are consistent. Verify
+by reading served HTML for `og:title` and `og:image`, not by reading the route
+file, since the destructive case looks correct in source.
