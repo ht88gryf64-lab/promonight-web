@@ -895,3 +895,55 @@ work. Byte-identity note: changes prerendered HTML on three hub pages.
 
 **Severity: Low.** No functional consequence; a truthfulness fix on live
 copy, recorded so it does not sit.
+
+---
+
+## 16. `PATH_RE` is duplicated across two repos and guarded from one side only
+
+**Status: OPEN, low urgency.** Ride it along with the next change to
+`route.ts`; it does not warrant its own branch.
+
+**What it is.** `PATH_RE` in `src/app/api/revalidate/route.ts:39` is duplicated
+byte-for-byte in the pipeline at `promo-pipeline/lib/revalidate-notify.js`.
+Both copies were widened from two segments to three on 2026-08-13 for
+`/cfb/rivalries/<slug>`. The pipeline side now has a test asserting the
+coupling (`promo-pipeline/test/revalidate-notify.test.js`, landed in
+`9870eff`). **This side has no mirror, so the coupling is enforced in one
+direction only.**
+
+**Why the unguarded direction is the dangerous one.** The pipeline test catches
+someone NARROWING the pipeline copy. Nothing catches someone narrowing THIS
+copy. If `route.ts` is narrowed, the endpoint begins rejecting paths the
+pipeline correctly sends, and the only symptom is a warn line in a scanner log
+while the affected pages serve stale indefinitely. No error, no failed run, no
+alert. Same silent-failure shape as the eight optional promo fields that
+eroded for six weeks because the diff never loaded them.
+
+**What to add.** Copy the pipeline test rather than writing a new one, so the
+two stay comparable:
+
+- 3-segment `/cfb/rivalries/<slug>` validates.
+- 1 and 2 segments still validate; 4 segments rejected.
+- The ten charset rejections: uppercase in first and last position,
+  underscore, dot, query string, trailing slash, missing leading slash, empty
+  segment, space, and protocol-relative `//evil.com` (which parses as two
+  segments under the charset rules and must be pinned explicitly).
+- A literal assertion on `PATH_RE.source` against the shipped pattern string,
+  so a future narrowing fails loudly rather than silently dropping paths.
+- **An assertion that the flags are empty.** An `i` flag would defeat every
+  uppercase rejection without touching the pattern, so the source assertion
+  alone is NOT sufficient. This was found on the pipeline side and is easy to
+  omit.
+
+`PATH_RE` is not currently exported from `route.ts`; the pipeline exported its
+copy for the test with a comment restricting the export to that use.
+
+**Prove the guard bites before calling it done.** Narrow the regex, confirm the
+expected tests fail, restore. On the pipeline side, narrowing to `{0,1}` failed
+2 of 5 tests. A test that cannot fail is not a guard.
+
+**Where it lives.** `src/app/api/revalidate/route.ts:39`.
+
+**Why it matters.** A byte-identical coupling across two repos guarded only by
+a comment is the same shape as extraction rules living in conversation rather
+than in a file, which has bitten this project twice.
