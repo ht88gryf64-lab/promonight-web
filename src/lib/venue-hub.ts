@@ -756,10 +756,12 @@ export function bagFaqAnswers(hub: BagFacts, tenantExceptions: string[] = []): B
   if (dims) return { size: join(`Bags up to ${dims} are allowed at ${short}.`, notes), clarity: null };
   if (notes) return { size: notes, clarity: null };
   if (hub.bagPolicyUrl) {
-    // Deliberately does NOT say "linked on this page": the bag card, and with it
-    // the Official bag policy link, is gated on hasBag, which is false in exactly
-    // this case. Promising a link that does not render would be a new false
-    // statement in place of the one this function removes.
+    // Deliberately does NOT say "linked on this page", even though the bag card
+    // and its Official bag policy link now DO render in this case (the card is
+    // gated on hasBagFaq, see VenueHubView). The reason is no longer the gate, it
+    // is that an FAQPage acceptedAnswer can be surfaced detached from the page it
+    // came from, so an answer that points at "this page" is false wherever it is
+    // read. Same standalone principle as the division of labour noted above.
     return {
       size: `${short} has not published a bag size limit we could verify. Check the venue's official bag policy before you travel.`,
       clarity: null,
