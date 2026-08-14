@@ -522,13 +522,14 @@ export type SpotHeroOpts = {
 // replaces it. The aff_c prefix + aff_id are hardcoded constants (always
 // commissionable), same model as Fanatics / Expedia / TicketNetwork.
 const SPOTHERO_AFF_C = 'https://tracking.spothero.com/aff_c';
+const SPOTHERO_AFF_ID = '2427';
 export function buildSpotHeroUrl(opts: SpotHeroOpts): string {
   const destination = hasValidCoords(opts.latitude, opts.longitude)
     ? `https://spothero.com/search?lat=${opts.latitude}&lng=${opts.longitude}`
     : 'https://spothero.com/';
   const params = new URLSearchParams({
     offer_id: '1',
-    aff_id: '2427',
+    aff_id: SPOTHERO_AFF_ID,
     aff_sub: opts.subKey,
     url: destination,
   });
@@ -623,3 +624,23 @@ export function buildExpediaHotelLink(opts: ExpediaHotelLinkOpts): string {
     `&pubref=${encodeURIComponent(opts.pubref)}`
   );
 }
+
+// ── Build-time tracking-constant guard hooks ─────────────────────────────
+// Read-only snapshot of every hardcoded tracking constant, consumed by
+// scripts/verify-affiliate-tracking.ts from the npm prebuild hook. The verify
+// script keeps its OWN independent copy of the blessed values and compares:
+// a bad edit to any constant here fails the build there, loudly, instead of
+// shipping unattributed links that no runtime signal would ever flag.
+export const AFFILIATE_TRACKING_CONSTANTS = {
+  ticketNetworkPrefix: TICKETNETWORK.prefix,
+  ticketNetworkPropertyId: TICKETNETWORK.partnerPropertyId,
+  fanaticsOrigin: FANATICS.origin,
+  fanaticsAccount: FANATICS.account,
+  fanaticsCampaignId: FANATICS.campaignId,
+  spotHeroTracker: SPOTHERO_AFF_C,
+  spotHeroAffId: SPOTHERO_AFF_ID,
+  expediaBase: EXPEDIA.base,
+  expediaCamref: EXPEDIA.camref,
+  expediaCreativeref: EXPEDIA.creativeref,
+  expediaAdref: EXPEDIA.adref,
+} as const;
