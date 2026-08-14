@@ -228,11 +228,15 @@ Overall reflects current-season promo presence (5 of 10 points require upcoming 
 
 ## 5. Monetization [MANUAL - NEEDS CONFIRM]
 
-- Affiliate network: Impact (publisher 7236189)
-- Live: Ticketmaster (Nick Jackson), Fanatics (Wade Tonkin)
-- Approved/wiring: SpotHero, Booking.com, FlexOffers (fo-verify b823c9f6...)
-- Pending/priority: Gametime (via FlexOffers, priority), Vivid Seats (outreach sent), TickPick (pending), StubHub (Partnerize, pending)
-- Declined: SeatGeek (x2)
+- Impact (publisher 7236189): Ticketmaster, TicketNetwork, Fanatics. All three live and prod-verified 2026-08-14.
+- SpotHero: OWN IN-HOUSE system (tracking.spothero.com/aff_c, aff_id=2427). Live. NOT Partnerize.
+- Expedia: OWN IN-HOUSE system (camref). Live.
+- eBay Partner Network: live, past-bobblehead resale rows.
+- SeatGeek: declined twice. Code removed 2026-08-14.
+- StubHub: never approved. Partnerize application stalled; fall reapplication planned. Code removed 2026-08-14.
+- Booking.com: not live, no code path.
+- Outreach/pending: Gametime, Vivid Seats, TickPick
+- Affiliate attribution boundary: 2026-08-14T14:33:38Z. The sub-ID token scheme changed at that deploy, so partner dashboards show old and new tokens as separate rows and per-surface revenue comparisons spanning it are invalid. Details: audit/affiliate-attribution-audit.md.
 - Ticketmaster zero conversions = audience economics, not technical. Resale partners are the focus (5% vs 0.5-1.5%).
 - Display ads: Mediavine Journey. Threshold is 1,000 monthly sessions (met) + 30-day Grow widget run before applying. CONFIRM Grow install date; it gates the July approval timing. At bull traffic, ads are ~$30-60/month. Immaterial; affiliate is the lever.
 - Newsletter: Resend system, sending domain mail.getpromonight.com, in phased build. Subscriber count: CONFIRM (likely pre-launch/0). Capture wired on /world-cup and aggregator pages (web_world_cup, web_aggregator sources).
