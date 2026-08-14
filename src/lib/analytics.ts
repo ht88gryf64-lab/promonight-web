@@ -277,8 +277,6 @@ export type CollectionTileTapProperties = {
 };
 
 export type AffiliatePartner =
-  | 'seatgeek'
-  | 'stubhub'
   | 'fanatics'
   | 'spothero'
   | 'expedia'
