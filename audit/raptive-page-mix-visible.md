@@ -1,6 +1,6 @@
 # Raptive page mix, visible unique words
 
-Generated: 2026-08-14T15:36:05.522Z
+Generated: 2026-08-14T16:21:55.802Z
 Sibling of audit/raptive-page-mix.ts; raw counts use the identical method for comparability.
 Corrections applied here: 4+ word text segments deduplicated within each document; seasonal in-week promo rails (section aria-labelledby promos-this-week / {league}-this-week / {league}-today) measured separately and excluded from the corrected count. JSON-LD is stripped before counting in BOTH scripts, so it never inflated word counts.
 
@@ -16,17 +16,17 @@ Total sitemap URLs 468; HTTP 200 468; failures 0.
 | nhl-team | 32 | 1847 | 1658 | 199 | 0 | 1658 | 1520 |
 | mls-team | 30 | 1848 | 1621 | 229 | 0 | 1621 | 1614 |
 | wnba-team | 15 | 1703 | 1510 | 223 | 0 | 1510 | 1540 |
-| cfb-school | 86 | 267 | 267 | 0 | 0 | 267 | 272 |
-| venue | 156 | 712 | 676 | 32 | 0 | 640 | 639 |
-| aggregator | 10 | 1532 | 1318 | 253 | 0 | 1318 | 1472 |
+| cfb-school | 86 | 300 | 300 | 0 | 0 | 300 | 305 |
+| venue | 156 | 857 | 819 | 32 | 0 | 786 | 789 |
+| aggregator | 10 | 1529 | 1316 | 253 | 0 | 1316 | 1469 |
 | hub | 7 | 1005 | 998 | 49 | 159 | 789 | 865 |
-| other | 40 | 121 | 121 | 0 | 0 | 121 | 350 |
+| other | 40 | 150 | 150 | 0 | 0 | 150 | 373 |
 
 ## Sitewide thresholds
 
-- Raw (original method): >=1000 161 of 468 (34.4%); >=1500 104 (22.2%)
-- Unique (deduped, rails included): >=1000 156 (33.3%); >=1500 91 (19.4%)
-- Corrected (deduped, rails excluded; off-season baseline): >=1000 150 (32.1%); >=1500 91 (19.4%)
+- Raw (original method): >=1000 198 of 468 (42.3%); >=1500 107 (22.9%)
+- Unique (deduped, rails included): >=1000 189 (40.4%); >=1500 92 (19.7%)
+- Corrected (deduped, rails excluded; off-season baseline): >=1000 177 (37.8%); >=1500 92 (19.7%)
 
 ## Rail (seasonal) words per route type
 
