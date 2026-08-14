@@ -4,7 +4,7 @@
   "q2-stadium": {
     "venue": "Q2 Stadium",
     "gatesOpen": "Gates open 90 minutes before kickoff for Austin FC home matches.",
-    "parkingInfo": "Three on-site lots serve Q2 Stadium: SciPlay Lot (west), East Lot (northeast), and Southwest Lot. All lots require advance mobile purchase through the Austin FC app or SeatGeek; no day-of walk-up sales. Lots sell out for high-demand matches. From US-183 North, exit at Braker Lane east; from MoPac (Loop 1), exit Braker Lane east. Rideshare drop-off is on North Burnet Road at Braker Lane. Bag lockers are available at the NW and SW gates for $10 per locker if you need to store items.",
+    "parkingInfo": "Three on-site lots serve Q2 Stadium: SciPlay Lot (west), East Lot (northeast), and Southwest Lot. All lots require advance mobile purchase through the Austin FC app; no day-of walk-up sales. Lots sell out for high-demand matches. From US-183 North, exit at Braker Lane east; from MoPac (Loop 1), exit Braker Lane east. Rideshare drop-off is on North Burnet Road at Braker Lane. Bag lockers are available at the NW and SW gates for $10 per locker if you need to store items.",
     "publicTransit": "CapMetro MetroRail Red Line has a McKalla Station directly adjacent to Q2 Stadium, making the train the easiest way to attend a match without driving. From downtown Austin, the ride is under 20 minutes. CapMetro buses also connect to the Burnet Road corridor. CapMetro schedules are at capmetro.org. Lyft is the official rideshare partner.",
     "accessibility": "Accessible seating is available on all levels. Accessible parking spaces are in all three stadium lots. Wheelchair-friendly gate access and restrooms are located throughout the stadium. Contact Q2 Stadium guest services through austinfc.com for specific accommodation requests.",
     "bagPolicyUrl": "https://www.austinfc.com/stadium/bag-policy",
@@ -24,7 +24,7 @@
   "toyota-stadium": {
     "venue": "Toyota Stadium",
     "gatesOpen": "Gates open 90 minutes before kickoff for FC Dallas home matches.",
-    "parkingInfo": "Toyota Stadium has large adjacent parking lots with thousands of spaces. General lots are cashless; advance purchase through the FC Dallas app or SeatGeek is recommended for preferred sections. From the Dallas North Tollway (DNT), take the Eldorado Pkwy exit in Frisco; the stadium is at 9200 World Cup Way. From US-75 (Central Expressway), exit Stacy Road or Eldorado west to the stadium. Tailgating is permitted in designated lots.",
+    "parkingInfo": "Toyota Stadium has large adjacent parking lots with thousands of spaces. General lots are cashless; advance purchase through the FC Dallas app is recommended for preferred sections. From the Dallas North Tollway (DNT), take the Eldorado Pkwy exit in Frisco; the stadium is at 9200 World Cup Way. From US-75 (Central Expressway), exit Stacy Road or Eldorado west to the stadium. Tailgating is permitted in designated lots.",
     "publicTransit": "DART light rail (Red Line) can get you to the Frisco area, and shuttle service sometimes supplements DART for high-profile FC Dallas matches. Check dart.org and the FC Dallas matchday guide for the most current service. Rideshare from Dallas or Plano (about 30 minutes) is a practical option. Frisco is primarily a drive-to suburb.",
     "accessibility": "Toyota Stadium has ADA-compliant seating throughout and accessible parking near the main entrance. The venue is also the home of the National Soccer Hall of Fame, which has full accessibility. Contact FC Dallas at fcdallas.com for accommodation requests.",
     "bagPolicyUrl": "https://www.fcdallas.com/toyota-stadium/bag-policy",
@@ -44,7 +44,7 @@
   "dignity-health-sports-park": {
     "venue": "Dignity Health Sports Park",
     "gatesOpen": "Gates open 90 minutes before kickoff for LA Galaxy home matches.",
-    "parkingInfo": "On-site parking surrounds Dignity Health Sports Park in Carson with multiple general and premium lots. Advance purchase through the LA Galaxy app or SeatGeek is recommended; lots can sell out for high-profile matchups. The stadium address is 18400 Avalon Boulevard, Carson. From I-110 (Harbor Freeway), exit Avalon Boulevard south; from I-405, take the Avalon exit. Cash is not accepted in the lots.",
+    "parkingInfo": "On-site parking surrounds Dignity Health Sports Park in Carson with multiple general and premium lots. Advance purchase through the LA Galaxy app is recommended; lots can sell out for high-profile matchups. The stadium address is 18400 Avalon Boulevard, Carson. From I-110 (Harbor Freeway), exit Avalon Boulevard south; from I-405, take the Avalon exit. Cash is not accepted in the lots.",
     "publicTransit": "Dignity Health Sports Park is in a suburban location in Carson, between Los Angeles and Long Beach. The Metro Green Line (E Line) has an Avalon Station a manageable distance away; the Torrance Transit Bus Route 8 and LA Metro buses provide additional connections but service frequency varies. Most fans drive or take rideshare (approximately 20 to 30 minutes from downtown LA or Long Beach). Check metro.net for transit options.",
     "accessibility": "Accessible seating and ADA parking are available throughout. Wheelchair-accessible gates and restrooms serve all areas of the venue. Contact LA Galaxy at lagalaxy.com for specific accommodation requests.",
     "bagPolicyUrl": "https://www.lagalaxy.com/stadium/bag-policy",
@@ -94,7 +94,7 @@
   "snapdragon-stadium": {
     "venue": "Snapdragon Stadium",
     "gatesOpen": "Gates open 90 minutes before kickoff for San Diego FC home matches.",
-    "parkingInfo": "Multiple on-site lots and a stadium parking structure serve Snapdragon Stadium in the Mission Valley neighborhood of San Diego. Premium and general lots require advance purchase through the San Diego FC app or SeatGeek; walk-up availability varies. The stadium address is 2001 Greg Sherwood Way in Mission Valley, directly off I-8 between the I-805 and I-15. From I-8, take Exit 9 (Friars Road) and follow the directional signage.",
+    "parkingInfo": "Multiple on-site lots and a stadium parking structure serve Snapdragon Stadium in the Mission Valley neighborhood of San Diego. Premium and general lots require advance purchase through the San Diego FC app; walk-up availability varies. The stadium address is 2001 Greg Sherwood Way in Mission Valley, directly off I-8 between the I-805 and I-15. From I-8, take Exit 9 (Friars Road) and follow the directional signage.",
     "publicTransit": "The MTS Green Line (Mission Valley West Trolley) has a Snapdragon Stadium station directly at the venue. From downtown San Diego, the trolley ride takes approximately 20 to 25 minutes. The Green Line connects to the Blue Line at Old Town and to the UC San Diego campus. Check sdmts.com for fares, schedules, and connections. Transit is the preferred way to attend San Diego FC matches given limited post-match parking exit capacity.",
     "accessibility": "Snapdragon Stadium is a modern venue (opened 2022) with full ADA compliance throughout. Accessible seating, parking, restrooms, and gates are available at all areas. Contact San Diego FC at sandiegofc.com for specific accommodation requests.",
     "bagPolicyUrl": "https://www.sandiegofc.com/stadium/bag-policy",
@@ -104,7 +104,7 @@
   "paypal-park": {
     "venue": "PayPal Park",
     "gatesOpen": "Gates open 90 minutes before kickoff for San Jose Earthquakes home matches.",
-    "parkingInfo": "On-site lots surrounding PayPal Park provide parking for most Earthquakes home matches. Advance purchase via SeatGeek or ParkMobile is recommended for high-demand matchups. The stadium address is 1123 Coleman Avenue, San Jose. From US-101, take the Coleman Avenue exit (Exit 391); the stadium is about one mile from the freeway.",
+    "parkingInfo": "On-site lots surrounding PayPal Park provide parking for most Earthquakes home matches. Advance purchase via ParkMobile is recommended for high-demand matchups. The stadium address is 1123 Coleman Avenue, San Jose. From US-101, take the Coleman Avenue exit (Exit 391); the stadium is about one mile from the freeway.",
     "publicTransit": "VTA Light Rail has a dedicated Earthquakes Stadium station directly at PayPal Park, making the light rail the easiest way to attend a match without dealing with parking. Multiple VTA bus routes also serve the Coleman Avenue and Airport Boulevard corridor. From downtown San Jose, the light rail ride takes approximately 15 to 20 minutes. Check vta.org for schedules and fares.",
     "accessibility": "PayPal Park has ADA-accessible seating on all levels and accessible entry points at all gates. Accessible parking is in the designated lots nearest the main entry. Contact San Jose Earthquakes at sjearthquakes.com for specific accommodation requests.",
     "bagPolicyUrl": "https://www.sjearthquakes.com/stadium/bag-policy",
