@@ -1020,3 +1020,48 @@ field name misses the rows. Nothing user-facing reads sources today (kept off
 pages deliberately after the CFB quoted-source-URL incident), so the exposure
 is future tooling. Fix shape when picked up: re-key the two rows to their
 field names in Firestore with the usual snapshot-first protocol.
+
+## 20. Team pages repeat promo descriptions and CTA copy per row, the largest duplication on the site
+
+**Status: OPEN.** Measured, not fixed. MLB team pages lose a median 689
+visible words to in-document repeats (audit/raptive-page-mix-visible.md, dup
+delta column), the largest of any route type; a fresh single-page measurement
+on /mlb/minnesota-twins found 1,317 excess words across 36 distinct repeated
+4+ word segments.
+
+**Two mechanisms, and neither is entry 18's two-mount case.**
+(1) Recurring-promo descriptions repeated per date: the same stored
+description renders once per date row, e.g. the Legends Landing
+all-you-can-eat description 18 times (+408 words), the $5 student ticket 7
+times (+192), the military half-price offer 5 times (+144). Mount: the promo
+list rows render promo.title and promo.description per row
+(src/components/redesign/RedesignPromoRow.tsx:175-177 via
+src/components/promo-list.tsx), and recurring every-game deals plus repeated
+theme nights carry identical text on every date.
+(2) Per-game-row CTA copy: the "Get tickets / ticketmaster / Get Tickets"
+strip renders once per schedule row, 26 times on the Twins page (+175 words).
+Mount: TicketsBlock inside the calendar and schedule expands
+(src/components/redesign/GameExpand.tsx:189-219, opened from
+CalendarGrid.tsx:437-457 and ScheduleRow.tsx:196-203).
+
+**Does the entry-18 single-grid approach apply? No.** Entry 18 is one card
+mounted twice for two breakpoints; here each repeat is a distinct row that
+legitimately exists, carrying identical text. The fix classes are different:
+for (1), collapse a recurring deal into one row with its date list, or render
+the full description on first occurrence and a short reference on repeats;
+for (2), a row-level compact CTA (icon or single word) with one full CTA
+block per page, which also touches the affiliate-click surface area and so
+needs its own review. Both change visible UX and belong to a deliberate
+design pass, not a cleanup commit.
+
+## 21. Homepage visible "Last updated" line is clock-derived
+
+**Status: OPEN, entry-17 class.** src/app/page.tsx:319 computes
+`lastUpdated = formatChicagoLong(today)` from the render clock and line 364
+renders "{promoCount} promos tracked · Last updated {lastUpdated}" in the
+homepage hero, so every ISR regeneration asserts updated-today regardless of
+whether any data changed. This is the same synthetic-freshness class as entry
+17 (fixed sitewide in the 2026-08-14 data-only tier) and was deliberately
+left out of that pass as out of its approved scope. Fix shape when picked up:
+bind a real stored stamp if one becomes available for the homepage slate, or
+drop the "Last updated" clause and keep the promo count, which is real.
