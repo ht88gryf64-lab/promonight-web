@@ -212,8 +212,10 @@ export function buildCfbHubMetadata(): Metadata {
 
 /** Kickoff exactly as the page renders it, or null when it is not announced.
  *  Mirrors RivalryMatchupPage so the description can never claim a time the
- *  fact card does not show. */
-function renderedKickoff(game: MatchupPage['game']): string | null {
+ *  fact card does not show. Exported so the page can build the SAME description
+ *  string as its visible lede (data-only tier: the hand-written matchup
+ *  description surfaces as body copy, not just a meta tag). */
+export function renderedKickoff(game: MatchupPage['game']): string | null {
   if (!game || game.kickoff?.tbd || !game.kickoff?.time) return null;
   if (/tbd/i.test(game.kickoff.time)) return null;
   const tz = game.kickoff.tz && game.kickoff.tz !== 'TBD' ? ` ${game.kickoff.tz}` : '';
