@@ -42,7 +42,7 @@ export default function PrivacyPage() {
       <ul>
         <li><strong>Operating the service</strong> &mdash; serving promo, schedule, and venue content, and keeping the site and app online and secure.</li>
         <li><strong>Personalization</strong> &mdash; ordering content by the teams and regions you appear to be interested in.</li>
-        <li><strong>Affiliate attribution</strong> &mdash; when you click an outbound link to a ticket marketplace, parking marketplace, hotel marketplace, sportsbook, merchandise retailer, or other affiliate partner, we record the click so the partner can pay us a commission if you complete a purchase. We do not see your payment details.</li>
+        <li><strong>Affiliate attribution</strong> &mdash; when you click an outbound link to a ticket marketplace, parking marketplace, hotel marketplace, merchandise retailer, or resale marketplace, we record the click so the partner can pay us a commission if you complete a purchase. We do not see your payment details.</li>
         <li><strong>Product improvement</strong> &mdash; understanding which pages, features, and content perform well so we can improve them.</li>
         <li><strong>Notifications and customer support</strong> &mdash; sending alerts you&apos;ve opted into and responding to inquiries.</li>
       </ul>
@@ -54,9 +54,9 @@ export default function PrivacyPage() {
         <li><strong>PostHog</strong> &mdash; product analytics on the website (events, session metadata). PostHog&apos;s privacy policy: <a href="https://posthog.com/privacy">posthog.com/privacy</a>.</li>
         <li><strong>Google Analytics 4</strong> &mdash; aggregate website traffic analytics. Google&apos;s privacy policy applies; you can install the Google Analytics opt-out browser add-on at <a href="https://tools.google.com/dlpage/gaoptout">tools.google.com/dlpage/gaoptout</a>.</li>
         <li><strong>Vercel</strong> &mdash; website hosting and CDN. Standard server logs (IP, user-agent, request paths) are processed by Vercel as part of serving the site.</li>
-        <li><strong>Affiliate networks</strong> &mdash; we participate in affiliate programs operated by Awin, Partnerize, Impact, CJ Affiliate, FlexOffers, and similar networks. When you click an outbound affiliate link, the destination partner and the network drop their own cookies on the destination site to attribute any subsequent purchase. We are not in control of those cookies.</li>
+        <li><strong>Affiliate networks and programs</strong> &mdash; we participate in the Impact affiliate network (Ticketmaster, TicketNetwork, and Fanatics), the eBay Partner Network, and the in-house affiliate programs operated by SpotHero and Expedia. When you click an outbound affiliate link, the destination partner and its network drop their own cookies on the destination site to attribute any subsequent purchase. We are not in control of those cookies.</li>
         <li><strong>Ad networks</strong> &mdash; see Section 5.</li>
-        <li><strong>Ticketmaster, Fanatics, SpotHero, Expedia, and other linked partners</strong> &mdash; ticket, merchandise, parking, and hotel marketplaces we link out to. Their privacy policies govern any data collected on their sites.</li>
+        <li><strong>Ticketmaster, TicketNetwork, Fanatics, SpotHero, Expedia, and eBay</strong> &mdash; the ticket, merchandise, parking, hotel, and resale marketplaces we link out to. Their privacy policies govern any data collected on their sites.</li>
       </ul>
       <p>
         When you tap or click links to third-party sites, you leave PromoNight and become subject to the terms and privacy policies of those platforms. We are not responsible for their practices and encourage you to review their policies.
