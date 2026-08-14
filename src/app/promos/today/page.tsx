@@ -103,7 +103,6 @@ export default async function PromosTodayPage() {
         url={PAGE_URL}
         title={TITLE}
         description={DESCRIPTION}
-        lastUpdated={todayYMD}
         faqs={[]}
         groups={jsonLdGroups}
       />

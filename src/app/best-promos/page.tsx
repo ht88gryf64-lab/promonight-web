@@ -180,7 +180,7 @@ export default async function BestPromosPage() {
           url={PAGE_URL}
           title={`Best Sports Promo Nights of ${SEASON_YEAR}`}
           description={`Score-ranked list of ${promos.length} top promotional events across MLB, MLS, and WNBA in ${SEASON_YEAR}.`}
-          lastUpdated={latestComputedAt || new Date().toISOString()}
+          lastUpdated={latestComputedAt}
           faqs={FAQS}
           itemListItems={itemListPromos}
           locationsByTeamId={locationsByTeamId}

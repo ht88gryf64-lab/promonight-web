@@ -74,7 +74,6 @@ export default async function JerseyGiveawaysPage() {
         url="https://www.getpromonight.com/promos/jersey-giveaways"
         title={`Every Jersey & Apparel Giveaway in Pro Sports ${YEAR}`}
         description={lead}
-        lastUpdated={todayYMD()}
         faqs={faqs}
         groups={groups}
       />
@@ -82,7 +81,6 @@ export default async function JerseyGiveawaysPage() {
         eyebrow="Apparel giveaways"
         title={`EVERY JERSEY, HAT & APPAREL GIVEAWAY`}
         lead={lead}
-        lastUpdated={new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
         groups={groups}
         faqs={faqs}
         emptyMessage="No upcoming jersey or apparel giveaways are currently tracked."

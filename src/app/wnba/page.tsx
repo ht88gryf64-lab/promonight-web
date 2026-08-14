@@ -106,7 +106,6 @@ export default async function WnbaHubPage() {
         url={HUB_URL}
         title={TITLE}
         description={DESCRIPTION}
-        lastUpdated={todayYMD()}
         faqs={FAQS}
         groups={jsonLdGroups}
       />

@@ -127,7 +127,7 @@ export default async function TeamRankingsPage() {
     headline: `Best Sports Promo Schedules of ${YEAR}: Team-by-Team Rankings`,
     description: `All ${teamScores.length} MLB, MLS, and WNBA teams ranked by ${YEAR} promo schedule strength.`,
     url: PAGE_URL,
-    dateModified: latestComputedAt || new Date().toISOString(),
+    ...(latestComputedAt ? { dateModified: latestComputedAt } : {}),
     author: {
       '@type': 'Organization',
       name: 'PromoNight',

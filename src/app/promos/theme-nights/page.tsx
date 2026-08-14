@@ -122,7 +122,6 @@ export default async function ThemeNightsPage() {
         url="https://www.getpromonight.com/promos/theme-nights"
         title={`Every Theme Night in Pro Sports ${YEAR}`}
         description={lead}
-        lastUpdated={todayYMD()}
         faqs={faqs}
         groups={groups}
       />
@@ -130,7 +129,6 @@ export default async function ThemeNightsPage() {
         eyebrow="Theme nights"
         title={`EVERY THEME NIGHT IN ${YEAR}`}
         lead={lead}
-        lastUpdated={new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
         groups={groups}
         faqs={faqs}
         emptyMessage="No upcoming theme nights are currently tracked."

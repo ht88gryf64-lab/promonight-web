@@ -163,7 +163,7 @@ export default async function BobbleheadsPage() {
           url={PAGE_URL}
           title={`Best Bobblehead Nights of ${SEASON_YEAR}`}
           description={`Every bobblehead giveaway across MLB, MLS, and WNBA in ${SEASON_YEAR}, ranked by score.`}
-          lastUpdated={latestComputedAt || new Date().toISOString()}
+          lastUpdated={latestComputedAt}
           faqs={FAQS}
           itemListItems={itemListPromos}
           locationsByTeamId={locationsByTeamId}

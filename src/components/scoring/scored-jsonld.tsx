@@ -8,7 +8,8 @@ type ScoredJsonLdProps = {
   url: string;
   title: string;
   description: string;
-  lastUpdated: string;
+  /** Real stored timestamp only (score computedAt); omitted when absent. */
+  lastUpdated?: string | null;
   faqs: Faq[];
   itemListItems: ScoredPromoWithTeam[];
   // Map<team.id, SchemaLocation> produced by getSchemaLocationsForTeams.
@@ -53,7 +54,7 @@ export function ScoredJsonLd({
       headline: title,
       description,
       url,
-      dateModified: lastUpdated,
+      ...(lastUpdated ? { dateModified: lastUpdated } : {}),
       author: {
         '@type': 'Organization',
         name: 'PromoNight',

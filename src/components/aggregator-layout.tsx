@@ -27,7 +27,10 @@ export interface AggregatorPageProps {
   eyebrow: string;
   title: string;
   lead: string;
-  lastUpdated: string;
+  /** A REAL stored timestamp only (e.g. score computedAt). Omit when the only
+   *  available value would be the render clock: a synthetic always-now stamp is
+   *  a false freshness claim (docs/known-issues.md entry 17). */
+  lastUpdated?: string | null;
   groups: AggregatorGroup[];
   faqs: { question: string; answer: string }[];
   emptyMessage?: string;
@@ -99,7 +102,8 @@ function RedesignAggregatorPage({
           </p>
           <h1 className="rd-display mt-1 text-4xl uppercase leading-[0.95] text-white md:text-6xl">{title}</h1>
           <p className="mt-3 font-rd text-[11px] uppercase tracking-[0.12em] text-white/45">
-            {totalCount} promo{totalCount !== 1 ? 's' : ''} · Last updated {lastUpdated}
+            {totalCount} promo{totalCount !== 1 ? 's' : ''}
+            {lastUpdated ? <> · Last updated {lastUpdated}</> : null}
           </p>
         </div>
       </section>
@@ -212,7 +216,8 @@ function LegacyAggregatorPage({
             {title}
           </h1>
           <p className="text-text-muted text-xs font-mono tracking-[0.5px] mt-3">
-            Last updated {lastUpdated} &middot; {totalCount} promo{totalCount !== 1 ? 's' : ''}
+            {lastUpdated ? <>Last updated {lastUpdated} &middot; </> : null}
+            {totalCount} promo{totalCount !== 1 ? 's' : ''}
           </p>
           <p className="mt-5 text-text-secondary text-base leading-relaxed max-w-3xl">
             {lead}
@@ -287,7 +292,8 @@ export function AggregatorJsonLd({
   url: string;
   title: string;
   description: string;
-  lastUpdated: string;
+  /** Real stored timestamp only; omitted from the CollectionPage when absent. */
+  lastUpdated?: string | null;
   faqs: { question: string; answer: string }[];
   groups: AggregatorGroup[];
 }) {
@@ -305,7 +311,7 @@ export function AggregatorJsonLd({
       name: title,
       description,
       url,
-      dateModified: lastUpdated,
+      ...(lastUpdated ? { dateModified: lastUpdated } : {}),
       isPartOf: {
         '@type': 'WebSite',
         name: 'PromoNight',
