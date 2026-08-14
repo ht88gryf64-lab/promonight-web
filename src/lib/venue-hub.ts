@@ -122,7 +122,13 @@ export const getVenueHub = cache(async (slug: string): Promise<VenueHub | null> 
     };
   });
   return {
-    slug: d.slug,
+    // Sub-ID slug: doc.id (the `slug` argument that fetched this doc) is the
+    // routing-truth key — the URL, the /venues index and the sitemap all key on
+    // it. The stored d.slug field is used only when it MATCHES; a missing or
+    // diverging field falls back to doc.id so an affiliate sub-ID can never
+    // silently degrade to team-keyed or name a different building than the
+    // page URL (audit/affiliate-attribution-audit.md, ranked item 8).
+    slug: d.slug === slug ? d.slug : slug,
     name: d.name,
     city: d.city ?? null,
     state: d.state ?? null,

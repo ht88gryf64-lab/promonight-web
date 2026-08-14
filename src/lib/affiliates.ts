@@ -1,19 +1,16 @@
-// Affiliate outbound URL generators with env-var-swappable tracking IDs and
-// surface-aware sub-ID tagging. The builders compose a destination URL and
-// inject the tracking ID when its env var is set; when the env var is unset
-// the URL is left untagged. CTA components are expected to call
-// `isPartnerActive(partner)` and skip rendering buttons whose env vars are
-// empty — otherwise high-intent traffic would land at the partner with no
-// commission attached (the SeatGeek-rejected case). The sub-ID encodes
-// ${surface}_${promoId ?? 'none'} so partner reports can slice revenue by
-// surface and promo without extra events.
+// Affiliate outbound URL generators with surface-aware sub-ID tagging. Every
+// live partner's tracking material is a hardcoded constant (TicketNetwork /
+// Fanatics Impact prefixes, SpotHero aff_c + aff_id, Expedia camref family)
+// except Ticketmaster, whose Impact wrap template is injected via an env var.
+// The sub-ID convention is {surface}_{id} across partners; away-game rows use
+// the shared awayGameSubKey compound token. The prebuild guard
+// scripts/verify-affiliate-tracking.ts fails the build when any of the
+// hardcoded constants drift or the Ticketmaster wrap is absent/malformed.
 
 import type { AnalyticsSurface } from './analytics';
 import type { Team } from './types';
 import { FANATICS_AD_IDS } from './fanatics-ad-ids';
 
-const SEATGEEK_AID = process.env.NEXT_PUBLIC_SEATGEEK_AID ?? '';
-const STUBHUB_RID = process.env.NEXT_PUBLIC_STUBHUB_RID ?? '';
 // Impact wrap-link template for Ticketmaster. Placeholder tokens — `{TARGET}`
 // receives the URL-encoded destination (Ticketmaster team URL); `{SHARED_ID}`
 // receives the surface tag for partner-side reporting. When unset, the
@@ -22,8 +19,6 @@ const STUBHUB_RID = process.env.NEXT_PUBLIC_STUBHUB_RID ?? '';
 const TICKETMASTER_IMPACT_WRAP = process.env.NEXT_PUBLIC_TICKETMASTER_IMPACT_WRAP ?? '';
 
 export type AffiliatePartner =
-  | 'seatgeek'
-  | 'stubhub'
   | 'fanatics'
   | 'spothero'
   | 'expedia'
@@ -54,10 +49,6 @@ export type AffiliateLinkOptions = {
 // quantify pre-approval click loss without affecting routing behavior.
 export function isPartnerActive(partner: AffiliatePartner): boolean {
   switch (partner) {
-    case 'seatgeek':
-      return SEATGEEK_AID.length > 0;
-    case 'stubhub':
-      return STUBHUB_RID.length > 0;
     case 'fanatics':
       // The Impact /c/ prefix, account, campaign and adIds are hardcoded
       // constants baked into every Fanatics link (no env var), so the outbound
@@ -84,38 +75,24 @@ export function isPartnerActive(partner: AffiliatePartner): boolean {
   }
 }
 
-function subId(opts: AffiliateLinkOptions): string {
-  return `${opts.surface}_${opts.promoId ?? 'none'}`;
-}
-
-function setParam(url: URL, key: string, value: string): void {
-  if (!value) return;
-  url.searchParams.set(key, value);
+// ── Away-game sub-ID (single source) ─────────────────────────────────────
+// The ONE helper that computes the away-game sub-ID for every partner. Before
+// this existed each partner derived its own away key and the four disagreed on
+// the same row (TN keyed the page team, Expedia and SpotHero keyed the
+// opponent, Ticketmaster kept the page surface), so cross-partner joins
+// mismatched teams by construction. The compound token names both sides:
+//   web_away_game_{pageTeamId}_at_{opponentId}
+// Call sites (the away-game expands) compute it once, where both ids are
+// known, and pass it down as `subKey`; the builders and CTA components use a
+// provided subKey verbatim and must NOT derive their own away key.
+export function awayGameSubKey(pageTeamId: string, opponentId: string): string {
+  return `web_away_game_${pageTeamId}_at_${opponentId}`;
 }
 
 // ── Raw-URL tagging helpers ──────────────────────────────────────────────
 // Used by <TrackedAffiliateLink>, which accepts a pre-built outbound URL and
-// re-tags it at render time. Idempotent with the typed builders below.
-
-/** @deprecated Affiliate program not currently approved. Retained so existing
- *  imports (`buildAffiliateUrl`, legacy callsites) keep type-checking. The
- *  active ticket partner is Ticketmaster — see `buildTicketmasterUrl`. */
-export function seatGeekUrl(rawUrl: string, opts: AffiliateLinkOptions): string {
-  const url = new URL(rawUrl);
-  setParam(url, 'aid', SEATGEEK_AID);
-  setParam(url, 'sub1', subId(opts));
-  return url.toString();
-}
-
-/** @deprecated Affiliate program not currently approved. Retained so existing
- *  imports (`buildAffiliateUrl`, legacy callsites) keep type-checking. The
- *  active ticket partner is Ticketmaster — see `buildTicketmasterUrl`. */
-export function stubHubUrl(rawUrl: string, opts: AffiliateLinkOptions): string {
-  const url = new URL(rawUrl);
-  setParam(url, 'rid', STUBHUB_RID);
-  setParam(url, 'sub_id', subId(opts));
-  return url.toString();
-}
+// re-tags it at render time. Every live partner's URL arrives fully assembled
+// from its typed builder, so each case is a documented passthrough.
 
 /** @deprecated Fanatics links are fully assembled by `buildFanaticsUrl` at the
  *  call site, where team + surface are known. The Impact `/c/` prefix, adId
@@ -130,13 +107,9 @@ export function fanaticsUrl(rawUrl: string, _opts: AffiliateLinkOptions): string
 export function buildAffiliateUrl(
   partner: AffiliatePartner,
   rawUrl: string,
-  opts: AffiliateLinkOptions,
+  _opts: AffiliateLinkOptions,
 ): string {
   switch (partner) {
-    case 'seatgeek':
-      return seatGeekUrl(rawUrl, opts);
-    case 'stubhub':
-      return stubHubUrl(rawUrl, opts);
     case 'fanatics':
       // Fanatics links are fully assembled by `buildFanaticsUrl` at the call
       // site: the Impact prefix, adId, and subId1 are already baked in. Do
@@ -169,56 +142,15 @@ export function buildAffiliateUrl(
 // These compose a complete outbound URL from the minimum data each partner
 // needs, then apply the tracking params via the helpers above.
 
-export type SeatGeekOpts = {
-  team?: string; // team slug: 'minnesota-twins', 'boston-celtics'
-  event?: string; // optional SeatGeek event slug; overrides team if present
-  surface: AnalyticsSurface;
-  promoId?: string | null;
-};
-
-/** @deprecated Affiliate program not currently approved. Restore when
- *  SeatGeek direct brand approval lands. The active ticket partner is
- *  Ticketmaster — see `buildTicketmasterUrl`. */
-export function buildSeatGeekUrl(opts: SeatGeekOpts): string {
-  const base = 'https://seatgeek.com';
-  const path = opts.event
-    ? `/${encodeURIComponent(opts.event)}`
-    : opts.team
-      ? `/${encodeURIComponent(opts.team)}-tickets`
-      : '';
-  return seatGeekUrl(`${base}${path}`, {
-    surface: opts.surface,
-    promoId: opts.promoId,
-  });
-}
-
-export type StubHubOpts = {
-  /** Team slug (Firestore id), e.g. 'toronto-blue-jays'. StubHub's canonical
-   *  team-page format is `/{slug}-tickets/category/<id>`, but the numeric
-   *  category id is per-team and not easy to source. `/{slug}-schedule/` also
-   *  resolves to a real team page on StubHub and works without an id map. */
-  teamSlug?: string;
-  surface: AnalyticsSurface;
-  promoId?: string | null;
-};
-
-/** @deprecated Affiliate program not currently approved. Restore when
- *  StubHub direct brand approval lands. The active ticket partner is
- *  Ticketmaster — see `buildTicketmasterUrl`. */
-export function buildStubHubUrl(opts: StubHubOpts): string {
-  const base = opts.teamSlug
-    ? `https://www.stubhub.com/${encodeURIComponent(opts.teamSlug)}-schedule/`
-    : 'https://www.stubhub.com/';
-  return stubHubUrl(base, {
-    surface: opts.surface,
-    promoId: opts.promoId,
-  });
-}
-
 export type TicketmasterOpts = {
   /** Venue hub only: building slug, appended to the SharedID so attribution is
    *  per-building (web_venue_{slug}). Omitted by every other surface. */
   venueSlug?: string;
+  /** Complete sub-ID override, used verbatim as the SharedID. Away-game rows
+   *  pass awayGameSubKey(pageTeamId, opponentId) so all four partners ship the
+   *  identical compound token. When absent the SharedID composes from
+   *  surface + venueSlug/teamSlug below. */
+  subKey?: string;
   /** PromoNight team slug (Firestore doc id), e.g. 'minnesota-twins'. */
   teamSlug: string;
   /** Ticketmaster URL slug. Set on the Team via Firestore for all 167 teams
@@ -267,12 +199,18 @@ export function buildTicketmasterUrl(opts: TicketmasterOpts): string {
     return directUrl;
   }
 
+  // SharedID carries the SAME full {surface}_{id} token every other partner
+  // receives (subId1 / aff_sub / pubref). It previously carried the bare
+  // surface on every non-venue page, which collapsed all teams, CFB schools,
+  // the today board and both /best-promos pages into single partner-side
+  // buckets (audit/affiliate-attribution-audit.md, ranked item 1).
+  const sharedId =
+    opts.subKey ??
+    (opts.venueSlug ? `${opts.surface}_${opts.venueSlug}` : `${opts.surface}_${opts.teamSlug}`);
+
   return TICKETMASTER_IMPACT_WRAP
     .replace('{TARGET}', encodeURIComponent(directUrl))
-    .replace(
-      '{SHARED_ID}',
-      encodeURIComponent(opts.venueSlug ? `${opts.surface}_${opts.venueSlug}` : opts.surface),
-    );
+    .replace('{SHARED_ID}', encodeURIComponent(sharedId));
 }
 
 // ── TicketNetwork (Impact) ───────────────────────────────────────────────
@@ -324,13 +262,16 @@ export function ticketNetworkLandingUrl(team: Pick<Team, 'id' | 'ticketNetworkSl
 
 export type TicketNetworkLinkOpts = {
   team: Pick<Team, 'id' | 'ticketNetworkSlug'>;
-  /** Venue hub only: building slug, inserted before team.id so subId1 is
-   *  web_venue_{slug}_{teamId}. Omitted by every other surface. */
+  /** Venue hub only: building slug. When set, subId1 is the building-keyed
+   *  web_venue_{slug} with NO team suffix. Omitted by every other surface. */
   venueSlug?: string;
+  /** Complete sub-ID override, used verbatim as subId1. Away-game rows pass
+   *  awayGameSubKey(pageTeamId, opponentId); no caller derives its own away
+   *  key (see awayGameSubKey). */
+  subKey?: string;
   /** subId1 surface segment, already including the `web_` prefix
-   *  (e.g. 'web_team_page'). Away-game CTAs pass 'web_away_game' so attribution
-   *  matches the Expedia pubref convention (see lib/hotel-link.ts). */
-  surface: AnalyticsSurface | 'web_away_game';
+   *  (e.g. 'web_team_page'). */
+  surface: AnalyticsSurface;
 };
 
 // Assembles the full tracked TicketNetwork link. Returns null when the landing
@@ -348,7 +289,7 @@ export function buildTicketNetworkLink(opts: TicketNetworkLinkOpts): string | nu
     // the subId is web_venue_{slug} with NO team suffix. Team-keyed attribution
     // (surface_team.id) is for the team-page block, where the team is known.
     `&MediaPartnerPropertyId=${TICKETNETWORK.partnerPropertyId}` +
-    `&subId1=${opts.venueSlug ? `${opts.surface}_${opts.venueSlug}` : `${opts.surface}_${opts.team.id}`}`
+    `&subId1=${opts.subKey ?? (opts.venueSlug ? `${opts.surface}_${opts.venueSlug}` : `${opts.surface}_${opts.team.id}`)}`
   );
 }
 
@@ -494,13 +435,14 @@ export type SpotHeroOpts = {
 // replaces it. The aff_c prefix + aff_id are hardcoded constants (always
 // commissionable), same model as Fanatics / Expedia / TicketNetwork.
 const SPOTHERO_AFF_C = 'https://tracking.spothero.com/aff_c';
+const SPOTHERO_AFF_ID = '2427';
 export function buildSpotHeroUrl(opts: SpotHeroOpts): string {
   const destination = hasValidCoords(opts.latitude, opts.longitude)
     ? `https://spothero.com/search?lat=${opts.latitude}&lng=${opts.longitude}`
     : 'https://spothero.com/';
   const params = new URLSearchParams({
     offer_id: '1',
-    aff_id: '2427',
+    aff_id: SPOTHERO_AFF_ID,
     aff_sub: opts.subKey,
     url: destination,
   });
@@ -550,7 +492,9 @@ export type ExpediaHotelLinkOpts = {
   checkIn?: string | null;
   checkOut?: string | null;
   /** Expedia in-house affiliate sub-tracking (pubref), e.g.
-   *  "web_away_game_minnesota-twins" or "web_venue_arrowhead-stadium". */
+   *  "web_team_page_minnesota-twins", "web_venue_arrowhead-stadium", or the
+   *  away-row compound token from awayGameSubKey
+   *  ("web_away_game_minnesota-twins_at_san-diego-padres"). */
   pubref: string;
 };
 
@@ -595,3 +539,23 @@ export function buildExpediaHotelLink(opts: ExpediaHotelLinkOpts): string {
     `&pubref=${encodeURIComponent(opts.pubref)}`
   );
 }
+
+// ── Build-time tracking-constant guard hooks ─────────────────────────────
+// Read-only snapshot of every hardcoded tracking constant, consumed by
+// scripts/verify-affiliate-tracking.ts from the npm prebuild hook. The verify
+// script keeps its OWN independent copy of the blessed values and compares:
+// a bad edit to any constant here fails the build there, loudly, instead of
+// shipping unattributed links that no runtime signal would ever flag.
+export const AFFILIATE_TRACKING_CONSTANTS = {
+  ticketNetworkPrefix: TICKETNETWORK.prefix,
+  ticketNetworkPropertyId: TICKETNETWORK.partnerPropertyId,
+  fanaticsOrigin: FANATICS.origin,
+  fanaticsAccount: FANATICS.account,
+  fanaticsCampaignId: FANATICS.campaignId,
+  spotHeroTracker: SPOTHERO_AFF_C,
+  spotHeroAffId: SPOTHERO_AFF_ID,
+  expediaBase: EXPEDIA.base,
+  expediaCamref: EXPEDIA.camref,
+  expediaCreativeref: EXPEDIA.creativeref,
+  expediaAdref: EXPEDIA.adref,
+} as const;

@@ -191,11 +191,11 @@ export default async function BobbleheadsPage() {
             </p>
 
             <Suspense fallback={null}>
-              <ScoringPageViewTracker pageTitle="Best Bobblehead Nights" scoreCount={promos.length} defaultLeague="All" defaultRange="90d" />
+              <ScoringPageViewTracker pageTitle="Best Bobblehead Nights" surface="web_best_promos_bobbleheads" scoreCount={promos.length} defaultLeague="All" defaultRange="90d" />
             </Suspense>
 
             <div className="mt-8">
-              <BestPromosBrowser initialPromos={promos} serverTodayYMD={todayYMD} ticketsPlacement="best_promos_bobbleheads_card" trackingSurface="best_promos_bobbleheads" inlineAnswers={INLINE_ANSWERS} variant="light" />
+              <BestPromosBrowser initialPromos={promos} serverTodayYMD={todayYMD} ticketsPlacement="best_promos_bobbleheads_card" trackingSurface="best_promos_bobbleheads" ticketsSurface="web_best_promos_bobbleheads" inlineAnswers={INLINE_ANSWERS} variant="light" />
             </div>
 
             <section className="mt-16">
@@ -266,6 +266,7 @@ export default async function BobbleheadsPage() {
           <Suspense fallback={null}>
             <ScoringPageViewTracker
               pageTitle="Best Bobblehead Nights"
+              surface="web_best_promos_bobbleheads"
               scoreCount={promos.length}
               defaultLeague="All"
               defaultRange="90d"
@@ -278,6 +279,7 @@ export default async function BobbleheadsPage() {
               serverTodayYMD={todayYMD}
               ticketsPlacement="best_promos_bobbleheads_card"
               trackingSurface="best_promos_bobbleheads"
+              ticketsSurface="web_best_promos_bobbleheads"
               inlineAnswers={INLINE_ANSWERS}
             />
           </div>

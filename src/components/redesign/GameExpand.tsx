@@ -6,6 +6,7 @@ import { ShareButton, formatShareDate, type ShareItem } from '@/components/share
 import { TicketsBlock } from '@/components/affiliates/TicketsBlock';
 import { ParkingCTA } from '@/components/affiliates/ParkingCTA';
 import { HotelsCTA } from '@/components/affiliates/HotelsCTA';
+import { awayGameSubKey } from '@/lib/affiliates';
 import { teamDisplayName } from '@/lib/promo-helpers';
 import { formatGameTime } from '@/lib/format-game-time';
 import { categoryFor } from './categories';
@@ -106,6 +107,15 @@ function GameExpandRow({
   // home_game_card / away_game_card breakdowns stay continuous.
   const placement = isHome ? 'home_game_card' : 'away_game_card';
 
+  // ONE away-game sub-ID for every partner on this row (tickets, parking,
+  // hotels): the shared compound token, computed once where both sides are
+  // known. On an away game the page team is the away side and the opponent is
+  // the home side, so the schedule doc's slugs cover the null cases (untracked
+  // opponent, teamless context) without any partner deriving its own key.
+  const awaySubKey = !isHome
+    ? awayGameSubKey(team?.id ?? game.awayTeamSlug, opponentTeam?.id ?? game.homeTeamSlug)
+    : undefined;
+
   const eyebrow = game.isInternational
     ? `International · ${game.internationalLocation ?? game.venueName}`
     : isHome
@@ -193,6 +203,7 @@ function GameExpandRow({
             surface={surface}
             placement={placement}
             promoId={teamSlug ? `${teamSlug}:${game.date}:${game.id}` : undefined}
+            subKey={awaySubKey}
             variant="card"
           />
         )}
@@ -204,6 +215,7 @@ function GameExpandRow({
                 venue={opponentVenue}
                 surface={surface}
                 placement={placement}
+                subKey={awaySubKey}
                 compact
               />
             )}
@@ -214,6 +226,7 @@ function GameExpandRow({
                 surface={surface}
                 placement={placement}
                 gameDate={game.date}
+                subKey={awaySubKey}
                 variant="modal-row"
               />
             )}

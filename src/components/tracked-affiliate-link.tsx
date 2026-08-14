@@ -34,8 +34,10 @@ export type TrackedAffiliateLinkProps = {
 
 // Fires on mousedown (not click) so the event is captured even when the
 // browser immediately navigates away and cancels subsequent JS. The outbound
-// href is tagged at render time with the affiliate sub-ID format
-// ${surface}_${promoId ?? 'none'}.
+// href must arrive FULLY TAGGED from the partner's typed builder in
+// lib/affiliates.ts (subId1 / SharedID / aff_sub / pubref already baked in);
+// buildAffiliateUrl below is a documented passthrough for every partner and
+// attaches nothing at render time.
 export function TrackedAffiliateLink({
   href,
   partner,

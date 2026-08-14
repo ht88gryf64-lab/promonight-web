@@ -2,11 +2,16 @@
 
 import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { track } from '@/lib/analytics';
+import { track, type AnalyticsSurface } from '@/lib/analytics';
 import { resolveBrowserVariant } from '@/lib/capture/variant';
 
 type Props = {
   pageTitle: string;
+  // page_view surface. /best-promos/bobbleheads passes its own token so its
+  // page_view matches the affiliate_click surface the same pageload emits
+  // (numerator and denominator must split together); /best-promos and
+  // /team-rankings use the default.
+  surface?: Extract<AnalyticsSurface, 'web_best_promos' | 'web_best_promos_bobbleheads'>;
   // The server-fetched promo or team count this page mounted with. For
   // /best-promos and /best-promos/bobbleheads this is the cap-applied
   // server fetch length; for /team-rankings it's the total scored team
@@ -29,6 +34,7 @@ type Props = {
 // don't re-fire page_view; score_filter_changed covers that cadence.
 export function ScoringPageViewTracker({
   pageTitle,
+  surface = 'web_best_promos',
   scoreCount,
   defaultLeague,
   defaultRange,
@@ -52,7 +58,7 @@ export function ScoringPageViewTracker({
         : undefined;
 
     track('page_view', {
-      surface: 'web_best_promos',
+      surface,
       page_title: pageTitle,
       score_count: scoreCount,
       league_filter: leagueFilter,

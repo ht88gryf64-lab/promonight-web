@@ -1,0 +1,21 @@
+{
+  "takenAt": "2026-08-14T14:02:15.436Z",
+  "field": "parkingInfo",
+  "docs": {
+    "q2-stadium": {
+      "parkingInfo": "Three on-site lots serve Q2 Stadium: SciPlay Lot (west), East Lot (northeast), and Southwest Lot. All lots require advance mobile purchase through the Austin FC app or SeatGeek; no day-of walk-up sales. Lots sell out for high-demand matches. From US-183 North, exit at Braker Lane east; from MoPac (Loop 1), exit Braker Lane east. Rideshare drop-off is on North Burnet Road at Braker Lane. Bag lockers are available at the NW and SW gates for $10 per locker if you need to store items."
+    },
+    "toyota-stadium": {
+      "parkingInfo": "Toyota Stadium has large adjacent parking lots with thousands of spaces. General lots are cashless; advance purchase through the FC Dallas app or SeatGeek is recommended for preferred sections. From the Dallas North Tollway (DNT), take the Eldorado Pkwy exit in Frisco; the stadium is at 9200 World Cup Way. From US-75 (Central Expressway), exit Stacy Road or Eldorado west to the stadium. Tailgating is permitted in designated lots."
+    },
+    "dignity-health-sports-park": {
+      "parkingInfo": "On-site parking surrounds Dignity Health Sports Park in Carson with multiple general and premium lots. Advance purchase through the LA Galaxy app or SeatGeek is recommended; lots can sell out for high-profile matchups. The stadium address is 18400 Avalon Boulevard, Carson. From I-110 (Harbor Freeway), exit Avalon Boulevard south; from I-405, take the Avalon exit. Cash is not accepted in the lots."
+    },
+    "snapdragon-stadium": {
+      "parkingInfo": "Multiple on-site lots and a stadium parking structure serve Snapdragon Stadium in the Mission Valley neighborhood of San Diego. Premium and general lots require advance purchase through the San Diego FC app or SeatGeek; walk-up availability varies. The stadium address is 2001 Greg Sherwood Way in Mission Valley, directly off I-8 between the I-805 and I-15. From I-8, take Exit 9 (Friars Road) and follow the directional signage."
+    },
+    "paypal-park": {
+      "parkingInfo": "On-site lots surrounding PayPal Park provide parking for most Earthquakes home matches. Advance purchase via SeatGeek or ParkMobile is recommended for high-demand matchups. The stadium address is 1123 Coleman Avenue, San Jose. From US-101, take the Coleman Avenue exit (Exit 391); the stadium is about one mile from the freeway."
+    }
+  }
+}

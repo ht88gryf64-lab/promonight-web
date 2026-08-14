@@ -16,9 +16,12 @@ type HotelsCTAProps = {
   /** Venue for the team. Valid lat/lng -> precise stadium-area search; absent
    *  -> city-level search (never a broken button). */
   venue?: Venue | null;
-  /** Away-game date (YYYY-MM-DD). Present -> dated single-night search +
-   *  web_away_game pubref. Absent -> undated search + {surface} pubref. */
+  /** Away-game date (YYYY-MM-DD). Present -> dated single-night search.
+   *  Absent -> undated search. */
   gameDate?: string | null;
+  /** Complete sub-ID override, used verbatim as pubref. Away-game rows pass
+   *  the shared awayGameSubKey compound token computed at the call site. */
+  subKey?: string;
   placement?: string;
   /** 'modal-row': polished modal row (eyebrow + button), away-game module.
    *  'card': descriptor card with team identity (/playoffs trip grid).
@@ -52,10 +55,11 @@ export function HotelsCTA({
   surface,
   venue,
   gameDate,
+  subKey,
   placement = 'team_page_footer',
   variant = 'section',
 }: HotelsCTAProps) {
-  const link = resolveHotelLink({ team, venue, surface, gameDate });
+  const link = resolveHotelLink({ team, venue, surface, gameDate, subKey });
   // Hide rather than render a broken button when there's neither coords nor a
   // resolvable city (same spirit as the Game Day no-data state).
   if (!link) return null;

@@ -5,6 +5,7 @@ import { ShareButton, formatShareDate, type ShareItem } from '@/components/share
 import { TicketsBlock } from '@/components/affiliates/TicketsBlock';
 import { ParkingCTA } from '@/components/affiliates/ParkingCTA';
 import { HotelsCTA } from '@/components/affiliates/HotelsCTA';
+import { awayGameSubKey } from '@/lib/affiliates';
 import { teamDisplayName } from '@/lib/promo-helpers';
 import type { GameContext } from '@/lib/data';
 import { formatGameTime } from '@/lib/format-game-time';
@@ -100,6 +101,15 @@ export function GameDetailRow({
   const oppSlug = isHome ? game.awayTeamSlug : game.homeTeamSlug;
 
   const placement = isHome ? 'home_game_card' : 'away_game_card';
+
+  // ONE away-game sub-ID for every partner on this row (tickets, parking,
+  // hotels): the shared compound token, computed once where both sides are
+  // known. On an away game the page team is the away side and the opponent is
+  // the home side, so the schedule doc's slugs cover the null cases without
+  // any partner deriving its own key.
+  const awaySubKey = !isHome
+    ? awayGameSubKey(team?.id ?? game.awayTeamSlug, opponentTeam?.id ?? game.homeTeamSlug)
+    : undefined;
 
   // For international games (NFL-only today) the eyebrow flips to a
   // neutral-site label rather than "Home game" / "At {opponentVenue.name}".
@@ -226,6 +236,7 @@ export function GameDetailRow({
             surface={surface}
             placement={placement}
             promoId={teamSlug ? `${teamSlug}:${game.date}:${game.id}` : undefined}
+            subKey={awaySubKey}
             variant="card"
           />
         )}
@@ -237,6 +248,7 @@ export function GameDetailRow({
                 venue={opponentVenue}
                 surface={surface}
                 placement={placement}
+                subKey={awaySubKey}
                 compact
               />
             )}
@@ -247,6 +259,7 @@ export function GameDetailRow({
                 surface={surface}
                 placement={placement}
                 gameDate={game.date}
+                subKey={awaySubKey}
                 variant="modal-row"
               />
             )}
