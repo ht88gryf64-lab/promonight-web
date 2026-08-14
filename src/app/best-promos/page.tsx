@@ -218,7 +218,7 @@ export default async function BestPromosPage() {
             </Suspense>
 
             <div className="mt-8">
-              <BestPromosBrowser initialPromos={promos} serverTodayYMD={todayYMD} ticketsPlacement="best_promos_card" trackingSurface="best_promos" inlineAnswers={INLINE_ANSWERS} variant="light" />
+              <BestPromosBrowser initialPromos={promos} serverTodayYMD={todayYMD} ticketsPlacement="best_promos_card" trackingSurface="best_promos" ticketsSurface="web_best_promos" inlineAnswers={INLINE_ANSWERS} variant="light" />
             </div>
 
             <section className="mt-16">
@@ -297,6 +297,7 @@ export default async function BestPromosPage() {
               serverTodayYMD={todayYMD}
               ticketsPlacement="best_promos_card"
               trackingSurface="best_promos"
+              ticketsSurface="web_best_promos"
               inlineAnswers={INLINE_ANSWERS}
             />
           </div>

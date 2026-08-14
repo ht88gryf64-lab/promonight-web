@@ -168,6 +168,10 @@ export type AnalyticsSurface =
   | 'web_article'
   | 'web_my_teams'
   | 'web_best_promos'
+  // /best-promos/bobbleheads — its own surface so the bobblehead page's
+  // affiliate sub-IDs (and path-inferred events) separate from /best-promos
+  // partner-side instead of collapsing into one bucket.
+  | 'web_best_promos_bobbleheads'
   | 'web_world_cup'
   | 'web_other';
 
@@ -1248,6 +1252,7 @@ const KNOWN_SURFACE_VALUES = [
   'web_article',
   'web_my_teams',
   'web_best_promos',
+  'web_best_promos_bobbleheads',
   'web_world_cup',
   'web_other',
 ] as const satisfies readonly AnalyticsSurface[];
@@ -1280,6 +1285,10 @@ export function inferSurfaceFromPath(path: string): AnalyticsSurface {
   if (path.startsWith('/promos/today')) return 'web_today';
   if (path.startsWith('/promos/')) return 'web_article';
   if (path.startsWith('/my-teams')) return 'web_my_teams';
+  // MUST precede the generic /best-promos branch below, same trap as the
+  // /cfb/rivalries branch: without it the bobbleheads page path-infers into
+  // the general best-promos bucket.
+  if (path.startsWith('/best-promos/bobbleheads')) return 'web_best_promos_bobbleheads';
   if (path.startsWith('/best-promos') || path.startsWith('/team-rankings')) return 'web_best_promos';
   if (path.startsWith('/teams')) return 'web_league_index';
   // MUST precede the /cfb branch below. /cfb/rivalries/{slug} starts with /cfb,

@@ -3,7 +3,7 @@
 import { usePathname, useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import type { ScoredPromoWithTeam } from '@/lib/types';
-import { track, type ScoringPageSurface } from '@/lib/analytics';
+import { track, type AnalyticsSurface, type ScoringPageSurface } from '@/lib/analytics';
 import { ScoredPromoCard } from './scored-promo-card';
 import { LeagueFilter, LEAGUE_FILTER_VALUES, type LeagueFilterValue } from './league-filter';
 import { DateRangeFilter, DATE_RANGE_FILTER_VALUES, type DateRangeFilterValue } from './date-range-filter';
@@ -32,6 +32,9 @@ type BestPromosBrowserProps = {
   // load_more_tap). Excludes 'team_rankings' since this component never
   // renders on that page.
   trackingSurface: Exclude<ScoringPageSurface, 'team_rankings'>;
+  // Affiliate surface for the card's inline TicketsBlock, passed in from the
+  // route so the two best-promos pages separate partner-side.
+  ticketsSurface: Extract<AnalyticsSurface, 'web_best_promos' | 'web_best_promos_bobbleheads'>;
   // Inline question-based H2-with-answer blocks injected into the list per
   // the AI Citation Doctrine. Skipped at positions past the rendered count.
   inlineAnswers?: InlineAnswerBlock[];
@@ -79,6 +82,7 @@ export function BestPromosBrowser({
   serverTodayYMD,
   ticketsPlacement,
   trackingSurface,
+  ticketsSurface,
   inlineAnswers = [],
   variant = 'dark',
 }: BestPromosBrowserProps) {
@@ -234,6 +238,7 @@ export function BestPromosBrowser({
                 showTickets
                 ticketsPlacement={ticketsPlacement}
                 trackingSurface={trackingSurface}
+                ticketsSurface={ticketsSurface}
                 variant={variant}
               />
               {answerHere && (

@@ -88,6 +88,20 @@ function subId(opts: AffiliateLinkOptions): string {
   return `${opts.surface}_${opts.promoId ?? 'none'}`;
 }
 
+// ── Away-game sub-ID (single source) ─────────────────────────────────────
+// The ONE helper that computes the away-game sub-ID for every partner. Before
+// this existed each partner derived its own away key and the four disagreed on
+// the same row (TN keyed the page team, Expedia and SpotHero keyed the
+// opponent, Ticketmaster kept the page surface), so cross-partner joins
+// mismatched teams by construction. The compound token names both sides:
+//   web_away_game_{pageTeamId}_at_{opponentId}
+// Call sites (the away-game expands) compute it once, where both ids are
+// known, and pass it down as `subKey`; the builders and CTA components use a
+// provided subKey verbatim and must NOT derive their own away key.
+export function awayGameSubKey(pageTeamId: string, opponentId: string): string {
+  return `web_away_game_${pageTeamId}_at_${opponentId}`;
+}
+
 function setParam(url: URL, key: string, value: string): void {
   if (!value) return;
   url.searchParams.set(key, value);
@@ -219,6 +233,11 @@ export type TicketmasterOpts = {
   /** Venue hub only: building slug, appended to the SharedID so attribution is
    *  per-building (web_venue_{slug}). Omitted by every other surface. */
   venueSlug?: string;
+  /** Complete sub-ID override, used verbatim as the SharedID. Away-game rows
+   *  pass awayGameSubKey(pageTeamId, opponentId) so all four partners ship the
+   *  identical compound token. When absent the SharedID composes from
+   *  surface + venueSlug/teamSlug below. */
+  subKey?: string;
   /** PromoNight team slug (Firestore doc id), e.g. 'minnesota-twins'. */
   teamSlug: string;
   /** Ticketmaster URL slug. Set on the Team via Firestore for all 167 teams
@@ -267,12 +286,18 @@ export function buildTicketmasterUrl(opts: TicketmasterOpts): string {
     return directUrl;
   }
 
+  // SharedID carries the SAME full {surface}_{id} token every other partner
+  // receives (subId1 / aff_sub / pubref). It previously carried the bare
+  // surface on every non-venue page, which collapsed all teams, CFB schools,
+  // the today board and both /best-promos pages into single partner-side
+  // buckets (audit/affiliate-attribution-audit.md, ranked item 1).
+  const sharedId =
+    opts.subKey ??
+    (opts.venueSlug ? `${opts.surface}_${opts.venueSlug}` : `${opts.surface}_${opts.teamSlug}`);
+
   return TICKETMASTER_IMPACT_WRAP
     .replace('{TARGET}', encodeURIComponent(directUrl))
-    .replace(
-      '{SHARED_ID}',
-      encodeURIComponent(opts.venueSlug ? `${opts.surface}_${opts.venueSlug}` : opts.surface),
-    );
+    .replace('{SHARED_ID}', encodeURIComponent(sharedId));
 }
 
 // ── TicketNetwork (Impact) ───────────────────────────────────────────────
@@ -324,13 +349,16 @@ export function ticketNetworkLandingUrl(team: Pick<Team, 'id' | 'ticketNetworkSl
 
 export type TicketNetworkLinkOpts = {
   team: Pick<Team, 'id' | 'ticketNetworkSlug'>;
-  /** Venue hub only: building slug, inserted before team.id so subId1 is
-   *  web_venue_{slug}_{teamId}. Omitted by every other surface. */
+  /** Venue hub only: building slug. When set, subId1 is the building-keyed
+   *  web_venue_{slug} with NO team suffix. Omitted by every other surface. */
   venueSlug?: string;
+  /** Complete sub-ID override, used verbatim as subId1. Away-game rows pass
+   *  awayGameSubKey(pageTeamId, opponentId); no caller derives its own away
+   *  key (see awayGameSubKey). */
+  subKey?: string;
   /** subId1 surface segment, already including the `web_` prefix
-   *  (e.g. 'web_team_page'). Away-game CTAs pass 'web_away_game' so attribution
-   *  matches the Expedia pubref convention (see lib/hotel-link.ts). */
-  surface: AnalyticsSurface | 'web_away_game';
+   *  (e.g. 'web_team_page'). */
+  surface: AnalyticsSurface;
 };
 
 // Assembles the full tracked TicketNetwork link. Returns null when the landing
@@ -348,7 +376,7 @@ export function buildTicketNetworkLink(opts: TicketNetworkLinkOpts): string | nu
     // the subId is web_venue_{slug} with NO team suffix. Team-keyed attribution
     // (surface_team.id) is for the team-page block, where the team is known.
     `&MediaPartnerPropertyId=${TICKETNETWORK.partnerPropertyId}` +
-    `&subId1=${opts.venueSlug ? `${opts.surface}_${opts.venueSlug}` : `${opts.surface}_${opts.team.id}`}`
+    `&subId1=${opts.subKey ?? (opts.venueSlug ? `${opts.surface}_${opts.venueSlug}` : `${opts.surface}_${opts.team.id}`)}`
   );
 }
 

@@ -10,9 +10,10 @@
 //   coords absent    -> city-level search (latLong omitted). Preserves the
 //   ~26% of teams that have no coords; only HIDES (returns null) when there is
 //   neither coords NOR a resolvable city.
-// - gameDate present -> dated search (checkIn = gameDate, checkOut = +1 day)
-//   and pubref = web_away_game_{slug}.
-//   gameDate absent   -> undated search, pubref = {surface}_{slug}.
+// - gameDate present -> dated search (checkIn = gameDate, checkOut = +1 day).
+// - pubref = subKey when provided (away rows pass the shared
+//   awayGameSubKey compound token so all four partners match), else
+//   {surface}_{slug}. This resolver never derives its own away key.
 
 import type { Team, Venue } from './types';
 import type { AnalyticsSurface } from './analytics';
@@ -23,8 +24,13 @@ export interface HotelLinkInput {
   team: Team;
   venue?: Venue | null;
   surface: AnalyticsSurface;
-  /** Away-game date (YYYY-MM-DD). Present only on away-game rows. */
+  /** Away-game date (YYYY-MM-DD). Present only on away-game rows. Controls
+   *  the dated search ONLY; the away sub-ID rides in via subKey. */
   gameDate?: string | null;
+  /** Complete sub-ID override, used verbatim as pubref. Away-game rows pass
+   *  awayGameSubKey(pageTeamId, opponentId) from lib/affiliates so Expedia
+   *  ships the same compound token as TN / TM / SpotHero. */
+  subKey?: string;
 }
 
 export interface HotelLink {
@@ -55,7 +61,7 @@ function coordsOk(v: Venue | null | undefined): v is Venue {
  *  CTA can hide rather than render a broken button. (team.city is ~always
  *  present, so this is defensive.) */
 export function resolveHotelLink(input: HotelLinkInput): HotelLink | null {
-  const { team, venue, surface, gameDate } = input;
+  const { team, venue, surface, gameDate, subKey } = input;
   const hasCoords = coordsOk(venue);
   const city = VENUE_CITY_OVERRIDES[team.id] ?? team.city ?? '';
   if (!hasCoords && !city) return null;
@@ -64,7 +70,7 @@ export function resolveHotelLink(input: HotelLinkInput): HotelLink | null {
   const dated = Boolean(gameDate);
   const checkIn = gameDate ?? null;
   const checkOut = gameDate ? nextDayISO(gameDate) : null;
-  const pubref = gameDate ? `web_away_game_${team.id}` : `${surface}_${team.id}`;
+  const pubref = subKey ?? `${surface}_${team.id}`;
 
   const href = buildExpediaHotelLink({
     venueName,

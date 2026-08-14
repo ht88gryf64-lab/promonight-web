@@ -19,6 +19,11 @@ type ParkingCTAProps = {
    *  only red CTA on screen. /playoffs cards pass 'secondary' (outlined) so
    *  parking doesn't compete with the tickets primary above it. */
   tone?: 'primary' | 'secondary';
+  /** Complete sub-ID override, used verbatim as aff_sub. Away-game rows pass
+   *  the shared awayGameSubKey compound token (the `team` prop there is the
+   *  OPPONENT, which previously mislabeled aff_sub into the opponent's own
+   *  team-page bucket). This component derives no away key of its own. */
+  subKey?: string;
 };
 
 function hasCoords(v: Venue | null | undefined): v is Venue {
@@ -67,6 +72,7 @@ export function ParkingCTA({
   placement = 'team_page_inline',
   compact = false,
   tone = 'primary',
+  subKey: subKeyOverride,
 }: ParkingCTAProps) {
   // Button renders regardless of SpotHero env state — bare URL fallback
   // routes the user to SpotHero's coordinate search even pre-approval.
@@ -77,8 +83,9 @@ export function ParkingCTA({
   // have no venue doc (all MLS today, most NBA, most WNBA).
   const label = venue?.name || teamName;
 
-  // Per-surface sub-ID, e.g. web_team_page_{teamId}. Rides aff_c as aff_sub.
-  const subKey = `${surface}_${team.id}`;
+  // Per-surface sub-ID, e.g. web_team_page_{teamId}, or the call-site-provided
+  // override (away rows). Rides aff_c as aff_sub.
+  const subKey = subKeyOverride ?? `${surface}_${team.id}`;
   const href = hasCoords(venue)
     ? buildSpotHeroUrl({
         latitude: venue.lat,

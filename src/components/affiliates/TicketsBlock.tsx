@@ -17,6 +17,9 @@ type TicketsBlockProps = {
   surface: AnalyticsSurface;
   placement: TicketsBlockPlacement;
   promoId?: string | null;
+  /** Complete sub-ID override forwarded to both ticket vendors. Away-game rows
+   *  pass the shared awayGameSubKey compound token computed at the call site. */
+  subKey?: string;
   /** Reserved for when per-event Ticketmaster URLs are wired; unused today. */
   event?: string;
   /** 'section' (default): full team-page section with eyebrow + h2 + CTA.
@@ -55,6 +58,7 @@ export function TicketsBlock({
   surface,
   placement,
   promoId,
+  subKey,
   variant = 'section',
 }: TicketsBlockProps) {
   if (variant === 'card') {
@@ -69,6 +73,7 @@ export function TicketsBlock({
           surface={surface}
           placement={placement}
           promoId={promoId}
+          subKey={subKey}
           size="compact"
         />
       </div>
@@ -96,6 +101,7 @@ export function TicketsBlock({
             surface={surface}
             placement={placement}
             promoId={promoId}
+            subKey={subKey}
             size="full"
           />
         </div>

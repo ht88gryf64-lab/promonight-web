@@ -1,6 +1,6 @@
 import { IconFlame } from '@tabler/icons-react';
 import type { ScoredPromoWithTeam } from '@/lib/types';
-import type { ScoringPageSurface } from '@/lib/analytics';
+import type { AnalyticsSurface, ScoringPageSurface } from '@/lib/analytics';
 import { teamDisplayName } from '@/lib/promo-helpers';
 import { PromoBadge } from '../promo-badge';
 import { TrackedTapLink } from '../analytics/TrackedTapLink';
@@ -22,6 +22,10 @@ type ScoredPromoCardProps = {
   // Page-level surface tag for the scored_promo_card_tap event. Excludes
   // 'team_rankings' since that page doesn't render this card.
   trackingSurface: Exclude<ScoringPageSurface, 'team_rankings'>;
+  // Affiliate surface for the inline TicketsBlock, passed in from the route so
+  // /best-promos and /best-promos/bobbleheads separate partner-side instead of
+  // sharing one hardcoded web_best_promos sub-ID bucket.
+  ticketsSurface: Extract<AnalyticsSurface, 'web_best_promos' | 'web_best_promos_bobbleheads'>;
   // 'dark' (default) is byte-identical when the gate is off; 'light' is the
   // cream-house card. Same data + scored_promo_card_tap event + tickets.
   variant?: 'dark' | 'light';
@@ -51,6 +55,7 @@ export function ScoredPromoCard({
   showTickets = false,
   ticketsPlacement = 'best_promos_card',
   trackingSurface,
+  ticketsSurface,
   variant = 'dark',
 }: ScoredPromoCardProps) {
   const { team, derivedSignals } = promo;
@@ -119,7 +124,7 @@ export function ScoredPromoCard({
         </TrackedTapLink>
         {showTickets && (
           <div className="border-t border-rd-line px-4 pb-4 pt-3">
-            <TicketsBlock team={team} surface="web_best_promos" placement={ticketsPlacement} variant="card" />
+            <TicketsBlock team={team} surface={ticketsSurface} placement={ticketsPlacement} variant="card" />
           </div>
         )}
       </article>
@@ -193,7 +198,7 @@ export function ScoredPromoCard({
         <div className="px-4 pb-4 pt-3 border-t border-border-subtle">
           <TicketsBlock
             team={team}
-            surface="web_best_promos"
+            surface={ticketsSurface}
             placement={ticketsPlacement}
             variant="card"
           />

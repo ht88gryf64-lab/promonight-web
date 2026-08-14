@@ -39,9 +39,9 @@ import { TrackedAffiliateLink } from '@/components/tracked-affiliate-link';
 //    ancestor (the today card row provides one); with no container, the
 //    compressed brand-mark-only form is the safe default.
 //
-// `surface` rides through the wrap template's SharedID (Ticketmaster) / subId1
-// (TicketNetwork) for partner-side reporting; per-promo attribution stays on
-// PostHog's affiliate_click event.
+// The full {surface}_{id} sub-ID rides through the wrap template's SharedID
+// (Ticketmaster) and subId1 (TicketNetwork) for partner-side reporting;
+// per-promo attribution stays on PostHog's affiliate_click event.
 
 type Props = {
   team: Team;
@@ -49,9 +49,13 @@ type Props = {
   placement: string;
   promoId?: string | null;
   /** Venue hub only: building slug, threaded into the affiliate subId so ticket
-   *  attribution is per-building (web_venue_{slug} / web_venue_{slug}_{teamId}).
-   *  Omitted by every other surface, whose subId stays unchanged. */
+   *  attribution is per-building (web_venue_{slug}). Omitted by every other
+   *  surface, whose subId stays unchanged. */
   venueSlug?: string;
+  /** Complete sub-ID override, used verbatim for BOTH vendors (TN subId1 and
+   *  TM SharedID). Away-game rows pass awayGameSubKey(pageTeamId, opponentId)
+   *  computed at the call site; this component derives no away key of its own. */
+  subKey?: string;
   /** 'full' (default) — team-page hero / sidebar / standalone use.
    *  'compact' — tighter padding + gap, fits inside playoff cards / modal stacks. */
   size?: 'full' | 'compact';
@@ -67,25 +71,25 @@ export function TicketmasterCTA({
   placement,
   promoId,
   venueSlug,
+  subKey,
   size = 'full',
   layout = 'stacked',
 }: Props) {
-  // subId1 surface segment for TicketNetwork: away-game CTAs attribute to
-  // 'web_away_game' (mirrors lib/hotel-link.ts); every other placement uses the
-  // page surface. team.id is appended by the builder for cross-partner joins.
-  // (Ticketmaster carries the page surface directly via its wrap SharedID.)
-  const tnSurface: AnalyticsSurface | 'web_away_game' =
-    placement === 'away_game_card' ? 'web_away_game' : surface;
-
+  // Both vendors receive the identical sub-ID: subKey verbatim when the call
+  // site provides one (away rows pass the shared awayGameSubKey compound
+  // token), else the builders compose {surface}_{venueSlug|team.id}. The old
+  // per-vendor divergence (TN flipping to web_away_game while TM kept the page
+  // surface) is gone; away keys are never derived here.
   const ticketmasterHref = buildTicketmasterUrl({
     venueSlug,
+    subKey,
     teamSlug: team.id,
     ticketmasterSlug: team.ticketmasterSlug,
     ticketmasterAttractionId: team.ticketmasterAttractionId,
     surface,
     promoId,
   });
-  const ticketNetworkHref = buildTicketNetworkLink({ team, surface: tnSurface, venueSlug });
+  const ticketNetworkHref = buildTicketNetworkLink({ team, surface, venueSlug, subKey });
 
   // Graceful fallback — never render a broken ticket link. If neither vendor
   // resolves, hide the CTA entirely; otherwise render whichever buttons resolve.
