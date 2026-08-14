@@ -44,6 +44,7 @@ function resaleQuery(promo: Pick<Promo, 'date' | 'title'>, teamNickname: string)
 // EPN customid: alphanumeric + underscore only, max 256 chars. The synthetic
 // promo id carries colons, spaces, and whatever punctuation the title has —
 // all collapsed to single underscores.
+// NOTE(2026-08-14): the alphanumeric-plus-underscore restriction above is uncorroborated by any reachable eBay doc (EPN's own page says "open form field", eBay's developer examples use "abc123!"); widening the keep-class to allow hyphens would make customid joinable to the other five partners' {surface}_{team.id} tokens without normalization, but is DEFERRED pending an empirical EPN reporting echo check, and flipping it is a third attribution boundary for eBay rows.
 export function ebayCustomId(placement: EbayResalePlacement, promoId: string): string {
   return `web_${placement}_${promoId}`
     .replace(/[^A-Za-z0-9_]+/g, '_')
