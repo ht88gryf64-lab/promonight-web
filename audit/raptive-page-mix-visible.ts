@@ -23,6 +23,13 @@
  * rails included), railWords, wordsCorrected (deduped, rails excluded; the
  * off-season planning number).
  *
+ * KNOWN LIMITATION of the dedupe: recurring promos whose rows repeat the same
+ * title and description verbatim on one page (e.g. an every-Friday deal listed
+ * per date) are collapsed to one occurrence, so promo-heavy route types read
+ * conservatively LOW. This is accepted by the visible-unique definition
+ * (repeated text is repeated text, whatever produced it); treat the corrected
+ * numbers as a floor, not a midpoint, on promo-dense pages.
+ *
  * Run: npx tsx audit/raptive-page-mix-visible.ts
  * Output: audit/raptive-page-mix-visible.md (numbers only, no conclusions)
  */

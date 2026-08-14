@@ -161,17 +161,15 @@ export default async function BestPromosPage() {
     if (!t.computedAt) return acc;
     return !acc || t.computedAt > acc ? t.computedAt : acc;
   }, '');
+  // Real stamp only: no render-clock fallback (docs/known-issues.md entry 17).
+  // Null hides the visible Last-updated line rather than asserting today.
   const lastUpdatedDisplay = latestComputedAt
     ? new Date(latestComputedAt).toLocaleDateString('en-US', {
         month: 'long',
         day: 'numeric',
         year: 'numeric',
       })
-    : new Date().toLocaleDateString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
-      });
+    : null;
 
   if (isRedesignEnabled()) {
     return (
@@ -196,7 +194,7 @@ export default async function BestPromosPage() {
               </div>
               <p className="font-rd text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: '#ff5a78' }}>Best of {SEASON_YEAR}</p>
               <h1 className="rd-display mt-1 text-4xl uppercase leading-[0.95] text-white md:text-6xl">BEST SPORTS PROMO NIGHTS OF {SEASON_YEAR}</h1>
-              <p className="mt-3 font-rd text-[11px] uppercase tracking-[0.12em] text-white/45">Last updated {lastUpdatedDisplay} · {promos.length} promos ranked</p>
+              <p className="mt-3 font-rd text-[11px] uppercase tracking-[0.12em] text-white/45">{lastUpdatedDisplay ? <>Last updated {lastUpdatedDisplay} · </> : null}{promos.length} promos ranked</p>
             </div>
           </section>
 
@@ -244,7 +242,7 @@ export default async function BestPromosPage() {
         url={PAGE_URL}
         title={`Best Sports Promo Nights of ${SEASON_YEAR}`}
         description={`Score-ranked list of ${promos.length} top promotional events across MLB, MLS, and WNBA in ${SEASON_YEAR}.`}
-        lastUpdated={latestComputedAt || new Date().toISOString()}
+        lastUpdated={latestComputedAt}
         faqs={FAQS}
         itemListItems={itemListPromos}
         locationsByTeamId={locationsByTeamId}
@@ -267,7 +265,7 @@ export default async function BestPromosPage() {
             BEST SPORTS PROMO NIGHTS OF {SEASON_YEAR}
           </h1>
           <p className="font-mono text-[10px] tracking-[1.5px] uppercase text-text-muted mt-3">
-            Last updated {lastUpdatedDisplay} · {promos.length} promos ranked
+            {lastUpdatedDisplay ? <>Last updated {lastUpdatedDisplay} · </> : null}{promos.length} promos ranked
           </p>
           <p className="mt-5 text-text-secondary text-base leading-relaxed max-w-3xl">
             The {promos.length} best-scored sports promo nights of {SEASON_YEAR} are

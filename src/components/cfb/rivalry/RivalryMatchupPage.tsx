@@ -114,9 +114,12 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
 
   // Corroborating source links (cfbRivalries.source, sometimes "urlA + urlB").
   // Rendered as citation links in the trophy section; never rendered as prose.
-  const sourceLinks = rivalry.source
+  // (rivalry.source ?? ''): the type says string but loadRivalries is a raw
+  // cast, and safeHttpUrl already treats this exact field as possibly absent.
+  // Also require parseability so new URL(u) below can never throw in render.
+  const sourceLinks = (rivalry.source ?? '')
     .split(/\s+\+\s+/)
-    .filter((u) => u.startsWith('http'))
+    .filter((u) => u.startsWith('http') && URL.canParse(u))
     .slice(0, 2);
 
   // ── affiliate hrefs, all from the SHARED builders ──

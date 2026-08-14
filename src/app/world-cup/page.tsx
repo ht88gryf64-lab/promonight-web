@@ -65,12 +65,6 @@ const FAQS: { question: string; answer: string }[] = [
 export default async function WorldCupPage() {
   const data = await getWorldCupData();
 
-  const updatedLong = new Date().toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  });
-  const updatedIso = new Date().toISOString();
   const cityCount = data.cities.length;
 
   const collectionSchema = {
@@ -80,7 +74,6 @@ export default async function WorldCupPage() {
     description:
       'All 11 US World Cup 2026 host cities mapped to their local MLB ballparks and home games, June 11 to July 19, 2026.',
     url: PAGE_URL,
-    dateModified: updatedIso,
     isPartOf: {
       '@type': 'WebSite',
       name: 'PromoNight',
@@ -169,7 +162,7 @@ export default async function WorldCupPage() {
             World Cup Host Cities, Plus a Ballgame
           </h1>
           <p className="mt-4 font-rd text-[11px] uppercase tracking-[0.12em] text-white/55">
-            June 11 to July 19 · 11 US Host Cities · Updated {updatedLong}
+            June 11 to July 19 · 11 US Host Cities
           </p>
           <p className="mt-4 max-w-3xl font-rd text-base leading-relaxed text-white/70 md:text-lg">
             The World Cup takes over 11 US cities this summer, and every one of them has a Major

@@ -425,19 +425,24 @@ export function VenueHubView({
   // Verbatim per-building prose in the MAIN column (not the twice-rendered
   // rail), each row `{name}. {notes}`. officialParkingUrls links close the card.
   const lotsWithNotes = verified ? hub.parkingLots.filter((l) => l.name) : [];
+  // Card renders when there is lot prose OR an official link: a doc whose only
+  // parking fact is the official page (no per-lot breakdown) still surfaces
+  // the link instead of silently dropping the field it exists to render.
   const hasLotContent = lotsWithNotes.some((l) => l.notes) || (verified && hub.officialParkingUrls.length > 0);
   const parkingLotsCard =
-    verified && lotsWithNotes.length > 0 && hasLotContent ? (
+    verified && hasLotContent ? (
       <Card>
         <CardLabel>Parking lots</CardLabel>
-        <div className="grid grid-cols-1 gap-2.5 font-rd text-[13px] leading-[1.5] text-rd-ink md:grid-cols-2">
-          {lotsWithNotes.slice(0, 12).map((l) => (
-            <div key={l.name}>
-              <strong>{l.name}.</strong>
-              {l.notes ? <> {l.notes}</> : null}
-            </div>
-          ))}
-        </div>
+        {lotsWithNotes.length > 0 ? (
+          <div className="grid grid-cols-1 gap-2.5 font-rd text-[13px] leading-[1.5] text-rd-ink md:grid-cols-2">
+            {lotsWithNotes.slice(0, 12).map((l) => (
+              <div key={l.name}>
+                <strong>{l.name}.</strong>
+                {l.notes ? <> {l.notes}</> : null}
+              </div>
+            ))}
+          </div>
+        ) : null}
         {hub.officialParkingUrls.length > 0 ? (
           <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 font-rd text-[11px]">
             <span className="text-rd-ink-soft">Official parking:</span>

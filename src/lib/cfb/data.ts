@@ -266,7 +266,10 @@ export const getCfbSchoolPage = cache(async (id: string): Promise<CfbSchoolPage 
     games.push({
       id: g.id, date: g.date, week: g.week, isHome, neutralSite: !!g.neutralSite,
       conferenceGame: typeof g.conferenceGame === 'boolean' ? g.conferenceGame : null,
-      themes: Array.isArray(g.themeDesignations)
+      // Gated on the game's verified flag like every other displayed fact
+      // (kickoff, network): a parser-written designation carries no signal
+      // until the verify pass confirms the game (types.ts LOCKED DECISION 5).
+      themes: g.verified === true && Array.isArray(g.themeDesignations)
         ? g.themeDesignations.map((t) => t.displayName).filter(Boolean)
         : [],
       opponentId, opponentName: nameById.get(opponentId) || prettifySlug(opponentId),

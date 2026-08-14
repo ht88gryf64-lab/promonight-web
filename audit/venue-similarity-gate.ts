@@ -89,6 +89,15 @@ function jaccard(a: Set<string>, b: Set<string>): number {
   return inter / (a.size + b.size - inter);
 }
 
+function fnv1a(s: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return h >>> 0;
+}
+
 function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
@@ -108,13 +117,16 @@ async function main(): Promise<void> {
     .sort();
   if (venuePaths.length === 0) throw new Error("no venue paths in sitemap");
 
-  const rng = mulberry32(SEED);
-  const shuffled = [...venuePaths];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  const sample = shuffled.slice(0, Math.min(SAMPLE, shuffled.length));
+  // Per-slug deterministic hash selection, NOT a shuffle of the whole list: a
+  // Fisher-Yates permutation changes wholesale when sitemap membership drifts
+  // by one slug, silently comparing different page sets across runs. Hashing
+  // each slug independently keeps the sample stable under drift: a slug's rank
+  // never changes, so membership changes only swap the entering/leaving slugs.
+  const rank = (p: string): number => {
+    const rng = mulberry32(SEED ^ fnv1a(p));
+    return rng();
+  };
+  const sample = [...venuePaths].sort((x, y) => rank(x) - rank(y)).slice(0, Math.min(SAMPLE, venuePaths.length));
 
   const sets: Set<string>[] = [];
   for (const p of sample) {
@@ -144,3 +156,7 @@ main().catch((e) => {
   console.error(e);
   process.exit(1);
 });
+
+// Module marker: without an import/export tsc treats this file as a global
+// script and its helpers collide with same-named helpers in other scripts.
+export {};
