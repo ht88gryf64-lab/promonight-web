@@ -191,7 +191,7 @@ export default async function BobbleheadsPage() {
             </p>
 
             <Suspense fallback={null}>
-              <ScoringPageViewTracker pageTitle="Best Bobblehead Nights" scoreCount={promos.length} defaultLeague="All" defaultRange="90d" />
+              <ScoringPageViewTracker pageTitle="Best Bobblehead Nights" surface="web_best_promos_bobbleheads" scoreCount={promos.length} defaultLeague="All" defaultRange="90d" />
             </Suspense>
 
             <div className="mt-8">
@@ -266,6 +266,7 @@ export default async function BobbleheadsPage() {
           <Suspense fallback={null}>
             <ScoringPageViewTracker
               pageTitle="Best Bobblehead Nights"
+              surface="web_best_promos_bobbleheads"
               scoreCount={promos.length}
               defaultLeague="All"
               defaultRange="90d"

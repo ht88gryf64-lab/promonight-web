@@ -492,7 +492,9 @@ export type ExpediaHotelLinkOpts = {
   checkIn?: string | null;
   checkOut?: string | null;
   /** Expedia in-house affiliate sub-tracking (pubref), e.g.
-   *  "web_away_game_minnesota-twins" or "web_venue_arrowhead-stadium". */
+   *  "web_team_page_minnesota-twins", "web_venue_arrowhead-stadium", or the
+   *  away-row compound token from awayGameSubKey
+   *  ("web_away_game_minnesota-twins_at_san-diego-padres"). */
   pubref: string;
 };
 

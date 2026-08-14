@@ -28,7 +28,31 @@
 // The env value is never printed. Diagnostics name the defect (absent, empty,
 // whitespace, wrong host, missing template slot), not the content.
 
+import { existsSync, readFileSync } from 'fs';
+import { join } from 'path';
 import { AFFILIATE_TRACKING_CONSTANTS } from '../src/lib/affiliates';
+
+// Mirror `next build`'s env loading for the one var this guard shape-checks:
+// prebuild runs under bare tsx (which does NOT read .env.local), but the
+// subsequent `next build` DOES and would inline whatever .env.local holds.
+// Without this fallback a malformed .env.local value sails past the guard
+// (the absence branch wins) and still ships in the local build. Real process
+// env always wins, matching Next's precedence. One layer of matching quotes
+// is stripped the way dotenv parsing does; any interior/trailing whitespace
+// survives and fails the shape check.
+function envLocalValue(key: string): string | undefined {
+  const p = join(__dirname, '..', '.env.local');
+  if (!existsSync(p)) return undefined;
+  for (const line of readFileSync(p, 'utf8').split('\n')) {
+    if (!line.startsWith(`${key}=`)) continue;
+    let v = line.slice(key.length + 1).replace(/\r$/, '');
+    if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
+      v = v.slice(1, -1);
+    }
+    return v;
+  }
+  return undefined;
+}
 
 // ASCII printable, no whitespace of any kind anywhere in the value.
 const PRINTABLE_RE = /^[!-~]+$/;
@@ -72,7 +96,9 @@ for (const key of Object.keys(BLESSED) as Array<keyof typeof BLESSED>) {
   }
 }
 
-const wrap = process.env.NEXT_PUBLIC_TICKETMASTER_IMPACT_WRAP;
+const wrap =
+  process.env.NEXT_PUBLIC_TICKETMASTER_IMPACT_WRAP ??
+  envLocalValue('NEXT_PUBLIC_TICKETMASTER_IMPACT_WRAP');
 const isProductionTarget = process.env.VERCEL_ENV === 'production';
 
 if (wrap === undefined || wrap === '') {
@@ -82,7 +108,20 @@ if (wrap === undefined || wrap === '') {
     ': every Ticketmaster CTA sitewide will silently revert to a bare, unattributed ' +
     'ticketmaster.com URL (src/lib/affiliates.ts pre-approval fallback).';
   if (isProductionTarget) {
-    failures.push(message + ' This is a hard failure on production-target builds.');
+    // The empty-on-production case has a known benign-LOOKING cause that is
+    // still a real hazard: `vercel env pull` writes this Encrypted var as an
+    // empty string (it does not decrypt; docs/ticketmaster-impact-attribution-
+    // conflict.md), so a LOCAL `vercel build --prod` lands here. That failure
+    // is by design: a `vercel deploy --prebuilt` from that directory would
+    // genuinely ship unattributed links. Real Vercel deploy builds receive the
+    // decrypted value and pass.
+    const pullNote =
+      wrap === ''
+        ? ' If this is a local `vercel build --prod` after `vercel env pull`, the empty value is ' +
+          'the pull writing the Encrypted var as ""; do NOT weaken this guard, and do not deploy ' +
+          'a locally prebuilt output. Vercel-hosted production builds get the real value and pass.'
+        : '';
+    failures.push(message + ' This is a hard failure on production-target builds.' + pullNote);
   } else {
     console.warn(
       `[verify-affiliate-tracking] WARNING: ${message} This build target ` +

@@ -38,9 +38,12 @@ The previous SeatGeek + StubHub dual-button ticket CTAs (rendered in
 pages, playoffs cards, and game-day modals) were retired on 2026-05-03 in
 favor of single-source Ticketmaster. Neither program had landed approval and
 the dual-CTA had become a high-intent leak. The URL builders
-(`buildSeatGeekUrl`, `buildStubHubUrl`) remain in `src/lib/affiliates.ts`
-marked `@deprecated` for type-checking compatibility but are no longer
-rendered by any user-facing surface. SG/SH rows were never registered here
+(`buildSeatGeekUrl`, `buildStubHubUrl`) were kept `@deprecated` for a time and
+then DELETED outright on 2026-08-14 (Gate 3c of the affiliate attribution
+fixes, with the env gates and both partner-union members): SeatGeek was
+declined twice and StubHub was never approved, and the dead builders tagged
+IDs directly onto retailer URLs, so re-wiring them without env values would
+have shipped untagged links. SG/SH rows were never registered here
 (the registry post-dates their addition), so there are no row-level
 deprecations to record — this paragraph is the historical note.
 
