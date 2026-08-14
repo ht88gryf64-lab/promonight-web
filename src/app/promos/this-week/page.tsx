@@ -53,7 +53,6 @@ export default async function ThisWeekPage() {
       promos: list,
     }));
 
-  const lastUpdated = todayYMD();
 
   const lead = `Every highlighted promotional event across MLB, NBA, NHL, NFL, MLS, and WNBA in the next seven days. Giveaways, theme nights, bobbleheads, and food deals at all 169 teams, grouped by day. Updated daily based on the live PromoNight database.`;
 
@@ -81,7 +80,6 @@ export default async function ThisWeekPage() {
         url="https://www.getpromonight.com/promos/this-week"
         title="Promos This Week Across Pro Sports"
         description={lead}
-        lastUpdated={lastUpdated}
         faqs={faqs}
         groups={groups}
       />
@@ -89,7 +87,6 @@ export default async function ThisWeekPage() {
         eyebrow="This week"
         title="HOT PROMOS THIS WEEK"
         lead={lead}
-        lastUpdated={new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
         groups={groups}
         faqs={faqs}
         emptyMessage="No hot promos scheduled in the next seven days. Check back tomorrow as new events are added."

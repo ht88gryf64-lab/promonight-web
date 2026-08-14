@@ -977,3 +977,46 @@ web-visible later) or drops the field.
 **Why it matters.** A freshness claim that is always "now" is
 indistinguishable from no freshness signal to a careful reviewer, and worse
 than none to one who checks twice.
+
+## 18. Plan-your-visit and Tickets cards render twice in every venue hub document
+
+**Status: OPEN.** Content duplication independent of word counting; the
+corrected page-mix measurement (audit/raptive-page-mix-visible.ts) already
+deduplicates it, so this is a served-bytes and semantics issue, not a
+metrics one.
+
+**What it is.** VenueHubView mounts planCard and ticketsCard twice per page:
+inline for mobile inside `lg:hidden` wrappers
+(src/components/venue-hub/VenueHubView.tsx:578, :584) and again in the desktop
+sticky rail (`hidden lg:block`, :590-593). Every affiliate CTA, degrade line,
+tailgate window and lot-map link ships twice in the HTML of all 223 hub pages;
+only CSS decides which copy is visible. Screen readers and crawlers see both.
+
+**Single DOM node or CSS-only?** A single-node version is achievable without
+JS, but not by pure CSS on the current structure: the two mounts live in
+different grid children (main column vs rail aside), and one element cannot
+occupy both. The workable shape is flattening the two-column split so the
+shared cards are direct children of one responsive grid, with lg: column and
+order utilities placing them in the rail position, and `lg:sticky lg:top-5
+self-start` applied to the cards themselves instead of the aside wrapper. That
+is a container rework of VenueHubView's layout section (:556-593), medium
+risk, and belongs in its own layout pass. Until then the duplicate mounts are
+byte-identical by construction (same variables), so the duplication cannot
+drift into contradiction.
+
+## 19. venueHubs/t-mobile-park sources map has URL-as-key rows
+
+**Status: OPEN, data hygiene, low urgency.** Found during the venue
+thickening analysis (audit/venue-thickening-plan.md method note), confirmed by
+direct read 2026-08-14: the `sources` map on venueHubs/t-mobile-park contains
+2 rows whose KEYS are URLs (e.g.
+"https://www.mlb.com/mariners/ballpark/information/guide") instead of field
+names mapping to URL values. Every other doc keys sources by field name.
+
+**Why it matters.** Any script that consumes sources maps programmatically
+(per-field citation rendering, source auditing, harvest reconciliation) will
+misread this doc: iterating keys as field names yields URLs, and looking up a
+field name misses the rows. Nothing user-facing reads sources today (kept off
+pages deliberately after the CFB quoted-source-URL incident), so the exposure
+is future tooling. Fix shape when picked up: re-key the two rows to their
+field names in Firestore with the usual snapshot-first protocol.

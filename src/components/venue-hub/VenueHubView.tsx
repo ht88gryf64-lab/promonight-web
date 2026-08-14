@@ -223,11 +223,27 @@ export function VenueHubView({
     });
   }
   if (verified && hub.publicTransit && (hub.publicTransit.lines.length > 0 || hub.publicTransit.notes)) {
-    gettingRows.push({ label: 'Transit', body: hub.publicTransit.notes || hub.publicTransit.lines.join(', ') });
+    // Notes AND lines: the lines array used to be swallowed whenever notes
+    // existed, leaving named routes ("Metro C Line", "Route 47") dark. The
+    // "Lines:" lead-in stays a single fixed word so no template-only 5-gram
+    // forms (see audit/venue-thickening-plan.md, 9e discipline).
+    const transitParts = [
+      hub.publicTransit.notes,
+      hub.publicTransit.lines.length > 0 ? `Lines: ${hub.publicTransit.lines.join(', ')}.` : null,
+    ].filter(Boolean) as string[];
+    gettingRows.push({ label: 'Transit', body: transitParts.join(' ') });
   }
   if (verified && hub.rideshareDropoff) gettingRows.push({ label: 'Rideshare', body: hub.rideshareDropoff });
   if (verified && hub.tailgating?.allowed === true) {
-    gettingRows.push({ label: 'Tailgating', body: hub.tailgating.rules || 'Tailgating is permitted in the parking lots.' });
+    // The harvested sub-fields (timeWindow, grillRules, rvPolicy) were typed
+    // and populated but never rendered. Each is verbatim per-building prose;
+    // periods normalized once here.
+    const tg = hub.tailgating;
+    const tailBody = [tg.rules || 'Tailgating is permitted in the parking lots.', tg.timeWindow, tg.grillRules, tg.rvPolicy]
+      .filter((s): s is string => !!s)
+      .map((s) => `${stripTrailingPeriod(s)}.`)
+      .join(' ');
+    gettingRows.push({ label: 'Tailgating', body: tailBody });
   } else if (verified && hub.tailgating?.allowed === false) {
     gettingRows.push({ label: 'Tailgating', body: 'Tailgating is not permitted at this venue.' });
   }
@@ -258,6 +274,11 @@ export function VenueHubView({
   }
   if (verified && hub.rideshareDropoff) {
     chips.push({ k: 'RIDESHARE', v: 'Available' });
+  }
+  // Capacity as a fact chip, never a sentence: a "seats {n} fans" skeleton
+  // would be near-100% template-shared across buildings (plan 9e).
+  if (verified && typeof hub.capacity === 'number' && hub.capacity > 0) {
+    chips.push({ k: 'CAPACITY', v: hub.capacity.toLocaleString('en-US') });
   }
   const showFactBand = chips.length >= 2;
 
@@ -399,11 +420,63 @@ export function VenueHubView({
     </Card>
   ) : null;
 
+  // Parking lots: the per-lot harvested notes (895 verified values corpus-wide)
+  // were dark; only the first 8 lot NAMES surfaced, inside one FAQ sentence.
+  // Verbatim per-building prose in the MAIN column (not the twice-rendered
+  // rail), each row `{name}. {notes}`. officialParkingUrls links close the card.
+  const lotsWithNotes = verified ? hub.parkingLots.filter((l) => l.name) : [];
+  // Card renders when there is lot prose OR an official link: a doc whose only
+  // parking fact is the official page (no per-lot breakdown) still surfaces
+  // the link instead of silently dropping the field it exists to render.
+  const hasLotContent = lotsWithNotes.some((l) => l.notes) || (verified && hub.officialParkingUrls.length > 0);
+  const parkingLotsCard =
+    verified && hasLotContent ? (
+      <Card>
+        <CardLabel>Parking lots</CardLabel>
+        {lotsWithNotes.length > 0 ? (
+          <div className="grid grid-cols-1 gap-2.5 font-rd text-[13px] leading-[1.5] text-rd-ink md:grid-cols-2">
+            {lotsWithNotes.slice(0, 12).map((l) => (
+              <div key={l.name}>
+                <strong>{l.name}.</strong>
+                {l.notes ? <> {l.notes}</> : null}
+              </div>
+            ))}
+          </div>
+        ) : null}
+        {hub.officialParkingUrls.length > 0 ? (
+          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 font-rd text-[11px]">
+            <span className="text-rd-ink-soft">Official parking:</span>
+            {hub.officialParkingUrls.slice(0, 3).map((u) => (
+              <a
+                key={u}
+                href={u}
+                className="font-semibold text-rd-red"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {new URL(u).hostname.replace(/^www\./, '')} &rsaquo;
+              </a>
+            ))}
+          </div>
+        ) : null}
+      </Card>
+    ) : null;
+
   const foodCard =
     verified && hub.food ? (
       <Card>
         <CardLabel>Food worth the line</CardLabel>
         <p className="font-rd text-[13px] leading-relaxed text-rd-ink">{hub.food}</p>
+      </Card>
+    ) : null;
+
+  // In the neighborhood: hub.nearby was typed, populated on 47 docs, and
+  // consumed nowhere. Verbatim harvested prose (0.1% cross-venue shared grams).
+  const nearbyCard =
+    verified && hub.nearby ? (
+      <Card>
+        <CardLabel>In the neighborhood</CardLabel>
+        <p className="font-rd text-[13px] leading-relaxed text-rd-ink">{hub.nearby}</p>
       </Card>
     ) : null;
 
@@ -445,6 +518,7 @@ export function VenueHubView({
         state={hub.state}
         lat={hub.lat}
         lng={hub.lng}
+        capacity={hub.capacity}
         faqs={faqs}
       />
 
@@ -508,7 +582,9 @@ export function VenueHubView({
             {/* mobile: Plan-your-visit sits directly under the bag capsule */}
             {planCard ? <div className="lg:hidden">{planCard}</div> : null}
             {gettingInCard}
+            {parkingLotsCard}
             {foodCard}
+            {nearbyCard}
             {/* mobile: Tickets & gear sits above the FAQ */}
             {ticketsCard ? <div className="lg:hidden">{ticketsCard}</div> : null}
             {faqCard}

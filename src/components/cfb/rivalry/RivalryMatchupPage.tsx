@@ -4,6 +4,8 @@ import type { MatchupPage } from '@/lib/cfb/matchups';
 import type { TripStepKey } from '@/lib/cfb/trip-steps';
 import { planTripSteps } from '@/lib/cfb/trip-steps';
 import { resolveCfbTheme } from '@/lib/cfb/theme';
+import { buildMatchupDescription } from '@/lib/cfb/matchup-description';
+import { renderedKickoff } from '@/lib/cfb/metadata';
 import { toAffiliateTeam } from '@/lib/cfb/page-extras';
 import { buildTicketNetworkLink, buildSpotHeroUrl } from '@/lib/affiliates';
 import { resolveHotelLink } from '@/lib/hotel-link';
@@ -97,6 +99,29 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
     ? `${game.kickoff.time}${game.kickoff.tz && game.kickoff.tz !== 'TBD' ? ` ${game.kickoff.tz}` : ''}`
     : 'Kickoff TBA';
 
+  // Visible lede: byte-identical to the meta description (same builder, same
+  // inputs as buildCfbMatchupMetadata), so the hand-written 140-160 char
+  // matchup description finally renders as body copy instead of head-only.
+  const lede = buildMatchupDescription({
+    displayName: data.displayName,
+    schoolA: a?.name ?? aFallback,
+    schoolB: b?.name ?? bFallback,
+    date: game?.date ?? null,
+    kickoff: renderedKickoff(game),
+    venueName: resolvedVenue?.name ?? null,
+    venueCity: resolvedVenue?.city ?? null,
+  });
+
+  // Corroborating source links (cfbRivalries.source, sometimes "urlA + urlB").
+  // Rendered as citation links in the trophy section; never rendered as prose.
+  // (rivalry.source ?? ''): the type says string but loadRivalries is a raw
+  // cast, and safeHttpUrl already treats this exact field as possibly absent.
+  // Also require parseability so new URL(u) below can never throw in render.
+  const sourceLinks = (rivalry.source ?? '')
+    .split(/\s+\+\s+/)
+    .filter((u) => u.startsWith('http') && URL.canParse(u))
+    .slice(0, 2);
+
   // ── affiliate hrefs, all from the SHARED builders ──
   // The sub-ID keys on the rivalry slug rather than a team id, so the click is
   // attributed to the matchup. Landing pages still resolve from the home school,
@@ -188,6 +213,10 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
           <SchoolName school={b} fallback={bFallback} />
         </p>
 
+        {/* 3b. lede: the hand-written matchup description, surfaced as body
+            copy (identical string to the meta description by construction). */}
+        <p className="mt-3 max-w-prose text-sm leading-relaxed text-white/70">{lede}</p>
+
         {/* 4. fact card, the direct answer */}
         <section className="mt-4 rounded-xl border border-white/12 bg-white/[0.04] p-4">
           {date ? (
@@ -247,6 +276,12 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
           <div className="mt-3 grid grid-cols-2 gap-3">
             <Stat label="Series began" value={String(rivalry.seriesStartYear)} />
             {data.conference && <Stat label="Conference" value={data.conference} />}
+            {/* The trophy's proper name, previously rendered only inside the
+                generated sentence (and dropped there whenever it matched the
+                title). Suppressed when it merely repeats the H1. */}
+            {rivalry.trophy && rivalry.trophy !== data.displayName && (
+              <Stat label="Trophy" value={rivalry.trophy} />
+            )}
             {/* Only when present, 11 of 212. Kept visually separate from the
                 series start: they are different facts and conflating them was a
                 prior bug. */}
@@ -254,6 +289,21 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
               <Stat label="Trophy created" value={String(rivalry.trophyCreatedYear)} />
             )}
           </div>
+          {/* Corroborating citation links (cfbRivalries.source). Labels only,
+              never raw URLs as text: the CFB quoted-source-URL incident rule. */}
+          {sourceLinks.length > 0 && (
+            <p className="mt-3 text-[11px] text-white/40">
+              Source:{' '}
+              {sourceLinks.map((u, i) => (
+                <span key={u}>
+                  {i > 0 ? ', ' : ''}
+                  <a href={u} target="_blank" rel="noopener noreferrer" className="underline hover:text-white/70">
+                    {new URL(u).hostname.replace(/^www\./, '')}
+                  </a>
+                </span>
+              ))}
+            </p>
+          )}
         </section>
 
         {/* 8. sibling rail. Omitted entirely below 2. */}

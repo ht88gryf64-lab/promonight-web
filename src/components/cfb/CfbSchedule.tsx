@@ -31,9 +31,17 @@ function ScheduleRow({ g, last, onOpen }: { g: CfbGameView; last: boolean; onOpe
       className={`group grid w-full cursor-pointer grid-cols-[56px_1fr_auto_16px] items-center gap-3 px-4 py-3.5 text-left transition-colors sm:grid-cols-[64px_1fr_auto_16px] sm:gap-5 sm:px-6 ${g.rivalry ? 'hover:brightness-110' : 'hover:bg-white/[0.03]'}`}
       style={{ borderBottom: last ? 'none' : '1px solid rgba(255,255,255,0.05)', background: g.rivalry ? 'var(--cfb-tint)' : undefined }}
     >
-      <div className="text-[12px] text-white/55" style={{ fontFamily: MONO }}>{fmtMonthDay(g.date)}</div>
+      <div style={{ fontFamily: MONO }}>
+        <div className="text-[12px] text-white/55">{fmtMonthDay(g.date)}</div>
+        {/* Week number: pipeline data, previously computed but never rendered. */}
+        <div className="mt-0.5 text-[10px] text-white/30">Wk {g.week}</div>
+      </div>
       <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
-        <span className="text-[10px] uppercase text-white/35" style={{ fontFamily: MONO }}>{g.isHome ? (g.neutralSite ? 'N' : 'VS') : 'AT'}</span>
+        <span className="text-[10px] uppercase text-white/35" style={{ fontFamily: MONO }}>
+          {g.isHome ? (g.neutralSite ? 'N' : 'VS') : 'AT'}
+          {/* Conference-game marker, from the stored conferenceGame flag. */}
+          {g.conferenceGame ? ' · CONF' : ''}
+        </span>
         {/* DECIDED, Phase 2B: the opponent name here stays PLAIN TEXT, permanently.
             Do not link it and do not unwrap the row into a non-button affordance
             to make room for a link. This row is a <button> that opens the gameday
@@ -51,6 +59,17 @@ function ScheduleRow({ g, last, onOpen }: { g: CfbGameView; last: boolean; onOpe
             belongs in a component pass over the whole row, not in a linking
             change. Tracked so this reads as a decision, not an oversight. */}
         {g.rivalry && <TrophyTag rivalry={g.rivalry} />}
+        {/* Theme-night designations ("Checker Neyland"): verified pipeline data,
+            previously dark. Sparse today; renders only where tagged. */}
+        {g.themes.map((t) => (
+          <span
+            key={t}
+            className="rounded-full border border-white/15 px-2 py-0.5 text-[10px] uppercase tracking-wide text-white/60"
+            style={{ fontFamily: MONO }}
+          >
+            {t}
+          </span>
+        ))}
       </div>
       <div className="text-right" style={{ fontFamily: MONO }}>
         {g.kickoffVerified ? (

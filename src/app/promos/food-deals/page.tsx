@@ -70,7 +70,6 @@ export default async function FoodDealsPage() {
         url="https://www.getpromonight.com/promos/food-deals"
         title={`Every Ballpark Food Deal in Pro Sports ${YEAR}`}
         description={lead}
-        lastUpdated={todayYMD()}
         faqs={faqs}
         groups={groups}
       />
@@ -78,7 +77,6 @@ export default async function FoodDealsPage() {
         eyebrow="Food deals"
         title={`EVERY FOOD DEAL IN ${YEAR}`}
         lead={lead}
-        lastUpdated={new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
         groups={groups}
         faqs={faqs}
         emptyMessage="No upcoming food deals are currently tracked. Teams typically announce more through the season."

@@ -81,17 +81,6 @@ const FAQS: HubFaqItem[] = [
   },
 ];
 
-// Chicago-anchored YMD for the schema dateModified, matching the hub anchor.
-function todayYMD(): string {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Chicago',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date());
-  const part = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
-  return `${part('year')}-${part('month')}-${part('day')}`;
-}
 
 export default async function NflHubPage() {
   const [slate, counts, divisions, today, teams, venueMap] = await Promise.all([
@@ -170,7 +159,6 @@ export default async function NflHubPage() {
         url={HUB_URL}
         title={TITLE}
         description={DESCRIPTION}
-        lastUpdated={todayYMD()}
         faqs={FAQS}
         groups={jsonLdGroups}
       />

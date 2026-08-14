@@ -11,6 +11,7 @@ export function VenueHubJsonLd({
   state,
   lat,
   lng,
+  capacity,
   faqs,
 }: {
   name: string;
@@ -22,6 +23,8 @@ export function VenueHubJsonLd({
   state: string | null;
   lat: number | null;
   lng: number | null;
+  /** Stored seating capacity; emitted as maximumAttendeeCapacity when present. */
+  capacity?: number | null;
   faqs: HubFaqItem[];
 }) {
   const place: Record<string, unknown> = {
@@ -41,6 +44,9 @@ export function VenueHubJsonLd({
   }
   if (lat !== null && lng !== null) {
     place.geo = { '@type': 'GeoCoordinates', latitude: lat, longitude: lng };
+  }
+  if (typeof capacity === 'number' && capacity > 0) {
+    place.maximumAttendeeCapacity = capacity;
   }
 
   const faqPage =

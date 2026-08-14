@@ -26,6 +26,10 @@ export interface CfbGameView {
   week: number;
   isHome: boolean;
   neutralSite: boolean;
+  /** Conference game flag from the pipeline; null when unknown. */
+  conferenceGame: boolean | null;
+  /** Theme-night display names ("Checker Neyland"); empty when none tagged. */
+  themes: string[];
   opponentId: string;
   opponentName: string;
   kickoffDisplay: string; // "7:30 PM ET" only when verified+announced; else "Kickoff TBA"
@@ -261,6 +265,13 @@ export const getCfbSchoolPage = cache(async (id: string): Promise<CfbSchoolPage 
     const oppVenue = oppSchool?.venueId ? venueById.get(oppSchool.venueId) || null : null;
     games.push({
       id: g.id, date: g.date, week: g.week, isHome, neutralSite: !!g.neutralSite,
+      conferenceGame: typeof g.conferenceGame === 'boolean' ? g.conferenceGame : null,
+      // Gated on the game's verified flag like every other displayed fact
+      // (kickoff, network): a parser-written designation carries no signal
+      // until the verify pass confirms the game (types.ts LOCKED DECISION 5).
+      themes: g.verified === true && Array.isArray(g.themeDesignations)
+        ? g.themeDesignations.map((t) => t.displayName).filter(Boolean)
+        : [],
       opponentId, opponentName: nameById.get(opponentId) || prettifySlug(opponentId),
       kickoffDisplay: kd.display, kickoffVerified: kd.verified,
       networkDisplay: g.broadcast?.confirmed && g.broadcast.network && !/tbd/i.test(g.broadcast.network) ? g.broadcast.network : null,

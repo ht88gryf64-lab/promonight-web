@@ -91,8 +91,8 @@ export default async function PromosTodayPage() {
         : 'No sports promotional giveaways scheduled right now. Check back as teams add dates.';
 
   // JSON-LD ItemList: today's promos, or tomorrow's when today is empty, so the
-  // list is never empty. dateModified = today (Chicago), advancing on each daily
-  // regeneration.
+  // list is never empty. No dateModified: the board date is clock-derived, and
+  // clock-derived stamps were removed (docs/known-issues.md entry 17).
   const jsonLdGroups: AggregatorGroup[] = [
     { label: 'Sports promos today', promos: hasToday ? today : tomorrow },
   ];
@@ -103,7 +103,6 @@ export default async function PromosTodayPage() {
         url={PAGE_URL}
         title={TITLE}
         description={DESCRIPTION}
-        lastUpdated={todayYMD}
         faqs={[]}
         groups={jsonLdGroups}
       />

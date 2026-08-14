@@ -71,6 +71,9 @@ export interface VenueHub {
   // building facts
   parkingLots: ParkingLot[];
   parkingLotMapUrl: string | null;
+  /** Official parking info pages (team/venue sites). Harvested + verified like
+   *  every other hub fact; rendered as outbound links in the parking lots card. */
+  officialParkingUrls: string[];
   publicTransit: PublicTransit | null;
   rideshareDropoff: string | null;
   accessibility: string | null;
@@ -138,6 +141,14 @@ export const getVenueHub = cache(async (slug: string): Promise<VenueHub | null> 
     tenants: Array.isArray(d.tenants) ? d.tenants : [],
     parkingLots: Array.isArray(d.parkingLots) ? d.parkingLots : [],
     parkingLotMapUrl: d.parkingLotMapUrl ?? null,
+    officialParkingUrls: Array.isArray(d.officialParkingUrls)
+      ? d.officialParkingUrls.filter(
+          // startsWith alone admits unparseable strings ('http//x', 'http://');
+          // URL.canParse keeps a single malformed doc entry from throwing in
+          // the render (new URL(u).hostname) and failing the whole SSG build.
+          (u: unknown): u is string => typeof u === 'string' && u.startsWith('http') && URL.canParse(u),
+        )
+      : [],
     publicTransit: d.publicTransit ?? null,
     rideshareDropoff: d.rideshareDropoff ?? null,
     accessibility: d.accessibility ?? null,

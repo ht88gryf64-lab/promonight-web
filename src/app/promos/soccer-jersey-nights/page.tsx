@@ -93,8 +93,8 @@ export default async function SoccerJerseyNightsPage() {
 
   const total = hits.length;
   const wcCount = hits.filter((p) => p.date >= WC_START && p.date <= WC_END).length;
-  const updatedLong = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-  const updatedIso = new Date().toISOString();
+  // Clock-derived stamps removed (docs/known-issues.md entry 17): no real
+  // stored timestamp exists for this collection, so dateModified is omitted.
 
   const lead =
     `A soccer jersey night is a pro sports game where the giveaway is a soccer-style jersey, and ${total} are on the upcoming calendar across MLB, WNBA, and MLS in 2026, ${wcCount} of them during the World Cup. ` +
@@ -107,7 +107,6 @@ export default async function SoccerJerseyNightsPage() {
     description:
       'Every upcoming soccer jersey giveaway across MLB, WNBA, and MLS in 2026, many during the World Cup.',
     url: PAGE_URL,
-    dateModified: updatedIso,
     isPartOf: { '@type': 'WebSite', name: 'PromoNight', url: 'https://www.getpromonight.com' },
   };
 
@@ -172,7 +171,6 @@ export default async function SoccerJerseyNightsPage() {
         eyebrow="Soccer jersey giveaways"
         title="Soccer Jersey Nights"
         lead={lead}
-        lastUpdated={updatedLong}
         groups={groups}
         faqs={FAQS}
         emptyMessage="No upcoming soccer jersey nights are currently tracked. Check back as teams announce World Cup tie-ins."

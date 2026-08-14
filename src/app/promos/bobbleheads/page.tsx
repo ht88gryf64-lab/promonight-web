@@ -83,7 +83,6 @@ export default async function BobbleheadsPage() {
         url="https://www.getpromonight.com/promos/bobbleheads"
         title={`Every Bobblehead Giveaway in Pro Sports ${YEAR}`}
         description={lead}
-        lastUpdated={todayYMD()}
         faqs={faqs}
         groups={groups}
       />
@@ -91,7 +90,6 @@ export default async function BobbleheadsPage() {
         eyebrow="Bobbleheads"
         title={`EVERY BOBBLEHEAD IN ${YEAR}`}
         lead={lead}
-        lastUpdated={new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
         groups={groups}
         faqs={faqs}
         emptyMessage="No upcoming bobblehead nights are currently tracked. Teams typically announce more through the season."
