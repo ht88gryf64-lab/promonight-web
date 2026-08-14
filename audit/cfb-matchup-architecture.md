@@ -1145,19 +1145,28 @@ new builders emit the full object for that reason.
 
 ## Open items added after the metadata merge (63efa7b, 2026-08-12)
 
-### cfbVenues.city is junk on 59 of 86 docs, and those records are unrepaired
+### CLOSED 2026-08-14: cfbVenues.city junk (was: 59 of 86 unrepaired)
 
-The raw `city` field holds street addresses, "University of X" run-ons, wiki
+The raw `city` field held street addresses, "University of X" run-ons, wiki
 fragments, bracketed URLs and empties. Two examples of the shape:
-`ross-ade-stadium.city` is a street address with a bracketed campus-directory
-URL, and `notre-dame-stadium.city` is the literal string
+`ross-ade-stadium.city` was a street address with a bracketed campus-directory
+URL, and `notre-dame-stadium.city` the literal string
 `| coordinates         =`, a leaked wikitext row.
 
-Every CFB surface now routes around it through `venueCity()`
+Every CFB surface routes around it through `venueCity()`
 (`src/lib/cfb/venue-cities.ts`), a hand-verified id-to-city map, and the last
 reader that did not, `getMatchupPage`, was fixed in this merge. The map returns
 null for an unmapped id so a caller falls back to the venue name alone and never
 renders the raw field.
+
+CLOSURE NOTE (2026-08-14, read-only Firestore inspection of all 86 docs):
+city is populated 86/86 and clean on 85/86. One residual junk value remains:
+notre-dame-stadium.city is still the wikitext row quoted above (the doc's
+updatedAt predates this entry, so the field itself was never repaired there).
+beaver-stadium's "University Park" is correct (that is the real Penn State
+locality), not junk. Nothing user-facing renders the raw field, so the ticket
+is closed; if notre-dame-stadium.city is ever repaired, that one write is the
+whole remaining job.
 
 **The underlying records are still wrong.** What exists today is a complete
 read-side workaround, not a repair. The consequences of leaving it:

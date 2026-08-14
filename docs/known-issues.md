@@ -947,3 +947,33 @@ expected tests fail, restore. On the pipeline side, narrowing to `{0,1}` failed
 **Why it matters.** A byte-identical coupling across two repos guarded only by
 a comment is the same shape as extraction rules living in conversation rather
 than in a file, which has bitten this project twice.
+
+## 17. Team-page JSON-LD stamps `dateModified = new Date()` on every ISR render
+
+**Status: OPEN, scheduled.** Fix rides the CFB data-only content tier (scoped
+2026-08-14), not its own branch.
+
+**What it is.** `src/components/json-ld.tsx:126` builds the team-page WebPage
+JSON-LD with `dateModified: new Date().toISOString()`, so all 169 team pages
+assert "modified just now" on every ISR regeneration regardless of whether any
+underlying data changed. That is a synthetic freshness claim on the site's
+highest-traffic template, and it matters under Raptive review criteria that
+name accuracy and trustworthiness. The 2026-08-14 authorship sweep found the
+same synthetic pattern on the aggregator CollectionPage stamps, /promos/today,
+and the league hubs (todayYMD()/new Date() at theme-nights/page.tsx:125,133,
+today/page.tsx:106, mlb/page.tsx:109), while the scored pages and /playoffs
+already bind real stamps (TeamScore.computedAt, PlayoffConfig.lastScanDate).
+
+**The fix shape.** Replace synthetic stamps with real stored timestamps where
+one exists, and OMIT dateModified where none does; never synthesize.
+Real sources already in hand: venueHubs.updatedAt (already feeds sitemap
+lastmod via lib/venue-hub.ts:318-326), CFB school/venue/game verification
+stamps (cfb/types.ts:39, :78, :108), PlayoffPromo.updatedAt
+(types.ts:321-322). The base Promo interface carries NO updatedAt
+(types.ts:76-114), so the team-page WebPage either binds to a real per-team
+signal (for example the newest playoffPromo/scan stamp if one is wired
+web-visible later) or drops the field.
+
+**Why it matters.** A freshness claim that is always "now" is
+indistinguishable from no freshness signal to a careful reviewer, and worse
+than none to one who checks twice.
