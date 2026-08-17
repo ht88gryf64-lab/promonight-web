@@ -178,6 +178,18 @@ export function CfbSchoolPage({ data, venueHubLink }: { data: CfbSchoolPageData;
                   <span className="text-[10px] font-normal text-white/45" style={{ fontFamily: MONO }}>{fmtMonthDay(c.date)}</span>
                 </Link>
               ))}
+              {/* The way UP into the index. Every school with a rivalry chip
+                  also links the hub itself: before this, the 86 school pages
+                  linked 63 individual rivalries and the index zero times
+                  (Phase 2 inbound-graph slice). Muted text keeps the named
+                  rivalries as the primary targets. */}
+              <Link
+                href="/cfb/rivalries"
+                className="inline-flex min-h-11 shrink-0 items-center whitespace-nowrap rounded-lg border border-white/15 px-4 text-[13px] font-bold text-white/70 transition-colors hover:border-white/30 hover:bg-white/10 hover:text-white"
+                style={{ fontFamily: SANS }}
+              >
+                All rivalries →
+              </Link>
             </div>
           </nav>
         )}
@@ -232,7 +244,13 @@ export function CfbSchoolPage({ data, venueHubLink }: { data: CfbSchoolPageData;
               <TicketmasterCTA team={affTeam} surface="web_cfb" placement="cfb_gameday" size="full" />
             </div>
             <div className="flex flex-col gap-2.5">
-              <SpotHeroCTA team={affTeam} venue={affVenue} surface="web_cfb" placement="cfb_gameday" />
+              {/* Gated like the matchup page's Park step (RivalryMatchupPage
+                  159-169): SpotHeroCTA never returns null, and with no venue it
+                  renders a tracked link to spothero.com's homepage — a dead end
+                  wearing a useful hat. washington-state (venueId '') is the
+                  first school this path can actually hit. Every cfbVenues doc
+                  carries audited non-zero coords, so the venue gate suffices. */}
+              {affVenue && <SpotHeroCTA team={affTeam} venue={affVenue} surface="web_cfb" placement="cfb_gameday" />}
               <ExpediaCTA team={affTeam} venue={affVenue} surface="web_cfb" placement="cfb_gameday" />
               <FanaticsCTA team={affTeam} surface="web_cfb" placement="cfb_gameday" />
             </div>

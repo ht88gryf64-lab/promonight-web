@@ -17,6 +17,7 @@ import { UpcomingPromoModalProvider } from './UpcomingPromoModal';
 import type { HeroBuckets } from '@/components/tonight-strip';
 import { HomepageJsonLd } from '@/components/homepage-json-ld';
 import { TeamGrid } from '@/components/team-grid';
+import { isCfbHubLive } from '@/lib/league-hubs';
 import { AppDownloadButtons } from '@/components/app-download-buttons';
 import { FollowCTA } from '@/components/follow/FollowCTA';
 import { IndieDeveloperBlock } from '@/components/indie-developer-block';
@@ -302,6 +303,22 @@ export function RedesignHomePage({
             surface="homepage"
             variant="light"
           />
+
+          {/* College entry in SERVED HTML. The CFB tab above mounts its
+              content client-side only, so this line is the crawlable homepage
+              path into the rivalry hub (Phase 2 inbound-graph slice). Gated on
+              the same registry flag as the tab and the nav. */}
+          {isCfbHubLive() && (
+            <div className="mt-8">
+              <Link
+                href="/cfb/rivalries"
+                className="inline-flex items-center gap-1 font-rd text-sm font-semibold text-rd-red hover:underline"
+              >
+                College Football Rivalries 2026
+                <IconArrowRight size={15} stroke={2.25} />
+              </Link>
+            </div>
+          )}
         </div>
       </section>
 

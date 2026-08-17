@@ -136,12 +136,10 @@ export function buildRivalryMatchupJsonLd(data: MatchupPage): Schema[] {
         schoolA: a?.name ?? prettySchoolId(aId),
         schoolB: b?.name ?? prettySchoolId(bId),
         date: game.date,
-        // The verify gate applies to the WHOLE SportsEvent, prose included: an
-        // unverified game's stored time must not ride into the entity through
-        // the description while startDate correctly withholds it. (The visible
-        // lede/meta description keep their own pre-existing behavior; today
-        // every verified:false game is also kickoff.tbd, so all surfaces agree.)
-        kickoff: game.verified === true ? renderedKickoff(game) : null,
+        // renderedKickoff carries the verify gate itself (announced AND
+        // verified:true), so the description can never ship a time that
+        // startDate withholds.
+        kickoff: renderedKickoff(game),
         venueName: data.resolvedVenue?.name ?? null,
         venueCity: data.resolvedVenue?.city ?? null,
       }),

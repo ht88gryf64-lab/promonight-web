@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import type { CSSProperties } from 'react';
 import { notFound } from 'next/navigation';
-import { getAllCfbSchoolIds, getCfbSchoolPage } from '@/lib/cfb/data';
+import { getAllCfbSchoolIds, getCfbSchoolPage, cfbSchoolBelowIndexFloor } from '@/lib/cfb/data';
 import { getVenueHubForTeam } from '@/lib/venue-hub';
 import { buildCfbTeamMetadata } from '@/lib/cfb/metadata';
 import { resolveCfbTheme, cfbThemeVars } from '@/lib/cfb/theme';
@@ -26,11 +26,10 @@ export async function generateMetadata({ params }: { params: Promise<{ school: s
 // Quality floor (decision record §4): a page indexes only if it carries enough
 // verified hard data to be useful. A deferred G5 with almost nothing corroborated
 // holds noindex until it enriches, rather than shipping a near-empty shell.
-function belowIndexFloor(data: Awaited<ReturnType<typeof getCfbSchoolPage>>): boolean {
-  if (!data) return true;
-  // useful stub = a real schedule (>=8 games) + a resolved venue.
-  return data.games.length < 8 || !data.venue;
-}
+// The predicate lives in the data layer (cfbSchoolBelowIndexFloor) because the
+// sitemap consumes the SAME rule: a URL this page marks noindex is also omitted
+// from the sitemap, and one shared function keeps the two from drifting.
+const belowIndexFloor = cfbSchoolBelowIndexFloor;
 
 export default async function Page({ params }: { params: Promise<{ school: string }> }) {
   const { school } = await params;

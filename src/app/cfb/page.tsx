@@ -1,4 +1,5 @@
 import { getCfbHubData } from '@/lib/cfb/hub-data';
+import { getMatchupIndex } from '@/lib/cfb/matchups';
 import { getVenueLinksForTeams } from '@/lib/venue-hub';
 import { HubVenueLinks } from '@/components/hub/HubVenueLinks';
 import { buildCfbHubMetadata } from '@/lib/cfb/metadata';
@@ -41,6 +42,11 @@ function SectionLabel({ children, sub, right, as: Tag = 'div' }: { children: Rea
 
 export default async function CfbHub() {
   const data = await getCfbHubData();
+  // Derived from the same source /cfb/rivalries renders (getMatchupIndexRows
+  // maps getMatchupIndex 1:1), so this anchor's count can never drift from the
+  // index page's row count. getMatchupIndex skips venue resolution, which the
+  // count does not need.
+  const matchupCount = (await getMatchupIndex()).length;
   const allTeams = data.browse.flatMap((b) => b.teams.map((t) => ({ id: t.id, name: t.name })));
   // Indexable stadium guides for the schools we cover (deduped by building).
   const venueLinks = await getVenueLinksForTeams(allTeams.map((t) => t.id));
@@ -103,7 +109,7 @@ export default async function CfbHub() {
               className="inline-flex min-h-11 items-center rounded-lg border border-white/20 px-5 text-[13px] font-bold text-white transition-colors hover:bg-white/10"
               style={{ fontFamily: SANS }}
             >
-              All 32 rivalries, in date order →
+              All {matchupCount} rivalries, in date order →
             </Link>
           </div>
         </section>

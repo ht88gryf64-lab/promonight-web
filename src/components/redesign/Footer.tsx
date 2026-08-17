@@ -48,6 +48,7 @@ const DISCOVER_LINKS: FooterLink[] = [
   { label: 'Team rankings', href: '/team-rankings' },
   { label: 'Stadium guides', href: '/venues' },
   { label: 'World Cup 2026', href: '/world-cup' },
+  { label: 'College football rivalries', href: '/cfb/rivalries' },
   { label: 'Follow your teams', href: '/follow' },
 ];
 

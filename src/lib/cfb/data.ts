@@ -214,6 +214,27 @@ export async function getAllCfbSchoolIds(): Promise<string[]> {
   return schools.map((s) => s.id);
 }
 
+/** Quality floor (decision record §4): a school page indexes only if it
+ *  carries enough verified hard data to be useful — a real schedule (>=8
+ *  games) AND a resolved venue. ONE predicate shared by the page (robots
+ *  noindex, src/app/cfb/[school]/page.tsx) and the sitemap (URL omitted), so
+ *  the two decisions cannot drift. */
+export function cfbSchoolBelowIndexFloor(page: CfbSchoolPage | null): boolean {
+  if (!page) return true;
+  return page.games.length < 8 || !page.venue;
+}
+
+/** School ids above the index floor — the sitemap set. A noindex stub
+ *  (washington-state: one game, no venue doc) must not be sitemap-listed or
+ *  pushed through the IndexNow deploy hook. Cheap: every page here reads the
+ *  same TTL-cached collection loaders, so this is in-memory after the first
+ *  load. */
+export async function getIndexableCfbSchoolIds(): Promise<string[]> {
+  const ids = await getAllCfbSchoolIds();
+  const pages = await Promise.all(ids.map((id) => getCfbSchoolPage(id)));
+  return ids.filter((_, i) => !cfbSchoolBelowIndexFloor(pages[i]));
+}
+
 export async function getCfbSchool(id: string): Promise<CfbSchool | null> {
   const schools = await loadSchools();
   return schools.find((s) => s.id === id) ?? null;

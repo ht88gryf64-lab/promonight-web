@@ -1,7 +1,23 @@
-export function GET() {
+import { getAllCfbSchoolIds } from '@/lib/cfb/data';
+import { getMatchupIndex } from '@/lib/cfb/matchups';
+
+// Counts are DERIVED, never hardcoded (aggregator plan §4 discipline): the
+// school count reads the cfbSchools collection and the rivalry count reads the
+// SAME source /cfb/rivalries renders (getMatchupIndex, which drops registry
+// entries whose rivalry doc is missing), so this file cannot drift from the
+// pages it describes. force-static is load-bearing: Next 15 route handlers are
+// dynamic by default, and only this export makes the GET run at build — where
+// a failed Firestore read fails the build loudly (the sitemap's fail-loud rule
+// for the same collection) instead of 500ing crawlers at request time.
+export const dynamic = 'force-static';
+
+export async function GET() {
+  const cfbSchoolCount = (await getAllCfbSchoolIds()).length;
+  const rivalryCount = (await getMatchupIndex()).length;
+
   const content = `# PromoNight
 
-PromoNight is a mobile app and website that tracks every promotional event -- giveaways, theme nights, food deals, and kids events -- across 169 professional sports teams in MLB, NBA, NFL, NHL, MLS, and WNBA.
+PromoNight is a mobile app and website that tracks every promotional event -- giveaways, theme nights, food deals, and kids events -- across 169 professional sports teams in MLB, NBA, NFL, NHL, MLS, and WNBA, plus 2026 schedules, rivalry games, and gameday travel guides for ${cfbSchoolCount} college football programs.
 
 ## Content Categories
 
@@ -11,6 +27,7 @@ PromoNight is a mobile app and website that tracks every promotional event -- gi
 - Theme nights: Star Wars nights, pride nights, faith nights, and other themed game events
 - Food deals: Dollar hot dog nights, pregame happy hours, and recurring concession specials
 - Kids events: Family days, kids run the bases, and youth-focused promotions
+- College football: 2026 schedules, kickoff and TV info once officially announced, and gameday travel plans for ${cfbSchoolCount} programs, plus ${rivalryCount} named rivalry games with date, stadium, and trophy details
 
 ## Key Pages
 
@@ -20,6 +37,10 @@ PromoNight is a mobile app and website that tracks every promotional event -- gi
 - Best promo nights of the year, score-ranked: https://www.getpromonight.com/best-promos
 - Best bobblehead nights of the year, score-ranked: https://www.getpromonight.com/best-promos/bobbleheads
 - Team-by-team promo schedule rankings: https://www.getpromonight.com/team-rankings
+- College football hub: https://www.getpromonight.com/cfb
+- College football school pages: https://www.getpromonight.com/cfb/{school-slug} (e.g., /cfb/ohio-state)
+- College football rivalries, all ${rivalryCount} in date order: https://www.getpromonight.com/cfb/rivalries
+- Rivalry game pages: https://www.getpromonight.com/cfb/rivalries/{slug} (e.g., /cfb/rivalries/iron-bowl)
 - Sitemap: https://www.getpromonight.com/sitemap.xml
 
 ## Organization

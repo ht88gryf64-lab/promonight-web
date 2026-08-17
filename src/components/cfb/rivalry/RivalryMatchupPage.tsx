@@ -94,10 +94,10 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
   const bFallback = prettyId(bId);
 
   const date = game?.date ? formatDayMonth(game.date) : null;
-  // "Kickoff TBA" verbatim, no embellishment.
-  const kickoff = game && !game.kickoff?.tbd && game.kickoff?.time && !/tbd/i.test(game.kickoff.time)
-    ? `${game.kickoff.time}${game.kickoff.tz && game.kickoff.tz !== 'TBD' ? ` ${game.kickoff.tz}` : ''}`
-    : 'Kickoff TBA';
+  // "Kickoff TBA" verbatim, no embellishment. renderedKickoff is the ONE gate
+  // (announced AND verified), shared with the meta description, the lede and
+  // the SportsEvent, so no surface can ever show a time another withholds.
+  const kickoff = renderedKickoff(game) ?? 'Kickoff TBA';
 
   // Visible lede: byte-identical to the meta description (same builder, same
   // inputs as buildCfbMatchupMetadata), so the hand-written 140-160 char

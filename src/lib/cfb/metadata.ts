@@ -185,8 +185,11 @@ export function buildCfbHubMetadata(): Metadata {
   // the rendered <title> (+ ' | PromoNight') stays ≤60. Avoids the schedule head term.
   const title = 'College Football Rivalries & Gameday 2026'; // 41 field → 54 rendered
   // Em-dash-free (house rule: avoid em dashes in user-facing copy); colon + commas.
+  // No team count: this is a static module-level export, so a numeric claim
+  // cannot derive from the schools collection and drifts the moment the corpus
+  // grows (it read "all 86 teams" until the washington-state seed made it 87).
   const description =
-    'College football rivalries, trophy games and theme nights for 2026: The Game, Iron Bowl, Red River, plus schedules and gameday plans for all 86 teams.';
+    'College football rivalries, trophy games and theme nights for 2026: The Game, Iron Bowl, Red River, plus schedules and gameday plans for every team.'; // 148 ≤ 155
   const socialTitle = `${title} | PromoNight`;
   const url = `${BASE}/cfb`;
   return {
@@ -210,13 +213,14 @@ export function buildCfbHubMetadata(): Metadata {
 // shallow-merges metadata, so a page that sets `openGraph: { url }` REPLACES the
 // layout's openGraph wholesale and silently drops og:title and og:image.
 
-/** Kickoff exactly as the page renders it, or null when it is not announced.
- *  Mirrors RivalryMatchupPage so the description can never claim a time the
- *  fact card does not show. Exported so the page can build the SAME description
- *  string as its visible lede (data-only tier: the hand-written matchup
- *  description surfaces as body copy, not just a meta tag). */
+/** Kickoff exactly as the page renders it, or null when it is not announced OR
+ *  not verified. The verify gate matches data.ts kickoffDisplay: a stored time
+ *  on a verified:false game (a flagged date-error, or a parser time the verify
+ *  pass has not confirmed) never reaches the description, the lede, the fact
+ *  card or the SportsEvent. Exported so every surface builds the SAME string
+ *  through this ONE gate (the fact card consumes it too). */
 export function renderedKickoff(game: MatchupPage['game']): string | null {
-  if (!game || game.kickoff?.tbd || !game.kickoff?.time) return null;
+  if (!game || game.verified !== true || game.kickoff?.tbd || !game.kickoff?.time) return null;
   if (/tbd/i.test(game.kickoff.time)) return null;
   const tz = game.kickoff.tz && game.kickoff.tz !== 'TBD' ? ` ${game.kickoff.tz}` : '';
   return `${game.kickoff.time}${tz}`;
