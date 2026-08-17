@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getAllMatchupSlugs, getMatchupPage } from '@/lib/cfb/matchups';
 import { buildCfbMatchupMetadata } from '@/lib/cfb/metadata';
+import { buildRivalryMatchupJsonLd } from '@/lib/cfb/rivalry-jsonld';
 import { RivalryMatchupPage } from '@/components/cfb/rivalry/RivalryMatchupPage';
 
 export const revalidate = 21600; // ISR, same cadence as the CFB hub and school pages
@@ -37,9 +38,25 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
   const data = await getMatchupPage(slug);
   if (!data) notFound();
 
+  // BreadcrumbList (backing the visual breadcrumb) + SportsEvent for the 2026
+  // game. Kickoff and broadcast ride the verify gate inside the builder: an
+  // unverified game emits a bare date and no network, never a placeholder.
+  const schemas = buildRivalryMatchupJsonLd(data);
+
   // Deliberately does NOT mount CfbThemePersist and does NOT theme itself in
   // either school's colour. A rivalry has two schools, so a single-school
   // persist write would be ambiguous, and theming in one school's colour picks
   // a side. The schools appear only as the two accents.
-  return <RivalryMatchupPage data={data} />;
+  return (
+    <>
+      {schemas.map((schema, i) => (
+        <script
+          key={i}
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+        />
+      ))}
+      <RivalryMatchupPage data={data} />
+    </>
+  );
 }

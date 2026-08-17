@@ -251,12 +251,17 @@ export function buildCfbMatchupMetadata(data: MatchupPage): Metadata {
   };
 }
 
+// Exported so the index JSON-LD (rivalry-jsonld.ts) reuses the exact strings
+// the <head> ships — CollectionPage name/description and meta cannot drift.
+export const RIVALRY_INDEX_TITLE = 'College Football Rivalries 2026';
+export const RIVALRY_INDEX_DESCRIPTION =
+  'Every major college football rivalry in 2026: the date, the kickoff, the stadium and how to plan the trip.';
+
 export function buildCfbRivalryIndexMetadata(): Metadata {
   // Description unchanged from what the route already shipped; this builder only
   // adds the canonical and the self-referencing og:url it was missing.
-  const title = 'College Football Rivalries 2026';
-  const description =
-    'Every major college football rivalry in 2026: the date, the kickoff, the stadium and how to plan the trip.';
+  const title = RIVALRY_INDEX_TITLE;
+  const description = RIVALRY_INDEX_DESCRIPTION;
   const socialTitle = `${title} | PromoNight`;
   const url = `${BASE}/cfb/rivalries`;
   return {
