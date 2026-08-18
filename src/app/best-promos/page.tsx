@@ -48,7 +48,7 @@ function addDaysYMD(base: Date, days: number): string {
 // the score mechanics, and the phrasing.
 export const metadata: Metadata = {
   title: `Best Sports Promo Nights of ${SEASON_YEAR}: Score-Ranked Giveaways`,
-  description: `Score-ranked promo nights across MLB, MLS, and WNBA in ${SEASON_YEAR}. Bobbleheads, jerseys, and theme nights ranked 0 to 100 by attendance cap, item value, sponsor presence, and highlight tier. Top score 100. Updated weekly.`,
+  description: `Score-ranked promo nights across MLB, MLS, and WNBA in ${SEASON_YEAR}. Bobbleheads, jerseys, and theme nights ranked 0 to 100 by attendance cap, item value, sponsor presence, and highlight tier. Updated weekly.`,
   alternates: { canonical: PAGE_URL },
   openGraph: {
     title: `Best Sports Promo Nights of ${SEASON_YEAR}`,
@@ -100,7 +100,7 @@ const FAQS = [
   {
     question: 'Can I see only bobblehead nights?',
     answer:
-      'Yes. Visit /best-promos/bobbleheads for the same ranking filtered to derivedSignals.itemType equal to "bobblehead". That page surfaces 204 bobblehead promos across the three scored leagues, with two WNBA 100s and an MLB cluster at 98 leading.',
+      'Yes. Visit /best-promos/bobbleheads for the same ranking filtered to derivedSignals.itemType equal to "bobblehead". That page shows every scored upcoming bobblehead night across the three scored leagues with its own ranked list.',
   },
 ];
 
@@ -112,13 +112,13 @@ const INLINE_ANSWERS = [
     afterPosition: 14,
     question: 'What gives a promo a perfect 100 score?',
     answer:
-      'The two bobbleheads tied at 100 share four signals: a stated attendance cap under 15,000, a named sponsor, highlighted status from the team, and a recognizable player likeness in the item type. Most MLB bobbleheads cluster at 98 because they hit three of the four.',
+      'A perfect 100 requires four signals together: a stated attendance cap, a named sponsor, highlighted status from the team, and a recognizable player likeness in the item type. Most high-scoring bobbleheads sit just below the top because they hit three of the four.',
   },
   {
     afterPosition: 29,
     question: 'Which teams have the highest-rated promos?',
     answer:
-      'Texas Rangers leads team-level scoring at 96, followed by Los Angeles Dodgers and Seattle Storm tied at 94. Team-level scores roll up average promo score, schedule variety, and highlight share across the entire team\'s season.',
+      'The current leaders are on the team rankings page, which orders every scored team by the same system. Team-level scores roll up average promo score, schedule variety, and highlight share across the entire team\'s season.',
   },
   {
     afterPosition: 44,

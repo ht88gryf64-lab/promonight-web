@@ -68,7 +68,7 @@ const FAQS = [
   {
     question: 'What are the highest-rated bobblehead giveaways?',
     answer:
-      'Two Washington Mystics bobblehead nights are tied at the top score of 100: the Kiki Iriafen Bobblehead and a second Mystics Bobblehead Giveaway. Both pair a stated attendance cap with a named sponsor and a highlighted-status flag from the team. MLB bobbleheads cluster just behind at 98, led by Arizona Diamondbacks, Atlanta Braves, and Chicago Cubs programs.',
+      'The current leaders sit at the top of the ranked list on this page. The highest-rated bobblehead nights pair a stated attendance cap with a named sponsor and a highlighted-status flag from the team; entries missing one of those signals rank just behind.',
   },
   {
     question: 'Which MLB team gives away the most bobbleheads?',
@@ -102,7 +102,7 @@ const INLINE_ANSWERS = [
     afterPosition: 14,
     question: 'Why do WNBA bobbleheads score so high?',
     answer:
-      'WNBA arenas seat 9,000 to 15,000 fans, so a bobblehead capped at 10,000 covers nearly every ticketed attendee. That near-universal availability combined with a named sponsor and a highlight tier puts both Washington Mystics bobbleheads at 100, ahead of the MLB cluster tied at 98.',
+      'WNBA arenas seat 9,000 to 15,000 fans, so a bobblehead capped at 10,000 covers nearly every ticketed attendee. That near-universal availability combined with a named sponsor and a highlight tier is why WNBA bobbleheads can outscore programs at much larger venues.',
   },
   {
     afterPosition: 29,
@@ -185,7 +185,7 @@ export default async function BobbleheadsPage() {
 
           <div className="mx-auto max-w-4xl px-6 pb-20 pt-10">
             <p className="rounded-2xl border border-rd-line bg-rd-card p-5 font-rd text-[15px] leading-relaxed text-rd-ink-soft">
-              The {promos.length} top-scored bobblehead giveaways of {SEASON_YEAR} are ranked below across MLB, MLS, and WNBA. MLB clubs run the majority of bobblehead programs, but the two highest-scoring entries are Washington Mystics bobblehead nights tied at 100. Every listed event is scored on attendance cap, item value, sponsor presence, and highlight tier.
+              The {promos.length} top-scored bobblehead giveaways of {SEASON_YEAR} are ranked below across MLB, MLS, and WNBA. MLB clubs run the majority of bobblehead programs. Every listed event is scored on attendance cap, item value, sponsor presence, and highlight tier.
             </p>
 
             <Suspense fallback={null}>
@@ -255,10 +255,9 @@ export default async function BobbleheadsPage() {
           <p className="mt-5 text-text-secondary text-base leading-relaxed max-w-3xl">
             The {promos.length} top-scored bobblehead giveaways of {SEASON_YEAR} are
             ranked below across MLB, MLS, and WNBA. MLB clubs run the
-            majority of bobblehead programs, but the two highest-scoring
-            entries are Washington Mystics bobblehead nights tied at 100.
-            Every listed event is scored on attendance cap, item value,
-            sponsor presence, and highlight tier.
+            majority of bobblehead programs. Every listed event is scored
+            on attendance cap, item value, sponsor presence, and highlight
+            tier.
           </p>
 
           <Suspense fallback={null}>
