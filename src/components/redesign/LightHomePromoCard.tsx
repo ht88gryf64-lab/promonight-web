@@ -40,7 +40,7 @@ export function LightHomePromoCard({
 }) {
   const openModal = useUpcomingPromoModal();
   const { day, weekday, month } = dateParts(promo.date);
-  const { color, label, Icon } = categoryFor(promo.type);
+  const { color, ink, label, Icon } = categoryFor(promo.type);
   const teamName = teamDisplayName(promo.team);
   const open = () => openModal({ promo, contexts, surface });
 
@@ -50,6 +50,10 @@ export function LightHomePromoCard({
       tabIndex={0}
       onClick={open}
       onKeyDown={(e) => {
+        // Keydowns from the nested star button bubble here; the star stops
+        // propagation of its CLICK only. Without this guard, Enter or Space
+        // on the star toggled the star AND opened the modal.
+        if (e.target !== e.currentTarget) return;
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
           open();
@@ -69,7 +73,7 @@ export function LightHomePromoCard({
           <div className="mb-1.5 flex flex-wrap items-center gap-2">
             <span
               className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
-              style={{ backgroundColor: `${color}1a`, color }}
+              style={{ backgroundColor: `${color}1a`, color: ink }}
             >
               <Icon size={12} stroke={2.25} />
               <span>{label}</span>
