@@ -17,6 +17,10 @@ export interface RivalryIndexRow {
   /** cfbRivalries.trophy verbatim; null when the doc has none. Rendered only
    *  when present — never "no trophy", never inferred. */
   trophy: string | null;
+  /** Each side's cfbSchools.primaryColor, in schoolIds order. null for an
+   *  untracked school or a missing color — the card then renders the single
+   *  neutral spine instead of a two-color split. Never inferred. */
+  colors: [string | null, string | null];
 }
 
 // The 2026 Rivalry Week window. The BOUNDS are the definition (season year
@@ -79,4 +83,69 @@ export function buildRivalryIndexFaqs(rows: RivalryIndexRow[]): RivalryFaq[] {
     answer: 'Each rivalry page shows the kickoff time and the network once they are officially announced. Until then the page lists the kickoff as TBA rather than a guess.',
   });
   return faqs;
+}
+
+// ── presentational grouping (visual pass) ────────────────────────────────────
+// Groups are PRESENTATIONAL ONLY: they partition the exact arrays the DOM
+// already renders, so total row count, order within a group, and the ItemList
+// (which reads the ungrouped ordered array) cannot change. Header counts are
+// group lengths — derived, never hardcoded.
+
+export interface RowGroup {
+  /** Stable key (YYYY-MM-DD for days, YYYY-MM for months, 'unscheduled'). */
+  key: string;
+  /** Header label, e.g. "Friday" / "November". */
+  label: string;
+  /** Header sub-label, e.g. "Nov 27" for a day; '' for months. */
+  subLabel: string;
+  rows: RivalryIndexRow[];
+}
+
+function fmt(date: string, opts: Intl.DateTimeFormatOptions): string {
+  return new Date(`${date}T12:00:00`).toLocaleDateString('en-US', opts);
+}
+
+/** Rivalry Week rows partitioned by calendar day, in the order rivalryWeekRows
+ *  returns them. Concatenating group rows reproduces the input exactly. */
+export function groupRivalryWeekByDay(rows: RivalryIndexRow[]): RowGroup[] {
+  const week = rivalryWeekRows(rows);
+  const groups: RowGroup[] = [];
+  for (const r of week) {
+    const last = groups[groups.length - 1];
+    if (last && last.key === r.date) {
+      last.rows.push(r);
+    } else {
+      groups.push({
+        key: r.date!,
+        // Mockup day-label shape: "Sat, Nov 21".
+        label: fmt(r.date!, { weekday: 'short' }),
+        subLabel: fmt(r.date!, { month: 'short', day: 'numeric' }),
+        rows: [r],
+      });
+    }
+  }
+  return groups;
+}
+
+/** The FULL ordered list partitioned by month (undated rows last under one
+ *  'unscheduled' group). Consumes orderedIndexRows' exact output, so
+ *  concatenating group rows is byte-identical to the ungrouped list the
+ *  ItemList JSON-LD reads. */
+export function groupIndexByMonth(orderedRows: RivalryIndexRow[]): RowGroup[] {
+  const groups: RowGroup[] = [];
+  for (const r of orderedRows) {
+    const key = r.date ? r.date.slice(0, 7) : 'unscheduled';
+    const last = groups[groups.length - 1];
+    if (last && last.key === key) {
+      last.rows.push(r);
+    } else {
+      groups.push({
+        key,
+        label: r.date ? fmt(r.date, { month: 'long' }) : 'Not scheduled',
+        subLabel: '',
+        rows: [r],
+      });
+    }
+  }
+  return groups;
 }

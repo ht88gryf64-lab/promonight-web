@@ -70,6 +70,10 @@ export interface MatchupSibling {
   slug: string;
   name: string;
   date: string | null;
+  /** Each side's cfbSchools.primaryColor, schoolIds order; null when untracked
+   *  or missing. Drives the sibling card's split spine; a null side falls back
+   *  to the single neutral spine. Never inferred. */
+  colors: [string | null, string | null];
 }
 
 export interface MatchupPage {
@@ -117,7 +121,7 @@ function daysApart(a: string, b: string): number {
 
 /** Slug, name and date for every registry matchup. Cheap enough to build once
  *  and reuse for the sibling rail and the /cfb/rivalries index. */
-export const getMatchupIndex = cache(async (): Promise<Array<{ slug: string; name: string; date: string | null; conference: string | null; schoolIds: string[] }>> => {
+export const getMatchupIndex = cache(async (): Promise<Array<{ slug: string; name: string; date: string | null; conference: string | null; schoolIds: string[]; colors: [string | null, string | null] }>> => {
   const { schools, rivalries, games } = await getCfbCorpus();
   const schoolById = new Map(schools.map((s) => [s.id, s]));
   const out = [];
@@ -126,6 +130,10 @@ export const getMatchupIndex = cache(async (): Promise<Array<{ slug: string; nam
     if (!rivalry) continue;
     const game = games.find((g) => g.data.rivalryId === e.rivalryId) ?? null;
     const first = rivalry.schoolIds.map((id) => schoolById.get(id)).find(Boolean);
+    // Stored primaryColor or null (untracked school / missing field). The null
+    // rides through to the card, which falls back to the neutral spine — the
+    // display layer never invents a color.
+    const [colorA, colorB] = rivalry.schoolIds.map((id) => schoolById.get(id)?.primaryColor || null);
     out.push({
       slug: e.slug,
       // The display name, so the sibling rail and the /cfb/rivalries index show
@@ -134,6 +142,7 @@ export const getMatchupIndex = cache(async (): Promise<Array<{ slug: string; nam
       date: game?.data.date ?? null,
       conference: first?.conferenceBySeason?.['2026'] ?? null,
       schoolIds: rivalry.schoolIds,
+      colors: [colorA ?? null, colorB ?? null] as [string | null, string | null],
     });
   }
   return out;
@@ -175,6 +184,7 @@ export const getMatchupIndexRows = cache(async (): Promise<RivalryIndexRow[]> =>
         .join(' vs '),
       venueName,
       trophy: rivalry?.trophy ?? null,
+      colors: r.colors,
     };
   }));
 });
@@ -292,7 +302,7 @@ export const getMatchupPage = cache(async (slug: string): Promise<MatchupPage | 
     resolvedVenue,
     conference: (schoolA ?? schoolB)?.conferenceBySeason?.['2026'] ?? null,
     rivalrySentence,
-    siblings: siblings.map((s) => ({ slug: s.slug, name: s.name, date: s.date })),
+    siblings: siblings.map((s) => ({ slug: s.slug, name: s.name, date: s.date, colors: s.colors })),
     siblingsAreSameWeek,
   };
 });

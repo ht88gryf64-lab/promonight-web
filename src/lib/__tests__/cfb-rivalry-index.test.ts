@@ -21,6 +21,7 @@ const row = (slug: string, date: string | null, extra: Partial<RivalryIndexRow> 
   matchup: 'A vs B',
   venueName: null,
   trophy: null,
+  colors: [null, null],
   ...extra,
 });
 
@@ -92,4 +93,51 @@ test('no FAQ copy contains an em dash (house rule for user-facing copy)', () => 
   for (const f of buildRivalryIndexFaqs(rows)) {
     assert.equal(/—/.test(f.question + f.answer), false);
   }
+});
+
+// ── presentational grouping (visual pass) ────────────────────────────────────
+// The load-bearing invariant: groups PARTITION the exact arrays the DOM
+// already renders. Concatenating group rows must reproduce the source arrays,
+// so total row count, order, and the ItemList can never drift.
+
+import { groupRivalryWeekByDay, groupIndexByMonth } from '@/lib/cfb/rivalry-index';
+
+test('groupRivalryWeekByDay partitions rivalryWeekRows exactly, in order', () => {
+  const rows = [
+    row('sat21', '2026-11-21'),
+    row('fri27-a', '2026-11-27'),
+    row('fri27-b', '2026-11-27'),
+    row('sat28-a', '2026-11-28'),
+    row('sat28-b', '2026-11-28'),
+    row('sat28-c', '2026-11-28'),
+    row('october', '2026-10-10'),
+    row('dormant', null),
+  ];
+  const groups = groupRivalryWeekByDay(rows);
+  assert.deepEqual(groups.flatMap((g) => g.rows), rivalryWeekRows(rows));
+  assert.deepEqual(groups.map((g) => g.key), ['2026-11-21', '2026-11-27', '2026-11-28']);
+  assert.deepEqual(groups.map((g) => g.rows.length), [1, 2, 3]);
+  assert.equal(groups[0].label, 'Sat');
+  assert.equal(groups[0].subLabel, 'Nov 21');
+});
+
+test('groupIndexByMonth partitions the ordered list exactly; undated rows land last', () => {
+  const ordered = orderedIndexRows([
+    row('nov', '2026-11-28'),
+    row('dormant-a', null),
+    row('sep-a', '2026-09-05'),
+    row('sep-b', '2026-09-19'),
+    row('oct', '2026-10-31'),
+    row('dormant-b', null),
+  ]);
+  const groups = groupIndexByMonth(ordered);
+  assert.deepEqual(groups.flatMap((g) => g.rows), ordered);
+  assert.deepEqual(groups.map((g) => g.key), ['2026-09', '2026-10', '2026-11', 'unscheduled']);
+  assert.deepEqual(groups.map((g) => g.label), ['September', 'October', 'November', 'Not scheduled']);
+  assert.equal(groups.reduce((n, g) => n + g.rows.length, 0), ordered.length);
+});
+
+test('grouping an empty row set yields no groups, not an empty header', () => {
+  assert.deepEqual(groupRivalryWeekByDay([]), []);
+  assert.deepEqual(groupIndexByMonth([]), []);
 });
