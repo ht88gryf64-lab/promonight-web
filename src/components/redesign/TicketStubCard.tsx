@@ -174,10 +174,12 @@ export function TicketStubCard({
         </div>
 
         {/* NOT a heading: the card can render inside the hero, and a heading
-            here would skip from the page h1 straight to h3s. min-height equals
-            the clamp ceiling (3 lines x 27px leading-none = 81px) so the
-            reservation and the clamp agree and rail cards keep one rhythm. */}
-        <p className="line-clamp-3 min-h-[81px] font-rd text-[27px] font-bold leading-none tracking-[0.004em] text-rd-ink transition-colors group-hover:text-rd-red">
+            here would skip from the page h1 straight to h3s. 22px, not the
+            target's 27px: the target was written against short mock titles,
+            and at 27px real 60-char titles clipped to fragments. min-height
+            equals the clamp ceiling (3 lines x 22px leading-none = 66px) so
+            the reservation and the clamp agree. */}
+        <p className="line-clamp-3 min-h-[66px] font-rd text-[22px] font-bold leading-none tracking-[0.004em] text-rd-ink transition-colors group-hover:text-rd-red">
           {promo.title}
         </p>
 
