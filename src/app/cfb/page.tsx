@@ -1,4 +1,5 @@
 import { getCfbHubData } from '@/lib/cfb/hub-data';
+import { getMatchupIndex } from '@/lib/cfb/matchups';
 import { getVenueLinksForTeams } from '@/lib/venue-hub';
 import { HubVenueLinks } from '@/components/hub/HubVenueLinks';
 import { buildCfbHubMetadata } from '@/lib/cfb/metadata';
@@ -23,11 +24,15 @@ const SANS = 'var(--font-outfit), system-ui, sans-serif';
 // wedge). Tier + OG handled in one place with the team pages.
 export const metadata = buildCfbHubMetadata();
 
-function SectionLabel({ children, sub, right }: { children: React.ReactNode; sub?: string; right?: string }) {
+// `as="h2"` renders the label as a real heading so its section's anchors hang
+// under it in the document outline instead of directly under the hero H1.
+// Visually identical either way: Tailwind's preflight resets heading
+// font-size/weight/margin to match a div.
+function SectionLabel({ children, sub, right, as: Tag = 'div' }: { children: React.ReactNode; sub?: string; right?: string; as?: 'h2' | 'div' }) {
   return (
     <>
       <div className="flex items-baseline justify-between gap-3">
-        <div className="text-[12px] tracking-[0.16em]" style={{ fontFamily: MONO, color: GOLD }}>{children}</div>
+        <Tag className="text-[12px] tracking-[0.16em]" style={{ fontFamily: MONO, color: GOLD }}>{children}</Tag>
         {right && <div className="shrink-0 text-[10px] text-white/35" style={{ fontFamily: MONO }}>{right}</div>}
       </div>
       {sub && <div className="mt-1.5 text-[14px] text-white/55" style={{ fontFamily: SANS }}>{sub}</div>}
@@ -37,6 +42,11 @@ function SectionLabel({ children, sub, right }: { children: React.ReactNode; sub
 
 export default async function CfbHub() {
   const data = await getCfbHubData();
+  // Derived from the same source /cfb/rivalries renders (getMatchupIndexRows
+  // maps getMatchupIndex 1:1), so this anchor's count can never drift from the
+  // index page's row count. getMatchupIndex skips venue resolution, which the
+  // count does not need.
+  const matchupCount = (await getMatchupIndex()).length;
   const allTeams = data.browse.flatMap((b) => b.teams.map((t) => ({ id: t.id, name: t.name })));
   // Indexable stadium guides for the schools we cover (deduped by building).
   const venueLinks = await getVenueLinksForTeams(allTeams.map((t) => t.id));
@@ -87,7 +97,7 @@ export default async function CfbHub() {
 
         {/* ── NATIONAL rivalries (§9 curated layer; §14b diagonal blocks) ── */}
         <section className="mt-14">
-          <SectionLabel sub="The games people plan their whole fall around.">THE RIVALRIES THAT DEFINE THE SEASON</SectionLabel>
+          <SectionLabel as="h2" sub="The games people plan their whole fall around.">THE RIVALRIES THAT DEFINE THE SEASON</SectionLabel>
           <div className="mt-5 grid gap-4 lg:grid-cols-2">
             {data.national.map((b) => <NationalBlock key={b.key} block={b} />)}
           </div>
@@ -99,7 +109,7 @@ export default async function CfbHub() {
               className="inline-flex min-h-11 items-center rounded-lg border border-white/20 px-5 text-[13px] font-bold text-white transition-colors hover:bg-white/10"
               style={{ fontFamily: SANS }}
             >
-              All 32 rivalries, in date order →
+              All {matchupCount} rivalries, in date order →
             </Link>
           </div>
         </section>

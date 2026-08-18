@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { getAllTeams, getPlayoffConfig, getStillAlivePlayoffTeamIds } from '@/lib/data';
-import { getAllCfbSchoolIds } from '@/lib/cfb/data';
+import { getIndexableCfbSchoolIds } from '@/lib/cfb/data';
 import { getAllMatchupSlugs } from '@/lib/cfb/matchups';
 import { isCfbHubLive, LEAGUE_HUBS } from '@/lib/league-hubs';
 import { getIndexableVenueHubSitemapEntries } from '@/lib/venue-hub';
@@ -56,9 +56,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // the honest outcomes are the full CFB set or a failed render (build failure
   // at deploy time; the deployed sitemap.xml is static and cannot break at
   // runtime), never a silent hole.
+  // Indexable ids only: the same cfbSchoolBelowIndexFloor predicate the page
+  // uses for its robots noindex, so a below-floor stub (washington-state: one
+  // game, no venue doc) is never sitemap-listed or IndexNow-pushed while it
+  // serves noindex.
   const cfbLive = isCfbHubLive();
   const cfbSchoolIds = cfbLive
-    ? await getAllCfbSchoolIds().catch((err) => {
+    ? await getIndexableCfbSchoolIds().catch((err) => {
         console.error('[sitemap] cfbSchools read failed; refusing to serve a sitemap missing the CFB set', err);
         throw err;
       })

@@ -21,6 +21,7 @@ import { buildRivalrySentences } from '@/lib/cfb/page-extras';
 import { venueCity } from '@/lib/cfb/venue-cities';
 import { MATCHUP_REGISTRY, type MatchupRegistryEntry } from '@/lib/cfb/matchup-registry';
 import { resolveMatchupDisplayName, findDisplayNameCollisions } from '@/lib/cfb/display-name';
+import type { RivalryIndexRow } from '@/lib/cfb/rivalry-index';
 
 // Re-exported so existing importers keep one entry point.
 export { MATCHUP_REGISTRY, resolveMatchupDisplayName, findDisplayNameCollisions };
@@ -138,18 +139,43 @@ export const getMatchupIndex = cache(async (): Promise<Array<{ slug: string; nam
   return out;
 });
 
-/** Index rows for /cfb/rivalries, with a display matchup string. */
-export const getMatchupIndexRows = cache(async (): Promise<Array<{ slug: string; name: string; date: string | null; matchup: string }>> => {
-  const { schools } = await getCfbCorpus();
+/** Index rows for /cfb/rivalries: display matchup string plus the stadium and
+ *  trophy the index renders. venueName resolves exactly as getMatchupPage does
+ *  (campus stadium via the home school for a non-neutral game, venueHubs for a
+ *  neutral site) but is PLAIN TEXT on the index — never a link — so it carries
+ *  no indexability gate and cannot overstate what the detail page links. */
+export const getMatchupIndexRows = cache(async (): Promise<RivalryIndexRow[]> => {
+  const { schools, venues, rivalries, games } = await getCfbCorpus();
   const byId = new Map(schools.map((s) => [s.id, s]));
+  const venueById = new Map(venues.map((v) => [v.id, v]));
+  const rivalryById = new Map(rivalries.map((r) => [r.id, r]));
   const index = await getMatchupIndex();
-  return index.map((r) => ({
-    slug: r.slug,
-    name: r.name,
-    date: r.date,
-    matchup: r.schoolIds
-      .map((id) => byId.get(id)?.shortName || byId.get(id)?.name || id.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' '))
-      .join(' vs '),
+  return Promise.all(index.map(async (r) => {
+    const entry = BY_SLUG.get(r.slug)!; // index rows only exist for registry slugs
+    const rivalry = rivalryById.get(entry.rivalryId) ?? null;
+    const game = games.find((g) => g.data.rivalryId === entry.rivalryId) ?? null;
+
+    let venueName: string | null = null;
+    if (game?.data.neutralSite && game.data.neutralVenueHubSlug) {
+      const hub = await getVenueHub(game.data.neutralVenueHubSlug);
+      venueName = hub?.name ?? null;
+    } else if (game && !game.data.neutralSite) {
+      // !neutralSite mirrors getMatchupPage exactly: a neutral game missing its
+      // hub slug shows NO stadium rather than the home school's campus stadium.
+      const home = byId.get(game.data.homeSchoolId);
+      venueName = home?.venueId ? venueById.get(home.venueId)?.name ?? null : null;
+    }
+
+    return {
+      slug: r.slug,
+      name: r.name,
+      date: r.date,
+      matchup: r.schoolIds
+        .map((id) => byId.get(id)?.shortName || byId.get(id)?.name || id.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' '))
+        .join(' vs '),
+      venueName,
+      trophy: rivalry?.trophy ?? null,
+    };
   }));
 });
 
