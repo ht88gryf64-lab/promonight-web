@@ -1104,3 +1104,33 @@ the moment promos are announced": /my-teams is noindexed
 teams in localStorage, so exposure is minimal, but the immediacy claim is
 false at every scope (scans are weekly at best). Soften to added-over-time
 copy when the page is next touched.
+
+## 24. Redesign fonts silently rendered DM Sans for the life of the redesign
+
+**Status: RESOLVED 2026-08-18 (merge 18c8e36).** The @theme font tokens
+referenced runtime next/font variables (`--font-rd: var(--font-archivo), ...`),
+and a CSS custom property substitutes its inner var() AT ITS OWN DECLARATION
+POINT: at :root, --font-archivo (set by next/font only on the redesign
+wrappers) is undefined, so --font-rd computed to invalid-empty and that dead
+value inherited down. `font-family: var(--font-rd)` then fell back to the
+inherited body DM Sans on every rd surface, sitewide, from the redesign flip
+until 2026-08-18. The Archivo faces were declared but never fetched. The four
+layout fonts survived only because next/font puts their source variables on
+the html element itself, and --font-outfit survived through a self-reference
+cycle that the unlayered next/font class happened to beat in the cascade.
+
+Why code reading could not catch it: every rule involved is individually
+correct, the failure lives in where var() substitution happens, and the
+fallback face is a plausible-looking sans. It was found only by computed-style
+probes during unrelated measurement work.
+
+The rule going forward: **any @theme font token that references a next/font
+variable must use the `@theme inline` form**, and author CSS must reference
+the concrete chain (see the comment block above the font tokens in
+globals.css). Note that @theme inline still emits :root aliases, so a token
+whose name collides with the next/font variable it references remains a
+cascade-luck cycle; the fix renamed next/font's outfit variable to
+--font-outfit-sans to dissolve ours. Related deliberate choice: rd-display
+and rd-numerals shipped with font-stretch neutralized to normal because the
+125% expanded cut had never actually rendered; activating it is a separate
+visual decision.
