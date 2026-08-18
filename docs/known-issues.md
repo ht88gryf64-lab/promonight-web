@@ -1065,3 +1065,42 @@ whether any data changed. This is the same synthetic-freshness class as entry
 left out of that pass as out of its approved scope. Fix shape when picked up:
 bind a real stored stamp if one becomes available for the homepage slate, or
 drop the "Last updated" clause and keep the promo count, which is real.
+
+## 22. Latent unbacked freshness claims that re-arm on a flag flip or data shift
+
+**Status: OPEN.** Five claim sites assert update mechanisms that do not run,
+but currently render on zero pages only because of season or gate state, not
+because the copy was fixed. They re-arm without any deploy:
+(1) /playoffs "refreshes within an hour of the latest scanner update"
+(src/app/playoffs/page.tsx:149, FAQPage JSON-LD plus DOM when active),
+"Updated hourly." (:298, Article JSON-LD), and "Updated hourly from official
+team sources." (:360 and :460, DOM). The playoff scanner cron is disabled;
+all four lines sit in the active-playoffs branch and return the moment
+appConfig/playoffs.playoffsActive flips true.
+(2) ZeroPromoFallback announcement-immediacy promises: "be notified the
+moment {team} announce their promos" (src/components/zero-promo-fallback.tsx:43,
+WNBA copy) and "notified as soon as the schedule is posted" (:71, MLB copy).
+The current 25 zero-promo pages are NFL/NBA/NHL/MLS, so both lines render
+nowhere today; any WNBA or MLB team dropping to zero promos resurfaces them.
+The pipeline is cron-driven, so moment-of-announcement claims cannot be made
+true by any mechanism that exists.
+(3) The two dormant gate-off clock stamps, entry-21 class: src/app/page.tsx:364
+and src/components/team-hero.tsx:82 both render "Last updated {new Date()}"
+on the legacy paths, live again on a single NEXT_PUBLIC_REDESIGN_V2 flip.
+Fix shape: correct the copy at the source even while the surfaces are dark;
+none of these should wait for the surface to reappear in prod.
+
+## 23. Freshness claims out of scope for the 2026-08-18 indexed-page pass
+
+**Status: OPEN.** Two claims were deliberately excluded from the
+feature/freshness-claims pass:
+(1) src/app/privacy/page.tsx:98 "Cached data is refreshed periodically when
+you are connected to the internet" describes the Flutter app's offline cache,
+which this repo can neither back nor refute; verify against the app's sync
+behavior before editing.
+(2) src/components/my-teams-view.tsx:667 and :733 "the calendar will populate
+the moment promos are announced": /my-teams is noindexed
+(src/app/my-teams/page.tsx:17) and the copy is client-only behind starred
+teams in localStorage, so exposure is minimal, but the immediacy claim is
+false at every scope (scans are weekly at best). Soften to added-over-time
+copy when the page is next touched.

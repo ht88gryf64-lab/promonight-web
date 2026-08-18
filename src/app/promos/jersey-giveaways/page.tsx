@@ -23,7 +23,7 @@ const YEAR = new Date().getFullYear();
 
 export const metadata: Metadata = {
   title: `${YEAR} Jersey, Cap & Hoodie Giveaway Nights`,
-  description: `Every ${YEAR} jersey, cap, and apparel giveaway across pro sports. First 10,000 to 25,000 fans only. Arrive early. Updated weekly.`,
+  description: `Every ${YEAR} jersey, cap, and apparel giveaway across pro sports. First 10,000 to 25,000 fans only. Arrive early. From official team announcements.`,
   alternates: { canonical: 'https://www.getpromonight.com/promos/jersey-giveaways' },
   openGraph: pageOpenGraph('/promos/jersey-giveaways'),
 };

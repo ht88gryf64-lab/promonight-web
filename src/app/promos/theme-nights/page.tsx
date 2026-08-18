@@ -55,7 +55,7 @@ const CATEGORIES: ThemeCategory[] = [
 
 export const metadata: Metadata = {
   title: `${YEAR} Theme Nights: Star Wars, Heritage & Fireworks`,
-  description: `Every ${YEAR} theme night across pro sports by category: Star Wars, heritage, fireworks, faith and community, and pop culture tie-ins. Updated weekly.`,
+  description: `Every ${YEAR} theme night across pro sports by category: Star Wars, heritage, fireworks, faith and community, and pop culture tie-ins. From official team announcements.`,
   alternates: { canonical: 'https://www.getpromonight.com/promos/theme-nights' },
   openGraph: pageOpenGraph('/promos/theme-nights'),
 };

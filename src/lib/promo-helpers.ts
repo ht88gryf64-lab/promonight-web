@@ -362,16 +362,15 @@ export function generateTeamFAQs(
     answer: `PromoNight tracks home-game promotions for all 169 teams across MLB, NBA, NFL, NHL, MLS, and WNBA. If you're traveling to see the ${team.name} play on the road, browse the home team's calendar on this site to see every promo scheduled at their venue during your trip.`,
   });
 
-  // 5g. Data authority — update cadence (only when there's enough data to claim authority)
+  // 5g. Data authority: provenance plus derived count (only when there's
+  // enough data to claim authority). No timestamp: the old render-time
+  // "Last updated" stamp was known-issues entry 21 class (synthetic
+  // freshness) and no stored per-team stamp covers NBA/NHL, so the answer
+  // states provenance and the one cadence that is true on every page.
   if (promos.length >= 10) {
-    const lastUpdated = new Date().toLocaleDateString('en-US', {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-    });
     faqs.push({
       question: `How often are ${team.name} promo schedules updated?`,
-      answer: `This page is updated regularly throughout the ${year} ${team.league} season as the ${team.name} announce new giveaways, theme nights, and family events. The current schedule reflects ${promos.length} scheduled events. Last updated ${lastUpdated}.`,
+      answer: `${team.name} promo data comes from official team announcements and is reviewed before it appears here. The current schedule reflects ${promos.length} scheduled events. MLB, WNBA, and MLS schedules are rechecked weekly in season.`,
     });
   }
 

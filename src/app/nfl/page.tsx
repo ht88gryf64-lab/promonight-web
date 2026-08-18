@@ -67,7 +67,7 @@ const FAQS: HubFaqItem[] = [
   {
     question: 'When do NFL teams announce their promotional schedules?',
     answer:
-      `Most clubs publish theme nights and giveaways in waves from late summer through the season, and some announce game by game. As of August ${YEAR}, thirteen clubs have published promotions; the rest of the league's team pages carry the full 18-week schedule and pick up promos as they are announced.`,
+      `Most clubs publish theme nights and giveaways in waves from late summer through the season, and some announce game by game. Every team page carries the club's full 18-week schedule even before its promotions are published.`,
   },
   {
     question: 'Are primetime NFL games different for fans attending in person?',
@@ -167,7 +167,7 @@ export default async function NflHubPage() {
         eyebrow="NFL League Hub"
         title={`NFL PROMOTIONS ${YEAR}`}
         subtitle="Theme nights, giveaways, and kids days across all 32 clubs, organized by NFL week with the stadium guide one tap from every game."
-        freshness="Updated as clubs announce promotions."
+        freshness="From official club announcements."
         accent={ACCENT}
       >
         <HubStatBar stats={stats} leagueLabel="NFL" />
@@ -196,8 +196,7 @@ export default async function NflHubPage() {
             </h2>
             <p className="mt-2 max-w-2xl font-rd text-[15px] text-rd-ink-soft">
               Every club&rsquo;s team page keeps its full promotional history, and the stadium
-              guides below stay current year-round. New season promotions appear here as clubs
-              announce them.
+              guides below cover parking, bag policy, and gameday logistics for each building.
             </p>
           </section>
         ) : (

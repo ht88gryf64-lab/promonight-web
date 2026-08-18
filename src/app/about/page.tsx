@@ -112,13 +112,13 @@ export default async function AboutPage() {
                 <li><strong className="text-rd-ink">Food deals</strong> - dollar dogs, two-dollar beer Fridays, kids eat free Sundays. The deals that make going to a game affordable when you&apos;re bringing the whole family.</li>
                 <li><strong className="text-rd-ink">Kids and family events</strong> - kids run the bases, face painting, family packs. The things that turn a baseball game into a day your kid remembers.</li>
               </ul>
-              <p className="text-rd-ink-soft text-[15px] leading-relaxed mt-5">The full season covers around 2,700 promotional events. I review and update the data regularly throughout the season because teams add promos mid-season and nobody else is watching.</p>
+              <p className="text-rd-ink-soft text-[15px] leading-relaxed mt-5">The full season covers around 2,700 promotional events. MLB, WNBA, and MLS schedules get a weekly recheck in season, and I review the rest by hand because teams add promos mid-season and nobody else is watching.</p>
             </section>
 
             <section className="mb-12">
               <h2 className="rd-display text-2xl md:text-3xl uppercase text-rd-ink mb-4">How PromoNight gets its data</h2>
               <div className="space-y-4 text-rd-ink-soft text-[15px] leading-relaxed">
-                <p>All promo data comes from official team sources. Team websites, ticketing platforms, and press releases. I wrote scrapers for the teams that publish in parseable formats and I review everything manually before it goes live. If a team announces a new promo halfway through the season, PromoNight picks it up within a few days.</p>
+                <p>All promo data comes from official team sources. Team websites, ticketing platforms, and press releases. I wrote scrapers for the teams that publish in parseable formats and I review everything manually before it goes live. If a team announces a new promo halfway through the season, the weekly recheck usually catches it for MLB, WNBA, and MLS; for other leagues I add it once I confirm it.</p>
                 <p>If you ever spot something that looks wrong, there&apos;s a &ldquo;report an issue&rdquo; button on every promo page in the app. Those reports come straight to me and I fix them fast. Data quality is the whole job.</p>
               </div>
             </section>
@@ -239,7 +239,7 @@ export default async function AboutPage() {
               </li>
             </ul>
             <p className="text-text-secondary text-[15px] leading-relaxed mt-5">
-              The full season covers around 2,700 promotional events. I review and update the data regularly throughout the season because teams add promos mid-season and nobody else is watching.
+              The full season covers around 2,700 promotional events. MLB, WNBA, and MLS schedules get a weekly recheck in season, and I review the rest by hand because teams add promos mid-season and nobody else is watching.
             </p>
           </section>
 
@@ -249,7 +249,7 @@ export default async function AboutPage() {
             </h2>
             <div className="space-y-4 text-text-secondary text-[15px] leading-relaxed">
               <p>
-                All promo data comes from official team sources. Team websites, ticketing platforms, and press releases. I wrote scrapers for the teams that publish in parseable formats and I review everything manually before it goes live. If a team announces a new promo halfway through the season, PromoNight picks it up within a few days.
+                All promo data comes from official team sources. Team websites, ticketing platforms, and press releases. I wrote scrapers for the teams that publish in parseable formats and I review everything manually before it goes live. If a team announces a new promo halfway through the season, the weekly recheck usually catches it for MLB, WNBA, and MLS; for other leagues I add it once I confirm it.
               </p>
               <p>
                 If you ever spot something that looks wrong, there&apos;s a &ldquo;report an issue&rdquo; button on every promo page in the app. Those reports come straight to me and I fix them fast. Data quality is the whole job.
