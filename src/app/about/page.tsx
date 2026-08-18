@@ -44,8 +44,13 @@ export default async function AboutPage() {
     {
       '@context': 'https://schema.org',
       '@type': 'Person',
-      name: 'Matt',
+      name: 'Matt Kovalik',
       jobTitle: 'Founder, PromoNight',
+      image: 'https://www.getpromonight.com/matt-avatar.jpg',
+      sameAs: [
+        'https://www.linkedin.com/in/mattkovalik/',
+        'https://twitter.com/promo_night_app',
+      ],
       worksFor: {
         '@type': 'Organization',
         name: 'PromoNight',
@@ -79,6 +84,7 @@ export default async function AboutPage() {
               <div>
                 <span className="font-rd text-[11px] font-semibold uppercase tracking-[0.14em] text-white/55">About</span>
                 <h1 className="rd-display mt-1 text-4xl uppercase leading-[0.95] text-white md:text-6xl">ABOUT PROMONIGHT</h1>
+                <p className="mt-2 font-rd text-[13px] text-white/60">Matt Kovalik · Founder, PromoNight</p>
               </div>
             </div>
           </section>
@@ -129,7 +135,7 @@ export default async function AboutPage() {
               <h2 className="rd-display text-2xl md:text-3xl uppercase text-rd-ink mb-4">Get in touch</h2>
               <div className="space-y-4 text-rd-ink-soft text-[15px] leading-relaxed">
                 <p>If you have feedback, a promo I missed, or a team you want covered better, email me at{' '}<a href="mailto:hello@getpromonight.com" className="text-rd-red hover:underline">hello@getpromonight.com</a>. I read every message.</p>
-                <p>If you want to follow along as PromoNight grows, the app has a Twitter account at{' '}<a href="https://twitter.com/promo_night_app" target="_blank" rel="noopener" className="text-rd-red hover:underline">@promo_night_app</a>{' '}that posts the day&apos;s best promos across the league.</p>
+                <p>If you want to follow along as PromoNight grows, the app has a Twitter account at{' '}<a href="https://twitter.com/promo_night_app" target="_blank" rel="noopener" className="text-rd-red hover:underline">@promo_night_app</a>{' '}that posts the day&apos;s best promos across the league. You can also find me on{' '}<a href="https://www.linkedin.com/in/mattkovalik/" target="_blank" rel="noopener" className="text-rd-red hover:underline">LinkedIn</a>.</p>
               </div>
             </section>
 
@@ -184,6 +190,9 @@ export default async function AboutPage() {
               <h1 className="font-display text-4xl md:text-6xl tracking-[1px] mt-1">
                 ABOUT PROMONIGHT
               </h1>
+              <p className="mt-2 font-mono text-[12px] text-text-secondary">
+                Matt Kovalik · Founder, PromoNight
+              </p>
             </div>
           </div>
 
@@ -284,7 +293,16 @@ export default async function AboutPage() {
                 >
                   @promo_night_app
                 </a>{' '}
-                that posts the day&apos;s best promos across the league.
+                that posts the day&apos;s best promos across the league. You can also find me on{' '}
+                <a
+                  href="https://www.linkedin.com/in/mattkovalik/"
+                  target="_blank"
+                  rel="noopener"
+                  className="text-accent-red hover:underline"
+                >
+                  LinkedIn
+                </a>
+                .
               </p>
             </div>
           </section>
