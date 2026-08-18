@@ -10,6 +10,8 @@ import { toAffiliateTeam } from '@/lib/cfb/page-extras';
 import { buildTicketNetworkLink, buildSpotHeroUrl } from '@/lib/affiliates';
 import { resolveHotelLink } from '@/lib/hotel-link';
 import { TripStepAffiliate, TripStepInternal } from '@/components/cfb/rivalry/TripStep';
+import { barlowCondensed } from '@/components/cfb/rivalry/fonts';
+import { Spine, spineVars, CONDENSED } from '@/components/cfb/rivalry/spine';
 import type { Team, Venue } from '@/lib/types';
 
 const PAGE_BG = '#08070d';
@@ -188,10 +190,10 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
     .map((s) => ({ kind: (s.partner ? 'aff' : 'internal') as 'aff' | 'internal', key: s.key as keyof typeof STEP_COPY, href: s.href, partner: s.partner }));
 
   return (
-    <main className="min-h-screen text-white" style={{ background: PAGE_BG }}>
+    <main className={`min-h-screen text-white ${barlowCondensed.variable}`} style={{ background: PAGE_BG }}>
       <div className="mx-auto max-w-2xl px-4 pb-16 pt-4">
-        {/* 1. breadcrumb */}
-        <nav aria-label="Breadcrumb" className="text-[11px] uppercase tracking-wider text-white/45">
+        {/* 1. breadcrumb (condensed face per the visual pass; colors unchanged) */}
+        <nav aria-label="Breadcrumb" className="text-[12px] font-semibold uppercase tracking-[0.18em] text-white/45" style={{ fontFamily: CONDENSED }}>
           <Link href="/cfb" className="hover:text-white">College Football</Link>
           <span className="px-1.5 text-white/25">/</span>
           <Link href="/cfb/rivalries" className="hover:text-white">Rivalries</Link>
@@ -201,8 +203,12 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
         {/* The display name, not rivalry.name: the H1 is a search target, and
             cfbRivalries.name holds the trophy or historical name, which is not
             always what anyone searches. The trophy block below still shows
-            rivalry.trophy, so nothing is lost. */}
-        <h1 className="mt-3 text-3xl font-extrabold leading-tight sm:text-4xl">
+            rivalry.trophy, so nothing is lost. Condensed all-caps is styling
+            only; the H1 STRING is unchanged. */}
+        <h1
+          className="mt-3 font-extrabold uppercase leading-[0.98] tracking-[0.01em]"
+          style={{ fontFamily: CONDENSED, fontSize: 'clamp(34px, 8vw, 48px)' }}
+        >
           {data.displayName} {SEASON}
         </h1>
 
@@ -248,7 +254,7 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
 
         {/* 6. plan the trip */}
         <section className="mt-8">
-          <h2 className="text-[11px] uppercase tracking-wider text-white/45">Plan the trip</h2>
+          <h2 className="text-[13px] font-semibold uppercase tracking-[0.14em] text-white/45" style={{ fontFamily: CONDENSED }}>Plan the trip</h2>
           <ol className="mt-3">
             {steps.map((s, i) => {
               const copy = STEP_COPY[s.key];
@@ -271,7 +277,7 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
 
         {/* 7. the trophy */}
         <section className="mt-8">
-          <h2 className="text-[11px] uppercase tracking-wider text-white/45">The trophy</h2>
+          <h2 className="text-[13px] font-semibold uppercase tracking-[0.14em] text-white/45" style={{ fontFamily: CONDENSED }}>The trophy</h2>
           {data.rivalrySentence && <p className="mt-3 text-sm leading-relaxed text-white/75">{data.rivalrySentence}</p>}
           <div className="mt-3 grid grid-cols-2 gap-3">
             <Stat label="Series began" value={String(rivalry.seriesStartYear)} />
@@ -309,18 +315,28 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
         {/* 8. sibling rail. Omitted entirely below 2. */}
         {siblings.length >= 2 && (
           <section className="mt-8">
-            <h2 className="text-[11px] uppercase tracking-wider text-white/45">
+            <h2 className="text-[13px] font-semibold uppercase tracking-[0.14em] text-white/45" style={{ fontFamily: CONDENSED }}>
               {data.siblingsAreSameWeek ? 'More rivalry week' : 'More rivalries'}
             </h2>
             <ul className="mt-3 space-y-2">
               {siblings.map((s) => (
                 <li key={s.slug}>
+                  {/* Compact mockup card: split spine in both schools' stored
+                      colors, condensed all-caps name. Href and text unchanged. */}
                   <Link
                     href={`/cfb/rivalries/${s.slug}`}
-                    className="flex items-center justify-between rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2.5 text-sm transition-colors hover:bg-white/[0.06]"
+                    className="relative flex items-center justify-between gap-3 overflow-hidden rounded-[10px] border border-white/10 bg-white/[0.03] py-2.5 pl-[22px] pr-3.5 transition-[transform,border-color] duration-150 hover:-translate-y-px hover:border-white/25"
+                    style={spineVars(s.colors)}
                   >
-                    <span className="font-medium">{s.name}</span>
-                    {s.date && <span className="text-white/45">{formatDayMonth(s.date).monthDay}</span>}
+                    <Spine colors={s.colors} />
+                    <span className="relative min-w-0 text-[16px] font-bold uppercase leading-[1.1] tracking-[0.02em]" style={{ fontFamily: CONDENSED }}>
+                      {s.name}
+                    </span>
+                    {s.date && (
+                      <span className="relative shrink-0 text-[14px] font-semibold tracking-[0.06em] text-white/45" style={{ fontFamily: CONDENSED }}>
+                        {formatDayMonth(s.date).monthDay}
+                      </span>
+                    )}
                   </Link>
                 </li>
               ))}

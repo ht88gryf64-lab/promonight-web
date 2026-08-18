@@ -216,7 +216,7 @@ test('a canceled game maps to EventCancelled, never silently EventScheduled', ()
 // ── buildRivalryIndexJsonLd ──────────────────────────────────────────────────
 
 const row = (slug: string, date: string | null): RivalryIndexRow =>
-  ({ slug, name: slug, date, matchup: 'A vs B', venueName: null, trophy: null });
+  ({ slug, name: slug, date, matchup: 'A vs B', venueName: null, trophy: null, colors: [null, null] });
 
 test('ItemList mirrors the ordered rows exactly: count, positions and URLs', () => {
   const rows = [row('iron-bowl', '2026-11-28'), row('egg-bowl', '2026-11-27'), row('dormant', null)];
