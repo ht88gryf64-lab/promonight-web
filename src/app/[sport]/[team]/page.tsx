@@ -109,9 +109,15 @@ export async function generateMetadata({
       day: 'numeric',
     });
 
+  // League-aware freshness tail: only MLB, WNBA, and MLS have a weekly scan
+  // cron (seasonal for the latter two), so only they may claim a recheck
+  // cadence. NBA, NHL, and NFL state provenance instead.
+  const freshnessTail = ['MLB', 'WNBA', 'MLS'].includes(team.league)
+    ? 'Rechecked weekly in season.'
+    : 'From official team announcements.';
   const fallbackDescription = venue
-    ? `${displayName} ${year} promotional schedule - bobbleheads, giveaways, theme nights, and food deals at ${venue.name}. Updated weekly.`
-    : `${displayName} ${year} promotional schedule - bobbleheads, giveaways, theme nights, and food deals. Updated weekly.`;
+    ? `${displayName} ${year} promotional schedule - bobbleheads, giveaways, theme nights, and food deals at ${venue.name}. ${freshnessTail}`
+    : `${displayName} ${year} promotional schedule - bobbleheads, giveaways, theme nights, and food deals. ${freshnessTail}`;
 
   const upcomingForDesc = promos
     .filter((p) => p.date >= todayStr)
