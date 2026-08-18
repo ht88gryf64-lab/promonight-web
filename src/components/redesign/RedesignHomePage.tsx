@@ -115,8 +115,8 @@ export function RedesignHomePage({
             Every promo at every game.
           </h1>
           <p className="mt-4 max-w-2xl font-rd text-lg text-white/70">
-            {teamCount} teams · 6 leagues · updated daily. Find tonight&apos;s giveaways, theme
-            nights, and food deals.
+            {teamCount} teams · 6 leagues · from official team announcements. Find
+            tonight&apos;s giveaways, theme nights, and food deals.
           </p>
           <p className="mt-3 font-rd text-[11px] uppercase tracking-[0.12em] text-white/45">
             {promoCount.toLocaleString()} promos tracked · Last updated {lastUpdated}
