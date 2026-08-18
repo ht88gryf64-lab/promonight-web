@@ -21,7 +21,7 @@ const YEAR = new Date().getFullYear();
 
 export const metadata: Metadata = {
   title: `${YEAR} Ballpark Food Deals: Discount Concession Nights`,
-  description: `Every ${YEAR} food-deal promo across MLB, NBA, NHL, NFL, MLS, and WNBA. Dollar dogs, half-price concessions, and value menus by month with team, date, and opponent. Updated weekly.`,
+  description: `Every ${YEAR} food-deal promo across MLB, NBA, NHL, NFL, MLS, and WNBA. Dollar dogs, half-price concessions, and value menus by month with team, date, and opponent. From official team announcements.`,
   alternates: { canonical: 'https://www.getpromonight.com/promos/food-deals' },
   openGraph: pageOpenGraph('/promos/food-deals'),
 };

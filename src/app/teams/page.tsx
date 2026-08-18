@@ -21,7 +21,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const teamCount = (await getAllTeams()).length;
   return {
     title: `All ${teamCount} Pro Sports Teams · Promo Calendars by League`,
-    description: `Browse all ${teamCount} pro sports teams across ${LEAGUE_SET} in ${SEASON_YEAR}. Star your teams to follow ${PROMO_TYPES} as they're announced.`,
+    description: `Browse all ${teamCount} pro sports teams across ${LEAGUE_SET} in ${SEASON_YEAR}. Star your teams and get one weekly email with their ${PROMO_TYPES}.`,
     alternates: { canonical: 'https://www.getpromonight.com/teams' },
     openGraph: pageOpenGraph('/teams'),
   };

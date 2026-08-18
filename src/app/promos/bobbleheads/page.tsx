@@ -22,7 +22,7 @@ const YEAR = new Date().getFullYear();
 
 export const metadata: Metadata = {
   title: `${YEAR} Bobblehead Giveaways: Player Figurine Nights`,
-  description: `Every ${YEAR} bobblehead giveaway across MLB, NBA, NHL, NFL, MLS, and WNBA. Player figurines by month with team, date, and opponent. Updated weekly.`,
+  description: `Every ${YEAR} bobblehead giveaway across MLB, NBA, NHL, NFL, MLS, and WNBA. Player figurines by month with team, date, and opponent. From official team announcements.`,
   alternates: { canonical: 'https://www.getpromonight.com/promos/bobbleheads' },
   openGraph: pageOpenGraph('/promos/bobbleheads'),
 };
@@ -53,7 +53,7 @@ export default async function BobbleheadsPage() {
       promos: list,
     }));
 
-  const lead = `Every bobblehead giveaway scheduled across MLB, NBA, NHL, NFL, MLS, and WNBA in ${YEAR}. Player name, team, date, and opponent for each bobblehead night, grouped by month. Pulled from official team sources and refreshed throughout the season.`;
+  const lead = `Every bobblehead giveaway scheduled across MLB, NBA, NHL, NFL, MLS, and WNBA in ${YEAR}. Player name, team, date, and opponent for each bobblehead night, grouped by month. Pulled from official team sources, with MLB, WNBA, and MLS rechecked weekly in season.`;
 
   const faqs = [
     {
