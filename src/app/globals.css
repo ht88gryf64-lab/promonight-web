@@ -40,12 +40,30 @@
   --color-rd-cat-food: #16a34a;     /* green (live = orange) */
   --color-rd-cat-kids: #2563eb;     /* blue */
 
+}
+
+/* Font tokens live in @theme INLINE, not @theme: these values reference
+ * runtime next/font variables, and a plain @theme declaration substitutes
+ * the inner var() at :root, where wrapper-scoped variables like
+ * --font-archivo do not exist. That made --font-rd compute to
+ * invalid-empty and every rd surface silently rendered DM Sans from the
+ * redesign flip until 2026-08-18. With `inline`, utilities compile to the
+ * concrete chain (e.g. .font-rd { font-family: var(--font-archivo), ... })
+ * and the var() resolves at the element that uses it, inside the wrapper
+ * that defines it. This also dissolves the --font-outfit self-reference:
+ * no :root alias is emitted, so there is no cycle, and the utility reads
+ * next/font's html-level value directly. */
+@theme inline {
   --font-display: var(--font-bebas-neue), sans-serif;
   --font-body: var(--font-dm-sans), sans-serif;
   --font-mono: var(--font-dm-mono), monospace;
-  --font-outfit: var(--font-outfit), sans-serif;
-  /* Archivo (redesign). --font-archivo is set by next/font on the team-page
-   * wrapper, NOT on <html>, so this resolves only inside the redesigned tree. */
+  /* next/font's variable is --font-outfit-sans (renamed from --font-outfit)
+   * so this token no longer references itself; the old same-name cycle only
+   * resolved because the unlayered next/font class happened to beat the
+   * layered theme rule in the cascade. */
+  --font-outfit: var(--font-outfit-sans), sans-serif;
+  /* Archivo (redesign). --font-archivo is set by next/font on the redesign
+   * wrappers, NOT on <html>, so it only resolves inside the redesigned tree. */
   --font-rd: var(--font-archivo), system-ui, sans-serif;
 }
 
@@ -58,7 +76,10 @@ html {
 body {
   background-color: var(--color-bg);
   color: var(--color-text-primary);
-  font-family: var(--font-body);
+  /* Concrete chain, not var(--font-body): the @theme inline font tokens no
+   * longer emit :root aliases. --font-dm-sans sits on <html> via next/font,
+   * so this resolves here. */
+  font-family: var(--font-dm-sans), sans-serif;
   min-height: 100vh;
   overflow-x: hidden;
 }
@@ -274,9 +295,11 @@ body::before {
 /* ── Redesign v2 utilities (gated, team page only) ─────────────────────────
  * Scoped to the .rd-root wrapper the team page mounts when the gate is on, so
  * none of this affects the live dark page. The wrapper also carries next/font's
- * --font-archivo, so var(--font-rd) resolves to Archivo here and nowhere else. */
+ * --font-archivo, so the concrete chain below resolves to Archivo here and
+ * nowhere else (var(--font-rd) is no longer emitted at :root; see the
+ * @theme inline note at the top of this file). */
 .rd-root {
-  font-family: var(--font-rd);
+  font-family: var(--font-archivo), system-ui, sans-serif;
   color: var(--color-rd-ink);
   background-color: var(--color-rd-cream);
   /* Sit above the body's fixed noise overlay (z-0) so the cream surface reads
@@ -286,20 +309,25 @@ body::before {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Heavy EXPANDED display cut — Archivo width axis at 125%. For lockups and
- * featured headlines. Descendant-scoped under .rd-root so the utility can never
- * affect the live page even if the class name were reused elsewhere. */
+/* Heavy display cut. Descendant-scoped under .rd-root so the utility can never
+ * affect the live page even if the class name were reused elsewhere.
+ * font-stretch is DELIBERATELY normal for now: the intended 125% expanded cut
+ * was a silent no-op for the entire DM Sans era of the font-rd bug, so nobody
+ * has ever seen it render. Activating it in the same change that fixes the
+ * font would make two visual shifts unattributable. Stretch is a separate
+ * visual decision after Archivo ships at natural width. */
 .rd-root .rd-display {
   font-weight: 800;
-  font-stretch: 125%;
+  font-stretch: normal;
   letter-spacing: -0.005em;
   line-height: 0.95;
 }
 
-/* Scoreboard numerals — heaviest expanded cut, tabular figures. */
+/* Scoreboard numerals — heaviest cut, tabular figures. Stretch neutralized,
+ * same rationale as .rd-display above. */
 .rd-root .rd-numerals {
   font-weight: 900;
-  font-stretch: 125%;
+  font-stretch: normal;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
 }

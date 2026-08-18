@@ -18,7 +18,7 @@ const GOLD = '#FFB71E';
 const RED = '#e0492e';
 const SERIF = 'var(--font-cfb-serif), Georgia, serif';
 const MONO = 'var(--font-mono), ui-monospace, monospace';
-const SANS = 'var(--font-outfit), system-ui, sans-serif';
+const SANS = 'var(--font-outfit-sans), system-ui, sans-serif';
 
 // Rivalry-first per §13 (schedule head terms unwinnable; rivalry/theme are the
 // wedge). Tier + OG handled in one place with the team pages.

@@ -17,7 +17,7 @@ export const RED = '#e0492e';
 /** Condensed display stack for rivalry names and section headings. Barlow
  *  Condensed loads via next/font (fonts.ts), scoped to the rivalry pages'
  *  wrappers; zero render-blocking link tags. */
-export const CONDENSED = 'var(--font-cfb-condensed), var(--font-outfit), system-ui, sans-serif';
+export const CONDENSED = 'var(--font-cfb-condensed), var(--font-outfit-sans), system-ui, sans-serif';
 
 /** Card-level style carrying the two spine colors as custom properties
  *  (mockup: `style="--c1:…; --c2:…"`). Empty when either side is missing so
