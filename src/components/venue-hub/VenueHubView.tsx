@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import Link from 'next/link';
 import type { Team } from '@/lib/types';
 import type { HubFaqItem } from '@/components/hub/HubFaq';
 import { HubFaq } from '@/components/hub/HubFaq';
@@ -317,6 +318,16 @@ export function VenueHubView({
               <a href={bagPolicyLink} className="font-semibold text-rd-red" target="_blank" rel="noopener noreferrer">
                 Official bag policy &rsaquo;
               </a>
+            </div>
+          ) : null}
+          {/* The MLB comparison layer: the venue corpus's fourth inbound link
+              (aggregator plan Build 2). MLB buildings only; other leagues have
+              no bag aggregator yet. */}
+          {hub.tenants.some((t) => t.league === 'MLB') ? (
+            <div className="mt-1 text-[11px]">
+              <Link href="/venues/bag-policies" className="font-semibold text-rd-ink-soft transition-colors hover:text-rd-red">
+                Compare every MLB ballpark&apos;s bag policy &rsaquo;
+              </Link>
             </div>
           ) : null}
         </div>

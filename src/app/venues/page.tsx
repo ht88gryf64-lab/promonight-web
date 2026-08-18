@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 import { getVenueIndexEntries, SEASON_YEAR } from '@/lib/venue-hub';
+import { BAG_SEASON } from '@/lib/venue-bag-policies';
 import { groupVenueIndexEntries } from '@/lib/venue-index';
 import { HubVenueLinks } from '@/components/hub/HubVenueLinks';
 import { getLeagueHub } from '@/lib/league-hubs';
@@ -18,7 +19,9 @@ export const revalidate = 86400;
 
 const CANONICAL = 'https://www.getpromonight.com/venues';
 // Season year is the deliberate SEASON_YEAR constant, never getFullYear().
-const TITLE = 'Stadium Guides: Bag Policies & Parking';
+// Retitled off "Bag Policies" so the head term consolidates on the child
+// aggregator (/venues/bag-policies) instead of splitting relevance with it.
+const TITLE = 'Stadium Guides: Parking & Gameday Rules';
 const DESCRIPTION = `Bag policies, parking, gate times, and transit for MLB, NFL, MLS, WNBA, NBA, NHL, and college football stadiums and arenas, verified for the ${SEASON_YEAR} season.`;
 
 export const metadata: Metadata = {
@@ -43,6 +46,15 @@ export default async function VenuesIndexPage() {
           policies, parking, gate times, and transit, one page per building. Pick
           a venue for the full rundown, or jump to its league below.
         </p>
+        {/* The bag-policy aggregator: the namespace's comparison layer over the
+            per-building guides. Prominent by design (aggregator plan Build 2). */}
+        <Link
+          href="/venues/bag-policies"
+          className="mt-5 inline-flex items-center gap-2 rounded-lg border border-rd-line bg-rd-card px-4 py-3 font-rd text-sm font-semibold text-rd-ink shadow-sm transition-colors hover:border-rd-red hover:text-rd-red"
+        >
+          MLB Bag Policy {BAG_SEASON}: every ballpark&apos;s rule, compared
+          <span aria-hidden>→</span>
+        </Link>
       </header>
 
       <main className="mx-auto max-w-6xl space-y-14 px-6 pb-20 pt-12">

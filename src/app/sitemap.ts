@@ -185,6 +185,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'weekly',
       priority: 0.8,
     },
+    {
+      // /venues/bag-policies: the MLB bag-policy aggregator (Build 2). Static
+      // route, counts derived from venueHubs at render. Auto-propagates to the
+      // IndexNow deploy hook via getAllSitemapUrls like every entry here.
+      url: `${BASE_URL}/venues/bag-policies`,
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
     ...leagueHubEntries,
     ...playoffHubEntries,
     ...teamPages,
