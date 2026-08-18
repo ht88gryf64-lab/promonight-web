@@ -2,7 +2,7 @@
 
 Canonical current-state snapshot for getpromonight.com. This file is the source of truth for site state across every thread in the project. When a thread needs current numbers, it reads here first, then pulls anything live from PostHog in-thread.
 
-Generated: 2026-06-12
+Generated: 2026-08-18
 Data windows: traffic and CTR as of 2026-06-10 (GSC/Bing have a 2-3 day lag); structural sections as noted per section.
 
 ## How to use this file
@@ -89,6 +89,15 @@ PromoNight is in a confirmed growth phase as of mid June 2026. The May 1-8 Bing 
   onMouseDown, so desktop right-clicks over-count slightly and keyboard activation
   emits nothing. Immaterial at current volume; re-check before reading small
   from_tab counts as CTR.
+
+### MEASUREMENT BOUNDARY: scoring freeze, rescore, and scored-surface rebuild [MANUAL, added 2026-08-18]
+
+- 2026-08-18 is a measurement boundary for the three scored surfaces (/best-promos, /best-promos/bobbleheads, /team-rankings): inventory, ordering, counts, and copy all changed the same day. Any ranking-page CTR or engagement trend crossing this date compares different pages, not different behavior.
+- THE SCORING FREEZE. Cause: scoring code lived only inside the retired legacy scanner (scan-promos.js) plus the manual backfill script, and was never ported to the v2 scanners; when the legacy workflow was retired during the v2 migration (Actions UI disable between June 9 and 16, cron commented June 19, if false interlock July 1), scoring lost its only scheduled caller. Duration: last teamScores write 2026-06-23 (a manual wave-2c rescore during the migration), frozen until 2026-08-18. Detected by the freshness-claims audit, not by any alarm; nothing watches stored timestamp age (section 8).
+- THE RESCORE (2026-08-18, capture-first with a proven zero-diff rollback file): 3,221 live promos swept across 75 teams, zero failures. 945 promos scored for the first time; 195 previously-scored promos corrected for post-June content drift (read-only estimate predicted 195, the run changed exactly 195). /best-promos top-300 league split moved from MLB 295 / MLS 2 / WNBA 3 to MLB 247 / MLS 39 / WNBA 14; /best-promos/bobbleheads went 38 to 67 rows; /team-rankings went 73 to 75 teams with 71 of 73 pre-existing teams changing rank position.
+- THE REATTACHMENT (option C, pipeline main d9e8fa9): a league-scoped backfill-scoring.js --execute step plus a scored-surfaces revalidate step appended to each v2 scan workflow (MLB Tue year-round, WNBA Wed and MLS Thu in season), gated off dry-run dispatches; a scoring failure or a rejected revalidation turns the scan run red by design. First watched MLB run clean (run 32181039532: scan normal, 30 teams scored, 0 failed, 2,577 promos, revalidated 3, fresh dateModified served). Scoring is autonomous again for the first time since June 9.
+- THE FRESHNESS SWEEP (merged fdf0025 and 2093bbc): a full-repo audit found 24 unbacked freshness or cadence claims shipping on indexed surfaces. Fixed: the team-FAQ render-time Last updated stamp (101 pages, inside FAQPage JSON-LD), league-aware team fallback metas (84 pages), the homepage FAQ scope claim, the /about cadence sentences, the NFL hub announcement-pickup claims and hardcoded thirteen, the best-promos frozen facts and false cron time, four aggregator metas plus /teams, and the scored-surface weekly claims now scoped to "MLB rescored weekly; WNBA and MLS in season". Filed as latent rather than fixed: known-issues entry 22 (playoffs hourly claims, zero-promo announcement-immediacy copy, two dormant gate-off clock stamps; all re-arm on a flag flip or data shift with no deploy) and entry 23 (privacy app-cache claim, unverifiable from the web repo; my-teams immediacy copy, noindexed).
+- AUTHORSHIP (merged 834ee9a): /about Person schema completed with full name Matt Kovalik, image, and sameAs (LinkedIn plus the Twitter profile already in the body); visible byline and LinkedIn link added so rendered text and schema agree; founder photo live at /matt-avatar.jpg replacing the monogram (known caveat: existsSync detection could flip back on an ISR lambda render; re-check after a revalidation cycle). Homepage "updated daily" replaced with provenance copy on both gate paths.
 
 ### Bing Search [LIVE, daily June 1-10]
 - Clicks: settled to ~37/day weekday after a June 1-4 peak of 41.5; recent 4-day avg ~28/day
@@ -202,29 +211,29 @@ Action rule: rewrite only C's, attempt feature capture on B's, route A's to auth
 ### Title rewrite status
 - Shipped June 3. Aggregate MLB CTR 0.73% -> 0.86% (modest, real). 6x team-to-team variance. Red Sox cluster NOT fixed (core giveaway queries 0.26%). Most June click growth came from Google volume, not the rewrite. CTR lever partly pulled (winning teams), partly latent (C-bucket stuck teams), partly unwinnable (A-bucket).
 
-## 3. Data completeness by league [AUTO, generated 2026-06-12]
+## 3. Data completeness by league [AUTO, generated 2026-08-18]
 
 Per-league data completeness from the field-presence rubric (see `audit/README.md`). **Overall /10** is the signed-off score; **Structural /10** is the season-independent subset (venue resolved + PYV detail + gates + recurring), normalized ×2.
 
 | League | Overall /10 | Structural /10 | Season |
 |--------|-------------|----------------|--------|
-| MLB | 9.6 | 9.2 | in-season |
-| NBA | 2.4 | 4.8 | offseason |
-| NFL | 2.1 | 4.3 | offseason |
-| NHL | 2.7 | 5.3 | offseason |
-| MLS | 8.1 | 8.8 | in-season |
-| WNBA | 7.0 | 5.9 | in-season |
+| MLB | 9.9 | 9.7 | in-season |
+| NBA | 3.0 | 5.9 | offseason |
+| NFL | 4.1 | 4.3 | in-season |
+| NHL | 2.8 | 5.6 | offseason |
+| MLS | 8.8 | 8.9 | in-season |
+| WNBA | 8.2 | 8.9 | in-season |
 
-Overall reflects current-season promo presence (5 of 10 points require upcoming promos). Leagues flagged `offseason` had 0 upcoming promos as of 2026-06-12, so their Overall is mostly venue coverage — read **Structural /10** for the season-independent picture.
+Overall reflects current-season promo presence (5 of 10 points require upcoming promos). Leagues flagged `offseason` had 0 upcoming promos as of 2026-08-18, so their Overall is mostly venue coverage — read **Structural /10** for the season-independent picture.
 
-## 4. Content coverage [AUTO, generated 2026-06-12]
+## 4. Content coverage [AUTO, generated 2026-08-18]
 
-- Recurring every-game deals: 6/167 teams populated
-- Venue detail (parking + transit + bag policy): 81/167 populated; gate times: 70/167
-- Affiliate readiness: Ticketmaster 167/167, Fanatics 167/167
-- Promo coverage: 983 upcoming across 167 teams, 2625 all-time
-- Page inventory: 189 routes (167 team pages + 22 others)
-- Aggregator pages live (9): /best-promos, /best-promos/bobbleheads, /promos/bobbleheads, /promos/food-deals, /promos/jersey-giveaways, /promos/soccer-jersey-nights, /promos/theme-nights, /promos/this-week, /world-cup
+- Recurring every-game deals: 22/169 teams populated
+- Venue detail (parking + transit + bag policy): 100/169 populated; gate times: 84/169
+- Affiliate readiness: Ticketmaster 169/169, Fanatics 169/169
+- Promo coverage: 1217 upcoming across 169 teams, 5212 all-time
+- Page inventory: 206 routes (169 team pages + 37 others)
+- Aggregator pages live (10): /best-promos, /best-promos/bobbleheads, /promos/bobbleheads, /promos/food-deals, /promos/jersey-giveaways, /promos/soccer-jersey-nights, /promos/theme-nights, /promos/this-week, /promos/today, /world-cup
 
 ## 5. Monetization [MANUAL - NEEDS CONFIRM]
 
@@ -242,9 +251,9 @@ Overall reflects current-season promo presence (5 of 10 points require upcoming 
 - Newsletter: Resend system, sending domain mail.getpromonight.com, in phased build. Subscriber count: CONFIRM (likely pre-launch/0). Capture wired on /world-cup and aggregator pages (web_world_cup, web_aggregator sources).
 - Pro subs: RevenueCat, $5.99/season single sport, $9.99/year all sports.
 
-## 6. Technical health [AUTO, generated 2026-06-12]
+## 6. Technical health [AUTO, generated 2026-08-18]
 
-- Canonical: www is canonical and consistent across metadataBase, sitemap, and robots (verified 2026-06-12).
+- Canonical: www is canonical and consistent across metadataBase, sitemap, and robots (verified 2026-08-18).
 - Sitemap: single canonical sitemap at https://www.getpromonight.com/sitemap.xml; no non-www duplicate.
 - robots.txt: allows GPTBot, ClaudeBot, PerplexityBot, Google-Extended, ChatGPT-User, Applebot-Extended.
 - llms.txt: present.
@@ -258,7 +267,6 @@ Overall reflects current-season promo presence (5 of 10 points require upcoming 
   - [RESOLVED] /playoffs openGraph defined without images array (blanks inherited og-image)
   - [MANUAL] /world-cup Boston Red Sox card lists "Fri 17 Jul vs Rays" twice (duplicate row)
   - [MANUAL] Stale transit-data pass outstanding (e.g. Northstar/Target Field; Northstar shut down 2026-01-04)
-  - [OPEN] /follow openGraph defined without an images array (blanks inherited og-image; same class as the playoffs fix)
 
 ## Technical caveats [MANUAL]
 
@@ -287,3 +295,14 @@ Once the search-intelligence dashboard exists (GSC API + BWT API writing weekly 
 - MLB team-page aggregate CTR + count of WIN/MID/STUCK teams
 - Recurring-deals coverage (X/167)
 - Newsletter subscribers
+
+## 8. Absent-write monitoring gap [MANUAL, added 2026-08-18]
+
+The scoring freeze exposed a structural asymmetry: the scanner framework has strong guards against BAD writes (hash-skip, absent-streak tombstone threshold, recurring floor-guard, snapshot-first reversibility, hold alerting) and none against ABSENT writes. A subsystem that silently stops writing looks identical to a quiet week: every surface kept serving, every honest stamp kept showing its stale value, and the only tell was a timestamp age nobody watches. teamScores sat frozen for 56 days while two indexed surfaces claimed weekly updates, and the freeze was found by a copy audit, not an alarm.
+
+Nothing watches stored timestamp age today. Known stale-with-no-alarm stamps as of 2026-08-18:
+- appConfig/dataVersion.lastDataUpdate = 2026-06-23T02:01:14.999Z (tracks the last scoring run of the pre-freeze era; nothing in src reads it and nothing refreshes it)
+- metadata/lastUpdated.timestamp = 2026-03-30T22:01:34.713Z (141+ days old; writer unknown or retired)
+Both predate the rescore and were deliberately not touched by it; recorded here as known-stale rather than silently trusted. The existing weekly staleness-check workflow did not catch the freeze: whatever it covers, it does not alarm on teamScores.computedAt or on these metadata stamps.
+
+Fix shape when picked up: a timestamp-age tripwire, most naturally hosted in the existing staleness-check workflow, asserting teamScores max computedAt is younger than 8 days during each scored league's season, plus a decision per orphaned stamp (wire it to a real writer or delete it). Until then, treat any stored timestamp on a surface or in appConfig as unverified until its writer is identified.
