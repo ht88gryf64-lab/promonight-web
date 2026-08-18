@@ -12,9 +12,10 @@ import { ScoringPageViewTracker } from '@/components/scoring/scoring-page-view-t
 import { isRedesignEnabled } from '@/lib/redesign';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 
-// Server-side fetch runs once per ISR revalidate window. The scoring
-// pipeline writes weekly (Tuesday scan); daily revalidate is cheap
-// insurance against any out-of-band rescore landing mid-week.
+// Server-side fetch runs once per ISR revalidate window. Scoring rides
+// each league's weekly scan (MLB Tue year-round; WNBA Wed and MLS Thu in
+// season) and each scoring run revalidates this page on-demand; daily
+// revalidate is cheap insurance against any out-of-band rescore.
 export const revalidate = 86400;
 
 const PAGE_URL = 'https://www.getpromonight.com/best-promos';
@@ -48,11 +49,11 @@ function addDaysYMD(base: Date, days: number): string {
 // the score mechanics, and the phrasing.
 export const metadata: Metadata = {
   title: `Best Sports Promo Nights of ${SEASON_YEAR}: Score-Ranked Giveaways`,
-  description: `Score-ranked promo nights across MLB, MLS, and WNBA in ${SEASON_YEAR}. Bobbleheads, jerseys, and theme nights ranked 0 to 100 by attendance cap, item value, sponsor presence, and highlight tier. Top score 100. Updated weekly.`,
+  description: `Score-ranked promo nights across MLB, MLS, and WNBA in ${SEASON_YEAR}. Bobbleheads, jerseys, and theme nights ranked 0 to 100 by attendance cap, item value, sponsor presence, and highlight tier. MLB rescored weekly; WNBA and MLS in season.`,
   alternates: { canonical: PAGE_URL },
   openGraph: {
     title: `Best Sports Promo Nights of ${SEASON_YEAR}`,
-    description: `Score-ranked promo nights across MLB, MLS, and WNBA. Updated weekly.`,
+    description: `Score-ranked promo nights across MLB, MLS, and WNBA. MLB rescored weekly; WNBA and MLS in season.`,
     url: PAGE_URL,
     type: 'website',
     images: [
@@ -100,7 +101,7 @@ const FAQS = [
   {
     question: 'Can I see only bobblehead nights?',
     answer:
-      'Yes. Visit /best-promos/bobbleheads for the same ranking filtered to derivedSignals.itemType equal to "bobblehead". That page surfaces 204 bobblehead promos across the three scored leagues, with two WNBA 100s and an MLB cluster at 98 leading.',
+      'Yes. Visit /best-promos/bobbleheads for the same ranking filtered to derivedSignals.itemType equal to "bobblehead". That page shows every scored upcoming bobblehead night across the three scored leagues with its own ranked list.',
   },
 ];
 
@@ -112,13 +113,13 @@ const INLINE_ANSWERS = [
     afterPosition: 14,
     question: 'What gives a promo a perfect 100 score?',
     answer:
-      'The two bobbleheads tied at 100 share four signals: a stated attendance cap under 15,000, a named sponsor, highlighted status from the team, and a recognizable player likeness in the item type. Most MLB bobbleheads cluster at 98 because they hit three of the four.',
+      'A perfect 100 requires four signals together: a stated attendance cap, a named sponsor, highlighted status from the team, and a recognizable player likeness in the item type. Most high-scoring bobbleheads sit just below the top because they hit three of the four.',
   },
   {
     afterPosition: 29,
     question: 'Which teams have the highest-rated promos?',
     answer:
-      'Texas Rangers leads team-level scoring at 96, followed by Los Angeles Dodgers and Seattle Storm tied at 94. Team-level scores roll up average promo score, schedule variety, and highlight share across the entire team\'s season.',
+      'The current leaders are on the team rankings page, which orders every scored team by the same system. Team-level scores roll up average promo score, schedule variety, and highlight share across the entire team\'s season.',
   },
   {
     afterPosition: 44,
@@ -200,7 +201,7 @@ export default async function BestPromosPage() {
 
           <div className="mx-auto max-w-4xl px-6 pb-20 pt-10">
             <p className="rounded-2xl border border-rd-line bg-rd-card p-5 font-rd text-[15px] leading-relaxed text-rd-ink-soft">
-              The {promos.length} best-scored sports promo nights of {SEASON_YEAR} are ranked below from 100 down. Every entry pulls from official MLB, MLS, and WNBA team-promotion announcements and is scored 0 to 100 on attendance cap, item value, sponsor presence, and highlight tier. The list refreshes weekly with each Tuesday scan.
+              The {promos.length} best-scored sports promo nights of {SEASON_YEAR} are ranked below from 100 down. Every entry pulls from official MLB, MLS, and WNBA team-promotion announcements and is scored 0 to 100 on attendance cap, item value, sponsor presence, and highlight tier. The list refreshes with each league&apos;s weekly scan: MLB year-round, WNBA and MLS in season.
             </p>
 
             <p className="mt-4 font-rd text-sm text-rd-ink-soft">
@@ -272,7 +273,7 @@ export default async function BestPromosPage() {
             ranked below from 100 down. Every entry pulls from official MLB,
             MLS, and WNBA team-promotion announcements and is scored 0 to 100
             on attendance cap, item value, sponsor presence, and highlight
-            tier. The list refreshes weekly with each Tuesday scan.
+            tier. The list refreshes with each league&apos;s weekly scan: MLB year-round, WNBA and MLS in season.
           </p>
 
           {/* useSearchParams inside ScoringPageViewTracker requires a

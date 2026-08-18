@@ -12,33 +12,40 @@ import { archivoHouse } from '@/components/redesign/fonts-house';
 export const revalidate = 86400;
 
 const PAGE_URL = 'https://www.getpromonight.com/team-rankings';
-const YEAR = new Date().getFullYear();
+// Hardcoded season year in SEO copy per house rule (never getFullYear();
+// bump deliberately when next-season content is ready).
+const YEAR = 2026;
 
 function localYMD(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-// Three-variable rule: team count, league set, top score / top team name
-// are all interpolated below. Distinct from /best-promos and /bobbleheads.
-export const metadata: Metadata = {
-  title: `Best Sports Promo Schedules of ${YEAR}: Team Rankings`,
-  description: `All 73 MLB, MLS, and WNBA teams ranked by ${YEAR} promo schedule strength. Texas Rangers leads at score 96; Seattle Storm tops WNBA at 94 and Orlando City tops MLS at 85. Each ranking factors variety, highlights, and the share of major giveaways. Updated weekly.`,
-  alternates: { canonical: PAGE_URL },
-  openGraph: {
-    title: `Best Sports Promo Schedules of ${YEAR}`,
-    description: `All 73 MLB, MLS, and WNBA teams ranked by ${YEAR} promo schedule strength. Updated weekly.`,
-    url: PAGE_URL,
-    type: 'website',
-    images: [
-      {
-        url: '/og-image.png',
-        width: 1200,
-        height: 630,
-        alt: 'PromoNight — team promo schedule rankings',
-      },
-    ],
-  },
-};
+// Team count is DERIVED from teamScores at metadata time so it can never
+// contradict the rendered list. Leader names and scores are deliberately NOT
+// in the meta: a derived leader drifts every scoring run, and a frozen one
+// goes false the same way the pre-rescore copy did.
+export async function generateMetadata(): Promise<Metadata> {
+  const teamCount = (await getAllTeamScores()).length;
+  return {
+    title: `Best Sports Promo Schedules of ${YEAR}: Team Rankings`,
+    description: `All ${teamCount} MLB, MLS, and WNBA teams ranked by ${YEAR} promo schedule strength. Each ranking factors variety, highlights, and the share of major giveaways. MLB rescored weekly; WNBA and MLS in season.`,
+    alternates: { canonical: PAGE_URL },
+    openGraph: {
+      title: `Best Sports Promo Schedules of ${YEAR}`,
+      description: `All ${teamCount} MLB, MLS, and WNBA teams ranked by ${YEAR} promo schedule strength. MLB rescored weekly; WNBA and MLS in season.`,
+      url: PAGE_URL,
+      type: 'website',
+      images: [
+        {
+          url: '/og-image.png',
+          width: 1200,
+          height: 630,
+          alt: 'PromoNight — team promo schedule rankings',
+        },
+      ],
+    },
+  };
+}
 
 const FAQS = [
   {
@@ -49,22 +56,22 @@ const FAQS = [
   {
     question: 'Which MLB team has the best promo schedule?',
     answer:
-      'Texas Rangers leads MLB and the overall list at 96. Los Angeles Dodgers ranks second at 94, followed by Chicago Cubs at 89 and San Diego Padres at 86. The MLB tier above 90 is concentrated in clubs with deep bobblehead programs and named-sponsor coverage.',
+      'The current MLB leader sits at the top of the live table above. The top MLB tier is concentrated in clubs with deep bobblehead programs and named-sponsor coverage.',
   },
   {
     question: 'Which MLS team has the highest-rated promo schedule?',
     answer:
-      'Orlando City leads MLS at 85, followed by FC Dallas at 81 and Portland Timbers at 67. MLS clubs typically score below MLB and WNBA at the top of the table because MLS promo schedules run fewer bobblehead and jersey-giveaway dates per season.',
+      'The current MLS leader is shown in the live table above, filterable by league. MLS clubs typically score below MLB and WNBA at the top of the table because MLS promo schedules run fewer bobblehead and jersey-giveaway dates per season.',
   },
   {
     question: 'Which WNBA team tops the rankings?',
     answer:
-      'Seattle Storm leads WNBA at 94, tied with Los Angeles Dodgers for second overall. WNBA teams score high because their smaller venues make low-cap, high-quality giveaways easier to staff and distribute to most ticketed fans.',
+      'The current WNBA leader is shown in the live table above, filterable by league. WNBA teams score high because their smaller venues make low-cap, high-quality giveaways easier to staff and distribute to most ticketed fans.',
   },
   {
     question: 'Why is my team\'s score the same as last week?',
     answer:
-      'Team scores recompute only when at least one of the team\'s promos changes between scans. A team whose schedule is stable from the previous week keeps its prior score and computedAt timestamp. Scrape failures during the weekly run also skip the rescore for that team.',
+      'Scores are recomputed in a full league sweep with each league\'s weekly scan: MLB year-round, WNBA and MLS in season. Scoring is deterministic, so a team whose schedule has not changed gets the same score back after a sweep; the Last updated date reflects the most recent sweep, not a change in your team\'s number.',
   },
   {
     question: 'Why are NBA and NHL not on this ranking?',
