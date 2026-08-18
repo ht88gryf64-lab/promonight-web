@@ -46,11 +46,11 @@ function addDaysYMD(base: Date, days: number): string {
 // metadata that ISR never recomputes.
 export const metadata: Metadata = {
   title: `Best Bobblehead Nights of ${SEASON_YEAR}: Ranked by Score`,
-  description: `Every bobblehead giveaway across MLB, MLS, and WNBA in ${SEASON_YEAR}, ranked 0 to 100 by attendance cap, item value, sponsor presence, and highlight tier. Updated weekly.`,
+  description: `Every bobblehead giveaway across MLB, MLS, and WNBA in ${SEASON_YEAR}, ranked 0 to 100 by attendance cap, item value, sponsor presence, and highlight tier. MLB rescored weekly; WNBA and MLS in season.`,
   alternates: { canonical: PAGE_URL },
   openGraph: {
     title: `Best Bobblehead Nights of ${SEASON_YEAR}`,
-    description: `Every bobblehead giveaway across MLB, MLS, and WNBA in ${SEASON_YEAR}, ranked by score. Updated weekly.`,
+    description: `Every bobblehead giveaway across MLB, MLS, and WNBA in ${SEASON_YEAR}, ranked by score. MLB rescored weekly; WNBA and MLS in season.`,
     url: PAGE_URL,
     type: 'website',
     images: [

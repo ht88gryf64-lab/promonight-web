@@ -12,9 +12,10 @@ import { ScoringPageViewTracker } from '@/components/scoring/scoring-page-view-t
 import { isRedesignEnabled } from '@/lib/redesign';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 
-// Server-side fetch runs once per ISR revalidate window. The scoring
-// pipeline writes weekly (Tuesday scan); daily revalidate is cheap
-// insurance against any out-of-band rescore landing mid-week.
+// Server-side fetch runs once per ISR revalidate window. Scoring rides
+// each league's weekly scan (MLB Tue year-round; WNBA Wed and MLS Thu in
+// season) and each scoring run revalidates this page on-demand; daily
+// revalidate is cheap insurance against any out-of-band rescore.
 export const revalidate = 86400;
 
 const PAGE_URL = 'https://www.getpromonight.com/best-promos';
@@ -48,11 +49,11 @@ function addDaysYMD(base: Date, days: number): string {
 // the score mechanics, and the phrasing.
 export const metadata: Metadata = {
   title: `Best Sports Promo Nights of ${SEASON_YEAR}: Score-Ranked Giveaways`,
-  description: `Score-ranked promo nights across MLB, MLS, and WNBA in ${SEASON_YEAR}. Bobbleheads, jerseys, and theme nights ranked 0 to 100 by attendance cap, item value, sponsor presence, and highlight tier. Updated weekly.`,
+  description: `Score-ranked promo nights across MLB, MLS, and WNBA in ${SEASON_YEAR}. Bobbleheads, jerseys, and theme nights ranked 0 to 100 by attendance cap, item value, sponsor presence, and highlight tier. MLB rescored weekly; WNBA and MLS in season.`,
   alternates: { canonical: PAGE_URL },
   openGraph: {
     title: `Best Sports Promo Nights of ${SEASON_YEAR}`,
-    description: `Score-ranked promo nights across MLB, MLS, and WNBA. Updated weekly.`,
+    description: `Score-ranked promo nights across MLB, MLS, and WNBA. MLB rescored weekly; WNBA and MLS in season.`,
     url: PAGE_URL,
     type: 'website',
     images: [
@@ -200,7 +201,7 @@ export default async function BestPromosPage() {
 
           <div className="mx-auto max-w-4xl px-6 pb-20 pt-10">
             <p className="rounded-2xl border border-rd-line bg-rd-card p-5 font-rd text-[15px] leading-relaxed text-rd-ink-soft">
-              The {promos.length} best-scored sports promo nights of {SEASON_YEAR} are ranked below from 100 down. Every entry pulls from official MLB, MLS, and WNBA team-promotion announcements and is scored 0 to 100 on attendance cap, item value, sponsor presence, and highlight tier. The list refreshes weekly with each Tuesday scan.
+              The {promos.length} best-scored sports promo nights of {SEASON_YEAR} are ranked below from 100 down. Every entry pulls from official MLB, MLS, and WNBA team-promotion announcements and is scored 0 to 100 on attendance cap, item value, sponsor presence, and highlight tier. The list refreshes with each league&apos;s weekly scan: MLB year-round, WNBA and MLS in season.
             </p>
 
             <p className="mt-4 font-rd text-sm text-rd-ink-soft">
@@ -272,7 +273,7 @@ export default async function BestPromosPage() {
             ranked below from 100 down. Every entry pulls from official MLB,
             MLS, and WNBA team-promotion announcements and is scored 0 to 100
             on attendance cap, item value, sponsor presence, and highlight
-            tier. The list refreshes weekly with each Tuesday scan.
+            tier. The list refreshes with each league&apos;s weekly scan: MLB year-round, WNBA and MLS in season.
           </p>
 
           {/* useSearchParams inside ScoringPageViewTracker requires a

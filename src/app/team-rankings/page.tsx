@@ -28,11 +28,11 @@ export async function generateMetadata(): Promise<Metadata> {
   const teamCount = (await getAllTeamScores()).length;
   return {
     title: `Best Sports Promo Schedules of ${YEAR}: Team Rankings`,
-    description: `All ${teamCount} MLB, MLS, and WNBA teams ranked by ${YEAR} promo schedule strength. Each ranking factors variety, highlights, and the share of major giveaways. Updated weekly.`,
+    description: `All ${teamCount} MLB, MLS, and WNBA teams ranked by ${YEAR} promo schedule strength. Each ranking factors variety, highlights, and the share of major giveaways. MLB rescored weekly; WNBA and MLS in season.`,
     alternates: { canonical: PAGE_URL },
     openGraph: {
       title: `Best Sports Promo Schedules of ${YEAR}`,
-      description: `All ${teamCount} MLB, MLS, and WNBA teams ranked by ${YEAR} promo schedule strength. Updated weekly.`,
+      description: `All ${teamCount} MLB, MLS, and WNBA teams ranked by ${YEAR} promo schedule strength. MLB rescored weekly; WNBA and MLS in season.`,
       url: PAGE_URL,
       type: 'website',
       images: [
@@ -71,7 +71,7 @@ const FAQS = [
   {
     question: 'Why is my team\'s score the same as last week?',
     answer:
-      'Team scores recompute only when at least one of the team\'s promos changes between scans. A team whose schedule is stable from the previous week keeps its prior score and computedAt timestamp. Scrape failures during the weekly run also skip the rescore for that team.',
+      'Scores are recomputed in a full league sweep with each league\'s weekly scan: MLB year-round, WNBA and MLS in season. Scoring is deterministic, so a team whose schedule has not changed gets the same score back after a sweep; the Last updated date reflects the most recent sweep, not a change in your team\'s number.',
   },
   {
     question: 'Why are NBA and NHL not on this ranking?',
