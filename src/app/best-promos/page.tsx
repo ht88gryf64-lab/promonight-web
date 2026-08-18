@@ -75,7 +75,7 @@ const FAQS = [
   {
     question: 'What makes a promo score 100?',
     answer:
-      'A 100 score requires a giveaway with a desirable collectible item (typically a bobblehead), a stated attendance cap, a highlighted status from the team, and a named sponsor. As of the most recent scan, two Washington Mystics bobblehead nights are tied at 100.',
+      'A 100 score requires a giveaway with a desirable collectible item (typically a bobblehead), a stated attendance cap, a highlighted status from the team, and a named sponsor.',
   },
   {
     question: 'Why is my favorite team not at the top?',
@@ -90,7 +90,7 @@ const FAQS = [
   {
     question: 'How often does this list update?',
     answer:
-      'The scoring pipeline runs every Tuesday at 15:00 UTC. Newly announced promos appear within a week. Team scores and per-promo scores can shift between scans as teams announce more events and the variety bonus adjusts.',
+      'Team scores and per-promo scores are recomputed when a scoring run processes updated promo data, and can shift between runs as teams announce more events and the variety bonus adjusts. The Last updated date on this page reflects the most recent scoring run.',
   },
   {
     question: 'What does the "Presented by" line on a card mean?',
