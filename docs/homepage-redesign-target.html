@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<!--
+  PromoNight homepage redesign: DESIGN TARGET
+  ============================================
+  This file is a visual reference, NOT a spec. Where it conflicts
+  with the Phase 0 audit or with anything in the repo, the repo wins.
+
+  Corrections already applied from the Phase 0 audit:
+    1. Type: Archivo (display + body) and DM Mono (all data). Both are
+       already loaded via next/font. Do NOT introduce Barlow Condensed,
+       IBM Plex Mono, or Inter: all three are net-new loads that walk
+       into the gate-off byte-identity font trap, and the page would
+       pay for both sets. Archivo uses font-stretch 125% on display
+       type to approximate the condensed look, matching .rd-display.
+    2. No "last scan" stat. A single sitewide scan stamp is per-league
+       false by construction (MLB weekly, WNBA/MLS weekly in season,
+       NBA/NHL manual, NFL/CFB no scanner). Fourth hero stat is a
+       derived count instead.
+    3. Category grid is 7 tiles, one per real aggregator route. Not 8.
+       "Hot this week" was cut: it counted all future highlights, not
+       a week.
+    4. Gameday grid is 4 cards, all venue sections that are actually
+       populated at scale. Hotels cut (no content field, affiliate
+       button only). Seating cut (section does not exist). Tickets cut
+       (no honest contextless destination).
+    5. FAQ renders permanently expanded, NOT as an accordion. The
+       homepage sits inside the Raptive visible-word baseline and
+       collapsing answers reduces measured words.
+    6. Ad slots: the system already exists (AdSlot.tsx, slots.ts,
+       docs/ad-slots-registry.md). HEADER_LEADERBOARD is already
+       mounted at the hero boundary. RECIRC_NATIVE moves from above
+       the team finder to below it. ADHESION_FOOTER stays global.
+       Three slots total, not two. Registry rows are deprecate-only.
+
+  Hard rules this file assumes:
+    - NO affiliate links anywhere on the homepage. No partner has the
+      context it needs (SpotHero needs venue lat/lng, Expedia needs a
+      city, Ticketmaster needs an event). The gameday grid is internal
+      navigation.
+    - NO Review, AggregateRating, SoftwareApplication, or Person schema
+      on this page. The App Store review is visual content only.
+      Person schema lives on /about.
+    - NO hardcoded counts. Every number shown here is illustrative;
+      all must be derived at render.
+    - Ticket-stub spine and team card accents read the per-team
+      primaryColor (ARGB int in Firestore, hex via argbToHex).
+      Coverage is 169/169 for pro teams.
+
+  Known open items this file does not solve:
+    - The visible "Last updated" clock stamp is known-issues entry 21.
+    - /api/revalidate cannot revalidate "/" (PATH_RE rejects the bare
+      root), so homepage ISR lag is up to 6h.
+-->
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PromoNight · Every promo at every game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#fbf8f3;
+    --bg-alt:#f4eee6;
+    --card:#fffefc;
+    --ink:#1a100e;
+    --ink-2:#493c37;
+    --ink-3:#7c6e67;
+    --ink-4:#a99b93;
+    --line:#eae1d6;
+    --line-2:#dbcfc1;
+    --maroon:#280b0b;
+    --maroon-2:#3c1313;
+    --red:#e23b3b;
+    --red-2:#c22a2a;
+    --red-3:#991d1d;
+    --amber:#ffc45e;
+    --giveaway:#ef8f2c;
+    --theme:#8b5cf6;
+    --food:#17a34a;
+    --kids:#2f7ff0;
+    --r:16px;
+    --sh-1:0 1px 2px rgba(26,16,14,.05);
+    --sh-2:0 1px 3px rgba(26,16,14,.05),0 10px 28px -10px rgba(26,16,14,.12);
+    --sh-3:0 2px 6px rgba(26,16,14,.06),0 22px 48px -14px rgba(26,16,14,.2);
+    --ease:cubic-bezier(.22,.68,.31,1);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+  body{
+    font-family:'Archivo',-apple-system,BlinkMacSystemFont,sans-serif;
+    background:var(--bg);color:var(--ink);
+    font-size:16px;line-height:1.5;
+    -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+    overflow-x:hidden;
+  }
+  a{color:inherit;text-decoration:none}
+  img{display:block;max-width:100%}
+  svg{display:block}
+  :focus-visible{outline:2px solid var(--red);outline-offset:3px;border-radius:4px}
+  ::selection{background:var(--red);color:#fff}
+  .wrap{max-width:1200px;margin:0 auto;padding:0 28px;position:relative}
+
+  .mono{font-family:'DM Mono',monospace}
+  .eyebrow{
+    font-family:'DM Mono',monospace;
+    font-size:10.5px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--ink-4);display:flex;align-items:center;gap:9px;margin-bottom:10px;
+  }
+  .eyebrow .dot{width:6px;height:6px;border-radius:50%;flex:none}
+  h2.sec{
+    font-family:'Archivo',sans-serif;font-weight:800;font-size:34px;
+    font-stretch:125%;letter-spacing:.01em;text-transform:uppercase;line-height:.95;
+  }
+  .sec-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:28px}
+  .sec-head .lede{font-size:14px;color:var(--ink-3);margin-top:9px;max-width:440px}
+  .see-all{
+    font-family:'DM Mono',monospace;
+    font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--red-3);white-space:nowrap;
+    display:inline-flex;align-items:center;gap:6px;transition:gap .18s var(--ease),color .15s;
+    padding-bottom:3px;border-bottom:1px solid transparent;
+  }
+  .see-all:hover{color:var(--red);gap:11px;border-color:var(--red)}
+  section{padding:72px 0}
+  section.alt{background:var(--bg-alt);border-block:1px solid var(--line)}
+
+  .rv{opacity:0;transform:translateY(18px);transition:opacity .6s var(--ease),transform .6s var(--ease)}
+  .rv.in{opacity:1;transform:none}
+
+  /* ================= BAND ================= */
+  .band{
+    background:radial-gradient(130% 140% at 10% -10%,#4e1a1a 0%,var(--maroon-2) 40%,var(--maroon) 100%);
+    color:#f8f3ee;position:relative;
+  }
+  .band .grain{
+    position:absolute;inset:0;pointer-events:none;opacity:.55;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+  }
+  nav{position:relative;z-index:3;border-bottom:1px solid rgba(255,255,255,.07)}
+  .nav-in{display:flex;align-items:center;gap:34px;height:70px}
+  .logo{display:flex;align-items:center;gap:10px;font-family:'Archivo',sans-serif;font-weight:700;font-size:23px;letter-spacing:.06em}
+  .mark{
+    width:34px;height:34px;border-radius:9px;display:grid;place-items:center;flex:none;
+    background:linear-gradient(155deg,#2c1414,#0b0404);
+    border:1px solid rgba(255,255,255,.12);position:relative;
+    box-shadow:0 2px 10px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.07);
+  }
+  .mark b{
+    font-family:'Archivo',sans-serif;font-size:21px;font-weight:800;line-height:1;
+    background:linear-gradient(180deg,#ff6363,#9d1b1b);
+    -webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:3px;
+  }
+  .mark::after{
+    content:"";position:absolute;bottom:4px;left:50%;transform:translateX(-50%);
+    width:17px;height:2.5px;border-radius:2px;
+    background:linear-gradient(90deg,var(--food) 0 25%,var(--theme) 25% 50%,var(--kids) 50% 75%,var(--giveaway) 75% 100%);
+  }
+  .nav-links{display:flex;gap:26px;font-size:14px;font-weight:450;color:rgba(248,243,238,.66)}
+  .nav-links a{transition:color .15s}
+  .nav-links a:hover{color:#fff}
+  .nav-r{margin-left:auto;display:flex;align-items:center;gap:14px}
+  .nav-search{
+    display:flex;align-items:center;gap:9px;height:37px;padding:0 15px;border-radius:9px;
+    background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.09);
+    font-family:'DM Mono',monospace;font-size:11.5px;letter-spacing:.02em;
+    color:rgba(248,243,238,.42);min-width:220px;
+  }
+  .nav-cta{
+    font-size:13.5px;font-weight:600;padding:10px 19px;border-radius:9px;color:#fff;
+    background:linear-gradient(180deg,var(--red),var(--red-2));
+    box-shadow:0 2px 14px rgba(226,59,59,.38),inset 0 1px 0 rgba(255,255,255,.2);
+    transition:transform .15s var(--ease);
+  }
+  .nav-cta:hover{transform:translateY(-1px)}
+
+  /* ================= HERO ================= */
+  .hero{position:relative;z-index:2;padding:96px 0 104px}
+  .h-anim{opacity:0;transform:translateY(22px);animation:rise .7s var(--ease) forwards}
+  .h-anim.d1{animation-delay:.05s}.h-anim.d2{animation-delay:.16s}.h-anim.d3{animation-delay:.27s}.h-anim.d4{animation-delay:.4s}
+  @keyframes rise{to{opacity:1;transform:none}}
+  .hero h1{
+    font-family:'Archivo',sans-serif;font-weight:800;
+    font-size:clamp(46px,6.6vw,88px);line-height:.92;letter-spacing:-.01em;
+    font-stretch:125%;text-transform:uppercase;color:#fff;max-width:15ch;
+  }
+  .hero h1 em{
+    font-style:normal;display:block;
+    background:linear-gradient(172deg,#ff8080 8%,#d22c2c 82%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    padding-bottom:.06em;
+  }
+  .hero .sub{margin:26px 0 36px;font-size:17.5px;line-height:1.55;color:rgba(248,243,238,.68);max-width:560px}
+  .ctas{display:flex;gap:13px;flex-wrap:wrap}
+  .btn{
+    display:inline-flex;align-items:center;gap:10px;padding:16px 28px;border-radius:12px;
+    font-size:15px;font-weight:600;transition:transform .16s var(--ease),box-shadow .16s,border-color .16s,color .16s;
+  }
+  .btn-p{
+    color:#fff;background:linear-gradient(180deg,var(--red),var(--red-2));
+    box-shadow:0 5px 22px rgba(226,59,59,.36),inset 0 1px 0 rgba(255,255,255,.22);
+  }
+  .btn-p:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(226,59,59,.44),inset 0 1px 0 rgba(255,255,255,.22)}
+  .btn-g{border:1px solid rgba(255,255,255,.26);color:rgba(248,243,238,.9)}
+  .btn-g:hover{border-color:rgba(255,255,255,.6);color:#fff}
+  .btn-dark{color:#fff;background:var(--ink);box-shadow:var(--sh-2)}
+  .btn-dark:hover{transform:translateY(-2px);box-shadow:var(--sh-3)}
+  .hero-stats{display:flex;margin-top:52px;flex-wrap:wrap}
+  .hstat{padding-right:36px;margin-right:36px;border-right:1px solid rgba(255,255,255,.12)}
+  .hstat:last-child{border:0;padding-right:0;margin-right:0}
+  .hstat .n{font-family:'Archivo',sans-serif;font-weight:700;font-size:32px;line-height:1;color:#fff}
+  .hstat .l{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:rgba(248,243,238,.42);margin-top:8px}
+
+  /* ============ RIBBON BOARD ============ */
+  .ribbon{
+    position:relative;z-index:2;background:#0d0505;
+    border-top:1px solid rgba(255,255,255,.06);
+    overflow:hidden;height:44px;display:flex;align-items:center;
+  }
+  .ribbon::before,.ribbon::after{
+    content:"";position:absolute;top:0;bottom:0;width:90px;z-index:2;pointer-events:none;
+  }
+  .ribbon::before{left:0;background:linear-gradient(90deg,#0d0505,transparent)}
+  .ribbon::after{right:0;background:linear-gradient(270deg,#0d0505,transparent)}
+  .tick{
+    display:flex;white-space:nowrap;will-change:transform;
+    animation:tick 46s linear infinite;
+  }
+  .ribbon:hover .tick{animation-play-state:paused}
+  @keyframes tick{to{transform:translateX(-50%)}}
+  .tick span{
+    font-family:'DM Mono',monospace;font-size:11.5px;font-weight:600;
+    letter-spacing:.16em;text-transform:uppercase;color:var(--amber);
+    text-shadow:0 0 12px rgba(255,196,94,.35);
+    padding:0 26px;display:inline-flex;align-items:center;gap:26px;
+  }
+  .tick span::after{content:"◆";font-size:7px;color:rgba(255,196,94,.4);text-shadow:none}
+
+  /* ============ TICKET STUB ============ */
+  .rail{display:flex;gap:20px;overflow-x:auto;padding:8px 4px 16px;scroll-snap-type:x mandatory;scrollbar-width:none}
+  .rail::-webkit-scrollbar{display:none}
+  .stub{
+    --tc:#333;
+    position:relative;flex:none;width:274px;scroll-snap-align:start;
+    background:var(--card);border-radius:var(--r);
+    border:1px solid var(--line);
+    box-shadow:var(--sh-2);
+    display:grid;grid-template-columns:56px 1fr;overflow:hidden;
+    transition:transform .22s var(--ease),box-shadow .22s,border-color .22s;
+  }
+  .stub:hover{transform:translateY(-6px) rotate(-.4deg);box-shadow:var(--sh-3);border-color:var(--line-2)}
+  .spine{
+    background:linear-gradient(180deg,var(--tc),color-mix(in srgb,var(--tc) 70%,#000));
+    color:#fff;display:grid;place-items:center;position:relative;
+  }
+  .spine::after{
+    content:"";position:absolute;inset:0;opacity:.14;
+    background:repeating-linear-gradient(135deg,#fff 0 1px,transparent 1px 8px);
+  }
+  .spine .rot{
+    transform:rotate(-90deg);white-space:nowrap;position:relative;z-index:1;
+    font-family:'DM Mono',monospace;font-weight:600;font-size:11.5px;
+    letter-spacing:.3em;text-transform:uppercase;
+    text-shadow:0 1px 2px rgba(0,0,0,.4);
+  }
+  .stub .perf{
+    position:absolute;left:56px;top:0;bottom:0;width:0;z-index:2;
+    border-left:1.5px dashed color-mix(in srgb,var(--line-2) 80%,#fff);
+  }
+  .stub .notch{
+    position:absolute;left:56px;width:15px;height:15px;border-radius:50%;
+    transform:translateX(-50%);background:var(--bg);border:1px solid var(--line);z-index:3;
+  }
+  .stub .notch.top{top:-8px}
+  .stub .notch.bot{bottom:-8px}
+  section.alt .stub .notch{background:var(--bg-alt)}
+  .stub-body{padding:19px 18px 16px;display:flex;flex-direction:column}
+  .stub-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:13px}
+  .stub-time{
+    font-family:'DM Mono',monospace;font-size:13px;font-weight:600;
+    letter-spacing:.06em;color:var(--ink-3);
+  }
+  .stub-hot{
+    font-family:'DM Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.18em;
+    padding:4px 8px;border-radius:5px;background:var(--red);color:#fff;
+    box-shadow:0 2px 8px rgba(226,59,59,.3);
+  }
+  .stub h3{
+    font-family:'Archivo',sans-serif;font-size:27px;font-weight:700;
+    line-height:1;letter-spacing:.004em;min-height:54px;
+  }
+  .stub-team{
+    display:flex;align-items:center;gap:9px;margin-top:12px;
+    font-size:12.5px;font-weight:450;color:var(--ink-3);
+  }
+  .stub-team .bar{width:3px;height:15px;border-radius:2px;background:var(--tc);flex:none}
+  .stub-foot{
+    display:flex;align-items:flex-end;justify-content:space-between;gap:10px;
+    margin-top:15px;padding-top:13px;border-top:1px solid var(--line);
+  }
+  .tag{
+    display:inline-flex;align-items:center;gap:6px;
+    font-family:'DM Mono',monospace;
+    font-size:9px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+    padding:5px 10px;border-radius:100px;
+  }
+  .tag i{width:6px;height:6px;border-radius:50%;flex:none}
+  .t-give{color:#a35a08;background:#fdf1e2} .t-give i{background:var(--giveaway)}
+  .t-theme{color:#5b2fbd;background:#f2ecfe} .t-theme i{background:var(--theme)}
+  .t-food{color:#0d6b31;background:#e6f6ec} .t-food i{background:var(--food)}
+  .t-kids{color:#1d54ad;background:#e8f1fe} .t-kids i{background:var(--kids)}
+  .bars{display:flex;align-items:flex-end;gap:1.5px;height:16px;opacity:.5}
+  .bars i{display:block;width:1.5px;background:var(--ink);height:100%}
+  .bars i:nth-child(2n){height:70%}.bars i:nth-child(3n){width:2.5px}
+  .bars i:nth-child(4n){height:85%}.bars i:nth-child(5n){width:1px}
+  .stub .rank{
+    position:absolute;right:14px;top:50px;
+    font-family:'Archivo',sans-serif;font-weight:800;font-size:52px;line-height:1;
+    color:var(--tc);opacity:.1;pointer-events:none;
+  }
+
+  /* ============ WEEK ============ */
+  .week{display:grid;grid-template-columns:repeat(auto-fit,minmax(174px,1fr));gap:15px}
+  .wday{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+    overflow:hidden;box-shadow:var(--sh-2);
+    transition:transform .2s var(--ease),box-shadow .2s,border-color .2s;
+  }
+  .wday:hover{transform:translateY(-4px);box-shadow:var(--sh-3);border-color:var(--line-2)}
+  .wd-head{
+    padding:11px 15px;border-bottom:1px solid var(--line);background:var(--bg-alt);
+    display:flex;align-items:baseline;justify-content:space-between;
+    font-family:'DM Mono',monospace;
+  }
+  .wd-day{font-size:10px;font-weight:600;letter-spacing:.2em;color:var(--ink-4)}
+  .wd-date{font-size:12px;font-weight:600;letter-spacing:.04em;color:var(--red-3)}
+  .wd-body{padding:15px}
+  .wd-body h4{font-family:'Archivo',sans-serif;font-size:20px;font-weight:700;line-height:1.05}
+  .wd-body .t{font-size:11.5px;color:var(--ink-4);margin-top:7px}
+
+  /* ============ AD ============ */
+  .ad{
+    border:1px dashed var(--line-2);border-radius:var(--r);margin-top:32px;
+    height:114px;display:grid;place-items:center;
+    background:repeating-linear-gradient(135deg,rgba(26,16,14,.012) 0 12px,transparent 12px 24px);
+  }
+  .ad span{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-4);font-weight:600}
+
+  /* ============ CATEGORIES ============ */
+  .cats{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:15px}
+  .cat{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+    padding:24px 19px 21px;box-shadow:var(--sh-2);position:relative;overflow:hidden;
+    transition:transform .2s var(--ease),box-shadow .2s,border-color .2s;
+  }
+  .cat::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:var(--cc)}
+  .cat:hover{transform:translateY(-4px);box-shadow:var(--sh-3);border-color:color-mix(in srgb,var(--cc) 45%,var(--line))}
+  .cat .ic{
+    width:44px;height:44px;border-radius:12px;display:grid;place-items:center;margin-bottom:16px;
+    background:color-mix(in srgb,var(--cc) 10%,#fff);color:var(--cc);
+    transition:transform .2s var(--ease);
+  }
+  .cat:hover .ic{transform:scale(1.08) rotate(-3deg)}
+  .cat h4{font-family:'Archivo',sans-serif;font-size:21px;font-weight:700;letter-spacing:.015em;text-transform:uppercase;line-height:1}
+  .cat p{font-size:12px;color:var(--ink-4);margin-top:7px;line-height:1.45}
+  .cat .cnt{font-family:'DM Mono',monospace;font-size:10.5px;font-weight:600;letter-spacing:.08em;color:var(--cc);margin-top:13px}
+
+  /* ============ TEAMS ============ */
+  .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px}
+  .tab{
+    font-family:'DM Mono',monospace;
+    font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+    padding:9px 17px;border-radius:100px;cursor:pointer;
+    border:1px solid var(--line-2);color:var(--ink-2);background:var(--card);
+    transition:all .15s;
+  }
+  .tab.on{background:var(--ink);border-color:var(--ink);color:#fff}
+  .tab:not(.on):hover{border-color:var(--ink-3);color:var(--ink)}
+  .teams{display:grid;grid-template-columns:repeat(auto-fit,minmax(182px,1fr));gap:15px}
+  .team{
+    --tc:#333;
+    position:relative;background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+    overflow:hidden;box-shadow:var(--sh-2);padding:19px;
+    transition:transform .2s var(--ease),box-shadow .2s,border-color .2s;
+  }
+  .team::before{content:"";position:absolute;inset:0 0 auto 0;height:4px;background:var(--tc)}
+  .team:hover{transform:translateY(-4px);box-shadow:var(--sh-3);border-color:color-mix(in srgb,var(--tc) 38%,var(--line))}
+  .tm-lg{
+    display:inline-block;font-family:'DM Mono',monospace;
+    font-size:9px;font-weight:600;letter-spacing:.18em;
+    padding:4px 9px;border-radius:5px;margin-bottom:13px;
+    background:color-mix(in srgb,var(--tc) 9%,#fff);color:var(--tc);
+  }
+  .team h4{font-family:'Archivo',sans-serif;font-size:24px;font-weight:700;line-height:1;letter-spacing:.004em}
+  .tm-count{display:flex;align-items:baseline;gap:8px;margin-top:15px;padding-top:14px;border-top:1px solid var(--line)}
+  .tm-count b{font-family:'Archivo',sans-serif;font-size:32px;font-weight:800;line-height:1;color:var(--tc)}
+  .tm-count span{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-4);font-weight:600}
+
+  /* ============ UTILITY ============ */
+  .util{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:15px}
+  .u{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+    padding:21px 19px;box-shadow:var(--sh-2);
+    transition:transform .2s var(--ease),box-shadow .2s,border-color .2s;
+  }
+  .u:hover{transform:translateY(-4px);box-shadow:var(--sh-3);border-color:var(--red)}
+  .u .ic{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;background:var(--bg-alt);color:var(--ink-2);margin-bottom:14px}
+  .u h4{font-family:'Archivo',sans-serif;font-size:19px;font-weight:700;letter-spacing:.02em;text-transform:uppercase}
+  .u p{font-size:11.5px;color:var(--ink-4);margin-top:5px;line-height:1.45}
+  .u .ucount{display:block;font-family:'DM Mono',monospace;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--red-3);margin-top:11px}
+
+  /* ============ APP ============ */
+  .app{
+    background:radial-gradient(115% 135% at 82% 8%,#4e1a1a 0%,var(--maroon-2) 42%,var(--maroon) 100%);
+    border-radius:26px;padding:52px;color:#f8f3ee;position:relative;overflow:hidden;
+    display:grid;grid-template-columns:1.15fr .85fr;gap:52px;align-items:center;
+    box-shadow:var(--sh-3);
+  }
+  .app .grain2{
+    position:absolute;inset:0;pointer-events:none;opacity:.5;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+  }
+  .app > *{position:relative;z-index:1}
+  .app .eyebrow{color:rgba(248,243,238,.42)}
+  .app h2{font-family:'Archivo',sans-serif;font-size:42px;font-weight:700;text-transform:uppercase;letter-spacing:.02em;line-height:.95;color:#fff}
+  .app .sub2{color:rgba(248,243,238,.68);font-size:15px;line-height:1.55;margin:16px 0 28px;max-width:400px}
+  .stores{display:flex;gap:12px;flex-wrap:wrap}
+  .store{
+    display:flex;align-items:center;gap:11px;padding:11px 19px;border-radius:12px;
+    border:1px solid rgba(255,255,255,.16);background:rgba(0,0,0,.32);
+    transition:border-color .15s,transform .15s var(--ease);
+  }
+  .store:hover{border-color:rgba(255,255,255,.4);transform:translateY(-2px)}
+  .store small{display:block;font-family:'DM Mono',monospace;font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:rgba(248,243,238,.45)}
+  .store b{display:block;font-size:14px;color:#fff;margin-top:2px}
+  .review{
+    background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+    border-radius:var(--r);padding:28px;
+  }
+  .stars{color:var(--amber);font-size:15px;letter-spacing:4px;margin-bottom:14px;text-shadow:0 0 14px rgba(255,196,94,.4)}
+  .review p{font-size:15px;line-height:1.55;color:#fff}
+  .review .attr{margin-top:15px;font-family:'DM Mono',monospace;font-size:10.5px;letter-spacing:.06em;color:rgba(248,243,238,.48)}
+
+  /* ============ NEWSLETTER ============ */
+  .news{
+    background:var(--card);border:1px solid var(--line-2);border-radius:22px;
+    padding:38px 46px;box-shadow:var(--sh-2);
+    display:flex;align-items:center;justify-content:space-between;gap:30px;flex-wrap:wrap;
+    position:relative;overflow:hidden;
+  }
+  .news::before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:linear-gradient(180deg,var(--red),var(--red-3))}
+  .news h3{font-family:'Archivo',sans-serif;font-size:32px;font-weight:700;text-transform:uppercase;letter-spacing:.02em;line-height:1}
+  .news p{font-size:14px;color:var(--ink-3);margin-top:9px;max-width:460px}
+
+  /* ============ FOUNDER ============ */
+  .founder{display:grid;grid-template-columns:290px 1fr;gap:44px;align-items:start;max-width:980px}
+  .fphoto{border-radius:20px;overflow:hidden;border:1px solid var(--line-2);box-shadow:var(--sh-3);transform:rotate(-1.2deg)}
+  .fphoto{background:var(--bg-alt)}
+  .fphoto img{width:100%;height:350px;object-fit:cover;display:block}
+  .founder .bio p{font-size:15.5px;line-height:1.7;color:var(--ink-2);max-width:620px}
+  .founder .sig{margin-top:22px;font-family:'DM Mono',monospace;font-size:11.5px;letter-spacing:.03em;color:var(--ink-4)}
+  .founder .sig b{color:var(--ink);font-weight:600}
+  .founder .sig a{color:var(--red-3);font-weight:600}
+  .founder .sig a:hover{color:var(--red)}
+
+  /* ============ FAQ (expanded by design, not an accordion) ============ */
+  .faq{max-width:780px}
+  .qa{
+    border:1px solid var(--line);border-radius:14px;background:var(--card);
+    padding:22px 24px;margin-bottom:12px;box-shadow:var(--sh-1);
+  }
+  .qa h3{
+    font-family:'Archivo',sans-serif;font-size:17px;font-weight:700;
+    letter-spacing:-.005em;line-height:1.25;
+  }
+  .qa p{margin-top:10px;font-size:14.5px;line-height:1.65;color:var(--ink-3)}
+
+  /* ============ FOOTER ============ */
+  footer{background:var(--maroon);color:#f8f3ee;padding:64px 0 40px;position:relative;overflow:hidden}
+  footer .grain3{
+    position:absolute;inset:0;pointer-events:none;opacity:.4;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+  }
+  .foot{display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:46px;position:relative}
+  .foot h5{font-family:'DM Mono',monospace;font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;color:rgba(248,243,238,.38);margin-bottom:17px}
+  .foot a{display:block;font-size:13.5px;color:rgba(248,243,238,.66);margin-bottom:11px;transition:color .15s}
+  .foot a:hover{color:#fff}
+  .fbrand p{font-size:13px;color:rgba(248,243,238,.48);line-height:1.6;margin-top:15px;max-width:290px}
+  .copy{margin-top:48px;padding-top:26px;border-top:1px solid rgba(255,255,255,.07);
+    font-family:'DM Mono',monospace;font-size:10.5px;letter-spacing:.06em;color:rgba(248,243,238,.35);position:relative}
+
+  @media(max-width:960px){
+    .hero{padding:64px 0 76px}
+    .app{grid-template-columns:1fr;padding:34px}
+    .founder{grid-template-columns:1fr;gap:30px}
+    .fphoto{transform:none}
+    .fphoto img{height:280px}
+    .foot{grid-template-columns:1fr 1fr}
+  }
+  @media(max-width:720px){
+    .nav-links,.nav-search{display:none}
+    .wrap{padding:0 20px}
+    section{padding:52px 0}
+    h2.sec{font-size:30px}
+    .sec-head{flex-direction:column;align-items:flex-start;gap:10px}
+  }
+  @media(prefers-reduced-motion:reduce){
+    *{transition:none!important;animation:none!important;scroll-behavior:auto}
+    .h-anim{opacity:1;transform:none}
+    .rv{opacity:1;transform:none}
+  }
+</style>
+</head>
+<body>
+
+<div class="band">
+  <div class="grain"></div>
+  <nav>
+    <div class="wrap nav-in">
+      <a class="logo" href="#"><span class="mark"><b>P</b></span>PROMONIGHT</a>
+      <div class="nav-links">
+        <a href="#">Tonight</a><a href="#">This Week</a><a href="#">Best Promos</a>
+        <a href="#">Teams</a><a href="#">Leagues</a><a href="#">Venues</a>
+      </div>
+      <div class="nav-r">
+        <div class="nav-search">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+          search teams, promos
+        </div>
+        <a class="nav-cta" href="#">Get the App</a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="wrap">
+      <div class="eyebrow h-anim d1" style="color:rgba(248,243,238,.42)"><span class="dot" style="background:var(--red)"></span>Every promo at every game</div>
+      <h1 class="h-anim d1">Find the games<em>worth going to.</em></h1>
+      <p class="sub h-anim d2">Every giveaway, bobblehead, theme night, food deal and family event across 169 teams in seven leagues, pulled from official team sources.</p>
+      <div class="ctas h-anim d3">
+        <a class="btn btn-p" href="#">See tonight's promos
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
+        </a>
+        <a class="btn btn-g" href="#">Find your team</a>
+      </div>
+      <div class="hero-stats h-anim d4">
+        <div class="hstat"><div class="n">5,212</div><div class="l">Promos tracked</div></div>
+        <div class="hstat"><div class="n">169</div><div class="l">Teams</div></div>
+        <div class="hstat"><div class="n">7</div><div class="l">Leagues</div></div>
+        <div class="hstat"><div class="n">238</div><div class="l">Jersey nights</div></div>
+      </div>
+    </div>
+  </header>
+
+  <div class="ribbon" aria-hidden="true">
+    <div class="tick">
+      <span>Tonight</span><span>Local Artist Hat · Brewers · 6:40</span><span>Bucket Hat · Mets · 7:10</span><span>Country Night · Rangers · 7:05</span><span>Dollar Dogs · Orioles · 6:35</span><span>Kids Run the Bases · Twins · 7:07</span><span>Mini Tote · Valkyries · 7:00</span><span>Back to School · D-backs · 7:25</span><span>Squishy Dumpling · Red Sox · 7:10</span>
+      <span>Tonight</span><span>Local Artist Hat · Brewers · 6:40</span><span>Bucket Hat · Mets · 7:10</span><span>Country Night · Rangers · 7:05</span><span>Dollar Dogs · Orioles · 6:35</span><span>Kids Run the Bases · Twins · 7:07</span><span>Mini Tote · Valkyries · 7:00</span><span>Back to School · D-backs · 7:25</span><span>Squishy Dumpling · Red Sox · 7:10</span>
+    </div>
+  </div>
+</div>
+
+<!-- TONIGHT -->
+<section>
+  <div class="wrap rv">
+    <div class="sec-head">
+      <div>
+        <div class="eyebrow"><span class="dot" style="background:var(--red)"></span>Happening now</div>
+        <h2 class="sec">Tonight</h2>
+        <p class="lede">Eight promos at games starting in the next few hours.</p>
+      </div>
+      <a class="see-all" href="#">All tonight's promos
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
+      </a>
+    </div>
+
+    <div class="rail">
+      <a class="stub" href="#" style="--tc:#12284b">
+        <div class="spine"><span class="rot">Aug 18</span></div>
+        <span class="perf"></span><span class="notch top"></span><span class="notch bot"></span>
+        <div class="stub-body">
+          <div class="stub-top"><span class="stub-time">6:40 PM</span></div>
+          <h3>Local Artist Hat</h3>
+          <div class="stub-team"><span class="bar"></span>Milwaukee Brewers</div>
+          <div class="stub-foot">
+            <span class="tag t-give"><i></i>Giveaway</span>
+            <span class="bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          </div>
+        </div>
+      </a>
+
+      <a class="stub" href="#" style="--tc:#ff5910">
+        <div class="spine"><span class="rot">Aug 18</span></div>
+        <span class="perf"></span><span class="notch top"></span><span class="notch bot"></span>
+        <div class="stub-body">
+          <div class="stub-top"><span class="stub-time">7:10 PM</span><span class="stub-hot">HOT</span></div>
+          <h3>Reversible Bucket Hat</h3>
+          <div class="stub-team"><span class="bar"></span>New York Mets</div>
+          <div class="stub-foot">
+            <span class="tag t-give"><i></i>Giveaway</span>
+            <span class="bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          </div>
+        </div>
+      </a>
+
+      <a class="stub" href="#" style="--tc:#003278">
+        <div class="spine"><span class="rot">Aug 18</span></div>
+        <span class="perf"></span><span class="notch top"></span><span class="notch bot"></span>
+        <div class="stub-body">
+          <div class="stub-top"><span class="stub-time">7:05 PM</span></div>
+          <h3>Country Night</h3>
+          <div class="stub-team"><span class="bar"></span>Texas Rangers</div>
+          <div class="stub-foot">
+            <span class="tag t-theme"><i></i>Theme Night</span>
+            <span class="bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          </div>
+        </div>
+      </a>
+
+      <a class="stub" href="#" style="--tc:#df4601">
+        <div class="spine"><span class="rot">Aug 18</span></div>
+        <span class="perf"></span><span class="notch top"></span><span class="notch bot"></span>
+        <div class="stub-body">
+          <div class="stub-top"><span class="stub-time">6:35 PM</span></div>
+          <h3>Dollar Hot Dog Night</h3>
+          <div class="stub-team"><span class="bar"></span>Baltimore Orioles</div>
+          <div class="stub-foot">
+            <span class="tag t-food"><i></i>Food Deal</span>
+            <span class="bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          </div>
+        </div>
+      </a>
+
+      <a class="stub" href="#" style="--tc:#002b5c">
+        <div class="spine"><span class="rot">Aug 18</span></div>
+        <span class="perf"></span><span class="notch top"></span><span class="notch bot"></span>
+        <div class="stub-body">
+          <div class="stub-top"><span class="stub-time">7:07 PM</span></div>
+          <h3>Kids Run the Bases</h3>
+          <div class="stub-team"><span class="bar"></span>Minnesota Twins</div>
+          <div class="stub-foot">
+            <span class="tag t-kids"><i></i>Family Event</span>
+            <span class="bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="ad"><span>HEADER_LEADERBOARD · existing slot, already mounted here</span></div>
+  </div>
+</section>
+
+<!-- THIS WEEK -->
+<section class="alt">
+  <div class="wrap rv">
+    <div class="sec-head">
+      <div>
+        <div class="eyebrow"><span class="dot" style="background:var(--kids)"></span>Coming up</div>
+        <h2 class="sec">This Week</h2>
+        <p class="lede">The biggest promo at each game over the next seven days.</p>
+      </div>
+      <a class="see-all" href="#">This week's promos
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
+      </a>
+    </div>
+    <div class="week">
+      <a class="wday" href="#"><div class="wd-head"><span class="wd-day">TUE</span><span class="wd-date">08.19</span></div><div class="wd-body"><h4>Bobby Witt Jr. Bobblehead</h4><div class="t">Kansas City Royals</div></div></a>
+      <a class="wday" href="#"><div class="wd-head"><span class="wd-day">WED</span><span class="wd-date">08.20</span></div><div class="wd-body"><h4>Beach Hat</h4><div class="t">Baltimore Orioles</div></div></a>
+      <a class="wday" href="#"><div class="wd-head"><span class="wd-day">THU</span><span class="wd-date">08.21</span></div><div class="wd-body"><h4>Luka Dončić Bobblehead</h4><div class="t">Los Angeles Dodgers</div></div></a>
+      <a class="wday" href="#"><div class="wd-head"><span class="wd-day">FRI</span><span class="wd-date">08.22</span></div><div class="wd-body"><h4>City Connect Crossbody Bag</h4><div class="t">Kansas City Royals</div></div></a>
+      <a class="wday" href="#"><div class="wd-head"><span class="wd-day">SAT</span><span class="wd-date">08.23</span></div><div class="wd-body"><h4>Hunter Brown Button Down</h4><div class="t">Houston Astros</div></div></a>
+      <a class="wday" href="#"><div class="wd-head"><span class="wd-day">SUN</span><span class="wd-date">08.24</span></div><div class="wd-body"><h4>Sparks x Dodgers Jersey</h4><div class="t">Los Angeles Sparks</div></div></a>
+    </div>
+  </div>
+</section>
+
+<!-- BEST PROMOS -->
+<section>
+  <div class="wrap rv">
+    <div class="sec-head">
+      <div>
+        <div class="eyebrow"><span class="dot" style="background:var(--giveaway)"></span>Worth planning around</div>
+        <h2 class="sec">Best Promos</h2>
+        <p class="lede">The giveaways fans line up early for.</p>
+      </div>
+      <a class="see-all" href="#">Full rankings
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
+      </a>
+    </div>
+    <div class="rail">
+      <a class="stub" href="#" style="--tc:#005a9c">
+        <div class="spine"><span class="rot">Aug 26</span></div>
+        <span class="perf"></span><span class="notch top"></span><span class="notch bot"></span>
+        <div class="stub-body">
+          <div class="stub-top"><span class="stub-time">7:10 PM</span><span class="stub-hot">HOT</span></div>
+          <h3>Ohtani &amp; Decoy Bobblehead</h3>
+          <div class="stub-team"><span class="bar"></span>Los Angeles Dodgers</div>
+          <div class="stub-foot">
+            <span class="tag t-give"><i></i>Giveaway</span>
+            <span class="bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          </div>
+          <span class="rank">01</span>
+        </div>
+      </a>
+      <a class="stub" href="#" style="--tc:#ff5910">
+        <div class="spine"><span class="rot">Sep 5</span></div>
+        <span class="perf"></span><span class="notch top"></span><span class="notch bot"></span>
+        <div class="stub-body">
+          <div class="stub-top"><span class="stub-time">4:10 PM</span></div>
+          <h3>Mr. Met Bobblehead</h3>
+          <div class="stub-team"><span class="bar"></span>New York Mets</div>
+          <div class="stub-foot">
+            <span class="tag t-give"><i></i>Giveaway</span>
+            <span class="bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          </div>
+          <span class="rank">02</span>
+        </div>
+      </a>
+      <a class="stub" href="#" style="--tc:#13274f">
+        <div class="spine"><span class="rot">Sep 13</span></div>
+        <span class="perf"></span><span class="notch top"></span><span class="notch bot"></span>
+        <div class="stub-body">
+          <div class="stub-top"><span class="stub-time">1:35 PM</span></div>
+          <h3>Freddie Freeman Bobblehead</h3>
+          <div class="stub-team"><span class="bar"></span>Atlanta Braves</div>
+          <div class="stub-foot">
+            <span class="tag t-give"><i></i>Giveaway</span>
+            <span class="bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          </div>
+          <span class="rank">03</span>
+        </div>
+      </a>
+      <a class="stub" href="#" style="--tc:#002b5c">
+        <div class="spine"><span class="rot">Sep 20</span></div>
+        <span class="perf"></span><span class="notch top"></span><span class="notch bot"></span>
+        <div class="stub-body">
+          <div class="stub-top"><span class="stub-time">6:10 PM</span></div>
+          <h3>Fan Appreciation Night</h3>
+          <div class="stub-team"><span class="bar"></span>Minnesota Twins</div>
+          <div class="stub-foot">
+            <span class="tag t-theme"><i></i>Theme Night</span>
+            <span class="bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          </div>
+          <span class="rank">04</span>
+        </div>
+      </a>
+      <a class="stub" href="#" style="--tc:#78288c">
+        <div class="spine"><span class="rot">Sep 26</span></div>
+        <span class="perf"></span><span class="notch top"></span><span class="notch bot"></span>
+        <div class="stub-body">
+          <div class="stub-top"><span class="stub-time">7:00 PM</span></div>
+          <h3>Lynx Championship Tee</h3>
+          <div class="stub-team"><span class="bar"></span>Minnesota Lynx</div>
+          <div class="stub-foot">
+            <span class="tag t-give"><i></i>Giveaway</span>
+            <span class="bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          </div>
+          <span class="rank">05</span>
+        </div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- CATEGORIES -->
+<section class="alt">
+  <div class="wrap rv">
+    <div class="sec-head">
+      <div>
+        <div class="eyebrow">
+          <span class="dot" style="background:var(--food)"></span><span class="dot" style="background:var(--theme)"></span>
+          <span class="dot" style="background:var(--kids)"></span><span class="dot" style="background:var(--giveaway)"></span>
+          Browse
+        </div>
+        <h2 class="sec">By What You Want</h2>
+        <p class="lede">Every promo type across all seven leagues, in one list.</p>
+      </div>
+    </div>
+    <div class="cats">
+      <a class="cat" href="/promos/today" style="--cc:var(--red)">
+        <div class="ic"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></div>
+        <h4>Today</h4><p>Every promo at tonight's games</p><div class="cnt">8 promos</div>
+      </a>
+      <a class="cat" href="/promos/this-week" style="--cc:var(--kids)">
+        <div class="ic"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4M7 14h4v4H7z"/></svg></div>
+        <h4>This Week</h4><p>The next seven days</p><div class="cnt">46 promos</div>
+      </a>
+      <a class="cat" href="/promos/bobbleheads" style="--cc:var(--giveaway)">
+        <div class="ic"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"/><path d="M8.5 11.5C7 12.6 6 14.6 6 17v3h12v-3c0-2.4-1-4.4-2.5-5.5"/><path d="M9 20v2h6v-2"/></svg></div>
+        <h4>Bobbleheads</h4><p>Every bobblehead night tracked</p><div class="cnt">69 promos</div>
+      </a>
+      <a class="cat" href="/promos/theme-nights" style="--cc:var(--theme)">
+        <div class="ic"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.6l2.9 5.9 6.5.95-4.7 4.6 1.1 6.5-5.8-3-5.8 3 1.1-6.5-4.7-4.6 6.5-.95z"/></svg></div>
+        <h4>Theme Nights</h4><p>Star Wars, heritage, faith and more</p><div class="cnt">669 promos</div>
+      </a>
+      <a class="cat" href="/promos/jersey-giveaways" style="--cc:var(--theme)">
+        <div class="ic"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3l4 2 4-2 5 3-2.5 4L17 9v12H7V9l-1.5 1L3 6z"/></svg></div>
+        <h4>Jersey Giveaways</h4><p>Wear it home from the game</p><div class="cnt">238 promos</div>
+      </a>
+      <a class="cat" href="/promos/soccer-jersey-nights" style="--cc:var(--food)">
+        <div class="ic"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5l3.5 2.5-1.3 4h-4.4l-1.3-4z"/><path d="M12 3v4.5M4.2 9.6l4.3 3.4M19.8 9.6l-4.3 3.4M7.8 20.4l1.9-6.4M16.2 20.4l-1.9-6.4"/></svg></div>
+        <h4>Soccer Jersey Nights</h4><p>MLS kit giveaways</p><div class="cnt">31 promos</div>
+      </a>
+      <a class="cat" href="/promos/food-deals" style="--cc:var(--food)">
+        <div class="ic"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13c0-2.2 3.6-4 8-4s8 1.8 8 4-3.6 4-8 4-8-1.8-8-4z"/><path d="M3 13.5c-.6 1.6.4 3.4 2.4 4.3 3.9 1.8 9.3 1.8 13.2 0 2-.9 3-2.7 2.4-4.3"/></svg></div>
+        <h4>Food Deals</h4><p>Dollar dogs and pregame specials</p><div class="cnt">64 promos</div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- TEAMS -->
+<section>
+  <div class="wrap rv">
+    <div class="sec-head">
+      <div>
+        <div class="eyebrow"><span class="dot" style="background:var(--red)"></span>Explore</div>
+        <h2 class="sec">Find Your Team</h2>
+        <p class="lede">Full promo calendars for all 169 teams across seven leagues.</p>
+      </div>
+      <a class="see-all" href="#">All 169 teams
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
+      </a>
+    </div>
+    <div class="tabs">
+      <span class="tab on">All</span><span class="tab">MLB</span><span class="tab">NBA</span><span class="tab">NFL</span>
+      <span class="tab">NHL</span><span class="tab">MLS</span><span class="tab">WNBA</span><span class="tab">CFB</span>
+    </div>
+    <div class="teams">
+      <a class="team" href="#" style="--tc:#002b5c">
+        <span class="tm-lg">MLB</span>
+        <h4>Minnesota Twins</h4>
+        <div class="tm-count"><b>56</b><span>upcoming</span></div>
+      </a>
+      <a class="team" href="#" style="--tc:#00a3e0">
+        <span class="tm-lg">MLB</span>
+        <h4>Miami Marlins</h4>
+        <div class="tm-count"><b>52</b><span>upcoming</span></div>
+      </a>
+      <a class="team" href="#" style="--tc:#003278">
+        <span class="tm-lg">MLB</span>
+        <h4>Texas Rangers</h4>
+        <div class="tm-count"><b>52</b><span>upcoming</span></div>
+      </a>
+      <a class="team" href="#" style="--tc:#0c2c56">
+        <span class="tm-lg">MLB</span>
+        <h4>Seattle Mariners</h4>
+        <div class="tm-count"><b>47</b><span>upcoming</span></div>
+      </a>
+      <a class="team" href="#" style="--tc:#78288c">
+        <span class="tm-lg">WNBA</span>
+        <h4>Minnesota Lynx</h4>
+        <div class="tm-count"><b>24</b><span>upcoming</span></div>
+      </a>
+      <a class="team" href="#" style="--tc:#5d9741">
+        <span class="tm-lg">MLS</span>
+        <h4>Minnesota United</h4>
+        <div class="tm-count"><b>8</b><span>upcoming</span></div>
+      </a>
+    </div>
+    <div class="ad"><span>RECIRC_NATIVE · relocated from above the team finder</span></div>
+  </div>
+</section>
+
+<!-- GAMEDAY -->
+<section class="alt">
+  <div class="wrap rv">
+    <div class="sec-head">
+      <div>
+        <div class="eyebrow"><span class="dot" style="background:var(--kids)"></span>Plan your trip</div>
+        <h2 class="sec">Going to the Game?</h2>
+        <p class="lede">Everything you need once you have picked the night.</p>
+      </div>
+      <a class="see-all" href="#">Search venues
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
+      </a>
+    </div>
+    <div class="util">
+      <a class="u" href="/venues#venues-mlb"><div class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M9.5 17V7h3.2a3 3 0 0 1 0 6H9.5"/></svg></div><h4>Parking</h4><p>Lots and rates nearby</p><span class="ucount">155 venues</span></a>
+      <a class="u" href="/venues#venues-mlb"><div class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></div><h4>Bag Policy</h4><p>What you can bring in</p><span class="ucount">161 venues</span></a>
+      <a class="u" href="/venues#venues-mlb"><div class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="13" rx="3"/><path d="M5 10h14M8.5 20l-2 2M15.5 20l2 2M7 16v4h10v-4"/><circle cx="8.5" cy="13" r=".6" fill="currentColor"/><circle cx="15.5" cy="13" r=".6" fill="currentColor"/></svg></div><h4>Transit</h4><p>Trains, buses and routes</p><span class="ucount">124 venues</span></a>
+      <a class="u" href="/venues#venues-mlb"><div class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></div><h4>Gate Times</h4><p>When doors open</p><span class="ucount">111 venues</span></a>
+    </div>
+  </div>
+</section>
+
+<!-- APP -->
+<section>
+  <div class="wrap rv">
+    <div class="app">
+      <div class="grain2"></div>
+      <div>
+        <div class="eyebrow"><span class="dot" style="background:var(--red)"></span>Never miss a promo night</div>
+        <h2>Get promo alerts<br>for your teams.</h2>
+        <p class="sub2">The free app sends a notification the morning of every promo for the teams you follow. Everything else lives here on the web.</p>
+        <div class="stores">
+          <a class="store" href="#">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M16.4 12.7c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.9-3.5.9s-1.8-.9-3-.8c-1.5 0-2.9.9-3.7 2.3-1.6 2.7-.4 6.8 1.1 9 .8 1.1 1.7 2.3 2.9 2.2 1.2 0 1.6-.7 3-.7s1.8.7 3 .7 2-1.1 2.8-2.2c.9-1.2 1.2-2.5 1.2-2.5s-2.4-.9-2.4-3.6zM14.2 5.9c.6-.8 1-1.9.9-3-1 0-2.1.6-2.8 1.4-.6.7-1.1 1.8-1 2.9 1.1.1 2.2-.6 2.9-1.3z"/></svg>
+            <span><small>Download on the</small><b>App Store</b></span>
+          </a>
+          <a class="store" href="#">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M3.6 2.3c-.3.3-.5.8-.5 1.4v16.6c0 .6.2 1.1.5 1.4l.1.1 9.3-9.3v-.2L3.6 2.3zM16.2 15.6l-3.1-3.1v-.2l3.1-3.1.1.1 3.7 2.1c1 .6 1 1.6 0 2.2l-3.8 2zM15.9 15.9L12.7 12.7 3.4 22c.3.4.9.4 1.5.1l11-6.2M15.9 8.1L4.9 1.9c-.6-.3-1.2-.3-1.5.1l9.3 9.3 3.2-3.2z"/></svg>
+            <span><small>Get it on</small><b>Google Play</b></span>
+          </a>
+        </div>
+      </div>
+      <div class="review">
+        <div class="stars">★★★★★</div>
+        <p>"This app is sick. I could never keep track of all the promos for MLB games until now."</p>
+        <div class="attr">DaveyMcDaveFace1 · App Store review</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- NEWSLETTER -->
+<section style="padding-top:0">
+  <div class="wrap rv">
+    <div class="news">
+      <div>
+        <h3>Never miss a giveaway</h3>
+        <p>Every giveaway, theme night and food deal for the teams you follow, in one free email a week.</p>
+      </div>
+      <a class="btn btn-dark" href="#">Get the weekly email
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- FOUNDER -->
+<section class="alt">
+  <div class="wrap rv">
+    <div class="eyebrow"><span class="dot" style="background:var(--red)"></span>From the builder</div>
+    <h2 class="sec" style="margin-bottom:32px">Built by a Minnesota Sports Fan</h2>
+    <div class="founder">
+      <div class="fphoto"><img src="/matt-avatar.jpg" alt="Matt Kovalik, founder of PromoNight"></div>
+      <div class="bio">
+        <p>Hi, I'm Matt. I'm a Minnesota sports fan across the board: Twins, Vikings, Wild, Wolves, Lynx, Loons and Gophers. PromoNight started with the Twins, when I was trying to figure out which game to take my son to and realized there was no decent way to answer that question. Every team buries its promo schedule in a different corner of its website.</p>
+        <p style="margin-top:16px">What started as a list for myself now tracks every giveaway, theme night, food deal and kids event across 169 teams in seven leagues. If you have ever shown up to a game and found out you missed bobblehead night by a day, this is for you.</p>
+        <div class="sig"><b>Matt Kovalik</b> · Founder · <a href="/about">How we track promos →</a></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section>
+  <div class="wrap rv">
+    <div class="eyebrow"><span class="dot" style="background:var(--theme)"></span>FAQ</div>
+    <h2 class="sec" style="margin-bottom:32px">Questions? We've Got Answers.</h2>
+    <div class="faq">
+      <div class="qa"><h3>What is PromoNight?</h3><p>PromoNight tracks every promotional event at professional sports games across MLB, NBA, NFL, NHL, MLS, WNBA and college football. Giveaways, theme nights, food deals and kids events for 169 teams, in one calendar.</p></div>
+      <div class="qa"><h3>Where does the promo data come from?</h3><p>Directly from official team sources: team websites, ticketing platforms and press releases. Every promo is checked against the source page before it appears here.</p></div>
+      <div class="qa"><h3>How often is it updated?</h3><p>MLB schedules are rechecked weekly year-round. WNBA and MLS are rechecked weekly in season. Other leagues are updated as new announcements are confirmed.</p></div>
+      <div class="qa"><h3>Is PromoNight free?</h3><p>Yes. Browsing every team and every promo is free. PromoNight Pro adds push notifications the morning of each promo for the teams you follow.</p></div>
+      <div class="qa"><h3>Which leagues are covered?</h3><p>MLB, NBA, NFL, NHL, MLS, WNBA and college football, across 169 professional teams and 87 FBS schools.</p></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="grain3"></div>
+  <div class="wrap">
+    <div class="foot">
+      <div class="fbrand">
+        <a class="logo" href="#"><span class="mark"><b>P</b></span>PROMONIGHT</a>
+        <p>Every giveaway, theme night, food deal and promotion across 169 teams in MLB, NBA, NHL, NFL, MLS, WNBA and CFB.</p>
+      </div>
+      <div><h5>Explore</h5><a href="#">Tonight</a><a href="#">This week</a><a href="#">Best promos</a><a href="#">All teams</a><a href="#">Leagues</a></div>
+      <div><h5>Browse</h5><a href="#">Giveaways</a><a href="#">Bobbleheads</a><a href="#">Theme nights</a><a href="#">Food deals</a><a href="#">Family events</a></div>
+      <div><h5>Info</h5><a href="#">About</a><a href="#">FAQ</a><a href="#">Stadium guides</a><a href="#">Contact</a><a href="#">Privacy policy</a></div>
+    </div>
+    <div class="copy">© 2026 PromoNight · Kovalik Digital LLC</div>
+  </div>
+</footer>
+<!-- ADHESION_FOOTER: third existing ad slot, mounted globally, not represented visually here -->
+
+<script>
+  (function(){
+    if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var io = new IntersectionObserver(function(es){
+      es.forEach(function(e){
+        if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}
+      });
+    },{threshold:.08,rootMargin:'0px 0px -40px 0px'});
+    document.querySelectorAll('.rv').forEach(function(el){io.observe(el);});
+  })();
+</script>
+</body>
+</html>
