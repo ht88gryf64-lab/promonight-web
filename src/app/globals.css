@@ -57,7 +57,11 @@
   --font-display: var(--font-bebas-neue), sans-serif;
   --font-body: var(--font-dm-sans), sans-serif;
   --font-mono: var(--font-dm-mono), monospace;
-  --font-outfit: var(--font-outfit), sans-serif;
+  /* next/font's variable is --font-outfit-sans (renamed from --font-outfit)
+   * so this token no longer references itself; the old same-name cycle only
+   * resolved because the unlayered next/font class happened to beat the
+   * layered theme rule in the cascade. */
+  --font-outfit: var(--font-outfit-sans), sans-serif;
   /* Archivo (redesign). --font-archivo is set by next/font on the redesign
    * wrappers, NOT on <html>, so it only resolves inside the redesigned tree. */
   --font-rd: var(--font-archivo), system-ui, sans-serif;

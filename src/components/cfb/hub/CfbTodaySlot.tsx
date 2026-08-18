@@ -5,7 +5,7 @@
 // to the pro leagues' daily promo board (/promos/today). Dark-themed to match the
 // CFB hub. No em dashes (house rule).
 const GOLD = '#FFB71E';
-const SANS = 'var(--font-outfit), system-ui, sans-serif';
+const SANS = 'var(--font-outfit-sans), system-ui, sans-serif';
 
 export function CfbTodaySlot() {
   return (

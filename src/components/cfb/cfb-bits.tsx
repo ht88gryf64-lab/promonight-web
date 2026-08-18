@@ -11,7 +11,7 @@ import type { CfbGameView } from '@/lib/cfb/data';
 
 export const SERIF = 'var(--font-cfb-serif), Georgia, serif';
 export const MONO = 'var(--font-mono), ui-monospace, monospace';
-export const SANS = 'var(--font-outfit), system-ui, sans-serif';
+export const SANS = 'var(--font-outfit-sans), system-ui, sans-serif';
 
 export type RivalryTag = NonNullable<CfbGameView['rivalry']>;
 

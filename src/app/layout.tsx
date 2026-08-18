@@ -43,7 +43,7 @@ const dmMono = DM_Mono({
 const outfit = Outfit({
   weight: ['600', '700', '800', '900'],
   subsets: ['latin'],
-  variable: '--font-outfit',
+  variable: '--font-outfit-sans',
   display: 'swap',
 });
 
