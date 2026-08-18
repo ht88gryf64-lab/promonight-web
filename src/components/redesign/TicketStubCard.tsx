@@ -1,7 +1,7 @@
 'use client';
 
 import { IconFlame } from '@tabler/icons-react';
-import type { PromoWithTeam } from '@/lib/types';
+import type { PromoType, PromoWithTeam } from '@/lib/types';
 import type { GameContext } from '@/lib/data';
 import { teamDisplayName } from '@/lib/promo-helpers';
 import { chipInk } from '@/lib/chip-contrast';
@@ -35,10 +35,26 @@ import { useUpcomingPromoModal, type UpcomingPromoSurface } from './UpcomingProm
 
 const FALLBACK_SPINE = '#211d18'; // --color-rd-ink
 
+// Known tradeoff: a genuinely black-branded team and a missing value now
+// render identically; the ambiguity moved here rather than being resolved.
 function spineColor(primaryColor: string | undefined): string {
   if (!primaryColor || primaryColor === '#000000') return FALLBACK_SPINE;
   return primaryColor;
 }
+
+// Text ink for the category tag. The raw rd-cat token on its own 10% tint
+// fails AA at this size (giveaway 2.53:1, food 2.95:1, kids 4.49:1), the
+// exact failure mode the audit flagged on the team-card chip. These are the
+// target file's hand-tuned darker inks; all four clear 4.5:1 on the tint
+// (giveaway 4.71, theme 6.99, food 5.94, kids 6.23). The dot and the tint
+// still use the rd-cat token, so this is an ink for the existing palette,
+// not a fifth palette.
+const TAG_INK: Record<PromoType, string> = {
+  giveaway: '#a35a08',
+  theme: '#5b2fbd',
+  food: '#0d6b31',
+  kids: '#1d54ad',
+};
 
 function spineDate(dateStr: string): string {
   const d = new Date(dateStr + 'T12:00:00');
@@ -84,6 +100,10 @@ export function TicketStubCard({
       tabIndex={0}
       onClick={open}
       onKeyDown={(e) => {
+        // Keydowns from the nested star button bubble here; the star only
+        // stops propagation of its CLICK. Without this guard, Enter or Space
+        // on the star would toggle the star AND open the modal.
+        if (e.target !== e.currentTarget) return;
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
           open();
@@ -154,8 +174,10 @@ export function TicketStubCard({
         </div>
 
         {/* NOT a heading: the card can render inside the hero, and a heading
-            here would skip from the page h1 straight to h3s. */}
-        <p className="line-clamp-3 min-h-[54px] font-rd text-[27px] font-bold leading-none tracking-[0.004em] text-rd-ink transition-colors group-hover:text-rd-red">
+            here would skip from the page h1 straight to h3s. min-height equals
+            the clamp ceiling (3 lines x 27px leading-none = 81px) so the
+            reservation and the clamp agree and rail cards keep one rhythm. */}
+        <p className="line-clamp-3 min-h-[81px] font-rd text-[27px] font-bold leading-none tracking-[0.004em] text-rd-ink transition-colors group-hover:text-rd-red">
           {promo.title}
         </p>
 
@@ -170,7 +192,7 @@ export function TicketStubCard({
         <div className="mt-auto flex items-end justify-between gap-2 border-t border-rd-line pt-3">
           <span
             className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-mono text-[9px] font-semibold uppercase tracking-[0.14em]"
-            style={{ backgroundColor: `${catColor}1a`, color: catColor }}
+            style={{ backgroundColor: `${catColor}1a`, color: TAG_INK[promo.type] ?? TAG_INK.giveaway }}
           >
             <i aria-hidden className="h-1.5 w-1.5 flex-none rounded-full" style={{ background: catColor }} />
             {catLabel}
