@@ -4,6 +4,7 @@ import { getPromosFromDate } from '@/lib/data';
 import type { PromoWithTeam } from '@/lib/types';
 import { relLuminance } from '@/lib/chip-contrast';
 import { pickHeroBuckets } from '@/components/tonight-strip';
+import { pickBestStubPromos } from '@/components/redesign/pick-best-stub-promos';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 import { TicketStubPreview } from './preview-client';
 
@@ -70,10 +71,12 @@ export default async function TicketStubPreviewPage() {
   // a superset of the homepage's 14-day window and the picker only matches
   // dates inside its own sets, so no new query pattern is introduced.
   const tonight = pickHeroBuckets(allFuture, todayYMD).tonight;
+  // Server-side pick so only the top N serialize to the client.
+  const best = pickBestStubPromos(allFuture, 8);
 
   return (
     <div className={`${archivoHouse.variable} rd-root min-h-screen bg-rd-cream`}>
-      <TicketStubPreview promos={promos} tonight={tonight} />
+      <TicketStubPreview promos={promos} tonight={tonight} best={best} />
     </div>
   );
 }

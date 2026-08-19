@@ -33,9 +33,11 @@ function Rail({ promos, withRank }: { promos: PromoWithTeam[]; withRank?: boolea
 export function TicketStubPreview({
   promos,
   tonight,
+  best,
 }: {
   promos: PromoWithTeam[];
   tonight: PromoWithTeam[];
+  best: PromoWithTeam[];
 }) {
   const byLum = promos
     .map((p) => ({ p, lum: relLuminance(p.team.primaryColor ?? '#000000') }))
@@ -70,6 +72,26 @@ export function TicketStubPreview({
             items={tonight.map((p) => ({ promo: p, contexts: null }))}
             surface="web_home_tonight"
             starPlacement="homepage_this_week_inline"
+          />
+        </section>
+
+        <section className="mt-10 rounded-2xl border border-dashed border-rd-line-strong p-6">
+          <p className="mb-6 font-mono text-[10px] uppercase tracking-[0.22em] text-rd-ink-faint">
+            StubRail as BEST PROMOS · top {best.length} by stored score, zero new reads ·
+            scored leagues only (MLB, MLS, WNBA) · surface here is a placeholder pending
+            the proposed web_home_best
+          </p>
+          <StubRail
+            eyebrow="Worth planning around"
+            dotColor="var(--color-rd-cat-giveaway)"
+            heading="Best Promos"
+            lede="The giveaways fans line up early for."
+            seeAllHref="/best-promos"
+            seeAllLabel="Full rankings"
+            items={best.map((p) => ({ promo: p, contexts: null }))}
+            surface="web_home_tonight"
+            starPlacement="homepage_this_week_inline"
+            withRank
           />
         </section>
 
