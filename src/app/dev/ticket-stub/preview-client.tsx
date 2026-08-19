@@ -2,6 +2,7 @@
 
 import type { PromoWithTeam } from '@/lib/types';
 import { TicketStubCard } from '@/components/redesign/TicketStubCard';
+import { StubRail } from '@/components/redesign/StubRail';
 import { UpcomingPromoModalProvider } from '@/components/redesign/UpcomingPromoModal';
 import { relLuminance } from '@/lib/chip-contrast';
 
@@ -29,7 +30,13 @@ function Rail({ promos, withRank }: { promos: PromoWithTeam[]; withRank?: boolea
   );
 }
 
-export function TicketStubPreview({ promos }: { promos: PromoWithTeam[] }) {
+export function TicketStubPreview({
+  promos,
+  tonight,
+}: {
+  promos: PromoWithTeam[];
+  tonight: PromoWithTeam[];
+}) {
   const byLum = promos
     .map((p) => ({ p, lum: relLuminance(p.team.primaryColor ?? '#000000') }))
     .sort((a, b) => a.lum - b.lum);
@@ -48,7 +55,25 @@ export function TicketStubPreview({ promos }: { promos: PromoWithTeam[] }) {
           shared modal as the live homepage cards, firing the same events on the same surface.
         </p>
 
-        <h2 className="mt-12 font-rd text-lg font-bold text-rd-ink">Tonight-rail presentation</h2>
+        <section className="mt-14 rounded-2xl border border-dashed border-rd-line-strong p-6">
+          <p className="mb-6 font-mono text-[10px] uppercase tracking-[0.22em] text-rd-ink-faint">
+            StubRail as the TONIGHT section · real tonight bucket ({tonight.length} promos) ·
+            renders nothing when the bucket is empty
+          </p>
+          <StubRail
+            eyebrow="Happening now"
+            dotColor="var(--color-rd-red)"
+            heading="Tonight"
+            lede={`${tonight.length} promos at games starting today.`}
+            seeAllHref="/promos/today"
+            seeAllLabel="All tonight's promos"
+            items={tonight.map((p) => ({ promo: p, contexts: null }))}
+            surface="web_home_tonight"
+            starPlacement="homepage_this_week_inline"
+          />
+        </section>
+
+        <h2 className="mt-12 font-rd text-lg font-bold text-rd-ink">Card at rail density (curated worst-case set)</h2>
         <Rail promos={promos} />
 
         <h2 className="mt-10 font-rd text-lg font-bold text-rd-ink">Best-promos presentation (rank watermark)</h2>

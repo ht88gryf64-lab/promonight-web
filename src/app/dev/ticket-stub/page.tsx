@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { getPromosFromDate } from '@/lib/data';
 import type { PromoWithTeam } from '@/lib/types';
 import { relLuminance } from '@/lib/chip-contrast';
+import { pickHeroBuckets } from '@/components/tonight-strip';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 import { TicketStubPreview } from './preview-client';
 
@@ -62,11 +63,17 @@ export default async function TicketStubPreviewPage() {
     notFound();
   }
 
-  const promos = curate(await getPromosFromDate(chicagoTodayYMD()));
+  const todayYMD = chicagoTodayYMD();
+  const allFuture = await getPromosFromDate(todayYMD);
+  const promos = curate(allFuture);
+  // Real tonight bucket via the exact picker the homepage uses; allFuture is
+  // a superset of the homepage's 14-day window and the picker only matches
+  // dates inside its own sets, so no new query pattern is introduced.
+  const tonight = pickHeroBuckets(allFuture, todayYMD).tonight;
 
   return (
     <div className={`${archivoHouse.variable} rd-root min-h-screen bg-rd-cream`}>
-      <TicketStubPreview promos={promos} />
+      <TicketStubPreview promos={promos} tonight={tonight} />
     </div>
   );
 }
