@@ -13,6 +13,7 @@ import { GamedayUtilityGrid } from '@/components/redesign/GamedayUtilityGrid';
 import { AppDownloadBlock } from '@/components/redesign/AppDownloadBlock';
 import { FollowCTA } from '@/components/follow/FollowCTA';
 import { FounderBlock } from '@/components/redesign/FounderBlock';
+import { HomepageFAQ } from '@/components/homepage-faq';
 import { getVenueUtilityCounts } from '@/lib/venue-hub';
 import { TeamGrid } from '@/components/team-grid';
 import { archivoHouse } from '@/components/redesign/fonts-house';
@@ -207,6 +208,15 @@ export default async function TicketStubPreviewPage() {
             schema (that stays on /about) · team and league facts derived: {leagueNames.join(' ')}
           </p>
           <FounderBlock teamCount={allTeams.length} leagues={leagueNames} />
+        </div>
+
+        <div className="mt-10 rounded-2xl border border-dashed border-rd-line-strong p-6">
+          <p className="mb-6 font-mono text-[10px] uppercase tracking-[0.22em] text-rd-ink-faint">
+            FAQ · restyle only · every answer stays unconditionally in the DOM (no accordion, no
+            details/summary) so the Raptive word count is unchanged · HOMEPAGE_FAQS untouched, so
+            DOM and FAQPage JSON-LD read the same array
+          </p>
+          <HomepageFAQ variant="light" layout="card" />
         </div>
       </div>
     </div>
