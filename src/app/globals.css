@@ -361,6 +361,9 @@ body::before {
   overflow: hidden;
   background: #0d0505;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
+  /* Establishes the query container the copies below size themselves against.
+   * Safe: this element's width is set by its parent, never by its contents. */
+  container-type: inline-size;
 }
 .rd-root .rd-ticker::before,
 .rd-root .rd-ticker::after {
@@ -385,6 +388,18 @@ body::before {
   white-space: nowrap;
   will-change: transform;
   animation: rd-ticker-travel 46s linear infinite;
+}
+/* Each copy is at least as wide as the strip itself. Without this floor the
+ * track is purely content-sized, so on a low inventory night (the December
+ * case) one copy is narrower than the band: the -50% travel then drags a
+ * growing blank gap across the strip and visibly snaps back when it loops.
+ * Pinning each copy to one container width makes -50% exactly one copy in
+ * every case, busy or sparse, so the loop is seamless by construction. */
+.rd-root .rd-ticker-copy {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  min-width: 100cqw;
 }
 /* Mouse-only affordance. This is NOT the accessibility mechanism; the
  * reduced-motion block below is. */
