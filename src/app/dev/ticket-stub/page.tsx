@@ -12,6 +12,7 @@ import { deriveLeagueOrder } from '@/components/redesign/derive-league-order';
 import { GamedayUtilityGrid } from '@/components/redesign/GamedayUtilityGrid';
 import { AppDownloadBlock } from '@/components/redesign/AppDownloadBlock';
 import { FollowCTA } from '@/components/follow/FollowCTA';
+import { FounderBlock } from '@/components/redesign/FounderBlock';
 import { getVenueUtilityCounts } from '@/lib/venue-hub';
 import { TeamGrid } from '@/components/team-grid';
 import { archivoHouse } from '@/components/redesign/fonts-house';
@@ -97,6 +98,16 @@ export default async function TicketStubPreviewPage() {
   // stays a wiring decision; this exercises the slot with the December-proof
   // pick.
   const leagueCount = new Set(allTeams.map((t) => t.league)).size;
+
+  // League NAMES for the founder prose, ordered by how many teams each league
+  // contributes (alphabetical tiebreak). Derived, so no hardcoded league list
+  // decides the sentence, and season-stable because teams do not leave a
+  // league in the offseason.
+  const teamsPerLeague = new Map<string, number>();
+  for (const t of allTeams) teamsPerLeague.set(t.league, (teamsPerLeague.get(t.league) ?? 0) + 1);
+  const leagueNames = [...teamsPerLeague.keys()].sort(
+    (a, b) => (teamsPerLeague.get(b) ?? 0) - (teamsPerLeague.get(a) ?? 0) || a.localeCompare(b),
+  );
 
   // Team finder inputs: derived tab order plus a minimal replica of the
   // homepage's rankTeamsByFuturePromos (count upcoming promos per team, sort
@@ -187,6 +198,15 @@ export default async function TicketStubPreviewPage() {
             TeamStarPicker stay out of scope · same destination, same single event
           </p>
           <FollowCTA surface="web_homepage" layout="split" />
+        </div>
+
+        <div className="mt-10 rounded-2xl border border-dashed border-rd-line-strong p-6">
+          <p className="mb-6 font-mono text-[10px] uppercase tracking-[0.22em] text-rd-ink-faint">
+            FOUNDER · new light-only component, IndieDeveloperBlock untouched so the dark path
+            stays byte-stable · larger tilted portrait · byline plus /about link · NO Person
+            schema (that stays on /about) · team and league facts derived: {leagueNames.join(' ')}
+          </p>
+          <FounderBlock teamCount={allTeams.length} leagues={leagueNames} />
         </div>
       </div>
     </div>
