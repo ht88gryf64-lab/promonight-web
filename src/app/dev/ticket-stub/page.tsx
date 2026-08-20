@@ -14,6 +14,7 @@ import { AppDownloadBlock } from '@/components/redesign/AppDownloadBlock';
 import { FollowCTA } from '@/components/follow/FollowCTA';
 import { FounderBlock } from '@/components/redesign/FounderBlock';
 import { HomepageFAQ } from '@/components/homepage-faq';
+import { TonightRibbon } from '@/components/redesign/TonightRibbon';
 import { getVenueUtilityCounts } from '@/lib/venue-hub';
 import { TeamGrid } from '@/components/team-grid';
 import { archivoHouse } from '@/components/redesign/fonts-house';
@@ -138,6 +139,16 @@ export default async function TicketStubPreviewPage() {
         </p>
       </div>
       <HomeHero teamCount={allTeams.length} leagueCount={leagueCount} stats={heroStats} />
+      {/* Ribbon sits at the hero's bottom edge, exactly as in the target: same
+          tonight array as the rail below, so it duplicates nothing new. */}
+      <TonightRibbon items={tonight} />
+      <div className="mx-auto max-w-6xl px-6 pt-4">
+        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-rd-ink-faint">
+          RIBBON TICKER above · same pickHeroBuckets tonight array as the rail ({tonight.length}{' '}
+          items, no new query) · aria-hidden · pauses on hover · fully suppressed under
+          prefers-reduced-motion · renders nothing when tonight is empty
+        </p>
+      </div>
       <TicketStubPreview promos={promos} tonight={tonight} best={best} />
 
       <div className="mx-auto max-w-6xl px-6 pb-16">
