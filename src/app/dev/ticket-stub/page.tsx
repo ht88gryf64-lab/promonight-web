@@ -9,6 +9,8 @@ import { HomeHero } from '@/components/redesign/HomeHero';
 import { buildHomeCategoryTiles } from '@/components/redesign/home-category-tiles';
 import { HomeCategoryGrid } from '@/components/redesign/HomeCategoryGrid';
 import { deriveLeagueOrder } from '@/components/redesign/derive-league-order';
+import { GamedayUtilityGrid } from '@/components/redesign/GamedayUtilityGrid';
+import { getVenueUtilityCounts } from '@/lib/venue-hub';
 import { TeamGrid } from '@/components/team-grid';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 import { TicketStubPreview } from './preview-client';
@@ -70,10 +72,11 @@ export default async function TicketStubPreviewPage() {
   }
 
   const todayYMD = chicagoTodayYMD();
-  const [allFuture, allTeams, promoCount] = await Promise.all([
+  const [allFuture, allTeams, promoCount, venueCounts] = await Promise.all([
     getPromosFromDate(todayYMD),
     getAllTeams(),
     getPromoCount(),
+    getVenueUtilityCounts(),
   ]);
   const promos = curate(allFuture);
   // Real tonight bucket via the exact picker the homepage uses; allFuture is
@@ -86,12 +89,12 @@ export default async function TicketStubPreviewPage() {
   // Hero numbers, every one derived (the league-agnostic standing constraint):
   // teams from the teams collection, leagues from the distinct league values
   // on those teams (CFB is a separate stream, matching the existing teamCount
-  // convention), corpus count from getPromoCount. The fourth stat derives
-  // from the live corpus too; which count the shipped hero shows is a wiring
-  // decision (a season-stable count like venue guides is the December-proof
-  // pick; giveaways-ahead is shown here to exercise the slot with real data).
+  // convention), corpus count from getPromoCount. Fourth stat: verified venue
+  // guides — season-stable (venue logistics do not expire with a season), so
+  // the stats row never shows a zero in a winter corpus. Final stat choice
+  // stays a wiring decision; this exercises the slot with the December-proof
+  // pick.
   const leagueCount = new Set(allTeams.map((t) => t.league)).size;
-  const giveawaysAhead = allFuture.filter((p) => p.type === 'giveaway').length;
 
   // Team finder inputs: derived tab order plus a minimal replica of the
   // homepage's rankTeamsByFuturePromos (count upcoming promos per team, sort
@@ -109,7 +112,7 @@ export default async function TicketStubPreviewPage() {
     { value: promoCount.toLocaleString(), label: 'Promos tracked' },
     { value: String(allTeams.length), label: 'Teams' },
     { value: String(leagueCount), label: 'Leagues' },
-    { value: giveawaysAhead.toLocaleString(), label: 'Giveaways ahead' },
+    { value: String(venueCounts.verifiedTotal), label: 'Venue guides' },
   ];
 
   return (
@@ -155,6 +158,15 @@ export default async function TicketStubPreviewPage() {
             variant="light"
             leagueOrder={leagueOrder}
           />
+        </div>
+
+        <div className="mt-10 rounded-2xl border border-dashed border-rd-line-strong p-6">
+          <p className="mb-6 font-mono text-[10px] uppercase tracking-[0.22em] text-rd-ink-faint">
+            GAMEDAY UTILITY GRID · 4 cards mirroring the venue-hub render gates · counts derived
+            from Firestore each render · internal links to /venues only (per-topic anchors do not
+            exist; per-league anchors would break league-agnosticism) · season-independent
+          </p>
+          <GamedayUtilityGrid counts={venueCounts} />
         </div>
       </div>
     </div>
