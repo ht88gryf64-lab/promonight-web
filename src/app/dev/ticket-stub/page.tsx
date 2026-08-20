@@ -10,6 +10,7 @@ import { buildHomeCategoryTiles } from '@/components/redesign/home-category-tile
 import { HomeCategoryGrid } from '@/components/redesign/HomeCategoryGrid';
 import { deriveLeagueOrder } from '@/components/redesign/derive-league-order';
 import { GamedayUtilityGrid } from '@/components/redesign/GamedayUtilityGrid';
+import { AppDownloadBlock } from '@/components/redesign/AppDownloadBlock';
 import { getVenueUtilityCounts } from '@/lib/venue-hub';
 import { TeamGrid } from '@/components/team-grid';
 import { archivoHouse } from '@/components/redesign/fonts-house';
@@ -167,6 +168,15 @@ export default async function TicketStubPreviewPage() {
             exist; per-league anchors would break league-agnosticism) · season-independent
           </p>
           <GamedayUtilityGrid counts={venueCounts} />
+        </div>
+
+        <div className="mt-10 rounded-2xl border border-dashed border-rd-line-strong p-6">
+          <p className="mb-6 font-mono text-[10px] uppercase tracking-[0.22em] text-rd-ink-faint">
+            APP BLOCK · real App Store review as visual content only · NO Review,
+            AggregateRating, or SoftwareApplication schema · store links reuse
+            AppDownloadButtons unchanged (section=homepage_app_block)
+          </p>
+          <AppDownloadBlock />
         </div>
       </div>
     </div>
