@@ -1,10 +1,11 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { getPromosFromDate } from '@/lib/data';
+import { getAllTeams, getPromoCount, getPromosFromDate } from '@/lib/data';
 import type { PromoWithTeam } from '@/lib/types';
 import { relLuminance } from '@/lib/chip-contrast';
 import { pickHeroBuckets } from '@/components/tonight-strip';
 import { pickBestStubPromos } from '@/components/redesign/pick-best-stub-promos';
+import { HomeHero } from '@/components/redesign/HomeHero';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 import { TicketStubPreview } from './preview-client';
 
@@ -65,7 +66,11 @@ export default async function TicketStubPreviewPage() {
   }
 
   const todayYMD = chicagoTodayYMD();
-  const allFuture = await getPromosFromDate(todayYMD);
+  const [allFuture, allTeams, promoCount] = await Promise.all([
+    getPromosFromDate(todayYMD),
+    getAllTeams(),
+    getPromoCount(),
+  ]);
   const promos = curate(allFuture);
   // Real tonight bucket via the exact picker the homepage uses; allFuture is
   // a superset of the homepage's 14-day window and the picker only matches
@@ -74,8 +79,31 @@ export default async function TicketStubPreviewPage() {
   // Server-side pick so only the top N serialize to the client.
   const best = pickBestStubPromos(allFuture, 8);
 
+  // Hero numbers, every one derived (the league-agnostic standing constraint):
+  // teams from the teams collection, leagues from the distinct league values
+  // on those teams (CFB is a separate stream, matching the existing teamCount
+  // convention), corpus count from getPromoCount. The fourth stat derives
+  // from the live corpus too; which count the shipped hero shows is a wiring
+  // decision (a season-stable count like venue guides is the December-proof
+  // pick; giveaways-ahead is shown here to exercise the slot with real data).
+  const leagueCount = new Set(allTeams.map((t) => t.league)).size;
+  const giveawaysAhead = allFuture.filter((p) => p.type === 'giveaway').length;
+  const heroStats = [
+    { value: promoCount.toLocaleString(), label: 'Promos tracked' },
+    { value: String(allTeams.length), label: 'Teams' },
+    { value: String(leagueCount), label: 'Leagues' },
+    { value: giveawaysAhead.toLocaleString(), label: 'Giveaways ahead' },
+  ];
+
   return (
     <div className={`${archivoHouse.variable} rd-root min-h-screen bg-rd-cream`}>
+      <div className="mx-auto max-w-6xl px-6 pt-10">
+        <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.22em] text-rd-ink-faint">
+          HERO · replaces the inline hero at RedesignHomePage.tsx:104-167 · tonight cards move to
+          the rail below · no clock stamp (entry 21) · all numbers derived
+        </p>
+      </div>
+      <HomeHero teamCount={allTeams.length} leagueCount={leagueCount} stats={heroStats} />
       <TicketStubPreview promos={promos} tonight={tonight} best={best} />
     </div>
   );

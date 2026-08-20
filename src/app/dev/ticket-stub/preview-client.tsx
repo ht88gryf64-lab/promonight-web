@@ -51,7 +51,9 @@ export function TicketStubPreview({
         <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-rd-ink-faint">
           Dev preview · not linked anywhere · prod 404s this route
         </p>
-        <h1 className="rd-display mt-2 text-4xl uppercase text-rd-ink">Ticket Stub Card</h1>
+        {/* Not an h1: the HomeHero section above owns the page h1 now, and this
+            preview exists partly to review heading semantics as they'd ship. */}
+        <p className="rd-display mt-2 text-4xl uppercase text-rd-ink">Ticket Stub Card</p>
         <p className="mt-2 max-w-xl font-rd text-sm text-rd-ink-soft">
           {promos.length} real promos spanning all four types. Tap any card: it opens the same
           shared modal as the live homepage cards, firing the same events on the same surface.
