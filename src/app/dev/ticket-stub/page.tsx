@@ -8,6 +8,8 @@ import { pickBestStubPromos } from '@/components/redesign/pick-best-stub-promos'
 import { HomeHero } from '@/components/redesign/HomeHero';
 import { buildHomeCategoryTiles } from '@/components/redesign/home-category-tiles';
 import { HomeCategoryGrid } from '@/components/redesign/HomeCategoryGrid';
+import { deriveLeagueOrder } from '@/components/redesign/derive-league-order';
+import { TeamGrid } from '@/components/team-grid';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 import { TicketStubPreview } from './preview-client';
 
@@ -90,6 +92,19 @@ export default async function TicketStubPreviewPage() {
   // pick; giveaways-ahead is shown here to exercise the slot with real data).
   const leagueCount = new Set(allTeams.map((t) => t.league)).size;
   const giveawaysAhead = allFuture.filter((p) => p.type === 'giveaway').length;
+
+  // Team finder inputs: derived tab order plus a minimal replica of the
+  // homepage's rankTeamsByFuturePromos (count upcoming promos per team, sort
+  // descending) — enough for the preview to show real ordering and counts.
+  const leagueOrder = deriveLeagueOrder(allFuture);
+  const teamPromoCounts: Record<string, number> = {};
+  for (const t of allTeams) teamPromoCounts[t.id] = 0;
+  for (const p of allFuture) {
+    if (teamPromoCounts[p.team.id] !== undefined) teamPromoCounts[p.team.id]++;
+  }
+  const teamsForGrid = [...allTeams].sort(
+    (a, b) => (teamPromoCounts[b.id] ?? 0) - (teamPromoCounts[a.id] ?? 0),
+  );
   const heroStats = [
     { value: promoCount.toLocaleString(), label: 'Promos tracked' },
     { value: String(allTeams.length), label: 'Teams' },
@@ -115,6 +130,31 @@ export default async function TicketStubPreviewPage() {
             destination&apos;s own filter · zero-count tiles drop, all-zero hides the section
           </p>
           <HomeCategoryGrid tiles={buildHomeCategoryTiles(allFuture, todayYMD)} />
+        </div>
+
+        <div className="mt-10 rounded-2xl border border-dashed border-rd-line-strong p-6">
+          <p className="mb-6 font-mono text-[10px] uppercase tracking-[0.22em] text-rd-ink-faint">
+            TEAM FINDER · existing TeamGrid (light), one additive prop: leagueOrder derived from
+            upcoming inventory instead of the fixed LEAGUE_ORDER · derived order today:{' '}
+            {leagueOrder.join(' ')}
+          </p>
+          <div className="mb-4">
+            <h2 className="rd-display text-3xl uppercase text-rd-ink md:text-4xl">
+              Find Your Team
+            </h2>
+            <p className="mt-2 max-w-md font-rd text-sm text-rd-ink-soft">
+              Full promo calendars for all {allTeams.length} teams.
+            </p>
+          </div>
+          <TeamGrid
+            teams={teamsForGrid}
+            promoCounts={teamPromoCounts}
+            limitOnAll={12}
+            countLabel="upcoming"
+            surface="homepage"
+            variant="light"
+            leagueOrder={leagueOrder}
+          />
         </div>
       </div>
     </div>
