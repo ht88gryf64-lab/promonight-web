@@ -6,6 +6,8 @@ import { relLuminance } from '@/lib/chip-contrast';
 import { pickHeroBuckets } from '@/components/tonight-strip';
 import { pickBestStubPromos } from '@/components/redesign/pick-best-stub-promos';
 import { HomeHero } from '@/components/redesign/HomeHero';
+import { buildHomeCategoryTiles } from '@/components/redesign/home-category-tiles';
+import { HomeCategoryGrid } from '@/components/redesign/HomeCategoryGrid';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 import { TicketStubPreview } from './preview-client';
 
@@ -105,6 +107,16 @@ export default async function TicketStubPreviewPage() {
       </div>
       <HomeHero teamCount={allTeams.length} leagueCount={leagueCount} stats={heroStats} />
       <TicketStubPreview promos={promos} tonight={tonight} best={best} />
+
+      <div className="mx-auto max-w-6xl px-6 pb-16">
+        <div className="rounded-2xl border border-dashed border-rd-line-strong p-6">
+          <p className="mb-6 font-mono text-[10px] uppercase tracking-[0.22em] text-rd-ink-faint">
+            CATEGORY GRID · 7 tiles, one per real aggregator route · counts mirror each
+            destination&apos;s own filter · zero-count tiles drop, all-zero hides the section
+          </p>
+          <HomeCategoryGrid tiles={buildHomeCategoryTiles(allFuture, todayYMD)} />
+        </div>
+      </div>
     </div>
   );
 }
