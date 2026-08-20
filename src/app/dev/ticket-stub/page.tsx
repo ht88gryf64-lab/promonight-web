@@ -11,6 +11,7 @@ import { HomeCategoryGrid } from '@/components/redesign/HomeCategoryGrid';
 import { deriveLeagueOrder } from '@/components/redesign/derive-league-order';
 import { GamedayUtilityGrid } from '@/components/redesign/GamedayUtilityGrid';
 import { AppDownloadBlock } from '@/components/redesign/AppDownloadBlock';
+import { FollowCTA } from '@/components/follow/FollowCTA';
 import { getVenueUtilityCounts } from '@/lib/venue-hub';
 import { TeamGrid } from '@/components/team-grid';
 import { archivoHouse } from '@/components/redesign/fonts-house';
@@ -177,6 +178,15 @@ export default async function TicketStubPreviewPage() {
             AppDownloadButtons unchanged (section=homepage_app_block)
           </p>
           <AppDownloadBlock />
+        </div>
+
+        <div className="mt-10 rounded-2xl border border-dashed border-rd-line-strong p-6">
+          <p className="mb-6 font-mono text-[10px] uppercase tracking-[0.22em] text-rd-ink-faint">
+            NEWSLETTER · existing FollowCTA, one additive presentation prop (layout=split) · no
+            form: the design target has no input element anywhere, so FollowForm and
+            TeamStarPicker stay out of scope · same destination, same single event
+          </p>
+          <FollowCTA surface="web_homepage" layout="split" />
         </div>
       </div>
     </div>
