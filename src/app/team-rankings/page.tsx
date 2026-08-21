@@ -214,9 +214,13 @@ export default async function TeamRankingsPage() {
             </Suspense>
 
             <div className="mt-8">
-              <Suspense fallback={null}>
-                <TeamRankingsList teamScores={teamScores} topPromos={topPromos} variant="light" />
-              </Suspense>
+              {/* No Suspense wrapper here on purpose. TeamRankingsList owns its
+                  own boundary around the null-rendering param reader, so a
+                  boundary at this level would be redundant AND harmful: it
+                  re-triggers a client-side render of the whole list after
+                  hydration, leaving a duplicate hidden copy of every row in
+                  the DOM. See known-issues entry 33. */}
+              <TeamRankingsList teamScores={teamScores} topPromos={topPromos} variant="light" />
             </div>
 
             <section className="mt-16">
@@ -281,12 +285,11 @@ export default async function TeamRankingsPage() {
           </Suspense>
 
           <div className="mt-10">
-            <Suspense fallback={null}>
-              <TeamRankingsList
-                teamScores={teamScores}
-                topPromos={topPromos}
-              />
-            </Suspense>
+            {/* No Suspense wrapper: see the note on the gate-on branch above. */}
+            <TeamRankingsList
+              teamScores={teamScores}
+              topPromos={topPromos}
+            />
           </div>
 
           <section className="mt-16 pt-10 border-t border-border-subtle">
