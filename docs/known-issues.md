@@ -1459,3 +1459,59 @@ redesigned seven-tile grid maps to `today`, `this_week`, `bobbleheads`,
 The value is deliberately left in the union rather than removed, so historical
 data keeps a valid type and the cliff stays legible.
 
+## 32. The homepage cannot be revalidated on demand
+
+**Status: OPEN, fix shape known, deliberately not applied yet. Filed
+2026-08-21.** `PATH_RE` in `src/app/api/revalidate/route.ts:39` is
+`/^\/[a-z0-9-]+(?:\/[a-z0-9-]+){0,2}$/`, which requires at least one path
+segment. The bare root `/` therefore fails validation and the endpoint returns
+`invalid_path` with a 400, failing the whole batch by design.
+
+**Why it matters more here than on any other route.** The homepage is the one
+indexed route whose content goes stale on a pure date rollover with no data
+write: its Tonight cards are date-derived, so at midnight they are wrong even
+though nothing in Firestore changed. That is why `/` carries
+`revalidate = 21600` rather than a longer window. Today the only way to force
+it fresh is to redeploy, which is a heavy and unrelated action.
+
+**Fix shape, one line:** anchor an alternation that admits exactly the root and
+nothing else.
+
+```ts
+const PATH_RE = /^\/$|^\/[a-z0-9-]+(?:\/[a-z0-9-]+){0,2}$/;
+```
+
+**Does allowing the root open anything else? Two answers, and the second is
+the one to remember.**
+
+1. At the regex level, no. `^\/$` is fully anchored and admits exactly the
+   one-character string `/`. The charset, the segment cap and the rejection of
+   uppercase, underscores, dots, query strings and trailing slashes are all
+   unchanged.
+
+2. At the behavior level, no TODAY, but only because of an argument the
+   endpoint does not pass. Next.js `revalidatePath(path, type?)` defaults
+   `type` to `'page'`, which "invalidates any path that matches the provided
+   page file" and "does not invalidate pages beneath it". The endpoint calls
+   `revalidatePath(p)` with no second argument, so `/` would revalidate the
+   homepage alone. But `revalidatePath('/', 'layout')` is documented to purge
+   the Client Cache and invalidate ALL cached data sitewide. So once `/` is an
+   accepted input, the endpoint is one added argument away from a sitewide
+   purge reachable by anyone holding the secret. If the root is allowed, the
+   `type` parameter should be explicitly pinned to `'page'` at the call site in
+   the same commit, with a comment saying why.
+
+**The one-line fix is not one site.** The pattern is duplicated four times and
+one copy asserts it as a literal string:
+
+- `src/app/api/revalidate/route.ts:39`, the endpoint
+- `promo-pipeline/lib/revalidate-notify.js:22`, the client, which silently
+  drops paths the endpoint would accept if it is not widened in step
+- `src/lib/__tests__/venue-bag-policies.test.ts:182`, a mirror of the endpoint
+  pattern
+- `promo-pipeline/test/revalidate-notify.test.js:24`, a coupling test holding
+  the pattern as the string `"^\\/[a-z0-9-]+(?:\\/[a-z0-9-]+){0,2}$"`
+
+Widening the endpoint alone leaves the pipeline unable to send the root, and
+the coupling test red. This is a two-repo change.
+
