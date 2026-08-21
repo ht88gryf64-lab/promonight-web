@@ -166,7 +166,12 @@ export default async function TeamRankingsPage() {
         name: teamDisplayName(t.team),
         sport: t.league,
         url: `https://www.getpromonight.com/${t.team.sportSlug}/${t.team.id}`,
-        description: `Team promo score ${t.teamScore}. ${t.promoCount} promos scored, ${t.highlightCount} highlighted.`.slice(0, 280),
+        // Scope is explicit because this is structured data. promoCount and
+        // highlightCount are both computed by scoreTeam over the SAME
+        // non-recurring lifetime array, so one scope word covers both, and
+        // "of them" pins the highlight figure to that same population rather
+        // than leaving it readable as a separate current-state number.
+        description: `Team promo score ${t.teamScore}. ${t.promoCount} all-time promos scored, ${t.highlightCount} of them highlighted.`.slice(0, 280),
       },
     })),
   };

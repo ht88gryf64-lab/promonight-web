@@ -1293,6 +1293,22 @@ export interface LeagueHubStats {
 // promos per team). teamsWithPromosThisWeek is the distinct team count in the
 // slate. getAllTeamScores is already scoped to SCORED_LEAGUES (MLB/MLS/WNBA), so
 // WNBA and MLS rows are present today.
+//
+// SCOPE, and the labels depend on it: teamScores.promoCount is a LIFETIME tally.
+// scoreTeam counts every non-recurring scored promo a team has ever had, with no
+// date filter (promo-pipeline/lib/scoring/score-team.js), so totalPromos and
+// avgPerTeam describe the whole archive rather than the current season or what is
+// upcoming. HubStatBar therefore labels both of them all-time explicitly. Do not
+// relabel either one as current state, and do not redefine promoCount to fix it:
+// promoCount is the denominator of averagePromoScore, which is stored, displayed
+// on /team-rankings, and described on /best-promos/bobbleheads, so changing its
+// meaning silently moves a score on another page. An upcoming figure, if one is
+// ever wanted here, needs its own field rather than a redefinition of this one.
+//
+// The non-recurring exclusion is currently a no-op: zero visible promos across
+// MLB, MLS and WNBA carry recurring:true (checked 2026-08-21, 3,226 promos), so
+// the all-time label is exact today. It would become an overstatement only if
+// recurring promos start landing in the promos subcollection.
 export async function getLeagueHubStats(league: string): Promise<LeagueHubStats> {
   const [scores, slate, teams] = await Promise.all([
     getAllTeamScores(),
