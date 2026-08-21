@@ -81,12 +81,12 @@ const FAQS = [
   {
     question: 'What does variety bonus mean?',
     answer:
-      'Variety bonus rewards teams whose schedule has multiple promo types rather than running only one. A team with 2 bobbleheads earns less variety bonus than a team with a bobblehead, a jersey, a theme night, and a kids day. The bonus caps at 8 points for teams running all four major types.',
+      'Variety bonus rewards teams whose schedule has multiple promo types rather than running only one. A team with 2 bobbleheads earns less variety bonus than a team with a bobblehead, a jersey, a theme night, and a kids day. It pays 3 points for two types, 8 for three, and 15 for all four. A type counts once the team has at least one promo of that type scoring 30 or higher.',
   },
   {
     question: 'How are bonuses applied to the final team score?',
     answer:
-      'A team\'s score equals: average promo score, plus variety bonus (max 8 points), plus hot-promo bonus capped at 20 points. A team running 16 or more highlighted promos hits the hot-promo cap; additional highlighted promos do not lift the score further but do strengthen team appeal in the underlying data.',
+      'A team\'s score equals its total promo score divided by its home-game count, times 1.5, plus a variety bonus of up to 15 points, plus a hot-promo bonus of 2 points per highlighted promo capped at 20. Recurring promos are excluded. A team running 10 or more highlighted promos hits the hot-promo cap; additional highlighted promos do not lift the score further but do strengthen team appeal in the underlying data. Team scores are not on a 0 to 100 scale and can exceed 100.',
   },
 ];
 
