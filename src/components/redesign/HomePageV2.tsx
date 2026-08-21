@@ -16,7 +16,7 @@ import { GamedayUtilityGrid } from './GamedayUtilityGrid';
 import { AppDownloadBlock } from './AppDownloadBlock';
 import { FounderBlock } from './FounderBlock';
 
-import { HomepageJsonLd } from '@/components/homepage-json-ld';
+import { HomepageJsonLd, type HomepageCounts } from '@/components/homepage-json-ld';
 import { TeamGrid } from '@/components/team-grid';
 import { FollowCTA } from '@/components/follow/FollowCTA';
 import { HomepageFAQ } from '@/components/homepage-faq';
@@ -56,6 +56,9 @@ export interface HomePageV2Props {
   /** League names for the founder prose, ordered by the caller. */
   leagueNames: string[];
   heroStats: HomeHeroStat[];
+  /** Derived coverage facts shared by the hero, the visible FAQ, and the
+   *  FAQPage schema. */
+  counts: HomepageCounts;
   resolvedContexts: Map<string, GameContext[]>;
 }
 
@@ -72,6 +75,7 @@ export function HomePageV2({
   leagueCount,
   leagueNames,
   heroStats,
+  counts,
   resolvedContexts,
 }: HomePageV2Props) {
   const contextsFor = (p: PromoWithTeam): GameContext[] | null =>
@@ -99,7 +103,7 @@ export function HomePageV2({
   return (
     <UpcomingPromoModalProvider showTeamLink>
       <div className={`${archivoHouse.variable} rd-root min-h-screen`}>
-        <HomepageJsonLd />
+        <HomepageJsonLd counts={counts} />
 
         <HomeHero teamCount={teamCount} leagueCount={leagueCount} stats={heroStats} />
 
@@ -179,7 +183,7 @@ export function HomePageV2({
             seeAllHref="/best-promos"
             seeAllLabel="Full rankings"
             items={bestPromos.map((p) => ({ promo: p, contexts: contextsFor(p) }))}
-            surface="web_home_tonight"
+            surface="web_home_best"
             starPlacement="homepage_this_week_inline"
             withRank
           />
@@ -237,7 +241,7 @@ export function HomePageV2({
           <FounderBlock teamCount={teamCount} leagues={leagueNames} />
         </section>
 
-        <HomepageFAQ variant="light" layout="card" />
+        <HomepageFAQ variant="light" layout="card" counts={counts} />
 
         <div className="mx-auto max-w-6xl px-6 py-4">
           <AdSlot config={AD_SLOTS.ADHESION_FOOTER} pageType="homepage" />

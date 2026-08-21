@@ -1,15 +1,65 @@
 import type { FAQItem } from '@/lib/promo-helpers';
+import type { Team } from '@/lib/types';
+import { LEAGUE_ORDER } from '@/lib/types';
 
-const HOMEPAGE_FAQS: FAQItem[] = [
+/** Coverage facts the homepage states in prose and in schema. Derived from the
+ *  teams collection the homepage already fetches, never written by hand: the
+ *  literals these replaced had gone stale before and there is no alarm that
+ *  would catch it. */
+export interface HomepageCounts {
+  teamCount: number;
+  leagueCount: number;
+  /** [league, teams] in canonical presentation order. */
+  leagueBreakdown: Array<[string, number]>;
+}
+
+export function homepageCountsFromTeams(teams: Team[]): HomepageCounts {
+  const per = new Map<string, number>();
+  for (const t of teams) per.set(t.league, (per.get(t.league) ?? 0) + 1);
+  // Canonical order rather than a derived one on purpose. This string is
+  // published as FAQPage answer text on both homepage gate variants, and the
+  // standing constraint is that the gate-off page stays byte-identical. The
+  // COUNTS are what go stale and are derived; the presentation order is not a
+  // fact about the data.
+  const leagueBreakdown = LEAGUE_ORDER.filter((l) => per.has(l)).map(
+    (l) => [l, per.get(l) as number] as [string, number],
+  );
+  for (const [league, n] of per) {
+    if (!leagueBreakdown.some(([l]) => l === league)) leagueBreakdown.push([league, n]);
+  }
+  return { teamCount: teams.length, leagueCount: per.size, leagueBreakdown };
+}
+
+// Spelled-out small numbers, so deriving a count does not silently rewrite
+// "six professional sports leagues" as "6 professional sports leagues".
+const NUMBER_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+function numberWord(n: number): string {
+  return NUMBER_WORDS[n] ?? String(n);
+}
+
+function leagueList(breakdown: Array<[string, number]>): string {
+  const names = breakdown.map(([l]) => l);
+  if (names.length <= 1) return names[0] ?? '';
+  return `${names.slice(0, -1).join(', ')}, and ${names[names.length - 1]}`;
+}
+
+function leagueSplit(breakdown: Array<[string, number]>): string {
+  const parts = breakdown.map(([l, n]) => `${n} ${l} teams`);
+  if (parts.length <= 1) return parts[0] ?? '';
+  return `${parts.slice(0, -1).join(', ')}, and ${parts[parts.length - 1]}`;
+}
+
+export function buildHomepageFaqs(c: HomepageCounts): FAQItem[] {
+  return [
   {
     question: 'What is PromoNight?',
     answer:
-      'PromoNight is a free mobile app that tracks every promotional event at professional sports games across MLB, NBA, NFL, NHL, MLS, and WNBA. It shows giveaway nights, theme nights, food deals, and kids events for all 169 teams in one calendar view.',
+      `PromoNight is a free mobile app that tracks every promotional event at professional sports games across ${leagueList(c.leagueBreakdown)}. It shows giveaway nights, theme nights, food deals, and kids events for all ${c.teamCount} teams in one calendar view.`,
   },
   {
     question: 'How many teams does PromoNight cover?',
     answer:
-      'PromoNight tracks promotional schedules for 169 teams across six professional sports leagues: 30 MLB teams, 30 NBA teams, 32 NFL teams, 32 NHL teams, 30 MLS teams, and 15 WNBA teams.',
+      `PromoNight tracks promotional schedules for ${c.teamCount} teams across ${numberWord(c.leagueCount)} professional sports leagues: ${leagueSplit(c.leagueBreakdown)}.`,
   },
   {
     question: 'Is PromoNight free?',
@@ -26,11 +76,11 @@ const HOMEPAGE_FAQS: FAQItem[] = [
     answer:
       'PromoNight aggregates promotional schedules directly from official team sources, including team websites, ticketing platforms, and press releases. MLB, WNBA, and MLS schedules are rechecked weekly in season, and other leagues are updated as new announcements are confirmed.',
   },
-];
+  ];
+}
 
-export { HOMEPAGE_FAQS };
-
-export function HomepageJsonLd() {
+export function HomepageJsonLd({ counts }: { counts: HomepageCounts }) {
+  const faqs = buildHomepageFaqs(counts);
   const schemas = [
     {
       '@context': 'https://schema.org',
@@ -39,7 +89,7 @@ export function HomepageJsonLd() {
       url: 'https://www.getpromonight.com',
       logo: 'https://www.getpromonight.com/logo.png',
       description:
-        'PromoNight tracks every giveaway, theme night, food deal, and promotion across 169 professional sports teams in MLB, NBA, NFL, NHL, MLS, and WNBA.',
+        `PromoNight tracks every giveaway, theme night, food deal, and promotion across ${counts.teamCount} professional sports teams in ${leagueList(counts.leagueBreakdown)}.`,
       email: 'hello@getpromonight.com',
       sameAs: [
         'https://x.com/promo_night_app',
@@ -52,7 +102,7 @@ export function HomepageJsonLd() {
       name: 'PromoNight',
       url: 'https://www.getpromonight.com',
       description:
-        'Track every giveaway, theme night, food deal, and promotion across 169 professional sports teams.',
+        `Track every giveaway, theme night, food deal, and promotion across ${counts.teamCount} professional sports teams.`,
     },
     // SoftwareApplication intentionally omitted: Google's Software App rich
     // result requires aggregateRating (or review) alongside offers, and we have
@@ -62,7 +112,7 @@ export function HomepageJsonLd() {
     {
       '@context': 'https://schema.org',
       '@type': 'FAQPage',
-      mainEntity: HOMEPAGE_FAQS.map((faq) => ({
+      mainEntity: faqs.map((faq) => ({
         '@type': 'Question',
         name: faq.question,
         acceptedAnswer: {

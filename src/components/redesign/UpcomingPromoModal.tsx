@@ -13,6 +13,10 @@ import { GameExpand, LegacyPromoExpand } from './GameExpand';
 // feed this one provider.
 export type UpcomingPromoSurface =
   | 'web_home_tonight'
+  // Ranked best-promos rail on the homepage. Its own value so a tap on a
+  // score-ranked card is separable from a tonight-bucket tap; the two rails
+  // render the same card component and would otherwise be indistinguishable.
+  | 'web_home_best'
   | 'web_home_this_week'
   | 'web_team_page_promolist';
 

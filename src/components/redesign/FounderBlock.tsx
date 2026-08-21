@@ -16,6 +16,11 @@ import Link from 'next/link';
 // own next/image: AvatarMatt is square-only by construction and is shared
 // with /about.
 //
+// The source is matt-founder-portrait.jpg, a 640x772 crop supplied for this
+// treatment. The square matt-avatar.jpg stays in place for /about and every
+// AvatarMatt render. At 640x772 the 290x350 box has real 2x headroom, so the
+// earlier upscale caveat is resolved.
+//
 // Prose is carried over verbatim from IndieDeveloperBlock except for the
 // team and league facts, which were hardcoded there and are derived props
 // here (the homepage rule that no count is written by hand).
@@ -54,7 +59,7 @@ export function FounderBlock({ teamCount, leagues }: FounderBlockProps) {
       <div className="grid max-w-[980px] gap-8 md:grid-cols-[290px_1fr] md:items-start md:gap-11">
         <div className="overflow-hidden rounded-[20px] border border-rd-line-strong bg-rd-cream shadow-[0_2px_6px_rgba(26,16,14,0.06),0_22px_48px_-14px_rgba(26,16,14,0.2)] md:[transform:rotate(-1.2deg)]">
           <Image
-            src="/matt-avatar.jpg"
+            src="/matt-founder-portrait.jpg"
             alt="Matt Kovalik, founder of PromoNight"
             width={290}
             height={350}

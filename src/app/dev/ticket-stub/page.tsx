@@ -14,6 +14,7 @@ import { AppDownloadBlock } from '@/components/redesign/AppDownloadBlock';
 import { FollowCTA } from '@/components/follow/FollowCTA';
 import { FounderBlock } from '@/components/redesign/FounderBlock';
 import { HomepageFAQ } from '@/components/homepage-faq';
+import { homepageCountsFromTeams } from '@/components/homepage-json-ld';
 import { TonightRibbon } from '@/components/redesign/TonightRibbon';
 import { getVenueUtilityCounts } from '@/lib/venue-hub';
 import { TeamGrid } from '@/components/team-grid';
@@ -227,7 +228,7 @@ export default async function TicketStubPreviewPage() {
             details/summary) so the Raptive word count is unchanged · HOMEPAGE_FAQS untouched, so
             DOM and FAQPage JSON-LD read the same array
           </p>
-          <HomepageFAQ variant="light" layout="card" />
+          <HomepageFAQ variant="light" layout="card" counts={homepageCountsFromTeams(allTeams)} />
         </div>
       </div>
     </div>

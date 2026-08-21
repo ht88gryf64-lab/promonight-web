@@ -18,7 +18,7 @@ import { TeamGrid } from '@/components/team-grid';
 import { AppDownloadButtons } from '@/components/app-download-buttons';
 import { IndieDeveloperBlock } from '@/components/indie-developer-block';
 import { HomepageFAQ } from '@/components/homepage-faq';
-import { HomepageJsonLd } from '@/components/homepage-json-ld';
+import { HomepageJsonLd, homepageCountsFromTeams } from '@/components/homepage-json-ld';
 import { TrackedTapLink } from '@/components/analytics/TrackedTapLink';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { AD_SLOTS } from '@/lib/ads/slots';
@@ -317,6 +317,10 @@ export default async function HomePage() {
   const teamsForGrid: Team[] = sortedTeams;
 
   const lastUpdated = formatChicagoLong(today);
+  // Coverage facts derived from the teams already fetched above. Replaces the
+  // hardcoded 169, the per-league split, and the league count that shipped in
+  // homepage prose and in FAQPage schema on both gate variants.
+  const homepageCounts = homepageCountsFromTeams(allTeams);
 
   // Gate-ON: render the redesigned light homepage from the SAME computed data,
   // preserving every analytics event. Gate-OFF falls through to the existing
@@ -336,6 +340,7 @@ export default async function HomePage() {
         promoCount={promoCount}
         teamCount={allTeams.length}
         lastUpdated={lastUpdated}
+        counts={homepageCounts}
         resolvedContexts={resolvedContexts}
       />
     );
@@ -343,7 +348,7 @@ export default async function HomePage() {
 
   return (
     <>
-      <HomepageJsonLd />
+      <HomepageJsonLd counts={homepageCounts} />
 
       {/* Hero */}
       <section className="relative pt-28 pb-12 md:pb-16 px-6 overflow-hidden">
@@ -357,7 +362,7 @@ export default async function HomePage() {
             EVERY PROMO AT EVERY GAME.
           </h1>
           <p className="text-text-secondary text-lg md:text-xl leading-relaxed max-w-2xl mb-4">
-            {allTeams.length} teams, 6 leagues, from official team announcements. Find
+            {allTeams.length} teams, {homepageCounts.leagueCount} leagues, from official team announcements. Find
             tonight&apos;s giveaways, theme nights, and food deals.
           </p>
           <p className="font-mono text-[11px] tracking-[0.08em] uppercase text-text-muted mb-10">
@@ -405,7 +410,7 @@ export default async function HomePage() {
                 Find your team
               </span>
               <h2 className="font-display text-3xl md:text-4xl tracking-[1px] mt-2">
-                {allTeams.length} TEAMS ACROSS 6 LEAGUES
+                {allTeams.length} TEAMS ACROSS {homepageCounts.leagueCount} LEAGUES
               </h2>
             </div>
             <Link
@@ -442,7 +447,7 @@ export default async function HomePage() {
       </section>
 
       {/* Built by Matt */}
-      <IndieDeveloperBlock />
+      <IndieDeveloperBlock teamCount={allTeams.length} />
 
       {/* App download — single small section */}
       <section className="py-16 px-6 border-t border-border-subtle">
@@ -464,7 +469,7 @@ export default async function HomePage() {
       </section>
 
       {/* FAQ */}
-      <HomepageFAQ />
+      <HomepageFAQ counts={homepageCounts} />
 
       <section className="px-6 py-4">
         <AdSlot config={AD_SLOTS.ADHESION_FOOTER} pageType="homepage" />

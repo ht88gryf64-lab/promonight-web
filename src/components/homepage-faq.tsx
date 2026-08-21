@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { HOMEPAGE_FAQS } from './homepage-json-ld';
+import { buildHomepageFaqs, type HomepageCounts } from './homepage-json-ld';
 import { event } from '@/lib/analytics';
 
 // Answers are ALWAYS in the DOM and always visible. There is no accordion and
@@ -9,16 +9,20 @@ import { event } from '@/lib/analytics';
 // visible-word baseline and collapsed answers are not measured. Both layouts
 // below render every answer unconditionally.
 //
-// The FAQPage JSON-LD does not need syncing by hand. HOMEPAGE_FAQS is declared
-// once in homepage-json-ld.tsx and read by two consumers: the structured data
-// there and the DOM here. Parity is structural, so a layout change like the
-// one below cannot drift from the schema. This commit leaves that array byte
-// identical, which is why the JSON-LD output is unchanged.
+// The FAQPage JSON-LD does not need syncing by hand. buildHomepageFaqs is
+// declared once in homepage-json-ld.tsx and called by two consumers: the
+// structured data there and the DOM here, both from the SAME derived counts
+// passed by the page. Parity is structural, so neither a layout change nor a
+// change in the underlying team data can drift the two apart.
 export function HomepageFAQ({
   variant = 'dark',
   layout = 'stack',
+  counts,
 }: {
   variant?: 'dark' | 'light';
+  /** Same derived counts the FAQPage schema is built from, so the visible
+   *  answers and the structured data cannot diverge. */
+  counts: HomepageCounts;
   // Presentation only, and opt-in: 'stack' (default) is what every current
   // caller renders, so the live homepage is untouched until the wiring pass
   // asks for 'card'. 'card' is the design target's treatment, a left-aligned
@@ -27,6 +31,7 @@ export function HomepageFAQ({
 }) {
   const light = variant === 'light';
   const cardLayout = light && layout === 'card';
+  const faqs = buildHomepageFaqs(counts);
   const ref = useRef<HTMLElement>(null);
   const fired = useRef(false);
 
@@ -63,7 +68,7 @@ export function HomepageFAQ({
             </h2>
           </div>
           <div className="max-w-[780px]">
-            {HOMEPAGE_FAQS.map((faq, i) => (
+            {faqs.map((faq, i) => (
               <div
                 key={i}
                 className="mb-3 rounded-[14px] border border-rd-line bg-rd-card px-6 py-[22px] shadow-[0_1px_2px_rgba(26,16,14,0.05)]"
@@ -103,7 +108,7 @@ export function HomepageFAQ({
           )}
         </div>
         <div className="space-y-8">
-          {HOMEPAGE_FAQS.map((faq, i) => (
+          {faqs.map((faq, i) => (
             <div key={i}>
               <h3 className={light ? 'font-rd text-base font-semibold text-rd-ink mb-2' : 'text-white font-semibold text-base mb-2'}>
                 {faq.question}

@@ -91,6 +91,8 @@ export type AnalyticsSurface =
   // reused modal body attribute to them too (so a ticket click from the
   // homepage modal is not mislabeled web_team_page).
   | 'web_home_tonight'
+  // Ranked best-promos rail on the homepage (score-ordered, not date-ordered).
+  | 'web_home_best'
   | 'web_home_this_week'
   | 'web_team_page'
   // Team-page "Upcoming promos" list rows (RedesignPromoRow) that open the same
@@ -1213,6 +1215,7 @@ export const trackAffiliateClick = (payload: AffiliateClickPayload) => {
 const KNOWN_SURFACE_VALUES = [
   'web_home',
   'web_home_tonight',
+  'web_home_best',
   'web_home_this_week',
   'web_team_page',
   'web_team_page_promolist',

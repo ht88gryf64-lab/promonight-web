@@ -15,7 +15,7 @@ import { LightHomePromoCard } from './LightHomePromoCard';
 import { UpcomingPromoModalProvider } from './UpcomingPromoModal';
 
 import type { HeroBuckets } from '@/components/tonight-strip';
-import { HomepageJsonLd } from '@/components/homepage-json-ld';
+import { HomepageJsonLd, type HomepageCounts } from '@/components/homepage-json-ld';
 import { TeamGrid } from '@/components/team-grid';
 import { isCfbHubLive } from '@/lib/league-hubs';
 import { AppDownloadButtons } from '@/components/app-download-buttons';
@@ -48,6 +48,9 @@ export interface RedesignHomePageProps {
    *  counted here. */
   teamCount: number;
   lastUpdated: string;
+  /** Derived coverage facts shared by the hero line, the visible FAQ, and the
+   *  FAQPage schema, so all three state the same numbers. */
+  counts: HomepageCounts;
   /** Resolved home-game context(s) for the upcoming-promo cards, keyed
    *  `${team.id}:${date}`. Built server-side in page.tsx (MLB/NFL only); promos
    *  with no entry render the legacy promo detail in the modal. */
@@ -71,6 +74,7 @@ export function RedesignHomePage({
   promoCount,
   teamCount,
   lastUpdated,
+  counts,
   resolvedContexts,
 }: RedesignHomePageProps) {
   const contextsFor = (p: PromoWithTeam): GameContext[] | null =>
@@ -98,7 +102,7 @@ export function RedesignHomePage({
   return (
     <UpcomingPromoModalProvider showTeamLink>
     <div className={`${archivoHouse.variable} rd-root min-h-screen`}>
-      <HomepageJsonLd />
+      <HomepageJsonLd counts={counts} />
 
       {/* HERO — dark charcoal house, no team tint */}
       <section className="relative overflow-hidden text-white" style={{ backgroundColor: HERO_INK }}>
@@ -115,7 +119,7 @@ export function RedesignHomePage({
             Every promo at every game.
           </h1>
           <p className="mt-4 max-w-2xl font-rd text-lg text-white/70">
-            {teamCount} teams · 6 leagues · from official team announcements. Find
+            {teamCount} teams · {counts.leagueCount} leagues · from official team announcements. Find
             tonight&apos;s giveaways, theme nights, and food deals.
           </p>
           <p className="mt-3 font-rd text-[11px] uppercase tracking-[0.12em] text-white/45">
@@ -330,7 +334,7 @@ export function RedesignHomePage({
       </section>
 
       {/* BUILT BY MATT */}
-      <IndieDeveloperBlock variant="light" />
+      <IndieDeveloperBlock variant="light" teamCount={teamCount} />
 
       {/* APP DOWNLOAD — small, secondary */}
       <section className="border-t border-rd-line px-6 py-14">
@@ -352,7 +356,7 @@ export function RedesignHomePage({
       </section>
 
       {/* FAQ */}
-      <HomepageFAQ variant="light" />
+      <HomepageFAQ variant="light" counts={counts} />
 
       <div className="mx-auto max-w-6xl px-6 py-4">
         <AdSlot config={AD_SLOTS.ADHESION_FOOTER} pageType="homepage" />

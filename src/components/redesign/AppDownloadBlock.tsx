@@ -47,11 +47,11 @@ export function AppDownloadBlock() {
               Never miss a promo night
             </p>
             <h2 className="rd-display mt-3 text-3xl uppercase leading-[0.95] text-white md:text-[42px]">
-              Get promo alerts for your teams.
+              Get promo reminders for your teams.
             </h2>
             <p className="mt-4 max-w-md font-rd text-[15px] leading-relaxed text-white/70">
-              The free app sends a notification the morning of every promo for the teams you
-              follow. Everything else lives here on the web.
+              PromoNight Pro sends a reminder the morning of every promo for the teams you
+              follow. The app is a free download and everything else lives here on the web.
             </p>
             <div className="mt-7 flex justify-start">
               <AppDownloadButtons section="homepage_app_block" page="home" variant="compact" />

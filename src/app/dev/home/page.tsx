@@ -17,6 +17,7 @@ import { pickBestStubPromos } from '@/components/redesign/pick-best-stub-promos'
 import { buildHomeCategoryTiles } from '@/components/redesign/home-category-tiles';
 import { deriveLeagueOrder } from '@/components/redesign/derive-league-order';
 import { HomePageV2 } from '@/components/redesign/HomePageV2';
+import { homepageCountsFromTeams } from '@/components/homepage-json-ld';
 
 // Full-page preview of the assembled redesign homepage, rendered from the same
 // live data the real route uses. Separate from /dev/ticket-stub, which is the
@@ -160,6 +161,7 @@ export default async function AssembledHomePreview() {
       leagueCount={leagueCount}
       leagueNames={leagueNames}
       heroStats={heroStats}
+      counts={homepageCountsFromTeams(allTeams)}
       resolvedContexts={resolvedContexts}
     />
   );
