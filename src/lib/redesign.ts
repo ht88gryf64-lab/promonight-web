@@ -12,6 +12,15 @@
 /**
  * Server-side gate. Reads the server-only `VERCEL_ENV`. Use this in Server
  * Components (the team page template branch).
+ *
+ * VERIFICATION GOTCHA, and it has already produced one confident wrong
+ * reading. `VERCEL_ENV` is UNDEFINED in a local build, so the first clause is
+ * true and the redesign is ON locally no matter what `NEXT_PUBLIC_REDESIGN_V2`
+ * is set to. Setting that flag to false on a local `next build` does NOT
+ * produce the gate-off page. Any gate-off comparison must build with
+ * `VERCEL_ENV=production` (which also needs the affiliate env vars the
+ * prebuild guard demands on production-target builds). See known-issues
+ * entry 29.
  */
 export function isRedesignEnabled(): boolean {
   return (

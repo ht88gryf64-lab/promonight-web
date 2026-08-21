@@ -1161,6 +1161,7 @@ but it must be a deliberate copy commit, because it changes answer text on
 169 pages in schema and should be verified at render like any other.
 
 
+
 ---
 
 ## 26. A clean tsc is not evidence a nullable field is handled
@@ -1372,3 +1373,37 @@ today: it returns null only for NFL, and `HOME_GAMES.NHL` is already 41. Two
 flags currently prevent that by accident rather than by design, `nhl.active:false`
 in `league-registry.json` and `SCORED_LEAGUES` in `src/lib/types.ts`. Neither was
 built as a scoring-window guard and neither should be relied on as one.
+## 29. Gate-off verification silently measured the wrong page
+
+**Status: RESOLVED as a method, recorded as a standing rule, 2026-08-21.**
+`isRedesignEnabled()` is `VERCEL_ENV !== 'production' || NEXT_PUBLIC_REDESIGN_V2
+=== 'true'`. `VERCEL_ENV` is undefined in a local build, so the first clause is
+always true and the redesign renders locally regardless of the flag. Every
+gate-off byte-identity check run on the homepage-redesign branch before this
+date was therefore comparing the redesign page against itself, and reporting it
+as proof about the dark fallback. It was harmless in the phases that only added
+components neither page rendered, but the check never tested what it claimed.
+
+**The rule:** any gate-off comparison must build with `VERCEL_ENV=production`.
+That build also trips the affiliate prebuild guard, so it needs a well-formed
+`NEXT_PUBLIC_TICKETMASTER_IMPACT_WRAP`; use the same dummy value on both sides
+of the comparison so any diff is attributable to the change under test.
+
+This is the same class as the blocked `cssRules` read during the font
+diagnosis in entry 24: in both cases a tooling artifact, not the code, produced
+a confident wrong reading, and in both cases the fix was to re-measure through
+a different path rather than to reason harder about the first result.
+
+**THE GATE-OFF CONSTRAINT, RESTATED.** It was written as "byte-identical
+rendered DOM". It is now **no visible or semantic change to the gate-off
+path**, verified as: identical FAQPage and other JSON-LD, identical visible
+text, and identical HTML after removing React interpolation markers.
+
+The wording changed because deriving the homepage counts on the dark path
+costs 48 bytes and zero meaning. Replacing the literals `6 leagues` (twice)
+and `169 teams` with interpolated values makes React emit `<!-- -->` markers
+around each one: 6 markers, 48 bytes, on a page whose visible text is
+unchanged at 945 words and whose JSON-LD is byte-identical. A hardcoded 169 on
+the rollback path is a real correctness problem the moment the team count
+moves, and 48 invisible bytes is the wrong thing to trade for it.
+
