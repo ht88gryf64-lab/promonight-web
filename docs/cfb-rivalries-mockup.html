@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>College Football Rivalries 2026 | PromoNight (mockup)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #120909;
+    --bg2: #0d0606;
+    --card: #1c1112;
+    --card-hi: #241517;
+    --line: #322023;
+    --text: #f2eaea;
+    --muted: #9c8a8c;
+    --dim: #6e5e60;
+    --red: #e5484d;
+    --red-deep: #a3282c;
+    --gold: #d9a441;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* film grain, matching brand */
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    pointer-events: none;
+    opacity: 0.05;
+    z-index: 1;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 0 16px 80px; position: relative; z-index: 2; }
+
+  .eyebrow {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--red);
+  }
+  header.page { padding: 36px 0 8px; }
+  h1 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 800;
+    font-size: clamp(38px, 9vw, 56px);
+    line-height: 0.98;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+    margin: 6px 0 10px;
+  }
+  h1 .yr { color: var(--red); }
+  .lede { color: var(--muted); max-width: 46ch; }
+
+  /* ============ RIVALRY WEEK MARQUEE ============ */
+  section.rw { margin-top: 36px; }
+  .rw-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    border-bottom: 2px solid var(--red-deep);
+    padding-bottom: 10px; margin-bottom: 4px;
+  }
+  h2.rw-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 800;
+    font-size: 30px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+  .rw-count {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 600; font-size: 14px;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--muted);
+  }
+  .rw-sub { color: var(--dim); font-size: 13px; margin-bottom: 16px; }
+
+  /* day rail inside rivalry week */
+  .day-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700; font-size: 15px;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--gold);
+    margin: 22px 0 10px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .day-label::after { content:""; flex:1; height:1px; background: var(--line); }
+  .day-label .n { color: var(--dim); font-weight: 600; letter-spacing: 0.06em; }
+
+  /* ============ THE MATCHUP CARD ============ */
+  a.match {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    margin-bottom: 10px;
+    overflow: hidden;
+    position: relative;
+    transition: transform 0.12s ease, border-color 0.12s ease;
+  }
+  a.match:hover, a.match:focus-visible { transform: translateY(-1px); border-color: #4a3033; }
+  a.match:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+
+  /* signature: the split spine in both schools' real colors */
+  .spine {
+    position: absolute; left: 0; top: 0; bottom: 0; width: 5px;
+    background: linear-gradient(160deg, var(--c1) 0 48%, var(--c2) 52% 100%);
+  }
+  .match-inner { padding: 13px 14px 13px 22px; }
+  .match-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .rname {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700; font-size: 20px;
+    text-transform: uppercase; letter-spacing: 0.02em;
+    line-height: 1.1;
+  }
+  .date {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 600; font-size: 15px;
+    letter-spacing: 0.06em;
+    color: var(--muted); white-space: nowrap;
+  }
+  .vs { margin-top: 3px; font-size: 13.5px; color: var(--muted); }
+  .vs b { color: var(--text); font-weight: 600; }
+  .vs .at { color: var(--dim); font-style: normal; padding: 0 2px; }
+  .meta { margin-top: 7px; display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 12px; color: var(--dim); }
+  .meta .trophy { color: var(--gold); display: inline-flex; align-items: center; gap: 5px; }
+  .meta .trophy::before { content: "🏆"; font-size: 11px; filter: saturate(0.7); }
+
+  /* marquee variant for rivalry week: bigger, dual color wash */
+  .rw a.match { background: var(--card-hi); }
+  .rw a.match .match-inner { padding-top: 15px; padding-bottom: 15px; }
+  .rw a.match::after {
+    content: "";
+    position: absolute; inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(120px 80px at 0% 0%, color-mix(in srgb, var(--c1) 14%, transparent), transparent 70%),
+      radial-gradient(120px 80px at 100% 100%, color-mix(in srgb, var(--c2) 14%, transparent), transparent 70%);
+  }
+  .rw .rname { font-size: 23px; }
+
+  /* ============ FULL LIST, MONTH-GROUPED ============ */
+  section.all { margin-top: 48px; }
+  .all-head { border-bottom: 2px solid var(--line); padding-bottom: 10px; margin-bottom: 4px; }
+  h2.all-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 800; font-size: 26px;
+    text-transform: uppercase;
+  }
+  .month-label {
+    position: sticky; top: 0; z-index: 3;
+    background: linear-gradient(var(--bg) 82%, transparent);
+    padding: 14px 0 8px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700; font-size: 17px;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--red);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .month-label::after { content:""; flex:1; height:1px; background: var(--line); }
+  .month-label .n { color: var(--dim); font-size: 13px; font-weight: 600; letter-spacing: 0.06em; }
+
+  /* compact row variant for the full list */
+  .all a.match { margin-bottom: 8px; }
+  .all .rname { font-size: 18px; }
+  .all .match-inner { padding: 11px 13px 11px 20px; }
+
+  .foot-note { margin-top: 40px; color: var(--dim); font-size: 12.5px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="page">
+    <div class="eyebrow">College Football</div>
+    <h1>College Football<br>Rivalries <span class="yr">2026</span></h1>
+    <p class="lede">The date, the kickoff and the stadium for every rivalry we cover, in the order they are played.</p>
+  </header>
+
+  <!-- ================= RIVALRY WEEK ================= -->
+  <section class="rw">
+    <div class="rw-head">
+      <h2 class="rw-title">Rivalry Week 2026</h2>
+      <span class="rw-count">17 games</span>
+    </div>
+    <p class="rw-sub">The last weekend of the regular season, November 21 through 29.</p>
+
+    <div class="day-label">Sat, Nov 21 <span class="n">1 game</span></div>
+
+    <a class="match" href="#" style="--c1:#00274c; --c2:#8c1515;">
+      <span class="spine"></span>
+      <div class="match-inner">
+        <div class="match-top"><span class="rname">Big Game</span><span class="date">Nov 21</span></div>
+        <div class="vs"><b>California</b> <span class="at">vs</span> <b>Stanford</b></div>
+        <div class="meta"><span>California Memorial Stadium</span><span class="trophy">The Axe</span></div>
+      </div>
+    </a>
+
+    <div class="day-label">Fri, Nov 27 <span class="n">4 games</span></div>
+
+    <a class="match" href="#" style="--c1:#660000; --c2:#001c58;">
+      <span class="spine"></span>
+      <div class="match-inner">
+        <div class="match-top"><span class="rname">Egg Bowl</span><span class="date">Nov 27</span></div>
+        <div class="vs"><b>Mississippi State</b> <span class="at">vs</span> <b>Ole Miss</b></div>
+        <div class="meta"><span>Vaught-Hemingway Stadium</span><span class="trophy">Golden Egg Trophy</span></div>
+      </div>
+    </a>
+
+    <a class="match" href="#" style="--c1:#bf5700; --c2:#500000;">
+      <span class="spine"></span>
+      <div class="match-inner">
+        <div class="match-top"><span class="rname">Lone Star Showdown</span><span class="date">Nov 27</span></div>
+        <div class="vs"><b>Texas</b> <span class="at">vs</span> <b>Texas A&amp;M</b></div>
+        <div class="meta"><span>Kyle Field</span></div>
+      </div>
+    </a>
+
+    <a class="match" href="#" style="--c1:#7a0019; --c2:#c5050c;">
+      <span class="spine"></span>
+      <div class="match-inner">
+        <div class="match-top"><span class="rname">Paul Bunyan's Axe</span><span class="date">Nov 27</span></div>
+        <div class="vs"><b>Minnesota</b> <span class="at">vs</span> <b>Wisconsin</b></div>
+        <div class="meta"><span>Camp Randall Stadium</span><span class="trophy">Paul Bunyan's Axe</span></div>
+      </div>
+    </a>
+
+    <a class="match" href="#" style="--c1:#ffcd00; --c2:#d00000;">
+      <span class="spine"></span>
+      <div class="match-inner">
+        <div class="match-top"><span class="rname">Heroes Trophy</span><span class="date">Nov 27</span></div>
+        <div class="vs"><b>Iowa</b> <span class="at">vs</span> <b>Nebraska</b></div>
+        <div class="meta"><span>Kinnick Stadium</span><span class="trophy">Heroes Trophy</span></div>
+      </div>
+    </a>
+
+    <div class="day-label">Sat, Nov 28 <span class="n">12 games</span></div>
+
+    <a class="match" href="#" style="--c1:#9e1b32; --c2:#0c2340;">
+      <span class="spine"></span>
+      <div class="match-inner">
+        <div class="match-top"><span class="rname">Iron Bowl</span><span class="date">Nov 28</span></div>
+        <div class="vs"><b>Alabama</b> <span class="at">vs</span> <b>Auburn</b></div>
+        <div class="meta"><span>Bryant-Denny Stadium</span><span class="trophy">James E. Foy, V-ODK Trophy</span></div>
+      </div>
+    </a>
+
+    <a class="match" href="#" style="--c1:#00274c; --c2:#bb0000;">
+      <span class="spine"></span>
+      <div class="match-inner">
+        <div class="match-top"><span class="rname">The Game</span><span class="date">Nov 28</span></div>
+        <div class="vs"><b>Michigan</b> <span class="at">vs</span> <b>Ohio State</b></div>
+        <div class="meta"><span>Ohio Stadium</span></div>
+      </div>
+    </a>
+
+    <a class="match" href="#" style="--c1:#f56600; --c2:#73000a;">
+      <span class="spine"></span>
+      <div class="match-inner">
+        <div class="match-top"><span class="rname">Palmetto Bowl</span><span class="date">Nov 28</span></div>
+        <div class="vs"><b>Clemson</b> <span class="at">vs</span> <b>South Carolina</b></div>
+        <div class="meta"><span>Memorial Stadium</span></div>
+      </div>
+    </a>
+
+    <a class="match" href="#" style="--c1:#990000; --c2:#cfb991;">
+      <span class="spine"></span>
+      <div class="match-inner">
+        <div class="match-top"><span class="rname">Old Oaken Bucket</span><span class="date">Nov 28</span></div>
+        <div class="vs"><b>Indiana</b> <span class="at">vs</span> <b>Purdue</b></div>
+        <div class="meta"><span>Memorial Stadium</span><span class="trophy">Old Oaken Bucket</span></div>
+      </div>
+    </a>
+
+    <a class="match" href="#" style="--c1:#ba0c2f; --c2:#b3a369;">
+      <span class="spine"></span>
+      <div class="match-inner">
+        <div class="match-top"><span class="rname">Clean, Old-Fashioned Hate</span><span class="date">Nov 28</span></div>
+        <div class="vs"><b>Georgia</b> <span class="at">vs</span> <b>Georgia Tech</b></div>
+        <div class="meta"><span>Sanford Stadium</span><span class="trophy">Governor's Cup</span></div>
+      </div>
+    </a>
+
+    <a class="match" href="#" style="--c1:#8c1d40; --c2:#cc0033;">
+      <span class="spine"></span>
+      <div class="match-inner">
+        <div class="match-top"><span class="rname">Territorial Cup</span><span class="date">Nov 28</span></div>
+        <div class="vs"><b>Arizona State</b> <span class="at">vs</span> <b>Arizona</b></div>
+        <div class="meta"><span>Casino Del Sol Stadium</span><span class="trophy">Territorial Cup</span></div>
+      </div>
+    </a>
+
+    <a class="match" href="#" style="--c1:#2d68c4; --c2:#990000;">
+      <span class="spine"></span>
+      <div class="match-inner">
+        <div class="match-top"><span class="rname">UCLA vs USC</span><span class="date">Nov 28</span></div>
+        <div class="vs"><b>UCLA</b> <span class="at">vs</span> <b>USC</b></div>
+        <div class="meta"><span>Rose Bowl</span><span class="trophy">Victory Bell</span></div>
+      </div>
+    </a>
+
+    <a class="match" href="#" style="--c1:#9d2235; --c2:#4d1979;">
+      <span class="spine"></span>
+      <div class="match-inner">
+        <div class="match-top"><span class="rname">Golden Boot</span><span class="date">Nov 28</span></div>
+        <div class="vs"><b>Arkansas</b> <span class="at">vs</span> <b>LSU</b></div>
+        <div class="meta"><span>Donald W. Reynolds Razorback Stadium</span><span class="trophy">Golden Boot</span></div>
+      </div>
+    </a>
+
+    <a class="match" href="#" style="--c1:#232d4b; --c2:#630031;">
+      <span class="spine"></span>
+      <div class="match-inner">
+        <div class="match-top"><span class="rname">Commonwealth Cup</span><span class="date">Nov 28</span></div>
+        <div class="vs"><b>Virginia</b> <span class="at">vs</span> <b>Virginia Tech</b></div>
+        <div class="meta"><span>Lane Stadium</span><span class="trophy">Commonwealth Cup</span></div>
+      </div>
+    </a>
+
+    <a class="match" href="#" style="--c1:#e84a27; --c2:#4e2a84;">
+      <span class="spine"></span>
+      <div class="match-inner">
+        <div class="match-top"><span class="rname">Land of Lincoln Trophy</span><span class="date">Nov 28</span></div>
+        <div class="vs"><b>Illinois</b> <span class="at">vs</span> <b>Northwestern</b></div>
+        <div class="meta"><span>Martin Stadium</span><span class="trophy">Land of Lincoln Trophy</span></div>
+      </div>
+    </a>
+
+    <a class="match" href="#" style="--c1:#512888; --c2:#ffcd00;">
+      <span class="spine"></span>
+      <div class="match-inner">
+        <div class="match-top"><span class="rname">Farmageddon</span><span class="date">Nov 28</span></div>
+        <div class="vs"><b>Kansas State</b> <span class="at">vs</span> <b>Iowa State</b></div>
+        <div class="meta"><span>Jack Trice Stadium</span></div>
+      </div>
+    </a>
+
+    <a class="match" href="#" style="--c1:#0033a0; --c2:#ad0000;">
+      <span class="spine"></span>
+      <div class="match-inner">
+        <div class="match-top"><span class="rname">Governor's Cup</span><span class="date">Nov 28</span></div>
+        <div class="vs"><b>Kentucky</b> <span class="at">vs</span> <b>Louisville</b></div>
+        <div class="meta"><span>Kroger Field</span><span class="trophy">Governor's Cup</span></div>
+      </div>
+    </a>
+  </section>
+
+  <!-- ================= FULL LIST ================= -->
+  <section class="all">
+    <div class="all-head">
+      <h2 class="all-title">All 32 Rivalries, in date order</h2>
+    </div>
+
+    <div class="month-label">September <span class="n">6 games</span></div>
+
+    <a class="match" href="#" style="--c1:#4b2e83; --c2:#981e32;">
+      <span class="spine"></span>
+      <div class="match-inner">
+        <div class="match-top"><span class="rname">Apple Cup</span><span class="date">Sep 6</span></div>
+        <div class="vs"><b>Washington</b> <span class="at">vs</span> <b>Washington State</b></div>
+        <div class="meta"><span>Husky Stadium</span><span class="trophy">Apple Cup Trophy</span></div>
+      </div>
+    </a>
+
+    <a class="match" href="#" style="--c1:#ffcd00; --c2:#c8102e;">
+      <span class="spine"></span>
+      <div class="match-inner">
+        <div class="match-top"><span class="rname">Cy-Hawk Trophy</span><span class="date">Sep 12</span></div>
+        <div class="vs"><b>Iowa</b> <span class="at">vs</span> <b>Iowa State</b></div>
+        <div class="meta"><span>Kinnick Stadium</span><span class="trophy">Cy-Hawk Trophy</span></div>
+      </div>
+    </a>
+
+    <a class="match" href="#" style="--c1:#461d7c; --c2:#73000a;">
+      <span class="spine"></span>
+      <div class="match-inner">
+        <div class="match-top"><span class="rname">Magnolia Bowl</span><span class="date">Sep 19</span></div>
+        <div class="vs"><b>LSU</b> <span class="at">vs</span> <b>Ole Miss</b></div>
+        <div class="meta"><span>Vaught-Hemingway Stadium</span><span class="trophy">Magnolia Bowl Trophy</span></div>
+      </div>
+    </a>
+
+    <a class="match" href="#" style="--c1:#00274c; --c2:#0c2340;">
+      <span class="spine"></span>
+      <div class="match-inner">
+        <div class="match-top"><span class="rname">Megaphone Trophy</span><span class="date">Sep 19</span></div>
+        <div class="vs"><b>Michigan State</b> <span class="at">vs</span> <b>Notre Dame</b></div>
+        <div class="meta"><span>Notre Dame Stadium</span><span class="trophy">Megaphone Trophy</span></div>
+      </div>
+    </a>
+
+    <a class="match" href="#" style="--c1:#e84a27; --c2:#bb0000;">
+      <span class="spine"></span>
+      <div class="match-inner">
+        <div class="match-top"><span class="rname">Illibuck</span><span class="date">Sep 26</span></div>
+        <div class="vs"><b>Illinois</b> <span class="at">vs</span> <b>Ohio State</b></div>
+        <div class="meta"><span>Illibuck</span><span class="trophy">Illibuck</span></div>
+      </div>
+    </a>
+
+    <div class="month-label">October <span class="n">9 games</span></div>
+
+    <a class="match" href="#" style="--c1:#7a0019; --c2:#00274c;">
+      <span class="spine"></span>
+      <div class="match-inner">
+        <div class="match-top"><span class="rname">Little Brown Jug</span><span class="date">Oct 3</span></div>
+        <div class="vs"><b>Michigan</b> <span class="at">vs</span> <b>Minnesota</b></div>
+        <div class="meta"><span>Huntington Bank Stadium</span><span class="trophy">Little Brown Jug</span></div>
+      </div>
+    </a>
+
+    <a class="match" href="#" style="--c1:#841617; --c2:#bf5700;">
+      <span class="spine"></span>
+      <div class="match-inner">
+        <div class="match-top"><span class="rname">Red River Rivalry</span><span class="date">Oct 10</span></div>
+        <div class="vs"><b>Oklahoma</b> <span class="at">vs</span> <b>Texas</b></div>
+        <div class="meta"><span>Cotton Bowl Stadium</span><span class="trophy">Golden Hat</span></div>
+      </div>
+    </a>
+
+    <a class="match" href="#" style="--c1:#0c2340; --c2:#8c1515;">
+      <span class="spine"></span>
+      <div class="match-inner">
+        <div class="match-top"><span class="rname">Legends Trophy</span><span class="date">Oct 10</span></div>
+        <div class="vs"><b>Notre Dame</b> <span class="at">vs</span> <b>Stanford</b></div>
+        <div class="meta"><span>Notre Dame Stadium</span><span class="trophy">Legends Trophy</span></div>
+      </div>
+    </a>
+
+    <a class="match" href="#" style="--c1:#512888; --c2:#0051ba;">
+      <span class="spine"></span>
+      <div class="match-inner">
+        <div class="match-top"><span class="rname">Sunflower Showdown</span><span class="date">Oct 17</span></div>
+        <div class="vs"><b>Kansas State</b> <span class="at">vs</span> <b>Kansas</b></div>
+        <div class="meta"><span>Bill Snyder Family Football Stadium</span><span class="trophy">Governor's Cup</span></div>
+      </div>
+    </a>
+
+    <a class="match" href="#" style="--c1:#9e1b32; --c2:#ff8200;">
+      <span class="spine"></span>
+      <div class="match-inner">
+        <div class="match-top"><span class="rname">Third Saturday in October</span><span class="date">Oct 17</span></div>
+        <div class="vs"><b>Alabama</b> <span class="at">vs</span> <b>Tennessee</b></div>
+        <div class="meta"><span>Neyland Stadium</span></div>
+      </div>
+    </a>
+
+    <div class="month-label">November <span class="n">17 games</span></div>
+
+    <a class="match" href="#" style="--c1:#0021a5; --c2:#ba0c2f;">
+      <span class="spine"></span>
+      <div class="match-inner">
+        <div class="match-top"><span class="rname">Florida vs Georgia</span><span class="date">Oct 31</span></div>
+        <div class="vs"><b>Florida</b> <span class="at">vs</span> <b>Georgia</b></div>
+        <div class="meta"><span>Mercedes-Benz Stadium</span></div>
+      </div>
+    </a>
+
+    <a class="match" href="#" style="--c1:#002e5d; --c2:#cc0000;">
+      <span class="spine"></span>
+      <div class="match-inner">
+        <div class="match-top"><span class="rname">Holy War</span><span class="date">Nov 7</span></div>
+        <div class="vs"><b>BYU</b> <span class="at">vs</span> <b>Utah</b></div>
+        <div class="meta"><span>Rice-Eccles Stadium</span></div>
+      </div>
+    </a>
+
+    <div class="foot-note">Mockup: 22 of 32 cards shown. The remaining rivalry week cards repeat above; production renders all 32 from getMatchupIndexRows().</div>
+  </section>
+
+</div>
+</body>
+</html>

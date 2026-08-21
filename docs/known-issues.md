@@ -1161,6 +1161,7 @@ but it must be a deliberate copy commit, because it changes answer text on
 169 pages in schema and should be verified at render like any other.
 
 
+
 ---
 
 ## 26. A clean tsc is not evidence a nullable field is handled
@@ -1372,3 +1373,89 @@ today: it returns null only for NFL, and `HOME_GAMES.NHL` is already 41. Two
 flags currently prevent that by accident rather than by design, `nhl.active:false`
 in `league-registry.json` and `SCORED_LEAGUES` in `src/lib/types.ts`. Neither was
 built as a scoring-window guard and neither should be relied on as one.
+## 29. Gate-off verification silently measured the wrong page
+
+**Status: RESOLVED as a method, recorded as a standing rule, 2026-08-21.**
+`isRedesignEnabled()` is `VERCEL_ENV !== 'production' || NEXT_PUBLIC_REDESIGN_V2
+=== 'true'`. `VERCEL_ENV` is undefined in a local build, so the first clause is
+always true and the redesign renders locally regardless of the flag. Every
+gate-off byte-identity check run on the homepage-redesign branch before this
+date was therefore comparing the redesign page against itself, and reporting it
+as proof about the dark fallback. It was harmless in the phases that only added
+components neither page rendered, but the check never tested what it claimed.
+
+**The rule:** any gate-off comparison must build with `VERCEL_ENV=production`.
+That build also trips the affiliate prebuild guard, so it needs a well-formed
+`NEXT_PUBLIC_TICKETMASTER_IMPACT_WRAP`; use the same dummy value on both sides
+of the comparison so any diff is attributable to the change under test.
+
+This is the same class as the blocked `cssRules` read during the font
+diagnosis in entry 24: in both cases a tooling artifact, not the code, produced
+a confident wrong reading, and in both cases the fix was to re-measure through
+a different path rather than to reason harder about the first result.
+
+**THE GATE-OFF CONSTRAINT, RESTATED.** It was written as "byte-identical
+rendered DOM". It is now **no visible or semantic change to the gate-off
+path**, verified as: identical FAQPage and other JSON-LD, identical visible
+text, and identical HTML after removing React interpolation markers.
+
+The wording changed because deriving the homepage counts on the dark path
+costs 48 bytes and zero meaning. Replacing the literals `6 leagues` (twice)
+and `169 teams` with interpolated values makes React emit `<!-- -->` markers
+around each one: 6 markers, 48 bytes, on a page whose visible text is
+unchanged at 945 words and whose JSON-LD is byte-identical. A hardcoded 169 on
+the rollback path is a real correctness problem the moment the team count
+moves, and 48 invisible bytes is the wrong thing to trade for it.
+
+## 30. team_tile_tap dual-emit is 15 weeks past its stated window
+
+**Status: OPEN, cutover decision still yours, filed 2026-08-21.** Every
+TeamCard click fires two events from one handler
+(`src/components/team-card.tsx:45-59`): the typed dual-sink `team_tile_tap`
+and the legacy GA4-only `team_card_click`.
+
+The migration note is at `src/components/team-card.tsx:46-48` ("Drop legacy in
+follow-up PR after ~2 weeks once dashboards confirmed migrated") and in commit
+e682197 (2026-04-25), which says it parallel-fires "for ~2 weeks". Nominal end
+was around 2026-05-09. Both still fire. No cutover date, no dashboard
+sign-off, no prior entry.
+
+Two properties of the pair matter before anyone decides:
+
+- `team_card_click` is **GA4-only**. It goes through the legacy `event()`
+  helper, never reaches PostHog, and is confirmed absent from the PostHog
+  taxonomy. So the comparison the dual-emit exists to enable cannot be run in
+  the tool where `team_tile_tap` actually lives.
+- `team_card_click` carries **no `from_tab` and no `is_homepage_sample`**. It
+  therefore cannot reproduce the one breakdown that changes at the homepage
+  swap, where league tab order becomes data-derived.
+
+The ratio between the two is invariant to the homepage swap (same handler,
+same body), so the swap does not break the comparison. It does move both
+levels down together. Homepage volume is roughly 2 taps per day, so any level
+shift will not be separable for weeks.
+
+## 31. collection_tile_tap: giveaways and food_deals lose their only emitters
+
+**Status: OPEN, filed 2026-08-21, triggered by the homepage swap.** Both
+values have exactly one emitter in the entire repo, `buildRedesignCollectionTiles`
+(`src/app/page.tsx:225` and `:229`) rendered by the live four-tile homepage
+section. No league hub emits either.
+
+**Does the new grid re-emit them? `food_deals` yes, `giveaways` no.** The
+redesigned seven-tile grid maps to `today`, `this_week`, `bobbleheads`,
+`theme_nights`, `jerseys`, `soccer_jerseys`, `food_deals`. So at the swap:
+
+- `food_deals` survives, moving from the homepage four-tile set to the new
+  grid, and stays a continuous series.
+- **`giveaways` becomes a dead value.** The redesigned grid has no giveaways
+  tile; the concept is split across bobbleheads and jerseys, which are their
+  own values. A dashboard filtered on `collection_name = 'giveaways'` shows
+  roughly 66 events per 30 days, then a cliff to zero on the swap date and a
+  flat line after. That is not a behavior change: the tile stopped existing.
+- `hot_this_week` also loses its homepage emitter and survives only on the
+  league hubs, dropping roughly 79%.
+
+The value is deliberately left in the union rather than removed, so historical
+data keeps a valid type and the cliff stays legible.
+

@@ -378,6 +378,74 @@ export const getVenueIndexEntries = cache(async (): Promise<VenueIndexEntry[]> =
   return out;
 });
 
+/** Per-topic venue coverage counts for the redesigned homepage's gameday
+ *  utility grid. Each count = verified buildings whose hub page actually
+ *  renders that section: bag/gates/transit mirror the hasBag/hasGates/
+ *  hasTransit predicates in buildVenueDescription below, parking mirrors the
+ *  narrower hasParkingData gate (see the inline note). If those predicates
+ *  change, this must follow. Derived at render, never
+ *  hardcoded: one venueHubs collection pass plus one tenants collection-group
+ *  pass (gate times live on verified tenant overlays), both cached per render
+ *  pass like the other readers. */
+export interface VenueUtilityCounts {
+  parking: number;
+  bag: number;
+  transit: number;
+  gates: number;
+  /** Verified buildings total (the honest "venue guides" population). */
+  verifiedTotal: number;
+}
+
+export const getVenueUtilityCounts = cache(async (): Promise<VenueUtilityCounts> => {
+  const [snap, tSnap] = await Promise.all([
+    db.collection('venueHubs').get(),
+    db.collectionGroup('tenants').get(),
+  ]);
+
+  // Buildings with at least one verified tenant overlay carrying a gates rule.
+  // Path-guarded so a same-named subcollection elsewhere can never leak in.
+  const gateSlugs = new Set<string>();
+  for (const td of tSnap.docs) {
+    if (!td.ref.path.startsWith('venueHubs/')) continue;
+    const t = td.data();
+    if (t.verified === true && t.gatesOpen?.ruleText) {
+      gateSlugs.add(td.ref.parent.parent!.id);
+    }
+  }
+
+  const counts: VenueUtilityCounts = { parking: 0, bag: 0, transit: 0, gates: 0, verifiedTotal: 0 };
+  for (const doc of snap.docs) {
+    const d = doc.data();
+    if (d.verified !== true) continue;
+    counts.verifiedTotal++;
+
+    // Deliberately the NARROW gate (hasParkingData, VenueHubView.tsx:206):
+    // published lot facts or an official lot map. The wider hasParking in
+    // buildVenueDescription also counts SpotHero-covered coordinates, but
+    // that is affiliate widget coverage, not a parking fact, and it would
+    // count buildings whose page shows the "no verified parking details"
+    // degrade copy.
+    const lots = Array.isArray(d.parkingLots) ? d.parkingLots : [];
+    if (lots.length > 0 || !!d.parkingLotMapUrl) counts.parking++;
+
+    if (
+      (d.bagMaxDimensions ?? null) !== null ||
+      typeof d.clearBagRequired === 'boolean' ||
+      d.bagsProhibited === true ||
+      !!d.bagPolicyNotes ||
+      !!d.bagPolicyUrl
+    ) {
+      counts.bag++;
+    }
+
+    const pt = d.publicTransit;
+    if (pt && ((pt.lines?.length ?? 0) > 0 || !!pt.notes)) counts.transit++;
+
+    if (gateSlugs.has(doc.id)) counts.gates++;
+  }
+  return counts;
+});
+
 // ── ticket CTA team resolution ──────────────────────────────────────────────
 // Tickets are building-agnostic (the CTA renders on every hub), but the ticket
 // LINK needs a concrete team. Resolve the first tenant that yields one, pro

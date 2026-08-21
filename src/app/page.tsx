@@ -18,15 +18,16 @@ import { TeamGrid } from '@/components/team-grid';
 import { AppDownloadButtons } from '@/components/app-download-buttons';
 import { IndieDeveloperBlock } from '@/components/indie-developer-block';
 import { HomepageFAQ } from '@/components/homepage-faq';
-import { HomepageJsonLd } from '@/components/homepage-json-ld';
+import { HomepageJsonLd, homepageCountsFromTeams } from '@/components/homepage-json-ld';
+import { getVenueUtilityCounts } from '@/lib/venue-hub';
+import { pickBestStubPromos } from '@/components/redesign/pick-best-stub-promos';
+import { buildHomeCategoryTiles } from '@/components/redesign/home-category-tiles';
+import { deriveLeagueOrder } from '@/components/redesign/derive-league-order';
 import { TrackedTapLink } from '@/components/analytics/TrackedTapLink';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { AD_SLOTS } from '@/lib/ads/slots';
 import { isRedesignEnabled } from '@/lib/redesign';
-import {
-  RedesignHomePage,
-  type RedesignCollectionTile,
-} from '@/components/redesign/RedesignHomePage';
+import { HomePageV2 } from '@/components/redesign/HomePageV2';
 
 // 6h fallback. Home is the only indexed route whose "Tonight" cards go stale on a
 // pure date rollover (no data write), so 6h bounds that staleness. On-demand
@@ -202,37 +203,6 @@ function rankTeamsByFuturePromos(
   return { sortedTeams, counts };
 }
 
-// Redesign Browse-Collections: four consolidated category tiles (gate-on only).
-// The legacy buildCollectionTiles() above is untouched and still drives the
-// byte-identical gate-off homepage. Tiles with a zero count are dropped.
-function buildRedesignCollectionTiles(allFuture: PromoWithTeam[]): RedesignCollectionTile[] {
-  const giveawayCount = allFuture.filter((p) => p.type === 'giveaway').length;
-  const themeCount = allFuture.filter((p) => p.type === 'theme').length;
-  const foodCount = allFuture.filter((p) => p.type === 'food').length;
-  const hotCount = allFuture.filter((p) => p.highlight).length;
-
-  // Giveaways links to the better-stocked of the two giveaway collections.
-  const bobbleheads = allFuture.filter(
-    (p) => BOBBLEHEAD_RE.test(p.title) || BOBBLEHEAD_RE.test(p.description),
-  ).length;
-  const jerseys = allFuture.filter(
-    (p) => JERSEY_RE.test(p.title) || JERSEY_RE.test(p.description),
-  ).length;
-  const giveawayHref = bobbleheads >= jerseys ? '/promos/bobbleheads' : '/promos/jersey-giveaways';
-
-  const tiles: RedesignCollectionTile[] = [];
-  if (giveawayCount > 0)
-    tiles.push({ key: 'giveaway', label: 'Giveaways', count: giveawayCount, href: giveawayHref, trackName: 'giveaways' });
-  if (themeCount > 0)
-    tiles.push({ key: 'theme', label: 'Theme nights', count: themeCount, href: '/promos/theme-nights', trackName: 'theme_nights' });
-  if (foodCount > 0)
-    tiles.push({ key: 'food', label: 'Food deals', count: foodCount, href: '/promos/food-deals', trackName: 'food_deals' });
-  if (hotCount > 0)
-    tiles.push({ key: 'hot', label: 'Hot this week', count: hotCount, href: '/promos/this-week', trackName: 'hot_this_week' });
-
-  return tiles;
-}
-
 // Resolve the bounded upcoming-promo set (hero Tonight + This Week) to the
 // home-game GameContext(s) the shared modal body renders, so a homepage card
 // opens the same modal as the team-page calendar. Date-scoped: getGamesForTeam
@@ -288,13 +258,17 @@ export default async function HomePage() {
   const weekEnd = plusDays(today, 7);
   const tonightWindowEnd = plusDays(today, 14);
 
-  const [regularWindow, playoffWindow, allFuture, allTeams, promoCount] =
+  const [regularWindow, playoffWindow, allFuture, allTeams, promoCount, venueCounts] =
     await Promise.all([
       getPromosInDateRange(today, tonightWindowEnd),
       getPlayoffPromosInDateRange(today, tonightWindowEnd),
       getPromosFromDate(today),
       getAllTeams(),
       getPromoCount(),
+      // Venue coverage for the gameday grid and the hero's fourth stat. One
+      // collection pass plus one path-guarded collection-group pass, issued
+      // with the reads already in flight.
+      getVenueUtilityCounts(),
     ]);
 
   // Merge playoff promos into the hero stream. Both arrays are PromoWithTeam
@@ -317,25 +291,44 @@ export default async function HomePage() {
   const teamsForGrid: Team[] = sortedTeams;
 
   const lastUpdated = formatChicagoLong(today);
+  // Coverage facts derived from the teams already fetched above. Replaces the
+  // hardcoded 169, the per-league split, and the league count that shipped in
+  // homepage prose and in FAQPage schema on both gate variants.
+  const homepageCounts = homepageCountsFromTeams(allTeams);
 
   // Gate-ON: render the redesigned light homepage from the SAME computed data,
   // preserving every analytics event. Gate-OFF falls through to the existing
   // dark homepage below, byte-identical.
   if (isRedesignEnabled()) {
+    // Covers the tonight bucket and This Week, the same set the previous
+    // homepage resolved. The ranked best-promos rail is deliberately NOT
+    // included: it would add up to eight more team/date enrichments on the
+    // highest traffic route, and its cards fall back to the legacy promo
+    // detail exactly as game-less leagues already do.
     const resolvedContexts = await resolveCardContexts([
       ...heroBuckets.tonight,
       ...weekPromos,
     ]);
     return (
-      <RedesignHomePage
+      <HomePageV2
         heroBuckets={heroBuckets}
         weekPromos={weekPromos}
-        collectionTiles={buildRedesignCollectionTiles(allFuture)}
+        bestPromos={pickBestStubPromos(allFuture, 8)}
+        categoryTiles={buildHomeCategoryTiles(allFuture, today)}
         teamsForGrid={teamsForGrid}
         teamPromoCounts={teamPromoCounts}
-        promoCount={promoCount}
+        leagueOrder={deriveLeagueOrder(allFuture)}
+        venueCounts={venueCounts}
         teamCount={allTeams.length}
-        lastUpdated={lastUpdated}
+        leagueCount={homepageCounts.leagueCount}
+        leagueNames={homepageCounts.leagueNamesBySize}
+        heroStats={[
+          { value: promoCount.toLocaleString(), label: 'Promos tracked' },
+          { value: String(allTeams.length), label: 'Teams' },
+          { value: String(homepageCounts.leagueCount), label: 'Leagues' },
+          { value: String(venueCounts.verifiedTotal), label: 'Venue guides' },
+        ]}
+        counts={homepageCounts}
         resolvedContexts={resolvedContexts}
       />
     );
@@ -343,7 +336,7 @@ export default async function HomePage() {
 
   return (
     <>
-      <HomepageJsonLd />
+      <HomepageJsonLd counts={homepageCounts} />
 
       {/* Hero */}
       <section className="relative pt-28 pb-12 md:pb-16 px-6 overflow-hidden">
@@ -357,7 +350,7 @@ export default async function HomePage() {
             EVERY PROMO AT EVERY GAME.
           </h1>
           <p className="text-text-secondary text-lg md:text-xl leading-relaxed max-w-2xl mb-4">
-            {allTeams.length} teams, 6 leagues, from official team announcements. Find
+            {allTeams.length} teams, {homepageCounts.leagueCount} leagues, from official team announcements. Find
             tonight&apos;s giveaways, theme nights, and food deals.
           </p>
           <p className="font-mono text-[11px] tracking-[0.08em] uppercase text-text-muted mb-10">
@@ -405,7 +398,7 @@ export default async function HomePage() {
                 Find your team
               </span>
               <h2 className="font-display text-3xl md:text-4xl tracking-[1px] mt-2">
-                {allTeams.length} TEAMS ACROSS 6 LEAGUES
+                {allTeams.length} TEAMS ACROSS {homepageCounts.leagueCount} LEAGUES
               </h2>
             </div>
             <Link
@@ -442,7 +435,7 @@ export default async function HomePage() {
       </section>
 
       {/* Built by Matt */}
-      <IndieDeveloperBlock />
+      <IndieDeveloperBlock teamCount={allTeams.length} />
 
       {/* App download — single small section */}
       <section className="py-16 px-6 border-t border-border-subtle">
@@ -464,7 +457,7 @@ export default async function HomePage() {
       </section>
 
       {/* FAQ */}
-      <HomepageFAQ />
+      <HomepageFAQ counts={homepageCounts} />
 
       <section className="px-6 py-4">
         <AdSlot config={AD_SLOTS.ADHESION_FOOTER} pageType="homepage" />

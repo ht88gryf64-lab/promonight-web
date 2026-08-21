@@ -90,6 +90,12 @@ interface TeamGridProps {
   // 'light' re-skins the tabs (charcoal-active pills) + cards for the redesign;
   // all geo/starred logic + analytics events are unchanged.
   variant?: 'dark' | 'light';
+  // League tab order. Defaults to the fixed LEAGUE_ORDER, so every existing
+  // caller renders byte-identically. The redesigned homepage passes an order
+  // derived from live promo inventory (deriveLeagueOrder) so in-season
+  // leagues surface first without a code change; the CFB chip is appended
+  // separately either way.
+  leagueOrder?: readonly string[];
 }
 
 export function TeamGrid({
@@ -100,6 +106,7 @@ export function TeamGrid({
   countLabel,
   surface = 'homepage',
   variant = 'dark',
+  leagueOrder = LEAGUE_ORDER,
 }: TeamGridProps) {
   const light = variant === 'light';
   const cfbLive = isCfbHubLive();
@@ -193,7 +200,7 @@ export function TeamGrid({
         <button onClick={() => switchTab('All')} className={tabClass(activeLeague === 'All')}>
           All
         </button>
-        {LEAGUE_ORDER.map((league) => (
+        {leagueOrder.map((league) => (
           <button key={league} onClick={() => switchTab(league)} className={tabClass(activeLeague === league)}>
             {league}
           </button>

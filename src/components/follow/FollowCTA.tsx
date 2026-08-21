@@ -1,3 +1,4 @@
+import { IconArrowRight } from '@tabler/icons-react';
 import type { Team } from '@/lib/types';
 import type { CaptureSurface } from '@/lib/follow-surface';
 import { EmailCtaLink } from '@/components/follow/EmailCtaLink';
@@ -22,9 +23,24 @@ interface FollowCTAProps {
   heading?: string;
   sub?: string;
   className?: string;
+  // Presentation only. 'stack' (default) is the centered card every current
+  // caller renders, byte-identical. 'split' is the redesigned homepage strip:
+  // same heading, same copy, same destination, same EmailCtaLink and the same
+  // single email_cta_click event, laid out horizontally with a red edge rail.
+  // No form, no input, no new client code: the design target carries no input
+  // element anywhere on the page, so the newsletter section is a link out in
+  // the target exactly as it already is here.
+  layout?: 'stack' | 'split';
 }
 
-export function FollowCTA({ surface, team, heading, sub, className = '' }: FollowCTAProps) {
+export function FollowCTA({
+  surface,
+  team,
+  heading,
+  sub,
+  className = '',
+  layout = 'stack',
+}: FollowCTAProps) {
   const teamSlug = team?.id;
   const resolvedHeading =
     heading ??
@@ -34,6 +50,40 @@ export function FollowCTA({ surface, team, heading, sub, className = '' }: Follo
     (team
       ? `Get every ${team.city} ${team.name} bobblehead, theme night, and food deal, plus any other teams you follow, in one free email a week.`
       : 'Get every giveaway, theme night, and food deal for the teams you follow in one free email a week.');
+
+  if (layout === 'split') {
+    return (
+      <div
+        className={`relative overflow-hidden rounded-[22px] border border-rd-line bg-rd-card px-8 py-9 shadow-[0_1px_2px_rgba(26,16,14,0.05)] md:px-11 ${className}`}
+      >
+        <span
+          aria-hidden
+          className="absolute inset-y-0 left-0 w-[5px]"
+          style={{
+            backgroundImage:
+              'linear-gradient(180deg, var(--color-rd-red), var(--color-rd-red-dark))',
+          }}
+        />
+        <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-6">
+          <div>
+            <h2 className="rd-display text-2xl uppercase text-rd-ink md:text-3xl">
+              {resolvedHeading}
+            </h2>
+            <p className="mt-2 max-w-[460px] font-rd text-sm text-rd-ink-soft">{resolvedSub}</p>
+          </div>
+          <EmailCtaLink
+            surface={surface}
+            teamSlug={teamSlug}
+            href={followHref(surface, teamSlug)}
+            className="inline-flex flex-none items-center justify-center gap-2 rounded-xl bg-rd-ink px-7 py-4 font-rd text-[15px] font-semibold text-white transition-opacity hover:opacity-90"
+          >
+            Get the free weekly email
+            <IconArrowRight size={16} stroke={2.5} />
+          </EmailCtaLink>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`rounded-2xl border border-rd-line bg-rd-card p-8 text-center ${className}`}>

@@ -50,7 +50,7 @@ export default function PrivacyPage() {
       <h2>4. Third-Party Services</h2>
       <p>We share data with the following providers strictly to operate the service. We do not sell, rent, or trade your personal data.</p>
       <ul>
-        <li><strong>Firebase (Google)</strong> &mdash; anonymous authentication, Firestore data storage, push notifications (FCM), and analytics for the mobile app. Google&apos;s privacy policy applies: <a href="https://policies.google.com/privacy">policies.google.com/privacy</a>.</li>
+        <li><strong>Firebase (Google)</strong> &mdash; anonymous authentication, Firestore data storage, messaging infrastructure (FCM), and analytics for the mobile app. Google&apos;s privacy policy applies: <a href="https://policies.google.com/privacy">policies.google.com/privacy</a>.</li>
         <li><strong>PostHog</strong> &mdash; product analytics on the website (events, session metadata). PostHog&apos;s privacy policy: <a href="https://posthog.com/privacy">posthog.com/privacy</a>.</li>
         <li><strong>Google Analytics 4</strong> &mdash; aggregate website traffic analytics. Google&apos;s privacy policy applies; you can install the Google Analytics opt-out browser add-on at <a href="https://tools.google.com/dlpage/gaoptout">tools.google.com/dlpage/gaoptout</a>.</li>
         <li><strong>Vercel</strong> &mdash; website hosting and CDN. Standard server logs (IP, user-agent, request paths) are processed by Vercel as part of serving the site.</li>

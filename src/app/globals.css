@@ -332,6 +332,114 @@ body::before {
   letter-spacing: -0.01em;
 }
 
+/* ── Tonight ribbon ticker (redesign) ─────────────────────────────────────
+ * Layout lives here rather than in Tailwind utilities because the
+ * reduced-motion rule at the end of this block has to be able to suppress the
+ * strip. Everything in this file below the @theme blocks is UNLAYERED, and
+ * unlayered rules outrank every Tailwind utility regardless of specificity, so
+ * pairing a layered `motion-reduce:hidden` with an unlayered display would
+ * leave the strip visible under reduce while testing clean everywhere else.
+ * Both rules live in the same cascade origin instead.
+ *
+ * Descendant-scoped under .rd-root like .rd-display, so the class can never
+ * affect the live page. Font chain is the concrete next/font variable, not the
+ * --font-mono token, per known-issues entry 24.
+ *
+ * The travel distance is exactly -50% because the component emits its item
+ * list twice; the second copy lands where the first started, so the loop is
+ * seamless. Duration is set inline per instance, derived from item count. */
+@keyframes rd-ticker-travel {
+  to {
+    transform: translateX(-50%);
+  }
+}
+.rd-root .rd-ticker {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 44px;
+  overflow: hidden;
+  background: #0d0505;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  /* Establishes the query container the copies below size themselves against.
+   * Safe: this element's width is set by its parent, never by its contents. */
+  container-type: inline-size;
+}
+.rd-root .rd-ticker::before,
+.rd-root .rd-ticker::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 90px;
+  z-index: 2;
+  pointer-events: none;
+}
+.rd-root .rd-ticker::before {
+  left: 0;
+  background: linear-gradient(90deg, #0d0505, transparent);
+}
+.rd-root .rd-ticker::after {
+  right: 0;
+  background: linear-gradient(270deg, #0d0505, transparent);
+}
+.rd-root .rd-ticker-track {
+  display: flex;
+  white-space: nowrap;
+  will-change: transform;
+  animation: rd-ticker-travel 46s linear infinite;
+}
+/* Each copy is at least as wide as the strip itself. Without this floor the
+ * track is purely content-sized, so on a low inventory night (the December
+ * case) one copy is narrower than the band: the -50% travel then drags a
+ * growing blank gap across the strip and visibly snaps back when it loops.
+ * Pinning each copy to one container width makes -50% exactly one copy in
+ * every case, busy or sparse, so the loop is seamless by construction. */
+.rd-root .rd-ticker-copy {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  min-width: 100cqw;
+}
+/* Mouse-only affordance. This is NOT the accessibility mechanism; the
+ * reduced-motion block below is. */
+.rd-root .rd-ticker:hover .rd-ticker-track {
+  animation-play-state: paused;
+}
+.rd-root .rd-ticker-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 26px;
+  padding: 0 26px;
+  font-family: var(--font-dm-mono), monospace;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #ffc45e;
+  text-shadow: 0 0 12px rgba(255, 196, 94, 0.35);
+}
+.rd-root .rd-ticker-item::after {
+  content: '\25C6';
+  font-size: 7px;
+  color: rgba(255, 196, 94, 0.4);
+  text-shadow: none;
+}
+
+/* FULL SUPPRESSION, not a pause, and the repo's first suppression precedent:
+ * the two existing reduced-motion blocks in this file collapse duration and
+ * the one motion-safe guard (TicketStubCard) gates a hover lift. A merely
+ * frozen track would show a truncated half list under the edge fade, because
+ * the -50% loop only reads correctly while both copies are in motion. Hiding
+ * the outer container also collapses the 44px band, its hairline and its two
+ * gradient masks. Nothing is lost: every promo in the strip also renders in
+ * the Tonight rail below it, which is why the strip is aria-hidden. */
+@media (prefers-reduced-motion: reduce) {
+  .rd-root .rd-ticker {
+    display: none;
+  }
+}
+
 /* Deep-link arrival flash. Applied by PromoArrivalHighlight to the team-page
  * promo row a /promos/today card links to (#promo-…), so the visitor sees which
  * promo they landed on. Brand-red ring that fades over ~3s. Not scoped to
