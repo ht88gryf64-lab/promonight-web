@@ -125,3 +125,16 @@ test('passing the all-time array would reintroduce the bug, which is why the spl
     'all-time input still produces the false claim, so callers must split first',
   );
 });
+
+test('a dateless promo belongs to neither population and never crashes the sort', () => {
+  // Recurring deals and the date-in-image clubs store date=null while the type
+  // says string. This threw TypeError on null.localeCompare during a real
+  // production build, so it is locked down here rather than rediscovered.
+  const dateless = { date: null, type: 'food', title: 'Dollar Dog Every Tuesday' } as unknown as Promo;
+  const { upcoming, past } = splitPromosByDate([...MIXED, dateless], TODAY);
+
+  assert.ok(!upcoming.some((p) => p.title === dateless.title), 'not claimable as upcoming');
+  assert.ok(!past.some((p) => p.title === dateless.title), 'not part of the dated archive');
+  assert.equal(upcoming.length + past.length, MIXED.length, 'the dated promos are unaffected');
+  assert.deepEqual(countPromosByType(upcoming), { giveaway: 1, theme: 1, kids: 0, food: 0 });
+});

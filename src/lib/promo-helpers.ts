@@ -196,8 +196,17 @@ export function splitPromosByDate<T extends { date: string }>(
   promos: T[],
   today: string = todayYmd(),
 ): { upcoming: T[]; past: T[] } {
-  const upcoming = promos.filter((p) => isUpcomingPromo(p, today));
-  const past = promos.filter((p) => !isUpcomingPromo(p, today));
+  // DATELESS PROMOS BELONG TO NEITHER POPULATION, and this is deliberate.
+  // Recurring deals and the date-in-image clubs carry date=null, which the
+  // schema types as string. A dateless promo cannot be claimed as upcoming,
+  // because there is no date for a visitor to turn up on, and it is not part of
+  // a dated archive either. The previous inline filters dropped them from both
+  // sides only as a side effect of null comparing false against a date string;
+  // excluding them explicitly keeps that behaviour and stops the sort below
+  // dereferencing a null.
+  const dated = promos.filter((p) => typeof p.date === 'string' && p.date !== '');
+  const upcoming = dated.filter((p) => isUpcomingPromo(p, today));
+  const past = dated.filter((p) => !isUpcomingPromo(p, today));
   upcoming.sort((a, b) => a.date.localeCompare(b.date));
   past.sort((a, b) => b.date.localeCompare(a.date));
   return { upcoming, past };
