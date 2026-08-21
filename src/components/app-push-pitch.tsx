@@ -27,10 +27,10 @@ export function AppPushPitch({
       } rounded-2xl p-6 text-center`}
     >
       <p className={`${light ? 'text-rd-ink-soft' : 'text-text-secondary'} text-sm mb-1`}>
-        Want push notifications the morning of every {teamName} promo?
+        Want a reminder the morning of every {teamName} promo?
       </p>
       <p className={`${light ? 'text-rd-ink-faint' : 'text-text-muted'} text-xs mb-5`}>
-        The free PromoNight app sends alerts for giveaways, theme nights, and food deals. Optional, not required to use this site.
+        The PromoNight app is a free download, and PromoNight Pro adds a reminder on each promo morning. Optional, not required to use this site.
       </p>
       <AppDownloadButtons
         section="promo_list_app_pitch"

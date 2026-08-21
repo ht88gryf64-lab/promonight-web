@@ -112,7 +112,7 @@ export function TeamContentSections({
               How do I find {fullName} promotional events?
             </h2>
             <p className="text-rd-ink-soft text-sm leading-relaxed">
-              PromoNight is a free app that tracks every {fullName} giveaway, theme night, food deal, and kids event in one place. Download PromoNight on iOS or Android to browse the full {year} promo calendar, set push notifications for your favorite events, and never miss a promotion at {venueName}.
+              PromoNight is a free app that tracks every {fullName} giveaway, theme night, food deal, and kids event in one place. Download PromoNight on iOS or Android to browse the full {year} promo calendar for free, and add PromoNight Pro for a morning-of reminder so you never miss a promotion at {venueName}.
             </p>
           </div>
         </div>
@@ -192,7 +192,7 @@ export function TeamContentSections({
             How do I find {fullName} promotional events?
           </h2>
           <p className="text-text-secondary text-sm leading-relaxed">
-            PromoNight is a free app that tracks every {fullName} giveaway, theme night, food deal, and kids event in one place. Download PromoNight on iOS or Android to browse the full {year} promo calendar, set push notifications for your favorite events, and never miss a promotion at {venueName}.
+            PromoNight is a free app that tracks every {fullName} giveaway, theme night, food deal, and kids event in one place. Download PromoNight on iOS or Android to browse the full {year} promo calendar for free, and add PromoNight Pro for a morning-of reminder so you never miss a promotion at {venueName}.
           </p>
         </div>
       </div>
