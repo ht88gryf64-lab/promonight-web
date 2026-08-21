@@ -14,7 +14,7 @@ export const revalidate = 86400;
 export const metadata: Metadata = {
   title: { absolute: 'Download PromoNight: Free on iOS & Android' },
   description:
-    'Install PromoNight free on iOS or Android. Push alerts on every giveaway, theme night, and food deal at your team\'s home games.',
+    'Install PromoNight free on iOS or Android. Browse every giveaway, theme night, and food deal at your team\'s home games, and add Pro for morning-of reminders.',
   alternates: { canonical: 'https://www.getpromonight.com/download' },
   openGraph: pageOpenGraph('/download'),
 };

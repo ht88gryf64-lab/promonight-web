@@ -30,7 +30,7 @@ const ABOUT_FAQS = [
   {
     question: 'How is PromoNight free?',
     answer:
-      "The base app is free because gatekeeping promo information behind a paywall felt wrong. PromoNight Pro ($5.99 per season per sport or $9.99 per year for all sports) adds push notifications so you get a heads-up the morning of a promo day. That's the only paid feature.",
+      "The base app is free because gatekeeping promo information behind a paywall felt wrong. PromoNight Pro ($5.99 per season per sport or $9.99 per year for all sports) adds a reminder the morning of a promo day, plus unlimited Game Day venue access.",
   },
   {
     question: 'Can I suggest a team or a feature?',

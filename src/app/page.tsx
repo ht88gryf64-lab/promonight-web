@@ -449,14 +449,14 @@ export default async function HomePage() {
         <div className="max-w-4xl mx-auto">
           <div className="bg-bg-card border border-border-subtle rounded-2xl p-8 md:p-10">
             <span className="font-mono text-[10px] tracking-[1.5px] uppercase text-accent-red">
-              Promo push
+              Promo reminders
             </span>
             <h2 className="font-display text-2xl md:text-3xl tracking-[1px] mt-2 mb-4">
               WANT NOTIFICATIONS THE MORNING OF EVERY PROMO?
             </h2>
             <p className="text-text-secondary text-sm md:text-base leading-relaxed max-w-2xl mb-6">
-              The PromoNight app sends a push the morning of every promo for
-              your starred teams. Free to download. Web has everything else.
+              PromoNight Pro sends a reminder the morning of every promo for
+              your starred teams. The app is free to download. Web has everything else.
             </p>
             <AppDownloadButtons section="homepage_app_section" page="home" />
           </div>
