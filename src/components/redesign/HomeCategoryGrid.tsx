@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { TrackedTapLink } from '@/components/analytics/TrackedTapLink';
 import {
   IconCalendar,
   IconCalendarWeek,
@@ -48,9 +48,15 @@ export function HomeCategoryGrid({ tiles }: { tiles: HomeCategoryTile[] }) {
         {tiles.map((t) => {
           const Icon = TILE_ICONS[t.key] ?? IconGift;
           return (
-            <Link
+            <TrackedTapLink
               key={t.key}
               href={t.href}
+              trackEvent="collection_tile_tap"
+              trackProps={{
+                surface: 'web_home',
+                collection_name: t.trackName,
+                collection_count: t.count,
+              }}
               className="group flex flex-col rounded-xl border border-rd-line bg-rd-card p-5 transition-colors hover:border-rd-line-strong"
             >
               <span
@@ -70,7 +76,7 @@ export function HomeCategoryGrid({ tiles }: { tiles: HomeCategoryTile[] }) {
               >
                 {t.count.toLocaleString()} promo{t.count === 1 ? '' : 's'}
               </p>
-            </Link>
+            </TrackedTapLink>
           );
         })}
       </div>

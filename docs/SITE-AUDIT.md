@@ -115,6 +115,75 @@ PromoNight is in a confirmed growth phase as of mid June 2026. The May 1-8 Bing 
 - KNOWN REMAINDER: privacy/page.tsx:53 still lists "push notifications (FCM)" when naming what Firebase provides. It describes a vendor capability rather than asserting we send anything, and the corrected bullet directly above it now says plainly that we do not. Left deliberately, flagged here.
 - FILED NOT FIXED: known-issues entry 25, two em dashes in live team-page FAQ answers (promo-helpers.ts:337 and :344) that render on 169 pages inside FAQPage schema.
 
+### MEASUREMENT BOUNDARY: homepage swap [MANUAL, PENDING, dated at the swap not at writing]
+
+**PENDING. This entry is written ahead of the change and is NOT yet in
+effect. It takes effect on the day the homepage swap ships (the commit that
+points `/` at HomePageV2). Date it then. If the swap does not ship, delete
+this block rather than leaving it to read as history.**
+
+The swap replaces the homepage sections, their order, and several of the
+components that carry analytics. Six event families move on the same day, so
+any homepage trend crossing that date compares different instrumentation, not
+different behavior.
+
+- **collection_tile_tap goes to zero on web_home while navigation probably
+  rises.** The live four-tile section is replaced by a seven-tile grid. Both
+  fire the same event, so the surviving values stay continuous, but the value
+  set rebases: `giveaways` loses its only emitter repo-wide and flatlines
+  (known-issues entry 28), `hot_this_week` loses its homepage emitter and
+  drops roughly 79%, and two new values appear, `today` and `this_week`.
+  `this_week` is deliberately NOT `hot_this_week`: same destination, different
+  measurement (highlights inside seven days versus every future highlight), so
+  folding them would rebase a live number mid-series. Net: more tiles, more
+  prominent, so real category navigation likely goes UP while several series
+  step down.
+- **this_week_see_all_tap loses one of two emitters, undecomposably.** The
+  hero "See all N promos tonight" link disappears; the This Week header link
+  remains. The two were byte-identical in the payload (`{surface:'web_home'}`,
+  no cta_id), so the step down cannot be split. Tonight-intent exits now go to
+  /promos/today through the tonight rail's see-all, which fires the new
+  `rail_see_all_tap` rather than this event. Post-swap the code finally
+  matches docs/cta-registry.md, which registers only one row.
+- **game_tap and promo_card_tap keep their names and shapes but change on
+  three axes at once** for web_home_tonight: rendered inventory (4 to 8),
+  position (inside the hero to a rail below it), and reachability (cards 3 and
+  4 were desktop-only). A device_class breakdown shows a mobile-ward mix shift
+  that is pure layout. HeroTonightCard stops rendering on the homepage.
+- **web_home_best is net-new inventory, not a split of tonight.** New surface
+  in PostHog and GA4, and a new `web_home_best_{team}` SharedID family in
+  Impact. Any saved partner view that enumerates the two known home surfaces,
+  or filters subIds by the two existing tokens, will silently under-report
+  homepage affiliate revenue. Same class as the 2026-08-14 attribution
+  boundary. The surface is already in KNOWN_SURFACES, so it attributes rather
+  than downgrading to web_other.
+- **affiliate_click does NOT go to zero.** The modal still renders the ticket
+  CTAs through the same chain, so web_home_tonight and web_home_this_week
+  continue. web_home_tonight steps on openers and position simultaneously, so
+  a pre/post read of it measures two changes at once. web_home_this_week is
+  the closest thing to a control series.
+- **team_tile_tap steps down from position, not from engagement.** The team
+  finder moves below two new rails and three extra tiles. The dual-emit ratio
+  with team_card_click is preserved (same handler), but both levels fall
+  together, and league tab order becomes data-derived so the from_tab
+  distribution reshuffles. See known-issues entry 27.
+- **faq_section_reached: the geometry artifact was FIXED BEFORE the swap, on
+  purpose, so this one is a clean position-only change.** The observer used to
+  watch the whole FAQ section at threshold 0.5, which a viewport shorter than
+  half the section can never satisfy; the taller card layout would have made
+  that worse and confounded the series. The observer now watches the FAQ
+  header block, whose height does not depend on layout or answer length. What
+  remains at the swap is only that the section sits further down the page.
+- **ROLLUP WARNING.** Any "homepage taps" or "homepage engagement" rollup that
+  sums tap events across web_home surfaces will step UP at the swap from
+  instrumentation alone: up to seven new emitters (two rail see-alls, five
+  gameday links). Every pre/post read of such a rollup is invalid across this
+  boundary.
+- **No event on the ribbon**, deliberately. It is aria-hidden and
+  non-interactive; instrumenting it would mean making it interactive, which
+  would create a duplicate path to promos the tonight rail already carries and
+  split that rail's attribution.
+
 ### Bing Search [LIVE, daily June 1-10]
 - Clicks: settled to ~37/day weekday after a June 1-4 peak of 41.5; recent 4-day avg ~28/day
 - Impressions: ~1,300/day

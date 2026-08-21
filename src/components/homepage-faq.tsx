@@ -32,7 +32,17 @@ export function HomepageFAQ({
   const light = variant === 'light';
   const cardLayout = light && layout === 'card';
   const faqs = buildHomepageFaqs(counts);
-  const ref = useRef<HTMLElement>(null);
+  // Observed element for faq_section_reached. Deliberately the HEADER BLOCK,
+  // not the whole section. IntersectionObserver caps the achievable ratio for
+  // a target taller than the viewport at viewportHeight / targetHeight, so a
+  // threshold of 0.5 on the full section required a viewport at least half the
+  // section's height: about 630px in the stack layout and about 790px in the
+  // taller card layout. Small phones could never satisfy it, and the card
+  // layout would have made that worse, turning a position change into a
+  // confounded one. The header block is a fixed ~50px regardless of layout or
+  // answer length, so the trigger is now viewport-independent and the event
+  // means what it says: the reader reached the FAQ.
+  const ref = useRef<HTMLDivElement>(null);
   const fired = useRef(false);
 
   useEffect(() => {
@@ -56,9 +66,9 @@ export function HomepageFAQ({
 
   if (cardLayout) {
     return (
-      <section ref={ref} className="px-6 py-16">
+      <section className="px-6 py-16">
         <div className="mx-auto max-w-6xl">
-          <div className="mb-8">
+          <div ref={ref} className="mb-8">
             <div className="mb-2 flex items-center gap-2 font-mono text-[10.5px] font-semibold uppercase tracking-[0.22em] text-rd-ink-faint">
               <span aria-hidden className="h-1.5 w-1.5 flex-none rounded-full bg-rd-cat-theme" />
               FAQ
@@ -89,11 +99,10 @@ export function HomepageFAQ({
 
   return (
     <section
-      ref={ref}
       className={`py-20 px-6 border-t ${light ? 'border-rd-line' : 'border-border-subtle'}`}
     >
       <div className="max-w-3xl mx-auto">
-        <div className="text-center mb-12">
+        <div ref={ref} className="text-center mb-12">
           <span className={light ? 'font-rd text-[10px] tracking-[1.5px] uppercase text-rd-ink-faint' : 'font-mono text-[10px] tracking-[1.5px] uppercase text-accent-red'}>
             FAQ
           </span>

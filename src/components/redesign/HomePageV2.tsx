@@ -128,6 +128,7 @@ export function HomePageV2({
             items={tonight.map((p) => ({ promo: p, contexts: contextsFor(p) }))}
             surface="web_home_tonight"
             starPlacement="homepage_this_week_inline"
+            rail="tonight"
           />
         </section>
 
@@ -191,6 +192,7 @@ export function HomePageV2({
             items={bestPromos.map((p) => ({ promo: p, contexts: contextsFor(p) }))}
             surface="web_home_best"
             starPlacement="homepage_this_week_inline"
+            rail="best_promos"
             withRank
           />
         </section>

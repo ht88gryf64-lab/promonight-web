@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { TrackedTapLink } from '@/components/analytics/TrackedTapLink';
 import { IconArrowRight } from '@tabler/icons-react';
 import type { PromoWithTeam } from '@/lib/types';
 import type { GameContext } from '@/lib/data';
@@ -39,6 +39,7 @@ export function StubRail({
   items,
   surface,
   starPlacement,
+  rail,
   withRank = false,
   notchBg,
 }: {
@@ -52,6 +53,9 @@ export function StubRail({
   items: StubRailItem[];
   surface: UpcomingPromoSurface;
   starPlacement: StarPlacement;
+  /** Analytics identity for the see-all link. One shell serves several rails,
+   *  so this carries the identity rather than leaning on `surface` alone. */
+  rail: 'tonight' | 'best_promos';
   /** Best-promos presentation: oversized rank watermark per card. */
   withRank?: boolean;
   /** Passed through to the cards' punched notches; must match the section
@@ -71,13 +75,20 @@ export function StubRail({
           <h2 className="rd-display text-3xl uppercase text-rd-ink md:text-4xl">{heading}</h2>
           {lede && <p className="mt-2 max-w-md font-rd text-sm text-rd-ink-soft">{lede}</p>}
         </div>
-        <Link
+        <TrackedTapLink
           href={seeAllHref}
+          trackEvent="rail_see_all_tap"
+          trackProps={{
+            surface: 'web_home',
+            rail,
+            item_count: items.length,
+            destination_url: seeAllHref,
+          }}
           className="inline-flex items-center gap-1.5 pb-1 font-mono text-xs font-semibold uppercase tracking-[0.06em] text-rd-red-dark transition-colors hover:text-rd-red"
         >
           {seeAllLabel}
           <IconArrowRight size={13} stroke={2.5} />
-        </Link>
+        </TrackedTapLink>
       </div>
 
       <div className="no-scrollbar flex gap-5 overflow-x-auto px-1 py-2" style={{ scrollSnapType: 'x mandatory' }}>

@@ -1407,3 +1407,55 @@ unchanged at 945 words and whose JSON-LD is byte-identical. A hardcoded 169 on
 the rollback path is a real correctness problem the moment the team count
 moves, and 48 invisible bytes is the wrong thing to trade for it.
 
+## 27. team_tile_tap dual-emit is 15 weeks past its stated window
+
+**Status: OPEN, cutover decision still yours, filed 2026-08-21.** Every
+TeamCard click fires two events from one handler
+(`src/components/team-card.tsx:45-59`): the typed dual-sink `team_tile_tap`
+and the legacy GA4-only `team_card_click`.
+
+The migration note is at `src/components/team-card.tsx:46-48` ("Drop legacy in
+follow-up PR after ~2 weeks once dashboards confirmed migrated") and in commit
+e682197 (2026-04-25), which says it parallel-fires "for ~2 weeks". Nominal end
+was around 2026-05-09. Both still fire. No cutover date, no dashboard
+sign-off, no prior entry.
+
+Two properties of the pair matter before anyone decides:
+
+- `team_card_click` is **GA4-only**. It goes through the legacy `event()`
+  helper, never reaches PostHog, and is confirmed absent from the PostHog
+  taxonomy. So the comparison the dual-emit exists to enable cannot be run in
+  the tool where `team_tile_tap` actually lives.
+- `team_card_click` carries **no `from_tab` and no `is_homepage_sample`**. It
+  therefore cannot reproduce the one breakdown that changes at the homepage
+  swap, where league tab order becomes data-derived.
+
+The ratio between the two is invariant to the homepage swap (same handler,
+same body), so the swap does not break the comparison. It does move both
+levels down together. Homepage volume is roughly 2 taps per day, so any level
+shift will not be separable for weeks.
+
+## 28. collection_tile_tap: giveaways and food_deals lose their only emitters
+
+**Status: OPEN, filed 2026-08-21, triggered by the homepage swap.** Both
+values have exactly one emitter in the entire repo, `buildRedesignCollectionTiles`
+(`src/app/page.tsx:225` and `:229`) rendered by the live four-tile homepage
+section. No league hub emits either.
+
+**Does the new grid re-emit them? `food_deals` yes, `giveaways` no.** The
+redesigned seven-tile grid maps to `today`, `this_week`, `bobbleheads`,
+`theme_nights`, `jerseys`, `soccer_jerseys`, `food_deals`. So at the swap:
+
+- `food_deals` survives, moving from the homepage four-tile set to the new
+  grid, and stays a continuous series.
+- **`giveaways` becomes a dead value.** The redesigned grid has no giveaways
+  tile; the concept is split across bobbleheads and jerseys, which are their
+  own values. A dashboard filtered on `collection_name = 'giveaways'` shows
+  roughly 66 events per 30 days, then a cliff to zero on the swap date and a
+  flat line after. That is not a behavior change: the tile stopped existing.
+- `hot_this_week` also loses its homepage emitter and survives only on the
+  league hubs, dropping roughly 79%.
+
+The value is deliberately left in the union rather than removed, so historical
+data keeps a valid type and the cliff stays legible.
+

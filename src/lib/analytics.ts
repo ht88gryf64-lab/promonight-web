@@ -30,7 +30,9 @@ export type AnalyticsEvent =
   | 'cta_click'
   | 'browse_all_teams_tap'
   | 'this_week_see_all_tap'
+  | 'rail_see_all_tap'
   | 'collection_tile_tap'
+  | 'gameday_card_tap'
   | 'affiliate_click'
   | 'venue_hub_click'
   | 'hub_to_team'
@@ -262,10 +264,41 @@ export type ThisWeekSeeAllTapProperties = {
   surface: AnalyticsSurface;
 };
 
+/** Rail see-all link. One shell (StubRail) serves several rails, so `rail`
+ *  carries the identity rather than leaning on `surface` alone. */
+export type RailSeeAllTapProperties = {
+  surface: AnalyticsSurface;
+  rail: 'tonight' | 'best_promos';
+  item_count: number;
+  destination_url: string;
+};
+
+/** Gameday utility card. All five links share one destination (/venues), so
+ *  without `card` they are indistinguishable in the data: same event, same
+ *  surface, same page_path, same href. `all_venues` is the section see-all. */
+export type GamedayCardTapProperties = {
+  surface: AnalyticsSurface;
+  card: 'parking' | 'bag' | 'transit' | 'gates' | 'all_venues';
+  venue_count: number;
+  destination_url: string;
+};
+
 export type CollectionTileTapProperties = {
   surface: AnalyticsSurface;
-  // Legacy (gate-off homepage) tiles + the redesign's consolidated four-tile set
-  // (gate-on homepage): giveaways / theme_nights / food_deals / hot_this_week.
+  // Three generations of tiles share this event.
+  //   legacy gate-off homepage + league hubs: bobbleheads, jerseys,
+  //     soccer_jerseys, theme_nights, fireworks
+  //   gate-on homepage four-tile set: giveaways, theme_nights, food_deals,
+  //     hot_this_week
+  //   redesigned seven-tile grid: today, this_week, bobbleheads, theme_nights,
+  //     jerseys, soccer_jerseys, food_deals
+  // `this_week` is deliberately NOT folded into `hot_this_week`. They share a
+  // destination but not a measurement: hot_this_week counts every future
+  // highlight, this_week counts highlights inside seven days. Reusing the
+  // value would rebase a live series mid-flight.
+  // `giveaways` and `food_deals` note: the redesigned grid has no giveaways
+  // tile, so that value loses its only emitter at the homepage swap. See
+  // known-issues entry 28.
   collection_name:
     | 'bobbleheads'
     | 'jerseys'
@@ -274,7 +307,9 @@ export type CollectionTileTapProperties = {
     | 'fireworks'
     | 'giveaways'
     | 'food_deals'
-    | 'hot_this_week';
+    | 'hot_this_week'
+    | 'today'
+    | 'this_week';
   collection_count: number;
 };
 
@@ -890,7 +925,9 @@ export type EventPropertiesMap = {
   cta_click: CtaClickProperties;
   browse_all_teams_tap: BrowseAllTeamsTapProperties;
   this_week_see_all_tap: ThisWeekSeeAllTapProperties;
+  rail_see_all_tap: RailSeeAllTapProperties;
   collection_tile_tap: CollectionTileTapProperties;
+  gameday_card_tap: GamedayCardTapProperties;
   affiliate_click: AffiliateClickProperties;
   app_download_click: AppDownloadClickProperties;
   promo_card_tap: PromoCardTapProperties;

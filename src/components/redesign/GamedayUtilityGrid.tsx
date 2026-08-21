@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { TrackedTapLink } from '@/components/analytics/TrackedTapLink';
 import { IconArrowRight, IconParking, IconShoppingBag, IconBus, IconClock } from '@tabler/icons-react';
 import type { VenueUtilityCounts } from '@/lib/venue-hub';
 
@@ -44,20 +44,34 @@ export function GamedayUtilityGrid({ counts }: { counts: VenueUtilityCounts }) {
             Everything you need once you have picked the night.
           </p>
         </div>
-        <Link
+        <TrackedTapLink
           href="/venues"
+          trackEvent="gameday_card_tap"
+          trackProps={{
+            surface: 'web_home',
+            card: 'all_venues',
+            venue_count: counts.verifiedTotal,
+            destination_url: '/venues',
+          }}
           className="inline-flex items-center gap-1.5 pb-1 font-mono text-xs font-semibold uppercase tracking-[0.06em] text-rd-red-dark transition-colors hover:text-rd-red"
         >
           All venue guides
           <IconArrowRight size={13} stroke={2.6} />
-        </Link>
+        </TrackedTapLink>
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {cards.map(({ key, label, blurb, Icon }) => (
-          <Link
+          <TrackedTapLink
             key={key}
             href="/venues"
+            trackEvent="gameday_card_tap"
+            trackProps={{
+              surface: 'web_home',
+              card: key,
+              venue_count: counts[key],
+              destination_url: '/venues',
+            }}
             className="group flex flex-col rounded-xl border border-rd-line bg-rd-card p-5 transition-colors hover:border-rd-line-strong"
           >
             <span
@@ -73,7 +87,7 @@ export function GamedayUtilityGrid({ counts }: { counts: VenueUtilityCounts }) {
             <p className="mt-3 font-mono text-[10.5px] font-semibold tracking-[0.08em] text-rd-ink-soft">
               {counts[key]} venues
             </p>
-          </Link>
+          </TrackedTapLink>
         ))}
       </div>
     </section>

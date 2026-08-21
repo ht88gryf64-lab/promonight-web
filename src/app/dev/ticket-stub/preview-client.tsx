@@ -74,6 +74,7 @@ export function TicketStubPreview({
             items={tonight.map((p) => ({ promo: p, contexts: null }))}
             surface="web_home_tonight"
             starPlacement="homepage_this_week_inline"
+            rail="tonight"
           />
         </section>
 
@@ -93,6 +94,7 @@ export function TicketStubPreview({
             items={best.map((p) => ({ promo: p, contexts: null }))}
             surface="web_home_tonight"
             starPlacement="homepage_this_week_inline"
+            rail="best_promos"
             withRank
           />
         </section>

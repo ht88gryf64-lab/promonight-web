@@ -1,4 +1,5 @@
 import type { PromoWithTeam } from '@/lib/types';
+import type { CollectionTileTapProperties } from '@/lib/analytics';
 import { isSoccerJerseyPromo } from '@/lib/soccer-jersey';
 
 // The redesigned category grid: 7 tiles, one per real aggregator route, per
@@ -16,8 +17,14 @@ import { isSoccerJerseyPromo } from '@/lib/soccer-jersey';
 // whichever categories the NFL/NHL/NBA inventory actually stocks instead of
 // advertising empty lists.
 
+type CollectionTileName = CollectionTileTapProperties['collection_name'];
+
 export interface HomeCategoryTile {
   key: string;
+  /** collection_tile_tap value. Separate from `key` because tile keys are
+   *  kebab-case for routing while the analytics union is snake_case, the same
+   *  split RedesignCollectionTile already uses. */
+  trackName: CollectionTileName;
   label: string;
   blurb: string;
   count: number;
@@ -52,6 +59,7 @@ export function buildHomeCategoryTiles(
   const defs: Array<Omit<HomeCategoryTile, 'count'> & { match: (p: PromoWithTeam) => boolean }> = [
     {
       key: 'today',
+      trackName: 'today',
       label: 'Today',
       blurb: "Every promo at today's games",
       href: '/promos/today',
@@ -61,6 +69,7 @@ export function buildHomeCategoryTiles(
     },
     {
       key: 'this-week',
+      trackName: 'this_week',
       label: 'This Week',
       blurb: 'Highlighted picks in the next seven days',
       href: '/promos/this-week',
@@ -69,6 +78,7 @@ export function buildHomeCategoryTiles(
     },
     {
       key: 'bobbleheads',
+      trackName: 'bobbleheads',
       label: 'Bobbleheads',
       blurb: 'Every bobblehead night tracked',
       href: '/promos/bobbleheads',
@@ -77,6 +87,7 @@ export function buildHomeCategoryTiles(
     },
     {
       key: 'theme-nights',
+      trackName: 'theme_nights',
       label: 'Theme Nights',
       blurb: 'Star Wars, heritage nights and more',
       href: '/promos/theme-nights',
@@ -86,6 +97,7 @@ export function buildHomeCategoryTiles(
     },
     {
       key: 'jersey-giveaways',
+      trackName: 'jerseys',
       label: 'Jersey Giveaways',
       blurb: 'Wear it home from the game',
       href: '/promos/jersey-giveaways',
@@ -94,6 +106,7 @@ export function buildHomeCategoryTiles(
     },
     {
       key: 'soccer-jerseys',
+      trackName: 'soccer_jerseys',
       label: 'Soccer Jersey Nights',
       blurb: 'Kit giveaways on the pitch',
       href: '/promos/soccer-jersey-nights',
@@ -103,6 +116,7 @@ export function buildHomeCategoryTiles(
     },
     {
       key: 'food-deals',
+      trackName: 'food_deals',
       label: 'Food Deals',
       blurb: 'Dollar dogs and pregame specials',
       href: '/promos/food-deals',
