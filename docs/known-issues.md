@@ -1287,3 +1287,88 @@ with a fresh cache entry, which is worse than not having revalidated at all.
 Wait for the production deployment to report `Ready` before revalidating. When
 in doubt, verify one page with a cache-busting curl and confirm it carries the
 new behaviour before sweeping the rest.
+
+---
+
+## 28. The team score divides an unbounded window by a one-season constant
+
+**Status: OPEN, not urgent today, becomes systemic on corpus depth.** Filed
+2026-08-21 from the hub stat-bar scoping. Lives in the pipeline
+(`promo-pipeline/lib/scoring/score-team.js` and
+`promo-pipeline/scripts/backfill-scoring.js`), recorded here because every
+surface it moves is in this repo.
+
+**What it is.** `backfill-scoring.js` builds `scoredPromos` from the whole
+`teams/{id}/promos` subcollection with only a tombstone filter and no date
+predicate, then `scoreTeam` computes:
+
+```js
+const density = sumScores / homeGames;   // homeGames is a fixed constant
+const teamScore = Math.round(density * DENSITY_SCALE + varietyBonus + hotBonus);
+```
+
+`HOME_GAMES` is one season (MLB 81, NBA 41, NHL 41, MLS 17, WNBA 20, NFL 8).
+So an **unbounded-window numerator is divided by a fixed one-season
+denominator**. The function's own header says it "aggregates a season of scored
+promos", which is what it was designed to do and not what it receives.
+
+**It is correct today only by accident of corpus depth.** Measured against
+production 2026-08-21: **3,209 of 3,226** scored-league non-recurring promos are
+dated 2026, with 13 in 2025 and 4 dateless. For MLB, MLS and WNBA the season is
+currently a synonym for calendar 2026, so numerator and denominator happen to
+describe the same window.
+
+**Size of the error today**, from a read-only projection that reproduces the
+live scorer exactly (0 mismatches across all 75 scored teams):
+
+| team | league | stored | season-scoped | drop |
+|---|---|---|---|---|
+| houston-dynamo | MLS | 64 | 18 | 46 |
+| cincinnati-reds | MLB | 90 | 88 | 2 |
+
+Every other team is identical. 27 of 75 rank positions change, but 26 of those
+are plus or minus one as knock-on from Houston moving 42 to 68. **The top 20 is
+unchanged**, so the page a visitor sees today is effectively the same.
+
+**Houston Dynamo is the preview, not the outlier.** It differs because MLS has
+the longest window in the corpus right now, not because anything about that club
+is unusual. Every team looks like Houston once its league has more than one
+season of promos.
+
+**THE TRIGGER IS CORPUS DEPTH, NOT TIME, AND NHL WILL BREAK IT.** Two things
+compound:
+
+1. A second season of any league doubles that league's numerator while the
+   denominator stays fixed, inflating every score in it and, worse, unevenly by
+   how long each club has been in the corpus.
+2. **NHL is the first league whose season crosses the calendar year.** An
+   Oct-to-April corpus cannot be expressed as "calendar 2026", which is the
+   implicit season definition the current code relies on. NBA has the same
+   shape, and NFL crosses into January and February. There is no code anywhere
+   in the pipeline that expresses a two-calendar-year season.
+
+**Six surfaces a recalibration moves.** All of them shift together, so this is a
+measurement boundary on the whole scored layer, not a single-page change:
+
+1. `/team-rankings` visible rows and **the sort order itself** (`teamScore` is
+   the sort key, `src/lib/data.ts:1067`).
+2. `/team-rankings` ItemList JSON-LD (`src/app/team-rankings/page.tsx`), which
+   publishes the score to crawlers.
+3. `/best-promos` (reads `getAllTeamScores`).
+4. `/best-promos/bobbleheads` (reads `getAllTeamScores`, and its copy explains
+   the `averagePromoScore` rollup).
+5. The league hub `all-time promos per team` stat, via `getLeagueHubStats`
+   (`src/components/hub/HubStatBar.tsx`).
+6. PostHog `team_score` payloads (`src/components/scoring/team-ranking-row.tsx`),
+   so historical analytics rows become non-comparable across the change.
+
+**What NOT to do.** Do not redefine `teamScores.promoCount` to fix this. It is
+the denominator of `averagePromoScore`, which is stored, displayed and explained
+on `/best-promos/bobbleheads`. See the reasoning recorded on `getLeagueHubStats`.
+
+**Sequencing.** The NHL scanner writing promos is safe and does not touch this.
+Enabling NHL SCORING is what trips it, and `scoreTeam` will happily score NHL
+today: it returns null only for NFL, and `HOME_GAMES.NHL` is already 41. Two
+flags currently prevent that by accident rather than by design, `nhl.active:false`
+in `league-registry.json` and `SCORED_LEAGUES` in `src/lib/types.ts`. Neither was
+built as a scoring-window guard and neither should be relied on as one.
