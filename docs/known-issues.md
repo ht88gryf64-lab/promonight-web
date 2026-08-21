@@ -1549,9 +1549,27 @@ Reading `window.location` once on mount is NOT a substitute: back and forward
 and same-route client navigations never remount the tree, and the UI desyncs
 from the URL.
 
-**AND: any new one gets a served-row count with a cache-busting curl before
-merge.** Not a local build check, not a browser check. Both of those pass while
-the bug is live.
+**TWO DISTINCT FAILURE MODES, and they need different checks.**
+
+**Mode 1, the bailout: content missing from served HTML.** The boundary is too
+broad, so the rendered subtree is replaced by BAILOUT_TO_CLIENT_SIDE_RENDERING.
+Detection: count rows in served HTML with a cache-busting curl. A local build
+check and a browser check BOTH pass while this is live.
+
+**Mode 2, the double render: content duplicated after hydration.** Once a
+component owns its own inner boundary, a redundant boundary at the page level
+re-triggers a client render of the whole subtree and leaves the server copy in
+the DOM. Detection: **load the page in a browser and count what is actually
+visible.** The build passes, AND the served-HTML curl passes, because the
+served HTML is correct. This is the mode that bit us second: after the mode-1
+fix, `/team-rankings?league=MLB` served a correct 75 rows and then hydrated
+into 105 score badges, 30 visible plus a hidden zero-height copy of all 75, and
+rendered two contradictory count lines, one reading 30 teams ranked in MLB and
+one reading 75 teams ranked.
+
+So the pre-merge check is BOTH: a served-row count for mode 1, and a browser
+render with a visible-element count for mode 2. Neither substitutes for the
+other.
 
 **Three worked. One did not, and that is the point.**
 
@@ -1570,10 +1588,20 @@ build, the type system, the test suite or a browser disagrees with it. A
 convention that only lives in comments is invisible at exactly the moment a
 new component is written.
 
-**Recommended follow-up, not yet done:** turn this into a build failure the way
-this repo already handles other hand-kept invariants (the `KNOWN_SURFACES`
-lockstep guard, the `PATH_RE` coupling test). A test that enumerates client
-components calling `useSearchParams` and asserts each one renders `null` would
-convert this entry from something to remember into something that cannot
-regress.
+**Enforced by a lockstep test** (`src/lib/__tests__/search-params-bailout.test.ts`),
+in the style this repo already uses for `KNOWN_SURFACES` and the revalidate
+`PATH_RE`. Read that test before assuming it covers more than it does:
+
+- It CATCHES mode 1 for new components: any file calling `useSearchParams` that
+  neither renders `null` nor owns a `Suspense fallback={null}`.
+- It CATCHES the specific mode-2 shape that actually occurred: a page directly
+  wrapping a self-bounded component in `Suspense`.
+- It CATCHES reintroduction of the URL-synced chip mode, which reads
+  `useSearchParams` and renders content.
+- **It does NOT catch a boundary further up the tree**, for example `Suspense`
+  around a wrapper `div` that contains the component, or a boundary added in a
+  layout rather than a page. Those produce mode 2 and the test will pass.
+
+**So mode 2 still needs a human with a browser.** The test narrows it; it does
+not close it.
 
