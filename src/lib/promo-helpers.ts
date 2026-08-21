@@ -244,6 +244,12 @@ export function generateTeamFAQs(
   promos: Promo[],
   venue: Venue | null,
   promoCounts: Record<PromoType, number>,
+  // Total teams in the `teams` collection, derived by the caller from
+  // getAllTeams().length. Required rather than optional on purpose: these
+  // answers ship inside FAQPage structured data on every team page, and a
+  // defaulted count would go stale silently, which is the exact failure this
+  // parameter exists to end.
+  teamCount: number,
   playoff?: PlayoffFAQContext,
 ): FAQItem[] {
   // Hardcoded 2026 season year, NOT getCurrentYear(): the page title and meta
@@ -316,7 +322,7 @@ export function generateTeamFAQs(
   // 5. How to track (always shown)
   faqs.push({
     question: `How can I track ${fullName} promotional events?`,
-    answer: `PromoNight is a free app that tracks every giveaway, theme night, food deal, and promotion for the ${fullName} and 166 other teams across MLB, NBA, NFL, NHL, MLS, and WNBA. Download it on iOS or Android to get a calendar view of all upcoming promos and push notifications before game day.`,
+    answer: `PromoNight is a free app that tracks every giveaway, theme night, food deal, and promotion for the ${fullName} and ${teamCount - 1} other teams across MLB, NBA, NFL, NHL, MLS, and WNBA. Download it on iOS or Android for a free calendar view of every upcoming promo. PromoNight Pro adds a reminder on the morning of each promo day.`,
   });
 
   // 5b. Travel — gate times (always shown; league-specific generic answer)
@@ -344,10 +350,13 @@ export function generateTeamFAQs(
     answer: `Several hotels sit within walking distance of ${venueName}, and more are a short rideshare away. For a ${fullName} game weekend, searching Expedia for hotels near ${venueName} surfaces the best rates for your specific date — prices jump on marquee dates like giveaway nights and playoff games, so booking early helps.`,
   });
 
-  // 5e. App — push notifications (always shown, distinct from #5's general pitch)
+  // 5e. App — promo-day reminders (always shown, distinct from #5's general pitch).
+  // Reminders are a PromoNight Pro feature: the app schedules a local
+  // notification on the device for the morning of the promo date. Nothing is
+  // sent from a server, so this answer must not describe a push.
   faqs.push({
-    question: `Can I get push notifications for ${team.name} promos?`,
-    answer: `Yes. The free PromoNight app sends push notifications the morning of every ${team.name} promo game — bobblehead giveaways, theme nights, food deals, and kids events. You can follow just the ${team.name} or multiple teams across MLB, NBA, NFL, NHL, MLS, and WNBA.`,
+    question: `Can I get notifications for ${team.name} promos?`,
+    answer: `Yes, with PromoNight Pro. The app sends a notification on the morning of every ${team.name} promo game, covering bobblehead giveaways, theme nights, food deals, and kids events. Downloading the app and browsing every promo is free. You can follow just the ${team.name} or multiple teams across MLB, NBA, NFL, NHL, MLS, and WNBA.`,
   });
 
   // 5f. App — away games (always shown)
@@ -359,7 +368,7 @@ export function generateTeamFAQs(
   faqs.push({
     brandPromo: true,
     question: `Does PromoNight work for away games?`,
-    answer: `PromoNight tracks home-game promotions for all 169 teams across MLB, NBA, NFL, NHL, MLS, and WNBA. If you're traveling to see the ${team.name} play on the road, browse the home team's calendar on this site to see every promo scheduled at their venue during your trip.`,
+    answer: `PromoNight tracks home-game promotions for all ${teamCount} teams across MLB, NBA, NFL, NHL, MLS, and WNBA. If you're traveling to see the ${team.name} play on the road, browse the home team's calendar on this site to see every promo scheduled at their venue during your trip.`,
   });
 
   // 5g. Data authority: provenance plus derived count (only when there's

@@ -70,7 +70,7 @@ export default async function ThisWeekPage() {
     {
       question: 'How do I see promos for just my team?',
       answer:
-        'Visit the team page directly from any promo in the list, or browse all 169 teams from the PromoNight app. The app offers push notifications the morning of a promo day.',
+        'Visit the team page directly from any promo in the list, or browse all 169 teams from the PromoNight app. PromoNight Pro adds a reminder on the morning of a promo day.',
     },
   ];
 

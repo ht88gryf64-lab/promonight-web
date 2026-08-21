@@ -1134,3 +1134,29 @@ cascade-luck cycle; the fix renamed next/font's outfit variable to
 and rd-numerals shipped with font-stretch neutralized to normal because the
 125% expanded cut had never actually rendered; activating it is a separate
 visual decision.
+
+## 25. Em dashes in two live team-page FAQ answers, inside FAQPage schema
+
+**Status: OPEN, filed 2026-08-21 during the notification-claims pass.** Two
+FAQ answers built by `generateTeamFAQs` contain em dashes and render on all
+169 team pages, in the visible FAQ and inside the FAQPage structured data:
+
+- `src/lib/promo-helpers.ts:337`, the directions and parking answer: "Check
+  the official {team} site for public transit options — most major-league
+  venues are served by bus or rail routes on game day."
+- `src/lib/promo-helpers.ts:344`, the hotels answer: "...surfaces the best
+  rates for your specific date — prices jump on marquee dates like giveaway
+  nights and playoff games, so booking early helps."
+
+The project rule is that em dashes are fine in code, comments, commits and
+internal docs, but not in user-facing copy. These are user-facing and they
+are also published to Google as answer text. A third instance in the same
+function was removed as a side effect of the notification-claims rewrite
+(the promo-day reminder answer), but these two were deliberately left alone:
+that pass was scoped to truth corrections, and rewriting adjacent copy would
+have widened a 169-page structured-data change beyond its stated scope.
+
+Fix is mechanical (replace with a comma, a semicolon, or a sentence break)
+but it must be a deliberate copy commit, because it changes answer text on
+169 pages in schema and should be verified at render like any other.
+

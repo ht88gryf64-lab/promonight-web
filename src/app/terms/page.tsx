@@ -29,7 +29,7 @@ export default function TermsPage() {
       <p>The website may display advertisements served by Google AdSense and other advertising partners. We do not control the specific ads shown and do not endorse advertised products or services. Ads are served by third parties using cookies and similar technologies; see our <a href="/privacy">Privacy Policy</a> for opt-out information. Clicking an ad takes you to a third-party site governed by its own terms.</p>
 
       <h2>4. Subscriptions &amp; Payments</h2>
-      <p>PromoNight Pro is an optional paid subscription that unlocks additional features including push notifications and Game Day venue access. Subscriptions are managed entirely through the Apple App Store or Google Play Store.</p>
+      <p>PromoNight Pro is an optional paid subscription that unlocks additional features including promo-day reminders and Game Day venue access. Reminders are scheduled by the app on your device for the morning of a promo date; PromoNight does not send them from a server. Subscriptions are managed entirely through the Apple App Store or Google Play Store.</p>
       <ul>
         <li>Payment is charged to your App Store or Google Play account at confirmation of purchase.</li>
         <li>Subscriptions automatically renew unless canceled at least 24 hours before the end of the current period.</li>

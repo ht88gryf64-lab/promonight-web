@@ -6,6 +6,9 @@ interface JsonLdProps {
   promos: Promo[];
   venue: Venue | null;
   promoCounts: Record<PromoType, number>;
+  /** Total teams, derived by the page from getAllTeams().length. Reaches the
+   *  FAQPage answers, so it must never be a hardcoded literal. */
+  teamCount: number;
   playoffPromos?: PlayoffPromo[];
   playoffContext?: PlayoffFAQContext;
 }
@@ -27,6 +30,7 @@ export function JsonLd({
   promos,
   venue,
   promoCounts,
+  teamCount,
   playoffPromos,
   playoffContext,
 }: JsonLdProps) {
@@ -94,7 +98,7 @@ export function JsonLd({
   // before this filter and 5 after, and the faqs.length > 0 guard below never
   // fires. That argument holds for a blacklist only; an allowlist could reach 0
   // and would silently drop the whole entity.
-  const faqs = generateTeamFAQs(team, promos, venue, promoCounts, playoffContext).filter(
+  const faqs = generateTeamFAQs(team, promos, venue, promoCounts, teamCount, playoffContext).filter(
     (faq) => !faq.brandPromo,
   );
   const faqSchema = faqs.length > 0

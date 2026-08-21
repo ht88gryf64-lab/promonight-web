@@ -197,11 +197,17 @@ export default async function TeamPage({
   // per MLB team-page revalidation. Remove this guard when MLB joins.
   const shouldCheckPlayoffs = team.league !== 'MLB';
 
-  const [promos, venue, playoffConfig] = await Promise.all([
+  // allTeams joins the existing parallel fetch purely to derive the team count
+  // that reaches the FAQ answers and their FAQPage schema. One `teams`
+  // collection read, issued alongside the reads already in flight, so it adds
+  // no latency. It replaces two hardcoded literals that had already gone stale.
+  const [promos, venue, playoffConfig, allTeams] = await Promise.all([
     getTeamPromos(team.id),
     getVenueForTeam(team.id),
     shouldCheckPlayoffs ? getPlayoffConfig() : Promise.resolve(null),
+    getAllTeams(),
   ]);
+  const teamCount = allTeams.length;
 
   const inPlayoffs =
     !!playoffConfig?.playoffsActive &&
@@ -257,6 +263,7 @@ export default async function TeamPage({
     return (
       <RedesignTeamPage
         team={team}
+        teamCount={teamCount}
         venue={venue}
         promos={promos}
         promoCounts={promoCounts}
@@ -280,6 +287,7 @@ export default async function TeamPage({
         promos={promos}
         venue={venue}
         promoCounts={promoCounts}
+        teamCount={teamCount}
         playoffPromos={inPlayoffs ? playoffPromos : undefined}
         playoffContext={playoffContext}
       />
@@ -451,6 +459,7 @@ export default async function TeamPage({
         promos={promos}
         venue={venue}
         promoCounts={promoCounts}
+        teamCount={teamCount}
         playoffContext={playoffContext}
       />
 

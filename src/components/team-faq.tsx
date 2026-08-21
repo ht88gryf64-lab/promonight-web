@@ -6,12 +6,14 @@ interface TeamFAQProps {
   promos: Promo[];
   venue: Venue | null;
   promoCounts: Record<PromoType, number>;
+  /** Total teams, derived by the page from getAllTeams().length. */
+  teamCount: number;
   playoffContext?: PlayoffFAQContext;
   variant?: 'dark' | 'light';
 }
 
-export function TeamFAQ({ team, promos, venue, promoCounts, playoffContext, variant = 'dark' }: TeamFAQProps) {
-  const faqs = generateTeamFAQs(team, promos, venue, promoCounts, playoffContext);
+export function TeamFAQ({ team, promos, venue, promoCounts, teamCount, playoffContext, variant = 'dark' }: TeamFAQProps) {
+  const faqs = generateTeamFAQs(team, promos, venue, promoCounts, teamCount, playoffContext);
 
   if (faqs.length === 0) return null;
 

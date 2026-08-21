@@ -40,6 +40,8 @@ import { AppPushPitch } from '@/components/app-push-pitch';
 
 export interface RedesignTeamPageProps {
   team: Team;
+  /** Total teams, derived by the page from getAllTeams().length. */
+  teamCount: number;
   venue: Venue | null;
   promos: Promo[];
   promoCounts: Record<PromoType, number>;
@@ -66,6 +68,7 @@ export interface RedesignTeamPageProps {
  */
 export function RedesignTeamPage({
   team,
+  teamCount,
   venue,
   promos,
   promoCounts,
@@ -147,6 +150,7 @@ export function RedesignTeamPage({
         promos={promos}
         venue={venue}
         promoCounts={promoCounts}
+        teamCount={teamCount}
         playoffPromos={inPlayoffs ? playoffPromos : undefined}
         playoffContext={playoffContext}
       />
@@ -392,6 +396,7 @@ export function RedesignTeamPage({
                 promos={promos}
                 venue={venue}
                 promoCounts={promoCounts}
+                teamCount={teamCount}
                 playoffContext={playoffContext}
                 variant="light"
               />

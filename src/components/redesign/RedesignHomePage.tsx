@@ -336,14 +336,14 @@ export function RedesignHomePage({
       <section className="border-t border-rd-line px-6 py-14">
         <div className="mx-auto max-w-3xl text-center">
           <span className="font-rd text-[11px] uppercase tracking-[0.14em] text-rd-ink-faint">
-            Promo push
+            Promo reminders
           </span>
           <h2 className="rd-display mx-auto mt-1 max-w-xl text-2xl text-rd-ink md:text-3xl">
             NOTIFICATIONS THE MORNING OF EVERY PROMO
           </h2>
           <p className="mx-auto mt-3 max-w-xl font-rd text-sm text-rd-ink-soft">
-            The free PromoNight app pushes the morning of every promo for your starred
-            teams. The web has everything else.
+            PromoNight Pro sends a reminder the morning of every promo for your starred
+            teams. The app is a free download and the web has everything else.
           </p>
           <div className="mt-6 flex justify-center">
             <AppDownloadButtons section="homepage_app_section" page="home" variant="compact" />
