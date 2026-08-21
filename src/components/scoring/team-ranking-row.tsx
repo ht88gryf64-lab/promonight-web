@@ -56,7 +56,7 @@ export function TeamRankingRow({ rank, teamScore, topPromo, variant = 'dark' }: 
             </div>
           )}
         </div>
-        <ScoreBadge score={teamScore.teamScore} size="md" variant="light" />
+        <ScoreBadge score={teamScore.teamScore} size="md" variant="light" scale="team" />
       </TrackedTapLink>
     );
   }
@@ -96,7 +96,7 @@ export function TeamRankingRow({ rank, teamScore, topPromo, variant = 'dark' }: 
           </div>
         )}
       </div>
-      <ScoreBadge score={teamScore.teamScore} size="md" />
+      <ScoreBadge score={teamScore.teamScore} size="md" scale="team" />
     </TrackedTapLink>
   );
 }

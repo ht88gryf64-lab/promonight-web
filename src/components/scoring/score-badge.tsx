@@ -9,6 +9,14 @@ type ScoreBadgeProps = {
   // 'light' is the cream-house treatment — same 0-100 semantics + high-to-low
   // brand-red cue (filled red / red-tint / muted), legible on white cards.
   variant?: 'dark' | 'light';
+  // Which scale the number is on, because this badge serves two.
+  // 'promo' (default) is a per-promo score, genuinely clamped 0 to 100 by the
+  // scorer, so "out of 100" is accurate. 'team' is a composite team score with
+  // NO upper bound: density times 1.5, plus a variety bonus up to 15, plus a
+  // hot-promo bonus up to 20. The top team currently sits at 162, so the
+  // "out of 100" phrasing was false on every team row above 100 and, being the
+  // accessible name, it was the ONLY version a screen-reader user received.
+  scale?: 'promo' | 'team';
 };
 
 // Brand red for the scoring family (matches the scoring-page hero accent).
@@ -16,7 +24,16 @@ const SCORE_RED = '#d31145';
 
 // Three-tier color band: 90+ filled brand red; 70-89 a quieter mid chip; below
 // 70 plain muted text with no fill. Pure presentation, no hooks.
-export function ScoreBadge({ score, size = 'md', className = '', style, variant = 'dark' }: ScoreBadgeProps) {
+export function ScoreBadge({
+  score,
+  size = 'md',
+  className = '',
+  style,
+  variant = 'dark',
+  scale = 'promo',
+}: ScoreBadgeProps) {
+  const ariaLabel =
+    scale === 'team' ? `Team promo score: ${score}` : `Promo score: ${score} out of 100`;
   const tier: 'hot' | 'warm' | 'cool' =
     score >= 90 ? 'hot' : score >= 70 ? 'warm' : 'cool';
 
@@ -41,7 +58,7 @@ export function ScoreBadge({ score, size = 'md', className = '', style, variant 
     return (
       <span
         className={`inline-flex items-center rounded-full font-rd tabular-nums tracking-wide ${sizeClasses} ${colorClasses} ${className}`}
-        aria-label={`Promo score: ${score} out of 100`}
+        aria-label={ariaLabel}
         style={{ ...colorStyle, ...style }}
       >
         {score}
@@ -59,7 +76,7 @@ export function ScoreBadge({ score, size = 'md', className = '', style, variant 
   return (
     <span
       className={`inline-flex items-center rounded-full font-mono tracking-wide ${sizeClasses} ${colorClasses} ${className}`}
-      aria-label={`Promo score: ${score} out of 100`}
+      aria-label={ariaLabel}
       style={style}
     >
       {score}
