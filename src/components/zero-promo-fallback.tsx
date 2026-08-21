@@ -40,35 +40,35 @@ const LEAGUE_COPY: Record<string, LeagueCopy> = {
     cadence: 'May start',
     paragraphs: ({ teamName, venueName, year }) => [
       `The WNBA regular season runs May through September. ${teamName} ${year} promotional schedules are typically released in April or early May, so this page fills out as the season gets closer.`,
-      `When promos are announced, you'll see every giveaway, theme night, ticket pack, and family event here at ${venueName}. Check back closer to the season opener, or get the free PromoNight app to be notified the moment ${teamName} announce their promos.`,
+      `When promos are announced, you'll see every giveaway, theme night, ticket pack, and family event here at ${venueName}. Check back closer to the season opener, or download the free PromoNight app to browse every confirmed promo across all six leagues in one calendar.`,
     ],
   },
   NBA: {
     cadence: 'October–April regular season',
     paragraphs: ({ teamName, venueName, year }) => [
       `The ${teamName} haven't announced any ${year} promotional events yet. Most NBA teams release their full promo schedules at the start of the regular season and then add dates throughout the year.`,
-      `When ${teamName} promos are confirmed at ${venueName}, they'll appear on this page. In the meantime, get the free PromoNight app to be notified as soon as giveaways, theme nights, or kids events are added.`,
+      `When ${teamName} promos are confirmed at ${venueName}, they'll appear on this page. In the meantime, the free PromoNight app carries the same calendar, so confirmed events show up there too.`,
     ],
   },
   NHL: {
     cadence: 'October–April regular season',
     paragraphs: ({ teamName, venueName, year }) => [
       `The ${teamName} haven't announced any ${year} promotional events yet. NHL teams typically release the bulk of their promo calendar at season open and continue adding dates through the playoffs.`,
-      `When ${teamName} giveaways, theme nights, or family events are confirmed at ${venueName}, they'll show up here. Get the free PromoNight app to be notified the moment promos are added.`,
+      `When ${teamName} giveaways, theme nights, or family events are confirmed at ${venueName}, they'll show up here. The free PromoNight app carries the same calendar as this page.`,
     ],
   },
   MLS: {
     cadence: 'February–October regular season',
     paragraphs: ({ teamName, venueName, year }) => [
       `MLS regular season runs February through October. ${teamName} ${year} promo schedules are released throughout the season rather than all at once, so this page grows as new events are confirmed.`,
-      `Check back as the season progresses for giveaways, theme matches, and family events at ${venueName}, or get the free PromoNight app for notifications.`,
+      `Check back as the season progresses for giveaways, theme matches, and family events at ${venueName}, or browse the same calendar in the free PromoNight app.`,
     ],
   },
   MLB: {
     cadence: 'March–October regular season',
     paragraphs: ({ teamName, venueName, year }) => [
       `The ${teamName} haven't released a full ${year} promotional schedule yet. MLB teams typically publish promo calendars in late January or early February for the full season.`,
-      `When ${teamName} ${year} giveaways, theme nights, and fireworks dates are announced for ${venueName}, every event will appear here. Get the free PromoNight app to be notified as soon as the schedule is posted.`,
+      `When ${teamName} ${year} giveaways, theme nights, and fireworks dates are announced for ${venueName}, every event will appear here. The free PromoNight app carries the same calendar once the schedule is posted.`,
     ],
   },
 };
