@@ -1,6 +1,7 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 import { getTeamBySlug, getTeamPromos } from '@/lib/data';
+import { splitPromosByDate } from '@/lib/promo-helpers';
 
 export const runtime = 'nodejs';
 
@@ -41,7 +42,9 @@ export async function GET(request: NextRequest) {
     return new Response('Team not found', { status: 404 });
   }
 
-  const promos = await getTeamPromos(team.id);
+  // UPCOMING only. This image is the claim a shared link makes before anyone
+  // reaches the page, so it must agree with the hero it previews.
+  const promos = splitPromosByDate(await getTeamPromos(team.id)).upcoming;
 
   return new ImageResponse(
     (

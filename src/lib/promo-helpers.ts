@@ -164,6 +164,71 @@ export function dedupePromos<T extends { date: string; title: string }>(
 // field-absent docs and break the "absent = visible" rule.
 export const isVisiblePromo = (p: { tombstoned?: boolean }): boolean => p.tombstoned !== true;
 
+// ── The single definition of "upcoming" ──────────────────────────────────────
+//
+// THERE IS EXACTLY ONE OF THESE AND IT LIVES HERE. Do not inline a second
+// `p.date >= today` anywhere. The bug this replaced existed precisely because
+// the promo LIST filtered by date while every COUNT on the same page did not,
+// so the hero advertised promos the list correctly reported as gone. Two
+// definitions of one idea is how the two halves of a page came to disagree.
+//
+// The rule these enforce: a count that reaches DOM, schema, or FAQ text is a
+// CLAIM, and a claim may only describe promos a visitor can still attend.
+// All-time counts stay available, but only behind a label that says archive.
+export function todayYmd(): string {
+  return new Date().toISOString().split('T')[0];
+}
+
+export const isUpcomingPromo = (p: { date: string }, today: string = todayYmd()): boolean =>
+  p.date >= today;
+
+// Splits one already-fetched array into the two populations. `upcoming` is
+// date-ascending (soonest first) and `past` is date-descending (most recent
+// first), which is the order the completed archive renders in.
+//
+// Both halves are SORTED here rather than inheriting the caller's order. The
+// previous version reversed the filtered array, which produced most-recent-first
+// only while the input happened to arrive date-ascending from the Firestore
+// orderBy. That is an unstated precondition, and an unstated precondition is a
+// bug waiting for the first caller who passes an array from anywhere else.
+// Sorting removes the error class instead of documenting the trap.
+export function splitPromosByDate<T extends { date: string }>(
+  promos: T[],
+  today: string = todayYmd(),
+): { upcoming: T[]; past: T[] } {
+  // DATELESS PROMOS BELONG TO NEITHER POPULATION, and this is deliberate.
+  // Recurring deals and the date-in-image clubs carry date=null, which the
+  // schema types as string. A dateless promo cannot be claimed as upcoming,
+  // because there is no date for a visitor to turn up on, and it is not part of
+  // a dated archive either. The previous inline filters dropped them from both
+  // sides only as a side effect of null comparing false against a date string;
+  // excluding them explicitly keeps that behaviour and stops the sort below
+  // dereferencing a null.
+  const dated = promos.filter((p) => typeof p.date === 'string' && p.date !== '');
+  const upcoming = dated.filter((p) => isUpcomingPromo(p, today));
+  const past = dated.filter((p) => !isUpcomingPromo(p, today));
+  upcoming.sort((a, b) => a.date.localeCompare(b.date));
+  past.sort((a, b) => b.date.localeCompare(a.date));
+  return { upcoming, past };
+}
+
+// The one place category counts are derived. Callers pass the population they
+// intend to describe (upcoming for a claim, the full array for a labelled
+// archive) so a count can never disagree with the rows beside it.
+//
+// The isGiveaway cross-count is preserved from the previous inline version: a
+// promo flagged isGiveaway counts toward the giveaway tally even when its
+// primary type is something else, so a kids-typed first-N-fans gate giveaway
+// stays in the kids list AND is counted as the giveaway it is.
+export function countPromosByType(promos: Promo[]): Record<PromoType, number> {
+  const counts: Record<PromoType, number> = { giveaway: 0, theme: 0, kids: 0, food: 0 };
+  for (const p of promos) {
+    if (counts[p.type] !== undefined) counts[p.type]++;
+    if (p.isGiveaway && p.type !== 'giveaway') counts.giveaway++;
+  }
+  return counts;
+}
+
 export function formatDateReadable(dateStr: string): string {
   const date = new Date(dateStr + 'T12:00:00');
   return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
@@ -241,9 +306,15 @@ function gateTimesAnswer(league: string, venueName: string, fullName: string): s
 
 export function generateTeamFAQs(
   team: Team,
-  promos: Promo[],
+  // UPCOMING promos only, and the counts derived from them. These answers ship
+  // inside FAQPage structured data, so every number and every named promo here
+  // is a claim to a crawler. Passing the all-time array would restate a
+  // finished season in the present tense, which is what this parameter naming
+  // exists to prevent. Split with splitPromosByDate and count with
+  // countPromosByType; do not filter at the call site.
+  upcomingPromos: Promo[],
   venue: Venue | null,
-  promoCounts: Record<PromoType, number>,
+  upcomingCounts: Record<PromoType, number>,
   // Total teams in the `teams` collection, derived by the caller from
   // getAllTeams().length. Required rather than optional on purpose: these
   // answers ship inside FAQPage structured data on every team page, and a
@@ -262,27 +333,31 @@ export function generateTeamFAQs(
   const venueName = venue?.name || 'their home stadium';
   const faqs: FAQItem[] = [];
 
-  // 1. Total promo count (always shown if promos exist)
-  if (promos.length > 0) {
+  // 1. Remaining promo count. Gated on UPCOMING, so a team whose season has
+  // finished emits no count answer at all rather than restating a closed
+  // season as if it were still ahead.
+  if (upcomingPromos.length > 0) {
     const parts: string[] = [];
-    if (promoCounts.giveaway > 0)
-      parts.push(`${promoCounts.giveaway} giveaway night${promoCounts.giveaway !== 1 ? 's' : ''}`);
-    if (promoCounts.theme > 0)
-      parts.push(`${promoCounts.theme} theme night${promoCounts.theme !== 1 ? 's' : ''}`);
-    if (promoCounts.food > 0)
-      parts.push(`${promoCounts.food} food deal event${promoCounts.food !== 1 ? 's' : ''}`);
-    if (promoCounts.kids > 0)
-      parts.push(`${promoCounts.kids} kids/family event${promoCounts.kids !== 1 ? 's' : ''}`);
+    if (upcomingCounts.giveaway > 0)
+      parts.push(`${upcomingCounts.giveaway} giveaway night${upcomingCounts.giveaway !== 1 ? 's' : ''}`);
+    if (upcomingCounts.theme > 0)
+      parts.push(`${upcomingCounts.theme} theme night${upcomingCounts.theme !== 1 ? 's' : ''}`);
+    if (upcomingCounts.food > 0)
+      parts.push(`${upcomingCounts.food} food deal event${upcomingCounts.food !== 1 ? 's' : ''}`);
+    if (upcomingCounts.kids > 0)
+      parts.push(`${upcomingCounts.kids} kids/family event${upcomingCounts.kids !== 1 ? 's' : ''}`);
 
     faqs.push({
       question: `How many promotional nights do the ${team.name} have in ${year}?`,
-      answer: `The ${fullName} have ${promos.length} promotional events scheduled for the ${year} season, including ${parts.join(', ')}. These events take place at ${venueName}${venue?.address ? ` in ${venue.address.split(',').slice(-2, -1)[0]?.trim() || venue.address}` : ''}.`,
+      answer: `The ${fullName} have ${upcomingPromos.length} promotional events coming up in the ${year} season, including ${parts.join(', ')}. These events take place at ${venueName}${venue?.address ? ` in ${venue.address.split(',').slice(-2, -1)[0]?.trim() || venue.address}` : ''}.`,
     });
   }
 
-  // 2. Best giveaway (skip if 0 giveaways)
-  if (promoCounts.giveaway > 0) {
-    const top = getTopGiveaway(promos);
+  // 2. Best giveaway. Gated on UPCOMING giveaways and selected from the
+  // upcoming array, so "most anticipated" can never name an event that has
+  // already happened.
+  if (upcomingCounts.giveaway > 0) {
+    const top = getTopGiveaway(upcomingPromos);
     if (top) {
       faqs.push({
         question: `What is the best ${team.name} giveaway night in ${year}?`,
@@ -291,9 +366,9 @@ export function generateTeamFAQs(
     }
   }
 
-  // 3. Food deals (skip if 0)
-  if (promoCounts.food > 0) {
-    const foodPromos = getPromosByType(promos, 'food');
+  // 3. Food deals (skip if none upcoming)
+  if (upcomingCounts.food > 0) {
+    const foodPromos = getPromosByType(upcomingPromos, 'food');
     const foodList = foodPromos
       .slice(0, 3)
       .map((p) => p.title)
@@ -305,9 +380,11 @@ export function generateTeamFAQs(
     });
   }
 
-  // 4. Kids events (skip if 0)
-  if (promoCounts.kids > 0) {
-    const kidsPromos = getPromosByType(promos, 'kids');
+  // 4. Kids events (skip if none upcoming). The answer says "Upcoming family
+  // events include", so the list behind it must be upcoming for the sentence
+  // to be true.
+  if (upcomingCounts.kids > 0) {
+    const kidsPromos = getPromosByType(upcomingPromos, 'kids');
     const kidsList = kidsPromos
       .slice(0, 3)
       .map((p) => `${p.title} (${formatDateReadable(p.date)})`)
@@ -315,7 +392,7 @@ export function generateTeamFAQs(
 
     faqs.push({
       question: `When are ${team.name} kids and family events in ${year}?`,
-      answer: `The ${fullName} have ${promoCounts.kids} kids and family event${promoCounts.kids !== 1 ? 's' : ''} scheduled for ${year}. Upcoming family events include ${kidsList}${kidsPromos.length > 3 ? `, and ${kidsPromos.length - 3} more throughout the season` : ''}. These events are designed for young fans and families attending games at ${venueName}.`,
+      answer: `The ${fullName} have ${upcomingCounts.kids} kids and family event${upcomingCounts.kids !== 1 ? 's' : ''} still to come in ${year}. Upcoming family events include ${kidsList}${kidsPromos.length > 3 ? `, and ${kidsPromos.length - 3} more throughout the season` : ''}. These events are designed for young fans and families attending games at ${venueName}.`,
     });
   }
 
@@ -376,10 +453,10 @@ export function generateTeamFAQs(
   // "Last updated" stamp was known-issues entry 21 class (synthetic
   // freshness) and no stored per-team stamp covers NBA/NHL, so the answer
   // states provenance and the one cadence that is true on every page.
-  if (promos.length >= 10) {
+  if (upcomingPromos.length >= 10) {
     faqs.push({
       question: `How often are ${team.name} promo schedules updated?`,
-      answer: `${team.name} promo data comes from official team announcements and is reviewed before it appears here. The current schedule reflects ${promos.length} scheduled events. MLB, WNBA, and MLS schedules are rechecked weekly in season.`,
+      answer: `${team.name} promo data comes from official team announcements and is reviewed before it appears here. The current schedule reflects ${upcomingPromos.length} scheduled events. MLB, WNBA, and MLS schedules are rechecked weekly in season.`,
     });
   }
 

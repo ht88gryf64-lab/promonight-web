@@ -1,3 +1,4 @@
+import { splitPromosByDate } from '@/lib/promo-helpers';
 import type { Metadata } from 'next';
 import { pageOpenGraph } from '@/lib/og';
 import { getPromosFromDate } from '@/lib/data';
@@ -35,8 +36,7 @@ export default async function BobbleheadsPage() {
   const re = /bobblehead/i;
   const bobbleheads = all.filter((p) => re.test(p.title) || re.test(p.description));
   const today = todayYMD();
-  const upcoming = bobbleheads.filter((p) => p.date >= today);
-  const past = bobbleheads.filter((p) => p.date < today).reverse(); // most-recent-first
+  const { upcoming, past } = splitPromosByDate(bobbleheads, today);
 
   const byMonth = new Map<string, typeof bobbleheads>();
   for (const p of upcoming) {

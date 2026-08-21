@@ -3,9 +3,13 @@ import { generateTeamFAQs, teamDisplayName, type PlayoffFAQContext } from '@/lib
 
 interface JsonLdProps {
   team: Team;
-  promos: Promo[];
+  /** UPCOMING promos and their counts, split once by the page. Everything this
+   *  component emits is a machine-readable claim, so nothing past-dated may
+   *  reach it: Event entities would advertise finished events, and the FAQPage
+   *  answers would restate a closed season in the present tense. */
+  upcomingPromos: Promo[];
   venue: Venue | null;
-  promoCounts: Record<PromoType, number>;
+  upcomingCounts: Record<PromoType, number>;
   /** Total teams, derived by the page from getAllTeams().length. Reaches the
    *  FAQPage answers, so it must never be a hardcoded literal. */
   teamCount: number;
@@ -27,16 +31,16 @@ function buildPlace(venue: Venue | null) {
 
 export function JsonLd({
   team,
-  promos,
+  upcomingPromos,
   venue,
-  promoCounts,
+  upcomingCounts,
   teamCount,
   playoffPromos,
   playoffContext,
 }: JsonLdProps) {
-  const today = new Date().toISOString().split('T')[0];
-  const upcomingPromos = promos.filter((p) => p.date >= today);
-
+  // No date filtering here any more. The page splits once with
+  // splitPromosByDate and hands this component the upcoming half, so there is
+  // exactly one definition of "upcoming" in the codebase.
   const teamUrl = `https://www.getpromonight.com/${team.sportSlug}/${team.id}`;
 
   const events = upcomingPromos.map((promo) => ({
@@ -98,7 +102,7 @@ export function JsonLd({
   // before this filter and 5 after, and the faqs.length > 0 guard below never
   // fires. That argument holds for a blacklist only; an allowlist could reach 0
   // and would silently drop the whole entity.
-  const faqs = generateTeamFAQs(team, promos, venue, promoCounts, teamCount, playoffContext).filter(
+  const faqs = generateTeamFAQs(team, upcomingPromos, venue, upcomingCounts, teamCount, playoffContext).filter(
     (faq) => !faq.brandPromo,
   );
   const faqSchema = faqs.length > 0

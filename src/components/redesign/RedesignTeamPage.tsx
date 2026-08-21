@@ -43,8 +43,13 @@ export interface RedesignTeamPageProps {
   /** Total teams, derived by the page from getAllTeams().length. */
   teamCount: number;
   venue: Venue | null;
+  /** Full visible array. Passed to PromoList, which splits it itself to render
+   *  the upcoming rows and the completed archive under separate headings. */
   promos: Promo[];
-  promoCounts: Record<PromoType, number>;
+  /** The claim currency: upcoming promos and their counts. Everything that
+   *  asserts a number to a reader or a crawler takes these. */
+  upcomingPromos: Promo[];
+  upcomingCounts: Record<PromoType, number>;
   displayName: string;
   gameContexts?: GameContext[];
   recurringDeals: RecurringDeal[];
@@ -71,7 +76,8 @@ export function RedesignTeamPage({
   teamCount,
   venue,
   promos,
-  promoCounts,
+  upcomingPromos,
+  upcomingCounts,
   displayName,
   gameContexts,
   recurringDeals,
@@ -92,18 +98,30 @@ export function RedesignTeamPage({
   const leagueHub = getLeagueHub(team.league);
   const leagueHubHref = leagueHub?.live ? leagueHub.href : null;
 
-  // Zero-promo gates. Two, not one: 38 team pages hold no promos at all, but
-  // only the 32 NFL ones have schedule data behind them (getGamesForTeam returns
-  // an empty array for every league but mlb and nfl), so gating the schedule on
-  // the promo condition alone would render an empty shell on the other six.
-  // Both gates are false on all 131 populated pages, which is what keeps their
-  // markup on the existing code path.
-  const hasNoPromos =
-    promoCounts.giveaway === 0 &&
-    promoCounts.theme === 0 &&
-    promoCounts.food === 0 &&
-    promoCounts.kids === 0;
-  const showSchedule = hasNoPromos && (gameContexts?.length ?? 0) > 0;
+  // THREE gates, and the distinction between the first two is load-bearing.
+  //
+  // hasNoUpcoming drives everything that speaks about what is COMING UP: the
+  // schedule-vs-explorer swap, where the rivals grid sits, and the emptiness of
+  // the "coming up" region. It is derived from upcomingCounts.
+  //
+  // hasNoPromosAtAll drives one thing only: whether the league-contextual
+  // fallback REPLACES the promo list. It is deliberately NOT hasNoUpcoming. A
+  // club whose season has finished still has a real completed archive, and
+  // replacing the list would hide genuine content and make the page thinner
+  // than the data warrants. Those pages keep PromoList, which reports the empty
+  // upcoming state in its own words and renders the archive under its own
+  // explicitly past heading.
+  //
+  // The previous single gate read all-time counts, so on a finished season it
+  // was false everywhere: the hero advertised promos that were gone and the
+  // fallback never mounted. Both halves of that are fixed here.
+  const hasNoUpcoming =
+    upcomingCounts.giveaway === 0 &&
+    upcomingCounts.theme === 0 &&
+    upcomingCounts.food === 0 &&
+    upcomingCounts.kids === 0;
+  const hasNoPromosAtAll = promos.length === 0;
+  const showSchedule = hasNoUpcoming && (gameContexts?.length ?? 0) > 0;
 
   // Same-division rivals, free from gameContexts (opponent Team docs are
   // already fetched by enrichGamesForTeam). Empty on leagues without game
@@ -116,12 +134,12 @@ export function RedesignTeamPage({
   // schedule) where it is the most useful thing on the page; populated
   // pages keep promo content first for the head query and mount it
   // immediately after the promo list (order-[41], ahead of the follow
-  // pairing at 42). Desktop ignores order-*, so the same hasNoPromos
+  // pairing at 42). Desktop ignores order-*, so the same hasNoUpcoming
   // branch also picks the SOURCE position at the two mounts below.
   const rivals = getDivisionRivals(team, gameContexts);
   const rivalsBlock =
     rivals.length > 0 ? (
-      <div className={hasNoPromos ? 'order-[12]' : 'order-[41]'}>
+      <div className={hasNoUpcoming ? 'order-[12]' : 'order-[41]'}>
         <DivisionRivals team={team} rivals={rivals} />
       </div>
     ) : null;
@@ -147,9 +165,9 @@ export function RedesignTeamPage({
       {/* SEO + analytics — reused verbatim, invisible. */}
       <JsonLd
         team={team}
-        promos={promos}
+        upcomingPromos={upcomingPromos}
         venue={venue}
-        promoCounts={promoCounts}
+        upcomingCounts={upcomingCounts}
         teamCount={teamCount}
         playoffPromos={inPlayoffs ? playoffPromos : undefined}
         playoffContext={playoffContext}
@@ -186,7 +204,7 @@ export function RedesignTeamPage({
         title={displayName.toUpperCase()}
         subtitle="Promos & Giveaways 2026"
         venueLine={venue?.name ?? undefined}
-        scoreboard={<StatScoreboard counts={promoCounts} gamesCount={gameContexts?.length} />}
+        scoreboard={<StatScoreboard counts={upcomingCounts} gamesCount={gameContexts?.length} />}
       />
 
       {/* Responsive weave — one DOM, two layouts.
@@ -283,8 +301,8 @@ export function RedesignTeamPage({
                 <ScheduleBlock contexts={gameContexts} team={team} teamName={displayName} />
               ) : (
                 <SeasonExplorer
-                  promos={promos}
-                  promoCounts={promoCounts}
+                  promos={upcomingPromos}
+                  promoCounts={upcomingCounts}
                   teamName={displayName}
                   teamSlug={team.id}
                   sport={team.league}
@@ -295,7 +313,7 @@ export function RedesignTeamPage({
             </div>
 
             {/* Rivals, zero-promo mount: directly under the schedule. */}
-            {hasNoPromos ? rivalsBlock : null}
+            {hasNoUpcoming ? rivalsBlock : null}
 
             {/* Full promo list — upcoming + completed, with show-all. The
                 upcoming rows open the shared game modal (same body the calendar
@@ -303,15 +321,20 @@ export function RedesignTeamPage({
                 showTeamLink defaults false — the user is already on this team's
                 page. */}
             <div className="order-[40]">
-              {hasNoPromos ? (
-                /* League-contextual copy REPLACES the list on the 38 zero-promo
-                   pages. Replace rather than sit alongside: both blocks render
-                   the same "Coming up" eyebrow and a competing H2 about the same
-                   absent thing, and the branch being replaced is the dead-end
-                   "No upcoming promos yet". It also means promo-list.tsx is not
-                   edited at all, and that file serves all 131 populated pages.
+              {hasNoPromosAtAll ? (
+                /* League-contextual copy REPLACES the list ONLY on pages with no
+                   promos at all, in any season. Replace rather than sit
+                   alongside: both blocks render the same "Coming up" eyebrow and
+                   a competing H2 about the same absent thing, and the branch
+                   being replaced is the dead-end "No upcoming promos yet".
                    PromoArrivalHighlight goes with it, which is inert here: it is
-                   a deep-link scroll effect with no promo rows to anchor to. */
+                   a deep-link scroll effect with no promo rows to anchor to.
+
+                   NOTE the gate is hasNoPromosAtAll, NOT hasNoUpcoming. A club
+                   whose season has ended has zero upcoming but a full completed
+                   archive, and that archive is real content a visitor may want.
+                   Those pages keep PromoList, which states the empty upcoming
+                   case in its own words and renders the archive beneath it. */
                 <ZeroPromoFallback
                   team={team}
                   venue={venue}
@@ -339,7 +362,7 @@ export function RedesignTeamPage({
 
             {/* Rivals, populated mount: immediately after the promo list,
                 ahead of every conversion/browse module. */}
-            {hasNoPromos ? null : rivalsBlock}
+            {hasNoUpcoming ? null : rivalsBlock}
 
             {/* Email + app conversion pairing, sitting after the promo slot
                 and the rivals grid, immediately before By the Numbers, on
@@ -359,8 +382,8 @@ export function RedesignTeamPage({
             <div className="order-[43]">
               <AuthorityStats
                 team={team}
-                promos={promos}
-                promoCounts={promoCounts}
+                promos={upcomingPromos}
+                promoCounts={upcomingCounts}
                 venue={venue}
                 teamName={displayName}
                 variant="light"
@@ -379,23 +402,23 @@ export function RedesignTeamPage({
             <div className="order-[71]">
               <TeamContentSections
                 team={team}
-                promos={promos}
+                promos={upcomingPromos}
                 venue={venue}
-                promoCounts={promoCounts}
+                promoCounts={upcomingCounts}
                 variant="light"
               />
             </div>
 
             <div className="order-[61]">
-              <TeamRelatedAggregators promos={promos} variant="light" />
+              <TeamRelatedAggregators promos={upcomingPromos} variant="light" />
             </div>
 
             <div className="order-[72]">
               <TeamFAQ
                 team={team}
-                promos={promos}
+                upcomingPromos={upcomingPromos}
                 venue={venue}
-                promoCounts={promoCounts}
+                upcomingCounts={upcomingCounts}
                 teamCount={teamCount}
                 playoffContext={playoffContext}
                 variant="light"

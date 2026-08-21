@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { pageOpenGraph } from '@/lib/og';
+import { isUpcomingPromo, todayYmd } from '@/lib/promo-helpers';
 import { getAllTeams, getTeamPromos } from '@/lib/data';
 import { TeamsBrowser } from '@/components/teams-browser';
 import { isRedesignEnabled } from '@/lib/redesign';
@@ -30,11 +31,18 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function TeamsPage() {
   const teams = await getAllTeams();
 
+  // UPCOMING only, matching the team pages these cards link to. The card says
+  // "N promos" with no date qualifier, so the number is a claim about what a
+  // visitor will find on the other side of the click. Counting all-time here
+  // promised a full archive and delivered an empty upcoming list, and it was
+  // the second definition of a count the team page derives differently, which
+  // is the drift this change exists to end.
+  const today = todayYmd();
   const promoCounts: Record<string, number> = {};
   await Promise.all(
     teams.map(async (t) => {
       const promos = await getTeamPromos(t.id);
-      promoCounts[t.id] = promos.length;
+      promoCounts[t.id] = promos.filter((p) => isUpcomingPromo(p, today)).length;
     }),
   );
 

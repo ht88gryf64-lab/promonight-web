@@ -27,7 +27,7 @@ import { TeamFAQ } from '@/components/team-faq';
 import { TeamRelatedAggregators } from '@/components/team-related-aggregators';
 import { JsonLd } from '@/components/json-ld';
 import { PlayoffSection } from '@/components/playoff-section';
-import { extractPlayoffOpponent, teamDisplayName } from '@/lib/promo-helpers';
+import { countPromosByType, extractPlayoffOpponent, isUpcomingPromo, splitPromosByDate, teamDisplayName } from '@/lib/promo-helpers';
 import { TeamPageTracker } from '@/components/analytics-events';
 import { EngagementTracker } from '@/components/analytics/EngagementTracker';
 import { TicketmasterCTA } from '@/components/affiliates/TicketmasterCTA';
@@ -120,7 +120,7 @@ export async function generateMetadata({
     : `${displayName} ${year} promotional schedule - bobbleheads, giveaways, theme nights, and food deals. ${freshnessTail}`;
 
   const upcomingForDesc = promos
-    .filter((p) => p.date >= todayStr)
+    .filter((p) => isUpcomingPromo(p, todayStr))
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(0, 3);
 
@@ -231,19 +231,26 @@ export default async function TeamPage({
       }
     : undefined;
 
-  const promoCounts: Record<PromoType, number> = { giveaway: 0, theme: 0, kids: 0, food: 0 };
-  for (const p of promos) {
-    if (promoCounts[p.type] !== undefined) {
-      promoCounts[p.type]++;
-    }
-    // A promo flagged isGiveaway counts toward the giveaway tally even when its
-    // primary type is something else. The two Twins kids gate giveaways are
-    // typed 'kids' (so the FAQ kids list keeps them) but are genuine
-    // first-N-fans gate giveaways. No-op for promos without the flag.
-    if (p.isGiveaway && p.type !== 'giveaway') {
-      promoCounts.giveaway++;
-    }
-  }
+  // ── The one derivation. Two populations, one split, one counting function ──
+  //
+  // upcomingCounts is the CLAIM CURRENCY. It feeds the hero stat row, the FAQ
+  // generator (and therefore the FAQPage schema), the SEO content sections, the
+  // category chips, and the zero-state routing gate. A number in any of those
+  // places asserts something to a reader or a crawler, and may only describe
+  // promos a visitor can still attend.
+  //
+  // There is deliberately NO allTimeCounts variable here. The only surface that
+  // describes the archive is the COMPLETED heading inside PromoList, which
+  // derives its own count from the same split applied to the array it already
+  // receives. Computing a second archive total at this level would create a
+  // number with no consumer, sitting one prop-drill away from any claim surface
+  // a future change might wire it into. That is how the original bug happened.
+  //
+  // Before this, every count on the page was all-time while the promo list alone
+  // filtered by date, so 137 of 144 populated pages advertised a number the list
+  // directly beneath it contradicted.
+  const { upcoming: upcomingPromos } = splitPromosByDate(promos);
+  const upcomingCounts = countPromosByType(upcomingPromos);
 
   const displayName = teamDisplayName(team);
   const recurringDeals = await getRecurringDealsForTeam(team.id);
@@ -266,7 +273,8 @@ export default async function TeamPage({
         teamCount={teamCount}
         venue={venue}
         promos={promos}
-        promoCounts={promoCounts}
+        upcomingPromos={upcomingPromos}
+        upcomingCounts={upcomingCounts}
         displayName={displayName}
         gameContexts={gameContexts}
         recurringDeals={recurringDeals}
@@ -284,9 +292,9 @@ export default async function TeamPage({
     <>
       <JsonLd
         team={team}
-        promos={promos}
+        upcomingPromos={upcomingPromos}
         venue={venue}
-        promoCounts={promoCounts}
+        upcomingCounts={upcomingCounts}
         teamCount={teamCount}
         playoffPromos={inPlayoffs ? playoffPromos : undefined}
         playoffContext={playoffContext}
@@ -306,8 +314,8 @@ export default async function TeamPage({
       <TeamHero
         team={team}
         venue={venue}
-        promoCount={promos.length}
-        promoCounts={promoCounts}
+        promoCount={upcomingPromos.length}
+        promoCounts={upcomingCounts}
       />
 
       <section className="px-6 py-4">
@@ -425,12 +433,17 @@ export default async function TeamPage({
 
       <AuthorityStats
         team={team}
-        promos={promos}
-        promoCounts={promoCounts}
+        promos={upcomingPromos}
+        promoCounts={upcomingCounts}
         venue={venue}
         teamName={displayName}
       />
 
+      {/* The fallback REPLACES the list only when there is nothing to show at
+          all. A team with no upcoming promos but a real completed season keeps
+          its list, because PromoList renders the archive under its own
+          explicitly past heading and hiding it would make the page thinner
+          than the data warrants. */}
       {promos.length === 0 ? (
         <ZeroPromoFallback team={team} venue={venue} teamName={displayName} />
       ) : (
@@ -445,20 +458,20 @@ export default async function TeamPage({
         />
       )}
 
-      <TeamRelatedAggregators promos={promos} />
+      <TeamRelatedAggregators promos={upcomingPromos} />
 
       <TeamContentSections
         team={team}
-        promos={promos}
+        promos={upcomingPromos}
         venue={venue}
-        promoCounts={promoCounts}
+        promoCounts={upcomingCounts}
       />
 
       <TeamFAQ
         team={team}
-        promos={promos}
+        upcomingPromos={upcomingPromos}
         venue={venue}
-        promoCounts={promoCounts}
+        upcomingCounts={upcomingCounts}
         teamCount={teamCount}
         playoffContext={playoffContext}
       />
