@@ -30,7 +30,7 @@ import {
   type NflWeekContext,
   type NflClubCounts,
 } from './nfl-week';
-import { resolveIcon, dedupePromos, isVisiblePromo } from './promo-helpers';
+import { dedupePromos, isUpcomingPromo, isVisiblePromo, resolveIcon } from './promo-helpers';
 import { getVenueOverride } from './venue-overrides';
 import { VENUE_RESOLUTION_MAP } from './venue-resolution-map';
 import { VENUE_LOCATIONS_STATIC } from './venue-locations';
@@ -284,7 +284,7 @@ export async function getHighlightedPromos(limit: number = 6): Promise<PromoWith
           .get();
         for (const doc of snapshot.docs) {
           const promo = mapPromoDoc(doc);
-          if (promo.date >= today) {
+          if (isUpcomingPromo(promo, today)) {
             allHighlighted.push({ ...promo, team });
           }
         }

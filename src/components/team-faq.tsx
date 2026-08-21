@@ -3,17 +3,20 @@ import { generateTeamFAQs, type PlayoffFAQContext } from '@/lib/promo-helpers';
 
 interface TeamFAQProps {
   team: Team;
-  promos: Promo[];
+  /** UPCOMING promos and their counts. These answers ship inside FAQPage
+   *  structured data, so they may only describe promos still ahead. The page
+   *  splits once and passes the upcoming half here. */
+  upcomingPromos: Promo[];
   venue: Venue | null;
-  promoCounts: Record<PromoType, number>;
+  upcomingCounts: Record<PromoType, number>;
   /** Total teams, derived by the page from getAllTeams().length. */
   teamCount: number;
   playoffContext?: PlayoffFAQContext;
   variant?: 'dark' | 'light';
 }
 
-export function TeamFAQ({ team, promos, venue, promoCounts, teamCount, playoffContext, variant = 'dark' }: TeamFAQProps) {
-  const faqs = generateTeamFAQs(team, promos, venue, promoCounts, teamCount, playoffContext);
+export function TeamFAQ({ team, upcomingPromos, venue, upcomingCounts, teamCount, playoffContext, variant = 'dark' }: TeamFAQProps) {
+  const faqs = generateTeamFAQs(team, upcomingPromos, venue, upcomingCounts, teamCount, playoffContext);
 
   if (faqs.length === 0) return null;
 

@@ -7,7 +7,7 @@ import { RedesignPromoRow } from '@/components/redesign/RedesignPromoRow';
 import { LazyPromoRows } from '@/components/redesign/LazyPromoRows';
 import { PromoArrivalHighlight } from '@/components/redesign/PromoArrivalHighlight';
 import { isBobbleheadGiveaway, isEbayResaleActive } from '@/lib/ebay';
-import { promoAnchorId } from '@/lib/promo-helpers';
+import { promoAnchorId, splitPromosByDate } from '@/lib/promo-helpers';
 import type { Promo, PromoType, Team } from '@/lib/types';
 import type { GameContext } from '@/lib/data';
 
@@ -190,9 +190,11 @@ export function PromoList({
   }
   const contextsFor = (p: Promo): GameContext[] | null => homeCtxByDate.get(p.date) ?? null;
 
-  const today = new Date().toISOString().split('T')[0];
-  const upcoming = promos.filter((p) => p.date >= today);
-  const past = promos.filter((p) => p.date < today).reverse(); // most-recent-first
+  // The shared split. This file used to own the only correct date filter on the
+  // page while every count around it was all-time, which is how the hero came to
+  // advertise promos this list reported as gone. The predicate now lives in
+  // promo-helpers so both read the same definition.
+  const { upcoming, past } = splitPromosByDate(promos);
 
   const upcomingVisible = upcoming.slice(0, UPCOMING_VISIBLE);
   const upcomingHidden = upcoming.slice(UPCOMING_VISIBLE);
@@ -300,6 +302,13 @@ export function PromoList({
                 <h3 className="rd-display text-2xl md:text-3xl text-rd-ink-soft mt-1">
                   COMPLETED {SEASON_YEAR} PROMOS
                 </h3>
+                {/* The archive states its own size. This is the ONE count on the
+                    page derived from past promos, and it sits under a heading
+                    that says COMPLETED, so it describes rather than advertises.
+                    Parity with the dark variant below. */}
+                <p className="text-rd-ink-faint text-xs font-rd mt-2">
+                  {past.length} completed {past.length === 1 ? 'event' : 'events'} this season
+                </p>
               </div>
 
               {/* Lifted resale rows are the bounded exception to the collapse
