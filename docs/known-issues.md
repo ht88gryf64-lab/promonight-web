@@ -1407,7 +1407,7 @@ unchanged at 945 words and whose JSON-LD is byte-identical. A hardcoded 169 on
 the rollback path is a real correctness problem the moment the team count
 moves, and 48 invisible bytes is the wrong thing to trade for it.
 
-## 27. team_tile_tap dual-emit is 15 weeks past its stated window
+## 30. team_tile_tap dual-emit is 15 weeks past its stated window
 
 **Status: OPEN, cutover decision still yours, filed 2026-08-21.** Every
 TeamCard click fires two events from one handler
@@ -1435,7 +1435,7 @@ same body), so the swap does not break the comparison. It does move both
 levels down together. Homepage volume is roughly 2 taps per day, so any level
 shift will not be separable for weeks.
 
-## 28. collection_tile_tap: giveaways and food_deals lose their only emitters
+## 31. collection_tile_tap: giveaways and food_deals lose their only emitters
 
 **Status: OPEN, filed 2026-08-21, triggered by the homepage swap.** Both
 values have exactly one emitter in the entire repo, `buildRedesignCollectionTiles`

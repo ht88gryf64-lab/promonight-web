@@ -131,7 +131,7 @@ different behavior.
   rises.** The live four-tile section is replaced by a seven-tile grid. Both
   fire the same event, so the surviving values stay continuous, but the value
   set rebases: `giveaways` loses its only emitter repo-wide and flatlines
-  (known-issues entry 28), `hot_this_week` loses its homepage emitter and
+  (known-issues entry 31), `hot_this_week` loses its homepage emitter and
   drops roughly 79%, and two new values appear, `today` and `this_week`.
   `this_week` is deliberately NOT `hot_this_week`: same destination, different
   measurement (highlights inside seven days versus every future highlight), so
@@ -166,7 +166,7 @@ different behavior.
   finder moves below two new rails and three extra tiles. The dual-emit ratio
   with team_card_click is preserved (same handler), but both levels fall
   together, and league tab order becomes data-derived so the from_tab
-  distribution reshuffles. See known-issues entry 27.
+  distribution reshuffles. See known-issues entry 30.
 - **faq_section_reached: the geometry artifact was FIXED BEFORE the swap, on
   purpose, so this one is a clean position-only change.** The observer used to
   watch the whole FAQ section at threshold 0.5, which a viewport shorter than

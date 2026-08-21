@@ -298,7 +298,7 @@ export type CollectionTileTapProperties = {
   // value would rebase a live series mid-flight.
   // `giveaways` and `food_deals` note: the redesigned grid has no giveaways
   // tile, so that value loses its only emitter at the homepage swap. See
-  // known-issues entry 28.
+  // known-issues entry 31.
   collection_name:
     | 'bobbleheads'
     | 'jerseys'
