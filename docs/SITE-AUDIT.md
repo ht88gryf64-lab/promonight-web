@@ -2,7 +2,7 @@
 
 Canonical current-state snapshot for getpromonight.com. This file is the source of truth for site state across every thread in the project. When a thread needs current numbers, it reads here first, then pulls anything live from PostHog in-thread.
 
-Generated: 2026-08-18
+Generated: 2026-08-21
 Data windows: traffic and CTR as of 2026-06-10 (GSC/Bing have a 2-3 day lag); structural sections as noted per section.
 
 ## How to use this file
@@ -115,12 +115,10 @@ PromoNight is in a confirmed growth phase as of mid June 2026. The May 1-8 Bing 
 - KNOWN REMAINDER: privacy/page.tsx:53 still lists "push notifications (FCM)" when naming what Firebase provides. It describes a vendor capability rather than asserting we send anything, and the corrected bullet directly above it now says plainly that we do not. Left deliberately, flagged here.
 - FILED NOT FIXED: known-issues entry 25, two em dashes in live team-page FAQ answers (promo-helpers.ts:337 and :344) that render on 169 pages inside FAQPage schema.
 
-### MEASUREMENT BOUNDARY: homepage swap [MANUAL, PENDING, dated at the swap not at writing]
+### MEASUREMENT BOUNDARY: homepage swap [MANUAL, added 2026-08-21]
 
-**PENDING. This entry is written ahead of the change and is NOT yet in
-effect. It takes effect on the day the homepage swap ships (the commit that
-points `/` at HomePageV2). Date it then. If the swap does not ship, delete
-this block rather than leaving it to read as history.**
+**IN EFFECT from 2026-08-21.** The homepage swap shipped in merge 99295b7:
+`/` now renders HomePageV2. Visible words went from 846 to 1,343.
 
 The swap replaces the homepage sections, their order, and several of the
 components that carry analytics. Six event families move on the same day, so
@@ -296,7 +294,7 @@ Action rule: rewrite only C's, attempt feature capture on B's, route A's to auth
 ### Title rewrite status
 - Shipped June 3. Aggregate MLB CTR 0.73% -> 0.86% (modest, real). 6x team-to-team variance. Red Sox cluster NOT fixed (core giveaway queries 0.26%). Most June click growth came from Google volume, not the rewrite. CTR lever partly pulled (winning teams), partly latent (C-bucket stuck teams), partly unwinnable (A-bucket).
 
-## 3. Data completeness by league [AUTO, generated 2026-08-18]
+## 3. Data completeness by league [AUTO, generated 2026-08-21]
 
 Per-league data completeness from the field-presence rubric (see `audit/README.md`). **Overall /10** is the signed-off score; **Structural /10** is the season-independent subset (venue resolved + PYV detail + gates + recurring), normalized ×2.
 
@@ -307,17 +305,17 @@ Per-league data completeness from the field-presence rubric (see `audit/README.m
 | NFL | 4.1 | 4.3 | in-season |
 | NHL | 2.8 | 5.6 | offseason |
 | MLS | 8.8 | 8.9 | in-season |
-| WNBA | 8.2 | 8.9 | in-season |
+| WNBA | 8.0 | 8.9 | in-season |
 
-Overall reflects current-season promo presence (5 of 10 points require upcoming promos). Leagues flagged `offseason` had 0 upcoming promos as of 2026-08-18, so their Overall is mostly venue coverage — read **Structural /10** for the season-independent picture.
+Overall reflects current-season promo presence (5 of 10 points require upcoming promos). Leagues flagged `offseason` had 0 upcoming promos as of 2026-08-21, so their Overall is mostly venue coverage — read **Structural /10** for the season-independent picture.
 
-## 4. Content coverage [AUTO, generated 2026-08-18]
+## 4. Content coverage [AUTO, generated 2026-08-21]
 
 - Recurring every-game deals: 22/169 teams populated
 - Venue detail (parking + transit + bag policy): 100/169 populated; gate times: 84/169
 - Affiliate readiness: Ticketmaster 169/169, Fanatics 169/169
-- Promo coverage: 1217 upcoming across 169 teams, 5212 all-time
-- Page inventory: 206 routes (169 team pages + 37 others)
+- Promo coverage: 1167 upcoming across 169 teams, 5217 all-time
+- Page inventory: 207 routes (169 team pages + 38 others)
 - Aggregator pages live (10): /best-promos, /best-promos/bobbleheads, /promos/bobbleheads, /promos/food-deals, /promos/jersey-giveaways, /promos/soccer-jersey-nights, /promos/theme-nights, /promos/this-week, /promos/today, /world-cup
 
 ## 5. Monetization [MANUAL - NEEDS CONFIRM]
@@ -336,9 +334,9 @@ Overall reflects current-season promo presence (5 of 10 points require upcoming 
 - Newsletter: Resend system, sending domain mail.getpromonight.com, in phased build. Subscriber count: CONFIRM (likely pre-launch/0). Capture wired on /world-cup and aggregator pages (web_world_cup, web_aggregator sources).
 - Pro subs: RevenueCat, $5.99/season single sport, $9.99/year all sports.
 
-## 6. Technical health [AUTO, generated 2026-08-18]
+## 6. Technical health [AUTO, generated 2026-08-21]
 
-- Canonical: www is canonical and consistent across metadataBase, sitemap, and robots (verified 2026-08-18).
+- Canonical: www is canonical and consistent across metadataBase, sitemap, and robots (verified 2026-08-21).
 - Sitemap: single canonical sitemap at https://www.getpromonight.com/sitemap.xml; no non-www duplicate.
 - robots.txt: allows GPTBot, ClaudeBot, PerplexityBot, Google-Extended, ChatGPT-User, Applebot-Extended.
 - llms.txt: present.
