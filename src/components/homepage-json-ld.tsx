@@ -11,6 +11,11 @@ export interface HomepageCounts {
   leagueCount: number;
   /** [league, teams] in canonical presentation order. */
   leagueBreakdown: Array<[string, number]>;
+  /** League names ordered by how many teams each contributes, alphabetical
+   *  tiebreak. Used by prose that lists coverage, where ordering by a
+   *  hardcoded league list is what the league-agnostic rule forbids. Derived
+   *  here so the homepage and any preview cannot compute it differently. */
+  leagueNamesBySize: string[];
 }
 
 export function homepageCountsFromTeams(teams: Team[]): HomepageCounts {
@@ -27,7 +32,10 @@ export function homepageCountsFromTeams(teams: Team[]): HomepageCounts {
   for (const [league, n] of per) {
     if (!leagueBreakdown.some(([l]) => l === league)) leagueBreakdown.push([league, n]);
   }
-  return { teamCount: teams.length, leagueCount: per.size, leagueBreakdown };
+  const leagueNamesBySize = [...per.keys()].sort(
+    (a, b) => (per.get(b) as number) - (per.get(a) as number) || a.localeCompare(b),
+  );
+  return { teamCount: teams.length, leagueCount: per.size, leagueBreakdown, leagueNamesBySize };
 }
 
 // Spelled-out small numbers, so deriving a count does not silently rewrite

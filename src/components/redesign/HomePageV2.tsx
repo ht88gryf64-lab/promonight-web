@@ -89,9 +89,9 @@ export function HomePageV2({
 
   const tonight = heroBuckets.tonight;
 
-  // This Week grouped by date. This block is the one piece carried over as
-  // markup rather than as a component, because it only ever existed inline in
-  // RedesignHomePage. The copy in that file goes dead at the swap commit.
+  // This Week grouped by date. Carried over as markup rather than as a
+  // component because it only ever existed inline in the previous homepage,
+  // which the swap deleted. This is now the only copy.
   const weekByDate = new Map<string, PromoWithTeam[]>();
   for (const p of weekPromos) {
     const list = weekByDate.get(p.date) ?? [];

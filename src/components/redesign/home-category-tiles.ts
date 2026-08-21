@@ -12,8 +12,8 @@ import { isSoccerJerseyPromo } from '@/lib/soccer-jersey';
 // must follow.
 //
 // League-agnostic by construction: nothing here names a league or a season.
-// A tile whose count is zero is dropped (the buildRedesignCollectionTiles
-// precedent, page.tsx:224-231), so in a December corpus the grid shrinks to
+// A tile whose count is zero is dropped (the precedent set by the retired
+// four-tile builder), so in a December corpus the grid shrinks to
 // whichever categories the NFL/NHL/NBA inventory actually stocks instead of
 // advertising empty lists.
 
@@ -23,7 +23,7 @@ export interface HomeCategoryTile {
   key: string;
   /** collection_tile_tap value. Separate from `key` because tile keys are
    *  kebab-case for routing while the analytics union is snake_case, the same
-   *  split RedesignCollectionTile already uses. */
+   *  split the retired four-tile builder already used. */
   trackName: CollectionTileName;
   label: string;
   blurb: string;

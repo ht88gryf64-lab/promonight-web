@@ -19,14 +19,15 @@ import { AppDownloadButtons } from '@/components/app-download-buttons';
 import { IndieDeveloperBlock } from '@/components/indie-developer-block';
 import { HomepageFAQ } from '@/components/homepage-faq';
 import { HomepageJsonLd, homepageCountsFromTeams } from '@/components/homepage-json-ld';
+import { getVenueUtilityCounts } from '@/lib/venue-hub';
+import { pickBestStubPromos } from '@/components/redesign/pick-best-stub-promos';
+import { buildHomeCategoryTiles } from '@/components/redesign/home-category-tiles';
+import { deriveLeagueOrder } from '@/components/redesign/derive-league-order';
 import { TrackedTapLink } from '@/components/analytics/TrackedTapLink';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { AD_SLOTS } from '@/lib/ads/slots';
 import { isRedesignEnabled } from '@/lib/redesign';
-import {
-  RedesignHomePage,
-  type RedesignCollectionTile,
-} from '@/components/redesign/RedesignHomePage';
+import { HomePageV2 } from '@/components/redesign/HomePageV2';
 
 // 6h fallback. Home is the only indexed route whose "Tonight" cards go stale on a
 // pure date rollover (no data write), so 6h bounds that staleness. On-demand
@@ -202,37 +203,6 @@ function rankTeamsByFuturePromos(
   return { sortedTeams, counts };
 }
 
-// Redesign Browse-Collections: four consolidated category tiles (gate-on only).
-// The legacy buildCollectionTiles() above is untouched and still drives the
-// byte-identical gate-off homepage. Tiles with a zero count are dropped.
-function buildRedesignCollectionTiles(allFuture: PromoWithTeam[]): RedesignCollectionTile[] {
-  const giveawayCount = allFuture.filter((p) => p.type === 'giveaway').length;
-  const themeCount = allFuture.filter((p) => p.type === 'theme').length;
-  const foodCount = allFuture.filter((p) => p.type === 'food').length;
-  const hotCount = allFuture.filter((p) => p.highlight).length;
-
-  // Giveaways links to the better-stocked of the two giveaway collections.
-  const bobbleheads = allFuture.filter(
-    (p) => BOBBLEHEAD_RE.test(p.title) || BOBBLEHEAD_RE.test(p.description),
-  ).length;
-  const jerseys = allFuture.filter(
-    (p) => JERSEY_RE.test(p.title) || JERSEY_RE.test(p.description),
-  ).length;
-  const giveawayHref = bobbleheads >= jerseys ? '/promos/bobbleheads' : '/promos/jersey-giveaways';
-
-  const tiles: RedesignCollectionTile[] = [];
-  if (giveawayCount > 0)
-    tiles.push({ key: 'giveaway', label: 'Giveaways', count: giveawayCount, href: giveawayHref, trackName: 'giveaways' });
-  if (themeCount > 0)
-    tiles.push({ key: 'theme', label: 'Theme nights', count: themeCount, href: '/promos/theme-nights', trackName: 'theme_nights' });
-  if (foodCount > 0)
-    tiles.push({ key: 'food', label: 'Food deals', count: foodCount, href: '/promos/food-deals', trackName: 'food_deals' });
-  if (hotCount > 0)
-    tiles.push({ key: 'hot', label: 'Hot this week', count: hotCount, href: '/promos/this-week', trackName: 'hot_this_week' });
-
-  return tiles;
-}
-
 // Resolve the bounded upcoming-promo set (hero Tonight + This Week) to the
 // home-game GameContext(s) the shared modal body renders, so a homepage card
 // opens the same modal as the team-page calendar. Date-scoped: getGamesForTeam
@@ -288,13 +258,17 @@ export default async function HomePage() {
   const weekEnd = plusDays(today, 7);
   const tonightWindowEnd = plusDays(today, 14);
 
-  const [regularWindow, playoffWindow, allFuture, allTeams, promoCount] =
+  const [regularWindow, playoffWindow, allFuture, allTeams, promoCount, venueCounts] =
     await Promise.all([
       getPromosInDateRange(today, tonightWindowEnd),
       getPlayoffPromosInDateRange(today, tonightWindowEnd),
       getPromosFromDate(today),
       getAllTeams(),
       getPromoCount(),
+      // Venue coverage for the gameday grid and the hero's fourth stat. One
+      // collection pass plus one path-guarded collection-group pass, issued
+      // with the reads already in flight.
+      getVenueUtilityCounts(),
     ]);
 
   // Merge playoff promos into the hero stream. Both arrays are PromoWithTeam
@@ -326,20 +300,34 @@ export default async function HomePage() {
   // preserving every analytics event. Gate-OFF falls through to the existing
   // dark homepage below, byte-identical.
   if (isRedesignEnabled()) {
+    // Covers the tonight bucket and This Week, the same set the previous
+    // homepage resolved. The ranked best-promos rail is deliberately NOT
+    // included: it would add up to eight more team/date enrichments on the
+    // highest traffic route, and its cards fall back to the legacy promo
+    // detail exactly as game-less leagues already do.
     const resolvedContexts = await resolveCardContexts([
       ...heroBuckets.tonight,
       ...weekPromos,
     ]);
     return (
-      <RedesignHomePage
+      <HomePageV2
         heroBuckets={heroBuckets}
         weekPromos={weekPromos}
-        collectionTiles={buildRedesignCollectionTiles(allFuture)}
+        bestPromos={pickBestStubPromos(allFuture, 8)}
+        categoryTiles={buildHomeCategoryTiles(allFuture, today)}
         teamsForGrid={teamsForGrid}
         teamPromoCounts={teamPromoCounts}
-        promoCount={promoCount}
+        leagueOrder={deriveLeagueOrder(allFuture)}
+        venueCounts={venueCounts}
         teamCount={allTeams.length}
-        lastUpdated={lastUpdated}
+        leagueCount={homepageCounts.leagueCount}
+        leagueNames={homepageCounts.leagueNamesBySize}
+        heroStats={[
+          { value: promoCount.toLocaleString(), label: 'Promos tracked' },
+          { value: String(allTeams.length), label: 'Teams' },
+          { value: String(homepageCounts.leagueCount), label: 'Leagues' },
+          { value: String(venueCounts.verifiedTotal), label: 'Venue guides' },
+        ]}
         counts={homepageCounts}
         resolvedContexts={resolvedContexts}
       />

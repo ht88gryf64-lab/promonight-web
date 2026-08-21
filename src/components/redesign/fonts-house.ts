@@ -2,7 +2,7 @@ import { Archivo } from 'next/font/google';
 
 // PRELOAD-DISABLED Archivo for surfaces reachable from the ROOT layout or from a
 // route whose gate-off render must stay byte-identical: the global chrome
-// (GlobalChrome) and the gate-on RedesignHomePage.
+// (GlobalChrome) and the gate-on homepage (HomePageV2).
 //
 // next/font emits a font-preload <link> on every route that can REACH a font in
 // its module graph — not just where it renders. A preload:true instance reachable

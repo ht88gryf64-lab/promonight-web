@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { IconArrowRight } from '@tabler/icons-react';
 
-// Redesign hero, a variant of the inline hero in RedesignHomePage.tsx:104-167
+// Redesign hero. Began as a variant of the inline hero in the retired
+// RedesignHomePage
 // per the design target (docs/homepage-redesign-target.html): the tonight
 // cards move OUT of the hero into their own StubRail section below, the old
 // h1 becomes the eyebrow, and the clock-stamp line (known-issues entry 21) is
@@ -32,7 +33,8 @@ export interface HomeHeroProps {
   stats: HomeHeroStat[];
 }
 
-// Matches RedesignHomePage's HERO_INK (charcoal, team-page hero base).
+// Charcoal hero base, matching the team-page hero (the value the previous
+// homepage called HERO_INK before it was retired).
 const HERO_INK = '#1d1714';
 
 export function HomeHero({ teamCount, leagueCount, stats }: HomeHeroProps) {

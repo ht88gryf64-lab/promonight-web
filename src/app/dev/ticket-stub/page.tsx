@@ -135,7 +135,7 @@ export default async function TicketStubPreviewPage() {
     <div className={`${archivoHouse.variable} rd-root min-h-screen bg-rd-cream`}>
       <div className="mx-auto max-w-6xl px-6 pt-10">
         <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.22em] text-rd-ink-faint">
-          HERO · replaces the inline hero at RedesignHomePage.tsx:104-167 · tonight cards move to
+          HERO · replaces the retired inline homepage hero · tonight cards move to
           the rail below · no clock stamp (entry 21) · all numbers derived
         </p>
       </div>
