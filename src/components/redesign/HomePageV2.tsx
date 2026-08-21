@@ -33,10 +33,16 @@ import { AD_SLOTS } from '@/lib/ads/slots';
 // week, best promos rail, category grid, team finder, ad slot B, gameday grid,
 // app block, newsletter strip, founder block, FAQ, adhesion footer slot.
 //
-// Ad slots are placed here as instructed for the assembly and are revisited in
-// their own commit: HEADER_LEADERBOARD sits at the tonight boundary rather
-// than immediately under the hero, RECIRC_NATIVE has moved from above the team
-// finder to below it, and ADHESION_FOOTER is unchanged at the end.
+// AD SLOTS, final: three, unchanged in count. HEADER_LEADERBOARD LEAVES IN
+// PLACE. It already sat at the hero-to-next-section boundary; the tonight rail
+// now occupies that gap, so the slot follows the rail without moving relative
+// to the page structure. RECIRC_NATIVE is the one that moves, from above the
+// team finder to below it. ADHESION_FOOTER is unchanged at the end.
+//
+// No registry row changes. docs/ad-slots-registry.md rows describe slot
+// CONFIG (sizes, lazy, tier, status), not mount position, so a placement move
+// is not representable as a row edit and the deprecate-only rule is moot here.
+// The homepage placement order is recorded in that file as a note instead.
 
 export interface HomePageV2Props {
   heroBuckets: HeroBuckets;

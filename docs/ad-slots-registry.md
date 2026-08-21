@@ -21,6 +21,28 @@ Slot configs live in `src/lib/ads/slots.ts`. Component lives in
 | adhesion_footer | homepage, team_page, promo_collection, playoffs_hub | — | — | 320×50 | no | medium | active |
 | recirc_native | homepage | 728×250 | — | 300×250 | yes | medium | active |
 
+## Homepage placement order (redesign)
+
+Rows above describe slot CONFIG, not mount position, so the redesign's
+placement changes are recorded here rather than as row edits. No row is
+edited or deprecated: the three homepage slots keep their ids, sizes, lazy
+flags and tiers exactly as listed.
+
+Order on the assembled homepage, top to bottom:
+
+1. hero, ribbon, tonight rail
+2. `header_leaderboard` (LEAVES IN PLACE: it already sat at the boundary just
+   below the hero, and the tonight rail now fills that gap, so the slot
+   follows the rail without moving relative to the page structure)
+3. this week, best promos rail, category grid, team finder
+4. `recirc_native` (MOVED: previously above the team finder, now below it)
+5. gameday grid, app block, newsletter strip, founder block, FAQ
+6. `adhesion_footer` (unchanged, last)
+
+Three slots, same as the live homepage today. Note that all three currently
+render nothing at all: `AdSlot` collapses when no network is assigned and
+`NEXT_PUBLIC_AD_NETWORK` is unset, which is true of the live homepage too.
+
 ## Lighthouse / CLS
 
 Premium networks (Mediavine, Raptive) reject sites with CLS > 0.1 in field
