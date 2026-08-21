@@ -41,6 +41,13 @@ type BestPromosBrowserProps = {
   // 'dark' (default) byte-identical when the gate is off; 'light' is the
   // cream-house. All filters, events, scoring, and capsules are unchanged.
   variant?: 'dark' | 'light';
+  /** Retrospective mode: the forward window yielded nothing, so initialPromos
+   *  carry a COMPLETED season instead of upcoming dates. Skips the
+   *  today-forward date filter that would discard every one of them, and hides
+   *  the date-range chips, which are meaningless once the season is over.
+   *  Driven by a real emptiness condition, never a date literal, so it
+   *  switches back on its own the day new data lands. */
+  retrospective?: boolean;
 };
 
 const PAGE_SIZE = 50;
@@ -85,6 +92,7 @@ export function BestPromosBrowser({
   ticketsSurface,
   inlineAnswers = [],
   variant = 'dark',
+  retrospective = false,
 }: BestPromosBrowserProps) {
   const light = variant === 'light';
   const labelClass = light
@@ -120,11 +128,13 @@ export function BestPromosBrowser({
     const endYMD = addDaysToYMD(serverTodayYMD, RANGE_DAYS[range] ?? 90);
     return initialPromos.filter((p) => {
       if (league !== 'All' && p.team.league !== league) return false;
-      if (p.date < serverTodayYMD) return false;
-      if (p.date > endYMD) return false;
+      // Retrospective rows are all in the past by definition, so the
+      // today-forward window would discard every one of them.
+      if (!retrospective && p.date < serverTodayYMD) return false;
+      if (!retrospective && p.date > endYMD) return false;
       return true;
     });
-  }, [initialPromos, serverTodayYMD, league, range]);
+  }, [initialPromos, serverTodayYMD, league, range, retrospective]);
 
   // Reset visible count when filters change so the user doesn't see a tiny
   // visible window if they narrow filters with N previously loaded.
@@ -218,14 +228,16 @@ export function BestPromosBrowser({
         <LeagueFilter value={league} onSelect={handleLeagueSelect} variant={variant} />
       </div>
 
-      <div className="mb-8">
-        <div className={labelClass}>Filter by date range</div>
-        <DateRangeFilter value={range} onSelect={handleRangeSelect} variant={variant} />
-      </div>
+      {!retrospective && (
+        <div className="mb-8">
+          <div className={labelClass}>Filter by date range</div>
+          <DateRangeFilter value={range} onSelect={handleRangeSelect} variant={variant} />
+        </div>
+      )}
 
       <p className={light ? 'font-rd text-[11px] text-rd-ink-faint mb-4' : 'font-mono text-[11px] text-text-dim mb-4'}>
-        {filtered.length} promo{filtered.length === 1 ? '' : 's'} match this
-        filter
+        {filtered.length} promo{filtered.length === 1 ? '' : 's'}{' '}
+        {retrospective ? 'ranked from the completed season' : 'match this filter'}
       </p>
 
       <div className="space-y-3">
@@ -259,8 +271,9 @@ export function BestPromosBrowser({
       {visible.length === 0 && (
         <div className={light ? 'bg-rd-card border border-rd-line rounded-2xl p-10 text-center' : 'bg-bg-card border border-border-subtle rounded-2xl p-10 text-center'}>
           <p className={light ? 'text-rd-ink-soft' : 'text-text-secondary'}>
-            No scored promos match this filter. Try a wider date range or a
-            different league.
+            {retrospective
+              ? 'No scored promos in this league for the 2026 season.'
+              : 'No scored promos match this filter. Try a wider date range or a different league.'}
           </p>
         </div>
       )}
