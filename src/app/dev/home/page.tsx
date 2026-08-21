@@ -28,7 +28,10 @@ import { homepageCountsFromTeams } from '@/components/homepage-json-ld';
 // NODE_ENV=production and this page exists to be reviewed on a preview URL.
 // Production serves 404.
 export const metadata: Metadata = { robots: { index: false, follow: false } };
-export const revalidate = 0;
+// Prerendered rather than dynamic (revalidate 0) so the assembled page lands in
+// the build output as HTML and its visible word count is measurable from a
+// build artifact instead of a live fetch. The real homepage uses 21600.
+export const revalidate = 300;
 
 function chicagoTodayYMD(): string {
   const parts = new Intl.DateTimeFormat('en-CA', {
