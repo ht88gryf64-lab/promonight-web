@@ -1160,3 +1160,58 @@ Fix is mechanical (replace with a comma, a semicolon, or a sentence break)
 but it must be a deliberate copy commit, because it changes answer text on
 169 pages in schema and should be verified at render like any other.
 
+
+---
+
+## 26. A clean tsc is not evidence a nullable field is handled
+
+**Status: RESOLVED for the instance in `dc2d6e7`, RECORDED as a standing rule.**
+Filed 2026-08-21 from the promo-count derivation change.
+
+**What happened.** `splitPromosByDate` was given an explicit sort so its
+"most recent first" guarantee would stop depending on the caller passing a
+date-ascending array. The full production build then failed prerendering
+`/mlb/cincinnati-reds`:
+
+```
+TypeError: Cannot read properties of null (reading 'localeCompare')
+Export encountered an error on /[sport]/[team]/page: /mlb/cincinnati-reds
+```
+
+Recurring deals and the date-in-image clubs store `date: null` while the
+`Promo` type declares `date: string`. The previous code filtered with
+`p.date >= today` and `p.date < today`, and a null compares false against a
+date string in both directions, so those rows silently fell out of both
+halves. Nothing depended on that, nothing documented it, and it was not
+deliberate. Adding a sort turned the accident into a crash, because `past`
+then contained a row whose `date` could not be compared.
+
+**Why it is worth an entry rather than just a fix.** Every cheap check passed
+while the bug was live in the working tree:
+
+- `tsc --noEmit` was clean, because the type says `string` and the data
+  disagrees. TypeScript was asserting something about the schema that
+  Firestore does not enforce.
+- The full test suite passed, 515 tests, including the new tests written
+  specifically for this change. Every fixture had a date, because a fixture
+  author writes the shape the type describes.
+- Only a real production build against real data caught it, and only on one
+  team out of 169.
+
+**The rule.** A clean type check is not evidence that a nullable field is
+handled. It is evidence that the declared type and the code agree, which says
+nothing when the declared type is the thing that is wrong. Where a field comes
+from Firestore, treat its declared non-nullability as a claim to verify, not a
+guarantee to rely on. In particular, any change that moves a field from a
+comparison (which coerces silently) to a method call (which throws) crosses
+exactly this line.
+
+**The corollary for tests.** Fixtures inherit the author's mental model, so a
+suite written from the type will never contain the value the type forbids.
+When touching a Firestore-backed field, write at least one fixture that
+violates the declared type on purpose. The regression test added alongside the
+fix does this, and its comment says why.
+
+**The practical check.** For a change of this shape, run the real build. It is
+the only step in this project's gate that reads all 169 teams' actual stored
+values.

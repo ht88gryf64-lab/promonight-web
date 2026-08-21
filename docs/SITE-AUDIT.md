@@ -320,3 +320,44 @@ Nothing watches stored timestamp age today. Known stale-with-no-alarm stamps as 
 Both predate the rescore and were deliberately not touched by it; recorded here as known-stale rather than silently trusted. The existing weekly staleness-check workflow did not catch the freeze: whatever it covers, it does not alarm on teamScores.computedAt or on these metadata stamps.
 
 Fix shape when picked up: a timestamp-age tripwire, most naturally hosted in the existing staleness-check workflow, asserting teamScores max computedAt is younger than 8 days during each scored league's season, plus a decision per orphaned stamp (wire it to a real writer or delete it). Until then, treat any stored timestamp on a surface or in appConfig as unverified until its writer is identified.
+
+### Hub stat bar "N promos tracked" [MANUAL, added 2026-08-21]
+
+**Recorded here with a correction to the framing it arrived with.** This surface was raised
+as a third known-stale stamp alongside the two above. It is not stale, and calling it stale
+would put a false claim in this file. The defect is real but it is a different one.
+
+**What it reads.** `getLeagueHubStats` (`src/lib/data.ts:1296-1313`) sums `promoCount` across
+`teamScores` docs for the league. `HubStatBar` (`src/components/hub/HubStatBar.tsx:18-35`)
+renders it as "{N} {league} promos tracked" plus "avg promos per team", on `/mlb`, `/wnba`
+and `/mls`.
+
+**What it reads TODAY**, measured 2026-08-21:
+
+| league | rendered total | rendered avg per team |
+|---|---|---|
+| MLB | 2,577 | 85.9 |
+| MLS | 413 | 13.8 |
+| WNBA | 236 | 15.7 |
+
+**Why it is not a staleness entry.** `teamScores.computedAt` spans 2026-08-18 to
+**2026-08-20**, one day old at the time of writing. The scoring writer is live again after
+the rescore, so this surface is being recomputed, not frozen. It does not belong in the list
+above.
+
+**What is actually wrong with it.** Those three totals match the ALL-TIME visible promo
+counts in Firestore exactly (MLB 2,577, MLS 413, WNBA 236). `teamScores.promoCount` is a
+lifetime tally, so the hub bar is the same class of defect as the team-page counts fixed on
+2026-08-21 in `fix/promo-count-derivation`, in a different pipeline. Being freshly computed
+makes it worse rather than better: it will keep being recomputed as a lifetime figure
+indefinitely.
+
+**Why converting it to allTimeCounts would be the wrong fix.** It would change the source
+without changing the meaning, and it would cost 30 team reads per hub render to arrive at the
+number the surface already has. The question is not where the number comes from, it is what
+the label should promise. "Promos tracked" is defensible for a lifetime dataset figure and
+should then say so explicitly. "Avg promos per team" is not defensible as a lifetime average
+next to a hub whose purpose is what is on this week. Decide the label first, then the source.
+
+**Not fixed now, deliberately.** No user-facing claim here is false in the way the team-page
+counts were, because "tracked" can honestly describe an archive.
