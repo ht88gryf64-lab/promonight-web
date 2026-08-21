@@ -112,7 +112,7 @@ export default async function ThemeNightsPage() {
     {
       question: 'Can I get theme-night notifications?',
       answer:
-        'Yes. PromoNight Pro sends a push notification the morning of a promo day for every team you follow. It is $5.99 per season for a single sport or $9.99 per year for all sports.',
+        'Yes. PromoNight Pro schedules a reminder on your device for the morning of a promo day for every team you follow. It is $5.99 per season for a single sport or $9.99 per year for all sports.',
     },
   ];
 

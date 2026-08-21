@@ -31,7 +31,7 @@ export default async function DownloadPage() {
             <span className="font-rd text-[11px] tracking-[0.14em] uppercase text-rd-ink-faint">Download</span>
             <h1 className="rd-display text-4xl md:text-6xl uppercase text-rd-ink mt-2">GET PROMONIGHT</h1>
             <p className="text-rd-ink-soft text-base md:text-lg mt-4 max-w-2xl mx-auto">
-              Every giveaway, theme night, and food deal across MLB, NBA, NHL, NFL, MLS, and WNBA. Free to download. Pro tier adds push notifications.
+              Every giveaway, theme night, and food deal across MLB, NBA, NHL, NFL, MLS, and WNBA. Free to download. Pro tier adds promo-day reminders.
             </p>
           </div>
 
@@ -82,7 +82,7 @@ export default async function DownloadPage() {
                   <div className="absolute inset-0 rounded-[36px] border border-white/5 pointer-events-none" />
                   <div className="relative w-full h-full rounded-[33px] overflow-hidden bg-[#060810]">
                     {pushScreenshotExists ? (
-                      <Image src="/screenshots/push.png" alt="PromoNight push notification: Bobblehead night tonight at Target Field" fill sizes="(max-width: 768px) 80vw, 280px" className="object-cover" />
+                      <Image src="/screenshots/push.png" alt="PromoNight reminder: Bobblehead night tonight at Target Field" fill sizes="(max-width: 768px) 80vw, 280px" className="object-cover" />
                     ) : (
                       <div className="absolute inset-0 flex flex-col items-center justify-start pt-24 bg-gradient-to-b from-[#060810] to-[#0e1017] p-5">
                         <div className="w-full bg-bg-card/95 border border-border-subtle rounded-2xl p-3 flex items-start gap-3 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.7)]">
@@ -103,7 +103,7 @@ export default async function DownloadPage() {
               <div>
                 <span className="font-rd text-[11px] tracking-[0.14em] uppercase text-rd-ink-faint">PromoNight Pro</span>
                 <h2 className="rd-display text-3xl md:text-4xl uppercase text-rd-ink mt-2 mb-4">NEVER FORGET A PROMO DAY</h2>
-                <p className="text-rd-ink-soft text-sm leading-relaxed mb-4">Pro notifies you the morning of every promotional event for teams you follow. So you see &ldquo;Bobblehead night tonight at Target Field&rdquo; when you&apos;re deciding what to do after work, not after the game.</p>
+                <p className="text-rd-ink-soft text-sm leading-relaxed mb-4">Pro reminds you the morning of every promotional event for teams you follow. So you see &ldquo;Bobblehead night tonight at Target Field&rdquo; when you&apos;re deciding what to do after work, not after the game.</p>
                 <p className="text-rd-ink-faint text-xs font-rd tracking-[0.04em]">$5.99 per season per sport &middot; $9.99 per year for all sports</p>
               </div>
             </div>
@@ -124,7 +124,7 @@ export default async function DownloadPage() {
             GET PROMONIGHT
           </h1>
           <p className="text-text-secondary text-base md:text-lg mt-4 max-w-2xl mx-auto">
-            Every giveaway, theme night, and food deal across MLB, NBA, NHL, NFL, MLS, and WNBA. Free to download. Pro tier adds push notifications.
+            Every giveaway, theme night, and food deal across MLB, NBA, NHL, NFL, MLS, and WNBA. Free to download. Pro tier adds promo-day reminders.
           </p>
         </div>
 
@@ -205,7 +205,7 @@ export default async function DownloadPage() {
                   {pushScreenshotExists ? (
                     <Image
                       src="/screenshots/push.png"
-                      alt="PromoNight push notification: Bobblehead night tonight at Target Field"
+                      alt="PromoNight reminder: Bobblehead night tonight at Target Field"
                       fill
                       sizes="(max-width: 768px) 80vw, 280px"
                       className="object-cover"
@@ -237,7 +237,7 @@ export default async function DownloadPage() {
                 NEVER FORGET A PROMO DAY
               </h2>
               <p className="text-text-secondary text-sm leading-relaxed mb-4">
-                Pro notifies you the morning of every promotional event for teams you follow. So you see &ldquo;Bobblehead night tonight at Target Field&rdquo; when you&apos;re deciding what to do after work, not after the game.
+                Pro reminds you the morning of every promotional event for teams you follow. So you see &ldquo;Bobblehead night tonight at Target Field&rdquo; when you&apos;re deciding what to do after work, not after the game.
               </p>
               <p className="text-text-muted text-xs font-mono tracking-[0.5px]">
                 $5.99 per season per sport &middot; $9.99 per year for all sports

@@ -177,7 +177,7 @@ function buildFaqs(
   faqs.push({
     question: 'How do I find playoff promotions for my team?',
     answer:
-      'Click any team name above to open that team\'s full promo page on PromoNight. Each team page shows the regular-season calendar plus a pinned playoff section with all scheduled giveaways, watch parties, and fan events. The PromoNight iOS and Android apps also push notifications before each game.',
+      'Click any team name above to open that team\'s full promo page on PromoNight. Each team page shows the regular-season calendar plus a pinned playoff section with all scheduled giveaways, watch parties, and fan events. PromoNight Pro also schedules a reminder on your device before each game.',
   });
 
   return faqs;

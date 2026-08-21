@@ -14,7 +14,7 @@ const HOMEPAGE_FAQS: FAQItem[] = [
   {
     question: 'Is PromoNight free?',
     answer:
-      'Yes, PromoNight is free to download and use. The free version lets you track all teams and browse all promos. PromoNight Pro ($9.99/year or $5.99/season per sport) adds push notifications so you never miss a promo day.',
+      'Yes, PromoNight is free to download and use. The free version lets you track all teams and browse all promos. PromoNight Pro ($9.99/year or $5.99/season per sport) adds a reminder that the app schedules on your device for the morning of each promo day.',
   },
   {
     question: 'What types of promotions does PromoNight track?',
