@@ -1515,3 +1515,65 @@ one copy asserts it as a literal string:
 Widening the endpoint alone leaves the pipeline unable to send the root, and
 the coupling test red. This is a two-repo change.
 
+## 33. useSearchParams silently deletes indexed content, and only served HTML shows it
+
+**Status: RULE, with all four known instances now conforming. Filed
+2026-08-21 after the fourth one shipped anyway.**
+
+**The failure mode.** Calling `useSearchParams()` in a client component opts
+that component out of static prerendering. If the nearest `Suspense` boundary
+is broad enough to contain rendered content, that content is replaced by
+`BAILOUT_TO_CLIENT_SIDE_RENDERING` in the served HTML and hydrated only in the
+browser. Nothing errors. Nothing warns. The build succeeds, the page looks
+perfect in a browser, in dev, and in a preview, because a browser runs the
+hydration that a crawler does not. **The only way to see it is to count rows in
+the served HTML.**
+
+**What it cost.** `/team-rankings` served **zero** of its 75 ranked rows to
+crawlers, on a page whose entire value is that ranking, while its sibling
+`/best-promos` served 50. Measured 2026-08-21 with cache-busting curls:
+
+| page | served bytes | rows in served DOM |
+|---|---|---|
+| `/team-rankings` before the fix | 255,556 | **0** |
+| `/best-promos` | 682,809 | 50 |
+| `/best-promos/bobbleheads` | 469,458 | 50 |
+| `/teams` | 314,360 | present |
+
+**THE RULE.** Any client component on an indexed route that calls
+`useSearchParams` must isolate the read into a null-rendering child inside its
+OWN `Suspense` boundary, so the bailout stops at a component that renders
+nothing. The parent holds the value in `useState` with a default that lets the
+server render the full content, and the reader corrects it after hydration.
+Reading `window.location` once on mount is NOT a substitute: back and forward
+and same-route client navigations never remount the tree, and the UI desyncs
+from the URL.
+
+**AND: any new one gets a served-row count with a cache-busting curl before
+merge.** Not a local build check, not a browser check. Both of those pass while
+the bug is live.
+
+**Three worked. One did not, and that is the point.**
+
+- `best-promos-browser.tsx`, `ScoreParamsReader` in its own boundary. Correct,
+  with a comment explaining exactly why.
+- `teams-browser.tsx`, same pattern, same explanatory comment.
+- `PageViewTracker` and `ScoringPageViewTracker`, safe by construction because
+  they render `null` already.
+- `team-rankings-list.tsx`, **the one that failed**: it called
+  `useSearchParams` at its top level while the page wrapped the whole list in
+  one boundary, so the bailout took the table. Fixed in `6e7472c`.
+
+The lesson is not that people forget. Two correct instances carried comments
+explaining the trap, and the fourth shipped anyway, because nothing in the
+build, the type system, the test suite or a browser disagrees with it. A
+convention that only lives in comments is invisible at exactly the moment a
+new component is written.
+
+**Recommended follow-up, not yet done:** turn this into a build failure the way
+this repo already handles other hand-kept invariants (the `KNOWN_SURFACES`
+lockstep guard, the `PATH_RE` coupling test). A test that enumerates client
+components calling `useSearchParams` and asserts each one renders `null` would
+convert this entry from something to remember into something that cannot
+regress.
+
