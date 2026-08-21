@@ -1215,3 +1215,75 @@ fix does this, and its comment says why.
 **The practical check.** For a change of this shape, run the real build. It is
 the only step in this project's gate that reads all 169 teams' actual stored
 values.
+
+---
+
+## 27. Two auth traps on the deploy endpoints, and one ordering rule
+
+**Status: NOT DEFECTS, recorded as operator traps.** Filed 2026-08-21 after both
+were hit during the promo-count derivation release. Both endpoints behave
+correctly. Both will silently do nothing if called the obvious way, and neither
+reports failure in a shape that looks like failure. Companion to entry 16, which
+covers the `PATH_RE` half of the same endpoint.
+
+### `/api/revalidate` authenticates on a header, not Bearer
+
+`src/app/api/revalidate/route.ts:48` checks
+`request.headers.get('x-revalidate-secret') !== secret`. A Bearer
+`Authorization` header, which is the reflex for a secret-bearing POST, returns:
+
+```
+{"ok":false,"reason":"unauthorized"}
+```
+
+and revalidates nothing. That was the actual first response this session, twice,
+across 171 paths.
+
+Combined with the trap already known on this endpoint, that it answers
+`ok:true` regardless of whether the supplied paths were meaningful, the rule is:
+
+> **Never trust the response shape. Derive the expected path count first, then
+> assert the returned `revalidated` total against it.**
+
+The endpoint caps at 100 paths per request, so a full team-page sweep is at
+least two calls and the counts must be summed before comparing. The correct
+call shape:
+
+```
+curl -X POST https://www.getpromonight.com/api/revalidate \
+  -H "Content-Type: application/json" \
+  -H "x-revalidate-secret: $REVALIDATE_SECRET" \
+  -d '{"paths":["/nhl/boston-bruins", ...]}'
+```
+
+### `INDEXNOW_SUBMIT_SECRET` is not the IndexNow key
+
+It is the auth secret for this site's own `/api/indexnow/submit` route
+(`src/app/api/indexnow/submit/route.ts:27`, header `x-indexnow-secret`). The
+real key is `INDEXNOW_KEY`, read by `src/lib/indexnow.ts:19`, which builds
+`keyLocation` as `https://{HOST}/{key}.txt`.
+
+Treating the submit secret as the key produces a `keyLocation` that **404s**,
+and submitting directly to the endpoints with it still returns **HTTP 200 from
+both** `api.indexnow.org` and `www.bing.com/indexnow`. That happened here and
+looked like a clean success.
+
+> **A 200 from IndexNow means accepted, not verified.** Acceptance is
+> synchronous and key verification is asynchronous, so an unverifiable key fails
+> later, silently, with no artifact on this side.
+
+Always submit through `/api/indexnow/submit`. It holds the real key and already
+fans out to both endpoints (`src/lib/indexnow.ts:12-13`), so a direct call buys
+nothing and risks exactly this. It answers `{"ok":true,"submitted":N}`; check N.
+
+### Ordering: deploy Ready, then revalidate
+
+Revalidation regenerates a page from **whatever code is currently deployed**.
+Firing it while the production build is still `Building` regenerates every path
+from the OLD bundle, and the result looks identical to a successful run: the
+counts match, the endpoint reports `ok:true`, and the pages serve stale content
+with a fresh cache entry, which is worse than not having revalidated at all.
+
+Wait for the production deployment to report `Ready` before revalidating. When
+in doubt, verify one page with a cache-busting curl and confirm it carries the
+new behaviour before sweeping the rest.
