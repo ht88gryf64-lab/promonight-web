@@ -93,6 +93,11 @@ export function HomepageJsonLd({ counts }: { counts: HomepageCounts }) {
     {
       '@context': 'https://schema.org',
       '@type': 'Organization',
+      // Stable @id so this node and the Organization on /about are read as ONE
+      // company rather than two. /about carries founder, legalName and the
+      // AboutPage that names it as mainEntity; without a shared identifier a
+      // consumer sees two unrelated organizations with the same name.
+      '@id': 'https://www.getpromonight.com/#organization',
       name: 'PromoNight',
       url: 'https://www.getpromonight.com',
       // /logo.png has never existed in public/ and returns 404 in production.
