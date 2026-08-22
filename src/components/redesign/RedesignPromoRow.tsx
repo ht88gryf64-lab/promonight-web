@@ -117,7 +117,13 @@ export function RedesignPromoRow({
       id={anchorId}
       className={[
         'group relative flex scroll-mt-24 gap-4 rounded-2xl border border-rd-line bg-rd-card p-4 transition-colors md:p-5',
-        completed ? 'opacity-60 hover:opacity-80' : 'hover:border-rd-line-strong',
+        // No opacity on completed rows. The completed state is already
+        // signalled three ways: position under its own heading, an explicit
+        // Completed chip, and the muted tokens. The fade was the only one that
+        // cost contrast and the only one not machine-readable, and it dragged
+        // the whole row under AA: body 2.92:1, meta 1.89:1, and the Completed
+        // chip itself 1.89:1, which is the element carrying the meaning.
+        completed ? '' : 'hover:border-rd-line-strong',
         openable ? 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rd-red focus-visible:ring-offset-2' : '',
         href ? 'cursor-pointer' : '',
       ]
