@@ -1679,12 +1679,19 @@ sweep.** `--color-rd-ink-faint: #9a9081` (`src/app/globals.css:33`, commented
 "eyebrows, captions") does not clear WCAG 1.4.3 normal text on either surface
 it renders on, **before any opacity is applied**:
 
-| background | ratio | 4.5 normal text |
-|---|---|---|
-| `--color-rd-card` #ffffff | **3.14:1** | FAIL |
-| `--color-rd-cream` #f7f3ea | **2.84:1** | FAIL |
+| background | ratio | 4.5 normal text | 3.0 graphics |
+|---|---|---|---|
+| `--color-rd-card` #ffffff | **3.14:1** | FAIL | pass |
+| `--color-rd-cream` #f7f3ea | **2.84:1** | FAIL | **FAIL** |
 
-It clears the 3.0 threshold for icons and borders on white but not on cream.
+**CORRECTED 2026-08-21, and it is worse than first written.** The original
+version of this entry said the token is "under 4.5 on white and cream", which
+understates it. **White is the only surface in the codebase where ink-faint
+reaches even 3.0.** On the cream page, on the #faf7f0 tint, on every tinted
+calendar cell and on every rd-ink 6 percent pill, it fails the NON-TEXT bar
+too. So the icon and glyph uses that would otherwise be defensible under SC
+1.4.11 are defensible only on white cards, and two of them (a remove-chip
+glyph on cream and a 13px clock icon on the cream page) fail outright.
 
 **Scale: 181 uses across 70 files**, applied through the `text-rd-ink-faint`
 utility.
