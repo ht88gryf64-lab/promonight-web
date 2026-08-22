@@ -81,12 +81,12 @@ const FAQS = [
   {
     question: 'What does variety bonus mean?',
     answer:
-      'Variety bonus rewards teams whose schedule has multiple promo types rather than running only one. A team with 2 bobbleheads earns less variety bonus than a team with a bobblehead, a jersey, a theme night, and a kids day. The bonus caps at 8 points for teams running all four major types.',
+      'Variety bonus rewards teams whose schedule has multiple promo types rather than running only one. A team with 2 bobbleheads earns less variety bonus than a team with a bobblehead, a jersey, a theme night, and a kids day. It pays 3 points for two types, 8 for three, and 15 for all four. A type counts once the team has at least one promo of that type scoring 30 or higher.',
   },
   {
     question: 'How are bonuses applied to the final team score?',
     answer:
-      'A team\'s score equals: average promo score, plus variety bonus (max 8 points), plus hot-promo bonus capped at 20 points. A team running 16 or more highlighted promos hits the hot-promo cap; additional highlighted promos do not lift the score further but do strengthen team appeal in the underlying data.',
+      'A team\'s score equals its total promo score divided by its home-game count, times 1.5, plus a variety bonus of up to 15 points, plus a hot-promo bonus of 2 points per highlighted promo capped at 20. Recurring promos are excluded. A team running 10 or more highlighted promos hits the hot-promo cap; additional highlighted promos do not lift the score further but do strengthen team appeal in the underlying data. Team scores are not on a 0 to 100 scale and can exceed 100.',
   },
 ];
 
@@ -184,6 +184,19 @@ export default async function TeamRankingsPage() {
     </>
   );
 
+  // OFFSEASON THINNING. Every row carries a top-promo tease drawn from that
+  // team's best UPCOMING scored promo. When the three scored leagues are all
+  // between seasons, every tease disappears on the same day and the page gets
+  // visibly thinner with nothing explaining why. The rankings themselves stay
+  // valid: they score a completed season, and the score, promo count and
+  // highlight count on every row are all-time figures that do not go stale.
+  //
+  // Condition, not a date: it self-heals when new scored promos land.
+  const teasesPresent = Object.keys(topPromos).length > 0;
+  const offseasonNote = teasesPresent
+    ? null
+    : ` These are final ${YEAR} standings: the leagues we score are between seasons, so no upcoming promo is shown on any row. The scores, promo counts and highlight counts are all-time figures and do not change while the schedules are quiet.`;
+
   if (isRedesignEnabled()) {
     return (
       <>
@@ -206,7 +219,7 @@ export default async function TeamRankingsPage() {
           <div className="mx-auto max-w-4xl px-6 pb-20 pt-10">
             <p className="rounded-2xl border border-rd-line bg-rd-card p-5 font-rd text-[15px] leading-relaxed text-rd-ink-soft">
               All {teamScores.length} scored teams across MLB, MLS, and WNBA are ranked below by promo schedule strength
-              {topTeam ? `, with ${teamDisplayName(topTeam.team)} leading at score ${topTeam.teamScore}` : ''}. Each ranking combines the team&apos;s average promo score, the number of highlighted promos, a schedule variety bonus, and a hot-promo bonus. Filter by league to compare within MLB, MLS, or WNBA only.
+              {topTeam ? `, with ${teamDisplayName(topTeam.team)} leading at score ${topTeam.teamScore}` : ''}. Each ranking combines the team&apos;s average promo score, the number of highlighted promos, a schedule variety bonus, and a hot-promo bonus. Filter by league to compare within MLB, MLS, or WNBA only.{offseasonNote}
             </p>
 
             <Suspense fallback={null}>
@@ -214,9 +227,13 @@ export default async function TeamRankingsPage() {
             </Suspense>
 
             <div className="mt-8">
-              <Suspense fallback={null}>
-                <TeamRankingsList teamScores={teamScores} topPromos={topPromos} variant="light" />
-              </Suspense>
+              {/* No Suspense wrapper here on purpose. TeamRankingsList owns its
+                  own boundary around the null-rendering param reader, so a
+                  boundary at this level would be redundant AND harmful: it
+                  re-triggers a client-side render of the whole list after
+                  hydration, leaving a duplicate hidden copy of every row in
+                  the DOM. See known-issues entry 33. */}
+              <TeamRankingsList teamScores={teamScores} topPromos={topPromos} variant="light" />
             </div>
 
             <section className="mt-16">
@@ -269,7 +286,7 @@ export default async function TeamRankingsPage() {
             . Each ranking combines the team&apos;s average promo score, the
             number of highlighted promos, a schedule variety bonus, and a
             hot-promo bonus. Filter by league to compare within MLB, MLS,
-            or WNBA only.
+            or WNBA only.{offseasonNote}
           </p>
 
           <Suspense fallback={null}>
@@ -281,12 +298,11 @@ export default async function TeamRankingsPage() {
           </Suspense>
 
           <div className="mt-10">
-            <Suspense fallback={null}>
-              <TeamRankingsList
-                teamScores={teamScores}
-                topPromos={topPromos}
-              />
-            </Suspense>
+            {/* No Suspense wrapper: see the note on the gate-on branch above. */}
+            <TeamRankingsList
+              teamScores={teamScores}
+              topPromos={topPromos}
+            />
           </div>
 
           <section className="mt-16 pt-10 border-t border-border-subtle">

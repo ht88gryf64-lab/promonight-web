@@ -123,10 +123,19 @@ export default async function BobbleheadsPage() {
   const todayYMD = localYMD(now);
   const endYMD = addDaysYMD(now, SERVER_FETCH_DAYS);
 
-  const [promos, teamScores] = await Promise.all([
+  const [forwardPromos, teamScores] = await Promise.all([
     getScoredPromosByItemType(todayYMD, endYMD, 'bobblehead', SERVER_FETCH_CAP),
     getAllTeamScores(),
   ]);
+
+  // RETROSPECTIVE MODE, same contract as /best-promos: when the forward window
+  // is empty the page ranks the completed season instead of serving a ranking
+  // header over nothing. Triggered by real emptiness, never a date literal, so
+  // it flips back on its own when new schedules land.
+  const retrospective = forwardPromos.length === 0;
+  const promos = retrospective
+    ? await getScoredPromosByItemType(`${SEASON_YEAR}-01-01`, todayYMD, 'bobblehead', SERVER_FETCH_CAP)
+    : forwardPromos;
 
   // The ItemList mirrors the browser's server-rendered default view
   // (90-day window, first 50 cards): the schema declares exactly the
@@ -154,14 +163,42 @@ export default async function BobbleheadsPage() {
       })
     : null;
 
+  // dateModified signals to a crawler that CONTENT changed, so in
+  // retrospective mode it must not track the scoring clock. TeamScore
+  // computedAt advances weekly because MLB scanning and scoring run
+  // year-round, which over a frozen ranking would promise changes that never
+  // arrive and spend crawl budget on nothing.
+  //
+  // Bound instead to the most recent DATE among the ranked promos. That is
+  // genuinely when this ranking last changed: a new row can only join the set
+  // by being a scored promo of this season, and once the last event date has
+  // passed nothing further can enter until next season's data lands, which
+  // flips the mode back anyway.
+  //
+  // Per-promo scoredAt was the other candidate and is unsuitable: the rescore
+  // writes it unconditionally on every promo it touches, with no skip for
+  // unchanged documents, so it drifts weekly exactly like computedAt.
+  const rankedContentDate = retrospective
+    ? promos.reduce((acc, p) => (p.date > acc ? p.date : acc), '')
+    : null;
+  const jsonLdLastUpdated = rankedContentDate || latestComputedAt;
+
+  const jsonLdDescription = retrospective
+    ? `Every bobblehead giveaway of the completed ${SEASON_YEAR} season across MLB, MLS, and WNBA, ranked by score.`
+    : `Every bobblehead giveaway across MLB, MLS, and WNBA in ${SEASON_YEAR}, ranked by score.`;
+  const stampLine = retrospective
+    ? `${SEASON_YEAR} season complete${lastUpdatedDisplay ? ` · scores last computed ${lastUpdatedDisplay}` : ''} · ${promos.length} bobbleheads ranked`
+    : null;
+  const capsuleRetro = `The ${SEASON_YEAR} season is complete, and these are its ${promos.length} top-scored bobblehead giveaways across MLB, MLS, and WNBA. Nothing here is upcoming: the three leagues we score are between seasons, so this is the finished year ranked rather than a list of what is on next. MLB clubs run the majority of bobblehead programs. Every listed event is scored on attendance cap, item value, sponsor presence, and highlight tier. Upcoming bobbleheads return here automatically when ${SEASON_YEAR + 1} schedules are published.`;
+
   if (isRedesignEnabled()) {
     return (
       <>
         <ScoredJsonLd
           url={PAGE_URL}
           title={`Best Bobblehead Nights of ${SEASON_YEAR}`}
-          description={`Every bobblehead giveaway across MLB, MLS, and WNBA in ${SEASON_YEAR}, ranked by score.`}
-          lastUpdated={latestComputedAt}
+          description={jsonLdDescription}
+          lastUpdated={jsonLdLastUpdated}
           faqs={FAQS}
           itemListItems={itemListPromos}
           locationsByTeamId={locationsByTeamId}
@@ -179,13 +216,15 @@ export default async function BobbleheadsPage() {
               </div>
               <p className="font-rd text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: '#ff5a78' }}>Bobbleheads of {SEASON_YEAR}</p>
               <h1 className="rd-display mt-1 text-4xl uppercase leading-[0.95] text-white md:text-6xl">BEST BOBBLEHEAD NIGHTS OF {SEASON_YEAR}</h1>
-              <p className="mt-3 font-rd text-[11px] uppercase tracking-[0.12em] text-white/45">{lastUpdatedDisplay ? <>Last updated {lastUpdatedDisplay} · </> : null}{promos.length} bobbleheads ranked</p>
+              <p className="mt-3 font-rd text-[11px] uppercase tracking-[0.12em] text-white/45">{stampLine ?? <>{lastUpdatedDisplay ? <>Last updated {lastUpdatedDisplay} · </> : null}{promos.length} bobbleheads ranked</>}</p>
             </div>
           </section>
 
           <div className="mx-auto max-w-4xl px-6 pb-20 pt-10">
             <p className="rounded-2xl border border-rd-line bg-rd-card p-5 font-rd text-[15px] leading-relaxed text-rd-ink-soft">
-              The {promos.length} top-scored bobblehead giveaways of {SEASON_YEAR} are ranked below across MLB, MLS, and WNBA. MLB clubs run the majority of bobblehead programs. Every listed event is scored on attendance cap, item value, sponsor presence, and highlight tier.
+              {retrospective ? capsuleRetro : (
+                <>The {promos.length} top-scored bobblehead giveaways of {SEASON_YEAR} are ranked below across MLB, MLS, and WNBA. MLB clubs run the majority of bobblehead programs. Every listed event is scored on attendance cap, item value, sponsor presence, and highlight tier.</>
+              )}
             </p>
 
             <Suspense fallback={null}>
@@ -193,7 +232,7 @@ export default async function BobbleheadsPage() {
             </Suspense>
 
             <div className="mt-8">
-              <BestPromosBrowser initialPromos={promos} serverTodayYMD={todayYMD} ticketsPlacement="best_promos_bobbleheads_card" trackingSurface="best_promos_bobbleheads" ticketsSurface="web_best_promos_bobbleheads" inlineAnswers={INLINE_ANSWERS} variant="light" />
+              <BestPromosBrowser initialPromos={promos} serverTodayYMD={todayYMD} ticketsPlacement="best_promos_bobbleheads_card" trackingSurface="best_promos_bobbleheads" ticketsSurface="web_best_promos_bobbleheads" inlineAnswers={INLINE_ANSWERS} variant="light" retrospective={retrospective} />
             </div>
 
             <section className="mt-16">
@@ -218,8 +257,8 @@ export default async function BobbleheadsPage() {
       <ScoredJsonLd
         url={PAGE_URL}
         title={`Best Bobblehead Nights of ${SEASON_YEAR}`}
-        description={`Every bobblehead giveaway across MLB, MLS, and WNBA in ${SEASON_YEAR}, ranked by score.`}
-        lastUpdated={latestComputedAt}
+        description={jsonLdDescription}
+        lastUpdated={jsonLdLastUpdated}
         faqs={FAQS}
         itemListItems={itemListPromos}
         locationsByTeamId={locationsByTeamId}
@@ -249,15 +288,16 @@ export default async function BobbleheadsPage() {
             BEST BOBBLEHEAD NIGHTS OF {SEASON_YEAR}
           </h1>
           <p className="font-mono text-[10px] tracking-[1.5px] uppercase text-text-muted mt-3">
-            {lastUpdatedDisplay ? <>Last updated {lastUpdatedDisplay} · </> : null}{promos.length} bobbleheads
-            ranked
+            {stampLine ?? <>{lastUpdatedDisplay ? <>Last updated {lastUpdatedDisplay} · </> : null}{promos.length} bobbleheads ranked</>}
           </p>
           <p className="mt-5 text-text-secondary text-base leading-relaxed max-w-3xl">
-            The {promos.length} top-scored bobblehead giveaways of {SEASON_YEAR} are
-            ranked below across MLB, MLS, and WNBA. MLB clubs run the
-            majority of bobblehead programs. Every listed event is scored
-            on attendance cap, item value, sponsor presence, and highlight
-            tier.
+            {retrospective ? capsuleRetro : (
+              <>The {promos.length} top-scored bobblehead giveaways of {SEASON_YEAR} are
+              ranked below across MLB, MLS, and WNBA. MLB clubs run the
+              majority of bobblehead programs. Every listed event is scored
+              on attendance cap, item value, sponsor presence, and highlight
+              tier.</>
+            )}
           </p>
 
           <Suspense fallback={null}>
@@ -278,6 +318,7 @@ export default async function BobbleheadsPage() {
               trackingSurface="best_promos_bobbleheads"
               ticketsSurface="web_best_promos_bobbleheads"
               inlineAnswers={INLINE_ANSWERS}
+              retrospective={retrospective}
             />
           </div>
 

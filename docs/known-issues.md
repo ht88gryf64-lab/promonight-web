@@ -1515,3 +1515,120 @@ one copy asserts it as a literal string:
 Widening the endpoint alone leaves the pipeline unable to send the root, and
 the coupling test red. This is a two-repo change.
 
+## 33. useSearchParams silently deletes indexed content, and only served HTML shows it
+
+**Status: RULE, with all four known instances now conforming. Filed
+2026-08-21 after the fourth one shipped anyway.**
+
+**The failure mode.** Calling `useSearchParams()` in a client component opts
+that component out of static prerendering. If the nearest `Suspense` boundary
+is broad enough to contain rendered content, that content is replaced by
+`BAILOUT_TO_CLIENT_SIDE_RENDERING` in the served HTML and hydrated only in the
+browser. Nothing errors. Nothing warns. The build succeeds, the page looks
+perfect in a browser, in dev, and in a preview, because a browser runs the
+hydration that a crawler does not. **The only way to see it is to count rows in
+the served HTML.**
+
+**What it cost.** `/team-rankings` served **zero** of its 75 ranked rows to
+crawlers, on a page whose entire value is that ranking, while its sibling
+`/best-promos` served 50. Measured 2026-08-21 with cache-busting curls:
+
+| page | served bytes | rows in served DOM |
+|---|---|---|
+| `/team-rankings` before the fix | 255,556 | **0** |
+| `/best-promos` | 682,809 | 50 |
+| `/best-promos/bobbleheads` | 469,458 | 50 |
+| `/teams` | 314,360 | present |
+
+**THE RULE.** Any client component on an indexed route that calls
+`useSearchParams` must isolate the read into a null-rendering child inside its
+OWN `Suspense` boundary, so the bailout stops at a component that renders
+nothing. The parent holds the value in `useState` with a default that lets the
+server render the full content, and the reader corrects it after hydration.
+Reading `window.location` once on mount is NOT a substitute: back and forward
+and same-route client navigations never remount the tree, and the UI desyncs
+from the URL.
+
+**TWO DISTINCT FAILURE MODES, and they need different checks.**
+
+**Mode 1, the bailout: content missing from served HTML.** The boundary is too
+broad, so the rendered subtree is replaced by BAILOUT_TO_CLIENT_SIDE_RENDERING.
+Detection: count rows in served HTML with a cache-busting curl. A local build
+check and a browser check BOTH pass while this is live.
+
+**Mode 2, the double render: content duplicated after hydration.** Once a
+component owns its own inner boundary, a redundant boundary at the page level
+re-triggers a client render of the whole subtree and leaves the server copy in
+the DOM. Detection: **load the page in a browser and count what is actually
+visible.** The build passes, AND the served-HTML curl passes, because the
+served HTML is correct. This is the mode that bit us second: after the mode-1
+fix, `/team-rankings?league=MLB` served a correct 75 rows and then hydrated
+into 105 score badges, 30 visible plus a hidden zero-height copy of all 75, and
+rendered two contradictory count lines, one reading 30 teams ranked in MLB and
+one reading 75 teams ranked.
+
+So the pre-merge check is BOTH, and both are runnable commands:
+
+```bash
+# mode 1: content present in served HTML
+curl -s "https://www.getpromonight.com/team-rankings?cb=$RANDOM" \
+  | grep -o 'Team promo score:' | wc -l
+
+# mode 2: no hidden duplicates after hydration. Exits non-zero on failure.
+node scripts/check-hydration-duplicates.js "https://www.getpromonight.com/team-rankings"
+node scripts/check-hydration-duplicates.js "https://<deployment>.vercel.app/best-promos?_vercel_share=<token>"
+```
+
+The mode-2 script takes any preview or production URL, share token included,
+knows the repeating element for the scored surfaces, accepts `--selector` for
+anything else, and exits 1 on any hidden duplicate so it can gate rather than
+merely report. It replaces the manual browser session that this entry used to
+prescribe, because a check depending on a browser session staying alive is a
+check that gets skipped.
+
+**SENSITIVITY CAVEAT, because a guard nobody trusts correctly is worse than
+none.** The script has NOT been shown to reproduce the one historical case.
+Real Chrome reported 105 badges and three count lines on the pre-fix
+deployment; the script against that same deployment reports 30 of 30 visible,
+zero hidden, at every timing tried. Either headless does not reproduce that
+hydration path, or the original reading was an artifact of the browser
+extension's evaluation context, and those cannot be separated without a real
+browser. Treat a clean run as cheap evidence rather than proof, and keep a real
+browser in the loop for anything load bearing. The fix that prompted all this
+stands regardless: a boundary above a component that already owns one is
+redundant on its own terms.
+
+**Three worked. One did not, and that is the point.**
+
+- `best-promos-browser.tsx`, `ScoreParamsReader` in its own boundary. Correct,
+  with a comment explaining exactly why.
+- `teams-browser.tsx`, same pattern, same explanatory comment.
+- `PageViewTracker` and `ScoringPageViewTracker`, safe by construction because
+  they render `null` already.
+- `team-rankings-list.tsx`, **the one that failed**: it called
+  `useSearchParams` at its top level while the page wrapped the whole list in
+  one boundary, so the bailout took the table. Fixed in `6e7472c`.
+
+The lesson is not that people forget. Two correct instances carried comments
+explaining the trap, and the fourth shipped anyway, because nothing in the
+build, the type system, the test suite or a browser disagrees with it. A
+convention that only lives in comments is invisible at exactly the moment a
+new component is written.
+
+**Enforced by a lockstep test** (`src/lib/__tests__/search-params-bailout.test.ts`),
+in the style this repo already uses for `KNOWN_SURFACES` and the revalidate
+`PATH_RE`. Read that test before assuming it covers more than it does:
+
+- It CATCHES mode 1 for new components: any file calling `useSearchParams` that
+  neither renders `null` nor owns a `Suspense fallback={null}`.
+- It CATCHES the specific mode-2 shape that actually occurred: a page directly
+  wrapping a self-bounded component in `Suspense`.
+- It CATCHES reintroduction of the URL-synced chip mode, which reads
+  `useSearchParams` and renders content.
+- **It does NOT catch a boundary further up the tree**, for example `Suspense`
+  around a wrapper `div` that contains the component, or a boundary added in a
+  layout rather than a page. Those produce mode 2 and the test will pass.
+
+**So mode 2 still needs a human with a browser.** The test narrows it; it does
+not close it.
+
