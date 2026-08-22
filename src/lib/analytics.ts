@@ -177,6 +177,10 @@ export type AnalyticsSurface =
   // partner-side instead of collapsing into one bucket.
   | 'web_best_promos_bobbleheads'
   | 'web_world_cup'
+  // /about, the method page. It carries the only Person schema on the site
+  // and the app-download CTA whose placement is 'about_cta', and until this
+  // existed both its pageviews and those clicks resolved to web_other.
+  | 'web_about'
   | 'web_other';
 
 export type Sport = 'mlb' | 'nba' | 'nhl' | 'nfl' | 'mls' | 'wnba';
@@ -1292,6 +1296,7 @@ const KNOWN_SURFACE_VALUES = [
   'web_best_promos',
   'web_best_promos_bobbleheads',
   'web_world_cup',
+  'web_about',
   'web_other',
 ] as const satisfies readonly AnalyticsSurface[];
 
@@ -1323,6 +1328,7 @@ export function inferSurfaceFromPath(path: string): AnalyticsSurface {
   if (path.startsWith('/promos/today')) return 'web_today';
   if (path.startsWith('/promos/')) return 'web_article';
   if (path.startsWith('/my-teams')) return 'web_my_teams';
+  if (path.startsWith('/about')) return 'web_about';
   // MUST precede the generic /best-promos branch below, same trap as the
   // /cfb/rivalries branch: without it the bobbleheads page path-infers into
   // the general best-promos bucket.

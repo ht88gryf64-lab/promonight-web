@@ -41,12 +41,17 @@ PromoNight is a mobile app and website that tracks every promotional event -- gi
 - College football school pages: https://www.getpromonight.com/cfb/{school-slug} (e.g., /cfb/ohio-state)
 - College football rivalries, all ${rivalryCount} in date order: https://www.getpromonight.com/cfb/rivalries
 - Rivalry game pages: https://www.getpromonight.com/cfb/rivalries/{slug} (e.g., /cfb/rivalries/iron-bowl)
+- How the data is sourced, checked and published, plus who runs this: https://www.getpromonight.com/about
+- Verified gameday guides by venue: https://www.getpromonight.com/venues
 - Sitemap: https://www.getpromonight.com/sitemap.xml
 
 ## Organization
 
 - Name: PromoNight
 - Contact: hello@getpromonight.com
+- Legal name: Kovalik Digital LLC
+- Founder and author: Matt Kovalik
+- Editorial method and sourcing: https://www.getpromonight.com/about
 - App: Available on iOS App Store and Google Play
 `;
 
