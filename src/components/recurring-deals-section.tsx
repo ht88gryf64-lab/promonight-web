@@ -42,7 +42,7 @@ export function RecurringDealsSection({
               EVERY GAME DEALS
             </h2>
             <p className="text-rd-ink-soft text-sm mt-2">
-              Recurring food, drink, and family deals that happen at {team.name} home games{venueName ? ` at ${venueName}` : ''} — regardless of the promo calendar.
+              Recurring food, drink, and family deals that happen at {team.name} home games{venueName ? ` at ${venueName}` : ''}, regardless of the promo calendar.
             </p>
           </div>
 
@@ -85,7 +85,7 @@ export function RecurringDealsSection({
             EVERY GAME DEALS
           </h2>
           <p className="text-text-secondary text-sm mt-2">
-            Recurring food, drink, and family deals that happen at {team.name} home games{venueName ? ` at ${venueName}` : ''} — regardless of the promo calendar.
+            Recurring food, drink, and family deals that happen at {team.name} home games{venueName ? ` at ${venueName}` : ''}, regardless of the promo calendar.
           </p>
         </div>
 

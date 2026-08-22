@@ -109,13 +109,13 @@ export function AuthorityStats({
   if (promoCounts.giveaway >= 4 && topMonths.length > 0) {
     const monthList = topMonths.map(([m]) => MONTH_NAMES[m]).join(' and ');
     sentences.push(
-      `Giveaways are most concentrated in ${monthList} — ${topMonthsTotal} of the team's ${promoCounts.giveaway} giveaways fall in ${topMonths.length === 1 ? 'that month' : 'those two months'}.`,
+      `Giveaways are most concentrated in ${monthList}: ${topMonthsTotal} of the team's ${promoCounts.giveaway} giveaways fall in ${topMonths.length === 1 ? 'that month' : 'those two months'}.`,
     );
   }
 
   if (topWeekday && topWeekday[1] >= 4 && topWeekdayGiveaways >= 2) {
     sentences.push(
-      `${WEEKDAYS[topWeekday[0]]} home games are the most promo-heavy — ${topWeekday[1]} scheduled events with ${topWeekdayGiveaways} giveaway${topWeekdayGiveaways === 1 ? '' : 's'}.`,
+      `${WEEKDAYS[topWeekday[0]]} home games are the most promo-heavy: ${topWeekday[1]} scheduled events with ${topWeekdayGiveaways} giveaway${topWeekdayGiveaways === 1 ? '' : 's'}.`,
     );
   }
 
