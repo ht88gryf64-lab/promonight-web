@@ -156,8 +156,20 @@ One row per route x partner. "ID expression" is the exact source of the second h
 | /playoffs | Expedia (HotelsCTA) | web_playoffs | {surface}_{team.id}, undated | no; hides on null resolve | no |
 | /mlb, /wnba, /mls hubs | TicketNetwork | web_{league}_hub_this_week | {surface}_{team.id} | no | no |
 | /mlb, /wnba, /mls hubs | Ticketmaster | web_{league}_hub_this_week | surface only | env-shaped | YES per hub |
-| / (homepage modals) | TicketNetwork | web_home_tonight / web_home_this_week | {surface}_{team.id} (client-only render after card tap) | no | no; away contexts dormant (home-game feeds only) |
-| / (homepage modals) | Ticketmaster | web_home_tonight / web_home_this_week | surface only | env-shaped | YES per rail |
+| / (homepage modals) | TicketNetwork | web_home_tonight / web_home_best / web_home_this_week | {surface}_{team.id} (client-only render after card tap) | no | no; away contexts dormant (home-game feeds only) |
+| / (homepage modals) | Ticketmaster | web_home_tonight / web_home_best / web_home_this_week | surface only | env-shaped | YES per rail |
+
+**web_home_best added 2026-08-21** (homepage rebuild, merge 99295b7). The
+ranked best-promos rail is a third homepage surface alongside tonight and this
+week, so it emits a third SharedID family, `web_home_best_{team}` for
+TicketNetwork and the bare surface for Ticketmaster. Nothing in the repo
+enumerates home surfaces: `buildTicketmasterUrl` composes
+`${surface}_${teamSlug}` generically, so the new family flowed through with no
+code change. The exposure is partner-side only: any saved Impact view that
+filters SubId1 by an exact list of the two older tokens under-reports homepage
+revenue from that date. A starts-with `web_home` filter is future-proof
+against the next rail; an exact-match list is not.
+
 | /best-promos + /best-promos/bobbleheads | TicketNetwork | web_best_promos | hardcoded literal, scored-promo-card.tsx:122, 196 + {team.id} | no | YES: two routes, one token (ranked item 5) |
 | /best-promos + bobbleheads | Ticketmaster | web_best_promos | surface only | env-shaped | YES doubly: both pages AND all teams |
 | /my-teams | TN + Fanatics + SpotHero + Expedia | web_my_teams | {surface}_{team.id} each | no | no |
