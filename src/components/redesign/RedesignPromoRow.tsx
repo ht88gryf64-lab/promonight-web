@@ -76,7 +76,7 @@ export function RedesignPromoRow({
 }) {
   const openModal = useUpcomingPromoModal();
   const { day, weekday, month } = formatPromoDate(promo.date);
-  const { color, label, Icon } = categoryFor(promo.type);
+  const { color, label, Icon, ink } = categoryFor(promo.type);
 
   const shareItem: ShareItem = {
     icon: promo.icon,
@@ -152,7 +152,7 @@ export function RedesignPromoRow({
           <Icon size={18} stroke={2} className="shrink-0" style={{ color }} aria-hidden />
           <span
             className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
-            style={{ backgroundColor: `${color}1a`, color }}
+            style={{ backgroundColor: `${color}1a`, color: ink }}
           >
             <Icon size={12} stroke={2.25} />
             <span>{label}</span>

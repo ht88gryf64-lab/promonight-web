@@ -97,7 +97,7 @@ export function HubTodayPromos({
             >
               <span
                 className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-rd text-[11px] font-semibold"
-                style={{ backgroundColor: `${cat.color}1a`, color: cat.color }}
+                style={{ backgroundColor: `${cat.color}1a`, color: cat.ink }}
               >
                 <cat.Icon size={12} stroke={2.25} />
                 {cat.label}

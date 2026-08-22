@@ -58,7 +58,7 @@ export function HubBrowseByType({
                   className="grid h-9 w-9 shrink-0 place-items-center rounded-full"
                   style={{ backgroundColor: `${cat.color}1a` }}
                 >
-                  <cat.Icon size={18} stroke={2} style={{ color: cat.color }} />
+                  <cat.Icon size={18} stroke={2} style={{ color: cat.ink }} />
                 </span>
                 <span className="font-rd font-semibold text-rd-ink">{tile.label}</span>
               </span>

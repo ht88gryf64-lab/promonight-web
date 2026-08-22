@@ -207,12 +207,12 @@ function LightSectionHeader({
   category: PromoType;
   children: React.ReactNode;
 }) {
-  const { color, Icon } = RD_CATEGORIES[category];
+  const { color, Icon, ink } = RD_CATEGORIES[category];
   return (
     <div className="flex items-start gap-3 mb-4">
       <span
         className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-        style={{ backgroundColor: `${color}1a`, color }}
+        style={{ backgroundColor: `${color}1a`, color: ink }}
       >
         <Icon size={18} stroke={2.25} />
       </span>

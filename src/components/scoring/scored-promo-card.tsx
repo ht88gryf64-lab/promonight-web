@@ -66,7 +66,7 @@ export function ScoredPromoCard({
   const sponsor = derivedSignals.sponsor;
 
   if (variant === 'light') {
-    const { color, label, Icon } = categoryFor(promo.type);
+    const { color, label, Icon, ink } = categoryFor(promo.type);
     return (
       <article className="overflow-hidden rounded-2xl border border-rd-line bg-rd-card transition-colors hover:border-rd-line-strong">
         <TrackedTapLink
@@ -89,7 +89,7 @@ export function ScoredPromoCard({
           </div>
           <div className="min-w-0 flex-1">
             <div className="mb-1 flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ backgroundColor: `${color}1a`, color }}>
+              <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ backgroundColor: `${color}1a`, color: ink }}>
                 <Icon size={12} stroke={2.25} />
                 <span>{label}</span>
               </span>
