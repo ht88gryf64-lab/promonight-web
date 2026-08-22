@@ -201,14 +201,41 @@ test('the ink ramp values are the ones the contrast work established', () => {
     }
   }
 
-  // The ramp must read as three steps, not two.
+  // THE RAMP MUST READ AS THREE STEPS, NOT TWO.
+  //
+  // Both ends are pinned: ink is the brand charcoal and ink-faint sits on the
+  // 4.5:1 floor for cream. So the total span is fixed and the two steps
+  // multiply to it, which means they trade one for one. A future edit that
+  // "improves" one step is silently taking it from the other, and the bar
+  // below is what makes that visible instead of shipping.
+  const top = ratio(ink!, soft!);
+  const bottom = ratio(soft!, faint!);
+  const span = ratio(ink!, faint!);
+
   assert.ok(
-    ratio(ink!, soft!) >= 1.3,
-    `ink to ink-soft separation is ${ratio(ink!, soft!).toFixed(2)}:1, under 1.30`,
+    Math.abs(top * bottom - span) < 0.01,
+    `the two steps must multiply to the span: ${top.toFixed(3)} x ${bottom.toFixed(3)} = ` +
+      `${(top * bottom).toFixed(3)}, span is ${span.toFixed(3)}. If this fails the contrast ` +
+      `math itself is wrong, not the palette.`,
   );
+
+  for (const [name, value] of [['ink to ink-soft', top], ['ink-soft to ink-faint', bottom]] as const) {
+    assert.ok(
+      value >= 1.7,
+      `${name} separation is ${value.toFixed(2)}:1, under the 1.70 bar. The span is fixed at ` +
+        `${span.toFixed(2)}:1, so this step was almost certainly narrowed to widen the other one. ` +
+        `The even split is ${Math.sqrt(span).toFixed(2)}:1 each and there is no room for both ` +
+        `steps to be generous. See the ramp comment in globals.css.`,
+    );
+  }
+
+  // Shape: the top step stays the larger of the two. Darkening ink-soft past
+  // the even-split point inverts the ramp, making the heading-to-body step
+  // weaker than the body-to-caption step.
   assert.ok(
-    ratio(soft!, faint!) >= 1.3,
-    `ink-soft to ink-faint separation is ${ratio(soft!, faint!).toFixed(2)}:1, under 1.30. ` +
-      `Darkening one without the other collapses the bottom of the ramp.`,
+    top >= bottom,
+    `the ramp has inverted: ink to ink-soft is ${top.toFixed(2)}:1 but ink-soft to ink-faint is ` +
+      `${bottom.toFixed(2)}:1. ink-soft has been darkened past the even-split point of ` +
+      `${Math.sqrt(span).toFixed(2)}:1.`,
   );
 });

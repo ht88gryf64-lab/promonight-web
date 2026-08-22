@@ -30,22 +30,31 @@
   --color-rd-card: #ffffff;         /* white card */
   /* THE INK RAMP. Three tones for text, one for decoration. Every text tone
    * clears WCAG 1.4.3 (4.5:1) on BOTH grounds it renders on, the white card
-   * and the cream page, and adjacent tones stay at least 1.30:1 apart so the
-   * ramp reads as three steps rather than two.
+   * and the cream page.
    *
    *   token          value     white   cream   step to next
-   *   ink            #211d18   16.75   15.13   2.55 to ink-soft
-   *   ink-soft       #645c51    6.58    5.94   1.32 to ink-faint
+   *   ink            #211d18   16.75   15.13   1.87 to ink-soft
+   *   ink-soft       #50483f    8.98    8.10   1.79 to ink-faint
    *   ink-faint      #786e60    5.00    4.52   text floor
    *   ink-decor      #9a9081    3.14    2.84   NOT FOR TEXT
    *
-   * ink-soft and ink-faint were darkened together on purpose. ink-faint alone
-   * could not both clear 4.5:1 on cream and stay 1.30:1 from the old ink-soft:
-   * the luminance ceiling for 4.5:1 on cream caps that separation at 1.13:1,
-   * so holding ink-soft still would have bought AA by collapsing the bottom
-   * two tones into one. See known-issues entry 35. */
+   * THE SPAN IS FIXED, SO THE TWO STEPS TRADE ONE FOR ONE. Neither end of the
+   * ramp can move: ink is the brand charcoal, and ink-faint sits on the 4.5:1
+   * floor for the cream page, which is the tighter of its two grounds. That
+   * locks ink to ink-faint at 3.35:1, and the two steps have to multiply to
+   * it. Every unit of separation ink-soft buys at the bottom of the ramp is
+   * taken from the top. The even split is 1.83:1 on each step; past that the
+   * top step becomes the weaker of the two and the ramp inverts. ink-soft sits
+   * just under that point, so the top step stays the larger one.
+   *
+   * Why the bottom step earns the top step's headroom: ink and ink-soft are
+   * nearly always separated by weight or size as well as tone, while ink-soft
+   * and ink-faint routinely meet at the same size and weight with color as the
+   * only signal. The giveaway list on a team page is the case to judge by. See
+   * known-issues entries 9 and 35 for the history. Values and both step sizes
+   * are guarded by src/lib/__tests__/ink-decor-usage.test.ts. */
   --color-rd-ink: #211d18;          /* primary text, headings */
-  --color-rd-ink-soft: #645c51;     /* secondary body text */
+  --color-rd-ink-soft: #50483f;     /* secondary body text */
   --color-rd-ink-faint: #786e60;    /* eyebrows, captions, the quietest READABLE tier */
   /* Decoration only: aria-hidden glyphs, drag handles, dot fills. Fails 4.5:1
    * on both grounds by design, and fails even 3.0:1 on cream, so it must never
