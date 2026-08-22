@@ -62,7 +62,8 @@ function typeColorLight(type: string): string {
     case 'food':
       return '#16a34a';
     default:
-      return '#9a9081';
+      // Decoration dot, not text: the muted ink-decor value.
+    return 'var(--color-rd-ink-decor)';
   }
 }
 

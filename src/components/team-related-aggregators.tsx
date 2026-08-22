@@ -72,7 +72,7 @@ export function TeamRelatedAggregators({
                   {it.hint}
                 </div>
               </div>
-              <IconChevronRight size={18} stroke={2} className="text-rd-ink-faint shrink-0" />
+              <IconChevronRight size={18} stroke={2} className="text-rd-ink-decor shrink-0" />
             </Link>
           ))}
         </div>

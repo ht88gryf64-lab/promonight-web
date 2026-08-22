@@ -123,7 +123,7 @@ function VenueRow({ group, r }: { group: BagPolicyGroup['key']; r: BagPolicyRow 
               </span>
               <span className="mt-px block text-[12.5px] text-rd-ink-soft">{r.teamName}</span>
             </span>
-            <span aria-hidden className="shrink-0 text-[15px] text-rd-ink-faint">→</span>
+            <span aria-hidden className="shrink-0 text-[15px] text-rd-ink-decor">→</span>
           </span>
           {chips.length > 0 && <span className="mt-2 flex flex-wrap gap-1.5">{chips}</span>}
         </span>

@@ -78,7 +78,7 @@ export function VenueHubLink({ teamId, league, buildingSlug, buildingDisplayName
 
       <span
         aria-hidden="true"
-        className="ml-auto text-rd-ink-faint text-[17px] leading-none transition-transform group-hover:translate-x-0.5"
+        className="ml-auto text-rd-ink-decor text-[17px] leading-none transition-transform group-hover:translate-x-0.5"
       >
         &rsaquo;
       </span>

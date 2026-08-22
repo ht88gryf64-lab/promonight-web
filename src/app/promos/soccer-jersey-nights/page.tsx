@@ -156,7 +156,7 @@ export default async function SoccerJerseyNightsPage() {
       <IconChevronRight
         size={18}
         stroke={2.25}
-        className="shrink-0 text-rd-ink-faint transition-transform group-hover:translate-x-0.5"
+        className="shrink-0 text-rd-ink-decor transition-transform group-hover:translate-x-0.5"
         aria-hidden
       />
     </Link>

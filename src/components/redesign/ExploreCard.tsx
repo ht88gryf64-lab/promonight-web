@@ -57,7 +57,7 @@ export function ExploreCard({ team, className = '' }: ExploreCardProps) {
               <Icon size={18} stroke={2} className="text-rd-ink-soft" />
             </span>
             <span className="font-rd font-medium text-rd-ink flex-1">{label}</span>
-            <IconChevronRight size={18} stroke={2} className="text-rd-ink-faint shrink-0" />
+            <IconChevronRight size={18} stroke={2} className="text-rd-ink-decor shrink-0" />
           </Link>
         ))}
       </div>

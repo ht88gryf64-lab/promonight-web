@@ -65,7 +65,7 @@ export function HubBrowseByType({
               <IconArrowRight
                 size={16}
                 stroke={2}
-                className="shrink-0 text-rd-ink-faint transition-colors group-hover:text-rd-red"
+                className="shrink-0 text-rd-ink-decor transition-colors group-hover:text-rd-red"
               />
             </TrackedTapLink>
           );
