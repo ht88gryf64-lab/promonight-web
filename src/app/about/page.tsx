@@ -14,6 +14,7 @@ import {
   ABOUT_LAST_REVIEWED_LABEL,
   aboutFaqs,
   aboutLede,
+  aboutMetaDescription,
   aboutSections,
   type AboutCounts,
 } from '@/lib/about-copy';
@@ -56,9 +57,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const c = await getAboutCounts();
   return {
     title: { absolute: 'How PromoNight Tracks Sports Promotions' },
-    description:
-      `How PromoNight finds, checks and publishes promotional schedules for ${c.teamCount} teams across ` +
-      `${c.leagueCount} leagues, plus ${c.cfbSchoolCount} college football programs. Written by Matt Kovalik in Minneapolis.`,
+    description: aboutMetaDescription(c),
     alternates: { canonical: CANONICAL },
     openGraph: pageOpenGraph('/about'),
     // Overrides the root twitter block, which sets creator to @promo_night_app.
@@ -119,9 +118,10 @@ export default async function AboutPage() {
   // Organization as mainEntity and the Person attached as author, which is the
   // stronger authorship signal anyway.
   //
-  // Organization carries a stable @id so it merges with the homepage
-  // Organization node rather than reading as a second company. The homepage
-  // node does not carry that @id yet; see docs/known-issues.md entry 37.
+  // Organization carries a stable @id, and the homepage Organization carries the
+  // same one, so the two merge into a single company rather than reading as two
+  // that happen to share a name. Verified against prod: one distinct @id across
+  // both pages, zero dangling references.
   const schemas = [
     {
       '@context': 'https://schema.org',
@@ -129,9 +129,7 @@ export default async function AboutPage() {
       '@id': PAGE_ID,
       url: CANONICAL,
       name: 'How PromoNight Tracks Sports Promotions',
-      description:
-        `How PromoNight finds, checks and publishes promotional schedules for ${counts.teamCount} teams ` +
-        `across ${counts.leagueCount} leagues, plus ${counts.cfbSchoolCount} college football programs.`,
+      description: aboutMetaDescription(counts),
       mainEntity: { '@id': ORG_ID },
       author: { '@id': PERSON_ID },
       // A real editorial date, bumped by hand when the copy changes and guarded

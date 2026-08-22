@@ -55,7 +55,7 @@ export const ABOUT_LAST_REVIEWED_LABEL = 'August 22, 2026';
 // The test prints the correct value when it fails, so there is nothing to run
 // by hand.
 // eslint-disable-next-line prettier/prettier
-export const ABOUT_COPY_FINGERPRINT = 'afa3e4a5135549c840f2af4617961b38da6c3f6e2cdd686b7fcf0565d09d3b82';
+export const ABOUT_COPY_FINGERPRINT = 'd0c6d040d5fea11cbbff3c0c16ce893161d0cb406b16c88953edb9270b59abc3';
 
 export interface AboutCounts {
   teamCount: number;
@@ -82,6 +82,24 @@ export interface AboutSection {
   id: string;
   heading: string;
   blocks: AboutBlock[];
+}
+
+// Spelled-out small numbers. Deriving a count must not silently rewrite "six
+// leagues" as "6 leagues"; homepage-json-ld.tsx carries the same helper for the
+// same reason.
+const NUMBER_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+export function numberWord(n: number): string {
+  return NUMBER_WORDS[n] ?? String(n);
+}
+
+/** The SERP and og:description text. Lives here rather than in the route so it
+ *  sits under the same review-date guard as the rest of the copy. */
+export function aboutMetaDescription(c: AboutCounts): string {
+  return (
+    `How PromoNight finds, checks and publishes promotional schedules for ${c.teamCount} teams ` +
+    `across ${numberWord(c.leagueCount)} leagues, plus ${c.cfbSchoolCount} college football programs. ` +
+    `Written by Matt Kovalik in Minneapolis.`
+  );
 }
 
 export function aboutLede(c: AboutCounts): string {
