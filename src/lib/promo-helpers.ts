@@ -292,7 +292,7 @@ function gateTimesAnswer(league: string, venueName: string, fullName: string): s
     case 'NBA':
       return `Doors at ${venueName} typically open 90 minutes before tipoff for ${fullName} home games, sometimes earlier on major giveaway or theme nights. The official team site publishes the confirmed open time with each game's day-of details.`;
     case 'NFL':
-      return `${venueName} gates typically open about two hours before kickoff for ${fullName} home games, with some gates (club / premium) opening earlier. Individual game-day gate times are posted on the official team site — tailgate and parking lots generally open several hours earlier.`;
+      return `${venueName} gates typically open about two hours before kickoff for ${fullName} home games, with some gates (club / premium) opening earlier. Individual game-day gate times are posted on the official team site. Tailgate and parking lots generally open several hours earlier.`;
     case 'NHL':
       return `Gates at ${venueName} typically open 75 – 90 minutes before puck drop for ${fullName} home games, with earlier openings on playoff nights and giveaway games. Confirm the exact open time for your game on the official team site.`;
     case 'MLS':
@@ -417,14 +417,14 @@ export function generateTeamFAQs(
     const addressClause = venue?.address ? `${venueName} is located at ${venue.address}.` : `${venueName} is in ${city}.`;
     faqs.push({
       question: `How do I get to ${venueName}?`,
-      answer: `${addressClause} Parking is available on-site on game days, and many fans reserve guaranteed spots in advance through SpotHero to avoid lot-closure surprises. Check the official ${team.name} site for public transit options — most major-league venues are served by bus or rail routes on game day.`,
+      answer: `${addressClause} Parking is available on-site on game days, and many fans reserve guaranteed spots in advance through SpotHero to avoid lot-closure surprises. Check the official ${team.name} site for public transit options. Most major-league venues are served by bus or rail routes on game day.`,
     });
   }
 
   // 5d. Travel — hotels (always shown)
   faqs.push({
     question: `Where should I stay near ${venueName}?`,
-    answer: `Several hotels sit within walking distance of ${venueName}, and more are a short rideshare away. For a ${fullName} game weekend, searching Expedia for hotels near ${venueName} surfaces the best rates for your specific date — prices jump on marquee dates like giveaway nights and playoff games, so booking early helps.`,
+    answer: `Several hotels sit within walking distance of ${venueName}, and more are a short rideshare away. For a ${fullName} game weekend, searching Expedia for hotels near ${venueName} surfaces the best rates for your specific date. Prices jump on marquee dates like giveaway nights and playoff games, so booking early helps.`,
   });
 
   // 5e. App — promo-day reminders (always shown, distinct from #5's general pitch).

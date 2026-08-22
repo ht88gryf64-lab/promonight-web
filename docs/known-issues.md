@@ -1780,3 +1780,71 @@ as near-black, which produced a confident 1.09:1 "failure" that did not exist.
 And a hand-composited tint is not the same as asking the browser. Resolve
 colors by painting them to a canvas and composite the real ancestor chain.
 
+---
+
+## 36. The weekly digest was shipping two sub-AA text tones to real subscribers
+
+**Status: RESOLVED 2026-08-22 on `fix/aa-copy-and-email`. Found 2026-08-21
+while surveying the ink ramp, on a surface the ramp work was not looking at.**
+
+`src/lib/email.ts` carries its own palette, and two of its text tones did not
+clear WCAG 1.4.3 normal text on the white card every one of them renders on:
+
+| value | on `#ffffff` | 4.5 normal text | what it carried |
+|---|---|---|---|
+| `#8a8276` | **3.79:1** | FAIL | digest date column, team meta line, every footer and unsubscribe link |
+| `#a39b8d` | **2.75:1** | FAIL | the CAN-SPAM postal address |
+
+Ten uses of the first, one of the second. Everything else in the file passed:
+`#1d1714` 17.72, `#4b463f` 9.35, `#6b6459` 5.85, `#d31145` 5.34, white on the
+red CTA 5.34, and the wordmark accent 5.76 on the dark bar.
+
+**Why this one matters more than a page.** It is sent weekly to real
+subscribers, and email clients render on white by default, so the worst-case
+ground is the actual ground. Unlike a web page there is no devtools pass, no
+Lighthouse run, and no crawler that will ever report it.
+
+**Why nothing caught it.** The colors were 28 inline literals spread through
+template strings, because email HTML has to inline everything. There is no
+rendering test for this file, only `email-timeout.test.ts`, which exercises the
+send path. So there was no single place where the palette could be read, and
+no check that would have failed.
+
+### The palette decision
+
+**Email stays a separate palette. It cannot be otherwise.** Email cannot read
+CSS custom properties: Gmail strips `<style>`, Outlook renders through Word,
+and `var()` is unsupported across the major clients. Every color in a mail body
+has to be an inline literal hex, so there is no mechanism by which `email.ts`
+could consume `--color-rd-ink-soft` at render time. The most that could be
+shared is a build-time TypeScript constant, which is a different thing from a
+token and would still be a second copy.
+
+There are two further reasons not to force them together even at build time.
+The grounds differ: the email card is `#ffffff` inside a `#f4f1ea` frame, not
+the site's `#f7f3ea` page. And email clients mutate colors in ways the web
+never does, since Gmail and Apple Mail dark mode can invert or shift a light
+palette, so a change made for the site could land somewhere unintended in a
+client.
+
+**What is shared is the standard, not the token:** every tone clears 4.5:1 on
+the ground it actually renders on. That is the rule that was violated, and it
+is the rule the guard now holds.
+
+**The fix.** Both failing values move to `#786e60`, which is the site's
+`ink-faint`, borrowed outright because it is the same job and is already the
+proven floor at 5.00:1 on white. The postal address and the footer collapse
+into one tone as a result, which is correct: the postal line is legally
+required text and cannot sit below the readable floor just to be quiet.
+
+The 28 literals are now five named constants in one documented block, because
+the scattering is what allowed the drift. `src/lib/__tests__/email-contrast.test.ts`
+asserts each tone against the card, the two wordmark tones against the dark
+bar, that no inline `color:#hex` literal reappears past the constants, and that
+the quietest email tier has not drifted from the site's `ink-faint`. All four
+were shown to fail before being committed.
+
+**What the guard does not cover.** It reads declared values, so it proves the
+palette is compliant, not that a given string is painted on the ground the test
+assumes. And no static check reaches what a mail client does to the colors
+after delivery.
