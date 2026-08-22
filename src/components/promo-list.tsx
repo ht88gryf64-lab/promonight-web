@@ -73,7 +73,7 @@ function PromoRow({
     <div
       className={`group relative bg-bg-card border border-border-subtle rounded-2xl p-4 md:p-5 transition-all flex gap-4 ${
         completed
-          ? 'opacity-60 hover:opacity-80'
+          ? ''
           : 'hover:border-border-hover'
       }`}
       style={{ borderLeftWidth: '3px', borderLeftColor: typeColor }}

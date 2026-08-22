@@ -42,19 +42,13 @@ function spineColor(primaryColor: string | undefined): string {
   return primaryColor;
 }
 
-// Text ink for the category tag. The raw rd-cat token on its own 10% tint
-// fails AA at this size (giveaway 2.53:1, food 2.95:1, kids 4.49:1), the
-// exact failure mode the audit flagged on the team-card chip. These are the
-// target file's hand-tuned darker inks; all four clear 4.5:1 on the tint
-// (giveaway 4.71, theme 6.99, food 5.94, kids 6.23). The dot and the tint
-// still use the rd-cat token, so this is an ink for the existing palette,
-// not a fifth palette.
-const TAG_INK: Record<PromoType, string> = {
-  giveaway: '#a35a08',
-  theme: '#5b2fbd',
-  food: '#0d6b31',
-  kids: '#1d54ad',
-};
+// Text ink for the category tag comes from CategoryMeta.ink. The raw rd-cat
+// token on its own 10% tint fails AA at this size (giveaway 2.53:1, food
+// 2.95:1, kids 4.49:1); the inks clear it (4.71 / 6.99 / 5.94 / 6.23). This
+// file used to carry its own copy of those four hexes, which is a second
+// source of truth for one palette; it now reads the shared one. The dot and
+// the tint still use the rd-cat token, so this is an ink for the existing
+// palette, not a fifth palette.
 
 function spineDate(dateStr: string): string {
   const d = new Date(dateStr + 'T12:00:00');
@@ -88,7 +82,7 @@ export function TicketStubCard({
   notchBg?: string;
 }) {
   const openModal = useUpcomingPromoModal();
-  const { color: catColor, label: catLabel } = categoryFor(promo.type);
+  const { color: catColor, label: catLabel, ink: catInk } = categoryFor(promo.type);
   const teamName = teamDisplayName(promo.team);
   const spine = spineColor(promo.team.primaryColor);
   const spineInk = chipInk(spine);
@@ -196,7 +190,7 @@ export function TicketStubCard({
         <div className="mt-auto flex items-end justify-between gap-2 border-t border-rd-line pt-3">
           <span
             className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-mono text-[9px] font-semibold uppercase tracking-[0.14em]"
-            style={{ backgroundColor: `${catColor}1a`, color: TAG_INK[promo.type] ?? TAG_INK.giveaway }}
+            style={{ backgroundColor: `${catColor}1a`, color: catInk }}
           >
             <i aria-hidden className="h-1.5 w-1.5 flex-none rounded-full" style={{ background: catColor }} />
             {catLabel}

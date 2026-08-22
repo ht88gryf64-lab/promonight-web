@@ -41,11 +41,11 @@ function ymd(date: string): { weekday: string; mon: string; day: number } {
 // soccer "WC JERSEY" sub-pill wrap to a new line on narrow widths instead of
 // bleeding past the card's right padding. rounded-2xl reads cleanly when wrapped.
 function PromoBadge({ type, title, soccer }: { type: PromoType; title: string; soccer: boolean }) {
-  const { color, Icon } = categoryFor(type);
+  const { color, Icon, ink } = categoryFor(type);
   return (
     <span
       className={`inline-flex max-w-full flex-wrap items-center gap-1 rounded-2xl px-2 py-0.5 font-rd text-[11px] font-semibold ${soccer ? 'ring-1 ring-rd-red' : ''}`}
-      style={{ backgroundColor: `${color}1a`, color }}
+      style={{ backgroundColor: `${color}1a`, color: ink }}
     >
       <Icon size={12} stroke={2.25} className="shrink-0" />
       <span className="min-w-0 [overflow-wrap:anywhere]">{title}</span>
