@@ -163,6 +163,26 @@ export default async function BobbleheadsPage() {
       })
     : null;
 
+  // dateModified signals to a crawler that CONTENT changed, so in
+  // retrospective mode it must not track the scoring clock. TeamScore
+  // computedAt advances weekly because MLB scanning and scoring run
+  // year-round, which over a frozen ranking would promise changes that never
+  // arrive and spend crawl budget on nothing.
+  //
+  // Bound instead to the most recent DATE among the ranked promos. That is
+  // genuinely when this ranking last changed: a new row can only join the set
+  // by being a scored promo of this season, and once the last event date has
+  // passed nothing further can enter until next season's data lands, which
+  // flips the mode back anyway.
+  //
+  // Per-promo scoredAt was the other candidate and is unsuitable: the rescore
+  // writes it unconditionally on every promo it touches, with no skip for
+  // unchanged documents, so it drifts weekly exactly like computedAt.
+  const rankedContentDate = retrospective
+    ? promos.reduce((acc, p) => (p.date > acc ? p.date : acc), '')
+    : null;
+  const jsonLdLastUpdated = rankedContentDate || latestComputedAt;
+
   const jsonLdDescription = retrospective
     ? `Every bobblehead giveaway of the completed ${SEASON_YEAR} season across MLB, MLS, and WNBA, ranked by score.`
     : `Every bobblehead giveaway across MLB, MLS, and WNBA in ${SEASON_YEAR}, ranked by score.`;
@@ -178,7 +198,7 @@ export default async function BobbleheadsPage() {
           url={PAGE_URL}
           title={`Best Bobblehead Nights of ${SEASON_YEAR}`}
           description={jsonLdDescription}
-          lastUpdated={latestComputedAt}
+          lastUpdated={jsonLdLastUpdated}
           faqs={FAQS}
           itemListItems={itemListPromos}
           locationsByTeamId={locationsByTeamId}
@@ -238,7 +258,7 @@ export default async function BobbleheadsPage() {
         url={PAGE_URL}
         title={`Best Bobblehead Nights of ${SEASON_YEAR}`}
         description={jsonLdDescription}
-        lastUpdated={latestComputedAt}
+        lastUpdated={jsonLdLastUpdated}
         faqs={FAQS}
         itemListItems={itemListPromos}
         locationsByTeamId={locationsByTeamId}
