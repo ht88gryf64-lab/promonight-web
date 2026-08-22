@@ -34,8 +34,8 @@
    * ramp reads as three steps rather than two.
    *
    *   token          value     white   cream   step to next
-   *   ink            #211d18   16.75   15.13   2.65 to ink-soft
-   *   ink-soft       #655d52    6.48    5.85   1.30 to ink-faint
+   *   ink            #211d18   16.75   15.13   2.55 to ink-soft
+   *   ink-soft       #645c51    6.58    5.94   1.32 to ink-faint
    *   ink-faint      #786e60    5.00    4.52   text floor
    *   ink-decor      #9a9081    3.14    2.84   NOT FOR TEXT
    *
@@ -45,7 +45,7 @@
    * so holding ink-soft still would have bought AA by collapsing the bottom
    * two tones into one. See known-issues entry 35. */
   --color-rd-ink: #211d18;          /* primary text, headings */
-  --color-rd-ink-soft: #655d52;     /* secondary body text */
+  --color-rd-ink-soft: #645c51;     /* secondary body text */
   --color-rd-ink-faint: #786e60;    /* eyebrows, captions, the quietest READABLE tier */
   /* Decoration only: aria-hidden glyphs, drag handles, dot fills. Fails 4.5:1
    * on both grounds by design, and fails even 3.0:1 on cream, so it must never
