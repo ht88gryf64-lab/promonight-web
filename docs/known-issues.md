@@ -1672,3 +1672,43 @@ recorded in `categories.ts`.
 This needs a design decision, not just an implementation, which is why it was
 split out of the mechanical sweep rather than bundled into it.
 
+## 35. The ink-faint token fails AA on its own, and a fade was hiding it
+
+**Status: OPEN, token change not made. Filed 2026-08-21 during the contrast
+sweep.** `--color-rd-ink-faint: #9a9081` (`src/app/globals.css:33`, commented
+"eyebrows, captions") does not clear WCAG 1.4.3 normal text on either surface
+it renders on, **before any opacity is applied**:
+
+| background | ratio | 4.5 normal text |
+|---|---|---|
+| `--color-rd-card` #ffffff | **3.14:1** | FAIL |
+| `--color-rd-cream` #f7f3ea | **2.84:1** | FAIL |
+
+It clears the 3.0 threshold for icons and borders on white but not on cream.
+
+**Scale: 181 uses across 70 files**, applied through the `text-rd-ink-faint`
+utility.
+
+**Why it surfaced only now, and this is the part worth remembering.** The
+completed promo rows carried `opacity-60`, which composited the whole row and
+put the same text at **1.89:1**. The fade was the visible, obviously wrong
+number, so it took the attention. Removing it lifted the text to 3.14:1, which
+looked like a fix and was actually the token's own untreated value coming into
+view. **A defect that makes a second defect look like the whole problem hides
+the second defect behind its own fix.** The measurement that caught it was
+recomputing every element ratio AFTER the change rather than declaring victory
+because the number improved.
+
+**This is a token change with sitewide visual consequences, not a component
+fix.** One value governs every eyebrow, caption, timestamp, count line and unit
+label in the redesign. Darkening it changes the visual weight of the quietest
+tier of type on every page at once, and it compresses the gap to
+`--color-rd-ink-soft` #6f665a, which is the next step up the ramp. That is a
+design decision about the palette, not a mechanical swap, which is why it is
+filed rather than fixed.
+
+**Not every use needs 4.5:1.** Uses that are icons, borders or pure decoration
+are judged at 3.0 and mostly pass on white. Scoping which of the 181 are read
+as text, at what sizes, and on which background is the work that has to precede
+any change.
+
