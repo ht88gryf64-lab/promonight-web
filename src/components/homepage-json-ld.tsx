@@ -95,7 +95,12 @@ export function HomepageJsonLd({ counts }: { counts: HomepageCounts }) {
       '@type': 'Organization',
       name: 'PromoNight',
       url: 'https://www.getpromonight.com',
-      logo: 'https://www.getpromonight.com/logo.png',
+      // /logo.png has never existed in public/ and returns 404 in production.
+      // /icon.png is the Next app icon (src/app/icon.png), 192x192, served 200,
+      // and is the actual brand mark. A purpose-made wordmark is separate
+      // design work; this is the property Google reads for publisher identity
+      // and it should point at a file that resolves.
+      logo: 'https://www.getpromonight.com/icon.png',
       description:
         `PromoNight tracks every giveaway, theme night, food deal, and promotion across ${counts.teamCount} professional sports teams in ${leagueList(counts.leagueBreakdown)}.`,
       email: 'hello@getpromonight.com',
