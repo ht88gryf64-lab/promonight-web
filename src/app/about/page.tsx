@@ -1,69 +1,175 @@
 import type { Metadata } from 'next';
+import type { ReactNode } from 'react';
 import { pageOpenGraph } from '@/lib/og';
 import Link from 'next/link';
 import { AvatarMatt } from '@/components/avatar-matt';
 import { AppDownloadButtons } from '@/components/app-download-buttons';
 import { isRedesignEnabled } from '@/lib/redesign';
 import { archivoHouse } from '@/components/redesign/fonts-house';
+import { getAllTeams } from '@/lib/data';
+import { getAllCfbSchoolIds } from '@/lib/cfb/data';
+import { LEAGUE_ORDER, SCORED_LEAGUES } from '@/lib/types';
+import {
+  ABOUT_LAST_REVIEWED,
+  ABOUT_LAST_REVIEWED_LABEL,
+  aboutFaqs,
+  aboutLede,
+  aboutSections,
+  type AboutCounts,
+} from '@/lib/about-copy';
 
 export const revalidate = 86400;
 
-export const metadata: Metadata = {
-  title: { absolute: 'About PromoNight: The Indie App Behind the Promo Calendar' },
-  description:
-    'Independent app built by a Minnesota sports fan who kept missing the good games. Free, not affiliated with any league. A cleaner way to browse promos.',
-  alternates: { canonical: 'https://www.getpromonight.com/about' },
-  openGraph: pageOpenGraph('/about'),
-};
+const CANONICAL = 'https://www.getpromonight.com/about';
+const ORG_ID = 'https://www.getpromonight.com/#organization';
+const PERSON_ID = `${CANONICAL}#matt`;
+const PAGE_ID = `${CANONICAL}#webpage`;
 
-const ABOUT_FAQS = [
-  {
-    question: 'Who runs PromoNight?',
-    answer:
-      "PromoNight is a solo project. It's built and maintained by Matt, a Minnesota-based developer and sports fan. No team, no league, and no ticketing company is involved.",
-  },
-  {
-    question: 'Is PromoNight affiliated with MLB, the NBA, or any team?',
-    answer:
-      'No. PromoNight is independent. Promo data is pulled from publicly available team announcements and reviewed manually for accuracy.',
-  },
-  {
-    question: 'How is PromoNight free?',
-    answer:
-      "The base app is free because gatekeeping promo information behind a paywall felt wrong. PromoNight Pro ($5.99 per season per sport or $9.99 per year for all sports) adds a reminder the morning of a promo day, plus unlimited Game Day venue access.",
-  },
-  {
-    question: 'Can I suggest a team or a feature?',
-    answer:
-      "Yes. Email hello@getpromonight.com. Every major league team in the US is already covered. If you're a fan of a minor league team or college team and you'd use this, let me know. That's a realistic next step.",
-  },
-];
+function joinList(names: string[]): string {
+  if (names.length <= 1) return names[0] ?? '';
+  return `${names.slice(0, -1).join(', ')}, and ${names[names.length - 1]}`;
+}
+
+/** Coverage facts read from live data rather than typed into copy. The page
+ *  previously hardcoded the team count in six places and a promo total that had
+ *  gone stale, with nothing that would notice. */
+async function getAboutCounts(): Promise<AboutCounts> {
+  const [teams, cfbIds] = await Promise.all([getAllTeams(), getAllCfbSchoolIds()]);
+  // Canonical order first, then anything the data carries that the constant
+  // does not, so a new league appears in the counts without a code change.
+  const leagues: string[] = LEAGUE_ORDER.filter((l) => teams.some((t) => t.league === l));
+  for (const t of teams) if (!leagues.includes(t.league)) leagues.push(t.league);
+  const scored = SCORED_LEAGUES as ReadonlySet<string>;
+  const ranked = teams.filter((t) => scored.has(t.league));
+  const rankedLeagues = leagues.filter((l) => scored.has(l));
+  return {
+    teamCount: teams.length,
+    leagueCount: leagues.length,
+    leagueList: joinList(leagues),
+    cfbSchoolCount: cfbIds.length,
+    rankedTeamCount: ranked.length,
+    rankedLeagueList: joinList(rankedLeagues),
+  };
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const c = await getAboutCounts();
+  return {
+    title: { absolute: 'How PromoNight Tracks Sports Promotions' },
+    description:
+      `How PromoNight finds, checks and publishes promotional schedules for ${c.teamCount} teams across ` +
+      `${c.leagueCount} leagues, plus ${c.cfbSchoolCount} college football programs. Written by Matt Kovalik in Minneapolis.`,
+    alternates: { canonical: CANONICAL },
+    openGraph: pageOpenGraph('/about'),
+    // Overrides the root twitter block, which sets creator to @promo_night_app.
+    // That is the product account, not a person, and this is the one page that
+    // carries a personal byline. site keeps the publication; creator is dropped
+    // rather than pointed at a personal handle that does not exist.
+    twitter: {
+      card: 'summary_large_image',
+      site: '@promo_night_app',
+      images: ['/og-image.png'],
+    },
+  };
+}
+
+/** Renders [label](/path) inline links from the copy module. Both gate variants
+ *  use this, so the copy owns its links and the two branches cannot diverge. */
+function Inline({ text, linkClass }: { text: string; linkClass: string }) {
+  const parts: ReactNode[] = [];
+  const re = /\[([^\]]+)\]\(([^)]+)\)/g;
+  let last = 0;
+  let key = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) parts.push(text.slice(last, m.index));
+    const [, label, href] = m;
+    parts.push(
+      href.startsWith('/') ? (
+        <Link key={key++} href={href} className={linkClass}>
+          {label}
+        </Link>
+      ) : (
+        <a key={key++} href={href} className={linkClass}>
+          {label}
+        </a>
+      ),
+    );
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return <>{parts}</>;
+}
 
 export default async function AboutPage() {
+  const counts = await getAboutCounts();
+  const lede = aboutLede(counts);
+  const sections = aboutSections(counts);
+  const faqs = aboutFaqs(counts);
+  const light = isRedesignEnabled();
+
+  // ONE SCRIPT TAG PER ENTITY (house pattern, src/components/homepage-json-ld.tsx:134).
+  // The old page emitted a single 2-element array and connected nothing to
+  // anything: a Person and a FAQPage as siblings, with no statement that the
+  // person authored or was responsible for the page.
+  //
+  // AboutPage rather than ProfilePage. ProfilePage declares that the page IS a
+  // profile of a person, which is the app-marketing reading this rewrite moves
+  // away from. AboutPage says the page is about the publication, with the
+  // Organization as mainEntity and the Person attached as author, which is the
+  // stronger authorship signal anyway.
+  //
+  // Organization carries a stable @id so it merges with the homepage
+  // Organization node rather than reading as a second company. The homepage
+  // node does not carry that @id yet; see docs/known-issues.md entry 37.
   const schemas = [
     {
       '@context': 'https://schema.org',
+      '@type': 'AboutPage',
+      '@id': PAGE_ID,
+      url: CANONICAL,
+      name: 'How PromoNight Tracks Sports Promotions',
+      description:
+        `How PromoNight finds, checks and publishes promotional schedules for ${counts.teamCount} teams ` +
+        `across ${counts.leagueCount} leagues, plus ${counts.cfbSchoolCount} college football programs.`,
+      mainEntity: { '@id': ORG_ID },
+      author: { '@id': PERSON_ID },
+      // A real editorial date, bumped by hand when the copy changes and guarded
+      // by src/lib/__tests__/about-freshness.test.ts. Not a render clock: see
+      // the house ruling at src/components/json-ld.tsx:123.
+      dateModified: ABOUT_LAST_REVIEWED,
+    },
+    {
+      '@context': 'https://schema.org',
       '@type': 'Person',
+      '@id': PERSON_ID,
       name: 'Matt Kovalik',
       jobTitle: 'Founder, PromoNight',
       image: 'https://www.getpromonight.com/matt-avatar.jpg',
-      sameAs: [
-        'https://www.linkedin.com/in/mattkovalik/',
-        'https://twitter.com/promo_night_app',
-      ],
-      worksFor: {
-        '@type': 'Organization',
-        name: 'PromoNight',
-        url: 'https://www.getpromonight.com',
-      },
-      description:
-        'Solo developer and Minnesota sports fan. Builder of PromoNight.',
-      url: 'https://www.getpromonight.com/about',
+      // @promo_night_app removed on purpose: sameAs on a Person asserts another
+      // profile OF THAT PERSON, and the handle is the product account. It now
+      // sits on the Organization, where the page's own prose already puts it.
+      sameAs: ['https://www.linkedin.com/in/mattkovalik/'],
+      worksFor: { '@id': ORG_ID },
+      description: 'Solo developer and Minnesota sports fan. Builder of PromoNight.',
+      url: CANONICAL,
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Organization',
+      '@id': ORG_ID,
+      name: 'PromoNight',
+      legalName: 'Kovalik Digital LLC',
+      url: 'https://www.getpromonight.com',
+      logo: 'https://www.getpromonight.com/icon.png',
+      email: 'hello@getpromonight.com',
+      founder: { '@id': PERSON_ID },
+      sameAs: ['https://x.com/promo_night_app', 'https://www.facebook.com/PromoNightApp'],
     },
     {
       '@context': 'https://schema.org',
       '@type': 'FAQPage',
-      mainEntity: ABOUT_FAQS.map((f) => ({
+      mainEntity: faqs.map((f) => ({
         '@type': 'Question',
         name: f.question,
         acceptedAnswer: { '@type': 'Answer', text: f.answer },
@@ -71,78 +177,90 @@ export default async function AboutPage() {
     },
   ];
 
-  if (isRedesignEnabled()) {
+  const jsonLd = (
+    <>
+      {schemas.map((schema, i) => (
+        <script
+          key={i}
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+        />
+      ))}
+    </>
+  );
+
+  if (light) {
+    const linkClass = 'text-rd-red hover:underline';
     return (
       <>
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schemas) }} />
+        {jsonLd}
         <div className={`${archivoHouse.variable} rd-root min-h-screen`}>
-          {/* Charcoal hero */}
           <section className="relative overflow-hidden text-white" style={{ backgroundColor: '#1d1714' }}>
-            <div aria-hidden className="absolute inset-0 z-0 opacity-60" style={{ backgroundImage: 'radial-gradient(120% 80% at 100% 0%, rgba(218,45,32,0.16) 0%, transparent 60%)' }} />
+            <div
+              aria-hidden
+              className="absolute inset-0 z-0 opacity-60"
+              style={{
+                backgroundImage:
+                  'radial-gradient(120% 80% at 100% 0%, rgba(218,45,32,0.16) 0%, transparent 60%)',
+              }}
+            />
             <div className="relative z-10 mx-auto flex max-w-3xl items-center gap-4 px-6 pb-12 pt-16 md:pb-14 md:pt-20">
               <AvatarMatt size={64} />
               <div>
-                <span className="font-rd text-[11px] font-semibold uppercase tracking-[0.14em] text-white/55">About</span>
-                <h1 className="rd-display mt-1 text-4xl uppercase leading-[0.95] text-white md:text-6xl">ABOUT PROMONIGHT</h1>
-                <p className="mt-2 font-rd text-[13px] text-white/60">Matt Kovalik · Founder, PromoNight</p>
+                <span className="font-rd text-[11px] font-semibold uppercase tracking-[0.14em] text-white/55">
+                  About
+                </span>
+                <h1 className="rd-display mt-1 text-4xl uppercase leading-[0.95] text-white md:text-6xl">
+                  How PromoNight Tracks Sports Promotions
+                </h1>
+                <p className="mt-2 font-rd text-[13px] text-white/60">
+                  Matt Kovalik · Founder, PromoNight ·{' '}
+                  <time dateTime={ABOUT_LAST_REVIEWED}>Last reviewed {ABOUT_LAST_REVIEWED_LABEL}</time>
+                </p>
               </div>
             </div>
           </section>
 
           <div className="mx-auto max-w-3xl px-6 pb-20 pt-10 font-rd">
-            <p className="text-rd-ink-soft text-base leading-relaxed mb-12">
-              PromoNight is a free iOS and Android app that tracks every promotional event at professional sports games across MLB, NBA, NHL, NFL, MLS, and WNBA. It covers giveaway nights, theme nights, food deals, and kids events across all 169 teams in one calendar view. It was built by a solo indie developer in Minneapolis who got tired of missing bobblehead night.
-            </p>
+            <p className="text-rd-ink-soft text-base leading-relaxed mb-12">{lede}</p>
 
-            <section className="mb-12">
-              <h2 className="rd-display text-2xl md:text-3xl uppercase text-rd-ink mb-4">Why I built this</h2>
-              <div className="space-y-4 text-rd-ink-soft text-[15px] leading-relaxed">
-                <p>I&apos;m a Minnesota sports fan. Twins, Wild, Timberwolves, the whole stack. Last year I was trying to figure out which summer Twins game to bring my son to, and it turned out to be surprisingly hard work. Some games have bobbleheads. Some have fireworks. Some have kids running the bases after the final out, which is genuinely the best thing at a baseball game if you&apos;re eight years old. None of that information lives in one place.</p>
-                <p>The Twins have a promo page. Ticketmaster has a different version. Local beat writers cover the promo calendar once in February and then never again. I ended up with a spreadsheet, which is a bad sign for a problem that millions of fans have.</p>
-                <p>So I built the thing I wanted. A calendar. Tap a day, see what&apos;s happening. Push notification the morning of, so you actually remember. That&apos;s it. That&apos;s the whole app.</p>
-              </div>
-            </section>
-
-            <section className="mb-12">
-              <h2 className="rd-display text-2xl md:text-3xl uppercase text-rd-ink mb-4">What PromoNight covers</h2>
-              <p className="text-rd-ink-soft text-[15px] leading-relaxed mb-4">PromoNight tracks four categories of promotions across 169 teams:</p>
-              <ul className="space-y-3 text-rd-ink-soft text-[15px] leading-relaxed list-disc pl-6">
-                <li><strong className="text-rd-ink">Giveaways</strong> - bobbleheads, jerseys, caps, replica trophies, collectibles. The stuff people plan their season around.</li>
-                <li><strong className="text-rd-ink">Theme nights</strong> - Star Wars, Harry Potter, heritage nights, pride celebrations, fireworks, concerts. The reason tonight&apos;s game is different from last Tuesday&apos;s.</li>
-                <li><strong className="text-rd-ink">Food deals</strong> - dollar dogs, two-dollar beer Fridays, kids eat free Sundays. The deals that make going to a game affordable when you&apos;re bringing the whole family.</li>
-                <li><strong className="text-rd-ink">Kids and family events</strong> - kids run the bases, face painting, family packs. The things that turn a baseball game into a day your kid remembers.</li>
-              </ul>
-              <p className="text-rd-ink-soft text-[15px] leading-relaxed mt-5">The full season covers around 2,700 promotional events. MLB, WNBA, and MLS schedules get a weekly recheck in season, and I review the rest by hand because teams add promos mid-season and nobody else is watching.</p>
-            </section>
-
-            <section className="mb-12">
-              <h2 className="rd-display text-2xl md:text-3xl uppercase text-rd-ink mb-4">How PromoNight gets its data</h2>
-              <div className="space-y-4 text-rd-ink-soft text-[15px] leading-relaxed">
-                <p>All promo data comes from official team sources. Team websites, ticketing platforms, and press releases. I wrote scrapers for the teams that publish in parseable formats and I review everything manually before it goes live. If a team announces a new promo halfway through the season, the weekly recheck usually catches it for MLB, WNBA, and MLS; for other leagues I add it once I confirm it.</p>
-                <p>If you ever spot something that looks wrong, there&apos;s a &ldquo;report an issue&rdquo; button on every promo page in the app. Those reports come straight to me and I fix them fast. Data quality is the whole job.</p>
-              </div>
-            </section>
-
-            <section className="mb-12">
-              <h2 className="rd-display text-2xl md:text-3xl uppercase text-rd-ink mb-4">Who PromoNight is for</h2>
-              <div className="space-y-4 text-rd-ink-soft text-[15px] leading-relaxed">
-                <p>Regular-season attendees who go to a handful of games a year and want to make sure they&apos;re going on the right nights. Families choosing between Tuesday and Saturday. Collectors tracking bobbleheads. Out-of-town visitors catching a game in another city. Anyone who has ever shown up to a stadium, looked around, and realized they missed the giveaway.</p>
-                <p>It&apos;s not for stat-heads, fantasy players, or betting. There are plenty of great apps for that. PromoNight does one thing.</p>
-              </div>
-            </section>
-
-            <section className="mb-12">
-              <h2 className="rd-display text-2xl md:text-3xl uppercase text-rd-ink mb-4">Get in touch</h2>
-              <div className="space-y-4 text-rd-ink-soft text-[15px] leading-relaxed">
-                <p>If you have feedback, a promo I missed, or a team you want covered better, email me at{' '}<a href="mailto:hello@getpromonight.com" className="text-rd-red hover:underline">hello@getpromonight.com</a>. I read every message.</p>
-                <p>If you want to follow along as PromoNight grows, the app has a Twitter account at{' '}<a href="https://twitter.com/promo_night_app" target="_blank" rel="noopener" className="text-rd-red hover:underline">@promo_night_app</a>{' '}that posts the day&apos;s best promos across the league. You can also find me on{' '}<a href="https://www.linkedin.com/in/mattkovalik/" target="_blank" rel="noopener" className="text-rd-red hover:underline">LinkedIn</a>.</p>
-              </div>
-            </section>
+            {sections.map((section) => (
+              <section key={section.id} id={section.id} className="mb-12">
+                <h2 className="rd-display text-2xl md:text-3xl uppercase text-rd-ink mb-4">
+                  {section.heading}
+                </h2>
+                <div className="space-y-4 text-rd-ink-soft text-[15px] leading-relaxed">
+                  {section.blocks.map((block, i) =>
+                    block.kind === 'p' ? (
+                      <p key={i}>
+                        <Inline text={block.text} linkClass={linkClass} />
+                      </p>
+                    ) : (
+                      <ul key={i} className="space-y-3 list-disc pl-6">
+                        {block.items.map((item, j) => (
+                          <li key={j}>
+                            <strong className="text-rd-ink">{item.lead}</strong>{' '}
+                            <Inline text={item.text} linkClass={linkClass} />
+                          </li>
+                        ))}
+                      </ul>
+                    ),
+                  )}
+                </div>
+                {section.id === 'app' && (
+                  <div className="mt-6 flex">
+                    <AppDownloadButtons section="about_cta" page="about" variant="compact" />
+                  </div>
+                )}
+              </section>
+            ))}
 
             <section className="mb-16">
-              <h2 className="rd-display text-2xl md:text-3xl uppercase text-rd-ink mb-5">Frequently asked questions</h2>
+              <h2 className="rd-display text-2xl md:text-3xl uppercase text-rd-ink mb-5">
+                Frequently asked questions
+              </h2>
               <div className="space-y-6">
-                {ABOUT_FAQS.map((f, i) => (
+                {faqs.map((f, i) => (
                   <div key={i}>
                     <h3 className="text-rd-ink font-semibold text-base mb-1.5">{f.question}</h3>
                     <p className="text-rd-ink-soft text-[15px] leading-relaxed">{f.answer}</p>
@@ -150,27 +268,16 @@ export default async function AboutPage() {
                 ))}
               </div>
             </section>
-
-            <div className="mt-12 rounded-2xl border border-rd-line bg-rd-card p-8 text-center">
-              <h2 className="rd-display text-2xl md:text-3xl uppercase text-rd-ink mb-3">DOWNLOAD PROMONIGHT</h2>
-              <p className="text-rd-ink-soft text-sm mb-6">Free. 169 teams. 2,700+ promos.</p>
-              <div className="flex justify-center">
-                <AppDownloadButtons section="about_cta" page="about" variant="compact" />
-              </div>
-            </div>
           </div>
         </div>
       </>
     );
   }
 
+  const linkClass = 'text-accent-red hover:underline';
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(schemas) }}
-      />
-
+      {jsonLd}
       <div className="pt-28 pb-20 px-6">
         <div className="max-w-3xl mx-auto">
           <div className="flex items-center gap-2 text-text-muted text-xs font-mono tracking-[0.5px] mb-6">
@@ -184,135 +291,54 @@ export default async function AboutPage() {
           <div className="flex items-center gap-4 mb-8">
             <AvatarMatt size={64} />
             <div>
-              <span className="font-mono text-[10px] tracking-[1.5px] uppercase text-accent-red">
-                About
-              </span>
+              <span className="font-mono text-[10px] tracking-[1.5px] uppercase text-accent-red">About</span>
               <h1 className="font-display text-4xl md:text-6xl tracking-[1px] mt-1">
-                ABOUT PROMONIGHT
+                How PromoNight Tracks Sports Promotions
               </h1>
               <p className="mt-2 font-mono text-[12px] text-text-secondary">
-                Matt Kovalik · Founder, PromoNight
+                Matt Kovalik · Founder, PromoNight ·{' '}
+                <time dateTime={ABOUT_LAST_REVIEWED}>Last reviewed {ABOUT_LAST_REVIEWED_LABEL}</time>
               </p>
             </div>
           </div>
 
-          <p className="text-text-secondary text-base leading-relaxed mb-12">
-            PromoNight is a free iOS and Android app that tracks every promotional event at professional sports games across MLB, NBA, NHL, NFL, MLS, and WNBA. It covers giveaway nights, theme nights, food deals, and kids events across all 169 teams in one calendar view. It was built by a solo indie developer in Minneapolis who got tired of missing bobblehead night.
-          </p>
+          <p className="text-text-secondary text-base leading-relaxed mb-12">{lede}</p>
 
-          <section className="mb-12">
-            <h2 className="font-display text-2xl md:text-3xl tracking-[1px] mb-4">
-              Why I built this
-            </h2>
-            <div className="space-y-4 text-text-secondary text-[15px] leading-relaxed">
-              <p>
-                I&apos;m a Minnesota sports fan. Twins, Wild, Timberwolves, the whole stack. Last year I was trying to figure out which summer Twins game to bring my son to, and it turned out to be surprisingly hard work. Some games have bobbleheads. Some have fireworks. Some have kids running the bases after the final out, which is genuinely the best thing at a baseball game if you&apos;re eight years old. None of that information lives in one place.
-              </p>
-              <p>
-                The Twins have a promo page. Ticketmaster has a different version. Local beat writers cover the promo calendar once in February and then never again. I ended up with a spreadsheet, which is a bad sign for a problem that millions of fans have.
-              </p>
-              <p>
-                So I built the thing I wanted. A calendar. Tap a day, see what&apos;s happening. Push notification the morning of, so you actually remember. That&apos;s it. That&apos;s the whole app.
-              </p>
-            </div>
-          </section>
-
-          <section className="mb-12">
-            <h2 className="font-display text-2xl md:text-3xl tracking-[1px] mb-4">
-              What PromoNight covers
-            </h2>
-            <p className="text-text-secondary text-[15px] leading-relaxed mb-4">
-              PromoNight tracks four categories of promotions across 169 teams:
-            </p>
-            <ul className="space-y-3 text-text-secondary text-[15px] leading-relaxed list-disc pl-6">
-              <li>
-                <strong className="text-white">Giveaways</strong> - bobbleheads, jerseys, caps, replica trophies, collectibles. The stuff people plan their season around.
-              </li>
-              <li>
-                <strong className="text-white">Theme nights</strong> - Star Wars, Harry Potter, heritage nights, pride celebrations, fireworks, concerts. The reason tonight&apos;s game is different from last Tuesday&apos;s.
-              </li>
-              <li>
-                <strong className="text-white">Food deals</strong> - dollar dogs, two-dollar beer Fridays, kids eat free Sundays. The deals that make going to a game affordable when you&apos;re bringing the whole family.
-              </li>
-              <li>
-                <strong className="text-white">Kids and family events</strong> - kids run the bases, face painting, family packs. The things that turn a baseball game into a day your kid remembers.
-              </li>
-            </ul>
-            <p className="text-text-secondary text-[15px] leading-relaxed mt-5">
-              The full season covers around 2,700 promotional events. MLB, WNBA, and MLS schedules get a weekly recheck in season, and I review the rest by hand because teams add promos mid-season and nobody else is watching.
-            </p>
-          </section>
-
-          <section className="mb-12">
-            <h2 className="font-display text-2xl md:text-3xl tracking-[1px] mb-4">
-              How PromoNight gets its data
-            </h2>
-            <div className="space-y-4 text-text-secondary text-[15px] leading-relaxed">
-              <p>
-                All promo data comes from official team sources. Team websites, ticketing platforms, and press releases. I wrote scrapers for the teams that publish in parseable formats and I review everything manually before it goes live. If a team announces a new promo halfway through the season, the weekly recheck usually catches it for MLB, WNBA, and MLS; for other leagues I add it once I confirm it.
-              </p>
-              <p>
-                If you ever spot something that looks wrong, there&apos;s a &ldquo;report an issue&rdquo; button on every promo page in the app. Those reports come straight to me and I fix them fast. Data quality is the whole job.
-              </p>
-            </div>
-          </section>
-
-          <section className="mb-12">
-            <h2 className="font-display text-2xl md:text-3xl tracking-[1px] mb-4">
-              Who PromoNight is for
-            </h2>
-            <div className="space-y-4 text-text-secondary text-[15px] leading-relaxed">
-              <p>
-                Regular-season attendees who go to a handful of games a year and want to make sure they&apos;re going on the right nights. Families choosing between Tuesday and Saturday. Collectors tracking bobbleheads. Out-of-town visitors catching a game in another city. Anyone who has ever shown up to a stadium, looked around, and realized they missed the giveaway.
-              </p>
-              <p>
-                It&apos;s not for stat-heads, fantasy players, or betting. There are plenty of great apps for that. PromoNight does one thing.
-              </p>
-            </div>
-          </section>
-
-          <section className="mb-12">
-            <h2 className="font-display text-2xl md:text-3xl tracking-[1px] mb-4">
-              Get in touch
-            </h2>
-            <div className="space-y-4 text-text-secondary text-[15px] leading-relaxed">
-              <p>
-                If you have feedback, a promo I missed, or a team you want covered better, email me at{' '}
-                <a href="mailto:hello@getpromonight.com" className="text-accent-red hover:underline">
-                  hello@getpromonight.com
-                </a>
-                . I read every message.
-              </p>
-              <p>
-                If you want to follow along as PromoNight grows, the app has a Twitter account at{' '}
-                <a
-                  href="https://twitter.com/promo_night_app"
-                  target="_blank"
-                  rel="noopener"
-                  className="text-accent-red hover:underline"
-                >
-                  @promo_night_app
-                </a>{' '}
-                that posts the day&apos;s best promos across the league. You can also find me on{' '}
-                <a
-                  href="https://www.linkedin.com/in/mattkovalik/"
-                  target="_blank"
-                  rel="noopener"
-                  className="text-accent-red hover:underline"
-                >
-                  LinkedIn
-                </a>
-                .
-              </p>
-            </div>
-          </section>
+          {sections.map((section) => (
+            <section key={section.id} id={section.id} className="mb-12">
+              <h2 className="font-display text-2xl md:text-3xl tracking-[1px] mb-4">{section.heading}</h2>
+              <div className="space-y-4 text-text-secondary text-[15px] leading-relaxed">
+                {section.blocks.map((block, i) =>
+                  block.kind === 'p' ? (
+                    <p key={i}>
+                      <Inline text={block.text} linkClass={linkClass} />
+                    </p>
+                  ) : (
+                    <ul key={i} className="space-y-3 list-disc pl-6">
+                      {block.items.map((item, j) => (
+                        <li key={j}>
+                          <strong className="text-white">{item.lead}</strong>{' '}
+                          <Inline text={item.text} linkClass={linkClass} />
+                        </li>
+                      ))}
+                    </ul>
+                  ),
+                )}
+              </div>
+              {section.id === 'app' && (
+                <div className="mt-6">
+                  <AppDownloadButtons section="about_cta" page="about" variant="compact" />
+                </div>
+              )}
+            </section>
+          ))}
 
           <section className="mb-16">
             <h2 className="font-display text-2xl md:text-3xl tracking-[1px] mb-5">
               Frequently asked questions
             </h2>
             <div className="space-y-6">
-              {ABOUT_FAQS.map((f, i) => (
+              {faqs.map((f, i) => (
                 <div key={i}>
                   <h3 className="text-white font-semibold text-base mb-1.5">{f.question}</h3>
                   <p className="text-text-secondary text-[15px] leading-relaxed">{f.answer}</p>
@@ -320,16 +346,6 @@ export default async function AboutPage() {
               ))}
             </div>
           </section>
-
-          <div className="mt-12 bg-bg-card border border-border-subtle rounded-2xl p-8 text-center">
-            <h2 className="font-display text-2xl md:text-3xl tracking-[1px] mb-3">
-              DOWNLOAD PROMONIGHT
-            </h2>
-            <p className="text-text-secondary text-sm mb-6">
-              Free. 169 teams. 2,700+ promos.
-            </p>
-            <AppDownloadButtons section="about_cta" page="about" variant="compact" />
-          </div>
         </div>
       </div>
     </>

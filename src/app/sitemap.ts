@@ -4,6 +4,7 @@ import { getIndexableCfbSchoolIds } from '@/lib/cfb/data';
 import { getAllMatchupSlugs } from '@/lib/cfb/matchups';
 import { isCfbHubLive, LEAGUE_HUBS } from '@/lib/league-hubs';
 import { getIndexableVenueHubSitemapEntries } from '@/lib/venue-hub';
+import { ABOUT_LAST_REVIEWED } from '@/lib/about-copy';
 
 const BASE_URL = 'https://www.getpromonight.com';
 
@@ -202,7 +203,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...venuePages,
     {
       url: `${BASE_URL}/about`,
-      lastModified: now,
+      // Bound to the same editorial constant the page renders as its visible
+      // "Last reviewed" date, so <lastmod> and the page cannot disagree. Every
+      // other entry here uses the build clock, which for a page that changes
+      // twice a year would tell Google it changed on every deploy.
+      lastModified: new Date(ABOUT_LAST_REVIEWED),
       changeFrequency: 'monthly',
       priority: 0.7,
     },
