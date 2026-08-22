@@ -28,6 +28,21 @@ export const RD_CATEGORIES: Record<PromoType, CategoryMeta> = {
   kids: { key: 'kids', label: 'Kids & Family', color: '#2563eb', ink: '#1d54ad', Icon: IconBalloon },
 };
 
+// DARK-CONTEXT INKS, MEASURED BUT DELIBERATELY NOT ADDED AS A FIELD.
+// `ink` is darker than `color`, which is correct on the light surfaces and
+// catastrophic on a dark one: on the retired dark hero the inks measured
+// 2.38 / 1.69 / 1.92 / 1.90. Nothing on the site currently renders a category
+// tint on a dark background (the last such surface, HeroTonightCard, was
+// deleted with the homepage rebuild), so an inkDark field would have no
+// consumer and would rot. The measurement is kept here so it is not lost if a
+// dark category surface returns:
+//   giveaway #fa934b, theme #b692f5, food #1ac459, kids #80a4f3
+// Those clear 4.5:1 on a #2b2522 composite (white 6% over #1d1714). Add the
+// field WITH its first consumer, not before. Note also that a computed
+// variant is the wrong shape here: the tint is a hex-alpha string the browser
+// composites at paint time, so JS never sees the resolved background, and
+// deriving it would duplicate the compositing rule in a second place.
+
 // Display order for chips and legends: giveaway, theme, food, kids.
 export const RD_CATEGORY_ORDER: PromoType[] = ['giveaway', 'theme', 'food', 'kids'];
 

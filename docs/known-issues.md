@@ -1632,3 +1632,43 @@ in the style this repo already uses for `KNOWN_SURFACES` and the revalidate
 **So mode 2 still needs a human with a browser.** The test narrows it; it does
 not close it.
 
+## 34. team-card renders raw team color as text on a tint of itself
+
+**Status: OPEN, deferred deliberately, filed 2026-08-21 during the contrast
+sweep.** `src/components/team-card.tsx:79-84` renders a league chip whose text
+is the team's raw `primaryColor` on an 8.2 percent tint of that same color.
+It is the same defect the category chips had, one level worse, because here
+the color is DATA rather than a fixed palette.
+
+**Scale: 38 of 134 team colors fail AA on the light variant.** The spread runs
+from **1.27:1** (`#ece83a`) to 17.46:1 (`#000000`), so the same component is
+unreadable for some clubs and pristine for others. Sixteen more sit in a 4.5
+to 5.5 band that any token change would push under. On the dark variant the
+failing set INVERTS: navies and greens fail where golds pass. No single static
+rule covers both.
+
+**Why the sweep did not fix it, and why chipInk is not the answer.**
+Mechanically `chipInk()` is a one-line drop-in. Semantically it is the wrong
+function: it is a binary picker that answers "does white or near-black read on
+this SOLID fill", and both existing call sites (`LeagueChip`, `HubTeamGrid`)
+hand it a solid. This chip is a wash, so there are two ways to apply it and
+both are redesigns, not contrast patches:
+
+1. Pass the composited tint. Every tint is near-white, so it returns near-black
+   for all 134 teams: every league pill becomes identical near-black text and
+   the team-color accent disappears from the top-left of every card.
+2. Pass the raw color and make the pill a solid fill, matching the existing
+   call sites. That puts 134 saturated blocks of team color in a five-across
+   grid, competing with the card's own team-color underline.
+
+**What the real fix looks like.** A hue-preserving darkener in
+`src/lib/chip-contrast.ts`, roughly `inkOn(hex, bg, target = 4.5)`, walking HSL
+lightness down until the ratio clears. It keeps the club's hue (Steelers gold
+stays gold, just deeper), keeps the tinted-lozenge look, and being data-driven
+it cannot regress when a team is added or rebrands. That is the opposite
+direction from the same algorithm that generated the dark-context candidates
+recorded in `categories.ts`.
+
+This needs a design decision, not just an implementation, which is why it was
+split out of the mechanical sweep rather than bundled into it.
+
