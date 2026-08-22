@@ -31,7 +31,8 @@ function promoDotColor(type: string): string {
     case 'kids':
       return '#0ea5e9';
     default:
-      return '#9a9081';
+      // Decoration dot, not text: the muted ink-decor value.
+    return 'var(--color-rd-ink-decor)';
   }
 }
 

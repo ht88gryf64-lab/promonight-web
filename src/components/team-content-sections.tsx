@@ -252,7 +252,7 @@ function GiveawaySection({
         <ul className="space-y-1.5 list-disc list-inside text-rd-ink-soft">
           {giveaways.slice(0, 6).map((p, i) => (
             <li key={i}>
-              <span className="text-rd-ink font-medium">{formatDateReadable(p.date)}</span> — {p.title}
+              <span className="text-rd-ink font-medium">{formatDateReadable(p.date)}</span> · {p.title}
               {p.opponent ? ` (vs ${p.opponent})` : ''}
             </li>
           ))}
@@ -277,7 +277,7 @@ function GiveawaySection({
       <ul className="space-y-1.5 list-disc list-inside text-text-secondary">
         {giveaways.slice(0, 6).map((p, i) => (
           <li key={i}>
-            <span className="text-white font-medium">{formatDateReadable(p.date)}</span> — {p.title}
+            <span className="text-white font-medium">{formatDateReadable(p.date)}</span> · {p.title}
             {p.opponent ? ` (vs ${p.opponent})` : ''}
           </li>
         ))}
@@ -318,7 +318,7 @@ function ThemeSection({
         <ul className="space-y-1.5 list-disc list-inside text-rd-ink-soft">
           {themes.slice(0, 6).map((p, i) => (
             <li key={i}>
-              <span className="text-rd-ink font-medium">{formatDateReadable(p.date)}</span> — {p.title}
+              <span className="text-rd-ink font-medium">{formatDateReadable(p.date)}</span> · {p.title}
               {p.opponent ? ` (vs ${p.opponent})` : ''}
             </li>
           ))}
@@ -340,7 +340,7 @@ function ThemeSection({
       <ul className="space-y-1.5 list-disc list-inside text-text-secondary">
         {themes.slice(0, 6).map((p, i) => (
           <li key={i}>
-            <span className="text-white font-medium">{formatDateReadable(p.date)}</span> — {p.title}
+            <span className="text-white font-medium">{formatDateReadable(p.date)}</span> · {p.title}
             {p.opponent ? ` (vs ${p.opponent})` : ''}
           </li>
         ))}
@@ -379,7 +379,7 @@ function FoodSection({
         <ul className="space-y-1.5 list-disc list-inside text-rd-ink-soft">
           {foodDeals.slice(0, 6).map((p, i) => (
             <li key={i}>
-              <span className="text-rd-ink font-medium">{formatDateReadable(p.date)}</span> — {p.title}
+              <span className="text-rd-ink font-medium">{formatDateReadable(p.date)}</span> · {p.title}
             </li>
           ))}
           {foodDeals.length > 6 && (
@@ -400,7 +400,7 @@ function FoodSection({
       <ul className="space-y-1.5 list-disc list-inside text-text-secondary">
         {foodDeals.slice(0, 6).map((p, i) => (
           <li key={i}>
-            <span className="text-white font-medium">{formatDateReadable(p.date)}</span> — {p.title}
+            <span className="text-white font-medium">{formatDateReadable(p.date)}</span> · {p.title}
           </li>
         ))}
         {foodDeals.length > 6 && (
@@ -440,7 +440,7 @@ function KidsSection({
         <ul className="space-y-1.5 list-disc list-inside text-rd-ink-soft">
           {kidsEvents.slice(0, 6).map((p, i) => (
             <li key={i}>
-              <span className="text-rd-ink font-medium">{formatDateReadable(p.date)}</span> — {p.title}
+              <span className="text-rd-ink font-medium">{formatDateReadable(p.date)}</span> · {p.title}
             </li>
           ))}
           {kidsEvents.length > 6 && (
@@ -461,7 +461,7 @@ function KidsSection({
       <ul className="space-y-1.5 list-disc list-inside text-text-secondary">
         {kidsEvents.slice(0, 6).map((p, i) => (
           <li key={i}>
-            <span className="text-white font-medium">{formatDateReadable(p.date)}</span> — {p.title}
+            <span className="text-white font-medium">{formatDateReadable(p.date)}</span> · {p.title}
           </li>
         ))}
         {kidsEvents.length > 6 && (

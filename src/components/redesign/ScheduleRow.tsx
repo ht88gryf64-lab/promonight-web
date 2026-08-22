@@ -158,7 +158,7 @@ export function ScheduleRow({
             size={15}
             stroke={2}
             aria-hidden
-            className={`text-rd-ink-faint transition-transform ${open ? 'rotate-180' : ''}`}
+            className={`text-rd-ink-decor transition-transform ${open ? 'rotate-180' : ''}`}
           />
         </span>
       </button>

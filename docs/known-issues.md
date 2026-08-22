@@ -362,7 +362,12 @@ were not.
 
 ## 9. `rd-ink-faint` fails contrast on the surface it is most used on
 
-**What it is.** `--color-rd-ink-faint: #9a9081` (`src/app/globals.css:33`, commented
+**Status: RESOLVED 2026-08-21 on `feature/ink-token-split`. Superseded by entry
+35, which carries the fix and the shipped ramp.** Every value quoted below is a
+retired one. The prediction in "Why it is not fixed here" turned out to be
+almost exactly right, which is why this entry is kept rather than deleted.
+
+**What it is.** `--color-rd-ink-faint: #9a9081` (then at `src/app/globals.css:33`, commented
 "eyebrows, captions") does not meet WCAG AA for normal-size text against either
 redesign surface:
 
@@ -409,6 +414,14 @@ all.
 through these strings; every one of them labels content that is also present in
 full-contrast text next to it. It is a legibility tax on low-vision users and a
 standing AA gap, tracked so it is a decision rather than an oversight.
+
+**What actually happened.** The estimate above was close: the shipped
+`ink-faint` is `#786e60`, a hair off the predicted `#767065`. The collapse it
+warned about was real, and it was not avoidable by picking a better value. The
+fix was to move `rd-ink-soft` too, twice, and to give the decoration uses a
+token of their own so the readable tier could move without dragging drag
+handles and glyph fills darker with it. Entry 35 has the shipped ramp and the
+reason the two steps cannot both be widened.
 
 ---
 
@@ -1674,10 +1687,13 @@ split out of the mechanical sweep rather than bundled into it.
 
 ## 35. The ink-faint token fails AA on its own, and a fade was hiding it
 
-**Status: OPEN, token change not made. Filed 2026-08-21 during the contrast
-sweep.** `--color-rd-ink-faint: #9a9081` (`src/app/globals.css:33`, commented
-"eyebrows, captions") does not clear WCAG 1.4.3 normal text on either surface
-it renders on, **before any opacity is applied**:
+**Status: RESOLVED 2026-08-21 on `feature/ink-token-split`. Filed the same day
+during the contrast sweep.** The diagnosis below describes the RETIRED value
+`#9a9081`; the Resolution section at the end has what shipped and the one
+finding worth carrying forward. `--color-rd-ink-faint: #9a9081` (then at
+`src/app/globals.css:33`, commented "eyebrows, captions") did not clear WCAG
+1.4.3 normal text on either surface it renders on, **before any opacity is
+applied**:
 
 | background | ratio | 4.5 normal text | 3.0 graphics |
 |---|---|---|---|
@@ -1706,16 +1722,61 @@ the second defect behind its own fix.** The measurement that caught it was
 recomputing every element ratio AFTER the change rather than declaring victory
 because the number improved.
 
-**This is a token change with sitewide visual consequences, not a component
-fix.** One value governs every eyebrow, caption, timestamp, count line and unit
-label in the redesign. Darkening it changes the visual weight of the quietest
-tier of type on every page at once, and it compresses the gap to
-`--color-rd-ink-soft` #6f665a, which is the next step up the ramp. That is a
-design decision about the palette, not a mechanical swap, which is why it is
-filed rather than fixed.
+**This was a token change with sitewide visual consequences, not a component
+fix.** One value governed every eyebrow, caption, timestamp, count line and
+unit label in the redesign, so moving it changed the visual weight of the
+quietest tier of type on every page at once.
 
-**Not every use needs 4.5:1.** Uses that are icons, borders or pure decoration
-are judged at 3.0 and mostly pass on white. Scoping which of the 181 are read
-as text, at what sizes, and on which background is the work that has to precede
-any change.
+**Not every use needed 4.5:1.** Uses that are icons, borders or pure decoration
+are judged at 3.0. Scoping which of the 181 are read as text, at what sizes and
+on which background, is what the fix was built on.
+
+### Resolution
+
+The token was split rather than darkened, because it had been doing two jobs
+under one name. Readable text kept the name and moved to a compliant value;
+decoration got a token of its own and kept the old one.
+
+| token | value | white | cream | role |
+|---|---|---|---|---|
+| `--color-rd-ink` | `#211d18` | 16.75:1 | 15.13:1 | headings, titles |
+| `--color-rd-ink-soft` | `#50483f` | 8.98:1 | 8.10:1 | secondary body text |
+| `--color-rd-ink-faint` | `#786e60` | 5.00:1 | 4.52:1 | eyebrows, captions |
+| `--color-rd-ink-decor` | `#9a9081` | 3.14:1 | 2.84:1 | NOT FOR TEXT |
+
+All three text tones clear 4.5:1 on both grounds, which no version of the old
+ramp did. `ink-decor` carries the retired value and is confined to aria-hidden
+glyphs and fills, enforced by `src/lib/__tests__/ink-decor-usage.test.ts`.
+
+**THE FINDING WORTH KEEPING: the ramp's span is fixed, so its two steps trade
+one for one.** Both ends are pinned. `ink` is the brand charcoal. `ink-faint`
+sits exactly on the 4.5:1 floor for cream, the tighter of its two grounds, so
+it cannot be lightened without failing and gains nothing by being darkened.
+That locks `ink` to `ink-faint` at 3.35:1, and the two steps have to multiply
+to it. Bringing `ink-faint` up to compliance therefore compressed the bottom
+step to 1.32:1, and the only way to get it back was to spend the top step:
+`ink-soft` went `#6f665a` to `#645c51` to `#50483f`, restoring the bottom step
+to 1.79:1 and taking the top step from 2.55:1 to 1.87:1. The even split is
+1.83:1 on each and past it the ramp inverts. **There is no value that makes
+both steps generous**, so an edit that appears to improve one step is taking it
+from the other. The guard asserts both steps, their product against the span,
+and that the ramp has not inverted.
+
+**Why the budget went downward.** The two steps are not equally supported.
+`ink` and `ink-soft` are nearly always separated by weight or size as well as
+tone, so tone is one signal among several. `ink-soft` and `ink-faint` meet at
+the same size and weight in real copy, most visibly in the giveaway bullet list
+on a team page, where tone is the only signal there is. The step with no backup
+got the budget.
+
+**Grounds were measured, not assumed, and the first measurement was wrong.**
+Reading the source suggested white and cream. Instrumenting the rendered pages
+found four: white `#ffffff`, cream `#f7f3ea`, and the two calendar cell tints
+`#f9f9f9` and `#fdf3f2`. No ink tone renders on a dark ground anywhere. Two
+mistakes in that measurement are worth not repeating. Tailwind v4 emits
+alpha-modified colors as `oklab(...)`, so pulling numbers out of a color string
+with a regex reads those coordinates as RGB and reports the cream sticky header
+as near-black, which produced a confident 1.09:1 "failure" that did not exist.
+And a hand-composited tint is not the same as asking the browser. Resolve
+colors by painting them to a canvas and composite the real ancestor chain.
 

@@ -310,7 +310,7 @@ export function CaptureSheet({ open, onDismiss, labelledBy, children }: CaptureS
             ratio as the X glyph below, so both dismissals are equally findable.
             The population browsing at page scale > 1 skews low-vision, which is
             exactly the population a 1.39:1 bar does not exist for. */}
-        <span className="h-1 w-9 rounded-full bg-rd-ink-faint" />
+        <span className="h-1 w-9 rounded-full bg-rd-ink-decor" />
       </button>
       <button
         type="button"
@@ -320,7 +320,7 @@ export function CaptureSheet({ open, onDismiss, labelledBy, children }: CaptureS
         // right-1.5: 6px was the least forgiving position on the panel for any
         // viewport-narrowing effect. Moving it to 12px is cheap and buys a
         // little (scale 1.03 instead of 1.02); it is NOT the fix, the handle is.
-        className="absolute right-3 top-1.5 flex h-11 w-11 items-center justify-center rounded-full text-rd-ink-faint transition-colors hover:bg-rd-ink/[0.06] hover:text-rd-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rd-red focus-visible:ring-offset-2 focus-visible:ring-offset-rd-card"
+        className="absolute right-3 top-1.5 flex h-11 w-11 items-center justify-center rounded-full text-rd-ink-decor transition-colors hover:bg-rd-ink/[0.06] hover:text-rd-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rd-red focus-visible:ring-offset-2 focus-visible:ring-offset-rd-card"
       >
         <svg
           className="h-4 w-4"

@@ -1425,7 +1425,7 @@ function ComingUpRow({
             </span>
           </div>
         </div>
-        <span aria-hidden="true" className="shrink-0 text-lg text-rd-ink-faint">
+        <span aria-hidden="true" className="shrink-0 text-lg text-rd-ink-decor">
           ›
         </span>
       </Link>

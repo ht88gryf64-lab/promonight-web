@@ -144,7 +144,7 @@ export function RedesignPromoRow({
       <ShareButton
         item={shareItem}
         placement="promo_card"
-        className="absolute right-2.5 top-2.5 inline-flex h-8 w-8 items-center justify-center rounded-full text-rd-ink-faint transition-colors hover:bg-rd-cream hover:text-rd-ink active:bg-rd-line"
+        className="absolute right-2.5 top-2.5 inline-flex h-8 w-8 items-center justify-center rounded-full text-rd-ink-decor transition-colors hover:bg-rd-cream hover:text-rd-ink active:bg-rd-line"
         label={`Share ${promo.title}`}
       />
       <div className="w-14 flex-shrink-0 text-center">
