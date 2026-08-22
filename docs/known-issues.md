@@ -1567,9 +1567,36 @@ into 105 score badges, 30 visible plus a hidden zero-height copy of all 75, and
 rendered two contradictory count lines, one reading 30 teams ranked in MLB and
 one reading 75 teams ranked.
 
-So the pre-merge check is BOTH: a served-row count for mode 1, and a browser
-render with a visible-element count for mode 2. Neither substitutes for the
-other.
+So the pre-merge check is BOTH, and both are runnable commands:
+
+```bash
+# mode 1: content present in served HTML
+curl -s "https://www.getpromonight.com/team-rankings?cb=$RANDOM" \
+  | grep -o 'Team promo score:' | wc -l
+
+# mode 2: no hidden duplicates after hydration. Exits non-zero on failure.
+node scripts/check-hydration-duplicates.js "https://www.getpromonight.com/team-rankings"
+node scripts/check-hydration-duplicates.js "https://<deployment>.vercel.app/best-promos?_vercel_share=<token>"
+```
+
+The mode-2 script takes any preview or production URL, share token included,
+knows the repeating element for the scored surfaces, accepts `--selector` for
+anything else, and exits 1 on any hidden duplicate so it can gate rather than
+merely report. It replaces the manual browser session that this entry used to
+prescribe, because a check depending on a browser session staying alive is a
+check that gets skipped.
+
+**SENSITIVITY CAVEAT, because a guard nobody trusts correctly is worse than
+none.** The script has NOT been shown to reproduce the one historical case.
+Real Chrome reported 105 badges and three count lines on the pre-fix
+deployment; the script against that same deployment reports 30 of 30 visible,
+zero hidden, at every timing tried. Either headless does not reproduce that
+hydration path, or the original reading was an artifact of the browser
+extension's evaluation context, and those cannot be separated without a real
+browser. Treat a clean run as cheap evidence rather than proof, and keep a real
+browser in the loop for anything load bearing. The fix that prompted all this
+stands regardless: a boundary above a component that already owns one is
+redundant on its own terms.
 
 **Three worked. One did not, and that is the point.**
 
