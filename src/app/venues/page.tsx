@@ -5,7 +5,7 @@ import { getVenueIndexEntries, SEASON_YEAR } from '@/lib/venue-hub';
 import { BAG_SEASON } from '@/lib/venue-bag-policies';
 import { groupVenueIndexEntries } from '@/lib/venue-index';
 import { HubVenueLinks } from '@/components/hub/HubVenueLinks';
-import { getLeagueHub } from '@/lib/league-hubs';
+import { getLeagueHub, hubIndexLinkLabel } from '@/lib/league-hubs';
 import { pageOpenGraph } from '@/lib/og';
 
 // /venues index: the directory over every indexable building hub. Before this
@@ -70,7 +70,7 @@ export default async function VenuesIndexPage() {
                     href={hub.href}
                     className="font-rd text-sm text-rd-ink-soft transition-colors hover:text-rd-red"
                   >
-                    All {hub.label} promos ›
+                    {hubIndexLinkLabel(hub)} ›
                   </Link>
                 ) : null}
               </div>

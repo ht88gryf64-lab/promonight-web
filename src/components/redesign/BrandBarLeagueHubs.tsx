@@ -3,17 +3,17 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { IconChevronDown } from '@tabler/icons-react';
-import { LEAGUE_HUBS, hubAriaLabel } from '@/lib/league-hubs';
+import { LEAGUE_HUBS, hubAriaLabel, hubNavLabel } from '@/lib/league-hubs';
 import { LeagueChip } from './LeagueChip';
 
 // "League hubs" dropdown for the redesign top bar. Lists only live hubs from the
-// LEAGUE_HUBS registry (MLB today; the list grows as hubs ship). Keyboard
-// accessible: the trigger carries aria-expanded, Escape closes it, and an
-// outside click/tap closes it. Rendered once and always visible, so it works on
-// both desktop and mobile. The redesign top bar has no separate mobile menu
-// (the other links are desktop-only, hidden below md), so this single dropdown
-// is the mobile-visible entry point rather than an item in a menu that does not
-// exist. No nav analytics event is fired because the top bar has no existing
+// LEAGUE_HUBS registry (the list grows as hubs ship). Keyboard accessible: the
+// trigger carries aria-expanded, Escape closes it, and an outside click/tap
+// closes it. Desktop entry point; the mobile sheet (BrandBarMobileMenu) renders
+// the same registry list under its own "League hubs" heading. The text beside
+// each monogram is hubNavLabel, so a hub whose short label is not
+// self-explanatory (CFB) is spelled out here and in the sheet from one field.
+// No nav analytics event is fired because the top bar has no existing
 // nav-event pattern to match. Client component for the open/close state.
 const TRIGGER_CLASS =
   'inline-flex items-center gap-1 font-rd text-[12px] uppercase tracking-[0.12em] ' +
@@ -73,7 +73,7 @@ export function BrandBarLeagueHubs() {
             className="flex items-center gap-2.5 rounded-lg px-3 py-2 font-rd text-[13px] normal-case tracking-normal text-rd-ink-soft transition-colors hover:bg-rd-cream hover:text-rd-ink"
           >
             <LeagueChip accent={hub.accent} label={hub.label} size={22} />
-            <span>{hub.label}</span>
+            <span>{hubNavLabel(hub)}</span>
           </Link>
         ))}
       </div>

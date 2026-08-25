@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { FollowFooterCTA } from '@/components/follow/FollowFooterCTA';
+import { CFB_HUB, isCfbHubLive } from '@/lib/league-hubs';
 
 // Redesign v2 footer. The light team-page redesign uses a cream page with white
 // cards, but the footer is the one intentionally-dark surface: warm charcoal
@@ -42,12 +43,16 @@ const COMPANY_LINKS: FooterLink[] = [
 // hub, the /venues directory, and the /follow funnel a clean dofollow incoming
 // link on every page. The stadium-guides entry is the sitewide path into the
 // venue cluster: every indexable venue page is two clicks from any page via
-// footer -> /venues -> venue.
+// footer -> /venues -> venue. The college hub link is gated on the same
+// registry flag as the nav, so the footer cannot outlive or precede the hub:
+// before it, the only visible college link on the homepage went to the
+// rivalries index and the hub itself sat behind a collapsed menu.
 const DISCOVER_LINKS: FooterLink[] = [
   { label: 'Best promos', href: '/best-promos' },
   { label: 'Team rankings', href: '/team-rankings' },
   { label: 'Stadium guides', href: '/venues' },
   { label: 'World Cup 2026', href: '/world-cup' },
+  ...(isCfbHubLive() && CFB_HUB ? [{ label: 'College football', href: CFB_HUB.href }] : []),
   { label: 'College football rivalries', href: '/cfb/rivalries' },
   { label: 'Follow your teams', href: '/follow' },
 ];

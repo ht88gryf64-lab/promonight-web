@@ -6,7 +6,7 @@ import { IconMenu2 } from '@tabler/icons-react';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/redesign/Button';
 import { WorldCupNavLink } from '@/components/world-cup/nav-link';
-import { LEAGUE_HUBS, hubAriaLabel } from '@/lib/league-hubs';
+import { LEAGUE_HUBS, hubAriaLabel, hubNavLabel } from '@/lib/league-hubs';
 import { LeagueChip } from './LeagueChip';
 
 // Mobile hamburger + fullscreen nav sheet for the gate-on redesign top bar.
@@ -107,7 +107,7 @@ export function BrandBarMobileMenu({
             {LEAGUE_HUBS.map((hub) => (
               <Link key={hub.href} href={hub.href} aria-label={hubAriaLabel(hub)} className={ROW_LINK}>
                 <LeagueChip accent={hub.accent} label={hub.label} size={30} />
-                <span>{hub.label}</span>
+                <span>{hubNavLabel(hub)}</span>
               </Link>
             ))}
           </div>

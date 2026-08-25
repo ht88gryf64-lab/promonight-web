@@ -7,7 +7,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { LEAGUE_HUB_REGISTRY, LEAGUE_HUBS, hubAriaLabel } from '../league-hubs';
+import { LEAGUE_HUB_REGISTRY, LEAGUE_HUBS, hubAriaLabel, hubIndexLinkLabel, hubNavLabel } from '../league-hubs';
 
 test('the CFB hub aria-label never claims a promotional schedule', () => {
   const cfb = LEAGUE_HUB_REGISTRY.find((h) => h.league === 'CFB');
@@ -21,4 +21,15 @@ test('every pro hub aria-label still describes a promotional schedule', () => {
   for (const hub of LEAGUE_HUBS.filter((h) => h.league !== 'CFB')) {
     assert.equal(hubAriaLabel(hub), `${hub.label} promotional schedule`);
   }
+});
+
+test('the CFB hub is spelled out in menus and its /venues up-link never says promos', () => {
+  const cfb = LEAGUE_HUB_REGISTRY.find((h) => h.league === 'CFB');
+  assert.ok(cfb);
+  assert.equal(hubNavLabel(cfb), 'College football');
+  assert.doesNotMatch(hubIndexLinkLabel(cfb), /promo/i);
+  const mlb = LEAGUE_HUB_REGISTRY.find((h) => h.league === 'MLB');
+  assert.ok(mlb);
+  assert.equal(hubNavLabel(mlb), 'MLB');
+  assert.equal(hubIndexLinkLabel(mlb), 'All MLB promos');
 });

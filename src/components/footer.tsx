@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { getAllTeams } from '@/lib/data';
+import { CFB_HUB, isCfbHubLive } from '@/lib/league-hubs';
 import { FooterTeamSitemap } from './footer-team-sitemap';
 
 export async function Footer() {
@@ -69,6 +70,15 @@ export async function Footer() {
                   Stadium guides
                 </Link>
               </li>
+              {/* Same registry gate as the redesign footer and the nav, so the
+                  gate-off chrome carries a path to the college hub too. */}
+              {isCfbHubLive() && CFB_HUB && (
+                <li>
+                  <Link href={CFB_HUB.href} className="text-text-secondary text-sm hover:text-white transition-colors">
+                    College football
+                  </Link>
+                </li>
+              )}
             </ul>
           </div>
 

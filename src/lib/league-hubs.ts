@@ -1,12 +1,17 @@
 // Single source of truth for league hubs. Every league carries its locked
 // house-palette accent (the LeagueChip monogram background). `live` gates which
-// hubs actually render in menus: MLB is live today, the rest are ready-but-
-// inactive, so shipping a new hub is a one-line change (flip `live` to true once
-// the /{sportSlug} route exists). A future homepage league section and a
-// /leagues index are meant to read this same registry.
+// hubs actually render in menus (MLB, WNBA, MLS, NFL and CFB today; NBA and NHL
+// are ready-but-inactive), so shipping a new hub is a one-line change (flip
+// `live` to true once the /{sportSlug} route exists). A future homepage league
+// section and a /leagues index are meant to read this same registry.
 export interface LeagueHub {
   league: string; // display league code, e.g. 'MLB'
   label: string; // short nav / monogram label, e.g. 'MLB'
+  // Spelled-out menu text when the short label is not self-explanatory. The
+  // monogram chip keeps `label`; the text beside it renders this. Only CFB sets
+  // it: a bare "CFB" was the only nav wording for the college hub, and it was
+  // the one thing on the homepage a visitor had to already understand.
+  navLabel?: string;
   href: string; // hub route, e.g. '/mlb'
   sportSlug: string; // lowercased slug used in team URLs, e.g. 'mlb'
   accent: string; // locked house-palette hex for the LeagueChip background
@@ -28,7 +33,7 @@ export const LEAGUE_HUB_REGISTRY: LeagueHub[] = [
   { league: 'NBA', label: 'NBA', href: '/nba', sportSlug: 'nba', accent: '#b5642e', live: false },
   { league: 'NHL', label: 'NHL', href: '/nhl', sportSlug: 'nhl', accent: '#4a4f57', live: false },
   { league: 'NFL', label: 'NFL', href: '/nfl', sportSlug: 'nfl', accent: '#5f6b57', live: true },
-  { league: 'CFB', label: 'CFB', href: '/cfb', sportSlug: 'cfb', accent: '#9a7d2e', live: true, sitemapChangeFrequency: 'weekly' },
+  { league: 'CFB', label: 'CFB', navLabel: 'College football', href: '/cfb', sportSlug: 'cfb', accent: '#9a7d2e', live: true, sitemapChangeFrequency: 'weekly' },
 ];
 
 // The live hubs shown in menus (the BrandBarLeagueHubs desktop dropdown + the
@@ -61,4 +66,18 @@ export const isCfbHubLive = (): boolean => CFB_HUB?.live === true;
 export function hubAriaLabel(hub: LeagueHub): string {
   if (hub.league === 'CFB') return 'College football schedules, stadiums and rivalries';
   return `${hub.label} promotional schedule`;
+}
+
+// Visible menu text beside the monogram chip: the spelled-out name when a hub
+// carries one, else the short label.
+export function hubNavLabel(hub: LeagueHub): string {
+  return hub.navLabel ?? hub.label;
+}
+
+// The up-link from a hub's section on the /venues index. Pro hubs are promo
+// hubs; the college hub is not, and "All CFB promos" was a claim about a
+// corpus that has none.
+export function hubIndexLinkLabel(hub: LeagueHub): string {
+  if (hub.league === 'CFB') return 'College football schedules and rivalries';
+  return `All ${hub.label} promos`;
 }
