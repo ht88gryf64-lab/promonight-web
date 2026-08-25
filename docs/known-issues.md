@@ -1848,3 +1848,64 @@ were shown to fail before being committed.
 palette is compliant, not that a given string is painted on the ground the test
 assumes. And no static check reaches what a mail client does to the colors
 after delivery.
+
+---
+
+## 37. The /about copy carries a review date, and a test holds the words to it
+
+**Status: RULE, in force since 2026-08-22. Written up 2026-08-25; the code
+had cited this entry since the guard shipped.**
+
+`/about` publishes `ABOUT_LAST_REVIEWED` three ways: the visible "Last
+reviewed" line, `AboutPage.dateModified`, and the sitemap `<lastmod>` for the
+URL. A hand-maintained date goes stale the first time the copy moves and the
+date does not, and that failure is silent: the page builds, the schema
+validates, and the only symptom is a freshness claim that quietly stopped being
+one. Entry 17 recorded the opposite mistake on 169 team pages, a synthesized
+`new Date()` that claimed freshness every render.
+
+**The rule.** `src/lib/about-copy.ts` holds the copy, the date, and
+`ABOUT_COPY_FINGERPRINT`, a SHA-256 of its own contents with the fingerprint
+line removed. `src/lib/__tests__/about-freshness.test.ts` recomputes the hash
+and fails the suite when the words moved and the date did not, printing the
+value to paste in. So a copy edit on that page is also a review-date
+commitment: re-read the page, then bump `ABOUT_LAST_REVIEWED`,
+`ABOUT_LAST_REVIEWED_LABEL` and the fingerprint in the same commit.
+
+**What it does not prove.** That a human re-read the page, and anything that
+lives outside the file: a count derived from Firestore changes without any edit
+here, which is the intended design.
+
+---
+
+## 38. The shared social card still says the retired tagline
+
+**Status: OPEN, design task. Filed 2026-08-25 by the brand-copy pass that
+retired the line everywhere else. Severity: Medium (every shared link).**
+
+`public/og-image.png` is the one static 1200x630 social card, referenced by
+every route's `og:image` and `twitter:image` and by the SportsEvent images in
+the scored, rivalry and champions schema. The text baked into it reads:
+
+```
+PROMONIGHT
+Every promo. Every team.
+Free on iOS and Android
+```
+
+Both lines are now wrong. The tagline became `Find the game, plan the night.`
+(`src/lib/brand.ts`), and the app is the companion to the website, not the
+product, and covers four leagues. The alt text on every route now describes
+the card the site means to ship (`OG_IMAGE_ALT` in `src/lib/og.ts`:
+`PromoNight: Find the game, plan the night.`), so until the image is
+regenerated the alt and the pixels disagree. That is the intended interim
+state: the alts had quoted a third variant of the old line that matched
+nothing, and one shared constant that is right the moment the file is replaced
+is better than five literals that were wrong in two spellings.
+
+**What regenerating it needs.** A 1200x630 PNG at the same path, wordmark plus
+the tagline, no app sub-line or, if one is wanted, one that names the four
+leagues (`APP_LEAGUES` in `src/lib/coverage-counts.ts`). Nothing in code
+changes when the file is replaced. `src/app/api/og/route.tsx`, a per-request
+generator that carried a fourth wording, was removed in the same pass; nothing
+referenced it and Ahrefs recorded no backlinks to it.

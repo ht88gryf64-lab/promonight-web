@@ -124,7 +124,7 @@ export default async function CfbHub() {
           </section>
         )}
 
-        {/* ── BROWSE all schools (§14 crawlability — all links in DOM, CSS filter only) ── */}
+        {/* BROWSE all schools (§14 crawlability: all links in DOM, CSS filter only) */}
         <section id="browse" className="mt-14 scroll-mt-6">
           <SectionLabel sub="Pick your team for its full schedule, rivalries, and gameday plan.">BROWSE ALL {data.totalTeams} TEAMS</SectionLabel>
           <div className="mt-5">
