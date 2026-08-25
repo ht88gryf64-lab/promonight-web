@@ -18,8 +18,9 @@ export interface TripStepProps {
   index: number;
   isLast: boolean;
   title: string;
-  /** Generic by design and identical on all 32 pages. No per-rivalry variants. */
-  blurb: string;
+  /** Generic by design and identical on all 32 pages. No per-rivalry variants.
+   *  Optional: a step with nothing true to say says nothing. */
+  blurb?: string;
   cta: string;
   /** Solid for the primary step, ghost for the rest. */
   tone: 'solid' | 'ghost';
@@ -49,7 +50,7 @@ function Shell({ index, isLast, title, blurb, children }: TripStepProps & { chil
       <Rail index={index} isLast={isLast} />
       <div className="min-w-0 flex-1">
         <h3 className="text-base font-semibold text-white">{title}</h3>
-        <p className="mt-1 text-sm leading-snug text-white/60">{blurb}</p>
+        {blurb && <p className="mt-1 text-sm leading-snug text-white/60">{blurb}</p>}
         {children}
       </div>
     </li>
