@@ -12,7 +12,7 @@ export interface Team {
   division: string;
   // Ticketmaster team-page slug. Defaults to `id` when undefined — set this
   // only when the canonical Ticketmaster URL slug differs from PromoNight's
-  // internal slug. Populated for all 167 teams by
+  // internal slug. Populated for all 169 teams by
   // scripts/populate-ticketmaster-fields.ts from the merged mapping JSON.
   ticketmasterSlug?: string;
   // Ticketmaster URL artist id — the numeric segment after `/artist/` in

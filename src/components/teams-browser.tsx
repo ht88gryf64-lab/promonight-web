@@ -31,7 +31,7 @@ type ActiveLeague = typeof ALL | (typeof LEAGUE_ORDER)[number] | typeof CFB_CHIP
 
 // The ?league= subscription, quarantined in a null-rendering child so the
 // useSearchParams static-generation bailout stops at ITS Suspense boundary
-// instead of swallowing the browser: the 167-card grid must stay in the
+// instead of swallowing the browser: the 169-card grid must stay in the
 // prerendered HTML. Reading window.location once on mount is not enough — a
 // same-route client navigation (BrandBar "Teams" tap while a filter is
 // active, back/forward) never remounts this tree, and the pill would desync

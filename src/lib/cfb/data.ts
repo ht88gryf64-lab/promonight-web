@@ -39,12 +39,12 @@ export interface CfbGameView {
   // URL (cfbRivalries.source — the trophy's own Wikipedia page, never the list),
   // surfaced so the tag can link out; null when no valid URL is stored.
   rivalry: { id: string; name: string; trophy: string | null; sourceUrl: string | null } | null;
-  /** True when opponentId is one of the 86 tracked cfbSchools. An untracked
+  /** True when opponentId is one of the 87 tracked cfbSchools. An untracked
    *  opponent has no page, so it renders as plain text rather than a dead link,
-   *  the same rule the matchup pages use for washington-state. */
+   *  the same rule the matchup pages use for an untracked side. */
   opponentTracked: boolean;
   // Road-trip planner (away games only): the opponent's school+venue, present only
-  // when the opponent is one of the 86 tracked schools AND has a resolved venue.
+  // when the opponent is one of the 87 tracked schools AND has a resolved venue.
   // Used to build the SITE-STANDARD hotels/parking CTAs near the destination stadium.
   awaySchool: CfbSchool | null;
   awayVenue: CfbVenue | null;
@@ -132,11 +132,11 @@ function kickoffDisplay(g: CfbGame): { display: string; verified: boolean } {
 }
 
 // ── Read-efficiency layer (CFB-isolated; MLB path untouched) ─────────────────
-// The /cfb build renders 86 school pages, each calling getCfbSchoolPage TWICE
+// The /cfb build renders 87 school pages, each calling getCfbSchoolPage TWICE
 // (generateMetadata + Page). The naive reader did a FULL-collection read of
 // schools+venues+rivalries AND two games queries PER call → ~68,500 Firestore
 // reads/build and full-collection latency on every page (the prerender-timeout
-// root cause). The three static collections (schools 86, venues 86, rivalries
+// root cause). The three static collections (schools 87, venues 86, rivalries
 // 212) and the games collection (670) are identical for every school, so we read
 // each ONCE and reuse it.
 //
@@ -144,7 +144,7 @@ function kickoffDisplay(g: CfbGame): { display: string; verified: boolean } {
 //  • React cache() on getCfbSchoolPage — dedupes the generateMetadata+Page
 //    double-call within ONE page render (the house pattern; see getMlbSlate).
 //  • A module-level TTL cache on the four collections — reuses the single read
-//    ACROSS all 86 pages within a build (React cache() resets per page during
+//    ACROSS all 87 pages within a build (React cache() resets per page during
 //    SSG, so it alone can't do cross-page). TTL = the page's own ISR window
 //    (21600s), so at runtime each server instance re-reads on the same cadence
 //    the page revalidates — never staler than the page itself. A build is a

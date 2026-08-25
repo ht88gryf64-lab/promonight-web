@@ -5,7 +5,7 @@
 // template.
 //
 // STYLING = the approved immersive mockup (CfbDestinationMockup.jsx), reproduced
-// against real Firestore data and kept CONTRAST-SAFE across all 86 palettes (see
+// against real Firestore data and kept CONTRAST-SAFE across all 87 palettes (see
 // theme.ts). Immersive hero team-color wash + glow, Instrument Serif italic drama,
 // saturated signature card, accent section labels, themed rivalry cards.
 //
@@ -179,7 +179,7 @@ export function CfbSchoolPage({ data, venueHubLink }: { data: CfbSchoolPageData;
                 </Link>
               ))}
               {/* The way UP into the index. Every school with a rivalry chip
-                  also links the hub itself: before this, the 86 school pages
+                  also links the hub itself: before this, the 87 school pages
                   linked 63 individual rivalries and the index zero times
                   (Phase 2 inbound-graph slice). Muted text keeps the named
                   rivalries as the primary targets. */}

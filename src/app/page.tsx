@@ -187,7 +187,7 @@ function pickThisWeek(
 // looking. In spring this skews MLB-heavy because MLB schedules are denser
 // for the months ahead. If All-tab balance becomes a problem, options are
 // (a) take top-2-per-league across 6 leagues for 12 total, or (b) switch to
-// all-time totals via 167 separate getTeamPromos fetches.
+// all-time totals via 169 separate getTeamPromos fetches.
 function rankTeamsByFuturePromos(
   teams: Team[],
   allFuture: PromoWithTeam[],

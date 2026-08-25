@@ -74,7 +74,7 @@ export async function generateMetadata(): Promise<Metadata> {
   // "| PromoNight" suffix to match the rendered <title> and brand shared cards.
   const socialTitle = `${title} | PromoNight`;
   const description =
-    "Every MLB and NHL playoff promo schedule for 2026. Giveaways, bobbleheads & theme nights across all active playoff teams. See what's on tonight.";
+    "Every NBA and NHL playoff promo schedule for 2026. Giveaways, bobbleheads & theme nights across all active playoff teams. See what's on tonight.";
   return {
     title,
     description,

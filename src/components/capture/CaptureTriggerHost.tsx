@@ -25,7 +25,7 @@ import { CaptureTrigger } from './CaptureTrigger';
 // WHAT IT COSTS. Opponents come free out of gameContexts, which the page already
 // has. Venue-city siblings are one Firestore doc read each, and only for the
 // handful of teams that have any: VENUE_CITY_OVERRIDES holds about two dozen
-// entries and only a third of those pair up, so across 167 statically generated
+// entries and only a third of those pair up, so across 169 statically generated
 // pages this is on the order of ten extra reads at build time.
 
 function toChipTeam(team: Team): CaptureChipTeam {
