@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { getCoverageCounts } from '@/lib/get-coverage-counts';
+import { numberWord } from '@/lib/coverage-counts';
 import { pageOpenGraph } from '@/lib/og';
 import { getPromosFromDate } from '@/lib/data';
 import { AggregatorPage, AggregatorJsonLd, type AggregatorGroup } from '@/components/aggregator-layout';
@@ -19,12 +21,15 @@ function monthLabel(dateStr: string): string {
 
 const YEAR = new Date().getFullYear();
 
-export const metadata: Metadata = {
-  title: `${YEAR} Ballpark Food Deals: Discount Concession Nights`,
-  description: `Every ${YEAR} food-deal promo across MLB, NBA, NHL, NFL, MLS, and WNBA. Dollar dogs, half-price concessions, and value menus by month with team, date, and opponent. From official team announcements.`,
-  alternates: { canonical: 'https://www.getpromonight.com/promos/food-deals' },
-  openGraph: pageOpenGraph('/promos/food-deals'),
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const c = await getCoverageCounts();
+  return {
+    title: `${YEAR} Ballpark Food Deals: Discount Concession Nights`,
+    description: `Every ${YEAR} food-deal promo across ${c.leagueList}. Dollar dogs, half-price concessions, and value menus by month with team, date, and opponent. From official team announcements.`,
+    alternates: { canonical: 'https://www.getpromonight.com/promos/food-deals' },
+    openGraph: pageOpenGraph('/promos/food-deals'),
+  };
+}
 
 export default async function FoodDealsPage() {
   const all = await getPromosFromDate(todayYMD());
@@ -45,12 +50,13 @@ export default async function FoodDealsPage() {
       promos: list.sort((a, b) => a.date.localeCompare(b.date)),
     }));
 
-  const lead = `Every food-deal promotion scheduled across MLB, NBA, NHL, NFL, MLS, and WNBA in ${YEAR}. Dollar-dog nights, half-price concessions, and value menus with the team, date, and opponent for each, grouped by month. ${foods.length} food deal${foods.length !== 1 ? 's' : ''} currently tracked across 169 teams.`;
+  const c = await getCoverageCounts();
+  const lead = `Every food-deal promotion scheduled across ${c.leagueList} in ${YEAR}. Dollar-dog nights, half-price concessions, and value menus with the team, date, and opponent for each, grouped by month. ${foods.length} food deal${foods.length !== 1 ? 's' : ''} currently tracked across ${c.teamCount} teams.`;
 
   const faqs = [
     {
       question: `How many ballpark food deals are there in ${YEAR}?`,
-      answer: `PromoNight is tracking ${foods.length} food-deal promotion${foods.length !== 1 ? 's' : ''} across the six major pro leagues in ${YEAR}. These include dollar-dog nights, half-price concessions, and themed value menus.`,
+      answer: `PromoNight is tracking ${foods.length} food-deal promotion${foods.length !== 1 ? 's' : ''} across the ${numberWord(c.leagueCount)} major pro leagues in ${YEAR}. These include dollar-dog nights, half-price concessions, and themed value menus.`,
     },
     {
       question: 'What counts as a food deal?',

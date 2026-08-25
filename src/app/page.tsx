@@ -18,7 +18,8 @@ import { TeamGrid } from '@/components/team-grid';
 import { AppDownloadButtons } from '@/components/app-download-buttons';
 import { IndieDeveloperBlock } from '@/components/indie-developer-block';
 import { HomepageFAQ } from '@/components/homepage-faq';
-import { HomepageJsonLd, homepageCountsFromTeams } from '@/components/homepage-json-ld';
+import { HomepageJsonLd } from '@/components/homepage-json-ld';
+import { getCoverageCounts } from '@/lib/get-coverage-counts';
 import { getVenueUtilityCounts } from '@/lib/venue-hub';
 import { pickBestStubPromos } from '@/components/redesign/pick-best-stub-promos';
 import { buildHomeCategoryTiles } from '@/components/redesign/home-category-tiles';
@@ -294,7 +295,7 @@ export default async function HomePage() {
   // Coverage facts derived from the teams already fetched above. Replaces the
   // hardcoded 169, the per-league split, and the league count that shipped in
   // homepage prose and in FAQPage schema on both gate variants.
-  const homepageCounts = homepageCountsFromTeams(allTeams);
+  const homepageCounts = await getCoverageCounts();
 
   // Gate-ON: render the redesigned light homepage from the SAME computed data,
   // preserving every analytics event. Gate-OFF falls through to the existing
@@ -435,7 +436,7 @@ export default async function HomePage() {
       </section>
 
       {/* Built by Matt */}
-      <IndieDeveloperBlock teamCount={allTeams.length} />
+      <IndieDeveloperBlock teamCount={allTeams.length} leagueList={homepageCounts.leagueList} />
 
       {/* App download — single small section */}
       <section className="py-16 px-6 border-t border-border-subtle">

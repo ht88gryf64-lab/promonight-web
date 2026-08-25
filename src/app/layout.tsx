@@ -14,6 +14,7 @@ import { StarredTeamsProvider } from '@/hooks/use-starred-teams';
 import { ShareProvider } from '@/components/share';
 import { PostStarToastHost } from '@/components/post-star-toast';
 import { getPlayoffConfig } from '@/lib/data';
+import { getCoverageCounts } from '@/lib/get-coverage-counts';
 import './globals.css';
 
 const bebasNeue = Bebas_Neue({
@@ -47,42 +48,49 @@ const outfit = Outfit({
   display: 'swap',
 });
 
-export const metadata: Metadata = {
-  metadataBase: new URL('https://www.getpromonight.com'),
-  // The default title deliberately carries no category-page head terms
-  // ("Theme Nights", "Food Deals"): those made Google test the homepage
-  // against queries /promos/theme-nights and /promos/food-deals should own,
-  // splitting signal both ways. Brand + the winnable niche only.
-  title: {
-    default: 'PromoNight: Pro Sports Giveaway & Promo Night Tracker',
-    template: '%s | PromoNight',
-  },
-  description:
-    'PromoNight tracks every giveaway, theme night, and food deal across 169 teams in MLB, NBA, NFL, NHL, MLS, and WNBA. Never miss bobblehead night.',
-  openGraph: {
-    type: 'website',
-    siteName: 'PromoNight',
-    url: 'https://www.getpromonight.com',
-    images: [
-      {
-        url: '/og-image.png',
-        width: 1200,
-        height: 630,
-        alt: 'PromoNight: Every giveaway, every team',
-      },
-    ],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    site: '@promo_night_app',
-    creator: '@promo_night_app',
-    images: ['/og-image.png'],
-  },
-  // FlexOffers affiliate-network site ownership verification.
-  other: {
-    'fo-verify': 'b823c9f6-a5b9-4492-9bac-65ea29c2cd38',
-  },
-};
+// generateMetadata rather than a static export so the sitewide description
+// derives its team count and league list from the same read every page body
+// uses; the literal "169 teams in MLB, ..." it replaced had no alarm for the
+// day the collection moves.
+export async function generateMetadata(): Promise<Metadata> {
+  const c = await getCoverageCounts();
+  return {
+    metadataBase: new URL('https://www.getpromonight.com'),
+    // The default title deliberately carries no category-page head terms
+    // ("Theme Nights", "Food Deals"): those made Google test the homepage
+    // against queries /promos/theme-nights and /promos/food-deals should own,
+    // splitting signal both ways. Brand + the winnable niche only.
+    title: {
+      default: 'PromoNight: Pro Sports Giveaway & Promo Night Tracker',
+      template: '%s | PromoNight',
+    },
+    description:
+      `PromoNight tracks every giveaway, theme night, and food deal across ${c.teamCount} teams in ${c.leagueList}. Never miss bobblehead night.`,
+    openGraph: {
+      type: 'website',
+      siteName: 'PromoNight',
+      url: 'https://www.getpromonight.com',
+      images: [
+        {
+          url: '/og-image.png',
+          width: 1200,
+          height: 630,
+          alt: 'PromoNight: Every giveaway, every team',
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      site: '@promo_night_app',
+      creator: '@promo_night_app',
+      images: ['/og-image.png'],
+    },
+    // FlexOffers affiliate-network site ownership verification.
+    other: {
+      'fo-verify': 'b823c9f6-a5b9-4492-9bac-65ea29c2cd38',
+    },
+  };
+}
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // Fail-closed: if the config read throws (Firestore outage, perms, etc.),

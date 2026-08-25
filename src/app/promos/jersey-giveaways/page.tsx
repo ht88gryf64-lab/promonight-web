@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { getCoverageCounts } from '@/lib/get-coverage-counts';
 import { pageOpenGraph } from '@/lib/og';
 import Link from 'next/link';
 import { IconChevronRight } from '@tabler/icons-react';
@@ -48,7 +49,8 @@ export default async function JerseyGiveawaysPage() {
       promos: list,
     }));
 
-  const lead = `Every jersey, cap, hat, jacket, shirt, and hoodie giveaway across MLB, NBA, NHL, NFL, MLS, and WNBA in ${YEAR}. Apparel giveaway nights are typically capped at the first 10,000 to 25,000 fans through the gates, which is why arrival time matters.`;
+  const c = await getCoverageCounts();
+  const lead = `Every jersey, cap, hat, jacket, shirt, and hoodie giveaway across ${c.leagueList} in ${YEAR}. Apparel giveaway nights are typically capped at the first 10,000 to 25,000 fans through the gates, which is why arrival time matters.`;
 
   const faqs = [
     {

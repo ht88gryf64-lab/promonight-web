@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { FollowFooterCTA } from '@/components/follow/FollowFooterCTA';
 import { CFB_HUB, isCfbHubLive } from '@/lib/league-hubs';
+import { getCoverageCounts } from '@/lib/get-coverage-counts';
 
 // Redesign v2 footer. The light team-page redesign uses a cream page with white
 // cards, but the footer is the one intentionally-dark surface: warm charcoal
@@ -88,7 +89,11 @@ function FooterColumn({ heading, links }: { heading: string; links: FooterLink[]
   );
 }
 
-export function Footer({ year }: FooterProps) {
+export async function Footer({ year }: FooterProps) {
+  // The brand line states the site's coverage; its count and league list come
+  // from the same derivation as the root description and the homepage, never
+  // a literal (this paragraph read "169 teams" by hand on every page).
+  const coverage = await getCoverageCounts();
   return (
     <footer className="w-full border-t border-rd-line-strong bg-rd-ink text-white">
       <div className="mx-auto max-w-6xl px-6 py-14">
@@ -100,8 +105,8 @@ export function Footer({ year }: FooterProps) {
               <span style={{ color: RED_ON_DARK }}>NIGHT</span>
             </p>
             <p className="mt-4 font-rd text-sm leading-relaxed text-white/55">
-              Every giveaway, theme night, food deal, and promotion across 169 teams
-              in MLB, NBA, NHL, NFL, MLS, and WNBA.
+              Every giveaway, theme night, food deal, and promotion across {coverage.teamCount} teams
+              in {coverage.leagueList}.
             </p>
             <FollowFooterCTA />
           </div>

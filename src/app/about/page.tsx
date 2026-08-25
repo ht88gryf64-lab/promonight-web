@@ -6,9 +6,7 @@ import { AvatarMatt } from '@/components/avatar-matt';
 import { AppDownloadButtons } from '@/components/app-download-buttons';
 import { isRedesignEnabled } from '@/lib/redesign';
 import { archivoHouse } from '@/components/redesign/fonts-house';
-import { getAllTeams } from '@/lib/data';
-import { getAllCfbSchoolIds } from '@/lib/cfb/data';
-import { LEAGUE_ORDER, SCORED_LEAGUES } from '@/lib/types';
+import { getCoverageCounts } from '@/lib/get-coverage-counts';
 import {
   ABOUT_LAST_REVIEWED,
   ABOUT_LAST_REVIEWED_LABEL,
@@ -16,7 +14,6 @@ import {
   aboutLede,
   aboutMetaDescription,
   aboutSections,
-  type AboutCounts,
 } from '@/lib/about-copy';
 
 export const revalidate = 86400;
@@ -26,32 +23,12 @@ const ORG_ID = 'https://www.getpromonight.com/#organization';
 const PERSON_ID = `${CANONICAL}#matt`;
 const PAGE_ID = `${CANONICAL}#webpage`;
 
-function joinList(names: string[]): string {
-  if (names.length <= 1) return names[0] ?? '';
-  return `${names.slice(0, -1).join(', ')}, and ${names[names.length - 1]}`;
-}
-
 /** Coverage facts read from live data rather than typed into copy. The page
  *  previously hardcoded the team count in six places and a promo total that had
- *  gone stale, with nothing that would notice. */
-async function getAboutCounts(): Promise<AboutCounts> {
-  const [teams, cfbIds] = await Promise.all([getAllTeams(), getAllCfbSchoolIds()]);
-  // Canonical order first, then anything the data carries that the constant
-  // does not, so a new league appears in the counts without a code change.
-  const leagues: string[] = LEAGUE_ORDER.filter((l) => teams.some((t) => t.league === l));
-  for (const t of teams) if (!leagues.includes(t.league)) leagues.push(t.league);
-  const scored = SCORED_LEAGUES as ReadonlySet<string>;
-  const ranked = teams.filter((t) => scored.has(t.league));
-  const rankedLeagues = leagues.filter((l) => scored.has(l));
-  return {
-    teamCount: teams.length,
-    leagueCount: leagues.length,
-    leagueList: joinList(leagues),
-    cfbSchoolCount: cfbIds.length,
-    rankedTeamCount: ranked.length,
-    rankedLeagueList: joinList(rankedLeagues),
-  };
-}
+ *  gone stale, with nothing that would notice. The derivation now lives in
+ *  src/lib/coverage-counts.ts and is shared with the homepage, the root
+ *  metadata, both footers and every promo collection. */
+const getAboutCounts = getCoverageCounts;
 
 export async function generateMetadata(): Promise<Metadata> {
   const c = await getAboutCounts();

@@ -10,6 +10,8 @@ import { BestPromosBrowser } from '@/components/scoring/best-promos-browser';
 import { ScoredJsonLd } from '@/components/scoring/scored-jsonld';
 import { ScoringPageViewTracker } from '@/components/scoring/scoring-page-view-tracker';
 import { isRedesignEnabled } from '@/lib/redesign';
+import { numberWord } from '@/lib/coverage-counts';
+import { SCORED_LEAGUES } from '@/lib/types';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 
 // Server-side fetch runs once per ISR revalidate window. Scoring rides
@@ -101,7 +103,7 @@ const FAQS = [
   {
     question: 'Can I see only bobblehead nights?',
     answer:
-      'Yes. Visit /best-promos/bobbleheads for the same ranking filtered to derivedSignals.itemType equal to "bobblehead". That page shows every scored upcoming bobblehead night across the three scored leagues with its own ranked list.',
+      `Yes. Visit /best-promos/bobbleheads for the same ranking filtered to derivedSignals.itemType equal to "bobblehead". That page shows every scored upcoming bobblehead night across the ${numberWord(SCORED_LEAGUES.size)} scored leagues with its own ranked list.`,
   },
 ];
 

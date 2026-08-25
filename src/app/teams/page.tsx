@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { pageOpenGraph } from '@/lib/og';
 import { isUpcomingPromo, todayYmd } from '@/lib/promo-helpers';
 import { getAllTeams, getTeamPromos } from '@/lib/data';
+import { getCoverageCounts } from '@/lib/get-coverage-counts';
 import { TeamsBrowser } from '@/components/teams-browser';
 import { isRedesignEnabled } from '@/lib/redesign';
 import { archivoHouse } from '@/components/redesign/fonts-house';
@@ -10,26 +11,25 @@ export const revalidate = 86400;
 
 // Description carries four distinct variables (count, league set, year,
 // promo-type list) so the metadata three-variable rule holds without
-// reusing copy from another page. The count is DERIVED from getAllTeams()
-// (never hardcoded) so it can't go stale; the season year is hardcoded
-// deliberately (never getFullYear() in SEO copy).
-const LEAGUE_SET = 'MLB, NBA, NHL, NFL, MLS, and WNBA';
+// reusing copy from another page. The count AND the league set are DERIVED
+// from getCoverageCounts() (never hardcoded) so they can't go stale; the
+// season year is hardcoded deliberately (never getFullYear() in SEO copy).
 const PROMO_TYPES =
   'bobblehead nights, jersey giveaways, theme nights, and food deals';
 const SEASON_YEAR = 2026;
 
 export async function generateMetadata(): Promise<Metadata> {
-  const teamCount = (await getAllTeams()).length;
+  const c = await getCoverageCounts();
   return {
-    title: `All ${teamCount} Pro Sports Teams · Promo Calendars by League`,
-    description: `Browse all ${teamCount} pro sports teams across ${LEAGUE_SET} in ${SEASON_YEAR}. Star your teams and get one weekly email with their ${PROMO_TYPES}.`,
+    title: `All ${c.teamCount} Pro Sports Teams · Promo Calendars by League`,
+    description: `Browse all ${c.teamCount} pro sports teams across ${c.leagueList} in ${SEASON_YEAR}. Star your teams and get one weekly email with their ${PROMO_TYPES}.`,
     alternates: { canonical: 'https://www.getpromonight.com/teams' },
     openGraph: pageOpenGraph('/teams'),
   };
 }
 
 export default async function TeamsPage() {
-  const teams = await getAllTeams();
+  const [teams, coverage] = await Promise.all([getAllTeams(), getCoverageCounts()]);
 
   // UPCOMING only, matching the team pages these cards link to. The card says
   // "N promos" with no date qualifier, so the number is a claim about what a
@@ -63,7 +63,7 @@ export default async function TeamsPage() {
               FIND YOUR TEAM
             </h1>
             <p className="mt-3 max-w-xl font-rd text-base text-white/65">
-              {teams.length} teams across {LEAGUE_SET}. Star your teams to follow their promos.
+              {teams.length} teams across {coverage.leagueList}. Star your teams to follow their promos.
             </p>
           </div>
         </section>
@@ -86,7 +86,7 @@ export default async function TeamsPage() {
             FIND YOUR TEAM
           </h1>
           <p className="text-text-secondary mt-3 max-w-xl">
-            Browse {teams.length} teams across {LEAGUE_SET}. Star your teams to
+            Browse {teams.length} teams across {coverage.leagueList}. Star your teams to
             follow their promos.
           </p>
         </div>

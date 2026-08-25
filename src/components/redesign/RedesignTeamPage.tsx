@@ -1,6 +1,6 @@
 import type { Team, Venue, Promo, PromoType, PlayoffPromo } from '@/lib/types';
 import type { GameContext } from '@/lib/data';
-import type { PlayoffFAQContext } from '@/lib/promo-helpers';
+import type { PlayoffFAQContext, TeamFaqCoverage } from '@/lib/promo-helpers';
 import type { RecurringDeal } from '@/lib/recurring-deals';
 
 import Link from 'next/link';
@@ -40,8 +40,8 @@ import { AppPushPitch } from '@/components/app-push-pitch';
 
 export interface RedesignTeamPageProps {
   team: Team;
-  /** Total teams, derived by the page from getAllTeams().length. */
-  teamCount: number;
+  /** Sitewide coverage facts, derived by the page from getCoverageCounts(). */
+  coverage: TeamFaqCoverage;
   venue: Venue | null;
   /** Full visible array. Passed to PromoList, which splits it itself to render
    *  the upcoming rows and the completed archive under separate headings. */
@@ -73,7 +73,7 @@ export interface RedesignTeamPageProps {
  */
 export function RedesignTeamPage({
   team,
-  teamCount,
+  coverage,
   venue,
   promos,
   upcomingPromos,
@@ -168,7 +168,7 @@ export function RedesignTeamPage({
         upcomingPromos={upcomingPromos}
         venue={venue}
         upcomingCounts={upcomingCounts}
-        teamCount={teamCount}
+        coverage={coverage}
         playoffPromos={inPlayoffs ? playoffPromos : undefined}
         playoffContext={playoffContext}
       />
@@ -419,7 +419,7 @@ export function RedesignTeamPage({
                 upcomingPromos={upcomingPromos}
                 venue={venue}
                 upcomingCounts={upcomingCounts}
-                teamCount={teamCount}
+                coverage={coverage}
                 playoffContext={playoffContext}
                 variant="light"
               />

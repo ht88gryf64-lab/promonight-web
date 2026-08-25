@@ -1,5 +1,5 @@
 import type { Team, Promo, PromoType, Venue, PlayoffPromo } from '@/lib/types';
-import { generateTeamFAQs, teamDisplayName, type PlayoffFAQContext } from '@/lib/promo-helpers';
+import { generateTeamFAQs, teamDisplayName, type PlayoffFAQContext, type TeamFaqCoverage } from '@/lib/promo-helpers';
 
 interface JsonLdProps {
   team: Team;
@@ -10,9 +10,9 @@ interface JsonLdProps {
   upcomingPromos: Promo[];
   venue: Venue | null;
   upcomingCounts: Record<PromoType, number>;
-  /** Total teams, derived by the page from getAllTeams().length. Reaches the
-   *  FAQPage answers, so it must never be a hardcoded literal. */
-  teamCount: number;
+  /** Sitewide coverage facts, derived by the page from getCoverageCounts().
+   *  Reaches the FAQPage answers, so nothing in it may be a hardcoded literal. */
+  coverage: TeamFaqCoverage;
   playoffPromos?: PlayoffPromo[];
   playoffContext?: PlayoffFAQContext;
 }
@@ -34,7 +34,7 @@ export function JsonLd({
   upcomingPromos,
   venue,
   upcomingCounts,
-  teamCount,
+  coverage,
   playoffPromos,
   playoffContext,
 }: JsonLdProps) {
@@ -102,7 +102,7 @@ export function JsonLd({
   // before this filter and 5 after, and the faqs.length > 0 guard below never
   // fires. That argument holds for a blacklist only; an allowlist could reach 0
   // and would silently drop the whole entity.
-  const faqs = generateTeamFAQs(team, upcomingPromos, venue, upcomingCounts, teamCount, playoffContext).filter(
+  const faqs = generateTeamFAQs(team, upcomingPromos, venue, upcomingCounts, coverage, playoffContext).filter(
     (faq) => !faq.brandPromo,
   );
   const faqSchema = faqs.length > 0

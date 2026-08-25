@@ -1,5 +1,5 @@
 import type { Team, Promo, PromoType, Venue } from '@/lib/types';
-import { generateTeamFAQs, type PlayoffFAQContext } from '@/lib/promo-helpers';
+import { generateTeamFAQs, type PlayoffFAQContext, type TeamFaqCoverage } from '@/lib/promo-helpers';
 
 interface TeamFAQProps {
   team: Team;
@@ -9,14 +9,14 @@ interface TeamFAQProps {
   upcomingPromos: Promo[];
   venue: Venue | null;
   upcomingCounts: Record<PromoType, number>;
-  /** Total teams, derived by the page from getAllTeams().length. */
-  teamCount: number;
+  /** Sitewide coverage facts, derived by the page from getCoverageCounts(). */
+  coverage: TeamFaqCoverage;
   playoffContext?: PlayoffFAQContext;
   variant?: 'dark' | 'light';
 }
 
-export function TeamFAQ({ team, upcomingPromos, venue, upcomingCounts, teamCount, playoffContext, variant = 'dark' }: TeamFAQProps) {
-  const faqs = generateTeamFAQs(team, upcomingPromos, venue, upcomingCounts, teamCount, playoffContext);
+export function TeamFAQ({ team, upcomingPromos, venue, upcomingCounts, coverage, playoffContext, variant = 'dark' }: TeamFAQProps) {
+  const faqs = generateTeamFAQs(team, upcomingPromos, venue, upcomingCounts, coverage, playoffContext);
 
   if (faqs.length === 0) return null;
 
