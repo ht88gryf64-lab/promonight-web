@@ -1,5 +1,7 @@
 // CFB metadata (decision record §12 + §13; re-optimized on Ahrefs data, Jul 2026).
-// Templated, TIER-DERIVED (reads editorialStatus, so a school's description auto-
+// Templated. Formerly TIER-DERIVED on editorialStatus; the destination tier was
+// retired 2026-08-25 because nothing loads the blocks it promised (data.ts:311).
+// (Original note: reads editorialStatus, so a school's description auto-
 // enriches on graduation — no hand edit). "Schedule" is MANDATORY in every title:
 // "[school] football schedule 2026" is the head term with real volume (Ohio State
 // 10k, Alabama 8.3k, Notre Dame 7.8k), so it never gets dropped for a trophy token —
@@ -98,7 +100,6 @@ function firstFit(cands: string[], max: number): string {
 export function buildCfbTeamMetadata(data: CfbSchoolPage): Metadata {
   const s = data.school;
   const venue = data.venue;
-  const isDestination = data.editorialStatus === 'destination';
   const fullName = `${s.name} ${s.mascot}`.trim();
   const feat = selectFeaturedRivalry(data);
   const hasRivalry = feat.source !== 'none';
@@ -139,9 +140,11 @@ export function buildCfbTeamMetadata(data: CfbSchoolPage): Metadata {
   //    volume is — "ohio state michigan rivalry" 900/mo, not the generic "rivalry
   //    games" 10/mo). Carries "[stadium] parking" (a KD-1 logistics term). A generic
   //    "SchoolA–SchoolB" rivalry label collapses to "the {rival} rivalry" (no redundant
-  //    echo, and it still lands the word "rivalry"). AUTO promises only what the page
-  //    has (schedule, the rivalry, venue, tickets/parking/hotels); DESTINATION (dormant)
-  //    may add a gameday guide + tailgating. ──
+  //    echo, and it still lands the word "rivalry"). Every tier promises only what the
+  //    page renders (schedule, the rivalry, venue, tickets/parking/hotels). The former
+  //    DESTINATION tier promised "a gameday guide and tailgating" that no read path
+  //    loads (src/lib/cfb/data.ts:311 hardcodes the editorial block to nulls); it was
+  //    removed 2026-08-25 and returns only with the blocks it describes. ──
   const stadClause = stadium ? `${stadium} parking` : 'parking';
   const genericLabel = hasRivalry && rival != null && feat.name != null
     && /–/.test(feat.name) && (feat.name.includes(rival) || feat.name.includes(s.name));
@@ -150,15 +153,7 @@ export function buildCfbTeamMetadata(data: CfbSchoolPage): Metadata {
     : genericLabel
       ? `the ${rival} rivalry, `
       : `${feat.name} vs ${rival}, `;
-  const descCands = isDestination
-    ? [
-        `${fullName} ${YEAR} football schedule, ${rivalClause}a gameday guide and tailgating, plus tickets, ${stadClause} and hotels.`,
-        `${fullName} ${YEAR} football schedule, ${rivalClause}gameday guide, tickets, ${stadClause} and hotels.`,
-        `${s.name} ${YEAR} football schedule, ${rivalClause}gameday guide, tailgating, tickets and travel.`,
-        `${s.name} ${YEAR} football schedule, gameday guide, tickets, ${stadClause} and hotels.`,
-        `${s.name} ${YEAR} football schedule, gameday guide, tickets, parking and hotels.`,
-      ]
-    : [
+  const descCands = [
         `${fullName} ${YEAR} football schedule, ${rivalClause}plus tickets, ${stadClause} and hotels for every home game.`,
         `${fullName} ${YEAR} football schedule, ${rivalClause}plus tickets, ${stadClause} and hotels.`,
         `${s.name} ${YEAR} football schedule, ${rivalClause}plus tickets, ${stadClause} and hotels.`,
@@ -262,8 +257,11 @@ export function buildCfbMatchupMetadata(data: MatchupPage): Metadata {
 // Exported so the index JSON-LD (rivalry-jsonld.ts) reuses the exact strings
 // the <head> ships — CollectionPage name/description and meta cannot drift.
 export const RIVALRY_INDEX_TITLE = 'College Football Rivalries 2026';
+// Promises only what the index renders: date, stadium, trip planning. Kickoffs
+// live on the matchup pages once announced, so they are named there, not here.
+// No count: the registry is curated and a literal would drift.
 export const RIVALRY_INDEX_DESCRIPTION =
-  'Every major college football rivalry in 2026: the date, the kickoff, the stadium and how to plan the trip.';
+  'Named college football rivalries in 2026: the date, the stadium and how to plan the trip. Kickoff times appear on each rivalry page once announced.';
 
 export function buildCfbRivalryIndexMetadata(): Metadata {
   // Description unchanged from what the route already shipped; this builder only

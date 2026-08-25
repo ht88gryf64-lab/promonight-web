@@ -75,7 +75,7 @@ export function buildRivalryIndexFaqs(rows: RivalryIndexRow[]): RivalryFaq[] {
   if (trophies > 0) {
     faqs.push({
       question: 'How many of these rivalries play for a trophy?',
-      answer: `${trophies} of the ${total} rivalries listed here play for a named trophy. Series history and trophy details are on each rivalry page.`,
+      answer: `${trophies} of the ${total} rivalries listed here play for a named trophy. Each rivalry page shows the year the series began, and the trophy where there is one.`,
     });
   }
   faqs.push({
