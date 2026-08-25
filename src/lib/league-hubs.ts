@@ -52,6 +52,13 @@ export const isCfbHubLive = (): boolean => CFB_HUB?.live === true;
 // accessible name ('MLB promotional schedule') so a link stays descriptive for
 // crawlers and screen readers while the visible text stays short. A future hub
 // only sets its short label; the descriptive aria is derived the same way.
+//
+// CFB is the one hub that is NOT a promotional schedule: the college corpus
+// carries schedules, venues and rivalries and has no promo data at all, so the
+// derived name was asserting a promotional schedule that does not exist, on
+// every page, in the one text a screen-reader user hears. The branch keeps the
+// accessible name true to what the hub actually holds.
 export function hubAriaLabel(hub: LeagueHub): string {
+  if (hub.league === 'CFB') return 'College football schedules, stadiums and rivalries';
   return `${hub.label} promotional schedule`;
 }
