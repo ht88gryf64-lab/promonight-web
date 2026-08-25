@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { IconArrowRight } from '@tabler/icons-react';
+import { BRAND_TAGLINE } from '@/lib/brand';
 
 // Redesign hero. Began as a variant of the inline hero in the retired
 // RedesignHomePage
@@ -51,7 +52,7 @@ export function HomeHero({ teamCount, leagueCount, stats }: HomeHeroProps) {
       <div className="relative z-10 mx-auto max-w-6xl px-6 pb-14 pt-16 md:pb-20 md:pt-24">
         <p className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.18em] text-white/45">
           <span className="h-1.5 w-1.5 rounded-full bg-rd-red" aria-hidden />
-          Every promo at every game
+          {BRAND_TAGLINE}
         </p>
         <h1 className="rd-display mt-4 max-w-3xl text-4xl uppercase leading-[0.95] text-white md:text-6xl">
           Find the games worth going to.

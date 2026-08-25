@@ -1,3 +1,4 @@
+import { BRAND_TAGLINE } from '@/lib/brand';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import {
@@ -348,7 +349,7 @@ export default async function HomePage() {
 
         <div className="relative max-w-5xl mx-auto">
           <h1 className="font-display text-[clamp(40px,7vw,72px)] leading-[0.95] tracking-[1px] mb-4 max-w-3xl">
-            EVERY PROMO AT EVERY GAME.
+            {BRAND_TAGLINE.toUpperCase()}
           </h1>
           <p className="text-text-secondary text-lg md:text-xl leading-relaxed max-w-2xl mb-4">
             {allTeams.length} teams, {homepageCounts.leagueCount} leagues, from official team announcements. Find

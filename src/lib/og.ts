@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { BRAND_TAGLINE } from '@/lib/brand';
 
 // Shared Open Graph helpers. The root layout sets openGraph.url to the homepage,
 // and Next.js does NOT deep-merge openGraph: a child that defines no openGraph
@@ -10,12 +11,20 @@ import type { Metadata } from 'next';
 
 const SITE_URL = 'https://www.getpromonight.com';
 
-// Default social card. Hyphen, not em dash, per the house no-em-dash rule.
+// Alt text for the shared social card. One constant for every route that
+// carries the card: five inline copies used to quote a retired tagline in two
+// spellings, and none of them said what the image said. KNOWN GAP: the PNG
+// itself still reads "Every promo. Every team. / Free on iOS and Android"
+// until it is regenerated (docs/known-issues.md entry 38); the alt describes
+// the card the site means to ship.
+export const OG_IMAGE_ALT = `PromoNight: ${BRAND_TAGLINE}`;
+
+// Default social card.
 export const DEFAULT_OG_IMAGE = {
   url: '/og-image.png',
   width: 1200,
   height: 630,
-  alt: 'PromoNight - every giveaway, every team',
+  alt: OG_IMAGE_ALT,
 } as const;
 
 /** Complete openGraph for a page whose canonical URL is ALREADY computed.

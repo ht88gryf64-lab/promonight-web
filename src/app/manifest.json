@@ -1,7 +1,7 @@
 {
   "name": "PromoNight",
   "short_name": "PromoNight",
-  "description": "Every Giveaway, Theme Night & Food Deal at Your Team's Games",
+  "description": "Track giveaways, theme nights, and food deals at your team's games, with stadium guides for gameday.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#060810",

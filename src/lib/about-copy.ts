@@ -1,4 +1,5 @@
 import type { FAQItem } from '@/lib/promo-helpers';
+import { numberWord } from '@/lib/coverage-counts';
 
 /**
  * /about editorial copy, in one place.
@@ -43,10 +44,10 @@ import type { FAQItem } from '@/lib/promo-helpers';
  * quietly stale. The sitemap entry for /about reads this same constant, so the
  * visible date and <lastmod> cannot disagree.
  */
-export const ABOUT_LAST_REVIEWED = '2026-08-22';
+export const ABOUT_LAST_REVIEWED = '2026-08-25';
 
 /** Human rendering of ABOUT_LAST_REVIEWED. Fixed parts only, no locale clock. */
-export const ABOUT_LAST_REVIEWED_LABEL = 'August 22, 2026';
+export const ABOUT_LAST_REVIEWED_LABEL = 'August 25, 2026';
 
 // SHA-256 of this file with every line naming the fingerprint removed, so the
 // value cannot hash itself. The lockstep test recomputes it; a mismatch means
@@ -55,7 +56,7 @@ export const ABOUT_LAST_REVIEWED_LABEL = 'August 22, 2026';
 // The test prints the correct value when it fails, so there is nothing to run
 // by hand.
 // eslint-disable-next-line prettier/prettier
-export const ABOUT_COPY_FINGERPRINT = 'd0c6d040d5fea11cbbff3c0c16ce893161d0cb406b16c88953edb9270b59abc3';
+export const ABOUT_COPY_FINGERPRINT = '58915618f6d8c224ea888eb0e4d266e86b6e3753defaa2e62571ac68a4c5e77e';
 
 export interface AboutCounts {
   teamCount: number;
@@ -85,12 +86,9 @@ export interface AboutSection {
 }
 
 // Spelled-out small numbers. Deriving a count must not silently rewrite "six
-// leagues" as "6 leagues"; homepage-json-ld.tsx carries the same helper for the
-// same reason.
-const NUMBER_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
-export function numberWord(n: number): string {
-  return NUMBER_WORDS[n] ?? String(n);
-}
+// leagues" as "6 leagues". The helper lives with the rest of the coverage
+// derivation (src/lib/coverage-counts.ts) and is re-exported here.
+export { numberWord };
 
 /** The SERP and og:description text. Lives here rather than in the route so it
  *  sits under the same review-date guard as the rest of the copy. */
@@ -150,7 +148,7 @@ export function aboutSections(c: AboutCounts): AboutSection[] {
         {
           kind: 'p',
           text:
-            'So the website became the product. Every promo, every team, every league, no download and no account required. [Team pages](/teams), [collections by promo type](/best-promos), [venue guides](/venues) and [weekly rankings](/team-rankings), all free and all public.',
+            'So the website became the product. The whole calendar, no download and no account required. [Team pages](/teams), [collections by promo type](/best-promos), [venue guides](/venues) and [weekly rankings](/team-rankings), all free and all public.',
         },
         {
           kind: 'p',
@@ -314,7 +312,7 @@ export function aboutFaqs(c: AboutCounts): FAQItem[] {
     {
       question: 'Is PromoNight free?',
       answer:
-        'The website is completely free and always will be: every team, every promo, every venue guide, no account required. The app is a free download. PromoNight Pro is an optional subscription that adds promo-day reminders and unlimited Game Day venue unlocks.',
+        'The website is completely free and always will be: the whole calendar and every venue guide, no account required. The app is a free download. PromoNight Pro is an optional subscription that adds promo-day reminders and unlimited Game Day venue unlocks.',
     },
     {
       question: 'Where does the promo data come from?',

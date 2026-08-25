@@ -9,6 +9,7 @@
 // term). Within engine limits (rendered title ≤60, description ≤155). OG uses the
 // house /og-image.png so no CFB page ships a blanked image.
 
+import { OG_IMAGE_ALT } from '@/lib/og';
 import type { Metadata } from 'next';
 import type { CfbSchoolPage } from '@/lib/cfb/data';
 import type { MatchupPage } from '@/lib/cfb/matchups';
@@ -22,7 +23,7 @@ const TITLE_MAX = 60 - BRAND_SUFFIX.length; // 47 → rendered ≤60
 const DESC_MAX = 155; // hard cap (Google truncates ~155); every school verified ≤155
 const YEAR = 2026;
 const BASE = 'https://www.getpromonight.com';
-const OG_IMAGE = { url: '/og-image.png', width: 1200, height: 630, alt: 'PromoNight: Every giveaway, every team' };
+const OG_IMAGE = { url: '/og-image.png', width: 1200, height: 630, alt: OG_IMAGE_ALT };
 
 // §13 rivalry traffic priority. `token` = the short form for the (char-tight)
 // title; `name` = the full trophy/rivalry name for the description. Higher rank =

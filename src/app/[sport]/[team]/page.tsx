@@ -1,3 +1,4 @@
+import { OG_IMAGE_ALT } from '@/lib/og';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
@@ -165,7 +166,7 @@ export async function generateMetadata({
           url: '/og-image.png',
           width: 1200,
           height: 630,
-          alt: 'PromoNight: Every giveaway, every team',
+          alt: OG_IMAGE_ALT,
         },
       ],
     },

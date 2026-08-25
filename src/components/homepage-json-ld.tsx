@@ -1,5 +1,6 @@
 import type { FAQItem } from '@/lib/promo-helpers';
 import { leagueSplit, numberWord, type CoverageCounts } from '@/lib/coverage-counts';
+import { BRAND_TAGLINE } from '@/lib/brand';
 
 /** Coverage facts the homepage states in prose and in schema. One derivation
  *  for the whole site (src/lib/coverage-counts.ts), never written by hand: the
@@ -49,6 +50,10 @@ export function HomepageJsonLd({ counts }: { counts: HomepageCounts }) {
       // consumer sees two unrelated organizations with the same name.
       '@id': 'https://www.getpromonight.com/#organization',
       name: 'PromoNight',
+      // The tagline lives here and only here in schema: slogan is the field
+      // for it, description stays a coverage statement. The /about node shares
+      // this @id and carries no slogan, so the merged entity has exactly one.
+      slogan: BRAND_TAGLINE,
       url: 'https://www.getpromonight.com',
       // /logo.png has never existed in public/ and returns 404 in production.
       // /icon.png is the Next app icon (src/app/icon.png), 192x192, served 200,
