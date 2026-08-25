@@ -5,7 +5,7 @@ import { HubVenueLinks } from '@/components/hub/HubVenueLinks';
 import { buildCfbHubMetadata } from '@/lib/cfb/metadata';
 import { instrumentSerif } from '@/components/cfb/fonts';
 import Link from 'next/link';
-import { NationalBlock, WeekCard, ThemeCard } from '@/components/cfb/hub/blocks';
+import { NationalBlock, WeekCard } from '@/components/cfb/hub/blocks';
 import { CfbHubBrowse } from '@/components/cfb/hub/CfbHubBrowse';
 import { CfbHubSearch } from '@/components/cfb/hub/CfbHubSearch';
 import { CfbTodaySlot } from '@/components/cfb/hub/CfbTodaySlot';
@@ -83,7 +83,7 @@ export default async function CfbHub() {
       <div className="mx-auto max-w-6xl px-5 pb-24 sm:px-10">
 
         {/* Persistent today-slot — CFB's positive bridge to the daily pro board. */}
-        <CfbTodaySlot />
+        <CfbTodaySlot hasGames={data.weekly.games.length > 0} />
 
         {/* ── THIS WEEK · RIVALRY GAMES rail (§14a — rolls Monday AM) ── */}
         {data.weekly.games.length > 0 && (
@@ -114,15 +114,8 @@ export default async function CfbHub() {
           </div>
         </section>
 
-        {/* ── THEME GAMES (curated identities; single-color cards, NOT diagonal) ── */}
-        {data.theme.length > 0 && (
-          <section className="mt-14">
-            <SectionLabel sub="When the whole stadium picks a color.">THEME GAMES ACROSS THE COUNTRY</SectionLabel>
-            <div className="mt-5 grid grid-cols-2 gap-3.5 lg:grid-cols-4">
-              {data.theme.map((t) => <ThemeCard key={t.school.id} theme={t} />)}
-            </div>
-          </section>
-        )}
+        {/* Theme games rail removed 2026-08-25: no tradition data to derive it
+            from (cfbTraditions 2 docs, 0 school references). Returns with data. */}
 
         {/* BROWSE all schools (§14 crawlability: all links in DOM, CSS filter only) */}
         <section id="browse" className="mt-14 scroll-mt-6">

@@ -2,11 +2,11 @@
 // 62/38 split, home-left, four-color primary→secondary fade, seam divider when
 // primaries are too close, bottom-heavy scrim for legibility over any combo.
 // Two scales: NationalBlock (200px + blurb) and WeekCard (140px + countdown).
-// The diagonal is EXCLUSIVE to rivalries — ThemeCard is a single-color card.
+// The diagonal is EXCLUSIVE to rivalries.
 
 import Link from 'next/link';
 import type { CSSProperties } from 'react';
-import type { HubRivalryGame, HubNationalBlock, HubThemeGame, HubTeam } from '@/lib/cfb/hub-data';
+import type { HubRivalryGame, HubNationalBlock, HubTeam } from '@/lib/cfb/hub-data';
 import { rivalryBlockColors, orderRivalrySides } from '@/lib/cfb/hub-theme';
 
 const GOLD = '#FFB71E';
@@ -72,7 +72,11 @@ export function NationalBlock({ block }: { block: HubNationalBlock }) {
       <CornerName team={home} side="left" />
       <CornerName team={away} side="right" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] p-5">
-        <div className="text-[10px] tracking-wider text-white/85" style={{ fontFamily: MONO, textShadow: '0 1px 3px #000' }}>{fmtDate(block.date)} · {block.host.toUpperCase()}{block.est ? ` · EST. ${block.est}` : ''}</div>
+        {/* Date only when cfbGames has the pair's game; EST. only from the
+            rivalry doc's seriesStartYear. Each token is data or absent. */}
+        <div className="text-[10px] tracking-wider text-white/85" style={{ fontFamily: MONO, textShadow: '0 1px 3px #000' }}>
+          {[block.date ? fmtDate(block.date) : null, block.host.toUpperCase(), block.est ? `EST. ${block.est}` : null].filter(Boolean).join(' · ')}
+        </div>
         {block.trophy && (
           <div className="mt-2 inline-block rounded-full px-2.5 py-0.5 text-[10px] font-bold" style={{ fontFamily: MONO, color: '#08070d', background: GOLD }}>{block.trophy}</div>
         )}
@@ -105,26 +109,6 @@ export function WeekCard({ game }: { game: HubRivalryGame }) {
   );
 }
 
-export function ThemeCard({ theme }: { theme: HubThemeGame }) {
-  const p = norm(theme.school.primaryColor) ?? '#333333';
-  const s = norm(theme.school.secondaryColor) ?? '#ffffff';
-  return (
-    <Link href={`/cfb/${theme.school.id}`} className="group relative block h-[150px] overflow-hidden rounded-xl border border-white/[0.08]">
-      <div className="absolute inset-0 transition-transform group-hover:scale-[1.03]" style={{ background: `linear-gradient(135deg, ${p} 0%, ${p} 55%, ${s}44 100%)` }} />
-      <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, transparent 30%, rgba(0,0,0,0.8) 100%)' }} />
-      <div className="absolute bottom-0 p-4">
-        <div className="text-[9px] tracking-wider text-white/80" style={{ fontFamily: MONO }}>{theme.school.shortName.toUpperCase()} · THEME NIGHT</div>
-        <div className="mt-0.5 italic text-white" style={{ fontFamily: SERIF, fontSize: 20, lineHeight: 1, textShadow: '0 1px 4px #000' }}>{theme.theme}</div>
-      </div>
-    </Link>
-  );
-}
-
-function norm(hex: string | null): string | null {
-  if (!hex) return null;
-  const m = hex.replace('#', '').match(/^([0-9a-fA-F]{6})$/);
-  return m ? '#' + m[1] : null;
-}
 function fmtDate(iso: string): string {
   return new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase();
 }
