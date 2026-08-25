@@ -56,7 +56,7 @@ export const ABOUT_LAST_REVIEWED_LABEL = 'August 25, 2026';
 // The test prints the correct value when it fails, so there is nothing to run
 // by hand.
 // eslint-disable-next-line prettier/prettier
-export const ABOUT_COPY_FINGERPRINT = '243406cf920477c968fc369bc82c5ae01612a02b9678c35627dee7bb67ca2965';
+export const ABOUT_COPY_FINGERPRINT = '9d64010f7bfa132c07841530ced442eb7bb2bf15f748570b649ae64efc4506b2';
 
 export interface AboutCounts {
   teamCount: number;
@@ -91,12 +91,15 @@ export interface AboutSection {
 export { numberWord };
 
 /** The SERP and og:description text. Lives here rather than in the route so it
- *  sits under the same review-date guard as the rest of the copy. */
+ *  sits under the same review-date guard as the rest of the copy. No byline:
+ *  with it the string ran to 215 characters and Google truncated inside the
+ *  college clause; the byline does its authorship work in the visible page
+ *  and in the Person schema. Kept under 160 with the clause intact. */
 export function aboutMetaDescription(c: AboutCounts): string {
   return (
-    `How PromoNight finds, checks and publishes promotional schedules for ${c.teamCount} teams ` +
-    `across ${numberWord(c.leagueCount)} leagues, and covers schedules, venues and rivalries ` +
-    `for ${c.cfbSchoolCount} college football programs. Written by Matt Kovalik in Minneapolis.`
+    `How PromoNight finds, checks and publishes promos for ${c.teamCount} teams in ` +
+    `${numberWord(c.leagueCount)} leagues, and covers schedules, venues and rivalries ` +
+    `for ${c.cfbSchoolCount} college football programs.`
   );
 }
 
