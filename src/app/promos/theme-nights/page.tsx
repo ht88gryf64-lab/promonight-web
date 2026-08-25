@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { getCoverageCounts } from '@/lib/get-coverage-counts';
 import { pageOpenGraph } from '@/lib/og';
 import { getPromosFromDate } from '@/lib/data';
 import { AggregatorPage, AggregatorJsonLd, type AggregatorGroup } from '@/components/aggregator-layout';
@@ -96,7 +97,8 @@ export default async function ThemeNightsPage() {
     });
   }
 
-  const lead = `Every theme night scheduled across MLB, NBA, NHL, NFL, MLS, and WNBA in ${YEAR}. Grouped by theme category, from Star Wars nights and fireworks spectaculars to heritage and community celebrations. ${themes.length} theme nights currently tracked across 169 teams.`;
+  const c = await getCoverageCounts();
+  const lead = `Every theme night scheduled across ${c.leagueList} in ${YEAR}. Grouped by theme category, from Star Wars nights and fireworks spectaculars to heritage and community celebrations. ${themes.length} theme nights currently tracked across ${c.teamCount} teams.`;
 
   const faqs = [
     {

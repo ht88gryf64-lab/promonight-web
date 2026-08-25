@@ -40,7 +40,7 @@ export function BrowseCollections({ tiles }: { tiles: CollectionTile[] }) {
             BROWSE COLLECTIONS
           </h2>
           <p className="text-text-secondary text-sm md:text-base mt-3 max-w-2xl">
-            Every promo across pro sports, sliced by what it is. Pick a category
+            Promos across pro sports, sliced by what they are. Pick a category
             to see the full {yearSuffix} list.
           </p>
         </div>

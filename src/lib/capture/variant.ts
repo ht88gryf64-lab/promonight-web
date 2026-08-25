@@ -21,7 +21,7 @@
 // async import resolves post-hydration. Reading a flag would mean either
 // blocking on that import or accepting an undefined arm on first paint, and
 // adding server-side flags would mean a new dependency and a rendering strategy
-// change for 167 statically generated pages. A coin flip in localStorage costs
+// change for 169 statically generated pages. A coin flip in localStorage costs
 // none of that.
 
 import { isCaptureTriggerEnabledClient } from './gate';

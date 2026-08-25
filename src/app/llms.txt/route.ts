@@ -1,5 +1,5 @@
-import { getAllCfbSchoolIds } from '@/lib/cfb/data';
 import { getMatchupIndex } from '@/lib/cfb/matchups';
+import { getCoverageCounts } from '@/lib/get-coverage-counts';
 
 // Counts are DERIVED, never hardcoded (aggregator plan §4 discipline): the
 // school count reads the cfbSchools collection and the rivalry count reads the
@@ -12,16 +12,17 @@ import { getMatchupIndex } from '@/lib/cfb/matchups';
 export const dynamic = 'force-static';
 
 export async function GET() {
-  const cfbSchoolCount = (await getAllCfbSchoolIds()).length;
+  const c = await getCoverageCounts();
+  const cfbSchoolCount = c.cfbSchoolCount;
   const rivalryCount = (await getMatchupIndex()).length;
 
   const content = `# PromoNight
 
-PromoNight is a mobile app and website that tracks every promotional event -- giveaways, theme nights, food deals, and kids events -- across 169 professional sports teams in MLB, NBA, NFL, NHL, MLS, and WNBA, plus 2026 schedules, rivalry games, and gameday travel guides for ${cfbSchoolCount} college football programs.
+PromoNight is a website, with a companion mobile app for ${c.appLeagueList}, that tracks every promotional event -- giveaways, theme nights, food deals, and kids events -- across ${c.teamCount} professional sports teams in ${c.leagueList}, plus 2026 schedules, rivalry games, and gameday travel guides for ${cfbSchoolCount} college football programs.
 
 ## Content Categories
 
-- Team promo schedules: Complete lists of upcoming promotional events for each of 169 teams
+- Team promo schedules: Complete lists of upcoming promotional events for each of ${c.teamCount} teams
 - Giveaway calendars: Bobblehead nights, jersey giveaways, and collectible item schedules
 - Completed giveaways: Past bobblehead promos stay listed on team pages and the bobblehead calendar with current eBay resale availability
 - Theme nights: Star Wars nights, pride nights, faith nights, and other themed game events
@@ -52,7 +53,7 @@ PromoNight is a mobile app and website that tracks every promotional event -- gi
 - Legal name: Kovalik Digital LLC
 - Founder and author: Matt Kovalik
 - Editorial method and sourcing: https://www.getpromonight.com/about
-- App: Available on iOS App Store and Google Play
+- App: Available on iOS App Store and Google Play; covers ${c.appLeagueList}
 `;
 
   return new Response(content, {

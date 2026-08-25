@@ -79,7 +79,7 @@ export function TeamStarPicker({
   teams,
   selected,
   onToggle,
-  searchPlaceholder = 'Search 169 teams…',
+  searchPlaceholder,
   nearTeamIds = [],
 }: TeamStarPickerProps) {
   const [query, setQuery] = useState('');
@@ -126,7 +126,7 @@ export function TeamStarPicker({
         type="text"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder={searchPlaceholder}
+        placeholder={searchPlaceholder ?? `Search ${teams.length} teams…`}
         autoComplete="off"
         // text-base (16px), not text-sm: below 16 iOS Safari zooms the page on
         // focus. See the note in capture/CaptureCard.tsx.

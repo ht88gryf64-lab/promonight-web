@@ -1,5 +1,7 @@
 import { splitPromosByDate } from '@/lib/promo-helpers';
 import type { Metadata } from 'next';
+import { getCoverageCounts } from '@/lib/get-coverage-counts';
+import { numberWord } from '@/lib/coverage-counts';
 import { pageOpenGraph } from '@/lib/og';
 import { getPromosFromDate } from '@/lib/data';
 import { AggregatorPage, AggregatorJsonLd, type AggregatorGroup } from '@/components/aggregator-layout';
@@ -21,12 +23,15 @@ function monthLabel(dateStr: string): string {
 
 const YEAR = new Date().getFullYear();
 
-export const metadata: Metadata = {
-  title: `${YEAR} Bobblehead Giveaways: Player Figurine Nights`,
-  description: `Every ${YEAR} bobblehead giveaway across MLB, NBA, NHL, NFL, MLS, and WNBA. Player figurines by month with team, date, and opponent. From official team announcements.`,
-  alternates: { canonical: 'https://www.getpromonight.com/promos/bobbleheads' },
-  openGraph: pageOpenGraph('/promos/bobbleheads'),
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const c = await getCoverageCounts();
+  return {
+    title: `${YEAR} Bobblehead Giveaways: Player Figurine Nights`,
+    description: `Every ${YEAR} bobblehead giveaway across ${c.leagueList}. Player figurines by month with team, date, and opponent. From official team announcements.`,
+    alternates: { canonical: 'https://www.getpromonight.com/promos/bobbleheads' },
+    openGraph: pageOpenGraph('/promos/bobbleheads'),
+  };
+}
 
 export default async function BobbleheadsPage() {
   // Fetch the whole season (Jan 1 forward), not just today forward: completed
@@ -53,12 +58,13 @@ export default async function BobbleheadsPage() {
       promos: list,
     }));
 
-  const lead = `Every bobblehead giveaway scheduled across MLB, NBA, NHL, NFL, MLS, and WNBA in ${YEAR}. Player name, team, date, and opponent for each bobblehead night, grouped by month. Pulled from official team sources, with MLB, WNBA, and MLS rechecked weekly in season.`;
+  const c = await getCoverageCounts();
+  const lead = `Every bobblehead giveaway scheduled across ${c.leagueList} in ${YEAR}. Player name, team, date, and opponent for each bobblehead night, grouped by month. Pulled from official team sources, with MLB, WNBA, and MLS rechecked weekly in season.`;
 
   const faqs = [
     {
       question: `How many bobblehead giveaways are there in ${YEAR}?`,
-      answer: `PromoNight is tracking ${bobbleheads.length} bobblehead giveaway${bobbleheads.length !== 1 ? 's' : ''} across the six major pro leagues in ${YEAR}. MLB teams schedule the majority, with smaller counts in NBA, NHL, and WNBA.`,
+      answer: `PromoNight is tracking ${bobbleheads.length} bobblehead giveaway${bobbleheads.length !== 1 ? 's' : ''} across the ${numberWord(c.leagueCount)} major pro leagues in ${YEAR}. MLB teams schedule the majority, with smaller counts in NBA, NHL, and WNBA.`,
     },
     {
       question: 'How do I get a bobblehead at a game?',

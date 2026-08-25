@@ -8,6 +8,11 @@ import { TrackedAppLink } from '@/components/analytics-events';
 import { IOS_APP_URL, ANDROID_APP_URL } from '@/components/app-download-buttons';
 import { isRedesignEnabled } from '@/lib/redesign';
 import { archivoHouse } from '@/components/redesign/fonts-house';
+import { APP_LEAGUES, joinList } from '@/lib/coverage-counts';
+
+// The app covers four leagues (src/lib/coverage-counts.ts APP_LEAGUES); this
+// page used to list all six, which the app does not carry.
+const APP_LEAGUE_LIST = joinList(APP_LEAGUES);
 
 export const revalidate = 86400;
 
@@ -31,7 +36,7 @@ export default async function DownloadPage() {
             <span className="font-rd text-[11px] tracking-[0.14em] uppercase text-rd-ink-faint">Download</span>
             <h1 className="rd-display text-4xl md:text-6xl uppercase text-rd-ink mt-2">GET PROMONIGHT</h1>
             <p className="text-rd-ink-soft text-base md:text-lg mt-4 max-w-2xl mx-auto">
-              Every giveaway, theme night, and food deal across MLB, NBA, NHL, NFL, MLS, and WNBA. Free to download. Pro tier adds promo-day reminders.
+              Every giveaway, theme night, and food deal for {APP_LEAGUE_LIST} teams. Free to download. Pro tier adds promo-day reminders.
             </p>
           </div>
 
@@ -124,7 +129,7 @@ export default async function DownloadPage() {
             GET PROMONIGHT
           </h1>
           <p className="text-text-secondary text-base md:text-lg mt-4 max-w-2xl mx-auto">
-            Every giveaway, theme night, and food deal across MLB, NBA, NHL, NFL, MLS, and WNBA. Free to download. Pro tier adds promo-day reminders.
+            Every giveaway, theme night, and food deal for {APP_LEAGUE_LIST} teams. Free to download. Pro tier adds promo-day reminders.
           </p>
         </div>
 

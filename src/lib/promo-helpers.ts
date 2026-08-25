@@ -1,3 +1,4 @@
+import { APP_LEAGUES, type CoverageCounts } from '@/lib/coverage-counts';
 import type { Team, Promo, PromoType, Venue, PlayoffPromo } from './types';
 import { PROMO_TYPE_LABELS } from './types';
 
@@ -304,6 +305,9 @@ function gateTimesAnswer(league: string, venueName: string, fullName: string): s
   }
 }
 
+/** The slice of CoverageCounts the team FAQs state. */
+export type TeamFaqCoverage = Pick<CoverageCounts, 'teamCount' | 'leagueList' | 'appLeagueList'>;
+
 export function generateTeamFAQs(
   team: Team,
   // UPCOMING promos only, and the counts derived from them. These answers ship
@@ -315,12 +319,12 @@ export function generateTeamFAQs(
   upcomingPromos: Promo[],
   venue: Venue | null,
   upcomingCounts: Record<PromoType, number>,
-  // Total teams in the `teams` collection, derived by the caller from
-  // getAllTeams().length. Required rather than optional on purpose: these
-  // answers ship inside FAQPage structured data on every team page, and a
-  // defaulted count would go stale silently, which is the exact failure this
-  // parameter exists to end.
-  teamCount: number,
+  // Sitewide coverage facts (team count, league list, the app's league list),
+  // derived by the caller from getCoverageCounts(). Required rather than
+  // optional on purpose: these answers ship inside FAQPage structured data on
+  // every team page, and a defaulted count or a typed league list would go
+  // stale silently, which is the exact failure this parameter exists to end.
+  coverage: TeamFaqCoverage,
   playoff?: PlayoffFAQContext,
 ): FAQItem[] {
   // Hardcoded 2026 season year, NOT getCurrentYear(): the page title and meta
@@ -396,10 +400,16 @@ export function generateTeamFAQs(
     });
   }
 
-  // 5. How to track (always shown)
+  // 5. How to track (always shown). The app covers APP_LEAGUES only, so the
+  // answer names the app on those pages and the weekly email everywhere else:
+  // this ships as FAQPage schema, and it used to promise WNBA and NFL fans an
+  // app that does not carry their league.
+  const inApp = (APP_LEAGUES as readonly string[]).includes(team.league);
   faqs.push({
     question: `How can I track ${fullName} promotional events?`,
-    answer: `PromoNight is a free app that tracks every giveaway, theme night, food deal, and promotion for the ${fullName} and ${teamCount - 1} other teams across MLB, NBA, NFL, NHL, MLS, and WNBA. Download it on iOS or Android for a free calendar view of every upcoming promo. PromoNight Pro adds a reminder on the morning of each promo day.`,
+    answer: inApp
+      ? `PromoNight tracks every giveaway, theme night, food deal, and promotion for the ${fullName} and ${coverage.teamCount - 1} other teams across ${coverage.leagueList}, free on this site. The free PromoNight app carries the same ${fullName} calendar on iOS and Android, and PromoNight Pro adds a reminder on the morning of each promo day.`
+      : `PromoNight tracks every giveaway, theme night, food deal, and promotion for the ${fullName} and ${coverage.teamCount - 1} other teams across ${coverage.leagueList}, free on this site. Star the ${fullName} here to get one weekly email with what is coming up. The PromoNight app covers ${coverage.appLeagueList} and does not carry ${team.league} yet.`,
   });
 
   // 5b. Travel — gate times (always shown; league-specific generic answer)
@@ -433,7 +443,9 @@ export function generateTeamFAQs(
   // sent from a server, so this answer must not describe a push.
   faqs.push({
     question: `Can I get notifications for ${team.name} promos?`,
-    answer: `Yes, with PromoNight Pro. The app sends a notification on the morning of every ${team.name} promo game, covering bobblehead giveaways, theme nights, food deals, and kids events. Downloading the app and browsing every promo is free. You can follow just the ${team.name} or multiple teams across MLB, NBA, NFL, NHL, MLS, and WNBA.`,
+    answer: inApp
+      ? `Yes, with PromoNight Pro. The app sends a notification on the morning of every ${team.name} promo game, covering bobblehead giveaways, theme nights, food deals, and kids events. Downloading the app and browsing every promo is free. You can follow just the ${team.name} or multiple teams across ${coverage.appLeagueList}.`
+      : `Not on your phone yet. Promo-day reminders come from the PromoNight app, which covers ${coverage.appLeagueList} and does not carry ${team.league}. Star the ${team.name} on this site instead to get one weekly email with every giveaway, theme night, and food deal coming up.`,
   });
 
   // 5f. App — away games (always shown)
@@ -445,7 +457,7 @@ export function generateTeamFAQs(
   faqs.push({
     brandPromo: true,
     question: `Does PromoNight work for away games?`,
-    answer: `PromoNight tracks home-game promotions for all ${teamCount} teams across MLB, NBA, NFL, NHL, MLS, and WNBA. If you're traveling to see the ${team.name} play on the road, browse the home team's calendar on this site to see every promo scheduled at their venue during your trip.`,
+    answer: `PromoNight tracks home-game promotions for all ${coverage.teamCount} teams across ${coverage.leagueList}. If you're traveling to see the ${team.name} play on the road, browse the home team's calendar on this site to see every promo scheduled at their venue during your trip.`,
   });
 
   // 5g. Data authority: provenance plus derived count (only when there's

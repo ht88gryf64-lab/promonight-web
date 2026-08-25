@@ -255,7 +255,7 @@ export type CtaClickProperties = {
   sport?: Sport;
 };
 
-// Hero secondary CTA — "Browse all 167 teams →". Lives near cta_click since
+// Hero secondary CTA: "Browse all {N} teams" (count derived). Lives near cta_click since
 // it's a generic destination CTA, but kept as its own event so dashboards
 // don't have to filter cta_click by cta_id.
 export type BrowseAllTeamsTapProperties = {

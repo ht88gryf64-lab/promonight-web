@@ -18,7 +18,7 @@
 //
 // COVERAGE, HONESTLY. VENUE_CITY_OVERRIDES is a fallback table for hotel links,
 // not a venue-city census: it holds only the teams whose BRAND city differs from
-// their stadium city, about two dozen of 167. So rule 2 fires on the handful of
+// their stadium city, about two dozen of 169. So rule 2 fires on the handful of
 // shared-suburb pairs (Cowboys/Rangers in Arlington, Giants/Jets in East
 // Rutherford, Patriots/Revolution in Foxborough, Rams/Chargers in Inglewood) and
 // on nothing else. It is a top-up, not the mechanism. Rule 1 is what fills the

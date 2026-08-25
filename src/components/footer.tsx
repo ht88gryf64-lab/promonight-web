@@ -1,9 +1,11 @@
 import Link from 'next/link';
 import { getAllTeams } from '@/lib/data';
+import { CFB_HUB, isCfbHubLive } from '@/lib/league-hubs';
+import { getCoverageCounts } from '@/lib/get-coverage-counts';
 import { FooterTeamSitemap } from './footer-team-sitemap';
 
 export async function Footer() {
-  const teams = await getAllTeams();
+  const [teams, coverage] = await Promise.all([getAllTeams(), getCoverageCounts()]);
 
   // The old dark Footer now only renders on gate-off (the layout swaps in the
   // light redesign Footer when the gate is on), so the RedesignChromeGate
@@ -19,7 +21,7 @@ export async function Footer() {
               <span className="text-accent-red">NIGHT</span>
             </div>
             <p className="text-text-secondary text-sm leading-relaxed max-w-sm">
-              Track every giveaway, theme night, food deal, and promotion across 169 teams in MLB, NBA, NHL, NFL, MLS, and WNBA.
+              Track every giveaway, theme night, food deal, and promotion across {coverage.teamCount} teams in {coverage.leagueList}.
             </p>
           </div>
 
@@ -69,6 +71,15 @@ export async function Footer() {
                   Stadium guides
                 </Link>
               </li>
+              {/* Same registry gate as the redesign footer and the nav, so the
+                  gate-off chrome carries a path to the college hub too. */}
+              {isCfbHubLive() && CFB_HUB && (
+                <li>
+                  <Link href={CFB_HUB.href} className="text-text-secondary text-sm hover:text-white transition-colors">
+                    College football
+                  </Link>
+                </li>
+              )}
             </ul>
           </div>
 

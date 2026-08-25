@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import { FollowFooterCTA } from '@/components/follow/FollowFooterCTA';
+import { CFB_HUB, isCfbHubLive } from '@/lib/league-hubs';
+import { getCoverageCounts } from '@/lib/get-coverage-counts';
 
 // Redesign v2 footer. The light team-page redesign uses a cream page with white
 // cards, but the footer is the one intentionally-dark surface: warm charcoal
@@ -42,12 +44,16 @@ const COMPANY_LINKS: FooterLink[] = [
 // hub, the /venues directory, and the /follow funnel a clean dofollow incoming
 // link on every page. The stadium-guides entry is the sitewide path into the
 // venue cluster: every indexable venue page is two clicks from any page via
-// footer -> /venues -> venue.
+// footer -> /venues -> venue. The college hub link is gated on the same
+// registry flag as the nav, so the footer cannot outlive or precede the hub:
+// before it, the only visible college link on the homepage went to the
+// rivalries index and the hub itself sat behind a collapsed menu.
 const DISCOVER_LINKS: FooterLink[] = [
   { label: 'Best promos', href: '/best-promos' },
   { label: 'Team rankings', href: '/team-rankings' },
   { label: 'Stadium guides', href: '/venues' },
   { label: 'World Cup 2026', href: '/world-cup' },
+  ...(isCfbHubLive() && CFB_HUB ? [{ label: 'College football', href: CFB_HUB.href }] : []),
   { label: 'College football rivalries', href: '/cfb/rivalries' },
   { label: 'Follow your teams', href: '/follow' },
 ];
@@ -83,7 +89,11 @@ function FooterColumn({ heading, links }: { heading: string; links: FooterLink[]
   );
 }
 
-export function Footer({ year }: FooterProps) {
+export async function Footer({ year }: FooterProps) {
+  // The brand line states the site's coverage; its count and league list come
+  // from the same derivation as the root description and the homepage, never
+  // a literal (this paragraph read "169 teams" by hand on every page).
+  const coverage = await getCoverageCounts();
   return (
     <footer className="w-full border-t border-rd-line-strong bg-rd-ink text-white">
       <div className="mx-auto max-w-6xl px-6 py-14">
@@ -95,8 +105,8 @@ export function Footer({ year }: FooterProps) {
               <span style={{ color: RED_ON_DARK }}>NIGHT</span>
             </p>
             <p className="mt-4 font-rd text-sm leading-relaxed text-white/55">
-              Every giveaway, theme night, food deal, and promotion across 169 teams
-              in MLB, NBA, NHL, NFL, MLS, and WNBA.
+              Every giveaway, theme night, food deal, and promotion across {coverage.teamCount} teams
+              in {coverage.leagueList}.
             </p>
             <FollowFooterCTA />
           </div>

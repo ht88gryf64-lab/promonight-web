@@ -1,7 +1,7 @@
 'use client';
 
 // The conference sub-row shown in the pro team browsers (home + /teams) ONLY
-// when the CFB chip is active. CFB is not a pro league and its 86 schools are a
+// when the CFB chip is active. CFB is not a pro league and its 87 schools are a
 // separate data stream, so instead of filtering pro cards inline, selecting CFB
 // reveals this panel — each conference chip DEEP-LINKS into the /cfb hub
 // (/cfb?conf=<slug>), and "View the full hub" opens /cfb. No CFB cards ever
@@ -28,7 +28,7 @@ export function CfbConferenceSubRow({
   return (
     <div className="py-2">
       <p className={light ? 'mb-4 font-rd text-sm text-rd-ink-soft' : 'mb-4 text-sm text-text-secondary'}>
-        College football lives in its own hub — pick a conference to jump in.
+        College football lives in its own hub. Pick a conference to jump in.
       </p>
       <div className="flex flex-wrap gap-2">
         {CFB_CONFERENCES.map((c) => (

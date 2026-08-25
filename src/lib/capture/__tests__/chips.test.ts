@@ -36,7 +36,7 @@ test('a team is never its own sibling', () => {
 
 test('a team missing from the table has no siblings', () => {
   // The table is a hotel-link fallback holding only brand-city-differs-from-
-  // stadium-city teams, so most of the 167 fall through here. That is the
+  // stadium-city teams, so most of the 169 fall through here. That is the
   // documented ceiling on this rule, not a bug.
   assert.deepStrictEqual(venueCitySiblingSlugs('new-york-yankees', VENUE_CITY_OVERRIDES), []);
 });

@@ -153,7 +153,7 @@ export type TicketmasterOpts = {
   subKey?: string;
   /** PromoNight team slug (Firestore doc id), e.g. 'minnesota-twins'. */
   teamSlug: string;
-  /** Ticketmaster URL slug. Set on the Team via Firestore for all 167 teams
+  /** Ticketmaster URL slug. Set on the Team via Firestore for all 169 teams
    *  by scripts/populate-ticketmaster-fields.ts. Equals teamSlug for most
    *  teams; differs for a handful (e.g. lafc → 'los-angeles-football-club'). */
   ticketmasterSlug?: string;
@@ -181,7 +181,7 @@ export type TicketmasterOpts = {
 //   1. Canonical: `/{ticketmasterSlug}-tickets/artist/{ticketmasterAttractionId}`
 //      — resolves directly without redirect. Used once both fields are
 //      populated on the Team via Firestore (the populate script does this
-//      for all 167 teams from scripts/ticketmaster-team-mapping.json).
+//      for all 169 teams from scripts/ticketmaster-team-mapping.json).
 //   2. Slug-only:  `/{ticketmasterSlug}-tickets` — fallback for any team
 //      missing the artist id. Ticketmaster's slug → artist redirect handles it.
 //   3. Internal slug: `/{teamSlug}-tickets` — last-ditch fallback for teams

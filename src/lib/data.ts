@@ -454,7 +454,7 @@ export interface TeamCoords {
 }
 
 // Home-venue coordinates for every team that has them, in ONE bulk venues read
-// (vs 167 getVenueForTeam calls). Reuses the same venue lat/lng the affiliate
+// (vs 169 getVenueForTeam calls). Reuses the same venue lat/lng the affiliate
 // CTAs route on. Join is by full team name ("{city} {name}"), with the
 // VENUE_RESOLUTION_MAP slug fallback for shared buildings / name mismatches.
 // Teams with no resolvable venue are simply absent from the map (callers keep

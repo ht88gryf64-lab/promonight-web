@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { getCoverageCounts } from '@/lib/get-coverage-counts';
 import { DEFAULT_OG_IMAGE } from '@/lib/og';
 import { getAllTeams } from '@/lib/data';
 import { archivoHouse } from '@/components/redesign/fonts-house';
@@ -11,20 +12,23 @@ import { FollowForm } from '@/components/follow/FollowForm';
 // Global chrome (brand bar + footer) comes from the root layout; this page
 // renders the charcoal hero + cream body inside the light-house rd-root scope,
 // matching /my-teams and the aggregator pages.
-export const metadata: Metadata = {
-  title: 'Follow Your Teams: Free Promo Alerts',
-  description:
-    'Star your favorite MLB, NBA, NFL, NHL, MLS, and WNBA teams and get one weekly email with every giveaway, theme night, and food deal coming up.',
-  alternates: { canonical: '/follow' },
-  openGraph: {
-    title: 'Follow Your Teams on PromoNight',
+export async function generateMetadata(): Promise<Metadata> {
+  const c = await getCoverageCounts();
+  return {
+    title: 'Follow Your Teams: Free Promo Alerts',
     description:
-      'One weekly email with every giveaway, theme night, and food deal for the teams you star.',
-    url: 'https://www.getpromonight.com/follow',
-    images: [DEFAULT_OG_IMAGE],
-  },
-  robots: { index: true, follow: true },
-};
+      `Star your favorite ${c.leagueList} teams and get one weekly email with every giveaway, theme night, and food deal coming up.`,
+    alternates: { canonical: '/follow' },
+    openGraph: {
+      title: 'Follow Your Teams on PromoNight',
+      description:
+        'One weekly email with every giveaway, theme night, and food deal for the teams you star.',
+      url: 'https://www.getpromonight.com/follow',
+      images: [DEFAULT_OG_IMAGE],
+    },
+    robots: { index: true, follow: true },
+  };
+}
 
 // Per-request: getNearTeamIds reads the live Vercel geo headers, and the page
 // already reads searchParams, so it renders dynamically.

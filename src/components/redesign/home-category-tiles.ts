@@ -61,7 +61,7 @@ export function buildHomeCategoryTiles(
       key: 'today',
       trackName: 'today',
       label: 'Today',
-      blurb: "Every promo at today's games",
+      blurb: "What's on at today's games",
       href: '/promos/today',
       ink: '#da2d20',
       // Destination's "today" board bucket (today/page.tsx: getTodayPromos).

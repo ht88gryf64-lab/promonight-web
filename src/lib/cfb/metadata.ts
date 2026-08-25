@@ -9,6 +9,7 @@
 // term). Within engine limits (rendered title ≤60, description ≤155). OG uses the
 // house /og-image.png so no CFB page ships a blanked image.
 
+import { OG_IMAGE_ALT } from '@/lib/og';
 import type { Metadata } from 'next';
 import type { CfbSchoolPage } from '@/lib/cfb/data';
 import type { MatchupPage } from '@/lib/cfb/matchups';
@@ -22,7 +23,7 @@ const TITLE_MAX = 60 - BRAND_SUFFIX.length; // 47 → rendered ≤60
 const DESC_MAX = 155; // hard cap (Google truncates ~155); every school verified ≤155
 const YEAR = 2026;
 const BASE = 'https://www.getpromonight.com';
-const OG_IMAGE = { url: '/og-image.png', width: 1200, height: 630, alt: 'PromoNight: Every giveaway, every team' };
+const OG_IMAGE = { url: '/og-image.png', width: 1200, height: 630, alt: OG_IMAGE_ALT };
 
 // §13 rivalry traffic priority. `token` = the short form for the (char-tight)
 // title; `name` = the full trophy/rivalry name for the description. Higher rank =
@@ -188,8 +189,11 @@ export function buildCfbHubMetadata(): Metadata {
   // No team count: this is a static module-level export, so a numeric claim
   // cannot derive from the schools collection and drifts the moment the corpus
   // grows (it read "all 86 teams" until the washington-state seed made it 87).
+  // No "theme nights": the college corpus carries schedules, venues and
+  // rivalries. cfbTraditions has two docs that nothing reads, which is not
+  // backing for a claim in the head of the hub.
   const description =
-    'College football rivalries, trophy games and theme nights for 2026: The Game, Iron Bowl, Red River, plus schedules and gameday plans for every team.'; // 148 ≤ 155
+    'College football rivalries and trophy games for 2026: The Game, Iron Bowl, Red River, plus schedules, stadiums and gameday plans for every team.'; // 141 <= 155
   const socialTitle = `${title} | PromoNight`;
   const url = `${BASE}/cfb`;
   return {

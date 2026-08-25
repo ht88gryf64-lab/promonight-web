@@ -1,3 +1,4 @@
+import { OG_IMAGE_ALT } from '@/lib/og';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -73,7 +74,7 @@ export async function generateMetadata(): Promise<Metadata> {
   // "| PromoNight" suffix to match the rendered <title> and brand shared cards.
   const socialTitle = `${title} | PromoNight`;
   const description =
-    "Every MLB and NHL playoff promo schedule for 2026. Giveaways, bobbleheads & theme nights across all active playoff teams. See what's on tonight.";
+    "Every NBA and NHL playoff promo schedule for 2026. Giveaways, bobbleheads & theme nights across all active playoff teams. See what's on tonight.";
   return {
     title,
     description,
@@ -91,7 +92,7 @@ export async function generateMetadata(): Promise<Metadata> {
           url: '/og-image.png',
           width: 1200,
           height: 630,
-          alt: 'PromoNight: Every giveaway, every team',
+          alt: OG_IMAGE_ALT,
         },
       ],
     },

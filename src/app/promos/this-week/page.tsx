@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { pageOpenGraph } from '@/lib/og';
+import { getCoverageCounts } from '@/lib/get-coverage-counts';
 import { getPromosInDateRange } from '@/lib/data';
 import { AggregatorPage, AggregatorJsonLd, type AggregatorGroup } from '@/components/aggregator-layout';
 
@@ -25,13 +26,16 @@ function formatLongDate(dateStr: string): string {
   });
 }
 
-export const metadata: Metadata = {
-  title: 'Promos This Week: 7-Day Giveaway Tracker',
-  description:
-    'Every promo across MLB, NBA, NHL, NFL, MLS, and WNBA in the next 7 days. Bobbleheads, jerseys, theme nights, food deals. Updated daily.',
-  alternates: { canonical: 'https://www.getpromonight.com/promos/this-week' },
-  openGraph: pageOpenGraph('/promos/this-week'),
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const c = await getCoverageCounts();
+  return {
+    title: 'Promos This Week: 7-Day Giveaway Tracker',
+    description:
+      `Every promo across ${c.leagueList} in the next 7 days. Bobbleheads, jerseys, theme nights, food deals. Updated daily.`,
+    alternates: { canonical: 'https://www.getpromonight.com/promos/this-week' },
+    openGraph: pageOpenGraph('/promos/this-week'),
+  };
+}
 
 export default async function ThisWeekPage() {
   const start = todayYMD();
@@ -54,7 +58,8 @@ export default async function ThisWeekPage() {
     }));
 
 
-  const lead = `Every highlighted promotional event across MLB, NBA, NHL, NFL, MLS, and WNBA in the next seven days. Giveaways, theme nights, bobbleheads, and food deals at all 169 teams, grouped by day. Updated daily based on the live PromoNight database.`;
+  const c = await getCoverageCounts();
+  const lead = `Every highlighted promotional event across ${c.leagueList} in the next seven days. Giveaways, theme nights, bobbleheads, and food deals at all ${c.teamCount} teams, grouped by day. Updated daily based on the live PromoNight database.`;
 
   const faqs = [
     {
@@ -70,7 +75,7 @@ export default async function ThisWeekPage() {
     {
       question: 'How do I see promos for just my team?',
       answer:
-        'Visit the team page directly from any promo in the list, or browse all 169 teams from the PromoNight app. PromoNight Pro adds a reminder on the morning of a promo day.',
+        `Visit the team page directly from any promo in the list, or browse all ${c.teamCount} teams on this site. PromoNight Pro, in the app, adds a reminder on the morning of a promo day for ${c.appLeagueList} teams.`,
     },
   ];
 

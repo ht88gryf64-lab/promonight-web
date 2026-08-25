@@ -1,3 +1,4 @@
+import { BRAND_TAGLINE } from '@/lib/brand';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import {
@@ -18,7 +19,8 @@ import { TeamGrid } from '@/components/team-grid';
 import { AppDownloadButtons } from '@/components/app-download-buttons';
 import { IndieDeveloperBlock } from '@/components/indie-developer-block';
 import { HomepageFAQ } from '@/components/homepage-faq';
-import { HomepageJsonLd, homepageCountsFromTeams } from '@/components/homepage-json-ld';
+import { HomepageJsonLd } from '@/components/homepage-json-ld';
+import { getCoverageCounts } from '@/lib/get-coverage-counts';
 import { getVenueUtilityCounts } from '@/lib/venue-hub';
 import { pickBestStubPromos } from '@/components/redesign/pick-best-stub-promos';
 import { buildHomeCategoryTiles } from '@/components/redesign/home-category-tiles';
@@ -185,7 +187,7 @@ function pickThisWeek(
 // looking. In spring this skews MLB-heavy because MLB schedules are denser
 // for the months ahead. If All-tab balance becomes a problem, options are
 // (a) take top-2-per-league across 6 leagues for 12 total, or (b) switch to
-// all-time totals via 167 separate getTeamPromos fetches.
+// all-time totals via 169 separate getTeamPromos fetches.
 function rankTeamsByFuturePromos(
   teams: Team[],
   allFuture: PromoWithTeam[],
@@ -294,7 +296,7 @@ export default async function HomePage() {
   // Coverage facts derived from the teams already fetched above. Replaces the
   // hardcoded 169, the per-league split, and the league count that shipped in
   // homepage prose and in FAQPage schema on both gate variants.
-  const homepageCounts = homepageCountsFromTeams(allTeams);
+  const homepageCounts = await getCoverageCounts();
 
   // Gate-ON: render the redesigned light homepage from the SAME computed data,
   // preserving every analytics event. Gate-OFF falls through to the existing
@@ -347,11 +349,12 @@ export default async function HomePage() {
 
         <div className="relative max-w-5xl mx-auto">
           <h1 className="font-display text-[clamp(40px,7vw,72px)] leading-[0.95] tracking-[1px] mb-4 max-w-3xl">
-            EVERY PROMO AT EVERY GAME.
+            {BRAND_TAGLINE.toUpperCase()}
           </h1>
           <p className="text-text-secondary text-lg md:text-xl leading-relaxed max-w-2xl mb-4">
             {allTeams.length} teams, {homepageCounts.leagueCount} leagues, from official team announcements. Find
-            tonight&apos;s giveaways, theme nights, and food deals.
+            tonight&apos;s giveaways, theme nights, and food deals. Plus schedules, venues and rivalries for{' '}
+            {homepageCounts.cfbSchoolCount} college football programs.
           </p>
           <p className="font-mono text-[11px] tracking-[0.08em] uppercase text-text-muted mb-10">
             {promoCount.toLocaleString()} promos tracked · Last updated {lastUpdated}
@@ -435,7 +438,7 @@ export default async function HomePage() {
       </section>
 
       {/* Built by Matt */}
-      <IndieDeveloperBlock teamCount={allTeams.length} />
+      <IndieDeveloperBlock teamCount={allTeams.length} leagueList={homepageCounts.leagueList} />
 
       {/* App download — single small section */}
       <section className="py-16 px-6 border-t border-border-subtle">

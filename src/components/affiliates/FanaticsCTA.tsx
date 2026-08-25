@@ -36,7 +36,7 @@ type Props = {
 
 export function FanaticsCTA({ team, surface, placement, venueSlug, size = 'full' }: Props) {
   // Gate render on canonical URL presence (legacy path accepted as a
-  // fallback). After the migration all 167 teams should have a fanaticsUrl;
+  // fallback). After the migration all 169 teams should have a fanaticsUrl;
   // this null-return is a defense-in-depth safety net for teams added to
   // Firestore before being covered.
   if (!team.fanaticsUrl && !team.fanaticsPath) return null;

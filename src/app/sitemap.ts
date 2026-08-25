@@ -52,7 +52,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   //
   // FAIL LOUDLY, same treatment as the venueHubs read below: this used to be
   // `.catch(() => [])`, which on any Firestore error served a complete-looking
-  // sitemap silently missing all 86 CFB team pages (and the IndexNow hook
+  // sitemap silently missing every indexable CFB team page (and the IndexNow hook
   // skipped them too). A single collection read cannot partially succeed, so
   // the honest outcomes are the full CFB set or a failed render (build failure
   // at deploy time; the deployed sitemap.xml is static and cannot break at

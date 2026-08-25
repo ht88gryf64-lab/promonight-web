@@ -84,8 +84,8 @@ export interface MatchupPage {
   /** The 2026 meeting, or null when the rivalry is dormant this season. */
   game: (CfbGame & { id: string }) | null;
   /** Both sides, in registry pair order. null when the school is not one of the
-   *  86 tracked cfbSchools (Apple Cup's washington-state, for example). A null
-   *  side renders as plain text: no link, no spear, no accent color. */
+   *  87 tracked cfbSchools (an FCS opponent, for example). A null side renders
+   *  as plain text: no link, no spear, no accent color. */
   schools: [(CfbSchool & { id: string }) | null, (CfbSchool & { id: string }) | null];
   /** Campus venue for a non-neutral game, resolved from the home school. */
   venue: (CfbVenue & { id: string }) | null;

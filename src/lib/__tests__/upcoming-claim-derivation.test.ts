@@ -35,6 +35,8 @@ function promo(date: string, type: Promo['type'], title: string, extra: Partial<
 
 const TEAM = { id: 'boston-bruins', city: 'Boston', name: 'Bruins', league: 'NHL' } as Team;
 const VENUE = { name: 'TD Garden', address: '100 Legends Way, Boston, MA' } as Venue;
+// Sitewide coverage facts the FAQ states; a fixture here, derived in production.
+const COVERAGE = { teamCount: 169, leagueList: 'MLB, NBA, NFL, NHL, MLS, and WNBA', appLeagueList: 'MLB, NBA, NHL, and MLS' };
 
 // A club whose season has finished: a real archive, nothing ahead.
 const PAST_ONLY: Promo[] = [
@@ -87,7 +89,7 @@ test('the isGiveaway cross-count survives, and only on the population it is give
 
 test('FAQ emits no promo claim at all for a finished season', () => {
   const { upcoming } = splitPromosByDate(PAST_ONLY, TODAY);
-  const faqs = generateTeamFAQs(TEAM, upcoming, VENUE, countPromosByType(upcoming), 169);
+  const faqs = generateTeamFAQs(TEAM, upcoming, VENUE, countPromosByType(upcoming), COVERAGE);
   const joined = faqs.map((f) => `${f.question} ${f.answer}`).join(' ');
 
   // The four count-bearing slots must not appear.
@@ -107,7 +109,7 @@ test('FAQ emits no promo claim at all for a finished season', () => {
 
 test('FAQ counts and names describe only the upcoming half mid-season', () => {
   const { upcoming } = splitPromosByDate(MIXED, TODAY);
-  const faqs = generateTeamFAQs(TEAM, upcoming, VENUE, countPromosByType(upcoming), 169);
+  const faqs = generateTeamFAQs(TEAM, upcoming, VENUE, countPromosByType(upcoming), COVERAGE);
   const joined = faqs.map((f) => `${f.question} ${f.answer}`).join(' ');
 
   assert.ok(/2 promotional events coming up/.test(joined), 'counts the upcoming half, not all six');
@@ -118,7 +120,7 @@ test('FAQ counts and names describe only the upcoming half mid-season', () => {
 test('passing the all-time array would reintroduce the bug, which is why the split is the caller contract', () => {
   // Documents the failure mode rather than permitting it: this is what the old
   // call site did, and it is why the parameter is named upcomingPromos.
-  const faqs = generateTeamFAQs(TEAM, PAST_ONLY, VENUE, countPromosByType(PAST_ONLY), 169);
+  const faqs = generateTeamFAQs(TEAM, PAST_ONLY, VENUE, countPromosByType(PAST_ONLY), COVERAGE);
   const joined = faqs.map((f) => `${f.question} ${f.answer}`).join(' ');
   assert.ok(
     /most anticipated/.test(joined) && joined.includes('Zdeno Chara Bobblehead'),
