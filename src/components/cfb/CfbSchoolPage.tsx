@@ -40,6 +40,7 @@ import { FanaticsCTA } from '@/components/affiliates/FanaticsCTA';
 import { VenueHubLink } from '@/components/venue-hub/VenueHubLink';
 import type { TeamVenueHubLink } from '@/lib/venue-hub';
 import { SERIF, MONO, SANS, fmtMonthDay, fmtDayLong, Eyebrow, TAP_TARGET_24 } from './cfb-bits';
+import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
 
 export function CfbSchoolPage({ data, venueHubLink }: { data: CfbSchoolPageData; venueHubLink: TeamVenueHubLink | null }) {
   const { school, venue, games, editorial } = data;
@@ -397,6 +398,11 @@ export function CfbSchoolPage({ data, venueHubLink }: { data: CfbSchoolPageData;
           </Link>
           {editorial.contributor && <p className="mt-3 text-[11px] text-white/40" style={{ fontFamily: MONO }}>Gameday section by {editorial.contributor.credit}.</p>}
         </section>
+
+        {/* FTC disclosure. This page renders TicketNetwork, Ticketmaster, SpotHero,
+            Expedia and Fanatics CTAs (and more inside the schedule modal), so the
+            same disclosure the pro team pages carry ships here too. */}
+        <AffiliateDisclosure tone="dark" className="mt-10 text-center" />
       </div>
     </main>
   );

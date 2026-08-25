@@ -10,6 +10,7 @@ import { toAffiliateTeam } from '@/lib/cfb/page-extras';
 import { buildTicketNetworkLink, buildSpotHeroUrl } from '@/lib/affiliates';
 import { resolveHotelLink } from '@/lib/hotel-link';
 import { TripStepAffiliate, TripStepInternal } from '@/components/cfb/rivalry/TripStep';
+import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
 import { barlowCondensed } from '@/components/cfb/rivalry/fonts';
 import { Spine, spineVars, CONDENSED } from '@/components/cfb/rivalry/spine';
 import type { Team, Venue } from '@/lib/types';
@@ -350,6 +351,11 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
             </ul>
           </section>
         )}
+
+        {/* FTC disclosure. The trip timeline above carries TicketNetwork, Expedia
+            and SpotHero links, so the same disclosure the pro team pages carry
+            ships here too. */}
+        <AffiliateDisclosure tone="dark" className="mt-10 text-center" />
       </div>
     </main>
   );
