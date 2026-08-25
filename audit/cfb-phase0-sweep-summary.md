@@ -1,6 +1,6 @@
 # CFB Phase 0 sweep, surviving findings
 
-Generated 2026-08-25 from audit/cfb-phase0-sweep.md (workflow wf_1d1aa4ec-bcd, 4 finders, 68 flagged findings, one adversarial verifier each). This file lists the 61 findings whose verifier returned refuted=false. The 7 refuted findings, all verifier reasoning, and the finders' inventory notes are in the sweep file and are deliberately not repeated here.
+Generated 2026-08-25 from audit/cfb-phase0-sweep.json (workflow wf_1d1aa4ec-bcd, 4 finders, 68 flagged findings, one adversarial verifier each). This file lists the 61 findings whose verifier returned refuted=false. The 7 refuted findings, all verifier reasoning, and the finders' inventory notes are in the sweep file and are deliberately not repeated here.
 
 Severity is assigned by rule, not by the verifiers: high = a false or unbacked claim on an indexed surface, a live font fallback, or readable text under 3.0:1; medium = readable text between 3.0 and 4.45:1, an unconditional heading over missing data, a noindexed surface, or editorial content maintained in code; low = text on the 4.5:1 line, a hover or wash-dependent case, a latent path with no live instance, or a comment inaccuracy. Ratios quoted are the finders' computed values; the browser-measured values in the Phase 0 report agree with them.
 
