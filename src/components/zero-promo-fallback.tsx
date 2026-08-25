@@ -40,7 +40,7 @@ const LEAGUE_COPY: Record<string, LeagueCopy> = {
     cadence: 'May start',
     paragraphs: ({ teamName, venueName, year }) => [
       `The WNBA regular season runs May through September. ${teamName} ${year} promotional schedules are typically released in April or early May, so this page fills out as the season gets closer.`,
-      `When promos are announced, you'll see every giveaway, theme night, ticket pack, and family event here at ${venueName}. Check back closer to the season opener, or download the free PromoNight app to browse every confirmed promo across all six leagues in one calendar.`,
+      `When promos are announced, you'll see every giveaway, theme night, ticket pack, and family event here at ${venueName}. Check back closer to the season opener, or star the ${teamName} here to get one weekly email once dates are confirmed.`,
     ],
   },
   NBA: {

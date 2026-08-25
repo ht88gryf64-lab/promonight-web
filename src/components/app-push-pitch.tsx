@@ -1,4 +1,5 @@
 import { AppDownloadButtons } from './app-download-buttons';
+import { APP_LEAGUES } from '@/lib/coverage-counts';
 
 // The "soft app pitch" extracted verbatim from PromoList so the team page can
 // render it in the email+app pairing above the FAQ while every other PromoList
@@ -11,14 +12,20 @@ import { AppDownloadButtons } from './app-download-buttons';
 export function AppPushPitch({
   teamName,
   teamSlug,
+  league,
   variant = 'dark',
   className = 'mt-10',
 }: {
   teamName: string;
   teamSlug: string;
+  /** The team's league. The app covers APP_LEAGUES only, so the pitch renders
+   *  nothing for the others: a reminder offer for a league the app does not
+   *  carry is a promise the download cannot keep. */
+  league: string;
   variant?: 'dark' | 'light';
   className?: string;
 }) {
+  if (!(APP_LEAGUES as readonly string[]).includes(league)) return null;
   const light = variant === 'light';
   return (
     <div

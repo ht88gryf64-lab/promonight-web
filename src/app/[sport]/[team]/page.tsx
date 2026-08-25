@@ -449,6 +449,7 @@ export default async function TeamPage({
         <ZeroPromoFallback team={team} venue={venue} teamName={displayName} />
       ) : (
         <PromoList
+          league={team.league}
           promos={promos}
           teamSlug={team.id}
           teamName={displayName}

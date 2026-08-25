@@ -75,7 +75,7 @@ export default async function ThisWeekPage() {
     {
       question: 'How do I see promos for just my team?',
       answer:
-        `Visit the team page directly from any promo in the list, or browse all ${c.teamCount} teams from the PromoNight app. PromoNight Pro adds a reminder on the morning of a promo day.`,
+        `Visit the team page directly from any promo in the list, or browse all ${c.teamCount} teams on this site. PromoNight Pro, in the app, adds a reminder on the morning of a promo day for ${c.appLeagueList} teams.`,
     },
   ];
 

@@ -344,6 +344,7 @@ export function RedesignTeamPage({
               ) : (
                 <UpcomingPromoModalProvider>
                   <PromoList
+                    league={team.league}
                     promos={promos}
                     teamSlug={team.id}
                     teamName={displayName}
@@ -375,7 +376,7 @@ export function RedesignTeamPage({
             <div className="order-[42]">
               <div className="mx-auto max-w-3xl px-6 py-8">
                 <FollowCTA surface="web_team_page" team={team} />
-                <AppPushPitch variant="light" teamName={displayName} teamSlug={team.id} />
+                <AppPushPitch variant="light" teamName={displayName} teamSlug={team.id} league={team.league} />
               </div>
             </div>
 

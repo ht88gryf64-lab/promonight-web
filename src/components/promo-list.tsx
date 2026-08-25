@@ -137,6 +137,7 @@ export function PromoList({
   promos,
   teamSlug,
   teamName,
+  league,
   teamNickname,
   sport,
   primaryColor,
@@ -149,6 +150,8 @@ export function PromoList({
   promos: Promo[];
   teamSlug: string;
   teamName: string;
+  /** Team league; gates the app pitch to the leagues the app covers. */
+  league: string;
   /** Short brand name (Team.name, e.g. "Yankees") for the eBay resale search
    *  query. Falls back to teamName, which over-specifies the query slightly. */
   teamNickname?: string;
@@ -345,7 +348,7 @@ export function PromoList({
           )}
 
           {showAppPitch && (
-            <AppPushPitch variant="light" teamName={teamName} teamSlug={teamSlug} />
+            <AppPushPitch variant="light" teamName={teamName} teamSlug={teamSlug} league={league} />
           )}
         </div>
       </section>
@@ -458,7 +461,7 @@ export function PromoList({
         )}
 
         {showAppPitch && (
-          <AppPushPitch variant="dark" teamName={teamName} teamSlug={teamSlug} />
+          <AppPushPitch variant="dark" teamName={teamName} teamSlug={teamSlug} league={league} />
         )}
       </div>
     </section>

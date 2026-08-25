@@ -1,4 +1,4 @@
-import type { CoverageCounts } from '@/lib/coverage-counts';
+import { APP_LEAGUES, type CoverageCounts } from '@/lib/coverage-counts';
 import type { Team, Promo, PromoType, Venue, PlayoffPromo } from './types';
 import { PROMO_TYPE_LABELS } from './types';
 
@@ -400,10 +400,16 @@ export function generateTeamFAQs(
     });
   }
 
-  // 5. How to track (always shown)
+  // 5. How to track (always shown). The app covers APP_LEAGUES only, so the
+  // answer names the app on those pages and the weekly email everywhere else:
+  // this ships as FAQPage schema, and it used to promise WNBA and NFL fans an
+  // app that does not carry their league.
+  const inApp = (APP_LEAGUES as readonly string[]).includes(team.league);
   faqs.push({
     question: `How can I track ${fullName} promotional events?`,
-    answer: `PromoNight is a free app that tracks every giveaway, theme night, food deal, and promotion for the ${fullName} and ${coverage.teamCount - 1} other teams across ${coverage.leagueList}. Download it on iOS or Android for a free calendar view of every upcoming promo. PromoNight Pro adds a reminder on the morning of each promo day.`,
+    answer: inApp
+      ? `PromoNight tracks every giveaway, theme night, food deal, and promotion for the ${fullName} and ${coverage.teamCount - 1} other teams across ${coverage.leagueList}, free on this site. The free PromoNight app carries the same ${fullName} calendar on iOS and Android, and PromoNight Pro adds a reminder on the morning of each promo day.`
+      : `PromoNight tracks every giveaway, theme night, food deal, and promotion for the ${fullName} and ${coverage.teamCount - 1} other teams across ${coverage.leagueList}, free on this site. Star the ${fullName} here to get one weekly email with what is coming up. The PromoNight app covers ${coverage.appLeagueList} and does not carry ${team.league} yet.`,
   });
 
   // 5b. Travel — gate times (always shown; league-specific generic answer)
@@ -437,7 +443,9 @@ export function generateTeamFAQs(
   // sent from a server, so this answer must not describe a push.
   faqs.push({
     question: `Can I get notifications for ${team.name} promos?`,
-    answer: `Yes, with PromoNight Pro. The app sends a notification on the morning of every ${team.name} promo game, covering bobblehead giveaways, theme nights, food deals, and kids events. Downloading the app and browsing every promo is free. You can follow just the ${team.name} or multiple teams across ${coverage.leagueList}.`,
+    answer: inApp
+      ? `Yes, with PromoNight Pro. The app sends a notification on the morning of every ${team.name} promo game, covering bobblehead giveaways, theme nights, food deals, and kids events. Downloading the app and browsing every promo is free. You can follow just the ${team.name} or multiple teams across ${coverage.appLeagueList}.`
+      : `Not on your phone yet. Promo-day reminders come from the PromoNight app, which covers ${coverage.appLeagueList} and does not carry ${team.league}. Star the ${team.name} on this site instead to get one weekly email with every giveaway, theme night, and food deal coming up.`,
   });
 
   // 5f. App — away games (always shown)

@@ -13,7 +13,7 @@ export function buildHomepageFaqs(c: HomepageCounts): FAQItem[] {
   {
     question: 'What is PromoNight?',
     answer:
-      `PromoNight is a free mobile app that tracks every promotional event at professional sports games across ${c.leagueList}. It shows giveaway nights, theme nights, food deals, and kids events for all ${c.teamCount} teams in one calendar view.`,
+      `PromoNight is a free website that tracks every promotional event at professional sports games across ${c.leagueList}. It shows giveaway nights, theme nights, food deals, and kids events for all ${c.teamCount} teams in one calendar view. The free companion app covers ${c.appLeagueList}.`,
   },
   {
     question: 'How many teams does PromoNight cover?',
@@ -23,7 +23,7 @@ export function buildHomepageFaqs(c: HomepageCounts): FAQItem[] {
   {
     question: 'Is PromoNight free?',
     answer:
-      'Yes, PromoNight is free to download and use. The free version lets you track all teams and browse all promos. PromoNight Pro ($9.99/year or $5.99/season per sport) adds a reminder that the app schedules on your device for the morning of each promo day.',
+      `Yes. The website is free, with every team and every promo and no account required. The app is a free download and covers ${c.appLeagueList}. PromoNight Pro ($9.99/year or $5.99/season per sport) adds a reminder that the app schedules on your device for the morning of each promo day.`,
   },
   {
     question: 'What types of promotions does PromoNight track?',

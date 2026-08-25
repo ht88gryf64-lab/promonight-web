@@ -1,3 +1,4 @@
+import { APP_LEAGUES, joinList } from '@/lib/coverage-counts';
 import type { Team, Promo, PromoType, Venue } from '@/lib/types';
 import { PROMO_TYPE_LABELS } from '@/lib/types';
 import {
@@ -15,6 +16,8 @@ import { RD_CATEGORIES } from '@/components/redesign/categories';
 // leaves one page asserting two different years.
 const SEASON_YEAR = 2026;
 
+
+const APP_LEAGUE_LIST = joinList(APP_LEAGUES);
 
 interface TeamContentSectionsProps {
   team: Team;
@@ -34,6 +37,9 @@ export function TeamContentSections({
   const year = SEASON_YEAR;
   const fullName = teamDisplayName(team);
   const venueName = venue?.name || 'their home stadium';
+  // The app covers APP_LEAGUES only; the plug names it on those pages and the
+  // weekly email everywhere else, on all 169 pages and both variants.
+  const inApp = (APP_LEAGUES as readonly string[]).includes(team.league);
 
   if (variant === 'light') {
     return (
@@ -112,7 +118,9 @@ export function TeamContentSections({
               How do I find {fullName} promotional events?
             </h2>
             <p className="text-rd-ink-soft text-sm leading-relaxed">
-              PromoNight is a free app that tracks every {fullName} giveaway, theme night, food deal, and kids event in one place. Download PromoNight on iOS or Android to browse the full {year} promo calendar for free, and add PromoNight Pro for a morning-of reminder so you never miss a promotion at {venueName}.
+              {inApp
+                ? `PromoNight tracks every ${fullName} giveaway, theme night, food deal, and kids event in one place, free on this site. The free PromoNight app carries the same ${year} calendar on iOS and Android, and PromoNight Pro adds a morning-of reminder so you never miss a promotion at ${venueName}.`
+                : `PromoNight tracks every ${fullName} giveaway, theme night, food deal, and kids event in one place, free on this site. Star the ${fullName} here to get one weekly email with what is coming up at ${venueName}. The PromoNight app covers ${APP_LEAGUE_LIST} and does not carry ${team.league} yet.`}
             </p>
           </div>
         </div>
@@ -192,7 +200,9 @@ export function TeamContentSections({
             How do I find {fullName} promotional events?
           </h2>
           <p className="text-text-secondary text-sm leading-relaxed">
-            PromoNight is a free app that tracks every {fullName} giveaway, theme night, food deal, and kids event in one place. Download PromoNight on iOS or Android to browse the full {year} promo calendar for free, and add PromoNight Pro for a morning-of reminder so you never miss a promotion at {venueName}.
+            {inApp
+                ? `PromoNight tracks every ${fullName} giveaway, theme night, food deal, and kids event in one place, free on this site. The free PromoNight app carries the same ${year} calendar on iOS and Android, and PromoNight Pro adds a morning-of reminder so you never miss a promotion at ${venueName}.`
+                : `PromoNight tracks every ${fullName} giveaway, theme night, food deal, and kids event in one place, free on this site. Star the ${fullName} here to get one weekly email with what is coming up at ${venueName}. The PromoNight app covers ${APP_LEAGUE_LIST} and does not carry ${team.league} yet.`}
           </p>
         </div>
       </div>
