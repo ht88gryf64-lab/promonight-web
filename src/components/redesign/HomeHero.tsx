@@ -28,6 +28,10 @@ export interface HomeHeroProps {
   teamCount: number;
   /** Distinct leagues among those teams, derived — never hardcoded. */
   leagueCount: number;
+  /** College football programs, derived from cfbSchools. A separate corpus
+   *  (schedules, venues, rivalries; no promos), so it is named in its own
+   *  clause and never added to teamCount or leagueCount. */
+  cfbSchoolCount: number;
   /** Stats row, rendered in order. Caller derives every value; a stat whose
    *  underlying count can hit zero should be chosen (or swapped) at wiring
    *  time rather than rendering "0" here. */
@@ -38,7 +42,7 @@ export interface HomeHeroProps {
 // homepage called HERO_INK before it was retired).
 const HERO_INK = '#1d1714';
 
-export function HomeHero({ teamCount, leagueCount, stats }: HomeHeroProps) {
+export function HomeHero({ teamCount, leagueCount, cfbSchoolCount, stats }: HomeHeroProps) {
   return (
     <section className="relative overflow-hidden text-white" style={{ backgroundColor: HERO_INK }}>
       <div
@@ -59,7 +63,8 @@ export function HomeHero({ teamCount, leagueCount, stats }: HomeHeroProps) {
         </h1>
         <p className="mt-5 max-w-2xl font-rd text-lg text-white/70">
           Every giveaway, theme night, food deal and family event across {teamCount} teams in{' '}
-          {leagueCount} leagues, pulled from official team sources.
+          {leagueCount} leagues, pulled from official team sources. Plus schedules, venues and
+          rivalries for {cfbSchoolCount} college football programs.
         </p>
 
         <div className="mt-8 flex flex-wrap items-center gap-3">

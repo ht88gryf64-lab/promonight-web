@@ -111,7 +111,12 @@ export function HomePageV2({
       <div className={`${archivoHouse.variable} rd-root min-h-screen`}>
         <HomepageJsonLd counts={counts} />
 
-        <HomeHero teamCount={teamCount} leagueCount={leagueCount} stats={heroStats} />
+        <HomeHero
+          teamCount={teamCount}
+          leagueCount={leagueCount}
+          cfbSchoolCount={counts.cfbSchoolCount}
+          stats={heroStats}
+        />
 
         {/* Decorative, aria-hidden, hides when tonight is empty, suppressed
             entirely under prefers-reduced-motion. */}

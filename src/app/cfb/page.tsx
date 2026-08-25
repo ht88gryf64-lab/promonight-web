@@ -71,7 +71,7 @@ export default async function CfbHub() {
             The rivalries, the road trips,<br className="hidden sm:block" /> and every Saturday that matters.
           </h1>
           <p className="mt-5 max-w-xl text-[15px] leading-relaxed text-white/70" style={{ fontFamily: SANS, textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}>
-            Trophy games, theme nights, and gameday plans for {data.totalTeams} teams. Built for fans who actually go.
+            Trophy games, schedules, and gameday plans for {data.totalTeams} teams. Built for fans who actually go.
           </p>
           <div className="mt-7 flex flex-wrap items-center gap-3">
             <CfbHubSearch teams={allTeams} />

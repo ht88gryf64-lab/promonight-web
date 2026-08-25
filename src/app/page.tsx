@@ -353,7 +353,8 @@ export default async function HomePage() {
           </h1>
           <p className="text-text-secondary text-lg md:text-xl leading-relaxed max-w-2xl mb-4">
             {allTeams.length} teams, {homepageCounts.leagueCount} leagues, from official team announcements. Find
-            tonight&apos;s giveaways, theme nights, and food deals.
+            tonight&apos;s giveaways, theme nights, and food deals. Plus schedules, venues and rivalries for{' '}
+            {homepageCounts.cfbSchoolCount} college football programs.
           </p>
           <p className="font-mono text-[11px] tracking-[0.08em] uppercase text-text-muted mb-10">
             {promoCount.toLocaleString()} promos tracked · Last updated {lastUpdated}

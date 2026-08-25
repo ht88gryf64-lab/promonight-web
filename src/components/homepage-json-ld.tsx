@@ -18,7 +18,7 @@ export function buildHomepageFaqs(c: HomepageCounts): FAQItem[] {
   {
     question: 'How many teams does PromoNight cover?',
     answer:
-      `PromoNight tracks promotional schedules for ${c.teamCount} teams across ${numberWord(c.leagueCount)} professional sports leagues: ${leagueSplit(c.leagueBreakdown)}.`,
+      `PromoNight tracks promotional schedules for ${c.teamCount} teams across ${numberWord(c.leagueCount)} professional sports leagues: ${leagueSplit(c.leagueBreakdown)}. It also covers schedules, venues and rivalries for ${c.cfbSchoolCount} college football programs, which carry no promotions.`,
   },
   {
     question: 'Is PromoNight free?',
@@ -61,8 +61,11 @@ export function HomepageJsonLd({ counts }: { counts: HomepageCounts }) {
       // design work; this is the property Google reads for publisher identity
       // and it should point at a file that resolves.
       logo: 'https://www.getpromonight.com/icon.png',
+      // Two sentences on purpose: the first is the promo claim and its count is
+      // pro-only; the second names the college corpus, which has no promos and
+      // is never added to that count (the CFB rule, src/lib/coverage-counts.ts).
       description:
-        `PromoNight tracks every giveaway, theme night, food deal, and promotion across ${counts.teamCount} professional sports teams in ${counts.leagueList}.`,
+        `PromoNight tracks every giveaway, theme night, food deal, and promotion across ${counts.teamCount} professional sports teams in ${counts.leagueList}. It also covers schedules, venues and rivalries for ${counts.cfbSchoolCount} college football programs.`,
       email: 'hello@getpromonight.com',
       sameAs: [
         'https://x.com/promo_night_app',
@@ -75,7 +78,7 @@ export function HomepageJsonLd({ counts }: { counts: HomepageCounts }) {
       name: 'PromoNight',
       url: 'https://www.getpromonight.com',
       description:
-        `Track every giveaway, theme night, food deal, and promotion across ${counts.teamCount} professional sports teams.`,
+        `Track every giveaway, theme night, food deal, and promotion across ${counts.teamCount} professional sports teams, plus schedules, venues and rivalries for ${counts.cfbSchoolCount} college football programs.`,
     },
     // SoftwareApplication intentionally omitted: Google's Software App rich
     // result requires aggregateRating (or review) alongside offers, and we have
