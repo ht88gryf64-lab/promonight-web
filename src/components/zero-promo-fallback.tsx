@@ -113,10 +113,17 @@ export function ZeroPromoFallback({
 }) {
   // Keyed on team.league, which Firestore stores uppercase ('NFL', 'NBA').
   // NOT team.sportSlug, which is derived at read time and is not on the doc.
-  const copy = LEAGUE_COPY[team.league] ?? LEAGUE_COPY.MLB;
+  // A league with no entry gets NEUTRAL copy, never another league's: the
+  // previous `?? LEAGUE_COPY.MLB` would have printed "MLB teams typically
+  // publish promo calendars in late January" on any page whose league is not
+  // in the table. All six pro leagues have entries today, so this branch is
+  // unreachable by a real page; it exists so the failure mode is honest.
+  const copy = LEAGUE_COPY[team.league];
   const venueName = venue?.name ?? `${team.name} home venues`;
   const city = extractCity(venue?.address) || team.city;
-  const paragraphs = copy.paragraphs({ teamName, venueName, city, year: SEASON_YEAR });
+  const paragraphs = copy
+    ? copy.paragraphs({ teamName, venueName, city, year: SEASON_YEAR })
+    : [`No ${teamName} promotions are listed for ${SEASON_YEAR} yet.`];
 
   if (variant === 'light') {
     return (
