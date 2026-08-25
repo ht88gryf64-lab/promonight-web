@@ -4,7 +4,7 @@ Generated 2026-08-25 from audit/cfb-phase0-sweep.md (workflow wf_1d1aa4ec-bcd, 4
 
 Severity is assigned by rule, not by the verifiers: high = a false or unbacked claim on an indexed surface, a live font fallback, or readable text under 3.0:1; medium = readable text between 3.0 and 4.45:1, an unconditional heading over missing data, a noindexed surface, or editorial content maintained in code; low = text on the 4.5:1 line, a hover or wash-dependent case, a latent path with no live instance, or a comment inaccuracy. Ratios quoted are the finders' computed values; the browser-measured values in the Phase 0 report agree with them.
 
-Counts: 61 surviving (high 19, medium 24, low 18). Per dimension: traditions 18/18, counts 1/1, fonts 5/5, tokens 37/44.
+Counts: 61 surviving (high 18, medium 24, low 19). Per dimension: traditions 18/18, counts 1/1, fonts 5/5, tokens 37/44.
 
 Phase 0 item key: "Item 6" is the sitewide-passes item (fonts, tokens, contrast); "Also-report" items are the two extra asks (tradition claims without backing data, hardcoded counts in DOM or schema).
 
@@ -52,37 +52,37 @@ Phase 0 item key: "Item 6" is the sitewide-passes item (fonts, tokens, contrast)
 | # | sev | file:line | renders in | finding |
 |---|---|---|---|---|
 | 25 | high | `src/components/cfb/CfbSchedule.tsx:37` | visible DOM | 10px week number at white/30 fails 4.5:1. |
-| 26 | high | `src/components/cfb/hub/blocks.tsx:116` | visible DOM | 9px opacity-modified text over the raw school primaryColor with only a partial scrim; ThemeCard has no too-light guard (line 109 falls back only when the color is missing), so a light primary fails. |
-| 27 | high | `src/components/cfb/hub/CfbHubBrowse.tsx:77` | visible DOM | 10px readable note at white/30 fails 4.5:1 (the count itself is derived from the total prop = data.totalTeams, not hardcoded). |
-| 28 | high | `src/components/cfb/rivalry/RivalryMatchupPage.tsx:198` | visible DOM | Separator glyph at white/25 is far under 4.5:1 and is not marked decorative. |
-| 29 | medium | `src/app/cfb/page.tsx:36` | visible DOM | 10px readable freshness/week meta at white/35 fails 4.5:1. |
-| 30 | medium | `src/app/cfb/rivalries/page.tsx:70` | visible DOM | 13.5px 'vs' connector at white/35 fails 4.5:1 on both card grounds. |
-| 31 | medium | `src/app/cfb/rivalries/page.tsx:76` | visible DOM | 12px venue name (meaningful fact text) at white/40 fails 4.5:1; only the trophy child overrides to GOLD. |
-| 32 | medium | `src/app/cfb/rivalries/page.tsx:107` | visible DOM | 15px derived game count at white/35 fails 4.5:1. |
-| 33 | medium | `src/app/cfb/rivalries/page.tsx:124` | visible DOM | 13px derived count at white/35 fails 4.5:1. |
-| 34 | medium | `src/app/cfb/rivalries/page.tsx:195` | visible DOM | 13px readable definition sentence at white/40 fails 4.5:1. |
-| 35 | medium | `src/components/cfb/cfb-bits.tsx:97` | visible DOM | 10px readable meta text at white/35 fails 4.5:1. |
-| 36 | medium | `src/components/cfb/CfbConferenceSubRow.tsx:26` | visible DOM | 11px white text on the legacy --color-accent-red fill fails 4.5:1, and the element also carries hover:opacity-90. |
-| 37 | medium | `src/components/cfb/CfbSchedule.tsx:40` | visible DOM | 10px home/away/conference marker at white/35 fails 4.5:1. |
-| 38 | medium | `src/components/cfb/CfbSchedule.tsx:78` | visible DOM | 10px broadcast network at white/40 fails 4.5:1. |
-| 39 | medium | `src/components/cfb/CfbSchedule.tsx:81` | visible DOM | 12px 'Kickoff TBA' at white/40 fails 4.5:1; this is the state most rows are in. |
-| 40 | medium | `src/components/cfb/CfbSchoolPage.tsx:365` | visible DOM | 9px readable caption at white/40 fails 4.5:1 on every plausible ground of the rivalry card. |
-| 41 | medium | `src/components/cfb/ContributeForm.tsx:49` | visible DOM | 16px placeholder text at white/30 fails 4.5:1 on all seven fields. |
-| 42 | medium | `src/components/cfb/ContributeForm.tsx:56` | visible DOM | 14px label hint at white/40 fails 4.5:1. |
-| 43 | medium | `src/components/cfb/ContributeForm.tsx:59` | visible DOM | 14px label hint at white/40 fails 4.5:1. |
-| 44 | medium | `src/components/cfb/ContributeForm.tsx:87` | visible DOM | 12px readable note at white/40 fails 4.5:1. |
-| 45 | medium | `src/components/cfb/hub/blocks.tsx:98` | visible DOM | 8px white text on the raw-hex red badge fails 4.5:1. |
-| 46 | medium | `src/components/cfb/hub/CfbHubBrowse.tsx:70` | visible DOM | 16px placeholder at white/35 fails 4.5:1. |
-| 47 | medium | `src/components/cfb/rivalry/RivalryMatchupPage.tsx:218` | visible DOM | 'vs' at white/40 fails 4.5:1; 18px/600 is below the 18.66px-bold large-text threshold so the 3:1 bar does not apply. |
-| 48 | medium | `src/components/cfb/rivalry/RivalryMatchupPage.tsx:301` | visible DOM | 11px source citation text and its hostname links at white/40 fail 4.5:1 (links inherit the color; hover raises it only to /70). |
-| 49 | low | `src/app/cfb/rivalries/page.tsx:64` | visible DOM | 15px row date at white/45 sits on the 4.5:1 line on both card variants. |
-| 50 | low | `src/app/cfb/rivalries/page.tsx:159` | visible DOM | 13px breadcrumb link at white/45 sits exactly on the 4.5:1 line. |
-| 51 | low | `src/app/cfb/rivalries/page.tsx:189` | visible DOM | 14px derived count at white/45 sits on the 4.5:1 line. |
-| 52 | low | `src/components/cfb/cfb-bits.tsx:67` | visible DOM | Whole-element opacity modifier applied to a 9-10px bold text pill at hover; lowers the accent-ink/accent-fill ratio below its construction floor. |
-| 53 | low | `src/components/cfb/CfbSchedule.tsx:137` | visible DOM | --cfb-accent's 4.5:1 floor is proven against #111111 (L 0.0056), but this box composites to #181a20 (L 0.0104), a lighter ground the guarantee does not cover. |
-| 54 | low | `src/components/cfb/CfbSchoolPage.tsx:104` | visible DOM | Opacity-modified white text over the hero wash; contrast depends on wash. |
-| 55 | low | `src/components/cfb/CfbSchoolPage.tsx:178` | visible DOM | 10px opacity-modified date text sits exactly on the 4.5:1 line and drops below it on hover. |
-| 56 | low | `src/components/cfb/hub/blocks.tsx:21` | visible DOM | 10-11px white school-name links sit at the TOP of the diagonal block where the scrim is only 0.14 black over the raw team primary; contrast depends on fill and fails for light primaries. |
+| 26 | high | `src/components/cfb/hub/CfbHubBrowse.tsx:77` | visible DOM | 10px readable note at white/30 fails 4.5:1 (the count itself is derived from the total prop = data.totalTeams, not hardcoded). |
+| 27 | high | `src/components/cfb/rivalry/RivalryMatchupPage.tsx:198` | visible DOM | Separator glyph at white/25 is far under 4.5:1 and is not marked decorative. |
+| 28 | medium | `src/app/cfb/page.tsx:36` | visible DOM | 10px readable freshness/week meta at white/35 fails 4.5:1. |
+| 29 | medium | `src/app/cfb/rivalries/page.tsx:70` | visible DOM | 13.5px 'vs' connector at white/35 fails 4.5:1 on both card grounds. |
+| 30 | medium | `src/app/cfb/rivalries/page.tsx:76` | visible DOM | 12px venue name (meaningful fact text) at white/40 fails 4.5:1; only the trophy child overrides to GOLD. |
+| 31 | medium | `src/app/cfb/rivalries/page.tsx:107` | visible DOM | 15px derived game count at white/35 fails 4.5:1. |
+| 32 | medium | `src/app/cfb/rivalries/page.tsx:124` | visible DOM | 13px derived count at white/35 fails 4.5:1. |
+| 33 | medium | `src/app/cfb/rivalries/page.tsx:195` | visible DOM | 13px readable definition sentence at white/40 fails 4.5:1. |
+| 34 | medium | `src/components/cfb/cfb-bits.tsx:97` | visible DOM | 10px readable meta text at white/35 fails 4.5:1. |
+| 35 | medium | `src/components/cfb/CfbConferenceSubRow.tsx:26` | visible DOM | 11px white text on the legacy --color-accent-red fill fails 4.5:1, and the element also carries hover:opacity-90. |
+| 36 | medium | `src/components/cfb/CfbSchedule.tsx:40` | visible DOM | 10px home/away/conference marker at white/35 fails 4.5:1. |
+| 37 | medium | `src/components/cfb/CfbSchedule.tsx:78` | visible DOM | 10px broadcast network at white/40 fails 4.5:1. |
+| 38 | medium | `src/components/cfb/CfbSchedule.tsx:81` | visible DOM | 12px 'Kickoff TBA' at white/40 fails 4.5:1; this is the state most rows are in. |
+| 39 | medium | `src/components/cfb/CfbSchoolPage.tsx:365` | visible DOM | 9px readable caption at white/40 fails 4.5:1 on every plausible ground of the rivalry card. |
+| 40 | medium | `src/components/cfb/ContributeForm.tsx:49` | visible DOM | 16px placeholder text at white/30 fails 4.5:1 on all seven fields. |
+| 41 | medium | `src/components/cfb/ContributeForm.tsx:56` | visible DOM | 14px label hint at white/40 fails 4.5:1. |
+| 42 | medium | `src/components/cfb/ContributeForm.tsx:59` | visible DOM | 14px label hint at white/40 fails 4.5:1. |
+| 43 | medium | `src/components/cfb/ContributeForm.tsx:87` | visible DOM | 12px readable note at white/40 fails 4.5:1. |
+| 44 | medium | `src/components/cfb/hub/blocks.tsx:98` | visible DOM | 8px white text on the raw-hex red badge fails 4.5:1. |
+| 45 | medium | `src/components/cfb/hub/CfbHubBrowse.tsx:70` | visible DOM | 16px placeholder at white/35 fails 4.5:1. |
+| 46 | medium | `src/components/cfb/rivalry/RivalryMatchupPage.tsx:218` | visible DOM | 'vs' at white/40 fails 4.5:1; 18px/600 is below the 18.66px-bold large-text threshold so the 3:1 bar does not apply. |
+| 47 | medium | `src/components/cfb/rivalry/RivalryMatchupPage.tsx:301` | visible DOM | 11px source citation text and its hostname links at white/40 fail 4.5:1 (links inherit the color; hover raises it only to /70). |
+| 48 | low | `src/app/cfb/rivalries/page.tsx:64` | visible DOM | 15px row date at white/45 sits on the 4.5:1 line on both card variants. |
+| 49 | low | `src/app/cfb/rivalries/page.tsx:159` | visible DOM | 13px breadcrumb link at white/45 sits exactly on the 4.5:1 line. |
+| 50 | low | `src/app/cfb/rivalries/page.tsx:189` | visible DOM | 14px derived count at white/45 sits on the 4.5:1 line. |
+| 51 | low | `src/components/cfb/cfb-bits.tsx:67` | visible DOM | Whole-element opacity modifier applied to a 9-10px bold text pill at hover; lowers the accent-ink/accent-fill ratio below its construction floor. |
+| 52 | low | `src/components/cfb/CfbSchedule.tsx:137` | visible DOM | --cfb-accent's 4.5:1 floor is proven against #111111 (L 0.0056), but this box composites to #181a20 (L 0.0104), a lighter ground the guarantee does not cover. |
+| 53 | low | `src/components/cfb/CfbSchoolPage.tsx:104` | visible DOM | Opacity-modified white text over the hero wash; contrast depends on wash. |
+| 54 | low | `src/components/cfb/CfbSchoolPage.tsx:178` | visible DOM | 10px opacity-modified date text sits exactly on the 4.5:1 line and drops below it on hover. |
+| 55 | low | `src/components/cfb/hub/blocks.tsx:21` | visible DOM | 10-11px white school-name links sit at the TOP of the diagonal block where the scrim is only 0.14 black over the raw team primary; contrast depends on fill and fails for light primaries. |
+| 56 | low | `src/components/cfb/hub/blocks.tsx:116` | visible DOM | 9px opacity-modified text over the raw school primaryColor with only a partial scrim; ThemeCard has no too-light guard (line 109 falls back only when the color is missing), so a light primary fails. |
 | 57 | low | `src/components/cfb/rivalry/RivalryMatchupPage.tsx:85` | visible DOM | 11px stat labels at white/45 sit on the 4.5:1 line. |
 | 58 | low | `src/components/cfb/rivalry/RivalryMatchupPage.tsx:196` | visible DOM | 12px breadcrumb links at white/45 sit exactly on the 4.5:1 line. |
 | 59 | low | `src/components/cfb/rivalry/RivalryMatchupPage.tsx:257` | visible DOM | Three 13px section headings at white/45 sit exactly on the 4.5:1 line. |
