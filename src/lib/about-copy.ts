@@ -56,7 +56,7 @@ export const ABOUT_LAST_REVIEWED_LABEL = 'August 25, 2026';
 // The test prints the correct value when it fails, so there is nothing to run
 // by hand.
 // eslint-disable-next-line prettier/prettier
-export const ABOUT_COPY_FINGERPRINT = '58915618f6d8c224ea888eb0e4d266e86b6e3753defaa2e62571ac68a4c5e77e';
+export const ABOUT_COPY_FINGERPRINT = '243406cf920477c968fc369bc82c5ae01612a02b9678c35627dee7bb67ca2965';
 
 export interface AboutCounts {
   teamCount: number;
@@ -95,8 +95,8 @@ export { numberWord };
 export function aboutMetaDescription(c: AboutCounts): string {
   return (
     `How PromoNight finds, checks and publishes promotional schedules for ${c.teamCount} teams ` +
-    `across ${numberWord(c.leagueCount)} leagues, plus ${c.cfbSchoolCount} college football programs. ` +
-    `Written by Matt Kovalik in Minneapolis.`
+    `across ${numberWord(c.leagueCount)} leagues, and covers schedules, venues and rivalries ` +
+    `for ${c.cfbSchoolCount} college football programs. Written by Matt Kovalik in Minneapolis.`
   );
 }
 
