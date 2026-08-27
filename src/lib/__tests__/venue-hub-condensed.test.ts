@@ -10,6 +10,7 @@ mock.module(new URL('../firebase.ts', import.meta.url).href, { namedExports: { d
 
 import type { VenueHub as Hub } from '../venue-hub';
 import type { CondensedField } from '../venue-hub-condensed';
+import { transitSuppressed } from '../venue-transit-suppression';
 
 // Loaded inside each test: the module under test imports venue-hub, which
 // imports the firebase client, so the mocks above must be registered first
@@ -178,7 +179,12 @@ test('the conflicts and holds lists silence the named field on the named hub and
   for (const [slug, field] of [...wholeLine, ...CONDENSED_HOLDS.map((h) => [h.hub, h.field] as [string, CondensedField])]) {
     const keys = buildCondensedLogistics(hub({ slug }), 'x').map((l) => l.key);
     assert.ok(!keys.includes(field), `${slug}: ${field} must stay silent`);
-    assert.equal(keys.length, 9, `${slug}: only ${field} is withheld`);
+    // A hub can sit on two lists for two different fields: hard-rock-stadium
+    // has a tailgating conflict AND a suppressed transit field, so it withholds
+    // both. Assert on the exact withheld set rather than a bare count.
+    const alsoTransit = transitSuppressed(slug) && field !== 'transit';
+    assert.equal(keys.length, alsoTransit ? 8 : 9, `${slug}: only ${field}${alsoTransit ? ' and transit' : ''} is withheld`);
+    if (alsoTransit) assert.ok(!keys.includes('transit'), `${slug}: transit is suppressed too`);
   }
   assert.equal(buildCondensedLogistics(hub({ slug: 'some-other-stadium' }), 'x').length, 10);
 });

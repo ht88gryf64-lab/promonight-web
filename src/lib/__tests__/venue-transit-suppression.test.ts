@@ -11,13 +11,24 @@ mock.module(new URL('../firebase.ts', import.meta.url).href, { namedExports: { d
 import { TRANSIT_SUPPRESSED, transitSuppressed } from '../venue-transit-suppression';
 import type { VenueHub as Hub } from '../venue-hub';
 
-const EXPECTED = [
+const ELEVEN = [
   'levis-stadium', 'stanford-stadium', 'dodger-stadium', 'loandepot-park', 'providence-park',
   'gerald-j-ford-stadium', 'audi-field', 'bmo-field', 'husky-stadium',
   'los-angeles-memorial-coliseum', 'mountain-america-stadium',
 ];
+// Second pass: the sweep graded these "changed", the classification judged each
+// would-strand, which is the standard the eleven were silenced on.
+const WOULD_STRAND = [
+  'albertsons-stadium', 'amon-g-carter-stadium', 'barclays-center', 'carter-finley-stadium',
+  'citizens-bank-park', 'darrell-k-royal-texas-memorial-stadium', 'davis-wade-stadium',
+  'donald-w-reynolds-razorback-stadium', 'empower-field', 'exploria-stadium', 'hard-rock-stadium',
+  'jones-stadium', 'kenan-stadium', 'martin-stadium-northwestern-university',
+  'memorial-stadium-lincoln', 'moda-center', 'mt-bank-stadium', 'paycor-stadium', 'sofi-stadium',
+  'space-city-financial-stadium', 'target-center',
+];
+const EXPECTED = [...ELEVEN, ...WOULD_STRAND];
 
-test('the suppression list is exactly the eleven, each with its reason', () => {
+test('the suppression list is exactly the thirty-two, each with its reason', () => {
   assert.deepEqual(TRANSIT_SUPPRESSED.map((t) => t.hub), EXPECTED);
   for (const t of TRANSIT_SUPPRESSED) {
     assert.ok(t.reason.length > 80, `${t.hub}: the reason must name the service and its evidence`);
@@ -25,8 +36,9 @@ test('the suppression list is exactly the eleven, each with its reason', () => {
   }
 });
 
-test('transitSuppressed answers for the eleven and for nothing else', () => {
+test('transitSuppressed answers for every suppressed hub and for nothing else', () => {
   for (const slug of EXPECTED) assert.equal(transitSuppressed(slug), true, slug);
+  assert.equal(new Set(EXPECTED).size, EXPECTED.length, 'no slug appears twice');
   for (const slug of ['target-field', 'secu-stadium', 'ohio-stadium', 'acrisure-stadium', '']) {
     assert.equal(transitSuppressed(slug), false, `${slug} must not be suppressed`);
   }
