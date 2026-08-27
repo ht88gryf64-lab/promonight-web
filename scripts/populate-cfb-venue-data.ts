@@ -29,14 +29,31 @@ import { join } from 'path';
 import { FieldPath } from 'firebase-admin/firestore';
 import { db } from '../src/lib/firebase';
 
-interface PlanField { path: string; value: unknown; source: string; overwrite?: boolean; note?: string }
+interface PlanField {
+  path: string;
+  value: unknown;
+  source: string;
+  /** Override where provenance is written. Needed when several sub-paths of
+   *  one field share a single provenance key (publicTransit.notes and
+   *  publicTransit.lines both vouched for by sources.publicTransit): the
+   *  derived key would be dotted, which would leave the flat key stale. The
+   *  duplicate-path collapse in push() makes the shared key safe. */
+  sourceKey?: string;
+  overwrite?: boolean;
+  note?: string;
+}
 interface PlanOverlay { teamId: string; fields: PlanField[] }
 interface PlanEntry { hub: string; note?: string; fields: PlanField[]; overlay?: PlanOverlay }
 
 const SUB_KEYED = /^(tailgating|publicTransit)\./;
 /** Internal record fields: no user-facing copy rules, no provenance key. */
 const INTERNAL = new Set(['verifyNotes']);
-const OFFICIAL_HOST = /^(https?:\/\/)([a-z0-9-]+\.)*(edu|com|org|gov|net)(\/|$)/i;
+// A source must be an http(s) URL with a real host. It deliberately does NOT
+// whitelist TLDs: transit operators outside the US are official sources too
+// (ttc.ca is the Toronto Transit Commission), and a TLD list silently
+// rejects them as malformed. Whether a host is authoritative is a research
+// judgment recorded in the report, not something a regex can decide.
+const OFFICIAL_HOST = /^https?:\/\/[a-z0-9-]+(\.[a-z0-9-]+)+(\/|$|\?|#)/i;
 
 /** Where the provenance for a written path lives in the sources map. */
 function sourceKey(path: string): string {
@@ -104,7 +121,7 @@ async function main() {
       for (const f of t.fields) {
         const cur = getAt(t.doc, f.path);
         const internal = INTERNAL.has(f.path);
-        const sk = sourceKey(f.path);
+        const sk = f.sourceKey ?? sourceKey(f.path);
         const curSrc = internal ? undefined : sources[sk];
         const same = JSON.stringify(cur) === JSON.stringify(f.value) && (internal || curSrc === f.source);
         if (same) { skippedSame++; op.lines.push(`    = ${f.path} (already identical, with source)`); continue; }

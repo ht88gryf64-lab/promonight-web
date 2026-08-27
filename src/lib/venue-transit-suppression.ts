@@ -170,6 +170,37 @@ export const TRANSIT_SUPPRESSED: ReadonlyArray<TransitSuppression> = [
     hub: 'target-center',
     reason: "Minneapolis: the stored routing names services that no longer describe how to reach the arena this season, and the operator's current network does not carry the stops the stored text sends riders to.",
   },
+  // ── Added 2026-08-27, third pass. huntington-bank-field was proposed as a
+  // copy edit and silenced instead: the qualifier that makes the sentence
+  // true (event-only service) lived only in the lines array, and the
+  // condensed block renders a first sentence, so a surface could carry the
+  // service name without the restriction. The other five were graded
+  // would-mislead rather than would-strand, and are silenced by ruling
+  // rather than re-sourced, pending a corrected harvest.
+  {
+    hub: 'huntington-bank-field',
+    reason: "Cleveland: GCRTA publishes the Waterfront Line as event-only, running between Tower City and South Harbor for Browns home games and select major events, and its Blue and Green Line pages both say riders continuing to the Waterfront Line change trains at Tower City, so the stored claim that W. 3rd St. Station is served by the Blue, Green and Waterfront Lines is wrong. Silenced rather than relabelled: the event-only qualifier survives only in the lines array, and the condensed block renders a first sentence, so the restriction is structurally droppable.",
+  },
+  {
+    hub: 'everbank-stadium',
+    reason: "Jacksonville: JTA's Gameday Xpress runs for the 2026 Jaguars season, but JTA's own 2026 page publishes different park-and-ride origins and times than the stored text gives, so a fan planning around the stored pickup may find no service there.",
+  },
+  {
+    hub: 'jack-trice-stadium',
+    reason: "Iowa State: CyRide route 3 Blue still runs, but its current Saturday timetable, season-stamped 17 August 2026 to 14 May 2027, does not carry the gameday service pattern the stored text describes.",
+  },
+  {
+    hub: 'lane-stadium',
+    reason: "Virginia Tech: Blacksburg Transit's 2026 football page still reads that game-day details will be posted before the first game, so the stored expanded schedule and Two Town Trolley routing have no current-season backing from the operator.",
+  },
+  {
+    hub: 'neyland-stadium',
+    reason: "Tennessee: KAT still runs buses from the Civic Coliseum garages to Neyland in 2026, but not on the terms the stored text publishes, so the stored pickup points and timing would send a fan to the wrong place or the wrong hour.",
+  },
+  {
+    hub: 'simmons-bank-liberty-stadium',
+    reason: "Memphis: the $10 University of Memphis Park and Ride shuttle still runs, but the stored description comes from a 2024 fan-information article and Memphis Athletics has since published different terms, so the stored price, origin and timing are not the current-season arrangement.",
+  },
 ];
 
 const SUPPRESSED = new Set(TRANSIT_SUPPRESSED.map((t) => t.hub));

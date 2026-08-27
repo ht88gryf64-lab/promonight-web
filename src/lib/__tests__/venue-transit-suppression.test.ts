@@ -26,9 +26,16 @@ const WOULD_STRAND = [
   'memorial-stadium-lincoln', 'moda-center', 'mt-bank-stadium', 'paycor-stadium', 'sofi-stadium',
   'space-city-financial-stadium', 'target-center',
 ];
-const EXPECTED = [...ELEVEN, ...WOULD_STRAND];
+// Third pass: huntington-bank-field silenced instead of relabelled (its
+// event-only qualifier could not survive a first-sentence render), plus five
+// would-mislead rows silenced by ruling.
+const THIRD_PASS = [
+  'huntington-bank-field', 'everbank-stadium', 'jack-trice-stadium', 'lane-stadium',
+  'neyland-stadium', 'simmons-bank-liberty-stadium',
+];
+const EXPECTED = [...ELEVEN, ...WOULD_STRAND, ...THIRD_PASS];
 
-test('the suppression list is exactly the thirty-two, each with its reason', () => {
+test('the suppression list is exactly the thirty-eight, each with its reason', () => {
   assert.deepEqual(TRANSIT_SUPPRESSED.map((t) => t.hub), EXPECTED);
   for (const t of TRANSIT_SUPPRESSED) {
     assert.ok(t.reason.length > 80, `${t.hub}: the reason must name the service and its evidence`);
