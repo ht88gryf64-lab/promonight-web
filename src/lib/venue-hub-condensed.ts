@@ -28,10 +28,20 @@ export interface CondensedLine {
 
 const has = (s: string | null | undefined): s is string => typeof s === 'string' && s.trim().length > 0;
 const prov = (sources: Record<string, string> | undefined, key: string): boolean => !!sources && has(sources[key]);
+/** House rule at render, never in the record: the stored text is the sourced
+ *  value and is not edited, but an em dash in served copy is out. A spaced or
+ *  bare em dash becomes a comma; one that follows punctuation becomes a space
+ *  so no ",," or ".," forms. En dashes stay: they are part of building names
+ *  (Rice–Eccles, Vaught–Hemingway). */
+export function stripEmDashes(t: string): string {
+  return t
+    .replace(/([.,;:!?])\s*—\s*/g, '$1 ')
+    .replace(/\s*—\s*/g, ', ');
+}
 // First stored sentence, verbatim. A lead that already ends in a terminator
 // keeps it ("Sodexo Live!" stays "Sodexo Live!", never "Sodexo Live!."); one
 // that does not (a fragment, or a value stored without its period) gets one.
-const sentence = (t: string): string => { const lead = leadSentences(t, 1).lead; return /[.!?]$/.test(lead) ? lead : `${stripTrailingPeriod(lead)}.`; };
+const sentence = (t: string): string => { const lead = stripEmDashes(leadSentences(t, 1).lead); return /[.!?]$/.test(lead) ? lead : `${stripTrailingPeriod(lead)}.`; };
 
 /** Build the lines for one tenant of a hub. `tenantId` selects the overlay whose
  *  gates rule applies (a shared NFL/CFB building has one per tenant). */
@@ -60,7 +70,7 @@ export function buildCondensedLogistics(hub: VenueHub, tenantId: string): Conden
 
   // Parking: lot names only with sources.parkingLots; each link only with its own key.
   {
-    const lots = prov(s, 'parkingLots') ? hub.parkingLots.map((l) => l.name).filter(has).slice(0, 4) : [];
+    const lots = prov(s, 'parkingLots') ? hub.parkingLots.map((l) => l.name).filter(has).slice(0, 4).map(stripEmDashes) : [];
     const mapHref = has(hub.parkingLotMapUrl) && prov(s, 'parkingLotMapUrl') ? hub.parkingLotMapUrl : null;
     const officialHref = !mapHref && hub.officialParkingUrls.length > 0 && prov(s, 'officialParkingUrls') ? hub.officialParkingUrls[0] : null;
     const href = mapHref ?? officialHref;
@@ -86,7 +96,7 @@ export function buildCondensedLogistics(hub: VenueHub, tenantId: string): Conden
     const pt = hub.publicTransit;
     const parts: string[] = [];
     if (has(pt.notes)) parts.push(sentence(pt.notes));
-    if (pt.lines.length) parts.push(`Lines: ${pt.lines.join(', ')}.`);
+    if (pt.lines.length) parts.push(`Lines: ${pt.lines.map(stripEmDashes).join(', ')}.`);
     if (parts.length) lines.push({ key: 'transit', label: 'Transit', text: parts.join(' '), href: null, hrefLabel: null });
   }
 

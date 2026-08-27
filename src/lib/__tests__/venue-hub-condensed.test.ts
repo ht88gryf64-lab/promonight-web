@@ -98,3 +98,14 @@ test('the block minimum is three lines', async () => {
   const { CONDENSED_MIN_FIELDS } = await load();
   assert.equal(CONDENSED_MIN_FIELDS, 3);
 });
+
+test('em dashes in stored text are stripped at render, never carried into served copy', async () => {
+  const { buildCondensedLogistics, stripEmDashes } = await load();
+  assert.equal(stripEmDashes('Block Party on Curtin Road each home game — live music and food trucks'), 'Block Party on Curtin Road each home game, live music and food trucks');
+  assert.equal(stripEmDashes('Lots open at 7am.— tailgating allowed'), 'Lots open at 7am. tailgating allowed');
+  assert.equal(stripEmDashes('Rice–Eccles Stadium'), 'Rice–Eccles Stadium', 'en dashes in building names are untouched');
+  const h = hub({ nearby: 'Block party on Main St — live music. Food trucks.' });
+  const line = buildCondensedLogistics(h, 'x').find((l) => l.key === 'nearby');
+  assert.equal(line!.text, 'Block party on Main St, live music.');
+  assert.ok(!buildCondensedLogistics(h, 'x').some((l) => /—/.test(l.text)));
+});
