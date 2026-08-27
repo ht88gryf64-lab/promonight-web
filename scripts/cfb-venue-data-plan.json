@@ -28,7 +28,559 @@
     "path": "verifyNotes",
     "overwrite": true,
     "value": "Official sources exist (Pass 2, 2026-08-27): armygameday.com is the Army West Point Athletic Association's operator gameday site (parking, shuttles, tailgating, accessibility, directions, bag policy) and goarmywestpoint.com/news/2026/8/25/athletics-michie-stadium-preserved-by-usaa-to-implement-clear-bag-policy-enhanced-security-screening-for-ticketed-events carries the 2026 clear bag policy, gates and outside-food rules; westpoint.edu/gateway-for-visitors carries visitor access. Fields below were extracted from those pages with a per-field source (audit/cfb-venue-sourcing-report.md section 8). The doc-level verified flag is unchanged by this pass. | SUPERSEDED 2026-08-27, kept for the record, the claim was false: HELD verified=false: athletics source too thin (access-restricted academy / sparse site); needs targeted re-scrape. | All four dumps read/grepped. fu00 (SeatGeek Army ticket page) contains only generic, hedged FAQ boilerplate about college football broadly — 'Tailgating or parking near campus is often allowed... Policies vary by school' (L695), 'grilling gear (if allowed)' (L686), 'most stadiums recommend arriving 90 minutes to 2 hours before kickoff' (L674), 'most require one parking pass per vehicle' (L738). None of this is an affirmative, Michie-specific policy statement; all are 'varies/check local rules' disclaimers, so none supports a fact. L472 marketing prose ('spirited tailgating', 'seats over 38,000') is descriptive color, not a logistics policy. L203/L736-738 'Parking' tab is a SeatGeek resale marketplace, not an official venue parking URL. fu01 (goarmywestpoint home), fu02 (Navy opponent history), fu03 (2026 schedule news) carry zero gameday logistics — only nav links to ArmyGameday.com/michiestadium.com, which were not fetched. No parking lots, transit lines, bag policy, gate times, tailgating rules, or accessibility affirmatively stated anywhere. Extractor's all-null output verified correct: no boolean was set false from silence, and no policy exception was mistaken for policy absence. Nothing to reject or repair."
+   },
+   {
+    "path": "parkingLots",
+    "value": [
+     {
+      "name": "H Lot",
+      "notes": "ADA and wheelchair accessible parking; enter through Stony Lonesome Gate; no advance parking pass needed; shuttle to the parade ground and to Gate 1 and Gate 5 of Michie Stadium"
+     },
+     {
+      "name": "North Dock",
+      "notes": "RV parking; call the ticket office at 1-877-TIX-ARMY"
+     },
+     {
+      "name": "ski slope",
+      "notes": "Bus parking; shuttle buses transport fans on post; call the ticket office at 1-877-TIX-ARMY"
+     }
+    ],
+    "source": "https://www.armygameday.com/parking",
+    "note": "substance; confirmed"
+   },
+   {
+    "path": "parkingLotMapUrl",
+    "value": "https://images.squarespace-cdn.com/content/v1/58d14fbc1b631b09415f854d/f9ef4751-f556-4a6a-b75f-6601207482dc/2026-Football-Parking-Map---August-2026---Web.jpg",
+    "source": "https://www.armygameday.com/parking",
+    "note": "verbatim; corrected"
+   },
+   {
+    "path": "officialParkingUrls",
+    "value": [
+     "https://www.armygameday.com/parking",
+     "https://www.armygameday.com/direction"
+    ],
+    "source": "https://www.armygameday.com/parking",
+    "note": "verbatim; confirmed"
+   },
+   {
+    "path": "publicTransit.lines",
+    "value": [
+     "Short Line Bus",
+     "Metro-North"
+    ],
+    "source": "https://www.armygameday.com/direction",
+    "note": "verbatim; confirmed"
+   },
+   {
+    "path": "publicTransit.notes",
+    "value": "Metro-North trains from Grand Central Station reach Garrison, directly across the river from West Point, in about 1 hour 10 minutes; riders without a car should get off at Peekskill, one stop south of Garrison, where cabs are often waiting, and the drive from Garrison or Peekskill to West Point takes about 20 minutes. Short Line Bus runs daily service from the New York City Port Authority to the West Point Visitors Center, a one-way trip of 1 hour 40 minutes. Reserving a Highland Falls or Peekskill cab in advance is suggested.",
+    "source": "https://www.armygameday.com/direction",
+    "note": "substance; confirmed"
+   },
+   {
+    "path": "accessibility",
+    "value": "ADA and wheelchair accessible parking and bus transportation are available by entering Stony Lonesome Gate and parking in H Lot; no advance parking pass is needed for H Lot, but a handicapped license plate, state registration or handicapped parking pass is required to enter the area. Shuttles run from H Lot to the parade ground and to Gate 1 and Gate 5 of Michie Stadium. Handicapped seating and parking are available through the Army Ticket Office at 1-877-TIX-ARMY (849-2769).",
+    "source": "https://www.armygameday.com/parking",
+    "note": "substance; confirmed"
+   },
+   {
+    "path": "bagMaxDimensions",
+    "value": {
+     "w": 12,
+     "h": 6,
+     "d": 12,
+     "unit": "in"
+    },
+    "source": "https://goarmywestpoint.com/news/2026/8/25/athletics-michie-stadium-preserved-by-usaa-to-implement-clear-bag-policy-enhanced-security-screening-for-ticketed-events",
+    "note": "verbatim; confirmed"
+   },
+   {
+    "path": "clearBagRequired",
+    "value": true,
+    "source": "https://goarmywestpoint.com/news/2026/8/25/athletics-michie-stadium-preserved-by-usaa-to-implement-clear-bag-policy-enhanced-security-screening-for-ticketed-events",
+    "note": "substance; confirmed"
+   },
+   {
+    "path": "bagPolicyUrl",
+    "value": "https://www.armygameday.com/bagpolicy",
+    "source": "https://www.armygameday.com/bagpolicy",
+    "note": "verbatim; confirmed"
+   },
+   {
+    "path": "bagPolicyNotes",
+    "value": "Beginning September 5, 2026, fans may bring one clear plastic, vinyl or PVC bag no larger than 12 by 6 by 12 inches, or one clear gallon-size freezer bag, plus one small clutch or handheld wallet no larger than 8 by 5 by 2 inches with no handle or strap. Backpacks, luggage, briefcases, computer bags, coolers, fanny packs, cinch bags and other non-compliant bags are prohibited. Diaper bags are permitted, and strollers are permitted but must be checked at a Guest Services Tent. All items are subject to search, and prohibited items are denied at all gates and must be returned to the owner's car or discarded. Fans pass through OPENGATE walk-through weapons-detection screening at each gate and do not need to remove watches, phones, cameras, keys or loose change.",
+    "source": "https://goarmywestpoint.com/news/2026/8/25/athletics-michie-stadium-preserved-by-usaa-to-implement-clear-bag-policy-enhanced-security-screening-for-ticketed-events",
+    "note": "substance; corrected"
+   },
+   {
+    "path": "tailgating.allowed",
+    "value": true,
+    "source": "https://goarmywestpoint.com/news/2016/6/15/game-day-tailgating",
+    "note": "substance; confirmed"
+   },
+   {
+    "path": "tailgating.rules",
+    "value": "Tailgating must be confined to a small area around your vehicle, and traffic lanes and adjacent parking spaces cannot be blocked at any time. Each parking pass is one parking space; saving spots is prohibited, and groups wishing to park together must enter the lots at the same time displaying matching passes. Vehicles other than RVs cannot be larger than 8 feet 4 inches by 20 feet.",
+    "source": "https://www.armygameday.com/parking",
+    "note": "substance; confirmed"
+   },
+   {
+    "path": "tailgating.timeWindow",
+    "value": "Parking lots open six hours before kickoff for noon games.",
+    "source": "https://www.armygameday.com/parking",
+    "note": "substance; confirmed"
+   },
+   {
+    "path": "tailgating.grillRules",
+    "value": "Dispose of charcoal in the specially marked barrels located throughout the parking lots, not in dumpsters or garbage containers. Glass containers are prohibited.",
+    "source": "https://goarmywestpoint.com/news/2016/6/15/game-day-tailgating",
+    "note": "substance; confirmed"
+   },
+   {
+    "path": "tailgating.rvPolicy",
+    "value": "RVs park at North Dock and buses park at the ski slope, with shuttle buses available to transport fans on post. Call the ticket office at 1-877-TIX-ARMY to arrange RV or bus parking.",
+    "source": "https://www.armygameday.com/parking",
+    "note": "substance; confirmed"
+   },
+   {
+    "path": "venueAccessRestrictions",
+    "value": "All fans 18 and older must present a valid U.S. issued ID (license or passport) to enter West Point, and enhanced security measures are in effect at West Point and at stadium access points for all home football games. Fans must enter through the gate indicated on their parking pass: green passes use Thayer Gate (674 Thayer Road), red passes Stony Lonesome Gate (1 Stony Lonesome Road), and blue and gold passes Washington Gate (917 Washington Road). Fans who enter the wrong gate may park at that gate or exit and proceed to the correct one.",
+    "source": "https://www.armygameday.com/parking",
+    "note": "substance; corrected"
+   },
+   {
+    "path": "nearby",
+    "value": "The West Point Visitors Center and West Point Museum are on the road through the Highland Falls business district that leads to Thayer Gate. Thayer Gate gives the most direct access to the Thayer Hotel, and Stony Lonesome Gate, open 24 hours, the most direct access to the Michie/Holleder athletic complex, commissary and post exchange. West Point's visitor listings also include the West Point Cemetery, Constitution Island, the West Point chapels, the Association of Graduates gift shop and on-post dining options.",
+    "source": "https://westpoint.edu/gateway-for-visitors",
+    "note": "substance; corrected"
+   },
+   {
+    "path": "outsideFoodAllowed",
+    "value": false,
+    "source": "https://goarmywestpoint.com/news/2026/8/25/athletics-michie-stadium-preserved-by-usaa-to-implement-clear-bag-policy-enhanced-security-screening-for-ticketed-events",
+    "note": "substance; confirmed"
+   },
+   {
+    "path": "outsideFoodRules",
+    "value": "Outside food, drinks and alcohol are prohibited in Michie Stadium, as are water bottles and other containers. Prohibited items are denied at all gates and must be returned to the owner's car or discarded. Prescribed medical equipment is permitted.",
+    "source": "https://goarmywestpoint.com/news/2026/8/25/athletics-michie-stadium-preserved-by-usaa-to-implement-clear-bag-policy-enhanced-security-screening-for-ticketed-events",
+    "note": "substance; confirmed"
+   },
+   {
+    "path": "food",
+    "value": "Michie Stadium is a cashless venue: all concession and merchandise stands accept debit and credit cards and mobile payment on gameday, and cash is not accepted. Concession stands on the stadium map include Pretzel Post (102), Smokehouse Platoon (118), Sgt Franks (119), Taco Troop (201), The Plain Burger Co. (204), Frank Formation (206), The Smokehouse (209), Five Star Franks (221), Major Mustard (224), Bravo'Q (321) and Drill Dogs (325), plus the Black Knight Grill (Bunker Burgers, Chicken Platoon, Bravo Barbecue) and beverage stations, with menus of hot dogs, burgers, pulled pork, loaded nachos, tacos, pretzels, chicken tenders, popcorn and beverages.",
+    "source": "https://www.armygameday.com/concessions",
+    "note": "substance; confirmed"
    }
-  ]
+  ],
+  "overlay": {
+   "teamId": "army",
+   "fields": [
+    {
+     "path": "gatesOpen.ruleText",
+     "value": "Stadium gates open at 10:00 a.m. for a 12:00 p.m. kickoff, two hours before the game. On a noon-kickoff day the parking lots open at 6:00 a.m., shuttle buses start at 7:30 a.m., and the cadet review on The Plain is at 9:00 a.m.",
+     "source": "https://westpointpremium.com/tailgates",
+     "note": "substance; confirmed"
+    }
+   ]
+  }
+ },
+ {
+  "hub": "kidd-brewer-stadium",
+  "note": "appalachian-state: sub-minimum extraction from the official sources named in audit/cfb-venue-sourcing-report.md section 8; every field carries its own verified citation.",
+  "fields": [
+   {
+    "path": "parkingLots",
+    "value": [
+     {
+      "name": "Watauga County Parking Deck",
+      "notes": "Single-game parking for fans without a Yosef Club pass, $50, near the courthouse at 140 N. Water Street."
+     },
+     {
+      "name": "Levine College of Health Sciences",
+      "notes": "Free, 75 first-come first-serve spaces, with the AppalCART route to campus."
+     },
+     {
+      "name": "Hill Street ADA parking",
+      "notes": "AppalCART shuttle to Kidd Brewer Stadium."
+     },
+     {
+      "name": "Yosef Club parking lots",
+      "notes": "Passholders only; lots open at 8 a.m. for 2:30 or 3:30 p.m. kickoffs, subject to change."
+     }
+    ],
+    "source": "https://appstatesports.com/news/2025/9/4/2025-app-state-football-fan-guide.aspx",
+    "note": "substance; confirmed"
+   },
+   {
+    "path": "parkingLotMapUrl",
+    "value": "https://mountaineersathleticfund.com/assets/media/pages/yosef-club/fb-parking-2026.webp",
+    "source": "https://mountaineersathleticfund.com/yosef-club/index.html#season-tickets-parking",
+    "note": "verbatim; confirmed"
+   },
+   {
+    "path": "officialParkingUrls",
+    "value": [
+     "https://mountaineersathleticfund.com/yosef-club/index.html#season-tickets-parking"
+    ],
+    "source": "https://appstatesports.com/news/2025/9/4/2025-app-state-football-fan-guide.aspx",
+    "overwrite": true,
+    "note": "verbatim; corrected; REPLACES [\"https://mountaineersathleticfund.com/yosef-club/renewals/index.html\"]"
+   },
+   {
+    "path": "publicTransit.lines",
+    "value": [
+     "AppalCART Purple Route",
+     "AppalCART Express Route",
+     "AppalCART Orange Route",
+     "AppalCART Gray Route"
+    ],
+    "source": "https://www.appalcart.com/game-day-routes",
+    "note": "substance; corrected"
+   },
+   {
+    "path": "publicTransit.notes",
+    "value": "AppalCART runs four extra routes and two shuttles on Saturdays when there is a football game. The Purple, Express, Orange and Gray routes begin four hours before kickoff and stop two hours after the game has ended. Two paratransit-equipped buses shuttle between the stadium and the Hill Street parking lots behind the Convocation Center, beginning four hours before the game and running until the fourth quarter; from the start of the fourth quarter, paratransit shuttles run from the Stadium East Gate to the Hill Street parking lot for approximately two hours, and a 30-minute traffic delay is expected at the end of the game. On home game days a shuttle also connects the Poplar Grove Connector parking lot and the Peacock Traffic Circle. If a game is on a weekday, the normal bus schedule runs until 10 p.m. and the game day schedules run after that. All scheduled times depend on traffic.",
+    "source": "https://www.appalcart.com/game-day-routes",
+    "note": "substance; corrected"
+   },
+   {
+    "path": "accessibility",
+    "value": "AppalCART provides a shuttle from Hill Street ADA parking to Kidd Brewer Stadium. For information on parking and seating for guests with disabilities, contact the Athletics Ticket Office at 828-262-7733 or visit the customer service booths outside the North End Zone on game day.",
+    "source": "https://appstatesports.com/news/2025/9/4/2025-app-state-football-fan-guide.aspx",
+    "note": "substance; corrected"
+   },
+   {
+    "path": "bagPolicyUrl",
+    "value": "https://appstatesports.com/news/2017/5/30/app-state-athletics-institutes-clear-bag-policy.aspx",
+    "source": "https://appstatesports.com/news/2017/5/30/app-state-athletics-institutes-clear-bag-policy.aspx",
+    "note": "verbatim; confirmed"
+   },
+   {
+    "path": "bagPolicyNotes",
+    "value": "Approved bags are clear plastic bags no larger than 12 by 6 by 12 inches and small clutch purses no larger than 4.5 by 6.5 inches. Diaper bags, backpacks, binocular cases, camera cases, tinted or printed pattern plastic bags, fanny packs, oversized tote bags, mesh bags and purses larger than 4.5 by 6.5 inches are not approved. Yosef's Locker and the North End Zone plaza merchandise tent sell approved clear bags. Foam seat cushions without back supports or storage features are allowed, as are seatbacks up to 18 inches wide without armrests, bleacher clamps or storage features; all items are subject to security inspection at entry. Exceptions are made for medically necessary items after inspection at the stadium entrances.",
+    "source": "https://appstatesports.com/news/2025/9/4/2025-app-state-football-fan-guide.aspx",
+    "note": "substance; confirmed"
+   },
+   {
+    "path": "tailgating.allowed",
+    "value": true,
+    "source": "https://appstatesports.com/news/2025/9/4/2025-app-state-football-fan-guide.aspx",
+    "note": "substance; confirmed"
+   },
+   {
+    "path": "tailgating.rules",
+    "value": "Malt beverages and unfortified wine may be consumed in designated tailgating locations by fans of legal drinking age, and anyone drinking must be able to show a valid driver's license or photo ID on request. Liquor, kegs, common containers and glass containers are not permitted in any tailgating location, and no outside alcohol is permitted inside Kidd Brewer Stadium. Portable toilets are provided in the parking and tailgate areas, and staff hand out recycling and trash bags in all tailgate lots. Student tailgating information is on the Office of Campus Activities web page.",
+    "source": "https://appstatesports.com/news/2025/9/4/2025-app-state-football-fan-guide.aspx",
+    "note": "substance; confirmed"
+   },
+   {
+    "path": "tailgating.timeWindow",
+    "value": "Yosef Club parking lots open to passholders for tailgating at 8 a.m. for games with 2:30 or 3:30 p.m. kickoffs, subject to change. For the Nov. 6, 2025 game against Georgia Southern the lots opened at 4 p.m. Tailgating times change with kickoff times as they are announced.",
+    "source": "https://appstatesports.com/news/2025/9/4/2025-app-state-football-fan-guide.aspx",
+    "note": "substance; confirmed"
+   },
+   {
+    "path": "outsideFoodAllowed",
+    "value": false,
+    "source": "https://appstatesports.com/news/2025/9/4/2025-app-state-football-fan-guide.aspx",
+    "note": "substance; confirmed"
+   },
+   {
+    "path": "outsideFoodRules",
+    "value": "No outside food or drink is allowed into Kidd Brewer Stadium, except one unopened standard-size bottle of water per patron. Outside alcohol, outside food and beverages, and coolers or containers are on the prohibited items list.",
+    "source": "https://appstatesports.com/news/2025/9/4/2025-app-state-football-fan-guide.aspx",
+    "note": "substance; confirmed"
+   },
+   {
+    "path": "food",
+    "value": "Concession stands accept cash and card, with one dedicated cash-only lane at each main concession stand on the East and West concourses. Beer is sold at locations throughout the stadium through the end of the third quarter at $10 to $14 per can, with a limit of two alcoholic beverages per valid ID per transaction, and alcohol bought inside cannot be taken out of the stadium. Yosef's Sweet Shack in the West concourse serves frozen alcoholic slushies and other drinks, Grab & Go snack stations are on the West and East concourses, food trucks operate throughout the stadium, and shelled peanuts are sold at concession areas. Pizza is available to fans with west side club level tickets.",
+    "source": "https://appstatesports.com/news/2025/9/4/2025-app-state-football-fan-guide.aspx",
+    "note": "substance; confirmed"
+   }
+  ],
+  "overlay": {
+   "teamId": "appalachian-state",
+   "fields": [
+    {
+     "path": "gatesOpen.ruleText",
+     "value": "Gates open two hours before kickoff for all home games, subject to change. Student Yosef Club members are admitted two and a half hours before kickoff.",
+     "source": "https://appstatesports.com/news/2025/9/4/2025-app-state-football-fan-guide.aspx",
+     "note": "substance; confirmed"
+    },
+    {
+     "path": "gatesOpen.minutesBefore",
+     "value": 120,
+     "source": "https://appstatesports.com/news/2025/9/4/2025-app-state-football-fan-guide.aspx",
+     "note": "substance; confirmed"
+    }
+   ]
+  }
+ },
+ {
+  "hub": "david-booth-kansas-memorial-stadium",
+  "note": "kansas: sub-minimum extraction from the official sources named in audit/cfb-venue-sourcing-report.md section 8; every field carries its own verified citation.",
+  "fields": [
+   {
+    "path": "parkingLots",
+    "value": [
+     {
+      "name": "Lot 11",
+      "notes": "No Williams Fund permit needed; sold first come, first served for $35, credit card only."
+     },
+     {
+      "name": "Lot 72",
+      "notes": "No Williams Fund permit needed; sold first come, first served for $35, credit card only; 13 accessible spaces near the game shuttle."
+     },
+     {
+      "name": "Allen Fieldhouse Garage",
+      "notes": "No Williams Fund permit needed; sold first come, first served for $35, credit card only; game shuttle pickup outside the garage (stop 216)."
+     },
+     {
+      "name": "Lot 90",
+      "notes": "Discounted parking near Capital Federal Hall, $10 per stall; the only RV parking; game shuttle pickup at Naismith & Schwegler (stop 257) at the NW corner of the lot."
+     },
+     {
+      "name": "Mississippi Street Garage",
+      "notes": "Williams Fund game permit required; 17 accessible spaces sold at $35 first come, first served, credit card only."
+     },
+     {
+      "name": "Lot 59",
+      "notes": "Williams Fund game permit required; 14 accessible spaces sold at $35 first come, first served, credit card only."
+     },
+     {
+      "name": "Lot 54",
+      "notes": "Williams Fund game permit required; 3 accessible spaces near the game shuttle."
+     }
+    ],
+    "source": "https://parking.ku.edu/football-game-day",
+    "note": "substance; corrected"
+   },
+   {
+    "path": "parkingLotMapUrl",
+    "value": "https://s3.us-east-2.amazonaws.com/sidearm.nextgen.sites/ukansas.sidearmsports.com/documents/2026/6/24/2026_KU_FB_TailgatingMap_1.pdf",
+    "source": "https://kuathletics.com/feature/the-booth",
+    "note": "verbatim; confirmed"
+   },
+   {
+    "path": "publicTransit.lines",
+    "value": [
+     "Game Shuttle/Limited Mobility Bus Service",
+     "Gameday Courtesy Shuttle"
+    ],
+    "source": "https://kuathletics.com/feature/the-booth",
+    "note": "verbatim; confirmed"
+   },
+   {
+    "path": "publicTransit.notes",
+    "value": "Complimentary KU game shuttles run to the stadium from Economy Lot 90, with a pickup on Naismith Drive, and from Irving Hill Road at Lot 54 for reserved season parking pass holders and Allen Fieldhouse Parking Garage guests. Shuttle service begins three hours before kickoff, operates continuously until kickoff, resumes at the start of the fourth quarter and continues until 30 minutes after the game; paratransit-equipped buses operate from both Lot 54 and Lot 90. Golf cart courtesy shuttles carry fans between the surrounding lots and the stadium gates, with the east shuttle serving lots 91 and the Mississippi Street bus stop and the west shuttle serving lots 56, 57 and 60, from three hours before the game until 15 minutes into the first quarter, again as needed after halftime, and for 30 minutes after the game; call (785) 429-4295 on game day with specific needs.",
+    "source": "https://kuathletics.com/feature/the-booth",
+    "note": "substance; corrected"
+   },
+   {
+    "path": "rideshareDropoff",
+    "value": "The preferred rideshare drop-off and pickup location is one block east of the stadium near the intersection of 11th and Indiana streets, in the four northernmost metered spots in front of the HERE apartment complex.",
+    "source": "https://kuathletics.com/feature/the-booth",
+    "note": "substance; confirmed"
+   },
+   {
+    "path": "accessibility",
+    "value": "Accessible parking is sold on site by KU Transportation Services for $35 per vehicle on a first-come, first-served basis in Lot 59 (12 spaces) and Lot 91 (5 spaces); a state-issued accessible license plate or hang tag must be displayed, and Williams Education Fund season parking passes are not valid in accessible spaces. If those lots are full, paratransit-equipped shuttle buses run to and from the stadium from Lot 54 (6 accessible spaces, enter from Irving Hill Road), the Allen Fieldhouse Parking Garage (12 spaces) and Lot 90; additional accessible spaces, listed without shuttle service or an accessible path to the stadium, are in Lot 52 (8), Lots 36/39 (9) and the Mississippi Street Parking Garage (17). Wheelchair seating holds one person plus up to three companions if space is available and is reached by elevators on the east and west sides; limited mobility seating is on the third level near the elevators, and fans should contact the Athletics Ticket Office at (785) 864-3141 as early as possible to trade tickets for those seats. Golf cart courtesy shuttles carry fans needing assistance from the surrounding lots to the stadium gates starting three hours before the game; call (785) 429-4295 on game day with specific needs. Walk-through metal detector lanes are not accessible for wheelchairs and other assistive devices, and hand-held metal detectors are used for guests who cannot use them; guests with medical devices should notify Event Staff to be assisted through screening. A sensory room is on the main concourse outside sections 118 and 312.",
+    "source": "https://kuathletics.com/feature/the-booth",
+    "note": "substance; corrected"
+   },
+   {
+    "path": "bagMaxDimensions",
+    "value": {
+     "w": 12,
+     "h": 6,
+     "d": 12,
+     "unit": "in"
+    },
+    "source": "https://kuathletics.com/feature/the-booth",
+    "note": "verbatim; confirmed"
+   },
+   {
+    "path": "clearBagRequired",
+    "value": true,
+    "source": "https://kuathletics.com/feature/the-booth",
+    "note": "verbatim; confirmed"
+   },
+   {
+    "path": "bagPolicyUrl",
+    "value": "https://kuathletics.com/documents/2024/11/1/Clear_Bag_Policy.pdf",
+    "source": "https://kuathletics.com/documents/2024/11/1/Clear_Bag_Policy.pdf",
+    "note": "verbatim; confirmed"
+   },
+   {
+    "path": "outsideFoodAllowed",
+    "value": false,
+    "source": "https://kuathletics.com/feature/the-booth",
+    "note": "verbatim; confirmed"
+   },
+   {
+    "path": "outsideFoodRules",
+    "value": "Outside food is not permitted in the stadium. Each ticket holder may bring one unopened 20 oz. plastic bottle of water and one empty plastic refillable water bottle up to 32 oz.; metal bottles, cans, other liquid containers and coolers are prohibited, and no alcohol, including non-alcoholic beer and wine, may be brought in.",
+    "source": "https://kuathletics.com/feature/the-booth",
+    "note": "substance; confirmed"
+   },
+   {
+    "path": "food",
+    "value": "General concessions open in all areas when the gates open and are located throughout the west-side concourses. The student-only Hawks Huddle stand, with student pricing, is under section 132 at the south end of the stadium, and food trucks set up at the southeast corner starting 30 minutes before kickoff to serve the east and south seating. Bottle filling stations and water fountains are on the main and view level concourses on the west and north sides and at the bottom of sections 17 and 26 on the east side.",
+    "source": "https://kuathletics.com/feature/the-booth",
+    "note": "substance; confirmed"
+   },
+   {
+    "path": "nearby",
+    "value": "Three official pregame areas around the stadium open three hours before kickoff. Gameday Boulevard is a closed stretch of 11th Street from Maine to Illinois with food, beer and beverages from Tap That KC, game-day activities and music; Gameday on the Hill is a free-to-enter tailgate area at the base of The Hill with music, high-top and picnic tables, tailgating games, food trucks, and beverages and beer from Tap That KC; and the Family Fun Zone on the practice fields adjacent to The Hill has tailgating games, inflatables and other activities for kids. Reserved full-service tailgate packages on Campanile Hill are sold through REVELxp at revelxp.com/kansas or (785) 727-4122.",
+    "source": "https://kuathletics.com/feature/the-booth",
+    "note": "substance; corrected"
+   }
+  ],
+  "overlay": {
+   "teamId": "kansas",
+   "fields": [
+    {
+     "path": "gatesOpen.ruleText",
+     "value": "General public gates open 90 minutes before kickoff. Premium-space gates (Jayhawk Club, Limestone Club, Founders Level at Gate 1, Conference Center at Gate 5 and 1921 Field Club at Gate 6) and the Gate 13 student gate open two hours before kickoff.",
+     "source": "https://kuathletics.com/feature/the-booth",
+     "note": "substance; confirmed"
+    }
+   ]
+  }
+ },
+ {
+  "hub": "autzen-stadium",
+  "note": "oregon: sub-minimum extraction from the official sources named in audit/cfb-venue-sourcing-report.md section 8; every field carries its own verified citation.",
+  "fields": [
+   {
+    "path": "parkingLots",
+    "value": [
+     {
+      "name": "Eugene Science Center",
+      "notes": "Season and single game advance parking passes at lots adjacent to Autzen Stadium managed by the Eugene Science Center; University of Oregon Alumni Association members receive a 10% discount."
+     },
+     {
+      "name": "Eugene Masonic Lodge",
+      "notes": "Season, overnight, and single game parking across the street from Autzen Stadium."
+     },
+     {
+      "name": "Boy Scouts",
+      "notes": "Season, overnight, and single game parking across the street from Autzen Stadium; online reservations through DuckParking.com."
+     },
+     {
+      "name": "HDC Lot",
+      "notes": "Entry 1. Autzen Complex lot; all spaces are reserved and a parking pass is required for entry."
+     },
+     {
+      "name": "RED Lot",
+      "notes": "Entry 2. Autzen Complex lot; all spaces are reserved and a parking pass is required for entry."
+     },
+     {
+      "name": "BLUE Lot",
+      "notes": "Entry 3. Autzen Complex lot; all spaces are reserved and a parking pass is required for entry."
+     },
+     {
+      "name": "YELLOW Lot",
+      "notes": "Entry 4. Autzen Complex lot; all spaces are reserved and a parking pass is required for entry."
+     },
+     {
+      "name": "GREEN Lot",
+      "notes": "Entry 5. Autzen Complex lot; all spaces are reserved and a parking pass is required for entry."
+     }
+    ],
+    "source": "https://goducks.com/sports/2011/6/21/205174790",
+    "note": "substance; corrected"
+   },
+   {
+    "path": "parkingLotMapUrl",
+    "value": "https://goducks.com/documents/download/2025/8/18/autzen_tailgate_parking_25.pdf",
+    "source": "https://goducks.com/sports/2011/6/21/205174790",
+    "note": "substance; confirmed"
+   },
+   {
+    "path": "officialParkingUrls",
+    "value": [
+     "https://goducks.com/sports/2011/6/21/205174790#directions"
+    ],
+    "source": "https://goducks.com/feature/gameday26",
+    "note": "substance; corrected"
+   },
+   {
+    "path": "publicTransit.lines",
+    "value": [
+     "Autzen Express",
+     "Lane Transit District (LTD)"
+    ],
+    "source": "https://goducks.com/sports/2011/6/21/205174790",
+    "note": "substance; confirmed"
+   },
+   {
+    "path": "publicTransit.notes",
+    "value": "The Autzen Express park-and-ride shuttles run to Autzen Stadium from four park-and-ride locations, listed on the page for 2025 as Valley River Center (Northwest parking lot), Lane Events Center (North parking lot), Pacific Source (555 International Way, Springfield) and Springfield Station (355 South A Street, Springfield), starting 3 hours before game time with buses every 10 to 20 minutes. Return trips run only at halftime and immediately after the game, continuing for 60 minutes after the game ends. Passes are $8 per person for the 2026 season when bought early or $12 on game day, sold online only; LTD Honored Rider passes are accepted for riders 65 and older, and cash is not accepted. Lane Transit District (LTD) is not running an Autzen shuttle this season, but fans can ride LTD to the University of Oregon campus and walk to the stadium.",
+    "source": "https://goducks.com/sports/2011/6/21/205174790",
+    "note": "substance; corrected"
+   },
+   {
+    "path": "accessibility",
+    "value": "Accessible parking is available through Entry 5 off Leo Harris Parkway for $40, first come first served, and requires a DMV-issued placard and proof of placard ownership; once the Autzen ADA lot is full, the ADA-compliant shuttle system is the next option. Accessible seating for wheelchair users and a guest can be arranged through the Oregon Athletic Ticket Office at 1-800-WEBFOOT or at the ticket office in the Casanova Center. A tram carries disabled and senior patrons from the lower concourse into the stadium and runs 30 minutes to 1 hour after the game, an elevator inside the South Gate connects the lower and main concourses, and alternative listening devices can be checked out from Guest Services. For accommodation questions call the Duck Ticket Office at (541) 346-4461 or TTY (541) 346-5418.",
+    "source": "https://goducks.com/sports/2011/6/21/205174790",
+    "note": "substance; corrected"
+   },
+   {
+    "path": "tailgating.allowed",
+    "value": true,
+    "source": "https://goducks.com/sports/2011/6/21/205174790",
+    "note": "substance; confirmed"
+   },
+   {
+    "path": "tailgating.rules",
+    "value": "All tailgating must stay within the dimensions of your reserved parking space: car spaces are 9 by 20 feet and RV spaces are 18 by 40 feet. Reserved car and RV parking is sold only as a season pass allocated by donor priority points, and a reserved parking pass is required to enter the lots.",
+    "source": "https://goducks.com/sports/2025/9/5/game-day-parking",
+    "note": "substance; confirmed"
+   },
+   {
+    "path": "tailgating.timeWindow",
+    "value": "Lots open 6 hours before kickoff but never before 7:00 AM, and a reserved parking pass is required for entry.",
+    "source": "https://goducks.com/sports/2025/9/5/game-day-parking",
+    "note": "substance; confirmed"
+   },
+   {
+    "path": "tailgating.rvPolicy",
+    "value": "RV parking in the Autzen Stadium lot is available only with a reserved parking pass; there is no individual game parking in the Autzen lot. RV spaces are 18 by 40, and all tailgating must stay within that space.",
+    "source": "https://goducks.com/sports/2011/6/21/205174790",
+    "note": "substance; confirmed"
+   },
+   {
+    "path": "venueAccessRestrictions",
+    "value": "Re-entry is not permitted once you leave the stadium, and all tickets are mobile through the GoDucks gameday app. Outside alcohol is not permitted, open umbrellas are banned in seating and aisle areas, and glass or metal containers, vacuum bottles and other thermos-type insulated containers, open plastic beverage containers unless empty, weapons, fireworks, laser pointers, explosives and munitions are not allowed inside; ticket holders agree to inspection of any article that could conceal prohibited items. Seat cushions may be no larger than 17.5 inches wide by 13.5 inches deep with a seat back no taller than 19 inches and no thicker than 4 inches. Smoking is not permitted in or around Autzen Stadium, throwing footballs, frisbees or other objects is not allowed in seating, tunnel or ramp areas, and students with Student Section tickets enter through the South Gate.",
+    "source": "https://goducks.com/sports/2011/6/21/205174790",
+    "note": "substance; confirmed"
+   },
+   {
+    "path": "nearby",
+    "value": "Autzen Stadium sits on a 90-acre site next to the north bank area of Alton Baker Park, north of the Willamette River and about a quarter mile north of the main University of Oregon campus, which is reached on foot by the Autzen footbridge. The Moshofsky Center opens three hours before kickoff to anyone with a ticket to that day's game, with concessions, beer, wine, inflatables and yard games, and the team's March to Victory passes through it two hours and twenty minutes before kickoff. Secured bicycle parking at the Duck Pen, between the Science Factory and the Autzen Footbridge, costs $5 per bicycle and opens three hours before kickoff, closing one hour after the game.",
+    "source": "https://goducks.com/sports/2011/6/21/205174790",
+    "note": "substance; corrected"
+   },
+   {
+    "path": "food",
+    "value": "Concession stands operate throughout Autzen Stadium, and beer and wine are sold at concession stands until the end of the third quarter; alcohol is not permitted in student seating areas. A concessions map is linked from the 2026 game day page.",
+    "source": "https://goducks.com/feature/gameday26",
+    "note": "substance; confirmed"
+   }
+  ],
+  "overlay": {
+   "teamId": "oregon",
+   "fields": [
+    {
+     "path": "gatesOpen.ruleText",
+     "value": "Stadium gates open 3 hours before kickoff, except the East Gate, which opens 90 minutes before kickoff. The seating bowl also opens 90 minutes before kickoff.",
+     "source": "https://goducks.com/sports/2011/6/21/205174790",
+     "note": "substance; confirmed"
+    }
+   ]
+  }
  }
 ]
