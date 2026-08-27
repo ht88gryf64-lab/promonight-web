@@ -69,7 +69,19 @@ async function main() {
   if (problems) { console.error(`[cfb-venue-data] ${problems} plan problem(s); nothing written.`); process.exit(1); }
 
   // Read current state, build the diff.
-  type Op = { ref: FirebaseFirestore.DocumentReference; label: string; updates: Array<[FieldPath, unknown]>; lines: string[] };
+  type Op = { ref: FirebaseFirestore.DocumentReference; label: string; updates: Array<[FieldPath, unknown]>; seen: Map<string, unknown>; lines: string[] };
+  let conflicts = 0;
+  /** Add one field-path update, collapsing an exact duplicate and refusing a
+   *  contradictory one. Firestore rejects a repeated field path outright. */
+  const push = (op: Op, path: string[], value: unknown, where?: string) => {
+    const k = path.join('\u0000');
+    if (op.seen.has(k)) {
+      if (JSON.stringify(op.seen.get(k)) !== JSON.stringify(value)) { console.error(`  PLAN ERROR ${where ?? op.label}: ${path.join('.')} set twice with different values`); conflicts++; }
+      return;
+    }
+    op.seen.set(k, value);
+    op.updates.push([new FieldPath(...path), value]);
+  };
   const ops: Op[] = [];
   const snapshot: Record<string, unknown> = {};
   let writes = 0, overwrites = 0, refused = 0, skippedSame = 0;
@@ -87,7 +99,7 @@ async function main() {
       else { const t = tSnap.data() as Record<string, unknown>; snapshot[`venueHubs/${e.hub}/tenants/${e.overlay.teamId}`] = t; targets.push({ ref: tRef, label: `${e.hub}/tenants/${e.overlay.teamId}`, doc: t, fields: e.overlay.fields }); }
     }
     for (const t of targets) {
-      const op: Op = { ref: t.ref, label: t.label, updates: [], lines: [] };
+      const op: Op = { ref: t.ref, label: t.label, updates: [], seen: new Map(), lines: [] };
       const sources = (t.doc.sources ?? {}) as Record<string, unknown>;
       for (const f of t.fields) {
         const cur = getAt(t.doc, f.path);
@@ -99,8 +111,12 @@ async function main() {
         if (populated(cur) && JSON.stringify(cur) !== JSON.stringify(f.value) && !f.overwrite) { refused++; op.lines.push(`    ! REFUSED ${f.path}: populated (${JSON.stringify(cur).slice(0, 80)}) and plan lacks overwrite:true`); continue; }
         if (populated(cur) && JSON.stringify(cur) !== JSON.stringify(f.value)) { overwrites++; op.lines.push(`    ~ OVERWRITE ${f.path}\n        was: ${JSON.stringify(cur).slice(0, 300)}\n        now: ${JSON.stringify(f.value).slice(0, 300)}${internal ? '' : `\n        source ${curSrc ?? '(none)'} -> ${f.source}`}`); }
         else op.lines.push(`    + ${f.path} = ${JSON.stringify(f.value).slice(0, 300)}\n        source: ${f.source}${f.note ? `\n        note: ${f.note}` : ''}`);
-        op.updates.push([new FieldPath(...segs(f.path)), f.value]);
-        if (!internal) op.updates.push([new FieldPath('sources', sk), f.source]);
+        push(op, segs(f.path), f.value);
+        // Two sub-fields of one field (gatesOpen.ruleText + gatesOpen.minutesBefore)
+        // share a single flat provenance key. Firestore rejects an update that
+        // names the same field path twice, so collapse them; a genuine
+        // disagreement (same key, two different sources) is a plan error.
+        if (!internal) push(op, ['sources', sk], f.source, `${t.label} ${f.path}`);
         writes++;
       }
       ops.push(op);
@@ -110,6 +126,7 @@ async function main() {
   for (const op of ops) { console.log(`\n  ${op.label}`); for (const l of op.lines) console.log(l); }
   console.log(`\n  fields ${execute ? 'written' : 'to write'}: ${writes} (of which overwrites: ${overwrites}); identical/skipped: ${skippedSame}; refused: ${refused}`);
   if (refused) { console.error('[cfb-venue-data] refused entries present; fix the plan before --execute.'); if (execute) process.exit(1); }
+  if (conflicts) { console.error(`[cfb-venue-data] ${conflicts} contradictory field path(s); nothing written.`); process.exit(1); }
   if (!execute) { console.log('\n[cfb-venue-data] DRY-RUN complete. Re-run with --execute to snapshot + write.'); process.exit(0); }
 
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
