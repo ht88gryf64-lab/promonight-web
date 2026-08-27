@@ -1637,3 +1637,69 @@ Executed 2026-08-27. Restore point for this write: `scripts/snapshots/cfb-venue-
 **A shared provenance key, the same shape as the failure in section 12's write.** `publicTransit.notes` and `publicTransit.lines` both derive their provenance to the single flat `sources.publicTransit`, so a naive plan would have submitted that path twice and been rejected exactly as `sources.gatesOpen` was. The fix is an explicit `sourceKey` override in the plan format: the collapse is now deliberate rather than incidental, and it also avoids writing dotted keys that would leave the flat key pointing at the superseded URL.
 
 **A TLD whitelist rejecting a real operator.** The source validator required a `.edu`, `.com`, `.org`, `.gov` or `.net` host and refused `ttc.ca`, the Toronto Transit Commission. Whether a host is authoritative is a research judgment recorded in this report, not something a regex can decide, so the validator now only checks that a source is an http(s) URL with a real host.
+
+## 16. The two consumers gate differently, measured
+
+Report only, nothing changed. The same `venueHubs` document feeds two renderers with different admission rules, and this section measures the gap on all 86 buildings that have a CFB tenant, the only ones where both consumers run.
+
+### The two models
+
+**The venue page** (`/venues/[slug]`, via `venue-logistics.tsx` and `VenueHubView.tsx`) gates every fact card on the **doc-level `verified` flag** and nothing else. The file says so in its own header: "every fact card sits behind hub.verified exactly as it did inside the view." It does not read `sources` at all. One flag admits or withholds the whole page's facts.
+
+**The CFB condensed block** (`/cfb/[school]`, via `venue-hub-condensed.ts`) gates each field on **its own provenance**, plus the conflicts and holds lists, and deliberately ignores `verified`. Its header is equally explicit: "Not the index floor, not the doc-level verified flag, not the tenant's verified flag."
+
+Neither is wrong on its own terms. They answer different questions: "did a human vouch for this building?" versus "can this specific sentence be traced to a source?" The consequence is that the same stored value can render on one surface and not the other, in both directions.
+
+### Measured, 86 CFB-tenant buildings
+
+| Field | Venue page only | CFB block only | Both | Neither |
+| --- | --- | --- | --- | --- |
+| gates | 2 | 30 | 47 | 7 |
+| bag | 0 | 13 | 70 | 3 |
+| parking | 1 | 15 | 70 | 0 |
+| tailgating | 3 | 12 | 66 | 5 |
+| transit | 0 | 6 | 30 | 50 |
+| rideshare | 0 | 3 | 35 | 48 |
+| accessibility | 0 | 11 | 68 | 7 |
+| outsideFood | 0 | 21 | 52 | 13 |
+| food | 0 | 10 | 58 | 18 |
+| nearby | 0 | 3 | 11 | 72 |
+
+### Direction 1: the CFB block renders what the venue page withholds
+
+**Cause: 13 CFB buildings carry `verified: false`**, so their venue pages render no fact cards at all while their school pages render every sourced field. They are: acrisure-bounce-house, autzen-stadium, bridgeforth-stadium-and-zane-showker-field, brooks-stadium, doak-campbell-stadium, huskie-stadium, ln-federal-credit-union-stadium, martin-stadium-northwestern-university, michie-stadium, michigan-stadium, navy-marine-corps-memorial-stadium, sanford-stadium, simmons-bank-liberty-stadium.
+
+**This is deliberate and documented.** It is also the whole point of the per-field rule: a building nobody has signed off wholesale can still carry individually sourced facts, and the school page shows them. The gates column is the largest single case at 30, because gate rules live on tenant overlays whose own `verified` flag the venue page also requires.
+
+**Sanford Stadium is the live case the last pass surfaced.** Its corrected transit copy, written in this session, renders on `/cfb/georgia` and nowhere else, because `sanford-stadium` is `verified: false`. Nothing is broken; the fact simply reaches readers on one of its two surfaces. The same is true of Michie Stadium's entire Army extraction and Autzen's entire Oregon extraction, both written this session, both `verified: false`, both visible only on the school page.
+
+### Direction 2: the venue page renders what the CFB block withholds
+
+Six buildings, three fields, and this is the direction that carries risk, because the withheld ones are withheld **for cause**.
+
+| Field | Buildings | Why the CFB block withholds it | Still rendering on the venue page? |
+| --- | --- | --- | --- |
+| tailgating | david-booth-kansas-memorial-stadium, hard-rock-stadium, yulman-stadium | On `CONDENSED_CONFLICTS`: an official source contradicts the stored text | **Yes, verified on the preview** |
+| gates | albertsons-stadium, allegacy-federal-credit-union-stadium | Truly unsourced; no provenance for the gate rule | **Yes, verified on the preview** |
+| parking | acrisure-stadium | `officialParkingUrls` populated with no `sources.officialParkingUrls` | **Yes, verified on the preview** |
+
+Fetched from the preview to confirm rather than infer:
+
+- `/venues/yulman-stadium` serves "The Berger Family Lawn is the only tailgating location for the 2025 season", the stale 2025 capture that report section 4 records as conflicting with the club's rewritten 2026 page.
+- `/venues/david-booth-kansas-memorial-stadium` serves the superseded permitted-lot list.
+- `/venues/hard-rock-stadium` serves the tailgating rules whose pass-colour clause no official page supports.
+- `/venues/albertsons-stadium` and `/venues/allegacy-federal-credit-union-stadium` serve gate rules that carry no provenance at all.
+
+Coastal Carolina is the exception that proves the mechanism: `brooks-stadium` is also on the conflicts list, and its tailgating row is **absent** from its venue page, but only because the building is `verified: false`. The conflicts list played no part.
+
+### Is the divergence deliberate?
+
+**Direction 1: yes, by design, and the design is right.** Both files state the rule in their headers, and a test pins the condensed block's independence from `verified`.
+
+**Direction 2: the mechanism is deliberate, the outcome is not.** The wiring check flagged this asymmetry when the block shipped, calling it "deliberate and this list is what closes it" for the CFB surface only. Nothing ever closed it for the venue page. So a conflict discovered by the sourcing pass is currently withheld from the school page and published on the venue page, which is the higher-traffic of the two for these buildings. That is not a considered position, it is an unclosed edge.
+
+**Transit is the one field where the gap is already closed**, because `transitSuppressed` was wired into both consumers rather than into the condensed block alone. That is the shape a fix would take for the other two lists: a suppression consulted by every renderer, not a rule that lives inside one of them. The transit column above shows the effect, 0 in the venue-only column.
+
+### What a fix would cost, if you want one
+
+`CONDENSED_CONFLICTS` and the per-field provenance rule are both currently private to `venue-hub-condensed.ts`, which is CFB-scoped. Honouring them on the venue page means either lifting the conflicts list into a shared module the way `venue-transit-suppression.ts` already is (small, and it would silence 6 fields on 6 venue pages), or moving the venue page to per-field provenance wholesale (large: 13 buildings would lose every card they currently show, since `verified: false` and unsourced are not the same condition and many of those fields have no source recorded). The first is the proportionate one. Neither is done here.
