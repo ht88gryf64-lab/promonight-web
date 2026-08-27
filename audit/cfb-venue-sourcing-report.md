@@ -1297,3 +1297,314 @@ Classes: name-only 7, stale-description 16, temporary-disruption 5, partly-withd
 ### If you want a default
 
 Silence the 21 would-strand rows on the same mechanism as the eleven, since by the standard already applied they qualify. Re-point the 5 broken citations, which changes no user-facing copy. Take the 20 label edits as a batch when someone is next in the data. Leave the 3 temporary disruptions and re-check after the season settles. A scheduled source-URL check (dead, redirected, or dated before the current season) would stop this list regrowing without reading a word of any page.
+## 14. Proposed copy changes for the remaining transit fields, for review before anything ships
+
+**Nothing here has been applied.** Every row is a proposal. Each was drafted from the stored text, then handed to a second agent that re-fetched the proposed source and checked three things: that the page is live and carries the fact, that the change is minimal rather than a rewrite, and that no name or number appears that the source does not contain. 21 rows in, 21 out, identity diff clean.
+
+**Scope correction.** The earlier count of 20 label edits assumed all 49 rows were still open. Four of them (citizens-bank-park, darrell-k-royal-texas-memorial-stadium, mt-bank-stadium, target-center) were judged would-strand and are now silenced in section 12, so they are no longer copy edits. That leaves 16 label edits and 5 re-sources, the 21 below.
+
+Of the 21: 6 label-edit, 12 both, 3 re-source. Confidence: 12 high, 9 medium, none low. No proposal came back as "no change needed".
+
+### A. Citation only, no user-facing copy changes (3)
+
+Safe to apply without reading the prose: the facts were confirmed correct, only the URL behind them moves.
+
+| Hub | League | Current source | Proposed source | Why |
+| --- | --- | --- | --- | --- |
+| bank-of-america-stadium | MLS/NFL | https://www.panthers.com/traffic-parking | https://www.panthers.com/schedule/traffic-parking | Prose and lines need no change: I fetched the relocated Panthers page myself (HTTP 200, canonical and og:url both self-referencing that path) and it carries every asserted fact verbatim, "Blue Line: Park at any Park and Ride station along t |
+| casino-del-sol-stadium | CFB | https://arizonawildcats.com/sports/2022/8/30/A-Z%20Fan%20Guide.aspx | https://arizonawildcats.com/sports/2022/8/30/AZFanGuide | Verified independently: the proposed URL returns HTTP 200 with no redirect, is self-canonical, and carries every asserted fact on one page, its Phoenix Transport block reads "the Cat Cruiser transportation program for our fans in Phoenix... |
+| kyle-field | CFB | https://12thman.com/feature/football-gameday | https://transport.tamu.edu/Parking/events/football.aspx | Verified independently today: the TAMU Transportation Services page returns HTTP 200 and carries every fact the prose and both labels assert, in the operator's own words, "Shuttle routes have changed this year but still take fans to Kyle Fi |
+
+### B. Copy changes, one entry each
+
+Ordered by rider impact: the ones that change a fact a fan acts on come first. Each shows the stored text and the proposal, with the operator evidence.
+
+#### boone-pickens-stadium (CFB) — would-mislead, both, confidence medium
+
+Stored text:
+
+> Courtesy shuttle service from downtown Stillwater (7th and Lewis) to the stadium (Hall of Fame and Knoblock) begins 2 hours prior to kickoff and continues throughout post-game, with pick-up/drop-off approximately every 15 minutes. ADA shuttle picks up/drops off at the OSU Multimodal Transportation Terminal south of the Monroe Street Parking Garage.
+
+Proposed:
+
+> Courtesy shuttle service from downtown Stillwater (7th and Lewis) to the stadium (Hall of Fame and Knoblock) begins 3 hours prior to kickoff and runs until 30 minutes after kickoff, then resumes in the 3rd quarter and continues for a minimum of 30 minutes post-game, with pick-up/drop-off approximately every 15 minutes. ADA shuttle picks up/drops off at the OSU Multimodal Transportation Terminal south of the Monroe Street Parking Garage.
+
+Source: https://okstate.com/sports/2015/3/17/GEN_2014010169 becomes https://okstate.com/documents/2025/11/18/Football-Parking-map-F26.pdf
+
+Evidence: Hours change CONFIRMED, source claim CORRECTED. OSU's 2026 map, titled "2026 FOOTBALL CAMPUS TRANSIT" and stamped "MAP SUBJECT TO CHANGE - UPDATED 7/24/26", carries a GAMEDAY SHUTTLES panel reading "Shuttle service will begin three hours prior to game and will continue until 30 minutes after kickoff ... shuttles will resume in 3rd Quarter and continue for a minimum of 30 minutes post-game or until lines are gone", so the stored "2 hours ... throughout post-game" understates the pre-game window and denies a real mid-game gap; Visit Stillwater's 2026 guide attaches those same hours to "the shuttle at 7th and Lewis", confirming the panel describes this service and not the ADA shuttle, whose own hours differ. Two corrections to the draft I checked. First, the proposed URL is NOT application/pdf: fetched 2026-08-27 with a Chrome UA it returns HTTP 200 text/html, the okstate.com document landing page (title "Football Parking map F26 - Oklahoma State University Athletics", reached by redirect from okstate.com/FB-Parking) whose own HTML contains no shuttle text; the panel text lives in the PDF bytes at https://s3.us-east-2.amazonaws.com/sidearm.nextgen.sites/okstate.com/documents/2025/11/18/Football-Parking-map-F26.pdf (HTTP 200, application/pdf). I keep the okstate.com landing page as the citation because it is on the operator domain and renders the map, but the reviewer should know the fact is in the embedded document. Second, the map does not support the whole paragraph: it has no "15 minutes" cadence, no "Multimodal" (zero hits), and never names 7th and Lewis or Hall of Fame and Knoblock as the endpoints, so the stored A-Z guide URL must be KEPT alongside the map rather than replaced (it is live, current-season, verbatim on those three facts, and stale only on the hours), and the ADA sentence is best cited to https://okstateposse.com/parking/ada-parking/, which states "pick-up and drop off point will be located at the OSU Multimodal Transportation Terminal located directly South of the Monroe Street Parking Garage". I also tightened the draft's wording: it read "pauses from 30 minutes after kickoff until the 3rd quarter, then runs for", which drops the stored verb "continues" and uses "pauses", a word no source uses; the version here follows the operator's own clause order and changes only the hours clause, leaving every other word and the entire second sentence untouched.
+
+#### coca-cola-coliseum (WNBA) — would-mislead, both, confidence medium
+
+Stored text:
+
+> Exhibition GO station serves the venue at Exhibition Place. TTC directions route via a 509/511 replacement bus toward Lake Shore and Bathurst. GO Transit: 1-888-GET-ON-GO; TTC: 416-393-INFO.
+
+Proposed:
+
+> Exhibition GO station serves the venue at Exhibition Place. TTC directions route via the 509 Harbourfront or 511 Bathurst streetcar to Exhibition Loop. GO Transit: 1-888-GET-ON-GO; TTC: 416-393-INFO.
+
+Source: https://www.coca-colacoliseum.com/plan-your-visit/directions-parking becomes https://www.ttc.ca/routes-and-schedules/509
+
+Evidence: The text change stands and is verified: the venue page still literally reads "Transfer to 509/511 REPLACEMENT BUS towards LAKE SHORE and BATHURST," while TTC's own route data (ttcapi/routedetail id=509 and id=511, fetched 2026-08-27) says the 509 Harbourfront streetcar route "operates between Union Station on Line 1 Yonge-University and Exhibition Loop" and the 511 Bathurst streetcar route "operates between Bathurst Station on Line 2 Bloor-Danforth and Exhibition Loop," both inService with an in-service "TO Exhibition" branch, and the live-alerts feed (lastUpdated 2026-08-27T18:03:46Z, 19 route alerts) carries none on 509, 511 or 29. I corrected the proposed source: the CNE page it named is live and does state both routings, but it is headed "Friday, August 21 - Monday, September 7, 2026" and describes CNE-window-only conditions (the 509/511 stops at Manitoba Dr and Strachan Ave are out of service for that window), so citing it on a venue whose season runs October to April would replace one dated source with one that expires in eleven days; the year-round route page is the durable operator citation. Confidence is medium, not high, on four counts: the cited URL carries the 509 half only (the 511 half is verified on the parallel https://www.ttc.ca/routes-and-schedules/511), that page renders client-side so a curl returns an SPA shell and the facts come from its own ttc.ca route-detail endpoint, both route pages' directional prose says "buses" while their headers and the CNE page say streetcar, and the GO Transit line entry is not sourced by this TTC URL at all (the original proposal's claim that all four lines re-confirm on the TTC page is wrong for that entry) and still rests on the stale venue page, where "Lakeshore East-West line" mirrors the venue's own wording though Exhibition GO sits on Lakeshore West. That GO wording is not the flagged defect, so all four lines are left unchanged.
+
+#### crypto-com-arena (NHL/NBA/WNBA) — would-mislead, label-edit, confidence medium
+
+Stored text:
+
+> Crypto.com Arena is blocks from the Metro A and B Lines. Nearest Metro Rail stop is Pico Station (A and E Lines); 7th St/Metro Center Station is also nearby for transfers. Metro Bus lines 28, 30, 81, 460 and the J Line stop near L.A. LIVE. DASH Bus Route F has several stops on Figueroa St. adjacent to L.A. LIVE. Metrolink and Amtrak connect to Downtown LA where riders transfer to Metro Rail.
+
+Proposed:
+
+> Crypto.com Arena is blocks from the Metro A and B Lines. Nearest Metro Rail stop is Pico Station (A and E Lines); 7th St/Metro Center Station is also nearby for transfers. Metro Bus lines 28, 30, 81, 460 and the J Line stop near L.A. LIVE. DASH Bus Route F has several stops on Figueroa St. adjacent to L.A. LIVE, though from August 5 to November 5, 2026, southbound buses are on detour between 6 a.m. and 5 p.m. and skip the stop at Figueroa St. and Pico Blvd., with the nearest listed alternative at Figueroa St. and 12th St. Metrolink and Amtrak connect to Downtown LA where riders transfer to Metro Rail.
+
+Evidence: LADOT Transit's alerts feed (https://www.ladotbus.com/alerts, HTTP 200 fetched today) carries the alert verbatim, including dropped stop Figueroa St. & Pico Blvd. (#6144), which is the L.A. LIVE stop this sentence promises, and "DASH F" is still a live route entity on that feed alongside A/B/D/E with zero discontinue/suspend/rename hits, so the lines array stands unchanged. I reverted the proposed source swap: the LADOT feed carries none of the paragraph's other facts (zero hits for Pico Station, Metro Center, Metrolink, Amtrak, L.A. LIVE) and its alert record self-expires 2026-11-06T07:59:59Z, so LADOT belongs as a SECOND source on this field, not as a replacement for the arena page that sources the other four sentences.
+
+#### huntington-bank-field (NFL) — would-mislead, both, confidence medium
+
+Stored text:
+
+> Closest station is W. 3rd St. Station (Blue, Green and Waterfront Lines), across the street from the stadium. Tower City Center Station is served by all four GCRTA rail lines (Red Line riders transfer there) and is about a 15-minute walk via W. 3rd Street. On Browns gamedays the Waterfront Line runs Tower City to South Harbor Station in the Municipal Parking Lot, and postgame service runs until all passengers have cleared W. 3rd St. Station. Free parking at GCRTA rail stations.
+
+Proposed:
+
+> Closest station is W. 3rd St. Station (Waterfront Line), across the street from the stadium. Tower City Center Station is served by all four GCRTA rail lines (Red Line riders transfer there) and is about a 15-minute walk via W. 3rd Street. On Browns gamedays the Waterfront Line runs Tower City to South Harbor Station in the Municipal Parking Lot, and postgame service runs until all passengers have cleared W. 3rd St. Station. Free parking at GCRTA rail stations.
+
+Lines: `["GCRTA Waterfront Line","GCRTA Blue Line","GCRTA Green Line"]`
+
+becomes `["GCRTA Waterfront Line (Browns home games and select major events only)","GCRTA Blue Line","GCRTA Green Line"]`
+
+Source: https://huntingtonbankfield.com/directions-parking/ becomes https://www.riderta.com/routes/waterfrontline
+
+Evidence: Verified on GCRTA's own site 2026-08-27: /routes/blueline and /routes/greenline both read "Customers continuing to the Waterfront Line will need to change trains at Tower City" and both describe service terminating at Tower City Rapid Station, so W. 3rd St. is reached by the Waterfront Line alone and the stored "Blue, Green and" is false; /routes/waterfrontline (HTTP 200) carries the permanent event-only description verbatim, "operates between Tower City and South Harbor Station in the Municipal Parking Lot during Cleveland Browns home games and select major events," which both justifies the line qualifier and confirms sentence three. Re-sourcing is forced because the stadium page returns HTTP 403 to a Chrome UA. I corrected the draft under review on two counts: it substituted a transfer clause ("Blue and Green Line riders change trains at Tower City") that is not on the cited waterfrontline page and that, compressed out of GCRTA's conditional phrasing, tells a rider they can reach W. 3rd St. via Tower City on any day, when the Waterfront Line runs only on the dates the in-force alert lists; deleting "Blue, Green and" is the smaller change, removes no correct information, and leaves sentences two and three to carry the Tower City walk and the gameday operation. Three reviewer notes, all left unedited under minimum change: GCRTA's own station label is "W. 3 (Stadium) Station" (riders-alerts/waterfront-line-service, which also lists the ten 2026-27 operating dates); the postgame "until all passengers have cleared" clause is unverifiable against GCRTA, which publishes fixed per-date end times such as 6:15 pm; and riderta.com/parking/ says free parking at "many" Rapid stations, not all, so the last sentence generalizes slightly.
+
+#### memorial-stadium-clemson (CFB) — would-mislead, both, confidence medium
+
+Prose unchanged.
+
+Lines: `["CATBus"]`
+
+becomes `["CATbus Red Route (home football games, drop-off and pickup on Cherry Rd and Bryan Circle)"]`
+
+Source: https://clemsontigers.com/news/2016/09/26/gameday-guide-louisville-at-clemson becomes https://www.clemson.edu/campus-life/parking/parking-permits/permits/football-permits.html
+
+Evidence: Verified today (HTTP 200, no Last-Modified header): Clemson Parking and Transportation Services states "Clemson Area Transit (CATBus) operates the Red Route during home football games. Due to road closures, the route drop offs and picks up on campus on Cherry Rd and Bryan Circle", so the bare "CATBus" label is replaced by the actual arrangement, a rerouted regular route rather than dedicated game-day service, and the 2016 single-game guide is dropped. Corrected against the reviewed draft on three points: the draft dropped the "picks up" half of the operator sentence (restored, since riders need the return leg), wrote "gamedays" where the operator writes "home football games", and its note that catbus.com redirects to clemsoncity.org/313/Routes-Services was wrong (it 301s to /310/Clemson-Area-Transit-CATbus; /313 lists Red - Central/Clemson under a Route Detours nav, not a roster of four live routes). Casing follows the operator, whose own site uses "CATbus" four times and "CATBus" never, though the cited campus page writes "CATBus". Confidence is medium, not high: the fact is verbatim on a live official page but that page is stamped to the 2025 season (Aug 30 LSU through Nov 22 Furman), no 2026 replacement is published, and the current clemsontigers.com gameday guide mentions no transit at all, so this row should ship flagged as awaiting 2026 confirmation.
+
+#### mercedes-benz-stadium (NFL/MLS) — would-mislead, both, confidence medium
+
+Stored text:
+
+> $2.50 each way; SEC District Station is the preferred arrival/departure stop.
+
+Proposed:
+
+> $2.50 each way, though A-Line fares are not being collected until further notice; SEC District Station is the preferred arrival/departure stop.
+
+Lines: `["MARTA rail — SEC District Station (formerly GWCC/CNN Center; preferred, at stadium doorstep)","MARTA rail — Vine City Station","MARTA Rapid A-Line BRT — South Downtown stop"]`
+
+becomes `["MARTA rail, SEC District Station (formerly GWCC/CNN Center; preferred, at stadium doorstep)","MARTA rail, Vine City Station","MARTA Rapid A-Line BRT, South Downtown stop (A-Line in phase one service, no fare collected, board at posted signs)"]`
+
+Source: https://www.mercedesbenzstadium.com/parking-and-transportation becomes https://itsmarta.com/Aline.aspx
+
+Evidence: Corrects the submitted proposal on three verified points. (1) Scoping the fare to "MARTA rail" is backwards: MARTA's fare page (fare-programs.aspx 301s to itsmarta.com/ride/how-to-pay/fares-and-transfers, fetched today) prices the $2.50 standard one-way for "Rail, Bus, Rapid, and MARTA Reach", so Rapid is also $2.50 and the real corrective fact is Aline.aspx's "Fare will not be collected until further notice." (2) Aline.aspx contains zero occurrences of "South Downtown", and MARTA's explicit shifted-stop list is City Hall, Five Points, Convocation Center, Summerhill, Ormond Street, Peoplestown and Carver, so "(temporary posted stop during construction)" is an inference about that stop rather than an operator statement; the Route A timetable marked EFFECTIVE: 04-18-2026 confirms South Downtown as a named stop and contains no instance of "temporar". (3) The added paragraph is cut back to one clause because the stored $2.50 and the SEC District preference are both still verbatim on the venue page today; the retained qualifiers are operator-verbatim ("The Rapid A-Line is in service", "Fare will not be collected until further notice", "Look for posted signs nearby to board and exit"). Note for the reviewer: Aline.aspx is cited because it carries the corrective fare-waiver fact, but it does not carry $2.50, SEC District or South Downtown, so keeping the venue URL is a defensible alternative if the corrective clause is dropped.
+
+#### milan-puskar-stadium (CFB) — would-mislead, both, confidence medium
+
+Stored text:
+
+> MountainLine stadium shuttle service begins two hours before kickoff and runs at least one hour after the game; cost is $3.00 round trip and children 3 and under ride free. The PRT runs on game days from 9:30 a.m. until one hour after the game and is free of charge.
+
+Proposed:
+
+> MountainLine stadium shuttle service begins two hours before kickoff and runs at least one hour after the game; cost is $3.00 round trip and children 5 and under ride free. The PRT runs on game days from 9:30 a.m. to 5 p.m., plus one hour after any game that ends past 5 p.m., and costs 50 cents for visitors.
+
+Source: https://wvusports.com/news/2025/9/23/football-utah-game-information becomes https://prt.wvu.edu/how-to-ride
+
+Evidence: Verified live today with a Chrome UA: busride.org/Football says "Cost per passenger is $3.00 round trip, children 5 and under ride free" and confirms the unchanged two-hours-before and one-hour-after shuttle timings, so only the number 3 moves to 5; prt.wvu.edu/how-to-ride prices "Everyone Else... visitors, community members" at 50 cents with no game-day exception anywhere on the page, so "free of charge" cannot stand; prt.wvu.edu/hours-of-operation (stamped August 6, 2026) gives Saturday 9:30 a.m. to 5 p.m. and extends service only "one hour after the conclusion of any home football or men's basketball game that extends past normal operating hours," which is load-bearing because the Sept. 12 1 p.m. kickoff ends near the 5 p.m. close and gets no extension. Against the reviewed draft I trimmed two non-minimal additions, the "adjusted hours posted for some dates" clause and the WVU students/faculty/staff free tier (the operator limits that tier to the Morgantown campus, so it misstates Tech, Potomac State and online students), and kept the stored "on game days" rather than "Saturdays" because all seven 2026 home games are Saturdays and the frame change is not needed for truth. Confidence is medium for the citation, not the facts: one source slot cannot carry a two-operator note, so busride.org/Football and prt.wvu.edu/hours-of-operation must join how-to-ride in sources, and note that how-to-ride carries a 2025-09-10 footer stamp that a staleness sweep will re-flag while the hours page is stamped 2026.
+
+#### saban-field-at-bryant-denny-stadium (CFB) — would-mislead, both, confidence high
+
+Stored text:
+
+> Free Crimson Ride shuttle service to the Quad begins at 7 a.m. on game days and concludes 1.5 hours postgame, servicing east campus parking areas (East Campus RV lot, Lot A, Peter Bryce Blvd lots). Off-campus shuttles run from downtown, University Mall and Birmingham (uagameday.com/shuttles).
+
+Proposed:
+
+> Free Crimson Ride shuttle service to the Quad begins at 6 a.m. (11 a.m. kickoff only) on game days and concludes 1.5 hours postgame, servicing east campus parking areas (East Campus RV lot, Lot A, Peter Bryce Blvd lots). Off-campus shuttles run from downtown, University Mall and Birmingham (uagameday.com/shuttles).
+
+Source: https://rolltide.com/news/2022/8/25/football-new-in-2022 becomes https://uagameday.com/shuttles/
+
+Evidence: I fetched https://uagameday.com/shuttles/ today (HTTP 200, article:modified_time 2026-08-06): "The Crimson Ride is FREE for all fans on Gameday, servicing east campus public parking areas... East Campus RV lots, Lot A and parking lots located along Peter Bryce Blvd. Shuttle service to the Quad begins at 6am (11am kickoff only) on gameday and concludes 1.5 hours postgame", and the same page still carries the downtown, University Mall and Birmingham off-campus shuttles the second sentence names; uagameday.com/parking/ (modified 2026-08-21) independently repeats "Shuttles begin at 6 a.m. (11 a.m. kickoff only) on Gameday", and crimsonride.ua.edu points its own Gameday Information link at uagameday.com, making it the operator's authority rather than a team page. The 7 a.m. claim survives only in the 2022 rolltide.com post, so the number changes and the citation moves; against the draft I kept "on game days" (a correct fact the draft deleted) and used UA's verbatim "11 a.m. kickoff only" instead of "for 11 a.m. kickoffs", since dropping "only" lets a rider with a later kickoff read 6 a.m. as a general start time that UA publishes for no other window.
+
+#### sanford-stadium (CFB) — would-mislead, both, confidence medium
+
+Stored text:
+
+> Complimentary shuttle from the Ramsey Center/Rec Sports Complex (East Campus Parking Deck bus area) to Gate 6 of Sanford Stadium before and after games. If overflow parking is used, shuttles also pick up at the Intramural Fields lot off College Station Road. Shuttles run continuously for 5.5 hours before the scheduled game time; return service runs continuously for two hours after the game ends.
+
+Proposed:
+
+> Complimentary S - Stadium Loop shuttle from the Ramsey Center/Rec Sports Complex (East Campus Parking Deck bus area) to Gate 6 of Sanford Stadium before and after games. If overflow parking is used, shuttles also pick up at the Intramural Fields lot off College Station Road. Shuttles begin 3.5 hours before the scheduled game time; return service runs continuously after the game until traffic patterns return to normal, at least one hour.
+
+Lines: `["UGA Campus Transit complimentary gameday shuttle (East Campus Parking Deck/Ramsey Center to Gate 6)"]`
+
+becomes `["UGA Campus Transit S - Stadium Loop complimentary gameday shuttle (East Campus Parking Deck/Ramsey Center to Gate 6)"]`
+
+Source: https://georgiadogs.com/sports/2017/6/16/football-2016gamedaycentral-01 becomes https://tps.uga.edu/parking/football/
+
+Evidence: Verified independently: tps.uga.edu/parking/football/ (Chrome UA, HTTP 200, no redirect, schema dateModified 2026-06-18) reads verbatim "via the S - Stadium Loop bus beginning 3.5 hours before kickoff" and "buses operate continuously after the game until traffic patterns return to normal, at least 1 hour", while the cited georgiadogs URL is confirmed 2016 season ("Football - 2016 Gameday Central", Sept 3 2016 vs UNC) and is the verbatim origin of the false 5.5-hour and two-hour figures; I kept the stored "before the scheduled game time" rather than the drafter's "kickoff" since it denotes the same instant and is the smaller edit, and I kept the drafter's removal of pre-game "continuously", which the 2026 page does not claim. Confidence is medium, not high, because the proposed URL does not carry three retained clauses: "Complimentary" (zero hits there, supported only indirectly by tps.uga.edu/transit/, "fare free and open to the public"), "Ramsey Center/Rec Sports Complex", and "off College Station Road" (found on no live UGA page I could fetch, only the 2016 source), so a reviewer may want to keep the georgiadogs URL as a secondary citation or drop the street name; note also the operator spells the route with an en dash, rendered here as a hyphen per the house dash rule.
+
+#### subaru-park (MLS) — would-mislead, label-edit, confidence high
+
+Stored text:
+
+> Take the SEPTA Wilmington/Newark Regional Rail line to the Chester Transportation Center. A free shuttle runs to Subaru Park every 20 minutes, picking up at the corner of Seaport Drive and Reaney Street (across from Lot D). Additional details in the packet (service beginning four hours prior to game time, Philadelphia Union matches only, show a SEPTA ticket to board, returning shuttles along Front Street / Seaport Drive by the Subaru Gate) appear on the guide and directions pages rather than the cited transportation page.
+
+Proposed:
+
+> Take the SEPTA Wilmington/Newark Regional Rail line to the Chester Transportation Center. A free shuttle runs to Subaru Park every 20 minutes, picking up at the corner of Seaport Drive and Reaney Street (across from Lot D). Additional details in the packet (service beginning four hours prior to game time, Philadelphia Union matches only, show a SEPTA ticket to board, returning shuttles along Seaport Drive on the north side of the stadium) appear on the guide and directions pages rather than the cited transportation page.
+
+Evidence: The club's directions page, fetched today (HTTP 200), states that shuttles returning to the Chester Transportation Center "will be parked along Seaport Drive on the north side of Subaru Park (just west of the intersection of Seaport and Reaney Streets)", and Wayback shows that page replaced its older Front Street wording between 2025-03-22 and 2025-07-30 while only the lagging guide page still carries it, so the Front Street half and its Subaru Gate locator are the stale instruction and drop out. The citation stays on the transportation page because that is the only page carrying this sentence's "every 20 minutes" and "across from Lot D" pickup facts (the directions page contains zero occurrences of either, or of "SEPTA ticket"), and the closing clause names it as the cited page.
+
+#### acrisure-stadium (NFL/CFB) — cosmetic, label-edit, confidence high
+
+Stored text:
+
+> Take the 'T' to Allegheny Station (Allegheny Ave & Reedsdale St) or Northside Station (base of West General Robinson Street Garage); North Shore parking is reserved and pre-sold, downtown parking encouraged.
+
+Proposed:
+
+> Take the 'T' to Allegheny Station (Allegheny Ave & Reedsdale St) or North Side Station (base of West General Robinson Street Garage); North Shore parking is reserved and pre-sold, downtown parking encouraged.
+
+Lines: `["Port Authority 'T' light rail (LRT)"]`
+
+becomes `["Pittsburgh Regional Transit (PRT) 'T' light rail"]`
+
+Evidence: Verified on PRT's own site today: the About Us history states verbatim "In June 2022, Port Authority was rebranded to Pittsburgh Regional Transit", and the How to Ride the Light Rail System page (HTTP 200) lists "Allegheny" and "North Side" as separate stations with zero occurrences of "Northside", so the agency label and that one spelling are the only changes. I reverted the drafter's source swap to PRT: the stored notes never name the operator (the stale name is only in lines[]), and PRT's page carries none of the paragraph's other facts (the 'T' name, Allegheny Ave and Reedsdale St, the West General Robinson Street Garage, the reserved and pre-sold North Shore parking), all of which the live Acrisure A-Z guide does carry, so the citation stays with the venue while PRT stands as the evidence for the line label.
+
+#### arrowhead-stadium (NFL) — cosmetic, both, confidence high
+
+Stored text:
+
+> Bus transportation available through RideKC on the 47 Broadway line; see RideKC.org
+
+Proposed:
+
+> Bus transportation available through RideKC on the 47 Martin Luther King Jr. line; see RideKC.org
+
+Lines: `["RideKC 47 Broadway"]`
+
+becomes `["RideKC 47 Martin Luther King Jr."]`
+
+Source: https://www.gehafieldatarrowhead.com/plan-your-visit/parking-transportation/game-plan becomes https://ridekc.org/getting-around/routes-in-service/47-martin-luther-king-jr/
+
+Evidence: Verified independently today: the RideKC route page returns HTTP 200 with title and H1 "47 - Martin Luther King Jr.", contains zero occurrences of "Broadway", lists no Broadway route anywhere on its 49-route system roster, and the legacy slug /47-broadway/ returns 404, so the stored name sends a fan searching RideKC.org to nothing. The same page carries the venue relevance in the operator's own words, "daily service from KU Medical Center, to the Country Club Plaza, along Martin Luther King to the stadium area", plus timetable timepoints "ON BLUE RIDGE CUT OFF AT 38TH TERR NB/SB" and a route-specific point of interest for Kauffman Stadium at the Truman Sports Complex, and the stored stadium URL 301s to arrowheadstadiumkc.com where the page still prints the retired "47 Broadway", making it the origin of the error and the operator the naming authority. Reviewer caveat: RideKC's own points-of-interest page shows "No nearby routes available." for "Kansas City Chiefs and GEHA Stadium, 1 Arrowhead Dr" while listing the 47 for Kauffman at 1 Royal Way, though that same entry's prose says RideKC connections help fans access the Truman Sports Complex, so the empty widget contradicts its own page and does not contradict any word of the proposed text.
+
+#### great-american-ball-park (MLB) — cosmetic, both, confidence high
+
+Stored text:
+
+> The Cincinnati Bell Connector streetcar runs a 3.6-mile loop connecting The Banks, Downtown and Over-the-Rhine; it is free to ride and Station 1 at The Banks is just steps from the ballpark. Cincinnati Metro buses serve Hamilton County; the Transit Authority of Northern Kentucky (TANK) provides bus service to and from Northern Kentucky; ACCESS provides transportation for guests with disabilities.
+
+Proposed:
+
+> The Connector streetcar runs a 3.6-mile loop connecting The Banks, Downtown and Over-the-Rhine; it is free to ride and Station 1 at The Banks is just steps from the ballpark. Cincinnati Metro buses serve Hamilton County; the Transit Authority of Northern Kentucky (TANK) provides bus service to and from Northern Kentucky; ACCESS provides transportation for guests with disabilities.
+
+Lines: `["Cincinnati Bell Connector (streetcar)","Cincinnati Metro (bus)","Transit Authority of Northern Kentucky (TANK)"]`
+
+becomes `["The Connector (streetcar)","Cincinnati Metro (bus)","Transit Authority of Northern Kentucky (TANK)"]`
+
+Source: https://www.mlb.com/reds/ballpark/transportation becomes https://www.cincinnati-oh.gov/streetcar/
+
+Evidence: Verified live 2026-08-27 (HTTP 200, Chrome UA): the operator brands it "The Connector" in the page title, H1, breadcrumb schema, nav and body prose ("The Connector is an electric-powered streetcar that operates along a 3.6-mile loop... It is free to ride"), and the hub's other stored source, mlb.com/reds/ballpark/information/guide, has already dropped the sponsor name itself ("The Connector is an electric mode of streetcar transportation operating on a 3.6-mile loop"), so operator and club now agree and the edit is a single 16-character deletion of "Cincinnati Bell" with no other fact touched. The loop wording "The Banks, Downtown and Over-the-Rhine" re-confirms verbatim on the operator's route page, https://www.cincinnati-oh.gov/streetcar/how-to-ride/hours-route-and-station-stops/, which also lists Great American Ball Park as a popular destination. IMPORTANT, the operator URL must be ADDED to sources, not substituted for the current one: mlb.com/reds/ballpark/transportation is the only page anywhere that supports the "Station 1 at The Banks" clause (the operator says "There are 18 stations" and never numbers them) and only the guide page supports Metro, TANK and ACCESS (the transportation page carries none of the three), so both Reds URLs must stay; the operator homepage's head metadata still reads "Cincinnati Bell ... 4-mile loop", unmaintained boilerplate contradicted by its own visible 3.6-mile copy, and a stale 2020 flyer image on the fares page keeps the old name in an alt attribute.
+
+#### kauffman-stadium (MLB) — cosmetic, label-edit, confidence high
+
+Stored text:
+
+> The 47 Broadway serves Kauffman Stadium 7 days a week to Royals games and back; schedules at ridekc.org or 816-221-0660.
+
+Proposed:
+
+> The 47 Martin Luther King Jr. serves Kauffman Stadium 7 days a week to Royals games and back; schedules at ridekc.org or 816-221-0660.
+
+Lines: `["47 Broadway (RideKC bus)"]`
+
+becomes `["47 Martin Luther King Jr. (RideKC bus)"]`
+
+Source: https://www.mlb.com/royals/ballpark/information/guide becomes https://ridekc.org/getting-around/routes-in-service/47-martin-luther-king-jr/
+
+Evidence: Verified on the operator page (HTTP 200): RideKC names the route "47 - Martin Luther King Jr.", its prose reads "a bi-state route with daily service ... along Martin Luther King to the stadium area", it lists "Kansas City Royals and Kauffman Stadium" under its points of interest, and the footer prints Customer Service 816.221.0660; the ?service=saturday and ?service=sunday tabs return real timetables carrying the same Truman Sports Complex timepoints (BLUE RIDGE CUT OFF AT 38TH TERR, NB and SB, plus US 40 nearside Sterling) in both directions, so "7 days a week ... and back" is confirmed for all seven days, not just inferred from the word daily. The citation moves off the Royals ballpark guide because that page is where the retired name originates (it still reads "The 47 Broadway serves Kauffman Stadium 7 days a week") and RideKC's legacy slug /routes-in-service/47-broadway/ returns 404 with no redirect; the edit is a single token substitution, with the frequency, the phone number and every other clause byte-identical.
+
+#### nrg-stadium (NFL) — cosmetic, label-edit, confidence high
+
+Stored text:
+
+> Exit at NRG Park Station off Fannin and enter Gate 2. From IAH airport take METRO 500 IAH Express to downtown then transfer to Red Line. METRO info 713-225-0119; 100% accessible with METROLift paratransit.
+
+Proposed:
+
+> Exit at Stadium Park / Astrodome Station off Fannin and enter Gate 2. From IAH airport take METRO 500 Downtown Direct to downtown then transfer to Red Line. METRO info 713-225-0119; 100% accessible with METROLift paratransit.
+
+Source: https://www.nrgpark.com/plan-your-visit/ becomes https://www.ridemetro.org/riding-metro/houston-attractions/reliant-park
+
+Evidence: METRO's attraction page for the venue (fetched today, HTTP 200; its /nrg-park URL now resolves to /reliant-park) names the stop "Stadium Park / Astrodome Station" and the "METRORail Red Line" at every 6-12 min with extra Texans game-day trains, and METRO's /transit-services/metrorail page independently lists it as "R2 - Stadium Park / Astrodome"; the route rename is verified on METRO's own live route page /park-and-ride-bus/route-details/500-downtown-direct, branded "500 DOWNTOWN DIRECT" and still serving IAH, since the cited attraction page carries zero occurrences of "IAH" or "Downtown Direct". I rejected the proposed 713-635-4000 phone swap: ridemetro.org/contact lists 713-225-0119 as METRO's own "METROLift Customer Service and Eligibility" line, so the stored number is correct and service-appropriate for this METROLift sentence, and "Gate 2" and "off Fannin" appear on no METRO page and stay sourced to the venue.
+
+#### rose-bowl-stadium (CFB) — cosmetic, label-edit, confidence high
+
+Stored text:
+
+> Take the Metro Gold Line and exit at Memorial Park Station in Pasadena; from there walk approximately 2.4 miles to the stadium or purchase a Rose Bowl Shuttle pass. Metrolink trains arrive into Union Station where passengers transfer to the Metro Gold Line.
+
+Proposed:
+
+> Take the Metro A Line and exit at Memorial Park Station in Pasadena; from there walk approximately 2.4 miles to the stadium or purchase a Rose Bowl Shuttle pass. Metrolink trains arrive into Union Station where passengers transfer to the Metro A Line.
+
+Lines: `["Metro Gold Line (exit at Memorial Park Station, Pasadena)","Metrolink (arrives Union Station; transfer to Metro Gold Line)"]`
+
+becomes `["Metro A Line (exit at Memorial Park Station, Pasadena)","Metrolink (arrives Union Station; transfer to Metro A Line)"]`
+
+Source: https://uclabruins.com/gameday-information becomes https://www.metro.net/destinations/rose-bowl/
+
+Evidence: Rename verified, citation corrected: the submitted source, metro.net/riding/schedules/, contains zero occurrences of "Memorial Park" and so does not carry the station or transfer facts this copy asserts (those counts came from the linked timetable PDF, whose dated CDN filename rotates each service change), whereas Metro's own venue page at metro.net/destinations/rose-bowl/ (HTTP 200, no redirect, fetched today) states "Ride the Metro A Line. Exit Memorial Park Station.", names Memorial Park Station five times, lists "A Line Union Station $8" under park and ride, and says "Gold" nowhere. Reviewer note on two clauses left unchanged under the minimal-change rule: the same Metro page says "Walk 1.5 miles through the scenic Arroyo Seco trail" against the retained 2.4 miles, and calls the shuttle the "Foothill Transit Rose Bowl Shuttle" that "is free" against the retained "purchase a Rose Bowl Shuttle pass", so the UCLA gameday page should stay as a secondary citation for those two, or they should be resolved separately.
+
+#### soldier-field (MLS/NFL) — cosmetic, both, confidence medium
+
+Prose unchanged.
+
+Lines: `["CTA Red Line","CTA Green Line","CTA Orange Line (Roosevelt Station)","CTA Bus 146 Inner Drive/Michigan Express","CTA Bus 130 Museum Campus (Memorial Day-Labor Day)","Metra (18th Street Station)"]`
+
+becomes `["CTA Red Line","CTA Green Line","CTA Orange Line (Roosevelt Station)","CTA Bus 146 Inner Lake Shore/Michigan Express","CTA Bus 130 Museum Campus (Memorial Day-Labor Day)","Metra (18th Street Station)"]`
+
+Source: https://www.soldierfield.com/plan-your-visit/directions-parking becomes https://www.soldierfield.com/plan-your-visit/directions
+
+Evidence: Verified today: the venue's live Directions page (HTTP 200, sitemap lastmod 2026-08-06) carries every fact in the unchanged prose, namely Red/Green/Orange at Roosevelt with a "3/4 mile walk to stadium entrance", the 146 connection from Roosevelt Station to the stadium entrance on McFetridge Drive, "From Memorial Day to Labor Day, CTA bus route #130 Museum Campus", and "Metra's Soldier Field stop is the 18th Street Station, a short walking distance", while the stored directions-parking URL is retired (404 titled "Page Not Found | Soldier Field" under a Googlebot UA, HTTP 406 with an empty body under a Chrome UA, and absent from the sitemap). The lines label is the only change: CTA's live routes API (HTTP 200, TimeStamp 2026-08-27T17:02:57) returns ServiceId 146 as "Inner Lake Shore/Michigan Express", and CTA's ridership dataset shows that name replacing "Inner Drive" from December 2021 onward through June 2026. Reviewer caveat, and the reason confidence is not high: this proposed source does not itself support the renamed label, because the venue page still prints the retired "Inner Drive", and CTA's own route page at transitchicago.com/bus/146/ returns HTTP 403 to automated fetch, so the label edit needs the CTA routes-API citation carried alongside the venue URL rather than in place of it (repointing wholly to CTA would leave all five prose facts uncited).
+
+#### wrigley-field (MLB) — cosmetic, both, confidence high
+
+Prose unchanged.
+
+Lines: `["CTA Red Line (Addison station)","CTA Bus #152 (Addison)","CTA Bus #22 (Clark)","CTA Blue Line (from O'Hare, transfer to #152 bus)","CTA Orange Line (from Midway)","CTA Yellow Line / Skokie Swift (from northern suburbs)","CTA Purple Line (from Wilmette)","CTA Brown Line (from LaSalle/downtown)"]`
+
+becomes `["CTA Red Line (Addison station)","CTA Bus #152 (Addison)","CTA Bus #22 (Clark)","CTA Blue Line (from O'Hare, transfer to #152 bus)","CTA Orange Line (from Midway)","CTA Yellow Line / Skokie Swift (from northern suburbs)","CTA Purple Line (from Wilmette)"]`
+
+Source: https://northsidebaseball.com/chicago-cubs-guides-resources/ultimate-fan-guide-wrigley-field-chicago/ becomes https://www.mlb.com/cubs/ballpark/information/guide
+
+Evidence: I fetched the Cubs guide (HTTP 200) and it carries all three stored notes sentences verbatim, so the prose needs no change, and it independently carries seven of the eight lines (Red Line at Addison, buses 152 and 22 at Clark & Addison, Blue Line toward Forest Park to Addison then eastbound 152, Orange Line to a Roosevelt Red Line transfer, and Skokie Swift/Yellow plus Purple from Linden, Wilmette). The original proposal's claim that nothing in the lines moves is wrong: the guide contains no occurrence of "brown", "LaSalle", "Van Buren" or "Fullerton" in any case, so "CTA Brown Line (from LaSalle/downtown)" survives only on the northsidebaseball page being retired, and the City of Chicago CTA "L" stops dataset places Addison (Brown Line) 1.08 miles west of the Addison (Red Line) stop at Wrigley, making a bare Brown Line label under "Addison station" a wrong-platform hazard. Dropping that one entry is the minimum that leaves every remaining line carried by the sole cited source; the retirement itself is sound, since my own fetch of northsidebaseball still routes Midway riders to Lake/State (closed since 2026-01-05, reopening 2029) and still gives the pre-2026 remote lot at 3900 N. Rockwell with a one-hour return shuttle against the guide's 4650 N. Clarendon Ave. and 90 minutes. If a reviewer wants a downtown option back, it should be re-added naming the Fullerton transfer to the Red Line and cited to CTA directly, not to the Cubs guide.
+
+### C. 7 rows still unassigned
+
+These fall outside both sets. They were graded would-mislead rather than would-strand, so they were not silenced, and their classification recommended silencing or leaving rather than an edit, so no copy proposal was drafted for them. They need a call: silence them, commission a copy proposal like the ones above, or leave them and re-check after the season settles.
+
+| Hub | League | Class | Recommended | What is uncertain |
+| --- | --- | --- | --- | --- |
+| alumni-stadium | CFB | temporary-disruption | leave | All three MBTA branches run to BC, Cleveland Circle and Reservoir/Riverside as described; what is in doubt is downtown access on two home dates, since alert 1028281 suspends Green Line service between North Station and Babcock St (B) or Kenmore (C, D) on Sept 19-20, the Maine game, and the alert tex |
+| camp-randall-stadium | CFB | stale-description | leave | Bucky Shuttle (GO Riteway) is confirmed still running from Lots 60/64/76 at $10 round-trip, but two UW pages disagree on where Lot 64 riders board: the athletics shuttle page we cite says the metro bus stop on Observatory Drive, while UW's newer 2025 Football Parking & Transportation Map says the me |
+| everbank-stadium | NFL | stale-description | silence | JTA's Gameday Xpress is confirmed running the 2026 Jaguars season, but JTA's 2026 page and its 2026-stamped maps contain no Lot Z, Parker St, Lot C or Connexion at all — every pickup lot now unloads at one lot adjacent to the East gates, with all ADA pickup/drop-off at Lot B — and JTB Park-n-Ride is |
+| jack-trice-stadium | CFB | stale-description | silence | CyRide #3 Blue runs unchanged, but its current Saturday timetable (season-stamped Aug 17 2026 to May 14 2027) publishes a timepoint literally named 'Jack Trice Stadium' three stops past Lincoln Way & Beach, which sits about 1.5 miles away at the north edge of campus, so the operator contradicts our  |
+| lane-stadium | CFB | stale-description | silence | Blacksburg Transit's 2026 football page still says game-day details "will be posted before the first game" (last updated 1/23/26), so the expanded schedule and postgame CAS routing in our notes are unconfirmed for 2026; meanwhile BT's Fall 2026 schedules contradict two stored claims outright, since  |
+| neyland-stadium | CFB | stale-description | silence | KAT still runs buses from the Civic Coliseum garages to Neyland in 2026, but not on the terms we publish: KAT's current football page reclassifies it as a $30-per-vehicle park-and-ride that includes the ride and tells riders "Do not purchase a mobile football shuttle pass", so our "$10 round trip pe |
+| simmons-bank-liberty-stadium | CFB | stale-description | silence | The $10 University of Memphis Park & Ride shuttle still runs, but Memphis Athletics' Oct 2, 2025 traffic release gives it a named operator (Blue City Tours), moves the stadium-end drop-off to outside Gate 6 on Glenn Rogers, Sr. Street, and adds a free MATA shuttle to Early Maxwell/Central, which fla |
+
+### What to watch when applying
+
+Nine of the 21 move the citation off a team or venue page and onto the transit operator. That is the right direction, since the operator is the naming authority and several of these venue pages are themselves the origin of the retired name (the Royals guide still prints "47 Broadway", the Arrowhead page the same). It does mean the source no longer carries the venue-specific clauses in the same paragraph, so the per-field provenance rule is satisfied for the transit fact while the surrounding detail traces to the venue page. Two proposals kept the venue citation for exactly that reason (acrisure-stadium, where only the line label was wrong).
