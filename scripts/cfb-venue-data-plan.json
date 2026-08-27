@@ -1,0 +1,34 @@
+[
+ {
+  "hub": "secu-stadium",
+  "note": "Maryland transit: ruling 2026-08-27, DOTS operates Shuttle-UM and is authoritative; stored window was stale. Removes the CONDENSED_HOLDS entry in the same change.",
+  "fields": [
+   {
+    "path": "publicTransit.notes",
+    "overwrite": true,
+    "source": "https://transportation.umd.edu/parking/athletics-parking/football",
+    "value": "Quickbus is Shuttle-UM's free service that transports you from your parking lot or the College Park Metro Station to Maryland Stadium. Quickbus operates from three hours prior to kickoff until one hour after the final whistle. All loops drop off and pick up at Cumberland Hall circle, which is a 7-minute (0.3 mile) walk to the stadium, and buses are available at this location during the game and after the game for your return trip. Buses on each loop are a mixture of ADA accessible and non-ADA accessible vehicles; paratransit service is offered to accommodate all guests."
+   },
+   {
+    "path": "publicTransit.lines",
+    "overwrite": true,
+    "source": "https://transportation.umd.edu/parking/athletics-parking/football",
+    "value": [
+     "Quickbus (Shuttle-UM free gameday shuttle)"
+    ],
+    "note": "value unchanged; re-sourced to DOTS, which names Quickbus as Shuttle-UM's free service"
+   }
+  ]
+ },
+ {
+  "hub": "michie-stadium",
+  "note": "Army verifyNotes correction; extracted fields are appended by the extraction step.",
+  "fields": [
+   {
+    "path": "verifyNotes",
+    "overwrite": true,
+    "value": "Official sources exist (Pass 2, 2026-08-27): armygameday.com is the Army West Point Athletic Association's operator gameday site (parking, shuttles, tailgating, accessibility, directions, bag policy) and goarmywestpoint.com/news/2026/8/25/athletics-michie-stadium-preserved-by-usaa-to-implement-clear-bag-policy-enhanced-security-screening-for-ticketed-events carries the 2026 clear bag policy, gates and outside-food rules; westpoint.edu/gateway-for-visitors carries visitor access. Fields below were extracted from those pages with a per-field source (audit/cfb-venue-sourcing-report.md section 8). The doc-level verified flag is unchanged by this pass. | SUPERSEDED 2026-08-27, kept for the record, the claim was false: HELD verified=false: athletics source too thin (access-restricted academy / sparse site); needs targeted re-scrape. | All four dumps read/grepped. fu00 (SeatGeek Army ticket page) contains only generic, hedged FAQ boilerplate about college football broadly — 'Tailgating or parking near campus is often allowed... Policies vary by school' (L695), 'grilling gear (if allowed)' (L686), 'most stadiums recommend arriving 90 minutes to 2 hours before kickoff' (L674), 'most require one parking pass per vehicle' (L738). None of this is an affirmative, Michie-specific policy statement; all are 'varies/check local rules' disclaimers, so none supports a fact. L472 marketing prose ('spirited tailgating', 'seats over 38,000') is descriptive color, not a logistics policy. L203/L736-738 'Parking' tab is a SeatGeek resale marketplace, not an official venue parking URL. fu01 (goarmywestpoint home), fu02 (Navy opponent history), fu03 (2026 schedule news) carry zero gameday logistics — only nav links to ArmyGameday.com/michiestadium.com, which were not fetched. No parking lots, transit lines, bag policy, gate times, tailgating rules, or accessibility affirmatively stated anywhere. Extractor's all-null output verified correct: no boolean was set false from silence, and no policy exception was mistaken for policy absence. Nothing to reject or repair."
+   }
+  ]
+ }
+]

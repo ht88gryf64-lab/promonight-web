@@ -173,9 +173,9 @@ test('the conflicts and holds lists silence the named field on the named hub and
     ['brooks-stadium', 'tailgating'], ['david-booth-kansas-memorial-stadium', 'tailgating'], ['hard-rock-stadium', 'tailgating'], ['yulman-stadium', 'tailgating'],
   ];
   assert.deepEqual(CONDENSED_CONFLICTS.map((c) => [c.hub, c.field, c.sub ?? null]), [...wholeLine.map(([h, f]) => [h, f, null]), ['kidd-brewer-stadium', 'parking', 'officialParkingUrls']]);
-  assert.deepEqual(CONDENSED_HOLDS.map((c) => [c.hub, c.field, c.sub ?? null]), [['secu-stadium', 'transit', null]]);
+  assert.deepEqual(CONDENSED_HOLDS.map((c) => [c.hub, c.field, c.sub ?? null]), [], 'no holds after the Pass 2 Maryland write');
   for (const e of [...CONDENSED_CONFLICTS, ...CONDENSED_HOLDS]) assert.ok(e.reason.length > 60, `${e.hub}: every exclusion carries its reason`);
-  for (const [slug, field] of [...wholeLine, ['secu-stadium', 'transit'] as [string, CondensedField]]) {
+  for (const [slug, field] of [...wholeLine, ...CONDENSED_HOLDS.map((h) => [h.hub, h.field] as [string, CondensedField])]) {
     const keys = buildCondensedLogistics(hub({ slug }), 'x').map((l) => l.key);
     assert.ok(!keys.includes(field), `${slug}: ${field} must stay silent`);
     assert.equal(keys.length, 9, `${slug}: only ${field} is withheld`);

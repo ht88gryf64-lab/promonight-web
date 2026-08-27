@@ -96,11 +96,9 @@ export const CONDENSED_CONFLICTS: ReadonlyArray<CondensedExclusion> = [
  *  queued. The field stays silent until the correction lands; the entry is
  *  deleted with that write. */
 export const CONDENSED_HOLDS: ReadonlyArray<CondensedExclusion> = [
-  {
-    hub: 'secu-stadium',
-    field: 'transit',
-    reason: 'Maryland: the stored Quickbus window (paused from 30 minutes after kickoff until halftime) is STALE, not disputed. The research pass found umterps.com (2026-dated) and transportation.umd.edu disagreeing on the mid-game gap; ruling 2026-08-27 (report section 4): DOTS operates Shuttle-UM, so DOTS is authoritative over the athletics page, and it publishes a continuous window from three hours before kickoff to one hour after the final whistle. Pass 2 corrects publicTransit.notes to the DOTS window and re-sources it to DOTS; delete this entry with that write.',
-  },
+  // secu-stadium transit was held here from 2026-08-27 until the Pass 2 write
+  // corrected publicTransit.notes to the DOTS window and re-sourced it to
+  // transportation.umd.edu (scripts/cfb-venue-data-plan.json).
 ];
 
 // Texas A&M (kyle-field) tailgating.rvPolicy is unconfirmed (on no 12thman.com
