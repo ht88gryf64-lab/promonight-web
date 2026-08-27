@@ -1608,3 +1608,32 @@ These fall outside both sets. They were graded would-mislead rather than would-s
 ### What to watch when applying
 
 Nine of the 21 move the citation off a team or venue page and onto the transit operator. That is the right direction, since the operator is the naming authority and several of these venue pages are themselves the origin of the retired name (the Royals guide still prints "47 Broadway", the Arrowhead page the same). It does mean the source no longer carries the venue-specific clauses in the same paragraph, so the per-field provenance rule is satisfied for the transit fact while the surrounding detail traces to the venue page. Two proposals kept the venue citation for exactly that reason (acrisure-stadium, where only the line label was wrong).
+
+## 15. Section 14 applied, six more silenced, verified at render
+
+Executed 2026-08-27. Restore point for this write: `scripts/snapshots/cfb-venue-data-pre-2026-08-27T22-22-38-067Z.json`. Dry run before executing read 35 fields, 24 overwrites, 2 identical, 0 refused; all 20 hubs wrote in one pass with no partial failure; the closing dry run reads 0 to write, 37 identical.
+
+**Applied: 20 of the 21 proposals.** Six renames (47 Broadway to 47 Martin Luther King Jr. at Arrowhead and Kauffman, Metro Gold Line to Metro A Line at the Rose Bowl, Cincinnati Bell Connector to The Connector, Port Authority to Pittsburgh Regional Transit, NRG Park Station to Stadium Park / Astrodome with 500 IAH Express to 500 Downtown Direct). Five substantive corrections (Boone Pickens shuttle window, Milan Puskar PRT hours and fare, Sanford shuttle timing and route name, Alabama Crimson Ride start time, Subaru Park return-shuttle location). Three citation-only re-sources, plus line-array corrections at Soldier Field, Clemson, Wrigley, Coca-Cola Coliseum and Mercedes-Benz.
+
+**Huntington Bank Field was silenced instead of relabelled.** GCRTA publishes the Waterfront Line as event-only, running Tower City to South Harbor for Browns home games and select major events, and its Blue and Green Line pages both say riders continuing to the Waterfront Line change trains at Tower City. The proposed copy corrected the station list but carried the event-only qualifier **only in the lines array**, and the condensed block renders a first sentence, so a surface could show the service name without the restriction that makes it true. The ruling was silence unless every surface can carry the qualifier; it cannot, so it is silenced.
+
+**Six more silenced, 38 in total**: huntington-bank-field plus everbank-stadium, jack-trice-stadium, lane-stadium, neyland-stadium and simmons-bank-liberty-stadium. alumni-stadium and camp-randall-stadium are left as recommended, to be re-checked after the season settles.
+
+### Verified at render, entry 33 both modes
+
+**Mode 1, served HTML, cache-busting fetch.**
+
+- The six newly silenced venue pages: Transit row absent, TRANSIT chip absent, all 200. Getting-in cards keep 5 to 17 rows. `simmons-bank-liberty-stadium` shows no card at all, but it is `verified: false` and every Getting-in row gates on that flag, so its card was already empty and nothing changed.
+- The 20 edited venue pages serve the corrected text: 19 of 20 matched on the first check. The exception is `sanford-stadium`, which serves no transit row because the building is `verified: false` and the venue page gates transit on it. Its corrected copy renders where it actually reaches readers, `/cfb/georgia`, which serves "Complimentary S - Stadium Loop shuttle from the Ramsey Center/Rec Sports Complex". No stale string survives on any edited page.
+- CFB pages carrying edited copy all serve it: georgia 9 lines, alabama 9, oklahoma-state 8, west-virginia 10, texas-am 9, clemson 8, ucla 9, arizona 9.
+- CFB pages on the newly silenced hubs: tennessee 8, iowa-state 6, virginia-tech 7, memphis 8, none carrying a Transit line, **none below the three-line minimum**. Across all 38 suppressed buildings, 21 CFB pages lose a Transit line and the lowest is `/cfb/miami` at 4.
+
+**Mode 2, hydration.** Zero hidden duplicates everywhere: cfb/tennessee 8 of 8, cfb/georgia 9 of 9, cfb/alabama 9 of 9, cfb/memphis 8 of 8, venues/neyland-stadium 8 of 8, venues/kauffman-stadium 10 of 10, venues/rose-bowl-stadium 11 of 11, venues/huntington-bank-field 7 of 7, /nfl 81 of 81.
+
+**A verification trap worth recording.** The first hydration run reported `total=0 visible=0 hidden=0` with exit code 0 on every page, which reads as a clean pass. The pages had not loaded at all: the preview share token was missing from the URL, so Puppeteer was measuring the SSO login page. **A zero-element result and a no-duplicates result are indistinguishable in that output.** Any hydration check whose element count is zero has proved nothing; assert a non-zero count before believing the hidden count, the same way the `<strong>Transit.</strong>` row check earlier needed a control page to show it could match at all.
+
+### Two script defects the plan forced out
+
+**A shared provenance key, the same shape as the failure in section 12's write.** `publicTransit.notes` and `publicTransit.lines` both derive their provenance to the single flat `sources.publicTransit`, so a naive plan would have submitted that path twice and been rejected exactly as `sources.gatesOpen` was. The fix is an explicit `sourceKey` override in the plan format: the collapse is now deliberate rather than incidental, and it also avoids writing dotted keys that would leave the flat key pointing at the superseded URL.
+
+**A TLD whitelist rejecting a real operator.** The source validator required a `.edu`, `.com`, `.org`, `.gov` or `.net` host and refused `ttc.ca`, the Toronto Transit Commission. Whether a host is authoritative is a research judgment recorded in this report, not something a regex can decide, so the validator now only checks that a source is an http(s) URL with a real host.
