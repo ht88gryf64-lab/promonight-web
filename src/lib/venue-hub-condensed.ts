@@ -9,6 +9,23 @@
 // field with no source stays silent. "No CFB data goes live before we love
 // it", applied per field.
 //
+// PROVENANCE GRAIN (2026-08-27, audit/cfb-venue-sourcing-report.md section 2):
+// venueHubs.sources carries two conventions. Most hubs vouch for a whole
+// field with a flat key (sources.tailgating, sources.publicTransit, overlay
+// sources.gatesOpen). Twenty-one hubs vouch per sub-field with dotted keys
+// (sources["tailgating.rules"], ["tailgating.timeWindow"],
+// ["publicTransit.notes"], ["publicTransit.lines"], overlay
+// ["gatesOpen.ruleText"]). Both are provenance. A sub-field renders when its
+// own dotted key OR its field's flat key is present; a sub-field with neither
+// stays silent even when a sibling sub-field is sourced. The data is right at
+// the sub-field grain; nothing here writes flat aliases to catch up.
+//
+// EXCLUSIONS: a field whose stored text an official source contradicts
+// (CONDENSED_CONFLICTS) or whose stored text is known stale pending a data
+// correction (CONDENSED_HOLDS) stays silent on the school page even when it is
+// populated and sourced. Both lists are explicit, keyed by hub slug, with the
+// reason per entry, so each can be revisited and deleted.
+//
 // Text is never paraphrased: gate times and bag dimensions are the stored
 // values, prose fields are their first stored sentence (leadSentences), lots
 // are their stored names.
@@ -26,8 +43,73 @@ export interface CondensedLine {
   hrefLabel: string | null;
 }
 
+export interface CondensedExclusion {
+  /** venueHubs doc id. */
+  hub: string;
+  field: CondensedField;
+  /** Why the field is silent, specific enough to re-check without the report. */
+  reason: string;
+}
+
+/** CONFLICTS (audit/cfb-venue-sourcing-report.md section 4, verified
+ *  2026-08-27). The stored text is populated and sourced, and an official page
+ *  contradicts it. The rule for conflicts is report-and-hold: the stored text
+ *  is not rewritten to match, no source is attached, and the field stays off
+ *  the school page. The venue page still renders these fields (it gates on
+ *  the doc-level verified flag, not per field). To lift an entry: correct the
+ *  data from the official page named here, then delete the entry. */
+export const CONDENSED_CONFLICTS: ReadonlyArray<CondensedExclusion> = [
+  {
+    hub: 'brooks-stadium',
+    field: 'tailgating',
+    reason: 'Coastal Carolina: rules and the two-hour lot-open window come from the 2020 COVID-season guide (goccusports.com/sports/2020/9/17/CAFgameday); the current 2026 parking page (goccusports.com/sports/2026/8/17/2025-football-parking) and the 2025 Know Before You Go articles contradict both.',
+  },
+  {
+    hub: 'david-booth-kansas-memorial-stadium',
+    field: 'tailgating',
+    reason: 'Kansas: the permitted-lot list on the cited 704G page is superseded (policy.ku.edu removed lots 33 and 50 in 2016; parking.ku.edu says tailgating is prohibited in lots 34 and 61) and the stored rules text is truncated mid-list ("96, and ...").',
+  },
+  {
+    hub: 'hard-rock-stadium',
+    field: 'tailgating',
+    reason: 'Miami: stored rules say blue/orange pass holders park where they wish in the first hour; hardrockstadium.com/stadium-policy (2026-08-11) and faq-items/tailgating-guidelines say orange only and never mention blue.',
+  },
+  {
+    hub: 'yulman-stadium',
+    field: 'tailgating',
+    reason: 'Tulane: stored rules are a 2025 capture ("only tailgating location for the 2025 season", Lagniappe/Beaucoup packages); the cited page (tulanegreenwave.com/sports/2019/7/29/tailgating-2019) was rewritten for 2026 with a different season statement and package list.',
+  },
+  {
+    hub: 'kidd-brewer-stadium',
+    field: 'parking',
+    reason: 'Appalachian State: the stored officialParkingUrls entry (mountaineersathleticfund.com/yosef-club/renewals/index.html) returns 403; the 2025 fan guide body links the live mountaineersathleticfund.com/yosef-club/index.html#season-tickets-parking instead.',
+  },
+];
+
+/** HOLDS. Not conflicts: the stored text is not disputed between official
+ *  sources, it is known stale and a data correction is queued. The field stays
+ *  silent until the correction lands; the entry is deleted with that write. */
+export const CONDENSED_HOLDS: ReadonlyArray<CondensedExclusion> = [
+  {
+    hub: 'secu-stadium',
+    field: 'transit',
+    reason: 'Maryland: the stored Quickbus window (paused from 30 minutes after kickoff until halftime) is STALE, not disputed. DOTS operates Shuttle-UM and is authoritative over the athletics page; transportation.umd.edu publishes a continuous window from three hours before kickoff to one hour after the final whistle. Pass 2 corrects publicTransit.notes to the DOTS window and re-sources it to DOTS; delete this entry with that write.',
+  },
+];
+
+// Texas A&M (kyle-field) tailgating.rvPolicy is unconfirmed (on no 12thman.com
+// tailgating page). It needs no entry: the block renders the rules and
+// timeWindow sentences only, never grillRules or rvPolicy. If rvPolicy ever
+// joins the line, gate kyle-field here first.
+
 const has = (s: string | null | undefined): s is string => typeof s === 'string' && s.trim().length > 0;
 const prov = (sources: Record<string, string> | undefined, key: string): boolean => !!sources && has(sources[key]);
+/** Provenance for one sub-field: its own dotted key, or the flat key that
+ *  vouches for the whole field. */
+const subProv = (sources: Record<string, string> | undefined, field: string, sub: string): boolean =>
+  prov(sources, `${field}.${sub}`) || prov(sources, field);
+const excluded = (hubSlug: string, field: CondensedField): boolean =>
+  CONDENSED_CONFLICTS.some((c) => c.hub === hubSlug && c.field === field) || CONDENSED_HOLDS.some((h) => h.hub === hubSlug && h.field === field);
 /** House rule at render, never in the record: the stored text is the sourced
  *  value and is not edited, but an em dash in served copy is out. A spaced or
  *  bare em dash becomes a comma; one that follows punctuation becomes a space
@@ -49,15 +131,15 @@ export function buildCondensedLogistics(hub: VenueHub, tenantId: string): Conden
   const s = hub.sources ?? {};
   const lines: CondensedLine[] = [];
 
-  // Gates: the tenant's own overlay, its own provenance.
+  // Gates: the tenant's own overlay, its own provenance (gatesOpen.ruleText or gatesOpen).
   const overlay = hub.tenantOverlays.find((t) => t.teamId === tenantId);
-  if (overlay?.gatesOpen && has(overlay.gatesOpen.ruleText) && prov(overlay.sources, 'gatesOpen')) {
+  if (overlay?.gatesOpen && has(overlay.gatesOpen.ruleText) && subProv(overlay.sources, 'gatesOpen', 'ruleText') && !excluded(hub.slug, 'gates')) {
     lines.push({ key: 'gates', label: 'Gates', text: sentence(overlay.gatesOpen.ruleText), href: null, hrefLabel: null });
   }
 
   // Bag policy: the stored dimensions verbatim, or the stored boolean, or the
   // first sentence of the notes. Each fact needs its own key present.
-  {
+  if (!excluded(hub.slug, 'bag')) {
     const dims = dimsString(hub.bagMaxDimensions);
     let text: string | null = null;
     if (dims && prov(s, 'bagMaxDimensions')) text = `${hub.clearBagRequired === true && prov(s, 'clearBagRequired') ? 'Clear bag' : 'Max bag'} ${dims}.`;
@@ -69,7 +151,7 @@ export function buildCondensedLogistics(hub: VenueHub, tenantId: string): Conden
   }
 
   // Parking: lot names only with sources.parkingLots; each link only with its own key.
-  {
+  if (!excluded(hub.slug, 'parking')) {
     const lots = prov(s, 'parkingLots') ? hub.parkingLots.map((l) => l.name).filter(has).slice(0, 4).map(stripEmDashes) : [];
     const mapHref = has(hub.parkingLotMapUrl) && prov(s, 'parkingLotMapUrl') ? hub.parkingLotMapUrl : null;
     const officialHref = !mapHref && hub.officialParkingUrls.length > 0 && prov(s, 'officialParkingUrls') ? hub.officialParkingUrls[0] : null;
@@ -78,40 +160,47 @@ export function buildCondensedLogistics(hub: VenueHub, tenantId: string): Conden
     if (text) lines.push({ key: 'parking', label: 'Parking', text, href, hrefLabel: href ? (mapHref ? 'Official lot map' : 'Official parking') : null });
   }
 
-  // Tailgating: allowed flag plus the first sentence of the rules and the window.
-  if (hub.tailgating && prov(s, 'tailgating')) {
+  // Tailgating: the allowed flag, the first sentence of the rules and of the
+  // window, each on its own provenance. grillRules and rvPolicy do not render
+  // here; they are venue-page depth.
+  if (hub.tailgating && !excluded(hub.slug, 'tailgating')) {
     const tg = hub.tailgating;
+    const allowedOk = typeof tg.allowed === 'boolean' && subProv(s, 'tailgating', 'allowed');
+    const rulesOk = has(tg.rules) && subProv(s, 'tailgating', 'rules');
+    const windowOk = has(tg.timeWindow) && subProv(s, 'tailgating', 'timeWindow');
     const parts: string[] = [];
-    if (tg.allowed === false) parts.push('Not permitted.');
+    if (tg.allowed === false && allowedOk) parts.push('Not permitted.');
     else {
-      if (has(tg.rules)) parts.push(sentence(tg.rules));
-      else if (tg.allowed === true) parts.push('Permitted.');
-      if (has(tg.timeWindow)) parts.push(sentence(tg.timeWindow));
+      if (rulesOk) parts.push(sentence(tg.rules as string));
+      else if (tg.allowed === true && allowedOk) parts.push('Permitted.');
+      if (windowOk) parts.push(sentence(tg.timeWindow as string));
     }
     if (parts.length) lines.push({ key: 'tailgating', label: 'Tailgating', text: parts.join(' '), href: null, hrefLabel: null });
   }
 
-  // Transit: first sentence of the notes plus the named lines.
-  if (hub.publicTransit && prov(s, 'publicTransit')) {
+  // Transit: first sentence of the notes plus the named lines, each on its own provenance.
+  if (hub.publicTransit && !excluded(hub.slug, 'transit')) {
     const pt = hub.publicTransit;
     const parts: string[] = [];
-    if (has(pt.notes)) parts.push(sentence(pt.notes));
-    if (pt.lines.length) parts.push(`Lines: ${pt.lines.map(stripEmDashes).join(', ')}.`);
+    if (has(pt.notes) && subProv(s, 'publicTransit', 'notes')) parts.push(sentence(pt.notes));
+    if (Array.isArray(pt.lines) && pt.lines.length && subProv(s, 'publicTransit', 'lines')) parts.push(`Lines: ${pt.lines.map(stripEmDashes).join(', ')}.`);
     if (parts.length) lines.push({ key: 'transit', label: 'Transit', text: parts.join(' '), href: null, hrefLabel: null });
   }
 
-  if (has(hub.rideshareDropoff) && prov(s, 'rideshareDropoff')) lines.push({ key: 'rideshare', label: 'Rideshare', text: sentence(hub.rideshareDropoff), href: null, hrefLabel: null });
-  if (has(hub.accessibility) && prov(s, 'accessibility')) lines.push({ key: 'accessibility', label: 'Accessibility', text: sentence(hub.accessibility), href: null, hrefLabel: null });
+  if (has(hub.rideshareDropoff) && prov(s, 'rideshareDropoff') && !excluded(hub.slug, 'rideshare')) lines.push({ key: 'rideshare', label: 'Rideshare', text: sentence(hub.rideshareDropoff), href: null, hrefLabel: null });
+  if (has(hub.accessibility) && prov(s, 'accessibility') && !excluded(hub.slug, 'accessibility')) lines.push({ key: 'accessibility', label: 'Accessibility', text: sentence(hub.accessibility), href: null, hrefLabel: null });
 
   // Outside food: the stored boolean, else the first sentence of the rules.
-  if (typeof hub.outsideFoodAllowed === 'boolean' && (prov(s, 'outsideFoodAllowed') || prov(s, 'outsideFoodRules'))) {
-    lines.push({ key: 'outsideFood', label: 'Outside food', text: hub.outsideFoodAllowed ? 'Outside food is allowed.' : 'No outside food or drink.', href: null, hrefLabel: null });
-  } else if (has(hub.outsideFoodRules) && prov(s, 'outsideFoodRules')) {
-    lines.push({ key: 'outsideFood', label: 'Outside food', text: sentence(hub.outsideFoodRules), href: null, hrefLabel: null });
+  if (!excluded(hub.slug, 'outsideFood')) {
+    if (typeof hub.outsideFoodAllowed === 'boolean' && (prov(s, 'outsideFoodAllowed') || prov(s, 'outsideFoodRules'))) {
+      lines.push({ key: 'outsideFood', label: 'Outside food', text: hub.outsideFoodAllowed ? 'Outside food is allowed.' : 'No outside food or drink.', href: null, hrefLabel: null });
+    } else if (has(hub.outsideFoodRules) && prov(s, 'outsideFoodRules')) {
+      lines.push({ key: 'outsideFood', label: 'Outside food', text: sentence(hub.outsideFoodRules), href: null, hrefLabel: null });
+    }
   }
 
-  if (has(hub.food) && prov(s, 'food')) lines.push({ key: 'food', label: 'Concessions', text: sentence(hub.food), href: null, hrefLabel: null });
-  if (has(hub.nearby) && prov(s, 'nearby')) lines.push({ key: 'nearby', label: 'Nearby', text: sentence(hub.nearby), href: null, hrefLabel: null });
+  if (has(hub.food) && prov(s, 'food') && !excluded(hub.slug, 'food')) lines.push({ key: 'food', label: 'Concessions', text: sentence(hub.food), href: null, hrefLabel: null });
+  if (has(hub.nearby) && prov(s, 'nearby') && !excluded(hub.slug, 'nearby')) lines.push({ key: 'nearby', label: 'Nearby', text: sentence(hub.nearby), href: null, hrefLabel: null });
 
   return lines;
 }

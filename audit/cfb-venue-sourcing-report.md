@@ -891,3 +891,29 @@ Verdict: **UNEXTRACTED** for eight of nine: gates, parking lots and lot map, off
 - Four sub-minimum hubs: a separate extraction task with the URLs in section 8, not part of this sourcing write.
 
 Stop. No writes were made on this pass.
+
+## 10. Pass 1 (renderer sub-key fix), before and after, 2026-08-27
+
+Code only, zero Firestore writes. `src/lib/venue-hub-condensed.ts` now treats a sub-field as sourced when its own dotted key OR its field's flat key is present, and carries two explicit exclusion lists: `CONDENSED_CONFLICTS` (brooks-stadium, david-booth-kansas-memorial-stadium, hard-rock-stadium, yulman-stadium tailgating; kidd-brewer-stadium parking) and `CONDENSED_HOLDS` (secu-stadium transit: stale, not disputed; DOTS is authoritative; corrected and re-sourced in Pass 2, entry deleted with that write). The block still renders only the rules and timeWindow sentences for tailgating and notes plus lines for transit; grillRules and rvPolicy remain venue-page depth, so Texas A&M's unconfirmed rvPolicy needs no entry.
+
+Measured by running the HEAD renderer and the new renderer over the 2026-08-27 read-only dump for all 86 CFB school/hub pairs:
+
+| School | Hub | Lines before | Lines after | Gained |
+| --- | --- | --- | --- | --- |
+| alabama | saban-field-at-bryant-denny-stadium | 8 | 9 | tailgating |
+| colorado | folsom-field | 6 | 7 | tailgating |
+| georgia | sanford-stadium | 8 | 9 | tailgating |
+| indiana | memorial-stadium-indiana-university | 3 | 4 | tailgating |
+| kansas-state | bill-snyder-family-football-stadium | 5 | 6 | tailgating |
+| maryland | secu-stadium | 6 | 7 | tailgating (transit held) |
+| memphis | simmons-bank-liberty-stadium | 8 | 9 | tailgating |
+| michigan-state | spartan-stadium-east-lansing-michigan | 5 | 7 | gates, tailgating |
+| ohio-state | ohio-stadium | 7 | 8 | tailgating |
+| oklahoma-state | boone-pickens-stadium | 7 | 8 | tailgating |
+| texas-am | kyle-field | 8 | 9 | tailgating |
+| ucla | rose-bowl-stadium | 8 | 9 | tailgating |
+| wake-forest | allegacy-federal-credit-union-stadium | 6 | 7 | tailgating |
+
+Unchanged by design: coastal-carolina (4), kansas (2), miami (5), tulane (6), appalachian-state (1) on the conflicts list; maryland transit on hold. Boise State and Wake Forest gates stay silent until a source is written (truly unsourced, section 5). No school lost a line.
+
+Above / below the three-line minimum: 82 / 4 before, 82 / 4 after. Kansas stays below (bag, parking) because its tailgating line is on the conflicts list; the other three below are appalachian-state (bag), army (none), oregon (bag, outsideFood), the sub-minimum set of section 8.
