@@ -96,8 +96,8 @@ export function buildMatchupDescription(input: MatchupDescriptionInput): string 
   if (!when) {
     return longestFit(
       [
-        `${matchup}. The rivalry has no scheduled 2026 meeting. Series history, past results and how to plan the trip when the game returns.`,
-        `${matchup}. No 2026 meeting is scheduled. Series history and how to plan the trip when the game returns.`,
+        `${matchup}. The rivalry has no scheduled 2026 meeting. The year the series began, and how to plan the trip when the game returns.`,
+        `${matchup}. No 2026 meeting is scheduled. When the series began, and how to plan the trip when the game returns.`,
         `${matchup}. No 2026 meeting is scheduled.`,
         `${displayName}. No 2026 meeting is scheduled.`,
       ],

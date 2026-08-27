@@ -40,6 +40,7 @@ import { FanaticsCTA } from '@/components/affiliates/FanaticsCTA';
 import { VenueHubLink } from '@/components/venue-hub/VenueHubLink';
 import type { TeamVenueHubLink } from '@/lib/venue-hub';
 import { SERIF, MONO, SANS, fmtMonthDay, fmtDayLong, Eyebrow, TAP_TARGET_24 } from './cfb-bits';
+import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
 
 export function CfbSchoolPage({ data, venueHubLink }: { data: CfbSchoolPageData; venueHubLink: TeamVenueHubLink | null }) {
   const { school, venue, games, editorial } = data;
@@ -386,7 +387,7 @@ export function CfbSchoolPage({ data, venueHubLink }: { data: CfbSchoolPageData;
         <section className="mt-12 rounded-2xl p-6" style={{ background: '#0c0b12', border: '1px solid rgba(255,255,255,0.07)' }}>
           <div className="italic text-white" style={{ fontFamily: SERIF, fontSize: '1.5rem' }}>Know this place?</div>
           <p className="mt-1.5 max-w-2xl text-[13.5px] leading-relaxed text-white/65" style={{ fontFamily: SANS }}>
-            Help us tell the story of a {school.shortName} Saturday — the traditions, the tailgate, why you go. Written by people who actually go.
+            Tell us about a {school.shortName} Saturday: the traditions, the tailgate, why you go. A person reads every submission before anything publishes, and a published section credits its contributor.
           </p>
           <Link
             href={`/cfb/contribute?school=${school.id}`}
@@ -397,6 +398,11 @@ export function CfbSchoolPage({ data, venueHubLink }: { data: CfbSchoolPageData;
           </Link>
           {editorial.contributor && <p className="mt-3 text-[11px] text-white/40" style={{ fontFamily: MONO }}>Gameday section by {editorial.contributor.credit}.</p>}
         </section>
+
+        {/* FTC disclosure. This page renders TicketNetwork, Ticketmaster, SpotHero,
+            Expedia and Fanatics CTAs (and more inside the schedule modal), so the
+            same disclosure the pro team pages carry ships here too. */}
+        <AffiliateDisclosure tone="dark" className="mt-10 text-center" />
       </div>
     </main>
   );

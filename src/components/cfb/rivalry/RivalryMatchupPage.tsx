@@ -10,6 +10,7 @@ import { toAffiliateTeam } from '@/lib/cfb/page-extras';
 import { buildTicketNetworkLink, buildSpotHeroUrl } from '@/lib/affiliates';
 import { resolveHotelLink } from '@/lib/hotel-link';
 import { TripStepAffiliate, TripStepInternal } from '@/components/cfb/rivalry/TripStep';
+import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
 import { barlowCondensed } from '@/components/cfb/rivalry/fonts';
 import { Spine, spineVars, CONDENSED } from '@/components/cfb/rivalry/spine';
 import type { Team, Venue } from '@/lib/types';
@@ -19,12 +20,15 @@ const SEASON = 2026; // hardcoded by house rule, never getFullYear() in SEO copy
 
 // Generic by design and identical on all 32 pages. The trip is the same trip;
 // per-rivalry variants would be 32 pieces of copy to maintain for no gain.
-const STEP_COPY = {
-  tickets: { title: 'Get in', blurb: 'Rivalry games sell out. Resale is usually the route.', cta: 'Find tickets' },
-  hotels: { title: 'Book a room', blurb: 'Rooms near campus go early on rivalry weekend.', cta: 'Find hotels' },
+// The tickets and hotels steps carry no blurb: the earlier sentences ("Rivalry
+// games sell out", "Rooms near campus go early") were generalities no field
+// backs, and a claim either derives from data or it comes out.
+const STEP_COPY: Record<TripStepKey, { title: string; blurb?: string; cta: string }> = {
+  tickets: { title: 'Get in', cta: 'Find tickets' },
+  hotels: { title: 'Book a room', cta: 'Find hotels' },
   parking: { title: 'Park', blurb: 'Reserve ahead and walk in.', cta: 'Reserve parking' },
   gates: { title: 'Gates and bags', blurb: 'Bag rules, gate times and transit for this stadium.', cta: 'Gameday guide' },
-} as const;
+};
 
 function formatDayMonth(date: string): { weekday: string; monthDay: string } {
   const d = new Date(`${date}T12:00:00`);
@@ -275,9 +279,13 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
           </ol>
         </section>
 
-        {/* 7. the trophy */}
+        {/* 7. the trophy. The heading renders only when the rivalry doc carries a
+            trophy; 7 of 32 do not, and a heading over nothing is a claim. The
+            series facts and sources below it render either way. */}
         <section className="mt-8">
-          <h2 className="text-[13px] font-semibold uppercase tracking-[0.14em] text-white/45" style={{ fontFamily: CONDENSED }}>The trophy</h2>
+          {rivalry.trophy && (
+            <h2 className="text-[13px] font-semibold uppercase tracking-[0.14em] text-white/45" style={{ fontFamily: CONDENSED }}>The trophy</h2>
+          )}
           {data.rivalrySentence && <p className="mt-3 text-sm leading-relaxed text-white/75">{data.rivalrySentence}</p>}
           <div className="mt-3 grid grid-cols-2 gap-3">
             <Stat label="Series began" value={String(rivalry.seriesStartYear)} />
@@ -343,6 +351,11 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
             </ul>
           </section>
         )}
+
+        {/* FTC disclosure. The trip timeline above carries TicketNetwork, Expedia
+            and SpotHero links, so the same disclosure the pro team pages carry
+            ships here too. */}
+        <AffiliateDisclosure tone="dark" className="mt-10 text-center" />
       </div>
     </main>
   );

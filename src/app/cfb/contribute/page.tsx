@@ -34,7 +34,7 @@ export default async function ContributePage({ searchParams }: { searchParams: P
           <Link href={`/cfb/${s.id}`} className="text-sm text-white/50 hover:text-white">← {s.name}</Link>
           <div className="mt-4 h-1 w-16 rounded" style={{ background: 'var(--cfb-accent)' }} />
           <h1 className="mt-3 text-3xl font-extrabold">Tell the story of a {s.shortName} Saturday</h1>
-          <p className="mt-2 text-white/70">You know this place. Help the next person plan the trip — the traditions, the tailgate, why you go. Written by people who actually go, credited to you.</p>
+          <p className="mt-2 text-white/70">Help the next person plan the trip: the traditions, the tailgate, why you go. A person reads every submission before anything publishes, and a published section credits you by name.</p>
           <div className="mt-8">
             <ContributeForm schoolId={s.id} schoolName={s.shortName} />
           </div>
