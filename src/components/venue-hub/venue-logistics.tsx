@@ -76,7 +76,17 @@ export type TenantNameResolver = (t: { teamId: string; displayName: string }) =>
 /** Verified tenant overlays that carry a gates-open rule. Shared by the
  *  getting-in rows and the view's gates FAQ so the two can never disagree. */
 export function verifiedGateTenants(hub: VenueHub): VenueHubTenantOverlay[] {
-  return hub.tenantOverlays.filter((t) => t.verified && t.gatesOpen?.ruleText);
+  // Provenance is applied HERE, not at each call site, because this one set
+  // feeds the Getting-in row, the gates FAQ (visible AND inside FAQPage JSON-LD)
+  // and the GATES fact-band chip. Gating only the row left an unprovenanced gate
+  // rule inside structured data, which is the worst place for it.
+  return hub.tenantOverlays.filter(
+    (t) =>
+      t.verified &&
+      t.gatesOpen?.ruleText &&
+      hasSubProvenance(t.sources, 'gatesOpen', 'ruleText') &&
+      !fieldExcluded(hub.slug, 'gates'),
+  );
 }
 
 export interface GettingInRow {
@@ -91,7 +101,6 @@ export function buildGettingInRows(hub: VenueHub, tenantName: TenantNameResolver
   const gateTenants = verifiedGateTenants(hub);
   const gettingRows: GettingInRow[] = [];
   for (const t of gateTenants) {
-    if (!hasSubProvenance(t.sources, 'gatesOpen', 'ruleText') || fieldExcluded(hub.slug, 'gates')) continue;
     const rule = stripTrailingPeriod(t.gatesOpen!.ruleText!);
     // The variance is rendered ONLY when it adds something the ruleText does not
     // already say. Both used to render unconditionally on 46 pages, which read as
@@ -232,12 +241,18 @@ export function NearbyCard({ hub }: { hub: VenueHub }) {
  *  passes it in so the card and the FAQ stay on one gate. */
 export function BagCard({ hub, hasBagFaq }: { hub: VenueHub; hasBagFaq: boolean }) {
   if (!hasBagFaq) return null;
-  const cap = bagCapsule(hub);
-  const bagSplit = hub.bagPolicyNotes ? leadSentences(hub.bagPolicyNotes, 2) : { lead: '', overflow: '' };
+  // Same rule as the FAQ: the capsule states a bag fact, so each fact it can
+  // state needs its own provenance.
+  const cap = bagCapsule({
+    bagMaxDimensions: hasProvenance(hub.sources, 'bagMaxDimensions') ? hub.bagMaxDimensions : null,
+    clearBagRequired: hasProvenance(hub.sources, 'clearBagRequired') ? hub.clearBagRequired : null,
+    bagsProhibited: hasProvenance(hub.sources, 'bagsProhibited') ? hub.bagsProhibited : null,
+  });
+  const bagSplit = hub.bagPolicyNotes && hasProvenance(hub.sources, 'bagPolicyNotes') ? leadSentences(hub.bagPolicyNotes, 2) : { lead: '', overflow: '' };
   const noOutsideFood =
     hub.verified && hub.outsideFoodAllowed === false && !fieldExcluded(hub.slug, 'outsideFood') &&
     (hasProvenance(hub.sources, 'outsideFoodAllowed') || hasProvenance(hub.sources, 'outsideFoodRules'));
-  const bagPolicyLink = hub.bagPolicyUrl;
+  const bagPolicyLink = hasProvenance(hub.sources, 'bagPolicyUrl') ? hub.bagPolicyUrl : null;
   return (
     <Card accent>
       <CardLabel>What size bag can I bring?</CardLabel>
