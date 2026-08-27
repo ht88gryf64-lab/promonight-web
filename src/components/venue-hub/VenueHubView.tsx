@@ -12,19 +12,29 @@ import { VenuePhotoHero } from './VenuePhotoHero';
 import { HubTeamLink } from './HubTeamLink';
 import { HubPromosThisWeek } from './HubPromosThisWeek';
 import {
+  Card,
+  CardLabel,
+  formatMinutesBefore,
+  transitMode,
+  verifiedGateTenants,
+  buildGettingInRows,
+  GettingInCard,
+  ParkingLotsCard,
+  FoodCard,
+  NearbyCard,
+  BagCard,
+} from './venue-logistics';
+import {
   type VenueHub,
   type TenantTeamLink,
   type VenueHubWeekPromo,
   displayVenueName,
-  leadSentences,
   cityState,
   spotHeroCovers,
   dimsString,
-  bagCapsule,
   venueHubDescription,
   bagFaqAnswers,
   stripTrailingPeriod,
-  isRestatement,
 } from '@/lib/venue-hub';
 
 // House Light venue logistics hub. Server component (the photo hero's onError
@@ -43,6 +53,9 @@ import {
 //      "no data yet" line linking to contact, never an empty booking box.
 // Affiliate attribution and analytics are UNCHANGED by the layout: every CTA is
 // the same component with the same web_venue_{slug} props as before.
+// The logistics cards (bag capsule, getting in, parking lots, food, neighborhood)
+// live in ./venue-logistics.tsx, extracted verbatim so this page renders
+// byte-identically and so other pages can mount the same cards.
 
 // The site's one contact affordance (Footer "Contact", /about) — a mailto, not
 // a route. The previous value here was https://www.getpromonight.com/contact,
@@ -50,50 +63,6 @@ import {
 // dead link as its only next step. If a real contact/contribute route ever
 // ships, update the Footer and this constant together.
 const CONTACT_URL = 'mailto:hello@getpromonight.com';
-
-function Card({ children, accent, tint }: { children: ReactNode; accent?: boolean; tint?: boolean }) {
-  return (
-    <section
-      className={`mb-3 rounded-xl bg-rd-card p-4 shadow-[0_1px_3px_rgba(33,29,24,0.08)] ${
-        accent ? 'border-t-[3px] border-rd-red' : ''
-      } ${tint ? 'bg-[#faf7f0]' : ''}`}
-    >
-      {children}
-    </section>
-  );
-}
-
-function CardLabel({ children }: { children: ReactNode }) {
-  return (
-    <h2 className="m-0 mb-2.5 font-rd text-[13px] font-extrabold uppercase tracking-[0.08em] text-rd-ink-faint">
-      {children}
-    </h2>
-  );
-}
-
-// Gate-open minutes -> a short scan-chip label: "90 min before", "2h before",
-// "2h30 before".
-function formatMinutesBefore(m: number): string {
-  if (m < 60) return `${m} min before`;
-  const h = Math.floor(m / 60);
-  const mm = m % 60;
-  return mm === 0 ? `${h}h before` : `${h}h${mm} before`;
-}
-
-// Transit lines/notes -> a one- or two-word mode chip. Keyword-derived, never a
-// prose dump. Rail detection requires explicit rail vocabulary or a rail-transit
-// authority acronym: a bare "line" is NOT a rail signal, since bus routes are
-// commonly named "lines" too (e.g. RideKC's "47 Broadway line" at Arrowhead is a
-// bus route, not rail).
-function transitMode(pt: { lines: string[]; notes: string | null }): string {
-  const text = [...pt.lines, pt.notes ?? ''].join(' ').toLowerCase();
-  const rail =
-    /\brail\b|\bmetro\b|subway|light[\s-]?rail|\btrain\b|streetcar|monorail|\btram\b|\btrolley\b|commuter rail|\bbart\b|\bmarta\b|\bmbta\b|\bsepta\b|\bcta\b|\bpath\b|\blirr\b|\bmetrolink\b|\bel\b|the l\b/.test(
-      text,
-    );
-  const bus = /\bbus(es)?\b|shuttle|coach|\bbrt\b/.test(text);
-  return rail && bus ? 'Rail + bus' : rail ? 'Rail' : bus ? 'Bus' : 'Nearby transit';
-}
 
 export function VenueHubView({
   hub,
@@ -145,11 +114,7 @@ export function VenueHubView({
   // narrower test for whether a bag fact exists at all, which is what
   // venueHubIsIndexable and the capsule copy care about.
   const hasBagFaq = hasBag || (verified && !!hub.bagPolicyUrl);
-  const cap = bagCapsule(hub);
   const dimStr = dimsString(hub.bagMaxDimensions);
-  const bagSplit = hub.bagPolicyNotes ? leadSentences(hub.bagPolicyNotes, 2) : { lead: '', overflow: '' };
-  const noOutsideFood = verified && hub.outsideFoodAllowed === false;
-  const bagPolicyLink = hub.bagPolicyUrl;
 
   // ── FAQ (rule: overflow bag text + long-tail queries land here) ──
   const faqs: HubFaqItem[] = [];
@@ -177,7 +142,7 @@ export function VenueHubView({
         : `Outside food is permitted at ${short}.`);
     faqs.push({ question: `Can you bring outside food into ${short}?`, answer: foodAns });
   }
-  const gateTenants = hub.tenantOverlays.filter((t) => t.verified && t.gatesOpen?.ruleText);
+  const gateTenants = verifiedGateTenants(hub);
   const lotOpenTenants = hub.tenantOverlays.filter((t) => t.verified && t.tailgateWindow);
   const lotOpenLines = lotOpenTenants.map((t) => ({
     key: t.teamId,
@@ -207,49 +172,9 @@ export function VenueHubView({
   const point = hub.lat !== null && hub.lng !== null ? { lat: hub.lat, lng: hub.lng } : null;
   const canSpotHero = spotHeroCovers(hub) && point !== null && ticketTeam !== null;
 
-  // ── getting-in rows ──
-  const gettingRows: { label: string; body: ReactNode }[] = [];
-  for (const t of gateTenants) {
-    const rule = stripTrailingPeriod(t.gatesOpen!.ruleText!);
-    // The variance is rendered ONLY when it adds something the ruleText does not
-    // already say. Both used to render unconditionally on 46 pages, which read as
-    // the same sentence twice at target-field and barclays-center, while at
-    // memorial-stadium-lincoln and chase-field the variance carries premium,
-    // student and early-entry detail the ruleText omits. Containment decides.
-    const variance =
-      t.gateVariance && !isRestatement(rule, t.gateVariance) ? stripTrailingPeriod(t.gateVariance) : null;
-    gettingRows.push({
-      label: gateTenants.length > 1 ? `Gates (${tenantName(t)})` : 'Gates',
-      body: `${rule}.${variance ? ` ${variance}.` : ''}`,
-    });
-  }
-  if (verified && hub.publicTransit && (hub.publicTransit.lines.length > 0 || hub.publicTransit.notes)) {
-    // Notes AND lines: the lines array used to be swallowed whenever notes
-    // existed, leaving named routes ("Metro C Line", "Route 47") dark. The
-    // "Lines:" lead-in stays a single fixed word so no template-only 5-gram
-    // forms (see audit/venue-thickening-plan.md, 9e discipline).
-    const transitParts = [
-      hub.publicTransit.notes,
-      hub.publicTransit.lines.length > 0 ? `Lines: ${hub.publicTransit.lines.join(', ')}.` : null,
-    ].filter(Boolean) as string[];
-    gettingRows.push({ label: 'Transit', body: transitParts.join(' ') });
-  }
-  if (verified && hub.rideshareDropoff) gettingRows.push({ label: 'Rideshare', body: hub.rideshareDropoff });
-  if (verified && hub.tailgating?.allowed === true) {
-    // The harvested sub-fields (timeWindow, grillRules, rvPolicy) were typed
-    // and populated but never rendered. Each is verbatim per-building prose;
-    // periods normalized once here.
-    const tg = hub.tailgating;
-    const tailBody = [tg.rules || 'Tailgating is permitted in the parking lots.', tg.timeWindow, tg.grillRules, tg.rvPolicy]
-      .filter((s): s is string => !!s)
-      .map((s) => `${stripTrailingPeriod(s)}.`)
-      .join(' ');
-    gettingRows.push({ label: 'Tailgating', body: tailBody });
-  } else if (verified && hub.tailgating?.allowed === false) {
-    gettingRows.push({ label: 'Tailgating', body: 'Tailgating is not permitted at this venue.' });
-  }
-  if (verified && hub.accessibility) gettingRows.push({ label: 'Accessibility', body: hub.accessibility });
-  if (verified && hub.venueAccessRestrictions) gettingRows.push({ label: 'Entry', body: hub.venueAccessRestrictions });
+  // ── getting-in rows (built in venue-logistics.tsx, shared with any page that
+  //    mounts the block; the rows and the gates FAQ read the same tenant set) ──
+  const gettingRows = buildGettingInRows(hub, tenantName);
 
   // ── fact band chips (each conditional; band omitted below 2 chips) ──
   const chips: { k: string; v: string }[] = [];
@@ -293,47 +218,7 @@ export function VenueHubView({
   // empty state. bagCapsule returns the neutral BAG POLICY label with no size and
   // no clarity claim when the three fact fields are null, so widening the gate
   // asserts nothing new.
-  const bagCard = hasBagFaq ? (
-    <Card accent>
-      <CardLabel>What size bag can I bring?</CardLabel>
-      <div className="flex flex-wrap items-center gap-2.5">
-        <div className="rounded-lg bg-rd-ink px-3.5 py-2.5 text-center text-white">
-          {cap.dims ? (
-            <div className="text-xl font-extrabold leading-none">{cap.dims}</div>
-          ) : (
-            <div className="text-base font-extrabold leading-none">{cap.bigText}</div>
-          )}
-          <div className="mt-1 font-rd text-[10px] tracking-[0.1em] text-white/75">{cap.label}</div>
-        </div>
-        <div className="min-w-[180px] flex-1 font-rd text-[13px] leading-[1.5] text-rd-ink">
-          {bagSplit.lead ? <span>{bagSplit.lead}</span> : <span>Review the official bag policy before you arrive.</span>}
-          {noOutsideFood ? (
-            <>
-              {' '}
-              <strong>No outside food or drink.</strong>
-            </>
-          ) : null}
-          {bagPolicyLink ? (
-            <div className="mt-1 text-[11px]">
-              <a href={bagPolicyLink} className="font-semibold text-rd-red" target="_blank" rel="noopener noreferrer">
-                Official bag policy &rsaquo;
-              </a>
-            </div>
-          ) : null}
-          {/* The MLB comparison layer: the venue corpus's fourth inbound link
-              (aggregator plan Build 2). MLB buildings only; other leagues have
-              no bag aggregator yet. */}
-          {hub.tenants.some((t) => t.league === 'MLB') ? (
-            <div className="mt-1 text-[11px]">
-              <Link href="/venues/bag-policies" className="font-semibold text-rd-ink-soft transition-colors hover:text-rd-red">
-                Compare every MLB ballpark&apos;s bag policy &rsaquo;
-              </Link>
-            </div>
-          ) : null}
-        </div>
-      </div>
-    </Card>
-  ) : null;
+  const bagCard = <BagCard hub={hub} hasBagFaq={hasBagFaq} />;
 
   // Teams that play here: the RETURN internal links (hub -> team pages), closing
   // the loop the hub otherwise leaves open. Building-agnostic (renders on held
@@ -418,78 +303,13 @@ export function VenueHubView({
     </Card>
   ) : null;
 
-  const gettingInCard = gettingRows.length ? (
-    <Card>
-      <CardLabel>Getting in</CardLabel>
-      <div className="grid grid-cols-1 gap-2.5 font-rd text-[13px] leading-[1.5] text-rd-ink md:grid-cols-2">
-        {gettingRows.map((r) => (
-          <div key={r.label}>
-            <strong>{r.label}.</strong> {r.body}
-          </div>
-        ))}
-      </div>
-    </Card>
-  ) : null;
+  const gettingInCard = <GettingInCard rows={gettingRows} />;
 
-  // Parking lots: the per-lot harvested notes (895 verified values corpus-wide)
-  // were dark; only the first 8 lot NAMES surfaced, inside one FAQ sentence.
-  // Verbatim per-building prose in the MAIN column (not the twice-rendered
-  // rail), each row `{name}. {notes}`. officialParkingUrls links close the card.
-  const lotsWithNotes = verified ? hub.parkingLots.filter((l) => l.name) : [];
-  // Card renders when there is lot prose OR an official link: a doc whose only
-  // parking fact is the official page (no per-lot breakdown) still surfaces
-  // the link instead of silently dropping the field it exists to render.
-  const hasLotContent = lotsWithNotes.some((l) => l.notes) || (verified && hub.officialParkingUrls.length > 0);
-  const parkingLotsCard =
-    verified && hasLotContent ? (
-      <Card>
-        <CardLabel>Parking lots</CardLabel>
-        {lotsWithNotes.length > 0 ? (
-          <div className="grid grid-cols-1 gap-2.5 font-rd text-[13px] leading-[1.5] text-rd-ink md:grid-cols-2">
-            {lotsWithNotes.slice(0, 12).map((l) => (
-              <div key={l.name}>
-                <strong>{l.name}.</strong>
-                {l.notes ? <> {l.notes}</> : null}
-              </div>
-            ))}
-          </div>
-        ) : null}
-        {hub.officialParkingUrls.length > 0 ? (
-          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 font-rd text-[11px]">
-            <span className="text-rd-ink-soft">Official parking:</span>
-            {hub.officialParkingUrls.slice(0, 3).map((u) => (
-              <a
-                key={u}
-                href={u}
-                className="font-semibold text-rd-red"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {new URL(u).hostname.replace(/^www\./, '')} &rsaquo;
-              </a>
-            ))}
-          </div>
-        ) : null}
-      </Card>
-    ) : null;
+  const parkingLotsCard = <ParkingLotsCard hub={hub} />;
 
-  const foodCard =
-    verified && hub.food ? (
-      <Card>
-        <CardLabel>Food worth the line</CardLabel>
-        <p className="font-rd text-[13px] leading-relaxed text-rd-ink">{hub.food}</p>
-      </Card>
-    ) : null;
+  const foodCard = <FoodCard hub={hub} />;
 
-  // In the neighborhood: hub.nearby was typed, populated on 47 docs, and
-  // consumed nowhere. Verbatim harvested prose (0.1% cross-venue shared grams).
-  const nearbyCard =
-    verified && hub.nearby ? (
-      <Card>
-        <CardLabel>In the neighborhood</CardLabel>
-        <p className="font-rd text-[13px] leading-relaxed text-rd-ink">{hub.nearby}</p>
-      </Card>
-    ) : null;
+  const nearbyCard = <NearbyCard hub={hub} />;
 
   // Tickets & gear: Ticketmaster (primary) + TicketNetwork paired inside
   // TicketmasterCTA, plus Fanatics. Building-agnostic (renders on every hub with

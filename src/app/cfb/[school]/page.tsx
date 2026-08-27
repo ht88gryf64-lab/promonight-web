@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import type { CSSProperties } from 'react';
 import { notFound } from 'next/navigation';
 import { getAllCfbSchoolIds, getCfbSchoolPage, cfbSchoolBelowIndexFloor } from '@/lib/cfb/data';
-import { getVenueHubForTeam } from '@/lib/venue-hub';
+import { getVenueHub, getVenueHubForTeam } from '@/lib/venue-hub';
 import { buildCfbTeamMetadata } from '@/lib/cfb/metadata';
 import { resolveCfbTheme, cfbThemeVars } from '@/lib/cfb/theme';
 import { CfbSchoolPage } from '@/components/cfb/CfbSchoolPage';
@@ -42,6 +42,10 @@ export default async function Page({ params }: { params: Promise<{ school: strin
   // import cycle. The link renders only when the hub is above the indexing floor
   // (getVenueHubForTeam carries that flag); CfbSchoolPage gates on it.
   const venueHubLink = await getVenueHubForTeam(data.school.id);
+  // The full hub (doc + tenants, one cached read) for the condensed logistics
+  // block. Fetched whenever the school has a building, floor or no floor: the
+  // block gates per field on provenance, never on indexable.
+  const venueHub = venueHubLink ? await getVenueHub(venueHubLink.slug) : null;
 
   const theme = resolveCfbTheme(data.school.primaryColor, data.school.secondaryColor);
   const vars = cfbThemeVars(theme) as CSSProperties;
@@ -64,7 +68,7 @@ export default async function Page({ params }: { params: Promise<{ school: strin
     <div style={vars} data-cfb-noindex={belowIndexFloor(data) ? 'true' : undefined}>
       {belowIndexFloor(data) && <meta name="robots" content="noindex,follow" />}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <CfbSchoolPage data={data} venueHubLink={venueHubLink} />
+      <CfbSchoolPage data={data} venueHubLink={venueHubLink} venueHub={venueHub} />
     </div>
   );
 }
