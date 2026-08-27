@@ -311,11 +311,12 @@ export function CfbSchoolPage({ data, venueHubLink, venueHub }: { data: CfbSchoo
 
         {/* ── SCHEDULE — always present. Rows are CLICKABLE and open the gameday
             modal (CfbSchedule); per-game tickets/hotels/parking live in that modal,
-            never stacked inline. ── */}
+            never stacked inline. Each row also carries a server-rendered second
+            line (venue, city, home/away/neutral), so the detail exists in the HTML. ── */}
         <section className="mt-11">
           <Eyebrow>2026 Schedule</Eyebrow>
           <CfbSchedule games={games} school={school} venue={venue} />
-          <p className="mt-2.5 text-[11px] text-white/55" style={{ fontFamily: MONO }}>Tap any game for its venue, kickoff, and gameday links. Kickoff times show once announced and confirmed on a second source; until then, Kickoff TBA.</p>
+          <p className="mt-2.5 text-[11px] text-white/55" style={{ fontFamily: MONO }}>Tap any game for its gameday links. Kickoff times show once announced and confirmed on a second source; until then, Kickoff TBA.</p>
         </section>
 
         {/* ── GAMEDAY & TRADITIONS (editorial, destination-only) ── Gated SOLELY on

@@ -23,7 +23,13 @@ import { SpotHeroCTA } from '@/components/affiliates/SpotHeroCTA';
 import { ExpediaCTA } from '@/components/affiliates/ExpediaCTA';
 import { fmtMonthDay, fmtDayLong, TrophyTag, SERIF, MONO, SANS } from './cfb-bits';
 
-function ScheduleRow({ g, last, onOpen }: { g: CfbGameView; last: boolean; onOpen: () => void }) {
+function ScheduleRow({ g, last, onOpen, school, venue }: { g: CfbGameView; last: boolean; onOpen: () => void; school: CfbSchool; venue: CfbVenue | null }) {
+  // Server-rendered detail line (2026-08-27): the venue, its city and the
+  // home/away/neutral status used to exist only inside the click-to-open modal,
+  // so a crawler or a reviewer reading the HTML saw a schedule with no detail.
+  // Same resolution the modal uses; visible on every row, never hidden.
+  const { gameVenue } = resolveGame(g, school, venue);
+  const detail = [gameVenue?.name ?? null, venueCity(gameVenue), g.neutralSite ? 'Neutral site' : g.isHome ? 'Home' : 'Away'].filter(Boolean).join(' · ');
   return (
     <button
       type="button"
@@ -70,6 +76,7 @@ function ScheduleRow({ g, last, onOpen }: { g: CfbGameView; last: boolean; onOpe
             {t}
           </span>
         ))}
+        <div className="w-full text-[11px] text-white/55" style={{ fontFamily: MONO }}>{detail}</div>
       </div>
       <div className="text-right" style={{ fontFamily: MONO }}>
         {g.kickoffVerified ? (
@@ -162,7 +169,7 @@ export function CfbSchedule({ games, school, venue }: { games: CfbGameView[]; sc
     <>
       <div className="overflow-hidden rounded-2xl" style={{ background: '#0c0b12', border: '1px solid rgba(255,255,255,0.06)' }}>
         {games.map((g, i) => (
-          <ScheduleRow key={g.id} g={g} last={i === games.length - 1} onOpen={() => setSelected(g)} />
+          <ScheduleRow key={g.id} g={g} last={i === games.length - 1} onOpen={() => setSelected(g)} school={school} venue={venue} />
         ))}
       </div>
 
