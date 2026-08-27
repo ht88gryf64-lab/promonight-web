@@ -26,14 +26,14 @@ export function ContributeForm({ schoolId, schoolName }: { schoolId: string; sch
       // Gate the thank-you on the transport AND the body. The server only sends
       // ok:true after a write it confirmed, so success here always means stored.
       if (r.ok && j.ok) setState('done');
-      else { setState('error'); setErr(j.error === 'contact_required' ? 'Add an email or LinkedIn so we can credit you.' : j.error === 'content_required' ? 'Tell us at least one thing about gameday.' : 'Something went wrong — try again.'); }
-    } catch { setState('error'); setErr('Network error — try again.'); }
+      else { setState('error'); setErr(j.error === 'contact_required' ? 'Add an email or LinkedIn so we can credit you.' : j.error === 'content_required' ? 'Tell us at least one thing about gameday.' : 'Something went wrong. Try again.'); }
+    } catch { setState('error'); setErr('Network error. Try again.'); }
   }
 
   if (state === 'done') {
     return (
       <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
-        <h2 className="text-lg font-bold">Thank you — it’s in the queue.</h2>
+        <h2 className="text-lg font-bold">Thank you. It’s in the queue.</h2>
         <p className="mt-2 text-white/70">A person reviews every submission (we fact-check rivalry + travel claims and confirm it’s original) before it goes live. We’ll reach out to credit you when it publishes.</p>
       </div>
     );
@@ -61,13 +61,13 @@ export function ContributeForm({ schoolId, schoolName }: { schoolId: string; sch
         </label>
       </div>
 
-      <label className="block text-sm">Why you go — the soul of a {schoolName} Saturday
+      <label className="block text-sm">Why you go: the soul of a {schoolName} Saturday
         <textarea name="whyYouGo" rows={3} maxLength={4000} className={`mt-1 ${field}`} placeholder="First-person, what makes it worth the trip." />
       </label>
       <label className="block text-sm">Traditions & theme nights
         <textarea name="traditions" rows={2} maxLength={4000} className={`mt-1 ${field}`} placeholder="Whiteouts, walks, chants, the stuff a first-timer wouldn’t know." />
       </label>
-      <label className="block text-sm">Gameday logistics — tailgating, parking, transit, gate timing
+      <label className="block text-sm">Gameday logistics: tailgating, parking, transit, gate timing
         <textarea name="gameday" rows={2} maxLength={4000} className={`mt-1 ${field}`} placeholder="Where to park, when lots open, how to get in." />
       </label>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -84,7 +84,7 @@ export function ContributeForm({ schoolId, schoolName }: { schoolId: string; sch
         <button type="submit" disabled={state === 'sending'} className="rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-60" style={{ background: 'var(--cfb-accent)', color: 'var(--cfb-accent-on)' }}>
           {state === 'sending' ? 'Sending…' : 'Submit for review'}
         </button>
-        <span className="text-xs text-white/40">Reviewed by a human before it publishes — never posted automatically.</span>
+        <span className="text-xs text-white/40">Reviewed by a human before it publishes, never posted automatically.</span>
       </div>
     </form>
   );
