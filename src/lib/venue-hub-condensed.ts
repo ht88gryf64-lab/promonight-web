@@ -45,81 +45,29 @@ export interface CondensedLine {
   hrefLabel: string | null;
 }
 
-export interface CondensedExclusion {
-  /** venueHubs doc id. */
-  hub: string;
-  field: CondensedField;
-  /** When set, only this sub-field of the line is withheld (the line's other
-   *  sub-fields still render on their own provenance). Absent: the whole line. */
-  sub?: 'officialParkingUrls' | 'parkingLotMapUrl' | 'parkingLots' | 'rules' | 'timeWindow' | 'allowed' | 'notes' | 'lines' | 'ruleText';
-  /** Why the field is silent, specific enough to re-check without the report. */
-  reason: string;
-}
+import {
+  FIELD_CONFLICTS,
+  FIELD_HOLDS,
+  fieldExcluded,
+  subFieldExcluded,
+  hasProvenance,
+  hasSubProvenance,
+  type FieldExclusion,
+} from './venue-field-exclusions';
 
-/** CONFLICTS (audit/cfb-venue-sourcing-report.md section 4, verified
- *  2026-08-27). The stored text is populated and sourced, and an official page
- *  contradicts it. The rule for conflicts is report-and-hold: the stored text
- *  is not rewritten to match, no source is attached, and the field stays off
- *  the school page. The venue page still renders these fields (it gates on
- *  the doc-level verified flag, not per field). To lift an entry: correct the
- *  data from the official page named here, then delete the entry. */
-export const CONDENSED_CONFLICTS: ReadonlyArray<CondensedExclusion> = [
-  {
-    hub: 'brooks-stadium',
-    field: 'tailgating',
-    reason: 'Coastal Carolina: rules and the two-hour lot-open window come from the 2020 COVID-season guide (goccusports.com/sports/2020/9/17/CAFgameday); the current 2026 parking page (goccusports.com/sports/2026/8/17/2025-football-parking) and the 2025 Know Before You Go articles contradict both.',
-  },
-  {
-    hub: 'david-booth-kansas-memorial-stadium',
-    field: 'tailgating',
-    reason: 'Kansas: the permitted-lot list on the cited 704G page is superseded (policy.ku.edu removed lots 33 and 50 in 2016; parking.ku.edu says tailgating is prohibited in lots 34 and 61).',
-  },
-  {
-    hub: 'hard-rock-stadium',
-    field: 'tailgating',
-    reason: 'Miami: stored rules say blue/orange pass holders park where they wish in the first hour; hardrockstadium.com/stadium-policy (2026-08-11) and faq-items/tailgating-guidelines say orange only and never mention blue.',
-  },
-  {
-    hub: 'yulman-stadium',
-    field: 'tailgating',
-    reason: 'Tulane: stored rules are a 2025 capture ("only tailgating location for the 2025 season", Lagniappe/Beaucoup packages); the cited page (tulanegreenwave.com/sports/2019/7/29/tailgating-2019) was rewritten for 2026 with a different season statement and package list.',
-  },
-  {
-    hub: 'kidd-brewer-stadium',
-    field: 'parking',
-    sub: 'officialParkingUrls',
-    reason: 'Appalachian State: the stored officialParkingUrls entry (mountaineersathleticfund.com/yosef-club/renewals/index.html) returns 403; the 2025 fan guide body links the live mountaineersathleticfund.com/yosef-club/index.html#season-tickets-parking instead. Sub-field grain on purpose: lots and a lot map written with their own sources (report section 8) render; the dead link never does.',
-  },
-];
-
-/** HOLDS. Not conflicts: a ruling has settled which official source governs,
- *  so the stored text is stale rather than disputed, and a data correction is
- *  queued. The field stays silent until the correction lands; the entry is
- *  deleted with that write. */
-export const CONDENSED_HOLDS: ReadonlyArray<CondensedExclusion> = [
-  // secu-stadium transit was held here from 2026-08-27 until the Pass 2 write
-  // corrected publicTransit.notes to the DOTS window and re-sourced it to
-  // transportation.umd.edu (scripts/cfb-venue-data-plan.json).
-];
-
-// Texas A&M (kyle-field) tailgating.rvPolicy is unconfirmed (on no 12thman.com
-// tailgating page). It needs no entry: the block renders the rules and
-// timeWindow sentences only, never grillRules or rvPolicy. If rvPolicy ever
-// joins the line, gate kyle-field here first.
+/** The exclusion lists now live in venue-field-exclusions.ts so the venue page
+ *  honours them too: a field withheld here for cause was still rendering on the
+ *  building's own page. Re-exported under the original names because they are
+ *  the documented handle for this rule. */
+export type CondensedExclusion = FieldExclusion;
+export const CONDENSED_CONFLICTS = FIELD_CONFLICTS;
+export const CONDENSED_HOLDS = FIELD_HOLDS;
 
 const has = (s: string | null | undefined): s is string => typeof s === 'string' && s.trim().length > 0;
-const prov = (sources: Record<string, string> | undefined, key: string): boolean => !!sources && has(sources[key]);
-/** Provenance for one sub-field: its own dotted key, or the flat key that
- *  vouches for the whole field. */
-const subProv = (sources: Record<string, string> | undefined, field: string, sub: string): boolean =>
-  prov(sources, `${field}.${sub}`) || prov(sources, field);
-const EXCLUSIONS: ReadonlyArray<CondensedExclusion> = [...CONDENSED_CONFLICTS, ...CONDENSED_HOLDS];
-/** The whole line is withheld: an entry for this hub and field with no sub. */
-const excluded = (hubSlug: string, field: CondensedField): boolean =>
-  EXCLUSIONS.some((e) => e.hub === hubSlug && e.field === field && !e.sub);
-/** One sub-field is withheld: an entry naming it, or one withholding the whole line. */
-const excludedSub = (hubSlug: string, field: CondensedField, sub: NonNullable<CondensedExclusion['sub']>): boolean =>
-  EXCLUSIONS.some((e) => e.hub === hubSlug && e.field === field && (!e.sub || e.sub === sub));
+const prov = hasProvenance;
+const subProv = hasSubProvenance;
+const excluded = fieldExcluded;
+const excludedSub = subFieldExcluded;
 /** House rule at render, never in the record: the stored text is the sourced
  *  value and is not edited, but an em dash in served copy is out. A spaced or
  *  bare em dash becomes a comma; one that follows punctuation becomes a space

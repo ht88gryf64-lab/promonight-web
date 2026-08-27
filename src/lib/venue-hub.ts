@@ -122,7 +122,20 @@ export interface VenueHub {
 function stringMap(v: unknown): Record<string, string> {
   if (!v || typeof v !== 'object' || Array.isArray(v)) return {};
   const out: Record<string, string> = {};
-  for (const [k, val] of Object.entries(v as Record<string, unknown>)) if (typeof val === 'string' && val.length > 0) out[k] = val;
+  for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
+    if (typeof val === 'string' && val.length > 0) { out[k] = val; continue; }
+    // A field vouched for by more than one page is stored as an ARRAY of URLs.
+    // 45 provenance values in the corpus are shaped that way, almost all of them
+    // on MLB buildings. Dropping them made those fields read as UNSOURCED, so the
+    // per-field rule withheld facts that are in fact sourced, and it did it
+    // silently because an absent key and a malformed key are indistinguishable
+    // downstream. Take the first non-empty URL: nothing renders the source, it is
+    // only ever tested for presence, so the first is a faithful primary.
+    if (Array.isArray(val)) {
+      const first = val.find((u): u is string => typeof u === 'string' && u.length > 0);
+      if (first) out[k] = first;
+    }
+  }
   return out;
 }
 

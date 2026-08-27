@@ -3,6 +3,7 @@ import Link from 'next/link';
 import type { Team } from '@/lib/types';
 import type { HubFaqItem } from '@/components/hub/HubFaq';
 import { transitSuppressed } from '@/lib/venue-transit-suppression';
+import { fieldExcluded, hasProvenance } from '@/lib/venue-field-exclusions';
 import { HubFaq } from '@/components/hub/HubFaq';
 import { TicketmasterCTA } from '@/components/affiliates/TicketmasterCTA';
 import { FanaticsCTA } from '@/components/affiliates/FanaticsCTA';
@@ -102,19 +103,22 @@ export function VenueHubView({
   const subtitle = [loc, ...tenantNames].filter(Boolean).join(' · ');
 
   // ── bag capsule (rule 3: length budget; label fix in bagCapsule) ──
+  // Each bag fact needs its own provenance, the same test the CFB block applies,
+  // so a claim cannot render here that is withheld there (report section 16).
+  const bagExcluded = fieldExcluded(hub.slug, 'bag');
   const hasBag =
-    verified &&
-    (hub.bagMaxDimensions !== null ||
-      hub.clearBagRequired !== null ||
-      hub.bagsProhibited === true ||
-      !!hub.bagPolicyNotes);
+    verified && !bagExcluded &&
+    ((hub.bagMaxDimensions !== null && hasProvenance(hub.sources, 'bagMaxDimensions')) ||
+      (hub.clearBagRequired !== null && hasProvenance(hub.sources, 'clearBagRequired')) ||
+      (hub.bagsProhibited === true && hasProvenance(hub.sources, 'bagsProhibited')) ||
+      (!!hub.bagPolicyNotes && hasProvenance(hub.sources, 'bagPolicyNotes')));
   // A building with only a policy URL has no FACT to put in the capsule, but it
   // can still answer "has this venue published a bag policy" (the fifth case in
   // bagFaqAnswers) and it can still send the reader to the venue's own page. So
   // this, not hasBag, is what gates both the FAQ and the card: hasBag remains the
   // narrower test for whether a bag fact exists at all, which is what
   // venueHubIsIndexable and the capsule copy care about.
-  const hasBagFaq = hasBag || (verified && !!hub.bagPolicyUrl);
+  const hasBagFaq = hasBag || (verified && !bagExcluded && !!hub.bagPolicyUrl && hasProvenance(hub.sources, 'bagPolicyUrl'));
   const dimStr = dimsString(hub.bagMaxDimensions);
 
   // ── FAQ (rule: overflow bag text + long-tail queries land here) ──
