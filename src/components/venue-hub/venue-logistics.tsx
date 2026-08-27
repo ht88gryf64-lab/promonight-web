@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
+import type { CondensedLine } from '@/lib/venue-hub-condensed';
 import {
   type VenueHub,
   type VenueHubTenantOverlay,
@@ -278,5 +279,51 @@ export function VenueLogisticsBlock({ hub, tenantName = (t) => t.displayName }: 
       <FoodCard hub={hub} />
       <NearbyCard hub={hub} />
     </>
+  );
+}
+
+/** The condensed logistics block: one line per provenanced field, verbatim
+ *  from the hub, with a link to the full guide for depth. Dark tone for the
+ *  CFB pages; the label colour reads --cfb-accent when the page sets it and
+ *  falls back to the hub gold elsewhere, so a pro page can mount it as is.
+ *  The caller decides the minimum (CONDENSED_MIN_FIELDS) and passes the lines. */
+export function CondensedLogisticsBlock({
+  lines,
+  guideHref,
+  venueName,
+}: {
+  lines: CondensedLine[];
+  guideHref: string;
+  venueName: string;
+}) {
+  if (!lines.length) return null;
+  const MONO = 'var(--font-mono), ui-monospace, monospace';
+  const SANS = 'var(--font-outfit-sans), system-ui, sans-serif';
+  return (
+    <div className="rounded-2xl p-5" style={{ background: '#0c0b12', border: '1px solid rgba(255,255,255,0.06)' }}>
+      <dl className="grid gap-x-6 gap-y-3.5 sm:grid-cols-2">
+        {lines.map((l) => (
+          <div key={l.key}>
+            <dt className="text-[10px] uppercase" style={{ fontFamily: MONO, letterSpacing: '0.12em', color: 'var(--cfb-accent, #FFB71E)' }}>{l.label}</dt>
+            <dd className="mt-0.5 text-[13.5px] leading-relaxed text-white/70" style={{ fontFamily: SANS }}>
+              {l.text}
+              {l.href && l.hrefLabel ? (
+                <>
+                  {' '}
+                  <a href={l.href} target="_blank" rel="noopener noreferrer" className="font-semibold text-white/85 underline-offset-2 hover:underline">
+                    {l.hrefLabel} &rsaquo;
+                  </a>
+                </>
+              ) : null}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <p className="mt-4 text-[13px]" style={{ fontFamily: SANS }}>
+        <Link href={guideHref} className="font-bold" style={{ color: 'var(--cfb-accent, #FFB71E)' }}>
+          Full gameday guide for {venueName} &rarr;
+        </Link>
+      </p>
+    </div>
   );
 }

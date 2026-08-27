@@ -38,11 +38,13 @@ import { SpotHeroCTA } from '@/components/affiliates/SpotHeroCTA';
 import { ExpediaCTA } from '@/components/affiliates/ExpediaCTA';
 import { FanaticsCTA } from '@/components/affiliates/FanaticsCTA';
 import { VenueHubLink } from '@/components/venue-hub/VenueHubLink';
-import type { TeamVenueHubLink } from '@/lib/venue-hub';
+import { CondensedLogisticsBlock } from '@/components/venue-hub/venue-logistics';
+import { buildCondensedLogistics, CONDENSED_MIN_FIELDS } from '@/lib/venue-hub-condensed';
+import { displayVenueName, type TeamVenueHubLink, type VenueHub } from '@/lib/venue-hub';
 import { SERIF, MONO, SANS, fmtMonthDay, fmtDayLong, Eyebrow, TAP_TARGET_24 } from './cfb-bits';
 import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
 
-export function CfbSchoolPage({ data, venueHubLink }: { data: CfbSchoolPageData; venueHubLink: TeamVenueHubLink | null }) {
+export function CfbSchoolPage({ data, venueHubLink, venueHub }: { data: CfbSchoolPageData; venueHubLink: TeamVenueHubLink | null; venueHub: VenueHub | null }) {
   const { school, venue, games, editorial } = data;
   const rivalryGames = games.filter((g) => g.rivalry);
   const homeCount = games.filter((g) => g.isHome && !g.neutralSite).length;
@@ -275,6 +277,37 @@ export function CfbSchoolPage({ data, venueHubLink }: { data: CfbSchoolPageData;
             </div>
           )}
         </section>
+
+        {/* ── GAMEDAY AT {VENUE} — the condensed logistics block, read from the
+            SAME venueHubs doc /venues/{slug} renders. One line per field, the
+            stored value verbatim (first sentence for prose), and a field renders
+            only when the hub carries provenance for it (venue-hub-condensed.ts).
+            Not gated on the index floor or on verified: a below-floor building
+            still shows the fields it legitimately carries. Minimum three lines
+            for the block; below that the page keeps the guide link (the
+            VenueHubLink card above for indexable hubs, a plain link here for the
+            held ones) and shows nothing else. No hub (washington-state): nothing. ── */}
+        {venueHub && (() => {
+          const lines = buildCondensedLogistics(venueHub, school.id);
+          const guideHref = `/venues/${venueHub.slug}`;
+          const venueName = displayVenueName(venueHub.name);
+          if (lines.length >= CONDENSED_MIN_FIELDS) {
+            return (
+              <section className="mt-11">
+                <Eyebrow>Gameday at {venueName}</Eyebrow>
+                <CondensedLogisticsBlock lines={lines} guideHref={guideHref} venueName={venueName} />
+              </section>
+            );
+          }
+          if (venueHubLink?.indexable) return null;
+          return (
+            <p className="mt-4 text-[13px]" style={{ fontFamily: SANS }}>
+              <Link href={guideHref} className="font-bold" style={{ color: 'var(--cfb-accent)' }}>
+                Full gameday guide for {venueName} &rarr;
+              </Link>
+            </p>
+          );
+        })()}
 
         {/* ── SCHEDULE — always present. Rows are CLICKABLE and open the gameday
             modal (CfbSchedule); per-game tickets/hotels/parking live in that modal,

@@ -57,6 +57,11 @@ export interface VenueHubTenantOverlay {
   tailgateWindow: string | null;
   bagPolicyException: string | null;
   verified: boolean;
+  /** Per-field provenance URLs on the overlay (gatesOpen, gateVariance,
+   *  tailgateWindow, bagPolicyException, parkingPrice). {} when the doc has
+   *  none. Read by the condensed logistics block, which renders a field only
+   *  when its source is present. */
+  sources: Record<string, string>;
 }
 
 export interface VenueHub {
@@ -103,9 +108,23 @@ export interface VenueHub {
   verified: boolean;
   // per-tenant overlays (gate times etc.)
   tenantOverlays: VenueHubTenantOverlay[];
+  /** Per-field provenance URLs keyed by field (parkingLots, publicTransit,
+   *  tailgating, accessibility, bagPolicyUrl, food, nearby, ...). {} when the
+   *  doc has none. The venue page does not read it; the condensed logistics
+   *  block on the CFB school page renders a field only when its key is here. */
+  sources: Record<string, string>;
 }
 
 /** Read a building doc + its tenant overlays. Null when the doc is absent. */
+/** A doc field that should be a string->URL map. Anything else (absent,
+ *  malformed, non-string values) reads as an empty map, never as provenance. */
+function stringMap(v: unknown): Record<string, string> {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return {};
+  const out: Record<string, string> = {};
+  for (const [k, val] of Object.entries(v as Record<string, unknown>)) if (typeof val === 'string' && val.length > 0) out[k] = val;
+  return out;
+}
+
 export const getVenueHub = cache(async (slug: string): Promise<VenueHub | null> => {
   const doc = await db.collection('venueHubs').doc(slug).get();
   if (!doc.exists) return null;
@@ -122,6 +141,7 @@ export const getVenueHub = cache(async (slug: string): Promise<VenueHub | null> 
       tailgateWindow: t.tailgateWindow ?? null,
       bagPolicyException: t.bagPolicyException ?? null,
       verified: t.verified === true,
+      sources: stringMap(t.sources),
     };
   });
   return {
@@ -167,6 +187,7 @@ export const getVenueHub = cache(async (slug: string): Promise<VenueHub | null> 
     photoAttribution: typeof d.photoAttribution === 'string' && d.photoAttribution ? d.photoAttribution : null,
     verified: d.verified === true,
     tenantOverlays,
+    sources: stringMap(d.sources),
   };
 });
 
