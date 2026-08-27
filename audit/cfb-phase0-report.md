@@ -142,6 +142,8 @@ Rendered DOM, cache-busting curl of the homepage (/) and a pro team page (/mlb/c
 
 Absent: an always-visible top-level nav link to /cfb (by design, in parity with the other hubs). No other /cfb anchor exists on either page.
 
+**Amendment, 2026-08-27 (do not re-open).** The finder row above should not be read as a crawl gap. The seven links the CFB chip reveals are /cfb itself plus six /cfb?conf= variants. The hub honours ?conf= client-side from window.location as an initial visibility filter (src/components/cfb/hub/CfbHubBrowse.tsx:24-32; no useSearchParams, no Suspense bailout), its canonical is /cfb, and its served HTML carries all 86 school links regardless of the filter. /cfb is linked from the nav dropdown and the footer on every page in served HTML. Nothing is reachable only through the chip, so no finder change was made; the client-only reveal is cosmetic, not a discoverability defect.
+
 Sitemap (live https://www.getpromonight.com/sitemap.xml, 470 URLs): /cfb present (1); /cfb/rivalries present (1); rivalry detail URLs 32 of 32, the slug set identical to MATCHUP_REGISTRY; school pages 86 of 87. The omitted school is washington-state, excluded by cfbSchoolBelowIndexFloor (fewer than 8 games or no venue; it has 6 games and no venue) and served with robots noindex,follow. llms.txt lists the hub, the school URL pattern, the rivalries index and the matchup URL pattern with counts derived at render time.
 
 ## 5. Editorial status
