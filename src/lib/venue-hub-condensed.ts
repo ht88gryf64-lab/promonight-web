@@ -12,10 +12,11 @@
 // PROVENANCE GRAIN (2026-08-27, audit/cfb-venue-sourcing-report.md section 2):
 // venueHubs.sources carries two conventions. Most hubs vouch for a whole
 // field with a flat key (sources.tailgating, sources.publicTransit, overlay
-// sources.gatesOpen). Twenty-one hubs vouch per sub-field with dotted keys
+// sources.gatesOpen). Others vouch per sub-field with dotted keys
 // (sources["tailgating.rules"], ["tailgating.timeWindow"],
 // ["publicTransit.notes"], ["publicTransit.lines"], overlay
-// ["gatesOpen.ruleText"]). Both are provenance. A sub-field renders when its
+// ["gatesOpen.ruleText"]): 21 hubs in the 2026-08-27 dump carry at least one,
+// the 17 tailgating hubs of report section 2 among them. Both are provenance. A sub-field renders when its
 // own dotted key OR its field's flat key is present; a sub-field with neither
 // stays silent even when a sibling sub-field is sourced. The data is right at
 // the sub-field grain; nothing here writes flat aliases to catch up.
@@ -47,6 +48,9 @@ export interface CondensedExclusion {
   /** venueHubs doc id. */
   hub: string;
   field: CondensedField;
+  /** When set, only this sub-field of the line is withheld (the line's other
+   *  sub-fields still render on their own provenance). Absent: the whole line. */
+  sub?: 'officialParkingUrls' | 'parkingLotMapUrl' | 'parkingLots' | 'rules' | 'timeWindow' | 'allowed' | 'notes' | 'lines' | 'ruleText';
   /** Why the field is silent, specific enough to re-check without the report. */
   reason: string;
 }
@@ -67,7 +71,7 @@ export const CONDENSED_CONFLICTS: ReadonlyArray<CondensedExclusion> = [
   {
     hub: 'david-booth-kansas-memorial-stadium',
     field: 'tailgating',
-    reason: 'Kansas: the permitted-lot list on the cited 704G page is superseded (policy.ku.edu removed lots 33 and 50 in 2016; parking.ku.edu says tailgating is prohibited in lots 34 and 61) and the stored rules text is truncated mid-list ("96, and ...").',
+    reason: 'Kansas: the permitted-lot list on the cited 704G page is superseded (policy.ku.edu removed lots 33 and 50 in 2016; parking.ku.edu says tailgating is prohibited in lots 34 and 61).',
   },
   {
     hub: 'hard-rock-stadium',
@@ -82,18 +86,20 @@ export const CONDENSED_CONFLICTS: ReadonlyArray<CondensedExclusion> = [
   {
     hub: 'kidd-brewer-stadium',
     field: 'parking',
-    reason: 'Appalachian State: the stored officialParkingUrls entry (mountaineersathleticfund.com/yosef-club/renewals/index.html) returns 403; the 2025 fan guide body links the live mountaineersathleticfund.com/yosef-club/index.html#season-tickets-parking instead.',
+    sub: 'officialParkingUrls',
+    reason: 'Appalachian State: the stored officialParkingUrls entry (mountaineersathleticfund.com/yosef-club/renewals/index.html) returns 403; the 2025 fan guide body links the live mountaineersathleticfund.com/yosef-club/index.html#season-tickets-parking instead. Sub-field grain on purpose: lots and a lot map written with their own sources (report section 8) render; the dead link never does.',
   },
 ];
 
-/** HOLDS. Not conflicts: the stored text is not disputed between official
- *  sources, it is known stale and a data correction is queued. The field stays
- *  silent until the correction lands; the entry is deleted with that write. */
+/** HOLDS. Not conflicts: a ruling has settled which official source governs,
+ *  so the stored text is stale rather than disputed, and a data correction is
+ *  queued. The field stays silent until the correction lands; the entry is
+ *  deleted with that write. */
 export const CONDENSED_HOLDS: ReadonlyArray<CondensedExclusion> = [
   {
     hub: 'secu-stadium',
     field: 'transit',
-    reason: 'Maryland: the stored Quickbus window (paused from 30 minutes after kickoff until halftime) is STALE, not disputed. DOTS operates Shuttle-UM and is authoritative over the athletics page; transportation.umd.edu publishes a continuous window from three hours before kickoff to one hour after the final whistle. Pass 2 corrects publicTransit.notes to the DOTS window and re-sources it to DOTS; delete this entry with that write.',
+    reason: 'Maryland: the stored Quickbus window (paused from 30 minutes after kickoff until halftime) is STALE, not disputed. The research pass found umterps.com (2026-dated) and transportation.umd.edu disagreeing on the mid-game gap; ruling 2026-08-27 (report section 4): DOTS operates Shuttle-UM, so DOTS is authoritative over the athletics page, and it publishes a continuous window from three hours before kickoff to one hour after the final whistle. Pass 2 corrects publicTransit.notes to the DOTS window and re-sources it to DOTS; delete this entry with that write.',
   },
 ];
 
@@ -108,8 +114,13 @@ const prov = (sources: Record<string, string> | undefined, key: string): boolean
  *  vouches for the whole field. */
 const subProv = (sources: Record<string, string> | undefined, field: string, sub: string): boolean =>
   prov(sources, `${field}.${sub}`) || prov(sources, field);
+const EXCLUSIONS: ReadonlyArray<CondensedExclusion> = [...CONDENSED_CONFLICTS, ...CONDENSED_HOLDS];
+/** The whole line is withheld: an entry for this hub and field with no sub. */
 const excluded = (hubSlug: string, field: CondensedField): boolean =>
-  CONDENSED_CONFLICTS.some((c) => c.hub === hubSlug && c.field === field) || CONDENSED_HOLDS.some((h) => h.hub === hubSlug && h.field === field);
+  EXCLUSIONS.some((e) => e.hub === hubSlug && e.field === field && !e.sub);
+/** One sub-field is withheld: an entry naming it, or one withholding the whole line. */
+const excludedSub = (hubSlug: string, field: CondensedField, sub: NonNullable<CondensedExclusion['sub']>): boolean =>
+  EXCLUSIONS.some((e) => e.hub === hubSlug && e.field === field && (!e.sub || e.sub === sub));
 /** House rule at render, never in the record: the stored text is the sourced
  *  value and is not edited, but an em dash in served copy is out. A spaced or
  *  bare em dash becomes a comma; one that follows punctuation becomes a space
@@ -154,26 +165,27 @@ export function buildCondensedLogistics(hub: VenueHub, tenantId: string): Conden
   if (!excluded(hub.slug, 'parking')) {
     const lots = prov(s, 'parkingLots') ? hub.parkingLots.map((l) => l.name).filter(has).slice(0, 4).map(stripEmDashes) : [];
     const mapHref = has(hub.parkingLotMapUrl) && prov(s, 'parkingLotMapUrl') ? hub.parkingLotMapUrl : null;
-    const officialHref = !mapHref && hub.officialParkingUrls.length > 0 && prov(s, 'officialParkingUrls') ? hub.officialParkingUrls[0] : null;
+    const officialHref = !mapHref && hub.officialParkingUrls.length > 0 && prov(s, 'officialParkingUrls') && !excludedSub(hub.slug, 'parking', 'officialParkingUrls') ? hub.officialParkingUrls[0] : null;
     const href = mapHref ?? officialHref;
     const text = lots.length ? `Lots: ${lots.join(', ')}.` : href ? 'See the official parking page.' : null;
     if (text) lines.push({ key: 'parking', label: 'Parking', text, href, hrefLabel: href ? (mapHref ? 'Official lot map' : 'Official parking') : null });
   }
 
   // Tailgating: the allowed flag, the first sentence of the rules and of the
-  // window, each on its own provenance. grillRules and rvPolicy do not render
-  // here; they are venue-page depth.
+  // window, each on its own provenance. A false flag is terminal: sourced, it
+  // renders "Not permitted."; unsourced, the line stays silent, so a lot-open
+  // window can never be presented under a prohibition. grillRules and
+  // rvPolicy do not render here; they are venue-page depth.
   if (hub.tailgating && !excluded(hub.slug, 'tailgating')) {
     const tg = hub.tailgating;
     const allowedOk = typeof tg.allowed === 'boolean' && subProv(s, 'tailgating', 'allowed');
-    const rulesOk = has(tg.rules) && subProv(s, 'tailgating', 'rules');
-    const windowOk = has(tg.timeWindow) && subProv(s, 'tailgating', 'timeWindow');
     const parts: string[] = [];
-    if (tg.allowed === false && allowedOk) parts.push('Not permitted.');
-    else {
-      if (rulesOk) parts.push(sentence(tg.rules as string));
+    if (tg.allowed === false) {
+      if (allowedOk) parts.push('Not permitted.');
+    } else {
+      if (has(tg.rules) && subProv(s, 'tailgating', 'rules')) parts.push(sentence(tg.rules));
       else if (tg.allowed === true && allowedOk) parts.push('Permitted.');
-      if (windowOk) parts.push(sentence(tg.timeWindow as string));
+      if (has(tg.timeWindow) && subProv(s, 'tailgating', 'timeWindow')) parts.push(sentence(tg.timeWindow));
     }
     if (parts.length) lines.push({ key: 'tailgating', label: 'Tailgating', text: parts.join(' '), href: null, hrefLabel: null });
   }
