@@ -31,6 +31,7 @@
 // values, prose fields are their first stored sentence (leadSentences), lots
 // are their stored names.
 import { type VenueHub, leadSentences, dimsString, stripTrailingPeriod } from './venue-hub';
+import { transitSuppressed } from './venue-transit-suppression';
 
 export type CondensedField =
   | 'gates' | 'bag' | 'parking' | 'tailgating' | 'transit' | 'rideshare' | 'accessibility' | 'outsideFood' | 'food' | 'nearby';
@@ -189,7 +190,7 @@ export function buildCondensedLogistics(hub: VenueHub, tenantId: string): Conden
   }
 
   // Transit: first sentence of the notes plus the named lines, each on its own provenance.
-  if (hub.publicTransit && !excluded(hub.slug, 'transit')) {
+  if (hub.publicTransit && !excluded(hub.slug, 'transit') && !transitSuppressed(hub.slug)) {
     const pt = hub.publicTransit;
     const parts: string[] = [];
     if (has(pt.notes) && subProv(s, 'publicTransit', 'notes')) parts.push(sentence(pt.notes));

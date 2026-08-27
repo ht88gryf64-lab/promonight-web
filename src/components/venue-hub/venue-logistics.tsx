@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import type { CondensedLine } from '@/lib/venue-hub-condensed';
+import { transitSuppressed } from '@/lib/venue-transit-suppression';
 import {
   type VenueHub,
   type VenueHubTenantOverlay,
@@ -96,7 +97,9 @@ export function buildGettingInRows(hub: VenueHub, tenantName: TenantNameResolver
       body: `${rule}.${variance ? ` ${variance}.` : ''}`,
     });
   }
-  if (verified && hub.publicTransit && (hub.publicTransit.lines.length > 0 || hub.publicTransit.notes)) {
+  // Suppressed buildings name a service a fan cannot use; the row is withheld
+  // and the stored text is left untouched (venue-transit-suppression.ts).
+  if (verified && !transitSuppressed(hub.slug) && hub.publicTransit && (hub.publicTransit.lines.length > 0 || hub.publicTransit.notes)) {
     // Notes AND lines: the lines array used to be swallowed whenever notes
     // existed, leaving named routes ("Metro C Line", "Route 47") dark. The
     // "Lines:" lead-in stays a single fixed word so no template-only 5-gram

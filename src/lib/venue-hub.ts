@@ -6,6 +6,7 @@ import { getTeamBySlug, getTeamPromos, promoBoardChicagoYMD } from './data';
 import { getCfbSchool } from './cfb/data';
 import { toAffiliateTeam } from './cfb/page-extras';
 import { collectVenueLinksForTeams, type HubVenueLink, type VenueIndexEntry } from './venue-index';
+import { transitSuppressed } from './venue-transit-suppression';
 
 // Read layer for the venue logistics hub (/venues/[slug]). Reads the venueHubs
 // collection ONLY. The legacy `venues` collection and getVenueForTeam are
@@ -459,8 +460,10 @@ export const getVenueUtilityCounts = cache(async (): Promise<VenueUtilityCounts>
       counts.bag++;
     }
 
+    // Suppressed buildings render no transit anywhere, so they must not be
+    // counted in the homepage utility tile either.
     const pt = d.publicTransit;
-    if (pt && ((pt.lines?.length ?? 0) > 0 || !!pt.notes)) counts.transit++;
+    if (pt && !transitSuppressed(doc.id) && ((pt.lines?.length ?? 0) > 0 || !!pt.notes)) counts.transit++;
 
     if (gateSlugs.has(doc.id)) counts.gates++;
   }
@@ -909,7 +912,7 @@ export function venueHubDescription(hub: VenueHub): string {
       (spotHeroCovers(hub) && hub.lat !== null && hub.lng !== null));
   const hasGates = verified && hub.tenantOverlays.some((t) => t.verified && !!t.gatesOpen?.ruleText);
   const hasTransit =
-    verified && !!hub.publicTransit && ((hub.publicTransit.lines?.length ?? 0) > 0 || !!hub.publicTransit.notes);
+    verified && !transitSuppressed(hub.slug) && !!hub.publicTransit && ((hub.publicTransit.lines?.length ?? 0) > 0 || !!hub.publicTransit.notes);
   const hasFood = verified && !!hub.food;
   // Expedia hotels renders for every verified, tenanted building (all 222 have
   // a tenant), so hotels is a covered topic whenever the page is verified.

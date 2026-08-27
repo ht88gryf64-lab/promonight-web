@@ -24,6 +24,7 @@ import { HubTeamGrid } from '@/components/hub/HubTeamGrid';
 import { HubVenueLinks } from '@/components/hub/HubVenueLinks';
 import { HubFaq, type HubFaqItem } from '@/components/hub/HubFaq';
 import { getVenueLinksForTeams, getTeamVenueHubMap, getVenueHub } from '@/lib/venue-hub';
+import { transitSuppressed } from '@/lib/venue-transit-suppression';
 
 // League hub accent (house palette, mirrors LEAGUE_HUB_REGISTRY NFL entry).
 const ACCENT = '#5f6b57';
@@ -144,7 +145,7 @@ export default async function NflHubPage() {
       const entry: PrimetimeLogistics = {};
       if (overlay?.gatesOpen?.ruleText) entry.gateText = overlay.gatesOpen.ruleText;
       if (lotNote) entry.lotText = lotNote;
-      if (hub.publicTransit?.lines?.[0]) entry.transitText = hub.publicTransit.lines[0];
+      if (!transitSuppressed(hub.slug) && hub.publicTransit?.lines?.[0]) entry.transitText = hub.publicTransit.lines[0];
       if (entry.gateText || entry.lotText || entry.transitText) logisticsByGameId[g.id] = entry;
     }
   }

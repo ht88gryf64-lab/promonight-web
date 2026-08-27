@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import type { Team } from '@/lib/types';
 import type { HubFaqItem } from '@/components/hub/HubFaq';
+import { transitSuppressed } from '@/lib/venue-transit-suppression';
 import { HubFaq } from '@/components/hub/HubFaq';
 import { TicketmasterCTA } from '@/components/affiliates/TicketmasterCTA';
 import { FanaticsCTA } from '@/components/affiliates/FanaticsCTA';
@@ -192,7 +193,7 @@ export function VenueHubView({
   } else if (verified && gateMins.size > 1) {
     chips.push({ k: 'GATES', v: 'Varies by event' });
   }
-  if (verified && hub.publicTransit && (hub.publicTransit.lines.length > 0 || hub.publicTransit.notes)) {
+  if (verified && !transitSuppressed(hub.slug) && hub.publicTransit && (hub.publicTransit.lines.length > 0 || hub.publicTransit.notes)) {
     chips.push({ k: 'TRANSIT', v: transitMode(hub.publicTransit) });
   }
   if (verified && hub.outsideFoodAllowed !== null) {
