@@ -1,0 +1,18 @@
+[
+ {
+  "hub": "autzen-stadium",
+  "note": "Oregon transit: the lines array named Lane Transit District (LTD) while sentence 4 of the same notes said LTD is not running an Autzen shuttle this season. The cited source settles it rather than leaving it disputed: the page reads 'AUTZEN EXPRESS WITH FIRST STUDENT' (First Student operates the shuttle, not LTD) and 'Even though Lane Transit District (LTD) will not be providing Autzen Shuttle service this season, you can still ride LTD to the UO and then walk to the game from campus.' LTD therefore does not serve the venue and is removed from lines; the notes already describe the walk-from-campus option correctly and are unchanged.",
+  "fields": [
+   {
+    "path": "publicTransit.lines",
+    "value": [
+     "Autzen Express"
+    ],
+    "source": "https://goducks.com/sports/2011/6/21/205174790",
+    "sourceKey": "publicTransit",
+    "overwrite": true,
+    "note": "removes Lane Transit District (LTD), which the cited page says is not providing Autzen shuttle service"
+   }
+  ]
+ }
+]
