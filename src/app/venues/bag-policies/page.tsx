@@ -6,6 +6,11 @@ import { pageOpenGraph } from '@/lib/og';
 // preloads to THIS route only; the font module's own import-graph warning is
 // satisfied because this page renders the face throughout.
 import { barlowCondensed } from '@/components/cfb/rivalry/fonts';
+// rd-root's --font-rd resolves through --font-archivo, which only exists
+// inside a scope that binds it. Mounting rd-root without this rendered the
+// whole body in the fallback family. preload:false instance, so adding it
+// here puts no font preload on any gate-off page.
+import { archivoHouse } from '@/components/redesign/fonts-house';
 import {
   BAG_SEASON,
   groupBagPolicyRows,
@@ -145,7 +150,7 @@ export default async function Page() {
   const schemas = buildBagPolicyJsonLd(title, description, orderedRows, faqs);
 
   return (
-    <div className={`rd-root min-h-screen bg-rd-cream ${barlowCondensed.variable}`}>
+    <div className={`${archivoHouse.variable} rd-root min-h-screen bg-rd-cream ${barlowCondensed.variable}`}>
       {schemas.map((schema, i) => (
         <script key={i} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
       ))}
