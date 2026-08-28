@@ -100,7 +100,10 @@ export function buildGettingInRows(hub: VenueHub, tenantName: TenantNameResolver
   const verified = hub.verified;
   const gateTenants = verifiedGateTenants(hub);
   const gettingRows: GettingInRow[] = [];
-  for (const t of gateTenants) {
+  // The gates row read the OVERLAY's verified flag and never the doc's, so an
+  // unsigned-off building could still publish a gate time while every sibling
+  // row stayed dark. Zero instances in today's corpus; latent, not live.
+  for (const t of verified ? gateTenants : []) {
     const rule = stripTrailingPeriod(t.gatesOpen!.ruleText!);
     // The variance is rendered ONLY when it adds something the ruleText does not
     // already say. Both used to render unconditionally on 46 pages, which read as
@@ -116,14 +119,20 @@ export function buildGettingInRows(hub: VenueHub, tenantName: TenantNameResolver
   }
   // Suppressed buildings name a service a fan cannot use; the row is withheld
   // and the stored text is left untouched (venue-transit-suppression.ts).
-  if (verified && !transitSuppressed(hub.slug) && hub.publicTransit && (hub.publicTransit.lines.length > 0 || hub.publicTransit.notes)) {
+  // Provenance and the exclusion list, matching every sibling row and the CFB
+  // block. This row was the only one left on the suppression check alone.
+  const transitOk =
+    verified && !transitSuppressed(hub.slug) && !fieldExcluded(hub.slug, 'transit') && !!hub.publicTransit;
+  const transitNotesOk = transitOk && !!hub.publicTransit?.notes && hasSubProvenance(hub.sources, 'publicTransit', 'notes');
+  const transitLinesOk = transitOk && (hub.publicTransit?.lines.length ?? 0) > 0 && hasSubProvenance(hub.sources, 'publicTransit', 'lines');
+  if (transitNotesOk || transitLinesOk) {
     // Notes AND lines: the lines array used to be swallowed whenever notes
     // existed, leaving named routes ("Metro C Line", "Route 47") dark. The
     // "Lines:" lead-in stays a single fixed word so no template-only 5-gram
     // forms (see audit/venue-thickening-plan.md, 9e discipline).
     const transitParts = [
-      hub.publicTransit.notes,
-      hub.publicTransit.lines.length > 0 ? `Lines: ${hub.publicTransit.lines.join(', ')}.` : null,
+      transitNotesOk ? hub.publicTransit!.notes : null,
+      transitLinesOk ? `Lines: ${hub.publicTransit!.lines.join(', ')}.` : null,
     ].filter(Boolean) as string[];
     gettingRows.push({ label: 'Transit', body: transitParts.join(' ') });
   }
