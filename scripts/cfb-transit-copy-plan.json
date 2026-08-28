@@ -1,0 +1,456 @@
+[
+ {
+  "hub": "acrisure-stadium",
+  "note": "Section 14 proposal: Verified on PRT's own site today: the About Us history states verbatim \"In June 2022, Port Authority was rebranded to Pittsburgh Regional Transit\", and the How to Ride the Light Rail System page (HTTP",
+  "fields": [
+   {
+    "path": "publicTransit.notes",
+    "value": "Take the 'T' to Allegheny Station (Allegheny Ave & Reedsdale St) or North Side Station (base of West General Robinson Street Garage); North Shore parking is reserved and pre-sold, downtown parking encouraged.",
+    "source": "https://acrisurestadium.com/guest-services/a-z-guide",
+    "sourceKey": "publicTransit",
+    "note": "label-edit; confidence high",
+    "overwrite": true
+   },
+   {
+    "path": "publicTransit.lines",
+    "value": [
+     "Pittsburgh Regional Transit (PRT) 'T' light rail"
+    ],
+    "source": "https://acrisurestadium.com/guest-services/a-z-guide",
+    "sourceKey": "publicTransit",
+    "overwrite": true
+   }
+  ]
+ },
+ {
+  "hub": "arrowhead-stadium",
+  "note": "Section 14 proposal: Verified independently today: the RideKC route page returns HTTP 200 with title and H1 \"47 - Martin Luther King Jr.\", contains zero occurrences of \"Broadway\", lists no Broadway route anywhere on its 4",
+  "fields": [
+   {
+    "path": "publicTransit.notes",
+    "value": "Bus transportation available through RideKC on the 47 Martin Luther King Jr. line; see RideKC.org",
+    "source": "https://ridekc.org/getting-around/routes-in-service/47-martin-luther-king-jr/",
+    "sourceKey": "publicTransit",
+    "note": "both; confidence high",
+    "overwrite": true
+   },
+   {
+    "path": "publicTransit.lines",
+    "value": [
+     "RideKC 47 Martin Luther King Jr."
+    ],
+    "source": "https://ridekc.org/getting-around/routes-in-service/47-martin-luther-king-jr/",
+    "sourceKey": "publicTransit",
+    "overwrite": true
+   }
+  ]
+ },
+ {
+  "hub": "kauffman-stadium",
+  "note": "Section 14 proposal: Verified on the operator page (HTTP 200): RideKC names the route \"47 - Martin Luther King Jr.\", its prose reads \"a bi-state route with daily service ... along Martin Luther King to the stadium area\", ",
+  "fields": [
+   {
+    "path": "publicTransit.notes",
+    "value": "The 47 Martin Luther King Jr. serves Kauffman Stadium 7 days a week to Royals games and back; schedules at ridekc.org or 816-221-0660.",
+    "source": "https://ridekc.org/getting-around/routes-in-service/47-martin-luther-king-jr/",
+    "sourceKey": "publicTransit",
+    "note": "label-edit; confidence high",
+    "overwrite": true
+   },
+   {
+    "path": "publicTransit.lines",
+    "value": [
+     "47 Martin Luther King Jr. (RideKC bus)"
+    ],
+    "source": "https://ridekc.org/getting-around/routes-in-service/47-martin-luther-king-jr/",
+    "sourceKey": "publicTransit",
+    "overwrite": true
+   }
+  ]
+ },
+ {
+  "hub": "nrg-stadium",
+  "note": "Section 14 proposal: METRO's attraction page for the venue (fetched today, HTTP 200; its /nrg-park URL now resolves to /reliant-park) names the stop \"Stadium Park / Astrodome Station\" and the \"METRORail Red Line\" at every",
+  "fields": [
+   {
+    "path": "publicTransit.notes",
+    "value": "Exit at Stadium Park / Astrodome Station off Fannin and enter Gate 2. From IAH airport take METRO 500 Downtown Direct to downtown then transfer to Red Line. METRO info 713-225-0119; 100% accessible with METROLift paratransit.",
+    "source": "https://www.ridemetro.org/riding-metro/houston-attractions/reliant-park",
+    "sourceKey": "publicTransit",
+    "note": "label-edit; confidence high",
+    "overwrite": true
+   },
+   {
+    "path": "publicTransit.lines",
+    "value": [
+     "METRORail Red Line"
+    ],
+    "source": "https://www.ridemetro.org/riding-metro/houston-attractions/reliant-park",
+    "sourceKey": "publicTransit"
+   }
+  ]
+ },
+ {
+  "hub": "rose-bowl-stadium",
+  "note": "Section 14 proposal: Rename verified, citation corrected: the submitted source, metro.net/riding/schedules/, contains zero occurrences of \"Memorial Park\" and so does not carry the station or transfer facts this copy asser",
+  "fields": [
+   {
+    "path": "publicTransit.notes",
+    "value": "Take the Metro A Line and exit at Memorial Park Station in Pasadena; from there walk approximately 2.4 miles to the stadium or purchase a Rose Bowl Shuttle pass. Metrolink trains arrive into Union Station where passengers transfer to the Metro A Line.",
+    "source": "https://www.metro.net/destinations/rose-bowl/",
+    "sourceKey": "publicTransit",
+    "note": "label-edit; confidence high",
+    "overwrite": true
+   },
+   {
+    "path": "publicTransit.lines",
+    "value": [
+     "Metro A Line (exit at Memorial Park Station, Pasadena)",
+     "Metrolink (arrives Union Station; transfer to Metro A Line)"
+    ],
+    "source": "https://www.metro.net/destinations/rose-bowl/",
+    "sourceKey": "publicTransit",
+    "overwrite": true
+   }
+  ]
+ },
+ {
+  "hub": "soldier-field",
+  "note": "Section 14 proposal: Verified today: the venue's live Directions page (HTTP 200, sitemap lastmod 2026-08-06) carries every fact in the unchanged prose, namely Red/Green/Orange at Roosevelt with a \"3/4 mile walk to stadium",
+  "fields": [
+   {
+    "path": "publicTransit.notes",
+    "value": "CTA Red/Green/Orange Lines stop at Roosevelt Station, ~3/4-mile walk; Bus 146 connects Roosevelt to stadium; Bus 130 seasonal; Metra 18th Street Station a short walk.",
+    "source": "https://www.soldierfield.com/plan-your-visit/directions",
+    "sourceKey": "publicTransit",
+    "note": "both; confidence medium; prose unchanged, carries the re-source"
+   },
+   {
+    "path": "publicTransit.lines",
+    "value": [
+     "CTA Red Line",
+     "CTA Green Line",
+     "CTA Orange Line (Roosevelt Station)",
+     "CTA Bus 146 Inner Lake Shore/Michigan Express",
+     "CTA Bus 130 Museum Campus (Memorial Day-Labor Day)",
+     "Metra (18th Street Station)"
+    ],
+    "source": "https://www.soldierfield.com/plan-your-visit/directions",
+    "sourceKey": "publicTransit",
+    "overwrite": true
+   }
+  ]
+ },
+ {
+  "hub": "great-american-ball-park",
+  "note": "Section 14 proposal: Verified live 2026-08-27 (HTTP 200, Chrome UA): the operator brands it \"The Connector\" in the page title, H1, breadcrumb schema, nav and body prose (\"The Connector is an electric-powered streetcar tha",
+  "fields": [
+   {
+    "path": "publicTransit.notes",
+    "value": "The Connector streetcar runs a 3.6-mile loop connecting The Banks, Downtown and Over-the-Rhine; it is free to ride and Station 1 at The Banks is just steps from the ballpark. Cincinnati Metro buses serve Hamilton County; the Transit Authority of Northern Kentucky (TANK) provides bus service to and from Northern Kentucky; ACCESS provides transportation for guests with disabilities.",
+    "source": "https://www.cincinnati-oh.gov/streetcar/",
+    "sourceKey": "publicTransit",
+    "note": "both; confidence high",
+    "overwrite": true
+   },
+   {
+    "path": "publicTransit.lines",
+    "value": [
+     "The Connector (streetcar)",
+     "Cincinnati Metro (bus)",
+     "Transit Authority of Northern Kentucky (TANK)"
+    ],
+    "source": "https://www.cincinnati-oh.gov/streetcar/",
+    "sourceKey": "publicTransit",
+    "overwrite": true
+   }
+  ]
+ },
+ {
+  "hub": "boone-pickens-stadium",
+  "note": "Section 14 proposal: Hours change CONFIRMED, source claim CORRECTED. OSU's 2026 map, titled \"2026 FOOTBALL CAMPUS TRANSIT\" and stamped \"MAP SUBJECT TO CHANGE - UPDATED 7/24/26\", carries a GAMEDAY SHUTTLES panel reading \"S",
+  "fields": [
+   {
+    "path": "publicTransit.notes",
+    "value": "Courtesy shuttle service from downtown Stillwater (7th and Lewis) to the stadium (Hall of Fame and Knoblock) begins 3 hours prior to kickoff and runs until 30 minutes after kickoff, then resumes in the 3rd quarter and continues for a minimum of 30 minutes post-game, with pick-up/drop-off approximately every 15 minutes. ADA shuttle picks up/drops off at the OSU Multimodal Transportation Terminal south of the Monroe Street Parking Garage.",
+    "source": "https://okstate.com/documents/2025/11/18/Football-Parking-map-F26.pdf",
+    "sourceKey": "publicTransit",
+    "note": "both; confidence medium",
+    "overwrite": true
+   }
+  ]
+ },
+ {
+  "hub": "coca-cola-coliseum",
+  "note": "Section 14 proposal: The text change stands and is verified: the venue page still literally reads \"Transfer to 509/511 REPLACEMENT BUS towards LAKE SHORE and BATHURST,\" while TTC's own route data (ttcapi/routedetail id=50",
+  "fields": [
+   {
+    "path": "publicTransit.notes",
+    "value": "Exhibition GO station serves the venue at Exhibition Place. TTC directions route via the 509 Harbourfront or 511 Bathurst streetcar to Exhibition Loop. GO Transit: 1-888-GET-ON-GO; TTC: 416-393-INFO.",
+    "source": "https://www.ttc.ca/routes-and-schedules/509",
+    "sourceKey": "publicTransit",
+    "note": "both; confidence medium",
+    "overwrite": true
+   },
+   {
+    "path": "publicTransit.lines",
+    "value": [
+     "GO Transit Lakeshore East-West line to Exhibition GO station (one stop west of Union Station)",
+     "TTC 509 Harbourfront streetcar (from Union Station)",
+     "TTC 511 Bathurst streetcar (from Bathurst Station)",
+     "TTC 29 Dufferin bus (from Dufferin Station, south to Exhibition)"
+    ],
+    "source": "https://www.ttc.ca/routes-and-schedules/509",
+    "sourceKey": "publicTransit"
+   }
+  ]
+ },
+ {
+  "hub": "milan-puskar-stadium",
+  "note": "Section 14 proposal: Verified live today with a Chrome UA: busride.org/Football says \"Cost per passenger is $3.00 round trip, children 5 and under ride free\" and confirms the unchanged two-hours-before and one-hour-after ",
+  "fields": [
+   {
+    "path": "publicTransit.notes",
+    "value": "MountainLine stadium shuttle service begins two hours before kickoff and runs at least one hour after the game; cost is $3.00 round trip and children 5 and under ride free. The PRT runs on game days from 9:30 a.m. to 5 p.m., plus one hour after any game that ends past 5 p.m., and costs 50 cents for visitors.",
+    "source": "https://prt.wvu.edu/how-to-ride",
+    "sourceKey": "publicTransit",
+    "note": "both; confidence medium",
+    "overwrite": true
+   },
+   {
+    "path": "publicTransit.lines",
+    "value": [
+     "MountainLine Transit stadium shuttle (from Mountaineer Mall)",
+     "PRT (Personal Rapid Transit)"
+    ],
+    "source": "https://prt.wvu.edu/how-to-ride",
+    "sourceKey": "publicTransit"
+   }
+  ]
+ },
+ {
+  "hub": "saban-field-at-bryant-denny-stadium",
+  "note": "Section 14 proposal: I fetched https://uagameday.com/shuttles/ today (HTTP 200, article:modified_time 2026-08-06): \"The Crimson Ride is FREE for all fans on Gameday, servicing east campus public parking areas... East Camp",
+  "fields": [
+   {
+    "path": "publicTransit.notes",
+    "value": "Free Crimson Ride shuttle service to the Quad begins at 6 a.m. (11 a.m. kickoff only) on game days and concludes 1.5 hours postgame, servicing east campus parking areas (East Campus RV lot, Lot A, Peter Bryce Blvd lots). Off-campus shuttles run from downtown, University Mall and Birmingham (uagameday.com/shuttles).",
+    "source": "https://uagameday.com/shuttles/",
+    "sourceKey": "publicTransit",
+    "note": "both; confidence high",
+    "overwrite": true
+   }
+  ]
+ },
+ {
+  "hub": "sanford-stadium",
+  "note": "Section 14 proposal: Verified independently: tps.uga.edu/parking/football/ (Chrome UA, HTTP 200, no redirect, schema dateModified 2026-06-18) reads verbatim \"via the S - Stadium Loop bus beginning 3.5 hours before kickoff",
+  "fields": [
+   {
+    "path": "publicTransit.notes",
+    "value": "Complimentary S - Stadium Loop shuttle from the Ramsey Center/Rec Sports Complex (East Campus Parking Deck bus area) to Gate 6 of Sanford Stadium before and after games. If overflow parking is used, shuttles also pick up at the Intramural Fields lot off College Station Road. Shuttles begin 3.5 hours before the scheduled game time; return service runs continuously after the game until traffic patterns return to normal, at least one hour.",
+    "source": "https://tps.uga.edu/parking/football/",
+    "sourceKey": "publicTransit",
+    "note": "both; confidence medium",
+    "overwrite": true
+   },
+   {
+    "path": "publicTransit.lines",
+    "value": [
+     "UGA Campus Transit S - Stadium Loop complimentary gameday shuttle (East Campus Parking Deck/Ramsey Center to Gate 6)"
+    ],
+    "source": "https://tps.uga.edu/parking/football/",
+    "sourceKey": "publicTransit",
+    "overwrite": true
+   }
+  ]
+ },
+ {
+  "hub": "subaru-park",
+  "note": "Section 14 proposal: The club's directions page, fetched today (HTTP 200), states that shuttles returning to the Chester Transportation Center \"will be parked along Seaport Drive on the north side of Subaru Park (just wes",
+  "fields": [
+   {
+    "path": "publicTransit.notes",
+    "value": "Take the SEPTA Wilmington/Newark Regional Rail line to the Chester Transportation Center. A free shuttle runs to Subaru Park every 20 minutes, picking up at the corner of Seaport Drive and Reaney Street (across from Lot D). Additional details in the packet (service beginning four hours prior to game time, Philadelphia Union matches only, show a SEPTA ticket to board, returning shuttles along Seaport Drive on the north side of the stadium) appear on the guide and directions pages rather than the cited transportation page.",
+    "source": "https://www.philadelphiaunion.com/stadium/transportation",
+    "sourceKey": "publicTransit",
+    "note": "label-edit; confidence high",
+    "overwrite": true
+   },
+   {
+    "path": "publicTransit.lines",
+    "value": [
+     "SEPTA Wilmington/Newark Regional Rail Line"
+    ],
+    "source": "https://www.philadelphiaunion.com/stadium/transportation",
+    "sourceKey": "publicTransit"
+   }
+  ]
+ },
+ {
+  "hub": "mercedes-benz-stadium",
+  "note": "Section 14 proposal: Corrects the submitted proposal on three verified points. (1) Scoping the fare to \"MARTA rail\" is backwards: MARTA's fare page (fare-programs.aspx 301s to itsmarta.com/ride/how-to-pay/fares-and-transf",
+  "fields": [
+   {
+    "path": "publicTransit.notes",
+    "value": "$2.50 each way, though A-Line fares are not being collected until further notice; SEC District Station is the preferred arrival/departure stop.",
+    "source": "https://itsmarta.com/Aline.aspx",
+    "sourceKey": "publicTransit",
+    "note": "both; confidence medium",
+    "overwrite": true
+   },
+   {
+    "path": "publicTransit.lines",
+    "value": [
+     "MARTA rail, SEC District Station (formerly GWCC/CNN Center; preferred, at stadium doorstep)",
+     "MARTA rail, Vine City Station",
+     "MARTA Rapid A-Line BRT, South Downtown stop (A-Line in phase one service, no fare collected, board at posted signs)"
+    ],
+    "source": "https://itsmarta.com/Aline.aspx",
+    "sourceKey": "publicTransit",
+    "overwrite": true
+   }
+  ]
+ },
+ {
+  "hub": "crypto-com-arena",
+  "note": "Section 14 proposal: LADOT Transit's alerts feed (https://www.ladotbus.com/alerts, HTTP 200 fetched today) carries the alert verbatim, including dropped stop Figueroa St. & Pico Blvd. (#6144), which is the L.A. LIVE stop ",
+  "fields": [
+   {
+    "path": "publicTransit.notes",
+    "value": "Crypto.com Arena is blocks from the Metro A and B Lines. Nearest Metro Rail stop is Pico Station (A and E Lines); 7th St/Metro Center Station is also nearby for transfers. Metro Bus lines 28, 30, 81, 460 and the J Line stop near L.A. LIVE. DASH Bus Route F has several stops on Figueroa St. adjacent to L.A. LIVE, though from August 5 to November 5, 2026, southbound buses are on detour between 6 a.m. and 5 p.m. and skip the stop at Figueroa St. and Pico Blvd., with the nearest listed alternative at Figueroa St. and 12th St. Metrolink and Amtrak connect to Downtown LA where riders transfer to Metro Rail.",
+    "source": "https://www.cryptoarena.com/plan-your-visit/getting-here/public-transportation",
+    "sourceKey": "publicTransit",
+    "note": "label-edit; confidence medium",
+    "overwrite": true
+   },
+   {
+    "path": "publicTransit.lines",
+    "value": [
+     "Metro A Line",
+     "Metro B Line",
+     "Metro C Line",
+     "Metro D Line",
+     "Metro E Line",
+     "Metro J Line",
+     "Metro Bus 28",
+     "Metro Bus 30",
+     "Metro Bus 81",
+     "Metro Bus 460",
+     "DASH Route F",
+     "Metrolink",
+     "Amtrak"
+    ],
+    "source": "https://www.cryptoarena.com/plan-your-visit/getting-here/public-transportation",
+    "sourceKey": "publicTransit"
+   }
+  ]
+ },
+ {
+  "hub": "bank-of-america-stadium",
+  "note": "Section 14 proposal: Prose and lines need no change: I fetched the relocated Panthers page myself (HTTP 200, canonical and og:url both self-referencing that path) and it carries every asserted fact verbatim, \"Blue Line: P",
+  "fields": [
+   {
+    "path": "publicTransit.notes",
+    "value": "Ride the LYNX Blue Line straight to Brooklyn Village Station; the Carson, Brooklyn Village and Convention Center stops are all within blocks of the stadium. Park at any Park and Ride station along the line (Park and Ride included in fare). Fare $4.40 round trip; buy via the CATS-Pass app.",
+    "source": "https://www.panthers.com/schedule/traffic-parking",
+    "sourceKey": "publicTransit",
+    "note": "re-source; confidence high; prose unchanged, carries the re-source"
+   },
+   {
+    "path": "publicTransit.lines",
+    "value": [
+     "LYNX Blue Line (Brooklyn Village Station; Carson and Convention Center stations also within blocks)"
+    ],
+    "source": "https://www.panthers.com/schedule/traffic-parking",
+    "sourceKey": "publicTransit"
+   }
+  ]
+ },
+ {
+  "hub": "casino-del-sol-stadium",
+  "note": "Section 14 proposal: Verified independently: the proposed URL returns HTTP 200 with no redirect, is self-canonical, and carries every asserted fact on one page, its Phoenix Transport block reads \"the Cat Cruiser transport",
+  "fields": [
+   {
+    "path": "publicTransit.notes",
+    "value": "Cat Cruiser round-trip bus program serves fans from Phoenix for every home football game (arrive ~2 hours before kickoff, depart 30 minutes after)",
+    "source": "https://arizonawildcats.com/sports/2022/8/30/AZFanGuide",
+    "sourceKey": "publicTransit",
+    "note": "re-source; confidence high; prose unchanged, carries the re-source"
+   },
+   {
+    "path": "publicTransit.lines",
+    "value": [
+     "Sun Link Streetcar"
+    ],
+    "source": "https://arizonawildcats.com/sports/2022/8/30/AZFanGuide",
+    "sourceKey": "publicTransit"
+   }
+  ]
+ },
+ {
+  "hub": "memorial-stadium-clemson",
+  "note": "Section 14 proposal: Verified today (HTTP 200, no Last-Modified header): Clemson Parking and Transportation Services states \"Clemson Area Transit (CATBus) operates the Red Route during home football games. Due to road clo",
+  "fields": [
+   {
+    "path": "publicTransit.lines",
+    "value": [
+     "CATbus Red Route (home football games, drop-off and pickup on Cherry Rd and Bryan Circle)"
+    ],
+    "source": "https://www.clemson.edu/campus-life/parking/parking-permits/permits/football-permits.html",
+    "sourceKey": "publicTransit",
+    "overwrite": true
+   }
+  ]
+ },
+ {
+  "hub": "kyle-field",
+  "note": "Section 14 proposal: Verified independently today: the TAMU Transportation Services page returns HTTP 200 and carries every fact the prose and both labels assert, in the operator's own words, \"Shuttle routes have changed ",
+  "fields": [
+   {
+    "path": "publicTransit.notes",
+    "value": "A free Bryan gameday shuttle (gameday.bryantx.gov) plus on-campus and off-campus gameday shuttles operate on football gamedays via Transportation Services.",
+    "source": "https://transport.tamu.edu/Parking/events/football.aspx",
+    "sourceKey": "publicTransit",
+    "note": "re-source; confidence high; prose unchanged, carries the re-source"
+   },
+   {
+    "path": "publicTransit.lines",
+    "value": [
+     "Free Bryan Shuttle",
+     "On-Campus & Off-Campus Gameday Shuttles"
+    ],
+    "source": "https://transport.tamu.edu/Parking/events/football.aspx",
+    "sourceKey": "publicTransit"
+   }
+  ]
+ },
+ {
+  "hub": "wrigley-field",
+  "note": "Section 14 proposal: I fetched the Cubs guide (HTTP 200) and it carries all three stored notes sentences verbatim, so the prose needs no change, and it independently carries seven of the eight lines (Red Line at Addison, ",
+  "fields": [
+   {
+    "path": "publicTransit.notes",
+    "value": "Public transportation is the recommended way to get to Wrigley Field. The CTA Red Line stops directly at the Wrigley Field Addison station. CTA Bus #152 (Addison) and CTA Bus #22 (Clark) both stop at the intersection of Clark & Addison streets.",
+    "source": "https://www.mlb.com/cubs/ballpark/information/guide",
+    "sourceKey": "publicTransit",
+    "note": "both; confidence high; prose unchanged, carries the re-source"
+   },
+   {
+    "path": "publicTransit.lines",
+    "value": [
+     "CTA Red Line (Addison station)",
+     "CTA Bus #152 (Addison)",
+     "CTA Bus #22 (Clark)",
+     "CTA Blue Line (from O'Hare, transfer to #152 bus)",
+     "CTA Orange Line (from Midway)",
+     "CTA Yellow Line / Skokie Swift (from northern suburbs)",
+     "CTA Purple Line (from Wilmette)"
+    ],
+    "source": "https://www.mlb.com/cubs/ballpark/information/guide",
+    "sourceKey": "publicTransit",
+    "overwrite": true
+   }
+  ]
+ }
+]

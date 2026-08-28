@@ -1,6 +1,14 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import type { CondensedLine } from '@/lib/venue-hub-condensed';
+import { transitSuppressed } from '@/lib/venue-transit-suppression';
+// The venue page now honours the SAME per-field provenance and exclusion rules
+// as the CFB condensed block. It keeps its doc-level `verified` gate on top:
+// that asymmetry is deliberate (a building nobody signed off shows nothing
+// here, while its individually sourced facts still reach its school page).
+// What was NOT deliberate was publishing a field here that the school page
+// withholds for cause. See audit/cfb-venue-sourcing-report.md section 16.
+import { fieldExcluded, subFieldExcluded, hasProvenance, hasSubProvenance, isReachableUrl } from '@/lib/venue-field-exclusions';
 import {
   type VenueHub,
   type VenueHubTenantOverlay,
@@ -68,7 +76,17 @@ export type TenantNameResolver = (t: { teamId: string; displayName: string }) =>
 /** Verified tenant overlays that carry a gates-open rule. Shared by the
  *  getting-in rows and the view's gates FAQ so the two can never disagree. */
 export function verifiedGateTenants(hub: VenueHub): VenueHubTenantOverlay[] {
-  return hub.tenantOverlays.filter((t) => t.verified && t.gatesOpen?.ruleText);
+  // Provenance is applied HERE, not at each call site, because this one set
+  // feeds the Getting-in row, the gates FAQ (visible AND inside FAQPage JSON-LD)
+  // and the GATES fact-band chip. Gating only the row left an unprovenanced gate
+  // rule inside structured data, which is the worst place for it.
+  return hub.tenantOverlays.filter(
+    (t) =>
+      t.verified &&
+      t.gatesOpen?.ruleText &&
+      hasSubProvenance(t.sources, 'gatesOpen', 'ruleText') &&
+      !fieldExcluded(hub.slug, 'gates'),
+  );
 }
 
 export interface GettingInRow {
@@ -82,7 +100,10 @@ export function buildGettingInRows(hub: VenueHub, tenantName: TenantNameResolver
   const verified = hub.verified;
   const gateTenants = verifiedGateTenants(hub);
   const gettingRows: GettingInRow[] = [];
-  for (const t of gateTenants) {
+  // The gates row read the OVERLAY's verified flag and never the doc's, so an
+  // unsigned-off building could still publish a gate time while every sibling
+  // row stayed dark. Zero instances in today's corpus; latent, not live.
+  for (const t of verified ? gateTenants : []) {
     const rule = stripTrailingPeriod(t.gatesOpen!.ruleText!);
     // The variance is rendered ONLY when it adds something the ruleText does not
     // already say. Both used to render unconditionally on 46 pages, which read as
@@ -96,19 +117,30 @@ export function buildGettingInRows(hub: VenueHub, tenantName: TenantNameResolver
       body: `${rule}.${variance ? ` ${variance}.` : ''}`,
     });
   }
-  if (verified && hub.publicTransit && (hub.publicTransit.lines.length > 0 || hub.publicTransit.notes)) {
+  // Suppressed buildings name a service a fan cannot use; the row is withheld
+  // and the stored text is left untouched (venue-transit-suppression.ts).
+  // Provenance and the exclusion list, matching every sibling row and the CFB
+  // block. This row was the only one left on the suppression check alone.
+  const transitOk =
+    verified && !transitSuppressed(hub.slug) && !fieldExcluded(hub.slug, 'transit') && !!hub.publicTransit;
+  const transitNotesOk = transitOk && !!hub.publicTransit?.notes && hasSubProvenance(hub.sources, 'publicTransit', 'notes');
+  const transitLinesOk = transitOk && (hub.publicTransit?.lines.length ?? 0) > 0 && hasSubProvenance(hub.sources, 'publicTransit', 'lines');
+  if (transitNotesOk || transitLinesOk) {
     // Notes AND lines: the lines array used to be swallowed whenever notes
     // existed, leaving named routes ("Metro C Line", "Route 47") dark. The
     // "Lines:" lead-in stays a single fixed word so no template-only 5-gram
     // forms (see audit/venue-thickening-plan.md, 9e discipline).
     const transitParts = [
-      hub.publicTransit.notes,
-      hub.publicTransit.lines.length > 0 ? `Lines: ${hub.publicTransit.lines.join(', ')}.` : null,
+      transitNotesOk ? hub.publicTransit!.notes : null,
+      transitLinesOk ? `Lines: ${hub.publicTransit!.lines.join(', ')}.` : null,
     ].filter(Boolean) as string[];
     gettingRows.push({ label: 'Transit', body: transitParts.join(' ') });
   }
-  if (verified && hub.rideshareDropoff) gettingRows.push({ label: 'Rideshare', body: hub.rideshareDropoff });
-  if (verified && hub.tailgating?.allowed === true) {
+  if (verified && hub.rideshareDropoff && hasProvenance(hub.sources, 'rideshareDropoff') && !fieldExcluded(hub.slug, 'rideshare')) gettingRows.push({ label: 'Rideshare', body: hub.rideshareDropoff });
+  const tailgateOk =
+    verified && !fieldExcluded(hub.slug, 'tailgating') &&
+    (hasSubProvenance(hub.sources, 'tailgating', 'rules') || hasSubProvenance(hub.sources, 'tailgating', 'allowed'));
+  if (tailgateOk && hub.tailgating?.allowed === true) {
     // The harvested sub-fields (timeWindow, grillRules, rvPolicy) were typed
     // and populated but never rendered. Each is verbatim per-building prose;
     // periods normalized once here.
@@ -118,13 +150,27 @@ export function buildGettingInRows(hub: VenueHub, tenantName: TenantNameResolver
       .map((s) => `${stripTrailingPeriod(s)}.`)
       .join(' ');
     gettingRows.push({ label: 'Tailgating', body: tailBody });
-  } else if (verified && hub.tailgating?.allowed === false) {
+  } else if (tailgateOk && hub.tailgating?.allowed === false) {
     gettingRows.push({ label: 'Tailgating', body: 'Tailgating is not permitted at this venue.' });
   }
-  if (verified && hub.accessibility) gettingRows.push({ label: 'Accessibility', body: hub.accessibility });
-  if (verified && hub.venueAccessRestrictions) gettingRows.push({ label: 'Entry', body: hub.venueAccessRestrictions });
+  if (verified && hub.accessibility && hasProvenance(hub.sources, 'accessibility') && !fieldExcluded(hub.slug, 'accessibility')) gettingRows.push({ label: 'Accessibility', body: hub.accessibility });
+  if (verified && hub.venueAccessRestrictions && hasProvenance(hub.sources, 'venueAccessRestrictions')) gettingRows.push({ label: 'Entry', body: hub.venueAccessRestrictions });
 
   return gettingRows;
+}
+
+/** The overlays whose tailgate window the Plan-your-visit card prints. Lifted
+ *  out of VenueHubView so it is reachable by a test: it sits two cards above
+ *  the Getting-in card and was publishing what that card withholds. */
+export function planYourVisitTailgateTenants(hub: VenueHub): VenueHubTenantOverlay[] {
+  // Same gates as the Getting-in Tailgating row: the field's exclusion list and
+  // the overlay's own provenance. Without them, yulman-stadium and
+  // hard-rock-stadium withheld tailgating on one card for conflict and
+  // republished a lot-open time two cards above it, on the same page.
+  if (!hub.verified || fieldExcluded(hub.slug, 'tailgating')) return [];
+  return hub.tenantOverlays.filter(
+    (t) => t.verified && t.tailgateWindow && hasProvenance(t.sources, 'tailgateWindow'),
+  );
 }
 
 export function GettingInCard({ rows }: { rows: GettingInRow[] }) {
@@ -149,11 +195,16 @@ export function ParkingLotsCard({ hub }: { hub: VenueHub }) {
   // were dark; only the first 8 lot NAMES surfaced, inside one FAQ sentence.
   // Verbatim per-building prose in the MAIN column (not the twice-rendered
   // rail), each row `{name}. {notes}`. officialParkingUrls links close the card.
-  const lotsWithNotes = verified ? hub.parkingLots.filter((l) => l.name) : [];
+  const parkingOff = fieldExcluded(hub.slug, 'parking');
+  const lotsOk = verified && !parkingOff && hasProvenance(hub.sources, 'parkingLots') && !subFieldExcluded(hub.slug, 'parking', 'parkingLots');
+  // POINTER: a link gates on reachability and the exclusion list, not provenance.
+  const linksOk = verified && !parkingOff && !subFieldExcluded(hub.slug, 'parking', 'officialParkingUrls');
+  const lotsWithNotes = lotsOk ? hub.parkingLots.filter((l) => l.name) : [];
+  const officialUrls = linksOk ? hub.officialParkingUrls.filter(isReachableUrl) : [];
   // Card renders when there is lot prose OR an official link: a doc whose only
   // parking fact is the official page (no per-lot breakdown) still surfaces
   // the link instead of silently dropping the field it exists to render.
-  const hasLotContent = lotsWithNotes.some((l) => l.notes) || (verified && hub.officialParkingUrls.length > 0);
+  const hasLotContent = lotsWithNotes.some((l) => l.notes) || officialUrls.length > 0;
   if (!(verified && hasLotContent)) return null;
   return (
       <Card>
@@ -168,10 +219,10 @@ export function ParkingLotsCard({ hub }: { hub: VenueHub }) {
             ))}
           </div>
         ) : null}
-        {hub.officialParkingUrls.length > 0 ? (
+        {officialUrls.length > 0 ? (
           <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 font-rd text-[11px]">
             <span className="text-rd-ink-soft">Official parking:</span>
-            {hub.officialParkingUrls.slice(0, 3).map((u) => (
+            {officialUrls.slice(0, 3).map((u) => (
               <a
                 key={u}
                 href={u}
@@ -190,7 +241,7 @@ export function ParkingLotsCard({ hub }: { hub: VenueHub }) {
 }
 
 export function FoodCard({ hub }: { hub: VenueHub }) {
-  if (!(hub.verified && hub.food)) return null;
+  if (!(hub.verified && hub.food && hasProvenance(hub.sources, 'food') && !fieldExcluded(hub.slug, 'food'))) return null;
   return (
       <Card>
         <CardLabel>Food worth the line</CardLabel>
@@ -200,7 +251,7 @@ export function FoodCard({ hub }: { hub: VenueHub }) {
 }
 
 export function NearbyCard({ hub }: { hub: VenueHub }) {
-  if (!(hub.verified && hub.nearby)) return null;
+  if (!(hub.verified && hub.nearby && hasProvenance(hub.sources, 'nearby') && !fieldExcluded(hub.slug, 'nearby'))) return null;
   return (
       <Card>
         <CardLabel>In the neighborhood</CardLabel>
@@ -214,10 +265,19 @@ export function NearbyCard({ hub }: { hub: VenueHub }) {
  *  passes it in so the card and the FAQ stay on one gate. */
 export function BagCard({ hub, hasBagFaq }: { hub: VenueHub; hasBagFaq: boolean }) {
   if (!hasBagFaq) return null;
-  const cap = bagCapsule(hub);
-  const bagSplit = hub.bagPolicyNotes ? leadSentences(hub.bagPolicyNotes, 2) : { lead: '', overflow: '' };
-  const noOutsideFood = hub.verified && hub.outsideFoodAllowed === false;
-  const bagPolicyLink = hub.bagPolicyUrl;
+  // Same rule as the FAQ: the capsule states a bag fact, so each fact it can
+  // state needs its own provenance.
+  const cap = bagCapsule({
+    bagMaxDimensions: hasProvenance(hub.sources, 'bagMaxDimensions') ? hub.bagMaxDimensions : null,
+    clearBagRequired: hasProvenance(hub.sources, 'clearBagRequired') ? hub.clearBagRequired : null,
+    bagsProhibited: hasProvenance(hub.sources, 'bagsProhibited') ? hub.bagsProhibited : null,
+  });
+  const bagSplit = hub.bagPolicyNotes && hasProvenance(hub.sources, 'bagPolicyNotes') ? leadSentences(hub.bagPolicyNotes, 2) : { lead: '', overflow: '' };
+  const noOutsideFood =
+    hub.verified && hub.outsideFoodAllowed === false && !fieldExcluded(hub.slug, 'outsideFood') &&
+    (hasProvenance(hub.sources, 'outsideFoodAllowed') || hasProvenance(hub.sources, 'outsideFoodRules'));
+  // POINTER: the venue's own policy page. Reachability, not provenance.
+  const bagPolicyLink = isReachableUrl(hub.bagPolicyUrl) && !fieldExcluded(hub.slug, 'bag') ? hub.bagPolicyUrl : null;
   return (
     <Card accent>
       <CardLabel>What size bag can I bring?</CardLabel>

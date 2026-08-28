@@ -31,6 +31,11 @@
  *
  * USAGE
  *   node scripts/check-hydration-duplicates.js <url> [--selector <css>] [--json]
+ *     [--allow-zero] [--expect-selector <css>] [--expect-title <substring>]
+ *
+ *   A zero element count FAILS by default: it is indistinguishable from a clean
+ *   pass, and a preview URL missing its _vercel_share token produces exactly
+ *   that. Pass --allow-zero only when the surface genuinely has none.
  *
  *   # preview, share token goes in the URL as normal
  *   node scripts/check-hydration-duplicates.js \
@@ -83,20 +88,62 @@ const SELECTORS = [
 ];
 
 function parseArgs(argv) {
-  const args = { url: null, selector: null, json: false };
+  const args = { url: null, selector: null, json: false, allowZero: false, expectSelector: null, expectTitle: null };
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
     if (a === '--selector') args.selector = argv[++i];
     else if (a === '--json') args.json = true;
+    // A zero count is a FAILURE by default (see the floor below). Pass this only
+    // for a surface that is legitimately expected to have none of the element,
+    // e.g. a CFB page below the condensed block's minimum.
+    else if (a === '--allow-zero') args.allowZero = true;
+    else if (a === '--expect-selector') args.expectSelector = argv[++i];
+    else if (a === '--expect-title') args.expectTitle = argv[++i];
     else if (!args.url) args.url = a;
   }
   return args;
 }
 
+/** Markers of an auth wall or an error page standing in for the real one. A
+ *  Vercel preview without a valid share token serves an SSO page that has a
+ *  200-ish shell and none of the app's elements, which is why a bare element
+ *  count cannot tell "no duplicates" from "never loaded". */
+const NOT_THE_PAGE = [
+  /vercel\.com\/sso/i, /\/sso-api/i, /authentication required/i, /log in to vercel/i,
+  /sign in to continue/i, /deployment protection/i, /access denied/i, /^\s*401\b/, /^\s*403\b/,
+];
+
+/** Throw unless we are actually on the page that was asked for. Checks the HTTP
+ *  status, that we were not redirected to a different host or path, and that the
+ *  document does not look like an auth or error interstitial. */
+async function assertOnExpectedPage(page, requestedUrl, resp, label) {
+  if (!resp) throw new Error(`${label}: no HTTP response`);
+  const status = resp.status();
+  if (status >= 400) throw new Error(`${label}: HTTP ${status} for ${requestedUrl}`);
+  const want = new URL(requestedUrl);
+  const got = new URL(page.url());
+  if (got.host !== want.host) {
+    throw new Error(`${label}: redirected off-host, asked for ${want.host}${want.pathname}, landed on ${got.host}${got.pathname}. A preview needs its _vercel_share token.`);
+  }
+  if (got.pathname.replace(/\/$/, '') !== want.pathname.replace(/\/$/, '')) {
+    throw new Error(`${label}: redirected, asked for ${want.pathname}, landed on ${got.pathname}`);
+  }
+  const probe = await page.evaluate(() => ({
+    title: document.title || '',
+    head: (document.body ? document.body.innerText : '').slice(0, 400),
+    bodyLen: (document.body ? document.body.innerText : '').length,
+  }));
+  const hay = `${page.url()} ${probe.title} ${probe.head}`;
+  const hit = NOT_THE_PAGE.find((re) => re.test(hay));
+  if (hit) throw new Error(`${label}: this is not the page, it matches ${hit}. Title: ${JSON.stringify(probe.title)}`);
+  if (probe.bodyLen < 200) throw new Error(`${label}: body is ${probe.bodyLen} chars, the page did not render`);
+  return probe;
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (!args.url) {
-    console.error('usage: node scripts/check-hydration-duplicates.js <url> [--selector <css>] [--json]');
+    console.error('usage: node scripts/check-hydration-duplicates.js <url> [--selector <css>] [--json] [--allow-zero] [--expect-selector <css>] [--expect-title <s>]');
     process.exit(2);
   }
 
@@ -117,14 +164,26 @@ async function main() {
   try {
     const page = await browser.newPage();
     // First navigation consumes any share token and sets the auth cookie.
-    await page.goto(args.url, { waitUntil: 'networkidle0', timeout: 90000 });
+    const resp1 = await page.goto(args.url, { waitUntil: 'networkidle0', timeout: 90000 });
+    await assertOnExpectedPage(page, args.url, resp1, 'first navigation');
 
     // Second navigation with a cache buster, so a cached response cannot mask a
     // regression. The token is a cookie by now, so it can be dropped.
     const bust = new URL(args.url);
     bust.searchParams.delete('_vercel_share');
     bust.searchParams.set('cb', String(Date.now()));
-    await page.goto(bust.toString(), { waitUntil: 'networkidle0', timeout: 90000 });
+    const resp2 = await page.goto(bust.toString(), { waitUntil: 'networkidle0', timeout: 90000 });
+    // The share token was dropped here, so this is also where a preview whose
+    // auth cookie did not stick redirects to SSO. Assert again rather than
+    // counting elements on a login screen.
+    const probe = await assertOnExpectedPage(page, bust.toString(), resp2, 'cache-busted navigation');
+    if (args.expectTitle && !probe.title.includes(args.expectTitle)) {
+      throw new Error(`expected title to contain ${JSON.stringify(args.expectTitle)}, got ${JSON.stringify(probe.title)}`);
+    }
+    if (args.expectSelector) {
+      const n = await page.evaluate((sel) => document.querySelectorAll(sel).length, args.expectSelector);
+      if (n === 0) throw new Error(`expected selector ${JSON.stringify(args.expectSelector)} matched nothing, so this is not the expected page`);
+    }
 
     // Hydration is not an event we can await directly; give the client render a
     // moment to produce the duplicate if it is going to.
@@ -145,6 +204,19 @@ async function main() {
     );
 
     const hidden = result.total - result.visible;
+
+    // THE FLOOR. A run that matched nothing has measured nothing, and
+    // total=0/visible=0/hidden=0 is byte-identical to a clean pass. Every entry
+    // 33 check runs through this script, so a silent zero is a verification
+    // hole, not a convenience. Fail unless the caller says zero is expected.
+    if (result.total === 0 && !args.allowZero) {
+      throw new Error(
+        `selector ${JSON.stringify(selector)} matched 0 elements. Either the selector is wrong ` +
+          `or the page did not render what was expected. A zero count proves nothing about ` +
+          `hydration. Pass --allow-zero only if this surface genuinely has none of this element.`,
+      );
+    }
+
     failed = hidden > 0;
 
     if (args.json) {

@@ -24,6 +24,9 @@ import { HubTeamGrid } from '@/components/hub/HubTeamGrid';
 import { HubVenueLinks } from '@/components/hub/HubVenueLinks';
 import { HubFaq, type HubFaqItem } from '@/components/hub/HubFaq';
 import { getVenueLinksForTeams, getTeamVenueHubMap, getVenueHub } from '@/lib/venue-hub';
+import { transitSuppressed } from '@/lib/venue-transit-suppression';
+import { fieldExcluded, subFieldExcluded, hasProvenance, hasSubProvenance } from '@/lib/venue-field-exclusions';
+import { verifiedGateTenants } from '@/components/venue-hub/venue-logistics';
 
 // League hub accent (house palette, mirrors LEAGUE_HUB_REGISTRY NFL entry).
 const ACCENT = '#5f6b57';
@@ -137,14 +140,31 @@ export default async function NflHubPage() {
       if (!link) continue;
       const hub = await getVenueHub(link.slug);
       if (!hub) continue;
-      const overlay = hub.tenantOverlays.find(
-        (t) => t.teamId === g.homeTeamSlug && t.verified && t.gatesOpen?.ruleText,
-      );
-      const lotNote = hub.parkingLots.find((l) => /open/i.test(l.notes ?? ''))?.notes ?? undefined;
+      // Every string below is a CLAIM about the building, so each carries the
+      // same three gates the venue page applies: the doc-level verified flag
+      // first, then that field's own provenance, then the exclusion list. This
+      // surface was gated field-by-field as defects surfaced (a bare "VTA", then
+      // highmark's transit prose on an unverified doc); it now reuses the rules
+      // rather than restating them.
       const entry: PrimetimeLogistics = {};
-      if (overlay?.gatesOpen?.ruleText) entry.gateText = overlay.gatesOpen.ruleText;
-      if (lotNote) entry.lotText = lotNote;
-      if (hub.publicTransit?.lines?.[0]) entry.transitText = hub.publicTransit.lines[0];
+      if (hub.verified) {
+        // verifiedGateTenants already applies overlay provenance + the gates exclusion.
+        const overlay = verifiedGateTenants(hub).find((t) => t.teamId === g.homeTeamSlug);
+        if (overlay?.gatesOpen?.ruleText) entry.gateText = overlay.gatesOpen.ruleText;
+
+        const lotsOk =
+          !fieldExcluded(hub.slug, 'parking') &&
+          !subFieldExcluded(hub.slug, 'parking', 'parkingLots') &&
+          hasProvenance(hub.sources, 'parkingLots');
+        const lotNote = lotsOk ? hub.parkingLots.find((l) => /open/i.test(l.notes ?? ''))?.notes ?? undefined : undefined;
+        if (lotNote) entry.lotText = lotNote;
+
+        const transitOk =
+          !transitSuppressed(hub.slug) &&
+          !fieldExcluded(hub.slug, 'transit') &&
+          hasSubProvenance(hub.sources, 'publicTransit', 'lines');
+        if (transitOk && hub.publicTransit?.lines?.[0]) entry.transitText = hub.publicTransit.lines[0];
+      }
       if (entry.gateText || entry.lotText || entry.transitText) logisticsByGameId[g.id] = entry;
     }
   }

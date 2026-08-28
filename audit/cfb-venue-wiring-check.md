@@ -180,3 +180,22 @@ Added 2026-08-27 when the condensed logistics block shipped on the school pages 
 **gates rule on the CFB tenant overlay, no overlay sources.gatesOpen (3)**: boise-state / albertsons-stadium; michigan-state / spartan-stadium-east-lansing-michigan; wake-forest / allegacy-federal-credit-union-stadium.
 
 Anchor schools in the list: alabama, georgia, kansas-state, miami, ohio-state, oklahoma-state, texas-am. Sourcing these is a data task (find the official page each fact came from and write its URL), not a template task; the block picks each field up the moment its source lands.
+
+## 9. Transit suppression can push a hub below the indexing floor
+
+Added 2026-08-27 when the stale-transit sweep (audit/cfb-venue-sourcing-report.md sections 11 to 13) silenced the transit field on 32 buildings whose stored text names a service a fan cannot use.
+
+**The interaction.** The floor is `venueHubIsIndexable`: coordinates, plus the doc-level `verified` flag, plus at least two of (bag policy, parking, transit). Transit is one of the three, so a building that clears the floor on geo + bag + transit with no parking clears it *only because of a transit field*. Suppress that field at render and the page now asserts, through the sitemap and through its own `robots` tag, a substance it no longer shows.
+
+**Deliberately not acted on.** `src/lib/venue-transit-suppression.ts` is consulted by the render surfaces only. `venueHubIsIndexable` and `readIndexFloorFields` read the raw building doc and are untouched, which is exactly how an unsourced field already behaves: it counts toward the floor while staying off the page. The suppression list therefore changes what a page says, never whether it is indexed. A test pins this (`suppression does not touch the indexing floor, so no page is de-indexed by it`), so folding the two together cannot happen by accident.
+
+**The live case is `providence-park`.** Measured across all 32 suppressed buildings, it is the only one whose floor depends on the suppressed field:
+
+| Building | geo | bag | parking | transit | floor now | floor if suppression fed the floor |
+| --- | --- | --- | --- | --- | --- | --- |
+| providence-park | yes | yes | no | yes (suppressed) | **above** | **below** |
+| all other suppressed buildings | yes | yes | yes | varies | above | above |
+
+If the floor ever consumes the suppression list, `providence-park` drops out of `sitemap.ts`, disappears from `/venues`, its page flips to `robots: noindex, follow`, and the `VenueHubLink` card stops rendering on `/mls/portland-timbers` (that card gates on `hub.indexable`). Four user-visible consequences from one hidden field.
+
+**The rule.** The floor changes only as its own decision, taken on indexing grounds and verified against the sitemap, `/venues`, the page's `robots` tag and the team-page card together. It is not a side effect of a copy fix. Anyone re-sourcing `providence-park`'s transit from TriMet closes this by deleting its suppression entry, which is the cheapest resolution and the one to prefer.

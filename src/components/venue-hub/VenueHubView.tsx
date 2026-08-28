@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import type { Team } from '@/lib/types';
 import type { HubFaqItem } from '@/components/hub/HubFaq';
+import { transitSuppressed } from '@/lib/venue-transit-suppression';
+import { fieldExcluded, hasProvenance, isReachableUrl } from '@/lib/venue-field-exclusions';
 import { HubFaq } from '@/components/hub/HubFaq';
 import { TicketmasterCTA } from '@/components/affiliates/TicketmasterCTA';
 import { FanaticsCTA } from '@/components/affiliates/FanaticsCTA';
@@ -17,6 +19,7 @@ import {
   formatMinutesBefore,
   transitMode,
   verifiedGateTenants,
+  planYourVisitTailgateTenants,
   buildGettingInRows,
   GettingInCard,
   ParkingLotsCard,
@@ -101,20 +104,25 @@ export function VenueHubView({
   const subtitle = [loc, ...tenantNames].filter(Boolean).join(' · ');
 
   // ── bag capsule (rule 3: length budget; label fix in bagCapsule) ──
+  // Each bag fact needs its own provenance, the same test the CFB block applies,
+  // so a claim cannot render here that is withheld there (report section 16).
+  const bagExcluded = fieldExcluded(hub.slug, 'bag');
   const hasBag =
-    verified &&
-    (hub.bagMaxDimensions !== null ||
-      hub.clearBagRequired !== null ||
-      hub.bagsProhibited === true ||
-      !!hub.bagPolicyNotes);
+    verified && !bagExcluded &&
+    ((hub.bagMaxDimensions !== null && hasProvenance(hub.sources, 'bagMaxDimensions')) ||
+      (hub.clearBagRequired !== null && hasProvenance(hub.sources, 'clearBagRequired')) ||
+      (hub.bagsProhibited === true && hasProvenance(hub.sources, 'bagsProhibited')) ||
+      (!!hub.bagPolicyNotes && hasProvenance(hub.sources, 'bagPolicyNotes')));
   // A building with only a policy URL has no FACT to put in the capsule, but it
   // can still answer "has this venue published a bag policy" (the fifth case in
   // bagFaqAnswers) and it can still send the reader to the venue's own page. So
   // this, not hasBag, is what gates both the FAQ and the card: hasBag remains the
   // narrower test for whether a bag fact exists at all, which is what
   // venueHubIsIndexable and the capsule copy care about.
-  const hasBagFaq = hasBag || (verified && !!hub.bagPolicyUrl);
-  const dimStr = dimsString(hub.bagMaxDimensions);
+  // The URL arm is a POINTER: it sends the reader to the venue's own policy
+  // page and asserts no fact, so it needs reachability, not provenance.
+  const hasBagFaq = hasBag || (verified && !bagExcluded && isReachableUrl(hub.bagPolicyUrl));
+  const dimStr = hasProvenance(hub.sources, 'bagMaxDimensions') ? dimsString(hub.bagMaxDimensions) : null;
 
   // ── FAQ (rule: overflow bag text + long-tail queries land here) ──
   const faqs: HubFaqItem[] = [];
@@ -128,13 +136,29 @@ export function VenueHubView({
     const tenantExceptions = hub.tenantOverlays
       .filter((t) => t.verified && t.bagPolicyException)
       .map((t) => t.bagPolicyException as string);
-    const bag = bagFaqAnswers(hub, tenantExceptions);
+    // Answer from PROVENANCED facts only. hasBagFaq can be true on a sourced
+    // policy URL alone, and bagFaqAnswers reads the individual bag fields, so
+    // without this an unsourced fact could be asserted inside FAQPage schema.
+    // hard-rock-stadium is the live case: sourced dimensions and notes, an
+    // UNSOURCED clearBagRequired, which drove the "does it require a clear bag"
+    // answer.
+    const bagFacts = {
+      ...hub,
+      bagMaxDimensions: hasProvenance(hub.sources, 'bagMaxDimensions') ? hub.bagMaxDimensions : null,
+      clearBagRequired: hasProvenance(hub.sources, 'clearBagRequired') ? hub.clearBagRequired : null,
+      bagsProhibited: hasProvenance(hub.sources, 'bagsProhibited') ? hub.bagsProhibited : null,
+      bagPolicyNotes: hasProvenance(hub.sources, 'bagPolicyNotes') ? hub.bagPolicyNotes : null,
+    };
+    const bag = bagFaqAnswers(bagFacts, tenantExceptions);
     if (bag.size) faqs.push({ question: `What size bag can I bring into ${short}?`, answer: bag.size });
     // Emitted ONLY when clearBagRequired is a boolean. On null the question is
     // dropped rather than answered, because the source said neither.
     if (bag.clarity) faqs.push({ question: `Does ${short} require a clear bag?`, answer: bag.clarity });
   }
-  if (verified && (hub.outsideFoodAllowed !== null || hub.outsideFoodRules)) {
+  const outsideFoodOk =
+    verified && !fieldExcluded(hub.slug, 'outsideFood') &&
+    (hasProvenance(hub.sources, 'outsideFoodAllowed') || hasProvenance(hub.sources, 'outsideFoodRules'));
+  if (outsideFoodOk && (hub.outsideFoodAllowed !== null || hub.outsideFoodRules)) {
     const foodAns =
       hub.outsideFoodRules ||
       (hub.outsideFoodAllowed === false
@@ -143,7 +167,7 @@ export function VenueHubView({
     faqs.push({ question: `Can you bring outside food into ${short}?`, answer: foodAns });
   }
   const gateTenants = verifiedGateTenants(hub);
-  const lotOpenTenants = hub.tenantOverlays.filter((t) => t.verified && t.tailgateWindow);
+  const lotOpenTenants = planYourVisitTailgateTenants(hub);
   const lotOpenLines = lotOpenTenants.map((t) => ({
     key: t.teamId,
     label: lotOpenTenants.length > 1 ? tenantName(t) : null,
@@ -159,8 +183,15 @@ export function VenueHubView({
         : gateTenants.map((t) => `${tenantName(t)}: ${stripTrailingPeriod(t.gatesOpen!.ruleText!)}.`).join(' ');
     faqs.push({ question: `When do gates open at ${short}?`, answer: gateAns });
   }
-  if (verified && (hub.parkingLots.length > 0 || hub.parkingLotMapUrl)) {
-    const lotNames = hub.parkingLots.slice(0, 8).map((l) => l.name).join(', ');
+  // The parking FAQ NAMES lots, so it is a claim and needs the lots' own
+  // provenance; hasParkingData below only decides whether to offer a booking
+  // widget, which asserts nothing about the building, so it stays as it was.
+  const parkingFactsOk =
+    verified && !fieldExcluded(hub.slug, 'parking') &&
+    ((hub.parkingLots.length > 0 && hasProvenance(hub.sources, 'parkingLots')) ||
+      isReachableUrl(hub.parkingLotMapUrl));
+  if (parkingFactsOk) {
+    const lotNames = hasProvenance(hub.sources, 'parkingLots') ? hub.parkingLots.slice(0, 8).map((l) => l.name).join(', ') : '';
     faqs.push({
       question: primaryTenant ? `Where do you park for a ${primaryTenant} game?` : `Where do you park at ${short}?`,
       answer: `${short} has on-site lots${lotNames ? ` including ${lotNames}` : ''}. Reserve a nearby spot in advance through SpotHero on this page.`,
@@ -182,9 +213,11 @@ export function VenueHubView({
     if (dimStr) chips.push({ k: hub.clearBagRequired ? 'CLEAR BAG' : 'MAX BAG', v: dimStr });
     else if (hub.bagsProhibited === true) chips.push({ k: 'BAGS', v: 'Not allowed' });
   }
+  // Read the PROVENANCE-GATED tenant set, not tenantOverlays directly: the chip
+  // is a claim about gate times like any other and must not outlive the rule.
   const gateMins = new Set(
-    hub.tenantOverlays
-      .filter((t) => t.verified && typeof t.gatesOpen?.minutesBefore === 'number')
+    gateTenants
+      .filter((t) => typeof t.gatesOpen?.minutesBefore === 'number')
       .map((t) => t.gatesOpen!.minutesBefore as number),
   );
   if (verified && gateMins.size === 1) {
@@ -192,13 +225,13 @@ export function VenueHubView({
   } else if (verified && gateMins.size > 1) {
     chips.push({ k: 'GATES', v: 'Varies by event' });
   }
-  if (verified && hub.publicTransit && (hub.publicTransit.lines.length > 0 || hub.publicTransit.notes)) {
+  if (verified && !transitSuppressed(hub.slug) && hub.publicTransit && (hub.publicTransit.lines.length > 0 || hub.publicTransit.notes)) {
     chips.push({ k: 'TRANSIT', v: transitMode(hub.publicTransit) });
   }
-  if (verified && hub.outsideFoodAllowed !== null) {
+  if (outsideFoodOk && hub.outsideFoodAllowed !== null) {
     chips.push({ k: 'OUTSIDE FOOD', v: hub.outsideFoodAllowed ? 'Allowed' : 'Not allowed' });
   }
-  if (verified && hub.rideshareDropoff) {
+  if (verified && hub.rideshareDropoff && hasProvenance(hub.sources, 'rideshareDropoff') && !fieldExcluded(hub.slug, 'rideshare')) {
     chips.push({ k: 'RIDESHARE', v: 'Available' });
   }
   // Capacity as a fact chip, never a sentence: a "seats {n} fans" skeleton
@@ -293,7 +326,7 @@ export function VenueHubView({
           ))}
         </div>
       ) : null}
-      {hub.parkingLotMapUrl ? (
+      {isReachableUrl(hub.parkingLotMapUrl) && !fieldExcluded(hub.slug, 'parking') ? (
         <div className="mt-2 font-rd text-[11px]">
           <a href={hub.parkingLotMapUrl} className="font-semibold text-rd-red" target="_blank" rel="noopener noreferrer">
             Official parking lot map &rsaquo;

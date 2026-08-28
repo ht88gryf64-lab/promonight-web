@@ -10,6 +10,7 @@ mock.module(new URL('../firebase.ts', import.meta.url).href, { namedExports: { d
 
 import type { VenueHub as Hub } from '../venue-hub';
 import type { CondensedField } from '../venue-hub-condensed';
+import { transitSuppressed } from '../venue-transit-suppression';
 
 // Loaded inside each test: the module under test imports venue-hub, which
 // imports the firebase client, so the mocks above must be registered first
@@ -85,14 +86,24 @@ test('parking sub-fields gate on their own keys', async () => {
   assert.equal(line!.href, 'https://x.edu/map');
 });
 
-test('a hub with empty sources maps renders nothing at all, whatever it holds', async () => {
+test('with no provenance anywhere, only POINTERS survive: a link asserts nothing', async () => {
   const { buildCondensedLogistics } = await load();
   const h = hub({ sources: {} });
-  // The doc-level map alone leaves the gates line standing, because gates
-  // provenance lives on the tenant overlay; that is the rule working, not a gap.
-  assert.deepEqual(buildCondensedLogistics(h, 'x').map((l) => l.key), ['gates']);
+  // The overlay's own map still vouches for the gates rule, so it stands.
+  // Bag and parking survive too, but ONLY as links: the fixture carries a
+  // bagPolicyUrl and a parkingLotMapUrl, and a pointer gates on reachability
+  // rather than provenance because rendering it asserts nothing about the
+  // building. Every CLAIM is gone.
+  const withOverlay = buildCondensedLogistics(h, 'x');
+  assert.deepEqual(withOverlay.map((l) => l.key), ['gates', 'bag', 'parking']);
+  assert.equal(withOverlay.find((l) => l.key === 'bag')!.text, 'See the official bag policy.', 'no bag FACT, just the link');
+  assert.equal(withOverlay.find((l) => l.key === 'parking')!.text, 'See the official parking page.', 'no lot NAMES, just the link');
   const bare = { ...h, tenantOverlays: [{ ...h.tenantOverlays[0], sources: {} }] };
-  assert.deepEqual(buildCondensedLogistics(bare, 'x'), []);
+  const keys = buildCondensedLogistics(bare, 'x').map((l) => l.key);
+  assert.deepEqual(keys, ['bag', 'parking'], 'gates goes with its overlay provenance; the two links remain');
+  // and a hub with no links at all renders nothing
+  const noLinks = { ...bare, bagPolicyUrl: null, parkingLotMapUrl: null, officialParkingUrls: [] } as typeof bare;
+  assert.deepEqual(buildCondensedLogistics(noLinks, 'x'), []);
 });
 
 test('the block minimum is three lines', async () => {
@@ -172,21 +183,32 @@ test('the conflicts and holds lists silence the named field on the named hub and
   const wholeLine: Array<[string, CondensedField]> = [
     ['brooks-stadium', 'tailgating'], ['david-booth-kansas-memorial-stadium', 'tailgating'], ['hard-rock-stadium', 'tailgating'], ['yulman-stadium', 'tailgating'],
   ];
-  assert.deepEqual(CONDENSED_CONFLICTS.map((c) => [c.hub, c.field, c.sub ?? null]), [...wholeLine.map(([h, f]) => [h, f, null]), ['kidd-brewer-stadium', 'parking', 'officialParkingUrls']]);
-  assert.deepEqual(CONDENSED_HOLDS.map((c) => [c.hub, c.field, c.sub ?? null]), [['secu-stadium', 'transit', null]]);
+  assert.deepEqual(CONDENSED_CONFLICTS.filter((c) => !c.sub).map((c) => [c.hub, c.field]), wholeLine);
+  assert.deepEqual(CONDENSED_HOLDS.map((c) => [c.hub, c.field, c.sub ?? null]), [], 'no holds after the Pass 2 Maryland write');
   for (const e of [...CONDENSED_CONFLICTS, ...CONDENSED_HOLDS]) assert.ok(e.reason.length > 60, `${e.hub}: every exclusion carries its reason`);
-  for (const [slug, field] of [...wholeLine, ['secu-stadium', 'transit'] as [string, CondensedField]]) {
+  for (const [slug, field] of [...wholeLine, ...CONDENSED_HOLDS.map((h) => [h.hub, h.field] as [string, CondensedField])]) {
     const keys = buildCondensedLogistics(hub({ slug }), 'x').map((l) => l.key);
     assert.ok(!keys.includes(field), `${slug}: ${field} must stay silent`);
-    assert.equal(keys.length, 9, `${slug}: only ${field} is withheld`);
+    // A hub can sit on two lists for two different fields: hard-rock-stadium
+    // has a tailgating conflict AND a suppressed transit field, so it withholds
+    // both. Assert on the exact withheld set rather than a bare count.
+    const alsoTransit = transitSuppressed(slug) && field !== 'transit';
+    assert.equal(keys.length, alsoTransit ? 8 : 9, `${slug}: only ${field}${alsoTransit ? ' and transit' : ''} is withheld`);
+    if (alsoTransit) assert.ok(!keys.includes('transit'), `${slug}: transit is suppressed too`);
   }
   assert.equal(buildCondensedLogistics(hub({ slug: 'some-other-stadium' }), 'x').length, 10);
 });
 
-test('a sub-field exclusion withholds that sub-field only: App State never links the dead parking URL but sourced lots and a lot map still render', async () => {
+test('a sub-field exclusion withholds that sub-field only, on an entry that actually exists', async () => {
   const { buildCondensedLogistics } = await load();
   const dead = 'https://mountaineersathleticfund.com/yosef-club/renewals/index.html';
-  const h = hub({ slug: 'kidd-brewer-stadium', officialParkingUrls: [dead] });
+  // Keyed to whatever sub-field entry is CURRENTLY listed, not to a slug whose
+  // entry may since have been lifted: the previous version pinned
+  // kidd-brewer-stadium and stayed green after its exclusion was removed.
+  const { FIELD_CONFLICTS } = await import('../venue-field-exclusions');
+  const entry = FIELD_CONFLICTS.find((c) => c.sub === 'officialParkingUrls');
+  if (!entry) return; // nothing of this shape listed today
+  const h = hub({ slug: entry.hub, officialParkingUrls: [dead] });
   h.sources = { ...h.sources, officialParkingUrls: 'https://appstatesports.com/guide' };
   const parking = (x: Hub) => buildCondensedLogistics(x, 'x').find((l) => l.key === 'parking');
   const withMap = parking(h);

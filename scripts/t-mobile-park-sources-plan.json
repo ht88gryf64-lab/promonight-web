@@ -1,0 +1,104 @@
+[
+ {
+  "hub": "t-mobile-park",
+  "note": "T-Mobile Park: the sources map was stored INVERTED, {url: page title} instead of {field: url}, so every field read as unsourced and the per-field rule withheld the whole page. Each field below is re-pointed at the page that carries its value, verified by fetching all three pages 2026-08-28. The two inverted URL keys are left in place (the writer never deletes); they are inert because lookups are by field name.",
+  "fields": [
+   {
+    "path": "bagMaxDimensions",
+    "value": {
+     "w": 12,
+     "h": 6,
+     "d": 12,
+     "unit": "in"
+    },
+    "source": "https://www.mlb.com/mariners/ballpark/gate-bag-policy-faq",
+    "note": "value unchanged; provenance re-pointed at the page that carries it"
+   },
+   {
+    "path": "clearBagRequired",
+    "value": true,
+    "source": "https://www.mlb.com/mariners/ballpark/gate-bag-policy-faq",
+    "note": "value unchanged; provenance re-pointed at the page that carries it"
+   },
+   {
+    "path": "bagPolicyNotes",
+    "value": "Clear bags no larger than 12\" x 6\" x 12\" are permitted, as are one-gallon clear plastic zip-top bags; security must be able to see contents to the bottom of the bag and bags that obscure contents are not allowed. Small clutch bags (including fanny packs) no larger than 4.5\" x 6.5\" are permitted. Backpacks, multi-compartment bags, duffle bags and purses larger than 4.5\" x 6.5\" are not permitted. Exceptions are made for medically necessary items or single-compartment diaper bags (child must be present). Bags larger than 16\" x 16\" x 8\" are not permitted, and the Mariners do not offer bag/coat storage.",
+    "source": "https://www.mlb.com/mariners/ballpark/gate-bag-policy-faq",
+    "note": "value unchanged; provenance re-pointed at the page that carries it"
+   },
+   {
+    "path": "bagPolicyUrl",
+    "value": "https://www.mlb.com/mariners/ballpark/gate-bag-policy-faq",
+    "source": "https://www.mlb.com/mariners/ballpark/gate-bag-policy-faq",
+    "note": "value unchanged; provenance re-pointed at the page that carries it"
+   },
+   {
+    "path": "parkingLots",
+    "value": [
+     {
+      "name": "Mariners Parking Garage",
+      "notes": "Not available for pre-purchase; a limited number of first-come, first-served spots sold on game days. Cashless (debit/credit or mobile payment only). Accommodates vehicles 7' or less in height. Limited day-of-game accessible spaces for vehicles with state-issued disabled plates/permits."
+     }
+    ],
+    "source": "https://www.mlb.com/mariners/ballpark/information/guide",
+    "note": "value unchanged; provenance re-pointed at the page that carries it"
+   },
+   {
+    "path": "officialParkingUrls",
+    "value": [
+     "https://www.mlb.com/mariners/ballpark/information/guide",
+     "https://www.mlb.com/mariners/ballpark/disability-access-guide"
+    ],
+    "source": "https://www.mlb.com/mariners/ballpark/information/guide",
+    "note": "value unchanged; provenance re-pointed at the page that carries it"
+   },
+   {
+    "path": "publicTransit",
+    "value": {
+     "lines": [
+      "King County Metro"
+     ],
+     "notes": "King County Metro offers a variety of accessible services, but no regular-route stops are located adjacent to the ballpark. Metro's ACCESS service and paratransit vans load/unload along the east curb of Occidental Avenue S. next to the parking plaza. More options at Mariners.com/Transportation."
+    },
+    "source": "https://www.mlb.com/mariners/ballpark/disability-access-guide",
+    "note": "value unchanged; provenance re-pointed at the page that carries it"
+   },
+   {
+    "path": "rideshareDropoff",
+    "value": "Guests using rideshare services such as Lyft or Uber should use the designated rideshare lot located southeast of the ballpark, a short walk (less than five minutes) from most gates. A taxi stand is at the northwest corner of First Avenue South and South Royal Brougham Way (in front of Silver Cloud Hotel), operating before, during and after events.",
+    "source": "https://www.mlb.com/mariners/ballpark/information/guide",
+    "note": "value unchanged; provenance re-pointed at the page that carries it"
+   },
+   {
+    "path": "accessibility",
+    "value": "T-Mobile Park was designed to meet all structural and service requirements of the ADA; all restrooms, ticket windows, drinking fountains and counters at points of service are accessible, and all entrances are accessible. Accessible and companion seating is available at a range of price levels. Elevators and ramps (SEC 114 and 143) reach all levels. Accessible parking is available day-of-game at the Mariners Garage for vehicles with state-issued disabled plates/permits, with ADA drop-off/pick-up areas around the ballpark. Assistive listening devices, wheelchair escorts/storage, sensory room and sensory bags are available. Reasonable-modification requests handled case-by-case via adaservices@mariners.com.",
+    "source": "https://www.mlb.com/mariners/ballpark/disability-access-guide",
+    "note": "value unchanged; provenance re-pointed at the page that carries it"
+   },
+   {
+    "path": "venueAccessRestrictions",
+    "value": "All guests entering are screened for prohibited items by walk-through or hand-held metal detector (cell phones, car keys and coins no longer need to be removed). Guests are not permitted to re-enter the ballpark once they leave; in an emergency, re-entry may be granted only by a Shift Captain or Zone Supervisor and re-entrants are subject to security re-inspection. An extensive prohibited-items list applies, including weapons, aerosols, outside alcoholic beverages, aluminum/metal and glass containers, hard-sided and Styrofoam coolers, drones, selfie sticks, laser pointers, luggage/duffle bags and wrapped packages.",
+    "source": "https://www.mlb.com/mariners/ballpark/information/guide",
+    "note": "value unchanged; provenance re-pointed at the page that carries it"
+   },
+   {
+    "path": "outsideFoodAllowed",
+    "value": true,
+    "source": "https://www.mlb.com/mariners/ballpark/information/guide",
+    "note": "value unchanged; provenance re-pointed at the page that carries it"
+   },
+   {
+    "path": "outsideFoodRules",
+    "value": "Outside food is permitted in single-serving sizes. Sealed, clear plastic water bottles up to 32oz, baby bottles, beverages related to medical needs, and unopened soft-sided single-serve containers like juice boxes are permitted; guests may also bring one empty plastic reusable bottle 32 ounces or smaller. Soda, coffee or other beverages are not allowed, and no outside alcoholic beverages may enter.",
+    "source": "https://www.mlb.com/mariners/ballpark/information/guide",
+    "note": "value unchanged; provenance re-pointed at the page that carries it"
+   },
+   {
+    "path": "food",
+    "value": "Concessions include ballpark favorites like hot dogs and pizza, plus limited selections at Ivar's and The Natural featuring gluten-friendly, vegetarian, vegan and plant-based menu items. Beverages include coffee, soda, water, beer, wine and other alcoholic drinks. All concession stands are cashless.",
+    "source": "https://www.mlb.com/mariners/ballpark/information/guide",
+    "note": "value unchanged; provenance re-pointed at the page that carries it"
+   }
+  ]
+ }
+]
