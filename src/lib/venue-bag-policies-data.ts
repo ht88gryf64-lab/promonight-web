@@ -7,7 +7,7 @@ import { db } from '@/lib/firebase';
 import { getAllTeams } from '@/lib/data';
 import { teamDisplayName } from '@/lib/promo-helpers';
 import { dimsString, type BagMaxDimensions } from '@/lib/venue-hub';
-import { parseClutch, SOURCES_CONFLICT_SLUGS, type BagPolicyRow } from '@/lib/venue-bag-policies';
+import { bagRowFromDoc, type BagPolicyRow } from '@/lib/venue-bag-policies';
 
 // ── the Firestore read (30 MLB buildings + tenant overlays + team join) ─────
 export const getMlbBagPolicyRows = cache(async (): Promise<BagPolicyRow[]> => {
@@ -32,23 +32,16 @@ export const getMlbBagPolicyRows = cache(async (): Promise<BagPolicyRow[]> => {
       .find((t) => t.league === 'MLB' && t.verified === true); // verified overlays only, like VenueHubView
 
     const team = teamById.get(mlbTenant.teamId);
-    const sourcesConflict = SOURCES_CONFLICT_SLUGS.includes(doc.id);
-    const dims: BagMaxDimensions | null = sourcesConflict ? null : (d.bagMaxDimensions ?? null);
-    const dimsText = dims ? prettyDims(dims) : null;
-
-    rows.push({
-      slug: doc.id,
-      venueName: String(d.name ?? doc.id),
-      teamName: team ? teamDisplayName(team) : mlbTenant.teamId,
-      teamColor: team?.primaryColor ?? null,
-      clearBagRequired: sourcesConflict ? null : typeof d.clearBagRequired === 'boolean' ? d.clearBagRequired : null,
-      dims,
-      dimsText,
-      bagsProhibited: sourcesConflict ? null : typeof d.bagsProhibited === 'boolean' ? d.bagsProhibited : null,
-      bagPolicyUrl: typeof d.bagPolicyUrl === 'string' && URL.canParse(d.bagPolicyUrl) ? d.bagPolicyUrl : null,
-      clutch: sourcesConflict ? null : parseClutch([overlay?.bagPolicyException, d.bagPolicyNotes], dimsText),
-      sourcesConflict,
-    });
+    // One builder, shared with the test and with the per-field rules; the row
+    // shape and the withholding logic live in venue-bag-policies.ts.
+    rows.push(
+      bagRowFromDoc(doc.id, d, {
+        venueName: String(d.name ?? doc.id),
+        teamName: team ? teamDisplayName(team) : mlbTenant.teamId,
+        teamColor: team?.primaryColor ?? null,
+        overlayException: overlay?.bagPolicyException ?? null,
+      }),
+    );
   }
   return rows;
 });

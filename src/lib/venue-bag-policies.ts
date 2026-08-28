@@ -11,6 +11,7 @@
 // the unit tests import this directly (the rivalry-index precedent). The
 // loader lives in venue-bag-policies-data.ts.
 import type { BagMaxDimensions } from '@/lib/venue-hub';
+import { fieldExcluded, hasProvenance, isReachableUrl } from './venue-field-exclusions';
 
 export const BAG_SEASON = 2026; // hardcoded by house rule, never getFullYear()
 
@@ -261,3 +262,52 @@ export function buildBagPolicyFaqs(groups: BagPolicyGroup[]): BagFaq[] {
   return faqs;
 }
 
+
+
+/** Build one aggregator row from a raw venueHubs doc. Extracted so a test can
+ *  reach it: this page publishes the same bag facts as /venues/[slug] and must
+ *  withhold on the same terms. */
+export function bagRowFromDoc(
+  slug: string,
+  d: Record<string, unknown>,
+  opts: { venueName?: string; teamName?: string; teamColor?: string | null; overlayException?: string | null } = {},
+): BagPolicyRow {
+  // The SHARED rules, not a second private list: this page publishes the same
+  // facts as /venues/[slug] from the same docs, so two exclusion lists over one
+  // set of facts would drift by construction. SOURCES_CONFLICT_SLUGS is kept as
+  // an additional local veto, never as the only one.
+  const sources = (d.sources && typeof d.sources === 'object' && !Array.isArray(d.sources)
+    ? Object.fromEntries(Object.entries(d.sources as Record<string, unknown>).flatMap(([k, v]) => {
+        if (typeof v === 'string' && v) return [[k, v] as const];
+        if (Array.isArray(v)) { const f = v.find((u) => typeof u === 'string' && u); return f ? [[k, f] as const] : []; }
+        return [];
+      }))
+    : {}) as Record<string, string>;
+  const excluded = fieldExcluded(slug, 'bag');
+  const sourcesConflict = SOURCES_CONFLICT_SLUGS.includes(slug) || excluded;
+  const sourced = (k: string) => !sourcesConflict && hasProvenance(sources, k);
+  const dims = (sourced('bagMaxDimensions') ? ((d.bagMaxDimensions ?? null) as BagPolicyRow['dims']) : null);
+  const dimsText = dims ? prettyDimsPure(dims) : null;
+  return {
+    slug,
+    venueName: opts.venueName ?? String(d.name ?? slug),
+    teamName: opts.teamName ?? '',
+    teamColor: opts.teamColor ?? null,
+    clearBagRequired: sourced('clearBagRequired') && typeof d.clearBagRequired === 'boolean' ? d.clearBagRequired : null,
+    dims,
+    dimsText,
+    bagsProhibited: sourced('bagsProhibited') && typeof d.bagsProhibited === 'boolean' ? d.bagsProhibited : null,
+    // POINTER: reachability, not provenance.
+    bagPolicyUrl: !excluded && isReachableUrl(d.bagPolicyUrl) ? (d.bagPolicyUrl as string) : null,
+    clutch: sourced('bagPolicyNotes') || opts.overlayException ? parseClutch([opts.overlayException ?? null, sourced('bagPolicyNotes') ? (d.bagPolicyNotes as string | null) : null], dimsText) : null,
+    sourcesConflict,
+  };
+}
+
+/** Local copy of the presentation formatter so this pure module has no
+ *  server-only import. */
+function prettyDimsPure(dims: NonNullable<BagPolicyRow['dims']>): string | null {
+  const { w, h, d: dd } = dims as { w?: number; h?: number; d?: number };
+  if (typeof w !== 'number' || typeof h !== 'number' || typeof dd !== 'number') return null;
+  return `${w}\u2033 \u00d7 ${h}\u2033 \u00d7 ${dd}\u2033`;
+}
