@@ -122,6 +122,14 @@ export interface VenueHub {
 function stringMap(v: unknown): Record<string, string> {
   if (!v || typeof v !== 'object' || Array.isArray(v)) return {};
   const out: Record<string, string> = {};
+  // An INVERTED map ({url: page title} instead of {field: url}) reads as an
+  // empty map downstream, and an absent key and a malformed key are
+  // indistinguishable there: t-mobile-park lost every fact card that way, on a
+  // verified doc, with no error anywhere. Warn so the next one is loud.
+  const keys = Object.keys(v as Record<string, unknown>);
+  if (keys.length > 0 && keys.every((k) => /^https?:\/\//.test(k))) {
+    console.warn(`[venue-hub] sources map looks INVERTED (every key is a URL); provenance will read as absent for every field. Keys: ${keys.join(', ')}`);
+  }
   for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
     if (typeof val === 'string' && val.length > 0) { out[k] = val; continue; }
     // A field vouched for by more than one page is stored as an ARRAY of URLs.

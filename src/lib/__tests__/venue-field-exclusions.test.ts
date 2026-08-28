@@ -63,3 +63,17 @@ test('array-valued provenance is honoured, since a fact can be vouched for by tw
   const s = { food: 'https://a.com/x' };
   assert.equal(hasProvenance(s, 'food'), true);
 });
+
+test('an inverted sources map is not silently equivalent to an absent one', async () => {
+  // t-mobile-park stored {url: page title} instead of {field: url}. stringMap
+  // returned a map whose only keys were URLs, so hasProvenance was false for
+  // every field name and the per-field rule withheld the entire page, on a
+  // verified doc, with no error raised anywhere. The data is fixed; this pins
+  // the shape so the next one is caught rather than rendered as nothing.
+  const inverted = { 'https://example.com/guide': 'A Guide', 'https://example.com/access': 'Access Guide' };
+  for (const f of ['food', 'accessibility', 'parkingLots', 'bagMaxDimensions']) {
+    assert.equal(hasProvenance(inverted as Record<string, string>, f), false, `${f}: an inverted map provides no field provenance`);
+  }
+  // and the right shape does work
+  assert.equal(hasProvenance({ food: 'https://example.com/guide' }, 'food'), true);
+});
