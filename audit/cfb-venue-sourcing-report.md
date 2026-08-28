@@ -1816,3 +1816,41 @@ Cherry-picked to main alone as `b7b59fe`: `leadSentences` plus its test, two fil
 | 26 | yankee-stadium | MLS/MLB | publicTransit.notes | The No. | 4 and D trains make stops at the 161st Street/Yankee Stadium subway st |
 
 Production checks: `/cfb/alabama` now serves the full Crimson Ride sentence including "(11 a.m. kickoff only)"; Davis-Wade and Arkansas both carry "Friday"; 25 of 26 confirmed on their venue page and the 26th (bridgeforth) on `/cfb/james-madison`, which is where it renders because that building is `verified: false`.
+
+## 19. T-Mobile Park's inverted sources map, and the description audit
+
+### The inversion (fixed, verified at render)
+
+`venueHubs/t-mobile-park` stored `sources` as `{url: page title}` instead of `{field: url}`. Both values were strings, so `stringMap` accepted them and returned a map whose only keys were URLs. `hasProvenance` was therefore false for every field name, and the per-field rule withheld the whole page: a verified MLB ballpark reduced to a single card. Nothing errored, because **an absent key and a malformed key are indistinguishable downstream** \- the same shape as the array-valued-provenance defect and as `leadSentences`, where the failure is invisible at the point it happens.
+
+Thirteen fields were re-pointed at the page that carries each value, each verified by fetching the page and matching a distinctive phrase. The mapping was not obvious: the bag facts are on neither cited page but on the `gate-bag-policy-faq` the doc already stored as `bagPolicyUrl` ("Clear plastic bags no larger than 12\" x 6\" x 12\" are permitted" is verbatim there), and `publicTransit` and `accessibility` belong to the disability access guide, which is what their stored text describes. Values were not touched.
+
+At render, on the preview: the page goes from 2 rows and 2 cards to **6 Getting-in rows (Gates, Transit, Rideshare, Accessibility, Entry, plus the lot row) and 4 cards**, with 5 fact-band chips. Controls unchanged (target-field 8 rows, wrigley-field 11). Hydration clean, non-zero counts.
+
+### Corpus scan
+
+| Shape | Count | Hubs |
+| --- | --- | --- |
+| fully inverted (every key a URL) | 1 | t-mobile-park, now fixed |
+| partially inverted | 0 | none |
+| field key whose value is not a URL | 0 | none |
+| unrecognised key | 3 | cotton-bowl-stadium `capacity`, darrell-k-royal `parkingLots:East Campus Garage`, mountain-america-stadium `tailgatingGrillRules` |
+
+The three unrecognised keys are inert: each hub also carries the correct key for that field, so no provenance is lost and nothing renders differently. `stringMap` now warns when every key in a map is URL-shaped, and a test pins that an inverted map yields no field provenance.
+
+### venueHubDescription and StadiumOrArena JSON-LD (reported, not changed)
+
+The function builds a lead sentence plus a "Plus ..." topic list from six predicates that test raw field presence behind `verified` alone. Only `hasTransit` consults suppression; none consults the exclusion list or per-field provenance. The lead's bag sentence is **manufactured** by `bagAnswer` from `bagsProhibited` / `clearBagRequired` / `bagMaxDimensions`, and the same string is passed to `VenueHubJsonLd` as the `StadiumOrArena` description, so it reaches machines identically. This is the `leadSentences` class: the render step composes the claim, so provenance on the underlying records does not constrain what is asserted.
+
+Measured across all 223 buildings:
+
+| Problem | Count | Hubs |
+| --- | --- | --- |
+| "Plus ..." promises **parking** the page withholds | 3 | acrisure-stadium, fenway-park, lincoln-financial-field |
+| "Plus ..." promises **gate times** the page withholds | 2 | albertsons-stadium, allegacy-federal-credit-union-stadium |
+| lead asserts a bag fact from an **unsourced** field | 1 | hard-rock-stadium |
+| lead that is factually false | 0 | none |
+
+The first two are overstated coverage, not false facts. The third is the one that matters: `/venues/hard-rock-stadium` serves "A clear bag up to 12\" x 6\" x 12\" is **required**" in its meta description and in `StadiumOrArena` JSON-LD, while the page's own capsule reads "**MAX BAG SIZE** 12\" x 6\" x 12\"" because `clearBagRequired` carries no source and the capsule withholds it. One document, two answers about the same policy, and the machine-readable copy makes the stronger claim.
+
+Stated precisely, because the distinction decides the fix: that claim is not demonstrably **false** \- Hard Rock's recorded conflict was about tailgating pass colours, not bags \- it is **unverifiable by this project's own standard**, asserted on a surface that no longer asks for provenance. Nothing was changed.
