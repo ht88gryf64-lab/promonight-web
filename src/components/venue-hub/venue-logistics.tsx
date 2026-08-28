@@ -159,6 +159,20 @@ export function buildGettingInRows(hub: VenueHub, tenantName: TenantNameResolver
   return gettingRows;
 }
 
+/** The overlays whose tailgate window the Plan-your-visit card prints. Lifted
+ *  out of VenueHubView so it is reachable by a test: it sits two cards above
+ *  the Getting-in card and was publishing what that card withholds. */
+export function planYourVisitTailgateTenants(hub: VenueHub): VenueHubTenantOverlay[] {
+  // Same gates as the Getting-in Tailgating row: the field's exclusion list and
+  // the overlay's own provenance. Without them, yulman-stadium and
+  // hard-rock-stadium withheld tailgating on one card for conflict and
+  // republished a lot-open time two cards above it, on the same page.
+  if (!hub.verified || fieldExcluded(hub.slug, 'tailgating')) return [];
+  return hub.tenantOverlays.filter(
+    (t) => t.verified && t.tailgateWindow && hasProvenance(t.sources, 'tailgateWindow'),
+  );
+}
+
 export function GettingInCard({ rows }: { rows: GettingInRow[] }) {
   if (!rows.length) return null;
   return (

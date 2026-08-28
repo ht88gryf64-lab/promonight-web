@@ -19,6 +19,7 @@ import {
   formatMinutesBefore,
   transitMode,
   verifiedGateTenants,
+  planYourVisitTailgateTenants,
   buildGettingInRows,
   GettingInCard,
   ParkingLotsCard,
@@ -166,7 +167,7 @@ export function VenueHubView({
     faqs.push({ question: `Can you bring outside food into ${short}?`, answer: foodAns });
   }
   const gateTenants = verifiedGateTenants(hub);
-  const lotOpenTenants = hub.tenantOverlays.filter((t) => t.verified && t.tailgateWindow);
+  const lotOpenTenants = planYourVisitTailgateTenants(hub);
   const lotOpenLines = lotOpenTenants.map((t) => ({
     key: t.teamId,
     label: lotOpenTenants.length > 1 ? tenantName(t) : null,
