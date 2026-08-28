@@ -7,6 +7,7 @@ import { getCfbSchool } from './cfb/data';
 import { toAffiliateTeam } from './cfb/page-extras';
 import { collectVenueLinksForTeams, type HubVenueLink, type VenueIndexEntry } from './venue-index';
 import { transitSuppressed } from './venue-transit-suppression';
+import { rendersBag, rendersParking, rendersFood, rendersGates, fieldExcluded, hasProvenance, hasSubProvenance } from './venue-field-exclusions';
 
 // Read layer for the venue logistics hub (/venues/[slug]). Reads the venueHubs
 // collection ONLY. The legacy `venues` collection and getVenueForTeam are
@@ -470,7 +471,7 @@ export const getVenueUtilityCounts = cache(async (): Promise<VenueUtilityCounts>
   for (const td of tSnap.docs) {
     if (!td.ref.path.startsWith('venueHubs/')) continue;
     const t = td.data();
-    if (t.verified === true && t.gatesOpen?.ruleText) {
+    if (t.verified === true && t.gatesOpen?.ruleText && hasSubProvenance(stringMap(t.sources), 'gatesOpen', 'ruleText')) {
       gateSlugs.add(td.ref.parent.parent!.id);
     }
   }
@@ -487,25 +488,26 @@ export const getVenueUtilityCounts = cache(async (): Promise<VenueUtilityCounts>
     // that is affiliate widget coverage, not a parking fact, and it would
     // count buildings whose page shows the "no verified parking details"
     // degrade copy.
-    const lots = Array.isArray(d.parkingLots) ? d.parkingLots : [];
-    if (lots.length > 0 || !!d.parkingLotMapUrl) counts.parking++;
+    // Same predicates as the page and the description (venue-field-exclusions),
+    // because this tile is documented to mirror what the venue page renders.
+    const facts = {
+      slug: doc.id, sources: stringMap(d.sources),
+      bagMaxDimensions: d.bagMaxDimensions ?? null, clearBagRequired: typeof d.clearBagRequired === 'boolean' ? d.clearBagRequired : null,
+      bagsProhibited: typeof d.bagsProhibited === 'boolean' ? d.bagsProhibited : null, bagPolicyNotes: d.bagPolicyNotes ?? null,
+      bagPolicyUrl: d.bagPolicyUrl ?? null, parkingLots: Array.isArray(d.parkingLots) ? d.parkingLots : [],
+      parkingLotMapUrl: d.parkingLotMapUrl ?? null,
+      officialParkingUrls: Array.isArray(d.officialParkingUrls) ? d.officialParkingUrls : [], food: d.food ?? null,
+    };
+    if (rendersParking(facts)) counts.parking++;
 
-    if (
-      (d.bagMaxDimensions ?? null) !== null ||
-      typeof d.clearBagRequired === 'boolean' ||
-      d.bagsProhibited === true ||
-      !!d.bagPolicyNotes ||
-      !!d.bagPolicyUrl
-    ) {
-      counts.bag++;
-    }
+    if (rendersBag(facts)) counts.bag++;
 
     // Suppressed buildings render no transit anywhere, so they must not be
     // counted in the homepage utility tile either.
     const pt = d.publicTransit;
     if (pt && !transitSuppressed(doc.id) && ((pt.lines?.length ?? 0) > 0 || !!pt.notes)) counts.transit++;
 
-    if (gateSlugs.has(doc.id)) counts.gates++;
+    if (gateSlugs.has(doc.id) && !fieldExcluded(doc.id, 'gates')) counts.gates++;
   }
   return counts;
 });
@@ -938,22 +940,19 @@ export function venueHubDescription(hub: VenueHub): string {
   const verified = hub.verified;
   const dims = dimsString(hub.bagMaxDimensions);
 
-  const hasBag =
-    verified &&
-    (hub.bagMaxDimensions !== null ||
-      hub.clearBagRequired !== null ||
-      hub.bagsProhibited === true ||
-      !!hub.bagPolicyNotes ||
-      !!hub.bagPolicyUrl);
-  const hasParking =
-    verified &&
-    (hub.parkingLots.length > 0 ||
-      !!hub.parkingLotMapUrl ||
-      (spotHeroCovers(hub) && hub.lat !== null && hub.lng !== null));
-  const hasGates = verified && hub.tenantOverlays.some((t) => t.verified && !!t.gatesOpen?.ruleText);
+  // These MUST be the predicates the page renders on, not a restatement of
+  // them: this string is the <meta name="description"> AND the StadiumOrArena
+  // JSON-LD description, so a topic advertised here that the page withholds is
+  // an unfalsifiable claim in structured data. Shared from
+  // venue-field-exclusions so the three consumers cannot drift.
+  const hasBag = verified && rendersBag(hub);
+  const hasParking = verified && rendersParking(hub);
+  const hasGates = verified && rendersGates(hub.slug, hub.tenantOverlays);
   const hasTransit =
-    verified && !transitSuppressed(hub.slug) && !!hub.publicTransit && ((hub.publicTransit.lines?.length ?? 0) > 0 || !!hub.publicTransit.notes);
-  const hasFood = verified && !!hub.food;
+    verified && !transitSuppressed(hub.slug) && !fieldExcluded(hub.slug, 'transit') && !!hub.publicTransit &&
+    (((hub.publicTransit.lines?.length ?? 0) > 0 && hasSubProvenance(hub.sources, 'publicTransit', 'lines')) ||
+      (!!hub.publicTransit.notes && hasSubProvenance(hub.sources, 'publicTransit', 'notes')));
+  const hasFood = verified && rendersFood(hub);
   // Expedia hotels renders for every verified, tenanted building (all 222 have
   // a tenant), so hotels is a covered topic whenever the page is verified.
   const hasHotels = verified;
@@ -961,7 +960,15 @@ export function venueHubDescription(hub: VenueHub): string {
   let lead: string;
   let leadTopic: 'bag' | 'parking' | 'transit' | null;
   if (hasBag) {
-    lead = `What size bag can you bring into ${short}? ${bagAnswer(hub, dims)}`;
+    // bagAnswer MANUFACTURES the sentence, so feed it only facts with their own
+    // provenance; otherwise an unsourced boolean becomes a published policy.
+    const bagFacts = {
+      ...hub,
+      bagMaxDimensions: hasProvenance(hub.sources, 'bagMaxDimensions') ? hub.bagMaxDimensions : null,
+      clearBagRequired: hasProvenance(hub.sources, 'clearBagRequired') ? hub.clearBagRequired : null,
+      bagsProhibited: hasProvenance(hub.sources, 'bagsProhibited') ? hub.bagsProhibited : null,
+    };
+    lead = `What size bag can you bring into ${short}? ${bagAnswer(bagFacts, dimsString(bagFacts.bagMaxDimensions))}`;
     leadTopic = 'bag';
   } else if (hasParking) {
     lead = `Where can you park at ${short}? Reserve nearby parking in advance${

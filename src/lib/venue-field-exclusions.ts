@@ -97,3 +97,57 @@ export function hasProvenance(sources: Record<string, string> | undefined, key: 
 export function hasSubProvenance(sources: Record<string, string> | undefined, field: string, sub: string): boolean {
   return hasProvenance(sources, `${field}.${sub}`) || hasProvenance(sources, field);
 }
+
+
+/** The minimal shape the render predicates need. Works on a mapped VenueHub and
+ *  on a raw doc alike, so the description, the homepage counts and the page
+ *  cannot drift apart by restating the rule three times. */
+export interface RenderFacts {
+  slug: string;
+  sources: Record<string, string>;
+  bagMaxDimensions?: unknown;
+  clearBagRequired?: boolean | null;
+  bagsProhibited?: boolean | null;
+  bagPolicyNotes?: string | null;
+  bagPolicyUrl?: string | null;
+  parkingLots?: Array<{ name?: string; notes?: string | null }>;
+  parkingLotMapUrl?: string | null;
+  officialParkingUrls?: string[];
+  food?: string | null;
+}
+const present = (v: unknown) => v !== null && v !== undefined && !(typeof v === 'string' && !v.trim());
+
+/** A bag CLAIM with its own provenance, or the policy-page POINTER. */
+export function rendersBag(f: RenderFacts): boolean {
+  if (fieldExcluded(f.slug, 'bag')) return false;
+  const claim =
+    (present(f.bagMaxDimensions) && hasProvenance(f.sources, 'bagMaxDimensions')) ||
+    (typeof f.clearBagRequired === 'boolean' && hasProvenance(f.sources, 'clearBagRequired')) ||
+    (f.bagsProhibited === true && hasProvenance(f.sources, 'bagsProhibited')) ||
+    (present(f.bagPolicyNotes) && hasProvenance(f.sources, 'bagPolicyNotes'));
+  return claim || isReachableUrl(f.bagPolicyUrl);
+}
+
+/** Sourced lot prose (a claim), or either parking POINTER. */
+export function rendersParking(f: RenderFacts): boolean {
+  if (fieldExcluded(f.slug, 'parking')) return false;
+  const lots =
+    (f.parkingLots ?? []).some((l) => present(l.notes)) &&
+    hasProvenance(f.sources, 'parkingLots') &&
+    !subFieldExcluded(f.slug, 'parking', 'parkingLots');
+  const links =
+    (f.officialParkingUrls ?? []).some(isReachableUrl) && !subFieldExcluded(f.slug, 'parking', 'officialParkingUrls');
+  return lots || links || isReachableUrl(f.parkingLotMapUrl);
+}
+
+export function rendersFood(f: RenderFacts): boolean {
+  return !fieldExcluded(f.slug, 'food') && present(f.food) && hasProvenance(f.sources, 'food');
+}
+
+/** A gate rule renders only from an overlay that is verified AND sourced. */
+export function rendersGates(slug: string, overlays: Array<{ verified?: boolean; gatesOpen?: { ruleText?: string | null } | null; sources?: Record<string, string> }>): boolean {
+  if (fieldExcluded(slug, 'gates')) return false;
+  return overlays.some(
+    (t) => t.verified === true && present(t.gatesOpen?.ruleText) && hasSubProvenance(t.sources, 'gatesOpen', 'ruleText'),
+  );
+}
