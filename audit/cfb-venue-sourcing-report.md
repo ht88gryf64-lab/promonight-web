@@ -1890,7 +1890,7 @@ Every finding re-checked against HEAD by RUNNING something rather than reading: 
 | medium | src/components/venue-hub/venue-logistics.tsx:113 | An unsourced gate variance rides into the Gates row on the rule's provenance key |
 | medium | src/app/nfl/page.tsx:145 | The /nfl primetime card quotes building prose with no provenance, no exclusion and no doc-level verified gate |
 
-**The largest is a regression this branch introduces.** On main,  renders on  alone; on the branch it needs . Re-measured: 166 verified buildings, 154 carry the URLs, 103 carry the source key, so **51 pages lose the "Official parking:" row** and three of them (acrisure-stadium, chase-field, fenway-park) lose the whole Parking lots card. Only one of the 51, kidd-brewer-stadium, is a deliberate sub-exclusion. That was measured on the 86-building CFB slice and shipped to all 166.
+**The largest is a regression this branch introduces.** On main, `officialParkingUrls` renders on `verified` alone; on the branch it needs `sources.officialParkingUrls`. Re-measured: 166 verified buildings, 154 carry the URLs, 103 carry the source key, so **51 pages lose the "Official parking:" row** and three of them (acrisure-stadium, chase-field, fenway-park) lose the whole Parking lots card. Only one of the 51, kidd-brewer-stadium, is a deliberate sub-exclusion. That was measured on the 86-building CFB slice and shipped to all 166.
 
 ### Every still-open finding, live first
 
@@ -1933,6 +1933,6 @@ Every finding re-checked against HEAD by RUNNING something rather than reading: 
 
 ### Two things the re-triage found that the first review did not
 
-**A new live instance on /nfl.** The primetime card reads  and  without testing  at all, which is the first gate every  renderer applies.  is  and not suppressed, so a Bills primetime card publishes  transit prose that  renders nowhere.
+**A new live instance on /nfl.** The primetime card reads `hub.parkingLots` and `hub.publicTransit` without testing `hub.verified` at all, which is the first gate every `/venues` renderer applies. `highmark-stadium` is `verified: false` and not suppressed, so a Bills primetime card publishes `NFTA Game Day Express` transit prose that `/venues/highmark-stadium` renders nowhere.
 
-**The inverted-map guard is narrower than it reads.**  warns only when EVERY key is URL-shaped. t-mobile-park's repaired map still holds its two leftover URL keys beside the field keys, so a partial inversion would pass silently, and re-inverting the Firestore data would fail no test. The code-shape reintroduction is covered; the data shape is not.
+**The inverted-map guard is narrower than it reads.** `stringMap` warns only when EVERY key is URL-shaped. t-mobile-park's repaired map still holds its two leftover URL keys beside the field keys, so a partial inversion would pass silently, and re-inverting the Firestore data would fail no test. The code-shape reintroduction is covered; the data shape is not.
