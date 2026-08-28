@@ -75,6 +75,18 @@ export function subFieldExcluded(hubSlug: string, field: FieldExclusion['field']
 
 const nonEmpty = (s: unknown): s is string => typeof s === 'string' && s.trim().length > 0;
 
+/** POINTERS vs CLAIMS. A field whose value IS a link (officialParkingUrls,
+ *  parkingLotMapUrl, bagPolicyUrl) asserts nothing about the building: it says
+ *  "the operator publishes this here". Rendering it cannot be wrong about a
+ *  gate time or a bag size, so provenance for it is a category error, and
+ *  requiring one withheld 55 working links from live pages. A pointer gates on
+ *  REACHABILITY, meaning a well-formed http(s) URL, plus the exclusion list,
+ *  which is where a link KNOWN to be dead is named (kidd-brewer-stadium's 403).
+ *  Everything else is a claim and keeps its per-field provenance. */
+export function isReachableUrl(u: unknown): u is string {
+  return typeof u === 'string' && /^https?:\/\//.test(u) && URL.canParse(u);
+}
+
 /** Provenance for one field: its key is present in the hub's sources map. */
 export function hasProvenance(sources: Record<string, string> | undefined, key: string): boolean {
   return !!sources && nonEmpty(sources[key]);

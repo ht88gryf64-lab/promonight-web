@@ -8,7 +8,7 @@ import { transitSuppressed } from '@/lib/venue-transit-suppression';
 // here, while its individually sourced facts still reach its school page).
 // What was NOT deliberate was publishing a field here that the school page
 // withholds for cause. See audit/cfb-venue-sourcing-report.md section 16.
-import { fieldExcluded, subFieldExcluded, hasProvenance, hasSubProvenance } from '@/lib/venue-field-exclusions';
+import { fieldExcluded, subFieldExcluded, hasProvenance, hasSubProvenance, isReachableUrl } from '@/lib/venue-field-exclusions';
 import {
   type VenueHub,
   type VenueHubTenantOverlay,
@@ -183,9 +183,10 @@ export function ParkingLotsCard({ hub }: { hub: VenueHub }) {
   // rail), each row `{name}. {notes}`. officialParkingUrls links close the card.
   const parkingOff = fieldExcluded(hub.slug, 'parking');
   const lotsOk = verified && !parkingOff && hasProvenance(hub.sources, 'parkingLots') && !subFieldExcluded(hub.slug, 'parking', 'parkingLots');
-  const linksOk = verified && !parkingOff && hasProvenance(hub.sources, 'officialParkingUrls') && !subFieldExcluded(hub.slug, 'parking', 'officialParkingUrls');
+  // POINTER: a link gates on reachability and the exclusion list, not provenance.
+  const linksOk = verified && !parkingOff && !subFieldExcluded(hub.slug, 'parking', 'officialParkingUrls');
   const lotsWithNotes = lotsOk ? hub.parkingLots.filter((l) => l.name) : [];
-  const officialUrls = linksOk ? hub.officialParkingUrls : [];
+  const officialUrls = linksOk ? hub.officialParkingUrls.filter(isReachableUrl) : [];
   // Card renders when there is lot prose OR an official link: a doc whose only
   // parking fact is the official page (no per-lot breakdown) still surfaces
   // the link instead of silently dropping the field it exists to render.
@@ -261,7 +262,8 @@ export function BagCard({ hub, hasBagFaq }: { hub: VenueHub; hasBagFaq: boolean 
   const noOutsideFood =
     hub.verified && hub.outsideFoodAllowed === false && !fieldExcluded(hub.slug, 'outsideFood') &&
     (hasProvenance(hub.sources, 'outsideFoodAllowed') || hasProvenance(hub.sources, 'outsideFoodRules'));
-  const bagPolicyLink = hasProvenance(hub.sources, 'bagPolicyUrl') ? hub.bagPolicyUrl : null;
+  // POINTER: the venue's own policy page. Reachability, not provenance.
+  const bagPolicyLink = isReachableUrl(hub.bagPolicyUrl) && !fieldExcluded(hub.slug, 'bag') ? hub.bagPolicyUrl : null;
   return (
     <Card accent>
       <CardLabel>What size bag can I bring?</CardLabel>

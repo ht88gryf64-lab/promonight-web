@@ -32,6 +32,7 @@
 // are their stored names.
 import { type VenueHub, leadSentences, dimsString, stripTrailingPeriod } from './venue-hub';
 import { transitSuppressed } from './venue-transit-suppression';
+import { isReachableUrl } from './venue-field-exclusions';
 
 export type CondensedField =
   | 'gates' | 'bag' | 'parking' | 'tailgating' | 'transit' | 'rideshare' | 'accessibility' | 'outsideFood' | 'food' | 'nearby';
@@ -104,15 +105,16 @@ export function buildCondensedLogistics(hub: VenueHub, tenantId: string): Conden
     else if (hub.bagsProhibited === true && prov(s, 'bagsProhibited')) text = 'Bags are not allowed.';
     else if (typeof hub.clearBagRequired === 'boolean' && prov(s, 'clearBagRequired')) text = hub.clearBagRequired ? 'Clear bag required.' : 'Clear bag not required.';
     else if (has(hub.bagPolicyNotes) && prov(s, 'bagPolicyNotes')) text = sentence(hub.bagPolicyNotes);
-    const href = has(hub.bagPolicyUrl) && prov(s, 'bagPolicyUrl') ? hub.bagPolicyUrl : null;
+    // POINTER: reachability, not provenance (see venue-field-exclusions).
+    const href = isReachableUrl(hub.bagPolicyUrl) ? hub.bagPolicyUrl : null;
     if (text || href) lines.push({ key: 'bag', label: 'Bag policy', text: text ?? 'See the official bag policy.', href, hrefLabel: href ? 'Official bag policy' : null });
   }
 
   // Parking: lot names only with sources.parkingLots; each link only with its own key.
   if (!excluded(hub.slug, 'parking')) {
     const lots = prov(s, 'parkingLots') ? hub.parkingLots.map((l) => l.name).filter(has).slice(0, 4).map(stripEmDashes) : [];
-    const mapHref = has(hub.parkingLotMapUrl) && prov(s, 'parkingLotMapUrl') ? hub.parkingLotMapUrl : null;
-    const officialHref = !mapHref && hub.officialParkingUrls.length > 0 && prov(s, 'officialParkingUrls') && !excludedSub(hub.slug, 'parking', 'officialParkingUrls') ? hub.officialParkingUrls[0] : null;
+    const mapHref = isReachableUrl(hub.parkingLotMapUrl) ? hub.parkingLotMapUrl : null;
+    const officialHref = !mapHref && !excludedSub(hub.slug, 'parking', 'officialParkingUrls') ? (hub.officialParkingUrls.find(isReachableUrl) ?? null) : null;
     const href = mapHref ?? officialHref;
     const text = lots.length ? `Lots: ${lots.join(', ')}.` : href ? 'See the official parking page.' : null;
     if (text) lines.push({ key: 'parking', label: 'Parking', text, href, hrefLabel: href ? (mapHref ? 'Official lot map' : 'Official parking') : null });

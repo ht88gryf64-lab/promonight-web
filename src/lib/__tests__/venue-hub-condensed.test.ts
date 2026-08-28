@@ -86,14 +86,24 @@ test('parking sub-fields gate on their own keys', async () => {
   assert.equal(line!.href, 'https://x.edu/map');
 });
 
-test('a hub with empty sources maps renders nothing at all, whatever it holds', async () => {
+test('with no provenance anywhere, only POINTERS survive: a link asserts nothing', async () => {
   const { buildCondensedLogistics } = await load();
   const h = hub({ sources: {} });
-  // The doc-level map alone leaves the gates line standing, because gates
-  // provenance lives on the tenant overlay; that is the rule working, not a gap.
-  assert.deepEqual(buildCondensedLogistics(h, 'x').map((l) => l.key), ['gates']);
+  // The overlay's own map still vouches for the gates rule, so it stands.
+  // Bag and parking survive too, but ONLY as links: the fixture carries a
+  // bagPolicyUrl and a parkingLotMapUrl, and a pointer gates on reachability
+  // rather than provenance because rendering it asserts nothing about the
+  // building. Every CLAIM is gone.
+  const withOverlay = buildCondensedLogistics(h, 'x');
+  assert.deepEqual(withOverlay.map((l) => l.key), ['gates', 'bag', 'parking']);
+  assert.equal(withOverlay.find((l) => l.key === 'bag')!.text, 'See the official bag policy.', 'no bag FACT, just the link');
+  assert.equal(withOverlay.find((l) => l.key === 'parking')!.text, 'See the official parking page.', 'no lot NAMES, just the link');
   const bare = { ...h, tenantOverlays: [{ ...h.tenantOverlays[0], sources: {} }] };
-  assert.deepEqual(buildCondensedLogistics(bare, 'x'), []);
+  const keys = buildCondensedLogistics(bare, 'x').map((l) => l.key);
+  assert.deepEqual(keys, ['bag', 'parking'], 'gates goes with its overlay provenance; the two links remain');
+  // and a hub with no links at all renders nothing
+  const noLinks = { ...bare, bagPolicyUrl: null, parkingLotMapUrl: null, officialParkingUrls: [] } as typeof bare;
+  assert.deepEqual(buildCondensedLogistics(noLinks, 'x'), []);
 });
 
 test('the block minimum is three lines', async () => {

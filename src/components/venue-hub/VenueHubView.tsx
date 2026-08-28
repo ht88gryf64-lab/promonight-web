@@ -3,7 +3,7 @@ import Link from 'next/link';
 import type { Team } from '@/lib/types';
 import type { HubFaqItem } from '@/components/hub/HubFaq';
 import { transitSuppressed } from '@/lib/venue-transit-suppression';
-import { fieldExcluded, hasProvenance } from '@/lib/venue-field-exclusions';
+import { fieldExcluded, hasProvenance, isReachableUrl } from '@/lib/venue-field-exclusions';
 import { HubFaq } from '@/components/hub/HubFaq';
 import { TicketmasterCTA } from '@/components/affiliates/TicketmasterCTA';
 import { FanaticsCTA } from '@/components/affiliates/FanaticsCTA';
@@ -118,7 +118,9 @@ export function VenueHubView({
   // this, not hasBag, is what gates both the FAQ and the card: hasBag remains the
   // narrower test for whether a bag fact exists at all, which is what
   // venueHubIsIndexable and the capsule copy care about.
-  const hasBagFaq = hasBag || (verified && !bagExcluded && !!hub.bagPolicyUrl && hasProvenance(hub.sources, 'bagPolicyUrl'));
+  // The URL arm is a POINTER: it sends the reader to the venue's own policy
+  // page and asserts no fact, so it needs reachability, not provenance.
+  const hasBagFaq = hasBag || (verified && !bagExcluded && isReachableUrl(hub.bagPolicyUrl));
   const dimStr = hasProvenance(hub.sources, 'bagMaxDimensions') ? dimsString(hub.bagMaxDimensions) : null;
 
   // ── FAQ (rule: overflow bag text + long-tail queries land here) ──
@@ -186,7 +188,7 @@ export function VenueHubView({
   const parkingFactsOk =
     verified && !fieldExcluded(hub.slug, 'parking') &&
     ((hub.parkingLots.length > 0 && hasProvenance(hub.sources, 'parkingLots')) ||
-      (!!hub.parkingLotMapUrl && hasProvenance(hub.sources, 'parkingLotMapUrl')));
+      isReachableUrl(hub.parkingLotMapUrl));
   if (parkingFactsOk) {
     const lotNames = hasProvenance(hub.sources, 'parkingLots') ? hub.parkingLots.slice(0, 8).map((l) => l.name).join(', ') : '';
     faqs.push({
@@ -323,7 +325,7 @@ export function VenueHubView({
           ))}
         </div>
       ) : null}
-      {hub.parkingLotMapUrl ? (
+      {isReachableUrl(hub.parkingLotMapUrl) && !fieldExcluded(hub.slug, 'parking') ? (
         <div className="mt-2 font-rd text-[11px]">
           <a href={hub.parkingLotMapUrl} className="font-semibold text-rd-red" target="_blank" rel="noopener noreferrer">
             Official parking lot map &rsaquo;
