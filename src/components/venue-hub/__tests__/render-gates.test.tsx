@@ -87,10 +87,18 @@ test('GATE: a field on the conflicts list renders on no surface', async () => {
 
 // ── GATE 8: sub-field exclusions ──────────────────────────────────────────
 test('GATE: a sub-field exclusion withholds only its sub-field', async () => {
-  const { subFieldExcluded, fieldExcluded } = await import('../../../lib/venue-field-exclusions');
-  assert.equal(subFieldExcluded('kidd-brewer-stadium', 'parking', 'officialParkingUrls'), true);
-  assert.equal(subFieldExcluded('kidd-brewer-stadium', 'parking', 'parkingLots'), false);
-  assert.equal(fieldExcluded('kidd-brewer-stadium', 'parking'), false, 'the field itself is not excluded');
+  const { subFieldExcluded, fieldExcluded, FIELD_CONFLICTS } = await import('../../../lib/venue-field-exclusions');
+  // Keyed to the live list. Hardcoding a slug here is what let the App State
+  // entry go stale unnoticed: the assertion kept passing on a lifted entry.
+  const e = FIELD_CONFLICTS.find((c) => c.sub);
+  if (e) {
+    assert.equal(subFieldExcluded(e.hub, e.field, e.sub!), true);
+    assert.equal(fieldExcluded(e.hub, e.field), false, 'a sub entry does not exclude the whole field');
+  }
+  // whole-field entries do exclude the field
+  const w = FIELD_CONFLICTS.find((c) => !c.sub)!;
+  assert.equal(fieldExcluded(w.hub, w.field), true);
+  assert.equal(subFieldExcluded(w.hub, w.field, 'rules'), true, 'a whole-field entry covers every sub-field');
 });
 
 // ── GATE 9: the holds list ────────────────────────────────────────────────

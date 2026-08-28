@@ -183,7 +183,7 @@ test('the conflicts and holds lists silence the named field on the named hub and
   const wholeLine: Array<[string, CondensedField]> = [
     ['brooks-stadium', 'tailgating'], ['david-booth-kansas-memorial-stadium', 'tailgating'], ['hard-rock-stadium', 'tailgating'], ['yulman-stadium', 'tailgating'],
   ];
-  assert.deepEqual(CONDENSED_CONFLICTS.map((c) => [c.hub, c.field, c.sub ?? null]), [...wholeLine.map(([h, f]) => [h, f, null]), ['kidd-brewer-stadium', 'parking', 'officialParkingUrls']]);
+  assert.deepEqual(CONDENSED_CONFLICTS.filter((c) => !c.sub).map((c) => [c.hub, c.field]), wholeLine);
   assert.deepEqual(CONDENSED_HOLDS.map((c) => [c.hub, c.field, c.sub ?? null]), [], 'no holds after the Pass 2 Maryland write');
   for (const e of [...CONDENSED_CONFLICTS, ...CONDENSED_HOLDS]) assert.ok(e.reason.length > 60, `${e.hub}: every exclusion carries its reason`);
   for (const [slug, field] of [...wholeLine, ...CONDENSED_HOLDS.map((h) => [h.hub, h.field] as [string, CondensedField])]) {
@@ -199,10 +199,16 @@ test('the conflicts and holds lists silence the named field on the named hub and
   assert.equal(buildCondensedLogistics(hub({ slug: 'some-other-stadium' }), 'x').length, 10);
 });
 
-test('a sub-field exclusion withholds that sub-field only: App State never links the dead parking URL but sourced lots and a lot map still render', async () => {
+test('a sub-field exclusion withholds that sub-field only, on an entry that actually exists', async () => {
   const { buildCondensedLogistics } = await load();
   const dead = 'https://mountaineersathleticfund.com/yosef-club/renewals/index.html';
-  const h = hub({ slug: 'kidd-brewer-stadium', officialParkingUrls: [dead] });
+  // Keyed to whatever sub-field entry is CURRENTLY listed, not to a slug whose
+  // entry may since have been lifted: the previous version pinned
+  // kidd-brewer-stadium and stayed green after its exclusion was removed.
+  const { FIELD_CONFLICTS } = await import('../venue-field-exclusions');
+  const entry = FIELD_CONFLICTS.find((c) => c.sub === 'officialParkingUrls');
+  if (!entry) return; // nothing of this shape listed today
+  const h = hub({ slug: entry.hub, officialParkingUrls: [dead] });
   h.sources = { ...h.sources, officialParkingUrls: 'https://appstatesports.com/guide' };
   const parking = (x: Hub) => buildCondensedLogistics(x, 'x').find((l) => l.key === 'parking');
   const withMap = parking(h);

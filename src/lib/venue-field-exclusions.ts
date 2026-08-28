@@ -46,12 +46,13 @@ export const FIELD_CONFLICTS: ReadonlyArray<FieldExclusion> = [
     field: 'tailgating',
     reason: 'Tulane: stored rules are a 2025 capture ("only tailgating location for the 2025 season", Lagniappe/Beaucoup packages); the cited page was rewritten for 2026 with a different season statement and package list.',
   },
-  {
-    hub: 'kidd-brewer-stadium',
-    field: 'parking',
-    sub: 'officialParkingUrls',
-    reason: 'Appalachian State: the stored officialParkingUrls entry (mountaineersathleticfund.com/yosef-club/renewals/index.html) returns 403; the 2025 fan guide body links the live yosef-club/index.html#season-tickets-parking instead. Sub-field grain on purpose: sourced lots and a lot map still render, the dead link never does.',
-  },
+  // kidd-brewer-stadium / parking / officialParkingUrls was here from
+  // 2026-08-27 until 2026-08-28. It named a 403 URL that the Pass 2 write
+  // replaced with the live yosef-club/index.html#season-tickets-parking, so the
+  // condition it described stopped existing and the entry only hid a good link.
+  // Lifting an entry when its data is corrected is the documented close, and it
+  // is the step that got missed: the test covering it asserted the mechanism
+  // against a fixture still holding the dead URL, so it stayed green.
 ];
 
 /** HOLDS. Not conflicts: a ruling settled which official source governs, so the
