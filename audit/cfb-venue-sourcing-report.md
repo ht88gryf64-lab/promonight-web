@@ -1977,3 +1977,47 @@ The first guard fired only when *every* key in a sources map was URL-shaped, so 
 Swept all 223 hubs **and every tenant overlay**: **0 fully inverted, 1 partial (t-mobile-park, 2 of 15 keys, its own leftovers), 0 overlay maps affected.** The leftovers are inert and are left in place: removing a map key requires a delete, which the writer deliberately cannot do, and that property is worth more than the tidiness.
 
 Hydration clean on every changed page, non-zero counts throughout.
+
+## 22. The four merge-gate blockers closed, and the pre-merge review
+
+Each closed with a test that FAILED on HEAD before the fix. Where the gate was not reachable from a test, the helper was extracted **verbatim first**, so the failure was the defect and not a missing export.
+
+### What failed, before
+
+| Blocker | The failing assertion on HEAD |
+| --- | --- |
+| description / counts | `description asserts a clear-bag requirement from an unsourced field: "A clear bag up to 12" x 6" x 12" is required."` plus three more (gate times, parking, food promised and withheld) |
+| Plan-your-visit | `yulman-stadium: Plan-your-visit republishes the tailgate window the Getting-in card withholds` |
+| App State exclusion | `kidd-brewer-stadium: the dead link was replaced, so the exclusion must be lifted` |
+| bag-policies | `an unsourced clear-bag flag is not published by the aggregator` |
+
+### Verified at render, preview of b4fd0f0
+
+- `/venues/yulman-stadium` and `/venues/hard-rock-stadium`: Tailgating row absent **and** no lot-open line in Plan-your-visit. The card still renders its other content.
+- `/venues/kidd-brewer-stadium`: the corrected `yosef-club/index.html#season-tickets-parking` link renders, the dead `/renewals/` URL appears nowhere.
+- `/venues/bag-policies`: renders, in the house font (`__variable_… rd-root`), 49 rows, hydration clean.
+- Hydration clean on all four, non-zero counts.
+
+**One honest measurement note.** `/venues/bag-policies` publishes **0 changed rows** today. The page is MLB-only, and after the T-Mobile Park data repair there are zero MLB buildings with an unsourced bag fact, so this fix is **preventive**: it closes the drift path between two lists over one set of facts rather than correcting live output. My first measurement reported one changed row (kauffman-stadium) because the baseline ignored `SOURCES_CONFLICT_SLUGS`, which already nulled it. Corrected: 0.
+
+The hydration script earned its floor here too: `--selector "tbody tr"` matched nothing on a page built from `<li>`, and the run **failed loudly** instead of reporting a clean `0/0`.
+
+### Consumer coverage, enumerated
+
+Every file that reads a venueHubs **fact** field now goes through the shared rules:
+
+| File | Uses shared rules |
+| --- | --- |
+| `lib/venue-hub.ts`, `lib/venue-hub-condensed.ts`, `lib/venue-field-exclusions.ts` | yes |
+| `components/venue-hub/venue-logistics.tsx`, `VenueHubView.tsx` | yes |
+| `app/nfl/page.tsx`, `lib/venue-bag-policies.ts` | yes |
+
+The files that do not are `components/venue-info-block.tsx`, `lib/data.ts`, `lib/venue-overrides.ts` and `app/api/my-teams/promos/route.ts`. **None of them reads venueHubs** (0 references each); they read the separate `venues` collection, a different corpus with its own provenance story. That is the one remaining consumer gap and it is out of this branch's scope, reported rather than silently included.
+
+### The three open live findings, with a recommendation
+
+1. **`venues.publicTransit` on team pages** is not covered by any of this. `venues/loandepot-park` still names "Civic Center Station", which Miami-Dade publishes as UHealth | Jackson. *Recommendation: leave.* It is one renamed station in an otherwise correct paragraph, on a corpus this branch never touched; folding it in now would widen a branch that is already large.
+2. **The write script rewrites provenance without `overwrite: true`** and reports it as a new field. Operator-facing, no rendered surface. *Recommendation: follow-on branch.* It costs nothing today and the fix belongs with the snapshot-restore hardening.
+3. **An unsourced gate variance rides in on the rule's provenance key** at `/venues/notre-dame-stadium`. One page, one sentence. *Recommendation: follow-on branch*, together with the seven unconsulted exclusion sub-keys, which are latent and are better fixed with the tests that would prove them.
+
+None of the three is a claim published without provenance on a surface this branch owns.
