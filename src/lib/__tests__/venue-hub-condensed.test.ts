@@ -29,7 +29,7 @@ function hub(over: Partial<Hub> = {}): Hub {
     bagMaxDimensions: { w: 12, h: 6, d: 12, unit: 'in' }, clearBagRequired: true, bagsProhibited: null,
     bagPolicyUrl: 'https://x.edu/bags', bagPolicyNotes: 'Small clutches allowed. Nothing else.',
     tailgating: { allowed: true, rules: 'Stay in your space. No open flames.', timeWindow: 'Lots open at 7am.', grillRules: null, rvPolicy: null },
-    venueAccessRestrictions: null, nearby: 'Block party on Main St. Food trucks.', outsideFoodAllowed: false, outsideFoodRules: 'No outside food.',
+    venueAccessRestrictions: null, nearby: 'Block party on the plaza. Food trucks.', outsideFoodAllowed: false, outsideFoodRules: 'No outside food.',
     food: 'Pizza near section 1. Tacos near 2.', photoUrl: null, photoAttribution: null,
     // doc-level verified is FALSE on purpose: the rule must not read it.
     verified: false,
@@ -54,7 +54,7 @@ test('a fully provenanced hub renders every field, verbatim first sentences, reg
   assert.equal(byKey.accessibility.text, 'ADA entrances at Gate A.');
   assert.equal(byKey.outsideFood.text, 'No outside food or drink.');
   assert.equal(byKey.food.text, 'Pizza near section 1.');
-  assert.equal(byKey.nearby.text, 'Block party on Main St.');
+  assert.equal(byKey.nearby.text, 'Block party on the plaza.');
 });
 
 test('a populated field with no source for it stays silent', async () => {
@@ -205,4 +205,30 @@ test('a sub-field exclusion withholds that sub-field only: App State never links
   assert.equal(lotsOnly.href, null, 'the official link is withheld even though it is sourced');
   assert.equal(parking({ ...h, parkingLotMapUrl: null, parkingLots: [] }), undefined, 'nothing but the dead link: no parking line');
   assert.ok(!buildCondensedLogistics(h, 'x').some((l) => l.href === dead));
+});
+
+test('a period after an abbreviation is not a sentence end, so a qualifier cannot be truncated away', async () => {
+  const { leadSentences } = await import('../venue-hub');
+  // THE LIVE DEFECT this guards: /cfb/alabama served "Free Crimson Ride shuttle
+  // service to the Quad begins at 6 a.m." from stored text that continues
+  // "(11 a.m. kickoff only)". The block renders ONE lead sentence, so the split
+  // decided whether the rendered claim was true.
+  assert.equal(
+    leadSentences('Free Crimson Ride shuttle service to the Quad begins at 6 a.m. (11 a.m. kickoff only) on game days. Off-campus shuttles run from downtown.', 1).lead,
+    'Free Crimson Ride shuttle service to the Quad begins at 6 a.m. (11 a.m. kickoff only) on game days.',
+  );
+  assert.equal(
+    leadSentences('Tailgate tents may be dropped off starting 5 a.m. Friday. All picnic areas open at 4 p.m. the day before.', 1).lead,
+    'Tailgate tents may be dropped off starting 5 a.m. Friday.',
+  );
+  // Ordinary sentences still split.
+  assert.deepEqual(leadSentences('Take the bus. Then walk.', 1), { lead: 'Take the bus.', overflow: 'Then walk.' });
+  // Street-type abbreviations mid-clause no longer split.
+  assert.equal(leadSentences('Drop off on 8th St. north of Gate 3. Lots close after.', 1).lead, 'Drop off on 8th St. north of Gate 3.');
+  // THE DELIBERATE TRADE, stated so it is a decision and not a surprise: an
+  // ambiguous abbreviation that genuinely ENDS a sentence merges it with the
+  // next one, because "Ave. Garage" and "St. Food trucks." are indistinguishable
+  // without parsing. Over-inclusion shows the reader more true text; truncation
+  // showed a false claim. Merging is the safer failure.
+  assert.equal(leadSentences('Block party on Main St. Food trucks.', 1).lead, 'Block party on Main St. Food trucks.');
 });

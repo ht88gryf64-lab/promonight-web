@@ -222,8 +222,19 @@ export function displayVenueName(name: string): string {
  * dimensions and clutch sizes are never split apart. */
 export function leadSentences(text: string, max: number): { lead: string; overflow: string } {
   const trimmed = text.trim();
-  const sentences = trimmed
+  // A period after a known abbreviation is not a sentence end. Splitting on it
+  // truncates the lead mid-clause, and the condensed block renders exactly one
+  // lead sentence, so the dropped remainder can be the clause that made the
+  // sentence TRUE: /cfb/alabama served "Free Crimson Ride shuttle service to
+  // the Quad begins at 6 a.m." from stored text that continues "(11 a.m.
+  // kickoff only)". 23 stored prose values are cut this way corpus-wide.
+  // Placeholder the abbreviation dots, split, then restore.
+  const ABBREV = /\b(a\.m|p\.m|A\.M|P\.M|St|Ave|Blvd|Rd|Dr|Ste|Mt|Ft|No|approx|vs|Jr|Sr|Inc|Co|Corp|U\.S|N\.W|S\.W|N\.E|S\.E|e\.g|i\.e)\.(?=\s|$)/g;
+  const DOT = '\u0000';
+  const masked = trimmed.replace(ABBREV, (m) => m.replace(/\./g, DOT));
+  const sentences = masked
     .split(/(?<=[.!?])\s+(?=["'(A-Z0-9])/)
+    .map((x) => x.split(DOT).join('.'))
     .map((s) => s.trim())
     .filter(Boolean);
   const lead = sentences.slice(0, max).join(' ').trim();
