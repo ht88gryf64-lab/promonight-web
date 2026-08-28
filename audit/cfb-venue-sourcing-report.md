@@ -1703,3 +1703,79 @@ Coastal Carolina is the exception that proves the mechanism: `brooks-stadium` is
 ### What a fix would cost, if you want one
 
 `CONDENSED_CONFLICTS` and the per-field provenance rule are both currently private to `venue-hub-condensed.ts`, which is CFB-scoped. Honouring them on the venue page means either lifting the conflicts list into a shared module the way `venue-transit-suppression.ts` already is (small, and it would silence 6 fields on 6 venue pages), or moving the venue page to per-field provenance wholesale (large: 13 buildings would lose every card they currently show, since `verified: false` and unsourced are not the same condition and many of those fields have no source recorded). The first is the proportionate one. Neither is done here.
+## 17. Pre-merge adversarial review of the whole branch
+
+Five lenses over the full diff against main, read as one change rather than as the sequence of passes that produced it: unprovenanced claims on any surface, consumers not covered by the wiring, guards that report success while measuring nothing, the Firestore write path, and copy correctness. 56 findings raised, each verified independently against the real code and the 223-hub dump, with a pre-existing condition counted as refuted unless this branch made it worse. **42 confirmed, 14 refuted, 0 left unverified** (verdicts reconciled against the raised list by identity, not by count).
+
+**The branch is not ready to merge.** The confirmed set includes claims rendering without provenance on surfaces the wiring never reached, copy this pass wrote that renders false, and two suppression reasons that misdescribe the data they withhold.
+
+### Verified by hand, because they are the ones that would ship something wrong
+
+| # | What | Checked |
+| --- | --- | --- |
+| 1 | **/cfb/alabama renders a false sentence written by this pass.** Stored notes read "Free Crimson Ride shuttle service to the Quad begins at 6 a.m. (11 a.m. kickoff only) on game days...". The condensed block renders the first sentence, which the abbreviation split cuts at "begins at 6 a.m." | Reproduced: the qualifier does not survive. This is the huntington-bank-field failure mode recurring inside copy that was applied rather than withheld |
+| 2 | **Autzen transit contradicts itself.** `lines` names "Lane Transit District (LTD)" while sentence 4 of the notes reads "Lane Transit District (LTD) is not running an Autzen shuttle this season" | Reproduced against Firestore; both were written by the Pass 2 execute |
+| 3 | **52 verified venue pages lose their official-parking link row.** 166 verified hubs, 154 carry officialParkingUrls, only 102 carry `sources.officialParkingUrls` | Reproduced exactly. My sweep measured cards appearing and disappearing, not rows inside a surviving card, and it measured the 86-building CFB slice rather than all 166 |
+| 4 | **The App State parking exclusion is now stale.** Pass 2 replaced the dead /renewals/ URL with the live Yosef Club page, so the entry withholds a link that is no longer dead | Reproduced: stored value is the corrected URL |
+| 5 | **The bmo-field suppression reason describes another building.** It says "the stored routing sends riders to a TTC 509/511 replacement bus"; bmo-field's stored notes never mention one. That text belongs to coca-cola-coliseum and to bmo-field's source page | Reproduced against the stored notes |
+
+### All 42 confirmed findings
+
+| Severity | Location | Finding |
+| --- | --- | --- |
+| high | src/components/venue-hub/VenueHubView.tsx:187 | The bag fact-band chip renders raw dimensions and clear-bag state that the capsule beside it now withholds |
+| high | src/lib/venue-bag-policies-data.ts:36 | /venues/bag-policies reads venueHubs bag values directly and consults neither exclusions nor provenance |
+| high | src/lib/venue-hub.ts:914 | venueHubDescription still derives its meta description from raw fields, so the head promises facts the body withholds |
+| high | scripts/cfb-transit-copy-plan.json:237 | Copy written this pass renders a false first sentence on /cfb/alabama: the "11 a.m. kickoff only" qualifier is dropped |
+| high | scripts/populate-cfb-venue-data.ts:130 | Provenance writes bypass the overwrite guard entirely when the stored value already matches the plan |
+| high | src/components/venue-hub/venue-logistics.tsx:147 | Provenance test cannot tell a malformed sources map from an absent key, so t-mobile-park silently loses six sections |
+| high | src/components/venue-hub/venue-logistics.tsx:177 | 52 verified venue pages silently lose their official-parking links; the change was measured on 86 buildings and shipped to 166 |
+| high | src/components/venue-hub/VenueHubView.tsx:109 | New per-field provenance gate strips seven cards from /venues/t-mobile-park, whose sources map is key/value inverted |
+| high | src/lib/venue-hub.ts:122 | An inverted sources map (URL keys, title values) silently strips every field's provenance, blanking T-Mobile Park's page while its chips, FAQs, description and the MLB bag aggregator keep publishing the same facts |
+| high | src/lib/venue-hub.ts:914 | venueHubDescription reads no provenance and no exclusion list, so the meta description and StadiumOrArena JSON-LD promise facts the page now withholds |
+| high | src/lib/venue-transit-suppression.ts:69 | bmo-field is silenced on a reason that quotes a different building's stored text |
+| high | src/lib/venue-transit-suppression.ts:170 | Three suppression reasons contradict the report's own verified findings, and two name neither a service nor an operator |
+| medium | src/components/venue-hub/venue-logistics.tsx:177 | The venue page's per-field provenance gate is materially wider than the audit predicted and the widening was not measured |
+| medium | src/components/venue-hub/venue-logistics.tsx:119 | The venue page's transit row consults suppression but never the exclusion list or transit provenance |
+| medium | src/components/venue-hub/VenueHubView.tsx:291 | Plan-your-visit still serves tailgating-window prose and the lot-map link for buildings whose fields are excluded |
+| medium | src/lib/venue-field-exclusions.ts:18 | Seven of the nine declared exclusion sub-keys are consulted nowhere, so a sub-field entry silently does nothing |
+| medium | audit/cfb-venue-sourcing-report.md:1705 | Report section 16 is stale and now contradicts the code it describes, and contradicts itself |
+| medium | audit/cfb-venue-wiring-check.md:192 | The wiring check's "only one building" measurement is both stale and wrong: barclays-center is a second case |
+| medium | scripts/cfb-venue-data-plan.json:173 | Army `food` value is more specific than the report says its cited page can support |
+| medium | scripts/cfb-venue-data-plan.json:511 | Autzen transit copy written by this pass names LTD as a line while its own text says LTD is not running |
+| medium | scripts/populate-cfb-venue-data.ts:150 | After the partial failure the newest snapshot is not a restore point, and nothing in the script or the report says so |
+| medium | scripts/populate-cfb-venue-data.ts:151 | The documented snapshot restore (`set()` of the JSON) converts Firestore Timestamps into plain maps |
+| medium | src/components/venue-hub/venue-logistics.tsx:110 | The venue page's Transit row is the one field still rendered with no provenance test at all, and it does not consult the exclusion list either |
+| medium | src/components/venue-hub/venue-logistics.tsx:110 | The venue page transit row is the only Getting-in row that got neither the provenance nor the exclusion gate |
+| medium | src/components/venue-hub/VenueHubView.tsx:151 | The Plan-your-visit card renders an overlay tailgate window and the lot-map link with no exclusion check, so a hub whose tailgating field is withheld for conflict still serves a tailgating claim |
+| medium | src/lib/__tests__/venue-field-exclusions.test.ts:57 | The test named for the array-provenance fix never touches the code it fixed |
+| medium | src/lib/__tests__/venue-transit-suppression.test.ts:75 | The test that "pins" suppression away from the indexing floor cannot fail |
+| medium | src/lib/venue-field-exclusions.ts:49 | App State parking-link exclusion was not lifted after the Pass 2 write corrected the dead link |
+| medium | src/lib/venue-hub-condensed.ts:84 | The abbreviation split drops qualifiers or truncates mid-address on seven more school pages, so the huntington ruling is applied to one entry and not to the class |
+| medium | src/lib/venue-hub.ts:914 | venueHubDescription and getVenueUtilityCounts were updated for suppression but not for the new provenance gate |
+| low | src/app/nfl/page.tsx:146 | The NFL hub's primetime logistics render gate and lot text with no provenance or exclusion test |
+| low | src/lib/venue-hub.ts:466 | The homepage utility counts no longer mirror the venue-page render gates the function is documented to mirror |
+| low | audit/cfb-venue-sourcing-report.md:1207 | Homepage transit tile count in the report no longer matches what the tile will serve |
+| low | scripts/check-hydration-duplicates.js:113 | Two NOT_THE_PAGE patterns can never match, because the haystack always starts with the URL |
+| low | scripts/populate-cfb-venue-data.ts:81 | `sourceKey` override is free text and is never validated against the path or against any key a renderer reads |
+| low | scripts/populate-cfb-venue-data.ts:83 | A plan entry with a missing `value` crashes with a TypeError instead of the designed PLAN ERROR listing |
+| low | scripts/populate-cfb-venue-data.ts:144 | The write script announces "fields written: N" before writing anything, and a dry run with refusals exits 0 |
+| low | src/components/venue-hub/venue-logistics.tsx:102 | The gate-variance sentence rides on the gatesOpen provenance key, so an unsourced variance renders alongside a sourced rule |
+| low | src/lib/__tests__/venue-field-exclusions.test.ts:59 | The test that claims to cover array-valued provenance asserts nothing about arrays, and stringMap itself is unexported and untested |
+| low | src/lib/venue-hub.ts:464 | The homepage utility-grid counts got the suppression fix but not the provenance fix, so its documented invariant is now false for three of four tiles |
+| low | src/lib/venue-transit-suppression.ts:12 | "Silences the transit field ... at every surface that renders it" is not true of the team-page block, and the scan behind it covered only the first eleven |
+| low | src/lib/venue-transit-suppression.ts:21 | "It matters for exactly one building, providence-park" is wrong by one after the list grew to 38 |
+
+### The themes
+
+**Surfaces the wiring never reached.** `venueHubDescription` still derives the meta description and the StadiumOrArena JSON-LD from raw fields, so the head promises what the body now withholds, and its own docstring says "Never promises a fact the page does not render". `/venues/bag-policies` reads bag values directly and consults neither list. The NFL hub still builds gate and lot text from raw overlays. The Plan-your-visit card renders overlay tailgate windows and the lot-map link ungated, so yulman-stadium still serves tailgating prose after its tailgating field was withheld. And the venue page's Transit row is the one Getting-in row that got neither the provenance test nor the exclusion test.
+
+**Guards that measure nothing.** The test pinning suppression away from the indexing floor cannot fail: `IndexFloorFields` has no slug, so the floor could not consult suppression even if it wanted to. The test named for the array-provenance fix never exercises an array. Seven of the nine declared exclusion sub-keys reach no call site, so a sub-field entry naming one would silently do nothing.
+
+**The write path.** A provenance write bypasses the overwrite guard when the stored value already matches the plan. The documented snapshot restore, a `set()` of the JSON, converts Firestore Timestamps into plain maps. And the post-partial-failure snapshot trap is real but recorded only in scanner-framework 6b.4, not in the script that produces it.
+
+**Stale claims in my own audit.** Section 16 now contradicts the code it describes. The wiring check still says 32 suppressed buildings when the list holds 38, and its "only providence-park" floor measurement misses barclays-center. The homepage transit count in section 12 no longer matches what the tile serves.
+
+### Recommendation
+
+Do not merge. The five hand-verified items are user-facing and three of them were introduced by this branch rather than found by it. The proportionate order is: fix the two bad copy values in Firestore (Alabama, Autzen), lift the stale App State exclusion, correct the bmo-field reason, decide the 52 parking links deliberately rather than by omission, then close the four ungated surfaces, then correct the audit sections. The vacuous tests should be fixed in the same pass, since each one is currently evidence of nothing.
