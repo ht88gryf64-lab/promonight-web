@@ -1936,3 +1936,44 @@ Every finding re-checked against HEAD by RUNNING something rather than reading: 
 **A new live instance on /nfl.** The primetime card reads `hub.parkingLots` and `hub.publicTransit` without testing `hub.verified` at all, which is the first gate every `/venues` renderer applies. `highmark-stadium` is `verified: false` and not suppressed, so a Bills primetime card publishes `NFTA Game Day Express` transit prose that `/venues/highmark-stadium` renders nowhere.
 
 **The inverted-map guard is narrower than it reads.** `stringMap` warns only when EVERY key is URL-shaped. t-mobile-park's repaired map still holds its two leftover URL keys beside the field keys, so a partial inversion would pass silently, and re-inverting the Firestore data would fail no test. The code-shape reintroduction is covered; the data shape is not.
+
+## 21. Pointers versus claims, and the /nfl sweep
+
+### The classification
+
+The rule that was wrong: every gated field required its own provenance key. But provenance answers *who says this fact is true*, and a field whose value **is a link** poses no such question. Rendering `officialParkingUrls` says "the operator publishes parking information here", which cannot be wrong about a gate time or a bag size. Requiring a source for it withheld 55 working links from live pages.
+
+| Kind | Fields | Gate | Withheld before |
+| --- | --- | --- | --- |
+| **POINTER** | officialParkingUrls, parkingLotMapUrl, bagPolicyUrl | reachability (well-formed http(s) URL) + the exclusion list | 55 |
+| **CLAIM** | gate rule, tailgating, transit prose, lot names and notes, rideshare, accessibility, entry, food, nearby, bag dimensions, clear-bag flag, bag notes, outside food | per-field provenance + the exclusion list, unchanged | 26 |
+
+A link known to be dead is still withheld, by *name*, on the exclusion list. That is the right home for it: the fact that a URL 404s is a property of that URL, not of the field.
+
+### Verified across all 166 verified buildings
+
+- **51 regain the "Official parking:" row.**
+- **4 regain the whole Parking lots card**: acrisure-stadium, chase-field, fenway-park, nrg-stadium. (An earlier count said 6; that measurement let the lot map open the card, which it does not. The card needs lot prose or an official link.)
+- **0 lose anything.**
+- `kidd-brewer-stadium` keeps its exclusion: the `/yosef-club/index.html#season-tickets-parking` link is absent from the served page and the "Official parking:" row does not render, while its lot map still does. The sub-field grain working as designed.
+- The corpus sweep is now **5 hubs changing state, all claims**: 3 conflicting tailgating (Kansas, Miami, Tulane), 2 unsourced gate rules (Boise State, Wake Forest).
+
+### /nfl, swept whole rather than field by field
+
+This surface was gated one defect at a time: a bare "VTA" in the first pass, then highmark-stadium's transit prose on an unverified doc. Enumerated instead, the route reads exactly **three** venueHubs claim fields, plus structural slug/displayName/indexable which assert nothing:
+
+| Field | Gate before | Gate now |
+| --- | --- | --- |
+| overlay `gatesOpen.ruleText` | `t.verified` only | doc verified + overlay provenance + gates exclusion, via `verifiedGateTenants` |
+| `parkingLots[].notes` | **none at all** | doc verified + `sources.parkingLots` + parking exclusion |
+| `publicTransit.lines[0]` | `transitSuppressed` only | doc verified + `publicTransit.lines` provenance + transit exclusion |
+
+None of the three tested the doc-level `verified` flag, which is the first gate every `/venues` renderer applies. Swept all 30 NFL-tenanted buildings: **exactly one primetime card changes**, highmark-stadium / buffalo-bills, which loses `transitText` because its doc is `verified: false`. Every other card already met the stricter bar. Served `/nfl` carries no bare "NFTA", "VTA" or "RavensRide".
+
+### The partial-inversion assertion
+
+The first guard fired only when *every* key in a sources map was URL-shaped, so a partial inversion stayed silent, and t-mobile-park's own repaired map would not have warned. A field lookup can never match a URL key, so the presence of one is always a defect. The warning now fires on any, and names whether the map is fully or partially inverted.
+
+Swept all 223 hubs **and every tenant overlay**: **0 fully inverted, 1 partial (t-mobile-park, 2 of 15 keys, its own leftovers), 0 overlay maps affected.** The leftovers are inert and are left in place: removing a map key requires a delete, which the writer deliberately cannot do, and that property is worth more than the tidiness.
+
+Hydration clean on every changed page, non-zero counts throughout.
