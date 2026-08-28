@@ -29,6 +29,31 @@
  * boundary above a component that already owns one is redundant, and redundant
  * boundaries re-render subtrees for no reason.
  *
+ * THE ACCORDION CAVEAT, and it produces FALSE POSITIVES. "Hidden" here means
+ * getBoundingClientRect().height === 0, which cannot distinguish a server copy
+ * left behind by a double render from content that is legitimately collapsed,
+ * off-screen at the test viewport, or behind a closed disclosure. The heuristic
+ * has no way to ask WHY an element has no height.
+ *
+ * Worked example, 2026-08-28. Run against a pro team page:
+ *
+ *   check-hydration-duplicates.js https://.../mlb/seattle-mariners \
+ *     --selector "a[href^='/mlb/']"
+ *   -> FAIL: 15 element(s) present in the DOM but not visible
+ *
+ * All 15 were "View {opponent} full schedule" links inside COLLAPSED schedule
+ * rows: real markup, correctly hidden, zero height until the row is tapped.
+ * Nothing was wrong with the page. The run was investigated only because the
+ * surface under test had not changed, which is a weak reason to doubt a failure
+ * and not one to rely on.
+ *
+ * SO: on any page with collapsible content, tabs, carousels, or responsive
+ * variants, choose a selector whose elements are ALWAYS visible when the page
+ * is correct. Prefer the repeating unit's outer row over a control nested
+ * inside it. If a failure names elements you expect to be hidden, that is this
+ * caveat and not entry 33; confirm by checking whether the parent is collapsed
+ * rather than by assuming either way.
+ *
  * USAGE
  *   node scripts/check-hydration-duplicates.js <url> [--selector <css>] [--json]
  *     [--allow-zero] [--expect-selector <css>] [--expect-title <substring>]
