@@ -126,9 +126,17 @@ function stringMap(v: unknown): Record<string, string> {
   // empty map downstream, and an absent key and a malformed key are
   // indistinguishable there: t-mobile-park lost every fact card that way, on a
   // verified doc, with no error anywhere. Warn so the next one is loud.
+  // ANY url-shaped key is wrong, not just a wholly inverted map. The first
+  // version of this warning fired only when EVERY key was a URL, which meant a
+  // PARTIAL inversion stayed silent, and t-mobile-park's own repaired map, which
+  // still carries two leftover URL keys beside its field keys, would not have
+  // warned. A field lookup can never hit a URL key, so its presence is always a
+  // defect, and the count is what tells you which kind.
   const keys = Object.keys(v as Record<string, unknown>);
-  if (keys.length > 0 && keys.every((k) => /^https?:\/\//.test(k))) {
-    console.warn(`[venue-hub] sources map looks INVERTED (every key is a URL); provenance will read as absent for every field. Keys: ${keys.join(', ')}`);
+  const urlKeys = keys.filter((k) => /^https?:\/\//.test(k));
+  if (urlKeys.length > 0) {
+    const kind = urlKeys.length === keys.length ? 'FULLY INVERTED' : 'partially inverted';
+    console.warn(`[venue-hub] sources map is ${kind}: ${urlKeys.length} of ${keys.length} keys are URLs, and a field lookup can never match them. Keys: ${urlKeys.join(', ')}`);
   }
   for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
     if (typeof val === 'string' && val.length > 0) { out[k] = val; continue; }

@@ -76,4 +76,10 @@ test('an inverted sources map is not silently equivalent to an absent one', asyn
   }
   // and the right shape does work
   assert.equal(hasProvenance({ food: 'https://example.com/guide' }, 'food'), true);
+  // A PARTIAL inversion is the shape the first guard missed: field keys work,
+  // the URL keys are dead weight, and nothing about a lookup reveals them.
+  const partial = { food: 'https://example.com/guide', 'https://example.com/stray': 'A Guide' };
+  assert.equal(hasProvenance(partial, 'food'), true);
+  assert.equal(hasProvenance(partial, 'https://example.com/stray'), true, 'a URL key is only ever reachable by asking for a URL, which no caller does');
+  assert.equal(hasProvenance(partial, 'accessibility'), false);
 });
