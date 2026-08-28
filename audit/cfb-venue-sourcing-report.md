@@ -1779,3 +1779,40 @@ Five lenses over the full diff against main, read as one change rather than as t
 ### Recommendation
 
 Do not merge. The five hand-verified items are user-facing and three of them were introduced by this branch rather than found by it. The proportionate order is: fix the two bad copy values in Firestore (Alabama, Autzen), lift the stale App State exclusion, correct the bmo-field reason, decide the 52 parking links deliberately rather than by omission, then close the four ungated surfaces, then correct the audit sections. The vacuous tests should be fixed in the same pass, since each one is currently evidence of nothing.
+
+## 18. The abbreviation split, fixed on main and verified on production
+
+Cherry-picked to main alone as `b7b59fe`: `leadSentences` plus its test, two files, no other change from the branch. Deployed, 41 affected paths revalidated, verified on production with cache-busting fetches.
+
+**26 rendered leads change** (the earlier count of 23 used a narrower detector). Every one is text the split had cut; the column shows what each lead gained.
+
+| # | Building | League | Field | Before (truncated) | After (complete) |
+|---|---|---|---|---|---|
+| 1 | allianz-field | MLS | accessibility | t side of the stadium near Simpson Street and can be accessed from St. | Anthony Avenue. |
+| 2 | bmo-field | MLS | accessibility | ble seating sections marked with an 'A' after the section number (e.g. | 105A); sections 124A, 321A and 325A enter through Gate 5. |
+| 3 | bridgeforth-stadium-and-zane-showker-field | CFB | publicTransit.notes | tival Conference Center Bus Stop, Convocation Center (University Blvd. | Bus Stop), Lot C3 (ADA Shuttle), Lot R10, and select area hotels and o |
+| 4 | busch-stadium | MLB | rideshareDropoff | r on the east side of the building on Broadway just south of Clark St. | Taxi and rideshare pickups are located on the east side of the stadium |
+| 5 | camp-randall-stadium | CFB | tailgating.timeWindow | a.m. for all other kickoff times; for Friday games lots open at 2 p.m. | Friends Meetinghouse parking begins three hours prior to kickoff. |
+| 6 | davis-wade-stadium | CFB | tailgating.timeWindow | Tailgate tents may be dropped off in designated areas starting 5 a.m. | Friday. |
+| 7 | donald-w-reynolds-razorback-stadium | CFB | tailgating.timeWindow | Tents, awnings and similar equipment may be set up starting at 5 p.m. | Friday before a game and must be taken down and removed by 12 noon the |
+| 8 | everbank-stadium | NFL | nearby | ypress Parking, Sports Complex Garage, Arena Garage, Yates Garage; St. | Johns River Taxi also available |
+| 9 | faurot-field | CFB | tailgating.timeWindow | no earlier than 8 a.m. on game day; tailgating sites open at 8:00 a.m. | (subject to change) and must be cleared and cleaned by midnight or 3 h |
+| 10 | firstbank-stadium | CFB | accessibility | ADA drive-up parking available on game day in the 25th Ave. | Garage (near elevators/corners) and West Garage (both open 4 p.m.); Lo |
+| 11 | gaylord-family-oklahoma-memorial-stadium | CFB | accessibility | ndow at the Athletics Ticket Office on the plaza level of the Asp Ave. | Parking Facility immediately west of the stadium (limited, first-come; |
+| 12 | huntington-bank-stadium | CFB | tailgating.timeWindow | kends: lots open 6 hours prior to game time but no earlier than 7 a.m. | Weekdays: lots open 6 hours prior to game time but no earlier than 2 p |
+| 13 | lambeau-field | NFL | tailgating.rules | itted in Lambeau Field-operated lots only, not in Titletown lots (e.g. | Lot 15). |
+| 14 | lane-stadium | CFB | tailgating.timeWindow | Donor/public parking lots open 7 a.m. | Saturday for Saturday games (after 3 p.m. game day for non-Saturday ga |
+| 15 | memorial-stadium-lincoln | CFB | tailgating.timeWindow | m. for kickoffs before 6 p.m. and at 11 a.m. for kickoffs after 6 p.m. | (exceptions: Lots 19, 20 and 21 open at 6 a.m. for 11 a.m. kickoffs an |
+| 16 | michelob-ultra-arena | WNBA | nearby | Located inside Mandalay Bay Resort & Casino at 3950 Las Vegas Blvd. | South, Las Vegas, NV 89119. |
+| 17 | milan-puskar-stadium | CFB | tailgating.timeWindow | aturday) unless otherwise noted, and tents may be erected after 7 a.m. | The adjacent Almost Heaven Village fan area is open from 3 1/2 hours b |
+| 18 | q2-stadium | MLS | food | Concessions are operated by 512 Food Co. | Club menus are available in the Lexus Club, East Club, and Q2 Stadium  |
+| 19 | rice-eccles-stadium | CFB | tailgating.timeWindow | Tailgate lots open at 6 a.m. | (other parking lots open five hours before kickoff) |
+| 20 | rogers-centre | MLB | publicTransit.notes | nd is accessible on foot, by personal vehicle via major highways (e.g. | Highway 407 ETR), by bike, or by public transit including TTC, GO Trai |
+| 21 | ross-ade-stadium | CFB | tailgating.timeWindow | Lots open eight (8) hours prior to kickoff but not earlier than 8 a.m. | (subject to change on weekday/Friday games); lots close two (2) hours  |
+| 22 | saban-field-at-bryant-denny-stadium | CFB | publicTransit.notes | Free Crimson Ride shuttle service to the Quad begins at 6 a.m. | (11 a.m. kickoff only) on game days and concludes 1.5 hours postgame,  |
+| 23 | snapdragon-stadium | MLS/CFB | outsideFoodRules | od is not permitted (stated for certain matches including the SDFC vs. | LA Galaxy match). |
+| 24 | tropicana-field | MLB | food | er field, an open-air patio featuring local favorites from popular St. | Pete restaurants with a full-service bar serving Budweiser and local B |
+| 25 | us-bank-stadium | NFL | publicTransit.notes | Light rail runs directly to the U.S. | Bank Stadium Station; 123+ Metro Transit bus routes serve downtown Min |
+| 26 | yankee-stadium | MLS/MLB | publicTransit.notes | The No. | 4 and D trains make stops at the 161st Street/Yankee Stadium subway st |
+
+Production checks: `/cfb/alabama` now serves the full Crimson Ride sentence including "(11 a.m. kickoff only)"; Davis-Wade and Arkansas both carry "Friday"; 25 of 26 confirmed on their venue page and the 26th (bridgeforth) on `/cfb/james-madison`, which is where it renders because that building is `verified: false`.
