@@ -4,6 +4,7 @@ import { teamDisplayName, synthPromoId } from '@/lib/promo-helpers';
 import { normalizeSport } from '@/lib/analytics';
 import { TrackedTapLink } from './analytics/TrackedTapLink';
 import { StarToggleInline } from './star-toggle';
+import { isPurchaseGated } from '@/lib/promo-helpers';
 
 function formatDayLabel(dateStr: string): string {
   return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', {
@@ -111,7 +112,7 @@ export function ThisWeekStrip({ promos, today }: { promos: PromoWithTeam[]; toda
                           <div className="flex flex-wrap items-center gap-2 mb-1">
                             <span className="text-base">{p.icon}</span>
                             <PromoBadge type={p.type} />
-                            {p.highlight && (
+                            {p.highlight && !isPurchaseGated(p) && (
                               <span className="text-[10px] font-mono text-accent-red">HOT</span>
                             )}
                           </div>

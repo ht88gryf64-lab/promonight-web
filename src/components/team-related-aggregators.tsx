@@ -23,21 +23,21 @@ export function TeamRelatedAggregators({
   const items: { label: string; href: string; hint: string }[] = [];
   if (bobbleheads >= 5) {
     items.push({
-      label: 'Every bobblehead across pro sports',
+      label: 'Bobblehead nights across pro sports',
       href: '/promos/bobbleheads',
       hint: `${bobbleheads} on this team`,
     });
   }
   if (jerseys >= 3) {
     items.push({
-      label: 'Every jersey & apparel giveaway',
+      label: 'Jersey & apparel giveaways',
       href: '/promos/jersey-giveaways',
       hint: `${jerseys} on this team`,
     });
   }
   if (themes >= 5) {
     items.push({
-      label: 'Every theme night in pro sports',
+      label: 'Theme nights in pro sports',
       href: '/promos/theme-nights',
       hint: `${themes} on this team`,
     });

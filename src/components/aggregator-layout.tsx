@@ -140,7 +140,7 @@ function RedesignAggregatorPage({
         <div className="mt-16 rounded-2xl border border-rd-line bg-rd-card p-8 text-center">
           <h2 className="rd-display text-2xl uppercase text-rd-ink md:text-3xl">SEE THE FULL CALENDAR ON PROMONIGHT</h2>
           <p className="mx-auto mt-3 max-w-md font-rd text-sm text-rd-ink-soft">
-            Get notifications the morning of every giveaway, theme night, and food deal for your teams.
+            Get notifications the morning of a giveaway, theme night or food deal for your teams.
           </p>
           <div className="mt-6 flex justify-center">
             <AppDownloadButtons section="aggregator_cta" page={title.toLowerCase().replace(/\s+/g, '_')} variant="compact" />
@@ -251,7 +251,7 @@ function LegacyAggregatorPage({
             SEE THE FULL CALENDAR ON PROMONIGHT
           </h2>
           <p className="text-text-secondary text-sm mb-6 max-w-md mx-auto">
-            Get notifications the morning of every giveaway, theme night, and food deal for your teams.
+            Get notifications the morning of a giveaway, theme night or food deal for your teams.
           </p>
           <AppDownloadButtons section="aggregator_cta" page={title.toLowerCase().replace(/\s+/g, '_')} variant="compact" />
         </div>

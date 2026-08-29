@@ -105,8 +105,8 @@ export async function Footer({ year }: FooterProps) {
               <span style={{ color: RED_ON_DARK }}>NIGHT</span>
             </p>
             <p className="mt-4 font-rd text-sm leading-relaxed text-white/55">
-              Every giveaway, theme night, food deal, and promotion across {coverage.teamCount} teams
-              in {coverage.leagueList}.
+              Giveaways, theme nights, food deals and promotions for {coverage.teamCount} teams
+              in {coverage.leagueList}, from official team sources.
             </p>
             <FollowFooterCTA />
           </div>

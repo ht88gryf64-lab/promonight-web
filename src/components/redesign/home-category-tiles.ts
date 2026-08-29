@@ -80,7 +80,7 @@ export function buildHomeCategoryTiles(
       key: 'bobbleheads',
       trackName: 'bobbleheads',
       label: 'Bobbleheads',
-      blurb: 'Every bobblehead night tracked',
+      blurb: 'Bobblehead nights on record',
       href: '/promos/bobbleheads',
       ink: '#a35a08',
       match: (p) => BOBBLEHEAD_RE.test(p.title) || BOBBLEHEAD_RE.test(p.description),

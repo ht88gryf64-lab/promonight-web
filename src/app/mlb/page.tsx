@@ -48,7 +48,7 @@ const FAQS: HubFaqItem[] = [
   {
     question: 'What MLB promotions are happening this week?',
     answer:
-      'PromoNight tracks every giveaway, bobblehead night, theme night, and food deal announced by all 30 MLB teams. The this-week rail on this page lists the promotions scheduled at MLB ballparks over the next seven days, and it updates as teams add dates.',
+      'PromoNight tracks giveaways, bobblehead nights, theme nights and food deals announced by the 30 MLB teams. The this-week rail on this page lists the promotions scheduled at MLB ballparks over the next seven days, and it updates as teams add dates.',
   },
   {
     question: 'Which MLB teams give away the most bobbleheads?',
@@ -102,7 +102,7 @@ export default async function MlbHubPage() {
       <HubHero
         eyebrow="MLB League Hub"
         title={`MLB PROMOTIONS ${YEAR}`}
-        subtitle="Every giveaway, bobblehead night, theme night, and food deal across all 30 MLB clubs, grouped by division."
+        subtitle="Giveaways, bobblehead nights, theme nights and food deals across the 30 MLB clubs, grouped by division."
         freshness="Rechecked weekly and updated as clubs announce promotions."
         accent={ACCENT}
       >

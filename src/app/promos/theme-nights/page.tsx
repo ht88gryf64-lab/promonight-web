@@ -12,7 +12,15 @@ function todayYMD(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-const YEAR = new Date().getFullYear();
+// HARDCODED SEASON YEAR, never new Date().getFullYear(). This value reaches the
+// page title, the meta description and the on-page lead, so an auto-rolling year
+// would retitle this page to the next season at midnight on Jan 1 — with no
+// deploy, no review, and no theme-night data behind the new number. The page would
+// sit in the index advertising a season that does not exist yet.
+//
+// Bump this deliberately when next-season content is ready. Same rule as
+// /best-promos, the team pages, the venue pages and the CFB family.
+const YEAR = 2026;
 
 interface ThemeCategory {
   label: string;
@@ -56,7 +64,7 @@ const CATEGORIES: ThemeCategory[] = [
 
 export const metadata: Metadata = {
   title: `${YEAR} Theme Nights: Star Wars, Heritage & Fireworks`,
-  description: `Every ${YEAR} theme night across pro sports by category: Star Wars, heritage, fireworks, faith and community, and pop culture tie-ins. From official team announcements.`,
+  description: `${YEAR} theme nights across pro sports by category: Star Wars, heritage, fireworks, faith and community, and pop culture tie-ins. From official team announcements.`,
   alternates: { canonical: 'https://www.getpromonight.com/promos/theme-nights' },
   openGraph: pageOpenGraph('/promos/theme-nights'),
 };
@@ -98,7 +106,7 @@ export default async function ThemeNightsPage() {
   }
 
   const c = await getCoverageCounts();
-  const lead = `Every theme night scheduled across ${c.leagueList} in ${YEAR}. Grouped by theme category, from Star Wars nights and fireworks spectaculars to heritage and community celebrations. ${themes.length} theme nights currently tracked across ${c.teamCount} teams.`;
+  const lead = `Theme nights scheduled across ${c.leagueList} in ${YEAR}. Grouped by theme category, from Star Wars nights and fireworks spectaculars to heritage and community celebrations. ${themes.length} theme nights currently tracked across ${c.teamCount} teams.`;
 
   const faqs = [
     {
@@ -114,7 +122,7 @@ export default async function ThemeNightsPage() {
     {
       question: 'Can I get theme-night notifications?',
       answer:
-        'Yes. PromoNight Pro schedules a reminder on your device for the morning of a promo day for every team you follow. It is $5.99 per season for a single sport or $9.99 per year for all sports.',
+        'Yes. PromoNight Pro schedules a reminder on your device for the morning of a promo day for the teams you follow. It is $5.99 per season for a single sport or $9.99 per year for all sports.',
     },
   ];
 
@@ -122,14 +130,14 @@ export default async function ThemeNightsPage() {
     <>
       <AggregatorJsonLd
         url="https://www.getpromonight.com/promos/theme-nights"
-        title={`Every Theme Night in Pro Sports ${YEAR}`}
+        title={`Theme Nights in Pro Sports ${YEAR}`}
         description={lead}
         faqs={faqs}
         groups={groups}
       />
       <AggregatorPage
         eyebrow="Theme nights"
-        title={`EVERY THEME NIGHT IN ${YEAR}`}
+        title={`THEME NIGHTS IN ${YEAR}`}
         lead={lead}
         groups={groups}
         faqs={faqs}

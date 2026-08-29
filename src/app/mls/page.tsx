@@ -48,7 +48,7 @@ const FAQS: HubFaqItem[] = [
   {
     question: 'What MLS promotions are happening this week?',
     answer:
-      'PromoNight tracks every giveaway, scarf night, theme night, and specialty kit announced by all 30 MLS clubs. The this-week rail on this page lists the promotions scheduled at MLS stadiums over the next seven days, and it updates as clubs add dates.',
+      'PromoNight tracks giveaways, scarf nights, theme nights and specialty kits announced by the 30 MLS clubs. The this-week rail on this page lists the promotions scheduled at MLS stadiums over the next seven days, and it updates as clubs add dates.',
   },
   {
     question: 'Which MLS clubs give away jerseys and scarves?',
@@ -102,7 +102,7 @@ export default async function MlsHubPage() {
       <HubHero
         eyebrow="MLS League Hub"
         title={`MLS PROMOTIONS ${YEAR}`}
-        subtitle="Every jersey giveaway, scarf night, and theme night across all 30 MLS clubs, grouped by conference."
+        subtitle="Jersey giveaways, scarf nights and theme nights across the 30 MLS clubs, grouped by conference."
         freshness="Rechecked weekly in season and updated as clubs announce promotions."
         accent={ACCENT}
       >

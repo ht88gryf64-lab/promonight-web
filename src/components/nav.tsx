@@ -9,7 +9,7 @@ import { useStarredTeams } from '@/hooks/use-starred-teams';
 const BROWSE_LINKS = [
   { href: '/promos/today', label: 'Promos today' },
   { href: '/promos/this-week', label: 'Hot this week' },
-  { href: '/promos/bobbleheads', label: 'Every bobblehead' },
+  { href: '/promos/bobbleheads', label: 'Bobblehead nights' },
   { href: '/promos/jersey-giveaways', label: 'Jersey & apparel' },
   { href: '/promos/theme-nights', label: 'Theme nights' },
 ];

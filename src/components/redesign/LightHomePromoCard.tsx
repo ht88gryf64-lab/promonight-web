@@ -4,10 +4,11 @@ import { IconFlame } from '@tabler/icons-react';
 import type { PromoWithTeam } from '@/lib/types';
 import type { GameContext } from '@/lib/data';
 import { teamDisplayName } from '@/lib/promo-helpers';
-import { categoryFor } from './categories';
+import { categoryForPromo } from './categories';
 import { StarToggleInline } from '@/components/star-toggle';
 import type { StarPlacement } from '@/hooks/use-starred-teams';
 import { useUpcomingPromoModal, type UpcomingPromoSurface } from './UpcomingPromoModal';
+import { isPurchaseGated } from '@/lib/promo-helpers';
 
 // Light-house promo card for the redesigned homepage Tonight + This Week
 // sections. Visually it matches the team-page RedesignPromoRow (date column,
@@ -40,7 +41,7 @@ export function LightHomePromoCard({
 }) {
   const openModal = useUpcomingPromoModal();
   const { day, weekday, month } = dateParts(promo.date);
-  const { color, ink, label, Icon } = categoryFor(promo.type);
+  const { color, ink, label, Icon } = categoryForPromo(promo);
   const teamName = teamDisplayName(promo.team);
   const open = () => openModal({ promo, contexts, surface });
 
@@ -78,7 +79,7 @@ export function LightHomePromoCard({
               <Icon size={12} stroke={2.25} />
               <span>{label}</span>
             </span>
-            {promo.highlight && (
+            {promo.highlight && !isPurchaseGated(promo) && (
               <span className="inline-flex items-center gap-0.5 font-rd text-[10px] font-semibold uppercase tracking-[0.05em] text-rd-red">
                 <IconFlame size={12} stroke={2.25} />
                 HOT

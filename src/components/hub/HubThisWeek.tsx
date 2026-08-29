@@ -1,5 +1,5 @@
 import type { PromoWithTeam } from '@/lib/types';
-import { categoryFor } from '@/components/redesign/categories';
+import { categoryForPromo } from '@/components/redesign/categories';
 import { teamDisplayName, synthPromoId } from '@/lib/promo-helpers';
 import { normalizeSport, type AnalyticsSurface } from '@/lib/analytics';
 import { TrackedTapLink } from '@/components/analytics/TrackedTapLink';
@@ -94,7 +94,7 @@ export function HubThisWeek({
             </h3>
             <div className="mt-3 grid gap-4 md:grid-cols-2">
               {list.map((p) => {
-                const cat = categoryFor(p.type);
+                const cat = categoryForPromo(p);
                 const name = teamDisplayName(p.team);
                 return (
                   <div

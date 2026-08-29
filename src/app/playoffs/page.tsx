@@ -296,7 +296,7 @@ export default async function PlayoffsPage() {
 
   const faqs = buildFaqs(config, byLeague, totalPromos, totalTeams);
   const headline = '2026 NBA and NHL Playoff Promotions';
-  const description = `Every promotional event at 2026 NBA and NHL playoff games: ${totalPromos} scheduled giveaways, watch parties, and fan events across ${totalTeams} active teams. Updated hourly.`;
+  const description = `Promotions at 2026 NBA and NHL playoff games: ${totalPromos} scheduled giveaways, watch parties, and fan events across ${totalTeams} active teams. Updated hourly.`;
 
   const articleSchema = {
     '@context': 'https://schema.org',

@@ -62,7 +62,7 @@ export function HomeHero({ teamCount, leagueCount, cfbSchoolCount, stats }: Home
           Find the games worth going to.
         </h1>
         <p className="mt-5 max-w-2xl font-rd text-lg text-white/70">
-          Every giveaway, theme night, food deal and family event across {teamCount} teams in{' '}
+          Giveaways, theme nights, food deals and family events for {teamCount} teams in{' '}
           {leagueCount} leagues, pulled from official team sources. Plus schedules, venues and
           rivalries for {cfbSchoolCount} college football programs.
         </p>

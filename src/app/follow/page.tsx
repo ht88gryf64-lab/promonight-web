@@ -17,12 +17,12 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: 'Follow Your Teams: Free Promo Alerts',
     description:
-      `Star your favorite ${c.leagueList} teams and get one weekly email with every giveaway, theme night, and food deal coming up.`,
+      `Star your favorite ${c.leagueList} teams and get one weekly email with the giveaways, theme nights and food deals coming up.`,
     alternates: { canonical: '/follow' },
     openGraph: {
       title: 'Follow Your Teams on PromoNight',
       description:
-        'One weekly email with every giveaway, theme night, and food deal for the teams you star.',
+        'One weekly email with the giveaways, theme nights and food deals for the teams you star.',
       url: 'https://www.getpromonight.com/follow',
       images: [DEFAULT_OG_IMAGE],
     },
@@ -83,8 +83,8 @@ export default async function FollowPage({
           </h1>
           <p className="mt-4 max-w-xl font-rd text-base leading-relaxed text-white/70">
             {seededTeam
-              ? `Get every ${seededTeam.city} ${seededTeam.name} bobblehead, theme night, and food deal, plus any other teams you star, in one email a week.`
-              : 'Star your teams and get every giveaway, theme night, and food deal coming up in one email a week.'}
+              ? `Get the ${seededTeam.city} ${seededTeam.name} bobbleheads, theme nights and food deals, plus any other teams you star, in one email a week.`
+              : 'Star your teams and get the giveaways, theme nights and food deals coming up in one email a week.'}
           </p>
         </div>
       </section>

@@ -10,6 +10,7 @@ import { isBobbleheadGiveaway, isEbayResaleActive } from '@/lib/ebay';
 import { promoAnchorId, splitPromosByDate } from '@/lib/promo-helpers';
 import type { Promo, PromoType, Team } from '@/lib/types';
 import type { GameContext } from '@/lib/data';
+import { isPurchaseGated } from '@/lib/promo-helpers';
 
 // Hardcoded, never derived from the clock. These strings label promos that
 // have ALREADY HAPPENED, so a getFullYear() here was the worst of the year
@@ -99,7 +100,7 @@ function PromoRow({
               Completed
             </span>
           )}
-          {!completed && promo.highlight && (
+          {!completed && promo.highlight && !isPurchaseGated(promo) && (
             <span className="inline-flex items-center gap-1 text-[10px] font-mono text-accent-red">
               <span className="w-1.5 h-1.5 rounded-full bg-accent-red animate-pulse-dot" />
               HOT

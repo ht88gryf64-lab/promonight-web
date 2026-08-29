@@ -9,7 +9,7 @@ import { HotelsCTA } from '@/components/affiliates/HotelsCTA';
 import { awayGameSubKey } from '@/lib/affiliates';
 import { teamDisplayName } from '@/lib/promo-helpers';
 import { formatGameTime } from '@/lib/format-game-time';
-import { categoryFor } from './categories';
+import { categoryForPromo } from './categories';
 import { IconFlame, IconMapPin, IconArrowRight } from '@tabler/icons-react';
 
 // Redesign v2 in-place game/promo detail. A faithful, restyled fork of the
@@ -40,7 +40,7 @@ function CtaTray({ children }: { children: React.ReactNode }) {
 }
 
 function PromoLine({ promo }: { promo: Promo }) {
-  const cat = categoryFor(promo.type);
+  const cat = categoryForPromo(promo);
   return (
     <div className="flex gap-3" style={{ borderLeft: `3px solid ${cat.color}`, paddingLeft: 12 }}>
       <cat.Icon size={20} stroke={2} className="mt-0.5 shrink-0" style={{ color: cat.color }} aria-hidden />

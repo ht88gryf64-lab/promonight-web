@@ -66,7 +66,7 @@ export async function generateMetadata(): Promise<Metadata> {
       template: '%s | PromoNight',
     },
     description:
-      `PromoNight tracks every giveaway, theme night, and food deal across ${c.teamCount} teams in ${c.leagueList}. Never miss bobblehead night.`,
+      `PromoNight tracks giveaways, theme nights and food deals for ${c.teamCount} teams in ${c.leagueList}, from official team sources. Find bobblehead night before it sells out.`,
     openGraph: {
       type: 'website',
       siteName: 'PromoNight',
