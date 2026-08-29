@@ -5,7 +5,7 @@ import type { PromoType, PromoWithTeam } from '@/lib/types';
 import type { GameContext } from '@/lib/data';
 import { teamDisplayName } from '@/lib/promo-helpers';
 import { chipInk } from '@/lib/chip-contrast';
-import { categoryFor } from './categories';
+import { categoryForPromo } from './categories';
 import { StarToggleInline } from '@/components/star-toggle';
 import type { StarPlacement } from '@/hooks/use-starred-teams';
 import { useUpcomingPromoModal, type UpcomingPromoSurface } from './UpcomingPromoModal';
@@ -82,7 +82,7 @@ export function TicketStubCard({
   notchBg?: string;
 }) {
   const openModal = useUpcomingPromoModal();
-  const { color: catColor, label: catLabel, ink: catInk } = categoryFor(promo.type);
+  const { color: catColor, label: catLabel, ink: catInk } = categoryForPromo(promo);
   const teamName = teamDisplayName(promo.team);
   const spine = spineColor(promo.team.primaryColor);
   const spineInk = chipInk(spine);

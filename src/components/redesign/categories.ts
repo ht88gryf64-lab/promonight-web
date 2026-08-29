@@ -1,5 +1,6 @@
-import { IconGift, IconConfetti, IconCup, IconBalloon } from '@tabler/icons-react';
-import type { PromoType } from '@/lib/types';
+import { IconGift, IconConfetti, IconCup, IconBalloon, IconTicket } from '@tabler/icons-react';
+import { isPurchaseGated } from '@/lib/promo-helpers';
+import type { Promo, PromoType } from '@/lib/types';
 
 // Redesign v2 category system. ONE Tabler icon per category, ONE color per
 // category — mirrors the --color-rd-cat-* tokens in globals.css. The mapping
@@ -48,4 +49,27 @@ export const RD_CATEGORY_ORDER: PromoType[] = ['giveaway', 'theme', 'food', 'kid
 
 export function categoryFor(type: PromoType): CategoryMeta {
   return RD_CATEGORIES[type] ?? RD_CATEGORIES.giveaway;
+}
+
+// The section-8 display category. A row whose own description says a purchase
+// is required is not a giveaway, so it does not get the giveaway pill and it
+// does not get the HOT flame. It still renders — the event is real and a fan
+// may want it — but it renders under a label that matches its own copy.
+//
+// Neutral slate rather than a fifth brand hue: this is deliberately the least
+// eye-catching pill on the page, because the whole defect was purchasable
+// inventory dressed as the most exciting thing in the list. Ink measured on the
+// 10% tint of `color` at 5.6:1, clearing AA at pill size like the other four.
+export const RD_TICKET_PACKAGE: CategoryMeta = {
+  key: 'giveaway',
+  label: 'Ticket Package',
+  color: '#64748b',
+  ink: '#3f4c5f',
+  Icon: IconTicket,
+};
+
+/** Display category for a promo, section-8 rule applied. Use this in any
+ *  renderer that shows a category pill; `categoryFor` is the raw type map. */
+export function categoryForPromo(promo: Pick<Promo, 'type' | 'title' | 'description'>): CategoryMeta {
+  return isPurchaseGated(promo) ? RD_TICKET_PACKAGE : categoryFor(promo.type);
 }

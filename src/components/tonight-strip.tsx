@@ -6,6 +6,7 @@ import { teamDisplayName, synthPromoId } from '@/lib/promo-helpers';
 import { normalizeSport, type EyebrowState } from '@/lib/analytics';
 import { TrackedTapLink } from './analytics/TrackedTapLink';
 import { StarToggleInline } from './star-toggle';
+import { isPurchaseGated } from '@/lib/promo-helpers';
 
 export interface HeroBuckets {
   tonight: PromoWithTeam[];
@@ -198,7 +199,7 @@ function BucketSection({ title, promos, eyebrowState, isFirst }: BucketSectionPr
                   }}
                   className="group block p-5 pr-10 flex gap-4"
                 >
-                  {promo.highlight && (
+                  {promo.highlight && !isPurchaseGated(promo) && (
                     <div
                       className="absolute top-0 right-0 w-24 h-24 pointer-events-none"
                       style={{
@@ -223,7 +224,7 @@ function BucketSection({ title, promos, eyebrowState, isFirst }: BucketSectionPr
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
                       <span className="text-lg">{promo.icon}</span>
                       <PromoBadge type={promo.type} />
-                      {promo.highlight && (
+                      {promo.highlight && !isPurchaseGated(promo) && (
                         <span className="text-[10px] font-mono text-accent-red">
                           HOT
                         </span>

@@ -165,6 +165,58 @@ export function dedupePromos<T extends { date: string; title: string }>(
 // field-absent docs and break the "absent = visible" rule.
 export const isVisiblePromo = (p: { tombstoned?: boolean }): boolean => p.tombstoned !== true;
 
+// ── Section 8 out-of-scope discipline, applied at the RENDER layer ───────────
+//
+// scanner-framework.md section 8: "Specialty ticket packages / experiences —
+// things you *buy*, not free dated promos" are real content but NOT promo-
+// calendar content. The ingest layer does not currently enforce that, so rows
+// whose own description says a purchase is required arrive typed `giveaway`
+// and render under a "Giveaways" pill with a HOT flame beside a sentence that
+// reads "special ticket package includes your ticket and...". The label and the
+// copy in the same row contradict each other, and the label is the half a
+// reader trusts.
+//
+// This predicate is the single source for that judgment. It reads the row's
+// OWN description — not a curated list, not the type — so it cannot drift from
+// what the page actually says. Deliberately conservative: it matches only
+// explicit purchase language, because a false positive relabels a genuine free
+// giveaway, which is the worse error of the two.
+export const PURCHASE_GATED_RE =
+  /ticket package|special(?:ty)? ticket|package purchase|with (?:the )?purchase|purchase of|separate ticket|voucher required|ticket required|must purchase|only available with/i;
+
+/** The bobblehead keyword, matched against the TITLE only. A description match
+ *  pulls in theme nights that merely mention a bobblehead, which is how a
+ *  "bobblehead giveaways" count came to include events that give away no
+ *  bobblehead. */
+export const BOBBLEHEAD_RE = /bobblehead/i;
+
+/**
+ * THE defensible bobblehead-giveaway population, and the single source for any
+ * number this site publishes about bobbleheads.
+ *
+ * Three conditions, each removing a measured over-count:
+ *   1. typed `giveaway`      — a theme night is not a giveaway
+ *   2. "bobblehead" in the TITLE — description matches are passing mentions
+ *   3. not purchase-gated    — a ticket package you buy is not a giveaway
+ *
+ * Measured on the 2026 corpus when this was written: the loose
+ * title-or-description predicate returned 347, of which ~45 matched on
+ * description alone and ~21 were purchase-gated ticket packages. Publishing 347
+ * as "bobblehead giveaways" overstated the real figure by roughly a third.
+ */
+export function strictBobbleheadGiveaways<T extends Pick<Promo, 'type' | 'title' | 'description'>>(
+  promos: T[],
+): T[] {
+  return promos.filter(
+    (p) => p.type === 'giveaway' && BOBBLEHEAD_RE.test(p.title ?? '') && !isPurchaseGated(p),
+  );
+}
+
+/** True when a promo's own copy says you have to buy something to get it. */
+export function isPurchaseGated(p: Pick<Promo, 'title' | 'description'>): boolean {
+  return PURCHASE_GATED_RE.test(p.description ?? '') || PURCHASE_GATED_RE.test(p.title ?? '');
+}
+
 // ── The single definition of "upcoming" ──────────────────────────────────────
 //
 // THERE IS EXACTLY ONE OF THESE AND IT LIVES HERE. Do not inline a second
@@ -404,8 +456,8 @@ export function generateTeamFAQs(
   faqs.push({
     question: `How can I track ${fullName} promotional events?`,
     answer: inApp
-      ? `PromoNight tracks every giveaway, theme night, food deal, and promotion for the ${fullName} and ${coverage.teamCount - 1} other teams across ${coverage.leagueList}, free on this site. The free PromoNight app carries the same ${fullName} calendar on iOS and Android, and PromoNight Pro adds a reminder on the morning of each promo day.`
-      : `PromoNight tracks every giveaway, theme night, food deal, and promotion for the ${fullName} and ${coverage.teamCount - 1} other teams across ${coverage.leagueList}, free on this site. Star the ${fullName} here to get one weekly email with what is coming up. The PromoNight app covers ${coverage.appLeagueList} and does not carry ${team.league} yet.`,
+      ? `PromoNight tracks giveaways, theme nights, food deals and promotions for the ${fullName} and ${coverage.teamCount - 1} other teams across ${coverage.leagueList}, free on this site. The free PromoNight app carries the same ${fullName} calendar on iOS and Android, and PromoNight Pro adds a reminder on the morning of each promo day.`
+      : `PromoNight tracks giveaways, theme nights, food deals and promotions for the ${fullName} and ${coverage.teamCount - 1} other teams across ${coverage.leagueList}, free on this site. Star the ${fullName} here to get one weekly email with what is coming up. The PromoNight app covers ${coverage.appLeagueList} and does not carry ${team.league} yet.`,
   });
 
   // 5b. Travel — gate times. Gated on the stored value: no record, no question.
@@ -453,7 +505,7 @@ export function generateTeamFAQs(
   faqs.push({
     brandPromo: true,
     question: `Does PromoNight work for away games?`,
-    answer: `PromoNight tracks home-game promotions for all ${coverage.teamCount} teams across ${coverage.leagueList}. If you're traveling to see the ${team.name} play on the road, browse the home team's calendar on this site to see every promo scheduled at their venue during your trip.`,
+    answer: `PromoNight tracks home-game promotions for ${coverage.teamCount} teams across ${coverage.leagueList}. If you're traveling to see the ${team.name} play on the road, browse the home team's calendar on this site for the promotions we have on record at their venue during your trip.`,
   });
 
   // 5g. Data authority: provenance plus derived count (only when there's

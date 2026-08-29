@@ -7,6 +7,7 @@ import { PromoBadge } from './promo-badge';
 import { teamDisplayName } from '@/lib/promo-helpers';
 import type { AggregatorGroup } from './aggregator-layout';
 import { StarToggleInline } from './star-toggle';
+import { isPurchaseGated } from '@/lib/promo-helpers';
 
 const INITIAL_COUNT = 50;
 const STEP = 50;
@@ -75,7 +76,7 @@ export function AggregatorPaginatedGroups({ groups }: { groups: AggregatorGroup[
                       <div className="flex flex-wrap items-center gap-2 mb-1">
                         <span className="text-base">{p.icon}</span>
                         <PromoBadge type={p.type} />
-                        {p.highlight && (
+                        {p.highlight && !isPurchaseGated(p) && (
                           <span className="text-[10px] font-mono text-accent-red">HOT</span>
                         )}
                       </div>

@@ -4,10 +4,11 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { IconFlame } from '@tabler/icons-react';
 import { ShareButton, formatShareDate, type ShareItem } from '@/components/share';
-import { categoryFor } from './categories';
+import { categoryForPromo } from './categories';
 import type { Promo, Team } from '@/lib/types';
 import type { GameContext } from '@/lib/data';
 import { useUpcomingPromoModal, type UpcomingPromoSurface } from './UpcomingPromoModal';
+import { isPurchaseGated } from '@/lib/promo-helpers';
 
 // One light-theme promo row (used by the gate-on PromoList for both the
 // server-rendered visible rows and the client lazy-mounted hidden rows). Keeps
@@ -76,7 +77,7 @@ export function RedesignPromoRow({
 }) {
   const openModal = useUpcomingPromoModal();
   const { day, weekday, month } = formatPromoDate(promo.date);
-  const { color, label, Icon, ink } = categoryFor(promo.type);
+  const { color, label, Icon, ink } = categoryForPromo(promo);
 
   const shareItem: ShareItem = {
     icon: promo.icon,
@@ -168,7 +169,7 @@ export function RedesignPromoRow({
               Completed
             </span>
           )}
-          {!completed && promo.highlight && (
+          {!completed && promo.highlight && !isPurchaseGated(promo) && (
             <span className="inline-flex items-center gap-0.5 font-rd text-[10px] font-semibold uppercase tracking-[0.05em] text-rd-red">
               <IconFlame size={12} stroke={2.25} />
               HOT

@@ -10,6 +10,7 @@ import { teamDisplayName } from '@/lib/promo-helpers';
 import type { GameContext } from '@/lib/data';
 import { formatGameTime } from '@/lib/format-game-time';
 import type { AnalyticsSurface } from '@/lib/analytics';
+import { isPurchaseGated } from '@/lib/promo-helpers';
 
 // Shared modal-body renderers for a single calendar day. Extracted verbatim from
 // team-calendar.tsx so the homepage's Upcoming-Promos modal renders byte-identical
@@ -199,7 +200,7 @@ export function GameDetailRow({
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2 mb-1">
                   <PromoBadge type={p.type} />
-                  {p.highlight && (
+                  {p.highlight && !isPurchaseGated(p) && (
                     <span className="inline-flex items-center gap-1 text-[10px] font-mono text-accent-red">
                       <span className="w-1.5 h-1.5 rounded-full bg-accent-red animate-pulse-dot" />
                       HOT
@@ -308,7 +309,7 @@ export function LegacyPromoDetail({
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-center gap-2 mb-1">
                 <PromoBadge type={p.type} />
-                {p.highlight && (
+                {p.highlight && !isPurchaseGated(p) && (
                   <span className="inline-flex items-center gap-1 text-[10px] font-mono text-accent-red">
                     <span className="w-1.5 h-1.5 rounded-full bg-accent-red animate-pulse-dot" />
                     HOT

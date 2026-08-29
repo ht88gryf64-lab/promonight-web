@@ -4,7 +4,7 @@ import { IconFlame } from '@tabler/icons-react';
 import type { PromoWithTeam } from '@/lib/types';
 import type { GameContext } from '@/lib/data';
 import { teamDisplayName } from '@/lib/promo-helpers';
-import { categoryFor } from './categories';
+import { categoryForPromo } from './categories';
 import { StarToggleInline } from '@/components/star-toggle';
 import type { StarPlacement } from '@/hooks/use-starred-teams';
 import { useUpcomingPromoModal, type UpcomingPromoSurface } from './UpcomingPromoModal';
@@ -40,7 +40,7 @@ export function LightHomePromoCard({
 }) {
   const openModal = useUpcomingPromoModal();
   const { day, weekday, month } = dateParts(promo.date);
-  const { color, ink, label, Icon } = categoryFor(promo.type);
+  const { color, ink, label, Icon } = categoryForPromo(promo);
   const teamName = teamDisplayName(promo.team);
   const open = () => openModal({ promo, contexts, surface });
 

@@ -2,7 +2,7 @@ import { IconArrowRight } from '@tabler/icons-react';
 import type { PromoWithTeam } from '@/lib/types';
 import type { AnalyticsSurface } from '@/lib/analytics';
 import { normalizeSport } from '@/lib/analytics';
-import { categoryFor } from '@/components/redesign/categories';
+import { categoryForPromo } from '@/components/redesign/categories';
 import { teamDisplayName, synthPromoId, promoAnchorId } from '@/lib/promo-helpers';
 import { formatClock } from '@/components/promos-today/helpers';
 import { TrackedTapLink } from '@/components/analytics/TrackedTapLink';
@@ -76,7 +76,7 @@ export function HubTodayPromos({
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         {slate.map((p) => {
-          const cat = categoryFor(p.type);
+          const cat = categoryForPromo(p);
           const clock = formatClock(p.time);
           return (
             <TrackedTapLink

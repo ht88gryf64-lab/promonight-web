@@ -5,7 +5,7 @@ import { teamDisplayName } from '@/lib/promo-helpers';
 import { PromoBadge } from '../promo-badge';
 import { TrackedTapLink } from '../analytics/TrackedTapLink';
 import { TicketsBlock, type TicketsBlockPlacement } from '../affiliates/TicketsBlock';
-import { categoryFor } from '../redesign/categories';
+import { categoryForPromo } from '../redesign/categories';
 import { ScoreBadge } from './score-badge';
 
 type ScoredPromoCardProps = {
@@ -66,7 +66,7 @@ export function ScoredPromoCard({
   const sponsor = derivedSignals.sponsor;
 
   if (variant === 'light') {
-    const { color, label, Icon, ink } = categoryFor(promo.type);
+    const { color, label, Icon, ink } = categoryForPromo(promo);
     return (
       <article className="overflow-hidden rounded-2xl border border-rd-line bg-rd-card transition-colors hover:border-rd-line-strong">
         <TrackedTapLink
