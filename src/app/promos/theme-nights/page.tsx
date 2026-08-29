@@ -64,7 +64,7 @@ const CATEGORIES: ThemeCategory[] = [
 
 export const metadata: Metadata = {
   title: `${YEAR} Theme Nights: Star Wars, Heritage & Fireworks`,
-  description: `Every ${YEAR} theme night across pro sports by category: Star Wars, heritage, fireworks, faith and community, and pop culture tie-ins. From official team announcements.`,
+  description: `${YEAR} theme nights across pro sports by category: Star Wars, heritage, fireworks, faith and community, and pop culture tie-ins. From official team announcements.`,
   alternates: { canonical: 'https://www.getpromonight.com/promos/theme-nights' },
   openGraph: pageOpenGraph('/promos/theme-nights'),
 };
@@ -106,7 +106,7 @@ export default async function ThemeNightsPage() {
   }
 
   const c = await getCoverageCounts();
-  const lead = `Every theme night scheduled across ${c.leagueList} in ${YEAR}. Grouped by theme category, from Star Wars nights and fireworks spectaculars to heritage and community celebrations. ${themes.length} theme nights currently tracked across ${c.teamCount} teams.`;
+  const lead = `Theme nights scheduled across ${c.leagueList} in ${YEAR}. Grouped by theme category, from Star Wars nights and fireworks spectaculars to heritage and community celebrations. ${themes.length} theme nights currently tracked across ${c.teamCount} teams.`;
 
   const faqs = [
     {
@@ -122,7 +122,7 @@ export default async function ThemeNightsPage() {
     {
       question: 'Can I get theme-night notifications?',
       answer:
-        'Yes. PromoNight Pro schedules a reminder on your device for the morning of a promo day for every team you follow. It is $5.99 per season for a single sport or $9.99 per year for all sports.',
+        'Yes. PromoNight Pro schedules a reminder on your device for the morning of a promo day for the teams you follow. It is $5.99 per season for a single sport or $9.99 per year for all sports.',
     },
   ];
 
@@ -130,14 +130,14 @@ export default async function ThemeNightsPage() {
     <>
       <AggregatorJsonLd
         url="https://www.getpromonight.com/promos/theme-nights"
-        title={`Every Theme Night in Pro Sports ${YEAR}`}
+        title={`Theme Nights in Pro Sports ${YEAR}`}
         description={lead}
         faqs={faqs}
         groups={groups}
       />
       <AggregatorPage
         eyebrow="Theme nights"
-        title={`EVERY THEME NIGHT IN ${YEAR}`}
+        title={`THEME NIGHTS IN ${YEAR}`}
         lead={lead}
         groups={groups}
         faqs={faqs}

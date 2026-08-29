@@ -33,7 +33,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const c = await getCoverageCounts();
   return {
     title: `${YEAR} Ballpark Food Deals: Discount Concession Nights`,
-    description: `Every ${YEAR} food-deal promo across ${c.leagueList}. Dollar dogs, half-price concessions, and value menus by month with team, date, and opponent. From official team announcements.`,
+    description: `${YEAR} food-deal promos across ${c.leagueList}. Dollar dogs, half-price concessions, and value menus by month with team, date, and opponent. From official team announcements.`,
     alternates: { canonical: 'https://www.getpromonight.com/promos/food-deals' },
     openGraph: pageOpenGraph('/promos/food-deals'),
   };
@@ -59,7 +59,7 @@ export default async function FoodDealsPage() {
     }));
 
   const c = await getCoverageCounts();
-  const lead = `Every food-deal promotion scheduled across ${c.leagueList} in ${YEAR}. Dollar-dog nights, half-price concessions, and value menus with the team, date, and opponent for each, grouped by month. ${foods.length} food deal${foods.length !== 1 ? 's' : ''} currently tracked across ${c.teamCount} teams.`;
+  const lead = `Food-deal promotions scheduled across ${c.leagueList} in ${YEAR}. Dollar-dog nights, half-price concessions, and value menus with the team, date, and opponent for each, grouped by month. ${foods.length} food deal${foods.length !== 1 ? 's' : ''} currently tracked across ${c.teamCount} teams.`;
 
   const faqs = [
     {
@@ -74,7 +74,7 @@ export default async function FoodDealsPage() {
     {
       question: 'Can I get food-deal notifications?',
       answer:
-        'Yes, with PromoNight Pro, which sends a notification the morning of every promo day for the teams you follow, food deals included. The app is a free download and you can browse the full calendar on any team page.',
+        'Yes, with PromoNight Pro, which sends a notification the morning of a promo day for the teams you follow, food deals included. The app is a free download and you can browse the full calendar on any team page.',
     },
   ];
 
@@ -82,14 +82,14 @@ export default async function FoodDealsPage() {
     <>
       <AggregatorJsonLd
         url="https://www.getpromonight.com/promos/food-deals"
-        title={`Every Ballpark Food Deal in Pro Sports ${YEAR}`}
+        title={`Ballpark Food Deals in Pro Sports ${YEAR}`}
         description={lead}
         faqs={faqs}
         groups={groups}
       />
       <AggregatorPage
         eyebrow="Food deals"
-        title={`EVERY FOOD DEAL IN ${YEAR}`}
+        title={`FOOD DEALS IN ${YEAR}`}
         lead={lead}
         groups={groups}
         faqs={faqs}

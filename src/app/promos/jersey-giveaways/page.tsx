@@ -32,7 +32,7 @@ const YEAR = 2026;
 
 export const metadata: Metadata = {
   title: `${YEAR} Jersey, Cap & Hoodie Giveaway Nights`,
-  description: `Every ${YEAR} jersey, cap, and apparel giveaway across pro sports. First 10,000 to 25,000 fans only. Arrive early. From official team announcements.`,
+  description: `${YEAR} jersey, cap and apparel giveaways across pro sports. First 10,000 to 25,000 fans only. Arrive early. From official team announcements.`,
   alternates: { canonical: 'https://www.getpromonight.com/promos/jersey-giveaways' },
   openGraph: pageOpenGraph('/promos/jersey-giveaways'),
 };
@@ -58,13 +58,13 @@ export default async function JerseyGiveawaysPage() {
     }));
 
   const c = await getCoverageCounts();
-  const lead = `Every jersey, cap, hat, jacket, shirt, and hoodie giveaway across ${c.leagueList} in ${YEAR}. Apparel giveaway nights are typically capped at the first 10,000 to 25,000 fans through the gates, which is why arrival time matters.`;
+  const lead = `Jersey, cap, hat, jacket, shirt and hoodie giveaways across ${c.leagueList} in ${YEAR}. Apparel giveaway nights are typically capped at the first 10,000 to 25,000 fans through the gates, which is why arrival time matters.`;
 
   const faqs = [
     {
       question: 'What counts as a jersey giveaway?',
       answer:
-        'This page pulls every promo whose title or description includes jersey, cap, hat, jacket, shirt, or hoodie. That covers replica jerseys, rally caps, hoodie nights, and novelty apparel like Hawaiian shirts.',
+        'This page pulls any promo whose title or description includes jersey, cap, hat, jacket, shirt, or hoodie. That covers replica jerseys, rally caps, hoodie nights, and novelty apparel like Hawaiian shirts.',
     },
     {
       question: 'Are jersey giveaways limited to certain sections?',
@@ -74,7 +74,7 @@ export default async function JerseyGiveawaysPage() {
     {
       question: `How do I track jersey nights for just my team?`,
       answer:
-        'Visit your team page from any promo in this list, or download the PromoNight app to pin a team, and add PromoNight Pro for a morning-of reminder before every apparel night.',
+        'Visit your team page from any promo in this list, or download the PromoNight app to pin a team, and add PromoNight Pro for a morning-of reminder before an apparel night.',
     },
   ];
 
@@ -82,14 +82,14 @@ export default async function JerseyGiveawaysPage() {
     <>
       <AggregatorJsonLd
         url="https://www.getpromonight.com/promos/jersey-giveaways"
-        title={`Every Jersey & Apparel Giveaway in Pro Sports ${YEAR}`}
+        title={`Jersey & Apparel Giveaways in Pro Sports ${YEAR}`}
         description={lead}
         faqs={faqs}
         groups={groups}
       />
       <AggregatorPage
         eyebrow="Apparel giveaways"
-        title={`EVERY JERSEY, HAT & APPAREL GIVEAWAY`}
+        title={`JERSEY, HAT & APPAREL GIVEAWAYS`}
         lead={lead}
         groups={groups}
         faqs={faqs}

@@ -35,7 +35,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const c = await getCoverageCounts();
   return {
     title: `${YEAR} Bobblehead Giveaways: Player Figurine Nights`,
-    description: `Every ${YEAR} bobblehead giveaway across ${c.leagueList}. Player figurines by month with team, date, and opponent. From official team announcements.`,
+    description: `${YEAR} bobblehead giveaways across ${c.leagueList}. Player figurines by month with team, date, and opponent. From official team announcements.`,
     alternates: { canonical: 'https://www.getpromonight.com/promos/bobbleheads' },
     openGraph: pageOpenGraph('/promos/bobbleheads'),
   };
@@ -83,7 +83,7 @@ export default async function BobbleheadsPage() {
     }));
 
   const c = await getCoverageCounts();
-  const lead = `Every bobblehead giveaway scheduled across ${c.leagueList} in ${YEAR}. Player name, team, date, and opponent for each bobblehead night, grouped by month. Pulled from official team sources, with MLB, WNBA, and MLS rechecked weekly in season.`;
+  const lead = `Bobblehead giveaways scheduled across ${c.leagueList} in ${YEAR}. Player name, team, date, and opponent for each bobblehead night, grouped by month. Pulled from official team sources, with MLB, WNBA, and MLS rechecked weekly in season.`;
 
   const faqs = [
     {
@@ -117,14 +117,14 @@ export default async function BobbleheadsPage() {
     <>
       <AggregatorJsonLd
         url="https://www.getpromonight.com/promos/bobbleheads"
-        title={`Every Bobblehead Giveaway in Pro Sports ${YEAR}`}
+        title={`Bobblehead Giveaways in Pro Sports ${YEAR}`}
         description={lead}
         faqs={faqs}
         groups={groups}
       />
       <AggregatorPage
         eyebrow="Bobbleheads"
-        title={`EVERY BOBBLEHEAD IN ${YEAR}`}
+        title={`BOBBLEHEADS IN ${YEAR}`}
         lead={lead}
         groups={groups}
         faqs={faqs}

@@ -29,7 +29,7 @@ interface ExploreLink {
 
 export function ExploreCard({ team, className = '' }: ExploreCardProps) {
   const links: ExploreLink[] = [
-    { href: '/promos/bobbleheads', label: 'Every bobblehead', Icon: IconTrophy },
+    { href: '/promos/bobbleheads', label: 'Bobblehead nights', Icon: IconTrophy },
     { href: '/promos/this-week', label: 'Hot this week', Icon: IconFlame },
     { href: '/promos/jersey-giveaways', label: 'Jersey & apparel giveaways', Icon: IconShirt },
     { href: '/promos/theme-nights', label: 'Theme nights', Icon: IconConfetti },
