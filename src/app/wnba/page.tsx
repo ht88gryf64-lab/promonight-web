@@ -48,7 +48,7 @@ const FAQS: HubFaqItem[] = [
   {
     question: 'What WNBA promotions are happening this week?',
     answer:
-      'PromoNight tracks every giveaway, theme night, and bobblehead announced by all 15 WNBA teams. The this-week rail on this page lists the promotions scheduled at WNBA arenas over the next seven days, and it updates as teams add dates.',
+      'PromoNight tracks giveaways, theme nights and bobbleheads announced by the 15 WNBA teams. The this-week rail on this page lists the promotions scheduled at WNBA arenas over the next seven days, and it updates as teams add dates.',
   },
   {
     question: 'Which WNBA teams give away bobbleheads?',
@@ -102,7 +102,7 @@ export default async function WnbaHubPage() {
       <HubHero
         eyebrow="WNBA League Hub"
         title={`WNBA PROMOTIONS ${YEAR}`}
-        subtitle="Every theme night, jersey giveaway, and bobblehead across all 15 WNBA teams, grouped by conference."
+        subtitle="Theme nights, jersey giveaways and bobbleheads across the 15 WNBA teams, grouped by conference."
         freshness="Rechecked weekly in season and updated as clubs announce promotions."
         accent={ACCENT}
       >

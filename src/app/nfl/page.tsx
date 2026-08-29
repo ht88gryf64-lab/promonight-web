@@ -237,7 +237,7 @@ export default async function NflHubPage() {
           sectionId="nfl-browse-team"
           surface="web_nfl_hub_team_card"
           collection="nfl_hub"
-          intro="All 32 NFL clubs by division. Open any team for its full 2026 schedule and every promotion announced so far."
+          intro="All 32 NFL clubs by division. Open any team for its full 2026 schedule and the promotions announced so far."
           selectorLabel="Filter teams by division"
           allLabel="All divisions"
           subtitleByTeamId={subtitleByTeamId}

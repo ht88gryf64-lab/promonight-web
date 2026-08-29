@@ -19,7 +19,7 @@ export const revalidate = 86400;
 export const metadata: Metadata = {
   title: { absolute: 'Download PromoNight: Free on iOS & Android' },
   description:
-    'Install PromoNight free on iOS or Android. Browse every giveaway, theme night, and food deal at your team\'s home games, and add Pro for morning-of reminders.',
+    'Install PromoNight free on iOS or Android. Browse the giveaways, theme nights and food deals at your team\'s home games, and add Pro for morning-of reminders.',
   alternates: { canonical: 'https://www.getpromonight.com/download' },
   openGraph: pageOpenGraph('/download'),
 };
@@ -36,7 +36,7 @@ export default async function DownloadPage() {
             <span className="font-rd text-[11px] tracking-[0.14em] uppercase text-rd-ink-faint">Download</span>
             <h1 className="rd-display text-4xl md:text-6xl uppercase text-rd-ink mt-2">GET PROMONIGHT</h1>
             <p className="text-rd-ink-soft text-base md:text-lg mt-4 max-w-2xl mx-auto">
-              Every giveaway, theme night, and food deal for {APP_LEAGUE_LIST} teams. Free to download. Pro tier adds promo-day reminders.
+              Giveaways, theme nights and food deals for {APP_LEAGUE_LIST} teams. Free to download. Pro tier adds promo-day reminders.
             </p>
           </div>
 
@@ -129,7 +129,7 @@ export default async function DownloadPage() {
             GET PROMONIGHT
           </h1>
           <p className="text-text-secondary text-base md:text-lg mt-4 max-w-2xl mx-auto">
-            Every giveaway, theme night, and food deal for {APP_LEAGUE_LIST} teams. Free to download. Pro tier adds promo-day reminders.
+            Giveaways, theme nights and food deals for {APP_LEAGUE_LIST} teams. Free to download. Pro tier adds promo-day reminders.
           </p>
         </div>
 
