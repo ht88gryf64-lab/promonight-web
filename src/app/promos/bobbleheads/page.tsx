@@ -1,4 +1,4 @@
-import { splitPromosByDate } from '@/lib/promo-helpers';
+import { splitPromosByDate, strictBobbleheadGiveaways, teamDisplayName } from '@/lib/promo-helpers';
 import type { Metadata } from 'next';
 import { getCoverageCounts } from '@/lib/get-coverage-counts';
 import { numberWord } from '@/lib/coverage-counts';
@@ -40,6 +40,22 @@ export default async function BobbleheadsPage() {
   const all = await getPromosFromDate(`${YEAR}-01-01`);
   const re = /bobblehead/i;
   const bobbleheads = all.filter((p) => re.test(p.title) || re.test(p.description));
+  // The LIST above stays deliberately loose — a theme night whose description
+  // names a bobblehead is still worth showing a fan. Every published NUMBER,
+  // though, comes from the strict population, because "347 bobblehead
+  // giveaways" was counting description-only mentions and purchase-gated ticket
+  // packages as giveaways.
+  const strict = strictBobbleheadGiveaways(all);
+  const strictCount = strict.length;
+  const byTeam = new Map<string, number>();
+  for (const p of strict) {
+    const name = teamDisplayName(p.team);
+    byTeam.set(name, (byTeam.get(name) ?? 0) + 1);
+  }
+  const topTeams = [...byTeam.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, 3)
+    .map(([name]) => name);
   const today = todayYMD();
   const { upcoming, past } = splitPromosByDate(bobbleheads, today);
 
@@ -64,7 +80,7 @@ export default async function BobbleheadsPage() {
   const faqs = [
     {
       question: `How many bobblehead giveaways are there in ${YEAR}?`,
-      answer: `PromoNight is tracking ${bobbleheads.length} bobblehead giveaway${bobbleheads.length !== 1 ? 's' : ''} across the ${numberWord(c.leagueCount)} major pro leagues in ${YEAR}. MLB teams schedule the majority, with smaller counts in NBA, NHL, and WNBA.`,
+      answer: `PromoNight has ${strictCount} bobblehead giveaway${strictCount !== 1 ? 's' : ''} on record across the ${numberWord(c.leagueCount)} major pro leagues in ${YEAR}, counting only free gate giveaways whose title names a bobblehead. MLB teams schedule most of them. The list below is wider than that count: it also shows theme nights that include a bobblehead and nights where the figurine comes with a ticket package.`,
     },
     {
       question: 'How do I get a bobblehead at a game?',
@@ -73,13 +89,19 @@ export default async function BobbleheadsPage() {
     },
     {
       question: 'Which team gives away the most bobbleheads?',
-      answer:
-        'MLB teams typically lead; the Dodgers, Giants, and Guardians are consistently among the most active bobblehead programs. Counts vary season to season as teams announce more promos after opening day.',
+      answer: topTeams.length
+        ? `On the ${YEAR} schedules we have on record, ${topTeams.slice(0, -1).join(', ')}${topTeams.length > 1 ? ' and ' : ''}${topTeams[topTeams.length - 1]} run the most bobblehead giveaways. Counts move through the season as teams announce more, and this answer is recomputed from the schedule rather than fixed.`
+        : `No ${YEAR} bobblehead giveaways are on record yet.`,
     },
     {
       question: 'What if I miss a bobblehead giveaway?',
+      // NO CLAIM ABOUT THE RESALE MARKET. We hold zero resale observations —
+      // src/lib/ebay.ts builds an eBay SEARCH URL and stores nothing — so the
+      // old answer ("most show up on eBay within days, often the same night")
+      // asserted market behaviour this system has never measured. What is left
+      // is only what is true: we link, the reader looks.
       answer:
-        "Most giveaway bobbleheads show up on eBay's resale market within days of the game, often the same night. Prices vary widely with the player, the production run, and whether the box is unopened. PromoNight links recent past bobblehead giveaways on this page and on each team's schedule page directly to current eBay listings, so you can check resale availability if you missed the gates.",
+        "Completed bobblehead nights stay listed on this page and on each team's schedule page, with a link through to current eBay listings for that giveaway so you can see what is available. We do not track resale prices, so check the listings for what a given bobblehead is going for.",
     },
   ];
 
