@@ -37,9 +37,13 @@ const THIRD_PASS = [
 // never looked at. Scoped to that corpus only, because the hub records for
 // these two buildings were not the source of the finding.
 const VENUES_PASS = ['nationals-park', 'mercedes-benz-stadium'];
-const EXPECTED = [...ELEVEN, ...WOULD_STRAND, ...THIRD_PASS, ...VENUES_PASS];
+// Fifth pass: the three of twenty already-applied renames that failed the
+// re-verification against the operators. Hub-scoped: the renames were applied
+// to venueHubs, and each building's `venues` string was read separately.
+const RENAME_RECHECK = ['coca-cola-coliseum', 'bank-of-america-stadium', 'sanford-stadium'];
+const EXPECTED = [...ELEVEN, ...WOULD_STRAND, ...THIRD_PASS, ...VENUES_PASS, ...RENAME_RECHECK];
 
-test('the suppression list is exactly the forty, each with its reason and its scope', () => {
+test('the suppression list is exactly the forty-three, each with its reason and its scope', () => {
   assert.deepEqual(TRANSIT_SUPPRESSED.map((t) => t.hub), EXPECTED);
   for (const t of TRANSIT_SUPPRESSED) {
     assert.ok(t.reason.length > 80, `${t.hub}: the reason must name the service and its evidence`);
@@ -57,7 +61,7 @@ test('the suppression list is exactly the forty, each with its reason and its sc
 test('scope is recorded per entry, and the two corpora get different sets', () => {
   const hubScoped = TRANSIT_SUPPRESSED.filter((t) => t.applies.includes('hub')).map((t) => t.hub);
   const venuesScoped = TRANSIT_SUPPRESSED.filter((t) => t.applies.includes('venues')).map((t) => t.hub);
-  assert.equal(hubScoped.length, 38, 'the original sweep was researched against hub text');
+  assert.equal(hubScoped.length, 41, 'hub-scoped: the original 38 plus the three rename-recheck failures');
   assert.deepEqual(
     venuesScoped,
     ['loandepot-park', 'providence-park', 'exploria-stadium', 'nationals-park', 'mercedes-benz-stadium'],
@@ -93,7 +97,7 @@ test('a venues-scoped defect silences the venues corpus', () => {
 test('transitSuppressed answers for every suppressed hub and for nothing else', () => {
   // EXPECTED is now every entry in the file, which is a superset of the hub
   // surface: VENUES_PASS was found in the other corpus and is not silenced here.
-  const hubScoped = [...ELEVEN, ...WOULD_STRAND, ...THIRD_PASS];
+  const hubScoped = [...ELEVEN, ...WOULD_STRAND, ...THIRD_PASS, ...RENAME_RECHECK];
   for (const slug of hubScoped) assert.equal(transitSuppressed(slug), true, slug);
   for (const slug of VENUES_PASS) {
     assert.equal(transitSuppressed(slug), false, `${slug} is a venues-corpus finding`);

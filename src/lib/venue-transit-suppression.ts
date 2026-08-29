@@ -280,6 +280,28 @@ export const TRANSIT_SUPPRESSED: ReadonlyArray<TransitSuppression> = [
     reason: 'Mercedes-Benz Stadium: the stored text puts Vine City and GWCC/CNN Center on the Red and Gold Lines. Those are MARTA\u2019s north-south pair; both stations are on the east-west Blue and Green Lines. A fan following this boards a train that never reaches the stadium, which is worse than no sentence at all.',
     applies: ['venues'],
   },
+  // ── Added 2026-08-29, rename re-verification pass. All twenty already-applied
+  // renames were re-checked against the operators, looking for the inverse
+  // error: a name we "corrected" that the operator still publishes. There were
+  // none. Seventeen were confirmed correct. These three failed differently, and
+  // by the same standard as the other ten on this list: a fan following the
+  // stored text is misdirected. We do not hold an operator-verified replacement
+  // for any of them, so none is corrected.
+  {
+    hub: 'coca-cola-coliseum',
+    reason: 'Coca-Cola Coliseum: the stored lines name a "GO Transit Lakeshore East-West line", which GO does not run. It publishes Lakeshore West and Lakeshore East as two separate lines with separate timetables (Table 01 and Table 09), and Exhibition GO appears five times in Lakeshore West and zero times in Lakeshore East. The name is a composite of two real lines that does not correspond to any service. All four TTC entries on this building were verified correct against TTC GTFS and are not the reason for this entry.',
+    applies: ['hub'],
+  },
+  {
+    hub: 'bank-of-america-stadium',
+    reason: 'Bank of America Stadium: the stored notes and lines both send riders to a "Convention Center" station, which is absent from the 26-station roster CATS publishes; that stop is 3rd Street Station and has its own CATS page. The name was inherited from the cited source, panthers.com, which is the team rather than the operator. LYNX Blue Line, Carson and Brooklyn Village were each verified correct and are not the reason for this entry.',
+    applies: ['hub'],
+  },
+  {
+    hub: 'sanford-stadium',
+    reason: 'Sanford Stadium: the stored notes give the shuttle pickup as "the Ramsey Center/Rec Sports Complex" as though it were one place. UGA runs two distinct facilities: the Ramsey Center sits by the East Campus Deck, while the Rec Sports Complex is the intramural-fields site off College Station Road, which our own next sentence separately describes as the overflow pickup. UGA now publishes the pickup as the East Campus Deck. The service names "S - Stadium Loop" and "UGA Campus Transit" were verified current and are not the reason for this entry.',
+    applies: ['hub'],
+  },
 ];
 
 const SUPPRESSED = new Set(
@@ -305,6 +327,15 @@ export function transitSuppressed(hubSlug: string): boolean {
  * Deliberately a different set from `transitSuppressed`. See the `applies`
  * doc on TransitSuppression: the two corpora store independent strings, and a
  * defect verified in one is not evidence about the other.
+ *
+ * KNOWN BLIND SPOT. Seven `venues` docs are per-team suffixed records for
+ * shared buildings (`bank-of-america-stadium-panthers`, `metlife-stadium-jets`,
+ * `sofi-stadium-chargers`, and four more), and a slug key does not reach them
+ * from the canonical slug. Measured 2026-08-29: only one of the seven publishes
+ * transit at all (`moda-center-portland-fire`), and its base is hub-scoped, so
+ * nothing is missed today. It would start costing something the moment a shared
+ * building earns a `venues` scope, so check the suffixed sibling then.
+ * scripts/probe-suffixed-venues.ts re-runs the measurement.
  */
 export function venuesTransitSuppressed(venueSlug: string): boolean {
   return SUPPRESSED_VENUES.has(venueSlug);
