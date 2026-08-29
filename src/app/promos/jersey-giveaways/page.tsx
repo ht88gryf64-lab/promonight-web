@@ -89,7 +89,7 @@ export default async function JerseyGiveawaysPage() {
       />
       <AggregatorPage
         eyebrow="Apparel giveaways"
-        title={`JERSEY, HAT & APPAREL GIVEAWAYS`}
+        title={`JERSEY, HAT & APPAREL GIVEAWAYS IN ${YEAR}`}
         lead={lead}
         groups={groups}
         faqs={faqs}
