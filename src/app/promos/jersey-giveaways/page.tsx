@@ -20,7 +20,15 @@ function monthLabel(dateStr: string): string {
   });
 }
 
-const YEAR = new Date().getFullYear();
+// HARDCODED SEASON YEAR, never new Date().getFullYear(). This value reaches the
+// page title, the meta description and the on-page lead, so an auto-rolling year
+// would retitle this page to the next season at midnight on Jan 1 — with no
+// deploy, no review, and no jersey-giveaway data behind the new number. The page would
+// sit in the index advertising a season that does not exist yet.
+//
+// Bump this deliberately when next-season content is ready. Same rule as
+// /best-promos, the team pages, the venue pages and the CFB family.
+const YEAR = 2026;
 
 export const metadata: Metadata = {
   title: `${YEAR} Jersey, Cap & Hoodie Giveaway Nights`,
