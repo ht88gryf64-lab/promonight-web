@@ -185,6 +185,12 @@ export const SCORED_LEAGUES = new Set(['MLB', 'MLS', 'WNBA'] as const);
 export type ScoredLeague = 'MLB' | 'MLS' | 'WNBA';
 
 export interface Venue {
+  // Firestore doc id of the `venues` record. Shares a namespace with
+  // `venueHubs` doc ids (141 of 148 venues ids are also hub ids), which is what
+  // lets a withholding decision recorded against a hub apply to this corpus
+  // too. Both mapping sites must set it; a Venue without a slug silently opts
+  // out of every slug-keyed gate.
+  slug: string;
   name: string;
   address: string;
   team: string;

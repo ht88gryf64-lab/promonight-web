@@ -26,6 +26,11 @@ function routingVenue(team: WorldCupTeamData, fallbackLat: number, fallbackLng: 
   if (team.venue) return team.venue;
   if (!team.team) return null;
   return {
+    // Synthesized from World Cup coordinates, not a `venues` doc, so there is
+    // no doc id to carry. Empty is the honest value: it matches no suppression
+    // key, and this object is used only for affiliate geo-routing (railVenue) —
+    // it is never passed to VenueInfoBlock, which receives the real team.venue.
+    slug: '',
     name: fallbackName,
     address: '',
     team: team.ref.display,
