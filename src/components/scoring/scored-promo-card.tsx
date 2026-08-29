@@ -7,6 +7,7 @@ import { TrackedTapLink } from '../analytics/TrackedTapLink';
 import { TicketsBlock, type TicketsBlockPlacement } from '../affiliates/TicketsBlock';
 import { categoryForPromo } from '../redesign/categories';
 import { ScoreBadge } from './score-badge';
+import { isPurchaseGated } from '@/lib/promo-helpers';
 
 type ScoredPromoCardProps = {
   promo: ScoredPromoWithTeam;
@@ -93,7 +94,7 @@ export function ScoredPromoCard({
                 <Icon size={12} stroke={2.25} />
                 <span>{label}</span>
               </span>
-              {promo.highlight && (
+              {promo.highlight && !isPurchaseGated(promo) && (
                 <span className="inline-flex items-center gap-0.5 font-rd text-[10px] font-semibold uppercase tracking-[0.05em] text-rd-red">
                   <IconFlame size={12} stroke={2.25} />HOT
                 </span>
@@ -161,7 +162,7 @@ export function ScoredPromoCard({
               {promo.icon}
             </span>
             <PromoBadge type={promo.type} />
-            {promo.highlight && (
+            {promo.highlight && !isPurchaseGated(promo) && (
               <span className="text-[10px] font-mono text-accent-red">HOT</span>
             )}
             {itemType && (

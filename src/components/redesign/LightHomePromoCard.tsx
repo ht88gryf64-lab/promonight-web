@@ -8,6 +8,7 @@ import { categoryForPromo } from './categories';
 import { StarToggleInline } from '@/components/star-toggle';
 import type { StarPlacement } from '@/hooks/use-starred-teams';
 import { useUpcomingPromoModal, type UpcomingPromoSurface } from './UpcomingPromoModal';
+import { isPurchaseGated } from '@/lib/promo-helpers';
 
 // Light-house promo card for the redesigned homepage Tonight + This Week
 // sections. Visually it matches the team-page RedesignPromoRow (date column,
@@ -78,7 +79,7 @@ export function LightHomePromoCard({
               <Icon size={12} stroke={2.25} />
               <span>{label}</span>
             </span>
-            {promo.highlight && (
+            {promo.highlight && !isPurchaseGated(promo) && (
               <span className="inline-flex items-center gap-0.5 font-rd text-[10px] font-semibold uppercase tracking-[0.05em] text-rd-red">
                 <IconFlame size={12} stroke={2.25} />
                 HOT

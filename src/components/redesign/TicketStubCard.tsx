@@ -9,6 +9,7 @@ import { categoryForPromo } from './categories';
 import { StarToggleInline } from '@/components/star-toggle';
 import type { StarPlacement } from '@/hooks/use-starred-teams';
 import { useUpcomingPromoModal, type UpcomingPromoSurface } from './UpcomingPromoModal';
+import { isPurchaseGated } from '@/lib/promo-helpers';
 
 // Ticket-stub promo card for the homepage redesign (docs/homepage-redesign-
 // target.html). Built ALONGSIDE LightHomePromoCard; nothing imports this yet.
@@ -150,7 +151,7 @@ export function TicketStubCard({
               {promo.time}
             </span>
           )}
-          {promo.highlight && (
+          {promo.highlight && !isPurchaseGated(promo) && (
             <span className="inline-flex items-center gap-1 rounded-[5px] bg-rd-red px-2 py-1 font-mono text-[9px] font-semibold uppercase tracking-[0.18em] text-white shadow-[0_2px_8px_rgba(218,45,32,0.3)]">
               <IconFlame size={10} stroke={2.5} />
               HOT
