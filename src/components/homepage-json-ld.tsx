@@ -13,7 +13,7 @@ export function buildHomepageFaqs(c: HomepageCounts): FAQItem[] {
   {
     question: 'What is PromoNight?',
     answer:
-      `PromoNight is a free website that tracks every promotional event at professional sports games across ${c.leagueList}. It shows giveaway nights, theme nights, food deals, and kids events for all ${c.teamCount} teams in one calendar view. The free companion app covers ${c.appLeagueList}.`,
+      `PromoNight is a free website that tracks promotional events at professional sports games across ${c.leagueList}. It shows giveaway nights, theme nights, food deals, and kids events for ${c.teamCount} teams in one calendar view. The free companion app covers ${c.appLeagueList}.`,
   },
   {
     question: 'How many teams does PromoNight cover?',
@@ -23,7 +23,7 @@ export function buildHomepageFaqs(c: HomepageCounts): FAQItem[] {
   {
     question: 'Is PromoNight free?',
     answer:
-      `Yes. The website is free, with every team and every promo and no account required. The app is a free download and covers ${c.appLeagueList}. PromoNight Pro ($9.99/year or $5.99/season per sport) adds a reminder that the app schedules on your device for the morning of each promo day.`,
+      `Yes. The website is free, with no account required. The app is a free download and covers ${c.appLeagueList}. PromoNight Pro ($9.99/year or $5.99/season per sport) adds a reminder that the app schedules on your device for the morning of each promo day.`,
   },
   {
     question: 'What types of promotions does PromoNight track?',
@@ -65,7 +65,7 @@ export function HomepageJsonLd({ counts }: { counts: HomepageCounts }) {
       // pro-only; the second names the college corpus, which has no promos and
       // is never added to that count (the CFB rule, src/lib/coverage-counts.ts).
       description:
-        `PromoNight tracks every giveaway, theme night, food deal, and promotion across ${counts.teamCount} professional sports teams in ${counts.leagueList}. It also covers schedules, venues and rivalries for ${counts.cfbSchoolCount} college football programs.`,
+        `PromoNight tracks giveaways, theme nights, food deals and promotions for ${counts.teamCount} professional sports teams in ${counts.leagueList}. It also covers schedules, venues and rivalries for ${counts.cfbSchoolCount} college football programs.`,
       email: 'hello@getpromonight.com',
       sameAs: [
         'https://x.com/promo_night_app',
@@ -78,7 +78,7 @@ export function HomepageJsonLd({ counts }: { counts: HomepageCounts }) {
       name: 'PromoNight',
       url: 'https://www.getpromonight.com',
       description:
-        `Track every giveaway, theme night, food deal, and promotion across ${counts.teamCount} professional sports teams, plus schedules, venues and rivalries for ${counts.cfbSchoolCount} college football programs.`,
+        `Track giveaways, theme nights, food deals and promotions for ${counts.teamCount} professional sports teams, plus schedules, venues and rivalries for ${counts.cfbSchoolCount} college football programs.`,
     },
     // SoftwareApplication intentionally omitted: Google's Software App rich
     // result requires aggregateRating (or review) alongside offers, and we have

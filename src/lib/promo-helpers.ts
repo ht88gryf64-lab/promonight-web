@@ -492,8 +492,8 @@ export function generateTeamFAQs(
   faqs.push({
     question: `Can I get notifications for ${team.name} promos?`,
     answer: inApp
-      ? `Yes, with PromoNight Pro. The app sends a notification on the morning of every ${team.name} promo game, covering bobblehead giveaways, theme nights, food deals, and kids events. Downloading the app and browsing every promo is free. You can follow just the ${team.name} or multiple teams across ${coverage.appLeagueList}.`
-      : `Not on your phone yet. Promo-day reminders come from the PromoNight app, which covers ${coverage.appLeagueList} and does not carry ${team.league}. Star the ${team.name} on this site instead to get one weekly email with every giveaway, theme night, and food deal coming up.`,
+      ? `Yes, with PromoNight Pro. The app sends a notification on the morning of every ${team.name} promo game, covering bobblehead giveaways, theme nights, food deals, and kids events. Downloading the app and browsing the calendar is free. You can follow just the ${team.name} or multiple teams across ${coverage.appLeagueList}.`
+      : `Not on your phone yet. Promo-day reminders come from the PromoNight app, which covers ${coverage.appLeagueList} and does not carry ${team.league}. Star the ${team.name} on this site instead to get one weekly email with the giveaways, theme nights and food deals coming up.`,
   });
 
   // 5f. App — away games (always shown)
