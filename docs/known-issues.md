@@ -1909,3 +1909,46 @@ leagues (`APP_LEAGUES` in `src/lib/coverage-counts.ts`). Nothing in code
 changes when the file is replaced. `src/app/api/og/route.tsx`, a per-request
 generator that carried a fourth wording, was removed in the same pass; nothing
 referenced it and Ahrefs recorded no backlinks to it.
+
+---
+
+## 39. `team-hero.tsx` carries a rolling year and a render-time freshness stamp, latent behind the redesign gate
+
+**What it is.** `src/components/team-hero.tsx:79-83` renders two claims from the
+clock at request time:
+
+```tsx
+{new Date().getFullYear()} PROMO SCHEDULE
+Last updated {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+```
+
+The first is the house-rule violation the four aggregator pages were just fixed
+for: a season year that rolls to the next season at midnight on Jan 1 with no
+deploy and no data behind it. The second is the entry-17 class — a "Last updated"
+that reports when the page was rendered, not when the data changed, so it reads
+as fresh on every ISR revalidation regardless of whether anything moved.
+
+**Where it lives.** `src/components/team-hero.tsx:79` and `:83`. Reached only
+from `src/app/[sport]/[team]/page.tsx:315`, which sits *after* the
+`if (isRedesignEnabled()) return <RedesignTeamPage/>` early return at `:270`.
+
+**Why it is filed as LATENT and not fixed.** `NEXT_PUBLIC_REDESIGN_V2` is on, so
+this component does not render in production today — verified 2026-08-29 by
+grepping the served HTML of `/mlb/minnesota-twins` for `PROMO SCHEDULE`, which
+returns zero. Both claims are unreachable while the flag stays on.
+
+They become live the moment it is turned off. The documented rollback for the
+redesign is exactly that flag flip (see the team-page redesign notes), so the
+rollback path — the thing you reach for when production is already unhappy —
+restores a wrong year and a synthetic freshness stamp on all 169 team pages.
+
+It was left in place deliberately rather than swept into a pre-filing copy pass:
+editing the rollback template while it is the standby for a live template is a
+worse trade than recording the defect. **Fix it when the legacy team template is
+retired, or before any deliberate use of the flag as a rollback.** If the flag is
+ever flipped in anger, treat these two lines as a known-broken surface rather
+than as a new regression.
+
+**Severity: Low today, Medium on rollback.** No user-visible effect while the
+flag is on; a wrong year plus a false freshness claim on 169 indexed pages if it
+is turned off.
