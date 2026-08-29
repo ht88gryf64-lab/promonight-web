@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { resolveIcon } from '@/lib/promo-helpers';
+import { bagPolicyUrlFor, nearbySilenced, redactClause } from '@/lib/venue-corpus-silence';
 import { getVenueOverride } from '@/lib/venue-overrides';
 import type { PromoType, Venue } from '@/lib/types';
 
@@ -107,14 +108,15 @@ async function fetchVenueForTeam(
       lng: data.lng,
       hasAmenityData: data.hasAmenityData,
       amenityCount: data.amenityCount,
-      gatesOpen: data.gatesOpen,
       league: data.league,
       teamId: data.teamId,
-      parkingInfo: data.parkingInfo ?? override?.parkingInfo,
-      publicTransit: data.publicTransit ?? override?.publicTransit,
-      bagPolicyUrl: data.bagPolicyUrl ?? override?.bagPolicyUrl,
+      // Same silencing as src/lib/data.ts. This mapping is a duplicate of that
+      // one, so anything applied there has to be applied here or the API keeps
+      // serving what the pages stopped serving.
+      parkingInfo: redactClause(snapshot.docs[0].id, 'parkingInfo', data.parkingInfo ?? override?.parkingInfo) ?? undefined,
+      bagPolicyUrl: bagPolicyUrlFor(snapshot.docs[0].id, data.bagPolicyUrl ?? override?.bagPolicyUrl),
       accessibility: data.accessibility ?? override?.accessibility,
-      nearby: data.nearby ?? override?.nearby,
+      nearby: nearbySilenced(snapshot.docs[0].id) ? undefined : (data.nearby ?? override?.nearby),
     };
   } catch (err) {
     console.error('STARRED_PROMOS_VENUE_FETCH_ERR', { teamSlug, err });

@@ -104,7 +104,7 @@ export function buildCondensedLogistics(hub: VenueHub, tenantId: string): Conden
     if (dims && prov(s, 'bagMaxDimensions')) text = `${hub.clearBagRequired === true && prov(s, 'clearBagRequired') ? 'Clear bag' : 'Max bag'} ${dims}.`;
     else if (hub.bagsProhibited === true && prov(s, 'bagsProhibited')) text = 'Bags are not allowed.';
     else if (typeof hub.clearBagRequired === 'boolean' && prov(s, 'clearBagRequired')) text = hub.clearBagRequired ? 'Clear bag required.' : 'Clear bag not required.';
-    else if (has(hub.bagPolicyNotes) && prov(s, 'bagPolicyNotes')) text = sentence(hub.bagPolicyNotes);
+    else if (has(hub.bagPolicyNotes) && prov(s, 'bagPolicyNotes') && !excludedSub(hub.slug, 'bag', 'notes')) text = sentence(hub.bagPolicyNotes);
     // POINTER: reachability, not provenance (see venue-field-exclusions).
     const href = isReachableUrl(hub.bagPolicyUrl) ? hub.bagPolicyUrl : null;
     if (text || href) lines.push({ key: 'bag', label: 'Bag policy', text: text ?? 'See the official bag policy.', href, hrefLabel: href ? 'Official bag policy' : null });
@@ -112,7 +112,7 @@ export function buildCondensedLogistics(hub: VenueHub, tenantId: string): Conden
 
   // Parking: lot names only with sources.parkingLots; each link only with its own key.
   if (!excluded(hub.slug, 'parking')) {
-    const lots = prov(s, 'parkingLots') ? hub.parkingLots.map((l) => l.name).filter(has).slice(0, 4).map(stripEmDashes) : [];
+    const lots = prov(s, 'parkingLots') && !excludedSub(hub.slug, 'parking', 'parkingLots') ? hub.parkingLots.map((l) => l.name).filter(has).slice(0, 4).map(stripEmDashes) : [];
     const mapHref = isReachableUrl(hub.parkingLotMapUrl) ? hub.parkingLotMapUrl : null;
     const officialHref = !mapHref && !excludedSub(hub.slug, 'parking', 'officialParkingUrls') ? (hub.officialParkingUrls.find(isReachableUrl) ?? null) : null;
     const href = mapHref ?? officialHref;

@@ -76,11 +76,22 @@ test('GATE: the gates row, FAQ and chip all read one provenance-gated tenant set
 test('GATE: a field on the conflicts list renders on no surface', async () => {
   const { FIELD_CONFLICTS, fieldExcluded } = await import('../../../lib/venue-field-exclusions');
   const conflicted = FIELD_CONFLICTS.filter((c) => !c.sub);
-  assert.ok(conflicted.length >= 4, 'the tailgating conflicts are listed');
+  assert.ok(conflicted.length >= 4, 'the whole-field conflicts are listed');
+  // Assert on the entry's OWN field. This used to hardcode 'Tailgating',
+  // which was true only while every whole-field entry happened to be a
+  // tailgating one; the first accessibility entry made that assertion test the
+  // wrong row and pass or fail for the wrong reason.
+  const ROW: Record<string, string> = {
+    tailgating: 'Tailgating', accessibility: 'Accessibility', nearby: 'Nearby',
+    food: 'Food', outsideFood: 'Outside food', rideshare: 'Rideshare',
+    transit: 'Transit', parking: 'Parking', gates: 'Gates', bag: 'Bag policy',
+  };
   for (const c of conflicted) {
     assert.equal(fieldExcluded(c.hub, c.field), true);
     const rows = await labels(hub({ slug: c.hub }));
-    assert.ok(!rows.includes('Tailgating'), `${c.hub}: the conflicting field is withheld even though it is populated AND sourced`);
+    const label = ROW[c.field];
+    assert.ok(label, `${c.hub}: no row label mapped for field ${c.field}`);
+    assert.ok(!rows.includes(label), `${c.hub}: ${label} is withheld even though it is populated AND sourced`);
     assert.ok(rows.length >= 4, `${c.hub}: only the excluded field is withheld`);
   }
 });

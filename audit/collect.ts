@@ -547,9 +547,16 @@ export async function collectAuto(deps: CollectDeps = {}): Promise<AuditData> {
     const v = venues[i];
     const upCount = upcomingByTeam.get(team.id) ?? 0;
     const hasPark = !!v && nonEmpty(v.parkingInfo);
-    const hasTransit = !!v && nonEmpty(v.publicTransit);
     const hasBag = !!v && nonEmpty(v.bagPolicyUrl);
-    const hasGates = !!v && nonEmpty(v.gatesOpen);
+    // Transit and gate times are stored in Firestore but SILENCED at the render
+    // layer since 2026-08-29 (src/lib/venue-corpus-silence.ts), so no reader can
+    // see them. This audit measures what the site publishes, not what the
+    // database holds, and counting a silenced field as coverage is exactly the
+    // overstatement the audit exists to catch. Both are hard false until the
+    // corpus is rebuilt with provenance, which will drop pyvDetail and gates
+    // coverage in the next regeneration. That drop is the honest number.
+    const hasTransit = false;
+    const hasGates = false;
 
     const dims: TeamDims = {
       upcoming1: upCount >= 1,

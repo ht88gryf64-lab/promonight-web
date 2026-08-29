@@ -202,7 +202,6 @@ export interface Venue {
   lng: number;
   hasAmenityData: boolean;
   amenityCount: number;
-  gatesOpen?: string;
   league: string;
   teamId: string;
   // Short team ids (`{nickname}-{league}`, e.g. `lac-nfl`, `clt-mls`) of
@@ -215,8 +214,14 @@ export interface Venue {
   sharedTeams?: string[];
   // Optional venue-plan fields. Populated per-venue via data-ops; left empty
   // for most teams. Render only when present.
+  //
+  // `gatesOpen` and `publicTransit` are DELIBERATELY ABSENT. Both still exist
+  // in Firestore and are untouched there, but a 2026-08-29 operator-verified
+  // sample found publicTransit defective in 16 of 20 docs and 5 of 17 gate
+  // claims outright false, with the defects generated rather than stale. They
+  // are omitted from this type so the compiler, not a reviewer, prevents a
+  // consumer from reading them. See src/lib/venue-corpus-silence.ts.
   parkingInfo?: string;
-  publicTransit?: string;
   bagPolicyUrl?: string;
   accessibility?: string;
   nearby?: string;

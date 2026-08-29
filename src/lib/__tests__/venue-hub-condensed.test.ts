@@ -182,6 +182,10 @@ test('the conflicts and holds lists silence the named field on the named hub and
   assert.ok(Array.isArray(CONDENSED_CONFLICTS) && Array.isArray(CONDENSED_HOLDS), 'both exclusion lists are exported');
   const wholeLine: Array<[string, CondensedField]> = [
     ['brooks-stadium', 'tailgating'], ['david-booth-kansas-memorial-stadium', 'tailgating'], ['hard-rock-stadium', 'tailgating'], ['yulman-stadium', 'tailgating'],
+    // Expired rather than contradicted, added 2026-08-29. Both hubs are also
+    // transit-suppressed on separate entries, which the alsoTransit branch
+    // below accounts for.
+    ['albertsons-stadium', 'tailgating'], ['sanford-stadium', 'accessibility'],
   ];
   assert.deepEqual(CONDENSED_CONFLICTS.filter((c) => !c.sub).map((c) => [c.hub, c.field]), wholeLine);
   assert.deepEqual(CONDENSED_HOLDS.map((c) => [c.hub, c.field, c.sub ?? null]), [], 'no holds after the Pass 2 Maryland write');

@@ -1,6 +1,5 @@
 import { IconClock } from '@tabler/icons-react';
 import type { Venue } from '@/lib/types';
-import { venuesTransitSuppressed } from '@/lib/venue-transit-suppression';
 
 type Row = { label: string; content: React.ReactNode };
 
@@ -10,16 +9,9 @@ type Row = { label: string; content: React.ReactNode };
  * when the record is silent, so an empty return means the venue has nothing
  * verified to say and the caller renders no card at all.
  */
-function buildRows(
-  venue: Venue,
-  gate: string | null,
-  transit: string | null,
-  linkClass: string,
-): Row[] {
+function buildRows(venue: Venue, linkClass: string): Row[] {
   const rows: Row[] = [];
-  if (gate) rows.push({ label: 'Gate times', content: gate });
   if (venue.parkingInfo) rows.push({ label: 'Parking', content: venue.parkingInfo });
-  if (transit) rows.push({ label: 'Transit', content: transit });
   if (venue.accessibility) rows.push({ label: 'Accessibility', content: venue.accessibility });
   if (venue.bagPolicyUrl) {
     rows.push({
@@ -49,28 +41,15 @@ export function VenueInfoBlock({
   league: string;
   variant?: 'dark' | 'light';
 }) {
-  // A field the record does not carry renders NO row. What stood here was a
-  // hardcoded league sentence substituted for an absent gatesOpen and labelled
-  // "Gate times" in the same style as a sourced value, on 85 of 169 team pages,
-  // and on 69 of those it was the only row in the card. A generated cadence is
-  // not a fact about this building. Nothing replaces it: an absent field is
-  // absent. See audit/venues-collection-phase0.md.
-  const gate = venue.gatesOpen?.trim() || null;
-  // Transit withheld in THIS corpus is withheld here. Not the hub-scoped set:
-  // the two corpora store independent strings, and of the nine buildings on the
-  // suppression list that also publish transit here, only three carry the
-  // defect their reason describes. Blanket-transferring would withhold correct
-  // text on eight of eleven team pages.
-  const transit = venue.publicTransit && !venuesTransitSuppressed(venue.slug) ? venue.publicTransit : null;
-
-  // One row list, both variants. These were two identical copies differing only
-  // in the bag link's colour class, which is the same shape of defect as the
-  // duplicated Firestore-to-Venue mapping: a gate added to one copy and not the
-  // other renders differently depending on which surface you are standing on.
-  const rows = buildRows(venue, gate, transit, 'text-accent-red');
+  // Neither a gate row nor a transit row can be built here any more: the Venue
+  // type no longer carries either field, because the `venues` corpus was
+  // measured 78.9% defective on transit and 5-of-17 false on gate times, with
+  // the defects generated rather than stale. Firestore keeps the strings for a
+  // provenance rebuild. See src/lib/venue-corpus-silence.ts.
+  const rows = buildRows(venue, 'text-accent-red');
 
   if (variant === 'light') {
-    const lightRows = buildRows(venue, gate, transit, 'text-rd-red');
+    const lightRows = buildRows(venue, 'text-rd-red');
 
     // A labelled box with nothing in it reads as a failure, not as restraint.
     if (!lightRows.length) return null;

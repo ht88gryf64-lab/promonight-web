@@ -272,7 +272,11 @@ export function BagCard({ hub, hasBagFaq }: { hub: VenueHub; hasBagFaq: boolean 
     clearBagRequired: hasProvenance(hub.sources, 'clearBagRequired') ? hub.clearBagRequired : null,
     bagsProhibited: hasProvenance(hub.sources, 'bagsProhibited') ? hub.bagsProhibited : null,
   });
-  const bagSplit = hub.bagPolicyNotes && hasProvenance(hub.sources, 'bagPolicyNotes') ? leadSentences(hub.bagPolicyNotes, 2) : { lead: '', overflow: '' };
+  // Sub-field gate, same omission the parking FAQ had: notes were withheld
+  // nowhere despite an entry naming them.
+  const bagNotesOk = !!hub.bagPolicyNotes && hasProvenance(hub.sources, 'bagPolicyNotes')
+    && !subFieldExcluded(hub.slug, 'bag', 'notes');
+  const bagSplit = bagNotesOk ? leadSentences(hub.bagPolicyNotes!, 2) : { lead: '', overflow: '' };
   const noOutsideFood =
     hub.verified && hub.outsideFoodAllowed === false && !fieldExcluded(hub.slug, 'outsideFood') &&
     (hasProvenance(hub.sources, 'outsideFoodAllowed') || hasProvenance(hub.sources, 'outsideFoodRules'));
@@ -328,7 +332,10 @@ export function VenueLogisticsBlock({ hub, tenantName = (t) => t.displayName }: 
   const verified = hub.verified;
   const hasBag =
     verified &&
-    (hub.bagMaxDimensions !== null || hub.clearBagRequired !== null || hub.bagsProhibited === true || !!hub.bagPolicyNotes);
+    (hub.bagMaxDimensions !== null || hub.clearBagRequired !== null || hub.bagsProhibited === true
+      // Notes count toward "has a bag policy" only if they would actually
+      // render; an excluded sub-field must not open a card it cannot fill.
+      || (!!hub.bagPolicyNotes && !subFieldExcluded(hub.slug, 'bag', 'notes')));
   const hasBagFaq = hasBag || (verified && !!hub.bagPolicyUrl);
   const rows = buildGettingInRows(hub, tenantName);
   return (
