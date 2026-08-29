@@ -119,8 +119,8 @@ export function TeamContentSections({
             </h2>
             <p className="text-rd-ink-soft text-sm leading-relaxed">
               {inApp
-                ? `PromoNight tracks every ${fullName} giveaway, theme night, food deal, and kids event in one place, free on this site. The free PromoNight app carries the same ${year} calendar on iOS and Android, and PromoNight Pro adds a morning-of reminder so you never miss a promotion at ${venueName}.`
-                : `PromoNight tracks every ${fullName} giveaway, theme night, food deal, and kids event in one place, free on this site. Star the ${fullName} here to get one weekly email with what is coming up at ${venueName}. The PromoNight app covers ${APP_LEAGUE_LIST} and does not carry ${team.league} yet.`}
+                ? `PromoNight tracks ${fullName} giveaways, theme nights, food deals and kids events in one place, free on this site. The free PromoNight app carries the same ${year} calendar on iOS and Android, and PromoNight Pro adds a morning-of reminder so you never miss a promotion at ${venueName}.`
+                : `PromoNight tracks ${fullName} giveaways, theme nights, food deals and kids events in one place, free on this site. Star the ${fullName} here to get one weekly email with what is coming up at ${venueName}. The PromoNight app covers ${APP_LEAGUE_LIST} and does not carry ${team.league} yet.`}
             </p>
           </div>
         </div>
@@ -201,8 +201,8 @@ export function TeamContentSections({
           </h2>
           <p className="text-text-secondary text-sm leading-relaxed">
             {inApp
-                ? `PromoNight tracks every ${fullName} giveaway, theme night, food deal, and kids event in one place, free on this site. The free PromoNight app carries the same ${year} calendar on iOS and Android, and PromoNight Pro adds a morning-of reminder so you never miss a promotion at ${venueName}.`
-                : `PromoNight tracks every ${fullName} giveaway, theme night, food deal, and kids event in one place, free on this site. Star the ${fullName} here to get one weekly email with what is coming up at ${venueName}. The PromoNight app covers ${APP_LEAGUE_LIST} and does not carry ${team.league} yet.`}
+                ? `PromoNight tracks ${fullName} giveaways, theme nights, food deals and kids events in one place, free on this site. The free PromoNight app carries the same ${year} calendar on iOS and Android, and PromoNight Pro adds a morning-of reminder so you never miss a promotion at ${venueName}.`
+                : `PromoNight tracks ${fullName} giveaways, theme nights, food deals and kids events in one place, free on this site. Star the ${fullName} here to get one weekly email with what is coming up at ${venueName}. The PromoNight app covers ${APP_LEAGUE_LIST} and does not carry ${team.league} yet.`}
           </p>
         </div>
       </div>

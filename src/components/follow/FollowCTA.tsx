@@ -48,7 +48,7 @@ export function FollowCTA({
   const resolvedSub =
     sub ??
     (team
-      ? `Get every ${team.city} ${team.name} bobblehead, theme night, and food deal, plus any other teams you follow, in one free email a week.`
+      ? `Get the ${team.city} ${team.name} bobbleheads, theme nights and food deals, plus any other teams you follow, in one free email a week.`
       : 'Get the giveaways, theme nights and food deals for the teams you follow in one free email a week.');
 
   if (layout === 'split') {

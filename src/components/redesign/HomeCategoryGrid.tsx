@@ -40,7 +40,7 @@ export function HomeCategoryGrid({ tiles }: { tiles: HomeCategoryTile[] }) {
         </div>
         <h2 className="rd-display text-3xl uppercase text-rd-ink md:text-4xl">By What You Want</h2>
         <p className="mt-2 max-w-md font-rd text-sm text-rd-ink-soft">
-          Every upcoming promo by type, each in one list.
+          Upcoming promos by type, each in one list.
         </p>
       </div>
 
