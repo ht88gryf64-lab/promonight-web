@@ -52,10 +52,45 @@ today, so this rate describes what is being served, not a stale seed file.**
 |---|---|
 | `publicTransit` | **16 of 20 defective. 80% including the control, 78.9% excluding it.** 4 clean. |
 | `gatesOpen` | 17 claims made: 9 true, **5 false**, 3 unverifiable. **47% not confirmed.** |
-| `bagPolicyUrl` | **10 of 20 unusable**: 7 hard 404s, 3 that return 200 onto pages carrying no policy. |
+| `bagPolicyUrl` | See the correction in section 2a. The figure first recorded here, 7 hard 404s, was measured against the seed file and never described production. |
 
 Removing the control moves the transit rate by 1.1 points. The control was not
 carrying the number.
+
+## 2a. CORRECTION, 2026-08-29: the bag-URL figure tested the wrong thing
+
+**The "7 hard 404s" originally recorded above was measured against the SEED
+FILE, not against production, and it never described what the site serves.**
+Recorded here because this document will be cited later and the wrong number
+must not travel with it.
+
+What is actually true of the live corpus:
+
+- **Every live stored `bagPolicyUrl` returns 200.** There are no unreachable bag
+  links. Checked with a browser user-agent, following redirects.
+- The seed values in `scripts/arena-plan-your-visit-*.json` differ from the live
+  Firestore values, and `populate-arena-plan-your-visit.ts` says so in its own
+  header: "Curl-verified dead links replaced with live official pages." The dead
+  links were repaired after seeding. The sample read the seed.
+- **The real defect is narrower and different in kind:** seven URLs resolve onto
+  a hub or landing page carrying no bag policy at all. A dead end, not a broken
+  link. Those seven are repointed in code at the page the operator publishes,
+  each fetched and confirmed to carry bag-policy text: bmo-field, geodis-park,
+  allianz-field, bc-place, bank-of-america-stadium, american-family-field,
+  busch-stadium.
+- `amalie-arena` is left alone: reachable, its own domain does not resolve, and
+  the operator's pages are client-rendered, so there is no confident target.
+
+**The cause, which is worth more than the correction.** A drift check WAS run
+before the sampling pass and returned 20 of 20 byte-identical. It compared
+**`publicTransit` only.** Every other field in the same records went unchecked,
+and `bagPolicyUrl` had in fact drifted. A spot check that covers one field and
+is reported as though it covered the record is worse than no spot check, because
+it converts an unknown into a false assurance. **A drift check must compare
+every field the pass will draw a conclusion about.**
+
+This does not disturb the transit or gate-time findings: those were compared
+field-for-field and were byte-identical, which is why 78.9% stands.
 
 ## 3. Generated, not stale, and the distinction decides the remedy
 
