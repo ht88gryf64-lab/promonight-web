@@ -30,56 +30,92 @@
 // dependency direction.
 
 export interface TransitSuppression {
-  /** venueHubs doc id. */
+  /** Doc id. Shared namespace: 141 of 148 `venues` ids are also `venueHubs` ids. */
   hub: string;
   /** The service that does not run, and the operator evidence for it. */
   reason: string;
+  /**
+   * Which corpus the evidence in `reason` was gathered against, and therefore
+   * where the withholding is earned.
+   *
+   * This is not bookkeeping. `venueHubs` and `venues` store INDEPENDENT transit
+   * strings for the same building — of nine buildings on this list that also
+   * publish transit in `venues`, not one pair is byte-identical, and only three
+   * of the nine `venues` strings contain the defect the reason describes. The
+   * Dodger Stadium reason is about Metro rail line letters; the `venues` text
+   * names no rail line at all, only the Express bus. The Citizens Bank Park
+   * reason is about Route 17; the `venues` text names only the Broad Street
+   * Line, which this project's own sweep confirmed is still current.
+   *
+   * Transferring a hub-scoped entry to `venues` on the strength of the shared
+   * id would withhold correct text on eight of eleven team pages, citing a
+   * defect that text does not contain. A suppression is a claim about a claim,
+   * not a curse on a building, so it travels only where it was verified.
+   */
+  applies: ReadonlyArray<'hub' | 'venues'>;
 }
 
 export const TRANSIT_SUPPRESSED: ReadonlyArray<TransitSuppression> = [
   {
     hub: 'levis-stadium',
     reason: "Levi's Stadium: the only transit source is the Super Bowl 50 gameday guide (Feb 2016), which states on its own face that regular-season shuttles do not apply to it and routes riders to a VTA.org/SB50 page that now 404s. The stored VTA / ACE / Capitol Corridor arrangement describes one 2016 event day.",
+    applies: ['hub'],
   },
   {
     hub: 'stanford-stadium',
     reason: 'Stanford Stadium: Caltrain publishes, on each dated 2026 home-game page, that Stanford Station will not be open and riders should use Palo Alto and walk. The stored text presents Caltrain game-day stops at Stanford as available.',
+    applies: ['hub'],
   },
   {
     hub: 'dodger-stadium',
     reason: 'Dodger Stadium: the stored lines name the Metro Gold Line, which no longer exists after the Regional Connector merged it into the A and E lines, and the Red and Purple Line labels are likewise off Metro’s current roster of eight lettered lines.',
+    applies: ['hub'],
   },
   {
     hub: 'loandepot-park',
     reason: 'loanDepot park: Metrobus routes 6 and 51 are absent from Miami-Dade DTPW’s live roster and current GTFS feed, route 21 still runs but its nearest stop is now about 1.7 km from the ballpark, and Civic Center station is published as UHealth | Jackson.',
+    // The `venues` text names Civic Center Station directly, so the rename defect is present in both corpora.
+    applies: ['hub', 'venues'],
   },
   {
     hub: 'providence-park',
     reason: 'Providence Park: TriMet’s own route page reads "This route is discontinued with replacement service on line 19-Glisan/Canyon Rd" for 58-Canyon Rd, which the stored lines still name.',
+    // The `venues` text fails independently of the reason above: it puts the
+    // Kings Hill/SW 18th Ave MAX station on the Blue, Orange AND Red lines. The
+    // Orange Line runs south to Milwaukie and does not serve that station. A
+    // separate defect in a separate string, so this one is earned on both
+    // surfaces even though the 58-Canyon Rd evidence is hub-only.
+    applies: ['hub', 'venues'],
   },
   {
     hub: 'gerald-j-ford-stadium',
     reason: 'Gerald J. Ford Stadium: DART publishes that from September 14 2026 the Red Line does not run in either direction on weekends. SMU plays Saturdays, and the stored text names DART without that limit.',
+    applies: ['hub'],
   },
   {
     hub: 'audi-field',
     reason: 'Audi Field: Metrobus 74 and P6 do not exist in WMATA’s post-redesign network, whose 117 routes carry no bare-numeric names at all; the Buzzard Point service is now C55 and C11.',
+    applies: ['hub'],
   },
   {
     hub: 'bmo-field',
     reason: 'BMO Field: the stored routing sends riders to a TTC 509/511 replacement bus that TTC’s own notice scoped to February through Summer 2025.',
+    applies: ['hub'],
   },
   {
     hub: 'husky-stadium',
     reason: 'Husky Stadium: UW Athletics states the South Kirkland, Eastgate and Redondo Heights park-and-ride express buses no longer operate in 2026, replaced by expanded Link light rail. The stored text names King County Metro park-and-ride buses without that.',
+    applies: ['hub'],
   },
   {
     hub: 'los-angeles-memorial-coliseum',
     reason: 'Los Angeles Memorial Coliseum: the stored lines name the Metro Silver Line, discontinued in the busway restructure, and the Expo Line, renamed the E Line after the Regional Connector.',
+    applies: ['hub'],
   },
   {
     hub: 'mountain-america-stadium',
     reason: 'Mountain America Stadium: the stored text routes riders to the Dorsey/Apache Blvd park-and-ride for the streetcar connection; Valley Metro announced that lot closed permanently on 2026-05-29.',
+    applies: ['hub'],
   },
   // ── Added 2026-08-27, second pass. Same standard as the eleven above: the
   // stale-transit sweep graded these "changed" rather than "discontinued",
@@ -89,86 +125,108 @@ export const TRANSIT_SUPPRESSED: ReadonlyArray<TransitSuppression> = [
   {
     hub: 'albertsons-stadium',
     reason: "Boise State: the stored Downtown Bronco Shuttle is VRT's 2023 pilot, which VRT discontinued after that season; the 2026 downtown ride is VRT's Game Day Bus, every 15 minutes from 13 stops, so the stored name, frequency and entire 7-stop list have no current operator backing. Boise State's own Lincoln and Brady garage shuttle is confirmed only through the 2025 fan guide.",
+    applies: ['hub'],
   },
   {
     hub: 'amon-g-carter-stadium',
     reason: "TCU: the 2026 parking page states the Saint Stephen's Presbyterian shuttle will not run for the Sept 12, Nov 14 and Nov 21 home games, three of eight dates, and that the Hyatt Place shuttle is hotel guests only. The stored text offers both to any fan on any game day.",
+    applies: ['hub'],
   },
   {
     hub: 'barclays-center',
     reason: "Barclays Center: the stored late-night LIRR promise (service up to 2 AM) is contradicted by MTA's published timetable for Aug 26 to Nov 8 2026, which has no Atlantic Terminal departure at or after 00:30 on any of 75 service days, with the last weeknight train at 23:31. It describes a pre-2021 Islanders-era arrangement.",
+    applies: ['hub'],
   },
   {
     hub: 'carter-finley-stadium',
     reason: "NC State: the 2026 stadium guide redefines Wolfpack Express as four roaming golf carts for fans needing assistance and retains only the Indoor Practice Facility lots, dropping the stored Westchase, Practice Field, Trinity and Stadium West stops. Gate 11 is now the terminus of a separate ADA bus for placard holders, not the general drop-off the stored text promises every rider.",
+    applies: ['hub'],
   },
   {
     hub: 'citizens-bank-park',
     reason: "Philadelphia: SEPTA's dated 23 August 2026 timetable shortens Route 17 to 2nd-Market to 20th-Johnston, with Pattison Av, NRG and Packer Park absent from every weekday, Saturday and Sunday table, so the stored Route 17 clause strands anyone who boards it. Broad-Pattison and the Navy Yard are now carried by Route 45.",
+    applies: ['hub'],
   },
   {
     hub: 'darrell-k-royal-texas-memorial-stadium',
     reason: "Texas: CapMetro's rail service is Route 550 (Red Line) and does not serve the stadium at all, so the stored MetroRail Route 18 names a service that does not exist on that corridor.",
+    applies: ['hub'],
   },
   {
     hub: 'davis-wade-stadium',
     reason: "Mississippi State: SMART has no Old Main or Hwy 12 route in its current roster, system map or GTFS feed; those patterns are now Starkville Central and Starkville Campus, and the stored Davis Wade Express is not in the operator's current service.",
+    applies: ['hub'],
   },
   {
     hub: 'donald-w-reynolds-razorback-stadium',
     reason: "Arkansas: Razorback Transit runs these as Route 88 and Route 89, with Silver and Gold surviving only as legend aliases, and service starts three hours before kickoff rather than the stored four.",
+    applies: ['hub'],
   },
   {
     hub: 'empower-field',
     reason: "Denver: RTD's D and H Lines have been suspended since 7 June 2026 for the Downtown Rail Reconstruction, and the D Line is additionally proposed for permanent discontinuation. The stored text routes fans to both as transfers to the E Line.",
+    applies: ['hub'],
   },
   {
     hub: 'exploria-stadium',
     reason: "Orlando: the stored Lymmo routing is not supported by the operator's current service, and the stored source URL 301-redirects to a malformed path that returns 403, so the claim cannot be re-verified against the page it came from.",
+    // The `venues` text names the LYMMO circulator directly, so the routing defect is present in both corpora.
+    applies: ['hub', 'venues'],
   },
   {
     hub: 'hard-rock-stadium',
     reason: "Miami Gardens: the stored Brightline Aventura round-trip shuttle, the Lot 70 and Lot 95 park-and-ride and the Uber Shuttle are event-specific arrangements not confirmed by the operator for the 2026 season, so a fan planning around them may find no service.",
+    applies: ['hub'],
   },
   {
     hub: 'jones-stadium',
     reason: "Texas Tech: the stored Citibus Park and Ride gameday shuttle is not confirmed in the operator's current service, and the stored 2016 source URL now redirects to a 2026 page carrying different arrangements.",
+    applies: ['hub'],
   },
   {
     hub: 'kenan-stadium',
     reason: "North Carolina: the stored Tar Heel Express description no longer matches the operator's current service, and the cited 2023 article was last touched in 2024, so the stop and timing detail it carries is not current-season.",
+    applies: ['hub'],
   },
   {
     hub: 'martin-stadium-northwestern-university',
     reason: "Northwestern: the stored transit directions are for a prior hub venue and the guide is still labelled 2025 Gameday Information, so the routing does not describe how to reach the 2026 home venue.",
+    applies: ['hub'],
   },
   {
     hub: 'memorial-stadium-lincoln',
     reason: "Nebraska: the cited huskers.com page no longer carries the StarTran gameday shuttle schedule, loading location or pickup points that the stored text quotes, so none of the stored Big Red Express detail can be re-verified against the operator.",
+    applies: ['hub'],
   },
   {
     hub: 'moda-center',
     reason: "Portland: TriMet truncated the MAX Green Line to Clackamas Town Center and Gateway Transit Center on 23 August 2026, so it no longer reaches Rose Quarter Transit Center; TriMet's own Rose Quarter page now lists Blue, Red and Yellow only. Bus 77 also moved off NE 9th Ave.",
+    applies: ['hub'],
   },
   {
     hub: 'mt-bank-stadium',
     reason: "Baltimore: the stored RavensRide park-and-ride charter buses are not confirmed by the operator for the 2026 season, so fans planning to park at a listed lot and ride in may find no service.",
+    applies: ['hub'],
   },
   {
     hub: 'paycor-stadium',
     reason: "Cincinnati: the stored TANK Bengals gameday shuttle drop-off at the Riverfront Transit Center is affected by a dated closure, so the stored drop-off point does not describe where the shuttle actually sets down this season.",
+    applies: ['hub'],
   },
   {
     hub: 'sofi-stadium',
     reason: "Inglewood: the stored Torrance Transit SoFi Special Service, Culver CityBus Line 99 Express and GTrans Line 7X are event services whose current-season operation is not confirmed by the operators, and GTrans's old gtrans.org domain now redirects to a domain-for-sale lander.",
+    applies: ['hub'],
   },
   {
     hub: 'space-city-financial-stadium',
     reason: "Houston: the stored UH game-day shuttle buses on the east campus and north end routes are confirmed only for a prior season, with no current-season page from the university or the operator confirming they run in 2026.",
+    applies: ['hub'],
   },
   {
     hub: 'target-center',
     reason: "Minneapolis: the stored routing names services that no longer describe how to reach the arena this season, and the operator's current network does not carry the stops the stored text sends riders to.",
+    applies: ['hub'],
   },
   // ── Added 2026-08-27, third pass. huntington-bank-field was proposed as a
   // copy edit and silenced instead: the qualifier that makes the sentence
@@ -180,32 +238,74 @@ export const TRANSIT_SUPPRESSED: ReadonlyArray<TransitSuppression> = [
   {
     hub: 'huntington-bank-field',
     reason: "Cleveland: GCRTA publishes the Waterfront Line as event-only, running between Tower City and South Harbor for Browns home games and select major events, and its Blue and Green Line pages both say riders continuing to the Waterfront Line change trains at Tower City, so the stored claim that W. 3rd St. Station is served by the Blue, Green and Waterfront Lines is wrong. Silenced rather than relabelled: the event-only qualifier survives only in the lines array, and the condensed block renders a first sentence, so the restriction is structurally droppable.",
+    applies: ['hub'],
   },
   {
     hub: 'everbank-stadium',
     reason: "Jacksonville: JTA's Gameday Xpress runs for the 2026 Jaguars season, but JTA's own 2026 page publishes different park-and-ride origins and times than the stored text gives, so a fan planning around the stored pickup may find no service there.",
+    applies: ['hub'],
   },
   {
     hub: 'jack-trice-stadium',
     reason: "Iowa State: CyRide route 3 Blue still runs, but its current Saturday timetable, season-stamped 17 August 2026 to 14 May 2027, does not carry the gameday service pattern the stored text describes.",
+    applies: ['hub'],
   },
   {
     hub: 'lane-stadium',
     reason: "Virginia Tech: Blacksburg Transit's 2026 football page still reads that game-day details will be posted before the first game, so the stored expanded schedule and Two Town Trolley routing have no current-season backing from the operator.",
+    applies: ['hub'],
   },
   {
     hub: 'neyland-stadium',
     reason: "Tennessee: KAT still runs buses from the Civic Coliseum garages to Neyland in 2026, but not on the terms the stored text publishes, so the stored pickup points and timing would send a fan to the wrong place or the wrong hour.",
+    applies: ['hub'],
   },
   {
     hub: 'simmons-bank-liberty-stadium',
     reason: "Memphis: the $10 University of Memphis Park and Ride shuttle still runs, but the stored description comes from a 2024 fan-information article and Memphis Athletics has since published different terms, so the stored price, origin and timing are not the current-season arrangement.",
+    applies: ['hub'],
+  },
+  // ── Added 2026-08-29, venues-corpus pass. These two were found in the
+  // `venues` collection (audit/venues-collection-phase0.md), which received
+  // none of the per-field provenance work and had never been swept. Their hub
+  // records were not the source of the finding, so neither is silenced on the
+  // hub surface by this entry.
+  {
+    hub: 'nationals-park',
+    reason: 'Nationals Park: the stored text tells fans to catch the DC Circulator from Union Station. The Circulator ceased operating entirely on 2024-12-31: not a route change, the whole system. The Navy Yard-Ballpark Green Line clause in the same string is sound, but the field renders as one sentence and cannot be half-published.',
+    applies: ['venues'],
+  },
+  {
+    hub: 'mercedes-benz-stadium',
+    reason: 'Mercedes-Benz Stadium: the stored text puts Vine City and GWCC/CNN Center on the Red and Gold Lines. Those are MARTA\u2019s north-south pair; both stations are on the east-west Blue and Green Lines. A fan following this boards a train that never reaches the stadium, which is worse than no sentence at all.',
+    applies: ['venues'],
   },
 ];
 
-const SUPPRESSED = new Set(TRANSIT_SUPPRESSED.map((t) => t.hub));
+const SUPPRESSED = new Set(
+  TRANSIT_SUPPRESSED.filter((t) => t.applies.includes('hub')).map((t) => t.hub),
+);
+const SUPPRESSED_VENUES = new Set(
+  TRANSIT_SUPPRESSED.filter((t) => t.applies.includes('venues')).map((t) => t.hub),
+);
 
-/** True when this building's transit text must not render on any surface. */
+/**
+ * True when the `venueHubs` transit text for this building must not render.
+ * Read by the hub surfaces: the mapper's description builder, the venue page,
+ * the NFL hub route and the CFB condensed block.
+ */
 export function transitSuppressed(hubSlug: string): boolean {
   return SUPPRESSED.has(hubSlug);
+}
+
+/**
+ * True when the `venues` transit text for this building must not render. Read
+ * by VenueInfoBlock, which is the team-page and world-cup surface.
+ *
+ * Deliberately a different set from `transitSuppressed`. See the `applies`
+ * doc on TransitSuppression: the two corpora store independent strings, and a
+ * defect verified in one is not evidence about the other.
+ */
+export function venuesTransitSuppressed(venueSlug: string): boolean {
+  return SUPPRESSED_VENUES.has(venueSlug);
 }
