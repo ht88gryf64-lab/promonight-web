@@ -295,7 +295,19 @@ export const TRANSIT_SUPPRESSED: ReadonlyArray<TransitSuppression> = [
   {
     hub: 'bank-of-america-stadium',
     reason: 'Bank of America Stadium: the stored notes and lines both send riders to a "Convention Center" station, which is absent from the 26-station roster CATS publishes; that stop is 3rd Street Station and has its own CATS page. The name was inherited from the cited source, panthers.com, which is the team rather than the operator. LYNX Blue Line, Carson and Brooklyn Village were each verified correct and are not the reason for this entry.',
-    applies: ['hub'],
+    // Scoped to BOTH, on separate evidence for separate strings. The `venues`
+    // record fails worse and differently: it states the Blue Line "has a Bank
+    // of America Stadium Station directly at the venue". CATS publishes a
+    // complete roster ("CATS has 26 stations") and names all 26; none is at the
+    // stadium under any name, and the nearest platform is Brooklyn Village at
+    // about 0.46 mi. Three independent verifications, each told to refute,
+    // refuted it at high confidence, and both rescues were closed: not merely
+    // misnamed (no station there under another name) and not another line (the
+    // Gold Line's 17 streetcar stops were checked too). The line's termini in
+    // the same sentence are correct, which is what makes the invented station
+    // read as credible. It renders on the Charlotte FC page, not the Panthers
+    // page, which reads a separate doc carrying no transit at all.
+    applies: ['hub', 'venues'],
   },
   {
     hub: 'sanford-stadium',

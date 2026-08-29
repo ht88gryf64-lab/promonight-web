@@ -64,7 +64,7 @@ test('scope is recorded per entry, and the two corpora get different sets', () =
   assert.equal(hubScoped.length, 41, 'hub-scoped: the original 38 plus the three rename-recheck failures');
   assert.deepEqual(
     venuesScoped,
-    ['loandepot-park', 'providence-park', 'exploria-stadium', 'nationals-park', 'mercedes-benz-stadium'],
+    ['loandepot-park', 'providence-park', 'exploria-stadium', 'nationals-park', 'mercedes-benz-stadium', 'bank-of-america-stadium'],
     'only buildings whose `venues` string was itself checked may be silenced there',
   );
 });
@@ -78,6 +78,15 @@ test('a hub-scoped defect does not silence the venues corpus', () => {
     assert.equal(transitSuppressed(slug), true, `${slug} is suppressed on the hub surface`);
     assert.equal(venuesTransitSuppressed(slug), false, `${slug} must NOT be silenced in the venues corpus on hub-only evidence`);
   }
+});
+
+test('a building can be silenced in both corpora on two separate findings', () => {
+  // bank-of-america-stadium is the only entry scoped to both on independent
+  // evidence: the hub text names a station CATS does not have ("Convention
+  // Center" for 3rd Street), and the venues text invents a different one
+  // outright ("Bank of America Stadium Station", which is on no CATS roster).
+  assert.equal(transitSuppressed('bank-of-america-stadium'), true);
+  assert.equal(venuesTransitSuppressed('bank-of-america-stadium'), true);
 });
 
 test('a venues-scoped defect silences the venues corpus', () => {
