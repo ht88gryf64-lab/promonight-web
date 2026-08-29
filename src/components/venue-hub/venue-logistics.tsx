@@ -9,6 +9,7 @@ import { transitSuppressed } from '@/lib/venue-transit-suppression';
 // What was NOT deliberate was publishing a field here that the school page
 // withholds for cause. See audit/cfb-venue-sourcing-report.md section 16.
 import { fieldExcluded, subFieldExcluded, hasProvenance, hasSubProvenance, isReachableUrl } from '@/lib/venue-field-exclusions';
+import { dimsString } from '@/lib/venue-hub';
 import {
   type VenueHub,
   type VenueHubTenantOverlay,
@@ -328,6 +329,30 @@ export function BagCard({ hub, hasBagFaq }: { hub: VenueHub; hasBagFaq: boolean 
 /** Every logistics card in the venue-page order, for pages other than the
  *  venue page. Light tone only for now; the cards are the same components the
  *  venue page mounts one by one. */
+/**
+ * The fact-band bag chip, as ONE gated decision.
+ *
+ * This existed as three separate reads inside VenueHubView: the dimensions were
+ * provenance-scrubbed, and the CHIP LABEL and the prohibition were not, so a
+ * building with sourced dimensions and an unsourced clear-bag flag published a
+ * "CLEAR BAG" claim that the same component withheld from its own FAQ. Live on
+ * hard-rock-stadium until 2026-08-29. The label is a claim about the building
+ * exactly as much as the number is, and it gets the same gate.
+ */
+export function bagChipFor(hub: VenueHub): { k: string; v: string } | null {
+  if (!hub.verified || fieldExcluded(hub.slug, 'bag')) return null;
+  const s = hub.sources;
+  const dims = hasProvenance(s, 'bagMaxDimensions') ? dimsString(hub.bagMaxDimensions) : null;
+  if (dims) {
+    const clear = hasProvenance(s, 'clearBagRequired') && hub.clearBagRequired === true;
+    return { k: clear ? 'CLEAR BAG' : 'MAX BAG', v: dims };
+  }
+  if (hasProvenance(s, 'bagsProhibited') && hub.bagsProhibited === true) {
+    return { k: 'BAGS', v: 'Not allowed' };
+  }
+  return null;
+}
+
 export function VenueLogisticsBlock({ hub, tenantName = (t) => t.displayName }: { hub: VenueHub; tenantName?: TenantNameResolver }) {
   const verified = hub.verified;
   const hasBag =

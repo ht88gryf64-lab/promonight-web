@@ -26,6 +26,7 @@ import {
   FoodCard,
   NearbyCard,
   BagCard,
+  bagChipFor,
 } from './venue-logistics';
 import {
   type VenueHub,
@@ -219,10 +220,12 @@ export function VenueHubView({
 
   // ── fact band chips (each conditional; band omitted below 2 chips) ──
   const chips: { k: string; v: string }[] = [];
-  if (verified) {
-    if (dimStr) chips.push({ k: hub.clearBagRequired ? 'CLEAR BAG' : 'MAX BAG', v: dimStr });
-    else if (hub.bagsProhibited === true) chips.push({ k: 'BAGS', v: 'Not allowed' });
-  }
+  // ONE gated decision, shared with nothing else that can drift from it. This
+  // was three separate reads: dimStr was provenance-scrubbed and the LABEL was
+  // not, so a sourced size plus an unsourced clear-bag flag published a CLEAR
+  // BAG claim this same component withheld from its own FAQ.
+  const bagChip = bagChipFor(hub);
+  if (bagChip) chips.push(bagChip);
   // Read the PROVENANCE-GATED tenant set, not tenantOverlays directly: the chip
   // is a claim about gate times like any other and must not outlive the rule.
   const gateMins = new Set(
