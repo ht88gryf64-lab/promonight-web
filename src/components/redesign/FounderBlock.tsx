@@ -80,7 +80,7 @@ export function FounderBlock({ teamCount, leagues }: FounderBlockProps) {
             </p>
             <p>
               So I spent a few months building it. PromoNight started with just the Twins and now
-              tracks every giveaway, theme night, food deal, and kids event across all {teamCount}{' '}
+              tracks giveaways, theme nights, food deals and kids events across {teamCount}{' '}
               teams in {joinLeagues(leagues)}. If you&apos;ve ever shown up to a game and found out
               you missed bobblehead night by 24 hours, this is for you.
             </p>
