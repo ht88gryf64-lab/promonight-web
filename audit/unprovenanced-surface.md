@@ -6,7 +6,10 @@ nothing and is excluded from the totals.
 
 ## The number
 
-**2,641 unprovenanced claims render today.**
+**2,641 unprovenanced claims render today** — but see the correction below, and
+`audit/promos-provenance.md`: the comparable forward-looking figure is **415**.
+The promo count groups 2,224 PAST events with 77 upcoming ones, and treats
+scanner-verified rows as the same risk class as generated venue prose.
 
 | Corpus | Rendered claims | Carry a source | Unprovenanced | Where |
 |---|---|---|---|---|
