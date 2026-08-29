@@ -28,7 +28,7 @@ export function FollowFooterCTA() {
         className="mt-2 inline-flex items-center gap-1.5 font-rd text-sm font-semibold transition-opacity hover:opacity-80"
         style={{ color: RED_ON_DARK }}
       >
-        Get every giveaway in your inbox →
+        Get the week&rsquo;s giveaways in your inbox →
       </EmailCtaLink>
     </div>
   );
