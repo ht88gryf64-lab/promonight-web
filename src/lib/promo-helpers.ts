@@ -335,24 +335,6 @@ export interface FAQItem {
   brandPromo?: true;
 }
 
-// The gate-time answer, from the venue record or not at all.
-//
-// What stood here was a switch on league returning a hardcoded cadence ("90
-// minutes before first pitch", "about two hours before kickoff") built from the
-// venue and team names, and its call site was commented "always shown". It never
-// read venue.gatesOpen. So on all 169 team pages this answered a question about
-// a specific building with a number nobody had checked against that building,
-// and on the 84 pages where a real stored time existed it published the invented
-// one instead. It ships inside FAQPage structured data, which makes it a
-// machine-readable claim rather than loose prose.
-//
-// A league cadence is not a fact about a stadium. If the record does not carry
-// the time, the honest page does not raise the question.
-function gateTimesAnswer(gatesOpen: string | undefined): string | null {
-  const stored = gatesOpen?.trim();
-  return stored ? stored : null;
-}
-
 /** The slice of CoverageCounts the team FAQs state. */
 export type TeamFaqCoverage = Pick<CoverageCounts, 'teamCount' | 'leagueList' | 'appLeagueList'>;
 
@@ -460,14 +442,14 @@ export function generateTeamFAQs(
       : `PromoNight tracks giveaways, theme nights, food deals and promotions for the ${fullName} and ${coverage.teamCount - 1} other teams across ${coverage.leagueList}, free on this site. Star the ${fullName} here to get one weekly email with what is coming up. The PromoNight app covers ${coverage.appLeagueList} and does not carry ${team.league} yet.`,
   });
 
-  // 5b. Travel — gate times. Gated on the stored value: no record, no question.
-  const gateAnswer = gateTimesAnswer(venue?.gatesOpen);
-  if (gateAnswer) {
-    faqs.push({
-      question: `What time do gates open at ${venueName}?`,
-      answer: gateAnswer,
-    });
-  }
+  // 5b. Travel — gate times: REMOVED, not gated.
+  //
+  // This slot published a hardcoded league cadence until 2026-08-29, then the
+  // stored venues.gatesOpen verbatim. Verifying the stored field against
+  // operators found 5 of 17 claims outright false and 3 more unverifiable, so
+  // publishing it verbatim inside FAQPage structured data was not a fix, it was
+  // a better-sourced version of the same wrong answer. The honest page does not
+  // raise a question it cannot answer. See venue-corpus-silence.ts.
 
   // 5c. Travel — directions / parking (always shown)
   {

@@ -32,6 +32,7 @@ import {
 } from './nfl-week';
 import { dedupePromos, isUpcomingPromo, isVisiblePromo, resolveIcon } from './promo-helpers';
 import { getVenueOverride } from './venue-overrides';
+import { bagPolicyUrlFor, nearbySilenced } from '@/lib/venue-corpus-silence';
 import { VENUE_RESOLUTION_MAP } from './venue-resolution-map';
 import { VENUE_LOCATIONS_STATIC } from './venue-locations';
 
@@ -441,15 +442,18 @@ export async function getVenueForTeam(teamId: string): Promise<Venue | null> {
     lng: data.lng,
     hasAmenityData: data.hasAmenityData,
     amenityCount: data.amenityCount,
-    gatesOpen: data.gatesOpen,
     league: data.league,
     teamId: data.teamId,
     // Firestore takes precedence; overrides fill in when Firestore is empty.
+    // gatesOpen and publicTransit are not mapped at all: see venue-corpus-silence.
     parkingInfo: data.parkingInfo ?? override?.parkingInfo,
-    publicTransit: data.publicTransit ?? override?.publicTransit,
-    bagPolicyUrl: data.bagPolicyUrl ?? override?.bagPolicyUrl,
+    // A pointer, so it is repointed rather than silenced, and the repoint has to
+    // WIN over the stored value (`stored ?? override` can only fill a gap).
+    bagPolicyUrl: bagPolicyUrlFor(slug!, data.bagPolicyUrl ?? override?.bagPolicyUrl),
     accessibility: data.accessibility ?? override?.accessibility,
-    nearby: data.nearby ?? override?.nearby,
+    // Withheld where the sentence counts stops from a station the same record
+    // invented; a fabricated primitive propagates into what was derived from it.
+    nearby: nearbySilenced(slug!) ? undefined : (data.nearby ?? override?.nearby),
   };
 }
 

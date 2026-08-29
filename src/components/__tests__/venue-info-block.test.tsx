@@ -1,57 +1,58 @@
-// VenueInfoBlock renders the `venues` corpus on all 169 pro team pages. It had
-// no gate of any kind, and worse: when gatesOpen was absent it MANUFACTURED a
-// league-generic sentence and labelled it "Gate times" in the same row style as
-// a sourced value, on 85 of 169 pages, and on 69 of those it was the only row.
-import { test, mock } from 'node:test';
+/* The team-page venue card, after the `venues` corpus was silenced.
+ *
+ * The card has been wrong twice in the same place. It first substituted a
+ * hardcoded league sentence for an absent gatesOpen and labelled it "Gate
+ * times" like a sourced value. That was removed on 2026-08-29. Verifying the
+ * stored fields against operators then found publicTransit defective in 16 of
+ * 20 docs and 5 of 17 gate claims false, so both fields are now silenced at the
+ * render layer. Firestore is untouched.
+ *
+ * These tests assert the DECISION (what claim reaches a reader), not the
+ * markup. */
+import { test } from 'node:test';
 import assert from 'node:assert';
 import { renderToStaticMarkup } from 'react-dom/server';
-
-mock.module('server-only', { namedExports: {} });
-
-import type { Venue } from '@/lib/types';
 import { VenueInfoBlock } from '../venue-info-block';
+import type { Venue } from '@/lib/types';
 
-const venue = (over: Partial<Venue> = {}): Venue => ({
-  id: 'x-stadium', name: 'X Stadium', team: 'Town X', teamId: 'x-nfl', league: 'NFL', sport: 'NFL',
-  address: '1 Way', lat: 1, lng: 2, primaryColor: '#000', accentColor: '#111', sportIcon: '🏈',
-  hasAmenityData: false, amenityCount: 0,
-  ...over,
-} as Venue);
+const base: Venue = {
+  slug: 'test-park', name: 'Test Park', address: '1 Test Way', team: 'Testville Niners',
+  sport: 'Baseball', sportIcon: '', primaryColor: '#000', accentColor: '#fff',
+  lat: 0, lng: 0, hasAmenityData: false, amenityCount: 0, league: 'MLB', teamId: 't',
+};
+const render = (v: Venue, variant: 'dark' | 'light' = 'dark') =>
+  renderToStaticMarkup(<VenueInfoBlock venue={v} league="MLB" variant={variant} />);
 
-test('an absent gatesOpen renders NO gate-times row, on either variant', () => {
+test('no gate-times row can be rendered, on either variant', () => {
   for (const variant of ['dark', 'light'] as const) {
-    const html = renderToStaticMarkup(<VenueInfoBlock venue={venue()} league="NFL" variant={variant} />);
-    assert.ok(!/Gate times/.test(html), `${variant}: a manufactured gate-time row rendered for a venue with no gatesOpen`);
-    assert.ok(!/typically open/.test(html), `${variant}: the fabricated league sentence reached the DOM`);
+    const html = render({ ...base, parkingInfo: 'Lots open early.' }, variant);
+    assert.ok(!/Gate times/.test(html), `${variant}: a gate-times row rendered`);
+    assert.ok(!/typically open/i.test(html), `${variant}: a manufactured cadence rendered`);
   }
 });
 
-test('a real gatesOpen still renders, verbatim', () => {
-  const html = renderToStaticMarkup(<VenueInfoBlock venue={venue({ gatesOpen: 'Gates open 2 hours before kickoff.' })} league="NFL" />);
-  assert.ok(/Gate times/.test(html));
-  assert.ok(/Gates open 2 hours before kickoff\./.test(html));
-});
-
-test('a venue with nothing to say renders no card at all, not an empty one', () => {
+test('no transit row can be rendered, on either variant', () => {
   for (const variant of ['dark', 'light'] as const) {
-    const html = renderToStaticMarkup(<VenueInfoBlock venue={venue()} league="NFL" variant={variant} />);
-    assert.equal(html, '', `${variant}: an empty labelled card is worse than no card`);
+    const html = render({ ...base, parkingInfo: 'Lots open early.' }, variant);
+    assert.ok(!/>Transit</.test(html), `${variant}: a transit row rendered`);
   }
 });
 
-test('a suppressed building publishes no transit sentence here either', () => {
-  // venueHubs silences these buildings' transit because an operator confirmed
-  // the named service does not run. The same claim must not survive on the
-  // team page just because it lives in a different collection.
-  const html = renderToStaticMarkup(
-    <VenueInfoBlock venue={venue({ slug: 'nationals-park', publicTransit: 'Take VTA light rail to the stadium.' })} league="NFL" />,
-  );
-  assert.ok(!/VTA/.test(html), 'nationals-park transit is suppressed on the hub page and must be suppressed here');
+test('the rows that survive still render, so this silenced fields and not the card', () => {
+  const html = render({ ...base, parkingInfo: 'Lots open two hours early.', accessibility: 'Ramps at Gate A.', nearby: 'Bars on Main.' });
+  assert.ok(/Parking/.test(html) && /Lots open two hours early/.test(html), 'parking must survive');
+  assert.ok(/Accessibility/.test(html) && /Ramps at Gate A/.test(html), 'accessibility must survive');
+  assert.ok(/Nearby/.test(html) && /Bars on Main/.test(html), 'nearby must survive');
 });
 
-test('a building on no list still publishes its transit', () => {
-  const html = renderToStaticMarkup(
-    <VenueInfoBlock venue={venue({ slug: 'target-field', publicTransit: 'METRO Blue Line stops at the ballpark.' })} league="MLB" />,
-  );
-  assert.ok(/METRO Blue Line/.test(html), 'the check must discriminate');
+test('a bag pointer still renders, because a link asserts nothing', () => {
+  const html = render({ ...base, bagPolicyUrl: 'https://example.com/bag-policy' });
+  assert.ok(/Bag policy/.test(html), 'the bag row must survive the silencing');
+  assert.ok(/https:\/\/example\.com\/bag-policy/.test(html), 'the href must reach the DOM');
+});
+
+test('a venue with nothing left to say renders no card at all, not an empty one', () => {
+  for (const variant of ['dark', 'light'] as const) {
+    assert.equal(render(base, variant), '', `${variant}: an empty labelled card rendered`);
+  }
 });
