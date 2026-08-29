@@ -407,6 +407,7 @@ export async function getVenueForTeam(teamId: string): Promise<Venue | null> {
     .get();
 
   let data = snapshot.empty ? undefined : snapshot.docs[0].data();
+  let slug = snapshot.empty ? undefined : snapshot.docs[0].id;
 
   // Fallback for the ~38 in-season (NBA/NHL/WNBA/MLS) teams the team-name
   // query can't reach: co-tenants sharing one building doc, and clubs whose
@@ -417,7 +418,10 @@ export async function getVenueForTeam(teamId: string): Promise<Venue | null> {
     const mappedVenueSlug = VENUE_RESOLUTION_MAP[teamId];
     if (mappedVenueSlug) {
       const mapped = await db.collection('venues').doc(mappedVenueSlug).get();
-      if (mapped.exists) data = mapped.data();
+      if (mapped.exists) {
+        data = mapped.data();
+        slug = mapped.id;
+      }
     }
   }
 
@@ -425,6 +429,7 @@ export async function getVenueForTeam(teamId: string): Promise<Venue | null> {
 
   const override = getVenueOverride(teamId);
   return {
+    slug: slug!,
     name: data.name,
     address: data.address,
     team: data.team,

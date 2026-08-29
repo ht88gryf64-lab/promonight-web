@@ -1,0 +1,9 @@
+{
+  // Next builds with "jsx": "preserve" and lets its own compiler apply the
+  // automatic runtime, so component files import no React. Under tsx that
+  // leaves bare JSX, and a .test.tsx that renders a component fails with
+  // "React is not defined". This overlay applies the automatic runtime for the
+  // test run only; nothing about the build changes.
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "jsx": "react-jsx" }
+}

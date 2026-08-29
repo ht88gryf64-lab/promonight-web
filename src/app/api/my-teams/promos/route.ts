@@ -95,6 +95,7 @@ async function fetchVenueForTeam(
     const data = snapshot.docs[0].data();
     const override = getVenueOverride(teamSlug);
     return {
+      slug: snapshot.docs[0].id,
       name: data.name,
       address: data.address,
       team: data.team,
