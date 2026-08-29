@@ -283,26 +283,22 @@ export interface FAQItem {
   brandPromo?: true;
 }
 
-// League-specific generic gate-time answer. Teams vary by venue, but the
-// league cadence is consistent enough to cite; we point readers to the official
-// team site for game-day specifics.
-function gateTimesAnswer(league: string, venueName: string, fullName: string): string | null {
-  switch (league) {
-    case 'MLB':
-      return `Gates at ${venueName} typically open 90 minutes before first pitch on most ${fullName} home dates, with earlier openings (often two hours) on marquee giveaway nights so the first 15,000 – 25,000 fans can claim the item. Check the official team site for the specific day's open time.`;
-    case 'NBA':
-      return `Doors at ${venueName} typically open 90 minutes before tipoff for ${fullName} home games, sometimes earlier on major giveaway or theme nights. The official team site publishes the confirmed open time with each game's day-of details.`;
-    case 'NFL':
-      return `${venueName} gates typically open about two hours before kickoff for ${fullName} home games, with some gates (club / premium) opening earlier. Individual game-day gate times are posted on the official team site. Tailgate and parking lots generally open several hours earlier.`;
-    case 'NHL':
-      return `Gates at ${venueName} typically open 75 – 90 minutes before puck drop for ${fullName} home games, with earlier openings on playoff nights and giveaway games. Confirm the exact open time for your game on the official team site.`;
-    case 'MLS':
-      return `Gates at ${venueName} typically open 60 – 90 minutes before kickoff for ${fullName} home matches, and earlier on supporter-group match days. The official team site confirms each match's open time.`;
-    case 'WNBA':
-      return `Doors at ${venueName} typically open 90 minutes before tipoff for ${fullName} home games. The official team site posts confirmed open times for each game's day-of schedule.`;
-    default:
-      return null;
-  }
+// The gate-time answer, from the venue record or not at all.
+//
+// What stood here was a switch on league returning a hardcoded cadence ("90
+// minutes before first pitch", "about two hours before kickoff") built from the
+// venue and team names, and its call site was commented "always shown". It never
+// read venue.gatesOpen. So on all 169 team pages this answered a question about
+// a specific building with a number nobody had checked against that building,
+// and on the 84 pages where a real stored time existed it published the invented
+// one instead. It ships inside FAQPage structured data, which makes it a
+// machine-readable claim rather than loose prose.
+//
+// A league cadence is not a fact about a stadium. If the record does not carry
+// the time, the honest page does not raise the question.
+function gateTimesAnswer(gatesOpen: string | undefined): string | null {
+  const stored = gatesOpen?.trim();
+  return stored ? stored : null;
 }
 
 /** The slice of CoverageCounts the team FAQs state. */
@@ -412,8 +408,8 @@ export function generateTeamFAQs(
       : `PromoNight tracks every giveaway, theme night, food deal, and promotion for the ${fullName} and ${coverage.teamCount - 1} other teams across ${coverage.leagueList}, free on this site. Star the ${fullName} here to get one weekly email with what is coming up. The PromoNight app covers ${coverage.appLeagueList} and does not carry ${team.league} yet.`,
   });
 
-  // 5b. Travel — gate times (always shown; league-specific generic answer)
-  const gateAnswer = gateTimesAnswer(team.league, venueName, fullName);
+  // 5b. Travel — gate times. Gated on the stored value: no record, no question.
+  const gateAnswer = gateTimesAnswer(venue?.gatesOpen);
   if (gateAnswer) {
     faqs.push({
       question: `What time do gates open at ${venueName}?`,
