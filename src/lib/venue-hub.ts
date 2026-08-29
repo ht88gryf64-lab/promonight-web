@@ -211,7 +211,7 @@ export const getVenueHub = cache(async (slug: string): Promise<VenueHub | null> 
       : [],
     publicTransit: d.publicTransit ?? null,
     rideshareDropoff: d.rideshareDropoff ?? null,
-    accessibility: d.accessibility ?? null,
+    accessibility: redactClause(slug, 'accessibility', d.accessibility),
     bagMaxDimensions: d.bagMaxDimensions ?? null,
     clearBagRequired: typeof d.clearBagRequired === 'boolean' ? d.clearBagRequired : null,
     bagsProhibited: typeof d.bagsProhibited === 'boolean' ? d.bagsProhibited : null,

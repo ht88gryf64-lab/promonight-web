@@ -117,7 +117,11 @@ test('every redaction records a clause, a field and its evidence', () => {
   assert.deepEqual(
     CLAUSE_REDACTIONS.map((r) => `${r.slug}.${r.field}`),
     ['madison-square-garden.parkingInfo', 'dignity-health-sports-park.parkingLots',
-      'milan-puskar-stadium.parkingLots', 'kidd-brewer-stadium.tailgating.timeWindow'],
+      'milan-puskar-stadium.parkingLots', 'kidd-brewer-stadium.tailgating.timeWindow',
+      // Cross-class: a claim filed under the wrong field, which is how each
+      // survived a gate scoped to the field the claim belongs to.
+      'mercedes-benz-stadium.parkingInfo', 'pnc-park.accessibility',
+      'guaranteed-rate-field.accessibility'],
   );
   for (const r of CLAUSE_REDACTIONS) {
     assert.ok(r.clause.length > 10, `${r.slug}: a clause short enough to match by accident is not safe`);
@@ -156,4 +160,24 @@ test('a sub-field exclusion is honoured by EVERY site that reads the field', () 
   for (const [file, re] of sites) {
     assert.ok(re.test(read(file)), `${file}: missing sub-field gate ${re}`);
   }
+});
+
+
+test('a mid-sentence clause is replaced, not deleted, so the field stays grammatical', () => {
+  // Pure deletion would leave "...accessible parking in all lots" with no stop.
+  // A mangled sentence reads as a bug and invites someone to "fix" it by
+  // restoring the clause, which is the opposite of what the entry is for.
+  const stored = 'PNC Park is fully accessible with wheelchair and companion seating throughout, accessible parking in all lots, and the T light rail drops off right at the Home Plate Gate.';
+  const out = redactClause('pnc-park', 'accessibility', stored);
+  assert.equal(out, 'PNC Park is fully accessible with wheelchair and companion seating throughout, accessible parking in all lots.');
+  assert.ok(!/light rail/.test(out!), 'the transit assertion survived');
+});
+
+test('accessibility is redacted at all three mapping sites, not just the venues pair', () => {
+  // guaranteed-rate-field is a venueHubs doc, so the venues mapping sites alone
+  // would have left it publishing. Every corpus that stores the field needs the
+  // gate, which is the whole lesson of this pass.
+  assert.ok(/redactClause\([^)]*'accessibility'/.test(read('src/lib/data.ts')), 'data.ts');
+  assert.ok(/redactClause\([^)]*'accessibility'/.test(read('src/app/api/my-teams/promos/route.ts')), 'my-teams route');
+  assert.ok(/redactClause\(slug, 'accessibility'/.test(read('src/lib/venue-hub.ts')), 'venue-hub mapper');
 });

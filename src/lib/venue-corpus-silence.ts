@@ -167,6 +167,13 @@ export interface ClauseRedaction {
   field: string;
   /** Exact substring to remove. Must match byte for byte or the field is withheld. */
   clause: string;
+  /**
+   * What to put in its place. Defaults to removal. Needed when the clause is
+   * joined mid-sentence and pure deletion would leave the field ungrammatical,
+   * which matters because a mangled sentence reads as a bug and invites someone
+   * to "fix" it by restoring the clause.
+   */
+  replacement?: string;
   reason: string;
 }
 
@@ -196,6 +203,28 @@ export const CLAUSE_REDACTIONS: ReadonlyArray<ClauseRedaction> = [
     clause: ' For the Nov. 6, 2025 game against Georgia Southern the lots opened at 4 p.m.',
     reason: 'A worked example from a game that has been played, frozen into guidance. The general rule and the value\'s own caveat that "tailgating times change with kickoff times as they are announced" are the durable part.',
   },
+  // ── Added 2026-08-29, cross-class pass (audit/venues-cross-class-claims.md).
+  // Each of these is a claim filed under the wrong field, which is how it
+  // survived a gate scoped to the field the claim actually belongs to.
+  {
+    slug: 'mercedes-benz-stadium',
+    field: 'parkingInfo',
+    clause: ' MARTA is the recommended approach for most fans.',
+    reason: 'A transit recommendation inside the parking field, on a doc whose publicTransit is ALREADY silenced in this corpus for putting Vine City and GWCC/CNN Center on MARTA\'s north-south pair when both are on the east-west lines. We withdrew its MARTA routing as wrong and the parking field went on recommending MARTA. The parking guidance in the rest of the value is unaffected.',
+  },
+  {
+    slug: 'pnc-park',
+    field: 'accessibility',
+    clause: ', and the T light rail drops off right at the Home Plate Gate.',
+    replacement: '.',
+    reason: 'A routing and adjacency assertion inside an accessibility field, unverified against Pittsburgh Regional Transit. Note this project has already found the "T" branding unbacked on PRT\'s own pages, which publish "light rail" and name the Red, Blue and Silver lines. Joined mid-sentence, so it is replaced with a full stop rather than deleted.',
+  },
+  {
+    slug: 'guaranteed-rate-field',
+    field: 'accessibility',
+    clause: ' The CTA Red Line Sox-35th station is wheelchair accessible; arrangements can be made in advance at (312) 674-5225.',
+    reason: 'Asserts a station name, its line, an accessibility fact about it and a phone number, none of it verified against the CTA. Genuinely useful if true, which is exactly why publishing it unverified is worse than publishing nothing. The ADA parking, seating, elevator and escort detail in the rest of the value is untouched.',
+  },
 ];
 
 const REDACTIONS = new Map(CLAUSE_REDACTIONS.map((r) => [`${r.slug}\u0000${r.field}`, r]));
@@ -214,6 +243,6 @@ export function redactClause(slug: string, field: string, stored: string | null 
   if (!r) return text;
   if (text === null) return null;
   if (!text.includes(r.clause)) return null;
-  const out = text.replace(r.clause, '').replace(/\s{2,}/g, ' ').trim();
+  const out = text.replace(r.clause, r.replacement ?? '').replace(/\s{2,}/g, ' ').trim();
   return out.length > 0 ? out : null;
 }
