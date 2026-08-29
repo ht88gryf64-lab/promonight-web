@@ -1,4 +1,5 @@
 import { redactClause } from '@/lib/venue-corpus-silence';
+import { publishedView } from '@/lib/venue-published-view';
 import 'server-only';
 import { cache } from 'react';
 import { db } from './firebase';
@@ -116,6 +117,15 @@ export interface VenueHub {
    *  doc has none. The venue page does not read it; the condensed logistics
    *  block on the CFB school page renders a field only when its key is here. */
   sources: Record<string, string>;
+  /**
+   * The pre-gate object, for the ONE allowlisted consumer.
+   *
+   * Present only on a hub that has been through publishedView. Reading it is
+   * publishing an ungated value, so every caller must appear in
+   * UNGATED_CONSUMERS (src/lib/venue-published-view.ts) with a written ruling
+   * and a test that locks it. Grep `\.ungated` to enumerate them.
+   */
+  ungated?: VenueHub;
 }
 
 /** Read a building doc + its tenant overlays. Null when the doc is absent. */
@@ -157,25 +167,16 @@ function stringMap(v: unknown): Record<string, string> {
   return out;
 }
 
-export const getVenueHub = cache(async (slug: string): Promise<VenueHub | null> => {
-  const doc = await db.collection('venueHubs').doc(slug).get();
-  if (!doc.exists) return null;
-  const d = doc.data() ?? {};
-  const tSnap = await db.collection('venueHubs').doc(slug).collection('tenants').get();
-  const tenantOverlays: VenueHubTenantOverlay[] = tSnap.docs.map((td) => {
-    const t = td.data();
-    return {
-      teamId: t.teamId,
-      league: t.league,
-      displayName: t.displayName ?? t.teamId,
-      gatesOpen: t.gatesOpen ?? null,
-      gateVariance: t.gateVariance ?? null,
-      tailgateWindow: t.tailgateWindow ?? null,
-      bagPolicyException: t.bagPolicyException ?? null,
-      verified: t.verified === true,
-      sources: stringMap(t.sources),
-    };
-  });
+/**
+ * The pure document-to-VenueHub mapping, extracted so it can be exercised
+ * without Firestore and so an audit measures the SAME code the site renders
+ * rather than a replica of it. getVenueHub is now fetch + this + publishedView.
+ */
+export function toVenueHub(
+  slug: string,
+  d: FirebaseFirestore.DocumentData,
+  tenantOverlays: VenueHubTenantOverlay[],
+): VenueHub {
   return {
     // Sub-ID slug: doc.id (the `slug` argument that fetched this doc) is the
     // routing-truth key — the URL, the /venues index and the sitemap all key on
@@ -234,6 +235,30 @@ export const getVenueHub = cache(async (slug: string): Promise<VenueHub | null> 
     tenantOverlays,
     sources: stringMap(d.sources),
   };
+}
+
+export const getVenueHub = cache(async (slug: string): Promise<VenueHub | null> => {
+  const doc = await db.collection('venueHubs').doc(slug).get();
+  if (!doc.exists) return null;
+  const d = doc.data() ?? {};
+  const tSnap = await db.collection('venueHubs').doc(slug).collection('tenants').get();
+  const tenantOverlays: VenueHubTenantOverlay[] = tSnap.docs.map((td) => {
+    const t = td.data();
+    return {
+      teamId: t.teamId,
+      league: t.league,
+      displayName: t.displayName ?? t.teamId,
+      gatesOpen: t.gatesOpen ?? null,
+      gateVariance: t.gateVariance ?? null,
+      tailgateWindow: t.tailgateWindow ?? null,
+      bagPolicyException: t.bagPolicyException ?? null,
+      verified: t.verified === true,
+      sources: stringMap(t.sources),
+    };
+  });
+  // Fetch, map, then GATE. The view is applied here and nowhere else, so a
+  // consumer cannot forget it: see src/lib/venue-published-view.ts.
+  return publishedView(toVenueHub(slug, d, tenantOverlays));
 });
 
 // ── display helpers ────────────────────────────────────────────────────────
