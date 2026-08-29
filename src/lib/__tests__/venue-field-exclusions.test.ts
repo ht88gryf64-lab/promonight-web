@@ -10,14 +10,22 @@ import {
   FIELD_CONFLICTS, FIELD_HOLDS, fieldExcluded, subFieldExcluded, hasProvenance, hasSubProvenance,
 } from '../venue-field-exclusions';
 
-test('the conflicts list is the four entries, each with a reason and no em dash', () => {
+test('the conflicts list is the nine entries, each with a reason and no em dash', () => {
   assert.deepEqual(
     FIELD_CONFLICTS.map((c) => [c.hub, c.field, c.sub ?? null]),
     [
+      // Contradicted by a source (2026-08-27 sweep).
       ['brooks-stadium', 'tailgating', null],
       ['david-booth-kansas-memorial-stadium', 'tailgating', null],
       ['hard-rock-stadium', 'tailgating', null],
       ['yulman-stadium', 'tailgating', null],
+      // Expired rather than contradicted (2026-08-29). Every cited page still
+      // loads, which is why a source-URL check could never have caught these.
+      ['allegacy-federal-credit-union-stadium', 'parking', 'parkingLots'],
+      ['chase-center', 'parking', 'parkingLots'],
+      ['albertsons-stadium', 'tailgating', null],
+      ['providence-park', 'bag', 'notes'],
+      ['sanford-stadium', 'accessibility', null],
     ],
   );
   assert.deepEqual(FIELD_HOLDS.map((h) => h.hub), []);

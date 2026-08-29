@@ -53,13 +53,46 @@ export const FIELD_CONFLICTS: ReadonlyArray<FieldExclusion> = [
   // Lifting an entry when its data is corrected is the documented close, and it
   // is the step that got missed: the test covering it asserted the mechanism
   // against a fixture still holding the dead URL, so it stayed green.
+  // secu-stadium transit was held here from 2026-08-27 until the Pass 2 write
+  // corrected publicTransit.notes to the DOTS window and re-sourced it.
+  // ── Added 2026-08-29, expired-claims pass (audit/venues-dated-claims.md).
+  // Not contradicted by a source: these name a season or cite a guide that has
+  // passed, while reading in the present tense on a page loaded today. Same
+  // failure as a stale fact, reached by the clock rather than by a rename, and
+  // it survives a source-URL check because every cited page still loads.
+  {
+    hub: 'allegacy-federal-credit-union-stadium',
+    field: 'parking',
+    sub: 'parkingLots',
+    reason: 'Wake Forest: the entire stored lot value is "Not available for the 2025 season". A lot listing whose only content is a past season\'s unavailability tells a 2026 fan nothing true, and there is no 2026 replacement on hand.',
+  },
+  {
+    hub: 'chase-center',
+    field: 'parking',
+    sub: 'parkingLots',
+    reason: 'Chase Center: two lots read "Purchasable on site per Mar 2024 event-day guide" and a third is "Listed as currently closed" on the authority of that same 2024 guide, with an address taken from a January 2022 guide. A lot described as currently closed on two-year-old evidence is the sharpest instance in the set.',
+  },
+  {
+    hub: 'albertsons-stadium',
+    field: 'tailgating',
+    reason: 'Boise State: sourced to a 2023 game-day guide, describing a named sponsor fan zone and its opening time. The hub is already transit-suppressed, but that entry is publicTransit-scoped and does not reach tailgating.',
+  },
+  {
+    hub: 'providence-park',
+    field: 'bag',
+    sub: 'notes',
+    reason: 'Providence Park: the stored bag rules come from a 2016 club page. Bag policies are among the most frequently revised venue rules, and a ten-year-old one should not be published as current.',
+  },
+  {
+    hub: 'sanford-stadium',
+    field: 'accessibility',
+    reason: 'Georgia: 2021 source, and it routes disabled patrons to specific box offices and a phone number with the instruction that accessible seating "is no longer exchanged at the gates". Wrong operational detail carries a sharper cost here than in most fields.',
+  },
 ];
 
 /** HOLDS. Not conflicts: a ruling settled which official source governs, so the
  *  stored text is stale rather than disputed, and a correction is queued. */
 export const FIELD_HOLDS: ReadonlyArray<FieldExclusion> = [
-  // secu-stadium transit was held here from 2026-08-27 until the Pass 2 write
-  // corrected publicTransit.notes to the DOTS window and re-sourced it.
 ];
 
 const ALL: ReadonlyArray<FieldExclusion> = [...FIELD_CONFLICTS, ...FIELD_HOLDS];

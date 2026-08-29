@@ -144,3 +144,76 @@ export const BAG_URL_REPOINTS: Readonly<Record<string, BagRepoint>> = {
 export function bagPolicyUrlFor(venueSlug: string, stored: string | undefined): string | undefined {
   return BAG_URL_REPOINTS[venueSlug]?.url ?? stored;
 }
+
+
+// ── Cross-class claims, and clauses that expired ────────────────────────────
+//
+// FIELD-SCOPED SILENCING GATES A FIELD, NOT A CLAIM CLASS. Madison Square
+// Garden's parkingInfo ended "Transit is the better call here, since the arena
+// sits directly above Penn Station": a transit assertion that survived the
+// transit silencing because it lives in the parking field. A sweep of both
+// corpora for that shape is in audit/venues-cross-class-claims.md.
+//
+// A redaction removes ONE clause and leaves the rest of the field standing. It
+// is deliberately fail-safe: if the exact clause is no longer present, the
+// stored text has drifted and we no longer know what we are editing, so the
+// WHOLE field is withheld rather than republished. Silence on drift, never
+// publish on drift.
+
+export interface ClauseRedaction {
+  /** `venues` or `venueHubs` doc id. */
+  slug: string;
+  /** The field the clause sits in. */
+  field: string;
+  /** Exact substring to remove. Must match byte for byte or the field is withheld. */
+  clause: string;
+  reason: string;
+}
+
+export const CLAUSE_REDACTIONS: ReadonlyArray<ClauseRedaction> = [
+  {
+    slug: 'madison-square-garden',
+    field: 'parkingInfo',
+    clause: ' Transit is the better call here, since the arena sits directly above Penn Station.',
+    reason: 'A transit routing assertion inside the parking field, which is how it survived the corpus-wide transit silencing. The claim happens to be true, but it is the class of claim this site has withdrawn from the venues corpus, and leaving it makes the corpus look selectively trustworthy. The parking advice in the rest of the sentence stands on its own.',
+  },
+  {
+    slug: 'dignity-health-sports-park',
+    field: 'parkingLots',
+    clause: '; passes were sold out for the 2025 season',
+    reason: 'A sold-out notice for a season that has ended, read in the present tense. The pass price, the game count, the AXS purchase route and the matchday walk-up option are all unaffected by its removal.',
+  },
+  {
+    slug: 'milan-puskar-stadium',
+    field: 'parkingLots',
+    clause: ' (sold out for the 2025 Utah game)',
+    reason: 'A sold-out notice for a game that has been played. The lot, its location, single-game availability and the bus/RV prohibition all stand without it.',
+  },
+  {
+    slug: 'kidd-brewer-stadium',
+    // Dotted, matching the sub-key convention the provenance maps already use.
+    field: 'tailgating.timeWindow',
+    clause: ' For the Nov. 6, 2025 game against Georgia Southern the lots opened at 4 p.m.',
+    reason: 'A worked example from a game that has been played, frozen into guidance. The general rule and the value\'s own caveat that "tailgating times change with kickoff times as they are announced" are the durable part.',
+  },
+];
+
+const REDACTIONS = new Map(CLAUSE_REDACTIONS.map((r) => [`${r.slug}\u0000${r.field}`, r]));
+
+/**
+ * The text to publish for this field, or null when it must be withheld.
+ *
+ * Returns the stored text unchanged when no redaction applies. When one does
+ * and the clause is present, returns the text without it. When one does and the
+ * clause is ABSENT, returns null: the stored value drifted out from under an
+ * edit we can no longer verify, and withholding is the safe direction.
+ */
+export function redactClause(slug: string, field: string, stored: string | null | undefined): string | null {
+  const text = typeof stored === 'string' ? stored : null;
+  const r = REDACTIONS.get(`${slug}\u0000${field}`);
+  if (!r) return text;
+  if (text === null) return null;
+  if (!text.includes(r.clause)) return null;
+  const out = text.replace(r.clause, '').replace(/\s{2,}/g, ' ').trim();
+  return out.length > 0 ? out : null;
+}

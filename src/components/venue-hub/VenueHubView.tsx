@@ -3,7 +3,7 @@ import Link from 'next/link';
 import type { Team } from '@/lib/types';
 import type { HubFaqItem } from '@/components/hub/HubFaq';
 import { transitSuppressed } from '@/lib/venue-transit-suppression';
-import { fieldExcluded, hasProvenance, isReachableUrl } from '@/lib/venue-field-exclusions';
+import { subFieldExcluded, fieldExcluded, hasProvenance, isReachableUrl } from '@/lib/venue-field-exclusions';
 import { HubFaq } from '@/components/hub/HubFaq';
 import { TicketmasterCTA } from '@/components/affiliates/TicketmasterCTA';
 import { FanaticsCTA } from '@/components/affiliates/FanaticsCTA';
@@ -112,7 +112,8 @@ export function VenueHubView({
     ((hub.bagMaxDimensions !== null && hasProvenance(hub.sources, 'bagMaxDimensions')) ||
       (hub.clearBagRequired !== null && hasProvenance(hub.sources, 'clearBagRequired')) ||
       (hub.bagsProhibited === true && hasProvenance(hub.sources, 'bagsProhibited')) ||
-      (!!hub.bagPolicyNotes && hasProvenance(hub.sources, 'bagPolicyNotes')));
+      (!!hub.bagPolicyNotes && hasProvenance(hub.sources, 'bagPolicyNotes')
+        && !subFieldExcluded(hub.slug, 'bag', 'notes')));
   // A building with only a policy URL has no FACT to put in the capsule, but it
   // can still answer "has this venue published a bag policy" (the fifth case in
   // bagFaqAnswers) and it can still send the reader to the venue's own page. So
@@ -147,7 +148,11 @@ export function VenueHubView({
       bagMaxDimensions: hasProvenance(hub.sources, 'bagMaxDimensions') ? hub.bagMaxDimensions : null,
       clearBagRequired: hasProvenance(hub.sources, 'clearBagRequired') ? hub.clearBagRequired : null,
       bagsProhibited: hasProvenance(hub.sources, 'bagsProhibited') ? hub.bagsProhibited : null,
-      bagPolicyNotes: hasProvenance(hub.sources, 'bagPolicyNotes') ? hub.bagPolicyNotes : null,
+      // Fourth site reading this field, and the last one found. The bag FAQ
+      // answer is assembled from provenanced facts, so it needs the sub-field
+      // exclusion too or an excluded note simply moves into the FAQ.
+      bagPolicyNotes: hasProvenance(hub.sources, 'bagPolicyNotes')
+        && !subFieldExcluded(hub.slug, 'bag', 'notes') ? hub.bagPolicyNotes : null,
     };
     const bag = bagFaqAnswers(bagFacts, tenantExceptions);
     if (bag.size) faqs.push({ question: `What size bag can I bring into ${short}?`, answer: bag.size });
@@ -186,12 +191,17 @@ export function VenueHubView({
   // The parking FAQ NAMES lots, so it is a claim and needs the lots' own
   // provenance; hasParkingData below only decides whether to offer a booking
   // widget, which asserts nothing about the building, so it stays as it was.
+  // The sub-field test is load-bearing and was missing: this FAQ gated on the
+  // WHOLE-field exclusion only, so a hub whose lots were withheld from the
+  // parking card still published its lot names in an FAQ sentence. Found when
+  // chase-center's lots were excluded and its names kept rendering here.
+  const lotsUsable = hasProvenance(hub.sources, 'parkingLots')
+    && !subFieldExcluded(hub.slug, 'parking', 'parkingLots');
   const parkingFactsOk =
     verified && !fieldExcluded(hub.slug, 'parking') &&
-    ((hub.parkingLots.length > 0 && hasProvenance(hub.sources, 'parkingLots')) ||
-      isReachableUrl(hub.parkingLotMapUrl));
+    ((hub.parkingLots.length > 0 && lotsUsable) || isReachableUrl(hub.parkingLotMapUrl));
   if (parkingFactsOk) {
-    const lotNames = hasProvenance(hub.sources, 'parkingLots') ? hub.parkingLots.slice(0, 8).map((l) => l.name).join(', ') : '';
+    const lotNames = lotsUsable ? hub.parkingLots.slice(0, 8).map((l) => l.name).join(', ') : '';
     faqs.push({
       question: primaryTenant ? `Where do you park for a ${primaryTenant} game?` : `Where do you park at ${short}?`,
       answer: `${short} has on-site lots${lotNames ? ` including ${lotNames}` : ''}. Reserve a nearby spot in advance through SpotHero on this page.`,

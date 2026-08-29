@@ -1,3 +1,4 @@
+import { redactClause } from '@/lib/venue-corpus-silence';
 import 'server-only';
 import { cache } from 'react';
 import { db } from './firebase';
@@ -190,7 +191,15 @@ export const getVenueHub = cache(async (slug: string): Promise<VenueHub | null> 
     lng: typeof d.lng === 'number' ? d.lng : null,
     capacity: typeof d.capacity === 'number' ? d.capacity : null,
     tenants: Array.isArray(d.tenants) ? d.tenants : [],
-    parkingLots: Array.isArray(d.parkingLots) ? d.parkingLots : [],
+    // Clause redactions land HERE, at the one mapper every hub renderer reads,
+    // rather than at each render site where one could be missed. The index
+    // floor (readIndexFloorFields) deliberately keeps reading the raw doc, so
+    // an expired clause never changes whether a page is indexable.
+    parkingLots: (Array.isArray(d.parkingLots) ? d.parkingLots : []).map((lot: ParkingLot) =>
+      typeof lot?.notes === 'string'
+        ? { ...lot, notes: redactClause(slug, 'parkingLots', lot.notes) }
+        : lot,
+    ),
     parkingLotMapUrl: d.parkingLotMapUrl ?? null,
     officialParkingUrls: Array.isArray(d.officialParkingUrls)
       ? d.officialParkingUrls.filter(
@@ -208,7 +217,12 @@ export const getVenueHub = cache(async (slug: string): Promise<VenueHub | null> 
     bagsProhibited: typeof d.bagsProhibited === 'boolean' ? d.bagsProhibited : null,
     bagPolicyUrl: d.bagPolicyUrl ?? null,
     bagPolicyNotes: d.bagPolicyNotes ?? null,
-    tailgating: d.tailgating ?? null,
+    tailgating: d.tailgating
+      ? {
+          ...d.tailgating,
+          timeWindow: redactClause(slug, 'tailgating.timeWindow', d.tailgating.timeWindow),
+        }
+      : null,
     venueAccessRestrictions: d.venueAccessRestrictions ?? null,
     nearby: d.nearby ?? null,
     outsideFoodAllowed: typeof d.outsideFoodAllowed === 'boolean' ? d.outsideFoodAllowed : null,
