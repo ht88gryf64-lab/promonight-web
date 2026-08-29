@@ -1,22 +1,43 @@
 import { IconClock } from '@tabler/icons-react';
 import type { Venue } from '@/lib/types';
+import { venuesTransitSuppressed } from '@/lib/venue-transit-suppression';
 
-function gateTimesFallback(league: string): string {
-  switch (league) {
-    case 'MLB':
-      return 'Gates typically open 90 minutes before first pitch (earlier on giveaway nights).';
-    case 'NBA':
-    case 'WNBA':
-      return 'Doors typically open 90 minutes before tipoff.';
-    case 'NFL':
-      return 'Gates typically open about 2 hours before kickoff.';
-    case 'NHL':
-      return 'Gates typically open 75–90 minutes before puck drop.';
-    case 'MLS':
-      return 'Gates typically open 60–90 minutes before kickoff.';
-    default:
-      return 'Gates typically open 90 minutes before the game.';
+type Row = { label: string; content: React.ReactNode };
+
+/**
+ * The rows the record actually supports, in display order. Every row is gated
+ * on its own field: nothing here substitutes, defaults, or generates a value
+ * when the record is silent, so an empty return means the venue has nothing
+ * verified to say and the caller renders no card at all.
+ */
+function buildRows(
+  venue: Venue,
+  gate: string | null,
+  transit: string | null,
+  linkClass: string,
+): Row[] {
+  const rows: Row[] = [];
+  if (gate) rows.push({ label: 'Gate times', content: gate });
+  if (venue.parkingInfo) rows.push({ label: 'Parking', content: venue.parkingInfo });
+  if (transit) rows.push({ label: 'Transit', content: transit });
+  if (venue.accessibility) rows.push({ label: 'Accessibility', content: venue.accessibility });
+  if (venue.bagPolicyUrl) {
+    rows.push({
+      label: 'Bag policy',
+      content: (
+        <a
+          href={venue.bagPolicyUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`${linkClass} hover:underline`}
+        >
+          Official {venue.name} bag policy ↗
+        </a>
+      ),
+    });
   }
+  if (venue.nearby) rows.push({ label: 'Nearby', content: venue.nearby });
+  return rows;
 }
 
 export function VenueInfoBlock({
@@ -28,56 +49,31 @@ export function VenueInfoBlock({
   league: string;
   variant?: 'dark' | 'light';
 }) {
-  // Venue plan always has *something* to show — the generic league cadence
-  // covers gate times when the venue record doesn't. Render whenever we have
-  // at least a venue name.
-  const gate = venue.gatesOpen?.trim() || gateTimesFallback(league);
+  // A field the record does not carry renders NO row. What stood here was a
+  // hardcoded league sentence substituted for an absent gatesOpen and labelled
+  // "Gate times" in the same style as a sourced value, on 85 of 169 team pages,
+  // and on 69 of those it was the only row in the card. A generated cadence is
+  // not a fact about this building. Nothing replaces it: an absent field is
+  // absent. See audit/venues-collection-phase0.md.
+  const gate = venue.gatesOpen?.trim() || null;
+  // Transit withheld in THIS corpus is withheld here. Not the hub-scoped set:
+  // the two corpora store independent strings, and of the nine buildings on the
+  // suppression list that also publish transit here, only three carry the
+  // defect their reason describes. Blanket-transferring would withhold correct
+  // text on eight of eleven team pages.
+  const transit = venue.publicTransit && !venuesTransitSuppressed(venue.slug) ? venue.publicTransit : null;
 
-  const rows: { label: string; content: React.ReactNode }[] = [];
-  rows.push({ label: 'Gate times', content: gate });
-  if (venue.parkingInfo) rows.push({ label: 'Parking', content: venue.parkingInfo });
-  if (venue.publicTransit) rows.push({ label: 'Transit', content: venue.publicTransit });
-  if (venue.accessibility) rows.push({ label: 'Accessibility', content: venue.accessibility });
-  if (venue.bagPolicyUrl) {
-    rows.push({
-      label: 'Bag policy',
-      content: (
-        <a
-          href={venue.bagPolicyUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-accent-red hover:underline"
-        >
-          Official {venue.name} bag policy ↗
-        </a>
-      ),
-    });
-  }
-  if (venue.nearby) rows.push({ label: 'Nearby', content: venue.nearby });
+  // One row list, both variants. These were two identical copies differing only
+  // in the bag link's colour class, which is the same shape of defect as the
+  // duplicated Firestore-to-Venue mapping: a gate added to one copy and not the
+  // other renders differently depending on which surface you are standing on.
+  const rows = buildRows(venue, gate, transit, 'text-accent-red');
 
   if (variant === 'light') {
-    const lightRows: { label: string; content: React.ReactNode }[] = [];
-    lightRows.push({ label: 'Gate times', content: gate });
-    if (venue.parkingInfo) lightRows.push({ label: 'Parking', content: venue.parkingInfo });
-    if (venue.publicTransit) lightRows.push({ label: 'Transit', content: venue.publicTransit });
-    if (venue.accessibility) lightRows.push({ label: 'Accessibility', content: venue.accessibility });
-    if (venue.bagPolicyUrl) {
-      lightRows.push({
-        label: 'Bag policy',
-        content: (
-          <a
-            href={venue.bagPolicyUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-rd-red hover:underline"
-          >
-            Official {venue.name} bag policy ↗
-          </a>
-        ),
-      });
-    }
-    if (venue.nearby) lightRows.push({ label: 'Nearby', content: venue.nearby });
+    const lightRows = buildRows(venue, gate, transit, 'text-rd-red');
 
+    // A labelled box with nothing in it reads as a failure, not as restraint.
+    if (!lightRows.length) return null;
     return (
       <div>
         <div className="mb-2 flex items-center gap-1.5">
@@ -103,6 +99,7 @@ export function VenueInfoBlock({
     );
   }
 
+  if (!rows.length) return null;
   return (
     <section className="py-10 px-6 border-t border-border-subtle">
       <div className="max-w-3xl mx-auto">
