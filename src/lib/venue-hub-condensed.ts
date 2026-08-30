@@ -86,7 +86,19 @@ const sentence = (t: string): string => { const lead = stripEmDashes(leadSentenc
 
 /** Build the lines for one tenant of a hub. `tenantId` selects the overlay whose
  *  gates rule applies (a shared NFL/CFB building has one per tenant). */
-export function buildCondensedLogistics(hub: VenueHub, tenantId: string): CondensedLine[] {
+export function buildCondensedLogistics(gatedHub: VenueHub, tenantId: string): CondensedLine[] {
+  // THE ONE ALLOWLISTED READ OF THE UNGATED OBJECT (UNGATED_CONSUMERS in
+  // src/lib/venue-published-view.ts). This block deliberately waives the
+  // doc-level and tenant-level `verified` flags, which the published view
+  // enforces, because a CFB building is verified by carrying a sourced field
+  // rather than by a flag nobody sets on that corpus. The header above states
+  // the ruling and venue-hub-condensed.test.ts locks it by fixing
+  // verified:false on both grains and asserting all ten lines still render.
+  //
+  // Everything else below still applies: per-field provenance, the exclusion
+  // lists and transit suppression are re-derived here exactly as before. Only
+  // `verified` is waived, and only here.
+  const hub: VenueHub = gatedHub.ungated ?? gatedHub;
   const s = hub.sources ?? {};
   const lines: CondensedLine[] = [];
 

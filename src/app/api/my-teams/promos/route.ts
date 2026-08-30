@@ -115,7 +115,7 @@ async function fetchVenueForTeam(
       // serving what the pages stopped serving.
       parkingInfo: redactClause(snapshot.docs[0].id, 'parkingInfo', data.parkingInfo ?? override?.parkingInfo) ?? undefined,
       bagPolicyUrl: bagPolicyUrlFor(snapshot.docs[0].id, data.bagPolicyUrl ?? override?.bagPolicyUrl),
-      accessibility: data.accessibility ?? override?.accessibility,
+      accessibility: redactClause(snapshot.docs[0].id, 'accessibility', data.accessibility ?? override?.accessibility) ?? undefined,
       nearby: nearbySilenced(snapshot.docs[0].id) ? undefined : (data.nearby ?? override?.nearby),
     };
   } catch (err) {
