@@ -258,7 +258,7 @@ export const CLAUSE_REDACTIONS: ReadonlyArray<ClauseRedaction> = [
     corpus: 'venueHubs',
     field: 'food',
     clause: ' (new in 2025)',
-    reason: 'TCU: "including local Fort Worth favorites (new in 2025)" describes an addition as new during a season that has ended, so a 2026 reader is told this year what was true last year. The parenthetical is severable and the rest of the value, cashless payment and the beer-sales window, is ordinary standing policy. Separately and not fixed by this entry: the cited source is a 2020 A-Z guide, which cannot carry a claim about 2025 at all.',
+    reason: 'TCU: "including local Fort Worth favorites (new in 2025)" describes an addition as new during a season that has ended, so a 2026 reader is told this year what was true last year. The parenthetical is severable and the rest of the value, cashless payment and the beer-sales window, is ordinary standing policy. The cited source is fine and is NOT a reason for this entry: the URL path reads /2020/ but that is a Sidearm CMS node-creation stub, and the live page serves its own banner from an images/2025/9/2/ path and states this claim verbatim. An earlier draft of this comment asserted the source could not carry the claim; that was wrong and is corrected here so nobody acts on it.',
   },
   {
     slug: 'everbank-stadium',
