@@ -6,7 +6,8 @@
 // while an FAQ builder shipped its own copy in FAQPage JSON-LD; a withheld
 // tailgate window republished by Plan-your-visit; sub-key exclusions that
 // silenced nothing on four surfaces; and a bag chip whose LABEL was ungated
-// while its number was, inside a single component. See scanner-framework 6b.6.
+// while its number was, inside a single component. See scanner-framework 6b.7
+// (renumbered from 6b.6: another session published a 6b.6 first).
 //
 // The cause is structural, not clerical. `getVenueHub` handed every consumer
 // the raw stored values plus a `sources` map, and each consumer re-derived "may

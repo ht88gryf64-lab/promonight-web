@@ -163,7 +163,7 @@ test('the view is applied at the MAPPER, so no consumer can skip it', () => {
 test('the ungated escape hatch has exactly the allowlisted callers', async () => {
   const { UNGATED_CONSUMERS } = await load();
   assert.deepEqual([...UNGATED_CONSUMERS], ['buildCondensedLogistics']);
-  // Enumerate real readers by grepping the property, the control 6b.6 names.
+  // Enumerate real readers by grepping the property, the control 6b.7 names.
   const files = ['src/lib/venue-hub-condensed.ts', 'src/components/venue-hub/VenueHubView.tsx',
     'src/components/venue-hub/venue-logistics.tsx', 'src/lib/venue-bag-policies.ts',
     'src/app/nfl/page.tsx', 'src/app/venues/bag-policies/page.tsx'];
