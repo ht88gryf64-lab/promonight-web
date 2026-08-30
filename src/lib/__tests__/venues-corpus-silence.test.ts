@@ -121,7 +121,11 @@ test('every redaction records a clause, a field and its evidence', () => {
       // Cross-class: a claim filed under the wrong field, which is how each
       // survived a gate scoped to the field the claim belongs to.
       'mercedes-benz-stadium.parkingInfo', 'pnc-park.accessibility',
-      'guaranteed-rate-field.accessibility'],
+      'guaranteed-rate-field.accessibility',
+      // Dated framing on a claim that is otherwise current, found by the
+      // stored-year report rather than by any source check.
+      'amon-g-carter-stadium.food', 'everbank-stadium.food',
+      'memorial-stadium-lincoln.outsideFoodRules'],
   );
   for (const r of CLAUSE_REDACTIONS) {
     assert.ok(r.clause.length > 10, `${r.slug}: a clause short enough to match by accident is not safe`);
@@ -224,5 +228,81 @@ test('every caller names the corpus it is reading', () => {
     for (const c of calls) {
       assert.ok(c.includes(`'${corpus}'`), `${file}: ${c} must name the ${corpus} corpus`);
     }
+  }
+});
+
+test('the three dated food claims are redacted, each naming venueHubs', () => {
+  // "New in 2025, no outside food and beverages are allowed" reads wrong for the
+  // whole 2026 season while staying entirely plausible, which is the shape that
+  // survives every check that looks at transport rather than content. All three
+  // are venueHubs; a fourth candidate (bridgeforth) is deliberately left alone,
+  // since "(began in 2019)" dates when a still-true thing started and its doc is
+  // verified:false so the published view withholds the field anyway.
+  const DATED = ['amon-g-carter-stadium', 'everbank-stadium', 'memorial-stadium-lincoln'];
+  for (const slug of DATED) {
+    const r = CLAUSE_REDACTIONS.find((x) => x.slug === slug);
+    assert.ok(r, `${slug}: no redaction entry`);
+    assert.equal(r!.corpus, 'venueHubs', `${slug}: must name its corpus`);
+    assert.ok(r!.reason.length > 60, `${slug}: carries its evidence`);
+    assert.ok(!/—/.test(r!.reason), `${slug}: no em dashes`);
+  }
+  assert.ok(!CLAUSE_REDACTIONS.some((x) => x.slug === 'bridgeforth-stadium-and-zane-showker-field'),
+    'bridgeforth is a start-year fact and must NOT be redacted');
+});
+
+test('each dated clause is removed and the surrounding policy survives', () => {
+  const amon = 'Expanded concession options inside Amon G. Carter Stadium including local Fort Worth favorites (new in 2025). All concessions are cashless (major credit cards, Visa gift cards, and non-contact payment including Apple Pay and Google Pay; no cash accepted). Beer is sold at concessions beginning three hours before kickoff (starting in Frog Alley) and concludes at the start of the fourth quarter.';
+  const a = redactClause('amon-g-carter-stadium', 'food', amon, 'venueHubs');
+  assert.ok(a && !/new in 2025/i.test(a), 'the dated parenthetical survived');
+  assert.ok(/cashless/.test(a!) && /fourth quarter/.test(a!), 'the concession policy must survive');
+
+  const ever = 'Delaware North Sportservice is the food and beverage provider; cashless venue; full 2025 concessions guide at jaguars.com/stadium/concessions';
+  const e = redactClause('everbank-stadium', 'food', ever, 'venueHubs');
+  assert.ok(e && !/2025/.test(e), 'the year survived');
+  assert.ok(/full concessions guide at jaguars\.com/.test(e!), 'the link must survive and now reads as current');
+
+  // Joined at the head of the sentence, so it takes a replacement: deleting
+  // "New in 2025, " alone would leave a lowercase sentence opening.
+  const neb = 'New in 2025, no outside food and beverages are allowed inside Memorial Stadium, including food/beverages from outside vendors. Personal empty water bottles are allowed for refilling.';
+  const n = redactClause('memorial-stadium-lincoln', 'outsideFoodRules', neb, 'venueHubs');
+  assert.ok(n && !/New in 2025/.test(n), 'the dated framing survived');
+  assert.ok(/^No outside food and beverages are allowed/.test(n!), `must stay grammatical, got: ${n}`);
+  assert.ok(/water bottles/.test(n!), 'the rest of the rule must survive');
+});
+
+test('the dated-food entries do not reach the venues corpus', () => {
+  // Same cross-corpus rule as everything else: an entry travels only where its
+  // clause was found.
+  const s = 'Some unrelated venues-corpus food text.';
+  for (const slug of ['amon-g-carter-stadium', 'everbank-stadium', 'memorial-stadium-lincoln']) {
+    assert.equal(redactClause(slug, 'food', s, 'venues'), s, `${slug}: leaked into venues`);
+    assert.equal(redactClause(slug, 'outsideFoodRules', s, 'venues'), s, `${slug}: leaked into venues`);
+  }
+});
+
+
+test('EVERY field named by a redaction is actually redacted at its mapper', () => {
+  // The generalisation of the escape that has now happened twice. Adding three
+  // `food` / `outsideFoodRules` entries silenced NOTHING at first, because the
+  // venueHubs mapper called redactClause for only three fields and nobody
+  // noticed the new ones were not among them. The entries looked applied, the
+  // unit tests passed, and the clauses kept rendering.
+  //
+  // So this asserts coverage from the DATA rather than from a hand-written list:
+  // every distinct field in CLAUSE_REDACTIONS must appear in a redactClause call
+  // in the mapper for its corpus. A fourth entry on a fourth field fails here
+  // instead of silently doing nothing.
+  const MAPPERS: Record<string, string[]> = {
+    venueHubs: ['src/lib/venue-hub.ts'],
+    venues: ['src/lib/data.ts', 'src/app/api/my-teams/promos/route.ts'],
+  };
+  for (const r of CLAUSE_REDACTIONS) {
+    // A dotted sub-key is applied under its own name at the mapper.
+    const needle = new RegExp(`redactClause\\([^)]*'${r.field.replace('.', '\\.')}'`);
+    const files = MAPPERS[r.corpus];
+    assert.ok(files, `${r.slug}: unknown corpus ${r.corpus}`);
+    const covered = files.some((f) => needle.test(read(f)));
+    assert.ok(covered,
+      `${r.slug}.${r.field}: no mapper for corpus ${r.corpus} calls redactClause for this field, so the entry silences nothing`);
   }
 });

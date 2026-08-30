@@ -247,6 +247,35 @@ export const CLAUSE_REDACTIONS: ReadonlyArray<ClauseRedaction> = [
     clause: ' The CTA Red Line Sox-35th station is wheelchair accessible; arrangements can be made in advance at (312) 674-5225.',
     reason: 'Asserts a station name, its line, an accessibility fact about it and a phone number, none of it verified against the CTA. Genuinely useful if true, which is exactly why publishing it unverified is worse than publishing nothing. The ADA parking, seating, elevator and escort detail in the rest of the value is untouched.',
   },
+  // ── Added 2026-08-30, stored-year report pass. Three claims whose dated
+  // framing will read wrong for the whole 2026 season while staying entirely
+  // plausible, which is why no source-URL or reachability check would ever find
+  // them: the page loads, the policy is broadly right, and only the year is
+  // stale. Found by the stored-year report on its first live run, in three prose
+  // fields an earlier manual sweep never opened.
+  {
+    slug: 'amon-g-carter-stadium',
+    corpus: 'venueHubs',
+    field: 'food',
+    clause: ' (new in 2025)',
+    reason: 'TCU: "including local Fort Worth favorites (new in 2025)" describes an addition as new during a season that has ended, so a 2026 reader is told this year what was true last year. The parenthetical is severable and the rest of the value, cashless payment and the beer-sales window, is ordinary standing policy. The cited source is fine and is NOT a reason for this entry: the URL path reads /2020/ but that is a Sidearm CMS node-creation stub, and the live page serves its own banner from an images/2025/9/2/ path and states this claim verbatim. An earlier draft of this comment asserted the source could not carry the claim; that was wrong and is corrected here so nobody acts on it.',
+  },
+  {
+    slug: 'everbank-stadium',
+    corpus: 'venueHubs',
+    field: 'food',
+    clause: ' 2025 concessions guide',
+    replacement: ' concessions guide',
+    reason: 'Jacksonville: "full 2025 concessions guide at jaguars.com/stadium/concessions" pins a link to a season that has ended. Dropping the year is strictly better than updating it, because the link resolves to whatever the club publishes now, so the sentence stops needing maintenance instead of needing it annually.',
+  },
+  {
+    slug: 'memorial-stadium-lincoln',
+    corpus: 'venueHubs',
+    field: 'outsideFoodRules',
+    clause: 'New in 2025, no outside',
+    replacement: 'No outside',
+    reason: 'Nebraska: the RULE is current and only the "New in 2025" framing rots, so this removes the framing and keeps the policy. Joined at the head of the sentence, so it takes a replacement rather than a deletion: removing the clause alone would leave the field opening on a lowercase word, and a mangled sentence reads as a bug and invites someone to restore the clause.',
+  },
 ];
 
 const REDACTIONS = new Map(CLAUSE_REDACTIONS.map((r) => [`${r.corpus}\u0000${r.slug}\u0000${r.field}`, r]));
