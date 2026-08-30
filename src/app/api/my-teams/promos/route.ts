@@ -113,9 +113,9 @@ async function fetchVenueForTeam(
       // Same silencing as src/lib/data.ts. This mapping is a duplicate of that
       // one, so anything applied there has to be applied here or the API keeps
       // serving what the pages stopped serving.
-      parkingInfo: redactClause(snapshot.docs[0].id, 'parkingInfo', data.parkingInfo ?? override?.parkingInfo) ?? undefined,
+      parkingInfo: redactClause(snapshot.docs[0].id, 'parkingInfo', data.parkingInfo ?? override?.parkingInfo, 'venues') ?? undefined,
       bagPolicyUrl: bagPolicyUrlFor(snapshot.docs[0].id, data.bagPolicyUrl ?? override?.bagPolicyUrl),
-      accessibility: redactClause(snapshot.docs[0].id, 'accessibility', data.accessibility ?? override?.accessibility) ?? undefined,
+      accessibility: redactClause(snapshot.docs[0].id, 'accessibility', data.accessibility ?? override?.accessibility, 'venues') ?? undefined,
       nearby: nearbySilenced(snapshot.docs[0].id) ? undefined : (data.nearby ?? override?.nearby),
     };
   } catch (err) {

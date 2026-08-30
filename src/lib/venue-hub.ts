@@ -198,7 +198,7 @@ export function toVenueHub(
     // an expired clause never changes whether a page is indexable.
     parkingLots: (Array.isArray(d.parkingLots) ? d.parkingLots : []).map((lot: ParkingLot) =>
       typeof lot?.notes === 'string'
-        ? { ...lot, notes: redactClause(slug, 'parkingLots', lot.notes) }
+        ? { ...lot, notes: redactClause(slug, 'parkingLots', lot.notes, 'venueHubs') }
         : lot,
     ),
     parkingLotMapUrl: d.parkingLotMapUrl ?? null,
@@ -212,7 +212,7 @@ export function toVenueHub(
       : [],
     publicTransit: d.publicTransit ?? null,
     rideshareDropoff: d.rideshareDropoff ?? null,
-    accessibility: redactClause(slug, 'accessibility', d.accessibility),
+    accessibility: redactClause(slug, 'accessibility', d.accessibility, 'venueHubs'),
     bagMaxDimensions: d.bagMaxDimensions ?? null,
     clearBagRequired: typeof d.clearBagRequired === 'boolean' ? d.clearBagRequired : null,
     bagsProhibited: typeof d.bagsProhibited === 'boolean' ? d.bagsProhibited : null,
@@ -221,7 +221,7 @@ export function toVenueHub(
     tailgating: d.tailgating
       ? {
           ...d.tailgating,
-          timeWindow: redactClause(slug, 'tailgating.timeWindow', d.tailgating.timeWindow),
+          timeWindow: redactClause(slug, 'tailgating.timeWindow', d.tailgating.timeWindow, 'venueHubs'),
         }
       : null,
     venueAccessRestrictions: d.venueAccessRestrictions ?? null,

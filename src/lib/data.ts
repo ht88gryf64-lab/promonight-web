@@ -446,11 +446,11 @@ export async function getVenueForTeam(teamId: string): Promise<Venue | null> {
     teamId: data.teamId,
     // Firestore takes precedence; overrides fill in when Firestore is empty.
     // gatesOpen and publicTransit are not mapped at all: see venue-corpus-silence.
-    parkingInfo: redactClause(slug!, 'parkingInfo', data.parkingInfo ?? override?.parkingInfo) ?? undefined,
+    parkingInfo: redactClause(slug!, 'parkingInfo', data.parkingInfo ?? override?.parkingInfo, 'venues') ?? undefined,
     // A pointer, so it is repointed rather than silenced, and the repoint has to
     // WIN over the stored value (`stored ?? override` can only fill a gap).
     bagPolicyUrl: bagPolicyUrlFor(slug!, data.bagPolicyUrl ?? override?.bagPolicyUrl),
-    accessibility: redactClause(slug!, 'accessibility', data.accessibility ?? override?.accessibility) ?? undefined,
+    accessibility: redactClause(slug!, 'accessibility', data.accessibility ?? override?.accessibility, 'venues') ?? undefined,
     // Withheld where the sentence counts stops from a station the same record
     // invented; a fabricated primitive propagates into what was derived from it.
     nearby: nearbySilenced(slug!) ? undefined : (data.nearby ?? override?.nearby),
