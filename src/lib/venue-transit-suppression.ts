@@ -98,6 +98,24 @@ export const TRANSIT_SUPPRESSED: ReadonlyArray<TransitSuppression> = [
     applies: ['hub'],
   },
   {
+    // CONTESTED, DO NOT RE-LITIGATE FROM SCRATCH. Two of this project's own
+    // verification passes disagree about whether TTC 509 and 511 currently run
+    // as STREETCARS or as buses to Exhibition Loop, and the disagreement is
+    // unresolved on purpose.
+    //   2026-08-29 pass A (rename re-verification): the 509/511 replacement-bus
+    //     era ended, so Toronto records describing restored streetcar service
+    //     are correct. Evidence: TTC GTFS routes.txt route_type=0 for both.
+    //   2026-08-29 pass B (venues-corpus verification): TTC's own routedetail
+    //     API showed 509 and 511 operating as BUSES end to end to Exhibition
+    //     Loop, with the bus badge on both.
+    // GTFS describes the scheduled route; the live API describes what is
+    // running today, and a long-running shuttle substitution would show exactly
+    // this split. Neither pass checked mode against an operator STATEMENT.
+    // Per the standing rule, a contested value with no confident source is
+    // dropped rather than picked, so this entry stands on its own evidence (the
+    // stored routing sends riders to a replacement bus TTC scoped to Summer
+    // 2025) and the mode question is left open. Settle it with a dated TTC
+    // service-change notice, not with another GTFS read.
     hub: 'bmo-field',
     reason: 'BMO Field: the stored routing sends riders to a TTC 509/511 replacement bus that TTC’s own notice scoped to February through Summer 2025.',
     applies: ['hub'],
