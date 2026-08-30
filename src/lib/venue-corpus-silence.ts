@@ -163,6 +163,21 @@ export function bagPolicyUrlFor(venueSlug: string, stored: string | undefined): 
 export interface ClauseRedaction {
   /** `venues` or `venueHubs` doc id. */
   slug: string;
+  /**
+   * WHICH CORPUS the clause was found in, and therefore the only one this entry
+   * may touch.
+   *
+   * Not bookkeeping. `venues` and `venueHubs` store INDEPENDENT strings for the
+   * same building, and `accessibility` exists in both. Without this scope two
+   * entries reached across and withheld a record they were never about: the
+   * pnc-park venues clause silenced a correct 500-character hub accessibility
+   * record, and the guaranteed-rate-field hub clause silenced a correct venues
+   * one. The fail-safe behaved exactly as designed, withholding a field whose
+   * clause it could not find; the design was missing a scope, so "clause
+   * absent" silently meant "wrong corpus". Same rule as
+   * venue-transit-suppression's `applies`, relearned.
+   */
+  corpus: 'venues' | 'venueHubs';
   /** The field the clause sits in. */
   field: string;
   /** Exact substring to remove. Must match byte for byte or the field is withheld. */
@@ -180,24 +195,28 @@ export interface ClauseRedaction {
 export const CLAUSE_REDACTIONS: ReadonlyArray<ClauseRedaction> = [
   {
     slug: 'madison-square-garden',
+    corpus: 'venues',
     field: 'parkingInfo',
     clause: ' Transit is the better call here, since the arena sits directly above Penn Station.',
     reason: 'A transit routing assertion inside the parking field, which is how it survived the corpus-wide transit silencing. The claim happens to be true, but it is the class of claim this site has withdrawn from the venues corpus, and leaving it makes the corpus look selectively trustworthy. The parking advice in the rest of the sentence stands on its own.',
   },
   {
     slug: 'dignity-health-sports-park',
+    corpus: 'venueHubs',
     field: 'parkingLots',
     clause: '; passes were sold out for the 2025 season',
     reason: 'A sold-out notice for a season that has ended, read in the present tense. The pass price, the game count, the AXS purchase route and the matchday walk-up option are all unaffected by its removal.',
   },
   {
     slug: 'milan-puskar-stadium',
+    corpus: 'venueHubs',
     field: 'parkingLots',
     clause: ' (sold out for the 2025 Utah game)',
     reason: 'A sold-out notice for a game that has been played. The lot, its location, single-game availability and the bus/RV prohibition all stand without it.',
   },
   {
     slug: 'kidd-brewer-stadium',
+    corpus: 'venueHubs',
     // Dotted, matching the sub-key convention the provenance maps already use.
     field: 'tailgating.timeWindow',
     clause: ' For the Nov. 6, 2025 game against Georgia Southern the lots opened at 4 p.m.',
@@ -208,12 +227,14 @@ export const CLAUSE_REDACTIONS: ReadonlyArray<ClauseRedaction> = [
   // survived a gate scoped to the field the claim actually belongs to.
   {
     slug: 'mercedes-benz-stadium',
+    corpus: 'venues',
     field: 'parkingInfo',
     clause: ' MARTA is the recommended approach for most fans.',
     reason: 'A transit recommendation inside the parking field, on a doc whose publicTransit is ALREADY silenced in this corpus for putting Vine City and GWCC/CNN Center on MARTA\'s north-south pair when both are on the east-west lines. We withdrew its MARTA routing as wrong and the parking field went on recommending MARTA. The parking guidance in the rest of the value is unaffected.',
   },
   {
     slug: 'pnc-park',
+    corpus: 'venues',
     field: 'accessibility',
     clause: ', and the T light rail drops off right at the Home Plate Gate.',
     replacement: '.',
@@ -221,13 +242,14 @@ export const CLAUSE_REDACTIONS: ReadonlyArray<ClauseRedaction> = [
   },
   {
     slug: 'guaranteed-rate-field',
+    corpus: 'venueHubs',
     field: 'accessibility',
     clause: ' The CTA Red Line Sox-35th station is wheelchair accessible; arrangements can be made in advance at (312) 674-5225.',
     reason: 'Asserts a station name, its line, an accessibility fact about it and a phone number, none of it verified against the CTA. Genuinely useful if true, which is exactly why publishing it unverified is worse than publishing nothing. The ADA parking, seating, elevator and escort detail in the rest of the value is untouched.',
   },
 ];
 
-const REDACTIONS = new Map(CLAUSE_REDACTIONS.map((r) => [`${r.slug}\u0000${r.field}`, r]));
+const REDACTIONS = new Map(CLAUSE_REDACTIONS.map((r) => [`${r.corpus}\u0000${r.slug}\u0000${r.field}`, r]));
 
 /**
  * The text to publish for this field, or null when it must be withheld.
@@ -237,9 +259,14 @@ const REDACTIONS = new Map(CLAUSE_REDACTIONS.map((r) => [`${r.slug}\u0000${r.fie
  * clause is ABSENT, returns null: the stored value drifted out from under an
  * edit we can no longer verify, and withholding is the safe direction.
  */
-export function redactClause(slug: string, field: string, stored: string | null | undefined): string | null {
+export function redactClause(
+  slug: string,
+  field: string,
+  stored: string | null | undefined,
+  corpus: 'venues' | 'venueHubs',
+): string | null {
   const text = typeof stored === 'string' ? stored : null;
-  const r = REDACTIONS.get(`${slug}\u0000${field}`);
+  const r = REDACTIONS.get(`${corpus}\u0000${slug}\u0000${field}`);
   if (!r) return text;
   if (text === null) return null;
   if (!text.includes(r.clause)) return null;

@@ -96,7 +96,7 @@ test('bag pointers are repointed, not silenced, and every target was verified re
 test('a redaction removes its clause and leaves the rest of the field standing', () => {
   const msg = CLAUSE_REDACTIONS.find((r) => r.slug === 'madison-square-garden')!;
   const stored = 'There is no official MSG parking, and nearby private garages are limited and expensive, so reserving ahead through a service like SpotHero is wise.' + msg.clause;
-  const out = redactClause('madison-square-garden', 'parkingInfo', stored);
+  const out = redactClause('madison-square-garden', 'parkingInfo', stored, 'venues');
   assert.ok(!/Penn Station/.test(out!), 'the transit assertion survived the redaction');
   assert.ok(/SpotHero is wise\.$/.test(out!), 'the parking advice must survive intact');
 });
@@ -106,11 +106,11 @@ test('a redaction is FAIL-SAFE: drift silences the field rather than republishin
   // out from under an edit we can no longer verify. Silence on drift, never
   // publish on drift, because the failure we are guarding against is exactly a
   // stale clause going back out.
-  assert.equal(redactClause('madison-square-garden', 'parkingInfo', 'Some rewritten parking text.'), null);
-  assert.equal(redactClause('madison-square-garden', 'parkingInfo', null), null);
+  assert.equal(redactClause('madison-square-garden', 'parkingInfo', 'Some rewritten parking text.', 'venues'), null);
+  assert.equal(redactClause('madison-square-garden', 'parkingInfo', null, 'venues'), null);
   // A slug with no redaction is passed through untouched.
-  assert.equal(redactClause('target-field', 'parkingInfo', 'Lots open early.'), 'Lots open early.');
-  assert.equal(redactClause('target-field', 'parkingInfo', undefined), null);
+  assert.equal(redactClause('target-field', 'parkingInfo', 'Lots open early.', 'venues'), 'Lots open early.');
+  assert.equal(redactClause('target-field', 'parkingInfo', undefined, 'venues'), null);
 });
 
 test('every redaction records a clause, a field and its evidence', () => {
@@ -168,7 +168,7 @@ test('a mid-sentence clause is replaced, not deleted, so the field stays grammat
   // A mangled sentence reads as a bug and invites someone to "fix" it by
   // restoring the clause, which is the opposite of what the entry is for.
   const stored = 'PNC Park is fully accessible with wheelchair and companion seating throughout, accessible parking in all lots, and the T light rail drops off right at the Home Plate Gate.';
-  const out = redactClause('pnc-park', 'accessibility', stored);
+  const out = redactClause('pnc-park', 'accessibility', stored, 'venues');
   assert.equal(out, 'PNC Park is fully accessible with wheelchair and companion seating throughout, accessible parking in all lots.');
   assert.ok(!/light rail/.test(out!), 'the transit assertion survived');
 });
@@ -180,4 +180,49 @@ test('accessibility is redacted at all three mapping sites, not just the venues 
   assert.ok(/redactClause\([^)]*'accessibility'/.test(read('src/lib/data.ts')), 'data.ts');
   assert.ok(/redactClause\([^)]*'accessibility'/.test(read('src/app/api/my-teams/promos/route.ts')), 'my-teams route');
   assert.ok(/redactClause\(slug, 'accessibility'/.test(read('src/lib/venue-hub.ts')), 'venue-hub mapper');
+});
+
+test('a redaction applies ONLY to the corpus its clause was found in', () => {
+  // THE CROSS-CORPUS RULE, relearned the hard way. `venues` and `venueHubs`
+  // store INDEPENDENT strings for the same building, which is already recorded
+  // for transit suppression. redactClause was keyed on (slug, field) with no
+  // corpus scope, and `accessibility` is the one field name present in both, so
+  // two entries reached across and hit a record they were never about:
+  //   pnc-park            venues clause -> silenced a GOOD 500-char hub record
+  //   guaranteed-rate-field  hub clause -> silenced a GOOD venues record
+  // The fail-safe worked exactly as designed (clause absent, so withhold the
+  // field); the design was missing a scope, so "absent" meant "wrong corpus".
+  for (const r of CLAUSE_REDACTIONS) {
+    assert.ok(r.corpus === 'venues' || r.corpus === 'venueHubs', `${r.slug}: must name its corpus`);
+  }
+  const pnc = CLAUSE_REDACTIONS.find((r) => r.slug === 'pnc-park')!;
+  assert.equal(pnc.corpus, 'venues');
+  const grf = CLAUSE_REDACTIONS.find((r) => r.slug === 'guaranteed-rate-field')!;
+  assert.equal(grf.corpus, 'venueHubs');
+
+  // The other corpus is passed through UNTOUCHED, not withheld.
+  const hubText = 'Accessible parking is available first-come, first-served in lots surrounding PNC Park.';
+  assert.equal(redactClause('pnc-park', 'accessibility', hubText, 'venueHubs'), hubText);
+  const venuesText = 'The White Sox record, which this entry is not about.';
+  assert.equal(redactClause('guaranteed-rate-field', 'accessibility', venuesText, 'venues'), venuesText);
+
+  // And the entry still bites in its OWN corpus.
+  const pncOwn = 'PNC Park is fully accessible with wheelchair and companion seating throughout, accessible parking in all lots, and the T light rail drops off right at the Home Plate Gate.';
+  const out = redactClause('pnc-park', 'accessibility', pncOwn, 'venues');
+  assert.ok(out && !/light rail/.test(out), 'the entry must still redact in its own corpus');
+});
+
+test('every caller names the corpus it is reading', () => {
+  for (const [file, corpus] of [
+    ['src/lib/data.ts', 'venues'],
+    ['src/app/api/my-teams/promos/route.ts', 'venues'],
+    ['src/lib/venue-hub.ts', 'venueHubs'],
+  ] as const) {
+    const src = read(file);
+    const calls = src.match(/redactClause\([^)]*\)/g) ?? [];
+    assert.ok(calls.length > 0, `${file}: calls redactClause`);
+    for (const c of calls) {
+      assert.ok(c.includes(`'${corpus}'`), `${file}: ${c} must name the ${corpus} corpus`);
+    }
+  }
 });

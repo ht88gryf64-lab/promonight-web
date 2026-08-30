@@ -34,7 +34,7 @@ async function main() {
     for (const f of VENUES_CLAIMS) {
       let val = (hit.d as any)[f] ?? (ov as any)?.[f];
       if (f === 'nearby' && nearbySilenced(hit.id)) val = undefined;
-      val = redactClause(hit.id, f, val as string | undefined);
+      val = redactClause(hit.id, f, val as string | undefined, 'venues');
       if (has(val)) { venuesClaims++; venuesByField[f] = (venuesByField[f] ?? 0) + 1; venuesPages.add(t.id); }
     }
     if (has((hit.d as any).bagPolicyUrl ?? (ov as any)?.bagPolicyUrl)) venuesPointers++;
