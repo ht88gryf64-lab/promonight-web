@@ -76,3 +76,31 @@ test('an excluded field is never advertised', async () => {
   const d = venueHubDescription({ ...hub(), slug: 'bmo-field' } as VenueHub);
   assert.ok(!/transit/i.test(d), `description advertises transit for a suppressed building: ${d}`);
 });
+
+test('a held building asserts nothing about verification', async () => {
+  const { venueHubDescription } = await load();
+  // verified:false is the only gate that matters: every fact predicate in the
+  // description builder is AND-ed with it, so this is the shape that reaches
+  // the held branch. It used to return "Gameday details verified and updated
+  // for the 2026 season", which was true of no held building and shipped in
+  // both the meta description and the StadiumOrArena JSON-LD.
+  const d = venueHubDescription(hub({ verified: false }));
+  for (const word of ['verified', 'updated', 'confirmed', 'current']) {
+    assert.ok(
+      !new RegExp(word, 'i').test(d),
+      `held-building description asserts "${word}", which nothing backs: ${d}`,
+    );
+  }
+  assert.ok(/X Stadium/.test(d), `held-building description should still name the building: ${d}`);
+});
+
+test('a held building advertises no topic its page withholds', async () => {
+  const { venueHubDescription } = await load();
+  // The held page renders the hero, the tenant link and the still-confirming
+  // notice, and nothing else. A description that leads with a topic would be
+  // an unfalsifiable claim in structured data, where there is no page to check.
+  const d = venueHubDescription(hub({ verified: false }));
+  assert.ok(!/What size bag/i.test(d), `held description leads with a bag answer: ${d}`);
+  assert.ok(!/Where can you park/i.test(d), `held description leads with a parking answer: ${d}`);
+  assert.ok(!/gate times, transit and rideshare/i.test(d), `held description leads with a transit answer: ${d}`);
+});

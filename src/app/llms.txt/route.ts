@@ -43,7 +43,7 @@ PromoNight is a website, with a companion mobile app for ${c.appLeagueList}, tha
 - College football rivalries, all ${rivalryCount} in date order: https://www.getpromonight.com/cfb/rivalries
 - Rivalry game pages: https://www.getpromonight.com/cfb/rivalries/{slug} (e.g., /cfb/rivalries/iron-bowl)
 - How the data is sourced, checked and published, plus who runs this: https://www.getpromonight.com/about
-- Verified gameday guides by venue: https://www.getpromonight.com/venues
+- Gameday guides by venue: https://www.getpromonight.com/venues
 - Sitemap: https://www.getpromonight.com/sitemap.xml
 
 ## Organization
