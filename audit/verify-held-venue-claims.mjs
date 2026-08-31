@@ -5,13 +5,24 @@
 // string under test reaches TWO consumers (meta description and the
 // StadiumOrArena JSON-LD), so both are asserted separately from served bytes.
 //
-// Usage: node audit/verify-held-venue-claims.mjs <origin>
+// Usage: node audit/verify-held-venue-claims.mjs <origin> [vercelShareToken]
 //   e.g. node audit/verify-held-venue-claims.mjs https://promonight-web-git-...vercel.app
+//
+// The project runs SSO deployment protection on everything except custom
+// domains, so a preview needs a _vercel_share token. The token is NOT usable
+// as a repeated query param: the first hit answers 307, sets a _vercel_jwt
+// cookie and redirects to a URL with the param stripped, and a client with no
+// cookie jar then follows that into the Vercel SSO login page and reads a
+// 200 whose body is a login form. Every assertion would then fail for the same
+// wrong reason, which is exactly the kind of uniform failure that looks like a
+// broken fix. So the token is exchanged ONCE for the cookie, and the cookie is
+// sent on the measured requests. Omit the token against production.
 import { setTimeout as sleep } from 'node:timers/promises';
 
 const ORIGIN = process.argv[2];
+const SHARE = process.argv[3] ?? '';
 if (!ORIGIN) {
-  console.error('usage: node audit/verify-held-venue-claims.mjs <origin>');
+  console.error('usage: node audit/verify-held-venue-claims.mjs <origin> [vercelShareToken]');
   process.exit(2);
 }
 
@@ -61,14 +72,42 @@ function jsonLdBlocks(html) {
   return out;
 }
 
+// Exchanged once, then sent as a header on every measured request.
+let authCookie = '';
+
+async function acquireCookie() {
+  if (!SHARE) return;
+  const res = await fetch(`${ORIGIN}/?_vercel_share=${SHARE}`, { redirect: 'manual' });
+  const raw = res.headers.getSetCookie?.() ?? [];
+  const jwt = raw.map((c) => c.split(';')[0]).find((c) => c.startsWith('_vercel_jwt='));
+  if (!jwt) {
+    console.error('could not exchange the share token for a _vercel_jwt cookie; aborting rather than measuring a login page');
+    process.exit(2);
+  }
+  authCookie = jwt;
+  console.log('share token exchanged for an auth cookie\n');
+}
+
 async function get(path) {
   // Cache-busting query param. On a fresh preview deployment every path is a
   // cold MISS anyway; on an aliased production host the query string is NOT
   // part of the cache key, which is why the x-vercel-cache value is reported
   // rather than assumed.
   const url = `${ORIGIN}${path}?cb=hvc${Date.now()}${Math.random().toString(36).slice(2, 8)}`;
-  const res = await fetch(url, { headers: { 'user-agent': 'promonight-verify/1' } });
+  const res = await fetch(url, {
+    headers: {
+      'user-agent': 'promonight-verify/1',
+      ...(authCookie ? { cookie: authCookie } : {}),
+    },
+    redirect: 'follow',
+  });
   const html = await res.text();
+  // A login page is a 200 with a body that answers none of the questions below.
+  // Fail loudly here rather than let 30 assertions fail for one upstream reason.
+  if (/<title>Login . Vercel<\/title>/.test(html) || html.includes('sso-api')) {
+    console.error(`AUTH WALL at ${path}: got the Vercel login page, not the deployment. Aborting.`);
+    process.exit(2);
+  }
   return {
     status: res.status,
     cache: res.headers.get('x-vercel-cache') ?? 'n/a',
@@ -79,6 +118,8 @@ async function get(path) {
 
 console.log(`origin: ${ORIGIN}`);
 console.log(`when:   ${new Date().toISOString()}\n`);
+
+await acquireCookie();
 
 console.log('--- HELD BUILDINGS: no verification claim, no affiliate CTA ---');
 for (const slug of HELD) {

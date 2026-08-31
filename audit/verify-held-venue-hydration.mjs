@@ -24,13 +24,19 @@
  * header and footer alone clear it on every page on the site, so the floor
  * fires only when something structural is gone.
  *
- * Usage: node audit/verify-held-venue-hydration.mjs <origin>
+ * Usage: node audit/verify-held-venue-hydration.mjs <origin> [vercelShareToken]
+ *
+ * The project runs SSO deployment protection on everything except custom
+ * domains. Unlike the fetch-based sibling script, Chrome keeps cookies, so the
+ * share token is consumed by ONE warm-up navigation and the measured
+ * navigations carry no token in their URL. Omit it against production.
  */
 import puppeteer from 'puppeteer-core';
 
 const ORIGIN = process.argv[2];
+const SHARE = process.argv[3] ?? '';
 if (!ORIGIN) {
-  console.error('usage: node audit/verify-held-venue-hydration.mjs <origin>');
+  console.error('usage: node audit/verify-held-venue-hydration.mjs <origin> [vercelShareToken]');
   process.exit(2);
 }
 
@@ -65,6 +71,15 @@ const browser = await puppeteer.launch({
 });
 
 try {
+  if (SHARE) {
+    // One navigation to trade the share token for an auth cookie, so the
+    // measured pages below are fetched exactly as a real visitor would.
+    const warm = await browser.newPage();
+    await warm.goto(`${ORIGIN}/?_vercel_share=${SHARE}`, { waitUntil: 'domcontentloaded', timeout: 90000 });
+    await warm.close();
+    console.log('share token consumed; auth cookie set');
+  }
+
   for (const c of CASES) {
     const page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 900 });
