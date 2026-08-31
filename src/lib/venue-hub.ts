@@ -1018,8 +1018,22 @@ export function venueHubDescription(hub: VenueHub): string {
     lead = `Getting to ${short}: gate times, transit and rideshare in one gameday guide.`;
     leadTopic = 'transit';
   } else {
-    // Held / thin building — no verified facts render, so promise nothing.
-    return `Plan your visit to ${short}${loc ? ` in ${loc}` : ''}. Gameday details verified and updated for the ${SEASON_YEAR} season.`.slice(
+    // Held / thin building: no verified facts render, so promise nothing.
+    //
+    // This used to read "Gameday details verified and updated for the 2026
+    // season", which was the exact inverse of the truth. The branch is reached
+    // ONLY when every fact predicate above is false, so the sentence asserted
+    // verification on, and only on, the 13 buildings that have none. The page
+    // body said "We are still confirming gameday details" directly above it.
+    // Both consumers carried the claim: this string is the
+    // <meta name="description"> (app/venues/[slug]/page.tsx) AND the
+    // StadiumOrArena JSON-LD description (VenueHubJsonLd), so noindex did not
+    // contain it: a link unfurl and a human reviewer both read it anyway.
+    //
+    // The replacement names the building and states an absence. It claims
+    // nothing about verification, updating, confirmation or currency, and it
+    // advertises no topic the held page withholds.
+    return `Gameday guide for ${short}${loc ? ` in ${loc}` : ''}. Parking, transit and bag details are not published yet.`.slice(
       0,
       DESC_MAX,
     );
