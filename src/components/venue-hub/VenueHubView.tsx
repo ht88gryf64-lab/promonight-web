@@ -358,10 +358,19 @@ export function VenueHubView({
   const nearbyCard = <NearbyCard hub={hub} />;
 
   // Tickets & gear: Ticketmaster (primary) + TicketNetwork paired inside
-  // TicketmasterCTA, plus Fanatics. Building-agnostic (renders on every hub with
-  // a resolvable team, held or not). Impact /c/ attribution with subId
-  // web_venue_{slug} — unchanged by the move into the rail.
-  const ticketsCard = ticketTeam ? (
+  // TicketmasterCTA, plus Fanatics. Impact /c/ attribution with subId
+  // web_venue_{slug}.
+  //
+  // Now gated on hub.verified, which planCard already was. A held building has
+  // no gameday facts to render, so the page was two affiliate CTAs sitting
+  // above a "we are still confirming" line: the only thing it offered a reader
+  // was a way to spend money. That is the same shape the empty-parking
+  // fallback already rejects at CONTACT_URL below, where an absent fact gets a
+  // no-data state and a way to help rather than a monetised one.
+  //
+  // The rule this follows is the Game Day one: a venue with no data is not
+  // monetised. The 167 verified buildings are untouched.
+  const ticketsCard = verified && ticketTeam ? (
     <Card>
       <CardLabel>Tickets &amp; gear</CardLabel>
       <TicketmasterCTA team={ticketTeam} surface="web_venue" placement="venue_hub" venueSlug={hub.slug} promoId={hub.slug} />
@@ -371,16 +380,26 @@ export function VenueHubView({
     </Card>
   ) : null;
 
+  // The desktop rail holds exactly planCard and ticketsCard, both of which are
+  // gated on hub.verified, so this is false on every held building.
+  const hasRail = Boolean(planCard || ticketsCard);
+
   const faqCard = faqs.length ? (
     <Card tint>
       <HubFaq faqs={faqs} />
     </Card>
   ) : null;
 
+  // The held state. With planCard and ticketsCard both gated on verified, this
+  // is now the page's only next step, so it carries one: the same CONTACT_URL
+  // affordance the empty-parking fallback uses, in the same voice.
   const heldNotice = !verified ? (
     <Card>
       <p className="font-rd text-[13px] leading-relaxed text-rd-ink-soft">
-        We are still confirming gameday details for {short}. Check back closer to the season.
+        We are still confirming gameday details for {short}. Check back closer to the season.{' '}
+        <a href={CONTACT_URL} className="font-semibold text-rd-red">
+          Know this building? Tell us &rsaquo;
+        </a>
       </p>
     </Card>
   ) : null;
@@ -439,7 +458,11 @@ export function VenueHubView({
           the sticky rail on desktop; the copy hidden at each breakpoint is
           toggled with lg: utilities so no CTA fires twice. */}
       <div className="mx-auto max-w-[1160px] px-3 py-4 md:px-8 md:py-6">
-        <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start lg:gap-6">
+        {/* Both rail cards are gated on hub.verified, so a held building has an
+            empty rail. Keeping the two-column grid there would reserve a 380px
+            dead column beside a one-line notice, so the grid classes only apply
+            when the rail has something in it. */}
+        <div className={hasRail ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start lg:gap-6' : ''}>
           {/* main column */}
           <div className="min-w-0">
             {bagCard}
@@ -469,10 +492,12 @@ export function VenueHubView({
           </div>
 
           {/* desktop sticky rail */}
-          <aside className="hidden lg:block lg:sticky lg:top-5">
-            {planCard}
-            {ticketsCard}
-          </aside>
+          {hasRail ? (
+            <aside className="hidden lg:block lg:sticky lg:top-5">
+              {planCard}
+              {ticketsCard}
+            </aside>
+          ) : null}
         </div>
       </div>
     </>
