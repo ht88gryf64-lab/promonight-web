@@ -8,15 +8,22 @@ import { LazyPromoRows } from '@/components/redesign/LazyPromoRows';
 import { PromoArrivalHighlight } from '@/components/redesign/PromoArrivalHighlight';
 import { isBobbleheadGiveaway, isEbayResaleActive } from '@/lib/ebay';
 import { promoAnchorId, splitPromosByDate } from '@/lib/promo-helpers';
+import { seasonSpan, completedHeading, completedSubline } from '@/lib/season-label';
 import type { Promo, PromoType, Team } from '@/lib/types';
 import type { GameContext } from '@/lib/data';
 import { isPurchaseGated } from '@/lib/promo-helpers';
 
-// Hardcoded, never derived from the clock. These strings label promos that
-// have ALREADY HAPPENED, so a getFullYear() here was the worst of the year
-// drifts on the page: at midnight on Jan 1 it would have rendered "COMPLETED
-// 2027 PROMOS" over a list of 2026 events, under a title still reading 2026.
-const SEASON_YEAR = 2026;
+// SEASON_YEAR = 2026 used to live here. Its comment was right about the hazard
+// it was avoiding: these strings label promos that have ALREADY HAPPENED, so a
+// getFullYear() would have rendered "COMPLETED 2027 PROMOS" over a list of 2026
+// events at midnight on Jan 1. But the replacement carried a second assumption,
+// that a season IS a calendar year, and that is false for NHL, NBA and NFL, and
+// for any MLS or MLB page whose archive happens to cross a New Year.
+//
+// The label is now derived from the rows it labels (src/lib/season-label.ts),
+// which is neither clock-derived nor constant. Single-year output is
+// byte-identical to what the constant produced, so the 30 MLB and 15 WNBA pages
+// do not move.
 
 // Fields shared by every promo row's ShareItem — the per-promo bits (icon,
 // title, date, type) are filled in per row.
@@ -200,6 +207,16 @@ export function PromoList({
   // promo-helpers so both read the same definition.
   const { upcoming, past } = splitPromosByDate(promos);
 
+  // The archive labels itself from its own rows. splitPromosByDate is untouched:
+  // `p.date >= today` is correct on all 169 teams and is not what was wrong.
+  const pastSpan = seasonSpan(past.map((p) => p.date));
+  const pastHeading = completedHeading(pastSpan);
+  const pastCount = completedSubline(past.length, pastSpan);
+  // Byte-identical to "See completed 2026 promos below." on a single-year
+  // archive. This line renders when a club has run out of upcoming promos, so
+  // it IS an MLB surface at season end, not an NHL-only one.
+  const pastPointerYears = pastSpan ? `${pastSpan.yearLabel} ` : '';
+
   const upcomingVisible = upcoming.slice(0, UPCOMING_VISIBLE);
   const upcomingHidden = upcoming.slice(UPCOMING_VISIBLE);
   const pastVisible = past.slice(0, COMPLETED_VISIBLE);
@@ -292,7 +309,7 @@ export function PromoList({
           ) : (
             <div className="text-center py-8">
               <p className="text-rd-ink-soft text-sm">
-                No upcoming {teamName} promos scheduled right now. See completed {SEASON_YEAR} promos below.
+                No upcoming {teamName} promos scheduled right now. See completed {pastPointerYears}promos below.
               </p>
             </div>
           )}
@@ -304,14 +321,14 @@ export function PromoList({
                   Already happened
                 </span>
                 <h3 className="rd-display text-2xl md:text-3xl text-rd-ink-soft mt-1">
-                  COMPLETED {SEASON_YEAR} PROMOS
+                  {pastHeading}
                 </h3>
                 {/* The archive states its own size. This is the ONE count on the
                     page derived from past promos, and it sits under a heading
                     that says COMPLETED, so it describes rather than advertises.
                     Parity with the dark variant below. */}
                 <p className="text-rd-ink-faint text-xs font-rd mt-2">
-                  {past.length} completed {past.length === 1 ? 'event' : 'events'} this season
+                  {pastCount}
                 </p>
               </div>
 
@@ -405,7 +422,7 @@ export function PromoList({
         ) : (
           <div className="text-center py-8">
             <p className="text-text-muted text-sm">
-              No upcoming {teamName} promos scheduled right now. See completed {SEASON_YEAR} promos below.
+              No upcoming {teamName} promos scheduled right now. See completed {pastPointerYears}promos below.
             </p>
           </div>
         )}
@@ -417,10 +434,10 @@ export function PromoList({
                 Already happened
               </span>
               <h3 className="font-display text-2xl md:text-3xl tracking-[1px] mt-1 text-text-secondary">
-                COMPLETED {SEASON_YEAR} PROMOS
+                {pastHeading}
               </h3>
               <p className="text-text-muted text-xs font-mono tracking-[0.5px] mt-2">
-                {past.length} completed {past.length === 1 ? 'event' : 'events'} this season
+                {pastCount}
               </p>
             </div>
 

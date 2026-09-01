@@ -1,12 +1,16 @@
 import { IconChartBar } from '@tabler/icons-react';
 import type { Promo, PromoType, Team, Venue } from '@/lib/types';
+import { seasonSpan, scheduledPeriodPhrase } from '@/lib/season-label';
 
-// Hardcoded, never derived from the clock. See the same rule at
-// generateTeamFAQs in promo-helpers.ts: the page title and meta description
-// already hardcode 2026, so a getFullYear() here flips this copy to the next
-// season at midnight on Jan 1, months before that season's data exists, and
-// leaves one page asserting two different years.
-const SEASON_YEAR = 2026;
+// SEASON_YEAR = 2026 used to live here, and its comment was right that a
+// getFullYear() would flip this copy to the next season at midnight on Jan 1.
+// The constant carried the other half of the same mistake: it asserted a
+// calendar year over a set of promos that may not sit in one. Detroit's 85
+// upcoming rows run 2026-10-02 to 2027-04-09, 38 of them in 2027, under prose
+// reading "in 2026".
+//
+// Derived from the promos in hand instead (src/lib/season-label.ts). Single-year
+// output is byte-identical to `in ${SEASON_YEAR}`.
 
 const HOME_GAMES_BY_LEAGUE: Record<string, number> = {
   MLB: 81,
@@ -40,7 +44,7 @@ export function AuthorityStats({
 }) {
   if (promos.length < 15) return null;
 
-  const year = SEASON_YEAR;
+  const period = scheduledPeriodPhrase(seasonSpan(promos.map((p) => p.date)));
   const homeGames = HOME_GAMES_BY_LEAGUE[team.league] ?? 0;
   const venueName = venue?.name ?? 'their home venue';
 
@@ -94,15 +98,15 @@ export function AuthorityStats({
 
   if (ratio !== null && pctHomeGames !== null) {
     sentences.push(
-      `The ${teamName} have ${promos.length} promotional events scheduled across ${homeGames} ${team.league} home ${homeGames === 1 ? 'game' : 'games'} in ${year}, averaging ${ratio} promos per home game. Roughly ${pctHomeGames}% of home dates at ${venueName} have at least one scheduled promotion.`,
+      `The ${teamName} have ${promos.length} promotional events scheduled across ${homeGames} ${team.league} home ${homeGames === 1 ? 'game' : 'games'} ${period}, averaging ${ratio} promos per home game. Roughly ${pctHomeGames}% of home dates at ${venueName} have at least one scheduled promotion.`,
     );
   } else if (ratio !== null) {
     sentences.push(
-      `The ${teamName} have ${promos.length} promotional events scheduled in ${year}, averaging ${ratio} promos per home game.`,
+      `The ${teamName} have ${promos.length} promotional events scheduled ${period}, averaging ${ratio} promos per home game.`,
     );
   } else {
     sentences.push(
-      `The ${teamName} have ${promos.length} promotional events scheduled in ${year}.`,
+      `The ${teamName} have ${promos.length} promotional events scheduled ${period}.`,
     );
   }
 
