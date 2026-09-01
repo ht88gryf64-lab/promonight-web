@@ -18,6 +18,7 @@ import { matchupEntryForSlug } from '@/lib/cfb/matchup-registry';
 import { resolveMatchupDisplayName } from '@/lib/cfb/display-name';
 import { CFB_COLLECTIONS, type CfbSchool, type CfbGame, type CfbRivalry } from '@/lib/cfb/types';
 import { CFB_CONF_BUCKET_ORDER, type CfbConfBucket } from '@/lib/cfb/conferences';
+import { cfbWeekNumber } from '@/lib/cfb/week';
 
 // ── CT-anchored date helpers (same anchor as the homepage; no scrape) ──
 function chicagoTodayYMD(): string {
@@ -201,11 +202,4 @@ function blankTeam(id: string): HubTeam {
   return { id, name: id.replace(/-/g, ' '), shortName: id.replace(/-/g, ' '), primaryColor: null, secondaryColor: null };
 }
 
-// CFB week number (Week 1 ≈ the week containing the first Saturday of the season,
-// ~late Aug). Best-effort label; null in the offseason path.
-function cfbWeekNumber(today: string): number | null {
-  const seasonStart = '2026-08-24'; // Monday of Week 1
-  const diff = daysBetween(seasonStart, today);
-  if (diff < 0) return null;
-  return Math.min(15, Math.floor(diff / 7) + 1);
-}
+
