@@ -23,6 +23,7 @@ import { HomepageFAQ } from '@/components/homepage-faq';
 import { TrackedTapLink } from '@/components/analytics/TrackedTapLink';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { AD_SLOTS } from '@/lib/ads/slots';
+import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
 
 // The assembled redesign homepage. COMPOSITION ONLY: every section below is an
 // existing component rendered in the reviewed order, with one exception noted
@@ -99,6 +100,12 @@ export function HomePageV2({
     weekByDate.set(p.date, list);
   }
   const weekGroups = Array.from(weekByDate.entries()).sort(([a], [b]) => a.localeCompare(b));
+
+  // True when at least one promo can open UpcomingPromoModal, which is the only
+  // thing on this page that reaches an affiliate CTA. No promos means no modal,
+  // no links, and nothing to disclose.
+  const hasPromoContent =
+    tonight.length > 0 || weekPromos.length > 0 || bestPromos.length > 0;
   const dayLabel = (d: string) =>
     new Date(d + 'T12:00:00').toLocaleDateString('en-US', {
       weekday: 'long',
@@ -255,6 +262,19 @@ export function HomePageV2({
         </section>
 
         <HomepageFAQ variant="light" layout="card" counts={counts} />
+
+        {/* The homepage's affiliate links are real but not in the served HTML:
+            every promo card here opens UpcomingPromoModal, which renders
+            GameExpand, which renders TicketsBlock, ParkingCTA and HotelsCTA. An
+            audit that counts anchors in the prerender sees zero and reports the
+            page as clean, which is how it went undisclosed. Wired at this level
+            rather than inside the modal because the modal is shared with team
+            pages, which already carry their own disclosure. */}
+        {hasPromoContent && (
+          <div className="mx-auto max-w-6xl px-6 pb-8">
+            <AffiliateDisclosure className="text-center" />
+          </div>
+        )}
 
         <div className="mx-auto max-w-6xl px-6 py-4">
           <AdSlot config={AD_SLOTS.ADHESION_FOOTER} pageType="homepage" />

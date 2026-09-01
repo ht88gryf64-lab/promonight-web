@@ -9,6 +9,7 @@ import { TicketmasterCTA } from '@/components/affiliates/TicketmasterCTA';
 import { FanaticsCTA } from '@/components/affiliates/FanaticsCTA';
 import { SpotHeroCTA } from '@/components/affiliates/SpotHeroCTA';
 import { ExpediaCTA } from '@/components/affiliates/ExpediaCTA';
+import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
 import { VenueHubJsonLd } from './VenueHubJsonLd';
 import { VenuePhotoHero } from './VenuePhotoHero';
 import { HubTeamLink } from './HubTeamLink';
@@ -499,6 +500,13 @@ export function VenueHubView({
             </aside>
           ) : null}
         </div>
+
+        {/* planCard carries SpotHero and Expedia, ticketsCard carries
+            Ticketmaster and Fanatics, and hasRail is already the "either one
+            rendered" test, so the disclosure appears on exactly the venue pages
+            that monetise. A held building renders neither card and makes no
+            commercial claim to disclose. */}
+        {hasRail ? <AffiliateDisclosure className="mt-10 text-center" /> : null}
       </div>
     </>
   );

@@ -55,8 +55,16 @@ export const ABOUT_LAST_REVIEWED_LABEL = 'August 25, 2026';
 // line: a wrapped value would put the digest back into its own input.
 // The test prints the correct value when it fails, so there is nothing to run
 // by hand.
+// 2026-09-01: the fingerprint moved and ABOUT_LAST_REVIEWED deliberately did
+// not. The only edit was removing a markdown link target ([NHL](/nhl) became
+// NHL, because /nhl is a 404) and adding the comment above it. The RENDERED
+// PROSE is byte-identical either way: the parser turns [NHL](/nhl) into an
+// anchor whose text is "NHL", so a reader sees the same words. The date claims
+// a human read the words; the hash covers the file, link syntax and comments
+// included. Do not treat this as precedent for updating the hash alone: it is
+// correct only when the visible prose is provably unchanged.
 // eslint-disable-next-line prettier/prettier
-export const ABOUT_COPY_FINGERPRINT = '9d64010f7bfa132c07841530ced442eb7bb2bf15f748570b649ae64efc4506b2';
+export const ABOUT_COPY_FINGERPRINT = 'b19f12225ba776f277eac944b9400cac53380cb210d7a7fc2714bf8872539e12';
 
 export interface AboutCounts {
   teamCount: number;
@@ -190,7 +198,12 @@ export function aboutSections(c: AboutCounts): AboutSection[] {
             {
               lead: 'The other leagues work differently, and I would rather say so than imply a cadence that is not there.',
               text:
-                'NBA, [NHL](/nhl) and [NFL](/nfl) publish in bursts, mostly right before their seasons start, and they get added by hand when I run a sweep. NHL is the one I am working on next, and I will be straight about where it stands: several clubs have already posted their 2026-27 promotions and they are not here yet. That is a gap I am closing, not a claim that there is nothing to find. [College football](/cfb) is different again: those pages carry schedules, venues and rivalries, not promotions.',
+                // NBA and NHL are plain text here on purpose: neither hub route
+                // exists yet (LEAGUE_HUB_REGISTRY has both at live:false), and
+                // /nhl was shipping as a live anchor to a 404. Every other
+                // surface reads the registry flag; this string is hand-written,
+                // so it has to be kept in step by hand until a hub ships.
+                'NBA, NHL and [NFL](/nfl) publish in bursts, mostly right before their seasons start, and they get added by hand when I run a sweep. NHL is the one I am working on next, and I will be straight about where it stands: several clubs have already posted their 2026-27 promotions and they are not here yet. That is a gap I am closing, not a claim that there is nothing to find. [College football](/cfb) is different again: those pages carry schedules, venues and rivalries, not promotions.',
             },
             {
               lead: 'A new promo’s title has to be built from words that are actually on the page it came from.',
