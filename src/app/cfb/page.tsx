@@ -121,7 +121,7 @@ export default async function CfbHub() {
         <section id="browse" className="mt-14 scroll-mt-6">
           <SectionLabel sub="Pick your team for its full schedule, rivalries, and gameday plan.">BROWSE ALL {data.totalTeams} TEAMS</SectionLabel>
           <div className="mt-5">
-            <CfbHubBrowse browse={data.browse} total={data.totalTeams} />
+            <CfbHubBrowse browse={data.browse} />
           </div>
         </section>
 

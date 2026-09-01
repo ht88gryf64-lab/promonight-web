@@ -1,11 +1,22 @@
 'use client';
 
-// BROWSE all 86 (§14 crawlability rule, NON-NEGOTIABLE). Every team <a href>
-// renders in the DOM at all times; the conference selector + search are a pure
-// CSS VISIBILITY filter (inline display:none), never conditional-render or
-// lazy-fetch — so SEO equity flows to every team page regardless of the selected
-// conference. This is a client component, but Next SSRs its initial markup, so
-// all 86 links are present in the served HTML.
+// BROWSE all 87 (section 14 crawlability rule, NON-NEGOTIABLE). Every team
+// <a href> renders in the DOM at all times; the conference selector + search
+// are a pure CSS VISIBILITY filter (inline display:none), never
+// conditional-render or lazy-fetch, so SEO equity flows to every team page
+// regardless of the selected conference. This is a client component, but Next
+// SSRs its initial markup, so all 87 links are present in the served HTML.
+//
+// This paragraph used to ship. Until 2026-09-01 the rule above was ALSO
+// rendered as visible body copy under the grid: "All 87 team links render in
+// the DOM regardless of the selected conference (visibility filter only), for
+// crawlability + SEO equity to team pages", in 10px mono at 30% opacity. It was
+// not an HTML comment and not sr-only; fans reading a college football page were
+// being shown a note about DOM crawlability, with an em dash in it. Deleted.
+//
+// Deleting it must not touch what it describes. The unconditional
+// browse.flatMap render and the per-chip display:none are the load-bearing
+// half; only the prose is gone.
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -15,7 +26,7 @@ import { bucketForConfSlug } from '@/lib/cfb/conferences';
 const GOLD = '#FFB71E';
 const MONO = 'var(--font-mono), ui-monospace, monospace';
 
-export function CfbHubBrowse({ browse, total }: { browse: { bucket: string; teams: HubTeam[] }[]; total: number }) {
+export function CfbHubBrowse({ browse }: { browse: { bucket: string; teams: HubTeam[] }[] }) {
   const [conf, setConf] = useState<string>('All');
   const [q, setQ] = useState('');
   const buckets = ['All', ...browse.map((b) => b.bucket)];
@@ -74,9 +85,6 @@ export function CfbHubBrowse({ browse, total }: { browse: { bucket: string; team
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
         {browse.flatMap((b) => b.teams.map((t) => chip(t, b.bucket)))}
       </div>
-      <p className="mt-4 text-[10px] tracking-wide text-white/30" style={{ fontFamily: MONO }}>
-        All {total} team links render in the DOM regardless of the selected conference (visibility filter only) — for crawlability + SEO equity to team pages.
-      </p>
     </div>
   );
 }
