@@ -1,53 +1,16 @@
 import Link from 'next/link';
 import { IconStarFilled, IconMapPin, IconExternalLink } from '@tabler/icons-react';
-import type { Venue } from '@/lib/types';
 import type { WorldCupCityData, WorldCupTeamData } from '@/lib/world-cup-data';
 import type { WorldCupFanFestival } from '@/data/world-cup-cities';
 import { TrackedLink } from '@/components/analytics/TrackedLink';
-import { TicketmasterCTA } from '@/components/affiliates/TicketmasterCTA';
-import { SpotHeroCTA } from '@/components/affiliates/SpotHeroCTA';
-import { ExpediaCTA } from '@/components/affiliates/ExpediaCTA';
-import { FanaticsCTA } from '@/components/affiliates/FanaticsCTA';
-import { VenueInfoBlock } from '@/components/venue-info-block';
 import { WorldCupGameRows } from './game-rows';
-
-const WC_SURFACE = 'web_world_cup' as const;
-const WC_PLACEMENT = 'world_cup_card';
 
 function longDate(date: string): string {
   const [y, m, d] = date.split('-').map(Number);
   return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
 }
 
-// Coords-complete venue for affiliate routing. Prefer the real ballpark venue;
-// when a ballpark venue doc is missing, synthesize one from the World Cup venue
-// coordinates so parking and hotel CTAs still route geographically.
-function routingVenue(team: WorldCupTeamData, fallbackLat: number, fallbackLng: number, fallbackName: string): Venue | null {
-  if (team.venue) return team.venue;
-  if (!team.team) return null;
-  return {
-    // Synthesized from World Cup coordinates, not a `venues` doc, so there is
-    // no doc id to carry. Empty is the honest value: it matches no suppression
-    // key, and this object is used only for affiliate geo-routing (railVenue) —
-    // it is never passed to VenueInfoBlock, which receives the real team.venue.
-    slug: '',
-    name: fallbackName,
-    address: '',
-    team: team.ref.display,
-    sport: 'MLB',
-    sportIcon: '',
-    primaryColor: team.team.primaryColor,
-    accentColor: team.team.secondaryColor,
-    lat: fallbackLat,
-    lng: fallbackLng,
-    hasAmenityData: false,
-    amenityCount: 0,
-    league: 'MLB',
-    teamId: team.team.id,
-  };
-}
-
-function TeamGames({ team, citySlug }: { team: WorldCupTeamData; citySlug: string }) {
+function TeamGames({ team }: { team: WorldCupTeamData }) {
   return (
     <div>
       {/* Stack the relationship line below the team name on mobile (full width,
@@ -64,54 +27,27 @@ function TeamGames({ team, citySlug }: { team: WorldCupTeamData; citySlug: strin
         </span>
       </div>
       {team.homeGames.length > 0 && team.team ? (
-        <WorldCupGameRows
-          games={team.homeGames}
-          team={team.team}
-          teamSlug={team.ref.slug}
-          teamName={team.team.name}
-          citySlug={citySlug}
-        />
+        <WorldCupGameRows games={team.homeGames} team={team.team} />
       ) : (
         <p className="border-t border-rd-line pt-2 font-rd text-[13px] text-rd-ink-soft">
-          No {team.ref.display} home games during the World Cup window. They are on the road or in the All-Star break.
+          The {team.ref.display} had no home dates inside the World Cup window. They were on the road or in the All-Star break.
         </p>
       )}
     </div>
   );
 }
 
-function WorldCupRail({ team, venue }: { team: WorldCupTeamData; venue: Venue | null }) {
-  if (!team.team) return null;
-  return (
-    <div>
-      <h4 className="mb-3 font-rd text-[11px] font-semibold uppercase tracking-[0.14em] text-rd-ink-faint">
-        Plan your visit
-      </h4>
-      <div className="flex flex-col gap-2.5">
-        <TicketmasterCTA team={team.team} surface={WC_SURFACE} placement={WC_PLACEMENT} size="full" />
-        <SpotHeroCTA team={team.team} venue={venue} surface={WC_SURFACE} placement={WC_PLACEMENT} />
-        <ExpediaCTA team={team.team} venue={venue} surface={WC_SURFACE} placement={WC_PLACEMENT} />
-        <FanaticsCTA team={team.team} surface={WC_SURFACE} placement={WC_PLACEMENT} />
-      </div>
-      {team.venue && (
-        <div className="mt-6">
-          <VenueInfoBlock venue={team.venue} league="MLB" variant="light" />
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Official Fan Festival / fan zones for the city. Server-rendered so crawlers
-// see the festival content; only the official-link click is a client leaf
-// (TrackedLink fires cta_click). No new affiliate CTAs — the official link is
-// a non-commercial FIFA / host-committee URL, not an affiliate partner.
+// Official Fan Festival / fan zones for the city, as they ran. Server-rendered
+// so crawlers see the festival content; only the official-link click is a client
+// leaf (TrackedLink fires cta_click). The official link is a non-commercial
+// FIFA / host-committee URL, never an affiliate partner, which is why it
+// survives the retrospective's removal of the commercial surface.
 function WhereToWatch({ festival, citySlug }: { festival: WorldCupFanFestival; citySlug: string }) {
   const { headline, admission, officialUrl, venues, distributed, highlights, note } = festival;
   return (
     <div className="border-t border-rd-line px-5 py-5 md:px-6">
       <p className="mb-3 font-rd text-[11px] font-semibold uppercase tracking-[0.12em] text-rd-ink-faint">
-        Where to watch
+        Where the city watched
       </p>
       <div className="rounded-xl border border-rd-line bg-rd-cream px-4 py-4">
         <h4 className="font-rd text-sm font-bold text-rd-ink [overflow-wrap:anywhere]">{headline}</h4>
@@ -169,7 +105,6 @@ function WhereToWatch({ festival, citySlug }: { festival: WorldCupFanFestival; c
 export function WorldCupHostCard({ data }: { data: WorldCupCityData }) {
   const { city, teams, hasAnyGames } = data;
   const primary = teams[0];
-  const railVenue = routingVenue(primary, city.wcVenueLat, city.wcVenueLng, city.wcVenue);
 
   return (
     <article id={city.slug} className="scroll-mt-24 overflow-hidden rounded-2xl border border-rd-line bg-rd-card">
@@ -180,31 +115,37 @@ export function WorldCupHostCard({ data }: { data: WorldCupCityData }) {
         </p>
         <h3 className="rd-display mt-1 text-2xl uppercase text-rd-ink md:text-3xl">{city.city}</h3>
         <p className="mt-1.5 font-rd text-sm text-rd-ink-soft">
-          {city.wcVenue} · {city.totalMatches} World Cup matches · {city.wcWindow}
+          {city.wcVenue} · {city.totalMatches} World Cup matches · {city.wcWindow}, 2026
         </p>
         {city.roundsNote && (
           <p className="mt-2 font-rd text-[13px] leading-relaxed text-rd-ink-soft">{city.roundsNote}</p>
         )}
       </div>
 
-      {/* Body: games (left) + affiliate rail (right) */}
-      <div className="grid gap-6 p-5 md:grid-cols-[1.5fr_1fr] md:p-6">
+      {/* Body. The right-hand "Plan your visit" rail is gone: it carried a
+          Ticketmaster, SpotHero, Expedia and Fanatics CTA per city, 55 live
+          commissionable links across the page, for a tournament that finished
+          on 2026-07-19. A retrospective does not sell tickets to a played
+          match. Removed here at the emitter rather than inside any shared
+          affiliate component, which every other route still uses unchanged. */}
+      <div className="p-5 md:p-6">
         <div>
           <p className="mb-3 font-rd text-[11px] font-semibold uppercase tracking-[0.12em] text-rd-ink-faint">
-            Games to catch
+            Ballgames that lined up
           </p>
 
           {hasAnyGames ? (
             <div className="space-y-5">
               {teams.map((team) => (
-                <TeamGames key={team.ref.slug} team={team} citySlug={city.slug} />
+                <TeamGames key={team.ref.slug} team={team} />
               ))}
             </div>
           ) : (
             <div className="rounded-xl border border-rd-line bg-rd-cream px-4 py-5">
               <p className="font-rd text-sm leading-relaxed text-rd-ink-soft">
-                No home games during your trip. The {primary.ref.display} are on the road or in the
-                MLB All-Star break across this stretch. Check the team page for the full calendar.
+                No home dates inside the tournament window. The {primary.ref.display} were on the
+                road or in the MLB All-Star break across that stretch. The team page carries the
+                full calendar.
               </p>
               <Link
                 href={`/mlb/${primary.ref.slug}`}
@@ -230,8 +171,6 @@ export function WorldCupHostCard({ data }: { data: WorldCupCityData }) {
             </div>
           )}
         </div>
-
-        <WorldCupRail team={primary} venue={railVenue} />
       </div>
 
       {/* Where to watch the World Cup itself: official Fan Festival / fan zones. */}

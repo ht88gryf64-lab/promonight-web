@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 import { getWorldCupData } from '@/lib/world-cup-data';
 import { WorldCupHostCard } from '@/components/world-cup/host-card';
-import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
+import { isWorldCupActive } from '@/lib/world-cup-active';
 
 const PAGE_URL = 'https://www.getpromonight.com/world-cup';
 
@@ -11,68 +11,95 @@ const PAGE_URL = 'https://www.getpromonight.com/world-cup';
 // from Firestore at revalidate time so the host-city content stays current.
 export const revalidate = 21600;
 
-export const metadata: Metadata = {
-  title: 'World Cup 2026: 11 US Host Cities & MLB Ballparks',
-  description:
-    'A fan guide to all 11 US World Cup 2026 host cities, June 11 to July 19. Find the local MLB ballpark in each city, the home games that line up with the World Cup, giveaway and theme nights, plus tickets, parking, and hotels.',
-  alternates: { canonical: PAGE_URL },
-  openGraph: {
-    title: 'World Cup 2026: 11 US Host Cities & MLB Ballparks',
-    description:
-      'All 11 US World Cup host cities mapped to their local MLB ballparks and home games, June 11 to July 19, 2026.',
-    url: PAGE_URL,
-    siteName: 'PromoNight',
-    type: 'website',
-    images: [
-      {
-        url: '/og-image.png',
-        width: 1200,
-        height: 630,
-        alt: 'PromoNight World Cup 2026 host-city fan guide',
-      },
-    ],
-  },
-};
+// THE PAGE READS THE CLOCK NOW. isWorldCupActive() shipped on 2026-06-xx with
+// exactly one call site, src/app/layout.tsx:115, gating the announcement strip
+// and the nav link. Its own comment said "The /world-cup hub page itself stays
+// live regardless", and that decision is what went stale: the tournament ended
+// 2026-07-19 and the page kept selling tickets to it in the future tense for six
+// weeks. The gate now reaches the behaviour that depends on tournament state.
+//
+// WHY THE PROSE IS NOT ALSO BRANCHED. The copy below is written in the past
+// tense with absolute dates ("ran June 11 to July 19, 2026"), not gated behind
+// this flag. Time-relative copy is what went stale; time-absolute copy cannot.
+// Shipping a second full set of strings for a branch that can never be true
+// again (WORLD_CUP_END is a fixed 2026 date) would be two copies to drift
+// instead of one. The live-tense original is in git at db28365 if a future
+// edition needs it.
+
+// A dated retrospective, and the title says so. The old title and description
+// promised a forward-looking fan guide with "tickets, parking, and hotels",
+// none of which this page offers any more.
+export function generateMetadata(): Metadata {
+  const title = isWorldCupActive()
+    ? 'World Cup 2026: 11 US Host Cities & MLB Ballparks'
+    : 'World Cup 2026: How the 11 US Host Cities Played Out';
+  const description = isWorldCupActive()
+    ? 'A fan guide to all 11 US World Cup 2026 host cities, June 11 to July 19. Find the local MLB ballpark in each city, the home games that line up with the World Cup, giveaway and theme nights.'
+    : 'A record of the 2026 World Cup in the United States, June 11 to July 19, 2026: all 11 host cities, the local MLB ballpark in each, the home games that fell inside the tournament window, and the giveaways on those dates.';
+  return {
+    title,
+    description,
+    alternates: { canonical: PAGE_URL },
+    openGraph: {
+      title,
+      description,
+      url: PAGE_URL,
+      siteName: 'PromoNight',
+      type: 'website',
+      images: [
+        {
+          url: '/og-image.png',
+          width: 1200,
+          height: 630,
+          alt: 'PromoNight World Cup 2026 host-city guide',
+        },
+      ],
+    },
+  };
+}
 
 const FAQS: { question: string; answer: string }[] = [
   {
-    question: 'Which cities are hosting the 2026 World Cup in the United States?',
+    question: 'Which cities hosted the 2026 World Cup in the United States?',
     answer:
-      "Eleven US cities host 2026 World Cup matches: New York and New Jersey, Dallas, Atlanta, Miami, Los Angeles, Boston, Kansas City, Houston, Seattle, Philadelphia, and the San Francisco Bay Area. Together they stage 78 of the tournament's 104 matches, including both semi-finals, the third-place play-off, and the Final at MetLife Stadium on July 19, 2026.",
+      "Eleven US cities hosted 2026 World Cup matches: New York and New Jersey, Dallas, Atlanta, Miami, Los Angeles, Boston, Kansas City, Houston, Seattle, Philadelphia, and the San Francisco Bay Area. Between them they staged 78 of the tournament's 104 matches, including both semi-finals, the third-place play-off, and the Final at MetLife Stadium on July 19, 2026.",
   },
   {
-    question: 'Can I catch an MLB game while I am in town for the World Cup?',
+    question: 'Could you catch an MLB game while you were in town for the World Cup?',
     answer:
-      'Yes. Every US host city has a Major League Baseball team near the stadium, several within walking distance, so you can pair a World Cup match with a ballgame. The best overlap is the group stage, June 11 to early July. The MLB All-Star break, around July 13 to 16, pauses all baseball during the semi-finals, then games resume on July 17, before the final.',
+      'Yes. Every US host city has a Major League Baseball team near the stadium, several within walking distance, so a World Cup match and a ballgame could share a trip. The best overlap was the group stage, June 11 to early July 2026. The MLB All-Star break, July 13 to 16, paused all baseball during the semi-finals; games resumed on July 17, before the final.',
   },
   {
-    question: 'When and where is the 2026 World Cup final?',
+    question: 'When and where was the 2026 World Cup final?',
     answer:
-      'The 2026 World Cup final is on Sunday, July 19, 2026 at MetLife Stadium in East Rutherford, New Jersey, just outside New York City. MetLife hosts eight matches in total. Yankee Stadium is about 12 miles away and Citi Field about 15, so a Yankees or Mets home game can bookend final weekend.',
+      'The 2026 World Cup final was played on Sunday, July 19, 2026 at MetLife Stadium in East Rutherford, New Jersey, just outside New York City. MetLife hosted eight matches in total. Yankee Stadium is about 12 miles away and Citi Field about 15, so a Yankees or Mets home game could bookend final weekend.',
   },
   {
-    question: 'Why is there a World Cup match in Philadelphia on July 4?',
+    question: 'Why was there a World Cup match in Philadelphia on July 4?',
     answer:
-      "Philadelphia hosts a World Cup Round of 16 at Lincoln Financial Field on July 4, 2026, Independence Day and America's 250th birthday, the first World Cup knockout match ever played on the Fourth. Ten days later the city hosts the MLB All-Star Game next door at Citizens Bank Park on July 14. One city, two majors, in one summer.",
+      "Philadelphia hosted a World Cup Round of 16 at Lincoln Financial Field on July 4, 2026, Independence Day and America's 250th birthday, the first World Cup knockout match ever played on the Fourth. Ten days later the city hosted the MLB All-Star Game next door at Citizens Bank Park on July 14. One city, two majors, in one summer.",
   },
   {
-    question: 'What is the best time to combine a World Cup trip with baseball?',
+    question: 'When was the best time to combine a World Cup trip with baseball?',
     answer:
-      'The group stage, June 11 to early July, is the best window to pair the World Cup with a local MLB home game, because teams are playing a full schedule. From about July 13 to 16 the MLB All-Star break pauses every game, so mid-July host cities show no home dates during the semi-finals. Baseball resumes July 17, so a ballgame can still bookend the July 19 final.',
+      'The group stage, June 11 to early July 2026, was the best window to pair the World Cup with a local MLB home game, because teams were playing a full schedule. From July 13 to 16 the MLB All-Star break paused every game, so mid-July host cities showed no home dates during the semi-finals. Baseball resumed July 17, so a ballgame could still bookend the July 19 final.',
   },
 ];
 
 export default async function WorldCupPage() {
   const data = await getWorldCupData();
 
+  const active = isWorldCupActive();
   const cityCount = data.cities.length;
 
   const collectionSchema = {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
-    name: 'World Cup 2026: 11 US Host Cities & MLB Ballparks',
+    name: active
+      ? 'World Cup 2026: 11 US Host Cities & MLB Ballparks'
+      : 'World Cup 2026: How the 11 US Host Cities Played Out',
     description:
-      'All 11 US World Cup 2026 host cities mapped to their local MLB ballparks and home games, June 11 to July 19, 2026.',
+      'All 11 US World Cup 2026 host cities mapped to their local MLB ballparks and the home games that fell inside the June 11 to July 19, 2026 tournament window.',
     url: PAGE_URL,
     isPartOf: {
       '@type': 'WebSite',
@@ -98,9 +125,16 @@ export default async function WorldCupPage() {
   // SocialEvent JSON-LD for fan festivals with a concrete single venue and date
   // window: the single-venue cities, both NY/NJ fan zones, and the LA Coliseum
   // opening week. Distributed programs (SF Bay Area, Seattle) and the vague
-  // citywide LA phase carry no startDate, so they are skipped. Emitted alongside
-  // CollectionPage + FAQPage, not replacing them.
-  const fanFestEvents = data.cities.flatMap((c) => {
+  // citywide LA phase carry no startDate, so they are skipped.
+  //
+  // GATED ON THE TOURNAMENT CLOCK. These ten objects carried
+  // eventStatus EventScheduled over startDates in June and July 2026, which
+  // asserted to every consumer that a finished festival was still upcoming.
+  // schema.org has no "this happened" status that fits (EventMovedOnline,
+  // EventPostponed and EventCancelled are all false here), so the retrospective
+  // emits nothing rather than a status that is wrong. CollectionPage and
+  // FAQPage still ship; only the forward-looking claim is dropped.
+  const fanFestEvents = active ? data.cities.flatMap((c) => {
     const f = c.city.fanFestival;
     const cityName = c.city.city.split(' / ')[0];
     return (f.venues ?? [])
@@ -123,7 +157,7 @@ export default async function WorldCupPage() {
         organizer: { '@type': 'Organization', name: 'FIFA', url: 'https://www.fifa.com' },
         url: f.officialUrl,
       }));
-  });
+  }) : [];
 
   const jersey = data.soccerJerseyEntries;
 
@@ -156,18 +190,19 @@ export default async function WorldCupPage() {
         />
         <div className="relative z-10 mx-auto max-w-5xl px-6 pb-12 pt-16 md:pb-14 md:pt-20">
           <p className="font-rd text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: '#ff5a78' }}>
-            FIFA World Cup 26 · Fan Guide
+            FIFA World Cup 26 · Retrospective
           </p>
           <h1 className="rd-display mt-1 text-4xl uppercase leading-[0.95] text-white md:text-6xl">
             World Cup Host Cities, Plus a Ballgame
           </h1>
           <p className="mt-4 font-rd text-[11px] uppercase tracking-[0.12em] text-white/55">
-            June 11 to July 19 · 11 US Host Cities
+            June 11 to July 19, 2026 · 11 US Host Cities · Tournament complete
           </p>
           <p className="mt-4 max-w-3xl font-rd text-base leading-relaxed text-white/70 md:text-lg">
-            The World Cup takes over 11 US cities this summer, and every one of them has a Major
-            League Baseball team down the road. Here is how to catch a local ballgame, with its
-            giveaways and theme nights, between matches.
+            The 2026 World Cup ran across 11 US cities from June 11 to July 19, and every one of
+            them has a Major League Baseball team down the road. This is the record of which
+            ballgames fell inside that window, and the giveaways and theme nights that landed on
+            those dates.
           </p>
         </div>
       </section>
@@ -176,17 +211,17 @@ export default async function WorldCupPage() {
         {/* Inverted-pyramid intro capsule */}
         <div className="rounded-2xl border border-rd-line bg-rd-card p-6 md:p-8">
           <p className="font-rd text-lg font-semibold leading-relaxed text-rd-ink md:text-xl">
-            All 11 United States cities hosting the 2026 FIFA World Cup also have a Major League
-            Baseball team within reach of the stadium, so you can catch a local MLB home game between
-            World Cup matches on the same trip.
+            All 11 United States cities that hosted the 2026 FIFA World Cup also have a Major
+            League Baseball team within reach of the stadium, so a local MLB home game and a World
+            Cup match could share a trip.
           </p>
           <p className="mt-4 font-rd text-[15px] leading-relaxed text-rd-ink-soft">
-            The best window to pair the two is the group stage, June 11 to early July, when MLB teams
-            are playing a full schedule. The MLB All-Star break, around July 13 to 16, pauses every
-            baseball game during the World Cup semi-finals, so some mid-July host cities show no home
-            games in that stretch. Baseball resumes July 17, in time to bookend the July 19 final.
-            Each city card below maps the World Cup venue to its nearest ballpark,
-            the home games that line up, and the giveaways on those dates.
+            The best window to pair the two was the group stage, June 11 to early July 2026, when
+            MLB teams were playing a full schedule. The MLB All-Star break, July 13 to 16, paused
+            every baseball game during the World Cup semi-finals, so some mid-July host cities had
+            no home dates in that stretch. Baseball resumed July 17, in time to bookend the July 19
+            final. Each city card below maps the World Cup venue to its nearest ballpark, the home
+            games that fell inside the window, and the giveaways on those dates.
           </p>
         </div>
 
@@ -208,10 +243,10 @@ export default async function WorldCupPage() {
               A summer of two majors
             </h2>
             <p className="mt-3 max-w-3xl font-rd text-[15px] leading-relaxed text-white/75 md:text-base">
-              Philadelphia hosts a World Cup Round of 16 at Lincoln Financial Field on July 4, 2026,
+              Philadelphia hosted a World Cup Round of 16 at Lincoln Financial Field on July 4, 2026,
               Independence Day and America&apos;s 250th birthday, the first World Cup knockout match
-              ever played on the Fourth, in the city where the country was founded. Ten days later the MLB
-              All-Star Game comes to Citizens Bank Park next door on July 14. Two majors, one South
+              ever played on the Fourth, in the city where the country was founded. Ten days later the
+              MLB All-Star Game came to Citizens Bank Park next door on July 14. Two majors, one South
               Philadelphia complex, ten days apart.
             </p>
             <Link
@@ -231,9 +266,8 @@ export default async function WorldCupPage() {
           </span>
           <h2 className="rd-display mt-1 text-3xl uppercase text-rd-ink md:text-4xl">Host Cities</h2>
           <p className="mt-2 max-w-3xl font-rd text-sm leading-relaxed text-rd-ink-soft md:text-base">
-            Ordered by the biggest match each city hosts, from the New York and New Jersey Final down
-            to the group stage. Tickets route through Ticketmaster; parking and hotels route to the
-            ballpark.
+            Ordered by the biggest match each city hosted, from the New York and New Jersey Final
+            down to the group stage.
           </p>
           <div className="mt-6 space-y-6">
             {data.cities.map((c) => (
@@ -253,7 +287,7 @@ export default async function WorldCupPage() {
           {jersey.length > 0 ? (
             <>
               <p className="mt-2 font-rd text-[15px] leading-relaxed text-rd-ink-soft">
-                Host-city teams running a soccer or World Cup themed jersey giveaway during the
+                Host-city teams that ran a soccer or World Cup themed jersey giveaway during the
                 tournament:
               </p>
               <ul className="mt-3 space-y-1.5">
@@ -272,9 +306,8 @@ export default async function WorldCupPage() {
             </>
           ) : (
             <p className="mt-2 font-rd text-[15px] leading-relaxed text-rd-ink-soft">
-              When a host-city team runs a soccer or World Cup themed jersey giveaway during the
-              tournament, it shows up here. We are tracking every host-city calendar for one. In the
-              meantime, browse jersey giveaways across the league.
+              No host-city team ran a soccer or World Cup themed jersey giveaway inside the
+              tournament window. Jersey giveaways across the league are still tracked.
             </p>
           )}
           <Link
@@ -300,10 +333,14 @@ export default async function WorldCupPage() {
           </div>
         </section>
 
-        {/* Affiliate disclosure */}
-        <section className="mt-12 border-t border-rd-line pt-6">
-          <AffiliateDisclosure />
-        </section>
+        {/* No affiliate disclosure, because there is nothing left to disclose.
+            The 55 partner links and the per-row ticket, parking and hotel CTAs
+            are gone with the retrospective, and a page that keeps claiming "we
+            may earn a commission on links on this page" over zero such links is
+            making a false statement in the other direction. The build guard in
+            scripts/verify-affiliate-tracking.ts agrees: /world-cup no longer
+            reaches an affiliate emitter, so it no longer requires a disclosure,
+            and the emitting-route count drops from 15 to 14. */}
       </div>
     </div>
   );
