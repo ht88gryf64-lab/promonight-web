@@ -8,6 +8,7 @@ import { ScoredPromoCard } from './scored-promo-card';
 import { LeagueFilter, LEAGUE_FILTER_VALUES, type LeagueFilterValue } from './league-filter';
 import { DateRangeFilter, DATE_RANGE_FILTER_VALUES, type DateRangeFilterValue } from './date-range-filter';
 import type { TicketsBlockPlacement } from '../affiliates/TicketsBlock';
+import { AffiliateDisclosure } from '../affiliates/AffiliateDisclosure';
 
 type InlineAnswerBlock = {
   // Position the H2 should appear at within the filtered visible list,
@@ -292,6 +293,15 @@ export function BestPromosBrowser({
             Show {nextChunk} more · {remaining} remaining
           </button>
         </div>
+      )}
+
+      {/* Every visible ScoredPromoCard renders a TicketsBlock, and this browser
+          is the only affiliate emitter on /best-promos and
+          /best-promos/bobbleheads, so the disclosure lives with the cards.
+          Gated on the same `visible` list the CTAs come from: filtering down to
+          an empty result set removes the links and the claim together. */}
+      {visible.length > 0 && (
+        <AffiliateDisclosure className="mt-10 text-center" tone={light ? 'light' : 'dark'} />
       )}
     </div>
   );

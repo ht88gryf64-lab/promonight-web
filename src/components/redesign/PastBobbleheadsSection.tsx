@@ -4,8 +4,9 @@ import { useState } from 'react';
 import Link from 'next/link';
 import type { PromoWithTeam } from '@/lib/types';
 import { teamDisplayName } from '@/lib/promo-helpers';
-import { isBobbleheadGiveaway } from '@/lib/ebay';
+import { isBobbleheadGiveaway, isEbayResaleActive } from '@/lib/ebay';
 import { EbayResaleLink } from '@/components/affiliates/EbayResaleLink';
+import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
 
 // "Earlier this season" section for /promos/bobbleheads: completed bobblehead
 // promos, most recent first. Strict-predicate giveaways are exempt from the
@@ -126,6 +127,15 @@ export function PastBobbleheadsSection({ promos }: { promos: PromoWithTeam[] }) 
           )}
         </div>
       )}
+
+      {/* Only the lifted rows carry an eBay resale CTA (`withResale`), and this
+          section is the sole affiliate emitter on /promos/bobbleheads, so the
+          disclosure is gated on the same condition the links are. Both halves
+          are load-bearing: EbayResaleLink self-guards on isEbayResaleActive()
+          and renders nothing when NEXT_PUBLIC_EBAY_CAMPID is unset, which is
+          every environment except production. Without that conjunct the preview
+          build shows a commission disclosure over zero commission links. */}
+      {lifted.length > 0 && isEbayResaleActive() && <AffiliateDisclosure className="mt-8" />}
     </section>
   );
 }

@@ -4,6 +4,7 @@ import { teamDisplayName, synthPromoId } from '@/lib/promo-helpers';
 import { normalizeSport, type AnalyticsSurface } from '@/lib/analytics';
 import { TrackedTapLink } from '@/components/analytics/TrackedTapLink';
 import { TicketsBlock } from '@/components/affiliates/TicketsBlock';
+import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
 import { IconFlame, IconArrowRight } from '@tabler/icons-react';
 
 // Cap the rail so it stays a focused lead-in. getMlbSlate is already one promo
@@ -157,6 +158,14 @@ export function HubThisWeek({
           </div>
         ))}
       </div>
+
+      {/* The disclosure travels with the CTAs, not with the route. Every card
+          above carries a TicketsBlock, and this is the only affiliate emitter
+          on a league hub, so the rail and its fine print appear and disappear
+          together: the early `slate.length === 0` return takes both out.
+          Wiring it per route is what left /mlb, /mls and /wnba shipping
+          undisclosed affiliate links (Phase 0, NEW-1). */}
+      <AffiliateDisclosure className="mt-8" />
     </section>
   );
 }

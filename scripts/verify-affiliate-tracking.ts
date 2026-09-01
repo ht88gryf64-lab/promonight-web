@@ -18,6 +18,15 @@
 //      aff_c tracker + aff_id, Expedia camref family) drifts from the blessed
 //      values duplicated below. The duplication is the point: an edit must
 //      touch both files, in different terms, to ship.
+//   4. A route renders an affiliate CTA but no AffiliateDisclosure anywhere in
+//      its component tree. This is the FTC half of the same problem the first
+//      three checks cover commercially: on 2026-09-01 a served-HTML audit found
+//      318 affiliate links, 24% of the site's total, on seven routes carrying no
+//      disclosure at all (/promos/today, /best-promos, /best-promos/bobbleheads,
+//      /mlb, /mls, /wnba, /promos/bobbleheads). The cause was structural, not an
+//      oversight: AffiliateDisclosure was imported per ROUTE while the CTAs
+//      arrive inside shared components, so every new route that reused a CTA
+//      component started out undisclosed and nothing said so.
 //
 // Absence on a NON-production build (preview/dev/local) is a loud warning,
 // not a failure: as of 2026-08-14 the wrap var exists only in the Production
@@ -28,8 +37,8 @@
 // The env value is never printed. Diagnostics name the defect (absent, empty,
 // whitespace, wrong host, missing template slot), not the content.
 
-import { existsSync, readFileSync } from 'fs';
-import { join } from 'path';
+import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
+import { dirname, join, relative, resolve } from 'path';
 import { AFFILIATE_TRACKING_CONSTANTS } from '../src/lib/affiliates';
 
 // Mirror `next build`'s env loading for the one var this guard shape-checks:
@@ -148,6 +157,148 @@ if (wrap === undefined || wrap === '') {
   );
 }
 
+// ── 4. Disclosure coverage ─────────────────────────────────────────────────
+//
+// Static import-graph check, no build output and no network needed. For each
+// App Router route (its page.tsx plus every ancestor layout.tsx, since a layout
+// renders on every route beneath it) we walk the transitive closure of LOCAL
+// imports. If that closure reaches an affiliate CTA emitter it must also reach
+// AffiliateDisclosure.
+//
+// The check is deliberately an OVER-approximation: it fires on a route that
+// imports a CTA component behind a condition that never becomes true. That is
+// the safe direction. A missing disclosure ships undisclosed paid links; a
+// spurious one costs an import line or a two-line justification. It cannot see
+// through a dynamic import with a computed specifier, so those are reported as
+// unresolvable rather than silently passing.
+
+const SRC = resolve(__dirname, '..', 'src');
+const APP = join(SRC, 'app');
+const DISCLOSURE = join(SRC, 'components', 'affiliates', 'AffiliateDisclosure.tsx');
+
+// Every module under components/affiliates/ is an emitter except the disclosure
+// itself, plus the generic tracked link that the CFB and trip surfaces use
+// directly. Derived from the directory rather than listed, so a new CTA
+// component is covered the day it lands.
+const AFFILIATE_DIR = join(SRC, 'components', 'affiliates');
+const EMITTERS = new Set<string>([
+  ...readdirSync(AFFILIATE_DIR)
+    .filter((f) => f.endsWith('.tsx'))
+    .map((f) => join(AFFILIATE_DIR, f)),
+  join(SRC, 'components', 'tracked-affiliate-link.tsx'),
+]);
+EMITTERS.delete(DISCLOSURE);
+
+const RESOLVE_EXTS = ['.tsx', '.ts', '/index.tsx', '/index.ts'];
+
+function resolveImport(fromFile: string, spec: string): string | null {
+  let base: string;
+  if (spec.startsWith('@/')) base = join(SRC, spec.slice(2));
+  else if (spec.startsWith('./') || spec.startsWith('../')) base = resolve(dirname(fromFile), spec);
+  else return null; // node_modules or a bare specifier: not ours to walk.
+  for (const ext of RESOLVE_EXTS) {
+    const candidate = base + ext;
+    if (existsSync(candidate) && statSync(candidate).isFile()) return candidate;
+  }
+  return existsSync(base) && statSync(base).isFile() ? base : null;
+}
+
+// Static `import ... from 'x'`, side-effect `import 'x'`, `export ... from 'x'`
+// and `import('x')` with a literal specifier. A computed specifier has no
+// literal to capture and is counted as unresolvable below.
+const SPEC_RE = /(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s+)['"]([^'"]+)['"]/g;
+const DYNAMIC_COMPUTED_RE = /\bimport\s*\(\s*[^'")]/;
+
+function closureOf(entries: string[]): { modules: Set<string>; computed: string[] } {
+  const seen = new Set<string>();
+  const computed: string[] = [];
+  const queue = [...entries];
+  while (queue.length > 0) {
+    const file = queue.pop() as string;
+    if (seen.has(file)) continue;
+    seen.add(file);
+    let source: string;
+    try {
+      source = readFileSync(file, 'utf8');
+    } catch {
+      continue;
+    }
+    if (DYNAMIC_COMPUTED_RE.test(source)) computed.push(relative(SRC, file));
+    for (const m of source.matchAll(SPEC_RE)) {
+      const target = resolveImport(file, m[1]);
+      if (target && !seen.has(target)) queue.push(target);
+    }
+  }
+  return { modules: seen, computed };
+}
+
+// src/app/dev/* is excluded: every one of those routes calls notFound() when
+// the environment is production (three on NODE_ENV, capture-probe on
+// VERCEL_ENV), so they cannot serve an affiliate link to a reader. The
+// exclusion is by directory and is the ONLY exemption; if a dev route ever
+// stops 404ing in production it needs a disclosure like any other page.
+const EXCLUDED_ROUTE_DIRS = [join(APP, 'dev')];
+
+function routeFiles(dir: string, acc: string[] = []): string[] {
+  if (EXCLUDED_ROUTE_DIRS.some((d) => resolve(dir) === d || resolve(dir).startsWith(d + '/'))) {
+    return acc;
+  }
+  for (const entry of readdirSync(dir)) {
+    const p = join(dir, entry);
+    if (statSync(p).isDirectory()) routeFiles(p, acc);
+    else if (entry === 'page.tsx') acc.push(p);
+  }
+  return acc;
+}
+
+// The URL path a page.tsx serves, for diagnostics only. Route groups such as
+// (marketing) do not appear in the URL.
+function routePath(pageFile: string): string {
+  const rel = relative(APP, dirname(pageFile));
+  const segments = rel === '' ? [] : rel.split(/[\\/]/).filter((s) => !s.startsWith('('));
+  return '/' + segments.join('/');
+}
+
+// Ancestor layouts render around the page, so they belong in its closure.
+function layoutsFor(pageFile: string): string[] {
+  const layouts: string[] = [];
+  let dir = dirname(pageFile);
+  for (;;) {
+    const l = join(dir, 'layout.tsx');
+    if (existsSync(l)) layouts.push(l);
+    if (resolve(dir) === APP) break;
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return layouts;
+}
+
+let routesChecked = 0;
+let routesWithCtas = 0;
+for (const pageFile of routeFiles(APP).sort()) {
+  routesChecked += 1;
+  const { modules, computed } = closureOf([pageFile, ...layoutsFor(pageFile)]);
+  const emitters = [...modules].filter((m) => EMITTERS.has(m));
+  if (emitters.length === 0) continue;
+  routesWithCtas += 1;
+  if (modules.has(DISCLOSURE)) continue;
+  const named = emitters.map((m) => relative(SRC, m)).sort().join(', ');
+  const computedNote =
+    computed.length > 0
+      ? ` (note: ${computed.length} module(s) in this route use a computed dynamic import, which this ` +
+        `check cannot follow: ${computed.slice(0, 3).join(', ')})`
+      : '';
+  failures.push(
+    `Undisclosed affiliate CTAs on route ${routePath(pageFile)}: its component tree reaches ` +
+      `${named} but never AffiliateDisclosure. Render <AffiliateDisclosure /> from the component ` +
+      `that emits the CTAs where that component appears at most once per page (HubThisWeek, ` +
+      `PastBobbleheadsSection and BestPromosBrowser do this); wire it into the route only when the ` +
+      `emitter repeats per row, as ${relative(SRC, join(APP, 'promos', 'today', 'page.tsx'))} does.` +
+      computedNote,
+  );
+}
+
 if (failures.length > 0) {
   console.error('[verify-affiliate-tracking] BUILD BLOCKED: affiliate tracking would be broken or unattributed.');
   for (const f of failures) console.error(`  - ${f}`);
@@ -156,5 +307,6 @@ if (failures.length > 0) {
 
 console.log(
   `[verify-affiliate-tracking] OK: ${Object.keys(BLESSED).length} hardcoded tracking constants match; ` +
-    `Ticketmaster wrap ${wrap ? 'present and well-formed' : 'absent (tolerated on this non-production target)'}.`,
+    `Ticketmaster wrap ${wrap ? 'present and well-formed' : 'absent (tolerated on this non-production target)'}; ` +
+    `${routesWithCtas} of ${routesChecked} routes render affiliate CTAs and every one reaches AffiliateDisclosure.`,
 );

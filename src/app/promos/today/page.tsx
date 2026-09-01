@@ -12,6 +12,7 @@ import {
 import type { Venue } from '@/lib/types';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 import { AggregatorJsonLd, type AggregatorGroup } from '@/components/aggregator-layout';
+import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { AD_SLOTS } from '@/lib/ads/slots';
 import { DailyBoardHero } from '@/components/promos-today/DailyBoardHero';
@@ -214,6 +215,13 @@ export default async function PromosTodayPage() {
             <IconArrowRight size={15} stroke={2} />
           </Link>
         </div>
+
+        {/* Wired at the route, not in a component: the affiliate emitter here is
+            TodayPromoCard, which renders many times per page, so a
+            component-level disclosure would repeat once per card. `filterLeagues`
+            is empty exactly when neither day has a promo, which is exactly when
+            no card, and therefore no affiliate link, renders. */}
+        {filterLeagues.length > 0 && <AffiliateDisclosure className="mt-10 text-center" />}
       </main>
     </div>
   );
