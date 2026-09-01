@@ -236,7 +236,7 @@ export const WORLD_CUP_CITIES: WorldCupCity[] = [
     marqueeDate: '2026-07-18',
     firstMatchDate: '2026-06-15',
     wcWindow: 'June 15 to July 18',
-    roundsNote: 'Hosts a quarter-final on July 11 and the third-place play-off on July 18.',
+    roundsNote: 'Hosted a quarter-final on July 11 and the third-place play-off on July 18.',
     primaryTeam: {
       slug: 'miami-marlins',
       display: 'Marlins',
@@ -433,7 +433,7 @@ export const WORLD_CUP_CITIES: WorldCupCity[] = [
     marqueeDate: '2026-07-04',
     firstMatchDate: '2026-06-14',
     wcWindow: 'June 14 to July 4',
-    roundsNote: 'World Cup matches run June 14 through the July 4 Round of 16, the first World Cup knockout match ever played on Independence Day.',
+    roundsNote: 'World Cup matches ran June 14 through the July 4 Round of 16, the first World Cup knockout match ever played on Independence Day.',
     primaryTeam: {
       slug: 'philadelphia-phillies',
       display: 'Phillies',
@@ -444,7 +444,7 @@ export const WORLD_CUP_CITIES: WorldCupCity[] = [
       date: '2026-07-14',
       label: 'MLB All-Star Game',
       venue: 'Citizens Bank Park',
-      note: 'Ten days after the World Cup Round of 16 at the Linc, the city hosts the MLB All-Star Game next door.',
+      note: 'Ten days after the World Cup Round of 16 at the Linc, the city hosted the MLB All-Star Game next door.',
     },
     fanFestival: {
       headline: 'FIFA Fan Festival at Lemon Hill, Fairmount Park',

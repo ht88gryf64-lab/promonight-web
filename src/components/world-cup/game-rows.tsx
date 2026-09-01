@@ -1,30 +1,23 @@
-'use client';
-
-import { useState } from 'react';
-import dynamic from 'next/dynamic';
 import { IconBallFootball } from '@tabler/icons-react';
 import type { GameContext } from '@/lib/data';
 import type { PromoType, Team } from '@/lib/types';
-import { normalizeSport, track } from '@/lib/analytics';
 import { isSoccerJerseyPromo } from '@/lib/soccer-jersey';
 import { categoryFor } from '@/components/redesign/categories';
-import { Modal } from '@/components/ui/modal';
 
-// The game-detail content is the SAME light redesign expand the team-page
-// calendar renders. Lazy-loaded (ssr:false) so its affiliate CTAs (TicketsBlock,
-// ParkingCTA, HotelsCTA, ShareButton) are not in the initial /world-cup bundle
-// or HTML — the modal is mounted only once a row is first opened. The clickable
-// rows themselves render server-side (this is a client island, SSR'd to HTML)
-// so crawlers still see every game.
-const GameExpand = dynamic(
-  () => import('@/components/redesign/GameExpand').then((m) => m.GameExpand),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="py-10 text-center font-rd text-sm text-rd-ink-soft">Loading game details…</div>
-    ),
-  },
-);
+// Completed fixture rows for the /world-cup retrospective. Server component.
+//
+// WAS: a client island where each row was a button opening a Modal that
+// lazy-loaded GameExpand. That modal is the team page's live game detail, and it
+// renders TicketsBlock, ParkingCTA and HotelsCTA. Because the import was
+// ssr:false those CTAs never appeared in the served HTML, so an audit that
+// counts anchors read the page as carrying 55 affiliate links when it actually
+// carried 55 plus a live ticket, parking and hotel CTA one click behind every
+// one of 186 game rows.
+//
+// Removing only the visible rail would have left that behind. A retrospective
+// must not sell a ticket to a match played in June, and the row detail has
+// nothing else to show once the CTAs are gone, so the rows are now static text.
+// The tournament date and opponent were always the informational payload.
 
 function ymd(date: string): { weekday: string; mon: string; day: number } {
   const [y, m, d] = date.split('-').map(Number);
@@ -58,23 +51,13 @@ function PromoBadge({ type, title, soccer }: { type: PromoType; title: string; s
   );
 }
 
-function GameRowButton({
-  ctx,
-  league,
-  onOpen,
-}: {
-  ctx: GameContext;
-  league?: string;
-  onOpen: (ctx: GameContext) => void;
-}) {
+function GameRow({ ctx, league }: { ctx: GameContext; league?: string }) {
   const { weekday, mon, day } = ymd(ctx.game.date);
   const opponent = ctx.opponentTeam?.name ?? ctx.game.awayTeamSlug;
   return (
-    <button
-      type="button"
-      onClick={() => onOpen(ctx)}
-      aria-label={`Game details, vs ${opponent}, ${weekday} ${mon} ${day}`}
-      className="flex w-full items-start gap-3 py-2.5 text-left transition-colors hover:bg-black/[0.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rd-red/40"
+    <div
+      aria-label={`Completed game, vs ${opponent}, ${weekday} ${mon} ${day}, 2026`}
+      className="flex w-full items-start gap-3 py-2.5 text-left"
     >
       <div className="w-11 shrink-0 text-center">
         <div className="font-rd text-[10px] uppercase tracking-[0.08em] text-rd-ink-faint">{weekday}</div>
@@ -91,75 +74,31 @@ function GameRowButton({
           </div>
         )}
       </div>
-    </button>
+    </div>
   );
 }
 
 interface WorldCupGameRowsProps {
   games: GameContext[];
-  /** Live Team object — always present when there are home games to render. */
+  /** Live Team object, always present when there are home games to render.
+   *  Only `league` is read now, for the soccer-jersey badge test. */
   team: Team;
-  /** Team URL slug / id, e.g. 'boston-red-sox'. */
-  teamSlug: string;
-  /** Full team name for the reused share payload. */
-  teamName: string;
-  /** City slug for analytics attribution, e.g. 'boston'. */
-  citySlug: string;
 }
 
-export function WorldCupGameRows({ games, team, teamSlug, teamName, citySlug }: WorldCupGameRowsProps) {
-  const [selected, setSelected] = useState<GameContext | null>(null);
+// teamSlug, teamName and citySlug are gone with the modal. They existed to fill
+// the GameExpand share payload and the game_tap analytics event, and a static
+// row fires neither.
 
-  const onOpen = (ctx: GameContext) => {
-    // Same event the team-page calendar fires, attributed to the hub surface.
-    track('game_tap', {
-      surface: 'web_world_cup',
-      team_slug: teamSlug,
-      sport: normalizeSport(team.sportSlug),
-      game_id: ctx.game.id,
-      is_home: ctx.isHome,
-      has_promo: ctx.promos.length > 0,
-      opponent_slug: ctx.isHome ? ctx.game.awayTeamSlug : ctx.game.homeTeamSlug,
-      placement: 'world_cup_card',
-      city: citySlug,
-    });
-    setSelected(ctx);
-  };
-
-  const selectedOpponent = selected
-    ? selected.opponentTeam?.name ?? selected.game.awayTeamSlug
-    : '';
-
+export function WorldCupGameRows({ games, team }: WorldCupGameRowsProps) {
   return (
-    <>
-      <div className="divide-y divide-rd-line border-t border-rd-line">
-        {games.map((ctx) => (
-          <GameRowButton
-            key={`${ctx.game.date}-${ctx.game.doubleheaderGame ?? 0}`}
-            ctx={ctx}
-            league={team.league}
-            onOpen={onOpen}
-          />
-        ))}
-      </div>
-
-      {selected && (
-        <Modal
-          isOpen
-          variant="light"
-          onClose={() => setSelected(null)}
-          ariaLabel={`Game details: vs ${selectedOpponent}`}
-        >
-          <GameExpand
-            dateStr={selected.game.date}
-            contexts={[selected]}
-            team={team}
-            teamSlug={teamSlug}
-            teamName={teamName}
-            surface="web_world_cup"
-          />
-        </Modal>
-      )}
-    </>
+    <div className="divide-y divide-rd-line border-t border-rd-line">
+      {games.map((ctx) => (
+        <GameRow
+          key={`${ctx.game.date}-${ctx.game.doubleheaderGame ?? 0}`}
+          ctx={ctx}
+          league={team.league}
+        />
+      ))}
+    </div>
   );
 }

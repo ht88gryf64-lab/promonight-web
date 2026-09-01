@@ -56,6 +56,12 @@ export interface WorldCupData {
   totalHomeGames: number;
 }
 
+// The fixed 2026-06-11 to 2026-07-19 tournament window. This selector reads no
+// clock, which was a defect while the page was written in the future tense (it
+// actively pulled finished fixtures into a page claiming they were upcoming) and
+// is exactly right for a retrospective: the window IS the historical fact the
+// page is a record of, and it can never go stale. The page reads
+// isWorldCupActive() for the things that genuinely depend on today's date.
 function inWindow(date: string): boolean {
   return date >= WORLD_CUP_WINDOW_START && date <= WORLD_CUP_WINDOW_END;
 }
