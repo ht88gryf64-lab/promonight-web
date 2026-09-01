@@ -100,7 +100,9 @@ function GameExpandRow({
   showOpponentLink?: boolean;
 }) {
   const { game, isHome, opponentTeam, opponentVenue, promos } = ctx;
-  const timeLabel = game.timeTbd ? 'TBD' : formatGameTime(game.gameTimeTz, game.gameTime, game.date);
+  const timeLabel = game.timeTbd
+    ? 'TBD'
+    : formatGameTime(game.gameTimeTz, game.gameTime, game.date, game.gameTimeZoneAbbrev);
   const oppName = opponentTeam ? teamDisplayName(opponentTeam) : '';
 
   // Placement string preserved verbatim from the live calendar so PostHog

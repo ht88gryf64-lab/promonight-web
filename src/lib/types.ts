@@ -234,7 +234,16 @@ export interface Game {
   league: string; // 'mlb' | 'nfl'
   date: string; // YYYY-MM-DD (home-venue local date)
   gameTime: string; // HH:MM. MLB: UTC. NFL: UTC, with timeTbd flagging placeholders.
-  gameTimeTz: string; // MLB: "UTC" (renderer converts to viewer local). NFL: IANA venue tz (renderer stays in venue tz).
+  // IANA venue timezone. The renderer stays in venue time for every league.
+  // NFL docs store this directly (src/lib/ingest-nfl.ts). MLB docs written
+  // before 2026-09-01 store the legacy 'UTC' sentinel, which mapGameDoc
+  // replaces with the real zone at read time; see src/lib/mlb-venue-tz.ts.
+  // No Game object leaving the data layer should carry 'UTC'.
+  gameTimeTz: string;
+  // Short zone label for the time cell, e.g. "CDT". Set by mapGameDoc for MLB
+  // only, so appending it cannot change NFL output. Absent when the instant
+  // could not be resolved, in which case no zone is shown rather than a guess.
+  gameTimeZoneAbbrev?: string;
   homeTeamSlug: string;
   awayTeamSlug: string;
   venueName: string;
