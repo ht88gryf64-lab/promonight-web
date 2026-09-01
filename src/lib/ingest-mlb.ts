@@ -1,5 +1,6 @@
 import 'server-only';
 import { db } from './firebase';
+import { resolveMlbZone } from './mlb-venue-tz';
 import { MLB_TEAM_ID_TO_SLUG } from './mlb-team-ids';
 import type { GameStatus } from './types';
 
@@ -21,6 +22,14 @@ export interface IngestStats {
   postseason: number;
   doubleheaders: number;
   errors: number;
+  /** Games whose venueName is not in MLB_VENUE_TO_TZ, written with the home
+   *  club's market zone instead. Correct for a park rename, an hour off for
+   *  a new neutral site, and never 'UTC'. */
+  venueTzFallbacks: number;
+  /** Games where neither the venue nor the home club resolved to a zone.
+   *  Written with an empty tz, which renders no time rather than a wrong
+   *  one. Should always be zero; a non-zero value is a corrupt doc. */
+  venueTzUnresolved: number;
 }
 
 interface StatsApiGame {
@@ -84,7 +93,14 @@ export async function ingestMlbSchedule(opts: IngestOptions = {}): Promise<Inges
     postseason: 0,
     doubleheaders: 0,
     errors: 0,
+    venueTzFallbacks: 0,
+    venueTzUnresolved: 0,
   };
+
+  // Distinct venue strings the timezone map did not know, reported once at the
+  // end of the run. This is the earliest point a rename or a new neutral site
+  // is visible, months before anyone would notice a wrong clock on a page.
+  const unmappedVenues = new Set<string>();
 
   const docs: Array<{ id: string; data: Record<string, unknown> }> = [];
   for (const day of schedule.dates) {
@@ -95,13 +111,36 @@ export async function ingestMlbSchedule(opts: IngestOptions = {}): Promise<Inges
       const awaySlug = MLB_TEAM_ID_TO_SLUG[g.teams.away.team.id];
       if (!homeSlug || !awaySlug) { stats.skippedMissingSlug++; continue; }
 
+      const venueName = g.venue?.name ?? '';
+
+      // gameTime stays the UTC clock of the kickoff instant, unchanged. What
+      // changed on 2026-09-01 is gameTimeTz: it used to be hardcoded 'UTC',
+      // which recorded the ENCODING of gameTime rather than the venue, and left
+      // the renderer with nothing to convert into. It now carries the real IANA
+      // venue zone, the same contract ingest-nfl.ts has always written, so
+      // format-game-time.ts renders venue-local for both leagues.
       let gameTime = '';
       let gameTimeTz = '';
       try {
         const d = new Date(g.gameDate);
         if (!Number.isNaN(d.getTime())) {
           gameTime = d.toISOString().slice(11, 16);
-          gameTimeTz = 'UTC';
+          const zone = resolveMlbZone(venueName, homeSlug);
+          // A miss falls back to the home club's market and is COUNTED, not
+          // swallowed: this is where a new venue string first appears, so the
+          // run summary is the earliest place a rename or a new neutral site
+          // can be noticed. Never write 'UTC' back, and never write a guess
+          // when neither the venue nor the club is known.
+          if (zone) {
+            gameTimeTz = zone.tz;
+            if (zone.source === 'club') {
+              stats.venueTzFallbacks++;
+              unmappedVenues.add(venueName);
+            }
+          } else {
+            stats.venueTzUnresolved++;
+            unmappedVenues.add(venueName);
+          }
         }
       } catch { /* optional */ }
 
@@ -118,7 +157,7 @@ export async function ingestMlbSchedule(opts: IngestOptions = {}): Promise<Inges
         gameTimeTz,
         homeTeamSlug: homeSlug,
         awayTeamSlug: awaySlug,
-        venueName: g.venue?.name ?? '',
+        venueName,
         status: normalizeStatus(g.status?.detailedState),
         mlbGameId: g.gamePk,
       };
@@ -143,6 +182,17 @@ export async function ingestMlbSchedule(opts: IngestOptions = {}): Promise<Inges
       stats.errors++;
       log(`batch error: ${(e as Error).message}`);
     }
+  }
+
+  if (unmappedVenues.size > 0) {
+    log(
+      `VENUE TZ MISS: ${unmappedVenues.size} venue name(s) not in MLB_VENUE_TO_TZ, ` +
+        `${stats.venueTzFallbacks} game(s) written with the home club's zone and ` +
+        `${stats.venueTzUnresolved} with no zone at all: ` +
+        `${[...unmappedVenues].map((v) => JSON.stringify(v)).join(', ')}. ` +
+        'Add them to src/lib/mlb-venue-tz.ts. A club fallback is correct for a park ' +
+        'rename and an hour off for a neutral site in another zone.',
+    );
   }
 
   return stats;

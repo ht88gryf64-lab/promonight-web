@@ -35,6 +35,8 @@ import { getVenueOverride } from './venue-overrides';
 import { bagPolicyUrlFor, nearbySilenced, redactClause } from '@/lib/venue-corpus-silence';
 import { VENUE_RESOLUTION_MAP } from './venue-resolution-map';
 import { VENUE_LOCATIONS_STATIC } from './venue-locations';
+import { resolveMlbZone } from './mlb-venue-tz';
+import { gameZoneAbbrev } from './format-game-time';
 
 function tsToIso(v: unknown): string | null {
   if (!v) return null;
@@ -760,6 +762,40 @@ function mapGameDoc(doc: FirebaseFirestore.DocumentSnapshot): Game {
     venueName: d.venueName ?? '',
     status: (d.status ?? 'scheduled') as GameStatus,
   };
+
+  // ── MLB venue-timezone substitution (added 2026-09-01) ────────────────────
+  //
+  // DELETE THIS BLOCK once the mlb games corpus has been backfilled with real
+  // IANA zones and a probe confirms zero docs still store 'UTC'. It is a
+  // read-time bridge, not architecture, and it is written to be safe to remove
+  // rather than safe to keep: the ingest already writes the real zone for new
+  // docs, so this only serves docs written before that change.
+  //
+  // Why read time and not a migration. The branch in format-game-time.ts is
+  // selected on the literal string 'UTC', so a half-migrated corpus would
+  // render some MLB games in venue time and others in UTC on the SAME page.
+  // Resolving here makes that impossible: the substitution is keyed on the
+  // sentinel and idempotent, so a doc already carrying a real zone passes
+  // through untouched and renders identically to one that does not. A corpus
+  // that is 0%, 47% or 100% migrated produces byte-identical output, which is
+  // why the backfill can be run, deferred, or skipped with no render effect.
+  //
+  // Gated on league AND the sentinel so nothing else can be caught by it.
+  if (game.league === 'mlb' && game.gameTimeTz === 'UTC') {
+    const zone = resolveMlbZone(game.venueName, game.homeTeamSlug);
+    // Absence is null, never a default: with no zone the label renders empty
+    // rather than falling back to the sentinel, which is what printed a 7:10 PM
+    // first pitch as "2:10 AM". See resolveMlbZone for the map-miss policy.
+    game.gameTimeTz = zone ? zone.tz : '';
+  }
+  // Every league gets the label from the same rule; only MLB has a zone that
+  // was resolved here, and NFL call sites pass no abbreviation, so this cannot
+  // change NFL output.
+  if (game.league === 'mlb' && game.gameTimeTz) {
+    const abbrev = gameZoneAbbrev(game.gameTimeTz, game.gameTime, game.date);
+    if (abbrev) game.gameTimeZoneAbbrev = abbrev;
+  }
+
   // MLB-only fields. Read defensively so NFL docs (no mlbGameId) read cleanly.
   if (typeof d.mlbGameId === 'number') game.mlbGameId = d.mlbGameId;
   if (typeof d.doubleheaderGame === 'number') game.doubleheaderGame = d.doubleheaderGame;

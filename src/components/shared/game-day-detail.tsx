@@ -97,7 +97,7 @@ export function GameDetailRow({
   // ESPN's 05:00Z (midnight Eastern) placeholder.
   const timeLabel = game.timeTbd
     ? 'TBD'
-    : formatGameTime(game.gameTimeTz, game.gameTime, game.date);
+    : formatGameTime(game.gameTimeTz, game.gameTime, game.date, game.gameTimeZoneAbbrev);
   const oppName = opponentTeam ? teamDisplayName(opponentTeam) : '';
   const oppSlug = isHome ? game.awayTeamSlug : game.homeTeamSlug;
 

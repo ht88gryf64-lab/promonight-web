@@ -164,7 +164,7 @@ function NflGameCard({
   const dayYmd = game.timeTbd ? gameEtYmd(game) : game.date;
   const kickoff = game.timeTbd
     ? 'KICKOFF TBD'
-    : formatGameTime(game.gameTimeTz, game.gameTime, game.date).toUpperCase();
+    : formatGameTime(game.gameTimeTz, game.gameTime, game.date, game.gameTimeZoneAbbrev).toUpperCase();
   const metaColor = metaAmber ? AMBER : MUTED;
   const venueName = venue?.displayName || game.venueName;
   const logisticsParts = wide

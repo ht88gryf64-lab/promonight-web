@@ -195,7 +195,7 @@ export function ScheduleBlock({ contexts, team, teamName }: ScheduleBlockProps) 
             // print a confident wrong kickoff that no field can flag.
             const kickoffLabel = game.timeTbd
               ? 'TBD'
-              : formatGameTime(game.gameTimeTz, game.gameTime, game.date);
+              : formatGameTime(game.gameTimeTz, game.gameTime, game.date, game.gameTimeZoneAbbrev);
 
             // Venue is the per-game venueName and nothing else. The page-level
             // venue prop is the team's own building, which is wrong for the

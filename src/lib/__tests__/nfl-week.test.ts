@@ -5,6 +5,7 @@ import {
   seasonWeekKey,
   weekLabel,
   gameEtYmd,
+  gameUtcInstantMs,
   buildWeekBuckets,
   selectWeekContext,
   selectDisplayBucket,
@@ -193,6 +194,45 @@ describe('buildWeekBuckets — the pair invariant', () => {
     assert.equal(buckets.length, 1);
     assert.equal(buckets[0].games.length, 1);
     assert.equal(buckets[0].games[0].id, 'reg');
+  });
+
+  // Added 2026-09-01 with the MLB venue-timezone fix.
+  //
+  // gameUtcInstantMs (nfl-week.ts:83) returns null when gameTimeTz === 'UTC',
+  // and its comment names MLB docs as the reason. From this change on, MLB docs
+  // reach the app carrying a REAL IANA zone, so that conjunct stops firing for
+  // them. Line 83 is deliberately left as written; this test pins the thing
+  // that was actually keeping MLB out of the NFL hub, which is the absent
+  // (week, seasonType) pair, so the protection is asserted rather than assumed.
+  test('an MLB doc carrying a real IANA zone still never enters a week bucket', () => {
+    const mlbWithRealZone = game({
+      id: 'mlb-2026-09-17-cubs-at-brewers',
+      date: '2026-09-17',
+      league: 'mlb',
+      gameTime: '23:40',
+      gameTimeTz: 'America/Chicago',
+      seasonType: undefined,
+      week: undefined,
+    });
+    // Its instant now resolves, where before the sentinel forced null.
+    assert.notEqual(gameUtcInstantMs(mlbWithRealZone), null);
+    // It is still not bucketable, which is what keeps it off the NFL hub.
+    assert.deepEqual(buildWeekBuckets([mlbWithRealZone]), []);
+    const buckets = buildWeekBuckets([mlbWithRealZone, game({ id: 'reg', date: '2026-09-17', week: 2 })]);
+    assert.equal(buckets.length, 1);
+    assert.deepEqual(
+      buckets[0].games.map((g) => g.id),
+      ['reg'],
+    );
+    // NOT asserted, because it is not true: clubRegularSeasonCounts WOULD count
+    // this doc if it were ever handed one, since isRegularSeasonGame is
+    // absent-means-keep by design (an MLB doc has no seasonType, and a
+    // Firestore equality filter would drop all 2,455 of them). What keeps MLB
+    // out of that path is the league-scoped read upstream: getNflClubCounts
+    // calls getLeagueGames('nfl'), which queries where('league','==','nfl').
+    // Pinning the counts function itself would assert an invariant it does not
+    // have and does not need.
+    assert.equal(clubRegularSeasonCounts([mlbWithRealZone], [], '2026-09-01')['home-club']?.homeGames, 1);
   });
 });
 
