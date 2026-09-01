@@ -1,4 +1,5 @@
 import { OG_IMAGE_ALT } from '@/lib/og';
+import { offseasonHeadingTag } from '@/lib/playoffs-headings';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -31,15 +32,55 @@ import { ChampionsCelebration } from '@/components/champions/champions-celebrati
 export const revalidate = 21600;
 
 const PAGE_URL = 'https://www.getpromonight.com/playoffs';
+
+// The 2026 MLB postseason opens with the Wild Card round on Tuesday
+// September 29, Division Series October 3, World Series October 23. The
+// offseason copy used to say playoffs "pick back up in October", which was
+// wrong by a month and the kind of wrong that gets worse rather than
+// self-correcting: it stays on the page every day of that missing week.
+//
+// The stored schedule agrees. The last regular-season game in the mlb games
+// collection is 2026-09-27, so a postseason starting in October would leave a
+// four-day hole the data does not have.
+//
+// The label and the date live together so the copy cannot drift from the
+// boundary the copy is chosen by.
+const MLB_POSTSEASON_OPENS = '2026-09-29';
+const MLB_POSTSEASON_OPENS_LABEL = 'September 29';
+
+// Whether the MLB postseason has started yet, so the offseason copy reads
+// correctly BEFORE and AFTER that date rather than only today. Wrong-after is
+// exactly the failure the "in October" line already had.
+function mlbPostseasonUnderway(now: Date = new Date()): boolean {
+  return now.toISOString().slice(0, 10) >= MLB_POSTSEASON_OPENS;
+}
+
+
 // Launch date for the /playoffs hub. Static anchor for Article.datePublished;
 // dateModified refreshes with each scanner run.
 const PAGE_PUBLISHED = '2026-04-20T00:00:00-05:00';
 
+// THREE metadata states, matching the three the page body can render.
+//
+// It used to be two, and the second one was dead. The offseason branch was
+// gated on `playoffsActive === false && isChampionsCelebrationActive()`, while
+// the body gate at the bottom of this file is `!config.playoffsActive` alone.
+// The comment here claimed the branch "mirrors the page's playoffsActive ===
+// false gate"; it did not, and once CHAMPIONS_DISPLAY_UNTIL passed on
+// 2026-07-05 the conjunct went permanently false. From that day generateMetadata
+// fell through to the live-playoffs default, so the page served "Playoff Promos
+// & Giveaways 2026" and "See what's on tonight" over a body that says the
+// playoffs are complete. Six weeks of a title contradicting its own page.
+//
+// The two gates are now the same shape: playoffsActive decides live vs
+// offseason, and isChampionsCelebrationActive only chooses BETWEEN the two
+// offseason variants. Adding a third state is what makes the mirror claim true.
 export async function generateMetadata(): Promise<Metadata> {
-  // Offseason champions mode swaps in champions-focused metadata. Mirrors the
-  // page's playoffsActive === false gate and auto-reverts next season.
   const cfg = await getPlayoffConfig().catch(() => null);
-  if (cfg && cfg.playoffsActive === false && isChampionsCelebrationActive()) {
+  const offseason = cfg?.playoffsActive === false;
+
+  // Offseason, still inside the champions window: champions-focused metadata.
+  if (offseason && isChampionsCelebrationActive()) {
     const champTitle = '2026 NBA and NHL Champions: Knicks, Hurricanes';
     const champDescription =
       'Honoring the New York Knicks (2026 NBA Champions) and Carolina ' +
@@ -67,8 +108,39 @@ export async function generateMetadata(): Promise<Metadata> {
     };
   }
 
-  // The root layout's title.template ("%s | PromoNight") appends the brand, so
-  // this bare title renders as "Playoff Promos & Giveaways 2026 | PromoNight".
+  // Offseason, champions window expired: say what the body says. This is the
+  // branch that did not exist, and its absence is the whole defect.
+  if (offseason) {
+    const offTitle = 'NBA and NHL Playoff Promos: 2026 Postseason Complete';
+    const offDescription =
+      'The 2026 NBA and NHL playoffs are over. Postseason promo coverage resumes ' +
+      `with the MLB Wild Card round on ${MLB_POSTSEASON_OPENS_LABEL}, and returns for the NBA ` +
+      'and NHL next spring. Browse giveaways and theme nights across every team in the meantime.';
+    return {
+      title: offTitle,
+      description: offDescription,
+      alternates: { canonical: PAGE_URL },
+      openGraph: {
+        title: `${offTitle} | PromoNight`,
+        description: offDescription,
+        siteName: 'PromoNight',
+        url: PAGE_URL,
+        type: 'website',
+        images: [
+          {
+            url: '/og-image.png',
+            width: 1200,
+            height: 630,
+            alt: OG_IMAGE_ALT,
+          },
+        ],
+      },
+    };
+  }
+
+  // Live playoffs. The root layout's title.template ("%s | PromoNight") appends
+  // the brand, so this bare title renders as
+  // "Playoff Promos & Giveaways 2026 | PromoNight".
   const title = 'Playoff Promos & Giveaways 2026';
   // OG title is not processed by the layout title.template, so include the
   // "| PromoNight" suffix to match the rendered <title> and brand shared cards.
@@ -784,6 +856,53 @@ function promoTypeColor(type: string): string {
 // design site-wide.
 async function PlayoffsOffseason() {
   const showChampions = isChampionsCelebrationActive();
+  const underway = mlbPostseasonUnderway();
+
+  // THE HEADING IS CONDITIONAL, AND THE CONDITION IS LOAD-BEARING.
+  //
+  // This page served no h1 at all: the offseason early return sits above the
+  // live hub's heading, so the highest heading in main was this h2. The obvious
+  // fix, promote it, is wrong on its own, because ChampionsCelebration already
+  // renders an h1 (champions-celebration.tsx:279) and it mounts directly above
+  // this section whenever showChampions is true. An unconditional promotion
+  // would trade "no h1" for "two h1s" and only reveal that next June.
+  //
+  // So: h1 when this section is the top of the page, h2 when the celebration
+  // owns it. Pinned by the test in src/lib/__tests__/playoffs-headings.test.ts,
+  // which exercises the champions path rather than waiting for the calendar.
+  const Heading = offseasonHeadingTag(showChampions);
+
+  // Minimal WebPage + BreadcrumbList. The page previously served ZERO JSON-LD
+  // of any type: the Article and FAQPage emitters both sit below the early
+  // return above and are unreachable from this branch.
+  //
+  // DELIBERATELY NOT FAQPage. There is no visible FAQ on the offseason view,
+  // and FAQPage over questions a reader cannot see is the structured-data
+  // violation the audit went looking for. Adding one to fill the gap would have
+  // created the defect it was checking for.
+  const offseasonSchema = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'WebPage',
+        '@id': PAGE_URL,
+        url: PAGE_URL,
+        name: 'NBA and NHL Playoff Promos: 2026 Postseason Complete',
+        description:
+          'The 2026 NBA and NHL playoffs are over. Postseason promo coverage resumes ' +
+          `with the MLB Wild Card round on ${MLB_POSTSEASON_OPENS_LABEL}.`,
+        isPartOf: { '@type': 'WebSite', name: 'PromoNight', url: 'https://www.getpromonight.com' },
+        datePublished: PAGE_PUBLISHED,
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.getpromonight.com' },
+          { '@type': 'ListItem', position: 2, name: 'Playoffs', item: PAGE_URL },
+        ],
+      },
+    ],
+  };
 
   // Championship-run promo highlights. getPlayoffPromosForTeam is NOT gated on
   // playoffsActive, so the historical run docs still resolve in the offseason.
@@ -800,6 +919,10 @@ async function PlayoffsOffseason() {
 
   return (
     <div className={`${archivoHouse.variable} rd-root min-h-screen`}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(offseasonSchema) }}
+      />
       {showChampions && (
         <ChampionsCelebration
           champions={CHAMPIONS}
@@ -812,14 +935,17 @@ async function PlayoffsOffseason() {
           <span className="font-rd text-[11px] font-semibold uppercase tracking-[0.14em] text-rd-ink-faint">
             Offseason
           </span>
-          <h2 className="rd-display mt-1 text-2xl uppercase text-rd-ink md:text-3xl">
-            Playoffs return in October with MLB
-          </h2>
+          <Heading className="rd-display mt-1 text-2xl uppercase text-rd-ink md:text-3xl">
+            {underway
+              ? 'MLB postseason underway, NBA and NHL return in spring'
+              : `MLB playoffs open ${MLB_POSTSEASON_OPENS_LABEL}`}
+          </Heading>
           <p className="mt-2 max-w-3xl font-rd text-[15px] leading-relaxed text-rd-ink-soft">
-            The 2026 NBA and NHL playoffs are complete. Postseason promo coverage
-            picks back up in October when the MLB playoffs begin, and returns for
-            the NBA and NHL next spring. In the meantime, browse giveaways and
-            theme nights across every team.
+            The 2026 NBA and NHL playoffs are complete.{' '}
+            {underway
+              ? 'The MLB postseason is under way, and NBA and NHL coverage returns next spring.'
+              : `The MLB postseason opens with the Wild Card round on ${MLB_POSTSEASON_OPENS_LABEL}, and NBA and NHL coverage returns next spring.`}{' '}
+            In the meantime, browse giveaways and theme nights across every team.
           </p>
           <Link
             href="/"
