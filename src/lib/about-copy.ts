@@ -44,10 +44,10 @@ import { numberWord } from '@/lib/coverage-counts';
  * quietly stale. The sitemap entry for /about reads this same constant, so the
  * visible date and <lastmod> cannot disagree.
  */
-export const ABOUT_LAST_REVIEWED = '2026-08-25';
+export const ABOUT_LAST_REVIEWED = '2026-09-02';
 
 /** Human rendering of ABOUT_LAST_REVIEWED. Fixed parts only, no locale clock. */
-export const ABOUT_LAST_REVIEWED_LABEL = 'August 25, 2026';
+export const ABOUT_LAST_REVIEWED_LABEL = 'September 2, 2026';
 
 // SHA-256 of this file with every line naming the fingerprint removed, so the
 // value cannot hash itself. The lockstep test recomputes it; a mismatch means
@@ -63,8 +63,12 @@ export const ABOUT_LAST_REVIEWED_LABEL = 'August 25, 2026';
 // a human read the words; the hash covers the file, link syntax and comments
 // included. Do not treat this as precedent for updating the hash alone: it is
 // correct only when the visible prose is provably unchanged.
+// 2026-09-02: the NHL enable. Three sentences changed (the cadence list gains
+// NHL, the "added by hand" paragraph no longer says NHL is, and the coverage
+// line says NHL clubs are posting), so the prose moved and the date moved with
+// it. The wording was set by the enable brief and is quoted in its report.
 // eslint-disable-next-line prettier/prettier
-export const ABOUT_COPY_FINGERPRINT = 'b19f12225ba776f277eac944b9400cac53380cb210d7a7fc2714bf8872539e12';
+export const ABOUT_COPY_FINGERPRINT = '570727cd0920972d7b15bc7c1db8afbdf3bf95125b942af12c5735e414f65e8b';
 
 export interface AboutCounts {
   teamCount: number;
@@ -193,17 +197,17 @@ export function aboutSections(c: AboutCounts): AboutSection[] {
             {
               lead: 'The schedules get rechecked on a cadence, where a cadence honestly exists.',
               text:
-                '[MLB](/mlb) is rechecked weekly, year round. [MLS](/mls) is rechecked weekly through its season. [WNBA](/wnba) is rechecked weekly from May through September. Those three re-run on their own, though a couple of clubs publish at unpredictable addresses and need a URL added by hand.',
+                '[MLB](/mlb) is rechecked weekly, year round. [MLS](/mls) is rechecked weekly through its season. [WNBA](/wnba) is rechecked weekly from May through September. [NHL](/nhl) is rechecked weekly from August through June, which covers the summer window when clubs post their slates. Those four re-run on their own, though a couple of clubs publish at unpredictable addresses and need a URL added by hand.',
             },
             {
               lead: 'The other leagues work differently, and I would rather say so than imply a cadence that is not there.',
               text:
-                // NBA and NHL are plain text here on purpose: neither hub route
-                // exists yet (LEAGUE_HUB_REGISTRY has both at live:false), and
-                // /nhl was shipping as a live anchor to a 404. Every other
-                // surface reads the registry flag; this string is hand-written,
-                // so it has to be kept in step by hand until a hub ships.
-                'NBA, NHL and [NFL](/nfl) publish in bursts, mostly right before their seasons start, and they get added by hand when I run a sweep. NHL is the one I am working on next, and I will be straight about where it stands: several clubs have already posted their 2026-27 promotions and they are not here yet. That is a gap I am closing, not a claim that there is nothing to find. [College football](/cfb) is different again: those pages carry schedules, venues and rivalries, not promotions.',
+                // NBA stays plain text on purpose: its hub route does not exist
+                // (LEAGUE_HUB_REGISTRY has it at live:false). NHL became a link
+                // on 2026-09-02, the day its hub and weekly scan went live. Every
+                // other surface reads the registry flag; this string is
+                // hand-written, so it has to be kept in step by hand.
+                'NBA and [NFL](/nfl) publish in bursts, mostly right before their seasons start, and they get added by hand when I run a sweep. NHL used to sit in that group; as of September 2026 it is on the weekly scan, with 27 of the 32 clubs checked automatically and the other five held back until their pages carry a current schedule. [College football](/cfb) is different again: those pages carry schedules, venues and rivalries, not promotions.',
             },
             {
               lead: 'A new promo’s title has to be built from words that are actually on the page it came from.',
@@ -234,7 +238,7 @@ export function aboutSections(c: AboutCounts): AboutSection[] {
             {
               lead: 'Team pages',
               text:
-                `for all ${c.teamCount} teams, carrying whatever promotional calendar the team has published, past and upcoming, plus venue details for the ballpark or arena. MLB, MLS and WNBA carry a full season. NBA, NHL and most of the NFL are still waiting on team announcements. [Browse every team](/teams).`,
+                `for all ${c.teamCount} teams, carrying whatever promotional calendar the team has published, past and upcoming, plus venue details for the ballpark or arena. MLB, MLS and WNBA carry a full season, and NHL clubs are posting theirs now. NBA and most of the NFL are still waiting on team announcements. [Browse every team](/teams).`,
             },
             {
               lead: 'Collections',

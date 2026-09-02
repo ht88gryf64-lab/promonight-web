@@ -495,10 +495,17 @@ export function generateTeamFAQs(
   // "Last updated" stamp was known-issues entry 21 class (synthetic
   // freshness) and no stored per-team stamp covers NBA/NHL, so the answer
   // states provenance and the one cadence that is true on every page.
+  //
+  // HELD FOR THE NHL CRON ENABLE COMMIT. NHL joined this list on the
+  // feature/nhl-hub-held branch and the claim is true only once the weekly NHL
+  // scan workflow fires from main (promo-pipeline docs/nhl-pending-decisions.md
+  // entry 6c: the copy and the cadence change in the same commit, so neither
+  // is briefly wrong). Before that commit lands, this sentence would be an
+  // unbacked freshness claim on every NHL team page.
   if (upcomingPromos.length >= 10) {
     faqs.push({
       question: `How often are ${team.name} promo schedules updated?`,
-      answer: `${team.name} promo data comes from official team announcements and is reviewed before it appears here. The current schedule reflects ${upcomingPromos.length} scheduled events. MLB, WNBA, and MLS schedules are rechecked weekly in season.`,
+      answer: `${team.name} promo data comes from official team announcements and is reviewed before it appears here. The current schedule reflects ${upcomingPromos.length} scheduled events. MLB, WNBA, MLS, and NHL schedules are rechecked weekly in season.`,
     });
   }
 

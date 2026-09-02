@@ -111,10 +111,11 @@ export async function generateMetadata({
       day: 'numeric',
     });
 
-  // League-aware freshness tail: only MLB, WNBA, and MLS have a weekly scan
-  // cron (seasonal for the latter two), so only they may claim a recheck
-  // cadence. NBA, NHL, and NFL state provenance instead.
-  const freshnessTail = ['MLB', 'WNBA', 'MLS'].includes(team.league)
+  // League-aware freshness tail: only MLB, WNBA, MLS and NHL have a weekly
+  // scan cron (seasonal for the latter three; NHL joined 2026-09-02 with the
+  // hub enable), so only they may claim a recheck cadence. NBA and NFL state
+  // provenance instead.
+  const freshnessTail = ['MLB', 'WNBA', 'MLS', 'NHL'].includes(team.league)
     ? 'Rechecked weekly in season.'
     : 'From official team announcements.';
   const fallbackDescription = venue
