@@ -16,6 +16,7 @@ import type { Metadata } from 'next';
 import type { CfbSchoolPage } from '@/lib/cfb/data';
 import type { MatchupPage } from '@/lib/cfb/matchups';
 import { buildMatchupDescription, prettySchoolId } from '@/lib/cfb/matchup-description';
+import { venueLocalKickoff } from '@/lib/cfb/kickoff';
 
 // The root layout title template appends ' | PromoNight' (13 chars) to every
 // page title. The house standard keeps the RENDERED <title> (field + brand) ≤60
@@ -218,9 +219,16 @@ export function buildCfbHubMetadata(): Metadata {
  *  pass has not confirmed) never reaches the description, the lede, the fact
  *  card or the SportsEvent. Exported so every surface builds the SAME string
  *  through this ONE gate (the fact card consumes it too). */
-export function renderedKickoff(game: MatchupPage['game']): string | null {
+export function renderedKickoff(game: MatchupPage['game'], venueZone: string | null = null): string | null {
   if (!game || game.verified !== true || game.kickoff?.tbd || !game.kickoff?.time) return null;
   if (/tbd/i.test(game.kickoff.time)) return null;
+  // With the venue's zone known, render the corroborated instant venue-local
+  // (src/lib/cfb/kickoff.ts): the stored label is whichever school parsed the
+  // row. Without it, the stored string as-is, the pre-existing contract.
+  if (venueZone) {
+    const r = venueLocalKickoff(game, venueZone);
+    return r.verified ? r.display : null;
+  }
   const tz = game.kickoff.tz && game.kickoff.tz !== 'TBD' ? ` ${game.kickoff.tz}` : '';
   return `${game.kickoff.time}${tz}`;
 }
@@ -238,7 +246,7 @@ export function buildCfbMatchupMetadata(data: MatchupPage): Metadata {
     schoolA: a?.name ?? prettySchoolId(aId),
     schoolB: b?.name ?? prettySchoolId(bId),
     date: data.game?.date ?? null,
-    kickoff: renderedKickoff(data.game),
+    kickoff: renderedKickoff(data.game, data.venueZone),
     venueName: data.resolvedVenue?.name ?? null,
     venueCity: data.resolvedVenue?.city ?? null,
   });

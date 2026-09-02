@@ -316,7 +316,7 @@ export function CfbSchoolPage({ data, venueHubLink, venueHub }: { data: CfbSchoo
         <section className="mt-11">
           <Eyebrow>2026 Schedule</Eyebrow>
           <CfbSchedule games={games} school={school} venue={venue} />
-          <p className="mt-2.5 text-[11px] text-white/55" style={{ fontFamily: MONO }}>Tap any game for its gameday links. Kickoff times show once announced and confirmed on a second source; until then, Kickoff TBA.</p>
+          <p className="mt-2.5 text-[11px] text-white/55" style={{ fontFamily: MONO }}>Tap an upcoming game for its gameday links. Kickoff times are shown in the stadium's local time once announced and confirmed on a second source; until then, Kickoff TBA. Played games show no score.</p>
         </section>
 
         {/* ── GAMEDAY & TRADITIONS (editorial, destination-only) ── Gated SOLELY on

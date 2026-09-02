@@ -19,13 +19,10 @@ import { resolveMatchupDisplayName } from '@/lib/cfb/display-name';
 import { CFB_COLLECTIONS, type CfbSchool, type CfbGame, type CfbRivalry } from '@/lib/cfb/types';
 import { CFB_CONF_BUCKET_ORDER, type CfbConfBucket } from '@/lib/cfb/conferences';
 import { cfbWeekNumber } from '@/lib/cfb/week';
+import { chicagoTodayYMD } from '@/lib/cfb/clock';
 
-// ── CT-anchored date helpers (same anchor as the homepage; no scrape) ──
-function chicagoTodayYMD(): string {
-  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
-  const part = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
-  return `${part('year')}-${part('month')}-${part('day')}`;
-}
+// ── CT-anchored date helpers (same anchor as the homepage; no scrape).
+//    chicagoTodayYMD lives in clock.ts now, shared with the school pages. ──
 function dow(ymd: string): number {
   const [y, m, d] = ymd.split('-').map(Number);
   return new Date(Date.UTC(y, m - 1, d)).getUTCDay();

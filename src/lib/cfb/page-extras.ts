@@ -54,7 +54,9 @@ export function buildRivalrySentences(data: CfbSchoolPage): string[] {
     const where = g.isHome && !g.neutralSite && venue ? ` at ${venue.name}`
       : !g.isHome && !g.neutralSite && g.awayVenue ? ` at ${g.awayVenue.name}`
       : '';
-    out.push(`The ${ourName} vs ${rival} rivalry${identClause} is played on ${proseDate(g.date)}${where}.`);
+    // Tense follows the derived played flag (clock.ts): a game dated before
+    // today "was played", never "is played", and no result is claimed.
+    out.push(`The ${ourName} vs ${rival} rivalry${identClause} ${g.played ? 'was' : 'is'} played on ${proseDate(g.date)}${where}.`);
   }
   return out;
 }

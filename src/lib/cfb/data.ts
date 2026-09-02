@@ -9,21 +9,27 @@ import { db } from '@/lib/firebase';
 import type { CfbSchool, CfbVenue, CfbGame, CfbRivalry } from '@/lib/cfb/types';
 import { CFB_COLLECTIONS } from '@/lib/cfb/types';
 import { isVisibleGame } from '@/lib/cfb/human-owned';
-// Reuse the pipeline's SINGLE time parser (guards.ts). normTime honors the AM/PM
-// meridiem and returns 24-hour "HH:MM". The display layer must NOT re-derive AM/PM
-// with its own parser (that was the bug); it consumes normTime's output. One parser,
-// used everywhere — the display and the verify stage cannot drift.
-import { normTime } from '../../../scripts/cfb/lib/guards';
-
-const TZ_ABBR: Record<string, string> = {
-  'America/New_York': 'ET', 'America/Chicago': 'CT', 'America/Denver': 'MT',
-  'America/Boise': 'MT', 'America/Phoenix': 'MST', 'America/Los_Angeles': 'PT',
-};
+// Kickoff display goes through src/lib/cfb/kickoff.ts, which consumes the
+// pipeline's SINGLE time parser (guards.ts normTime) and re-expresses the
+// corroborated instant in the venue's zone. The display layer must NOT re-derive
+// AM/PM with its own parser (that was the bug). One parser, used everywhere.
+import { venueLocalKickoff } from '@/lib/cfb/kickoff';
+import { cfbVenueTimezone, cfbNeutralHubTimezone, cfbUntrackedHomeTimezone } from '@/lib/cfb/venue-timezones';
+import { chicagoTodayYMD, isPlayedGame } from '@/lib/cfb/clock';
+import { cfbGameWeek } from '@/lib/cfb/week';
 
 export interface CfbGameView {
   id: string;
   date: string; // YYYY-MM-DD
+  /** The stored per-school ordinal (rules.ts computeWeeks) on a doc both schools
+   *  share. NOT rendered: the away school inherits the home school's count. */
   week: number;
+  /** Calendar week of the game date (week.ts cfbGameWeek); null for Week 0. */
+  weekLabel: number | null;
+  /** Dated before today (America/Chicago). No result is known or shown; the
+   *  row stops presenting the game as a fixture. cfbGames.status never
+   *  transitions, so this is derived from the date alone. */
+  played: boolean;
   isHome: boolean;
   neutralSite: boolean;
   /** Conference game flag from the pipeline; null when unknown. */
@@ -32,7 +38,7 @@ export interface CfbGameView {
   themes: string[];
   opponentId: string;
   opponentName: string;
-  kickoffDisplay: string; // "7:30 PM ET" only when verified+announced; else "Kickoff TBA"
+  kickoffDisplay: string; // "7:30 PM ET" (venue-local) only when verified+announced; else "Kickoff TBA"
   kickoffVerified: boolean;
   networkDisplay: string | null; // only when broadcast.confirmed
   // tag-as-fact, crown none. sourceUrl = the stored corroborating trophy-article
@@ -89,47 +95,11 @@ function prettifySlug(slug: string): string {
     .replace(/\bTbd\b|\bTba\b/i, 'TBA');
 }
 
-// FIX 1: format ONLY what normTime parsed. normTime("7:00 PM") -> "19:00" (24h),
-// so `h >= 12` is now a correct 24-hour test (the old code read the 12-hour "7" and
-// mislabeled it AM). Handles both stored shapes — 12-hour-with-meridiem ("7:00 PM",
-// the current stored form) and bare 24-hour ("19:00").
-function to12h(time: string, tz: string): string | null {
-  const hhmm = normTime(time); // 24h "HH:MM" or "TBD"
-  if (hhmm === 'TBD') return null;
-  const [hStr, min] = hhmm.split(':');
-  let h = parseInt(hStr, 10); // 0..23
-  const ap = h >= 12 ? 'PM' : 'AM';
-  if (h === 0) h = 12; else if (h > 12) h -= 12;
-  const abbr = TZ_ABBR[tz] || tz;
-  return `${h}:${min} ${ap} ${abbr}`;
-}
-
-// A rendered kickoff in the 1:00–6:00 AM local window is categorically impossible
-// for CFB (earliest real kickoffs are ~11 AM local) — such a value is almost
-// certainly a bug (storage corruption or a render regression). FIX 2 lives here at
-// the DISPLAY layer because that is where the meridiem bug was; a storage-verify
-// guard cannot catch a render regression. Zero false positives: no CFB game exists
-// in this window.
-function isImpossibleAmRender(display: string): boolean {
-  return /^[1-6]:\d{2} AM\b/.test(display);
-}
-
-// The verify-gate: an announced time shows ONLY when the game is verified AND not
-// tbd AND parses. Everything else — unannounced (most of July) or a flagged
-// date-error (verified=false) — renders identically as "Kickoff TBA".
-function kickoffDisplay(g: CfbGame): { display: string; verified: boolean } {
-  const tbd = g.kickoff?.tbd || !g.kickoff?.time || /tbd|tba/i.test(g.kickoff?.time || '');
-  if (g.verified && !tbd) {
-    const t = to12h(g.kickoff.time, g.kickoff.tz);
-    if (t && isImpossibleAmRender(t)) {
-      // Better to show TBA than an impossible time; flag it so it is visible.
-      console.warn(`[cfb-kickoff-guard] suspect kickoff "${g.kickoff.time}" (${g.kickoff.tz}) -> "${t}" for game ${g.id}; rendering TBA`);
-      return { display: 'Kickoff TBA', verified: false };
-    }
-    if (t) return { display: t, verified: true };
-  }
-  return { display: 'Kickoff TBA', verified: false };
-}
+// The verify-gate and the venue-local conversion both live in
+// src/lib/cfb/kickoff.ts (venueLocalKickoff): an announced time shows ONLY when
+// the game is verified AND not tbd AND parses, re-expressed in the zone of the
+// building it is played in. Everything else renders "Kickoff TBA". The one
+// normTime parser (guards.ts) is consumed there, never re-derived here.
 
 // ── Read-efficiency layer (CFB-isolated; MLB path untouched) ─────────────────
 // The /cfb build renders 87 school pages, each calling getCfbSchoolPage TWICE
@@ -267,6 +237,7 @@ export const getCfbSchoolPage = cache(async (id: string): Promise<CfbSchoolPage 
   // games (doc-name order), deduped by docId, then a stable date sort. loadGames
   // preserves doc-name order, so filtering yields the same pre-sort sequence the
   // old two `.where().get()` queries did.
+  const today = chicagoTodayYMD();
   const homeGames = allGames.filter((x) => x.data.homeSchoolId === id);
   const awayGames = allGames.filter((x) => x.data.awaySchoolId === id);
   const seen = new Set<string>();
@@ -277,7 +248,15 @@ export const getCfbSchoolPage = cache(async (id: string): Promise<CfbSchoolPage 
     const g = x.data;
     const isHome = g.homeSchoolId === id;
     const opponentId = isHome ? g.awaySchoolId : g.homeSchoolId;
-    const kd = kickoffDisplay(g);
+    // Zone of the building the game is played in: the home school's campus
+    // stadium (tracked school), the untracked home school's campus, or the
+    // neutral-site venueHubs building. Null (unmapped, or a neutral game without
+    // its hub slug) leaves the kickoff in its stored label.
+    const homeSchoolForZone = schoolById.get(g.homeSchoolId);
+    const venueZone = g.neutralSite
+      ? cfbNeutralHubTimezone(g.neutralVenueHubSlug)
+      : (cfbVenueTimezone(homeSchoolForZone?.venueId) ?? cfbUntrackedHomeTimezone(g.homeSchoolId));
+    const kd = venueLocalKickoff(g, venueZone);
     const riv = g.rivalryId ? rivalryById.get(g.rivalryId) : null;
     // Road-trip planner: for a true away game (not home, not neutral), resolve the
     // opponent's school+venue so the template can render hotels/parking near the
@@ -285,7 +264,8 @@ export const getCfbSchoolPage = cache(async (id: string): Promise<CfbSchoolPage 
     const oppSchool = !isHome && !g.neutralSite ? schoolById.get(opponentId) || null : null;
     const oppVenue = oppSchool?.venueId ? venueById.get(oppSchool.venueId) || null : null;
     games.push({
-      id: g.id, date: g.date, week: g.week, isHome, neutralSite: !!g.neutralSite,
+      id: g.id, date: g.date, week: g.week, weekLabel: cfbGameWeek(g.date), played: isPlayedGame(g.date, today),
+      isHome, neutralSite: !!g.neutralSite,
       conferenceGame: typeof g.conferenceGame === 'boolean' ? g.conferenceGame : null,
       // Gated on the game's verified flag like every other displayed fact
       // (kickoff, network): a parser-written designation carries no signal

@@ -15,6 +15,7 @@ import type { RivalryFaq, RivalryIndexRow } from '@/lib/cfb/rivalry-index';
 // The pipeline's single time parser + tz tools (guards.ts). One parser
 // everywhere — the display layer and JSON-LD cannot drift (see data.ts:12-16).
 import { normTime, IANA, ianaOffsetMinutes } from '../../../scripts/cfb/lib/guards';
+import { venueLocalKickoff } from '@/lib/cfb/kickoff';
 
 const BASE = 'https://www.getpromonight.com';
 const YEAR = 2026; // hardcoded by house rule, never getFullYear() in SEO copy
@@ -76,10 +77,17 @@ export function buildRivalryIndexJsonLd(rows: RivalryIndexRow[], faqs: RivalryFa
 /** ISO-8601 startDate for the SportsEvent. Time and offset ONLY when the game
  *  is verified AND the kickoff is announced and parseable; every other case is
  *  the bare date. An unknown tz also degrades to the bare date — never guess. */
-export function sportsEventStartDate(game: Pick<CfbGame, 'date' | 'kickoff' | 'verified'>): string {
+export function sportsEventStartDate(game: Pick<CfbGame, 'date' | 'kickoff' | 'verified'>, venueZone: string | null = null): string {
   if (game.verified !== true) return game.date;
   const k = game.kickoff;
   if (!k || k.tbd) return game.date;
+  // With the venue's zone known, the same instant is expressed venue-local
+  // (src/lib/cfb/kickoff.ts), so the SportsEvent's wall time and offset are the
+  // stadium's, not the parsing school's. Without it, the stored label as before.
+  if (venueZone) {
+    const r = venueLocalKickoff(game, venueZone);
+    return r.iso ?? game.date;
+  }
   const hhmm = normTime(k.time ?? '');
   if (hhmm === 'TBD') return game.date;
   // Stored tz is an abbreviation in practice ("CT", "ET" — see the Phase 0
@@ -139,12 +147,12 @@ export function buildRivalryMatchupJsonLd(data: MatchupPage): Schema[] {
         // renderedKickoff carries the verify gate itself (announced AND
         // verified:true), so the description can never ship a time that
         // startDate withholds.
-        kickoff: renderedKickoff(game),
+        kickoff: renderedKickoff(game, data.venueZone),
         venueName: data.resolvedVenue?.name ?? null,
         venueCity: data.resolvedVenue?.city ?? null,
       }),
       url,
-      startDate: sportsEventStartDate(game),
+      startDate: sportsEventStartDate(game, data.venueZone),
       eventStatus: game.status === 'canceled' ? 'https://schema.org/EventCancelled' : 'https://schema.org/EventScheduled',
       image: EVENT_IMAGE,
       homeTeam: { '@type': 'SportsTeam', name: nameFor(game.homeSchoolId) },

@@ -55,3 +55,22 @@ export function cfbWeekNumber(today: string): number | null {
   if (diff < 0) return null;
   return Math.min(15, Math.floor(diff / 7) + 1);
 }
+
+/** Week label for a GAME, from its date. College football's week runs
+ *  Thursday to Monday (Week 1: Thu Sep 3 to Labor Day Mon Sep 7), so a game
+ *  week is Tuesday-to-Monday: the rail counter shifted back one day. The two
+ *  agree everywhere except a Monday game, which the rail (Monday-to-Sunday
+ *  window, see KNOWN RESIDUAL above) files under the next week and this files
+ *  under the week it closes. Week 0 stays unlabelled (null), same as the rail.
+ *
+ *  This replaces cfbGames.week on the school pages: that field is the parsing
+ *  school's game ORDINAL written onto a doc both schools share (rules.ts
+ *  computeWeeks), so the away school inherits the home school's count and 48
+ *  of 87 pages showed a duplicated "Wk N". */
+export function cfbGameWeek(date: string): number | null {
+  const [y, m, d] = date.split('-').map(Number);
+  if (!y || !m || !d) return null;
+  const prev = new Date(Date.UTC(y, m - 1, d - 1));
+  const ymd = `${prev.getUTCFullYear()}-${String(prev.getUTCMonth() + 1).padStart(2, '0')}-${String(prev.getUTCDate()).padStart(2, '0')}`;
+  return cfbWeekNumber(ymd);
+}
