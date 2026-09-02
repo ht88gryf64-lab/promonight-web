@@ -63,6 +63,11 @@ export interface CfbVenue {
   coordsVerifiedAt?: string; // ISO
   homeSchoolId: string;
   sharedSchoolIds: string[];
+  /** IANA zone of the building ("America/New_York"), written by
+   *  scripts/cfb/populate-venue-timezones.ts from the render map. The RECORD;
+   *  src/lib/cfb/venue-timezones.ts is the fallback when absent. */
+  timezone?: string;
+  timezoneSource?: string;
   // Prose, editorial — populated in the editorial pass, not the pipeline.
   tailgating?: string;
   parking?: string;

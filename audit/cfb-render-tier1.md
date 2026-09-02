@@ -194,3 +194,41 @@ Decision after the first pass: the site carries no CFB week numbers. The date is
 Not touched: `src/lib/cfb/rules.ts computeWeeks` (the pipeline writer's rule, quarantined with its writer) and `RIVALRY_WEEK_START/END`. The remaining `.week` reads in `src/components` are the pro `Game` type on NFL surfaces, not CFB.
 
 After the revision: 691 tests, 0 failures; `tsc --noEmit` clean.
+
+---
+
+## Production verification, 2026-09-02 (known-issues entry 33, both modes)
+
+Merged to `main` as 4f14dd2 (--no-ff from ca2c5aa, which had not moved). Vercel production deployment 6227210758 succeeded. Everything below was measured against `https://www.getpromonight.com` after that deploy.
+
+**Mode 1, served HTML** (cache-busting `?nocache=<ts>` plus `Cache-Control: no-cache`; every response `x-vercel-cache: PRERENDER`, `age: 0`):
+
+| Page | Rows served (upcoming / played) | "Wk" | "WEEK" | Confirmed content |
+|---|---|---|---|---|
+| /cfb/tennessee | 12 / 0 | 0 | 0 | Sep 26 Texas: `12:00 PM ET · ABC or ESPN`; no week label on any row |
+| /cfb/arizona-state | 12 / 0 | 0 | 0 | all rows Kickoff TBA (0 of 12 verified, unchanged) |
+| /cfb/washington-state | 6 / 0 | 0 | 0 | rows labelled by date only: SEP 6, SEP 12, SEP 26, OCT 3, OCT 24, OCT 31 |
+| /cfb/notre-dame | 12 / 0 | 0 | 0 | Sep 6 Wisconsin: `Neutral site · 6:30 PM CT · NBC and Peacock` |
+| /cfb/liberty | 12 / 0 | 0 | 0 | unchanged, every row with a kickoff |
+| /cfb/florida-state | 11 / 1 | 0 | 0 | Aug 29 New Mexico State: `Doak Campbell Stadium · Tallahassee · Home · Played`; no TBA, no button, `data-cfb-row="played"` |
+| /cfb (hub) | rail present | 0 | 0 | `RIVALRY GAMES · AUG 31 – SEP 6` with `UPDATES MONDAY AM` on the right |
+
+Schedule footer on every school page: "Tap an upcoming game for its gameday links. Kickoff times are shown in the stadium's local time once announced and confirmed on a second source; until then, Kickoff TBA. Played games show no score."
+
+**Mode 2, hydration** (`scripts/check-hydration-duplicates.js`, headless Chrome via `PUPPETEER_EXECUTABLE_PATH` pointing at the installed Google Chrome because the pipeline's puppeteer build had no cached browser; always-visible selector `[data-cfb-row]` on school pages, `a[href^="/cfb/"]` on the hub):
+
+| Page | total | visible | hidden duplicates |
+|---|---|---|---|
+| /cfb/tennessee | 12 | 12 | 0 |
+| /cfb/arizona-state | 12 | 12 | 0 |
+| /cfb/washington-state | 6 | 6 | 0 |
+| /cfb/notre-dame | 12 | 12 | 0 |
+| /cfb/liberty | 12 | 12 | 0 |
+| /cfb/florida-state | 12 | 12 | 0 |
+| /cfb | 107 | 107 | 0 |
+
+Every visible count equals the Mode 1 served-row count for that page. Per the script's own caveat a clean result is weak evidence, not proof.
+
+**Revalidation.** `POST /api/revalidate` with 121 paths in two requests (the route caps at 100): 87 `/cfb/<school>`, `/cfb`, `/cfb/rivalries`, and the 32 registry matchup pages. Responses: `{"ok":true,"revalidated":100}` and `{"ok":true,"revalidated":21}`, 121 of 121.
+
+**Served content after revalidation** (plain URLs, no cache-busting): all nine checked URLs (`/cfb/tennessee`, `/cfb/arizona-state`, `/cfb/washington-state`, `/cfb/notre-dame`, `/cfb/liberty`, `/cfb/florida-state`, `/cfb`, `/cfb/rivalries`, `/cfb/rivalries/apple-cup`) returned 200 with `x-vercel-cache: REVALIDATED`, `age: 0`, zero "Wk", zero "WEEK", and the same content markers as Mode 1. `/cfb/rivalries` still carries "Rivalry Week 2026", the named date window that stays.
