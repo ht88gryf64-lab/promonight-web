@@ -49,7 +49,7 @@ function ScheduleRow({ g, last, onOpen, school, venue }: { g: CfbGameView; last:
       </div>
       <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
         <span className="text-[10px] uppercase text-white/35" style={{ fontFamily: MONO }}>
-          {g.isHome ? (g.neutralSite ? 'N' : 'VS') : 'AT'}
+          {g.neutralSite ? 'N' : g.isHome ? 'VS' : 'AT'}
           {/* Conference-game marker, from the stored conferenceGame flag. */}
           {g.conferenceGame ? ' · CONF' : ''}
         </span>
