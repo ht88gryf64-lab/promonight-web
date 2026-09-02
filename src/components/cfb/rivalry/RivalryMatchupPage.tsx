@@ -103,7 +103,7 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
   // "Kickoff TBA" verbatim, no embellishment. renderedKickoff is the ONE gate
   // (announced AND verified), shared with the meta description, the lede and
   // the SportsEvent, so no surface can ever show a time another withholds.
-  const kickoff = renderedKickoff(game) ?? 'Kickoff TBA';
+  const kickoff = renderedKickoff(game, data.venueZone) ?? 'Kickoff TBA';
 
   // Visible lede: byte-identical to the meta description (same builder, same
   // inputs as buildCfbMatchupMetadata), so the hand-written 140-160 char
@@ -113,7 +113,7 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
     schoolA: a?.name ?? aFallback,
     schoolB: b?.name ?? bFallback,
     date: game?.date ?? null,
-    kickoff: renderedKickoff(game),
+    kickoff: renderedKickoff(game, data.venueZone),
     venueName: resolvedVenue?.name ?? null,
     venueCity: resolvedVenue?.city ?? null,
   });

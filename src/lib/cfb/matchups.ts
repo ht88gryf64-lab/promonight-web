@@ -19,6 +19,7 @@ import { getCfbCorpus, getCfbSchoolPage } from '@/lib/cfb/data';
 import { getVenueHub, getVenueHubForTeam, venueHubIsIndexable } from '@/lib/venue-hub';
 import { buildRivalrySentences } from '@/lib/cfb/page-extras';
 import { venueCity } from '@/lib/cfb/venue-cities';
+import { cfbVenueTimezone, cfbNeutralHubTimezone } from '@/lib/cfb/venue-timezones';
 import { MATCHUP_REGISTRY, type MatchupRegistryEntry } from '@/lib/cfb/matchup-registry';
 import { resolveMatchupDisplayName, findDisplayNameCollisions } from '@/lib/cfb/display-name';
 import type { RivalryIndexRow } from '@/lib/cfb/rivalry-index';
@@ -93,6 +94,10 @@ export interface MatchupPage {
   neutralVenueHubSlug: string | null;
   /** The flattened answer the template actually renders. */
   resolvedVenue: ResolvedMatchupVenue | null;
+  /** IANA zone of the building the game is played in (venue-timezones.ts),
+   *  so every kickoff the family renders is venue-local. Null when unmapped or
+   *  no game: the kickoff then shows its stored label, never a guessed zone. */
+  venueZone: string | null;
   /** 2026 conference of the first tracked school, for the trophy stat block. */
   conference: string | null;
   /** One sentence from the shared generator (page-extras.ts:35-60). Null when
@@ -300,6 +305,7 @@ export const getMatchupPage = cache(async (slug: string): Promise<MatchupPage | 
     venue,
     neutralVenueHubSlug,
     resolvedVenue,
+    venueZone: game?.data.neutralSite ? cfbNeutralHubTimezone(neutralVenueHubSlug) : cfbVenueTimezone(venue?.id),
     conference: (schoolA ?? schoolB)?.conferenceBySeason?.['2026'] ?? null,
     rivalrySentence,
     siblings: siblings.map((s) => ({ slug: s.slug, name: s.name, date: s.date, colors: s.colors })),

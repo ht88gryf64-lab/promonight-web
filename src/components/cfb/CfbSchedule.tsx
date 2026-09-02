@@ -30,17 +30,18 @@ function ScheduleRow({ g, last, onOpen, school, venue }: { g: CfbGameView; last:
   // Same resolution the modal uses; visible on every row, never hidden.
   const { gameVenue } = resolveGame(g, school, venue);
   const detail = [gameVenue?.name ?? null, venueCity(gameVenue), g.neutralSite ? 'Neutral site' : g.isHome ? 'Home' : 'Away'].filter(Boolean).join(' · ');
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className={`group grid w-full cursor-pointer grid-cols-[56px_1fr_auto_16px] items-center gap-3 px-4 py-3.5 text-left transition-colors sm:grid-cols-[64px_1fr_auto_16px] sm:gap-5 sm:px-6 ${g.rivalry ? 'hover:brightness-110' : 'hover:bg-white/[0.03]'}`}
-      style={{ borderBottom: last ? 'none' : '1px solid rgba(255,255,255,0.05)', background: g.rivalry ? 'var(--cfb-tint)' : undefined }}
-    >
+  // A played game (dated before today, America/Chicago) is not a fixture: no
+  // gameday modal, no kickoff, no "Kickoff TBA". No result is known, so none is
+  // shown; the row reads PLAYED and dims. Rendered as a div, not a button.
+  const rowClass = `group grid w-full grid-cols-[56px_1fr_auto_16px] items-center gap-3 px-4 py-3.5 text-left transition-colors sm:grid-cols-[64px_1fr_auto_16px] sm:gap-5 sm:px-6 ${g.played ? 'opacity-50' : g.rivalry ? 'cursor-pointer hover:brightness-110' : 'cursor-pointer hover:bg-white/[0.03]'}`;
+  const rowStyle = { borderBottom: last ? 'none' : '1px solid rgba(255,255,255,0.05)', background: g.rivalry ? 'var(--cfb-tint)' : undefined };
+  const inner = (
+    <>
+      {/* The date is the row's only label. CFB has no week numbers on this
+          site: the stored cfbGames.week is a per-school ordinal on a doc both
+          schools share and is not read anywhere. */}
       <div style={{ fontFamily: MONO }}>
         <div className="text-[12px] text-white/55">{fmtMonthDay(g.date)}</div>
-        {/* Week number: pipeline data, previously computed but never rendered. */}
-        <div className="mt-0.5 text-[10px] text-white/30">Wk {g.week}</div>
       </div>
       <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
         <span className="text-[10px] uppercase text-white/35" style={{ fontFamily: MONO }}>
@@ -79,7 +80,9 @@ function ScheduleRow({ g, last, onOpen, school, venue }: { g: CfbGameView; last:
         <div className="w-full text-[11px] text-white/55" style={{ fontFamily: MONO }}>{detail}</div>
       </div>
       <div className="text-right" style={{ fontFamily: MONO }}>
-        {g.kickoffVerified ? (
+        {g.played ? (
+          <div className="text-[11px] uppercase tracking-wide text-white/40">Played</div>
+        ) : g.kickoffVerified ? (
           <>
             <div className="text-[13px] font-bold text-white">{g.kickoffDisplay}</div>
             {g.networkDisplay && <div className="mt-0.5 text-[10px] text-white/40">{g.networkDisplay}</div>}
@@ -88,10 +91,18 @@ function ScheduleRow({ g, last, onOpen, school, venue }: { g: CfbGameView; last:
           <div className="text-[12px] text-white/40">{g.kickoffDisplay}</div>
         )}
       </div>
-      <svg className="h-3.5 w-3.5 text-white/20 transition-colors group-hover:text-[color:var(--cfb-accent)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-      </svg>
-    </button>
+      {/* The chevron is the modal affordance; a played row has no modal. */}
+      {g.played ? <span aria-hidden="true" /> : (
+        <svg className="h-3.5 w-3.5 text-white/20 transition-colors group-hover:text-[color:var(--cfb-accent)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+      )}
+    </>
+  );
+  return g.played ? (
+    <div className={rowClass} style={rowStyle} data-cfb-row="played" data-cfb-played="true" aria-label={`${g.opponentName}, played`}>{inner}</div>
+  ) : (
+    <button type="button" onClick={onOpen} className={rowClass} style={rowStyle} data-cfb-row="upcoming">{inner}</button>
   );
 }
 

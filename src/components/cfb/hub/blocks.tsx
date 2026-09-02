@@ -89,7 +89,9 @@ export function NationalBlock({ block }: { block: HubNationalBlock }) {
 
 export function WeekCard({ game }: { game: HubRivalryGame }) {
   const { a, b } = orderRivalrySides({ ...game.home, isHome: true }, { ...game.away }, game.neutral);
-  const countdown = game.days <= 0 ? 'TODAY' : game.days === 1 ? 'TOMORROW' : `IN ${game.days} DAYS`;
+  // days < 0: the game sits earlier in the Monday-to-Sunday rail window (a
+  // Saturday game viewed on Sunday). It was played; it is not TODAY.
+  const countdown = game.days < 0 ? 'PLAYED' : game.days === 0 ? 'TODAY' : game.days === 1 ? 'TOMORROW' : `IN ${game.days} DAYS`;
   return (
     <div className="relative h-[140px] min-w-[280px] shrink-0 overflow-hidden rounded-xl border border-white/10">
       <DiagonalFill a={a} b={b} fadeStart={45} dividerAlpha={0.5} />
