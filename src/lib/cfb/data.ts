@@ -14,7 +14,7 @@ import { isVisibleGame } from '@/lib/cfb/human-owned';
 // corroborated instant in the venue's zone. The display layer must NOT re-derive
 // AM/PM with its own parser (that was the bug). One parser, used everywhere.
 import { venueLocalKickoff } from '@/lib/cfb/kickoff';
-import { cfbVenueTimezone, cfbNeutralHubTimezone, cfbUntrackedHomeTimezone } from '@/lib/cfb/venue-timezones';
+import { resolveVenueZone } from '@/lib/cfb/venue-timezones';
 import { venueTodayYMD, isPlayedGame } from '@/lib/cfb/clock';
 
 export interface CfbGameView {
@@ -241,14 +241,19 @@ export const getCfbSchoolPage = cache(async (id: string): Promise<CfbSchoolPage 
     const g = x.data;
     const isHome = g.homeSchoolId === id;
     const opponentId = isHome ? g.awaySchoolId : g.homeSchoolId;
-    // Zone of the building the game is played in: the home school's campus
-    // stadium (tracked school), the untracked home school's campus, or the
-    // neutral-site venueHubs building. Null (unmapped, or a neutral game without
-    // its hub slug) leaves the kickoff in its stored label.
+    // Zone of the building the game is played in: the venue RECORD's timezone
+    // field when it carries one, else the render map (campus stadium, untracked
+    // home school's campus, or the neutral-site venueHubs building). Null
+    // (unmapped, or a neutral game without its hub slug) leaves the kickoff in
+    // its stored label. Neutral hubs are not loaded on this path, so a neutral
+    // game resolves through the map here; the matchup pages read the hub doc.
     const homeSchoolForZone = schoolById.get(g.homeSchoolId);
-    const venueZone = g.neutralSite
-      ? cfbNeutralHubTimezone(g.neutralVenueHubSlug)
-      : (cfbVenueTimezone(homeSchoolForZone?.venueId) ?? cfbUntrackedHomeTimezone(g.homeSchoolId));
+    const homeVenueForZone = homeSchoolForZone?.venueId ? venueById.get(homeSchoolForZone.venueId) : undefined;
+    const venueZone = resolveVenueZone({
+      neutralSite: g.neutralSite, neutralVenueHubSlug: g.neutralVenueHubSlug,
+      homeSchoolId: g.homeSchoolId, homeVenueId: homeSchoolForZone?.venueId,
+      homeVenueTimezone: homeVenueForZone?.timezone ?? null,
+    });
     const kd = venueLocalKickoff(g, venueZone);
     const riv = g.rivalryId ? rivalryById.get(g.rivalryId) : null;
     // Road-trip planner: for a true away game (not home, not neutral), resolve the

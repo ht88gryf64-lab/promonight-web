@@ -19,7 +19,7 @@ import { getCfbCorpus, getCfbSchoolPage } from '@/lib/cfb/data';
 import { getVenueHub, getVenueHubForTeam, venueHubIsIndexable } from '@/lib/venue-hub';
 import { buildRivalrySentences } from '@/lib/cfb/page-extras';
 import { venueCity } from '@/lib/cfb/venue-cities';
-import { cfbVenueTimezone, cfbNeutralHubTimezone } from '@/lib/cfb/venue-timezones';
+import { resolveVenueZone } from '@/lib/cfb/venue-timezones';
 import { MATCHUP_REGISTRY, type MatchupRegistryEntry } from '@/lib/cfb/matchup-registry';
 import { resolveMatchupDisplayName, findDisplayNameCollisions } from '@/lib/cfb/display-name';
 import type { RivalryIndexRow } from '@/lib/cfb/rivalry-index';
@@ -221,9 +221,12 @@ export const getMatchupPage = cache(async (slug: string): Promise<MatchupPage | 
 
   // ── resolve the venue the template renders ──
   let resolvedVenue: ResolvedMatchupVenue | null = null;
+  // The neutral building's own timezone field, when the record carries it.
+  let neutralHubTimezone: string | null = null;
   if (game?.data.neutralSite && neutralVenueHubSlug) {
     const hub = await getVenueHub(neutralVenueHubSlug);
     if (hub) {
+      neutralHubTimezone = hub.timezone ?? null;
       resolvedVenue = {
         name: hub.name,
         city: hub.city,
@@ -305,7 +308,12 @@ export const getMatchupPage = cache(async (slug: string): Promise<MatchupPage | 
     venue,
     neutralVenueHubSlug,
     resolvedVenue,
-    venueZone: game?.data.neutralSite ? cfbNeutralHubTimezone(neutralVenueHubSlug) : cfbVenueTimezone(venue?.id),
+    venueZone: game ? resolveVenueZone({
+      neutralSite: game.data.neutralSite, neutralVenueHubSlug,
+      homeSchoolId: game.data.homeSchoolId, homeVenueId: venue?.id ?? null,
+      homeVenueTimezone: venue?.timezone ?? null,
+      neutralHubTimezone,
+    }) : null,
     conference: (schoolA ?? schoolB)?.conferenceBySeason?.['2026'] ?? null,
     rivalrySentence,
     siblings: siblings.map((s) => ({ slug: s.slug, name: s.name, date: s.date, colors: s.colors })),

@@ -118,6 +118,23 @@ export const CFB_NEUTRAL_HUB_TIMEZONES: Record<string, string> = {
   'metlife-stadium': 'America/New_York', // East Rutherford, New Jersey (40.81, -74.07)
 };
 
+/** Zone of the building a game is played in. THE RECORD FIRST: a `timezone`
+ *  on the cfbVenues doc (campus) or the venueHubs doc (neutral site), written by
+ *  scripts/cfb/populate-venue-timezones.ts. The maps below are the fallback for
+ *  a doc without the field, and the only source for a home school with no doc
+ *  at all. Null when nothing answers: the kickoff then keeps its stored label. */
+export function resolveVenueZone(g: {
+  neutralSite?: boolean | null;
+  neutralVenueHubSlug?: string | null;
+  homeSchoolId: string;
+  homeVenueId?: string | null;
+  homeVenueTimezone?: string | null;
+  neutralHubTimezone?: string | null;
+}): string | null {
+  if (g.neutralSite) return g.neutralHubTimezone || cfbNeutralHubTimezone(g.neutralVenueHubSlug);
+  return g.homeVenueTimezone || cfbVenueTimezone(g.homeVenueId) || cfbUntrackedHomeTimezone(g.homeSchoolId);
+}
+
 /** The IANA zone of a cfbVenues building, or null when unmapped. Never guess:
  *  an unmapped venue leaves the kickoff in its stored label. */
 export function cfbVenueTimezone(venueId: string | null | undefined): string | null {

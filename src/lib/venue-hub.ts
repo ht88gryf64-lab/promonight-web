@@ -75,6 +75,10 @@ export interface VenueHub {
   state: string | null;
   lat: number | null;
   lng: number | null;
+  /** IANA zone of the building, when the record carries it (written by
+   *  scripts/cfb/populate-venue-timezones.ts for the neutral-site buildings
+   *  cfbGames reference). Null when absent; the CFB render map is the fallback. */
+  timezone?: string | null;
   capacity: number | null;
   tenants: VenueHubTenantRef[];
   // building facts
@@ -190,6 +194,7 @@ export function toVenueHub(
     state: d.state ?? null,
     lat: typeof d.lat === 'number' ? d.lat : null,
     lng: typeof d.lng === 'number' ? d.lng : null,
+    timezone: typeof d.timezone === 'string' && d.timezone.includes('/') ? d.timezone : null,
     capacity: typeof d.capacity === 'number' ? d.capacity : null,
     tenants: Array.isArray(d.tenants) ? d.tenants : [],
     // Clause redactions land HERE, at the one mapper every hub renderer reads,

@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { CFB_VENUE_TIMEZONES, CFB_NEUTRAL_HUB_TIMEZONES, CFB_UNTRACKED_HOME_TIMEZONES, cfbVenueTimezone, cfbNeutralHubTimezone, cfbUntrackedHomeTimezone } from '../cfb/venue-timezones';
+import { CFB_VENUE_TIMEZONES, CFB_NEUTRAL_HUB_TIMEZONES, CFB_UNTRACKED_HOME_TIMEZONES, cfbVenueTimezone, cfbNeutralHubTimezone, cfbUntrackedHomeTimezone, resolveVenueZone } from '../cfb/venue-timezones';
 
 // Every zone must be one Intl accepts, and the map must cover the whole
 // 2026 corpus: 86 campus stadiums and the 8 neutral buildings cfbGames reference.
@@ -48,6 +48,23 @@ describe('CFB venue time zones', () => {
     assert.deepEqual(easternWestOf87, []);
     const pacificEastOf114 = rows.filter((r) => r[2] === 'America/Los_Angeles' && Number(r[4]) > -114.5);
     assert.deepEqual(pacificEastOf114, []);
+  });
+
+  test('the record wins, the map is the fallback, the untracked map is the last resort', () => {
+    // Record present on the campus doc: used even if the map disagrees.
+    assert.equal(resolveVenueZone({ homeSchoolId: 'tennessee', homeVenueId: 'neyland-stadium', homeVenueTimezone: 'America/Chicago' }), 'America/Chicago');
+    // No record: the campus map.
+    assert.equal(resolveVenueZone({ homeSchoolId: 'tennessee', homeVenueId: 'neyland-stadium', homeVenueTimezone: null }), 'America/New_York');
+    // Tracked school without a venue doc: the venueless map.
+    assert.equal(resolveVenueZone({ homeSchoolId: 'washington-state', homeVenueId: '', homeVenueTimezone: null }), 'America/Los_Angeles');
+    // Untracked home school: the venueless map.
+    assert.equal(resolveVenueZone({ homeSchoolId: 'hawaii' }), 'Pacific/Honolulu');
+    // Neutral: the hub record, else the neutral map, else null.
+    assert.equal(resolveVenueZone({ neutralSite: true, neutralVenueHubSlug: 'lambeau-field', homeSchoolId: 'notre-dame', neutralHubTimezone: 'America/Chicago' }), 'America/Chicago');
+    assert.equal(resolveVenueZone({ neutralSite: true, neutralVenueHubSlug: 'lambeau-field', homeSchoolId: 'notre-dame' }), 'America/Chicago');
+    assert.equal(resolveVenueZone({ neutralSite: true, neutralVenueHubSlug: null, homeSchoolId: 'north-carolina' }), null); // Dublin
+    // Nothing anywhere.
+    assert.equal(resolveVenueZone({ homeSchoolId: 'furman' }), null);
   });
 
   test('unmapped ids resolve to null, never a guess', () => {
