@@ -15,20 +15,14 @@ import { isVisibleGame } from '@/lib/cfb/human-owned';
 // AM/PM with its own parser (that was the bug). One parser, used everywhere.
 import { venueLocalKickoff } from '@/lib/cfb/kickoff';
 import { cfbVenueTimezone, cfbNeutralHubTimezone, cfbUntrackedHomeTimezone } from '@/lib/cfb/venue-timezones';
-import { chicagoTodayYMD, isPlayedGame } from '@/lib/cfb/clock';
-import { cfbGameWeek } from '@/lib/cfb/week';
+import { venueTodayYMD, isPlayedGame } from '@/lib/cfb/clock';
 
 export interface CfbGameView {
   id: string;
-  date: string; // YYYY-MM-DD
-  /** The stored per-school ordinal (rules.ts computeWeeks) on a doc both schools
-   *  share. NOT rendered: the away school inherits the home school's count. */
-  week: number;
-  /** Calendar week of the game date (week.ts cfbGameWeek); null for Week 0. */
-  weekLabel: number | null;
-  /** Dated before today (America/Chicago). No result is known or shown; the
-   *  row stops presenting the game as a fixture. cfbGames.status never
-   *  transitions, so this is derived from the date alone. */
+  date: string; // YYYY-MM-DD. The row's only label: CFB has no week numbers here.
+  /** Dated before today in the VENUE's zone (clock.ts venueTodayYMD). No result
+   *  is known or shown; the row stops presenting the game as a fixture.
+   *  cfbGames.status never transitions, so this is derived from the date alone. */
   played: boolean;
   isHome: boolean;
   neutralSite: boolean;
@@ -237,7 +231,6 @@ export const getCfbSchoolPage = cache(async (id: string): Promise<CfbSchoolPage 
   // games (doc-name order), deduped by docId, then a stable date sort. loadGames
   // preserves doc-name order, so filtering yields the same pre-sort sequence the
   // old two `.where().get()` queries did.
-  const today = chicagoTodayYMD();
   const homeGames = allGames.filter((x) => x.data.homeSchoolId === id);
   const awayGames = allGames.filter((x) => x.data.awaySchoolId === id);
   const seen = new Set<string>();
@@ -264,7 +257,7 @@ export const getCfbSchoolPage = cache(async (id: string): Promise<CfbSchoolPage 
     const oppSchool = !isHome && !g.neutralSite ? schoolById.get(opponentId) || null : null;
     const oppVenue = oppSchool?.venueId ? venueById.get(oppSchool.venueId) || null : null;
     games.push({
-      id: g.id, date: g.date, week: g.week, weekLabel: cfbGameWeek(g.date), played: isPlayedGame(g.date, today),
+      id: g.id, date: g.date, played: isPlayedGame(g.date, venueTodayYMD(venueZone)),
       isHome, neutralSite: !!g.neutralSite,
       conferenceGame: typeof g.conferenceGame === 'boolean' ? g.conferenceGame : null,
       // Gated on the game's verified flag like every other displayed fact

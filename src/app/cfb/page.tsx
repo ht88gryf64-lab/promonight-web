@@ -50,10 +50,13 @@ export default async function CfbHub() {
   const allTeams = data.browse.flatMap((b) => b.teams.map((t) => ({ id: t.id, name: t.name })));
   // Indexable stadium guides for the schools we cover (deduped by building).
   const venueLinks = await getVenueLinksForTeams(allTeams.map((t) => t.id));
-  const weeklyLabel = data.weekly.label === 'this-week' ? 'THIS WEEK · RIVALRY GAMES' : 'NEXT UP · RIVALRY GAMES';
-  const weeklyRight = data.weekly.label === 'this-week' && data.weekly.week
-    ? `UPDATES MONDAY AM · WEEK ${data.weekly.week}`
-    : 'UPDATES MONDAY AM';
+  // The rail is labelled by its date window, never a week number (CFB has
+  // none on this site). "RIVALRY GAMES · AUG 31 – SEP 6" while the window has
+  // games; "NEXT UP · RIVALRY GAMES" for the offseason fallback.
+  const weeklyLabel = data.weekly.label === 'this-week' && data.weekly.range
+    ? `RIVALRY GAMES · ${data.weekly.range}`
+    : 'NEXT UP · RIVALRY GAMES';
+  const weeklyRight = 'UPDATES MONDAY AM';
 
   return (
     <main className={`min-h-screen text-white ${instrumentSerif.variable}`} style={{ background: '#08070d', fontFamily: SANS }}>
@@ -85,7 +88,7 @@ export default async function CfbHub() {
         {/* Persistent today-slot — CFB's positive bridge to the daily pro board. */}
         <CfbTodaySlot hasGames={data.weekly.games.length > 0} />
 
-        {/* ── THIS WEEK · RIVALRY GAMES rail (§14a — rolls Monday AM) ── */}
+        {/* ── RIVALRY GAMES rail, labelled by its date window (§14a — rolls Monday AM) ── */}
         {data.weekly.games.length > 0 && (
           <section className="mt-4">
             <SectionLabel right={weeklyRight}>{weeklyLabel}</SectionLabel>

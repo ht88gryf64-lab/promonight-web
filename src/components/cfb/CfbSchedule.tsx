@@ -37,11 +37,11 @@ function ScheduleRow({ g, last, onOpen, school, venue }: { g: CfbGameView; last:
   const rowStyle = { borderBottom: last ? 'none' : '1px solid rgba(255,255,255,0.05)', background: g.rivalry ? 'var(--cfb-tint)' : undefined };
   const inner = (
     <>
+      {/* The date is the row's only label. CFB has no week numbers on this
+          site: the stored cfbGames.week is a per-school ordinal on a doc both
+          schools share and is not read anywhere. */}
       <div style={{ fontFamily: MONO }}>
         <div className="text-[12px] text-white/55">{fmtMonthDay(g.date)}</div>
-        {/* Week label from the game DATE (week.ts cfbGameWeek), never the stored
-            per-school ordinal, which both schools share. Week 0 has no label. */}
-        {g.weekLabel !== null && <div className="mt-0.5 text-[10px] text-white/30">Wk {g.weekLabel}</div>}
       </div>
       <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
         <span className="text-[10px] uppercase text-white/35" style={{ fontFamily: MONO }}>
@@ -100,9 +100,9 @@ function ScheduleRow({ g, last, onOpen, school, venue }: { g: CfbGameView; last:
     </>
   );
   return g.played ? (
-    <div className={rowClass} style={rowStyle} data-cfb-played="true" aria-label={`${g.opponentName}, played`}>{inner}</div>
+    <div className={rowClass} style={rowStyle} data-cfb-row="played" data-cfb-played="true" aria-label={`${g.opponentName}, played`}>{inner}</div>
   ) : (
-    <button type="button" onClick={onOpen} className={rowClass} style={rowStyle}>{inner}</button>
+    <button type="button" onClick={onOpen} className={rowClass} style={rowStyle} data-cfb-row="upcoming">{inner}</button>
   );
 }
 

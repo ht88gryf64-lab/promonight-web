@@ -168,3 +168,29 @@ Recommendation, not a decision: the data fingerprint, stored in Firestore, with 
 - After: 693 tests, 0 failures (`npm test`); `tsc --noEmit` exit 0. `next lint` is not configured in this repo (interactive prompt), so no lint pass.
 - Render: `next dev` on port 3111, cache-busting `curl` (`?nocache=<ts>`, `Cache-Control: no-cache`) of `/cfb/tennessee`, `/cfb/arizona-state`, `/cfb/washington-state`, `/cfb/notre-dame`, `/cfb/liberty`, plus `/cfb/florida-state` for a played row and `/cfb` for the rail. Findings are quoted in items 1 to 3. The production check happens after deploy; the dev server was stopped after the check.
 - The item 3 table was produced by running the shipped modules over a read-only Firestore dump (662 live games), comparing the pre-change rendering (stored label) against the venue-local rendering row by row.
+
+---
+
+## Revision, 2026-09-02: CFB has no week numbers
+
+Decision after the first pass: the site carries no CFB week numbers. The date is the label. The stored ordinal was wrong on 48 pages and the rail's counter needed a hand-set anchor every August; deriving a week from the date only moved the anchor. Both are gone. Rivalry Week stays as a named date window (`rivalry-index.ts`).
+
+**Files touched in the revision:**
+
+| File | Change |
+|---|---|
+| `src/lib/cfb/week.ts` | **Deleted**, with its `CFB_2026_WEEK_1_MONDAY` anchor and both counters. |
+| `src/lib/__tests__/cfb-week.test.ts` | **Deleted** (pinned the anchor). |
+| `src/lib/__tests__/cfb-game-week.test.ts` | **Deleted** (pinned the date-derived label). |
+| `src/lib/__tests__/cfb-no-week-numbers.test.ts` | **New.** Scans `src/lib/cfb`, `src/components/cfb`, `src/app/cfb`: no week.ts import, no `Wk`, no `WEEK <n>`/`THIS WEEK`, no read of the stored field outside the annotated type and the writer's rule, no week-shaped property on the schedule view, the rail labelled by a date range. |
+| `src/lib/__tests__/cfb-played.test.ts` | Extended: today in a venue zone, the fallback, `dateRangeLabel`. |
+| `src/lib/cfb/clock.ts` | `todayYMD(zone)`, `venueTodayYMD(zone)` (falls back to the Chicago anchor when the venue is unmapped or the zone invalid), `dateRangeLabel(start, end)` in the house format ("AUG 31 – SEP 6"). |
+| `src/lib/cfb/data.ts` | `CfbGameView` loses `week` and `weekLabel`; `played` is now computed against the calendar day in the game's venue zone, not America/Chicago. No read of `cfbGames.week` remains. |
+| `src/lib/cfb/hub-data.ts` | No week counter. `weekly.range` is the Monday-to-Sunday window as a date-range string, null for the next-up fallback. |
+| `src/app/cfb/page.tsx` | Rail heading is `RIVALRY GAMES · AUG 31 – SEP 6` (was `THIS WEEK · RIVALRY GAMES` with `UPDATES MONDAY AM · WEEK 1` on the right; the right label is now `UPDATES MONDAY AM`). |
+| `src/components/cfb/CfbSchedule.tsx` | The `Wk N` line is removed; the date cell is the label. Rows carry `data-cfb-row="upcoming|played"` as an always-visible selector for the hydration check. |
+| `src/lib/cfb/types.ts` | `CfbGame.week` annotated UNUSED. Left in Firestore, never rendered, never derived from. |
+
+Not touched: `src/lib/cfb/rules.ts computeWeeks` (the pipeline writer's rule, quarantined with its writer) and `RIVALRY_WEEK_START/END`. The remaining `.week` reads in `src/components` are the pro `Game` type on NFL surfaces, not CFB.
+
+After the revision: 691 tests, 0 failures; `tsc --noEmit` clean.

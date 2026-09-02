@@ -18,8 +18,7 @@ import { matchupEntryForSlug } from '@/lib/cfb/matchup-registry';
 import { resolveMatchupDisplayName } from '@/lib/cfb/display-name';
 import { CFB_COLLECTIONS, type CfbSchool, type CfbGame, type CfbRivalry } from '@/lib/cfb/types';
 import { CFB_CONF_BUCKET_ORDER, type CfbConfBucket } from '@/lib/cfb/conferences';
-import { cfbWeekNumber } from '@/lib/cfb/week';
-import { chicagoTodayYMD } from '@/lib/cfb/clock';
+import { chicagoTodayYMD, dateRangeLabel } from '@/lib/cfb/clock';
 
 // ── CT-anchored date helpers (same anchor as the homepage; no scrape).
 //    chicagoTodayYMD lives in clock.ts now, shared with the school pages. ──
@@ -91,7 +90,10 @@ export interface HubNationalBlock extends NationalCurated {
   trophy: string | null;
 }
 export interface CfbHubData {
-  weekly: { label: 'this-week' | 'next-up'; week: number | null; games: HubRivalryGame[] };
+  /** The rail. `range` is the Monday-to-Sunday window in the house date format
+   *  ("AUG 31 – SEP 6") when the window has games; null for the next-up
+   *  fallback. CFB has no week numbers on this site. */
+  weekly: { label: 'this-week' | 'next-up'; range: string | null; games: HubRivalryGame[] };
   national: HubNationalBlock[];
   browse: { bucket: string; teams: HubTeam[] }[];
   totalTeams: number;
@@ -144,8 +146,8 @@ export async function getCfbHubData(): Promise<CfbHubData> {
   const thisWeek = games.filter((g) => g.date >= weekStart && g.date <= weekEnd);
   const upcoming = games.filter((g) => g.date >= today);
   const weekly = thisWeek.length > 0
-    ? { label: 'this-week' as const, week: cfbWeekNumber(today), games: thisWeek.slice(0, 12) }
-    : { label: 'next-up' as const, week: null, games: upcoming.slice(0, 8) };
+    ? { label: 'this-week' as const, range: dateRangeLabel(weekStart, weekEnd), games: thisWeek.slice(0, 12) }
+    : { label: 'next-up' as const, range: null, games: upcoming.slice(0, 8) };
 
   // National blocks: curated selection; colors, date, home side, series start
   // year and trophy all resolved from the same docs the matchup page reads.

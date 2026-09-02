@@ -122,7 +122,12 @@ export interface CfbVerification {
 export interface CfbGame {
   id: string;
   season: number;
-  week: number; // COMPUTED by rule from the schedule (game ordinal by date), never read
+  /** UNUSED. Written by the Phase 2 parser as the parsing school's game
+   *  ordinal (rules.ts computeWeeks) onto a doc both schools share, so the away
+   *  school inherits the home school's count. Decision 2026-09-02: CFB has no
+   *  week numbers on this site; no surface reads this field. Left in Firestore
+   *  untouched; do not render it and do not derive anything from it. */
+  week: number;
   date: string; // YYYY-MM-DD (home-venue local)
   status: 'scheduled' | 'completed' | 'canceled';
   homeSchoolId: string;
