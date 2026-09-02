@@ -75,7 +75,12 @@ cfbVenues/{venueId}
   source, updatedAt
 
 cfbGames/{gameId}                  // e.g. 2026-w5-tennessee-texas
-  season: 2026, week, date, status
+  season: 2026, date, status
+  // week: STRUCK 2026-09-02. Decision: CFB has no week numbers on this site;
+  // the date is the label. The stored field is a per-school ordinal written
+  // onto a doc both schools share (48 of 87 pages rendered a duplicate), and a
+  // date-derived week needs a hand-set anchor every August. Left in Firestore
+  // as UNUSED; no surface reads it; the sweep never writes it.
   homeSchoolId, awaySchoolId
   neutralSite: bool, venueId
   kickoff: { time, tz, tbd: bool, windowFlex: string|null }
@@ -128,12 +133,14 @@ Five failure modes the pass caught, each with its guard:
 | Failure mode | Example caught | Pipeline guard |
 |---|---|---|
 | Timezone conversion | Boise 6 kickoffs +2h, all rated HIGH | Verify kickoffs against the **home school's** official site with explicit tz. Never infer or convert blind. Store tz with time. |
-| Derived-field hallucination | ND week off-by-one (double-counted bye); ND conferenceGame=yes (it is independent) | Hard-gate derived fields by rule, do not extract. Independent = zero conference games, full stop. Week computed from schedule, not read. |
+| Derived-field hallucination | ND week off-by-one (double-counted bye); ND conferenceGame=yes (it is independent) | Hard-gate derived fields by rule, do not extract. Independent = zero conference games, full stop. ~~Week computed from schedule, not read.~~ **Week struck 2026-09-02:** the rule produced a per-school ordinal on a shared doc, wrong for the other school on 48 of 87 pages; the site carries no CFB week number, so there is nothing to derive. |
 | Entity conflation | originYear mixed series-start with trophy-creation | Split fields: `seriesStartYear` ≠ `trophyCreatedYear`. |
 | Outright fabrication | "Dooley-Fulmer Trophy" (does not exist) | Mandatory independent second source. Single-source claims cannot reach `verified: true`. |
 | Mis-citation | Correct TN/Texas time, wrong (stale) source | Store the source that actually carries the value, not a plausible adjacent URL. Verify the citation, not just the value. |
 
 **Rule:** treat every extractor HIGH as UNVERIFIED until independently confirmed. The HIGH rating carries no signal.
+
+**Who writes `verified` (recorded 2026-09-02, Phase B of the near-term sweep).** The verify runner (`promo-pipeline/cfb-sweep/verify.ts`) writes `verified` and `verification` after its own pass, **false to true only, never true to false.** Its write scope is exactly those two fields; the sweep's write scope is exactly `kickoff`, `broadcast`, `status`; each scope is a closed type (`Exact<>`) with expect-error pins, so writing `verified` from the sweep, or clearing it from the runner, is a compile error. A conflict on an already-verified game holds the whole doc. Two changes to the July contract, both from `audit/cfb-render-tier1.md` section 4: the stored digits are read in the **source school's** zone (the label the parser stamped is not the zone the digits are in; 25 of 27 July "conflicts" were this), and bare-hour shapes ("8 PM", "Noon") normalize. A kickoff window ("6:30 or 6:45 PM") is never one side of itself.
 
 ---
 
@@ -179,6 +186,7 @@ School: __________
 1. **Official athletics site** — schedule, designations, official logistics. Structured, generally crawlable (check each robots.txt).
 2. **Wikipedia** ("2026 [School] football team", stadium, rivalry pages) — schedule, venue, rivalry, colors. CC-BY-SA, most reproducible across all 134 FBS.
 3. **ESPN / Sports Reference (CFB)** — structured cross-check, fallback when official is JS-rendered.
+   **Deviation, logged 2026-09-02:** for the three volatile fields (kickoff, broadcast, status) the in-season sweep uses ESPN's public scoreboard as the structured PRIMARY (one request per season, 903 events, 660 of 662 stored games matched by team id and venue-local date) and the official site only to arbitrate a conflict. Reason: the official route is 86 JS-rendered fetches through Firecrawl with a Haiku parse each, the path that stamped the wrong zone label on 25 rows in July; a structured feed with an explicit instant and `timeValid` removes that class. The two-source rule is unchanged: ESPN alone is `single-source` and never reaches `verified`.
 4. **Conference + TV-partner releases** (SEC/Big Ten/Big 12/ACC, NBC/CBS/ESPN/Fox/CW) — kickoff windows + TV, roll out over summer and ~12 days pre-game.
 5. **Fan sites — RESEARCH LAYER ONLY** — paraphrase-only, human-mediated, editorial seeding. Permitted-use constraints in spike Part 4.
 

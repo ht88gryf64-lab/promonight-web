@@ -109,12 +109,20 @@ function prettifySlug(slug: string): string {
 //    double-call within ONE page render (the house pattern; see getMlbSlate).
 //  • A module-level TTL cache on the four collections — reuses the single read
 //    ACROSS all 87 pages within a build (React cache() resets per page during
-//    SSG, so it alone can't do cross-page). TTL = the page's own ISR window
-//    (21600s), so at runtime each server instance re-reads on the same cadence
-//    the page revalidates — never staler than the page itself. A build is a
-//    short-lived process with an empty cache, so it never serves stale data
-//    ACROSS builds; each `next build` reads fresh.
-const STATIC_TTL_MS = 21600 * 1000; // matches `export const revalidate = 21600`
+//    SSG, so it alone can't do cross-page). A build is a short-lived process
+//    with an empty cache, so it never serves stale data ACROSS builds.
+//
+//    THE TTL IS SHORT ON PURPOSE (2026-09-02). It used to equal the page's ISR
+//    window (21600s) on the reasoning "never staler than the page itself".
+//    That is wrong the moment something revalidates the page early: the CFB
+//    sweep (promo-pipeline cfb-sweep) writes kickoffs and POSTs /api/revalidate,
+//    Next re-renders the path, and this cache hands the render the SAME
+//    six-hour-old collections, so the regenerated page is byte-identical to the
+//    stale one. Measured on the gate-2 execute: two docs written and read back,
+//    four paths revalidated (x-vercel-cache: REVALIDATED), rows still "Kickoff
+//    TBA". Five minutes bounds that lag; the cost is four collection reads per
+//    server instance per five minutes under traffic, which is nothing.
+const STATIC_TTL_MS = 5 * 60 * 1000;
 
 function makeCollectionLoader<T>(read: () => Promise<T>): () => Promise<T> {
   let cached: { at: number; data: T } | null = null;
