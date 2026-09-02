@@ -33,7 +33,7 @@ export function buildHomepageFaqs(c: HomepageCounts): FAQItem[] {
   {
     question: 'How does PromoNight get its promo data?',
     answer:
-      'PromoNight aggregates promotional schedules directly from official team sources, including team websites, ticketing platforms, and press releases. MLB, WNBA, and MLS schedules are rechecked weekly in season, and other leagues are updated as new announcements are confirmed.',
+      'PromoNight aggregates promotional schedules directly from official team sources, including team websites, ticketing platforms, and press releases. MLB, WNBA, MLS, and NHL schedules are rechecked weekly in season, and other leagues are updated as new announcements are confirmed.',
   },
   ];
 }

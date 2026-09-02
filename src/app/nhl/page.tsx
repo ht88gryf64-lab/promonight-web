@@ -124,7 +124,7 @@ export default async function NhlHubPage() {
         eyebrow="NHL League Hub"
         title={`NHL PROMOTIONS ${SEASON}`}
         subtitle="Theme nights, giveaways, bobbleheads and kids days across the 32 NHL clubs, grouped by division."
-        freshness="Rechecked weekly and updated as clubs announce promotions."
+        freshness="Rechecked weekly in season and updated as clubs announce promotions."
         accent={ACCENT}
       >
         <HubStatBar stats={stats} leagueLabel="NHL" />

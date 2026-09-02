@@ -83,7 +83,7 @@ export default async function BobbleheadsPage() {
     }));
 
   const c = await getCoverageCounts();
-  const lead = `Bobblehead giveaways scheduled across ${c.leagueList} in ${YEAR}. Player name, team, date, and opponent for each bobblehead night, grouped by month. Pulled from official team sources, with MLB, WNBA, and MLS rechecked weekly in season.`;
+  const lead = `Bobblehead giveaways scheduled across ${c.leagueList} in ${YEAR}. Player name, team, date, and opponent for each bobblehead night, grouped by month. Pulled from official team sources, with MLB, WNBA, MLS, and NHL rechecked weekly in season.`;
 
   const faqs = [
     {

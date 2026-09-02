@@ -157,3 +157,36 @@ the flip if the grid alone reads too bare.
    through the deploy hook.
 6. Verify against served production HTML, all five layers (title, description,
    og tags, JSON-LD, body), per SITE-AUDIT section 9a.
+
+## Enabled 2026-09-02 (Gate 2 of the enable brief)
+
+Gate 1 verified the grid on a local render before the flip: the /nhl grid is
+the same HubTeamGrid the /nfl hub uses, so the per-club card (team-colored
+abbreviation tile from the team doc's ARGB primaryColor via argbToHex, name,
+subtitle, chevron) and the division chip row with "All divisions" default are
+shared by construction. Tile ink comes from chipInk (WCAG luminance): 26 white,
+6 dark across the 32 tiles. 32 tiles, 27 distinct colors, 5 chips, Eastern and
+Western bands, 8/8/8/8, 9 zero-state rows (five withheld clubs, Calgary, and
+the three still-empty pages; the executes of 2026-09-02 published the other
+five pending clubs), no literal "0 promos", zero em dashes.
+
+The enable commit carries every entry-6c item in one change:
+
+- league-hubs.ts: NHL live: true. Consumers that light up from this one flag:
+  BrandBarLeagueHubs (desktop nav), BrandBarMobileMenu (mobile sheet),
+  RedesignTeamPage (team-page up-link), venues/page.tsx (venue index),
+  promos-today helpers (today board hub link), sitemap.ts (LEAGUE_HUBS).
+- about-copy.ts: the cadence list gains NHL (weekly, August through June);
+  the "added by hand" paragraph no longer says NHL is; the coverage line says
+  NHL clubs are posting. ABOUT_LAST_REVIEWED and the fingerprint moved.
+- homepage JSON-LD: the freshness FAQ names NHL.
+- /nhl hero: the "in season" cadence variant, because the workflow is
+  seasonal.
+- promo-helpers.ts freshness sentence: already in place on this branch.
+- Two siblings the brief did not list, same claim class, changed here so no
+  surface disagrees: the /promos/bobbleheads lead ("MLB, WNBA, MLS, and NHL
+  rechecked weekly in season") and the team-page meta-description freshness
+  tail (NHL joins the leagues allowed to claim a recheck cadence).
+
+The workflow that backs these claims is the pipeline's nhl-promo-scan.yml,
+weekly Friday 08:00 UTC, month-gated August through June.

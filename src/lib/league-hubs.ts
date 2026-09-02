@@ -31,7 +31,7 @@ export const LEAGUE_HUB_REGISTRY: LeagueHub[] = [
   { league: 'WNBA', label: 'WNBA', href: '/wnba', sportSlug: 'wnba', accent: '#c9581f', live: true },
   { league: 'MLS', label: 'MLS', href: '/mls', sportSlug: 'mls', accent: '#3f7d5a', live: true },
   { league: 'NBA', label: 'NBA', href: '/nba', sportSlug: 'nba', accent: '#b5642e', live: false },
-  { league: 'NHL', label: 'NHL', href: '/nhl', sportSlug: 'nhl', accent: '#4a4f57', live: false },
+  { league: 'NHL', label: 'NHL', href: '/nhl', sportSlug: 'nhl', accent: '#4a4f57', live: true },
   { league: 'NFL', label: 'NFL', href: '/nfl', sportSlug: 'nfl', accent: '#5f6b57', live: true },
   { league: 'CFB', label: 'CFB', navLabel: 'College football', href: '/cfb', sportSlug: 'cfb', accent: '#9a7d2e', live: true, sitemapChangeFrequency: 'weekly' },
 ];
