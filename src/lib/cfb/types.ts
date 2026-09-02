@@ -171,6 +171,18 @@ export interface CfbGame {
    *  (scripts/cfb/run-phase2.ts:83 and :99). Keeping the two namespaces
    *  separate means venueId's meaning never depends on the neutralSite flag. */
   neutralVenueHubSlug?: string;
+  /** An INTERNATIONAL neutral site with no venueHubs doc (none should exist:
+   *  the hub corpus is US buildings with logistics). Carries the zone the
+   *  kickoff is expressed in and the venue line the schedule renders. Same
+   *  shape of idea as the pro Game's isInternational + internationalLocation
+   *  (src/components/shared/game-day-detail.tsx): the venue is named, parking
+   *  and hotel CTAs are suppressed, tickets stay. Human-owned; written by
+   *  promo-pipeline cfb-sweep/resolve.ts from an official source. */
+  internationalVenue?: { name: string; city: string; country: string; timezone: string; event?: string | null };
+  /** A human resolved one or more fields against an official source (the
+   *  in-season sweep then treats those fields as settled: never re-planned,
+   *  never held on an ESPN disagreement). Human-owned. */
+  humanResolved?: { fields: string[]; source: string; at: string; note?: string | null };
 }
 
 // ── cfbRivalries/{rivalryId} ─────────────────────────────────────────────────

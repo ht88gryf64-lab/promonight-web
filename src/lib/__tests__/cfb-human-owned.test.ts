@@ -26,8 +26,12 @@ const parserDoc = {
   verification: null,
 };
 
-test('the allowlist is exactly the two human-owned fields', () => {
-  assert.deepEqual([...HUMAN_OWNED_FIELDS], ['tombstoned', 'neutralVenueHubSlug']);
+test('the allowlist is exactly the four human-owned fields', () => {
+  // 2026-09-02: internationalVenue (a neutral site abroad with no hub doc) and
+  // humanResolved (fields settled against an official source) joined the two
+  // originals. Both are written by promo-pipeline cfb-sweep/resolve.ts, never
+  // by the parser, and no schedule page can rebuild them.
+  assert.deepEqual([...HUMAN_OWNED_FIELDS], ['tombstoned', 'neutralVenueHubSlug', 'internationalVenue', 'humanResolved']);
 });
 
 test('picks nothing from a doc that carries no human-owned fields', () => {

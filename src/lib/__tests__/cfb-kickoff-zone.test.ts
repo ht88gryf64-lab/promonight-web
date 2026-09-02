@@ -112,3 +112,15 @@ describe('the matchup family reads the same converter', () => {
     assert.equal(sportsEventStartDate(game()), '2026-09-26T11:00:00-05:00');
   });
 });
+
+describe('an international neutral site (Wembley)', () => {
+  test('Kansas vs Arizona State: 11:00 CT stored as an instant in Europe/London renders 5:00 PM BST', () => {
+    const r = venueLocalKickoff({ date: '2026-09-19', verified: true, kickoff: { time: '17:00', tz: 'Europe/London', tbd: false } }, 'Europe/London');
+    assert.equal(r.display, '5:00 PM BST');
+    assert.equal(r.iso, '2026-09-19T17:00:00+01:00');
+  });
+  test('the same instant in winter is GMT', () => {
+    const r = venueLocalKickoff({ date: '2026-12-05', verified: true, kickoff: { time: '15:00', tz: 'Europe/London', tbd: false } }, 'Europe/London');
+    assert.equal(r.display, '3:00 PM GMT');
+  });
+});

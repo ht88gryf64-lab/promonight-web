@@ -44,6 +44,19 @@ const ZONE_ABBR: Record<string, string> = {
   'Pacific/Honolulu': 'HST',
 };
 
+/** Short zone name for a zone outside the US map (Wembley: "BST" in
+ *  September, "GMT" in winter), from Intl in the en-GB locale, which names
+ *  European zones by abbreviation where en-US prints "GMT+1". Falls back to
+ *  the IANA city when Intl has nothing better. */
+export function zoneAbbr(zone: string, date: string): string {
+  try {
+    const parts = new Intl.DateTimeFormat('en-GB', { timeZone: zone, timeZoneName: 'short' }).formatToParts(new Date(`${date}T12:00:00Z`));
+    const name = parts.find((p) => p.type === 'timeZoneName')?.value ?? '';
+    if (name && !/^GMT[+-]/.test(name)) return name;
+  } catch { /* fall through */ }
+  return zone.split('/').pop()?.replace(/_/g, ' ') ?? zone;
+}
+
 function fmt12h(minutesOfDay: number, abbr: string): string {
   const m = ((minutesOfDay % 1440) + 1440) % 1440;
   let h = Math.floor(m / 60);
@@ -95,7 +108,7 @@ export function venueLocalKickoff(g: KickoffLike, venueZone: string | null): Ven
   }
   const utc = local - fromOff;
   const venueLocal = utc + toOff;
-  const abbr = ZONE_ABBR[venueZone] ?? '';
+  const abbr = ZONE_ABBR[venueZone] ?? zoneAbbr(venueZone, g.date);
   const display = fmt12h(venueLocal, abbr);
   if (isImpossibleAm(display)) return TBA;
   const sign = toOff < 0 ? '-' : '+';

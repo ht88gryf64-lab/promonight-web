@@ -313,6 +313,7 @@ export const getMatchupPage = cache(async (slug: string): Promise<MatchupPage | 
       homeSchoolId: game.data.homeSchoolId, homeVenueId: venue?.id ?? null,
       homeVenueTimezone: venue?.timezone ?? null,
       neutralHubTimezone,
+      internationalTimezone: game.data.internationalVenue?.timezone ?? null,
     }) : null,
     conference: (schoolA ?? schoolB)?.conferenceBySeason?.['2026'] ?? null,
     rivalrySentence,
