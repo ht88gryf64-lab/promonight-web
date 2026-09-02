@@ -130,8 +130,10 @@ export function resolveVenueZone(g: {
   homeVenueId?: string | null;
   homeVenueTimezone?: string | null;
   neutralHubTimezone?: string | null;
+  /** cfbGames.internationalVenue.timezone: a neutral site abroad with no hub doc. */
+  internationalTimezone?: string | null;
 }): string | null {
-  if (g.neutralSite) return g.neutralHubTimezone || cfbNeutralHubTimezone(g.neutralVenueHubSlug);
+  if (g.neutralSite) return g.neutralHubTimezone || g.internationalTimezone || cfbNeutralHubTimezone(g.neutralVenueHubSlug);
   return g.homeVenueTimezone || cfbVenueTimezone(g.homeVenueId) || cfbUntrackedHomeTimezone(g.homeSchoolId);
 }
 

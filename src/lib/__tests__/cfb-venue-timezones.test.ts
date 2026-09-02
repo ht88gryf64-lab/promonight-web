@@ -74,3 +74,11 @@ describe('CFB venue time zones', () => {
     assert.equal(cfbUntrackedHomeTimezone('furman'), null);
   });
 });
+
+describe('an international neutral site resolves from the doc', () => {
+  test('internationalVenue.timezone answers a neutral game with no hub', () => {
+    assert.equal(resolveVenueZone({ neutralSite: true, neutralVenueHubSlug: null, homeSchoolId: 'kansas', internationalTimezone: 'Europe/London' }), 'Europe/London');
+    // a hub record still wins when one exists
+    assert.equal(resolveVenueZone({ neutralSite: true, neutralVenueHubSlug: 'lambeau-field', homeSchoolId: 'notre-dame', neutralHubTimezone: 'America/Chicago', internationalTimezone: 'Europe/London' }), 'America/Chicago');
+  });
+});

@@ -26,6 +26,10 @@ export interface CfbGameView {
   played: boolean;
   isHome: boolean;
   neutralSite: boolean;
+  /** A neutral site abroad with no venueHubs doc (Wembley). Renders as the
+   *  venue line and the "International" eyebrow; parking and hotel CTAs are
+   *  suppressed as for every neutral game, tickets stay. */
+  internationalVenue: { name: string; city: string; country: string; timezone: string; event: string | null } | null;
   /** Conference game flag from the pipeline; null when unknown. */
   conferenceGame: boolean | null;
   /** Theme-night display names ("Checker Neyland"); empty when none tagged. */
@@ -261,6 +265,7 @@ export const getCfbSchoolPage = cache(async (id: string): Promise<CfbSchoolPage 
       neutralSite: g.neutralSite, neutralVenueHubSlug: g.neutralVenueHubSlug,
       homeSchoolId: g.homeSchoolId, homeVenueId: homeSchoolForZone?.venueId,
       homeVenueTimezone: homeVenueForZone?.timezone ?? null,
+      internationalTimezone: g.internationalVenue?.timezone ?? null,
     });
     const kd = venueLocalKickoff(g, venueZone);
     const riv = g.rivalryId ? rivalryById.get(g.rivalryId) : null;
@@ -272,6 +277,7 @@ export const getCfbSchoolPage = cache(async (id: string): Promise<CfbSchoolPage 
     games.push({
       id: g.id, date: g.date, played: isPlayedGame(g.date, venueTodayYMD(venueZone)),
       isHome, neutralSite: !!g.neutralSite,
+      internationalVenue: g.internationalVenue ? { name: g.internationalVenue.name, city: g.internationalVenue.city, country: g.internationalVenue.country, timezone: g.internationalVenue.timezone, event: g.internationalVenue.event ?? null } : null,
       conferenceGame: typeof g.conferenceGame === 'boolean' ? g.conferenceGame : null,
       // Gated on the game's verified flag like every other displayed fact
       // (kickoff, network): a parser-written designation carries no signal

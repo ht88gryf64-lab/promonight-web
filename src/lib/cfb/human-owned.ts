@@ -10,6 +10,8 @@
 // page can rebuild them:
 //   tombstoned           a redundant duplicate doc, hidden rather than deleted
 //   neutralVenueHubSlug  the venueHubs building a neutral-site game is played in
+//   internationalVenue   a neutral site abroad (no hub doc): name, city, zone
+//   humanResolved        fields a human settled against an official source
 //
 // The writer carries these forward across a rebuild using an ALLOWLIST, not
 // { merge: true }. Merge would preserve every stale machine field forever and
@@ -17,7 +19,7 @@
 // everything else machine-owned and freely overwritable.
 
 /** Fields a human decides. Never emitted by the parser, never re-derivable. */
-export const HUMAN_OWNED_FIELDS = ['tombstoned', 'neutralVenueHubSlug'] as const;
+export const HUMAN_OWNED_FIELDS = ['tombstoned', 'neutralVenueHubSlug', 'internationalVenue', 'humanResolved'] as const;
 
 export type HumanOwnedField = (typeof HUMAN_OWNED_FIELDS)[number];
 

@@ -29,7 +29,11 @@ function ScheduleRow({ g, last, onOpen, school, venue }: { g: CfbGameView; last:
   // so a crawler or a reviewer reading the HTML saw a schedule with no detail.
   // Same resolution the modal uses; visible on every row, never hidden.
   const { gameVenue } = resolveGame(g, school, venue);
-  const detail = [gameVenue?.name ?? null, venueCity(gameVenue), g.neutralSite ? 'Neutral site' : g.isHome ? 'Home' : 'Away'].filter(Boolean).join(' · ');
+  // An international neutral site names its building and city from the doc
+  // (no hub, no cfbVenues row): "Wembley Stadium · London · Neutral site".
+  const detail = g.internationalVenue
+    ? [g.internationalVenue.name, g.internationalVenue.city, 'Neutral site'].join(' · ')
+    : [gameVenue?.name ?? null, venueCity(gameVenue), g.neutralSite ? 'Neutral site' : g.isHome ? 'Home' : 'Away'].filter(Boolean).join(' · ');
   // A played game (dated before today, America/Chicago) is not a fixture: no
   // gameday modal, no kickoff, no "Kickoff TBA". No result is known, so none is
   // shown; the row reads PLAYED and dims. Rendered as a div, not a button.
@@ -45,7 +49,7 @@ function ScheduleRow({ g, last, onOpen, school, venue }: { g: CfbGameView; last:
       </div>
       <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
         <span className="text-[10px] uppercase text-white/35" style={{ fontFamily: MONO }}>
-          {g.isHome ? (g.neutralSite ? 'N' : 'VS') : 'AT'}
+          {g.neutralSite ? 'N' : g.isHome ? 'VS' : 'AT'}
           {/* Conference-game marker, from the stored conferenceGame flag. */}
           {g.conferenceGame ? ' · CONF' : ''}
         </span>
@@ -130,7 +134,10 @@ function CfbGameDetail({ g, school, venue }: { g: CfbGameView; school: CfbSchool
       ? toAffiliateVenue({ ...gameVenue, city: cityLabel ?? '', state: '' }, hostSchool)
       : null;
 
-  const homeAway = g.neutralSite ? 'Neutral site' : g.isHome ? 'Home' : 'Away';
+  // Mirrors the pro game-day-detail eyebrow for an international game:
+  // "International · London". Parking and hotels are already omitted for a
+  // neutral game (gameVenue is null); tickets stay.
+  const homeAway = g.internationalVenue ? `International · ${g.internationalVenue.city}` : g.neutralSite ? 'Neutral site' : g.isHome ? 'Home' : 'Away';
   const prefix = g.isHome && !g.neutralSite ? 'vs' : g.neutralSite ? 'vs' : 'at';
 
   return (
@@ -156,6 +163,16 @@ function CfbGameDetail({ g, school, venue }: { g: CfbGameView; school: CfbSchool
           <div className="mt-0.5 text-[15px] text-white" style={{ fontFamily: SANS }}>
             {gameVenue.name}{cityLabel && <span className="text-white/60"> · {cityLabel}</span>}
           </div>
+        </div>
+      )}
+      {!gameVenue && g.internationalVenue && (
+        <div className="mt-4 rounded-xl px-4 py-3" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+          <div className="text-[10px] uppercase" style={{ fontFamily: MONO, letterSpacing: '0.12em', color: 'var(--cfb-accent)' }}>Venue</div>
+          <div className="mt-0.5 text-[15px] text-white" style={{ fontFamily: SANS }}>
+            {g.internationalVenue.name}<span className="text-white/60"> · {g.internationalVenue.city}, {g.internationalVenue.country}</span>
+          </div>
+          {g.internationalVenue.event && <div className="mt-1 text-[12px] text-white/55" style={{ fontFamily: MONO }}>{g.internationalVenue.event}</div>}
+          <div className="mt-1 text-[12px] text-white/55" style={{ fontFamily: MONO }}>Kickoff shown in local time. Parking and hotel links are not offered for a game abroad.</div>
         </div>
       )}
 
