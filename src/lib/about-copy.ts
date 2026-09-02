@@ -68,7 +68,7 @@ export const ABOUT_LAST_REVIEWED_LABEL = 'September 2, 2026';
 // line says NHL clubs are posting), so the prose moved and the date moved with
 // it. The wording was set by the enable brief and is quoted in its report.
 // eslint-disable-next-line prettier/prettier
-export const ABOUT_COPY_FINGERPRINT = '570727cd0920972d7b15bc7c1db8afbdf3bf95125b942af12c5735e414f65e8b';
+export const ABOUT_COPY_FINGERPRINT = '7aadb2a27c4dc968add7bf45cc18e584512bcbd6de8c371d825794dfe11ed4ab';
 
 export interface AboutCounts {
   teamCount: number;
@@ -342,7 +342,7 @@ export function aboutFaqs(c: AboutCounts): FAQItem[] {
     {
       question: 'How often is it updated?',
       answer:
-        'MLB is rechecked weekly year round. MLS is rechecked weekly through its season, and WNBA weekly from May through September. NBA, NHL and NFL are added by hand as teams announce, which for most of them happens in a burst before the season starts.',
+        'MLB is rechecked weekly year round. MLS is rechecked weekly through its season, WNBA weekly from May through September, and NHL weekly from August through June. NBA and NFL are added by hand as teams announce, which for both happens in a burst before the season starts.',
     },
     {
       question: 'Which leagues are covered?',
