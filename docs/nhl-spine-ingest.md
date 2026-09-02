@@ -1,8 +1,9 @@
 # NHL season spine: ingest and offline join measurement
 
-Status date: 2026-09-01. Branch `feature/nhl-spine-ingest`, held. **No Firestore
-write has been made.** The `games` write for NHL is a separate authorization
-and has not been given.
+Status date: 2026-09-02. Branch `feature/nhl-spine-ingest`. **The `games` write
+was EXECUTED 2026-09-02 02:16Z under a separate authorization** (step B1 of the
+2026-09-01 brief); see the Executed section at the end. Everything above that
+section describes the dry-run build and still holds.
 
 Why this exists: `promo-pipeline/docs/scanner-framework.md` 6e and the
 2026-09-01 ruling make the season spine a hard gate for the NHL full-league
@@ -201,7 +202,7 @@ is a real limitation of a date-only join and would have been reported here
 had one occurred; the opponent check in the measurement script is the
 second line for that case.
 
-## What a write would touch, when authorized
+## What a write touches (executed 2026-09-02, see below)
 
 - `ingestNhlSchedule({ execute: true, snapshotPath })` counts existing `games`
   docs with `league == "nhl"` (expected 0 today), writes them to the snapshot
@@ -226,3 +227,28 @@ second line for that case.
 - Firestore writes: 0.
 - Payload cache: the 32 payloads are in the session scratchpad; a
   `--use-cache` replay rebuilt a byte-identical dry-run file with 0 fetches.
+
+## Executed 2026-09-02 02:16Z (step B1)
+
+- Command: `scripts/ingest-nhl-schedule.ts --execute --snapshot=<path> --cache-dir=<payloads> --use-cache`
+  from the 32 cached payloads. Fetches 0, cache hits 32.
+- Pre-write assertion, run separately before the command: `games` where
+  `league == "nhl"` was 0. The snapshot the CLI wrote before its first batch
+  also holds 0 docs (`pre-write-snapshot-nhl-games-2026-09-01.json`, session
+  scratchpad, takenAt 2026-09-02T02:16:52Z).
+- Write: 4 batches (400, 400, 400, 209), upserted 1,409, errors 0.
+- Read-back from Firestore, not the local file: 1,409 docs with league nhl,
+  65 preseason and 1,344 regular, season 2026 on all, no doc carries a week
+  field, all 1,409 carry ingestedAt; 32 clubs each at exactly 42 regular home
+  games; both known-truth rows present (2026020003 Bruins 2026-09-29 vs NYR,
+  2026020035 Detroit 2026-10-04 vs WPG); the four European rows store the
+  Helsinki and Berlin venue-local day (2026-11-12, 2026-11-14, 2026-12-18,
+  2026-12-20).
+- Negative control: the production pages /mlb/new-york-yankees and
+  /nfl/buffalo-bills were fetched before and after the write (2 fetches each
+  side) and are byte-identical raw HTML, consistent with `getGamesForTeam`
+  reading games only for mlb and nfl.
+- Tombstone never delete: the writer only upserts with merge; nothing was
+  deleted, and the collection had nothing NHL-scoped to delete.
+- Rollback, if ever needed: delete the 1,409 doc ids in the dry-run file; the
+  snapshot confirms there was nothing to restore underneath them.
