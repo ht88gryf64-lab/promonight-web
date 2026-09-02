@@ -157,6 +157,15 @@ export type AnalyticsSurface =
   | 'web_nfl_hub_promo_type'
   | 'web_nfl_hub_team_card'
   | 'web_nfl_hub_venues'
+  // NHL league hub (/nhl) and its interactive sub-surfaces, the WNBA/MLS shape
+  // (a mid-page this-week rail, not the NFL week container). Registered on the
+  // held feature/nhl-hub-held branch so the surfaces exist the moment the hub
+  // flips live.
+  | 'web_nhl_hub'
+  | 'web_nhl_hub_this_week'
+  | 'web_nhl_hub_promo_type'
+  | 'web_nhl_hub_team_card'
+  | 'web_nhl_hub_venues'
   | 'web_cfb_hub_venues'
   | 'web_venue_index'
   // Venue logistics hub (/venues/[slug]). Per-building attribution rides in the
@@ -1287,6 +1296,11 @@ const KNOWN_SURFACE_VALUES = [
   'web_nfl_hub_promo_type',
   'web_nfl_hub_team_card',
   'web_nfl_hub_venues',
+  'web_nhl_hub',
+  'web_nhl_hub_this_week',
+  'web_nhl_hub_promo_type',
+  'web_nhl_hub_team_card',
+  'web_nhl_hub_venues',
   'web_cfb_hub_venues',
   'web_venue_index',
   'web_venue',
@@ -1354,6 +1368,9 @@ export function inferSurfaceFromPath(path: string): AnalyticsSurface {
   // (whose allowlist includes 'nfl') and infers web_league_index for hub
   // pageviews — the third, untypechecked edit site for a new hub surface.
   if (path === '/nfl') return 'web_nfl_hub';
+  // Same trap for bare /nhl: without this branch the hub pageview infers
+  // web_league_index. Held with the /nhl route; harmless while nothing links it.
+  if (path === '/nhl') return 'web_nhl_hub';
   // /[sport]/[team] — team pages. Sports are known; anything else falls through.
   const m = path.match(/^\/([a-z]+)(?:\/|$)/);
   if (m && ['mlb', 'nba', 'nhl', 'nfl', 'mls', 'wnba'].includes(m[1])) {

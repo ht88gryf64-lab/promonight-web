@@ -1430,7 +1430,51 @@ const HUB_GROUPING: Record<string, HubGroupingSpec> = {
     ],
     superGroupOf: (key) => (key.startsWith('NFC') ? 'NFC' : 'AFC'),
   },
+  // NHL: four divisions under two conference bands. Division strings verified
+  // against the teams collection 2026-09-01 (read-only): exactly these four
+  // values, 8 clubs each (32/32), and NO conference field on any doc, so the
+  // band is derived from the division here rather than read. utah-hockey-club
+  // (display "Utah Mammoth") sits in Central with the rest.
+  NHL: {
+    groupOrder: ['Atlantic', 'Metropolitan', 'Central', 'Pacific'],
+    superGroups: [
+      { key: 'Eastern', label: 'Eastern Conference' },
+      { key: 'Western', label: 'Western Conference' },
+    ],
+    superGroupOf: (key) => (key === 'Central' || key === 'Pacific' ? 'Western' : 'Eastern'),
+  },
 };
+
+// Upcoming visible promo count per team for one league, today (Chicago
+// anchored) onward, keyed by team id. Every team in the league is present in
+// the result, zero included, so a hub card can say what a zero means instead of
+// falling off the map. One collectionGroup read; league scoping happens in
+// memory because promo docs carry no league field (see getLeagueSlate).
+//
+// Deliberately NOT getPromosFromDate: that helper dedupes to one promo per
+// team for the cross-team rails, which is exactly wrong for a count.
+export const getLeagueUpcomingPromoCounts = cache(
+  async (league: string): Promise<Record<string, number>> => {
+    const teams = await getAllTeams();
+    const counts: Record<string, number> = {};
+    const inLeague = new Set<string>();
+    for (const t of teams) {
+      if (t.league === league) {
+        inLeague.add(t.id);
+        counts[t.id] = 0;
+      }
+    }
+    const today = hubTodayChicagoYMD();
+    const snapshot = await db.collectionGroup('promos').where('date', '>=', today).get();
+    for (const doc of snapshot.docs) {
+      const teamId = doc.ref.parent.parent!.id;
+      if (!inLeague.has(teamId)) continue;
+      if (!isVisiblePromo(mapPromoDoc(doc))) continue;
+      counts[teamId] += 1;
+    }
+    return counts;
+  },
+);
 
 // The super-header bands for a league (empty when the league groups flat).
 // Exported so the hub page can hand them to HubTeamGrid without re-deriving.
