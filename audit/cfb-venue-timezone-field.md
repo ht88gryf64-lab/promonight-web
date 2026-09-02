@@ -1,6 +1,6 @@
 # CFB venue time zone as data, 2026-09-02
 
-**Branch:** `feat/cfb-venue-timezone-field`, off `main` at 4f14dd2. **The write has NOT executed.** This is the dry run, the read-path change that makes the record the source, and the report on what has no record to carry the field.
+**Branch:** `feat/cfb-venue-timezone-field`, off `main` at 4f14dd2. The dry run, the read-path change that makes the record the source, the report on what has no record to carry the field, and (at the end) the execution record.
 
 ## What the write does
 
@@ -34,10 +34,26 @@ Every one of the 94 target docs exists and none carries a `timezone` today, so a
 
 Not in this branch: the pipeline still carries its own per-school `venueTz` in `scripts/cfb/lib/schools-2026.ts`; pointing the verify stage at `cfbVenues.timezone` is a pipeline change for when that writer comes out of quarantine.
 
-## To execute
+## Executed, 2026-09-02 16:51 UTC
 
 ```
-npx tsx --env-file=.env.local --require ./scripts/stub-server-only.cjs scripts/cfb/populate-venue-timezones.ts --execute
+mode: EXECUTE
+set=94 skip-same=0 conflict=0 missing-doc=0
+snapshot: 94 docs -> scripts/snapshots/venue-timezones.2026-09-02T16-51-44-343Z.snapshot.json
+wrote timezone + timezoneSource on 94 docs (merge, no updatedAt)
+read-back: 94/94 carry the expected fields
 ```
 
-Expected: a snapshot file under `scripts/snapshots/`, `wrote timezone + timezoneSource on 94 docs`, `read-back: 94/94`.
+Closing dry run immediately after:
+
+```
+mode: DRY RUN (no writes)
+set=0 skip-same=94 conflict=0 missing-doc=0
+```
+
+The snapshot is the full before-state of all 94 docs, at `scripts/snapshots/venue-timezones.2026-09-02T16-51-44-343Z.snapshot.json` on this machine. `scripts/snapshots/` is gitignored (`.gitignore:54`), as for every earlier repair snapshot, so the file is local, not in the repository.
+
+## Two records, by necessity, named
+
+1. **The venue record: `cfbVenues/{id}.timezone` and `venueHubs/{slug}.timezone`.** 86 campus stadiums and the 8 neutral-site buildings. This is the source both repos should read; `resolveVenueZone()` reads it first.
+2. **The render map: `CFB_UNTRACKED_HOME_TIMEZONES` in `src/lib/cfb/venue-timezones.ts`.** 50 home schools in the corpus have no venue doc and no school doc (untracked opponents, several under drifted ids), and Washington State has a school doc but no venue doc. There is nothing to write a field onto, so for their home games (70 stored, 30 displaying a kickoff) the map is not a fallback but the record, and stays so until each gets a `cfbVenues` doc. The campus and neutral maps in the same file are now fallbacks only, kept for a doc that loses the field.
