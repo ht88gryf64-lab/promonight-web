@@ -273,6 +273,11 @@ export interface Game {
   // explicitly false for international games.
   broadcast?: { network: string; isPrimetime: boolean } | null;
   espnGameId?: string;
+  // NHL-only fields. Populated by src/lib/ingest-nhl.ts. The NHL game id
+  // encodes season type in digits 5 and 6 (01 preseason, 02 regular).
+  nhlGameId?: number;
+  nhlSeasonCode?: number;
+  neutralSite?: boolean;
   // ISO string at the data-layer boundary; stored as a Firestore Timestamp.
   ingestedAt?: string;
 }
