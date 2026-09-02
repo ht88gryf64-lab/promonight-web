@@ -132,13 +132,21 @@ Five failure modes the pass caught, each with its guard:
 
 | Failure mode | Example caught | Pipeline guard |
 |---|---|---|
-| Timezone conversion | Boise 6 kickoffs +2h, all rated HIGH | Verify kickoffs against the **home school's** official site with explicit tz. Never infer or convert blind. Store tz with time. |
+| Timezone conversion | Boise 6 kickoffs +2h, all rated HIGH | Verify kickoffs against the **home school's** official site with explicit tz. Never infer or convert blind. ~~Store tz with time.~~ **Store the instant in the venue's IANA zone (2026-09-02, see "Three label failures" below); a two-letter label is the failure, not the guard.** |
 | Derived-field hallucination | ND week off-by-one (double-counted bye); ND conferenceGame=yes (it is independent) | Hard-gate derived fields by rule, do not extract. Independent = zero conference games, full stop. ~~Week computed from schedule, not read.~~ **Week struck 2026-09-02:** the rule produced a per-school ordinal on a shared doc, wrong for the other school on 48 of 87 pages; the site carries no CFB week number, so there is nothing to derive. |
 | Entity conflation | originYear mixed series-start with trophy-creation | Split fields: `seriesStartYear` ≠ `trophyCreatedYear`. |
 | Outright fabrication | "Dooley-Fulmer Trophy" (does not exist) | Mandatory independent second source. Single-source claims cannot reach `verified: true`. |
 | Mis-citation | Correct TN/Texas time, wrong (stale) source | Store the source that actually carries the value, not a plausible adjacent URL. Verify the citation, not just the value. |
 
 **Rule:** treat every extractor HIGH as UNVERIFIED until independently confirmed. The HIGH rating carries no signal.
+
+**Three label failures, found 2026-09-02, all closed by one rule.** The July parser stored a kickoff as digits plus a two-letter label, and the label was wrong three different ways in one week:
+
+1. *The parser stamped digits in the parsing school's zone with a label that was not that zone.* Tennessee vs Texas parsed from texassports.com as "11:00 AM CT" for a Knoxville game; 25 of the 27 July verify "conflicts" were this (audit/cfb-render-tier1.md section 4).
+2. *The source page printed another zone's digits.* niuhuskies.com listed Wyoming vs Northern Illinois as 3:30 PM for a 1:30 PM MT game; 3:30 is Eastern. Neither the source school's zone nor the stamped label fits, and no reading of the label recovers it (promo-pipeline docs/cfb-resolutions-2026-09-02.md).
+3. *ESPN's TBD placeholder is an instant at midnight Eastern.* Read in a Central or Western venue zone it lands on the previous day, and 168 games failed to match on the date alone until the placeholder was read in ESPN's own anchor zone (docs/cfb-near-term-sweep-phase-a.md).
+
+**The rule: a kickoff is an INSTANT plus the venue's IANA zone.** `kickoff.time` is 24-hour "HH:MM" in `kickoff.tz`, and `kickoff.tz` is the IANA zone of the building the game is played in (`cfbVenues.timezone`, `venueHubs.timezone`, or `internationalVenue.timezone` on the game doc), never "ET"/"CT"/"MT"/"PT". The in-season sweep, the verify runner and the human-resolution path all write only that shape (closed types in promo-pipeline cfb-sweep/types.ts). A remaining two-letter label on a doc is July data the sweep has not yet rewritten; the display reads it through the pipeline's label map and converts to the venue zone, which is correct for a verified row and hidden for an unverified one. **Kickoff is never stored as digits plus a two-letter label again.**
 
 **Who writes `verified` (recorded 2026-09-02, Phase B of the near-term sweep).** The verify runner (`promo-pipeline/cfb-sweep/verify.ts`) writes `verified` and `verification` after its own pass, **false to true only, never true to false.** Its write scope is exactly those two fields; the sweep's write scope is exactly `kickoff`, `broadcast`, `status`; each scope is a closed type (`Exact<>`) with expect-error pins, so writing `verified` from the sweep, or clearing it from the runner, is a compile error. A conflict on an already-verified game holds the whole doc. Two changes to the July contract, both from `audit/cfb-render-tier1.md` section 4: the stored digits are read in the **source school's** zone (the label the parser stamped is not the zone the digits are in; 25 of 27 July "conflicts" were this), and bare-hour shapes ("8 PM", "Noon") normalize. A kickoff window ("6:30 or 6:45 PM") is never one side of itself.
 
