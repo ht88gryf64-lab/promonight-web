@@ -5,8 +5,17 @@
  * Reproduces the production title/description templates from
  *   src/app/[sport]/[team]/page.tsx  (and the playoffs page)
  * against LIVE Firestore data, then asserts:
- *   - every rendered <title> (incl. the layout's " | PromoNight" suffix) <= 60
+ *   - every CONTROL rendered <title> (incl. the layout's " | PromoNight"
+ *     suffix) <= 60
  *   - every meta description <= 155
+ *
+ * The ten ctr-diagnostic-sep2026 treatment teams are EXEMPT from the 60-char
+ * assertion and reported separately. Four of their titles run 61 to 63 chars,
+ * which was accepted when the experiment shipped: every query-relevant token
+ * lands inside the first 49 characters and only the " | PromoNight" brand
+ * suffix is at risk of clipping. See src/lib/title-treatment.ts. If the
+ * experiment is reverted or promoted, that file changes and this script
+ * follows automatically.
  *
  * Run with:
  *   node --require ./scripts/stub-server-only.cjs --import tsx \
@@ -14,6 +23,7 @@
  */
 import { getAllTeams, getTeamBySlug, getVenueForTeam } from '../src/lib/data';
 import { teamDisplayName } from '../src/lib/promo-helpers';
+import { isTitleTreatmentTeam, teamBareTitle } from '../src/lib/title-treatment';
 import type { Team } from '../src/lib/types';
 
 const YEAR = 2026; // must match the hardcoded `year` in the team/playoffs pages
@@ -29,13 +39,25 @@ function truncateAtWord(s: string, max: number): string {
   return (lastSpace > 0 ? slice.slice(0, lastSpace) : slice).trimEnd();
 }
 
-function bareTitle(display: string): string {
-  return `${display} Promos & Giveaways ${YEAR}`;
-}
+// The title template is NOT re-typed here. It is imported from
+// src/lib/title-treatment.ts, the same module the team route, og:title and the
+// JSON-LD WebPage name read, so this validator cannot drift from production the
+// way the two mirrors in scripts/audit-title-lengths.ts and
+// scripts/check-metadata-dedupe.ts already have. That import is also what makes
+// this script accept BOTH shapes automatically: the control
+// `{Display} Promos & Giveaways 2026` and, for the ten ctr-diagnostic-sep2026
+// treatment teams, `{Display} Giveaways & Theme Nights 2026`.
+//
 // What actually renders in <title> once the layout template is applied.
-function renderedTitle(display: string): string {
-  return `${bareTitle(display)}${TITLE_SUFFIX}`;
+function renderedTitle(team: Team, display: string): string {
+  return `${teamBareTitle(team, display)}${TITLE_SUFFIX}`;
 }
+// KNOWN STALE, and deliberately left alone by the ctr-diagnostic-sep2026
+// change: the production description has not been this string for some time
+// (it front-loads the next upcoming promos and falls back to a
+// "promotional schedule" sentence with a league-aware freshness tail). The
+// description numbers this script prints are therefore a floor, not a mirror.
+// Rewriting the description mirror is its own change with its own review.
 function rawDescription(display: string, venueName: string | null): string {
   return venueName
     ? `${display} ${YEAR} promos: giveaways, bobbleheads, theme nights & food deals at ${venueName}. Find the best games to attend this season.`
@@ -51,6 +73,8 @@ interface Row {
   slug: string;
   display: string;
   venueName: string | null;
+  /** In the ctr-diagnostic-sep2026 treatment arm (see src/lib/title-treatment.ts). */
+  treatment: boolean;
   title: string;
   titleLen: number;
   desc: string;
@@ -63,11 +87,12 @@ async function rowForTeam(team: Team): Promise<Row> {
   const display = teamDisplayName(team);
   const raw = rawDescription(display, venue);
   const desc = truncateAtWord(raw, DESC_MAX);
-  const title = renderedTitle(display);
+  const title = renderedTitle(team, display);
   return {
     slug: team.id,
     display,
     venueName: venue,
+    treatment: isTitleTreatmentTeam(team),
     title,
     titleLen: title.length,
     desc,
@@ -114,14 +139,18 @@ async function main() {
   const teams = await getAllTeams();
   const rows = await Promise.all(teams.map(rowForTeam));
 
-  const titleOver = rows.filter((r) => r.titleLen > TITLE_MAX);
+  // Over-budget titles split by arm: a control team over 60 is a real defect,
+  // a treatment team over 60 is the accepted cost of the experiment.
+  const titleOver = rows.filter((r) => r.titleLen > TITLE_MAX && !r.treatment);
+  const titleOverTreatment = rows.filter((r) => r.titleLen > TITLE_MAX && r.treatment);
   const descOver = rows.filter((r) => r.descLen > DESC_MAX);
   const truncated = rows.filter((r) => r.rawDescLen > DESC_MAX);
   const longestTitle = [...rows].sort((a, b) => b.titleLen - a.titleLen)[0];
   const longestDesc = [...rows].sort((a, b) => b.descLen - a.descLen)[0];
 
   console.log(`=== FULL SWEEP: ${rows.length} teams ===\n`);
-  console.log(`Titles over ${TITLE_MAX}: ${titleOver.length}`);
+  console.log(`Titles over ${TITLE_MAX} (control, FAIL): ${titleOver.length}`);
+  console.log(`Titles over ${TITLE_MAX} (treatment, accepted): ${titleOverTreatment.length}`);
   console.log(`Descs  over ${DESC_MAX}: ${descOver.length}`);
   console.log(`Descs truncated (raw > ${DESC_MAX}): ${truncated.length}`);
   console.log(`\nLongest title: ${longestTitle.titleLen} chars — ${longestTitle.title}`);
@@ -135,8 +164,16 @@ async function main() {
     }
   }
 
+  if (titleOverTreatment.length > 0) {
+    console.log(
+      `\n--- ctr-diagnostic-sep2026 treatment titles over ${TITLE_MAX} (ACCEPTED, not a failure) ---`,
+    );
+    for (const r of titleOverTreatment.sort((a, b) => b.titleLen - a.titleLen)) {
+      console.log(`  ${r.titleLen}  [${r.slug}] ${r.title}`);
+    }
+  }
   if (titleOver.length > 0) {
-    console.log(`\n!!! TITLES OVER ${TITLE_MAX} — needs fixing:`);
+    console.log(`\n!!! CONTROL TITLES OVER ${TITLE_MAX}, needs fixing:`);
     for (const r of titleOver) console.log(`  ${r.titleLen}  [${r.slug}] ${r.title}`);
   }
   if (descOver.length > 0) {
@@ -153,7 +190,9 @@ async function main() {
   console.log(`  desc  [${playoffDesc.length}/${DESC_MAX}] ${playoffDesc.length <= DESC_MAX ? 'OK' : 'OVER'}  ${playoffDesc}`);
 
   const pass = titleOver.length === 0 && descOver.length === 0 && playoffTitle.length <= TITLE_MAX && playoffDesc.length <= DESC_MAX;
-  console.log(`\n=== RESULT: ${pass ? 'PASS — all titles <=60 and descriptions <=155' : 'FAIL'} ===`);
+  console.log(
+    `\n=== RESULT: ${pass ? 'PASS: all control titles <=60 and descriptions <=155' : 'FAIL'} ===`,
+  );
   if (!pass) process.exit(1);
 }
 
