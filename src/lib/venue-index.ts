@@ -92,3 +92,15 @@ export function collectVenueLinksForTeams(
   }
   return out.sort((a, b) => a.name.localeCompare(b.name));
 }
+
+// ── team page: the old `venues` prose block versus the hub link ──────────────
+
+/** Whether the team page renders the provenance-free `venues` prose block for
+ *  this building. It renders only while the building's venueHub is NOT
+ *  indexable: once the hub clears the floor (verified + geo + 2 of 3), the hub
+ *  is the sourced record and the club page links it instead of repeating
+ *  unsourced prose beside it. No data is deleted; a building that drops back
+ *  below the floor gets the block back. */
+export function rendersVenuesBlock(venue: unknown, hubIndexable: boolean): boolean {
+  return venue !== null && venue !== undefined && !hubIndexable;
+}
