@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { Team, Venue } from '@/lib/types';
+import { indefiniteArticleFor } from '@/lib/indefinite-article';
 import type { AnalyticsSurface } from '@/lib/analytics';
 import { resolveHotelLink } from '@/lib/hotel-link';
 import { TrackedAffiliateLink } from '@/components/tracked-affiliate-link';
@@ -106,7 +107,7 @@ export function HotelsCTA({
     return (
       <div className="bg-bg-card border border-border-subtle rounded-xl p-5">
         <h3 className="font-display text-lg tracking-[0.5px] mb-1">{teamDisplayName(team)}</h3>
-        <p className="text-text-secondary text-xs mb-4">Traveling for a {team.name} game? Find a hotel near {venueName}.</p>
+        <p className="text-text-secondary text-xs mb-4">Traveling for {indefiniteArticleFor(team.name)} {team.name} game? Find a hotel near {venueName}.</p>
         {tracked(
           'inline-flex flex-col items-start gap-0.5 bg-bg-card border border-promo-theme/40 text-white font-semibold text-xs px-4 py-2.5 rounded-xl transition-all hover:-translate-y-0.5 hover:border-promo-theme',
           <>

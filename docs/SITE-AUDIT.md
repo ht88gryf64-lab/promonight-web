@@ -332,16 +332,28 @@ EMPTY: zero rich-result appearances in three months. Full working:
 
 | Page type | Share of impressions | CTR |
 |---|---|---|
-| MLB team pages | 81.7% | 1.24% |
-| Venue pages | 9.2% | 0.25% |
-| WNBA | not supplied | 6.66% |
-| NFL | not supplied | 14.31% |
-| MLS | not supplied | 6.49% |
+| MLB team | 81.7% | 1.24% |
+| Venue | 9.2% | 0.25% |
+| WNBA team | 1.9% | 6.66% |
+| NFL team | 1.8% | 14.31% |
+| /promos/* | 1.6% | not supplied |
+| MLS team | 1.3% | 6.49% |
+| CFB team | 0.8% | 0.30% |
+| NHL team | 0.4% | not supplied |
+| NBA team | 0.2% | not supplied |
 
-Impression share was supplied only for the first two rows; the other three are
-CTR alone and their shares are not recorded here rather than being inferred.
-The structural read from June still holds and is sharper: the two page types
-carrying ~91% of impressions convert 5x to 57x worse than every other type.
+Shares are from the GSC Pages.csv breakdown and sum to 98.9%; the residual ~1.1%
+is the homepage and the remaining static routes. The CFB CTR is the same 0.30%
+recorded in the deferred list at the end of this subsection. Three rows have no
+CTR supplied and are left blank rather than inferred.
+
+The structural read from June still holds and is sharper. **The two worst-
+converting page types carry 90.9% of all impressions.** Every other page type
+converts between 5x and 57x better than MLB team pages and is starved of
+impressions: NFL team pages convert at 14.31% on 1.8% of impressions, while MLB
+team pages convert at 1.24% on 81.7%. The whole-site 1.63% is an MLB-weighted
+average, and moving it means either fixing the MLB page type or redistributing
+impressions toward the types that already convert.
 
 #### A/B/C classification (Gate 1, 26 live SERPs in Chrome, US locale)
 

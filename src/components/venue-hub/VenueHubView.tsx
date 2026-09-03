@@ -40,8 +40,8 @@ import {
   venueHubDescription,
   bagFaqAnswers,
   stripTrailingPeriod,
-  indefiniteArticleFor,
 } from '@/lib/venue-hub';
+import { indefiniteArticleFor } from '@/lib/indefinite-article';
 
 // House Light venue logistics hub. Server component (the photo hero's onError
 // degrade is the only client leaf, VenuePhotoHero). Reads only the VenueHub it

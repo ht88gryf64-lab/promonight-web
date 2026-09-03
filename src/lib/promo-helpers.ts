@@ -1,6 +1,7 @@
 import { APP_LEAGUES, type CoverageCounts } from '@/lib/coverage-counts';
 import type { Team, Promo, PromoType, Venue, PlayoffPromo } from './types';
 import { PROMO_TYPE_LABELS } from './types';
+import { indefiniteArticleFor } from './indefinite-article';
 
 // Stable synthetic promo ID. Firestore promo subdocs do carry "p1"-style ids
 // but the data layer (mapPromoDoc) drops them — (team_slug, date, title)
@@ -464,7 +465,7 @@ export function generateTeamFAQs(
   // 5d. Travel — hotels (always shown)
   faqs.push({
     question: `Where should I stay near ${venueName}?`,
-    answer: `Several hotels sit within walking distance of ${venueName}, and more are a short rideshare away. For a ${fullName} game weekend, searching Expedia for hotels near ${venueName} surfaces the best rates for your specific date. Prices jump on marquee dates like giveaway nights and playoff games, so booking early helps.`,
+    answer: `Several hotels sit within walking distance of ${venueName}, and more are a short rideshare away. For ${indefiniteArticleFor(fullName)} ${fullName} game weekend, searching Expedia for hotels near ${venueName} surfaces the best rates for your specific date. Prices jump on marquee dates like giveaway nights and playoff games, so booking early helps.`,
   });
 
   // 5e. App — promo-day reminders (always shown, distinct from #5's general pitch).
