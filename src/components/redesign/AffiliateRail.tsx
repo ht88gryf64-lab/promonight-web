@@ -6,6 +6,7 @@ import { FanaticsCTA } from '@/components/affiliates/FanaticsCTA';
 import { VenueInfoBlock } from '@/components/venue-info-block';
 import { VenueHubLink } from '@/components/venue-hub/VenueHubLink';
 import { getVenueHubForTeam } from '@/lib/venue-hub';
+import { rendersVenuesBlock } from '@/lib/venue-index';
 
 // AffiliateRail — the "plan your visit" module. The single tickets CTA lives
 // here now (the hero Get Tickets button was removed), so this is the one place
@@ -63,10 +64,16 @@ export async function AffiliateRail({ team, venue, className }: AffiliateRailPro
         ) : null}
       </div>
 
-      {/* Full venue & game-day detail flows below the buttons */}
-      {venue && (
+      {/* Full venue & game-day detail flows below the buttons. RENDER RULE
+          (2026-09-03): once the building's venueHub is indexable, the hub is
+          the sourced record for this building and the old `venues` prose block
+          (provenance-free, 2026-05-23 batch) no longer renders beside its
+          link. The `venues` doc is untouched; a building that later drops
+          below the floor gets the block back. The decision is
+          rendersVenuesBlock in lib/venue-index so it is unit-testable. */}
+      {rendersVenuesBlock(venue, showHubLink) && (
         <div className="mt-6">
-          <VenueInfoBlock venue={venue} league={team.league} variant="light" />
+          <VenueInfoBlock venue={venue!} league={team.league} variant="light" />
         </div>
       )}
     </section>

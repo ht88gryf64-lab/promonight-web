@@ -276,6 +276,15 @@ export const CLAUSE_REDACTIONS: ReadonlyArray<ClauseRedaction> = [
     replacement: 'No outside',
     reason: 'Nebraska: the RULE is current and only the "New in 2025" framing rots, so this removes the framing and keeps the policy. Joined at the head of the sentence, so it takes a replacement rather than a deletion: removing the clause alone would leave the field opening on a lowercase word, and a mangled sentence reads as a bug and invites someone to restore the clause.',
   },
+  // Operator-contradicted figure found by the NHL Phase 1 execute (2026-09-03).
+  {
+    slug: 'centre-bell',
+    corpus: 'venues',
+    field: 'parkingInfo',
+    clause: ', and downtown garages run roughly 20 to 45 dollars on event nights',
+    reason:
+      'The operator page (centrebell.ca/en/getting-here, harvested 2026-09-02) gives the event-night range as $20 to $49; the club FAQ gives $20 to $45. The two sources contradict on the ceiling and neither dates its figure, so the venueHubs record carries no price and this clause must not publish one. The rest of the sentence stands on its own.',
+  },
 ];
 
 const REDACTIONS = new Map(CLAUSE_REDACTIONS.map((r) => [`${r.corpus}\u0000${r.slug}\u0000${r.field}`, r]));

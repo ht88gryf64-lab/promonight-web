@@ -125,7 +125,9 @@ test('every redaction records a clause, a field and its evidence', () => {
       // Dated framing on a claim that is otherwise current, found by the
       // stored-year report rather than by any source check.
       'amon-g-carter-stadium.food', 'everbank-stadium.food',
-      'memorial-stadium-lincoln.outsideFoodRules'],
+      'memorial-stadium-lincoln.outsideFoodRules',
+      // Operator-contradicted price, found by the NHL Phase 1 execute.
+      'centre-bell.parkingInfo'],
   );
   for (const r of CLAUSE_REDACTIONS) {
     assert.ok(r.clause.length > 10, `${r.slug}: a clause short enough to match by accident is not safe`);
@@ -305,4 +307,20 @@ test('EVERY field named by a redaction is actually redacted at its mapper', () =
     assert.ok(covered,
       `${r.slug}.${r.field}: no mapper for corpus ${r.corpus} calls redactClause for this field, so the entry silences nothing`);
   }
+});
+
+test('centre-bell parkingInfo drops the contradicted event-night price and keeps the rest', () => {
+  // Verbatim stored string, read 2026-09-02.
+  const stored =
+    'The Bell Centre Garage sits directly beneath the arena, with its entrance on Rue Saint-Antoine West a one-minute walk from the doors, and downtown garages run roughly 20 to 45 dollars on event nights. This is more of a downtown routing problem than a parking problem, so pick the garage that matches your exit route, or skip driving entirely.';
+  const out = redactClause('centre-bell', 'parkingInfo', stored, 'venues');
+  assert.equal(
+    out,
+    'The Bell Centre Garage sits directly beneath the arena, with its entrance on Rue Saint-Antoine West a one-minute walk from the doors. This is more of a downtown routing problem than a parking problem, so pick the garage that matches your exit route, or skip driving entirely.',
+  );
+  assert.ok(!/45 dollars|\$45|20 to 45/.test(out ?? ''));
+  // Fail-safe: if the stored text drifts and the clause is gone, the whole field is withheld.
+  assert.equal(redactClause('centre-bell', 'parkingInfo', 'Garage beneath the arena, roughly 20 to 49 dollars.', 'venues'), null);
+  // Scope: the hub corpus for the same slug is untouched.
+  assert.equal(redactClause('centre-bell', 'parkingInfo', 'unrelated hub text', 'venueHubs'), 'unrelated hub text');
 });
