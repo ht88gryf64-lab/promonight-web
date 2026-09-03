@@ -12,6 +12,7 @@ import { SeasonExplorer } from './SeasonExplorer';
 import { ScheduleBlock } from './ScheduleBlock';
 import { DivisionRivals } from './DivisionRivals';
 import { getDivisionRivals } from '@/lib/division-rivals';
+import { teamTitleSubtitle } from '@/lib/title-treatment';
 import { UpcomingPromoModalProvider } from './UpcomingPromoModal';
 import { AffiliateRail } from './AffiliateRail';
 import { ExploreCard } from './ExploreCard';
@@ -197,12 +198,17 @@ export function RedesignTeamPage({
         <AdSlot config={AD_SLOTS.HEADER_LEADERBOARD} pageType="team_page" />
       </div>
 
-      {/* Hero — no Get Tickets button (the affiliate stack is the single tickets CTA). */}
+      {/* Hero, no Get Tickets button (the affiliate stack is the single tickets CTA).
+          `subtitle` used to be a hardcoded "Promos & Giveaways 2026", an
+          independent second copy of the page title. It now reads the
+          ctr-diagnostic-sep2026 flip point in src/lib/title-treatment.ts, and
+          takes the TAIL of the title only: the <h1> directly above it already
+          prints the team name, so passing the full title would stutter it. */}
       <Hero
         tint={team.primaryColor}
         eyebrow={eyebrow}
         title={displayName.toUpperCase()}
-        subtitle="Promos & Giveaways 2026"
+        subtitle={teamTitleSubtitle(team)}
         venueLine={venue?.name ?? undefined}
         scoreboard={<StatScoreboard counts={upcomingCounts} gamesCount={gameContexts?.length} />}
       />

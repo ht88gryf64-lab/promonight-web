@@ -833,6 +833,45 @@ export function venueHubTitle(hub: Pick<VenueHub, 'name' | 'tenants'>): string {
   return `${head} | ${SEASON_YEAR} Gameday Guide`;
 }
 
+// ── indefinite article for a tenant name ───────────────────────────────────
+// The parking FAQ reads "Where do you park for a {tenant} game?". That question
+// is ONE string feeding both the visible H2 and the FAQPage JSON-LD, so a wrong
+// article ships into structured data too. It shipped as a bare "a" and rendered
+// "a Atlanta Braves game" on truist-park.
+//
+// A naive vowel-letter test does not survive this corpus (115 distinct tenant
+// names across the 222 buildings):
+//   UCLA, UConn, USF, Utah  open with a vowel LETTER but the consonant "yoo"
+//                           sound, so they take "a".
+//   NC State                opens with a consonant LETTER but "en", a vowel
+//                           sound, so it takes "an".
+// The rule below is therefore sound-based rather than spelling-based. It is a
+// heuristic sized to the names this corpus actually holds and the shapes new
+// ones are likely to take, not to all of English.
+
+// Letters whose spoken name opens with a vowel sound (F is "eff", N is "en").
+// U is deliberately absent: spoken "yoo", so an initialism opening U takes "a".
+const VOWEL_SOUND_LETTERS = new Set(['A', 'E', 'F', 'H', 'I', 'L', 'M', 'N', 'O', 'R', 'S', 'X']);
+
+/** "a" or "an" for a team or school name. Sound-based; see the note above. */
+export function indefiniteArticleFor(name: string): 'a' | 'an' {
+  const first = name.trim().split(/\s+/)[0] ?? '';
+  const letters = first.replace(/[^A-Za-z]/g, '');
+  if (!letters) return 'a';
+
+  // Initialism ("NC State", "D.C. United", "BYU", "TCU"): the first letter is
+  // read by its spoken name, not as a vowel or consonant glyph.
+  if (letters.length >= 2 && letters === letters.toUpperCase()) {
+    return VOWEL_SOUND_LETTERS.has(letters[0]) ? 'an' : 'a';
+  }
+
+  // "Utah", "Union", "Utica": U before a consonant is the "yoo" sound, as is
+  // a leading "Eu". Both take "a".
+  if (/^u[^aeiou]/i.test(letters) || /^eu/i.test(letters)) return 'a';
+
+  return /^[aeiou]/i.test(letters) ? 'an' : 'a';
+}
+
 // ── bag copy, generated from the policy data (spec section 6) ───────────────
 // Everything a page says about bags derives from `clearBagRequired`, never from a
 // template. The FAQ used to hardcode "{venue} requires a clear bag no larger than

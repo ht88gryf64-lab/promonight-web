@@ -40,6 +40,7 @@ import {
   venueHubDescription,
   bagFaqAnswers,
   stripTrailingPeriod,
+  indefiniteArticleFor,
 } from '@/lib/venue-hub';
 
 // House Light venue logistics hub. Server component (the photo hero's onError
@@ -205,7 +206,13 @@ export function VenueHubView({
   if (parkingFactsOk) {
     const lotNames = lotsUsable ? hub.parkingLots.slice(0, 8).map((l) => l.name).join(', ') : '';
     faqs.push({
-      question: primaryTenant ? `Where do you park for a ${primaryTenant} game?` : `Where do you park at ${short}?`,
+      // indefiniteArticleFor, not a bare "a": this shipped as "a Atlanta Braves
+      // game" on truist-park. One string, two surfaces (the visible H2 and the
+      // FAQPage JSON-LD both read this same faqs entry), so the fix lands on
+      // both together.
+      question: primaryTenant
+        ? `Where do you park for ${indefiniteArticleFor(primaryTenant)} ${primaryTenant} game?`
+        : `Where do you park at ${short}?`,
       answer: `${short} has on-site lots${lotNames ? ` including ${lotNames}` : ''}. Reserve a nearby spot in advance through SpotHero on this page.`,
     });
   }

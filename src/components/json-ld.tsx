@@ -1,5 +1,6 @@
 import type { Team, Promo, PromoType, Venue, PlayoffPromo } from '@/lib/types';
 import { generateTeamFAQs, teamDisplayName, type PlayoffFAQContext, type TeamFaqCoverage } from '@/lib/promo-helpers';
+import { teamBareTitle } from '@/lib/title-treatment';
 
 interface JsonLdProps {
   team: Team;
@@ -131,7 +132,11 @@ export function JsonLd({
     '@type': 'WebPage',
     '@id': teamUrl,
     url: teamUrl,
-    name: `${teamDisplayName(team)} Promos & Giveaways 2026`,
+    // Was an independent hardcoded copy of the page title, season year inline.
+    // It now reads the same helper the <title> and og:title do, so the WebPage
+    // entity can never disagree with the title a crawler sees, and the
+    // ctr-diagnostic-sep2026 treatment reaches this surface too.
+    name: teamBareTitle(team, teamDisplayName(team)),
     datePublished: '2025-12-01',
   };
 
