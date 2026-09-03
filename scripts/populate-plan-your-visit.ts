@@ -107,7 +107,7 @@ export const TWINS_FIELDS = {
   parkingInfo:
     'Target Field ramps sell out on giveaway and marquee dates. Pre-paid parking is the safest bet. Reserve a spot in advance rather than circling the ramps.',
   publicTransit:
-    'METRO Blue and Green lines stop at Target Field Station, directly connected to the stadium. Northstar commuter rail also terminates at the stadium.',
+    'METRO Blue and Green lines stop at Target Field Station, directly connected to the stadium.',
   accessibility:
     'Target Field is fully ADA-accessible with wheelchair seating throughout, elevators to every level, and accessible parking in Ramp A.',
   bagPolicyUrl: 'https://www.mlb.com/twins/ballpark/information/guide#bag-policy',
