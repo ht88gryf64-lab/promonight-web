@@ -1952,3 +1952,128 @@ than as a new regression.
 **Severity: Low today, Medium on rollback.** No user-visible effect while the
 flag is on; a wrong year plus a false freshness claim on 169 indexed pages if it
 is turned off.
+
+---
+
+## 40. The theme-night list renders "Invalid Date" for a dateless promo
+
+**What it is.** `ThemeSection` in `src/components/team-content-sections.tsx`
+renders a `<ul>` of up to six theme nights and formats each row's date with
+`formatDateReadable(p.date)`. That helper does `new Date(dateStr + 'T12:00:00')`
+with no guard, so a promo carrying `date: ''` or `null` renders the literal
+string `Invalid Date` next to the promo title.
+
+**Where it lives.** `src/components/team-content-sections.tsx`, the `<ul>` in
+both the `light` and dark branches of `ThemeSection`.
+
+**Why it is filed as UNREACHABLE and not fixed.** Both call sites pass
+`upcomingPromos`, and `splitPromosByDate`
+(`src/lib/promo-helpers.ts:260`) explicitly drops dateless promos from BOTH
+populations: `promos.filter((p) => typeof p.date === 'string' && p.date !== '')`.
+So no dateless row can reach this component through
+`src/app/[sport]/[team]/page.tsx` or `RedesignTeamPage`. Confirmed 2026-09-03.
+
+The paragraph directly above the list, added in the same component, handles this
+correctly: it filters for a usable date before naming anything and omits its
+sentence entirely when nothing qualifies. The list does not, so the two disagree
+about whether a dateless row is renderable.
+
+Surfaced by `src/components/__tests__/theme-section-omit.test.tsx`, whose first
+draft asserted against the whole rendered section and caught this. Those
+assertions were scoped back to the paragraph rather than fixing the list under a
+test commit.
+
+**Fix it if `splitPromosByDate` ever stops filtering dateless promos, or if any
+new caller passes an unfiltered array.** Either change makes this live on team
+pages with no other warning.
+
+**Severity: Low today.** Unreachable through every current call site. Medium the
+moment the upstream filter changes, since `Invalid Date` would render as body
+copy on indexed pages.
+
+---
+
+## 41. Three scripts carry stale copies of the team metadata template
+
+**What it is.** The team-page title and description template is mirrored by hand
+in several scripts, and the mirrors have drifted from the route that actually
+ships. A validator asserting an old string passes while production renders a
+different one, which is worse than no validator: it reads as coverage.
+
+**Where it lives.**
+
+- `scripts/check-metadata-dedupe.ts:41` builds
+  `` `${team.city} ${team.name} Promo Schedule ${YEAR}` ``. Production has not
+  used "Promo Schedule" in some time, and this also uses `city + name` instead of
+  `teamDisplayName()`, so it double-names every team whose name already contains
+  the city. Its header comment claims it is "kept in lockstep". It is not.
+- `scripts/audit-title-lengths.ts:45,145` asserts the same retired
+  "Promo Schedule" wording.
+- `scripts/validate-team-meta-2026.ts` had the same drift on the TITLE, fixed
+  2026-09-03 by importing `teamBareTitle` from `src/lib/title-treatment.ts` so it
+  cannot drift again. Its DESCRIPTION mirror is still stale: it reproduces
+  `` `{Team} 2026 promos: giveaways, bobbleheads, theme nights & food deals at
+  {venue}. ...` `` at `DESC_MAX 155`, while the route front-loads upcoming promos
+  with a league-aware freshness tail at `DESC_MAX 160`. Marked KNOWN STALE in a
+  comment at the time.
+
+**Why it matters.** These scripts exist to catch metadata regressions. Two of
+them would now report green against strings no page renders, and the third
+validates a title correctly while checking a description nothing produces.
+
+**The decision to make, per script.** Either read from the shared helper the way
+`validate-team-meta-2026.ts` now does for its title, or delete the script. A
+hand-mirrored template is the failure mode itself, so a third option of "update
+the copy" just resets the clock on the same defect. The description needs a
+shared helper to read from before its mirror can be fixed the same way; extracting
+one from `generateMetadata` is the enabling change.
+
+**Severity: Medium.** No user-visible effect, but it is false assurance in the
+exact tooling meant to prevent a user-visible metadata regression.
+
+---
+
+## 42. Hardcoded "a {Team}" ignores the article class, including inside FAQPage JSON-LD
+
+**What it is.** Copy generators write the indefinite article as a literal `a`
+before an interpolated team name, so any vowel-sound name renders
+"a Atlanta Braves game". Fixed at one site on 2026-09-03 and left at two others.
+
+**Where it is fixed.** `src/components/venue-hub/VenueHubView.tsx` parking FAQ now
+calls `indefiniteArticleFor()` from `src/lib/venue-hub.ts`. That helper is
+sound-based rather than spelling-based, because a vowel-letter test is not
+sufficient for this corpus: `UCLA`, `UConn`, `USF` and `Utah` open with a vowel
+letter but the consonant "yoo" sound and take "a", while `NC State` opens with a
+consonant letter but the vowel sound "en" and takes "an". Six tests in
+`src/lib/__tests__/indefinite-article.test.ts` pin the real corpus cases.
+
+**Where it is NOT fixed** (swept read-only 2026-09-03, both live):
+
+- `src/lib/promo-helpers.ts:467`, inside `generateTeamFAQs`, the always-shown
+  "Where should I stay near {venue}?" answer: "For a {displayName} game weekend".
+  **20 of 169 teams render the wrong article**, and because `json-ld.tsx` builds
+  the FAQPage from `generateTeamFAQs`, the error is in structured data as well as
+  visible copy. Affected: Arizona Diamondbacks, Atlanta Braves, Oakland Athletics,
+  Atlanta United FC, Austin FC, FC Cincinnati, FC Dallas, Orlando City SC, Atlanta
+  Hawks, Indiana Pacers, Oklahoma City Thunder, Orlando Magic, Arizona Cardinals,
+  Atlanta Falcons, Indianapolis Colts, Anaheim Ducks, Edmonton Oilers, Ottawa
+  Senators, Atlanta Dream, Indiana Fever.
+- `src/components/affiliates/HotelsCTA.tsx:109`, "Traveling for a {team.name}
+  game?". This one interpolates the NICKNAME, so it breaks on a different set:
+  **17 of 169 teams.** Rendered on `/playoffs`, `game-day-detail`, the redesign
+  `GameExpand`, and the world-cup rows. Affected: Angels, Astros, Athletics,
+  Orioles, Austin FC, Earthquakes, FC Cincinnati, FC Dallas, Inter CF, LAFC,
+  76ers, 49ers, Eagles, Avalanche, Islanders, Oilers, Aces.
+
+**Known limitation of the helper.** `indefiniteArticleFor` strips non-letters
+before deciding, so a numeric-leading name resolves on the letters that follow:
+it returns "an" for `76ers` and `49ers`, where spoken English takes "a"
+("a seventy-sixers game"). Harmless at the one shipped call site, whose tenant
+names are all full "City Nickname" strings with no numeric-leading entries,
+but it must be handled before the helper is used anywhere that interpolates a
+nickname. `HotelsCTA` is exactly such a place, and both `76ers` and `49ers` are
+in its affected list above.
+
+**Severity: Low.** A grammar error, not a wrong fact. Filed because it reaches
+FAQPage structured data on 20 indexed team pages, and because the fix is now a
+one-line call at each site once the numeric case is handled.
