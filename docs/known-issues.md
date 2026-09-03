@@ -2077,3 +2077,34 @@ in its affected list above.
 **Severity: Low.** A grammar error, not a wrong fact. Filed because it reaches
 FAQPage structured data on 20 indexed team pages, and because the fix is now a
 one-line call at each site once the numeric case is handled.
+
+### Resolution
+
+**RESOLVED in `e292f21` (2026-09-03).** Both remaining sites now call the
+helper, and the numeric case that blocked reuse is handled.
+
+The helper moved to `src/lib/indefinite-article.ts`, which imports nothing.
+It could not stay in `venue-hub.ts`: that module imports `server-only` and the
+Firestore client, and neither `promo-helpers.ts` nor the `HotelsCTA` component
+can pull that chain in.
+
+The numeric rule reads the first SPOKEN word of a leading digit run rather than
+stripping the digits: "76" opens "seventy" and "49" opens "forty", so both take
+"a", while "8" opens "eight" and takes "an". Only the first word decides the
+article, so the whole number is never spelled. "one" stays on "a" because it
+opens with a /w/ sound despite the vowel letter.
+
+Verified on production after revalidating all 20 affected paths
+(`revalidated: 20`): `/mlb/atlanta-braves`, `/nba/orlando-magic` and
+`/nhl/edmonton-oilers` each render the corrected string and return zero hits for
+an article before a vowel-initial word. On the team pages the corrected string
+appears twice, once as visible copy and once inside the FAQPage JSON-LD, which
+was the reason this entry was filed.
+
+Coverage: `src/lib/__tests__/indefinite-article.test.ts` (name and number
+rules), `src/components/__tests__/faq-jsonld-article.test.tsx` (asserts the
+EMITTED structured data, so a refactor that stops routing FAQs through
+`generateTeamFAQs` fails rather than silently regressing), and
+`src/components/__tests__/hotels-cta-article.test.tsx` (the card copy, whose
+team-page path runs through `GameExpand` inside a lazy-mounted client
+`ScheduleRow` and therefore never reaches served HTML for a curl to check).
