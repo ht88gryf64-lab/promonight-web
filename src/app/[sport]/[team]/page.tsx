@@ -39,6 +39,7 @@ import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure
 import { AdSlot } from '@/components/ads/AdSlot';
 import { AD_SLOTS } from '@/lib/ads/slots';
 import { isRedesignEnabled } from '@/lib/redesign';
+import { isTitleTreatmentTeam, teamBareTitle } from '@/lib/title-treatment';
 import { getCoverageCounts } from '@/lib/get-coverage-counts';
 import { RedesignTeamPage } from '@/components/redesign/RedesignTeamPage';
 
@@ -85,9 +86,15 @@ export async function generateMetadata({
 
   // The root layout's title.template ("%s | PromoNight") appends the brand to
   // every string title, so this bare value renders as
-  // `${displayName} Promos & Giveaways ${year} | PromoNight` — the 60-char SEO
+  // `${displayName} Promos & Giveaways ${year} | PromoNight`, the 60-char SEO
   // target. Do NOT add "| PromoNight" here or it doubles.
-  const title = `${displayName} Promos & Giveaways ${year}`;
+  //
+  // The string itself now comes from src/lib/title-treatment.ts, the single
+  // flip point for the ctr-diagnostic-sep2026 experiment: ten MLB teams render
+  // "{Display Name} Giveaways & Theme Nights 2026" instead, everything else is
+  // byte-identical to the line this replaced. Four of the ten treatment titles
+  // knowingly exceed 60 rendered characters; see the length note in that file.
+  const title = teamBareTitle(team, displayName);
 
   // OG/Twitter titles are NOT processed by the layout title.template, so spell
   // the "| PromoNight" suffix out here to match the rendered <title> byte-for-
@@ -122,15 +129,58 @@ export async function generateMetadata({
     ? `${displayName} ${year} promotional schedule - bobbleheads, giveaways, theme nights, and food deals at ${venue.name}. ${freshnessTail}`
     : `${displayName} ${year} promotional schedule - bobbleheads, giveaways, theme nights, and food deals. ${freshnessTail}`;
 
+  // CTR diagnostic (ctr-diagnostic-sep2026, see src/lib/title-treatment.ts).
+  // A treatment title promises "Theme Nights", so the snippet under it has to
+  // deliver one: the next DATED upcoming theme night is named ahead of the
+  // aggregate promo list. Read live from the promo array on every ISR
+  // revalidation, so there is no hardcoded promo name and no freshness claim
+  // that is not backed by a real promo date. Null for every control team, and
+  // null for a treatment team with no upcoming theme night, in which case the
+  // description below stays byte-identical to control. The explicit string
+  // test on `date` keeps the dateless recurring-deal rows out: a promo with no
+  // date cannot be named as "next".
+  const nextThemeNight = isTitleTreatmentTeam(team)
+    ? promos
+        .filter(
+          (p) =>
+            p.type === 'theme' &&
+            typeof p.date === 'string' &&
+            p.date !== '' &&
+            isUpcomingPromo(p, todayStr),
+        )
+        .sort((a, b) => a.date.localeCompare(b.date))[0] ?? null
+    : null;
+
   const upcomingForDesc = promos
     .filter((p) => isUpcomingPromo(p, todayStr))
     .sort((a, b) => a.date.localeCompare(b.date))
+    // The named theme night is dropped from the list it leads, so the same
+    // promo is never printed twice in one 160-char snippet. Reference
+    // identity, not a date/title match: nextThemeNight came out of this very
+    // array. No-op when nextThemeNight is null, which is every control team.
+    .filter((p) => p !== nextThemeNight)
     .slice(0, 3);
 
+  const closer = ` See the full ${year} schedule at PromoNight.`;
+  // Same rule as the promo entries below: an item that cannot fit the budget
+  // whole is dropped, never truncated mid-title.
+  const rawLead = nextThemeNight
+    ? `Next ${displayName} theme night: ${nextThemeNight.title} on ${monthDay(nextThemeNight.date)}.`
+    : '';
+  const lead = rawLead.length <= DESC_MAX ? rawLead : '';
+
   let rawDescription = fallbackDescription;
+  // A real dated theme night beats the evergreen fallback sentence even when
+  // no promo list survives the budget, so seed the description with the lead
+  // before the list is attempted rather than losing it to the fallback.
+  if (lead) {
+    rawDescription =
+      (lead + closer).length <= DESC_MAX ? lead + closer : lead;
+  }
   if (upcomingForDesc.length > 0) {
-    const prefix = `Upcoming ${displayName} promos: `;
-    const closer = ` See the full ${year} schedule at PromoNight.`;
+    const prefix = lead
+      ? `${lead} More upcoming promos: `
+      : `Upcoming ${displayName} promos: `;
     const fits: string[] = [];
     let len = prefix.length;
     for (const p of upcomingForDesc) {

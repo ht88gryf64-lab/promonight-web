@@ -9,7 +9,12 @@ export interface HeroProps {
   tint: string; // team primaryColor hex (e.g. "#002B5C"); may be any hex
   eyebrow?: React.ReactNode; // e.g. "MLB · AL Central"; the league may be a hub link
   title: string; // the lockup, e.g. "MINNESOTA TWINS"
-  subtitle?: string; // e.g. "Promos & Giveaways 2026"
+  // The tail of the page title, never the whole title: `title` above already
+  // carries the team name. Team pages pass teamTitleSubtitle() from
+  // src/lib/title-treatment.ts, which is "Promos & Giveaways 2026" for control
+  // teams and "Giveaways & Theme Nights 2026" for the ctr-diagnostic-sep2026
+  // treatment teams.
+  subtitle?: string;
   venueLine?: string; // e.g. "Target Field · Minneapolis, MN"
   scoreboard?: React.ReactNode; // StatScoreboard slot
   primaryCta?: React.ReactNode; // red Get Tickets slot (already-wired CTA)
