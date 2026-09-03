@@ -16,6 +16,17 @@ import { RD_CATEGORIES } from '@/components/redesign/categories';
 // leaves one page asserting two different years.
 const SEASON_YEAR = 2026;
 
+// "Sep 12". Deliberately shorter than formatDateReadable's "September 12": the
+// theme-night paragraph carries up to three of these inside one snippet-length
+// sentence, and the long month name spends the budget without adding meaning.
+// Noon local avoids the UTC-midnight off-by-one that shifts a date back a day.
+function monthDayShort(dateStr: string): string {
+  return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
 
 const APP_LEAGUE_LIST = joinList(APP_LEAGUES);
 
@@ -319,12 +330,42 @@ function ThemeSection({
   const fullName = teamDisplayName(team);
   const themes = getPromosByType(promos, 'theme');
 
+  // ONE paragraph, built once and rendered by BOTH variants below. It used to
+  // be two independent hardcoded copies, and both closed with the same
+  // boilerplate second sentence about entertainment, merchandise and game-day
+  // experiences, byte-identical on all 30 MLB teams. Google extracts this
+  // paragraph for the snippet on the "{team} theme nights" query family, so
+  // that sentence was spending the snippet saying nothing team-specific. It is
+  // replaced by the next three theme nights, named and dated, from the same
+  // array the <ul> below renders. The old sentence is deliberately not quoted
+  // here: it should not survive a repo grep in any form.
+  //
+  // The paragraph lives here rather than in each branch so the old sentence
+  // cannot survive on a second render path: the redesign passes variant="light"
+  // and is the live path today, but the dark branch is still reachable with the
+  // redesign gate off.
+  //
+  // UPCOMING-ness is the caller's contract, exactly as it already is for
+  // `count`: both call sites (the redesign template and the legacy team route)
+  // pass upcomingPromos / upcomingCounts. Dates are filtered here regardless,
+  // because a dateless recurring row cannot be named as "next up" and would
+  // render an invalid date.
+  const nextUp = themes
+    .filter((p) => typeof p.date === 'string' && p.date !== '')
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(0, 3);
+  // When nothing is scheduled the sentence is OMITTED, not softened. No filler,
+  // no "none scheduled": absence beats a wrong or empty claim.
+  const themeParagraph =
+    `The ${fullName} have ${count} theme night${count !== 1 ? 's' : ''} scheduled at ${venueName} during the ${year} season.` +
+    (nextUp.length > 0
+      ? ` Next up: ${nextUp.map((p) => `${p.title} (${monthDayShort(p.date)})`).join(', ')}.`
+      : '');
+
   if (variant === 'light') {
     return (
       <div className="text-rd-ink-soft text-sm leading-relaxed space-y-3">
-        <p>
-          The {fullName} have {count} theme night{count !== 1 ? 's' : ''} scheduled at {venueName} during the {year} season. Theme nights include special entertainment, themed merchandise, and unique game-day experiences.
-        </p>
+        <p>{themeParagraph}</p>
         <ul className="space-y-1.5 list-disc list-inside text-rd-ink-soft">
           {themes.slice(0, 6).map((p, i) => (
             <li key={i}>
@@ -344,9 +385,7 @@ function ThemeSection({
 
   return (
     <div className="text-text-secondary text-sm leading-relaxed space-y-3">
-      <p>
-        The {fullName} have {count} theme night{count !== 1 ? 's' : ''} scheduled at {venueName} during the {year} season. Theme nights include special entertainment, themed merchandise, and unique game-day experiences.
-      </p>
+      <p>{themeParagraph}</p>
       <ul className="space-y-1.5 list-disc list-inside text-text-secondary">
         {themes.slice(0, 6).map((p, i) => (
           <li key={i}>
