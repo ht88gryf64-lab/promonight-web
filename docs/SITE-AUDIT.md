@@ -260,7 +260,7 @@ This is the highest-leverage area of the site. The deeper structural read: 88% o
 
 Read: MLB has the impressions and leaks them (0.84%). NFL/MLS/WNBA convert at 5-6.5% but have almost no volume. This unifies the two levers: fix MLB CTR (SERP/rewrite work, much of it unwinnable per A/B/C) AND build the high-converting thin leagues so Google gives them volume. NFL at 6.51% on 169 offseason impressions is the empirical proof for the fall build.
 
-### MLB team-page CTR by team (TRACKED METRIC, refresh weekly)
+### MLB team-page CTR by team (TRACKED METRIC, refresh weekly) [SUPERSEDED 2026-09-03 by the CTR diagnostic subsection at the end of this section; per-team numbers below are 28d through Jun 10 and are kept for the trend only]
 
 Tracked on the latest full export. Cleanest isolation is a 7-day post-rewrite window; the June 3-9 7-day read gave a 0.86% aggregate. Snapshot below is 28-day through 2026-06-10 (0.84% aggregate; team rankings match the 7-day). Future weekly refreshes: prefer a consistent 7-day window for comparability.
 
@@ -320,6 +320,97 @@ Action rule: rewrite only C's, attempt feature capture on B's, route A's to auth
 
 ### Title rewrite status
 - Shipped June 3. Aggregate MLB CTR 0.73% -> 0.86% (modest, real). 6x team-to-team variance. Red Sox cluster NOT fixed (core giveaway queries 0.26%). Most June click growth came from Google volume, not the rewrite. CTR lever partly pulled (winning teams), partly latent (C-bucket stuck teams), partly unwinnable (A-bucket).
+
+### 2026-09-03 CTR diagnostic [LIVE, 3-month GSC export Jun 2 to Sep 2 2026]
+
+Supersedes the June per-team table above. Site: 29,632 clicks / 1.81M
+impressions / 1.63% CTR. Mobile is 77% of impressions. Search_appearance.csv is
+EMPTY: zero rich-result appearances in three months. Full working:
+`audit/ctr-diagnostic-gate0-gate1.md`.
+
+#### Page-type CTR
+
+| Page type | Share of impressions | CTR |
+|---|---|---|
+| MLB team pages | 81.7% | 1.24% |
+| Venue pages | 9.2% | 0.25% |
+| WNBA | not supplied | 6.66% |
+| NFL | not supplied | 14.31% |
+| MLS | not supplied | 6.49% |
+
+Impression share was supplied only for the first two rows; the other three are
+CTR alone and their shares are not recorded here rather than being inferred.
+The structural read from June still holds and is sharper: the two page types
+carrying ~91% of impressions convert 5x to 57x worse than every other type.
+
+#### A/B/C classification (Gate 1, 26 live SERPs in Chrome, US locale)
+
+Bucket definitions are in the standing protocol above.
+
+| Family | Class | Evidence |
+|---|---|---|
+| Stuck MLB teams, "[team] promotional schedule" and most giveaway queries | **A on the SERP** | Navigational intent owned by MLB.com. Pooled 0.83% CTR at weighted position 5.67, worse CTR at a better position than the giveaways family. Not ours to win on copy. |
+| Venue bag-policy queries | **B, and really a ranking problem** | busch, wrigley and citi field all NOT FOUND in the top 6-7 organic results, GSC positions 10.8 / 10.6 / 11.2. There is no CTR to fix at position 11. PAA sat at slot 2 on all three. |
+| "[team] theme nights" | **C on the snippet** | Every title carried "Giveaways" and none carried "Theme Nights". Six of ten stuck teams also closed the snippet with a content-free boilerplate sentence. Both fixed 2026-09-03. |
+
+Two standing assumptions were refuted and should not be re-litigated:
+
+- **No AI Overview appeared on any of the 26 SERPs**, venue queries included.
+- **Google does not rewrite our titles.** All 23 rendered listings showed the
+  title tag verbatim, unchanged between the giveaways and theme-nights query for
+  the same team.
+- **There was no winner-vs-loser template difference to port.** Winners and stuck
+  teams shipped byte-identical titles, H2 skeletons and JSON-LD type sets.
+  Position is the dominant variable: every clicking query observed sat at 3.4 or
+  better, every zero-click query at 6 or worse.
+
+#### Schema conclusion (Gate 2, Google Rich Results Test, 6 URLs)
+
+**Markup validates; Google declines the enhancement. No schema change is
+warranted for CTR.** Zero errors on all six pages; every issue is an
+`(optional)` warning. The tool reported Events (team pages) and Local businesses
+plus Organization (venue pages) detected and eligible, while GSC records zero
+appearances across 1.81M impressions.
+
+The control settles causality: Detroit Tigers, the best-converting page on the
+site, carries byte-identical Event schema with the same six missing optional
+fields (`offers`, `image`, `endDate`, `eventStatus`, `performer`, `url`) as the
+Dodgers page at zero clicks.
+
+**FAQPage does not appear in the tool output at all**, consistent with Google's
+2023 restriction of FAQ rich results to authoritative government and health
+sites. FAQ markup on this site has no rich-result upside and must never be
+costed as one. Any FAQ work is a PAA capture and relevance play only.
+
+#### Live experiment: ctr-diagnostic-sep2026
+
+| | |
+|---|---|
+| **Start** | **2026-09-03T20:01:32Z** (www alias serving the new build, confirmed by polling the alias) |
+| **Read date** | **2026-10-01** |
+| Treatment | 10 MLB team pages render `{Team} Giveaways & Theme Nights 2026` |
+| Control | the other 20 MLB teams keep `{Team} Promos & Giveaways 2026`, byte-identical |
+| Flip point | `src/lib/title-treatment.ts` (`TREATMENT_SLUGS`), one line to promote to all 30 or revert |
+| Treatment slugs | dodgers, braves, cubs, pirates, yankees, giants, astros, angels, blue-jays, rays |
+
+Read instructions: treatment vs control on `[team] theme nights` and
+`[team] giveaways`, 7-day windows, **no window may cross the start timestamp**
+(a straddling window mixes both titles for the treatment arm and is invalid),
+holding position constant within a band.
+
+Applied to all 30 MLB teams regardless of arm, so NOT part of the experiment:
+the theme-night boilerplate sentence was replaced by the next three dated theme
+nights.
+
+Measurement caveat: the Ahrefs GSC connector disagrees with the GSC export by
+roughly 7x at page level, because it aggregates only its stored keyword set
+(Dodgers 18,264 vs 138,709 impressions). Site level is close. **Take magnitudes
+from the GSC export**; use Ahrefs only for relative signals such as position
+ordering, intent mix and keyword breadth.
+
+Deferred, recorded so they are not lost: CFB team pages at 15,342 impressions
+and 0.30% across 100 pages; "apple cup 2026" at 2,003 impressions, 0.10%,
+position 11, with no page targeting it; venue ranking work.
 
 ## 3. Data completeness by league [AUTO, generated 2026-08-21]
 
