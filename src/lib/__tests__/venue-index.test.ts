@@ -18,6 +18,7 @@ const entry = (over: Partial<VenueIndexEntry>): VenueIndexEntry => ({
   name: 'X',
   city: null,
   state: null,
+  topics: [],
   leagues: [],
   ...over,
 });

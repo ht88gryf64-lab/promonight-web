@@ -20,8 +20,10 @@ function hub(slug: string): VenueHub {
     tailgating: { allowed: true, rules: 'Stay in your space.', timeWindow: 'Lots open at 7am.', grillRules: null, rvPolicy: null },
     venueAccessRestrictions: null, nearby: null, outsideFoodAllowed: null, outsideFoodRules: null, food: null,
     photoUrl: null, photoAttribution: null, verified: true,
-    tenantOverlays: [{ teamId: 'x', league: 'CFB', displayName: 'X', gatesOpen: null, gateVariance: null, tailgateWindow: 'Lots open 5 hours before kickoff.', bagPolicyException: null, verified: true, sources: { tailgateWindow: SRC } }],
+    tenantOverlays: [{ teamId: 'x', league: 'CFB', displayName: 'X', gatesOpen: null, gateVariance: null, tailgateWindow: 'Lots open 5 hours before kickoff.', bagPolicyException: null, verified: true, sources: { tailgateWindow: SRC }, verifiedAtByField: {} }],
     sources: { tailgating: SRC },
+    verifiedAtByField: {},
+    fieldStates: {},
   } as VenueHub;
 }
 
