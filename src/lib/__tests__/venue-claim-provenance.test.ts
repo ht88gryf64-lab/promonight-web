@@ -18,19 +18,19 @@ import {
   claimSourceHost,
   claimSourceUrl,
   claimState,
-  claimVerifiedOn,
+  claimSourceReadOn,
 } from '../venue-claim';
 
 const load = () => import('../venue-hub');
 const SRC = 'https://www.operator.example.com/policies';
 const FAQ = 'https://www.operator.example.com/arena-faq';
 
-const facts = (over: Partial<Pick<VenueHub, 'sources' | 'fieldStates' | 'verifiedAtByField'>> = {}) => ({
+const facts = (over: Partial<Pick<VenueHub, 'sources' | 'fieldStates' | 'observedAtByField'>> = {}) => ({
   sources: { bagPolicyNotes: SRC, parkingLots: SRC, 'publicTransit.lines': SRC, rideshareDropoff: SRC },
   fieldStates: {},
-  verifiedAtByField: { bagPolicyNotes: '2026-09-04T01:07:18.000Z', parkingLots: '2026-08-01T00:00:00.000Z' },
+  observedAtByField: { bagPolicyNotes: '2026-09-04T01:07:18.000Z', parkingLots: '2026-08-01T00:00:00.000Z' },
   ...over,
-}) as Pick<VenueHub, 'sources' | 'fieldStates' | 'verifiedAtByField'>;
+}) as Pick<VenueHub, 'sources' | 'fieldStates' | 'observedAtByField'>;
 
 test('a rendered claim carries its own source and its own date', () => {
   const f = facts({ fieldStates: { bagPolicyNotes: 'rendered' } });
@@ -41,16 +41,16 @@ test('a rendered claim carries its own source and its own date', () => {
   assert.equal(row.verifiedOn, 'Sep 4, 2026');
   // Two fields checked in different waves keep different dates: the whole point
   // of a per-field map is that a page cannot print one date for everything.
-  assert.equal(claimVerifiedOn(f, 'parkingLots'), 'Aug 1, 2026');
-  assert.notEqual(claimVerifiedOn(f, 'bagPolicyNotes'), claimVerifiedOn(f, 'parkingLots'));
+  assert.equal(claimSourceReadOn(f, 'parkingLots'), 'Aug 1, 2026');
+  assert.notEqual(claimSourceReadOn(f, 'bagPolicyNotes'), claimSourceReadOn(f, 'parkingLots'));
   assert.equal(claimSourceHost(SRC), 'operator.example.com');
 });
 
 test('a date never falls back to anything: no per-field entry means no date printed', () => {
-  const f = facts({ verifiedAtByField: {} });
-  assert.equal(claimVerifiedOn(f, 'bagPolicyNotes'), null);
+  const f = facts({ observedAtByField: {} });
+  assert.equal(claimSourceReadOn(f, 'bagPolicyNotes'), null);
   assert.equal(claimRow(f, 'bagPolicyNotes', true).verifiedOn, null);
-  assert.equal(claimVerifiedOn(facts({ verifiedAtByField: { bagPolicyNotes: 'not-a-date' } }), 'bagPolicyNotes'), null);
+  assert.equal(claimSourceReadOn(facts({ observedAtByField: { bagPolicyNotes: 'not-a-date' } }), 'bagPolicyNotes'), null);
 });
 
 test('operator-conflict shows the reason and keeps the pointer, and never the claim', () => {
@@ -105,7 +105,7 @@ test('the mapper nulls a field whose state is not rendered, whatever the doc sto
       bagPolicyNotes: 'A real bag rule.',
       sources: { bagPolicyNotes: SRC, publicTransit: SRC },
       fieldStates: { publicTransit: 'held', rideshareDropoff: 'operator-conflict', bagPolicyNotes: 'rendered' },
-      verifiedAtByField: { bagPolicyNotes: '2026-09-04T01:07:18.000Z' },
+      observedAtByField: { bagPolicyNotes: '2026-09-04T01:07:18.000Z' },
       verified: true,
     },
     [],
@@ -114,7 +114,7 @@ test('the mapper nulls a field whose state is not rendered, whatever the doc sto
   assert.equal(mapped.rideshareDropoff, null, 'a conflicted value must not survive the mapper');
   assert.equal(mapped.bagPolicyNotes, 'A real bag rule.');
   assert.equal(mapped.fieldStates.publicTransit, 'held');
-  assert.equal(mapped.verifiedAtByField.bagPolicyNotes, '2026-09-04T01:07:18.000Z');
+  assert.equal(mapped.observedAtByField.bagPolicyNotes, '2026-09-04T01:07:18.000Z');
 });
 
 test('the mapper drops a state value it does not understand rather than trusting it', async () => {
@@ -136,7 +136,7 @@ const titleHub = (over: Partial<VenueHub> = {}): VenueHub => ({
   tailgating: null, venueAccessRestrictions: null, nearby: null,
   outsideFoodAllowed: null, outsideFoodRules: null, food: null,
   photoUrl: null, photoAttribution: null, verified: true,
-  verifiedAtByField: {}, fieldStates: {},
+  observedAtByField: {}, fieldStates: {},
   tenantOverlays: [],
   sources: { bagMaxDimensions: SRC, clearBagRequired: SRC, bagPolicyNotes: SRC, parkingLots: SRC },
   ...over,
@@ -194,7 +194,7 @@ test('a conflicted claim links its class pointer once its own source entry is go
   const f = {
     sources: { parkingLots: SRC },
     fieldStates: { rideshareDropoff: 'operator-conflict' as const },
-    verifiedAtByField: {},
+    observedAtByField: {},
     officialParkingUrls: ['https://www.operator.example.com/parking'],
   };
   const row = claimRow(f, 'rideshareDropoff', true);
@@ -203,7 +203,23 @@ test('a conflicted claim links its class pointer once its own source entry is go
   assert.equal(row.sourceUrl, 'https://www.operator.example.com/parking', 'a conflict row must always carry a link');
   // A class with no pointer field has nothing to fall back to, and says so by
   // rendering the reason alone rather than a broken link.
-  const noPointer = claimRow({ sources: {}, fieldStates: { publicTransit: 'operator-conflict' as const }, verifiedAtByField: {} }, 'publicTransit', true);
+  const noPointer = claimRow({ sources: {}, fieldStates: { publicTransit: 'operator-conflict' as const }, observedAtByField: {} }, 'publicTransit', true);
   assert.equal(noPointer.sourceUrl, null);
   assert.equal(noPointer.reason, 'The operator publishes conflicting answers.');
+});
+
+// THE LIVE-DOCUMENT CASE. Eight NHL buildings are in production carrying
+// `verifiedAtByField`, a date the writer generated at write time and the page
+// printed as "Verified <date>" beside fan-facing policy. The render must not read
+// that key any more: a document written before the cutover has no observation time,
+// so it shows no date at all rather than a date that means something else.
+test('a legacy verifiedAtByField is ignored, so a pre-cutover doc shows no date', () => {
+  const legacy = facts({} as never);
+  (legacy as unknown as Record<string, unknown>).verifiedAtByField = {
+    bagPolicyNotes: '2026-09-04T01:07:18.865Z',
+    parkingLots: '2026-09-04T01:07:18.865Z',
+  };
+  (legacy as unknown as Record<string, unknown>).observedAtByField = {};
+  assert.equal(claimSourceReadOn(legacy, 'bagPolicyNotes'), null);
+  assert.equal(claimSourceReadOn(legacy, 'parkingLots'), null);
 });

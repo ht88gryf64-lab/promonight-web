@@ -130,7 +130,7 @@ test('the CFB condensed block withholds transit for a suppressed hub and keeps e
     venueAccessRestrictions: null, nearby: null, outsideFoodAllowed: false, outsideFoodRules: null,
     food: null, photoUrl: null, photoAttribution: null, verified: true, tenantOverlays: [],
     sources: { parkingLots: 'https://x.edu/p', parkingLotMapUrl: 'https://x.edu/map', clearBagRequired: 'https://x.edu/b', publicTransit: 'https://x.edu/t', accessibility: 'https://x.edu/a', tailgating: 'https://x.edu/tg', outsideFoodRules: 'https://x.edu/f' },
-    verifiedAtByField: {},
+    observedAtByField: {},
     fieldStates: {},
   } as Hub);
   const open = buildCondensedLogistics(hub('some-other-stadium'), 'x').map((l) => l.key);

@@ -10,7 +10,7 @@ import { transitSuppressed } from '@/lib/venue-transit-suppression';
 // withholds for cause. See audit/cfb-venue-sourcing-report.md section 16.
 import { fieldExcluded, subFieldExcluded, hasProvenance, hasSubProvenance, isReachableUrl } from '@/lib/venue-field-exclusions';
 import { dimsString } from '@/lib/venue-hub';
-import { CLAIM_STATE_REASON, claimRow, claimSourceHost, claimState, claimSourceUrl, claimVerifiedOn } from '@/lib/venue-claim';
+import { CLAIM_STATE_REASON, claimRow, claimSourceHost, claimState, claimSourceUrl, claimSourceReadOn } from '@/lib/venue-claim';
 import {
   type VenueHub,
   type VenueHubTenantOverlay,
@@ -119,7 +119,7 @@ export function ClaimLine({ sourceUrl, verifiedOn, reason }: { sourceUrl?: strin
           {claimSourceHost(sourceUrl)} &rsaquo;
         </a>
       ) : null}
-      {verifiedOn ? <span>{sourceUrl ? ' · ' : ''}Verified {verifiedOn}</span> : null}
+      {verifiedOn ? <span>{sourceUrl ? ' · ' : ''}Source read {verifiedOn}</span> : null}
     </div>
   );
 }
@@ -155,7 +155,7 @@ export function buildGettingInRows(hub: VenueHub, tenantName: TenantNameResolver
       label: gateTenants.length > 1 ? `Gates (${tenantName(t)})` : 'Gates',
       body: `${rule}.${variance ? ` ${variance}.` : ''}`,
       sourceUrl: typeof gateSrc === 'string' && gateSrc.startsWith('http') ? gateSrc : null,
-      verifiedOn: formatOverlayDate(t.verifiedAtByField?.gatesOpen),
+      verifiedOn: formatOverlayDate(t.observedAtByField?.gatesOpen),
     });
   }
   // Suppressed buildings name a service a fan cannot use; the row is withheld
@@ -179,7 +179,7 @@ export function buildGettingInRows(hub: VenueHub, tenantName: TenantNameResolver
       label: 'Transit',
       body: transitParts.join(' '),
       sourceUrl: claimSourceUrl(hub, 'publicTransit'),
-      verifiedOn: claimVerifiedOn(hub, 'publicTransit'),
+      verifiedOn: claimSourceReadOn(hub, 'publicTransit'),
     });
   }
   // Rideshare is the first field to render from the pipeline's per-field state:
@@ -280,7 +280,7 @@ export function ParkingLotsCard({ hub }: { hub: VenueHub }) {
         ) : null}
         <ClaimLine
           sourceUrl={lotsWithNotes.length > 0 ? claimSourceUrl(hub, 'parkingLots') : null}
-          verifiedOn={lotsWithNotes.length > 0 ? claimVerifiedOn(hub, 'parkingLots') : null}
+          verifiedOn={lotsWithNotes.length > 0 ? claimSourceReadOn(hub, 'parkingLots') : null}
         />
         {officialUrls.length > 0 ? (
           <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 font-rd text-[11px]">
@@ -373,7 +373,7 @@ export function BagCard({ hub, hasBagFaq }: { hub: VenueHub; hasBagFaq: boolean 
           ) : null}
           <ClaimLine
             sourceUrl={bagSplit.lead ? claimSourceUrl(hub, 'bagPolicyNotes') ?? claimSourceUrl(hub, 'bagMaxDimensions') : null}
-            verifiedOn={bagSplit.lead ? claimVerifiedOn(hub, 'bagPolicyNotes') ?? claimVerifiedOn(hub, 'bagMaxDimensions') : null}
+            verifiedOn={bagSplit.lead ? claimSourceReadOn(hub, 'bagPolicyNotes') ?? claimSourceReadOn(hub, 'bagMaxDimensions') : null}
           />
           {/* The clear-bag question renders its own row when the pipeline nulled
               the answer: bridgestone-arena's operator says one thing in its bag
