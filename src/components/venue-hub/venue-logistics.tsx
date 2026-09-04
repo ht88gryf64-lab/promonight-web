@@ -10,6 +10,7 @@ import { transitSuppressed } from '@/lib/venue-transit-suppression';
 // withholds for cause. See audit/cfb-venue-sourcing-report.md section 16.
 import { fieldExcluded, subFieldExcluded, hasProvenance, hasSubProvenance, isReachableUrl } from '@/lib/venue-field-exclusions';
 import { dimsString } from '@/lib/venue-hub';
+import { CLAIM_STATE_REASON, claimRow, claimSourceHost, claimState, claimSourceUrl, claimVerifiedOn } from '@/lib/venue-claim';
 import {
   type VenueHub,
   type VenueHubTenantOverlay,
@@ -93,10 +94,46 @@ export function verifiedGateTenants(hub: VenueHub): VenueHubTenantOverlay[] {
 export interface GettingInRow {
   label: string;
   body: ReactNode;
+  /** The page that carries this row's claim. Rendered as a visible link, so a
+   *  reader can check the claim rather than take the site's word for it. */
+  sourceUrl?: string | null;
+  /** THIS field's verification date, never the doc-level one. */
+  verifiedOn?: string | null;
+  /** Set instead of a claim when the pipeline nulled the value: the operator
+   *  contradicts itself, or no operator page carries the policy. */
+  reason?: string | null;
+}
+
+/**
+ * The provenance line under a claim: where it came from and when that field was
+ * checked. A claim with no link is a claim a reader cannot check, so this is
+ * rendered on every row that states a fact.
+ */
+export function ClaimLine({ sourceUrl, verifiedOn, reason }: { sourceUrl?: string | null; verifiedOn?: string | null; reason?: string | null }) {
+  if (!sourceUrl && !verifiedOn && !reason) return null;
+  return (
+    <div className="mt-0.5 font-rd text-[11px] text-rd-ink-faint">
+      {reason ? <span>{reason} </span> : null}
+      {sourceUrl ? (
+        <a href={sourceUrl} className="font-semibold text-rd-red" target="_blank" rel="noopener noreferrer">
+          {claimSourceHost(sourceUrl)} &rsaquo;
+        </a>
+      ) : null}
+      {verifiedOn ? <span>{sourceUrl ? ' · ' : ''}Verified {verifiedOn}</span> : null}
+    </div>
+  );
 }
 
 /** The "Getting in" rows: gates per verified tenant, transit, rideshare,
  *  tailgating, accessibility, entry restrictions. Moved unchanged from the view. */
+/** An overlay's own per-field date, formatted like a building claim's. */
+function formatOverlayDate(iso: string | undefined): string | null {
+  if (typeof iso !== 'string') return null;
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return null;
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).format(new Date(t));
+}
+
 export function buildGettingInRows(hub: VenueHub, tenantName: TenantNameResolver): GettingInRow[] {
   const verified = hub.verified;
   const gateTenants = verifiedGateTenants(hub);
@@ -113,9 +150,12 @@ export function buildGettingInRows(hub: VenueHub, tenantName: TenantNameResolver
     // student and early-entry detail the ruleText omits. Containment decides.
     const variance =
       t.gateVariance && !isRestatement(rule, t.gateVariance) ? stripTrailingPeriod(t.gateVariance) : null;
+    const gateSrc = t.sources?.gatesOpen ?? t.sources?.['gatesOpen.ruleText'] ?? null;
     gettingRows.push({
       label: gateTenants.length > 1 ? `Gates (${tenantName(t)})` : 'Gates',
       body: `${rule}.${variance ? ` ${variance}.` : ''}`,
+      sourceUrl: typeof gateSrc === 'string' && gateSrc.startsWith('http') ? gateSrc : null,
+      verifiedOn: formatOverlayDate(t.verifiedAtByField?.gatesOpen),
     });
   }
   // Suppressed buildings name a service a fan cannot use; the row is withheld
@@ -135,9 +175,26 @@ export function buildGettingInRows(hub: VenueHub, tenantName: TenantNameResolver
       transitNotesOk ? hub.publicTransit!.notes : null,
       transitLinesOk ? `Lines: ${hub.publicTransit!.lines.join(', ')}.` : null,
     ].filter(Boolean) as string[];
-    gettingRows.push({ label: 'Transit', body: transitParts.join(' ') });
+    gettingRows.push({
+      label: 'Transit',
+      body: transitParts.join(' '),
+      sourceUrl: claimSourceUrl(hub, 'publicTransit'),
+      verifiedOn: claimVerifiedOn(hub, 'publicTransit'),
+    });
   }
-  if (verified && hub.rideshareDropoff && hasProvenance(hub.sources, 'rideshareDropoff') && !fieldExcluded(hub.slug, 'rideshare')) gettingRows.push({ label: 'Rideshare', body: hub.rideshareDropoff });
+  // Rideshare is the first field to render from the pipeline's per-field state:
+  // american-airlines-center's two operator pages name different streets, so the
+  // value is nulled and the row explains the absence instead of vanishing.
+  const rideshare = claimRow(
+    hub,
+    'rideshareDropoff',
+    verified && !!hub.rideshareDropoff && hasProvenance(hub.sources, 'rideshareDropoff') && !fieldExcluded(hub.slug, 'rideshare'),
+  );
+  if (rideshare.show) {
+    gettingRows.push({ label: 'Rideshare', body: hub.rideshareDropoff!, sourceUrl: rideshare.sourceUrl, verifiedOn: rideshare.verifiedOn });
+  } else if (verified && rideshare.reason && !fieldExcluded(hub.slug, 'rideshare')) {
+    gettingRows.push({ label: 'Rideshare', body: null, reason: rideshare.reason, sourceUrl: rideshare.sourceUrl });
+  }
   const tailgateOk =
     verified && !fieldExcluded(hub.slug, 'tailgating') &&
     (hasSubProvenance(hub.sources, 'tailgating', 'rules') || hasSubProvenance(hub.sources, 'tailgating', 'allowed'));
@@ -183,6 +240,7 @@ export function GettingInCard({ rows }: { rows: GettingInRow[] }) {
         {rows.map((r) => (
           <div key={r.label}>
             <strong>{r.label}.</strong> {r.body}
+            <ClaimLine sourceUrl={r.sourceUrl} verifiedOn={r.verifiedOn} reason={r.reason} />
           </div>
         ))}
       </div>
@@ -220,6 +278,10 @@ export function ParkingLotsCard({ hub }: { hub: VenueHub }) {
             ))}
           </div>
         ) : null}
+        <ClaimLine
+          sourceUrl={lotsWithNotes.length > 0 ? claimSourceUrl(hub, 'parkingLots') : null}
+          verifiedOn={lotsWithNotes.length > 0 ? claimVerifiedOn(hub, 'parkingLots') : null}
+        />
         {officialUrls.length > 0 ? (
           <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 font-rd text-[11px]">
             <span className="text-rd-ink-soft">Official parking:</span>
@@ -283,6 +345,12 @@ export function BagCard({ hub, hasBagFaq }: { hub: VenueHub; hasBagFaq: boolean 
     (hasProvenance(hub.sources, 'outsideFoodAllowed') || hasProvenance(hub.sources, 'outsideFoodRules'));
   // POINTER: the venue's own policy page. Reachability, not provenance.
   const bagPolicyLink = isReachableUrl(hub.bagPolicyUrl) && !fieldExcluded(hub.slug, 'bag') ? hub.bagPolicyUrl : null;
+  const clearBagState = claimState(hub, 'clearBagRequired');
+  const clearBagReason =
+    clearBagState === 'operator-conflict' || clearBagState === 'no-operator-page'
+      ? CLAIM_STATE_REASON[clearBagState]
+      : null;
+  const clearBagReasonUrl = clearBagState === 'operator-conflict' ? bagPolicyLink : null;
   return (
     <Card accent>
       <CardLabel>What size bag can I bring?</CardLabel>
@@ -302,6 +370,24 @@ export function BagCard({ hub, hasBagFaq }: { hub: VenueHub; hasBagFaq: boolean 
               {' '}
               <strong>No outside food or drink.</strong>
             </>
+          ) : null}
+          <ClaimLine
+            sourceUrl={bagSplit.lead ? claimSourceUrl(hub, 'bagPolicyNotes') ?? claimSourceUrl(hub, 'bagMaxDimensions') : null}
+            verifiedOn={bagSplit.lead ? claimVerifiedOn(hub, 'bagPolicyNotes') ?? claimVerifiedOn(hub, 'bagMaxDimensions') : null}
+          />
+          {/* The clear-bag question renders its own row when the pipeline nulled
+              the answer: bridgestone-arena's operator says one thing in its bag
+              policy and another in its screening section, so the page says so
+              and points at the operator rather than staying silent. */}
+          {clearBagReason ? (
+            <div className="mt-1 font-rd text-[11px] text-rd-ink-faint">
+              <strong className="text-rd-ink">Clear bag.</strong> {clearBagReason}{' '}
+              {clearBagReasonUrl ? (
+                <a href={clearBagReasonUrl} className="font-semibold text-rd-red" target="_blank" rel="noopener noreferrer">
+                  {claimSourceHost(clearBagReasonUrl)} &rsaquo;
+                </a>
+              ) : null}
+            </div>
           ) : null}
           {bagPolicyLink ? (
             <div className="mt-1 text-[11px]">

@@ -12,6 +12,8 @@ export interface VenueIndexEntry {
   state: string | null;
   /** Unique tenant leagues, e.g. ['NFL', 'CFB'] for a shared building. */
   leagues: string[];
+  /** Topics this building publishes, for the card sub-line. */
+  topics: string[];
 }
 
 export interface VenueIndexSection {
@@ -66,12 +68,18 @@ export interface HubVenueLinkSource {
   displayName: string;
   indexable: boolean;
   city: string | null;
+  /** Topics this building publishes, for the card sub-line. */
+  topics?: string[];
 }
 
 export interface HubVenueLink {
   slug: string;
   name: string;
   city: string | null;
+  /** Topics this building publishes, in reading order. Empty when the source
+   *  carries none, which the card renders as no sub-line claim at all rather
+   *  than the old template listing bag, parking and gates for every building. */
+  topics: string[];
 }
 
 /** Resolve a league's team ids to their indexable building links, deduped by
@@ -88,7 +96,7 @@ export function collectVenueLinksForTeams(
     const link = map.get(id);
     if (!link || !link.indexable || seen.has(link.slug)) continue;
     seen.add(link.slug);
-    out.push({ slug: link.slug, name: link.displayName, city: link.city });
+    out.push({ slug: link.slug, name: link.displayName, city: link.city, topics: link.topics ?? [] });
   }
   return out.sort((a, b) => a.name.localeCompare(b.name));
 }

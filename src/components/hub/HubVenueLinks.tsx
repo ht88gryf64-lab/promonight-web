@@ -13,6 +13,16 @@ import type { HubVenueLink } from '@/lib/venue-index';
 // `heading` renders the section's own h2 (pro hubs + /venues index). The CFB
 // hub passes no heading and wraps this in its own SectionLabel styling, so the
 // component degrades to a bare list wrapped in a div instead of a section.
+/** The card sub-line: the topics this building actually publishes, sentence
+ *  cased. Empty for a building that publishes none, so the card names the
+ *  building and its city and promises nothing else. */
+function topicLine(topics: string[] | undefined): string {
+  const t = topics ?? [];
+  if (t.length === 0) return 'Gameday guide';
+  if (t.length === 1) return t[0];
+  return `${t.slice(0, -1).join(', ')} & ${t[t.length - 1]}`;
+}
+
 export function HubVenueLinks({
   venues,
   surface,
@@ -68,7 +78,8 @@ export function HubVenueLinks({
                     : 'block font-rd text-[12.5px] text-rd-ink-faint'
                 }
               >
-                {v.city ? `${v.city} · ` : ''}Bag policy, parking & gates
+                {v.city ? `${v.city} · ` : ''}
+                {topicLine(v.topics)}
               </span>
             </Link>
           </li>

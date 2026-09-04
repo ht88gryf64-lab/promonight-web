@@ -66,7 +66,17 @@ export interface VenueHubTenantOverlay {
    *  none. Read by the condensed logistics block, which renders a field only
    *  when its source is present. */
   sources: Record<string, string>;
+  /** Per-field verification dates on the overlay, same contract as the
+   *  building's map. {} on an overlay written before wave 2. */
+  verifiedAtByField: Record<string, string>;
 }
+
+/**
+ * Per-field state, written by the pipeline (venuehubs-write-guard FIELD_STATES).
+ * The renderer keys on this, so it is the single answer to "what does this row
+ * show": the claim, the pointer with a reason, or nothing at all.
+ */
+export type VenueFieldState = 'rendered' | 'operator-conflict' | 'no-operator-page' | 'held';
 
 export interface VenueHub {
   slug: string;
@@ -114,6 +124,14 @@ export interface VenueHub {
   photoAttribution: string | null;
   // gate: nothing renders unless verified
   verified: boolean;
+  /** Per-field verification date, ISO, stamped by the writer at write time. A
+   *  claim prints THIS date, never the doc-level `verifiedAt`, so a field
+   *  checked in one wave and a field checked in another never share a date
+   *  because the document has one. {} on a doc written before the map existed. */
+  verifiedAtByField: Record<string, string>;
+  /** Per-field state. {} on a doc written before the map existed, which reads
+   *  as "no opinion" and leaves every pre-existing gate in charge. */
+  fieldStates: Record<string, VenueFieldState>;
   // per-tenant overlays (gate times etc.)
   tenantOverlays: VenueHubTenantOverlay[];
   /** Per-field provenance URLs keyed by field (parkingLots, publicTransit,
@@ -176,12 +194,60 @@ function stringMap(v: unknown): Record<string, string> {
  * without Firestore and so an audit measures the SAME code the site renders
  * rather than a replica of it. getVenueHub is now fetch + this + publishedView.
  */
+const FIELD_STATE_VALUES: readonly VenueFieldState[] = ['rendered', 'operator-conflict', 'no-operator-page', 'held'];
+
+/** Reads the doc's `fieldStates`, keeping only the four values the pipeline
+ *  guard admits. An unknown value is dropped rather than trusted: a state this
+ *  renderer does not understand must not decide what a page shows. */
+export function fieldStateMap(v: unknown): Record<string, VenueFieldState> {
+  const out: Record<string, VenueFieldState> = {};
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return out;
+  for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
+    if (typeof val === 'string' && (FIELD_STATE_VALUES as readonly string[]).includes(val)) {
+      out[k] = val as VenueFieldState;
+    }
+  }
+  return out;
+}
+
+/** The claim fields the state map can switch off. Pointer fields are excluded:
+ *  a pointer is not a claim, and an operator-conflict row keeps its pointer. */
+const STATE_GATED_FIELDS = [
+  'parkingLots', 'publicTransit', 'rideshareDropoff', 'accessibility', 'bagMaxDimensions',
+  'clearBagRequired', 'bagsProhibited', 'bagPolicyNotes', 'tailgating', 'venueAccessRestrictions',
+  'nearby', 'outsideFoodAllowed', 'outsideFoodRules', 'food',
+] as const;
+
+/**
+ * Apply the per-field states to the mapped hub: any field the pipeline did not
+ * mark `rendered` is emptied.
+ *
+ * Gating HERE, at the one mapper every hub renderer reads, is the surface-escape
+ * lesson: an exclusion applied at a render site is not an exclusion, because the
+ * next render site added does not inherit it. The pipeline guard already refuses
+ * to write a value onto a non-rendered field, so on today's data this changes
+ * nothing; it is the lock that holds when a future writer or a hand edit gets it
+ * wrong, and the state map stays readable so a card can still explain why the
+ * value is gone.
+ */
+function applyFieldStates(hub: VenueHub): VenueHub {
+  const states = hub.fieldStates;
+  if (!Object.keys(states).length) return hub;
+  const out = { ...hub };
+  for (const f of STATE_GATED_FIELDS) {
+    const state = states[f];
+    if (!state || state === 'rendered') continue;
+    (out as Record<string, unknown>)[f] = Array.isArray(hub[f]) ? [] : null;
+  }
+  return out;
+}
+
 export function toVenueHub(
   slug: string,
   d: FirebaseFirestore.DocumentData,
   tenantOverlays: VenueHubTenantOverlay[],
 ): VenueHub {
-  return {
+  return applyFieldStates({
     // Sub-ID slug: doc.id (the `slug` argument that fetched this doc) is the
     // routing-truth key — the URL, the /venues index and the sitemap all key on
     // it. The stored d.slug field is used only when it MATCHES; a missing or
@@ -237,9 +303,17 @@ export function toVenueHub(
     photoUrl: typeof d.photoUrl === 'string' && d.photoUrl ? d.photoUrl : null,
     photoAttribution: typeof d.photoAttribution === 'string' && d.photoAttribution ? d.photoAttribution : null,
     verified: d.verified === true,
+    verifiedAtByField: stringMap(d.verifiedAtByField),
+    // A state other than `rendered` means the pipeline decided this field does
+    // not render. Gating HERE, at the one mapper every hub renderer reads, is
+    // the lesson of the surface-escape framework item: an exclusion applied at
+    // one render site is not an exclusion. The guard already refuses to write a
+    // value on a non-rendered field, so this is a second lock on the same door,
+    // and it is the lock that survives a new render path being added later.
+    fieldStates: fieldStateMap(d.fieldStates),
     tenantOverlays,
     sources: stringMap(d.sources),
-  };
+  });
 }
 
 export const getVenueHub = cache(async (slug: string): Promise<VenueHub | null> => {
@@ -259,6 +333,7 @@ export const getVenueHub = cache(async (slug: string): Promise<VenueHub | null> 
       bagPolicyException: t.bagPolicyException ?? null,
       verified: t.verified === true,
       sources: stringMap(t.sources),
+      verifiedAtByField: stringMap(t.verifiedAtByField),
     };
   });
   // Fetch, map, then GATE. The view is applied here and nowhere else, so a
@@ -389,6 +464,10 @@ export interface TeamVenueHubLink {
   indexable: boolean;
   /** For the hub/index link sub-line; null when the doc lacks a city. */
   city: string | null;
+  /** The topics this building actually publishes, in reading order, for the
+   *  rail-card sub-line. Every card used to read "Bag policy, parking & gates"
+   *  from a template, including cards for buildings with no gate times at all. */
+  topics: string[];
 }
 
 /** teamId -> its building hub. The team<->building relationship is the building
@@ -397,13 +476,51 @@ export interface TeamVenueHubLink {
  *  docs alone (tenants + all floor fields live on the doc — no per-hub tenants
  *  subcollection read), and cached so the whole 169-page build shares one pass. */
 export const getTeamVenueHubMap = cache(async (): Promise<Map<string, TeamVenueHubLink>> => {
-  const snap = await db.collection('venueHubs').get();
+  const [snap, tSnap] = await Promise.all([
+    db.collection('venueHubs').get(),
+    db.collectionGroup('tenants').get(),
+  ]);
+  // Buildings with at least one verified overlay carrying a sourced gate rule.
+  // Same shape as getVenueUtilityCounts, path-guarded the same way.
+  const gateSlugs = new Set<string>();
+  for (const td of tSnap.docs) {
+    if (!td.ref.path.startsWith('venueHubs/')) continue;
+    const t = td.data();
+    if (t.verified === true && t.gatesOpen?.ruleText && hasSubProvenance(stringMap(t.sources), 'gatesOpen', 'ruleText')) {
+      gateSlugs.add(td.ref.parent.parent!.id);
+    }
+  }
   const map = new Map<string, TeamVenueHubLink>();
   for (const doc of snap.docs) {
     const d = doc.data();
     const tenants: VenueHubTenantRef[] = Array.isArray(d.tenants) ? d.tenants : [];
     if (tenants.length === 0) continue;
     const indexable = venueHubIsIndexable(readIndexFloorFields(d));
+    // Same predicates the hub body renders on. Gates live on the tenant
+    // overlays, which this pass deliberately does not read (one query for the
+    // whole build), so the card names gates only when the gate index says so.
+    const facts = {
+      slug: doc.id,
+      sources: stringMap(d.sources),
+      bagMaxDimensions: d.bagMaxDimensions ?? null,
+      clearBagRequired: typeof d.clearBagRequired === 'boolean' ? d.clearBagRequired : null,
+      bagsProhibited: typeof d.bagsProhibited === 'boolean' ? d.bagsProhibited : null,
+      bagPolicyNotes: d.bagPolicyNotes ?? null,
+      bagPolicyUrl: d.bagPolicyUrl ?? null,
+      parkingLots: Array.isArray(d.parkingLots) ? d.parkingLots : [],
+      parkingLotMapUrl: d.parkingLotMapUrl ?? null,
+      officialParkingUrls: Array.isArray(d.officialParkingUrls) ? d.officialParkingUrls : [],
+      food: d.food ?? null,
+      publicTransit: d.publicTransit ?? null,
+    };
+    const verified = d.verified === true;
+    const topics = [
+      verified && rendersBag(facts) ? 'Bag policy' : null,
+      verified && rendersParking(facts) ? 'parking' : null,
+      verified && rendersTransit(facts) ? 'transit' : null,
+      verified && gateSlugs.has(doc.id) && !fieldExcluded(doc.id, 'gates') ? 'gate times' : null,
+      verified && rendersFood(facts) ? 'food' : null,
+    ].filter((x): x is string => !!x);
     const link: TeamVenueHubLink = {
       // doc.id, not the stored `slug` field: doc.id is the routing truth
       // (getVenueHub fetches by id, generateStaticParams/sitemap emit ids), so
@@ -413,6 +530,7 @@ export const getTeamVenueHubMap = cache(async (): Promise<Map<string, TeamVenueH
       displayName: displayVenueName(typeof d.name === 'string' ? d.name : doc.id),
       indexable,
       city: typeof d.city === 'string' ? d.city : null,
+      topics,
     };
     for (const t of tenants) {
       if (t?.teamId) map.set(t.teamId, link);
@@ -465,7 +583,18 @@ export async function getVenueLinksForTeams(teamIds: string[]): Promise<HubVenue
  *  pass, cached per render pass like the other readers. Leagues come from the
  *  doc's tenants array, so a shared building carries every hosting league. */
 export const getVenueIndexEntries = cache(async (): Promise<VenueIndexEntry[]> => {
-  const snap = await db.collection('venueHubs').get();
+  const [snap, tSnap] = await Promise.all([
+    db.collection('venueHubs').get(),
+    db.collectionGroup('tenants').get(),
+  ]);
+  const gateSlugs = new Set<string>();
+  for (const td of tSnap.docs) {
+    if (!td.ref.path.startsWith('venueHubs/')) continue;
+    const t = td.data();
+    if (t.verified === true && t.gatesOpen?.ruleText && hasSubProvenance(stringMap(t.sources), 'gatesOpen', 'ruleText')) {
+      gateSlugs.add(td.ref.parent.parent!.id);
+    }
+  }
   const out: VenueIndexEntry[] = [];
   for (const doc of snap.docs) {
     const d = doc.data();
@@ -474,12 +603,33 @@ export const getVenueIndexEntries = cache(async (): Promise<VenueIndexEntry[]> =
     const leagues = [...new Set(
       tenants.map((t) => t?.league).filter((l): l is League => typeof l === 'string'),
     )];
+    const facts = {
+      slug: doc.id,
+      sources: stringMap(d.sources),
+      bagMaxDimensions: d.bagMaxDimensions ?? null,
+      clearBagRequired: typeof d.clearBagRequired === 'boolean' ? d.clearBagRequired : null,
+      bagsProhibited: typeof d.bagsProhibited === 'boolean' ? d.bagsProhibited : null,
+      bagPolicyNotes: d.bagPolicyNotes ?? null,
+      bagPolicyUrl: d.bagPolicyUrl ?? null,
+      parkingLots: Array.isArray(d.parkingLots) ? d.parkingLots : [],
+      parkingLotMapUrl: d.parkingLotMapUrl ?? null,
+      officialParkingUrls: Array.isArray(d.officialParkingUrls) ? d.officialParkingUrls : [],
+      food: d.food ?? null,
+      publicTransit: d.publicTransit ?? null,
+    };
     out.push({
       slug: doc.id,
       name: displayVenueName(typeof d.name === 'string' ? d.name : doc.id),
       city: typeof d.city === 'string' ? d.city : null,
       state: typeof d.state === 'string' ? d.state : null,
       leagues,
+      topics: [
+        rendersBag(facts) ? 'Bag policy' : null,
+        rendersParking(facts) ? 'parking' : null,
+        rendersTransit(facts) ? 'transit' : null,
+        gateSlugs.has(doc.id) && !fieldExcluded(doc.id, 'gates') ? 'gate times' : null,
+        rendersFood(facts) ? 'food' : null,
+      ].filter((x): x is string => !!x),
     });
   }
   return out;
@@ -820,17 +970,80 @@ export function bagCapsule(hub: Pick<VenueHub, 'bagMaxDimensions' | 'clearBagReq
 // a name mid-word (two clean terms beat three with the third cut).
 const TITLE_HEAD_MAX = 60;
 
-/** SEO title head, league-split, with the long-name guard applied. Returns the
- *  bare value; the root layout's title.template appends " | PromoNight". */
-export function venueHubTitle(hub: Pick<VenueHub, 'name' | 'tenants'>): string {
+/**
+ * Which topics this building actually publishes.
+ *
+ * The <title>, the meta description and the league-hub rail card all named the
+ * same three or four topics on every building from a template, so a hub with a
+ * pointer-only bag row and no gate times still promised "Bag Policy, Parking &
+ * Food" in the tab and "Bag policy, parking & gates" in the rail. These are the
+ * page's own render predicates, so a topic can only be advertised where the body
+ * prints something for it.
+ */
+export interface VenueHubTopics {
+  bag: boolean;
+  parking: boolean;
+  transit: boolean;
+  gates: boolean;
+  food: boolean;
+  tailgating: boolean;
+}
+
+export function venueHubTopics(hub: VenueHub): VenueHubTopics {
+  const verified = hub.verified;
+  return {
+    bag: verified && rendersBag(hub),
+    parking: verified && rendersParking(hub),
+    transit: verified && rendersTransit(hub),
+    gates: verified && rendersGates(hub.slug, hub.tenantOverlays),
+    food: verified && rendersFood(hub),
+    tailgating:
+      verified &&
+      !fieldExcluded(hub.slug, 'tailgating') &&
+      !!hub.tailgating &&
+      hasProvenance(hub.sources, 'tailgating') &&
+      Object.values(hub.tailgating).some((v) => typeof v === 'string' && v.trim()),
+  };
+}
+
+/** Transit renders when it is not suppressed or excluded and at least one of
+ *  lines or notes carries its own sub-provenance. Shared by the topics, the
+ *  description and the transit row so the three cannot disagree. */
+export function rendersTransit(hub: Pick<VenueHub, 'slug' | 'publicTransit' | 'sources'>): boolean {
+  if (transitSuppressed(hub.slug) || fieldExcluded(hub.slug, 'transit') || !hub.publicTransit) return false;
+  return (
+    ((hub.publicTransit.lines?.length ?? 0) > 0 && hasSubProvenance(hub.sources, 'publicTransit', 'lines')) ||
+    (!!hub.publicTransit.notes && hasSubProvenance(hub.sources, 'publicTransit', 'notes'))
+  );
+}
+
+/** SEO title head, league-split, derived from the topics the doc carries, with
+ *  the long-name guard applied. Returns the bare value; the root layout's
+ *  title.template appends " | PromoNight". */
+export function venueHubTitle(hub: VenueHub): string {
   const short = displayVenueName(hub.name);
-  const cfb = isCfbOnlyHub(hub);
-  const full = cfb
-    ? `${short} Parking, Tailgating & Bag Policy`
-    : `${short} Bag Policy, Parking & Food`;
-  const dropped = cfb ? `${short} Parking & Bag Policy` : `${short} Bag Policy & Parking`;
-  const head = full.length <= TITLE_HEAD_MAX ? full : dropped;
+  const t = venueHubTopics(hub);
+  // League-preferred order. A term appears only when its topic renders.
+  const order: Array<[keyof VenueHubTopics, string]> = isCfbOnlyHub(hub)
+    ? [['parking', 'Parking'], ['tailgating', 'Tailgating'], ['bag', 'Bag Policy'], ['gates', 'Gate Times'], ['transit', 'Transit']]
+    : [['bag', 'Bag Policy'], ['parking', 'Parking'], ['gates', 'Gate Times'], ['transit', 'Transit'], ['food', 'Food']];
+  const terms = order.filter(([k]) => t[k]).map(([, label]) => label);
+  // A held building publishes nothing, so the head is the building name alone.
+  // The suffix still names the page type, which is not a claim about content.
+  let head = short;
+  for (let n = Math.min(terms.length, 3); n >= 1; n--) {
+    const candidate = `${short} ${joinTitleTerms(terms.slice(0, n))}`;
+    if (candidate.length <= TITLE_HEAD_MAX) {
+      head = candidate;
+      break;
+    }
+  }
   return `${head} | ${SEASON_YEAR} Gameday Guide`;
+}
+
+function joinTitleTerms(terms: string[]): string {
+  if (terms.length <= 1) return terms[0] ?? '';
+  return `${terms.slice(0, -1).join(', ')} & ${terms[terms.length - 1]}`;
 }
 
 
@@ -993,10 +1206,9 @@ export function venueHubDescription(hub: VenueHub): string {
   const hasBag = verified && rendersBag(hub);
   const hasParking = verified && rendersParking(hub);
   const hasGates = verified && rendersGates(hub.slug, hub.tenantOverlays);
-  const hasTransit =
-    verified && !transitSuppressed(hub.slug) && !fieldExcluded(hub.slug, 'transit') && !!hub.publicTransit &&
-    (((hub.publicTransit.lines?.length ?? 0) > 0 && hasSubProvenance(hub.sources, 'publicTransit', 'lines')) ||
-      (!!hub.publicTransit.notes && hasSubProvenance(hub.sources, 'publicTransit', 'notes')));
+  // Shared with venueHubTopics and the Getting-in transit row, so the title,
+  // the description and the body cannot disagree about whether transit renders.
+  const hasTransit = verified && rendersTransit(hub);
   const hasFood = verified && rendersFood(hub);
   // Expedia hotels renders for every verified, tenanted building (all 222 have
   // a tenant), so hotels is a covered topic whenever the page is verified.
