@@ -1,8 +1,21 @@
 import { PROMO_TYPE_COLORS, PROMO_TYPE_LABELS, type PromoType } from '@/lib/types';
+import { RD_TICKET_PACKAGE } from '@/components/redesign/categories';
 
-export function PromoBadge({ type }: { type: PromoType }) {
-  const color = PROMO_TYPE_COLORS[type];
-  const label = PROMO_TYPE_LABELS[type];
+/**
+ * `gated` marks a promo whose own copy says a purchase is required. It renders
+ * the neutral Ticket Package pill instead of the category pill, reusing the
+ * colours the light variant already ships (RD_TICKET_PACKAGE) rather than
+ * defining a second slate.
+ *
+ * The light path got this via categoryForPromo when the section-8 rule landed;
+ * this branch did not, so the rollback-only dark template still dressed a
+ * purchasable ticket package as a giveaway. The season-scope change publishes
+ * giveaway counts that INCLUDE gated rows (count broad, label precisely), which
+ * makes the row-level label load-bearing on both render paths.
+ */
+export function PromoBadge({ type, gated = false }: { type: PromoType; gated?: boolean }) {
+  const color = gated ? RD_TICKET_PACKAGE.color : PROMO_TYPE_COLORS[type];
+  const label = gated ? RD_TICKET_PACKAGE.label : PROMO_TYPE_LABELS[type];
 
   return (
     <span

@@ -28,7 +28,7 @@ import { TeamFAQ } from '@/components/team-faq';
 import { TeamRelatedAggregators } from '@/components/team-related-aggregators';
 import { JsonLd } from '@/components/json-ld';
 import { PlayoffSection } from '@/components/playoff-section';
-import { countPromosByType, extractPlayoffOpponent, isUpcomingPromo, splitPromosByDate, teamDisplayName } from '@/lib/promo-helpers';
+import { countPromosByType, extractPlayoffOpponent, isTicketMechanicRow, isUpcomingPromo, splitPromosByDate, teamDisplayName } from '@/lib/promo-helpers';
 import { TeamPageTracker } from '@/components/analytics-events';
 import { EngagementTracker } from '@/components/analytics/EngagementTracker';
 import { TicketmasterCTA } from '@/components/affiliates/TicketmasterCTA';
@@ -41,6 +41,7 @@ import { AD_SLOTS } from '@/lib/ads/slots';
 import { isRedesignEnabled } from '@/lib/redesign';
 import { isTitleTreatmentTeam, teamBareTitle } from '@/lib/title-treatment';
 import { getCoverageCounts } from '@/lib/get-coverage-counts';
+import { resolveSeasonScope } from '@/lib/season-scope';
 import { RedesignTeamPage } from '@/components/redesign/RedesignTeamPage';
 
 export const revalidate = 86400;
@@ -146,6 +147,10 @@ export async function generateMetadata({
             p.type === 'theme' &&
             typeof p.date === 'string' &&
             p.date !== '' &&
+            // "Early Entry" is typed `theme`, so without this the snippet under a
+            // title promising THEME NIGHTS could read "Next theme night: Early
+            // Entry", which promises an event and delivers a door time.
+            !isTicketMechanicRow(p) &&
             isUpcomingPromo(p, todayStr),
         )
         .sort((a, b) => a.date.localeCompare(b.date))[0] ?? null
@@ -153,6 +158,9 @@ export async function generateMetadata({
 
   const upcomingForDesc = promos
     .filter((p) => isUpcomingPromo(p, todayStr))
+    // Ticket mechanics are dropped from the SNIPPET only; they stay in the
+    // on-page list and in every count. See TICKET_MECHANIC_TITLES.
+    .filter((p) => !isTicketMechanicRow(p))
     .sort((a, b) => a.date.localeCompare(b.date))
     // The named theme night is dropped from the list it leads, so the same
     // promo is never printed twice in one 160-char snippet. Reference
@@ -304,6 +312,25 @@ export default async function TeamPage({
   const { upcoming: upcomingPromos } = splitPromosByDate(promos);
   const upcomingCounts = countPromosByType(upcomingPromos);
 
+  // ── The second derivation, and the reason the paragraph above is now wrong ──
+  //
+  // The note above was written when every count on the page had to be upcoming,
+  // and it was right about the bug it closed. It was wrong about the rule. The
+  // rule is LABEL MATCHES POPULATION (see promo-helpers.ts), and the narrow
+  // version of it produced the mirror defect: upcoming-only counts published
+  // under the words "the 2026 season" on 142 of 169 pages, so on 2026-09-04 this
+  // page said 19 where the season held 98.
+  //
+  // seasonScope is therefore a SECOND population, deliberately, and it is null
+  // whenever the rows cannot support a season claim (multi-year archive, wrong
+  // year, MLB before the rollout date). Consumers take one or the other and
+  // print the matching noun; nobody may print a number from one under the
+  // other's label.
+  //
+  // upcomingCounts is NOT retired. It still drives the layout gates in
+  // RedesignTeamPage, which are not claims and must not move.
+  const seasonScope = resolveSeasonScope(promos, team.league);
+
   const displayName = teamDisplayName(team);
   const recurringDeals = await getRecurringDealsForTeam(team.id);
 
@@ -327,6 +354,7 @@ export default async function TeamPage({
         promos={promos}
         upcomingPromos={upcomingPromos}
         upcomingCounts={upcomingCounts}
+        seasonScope={seasonScope}
         displayName={displayName}
         gameContexts={gameContexts}
         recurringDeals={recurringDeals}
@@ -350,6 +378,7 @@ export default async function TeamPage({
         coverage={coverage}
         playoffPromos={inPlayoffs ? playoffPromos : undefined}
         playoffContext={playoffContext}
+        season={seasonScope}
       />
       <TeamPageTracker
         teamSlug={team.id}
@@ -487,6 +516,7 @@ export default async function TeamPage({
         team={team}
         promos={upcomingPromos}
         promoCounts={upcomingCounts}
+        season={seasonScope}
         venue={venue}
         teamName={displayName}
       />
@@ -518,6 +548,7 @@ export default async function TeamPage({
         promos={upcomingPromos}
         venue={venue}
         promoCounts={upcomingCounts}
+        season={seasonScope}
       />
 
       <TeamFAQ
@@ -527,6 +558,7 @@ export default async function TeamPage({
         upcomingCounts={upcomingCounts}
         coverage={coverage}
         playoffContext={playoffContext}
+        season={seasonScope}
       />
 
       <section className="px-6 py-6 border-t border-border-subtle">

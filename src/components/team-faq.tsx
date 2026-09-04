@@ -1,5 +1,6 @@
 import type { Team, Promo, PromoType, Venue } from '@/lib/types';
 import { generateTeamFAQs, type PlayoffFAQContext, type TeamFaqCoverage } from '@/lib/promo-helpers';
+import type { SeasonScope } from '@/lib/season-scope';
 
 interface TeamFAQProps {
   team: Team;
@@ -12,11 +13,16 @@ interface TeamFAQProps {
   /** Sitewide coverage facts, derived by the page from getCoverageCounts(). */
   coverage: TeamFaqCoverage;
   playoffContext?: PlayoffFAQContext;
+  /** Resolved season population, or null when the rows cannot support a season
+   *  claim. Passed straight through to the generator, which is also what
+   *  json-ld.tsx calls, so the visible FAQ and the FAQPage schema always
+   *  describe the same population. */
+  season?: SeasonScope | null;
   variant?: 'dark' | 'light';
 }
 
-export function TeamFAQ({ team, upcomingPromos, venue, upcomingCounts, coverage, playoffContext, variant = 'dark' }: TeamFAQProps) {
-  const faqs = generateTeamFAQs(team, upcomingPromos, venue, upcomingCounts, coverage, playoffContext);
+export function TeamFAQ({ team, upcomingPromos, venue, upcomingCounts, coverage, playoffContext, season = null, variant = 'dark' }: TeamFAQProps) {
+  const faqs = generateTeamFAQs(team, upcomingPromos, venue, upcomingCounts, coverage, playoffContext, season);
 
   if (faqs.length === 0) return null;
 

@@ -6,10 +6,20 @@ import {
   isUpcomingPromo,
   splitPromosByDate,
 } from '../promo-helpers';
+import { resolveSeasonScope } from '../season-scope';
 import type { Promo, Team, Venue } from '../types';
 
-// The rule under test: a count that reaches DOM, schema, or FAQ text is a CLAIM,
-// and a claim may only describe promos a visitor can still attend.
+// The rule under test: LABEL MATCHES POPULATION. A count that reaches DOM,
+// schema, or FAQ text is a CLAIM, and the words around it must name the set it
+// counts.
+//
+// THIS FILE USED TO ASSERT THE NARROW VERSION, "a claim may only describe promos
+// a visitor can still attend", and the tests below are the ones that changed
+// when that reading was superseded. The narrow rule closed one bug and licensed
+// its mirror image: upcoming-only counts published under the words "the 2026
+// season" on 142 of 169 pages. Both are the same failure, a population moving
+// while its label stays put, so the assertions now pin the LABEL to whichever
+// population the caller passed. See src/lib/season-scope.ts.
 //
 // The bug these lock down shipped on 137 of 144 populated team pages. Counts were
 // derived from the all-time promo array while the promo list alone filtered by
@@ -93,10 +103,10 @@ test('FAQ emits no promo claim at all for a finished season', () => {
   const joined = faqs.map((f) => `${f.question} ${f.answer}`).join(' ');
 
   // The four count-bearing slots must not appear.
-  assert.ok(!/promotional events coming up/.test(joined), 'no remaining-count answer');
+  assert.ok(!/promotional events still to come/.test(joined), 'no remaining-count answer');
   assert.ok(!/most anticipated/.test(joined), 'no best-giveaway answer about a past event');
   assert.ok(!/kids and family event/.test(joined), 'no kids answer');
-  assert.ok(!/current schedule reflects/.test(joined), 'no schedule-size answer');
+  assert.ok(!/schedule on this page holds/.test(joined), 'no schedule-size answer');
 
   // And specifically: no past promo may be named anywhere in the output.
   for (const p of PAST_ONLY) {
@@ -107,14 +117,38 @@ test('FAQ emits no promo claim at all for a finished season', () => {
   assert.ok(faqs.length > 0, 'evergreen FAQ answers still emit');
 });
 
-test('FAQ counts and names describe only the upcoming half mid-season', () => {
+test('with no season resolved, FAQ counts describe the upcoming half and say so', () => {
   const { upcoming } = splitPromosByDate(MIXED, TODAY);
   const faqs = generateTeamFAQs(TEAM, upcoming, VENUE, countPromosByType(upcoming), COVERAGE);
   const joined = faqs.map((f) => `${f.question} ${f.answer}`).join(' ');
 
-  assert.ok(/2 promotional events coming up/.test(joined), 'counts the upcoming half, not all six');
+  assert.ok(/2 promotional events still to come/.test(joined), 'counts the upcoming half, not all six');
+  // The half-count must not borrow the season's noun. This is the assertion the
+  // narrow rule could not make, and the defect it could not see.
+  assert.ok(!/in the \d{4} season/.test(joined), 'a partial count never wears the season label');
   assert.ok(joined.includes('Opening Night Puck'), 'names an upcoming giveaway');
   assert.ok(!joined.includes('Zdeno Chara Bobblehead'), 'never names the passed giveaway');
+});
+
+test('with a season resolved, FAQ counts describe the season and name the remainder', () => {
+  const { upcoming } = splitPromosByDate(MIXED, TODAY);
+  // MIXED spans one calendar year in this fixture's own terms; resolve against a
+  // league with no rollout hold so the test pins the wording, not the date gate.
+  const season = resolveSeasonScope(MIXED, 'WNBA', TODAY);
+  assert.ok(season, 'fixture should resolve; if it stops, the fixture changed');
+  const faqs = generateTeamFAQs(
+    TEAM, upcoming, VENUE, countPromosByType(upcoming), COVERAGE, undefined, season,
+  );
+  const joined = faqs.map((f) => `${f.question} ${f.answer}`).join(' ');
+
+  assert.ok(
+    new RegExp(`${season!.total} promotional events in the ${season!.year} season`).test(joined),
+    'the season answer states the season total',
+  );
+  assert.ok(/2 are still to come/.test(joined), 'and names how much of it is left');
+  // The past giveaway is COUNTED in the season total but still never RECOMMENDED.
+  assert.ok(!/most anticipated[^.]*Zdeno Chara Bobblehead/.test(joined),
+    'a completed giveaway is never named as most anticipated');
 });
 
 test('passing the all-time array would reintroduce the bug, which is why the split is the caller contract', () => {

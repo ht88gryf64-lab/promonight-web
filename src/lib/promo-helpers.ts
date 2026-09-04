@@ -2,6 +2,12 @@ import { APP_LEAGUES, type CoverageCounts } from '@/lib/coverage-counts';
 import type { Team, Promo, PromoType, Venue, PlayoffPromo } from './types';
 import { PROMO_TYPE_LABELS } from './types';
 import { indefiniteArticleFor } from './indefinite-article';
+import { remainingPeriodPhrase } from './season-label';
+// TYPE-ONLY, and it has to stay that way: season-scope.ts imports this module
+// for countPromosByType / isUpcomingPromo, so a value import here would close a
+// runtime cycle. The one string this file needs off the object is precomputed
+// there as `gatedDisclosure`.
+import type { SeasonScope } from './season-scope';
 
 // Stable synthetic promo ID. Firestore promo subdocs do carry "p1"-style ids
 // but the data layer (mapPromoDoc) drops them — (team_slug, date, title)
@@ -213,6 +219,39 @@ export function strictBobbleheadGiveaways<T extends Pick<Promo, 'type' | 'title'
   );
 }
 
+/**
+ * Rows that are a TICKET MECHANIC rather than a promotional event.
+ *
+ * SCOPE: the META DESCRIPTION ONLY. These rows stay in the on-page list and in
+ * every count, because on the page they carry a date, a description and a
+ * category pill that together say what they are. A 160-character SERP snippet
+ * has room for none of that, so a row whose entire content is "you may enter
+ * early" spends the snippet on a query about giveaways and theme nights.
+ * Measured 2026-09-04: "Early Entry" is 5 rows corpus-wide, 4 of them upcoming,
+ * all on los-angeles-dodgers, which is the single highest-impression page on
+ * the site (17,447 impressions, 0.30% CTR).
+ *
+ * AN EXPLICIT LIST, NOT A HEURISTIC, and deliberately not PURCHASE_GATED_RE.
+ * That regex matches 268 of 1,631 giveaway rows, and most of them are real
+ * events whose copy merely mentions a ticket package ("Barbie Game Day Ticket
+ * Package", "Theme Night Ticket: KPop Demon Hunters Night"). Excluding those
+ * from the snippet would hide genuine promotions. These patterns match a whole
+ * title, so a row called "Early Entry Bobblehead" is untouched. Add to this
+ * list only with a measured count of what it removes.
+ */
+const TICKET_MECHANIC_TITLES: readonly RegExp[] = [
+  /^early entry$/i,
+  /^ticket package$/i,
+  /^special event ticket(?: package)?$/i,
+];
+
+/** True when a promo's title is a ticket mechanic, not an event. Meta
+ *  descriptions only; see TICKET_MECHANIC_TITLES. */
+export function isTicketMechanicRow(p: Pick<Promo, 'title'>): boolean {
+  const title = (p.title ?? '').trim();
+  return TICKET_MECHANIC_TITLES.some((re) => re.test(title));
+}
+
 /** True when a promo's own copy says you have to buy something to get it. */
 export function isPurchaseGated(p: Pick<Promo, 'title' | 'description'>): boolean {
   return PURCHASE_GATED_RE.test(p.description ?? '') || PURCHASE_GATED_RE.test(p.title ?? '');
@@ -226,9 +265,28 @@ export function isPurchaseGated(p: Pick<Promo, 'title' | 'description'>): boolea
 // so the hero advertised promos the list correctly reported as gone. Two
 // definitions of one idea is how the two halves of a page came to disagree.
 //
-// The rule these enforce: a count that reaches DOM, schema, or FAQ text is a
-// CLAIM, and a claim may only describe promos a visitor can still attend.
-// All-time counts stay available, but only behind a label that says archive.
+// ── THE STANDING RULE: LABEL MATCHES POPULATION ────────────────────────
+//
+// A count that reaches DOM, schema, or FAQ text is a CLAIM, and the words
+// around it must name the set it counts. That is the whole rule, and it is
+// SYMMETRIC.
+//
+// This comment used to state the one-sided version: "a claim may only describe
+// promos a visitor can still attend." That was written to close a real bug, in
+// which every count was all-time while the list alone filtered by date, so 137
+// of 144 populated pages advertised a number the rows beneath them
+// contradicted. The fix was right. The rule extracted from it was too narrow,
+// and the narrow version produced the mirror-image defect: upcoming-only counts
+// went out under the words "the 2026 season", so on 2026-09-04 the Dodgers page
+// said 19 where the season held 98, and shipped that reading inside FAQPage
+// structured data on 142 of 169 pages.
+//
+// Both failures are one failure. The population moved and the label did not.
+// So: state the season when you counted the season, state what is left when you
+// counted what is left, and never let one set borrow the other's noun.
+// src/lib/season-scope.ts resolves the season population, and refuses to when
+// the rows cannot support the claim; callers then fall back to the
+// upcoming-only wording rather than guessing.
 export function todayYmd(): string {
   return new Date().toISOString().split('T')[0];
 }
@@ -357,6 +415,12 @@ export function generateTeamFAQs(
   // stale silently, which is the exact failure this parameter exists to end.
   coverage: TeamFaqCoverage,
   playoff?: PlayoffFAQContext,
+  // The resolved SEASON population, or null when the rows cannot support a
+  // season claim (multi-year archive, wrong year, MLB before the rollout date).
+  // Resolved by the page with resolveSeasonScope; never derived here, so the
+  // visible FAQ and the FAQPage schema in json-ld.tsx cannot disagree about
+  // which population they describe. Null keeps the upcoming-only wording.
+  season?: SeasonScope | null,
 ): FAQItem[] {
   // Hardcoded 2026 season year, NOT getCurrentYear(): the page title and meta
   // description already hardcode 2026, and an auto-rolling getFullYear() would
@@ -368,23 +432,43 @@ export function generateTeamFAQs(
   const venueName = venue?.name || 'their home stadium';
   const faqs: FAQItem[] = [];
 
-  // 1. Remaining promo count. Gated on UPCOMING, so a team whose season has
-  // finished emits no count answer at all rather than restating a closed
-  // season as if it were still ahead.
-  if (upcomingPromos.length > 0) {
+  // 1. The count answer, and the page's primary claim.
+  //
+  // SEASON when the rows resolve to one: the question a searcher asks is "what
+  // is the schedule", and answering it with the remaining fraction was the
+  // defect. Both numbers are stated, because the season total alone reads as
+  // availability and the upcoming count alone understates the page.
+  //
+  // FALLBACK when they do not: the wording drops the season noun entirely
+  // rather than attaching it to a partial count, and the period comes from the
+  // remaining rows, so a club whose season crosses a New Year is not told it
+  // has events "in 2026" when half of them land in 2027.
+  const cityClause = venue?.address
+    ? ` in ${venue.address.split(',').slice(-2, -1)[0]?.trim() || venue.address}`
+    : '';
+  const breakdown = (c: Record<PromoType, number>): string => {
     const parts: string[] = [];
-    if (upcomingCounts.giveaway > 0)
-      parts.push(`${upcomingCounts.giveaway} giveaway night${upcomingCounts.giveaway !== 1 ? 's' : ''}`);
-    if (upcomingCounts.theme > 0)
-      parts.push(`${upcomingCounts.theme} theme night${upcomingCounts.theme !== 1 ? 's' : ''}`);
-    if (upcomingCounts.food > 0)
-      parts.push(`${upcomingCounts.food} food deal event${upcomingCounts.food !== 1 ? 's' : ''}`);
-    if (upcomingCounts.kids > 0)
-      parts.push(`${upcomingCounts.kids} kids/family event${upcomingCounts.kids !== 1 ? 's' : ''}`);
+    if (c.giveaway > 0) parts.push(`${c.giveaway} giveaway night${c.giveaway !== 1 ? 's' : ''}`);
+    if (c.theme > 0) parts.push(`${c.theme} theme night${c.theme !== 1 ? 's' : ''}`);
+    if (c.food > 0) parts.push(`${c.food} food deal event${c.food !== 1 ? 's' : ''}`);
+    if (c.kids > 0) parts.push(`${c.kids} kids/family event${c.kids !== 1 ? 's' : ''}`);
+    return parts.join(', ');
+  };
 
+  if (season) {
+    const remaining =
+      season.upcomingCount === 0
+        ? 'All of them have already taken place.'
+        : `${season.upcomingCount} ${season.upcomingCount === 1 ? 'is' : 'are'} still to come.`;
+    const gated = season.gatedDisclosure;
     faqs.push({
-      question: `How many promotional nights do the ${team.name} have in ${year}?`,
-      answer: `The ${fullName} have ${upcomingPromos.length} promotional events coming up in the ${year} season, including ${parts.join(', ')}. These events take place at ${venueName}${venue?.address ? ` in ${venue.address.split(',').slice(-2, -1)[0]?.trim() || venue.address}` : ''}.`,
+      question: `How many promotional nights do the ${team.name} have in the ${season.year} season?`,
+      answer: `The ${fullName} have ${season.total} promotional events in the ${season.year} season, including ${breakdown(season.counts)}. ${remaining}${gated ? ` ${gated}` : ''} These events take place at ${venueName}${cityClause}.`,
+    });
+  } else if (upcomingPromos.length > 0) {
+    faqs.push({
+      question: `How many ${team.name} promotional nights are still to come?`,
+      answer: `The ${fullName} have ${upcomingPromos.length} promotional events still to come${remainingPeriodPhrase(upcomingPromos.map((p) => p.date))}, including ${breakdown(upcomingCounts)}. These events take place at ${venueName}${cityClause}.`,
     });
   }
 
@@ -427,7 +511,10 @@ export function generateTeamFAQs(
 
     faqs.push({
       question: `When are ${team.name} kids and family events in ${year}?`,
-      answer: `The ${fullName} have ${upcomingCounts.kids} kids and family event${upcomingCounts.kids !== 1 ? 's' : ''} still to come in ${year}. Upcoming family events include ${kidsList}${kidsPromos.length > 3 ? `, and ${kidsPromos.length - 3} more throughout the season` : ''}. These events are designed for young fans and families attending games at ${venueName}.`,
+      // "still to come in 2026" was wrong on every club whose remaining rows
+      // cross a New Year (29 of 32 NHL clubs on 2026-09-04). The period comes
+      // from the rows being counted.
+      answer: `The ${fullName} have ${upcomingCounts.kids} kids and family event${upcomingCounts.kids !== 1 ? 's' : ''} still to come${remainingPeriodPhrase(kidsPromos.map((p) => p.date))}. Upcoming family events include ${kidsList}${kidsPromos.length > 3 ? `, and ${kidsPromos.length - 3} more throughout the season` : ''}. These events are designed for young fans and families attending games at ${venueName}.`,
     });
   }
 
@@ -503,10 +590,17 @@ export function generateTeamFAQs(
   // entry 6c: the copy and the cadence change in the same commit, so neither
   // is briefly wrong). Before that commit lands, this sentence would be an
   // unbacked freshness claim on every NHL team page.
-  if (upcomingPromos.length >= 10) {
+  if (season ? season.total >= 10 : upcomingPromos.length >= 10) {
+    // The sentence names the population it counts, same rule as FAQ 1: the
+    // season total where the season resolved, the remaining count where it did
+    // not. It used to say "the current schedule reflects N" over an
+    // upcoming-only N, which read as the whole schedule.
+    const reflects = season
+      ? `The ${season.year} schedule on this page holds ${season.total} events, ${season.upcomingCount} of them still to come.`
+      : `The schedule on this page holds ${upcomingPromos.length} events still to come.`;
     faqs.push({
       question: `How often are ${team.name} promo schedules updated?`,
-      answer: `${team.name} promo data comes from official team announcements and is reviewed before it appears here. The current schedule reflects ${upcomingPromos.length} scheduled events. MLB, WNBA, MLS, and NHL schedules are rechecked weekly in season.`,
+      answer: `${team.name} promo data comes from official team announcements and is reviewed before it appears here. ${reflects} MLB, WNBA, MLS, and NHL schedules are rechecked weekly in season.`,
     });
   }
 

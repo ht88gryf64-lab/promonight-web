@@ -32,6 +32,19 @@ import { RD_CATEGORIES, RD_CATEGORY_ORDER } from './categories';
 export interface StatScoreboardProps {
   counts: Record<PromoType, number>; // promoCounts from the page
   gamesCount?: number; // optional total scheduled games
+  /**
+   * The sentence that names the population the tiles count, e.g.
+   * "98 promotions in the 2026 season, 19 still to come".
+   *
+   * REQUIRED WHENEVER THE TILES CARRY SEASON COUNTS, and that is the whole
+   * reason it exists. The tiles are four bare numerals with a category word
+   * under each; nothing in them says which population they describe, so the
+   * band read as "what is on next" while carrying season totals would be the
+   * same label-versus-population defect in a new place. Omitted on the
+   * fallback path, where the tiles keep their upcoming-only counts and the
+   * "Coming up" promo list directly below them supplies the label.
+   */
+  note?: string;
   className?: string;
 }
 
@@ -57,36 +70,34 @@ function StatTile({ count, label, color, Icon }: TileProps) {
   );
 }
 
-export function StatScoreboard({ counts, gamesCount, className = '' }: StatScoreboardProps) {
+export function StatScoreboard({ counts, gamesCount, note, className = '' }: StatScoreboardProps) {
   return (
-    <div
-      className={[
-        'grid grid-cols-2 gap-2.5 sm:grid-cols-4 lg:grid-cols-5',
-        className,
-      ]
-        .filter(Boolean)
-        .join(' ')}
-    >
-      {RD_CATEGORY_ORDER.map((key) => {
-        const meta = RD_CATEGORIES[key];
-        return (
+    <div className={className}>
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 lg:grid-cols-5">
+        {RD_CATEGORY_ORDER.map((key) => {
+          const meta = RD_CATEGORIES[key];
+          return (
+            <StatTile
+              key={key}
+              count={counts[key] ?? 0}
+              label={meta.label}
+              color={meta.color}
+              Icon={meta.Icon}
+            />
+          );
+        })}
+        {typeof gamesCount === 'number' && gamesCount > 0 && (
           <StatTile
-            key={key}
-            count={counts[key] ?? 0}
-            label={meta.label}
-            color={meta.color}
-            Icon={meta.Icon}
+            count={gamesCount}
+            label="Games"
+            color="#ffffff"
+            Icon={IconCalendarEvent}
           />
-        );
-      })}
-      {typeof gamesCount === 'number' && gamesCount > 0 && (
-        <StatTile
-          count={gamesCount}
-          label="Games"
-          color="#ffffff"
-          Icon={IconCalendarEvent}
-        />
-      )}
+        )}
+      </div>
+      {note ? (
+        <p className="mt-3 font-rd text-[13px] text-white/70">{note}</p>
+      ) : null}
     </div>
   );
 }

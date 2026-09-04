@@ -8,6 +8,7 @@ import {
   teamDisplayName,
 } from '@/lib/promo-helpers';
 import { RD_CATEGORIES } from '@/components/redesign/categories';
+import type { SeasonScope } from '@/lib/season-scope';
 
 // Hardcoded, never derived from the clock. See the same rule at
 // generateTeamFAQs in promo-helpers.ts: the page title and meta description
@@ -32,10 +33,41 @@ const APP_LEAGUE_LIST = joinList(APP_LEAGUES);
 
 interface TeamContentSectionsProps {
   team: Team;
+  /** UPCOMING promos. The list population, and the whole population on the
+   *  fallback path. */
   promos: Promo[];
   venue: Venue | null;
   promoCounts: Record<PromoType, number>;
+  /** Resolved season population, or null. See scopeFor below. */
+  season?: SeasonScope | null;
   variant?: 'dark' | 'light';
+}
+
+/**
+ * What one section publishes, resolved once by the parent so the dark and light
+ * branches cannot drift.
+ *
+ * THE SPLIT THAT MATTERS: `count` may be a SEASON total while `list` is always
+ * a population the label names. Publishing a season count over a list of the
+ * season's EARLIEST rows would put completed events under a heading asking what
+ * the team is doing this year, which is the same label-versus-population defect
+ * one level down. So the count comes from the season and the list comes from
+ * what is still ahead, with its own label. Only when nothing is ahead does the
+ * list fall back to completed rows, and it says so.
+ */
+interface SectionScope {
+  /** The count to publish: season total where the season resolved. */
+  count: number;
+  /** How many of `count` are still ahead. Equals `count` on the fallback path. */
+  upcomingCount: number;
+  isSeason: boolean;
+  year: number;
+  /** Rows listed under the paragraph. */
+  list: Promo[];
+  /** True when `list` holds upcoming rows, false when it holds completed ones. */
+  listIsUpcoming: boolean;
+  /** Purchase-gating disclosure for a published season giveaway count. */
+  gatedDisclosure: string | null;
 }
 
 export function TeamContentSections({
@@ -43,11 +75,44 @@ export function TeamContentSections({
   promos,
   venue,
   promoCounts,
+  season = null,
   variant = 'dark',
 }: TeamContentSectionsProps) {
-  const year = SEASON_YEAR;
+  const year = season ? season.year : SEASON_YEAR;
   const fullName = teamDisplayName(team);
   const venueName = venue?.name || 'their home stadium';
+
+  const scopeFor = (type: PromoType): SectionScope => {
+    if (!season) {
+      return {
+        count: promoCounts[type],
+        upcomingCount: promoCounts[type],
+        isSeason: false,
+        year,
+        list: getPromosByType(promos, type),
+        listIsUpcoming: true,
+        gatedDisclosure: null,
+      };
+    }
+    const ahead = getPromosByType(season.upcoming, type);
+    const done = getPromosByType(season.past, type);
+    return {
+      count: season.counts[type],
+      upcomingCount: ahead.length,
+      isSeason: true,
+      year: season.year,
+      list: ahead.length > 0 ? ahead : done,
+      listIsUpcoming: ahead.length > 0,
+      // Only the giveaway count is published broad enough to need it.
+      gatedDisclosure: type === 'giveaway' ? season.gatedDisclosure : null,
+    };
+  };
+  const scopes: Record<PromoType, SectionScope> = {
+    giveaway: scopeFor('giveaway'),
+    theme: scopeFor('theme'),
+    food: scopeFor('food'),
+    kids: scopeFor('kids'),
+  };
   // The app covers APP_LEAGUES only; the plug names it on those pages and the
   // weekly email everywhere else, on all 169 pages and both variants.
   const inApp = (APP_LEAGUES as readonly string[]).includes(team.league);
@@ -57,67 +122,62 @@ export function TeamContentSections({
       <section className="py-10">
         <div className="max-w-3xl mx-auto space-y-10">
           {/* Giveaways */}
-          {promoCounts.giveaway > 0 && (
+          {scopes.giveaway.count > 0 && (
             <div>
               <LightSectionHeader category="giveaway">
                 What giveaways are the {team.name} doing in {year}?
               </LightSectionHeader>
               <GiveawaySection
                 team={team}
-                promos={promos}
+                upcoming={promos}
                 venueName={venueName}
-                count={promoCounts.giveaway}
-                year={year}
+                scope={scopes.giveaway}
                 variant="light"
               />
             </div>
           )}
 
           {/* Theme Nights */}
-          {promoCounts.theme > 0 && (
+          {scopes.theme.count > 0 && (
             <div>
               <LightSectionHeader category="theme">
                 What are the best {team.name} theme nights in {year}?
               </LightSectionHeader>
               <ThemeSection
                 team={team}
-                promos={promos}
+                upcoming={promos}
                 venueName={venueName}
-                count={promoCounts.theme}
-                year={year}
+                scope={scopes.theme}
                 variant="light"
               />
             </div>
           )}
 
           {/* Food Deals */}
-          {promoCounts.food > 0 && (
+          {scopes.food.count > 0 && (
             <div>
               <LightSectionHeader category="food">
                 What food deals does {venueName} offer?
               </LightSectionHeader>
               <FoodSection
                 team={team}
-                promos={promos}
                 venueName={venueName}
-                count={promoCounts.food}
+                scope={scopes.food}
                 variant="light"
               />
             </div>
           )}
 
           {/* Kids Events */}
-          {promoCounts.kids > 0 && (
+          {scopes.kids.count > 0 && (
             <div>
               <LightSectionHeader category="kids">
                 When are {team.name} kids and family events in {year}?
               </LightSectionHeader>
               <KidsSection
                 team={team}
-                promos={promos}
                 venueName={venueName}
-                count={promoCounts.kids}
-                year={year}
+                scope={scopes.kids}
                 variant="light"
               />
             </div>
@@ -143,64 +203,59 @@ export function TeamContentSections({
     <section className="py-12 px-6 border-t border-border-subtle">
       <div className="max-w-3xl mx-auto space-y-10">
         {/* Giveaways */}
-        {promoCounts.giveaway > 0 && (
+        {scopes.giveaway.count > 0 && (
           <div>
             <h2 className="font-display text-2xl md:text-3xl tracking-[1px] mb-4">
               What giveaways are the {team.name} doing in {year}?
             </h2>
             <GiveawaySection
               team={team}
-              promos={promos}
+              upcoming={promos}
               venueName={venueName}
-              count={promoCounts.giveaway}
-              year={year}
+              scope={scopes.giveaway}
             />
           </div>
         )}
 
         {/* Theme Nights */}
-        {promoCounts.theme > 0 && (
+        {scopes.theme.count > 0 && (
           <div>
             <h2 className="font-display text-2xl md:text-3xl tracking-[1px] mb-4">
               What are the best {team.name} theme nights in {year}?
             </h2>
             <ThemeSection
               team={team}
-              promos={promos}
+              upcoming={promos}
               venueName={venueName}
-              count={promoCounts.theme}
-              year={year}
+              scope={scopes.theme}
             />
           </div>
         )}
 
         {/* Food Deals */}
-        {promoCounts.food > 0 && (
+        {scopes.food.count > 0 && (
           <div>
             <h2 className="font-display text-2xl md:text-3xl tracking-[1px] mb-4">
               What food deals does {venueName} offer?
             </h2>
             <FoodSection
               team={team}
-              promos={promos}
               venueName={venueName}
-              count={promoCounts.food}
+              scope={scopes.food}
             />
           </div>
         )}
 
         {/* Kids Events */}
-        {promoCounts.kids > 0 && (
+        {scopes.kids.count > 0 && (
           <div>
             <h2 className="font-display text-2xl md:text-3xl tracking-[1px] mb-4">
               When are {team.name} kids and family events in {year}?
             </h2>
             <KidsSection
               team={team}
-              promos={promos}
               venueName={venueName}
-              count={promoCounts.kids}
-              year={year}
+              scope={scopes.kids}
             />
           </div>
         )}
@@ -218,6 +273,24 @@ export function TeamContentSections({
         </div>
       </div>
     </section>
+  );
+}
+
+/**
+ * The line that names what the bullet list beneath it holds. Rendered whenever
+ * a published count and its list describe different populations, which is every
+ * season-scoped section. Without it a season count of 50 sits directly above six
+ * upcoming rows and the reader reasonably reads the six as the fifty.
+ */
+function ListLabel({ scope, variant }: { scope: SectionScope; variant: 'dark' | 'light' }) {
+  if (!scope.isSeason) return null;
+  const text = scope.listIsUpcoming
+    ? 'Still to come:'
+    : `Completed in the ${scope.year} season:`;
+  return (
+    <p className={variant === 'light' ? 'text-rd-ink font-medium' : 'text-white font-medium'}>
+      {text}
+    </p>
   );
 }
 
@@ -244,32 +317,41 @@ function LightSectionHeader({
 
 function GiveawaySection({
   team,
-  promos,
+  upcoming,
   venueName,
-  count,
-  year,
+  scope,
   variant = 'dark',
 }: {
   team: Team;
-  promos: Promo[];
+  /** UPCOMING promos, used only for the "highlights include" pick. */
+  upcoming: Promo[];
   venueName: string;
-  count: number;
-  year: number;
+  scope: SectionScope;
   variant?: 'dark' | 'light';
 }) {
   const fullName = teamDisplayName(team);
-  const giveaways = getPromosByType(promos, 'giveaway');
-  const top = getTopGiveaway(promos);
+  const giveaways = scope.list;
+  // The highlight is chosen from UPCOMING rows on both paths. "Highlights
+  // include" is a recommendation, and recommending a night that has already
+  // happened is the one thing a season-scoped count must not licence.
+  const top = getTopGiveaway(upcoming);
+  const lead = scope.isSeason
+    ? scope.upcomingCount > 0
+      ? `The ${fullName} have ${scope.count} giveaway night${scope.count !== 1 ? 's' : ''} scheduled for the ${scope.year} season at ${venueName}, ${scope.upcomingCount} still to come.`
+      : `The ${fullName} have ${scope.count} giveaway night${scope.count !== 1 ? 's' : ''} in the ${scope.year} season at ${venueName}. All of them have already taken place.`
+    : `The ${fullName} have ${scope.count} giveaway night${scope.count !== 1 ? 's' : ''} still to come at ${venueName}.`;
 
   if (variant === 'light') {
     return (
       <div className="text-rd-ink-soft text-sm leading-relaxed space-y-3">
         <p>
-          The {fullName} have {count} giveaway night{count !== 1 ? 's' : ''} scheduled for the {year} season at {venueName}.
+          {lead}
           {top
             ? ` Highlights include ${top.title} on ${formatDateReadable(top.date)}${top.opponent ? ` against the ${top.opponent}` : ''}.`
             : ''}
         </p>
+        {scope.gatedDisclosure ? <p>{scope.gatedDisclosure}</p> : null}
+        <ListLabel scope={scope} variant="light" />
         <ul className="space-y-1.5 list-disc list-inside text-rd-ink-soft">
           {giveaways.slice(0, 6).map((p, i) => (
             <li key={i}>
@@ -290,11 +372,13 @@ function GiveawaySection({
   return (
     <div className="text-text-secondary text-sm leading-relaxed space-y-3">
       <p>
-        The {fullName} have {count} giveaway night{count !== 1 ? 's' : ''} scheduled for the {year} season at {venueName}.
+        {lead}
         {top
           ? ` Highlights include ${top.title} on ${formatDateReadable(top.date)}${top.opponent ? ` against the ${top.opponent}` : ''}.`
           : ''}
       </p>
+      {scope.gatedDisclosure ? <p>{scope.gatedDisclosure}</p> : null}
+      <ListLabel scope={scope} variant="dark" />
       <ul className="space-y-1.5 list-disc list-inside text-text-secondary">
         {giveaways.slice(0, 6).map((p, i) => (
           <li key={i}>
@@ -314,21 +398,20 @@ function GiveawaySection({
 
 function ThemeSection({
   team,
-  promos,
+  upcoming,
   venueName,
-  count,
-  year,
+  scope,
   variant = 'dark',
 }: {
   team: Team;
-  promos: Promo[];
+  /** UPCOMING promos, used only for the "Next up" pick. */
+  upcoming: Promo[];
   venueName: string;
-  count: number;
-  year: number;
+  scope: SectionScope;
   variant?: 'dark' | 'light';
 }) {
   const fullName = teamDisplayName(team);
-  const themes = getPromosByType(promos, 'theme');
+  const themes = scope.list;
 
   // ONE paragraph, built once and rendered by BOTH variants below. It used to
   // be two independent hardcoded copies, and both closed with the same
@@ -350,14 +433,23 @@ function ThemeSection({
   // pass upcomingPromos / upcomingCounts. Dates are filtered here regardless,
   // because a dateless recurring row cannot be named as "next up" and would
   // render an invalid date.
-  const nextUp = themes
+  // "Next up" is drawn from UPCOMING rows on both paths, never from `scope.list`:
+  // on a finished season that list holds completed nights, and naming one as
+  // next up would be false. Empty when nothing is ahead, and the clause is then
+  // omitted rather than softened.
+  const nextUp = getPromosByType(upcoming, 'theme')
     .filter((p) => typeof p.date === 'string' && p.date !== '')
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(0, 3);
   // When nothing is scheduled the sentence is OMITTED, not softened. No filler,
   // no "none scheduled": absence beats a wrong or empty claim.
+  const themeLead = scope.isSeason
+    ? scope.upcomingCount > 0
+      ? `The ${fullName} have ${scope.count} theme night${scope.count !== 1 ? 's' : ''} scheduled at ${venueName} during the ${scope.year} season, ${scope.upcomingCount} still to come.`
+      : `The ${fullName} have ${scope.count} theme night${scope.count !== 1 ? 's' : ''} at ${venueName} in the ${scope.year} season. All of them have already taken place.`
+    : `The ${fullName} have ${scope.count} theme night${scope.count !== 1 ? 's' : ''} still to come at ${venueName}.`;
   const themeParagraph =
-    `The ${fullName} have ${count} theme night${count !== 1 ? 's' : ''} scheduled at ${venueName} during the ${year} season.` +
+    themeLead +
     (nextUp.length > 0
       ? ` Next up: ${nextUp.map((p) => `${p.title} (${monthDayShort(p.date)})`).join(', ')}.`
       : '');
@@ -366,6 +458,7 @@ function ThemeSection({
     return (
       <div className="text-rd-ink-soft text-sm leading-relaxed space-y-3">
         <p>{themeParagraph}</p>
+        <ListLabel scope={scope} variant="light" />
         <ul className="space-y-1.5 list-disc list-inside text-rd-ink-soft">
           {themes.slice(0, 6).map((p, i) => (
             <li key={i}>
@@ -386,6 +479,7 @@ function ThemeSection({
   return (
     <div className="text-text-secondary text-sm leading-relaxed space-y-3">
       <p>{themeParagraph}</p>
+      <ListLabel scope={scope} variant="dark" />
       <ul className="space-y-1.5 list-disc list-inside text-text-secondary">
         {themes.slice(0, 6).map((p, i) => (
           <li key={i}>
@@ -405,26 +499,30 @@ function ThemeSection({
 
 function FoodSection({
   team,
-  promos,
   venueName,
-  count,
+  scope,
   variant = 'dark',
 }: {
   team: Team;
-  promos: Promo[];
   venueName: string;
-  count: number;
+  scope: SectionScope;
   variant?: 'dark' | 'light';
 }) {
   const fullName = teamDisplayName(team);
-  const foodDeals = getPromosByType(promos, 'food');
+  const foodDeals = scope.list;
+  const foodLead = scope.isSeason
+    ? scope.upcomingCount > 0
+      ? `${venueName} has ${scope.count} food deal event${scope.count !== 1 ? 's' : ''} during ${fullName} games in the ${scope.year} season, ${scope.upcomingCount} still to come.`
+      : `${venueName} had ${scope.count} food deal event${scope.count !== 1 ? 's' : ''} during ${fullName} games in the ${scope.year} season. All of them have already taken place.`
+    : `${venueName} has ${scope.count} food deal event${scope.count !== 1 ? 's' : ''} still to come during ${fullName} games.`;
 
   if (variant === 'light') {
     return (
       <div className="text-rd-ink-soft text-sm leading-relaxed space-y-3">
         <p>
-          {venueName} has {count} food deal event{count !== 1 ? 's' : ''} during {fullName} games. These include discounted concessions, pregame specials, and recurring weekly deals.
+          {foodLead} These include discounted concessions, pregame specials, and recurring weekly deals.
         </p>
+        <ListLabel scope={scope} variant="light" />
         <ul className="space-y-1.5 list-disc list-inside text-rd-ink-soft">
           {foodDeals.slice(0, 6).map((p, i) => (
             <li key={i}>
@@ -444,8 +542,9 @@ function FoodSection({
   return (
     <div className="text-text-secondary text-sm leading-relaxed space-y-3">
       <p>
-        {venueName} has {count} food deal event{count !== 1 ? 's' : ''} during {fullName} games. These include discounted concessions, pregame specials, and recurring weekly deals.
+        {foodLead} These include discounted concessions, pregame specials, and recurring weekly deals.
       </p>
+      <ListLabel scope={scope} variant="dark" />
       <ul className="space-y-1.5 list-disc list-inside text-text-secondary">
         {foodDeals.slice(0, 6).map((p, i) => (
           <li key={i}>
@@ -464,28 +563,30 @@ function FoodSection({
 
 function KidsSection({
   team,
-  promos,
   venueName,
-  count,
-  year,
+  scope,
   variant = 'dark',
 }: {
   team: Team;
-  promos: Promo[];
   venueName: string;
-  count: number;
-  year: number;
+  scope: SectionScope;
   variant?: 'dark' | 'light';
 }) {
   const fullName = teamDisplayName(team);
-  const kidsEvents = getPromosByType(promos, 'kids');
+  const kidsEvents = scope.list;
+  const kidsLead = scope.isSeason
+    ? scope.upcomingCount > 0
+      ? `The ${fullName} have ${scope.count} kids and family event${scope.count !== 1 ? 's' : ''} at ${venueName} in the ${scope.year} season, ${scope.upcomingCount} still to come.`
+      : `The ${fullName} had ${scope.count} kids and family event${scope.count !== 1 ? 's' : ''} at ${venueName} in the ${scope.year} season. All of them have already taken place.`
+    : `The ${fullName} have ${scope.count} kids and family event${scope.count !== 1 ? 's' : ''} still to come at ${venueName}.`;
 
   if (variant === 'light') {
     return (
       <div className="text-rd-ink-soft text-sm leading-relaxed space-y-3">
         <p>
-          The {fullName} have {count} kids and family event{count !== 1 ? 's' : ''} at {venueName} in {year}. Family events are designed to make game day fun for fans of all ages.
+          {kidsLead} Family events are designed to make game day fun for fans of all ages.
         </p>
+        <ListLabel scope={scope} variant="light" />
         <ul className="space-y-1.5 list-disc list-inside text-rd-ink-soft">
           {kidsEvents.slice(0, 6).map((p, i) => (
             <li key={i}>
@@ -505,8 +606,9 @@ function KidsSection({
   return (
     <div className="text-text-secondary text-sm leading-relaxed space-y-3">
       <p>
-        The {fullName} have {count} kids and family event{count !== 1 ? 's' : ''} at {venueName} in {year}. Family events are designed to make game day fun for fans of all ages.
+        {kidsLead} Family events are designed to make game day fun for fans of all ages.
       </p>
+      <ListLabel scope={scope} variant="dark" />
       <ul className="space-y-1.5 list-disc list-inside text-text-secondary">
         {kidsEvents.slice(0, 6).map((p, i) => (
           <li key={i}>

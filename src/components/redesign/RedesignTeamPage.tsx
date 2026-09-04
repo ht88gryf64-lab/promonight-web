@@ -13,6 +13,7 @@ import { ScheduleBlock } from './ScheduleBlock';
 import { DivisionRivals } from './DivisionRivals';
 import { getDivisionRivals } from '@/lib/division-rivals';
 import { teamTitleSubtitle } from '@/lib/title-treatment';
+import { isSeasonScopeLive, seasonClaimSentence, type SeasonScope } from '@/lib/season-scope';
 import { UpcomingPromoModalProvider } from './UpcomingPromoModal';
 import { AffiliateRail } from './AffiliateRail';
 import { ExploreCard } from './ExploreCard';
@@ -51,6 +52,14 @@ export interface RedesignTeamPageProps {
    *  asserts a number to a reader or a crawler takes these. */
   upcomingPromos: Promo[];
   upcomingCounts: Record<PromoType, number>;
+  /**
+   * The resolved SEASON population, or null when the rows cannot support a
+   * season claim. Resolved once by the route with resolveSeasonScope.
+   *
+   * It does NOT replace upcomingPromos / upcomingCounts, and must not: those
+   * still drive hasNoUpcoming below, which is a LAYOUT gate, not a claim.
+   */
+  seasonScope: SeasonScope | null;
   displayName: string;
   gameContexts?: GameContext[];
   recurringDeals: RecurringDeal[];
@@ -79,6 +88,7 @@ export function RedesignTeamPage({
   promos,
   upcomingPromos,
   upcomingCounts,
+  seasonScope,
   displayName,
   gameContexts,
   recurringDeals,
@@ -99,6 +109,12 @@ export function RedesignTeamPage({
   const leagueHub = getLeagueHub(team.league);
   const leagueHubHref = leagueHub?.live ? leagueHub.href : null;
 
+  // The away-day prerender change rides the LEAGUE date gate, not seasonScope.
+  // It is not a claim, so whether a team's rows resolve to a season is
+  // irrelevant to it; what matters is that MLB pages hold still until the
+  // ctr-diagnostic-sep2026 read date like every other change in this slice.
+  const scopeLive = isSeasonScopeLive(team.league);
+
   // THREE gates, and the distinction between the first two is load-bearing.
   //
   // hasNoUpcoming drives everything that speaks about what is COMING UP: the
@@ -116,6 +132,13 @@ export function RedesignTeamPage({
   // The previous single gate read all-time counts, so on a finished season it
   // was false everywhere: the hero advertised promos that were gone and the
   // fallback never mounted. Both halves of that are fixed here.
+  //
+  // DELIBERATELY NOT seasonScope. These three gates decide LAYOUT: which block
+  // occupies the season slot, and where the rivals grid mounts. They are not
+  // claims, and feeding them season counts would make hasNoUpcoming false on
+  // every page with a completed archive, silently relocating the rivals grid on
+  // 59 pages and swapping the calendar for the schedule block on the zero-promo
+  // ones. Counts moved to the season; these did not.
   const hasNoUpcoming =
     upcomingCounts.giveaway === 0 &&
     upcomingCounts.theme === 0 &&
@@ -172,6 +195,7 @@ export function RedesignTeamPage({
         coverage={coverage}
         playoffPromos={inPlayoffs ? playoffPromos : undefined}
         playoffContext={playoffContext}
+        season={seasonScope}
       />
       <TeamPageTracker
         teamSlug={team.id}
@@ -210,7 +234,13 @@ export function RedesignTeamPage({
         title={displayName.toUpperCase()}
         subtitle={teamTitleSubtitle(team)}
         venueLine={venue?.name ?? undefined}
-        scoreboard={<StatScoreboard counts={upcomingCounts} gamesCount={gameContexts?.length} />}
+        scoreboard={
+          <StatScoreboard
+            counts={seasonScope ? seasonScope.counts : upcomingCounts}
+            gamesCount={gameContexts?.length}
+            note={seasonScope ? seasonClaimSentence(seasonScope) : undefined}
+          />
+        }
       />
 
       {/* Responsive weave — one DOM, two layouts.
@@ -309,6 +339,8 @@ export function RedesignTeamPage({
                 <SeasonExplorer
                   promos={upcomingPromos}
                   promoCounts={upcomingCounts}
+                  seasonScoped={!!seasonScope}
+                  homeOnlyPrerender={scopeLive}
                   teamName={displayName}
                   teamSlug={team.id}
                   sport={team.league}
@@ -360,6 +392,7 @@ export function RedesignTeamPage({
                     venueName={venue?.name ?? null}
                     variant="light"
                     showAppPitch={false}
+                    seasonScoped={!!seasonScope}
                     team={team}
                     gameContexts={gameContexts}
                   />
@@ -391,6 +424,7 @@ export function RedesignTeamPage({
                 team={team}
                 promos={upcomingPromos}
                 promoCounts={upcomingCounts}
+                season={seasonScope}
                 venue={venue}
                 teamName={displayName}
                 variant="light"
@@ -412,6 +446,7 @@ export function RedesignTeamPage({
                 promos={upcomingPromos}
                 venue={venue}
                 promoCounts={upcomingCounts}
+                season={seasonScope}
                 variant="light"
               />
             </div>
@@ -428,6 +463,7 @@ export function RedesignTeamPage({
                 upcomingCounts={upcomingCounts}
                 coverage={coverage}
                 playoffContext={playoffContext}
+                season={seasonScope}
                 variant="light"
               />
             </div>

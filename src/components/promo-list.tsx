@@ -101,7 +101,7 @@ function PromoRow({
       <div className="flex-1 min-w-0 pr-8">
         <div className="flex flex-wrap items-center gap-2 mb-1.5">
           <span className="text-lg" aria-hidden="true">{promo.icon}</span>
-          <PromoBadge type={promo.type} />
+          <PromoBadge type={promo.type} gated={isPurchaseGated(promo)} />
           {completed && (
             <span className="inline-flex items-center gap-1 text-[10px] font-mono tracking-[0.5px] uppercase text-text-dim border border-border-subtle rounded-full px-2 py-0.5">
               Completed
@@ -139,6 +139,30 @@ function PromoRow({
 const UPCOMING_VISIBLE = 10;
 const COMPLETED_VISIBLE = 5;
 
+/**
+ * How many completed rows the LIGHT variant server-renders when the page has
+ * published a season count.
+ *
+ * WHY ANY AT ALL. A season-scoped page says "98 promotions in the 2026 season"
+ * and then server-renders 19 upcoming rows and a button. The count is honest,
+ * but a crawler never clicks the button, so the page asserts a season it does
+ * not show. Eight rows put the most recent completed nights in the HTML behind
+ * the claim.
+ *
+ * WHY EIGHT AND NOT ALL OF THEM. Completed rows are client-mounted because
+ * data-rich pages sit near Bing's 1 MB HTML ceiling, and that constraint is
+ * unchanged. Measured on production 2026-09-04: a completed row costs about
+ * 4.0 KB of DOM plus 2.5 KB of RSC flight payload, so roughly 6.5 KB each.
+ * Baselines: Minnesota Twins 819 KB (78% of 1 MB, 120 completed rows), Detroit
+ * Red Wings 772 KB (74%), Los Angeles Dodgers 733 KB (70%). Expanding the full
+ * Dodgers archive projects to about 1.17 MB, over the ceiling; the Twins are
+ * worse. Eight rows cost about 52 KB, which lands the worst case near 83%.
+ *
+ * The remainder stays behind the expander with its count in the button label,
+ * exactly as before.
+ */
+const COMPLETED_SSR_WHEN_SEASON_SCOPED = 8;
+
 const RESALE_LIFT_VISIBLE = 3;
 
 export function PromoList({
@@ -152,6 +176,7 @@ export function PromoList({
   venueName,
   variant = 'dark',
   showAppPitch = true,
+  seasonScoped = false,
   team,
   gameContexts,
 }: {
@@ -171,6 +196,10 @@ export function PromoList({
   // it separately in the email+app pairing). Default true keeps every other
   // surface unchanged.
   showAppPitch?: boolean;
+  /** True when the page published a SEASON count above this list. Server-renders
+   *  a bounded slice of the completed archive so the HTML carries evidence for
+   *  the claim. False leaves the list byte-identical to before. */
+  seasonScoped?: boolean;
   /** Full team object — enables the upcoming rows to open the shared game modal
    *  (light variant only). Absent → rows render static, as before. */
   team?: Team;
@@ -229,8 +258,15 @@ export function PromoList({
   // CTA itself is env-gated, so unsetting the var never silently changes page
   // content. Everything else stays behind the expander unchanged.
   const pastResale = past.filter(isBobbleheadGiveaway).slice(0, RESALE_LIFT_VISIBLE);
-  const pastCollapsed =
+  const pastAfterResale =
     pastResale.length > 0 ? past.filter((p) => !pastResale.includes(p)) : past;
+  // The bounded server-rendered slice sits between the lifted resale rows and
+  // the expander. Zero-length unless the page published a season count, which
+  // keeps every fallback page byte-identical.
+  const pastSsr = seasonScoped
+    ? pastAfterResale.slice(0, COMPLETED_SSR_WHEN_SEASON_SCOPED)
+    : [];
+  const pastCollapsed = pastAfterResale.slice(pastSsr.length);
 
   // Resolves to undefined (not a null-rendering element) for non-qualifying
   // rows, so the rows' `resaleSlot &&` wrapper never emits an empty div and
@@ -349,6 +385,20 @@ export function PromoList({
                 </div>
               )}
 
+              {pastSsr.length > 0 && (
+                <div className="mb-3 space-y-3">
+                  {pastSsr.map((promo, i) => (
+                    <RedesignPromoRow
+                      key={`ps-${i}`}
+                      promo={promo}
+                      share={share}
+                      completed
+                      resaleSlot={resaleSlotFor(promo, 'light')}
+                    />
+                  ))}
+                </div>
+              )}
+
               {/* Completed promos are fully collapsed behind the expander. The
                *  count lives in the (server-rendered) button label so the
                *  data-completeness signal is in the HTML; the rows themselves
@@ -358,7 +408,7 @@ export function PromoList({
                   promos={pastCollapsed}
                   share={share}
                   completed
-                  showLabel={`Show ${pastCollapsed.length} ${pastResale.length > 0 ? 'more ' : ''}completed ${pastCollapsed.length === 1 ? 'promo' : 'promos'}`}
+                  showLabel={`Show ${pastCollapsed.length} ${pastResale.length + pastSsr.length > 0 ? 'more ' : ''}completed ${pastCollapsed.length === 1 ? 'promo' : 'promos'}`}
                   hideLabel={`Hide completed ${pastCollapsed.length === 1 ? 'promo' : 'promos'}`}
                 />
               )}

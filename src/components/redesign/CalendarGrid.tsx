@@ -29,6 +29,21 @@ interface CalendarGridProps {
   gameContexts?: GameContext[];
   /** Category filter from the chips; 'all' shows every category. */
   activeCategory?: PromoType | 'all';
+  /**
+   * Restrict the SSR prerender window to HOME days.
+   *
+   * Every windowed game day is server-rendered hidden so crawlers see the
+   * schedule, and until this flag that included away days, each carrying the
+   * OPPONENT's promos. Measured on the live Dodgers page 2026-09-04: 23 hidden
+   * day blocks, and the away half of them put Marlins Hello Kitty Day, Reds
+   * Thirsty Thursdays and Giants Fiesta Gigantes into roughly 430 of the 1,090
+   * extractable text lines that precede this team's own promo list.
+   *
+   * Away days still expand on click through the lazy-mount branch below, and
+   * the click still fires game_tap plus away_game_expanded, so no behaviour and
+   * no analytics are lost. Only the prerendering changes.
+   */
+  homeOnlyPrerender?: boolean;
 }
 
 function monthKey(year: number, month: number): string {
@@ -62,6 +77,7 @@ export function CalendarGrid({
   team,
   gameContexts,
   activeCategory = 'all',
+  homeOnlyPrerender = false,
 }: CalendarGridProps) {
   const today = useMemo(() => {
     const d = new Date();
@@ -104,15 +120,18 @@ export function CalendarGrid({
     const startMs = Date.UTC(today.year, today.month, today.day);
     const endMs = startMs + PRERENDER_WINDOW_DAYS * 86_400_000;
     const upcoming: string[] = [];
-    for (const date of gameCtxsByDate.keys()) {
+    for (const [date, ctxs] of gameCtxsByDate.entries()) {
       const ymd = parseYMD(date);
       if (!ymd) continue;
+      // A date counts as home when ANY context on it is home, which keeps both
+      // halves of a doubleheader together and never drops a home day.
+      if (homeOnlyPrerender && !ctxs.some((c) => c.isHome)) continue;
       const ms = Date.UTC(ymd.year, ymd.month, ymd.day);
       if (ms >= startMs && ms <= endMs) upcoming.push(date);
     }
     upcoming.sort();
     return new Set(upcoming.slice(0, PRERENDER_MAX));
-  }, [hasGamesData, gameCtxsByDate, today]);
+  }, [hasGamesData, gameCtxsByDate, today, homeOnlyPrerender]);
 
   const monthsWithContent = useMemo(() => {
     const set = new Set<string>();
