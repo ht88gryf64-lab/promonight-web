@@ -210,6 +210,15 @@ export function resolveSeasonScope(
   if (dated.length === 0) return null;
 
   const span = seasonSpan(dated.map((p) => p.date));
+  // DATED FAILURE, 2027-01-15: this line switches the season display off, and
+  // it does so silently. MLB bobblehead calendars publish January to February,
+  // so the first 2027 row landing beside the retained 2026 archive makes
+  // spansYears true and every affected page reverts to the upcoming-only
+  // wording, in the highest-value MLB publishing window of the year. Falling
+  // back is correct (summing two seasons describes neither), but it is a bad
+  // resting state. The proposed two-season resolver and, more importantly, the
+  // measurement it must be built from are in
+  // docs/runbook-2027-01-15-spansyears-season-switchoff.md.
   if (!span || span.spansYears) return null;
 
   const year = span.years[0];
