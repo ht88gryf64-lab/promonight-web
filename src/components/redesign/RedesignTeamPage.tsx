@@ -13,6 +13,7 @@ import { ScheduleBlock } from './ScheduleBlock';
 import { DivisionRivals } from './DivisionRivals';
 import { getDivisionRivals } from '@/lib/division-rivals';
 import { teamTitleSubtitle } from '@/lib/title-treatment';
+import { seasonClaimSentence, type ClaimMode } from '@/lib/season-scope';
 import { UpcomingPromoModalProvider } from './UpcomingPromoModal';
 import { AffiliateRail } from './AffiliateRail';
 import { ExploreCard } from './ExploreCard';
@@ -51,6 +52,14 @@ export interface RedesignTeamPageProps {
    *  asserts a number to a reader or a crawler takes these. */
   upcomingPromos: Promo[];
   upcomingCounts: Record<PromoType, number>;
+  /**
+   * How every count-bearing surface on this page words itself. Resolved once by
+   * the route with resolveClaimMode.
+   *
+   * It does NOT replace upcomingPromos / upcomingCounts, and must not: those
+   * still drive hasNoUpcoming below, which is a LAYOUT gate, not a claim.
+   */
+  claim: ClaimMode;
   displayName: string;
   gameContexts?: GameContext[];
   recurringDeals: RecurringDeal[];
@@ -79,6 +88,7 @@ export function RedesignTeamPage({
   promos,
   upcomingPromos,
   upcomingCounts,
+  claim,
   displayName,
   gameContexts,
   recurringDeals,
@@ -99,6 +109,20 @@ export function RedesignTeamPage({
   const leagueHub = getLeagueHub(team.league);
   const leagueHubHref = leagueHub?.live ? leagueHub.href : null;
 
+  // The away-day prerender change rides the LEAGUE rollout gate, not seasonScope.
+  // It is not a claim, so whether a team's rows resolve to a season is
+  // irrelevant to it; what matters is that MLB pages hold still until the
+  // ctr-diagnostic-sep2026 read date like every other change in this slice.
+  //
+  // DERIVED FROM `claim`, NOT FROM A SECOND CLOCK READ. This was
+  // isSeasonScopeLive(team.league), which calls todayYmd() again. Two
+  // independent reads of the clock inside one render can straddle the UTC
+  // rollover and disagree, producing a page with held copy and home-only
+  // prerendering, a combination neither state defines. `claim.kind !== 'held'`
+  // is the same predicate, evaluated once, upstream.
+  const scopeLive = claim.kind !== 'held';
+  const seasonScope = claim.kind === 'season' ? claim.scope : null;
+
   // THREE gates, and the distinction between the first two is load-bearing.
   //
   // hasNoUpcoming drives everything that speaks about what is COMING UP: the
@@ -116,6 +140,13 @@ export function RedesignTeamPage({
   // The previous single gate read all-time counts, so on a finished season it
   // was false everywhere: the hero advertised promos that were gone and the
   // fallback never mounted. Both halves of that are fixed here.
+  //
+  // DELIBERATELY NOT seasonScope. These three gates decide LAYOUT: which block
+  // occupies the season slot, and where the rivals grid mounts. They are not
+  // claims, and feeding them season counts would make hasNoUpcoming false on
+  // every page with a completed archive, silently relocating the rivals grid on
+  // 59 pages and swapping the calendar for the schedule block on the zero-promo
+  // ones. Counts moved to the season; these did not.
   const hasNoUpcoming =
     upcomingCounts.giveaway === 0 &&
     upcomingCounts.theme === 0 &&
@@ -172,6 +203,7 @@ export function RedesignTeamPage({
         coverage={coverage}
         playoffPromos={inPlayoffs ? playoffPromos : undefined}
         playoffContext={playoffContext}
+        claim={claim}
       />
       <TeamPageTracker
         teamSlug={team.id}
@@ -210,7 +242,13 @@ export function RedesignTeamPage({
         title={displayName.toUpperCase()}
         subtitle={teamTitleSubtitle(team)}
         venueLine={venue?.name ?? undefined}
-        scoreboard={<StatScoreboard counts={upcomingCounts} gamesCount={gameContexts?.length} />}
+        scoreboard={
+          <StatScoreboard
+            counts={seasonScope ? seasonScope.counts : upcomingCounts}
+            gamesCount={gameContexts?.length}
+            note={seasonScope ? seasonClaimSentence(seasonScope) : undefined}
+          />
+        }
       />
 
       {/* Responsive weave — one DOM, two layouts.
@@ -309,6 +347,8 @@ export function RedesignTeamPage({
                 <SeasonExplorer
                   promos={upcomingPromos}
                   promoCounts={upcomingCounts}
+                  seasonScoped={!!seasonScope}
+                  homeOnlyPrerender={scopeLive}
                   teamName={displayName}
                   teamSlug={team.id}
                   sport={team.league}
@@ -360,6 +400,8 @@ export function RedesignTeamPage({
                     venueName={venue?.name ?? null}
                     variant="light"
                     showAppPitch={false}
+                    seasonScoped={!!seasonScope}
+                    scopeLive={scopeLive}
                     team={team}
                     gameContexts={gameContexts}
                   />
@@ -391,6 +433,7 @@ export function RedesignTeamPage({
                 team={team}
                 promos={upcomingPromos}
                 promoCounts={upcomingCounts}
+                claim={claim}
                 venue={venue}
                 teamName={displayName}
                 variant="light"
@@ -412,6 +455,7 @@ export function RedesignTeamPage({
                 promos={upcomingPromos}
                 venue={venue}
                 promoCounts={upcomingCounts}
+                claim={claim}
                 variant="light"
               />
             </div>
@@ -428,6 +472,7 @@ export function RedesignTeamPage({
                 upcomingCounts={upcomingCounts}
                 coverage={coverage}
                 playoffContext={playoffContext}
+                claim={claim}
                 variant="light"
               />
             </div>

@@ -1,6 +1,7 @@
 import type { Team, Promo, PromoType, Venue, PlayoffPromo } from '@/lib/types';
 import { generateTeamFAQs, teamDisplayName, type PlayoffFAQContext, type TeamFaqCoverage } from '@/lib/promo-helpers';
 import { teamBareTitle } from '@/lib/title-treatment';
+import type { ClaimMode } from '@/lib/season-scope';
 
 interface JsonLdProps {
   team: Team;
@@ -16,6 +17,11 @@ interface JsonLdProps {
   coverage: TeamFaqCoverage;
   playoffPromos?: PlayoffPromo[];
   playoffContext?: PlayoffFAQContext;
+  /** How the FAQPage answers word their counts. Reaches the FAQ only. The
+   *  Event entities below stay UPCOMING-ONLY and must: schema.org Events
+   *  advertise attendance, so emitting completed rows would be a regression,
+   *  not the season-scope fix. */
+  claim?: ClaimMode;
 }
 
 function buildPlace(venue: Venue | null) {
@@ -38,6 +44,7 @@ export function JsonLd({
   coverage,
   playoffPromos,
   playoffContext,
+  claim = { kind: 'held' },
 }: JsonLdProps) {
   // No date filtering here any more. The page splits once with
   // splitPromosByDate and hands this component the upcoming half, so there is
@@ -103,7 +110,7 @@ export function JsonLd({
   // before this filter and 5 after, and the faqs.length > 0 guard below never
   // fires. That argument holds for a blacklist only; an allowlist could reach 0
   // and would silently drop the whole entity.
-  const faqs = generateTeamFAQs(team, upcomingPromos, venue, upcomingCounts, coverage, playoffContext).filter(
+  const faqs = generateTeamFAQs(team, upcomingPromos, venue, upcomingCounts, coverage, playoffContext, claim).filter(
     (faq) => !faq.brandPromo,
   );
   const faqSchema = faqs.length > 0

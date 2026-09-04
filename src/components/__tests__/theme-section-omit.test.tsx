@@ -29,6 +29,7 @@ import { test } from 'node:test';
 import assert from 'node:assert';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { TeamContentSections } from '../team-content-sections';
+import { resolveSeasonScope, type ClaimMode } from '@/lib/season-scope';
 import type { Team, Promo, PromoType, Venue } from '@/lib/types';
 
 const team: Team = {
@@ -54,9 +55,14 @@ const counts = (theme: number): Record<PromoType, number> =>
   ({ giveaway: 0, theme, kids: 0, food: 0 });
 
 /** The theme paragraph only. The <ul> below it is out of scope; see the header. */
-function paragraph(promos: Promo[], theme: number, variant: 'dark' | 'light'): string {
+function paragraph(
+  promos: Promo[],
+  theme: number,
+  variant: 'dark' | 'light',
+  claim: ClaimMode = { kind: 'remaining' },
+): string {
   const html = renderToStaticMarkup(
-    <TeamContentSections team={team} promos={promos} venue={venue} promoCounts={counts(theme)} variant={variant} />,
+    <TeamContentSections team={team} promos={promos} venue={venue} promoCounts={counts(theme)} claim={claim} variant={variant} />,
   );
   const m = html.match(/<p[^>]*>(The Testville Niners have[^<]*)<\/p>/);
   assert.ok(m, `${variant}: the theme paragraph did not render at all`);
@@ -71,13 +77,38 @@ test('OMIT: no dated theme night leaves the count sentence alone and adds nothin
 
     assert.equal(
       p,
-      'The Testville Niners have 1 theme night scheduled at Test Park during the 2026 season.',
+      'The Testville Niners have 1 theme night still to come at Test Park.',
       `${variant}: the paragraph should be the count sentence and nothing else`,
     );
     assert.ok(!/Next up/.test(p), `${variant}: a dangling "Next up" rendered`);
     assert.ok(!/none scheduled|check back|to be announced|TBA|TBD/i.test(p), `${variant}: filler rendered`);
     assert.ok(!/special entertainment|themed merchandise/i.test(p), `${variant}: the old boilerplate returned`);
     assert.ok(!/Invalid Date/.test(p), `${variant}: a dateless promo was dated`);
+  }
+});
+
+// The SEASON path reaches the same omit branch, and unlike the fallback case
+// above it is genuinely reachable: a club whose season has finished has a real
+// theme-night count and nothing left to name. The paragraph must state the
+// season and stop, with no dangling "Next up:".
+test('OMIT: a finished season states its count and names nothing as next up', () => {
+  const past = [
+    themePromo({ date: '2026-04-02', title: 'Opening Theme' }),
+    themePromo({ date: '2026-05-02', title: 'Second Theme' }),
+  ];
+  const season = resolveSeasonScope(past, 'MLB', '2026-12-01');
+  assert.ok(season, 'fixture should resolve');
+  for (const variant of ['dark', 'light'] as const) {
+    // No upcoming rows: the caller passes an empty upcoming array, which is what
+    // the route does once the season is over.
+    const p = paragraph([], 2, variant, { kind: 'season', scope: season! });
+    // No forward clause: the ListLabel beneath supplies the timing.
+    assert.equal(
+      p,
+      'The Testville Niners have 2 theme nights at Test Park in the 2026 season.',
+      `${variant}: finished-season paragraph`,
+    );
+    assert.ok(!/Next up/.test(p), `${variant}: a dangling "Next up" rendered`);
   }
 });
 

@@ -111,3 +111,20 @@ export function scheduledPeriodPhrase(span: SeasonSpan | null): string {
   if (!span.spansYears || !span.monthRangeLabel) return `in ${span.yearLabel}`;
   return `between ${span.monthRangeLabel.replace(' to ', ' and ')}`;
 }
+
+/**
+ * The period phrase for a population that is NOT season-resolved, e.g.
+ * " between October 2026 and April 2027" for a club whose remaining rows cross
+ * a New Year. Leading space included so callers append it without a separator;
+ * empty string when the rows carry no usable dates.
+ *
+ * Sibling of scheduledPeriodPhrase, and separate from it because this one is
+ * appended to a clause that has already named its population ("still to come")
+ * rather than opening one.
+ */
+export function remainingPeriodPhrase(dates: readonly string[]): string {
+  const span = seasonSpan(dates);
+  if (!span) return '';
+  if (!span.spansYears || !span.monthRangeLabel) return ` in ${span.yearLabel}`;
+  return ` between ${span.monthRangeLabel.replace(' to ', ' and ')}`;
+}

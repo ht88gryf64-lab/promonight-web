@@ -13,7 +13,7 @@ import {
   enrichGamesForTeam,
   getStillAlivePlayoffTeamIds,
 } from '@/lib/data';
-import type { PromoType } from '@/lib/types';
+import type { Promo, PromoType } from '@/lib/types';
 import { TeamHero } from '@/components/team-hero';
 import { TeamCalendar } from '@/components/team-calendar';
 import { ScheduleReleaseVideoCard } from '@/components/ScheduleReleaseVideoCard';
@@ -28,7 +28,7 @@ import { TeamFAQ } from '@/components/team-faq';
 import { TeamRelatedAggregators } from '@/components/team-related-aggregators';
 import { JsonLd } from '@/components/json-ld';
 import { PlayoffSection } from '@/components/playoff-section';
-import { countPromosByType, extractPlayoffOpponent, isUpcomingPromo, splitPromosByDate, teamDisplayName } from '@/lib/promo-helpers';
+import { countPromosByType, extractPlayoffOpponent, isTicketMechanicRow, isUpcomingPromo, splitPromosByDate, teamDisplayName } from '@/lib/promo-helpers';
 import { TeamPageTracker } from '@/components/analytics-events';
 import { EngagementTracker } from '@/components/analytics/EngagementTracker';
 import { TicketmasterCTA } from '@/components/affiliates/TicketmasterCTA';
@@ -41,6 +41,7 @@ import { AD_SLOTS } from '@/lib/ads/slots';
 import { isRedesignEnabled } from '@/lib/redesign';
 import { isTitleTreatmentTeam, teamBareTitle } from '@/lib/title-treatment';
 import { getCoverageCounts } from '@/lib/get-coverage-counts';
+import { isSeasonScopeLive, resolveClaimMode } from '@/lib/season-scope';
 import { RedesignTeamPage } from '@/components/redesign/RedesignTeamPage';
 
 export const revalidate = 86400;
@@ -112,6 +113,14 @@ export async function generateMetadata({
   // defensively, when not even the first promo fits the budget).
   const DESC_MAX = 160;
   const todayStr = new Date().toISOString().split('T')[0];
+  // The snippet is the ONE surface the ctr-diagnostic-sep2026 read measures
+  // directly, and the rows this filter removes are all on los-angeles-dodgers,
+  // which is in the treatment arm. So the exclusion rides the same league gate
+  // as everything else in this change: MLB snippets do not move until the read
+  // date. Without this the meta description of the highest-impression page on
+  // the site would change mid-experiment.
+  const scopeLive = isSeasonScopeLive(team.league, todayStr);
+  const keepForDesc = (p: Promo) => (scopeLive ? !isTicketMechanicRow(p) : true);
   const monthDay = (d: string) =>
     new Date(d + 'T12:00:00').toLocaleDateString('en-US', {
       month: 'short',
@@ -146,6 +155,10 @@ export async function generateMetadata({
             p.type === 'theme' &&
             typeof p.date === 'string' &&
             p.date !== '' &&
+            // "Early Entry" is typed `theme`, so without this the snippet under a
+            // title promising THEME NIGHTS could read "Next theme night: Early
+            // Entry", which promises an event and delivers a door time.
+            keepForDesc(p) &&
             isUpcomingPromo(p, todayStr),
         )
         .sort((a, b) => a.date.localeCompare(b.date))[0] ?? null
@@ -153,6 +166,9 @@ export async function generateMetadata({
 
   const upcomingForDesc = promos
     .filter((p) => isUpcomingPromo(p, todayStr))
+    // Ticket mechanics are dropped from the SNIPPET only; they stay in the
+    // on-page list and in every count. See TICKET_MECHANIC_TITLES.
+    .filter(keepForDesc)
     .sort((a, b) => a.date.localeCompare(b.date))
     // The named theme night is dropped from the list it leads, so the same
     // promo is never printed twice in one 160-char snippet. Reference
@@ -304,6 +320,25 @@ export default async function TeamPage({
   const { upcoming: upcomingPromos } = splitPromosByDate(promos);
   const upcomingCounts = countPromosByType(upcomingPromos);
 
+  // ── The second derivation, and the reason the paragraph above is now wrong ──
+  //
+  // The note above was written when every count on the page had to be upcoming,
+  // and it was right about the bug it closed. It was wrong about the rule. The
+  // rule is LABEL MATCHES POPULATION (see promo-helpers.ts), and the narrow
+  // version of it produced the mirror defect: upcoming-only counts published
+  // under the words "the 2026 season" on 142 of 169 pages, so on 2026-09-04 this
+  // page said 19 where the season held 98.
+  //
+  // seasonScope is therefore a SECOND population, deliberately, and it is null
+  // whenever the rows cannot support a season claim (multi-year archive, wrong
+  // year, MLB before the rollout date). Consumers take one or the other and
+  // print the matching noun; nobody may print a number from one under the
+  // other's label.
+  //
+  // upcomingCounts is NOT retired. It still drives the layout gates in
+  // RedesignTeamPage, which are not claims and must not move.
+  const claimMode = resolveClaimMode(promos, team.league);
+
   const displayName = teamDisplayName(team);
   const recurringDeals = await getRecurringDealsForTeam(team.id);
 
@@ -327,6 +362,7 @@ export default async function TeamPage({
         promos={promos}
         upcomingPromos={upcomingPromos}
         upcomingCounts={upcomingCounts}
+        claim={claimMode}
         displayName={displayName}
         gameContexts={gameContexts}
         recurringDeals={recurringDeals}
@@ -350,6 +386,7 @@ export default async function TeamPage({
         coverage={coverage}
         playoffPromos={inPlayoffs ? playoffPromos : undefined}
         playoffContext={playoffContext}
+        claim={claimMode}
       />
       <TeamPageTracker
         teamSlug={team.id}
@@ -363,11 +400,16 @@ export default async function TeamPage({
         <AdSlot config={AD_SLOTS.HEADER_LEADERBOARD} pageType="team_page" />
       </section>
 
+      {/* Rollback-only template. The hero's first StatBox is labelled "Total
+       *  Promos", so on a season-scoped page it has to carry the season total:
+       *  left on the upcoming count it read "19 Total Promos" directly above
+       *  prose saying 98 promotional events in the 2026 season. Held and
+       *  fallback pages pass exactly what they passed before. */}
       <TeamHero
         team={team}
         venue={venue}
-        promoCount={upcomingPromos.length}
-        promoCounts={upcomingCounts}
+        promoCount={claimMode.kind === 'season' ? claimMode.scope.total : upcomingPromos.length}
+        promoCounts={claimMode.kind === 'season' ? claimMode.scope.counts : upcomingCounts}
       />
 
       <section className="px-6 py-4">
@@ -487,6 +529,7 @@ export default async function TeamPage({
         team={team}
         promos={upcomingPromos}
         promoCounts={upcomingCounts}
+        claim={claimMode}
         venue={venue}
         teamName={displayName}
       />
@@ -501,6 +544,7 @@ export default async function TeamPage({
       ) : (
         <PromoList
           league={team.league}
+          scopeLive={claimMode.kind !== 'held'}
           promos={promos}
           teamSlug={team.id}
           teamName={displayName}
@@ -518,6 +562,7 @@ export default async function TeamPage({
         promos={upcomingPromos}
         venue={venue}
         promoCounts={upcomingCounts}
+        claim={claimMode}
       />
 
       <TeamFAQ
@@ -527,6 +572,7 @@ export default async function TeamPage({
         upcomingCounts={upcomingCounts}
         coverage={coverage}
         playoffContext={playoffContext}
+        claim={claimMode}
       />
 
       <section className="px-6 py-6 border-t border-border-subtle">

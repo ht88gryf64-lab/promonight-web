@@ -7,6 +7,7 @@ import { RedesignPromoRow } from '@/components/redesign/RedesignPromoRow';
 import { LazyPromoRows } from '@/components/redesign/LazyPromoRows';
 import { PromoArrivalHighlight } from '@/components/redesign/PromoArrivalHighlight';
 import { isBobbleheadGiveaway, isEbayResaleActive } from '@/lib/ebay';
+import { splitCompletedForRender } from '@/lib/render-windows';
 import { promoAnchorId, splitPromosByDate } from '@/lib/promo-helpers';
 import { seasonSpan, completedHeading, completedSubline } from '@/lib/season-label';
 import type { Promo, PromoType, Team } from '@/lib/types';
@@ -56,11 +57,17 @@ function PromoRow({
   share,
   completed = false,
   resaleSlot,
+  scopeLive = false,
 }: {
   promo: Promo;
   share: PromoShareContext;
   completed?: boolean;
   resaleSlot?: ReactNode;
+  /** Whether this league's rollout gate has opened. The Ticket Package pill is
+   *  a visible change, and the rollback-only template is still an MLB render
+   *  path, so it holds with everything else rather than being the one thing in
+   *  the change with no gate. */
+  scopeLive?: boolean;
 }) {
   const { day, weekday, month } = formatPromoDate(promo.date);
   const typeColor = TYPE_COLORS[promo.type];
@@ -101,7 +108,7 @@ function PromoRow({
       <div className="flex-1 min-w-0 pr-8">
         <div className="flex flex-wrap items-center gap-2 mb-1.5">
           <span className="text-lg" aria-hidden="true">{promo.icon}</span>
-          <PromoBadge type={promo.type} />
+          <PromoBadge type={promo.type} gated={scopeLive && isPurchaseGated(promo)} />
           {completed && (
             <span className="inline-flex items-center gap-1 text-[10px] font-mono tracking-[0.5px] uppercase text-text-dim border border-border-subtle rounded-full px-2 py-0.5">
               Completed
@@ -139,6 +146,58 @@ function PromoRow({
 const UPCOMING_VISIBLE = 10;
 const COMPLETED_VISIBLE = 5;
 
+/**
+ * How many completed rows the LIGHT variant server-renders when the page has
+ * published a season count.
+ *
+ * WHY ANY AT ALL. A season-scoped page says "98 promotions in the 2026 season"
+ * and then server-renders the upcoming rows and a button. The count is honest,
+ * but a crawler never clicks the button, so the page asserts a season it does
+ * not show. Eight rows put the most recent completed nights in the HTML behind
+ * the claim. That matters most in the season-complete state, where the upcoming
+ * list is empty and these are the only promo rows in the served HTML.
+ *
+ * WHY EIGHT AND NOT ALL OF THEM. Completed rows are client-mounted because
+ * data-rich pages sit near Bing's 1 MB HTML ceiling, and that constraint is
+ * unchanged.
+ *
+ * THE COST PER ROW, MEASURED PROPERLY. An earlier version of this comment put
+ * it at 6,478 B (4,009 DOM + 2,469 flight) and was wrong by 1.93x, in two ways.
+ * React Flight DEDUPLICATES: a collapsed row is not serialized as an object
+ * inside LazyPromoRows' props, it is a path pointer into gameContexts, which
+ * already carries every promo. Measured on the served Dodgers payload, all 76
+ * collapsed rows cost 5,264 B TOTAL, about 68 B each, not 2,469 B each. And the
+ * 4,009 B DOM figure was taken from lifted resale rows, which carry an 862 B
+ * eBay CTA block that these rows deliberately do not.
+ *
+ * Marginal cost of moving one row from collapsed to server-rendered:
+ *   ~3,030 B DOM  +  389 B flight element  -  68 B pointer reclaimed  =  ~3,350 B
+ *
+ * Baselines, cache-busting curl of production 2026-09-04, uncompressed:
+ *   mlb/texas-rangers        846,229 B   80.7% of 1 MiB   <- heaviest page on the site
+ *   mlb/minnesota-twins      819,655 B   78.2%
+ *   mlb/miami-marlins        800,512 B   76.3%
+ *   nhl/detroit-red-wings    772,271 B   73.6%   (falls back, so unaffected)
+ *   mlb/los-angeles-dodgers  732,902 B   69.9%
+ *
+ * Eight rows cost about 26.8 KB, so the worst page lands near 83% even if the
+ * calendar trim saves nothing. The change is in fact net NEGATIVE on weight:
+ * restricting the calendar's prerender window to home days removes 92 to 140 KB
+ * of hidden away-game blocks from every MLB and NFL page, far more than these
+ * rows add.
+ *
+ * The eight are IN ADDITION to the up-to-three lifted resale rows, so the
+ * server-rendered completed block tops out at eleven. Only the lifted three
+ * carry the eBay CTA; these eight are passed no resale slot, so the affiliate
+ * surface does not grow with them.
+ *
+ * The remainder stays behind the expander with its count in the button label.
+ * On a team whose archive is eight rows or fewer after the lift there is no
+ * remainder and the expander does not render at all, which is correct rather
+ * than a regression: nothing is hidden.
+ */
+const COMPLETED_SSR_WHEN_SEASON_SCOPED = 8;
+
 const RESALE_LIFT_VISIBLE = 3;
 
 export function PromoList({
@@ -152,6 +211,8 @@ export function PromoList({
   venueName,
   variant = 'dark',
   showAppPitch = true,
+  seasonScoped = false,
+  scopeLive = false,
   team,
   gameContexts,
 }: {
@@ -171,6 +232,13 @@ export function PromoList({
   // it separately in the email+app pairing). Default true keeps every other
   // surface unchanged.
   showAppPitch?: boolean;
+  /** True when the page published a SEASON count above this list. Server-renders
+   *  a bounded slice of the completed archive so the HTML carries evidence for
+   *  the claim. False leaves the list byte-identical to before. */
+  seasonScoped?: boolean;
+  /** Whether this league's rollout gate has opened. Only the rollback-only dark
+   *  variant reads it, for the Ticket Package pill. */
+  scopeLive?: boolean;
   /** Full team object — enables the upcoming rows to open the shared game modal
    *  (light variant only). Absent → rows render static, as before. */
   team?: Team;
@@ -217,6 +285,10 @@ export function PromoList({
   // it IS an MLB surface at season end, not an NHL-only one.
   const pastPointerYears = pastSpan ? `${pastSpan.yearLabel} ` : '';
 
+  // State (b) from src/lib/season-scope.ts, recomputed here from the rows this
+  // component already holds rather than threaded as a fourth prop.
+  const seasonComplete = seasonScoped && upcoming.length === 0 && past.length > 0;
+
   const upcomingVisible = upcoming.slice(0, UPCOMING_VISIBLE);
   const upcomingHidden = upcoming.slice(UPCOMING_VISIBLE);
   const pastVisible = past.slice(0, COMPLETED_VISIBLE);
@@ -227,10 +299,24 @@ export function PromoList({
   // eBay resale CTA. The lifted rows are content and render regardless of the
   // campid (same contract as the hub's Earlier-this-season section) — only the
   // CTA itself is env-gated, so unsetting the var never silently changes page
-  // content. Everything else stays behind the expander unchanged.
-  const pastResale = past.filter(isBobbleheadGiveaway).slice(0, RESALE_LIFT_VISIBLE);
-  const pastCollapsed =
-    pastResale.length > 0 ? past.filter((p) => !pastResale.includes(p)) : past;
+  // content.
+  //
+  // These three stay the ONLY server-rendered rows carrying the resale CTA. The
+  // season-scoped slice below adds up to eight more completed rows to the HTML
+  // and deliberately passes them no slot, so this cap is a cap on the affiliate
+  // surface and not merely on the lift.
+  // A partition of `past`: every completed row lands in exactly one group. The
+  // arithmetic lives in src/lib/render-windows.ts and is tested there.
+  const {
+    resale: pastResale,
+    ssr: pastSsr,
+    collapsed: pastCollapsed,
+  } = splitCompletedForRender(
+    past,
+    isBobbleheadGiveaway,
+    RESALE_LIFT_VISIBLE,
+    seasonScoped ? COMPLETED_SSR_WHEN_SEASON_SCOPED : 0,
+  );
 
   // Resolves to undefined (not a null-rendering element) for non-qualifying
   // rows, so the rows' `resaleSlot &&` wrapper never emits an empty div and
@@ -254,11 +340,20 @@ export function PromoList({
         <PromoArrivalHighlight />
         <div className="max-w-5xl mx-auto">
           <div className="mb-6">
+            {/* SEASON-COMPLETE HEADING. With a published season count and nothing
+             *  left, "Coming up / UPCOMING PROMOS" is a large heading over the
+             *  sentence "there are none", which is the single strongest
+             *  empty-page signal on the page. Every MLB club enters this state,
+             *  and the Dodgers cluster alone carries roughly 26,000 monthly
+             *  impressions, so the heading has to name what the page actually
+             *  holds: the season. Only the words change; the rows, the archive
+             *  below and the ordering are untouched. Held and fallback pages
+             *  keep the original heading byte for byte. */}
             <span className="font-rd text-[11px] uppercase tracking-[0.14em] text-rd-ink-faint">
-              Coming up
+              {seasonComplete ? 'The full season' : 'Coming up'}
             </span>
             <h2 className="rd-display text-3xl md:text-4xl text-rd-ink mt-1">
-              UPCOMING PROMOS
+              {seasonComplete ? `${pastSpan?.yearLabel ?? ''} SEASON PROMOS`.trim() : 'UPCOMING PROMOS'}
             </h2>
             {upcoming.length > 0 && (
               <p className="text-rd-ink-faint text-xs font-rd tracking-[0.02em] mt-2">
@@ -306,6 +401,17 @@ export function PromoList({
               <p className="text-rd-ink-soft text-lg">No upcoming promos yet</p>
               <p className="text-rd-ink-faint text-sm mt-1">Check back later for the latest schedule</p>
             </div>
+          ) : seasonComplete ? (
+            /* States what the page HAS rather than what it lacks. Deliberately
+             * not "the season is complete": zero upcoming rows means our data
+             * holds nothing ahead, which is not the same as the season being
+             * over or our record being exhaustive. */
+            <div className="py-2">
+              <p className="text-rd-ink-soft text-sm">
+                All {past.length} {teamName} {past.length === 1 ? 'promotion' : 'promotions'} on record for the{' '}
+                {pastSpan?.yearLabel} season are below.
+              </p>
+            </div>
           ) : (
             <div className="text-center py-8">
               <p className="text-rd-ink-soft text-sm">
@@ -332,9 +438,11 @@ export function PromoList({
                 </p>
               </div>
 
-              {/* Lifted resale rows are the bounded exception to the collapse
-               *  below: at most RESALE_LIFT_VISIBLE rows, so the 1MB SSR-HTML
-               *  concern the collapse exists for stays handled. */}
+              {/* Lifted resale rows: at most RESALE_LIFT_VISIBLE, and the only
+               *  server-rendered rows that carry the eBay CTA. Together with the
+               *  season slice below the collapse admits at most
+               *  RESALE_LIFT_VISIBLE + COMPLETED_SSR_WHEN_SEASON_SCOPED rows,
+               *  which is what keeps the 1MB SSR-HTML concern handled. */}
               {pastResale.length > 0 && (
                 <div className="mb-3 space-y-3">
                   {pastResale.map((promo, i) => (
@@ -349,6 +457,27 @@ export function PromoList({
                 </div>
               )}
 
+              {/* NO resaleSlot on these rows, and that is the point. The eBay
+               *  CTA is capped at RESALE_LIFT_VISIBLE lifted rows above; these
+               *  eight previously lived inside LazyPromoRows, which passes no
+               *  slot, so they carried no CTA. Passing one here would quietly
+               *  take the server-rendered affiliate surface from 3 to as many
+               *  as 11 and move the placement:'team_page' resale_click
+               *  baseline mid-rollout. They are here for the content, not the
+               *  CTA. */}
+              {pastSsr.length > 0 && (
+                <div className="mb-3 space-y-3">
+                  {pastSsr.map((promo, i) => (
+                    <RedesignPromoRow
+                      key={`ps-${i}`}
+                      promo={promo}
+                      share={share}
+                      completed
+                    />
+                  ))}
+                </div>
+              )}
+
               {/* Completed promos are fully collapsed behind the expander. The
                *  count lives in the (server-rendered) button label so the
                *  data-completeness signal is in the HTML; the rows themselves
@@ -358,7 +487,7 @@ export function PromoList({
                   promos={pastCollapsed}
                   share={share}
                   completed
-                  showLabel={`Show ${pastCollapsed.length} ${pastResale.length > 0 ? 'more ' : ''}completed ${pastCollapsed.length === 1 ? 'promo' : 'promos'}`}
+                  showLabel={`Show ${pastCollapsed.length} ${pastResale.length + pastSsr.length > 0 ? 'more ' : ''}completed ${pastCollapsed.length === 1 ? 'promo' : 'promos'}`}
                   hideLabel={`Hide completed ${pastCollapsed.length === 1 ? 'promo' : 'promos'}`}
                 />
               )}
@@ -395,7 +524,7 @@ export function PromoList({
           <>
             <div className="space-y-3">
               {upcomingVisible.map((promo, i) => (
-                <PromoRow key={`u-${i}`} promo={promo} share={share} />
+                <PromoRow key={`u-${i}`} promo={promo} share={share} scopeLive={scopeLive} />
               ))}
             </div>
 
@@ -408,7 +537,7 @@ export function PromoList({
                 </summary>
                 <div className="mt-4 space-y-3">
                   {upcomingHidden.map((promo, i) => (
-                    <PromoRow key={`uh-${i}`} promo={promo} share={share} />
+                    <PromoRow key={`uh-${i}`} promo={promo} share={share} scopeLive={scopeLive} />
                   ))}
                 </div>
               </details>
@@ -449,6 +578,7 @@ export function PromoList({
                   key={`rp-${i}`}
                   promo={promo}
                   share={share}
+                  scopeLive={scopeLive}
                   completed
                   resaleSlot={resaleSlotFor(promo, 'dark')}
                 />
@@ -468,6 +598,7 @@ export function PromoList({
                       key={`ph-${i}`}
                       promo={promo}
                       share={share}
+                  scopeLive={scopeLive}
                       completed
                       resaleSlot={resaleSlotFor(promo, 'dark')}
                     />
