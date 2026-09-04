@@ -662,3 +662,107 @@ still correct.
   `ssoProtection: all_except_custom_domains`, so anonymous cache-busting curl
   against a preview will be walled, the same trap recorded in
   `audit/cfb-phase3-gate.md`.
+
+---
+
+# Gate verification, preview deploy 2026-09-04
+
+Preview: `promonight-bmkb4jukb-btj8tk69dk-7318s-projects.vercel.app`
+(`dpl_CCr86mMyHoyRjdx6DgXiDwwENo4N`, READY). Fetched with `vercel curl`, which
+carries the protection bypass; the project has
+`ssoProtection: all_except_custom_domains`, so anonymous curl is walled.
+
+**This deploy is also the green production build.** Vercel built all 551 pages
+successfully. The local `npm run build` failure is environmental and was proven
+so by building `main` in the same worktree, which failed identically.
+
+## The four claim states, at the render
+
+| page | state | what it publishes |
+|---|---|---|
+| `nfl/seattle-seahawks` | season | tiles 1/12/0/2 + 17 Games; "15 promotions in the 2026 season, 13 still to come"; FAQ "promotional events in the 2026 season, including 1 giveaway night, 12 theme nights, 2 kids/family events" |
+| `wnba/minnesota-lynx` | season | tiles 17/9/5/2 (was 3/1/1/0); "33 promotions in the 2026 season, 5 still to come"; "11 of the 17 giveaways require a ticket package" |
+| `nhl/detroit-red-wings` | remaining | tiles unchanged 6/72/4; FAQ "promotional events still to come **between October 2026 and April 2027**", no season noun; archive "COMPLETED 2025 TO 2026 PROMOS", "30 completed events, October 2025 to April 2026" |
+| `mlb/los-angeles-dodgers` | **held** | tiles 6/11/1/1 + 163 Games; "19 promotional events **coming up in the 2026 season**"; "79 completed events this season"; heading "UPCOMING PROMOS"; expander "Show 76 more completed promos" |
+
+Every Dodgers string is what production serves today. MLB is unchanged.
+
+## Page weight, corrected ~3,350 B/row
+
+| league | page | before | after | delta | % of 1 MiB |
+|---|---|---|---|---|---|
+| MLB | texas-rangers (heaviest on site) | 846,229 | 836,588 | -9,641 | **79.8%** |
+| MLB | los-angeles-dodgers | 733,752 | 723,736 | -10,016 | 69.0% |
+| NHL | detroit-red-wings | 772,271 | 757,778 | -14,493 | 72.3% |
+| MLS | san-diego-fc | 370,401 | 393,855 | **+23,454** | 37.6% |
+| NFL | seattle-seahawks | 300,082 | 294,189 | -5,893 | 28.1% |
+| WNBA | minnesota-lynx | - | 264,942 | - | 25.3% |
+| NBA | new-york-knicks | 149,253 | 147,214 | -2,039 | 14.0% |
+
+Nothing approaches 1 MB; the worst page sits at 79.8% and got lighter.
+`mls/san-diego-fc` is the one that grew, and it is the expected shape: a
+season-resolved page gaining 8 server-rendered completed rows. +23,454 B over 8
+rows is ~2,930 B each, against the predicted ~3,350 B, the gap explained by the
+absent eBay CTA blocks in this environment. **The old 6,478 B figure would have
+predicted +51,824 B, more than double the truth.**
+
+The MLB pages shrank despite being held. That is date and environment drift, not
+a code change: production HTML was rendered up to a day earlier (one or two more
+upcoming rows in the SSR set) and carries eBay CTA blocks this preview does not.
+Byte identity across a day boundary is not a clean test; the string-level
+comparison above is, and it passed.
+
+## Rivals grid did not move
+
+Every `order-*` slot compared production against preview:
+
+```
+MLB dodgers      order-[41] 2->2   order-[12] 0->0   "Around the division" 2->2
+                 order-[10] 2->2   order-[11] 0->0   order-[42] 2->2   order-[43] 2->2
+NHL red-wings    identical on all seven
+```
+
+## capture_prompt_shown still fires
+
+Verified in the BUILT client bundle served by the team page
+(`/_next/static/chunks/3894-ea39473352c3e5ab.js`), not only in source. The
+capture engine's TriggerSignal list ships intact:
+
+```js
+u = ["away_game_expanded","game_tap","promo_card_tap"],
+d = {away_game_expanded:3, promo_card_tap:2, game_tap:1},
+c = {away_game_expanded:2, game_tap:4, promo_card_tap:3}
+```
+
+`capture_prompt_shown`, `away_game_expanded` and `game_tap` are all present, and
+no prerender identifier appears anywhere near the handler, so the signal path is
+independent of the prerender-window change.
+
+The away-day trim behaves as intended on `nfl/seattle-seahawks`, where the
+league gate is open:
+
+| | production | preview |
+|---|---|---|
+| hidden day blocks | 5 | **3** |
+| away detail headers ("At {venue}") | 2 | **0** |
+| away hotel CTAs | 4 | **2** |
+| **away calendar cells** | **2** | **2** |
+| away legend swatch | 1 | 1 |
+
+Away days keep their calendar cells and stay clickable; only their hidden SSR
+detail was trimmed, and it lazy-mounts on click. The button-count delta
+(57 to 56) reconciles exactly: minus 2 away-block share buttons, minus 1
+expander that no longer renders because the archive is fully shown, plus 2 new
+completed-row share buttons.
+
+## Bounded completed rows
+
+| page | SSR completed rows | expander |
+|---|---|---|
+| nfl/seattle-seahawks | 0 -> **2** | "Show 2 completed promos" -> none (no remainder) |
+| wnba/minnesota-lynx | -> **8** | "Show 20 more completed promos" (8 + 20 = 28) |
+| mlb/los-angeles-dodgers (held) | 3 -> **3** | "Show 76 more completed promos", unchanged |
+| nhl/detroit-red-wings (remaining) | 1 -> **1** | "Show 29 more completed promos", unchanged |
+
+The cap holds at 8, fallback and held pages are untouched, and no page renders
+more than 11 server-rendered completed rows.
