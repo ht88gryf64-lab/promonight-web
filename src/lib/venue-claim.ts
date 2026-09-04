@@ -4,7 +4,7 @@
 // WHY THIS IS ITS OWN MODULE. Before wave 2 a venue page printed facts with no
 // visible way to check them, and a hub-level "verified" flag that said nothing
 // about WHICH fact was checked or WHEN. The pipeline now writes two per-field
-// maps (`fieldStates`, `verifiedAtByField`), and everything a page says about a
+// maps (`fieldStates`, `observedAtByField`), and everything a page says about a
 // single claim derives from them here, so the bag card, the parking card and
 // the transit row cannot drift into three different answers to the same
 // question.
@@ -28,7 +28,7 @@ export type ClaimField =
   | 'food'
   | 'nearby';
 
-type ClaimFacts = Pick<VenueHub, 'sources' | 'fieldStates' | 'verifiedAtByField'> &
+type ClaimFacts = Pick<VenueHub, 'sources' | 'fieldStates' | 'observedAtByField'> &
   Partial<Pick<VenueHub, 'bagPolicyUrl' | 'officialParkingUrls' | 'parkingLotMapUrl'>>;
 
 /**
@@ -88,8 +88,17 @@ export function claimSourceHost(url: string): string {
 /** "Sep 3, 2026" for this field's own verification stamp, or null when the doc
  *  carries no per-field date. Never falls back to the doc-level `verifiedAt`:
  *  a date copied across fields is the claim this map exists to stop. */
-export function claimVerifiedOn(hub: ClaimFacts, field: ClaimField): string | null {
-  const iso = hub.verifiedAtByField?.[field];
+/**
+ * The date we READ the source page carrying this claim, never the date we wrote
+ * the document. Until 2026-09-04 this read `verifiedAtByField`, which the writer
+ * generated with one timestamp taken at write time: eight live buildings carried
+ * 55 fields sharing two stamps 1 ms apart, each overstating its field's real read
+ * time by 1.3 to 24.4 hours, and the page printed it as "Verified <date>".
+ * Returns null when the harvest recorded no read time, which is every document
+ * written before the cutover, so those simply show no date.
+ */
+export function claimSourceReadOn(hub: ClaimFacts, field: ClaimField): string | null {
+  const iso = hub.observedAtByField?.[field];
   if (typeof iso !== 'string') return null;
   const t = Date.parse(iso);
   if (Number.isNaN(t)) return null;
@@ -141,5 +150,5 @@ export function claimRow(hub: ClaimFacts, field: ClaimField, fallbackShow: boole
     };
   }
   if (!fallbackShow) return { show: false, reason: null, sourceUrl: null, verifiedOn: null };
-  return { show: true, reason: null, sourceUrl, verifiedOn: claimVerifiedOn(hub, field) };
+  return { show: true, reason: null, sourceUrl, verifiedOn: claimSourceReadOn(hub, field) };
 }

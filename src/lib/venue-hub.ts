@@ -68,7 +68,8 @@ export interface VenueHubTenantOverlay {
   sources: Record<string, string>;
   /** Per-field verification dates on the overlay, same contract as the
    *  building's map. {} on an overlay written before wave 2. */
-  verifiedAtByField: Record<string, string>;
+  /** Per-field time the source page was READ, from the harvest. See venue-claim. */
+  observedAtByField: Record<string, string>;
 }
 
 /**
@@ -128,7 +129,8 @@ export interface VenueHub {
    *  claim prints THIS date, never the doc-level `verifiedAt`, so a field
    *  checked in one wave and a field checked in another never share a date
    *  because the document has one. {} on a doc written before the map existed. */
-  verifiedAtByField: Record<string, string>;
+  /** Per-field time the source page was READ, from the harvest. See venue-claim. */
+  observedAtByField: Record<string, string>;
   /** Per-field state. {} on a doc written before the map existed, which reads
    *  as "no opinion" and leaves every pre-existing gate in charge. */
   fieldStates: Record<string, VenueFieldState>;
@@ -303,7 +305,7 @@ export function toVenueHub(
     photoUrl: typeof d.photoUrl === 'string' && d.photoUrl ? d.photoUrl : null,
     photoAttribution: typeof d.photoAttribution === 'string' && d.photoAttribution ? d.photoAttribution : null,
     verified: d.verified === true,
-    verifiedAtByField: stringMap(d.verifiedAtByField),
+    observedAtByField: stringMap(d.observedAtByField),
     // A state other than `rendered` means the pipeline decided this field does
     // not render. Gating HERE, at the one mapper every hub renderer reads, is
     // the lesson of the surface-escape framework item: an exclusion applied at
@@ -333,7 +335,7 @@ export const getVenueHub = cache(async (slug: string): Promise<VenueHub | null> 
       bagPolicyException: t.bagPolicyException ?? null,
       verified: t.verified === true,
       sources: stringMap(t.sources),
-      verifiedAtByField: stringMap(t.verifiedAtByField),
+      observedAtByField: stringMap(t.observedAtByField),
     };
   });
   // Fetch, map, then GATE. The view is applied here and nowhere else, so a
