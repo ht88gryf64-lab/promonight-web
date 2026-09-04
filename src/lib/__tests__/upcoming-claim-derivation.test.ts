@@ -6,7 +6,7 @@ import {
   isUpcomingPromo,
   splitPromosByDate,
 } from '../promo-helpers';
-import { resolveSeasonScope } from '../season-scope';
+import { resolveClaimMode, resolveSeasonScope } from '../season-scope';
 import type { Promo, Team, Venue } from '../types';
 
 // The rule under test: LABEL MATCHES POPULATION. A count that reaches DOM,
@@ -119,7 +119,7 @@ test('FAQ emits no promo claim at all for a finished season', () => {
 
 test('with no season resolved, FAQ counts describe the upcoming half and say so', () => {
   const { upcoming } = splitPromosByDate(MIXED, TODAY);
-  const faqs = generateTeamFAQs(TEAM, upcoming, VENUE, countPromosByType(upcoming), COVERAGE);
+  const faqs = generateTeamFAQs(TEAM, upcoming, VENUE, countPromosByType(upcoming), COVERAGE, undefined, { kind: 'remaining' });
   const joined = faqs.map((f) => `${f.question} ${f.answer}`).join(' ');
 
   assert.ok(/2 promotional events still to come/.test(joined), 'counts the upcoming half, not all six');
@@ -135,9 +135,10 @@ test('with a season resolved, FAQ counts describe the season and name the remain
   // MIXED spans one calendar year in this fixture's own terms; resolve against a
   // league with no rollout hold so the test pins the wording, not the date gate.
   const season = resolveSeasonScope(MIXED, 'WNBA', TODAY);
+  void resolveClaimMode;
   assert.ok(season, 'fixture should resolve; if it stops, the fixture changed');
   const faqs = generateTeamFAQs(
-    TEAM, upcoming, VENUE, countPromosByType(upcoming), COVERAGE, undefined, season,
+    TEAM, upcoming, VENUE, countPromosByType(upcoming), COVERAGE, undefined, { kind: 'season', scope: season! },
   );
   const joined = faqs.map((f) => `${f.question} ${f.answer}`).join(' ');
 

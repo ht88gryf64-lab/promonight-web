@@ -1,7 +1,7 @@
 import { IconChartBar } from '@tabler/icons-react';
 import type { Promo, PromoType, Team, Venue } from '@/lib/types';
-import { seasonSpan, scheduledPeriodPhrase, remainingPeriodPhrase } from '@/lib/season-label';
-import type { SeasonScope } from '@/lib/season-scope';
+import { allCompletedClause, seasonSpan, scheduledPeriodPhrase, remainingPeriodPhrase } from '@/lib/season-label';
+import type { ClaimMode } from '@/lib/season-scope';
 
 // SEASON_YEAR = 2026 used to live here, and its comment was right that a
 // getFullYear() would flip this copy to the next season at midnight on Jan 1.
@@ -34,7 +34,7 @@ export function AuthorityStats({
   promoCounts,
   venue,
   teamName,
-  season = null,
+  claim = { kind: 'held' },
   variant = 'dark',
 }: {
   team: Team;
@@ -43,8 +43,8 @@ export function AuthorityStats({
   promoCounts: Record<PromoType, number>;
   venue: Venue | null;
   teamName: string;
-  /** Resolved season population, or null. See the scope note below. */
-  season?: SeasonScope | null;
+  /** How to word the counts. Defaults to 'held', the pre-change rendering. */
+  claim?: ClaimMode;
   variant?: 'dark' | 'light';
 }) {
   // ── SCOPE. This block held the worst of the four scope defects. ───────────
@@ -63,24 +63,28 @@ export function AuthorityStats({
   // rescoped, they are WITHHELD, and the opening sentence drops the
   // denominator with it. Sentences 2 and 3 describe the shape of whatever
   // population is in hand, so they are rephrased rather than dropped.
+  const season = claim.kind === 'season' ? claim.scope : null;
+  const held = claim.kind === 'held';
   const stats = season ? season.promos : promos;
   const counts = season ? season.counts : promoCounts;
   if (stats.length < 15) return null;
 
-  const period = season
-    ? scheduledPeriodPhrase(seasonSpan(stats.map((p) => p.date)))
-    : remainingPeriodPhrase(stats.map((p) => p.date)).trimStart();
+  const period =
+    season || held
+      ? scheduledPeriodPhrase(seasonSpan(stats.map((p) => p.date)))
+      : remainingPeriodPhrase(stats.map((p) => p.date)).trimStart();
   const homeGames = HOME_GAMES_BY_LEAGUE[team.league] ?? 0;
   const venueName = venue?.name ?? 'their home venue';
 
-  // 1. Promos per home game ratio. Season populations only.
+  // 1. Promos per home game ratio. Season populations only, except under the
+  //    hold, which reproduces the mixed-scope original on purpose.
   const ratio =
-    season && homeGames > 0 ? (stats.length / homeGames).toFixed(1) : null;
+    (season || held) && homeGames > 0 ? (stats.length / homeGames).toFixed(1) : null;
 
-  // 2. Percent of distinct home dates with at least one promo. Season only.
+  // 2. Percent of distinct home dates with at least one promo. Same rule.
   const distinctPromoDates = new Set(stats.map((p) => p.date)).size;
   const pctHomeGames =
-    season && homeGames > 0
+    (season || held) && homeGames > 0
       ? Math.min(Math.round((distinctPromoDates / homeGames) * 100), 100)
       : null;
 
@@ -121,15 +125,17 @@ export function AuthorityStats({
 
   const sentences: string[] = [];
 
-  if (season && ratio !== null && pctHomeGames !== null) {
-    const remaining =
-      season.upcomingCount === 0
-        ? ' All of them have already taken place.'
+  if ((season || held) && ratio !== null && pctHomeGames !== null) {
+    // The hold reproduces the original sentence, which ended at the percentage.
+    const remaining = !season
+      ? ''
+      : season.upcomingCount === 0
+        ? ` ${allCompletedClause(season.total)}`
         : ` ${season.upcomingCount} ${season.upcomingCount === 1 ? 'is' : 'are'} still to come.`;
     sentences.push(
       `The ${teamName} have ${stats.length} promotional events scheduled across ${homeGames} ${team.league} home ${homeGames === 1 ? 'game' : 'games'} ${period}, averaging ${ratio} promos per home game. Roughly ${pctHomeGames}% of home dates at ${venueName} have at least one scheduled promotion.${remaining}`,
     );
-  } else if (season) {
+  } else if (season || held) {
     sentences.push(
       `The ${teamName} have ${stats.length} promotional events scheduled ${period}.`,
     );
@@ -143,7 +149,7 @@ export function AuthorityStats({
 
   if (counts.giveaway >= 4 && topMonths.length > 0) {
     const monthList = topMonths.map(([m]) => MONTH_NAMES[m]).join(' and ');
-    const scope = season ? "the team's" : "the team's remaining";
+    const scope = season || held ? "the team's" : "the team's remaining";
     sentences.push(
       `Giveaways are most concentrated in ${monthList}: ${topMonthsTotal} of ${scope} ${counts.giveaway} giveaways fall in ${topMonths.length === 1 ? 'that month' : 'those two months'}.`,
     );
@@ -154,7 +160,7 @@ export function AuthorityStats({
 
   if (topWeekday && topWeekday[1] >= 4 && topWeekdayGiveaways >= 2) {
     sentences.push(
-      `${WEEKDAYS[topWeekday[0]]} home games are the most promo-heavy${season ? '' : ' of what is left'}: ${topWeekday[1]} scheduled events with ${topWeekdayGiveaways} giveaway${topWeekdayGiveaways === 1 ? '' : 's'}.`,
+      `${WEEKDAYS[topWeekday[0]]} home games are the most promo-heavy${season || held ? '' : ' of what is left'}: ${topWeekday[1]} scheduled events with ${topWeekdayGiveaways} giveaway${topWeekdayGiveaways === 1 ? '' : 's'}.`,
     );
   }
 

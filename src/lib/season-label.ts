@@ -128,3 +128,15 @@ export function remainingPeriodPhrase(dates: readonly string[]): string {
   if (!span.spansYears || !span.monthRangeLabel) return ` in ${span.yearLabel}`;
   return ` between ${span.monthRangeLabel.replace(' to ', ' and ')}`;
 }
+
+/**
+ * The clause that closes a season sentence whose category has nothing left.
+ * "All of them have already taken place" over a count of one is wrong, and a
+ * count of one is common: on 2026-09-04 the Las Vegas Aces had exactly one
+ * season giveaway and one season kids event, both completed.
+ */
+export function allCompletedClause(count: number): string {
+  return count === 1
+    ? 'It has already taken place.'
+    : 'All of them have already taken place.';
+}

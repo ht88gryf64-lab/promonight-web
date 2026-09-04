@@ -8,7 +8,8 @@ import {
   teamDisplayName,
 } from '@/lib/promo-helpers';
 import { RD_CATEGORIES } from '@/components/redesign/categories';
-import type { SeasonScope } from '@/lib/season-scope';
+import { allCompletedClause } from '@/lib/season-label';
+import type { ClaimMode } from '@/lib/season-scope';
 
 // Hardcoded, never derived from the clock. See the same rule at
 // generateTeamFAQs in promo-helpers.ts: the page title and meta description
@@ -38,8 +39,8 @@ interface TeamContentSectionsProps {
   promos: Promo[];
   venue: Venue | null;
   promoCounts: Record<PromoType, number>;
-  /** Resolved season population, or null. See scopeFor below. */
-  season?: SeasonScope | null;
+  /** How to word the counts. Defaults to 'held', the pre-change rendering. */
+  claim?: ClaimMode;
   variant?: 'dark' | 'light';
 }
 
@@ -61,6 +62,8 @@ interface SectionScope {
   /** How many of `count` are still ahead. Equals `count` on the fallback path. */
   upcomingCount: number;
   isSeason: boolean;
+  /** True inside a league's rollout hold: render the PRE-CHANGE sentence. */
+  held: boolean;
   year: number;
   /** Rows listed under the paragraph. */
   list: Promo[];
@@ -75,9 +78,11 @@ export function TeamContentSections({
   promos,
   venue,
   promoCounts,
-  season = null,
+  claim = { kind: 'held' },
   variant = 'dark',
 }: TeamContentSectionsProps) {
+  const season = claim.kind === 'season' ? claim.scope : null;
+  const held = claim.kind === 'held';
   const year = season ? season.year : SEASON_YEAR;
   const fullName = teamDisplayName(team);
   const venueName = venue?.name || 'their home stadium';
@@ -88,6 +93,7 @@ export function TeamContentSections({
         count: promoCounts[type],
         upcomingCount: promoCounts[type],
         isSeason: false,
+        held,
         year,
         list: getPromosByType(promos, type),
         listIsUpcoming: true,
@@ -100,6 +106,7 @@ export function TeamContentSections({
       count: season.counts[type],
       upcomingCount: ahead.length,
       isSeason: true,
+      held: false,
       year: season.year,
       list: ahead.length > 0 ? ahead : done,
       listIsUpcoming: ahead.length > 0,
@@ -335,10 +342,12 @@ function GiveawaySection({
   // include" is a recommendation, and recommending a night that has already
   // happened is the one thing a season-scoped count must not licence.
   const top = getTopGiveaway(upcoming);
-  const lead = scope.isSeason
+  const lead = scope.held
+    ? `The ${fullName} have ${scope.count} giveaway night${scope.count !== 1 ? 's' : ''} scheduled for the ${scope.year} season at ${venueName}.`
+    : scope.isSeason
     ? scope.upcomingCount > 0
       ? `The ${fullName} have ${scope.count} giveaway night${scope.count !== 1 ? 's' : ''} scheduled for the ${scope.year} season at ${venueName}, ${scope.upcomingCount} still to come.`
-      : `The ${fullName} have ${scope.count} giveaway night${scope.count !== 1 ? 's' : ''} in the ${scope.year} season at ${venueName}. All of them have already taken place.`
+      : `The ${fullName} have ${scope.count} giveaway night${scope.count !== 1 ? 's' : ''} in the ${scope.year} season at ${venueName}. ${allCompletedClause(scope.count)}`
     : `The ${fullName} have ${scope.count} giveaway night${scope.count !== 1 ? 's' : ''} still to come at ${venueName}.`;
 
   if (variant === 'light') {
@@ -443,10 +452,12 @@ function ThemeSection({
     .slice(0, 3);
   // When nothing is scheduled the sentence is OMITTED, not softened. No filler,
   // no "none scheduled": absence beats a wrong or empty claim.
-  const themeLead = scope.isSeason
+  const themeLead = scope.held
+    ? `The ${fullName} have ${scope.count} theme night${scope.count !== 1 ? 's' : ''} scheduled at ${venueName} during the ${scope.year} season.`
+    : scope.isSeason
     ? scope.upcomingCount > 0
       ? `The ${fullName} have ${scope.count} theme night${scope.count !== 1 ? 's' : ''} scheduled at ${venueName} during the ${scope.year} season, ${scope.upcomingCount} still to come.`
-      : `The ${fullName} have ${scope.count} theme night${scope.count !== 1 ? 's' : ''} at ${venueName} in the ${scope.year} season. All of them have already taken place.`
+      : `The ${fullName} have ${scope.count} theme night${scope.count !== 1 ? 's' : ''} at ${venueName} in the ${scope.year} season. ${allCompletedClause(scope.count)}`
     : `The ${fullName} have ${scope.count} theme night${scope.count !== 1 ? 's' : ''} still to come at ${venueName}.`;
   const themeParagraph =
     themeLead +
@@ -510,10 +521,12 @@ function FoodSection({
 }) {
   const fullName = teamDisplayName(team);
   const foodDeals = scope.list;
-  const foodLead = scope.isSeason
+  const foodLead = scope.held
+    ? `${venueName} has ${scope.count} food deal event${scope.count !== 1 ? 's' : ''} during ${fullName} games.`
+    : scope.isSeason
     ? scope.upcomingCount > 0
       ? `${venueName} has ${scope.count} food deal event${scope.count !== 1 ? 's' : ''} during ${fullName} games in the ${scope.year} season, ${scope.upcomingCount} still to come.`
-      : `${venueName} had ${scope.count} food deal event${scope.count !== 1 ? 's' : ''} during ${fullName} games in the ${scope.year} season. All of them have already taken place.`
+      : `${venueName} has ${scope.count} food deal event${scope.count !== 1 ? 's' : ''} during ${fullName} games in the ${scope.year} season. ${allCompletedClause(scope.count)}`
     : `${venueName} has ${scope.count} food deal event${scope.count !== 1 ? 's' : ''} still to come during ${fullName} games.`;
 
   if (variant === 'light') {
@@ -574,10 +587,12 @@ function KidsSection({
 }) {
   const fullName = teamDisplayName(team);
   const kidsEvents = scope.list;
-  const kidsLead = scope.isSeason
+  const kidsLead = scope.held
+    ? `The ${fullName} have ${scope.count} kids and family event${scope.count !== 1 ? 's' : ''} at ${venueName} in ${scope.year}.`
+    : scope.isSeason
     ? scope.upcomingCount > 0
       ? `The ${fullName} have ${scope.count} kids and family event${scope.count !== 1 ? 's' : ''} at ${venueName} in the ${scope.year} season, ${scope.upcomingCount} still to come.`
-      : `The ${fullName} had ${scope.count} kids and family event${scope.count !== 1 ? 's' : ''} at ${venueName} in the ${scope.year} season. All of them have already taken place.`
+      : `The ${fullName} have ${scope.count} kids and family event${scope.count !== 1 ? 's' : ''} at ${venueName} in the ${scope.year} season. ${allCompletedClause(scope.count)}`
     : `The ${fullName} have ${scope.count} kids and family event${scope.count !== 1 ? 's' : ''} still to come at ${venueName}.`;
 
   if (variant === 'light') {

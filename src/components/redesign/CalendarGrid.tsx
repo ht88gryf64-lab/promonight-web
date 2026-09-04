@@ -5,6 +5,7 @@ import type { Promo, PromoType, Team } from '@/lib/types';
 import type { GameContext } from '@/lib/data';
 import { normalizeSport, track } from '@/lib/analytics';
 import { synthPromoId } from '@/lib/promo-helpers';
+import { prerenderWindowDates } from '@/lib/render-windows';
 import { IconChevronLeft, IconChevronRight, IconArrowRight, IconX } from '@tabler/icons-react';
 import { RD_CATEGORIES } from './categories';
 import { GameExpand, LegacyPromoExpand } from './GameExpand';
@@ -117,20 +118,18 @@ export function CalendarGrid({
   const PRERENDER_MAX = 35;
   const prerenderedDates = useMemo(() => {
     if (!hasGamesData) return null;
-    const startMs = Date.UTC(today.year, today.month, today.day);
-    const endMs = startMs + PRERENDER_WINDOW_DAYS * 86_400_000;
-    const upcoming: string[] = [];
-    for (const [date, ctxs] of gameCtxsByDate.entries()) {
-      const ymd = parseYMD(date);
-      if (!ymd) continue;
-      // A date counts as home when ANY context on it is home, which keeps both
-      // halves of a doubleheader together and never drops a home day.
-      if (homeOnlyPrerender && !ctxs.some((c) => c.isHome)) continue;
-      const ms = Date.UTC(ymd.year, ymd.month, ymd.day);
-      if (ms >= startMs && ms <= endMs) upcoming.push(date);
-    }
-    upcoming.sort();
-    return new Set(upcoming.slice(0, PRERENDER_MAX));
+    // The rule itself lives in src/lib/render-windows.ts so it can be tested as
+    // arithmetic, including the road-trip floor, without a DOM render.
+    return prerenderWindowDates({
+      days: [...gameCtxsByDate.entries()].map(([date, ctxs]) => ({
+        date,
+        isHome: ctxs.some((c) => c.isHome),
+      })),
+      today: `${today.year}-${String(today.month + 1).padStart(2, '0')}-${String(today.day).padStart(2, '0')}`,
+      windowDays: PRERENDER_WINDOW_DAYS,
+      max: PRERENDER_MAX,
+      homeOnly: homeOnlyPrerender,
+    });
   }, [hasGamesData, gameCtxsByDate, today, homeOnlyPrerender]);
 
   const monthsWithContent = useMemo(() => {

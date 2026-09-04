@@ -29,7 +29,7 @@ import { test } from 'node:test';
 import assert from 'node:assert';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { TeamContentSections } from '../team-content-sections';
-import { resolveSeasonScope } from '@/lib/season-scope';
+import { resolveSeasonScope, type ClaimMode } from '@/lib/season-scope';
 import type { Team, Promo, PromoType, Venue } from '@/lib/types';
 
 const team: Team = {
@@ -59,10 +59,10 @@ function paragraph(
   promos: Promo[],
   theme: number,
   variant: 'dark' | 'light',
-  season: ReturnType<typeof resolveSeasonScope> = null,
+  claim: ClaimMode = { kind: 'remaining' },
 ): string {
   const html = renderToStaticMarkup(
-    <TeamContentSections team={team} promos={promos} venue={venue} promoCounts={counts(theme)} season={season} variant={variant} />,
+    <TeamContentSections team={team} promos={promos} venue={venue} promoCounts={counts(theme)} claim={claim} variant={variant} />,
   );
   const m = html.match(/<p[^>]*>(The Testville Niners have[^<]*)<\/p>/);
   assert.ok(m, `${variant}: the theme paragraph did not render at all`);
@@ -101,7 +101,7 @@ test('OMIT: a finished season states its count and names nothing as next up', ()
   for (const variant of ['dark', 'light'] as const) {
     // No upcoming rows: the caller passes an empty upcoming array, which is what
     // the route does once the season is over.
-    const p = paragraph([], 2, variant, season);
+    const p = paragraph([], 2, variant, { kind: 'season', scope: season! });
     assert.equal(
       p,
       'The Testville Niners have 2 theme nights at Test Park in the 2026 season. All of them have already taken place.',

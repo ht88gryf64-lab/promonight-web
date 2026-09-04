@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   MLB_SEASON_SCOPE_START,
   isSeasonScopeLive,
+  resolveClaimMode,
   resolveSeasonScope,
   seasonClaimSentence,
 } from '../season-scope';
@@ -164,7 +165,7 @@ describe('generateTeamFAQs scope labelling', () => {
       { giveaway: 1, theme: 0, food: 0, kids: 0 },
       coverage,
       undefined,
-      scope,
+      { kind: 'season', scope },
     );
     const answer = faqs[0].answer;
     assert.match(answer, /3 promotional events in the 2026 season/);
@@ -185,12 +186,71 @@ describe('generateTeamFAQs scope labelling', () => {
       { giveaway: 2, theme: 0, food: 0, kids: 0 },
       coverage,
       undefined,
-      null,
+      { kind: 'remaining' },
     );
     const answer = faqs[0].answer;
     assert.match(answer, /2 promotional events still to come/);
     assert.doesNotMatch(answer, /season/, 'no season claim without a resolved season');
     // The period comes from the rows, so a New Year crossing is stated honestly.
     assert.match(answer, /between December 2026 and January 2027/);
+  });
+});
+
+describe('resolveClaimMode', () => {
+  const rows = [promo('2026-04-01'), promo('2026-12-01')];
+
+  it('reports held for MLB inside the rollout hold, whatever the rows say', () => {
+    assert.deepEqual(resolveClaimMode(rows, 'MLB', '2026-09-30'), { kind: 'held' });
+  });
+
+  it('reports season for MLB once the read date passes', () => {
+    assert.equal(resolveClaimMode(rows, 'MLB', '2026-10-01').kind, 'season');
+  });
+
+  it('reports remaining when the rows cannot support a season claim', () => {
+    const multiYear = [promo('2026-12-01'), promo('2027-01-05')];
+    assert.deepEqual(resolveClaimMode(multiYear, 'NHL', TODAY), { kind: 'remaining' });
+  });
+
+  it('reports season for a resolving non-MLB league today', () => {
+    assert.equal(resolveClaimMode(rows, 'WNBA', TODAY).kind, 'season');
+  });
+});
+
+describe('the hold is total, not partial', () => {
+  // The rollout hold exists to protect ctr-diagnostic-sep2026, whose treatment
+  // arm is ten MLB team pages. A hold that lets improved prose through still
+  // moves the experiment, so 'held' must reproduce the PRE-CHANGE strings.
+  const rows = [
+    promo('2026-04-01', { type: 'theme' }),
+    promo('2026-12-01', { type: 'theme' }),
+  ];
+  const upcoming = [rows[1]];
+  const counts = { giveaway: 0, theme: 1, food: 0, kids: 0 };
+
+  it('held FAQ copy is the pre-change wording, defect included', () => {
+    const faqs = generateTeamFAQs(
+      team({ league: 'MLB' }), upcoming, null, counts, coverage, undefined, { kind: 'held' },
+    );
+    const a = faqs[0];
+    assert.equal(a.question, 'How many promotional nights do the Testers have in 2026?');
+    assert.match(a.answer, /1 promotional events coming up in the 2026 season/);
+  });
+
+  it('and the same team ships the new wording once the hold lifts', () => {
+    const claim = resolveClaimMode(rows, 'MLB', '2026-10-01');
+    const faqs = generateTeamFAQs(
+      team({ league: 'MLB' }), upcoming, null, counts, coverage, undefined, claim,
+    );
+    assert.match(faqs[0].answer, /2 promotional events in the 2026 season/);
+    assert.match(faqs[0].question, /in the 2026 season\?$/);
+  });
+
+  it('defaults to held, so an un-updated caller ships what it always shipped', () => {
+    const withDefault = generateTeamFAQs(team(), upcoming, null, counts, coverage);
+    const explicit = generateTeamFAQs(
+      team(), upcoming, null, counts, coverage, undefined, { kind: 'held' },
+    );
+    assert.deepEqual(withDefault, explicit);
   });
 });

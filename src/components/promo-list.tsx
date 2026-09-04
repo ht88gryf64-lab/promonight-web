@@ -7,6 +7,7 @@ import { RedesignPromoRow } from '@/components/redesign/RedesignPromoRow';
 import { LazyPromoRows } from '@/components/redesign/LazyPromoRows';
 import { PromoArrivalHighlight } from '@/components/redesign/PromoArrivalHighlight';
 import { isBobbleheadGiveaway, isEbayResaleActive } from '@/lib/ebay';
+import { splitCompletedForRender } from '@/lib/render-windows';
 import { promoAnchorId, splitPromosByDate } from '@/lib/promo-helpers';
 import { seasonSpan, completedHeading, completedSubline } from '@/lib/season-label';
 import type { Promo, PromoType, Team } from '@/lib/types';
@@ -158,6 +159,11 @@ const COMPLETED_VISIBLE = 5;
  * Dodgers archive projects to about 1.17 MB, over the ceiling; the Twins are
  * worse. Eight rows cost about 52 KB, which lands the worst case near 83%.
  *
+ * The eight are IN ADDITION to the up-to-three lifted resale rows, so the
+ * server-rendered completed block tops out at eleven rows. Only the lifted three
+ * carry the eBay CTA; these eight are passed no resale slot, so the affiliate
+ * surface does not grow with them.
+ *
  * The remainder stays behind the expander with its count in the button label,
  * exactly as before.
  */
@@ -256,17 +262,24 @@ export function PromoList({
   // eBay resale CTA. The lifted rows are content and render regardless of the
   // campid (same contract as the hub's Earlier-this-season section) — only the
   // CTA itself is env-gated, so unsetting the var never silently changes page
-  // content. Everything else stays behind the expander unchanged.
-  const pastResale = past.filter(isBobbleheadGiveaway).slice(0, RESALE_LIFT_VISIBLE);
-  const pastAfterResale =
-    pastResale.length > 0 ? past.filter((p) => !pastResale.includes(p)) : past;
-  // The bounded server-rendered slice sits between the lifted resale rows and
-  // the expander. Zero-length unless the page published a season count, which
-  // keeps every fallback page byte-identical.
-  const pastSsr = seasonScoped
-    ? pastAfterResale.slice(0, COMPLETED_SSR_WHEN_SEASON_SCOPED)
-    : [];
-  const pastCollapsed = pastAfterResale.slice(pastSsr.length);
+  // content.
+  //
+  // These three stay the ONLY server-rendered rows carrying the resale CTA. The
+  // season-scoped slice below adds up to eight more completed rows to the HTML
+  // and deliberately passes them no slot, so this cap is a cap on the affiliate
+  // surface and not merely on the lift.
+  // A partition of `past`: every completed row lands in exactly one group. The
+  // arithmetic lives in src/lib/render-windows.ts and is tested there.
+  const {
+    resale: pastResale,
+    ssr: pastSsr,
+    collapsed: pastCollapsed,
+  } = splitCompletedForRender(
+    past,
+    isBobbleheadGiveaway,
+    RESALE_LIFT_VISIBLE,
+    seasonScoped ? COMPLETED_SSR_WHEN_SEASON_SCOPED : 0,
+  );
 
   // Resolves to undefined (not a null-rendering element) for non-qualifying
   // rows, so the rows' `resaleSlot &&` wrapper never emits an empty div and
@@ -368,9 +381,11 @@ export function PromoList({
                 </p>
               </div>
 
-              {/* Lifted resale rows are the bounded exception to the collapse
-               *  below: at most RESALE_LIFT_VISIBLE rows, so the 1MB SSR-HTML
-               *  concern the collapse exists for stays handled. */}
+              {/* Lifted resale rows: at most RESALE_LIFT_VISIBLE, and the only
+               *  server-rendered rows that carry the eBay CTA. Together with the
+               *  season slice below the collapse admits at most
+               *  RESALE_LIFT_VISIBLE + COMPLETED_SSR_WHEN_SEASON_SCOPED rows,
+               *  which is what keeps the 1MB SSR-HTML concern handled. */}
               {pastResale.length > 0 && (
                 <div className="mb-3 space-y-3">
                   {pastResale.map((promo, i) => (
@@ -385,6 +400,14 @@ export function PromoList({
                 </div>
               )}
 
+              {/* NO resaleSlot on these rows, and that is the point. The eBay
+               *  CTA is capped at RESALE_LIFT_VISIBLE lifted rows above; these
+               *  eight previously lived inside LazyPromoRows, which passes no
+               *  slot, so they carried no CTA. Passing one here would quietly
+               *  take the server-rendered affiliate surface from 3 to as many
+               *  as 11 and move the placement:'team_page' resale_click
+               *  baseline mid-rollout. They are here for the content, not the
+               *  CTA. */}
               {pastSsr.length > 0 && (
                 <div className="mb-3 space-y-3">
                   {pastSsr.map((promo, i) => (
@@ -393,7 +416,6 @@ export function PromoList({
                       promo={promo}
                       share={share}
                       completed
-                      resaleSlot={resaleSlotFor(promo, 'light')}
                     />
                   ))}
                 </div>

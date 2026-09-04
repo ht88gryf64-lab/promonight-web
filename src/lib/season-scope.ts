@@ -114,6 +114,39 @@ export interface SeasonScope {
 }
 
 /**
+ * How a surface should word its counts. ONE value threaded to every consumer,
+ * so a branch cannot be forgotten in one component and honoured in another.
+ *
+ *   held      the league is inside its rollout hold. Render the PRE-CHANGE
+ *             wording, byte for byte. Not "the fallback wording": the fallback
+ *             wording is itself new, and shipping it to MLB would change the
+ *             FAQ copy and the FAQPage schema on all 30 MLB pages, ten of which
+ *             are the ctr-diagnostic-sep2026 treatment arm. A hold that lets
+ *             prose through is not a hold.
+ *   remaining the rows cannot support a season claim. State what is left, and
+ *             never borrow the season's noun.
+ *   season    state the season total and how much of it is left.
+ */
+export type ClaimMode =
+  | { kind: 'held' }
+  | { kind: 'remaining' }
+  | { kind: 'season'; scope: SeasonScope };
+
+/**
+ * The single entry point for consumers. Returns the mode AND, for convenience,
+ * the resolved scope when there is one.
+ */
+export function resolveClaimMode(
+  promos: Promo[],
+  league: string,
+  today: string = todayYmd(),
+): ClaimMode {
+  if (!isSeasonScopeLive(league, today)) return { kind: 'held' };
+  const scope = resolveSeasonScope(promos, league, today);
+  return scope ? { kind: 'season', scope } : { kind: 'remaining' };
+}
+
+/**
  * Resolve the season population for a team, or null when the rows cannot
  * support a season claim. Callers fall back to their upcoming-only claim on
  * null; they must NOT substitute the raw array.
@@ -178,4 +211,3 @@ export function seasonClaimSentence(scope: SeasonScope): string {
   if (scope.completedCount === 0) return `${head}, all still to come`;
   return `${head}, ${scope.upcomingCount} still to come`;
 }
-

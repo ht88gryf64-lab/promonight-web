@@ -2,12 +2,12 @@ import { APP_LEAGUES, type CoverageCounts } from '@/lib/coverage-counts';
 import type { Team, Promo, PromoType, Venue, PlayoffPromo } from './types';
 import { PROMO_TYPE_LABELS } from './types';
 import { indefiniteArticleFor } from './indefinite-article';
-import { remainingPeriodPhrase } from './season-label';
+import { allCompletedClause, remainingPeriodPhrase } from './season-label';
 // TYPE-ONLY, and it has to stay that way: season-scope.ts imports this module
 // for countPromosByType / isUpcomingPromo, so a value import here would close a
 // runtime cycle. The one string this file needs off the object is precomputed
 // there as `gatedDisclosure`.
-import type { SeasonScope } from './season-scope';
+import type { ClaimMode } from './season-scope';
 
 // Stable synthetic promo ID. Firestore promo subdocs do carry "p1"-style ids
 // but the data layer (mapPromoDoc) drops them — (team_slug, date, title)
@@ -415,12 +415,12 @@ export function generateTeamFAQs(
   // stale silently, which is the exact failure this parameter exists to end.
   coverage: TeamFaqCoverage,
   playoff?: PlayoffFAQContext,
-  // The resolved SEASON population, or null when the rows cannot support a
-  // season claim (multi-year archive, wrong year, MLB before the rollout date).
-  // Resolved by the page with resolveSeasonScope; never derived here, so the
-  // visible FAQ and the FAQPage schema in json-ld.tsx cannot disagree about
-  // which population they describe. Null keeps the upcoming-only wording.
-  season?: SeasonScope | null,
+  // How to word the counts. Resolved by the page with resolveClaimMode and
+  // never derived here, so the visible FAQ and the FAQPage schema in
+  // json-ld.tsx cannot disagree about which population they describe.
+  // Defaults to 'held', which is the pre-change copy: a caller that has not
+  // been updated keeps shipping exactly what it shipped before.
+  claim: ClaimMode = { kind: 'held' },
 ): FAQItem[] {
   // Hardcoded 2026 season year, NOT getCurrentYear(): the page title and meta
   // description already hardcode 2026, and an auto-rolling getFullYear() would
@@ -455,10 +455,11 @@ export function generateTeamFAQs(
     return parts.join(', ');
   };
 
-  if (season) {
+  if (claim.kind === 'season') {
+    const season = claim.scope;
     const remaining =
       season.upcomingCount === 0
-        ? 'All of them have already taken place.'
+        ? allCompletedClause(season.total)
         : `${season.upcomingCount} ${season.upcomingCount === 1 ? 'is' : 'are'} still to come.`;
     const gated = season.gatedDisclosure;
     faqs.push({
@@ -466,10 +467,21 @@ export function generateTeamFAQs(
       answer: `The ${fullName} have ${season.total} promotional events in the ${season.year} season, including ${breakdown(season.counts)}. ${remaining}${gated ? ` ${gated}` : ''} These events take place at ${venueName}${cityClause}.`,
     });
   } else if (upcomingPromos.length > 0) {
-    faqs.push({
-      question: `How many ${team.name} promotional nights are still to come?`,
-      answer: `The ${fullName} have ${upcomingPromos.length} promotional events still to come${remainingPeriodPhrase(upcomingPromos.map((p) => p.date))}, including ${breakdown(upcomingCounts)}. These events take place at ${venueName}${cityClause}.`,
-    });
+    // HELD keeps the pre-change strings byte for byte, including the "in the
+    // ${year} season" wording this whole change exists to remove. That wording
+    // is wrong, and it stays wrong on MLB until 2026-10-01, because a hold that
+    // improves the copy is a hold that moves the experiment.
+    faqs.push(
+      claim.kind === 'held'
+        ? {
+            question: `How many promotional nights do the ${team.name} have in ${year}?`,
+            answer: `The ${fullName} have ${upcomingPromos.length} promotional events coming up in the ${year} season, including ${breakdown(upcomingCounts)}. These events take place at ${venueName}${cityClause}.`,
+          }
+        : {
+            question: `How many ${team.name} promotional nights are still to come?`,
+            answer: `The ${fullName} have ${upcomingPromos.length} promotional events still to come${remainingPeriodPhrase(upcomingPromos.map((p) => p.date))}, including ${breakdown(upcomingCounts)}. These events take place at ${venueName}${cityClause}.`,
+          },
+    );
   }
 
   // 2. Best giveaway. Gated on UPCOMING giveaways and selected from the
@@ -514,7 +526,7 @@ export function generateTeamFAQs(
       // "still to come in 2026" was wrong on every club whose remaining rows
       // cross a New Year (29 of 32 NHL clubs on 2026-09-04). The period comes
       // from the rows being counted.
-      answer: `The ${fullName} have ${upcomingCounts.kids} kids and family event${upcomingCounts.kids !== 1 ? 's' : ''} still to come${remainingPeriodPhrase(kidsPromos.map((p) => p.date))}. Upcoming family events include ${kidsList}${kidsPromos.length > 3 ? `, and ${kidsPromos.length - 3} more throughout the season` : ''}. These events are designed for young fans and families attending games at ${venueName}.`,
+      answer: `The ${fullName} have ${upcomingCounts.kids} kids and family event${upcomingCounts.kids !== 1 ? 's' : ''} still to come${claim.kind === 'held' ? ` in ${year}` : remainingPeriodPhrase(kidsPromos.map((p) => p.date))}. Upcoming family events include ${kidsList}${kidsPromos.length > 3 ? `, and ${kidsPromos.length - 3} more throughout the season` : ''}. These events are designed for young fans and families attending games at ${venueName}.`,
     });
   }
 
@@ -590,14 +602,17 @@ export function generateTeamFAQs(
   // entry 6c: the copy and the cadence change in the same commit, so neither
   // is briefly wrong). Before that commit lands, this sentence would be an
   // unbacked freshness claim on every NHL team page.
-  if (season ? season.total >= 10 : upcomingPromos.length >= 10) {
+  if (claim.kind === 'season' ? claim.scope.total >= 10 : upcomingPromos.length >= 10) {
     // The sentence names the population it counts, same rule as FAQ 1: the
     // season total where the season resolved, the remaining count where it did
     // not. It used to say "the current schedule reflects N" over an
     // upcoming-only N, which read as the whole schedule.
-    const reflects = season
-      ? `The ${season.year} schedule on this page holds ${season.total} events, ${season.upcomingCount} of them still to come.`
-      : `The schedule on this page holds ${upcomingPromos.length} events still to come.`;
+    const reflects =
+      claim.kind === 'season'
+        ? `The ${claim.scope.year} schedule on this page holds ${claim.scope.total} events, ${claim.scope.upcomingCount} of them still to come.`
+        : claim.kind === 'held'
+          ? `The current schedule reflects ${upcomingPromos.length} scheduled events.`
+          : `The schedule on this page holds ${upcomingPromos.length} events still to come.`;
     faqs.push({
       question: `How often are ${team.name} promo schedules updated?`,
       answer: `${team.name} promo data comes from official team announcements and is reviewed before it appears here. ${reflects} MLB, WNBA, MLS, and NHL schedules are rechecked weekly in season.`,

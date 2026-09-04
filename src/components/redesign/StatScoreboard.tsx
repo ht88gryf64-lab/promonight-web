@@ -71,9 +71,19 @@ function StatTile({ count, label, color, Icon }: TileProps) {
 }
 
 export function StatScoreboard({ counts, gamesCount, note, className = '' }: StatScoreboardProps) {
-  return (
-    <div className={className}>
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 lg:grid-cols-5">
+  // NO NOTE, NO WRAPPER. The note only ever accompanies season counts, so on
+  // every held or fallback page this must emit exactly the markup it emitted
+  // before: one grid div carrying the merged class string. An always-on wrapper
+  // would change the DOM of the 30 MLB pages the rollout hold exists to freeze.
+  const grid = (
+    <div
+      className={[
+        'grid grid-cols-2 gap-2.5 sm:grid-cols-4 lg:grid-cols-5',
+        note ? '' : className,
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
         {RD_CATEGORY_ORDER.map((key) => {
           const meta = RD_CATEGORIES[key];
           return (
@@ -94,10 +104,15 @@ export function StatScoreboard({ counts, gamesCount, note, className = '' }: Sta
             Icon={IconCalendarEvent}
           />
         )}
-      </div>
-      {note ? (
-        <p className="mt-3 font-rd text-[13px] text-white/70">{note}</p>
-      ) : null}
+    </div>
+  );
+
+  if (!note) return grid;
+
+  return (
+    <div className={className}>
+      {grid}
+      <p className="mt-3 font-rd text-[13px] text-white/70">{note}</p>
     </div>
   );
 }
