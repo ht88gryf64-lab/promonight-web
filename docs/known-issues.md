@@ -2108,3 +2108,45 @@ EMITTED structured data, so a refactor that stops routing FAQs through
 `src/components/__tests__/hotels-cta-article.test.tsx` (the card copy, whose
 team-page path runs through `GameExpand` inside a lazy-mounted client
 `ScheduleRow` and therefore never reaches served HTML for a curl to check).
+
+## 43. CFB renders CT/ET while MLB and NFL render CDT/EDT
+
+**What it is.** Two independent kickoff-time systems reached production with
+different zone-label conventions, and they now sit on sibling pages. CFB school
+pages render "3:30 PM ET" and "11:00 AM CT". MLB and NFL team pages render
+"1:00 PM EDT" and "12:00 PM CDT". Same site, same kind of row, two spellings of
+the same idea.
+
+**Where each comes from.**
+
+  - CFB: `src/lib/cfb/kickoff.ts` (`venueLocalKickoff`) with the hand-verified
+    zone table in `src/lib/cfb/venue-timezones.ts`. Its labels are generic and
+    carry no daylight/standard distinction by construction.
+  - MLB and NFL: `gameZoneAbbrev` in `src/lib/format-game-time.ts`, which
+    derives the label from the game's own instant through Intl, so it says CDT
+    in September and CST in December for the same venue.
+
+The two paths share no code. CFB reads the `cfbGames` collection and never
+touches `mapGameDoc`, which is why turning the label on for every league in
+`fc59442` (2026-09-04) changed 33 NFL pages and left all 121 CFB pages
+byte-identical in their time strings.
+
+**Why it is a defect and not just a style split.** The generic form is
+ambiguous in exactly the window the specific form disambiguates. "3:30 PM ET"
+in November and "3:30 PM ET" in September are an hour apart in UTC, and nothing
+in the label says so. The NFL side used to have this same collapse: a single
+bare "1:00 PM" on the Falcons page turned out to be twelve EST games and eight
+EDT games, which is what motivated the label change in the first place.
+
+**Severity: Low.** Neither label is wrong, and no rendered clock value is
+affected. It is a consistency defect across two surfaces a reader may compare,
+plus a latent ambiguity on the CFB side across a DST boundary.
+
+**Not fixed deliberately.** Logged during the 2026-09-04 label change under an
+explicit scope ruling. Converting CFB to the Intl-derived form would move the
+kickoff string on all 121 CFB pages, which is a separate change with its own
+verification, and CFB's labels are load-bearing in
+`src/lib/__tests__/cfb-kickoff-zone.test.ts` and `cfb-rendered-kickoff.test.ts`.
+Whoever takes it should decide the direction first: either CFB gains the
+daylight distinction, or MLB and NFL drop it. The former is more informative and
+matches what the rest of the site now does.
