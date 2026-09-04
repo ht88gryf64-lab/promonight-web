@@ -788,10 +788,24 @@ function mapGameDoc(doc: FirebaseFirestore.DocumentSnapshot): Game {
     // first pitch as "2:10 AM". See resolveMlbZone for the map-miss policy.
     game.gameTimeTz = zone ? zone.tz : '';
   }
-  // Every league gets the label from the same rule; only MLB has a zone that
-  // was resolved here, and NFL call sites pass no abbreviation, so this cannot
-  // change NFL output.
-  if (game.league === 'mlb' && game.gameTimeTz) {
+  // ── Zone label, every league (was MLB-only until 2026-09-04) ─────────────
+  //
+  // The gate this replaces read `game.league === 'mlb'`, justified by a claim
+  // that "NFL call sites pass no abbreviation". That claim was true when it was
+  // written and is not true now: all four render sites pass
+  // game.gameTimeZoneAbbrev today (game-day-detail, ScheduleBlock, GameExpand,
+  // NflWeekContainer), so the only thing suppressing an NFL or NHL label was
+  // this condition. The visible cost was not confined to the international
+  // slate. On /nfl the one 1:00 PM ET kickoff window rendered as both "1:00 PM"
+  // and "12:00 PM" with nothing to separate them, and the 4:25 PM window
+  // rendered as three different bare clock times, because each cell shows its
+  // own venue-local hour. Labelling them resolves it without moving anything.
+  //
+  // Every league now takes the same rule. MLB output is unchanged by
+  // construction rather than by review: its zones are all North American, and
+  // gameZoneAbbrev prefers Intl's letter abbreviation, so no MLB game reaches
+  // the international name map.
+  if (game.gameTimeTz) {
     const abbrev = gameZoneAbbrev(game.gameTimeTz, game.gameTime, game.date);
     if (abbrev) game.gameTimeZoneAbbrev = abbrev;
   }

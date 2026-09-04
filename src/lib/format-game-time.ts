@@ -72,21 +72,87 @@ export function resolveGameInstant(tz: string, hhmm: string, dateYmd: string): D
 }
 
 /**
- * Short zone label for a game, e.g. "CDT", "PST", "MST".
+ * Long zone names to the abbreviation an English-speaking reader expects.
+ *
+ * WHY THIS MAP IS KEYED ON THE LONG NAME AND NOT ON THE ZONE. Intl's `short`
+ * style only returns a letter abbreviation where the en-US locale has one,
+ * which in practice means North America. Everywhere else it returns a bare
+ * offset, so the NFL international slate rendered "10:35 AM GMT+10" for
+ * Melbourne and "2:30 PM GMT+1" for London. The `long` style always returns a
+ * real name, and that name already tracks DST: Melbourne reads "Australian
+ * Eastern Standard Time" in September and "Australian Eastern Daylight Time"
+ * from October, and London flips to "Greenwich Mean Time" on 25 October 2026,
+ * which is the same day the Paris game kicks off. A per-venue table would have
+ * to encode every one of those transitions by hand and would be wrong the
+ * first time a date moved. Keying on the long name keeps the DST decision
+ * inside Intl, where it is already correct, and leaves this map holding only
+ * the stable name-to-initials step.
+ *
+ * Initials cannot be computed from the name: "Central European Standard Time"
+ * is CET, not CEST, so the standard/summer pairs have to be written out.
+ */
+const LONG_ZONE_NAME_TO_ABBREV: Record<string, string> = {
+  // Australia: Melbourne Cricket Ground, NFL week 1.
+  'Australian Eastern Standard Time': 'AEST',
+  'Australian Eastern Daylight Time': 'AEDT',
+  // United Kingdom: Tottenham Hotspur Stadium, Wembley.
+  'British Summer Time': 'BST',
+  'Greenwich Mean Time': 'GMT',
+  // Western Europe: Stade de France, Santiago Bernabeu, FC Bayern Munich.
+  'Central European Standard Time': 'CET',
+  'Central European Summer Time': 'CEST',
+  // Finland: Veikkaus Arena, the two NHL Helsinki games.
+  'Eastern European Standard Time': 'EET',
+  'Eastern European Summer Time': 'EEST',
+  // Brazil: Maracana. Brazil abolished DST in 2019, so only the standard name
+  // can occur today; the summer name is kept because the corpus outlives the
+  // policy and an unmapped name would silently fall back to "GMT-2".
+  'Brasilia Standard Time': 'BRT',
+  'Brasilia Summer Time': 'BRST',
+};
+
+function zoneNamePart(tz: string, instant: Date, style: 'short' | 'long'): string | null {
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: style })
+    .formatToParts(instant);
+  return parts.find((p) => p.type === 'timeZoneName')?.value ?? null;
+}
+
+/**
+ * Short zone label for a game, e.g. "CDT", "PST", "MST", "AEST", "BST".
  *
  * Derived from the game's own instant rather than a hand-written table, which
  * is the point: America/Phoenix reads MST year round and America/Mexico_City
  * reads CST year round (Mexico dropped DST in 2022), and a "state to zone"
  * table gets both wrong for half the year. Returns null when the instant
  * cannot be resolved, so an unlabelled time is never labelled with a guess.
+ *
+ * THE SHORT NAME IS PREFERRED AND THE MAP IS THE FALLBACK, not the other way
+ * round. A letter abbreviation from Intl is already the right answer for every
+ * North American zone in all three corpora, so taking it first means this
+ * change cannot move a single MLB, NHL or domestic NFL label: those never
+ * reach the map. Only an opaque "GMT+10" style offset falls through to
+ * LONG_ZONE_NAME_TO_ABBREV, and that set is exactly the international venues.
+ *
+ * America/Mexico_City deliberately keeps Intl's "CST". Its long name is the
+ * literal string "Central Standard Time", indistinguishable from US Central,
+ * so the map could not disambiguate it even if it were consulted, and the
+ * short-name-first rule means it is not. See the note in the gate report: a
+ * "CST (MX)" style label would also move MLB's Mexico City Series output,
+ * which this change is scoped not to touch.
+ *
+ * An unmapped opaque zone returns the offset unchanged rather than null. That
+ * is deliberate: "GMT+5:30" is opaque but true, and a reader is better served
+ * by a true offset than by a time with no zone at all.
  */
 export function gameZoneAbbrev(tz: string, hhmm: string, dateYmd: string): string | null {
   const instant = resolveGameInstant(tz, hhmm, dateYmd);
   if (!instant) return null;
   try {
-    const parts = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'short' })
-      .formatToParts(instant);
-    return parts.find((p) => p.type === 'timeZoneName')?.value ?? null;
+    const short = zoneNamePart(tz, instant, 'short');
+    if (short && !/^GMT[+-]/.test(short)) return short;
+    const long = zoneNamePart(tz, instant, 'long');
+    if (long && LONG_ZONE_NAME_TO_ABBREV[long]) return LONG_ZONE_NAME_TO_ABBREV[long];
+    return short ?? null;
   } catch {
     return null;
   }
