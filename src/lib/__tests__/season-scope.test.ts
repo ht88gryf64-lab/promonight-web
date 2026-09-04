@@ -8,7 +8,12 @@ import {
   resolveSeasonScope,
   seasonClaimSentence,
 } from '../season-scope';
-import { generateTeamFAQs, type TeamFaqCoverage } from '../promo-helpers';
+import {
+  generateTeamFAQs,
+  getPromosByType,
+  promosInCategory,
+  type TeamFaqCoverage,
+} from '../promo-helpers';
 import type { Promo, Team } from '../types';
 
 const promo = (date: string, over: Partial<Promo> = {}): Promo => ({
@@ -252,5 +257,97 @@ describe('the hold is total, not partial', () => {
       team(), upcoming, null, counts, coverage, undefined, { kind: 'held' },
     );
     assert.deepEqual(withDefault, explicit);
+  });
+});
+
+describe('defects found in adversarial review, pinned', () => {
+  const venue = null;
+  const counts = (o: Partial<Record<'giveaway' | 'theme' | 'food' | 'kids', number>> = {}) =>
+    ({ giveaway: 0, theme: 0, food: 0, kids: 0, ...o });
+
+  it('a count and its list agree about membership, isGiveaway cross-count included', () => {
+    // A kids-typed row flagged isGiveaway is counted as a giveaway. If the
+    // giveaway LIST used strict type membership it would be empty, and the
+    // section would report the category finished while the kids section on the
+    // same page listed the very same row as still to come.
+    const row = promo('2026-12-01', { type: 'kids', isGiveaway: true, title: 'Kids Backpack' });
+    const scope = resolveSeasonScope([row], 'WNBA', TODAY)!;
+    assert.equal(scope.counts.giveaway, 1, 'counted as a giveaway');
+    assert.equal(scope.counts.kids, 1, 'and still counted as kids');
+    assert.equal(promosInCategory(scope.upcoming, 'giveaway').length, 1, 'and LISTED as a giveaway');
+    assert.equal(promosInCategory(scope.upcoming, 'kids').length, 1);
+    // The strict helper is what disagreed; it is kept for callers that want it.
+    assert.equal(getPromosByType(scope.upcoming, 'giveaway').length, 0);
+  });
+
+  it('the season guard sees the same rows the counts do', () => {
+    // A malformed date must not be counted into a season it was not allowed to
+    // push into the multi-year fallback.
+    const rows = [promo('2026-05-01'), promo('not-a-date')];
+    const scope = resolveSeasonScope(rows, 'WNBA', TODAY)!;
+    assert.equal(scope.total, 1, 'the malformed row is excluded from the count');
+  });
+
+  it('the best-giveaway answer stamps the promo year, not the page year', () => {
+    // 29 of 32 NHL clubs carry rows on both sides of a New Year, and
+    // formatDateReadable prints no year, so a 2027 giveaway was being announced
+    // as the best giveaway night "in 2026" inside FAQPage schema.
+    const jan2027 = promo('2027-01-15', { title: 'Winter Bobblehead' });
+    const faqs = generateTeamFAQs(
+      team({ league: 'NHL' }), [jan2027], venue, counts({ giveaway: 1 }), coverage,
+      undefined, { kind: 'remaining' },
+    );
+    const best = faqs.find((f) => /best .* giveaway night/.test(f.question))!;
+    assert.match(best.question, /in 2027\?$/);
+    assert.match(best.answer, /giveaway in 2027 is Winter Bobblehead/);
+    assert.doesNotMatch(best.answer, /2026/);
+  });
+
+  it('the kids FAQ does not restate its own section H2 with a different number', () => {
+    const rows = [
+      promo('2026-04-01', { type: 'kids' }),
+      promo('2026-05-01', { type: 'kids' }),
+      promo('2026-12-01', { type: 'kids' }),
+    ];
+    const scope = resolveSeasonScope(rows, 'WNBA', TODAY)!;
+    const faqs = generateTeamFAQs(
+      team(), scope.upcoming, venue, counts({ kids: 1 }), coverage,
+      undefined, { kind: 'season', scope },
+    );
+    const kids = faqs.find((f) => /kids and family events/.test(f.question))!;
+    // The number matches the section, which publishes the season count.
+    assert.match(kids.answer, /3 kids and family events/);
+    assert.match(kids.answer, /1 is still to come/);
+    // And the question is no longer byte-identical to the section H2.
+    assert.notEqual(kids.question, 'When are Testers kids and family events in 2026?');
+  });
+
+  it('never emits "1 promotional events" or a dangling "including ."', () => {
+    const scope = resolveSeasonScope([promo('2026-12-01')], 'WNBA', TODAY)!;
+    const faqs = generateTeamFAQs(
+      team(), scope.upcoming, venue, counts({ giveaway: 1 }), coverage,
+      undefined, { kind: 'season', scope },
+    );
+    assert.match(faqs[0].answer, /have 1 promotional event in the 2026 season/);
+    assert.doesNotMatch(faqs[0].answer, /1 promotional events/);
+    assert.doesNotMatch(faqs[0].answer, /including \./);
+    assert.doesNotMatch(faqs[0].answer, /\s\s/, 'no double space from an omitted clause');
+  });
+
+  it('the gating disclosure has a shape for every degenerate count', () => {
+    const gated = (n: number, total: number) => {
+      const rows = Array.from({ length: total }, (_, i) =>
+        promo(`2026-12-${String(i + 1).padStart(2, '0')}`, {
+          title: `G${i}`,
+          description: i < n ? 'Included with the ticket package.' : '',
+        }),
+      );
+      return resolveSeasonScope(rows, 'WNBA', TODAY)!.gatedDisclosure;
+    };
+    assert.equal(gated(0, 3), null);
+    assert.equal(gated(1, 1), 'The only giveaway that season requires a ticket package.');
+    assert.equal(gated(3, 3), 'All 3 giveaways require a ticket package.');
+    assert.equal(gated(1, 3), '1 of the 3 giveaways requires a ticket package.');
+    assert.equal(gated(2, 3), '2 of the 3 giveaways require a ticket package.');
   });
 });

@@ -1,6 +1,6 @@
 import { IconChartBar } from '@tabler/icons-react';
 import type { Promo, PromoType, Team, Venue } from '@/lib/types';
-import { allCompletedClause, seasonSpan, scheduledPeriodPhrase, remainingPeriodPhrase } from '@/lib/season-label';
+import { seasonSpan, scheduledPeriodPhrase, remainingPeriodPhrase } from '@/lib/season-label';
 import type { ClaimMode } from '@/lib/season-scope';
 
 // SEASON_YEAR = 2026 used to live here, and its comment was right that a
@@ -126,14 +126,17 @@ export function AuthorityStats({
   const sentences: string[] = [];
 
   if ((season || held) && ratio !== null && pctHomeGames !== null) {
-    // The hold reproduces the original sentence, which ended at the percentage.
+    // The remaining clause sits INSIDE the first clause, next to the count it
+    // describes. Appended to the end of the paragraph its nearest antecedent was
+    // "home dates", so "5 are still to come" read as five home dates rather than
+    // five events. The hold emits no clause at all, reproducing the original.
     const remaining = !season
       ? ''
       : season.upcomingCount === 0
-        ? ` ${allCompletedClause(season.total)}`
-        : ` ${season.upcomingCount} ${season.upcomingCount === 1 ? 'is' : 'are'} still to come.`;
+        ? ', all of them already played'
+        : `, ${season.upcomingCount} of them still to come`;
     sentences.push(
-      `The ${teamName} have ${stats.length} promotional events scheduled across ${homeGames} ${team.league} home ${homeGames === 1 ? 'game' : 'games'} ${period}, averaging ${ratio} promos per home game. Roughly ${pctHomeGames}% of home dates at ${venueName} have at least one scheduled promotion.${remaining}`,
+      `The ${teamName} have ${stats.length} promotional events scheduled across ${homeGames} ${team.league} home ${homeGames === 1 ? 'game' : 'games'} ${period}${remaining}, averaging ${ratio} promos per home game. Roughly ${pctHomeGames}% of home dates at ${venueName} have at least one scheduled promotion.`,
     );
   } else if (season || held) {
     sentences.push(

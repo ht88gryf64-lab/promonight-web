@@ -76,6 +76,22 @@ export function isSeasonScopeLive(league: string, today: string = todayYmd()): b
 
 const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
 
+/**
+ * The disclosure that rides with a published season giveaway count.
+ *
+ * Three shapes, because "1 of the 1 giveaway requires a ticket package" is what
+ * a single template produces on the degenerate case and it reads as an error.
+ */
+function gatedDisclosureFor(gated: number, total: number): string | null {
+  if (gated === 0) return null;
+  if (gated >= total) {
+    return total === 1
+      ? 'The only giveaway that season requires a ticket package.'
+      : `All ${total} giveaways require a ticket package.`;
+  }
+  return `${gated} of the ${total} ${plural(total, 'giveaway', 'giveaways')} ${plural(gated, 'requires', 'require')} a ticket package.`;
+}
+
 export interface SeasonScope {
   /** The single calendar year the rows resolve to. */
   year: number;
@@ -163,7 +179,16 @@ export function resolveSeasonScope(
 
   // Dateless rows (recurring deals, the date-in-image clubs) belong to no
   // season and no archive, exactly as splitPromosByDate treats them.
-  const dated = promos.filter((p) => typeof p.date === 'string' && p.date !== '');
+  //
+  // The predicate is the FULL YMD shape, not merely a non-empty string, so this
+  // population is the same set seasonSpan measures below. A looser filter here
+  // would let a malformed date into `total` and `counts` while seasonSpan
+  // discarded it, so a row could be counted in a season it was not allowed to
+  // push into the multi-year fallback. Zero such rows exist today; the point is
+  // that the guard and the count can never see different sets.
+  const dated = promos.filter(
+    (p) => typeof p.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(p.date),
+  );
   if (dated.length === 0) return null;
 
   const span = seasonSpan(dated.map((p) => p.date));
@@ -191,10 +216,7 @@ export function resolveSeasonScope(
     upcomingCount: upcoming.length,
     completedCount: past.length,
     gatedGiveawayCount,
-    gatedDisclosure:
-      gatedGiveawayCount === 0
-        ? null
-        : `${gatedGiveawayCount} of the ${counts.giveaway} ${plural(counts.giveaway, 'giveaway', 'giveaways')} ${plural(gatedGiveawayCount, 'requires', 'require')} a ticket package.`,
+    gatedDisclosure: gatedDisclosureFor(gatedGiveawayCount, counts.giveaway),
   };
 }
 

@@ -350,6 +350,31 @@ export function getPromosByType(promos: Promo[], type: PromoType): Promo[] {
   return promos.filter((p) => p.type === type);
 }
 
+/**
+ * The rows countPromosByType counts for a category. Strict type membership,
+ * PLUS the isGiveaway cross-count: a promo flagged isGiveaway counts toward the
+ * giveaway tally even when its primary type is something else.
+ *
+ * WHY THIS EXISTS SEPARATELY FROM getPromosByType. A section that publishes
+ * countPromosByType's number over getPromosByType's rows is publishing a count
+ * and a list built by two different membership rules. With a kids-typed
+ * isGiveaway row still ahead, the giveaway section counted it, found no giveaway
+ * rows to list, and concluded the category was finished: "1 giveaway night in
+ * the 2026 season. It has already taken place." while the kids section on the
+ * same page correctly listed the same row as still to come.
+ *
+ * Measured 2026-09-04: ZERO rows corpus-wide carry isGiveaway with a non-
+ * giveaway type, so nothing renders differently today. The flag is still read by
+ * countPromosByType and documented as live for the Twins gate giveaways, so the
+ * disagreement is latent rather than absent, and a count and its list must not
+ * be able to disagree about what they contain.
+ */
+export function promosInCategory(promos: Promo[], type: PromoType): Promo[] {
+  return promos.filter(
+    (p) => p.type === type || (type === 'giveaway' && !!p.isGiveaway),
+  );
+}
+
 export function getTopGiveaway(promos: Promo[]): Promo | null {
   const giveaways = getPromosByType(promos, 'giveaway');
   if (giveaways.length === 0) return null;
@@ -452,6 +477,9 @@ export function generateTeamFAQs(
     if (c.theme > 0) parts.push(`${c.theme} theme night${c.theme !== 1 ? 's' : ''}`);
     if (c.food > 0) parts.push(`${c.food} food deal event${c.food !== 1 ? 's' : ''}`);
     if (c.kids > 0) parts.push(`${c.kids} kids/family event${c.kids !== 1 ? 's' : ''}`);
+    // Empty when no row lands in the four buckets, which Firestore can produce
+    // because mapPromoDoc casts `type` unchecked. Callers must not splice an
+    // empty list into "including ...", so they test it.
     return parts.join(', ');
   };
 
@@ -462,9 +490,10 @@ export function generateTeamFAQs(
         ? allCompletedClause(season.total)
         : `${season.upcomingCount} ${season.upcomingCount === 1 ? 'is' : 'are'} still to come.`;
     const gated = season.gatedDisclosure;
+    const seasonBreakdown = breakdown(season.counts);
     faqs.push({
       question: `How many promotional nights do the ${team.name} have in the ${season.year} season?`,
-      answer: `The ${fullName} have ${season.total} promotional events in the ${season.year} season, including ${breakdown(season.counts)}. ${remaining}${gated ? ` ${gated}` : ''} These events take place at ${venueName}${cityClause}.`,
+      answer: `The ${fullName} have ${season.total} promotional ${season.total === 1 ? 'event' : 'events'} in the ${season.year} season${seasonBreakdown ? `, including ${seasonBreakdown}` : ''}. ${remaining}${gated ? ` ${gated}` : ''} These events take place at ${venueName}${cityClause}.`,
     });
   } else if (upcomingPromos.length > 0) {
     // HELD keeps the pre-change strings byte for byte, including the "in the
@@ -479,7 +508,7 @@ export function generateTeamFAQs(
           }
         : {
             question: `How many ${team.name} promotional nights are still to come?`,
-            answer: `The ${fullName} have ${upcomingPromos.length} promotional events still to come${remainingPeriodPhrase(upcomingPromos.map((p) => p.date))}, including ${breakdown(upcomingCounts)}. These events take place at ${venueName}${cityClause}.`,
+            answer: `The ${fullName} have ${upcomingPromos.length} promotional ${upcomingPromos.length === 1 ? 'event' : 'events'} still to come${remainingPeriodPhrase(upcomingPromos.map((p) => p.date))}${breakdown(upcomingCounts) ? `, including ${breakdown(upcomingCounts)}` : ''}. These events take place at ${venueName}${cityClause}.`,
           },
     );
   }
@@ -490,9 +519,17 @@ export function generateTeamFAQs(
   if (upcomingCounts.giveaway > 0) {
     const top = getTopGiveaway(upcomingPromos);
     if (top) {
+      // The year comes from the PROMO, not from the page's season constant.
+      // formatDateReadable prints month and day only, so on a club whose
+      // remaining rows cross a New Year this answer named a 2027 giveaway as
+      // "the best giveaway night in 2026" with nothing on screen to contradict
+      // it, inside FAQPage structured data, on 29 of 32 NHL clubs. Held keeps
+      // the constant; every MLB row is 2026, so the two agree there anyway.
+      const topYear =
+        claim.kind === 'held' ? year : Number(top.date.slice(0, 4)) || year;
       faqs.push({
-        question: `What is the best ${team.name} giveaway night in ${year}?`,
-        answer: `The most anticipated ${team.name} giveaway in ${year} is ${top.title} on ${formatDateReadable(top.date)}${top.opponent ? ` against the ${top.opponent}` : ''}. ${top.description || `${PROMO_TYPE_LABELS.giveaway} nights typically go to the first fans through the gates, so arrive early when gates open.`}`,
+        question: `What is the best ${team.name} giveaway night in ${topYear}?`,
+        answer: `The most anticipated ${team.name} giveaway in ${topYear} is ${top.title} on ${formatDateReadable(top.date)}${top.opponent ? ` against the ${top.opponent}` : ''}. ${top.description || `${PROMO_TYPE_LABELS.giveaway} nights typically go to the first fans through the gates, so arrive early when gates open.`}`,
       });
     }
   }
@@ -514,13 +551,29 @@ export function generateTeamFAQs(
   // 4. Kids events (skip if none upcoming). The answer says "Upcoming family
   // events include", so the list behind it must be upcoming for the sentence
   // to be true.
-  if (upcomingCounts.kids > 0) {
+  // SEASON-AWARE, and it has to be. The question string here was verbatim the
+  // H2 that TeamContentSections renders over the kids section, and that section
+  // now publishes a SEASON count. Left alone, one page carried the same question
+  // twice with two different numbers, one of them inside FAQPage schema.
+  const kidsSeasonCount = claim.kind === 'season' ? claim.scope.counts.kids : 0;
+  if (claim.kind === 'season' ? kidsSeasonCount > 0 : upcomingCounts.kids > 0) {
     const kidsPromos = getPromosByType(upcomingPromos, 'kids');
     const kidsList = kidsPromos
       .slice(0, 3)
       .map((p) => `${p.title} (${formatDateReadable(p.date)})`)
       .join(', ');
 
+    if (claim.kind === 'season') {
+      const ahead = upcomingCounts.kids;
+      const aheadClause =
+        ahead === 0
+          ? allCompletedClause(kidsSeasonCount)
+          : `${ahead} ${ahead === 1 ? 'is' : 'are'} still to come${kidsList ? `: ${kidsList}` : ''}.`;
+      faqs.push({
+        question: `When are ${team.name} kids and family events in the ${claim.scope.year} season?`,
+        answer: `The ${fullName} have ${kidsSeasonCount} kids and family ${kidsSeasonCount === 1 ? 'event' : 'events'} at ${venueName} in the ${claim.scope.year} season. ${aheadClause} These events are designed for young fans and families attending games at ${venueName}.`,
+      });
+    } else
     faqs.push({
       question: `When are ${team.name} kids and family events in ${year}?`,
       // "still to come in 2026" was wrong on every club whose remaining rows

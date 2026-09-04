@@ -5,6 +5,7 @@ import {
   formatDateReadable,
   getPromosByType,
   getTopGiveaway,
+  promosInCategory,
   teamDisplayName,
 } from '@/lib/promo-helpers';
 import { RD_CATEGORIES } from '@/components/redesign/categories';
@@ -95,13 +96,17 @@ export function TeamContentSections({
         isSeason: false,
         held,
         year,
-        list: getPromosByType(promos, type),
+        list: promosInCategory(promos, type),
         listIsUpcoming: true,
         gatedDisclosure: null,
       };
     }
-    const ahead = getPromosByType(season.upcoming, type);
-    const done = getPromosByType(season.past, type);
+    // promosInCategory, not getPromosByType: `count` below comes from
+    // countPromosByType, and these two must agree about membership or the
+    // section can report a category finished while the row it counted is still
+    // ahead in another section on the same page.
+    const ahead = promosInCategory(season.upcoming, type);
+    const done = promosInCategory(season.past, type);
     return {
       count: season.counts[type],
       upcomingCount: ahead.length,

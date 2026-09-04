@@ -400,11 +400,16 @@ export default async function TeamPage({
         <AdSlot config={AD_SLOTS.HEADER_LEADERBOARD} pageType="team_page" />
       </section>
 
+      {/* Rollback-only template. The hero's first StatBox is labelled "Total
+       *  Promos", so on a season-scoped page it has to carry the season total:
+       *  left on the upcoming count it read "19 Total Promos" directly above
+       *  prose saying 98 promotional events in the 2026 season. Held and
+       *  fallback pages pass exactly what they passed before. */}
       <TeamHero
         team={team}
         venue={venue}
-        promoCount={upcomingPromos.length}
-        promoCounts={upcomingCounts}
+        promoCount={claimMode.kind === 'season' ? claimMode.scope.total : upcomingPromos.length}
+        promoCounts={claimMode.kind === 'season' ? claimMode.scope.counts : upcomingCounts}
       />
 
       <section className="px-6 py-4">
