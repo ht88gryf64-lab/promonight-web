@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   MLB_SEASON_SCOPE_START,
+  isSeasonComplete,
   isSeasonScopeLive,
   resolveClaimMode,
   resolveSeasonScope,
@@ -142,11 +143,27 @@ describe('seasonClaimSentence', () => {
     );
   });
 
-  it('says all completed when nothing is ahead', () => {
+  it('STATE (b): nothing ahead means no forward clause at all', () => {
+    // The obvious closer, "all completed", answers an availability question
+    // nobody asked and turns a season record into a notice of emptiness. Every
+    // MLB page enters this state the day the rollout hold lifts.
+    assert.equal(seasonClaimSentence(build(['2026-04-01'])), '1 promotion in the 2026 season');
     assert.equal(
-      seasonClaimSentence(build(['2026-04-01'])),
-      '1 promotion in the 2026 season, all completed',
+      seasonClaimSentence(build(['2026-04-01', '2026-05-01'])),
+      '2 promotions in the 2026 season',
     );
+    for (const dates of [['2026-04-01'], ['2026-04-01', '2026-05-01']]) {
+      const out = seasonClaimSentence(build(dates));
+      for (const banned of ['completed', 'still to come', 'already', 'no ', 'none']) {
+        assert.ok(!out.toLowerCase().includes(banned), `"${banned}" leaked into state (b): ${out}`);
+      }
+    }
+  });
+
+  it('isSeasonComplete marks exactly the zero-remaining state', () => {
+    assert.equal(isSeasonComplete(build(['2026-04-01'])), true);
+    assert.equal(isSeasonComplete(build(['2026-12-01'])), false);
+    assert.equal(isSeasonComplete(build(['2026-04-01', '2026-12-01'])), false);
   });
 
   it('says all still to come when nothing has happened', () => {
@@ -349,5 +366,22 @@ describe('defects found in adversarial review, pinned', () => {
     assert.equal(gated(3, 3), 'All 3 giveaways require a ticket package.');
     assert.equal(gated(1, 3), '1 of the 3 giveaways requires a ticket package.');
     assert.equal(gated(2, 3), '2 of the 3 giveaways require a ticket package.');
+  });
+});
+
+describe('state (b) reads as a record, not an empty page', () => {
+  const rows = [promo('2026-04-01'), promo('2026-05-01', { type: 'theme' })];
+  const scope = resolveSeasonScope(rows, 'WNBA', TODAY)!;
+
+  it('the FAQ answer states the season and stops', () => {
+    const faqs = generateTeamFAQs(
+      team(), [], null, { giveaway: 0, theme: 0, food: 0, kids: 0 }, coverage,
+      undefined, { kind: 'season', scope },
+    );
+    const a = faqs[0].answer;
+    assert.match(a, /have 2 promotional events in the 2026 season, including 1 giveaway night, 1 theme night\./);
+    assert.doesNotMatch(a, /already taken place|still to come|all completed/);
+    assert.doesNotMatch(a, /\s\s/, 'the removed clause must not leave a double space');
+    assert.doesNotMatch(a, /\.\s*\./, 'nor a doubled period');
   });
 });

@@ -102,9 +102,10 @@ test('OMIT: a finished season states its count and names nothing as next up', ()
     // No upcoming rows: the caller passes an empty upcoming array, which is what
     // the route does once the season is over.
     const p = paragraph([], 2, variant, { kind: 'season', scope: season! });
+    // No forward clause: the ListLabel beneath supplies the timing.
     assert.equal(
       p,
-      'The Testville Niners have 2 theme nights at Test Park in the 2026 season. All of them have already taken place.',
+      'The Testville Niners have 2 theme nights at Test Park in the 2026 season.',
       `${variant}: finished-season paragraph`,
     );
     assert.ok(!/Next up/.test(p), `${variant}: a dangling "Next up" rendered`);

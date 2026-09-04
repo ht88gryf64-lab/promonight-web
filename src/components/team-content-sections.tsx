@@ -9,7 +9,6 @@ import {
   teamDisplayName,
 } from '@/lib/promo-helpers';
 import { RD_CATEGORIES } from '@/components/redesign/categories';
-import { allCompletedClause } from '@/lib/season-label';
 import type { ClaimMode } from '@/lib/season-scope';
 
 // Hardcoded, never derived from the clock. See the same rule at
@@ -352,7 +351,7 @@ function GiveawaySection({
     : scope.isSeason
     ? scope.upcomingCount > 0
       ? `The ${fullName} have ${scope.count} giveaway night${scope.count !== 1 ? 's' : ''} scheduled for the ${scope.year} season at ${venueName}, ${scope.upcomingCount} still to come.`
-      : `The ${fullName} have ${scope.count} giveaway night${scope.count !== 1 ? 's' : ''} in the ${scope.year} season at ${venueName}. ${allCompletedClause(scope.count)}`
+      : `The ${fullName} have ${scope.count} giveaway night${scope.count !== 1 ? 's' : ''} in the ${scope.year} season at ${venueName}.`
     : `The ${fullName} have ${scope.count} giveaway night${scope.count !== 1 ? 's' : ''} still to come at ${venueName}.`;
 
   if (variant === 'light') {
@@ -462,7 +461,7 @@ function ThemeSection({
     : scope.isSeason
     ? scope.upcomingCount > 0
       ? `The ${fullName} have ${scope.count} theme night${scope.count !== 1 ? 's' : ''} scheduled at ${venueName} during the ${scope.year} season, ${scope.upcomingCount} still to come.`
-      : `The ${fullName} have ${scope.count} theme night${scope.count !== 1 ? 's' : ''} at ${venueName} in the ${scope.year} season. ${allCompletedClause(scope.count)}`
+      : `The ${fullName} have ${scope.count} theme night${scope.count !== 1 ? 's' : ''} at ${venueName} in the ${scope.year} season.`
     : `The ${fullName} have ${scope.count} theme night${scope.count !== 1 ? 's' : ''} still to come at ${venueName}.`;
   const themeParagraph =
     themeLead +
@@ -531,7 +530,7 @@ function FoodSection({
     : scope.isSeason
     ? scope.upcomingCount > 0
       ? `${venueName} has ${scope.count} food deal event${scope.count !== 1 ? 's' : ''} during ${fullName} games in the ${scope.year} season, ${scope.upcomingCount} still to come.`
-      : `${venueName} has ${scope.count} food deal event${scope.count !== 1 ? 's' : ''} during ${fullName} games in the ${scope.year} season. ${allCompletedClause(scope.count)}`
+      : `${venueName} has ${scope.count} food deal event${scope.count !== 1 ? 's' : ''} during ${fullName} games in the ${scope.year} season.`
     : `${venueName} has ${scope.count} food deal event${scope.count !== 1 ? 's' : ''} still to come during ${fullName} games.`;
 
   if (variant === 'light') {
@@ -597,7 +596,7 @@ function KidsSection({
     : scope.isSeason
     ? scope.upcomingCount > 0
       ? `The ${fullName} have ${scope.count} kids and family event${scope.count !== 1 ? 's' : ''} at ${venueName} in the ${scope.year} season, ${scope.upcomingCount} still to come.`
-      : `The ${fullName} have ${scope.count} kids and family event${scope.count !== 1 ? 's' : ''} at ${venueName} in the ${scope.year} season. ${allCompletedClause(scope.count)}`
+      : `The ${fullName} have ${scope.count} kids and family event${scope.count !== 1 ? 's' : ''} at ${venueName} in the ${scope.year} season.`
     : `The ${fullName} have ${scope.count} kids and family event${scope.count !== 1 ? 's' : ''} still to come at ${venueName}.`;
 
   if (variant === 'light') {

@@ -57,11 +57,17 @@ function PromoRow({
   share,
   completed = false,
   resaleSlot,
+  scopeLive = false,
 }: {
   promo: Promo;
   share: PromoShareContext;
   completed?: boolean;
   resaleSlot?: ReactNode;
+  /** Whether this league's rollout gate has opened. The Ticket Package pill is
+   *  a visible change, and the rollback-only template is still an MLB render
+   *  path, so it holds with everything else rather than being the one thing in
+   *  the change with no gate. */
+  scopeLive?: boolean;
 }) {
   const { day, weekday, month } = formatPromoDate(promo.date);
   const typeColor = TYPE_COLORS[promo.type];
@@ -102,7 +108,7 @@ function PromoRow({
       <div className="flex-1 min-w-0 pr-8">
         <div className="flex flex-wrap items-center gap-2 mb-1.5">
           <span className="text-lg" aria-hidden="true">{promo.icon}</span>
-          <PromoBadge type={promo.type} gated={isPurchaseGated(promo)} />
+          <PromoBadge type={promo.type} gated={scopeLive && isPurchaseGated(promo)} />
           {completed && (
             <span className="inline-flex items-center gap-1 text-[10px] font-mono tracking-[0.5px] uppercase text-text-dim border border-border-subtle rounded-full px-2 py-0.5">
               Completed
@@ -145,27 +151,50 @@ const COMPLETED_VISIBLE = 5;
  * published a season count.
  *
  * WHY ANY AT ALL. A season-scoped page says "98 promotions in the 2026 season"
- * and then server-renders 19 upcoming rows and a button. The count is honest,
+ * and then server-renders the upcoming rows and a button. The count is honest,
  * but a crawler never clicks the button, so the page asserts a season it does
  * not show. Eight rows put the most recent completed nights in the HTML behind
- * the claim.
+ * the claim. That matters most in the season-complete state, where the upcoming
+ * list is empty and these are the only promo rows in the served HTML.
  *
  * WHY EIGHT AND NOT ALL OF THEM. Completed rows are client-mounted because
  * data-rich pages sit near Bing's 1 MB HTML ceiling, and that constraint is
- * unchanged. Measured on production 2026-09-04: a completed row costs about
- * 4.0 KB of DOM plus 2.5 KB of RSC flight payload, so roughly 6.5 KB each.
- * Baselines: Minnesota Twins 819 KB (78% of 1 MB, 120 completed rows), Detroit
- * Red Wings 772 KB (74%), Los Angeles Dodgers 733 KB (70%). Expanding the full
- * Dodgers archive projects to about 1.17 MB, over the ceiling; the Twins are
- * worse. Eight rows cost about 52 KB, which lands the worst case near 83%.
+ * unchanged.
+ *
+ * THE COST PER ROW, MEASURED PROPERLY. An earlier version of this comment put
+ * it at 6,478 B (4,009 DOM + 2,469 flight) and was wrong by 1.93x, in two ways.
+ * React Flight DEDUPLICATES: a collapsed row is not serialized as an object
+ * inside LazyPromoRows' props, it is a path pointer into gameContexts, which
+ * already carries every promo. Measured on the served Dodgers payload, all 76
+ * collapsed rows cost 5,264 B TOTAL, about 68 B each, not 2,469 B each. And the
+ * 4,009 B DOM figure was taken from lifted resale rows, which carry an 862 B
+ * eBay CTA block that these rows deliberately do not.
+ *
+ * Marginal cost of moving one row from collapsed to server-rendered:
+ *   ~3,030 B DOM  +  389 B flight element  -  68 B pointer reclaimed  =  ~3,350 B
+ *
+ * Baselines, cache-busting curl of production 2026-09-04, uncompressed:
+ *   mlb/texas-rangers        846,229 B   80.7% of 1 MiB   <- heaviest page on the site
+ *   mlb/minnesota-twins      819,655 B   78.2%
+ *   mlb/miami-marlins        800,512 B   76.3%
+ *   nhl/detroit-red-wings    772,271 B   73.6%   (falls back, so unaffected)
+ *   mlb/los-angeles-dodgers  732,902 B   69.9%
+ *
+ * Eight rows cost about 26.8 KB, so the worst page lands near 83% even if the
+ * calendar trim saves nothing. The change is in fact net NEGATIVE on weight:
+ * restricting the calendar's prerender window to home days removes 92 to 140 KB
+ * of hidden away-game blocks from every MLB and NFL page, far more than these
+ * rows add.
  *
  * The eight are IN ADDITION to the up-to-three lifted resale rows, so the
- * server-rendered completed block tops out at eleven rows. Only the lifted three
+ * server-rendered completed block tops out at eleven. Only the lifted three
  * carry the eBay CTA; these eight are passed no resale slot, so the affiliate
  * surface does not grow with them.
  *
- * The remainder stays behind the expander with its count in the button label,
- * exactly as before.
+ * The remainder stays behind the expander with its count in the button label.
+ * On a team whose archive is eight rows or fewer after the lift there is no
+ * remainder and the expander does not render at all, which is correct rather
+ * than a regression: nothing is hidden.
  */
 const COMPLETED_SSR_WHEN_SEASON_SCOPED = 8;
 
@@ -183,6 +212,7 @@ export function PromoList({
   variant = 'dark',
   showAppPitch = true,
   seasonScoped = false,
+  scopeLive = false,
   team,
   gameContexts,
 }: {
@@ -206,6 +236,9 @@ export function PromoList({
    *  a bounded slice of the completed archive so the HTML carries evidence for
    *  the claim. False leaves the list byte-identical to before. */
   seasonScoped?: boolean;
+  /** Whether this league's rollout gate has opened. Only the rollback-only dark
+   *  variant reads it, for the Ticket Package pill. */
+  scopeLive?: boolean;
   /** Full team object — enables the upcoming rows to open the shared game modal
    *  (light variant only). Absent → rows render static, as before. */
   team?: Team;
@@ -251,6 +284,10 @@ export function PromoList({
   // archive. This line renders when a club has run out of upcoming promos, so
   // it IS an MLB surface at season end, not an NHL-only one.
   const pastPointerYears = pastSpan ? `${pastSpan.yearLabel} ` : '';
+
+  // State (b) from src/lib/season-scope.ts, recomputed here from the rows this
+  // component already holds rather than threaded as a fourth prop.
+  const seasonComplete = seasonScoped && upcoming.length === 0 && past.length > 0;
 
   const upcomingVisible = upcoming.slice(0, UPCOMING_VISIBLE);
   const upcomingHidden = upcoming.slice(UPCOMING_VISIBLE);
@@ -303,11 +340,20 @@ export function PromoList({
         <PromoArrivalHighlight />
         <div className="max-w-5xl mx-auto">
           <div className="mb-6">
+            {/* SEASON-COMPLETE HEADING. With a published season count and nothing
+             *  left, "Coming up / UPCOMING PROMOS" is a large heading over the
+             *  sentence "there are none", which is the single strongest
+             *  empty-page signal on the page. Every MLB club enters this state,
+             *  and the Dodgers cluster alone carries roughly 26,000 monthly
+             *  impressions, so the heading has to name what the page actually
+             *  holds: the season. Only the words change; the rows, the archive
+             *  below and the ordering are untouched. Held and fallback pages
+             *  keep the original heading byte for byte. */}
             <span className="font-rd text-[11px] uppercase tracking-[0.14em] text-rd-ink-faint">
-              Coming up
+              {seasonComplete ? 'The full season' : 'Coming up'}
             </span>
             <h2 className="rd-display text-3xl md:text-4xl text-rd-ink mt-1">
-              UPCOMING PROMOS
+              {seasonComplete ? `${pastSpan?.yearLabel ?? ''} SEASON PROMOS`.trim() : 'UPCOMING PROMOS'}
             </h2>
             {upcoming.length > 0 && (
               <p className="text-rd-ink-faint text-xs font-rd tracking-[0.02em] mt-2">
@@ -354,6 +400,17 @@ export function PromoList({
             <div className="text-center py-12">
               <p className="text-rd-ink-soft text-lg">No upcoming promos yet</p>
               <p className="text-rd-ink-faint text-sm mt-1">Check back later for the latest schedule</p>
+            </div>
+          ) : seasonComplete ? (
+            /* States what the page HAS rather than what it lacks. Deliberately
+             * not "the season is complete": zero upcoming rows means our data
+             * holds nothing ahead, which is not the same as the season being
+             * over or our record being exhaustive. */
+            <div className="py-2">
+              <p className="text-rd-ink-soft text-sm">
+                All {past.length} {teamName} {past.length === 1 ? 'promotion' : 'promotions'} on record for the{' '}
+                {pastSpan?.yearLabel} season are below.
+              </p>
             </div>
           ) : (
             <div className="text-center py-8">
@@ -467,7 +524,7 @@ export function PromoList({
           <>
             <div className="space-y-3">
               {upcomingVisible.map((promo, i) => (
-                <PromoRow key={`u-${i}`} promo={promo} share={share} />
+                <PromoRow key={`u-${i}`} promo={promo} share={share} scopeLive={scopeLive} />
               ))}
             </div>
 
@@ -480,7 +537,7 @@ export function PromoList({
                 </summary>
                 <div className="mt-4 space-y-3">
                   {upcomingHidden.map((promo, i) => (
-                    <PromoRow key={`uh-${i}`} promo={promo} share={share} />
+                    <PromoRow key={`uh-${i}`} promo={promo} share={share} scopeLive={scopeLive} />
                   ))}
                 </div>
               </details>
@@ -521,6 +578,7 @@ export function PromoList({
                   key={`rp-${i}`}
                   promo={promo}
                   share={share}
+                  scopeLive={scopeLive}
                   completed
                   resaleSlot={resaleSlotFor(promo, 'dark')}
                 />
@@ -540,6 +598,7 @@ export function PromoList({
                       key={`ph-${i}`}
                       promo={promo}
                       share={share}
+                  scopeLive={scopeLive}
                       completed
                       resaleSlot={resaleSlotFor(promo, 'dark')}
                     />

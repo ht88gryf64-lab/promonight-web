@@ -126,18 +126,23 @@ export function AuthorityStats({
   const sentences: string[] = [];
 
   if ((season || held) && ratio !== null && pctHomeGames !== null) {
-    // The remaining clause sits INSIDE the first clause, next to the count it
-    // describes. Appended to the end of the paragraph its nearest antecedent was
-    // "home dates", so "5 are still to come" read as five home dates rather than
-    // five events. The hold emits no clause at all, reproducing the original.
-    const remaining = !season
-      ? ''
-      : season.upcomingCount === 0
-        ? ', all of them already played'
-        : `, ${season.upcomingCount} of them still to come`;
+    // The remaining count gets its own sentence with an EXPLICIT NOUN, never a
+    // pronoun. Appended to the paragraph the nearest antecedent was "home
+    // dates"; moved inside the first clause it was "home games". Both read as a
+    // count of games rather than of events, so the pronoun is gone.
+    //
+    // In state (b) there is no sentence at all: the paragraph above is already a
+    // complete statement of the season, and a closer saying everything is over
+    // turns a record into a notice of emptiness. The hold emits nothing either,
+    // reproducing the original paragraph exactly.
     sentences.push(
-      `The ${teamName} have ${stats.length} promotional events scheduled across ${homeGames} ${team.league} home ${homeGames === 1 ? 'game' : 'games'} ${period}${remaining}, averaging ${ratio} promos per home game. Roughly ${pctHomeGames}% of home dates at ${venueName} have at least one scheduled promotion.`,
+      `The ${teamName} have ${stats.length} promotional events scheduled across ${homeGames} ${team.league} home ${homeGames === 1 ? 'game' : 'games'} ${period}, averaging ${ratio} promos per home game. Roughly ${pctHomeGames}% of home dates at ${venueName} have at least one scheduled promotion.`,
     );
+    if (season && season.upcomingCount > 0) {
+      sentences.push(
+        `${season.upcomingCount} of those ${season.total} events ${season.upcomingCount === 1 ? 'is' : 'are'} still to come.`,
+      );
+    }
   } else if (season || held) {
     sentences.push(
       `The ${teamName} have ${stats.length} promotional events scheduled ${period}.`,

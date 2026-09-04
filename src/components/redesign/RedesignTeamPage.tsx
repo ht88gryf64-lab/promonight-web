@@ -13,7 +13,7 @@ import { ScheduleBlock } from './ScheduleBlock';
 import { DivisionRivals } from './DivisionRivals';
 import { getDivisionRivals } from '@/lib/division-rivals';
 import { teamTitleSubtitle } from '@/lib/title-treatment';
-import { isSeasonScopeLive, seasonClaimSentence, type ClaimMode } from '@/lib/season-scope';
+import { seasonClaimSentence, type ClaimMode } from '@/lib/season-scope';
 import { UpcomingPromoModalProvider } from './UpcomingPromoModal';
 import { AffiliateRail } from './AffiliateRail';
 import { ExploreCard } from './ExploreCard';
@@ -109,11 +109,18 @@ export function RedesignTeamPage({
   const leagueHub = getLeagueHub(team.league);
   const leagueHubHref = leagueHub?.live ? leagueHub.href : null;
 
-  // The away-day prerender change rides the LEAGUE date gate, not seasonScope.
+  // The away-day prerender change rides the LEAGUE rollout gate, not seasonScope.
   // It is not a claim, so whether a team's rows resolve to a season is
   // irrelevant to it; what matters is that MLB pages hold still until the
   // ctr-diagnostic-sep2026 read date like every other change in this slice.
-  const scopeLive = isSeasonScopeLive(team.league);
+  //
+  // DERIVED FROM `claim`, NOT FROM A SECOND CLOCK READ. This was
+  // isSeasonScopeLive(team.league), which calls todayYmd() again. Two
+  // independent reads of the clock inside one render can straddle the UTC
+  // rollover and disagree, producing a page with held copy and home-only
+  // prerendering, a combination neither state defines. `claim.kind !== 'held'`
+  // is the same predicate, evaluated once, upstream.
+  const scopeLive = claim.kind !== 'held';
   const seasonScope = claim.kind === 'season' ? claim.scope : null;
 
   // THREE gates, and the distinction between the first two is load-bearing.
@@ -394,6 +401,7 @@ export function RedesignTeamPage({
                     variant="light"
                     showAppPitch={false}
                     seasonScoped={!!seasonScope}
+                    scopeLive={scopeLive}
                     team={team}
                     gameContexts={gameContexts}
                   />

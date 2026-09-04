@@ -2,7 +2,7 @@ import { APP_LEAGUES, type CoverageCounts } from '@/lib/coverage-counts';
 import type { Team, Promo, PromoType, Venue, PlayoffPromo } from './types';
 import { PROMO_TYPE_LABELS } from './types';
 import { indefiniteArticleFor } from './indefinite-article';
-import { allCompletedClause, remainingPeriodPhrase } from './season-label';
+import { remainingPeriodPhrase } from './season-label';
 // TYPE-ONLY, and it has to stay that way: season-scope.ts imports this module
 // for countPromosByType / isUpcomingPromo, so a value import here would close a
 // runtime cycle. The one string this file needs off the object is precomputed
@@ -485,15 +485,17 @@ export function generateTeamFAQs(
 
   if (claim.kind === 'season') {
     const season = claim.scope;
+    // State (b) carries no forward clause. See seasonClaimSentence: the season
+    // record stands on its own, and the rows below it are labelled completed.
     const remaining =
       season.upcomingCount === 0
-        ? allCompletedClause(season.total)
+        ? ''
         : `${season.upcomingCount} ${season.upcomingCount === 1 ? 'is' : 'are'} still to come.`;
     const gated = season.gatedDisclosure;
     const seasonBreakdown = breakdown(season.counts);
     faqs.push({
       question: `How many promotional nights do the ${team.name} have in the ${season.year} season?`,
-      answer: `The ${fullName} have ${season.total} promotional ${season.total === 1 ? 'event' : 'events'} in the ${season.year} season${seasonBreakdown ? `, including ${seasonBreakdown}` : ''}. ${remaining}${gated ? ` ${gated}` : ''} These events take place at ${venueName}${cityClause}.`,
+      answer: `The ${fullName} have ${season.total} promotional ${season.total === 1 ? 'event' : 'events'} in the ${season.year} season${seasonBreakdown ? `, including ${seasonBreakdown}` : ''}.${remaining ? ` ${remaining}` : ''}${gated ? ` ${gated}` : ''} These events take place at ${venueName}${cityClause}.`,
     });
   } else if (upcomingPromos.length > 0) {
     // HELD keeps the pre-change strings byte for byte, including the "in the
@@ -566,12 +568,10 @@ export function generateTeamFAQs(
     if (claim.kind === 'season') {
       const ahead = upcomingCounts.kids;
       const aheadClause =
-        ahead === 0
-          ? allCompletedClause(kidsSeasonCount)
-          : `${ahead} ${ahead === 1 ? 'is' : 'are'} still to come${kidsList ? `: ${kidsList}` : ''}.`;
+        ahead === 0 ? '' : `${ahead} ${ahead === 1 ? 'is' : 'are'} still to come${kidsList ? `: ${kidsList}` : ''}.`;
       faqs.push({
         question: `When are ${team.name} kids and family events in the ${claim.scope.year} season?`,
-        answer: `The ${fullName} have ${kidsSeasonCount} kids and family ${kidsSeasonCount === 1 ? 'event' : 'events'} at ${venueName} in the ${claim.scope.year} season. ${aheadClause} These events are designed for young fans and families attending games at ${venueName}.`,
+        answer: `The ${fullName} have ${kidsSeasonCount} kids and family ${kidsSeasonCount === 1 ? 'event' : 'events'} at ${venueName} in the ${claim.scope.year} season.${aheadClause ? ` ${aheadClause}` : ''} These events are designed for young fans and families attending games at ${venueName}.`,
       });
     } else
     faqs.push({

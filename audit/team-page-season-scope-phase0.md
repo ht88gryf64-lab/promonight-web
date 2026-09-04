@@ -487,3 +487,178 @@ three ways this change can go wrong silently. Requesting the gate's ruling rathe
 
 No files under `src/` modified. Awaiting the gate on section 12, and specifically on the MLB
 timing question in section 13.1.
+
+---
+
+# Addendum, 2026-09-04: corrections and the build gate
+
+Three adversarial reviewers ran against the build. Two of my Phase 0 numbers were
+wrong and are corrected here rather than left in the record above.
+
+## Correction 1: the per-row byte cost was overstated 1.93x
+
+Phase 0 section 7 put a completed row at **6,478 B** (4,009 DOM + 2,469 flight).
+Both halves were wrong.
+
+React Flight **deduplicates**. A collapsed row is not serialized as an object
+inside `LazyPromoRows`' props; it is a path pointer into `gameContexts`, which
+already carries every promo:
+
+```
+"$4b:props:children:3:props:children:props:gameContexts:140:promos:0"
+```
+
+Measured on the served Dodgers payload (72 `self.__next_f.push` chunks,
+345,489 B unescaped):
+
+| item | measured |
+|---|---|
+| 76 collapsed rows, total | **5,264 B**, about 68 B each |
+| one promo object, serialized once | 605 B |
+| server-rendered row element, no resale slot | 389 B flight |
+| DOM per completed row | ~3,030 B without the 862 B eBay CTA block |
+
+**Marginal cost of moving one row from collapsed to server-rendered:
+~3,030 B DOM + 389 B flight - 68 B reclaimed pointer = ~3,350 B.**
+
+My 2,469 B flight figure would have made 79 rows 195 KB, more than half the
+entire 345 KB flight payload. And my 4,009 B DOM figure was taken from lifted
+resale rows, which carry a CTA block the eight new rows deliberately do not.
+
+Consequence: my claim that expanding the Dodgers archive "projects to about
+1.17 MB, over the ceiling" recomputes to **998 KB, just under**. The conclusion
+survives on the Twins (1,221 KB) and Rangers (1,158 KB), but the Dodgers example
+did not support it.
+
+## Correction 2: the heaviest page is not the Twins
+
+Phase 0 named `mlb/minnesota-twins` at 819,655 B as the ceiling case. A full
+169-page sweep found:
+
+| bytes | page |
+|---|---|
+| **846,229** | **mlb/texas-rangers** |
+| 819,655 | mlb/minnesota-twins |
+| 800,512 | mlb/miami-marlins |
+| 787,316 | mlb/seattle-mariners |
+| 772,271 | nhl/detroit-red-wings |
+
+`mlb/texas-rangers` is the heaviest page on the site and was in neither my table
+nor the code comment. 25 of the 26 heaviest pages are MLB.
+
+## Correction 3: the ISR flip mechanism
+
+Phase 0 and the first version of `MLB_SEASON_SCOPE_START` both said MLB pages
+would pick the change up "on their next ISR revalidation within 24 hours, no
+redeploy." Wrong twice: ISR regeneration is **request-triggered**, so a page
+nobody visits never regenerates, and it is **stale-while-revalidate**, so the
+first request after expiry still serves the old HTML. 24 hours is a floor, not a
+ceiling, and the flip would be staggered and unbounded above.
+
+Written up as a dated operational step in
+`docs/runbook-2026-10-01-mlb-season-scope.md`.
+
+## The change is net negative on page weight
+
+Restricting the calendar's prerender window to home days removes far more than
+the eight rows add. Measured hidden `GameExpand` blocks in served HTML:
+
+| page | blocks | home bytes | away bytes removed |
+|---|---|---|---|
+| mlb/texas-rangers | 21 | 125,126 | **98,021** |
+| mlb/minnesota-twins | 22 | 75,194 | **140,019** |
+| mlb/los-angeles-dodgers | 22 | 81,919 | **112,493** |
+
+Worst projected post-change page, `mlb/texas-rangers`:
+
+| case | result |
+|---|---|
+| home dates in window, trim applies | ~776 KB, **74.0%** of 1 MiB |
+| road-trip floor fires, zero calendar saving | ~879 KB, **83.9%** |
+| on the actual Oct 1 flip day, window empty | **~600-650 KB** |
+
+Nothing exceeds 1 MB in any case. Minimum headroom on the most pessimistic
+assumption is about 16%.
+
+## The Oct 1 finding that forced a design change
+
+**All 30 MLB clubs carry zero promo rows dated on or after 2026-10-01.** The
+latest row in the league is 2026-09-27; 15 clubs end there.
+
+So MLB never renders the mid-season shape this change was designed around. On
+the day the hold lifts, every MLB page is already season-complete. Under the
+originally approved copy that would have published four zero tiles and "no
+upcoming promos" on a cluster carrying roughly 26,000 monthly impressions, which
+is worse than the understatement it replaced.
+
+The claim now has three states:
+
+| state | copy |
+|---|---|
+| a. in season, some left | `98 promotions in the 2026 season, 19 still to come` |
+| b. nothing left | `98 promotions in the 2026 season` |
+| c. no resolvable season | the upcoming-only fallback, unchanged |
+
+State (b) carries **no forward clause**. "All completed" answers an availability
+question nobody asked and turns a season record into a notice of emptiness.
+Timing is not dropped, it moves to the row labels, which say it once next to the
+things it describes. The promo-list heading becomes `2026 SEASON PROMOS` under
+"The full season" instead of `UPCOMING PROMOS` over a line saying there are none.
+
+What state (b) must never become is a claim that the record is complete. Zero
+upcoming rows means our data holds nothing ahead. It does not mean the season is
+over, and it does not mean we captured every event.
+
+Verified by rendering the Dodgers page against live Firestore with the date
+pinned to 2026-10-02:
+
+```
+HERO NOTE: "98 promotions in the 2026 season"
+tiles: give=50 theme=38 food=3 kids=7   (unfixed code at that date: 0/0/0/0)
+"7 of the 50 giveaways require a ticket package."
+```
+
+## Position: should state (b) surface the NEXT season?
+
+**No, and the question is pointing at a different bug.**
+
+MLB bobblehead calendars publish January to February, so a page will carry a
+complete 2026 season plus a partial 2027 one. In that window
+`resolveSeasonScope` sees `spansYears` and returns null, so **the feature
+silently switches itself off** and the page reverts to the upcoming-only claim,
+exactly when it is most valuable. That is the safe direction, absence over a
+wrong total, but it is not a good resting state and nothing announces it.
+
+So the work is not "add next season to state (b)". It is to make the resolver
+able to pick ONE season when two are present. The minimal honest rule stays
+data-derived rather than assumed: when the rows split into two calendar years
+and every upcoming row sits in the later one, resolve to the later year, claim
+that season, and leave the earlier year as the labelled archive. The split is
+observed, not modelled, so it does not reintroduce the season model
+`season-label.ts` refuses to build.
+
+Do not build it yet. Build it from a January measurement of how many teams
+actually land in that shape and how the rows divide, because if the two seasons
+interleave rather than split cleanly the rule does not hold and the fallback is
+still correct.
+
+## Build gate status
+
+- `tsc --noEmit` clean. **775 tests pass, 0 fail.**
+- **No production build.** `npm run build` fails on this machine with 60s
+  Firestore timeouts, and it is not this change: I built `main` in the same
+  worktree and it failed identically, on `/mls/atlanta-united`, `/venues`,
+  `/about` and `/llms.txt`, routes this branch does not touch.
+- **No preview deploy.** The CLI deploy was refused with
+  `readyStateReason: "The deployment was blocked because the commit author
+  doesn't have permission to create deployments for this project"` and
+  `seatBlock: {blockCode: TEAM_ACCESS_REQUIRED}`. Cause: `git user.email` is
+  unset, so every commit in this repo, main included, is authored
+  `mattkovalik@Matts-MacBook-Air.local`, which matches no Vercel seat. Not a
+  pause, not a spend limit, not a billing failure: plan pro, status active,
+  overdue null, team not blocked, and the only spend control on the account is
+  `analyticsSpendLimitInDollars: 500`.
+- Note for whenever a preview does deploy: the project has
+  `ssoProtection: all_except_custom_domains`, so anonymous cache-busting curl
+  against a preview will be walled, the same trap recorded in
+  `audit/cfb-phase3-gate.md`.

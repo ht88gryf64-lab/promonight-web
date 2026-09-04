@@ -52,15 +52,33 @@ import type { Promo, PromoType } from './types';
  * meta description on those pages mid-flight would confound the read with a
  * second variable. Every other league ships immediately.
  *
- * MECHANISM: a dated condition evaluated at render, NOT an env flag. Team pages
- * carry `revalidate = 86400`, so every MLB page picks the season scope up on its
- * next ISR revalidation within 24 hours of this date. No second build, no env
- * change, no redeploy.
+ * MECHANISM: a dated condition evaluated at render, NOT an env flag, so no edit
+ * is needed to flip it.
+ *
+ * BUT IT DOES NOT FLIP ITSELF, and an earlier version of this comment said it
+ * did ("picks it up on its next ISR revalidation within 24 hours, no redeploy").
+ * That is wrong twice over. `revalidate = 86400` schedules nothing: ISR
+ * regeneration is REQUEST-triggered, so a page nobody visits never regenerates,
+ * and it is stale-while-revalidate, so the first request after expiry still
+ * serves the old HTML and only enqueues the rebuild. 24 hours is a floor, not a
+ * ceiling, and the corpus would sit in a mixed state, some pages on each side of
+ * the change, FAQPage schema included.
+ *
+ * Converging it needs a deploy on the day, or a POST of the 30 MLB paths to
+ * /api/revalidate. That is a dated operational step, written down in
+ * docs/runbook-2026-10-01-mlb-season-scope.md. Do not delete that file without
+ * doing what it says.
  *
  * This is a ROLLOUT date, not a label. It is not the clock-derived-copy hazard
  * that the hardcoded season years elsewhere guard against: nothing user-visible
  * is derived from it, it gates only which of two truthful renderings ships, and
  * once it passes it never changes behaviour again.
+ *
+ * TIMEZONE: todayYmd() is UTC, so this opens at 2026-10-01T00:00Z, which is
+ * 2026-09-30 17:00 PDT. Search Console reports in Pacific. The ISR behaviour
+ * above makes a served-page change inside those seven hours very unlikely, and
+ * the direction of error is late rather than early, but the gate does not
+ * enforce Pacific and should not be read as if it does.
  */
 export const MLB_SEASON_SCOPE_START = '2026-10-01';
 
@@ -221,15 +239,47 @@ export function resolveSeasonScope(
 }
 
 /**
- * The headline claim: "98 promotions in the 2026 season, 19 still to come."
+ * True when the season has rows but none of them are still ahead.
  *
- * Both halves are stated because either alone misleads. The season total alone
- * reads as availability; the upcoming count alone is the understatement this
- * whole change exists to end.
+ * THIS IS THE SHAPE EVERY MLB PAGE ENTERS, and it arrives before the rollout
+ * hold lifts, not after. All 30 MLB clubs carry zero promo rows dated on or
+ * after 2026-10-01 (latest row across the league is 2026-09-27), so on the day
+ * MLB starts publishing season counts, every one of those pages is already in
+ * this state. The mid-season shape is the one MLB will never render this year.
+ */
+export function isSeasonComplete(scope: SeasonScope): boolean {
+  return scope.total > 0 && scope.upcomingCount === 0;
+}
+
+/**
+ * The headline claim, in three states.
+ *
+ *   a. in season, some left   "98 promotions in the 2026 season, 19 still to come"
+ *   b. nothing left           "98 promotions in the 2026 season"
+ *   c. no resolvable season   this function is not called; the caller falls back
+ *
+ * State (a) states both halves because either alone misleads: the season total
+ * alone reads as availability, and the upcoming count alone is the
+ * understatement this whole change exists to end.
+ *
+ * STATE (b) CARRIES NO FORWARD CLAUSE, and the omission is the point. The
+ * obvious closer, "all completed", answers a question about availability that
+ * nobody asked and turns a complete season record into a notice that there is
+ * nothing here. On the Dodgers cluster that notice would land on roughly 26,000
+ * monthly impressions. The bare statement reads as what it is: this is the
+ * season, and here it is. Timing is not dropped, it is MOVED to where it
+ * belongs, the labels on the rows themselves ("Completed in the 2026 season:",
+ * the COMPLETED heading, the per-row Completed chip), which say it once, next
+ * to the things it describes.
+ *
+ * What this must never become is a claim that the record is COMPLETE. Zero
+ * upcoming rows means our data holds nothing ahead; it does not mean the season
+ * is over or that we captured every event. "98 promotions in the 2026 season"
+ * is exactly as strong as the evidence.
  */
 export function seasonClaimSentence(scope: SeasonScope): string {
   const head = `${scope.total} ${plural(scope.total, 'promotion', 'promotions')} in the ${scope.year} season`;
-  if (scope.upcomingCount === 0) return `${head}, all completed`;
+  if (isSeasonComplete(scope)) return head;
   if (scope.completedCount === 0) return `${head}, all still to come`;
   return `${head}, ${scope.upcomingCount} still to come`;
 }
