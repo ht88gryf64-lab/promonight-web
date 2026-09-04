@@ -186,3 +186,24 @@ test('a field the state map holds drops out of the topics, so the title drops it
   assert.equal(venueHubTopics({ ...held, publicTransit: null } as VenueHub).transit, false);
   assert.ok(!venueHubTitle({ ...held, publicTransit: null } as VenueHub).includes('Transit'));
 });
+
+test('a conflicted claim links its class pointer once its own source entry is gone', () => {
+  // american-airlines-center's shape after the rule 1.5 null: sources.rideshareDropoff
+  // is removed with the value, so the row would have had no link at all. The
+  // guard requires the class pointer to be present for exactly this reason.
+  const f = {
+    sources: { parkingLots: SRC },
+    fieldStates: { rideshareDropoff: 'operator-conflict' as const },
+    verifiedAtByField: {},
+    officialParkingUrls: ['https://www.operator.example.com/parking'],
+  };
+  const row = claimRow(f, 'rideshareDropoff', true);
+  assert.equal(row.show, false);
+  assert.equal(row.reason, 'The operator publishes conflicting answers.');
+  assert.equal(row.sourceUrl, 'https://www.operator.example.com/parking', 'a conflict row must always carry a link');
+  // A class with no pointer field has nothing to fall back to, and says so by
+  // rendering the reason alone rather than a broken link.
+  const noPointer = claimRow({ sources: {}, fieldStates: { publicTransit: 'operator-conflict' as const }, verifiedAtByField: {} }, 'publicTransit', true);
+  assert.equal(noPointer.sourceUrl, null);
+  assert.equal(noPointer.reason, 'The operator publishes conflicting answers.');
+});

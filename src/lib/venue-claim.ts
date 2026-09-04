@@ -28,7 +28,34 @@ export type ClaimField =
   | 'food'
   | 'nearby';
 
-type ClaimFacts = Pick<VenueHub, 'sources' | 'fieldStates' | 'verifiedAtByField'>;
+type ClaimFacts = Pick<VenueHub, 'sources' | 'fieldStates' | 'verifiedAtByField'> &
+  Partial<Pick<VenueHub, 'bagPolicyUrl' | 'officialParkingUrls' | 'parkingLotMapUrl'>>;
+
+/**
+ * The pointer field backing each claim class, mirroring CLAIM_POINTERS in the
+ * pipeline's write guard. An operator-conflict row keeps its pointer so a reader
+ * can go read the contradiction, and the guard enforces that the pointer is
+ * present. The field's OWN sources entry is gone by then, because a nulled claim
+ * has no source: the pointer is what is left, and it is what the row links.
+ */
+const CLAIM_POINTERS: Partial<Record<ClaimField, Array<'bagPolicyUrl' | 'officialParkingUrls' | 'parkingLotMapUrl'>>> = {
+  bagMaxDimensions: ['bagPolicyUrl'],
+  clearBagRequired: ['bagPolicyUrl'],
+  bagsProhibited: ['bagPolicyUrl'],
+  bagPolicyNotes: ['bagPolicyUrl'],
+  parkingLots: ['officialParkingUrls', 'parkingLotMapUrl'],
+  rideshareDropoff: ['officialParkingUrls', 'parkingLotMapUrl'],
+};
+
+/** The pointer a conflicted claim falls back to. Null for a class with none. */
+export function claimPointerUrl(hub: ClaimFacts, field: ClaimField): string | null {
+  for (const key of CLAIM_POINTERS[field] ?? []) {
+    const v = hub[key];
+    const first = Array.isArray(v) ? v[0] : v;
+    if (typeof first === 'string' && first.startsWith('http') && URL.canParse(first)) return first;
+  }
+  return null;
+}
 
 /** The pipeline's state for a field, or null when the doc carries no state map
  *  (written before wave 2) or no entry for this field. Null is not a state: it
@@ -107,8 +134,9 @@ export function claimRow(hub: ClaimFacts, field: ClaimField, fallbackShow: boole
       show: false,
       reason: CLAIM_STATE_REASON[state],
       // A conflict keeps its pointer so a reader can go read the operator; a
-      // missing page has none to keep.
-      sourceUrl: state === 'operator-conflict' ? sourceUrl : null,
+      // missing page has none to keep. The field's own sources entry is removed
+      // when the value is nulled, so the class pointer is the live link.
+      sourceUrl: state === 'operator-conflict' ? sourceUrl ?? claimPointerUrl(hub, field) : null,
       verifiedOn: null,
     };
   }
