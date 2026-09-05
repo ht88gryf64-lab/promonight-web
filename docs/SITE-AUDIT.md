@@ -414,6 +414,37 @@ Applied to all 30 MLB teams regardless of arm, so NOT part of the experiment:
 the theme-night boilerplate sentence was replaced by the next three dated theme
 nights.
 
+#### Live experiment: nfl-schedule-title-sep2026
+
+| | |
+|---|---|
+| **Start** | **NOT YET SHIPPED.** Held on the baseline export. Record the timestamp here by polling the www alias, the same way ctr-diagnostic's start above was confirmed. |
+| **Read date** | **2026-09-20**, or ship + 15 days if the merge slips |
+| Treatment | 10 NFL team pages render `{Team} 2026 Schedule & Giveaways` |
+| Control | 10 named NFL teams keep `{Team} Promos & Giveaways 2026`, byte-identical |
+| Flip point | `src/lib/title-treatment.ts` (`NFL_SCHEDULE_TITLE_SLUGS`), one line to revert |
+| Treatment slugs | bears, cowboys, chiefs, eagles, steelers, 49ers, giants, bengals, lions, ravens |
+| Control slugs | rams, chargers, falcons, buccaneers, bills, broncos, seahawks, vikings, jets, dolphins |
+| Runbook | `docs/runbook-2026-09-20-nfl-title-test-read.md` |
+| Method | `audit/nfl-title-test-baseline-2026-09-05.md` |
+
+Scope is the `<title>` and its og:title / twitter:title mirror ONLY. The JSON-LD
+`WebPage.name` and the visible hero subtitle deliberately keep the control string
+on the treatment pages.
+
+Read instructions differ from the MLB experiment above and the difference is
+deliberate: **per page, never pooled.** `los-angeles-rams` was 785 of 816 control
+impressions in the July sample, so an arm-level ratio is one page against noise.
+Score against the promo-schedule query family, not the million-volume bare
+schedule head terms, which `src/lib/cfb/metadata.ts:116-122` already measured as
+unwinnable against Google's sports panel. Ten pages against ten over fourteen
+days is a directional signal, not a result.
+
+**Both experiments share `src/lib/title-treatment.ts`.** Any edit to that file
+before 2026-10-01 must keep all 30 MLB titles byte-identical, which
+`src/lib/__tests__/nfl-title-arm.test.ts` asserts. Re-run `npm test` after any
+such edit.
+
 Measurement caveat: the Ahrefs GSC connector disagrees with the GSC export by
 roughly 7x at page level, because it aggregates only its stored keyword set
 (Dodgers 18,264 vs 138,709 impressions). Site level is close. **Take magnitudes

@@ -2,16 +2,25 @@
  "experiment": "nfl-schedule-title-sep2026",
  "capturedAt": "2026-09-05",
  "readDate": "2026-09-20",
+ "shipDate": "2026-09-05",
+ "baselineOfRecord": {
+  "status": "pending",
+  "window": "2026-08-22..2026-09-04",
+  "pagesFile": null,
+  "queriesFile": null,
+  "note": "Set by scripts/nfl-title-baseline.ts. The merge gate needs BOTH baseline:pages and baseline:queries. Windows derive from shipDate; pass --ship-date if the merge slips."
+ },
  "titleSuffixTreatment": "2026 Schedule & Giveaways",
  "titleSuffixControl": "Promos & Giveaways 2026",
  "brandSuffix": " | PromoNight",
- "baselineSource": {
+ "priorSampleNotTheBaseline": {
   "tool": "Ahrefs GSC connector, project 9957864 (Getpromonight)",
   "window": "2026-07-01 to 2026-07-31 monthly bucket",
   "isAuthoritative": false,
   "whyNotTheWindowTheBriefAsked": "The brief asked for the 14 days prior (2026-08-22 to 2026-09-04). Ahrefs holds no URL-attributed GSC data after 2026-07-15: gsc-page-history, gsc-keywords and gsc-pages all return empty for any window starting after it, while unfiltered site-level gsc-performance-history runs to 2026-08-22. gsc-pages additionally ignores date_to and returns a whole-month bucket.",
   "samplingCaveat": "Keyword-capped sample, not true page totals. audit/ctr-diagnostic-gate0-gate1.md reconciled it against a real GSC Pages.csv and found it roughly 7x low at page level (~13% of true impressions).",
-  "authoritativeSourceNeeded": "A GSC Pages.csv export for 2026-08-22 to 2026-09-04, filtered to the 20 URLs. Same source the MLB ctr-diagnostic treated as authoritative."
+  "authoritativeSourceNeeded": "A GSC Pages.csv export for 2026-08-22 to 2026-09-04, filtered to the 20 URLs. Same source the MLB ctr-diagnostic treated as authoritative.",
+  "doNotScoreAgainstThis": "Seven weeks stale and roughly 7x low. Retained only because it is what established the Rams dominance of the control arm and the absence of head-term impressions."
  },
  "pages": [
   {
