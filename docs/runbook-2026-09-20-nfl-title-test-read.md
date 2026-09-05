@@ -35,6 +35,12 @@ and sits entirely before ship, then pass it with `--from`/`--to`. A GAP between
 the baseline window and the ship date is fine. An OVERLAP is not, and the ingest
 refuses it.
 
+**Pass `--dir`, the whole unzipped export folder, not `--csv`.** Chart.csv proves
+the range the export actually covers and Filters.csv proves which filters were
+applied. Pages.csv and Queries.csv carry neither, so a bare `--csv` cannot tell a
+14-day filtered export from a 28-day unfiltered one. On `--dir` the ingest checks
+both and refuses to write on a mismatch.
+
 - [ ] Search Console, custom range, 14 days ending on the last settled day,
       **Pages** tab, export.
 - [ ] Same range, add a filter of **Page contains `/nfl/`**, **Queries** tab,
@@ -45,11 +51,6 @@ refuses it.
 - [ ] `$R --window baseline --tab pages   --dir <export folder> --from <start> --to <end> --export-date <today> --execute`
 - [ ] `$R --window baseline --tab queries --dir <export folder> --from <start> --to <end> --export-date <today> --execute`
 
-**Pass `--dir`, the whole unzipped export folder, not `--csv`.** Chart.csv proves
-the range the export actually covers and Filters.csv proves which filters were
-applied. Pages.csv and Queries.csv carry neither, so a bare `--csv` cannot tell a
-14-day filtered export from a 28-day unfiltered one. On `--dir` the ingest checks
-both and refuses to write on a mismatch.
 - [ ] Confirm `baselineOfRecord.status` is `captured` in
       `audit/nfl-title-test-baseline-2026-09-05.json`. **That field is the gate,
       not the presence of a CSV.** A file can be the wrong property; the status
@@ -72,8 +73,8 @@ and it is the IndexNow deploy hook, so nothing blocks a bad merge on its own):
 ### If the baseline was not captured before ship
 
 Recoverable, contrary to the obvious reading. Search Console retains sixteen
-months of Performance data, so the 2026-08-22 to 2026-09-04 window stays
-exportable long after the merge. What a merge destroys is not the data, it is the
+months of Performance data, so the pre-ship window stays exportable long after
+the merge. What a merge destroys is not the data, it is the
 ability to attribute that window cleanly to the old titles. Export it anyway,
 ingest it, note in the JSON that it was captured after ship, and downgrade the
 read to a within-page before and after with that caveat stated in the write-up.
