@@ -1,11 +1,198 @@
 # Pre-Raptive Core Web Vitals baseline
 
-**This is the pre-Raptive-integration baseline, captured before any ad code was
-installed on getpromonight.com.** No ad network script, no ad container, and no
-consent-management platform was present in the served HTML of any measured page
-at capture time (verified independently in the same pass; see "Ad-free state
-verified at capture" below). Once ad units are live this measurement window
-cannot be recovered, so these numbers are the only pre-ad reference point.
+This file holds two capture sets. **Baseline B is the comparison baseline.**
+Baseline A is retained unaltered because it was taken with the Mediavine Grow
+script still loading, under a protocol that was not uniform across its rows, and
+the A-to-B delta is worth keeping visible rather than discarding.
+
+Both sets were taken before any ad code existed on getpromonight.com. Once ad
+units are live this measurement window cannot be recovered.
+
+## Reproducible protocol (pinned)
+
+**Any future capture that does not follow this protocol exactly is not
+comparable to Baseline B, and must not be presented as a before-and-after
+against it.** The numbers below are lab measurements whose absolute values are
+a function of the harness; only like-for-like comparison carries meaning.
+
+| Element | Value |
+| --- | --- |
+| Browser | Google Chrome **152.0.7977.76**, `--headless=new` |
+| Chrome flags | `--no-first-run --no-default-browser-check --disable-extensions --hide-scrollbars --mute-audio` |
+| Profile | fresh `--user-data-dir` per run, discarded afterwards |
+| Driver | Chrome DevTools Protocol 1.3 over a raw websocket (Python 3.13.7, `websockets` 16.0). No Lighthouse, no PageSpeed Insights |
+| Target | production `https://www.getpromonight.com` only. Never a preview deploy: preview differs on deployment protection, cache behaviour and domain |
+| HTTP cache | disabled for **every** navigation, warmup included (`Network.setCacheDisabled: true`) |
+
+### Emulation, per profile
+
+| | mobile | desktop |
+| --- | --- | --- |
+| `Emulation.setDeviceMetricsOverride` | 412 x 823, `deviceScaleFactor` 1.75, `mobile: true` | 1350 x 940, `deviceScaleFactor` 1.0, `mobile: false` |
+| `Emulation.setUserAgentOverride` | `Mozilla/5.0 (Linux; Android 12; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Mobile Safari/537.36` | cleared (native desktop UA) |
+| `Network.emulateNetworkConditions` | 1.6 Mbps down (209715 B/s), 750 Kbps up (96000 B/s), 150 ms latency | 10240 Mbps down/up (1342177280 B/s), 40 ms latency |
+| `Emulation.setCPUThrottlingRate` | 4 | 1 |
+
+### Warmup procedure
+
+Warmup is load bearing and is **not** optional.
+
+1. One Chrome process for the entire run. Per-process TLS and connection setup
+   is therefore paid exactly once, on the first navigation.
+2. **All twelve URLs are warmed before any of them is captured**, in the same
+   order they are later captured.
+3. **Each URL is warmed under the same emulation profile it is captured under.**
+   An unthrottled warmup is not acceptable: it does not exercise the same
+   request path, and can leave a conditionally fetched LCP resource cold.
+4. Warmup records TTFB only, after a 2.5 s settle. It is not a capture.
+5. Because the browser HTTP cache is disabled throughout, warmup populates the
+   Vercel edge and ISR caches, never the browser's.
+
+### Capture order
+
+Fixed and part of the protocol. Six mobile first, then six desktop, each in this
+URL order: `/mlb/minnesota-twins`, `/nhl/dallas-stars`, `/venues/td-garden`,
+`/venues/fenway-park`, `/cfb/alabama`, `/promos/this-week`.
+
+### How each metric is obtained
+
+- **LCP / CLS**: `PerformanceObserver` with `buffered: true`, read after a 4 s
+  settle. CLS uses the session-window algorithm (5 s window, 1 s gap) and
+  excludes any shift flagged `hadRecentInput`.
+- **INP**: a lab figure. CDP-dispatched input is *trusted* input, so it produces
+  genuine Event Timing entries. After the settle, the harness dispatches 4
+  `Tab` keydown/keyup pairs and 3 clicks at a computed non-interactive point
+  (`elementFromPoint` walking the viewport for the first element with no
+  `a,button,input,select,textarea,[role=button],[onclick],summary,dialog`
+  ancestor), 350 ms apart. INP is reported as the **maximum** interaction
+  latency observed. `durationThreshold` is 16 ms, the spec minimum.
+- This is **not** field INP. It carries no real-user interaction mix. CrUX is
+  the right instrument for the real number.
+
+## Baseline B: post-Grow, pre-Raptive, uniform warmed protocol, production.
+
+**This is the comparison baseline.** Captured 2026-09-05, 12:51Z-12:54Z UTC.
+
+| Field | Value |
+| --- | --- |
+| Deploy serving at capture | `dpl_6SmKD6N32GfyozKbBP25TBVwN6j1` |
+| Identical across all twelve rows | **yes**, re-read from the served HTML of every one of the twelve captures |
+| Mediavine Grow | absent (gate re-checked on production immediately before the run: 0 occurrences of `faves.grow.me`) |
+| Ad network script / ad container / CMP | none |
+| Protocol | the pinned protocol above, uniformly, all twelve rows in one pass |
+
+### Mobile (412 x 823, 4x CPU, 1.6 Mbps / 150 ms)
+
+| URL | Template | LCP (ms) | CLS | INP (ms) | FCP (ms) | cold TTFB | warm TTFB | interactions |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| /mlb/minnesota-twins | team | 1580 | 0.0005 | 32 | 1580 | 156.8 | 25.3 | 16 |
+| /nhl/dallas-stars | team | 1536 | 0.0688 | 32 | 1536 | 23.1 | 28.7 | 5 |
+| /venues/td-garden | venue | 1404 | 0.0023 | 16 \* | 1404 | 24.9 | 26.1 | 1 |
+| /venues/fenway-park | venue | 1392 | 0.0166 | 16 | 1392 | 23.1 | 27.1 | 2 |
+| /cfb/alabama | CFB school | 1528 | 0.0000 | <16 \*\* | 1528 | 23.5 | 27.9 | 0 |
+| /promos/this-week | aggregator | 1380 | 0.0000 | 16 | 1380 | 22.9 | 25 | 2 |
+
+### Desktop (1350 x 940, 1x CPU, 40 ms RTT)
+
+| URL | Template | LCP (ms) | CLS | INP (ms) | FCP (ms) | cold TTFB | warm TTFB | interactions |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| /mlb/minnesota-twins | team | 428 | 0.0070 | 32 | 428 | 24.3 | 24.3 | 2 |
+| /nhl/dallas-stars | team | 500 | 0.0000 | 32 | 500 | 26.3 | 25.5 | 4 |
+| /venues/td-garden | venue | 356 | 0.0010 | 32 | 356 | 31.6 | 25.9 | 2 |
+| /venues/fenway-park | venue | 364 | 0.0072 | 32 | 364 | 26.4 | 29 | 5 |
+| /cfb/alabama | CFB school | 408 | 0.0001 | 16 | 408 | 30.3 | 25.4 | 2 |
+| /promos/this-week | aggregator | 380 | 0.0001 | 16 \* | 380 | 25.9 | 30.3 | 1 |
+
+`\*` row rests on a **single** Event Timing observation. `\*\*` **no**
+interaction reached the 16 ms reporting threshold, so INP is below 16 ms rather
+than unmeasured; there is no B value to difference against A for that row.
+
+### Thin-observation rows, stated explicitly
+
+| Row | Interactions above 16 ms | Reading |
+| --- | ---: | --- |
+| /venues/td-garden mobile | 1 | single observation |
+| /promos/this-week desktop | 1 | single observation |
+| /cfb/alabama mobile | 0 | nothing crossed the threshold; INP < 16 ms |
+
+Every other row rests on 2 to 16 observations. Rows reporting exactly 16 ms sit
+at the measurement floor and mean "nothing slow was observed", not "INP is
+16 ms".
+
+### LCP element per page
+
+| URL | Strategy | LCP element |
+| --- | --- | --- |
+| /mlb/minnesota-twins | mobile | `H1.rd-display mt-3 text-4xl uppercase text-white md:text-6xl` |
+| /nhl/dallas-stars | mobile | `H1.rd-display mt-3 text-4xl uppercase text-white md:text-6xl` |
+| /venues/td-garden | mobile | `DIV.min-w-[180px] flex-1 font-rd text-[13px] leading-[1.5] text-` |
+| /venues/fenway-park | mobile | `DIV.min-w-[180px] flex-1 font-rd text-[13px] leading-[1.5] text-` |
+| /cfb/alabama | mobile | `DIV.mt-3 italic leading-tight text-white` |
+| /promos/this-week | mobile | `P.rounded-2xl border border-rd-line bg-rd-card p-5 font-rd tex` |
+| /mlb/minnesota-twins | desktop | `H1.rd-display mt-3 text-4xl uppercase text-white md:text-6xl` |
+| /nhl/dallas-stars | desktop | `H1.rd-display mt-3 text-4xl uppercase text-white md:text-6xl` |
+| /venues/td-garden | desktop | `DIV` |
+| /venues/fenway-park | desktop | `DIV` |
+| /cfb/alabama | desktop | `H1.mt-1 font-black text-white` |
+| /promos/this-week | desktop | `P.rounded-2xl border border-rd-line bg-rd-card p-5 font-rd tex` |
+
+Every LCP element is a text node. No page's LCP is an image, which means an ad
+unit placed above or beside the current LCP text has a direct path to becoming
+the new LCP element.
+
+### Cold versus warm TTFB
+
+Reported separately so per-process TLS setup and per-URL cache state stay
+distinguishable.
+
+- **Per-process TLS and connection setup**: paid once, on the very first
+  navigation of the run (`/mlb/minnesota-twins` mobile, cold TTFB **156.8 ms**).
+- **Every other cold TTFB**: 22.9-31.6 ms, i.e. already in the warm range on
+  first contact.
+- **Warm TTFB across all twelve captures**: 24.3-30.3 ms.
+
+The expectation going in was that a production deploy invalidates ISR wholesale
+and every URL would therefore pay a regeneration cost on its first load. That
+did not happen, and the cold column is the evidence: only the first navigation
+was slow, and it was slow by roughly the cost of TLS setup, not of a
+regeneration. These routes are statically prerendered at build time, so a new
+deploy ships their HTML already built and there is no per-URL first-hit penalty
+to warm away. The warmup pass still runs, because the protocol must be
+reproducible on the October side regardless of what the cache happens to be
+doing that day.
+
+## Baseline A to Baseline B delta, per URL
+
+Stated without interpretation. **The two sets differ in more than one variable**
+— Grow.me presence, warm-state uniformity, capture order, and time of day all
+changed between them — so no single cause can be read off this table, and in
+particular the delta must not be attributed to the Grow removal.
+
+| URL | Strategy | LCP A | LCP B | ΔLCP | CLS A | CLS B | ΔCLS | INP A | INP B | ΔINP |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| /mlb/minnesota-twins | mobile | 3444 | 1580 | -1864 | 0.0005 | 0.0005 | +0.0000 | 40 | 32 | -8 |
+| /nhl/dallas-stars | mobile | 1068 | 1536 | +468 | 0.0688 | 0.0688 | +0.0000 | 32 | 32 | +0 |
+| /venues/td-garden | mobile | 1116 | 1404 | +288 | 0.0023 | 0.0023 | +0.0000 | 16 | 16 | +0 |
+| /venues/fenway-park | mobile | 948 | 1392 | +444 | 0.0166 | 0.0166 | +0.0000 | 16 | 16 | +0 |
+| /cfb/alabama | mobile | 1172 | 1528 | +356 | 0.0000 | 0.0000 | +0.0000 | 24 | <16 | n/a |
+| /promos/this-week | mobile | 1144 | 1380 | +236 | 0.0000 | 0.0000 | +0.0000 | 32 | 16 | -16 |
+| /mlb/minnesota-twins | desktop | 596 | 428 | -168 | 0.0000 | 0.0070 | +0.0070 | 16 | 32 | +16 |
+| /nhl/dallas-stars | desktop | 348 | 500 | +152 | 0.0004 | 0.0000 | -0.0004 | 16 | 32 | +16 |
+| /venues/td-garden | desktop | 260 | 356 | +96 | 0.0010 | 0.0010 | +0.0000 | 16 | 32 | +16 |
+| /venues/fenway-park | desktop | 280 | 364 | +84 | 0.0072 | 0.0072 | +0.0000 | 32 | 32 | +0 |
+| /cfb/alabama | desktop | 320 | 408 | +88 | 0.0001 | 0.0001 | +0.0000 | 16 | 16 | +0 |
+| /promos/this-week | desktop | 284 | 380 | +96 | 0.0001 | 0.0001 | +0.0000 | 32 | 16 | -16 |
+
+`<16` means no interaction crossed the 16 ms Event Timing threshold in Baseline
+B, so `ΔINP` is `n/a` for that row rather than zero.
+
+## Baseline A: Grow present, mixed warm state, superseded.
+
+Superseded as the comparison baseline, retained verbatim below. Two properties
+disqualify it from that role: the Mediavine Grow script was loading on every
+page while these numbers were taken, and its twelve rows were captured in two
+passes under different warm states (pass 1 unwarmed, pass 2 warmed by a single
+homepage load). Nothing below has been altered or reconciled against Baseline B.
 
 ## Capture metadata
 
