@@ -15,6 +15,19 @@ comparable to Baseline B, and must not be presented as a before-and-after
 against it.** The numbers below are lab measurements whose absolute values are
 a function of the harness; only like-for-like comparison carries meaning.
 
+**Baseline A and Baseline B are not comparable in either direction.** Neither
+can stand in for the other, and the A-to-B delta below is retained as a record
+of what differed between two runs, not as a measurement of anything. **Baseline
+B stands alone as the comparison baseline.**
+
+**INP is directional only. LCP and CLS carry the comparison.** Across Baseline
+B's twelve rows the number of interactions clearing the 16 ms Event Timing
+threshold ranged from **0 to 16**, so the per-row INP figures rest on very
+uneven evidence: some are a maximum over sixteen observations, two are a single
+observation, and one had nothing to observe at all. Treat an INP movement as a
+hint worth investigating, never as a result. Field INP from CrUX is the
+instrument for a real number.
+
 | Element | Value |
 | --- | --- |
 | Browser | Google Chrome **152.0.7977.76**, `--headless=new` |
