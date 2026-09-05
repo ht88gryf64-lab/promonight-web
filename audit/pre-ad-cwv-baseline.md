@@ -11,7 +11,7 @@ cannot be recovered, so these numbers are the only pre-ad reference point.
 
 | Field | Value |
 | --- | --- |
-| Capture window (UTC) | 2026-09-05T12:03Z to 2026-09-05T12:10Z |
+| Capture window (UTC) | pass 1 2026-09-05T12:03Z-12:10Z; pass 2 2026-09-05T12:14Z-12:16Z |
 | Deploy serving at capture | `dpl_GRMXNjv7g3mEihaqa6DxLyudCqks` |
 | Build artifact | `/_next/static/chunks/main-app-5eb0d9c55a395822.js` |
 | Host | www.getpromonight.com (production) |
@@ -68,7 +68,19 @@ It is not field INP and carries no real-user interaction mix.
 | URL | Template | LCP (ms) | CLS | INP (ms) | FCP (ms) | TTFB (ms) | interactions |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | /mlb/minnesota-twins | team | 596 | 0.0000 | 16 | 352 | 25.8 | 14 |
+| /nhl/dallas-stars | team | 348 | 0.0004 | 16 | 348 | 26.9 | 16 |
 | /venues/td-garden | venue | 260 | 0.0010 | 16 | 260 | 24.8 | 14 |
+| /venues/fenway-park | venue | 280 | 0.0072 | 32 | 280 | 26.9 | 16 |
+| /cfb/alabama | CFB school | 320 | 0.0001 | 16 | 320 | 26.3 | 12 |
+| /promos/this-week | aggregator | 284 | 0.0001 | 32 | 284 | 27.0 | 1 |
+
+The four rows added in pass 2 were preceded by a throwaway warmup load of `/`
+so that none of them paid the cold TLS and CDN cost that inflated the Twins
+mobile row in pass 1. The warmup measured TTFB 98.0 ms; all four captures that
+followed it measured 26.3-27.0 ms. The warmup itself is not a baseline row and
+its numbers are excluded. Pass 2 ran on the same deploy as pass 1
+(`dpl_GRMXNjv7g3mEihaqa6DxLyudCqks`, re-read from the served HTML of all five
+pass-2 loads), so the whole table still describes one single production build.
 
 ### LCP element per page
 
@@ -82,6 +94,10 @@ It is not field INP and carries no real-user interaction mix.
 | /promos/this-week | mobile | `P.rounded-2xl border border-rd-line bg-rd-card p-5 font-rd` |
 | /mlb/minnesota-twins | desktop | `H1.rd-display mt-3 text-4xl uppercase text-white md:text-6xl` |
 | /venues/td-garden | desktop | `DIV` |
+| /nhl/dallas-stars | desktop | `H1.rd-display mt-3 text-4xl uppercase text-white md:text-6xl` |
+| /venues/fenway-park | desktop | `DIV` |
+| /cfb/alabama | desktop | `H1.mt-1 font-black text-white` |
+| /promos/this-week | desktop | `P.rounded-2xl border border-rd-line bg-rd-card p-5 font-rd` |
 
 Every LCP element is a text node. No page's LCP is an image today, which means
 an ad unit placed above or beside the current LCP text has a direct path to
@@ -108,13 +124,17 @@ becoming the new LCP element.
    interactions above the 16 ms Event Timing threshold, so their INP of 16 ms is
    at the measurement floor and means "nothing slow was observed", not "INP is
    16 ms". Field INP from CrUX is the right instrument for the real number.
+   The /promos/this-week desktop row is the thinnest sample in the table: one
+   interaction cleared the threshold, so its 32 ms is a single observation, not
+   a distribution.
 5. One page load per URL per strategy. There is no run-to-run variance estimate.
 
-## Coverage gap against the brief
+## Coverage history: the baseline is now complete
 
-The brief called for six URLs at both mobile and desktop, twelve measurements,
-under a twelve-fetch Phase 2 ceiling. Twelve network operations were spent, but
-four produced no data:
+All twelve measurements exist. They were taken in two passes.
+
+Pass 1 delivered 8 of the 12 under a twelve-operation ceiling, because four
+operations produced no data:
 
 - 3 spent on Google PageSpeed Insights API calls that returned HTTP 429
   (`Quota exceeded for quota metric 'Queries' ... 'Queries per day'`) on the
@@ -123,13 +143,14 @@ four produced no data:
   tab loaded in the background and Chrome suppresses paint timing for pages that
   load while hidden, so LCP and FCP came back null.
 
-The remaining 8 produced the 8 valid rows above. **Four desktop captures are
-therefore missing**: /nhl/dallas-stars, /venues/fenway-park, /cfb/alabama and
-/promos/this-week. Mobile was prioritised because it is 84% of traffic; the two
-desktop rows that were captured cover the team and venue templates, which
-together account for 336 of the 481 URLs in the sitemap. Completing the four
-missing desktop rows costs four more page loads with the same harness and should
-be done before any ad code ships.
+Pass 2 captured the four desktop rows pass 1 could not reach
+(/nhl/dallas-stars, /venues/fenway-park, /cfb/alabama, /promos/this-week) plus
+one warmup load, 5 operations against a six-operation ceiling. The same CDP
+harness, emulation profile and Chrome build were used in both passes.
+
+The only asymmetry left in the table is that pass 2 was warmed and pass 1 was
+not. That favours the pass-2 rows by roughly 70 ms of TTFB and is why the Twins
+mobile row stays flagged rather than being quietly compared against them.
 
 ## Ad-free state verified at capture
 
@@ -145,9 +166,20 @@ session, one per template plus /privacy and /ads.txt, all on deploy
 - No consent-management platform, cookie banner, `__tcfapi`, `__uspapi` or
   `__gpp` on any page.
 - Third-party scripts present and included in these numbers: Grow.me
-  (`faves.grow.me/main.js`, Raptive's own engagement product, already live
-  sitewide) and Google Analytics 4 (`G-N2M0M355LX`, preloaded via next/script).
+  (`faves.grow.me/main.js` with `data-grow-faves-site-id`) and Google
+  Analytics 4 (`G-N2M0M355LX`, preloaded via next/script).
 
-Because Grow.me is already on every page, this baseline is "pre-ad-unit", not
-"pre-Raptive-anything". Any post-integration comparison should hold that
-constant.
+**Correction to an earlier reading of this file.** The Grow.me tag was first
+recorded here as Raptive's own engagement product, which would have made the
+site partly onboarded already. That is wrong. The
+`faves.grow.me/main.js` + `data-grow-faves-site-id` signature is Mediavine's
+standard Grow install, left over from an abandoned Mediavine Journey
+application. It is a competitor script, not partial Raptive onboarding, and it
+is scheduled for removal.
+
+This matters for how the table is compared later. Grow.me was live and loading
+on every page while these numbers were taken, so the baseline is "pre-ad-unit
+with Grow.me present". Removing Grow.me is itself a performance change. A
+post-integration comparison that removes Grow.me and adds Raptive is measuring
+two deltas at once; capture an intermediate reading after the Grow.me removal
+lands if the two effects need to be told apart.
