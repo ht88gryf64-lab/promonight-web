@@ -1,0 +1,358 @@
+{
+ "experiment": "nfl-schedule-title-sep2026",
+ "capturedAt": "2026-09-05",
+ "readDate": "2026-09-20",
+ "titleSuffixTreatment": "2026 Schedule & Giveaways",
+ "titleSuffixControl": "Promos & Giveaways 2026",
+ "brandSuffix": " | PromoNight",
+ "baselineSource": {
+  "tool": "Ahrefs GSC connector, project 9957864 (Getpromonight)",
+  "window": "2026-07-01 to 2026-07-31 monthly bucket",
+  "isAuthoritative": false,
+  "whyNotTheWindowTheBriefAsked": "The brief asked for the 14 days prior (2026-08-22 to 2026-09-04). Ahrefs holds no URL-attributed GSC data after 2026-07-15: gsc-page-history, gsc-keywords and gsc-pages all return empty for any window starting after it, while unfiltered site-level gsc-performance-history runs to 2026-08-22. gsc-pages additionally ignores date_to and returns a whole-month bucket.",
+  "samplingCaveat": "Keyword-capped sample, not true page totals. audit/ctr-diagnostic-gate0-gate1.md reconciled it against a real GSC Pages.csv and found it roughly 7x low at page level (~13% of true impressions).",
+  "authoritativeSourceNeeded": "A GSC Pages.csv export for 2026-08-22 to 2026-09-04, filtered to the 20 URLs. Same source the MLB ctr-diagnostic treated as authoritative."
+ },
+ "pages": [
+  {
+   "slug": "baltimore-ravens",
+   "arm": "treatment",
+   "displayName": "Baltimore Ravens",
+   "titleAtBaseline": "Baltimore Ravens Promos & Giveaways 2026 | PromoNight",
+   "titleAfterShip": "Baltimore Ravens 2026 Schedule & Giveaways | PromoNight",
+   "titleLen": 55,
+   "promoCount": 0,
+   "gameCount": 17,
+   "ahrefsJuly2026": {
+    "clicks": 0,
+    "impressions": 4,
+    "ctrPct": 0,
+    "position": 9.25,
+    "presentInSample": true
+   }
+  },
+  {
+   "slug": "chicago-bears",
+   "arm": "treatment",
+   "displayName": "Chicago Bears",
+   "titleAtBaseline": "Chicago Bears Promos & Giveaways 2026 | PromoNight",
+   "titleAfterShip": "Chicago Bears 2026 Schedule & Giveaways | PromoNight",
+   "titleLen": 52,
+   "promoCount": 19,
+   "gameCount": 17,
+   "ahrefsJuly2026": {
+    "clicks": 2,
+    "impressions": 16,
+    "ctrPct": 12.5,
+    "position": 7.81,
+    "presentInSample": true
+   }
+  },
+  {
+   "slug": "cincinnati-bengals",
+   "arm": "treatment",
+   "displayName": "Cincinnati Bengals",
+   "titleAtBaseline": "Cincinnati Bengals Promos & Giveaways 2026 | PromoNight",
+   "titleAfterShip": "Cincinnati Bengals 2026 Schedule & Giveaways | PromoNight",
+   "titleLen": 57,
+   "promoCount": 0,
+   "gameCount": 17,
+   "ahrefsJuly2026": {
+    "clicks": null,
+    "impressions": null,
+    "ctrPct": null,
+    "position": null,
+    "presentInSample": false
+   }
+  },
+  {
+   "slug": "dallas-cowboys",
+   "arm": "treatment",
+   "displayName": "Dallas Cowboys",
+   "titleAtBaseline": "Dallas Cowboys Promos & Giveaways 2026 | PromoNight",
+   "titleAfterShip": "Dallas Cowboys 2026 Schedule & Giveaways | PromoNight",
+   "titleLen": 53,
+   "promoCount": 0,
+   "gameCount": 17,
+   "ahrefsJuly2026": {
+    "clicks": 0,
+    "impressions": 1,
+    "ctrPct": 0,
+    "position": 3,
+    "presentInSample": true
+   }
+  },
+  {
+   "slug": "detroit-lions",
+   "arm": "treatment",
+   "displayName": "Detroit Lions",
+   "titleAtBaseline": "Detroit Lions Promos & Giveaways 2026 | PromoNight",
+   "titleAfterShip": "Detroit Lions 2026 Schedule & Giveaways | PromoNight",
+   "titleLen": 52,
+   "promoCount": 0,
+   "gameCount": 17,
+   "ahrefsJuly2026": {
+    "clicks": 1,
+    "impressions": 5,
+    "ctrPct": 20,
+    "position": 7.4,
+    "presentInSample": true
+   }
+  },
+  {
+   "slug": "kansas-city-chiefs",
+   "arm": "treatment",
+   "displayName": "Kansas City Chiefs",
+   "titleAtBaseline": "Kansas City Chiefs Promos & Giveaways 2026 | PromoNight",
+   "titleAfterShip": "Kansas City Chiefs 2026 Schedule & Giveaways | PromoNight",
+   "titleLen": 57,
+   "promoCount": 7,
+   "gameCount": 17,
+   "ahrefsJuly2026": {
+    "clicks": 0,
+    "impressions": 1,
+    "ctrPct": 0,
+    "position": 6,
+    "presentInSample": true
+   }
+  },
+  {
+   "slug": "new-york-giants",
+   "arm": "treatment",
+   "displayName": "New York Giants",
+   "titleAtBaseline": "New York Giants Promos & Giveaways 2026 | PromoNight",
+   "titleAfterShip": "New York Giants 2026 Schedule & Giveaways | PromoNight",
+   "titleLen": 54,
+   "promoCount": 0,
+   "gameCount": 17,
+   "ahrefsJuly2026": {
+    "clicks": 17,
+    "impressions": 94,
+    "ctrPct": 18.09,
+    "position": 6.52,
+    "presentInSample": true
+   }
+  },
+  {
+   "slug": "philadelphia-eagles",
+   "arm": "treatment",
+   "displayName": "Philadelphia Eagles",
+   "titleAtBaseline": "Philadelphia Eagles Promos & Giveaways 2026 | PromoNight",
+   "titleAfterShip": "Philadelphia Eagles 2026 Schedule & Giveaways | PromoNight",
+   "titleLen": 58,
+   "promoCount": 0,
+   "gameCount": 17,
+   "ahrefsJuly2026": {
+    "clicks": 0,
+    "impressions": 1,
+    "ctrPct": 0,
+    "position": 26,
+    "presentInSample": true
+   }
+  },
+  {
+   "slug": "pittsburgh-steelers",
+   "arm": "treatment",
+   "displayName": "Pittsburgh Steelers",
+   "titleAtBaseline": "Pittsburgh Steelers Promos & Giveaways 2026 | PromoNight",
+   "titleAfterShip": "Pittsburgh Steelers 2026 Schedule & Giveaways | PromoNight",
+   "titleLen": 58,
+   "promoCount": 8,
+   "gameCount": 17,
+   "ahrefsJuly2026": {
+    "clicks": 0,
+    "impressions": 1,
+    "ctrPct": 0,
+    "position": 30,
+    "presentInSample": true
+   }
+  },
+  {
+   "slug": "san-francisco-49ers",
+   "arm": "treatment",
+   "displayName": "San Francisco 49ers",
+   "titleAtBaseline": "San Francisco 49ers Promos & Giveaways 2026 | PromoNight",
+   "titleAfterShip": "San Francisco 49ers 2026 Schedule & Giveaways | PromoNight",
+   "titleLen": 58,
+   "promoCount": 9,
+   "gameCount": 17,
+   "ahrefsJuly2026": {
+    "clicks": 5,
+    "impressions": 74,
+    "ctrPct": 6.76,
+    "position": 5.86,
+    "presentInSample": true
+   }
+  },
+  {
+   "slug": "atlanta-falcons",
+   "arm": "control",
+   "displayName": "Atlanta Falcons",
+   "titleAtBaseline": "Atlanta Falcons Promos & Giveaways 2026 | PromoNight",
+   "titleAfterShip": "Atlanta Falcons Promos & Giveaways 2026 | PromoNight",
+   "titleLen": 52,
+   "promoCount": 0,
+   "gameCount": 17,
+   "ahrefsJuly2026": {
+    "clicks": 0,
+    "impressions": 4,
+    "ctrPct": 0,
+    "position": 8,
+    "presentInSample": true
+   }
+  },
+  {
+   "slug": "buffalo-bills",
+   "arm": "control",
+   "displayName": "Buffalo Bills",
+   "titleAtBaseline": "Buffalo Bills Promos & Giveaways 2026 | PromoNight",
+   "titleAfterShip": "Buffalo Bills Promos & Giveaways 2026 | PromoNight",
+   "titleLen": 50,
+   "promoCount": 9,
+   "gameCount": 17,
+   "ahrefsJuly2026": {
+    "clicks": 0,
+    "impressions": 1,
+    "ctrPct": 0,
+    "position": 5,
+    "presentInSample": true
+   }
+  },
+  {
+   "slug": "denver-broncos",
+   "arm": "control",
+   "displayName": "Denver Broncos",
+   "titleAtBaseline": "Denver Broncos Promos & Giveaways 2026 | PromoNight",
+   "titleAfterShip": "Denver Broncos Promos & Giveaways 2026 | PromoNight",
+   "titleLen": 51,
+   "promoCount": 0,
+   "gameCount": 17,
+   "ahrefsJuly2026": {
+    "clicks": 0,
+    "impressions": 2,
+    "ctrPct": 0,
+    "position": 5.5,
+    "presentInSample": true
+   }
+  },
+  {
+   "slug": "los-angeles-chargers",
+   "arm": "control",
+   "displayName": "Los Angeles Chargers",
+   "titleAtBaseline": "Los Angeles Chargers Promos & Giveaways 2026 | PromoNight",
+   "titleAfterShip": "Los Angeles Chargers Promos & Giveaways 2026 | PromoNight",
+   "titleLen": 57,
+   "promoCount": 0,
+   "gameCount": 17,
+   "ahrefsJuly2026": {
+    "clicks": 1,
+    "impressions": 6,
+    "ctrPct": 16.67,
+    "position": 3.83,
+    "presentInSample": true
+   }
+  },
+  {
+   "slug": "los-angeles-rams",
+   "arm": "control",
+   "displayName": "Los Angeles Rams",
+   "titleAtBaseline": "Los Angeles Rams Promos & Giveaways 2026 | PromoNight",
+   "titleAfterShip": "Los Angeles Rams Promos & Giveaways 2026 | PromoNight",
+   "titleLen": 53,
+   "promoCount": 1,
+   "gameCount": 17,
+   "ahrefsJuly2026": {
+    "clicks": 205,
+    "impressions": 785,
+    "ctrPct": 26.11,
+    "position": 3.17,
+    "presentInSample": true
+   }
+  },
+  {
+   "slug": "miami-dolphins",
+   "arm": "control",
+   "displayName": "Miami Dolphins",
+   "titleAtBaseline": "Miami Dolphins Promos & Giveaways 2026 | PromoNight",
+   "titleAfterShip": "Miami Dolphins Promos & Giveaways 2026 | PromoNight",
+   "titleLen": 51,
+   "promoCount": 9,
+   "gameCount": 17,
+   "ahrefsJuly2026": {
+    "clicks": null,
+    "impressions": null,
+    "ctrPct": null,
+    "position": null,
+    "presentInSample": false
+   }
+  },
+  {
+   "slug": "minnesota-vikings",
+   "arm": "control",
+   "displayName": "Minnesota Vikings",
+   "titleAtBaseline": "Minnesota Vikings Promos & Giveaways 2026 | PromoNight",
+   "titleAfterShip": "Minnesota Vikings Promos & Giveaways 2026 | PromoNight",
+   "titleLen": 54,
+   "promoCount": 12,
+   "gameCount": 17,
+   "ahrefsJuly2026": {
+    "clicks": 0,
+    "impressions": 10,
+    "ctrPct": 0,
+    "position": 6.8,
+    "presentInSample": true
+   }
+  },
+  {
+   "slug": "new-york-jets",
+   "arm": "control",
+   "displayName": "New York Jets",
+   "titleAtBaseline": "New York Jets Promos & Giveaways 2026 | PromoNight",
+   "titleAfterShip": "New York Jets Promos & Giveaways 2026 | PromoNight",
+   "titleLen": 50,
+   "promoCount": 13,
+   "gameCount": 17,
+   "ahrefsJuly2026": {
+    "clicks": 0,
+    "impressions": 7,
+    "ctrPct": 0,
+    "position": 27.71,
+    "presentInSample": true
+   }
+  },
+  {
+   "slug": "seattle-seahawks",
+   "arm": "control",
+   "displayName": "Seattle Seahawks",
+   "titleAtBaseline": "Seattle Seahawks Promos & Giveaways 2026 | PromoNight",
+   "titleAfterShip": "Seattle Seahawks Promos & Giveaways 2026 | PromoNight",
+   "titleLen": 53,
+   "promoCount": 15,
+   "gameCount": 17,
+   "ahrefsJuly2026": {
+    "clicks": null,
+    "impressions": null,
+    "ctrPct": null,
+    "position": null,
+    "presentInSample": false
+   }
+  },
+  {
+   "slug": "tampa-bay-buccaneers",
+   "arm": "control",
+   "displayName": "Tampa Bay Buccaneers",
+   "titleAtBaseline": "Tampa Bay Buccaneers Promos & Giveaways 2026 | PromoNight",
+   "titleAfterShip": "Tampa Bay Buccaneers Promos & Giveaways 2026 | PromoNight",
+   "titleLen": 57,
+   "promoCount": 0,
+   "gameCount": 17,
+   "ahrefsJuly2026": {
+    "clicks": 0,
+    "impressions": 1,
+    "ctrPct": 0,
+    "position": 40,
+    "presentInSample": true
+   }
+  }
+ ]
+}
