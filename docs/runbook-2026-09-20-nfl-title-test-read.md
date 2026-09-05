@@ -24,12 +24,32 @@ executable, so it does not run as a bare path:
 Section 3 of the baseline document explains why Ahrefs and Windsor cannot supply
 either.
 
-- [ ] Search Console, range 2026-08-22 to 2026-09-04, **Pages** tab, export.
+Use a **custom date range**, not a preset. "Last 28 days" is the trap: it looks
+right in the UI and produces per-page rows that are 28-day totals, which cannot
+be filed under a 14-day window. The first export handed to this runbook was
+exactly that, and the ingest refused it.
+
+Search Console reports about two days behind, so the freshest usable day is
+roughly today minus 2. Pick the 14-day window that ends on the last settled day
+and sits entirely before ship, then pass it with `--from`/`--to`. A GAP between
+the baseline window and the ship date is fine. An OVERLAP is not, and the ingest
+refuses it.
+
+- [ ] Search Console, custom range, 14 days ending on the last settled day,
+      **Pages** tab, export.
 - [ ] Same range, add a filter of **Page contains `/nfl/`**, **Queries** tab,
-      export. The filter is load-bearing: without it "giants" also matches the
-      MLB San Francisco Giants, a ctr-diagnostic treatment club.
-- [ ] `$R --window baseline --tab pages   --csv <path> --export-date <today> --execute`
-- [ ] `$R --window baseline --tab queries --csv <path> --export-date <today> --execute`
+      export. The filter is load-bearing twice over: without it "giants" also
+      matches the MLB San Francisco Giants, a ctr-diagnostic treatment club, and
+      the unfiltered site-wide export hits the 1,000-row cap and silently drops
+      every zero-click query.
+- [ ] `$R --window baseline --tab pages   --dir <export folder> --from <start> --to <end> --export-date <today> --execute`
+- [ ] `$R --window baseline --tab queries --dir <export folder> --from <start> --to <end> --export-date <today> --execute`
+
+**Pass `--dir`, the whole unzipped export folder, not `--csv`.** Chart.csv proves
+the range the export actually covers and Filters.csv proves which filters were
+applied. Pages.csv and Queries.csv carry neither, so a bare `--csv` cannot tell a
+14-day filtered export from a 28-day unfiltered one. On `--dir` the ingest checks
+both and refuses to write on a mismatch.
 - [ ] Confirm `baselineOfRecord.status` is `captured` in
       `audit/nfl-title-test-baseline-2026-09-05.json`. **That field is the gate,
       not the presence of a CSV.** A file can be the wrong property; the status
@@ -119,9 +139,11 @@ most recent days is incomplete; exporting a window the day after it closes
 undercounts its tail and biases every delta downward, toward a false null.
 
 - [ ] Export both tabs for the read window (2026-09-06 to 2026-09-19 for a
-      2026-09-05 ship), Queries again filtered to Page contains `/nfl/`.
-- [ ] `$R --window read --tab pages   --csv <path> --export-date <today> --execute`
-- [ ] `$R --window read --tab queries --csv <path> --export-date <today> --execute`
+      2026-09-05 ship) as a **custom range**, Queries again filtered to Page
+      contains `/nfl/`. Match the baseline's window LENGTH exactly, or the raw
+      click and impression deltas compare different amounts of time.
+- [ ] `$R --window read --tab pages   --dir <export folder> --export-date <today> --execute`
+- [ ] `$R --window read --tab queries --dir <export folder> --export-date <today> --execute`
 - [ ] Check `suspect` and `suspectReasons` on both stamps in the JSON before
       trusting a number.
 - [ ] Write the conclusion to `audit/nfl-title-test-read-2026-09-20.md`, and

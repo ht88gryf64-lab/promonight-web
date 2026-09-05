@@ -188,19 +188,69 @@ artifact existing, so a degenerate export must never be allowed to become it.
 
 **A page absent from the export means it had no impressions in the window.** That
 is a real reading, and it is recorded as absent rather than coerced to zero so
-the read cannot divide by it. Three of the twenty were absent even from the far
-larger July Ahrefs sample, so expect some absences here too.
+the read cannot divide by it. In the real 28-day export all 20 URLs were present,
+so an absence in a 14-day window would be notable rather than routine; the three
+pages the Ahrefs sample showed as missing had impressions all along.
 
-### The proxy that is NOT the baseline
+### The proxy that is NOT the baseline, and what corrected it
 
-The July 2026 Ahrefs figures were captured before any of this was known and are
-kept in the JSON per page under `ahrefsJuly2026`, and at the top level under
-`priorSampleNotTheBaseline` (renamed from `baselineSource`, because that key name
-was itself a claim and the wrong one). They are seven weeks
-stale and roughly 7x low. **Do not score the read against them.** They are
-retained for one purpose: they are what established that
-`los-angeles-rams` dominates the control arm, and that the head-term hypothesis
-had no support.
+The July 2026 Ahrefs figures are kept in the JSON per page under
+`ahrefsJuly2026`, and at the top level under `priorSampleNotTheBaseline`
+(renamed from `baselineSource`, because that key name was itself a claim and the
+wrong one). **Do not score the read against them.**
+
+On 2026-09-05 a real Search Console export arrived covering 2026-08-07 to
+2026-09-03, 28 days, unfiltered. It is NOT the baseline of record: the window is
+wrong, and per-page rows are totals over whatever range was exported, so it
+cannot be filed under a 14-day window. The ingest refused it, correctly. But it
+is real GSC data on these exact URLs, and it overturns two things the Ahrefs
+sample had established.
+
+**Correction 1: the Rams do not dominate the control arm.** Ahrefs put
+`los-angeles-rams` at 96.2% of control impressions, converting at 26%. Real GSC
+puts it at **37.5%**, converting at 3.2%. The arms are close to balanced:
+
+| | clicks | impressions | CTR |
+|---|---|---|---|
+| treatment, 28 days | 1,874 | 11,458 | 16.4% |
+| control, 28 days | 951 | 9,416 | 10.1% |
+
+An impression ratio of 1.22 to 1, not the one-page-against-noise picture the
+Ahrefs sample painted. The per-page ruling in section 5 still stands, because
+with n=10 and this much per-page spread a pooled figure is fragile either way,
+but it no longer rests on the Rams being an outlier and must not be written up as
+though it does.
+
+**Correction 2: the test is better powered than stated.** The Ahrefs sample
+implied roughly 1,500 treatment impressions a month. Real GSC implies about
+**5,700 per 14 days** in treatment and 4,700 in control. The Ahrefs undercount on
+these pages was 58x in the treatment arm and 12x in control, far worse than the
+7x the MLB reconciliation measured on MLB pages. Section 6's power note is
+revised accordingly: still a directional read, but on a real impression base
+rather than a marginal one.
+
+Also worth recording: all 20 URLs are present in real GSC data. The three pages
+the Ahrefs sample showed as absent had impressions all along.
+
+### The head-term question, answered on real data
+
+Among the top 1,000 site queries by clicks, queries naming an NFL team token and
+containing "schedule":
+
+| family | queries | impressions | clicks | positions |
+|---|---|---|---|---|
+| promo-schedule (`{team} promotional schedule`, `{team} giveaway schedule`) | 25 | 1,617 | 299 | 3.0 to 5.3 |
+| bare schedule (`{team} schedule`) | **0** | **0** | **0** | n/a |
+
+Stated with its limit: the export is capped at 1,000 rows and its lowest row has
+1 click, so it excludes every zero-click query. The honest reading is that **no
+bare-schedule query on these pages earned a single click in 28 days**, while the
+promo-schedule family drew 299. That is not proof of zero impressions on the head
+terms, and the filtered baseline export will settle it, which is one more reason
+the Queries export is blocking.
+
+This is the strongest evidence yet for section 4's reframing, and it is now
+measured on real data rather than inferred from a capped third-party sample.
 
 ---
 
@@ -333,18 +383,28 @@ above.
 
 ## 6. Confounders, ranked
 
-1. **los-angeles-rams is 96% of the control arm's sampled impressions**
-   (785 of 816) and converts at 26%. Excluding it, the entire control arm is 1
-   click on 31 impressions in a month. Any pooled arm-level comparison is close
-   to a Rams-versus-everything comparison. **Severity: critical.** Mitigation:
-   do not pool at all. Report per-page deltas for all 20 URLs and read Rams as
-   its own line, exactly like every other page. See section 5.
-2. **Statistical power.** Ten pages against ten, over roughly 15 days, on a base
-   this thin. Grossing the July sample up by the documented 7x gives the treatment
-   arm on the order of 1,500 true impressions a month, and the window is half a
-   month. A CTR difference would have to be very large, well into double-digit
-   relative terms, before it outran noise. **This read will produce a directional
-   signal, not a significant result, and should be reported in those words.**
+1. **Per-page spread, not Rams dominance. REVISED 2026-09-05.** The original
+   entry read that `los-angeles-rams` was 96% of control impressions and rated
+   this critical. That came from the Ahrefs sample and real Search Console data
+   refuted it: the Rams are 37.5% of control impressions, and the arms sit at
+   1.22 to 1. **Severity: moderate, not critical.** What survives is the real
+   reason to avoid pooling: per-page CTR across these twenty URLs spans 3.2% to
+   28.8%, so any arm-level ratio is dominated by whichever two or three pages
+   happen to carry the impressions that fortnight. Mitigation is unchanged: do
+   not pool. Report per-page deltas for all 20 and read Rams as its own line
+   like every other page. See section 5.
+2. **Statistical power. REVISED 2026-09-05.** The original entry estimated the
+   treatment arm at roughly 1,500 impressions a month by grossing the Ahrefs
+   sample up 7x. Real Search Console data puts it near **5,700 per 14 days**,
+   with 4,700 in control, so the base is several times larger than stated and the
+   Ahrefs undercount on these pages was 58x rather than 7x. That improves the
+   read without rescuing it: ten pages against ten over fourteen days, with
+   recrawl lag eating an unknown share of the window, is still not powered for
+   significance. **This read will produce a directional signal, not a significant
+   result, and must be reported in those words.** The promo-schedule family it is
+   actually scored on is thinner still: 1,617 impressions over 28 days across the
+   whole arm set, so per-page family deltas will be small integers and must be
+   read as such.
 3. **Recrawl lag.** Google has to recrawl and re-render before the new title is
    ever shown. The production deploy submits the whole sitemap to IndexNow, these
    ten URLs included, but submission is not indexation and part of the 15-day

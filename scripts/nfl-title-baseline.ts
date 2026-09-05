@@ -40,9 +40,15 @@
  * USAGE
  *   R="node --require ./scripts/stub-server-only.cjs --import tsx scripts/nfl-title-baseline.ts"
  *
- *   $R --window baseline --tab pages   --csv ~/Downloads/Pages.csv   --export-date 2026-09-08
- *   $R --window baseline --tab queries --csv ~/Downloads/Queries.csv --export-date 2026-09-08
- *   # add --execute to write. Add --ship-date YYYY-MM-DD if the merge slipped.
+ *   $R --window baseline --tab pages   --dir ~/Downloads/getpromonight-9 --export-date 2026-09-08
+ *   $R --window baseline --tab queries --dir ~/Downloads/getpromonight-10 --export-date 2026-09-08
+ *
+ * PREFER --dir, the whole unzipped export folder, over --csv. Chart.csv proves
+ * the range the export actually covers and Filters.csv proves which filters were
+ * applied; Pages.csv and Queries.csv carry neither, so a bare --csv cannot tell
+ * a 14-day filtered export from a 28-day unfiltered one. Add --execute to write,
+ * --ship-date if the merge slipped, and --from/--to to file an export under the
+ * range it really covers.
  *
  * Reads and writes audit/nfl-title-test-baseline-2026-09-05.json only. No
  * network, no Firestore, no title is ever edited by this file.
@@ -230,6 +236,51 @@ interface ParsedExport {
   queries: Array<{ query: string } & Metrics>;
 }
 
+/**
+ * A Search Console export is a FOLDER, and the folder is what carries the
+ * provenance the CSVs themselves do not: Chart.csv has one row per day, so it
+ * states the range actually covered, and Filters.csv states which filters were
+ * applied. Pages.csv and Queries.csv carry neither.
+ *
+ * This matters because the first real export handed to this script was a
+ * "Last 28 days" range with no page filter, and nothing in a bare Pages.csv
+ * could have revealed that. Prefer --dir over --csv for exactly that reason.
+ */
+interface ExportMeta {
+  from: string | null;
+  to: string | null;
+  days: number;
+  filters: Array<[string, string]>;
+}
+
+function readExportMeta(dir: string): ExportMeta {
+  const meta: ExportMeta = { from: null, to: null, days: 0, filters: [] };
+  const chart = path.join(dir, 'Chart.csv');
+  if (fs.existsSync(chart)) {
+    const dates = fs
+      .readFileSync(chart, 'utf8')
+      .trim()
+      .split(/\r?\n/)
+      .slice(1)
+      .map((l) => splitCsvLine(l)[0])
+      .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d))
+      .sort();
+    if (dates.length > 0) {
+      meta.from = dates[0];
+      meta.to = dates[dates.length - 1];
+      meta.days = dates.length;
+    }
+  }
+  const filters = path.join(dir, 'Filters.csv');
+  if (fs.existsSync(filters)) {
+    for (const l of fs.readFileSync(filters, 'utf8').trim().split(/\r?\n/).slice(1)) {
+      const c = splitCsvLine(l);
+      if (c.length >= 2) meta.filters.push([c[0], c[1]]);
+    }
+  }
+  return meta;
+}
+
 function parseExport(csvPath: string, tab: TabName): ParsedExport {
   const text = fs.readFileSync(csvPath, 'utf8').replace(/^﻿/, '');
   const lines = text.split(/\r?\n/).filter((l) => l.trim() !== '');
@@ -376,14 +427,25 @@ function main(): void {
   const windowArg = arg('--window') as WindowName | undefined;
   const tab = (arg('--tab') ?? 'pages') as TabName;
   const csvArg = arg('--csv');
+  const dirArg = arg('--dir');
   const exportDate = arg('--export-date');
+  const fromArg = arg('--from');
+  const toArg = arg('--to');
 
   if (windowArg !== 'baseline' && windowArg !== 'read') {
     die('pass --window baseline  or  --window read');
   }
   if (tab !== 'pages' && tab !== 'queries') die('pass --tab pages  or  --tab queries');
-  if (!csvArg) die('pass --csv <path to the Search Console export>');
-  if (!fs.existsSync(csvArg)) die(`no such file: ${csvArg}`);
+  if (!csvArg && !dirArg) {
+    die(
+      'pass --dir <the unzipped Search Console export folder>, which is preferred because it\n' +
+        '  carries Chart.csv and Filters.csv and so proves the range and the filters, or\n' +
+        '  --csv <a single file> if you only have the one CSV.',
+    );
+  }
+  if (dirArg && !fs.existsSync(dirArg)) die(`no such directory: ${dirArg}`);
+  const resolvedCsv = csvArg ?? path.join(dirArg!, tab === 'pages' ? 'Pages.csv' : 'Queries.csv');
+  if (!fs.existsSync(resolvedCsv)) die(`no such file: ${resolvedCsv}`);
 
   const doc: BaselineDoc = JSON.parse(fs.readFileSync(JSON_PATH, 'utf8'));
 
@@ -391,7 +453,20 @@ function main(): void {
   // planned date. Recorded so every later run derives the same windows.
   const shipDate = arg('--ship-date') ?? doc.shipDate ?? DEFAULT_SHIP_DATE;
   const ship = parseDate(shipDate, 'ship date');
-  const win = windowFor(shipDate, windowArg);
+  // --from/--to override the derived window. Needed because Search Console runs
+  // about two days behind, so "the 14 days ending the day before ship" may not
+  // exist yet on the day the baseline is captured. A GAP between the baseline
+  // window and the ship date is fine; an OVERLAP is not, and is refused below.
+  const derived = windowFor(shipDate, windowArg);
+  const win =
+    fromArg || toArg
+      ? { from: fromArg ?? derived.from, to: toArg ?? derived.to }
+      : derived;
+  parseDate(win.from, '--from');
+  parseDate(win.to, '--to');
+  if (parseDate(win.from, '--from') > parseDate(win.to, '--to')) {
+    die(`--from ${win.from} is after --to ${win.to}`);
+  }
 
   // The house rule from the sibling experiment: no window may cross the start
   // timestamp. Derivation makes that structural, but check anyway so a
@@ -403,17 +478,56 @@ function main(): void {
     );
   }
 
-  const parsed = parseExport(csvArg, tab);
+  const parsed = parseExport(resolvedCsv, tab);
 
   console.log(`\n=== ${doc.experiment} ===`);
   console.log(
     `window   ${windowArg}  ${win.from} to ${win.to}   (derived from ship date ${shipDate})`,
   );
   console.log(`tab      ${tab}`);
-  console.log(`export   ${csvArg}`);
+  console.log(`export   ${resolvedCsv}`);
   console.log(`rows     ${parsed.rows}\n`);
 
   const suspectReasons: string[] = [];
+
+  // The check that would have caught the first real export handed to this
+  // script: a "Last 28 days" range with no page filter, which no bare
+  // Pages.csv can reveal because it carries neither.
+  if (dirArg) {
+    const meta = readExportMeta(dirArg);
+    if (meta.from && meta.to) {
+      console.log(`export covers ${meta.from} to ${meta.to} (${meta.days} days), per Chart.csv`);
+      if (meta.from !== win.from || meta.to !== win.to) {
+        suspectReasons.push(
+          `RANGE MISMATCH. The export covers ${meta.from}..${meta.to} (${meta.days} days) but this ` +
+            `window is ${win.from}..${win.to}. Per-page rows are totals over whatever range was ` +
+            `exported, so these numbers do not describe the window they would be filed under. ` +
+            `Re-export with a custom range, or pass --from/--to to file it under the range it ` +
+            `actually covers`,
+        );
+      }
+    } else {
+      suspectReasons.push('no Chart.csv in the export folder, so the covered range could not be verified');
+    }
+    if (meta.filters.length > 0) {
+      console.log(`filters applied: ${meta.filters.map(([k, v]) => `${k}=${v}`).join(', ')}`);
+    }
+    const hasPageFilter = meta.filters.some(
+      ([k, v]) => /page/i.test(k) || /\/nfl\//.test(v),
+    );
+    if (tab === 'queries' && !hasPageFilter) {
+      suspectReasons.push(
+        'the Queries export carries no page filter. Without "Page contains /nfl/" the rows are ' +
+          'site-wide, so team attribution crosses leagues ("giants" also matches the MLB San ' +
+          'Francisco Giants, a ctr-diagnostic treatment club) and the row cap bites',
+      );
+    }
+  } else {
+    suspectReasons.push(
+      'ran on a bare --csv, so the covered date range and the applied filters could not be ' +
+        'verified. Prefer --dir with the whole unzipped export folder',
+    );
+  }
 
   if (exportDate) {
     const settle = (parseDate(exportDate, '--export-date') - parseDate(win.to, 'window end')) / DAY;
@@ -627,7 +741,11 @@ function main(): void {
   // A degenerate export must never become the artifact of record, because the
   // runbook's merge gate is satisfied by that file existing.
   const blocking = suspectReasons.filter(
-    (r) => r.startsWith('only ') || r.includes('naming no test team'),
+    (r) =>
+      r.startsWith('only ') ||
+      r.includes('naming no test team') ||
+      r.startsWith('RANGE MISMATCH') ||
+      r.includes('no page filter'),
   );
   if (blocking.length > 0 && !force) {
     die(
@@ -642,7 +760,7 @@ function main(): void {
     'audit',
     `nfl-title-test-gsc-${windowArg}-${tab}-${win.from}_${win.to}.csv`,
   );
-  fs.copyFileSync(csvArg, copied);
+  fs.copyFileSync(resolvedCsv, copied);
 
   const stamp: WindowStamp = {
     from: win.from,
