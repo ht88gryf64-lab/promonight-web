@@ -383,3 +383,87 @@ with Grow.me present". Removing Grow.me is itself a performance change. A
 post-integration comparison that removes Grow.me and adds Raptive is measuring
 two deltas at once; capture an intermediate reading after the Grow.me removal
 lands if the two effects need to be told apart.
+
+---
+
+## Baseline C: 2026-09-06, after FanTools, from a REBUILT harness. Read the caveat before the numbers.
+
+**Why this exists.** FanTools shipped to the team-page sidebar on 2026-09-06
+(merge `69ea952`), which raised the question of whether Baseline B still
+described the pages Raptive would inject into.
+
+**The answer is yes, and not because of these numbers.** None of the six
+baseline URLs renders FanTools — the module has exactly one config entry,
+`/nba/minnesota-timberwolves`, which is not in this corpus. The two team pages
+that ARE in it, `/mlb/minnesota-twins` and `/nhl/dallas-stars`, changed by
+**five bytes**: a serialised `null` in the aside's RSC children array, measured
+by diffing two full builds (see `docs/known-issues.md` entry 44). No element,
+no request, no change to the LCP element — which on both pages is still the
+hero `H1.rd-display`, above and unrelated to the sidebar. Nothing there can
+move a lab metric.
+
+**The harness that produced Baseline A and B was never committed.** It was
+rebuilt on 2026-09-06 from the pinned protocol above and committed as
+`scripts/capture-cwv-baseline.py`, so the next capture is a command. The
+environment matched exactly: Chrome 152.0.7977.76, Python 3.13.7,
+websockets 16.0, same machine. Four details the protocol does not specify had
+to be reconstructed, and the file names them in its header: the interleaving of
+the Tab pairs and clicks, the `elementFromPoint` raster, CDP call ordering, and
+how FCP is derived.
+
+**Two runs, so this baseline carries the variance estimate Baseline B says it
+lacks.** Run 1 12:32Z, run 2 12:41Z, production, deploy serving `69ea952`.
+
+### Mobile — the reconstruction is faithful here
+
+| URL | B LCP | C LCP r1 / r2 | B CLS | C CLS r1 / r2 |
+| --- | ---: | ---: | ---: | ---: |
+| /mlb/minnesota-twins | 1580 | 1692 / 1628 | 0.0005 | 0.0005 / 0.0005 |
+| /nhl/dallas-stars | 1536 | 1540 / 1528 | 0.0688 | 0.0688 / 0.0688 |
+| /venues/td-garden | 1404 | 1384 / 1384 | 0.0023 | 0.0023 / 0.0023 |
+| /venues/fenway-park | 1392 | 1392 / 1392 | 0.0166 | 0.0166 / 0.0166 |
+| /cfb/alabama | 1528 | 1532 / 1532 | 0.0000 | 0.0000 / 0.0000 |
+| /promos/this-week | 1380 | 1384 / 1412 | 0.0000 | 0.0000 / 0.0000 |
+
+**Every mobile CLS figure reproduces to four decimal places**, across both runs
+and against a capture taken by different code a day earlier. LCP lands within
+0.3% on five of six rows. The exception is `/mlb/minnesota-twins`, +112 ms in
+run 1 and +48 ms in run 2 — a spread of 64 ms between two runs of the same
+harness on the same build, which is larger than any signal a five-byte payload
+change could produce. Call it noise and say so.
+
+### Desktop — NOT comparable to Baseline B, and it is not the change
+
+| URL | B LCP | C LCP r1 / r2 | B CLS | C CLS r1 / r2 |
+| --- | ---: | ---: | ---: | ---: |
+| /mlb/minnesota-twins | 428 | 160 / 176 | 0.0070 | 0.0000 / 0.0000 |
+| /nhl/dallas-stars | 500 | 176 / 164 | 0.0000 | 0.0000 / 0.0000 |
+| /venues/td-garden | 356 | 144 / 136 | 0.0010 | 0.0010 / 0.0010 |
+| /venues/fenway-park | 364 | 160 / 132 | 0.0072 | 0.0072 / 0.0072 |
+| /cfb/alabama | 408 | 212 / 148 | 0.0001 | 0.0001 / 0.0001 |
+| /promos/this-week | 380 | 144 / 132 | 0.0001 | 0.0001 / 0.0001 |
+
+Desktop LCP comes in **uniformly 55-65% lower than Baseline B on all six URLs**,
+and reproduces tightly across both runs (132-212 ms). A uniform shift on every
+row, stable run to run, is a harness or environment difference, not a page
+change — a five-byte payload delta on two of six URLs cannot make the other
+four 60% faster. The most likely cause is the desktop UA handling: this
+reconstruction sends `Emulation.setUserAgentOverride` with an empty string where
+the protocol says "cleared", which is not the same call.
+
+**Per this document's own rule, the desktop half of Baseline C must not be
+presented as a before-and-after against Baseline B.** The mobile half may be.
+Desktop CLS reproduces exactly on five of six rows regardless; the sixth,
+`/mlb/minnesota-twins` at 0.0070 to 0.0000, is a shift disappearing.
+
+### What still needs doing
+
+Baseline B and C both measure a corpus with **no partner-app page in it**. If
+Raptive injects into `/nba/minnesota-timberwolves`, neither baseline describes
+that page shape: it is the one team page carrying roughly 6 KB more HTML and an
+extra outbound link. Adding it is a corpus change, which makes it a new
+baseline rather than a row appended here.
+
+The desktop UA divergence should be settled before the next capture, since it
+is the one thing standing between this harness and a like-for-like desktop
+comparison.
