@@ -17,6 +17,7 @@ import { seasonClaimSentence, type ClaimMode } from '@/lib/season-scope';
 import { UpcomingPromoModalProvider } from './UpcomingPromoModal';
 import { AffiliateRail } from './AffiliateRail';
 import { ExploreCard } from './ExploreCard';
+import { FanTools } from './FanTools';
 
 // Reused components — light variant (default 'dark' is the untouched gate-off
 // path). SEO + analytics preserved; restyled into the cream flow (no dark band).
@@ -286,6 +287,19 @@ export function RedesignTeamPage({
               venue={venue}
               className={showSchedule ? 'order-[20] lg:mt-0' : 'order-[20] mt-10 lg:mt-0'}
             />
+            {/* Fan-made companion apps. Below the whole AffiliateRail, so it
+                is below both the tickets CTA (the rail's first child) and the
+                venue block (its last), which is what "below venue info, never
+                above the tickets CTA" resolves to once you know both live in
+                this rail. Self-gates to null for the 168 teams with no entry.
+
+                order-[21] because below lg the aside is display:contents and
+                these values drive the mobile sequence: 20 is the rail, 30 is
+                the next item, 21-29 are unused. Omitting order entirely would
+                default to 0 and put a third-party app link above the tickets
+                CTA. mt-10 clears the rail on mobile and lg:mt-0 hands spacing
+                back to the aside's lg:space-y-6, exactly as the rail does. */}
+            <FanTools team={team} className="order-[21] mt-10 lg:mt-0" />
             <ExploreCard team={team} className="order-[60]" />
             <AdSlot config={AD_SLOTS.SIDEBAR_STICKY} pageType="team_page" className="order-[62]" />
           </aside>
