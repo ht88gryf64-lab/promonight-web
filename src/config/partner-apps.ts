@@ -76,7 +76,7 @@ export const PARTNER_APPS: Record<string, PartnerAppEntry> = {
     heading: 'Free food promos at Target Center',
     intro: [
       'The Timberwolves run two conditional food promos at home games. If an opposing player misses two consecutive free throws in the fourth quarter or overtime, every fan gets a free Chick-fil-A Original Chicken Sandwich, claimed the next day through the official Timberwolves app. A separate McDonald’s fries deal triggers when the Wolves hit 11 three-pointers.',
-      'Both are conditional rather than scheduled, so they will not appear on the promo calendar below. You find out during the game.',
+      'Both are conditional rather than scheduled, so they are not on the promo calendar. You find out during the game.',
     ],
     disclosure:
       'Independent fan-made app, not affiliated with the Timberwolves, Chick-fil-A, or McDonald’s.',

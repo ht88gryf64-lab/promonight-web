@@ -67,13 +67,15 @@ export function FanTools({ team, className = '' }: FanToolsProps) {
           {app.blurb}
         </p>
 
-        {/* rel="nofollow noopener" per the brief. nofollow rather than
-            sponsored because nothing is paid for here, and the link is an
-            editorial pointer we do not want to pass ranking signal. */}
+        {/* nofollow rather than sponsored because nothing is paid for
+            here, and the link is an editorial pointer we do not want to pass
+            ranking signal. noopener noreferrer is the house pair every other
+            outbound link in src/ carries; this placement takes no exception
+            to it. */}
         <TrackedTapLink
           href={app.url}
           target="_blank"
-          rel="nofollow noopener"
+          rel="nofollow noopener noreferrer"
           trackEvent="partner_app_click"
           trackProps={{
             surface: 'web_team_page_partner',

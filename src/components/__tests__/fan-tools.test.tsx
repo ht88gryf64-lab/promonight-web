@@ -58,7 +58,10 @@ test('the outbound link carries the brief\'s rel and opens in a new tab', () => 
     html.includes('href="https://apps.apple.com/us/app/wolves-chicken/id6761731987"'),
     'the store URL must reach the DOM',
   );
-  assert.ok(html.includes('rel="nofollow noopener"'), 'rel must be exactly nofollow noopener');
+  assert.ok(
+    html.includes('rel="nofollow noopener noreferrer"'),
+    'rel must be nofollow plus the house noopener noreferrer pair',
+  );
   assert.ok(html.includes('target="_blank"'), 'target must be _blank');
 });
 
