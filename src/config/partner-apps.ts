@@ -46,6 +46,19 @@ export interface PartnerAppEntry {
   developer: string;
   url: string;
   platform: PartnerAppPlatform;
+  /** Optional app icon, committed under public/partner-apps/.
+   *
+   *  ABSENT IS A SUPPORTED STATE, not a gap to be filled later: the card
+   *  renders the name and developer alone and looks finished without it. Keep
+   *  it optional so a new entry can ship the moment its copy is verified,
+   *  without waiting on artwork.
+   *
+   *  `src` is a public/ path, so the asset is a build-time fact. Do NOT gate
+   *  the render on an existsSync check -- public/ is not guaranteed to be in
+   *  the traced filesystem of an ISR lambda, so that check produces false
+   *  negatives on re-render (see components/avatar-matt.tsx, which had exactly
+   *  that bug). A missing file should break the build loudly instead. */
+  icon?: { src: string; alt: string };
   /** One sentence, the card body. */
   blurb: string;
   /** Analytics identity. See PartnerAppId. */
@@ -71,6 +84,14 @@ export const PARTNER_APPS: Record<string, PartnerAppEntry> = {
     developer: 'David Cocchiarella',
     url: 'https://apps.apple.com/us/app/wolves-chicken/id6761731987',
     platform: 'ios',
+    // 180x180 PNG, downscaled from the App Store's artworkUrl512 via the
+    // iTunes lookup API on 2026-09-06. That same lookup independently
+    // corroborates the two claims this card prints: trackName "Wolves Chicken"
+    // and artistName "David Cocchiarella".
+    icon: {
+      src: '/partner-apps/wolves-chicken.png',
+      alt: 'Wolves Chicken app icon',
+    },
     blurb: 'Tracks both live and alerts you the moment the chicken is secured.',
     partner: 'wolves_chicken',
     heading: 'Free food promos at Target Center',

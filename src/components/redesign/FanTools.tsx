@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { TrackedTapLink } from '@/components/analytics/TrackedTapLink';
 import { getPartnerApp, type PartnerAppPlatform } from '@/config/partner-apps';
 import type { Team } from '@/lib/types';
@@ -39,6 +40,10 @@ import type { Team } from '@/lib/types';
 // classify every route importing it as an affiliate emitter and fail the build
 // for want of a disclosure it does not need.
 
+// Rendered icon edge in CSS pixels. The committed asset is 180x180, so this
+// still has better than 3x of detail on a retina screen.
+const ICON_PX = 56;
+
 /** How the platform is named in prose, and what its store button says. */
 const PLATFORM: Record<PartnerAppPlatform, { label: string; store: string }> = {
   ios: { label: 'iOS', store: 'App Store' },
@@ -71,11 +76,30 @@ export function FanTools({ team, className = '' }: FanToolsProps) {
       ))}
 
       <div className="mt-4 rounded-xl border border-rd-line bg-rd-cream p-4">
-        <p className="font-rd font-semibold text-rd-ink">{app.name}</p>
-        <p className="mt-0.5 font-rd text-xs text-rd-ink-faint">
-          {platform.label}, by {app.developer}
-        </p>
-        <p className="mt-2 font-rd text-sm leading-relaxed text-rd-ink-soft">
+        <div className="flex items-center gap-3">
+          {app.icon ? (
+            <Image
+              src={app.icon.src}
+              alt={app.icon.alt}
+              width={ICON_PX}
+              height={ICON_PX}
+              // Size pinned inline so no utility can override the intrinsic
+              // dimensions, the same guard avatar-matt uses. The radius is a
+              // PERCENTAGE on purpose: 22% of the box approximates the iOS
+              // icon squircle at any size, where a fixed px radius would only
+              // look right at one.
+              style={{ width: ICON_PX, height: ICON_PX, borderRadius: '22%' }}
+              className="shrink-0 border border-rd-line object-cover"
+            />
+          ) : null}
+          <div className="min-w-0">
+            <p className="font-rd font-semibold text-rd-ink">{app.name}</p>
+            <p className="mt-0.5 font-rd text-xs text-rd-ink-faint">
+              {platform.label}, by {app.developer}
+            </p>
+          </div>
+        </div>
+        <p className="mt-3 font-rd text-sm leading-relaxed text-rd-ink-soft">
           {app.blurb}
         </p>
 
