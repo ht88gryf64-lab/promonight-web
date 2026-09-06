@@ -5,13 +5,25 @@ import type { Team } from '@/lib/types';
 // FanTools — the fan-made companion app module in the team-page sidebar.
 //
 // Renders for a team only when config/partner-apps has an entry for it, which
-// today is one team of 169. The gate is INSIDE this component and returns null,
-// rather than a `{entry && <FanTools/>}` at the mount site, on purpose: a
-// falsy JSX expression serialises a `false` child into the RSC payload of the
-// 168 pages that have no entry, shifting every following sibling's reference
-// index. Inert, but not byte-identical, and there is no reason to accept that
-// on 168 pages to save a null check here. AffiliateRail's FanaticsCTA is the
-// same pattern.
+// today is one team of 169. The gate is INSIDE this component and returns
+// null, the same shape as AffiliateRail's FanaticsCTA.
+//
+// MEASURED, and NOT what the first version of this comment claimed. Returning
+// null does not keep the 168 no-entry pages byte-identical. Two full builds
+// diffed on 2026-09-06 (main vs this branch, build id and every
+// /_next/static/ asset path normalised) show the aside's children array go
+// from
+//   "children":["$L2c",["$","div",...ExploreCard...]]
+// to
+//   "children":["$L2c",null,["$","div",...ExploreCard...]]
+// identically on /nba/boston-celtics, /mlb/minnesota-twins and
+// /nhl/dallas-stars: exactly +5 bytes, and ExploreCard's positional index
+// moves from 1 to 2. A `{entry && <FanTools/>}` at the mount site would have
+// serialised `false` into the very same slot. NEITHER FORM AVOIDS THE SHIFT.
+// Only not mounting the component at all would, and that puts the gate back
+// on every caller. The inside gate is still the right shape, but it buys one
+// byte, not byte-identity. Recorded with the numbers in docs/known-issues.md
+// entry 44.
 //
 // SCOPE. The offers described here are conditional, not scheduled, so they are
 // not promos: no Firestore write, no promos-collection row, and no JSON-LD.

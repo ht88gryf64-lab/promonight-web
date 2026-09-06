@@ -2150,3 +2150,75 @@ verification, and CFB's labels are load-bearing in
 Whoever takes it should decide the direction first: either CFB gains the
 daylight distinction, or MLB and NFL drop it. The former is more informative and
 matches what the rest of the site now does.
+
+## 44. FanTools shifts the RSC child index on all 169 team pages, and returning null does not prevent it
+
+**What it is.** `FanTools` was added to the team-page sidebar on 2026-09-06 at
+`src/components/redesign/RedesignTeamPage.tsx:302`, inside the `<aside>` opened
+at `:279`, between `AffiliateRail` (`order-[20]`) and `ExploreCard`
+(`order-[60]`). It self-gates: `getPartnerApp(team.id)` returns null for the
+168 teams with no `src/config/partner-apps.ts` entry, and the component returns
+`null` before rendering anything.
+
+**The claim that turned out to be false.** The component was written with the
+gate INSIDE it rather than as `{entry && <FanTools/>}` at the mount site,
+specifically to avoid serialising a falsy child into the RSC payload of the 168
+pages and shifting every following sibling's reference index — the same
+reasoning recorded at `RedesignTeamPage.tsx:333-340` for the season slot. That
+reasoning does not hold for a component that returns null. **A server component
+returning `null` still occupies its positional slot in the parent's children
+array.**
+
+**Measured.** Two full production builds, diffed 2026-09-06 with the build id
+and every `/_next/static/` asset path normalised. On `/nba/boston-celtics`,
+`/mlb/minnesota-twins` and `/nhl/dallas-stars` alike, the aside's children array
+goes from
+
+```
+"children":["$L2c",["$","div",...ExploreCard...]]
+```
+
+to
+
+```
+"children":["$L2c",null,["$","div",...ExploreCard...]]
+```
+
+Exactly **+5 bytes** (`,null`) in both the prerendered `.html` and the `.rsc`
+flight payload, and `ExploreCard` moves from positional index 1 to index 2.
+`{entry && <FanTools/>}` would have written `false` into the identical slot, so
+it is not the better option — it is the same event, one byte longer. Only not
+mounting the component at all avoids the shift, and that returns the gate to
+every caller.
+
+The one page that gains real content, `/nba/minnesota-timberwolves`, grows
+**+5,909 characters** of normalised HTML and **+3,447** of `.rsc`.
+
+**Why it matters.** Entry 12 and entry 14 both require that prerendered-HTML
+changes be met with a same-day byte-identity baseline rebuild and a revalidation
+(ISR 86400). This change qualifies on all 169 team pages, not just the one that
+renders the module — which is exactly the case the inside-the-component gate was
+believed to have excluded. Anyone reading the old comment would have concluded
+no rebuild was needed for 168 of them.
+
+**Risks and couplings.** There is no byte-identity tooling in this repo. Nothing
+in `scripts/` captures or compares prerendered baselines, there is no npm script
+and no shell script, and `git log --all -S 'byte-identity' -- scripts audit`
+returns no commits. The instruction at entry 12 and entry 14 names no command,
+so the comparison above was constructed by hand: build at the base commit, copy
+`.next/server/app/**/*.{html,rsc}` aside, build at the change commit, and diff
+with the build id and `/_next/static/` paths normalised. Do NOT set
+`VERCEL_ENV=production` for this: `NEXT_PUBLIC_TICKETMASTER_IMPACT_WRAP` is
+absent locally and `scripts/verify-affiliate-tracking.ts:111-133` makes that a
+hard prebuild failure on production-target builds.
+
+Not resolved by anything here: a real baseline harness still does not exist, and
+the next change to a shared team-page wrapper will face the same hand-built
+comparison. `audit/pre-ad-cwv-baseline.md` has the same gap in the performance
+dimension — its protocol is pinned in detail but the harness that ran it was
+never committed.
+
+**Severity: Low.** Nothing user-visible and nothing functionally wrong: the
+extra child is inert on 168 pages. The defect was in the recorded reasoning, not
+the render, and the cost of believing it was skipping a rebuild that entry 12
+and entry 14 require.
