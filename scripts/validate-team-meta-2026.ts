@@ -17,13 +17,18 @@
  * experiment is reverted or promoted, that file changes and this script
  * follows automatically.
  *
+ * The ten nfl-schedule-title-sep2026 treatment clubs get NO such exemption.
+ * That arm was sized to fit (52 to 58 rendered), so one of its titles going
+ * over 60 is a real defect, not an accepted cost, and must fail here.
+ *
  * Run with:
  *   node --require ./scripts/stub-server-only.cjs --import tsx \
  *     --env-file=.env.local scripts/validate-team-meta-2026.ts
  */
 import { getAllTeams, getTeamBySlug, getVenueForTeam } from '../src/lib/data';
 import { teamDisplayName } from '../src/lib/promo-helpers';
-import { isTitleTreatmentTeam, teamBareTitle } from '../src/lib/title-treatment';
+import { teamMetaTitle, titleExperimentArm } from '../src/lib/title-treatment';
+import type { TitleArm } from '../src/lib/title-treatment';
 import type { Team } from '../src/lib/types';
 
 const YEAR = 2026; // must match the hardcoded `year` in the team/playoffs pages
@@ -50,7 +55,7 @@ function truncateAtWord(s: string, max: number): string {
 //
 // What actually renders in <title> once the layout template is applied.
 function renderedTitle(team: Team, display: string): string {
-  return `${teamBareTitle(team, display)}${TITLE_SUFFIX}`;
+  return `${teamMetaTitle(team, display)}${TITLE_SUFFIX}`;
 }
 // KNOWN STALE, and deliberately left alone by the ctr-diagnostic-sep2026
 // change: the production description has not been this string for some time
@@ -73,8 +78,13 @@ interface Row {
   slug: string;
   display: string;
   venueName: string | null;
-  /** In the ctr-diagnostic-sep2026 treatment arm (see src/lib/title-treatment.ts). */
-  treatment: boolean;
+  /**
+   * Which title experiment arm this team is in (see src/lib/title-treatment.ts).
+   * Only 'mlb-ctr-treatment' is exempt from the 60-char assertion. The ten
+   * nfl-schedule-title-sep2026 treatment clubs are NOT exempt: that arm's whole
+   * premise is that it fits the budget, so one going over 60 is a real failure.
+   */
+  arm: TitleArm;
   title: string;
   titleLen: number;
   desc: string;
@@ -92,7 +102,7 @@ async function rowForTeam(team: Team): Promise<Row> {
     slug: team.id,
     display,
     venueName: venue,
-    treatment: isTitleTreatmentTeam(team),
+    arm: titleExperimentArm(team),
     title,
     titleLen: title.length,
     desc,
@@ -141,16 +151,25 @@ async function main() {
 
   // Over-budget titles split by arm: a control team over 60 is a real defect,
   // a treatment team over 60 is the accepted cost of the experiment.
-  const titleOver = rows.filter((r) => r.titleLen > TITLE_MAX && !r.treatment);
-  const titleOverTreatment = rows.filter((r) => r.titleLen > TITLE_MAX && r.treatment);
+  const titleOver = rows.filter(
+    (r) => r.titleLen > TITLE_MAX && r.arm !== 'mlb-ctr-treatment',
+  );
+  const titleOverTreatment = rows.filter(
+    (r) => r.titleLen > TITLE_MAX && r.arm === 'mlb-ctr-treatment',
+  );
   const descOver = rows.filter((r) => r.descLen > DESC_MAX);
   const truncated = rows.filter((r) => r.rawDescLen > DESC_MAX);
   const longestTitle = [...rows].sort((a, b) => b.titleLen - a.titleLen)[0];
   const longestDesc = [...rows].sort((a, b) => b.descLen - a.descLen)[0];
 
   console.log(`=== FULL SWEEP: ${rows.length} teams ===\n`);
-  console.log(`Titles over ${TITLE_MAX} (control, FAIL): ${titleOver.length}`);
-  console.log(`Titles over ${TITLE_MAX} (treatment, accepted): ${titleOverTreatment.length}`);
+  console.log(`Titles over ${TITLE_MAX} (FAIL): ${titleOver.length}`);
+  console.log(`Titles over ${TITLE_MAX} (mlb-ctr treatment, accepted): ${titleOverTreatment.length}`);
+  const byArm = new Map<TitleArm, number>();
+  for (const r of rows) byArm.set(r.arm, (byArm.get(r.arm) ?? 0) + 1);
+  console.log(
+    `Arms: ${[...byArm].map(([a, n]) => `${a}=${n}`).join(', ')}`,
+  );
   console.log(`Descs  over ${DESC_MAX}: ${descOver.length}`);
   console.log(`Descs truncated (raw > ${DESC_MAX}): ${truncated.length}`);
   console.log(`\nLongest title: ${longestTitle.titleLen} chars — ${longestTitle.title}`);
@@ -173,8 +192,8 @@ async function main() {
     }
   }
   if (titleOver.length > 0) {
-    console.log(`\n!!! CONTROL TITLES OVER ${TITLE_MAX}, needs fixing:`);
-    for (const r of titleOver) console.log(`  ${r.titleLen}  [${r.slug}] ${r.title}`);
+    console.log(`\n!!! TITLES OVER ${TITLE_MAX}, needs fixing:`);
+    for (const r of titleOver) console.log(`  ${r.titleLen}  [${r.arm}] [${r.slug}] ${r.title}`);
   }
   if (descOver.length > 0) {
     console.log(`\n!!! DESCS OVER ${DESC_MAX} — truncation failed:`);
@@ -191,7 +210,7 @@ async function main() {
 
   const pass = titleOver.length === 0 && descOver.length === 0 && playoffTitle.length <= TITLE_MAX && playoffDesc.length <= DESC_MAX;
   console.log(
-    `\n=== RESULT: ${pass ? 'PASS: all control titles <=60 and descriptions <=155' : 'FAIL'} ===`,
+    `\n=== RESULT: ${pass ? 'PASS: every title outside the mlb-ctr treatment arm <=60, descriptions <=155' : 'FAIL'} ===`,
   );
   if (!pass) process.exit(1);
 }

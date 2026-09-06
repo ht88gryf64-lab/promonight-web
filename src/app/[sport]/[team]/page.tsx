@@ -39,7 +39,7 @@ import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure
 import { AdSlot } from '@/components/ads/AdSlot';
 import { AD_SLOTS } from '@/lib/ads/slots';
 import { isRedesignEnabled } from '@/lib/redesign';
-import { isTitleTreatmentTeam, teamBareTitle } from '@/lib/title-treatment';
+import { isTitleTreatmentTeam, teamMetaTitle } from '@/lib/title-treatment';
 import { getCoverageCounts } from '@/lib/get-coverage-counts';
 import { isSeasonScopeLive, resolveClaimMode } from '@/lib/season-scope';
 import { RedesignTeamPage } from '@/components/redesign/RedesignTeamPage';
@@ -90,12 +90,22 @@ export async function generateMetadata({
   // `${displayName} Promos & Giveaways ${year} | PromoNight`, the 60-char SEO
   // target. Do NOT add "| PromoNight" here or it doubles.
   //
-  // The string itself now comes from src/lib/title-treatment.ts, the single
-  // flip point for the ctr-diagnostic-sep2026 experiment: ten MLB teams render
-  // "{Display Name} Giveaways & Theme Nights 2026" instead, everything else is
-  // byte-identical to the line this replaced. Four of the ten treatment titles
-  // knowingly exceed 60 rendered characters; see the length note in that file.
-  const title = teamBareTitle(team, displayName);
+  // The string itself now comes from src/lib/title-treatment.ts, the flip point
+  // for both live title experiments. teamMetaTitle is the <title> accessor:
+  // ten MLB teams render "{Display Name} Giveaways & Theme Nights 2026"
+  // (ctr-diagnostic-sep2026), ten NFL teams render
+  // "{Display Name} 2026 Schedule & Giveaways" (nfl-schedule-title-sep2026),
+  // and every other team delegates to teamBareTitle and is byte-identical to
+  // the line this replaced. Four of the ten MLB treatment titles knowingly
+  // exceed 60 rendered characters; all ten NFL treatment titles fit. See the
+  // length notes in that file.
+  //
+  // This is the ONLY call site that moves for the NFL arm. The JSON-LD WebPage
+  // name (json-ld.tsx) and the visible hero subtitle (RedesignTeamPage.tsx)
+  // still call teamBareTitle / teamTitleSubtitle, so on those ten pages the
+  // <title> deliberately diverges from both. That is the brief's "title only"
+  // ruling, not an oversight.
+  const title = teamMetaTitle(team, displayName);
 
   // OG/Twitter titles are NOT processed by the layout title.template, so spell
   // the "| PromoNight" suffix out here to match the rendered <title> byte-for-
