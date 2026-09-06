@@ -1,0 +1,137 @@
+{
+  "origin": "https://www.getpromonight.com",
+  "rows": [
+    {
+      "lcp": 1692,
+      "cls": 0.0005174056972241638,
+      "fcp": 1692,
+      "inp": 16,
+      "interactions": 8,
+      "warm_ttfb": 22.5,
+      "strategy": "mobile",
+      "url": "/mlb/minnesota-twins",
+      "cold_ttfb": 23.19999998807907
+    },
+    {
+      "lcp": 1540,
+      "cls": 0.06881020219338634,
+      "fcp": 1540,
+      "inp": 16,
+      "interactions": 5,
+      "warm_ttfb": 22.599999994039536,
+      "strategy": "mobile",
+      "url": "/nhl/dallas-stars",
+      "cold_ttfb": 27.299999982118607
+    },
+    {
+      "lcp": 1384,
+      "cls": 0.0022754128717358923,
+      "fcp": 1384,
+      "inp": 16,
+      "interactions": 1,
+      "warm_ttfb": 23,
+      "strategy": "mobile",
+      "url": "/venues/td-garden",
+      "cold_ttfb": 23.700000017881393
+    },
+    {
+      "lcp": 1392,
+      "cls": 0.01658743750455727,
+      "fcp": 1392,
+      "inp": 16,
+      "interactions": 1,
+      "warm_ttfb": 22.900000005960464,
+      "strategy": "mobile",
+      "url": "/venues/fenway-park",
+      "cold_ttfb": 30.100000023841858
+    },
+    {
+      "lcp": 1532,
+      "cls": 4.286719478238386e-05,
+      "fcp": 1532,
+      "inp": 16,
+      "interactions": 1,
+      "warm_ttfb": 22.69999998807907,
+      "strategy": "mobile",
+      "url": "/cfb/alabama",
+      "cold_ttfb": 24.69999998807907
+    },
+    {
+      "lcp": 1384,
+      "cls": 4.286719478238386e-05,
+      "fcp": 1384,
+      "inp": 16,
+      "interactions": 1,
+      "warm_ttfb": 23.30000001192093,
+      "strategy": "mobile",
+      "url": "/promos/this-week",
+      "cold_ttfb": 27.900000005960464
+    },
+    {
+      "lcp": 160,
+      "cls": 0,
+      "fcp": 160,
+      "inp": 16,
+      "interactions": 2,
+      "warm_ttfb": 22.399999976158142,
+      "strategy": "desktop",
+      "url": "/mlb/minnesota-twins",
+      "cold_ttfb": 23.19999998807907
+    },
+    {
+      "lcp": 176,
+      "cls": 0,
+      "fcp": 176,
+      "inp": 32,
+      "interactions": 5,
+      "warm_ttfb": 26.5,
+      "strategy": "desktop",
+      "url": "/nhl/dallas-stars",
+      "cold_ttfb": 27.099999994039536
+    },
+    {
+      "lcp": 144,
+      "cls": 0.001035080352712839,
+      "fcp": 144,
+      "inp": 16,
+      "interactions": 3,
+      "warm_ttfb": 26.900000005960464,
+      "strategy": "desktop",
+      "url": "/venues/td-garden",
+      "cold_ttfb": 23.099999994039536
+    },
+    {
+      "lcp": 160,
+      "cls": 0.007186940367524735,
+      "fcp": 160,
+      "inp": 16,
+      "interactions": 2,
+      "warm_ttfb": 26.700000017881393,
+      "strategy": "desktop",
+      "url": "/venues/fenway-park",
+      "cold_ttfb": 23.19999998807907
+    },
+    {
+      "lcp": 212,
+      "cls": 9.634609491287978e-05,
+      "fcp": 212,
+      "inp": 32,
+      "interactions": 5,
+      "warm_ttfb": 26.30000001192093,
+      "strategy": "desktop",
+      "url": "/cfb/alabama",
+      "cold_ttfb": 28.30000001192093
+    },
+    {
+      "lcp": 144,
+      "cls": 9.634609491287978e-05,
+      "fcp": 144,
+      "inp": 16,
+      "interactions": 1,
+      "warm_ttfb": 26.5,
+      "strategy": "desktop",
+      "url": "/promos/this-week",
+      "cold_ttfb": 23.19999998807907
+    }
+  ]
+}
