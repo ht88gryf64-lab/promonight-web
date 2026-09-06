@@ -242,15 +242,42 @@ containing "schedule":
 | promo-schedule (`{team} promotional schedule`, `{team} giveaway schedule`) | 25 | 1,617 | 299 | 3.0 to 5.3 |
 | bare schedule (`{team} schedule`) | **0** | **0** | **0** | n/a |
 
-Stated with its limit: the export is capped at 1,000 rows and its lowest row has
-1 click, so it excludes every zero-click query. The honest reading is that **no
-bare-schedule query on these pages earned a single click in 28 days**, while the
-promo-schedule family drew 299. That is not proof of zero impressions on the head
-terms, and the filtered baseline export will settle it, which is one more reason
-the Queries export is blocking.
+That 28-day read was capped at 1,000 rows and excluded zero-click queries, so it
+could only show that no bare-schedule query earned a click. **The filtered
+baseline export settles it.** 233 rows, well under the cap, zero-click queries
+included, filtered to `Page +/nfl`, covering 2026-08-21 to 2026-09-03:
 
-This is the strongest evidence yet for section 4's reframing, and it is now
-measured on real data rather than inferred from a capped third-party sample.
+**Bare-schedule impressions across all twenty test pages: zero.** Not a low
+number, not a rounding artifact of a cap. Zero, on every one of the twenty.
+
+The promo-schedule family over the same fourteen days:
+
+| slug | arm | impressions | clicks | CTR | position |
+|---|---|---|---|---|---|
+| new-york-giants | T | 404 | 123 | 30.45% | 3.33 |
+| los-angeles-rams | C | 358 | 11 | 3.07% | 5.00 |
+| chicago-bears | T | 196 | 49 | 25.00% | 2.75 |
+| baltimore-ravens | T | 80 | 15 | 18.75% | 6.33 |
+| detroit-lions | T | 76 | 27 | 35.53% | 3.68 |
+| san-francisco-49ers | T | 69 | 17 | 24.64% | 2.64 |
+| new-york-jets | C | 59 | 2 | 3.39% | 4.20 |
+| los-angeles-chargers | C | 48 | 20 | 41.67% | 3.25 |
+| denver-broncos | C | 45 | 9 | 20.00% | 5.93 |
+| tampa-bay-buccaneers | C | 39 | 7 | 17.95% | 4.82 |
+| seattle-seahawks | C | 32 | 8 | 25.00% | 5.53 |
+| atlanta-falcons | C | 13 | 5 | 38.46% | 3.31 |
+| miami-dolphins | C | 9 | 3 | 33.33% | 4.44 |
+| dallas-cowboys | T | 7 | 1 | 14.29% | 3.57 |
+| buffalo-bills | C | 6 | 3 | 50.00% | 2.17 |
+
+Five pages have no schedule-family query at all: bengals, chiefs, eagles,
+steelers, vikings.
+
+Section 4's reframing is no longer an inference. The head terms the brief was
+built around draw **no impressions whatsoever** on these pages, while the family
+the title ignores ranks between 2.2 and 6.3 and converts up to 50%. The test is
+scored on the second table, and a null on the first is not a result at all
+because there is nothing there to move.
 
 ---
 
@@ -310,17 +337,83 @@ decision rule; the Queries export is what explains it.
 
 ---
 
+## 4b. los-angeles-rams is in freefall, and it is not the title
+
+Flagged during baseline review because earlier reads had this page converting at
+26% and the baseline shows 2.06%. It is a control page, so nothing here changes
+what ships, but it changes how its row must be read.
+
+| window | clicks | impressions | CTR | position |
+|---|---|---|---|---|
+| 2026-06-02 to 2026-09-01 (92 days) | 1,101 | 8,671 | 12.70% | 5.47 |
+| 2026-08-07 to 2026-09-03 (28 days) | 113 | 3,534 | 3.20% | 6.91 |
+| 2026-08-21 to 2026-09-03 (14 days, baseline) | 39 | 1,890 | 2.06% | 7.57 |
+
+**Impressions rising, position falling, clicks collapsing.** Averaged over the 92
+day window the page drew about 1,320 impressions and 168 clicks per fortnight; the
+baseline fortnight has 1,890 impressions and 39 clicks. It is being shown more and
+clicked far less.
+
+**The Sept 4 game-time label fix is not the cause.** `b688e20` merged at
+`fc59442`, 2026-09-04 11:00, and the baseline window closes 2026-09-03. The
+decline is fully present in data that predates the fix by a day. Whatever this
+is, it started earlier.
+
+**It is a ranking loss, not a CTR loss.** The page's biggest query,
+`rams giveaways 2026`, sits at position 7.34 with 410 impressions and 2 clicks
+(0.49%). In the July Ahrefs sample the same query was position 3.06 at 27.6%.
+Positions four through eight convert at a small fraction of positions two through
+three, which accounts for most of the collapse without any change in the page's
+appeal. The same pattern the MLB Gate 0 report recorded for big-market pages
+holds here: a wider, lower-intent query set at worse positions deflates page CTR
+with nothing wrong with the page.
+
+**One lead worth chasing separately.** The Rams page currently carries a single
+promo, `Championship Replica Ring` on 2026-10-18. A page ranking for
+`[team] giveaways 2026` with one giveaway on it is thin, and thinning content is
+a plausible driver of a ranking loss of this size. That is a hypothesis, not a
+finding, and it belongs to its own investigation rather than this experiment.
+
+**Consequence for the read.** A control page losing this much ground on its own
+would flatter the treatment arm in any pooled comparison, which is a second
+independent reason the pooled number is banned in section 5. Read the Rams row
+against the Rams baseline and nothing else, and expect it to fall further.
+
+---
+
 ## 5. The 2026-09-20 read
 
-Compare arms **per page, never pooled.** NFL team pages went 79 to 177 pageviews
-in a week on preseason alone and Week 1 opened 2026-09-10 inside the window, so
-any week-over-week number will rise regardless of the title.
+**The comparison is a per-page delta against each page's own baseline. The
+control arm exists to detect the Week 1 seasonal lift, not to serve as a matched
+cohort.** This is the single most important instruction in the document and the
+baseline data is why.
 
-**Do not compute a pooled treatment-versus-control CTR.** In the July sample
-`los-angeles-rams` was 785 of the control arm's 816 impressions and converted at
-26%. Excluding it, the entire control arm was 1 click on 31 impressions. A pooled
-arm ratio is that one page against noise, and it would move on Rams seasonality
-alone. Rams gets its own line and is read as its own line.
+The arms are not matched, and cannot be made matched by any reweighting:
+
+| | clicks | impressions | CTR |
+|---|---|---|---|
+| treatment, 2026-08-21 to 2026-09-03 | 1,125 | 6,165 | **18.25%** |
+| control, same window | 485 | 5,296 | **9.16%** |
+
+Four treatment pages carry 1,039 of the treatment arm's 1,125 clicks: Giants
+28.29%, Lions 21.93%, Bears 18.34%, 49ers 10.34%. **Control has no comparable
+page.** A pooled arm comparison would show treatment ahead by nine percentage
+points before a single title changed, and would keep showing it afterwards
+whatever the titles did. It would be a measurement of which teams are in which
+bucket, not of the change.
+
+So:
+
+- Each page is compared **only against itself**. Twenty independent before and
+  after readings.
+- The control arm answers exactly one question: how much did pages of this kind
+  move over this fortnight without a title change? Week 1 opened 2026-09-10
+  inside the read window, so a treatment rise that the control rows match is
+  seasonality, and a treatment rise the control rows do not match is the signal.
+- `los-angeles-rams` gets its own line and is read as its own line, like every
+  other page.
+- **Never report a pooled arm CTR.** Not as a headline, not as a summary, not as
+  a sanity check. It is a number that cannot mean what it looks like it means.
 
 Procedure:
 

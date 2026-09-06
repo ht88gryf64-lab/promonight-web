@@ -2,13 +2,12 @@
  "experiment": "nfl-schedule-title-sep2026",
  "capturedAt": "2026-09-05",
  "readDate": "2026-09-20",
- "shipDate": "2026-09-05",
+ "shipDate": "2026-09-06",
  "baselineOfRecord": {
-  "status": "pending",
-  "window": "2026-08-22..2026-09-04",
-  "pagesFile": null,
-  "queriesFile": null,
-  "note": "Set by scripts/nfl-title-baseline.ts. The merge gate needs BOTH baseline:pages and baseline:queries. Windows derive from shipDate; pass --ship-date if the merge slips."
+  "status": "captured",
+  "window": "2026-08-21..2026-09-03",
+  "pagesFile": "audit/nfl-title-test-gsc-baseline-pages-2026-08-21_2026-09-03.csv",
+  "queriesFile": "audit/nfl-title-test-gsc-baseline-queries-2026-08-21_2026-09-03.csv"
  },
  "titleSuffixTreatment": "2026 Schedule & Giveaways",
  "titleSuffixControl": "Promos & Giveaways 2026",
@@ -38,6 +37,32 @@
     "ctrPct": 0,
     "position": 9.25,
     "presentInSample": true
+   },
+   "gsc": {
+    "baseline": {
+     "clicks": 34,
+     "impressions": 341,
+     "ctrPct": 9.97,
+     "position": 7.08
+    }
+   },
+   "queryFamily": {
+    "baseline": {
+     "promoSchedule": {
+      "clicks": 15,
+      "impressions": 80,
+      "ctrPct": 18.75,
+      "position": 6.328125,
+      "queries": 4
+     },
+     "bareSchedule": {
+      "clicks": 0,
+      "impressions": 0,
+      "ctrPct": 0,
+      "position": 0,
+      "queries": 0
+     }
+    }
    }
   },
   {
@@ -55,6 +80,32 @@
     "ctrPct": 12.5,
     "position": 7.81,
     "presentInSample": true
+   },
+   "gsc": {
+    "baseline": {
+     "clicks": 280,
+     "impressions": 1527,
+     "ctrPct": 18.34,
+     "position": 4.51
+    }
+   },
+   "queryFamily": {
+    "baseline": {
+     "promoSchedule": {
+      "clicks": 49,
+      "impressions": 196,
+      "ctrPct": 25,
+      "position": 2.746173469387755,
+      "queries": 6
+     },
+     "bareSchedule": {
+      "clicks": 0,
+      "impressions": 0,
+      "ctrPct": 0,
+      "position": 0,
+      "queries": 0
+     }
+    }
    }
   },
   {
@@ -72,6 +123,32 @@
     "ctrPct": null,
     "position": null,
     "presentInSample": false
+   },
+   "gsc": {
+    "baseline": {
+     "clicks": 15,
+     "impressions": 257,
+     "ctrPct": 5.84,
+     "position": 6.43
+    }
+   },
+   "queryFamily": {
+    "baseline": {
+     "promoSchedule": {
+      "clicks": 0,
+      "impressions": 0,
+      "ctrPct": 0,
+      "position": 0,
+      "queries": 0
+     },
+     "bareSchedule": {
+      "clicks": 0,
+      "impressions": 0,
+      "ctrPct": 0,
+      "position": 0,
+      "queries": 0
+     }
+    }
    }
   },
   {
@@ -89,6 +166,32 @@
     "ctrPct": 0,
     "position": 3,
     "presentInSample": true
+   },
+   "gsc": {
+    "baseline": {
+     "clicks": 12,
+     "impressions": 97,
+     "ctrPct": 12.37,
+     "position": 4.89
+    }
+   },
+   "queryFamily": {
+    "baseline": {
+     "promoSchedule": {
+      "clicks": 1,
+      "impressions": 7,
+      "ctrPct": 14.285714285714285,
+      "position": 3.57,
+      "queries": 1
+     },
+     "bareSchedule": {
+      "clicks": 0,
+      "impressions": 0,
+      "ctrPct": 0,
+      "position": 0,
+      "queries": 0
+     }
+    }
    }
   },
   {
@@ -106,6 +209,32 @@
     "ctrPct": 20,
     "position": 7.4,
     "presentInSample": true
+   },
+   "gsc": {
+    "baseline": {
+     "clicks": 175,
+     "impressions": 798,
+     "ctrPct": 21.93,
+     "position": 5.1
+    }
+   },
+   "queryFamily": {
+    "baseline": {
+     "promoSchedule": {
+      "clicks": 27,
+      "impressions": 76,
+      "ctrPct": 35.526315789473685,
+      "position": 3.682105263157895,
+      "queries": 2
+     },
+     "bareSchedule": {
+      "clicks": 0,
+      "impressions": 0,
+      "ctrPct": 0,
+      "position": 0,
+      "queries": 0
+     }
+    }
    }
   },
   {
@@ -123,6 +252,32 @@
     "ctrPct": 0,
     "position": 6,
     "presentInSample": true
+   },
+   "gsc": {
+    "baseline": {
+     "clicks": 4,
+     "impressions": 26,
+     "ctrPct": 15.38,
+     "position": 5.38
+    }
+   },
+   "queryFamily": {
+    "baseline": {
+     "promoSchedule": {
+      "clicks": 0,
+      "impressions": 0,
+      "ctrPct": 0,
+      "position": 0,
+      "queries": 0
+     },
+     "bareSchedule": {
+      "clicks": 0,
+      "impressions": 0,
+      "ctrPct": 0,
+      "position": 0,
+      "queries": 0
+     }
+    }
    }
   },
   {
@@ -140,6 +295,32 @@
     "ctrPct": 18.09,
     "position": 6.52,
     "presentInSample": true
+   },
+   "gsc": {
+    "baseline": {
+     "clicks": 434,
+     "impressions": 1534,
+     "ctrPct": 28.29,
+     "position": 3.86
+    }
+   },
+   "queryFamily": {
+    "baseline": {
+     "promoSchedule": {
+      "clicks": 123,
+      "impressions": 404,
+      "ctrPct": 30.445544554455445,
+      "position": 3.3317326732673265,
+      "queries": 12
+     },
+     "bareSchedule": {
+      "clicks": 0,
+      "impressions": 0,
+      "ctrPct": 0,
+      "position": 0,
+      "queries": 0
+     }
+    }
    }
   },
   {
@@ -157,6 +338,32 @@
     "ctrPct": 0,
     "position": 26,
     "presentInSample": true
+   },
+   "gsc": {
+    "baseline": {
+     "clicks": 10,
+     "impressions": 32,
+     "ctrPct": 31.25,
+     "position": 3.78
+    }
+   },
+   "queryFamily": {
+    "baseline": {
+     "promoSchedule": {
+      "clicks": 0,
+      "impressions": 0,
+      "ctrPct": 0,
+      "position": 0,
+      "queries": 0
+     },
+     "bareSchedule": {
+      "clicks": 0,
+      "impressions": 0,
+      "ctrPct": 0,
+      "position": 0,
+      "queries": 0
+     }
+    }
    }
   },
   {
@@ -174,6 +381,32 @@
     "ctrPct": 0,
     "position": 30,
     "presentInSample": true
+   },
+   "gsc": {
+    "baseline": {
+     "clicks": 11,
+     "impressions": 103,
+     "ctrPct": 10.68,
+     "position": 6.46
+    }
+   },
+   "queryFamily": {
+    "baseline": {
+     "promoSchedule": {
+      "clicks": 0,
+      "impressions": 0,
+      "ctrPct": 0,
+      "position": 0,
+      "queries": 0
+     },
+     "bareSchedule": {
+      "clicks": 0,
+      "impressions": 0,
+      "ctrPct": 0,
+      "position": 0,
+      "queries": 0
+     }
+    }
    }
   },
   {
@@ -191,6 +424,32 @@
     "ctrPct": 6.76,
     "position": 5.86,
     "presentInSample": true
+   },
+   "gsc": {
+    "baseline": {
+     "clicks": 150,
+     "impressions": 1450,
+     "ctrPct": 10.34,
+     "position": 4.99
+    }
+   },
+   "queryFamily": {
+    "baseline": {
+     "promoSchedule": {
+      "clicks": 17,
+      "impressions": 69,
+      "ctrPct": 24.637681159420293,
+      "position": 2.637536231884058,
+      "queries": 4
+     },
+     "bareSchedule": {
+      "clicks": 0,
+      "impressions": 0,
+      "ctrPct": 0,
+      "position": 0,
+      "queries": 0
+     }
+    }
    }
   },
   {
@@ -208,6 +467,32 @@
     "ctrPct": 0,
     "position": 8,
     "presentInSample": true
+   },
+   "gsc": {
+    "baseline": {
+     "clicks": 46,
+     "impressions": 283,
+     "ctrPct": 16.25,
+     "position": 5.58
+    }
+   },
+   "queryFamily": {
+    "baseline": {
+     "promoSchedule": {
+      "clicks": 5,
+      "impressions": 13,
+      "ctrPct": 38.46153846153847,
+      "position": 3.31,
+      "queries": 1
+     },
+     "bareSchedule": {
+      "clicks": 0,
+      "impressions": 0,
+      "ctrPct": 0,
+      "position": 0,
+      "queries": 0
+     }
+    }
    }
   },
   {
@@ -225,6 +510,32 @@
     "ctrPct": 0,
     "position": 5,
     "presentInSample": true
+   },
+   "gsc": {
+    "baseline": {
+     "clicks": 42,
+     "impressions": 306,
+     "ctrPct": 13.73,
+     "position": 6.8
+    }
+   },
+   "queryFamily": {
+    "baseline": {
+     "promoSchedule": {
+      "clicks": 3,
+      "impressions": 6,
+      "ctrPct": 50,
+      "position": 2.17,
+      "queries": 1
+     },
+     "bareSchedule": {
+      "clicks": 0,
+      "impressions": 0,
+      "ctrPct": 0,
+      "position": 0,
+      "queries": 0
+     }
+    }
    }
   },
   {
@@ -242,6 +553,32 @@
     "ctrPct": 0,
     "position": 5.5,
     "presentInSample": true
+   },
+   "gsc": {
+    "baseline": {
+     "clicks": 91,
+     "impressions": 629,
+     "ctrPct": 14.47,
+     "position": 6.28
+    }
+   },
+   "queryFamily": {
+    "baseline": {
+     "promoSchedule": {
+      "clicks": 9,
+      "impressions": 45,
+      "ctrPct": 20,
+      "position": 5.932666666666667,
+      "queries": 2
+     },
+     "bareSchedule": {
+      "clicks": 0,
+      "impressions": 0,
+      "ctrPct": 0,
+      "position": 0,
+      "queries": 0
+     }
+    }
    }
   },
   {
@@ -259,6 +596,32 @@
     "ctrPct": 16.67,
     "position": 3.83,
     "presentInSample": true
+   },
+   "gsc": {
+    "baseline": {
+     "clicks": 91,
+     "impressions": 507,
+     "ctrPct": 17.95,
+     "position": 5.08
+    }
+   },
+   "queryFamily": {
+    "baseline": {
+     "promoSchedule": {
+      "clicks": 20,
+      "impressions": 48,
+      "ctrPct": 41.66666666666667,
+      "position": 3.250625,
+      "queries": 2
+     },
+     "bareSchedule": {
+      "clicks": 0,
+      "impressions": 0,
+      "ctrPct": 0,
+      "position": 0,
+      "queries": 0
+     }
+    }
    }
   },
   {
@@ -276,6 +639,32 @@
     "ctrPct": 26.11,
     "position": 3.17,
     "presentInSample": true
+   },
+   "gsc": {
+    "baseline": {
+     "clicks": 39,
+     "impressions": 1890,
+     "ctrPct": 2.06,
+     "position": 7.57
+    }
+   },
+   "queryFamily": {
+    "baseline": {
+     "promoSchedule": {
+      "clicks": 11,
+      "impressions": 358,
+      "ctrPct": 3.072625698324022,
+      "position": 4.998491620111731,
+      "queries": 9
+     },
+     "bareSchedule": {
+      "clicks": 0,
+      "impressions": 0,
+      "ctrPct": 0,
+      "position": 0,
+      "queries": 0
+     }
+    }
    }
   },
   {
@@ -293,6 +682,32 @@
     "ctrPct": null,
     "position": null,
     "presentInSample": false
+   },
+   "gsc": {
+    "baseline": {
+     "clicks": 28,
+     "impressions": 133,
+     "ctrPct": 21.05,
+     "position": 6.8
+    }
+   },
+   "queryFamily": {
+    "baseline": {
+     "promoSchedule": {
+      "clicks": 3,
+      "impressions": 9,
+      "ctrPct": 33.33333333333333,
+      "position": 4.44,
+      "queries": 1
+     },
+     "bareSchedule": {
+      "clicks": 0,
+      "impressions": 0,
+      "ctrPct": 0,
+      "position": 0,
+      "queries": 0
+     }
+    }
    }
   },
   {
@@ -310,6 +725,32 @@
     "ctrPct": 0,
     "position": 6.8,
     "presentInSample": true
+   },
+   "gsc": {
+    "baseline": {
+     "clicks": 32,
+     "impressions": 326,
+     "ctrPct": 9.82,
+     "position": 6.46
+    }
+   },
+   "queryFamily": {
+    "baseline": {
+     "promoSchedule": {
+      "clicks": 0,
+      "impressions": 0,
+      "ctrPct": 0,
+      "position": 0,
+      "queries": 0
+     },
+     "bareSchedule": {
+      "clicks": 0,
+      "impressions": 0,
+      "ctrPct": 0,
+      "position": 0,
+      "queries": 0
+     }
+    }
    }
   },
   {
@@ -327,6 +768,32 @@
     "ctrPct": 0,
     "position": 27.71,
     "presentInSample": true
+   },
+   "gsc": {
+    "baseline": {
+     "clicks": 20,
+     "impressions": 476,
+     "ctrPct": 4.2,
+     "position": 4.76
+    }
+   },
+   "queryFamily": {
+    "baseline": {
+     "promoSchedule": {
+      "clicks": 2,
+      "impressions": 59,
+      "ctrPct": 3.389830508474576,
+      "position": 4.20271186440678,
+      "queries": 5
+     },
+     "bareSchedule": {
+      "clicks": 0,
+      "impressions": 0,
+      "ctrPct": 0,
+      "position": 0,
+      "queries": 0
+     }
+    }
    }
   },
   {
@@ -344,6 +811,32 @@
     "ctrPct": null,
     "position": null,
     "presentInSample": false
+   },
+   "gsc": {
+    "baseline": {
+     "clicks": 46,
+     "impressions": 378,
+     "ctrPct": 12.17,
+     "position": 6.53
+    }
+   },
+   "queryFamily": {
+    "baseline": {
+     "promoSchedule": {
+      "clicks": 8,
+      "impressions": 32,
+      "ctrPct": 25,
+      "position": 5.530625,
+      "queries": 2
+     },
+     "bareSchedule": {
+      "clicks": 0,
+      "impressions": 0,
+      "ctrPct": 0,
+      "position": 0,
+      "queries": 0
+     }
+    }
    }
   },
   {
@@ -361,7 +854,61 @@
     "ctrPct": 0,
     "position": 40,
     "presentInSample": true
+   },
+   "gsc": {
+    "baseline": {
+     "clicks": 50,
+     "impressions": 368,
+     "ctrPct": 13.59,
+     "position": 6.07
+    }
+   },
+   "queryFamily": {
+    "baseline": {
+     "promoSchedule": {
+      "clicks": 7,
+      "impressions": 39,
+      "ctrPct": 17.94871794871795,
+      "position": 4.82,
+      "queries": 1
+     },
+     "bareSchedule": {
+      "clicks": 0,
+      "impressions": 0,
+      "ctrPct": 0,
+      "position": 0,
+      "queries": 0
+     }
+    }
    }
   }
- ]
+ ],
+ "gscWindows": {
+  "baseline:pages": {
+   "from": "2026-08-21",
+   "to": "2026-09-03",
+   "shipDate": "2026-09-06",
+   "tab": "pages",
+   "sourceFile": "audit/nfl-title-test-gsc-baseline-pages-2026-08-21_2026-09-03.csv",
+   "exportDate": "2026-09-06",
+   "rowsInExport": 379,
+   "rowsMatched": 20,
+   "rowsAbsent": 0,
+   "suspect": false,
+   "suspectReasons": []
+  },
+  "baseline:queries": {
+   "from": "2026-08-21",
+   "to": "2026-09-03",
+   "shipDate": "2026-09-06",
+   "tab": "queries",
+   "sourceFile": "audit/nfl-title-test-gsc-baseline-queries-2026-08-21_2026-09-03.csv",
+   "exportDate": "2026-09-06",
+   "rowsInExport": 233,
+   "rowsMatched": 15,
+   "rowsAbsent": 5,
+   "suspect": false,
+   "suspectReasons": []
+  }
+ }
 }

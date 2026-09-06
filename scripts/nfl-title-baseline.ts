@@ -781,13 +781,24 @@ function main(): void {
 
   const bp = doc.gscWindows['baseline:pages'];
   const bq = doc.gscWindows['baseline:queries'];
-  const bw = windowFor(shipDate, 'baseline');
+  // The window REPORTED here is the one actually captured, read back off the
+  // stamps, never re-derived from shipDate. Those differ whenever --from/--to
+  // were used, which is the normal case: Search Console runs about two days
+  // behind, so the baseline usually ends before ship rather than the day before
+  // it. Re-deriving would print a window no export covers.
+  const bw = bp ?? bq ?? null;
   doc.baselineOfRecord = {
     status: bp && bq ? 'captured' : 'pending',
-    window: `${bw.from}..${bw.to}`,
+    window: bw ? `${bw.from}..${bw.to}` : windowFor(shipDate, 'baseline').from + '..pending',
     pagesFile: bp ? bp.sourceFile : null,
     queriesFile: bq ? bq.sourceFile : null,
   };
+  if (bp && bq && (bp.from !== bq.from || bp.to !== bq.to)) {
+    console.log(
+      `\n!!! The two baseline exports cover DIFFERENT windows: pages ${bp.from}..${bp.to}, ` +
+        `queries ${bq.from}..${bq.to}. Re-export so they match.`,
+    );
+  }
 
   fs.writeFileSync(JSON_PATH, JSON.stringify(doc, null, 1) + '\n');
   console.log(`\nWROTE ${path.relative(REPO, JSON_PATH)}`);
