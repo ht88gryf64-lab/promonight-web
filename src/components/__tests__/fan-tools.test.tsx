@@ -106,3 +106,57 @@ test('config values are shaped for publication, since name and developer are pri
     }
   }
 });
+
+// ── App icon ──────────────────────────────────────────────────────────────
+// The icon is optional in the config shape, so both states are real and both
+// are tested. The absent case matters more: it is what every future entry
+// looks like before its artwork is sourced.
+
+test('the configured icon renders with its alt text and a pinned box', () => {
+  const html = render('minnesota-timberwolves');
+  assert.ok(/wolves-chicken\.png/.test(html), 'the icon file must reach the DOM');
+  assert.ok(html.includes('alt="Wolves Chicken app icon"'), 'alt text missing');
+  assert.ok(/width="56"/.test(html) && /height="56"/.test(html), 'explicit width and height required');
+  assert.ok(/border-radius:22%|border-radius:\s*22%/.test(html), 'radius must be the 22% squircle, not a px value');
+});
+
+test('the icon sits before the name, which sits before the developer', () => {
+  const html = render('minnesota-timberwolves');
+  const icon = html.indexOf('wolves-chicken');
+  const name = html.indexOf('Wolves Chicken<');
+  const dev = html.indexOf('David Cocchiarella');
+  assert.ok(icon > -1 && name > -1 && dev > -1, 'all three must render');
+  assert.ok(icon < name, 'icon must precede the app name in document order');
+  assert.ok(name < dev, 'name must precede the developer line');
+});
+
+test('the card renders fully with NO icon, because icon is optional', () => {
+  const entry = PARTNER_APPS['minnesota-timberwolves'];
+  const { icon, ...withoutIcon } = entry;
+  assert.ok(icon, 'precondition: the fixture entry has an icon to remove');
+  PARTNER_APPS['minnesota-timberwolves'] = withoutIcon;
+  try {
+    const html = render('minnesota-timberwolves');
+    assert.ok(!/wolves-chicken\.png/.test(html), 'no icon must render');
+    assert.ok(!/<img/.test(html), 'no img element at all');
+    // Everything else must survive: an absent icon is a supported state, not
+    // a degraded one.
+    assert.ok(html.includes('Wolves Chicken'), 'name must survive');
+    assert.ok(html.includes('David Cocchiarella'), 'developer must survive');
+    assert.ok(html.includes('Tracks both live'), 'blurb must survive');
+    assert.ok(html.includes('App Store'), 'store button must survive');
+    assert.ok(/Independent fan-made app/.test(html), 'disclosure must survive');
+    assert.ok(html.includes('rel="nofollow noopener noreferrer"'), 'rel must survive');
+  } finally {
+    PARTNER_APPS['minnesota-timberwolves'] = entry;
+  }
+});
+
+test('every configured icon points at a committed public/ asset path', () => {
+  for (const [key, app] of Object.entries(PARTNER_APPS)) {
+    if (!app.icon) continue;
+    assert.ok(app.icon.src.startsWith('/'), `${key}: icon src must be a public/ root path`);
+    assert.ok(!app.icon.src.startsWith('//'), `${key}: icon src must not be protocol-relative`);
+    assert.ok(app.icon.alt.trim().length > 0, `${key}: an icon with empty alt should omit the icon instead`);
+  }
+});
