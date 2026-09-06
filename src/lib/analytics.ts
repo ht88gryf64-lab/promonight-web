@@ -20,6 +20,9 @@ import type { SuppressionReason } from './capture/suppression';
 import type { CaptureVariant } from './capture/variant';
 import { readAttribution } from './attribution';
 import type { CaptureSurface } from './follow-surface';
+// Type-only: the closed union of partner-app identities. No runtime import, so
+// analytics.ts gains no dependency on the config module.
+import type { PartnerAppId } from '@/config/partner-apps';
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -74,7 +77,8 @@ export type AnalyticsEvent =
   | 'load_more_tap'
   | 'league_filter_change'
   | 'cfb_conf_nav'
-  | 'resale_click';
+  | 'resale_click'
+  | 'partner_app_click';
 
 // `TONIGHT_AND_TOMORROW` is retained for backwards-compatibility with dashboards
 // that already segment on it; the bucketed hero (Phase 1.5) emits TONIGHT,
@@ -101,6 +105,12 @@ export type AnalyticsSurface =
   // shared game modal as the calendar. Distinct from web_team_page (the calendar
   // grid) so dashboards can separate list-driven taps from calendar-driven ones.
   | 'web_team_page_promolist'
+  // The fan-made partner-app module (FanTools) in the team-page sidebar. Its
+  // own surface, not web_team_page, because the click leaves for a third
+  // party's store listing and is neither an affiliate motion nor an internal
+  // route: folding it into web_team_page would blend an unpaid editorial
+  // recommendation into the same bucket as the tickets CTA.
+  | 'web_team_page_partner'
   | 'web_promo_detail'
   | 'web_playoffs'
   | 'web_league_index'
@@ -666,6 +676,23 @@ export type ResaleClickProperties = {
   destination_url: string;
 };
 
+// partner_app_click: outbound tap on a fan-made companion app's store listing
+// in the team-page FanTools module. Not an affiliate motion — the placement is
+// unpaid and carries no tracking id, so it is deliberately NOT affiliate_click
+// and must never be counted as revenue. `partner` is the app's stable
+// analytics identity from the config (never its display name).
+//
+// Three properties on purpose. `placement` is redundant while
+// web_team_page_partner has exactly one emitter, and `destination_url` is
+// already implied by `partner` for a single-listing app. Add either the moment
+// a second emitter or a second listing per app exists — a blended dimension
+// cannot be split after ingestion.
+export type PartnerAppClickProperties = {
+  surface: AnalyticsSurface;
+  team_slug: string;
+  partner: PartnerAppId;
+};
+
 // venue_hub_click: the INTERNAL routing click into a building hub
 // (/venues/{slug}). Not an affiliate motion: it measures the into-hub
 // internal-link thesis, so it carries the destination building plus the origin.
@@ -980,6 +1007,7 @@ export type EventPropertiesMap = {
   league_filter_change: LeagueFilterChangeProperties;
   cfb_conf_nav: CfbConfNavProperties;
   resale_click: ResaleClickProperties;
+  partner_app_click: PartnerAppClickProperties;
 };
 
 // Fires when a user taps a conference chip (or "View the full hub") in the CFB
@@ -1269,6 +1297,7 @@ const KNOWN_SURFACE_VALUES = [
   'web_home_this_week',
   'web_team_page',
   'web_team_page_promolist',
+  'web_team_page_partner',
   'web_promo_detail',
   'web_playoffs',
   'web_league_index',

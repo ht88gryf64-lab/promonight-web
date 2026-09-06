@@ -492,7 +492,7 @@ Overall reflects current-season promo presence (5 of 10 points require upcoming 
 - Outreach/pending: Gametime, Vivid Seats, TickPick
 - Affiliate attribution boundary: 2026-08-14T14:33:38Z. The sub-ID token scheme changed at that deploy, so partner dashboards show old and new tokens as separate rows and per-surface revenue comparisons spanning it are invalid. Details: audit/affiliate-attribution-audit.md.
 - Ticketmaster zero conversions = audience economics, not technical. Resale partners are the focus (5% vs 0.5-1.5%).
-- Display ads: Mediavine Journey. Threshold is 1,000 monthly sessions (met) + 30-day Grow widget run before applying. CONFIRM Grow install date; it gates the July approval timing. At bull traffic, ads are ~$30-60/month. Immaterial; affiliate is the lever.
+- Display ads: Raptive, approved 2026-09-02. GAM onboarding pending, so nothing is live yet: `NEXT_PUBLIC_AD_NETWORK` is unset, `resolveAdNetwork()` returns 'none' (src/lib/ads/network.ts:8-19), and every AdSlot renders null. The Mediavine Journey path is dead — its 30-day Grow widget prerequisite no longer applies, and the Grow initializer was removed from the document head on 2026-09-05 (commit e0f136c) as Raptive P0 remediation. The pre-Raptive Core Web Vitals baseline was captured immediately after that removal and is the comparison baseline for anything Raptive injects: audit/pre-ad-cwv-baseline.md, Baseline B, 2026-09-05 12:51Z. At bull traffic, ads are ~$30-60/month. Immaterial; affiliate is the lever.
 - Newsletter: Resend system, sending domain mail.getpromonight.com, in phased build. Subscriber count: CONFIRM (likely pre-launch/0). Capture wired on /world-cup and aggregator pages (web_world_cup, web_aggregator sources).
 - Pro subs: RevenueCat, $5.99/season single sport, $9.99/year all sports.
 
@@ -528,7 +528,7 @@ Target: a Claude Code script (audit/generate-site-audit.ts) that emits this file
 - [AUTO] from Firestore: data completeness by league, recurring-deals coverage count, venue-data coverage count, promo counts.
 - [AUTO] from repo: page inventory by route type, aggregator pages present, schema presence per template, sitemap/canonical/robots/llms.txt state, known-bug scan.
 - [LIVE] pulled in-thread or from fresh exports: PostHog MAU/DAU/channels, Bing search + AI, Google clicks/impressions/CTR/position, per-team CTR table (from GSC Pages.csv + Queries.csv), forecast.
-- [MANUAL] from Matt: affiliate partner statuses, newsletter subscriber count, Grow install date.
+- [MANUAL] from Matt: affiliate partner statuses, newsletter subscriber count, Raptive/GAM onboarding state.
 
 Once the search-intelligence dashboard exists (GSC API + BWT API writing weekly snapshots to Firestore via GitHub Actions cron), the [LIVE] search section reads those snapshots and the file regenerates on cron. Project-knowledge upload stays manual.
 
