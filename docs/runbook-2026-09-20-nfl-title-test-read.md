@@ -139,9 +139,9 @@ deploy hook already covers it. Check the workflow run rather than adding a call.
 most recent days is incomplete; exporting a window the day after it closes
 undercounts its tail and biases every delta downward, toward a false null.
 
-- [ ] Export both tabs for the read window (2026-09-06 to 2026-09-19 for a
-      2026-09-05 ship) as a **custom range**, Queries again filtered to Page
-      contains `/nfl/`. Match the baseline's window LENGTH exactly, or the raw
+- [ ] Export both tabs for the read window, **2026-09-07 to 2026-09-20**, as a
+      custom range (ship was 2026-09-06T12:30:58Z), Queries again filtered to
+      Page contains `/nfl/`. Match the baseline's window LENGTH exactly, or the raw
       click and impression deltas compare different amounts of time.
 - [ ] `$R --window read --tab pages   --dir <export folder> --export-date <today> --execute`
 - [ ] `$R --window read --tab queries --dir <export folder> --export-date <today> --execute`

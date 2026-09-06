@@ -418,8 +418,9 @@ nights.
 
 | | |
 |---|---|
-| **Start** | **NOT YET SHIPPED.** Held on the baseline export. Record the timestamp here by polling the www alias, the same way ctr-diagnostic's start above was confirmed. |
-| **Read date** | **2026-09-20**, or ship + 15 days if the merge slips |
+| **Start** | **2026-09-06T12:30:58Z** (deployment `dpl_8oVkQnjcKBbbVCS543Z12cAQcwX1` READY and aliased to www, commit `8c052bf`) |
+| **Read date** | **2026-09-20**. Read window 2026-09-07 to 2026-09-20; export it 2026-09-23 or later, because Search Console runs about two days behind and a window exported the day it closes undercounts its own tail. |
+| Baseline of record | Search Console Pages and Queries exports, 2026-08-21 to 2026-09-03, both clean, in `audit/`. Treatment 1,125 clicks / 6,165 impressions / 18.25%; control 485 / 5,296 / 9.16%. |
 | Treatment | 10 NFL team pages render `{Team} 2026 Schedule & Giveaways` |
 | Control | 10 named NFL teams keep `{Team} Promos & Giveaways 2026`, byte-identical |
 | Flip point | `src/lib/title-treatment.ts` (`NFL_SCHEDULE_TITLE_SLUGS`), one line to revert |
