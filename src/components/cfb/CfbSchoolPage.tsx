@@ -27,6 +27,7 @@ import Link from 'next/link';
 import { matchupEntryForRivalryId } from '@/lib/cfb/matchup-registry';
 import { resolveMatchupDisplayName } from '@/lib/cfb/display-name';
 import { selectRailChips } from '@/lib/cfb/rivalry-rail';
+import { selectNextHomeGame } from '@/lib/cfb/next-home-game';
 import type { CfbSchoolPage as CfbSchoolPageData } from '@/lib/cfb/data';
 import { CfbThemePersist } from './CfbThemePersist';
 import { CfbSchedule } from './CfbSchedule';
@@ -69,7 +70,9 @@ export function CfbSchoolPage({ data, venueHubLink, venueHub }: { data: CfbSchoo
   const railChips = selectRailChips(games);
 
   const sig = editorial.signatureGameId ? games.find((g) => g.id === editorial.signatureGameId) : null;
-  const nextHome = games.find((g) => g.isHome && !g.neutralSite);
+  // The next UNPLAYED home game. Without the played filter this pinned the
+  // season opener forever: see lib/cfb/next-home-game.ts.
+  const nextHome = selectNextHomeGame(games);
 
   // Hero meta line (venue facts now live in the dedicated panel) + stat strip.
   const metaParts = [school.mascot, conf].filter(Boolean);
