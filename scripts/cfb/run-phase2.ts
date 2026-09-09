@@ -7,6 +7,28 @@
 //
 // THIS WRITER IS QUARANTINED. EVERY --execute IS REFUSED.
 //
+// KNOWN DEFECT, MEASURED 2026-09-09, AND A SECOND REASON NOT TO UNQUARANTINE IT:
+// PHANTOM ROWS BECOME DOCUMENTS. Across 50 real schedule pages, 9 pages made the
+// parser return more rows than the school has games, and on 8 of them the excess
+// was a genuine non-game row present on the page: liberty "vs Conference USA"
+// 7:00 PM ET, army "American Conference Championship Game", north-carolina "ACC
+// Championship" Noon, colorado "Big 12 Championship Game", lsu's SEC
+// Championship plus a 2027 block, nebraska a 2027 block. Five other pages
+// returned 11 rows for a 12-game schedule, so it drops games too.
+//
+// Nothing stops those becoming docs on this path: line ~126 calls gameId() on
+// whatever the parser returned, and normalizeSlug() passes an unrecognised slug
+// such as "conference-usa" straight through -- there is no check in guards.ts or
+// run-phase2-gate.ts that an opponent resolves to a known school or a recognised
+// FCS opponent. Before this script is ever unquarantined it needs that filter.
+//
+// It is NOT a Gate 8 blocker, and that is structural rather than lucky. The
+// arbitration writer only ever calls batch.update(), which Firestore rejects on
+// a missing document, and it refuses any planned write with no snapshot entry --
+// and a phantom row has no prior doc, so it can never be staged. Both are
+// asserted by test in promo-pipeline cfb-sweep/sweep.test.ts, "the arbitration
+// writer cannot create a document", rather than assumed here.
+//
 // A full 86-school dry run, with no scoping of any kind, measured the rebuild
 // dropping 74.1% of the rivalry tags in the corpus: 80 game docs across 79
 // rivalries, against 108 currently tagged. The run assembled rivalries=28. Nine
