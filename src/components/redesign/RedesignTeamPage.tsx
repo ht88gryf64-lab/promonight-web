@@ -172,7 +172,7 @@ export function RedesignTeamPage({
   const rivals = getDivisionRivals(team, gameContexts);
   const rivalsBlock =
     rivals.length > 0 ? (
-      <div className={hasNoUpcoming ? 'order-[12]' : 'order-[41]'}>
+      <div className={`rd-weave-item ${hasNoUpcoming ? 'order-[12]' : 'order-[41]'}`}>
         <DivisionRivals team={team} rivals={rivals} />
       </div>
     ) : null;
@@ -273,10 +273,23 @@ export function RedesignTeamPage({
        *  Mobile row-gap is dropped (`gap-x-8` keeps only the desktop column
        *  gap) because each main section self-spaces with its own py-* ; the one
        *  exception is the affiliate stack, which gets `mt-10` to clear the
-       *  calendar above it (reset to `lg:mt-0` back in the sidebar). */}
+       *  calendar above it (reset to `lg:mt-0` back in the sidebar).
+       *
+       *  ORDER FLOOR. `rd-weave` / `rd-weave-shell` / `rd-weave-item` are not
+       *  Tailwind utilities — they are markers for one rule in globals.css that
+       *  sends any UNMARKED mobile grid item to order:900. Without it a child
+       *  nobody authored inherits `order: 0`, and 0 beats the lowest value in
+       *  this weave (10, or 11 on the schedule branch), so it renders FIRST: at
+       *  the top of the column, above the calendar and the promo list. That is
+       *  the exact failure 7d2de25 fixed for ScheduleBlock, except a third
+       *  party writing selectors against this DOM can reintroduce it on all 169
+       *  pages without touching this file. Every child below carries
+       *  `rd-weave-item`; the two branch-dependent ones hoist it out of the
+       *  ternary so no branch can drop it. A new section needs BOTH an
+       *  `order-[n]` and the marker. */}
       <div className="mx-auto max-w-6xl px-6 pb-8">
-        <div className="grid grid-cols-1 gap-x-8 lg:grid-cols-[1fr_336px] lg:items-start">
-          <aside className="contents lg:block lg:space-y-6 lg:order-2 [&>*]:min-w-0">
+        <div className="rd-weave grid grid-cols-1 gap-x-8 lg:grid-cols-[1fr_336px] lg:items-start">
+          <aside className="rd-weave-shell contents lg:block lg:space-y-6 lg:order-2 [&>*]:min-w-0">
             {/* mt-10 exists to clear the calendar above it on mobile. On the
                 zero-promo schedule pages the calendar is gone and ScheduleBlock
                 sits there instead, carrying its own py-12, so the extra margin
@@ -285,7 +298,7 @@ export function RedesignTeamPage({
             <AffiliateRail
               team={team}
               venue={venue}
-              className={showSchedule ? 'order-[20] lg:mt-0' : 'order-[20] mt-10 lg:mt-0'}
+              className={`rd-weave-item order-[20] ${showSchedule ? 'lg:mt-0' : 'mt-10 lg:mt-0'}`}
             />
             {/* Fan-made companion apps. Below the whole AffiliateRail, so it
                 is below both the tickets CTA (the rail's first child) and the
@@ -299,26 +312,26 @@ export function RedesignTeamPage({
                 default to 0 and put a third-party app link above the tickets
                 CTA. mt-10 clears the rail on mobile and lg:mt-0 hands spacing
                 back to the aside's lg:space-y-6, exactly as the rail does. */}
-            <FanTools team={team} className="order-[21] mt-10 lg:mt-0" />
-            <ExploreCard team={team} className="order-[60]" />
-            <AdSlot config={AD_SLOTS.SIDEBAR_STICKY} pageType="team_page" className="order-[62]" />
+            <FanTools team={team} className="rd-weave-item order-[21] mt-10 lg:mt-0" />
+            <ExploreCard team={team} className="rd-weave-item order-[60]" />
+            <AdSlot config={AD_SLOTS.SIDEBAR_STICKY} pageType="team_page" className="rd-weave-item order-[62]" />
           </aside>
 
-          <main className="contents lg:block lg:min-w-0 lg:order-1 [&>*]:min-w-0">
-            <div className="order-[30] pb-4">
+          <main className="rd-weave-shell contents lg:block lg:min-w-0 lg:order-1 [&>*]:min-w-0">
+            <div className="rd-weave-item order-[30] pb-4">
               <AdSlot config={AD_SLOTS.TEAM_PAGE_AFTER_HERO} pageType="team_page" />
             </div>
 
             {/* NFL schedule-release video (light) — preserves cta_click. */}
             {team.league === 'NFL' && team.scheduleReleaseVideo && (
-              <div className="order-[31]">
+              <div className="rd-weave-item order-[31]">
                 <ScheduleReleaseVideoCard video={team.scheduleReleaseVideo} teamSlug={team.id} variant="light" />
               </div>
             )}
 
             {/* Playoffs (light), when active. */}
             {inPlayoffs && playoffPromos.length > 0 && (
-              <div className="order-[32]">
+              <div className="rd-weave-item order-[32]">
                 <PlayoffSection
                   team={team}
                   promos={playoffPromos}
@@ -354,7 +367,7 @@ export function RedesignTeamPage({
                 Games. Rendering both would also put two emitters of
                 away_game_expanded on one page with identical payloads, which
                 cannot be untangled after ingestion. */}
-            <div className={showSchedule ? 'order-[11]' : 'order-[10]'}>
+            <div className={`rd-weave-item ${showSchedule ? 'order-[11]' : 'order-[10]'}`}>
               {showSchedule && gameContexts ? (
                 <ScheduleBlock contexts={gameContexts} team={team} teamName={displayName} />
               ) : (
@@ -380,7 +393,7 @@ export function RedesignTeamPage({
                 expands inline); the provider holds one Modal for the list.
                 showTeamLink defaults false — the user is already on this team's
                 page. */}
-            <div className="order-[40]">
+            <div className="rd-weave-item order-[40]">
               {hasNoPromosAtAll ? (
                 /* League-contextual copy REPLACES the list ONLY on pages with no
                    promos at all, in any season. Replace rather than sit
@@ -435,14 +448,14 @@ export function RedesignTeamPage({
                 first (pre-stars this team, tags web_team_page, fires
                 email_cta_click), then the app push pitch moved out of
                 PromoList. */}
-            <div className="order-[42]">
+            <div className="rd-weave-item order-[42]">
               <div className="mx-auto max-w-3xl px-6 py-8">
                 <FollowCTA surface="web_team_page" team={team} />
                 <AppPushPitch variant="light" teamName={displayName} teamSlug={team.id} league={team.league} />
               </div>
             </div>
 
-            <div className="order-[43]">
+            <div className="rd-weave-item order-[43]">
               <AuthorityStats
                 team={team}
                 promos={upcomingPromos}
@@ -454,7 +467,7 @@ export function RedesignTeamPage({
               />
             </div>
 
-            <div className="order-[50]">
+            <div className="rd-weave-item order-[50]">
               <RecurringDealsSection
                 team={team}
                 deals={recurringDeals}
@@ -463,7 +476,7 @@ export function RedesignTeamPage({
               />
             </div>
 
-            <div className="order-[71]">
+            <div className="rd-weave-item order-[71]">
               <TeamContentSections
                 team={team}
                 promos={upcomingPromos}
@@ -474,11 +487,11 @@ export function RedesignTeamPage({
               />
             </div>
 
-            <div className="order-[61]">
+            <div className="rd-weave-item order-[61]">
               <TeamRelatedAggregators promos={upcomingPromos} variant="light" />
             </div>
 
-            <div className="order-[72]">
+            <div className="rd-weave-item order-[72]">
               <TeamFAQ
                 team={team}
                 upcomingPromos={upcomingPromos}
@@ -491,7 +504,7 @@ export function RedesignTeamPage({
               />
             </div>
 
-            <div className="order-[80] py-6">
+            <div className="rd-weave-item order-[80] py-6">
               <AdSlot config={AD_SLOTS.IN_CONTENT_1} pageType="team_page" />
             </div>
           </main>

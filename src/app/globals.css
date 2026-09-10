@@ -497,3 +497,37 @@ body::before {
     box-shadow: 0 0 0 3px rgba(218, 45, 32, 0.6);
   }
 }
+
+/* ── Team-page weave order floor ──────────────────────────────────────────────
+ * Below lg the team page's <aside> and <main> are display:contents, so their
+ * children are hoisted into one single-column grid and 17 `order-[n]` utilities
+ * drive the mobile reading sequence (RedesignTeamPage.tsx, "Responsive weave").
+ *
+ * The lowest authored value is 10 — 11 on the schedule branch — so a grid item
+ * carrying no order at all inherits `order: 0` and sorts AHEAD of every section
+ * on the page. It renders first: above the calendar, above the promo list,
+ * directly under the hero. Nothing warns, and it only happens under 1024px.
+ *
+ * That is fine while every child is authored here. It stops being fine the
+ * moment a third party places units by writing selectors against this DOM and
+ * injecting elements: measured on production, seven different sibling insertion
+ * points (prepend/append the grid, before/after any section, into either
+ * shell) ALL landed at visual position 1.
+ *
+ * So: mark what we authored, and floor everything else. Unmarked items go to
+ * the back of the column instead of the front — still not where a placer meant
+ * to put them, but survivable rather than silent.
+ *
+ * Scoped to max-width:1023px because at lg the shells are `lg:block`, order is
+ * inert, and the desktop layout must not move.
+ *
+ * The marker is a dedicated class, deliberately. Do NOT "simplify" this to an
+ * attribute-substring test — [class*="order-"] also matches border-2, rounded-
+ * and every other Tailwind class ending in "order-", which would exempt most of
+ * the page from the floor and quietly restore the bug. */
+@media (max-width: 1023px) {
+  .rd-weave > :not(.rd-weave-shell),
+  .rd-weave > .rd-weave-shell > :not(.rd-weave-item) {
+    order: 900;
+  }
+}
