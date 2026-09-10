@@ -2222,3 +2222,76 @@ never committed.
 extra child is inert on 168 pages. The defect was in the recorded reasoning, not
 the render, and the cost of believing it was skipping a rebuild that entry 12
 and entry 14 require.
+
+---
+
+## 45. Keyboard focus jumps 6,406px backward within the first twelve tabs on all 169 team pages
+
+**What it is.** Tab order follows DOM order. On team pages the mobile visual
+order does not come from the DOM — it comes from the CSS weave, which reorders
+sections below 1024px. The two sequences diverge in four places, so a keyboard
+user's focus leaves the viewport twice before reaching any promo content.
+
+Measured on `/mlb/los-angeles-dodgers` at a 386px viewport, 2026-09-09, against
+a production build. 87 focusable elements inside the grid. The traversal, by
+section order value and rendered `y`:
+
+```
+tab  0  -> section 20  y=1289   "Get Tickets"          (2nd section visually)
+tab  6  -> section 60  y=7080   "Bobblehead nights"    (9th section visually)
+tab 12  -> section 10  y= 674   calendar chip "All"    (1st section visually)   <- 6,406px BACKWARD
+tab 49  -> section 40  y=1909   promo rows
+```
+
+Focus opens on the tickets CTA, jumps ~5,800px down to the sidebar Explore card,
+then snaps 6,406px back up to the calendar at the top, then proceeds forward for
+the remaining 75 tabs. Only one backward step exceeds 30px, but it is the whole
+page height.
+
+A second divergence has no keyboard-detectable step: DOM order places
+`TeamContentSections` (`order-[71]`) before `TeamRelatedAggregators`
+(`order-[61]`), while the weave renders aggregators first. Both sections contain
+0 and 2 focusables respectively, so tabbing never reveals it, but linear reading
+order for a screen reader still disagrees with visual order.
+
+**Where it lives.** `src/components/redesign/RedesignTeamPage.tsx:291` is the
+grid container; the two `display:contents` shells that hoist their children into
+it are `:292` (`<aside>`) and `:320` (`<main>`). The divergence is structural to
+that arrangement, not to any one child: the sidebar children are authored first
+in source and weave into the middle and tail of the mobile column, while the
+calendar is authored fifth and weaves to first. The specific pair above is
+`:479` and `:490`.
+
+**Why it matters.** It is a real accessibility defect on all 169 team pages, at
+84% mobile traffic, and it predates the ad work entirely — nothing about it is
+caused by or conditional on ad injection. It is also the exact inverse of the
+property the weave exists to protect: commit `150a1dc` chose a CSS reorder over
+moving JSX specifically so that DOM order would stay pinned to desktop order and
+keep upcoming-promos and venue content high in the served HTML for crawlers. The
+same decision that serves crawlers scatters keyboard focus.
+
+**Risks and couplings.** The order floor added in this branch
+(`src/app/globals.css:529-530`, marker classes `rd-weave` / `rd-weave-shell` /
+`rd-weave-item`) does **not** address this and was never intended to. It changes
+where an *unmarked* grid item lands; it does not change the relationship between
+DOM order and visual order for the authored children, which is what produces the
+jump. Do not let the floor be recorded as an accessibility fix.
+
+The only approach that resolves it is a source-order inversion: make DOM order
+equal the mobile reading order and rebuild the desktop two-column layout with
+explicit `lg:col-start` / `lg:row-start` placement instead of `display:contents`
+plus `order`. That is deferred until after ads are live and stable, because it
+is a restructure of the most-edited layout file in the repo (nine commits have
+renumbered the weave, the most recent being `3489ad1` on 2026-09-06) and it
+would break the byte-identical-desktop property the gate and rollback design
+depend on. It would also need the same-day byte-identity baseline that entry 12
+and entry 14 require, with no harness to run it — see entry 44.
+
+Unverified and worth checking before that work: `display:contents` on `<main>`
+and `<aside>` has a known history of removing landmarks from the accessibility
+tree in older engines. Not measured.
+
+**Severity: Medium.** Real consequence on a normal path for keyboard and screen
+reader users, with a blast radius bounded to one template. Nothing is lost or
+broken — every section remains reachable, in a confusing sequence — which is why
+this is not High.
