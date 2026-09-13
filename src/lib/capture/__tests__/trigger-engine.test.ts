@@ -142,7 +142,10 @@ test('the decision floor is unchanged and the probe sits below it', () => {
 test('the probe fires when the threshold and 30 engaged seconds are both met', () => {
   const h = harness();
 
-  h.taps(4); // game_tap threshold, crossed at 4s
+  // Four taps, so the game_tap threshold of 2 is crossed at 2s and the clock
+  // reads 4s. The remaining fixtures keep tapping four times: the count in the
+  // assertions is the count PERFORMED, which no longer equals the threshold.
+  h.taps(4);
   assert.deepStrictEqual(h.events(), [], 'threshold alone is not enough');
 
   h.advance(25); // 29s
@@ -162,7 +165,7 @@ test('the probe fires when the threshold and 30 engaged seconds are both met', (
 
 test('30 seconds without the gesture threshold reports nothing, however long the visit', () => {
   const h = harness();
-  h.taps(3); // one gesture short of the game_tap threshold of 4
+  h.taps(1); // one gesture short of the game_tap threshold of 2
   h.advance(816); // the longest suppressed visit in the first read
   assert.deepStrictEqual(h.events(), []);
 });

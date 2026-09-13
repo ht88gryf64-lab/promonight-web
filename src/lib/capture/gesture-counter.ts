@@ -53,10 +53,36 @@ const PRECEDENCE: Record<TriggerSignal, number> = {
 // Thresholds are per signal and the trigger is the FIRST to be met, so a
 // visitor who only taps games and one who only expands away games both reach
 // it, on their own scale.
+//
+// HALVED FROM 4 / 3 / 2 ON THE PHASE 1 READ. 30 days, 2026-08-13 to 2026-09-12,
+// filterTestAccounts true:
+//   - 16,982 sessions
+//   - 12,567 (74%) fired at least one qualifying gesture
+//   - 1,886 (11%) met the gesture threshold at the 30s probe
+//   - 1,584 (9.3%) were shown the sheet, against a Phase 1 target of 30 to 45%
+//   - 57 suppressions total, 49 recently_dismissed and 21 session_already_shown
+//   - 751 of 1,590 shows dismissed (47%)
+//
+// THE GESTURE COUNT IS THE BINDING GATE, not the clock and not suppression.
+// Three quarters of sessions gesture at all and only one in seven of those
+// reaches the threshold, while suppression accounts for 57 sessions in a month.
+// The 30-to-45-second band holds roughly 300 sessions, so the 45s floor is not
+// the lever either: it is moving the counts that can close a 9.3-to-30% gap.
+//
+// The guardrail read says the sheet is not costing anything. Engaged sessions
+// only: shown 15.4% affiliate-click and 1.25 pages per session, not-shown 7.0%
+// and 1.22. Shown browsers click MORE, so a larger shown population is not a
+// revenue trade.
+//
+// Only these three numbers changed. The 45s decision floor, the 30s probe
+// floor, every suppression reason and its precedence, the 30-day dismissal
+// window, the route exclusions, the kill switch, the event names and the mounted
+// surfaces are all untouched, so the next read is attributable to this one
+// variable.
 export const DEFAULT_THRESHOLDS: Record<TriggerSignal, number> = {
-  away_game_expanded: 2,
-  game_tap: 4,
-  promo_card_tap: 3,
+  away_game_expanded: 1,
+  game_tap: 2,
+  promo_card_tap: 2,
 };
 
 // A burst is one gesture. 400ms is comfortably longer than the synchronous
