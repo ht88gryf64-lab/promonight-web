@@ -94,13 +94,15 @@ const TICK_MS = 5_000;
 // reachable from client code, so using it here would mean new plumbing.
 //
 // More importantly, filtering now would be guessing at a problem this phase
-// exists to reveal. The engine already demands 45 seconds of VISIBLE engaged
-// time plus several discrete gesture bursts, which excludes essentially every
-// crawler; what it does not exclude is a scripted browser that clicks four game
-// cells over 45 seconds. If that traffic is material it will show up as an
-// implausibly high shown rate in the Phase 2 read, and an implausible rate is
-// itself the signal to act on. Read the numbers first, then filter if they
-// demand it. The absence of filtering here is a decision, not an oversight.
+// exists to reveal. The engine still demands 45 seconds of VISIBLE engaged time
+// plus at least one discrete gesture burst, which excludes essentially every
+// crawler; what it does not exclude is a scripted browser that clicks two game
+// cells, or expands one away game, over those 45 seconds. The retuned thresholds
+// lower that bar, so the 45s floor now carries more of this weight than it did.
+// If that traffic is material it will show up as an implausibly high shown rate
+// in the next read, and an implausible rate is itself the signal to act on. Read
+// the numbers first, then filter if they demand it. The absence of filtering
+// here is a decision, not an oversight.
 
 export function CaptureTrigger({ pageType, team, pool }: CaptureTriggerProps) {
   const pathname = usePathname();

@@ -201,47 +201,55 @@ test('no signal is triggered below threshold', () => {
   assert.strictEqual(c.triggeredSignal(), null);
 });
 
-test('game_tap triggers at exactly 4 gestures, not 4 events', () => {
+test('game_tap triggers at exactly 2 gestures, not 2 events', () => {
   const clock = makeClock();
   const c = counter(clock);
 
-  // Four taps, each emitting two events. Event counting would trigger at tap 2.
-  for (let i = 0; i < 3; i++) {
-    c.observe('game_tap', `g${i}`);
-    c.observe('game_tap', `g${i}-second`);
-    clock.advance(500);
-    assert.strictEqual(c.triggeredSignal(), null, `still below threshold after tap ${i + 1}`);
-  }
-  c.observe('game_tap', 'g4');
+  // ONE tap emitting two events, which is what a doubleheader cell does. At a
+  // threshold of 2 this is the case the dedupe rule has to hold hardest: event
+  // counting would fire the sheet off a single tap.
+  c.observe('game_tap', 'g1');
+  c.observe('game_tap', 'g1-second');
+  assert.strictEqual(c.triggeredSignal(), null, 'still below threshold after one tap');
+
+  clock.advance(500);
+  c.observe('game_tap', 'g2');
   assert.strictEqual(c.triggeredSignal(), 'game_tap');
-  assert.strictEqual(c.countFor('game_tap'), 4);
+  assert.strictEqual(c.countFor('game_tap'), 2);
 });
 
-test('away_game_expanded triggers at 2', () => {
+test('away_game_expanded triggers at 1, off the co-firing pair, as one gesture', () => {
+  // The shortest path to the threshold in the whole engine: one tap on one away
+  // cell. The 45-second engaged floor is the only other condition on this path,
+  // which is deliberate. An away expansion is the strongest trip-planning signal
+  // the calendar emits, and it cannot be reached by scrolling.
   const clock = makeClock();
   const c = counter(clock);
 
   c.observe('game_tap', 'g1');
+  assert.strictEqual(
+    c.triggeredSignal(),
+    null,
+    'a game tap alone is one gesture, below the game_tap threshold of 2',
+  );
+
   c.observe('away_game_expanded', 'g1');
-  assert.strictEqual(c.triggeredSignal(), null);
-
-  clock.advance(500);
-  c.observe('game_tap', 'g2');
-  c.observe('away_game_expanded', 'g2');
-
   assert.strictEqual(c.triggeredSignal(), 'away_game_expanded');
-  assert.strictEqual(c.countFor('away_game_expanded'), 2);
+  assert.strictEqual(c.countFor('away_game_expanded'), 1);
+  assert.strictEqual(c.countFor('game_tap'), 0, 'the credit moved, it was not duplicated');
 });
 
-test('promo_card_tap triggers at 3', () => {
+test('promo_card_tap triggers at 2', () => {
   const clock = makeClock();
   const c = counter(clock);
 
-  for (let i = 0; i < 3; i++) {
-    c.observe('promo_card_tap');
-    clock.advance(500);
-  }
+  c.observe('promo_card_tap');
+  assert.strictEqual(c.triggeredSignal(), null, 'one promo gesture is not enough');
+
+  clock.advance(500);
+  c.observe('promo_card_tap');
   assert.strictEqual(c.triggeredSignal(), 'promo_card_tap');
+  assert.strictEqual(c.countFor('promo_card_tap'), 2);
 });
 
 test('when two signals cross together the stronger intent wins the attribution', () => {
@@ -250,14 +258,13 @@ test('when two signals cross together the stronger intent wins the attribution',
   const clock = makeClock();
   const c = counter(clock);
 
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 2; i++) {
     c.observe('promo_card_tap');
     clock.advance(500);
   }
-  for (let i = 0; i < 2; i++) {
-    c.observe('away_game_expanded', `g${i}`);
-    clock.advance(500);
-  }
+  c.observe('away_game_expanded', 'g0');
 
   assert.strictEqual(c.triggeredSignal(), 'away_game_expanded');
+  assert.strictEqual(c.countFor('promo_card_tap'), 2, 'both are exactly at threshold');
+  assert.strictEqual(c.countFor('away_game_expanded'), 1);
 });
