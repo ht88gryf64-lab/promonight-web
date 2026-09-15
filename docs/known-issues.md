@@ -2376,3 +2376,92 @@ CWV capture on the right URL.
 **Severity: Low.** The specific defect is fixed and the residual is a 0.0004
 width-only shift. This is recorded because the monitoring gap survives the fix,
 not because anything is currently broken.
+
+## 47. The apex is a Vercel edge redirect `next.config` cannot override, so any third-party ads.txt redirect puts the apex at two hops
+
+**What it is.** `getpromonight.com/ads.txt` cannot be pointed anywhere by the
+application. The apex is configured in Vercel as a project-domain redirect to
+`www`, which is resolved at the edge before the Next app is reached, so any
+`/ads.txt` redirect we write lands *after* that hop rather than instead of it.
+Delegating ads.txt to an ad network's hosted file therefore costs the apex a
+second hop, and the apex is the host that matters most.
+
+**Measured, not assumed.** Four apex paths were probed on production on
+2026-09-15, including two that have their own `next.config` redirects:
+
+| request | result |
+| --- | --- |
+| `getpromonight.com/index` | `308` -> `www.getpromonight.com/index` |
+| `getpromonight.com/promos` | `308` -> `www.getpromonight.com/promos` |
+| `getpromonight.com/mlb/los-angeles-dodgers` | `308` -> same path on `www` |
+| `getpromonight.com/this-path-does-not-exist-xyz` | `308` -> same path on `www` |
+
+All four preserve the path and none resolves the app's own rule: `/index`
+redirects to `/` in `next.config`, and the apex does not do that. The app never
+sees these requests, so a `has: [{ type: 'host' }]` rule for the apex can never
+fire. Contrast `www.getpromonight.com/index`, which does `308` to `/`.
+
+**What it cost.** The Raptive install (`6b9d612`) shipped `/ads.txt` as a `301`
+to `ads.adthrive.com`. On `www` that is one hop and correct. On the apex it
+produced `308` -> `www` -> `301` -> `200`, two redirects, and `curl` reported
+`num_redirects: 2`. Reverted in `7745d3e` back to a static `public/ads.txt`,
+which restores the apex to `308` -> `200`, the single hop it had before the
+install.
+
+**Google's documentation contradicts itself on whether that is fatal.**
+[Ensure ads.txt/app-ads.txt can be crawled](https://support.google.com/admanager/answer/7673979)
+carries both of these:
+
+- "Only a single redirect **outside the original root domain** is followed." By
+  this reading the apex-to-`www` hop is free, because `www.getpromonight.com`
+  is inside the `getpromonight.com` root, and only the hop to `adthrive.com`
+  counts. Two hops would be fine.
+- "If a second redirect is included — **even if it's for the same domain** —
+  the file will not be crawled." By this reading the apex chain is dead and
+  ads.txt goes uncrawled, taking programmatic demand with it.
+
+The same page also states "an ads.txt file on `www.domain.com/ads.txt` will
+only be crawled if `domain.com/ads.txt` redirects to it", which is why this is
+an apex problem and not a `www` problem: the crawler *starts* at the apex, so
+`www` being one hop rescues nothing. Raptive's own hosted file declares
+`ownerdomain=getpromonight.com`, the apex, so the host whose crawlability the
+redirect broke is the one the network names as owner. No resolution to the
+contradiction was found, and it was not worth resolving: the static file
+satisfies both readings.
+
+**Option A is the real fix and is deferred.** Removing the apex's
+project-domain redirect so the app serves the apex, then re-implementing
+apex-to-`www` as a `next.config` host rule ordered after a `/ads.txt` rule,
+would make both hosts one hop and let the network keep the file current
+without a deploy. Externally every apex URL would still be a single `308`.
+
+It is deferred because it moves apex/`www` canonicalization for all 481 live
+URLs out of Vercel's edge and into application config. SITE-AUDIT's "Technical
+caveats" section records that "apex/www canonical mismatch was the root cause
+of the May 2026 Bing deindex" and instructs re-confirming apex/www
+consistency on any redirect, canonical or sitemap change. This is exactly
+that change, on the largest possible surface. The May 1-8 Bing suppression
+recovered fully, but it cost a week of a channel that was then the site's
+traffic leader, and the sequencing
+is unforgiving: the app-side rule must ship and be verified *before* the domain
+setting is flipped, or the apex serves duplicate content at 481 URLs in the
+window between. That is a deliberate, separately-planned change with its own
+verification, not a step inside an ad install.
+
+**The cost of staying on Option B.** `public/ads.txt` is a mirror of a file
+Raptive maintains, and it does not follow their updates. They rotate demand
+partners and bump their version (`v2.74-auto` at the time of writing) without
+notifying us, and every partner missing from our copy is a partner whose bids
+go unauthorized. The file header records the source URL, the fetch timestamp
+and a `sha256` of the fetched bytes so drift is detected by comparison rather
+than by reading 71 records. Nothing currently watches it; that is the same
+silent-state-transition class as entry 46 and SITE-AUDIT section 8, and the
+cheap instrument is a scheduled fetch that compares the hash and opens an alert
+when it moves.
+
+**Severity: Medium.** Nothing is broken today and both readings of Google's
+documentation are satisfied by the current static file. It is recorded because
+the constraint is invisible from the repository — `next.config.ts` contains no
+hint that the apex is unreachable from it — and the next person to delegate a
+root-level file (`ads.txt`, `app-ads.txt`, `sellers.json`, a verification file)
+to a third-party URL will rediscover it the same way, by shipping it.
