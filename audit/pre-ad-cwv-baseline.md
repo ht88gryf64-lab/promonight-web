@@ -30,7 +30,7 @@ instrument for a real number.
 
 | Element | Value |
 | --- | --- |
-| Browser | Google Chrome **152.0.7977.76**, `--headless=new` |
+| Browser | `--headless=new`. Version was pinned at **152.0.7977.76** for Baselines A, B and the 2026-09-06 C. It is **no longer pinned**: Chrome auto-updates and a matching binary was not retained, so the version is expected to drift and must be recorded per capture instead. Baseline D ran on **153.0.8010.36** |
 | Chrome flags | `--no-first-run --no-default-browser-check --disable-extensions --hide-scrollbars --mute-audio` |
 | Profile | fresh `--user-data-dir` per run, discarded afterwards |
 | Driver | Chrome DevTools Protocol 1.3 over a raw websocket (Python 3.13.7, `websockets` 16.0). No Lighthouse, no PageSpeed Insights |
@@ -42,7 +42,7 @@ instrument for a real number.
 | | mobile | desktop |
 | --- | --- | --- |
 | `Emulation.setDeviceMetricsOverride` | 412 x 823, `deviceScaleFactor` 1.75, `mobile: true` | 1350 x 940, `deviceScaleFactor` 1.0, `mobile: false` |
-| `Emulation.setUserAgentOverride` | `Mozilla/5.0 (Linux; Android 12; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Mobile Safari/537.36` | cleared (native desktop UA) |
+| `Emulation.setUserAgentOverride` | `Mozilla/5.0 (Linux; Android 12; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Mobile Safari/537.36` | **set explicitly** to `Browser.getVersion`'s `userAgent`. From 2026-09-15 this is what "cleared (native desktop UA)" means in practice: CDP has no `clearUserAgentOverride`, one Chrome process serves the whole run, and mobile is captured first, so the Pixel 5 override persists into desktop unless the native UA is put back. Sending `""` is **not** this call - see `042eb29` |
 | `Network.emulateNetworkConditions` | 1.6 Mbps down (209715 B/s), 750 Kbps up (96000 B/s), 150 ms latency | 10240 Mbps down/up (1342177280 B/s), 40 ms latency |
 | `Emulation.setCPUThrottlingRate` | 4 | 1 |
 
@@ -517,3 +517,138 @@ baseline rather than a row appended here.
 The desktop UA divergence should be settled before the next capture, since it
 is the one thing standing between this harness and a like-for-like desktop
 comparison.
+
+## Baseline D: pre-Raptive-install, production, uniform warmed protocol.
+
+**This supersedes Baseline B as the comparison baseline for the post-install
+capture.** B remains correct for the build that produced it and is retained
+unaltered. The 2026-09-06 Baseline C above is a **harness-validation run, not a
+successor to B** - it exists to show that a rebuilt harness reproduced B's
+mobile half, and its desktop half is disqualified by the UA defect described in
+its own section. Neither A, B nor C is edited by this section.
+
+**Why a third baseline.** B was captured on `dpl_6SmKD6N32GfyozKbBP25TBVwN6j1`.
+Production has since shipped the mobile weave order floor (`e6132e0`), the
+single-`<main>` retags and selector hooks (`eee9a34`), the chip-row CLS fix
+(`04250ee`), the Raptive privacy statement (`e0accc5`) and the ads.txt AdSense
+removal (`f4fa756`). B no longer describes the build the ad tags will land on.
+D does.
+
+### Two deviations from the pinned protocol, stated before the numbers
+
+**1. Chrome 153.0.8010.36, not the pinned 152.0.7977.76.** Chrome auto-updated
+and no 152 binary was retained on the capture machine; none was downloaded. A
+major-version change is a harness change, so **the B-to-D delta carries an
+unknown Chrome-version component on every row, in both halves**. That component
+is not separated out below and cannot be from this data alone. It does not
+affect D's fitness for its actual job: the post-install capture will run on 153
+or later too, so D-to-post-install stays internally consistent, which is the
+comparison this baseline exists to serve.
+
+**2. The desktop rows are the first captured under a conforming UA.** The
+protocol's "cleared (native desktop UA)" is now implemented as an explicit set
+to `Browser.getVersion`'s `userAgent` (`042eb29`); the previous harness sent the
+empty string. **D's desktop half is therefore not comparable to any desktop half
+captured before it** - not B's, and not the 2026-09-06 C's. The desktop B-to-D
+delta is reported below because it was asked for, and it should be read with
+that in mind. The resolved UA was
+`Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36`.
+Note it identifies as **HeadlessChrome**: that is what this browser natively
+sends, and therefore what "cleared" resolves to under `--headless=new`.
+
+### Capture metadata
+
+| Field | Value |
+| --- | --- |
+| Captured | 2026-09-15, 15:53Z-15:56Z UTC |
+| Build | `main` at `f4fa756` |
+| Deploy serving at capture | `dpl_9Z7WVbma91Xz6ZhSUyeK2bozn3Y8` |
+| Identical across all twelve rows | **yes**, re-read from the served HTML of each of the twelve captures individually, not once per run |
+| Chrome | 153.0.8010.36, `--headless=new` |
+| Harness | `scripts/capture-cwv-baseline.py` at `4d7712c` |
+| Ad network script / ad container / CMP | **none**. 0 occurrences of `raptive`, `adthrive`, `adsbygoogle`, `faves.grow.me` in the served HTML. The single `googletag` hit is the GA4 `G-N2M0M355LX` preload, as in Baseline B |
+| Mediavine Grow | absent |
+| Protocol | the pinned protocol above, uniformly, all twelve rows in one pass, with the two deviations named directly above |
+
+### Mobile (412 x 823, DSF 1.75, 4x CPU, 1.6 Mbps / 150 ms)
+
+| URL | Template | LCP (ms) | CLS | INP (ms) | FCP (ms) | cold TTFB | warm TTFB | interactions |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| /mlb/minnesota-twins | team | 1576 | 0.0004 | 32 | 1576 | 54.2 | 44.0 | 6 |
+| /nhl/dallas-stars | team | 1524 | 0.0004 | 32 | 1524 | 81.7 | 42.9 | 4 |
+| /venues/td-garden | venue | 1376 | 0.0023 | <16 \*\* | 1376 | 50.6 | 57.2 | 0 |
+| /venues/fenway-park | venue | 1380 | 0.0166 | 16 \* | 1380 | 51.6 | 53.2 | 1 |
+| /cfb/alabama | CFB school | 1520 | 0.0000 | <16 \*\* | 1520 | 44.8 | 67.0 | 0 |
+| /promos/this-week | aggregator | 1360 | 0.0001 | <16 \*\* | 1360 | 86.0 | 42.2 | 0 |
+
+### Desktop (1350 x 940, DSF 1.0, 1x CPU, 40 ms RTT)
+
+| URL | Template | LCP (ms) | CLS | INP (ms) | FCP (ms) | cold TTFB | warm TTFB | interactions |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| /mlb/minnesota-twins | team | 288 | 0.0000 | 24 | 288 | 53.6 | 61.1 | 4 |
+| /nhl/dallas-stars | team | 548 | 0.0000 | <16 \*\* | 548 | 90.2 | 42.6 | 0 |
+| /venues/td-garden | venue | 288 | 0.0010 | 32 \* | 288 | 76.3 | 62.7 | 1 |
+| /venues/fenway-park | venue | 288 | 0.0072 | 16 | 288 | 82.8 | 45.1 | 3 |
+| /cfb/alabama | CFB school | 336 | 0.0001 | 16 \* | 336 | 43.1 | 74.3 | 1 |
+| /promos/this-week | aggregator | 280 | 0.0001 | 32 | 280 | 43.7 | 55.7 | 2 |
+
+`\*` row rests on a **single** Event Timing observation. `\*\*` **no**
+interaction reached the 16 ms reporting threshold, so INP is below 16 ms rather
+than unmeasured.
+
+### Thin-observation rows, stated explicitly
+
+Seven of the twelve rows rest on one observation or none - a materially thinner
+evidence base than Baseline B, where three rows did.
+
+| Row | Interactions above 16 ms | Reading |
+| --- | ---: | --- |
+| /venues/td-garden mobile | 0 | nothing crossed the threshold; INP < 16 ms |
+| /cfb/alabama mobile | 0 | nothing crossed the threshold; INP < 16 ms |
+| /promos/this-week mobile | 0 | nothing crossed the threshold; INP < 16 ms |
+| /nhl/dallas-stars desktop | 0 | nothing crossed the threshold; INP < 16 ms |
+| /venues/fenway-park mobile | 1 | single observation |
+| /venues/td-garden desktop | 1 | single observation |
+| /cfb/alabama desktop | 1 | single observation |
+
+The remaining five rows rest on 2 to 6 observations. Rows reporting exactly
+16 ms sit at the measurement floor and mean "nothing slow was observed", not
+"INP is 16 ms". Per the pinned protocol, INP here is directional only.
+
+### LCP element per page
+
+Not captured. The committed harness does not record the LCP element, and no
+attempt is made here to restate Baseline B's elements as if they had been
+observed in this run.
+
+## Baseline B to Baseline D delta, per URL
+
+Reported without interpretation, as asked. **Every row in both halves carries
+the unknown Chrome-version component described above.** Every desktop row
+additionally spans the UA fix and is not a like-for-like comparison.
+
+### Mobile
+
+| URL | LCP B -> D | CLS B -> D | INP B -> D |
+| --- | ---: | ---: | ---: |
+| /mlb/minnesota-twins | 1580 -> 1576 (-4) | 0.0005 -> 0.0004 (-0.0001) | 32 -> 32 |
+| /nhl/dallas-stars | 1536 -> 1524 (-12) | 0.0688 -> 0.0004 (-0.0684) | 32 -> 32 |
+| /venues/td-garden | 1404 -> 1376 (-28) | 0.0023 -> 0.0023 (0.0000) | 16 -> <16 |
+| /venues/fenway-park | 1392 -> 1380 (-12) | 0.0166 -> 0.0166 (0.0000) | 16 -> 16 |
+| /cfb/alabama | 1528 -> 1520 (-8) | 0.0000 -> 0.0000 (0.0000) | <16 -> <16 |
+| /promos/this-week | 1380 -> 1360 (-20) | 0.0000 -> 0.0001 (+0.0001) | 16 -> <16 |
+
+The `/nhl/dallas-stars` mobile CLS movement of -0.0684 is the chip-row fix in
+`04250ee`, already documented above, which predicted 0.0688 -> 0.0004. It is not
+an anomaly and not an ad effect.
+
+### Desktop
+
+| URL | LCP B -> D | CLS B -> D | INP B -> D |
+| --- | ---: | ---: | ---: |
+| /mlb/minnesota-twins | 428 -> 288 (-140) | 0.0070 -> 0.0000 (-0.0070) | 32 -> 24 |
+| /nhl/dallas-stars | 500 -> 548 (+48) | 0.0000 -> 0.0000 (0.0000) | 32 -> <16 |
+| /venues/td-garden | 356 -> 288 (-68) | 0.0010 -> 0.0010 (0.0000) | 32 -> 32 |
+| /venues/fenway-park | 364 -> 288 (-76) | 0.0072 -> 0.0072 (0.0000) | 32 -> 16 |
+| /cfb/alabama | 408 -> 336 (-72) | 0.0001 -> 0.0001 (0.0000) | 16 -> 16 |
+| /promos/this-week | 380 -> 280 (-100) | 0.0001 -> 0.0001 (0.0000) | 16 -> 32 |
