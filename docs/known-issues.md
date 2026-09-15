@@ -2295,3 +2295,55 @@ tree in older engines. Not measured.
 reader users, with a blast radius bounded to one template. Nothing is lost or
 broken — every section remains reachable, in a confusing sequence — which is why
 this is not High.
+
+## 46. Nothing alarms when a team page enters the chip-row wrap condition
+
+**What it is.** The CLS defect fixed in `04250ee` was data-triggered, and the
+data that triggers it moves on its own. No alarm exists for a page entering
+that state, and none existed for the five months it was live.
+
+**The condition.** Upcoming giveaway count >= 10 AND upcoming theme count >= 10,
+at a 412px viewport. Both counts at two digits widened chip row one from 358px
+on the font fallback to 369px inside a 364px container, crossing the flex-wrap
+boundary and translating everything below the row down 41.5px on the font swap.
+On 2026-09-14, 10 of 169 team pages met it - `minnesota-timberwolves`,
+`seattle-mariners`, `los-angeles-kings`, `chicago-bulls`, `nashville-predators`,
+`pittsburgh-penguins`, `washington-capitals`, `texas-rangers`, `dallas-stars`,
+`anaheim-ducks` - across NHL, MLB and NBA. 31 more were over the threshold on
+exactly one of the two counts.
+
+**Why it is still an entry after the fix.** `04250ee` removed the wrap, so this
+specific condition can no longer produce this specific shift. What it did not
+add is any visibility into the class. The counts are `upcomingCounts`, derived
+per render from promos still ahead of today, so membership churns as a season
+fills and drains: a page enters the set when a club announces a tenth theme
+night and leaves it when the tenth one is played. Nothing observes that
+transition. The next layout that makes a height depend on a text width - a chip
+row, a filter bar, a stat strip, a tab set - reintroduces the same failure with
+no alarm, and the only reason this one was found is that a pre-ad CWV baseline
+happened to sample `/nhl/dallas-stars`.
+
+**Why it is the same class as SITE-AUDIT section 8.** Section 8 (Absent-write
+monitoring gap) records that a subsystem which silently stops writing "looks
+identical to a quiet week", with "the only tell a timestamp age nobody watches";
+`teamScores` sat frozen 56 days and was found by a copy audit, not an alarm.
+This is the same shape from the other direction. There the state change is an
+absence of writes; here it is an ordinary, correct write that happens to move a
+page across a rendering threshold. Both are silent state transitions with no
+watcher, both were found by an audit that was looking for something else, and
+both would be caught by the same kind of instrument: a scheduled assertion over
+stored data rather than a guard at the write.
+
+**Fix shape when picked up.** Cheapest useful version is a check in the existing
+staleness-check workflow asserting that no team's upcoming counts put chip row
+one over the container width - the arithmetic is four numbers and a table of
+chip widths, and it needs no browser. The stronger version measures rather than
+predicts: assert in CI that the chip row's height is identical under Archivo and
+its size-adjusted fallback, which is the invariant the fix actually established
+and which holds regardless of what the counts do. Either is preferable to the
+status quo, which is that the next occurrence is found by whoever next runs a
+CWV capture on the right URL.
+
+**Severity: Low.** The specific defect is fixed and the residual is a 0.0004
+width-only shift. This is recorded because the monitoring gap survives the fix,
+not because anything is currently broken.
