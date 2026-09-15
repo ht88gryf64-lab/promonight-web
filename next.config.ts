@@ -12,23 +12,6 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
-        // Raptive hosts our ads.txt so their partner list stays current without
-        // a deploy. public/ads.txt is deleted, not just shadowed: Next resolves
-        // redirects before the public/ filesystem, so a file left here would
-        // never serve and would rot into a false record of what we declare.
-        // Both records it used to carry (google.com pub-8501674430909082 and
-        // indexexchange.com 182496) were verified present, with matching
-        // relationship values, in the hosted file before deleting it.
-        //
-        // statusCode: 301, not permanent: true. `permanent` emits 308, and
-        // ads.txt crawlers are strict about the status they will follow;
-        // Raptive asked for 301 specifically.
-        source: '/ads.txt',
-        destination:
-          'https://ads.adthrive.com/sites/6a9989924f70265a058c50b1/ads.txt',
-        statusCode: 301,
-      },
-      {
         source: '/privacy.html',
         destination: '/privacy',
         permanent: true,
