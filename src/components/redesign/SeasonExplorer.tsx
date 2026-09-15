@@ -57,11 +57,42 @@ export function SeasonExplorer({
           Still to come
         </p>
       )}
-      <div className="flex flex-wrap gap-2">
+      {/* Horizontal scroller rather than a wrapping row, and the reason is CLS.
+       *
+       *  Wrapping made this row's HEIGHT a function of its text WIDTH, and text
+       *  width is not stable across the font swap. Archivo is `display: swap`
+       *  and next/font's size-adjusted fallback matches vertical metrics but
+       *  cannot match horizontal advance widths, so every chip gets ~3px wider
+       *  when the real face lands. At 412px the container is 364px and row one
+       *  packs All + Giveaways + Theme Nights: 358px on the fallback, 369px on
+       *  Archivo. Teams whose giveaway AND theme counts are both two digits sit
+       *  astride that boundary, so the swap pushed a chip onto a third line and
+       *  translated everything below it down 41.5px. Measured 0.0688 on
+       *  /nhl/dallas-stars and 0.0594 on /nhl/los-angeles-kings, reproducible to
+       *  four decimals across four capture runs; 10 of 169 team pages met the
+       *  condition, and membership moves as upcoming counts change.
+       *
+       *  A scroller makes height independent of content width, so the swap can
+       *  widen the chips all it likes and nothing moves. `shrink-0` is
+       *  load-bearing: without it flex would compress the chips to fit instead
+       *  of overflowing, the labels would wrap, and the height would move again.
+       *
+       *  Same pattern as the CFB rivalry rail (CfbSchoolPage) and StubRail:
+       *  no-scrollbar because the global webkit thumb is #333 on a dark track
+       *  and reads as a design bar on cream (NflWeekContainer's note), with the
+       *  clipped chip at the right edge carrying the affordance instead.
+       *
+       *  `pb-1 -mb-1` rather than the rail's bare `pb-1`: overflow-x:auto makes
+       *  overflow-y computed `auto` too, which would clip the buttons' focus
+       *  ring, so the padding is real; the negative margin cancels its effect on
+       *  layout so this fix changes no geometry at any width. Desktop has 78px
+       *  of slack and rendered one row before and after regardless. */}
+      <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1 -mb-1">
         <CategoryChip
           category="all"
           active={activeCategory === 'all'}
           onClick={() => setActiveCategory('all')}
+          className="shrink-0 whitespace-nowrap"
         />
         {RD_CATEGORY_ORDER.map((c) => (
           <CategoryChip
@@ -70,6 +101,7 @@ export function SeasonExplorer({
             count={promoCounts[c]}
             active={activeCategory === c}
             onClick={() => setActiveCategory(c)}
+            className="shrink-0 whitespace-nowrap"
           />
         ))}
       </div>
