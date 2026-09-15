@@ -1,32 +1,36 @@
-# ads.txt for getpromonight.com
-#
-# MIRROR of Raptive's hosted file, NOT a hand-maintained list. Source:
-#   https://ads.adthrive.com/sites/6a9989924f70265a058c50b1/ads.txt
-#   fetched 2026-09-15T17:54:38Z, 4538 bytes, v2.74-auto
-#   sha256 88688112e5e185dc291a8cd1ecbce2f9d9772ab30975ba73449314342e573d47
-#
-# Everything below this header is Raptive's file byte for byte, including
-# their section comments and the three ads.txt variables (managerdomain,
-# contact, ownerdomain). Do not hand-edit those lines.
-#
-# THIS FILE GOES STALE. Raptive rotates demand partners and bumps the version
-# without telling us, and every partner missing from this file is a partner
-# whose bids go unauthorized. Re-fetch the source, diff against the block
-# below, and replace it wholesale. Compare the sha256 above to detect drift
-# rather than eyeballing 71 records.
-#
-# We serve this statically instead of 301-ing to the source, deliberately.
-# Google's crawler starts at the apex, getpromonight.com/ads.txt, which is a
-# Vercel project-domain 308 to www that next.config cannot override. A
-# redirect here would put the apex at two hops and risk it not being crawled
-# at all. See known-issues: "ads.txt apex redirect".
-#
-# Our own records go BELOW Raptive's "START OF ... CONTROLLED LINES" marker at
-# the end, not in the middle of their block. Both records we previously
-# declared (google.com pub-8501674430909082 RESELLER, indexexchange.com 182496
-# DIRECT) are already present in their block and must not be duplicated.
-#
-#Raptive ads.txt (CafeMedia/AdThrive) v2.74-auto
+/**
+ * Committed snapshot of Raptive's hosted ads.txt, used ONLY when the live
+ * fetch in `src/app/ads.txt/route.ts` cannot produce a usable body.
+ *
+ * Source: https://ads.adthrive.com/sites/6a9989924f70265a058c50b1/ads.txt
+ * Captured: 2026-09-15T17:54:38Z, 4538 bytes, their version v2.74-auto
+ * sha256: 88688112e5e185dc291a8cd1ecbce2f9d9772ab30975ba73449314342e573d47
+ *
+ * This is the upstream bytes exactly — no trailing newline, no reordering, and
+ * the three ads.txt VARIABLES (managerdomain, contact, ownerdomain) and the
+ * "CONTROLLED LINES" marker are preserved. Those variables are functional
+ * records under the IAB spec, not commentary, and dropping them as header
+ * noise would be a silent loss.
+ *
+ * Do not hand-edit. Re-capture by replacing the whole literal with a fresh
+ * fetch, and update the sha256 above so drift is detectable by comparison
+ * rather than by reading 71 records.
+ *
+ * It lives here rather than in public/ deliberately. A file at
+ * `public/ads.txt` SHADOWS the /ads.txt route handler — measured, not assumed:
+ * with both present the static file wins and the proxy never executes. Keeping
+ * the snapshot in public/ would have made the whole proxy silent dead code.
+ */
+export const ADS_TXT_SOURCE_URL =
+  'https://ads.adthrive.com/sites/6a9989924f70265a058c50b1/ads.txt';
+
+/** Hourly. Crawlers hit this file often; upstream should not see that volume. */
+export const ADS_TXT_REVALIDATE_SECONDS = 3600;
+
+export const ADS_TXT_FALLBACK_SHA256 =
+  '88688112e5e185dc291a8cd1ecbce2f9d9772ab30975ba73449314342e573d47';
+
+export const ADS_TXT_FALLBACK = `#Raptive ads.txt (CafeMedia/AdThrive) v2.74-auto
 managerdomain=cafemedia.com
 contact=info@raptive.com
 google.com, pub-8501674430909082, DIRECT, f08c47fec0942fa0 #video, banner
@@ -107,4 +111,4 @@ cafemedia.com, 6a9989924f70265a058c50b1, DIRECT, ecc1a0488da6f87f
 cafemedia.com, 6a998992d4f2555a054792af, DIRECT, ecc1a0488da6f87f
 ownerdomain=getpromonight.com
 # END OF RAPTIVE LINE ITEMS
-# START OF getpromonight.com CONTROLLED LINES
+# START OF getpromonight.com CONTROLLED LINES`;
