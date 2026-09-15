@@ -52,7 +52,7 @@ export default function PrivacyPage() {
       <ul>
         <li><strong>Firebase (Google)</strong> &mdash; anonymous authentication, Firestore data storage, messaging infrastructure (FCM), and analytics for the mobile app. Google&apos;s privacy policy applies: <a href="https://policies.google.com/privacy">policies.google.com/privacy</a>.</li>
         <li><strong>PostHog</strong> &mdash; product analytics on the website (events, session metadata). PostHog&apos;s privacy policy: <a href="https://posthog.com/privacy">posthog.com/privacy</a>.</li>
-        <li><strong>Google Analytics 4</strong> &mdash; aggregate website traffic analytics. Google&apos;s privacy policy applies; you can install the Google Analytics opt-out browser add-on at <a href="https://tools.google.com/dlpage/gaoptout">tools.google.com/dlpage/gaoptout</a>.</li>
+        <li><strong>Google Analytics 4</strong> &mdash; aggregate website traffic analytics. Google&apos;s privacy policy applies: <a href="https://policies.google.com/privacy">policies.google.com/privacy</a>. You can install the Google Analytics opt-out browser add-on at <a href="https://tools.google.com/dlpage/gaoptout">tools.google.com/dlpage/gaoptout</a>.</li>
         <li><strong>Vercel</strong> &mdash; website hosting and CDN. Standard server logs (IP, user-agent, request paths) are processed by Vercel as part of serving the site.</li>
         <li><strong>Affiliate networks and programs</strong> &mdash; we participate in the Impact affiliate network (Ticketmaster, TicketNetwork, and Fanatics), the eBay Partner Network, and the in-house affiliate programs operated by SpotHero and Expedia. When you click an outbound affiliate link, the destination partner and its network drop their own cookies on the destination site to attribute any subsequent purchase. We are not in control of those cookies.</li>
         <li><strong>Ad networks</strong> &mdash; see Section 5.</li>
@@ -64,7 +64,10 @@ export default function PrivacyPage() {
 
       <h2>5. Advertising</h2>
       <p>
-        Pages on getpromonight.com may display advertisements served by Google AdSense and, in the future, other advertising partners. Ad networks and their downstream partners use cookies, web beacons, and similar technologies to:
+        CMI Marketing, Inc., d/b/a Raptive (&quot;Raptive&quot;) is a service provider of this Site for the purposes of placing advertising on the Site, and Raptive will collect and use certain data for advertising purposes. To learn more about Raptive&apos;s data usage, click here: <a href="https://raptive.com/creator-advertising-privacy-statement/">https://raptive.com/creator-advertising-privacy-statement/</a>
+      </p>
+      <p>
+        Pages on getpromonight.com may display advertisements delivered through Raptive and through Google AdSense. Raptive works with a marketplace of ad networks and exchanges, so the specific advertiser and network serving a given ad will vary. Ad networks and their downstream partners use cookies, web beacons, and similar technologies to:
       </p>
       <ul>
         <li>Serve ads based on your prior visits to this and other websites.</li>
