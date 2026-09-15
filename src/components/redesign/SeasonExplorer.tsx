@@ -87,23 +87,40 @@ export function SeasonExplorer({
        *  ring, so the padding is real; the negative margin cancels its effect on
        *  layout so this fix changes no geometry at any width. Desktop has 78px
        *  of slack and rendered one row before and after regardless. */}
-      <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1 -mb-1">
-        <CategoryChip
-          category="all"
-          active={activeCategory === 'all'}
-          onClick={() => setActiveCategory('all')}
-          className="shrink-0 whitespace-nowrap"
-        />
-        {RD_CATEGORY_ORDER.map((c) => (
+      <div className="relative">
+        <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1 -mb-1">
           <CategoryChip
-            key={c}
-            category={c}
-            count={promoCounts[c]}
-            active={activeCategory === c}
-            onClick={() => setActiveCategory(c)}
+            category="all"
+            active={activeCategory === 'all'}
+            onClick={() => setActiveCategory('all')}
             className="shrink-0 whitespace-nowrap"
           />
-        ))}
+          {RD_CATEGORY_ORDER.map((c) => (
+            <CategoryChip
+              key={c}
+              category={c}
+              count={promoCounts[c]}
+              active={activeCategory === c}
+              onClick={() => setActiveCategory(c)}
+              className="shrink-0 whitespace-nowrap"
+            />
+          ))}
+        </div>
+        {/* Cream fade over the cut, lifted from NflWeekContainer's Rail: on a
+         *  cream surface a flat-cut pill reads as a broken layout rather than a
+         *  scroll edge, which is that component's own documented reason for the
+         *  overlay. The stop is #f7f3ea because that IS --color-rd-cream, the
+         *  page surface behind it.
+         *
+         *  Absolutely positioned, so it takes no layout space: where there is no
+         *  overflow (desktop, 736px of room for 657px of chips) it paints cream
+         *  on cream and is invisible. pointer-events-none so the chips under it
+         *  stay tappable, and aria-hidden because it carries no meaning. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-y-0 right-0 w-12"
+          style={{ background: 'linear-gradient(270deg, #f7f3ea 8%, rgba(247,243,234,0) 100%)' }}
+        />
       </div>
 
       <CalendarGrid
