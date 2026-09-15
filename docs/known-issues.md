@@ -2377,7 +2377,7 @@ CWV capture on the right URL.
 width-only shift. This is recorded because the monitoring gap survives the fix,
 not because anything is currently broken.
 
-## 47. The apex is a Vercel edge redirect `next.config` cannot override, so any third-party ads.txt redirect puts the apex at two hops
+## 47. The apex is a Vercel edge redirect nothing in the repo can override, so a third-party ads.txt REDIRECT puts the apex at two hops (resolved: proxy instead)
 
 **What it is.** `getpromonight.com/ads.txt` cannot be pointed anywhere by the
 application. The apex is configured in Vercel as a project-domain redirect to
@@ -2429,39 +2429,72 @@ redirect broke is the one the network names as owner. No resolution to the
 contradiction was found, and it was not worth resolving: the static file
 satisfies both readings.
 
-**Option A is the real fix and is deferred.** Removing the apex's
-project-domain redirect so the app serves the apex, then re-implementing
-apex-to-`www` as a `next.config` host rule ordered after a `/ads.txt` rule,
-would make both hosts one hop and let the network keep the file current
-without a deploy. Externally every apex URL would still be a single `308`.
+**RESOLVED by proxying, not redirecting.** `/ads.txt` is now a cached route
+handler (`src/app/ads.txt/route.ts`, merged 2026-09-15) that fetches Raptive's
+file server-side and answers `200`. That gives the freshness a redirect was
+wanted for while leaving the apex at the single `308` it has always had, so
+the apex-first crawler reaches the file in one hop. Canonicalization is
+untouched, which is the entire point: no Vercel domain setting and no
+host-based rule were involved.
 
-It is deferred because it moves apex/`www` canonicalization for all 481 live
-URLs out of Vercel's edge and into application config. SITE-AUDIT's "Technical
+Three details in that route are load-bearing and each was measured:
+
+- **`public/ads.txt` SHADOWS the route.** With both present the static file
+  wins and the handler never executes. Keeping the snapshot in `public/` as
+  "the fallback file" would have made the proxy dead code that still looked
+  correct in the build output. The snapshot lives in
+  `src/lib/ads-txt-fallback.ts` for that reason, not for tidiness.
+- **A directory with a dot works.** `app/ads.txt/route.ts` registers as
+  `/ads.txt/route -> app/ads.txt/route.js`. No rewrite from a clean path is
+  needed in Next 15.3.
+- **`export const revalidate` must be a literal.** Importing the shared
+  constant fails the build with "Next.js can't recognize the exported `config`
+  field in route". A test keeps the literal and the constant in step.
+
+**Option A (apex served by the app) is superseded, not merely deferred.** It
+would have removed the apex's project-domain redirect and re-implemented
+apex-to-`www` in `next.config`, moving canonicalization for all 481 live URLs
+out of Vercel's edge and into application config. SITE-AUDIT's "Technical
 caveats" section records that "apex/www canonical mismatch was the root cause
-of the May 2026 Bing deindex" and instructs re-confirming apex/www
-consistency on any redirect, canonical or sitemap change. This is exactly
-that change, on the largest possible surface. The May 1-8 Bing suppression
-recovered fully, but it cost a week of a channel that was then the site's
-traffic leader, and the sequencing
-is unforgiving: the app-side rule must ship and be verified *before* the domain
-setting is flipped, or the apex serves duplicate content at 481 URLs in the
-window between. That is a deliberate, separately-planned change with its own
-verification, not a step inside an ad install.
+of the May 2026 Bing deindex" and instructs re-confirming apex/www consistency
+on any redirect, canonical or sitemap change. The May 1-8 suppression recovered
+fully but cost a week of what was then the site's leading channel, and the
+sequencing was unforgiving: app rule first, domain flip second, or 481 URLs
+serve duplicate content in the gap. The proxy obtains the same outcome with
+none of that exposure, so option A should not be revived to solve this problem.
 
-**The cost of staying on Option B.** `public/ads.txt` is a mirror of a file
-Raptive maintains, and it does not follow their updates. They rotate demand
-partners and bump their version (`v2.74-auto` at the time of writing) without
-notifying us, and every partner missing from our copy is a partner whose bids
-go unauthorized. The file header records the source URL, the fetch timestamp
-and a `sha256` of the fetched bytes so drift is detected by comparison rather
-than by reading 71 records. Nothing currently watches it; that is the same
-silent-state-transition class as entry 46 and SITE-AUDIT section 8, and the
-cheap instrument is a scheduled fetch that compares the hash and opens an alert
-when it moves.
+**What the apex redirect sits above.** It is domain-level configuration,
+resolved before the deployment's own routing runs. That is what the four-path
+probe above establishes, and it means the apex is unreachable from
+`next.config` redirects. The neighbouring claim is easy to state too strongly,
+so state it precisely: `vercel.json` `redirects` and `rewrites` are NOT
+documented as unsupported on Next.js projects. Vercel's configuration reference
+lists both as generally available, and it does flag Next.js-specific exclusions
+elsewhere when they exist (`includeFiles`/`excludeFiles` under `functions`, and
+the `cleanUrls` 404 under `vercel dev`), so the absence of a caveat there is
+meaningful. This was not tested, because it would not have helped either way:
+`vercel.json` routing is still deployment-level and still sits BELOW the domain
+redirect. The correct statement is that the apex is above every routing layer
+the repository controls, `next.config` and `vercel.json` alike — not that
+`vercel.json` redirects do not fire.
 
-**Severity: Medium.** Nothing is broken today and both readings of Google's
-documentation are satisfied by the current static file. It is recorded because
-the constraint is invisible from the repository — `next.config.ts` contains no
-hint that the apex is unreachable from it — and the next person to delegate a
-root-level file (`ads.txt`, `app-ads.txt`, `sellers.json`, a verification file)
-to a third-party URL will rediscover it the same way, by shipping it.
+**The residual cost, now much smaller.** The committed snapshot still goes
+stale, but it is only reached when the live fetch fails, so staleness is a
+degraded mode rather than the steady state. The fallback triggers on a non-200,
+on a network throw, and on a `200` whose body is empty, truncated, or an HTML
+error page — status alone is not evidence of a file, and any of those published
+as our ads.txt would deauthorize every partner we have. Responses carry
+`x-ads-txt-source`, `x-ads-txt-reason` and `x-ads-txt-resolved-at` so the
+serving path is visible without guessing, and a fallback logs a warning.
+Nothing yet alarms on a *sustained* fallback, which is the same
+silent-state-transition class as entry 46 and SITE-AUDIT section 8; the cheap
+instrument is a scheduled check of `x-ads-txt-source` on the live URL.
+
+**Severity: Low**, reduced from Medium once the proxy shipped. Nothing is
+broken, both readings of Google's redirect documentation are satisfied by a
+one-hop apex, and the partner list is live again. It stays recorded because the
+constraint is invisible from the repository — `next.config.ts` contains no hint
+that the apex is beyond its reach — and the next person to point a root-level
+file (`ads.txt`, `app-ads.txt`, `sellers.json`, a domain verification file) at a
+third-party URL will rediscover it the same way this was, by shipping a
+redirect and measuring the apex afterwards.
