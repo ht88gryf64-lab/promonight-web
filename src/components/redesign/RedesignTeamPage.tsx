@@ -255,7 +255,7 @@ export function RedesignTeamPage({
       {/* Responsive weave — one DOM, two layouts.
        *
        *  DESKTOP (lg+): the exact two-column layout is unchanged. The
-       *  <aside>/<main> wrappers are restored at lg (`lg:block`), so their
+       *  <aside>/<div> weave shells are restored at lg (`lg:block`), so their
        *  children flow in source order inside the right sidebar / left main
        *  column and every `order-[n]` utility below goes INERT (order only
        *  affects flex/grid items). Source order == today's desktop order, so
@@ -288,7 +288,10 @@ export function RedesignTeamPage({
        *  ternary so no branch can drop it. A new section needs BOTH an
        *  `order-[n]` and the marker. */}
       <div className="mx-auto max-w-6xl px-6 pb-8">
-        <div className="rd-weave grid grid-cols-1 gap-x-8 lg:grid-cols-[1fr_336px] lg:items-start">
+        <div
+          className="rd-weave grid grid-cols-1 gap-x-8 lg:grid-cols-[1fr_336px] lg:items-start"
+          data-ad-region="content"
+        >
           <aside className="rd-weave-shell contents lg:block lg:space-y-6 lg:order-2 [&>*]:min-w-0">
             {/* mt-10 exists to clear the calendar above it on mobile. On the
                 zero-promo schedule pages the calendar is gone and ScheduleBlock
@@ -317,7 +320,7 @@ export function RedesignTeamPage({
             <AdSlot config={AD_SLOTS.SIDEBAR_STICKY} pageType="team_page" className="rd-weave-item order-[62]" />
           </aside>
 
-          <main className="rd-weave-shell contents lg:block lg:min-w-0 lg:order-1 [&>*]:min-w-0">
+          <div className="rd-weave-shell contents lg:block lg:min-w-0 lg:order-1 [&>*]:min-w-0">
             <div className="rd-weave-item order-[30] pb-4">
               <AdSlot config={AD_SLOTS.TEAM_PAGE_AFTER_HERO} pageType="team_page" />
             </div>
@@ -507,7 +510,7 @@ export function RedesignTeamPage({
             <div className="rd-weave-item order-[80] py-6">
               <AdSlot config={AD_SLOTS.IN_CONTENT_1} pageType="team_page" />
             </div>
-          </main>
+          </div>
         </div>
       </div>
 

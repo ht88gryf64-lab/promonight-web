@@ -111,7 +111,7 @@ export default async function NhlHubPage() {
   const jsonLdGroups: AggregatorGroup[] = [{ label: 'This week across the NHL', promos: slate }];
 
   return (
-    <div className={`${archivoHouse.variable} rd-root min-h-screen`}>
+    <div className={`${archivoHouse.variable} rd-root min-h-screen`} data-ad-region="content">
       <AggregatorJsonLd
         url={HUB_URL}
         title={TITLE}
@@ -134,7 +134,7 @@ export default async function NhlHubPage() {
         <AdSlot config={AD_SLOTS.HEADER_LEADERBOARD} pageType="nhl_hub" />
       </div>
 
-      <main className="mx-auto max-w-6xl space-y-16 px-6 pb-20 pt-12">
+      <div className="mx-auto max-w-6xl space-y-16 px-6 pb-20 pt-12">
         <HubTodayPromos
           slate={today}
           label="NHL"
@@ -167,6 +167,7 @@ export default async function NhlHubPage() {
           surface="web_nhl_hub_promo_type"
         />
         <HubVenueLinks
+          adItem="hub-section"
           venues={venueLinks}
           heading="NHL arena guides"
           intro="Bag policies, parking, and gate times for the arenas we have verified. The logistics half of the promo trip."
@@ -175,8 +176,8 @@ export default async function NhlHubPage() {
           placement="league_hub_venue_links"
         />
         <AdSlot config={AD_SLOTS.IN_CONTENT_2} pageType="nhl_hub" />
-        <HubFaq faqs={FAQS} sectionId="nhl-hub-faq" />
-      </main>
+        <HubFaq faqs={FAQS} sectionId="nhl-hub-faq" adItem="hub-section" />
+      </div>
     </div>
   );
 }

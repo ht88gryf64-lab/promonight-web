@@ -39,7 +39,7 @@ export function TodayPromoCard({
   return (
     <div className={dimmed ? 'opacity-70' : undefined}>
       {/* Full team-page row visual, deep-linked to the team promo anchor. */}
-      <RedesignPromoRow promo={p} share={share} href={anchorHref} />
+      <RedesignPromoRow promo={p} share={share} href={anchorHref} adItem="promo" />
 
       {/* Compact inline CTA row appended below the row. Independent affiliate
           links (new tab); container-queried so descriptors reveal only when wide

@@ -104,7 +104,7 @@ export function HubTeamGrid({
       : [{ key: 'all', label: null, groups }];
 
   return (
-    <section aria-labelledby={sectionId}>
+    <section aria-labelledby={sectionId} data-ad-item="hub-section">
       <h2 id={sectionId} className="rd-display text-2xl text-rd-ink md:text-3xl">
         Browse by team
       </h2>

@@ -59,7 +59,7 @@ export default async function CfbHub() {
   const weeklyRight = 'UPDATES MONDAY AM';
 
   return (
-    <main className={`min-h-screen text-white ${instrumentSerif.variable}`} style={{ background: '#08070d', fontFamily: SANS }}>
+    <div className={`min-h-screen text-white ${instrumentSerif.variable}`} style={{ background: '#08070d', fontFamily: SANS }} data-ad-region="content">
       {/* ── HERO — rivalry/road-trip framing, league-neutral gold/red wash. Text is
           FULL-opacity white + shadow over the wash (the washout lesson — no
           reduced-opacity white over the gradient). ── */}
@@ -90,7 +90,7 @@ export default async function CfbHub() {
 
         {/* ── RIVALRY GAMES rail, labelled by its date window (§14a — rolls Monday AM) ── */}
         {data.weekly.games.length > 0 && (
-          <section className="mt-4">
+          <section data-ad-item="cfb-section" className="mt-4">
             <SectionLabel right={weeklyRight}>{weeklyLabel}</SectionLabel>
             <div className="mt-4 flex gap-3 overflow-x-auto pb-3">
               {data.weekly.games.map((g) => <WeekCard key={g.id} game={g} />)}
@@ -99,7 +99,7 @@ export default async function CfbHub() {
         )}
 
         {/* ── NATIONAL rivalries (§9 curated layer; §14b diagonal blocks) ── */}
-        <section className="mt-14">
+        <section data-ad-item="cfb-section" className="mt-14">
           <SectionLabel as="h2" sub="The games people plan their whole fall around.">THE RIVALRIES THAT DEFINE THE SEASON</SectionLabel>
           <div className="mt-5 grid gap-4 lg:grid-cols-2">
             {data.national.map((b) => <NationalBlock key={b.key} block={b} />)}
@@ -121,7 +121,7 @@ export default async function CfbHub() {
             from (cfbTraditions 2 docs, 0 school references). Returns with data. */}
 
         {/* BROWSE all schools (§14 crawlability: all links in DOM, CSS filter only) */}
-        <section id="browse" className="mt-14 scroll-mt-6">
+        <section data-ad-item="cfb-section" id="browse" className="mt-14 scroll-mt-6">
           <SectionLabel sub="Pick your team for its full schedule, rivalries, and gameday plan.">BROWSE ALL {data.totalTeams} TEAMS</SectionLabel>
           <div className="mt-5">
             <CfbHubBrowse browse={data.browse} />
@@ -130,10 +130,11 @@ export default async function CfbHub() {
 
         {/* ── STADIUM GUIDES (venue inbound links; only verified buildings) ── */}
         {venueLinks.length > 0 && (
-          <section className="mt-14">
+          <section data-ad-item="cfb-section" className="mt-14">
             <SectionLabel sub="Bag policies, parking, and gate times for the stadiums we have verified.">STADIUM GUIDES</SectionLabel>
             <div className="mt-5">
               <HubVenueLinks
+                adItem="cfb-section"
                 venues={venueLinks}
                 surface="web_cfb_hub_venues"
                 placement="league_hub_venue_links"
@@ -143,6 +144,6 @@ export default async function CfbHub() {
           </section>
         )}
       </div>
-    </main>
+    </div>
   );
 }

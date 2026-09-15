@@ -499,9 +499,10 @@ body::before {
 }
 
 /* ── Team-page weave order floor ──────────────────────────────────────────────
- * Below lg the team page's <aside> and <main> are display:contents, so their
- * children are hoisted into one single-column grid and 17 `order-[n]` utilities
- * drive the mobile reading sequence (RedesignTeamPage.tsx, "Responsive weave").
+ * Below lg the team page's <aside> and its sibling weave-shell <div> are
+ * display:contents, so their children are hoisted into one single-column grid
+ * and 17 `order-[n]` utilities drive the mobile reading sequence
+ * (RedesignTeamPage.tsx, "Responsive weave").
  *
  * The lowest authored value is 10 — 11 on the schedule branch — so a grid item
  * carrying no order at all inherits `order: 0` and sorts AHEAD of every section

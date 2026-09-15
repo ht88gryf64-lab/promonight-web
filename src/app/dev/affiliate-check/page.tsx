@@ -32,7 +32,7 @@ export default async function AffiliateCheckPage() {
   type Surface = (typeof surfaces)[number];
 
   return (
-    <main style={{ padding: 24, fontFamily: 'monospace', color: '#0a0a0a', background: '#fff' }}>
+    <div style={{ padding: 24, fontFamily: 'monospace', color: '#0a0a0a', background: '#fff' }}>
       <h1 style={{ fontSize: 22, marginBottom: 12 }}>Affiliate URL spot-check</h1>
 
       <section style={{ marginBottom: 24, padding: 16, border: '1px solid #ddd', borderRadius: 6 }}>
@@ -148,7 +148,7 @@ export default async function AffiliateCheckPage() {
         builders remain in <code>src/lib/affiliates.ts</code> marked <code>@deprecated</code> but
         are no longer rendered by any user-facing surface.
       </p>
-    </main>
+    </div>
   );
 }
 

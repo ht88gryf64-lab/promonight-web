@@ -29,7 +29,7 @@ export default async function ContributePage({ searchParams }: { searchParams: P
 
   return (
     <div style={vars}>
-      <main className={`min-h-screen bg-[#0b0b0d] text-white ${archivo.className}`}>
+      <div className={`min-h-screen bg-[#0b0b0d] text-white ${archivo.className}`}>
         <div className="mx-auto max-w-2xl px-4 py-8">
           <Link href={`/cfb/${s.id}`} className="text-sm text-white/50 hover:text-white">← {s.name}</Link>
           <div className="mt-4 h-1 w-16 rounded" style={{ background: 'var(--cfb-accent)' }} />
@@ -39,7 +39,7 @@ export default async function ContributePage({ searchParams }: { searchParams: P
             <ContributeForm schoolId={s.id} schoolName={s.shortName} />
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

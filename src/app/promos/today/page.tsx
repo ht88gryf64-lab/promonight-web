@@ -99,7 +99,7 @@ export default async function PromosTodayPage() {
   ];
 
   return (
-    <div className={`${archivoHouse.variable} rd-root min-h-screen`}>
+    <div className={`${archivoHouse.variable} rd-root min-h-screen`} data-ad-region="content">
       <AggregatorJsonLd
         url={PAGE_URL}
         title={TITLE}
@@ -114,7 +114,7 @@ export default async function PromosTodayPage() {
         <AdSlot config={AD_SLOTS.HEADER_LEADERBOARD} pageType="promo_collection" />
       </div>
 
-      <main className="mx-auto max-w-5xl px-4 pb-16 pt-8 sm:px-6">
+      <div className="mx-auto max-w-5xl px-4 pb-16 pt-8 sm:px-6">
         {filterLeagues.length === 0 ? (
           // Both days empty. The hero already answers honestly; keep the page
           // useful with a pointer to the soonest date + the 7-day view.
@@ -134,7 +134,7 @@ export default async function PromosTodayPage() {
             {filterLeagues.map((L) => {
               const g = todayByLeague.get(L.league);
               return g ? (
-                <div key={`t-${L.league}`} data-filter-league={L.league} data-filter-empty="false">
+                <div key={`t-${L.league}`} data-filter-league={L.league} data-filter-empty="false" data-ad-item="aggregator-row">
                   <TodayLeagueSection group={g} venueByTeam={venueByTeam} surface="web_today" />
                 </div>
               ) : (
@@ -162,7 +162,7 @@ export default async function PromosTodayPage() {
                 {filterLeagues.map((L) => {
                   const g = tomorrowByLeague.get(L.league);
                   return g ? (
-                    <div key={`m-${L.league}`} data-filter-league={L.league} data-filter-empty="false">
+                    <div key={`m-${L.league}`} data-filter-league={L.league} data-filter-empty="false" data-ad-item="aggregator-row">
                       <TodayLeagueSection
                         group={g}
                         venueByTeam={venueByTeam}
@@ -222,7 +222,7 @@ export default async function PromosTodayPage() {
             is empty exactly when neither day has a promo, which is exactly when
             no card, and therefore no affiliate link, renders. */}
         {filterLeagues.length > 0 && <AffiliateDisclosure className="mt-10 text-center" />}
-      </main>
+      </div>
     </div>
   );
 }

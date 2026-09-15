@@ -179,7 +179,7 @@ export function CaptureProbeClient({ autofocusId }: { autofocusId?: string }) {
   }, []);
 
   return (
-    <main style={{ minHeight: '200vh', padding: 16, fontFamily: 'system-ui' }}>
+    <div style={{ minHeight: '200vh', padding: 16, fontFamily: 'system-ui' }}>
       <h1 style={{ fontSize: 18, fontWeight: 700 }}>capture probe</h1>
       <p style={{ fontSize: 16 }}>
         Tap a field to force a focus zoom, then tap REPORT. Measurements go to :4555.
@@ -246,6 +246,6 @@ export function CaptureProbeClient({ autofocusId }: { autofocusId?: string }) {
         pool={EMPTY_CHIP_POOL}
         expandedOpponentIds={[]}
       />
-    </main>
+    </div>
   );
 }

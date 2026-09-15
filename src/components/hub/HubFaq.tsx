@@ -12,13 +12,18 @@ export function HubFaq({
   // Defaults to the original id so existing non-hub callers (VenueHubView) render
   // unchanged; the league hubs pass their own per-league id.
   sectionId = 'mlb-hub-faq',
+  adItem,
 }: {
   faqs: HubFaqItem[];
   sectionId?: string;
+  /** Ad-placement item type, supplied by the host page. Omitted on hosts
+   * outside the selector-hook scope so no page gets an item without a
+   * region. */
+  adItem?: string;
 }) {
   if (faqs.length === 0) return null;
   return (
-    <section aria-labelledby={sectionId} className="border-t border-rd-line pt-10">
+    <section aria-labelledby={sectionId} className="border-t border-rd-line pt-10" data-ad-item={adItem}>
       <p
         id={sectionId}
         className="font-rd text-[11px] font-semibold uppercase tracking-[0.14em] text-rd-ink-faint"

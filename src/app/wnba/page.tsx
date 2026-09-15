@@ -90,7 +90,7 @@ export default async function WnbaHubPage() {
   const jsonLdGroups: AggregatorGroup[] = [{ label: 'This week across WNBA', promos: slate }];
 
   return (
-    <div className={`${archivoHouse.variable} rd-root min-h-screen`}>
+    <div className={`${archivoHouse.variable} rd-root min-h-screen`} data-ad-region="content">
       <AggregatorJsonLd
         url={HUB_URL}
         title={TITLE}
@@ -113,7 +113,7 @@ export default async function WnbaHubPage() {
         <AdSlot config={AD_SLOTS.HEADER_LEADERBOARD} pageType="wnba_hub" />
       </div>
 
-      <main className="mx-auto max-w-6xl space-y-16 px-6 pb-20 pt-12">
+      <div className="mx-auto max-w-6xl space-y-16 px-6 pb-20 pt-12">
         <HubTodayPromos
           slate={today}
           label="WNBA"
@@ -145,6 +145,7 @@ export default async function WnbaHubPage() {
           allLabel="All teams"
         />
         <HubVenueLinks
+          adItem="hub-section"
           venues={venueLinks}
           heading="WNBA arena guides"
           intro="Bag policies, parking, and gate times for the arenas we have verified. The logistics half of the promo trip."
@@ -153,8 +154,8 @@ export default async function WnbaHubPage() {
           placement="league_hub_venue_links"
         />
         <AdSlot config={AD_SLOTS.IN_CONTENT_2} pageType="wnba_hub" />
-        <HubFaq faqs={FAQS} sectionId="wnba-hub-faq" />
-      </main>
+        <HubFaq faqs={FAQS} sectionId="wnba-hub-faq" adItem="hub-section" />
+      </div>
     </div>
   );
 }

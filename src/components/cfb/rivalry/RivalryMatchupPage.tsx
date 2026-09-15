@@ -194,7 +194,7 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
     .map((s) => ({ kind: (s.partner ? 'aff' : 'internal') as 'aff' | 'internal', key: s.key as keyof typeof STEP_COPY, href: s.href, partner: s.partner }));
 
   return (
-    <main className={`min-h-screen text-white ${barlowCondensed.variable}`} style={{ background: PAGE_BG }}>
+    <div className={`min-h-screen text-white ${barlowCondensed.variable}`} style={{ background: PAGE_BG }} data-ad-region="content">
       <div className="mx-auto max-w-2xl px-4 pb-16 pt-4">
         {/* 1. breadcrumb (condensed face per the visual pass; colors unchanged) */}
         <nav aria-label="Breadcrumb" className="text-[12px] font-semibold uppercase tracking-[0.18em] text-white/45" style={{ fontFamily: CONDENSED }}>
@@ -228,7 +228,7 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
         <p className="mt-3 max-w-prose text-sm leading-relaxed text-white/70">{lede}</p>
 
         {/* 4. fact card, the direct answer */}
-        <section className="mt-4 rounded-xl border border-white/12 bg-white/[0.04] p-4">
+        <section data-ad-item="rivalry-section" className="mt-4 rounded-xl border border-white/12 bg-white/[0.04] p-4">
           {date ? (
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-extrabold leading-none">{date.monthDay}</span>
@@ -257,7 +257,7 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
         </div>
 
         {/* 6. plan the trip */}
-        <section className="mt-8">
+        <section data-ad-item="rivalry-section" className="mt-8">
           <h2 className="text-[13px] font-semibold uppercase tracking-[0.14em] text-white/45" style={{ fontFamily: CONDENSED }}>Plan the trip</h2>
           <ol className="mt-3">
             {steps.map((s, i) => {
@@ -282,7 +282,7 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
         {/* 7. the trophy. The heading renders only when the rivalry doc carries a
             trophy; 7 of 32 do not, and a heading over nothing is a claim. The
             series facts and sources below it render either way. */}
-        <section className="mt-8">
+        <section data-ad-item="rivalry-section" className="mt-8">
           {rivalry.trophy && (
             <h2 className="text-[13px] font-semibold uppercase tracking-[0.14em] text-white/45" style={{ fontFamily: CONDENSED }}>The trophy</h2>
           )}
@@ -322,7 +322,7 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
 
         {/* 8. sibling rail. Omitted entirely below 2. */}
         {siblings.length >= 2 && (
-          <section className="mt-8">
+          <section data-ad-item="rivalry-section" className="mt-8">
             <h2 className="text-[13px] font-semibold uppercase tracking-[0.14em] text-white/45" style={{ fontFamily: CONDENSED }}>
               {data.siblingsAreSameWeek ? 'More rivalry week' : 'More rivalries'}
             </h2>
@@ -357,7 +357,7 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
             ships here too. */}
         <AffiliateDisclosure tone="dark" className="mt-10 text-center" />
       </div>
-    </main>
+    </div>
   );
 }
 
