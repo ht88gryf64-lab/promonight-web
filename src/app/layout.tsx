@@ -117,12 +117,33 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en" className={`${bebasNeue.variable} ${dmSans.variable} ${dmMono.variable} ${outfit.variable}`}>
       <head>
-        {/* No third-party engagement script here. The Mediavine Grow
-            initializer (faves.grow.me/main.js) that used to sit at the top of
-            this head was removed: it was a leftover from an abandoned Mediavine
-            Journey application, and Mediavine is a competitor to the ad network
-            being onboarded. Nothing in the app ever read window.growMe, so the
-            tag had no callers to migrate. */}
+        {/* Raptive (AdThrive) ad manager, in the slot the Mediavine Grow
+            initializer held until e0f136c removed it — Grow was a leftover from
+            an abandoned Mediavine application, and Mediavine competes with
+            Raptive. This is a raw inline <script>, not next/script: Raptive
+            requires it to run once per document load and to NOT re-run on
+            client-side route changes (their code detects route changes itself),
+            and it must keep data-no-optimize and data-cfasync so Cloudflare and
+            optimizers leave it alone. Body is Raptive's, verbatim — do not
+            reformat it. */}
+        <script
+          data-no-optimize="1"
+          data-cfasync="false"
+          dangerouslySetInnerHTML={{
+            __html: `(function(w, d) {
+    w.adthrive = w.adthrive || {};
+    w.adthrive.cmd = w.adthrive.cmd || [];
+    w.adthrive.plugin = 'adthrive-ads-manual';
+    w.adthrive.host = 'ads.adthrive.com';
+    var s = d.createElement('script');
+    s.async = true;
+    s.referrerpolicy='no-referrer-when-downgrade';
+    s.src = 'https://' + w.adthrive.host + '/sites/6a9989924f70265a058c50b1/ads.min.js?referrer=' + w.encodeURIComponent(w.location.href) + '&cb=' + (Math.floor(Math.random() * 100) + 1);
+    var n = d.getElementsByTagName('script')[0];
+    n.parentNode.insertBefore(s, n);
+})(window, document);`,
+          }}
+        />
         {/* Impact site verification. Spread bypasses React's typed prop
             check on <meta> so the attribute renders as `value=` exactly
             as Impact's verifier requires (it does not accept `content=`). */}
