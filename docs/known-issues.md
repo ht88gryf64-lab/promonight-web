@@ -2287,9 +2287,38 @@ would break the byte-identical-desktop property the gate and rollback design
 depend on. It would also need the same-day byte-identity baseline that entry 12
 and entry 14 require, with no harness to run it — see entry 44.
 
-Unverified and worth checking before that work: `display:contents` on `<main>`
-and `<aside>` has a known history of removing landmarks from the accessibility
-tree in older engines. Not measured.
+`display:contents` and the accessibility tree, measured 2026-09-14. This
+paragraph previously said the landmark question was unverified and worth
+checking before that work. Both halves of that have since stopped being true.
+
+It was measured, in Chrome 153.0.8010.36 via CDP
+`Accessibility.getFullAXTree`, matching AX nodes to DOM nodes by
+`backendDOMNodeId` rather than inferring from role. A `display:contents`
+element **is** exposed: both weave shells came back unignored with no
+`ignoredReasons`, the shell then tagged `<main>` as `role=main` and the
+`<aside>` as `role=complementary`, at 386px and at 1440px alike. The landmark
+count did not change across viewports, which was the outcome most worth ruling
+out — a count that shifts on resize would have been worse than a stable
+duplicate. The two landmarks were nested rather than sibling. Confirmed on
+fresh loads at each viewport and again in headful Chrome with
+`--force-renderer-accessibility`.
+
+WebKit and Gecko are **not** verified. Firefox is not installed on the machine
+that took the measurement, and Safari could not be reached: Remote Automation
+was disabled and WebDriver exposes no accessibility-tree command, so reading
+WebKit's tree would have meant building a Web Inspector client. The residual
+risk is bounded and points the right way — WebKit was the last engine to fix
+`display:contents` accessibility, and if it diverges it does so by dropping the
+element, which moves Safari toward *one* landmark. That is the direction the
+landmark work wanted anyway, not a new failure mode.
+
+This no longer bears on the landmark count on this template. `a6464d0` retagged
+the inner shell from `<main>` to `<div>` (`RedesignTeamPage.tsx:323`), so the
+page serves one `<main>`, and the surviving `display:contents` shell is the
+`<aside>` at `:295`. The finding is kept here because it is about the property,
+not about that element: any future `display:contents` wrapper carrying a
+landmark role is exposed, and the source-order inversion above would replace
+both shells.
 
 **Severity: Medium.** Real consequence on a normal path for keyboard and screen
 reader users, with a blast radius bounded to one template. Nothing is lost or
