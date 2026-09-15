@@ -90,7 +90,7 @@ export default async function MlbHubPage() {
   const jsonLdGroups: AggregatorGroup[] = [{ label: 'This week across MLB', promos: slate }];
 
   return (
-    <div className={`${archivoHouse.variable} rd-root min-h-screen`}>
+    <div className={`${archivoHouse.variable} rd-root min-h-screen`} data-ad-region="content">
       <AggregatorJsonLd
         url={HUB_URL}
         title={TITLE}
@@ -145,6 +145,7 @@ export default async function MlbHubPage() {
           allLabel="All divisions"
         />
         <HubVenueLinks
+          adItem="hub-section"
           venues={venueLinks}
           heading="MLB ballpark guides"
           intro="Bag policies, parking, and gate times for the ballparks we have verified. The logistics half of the promo trip."
@@ -153,7 +154,7 @@ export default async function MlbHubPage() {
           placement="league_hub_venue_links"
         />
         <AdSlot config={AD_SLOTS.IN_CONTENT_2} pageType="mlb_hub" />
-        <HubFaq faqs={FAQS} sectionId="mlb-hub-faq" />
+        <HubFaq faqs={FAQS} sectionId="mlb-hub-faq" adItem="hub-section" />
       </div>
     </div>
   );

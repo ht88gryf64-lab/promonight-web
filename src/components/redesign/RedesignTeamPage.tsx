@@ -288,7 +288,10 @@ export function RedesignTeamPage({
        *  ternary so no branch can drop it. A new section needs BOTH an
        *  `order-[n]` and the marker. */}
       <div className="mx-auto max-w-6xl px-6 pb-8">
-        <div className="rd-weave grid grid-cols-1 gap-x-8 lg:grid-cols-[1fr_336px] lg:items-start">
+        <div
+          className="rd-weave grid grid-cols-1 gap-x-8 lg:grid-cols-[1fr_336px] lg:items-start"
+          data-ad-region="content"
+        >
           <aside className="rd-weave-shell contents lg:block lg:space-y-6 lg:order-2 [&>*]:min-w-0">
             {/* mt-10 exists to clear the calendar above it on mobile. On the
                 zero-promo schedule pages the calendar is gone and ScheduleBlock

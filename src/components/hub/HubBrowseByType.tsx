@@ -34,7 +34,7 @@ export function HubBrowseByType({
     tile.collectionName === 'hot_this_week' ? slate.length : countType(tile.accentType);
 
   return (
-    <section aria-labelledby={sectionId}>
+    <section aria-labelledby={sectionId} data-ad-item="hub-section">
       <h2 id={sectionId} className="rd-display text-2xl text-rd-ink md:text-3xl">
         Browse by promo type
       </h2>

@@ -99,7 +99,7 @@ export default async function PromosTodayPage() {
   ];
 
   return (
-    <div className={`${archivoHouse.variable} rd-root min-h-screen`}>
+    <div className={`${archivoHouse.variable} rd-root min-h-screen`} data-ad-region="content">
       <AggregatorJsonLd
         url={PAGE_URL}
         title={TITLE}
@@ -134,7 +134,7 @@ export default async function PromosTodayPage() {
             {filterLeagues.map((L) => {
               const g = todayByLeague.get(L.league);
               return g ? (
-                <div key={`t-${L.league}`} data-filter-league={L.league} data-filter-empty="false">
+                <div key={`t-${L.league}`} data-filter-league={L.league} data-filter-empty="false" data-ad-item="aggregator-row">
                   <TodayLeagueSection group={g} venueByTeam={venueByTeam} surface="web_today" />
                 </div>
               ) : (
@@ -162,7 +162,7 @@ export default async function PromosTodayPage() {
                 {filterLeagues.map((L) => {
                   const g = tomorrowByLeague.get(L.league);
                   return g ? (
-                    <div key={`m-${L.league}`} data-filter-league={L.league} data-filter-empty="false">
+                    <div key={`m-${L.league}`} data-filter-league={L.league} data-filter-empty="false" data-ad-item="aggregator-row">
                       <TodayLeagueSection
                         group={g}
                         venueByTeam={venueByTeam}

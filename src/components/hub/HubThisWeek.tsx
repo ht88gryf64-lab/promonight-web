@@ -73,7 +73,7 @@ export function HubThisWeek({
   const groups = Array.from(byDate.entries()).sort(([a], [b]) => a.localeCompare(b));
 
   return (
-    <section aria-labelledby={sectionId}>
+    <section aria-labelledby={sectionId} data-ad-item="hub-section">
       <div className="flex items-end justify-between gap-4">
         <h2 id={sectionId} className="rd-display text-2xl text-rd-ink md:text-3xl">
           {heading}

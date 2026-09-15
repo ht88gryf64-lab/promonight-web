@@ -31,6 +31,7 @@ export function HubVenueLinks({
   heading,
   intro,
   dark = false,
+  adItem,
 }: {
   venues: HubVenueLink[];
   surface: AnalyticsSurface;
@@ -39,6 +40,10 @@ export function HubVenueLinks({
   heading?: string;
   intro?: string;
   dark?: boolean;
+  /** Ad-placement item type, supplied by the host page. Omitted on hosts
+   * outside the selector-hook scope so no page gets an item without a
+   * region. */
+  adItem?: string;
 }) {
   if (venues.length === 0) return null;
 
@@ -47,7 +52,7 @@ export function HubVenueLinks({
       {venues.map((v) => {
         const href = `/venues/${v.slug}`;
         return (
-          <li key={v.slug}>
+          <li key={v.slug} data-ad-item="venue-card">
             <Link
               href={href}
               aria-label={`${v.name} bag policy, parking and gameday guide`}
@@ -93,7 +98,7 @@ export function HubVenueLinks({
   }
 
   return (
-    <section id={sectionId} className="scroll-mt-6">
+    <section id={sectionId} className="scroll-mt-6" data-ad-item={adItem}>
       <h2
         className={
           dark

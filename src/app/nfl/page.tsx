@@ -174,7 +174,7 @@ export default async function NflHubPage() {
   const offseason = slate.context.mode === 'offseason';
 
   return (
-    <div className={`${archivoHouse.variable} rd-root min-h-screen`}>
+    <div className={`${archivoHouse.variable} rd-root min-h-screen`} data-ad-region="content">
       <AggregatorJsonLd
         url={HUB_URL}
         title={TITLE}
@@ -221,6 +221,7 @@ export default async function NflHubPage() {
           </section>
         ) : (
           <NflWeekContainer
+            adItem="hub-section"
             slate={slate}
             teamsById={teamsById}
             venueByTeam={venueByTeam}
@@ -249,6 +250,7 @@ export default async function NflHubPage() {
           surface="web_nfl_hub_promo_type"
         />
         <HubVenueLinks
+          adItem="hub-section"
           venues={venueLinks}
           heading="NFL stadium guides"
           intro="Bag policies, parking, and gate times for the stadiums we have verified. The logistics half of the gameday trip."
@@ -257,7 +259,7 @@ export default async function NflHubPage() {
           placement="league_hub_venue_links"
         />
         <AdSlot config={AD_SLOTS.IN_CONTENT_2} pageType="nfl_hub" />
-        <HubFaq faqs={FAQS} sectionId="nfl-hub-faq" />
+        <HubFaq faqs={FAQS} sectionId="nfl-hub-faq" adItem="hub-section" />
       </div>
     </div>
   );

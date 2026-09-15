@@ -80,7 +80,7 @@ export function CfbSchoolPage({ data, venueHubLink, venueHub }: { data: CfbSchoo
     .filter(([n]) => n > 0);
 
   return (
-    <div className={`min-h-screen text-white ${instrumentSerif.variable}`} style={{ background: '#08070d', fontFamily: SANS }}>
+    <div className={`min-h-screen text-white ${instrumentSerif.variable}`} style={{ background: '#08070d', fontFamily: SANS }} data-ad-region="content">
       <CfbThemePersist schoolId={school.id} />
 
       {/* ── IMMERSIVE HERO — team-color wash bleeds from above the fold into the
@@ -243,7 +243,7 @@ export function CfbSchoolPage({ data, venueHubLink, venueHub }: { data: CfbSchoo
             (TicketmasterCTA = TM + TicketNetwork stacked, SpotHero, Expedia,
             Fanatics). Rendered UNCHANGED; surface="web_cfb", CFB placements. Fanatics
             self-gates to null (no CFB mapping). Hotels/parking name THIS venue. ── */}
-        <section className="mt-11">
+        <section data-ad-item="cfb-section" className="mt-11">
           <Eyebrow right={nextHome ? `vs ${nextHome.opponentName} · ${fmtMonthDay(nextHome.date)}` : undefined}>Plan your gameday</Eyebrow>
           <div className="grid gap-2.5 lg:grid-cols-2 lg:items-start">
             <div className="flex flex-col gap-2.5">
@@ -296,7 +296,7 @@ export function CfbSchoolPage({ data, venueHubLink, venueHub }: { data: CfbSchoo
           const venueName = displayVenueName(venueHub.name);
           if (lines.length >= CONDENSED_MIN_FIELDS) {
             return (
-              <section className="mt-11">
+              <section data-ad-item="cfb-section" className="mt-11">
                 <Eyebrow>Gameday at {venueName}</Eyebrow>
                 <CondensedLogisticsBlock lines={lines} guideHref={guideHref} venueName={venueName} />
               </section>
@@ -316,7 +316,7 @@ export function CfbSchoolPage({ data, venueHubLink, venueHub }: { data: CfbSchoo
             modal (CfbSchedule); per-game tickets/hotels/parking live in that modal,
             never stacked inline. Each row also carries a server-rendered second
             line (venue, city, home/away/neutral), so the detail exists in the HTML. ── */}
-        <section className="mt-11">
+        <section data-ad-item="cfb-section" className="mt-11">
           <Eyebrow>2026 Schedule</Eyebrow>
           <CfbSchedule games={games} school={school} venue={venue} />
           <p className="mt-2.5 text-[11px] text-white/55" style={{ fontFamily: MONO }}>Tap an upcoming game for its gameday links. Kickoff times are shown in the stadium's local time once announced and confirmed on a second source; until then, Kickoff TBA. Played games show no score.</p>
@@ -327,7 +327,7 @@ export function CfbSchoolPage({ data, venueHubLink, venueHub }: { data: CfbSchoo
             Phase 4 TODO: when editorial.traditions gets a defined shape, render the
             mockup's per-tradition card grid here and re-add it to the gate. */}
         {editorial.gamedayCulture && (
-          <section className="mt-11">
+          <section data-ad-item="cfb-section" className="mt-11">
             <Eyebrow>Gameday &amp; Traditions</Eyebrow>
             <div className="rounded-2xl p-6" style={{ background: '#0c0b12', border: '1px solid rgba(255,255,255,0.06)', borderLeft: '3px solid var(--cfb-accent)' }}>
               <p className="text-[13.5px] leading-relaxed text-white/70" style={{ fontFamily: SANS }}>{editorial.gamedayCulture}</p>
@@ -340,7 +340,7 @@ export function CfbSchoolPage({ data, venueHubLink, venueHub }: { data: CfbSchoo
             Prose is DATA-DERIVED (cfbRivalries + schedule), never invented. Cards crown
             none; the trophy name links to its own Wikipedia article when available. ── */}
         {rivalryGames.length > 0 && (
-          <section className="mt-11">
+          <section data-ad-item="cfb-section" className="mt-11">
             <Eyebrow>Rivalry Games</Eyebrow>
             {rivalrySentences.length > 0 && (
               <p className="mb-6 max-w-3xl text-[13.5px] leading-relaxed text-white/70" style={{ fontFamily: SANS }}>
@@ -412,7 +412,7 @@ export function CfbSchoolPage({ data, venueHubLink, venueHub }: { data: CfbSchoo
         {/* ── VENUE editorial (destination-only) — the auto venue FACTS live in the
             hero panel; this shows only when there's editorial prose. ── */}
         {venue && editorial.venueInTheirWords && (
-          <section className="mt-11">
+          <section data-ad-item="cfb-section" className="mt-11">
             <Eyebrow>{venue.name}</Eyebrow>
             <div className="rounded-2xl p-6" style={{ background: '#0c0b12', border: '1px solid rgba(255,255,255,0.06)', borderLeft: '3px solid var(--cfb-accent)' }}>
               <p className="text-[13.5px] leading-relaxed text-white/70" style={{ fontFamily: SANS }}>{editorial.venueInTheirWords}</p>
@@ -421,7 +421,7 @@ export function CfbSchoolPage({ data, venueHubLink, venueHub }: { data: CfbSchoo
         )}
 
         {/* ── CONTRIBUTOR CTA — invite depth. Ships on every auto page. ── */}
-        <section className="mt-12 rounded-2xl p-6" style={{ background: '#0c0b12', border: '1px solid rgba(255,255,255,0.07)' }}>
+        <section data-ad-item="cfb-section" className="mt-12 rounded-2xl p-6" style={{ background: '#0c0b12', border: '1px solid rgba(255,255,255,0.07)' }}>
           <div className="italic text-white" style={{ fontFamily: SERIF, fontSize: '1.5rem' }}>Know this place?</div>
           <p className="mt-1.5 max-w-2xl text-[13.5px] leading-relaxed text-white/65" style={{ fontFamily: SANS }}>
             Tell us about a {school.shortName} Saturday: the traditions, the tailgate, why you go. A person reads every submission before anything publishes, and a published section credits its contributor.

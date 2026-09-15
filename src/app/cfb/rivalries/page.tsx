@@ -143,7 +143,7 @@ export default async function Page() {
   const schemas = buildRivalryIndexJsonLd(ordered, faqs);
 
   return (
-    <div className={`min-h-screen text-white ${barlowCondensed.variable}`} style={{ background: PAGE_BG }}>
+    <div className={`min-h-screen text-white ${barlowCondensed.variable}`} style={{ background: PAGE_BG }} data-ad-region="content">
       {/* One script per entity (house pattern). */}
       {schemas.map((schema, i) => (
         <script
@@ -177,7 +177,7 @@ export default async function Page() {
         {/* Seasonal section on a persistent page, not a date-scoped page: the
             window bounds are the definition, the games inside it are derived. */}
         {week.length > 0 && (
-          <section className="mt-9">
+          <section data-ad-item="rivalry-section" className="mt-9">
             <div
               className="flex items-baseline justify-between gap-3 border-b-2 pb-2.5"
               style={{ borderColor: 'rgba(224, 73, 46, 0.6)' }}
@@ -208,7 +208,7 @@ export default async function Page() {
           </section>
         )}
 
-        <section className="mt-12">
+        <section data-ad-item="rivalry-section" className="mt-12">
           <div className="border-b-2 border-white/10 pb-2.5">
             <h2 className="text-[26px] font-extrabold uppercase" style={{ fontFamily: CONDENSED }}>
               All {ordered.length} rivalries, in date order
@@ -229,7 +229,7 @@ export default async function Page() {
         </section>
 
         {faqs.length > 0 && (
-          <section className="mt-14">
+          <section data-ad-item="rivalry-section" className="mt-14">
             <h2 className="text-[26px] font-extrabold uppercase" style={{ fontFamily: CONDENSED }}>
               Frequently asked questions
             </h2>

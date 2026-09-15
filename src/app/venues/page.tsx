@@ -36,7 +36,7 @@ export default async function VenuesIndexPage() {
   const sections = groupVenueIndexEntries(entries);
 
   return (
-    <div className={`${archivoHouse.variable} rd-root min-h-screen`}>
+    <div className={`${archivoHouse.variable} rd-root min-h-screen`} data-ad-region="content">
       <header className="mx-auto max-w-6xl px-6 pt-12">
         <h1 className="rd-display text-4xl text-rd-ink sm:text-5xl">
           STADIUM &amp; ARENA GUIDES
@@ -62,7 +62,7 @@ export default async function VenuesIndexPage() {
           const hub = getLeagueHub(s.league);
           const hubLive = hub?.live === true;
           return (
-            <section key={s.league} id={`venues-${s.league.toLowerCase()}`} className="scroll-mt-6">
+            <section key={s.league} id={`venues-${s.league.toLowerCase()}`} className="scroll-mt-6" data-ad-item="hub-section">
               <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
                 <h2 className="font-rd text-xl font-bold text-rd-ink">{s.heading}</h2>
                 {hubLive ? (

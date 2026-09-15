@@ -47,6 +47,7 @@ export function RedesignPromoRow({
   surface = 'web_team_page_promolist',
   anchorId,
   href,
+  adItem,
 }: {
   promo: Promo;
   share: PromoRowShare;
@@ -74,6 +75,10 @@ export function RedesignPromoRow({
    *  ShareButton stays above the overlay, so sharing still works; any appended
    *  CTA row is rendered outside the row and is unaffected. */
   href?: string;
+  /** Ad-placement item type, supplied by the host page. Only the hosts inside
+   * the selector-hook scope pass it (team page promo list, /promos/today), so
+   * the venue-hub and home-page rows get no item without an enclosing region. */
+  adItem?: string;
 }) {
   const openModal = useUpcomingPromoModal();
   const { day, weekday, month } = formatPromoDate(promo.date);
@@ -116,6 +121,7 @@ export function RedesignPromoRow({
     <div
       {...interactiveProps}
       id={anchorId}
+      data-ad-item={adItem}
       className={[
         'group relative flex scroll-mt-24 gap-4 rounded-2xl border border-rd-line bg-rd-card p-4 transition-colors md:p-5',
         // No opacity on completed rows. The completed state is already

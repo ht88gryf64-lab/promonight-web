@@ -41,6 +41,7 @@ export function HubTodayPromos({
   if (slate.length === 0) {
     return (
       <section
+        data-ad-item="hub-section"
         aria-labelledby={sectionId}
         className="flex items-center justify-between gap-3 rounded-2xl border border-rd-line bg-rd-card px-5 py-4"
       >
@@ -60,7 +61,7 @@ export function HubTodayPromos({
 
   // State A — that league's promos today.
   return (
-    <section aria-labelledby={sectionId}>
+    <section aria-labelledby={sectionId} data-ad-item="hub-section">
       <div className="flex items-end justify-between gap-4">
         <h2 id={sectionId} className="rd-display text-2xl text-rd-ink md:text-3xl">
           Today across {label}

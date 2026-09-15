@@ -288,6 +288,7 @@ export function NflWeekContainer({
   sectionId,
   surface,
   primetimeSurface,
+  adItem,
 }: {
   slate: NflWeekSlate;
   teamsById: Record<string, Team>;
@@ -297,6 +298,10 @@ export function NflWeekContainer({
   sectionId: string;
   surface: AnalyticsSurface;
   primetimeSurface: AnalyticsSurface;
+  /** Ad-placement item type, supplied by the host page. Omitted on hosts
+   * outside the selector-hook scope so no page gets an item without a
+   * region. */
+  adItem?: string;
 }) {
   const bucket = slate.context.bucket;
   if (!bucket) return null;
@@ -328,7 +333,7 @@ export function NflWeekContainer({
   const weekLabelText = `${bucket.label.toUpperCase()} · ${formatWindow(bucket.windowStartYmd, bucket.windowEndYmd)}`;
 
   return (
-    <section aria-labelledby={sectionId}>
+    <section aria-labelledby={sectionId} data-ad-item={adItem}>
       <RailHeading
         id={sectionId}
         title={slate.context.mode === 'next-up' ? 'Next up' : 'This week'}

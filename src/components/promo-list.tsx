@@ -375,6 +375,7 @@ export function PromoList({
                     contexts={contextsFor(promo)}
                     interactive
                     anchorId={`promo-${promoAnchorId(promo)}`}
+                    adItem="promo"
                   />
                 ))}
               </div>
