@@ -24,6 +24,11 @@ WHERE IT NECESSARILY DIVERGES, because the doc does not specify it:
   - CDP call ordering and per-call timeouts
   - how FCP was obtained (here: the first-contentful-paint entry from
     performance.getEntriesByType('paint'))
+
+2026-09-15: the desktop UA is now set explicitly to Browser.getVersion's
+userAgent. It previously sent the empty string, which is a distinct header
+value rather than the protocol's "cleared", and the file it feeds names that
+as the cause of the unusable desktop half of the 2026-09-06 Baseline C.
 Those four are why a run from this file is a RECONSTRUCTION. LCP, CLS, FCP and
 TTFB are insensitive to all four. INP is not, and the doc already rules INP
 directional only.
@@ -185,17 +190,48 @@ def launch():
     return proc, profile, port, CDP(page["webSocketDebuggerUrl"])
 
 
-def apply_profile(cdp, strategy):
+def native_ua(cdp):
+    """The browser's own UA string, via Browser.getVersion.
+
+    The protocol says the desktop profile runs with the UA "cleared (native
+    desktop UA)". There is no clearUserAgentOverride in CDP, and one Chrome
+    process serves the whole run with mobile captured first, so the Pixel 5
+    override persists into desktop unless something puts it back. This reads
+    what Chrome would send on its own and sets that.
+    """
+    return cdp.send("Browser.getVersion")["userAgent"]
+
+
+def apply_profile(cdp, strategy, desktop_ua):
     p = PROFILES[strategy]
     cdp.send("Emulation.setDeviceMetricsOverride", p["metrics"])
-    if p["ua"]:
-        cdp.send("Emulation.setUserAgentOverride", {"userAgent": p["ua"]})
-    else:
-        cdp.send("Emulation.setUserAgentOverride", {"userAgent": ""})
+    # p["ua"] None means the protocol's "cleared": restore the native desktop
+    # UA. Sending "" here is NOT the same call - an empty UA is its own header
+    # value, and it is what made the 2026-09-06 desktop half unusable.
+    cdp.send("Emulation.setUserAgentOverride",
+             {"userAgent": p["ua"] or desktop_ua})
     cdp.send("Network.emulateNetworkConditions", p["net"])
     cdp.send("Emulation.setCPUThrottlingRate", {"rate": p["cpu"]})
     # Disabled for EVERY navigation, warmup included.
     cdp.send("Network.setCacheDisabled", {"cacheDisabled": True})
+
+
+DEPLOY_JS = r"""
+(() => {
+  const m = document.documentElement.outerHTML.match(/dpl_[A-Za-z0-9]+/);
+  return m ? m[0] : null;
+})()
+"""
+
+
+def deploy_id(cdp):
+    """The Vercel deployment id, re-read from the HTML this row actually got.
+
+    Recorded per row, not once per run: a deploy landing mid-capture would
+    otherwise go unnoticed and silently mix two builds into one baseline.
+    """
+    r = cdp.send("Runtime.evaluate", {"expression": DEPLOY_JS, "returnByValue": True})
+    return r.get("result", {}).get("value")
 
 
 def ttfb(cdp):
@@ -246,6 +282,7 @@ def capture(cdp, url):
     if not isinstance(m, dict) or "lcp" not in m:
         raise RuntimeError(f"metrics probe returned {r['result']!r} for {url}")
     warm = ttfb(cdp)
+    dpl = deploy_id(cdp)
     pt = cdp.send("Runtime.evaluate", {"expression": POINT_JS, "returnByValue": True})
     pt = pt["result"]["value"]
     # 4 Tab keydown/keyup pairs, then 3 clicks, 350ms apart. Trusted input.
@@ -266,7 +303,8 @@ def capture(cdp, url):
         "awaitPromise": True, "returnByValue": True})["result"].get(
             "value", {"max": 0, "n": 0})
     return {"lcp": m["lcp"], "cls": m["cls"], "fcp": m["fcp"],
-            "inp": inp["max"], "interactions": inp["n"], "warm_ttfb": warm}
+            "inp": inp["max"], "interactions": inp["n"], "warm_ttfb": warm,
+            "deploy_id": dpl}
 
 
 def main():
@@ -277,10 +315,12 @@ def main():
     proc, profile, port, cdp = launch()
     try:
         cdp.send("Page.enable"); cdp.send("Network.enable"); cdp.send("Runtime.enable")
+        desktop_ua = native_ua(cdp)
+        print(f"native desktop UA: {desktop_ua}", flush=True)
         cold = {}
         print("warmup: all twelve, in capture order", flush=True)
         for strategy, path in ORDER:
-            apply_profile(cdp, strategy)
+            apply_profile(cdp, strategy, desktop_ua)
             navigate(cdp, ORIGIN + path, 2.5)
             cold[(strategy, path)] = ttfb(cdp)
             print(f"  warmed {strategy:7s} {path:26s} cold_ttfb={cold[(strategy,path)]}", flush=True)
@@ -288,15 +328,26 @@ def main():
         rows = []
         print("\ncapture", flush=True)
         for strategy, path in ORDER:
-            apply_profile(cdp, strategy)
+            apply_profile(cdp, strategy, desktop_ua)
             r = capture(cdp, ORIGIN + path)
             r.update({"strategy": strategy, "url": path,
                       "cold_ttfb": cold[(strategy, path)]})
             rows.append(r)
             print(f"  {strategy:7s} {path:26s} LCP={r['lcp']:.0f} CLS={r['cls']:.4f} "
-                  f"INP={r['inp']:.0f} FCP={r['fcp']:.0f} n={r['interactions']}", flush=True)
+                  f"INP={r['inp']:.0f} FCP={r['fcp']:.0f} n={r['interactions']} "
+                  f"dpl={r['deploy_id']}", flush=True)
 
-        json.dump({"origin": ORIGIN, "rows": rows}, open(args.out, "w"), indent=2)
+        seen = sorted({r["deploy_id"] for r in rows})
+        print(f"\ndeploy ids across the twelve rows: {seen}", flush=True)
+        if len(seen) != 1 or seen[0] is None:
+            print("  WARNING: not a single deploy across all twelve rows", flush=True)
+
+        env = cdp.send("Browser.getVersion")
+        json.dump({"origin": ORIGIN,
+                   "chrome": env.get("product"),
+                   "desktop_ua": desktop_ua,
+                   "deploy_ids": seen,
+                   "rows": rows}, open(args.out, "w"), indent=2)
         print(f"\nwrote {args.out}")
     finally:
         cdp.close()

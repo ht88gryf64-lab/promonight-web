@@ -1,0 +1,154 @@
+{
+  "origin": "https://www.getpromonight.com",
+  "chrome": "Chrome/153.0.8010.36",
+  "desktop_ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+  "deploy_ids": [
+    "dpl_9Z7WVbma91Xz6ZhSUyeK2bozn3Y8"
+  ],
+  "rows": [
+    {
+      "lcp": 1576,
+      "cls": 0.00036979506520952297,
+      "fcp": 1576,
+      "inp": 32,
+      "interactions": 6,
+      "warm_ttfb": 44,
+      "deploy_id": "dpl_9Z7WVbma91Xz6ZhSUyeK2bozn3Y8",
+      "strategy": "mobile",
+      "url": "/mlb/minnesota-twins",
+      "cold_ttfb": 54.19999998807907
+    },
+    {
+      "lcp": 1524,
+      "cls": 0.00039379543107408746,
+      "fcp": 1524,
+      "inp": 32,
+      "interactions": 4,
+      "warm_ttfb": 42.89999997615814,
+      "deploy_id": "dpl_9Z7WVbma91Xz6ZhSUyeK2bozn3Y8",
+      "strategy": "mobile",
+      "url": "/nhl/dallas-stars",
+      "cold_ttfb": 81.69999998807907
+    },
+    {
+      "lcp": 1376,
+      "cls": 0.0022754128717358923,
+      "fcp": 1376,
+      "inp": 0,
+      "interactions": 0,
+      "warm_ttfb": 57.19999998807907,
+      "deploy_id": "dpl_9Z7WVbma91Xz6ZhSUyeK2bozn3Y8",
+      "strategy": "mobile",
+      "url": "/venues/td-garden",
+      "cold_ttfb": 50.59999996423721
+    },
+    {
+      "lcp": 1380,
+      "cls": 0.016607153838542017,
+      "fcp": 1380,
+      "inp": 16,
+      "interactions": 1,
+      "warm_ttfb": 53.19999998807907,
+      "deploy_id": "dpl_9Z7WVbma91Xz6ZhSUyeK2bozn3Y8",
+      "strategy": "mobile",
+      "url": "/venues/fenway-park",
+      "cold_ttfb": 51.60000002384186
+    },
+    {
+      "lcp": 1520,
+      "cls": 4.286719478238386e-05,
+      "fcp": 1520,
+      "inp": 0,
+      "interactions": 0,
+      "warm_ttfb": 67,
+      "deploy_id": "dpl_9Z7WVbma91Xz6ZhSUyeK2bozn3Y8",
+      "strategy": "mobile",
+      "url": "/cfb/alabama",
+      "cold_ttfb": 44.80000001192093
+    },
+    {
+      "lcp": 1360,
+      "cls": 8.339617894027407e-05,
+      "fcp": 1360,
+      "inp": 0,
+      "interactions": 0,
+      "warm_ttfb": 42.200000047683716,
+      "deploy_id": "dpl_9Z7WVbma91Xz6ZhSUyeK2bozn3Y8",
+      "strategy": "mobile",
+      "url": "/promos/this-week",
+      "cold_ttfb": 86
+    },
+    {
+      "lcp": 288,
+      "cls": 0,
+      "fcp": 288,
+      "inp": 24,
+      "interactions": 4,
+      "warm_ttfb": 61.09999996423721,
+      "deploy_id": "dpl_9Z7WVbma91Xz6ZhSUyeK2bozn3Y8",
+      "strategy": "desktop",
+      "url": "/mlb/minnesota-twins",
+      "cold_ttfb": 53.60000002384186
+    },
+    {
+      "lcp": 548,
+      "cls": 0,
+      "fcp": 548,
+      "inp": 0,
+      "interactions": 0,
+      "warm_ttfb": 42.59999996423721,
+      "deploy_id": "dpl_9Z7WVbma91Xz6ZhSUyeK2bozn3Y8",
+      "strategy": "desktop",
+      "url": "/nhl/dallas-stars",
+      "cold_ttfb": 90.19999998807907
+    },
+    {
+      "lcp": 288,
+      "cls": 0.001035080352712839,
+      "fcp": 288,
+      "inp": 32,
+      "interactions": 1,
+      "warm_ttfb": 62.700000047683716,
+      "deploy_id": "dpl_9Z7WVbma91Xz6ZhSUyeK2bozn3Y8",
+      "strategy": "desktop",
+      "url": "/venues/td-garden",
+      "cold_ttfb": 76.29999995231628
+    },
+    {
+      "lcp": 288,
+      "cls": 0.007190596735180807,
+      "fcp": 288,
+      "inp": 16,
+      "interactions": 3,
+      "warm_ttfb": 45.10000002384186,
+      "deploy_id": "dpl_9Z7WVbma91Xz6ZhSUyeK2bozn3Y8",
+      "strategy": "desktop",
+      "url": "/venues/fenway-park",
+      "cold_ttfb": 82.80000001192093
+    },
+    {
+      "lcp": 336,
+      "cls": 9.634609491287978e-05,
+      "fcp": 336,
+      "inp": 16,
+      "interactions": 1,
+      "warm_ttfb": 74.29999995231628,
+      "deploy_id": "dpl_9Z7WVbma91Xz6ZhSUyeK2bozn3Y8",
+      "strategy": "desktop",
+      "url": "/cfb/alabama",
+      "cold_ttfb": 43.09999996423721
+    },
+    {
+      "lcp": 280,
+      "cls": 0.00010697738814464582,
+      "fcp": 280,
+      "inp": 32,
+      "interactions": 2,
+      "warm_ttfb": 55.69999998807907,
+      "deploy_id": "dpl_9Z7WVbma91Xz6ZhSUyeK2bozn3Y8",
+      "strategy": "desktop",
+      "url": "/promos/this-week",
+      "cold_ttfb": 43.69999998807907
+    }
+  ]
+}
