@@ -143,7 +143,7 @@ export default async function Page() {
   const schemas = buildRivalryIndexJsonLd(ordered, faqs);
 
   return (
-    <main className={`min-h-screen text-white ${barlowCondensed.variable}`} style={{ background: PAGE_BG }}>
+    <div className={`min-h-screen text-white ${barlowCondensed.variable}`} style={{ background: PAGE_BG }}>
       {/* One script per entity (house pattern). */}
       {schemas.map((schema, i) => (
         <script
@@ -244,6 +244,6 @@ export default async function Page() {
           </section>
         )}
       </div>
-    </main>
+    </div>
   );
 }

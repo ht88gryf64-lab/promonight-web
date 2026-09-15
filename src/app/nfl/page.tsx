@@ -197,7 +197,7 @@ export default async function NflHubPage() {
         <AdSlot config={AD_SLOTS.HEADER_LEADERBOARD} pageType="nfl_hub" />
       </div>
 
-      <main className="mx-auto max-w-6xl space-y-16 px-6 pb-20 pt-12">
+      <div className="mx-auto max-w-6xl space-y-16 px-6 pb-20 pt-12">
         <HubTodayPromos
           slate={today}
           label="NFL"
@@ -258,7 +258,7 @@ export default async function NflHubPage() {
         />
         <AdSlot config={AD_SLOTS.IN_CONTENT_2} pageType="nfl_hub" />
         <HubFaq faqs={FAQS} sectionId="nfl-hub-faq" />
-      </main>
+      </div>
     </div>
   );
 }

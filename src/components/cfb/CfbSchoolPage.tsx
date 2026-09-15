@@ -80,7 +80,7 @@ export function CfbSchoolPage({ data, venueHubLink, venueHub }: { data: CfbSchoo
     .filter(([n]) => n > 0);
 
   return (
-    <main className={`min-h-screen text-white ${instrumentSerif.variable}`} style={{ background: '#08070d', fontFamily: SANS }}>
+    <div className={`min-h-screen text-white ${instrumentSerif.variable}`} style={{ background: '#08070d', fontFamily: SANS }}>
       <CfbThemePersist schoolId={school.id} />
 
       {/* ── IMMERSIVE HERO — team-color wash bleeds from above the fold into the
@@ -441,6 +441,6 @@ export function CfbSchoolPage({ data, venueHubLink, venueHub }: { data: CfbSchoo
             same disclosure the pro team pages carry ships here too. */}
         <AffiliateDisclosure tone="dark" className="mt-10 text-center" />
       </div>
-    </main>
+    </div>
   );
 }

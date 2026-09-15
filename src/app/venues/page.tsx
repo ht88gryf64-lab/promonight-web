@@ -57,7 +57,7 @@ export default async function VenuesIndexPage() {
         </Link>
       </header>
 
-      <main className="mx-auto max-w-6xl space-y-14 px-6 pb-20 pt-12">
+      <div className="mx-auto max-w-6xl space-y-14 px-6 pb-20 pt-12">
         {sections.map((s) => {
           const hub = getLeagueHub(s.league);
           const hubLive = hub?.live === true;
@@ -84,7 +84,7 @@ export default async function VenuesIndexPage() {
             </section>
           );
         })}
-      </main>
+      </div>
     </div>
   );
 }

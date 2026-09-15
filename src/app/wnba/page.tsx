@@ -113,7 +113,7 @@ export default async function WnbaHubPage() {
         <AdSlot config={AD_SLOTS.HEADER_LEADERBOARD} pageType="wnba_hub" />
       </div>
 
-      <main className="mx-auto max-w-6xl space-y-16 px-6 pb-20 pt-12">
+      <div className="mx-auto max-w-6xl space-y-16 px-6 pb-20 pt-12">
         <HubTodayPromos
           slate={today}
           label="WNBA"
@@ -154,7 +154,7 @@ export default async function WnbaHubPage() {
         />
         <AdSlot config={AD_SLOTS.IN_CONTENT_2} pageType="wnba_hub" />
         <HubFaq faqs={FAQS} sectionId="wnba-hub-faq" />
-      </main>
+      </div>
     </div>
   );
 }

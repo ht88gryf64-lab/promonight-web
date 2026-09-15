@@ -255,7 +255,7 @@ export function RedesignTeamPage({
       {/* Responsive weave — one DOM, two layouts.
        *
        *  DESKTOP (lg+): the exact two-column layout is unchanged. The
-       *  <aside>/<main> wrappers are restored at lg (`lg:block`), so their
+       *  <aside>/<div> weave shells are restored at lg (`lg:block`), so their
        *  children flow in source order inside the right sidebar / left main
        *  column and every `order-[n]` utility below goes INERT (order only
        *  affects flex/grid items). Source order == today's desktop order, so
@@ -317,7 +317,7 @@ export function RedesignTeamPage({
             <AdSlot config={AD_SLOTS.SIDEBAR_STICKY} pageType="team_page" className="rd-weave-item order-[62]" />
           </aside>
 
-          <main className="rd-weave-shell contents lg:block lg:min-w-0 lg:order-1 [&>*]:min-w-0">
+          <div className="rd-weave-shell contents lg:block lg:min-w-0 lg:order-1 [&>*]:min-w-0">
             <div className="rd-weave-item order-[30] pb-4">
               <AdSlot config={AD_SLOTS.TEAM_PAGE_AFTER_HERO} pageType="team_page" />
             </div>
@@ -507,7 +507,7 @@ export function RedesignTeamPage({
             <div className="rd-weave-item order-[80] py-6">
               <AdSlot config={AD_SLOTS.IN_CONTENT_1} pageType="team_page" />
             </div>
-          </main>
+          </div>
         </div>
       </div>
 

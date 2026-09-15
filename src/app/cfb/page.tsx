@@ -59,7 +59,7 @@ export default async function CfbHub() {
   const weeklyRight = 'UPDATES MONDAY AM';
 
   return (
-    <main className={`min-h-screen text-white ${instrumentSerif.variable}`} style={{ background: '#08070d', fontFamily: SANS }}>
+    <div className={`min-h-screen text-white ${instrumentSerif.variable}`} style={{ background: '#08070d', fontFamily: SANS }}>
       {/* ── HERO — rivalry/road-trip framing, league-neutral gold/red wash. Text is
           FULL-opacity white + shadow over the wash (the washout lesson — no
           reduced-opacity white over the gradient). ── */}
@@ -143,6 +143,6 @@ export default async function CfbHub() {
           </section>
         )}
       </div>
-    </main>
+    </div>
   );
 }

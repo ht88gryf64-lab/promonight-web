@@ -194,7 +194,7 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
     .map((s) => ({ kind: (s.partner ? 'aff' : 'internal') as 'aff' | 'internal', key: s.key as keyof typeof STEP_COPY, href: s.href, partner: s.partner }));
 
   return (
-    <main className={`min-h-screen text-white ${barlowCondensed.variable}`} style={{ background: PAGE_BG }}>
+    <div className={`min-h-screen text-white ${barlowCondensed.variable}`} style={{ background: PAGE_BG }}>
       <div className="mx-auto max-w-2xl px-4 pb-16 pt-4">
         {/* 1. breadcrumb (condensed face per the visual pass; colors unchanged) */}
         <nav aria-label="Breadcrumb" className="text-[12px] font-semibold uppercase tracking-[0.18em] text-white/45" style={{ fontFamily: CONDENSED }}>
@@ -357,7 +357,7 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
             ships here too. */}
         <AffiliateDisclosure tone="dark" className="mt-10 text-center" />
       </div>
-    </main>
+    </div>
   );
 }
 
