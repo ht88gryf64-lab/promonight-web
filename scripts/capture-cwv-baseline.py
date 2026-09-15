@@ -216,6 +216,24 @@ def apply_profile(cdp, strategy, desktop_ua):
     cdp.send("Network.setCacheDisabled", {"cacheDisabled": True})
 
 
+DEPLOY_JS = r"""
+(() => {
+  const m = document.documentElement.outerHTML.match(/dpl_[A-Za-z0-9]+/);
+  return m ? m[0] : null;
+})()
+"""
+
+
+def deploy_id(cdp):
+    """The Vercel deployment id, re-read from the HTML this row actually got.
+
+    Recorded per row, not once per run: a deploy landing mid-capture would
+    otherwise go unnoticed and silently mix two builds into one baseline.
+    """
+    r = cdp.send("Runtime.evaluate", {"expression": DEPLOY_JS, "returnByValue": True})
+    return r.get("result", {}).get("value")
+
+
 def ttfb(cdp):
     r = cdp.send("Runtime.evaluate", {
         "expression": "(()=>{const n=performance.getEntriesByType('navigation')[0];"
@@ -264,6 +282,7 @@ def capture(cdp, url):
     if not isinstance(m, dict) or "lcp" not in m:
         raise RuntimeError(f"metrics probe returned {r['result']!r} for {url}")
     warm = ttfb(cdp)
+    dpl = deploy_id(cdp)
     pt = cdp.send("Runtime.evaluate", {"expression": POINT_JS, "returnByValue": True})
     pt = pt["result"]["value"]
     # 4 Tab keydown/keyup pairs, then 3 clicks, 350ms apart. Trusted input.
@@ -284,7 +303,8 @@ def capture(cdp, url):
         "awaitPromise": True, "returnByValue": True})["result"].get(
             "value", {"max": 0, "n": 0})
     return {"lcp": m["lcp"], "cls": m["cls"], "fcp": m["fcp"],
-            "inp": inp["max"], "interactions": inp["n"], "warm_ttfb": warm}
+            "inp": inp["max"], "interactions": inp["n"], "warm_ttfb": warm,
+            "deploy_id": dpl}
 
 
 def main():
@@ -314,9 +334,20 @@ def main():
                       "cold_ttfb": cold[(strategy, path)]})
             rows.append(r)
             print(f"  {strategy:7s} {path:26s} LCP={r['lcp']:.0f} CLS={r['cls']:.4f} "
-                  f"INP={r['inp']:.0f} FCP={r['fcp']:.0f} n={r['interactions']}", flush=True)
+                  f"INP={r['inp']:.0f} FCP={r['fcp']:.0f} n={r['interactions']} "
+                  f"dpl={r['deploy_id']}", flush=True)
 
-        json.dump({"origin": ORIGIN, "rows": rows}, open(args.out, "w"), indent=2)
+        seen = sorted({r["deploy_id"] for r in rows})
+        print(f"\ndeploy ids across the twelve rows: {seen}", flush=True)
+        if len(seen) != 1 or seen[0] is None:
+            print("  WARNING: not a single deploy across all twelve rows", flush=True)
+
+        env = cdp.send("Browser.getVersion")
+        json.dump({"origin": ORIGIN,
+                   "chrome": env.get("product"),
+                   "desktop_ua": desktop_ua,
+                   "deploy_ids": seen,
+                   "rows": rows}, open(args.out, "w"), indent=2)
         print(f"\nwrote {args.out}")
     finally:
         cdp.close()
