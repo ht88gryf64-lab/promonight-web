@@ -82,6 +82,56 @@ URL order: `/mlb/minnesota-twins`, `/nhl/dallas-stars`, `/venues/td-garden`,
 - This is **not** field INP. It carries no real-user interaction mix. CrUX is
   the right instrument for the real number.
 
+### 2026-09-14: the /nhl/dallas-stars mobile CLS row has since been fixed
+
+**Read this before comparing anything on `/nhl/dallas-stars` against Baseline
+B.** The 0.0688 mobile CLS recorded for that URL in Baseline A and Baseline B
+was a real, reproducible layout shift, and it has been fixed. It was not an ad
+effect, a harness artefact, or noise: it reproduced to four decimal places
+across Baseline A, Baseline B and both Baseline C runs, while the same page
+measured 0.0000 on desktop.
+
+**What it was.** A font-swap wrap-boundary shift in the `SeasonExplorer`
+category-chip row. Archivo loads `display: swap`, and next/font's size-adjusted
+fallback matches vertical metrics but cannot match horizontal advance widths, so
+every chip gained roughly 3px when the real face landed. `flex-wrap` turned that
+width change into a height change: a chip fell to a third line and everything
+below it moved 41.5px. Diagnosed causally rather than inferred - with all
+`woff2` blocked the page served 0.0000 with zero shift entries, which ruled out
+a lazy mount, a hydration-gated section, unsized media and a data-dependent
+render in one test.
+
+**The condition, for a future session that sees this recur:** upcoming giveaway
+count >= 10 AND upcoming theme count >= 10, at a 412px viewport. Both counts
+two digits widens chip row one from 358px on the fallback to 369px in a 364px
+container, which is what crosses the wrap boundary. It is data-specific and
+time-varying, not NHL-specific: 10 of 169 team pages met it on 2026-09-14,
+across NHL, MLB and NBA, and membership moves as upcoming counts change.
+
+**Fixed in `04250ee`** (chip row scrolls instead of wrapping, so its height no
+longer depends on its content width). Measured on production immediately after
+that deploy, at this exact pinned protocol:
+
+| URL | Baselines A and B | After `04250ee` |
+| --- | ---: | ---: |
+| /nhl/dallas-stars mobile | 0.0688 | **0.0004** |
+| /nhl/los-angeles-kings mobile | 0.0594 | **0.0004** |
+
+**The Baseline B row below is retained exactly as recorded and is not edited.**
+0.0688 is the correct measurement for the build that produced it
+(`dpl_6SmKD6N32GfyozKbBP25TBVwN6j1`), and rewriting it would destroy the record
+this file exists to hold.
+
+**Consequence for the October post-ad comparison.** A future capture of
+`/nhl/dallas-stars` will show roughly -0.068 mobile CLS against its Baseline B
+row, and **that delta is this fix, not an ad effect**. Reading it as an ad
+improvement would be a straightforward error, and reading an ad regression
+against the old row would understate the regression by the same amount. Either
+compare that URL against a post-`04250ee` re-capture, or subtract the fix
+explicitly. The same caution applies in weaker form to every other team-page
+row: the residual 0.0003-0.0004 width-only shift is unchanged, but any page
+that met the condition at its own capture time carries the same correction.
+
 ## Baseline B: post-Grow, pre-Raptive, uniform warmed protocol, production.
 
 **This is the comparison baseline.** Captured 2026-09-05, 12:51Z-12:54Z UTC.
