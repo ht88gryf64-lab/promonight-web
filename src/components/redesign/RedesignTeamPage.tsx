@@ -286,13 +286,23 @@ export function RedesignTeamPage({
        *  pages without touching this file. Every child below carries
        *  `rd-weave-item`; the two branch-dependent ones hoist it out of the
        *  ternary so no branch can drop it. A new section needs BOTH an
-       *  `order-[n]` and the marker. */}
+       *  `order-[n]` and the marker.
+       *
+       *  RAPTIVE HOOKS. `page-contents` (main shell) and `primary-sidebar`
+       *  (aside) are stable hooks Raptive's install team targets. They are
+       *  deliberately NOT Tailwind utilities and carry no CSS anywhere in this
+       *  repo, so they generate no rule, cannot be purged out of the markup,
+       *  and cannot move geometry. They exist to replace the whole-attribute
+       *  selector their config used to carry, which matched the main shell's
+       *  ENTIRE class string exactly and therefore broke on any class being
+       *  added or reordered. Renaming or removing either hook silently stops
+       *  in-content ads from placing, and nothing in this repo will fail. */}
       <div className="mx-auto max-w-6xl px-6 pb-8">
         <div
           className="rd-weave grid grid-cols-1 gap-x-8 lg:grid-cols-[1fr_336px] lg:items-start"
           data-ad-region="content"
         >
-          <aside className="rd-weave-shell contents lg:block lg:space-y-6 lg:order-2 [&>*]:min-w-0">
+          <aside className="rd-weave-shell contents lg:block lg:space-y-6 lg:order-2 [&>*]:min-w-0 primary-sidebar">
             {/* mt-10 exists to clear the calendar above it on mobile. On the
                 zero-promo schedule pages the calendar is gone and ScheduleBlock
                 sits there instead, carrying its own py-12, so the extra margin
@@ -320,7 +330,7 @@ export function RedesignTeamPage({
             <AdSlot config={AD_SLOTS.SIDEBAR_STICKY} pageType="team_page" className="rd-weave-item order-[62]" />
           </aside>
 
-          <div className="rd-weave-shell contents lg:block lg:min-w-0 lg:order-1 [&>*]:min-w-0">
+          <div className="rd-weave-shell contents lg:block lg:min-w-0 lg:order-1 [&>*]:min-w-0 page-contents">
             <div className="rd-weave-item order-[30] pb-4">
               <AdSlot config={AD_SLOTS.TEAM_PAGE_AFTER_HERO} pageType="team_page" />
             </div>
