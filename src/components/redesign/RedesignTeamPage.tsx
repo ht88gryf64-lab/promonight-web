@@ -18,6 +18,7 @@ import { UpcomingPromoModalProvider } from './UpcomingPromoModal';
 import { AffiliateRail } from './AffiliateRail';
 import { ExploreCard } from './ExploreCard';
 import { FanTools } from './FanTools';
+import WeaveAdOrder from './WeaveAdOrder';
 
 // Reused components — light variant (default 'dark' is the untouched gate-off
 // path). SEO + analytics preserved; restyled into the cream flow (no dark band).
@@ -292,6 +293,9 @@ export function RedesignTeamPage({
           className="rd-weave grid grid-cols-1 gap-x-8 lg:grid-cols-[1fr_336px] lg:items-start"
           data-ad-region="content"
         >
+          {/* Renders null. Orders injected ad containers to their anchor's
+              order so the floor above does not stack them all at 900. */}
+          <WeaveAdOrder />
           <aside className="rd-weave-shell contents lg:block lg:space-y-6 lg:order-2 [&>*]:min-w-0">
             {/* mt-10 exists to clear the calendar above it on mobile. On the
                 zero-promo schedule pages the calendar is gone and ScheduleBlock
