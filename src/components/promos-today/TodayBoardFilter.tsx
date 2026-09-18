@@ -105,7 +105,7 @@ export function TodayBoardFilter({
         </div>
       )}
 
-      <div ref={rootRef} className="flex flex-col gap-10">
+      <div ref={rootRef} className="flex flex-col gap-10 page-content">
         {children}
       </div>
     </div>

@@ -149,7 +149,7 @@ export function CfbSchoolPage({ data, venueHubLink, venueHub }: { data: CfbSchoo
         </div>
       </header>
 
-      <div className="mx-auto max-w-6xl px-5 pb-24 sm:px-8">
+      <div className="mx-auto max-w-6xl px-5 pb-24 sm:px-8 page-content">
 
         {/* ── RIVALRY RAIL. The jump into the matchup pages. Sits directly under
             the hero because the in-context links (the trophy tags and the rivalry
