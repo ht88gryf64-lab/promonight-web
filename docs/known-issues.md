@@ -2498,3 +2498,57 @@ that the apex is beyond its reach — and the next person to point a root-level
 file (`ads.txt`, `app-ads.txt`, `sellers.json`, a domain verification file) at a
 third-party URL will rediscover it the same way this was, by shipping a
 redirect and measuring the apex afterwards.
+
+## 48. CFB rivalry pages deliberately carry no `page-content`, so they place no in-content ads
+
+**What it is.** Raptive's Content rule matches two branches, the team-page weave
+and `.page-content > *`. The second was added to five templates on 2026-09-18.
+The 32 CFB rivalry pages were deliberately left out, and this entry exists so
+that omission is not later read as an oversight and "fixed".
+
+**Why the class cannot go on the obvious element.** `.page-content > *` selects
+EVERY direct child of whatever carries the class, so the class placement decides
+what an ad can be inserted after. On rivalry pages the only section-level
+container is `main > div.min-h-screen > div.mx-auto`, and it holds the `h1` as a
+direct child. Measured on `/cfb/rivalries/the-game` at 386px:
+
+| # | element | height | what it is |
+| --- | --- | --- | --- |
+| 0 | `nav` | 18px | breadcrumb |
+| 1 | `h1` | 33px | **the page h1** |
+| 2 | `p` | 28px | subtitle |
+| 3 | `p` | 91px | intro prose |
+| 4 | `section` | 158px | date card |
+| 5 | `div.grid` | 64px | team pair |
+| 6 | `section` | 489px | Plan the trip |
+| 7 | `section` | 169px | prose |
+| 8 | `section` | 177px | More rivalry week |
+| 9 | `p` | 49px | affiliate disclosure |
+
+The rule carries `skip: 2`, so the first insertion point would be **after the
+h1**, between the h1 and its own subtitle. The only other container on the page
+with three or more substantial children is an `ol` of four list items, which
+would put an ad between list rows.
+
+**Why it was not solved with a wrapper.** Adding a `<div class="page-content">`
+around children 4-8 would produce a clean anchor, and was rejected on
+proportion rather than on difficulty. The page is 1,552px tall at 386px and
+1,462px at 1190px, the rule's `max` is 3, and there are 32 of these pages. A
+template edit to fit three units into the shortest page type on the site is not
+worth the regression surface, and the other four templates carry the class and
+absorb the demand.
+
+**What would change the answer.** If rivalry pages grow materially, or if
+Raptive raises `max` or lowers `skip`, revisit. The fix is the wrapper, not
+moving the class onto the existing container: putting `page-content` on
+`div.mx-auto` as it stands ships an ad between a breadcrumb and an h1.
+
+**Related.** The team template is excluded for a different reason: it already
+matches the rule's first branch and has its own open mobile problem, where the
+weave shell is `display: contents` with a 0x0 box so Raptive's density
+algorithm computes zero units. See entry 47's neighbours and the
+`rd-weave-shell` notes in `RedesignTeamPage.tsx`.
+
+**Severity: Low.** Nothing is broken. This is a deliberate coverage gap on 32
+of 481 URLs, recorded so the next person to audit ad coverage finds the reason
+rather than the hole.

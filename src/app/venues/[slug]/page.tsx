@@ -64,7 +64,7 @@ export default async function VenueHubPage({ params }: { params: Promise<{ slug:
     getVenueHubWeekPromos(hub),
   ]);
   return (
-    <div className={`${archivoHouse.variable} rd-root min-h-screen`}>
+    <div className={`${archivoHouse.variable} rd-root min-h-screen`} data-ad-region="content">
       <VenueHubView
         hub={hub}
         canonicalUrl={`${BASE_URL}/venues/${slug}`}

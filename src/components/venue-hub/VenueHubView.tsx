@@ -472,7 +472,7 @@ export function VenueHubView({
             when the rail has something in it. */}
         <div className={hasRail ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start lg:gap-6' : ''}>
           {/* main column */}
-          <div className="min-w-0">
+          <div className="min-w-0 page-content">
             {bagCard}
             {/* Promos this week: directly under the bag capsule and above
                 parking. The capsule stays first because it is the SEO answer the
