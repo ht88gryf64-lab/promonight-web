@@ -115,7 +115,7 @@ export function HomePageV2({
 
   return (
     <UpcomingPromoModalProvider showTeamLink>
-      <div className={`${archivoHouse.variable} rd-root min-h-screen`}>
+      <div className={`${archivoHouse.variable} rd-root min-h-screen`} data-ad-region="content">
         <HomepageJsonLd counts={counts} />
 
         <HomeHero
