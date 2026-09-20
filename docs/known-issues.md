@@ -2949,3 +2949,54 @@ in-content inventory. The Footer and sticky units still serve.
 
 **Severity: Low.** Nothing is broken. A deliberate coverage gap, recorded so
 the next audit of ad coverage finds the reason rather than the hole.
+
+## 52. The homepage throws an intermittent hydration error #418 that has nothing to do with ads
+
+**What it is.** On a clean load of `/`, React sometimes throws minified error
+#418 (`args[]=HTML`, an element-level mismatch, not a text one), discards the
+server-rendered tree and rebuilds `<main>` on the client. No ad node is
+involved: the error arrives before Raptive has loaded, and nothing of Raptive's
+is removed.
+
+Found on 2026-09-20 while verifying the homepage `page-content` wrapper on
+production. It is NOT caused by that wrapper, and not by the loader move in
+entry 50:
+
+| where | build | desktop loads | #418 |
+| --- | --- | --- | --- |
+| production | with the wrapper | 7 | 1 |
+| preview `dpl_EnGyDESGmAV9Bp266nzAQHtEPK8o` | loader fix, BEFORE the wrapper | 6 | 1 |
+| local build and the wrapper's own preview | with the wrapper | 6 | 0 |
+| phone profile, all three environments | with the wrapper | 7 | 0 |
+
+So roughly 1 in 7 desktop loads where it shows at all, and the field has it too:
+one `hydration_mismatch` row with `route = '/'` and `adthrive_present = false`
+was recorded BEFORE either change shipped.
+
+**Why it does not cost ads any more.** Since entry 50's fix, `ads.min.js` loads
+from an effect that runs after React has finished recovering, so Raptive places
+into the rebuilt tree. On the production load that threw, all 5 Content units
+still placed. Before that fix a rebuild like this would have taken the ads with
+it whenever Raptive had already inserted.
+
+**What it does cost.** A full client re-render of `<main>` on the
+highest-traffic route: wasted main-thread time, and whatever a visitor had
+already scrolled to or focused is rebuilt under them.
+
+**Cause: unknown, and not investigated.** Every load in the table used a fresh
+browser context at the same viewport, so it is not stored state and not a
+viewport difference. That points at timing, which is an inference and not a
+finding. Nothing on the page has been ruled in or out.
+
+**How it shows in the field.** `hydration_mismatch` with
+`adthrive_present = false`. That value is also what a browser extension or
+in-page translation produces on ANY route, so the homepage has to be read
+against that baseline rather than on its own. After a week of data (on or after
+2026-09-27) check two things: whether `adthrive_present = false` rows cluster
+on `route = '/'` out of proportion to its share of pageviews, and whether they
+cluster by time of day. A time-of-day cluster would point at content that
+changes through the day (tonight's games, the ticker). No cluster at all would
+point back at the baseline.
+
+**Severity: Low, provisionally.** No revenue effect and no broken page. Promote
+to Medium if the field rate on `/` confirms anything like 1 in 7.
