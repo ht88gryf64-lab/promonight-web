@@ -11,6 +11,7 @@ import { UTMCaptureProvider } from '@/components/utm-capture-provider';
 import { AnalyticsProvider } from '@/components/analytics/AnalyticsProvider';
 import { PageViewTracker } from '@/components/analytics/PageViewTracker';
 import { AdProvider } from '@/components/ads/AdProvider';
+import { RaptiveLoader } from '@/components/ads/RaptiveLoader';
 import { StarredTeamsProvider } from '@/hooks/use-starred-teams';
 import { ShareProvider } from '@/components/share';
 import { PostStarToastHost } from '@/components/post-star-toast';
@@ -120,12 +121,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {/* Raptive (AdThrive) ad manager, in the slot the Mediavine Grow
             initializer held until e0f136c removed it — Grow was a leftover from
             an abandoned Mediavine application, and Mediavine competes with
-            Raptive. This is a raw inline <script>, not next/script: Raptive
-            requires it to run once per document load and to NOT re-run on
-            client-side route changes (their code detects route changes itself),
-            and it must keep data-no-optimize and data-cfasync so Cloudflare and
-            optimizers leave it alone. Body is Raptive's, verbatim — do not
-            reformat it. */}
+            Raptive. This is a raw inline <script>, not next/script, and it
+            must keep data-no-optimize and data-cfasync so Cloudflare and
+            optimizers leave it alone.
+
+            THIS IS ONLY THE STUB. The four assignments are Raptive's, verbatim
+            — do not reformat them. Their stock snippet also created the
+            ads.min.js <script> right here; that half now lives in
+            <RaptiveLoader />, mounted at the end of <body>, which runs it from
+            an effect after hydration. Loading it from the head let Raptive
+            insert into DOM React had not hydrated yet, and React answered with
+            error #418 and rebuilt <main> without the ads (known-issues entry
+            50). Do not move the loader back up here. */}
         <script
           data-no-optimize="1"
           data-cfasync="false"
@@ -135,12 +142,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     w.adthrive.cmd = w.adthrive.cmd || [];
     w.adthrive.plugin = 'adthrive-ads-manual';
     w.adthrive.host = 'ads.adthrive.com';
-    var s = d.createElement('script');
-    s.async = true;
-    s.referrerpolicy='no-referrer-when-downgrade';
-    s.src = 'https://' + w.adthrive.host + '/sites/6a9989924f70265a058c50b1/ads.min.js?referrer=' + w.encodeURIComponent(w.location.href) + '&cb=' + (Math.floor(Math.random() * 100) + 1);
-    var n = d.getElementsByTagName('script')[0];
-    n.parentNode.insertBefore(s, n);
 })(window, document);`,
           }}
         />
@@ -179,6 +180,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </StarredTeamsProvider>
           </AdProvider>
         </AnalyticsProvider>
+        {/* Last in <body> and outside every provider on purpose: it depends on
+            nothing, renders nothing, and its effect runs once the hydrated
+            tree has committed. See the component for why it is not in <head>. */}
+        <RaptiveLoader />
       </body>
     </html>
   );
