@@ -129,139 +129,154 @@ export function HomePageV2({
             entirely under prefers-reduced-motion. */}
         <TonightRibbon items={tonight} />
 
-        <section className="px-6 pt-14">
-          <StubRail
-            eyebrow="Happening now"
-            dotColor="var(--color-rd-red)"
-            heading="Tonight"
-            lede={`${tonight.length} promo${tonight.length === 1 ? '' : 's'} at games starting today.`}
-            seeAllHref="/promos/today"
-            seeAllLabel="All tonight's promos"
-            items={tonight.map((p) => ({ promo: p, contexts: contextsFor(p) }))}
-            surface="web_home_tonight"
-            starPlacement="homepage_this_week_inline"
-            rail="tonight"
-          />
-        </section>
+        {/* `page-content` is the hook Raptive's Content rule matches
+            (`.page-content > *`, skip 2, afterend), the same one the league
+            hubs, CFB school, venue and /promos/today pages carry. It is a NEW
+            wrapper here rather than a class on the root, and that is the whole
+            point: the rule makes every direct child an anchor, and the root's
+            leading children are three JSON-LD <script>s, the hero with the h1
+            and the decorative ticker. On the root, skip 2 would burn on two
+            scripts and the first ad would land above the hero. Inside this
+            wrapper skip 2 takes Tonight and the spacer, so the first ad follows
+            This Week. The disclosure and the last spacer stay outside so no ad
+            sits against the footer. Plain block, no styles: it must stay
+            layout-neutral. Keep it OUT of any <Suspense>; see known-issues
+            entry 50 for what happens to ads inside one. */}
+        <div className="page-content">
+          <section className="px-6 pt-14">
+            <StubRail
+              eyebrow="Happening now"
+              dotColor="var(--color-rd-red)"
+              heading="Tonight"
+              lede={`${tonight.length} promo${tonight.length === 1 ? '' : 's'} at games starting today.`}
+              seeAllHref="/promos/today"
+              seeAllLabel="All tonight's promos"
+              items={tonight.map((p) => ({ promo: p, contexts: contextsFor(p) }))}
+              surface="web_home_tonight"
+              starPlacement="homepage_this_week_inline"
+              rail="tonight"
+            />
+          </section>
 
-        <div className="mx-auto max-w-6xl px-6 pt-8">
-          <AdSlot config={AD_SLOTS.HEADER_LEADERBOARD} pageType="homepage" />
-        </div>
+          <div className="mx-auto max-w-6xl px-6 pt-8">
+            <AdSlot config={AD_SLOTS.HEADER_LEADERBOARD} pageType="homepage" />
+          </div>
 
-        {weekGroups.length > 0 && (
-          <section className="px-6 py-16">
-            <div className="mx-auto max-w-5xl">
-              <div className="mb-8 flex items-end justify-between gap-4">
-                <div>
-                  <span className="font-rd text-[11px] uppercase tracking-[0.14em] text-rd-ink-faint">
-                    Coming up
-                  </span>
-                  <h2 className="rd-display mt-1 text-3xl text-rd-ink md:text-4xl">THIS WEEK</h2>
-                </div>
-                <TrackedTapLink
-                  href="/promos/this-week"
-                  trackEvent="this_week_see_all_tap"
-                  trackProps={{ surface: 'web_home' }}
-                  className="inline-flex shrink-0 items-center gap-1 font-rd text-sm font-semibold text-rd-red hover:underline"
-                >
-                  See all
-                  <IconArrowRight size={15} stroke={2.25} />
-                </TrackedTapLink>
-              </div>
-
-              <div className="space-y-8">
-                {weekGroups.map(([date, list]) => (
-                  <div key={date}>
-                    <h3 className="mb-3 font-rd text-[11px] uppercase tracking-[0.1em] text-rd-ink-faint">
-                      {dayLabel(date)}
-                    </h3>
-                    <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
-                      {list.map((promo, i) => (
-                        <LightHomePromoCard
-                          key={`${promo.team.id}-w-${i}`}
-                          promo={promo}
-                          contexts={contextsFor(promo)}
-                          surface="web_home_this_week"
-                          starPlacement="homepage_this_week_inline"
-                        />
-                      ))}
-                    </div>
+          {weekGroups.length > 0 && (
+            <section className="px-6 py-16">
+              <div className="mx-auto max-w-5xl">
+                <div className="mb-8 flex items-end justify-between gap-4">
+                  <div>
+                    <span className="font-rd text-[11px] uppercase tracking-[0.14em] text-rd-ink-faint">
+                      Coming up
+                    </span>
+                    <h2 className="rd-display mt-1 text-3xl text-rd-ink md:text-4xl">THIS WEEK</h2>
                   </div>
-                ))}
+                  <TrackedTapLink
+                    href="/promos/this-week"
+                    trackEvent="this_week_see_all_tap"
+                    trackProps={{ surface: 'web_home' }}
+                    className="inline-flex shrink-0 items-center gap-1 font-rd text-sm font-semibold text-rd-red hover:underline"
+                  >
+                    See all
+                    <IconArrowRight size={15} stroke={2.25} />
+                  </TrackedTapLink>
+                </div>
+
+                <div className="space-y-8">
+                  {weekGroups.map(([date, list]) => (
+                    <div key={date}>
+                      <h3 className="mb-3 font-rd text-[11px] uppercase tracking-[0.1em] text-rd-ink-faint">
+                        {dayLabel(date)}
+                      </h3>
+                      <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
+                        {list.map((promo, i) => (
+                          <LightHomePromoCard
+                            key={`${promo.team.id}-w-${i}`}
+                            promo={promo}
+                            contexts={contextsFor(promo)}
+                            surface="web_home_this_week"
+                            starPlacement="homepage_this_week_inline"
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
+            </section>
+          )}
+
+          <section className="px-6 py-4">
+            <StubRail
+              eyebrow="Worth planning around"
+              dotColor="var(--color-rd-cat-giveaway)"
+              heading="Best Promos"
+              lede="The giveaways fans line up early for."
+              seeAllHref="/best-promos"
+              seeAllLabel="Full rankings"
+              items={bestPromos.map((p) => ({ promo: p, contexts: contextsFor(p) }))}
+              surface="web_home_best"
+              starPlacement="homepage_this_week_inline"
+              rail="best_promos"
+              withRank
+            />
+          </section>
+
+          <section className="py-16">
+            <HomeCategoryGrid tiles={categoryTiles} />
+          </section>
+
+          <section className="px-6 py-16">
+            <div className="mx-auto max-w-6xl">
+              <div className="mb-7">
+                <div className="mb-2 flex items-center gap-2 font-mono text-[10.5px] font-semibold uppercase tracking-[0.22em] text-rd-ink-faint">
+                  <span aria-hidden className="h-1.5 w-1.5 flex-none rounded-full bg-rd-red" />
+                  Explore
+                </div>
+                <h2 className="rd-display text-3xl uppercase text-rd-ink md:text-4xl">
+                  Find Your Team
+                </h2>
+                <p className="mt-2 max-w-md font-rd text-sm text-rd-ink-soft">
+                  Full promo calendars for all {teamCount} teams.
+                </p>
+              </div>
+              <TeamGrid
+                teams={teamsForGrid}
+                promoCounts={teamPromoCounts}
+                limitOnAll={12}
+                countLabel="upcoming"
+                surface="homepage"
+                variant="light"
+                leagueOrder={leagueOrder}
+              />
             </div>
           </section>
-        )}
 
-        <section className="px-6 py-4">
-          <StubRail
-            eyebrow="Worth planning around"
-            dotColor="var(--color-rd-cat-giveaway)"
-            heading="Best Promos"
-            lede="The giveaways fans line up early for."
-            seeAllHref="/best-promos"
-            seeAllLabel="Full rankings"
-            items={bestPromos.map((p) => ({ promo: p, contexts: contextsFor(p) }))}
-            surface="web_home_best"
-            starPlacement="homepage_this_week_inline"
-            rail="best_promos"
-            withRank
-          />
-        </section>
+          <div className="mx-auto max-w-6xl px-6 py-2">
+            <AdSlot config={AD_SLOTS.RECIRC_NATIVE} pageType="homepage" />
+          </div>
 
-        <section className="py-16">
-          <HomeCategoryGrid tiles={categoryTiles} />
-        </section>
+          <section className="py-16">
+            <GamedayUtilityGrid counts={venueCounts} />
+          </section>
 
-        <section className="px-6 py-16">
-          <div className="mx-auto max-w-6xl">
-            <div className="mb-7">
-              <div className="mb-2 flex items-center gap-2 font-mono text-[10.5px] font-semibold uppercase tracking-[0.22em] text-rd-ink-faint">
-                <span aria-hidden className="h-1.5 w-1.5 flex-none rounded-full bg-rd-red" />
-                Explore
-              </div>
-              <h2 className="rd-display text-3xl uppercase text-rd-ink md:text-4xl">
-                Find Your Team
-              </h2>
-              <p className="mt-2 max-w-md font-rd text-sm text-rd-ink-soft">
-                Full promo calendars for all {teamCount} teams.
-              </p>
+          <section className="py-6">
+            <AppDownloadBlock />
+          </section>
+
+          <section className="px-6 py-10">
+            <div className="mx-auto max-w-6xl">
+              <FollowCTA surface="web_homepage" layout="split" />
             </div>
-            <TeamGrid
-              teams={teamsForGrid}
-              promoCounts={teamPromoCounts}
-              limitOnAll={12}
-              countLabel="upcoming"
-              surface="homepage"
-              variant="light"
-              leagueOrder={leagueOrder}
-            />
-          </div>
-        </section>
+          </section>
 
-        <div className="mx-auto max-w-6xl px-6 py-2">
-          <AdSlot config={AD_SLOTS.RECIRC_NATIVE} pageType="homepage" />
+          <section className="py-16">
+            <FounderBlock teamCount={teamCount} leagues={leagueNames} />
+          </section>
+
+          <HomepageFAQ variant="light" layout="card" counts={counts} />
         </div>
-
-        <section className="py-16">
-          <GamedayUtilityGrid counts={venueCounts} />
-        </section>
-
-        <section className="py-6">
-          <AppDownloadBlock />
-        </section>
-
-        <section className="px-6 py-10">
-          <div className="mx-auto max-w-6xl">
-            <FollowCTA surface="web_homepage" layout="split" />
-          </div>
-        </section>
-
-        <section className="py-16">
-          <FounderBlock teamCount={teamCount} leagues={leagueNames} />
-        </section>
-
-        <HomepageFAQ variant="light" layout="card" counts={counts} />
 
         {/* The homepage's affiliate links are real but not in the served HTML:
             every promo card here opens UpcomingPromoModal, which renders
