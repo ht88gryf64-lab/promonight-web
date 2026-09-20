@@ -2544,11 +2544,134 @@ moving the class onto the existing container: putting `page-content` on
 `div.mx-auto` as it stands ships an ad between a breadcrumb and an h1.
 
 **Related.** The team template is excluded for a different reason: it already
-matches the rule's first branch and has its own open mobile problem, where the
-weave shell is `display: contents` with a 0x0 box so Raptive's density
-algorithm computes zero units. See entry 47's neighbours and the
-`rd-weave-shell` notes in `RedesignTeamPage.tsx`.
+matches the rule's first branch. It had its own mobile problem, where the weave
+shell is `display: contents` with a 0x0 box so Raptive's density algorithm
+computed zero units. That is resolved; see entry 49.
 
 **Severity: Low.** Nothing is broken. This is a deliberate coverage gap on 32
 of 481 URLs, recorded so the next person to audit ad coverage finds the reason
 rather than the hole.
+
+## 49. Mobile team pages placed zero in-content ads because Raptive measured a `display: contents` shell (resolved: the weave root is an `<article>`)
+
+**What it was.** From the Raptive install on 2026-09-15 until 2026-09-20, every
+one of the 169 team pages placed **zero** Content (in-content) ad units on a
+phone, while the same pages on desktop placed six. Team pages are about 54% of
+pageviews and most of that is mobile. Nothing looked broken from our side:
+Raptive's Content selector matched eleven anchors on the page, dynamic ads were
+enabled, the device classified as `phone`, and the count was still zero.
+
+**The mechanism, read from Raptive's own code.** The loader is
+`https://ads.adthrive.com/sites/6a9989924f70265a058c50b1/ads.min.js` and it
+pulls the core bundle `builds/core/cfc9790/js/adthrive.min.js`. The routine that
+sizes in-content ads works from ONE number, the height of what it decides is the
+main content element:
+
+1. Candidates are the `parentElement` of each node the Content selector
+   matched, plus the tallest `<article>` on the page if its `offsetHeight`
+   exceeds `window.innerHeight * 1.5`.
+2. The candidate with the largest `offsetHeight` wins.
+3. Units = `floor(density * height / (1 - density) / minDivHeight)`, less any
+   recipe units, capped by the anchors available and by `max + lazyMax`. Our
+   config is density 0.2 on both mobile and desktop, `minDivHeight` 250.
+
+Below 1024px the matched anchors are children of a `rd-weave-shell`, and the
+shells are `display: contents` there (that is what lets the aside's children
+interleave with the main column's in one grid, see the weave comment in
+`RedesignTeamPage.tsx` and commit `150a1dc`). An element at `display: contents`
+has no box, so its `offsetHeight` is 0. Every candidate measured 0, the formula
+returned 0, and no unit was created. On desktop the shell is `lg:block` and
+about 9,000px tall, which is why desktop was always fine.
+
+**What does not fix it.** Six CSS variants that give the shell a box on mobile
+all break the cross-shell interleave, because boxing the shell takes its
+children out of the root grid. Appending any class to the content shell breaks
+Raptive's selector, whose first branch is a whole-attribute match on that
+shell's exact class string (measured: eleven matches to zero). A subgrid
+prototype did work in the browser but is a far larger change.
+
+### Resolution
+
+Fixed in `58bcae2`, merged as `9bbb644` on 2026-09-20, production deploy
+`dpl_8QccWoMNVjZMFBpaZB8ZczEDRzSz`. The weave root `.rd-weave` changed from
+`<div>` to `<article>` and nothing else: no CSS, no class change, no order value
+touched. The root is a real box at every width (12,222px at 386px on
+`/mlb/los-angeles-dodgers`), so it is step 1's tall `<article>` and becomes the
+measured element.
+
+The `<aside>` gained `aria-label="Plan your visit and explore"` in the same
+commit. Under current HTML-AAM an `<aside>` scoped to an `<article>` is a
+`complementary` landmark only when it has an accessible name. Measured in Chrome
+153 via CDP `Accessibility.getFullAXTree`, AX nodes matched to DOM nodes by
+`backendDOMNodeId` (the entry 45 method), at 1190px and 386px: with the label
+the aside is `complementary`, with the label removed in place it drops to
+`generic` and the page has no complementary landmark at all. The label is
+load-bearing; do not drop it as redundant.
+
+**Do not retag it back.** Nothing styles or selects the element by tag, so a
+tidy-minded change to `<div>` passes tsc, tests and review and silently zeroes
+mobile in-content ads on all 169 pages. The comment above the element in
+`RedesignTeamPage.tsx` says so; this entry is the long form.
+
+**Measured**, in headed Chrome with a true 386px same-origin iframe, storage
+cleared before each cold load, first on the preview deploy
+`dpl_58zNHE7xWoc67SNX2zXCigEpXcKV` and then on production:
+
+| check | before (`<div>`) | after (`<article>`) |
+| --- | --- | --- |
+| cold mobile, `/mlb/los-angeles-dodgers` (preview and production) | 0 Content units | 7, after orders 40, 41, 42, 50, 71, 61, 72 |
+| cold mobile, zero-promo schedule branch (`/mlb/arizona-diamondbacks` on the preview) | not re-measured | 6 |
+| cold mobile, `/nfl/kansas-city-chiefs` (preview) | not re-measured | 7 |
+| cold desktop 1190px, Dodgers (preview and production) | 6 Content, 26 Sidebar, 1 Below_Post, 1 Footer | identical |
+| mobile soft navigation, Dodgers to Diamondbacks | n/a | 6, equal to that page's cold count |
+| desktop soft navigation into Dodgers | 6 | 6, same anchors |
+| desktop soft navigation into Diamondbacks (preview) | n/a | 5, equal to that page's cold count of 5 |
+
+`WeaveAdOrder` gave every unit its anchor's order within two frames of
+insertion and none stayed at the floor's 900. The rendered mobile sequence on
+the Dodgers page is `10 [video] 20 30 40 [ad] 41 [ad] 42 [ad] 50 [ad] 60 61 [ad]
+71 [ad] 72 [ad] 80`. Geometry was compared by snapshotting every element's
+rect, swapping the tag in place, and re-snapshotting inside one synchronous
+task, at 386px and 1190px on three pages: 15,925 elements, zero differences
+other than one CSS-animated Raptive loading spinner per page, which also
+differs against its own restore. The thirteen authored order values are
+unchanged and an unmarked element injected into the root or either shell still
+computes to 900.
+
+**The risk that was checked before merging.** On desktop the `<article>` is as
+tall as the taller column, and Raptive's sticky sidebar stacks 26 units that
+grow the aside to about 44,900px. So on desktop the measured height went from
+about 9,000px (the content shell) to about 44,900px, and on a soft navigation
+the sidebar is already in place when Content is re-placed. Measured at
+re-placement time on a desktop soft navigation: aside `offsetHeight` 44,905,
+root 44,905, content shell 8,654, and the count was 6 with the same six
+anchors as a cold load. Desktop is capped by the anchors available, not by
+density, so a larger measured height changes nothing there. The 44,900px aside
+predates this change and is identical on the `<div>` build.
+
+**What this did not change.** Entry 45 is untouched and still open: DOM order
+is exactly what it was, so the 6,406px backward keyboard jump remains. Option C
+(inverting team-page source order) was previously also the only known route to
+mobile in-content ads. It is now an accessibility-only change with no revenue
+urgency, and should be scheduled on those terms.
+
+**Monitoring.** `scripts/check-content-placement.js` in promo-pipeline landed
+disabled because team/phone read BROKEN from day one. It was armed on
+2026-09-20 (`gh variable set CONTENT_PLACEMENT_ALARM --body enabled`), runs
+Mondays 14:00 UTC, and fails when a template's selector matches at least one
+anchor and zero Content units are created. Tool authors: Raptive will not
+initialise under a `HeadlessChrome` user agent, see the Technical caveats
+section of `docs/SITE-AUDIT.md` before writing another checker.
+
+The first two armed runs (35515225496 and 35515487911) both read `team/phone`
+ok with 7 units and `team/desktop` ok with 6, which is the confirmation this
+entry needed. Both runs still FAILED, on a different row: `aggregator/desktop`,
+5 anchors and 0 units on `/promos/today`. That row is a checker artifact, not a
+site defect. Headed Chrome against production at the checker's own 1350x940
+viewport, minutes apart, created `AdThrive_Content_1..3_desktop`, and the
+checker's own `aggregator/phone` row read 3. Until the desktop aggregator row
+is fixed in the checker, an armed Monday run fails for a reason unrelated to
+what the alarm exists to catch. Open as of 2026-09-20.
+
+**Severity: resolved.** Was High: zero in-content ad revenue on the majority of
+traffic, with no error anywhere.
