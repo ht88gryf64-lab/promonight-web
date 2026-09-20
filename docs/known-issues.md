@@ -2771,6 +2771,33 @@ single targeted event for #418 carrying the route, the device class and whether
 any `adthrive` node existed at that moment, left to run for a week BEFORE
 anything about ad loading is changed.
 
+**Instrumented 2026-09-20.** The event is `hydration_mismatch`, merged as
+`bec34e8`, production deploy `dpl_4usnAGw9WzTADvSXEVoVTzeeowG2`. It is emitted
+from `src/instrumentation-client.ts`, which Next loads before `hydrate()`, on
+the first #418 per document, to PostHog and GA4 through `track()`. Props:
+`route`, `viewport_device` (phone, tablet, desktop at Raptive's 768 and 1024
+breakpoints), `adthrive_present`, `ms_since_navigation_start`. PostHog exception
+autocapture is still off; this is one event, not error tracking.
+
+`adthrive_present` means an ad node existed at some point UP TO the error. It
+cannot be read at the moment of the error, because React reports #418 after it
+has already deleted the server DOM and the ad containers with it. A row with
+`adthrive_present = false` is a mismatch Raptive did not cause (browser
+extensions and in-page translation are the usual sources), and that is the
+baseline to subtract.
+
+Read it on or after 2026-09-27. The rate is `hydration_mismatch` with
+`adthrive_present = true` over pageviews, split by `viewport_device` and by
+`route`. One row is a test, not a visitor: 2026-09-20T15:16:10Z, `/promos/today`,
+`ms_since_navigation_start` 1039, from the end-to-end check. It undercounts by
+construction in one way: a visitor who leaves before PostHog's lazy import lands
+reaches GA4 only, so GA4 is the higher and better count.
+
+To reproduce it in headless Chrome, hide automation with
+`--disable-blink-features=AutomationControlled`. posthog-js treats
+`navigator.webdriver` as a bot and silently drops every capture, which looks
+exactly like the event not firing.
+
 **Fix options, neither built.**
 
 1. Load `ads.min.js` after hydration instead of from the inline head script in
