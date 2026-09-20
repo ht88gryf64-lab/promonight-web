@@ -289,14 +289,30 @@ export function RedesignTeamPage({
        *  ternary so no branch can drop it. A new section needs BOTH an
        *  `order-[n]` and the marker. */}
       <div className="mx-auto max-w-6xl px-6 pb-8">
-        <div
+        {/* <article>, NOT <div>. Load-bearing for ad revenue; do not retag it
+            back for tidiness. Raptive sizes its in-content ad count from one
+            offsetHeight: the tallest of the parentElement of each node its
+            Content selector matches, and the tallest <article> over 1.5
+            viewports. Below lg those parents are the weave shells at
+            display:contents (offsetHeight 0), so as a <div> every mobile team
+            page placed ZERO content units. This element is a real box at every
+            width, so as an <article> it is the measured one. Source: the
+            main-content-height routine in Raptive's ads.min.js and its core
+            adthrive.min.js (build cfc9790, read September 2026). Nothing
+            selects this element by tag. The aria-label on the <aside> is part
+            of the same change: an <aside> scoped to an <article> keeps its
+            complementary landmark role only when it has an accessible name. */}
+        <article
           className="rd-weave grid grid-cols-1 gap-x-8 lg:grid-cols-[1fr_336px] lg:items-start"
           data-ad-region="content"
         >
           {/* Renders null. Orders injected ad containers to their anchor's
               order so the floor above does not stack them all at 900. */}
           <WeaveAdOrder />
-          <aside className="rd-weave-shell contents lg:block lg:space-y-6 lg:order-2 [&>*]:min-w-0">
+          <aside
+            aria-label="Plan your visit and explore"
+            className="rd-weave-shell contents lg:block lg:space-y-6 lg:order-2 [&>*]:min-w-0"
+          >
             {/* mt-10 exists to clear the calendar above it on mobile. On the
                 zero-promo schedule pages the calendar is gone and ScheduleBlock
                 sits there instead, carrying its own py-12, so the extra margin
@@ -515,7 +531,7 @@ export function RedesignTeamPage({
               <AdSlot config={AD_SLOTS.IN_CONTENT_1} pageType="team_page" />
             </div>
           </div>
-        </div>
+        </article>
       </div>
 
       {/* Fine print — minimal treatment in the cream flow (reads fine at #444). */}
