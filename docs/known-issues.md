@@ -2901,3 +2901,51 @@ inside a `<Suspense>` would reopen the race for that subtree, and a rise in
 
 The content placement monitor is a separate matter and is still disarmed for
 the reason given above.
+
+## 51. `/teams` deliberately carries no `page-content`, so it places no in-content ads
+
+**What it is.** Raptive's Content rule matches `.page-content > *`. The class
+went onto five templates on 2026-09-18 and onto the homepage on 2026-09-20 (as
+a new wrapper in `HomePageV2.tsx`, for the reason written above it). `/teams`
+was looked at in the same pass and deliberately left out. This entry exists so
+the omission is not later read as an oversight and "fixed". Same situation, and
+the same kind of record, as entry 48.
+
+**Why there is nowhere to put it.** The rule makes EVERY direct child of the
+carrier an anchor, skips the first two, and inserts after the rest. `/teams` is
+one hero and one filterable grid. Measured on production, 2026-09-20:
+
+| candidate | 386px | 1190px | direct children | why not |
+| --- | --- | --- | --- | --- |
+| page root, `div.rd-root.min-h-screen` | 14,803px | 6,849px | 2: the hero with the **h1** (251 / 274px), the content wrapper | `skip: 2` leaves zero anchors, and child 0 is the hero |
+| `TeamsBrowser` root `div` | 14,432px | 6,455px | 2: filter pills (112 / 32px), the grid | `skip: 2` leaves zero anchors |
+| the grid, `div.grid` | 14,288px | 6,391px | 169 `article` team cards | see below |
+
+The grid is the only element with enough children, and it fails three ways.
+
+1. **No section-level structure.** Its children are cards, not sections. There
+   is no boundary on the page where an ad reads as a break between two things.
+2. **The cells are too narrow for a unit.** Cards are 161px wide in two columns
+   at 386px and 264px wide in four columns at 1190px. An ad inserted `afterend`
+   of a card becomes a grid item of that width, and a 300x250 does not fit in
+   161px. Forcing it to span the row (`grid-column: 1 / -1`) leaves a hole in
+   every row it interrupts unless the grid also goes `dense`, which reorders
+   cards.
+3. **The list re-renders on every filter tap.** `TeamsBrowser` is a client
+   component and the grid is one keyed list that React rebuilds when a league
+   pill changes. A third party's nodes threaded between React's keyed children
+   end up stranded at arbitrary positions after the first tap.
+
+**What would change the answer.** Rendering the "All" view as per-league
+sections (MLB, NBA, NHL and so on, each its own block) would give the page
+section-level children, and the class could then go on their container exactly
+as it does on the league hubs. That is a DESIGN decision, not a class addition:
+starred teams currently sort first ACROSS leagues, and per-league sections mean
+either giving that up, or adding a "Your teams" section above the rest. Decide
+that on its own merits first. Do not reach for the grid.
+
+**Size of the gap.** One URL, but a tall one: 14,803px at 386px with no
+in-content inventory. The Footer and sticky units still serve.
+
+**Severity: Low.** Nothing is broken. A deliberate coverage gap, recorded so
+the next audit of ad coverage finds the reason rather than the hole.
