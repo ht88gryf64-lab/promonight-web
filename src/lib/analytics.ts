@@ -23,6 +23,7 @@ import type { CaptureSurface } from './follow-surface';
 // Type-only: the closed union of partner-app identities. No runtime import, so
 // analytics.ts gains no dependency on the config module.
 import type { PartnerAppId } from '@/config/partner-apps';
+import type { HydrationMismatchSnapshot } from '@/lib/hydration-mismatch';
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -78,7 +79,8 @@ export type AnalyticsEvent =
   | 'league_filter_change'
   | 'cfb_conf_nav'
   | 'resale_click'
-  | 'partner_app_click';
+  | 'partner_app_click'
+  | 'hydration_mismatch';
 
 // `TONIGHT_AND_TOMORROW` is retained for backwards-compatibility with dashboards
 // that already segment on it; the bucketed hero (Phase 1.5) emits TONIGHT,
@@ -1008,7 +1010,17 @@ export type EventPropertiesMap = {
   cfb_conf_nav: CfbConfNavProperties;
   resale_click: ResaleClickProperties;
   partner_app_click: PartnerAppClickProperties;
+  hydration_mismatch: HydrationMismatchProperties;
 };
+
+// React hydration error #418, first occurrence per document load, emitted from
+// src/instrumentation-client.ts. One targeted event, NOT error tracking; see
+// known-issues entry 50. `route` and the rest are captured at the moment of the
+// error, which can be seconds before the emit (the sinks load after hydration),
+// so they are props rather than being left to track()'s own page_path.
+// `adthrive_present` means an ad node existed at some point up to the error:
+// by the time React reports #418 it has already deleted them.
+export type HydrationMismatchProperties = HydrationMismatchSnapshot;
 
 // Fires when a user taps a conference chip (or "View the full hub") in the CFB
 // sub-row of the pro team browser (home / /teams). CFB routes OUT to the /cfb
