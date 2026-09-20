@@ -2683,7 +2683,7 @@ verdicts.
 **Severity: resolved.** Was High: zero in-content ad revenue on the majority of
 traffic, with no error anywhere.
 
-## 50. When Raptive inserts before React hydrates, React rebuilds `<main>` and deletes every ad unit
+## 50. When Raptive inserts before React hydrates, React rebuilds `<main>` and deletes every ad unit (resolved: `ads.min.js` loads after hydration)
 
 **What it is.** Raptive's head script inserts its ad containers into DOM that
 React owns. If it does so before hydration has reached that part of the tree,
@@ -2786,7 +2786,9 @@ has already deleted the server DOM and the ad containers with it. A row with
 extensions and in-page translation are the usual sources), and that is the
 baseline to subtract.
 
-Read it on or after 2026-09-27. The rate is `hydration_mismatch` with
+The plan was to read it on or after 2026-09-27. It did not take that long:
+the first sample was 10 mismatches in 45 pageviews, and that settled the
+urgency (see Resolution). The rate is `hydration_mismatch` with
 `adthrive_present = true` over pageviews, split by `viewport_device` and by
 `route`. One row is a test, not a visitor: 2026-09-20T15:16:10Z, `/promos/today`,
 `ms_since_navigation_start` 1039, from the end-to-end check. It undercounts by
@@ -2798,7 +2800,7 @@ To reproduce it in headless Chrome, hide automation with
 `navigator.webdriver` as a bot and silently drops every capture, which looks
 exactly like the event not firing.
 
-**Fix options, neither built.**
+**Fix options as they stood before the fix.** Option 1 is what shipped.
 
 1. Load `ads.min.js` after hydration instead of from the inline head script in
    `src/app/layout.tsx`. This removes the race by construction. It costs ad
@@ -2819,7 +2821,83 @@ them". Until it counts units at creation from a document-start
 MutationObserver, listens for `pageerror` #418, and gives the second case its
 own verdict, an armed run fails or passes according to the speed of the runner.
 
-**Severity: Medium, provisionally.** The consequence is real (a pageview with no
-in-content ads and a full re-render) and the mechanism is proven on every
-template tried, but the rate on real devices is unmeasured. Promote to High if
-the field rate is material.
+**Severity: resolved.** Was provisionally Medium pending a field rate. The
+field rate came back at 10 of 45 pageviews, which is High by this file's own
+scale: a fifth of visitors on a normal path lost every ad on the page.
+
+### Resolution
+
+Fixed in `ad40c20`, merged as `d721820` on 2026-09-20, production deploy
+`dpl_CdPaGvsedab5iGhR9ZPmthRHWY7w`.
+
+**The mechanism.** Raptive's stock head snippet does two things: it sets
+`window.adthrive`, `.cmd`, `.plugin` and `.host`, and it creates the
+`ads.min.js` `<script>`. Only the second half moved. The head in
+`src/app/layout.tsx` keeps the stub, the IIFE and the four assignments byte for
+byte with `data-no-optimize` and `data-cfasync` on the inline tag, because
+Raptive's runtime reads those on load and other code may push to `cmd` early.
+The script-element creation now lives in
+`src/components/ads/RaptiveLoader.tsx`, a client component that renders nothing
+and is mounted once, last in `<body>`, in the root layout. It builds the element
+in a `useEffect` the way their snippet built it: same `src` with `referrer` and
+`cb`, `async`, their `referrerpolicy` line as written, `insertBefore` the first
+script, plus `data-no-optimize` and `data-cfasync` on the created element.
+
+An effect cannot run until React has committed the hydrated tree, so the loader
+can no longer start the race it was losing. It does not wait on any particular
+component, selector or timer. Measured, the `ads.min.js` request now starts
+within a few milliseconds of hydration on every run.
+
+**Why this still meets Raptive's requirement.** Their requirement is that the tag
+runs once per document load and never on a client-side route change, because
+their code detects route changes itself. The root layout persists across App
+Router navigations, so the effect runs once per document, and a
+`window.__pnRaptiveLoaderRan` flag covers Strict Mode and remounts. Verified:
+across a three-page soft-navigation session `ads.min.js` was requested exactly
+once, one loader element existed throughout, and Raptive tore down and re-placed
+units on each navigation.
+
+**Raptive was informed after the fact rather than asked first.** That was a
+decision, not an oversight, and the reasons are these. The measured rate was 10
+of 45 pageviews, so every day spent waiting on a reply cost roughly a fifth of
+ad-bearing pageviews their entire ad load, which is Raptive's revenue as much as
+ours. The change keeps the one requirement they stated, exactly. It leaves their
+stub untouched and reproduces their loader line for line rather than rewriting
+it. And it is one commit to revert. Option 2 above, a delayed-init hook on their
+side, is still the better long-term answer if one exists, and asking for it is
+now a conversation about an improvement rather than about an outage.
+
+**Verified**, on a local production build, on preview
+`dpl_EnGyDESGmAV9Bp266nzAQHtEPK8o`, and then on production:
+
+| check | result |
+| --- | --- |
+| the race: 6x CPU with 300ms on `/_next/static/*.js`, and a flat 2,000ms delay, on aggregator, team desktop, team phone, venue | 21 runs across the three environments: zero #418, `<main>` never rebuilt, no ad node removed, units created at normal counts every time. The same recipe wiped every unit on every run before |
+| clean-load counts, ten template and viewport rows | identical to the head-loader build on the same day: team 7 phone and 6 desktop, `/mlb` 4 and 4, `/cfb/alabama` 4 and 2, `/venues/td-garden` 2 and 1, `/promos/today` 3 and 3 |
+| the instrument | a foreign node injected before hydration still produces #418 and exactly one `hydration_mismatch` per sink, with `adthrive_present = false`, and that page still ends with its ads because the loader runs after React's recovery |
+| CLS, Baseline D protocol, `/nhl/dallas-stars`, three captures each | 412px: 0.0018, 0.0118, 0.0004 before and 0.0004, 0.0004, 0.0004 after. 386px: 0.0118, 0.0013, 0.0127 before and 0.0003 three times after |
+
+**The cost.** Ads start later by roughly the hydration time. Median
+`ads.min.js` request start, milliseconds since navigation start, five
+interleaved clean loads each, production before against the preview after: team
+desktop 256 to 283, team phone 186 to 259, aggregator 171 to 290, venue 174 to
+305. First Content unit moved by 26 to 128ms. That is on a fast connection; on a
+slow one the delay is larger and so was the chance of losing every unit.
+
+**The race was also caught unprovoked.** Of the 20 clean, unthrottled production
+loads taken as the "before" half of that timing run, one lost: `/promos/today`
+desktop, first unit at 448ms, hydration at 604ms, #418, zero units. None of the
+20 on the fixed build did.
+
+**What to watch.** `hydration_mismatch` stays in place as the regression alarm.
+After this fix a row with `adthrive_present = true` should be rare to absent.
+One path remains: React hydrates `<Suspense>` boundaries in commits AFTER the
+root commit, so an effect in the root layout can run before a boundary has
+hydrated. Today no ad template puts a Raptive anchor inside one (the boundaries
+are the layout's `PageViewTracker`, which renders nothing, and the best-promos,
+team-rankings and teams-browser filters). Putting `.page-content` or the weave
+inside a `<Suspense>` would reopen the race for that subtree, and a rise in
+`adthrive_present = true` is how it would show.
+
+The content placement monitor is a separate matter and is still disarmed for
+the reason given above.
