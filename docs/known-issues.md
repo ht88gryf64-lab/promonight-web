@@ -2657,21 +2657,142 @@ urgency, and should be scheduled on those terms.
 
 **Monitoring.** `scripts/check-content-placement.js` in promo-pipeline landed
 disabled because team/phone read BROKEN from day one. It was armed on
-2026-09-20 (`gh variable set CONTENT_PLACEMENT_ALARM --body enabled`), runs
-Mondays 14:00 UTC, and fails when a template's selector matches at least one
-anchor and zero Content units are created. Tool authors: Raptive will not
+2026-09-20 (`gh variable set CONTENT_PLACEMENT_ALARM --body enabled`) and
+disarmed again the same day, for the reason in the next paragraph. It runs
+Mondays 14:00 UTC, and when armed fails if a template's selector matches at
+least one anchor and zero Content units exist at the end of the run. Tool authors: Raptive will not
 initialise under a `HeadlessChrome` user agent, see the Technical caveats
 section of `docs/SITE-AUDIT.md` before writing another checker.
 
 The first two armed runs (35515225496 and 35515487911) both read `team/phone`
 ok with 7 units and `team/desktop` ok with 6, which is the confirmation this
 entry needed. Both runs still FAILED, on a different row: `aggregator/desktop`,
-5 anchors and 0 units on `/promos/today`. That row is a checker artifact, not a
-site defect. Headed Chrome against production at the checker's own 1350x940
-viewport, minutes apart, created `AdThrive_Content_1..3_desktop`, and the
-checker's own `aggregator/phone` row read 3. Until the desktop aggregator row
-is fixed in the checker, an armed Monday run fails for a reason unrelated to
-what the alarm exists to catch. Open as of 2026-09-20.
+5 anchors and 0 units on `/promos/today`.
+
+**Correction, same day.** This entry first called that row "a checker artifact,
+not a site defect", on the strength of headed Chrome creating
+`AdThrive_Content_1..3_desktop` at the checker's own 1350x940 viewport minutes
+apart. That was wrong. Both observations were true of the browser that made
+them. The checker saw a real outcome: Raptive created the units and React's
+hydration recovery deleted them. It is a site-wide race, not an aggregator
+quirk and not a monitor bug, and it has its own entry, 50. The variable was
+deleted on 2026-09-20 and the monitor must not be rearmed until the checker
+reports "never created" and "created then deleted by hydration" as different
+verdicts.
 
 **Severity: resolved.** Was High: zero in-content ad revenue on the majority of
 traffic, with no error anywhere.
+
+## 50. When Raptive inserts before React hydrates, React rebuilds `<main>` and deletes every ad unit
+
+**What it is.** Raptive's head script inserts its ad containers into DOM that
+React owns. If it does so before hydration has reached that part of the tree,
+React 19 finds nodes the server render did not contain, throws minified error
+#418 (hydration mismatch, args `HTML`), discards the server-rendered DOM and
+renders it again on the client. Raptive's containers are deleted along with the
+nodes they were attached to, and Raptive does not place them a second time.
+The page then serves no in-content ads for that pageview, after paying for a
+full client re-render.
+
+Nothing about this is specific to one page. It is a race between two scripts,
+and which one wins depends on the visitor's device and network.
+
+**How it was found.** The content placement monitor was armed on 2026-09-20 and
+its first two armed runs (35515225496, 35515487911) failed on
+`aggregator/desktop`: `device=desktop`, 5 anchors, 0 Content units on
+`/promos/today`, with only `AdThrive_Footer_1_desktop` and
+`AdThrive_Video_StickyOutstream_1_desktop` present. Run 1 also read
+`aggregator/phone` as `INCONCLUSIVE no adthrive-device-* class on body`; run 2
+read that row ok with 3.
+
+Locally, the same checker on the same Chromium 147, headless, at 1350x940, was
+right every time: device class at 273, 400 and 250ms, 5 anchors, 3 units, page
+13,749px tall. (A healthy row prints `matches=8` because the three ad
+containers are themselves `.page-content > *`.) The unmodified checker run
+locally across all six rows matched CI on five and differed only on this one.
+
+**What it is not.** Each of these was tested and ruled out:
+
+| hypothesis | result |
+| --- | --- |
+| readiness poll too short | ready in under half a second against a 30s budget; CI reached readiness too |
+| scroll not reaching the anchors | Content units are created at about 270ms, before any scroll; the scroll does reach the bottom |
+| lazy-mounted sections absent at count time | all 5 sections are in the server HTML at 72ms and the count never changes |
+| runner timezone (UTC) | 3 of 3 runs under `emulateTimezone('UTC')` placed 3 units, no hydration error |
+| runner user agent (`X11; Linux x86_64`) | 3 of 3 placed 3 units |
+| slow CPU alone | 4x, 8x and 12x throttling all placed 3 units; throttling slows Raptive and hydration equally |
+| row order, shared browser process | full six-row run matched CI on the other five rows |
+
+**The reproduction.** Puppeteer request interception that delays ONLY
+`/_next/static/*.js`, so Raptive runs on time and the app's JavaScript arrives
+late. Nothing else is changed.
+
+- Unthrottled, 2,000ms and 5,000ms delay, `/promos/today` desktop. Raptive
+  creates `AdThrive_Content_1..3` at about 310ms. When hydration runs (2.2s and
+  5.4s) the page logs `Minified React error #418`, `<main class="relative
+  z-[1]">` is removed and re-inserted, the `.page-content` node is a different
+  node afterwards, and Raptive's body-level elements (footer, sticky outstream,
+  CCPA modal, comscore) are removed too. React also resets `<body className>`,
+  which takes `adthrive-device-*` with it. End state: 5 anchors, zero units, no
+  device class, no recovery within the 13s probe.
+- 6x CPU with a 300ms delay. Content created at 442ms, `<main>` rebuilt at
+  816ms, and the checker returns `device=desktop matches=5 content=0` with only
+  Footer and Video present. That is CI's desktop row verbatim. The rebuild
+  landed after Raptive's Content step and before its later steps, so the body
+  class, Footer and Video were written after the rebuild and survived.
+- 6x CPU with a 500ms or 700ms delay. The checker returns `INCONCLUSIVE no
+  adthrive-device-* class on body`. That is CI run 1's phone row verbatim.
+
+So the two different-looking CI rows are one event seen at two moments.
+`/promos/today` has no Suspense boundary or `loading.tsx` above the board, so
+the mismatch recovers at the root rather than inside a boundary.
+
+**Affected templates.** All of them that were tried. With the 2,000ms delay,
+unthrottled, `/mlb/los-angeles-dodgers` on desktop and on phone and
+`/venues/td-garden` on desktop each logged #418, rebuilt `<main>` at about 2.2s
+and ended with zero Raptive units and no device class. The aggregator is simply
+the page that loses the race unaided on a slow machine, because it is the
+heaviest to hydrate.
+
+**The margin.** On a fast machine and network, unthrottled, `/promos/today`
+desktop, sampled every 10ms: hydration reaches `.page-content` (first
+`__reactFiber` key on the node) at 128ms and 135ms; Raptive's first Content
+insertion lands at 155ms and 201ms. The margin is 27ms and 66ms. At 6x CPU it is
+391ms and 417ms, because both sides slow down together. What moves the margin
+is the RELATIVE arrival of the app's JavaScript and the ad script, which is a
+property of the visitor's network and cache, not something this repo controls.
+GitHub's hosted runner loses the race with no help at all, on 2 of 2 desktop
+runs and 1 of 2 phone runs of the aggregator.
+
+**What is not known.** How often real visitors lose it. PostHog exception
+autocapture is off and nothing else records a #418, so on 2026-09-20 the field
+rate is a blank, and the field rate is what decides urgency. The next step is a
+single targeted event for #418 carrying the route, the device class and whether
+any `adthrive` node existed at that moment, left to run for a week BEFORE
+anything about ad loading is changed.
+
+**Fix options, neither built.**
+
+1. Load `ads.min.js` after hydration instead of from the inline head script in
+   `src/app/layout.tsx`. This removes the race by construction. It costs ad
+   start time on every pageview, it contradicts the head placement Raptive asked
+   for, and it needs their sign-off. The script must still run exactly once per
+   document load.
+2. Ask Raptive whether they have a delayed-init hook for React and Next sites,
+   so their loader stays in the head and their placement waits for a signal from
+   the page. Unknown whether one exists.
+
+React offers no way to tolerate foreign element nodes inside a subtree it is
+hydrating, so there is no option 3 on our side of the boundary.
+
+**The monitor.** `CONTENT_PLACEMENT_ALARM` was deleted on 2026-09-20. The
+checker's single alarm condition conflates "Raptive computed zero units", the
+regression it was built for, with "Raptive placed units and hydration deleted
+them". Until it counts units at creation from a document-start
+MutationObserver, listens for `pageerror` #418, and gives the second case its
+own verdict, an armed run fails or passes according to the speed of the runner.
+
+**Severity: Medium, provisionally.** The consequence is real (a pageview with no
+in-content ads and a full re-render) and the mechanism is proven on every
+template tried, but the rate on real devices is unmeasured. Promote to High if
+the field rate is material.
