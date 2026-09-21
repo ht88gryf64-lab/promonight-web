@@ -3,13 +3,13 @@
 // one definition; this module adds only the parts that touch the database.
 
 import {
-  HUMAN_OWNED_FIELDS, pickHumanOwned,
+  HUMAN_OWNED_FIELDS, HUMAN_OWNED_BY_COLLECTION, pickHumanOwned, carryHumanOwned,
   MACHINE_OWNED_CRITICAL, MACHINE_OWNED_DEGRADE,
   findCriticalLosses, findFieldDrift,
 } from '../../../src/lib/cfb/human-owned';
 
 export {
-  HUMAN_OWNED_FIELDS, pickHumanOwned,
+  HUMAN_OWNED_FIELDS, HUMAN_OWNED_BY_COLLECTION, pickHumanOwned, carryHumanOwned,
   MACHINE_OWNED_CRITICAL, MACHINE_OWNED_DEGRADE,
   findCriticalLosses, findFieldDrift,
 };
@@ -21,7 +21,13 @@ export interface HumanOwnedHit {
   fields: Record<string, unknown>;
 }
 
-/** Scan collections for docs carrying human-owned fields. Read only. */
+/** Scan collections for docs carrying human-owned fields. Read only.
+ *
+ *  PER-COLLECTION, not one flat list: `editorial` is human-owned on cfbSchools
+ *  and meaningless on cfbGames, and `tombstoned` is the reverse. Scanning every
+ *  collection with the games list would have left an approved editorial block
+ *  invisible to the wipe guard — the exact silence this module exists to
+ *  prevent. */
 export async function findHumanOwnedDocs(
   db: FirebaseFirestore.Firestore,
   collections: string[],
@@ -30,7 +36,7 @@ export async function findHumanOwnedDocs(
   for (const col of collections) {
     const snap = await db.collection(col).get();
     for (const d of snap.docs) {
-      const fields = pickHumanOwned(d.data());
+      const fields = pickHumanOwned(d.data(), col);
       if (Object.keys(fields).length) hits.push({ collection: col, docId: d.id, fields });
     }
   }

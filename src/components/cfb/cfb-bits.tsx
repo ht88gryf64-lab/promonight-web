@@ -86,6 +86,22 @@ export function TrophyTag({ rivalry, tiny }: { rivalry: RivalryTag; tiny?: boole
   return <span className={cls} style={style} title={title}>{label}</span>;
 }
 
+// Attribution for a reader-contributed section.
+//
+// PER SECTION, not once per page. The contributor CTA promises that "a
+// published section credits its contributor", and one line at the bottom of
+// the page cannot tell a reader WHICH prose came from a person. It also
+// replaced a line that read "Gameday section by X" on pages whose published
+// sections are Why you go and the venue -- a byline that named the wrong
+// section is worse than none.
+export function Byline({ credit }: { credit: string }) {
+  return (
+    <p className="mt-3 text-[11px] uppercase text-white/35" style={{ fontFamily: MONO, letterSpacing: '0.08em' }}>
+      Contributed by {credit}
+    </p>
+  );
+}
+
 // Accent-colored mono section label (+ optional right-aligned meta), mockup style.
 export function Eyebrow({ children, right }: { children: ReactNode; right?: ReactNode }) {
   return (

@@ -27,7 +27,7 @@ import { PHASE1_SCHOOLS, BOISE_KICKOFF_FIXTURE, ND_SCHEDULE_FIXTURE, RIVALRY_FIX
 import { parseSchoolSchedule, type ParsedGame } from './lib/pipeline';
 import { guardTimezone, guardDerivedFields, guardEntityConflation, guardSecondSource, guardCitation } from './lib/guards';
 import { fetchWikiSchedule, corroborate } from './lib/corroborate';
-import { assertWipeSafe } from './lib/human-owned';
+import { assertWipeSafe, carryHumanOwned } from './lib/human-owned';
 
 const NO_LLM = process.argv.includes('--no-llm');
 const CORROBORATE_ONLY = process.argv.includes('--corroborate-only');
@@ -185,7 +185,20 @@ async function seedSupportingCollections() {
   ];
   const b = db.batch();
   for (const v of venues) b.set(db.collection(CFB_COLLECTIONS.venues).doc(v.id), { ...v, sharedSchoolIds: [], source: 'audit/cfb-stream-spike.md (verified)', updatedAt: NOW });
-  for (const s of schools) b.set(db.collection(CFB_COLLECTIONS.schools).doc(s.id), { ...s, conferenceBySeason: { '2026': CONFERENCE_2026[s.id] }, traditionIds: [], editorialStatus: 'auto', updatedAt: NOW });
+  // Read-then-preserve, same allowlist as the Phase 2 writer: cfbSchools carries
+  // `editorial` (approved reader prose) that no seed can rebuild, and this is a
+  // bare set(). editorialStatus is NOT written — it is derived at read time.
+  const storedSchools = await Promise.all(
+    schools.map((s) => db.collection(CFB_COLLECTIONS.schools).doc(s.id).get()),
+  );
+  for (let i = 0; i < schools.length; i++) {
+    const s = schools[i];
+    const stored = storedSchools[i].exists ? storedSchools[i].data() : undefined;
+    b.set(db.collection(CFB_COLLECTIONS.schools).doc(s.id), carryHumanOwned(
+      { ...s, conferenceBySeason: { '2026': CONFERENCE_2026[s.id] }, traditionIds: [], updatedAt: NOW },
+      stored, CFB_COLLECTIONS.schools,
+    ));
+  }
   for (const r of rivalries) b.set(db.collection(CFB_COLLECTIONS.rivalries).doc(r.id), { ...r, updatedAt: NOW });
   for (const t of traditions) b.set(db.collection(CFB_COLLECTIONS.traditions).doc(t.id), { ...t, updatedAt: NOW });
   await b.commit();

@@ -14,6 +14,12 @@
 //    conflation).
 // 5. `CfbGame.verified` defaults to false and gates production display.
 
+/** DERIVED, NEVER STORED. A school reaches "destination" the moment its
+ *  editorial.whyYouGo is approved; nothing writes this to Firestore, so it can
+ *  never disagree with what the page actually renders. It was a stored field
+ *  until 2026-09-20, when it was found to be written by three scripts, read by
+ *  data.ts and consumed by no template — the flip to "destination" moved no
+ *  pixel. Computed now in src/lib/cfb/data.ts. */
 export type CfbEditorialStatus = 'auto' | 'destination';
 
 /** Honest confidence the schedule parser self-assigns. Treated as UNVERIFIED
@@ -35,8 +41,45 @@ export interface CfbSchool {
   conferenceBySeason: Record<string, string>;
   venueId: string;
   traditionIds: string[]; // refs into cfbTraditions
-  editorialStatus: CfbEditorialStatus; // gates page treatment ("auto" until editorial lands)
+  /** Reader-contributed prose, approved section by section by a human
+   *  (scripts/cfb/approve-contribution.ts). HUMAN-OWNED: no parser can rebuild
+   *  it, so the Phase 2 writers carry it forward through their bare set() and
+   *  assertWipeSafe refuses a wipe while it is present (human-owned.ts). */
+  editorial?: CfbSchoolEditorial;
   updatedAt: string; // ISO
+}
+
+/** One approved section. The contributor's own words, plus the trail back to
+ *  the submission it came from. `contributor` is a FIRST NAME ONLY — the
+ *  contact on the contribution doc never reaches this collection, and a test
+ *  asserts it (src/lib/__tests__/cfb-approve-contribution.test.ts). */
+export interface CfbEditorialSection {
+  text: string;
+  contributor: string; // first name only, never an email or handle
+  approvedAt: string; // ISO
+  contributionId: string; // cfbContributions doc id
+}
+
+/** The editorial block on a school doc. Every member is optional: a section
+ *  exists only once a human has approved it, and the ONE template hides what is
+ *  absent. Two members are HELD and cannot publish yet:
+ *
+ *    traditions      shape undefined (CfbSchoolPage.tsx carries the Phase 4
+ *                    TODO), so it stays unknown[] and renders nothing.
+ *    signatureGame   the contribution stores FREE TEXT ("The Whiteout") while
+ *                    the template resolves editorial.signatureGameId as a game
+ *                    id. A phrase can never match a 2026-w{n}-{home}-{away} id,
+ *                    so this is stored for the record and rendered nowhere. The
+ *                    real destination for that content is a themeDesignation on
+ *                    the game doc, which inherits the verified gate.
+ *
+ *  The form's `gameday` answer has NO member here on purpose: the template's
+ *  gamedayCulture has no approved source yet. See the branch report. */
+export interface CfbSchoolEditorial {
+  whyYouGo?: CfbEditorialSection;
+  venueInTheirWords?: CfbEditorialSection;
+  traditions?: unknown[]; // HELD — no renderable shape
+  signatureGame?: CfbEditorialSection; // HELD — free text, not a game id
 }
 
 // ── cfbVenues/{venueId} ──────────────────────────────────────────────────────

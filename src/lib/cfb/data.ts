@@ -6,7 +6,9 @@
 
 import { cache } from 'react';
 import { db } from '@/lib/firebase';
-import type { CfbSchool, CfbVenue, CfbGame, CfbRivalry } from '@/lib/cfb/types';
+import type { CfbSchool, CfbVenue, CfbGame, CfbRivalry, CfbEditorialStatus } from '@/lib/cfb/types';
+import { flattenEditorial, deriveEditorialStatus, stripEditorial } from '@/lib/cfb/editorial';
+import type { EditorialView } from '@/lib/cfb/editorial';
 import { CFB_COLLECTIONS } from '@/lib/cfb/types';
 import { isVisibleGame } from '@/lib/cfb/human-owned';
 // Kickoff display goes through src/lib/cfb/kickoff.ts, which consumes the
@@ -58,16 +60,14 @@ export interface CfbSchoolPage {
   school: CfbSchool;
   venue: CfbVenue | null;
   games: CfbGameView[];
-  editorialStatus: 'auto' | 'destination';
-  // Editorial blocks (Phase 4 populates; ONE template renders them only when present).
-  editorial: {
-    signatureGameId: string | null;
-    traditions: unknown[]; // cfbTraditions later
-    gamedayCulture: string | null;
-    whyYouGo: string | null;
-    venueInTheirWords: string | null;
-    contributor: { name: string; credit: string } | null;
-  };
+  /** DERIVED from editorial.whyYouGo, never read from the doc (types.ts). */
+  editorialStatus: CfbEditorialStatus;
+  // Editorial blocks, FLATTENED for the ONE template, which renders each only
+  // when present. The stored shape is per-section
+  // ({ text, contributor, approvedAt, contributionId } — types.ts
+  // CfbSchoolEditorial); this view hands the template the strings it paints and
+  // keeps the provenance out of the JSX.
+  editorial: EditorialView;
 }
 
 // Extract the trophy's OWN article link from the stored rivalry provenance.
@@ -295,11 +295,20 @@ export const getCfbSchoolPage = cache(async (id: string): Promise<CfbSchoolPage 
   }
   games.sort((a, b) => a.date.localeCompare(b.date));
 
+  // NO NEW FIRESTORE CALL: `editorial` rides on the cfbSchools doc that
+  // loadSchools() already has in hand. Reading the public cfbContributions
+  // queue at render time was rejected — it is the landing collection of an
+  // unauthenticated POST and it carries the contributor's contact.
+  const editorial = flattenEditorial(school.editorial);
+
   return {
-    school, venue, games,
-    editorialStatus: school.editorialStatus || 'auto',
-    // Phase 3 auto pages: editorial blocks are all empty; the ONE template hides
-    // them. Phase 4 populates these as a DATA change (no template change).
-    editorial: { signatureGameId: null, traditions: [], gamedayCulture: null, whyYouGo: null, venueInTheirWords: null, contributor: null },
+    // stripEditorial: the page hands this doc to <CfbSchedule>, a CLIENT
+    // component, so every field on it crosses into the served RSC payload. The
+    // prose reaches the template through `editorial` below and nowhere else.
+    school: stripEditorial(school), venue, games,
+    // DERIVED, never stored, so it can never disagree with the page.
+    editorialStatus: deriveEditorialStatus(editorial),
+    editorial,
   };
 });
+

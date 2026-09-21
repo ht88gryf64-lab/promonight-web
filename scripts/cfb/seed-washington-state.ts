@@ -57,7 +57,6 @@ const DOC: CfbSchool & { colorsHumanConfirmed: boolean } = {
   conferenceBySeason: { '2026': 'Pac-12' },
   venueId: '',
   traditionIds: [],
-  editorialStatus: 'auto',
   updatedAt: new Date().toISOString(),
 };
 
