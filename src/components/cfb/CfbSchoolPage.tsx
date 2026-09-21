@@ -123,9 +123,18 @@ export function CfbSchoolPage({ data, venueHubLink, venueHub }: { data: CfbSchoo
 
             {/* Right — VENUE FACTS PANEL. Verified structured data only (name,
                 location, capacity from cfbVenues). No generated prose; opened-year
-                and surface aren't in the schema, so they're OMITTED, not invented. */}
+                and surface aren't in the schema, so they're OMITTED, not invented.
+
+                A div with role="complementary", deliberately NOT the aside tag.
+                Raptive's Sidebar rules select by TAG (`aside > *` and `aside`),
+                so an aside anywhere on a page receives the sidebar ad stack.
+                This panel sits inside the hero, and as an aside it took that
+                stack: the hero grew to 44,327px and every piece of page content
+                started 44,400px down on desktop (known-issues entry 53). The
+                role keeps what the tag gave it, the page's one complementary
+                landmark. Do not tidy this back into an aside. */}
             {venue && (
-              <aside className="rounded-2xl p-6 lg:mb-1" style={{ background: '#0e0d14', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div role="complementary" className="rounded-2xl p-6 lg:mb-1" style={{ background: '#0e0d14', border: '1px solid rgba(255,255,255,0.08)' }}>
                 <div className="text-[11px] uppercase" style={{ fontFamily: MONO, letterSpacing: '0.166em', color: 'var(--cfb-accent)' }}>About the venue</div>
                 <div className="mt-3 italic leading-tight text-white" style={{ fontFamily: SERIF, fontSize: '1.55rem' }}>{venue.name}</div>
                 <dl className="mt-4 space-y-3">
@@ -142,7 +151,7 @@ export function CfbSchoolPage({ data, venueHubLink, venueHub }: { data: CfbSchoo
                     </div>
                   )}
                 </dl>
-              </aside>
+              </div>
             )}
           </div>
           <div className="pb-11" />
