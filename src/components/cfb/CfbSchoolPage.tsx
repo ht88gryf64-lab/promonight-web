@@ -42,7 +42,7 @@ import { VenueHubLink } from '@/components/venue-hub/VenueHubLink';
 import { CondensedLogisticsBlock } from '@/components/venue-hub/venue-logistics';
 import { buildCondensedLogistics, CONDENSED_MIN_FIELDS } from '@/lib/venue-hub-condensed';
 import { displayVenueName, type TeamVenueHubLink, type VenueHub } from '@/lib/venue-hub';
-import { SERIF, MONO, SANS, fmtMonthDay, fmtDayLong, Eyebrow, TAP_TARGET_24 } from './cfb-bits';
+import { SERIF, MONO, SANS, fmtMonthDay, fmtDayLong, Eyebrow, Byline, TAP_TARGET_24 } from './cfb-bits';
 import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
 
 export function CfbSchoolPage({ data, venueHubLink, venueHub }: { data: CfbSchoolPageData; venueHubLink: TeamVenueHubLink | null; venueHub: VenueHub | null }) {
@@ -234,6 +234,7 @@ export function CfbSchoolPage({ data, venueHubLink, venueHub }: { data: CfbSchoo
               <div className="rounded-2xl p-6 sm:p-7" style={{ background: '#0c0b12', border: '1px solid rgba(255,255,255,0.07)' }}>
                 <div className="mb-2 italic text-white" style={{ fontFamily: SERIF, fontSize: '1.5rem' }}>Why you go</div>
                 <p className="text-[13.5px] leading-relaxed text-white/70" style={{ fontFamily: SANS }}>{editorial.whyYouGo}</p>
+                {editorial.contributor && <Byline credit={editorial.contributor.credit} />}
               </div>
             )}
           </div>
@@ -416,6 +417,7 @@ export function CfbSchoolPage({ data, venueHubLink, venueHub }: { data: CfbSchoo
             <Eyebrow>{venue.name}</Eyebrow>
             <div className="rounded-2xl p-6" style={{ background: '#0c0b12', border: '1px solid rgba(255,255,255,0.06)', borderLeft: '3px solid var(--cfb-accent)' }}>
               <p className="text-[13.5px] leading-relaxed text-white/70" style={{ fontFamily: SANS }}>{editorial.venueInTheirWords}</p>
+              {editorial.contributor && <Byline credit={editorial.contributor.credit} />}
             </div>
           </section>
         )}
@@ -433,7 +435,7 @@ export function CfbSchoolPage({ data, venueHubLink, venueHub }: { data: CfbSchoo
           >
             Contribute to this page
           </Link>
-          {editorial.contributor && <p className="mt-3 text-[11px] text-white/40" style={{ fontFamily: MONO }}>Gameday section by {editorial.contributor.credit}.</p>}
+          {editorial.contributor && <p className="mt-3 text-[11px] text-white/40" style={{ fontFamily: MONO }}>Reader-contributed sections on this page are by {editorial.contributor.credit}.</p>}
         </section>
 
         {/* FTC disclosure. This page renders TicketNetwork, Ticketmaster, SpotHero,
