@@ -5,6 +5,7 @@ import { ShareButton, formatShareDate, type ShareItem } from './share';
 import { EbayResaleLink } from './affiliates/EbayResaleLink';
 import { RedesignPromoRow } from '@/components/redesign/RedesignPromoRow';
 import { LazyPromoRows } from '@/components/redesign/LazyPromoRows';
+import { groupPromoRows } from '@/lib/promo-row-groups';
 import { PromoArrivalHighlight } from '@/components/redesign/PromoArrivalHighlight';
 import { isBobbleheadGiveaway, isEbayResaleActive } from '@/lib/ebay';
 import { splitCompletedForRender } from '@/lib/render-windows';
@@ -335,6 +336,19 @@ export function PromoList({
     ) : undefined;
 
   if (variant === 'light') {
+    const upcomingGroups = groupPromoRows(upcomingVisible);
+    const renderUpcomingRow = (promo: Promo, i: number) => (
+      <RedesignPromoRow
+        key={`u-${i}`}
+        promo={promo}
+        share={share}
+        team={team}
+        contexts={contextsFor(promo)}
+        interactive
+        anchorId={`promo-${promoAnchorId(promo)}`}
+        adItem="promo"
+      />
+    );
     return (
       <section className="py-12 px-6">
         <PromoArrivalHighlight />
@@ -365,19 +379,35 @@ export function PromoList({
 
           {upcoming.length > 0 ? (
             <>
+              {/* Rows box. Unchanged: same element, same `space-y-3`.
+                  Inside it the rows are grouped so Raptive has anchors INSIDE
+                  the list; see src/lib/promo-row-groups.ts for why, why four,
+                  and why the tail sits outside `page-content`. Layout-neutral
+                  by construction: Tailwind v4's space-y puts the 12px on every
+                  non-last child, so nested `space-y-3` groups reproduce the
+                  exact gaps the flat list had (measured: zero rect differences).
+                  Server-rendered, and must stay OUT of any <Suspense>
+                  (known-issues entry 50). `page-content` here is a Raptive hook,
+                  not a style; do not rename or restyle it. */}
               <div className="space-y-3">
-                {upcomingVisible.map((promo, i) => (
-                  <RedesignPromoRow
-                    key={`u-${i}`}
-                    promo={promo}
-                    share={share}
-                    team={team}
-                    contexts={contextsFor(promo)}
-                    interactive
-                    anchorId={`promo-${promoAnchorId(promo)}`}
-                    adItem="promo"
-                  />
-                ))}
+                {upcomingGroups.anchors.length > 0 && (
+                  <div className="space-y-3 page-content">
+                    {upcomingGroups.anchors.map((group) => (
+                      <div key={`g-${group.start}`} className="space-y-3">
+                        {group.rows.map((promo, j) => renderUpcomingRow(promo, group.start + j))}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {upcomingGroups.anchors.length > 0 ? (
+                  <div className="space-y-3">
+                    {upcomingGroups.tail.rows.map((promo, j) =>
+                      renderUpcomingRow(promo, upcomingGroups.tail.start + j),
+                    )}
+                  </div>
+                ) : (
+                  upcomingGroups.tail.rows.map((promo, j) => renderUpcomingRow(promo, j))
+                )}
               </div>
 
               {upcomingHidden.length > 0 && (
