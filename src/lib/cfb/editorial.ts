@@ -86,3 +86,98 @@ export function flattenEditorial(stored: CfbSchoolEditorial | undefined | null):
 export function deriveEditorialStatus(view: EditorialView): 'auto' | 'destination' {
   return view.whyYouGo ? 'destination' : 'auto';
 }
+
+// ── the approve path ────────────────────────────────────────────────────────
+
+/** The stored contribution, as scripts/../contribute/route.ts writes it. */
+export interface ContributionDoc {
+  schoolId?: unknown;
+  name?: unknown;
+  contact?: unknown; // an email or a handle. NEVER copied anywhere.
+  content?: Record<string, unknown>;
+  status?: unknown;
+}
+
+export interface ApproveInput {
+  contributionId: string;
+  doc: ContributionDoc;
+  /** Contribution keys to approve. Everything else is held. */
+  approve: readonly ContributionKey[];
+  /** Corrected text per contribution key: typo fixes only, never a rewrite.
+   *  An entry here REPLACES the submitted text for that section. */
+  edits?: Partial<Record<ContributionKey, string>>;
+  approvedAt: string; // ISO
+}
+
+export interface ApproveResult {
+  /** The editorial members to merge onto the school doc. Held sections absent. */
+  editorial: CfbSchoolEditorial;
+  /** Per-section verdict, for the record on the contribution doc. */
+  verdicts: Record<string, { verdict: 'approved' | 'held'; renders: boolean; reason?: string }>;
+  /** Sections approved but which no template can paint yet. */
+  approvedButNotRendered: EditorialKey[];
+}
+
+/** FIRST NAME ONLY.
+ *
+ *  The submitted `name` is free text and the contact is a separate field that
+ *  never leaves the contribution doc. Taking the first whitespace-delimited
+ *  token keeps a full name from becoming a public byline, and an email typed
+ *  into the name box from becoming one either: an address has no space, so the
+ *  token would be the whole address, which is exactly why it is rejected here
+ *  rather than trimmed. */
+export function creditName(name: unknown): string {
+  const raw = typeof name === 'string' ? name.trim() : '';
+  if (!raw) return '';
+  const first = raw.split(/\s+/)[0];
+  // never publish something that looks like a contact handle
+  if (/@|https?:|\.(com|net|org|io)$/i.test(first)) return '';
+  return first.slice(0, 40);
+}
+
+/** Build the editorial members for an approval. PURE.
+ *
+ *  Reads ONLY `content[key]` and `name` off the contribution. `contact` is
+ *  never touched, so it cannot reach cfbSchools by any path -- asserted in
+ *  cfb-approve-contribution.test.ts. A section with no text is held
+ *  automatically: approving an empty answer would publish a blank panel. */
+export function buildApproval(input: ApproveInput): ApproveResult {
+  const { contributionId, doc, approve, edits = {}, approvedAt } = input;
+  const content = (doc.content && typeof doc.content === 'object' ? doc.content : {}) as Record<string, unknown>;
+  const contributor = creditName(doc.name);
+
+  const editorial: CfbSchoolEditorial = {};
+  const verdicts: ApproveResult['verdicts'] = {};
+  const approvedButNotRendered: EditorialKey[] = [];
+  const wanted = new Set<ContributionKey>(approve);
+
+  for (const key of Object.keys(SECTION_MAP) as ContributionKey[]) {
+    const target = SECTION_MAP[key];
+    const submitted = typeof content[key] === 'string' ? (content[key] as string) : '';
+    const text = (edits[key] ?? submitted).trim();
+
+    if (!wanted.has(key)) {
+      verdicts[target] = { verdict: 'held', renders: false };
+      continue;
+    }
+    if (!text) {
+      verdicts[target] = { verdict: 'held', renders: false, reason: 'no text submitted' };
+      continue;
+    }
+    if (!contributor) {
+      verdicts[target] = { verdict: 'held', renders: false, reason: 'no publishable first name' };
+      continue;
+    }
+    if (target === 'traditions') {
+      // unknown[] with no renderable shape; refuse to invent one.
+      verdicts[target] = { verdict: 'held', renders: false, reason: 'no renderable shape (Phase 4)' };
+      continue;
+    }
+    editorial[target] = { text, contributor, approvedAt, contributionId } as CfbEditorialSection;
+    const renders = RENDERABLE_SECTIONS.includes(target);
+    verdicts[target] = { verdict: 'approved', renders };
+    if (!renders) approvedButNotRendered.push(target);
+  }
+
+  return { editorial, verdicts, approvedButNotRendered };
+}
