@@ -3000,3 +3000,97 @@ point back at the baseline.
 
 **Severity: Low, provisionally.** No revenue effect and no broken page. Promote
 to Medium if the field rate on `/` confirms anything like 1 in 7.
+
+## 53. Raptive's Sidebar rules match any `<aside>`, so an `<aside>` anywhere on a page receives the sidebar ad stack
+
+**What it is.** Raptive places sidebar ads with two rules, read from
+`window.adthrive.config.dynamicAds` on 2026-09-21. Both are desktop only, and
+both select by TAG, with no class and no page scoping:
+
+| rule | selector | position | sticky |
+| --- | --- | --- | --- |
+| `Sidebar_1` | `aside > *` | afterend | no |
+| `Sidebar_9` | `aside` | beforeend | yes |
+
+So whatever element on a page happens to be an `<aside>` is, to Raptive, the
+sidebar. It does not have to be a column, it does not have to be beside the
+content, and nothing in this repo opts it in. Writing `<aside>` for ordinary
+semantic reasons creates an ad slot.
+
+**Where it bit.** Measured at 1190px on production, 2026-09-21. Each of these
+pages has exactly one `<aside>`, and each received the identical stack:
+
+| template | what the `<aside>` is | aside | content beside it | page | footer y |
+| --- | --- | --- | --- | --- | --- |
+| team, `/mlb/minnesota-twins` | the real sidebar column, 336px, in the weave grid | 44,900px | 8,892px | 46,177px | 45,501 |
+| venue, `/venues/td-garden` | the real sticky rail, 380px | 44,457px | 1,602px | 45,485px | 44,809 |
+| CFB school, `/cfb/penn-state` and `/cfb/tennessee` | the hero's "About the venue" facts panel, 135px of authored content | 44,183px | none: it is INSIDE the hero | 48,918 / 48,287px | 48,242 / 47,611 |
+
+On team and venue pages the aside is the right element and the damage was a
+blank left column (from y 9,110 on the team page, from y 1,874 on the venue
+page) and a footer 45,000px down. The venue aside is itself `lg:sticky`, and at
+that height it stopped sticking. On CFB school pages the aside sits inside the
+hero `<header>`, so the stack made the HERO 44,327px tall and every piece of page
+content started at y 44,408. The panel is the right cell of the hero's two-column
+grid, not a single-column block, but it is in the hero and the hero precedes the
+content, which is all that matters.
+
+**The 44,000px cap.** The stack was the same everywhere: 26 injected children,
+being `Sidebar_1` at 250px, 24 `div.rp-sticky-sidebar` boxes of exactly 1,800px
+each (the slot inside each is `position: sticky; top: 60px`, and it does stick),
+and one more. About 44,000px whether the content beside it was 1,602px or
+8,892px. It does not track content height; it behaves like a cap of 25 sticky
+units. A likely reason, inferred and not read from their code: the feature fills
+the sidebar to the height of the page, and on these templates the aside is what
+sets the height of the page, so every box it adds makes room for another until
+the cap stops it.
+
+**Enhanced sticky sidebar is what builds the stack.** The setting is "Enhanced
+sticky sidebar ads" in Raptive Ad Controls, enabled around 2026-09-18, exposed at
+`config._dynamicAdsMapper._adOptions.dynamicStickySidebarEnabled`. Matt turned it
+off on 2026-09-21 and the flag read `false` when next checked the same day.
+Re-measured:
+
+| template | aside before | aside after | Sidebar slots | page height | footer y |
+| --- | --- | --- | --- | --- | --- |
+| team | 44,900 | 1,610 | 26 to 2 | 46,177 to 10,161 | 45,501 to 9,485 |
+| venue | 44,457 | 1,017 | 26 to 2 | 45,485 to 2,630 | 44,809 to 1,954 |
+| CFB school | 44,183 | 1,093 | 26 to 2 | 48,918 to 5,828 | 48,242 to 5,152 |
+
+With it off, an aside carries its authored content plus two units. The venue
+aside is shorter than its content column again, so it sticks again. Turning the
+setting back on returns the team and venue pages to the 44,000px state; whether
+to is a revenue call, and if it is ever wanted it should be raised with Raptive
+as a cap that respects content height.
+
+**The CFB retag.** Two units in the hero still pushed CFB content from about
+y 490 to y 972 through 1,322, so the panel was retagged in `5e50191`, merged as
+`cc23bed` on 2026-09-21, production deploy `dpl_AKjzBM91bUNTZhVX5jZtMErDTpkc`.
+`src/components/cfb/CfbSchoolPage.tsx` now renders it as
+`<div role="complementary">` with the same classes and style. Measured on
+production afterwards, both pages: hero 405px (its authored size), first content
+block at y 486 and y 490, zero Sidebar units in the hero or anywhere on the page,
+no `<aside>` left on the template. Geometry is identical with no ads present at
+386px and 1190px. The role keeps what the tag gave it: via CDP
+`Accessibility.getFullAXTree`, the panel is the page's one `complementary`
+landmark before and after. CFB school pages are single-column, so carrying no
+Sidebar units is correct for them.
+
+**The rule this leaves behind.** Do not write `<aside>` unless the element is
+meant to be the ad-bearing sidebar column. For a complementary panel anywhere
+else, use `<div role="complementary">`. As of 2026-09-21 the repo has two
+`<aside>` elements and both are intended: the team-page weave aside in
+`RedesignTeamPage.tsx` (which must also keep its `aria-label`, entry 49) and the
+venue rail in `VenueHubView.tsx`. A third one is a new ad placement whether or
+not anyone meant it to be.
+
+**Seen while verifying.** One of four clean preview loads of `/cfb/tennessee`
+threw a React #418 with no ad node involved and ads unaffected. The retag renders
+identical markup on server and client and cannot cause a mismatch; this is the
+intermittent non-ad #418 of entry 52, now seen on a CFB route as well as the
+homepage. It will show in the field as `hydration_mismatch` with
+`adthrive_present = false`.
+
+**Severity: Low, as a standing hazard.** The CFB defect it caused is resolved.
+What remains is a trap in the markup vocabulary: a perfectly reasonable tag
+choice silently becomes an ad slot.
