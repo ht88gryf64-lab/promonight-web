@@ -97,3 +97,35 @@ test('the held sections are exactly the two that cannot render', () => {
   assert.deepEqual([...RENDERABLE_SECTIONS], ['whyYouGo', 'venueInTheirWords']);
   assert.deepEqual([...HELD_SECTIONS], ['traditions', 'signatureGame']);
 });
+
+// ── the second exit: the school doc the page ships to the client ────────────
+//
+// Measured on production 2026-09-21: CfbSchoolPage is a server component, but
+// it passes the raw school doc to <CfbSchedule>, which is a CLIENT component,
+// so every field crosses into the RSC flight payload and is served in the HTML.
+// The approved prose, its contributionId and its approvedAt were all in the
+// served bytes while nothing was visible on the page. flattenEditorial keeps
+// the audit trail out of the view; the raw doc was handing it over anyway.
+
+test('the school doc handed to the page carries no editorial block', async () => {
+  const { stripEditorial } = await import('../cfb/editorial');
+  const school = {
+    id: 'penn-state', name: 'Penn State', venueId: 'beaver-stadium',
+    editorial: { whyYouGo: section('Why you go.') },
+  };
+  const shipped = stripEditorial(school);
+  assert.equal('editorial' in shipped, false);
+  const wire = JSON.stringify(shipped);
+  assert.equal(wire.includes('xjbIK9nfmh4zP7AotIJz'), false, 'contributionId must not ship to the client');
+  assert.equal(wire.includes('2026-09-20T18:00:00.000Z'), false, 'approvedAt must not ship to the client');
+  assert.equal(wire.includes('Why you go.'), false, 'the prose ships once, through the flat view');
+  // every machine field survives
+  assert.equal(shipped.id, 'penn-state');
+  assert.equal(shipped.venueId, 'beaver-stadium');
+});
+
+test('stripEditorial is a no-op on a school that has none', async () => {
+  const { stripEditorial } = await import('../cfb/editorial');
+  const school: { id: string; name: string; editorial?: unknown } = { id: 'tennessee', name: 'Tennessee' };
+  assert.equal(stripEditorial(school), school, 'no clone when there is nothing to strip');
+});

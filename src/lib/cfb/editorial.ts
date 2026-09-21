@@ -181,3 +181,31 @@ export function buildApproval(input: ApproveInput): ApproveResult {
 
   return { editorial, verdicts, approvedButNotRendered };
 }
+
+/** Strip `editorial` off the school doc before it reaches the page.
+ *
+ *  THE PAGE SHIPS `school` TO THE CLIENT. CfbSchoolPage is a server component,
+ *  but it hands the raw school doc to <CfbSchedule school={school}>, which is a
+ *  CLIENT component -- so every field on that doc crosses the serialization
+ *  boundary into the RSC flight payload and is served in the HTML, whether or
+ *  not anything paints it. Measured on production 2026-09-21, minutes after the
+ *  first approval landed: the approved prose, its contributionId and its
+ *  approvedAt were all in the served bytes of /cfb/penn-state while nothing was
+ *  visible on the page.
+ *
+ *  That makes the raw school doc a SECOND path to the editorial block, and an
+ *  ungated one. flattenEditorial deliberately leaves approvedAt and
+ *  contributionId behind; `school` was handing them over anyway. Nothing sensitive
+ *  ships today -- the contact never reaches this collection -- but the rule has
+ *  to hold at every exit, not just the one that was designed to enforce it.
+ *
+ *  Stripping at the DATA LAYER, not at the prop: the field is gone before any
+ *  component can pass it on, so a future client component added to this tree
+ *  cannot reintroduce the leak. Nothing reads school.editorial -- the prose
+ *  reaches the template only through the flat view -- so there is one path. */
+export function stripEditorial<T extends { editorial?: unknown }>(school: T): T {
+  if (school.editorial === undefined) return school;
+  const { editorial: _omit, ...rest } = school;
+  void _omit;
+  return rest as T;
+}

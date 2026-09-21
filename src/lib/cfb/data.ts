@@ -7,7 +7,7 @@
 import { cache } from 'react';
 import { db } from '@/lib/firebase';
 import type { CfbSchool, CfbVenue, CfbGame, CfbRivalry, CfbEditorialStatus } from '@/lib/cfb/types';
-import { flattenEditorial, deriveEditorialStatus } from '@/lib/cfb/editorial';
+import { flattenEditorial, deriveEditorialStatus, stripEditorial } from '@/lib/cfb/editorial';
 import type { EditorialView } from '@/lib/cfb/editorial';
 import { CFB_COLLECTIONS } from '@/lib/cfb/types';
 import { isVisibleGame } from '@/lib/cfb/human-owned';
@@ -302,7 +302,10 @@ export const getCfbSchoolPage = cache(async (id: string): Promise<CfbSchoolPage 
   const editorial = flattenEditorial(school.editorial);
 
   return {
-    school, venue, games,
+    // stripEditorial: the page hands this doc to <CfbSchedule>, a CLIENT
+    // component, so every field on it crosses into the served RSC payload. The
+    // prose reaches the template through `editorial` below and nowhere else.
+    school: stripEditorial(school), venue, games,
     // DERIVED, never stored, so it can never disagree with the page.
     editorialStatus: deriveEditorialStatus(editorial),
     editorial,
