@@ -60,3 +60,8 @@ gcp-credentials*.json
 # Site-audit dry-run output (audit/generate-site-audit.ts). The canonical file
 # is docs/SITE-AUDIT.md; the .generated.md is a transient dry-run artifact.
 docs/SITE-AUDIT.generated.md
+
+# Scratch working directories for the NHL arena waves: build scripts, dry-run
+# dumps and fetch logs. The wave REPORTS (audit/nhl-arena-data-*.md) stay
+# committable on purpose -- see CLAUDE.md.
+audit/nhl-wave*/
