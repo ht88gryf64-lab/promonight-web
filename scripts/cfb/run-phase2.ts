@@ -91,7 +91,7 @@ import { resolveVenue } from './lib/venue';
 import { resolveColors } from './lib/colors';
 import { tagRivalry, type RivalryEntry } from './lib/rivalry';
 import {
-  pickHumanOwned, assertWipeSafe, findFieldDrift,
+  pickHumanOwned, carryHumanOwned, assertWipeSafe, findFieldDrift,
   HUMAN_OWNED_FIELDS, MACHINE_OWNED_CRITICAL, MACHINE_OWNED_DEGRADE,
 } from './lib/human-owned';
 
@@ -189,6 +189,19 @@ async function runSchool(cfg: CfbSchoolConfig2026): Promise<SchoolResult> {
   const existingGames = await Promise.all(
     games.map((g) => db.collection(CFB_COLLECTIONS.games).doc(g.id).get()),
   );
+
+  // The SAME read-then-preserve for the school doc. cfbSchools is rebuilt by a
+  // bare set() below and wiped outright by an unscoped run, and it now carries
+  // `editorial` — reader-contributed prose a human approved, which no parser
+  // emits and no re-run can rebuild. Read in BOTH modes so a dry run reports
+  // exactly what a real run would carry.
+  const existingSchoolSnap = await db.collection(CFB_COLLECTIONS.schools).doc(cfg.id).get();
+  const existingSchool = existingSchoolSnap.exists ? existingSchoolSnap.data() : undefined;
+  const carriedSchool = pickHumanOwned(existingSchool, CFB_COLLECTIONS.schools);
+  if (Object.keys(carriedSchool).length) {
+    preserved.push(`${cfg.id} (school) ${JSON.stringify(carriedSchool)}`);
+    console.log(`    PRESERVE ${cfg.id} (school) ${JSON.stringify(carriedSchool)}${EXECUTE ? '' : ' (dry, would carry forward)'}`);
+  }
   const carriedByGameId = new Map<string, Record<string, unknown>>();
   for (let i = 0; i < games.length; i++) {
     const stored = existingGames[i].exists ? existingGames[i].data() : undefined;
@@ -216,12 +229,16 @@ async function runSchool(cfg: CfbSchoolConfig2026): Promise<SchoolResult> {
   if (EXECUTE) {
     // cfbSchools (colors proposed), cfbVenues (proposed), cfbGames (verified flags set)
     const b = db.batch();
-    b.set(db.collection(CFB_COLLECTIONS.schools).doc(cfg.id), {
+    // editorialStatus is NOT written. It is DERIVED from editorial.whyYouGo at
+    // read time (src/lib/cfb/data.ts), so a stored copy could only ever
+    // disagree with the page. This writer used to hardcode it to 'auto', which
+    // would have demoted an approved destination school on every re-run.
+    b.set(db.collection(CFB_COLLECTIONS.schools).doc(cfg.id), carryHumanOwned({
       id: cfg.id, name: cfg.name, shortName: cfg.name, mascot: cfg.nick,
       primaryColor: colors.primary, secondaryColor: colors.secondary, colorsSource: colors.source, colorsHumanConfirmed: false,
       conferenceBySeason: { '2026': cfg.conference2026 }, venueId, traditionIds: [],
-      editorialStatus: 'auto', updatedAt: NOW,
-    });
+      updatedAt: NOW,
+    }, existingSchool, CFB_COLLECTIONS.schools));
     if (venueId) b.set(db.collection(CFB_COLLECTIONS.venues).doc(venueId), {
       id: venueId, name: venue.proposedStadium, city: venue.city, state: venue.state, capacity: venue.capacity,
       lat: venue.lat, lng: venue.lng, homeSchoolId: cfg.id, sharedSchoolIds: [],

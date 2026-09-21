@@ -1,4 +1,4 @@
-// Human-owned fields on cfbGames.
+// Human-owned fields, BY COLLECTION.
 //
 // The Phase 2 writer (scripts/cfb/run-phase2.ts) rebuilds cfbGames from the
 // parser with a bare set(), and the full-run path wipes the collection first.
@@ -6,8 +6,8 @@
 // for dates, kickoffs, broadcast and corroboration, and a re-run should replace
 // them wholesale.
 //
-// Two fields are not machine-derivable. A human decides them and no schedule
-// page can rebuild them:
+// Four cfbGames fields are not machine-derivable. A human decides them and no
+// schedule page can rebuild them:
 //   tombstoned           a redundant duplicate doc, hidden rather than deleted
 //   neutralVenueHubSlug  the venueHubs building a neutral-site game is played in
 //   internationalVenue   a neutral site abroad (no hub doc): name, city, zone
@@ -18,8 +18,29 @@
 // turn the writer into an append-only store; naming the human-owned fields keeps
 // everything else machine-owned and freely overwritable.
 
-/** Fields a human decides. Never emitted by the parser, never re-derivable. */
-export const HUMAN_OWNED_FIELDS = ['tombstoned', 'neutralVenueHubSlug', 'internationalVenue', 'humanResolved'] as const;
+// cfbSchools carries one human-owned field of its own: `editorial`, the
+// reader-contributed prose approved section by section by
+// scripts/cfb/approve-contribution.ts. It has exactly the property that put the
+// cfbGames fields on this list — no parser emits it and no re-run can rebuild
+// it — and it sits in a collection that BOTH Phase 2 writers rebuild with a
+// bare set() and that run-phase2 --execute (unscoped) WIPES first. Without the
+// carry-forward below, one full run silently deletes every approved section.
+
+/** Human-owned fields per collection. A collection absent from this map has
+ *  none, which is the correct answer for cfbVenues and cfbRivalries today.
+ *  Registering a new wipe-listed collection means adding it here, or it gets
+ *  silent zero protection. */
+export const HUMAN_OWNED_BY_COLLECTION: Record<string, readonly string[]> = {
+  cfbGames: ['tombstoned', 'neutralVenueHubSlug', 'internationalVenue', 'humanResolved'],
+  cfbSchools: ['editorial'],
+};
+
+/** Fields a human decides on cfbGames. Never emitted by the parser, never
+ *  re-derivable. Kept as its own export because every existing caller means
+ *  the games list specifically. */
+export const HUMAN_OWNED_FIELDS = HUMAN_OWNED_BY_COLLECTION.cfbGames as readonly [
+  'tombstoned', 'neutralVenueHubSlug', 'internationalVenue', 'humanResolved',
+];
 
 export type HumanOwnedField = (typeof HUMAN_OWNED_FIELDS)[number];
 
@@ -118,12 +139,37 @@ export function findFieldDrift(
 export const isVisibleGame = (g: { tombstoned?: boolean }): boolean => g.tombstoned !== true;
 
 /** The human-owned fields actually present on a stored doc. Absent fields are
- *  omitted entirely so a spread never writes undefined into Firestore. */
-export function pickHumanOwned(existing: Record<string, unknown> | undefined | null): Record<string, unknown> {
+ *  omitted entirely so a spread never writes undefined into Firestore.
+ *  Defaults to the cfbGames list, which is what every pre-existing caller
+ *  means. Values are carried BY REFERENCE, so a carried field round-trips
+ *  byte-identically rather than through a lossy clone. */
+export function pickHumanOwned(
+  existing: Record<string, unknown> | undefined | null,
+  collection: string = 'cfbGames',
+): Record<string, unknown> {
   if (!existing) return {};
   const out: Record<string, unknown> = {};
-  for (const f of HUMAN_OWNED_FIELDS) {
+  for (const f of HUMAN_OWNED_BY_COLLECTION[collection] ?? []) {
     if (existing[f] !== undefined) out[f] = existing[f];
   }
   return out;
+}
+
+/** The document a machine writer should set(): its freshly derived fields, with
+ *  the stored human-owned ones laid back on top.
+ *
+ *  An ALLOWLIST, not { merge: true }. Merge would preserve every stale machine
+ *  field forever and turn the writer into an append-only store; naming the
+ *  human-owned fields keeps everything else machine-owned and freely
+ *  overwritable. The human-owned value wins on collision, which is the whole
+ *  point: a parser must never be able to overwrite a human's decision.
+ *
+ *  Both Phase 2 school writers go through this, so a full rebuild leaves an
+ *  approved editorial block byte-identical. */
+export function carryHumanOwned<T extends Record<string, unknown>>(
+  machine: T,
+  stored: Record<string, unknown> | undefined | null,
+  collection: string,
+): T & Record<string, unknown> {
+  return { ...machine, ...pickHumanOwned(stored, collection) };
 }
