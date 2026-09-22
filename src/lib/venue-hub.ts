@@ -10,6 +10,7 @@ import { toAffiliateTeam } from './cfb/page-extras';
 import { collectVenueLinksForTeams, type HubVenueLink, type VenueIndexEntry } from './venue-index';
 import { transitSuppressed } from './venue-transit-suppression';
 import { rendersBag, rendersParking, rendersFood, rendersGates, fieldExcluded, hasProvenance, hasSubProvenance } from './venue-field-exclusions';
+import { makeCollectionLoader, type CachedDoc, type CachedGroupDoc } from './collection-cache';
 
 // Read layer for the venue logistics hub (/venues/[slug]). Reads the venueHubs
 // collection ONLY. The legacy `venues` collection and getVenueForTeam are
@@ -318,6 +319,61 @@ export function toVenueHub(
   });
 }
 
+// ── Static-collection loaders ───────────────────────────────────────────────
+// venueHubs and its tenants subcollections are a hand-curated corpus written in
+// arena waves, not by the weekly scanners. Six readers in this file plus the
+// bag-policies loader each used to re-read the whole thing, and several run on
+// every team-page render. See collection-cache.ts for the TTL rationale.
+
+/** Building docs in Firestore's `__name__` ascending order, which is the order
+ *  /venues and the sitemap ship their rows in. */
+export const loadVenueHubDocs = makeCollectionLoader<CachedDoc[]>(async () => {
+  const snap = await db.collection('venueHubs').get();
+  return snap.docs.map((d) => ({ id: d.id, data: d.data() }));
+});
+
+/** Every tenant overlay, from the collection group, carrying its building slug.
+ *
+ *  THE PATH GUARD LIVES HERE, at the mapper, not at each of the four call sites
+ *  that used to repeat it. A `tenants` subcollection anywhere else in Firestore
+ *  would otherwise leak into a venueHubs count; gating once, where the documents
+ *  are shaped, is the rule this repo settled on after the surface-escape
+ *  finding. Group order (`__name__` on the full path) sorts by building slug
+ *  then tenant id, so filtering this list to one parent yields exactly the order
+ *  a direct `venueHubs/{slug}/tenants` read returned. */
+/*  `gateSlugs` is the set of buildings with at least one verified tenant
+ *  overlay carrying a SOURCED gate rule. Three readers (the team->building map,
+ *  the /venues index and the utility counts) each derived it with a
+ *  byte-identical loop over these same documents; it is one derivation now, and
+ *  it is built HERE rather than in a second makeCollectionLoader so it can never
+ *  carry a different generation than the documents it came from. */
+export const loadTenants = makeCollectionLoader<{
+  docs: CachedGroupDoc[];
+  gateSlugs: Set<string>;
+}>(async () => {
+  const snap = await db.collectionGroup('tenants').get();
+  const docs = snap.docs
+    .filter((td) => td.ref.path.startsWith('venueHubs/'))
+    .map((td) => ({ id: td.id, parentId: td.ref.parent.parent!.id, data: td.data() }));
+  const gateSlugs = new Set<string>();
+  for (const td of docs) {
+    const t = td.data;
+    if (t.verified === true && t.gatesOpen?.ruleText && hasSubProvenance(stringMap(t.sources), 'gatesOpen', 'ruleText')) {
+      gateSlugs.add(td.parentId);
+    }
+  }
+  return { docs, gateSlugs };
+});
+
+// DELIBERATELY NOT on the cached collections, unlike every other reader in this
+// file. One hub page needs ONE building and its overlays: one doc read plus a
+// tenants subcollection read, ~9 documents, versus 478 (venueHubs 223 + the
+// tenants group 255) to warm the whole corpus for a page that will look at one
+// row of it. The readers below are the opposite case — they need every
+// building, and they run on every team page through AffiliateRail — so they do
+// use it. In a build the corpus is warm here anyway (generateStaticParams calls
+// getAllVenueHubSlugs first), so nothing is lost on the path that dominates the
+// bill, and a cold single regeneration stays cheap.
 export const getVenueHub = cache(async (slug: string): Promise<VenueHub | null> => {
   const doc = await db.collection('venueHubs').doc(slug).get();
   if (!doc.exists) return null;
@@ -449,8 +505,7 @@ function readIndexFloorFields(d: FirebaseFirestore.DocumentData): IndexFloorFiel
 
 /** All 222 building slugs, for generateStaticParams. */
 export const getAllVenueHubSlugs = cache(async (): Promise<string[]> => {
-  const snap = await db.collection('venueHubs').get();
-  return snap.docs.map((d) => d.id);
+  return (await loadVenueHubDocs()).map((d) => d.id);
 });
 
 // ── team -> building routing (team-page logistics block) ─────────────────────
@@ -478,23 +533,10 @@ export interface TeamVenueHubLink {
  *  docs alone (tenants + all floor fields live on the doc — no per-hub tenants
  *  subcollection read), and cached so the whole 169-page build shares one pass. */
 export const getTeamVenueHubMap = cache(async (): Promise<Map<string, TeamVenueHubLink>> => {
-  const [snap, tSnap] = await Promise.all([
-    db.collection('venueHubs').get(),
-    db.collectionGroup('tenants').get(),
-  ]);
-  // Buildings with at least one verified overlay carrying a sourced gate rule.
-  // Same shape as getVenueUtilityCounts, path-guarded the same way.
-  const gateSlugs = new Set<string>();
-  for (const td of tSnap.docs) {
-    if (!td.ref.path.startsWith('venueHubs/')) continue;
-    const t = td.data();
-    if (t.verified === true && t.gatesOpen?.ruleText && hasSubProvenance(stringMap(t.sources), 'gatesOpen', 'ruleText')) {
-      gateSlugs.add(td.ref.parent.parent!.id);
-    }
-  }
+  const [hubDocs, { gateSlugs }] = await Promise.all([loadVenueHubDocs(), loadTenants()]);
   const map = new Map<string, TeamVenueHubLink>();
-  for (const doc of snap.docs) {
-    const d = doc.data();
+  for (const doc of hubDocs) {
+    const d = doc.data;
     const tenants: VenueHubTenantRef[] = Array.isArray(d.tenants) ? d.tenants : [];
     if (tenants.length === 0) continue;
     const indexable = venueHubIsIndexable(readIndexFloorFields(d));
@@ -555,10 +597,10 @@ export interface VenueHubSitemapEntry {
 }
 /** Indexable buildings only, with an accurate lastmod from the doc's updatedAt. */
 export const getIndexableVenueHubSitemapEntries = cache(async (): Promise<VenueHubSitemapEntry[]> => {
-  const snap = await db.collection('venueHubs').get();
+  const hubDocs = await loadVenueHubDocs();
   const out: VenueHubSitemapEntry[] = [];
-  for (const doc of snap.docs) {
-    const d = doc.data();
+  for (const doc of hubDocs) {
+    const d = doc.data;
     if (!venueHubIsIndexable(readIndexFloorFields(d))) continue;
     // updatedAt is a Firestore Timestamp; fall back to now if absent.
     const ts = d.updatedAt;
@@ -585,21 +627,10 @@ export async function getVenueLinksForTeams(teamIds: string[]): Promise<HubVenue
  *  pass, cached per render pass like the other readers. Leagues come from the
  *  doc's tenants array, so a shared building carries every hosting league. */
 export const getVenueIndexEntries = cache(async (): Promise<VenueIndexEntry[]> => {
-  const [snap, tSnap] = await Promise.all([
-    db.collection('venueHubs').get(),
-    db.collectionGroup('tenants').get(),
-  ]);
-  const gateSlugs = new Set<string>();
-  for (const td of tSnap.docs) {
-    if (!td.ref.path.startsWith('venueHubs/')) continue;
-    const t = td.data();
-    if (t.verified === true && t.gatesOpen?.ruleText && hasSubProvenance(stringMap(t.sources), 'gatesOpen', 'ruleText')) {
-      gateSlugs.add(td.ref.parent.parent!.id);
-    }
-  }
+  const [hubDocs, { gateSlugs }] = await Promise.all([loadVenueHubDocs(), loadTenants()]);
   const out: VenueIndexEntry[] = [];
-  for (const doc of snap.docs) {
-    const d = doc.data();
+  for (const doc of hubDocs) {
+    const d = doc.data;
     if (!venueHubIsIndexable(readIndexFloorFields(d))) continue;
     const tenants: VenueHubTenantRef[] = Array.isArray(d.tenants) ? d.tenants : [];
     const leagues = [...new Set(
@@ -656,25 +687,11 @@ export interface VenueUtilityCounts {
 }
 
 export const getVenueUtilityCounts = cache(async (): Promise<VenueUtilityCounts> => {
-  const [snap, tSnap] = await Promise.all([
-    db.collection('venueHubs').get(),
-    db.collectionGroup('tenants').get(),
-  ]);
-
-  // Buildings with at least one verified tenant overlay carrying a gates rule.
-  // Path-guarded so a same-named subcollection elsewhere can never leak in.
-  const gateSlugs = new Set<string>();
-  for (const td of tSnap.docs) {
-    if (!td.ref.path.startsWith('venueHubs/')) continue;
-    const t = td.data();
-    if (t.verified === true && t.gatesOpen?.ruleText && hasSubProvenance(stringMap(t.sources), 'gatesOpen', 'ruleText')) {
-      gateSlugs.add(td.ref.parent.parent!.id);
-    }
-  }
+  const [hubDocs, { gateSlugs }] = await Promise.all([loadVenueHubDocs(), loadTenants()]);
 
   const counts: VenueUtilityCounts = { parking: 0, bag: 0, transit: 0, gates: 0, verifiedTotal: 0 };
-  for (const doc of snap.docs) {
-    const d = doc.data();
+  for (const doc of hubDocs) {
+    const d = doc.data;
     if (d.verified !== true) continue;
     counts.verifiedTotal++;
 

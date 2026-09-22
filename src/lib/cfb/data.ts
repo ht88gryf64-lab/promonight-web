@@ -6,6 +6,7 @@
 
 import { cache } from 'react';
 import { db } from '@/lib/firebase';
+import { makeCollectionLoader } from '@/lib/collection-cache';
 import type { CfbSchool, CfbVenue, CfbGame, CfbRivalry, CfbEditorialStatus } from '@/lib/cfb/types';
 import { flattenEditorial, deriveEditorialStatus, stripEditorial } from '@/lib/cfb/editorial';
 import type { EditorialView } from '@/lib/cfb/editorial';
@@ -126,25 +127,11 @@ function prettifySlug(slug: string): string {
 //    four paths revalidated (x-vercel-cache: REVALIDATED), rows still "Kickoff
 //    TBA". Five minutes bounds that lag; the cost is four collection reads per
 //    server instance per five minutes under traffic, which is nothing.
-const STATIC_TTL_MS = 5 * 60 * 1000;
-
-function makeCollectionLoader<T>(read: () => Promise<T>): () => Promise<T> {
-  let cached: { at: number; data: T } | null = null;
-  let inflight: Promise<T> | null = null;
-  return async () => {
-    // Firestore emulator/prod clock only; Date.now() is fine at runtime (this
-    // module never executes inside a Workflow script sandbox).
-    if (cached && Date.now() - cached.at < STATIC_TTL_MS) return cached.data;
-    if (inflight) return inflight; // coalesce concurrent first-callers (build fan-out)
-    inflight = (async () => {
-      const data = await read();
-      cached = { at: Date.now(), data };
-      inflight = null;
-      return data;
-    })();
-    return inflight;
-  };
-}
+//
+//    makeCollectionLoader and the 5-minute TTL now live in
+//    src/lib/collection-cache.ts, unchanged, because the pro side needed the
+//    same thing for the same reason. The reasoning above is why it is written
+//    the way it is and is kept here where the CFB loaders read.
 
 // Each loader preserves Firestore's default document-name ordering (the same
 // order the old per-page `.get()` / `.where().get()` calls returned), and stamps

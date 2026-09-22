@@ -21,6 +21,7 @@ import type {
   DerivedSignals,
 } from './types';
 import { SCORED_LEAGUES, isRegularSeasonGame } from './types';
+import { makeCollectionLoader, type CachedDoc } from './collection-cache';
 import {
   buildWeekBuckets,
   selectWeekContext,
@@ -143,20 +144,73 @@ export function mapPromoDoc(doc: FirebaseFirestore.DocumentSnapshot): Promo {
   return promo;
 }
 
-export async function getAllTeams(): Promise<Team[]> {
+// ── Static-collection loaders ───────────────────────────────────────────────
+// teams, venues and teamScores change on a human/scanner-write cadence, not per
+// request, and every page render used to re-read them. See collection-cache.ts
+// for the TTL rationale. promos / games / playoffPromos are deliberately NOT
+// here: those are what the scanners write and what /api/revalidate exists to
+// surface, so they stay uncached.
+
+// EVERY DERIVED VIEW IS BUILT INSIDE THE LOADER THAT READS THE COLLECTION, and
+// never by a second makeCollectionLoader wrapping the first. A derived loader
+// gets its own independent 5-minute stamp, set when IT first ran, so the list
+// and the map built from it expire at different times: fill the list at T0,
+// build the map at T0+4:59, and from T0+5:00 the list re-reads while the map
+// keeps serving the old generation for another five minutes. /best-promos and
+// /team-rankings each read both views in one Promise.all, so that skew renders
+// two different versions of the same club on one page. Returning both views
+// from one read makes them the same generation by construction.
+
+/** `list` is sorted exactly as the old getAllTeams sorted (league, then city),
+ *  so every caller that relies on the shipped order — the team grid's index
+ *  math in teams-browser.tsx, the sitemap's URL order — sees no change. */
+const loadTeams = makeCollectionLoader<{ list: Team[]; byId: Map<string, Team> }>(async () => {
   const snapshot = await db.collection('teams').get();
-  const teams = snapshot.docs.map(mapTeamDoc);
-  teams.sort((a, b) => a.league.localeCompare(b.league) || a.city.localeCompare(b.city));
-  return teams;
+  const list = snapshot.docs.map(mapTeamDoc);
+  list.sort((a, b) => a.league.localeCompare(b.league) || a.city.localeCompare(b.city));
+  return { list, byId: new Map(list.map((t) => [t.id, t])) };
+});
+
+/** `docs` is in Firestore's `__name__` ascending order. That order is
+ *  load-bearing: getVenueForTeam takes the FIRST doc matching a team name
+ *  (replacing a `.where(...).limit(1)`, which resolves the same way) and
+ *  getSchemaLocationsForTeams lets the LAST one win. `byId` serves the
+ *  VENUE_RESOLUTION_MAP fallback that used to issue its own `.doc(slug).get()`.
+ *
+ *  NOTE FOR WHOEVER RUNS promo-pipeline/research-amenities.js: that script
+ *  writes venues/{id} and then POSTs /api/revalidate expecting the team page to
+ *  pick it up. With this cache the regenerated page can still be reading a
+ *  venues snapshot up to five minutes old, so the flush is best-effort now.
+ *  Re-POST after five minutes if the change has to be visible immediately. */
+const loadVenues = makeCollectionLoader<{ docs: CachedDoc[]; byId: Map<string, CachedDoc> }>(
+  async () => {
+    const snapshot = await db.collection('venues').get();
+    const docs = snapshot.docs.map((d) => ({ id: d.id, data: d.data() }));
+    return { docs, byId: new Map(docs.map((d) => [d.id, d])) };
+  },
+);
+
+const loadTeamScoreDocs = makeCollectionLoader<CachedDoc[]>(async () => {
+  const snapshot = await db.collection('teamScores').get();
+  return snapshot.docs.map((d) => ({ id: d.id, data: d.data() }));
+});
+
+export async function getAllTeams(): Promise<Team[]> {
+  // A shallow copy, not the cached array itself. No caller sorts or splices the
+  // result today, but one that did would silently corrupt every later render in
+  // the process. 169 pointer copies is the right price for closing that off.
+  return [...(await loadTeams()).list];
 }
 
 export async function getTeamBySlug(slug: string): Promise<Team | null> {
-  const doc = await db.collection('teams').doc(slug).get();
-  if (!doc.exists) return null;
-  return mapTeamDoc(doc);
+  return (await loadTeams()).byId.get(slug) ?? null;
 }
 
-export async function getTeamPromos(teamId: string): Promise<Promo[]> {
+/** Wrapped in React cache() so generateMetadata and the page body on
+ *  /[sport]/[team] share ONE read instead of two — the same dedupe the CFB
+ *  template gets from getCfbSchoolPage. Per-request only: promos stay uncached
+ *  across renders so a scan write plus /api/revalidate surfaces immediately. */
+export const getTeamPromos = cache(async (teamId: string): Promise<Promo[]> => {
   const snapshot = await db
     .collection('teams')
     .doc(teamId)
@@ -164,7 +218,7 @@ export async function getTeamPromos(teamId: string): Promise<Promo[]> {
     .orderBy('date', 'asc')
     .get();
   return dedupePromos(snapshot.docs.map(mapPromoDoc).filter(isVisiblePromo));
-}
+});
 
 export async function getPromosForDate(date: string): Promise<PromoWithTeam[]> {
   const teams = await getAllTeams();
@@ -396,6 +450,16 @@ export async function getPromoCount(): Promise<number> {
   return snapshot.data().count;
 }
 
+// READ-COST NOTE. This resolves off the cached venues collection (148 docs)
+// rather than the one-or-two document reads it used to issue. On a build, and
+// on any instance that has already rendered a page, that is 148 reads once
+// instead of two per call across ~200 calls. On a COLD instance regenerating a
+// single NHL/NBA/MLS/WNBA team page — the leagues where getGamesForTeam
+// short-circuits, so nothing else here needs the collection — it is 2 -> 148.
+// Unlike venueHubs (see the getVenueHub exemption in venue-hub.ts) there is no
+// carve-out, because the root layout already loads all 169 teams on every route
+// and the aggregator pages already read every venue; a second resolution regime
+// here would buy ~146 reads on 107 pages against a measured ~1.9M/day saved.
 export async function getVenueForTeam(teamId: string): Promise<Venue | null> {
   // Venues use a short teamId like "min", but we need to match by team name
   // Try querying by the full team name first
@@ -403,14 +467,15 @@ export async function getVenueForTeam(teamId: string): Promise<Venue | null> {
   if (!team) return null;
 
   const fullName = `${team.city} ${team.name}`;
-  const snapshot = await db
-    .collection('venues')
-    .where('team', '==', fullName)
-    .limit(1)
-    .get();
+  // Was `.where('team', '==', fullName).limit(1)`. An equality query with no
+  // orderBy resolves on the (team asc, __name__ asc) index, so limit(1) returns
+  // the matching doc with the lowest id — which is exactly the first match when
+  // scanning the cached collection, since the loader preserves __name__ order.
+  const venues = await loadVenues();
+  const match = venues.docs.find((d) => d.data.team === fullName);
 
-  let data = snapshot.empty ? undefined : snapshot.docs[0].data();
-  let slug = snapshot.empty ? undefined : snapshot.docs[0].id;
+  let data = match?.data;
+  let slug = match?.id;
 
   // Fallback for the ~38 in-season (NBA/NHL/WNBA/MLS) teams the team-name
   // query can't reach: co-tenants sharing one building doc, and clubs whose
@@ -420,9 +485,9 @@ export async function getVenueForTeam(teamId: string): Promise<Venue | null> {
   if (!data) {
     const mappedVenueSlug = VENUE_RESOLUTION_MAP[teamId];
     if (mappedVenueSlug) {
-      const mapped = await db.collection('venues').doc(mappedVenueSlug).get();
-      if (mapped.exists) {
-        data = mapped.data();
+      const mapped = venues.byId.get(mappedVenueSlug);
+      if (mapped) {
+        data = mapped.data;
         slug = mapped.id;
       }
     }
@@ -474,12 +539,12 @@ export async function getTeamVenueCoords(teams: Team[]): Promise<Map<string, Tea
   const fullNameToId = new Map<string, string>();
   for (const t of teams) fullNameToId.set(`${t.city} ${t.name}`, t.id);
 
-  const snapshot = await db.collection('venues').get();
+  const venueDocs = (await loadVenues()).docs;
   const coords = new Map<string, TeamCoords>();
   const venueSlugToCoords = new Map<string, TeamCoords>();
 
-  for (const doc of snapshot.docs) {
-    const data = doc.data();
+  for (const doc of venueDocs) {
+    const data = doc.data;
     const { lat, lng } = data;
     if (typeof lat !== 'number' || typeof lng !== 'number') continue;
     if (lat === 0 && lng === 0) continue; // null-island guard for missing data
@@ -836,7 +901,7 @@ function mapGameDoc(doc: FirebaseFirestore.DocumentSnapshot): Game {
 // Returns every game (home + away) involving `teamSlug`, sorted by date asc.
 // `league` is lowercase ('mlb' | 'nfl'). Other leagues currently have no
 // games data; this returns an empty array for them rather than throwing.
-export async function getGamesForTeam(teamSlug: string, league: string): Promise<Game[]> {
+export const getGamesForTeam = cache(async (teamSlug: string, league: string): Promise<Game[]> => {
   if (league !== 'mlb' && league !== 'nfl') return [];
   const [homeSnap, awaySnap] = await Promise.all([
     db.collection('games')
@@ -863,7 +928,7 @@ export async function getGamesForTeam(teamSlug: string, league: string): Promise
     return (a.gameTime || '').localeCompare(b.gameTime || '');
   });
   return games;
-}
+});
 
 // Context attached to each game for calendar rendering. Home-game context is
 // the team's own promos. Away-game context pulls the home team's venue and any
@@ -878,10 +943,80 @@ export interface GameContext {
   promos: Promo[];
 }
 
+// A promo date run: [startYmd, endYmd], inclusive, for one range query.
+type DateRun = [string, string];
+
+// Two game dates this close together share one range query. A baseball series
+// is three or four consecutive dates, so this collapses a series into a single
+// read window while leaving two series months apart as separate queries.
+// Raising it trades extra documents for fewer queries; it can never change the
+// output, because the caller filters to exact dates afterwards.
+const PROMO_RUN_MERGE_DAYS = 3;
+
+function ymdToUtcMillis(ymd: string): number {
+  return Date.parse(`${ymd}T00:00:00Z`);
+}
+
+/** Collapses a set of dates into the minimum number of inclusive ranges, merging
+ *  any two that sit within PROMO_RUN_MERGE_DAYS of each other. Runs come back
+ *  sorted ascending and never overlap. */
+function mergeDateRuns(dates: Iterable<string>): DateRun[] {
+  const sorted = [...new Set(dates)].sort();
+  const runs: DateRun[] = [];
+  for (const d of sorted) {
+    const last = runs[runs.length - 1];
+    if (last && ymdToUtcMillis(d) - ymdToUtcMillis(last[1]) <= PROMO_RUN_MERGE_DAYS * 86400000) {
+      last[1] = d;
+    } else {
+      runs.push([d, d]);
+    }
+  }
+  return runs;
+}
+
+/**
+ * One team's visible promos on an exact set of dates.
+ *
+ * Reads a bounded range per date run instead of the team's whole promo history.
+ * The result is identical to `getTeamPromos(teamId)` filtered to `dates`:
+ *  • mapPromoDoc and isVisiblePromo are per-document, so scoping cannot change
+ *    which documents survive them;
+ *  • dedupePromos keys on `date::title` with first-wins, and the runs are
+ *    disjoint date ranges concatenated in ascending order under the same
+ *    `orderBy('date','asc')` (whose within-date tiebreak is __name__ asc, the
+ *    same index the unbounded read used), so the surviving document of any
+ *    duplicate pair is the same one;
+ *  • filtering by date after the dedupe is equivalent to filtering before it,
+ *    because the dedupe key contains the date — a promo can only ever collide
+ *    with another promo on its own date.
+ */
+async function getTeamPromosOnDates(teamId: string, dates: Set<string>): Promise<Promo[]> {
+  if (dates.size === 0) return [];
+  const runs = mergeDateRuns(dates);
+  const perRun = await Promise.all(
+    runs.map(async ([start, end]) => {
+      const snapshot = await db
+        .collection('teams')
+        .doc(teamId)
+        .collection('promos')
+        .where('date', '>=', start)
+        .where('date', '<=', end)
+        .orderBy('date', 'asc')
+        .get();
+      return snapshot.docs;
+    }),
+  );
+  return dedupePromos(perRun.flat().map(mapPromoDoc).filter(isVisiblePromo)).filter((p) =>
+    dates.has(p.date),
+  );
+}
+
 // Enriches a list of games with opponent team + venue + the promos occurring
-// at the home-team's venue on that game date. Batches the team / venue / promo
-// reads by opponent slug so a full schedule (~162 games) resolves with O(30)
-// Firestore reads (opponent team + venue + promos) rather than O(N).
+// at the home-team's venue on that game date. Opponent teams and venues are
+// map hits off the cached teams/venues collections. Opponent promos are read
+// per opponent, bounded to the dates this team actually plays THERE — an MLB
+// page used to read all ~113 promos for each of 29 opponents (~3,300 documents)
+// to display promos on roughly three dates per opponent.
 export async function enrichGamesForTeam(
   teamSlug: string,
   games: Game[],
@@ -890,6 +1025,26 @@ export async function enrichGamesForTeam(
   const opponentSlugs = Array.from(new Set(
     games.map((g) => (g.homeTeamSlug === teamSlug ? g.awayTeamSlug : g.homeTeamSlug)),
   ));
+
+  // The ONLY dates read out of an opponent's promo map are the dates of games
+  // played AWAY at that opponent — see the `promos` ternary at the bottom of
+  // this function, where a home game reads ownPromosByDate instead. This loop
+  // mirrors that ternary exactly so the fetch set and the read set cannot
+  // drift. An opponent faced only at home gets an empty set and no query.
+  const awayDatesByOpp = new Map<string, Set<string>>();
+  for (const slug of opponentSlugs) awayDatesByOpp.set(slug, new Set<string>());
+  for (const g of games) {
+    if (g.homeTeamSlug === teamSlug) continue; // home game: own promos, not theirs
+    // mapGameDoc copies `date` straight off the doc with no default, and a game
+    // date now reaches a Firestore range filter, which rejects undefined and
+    // would 500 the whole team page. All 6,094 games docs carry a well-formed
+    // date today, so this is a guard against future ingest, not a live fix. A
+    // skipped date yields no promos for that row, exactly as the old
+    // bucket-by-date lookup did for a date that was not a key.
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(g.date)) continue;
+    awayDatesByOpp.get(g.homeTeamSlug)?.add(g.date);
+  }
+
   const teamById = new Map<string, Team>();
   const venueById = new Map<string, Venue | null>();
   const promosByOppDate = new Map<string, Map<string, Promo[]>>();
@@ -899,7 +1054,7 @@ export async function enrichGamesForTeam(
       const [team, venue, promos] = await Promise.all([
         getTeamBySlug(slug),
         getVenueForTeam(slug),
-        getTeamPromos(slug),
+        getTeamPromosOnDates(slug, awayDatesByOpp.get(slug) ?? new Set()),
       ]);
       if (team) teamById.set(slug, team);
       venueById.set(slug, venue);
@@ -1085,15 +1240,12 @@ export async function getScoredPromosByItemType(
 // Filters out any teamScores doc whose teamId doesn't resolve in `teams/`
 // (defense against orphan score rows after a schema migration).
 export async function getAllTeamScores(): Promise<TeamScoreWithTeam[]> {
-  const [scoresSnap, teams] = await Promise.all([
-    db.collection('teamScores').get(),
-    getAllTeams(),
-  ]);
-  const teamById = new Map(teams.map((t) => [t.id, t]));
+  const [scoreDocs, teams] = await Promise.all([loadTeamScoreDocs(), loadTeams()]);
+  const teamById = teams.byId;
 
   const out: TeamScoreWithTeam[] = [];
-  for (const doc of scoresSnap.docs) {
-    const data = doc.data();
+  for (const doc of scoreDocs) {
+    const data = doc.data;
     const teamId = (data.teamId as string) || doc.id;
     const team = teamById.get(teamId);
     if (!team) continue;
@@ -1255,10 +1407,10 @@ export async function getSchemaLocationsForTeams(
   // The collection has ~50 documents; the read cost is negligible and the
   // alternative (49 individual where('team', '==', name) queries) would
   // be wasteful.
-  const venuesSnap = await db.collection('venues').get();
+  const venueDocs = (await loadVenues()).docs;
   const venuesByFullName = new Map<string, FirebaseFirestore.DocumentData>();
-  for (const doc of venuesSnap.docs) {
-    const data = doc.data();
+  for (const doc of venueDocs) {
+    const data = doc.data;
     if (typeof data.team === 'string') {
       venuesByFullName.set(data.team, data);
     }
