@@ -3094,3 +3094,152 @@ homepage. It will show in the field as `hydration_mismatch` with
 **Severity: Low, as a standing hazard.** The CFB defect it caused is resolved.
 What remains is a trap in the markup vocabulary: a perfectly reasonable tag
 choice silently becomes an ad slot.
+
+---
+
+## 54. Nothing monitors Firestore read volume or cost
+
+**What it is.** No alarm, dashboard or workflow watches
+`firestore.googleapis.com/document/read_count`, the Firestore bill, or the egress that
+tracks it. The only way the September cost was found was a human reading a billing page.
+
+**How far it ran unseen.** The daily read rate stepped up 3.58x on 2026-09-15, from
+1.56M/day to 5.60M/day, and stayed there for six days until it was looked at by hand. The
+cause was deploy frequency, 1 to 5 deploys/day before that date and 8 to 14 after, so the
+step is visible in the Vercel deployment list as well as in Cloud Monitoring. Nothing
+connected the two. By the time it was read, the month to date stood at 82.04M reads and
+~$53/month at that run rate against a site serving 1 to 2K pageviews/day.
+
+**Why it matters more than the money.** $53/month is not an incident. The shape is: a
+metric moved 3.58x, stayed moved for six days, and the system had no opinion about it. The
+same shape at a worse constant is a real bill. It is also the same class of gap as
+SITE-AUDIT section 8, the absent-write monitoring gap: strong guards against bad writes,
+none against a quantity drifting. Section 8 is about a number that stopped moving and this
+is about one that started, and neither has a watcher.
+
+**Fix shape when picked up.** A read-count tripwire is a natural fit for the existing
+weekly `staleness-check` workflow, which already holds a service account and already runs
+on a schedule. Cloud Monitoring exposes the series over the API. A useful first assertion
+is a daily total above some multiple of a trailing median, and a second is a per-deployment
+excess above a threshold, since the post-fix deploy cost is now a stable ~137K and a
+regression there is the thing most likely to come back.
+
+**Severity: Medium.** No user-visible effect. A cost regression can run for weeks.
+
+---
+
+## 55. Preview deployments run a full prerender against production Firestore
+
+**What it is.** A preview build prerenders the whole site, the same ~520 pages as a
+production build, reading production Firestore to do it. This is the read-cost sibling of
+entry 1, which records that preview deployments WRITE to production Firestore; this is the
+read side of the same missing boundary.
+
+**What it cost.** Before the read-cost fix, a preview build cost the same as a production
+build, about 716K reads. Measured directly: 2026-09-17 had exactly one deployment, not
+production, and its hour shows 879,223 reads against a ~30K floor. Of the 112 deployments
+in Sept 1 to 21, roughly 41 to 49 were previews, so on the order of 1.4 to 1.6M reads/day
+went into prerendering branch URLs that no crawler visits and usually only one person opens,
+often on a page unrelated to the branch.
+
+**What it costs now.** Much less, because the per-build cost fell about 91%, but not zero,
+and it still scales with branch activity rather than with anything a reader wants. It is now
+roughly 33K reads per preview build against a 256K/day floor, so a heavy branch day is still
+a visible fraction of the day.
+
+**Why it is not fixed.** Preview builds prerendering everything is what makes a preview URL
+worth opening, and gating prerender on `VERCEL_ENV === 'production'` would trade that for
+slower, on-demand first paint during exactly the verification step previews exist for. It is
+a real tradeoff, not an oversight. Recorded so the cost is a decision rather than a surprise.
+
+**Severity: Low, post-fix.** Was Medium before `3b12d58`.
+
+---
+
+## 56. The homepage compares `Team.league` against lowercase league ids, so `resolveCardContexts` is dead code
+
+**What it is.** `src/app/page.tsx:225`:
+
+```ts
+if (p.team.league === 'mlb' || p.team.league === 'nfl') teams.set(p.team.id, p.team);
+```
+
+`Team.league` carries the value stored on the team doc, which is uppercase. Confirmed
+against Firestore: `{ NHL: 32, NFL: 32, MLB: 30, WNBA: 15, NBA: 30, MLS: 30 }`. The
+comparison can never be true, `teams.size` is always 0, the next line returns early, and
+`resolveCardContexts` always returns an empty Map.
+
+**The near miss that makes it easy to get wrong.** `Game.league` IS lowercase, and the
+other comparisons in the repo that read `game.league === 'nfl'` or `game.league === 'mlb'`
+(`team-calendar.tsx`, `CalendarGrid.tsx`, `GameExpand.tsx`, `game-day-detail.tsx`,
+`src/lib/data.ts:849`) are all correct. Two adjacent types use opposite casing for the same
+concept, and only the `Team` one is wrong here. `getGamesForTeam` takes the lowercase form,
+which is why the call two lines down reads naturally and the guard above it does not.
+
+**What the user loses.** The homepage promo cards never get game context, so a card that
+should open a gameday detail falls back to the legacy promo detail. No error, no blank
+region, just a quieter card than intended. This is a feature bug, not only a read-count
+finding: it happens to also mean the homepage never pays for `enrichGamesForTeam`, which is
+why it surfaced during the read-cost work rather than from the UI.
+
+**Found how.** During the `3b12d58` verification. The harness replicated the filter with
+uppercase, exercised a path the real page never takes, and the discrepancy between the
+harness's homepage read count and the real page's was the tell. The reported homepage saving
+was corrected from 15,548 to 3,222 reads as a result.
+
+**Not fixed here.** Fixing it turns a dead path live on the busiest page, which is a
+rendering change that deserves its own before-and-after, not a one-character edit inside a
+docs commit.
+
+**Severity: Medium.** A homepage interaction has been silently absent.
+
+---
+
+## 57. Six `venueHubs` docs store `updatedAt` as a string, so their sitemap `lastModified` is the build clock
+
+**What it is.** `getIndexableVenueHubSitemapEntries` in `src/lib/venue-hub.ts:607`:
+
+```ts
+const ts = d.updatedAt;
+const lastModified = ts && typeof ts.toDate === 'function' ? ts.toDate() : new Date();
+```
+
+The guard tests for a Firestore `Timestamp`. All 223 venueHubs docs HAVE an `updatedAt`, but
+six store it as an ISO string, which has no `.toDate`, so those six fall through to
+`new Date()` and ship the moment the sitemap was generated.
+
+| slug | stored `updatedAt` | verified |
+| --- | --- | --- |
+| `citizens-bank-park` | `"2026-08-18T19:58:39.036Z"` | true |
+| `cotton-bowl-stadium` | `"2026-08-11T13:58:58.743Z"` | true |
+| `globe-life-field` | `"2026-08-18T19:57:21.828Z"` | true |
+| `pnc-park` | `"2026-08-18T20:00:04.509Z"` | true |
+| `truist-park` | `"2026-08-18T19:58:38.450Z"` | true |
+| `yankee-stadium` | `"2026-08-18T19:58:39.626Z"` | true |
+
+The other 217 carry a real `Timestamp` and report an honest lastmod.
+
+**Why it matters.** `lastmod` is a freshness claim made to crawlers in a machine-readable
+file. These six tell Google and Bing they changed at build time on every build, while the
+records themselves have not moved since August 11 or 18. That is precisely the class of
+unbacked freshness claim the freshness sweep removed from rendered surfaces
+(SITE-AUDIT section 1, the 2026-08-18 measurement boundary, merged `fdf0025` and
+`2093bbc`): the sweep covered what the pages say and did not reach what the sitemap
+says. Repeated false lastmod is also the signal most likely to make a crawler discount
+lastmod for the whole host.
+
+**How it was found.** It is the only difference in the `3b12d58` byte-identity check. Two
+runs of `main` against ITSELF produce six differing `lastModified` values at the same six
+indices, which is what established the drift as pre-existing rather than caused by the read
+cache. Note what that means for byte-identity work generally: this file cannot be used as a
+stable baseline, and it is a sitemap rather than a page, so it sits outside the
+render-time stamps already recorded against page templates, entry 39 among them.
+
+**Fix shape.** Two independent options, and the cheap one is the reader: accept a string by
+falling back to `new Date(ts)` when `ts` is a parseable string, before falling back to now.
+That fixes the output without a migration. The durable one is to normalise the six docs to
+`Timestamp` so every writer and reader agrees on the type. Worth doing both, since a writer
+that produced strings once will produce them again.
+
+**Severity: Low.** No user-visible effect. It misleads crawlers and it blocks byte-identity
+checks on the sitemap.

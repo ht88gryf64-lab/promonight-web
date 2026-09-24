@@ -615,3 +615,80 @@ Three instances from the 2026-08-29 pre-filing sweep, each of which a source gre
 3. **`src/components/aggregator-layout.tsx` put one line on all four aggregator pages.** After the four page files were individually cleaned and their source greps were clean, the served HTML of every one of them still carried "the morning of every giveaway, theme night, and food deal" — one string, one shared component, four pages. Invisible to any grep scoped to a page.
 
 **The corollary: a clean grep after an edit is evidence about the file, not about the site.** Re-fetch, and state the deployment id and timestamp of the build every check ran against, so a read against a stale build cannot be mistaken for a finding. During this sweep a production deploy landed mid-audit and made an earlier gate-time finding obsolete within the hour; the finding was real against the build it was measured on and false against the one live thirty minutes later.
+
+## 10. Firestore read cost [MANUAL, added 2026-09-23]
+
+**Not filed under section 6 on purpose.** Section 6 is [AUTO] and is overwritten by
+`audit/generate-site-audit.ts`. Durable findings live outside it, the same reason
+"Technical caveats" exists.
+
+**The September bill.** 82.04M document reads month to date (Sept 1 to 21) at ~3.76M
+reads/day, plus 129.46 GiB of egress that tracks reads at about 1.6 KB each. Together
+roughly $53/month at that run rate. Site traffic over the same period was 1 to 2K GA4
+pageviews/day behind ISR, which implied something near 2,000 reads per pageview and was
+the clue that traffic was not the driver.
+
+**Where it actually went.** Hourly `firestore.googleapis.com/document/read_count` over 14
+days showed no diurnal curve at all: a flat floor near 30K/hr plus 28 discrete hours
+carrying 0.4M to 3.5M each. Every one of those 28 hours contained a Vercel deployment
+start, one for one.
+
+| source | reads/day | share |
+| --- | ---: | ---: |
+| Vercel build prerendering | 2,811,792 | 74.7% |
+| ISR regeneration from human and crawler traffic (the floor) | 719,232 | 19.1% |
+| crons, pipeline runs, and their revalidate fan-out | 232,109 | 6.2% |
+
+That is ~716K reads per deployment, and preview builds cost the same as production
+builds: a lone non-production deploy on 2026-09-17 shows 879K in its hour. The scanners
+were never the problem. All of promo-pipeline, including the weekly league scans, scoring
+and staleness-check, came to about 29.5K reads/day, 0.8% of the bill. Middleware reads
+nothing: the request counter and the crawler log are write-only.
+
+**The daily rate stepped up 3.58x on 2026-09-15**, from 1.56M/day to 5.60M/day. No code
+change caused it. Deploy frequency did, 1 to 5 per day before, 8 to 14 after.
+
+**Root causes, both in the read path rather than the data.**
+
+1. `getAllTeams` was uncached, and `src/app/layout.tsx` calls `getCoverageCounts` on every
+   route, so every one of ~520 pages in a build paid a 169-doc collection read plus the CFB
+   school count, a 170-read tax per page render. React `cache()` only dedupes inside one
+   page render and resets between pages, so it could not help across a build. The same
+   applied to `getTeamVenueHubMap`, which `AffiliateRail` calls on every team page: 223
+   venueHubs plus 255 tenants, 478 docs, per page.
+2. `enrichGamesForTeam` read every one of the 29 opponents' full promo history to render
+   promos on roughly three dates per opponent. That was 3,374 of an MLB team page's 3,933
+   reads, 86% of the page.
+
+**The fix.** Merged `3b12d58`, production deploy `dpl_2Gg86p286ZMiu4wyak9jDEzhQCZp`, READY
+2026-09-22T00:51:33Z. Two parts: the process-local 5-minute TTL collection cache that /cfb
+already used, moved to `src/lib/collection-cache.ts` and applied to `teams`, `venues`,
+`teamScores`, `venueHubs` and the `tenants` collection group; and opponent promo reads
+bounded to the dates the team actually plays there, merging dates within 3 days into one
+range query.
+
+**Measured after, against the pre-fix baselines.**
+
+| metric | before | after | change |
+| --- | ---: | ---: | ---: |
+| reads per deployment, above floor | 715,729 | 137,225 | -80.8% |
+| hourly floor, median of quiet hours | 29,968 | 10,677 | -64.4% |
+| implied daily floor | 719,232 | 256,248 | -64.4% |
+| marginal MLB team page render | 4,387 | 482 | -89% |
+| marginal NFL team page render | 867 | 51 | -94% |
+
+The full calendar day 2026-09-22, which contained exactly one production deploy and no
+previews, measured 528,243 reads. At the audit period's cadence of 5.3 deploys/day the
+implied rate is ~984K reads/day, about $13.56/month for reads plus egress against ~$53.
+
+**Open: the fix deploy built in 75 seconds.** That is fast enough that Vercel build-cache
+reuse cannot be ruled out, which would mean some pages were not re-prerendered and a cold
+deploy reads more than 137,225. The next production deploy settles it. The floor numbers,
+which are 64% of the saving and involve no build at all, are unaffected either way.
+
+**Promos, games and playoffPromos are deliberately NOT cached.** They are what the scanners
+write and what `/api/revalidate` exists to surface, so a longer-lived cache would hand a
+regenerated page the same stale data and produce a byte-identical page. Verified: a second
+render in the same process re-reads 345 promo docs and 165 game docs and zero cached docs,
+and the cached collections re-read once the clock passes the 5-minute TTL. Anything added to
+the cache later must clear the same bar.
