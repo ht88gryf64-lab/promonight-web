@@ -220,23 +220,33 @@ async function resolveCardContexts(
   const result = new Map<string, GameContext[]>();
 
   // Unique MLB/NFL teams only — getGamesForTeam returns [] for other leagues.
+  //
+  // MATCH ON sportSlug, NEVER ON league. `Team.league` carries the value stored
+  // on the team doc, which is UPPERCASE ("MLB"); `Game.league` is lowercase, and
+  // so is `Team.sportSlug`, which mapTeamDoc derives as league.toLowerCase().
+  // Comparing `team.league` against 'mlb' is therefore always false. It was, in
+  // all three places below, from the day this function was written until
+  // 2026-09-23: the first guard emptied `teams`, the early return fired, and
+  // every homepage card fell through to LegacyPromoExpand instead of the
+  // GameExpand modal. getGamesForTeam takes the lowercase form too, so passing
+  // `t.league` would have returned [] even past the guards. See known-issues 56.
   const teams = new Map<string, Team>();
   for (const p of promos) {
-    if (p.team.league === 'mlb' || p.team.league === 'nfl') teams.set(p.team.id, p.team);
+    if (p.team.sportSlug === 'mlb' || p.team.sportSlug === 'nfl') teams.set(p.team.id, p.team);
   }
   if (teams.size === 0) return result;
 
   const gamesByTeam = new Map<string, Awaited<ReturnType<typeof getGamesForTeam>>>();
   await Promise.all(
     [...teams.values()].map(async (t) => {
-      gamesByTeam.set(t.id, await getGamesForTeam(t.id, t.league));
+      gamesByTeam.set(t.id, await getGamesForTeam(t.id, t.sportSlug));
     }),
   );
 
   // One enrichment per unique (team, date) — the modal renders the whole day.
   const keys = new Map<string, { team: Team; date: string }>();
   for (const p of promos) {
-    if (p.team.league !== 'mlb' && p.team.league !== 'nfl') continue;
+    if (p.team.sportSlug !== 'mlb' && p.team.sportSlug !== 'nfl') continue;
     keys.set(`${p.team.id}:${p.date}`, { team: p.team, date: p.date });
   }
 
