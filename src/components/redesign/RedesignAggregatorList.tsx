@@ -8,6 +8,7 @@ import { track, type AnalyticsSurface } from '@/lib/analytics';
 import { teamDisplayName } from '@/lib/promo-helpers';
 import { StarToggleInline } from '@/components/star-toggle';
 import type { AggregatorGroup } from '@/components/aggregator-layout';
+import { groupPromoRows } from '@/lib/promo-row-groups';
 
 // Gate-ON cross-team collection list. Every promo is server-rendered (the list is
 // a client component but its initial state is 'All', so SSR emits every row); the
@@ -127,18 +128,29 @@ export function RedesignAggregatorList({
           const groupVisible =
             activeLeague === 'All' ||
             group.promos.some((p) => p.team.league === activeLeague);
-          return (
-            <section key={group.label} className={groupVisible ? '' : 'hidden'}>
-              <h2 className="rd-display mb-4 text-2xl uppercase text-rd-ink md:text-3xl">
-                {group.label}
-              </h2>
-              <div className="space-y-2.5">
-                {group.promos.map((p, i) => {
-                  const visible = activeLeague === 'All' || p.team.league === activeLeague;
-                  const showStar = visible && !seen.has(p.team.id);
-                  if (showStar) seen.add(p.team.id);
-                  const { day, weekday, month } = dateParts(p.date);
-                  return (
+          // In-content ad anchors, the promo-list pattern reused. Raptive's
+          // Content rule is `.page-content > *` (skip 2, insert after each
+          // remaining child). Without anchors inside the list, this page placed
+          // ZERO Content units: nothing on it carried the class. The class goes
+          // on an anchor parent INSIDE each section's row container, never on
+          // the outer wrapper (its first children are the intro and a 0px
+          // AdSlot placeholder) and never on `space-y-10` (a whole section is
+          // one child, up to 14,700px on theme-nights). Rows are grouped in
+          // fours, the last group of each section sits outside the anchor
+          // parent as the team list's tail does, and a section with a single
+          // group gets no anchor parent at all. Tailwind v4's space-y puts the
+          // gap on every non-last child, so nested `space-y-2.5` reproduces
+          // the flat list's geometry exactly. Same markup server and client:
+          // the grouping depends only on the rows, and initial state is 'All'.
+          // Rows mounted later by "Show more" are regrouped by React but get
+          // no anchors from Raptive, which does not rescan; accepted.
+          const rowGroups = groupPromoRows(group.promos);
+          const renderRow = (p: (typeof group.promos)[number], i: number) => {
+            const visible = activeLeague === 'All' || p.team.league === activeLeague;
+            const showStar = visible && !seen.has(p.team.id);
+            if (showStar) seen.add(p.team.id);
+            const { day, weekday, month } = dateParts(p.date);
+            return (
                     <div
                       key={`${group.label}-${i}`}
                       className={`relative ${visible ? '' : 'hidden'}`}
@@ -187,8 +199,33 @@ export function RedesignAggregatorList({
                         </div>
                       )}
                     </div>
-                  );
-                })}
+            );
+          };
+          // A group whose rows are all filtered out is hidden as a whole, so
+          // it contributes no space-y gap. At 'All' no group is ever hidden.
+          const renderGroup = (rows: typeof group.promos, start: number, key: string) => {
+            const anyVisible =
+              activeLeague === 'All' || rows.some((p) => p.team.league === activeLeague);
+            return (
+              <div key={key} className={anyVisible ? 'space-y-2.5' : 'hidden'}>
+                {rows.map((p, j) => renderRow(p, start + j))}
+              </div>
+            );
+          };
+          return (
+            <section key={group.label} className={groupVisible ? '' : 'hidden'}>
+              <h2 className="rd-display mb-4 text-2xl uppercase text-rd-ink md:text-3xl">
+                {group.label}
+              </h2>
+              <div className="space-y-2.5">
+                {rowGroups.anchors.length > 0 && (
+                  <div className="space-y-2.5 page-content">
+                    {rowGroups.anchors.map((g) => renderGroup(g.rows, g.start, `g-${g.start}`))}
+                  </div>
+                )}
+                {rowGroups.anchors.length > 0
+                  ? renderGroup(rowGroups.tail.rows, rowGroups.tail.start, `g-${rowGroups.tail.start}`)
+                  : rowGroups.tail.rows.map((p, j) => renderRow(p, j))}
               </div>
             </section>
           );
