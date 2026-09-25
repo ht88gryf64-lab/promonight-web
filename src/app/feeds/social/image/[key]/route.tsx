@@ -5,7 +5,7 @@ import { findCardPromo } from '@/lib/social-feed/feed';
 import { formatShortDate, IMAGE_SIZE } from '@/lib/social-feed/rss';
 import { cleanText } from '@/lib/social-feed/text';
 
-// 1080x1080 PNG card for one social-feed item. Text only: no team logos or
+// 1080x1080 PNG card for one social-feed item, at /feeds/social/image/{teamId}~{promoId}. Text only: no team logos or
 // league marks. Fonts are the static DM Sans TTFs committed beside this route
 // (Satori reads neither variable fonts nor WOFF2); OFL.txt sits with them.
 
@@ -38,9 +38,10 @@ function titleSize(title: string): number {
   return 54;
 }
 
-export async function GET(_req: Request, { params }: { params: Promise<{ promoId: string }> }) {
-  const { promoId } = await params;
-  const promo = await findCardPromo(promoId, new Date());
+// The path segment is the feed key "{teamId}~{promoId}" (see select.ts).
+export async function GET(_req: Request, { params }: { params: Promise<{ key: string }> }) {
+  const { key } = await params;
+  const promo = await findCardPromo(key);
   if (!promo) {
     return new Response('Not found', {
       status: 404,

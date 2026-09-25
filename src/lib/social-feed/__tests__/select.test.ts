@@ -9,6 +9,7 @@ import {
   applyCaps,
   feedWindow,
   FEED_CAP,
+  feedKey,
   orderPass1,
   orderPass2,
   selectFeedItems,
@@ -206,4 +207,14 @@ test('ids the image route cannot resolve are excluded', () => {
   const bad = [promo({ promoId: 'a.b' }), promo({ promoId: 'a b' }), promo({ promoId: 'x'.repeat(129) }), promo({ promoId: '' })];
   const good = promo({ promoId: '2026-09-26-fan-appreciation' });
   assert.deepEqual(orderPass1([...bad, good], WINDOW).map((p) => p.promoId), [good.promoId]);
+});
+
+test('two teams sharing one promoId both appear, under distinct feed keys', async () => {
+  const a = promo({ promoId: 'p10', teamId: 'new-york-city-fc' });
+  const b = promo({ promoId: 'p10', teamId: 'new-england-revolution', title: 'Other Night' });
+  const u = unscored({ promoId: 'p10', teamId: 'orlando-city' });
+  const r = await run([a, b], [u]);
+  const keys = r.items.map((p) => feedKey(p.teamId, p.promoId));
+  assert.deepEqual(keys, ['new-york-city-fc~p10', 'new-england-revolution~p10', 'orlando-city~p10']);
+  assert.equal(new Set(keys).size, 3);
 });

@@ -7,7 +7,7 @@
 
 import { buildUtmUrl } from '@/lib/utm';
 import { cleanText } from './text';
-import { addDaysYMD, FEED_TIME_ZONE } from './select';
+import { addDaysYMD, FEED_TIME_ZONE, feedKey } from './select';
 
 export const SITE_URL = 'https://www.getpromonight.com';
 export const FEED_URL = `${SITE_URL}/feeds/social.xml`;
@@ -83,12 +83,12 @@ export function itemLink(item: Pick<RssItemInput, 'promoId' | 'sportSlug' | 'tea
     source: 'promonight_feed',
     medium: 'social',
     campaign: 'social_rss',
-    content: item.promoId,
+    content: feedKey(item.teamId, item.promoId),
   });
 }
 
-export function imageUrl(promoId: string): string {
-  return `${SITE_URL}/feeds/social/image/${encodeURIComponent(promoId)}`;
+export function imageUrl(teamId: string, promoId: string): string {
+  return `${SITE_URL}/feeds/social/image/${encodeURIComponent(feedKey(teamId, promoId))}`;
 }
 
 export function itemTitle(item: RssItemInput): string {
@@ -106,13 +106,13 @@ export function itemDescription(item: RssItemInput): string {
 }
 
 function renderItem(item: RssItemInput, now: Date): string {
-  const img = escapeXml(imageUrl(item.promoId));
+  const img = escapeXml(imageUrl(item.teamId, item.promoId));
   return [
     '    <item>',
     `      <title>${escapeXml(itemTitle(item))}</title>`,
     `      <link>${escapeXml(itemLink(item))}</link>`,
     `      <description>${escapeXml(itemDescription(item))}</description>`,
-    `      <guid isPermaLink="false">${escapeXml(item.promoId)}</guid>`,
+    `      <guid isPermaLink="false">${escapeXml(feedKey(item.teamId, item.promoId))}</guid>`,
     `      <pubDate>${pubDateFor(item.date, now).toUTCString()}</pubDate>`,
     `      <enclosure url="${img}" type="image/png" length="0"/>`,
     `      <media:content url="${img}" medium="image" type="image/png" width="${IMAGE_SIZE}" height="${IMAGE_SIZE}"/>`,

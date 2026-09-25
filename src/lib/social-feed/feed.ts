@@ -4,11 +4,12 @@
 
 import 'server-only';
 import { db } from '@/lib/firebase';
-import { getAllTeams, getScoredPromosInDateRange, getVenueForTeam, mapPromoDoc } from '@/lib/data';
+import { getAllTeams, getScoredPromosInDateRange, getTeamBySlug, getVenueForTeam, mapPromoDoc } from '@/lib/data';
 import { dedupePromos, isVisiblePromo, teamDisplayName } from '@/lib/promo-helpers';
 import type { Team } from '@/lib/types';
 import type { RssItemInput } from './rss';
-import { addDaysYMD, centralYMD, PROMO_ID, selectFeedItems, type FeedCandidate, type FeedSelection } from './select';
+import { resolveCard } from './card';
+import { selectFeedItems, type FeedCandidate, type FeedSelection } from './select';
 
 export interface FeedPromo extends FeedCandidate {
   // Both reads filter on a date range, so a null-date doc never arrives here;
@@ -125,19 +126,14 @@ export async function getFeedRssItems(now: Date): Promise<{ items: RssItemInput[
   return { items: selection.items.map((p) => toRssItem(p, venues.get(p.teamId) ?? null)), selection };
 }
 
-// Image cards resolve any giveaway or theme promo dated from 14 days back
-// through the end of the feed window, so a card stays fetchable for a while
-// after its item leaves the feed. Anything else is unknown (404).
-export const IMAGE_LOOKBACK_DAYS = 14;
-
-export async function findCardPromo(promoId: string, now: Date): Promise<RssItemInput | null> {
-  if (!PROMO_ID.test(promoId)) return null;
-  const today = centralYMD(now);
-  // Not content-deduped: a pass-1 item can be the scored twin of a row the
-  // date-ordered dedupe would drop, and its card must still resolve.
-  const promos = await readVisiblePromos(addDaysYMD(today, -IMAGE_LOOKBACK_DAYS), addDaysYMD(today, 7));
-  const match = promos.find((p) => p.promoId === promoId && (p.type === 'giveaway' || p.type === 'theme'));
-  if (!match || typeof match.date !== 'string' || !match.date) return null;
-  const venue = (await getVenueForTeam(match.teamId))?.name ?? null;
-  return toRssItem(match, venue);
+// Image cards: one document read, scoped to the team named in the key.
+export async function findCardPromo(key: string): Promise<RssItemInput | null> {
+  return resolveCard(key, {
+    getPromo: async (teamId, promoId) => {
+      const doc = await db.collection('teams').doc(teamId).collection('promos').doc(promoId).get();
+      return doc.exists ? mapPromoDoc(doc) : null;
+    },
+    getTeam: (teamId) => getTeamBySlug(teamId),
+    getVenueName: async (teamId) => (await getVenueForTeam(teamId))?.name ?? null,
+  });
 }

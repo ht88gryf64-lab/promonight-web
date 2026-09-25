@@ -76,7 +76,7 @@ test('escapes & < > " \' in titles, descriptions and attributes', () => {
   assert.ok(xml.includes('<title>Minnesota Twins Fish &amp; Chips &lt;Night&gt; &quot;Big&quot; &apos;Deal&apos;, Sun Sep 27</title>'));
   assert.ok(xml.includes('at A&amp;B Park vs X &lt; Y'));
   // URL query separators are escaped inside the element.
-  assert.ok(xml.includes('?utm_source=promonight_feed&amp;utm_medium=social&amp;utm_campaign=social_rss&amp;utm_content=abc123'));
+  assert.ok(xml.includes('?utm_source=promonight_feed&amp;utm_medium=social&amp;utm_campaign=social_rss&amp;utm_content=minnesota-twins%7Eabc123'));
   assertWellEscaped(xml);
   assertBalanced(xml);
   assert.ok(!xml.includes('CDATA'));
@@ -122,9 +122,9 @@ test('zero items still produce a valid channel', () => {
 
 test('item carries link, guid, enclosure and media:content', () => {
   const xml = buildSocialRss([item()], NOW);
-  const img = 'https://www.getpromonight.com/feeds/social/image/abc123';
-  assert.ok(xml.includes('<link>https://www.getpromonight.com/mlb/minnesota-twins?utm_source=promonight_feed&amp;utm_medium=social&amp;utm_campaign=social_rss&amp;utm_content=abc123</link>'));
-  assert.ok(xml.includes('<guid isPermaLink="false">abc123</guid>'));
+  const img = 'https://www.getpromonight.com/feeds/social/image/minnesota-twins~abc123';
+  assert.ok(xml.includes('<link>https://www.getpromonight.com/mlb/minnesota-twins?utm_source=promonight_feed&amp;utm_medium=social&amp;utm_campaign=social_rss&amp;utm_content=minnesota-twins%7Eabc123</link>'));
+  assert.ok(xml.includes('<guid isPermaLink="false">minnesota-twins~abc123</guid>'));
   assert.ok(xml.includes(`<enclosure url="${img}" type="image/png" length="0"/>`));
   assert.ok(xml.includes(`<media:content url="${img}" medium="image" type="image/png" width="1080" height="1080"/>`));
 });
@@ -155,4 +155,20 @@ test('a pubDate still in the future clamps to now rounded down to the hour', () 
 test('nested cite fragments cannot reassemble into a tag', () => {
   assert.equal(cleanText('<ci<cite>te x>Free</cite>'), 'Free');
   assert.equal(cleanText('A<</cite>/cite>B'), 'AB');
+});
+
+test('two teams sharing one promoId get distinct guids, links and image URLs', () => {
+  const xml = buildSocialRss(
+    [
+      item({ promoId: 'p10', teamId: 'new-york-city-fc', sportSlug: 'mls', teamName: 'New York City FC' }),
+      item({ promoId: 'p10', teamId: 'new-england-revolution', sportSlug: 'mls', teamName: 'New England Revolution' }),
+    ],
+    NOW,
+  );
+  const guids = [...xml.matchAll(/<guid isPermaLink="false">([^<]*)<\/guid>/g)].map((m) => m[1]);
+  assert.deepEqual(guids, ['new-york-city-fc~p10', 'new-england-revolution~p10']);
+  assert.ok(xml.includes('/feeds/social/image/new-york-city-fc~p10"'));
+  assert.ok(xml.includes('/feeds/social/image/new-england-revolution~p10"'));
+  // URLSearchParams writes '~' as %7E in the query; analytics decode it back.
+  assert.ok(xml.includes('utm_content=new-england-revolution%7Ep10'));
 });

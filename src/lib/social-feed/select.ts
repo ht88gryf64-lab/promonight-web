@@ -13,7 +13,7 @@
 // Caps run across the combined list in order: max 2 per team, max 2 per
 // derivedSignals.itemType where that is a real category (null and 'generic'
 // are exempt; unscored promos carry no itemType), total 25. Duplicates by
-// promoId, and by team + date + title, are dropped.
+// feed key (team + promoId), and by team + date + title, are dropped.
 
 import { cleanText } from './text';
 
@@ -25,9 +25,28 @@ export const PER_ITEM_TYPE_CAP = 2;
 const CAP_EXEMPT_ITEM_TYPES = new Set(['generic']);
 const FEED_TYPES = new Set(['giveaway', 'theme']);
 const YMD = /^\d{4}-\d{2}-\d{2}$/;
-// Ids the image route will resolve. An item whose card would 404 never enters
-// the feed.
+// Allowed shape for each half of a feed key (teamId and promoId). An item
+// whose card would 404 never enters the feed.
 export const PROMO_ID = /^[A-Za-z0-9_-]{1,128}$/;
+
+// Promo doc ids are not unique across teams (legacy ids like "p10" or
+// "2026-09-24-fan-appreciation-night" exist under several teams), so the feed
+// keys every item by team and promo: guid, utm_content and the image path.
+// "~" cannot occur in a teamId, so a key splits on its first "~".
+export const FEED_KEY_SEPARATOR = '~';
+
+export function feedKey(teamId: string, promoId: string): string {
+  return `${teamId}${FEED_KEY_SEPARATOR}${promoId}`;
+}
+
+export function parseFeedKey(key: string): { teamId: string; promoId: string } | null {
+  const at = key.indexOf(FEED_KEY_SEPARATOR);
+  if (at < 0) return null;
+  const teamId = key.slice(0, at);
+  const promoId = key.slice(at + 1);
+  if (!PROMO_ID.test(teamId) || !PROMO_ID.test(promoId)) return null;
+  return { teamId, promoId };
+}
 
 export interface FeedCandidate {
   promoId: string;
@@ -76,7 +95,7 @@ export function feedWindow(now: Date): FeedWindow {
 
 function isEligible(c: FeedCandidate, w: FeedWindow): boolean {
   if (c.tombstoned === true) return false;
-  if (!PROMO_ID.test(c.promoId) || !c.teamId) return false;
+  if (!PROMO_ID.test(c.promoId) || !PROMO_ID.test(c.teamId)) return false;
   if (typeof c.date !== 'string' || !YMD.test(c.date)) return false;
   if (c.date < w.start || c.date > w.end) return false;
   if (!FEED_TYPES.has(c.type)) return false;
@@ -98,14 +117,14 @@ export function orderPass1<T extends FeedCandidate>(scored: T[], w: FeedWindow):
 
 const TYPE_RANK: Record<string, number> = { giveaway: 0, theme: 1 };
 
-// `pass1Ids` is every promoId the pass-1 source returned. Pass 2 takes the rest,
+// `pass1Keys` is the feed key of every row the pass-1 source returned. Pass 2 takes the rest,
 // including a doc that carries a score but was left out of the scored reader
 // (no scoreBreakdown/derivedSignals, or a league outside SCORED_LEAGUES).
 // Pass-2 rows are unranked, so their score and itemType are cleared: ordering
 // ignores them and the itemType cap exempts them.
-export function orderPass2<T extends FeedCandidate>(unscored: T[], w: FeedWindow, pass1Ids?: ReadonlySet<string>): T[] {
+export function orderPass2<T extends FeedCandidate>(unscored: T[], w: FeedWindow, pass1Keys?: ReadonlySet<string>): T[] {
   return unscored
-    .filter((c) => (pass1Ids ? !pass1Ids.has(c.promoId) : !isScored(c)) && isEligible(c, w))
+    .filter((c) => (pass1Keys ? !pass1Keys.has(feedKey(c.teamId, c.promoId)) : !isScored(c)) && isEligible(c, w))
     .map((c) => ({ ...c, score: null, itemType: null }))
     .sort(
       (a, b) =>
@@ -125,19 +144,20 @@ function cappedItemType(c: FeedCandidate): string | null {
 // Walks an already-ordered list, keeping each item that fits every cap.
 export function applyCaps<T extends FeedCandidate>(ordered: T[]): T[] {
   const out: T[] = [];
-  const ids = new Set<string>();
+  const keys = new Set<string>();
   const contentKeys = new Set<string>();
   const perTeam = new Map<string, number>();
   const perItemType = new Map<string, number>();
   for (const c of ordered) {
     if (out.length >= FEED_CAP) break;
-    if (ids.has(c.promoId)) continue;
+    const key = feedKey(c.teamId, c.promoId);
+    if (keys.has(key)) continue;
     const contentKey = `${c.teamId}::${c.date}::${cleanText(c.title).toLowerCase()}`;
     if (contentKeys.has(contentKey)) continue;
     if ((perTeam.get(c.teamId) ?? 0) >= PER_TEAM_CAP) continue;
     const itemType = cappedItemType(c);
     if (itemType && (perItemType.get(itemType) ?? 0) >= PER_ITEM_TYPE_CAP) continue;
-    ids.add(c.promoId);
+    keys.add(key);
     contentKeys.add(contentKey);
     perTeam.set(c.teamId, (perTeam.get(c.teamId) ?? 0) + 1);
     if (itemType) perItemType.set(itemType, (perItemType.get(itemType) ?? 0) + 1);
@@ -158,8 +178,8 @@ export async function selectFeedItems<T extends FeedCandidate>(opts: {
   if (pass1Items.length >= FEED_CAP) {
     return { items: pass1Items, pass1Count: pass1Items.length, usedFallback: false, window };
   }
-  const pass1Ids = new Set(scored.map((c) => c.promoId));
-  const pass2 = orderPass2(await opts.loadUnscored(window), window, pass1Ids);
+  const pass1Keys = new Set(scored.map((c) => feedKey(c.teamId, c.promoId)));
+  const pass2 = orderPass2(await opts.loadUnscored(window), window, pass1Keys);
   // Pass-1 items lead the combined list, so re-running the caps over it keeps
   // them unchanged and lets pass 2 fill only what the caps still allow.
   const items = applyCaps([...pass1Items, ...pass2]);
