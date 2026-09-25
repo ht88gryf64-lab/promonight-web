@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Promo, PromoType, Team } from '@/lib/types';
 import type { GameContext } from '@/lib/data';
 import { normalizeSport, track } from '@/lib/analytics';
@@ -45,6 +45,25 @@ interface CalendarGridProps {
    * no analytics are lost. Only the prerendering changes.
    */
   homeOnlyPrerender?: boolean;
+  /**
+   * Today as YYYY-MM-DD, computed ONCE by the page's server render and passed
+   * down. NOT read from the clock here, and that is the whole point.
+   *
+   * This is a client component, so it renders twice: on the server when the
+   * ISR copy is generated (in UTC, then frozen for up to a day), and on the
+   * visitor's device at hydration (their clock, their timezone). It used to
+   * call `new Date()` in render for "today", and "today" decides which game
+   * days get a hidden, server-rendered detail panel below the grid. Whenever a
+   * game date fell between the copy's today and the visitor's today, one side
+   * had a panel the other did not, React threw hydration error #418, and the
+   * whole <main> was rebuilt on the client. Measured at 10.7% of team pageviews
+   * and 82% of MLB pageviews in the 21:00 Central hour (known-issues entry 52).
+   *
+   * Rendering both sides from the SAME string makes the HTML identical by
+   * construction. The visitor's real today is read after mount, in an effect,
+   * and moves only the ring on the grid cell.
+   */
+  today: string;
 }
 
 function monthKey(year: number, month: number): string {
@@ -79,12 +98,25 @@ export function CalendarGrid({
   gameContexts,
   activeCategory = 'all',
   homeOnlyPrerender = false,
+  today: todayKey,
 }: CalendarGridProps) {
-  const today = useMemo(() => {
+  // Parsed once from the prop. No clock read in render, see the prop's doc.
+  const today = useMemo(
+    () => parseYMD(todayKey) ?? { year: 1970, month: 0, day: 1 },
+    [todayKey],
+  );
+
+  // The visitor's own clock, read AFTER hydration so it can never disagree
+  // with the server HTML. It drives the isToday ring and nothing else: not the
+  // prerender window, not the initial month, not the next-game lookup.
+  const [visitorTodayKey, setVisitorTodayKey] = useState<string | null>(null);
+  useEffect(() => {
     const d = new Date();
-    return { year: d.getFullYear(), month: d.getMonth(), day: d.getDate() };
+    setVisitorTodayKey(
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
+    );
   }, []);
-  const todayKey = `${today.year}-${String(today.month + 1).padStart(2, '0')}-${String(today.day).padStart(2, '0')}`;
+  const ringKey = visitorTodayKey ?? todayKey;
 
   const promosByDate = useMemo(() => {
     const map = new Map<string, Promo[]>();
@@ -125,12 +157,12 @@ export function CalendarGrid({
         date,
         isHome: ctxs.some((c) => c.isHome),
       })),
-      today: `${today.year}-${String(today.month + 1).padStart(2, '0')}-${String(today.day).padStart(2, '0')}`,
+      today: todayKey,
       windowDays: PRERENDER_WINDOW_DAYS,
       max: PRERENDER_MAX,
       homeOnly: homeOnlyPrerender,
     });
-  }, [hasGamesData, gameCtxsByDate, today, homeOnlyPrerender]);
+  }, [hasGamesData, gameCtxsByDate, todayKey, homeOnlyPrerender]);
 
   const monthsWithContent = useMemo(() => {
     const set = new Set<string>();
@@ -318,7 +350,7 @@ export function CalendarGrid({
           {cells.map((cell, i) => {
             if (!cell) return <div key={i} className="aspect-square" />;
 
-            const isToday = cell.dateStr === todayKey;
+            const isToday = cell.dateStr === ringKey;
             const isSelected = cell.dateStr === selectedDate;
             const firstGame = cell.gameCtxs[0];
             const homeGame = firstGame?.isHome === true;

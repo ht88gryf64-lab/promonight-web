@@ -28,7 +28,7 @@ import { TeamFAQ } from '@/components/team-faq';
 import { TeamRelatedAggregators } from '@/components/team-related-aggregators';
 import { JsonLd } from '@/components/json-ld';
 import { PlayoffSection } from '@/components/playoff-section';
-import { countPromosByType, extractPlayoffOpponent, isTicketMechanicRow, isUpcomingPromo, splitPromosByDate, teamDisplayName } from '@/lib/promo-helpers';
+import { countPromosByType, extractPlayoffOpponent, isTicketMechanicRow, isUpcomingPromo, splitPromosByDate, teamDisplayName, todayYmd } from '@/lib/promo-helpers';
 import { TeamPageTracker } from '@/components/analytics-events';
 import { EngagementTracker } from '@/components/analytics/EngagementTracker';
 import { TicketmasterCTA } from '@/components/affiliates/TicketmasterCTA';
@@ -327,7 +327,16 @@ export default async function TeamPage({
   // Before this, every count on the page was all-time while the promo list alone
   // filtered by date, so 137 of 144 populated pages advertised a number the list
   // directly beneath it contradicted.
-  const { upcoming: upcomingPromos } = splitPromosByDate(promos);
+  // THE page's one clock read for this render. Everything below that needs a
+  // "today" takes this value: the upcoming/past split, the claim mode, and the
+  // calendar. The calendar is the reason it is a named value rather than each
+  // helper's default: it is a client component that renders again on the
+  // visitor's device, and a "today" it read for itself there disagreed with
+  // the ISR copy's often enough to throw hydration error #418 on a tenth of
+  // team pageviews (known-issues entry 52). One value, computed here, sent
+  // down as a prop, hydrates the same on both sides by construction.
+  const todayStr = todayYmd();
+  const { upcoming: upcomingPromos } = splitPromosByDate(promos, todayStr);
   const upcomingCounts = countPromosByType(upcomingPromos);
 
   // ── The second derivation, and the reason the paragraph above is now wrong ──
@@ -347,7 +356,7 @@ export default async function TeamPage({
   //
   // upcomingCounts is NOT retired. It still drives the layout gates in
   // RedesignTeamPage, which are not claims and must not move.
-  const claimMode = resolveClaimMode(promos, team.league);
+  const claimMode = resolveClaimMode(promos, team.league, todayStr);
 
   const displayName = teamDisplayName(team);
   const recurringDeals = await getRecurringDealsForTeam(team.id);
@@ -375,6 +384,7 @@ export default async function TeamPage({
         claim={claimMode}
         displayName={displayName}
         gameContexts={gameContexts}
+        today={todayStr}
         recurringDeals={recurringDeals}
         playoffsActive={!!playoffConfig?.playoffsActive}
         inPlayoffs={inPlayoffs}
@@ -527,6 +537,7 @@ export default async function TeamPage({
         sport={team.league}
         team={team}
         gameContexts={gameContexts}
+        today={todayStr}
       />
 
       <RecurringDealsSection

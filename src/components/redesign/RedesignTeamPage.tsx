@@ -64,6 +64,11 @@ export interface RedesignTeamPageProps {
   claim: ClaimMode;
   displayName: string;
   gameContexts?: GameContext[];
+  /** Today as YYYY-MM-DD, the page's ONE clock read (UTC, at render time).
+   *  Forwarded to the calendar so server and client hydrate from the same
+   *  day; see CalendarGrid for why a client-side clock read there is a
+   *  hydration mismatch (known-issues entry 52). */
+  today: string;
   recurringDeals: RecurringDeal[];
   playoffsActive: boolean;
   inPlayoffs: boolean;
@@ -93,6 +98,7 @@ export function RedesignTeamPage({
   claim,
   displayName,
   gameContexts,
+  today,
   recurringDeals,
   inPlayoffs,
   playoffPromos,
@@ -404,6 +410,7 @@ export function RedesignTeamPage({
                   sport={team.league}
                   team={team}
                   gameContexts={gameContexts}
+                  today={today}
                 />
               )}
             </div>

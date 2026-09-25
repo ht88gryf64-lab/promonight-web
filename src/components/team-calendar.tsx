@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Promo, PromoType, Team } from '@/lib/types';
 import { PROMO_TYPE_COLORS, PROMO_TYPE_LABELS } from '@/lib/types';
 import { normalizeSport, track } from '@/lib/analytics';
@@ -21,6 +21,12 @@ interface TeamCalendarProps {
    *  game — home and away — with away-game travel context. When absent,
    *  falls back to the legacy promo-only rendering. */
   gameContexts?: GameContext[];
+  /** Today as YYYY-MM-DD from the page's server render. Same contract and the
+   *  same reason as CalendarGrid.today: a clock read in render here is a
+   *  hydration mismatch whenever a game date sits between the ISR copy's day
+   *  and the visitor's (known-issues entry 52). Gate-off path, kept in step so
+   *  the defect cannot return if the gate flips. */
+  today: string;
 }
 
 function monthKey(year: number, month: number): string {
@@ -52,12 +58,22 @@ function formatShortDate(dateStr: string): string {
   });
 }
 
-export function TeamCalendar({ promos, teamName, teamSlug, sport, team, gameContexts }: TeamCalendarProps) {
-  const today = useMemo(() => {
+export function TeamCalendar({ promos, teamName, teamSlug, sport, team, gameContexts, today: todayKey }: TeamCalendarProps) {
+  // Parsed from the prop; no clock read in render. See CalendarGrid.
+  const today = useMemo(
+    () => parseYMD(todayKey) ?? { year: 1970, month: 0, day: 1 },
+    [todayKey],
+  );
+
+  // The visitor's clock, after hydration, for the isToday ring only.
+  const [visitorTodayKey, setVisitorTodayKey] = useState<string | null>(null);
+  useEffect(() => {
     const d = new Date();
-    return { year: d.getFullYear(), month: d.getMonth(), day: d.getDate() };
+    setVisitorTodayKey(
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
+    );
   }, []);
-  const todayKey = `${today.year}-${String(today.month + 1).padStart(2, '0')}-${String(today.day).padStart(2, '0')}`;
+  const ringKey = visitorTodayKey ?? todayKey;
 
   const promosByDate = useMemo(() => {
     const map = new Map<string, Promo[]>();
@@ -312,7 +328,7 @@ export function TeamCalendar({ promos, teamName, teamSlug, sport, team, gameCont
             {cells.map((cell, i) => {
               if (!cell) return <div key={i} className="aspect-square" />;
 
-              const isToday = cell.dateStr === todayKey;
+              const isToday = cell.dateStr === ringKey;
               const isSelected = cell.dateStr === selectedDate;
               const hasPromos = cell.promos.length > 0;
               const hasHot = cell.promos.some((p) => p.highlight);
