@@ -35,6 +35,8 @@ interface SeasonExplorerProps {
    *  Held on the same league date gate as the season claims, so MLB pages do
    *  not move mid-experiment. */
   homeOnlyPrerender?: boolean;
+  /** Today as YYYY-MM-DD from the page's server render. Forwarded untouched. */
+  today: string;
 }
 
 export function SeasonExplorer({
@@ -47,6 +49,7 @@ export function SeasonExplorer({
   gameContexts,
   seasonScoped = false,
   homeOnlyPrerender = false,
+  today,
 }: SeasonExplorerProps) {
   const [activeCategory, setActiveCategory] = useState<PromoType | 'all'>('all');
 
@@ -132,6 +135,7 @@ export function SeasonExplorer({
         gameContexts={gameContexts}
         activeCategory={activeCategory}
         homeOnlyPrerender={homeOnlyPrerender}
+        today={today}
       />
     </div>
   );
