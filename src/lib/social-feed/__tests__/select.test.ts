@@ -186,3 +186,24 @@ test('pass 2 fills up to 25 in total', async () => {
   assert.equal(r.items.length, 25);
   assert.equal(r.pass1Count, 10);
 });
+
+test('a doc with a score that the scored reader left out still reaches pass 2, unranked and itemType-exempt', async () => {
+  // e.g. score present but no derivedSignals, so fetchScoredPromos skipped it.
+  const orphans = [1, 2, 3].map(() => promo({ score: 80, itemType: 'bobblehead' }));
+  const r = await run([], orphans);
+  assert.equal(r.items.length, 3);
+  assert.ok(r.items.every((p) => p.score === null && p.itemType === null));
+});
+
+test('a pass-1 source row never re-enters through pass 2', async () => {
+  const s = [1, 2, 3].map(() => promo({ teamId: 'twins' }));
+  const twin = { ...s[2], score: undefined };
+  const r = await run(s, [twin]);
+  assert.deepEqual(r.items.map((p) => p.promoId), [s[0].promoId, s[1].promoId]);
+});
+
+test('ids the image route cannot resolve are excluded', () => {
+  const bad = [promo({ promoId: 'a.b' }), promo({ promoId: 'a b' }), promo({ promoId: 'x'.repeat(129) }), promo({ promoId: '' })];
+  const good = promo({ promoId: '2026-09-26-fan-appreciation' });
+  assert.deepEqual(orderPass1([...bad, good], WINDOW).map((p) => p.promoId), [good.promoId]);
+});

@@ -10,14 +10,18 @@
 const CITE_OPEN = /<cite\b[^>]*>/gi;
 const CITE_CLOSE = /<\/cite\s*>/gi;
 // eslint-disable-next-line no-control-regex
-const XML_INVALID = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F￾￿]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g;
+const XML_INVALID = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\uFFFE\uFFFF]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g;
 
 export function cleanText(value: unknown): string {
   if (typeof value !== 'string') return '';
-  return value
-    .replace(CITE_OPEN, '')
-    .replace(CITE_CLOSE, '')
-    .replace(XML_INVALID, '')
+  // Repeat until stable so a nested fragment like "<ci<cite>te>" cannot
+  // reassemble into a tag after one pass.
+  let text = value.replace(XML_INVALID, '');
+  for (let prev = ''; prev !== text; ) {
+    prev = text;
+    text = text.replace(CITE_OPEN, '').replace(CITE_CLOSE, '');
+  }
+  return text
     .replace(/\s+/g, ' ')
     .trim();
 }

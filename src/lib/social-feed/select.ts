@@ -25,6 +25,9 @@ export const PER_ITEM_TYPE_CAP = 2;
 const CAP_EXEMPT_ITEM_TYPES = new Set(['generic']);
 const FEED_TYPES = new Set(['giveaway', 'theme']);
 const YMD = /^\d{4}-\d{2}-\d{2}$/;
+// Ids the image route will resolve. An item whose card would 404 never enters
+// the feed.
+export const PROMO_ID = /^[A-Za-z0-9_-]{1,128}$/;
 
 export interface FeedCandidate {
   promoId: string;
@@ -73,7 +76,7 @@ export function feedWindow(now: Date): FeedWindow {
 
 function isEligible(c: FeedCandidate, w: FeedWindow): boolean {
   if (c.tombstoned === true) return false;
-  if (!c.promoId || !c.teamId) return false;
+  if (!PROMO_ID.test(c.promoId) || !c.teamId) return false;
   if (typeof c.date !== 'string' || !YMD.test(c.date)) return false;
   if (c.date < w.start || c.date > w.end) return false;
   if (!FEED_TYPES.has(c.type)) return false;
@@ -95,9 +98,15 @@ export function orderPass1<T extends FeedCandidate>(scored: T[], w: FeedWindow):
 
 const TYPE_RANK: Record<string, number> = { giveaway: 0, theme: 1 };
 
-export function orderPass2<T extends FeedCandidate>(unscored: T[], w: FeedWindow): T[] {
+// `pass1Ids` is every promoId the pass-1 source returned. Pass 2 takes the rest,
+// including a doc that carries a score but was left out of the scored reader
+// (no scoreBreakdown/derivedSignals, or a league outside SCORED_LEAGUES).
+// Pass-2 rows are unranked, so their score and itemType are cleared: ordering
+// ignores them and the itemType cap exempts them.
+export function orderPass2<T extends FeedCandidate>(unscored: T[], w: FeedWindow, pass1Ids?: ReadonlySet<string>): T[] {
   return unscored
-    .filter((c) => !isScored(c) && isEligible(c, w))
+    .filter((c) => (pass1Ids ? !pass1Ids.has(c.promoId) : !isScored(c)) && isEligible(c, w))
+    .map((c) => ({ ...c, score: null, itemType: null }))
     .sort(
       (a, b) =>
         (a.date as string).localeCompare(b.date as string) ||
@@ -143,12 +152,14 @@ export async function selectFeedItems<T extends FeedCandidate>(opts: {
   loadUnscored: (w: FeedWindow) => Promise<T[]>;
 }): Promise<FeedSelection<T>> {
   const window = feedWindow(opts.now);
-  const pass1 = orderPass1(await opts.loadScored(window), window);
+  const scored = await opts.loadScored(window);
+  const pass1 = orderPass1(scored, window);
   const pass1Items = applyCaps(pass1);
   if (pass1Items.length >= FEED_CAP) {
     return { items: pass1Items, pass1Count: pass1Items.length, usedFallback: false, window };
   }
-  const pass2 = orderPass2(await opts.loadUnscored(window), window);
+  const pass1Ids = new Set(scored.map((c) => c.promoId));
+  const pass2 = orderPass2(await opts.loadUnscored(window), window, pass1Ids);
   // Pass-1 items lead the combined list, so re-running the caps over it keeps
   // them unchanged and lets pass 2 fill only what the caps still allow.
   const items = applyCaps([...pass1Items, ...pass2]);

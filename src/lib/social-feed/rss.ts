@@ -112,7 +112,7 @@ function renderItem(item: RssItemInput, now: Date): string {
     `      <title>${escapeXml(itemTitle(item))}</title>`,
     `      <link>${escapeXml(itemLink(item))}</link>`,
     `      <description>${escapeXml(itemDescription(item))}</description>`,
-    `      <guid isPermaLink="false">${escapeXml(cleanText(item.promoId))}</guid>`,
+    `      <guid isPermaLink="false">${escapeXml(item.promoId)}</guid>`,
     `      <pubDate>${pubDateFor(item.date, now).toUTCString()}</pubDate>`,
     `      <enclosure url="${img}" type="image/png" length="0"/>`,
     `      <media:content url="${img}" medium="image" type="image/png" width="${IMAGE_SIZE}" height="${IMAGE_SIZE}"/>`,

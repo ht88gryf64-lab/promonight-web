@@ -8,7 +8,7 @@ import { getAllTeams, getScoredPromosInDateRange, getVenueForTeam, mapPromoDoc }
 import { dedupePromos, isVisiblePromo, teamDisplayName } from '@/lib/promo-helpers';
 import type { Team } from '@/lib/types';
 import type { RssItemInput } from './rss';
-import { addDaysYMD, centralYMD, selectFeedItems, type FeedCandidate, type FeedSelection } from './select';
+import { addDaysYMD, centralYMD, PROMO_ID, selectFeedItems, type FeedCandidate, type FeedSelection } from './select';
 
 export interface FeedPromo extends FeedCandidate {
   // Both reads filter on a date range, so a null-date doc never arrives here;
@@ -129,7 +129,6 @@ export async function getFeedRssItems(now: Date): Promise<{ items: RssItemInput[
 // through the end of the feed window, so a card stays fetchable for a while
 // after its item leaves the feed. Anything else is unknown (404).
 export const IMAGE_LOOKBACK_DAYS = 14;
-const PROMO_ID = /^[A-Za-z0-9_-]{1,128}$/;
 
 export async function findCardPromo(promoId: string, now: Date): Promise<RssItemInput | null> {
   if (!PROMO_ID.test(promoId)) return null;

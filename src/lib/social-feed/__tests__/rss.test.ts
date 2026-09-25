@@ -84,9 +84,9 @@ test('escapes & < > " \' in titles, descriptions and attributes', () => {
 });
 
 test('control characters are stripped', () => {
-  const xml = buildSocialRss([item({ title: 'Bobble\u0000head\u0007 Night\u000B', opponent: 'Tigers￾' })], NOW);
+  const xml = buildSocialRss([item({ title: 'Bobble\u0000head\u0007 Night\u000B', opponent: 'Tigers\uFFFE' })], NOW);
   // eslint-disable-next-line no-control-regex
-  assert.ok(!/[\u0000-\u0008\u000B\u000C\u000E-\u001F￾￿]/.test(xml));
+  assert.ok(!/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/.test(xml));
   assert.ok(xml.includes('Bobblehead Night'));
 });
 
@@ -150,4 +150,9 @@ test('a pubDate still in the future clamps to now rounded down to the hour', () 
   // Day-7 item at 09:37 CDT: date-7 noon is later today.
   const morning = new Date('2026-09-25T14:37:12Z');
   assert.equal(pubDateFor('2026-10-02', morning).toISOString(), '2026-09-25T14:00:00.000Z');
+});
+
+test('nested cite fragments cannot reassemble into a tag', () => {
+  assert.equal(cleanText('<ci<cite>te x>Free</cite>'), 'Free');
+  assert.equal(cleanText('A<</cite>/cite>B'), 'AB');
 });
