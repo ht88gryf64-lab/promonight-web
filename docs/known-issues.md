@@ -2950,56 +2950,148 @@ in-content inventory. The Footer and sticky units still serve.
 **Severity: Low.** Nothing is broken. A deliberate coverage gap, recorded so
 the next audit of ad coverage finds the reason rather than the hole.
 
-## 52. The homepage throws an intermittent hydration error #418 that has nothing to do with ads
+## 52. Team pages throw hydration error #418 on about 1 in 10 pageviews: `CalendarGrid` prerenders day panels from `new Date()`, so the ISR copy and the visitor disagree about "today"
 
-**What it is.** On a clean load of `/`, React sometimes throws minified error
-#418 (`args[]=HTML`, an element-level mismatch, not a text one), discards the
-server-rendered tree and rebuilds `<main>` on the client. No ad node is
-involved: the error arrives before Raptive has loaded, and nothing of Raptive's
-is removed.
+**What it is.** React 19 minified error #418, a hydration mismatch, on team
+pages. React discards the server-rendered tree and rebuilds `<main>` on the
+client. No ad node is involved. This entry first recorded the error as a rare
+homepage curiosity (about 1 in 7 desktop loads of `/`, cause unknown). That was
+wrong about scope: the homepage is a footnote, and the bulk of it is team
+pages, on phones, in the evening.
 
-Found on 2026-09-20 while verifying the homepage `page-content` wrapper on
-production. It is NOT caused by that wrapper, and not by the loader move in
-entry 50:
+**Rate and scope in the field.** `hydration_mismatch` with
+`adthrive_present = false`, 2026-09-21 to 2026-09-24, against `page_view`:
 
-| where | build | desktop loads | #418 |
+| template | pageviews | mismatches | rate | of which phone |
+| --- | --- | --- | --- | --- |
+| team | 2,806 | 300 | 10.7% | 240 |
+| venue | 132 | 30 | 22.7% | 27 |
+| homepage | 73 | 3 | 4.1% | 0 |
+| aggregator | 263 | 1 | 0.4% | 0 |
+| hub, CFB school, everything else | 418 | 0 | 0 | 0 |
+
+The top routes are MLB clubs: `/mlb/detroit-tigers` 35, `/mlb/los-angeles-dodgers`
+31, `/mlb/chicago-white-sox` 23, `/mlb/texas-rangers` 21, `/mlb/kansas-city-royals`
+17. It is every browser and OS in proportion to traffic (Mobile Safari 14%,
+Android Chrome 12%, Windows Chrome 7%), so not an extension or an in-app
+browser. It fires at hydration: `ms_since_navigation_start` median about 600ms,
+with 236 of 331 under one second.
+
+Note on the label: since entry 50 moved `ads.min.js` behind hydration, no Raptive
+node can exist when a hydration error fires, so `adthrive_present = false` is
+now true of every mismatch by construction. It no longer means "unrelated to the
+page"; it means "the ads had not loaded yet", which is always.
+
+**It clusters by time of day.** Team-page mismatches per team pageview, by hour
+in Central time, same window:
+
+| hour (CT) | 06 | 07 | 08 | 09-19 (each) | 20 | 21 | 22 | 23 | 00 | 01 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| all team pages | 31% | 14% | 13% | 2 to 6% | 23% | 43% | 30% | 38% | 19% | 28% |
+| MLB team pages | 78% | 56% | 32% | 3 to 6% | 43% | 82% | 55% | 65% | 32% | 75% |
+
+Four hours, 20:00 to 23:59, carry 175 of the 300 team mismatches.
+
+**The mechanism, reproduced.** `src/components/redesign/CalendarGrid.tsx` is a
+client component. At line 83 it reads `new Date()` during render and derives
+`today` and `todayKey` from it. That value drives four things:
+
+1. `prerenderedDates` (lines 114 to 133, via `prerenderWindowDates` in
+   `src/lib/render-windows.ts`): the set of game dates inside `[today, today +
+   30 days]`, capped at 35, whose detail panel is server-rendered as
+   `<div hidden><GameExpand … /></div>` (lines 451 to 461).
+2. The initial `view` month (line 152).
+3. `nextUpcomingKey` and the empty-month hint (lines 157 to 171).
+4. The `isToday` ring on the grid cell (lines 321 and 344).
+
+On the server that `new Date()` runs once, in UTC, when the ISR copy is
+generated (`revalidate = 86400` in `src/app/[sport]/[team]/page.tsx:47`), and the
+result is frozen into the HTML for up to a day. On the client it runs on the
+visitor's clock, in the visitor's timezone, at visit time. Whenever a game date
+falls between those two "todays", one side prerenders a hidden panel the other
+side does not. That is a structural difference, and React throws. Items 2 to 4
+only change attributes or text that React 19 tolerates with a warning, which is
+why a same-day visit is quiet.
+
+Two situations put a game date between the two todays, and they are the two
+clusters:
+
+- Evening. UTC rolls over at 19:00 CDT. A copy regenerated after that carries
+  tomorrow as `today`, so tonight's game is outside its window and its panel is
+  not in the HTML. Every visitor for the rest of the evening still has today as
+  `today`, prerenders tonight's panel, and mismatches. ISR regenerates on the
+  first request after the previous copy expires, so a page that was regenerated
+  one evening tends to be regenerated the next evening too. MLB plays nearly
+  every night, which is why MLB dominates.
+- Morning. A copy from the previous UTC day has yesterday's game inside its
+  window and that panel in the HTML. A visitor whose `today` has moved on drops
+  it, and mismatches, until the copy expires.
+
+Reproduced on production, `/mlb/detroit-tigers` at 386px, ISR copy aged 67,521s
+(rendered 07:29 UTC on 2026-09-24), Raptive and analytics blocked, the
+server-rendered `<main>` snapshotted before React ran and diffed against the
+hydrated tree:
+
+| client clock | client "today" | server "today" | result |
 | --- | --- | --- | --- |
-| production | with the wrapper | 7 | 1 |
-| preview `dpl_EnGyDESGmAV9Bp266nzAQHtEPK8o` | loader fix, BEFORE the wrapper | 6 | 1 |
-| local build and the wrapper's own preview | with the wrapper | 6 | 0 |
-| phone profile, all three environments | with the wrapper | 7 | 0 |
+| real, 21:15 CDT 09-24 | 09-24 | 09-24 | no error; the only diffs are the star-button placeholders, which are hydration-safe by design |
+| shifted +48h | 09-26 | 09-24 | #418 (`args[]=text`); the diff is one `<div hidden>` panel, "Friday, September 25", present in the server HTML and absent on the client, plus the today ring moving cells |
 
-So roughly 1 in 7 desktop loads where it shows at all, and the field has it too:
-one `hydration_mismatch` row with `route = '/'` and `adthrive_present = false`
-was recorded BEFORE either change shipped.
+And in a local dev build with the server pinned to UTC and the client clock
+shifted 44 hours back or 48 hours forward across a game date: "Hydration failed
+because the server rendered text didn't match the client", in `CalendarGrid`.
+Shifts that do not cross a game date produce only the attribute warning for the
+ring. The error says `text` because the first node React reaches inside the
+extra panel is its date heading.
 
-**Why it does not cost ads any more.** Since entry 50's fix, `ads.min.js` loads
-from an effect that runs after React has finished recovering, so Raptive places
-into the rebuilt tree. On the production load that threw, all 5 Content units
-still placed. Before that fix a rebuild like this would have taken the ads with
-it whenever Raptive had already inserted.
+**What it costs.** A full client re-render of `<main>` on about 10% of team
+pageviews, concentrated at the busiest hour. Since entry 50 the ads survive it,
+because Raptive loads after React has recovered; before that fix this same
+rebuild was deleting every ad unit, and it was part of the 10-of-45 rate that
+entry recorded.
 
-**What it does cost.** A full client re-render of `<main>` on the
-highest-traffic route: wasted main-thread time, and whatever a visitor had
-already scrolled to or focused is rebuilt under them.
+**Ruled out on team pages.** The eBay resale guard in
+`EbayResaleLink.tsx` (one-way by construction, on completed rows only).
+`RedesignPromoRow` date formatting (local noon, timezone-safe). `CaptureTrigger`
+and `EngagementTracker` (effects only). `StarToggle` (placeholder until mount).
+The server-only reads in `team-hero.tsx`, `promo-list.tsx`, `authority-stats.tsx`
+and `[team]/page.tsx` (rendered once, never re-run on the client).
 
-**Cause: unknown, and not investigated.** Every load in the table used a fresh
-browser context at the same viewport, so it is not stored state and not a
-viewport difference. That points at timing, which is an inference and not a
-finding. Nothing on the page has been ruled in or out.
+**Not explained by this.** The venue rate, 22.7% on 132 pageviews: no client
+component reachable from `VenueHubView` reads the clock in render, so it is a
+different mechanism and the next thing to diagnose. The homepage's 3 rows
+(4.1%): none of its client components read the clock in render either; the
+original 1-in-7 observation (an `HTML`, not `text`, mismatch on desktop) stands
+unexplained.
 
-**How it shows in the field.** `hydration_mismatch` with
-`adthrive_present = false`. That value is also what a browser extension or
-in-page translation produces on ANY route, so the homepage has to be read
-against that baseline rather than on its own. After a week of data (on or after
-2026-09-27) check two things: whether `adthrive_present = false` rows cluster
-on `route = '/'` out of proportion to its share of pageviews, and whether they
-cluster by time of day. A time-of-day cluster would point at content that
-changes through the day (tonight's games, the ticker). No cluster at all would
-point back at the baseline.
+**Fix pattern, proposed and not built.** Render from one "today" on both sides,
+and let the visitor's clock in only after mount.
 
-**Severity: Low, provisionally.** No revenue effect and no broken page. Promote
-to Medium if the field rate on `/` confirms anything like 1 in 7.
+1. `src/app/[sport]/[team]/page.tsx` already computes `todayStr` (line 125,
+   UTC) for the upcoming/past split. Pass it down.
+2. `src/components/redesign/RedesignTeamPage.tsx` and
+   `src/components/redesign/SeasonExplorer.tsx`: thread it as a `today` prop.
+3. `src/components/redesign/CalendarGrid.tsx`: derive `today`, `todayKey`,
+   `prerenderedDates`, the initial `view` and `nextUpcomingKey` from the prop,
+   never from `new Date()` in render. Then, in a `useEffect`, read the visitor's
+   clock into state and use that state for the `isToday` ring only. An effect
+   runs after hydration, so it cannot mismatch; the ring is the one thing a
+   visitor can see, and the panels are hidden until clicked and lazy-mount on
+   click when outside the window anyway (lines 463 to 476).
+4. `src/components/team-calendar.tsx`: same change, same reason (gate-off path,
+   still compiled).
+
+Pinning to the build day means a copy up to a day old prerenders yesterday's
+panel and not tonight's. That is invisible: the panel is hidden, and clicking
+tonight's cell mounts it on demand.
+
+**How to verify the fix.** The production harness above with the client clock
+shifted +48h must produce zero #418 on three team pages, and the field rate of
+`hydration_mismatch` on team routes should fall from about 10% to the venue and
+homepage baseline within a day of deploy.
+
+**Severity: Medium.** Was Low. No revenue effect since entry 50, but a tenth of
+team pageviews, at peak, are rebuilt under the visitor.
 
 ## 53. Raptive's Sidebar rules match any `<aside>`, so an `<aside>` anywhere on a page receives the sidebar ad stack
 
