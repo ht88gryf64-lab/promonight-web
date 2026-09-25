@@ -2950,7 +2950,7 @@ in-content inventory. The Footer and sticky units still serve.
 **Severity: Low.** Nothing is broken. A deliberate coverage gap, recorded so
 the next audit of ad coverage finds the reason rather than the hole.
 
-## 52. Team pages throw hydration error #418 on about 1 in 10 pageviews: `CalendarGrid` prerenders day panels from `new Date()`, so the ISR copy and the visitor disagree about "today"
+## 52. Team pages threw hydration error #418 on about 1 in 10 pageviews: `CalendarGrid` prerendered day panels from `new Date()`, so the ISR copy and the visitor disagreed about "today" (resolved on team routes; venue and homepage residues open)
 
 **What it is.** React 19 minified error #418, a hydration mismatch, on team
 pages. React discards the server-rendered tree and rebuilds `<main>` on the
@@ -3064,8 +3064,8 @@ different mechanism and the next thing to diagnose. The homepage's 3 rows
 original 1-in-7 observation (an `HTML`, not `text`, mismatch on desktop) stands
 unexplained.
 
-**Fix pattern, proposed and not built.** Render from one "today" on both sides,
-and let the visitor's clock in only after mount.
+**Fix pattern, as built.** Render from one "today" on both sides, and let
+the visitor's clock in only after mount.
 
 1. `src/app/[sport]/[team]/page.tsx` already computes `todayStr` (line 125,
    UTC) for the upcoming/past split. Pass it down.
@@ -3085,13 +3085,55 @@ Pinning to the build day means a copy up to a day old prerenders yesterday's
 panel and not tonight's. That is invisible: the panel is hidden, and clicking
 tonight's cell mounts it on demand.
 
-**How to verify the fix.** The production harness above with the client clock
-shifted +48h must produce zero #418 on three team pages, and the field rate of
-`hydration_mismatch` on team routes should fall from about 10% to the venue and
-homepage baseline within a day of deploy.
+### Resolution (team routes)
 
-**Severity: Medium.** Was Low. No revenue effect since entry 50, but a tenth of
-team pageviews, at peak, are rebuilt under the visitor.
+Fixed in `f137218`, merged as `7be4314` on 2026-09-24, production deploy
+`dpl_57Paxy1mbtB16eTmmR3LF18sHtvz`. One deviation from the pattern above:
+the `todayStr` at `[team]/page.tsx:125` lives inside `generateMetadata`, not
+the page component, so the page component now makes its own single read
+(`const todayStr = todayYmd()`) and passes that one value to
+`splitPromosByDate`, `resolveClaimMode`, `RedesignTeamPage` (through
+`SeasonExplorer` to `CalendarGrid`) and `TeamCalendar`. The two helpers used to
+read the clock for themselves; they no longer do, so one render can no longer
+straddle the UTC rollover between reads.
+
+In both calendars the prop is bound as `todayKey` and parsed once for the
+month arithmetic. The visitor's clock is read in a `useEffect`, stored as
+`visitorTodayKey`, and used for the `isToday` ring and nothing else. A
+structural test, `src/lib/__tests__/calendar-today-prop.test.ts`, asserts one
+clock read per calendar, inside an effect; `today` as a required prop; and the
+visitor key read exactly once.
+
+Verified on a local production build and on preview
+`dpl_4taW5qwbPQmyEq3oyttoDeSiWnHt`, Raptive and analytics blocked unless
+stated:
+
+| check | result |
+| --- | --- |
+| the race: client clock +48h and -44h across a game date, 386px, tz America/Chicago, on `/mlb/detroit-tigers`, `/mlb/los-angeles-dodgers`, `/nfl/kansas-city-chiefs`, `/nhl/dallas-stars` | zero #418 in 17 of 17 runs. The pre-fix build throws on the same harness (Tigers, +48h) |
+| the ring | server HTML carries the copy's day; after mount the ring sits on the visitor's day: 09-24 at the real clock (server 09-25 UTC), 09-23 at -24h, 09-25 at +24h; no error |
+| taps | a cell inside the window and one beyond it (`/nfl/kansas-city-chiefs`, 2026-11-01, lazy mount) both open their panel |
+| geometry | zero rect differences against the pre-fix build across every `<main>` descendant, 386px and 1190px, three pages |
+| ads | Tigers: 8 Content units on phone, 6 on desktop, on both builds |
+| build | tsc clean, 917 tests green, build ok |
+
+`/mlb/los-angeles-dodgers` is not a calendar page this week: its season is
+over and the zero-upcoming schedule branch renders instead of `CalendarGrid`,
+so its zero is trivial. `/nhl/dallas-stars` stood in as the third calendar
+page.
+
+Then on production, once `dpl_57Paxy1mbtB16eTmmR3LF18sHtvz` was serving:
+`/mlb/detroit-tigers` at 386px with the client clock +48h and -44h, zero #418
+both times, the same recipe that threw on the previous deploy.
+
+**Still open.** The venue rate (22.7%) and the homepage's few rows are not this
+mechanism and were not touched. Read `hydration_mismatch` on team routes on or
+after 2026-09-26: it should be at the venue and homepage baseline. If it is
+not, the remaining team-page reads are the star-toggle placeholder pattern and
+the eBay guard, both believed safe, and that belief is what to test next.
+
+**Severity: Low.** Was Medium while open. What remains is the venue residue,
+which is its own diagnosis.
 
 ## 53. Raptive's Sidebar rules match any `<aside>`, so an `<aside>` anywhere on a page receives the sidebar ad stack
 
