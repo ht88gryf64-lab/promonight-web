@@ -3377,3 +3377,96 @@ that produced strings once will produce them again.
 
 **Severity: Low.** No user-visible effect. It misleads crawlers and it blocks byte-identity
 checks on the sitemap.
+
+## 58. Aggregator-layout pages carried no in-content ad anchors from install until 2026-09-25
+
+**What it was.** Every collection page rendered through
+`src/components/aggregator-layout.tsx` and `RedesignAggregatorList`
+(`/promos/bobbleheads`, `/promos/jersey-giveaways`, `/promos/theme-nights`,
+`/promos/food-deals`, `/promos/soccer-jersey-nights`, `/promos/this-week`)
+carried no `page-content` class anywhere in its served HTML, so Raptive's
+Content rule (`.page-content > *`, skip 2, insert after each remaining child)
+matched nothing and the pages placed ZERO in-content units from the install on
+2026-09-15 until this change. The 2026-09-18 rollout (entry 48's neighbours)
+covered `/promos/today`, which is its own file, and nothing else on this
+layout. Raptive's per-page data for 2026-09-15 to 09-23 had `/promos/bobbleheads`
+at 575 pageviews, 2.49 impressions per pageview and a $2.44 page RPM, against
+6 to 8 impressions per pageview on team pages; the 2.49 was Footer, the sticky
+Video and, on phones, the Interstitial.
+
+**Why not the obvious element.** The content wrapper,
+`div.mx-auto.max-w-4xl.px-6.pb-20.pt-10`, has as its first children the intro
+`<p>` and a 0px AdSlot placeholder `div.my-8`, then the WHOLE list as one child
+(6,886px on bobbleheads, 20,018px on jersey giveaways, 34,966px on theme
+nights at 386px), then the CTA, FollowCTA, FAQ and a second 0px placeholder.
+With `skip: 2` the first unit would have followed the entire list, and the two
+0px placeholders would have been anchors (Raptive skips `display: none`, not
+zero height). The list's own `div.space-y-10` is no better: its children are
+month or theme sections, and one section is up to 14,752px (Faith and
+Community Nights).
+
+**What shipped.** `47d0a24` and `03a0804`, merged as `7d3a37c` on 2026-09-25,
+production deploy `dpl_FdxzTQY4xR9BRJbZpUYo3wLJFq6N`. The promo-list pattern
+from `src/lib/promo-row-groups.ts`, reused: inside each section the rows render
+in groups of four; all groups but the last sit in one
+`div.space-y-2.5.page-content` inside the section's row container, so each
+group is an anchor; the last group is a sibling outside it; a section with a
+single group keeps flat markup. Tailwind v4's `space-y` puts the gap on every
+non-last child, so nested `space-y-2.5` reproduces the flat list's geometry
+exactly. A group whose rows are all filtered out by a league chip is hidden as
+a whole, so it adds no gap. Rows mounted later by "Show more" (theme nights
+only, 665 rows behind 350) are regrouped by React but get no anchors, because
+Raptive does not rescan; accepted, as on the team list.
+
+**The list root is an `<article>`, and that is load-bearing.** Raptive sizes
+the number of units from one `offsetHeight`: the tallest of each matched
+anchor's `parentElement` and the tallest `<article>` over 1.5 viewports (entry
+49). The anchor parents here are per-section groups a few hundred pixels tall,
+so with a `<div>` root `/promos/bobbleheads` produced exactly ONE unit from a
+7,000px list (tallest anchor parent 1,166px), jersey giveaways three, theme
+nights fourteen. As an `<article>` the list root is the measured element:
+
+| page | units before the retag (phone / desktop) | after | first unit, 386px | largest mobile in-list container |
+| --- | --- | --- | --- | --- |
+| `/promos/bobbleheads` | 1 / 1 | 7 / 7 | y 2,421, after November's first group | 414px |
+| `/promos/jersey-giveaways` | 3 / 3 | 19 / 19 | y 2,555, October | 300px |
+| `/promos/theme-nights` | 14 / 14 | 34 / 34 | y 1,965, Star Wars | 303px |
+
+The container heights are from production with live creatives (the preview,
+which fills nothing, showed 250 to 280px). 414px is under the 423px ceiling
+that gates in-list anchors on phones; nothing full-viewport appeared, the
+mobile interscroller having been turned off on 2026-09-21.
+
+Nothing selects the element by tag. Retagging it back to a `<div>` "for
+tidiness" silently drops bobbleheads to one unit; the comment above it says so
+and `src/lib/__tests__/aggregator-anchors.test.ts` asserts the root, the single
+anchor parent inside the row container, the tail outside it, and that the
+layout wrapper carries no class.
+
+**The first unit on bobbleheads sits in the third section.** Skip 2 consumes
+the first two anchors in document order, and September (5 rows) and October
+(6 rows) yield one anchor group each, so the first unit follows November's
+first group. That is about two viewports into the list on a phone and the
+same distance the team list settled on; moving it higher would mean a smaller
+group in short sections, which was not done.
+
+**Verified**, on preview `dpl_9yp3zjy2C3PraVuQndb29LQrqZ68` and then on
+production: zero rect differences grouped against flat, ads blocked, on all
+three pages at 386px and 1190px (1,355 / 3,148 / 5,525 elements); zero #418
+under the entry 50 reproduction (6x CPU, 300ms on `/_next/static/*.js`) and
+`hydration_mismatch` silent on every clean load; via CDP
+`Accessibility.getFullAXTree` the list exposes as `role=article` and the page
+keeps exactly one `main` landmark; a league chip that hides a section hides the
+unit inside it, and no unit was left visible between two hidden groups;
+`/promos/today` (1 unit) and `/nhl/dallas-stars` (8 phone, 6 desktop) unchanged;
+tsc clean, 956 tests green, build ok.
+
+**Not covered.** The legacy (gate-off) `LegacyAggregatorPage` and
+`AggregatorPaginatedGroups` were not touched; the redesign gate is live
+site-wide. The league hubs (`/mlb`, `/nfl` and so on) already carry the class
+on their root and were measured on 2026-09-20 with their own flat-list depth
+problem (first unit at y 4,008 desktop, 7,394 mobile on `/mlb`); that is still
+open and is a separate change.
+
+**Severity: resolved.** Was High for this template: no in-content inventory on
+about 5% of pageviews for ten days, with no error anywhere.
