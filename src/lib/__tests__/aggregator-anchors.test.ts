@@ -34,6 +34,14 @@ describe('RedesignAggregatorList anchors', () => {
     assert.match(code, /: rowGroups\.tail\.rows\.map\(\(p, j\) => renderRow\(p, j\)\)/, 'single-group section renders flat');
   });
 
+  it('renders its root as an <article>, the element Raptive measures density from', () => {
+    // known-issues entry 49 mechanism: with a <div> root the tallest anchor
+    // parent (a few hundred px) capped /promos/bobbleheads at one unit.
+    assert.match(code, /return \(\s*<article>\s*\{leagues\.length > 1 &&/);
+    assert.match(code, /<\/article>\s*\);\s*\}\s*$/);
+    assert.equal(code.split('<article').length - 1, 1);
+  });
+
   it('is not inside a Suspense boundary and reads no clock in render', () => {
     assert.doesNotMatch(code, /<Suspense|new Date\(\)|Date\.now\(\)/);
   });

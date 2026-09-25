@@ -113,7 +113,15 @@ export function RedesignAggregatorList({
   const seen = new Set<string>();
 
   return (
-    <div>
+    // <article>, NOT <div>, and not for semantics. Raptive sizes the number of
+    // in-content units from ONE offsetHeight: the tallest of each matched
+    // anchor's parentElement and the tallest <article> over 1.5 viewports.
+    // The anchor parents here are per-section groups of a few hundred pixels,
+    // so as a <div> this list produced a single unit on /promos/bobbleheads
+    // (tallest anchor parent 1,166px); as an <article> it is the measured
+    // element and produced seven. Same mechanism as known-issues entry 49.
+    // Nothing selects this element by tag. Do not retag it back for tidiness.
+    <article>
       {leagues.length > 1 && (
         <div className="mb-8 flex flex-wrap gap-2">
           <Chip label="All" active={activeLeague === 'All'} onClick={() => switchLeague('All')} />
@@ -243,6 +251,6 @@ export function RedesignAggregatorList({
           </button>
         </div>
       )}
-    </div>
+    </article>
   );
 }
