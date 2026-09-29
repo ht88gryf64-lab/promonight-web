@@ -9,6 +9,7 @@ const FIXTURES = new URL('../__fixtures__/', import.meta.url);
 export const FIXTURE = {
   mlbLive: 'MLB_2026.live-20260929T1715Z.json',
   wnbaLive: 'WNBA_2026.live-20260929T1715Z.json',
+  mlbInGame: 'MLB_2026.live-ingame-20260929T1909Z.json',
   mlbFinal: 'MLB_2025.final.json',
   wnbaFinal: 'WNBA_2025.final.json',
   mlbMixed: 'MLB_2025.replay-step-24.json',
@@ -18,6 +19,9 @@ export const FIXTURE = {
 /** The moment the two live documents were read. Tests that need a "now" use
  *  this one, so nothing depends on the day the suite runs. */
 export const CAPTURED_AT = new Date('2026-09-29T17:15:00Z');
+
+/** The moment the in-game document was read. */
+export const IN_GAME_AT = new Date('2026-09-29T19:09:00Z');
 
 /** What the admin SDK hands the mapper for a timestamp field. */
 class FakeTimestamp {

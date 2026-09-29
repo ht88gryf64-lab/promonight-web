@@ -66,7 +66,7 @@ test('WHITELIST: no operator field name and no operator value survives the mappe
     const always = [d.runId, d.bracketSha256, d.lastRevalidatedSha256, seeds.file, ...((d.source as { urls: string[] }).urls)];
     // The two live captures carry an author name and a seed hash. The 2025
     // documents were built from seed files that name no author.
-    const live = f === FIXTURE.mlbLive || f === FIXTURE.wnbaLive;
+    const live = f === FIXTURE.mlbLive || f === FIXTURE.wnbaLive || f === FIXTURE.mlbInGame;
     const sometimes = [seeds.authoredBy, d.validatedSeedSha256];
     for (const v of always) assert.equal(typeof v, 'string', `${f}: the fixture carries the value being checked`);
     if (live) for (const v of sometimes) assert.equal(typeof v, 'string', `${f}: a live capture carries the author and the seed hash`);

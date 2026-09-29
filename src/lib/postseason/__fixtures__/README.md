@@ -15,7 +15,7 @@ the admin SDK hands the mapper.
 | --- | --- |
 | `MLB_2026.live-20260929T1715Z.json` | `postseasonBrackets/MLB_2026` read at 2026-09-29T17:15Z, before the first pitch. Eleven series upcoming, pair placeholders (`NYY/BOS`), role placeholders, 41 games with no start time. |
 | `WNBA_2026.live-20260929T1715Z.json` | `postseasonBrackets/WNBA_2026` read at the same moment. Four first-round series underway at one final game each, `TBD` placeholders, three series with no games. |
-| `MLB_2026.live-ingame-*.json` | The same document read while a game was in progress, when one is present. |
+| `MLB_2026.live-ingame-20260929T1909Z.json` | `postseasonBrackets/MLB_2026` read at 2026-09-29T19:09Z, with Game 1 of Phillies at Braves in progress at 1 to 1. One series underway, ten upcoming. |
 
 Nothing in a live capture is edited.
 

@@ -21,7 +21,7 @@ import {
   type LeagueView,
   type SeriesView,
 } from '../view';
-import { CAPTURED_AT, FIXTURE, clubs, loadDoc, parks } from './helpers';
+import { CAPTURED_AT, FIXTURE, IN_GAME_AT, clubs, loadDoc, parks } from './helpers';
 
 type Doc = Record<string, unknown>;
 type RawSeries = Doc & { games: Doc[]; higher: Doc; lower: Doc };
@@ -244,10 +244,42 @@ test('WNBA LIVE: an if-necessary game is marked', () => {
 });
 
 // ---- A game in progress ----
-//
-// OVERLAY on a live capture: no captured document had a game in progress when
-// these were written. The edit is the status of one row, the value the
-// adapters write for a game under way.
+
+test('IN PROGRESS (captured): Game 1 of Phillies at Braves, under way at 1 to 1', () => {
+  // The stored row: status live, homeScore 1, awayScore 1, series wins 0 and 0.
+  const d = loadDoc(FIXTURE.mlbInGame);
+  const row = raw(d, 'NL-WC-A').games[0];
+  assert.deepEqual([row.status, row.homeScore, row.awayScore], ['live', 1, 1]);
+
+  const v = view(FIXTURE.mlbInGame, IN_GAME_AT);
+  const s = series(v, 'NL-WC-A');
+  assert.equal(s.status, 'live');
+  assert.equal(s.liveLabel, 'Game 1 live');
+  assert.equal(s.headline, 'Game 1 live');
+  assert.equal(s.scoreLine, null, 'no game is final, so the series has no score to state');
+  assert.equal(s.nextLabel, null);
+  assert.equal(s.next?.gameNumber, 1);
+  assert.equal(s.next?.hostName, 'Braves');
+  assert.equal(s.next?.park, 'Truist Park');
+  assert.equal(s.games[0].stateLabel, 'Live');
+  assert.equal(s.games[0].result, null, 'a score in progress is not shown');
+  assert.equal(s.games[0].when, 'Tue, Sep 29 · 2:00 PM ET');
+  assert.equal(s.higher.leads, false);
+  assert.equal(s.lower.leads, false);
+  // The other ten series are untouched by it.
+  assert.deepEqual(all(v).filter((x) => x.liveLabel !== null).map((x) => x.seriesKey), ['NL-WC-A']);
+  assert.deepEqual(v.phase, { kind: 'active', roundKey: 'wild_card', roundLabel: 'Wild Card Series' });
+  // A game under way is not an upcoming home game. Its Game 2 still is.
+  assert.ok(!v.homeGames.some((g) => g.key === 'MLB-NL-WC-A-1'));
+  assert.ok(v.homeGames.some((g) => g.key === 'MLB-NL-WC-A-2'));
+  assert.equal(v.homeGames[0].key, 'MLB-AL-WC-A-1', 'the soonest game still ahead leads the list');
+  // Stored lastChangedAt 2026-09-29T18:51:14.414Z.
+  assert.equal(v.updatedLabel, 'Sep 29, 2:51 PM ET');
+});
+
+// OVERLAY on a live capture, for the one combination the captured game does
+// not hold: a game under way in a series that already has a leader. The edit
+// is the status of one row, the value the adapters write for a game under way.
 test('IN PROGRESS: a game under way is named, carries no score, and is the headline', () => {
   const v = view(FIXTURE.wnbaLive, CAPTURED_AT, (d) => {
     const g = raw(d, 'R1-1v8').games[1];

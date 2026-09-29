@@ -7,7 +7,7 @@ import type { ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { mapBracketDoc } from '../../../lib/postseason/map';
 import { buildLeagueView, homeGamesThisWeek, nextHomeGames, type LeagueView } from '../../../lib/postseason/view';
-import { CAPTURED_AT, FIXTURE, clubs, loadDoc, parks, rawText } from '../../../lib/postseason/__tests__/helpers';
+import { CAPTURED_AT, FIXTURE, IN_GAME_AT, clubs, loadDoc, parks, rawText } from '../../../lib/postseason/__tests__/helpers';
 import { PlayoffsHub, type HubLeague } from '../PlayoffsHub';
 import { PlayoffsLeague, type LeagueBody } from '../PlayoffsLeague';
 import { PREDICTIONS_COPY } from '../PredictionsCard';
@@ -91,6 +91,7 @@ const FRESHNESS_WORDS = /\bhourly\b|\breal[- ]time\b|\blive\b|\bup to the minute
 
 const EVERY_VIEW: [string, () => LeagueView][] = [
   ['MLB live capture', () => view(FIXTURE.mlbLive)],
+  ['MLB in-game capture', () => view(FIXTURE.mlbInGame, IN_GAME_AT)],
   ['WNBA live capture', () => view(FIXTURE.wnbaLive)],
   ['MLB 2025 final', () => view(FIXTURE.mlbFinal, new Date('2025-11-02T04:00:00Z'))],
   ['WNBA 2025 final', () => view(FIXTURE.wnbaFinal, new Date('2025-10-11T04:00:00Z'))],
@@ -193,6 +194,30 @@ test('SERIES SCORE: wins per side, the leader, and results', () => {
   const mlb = leagueHtml(view(FIXTURE.mlbLive));
   assert.equal(count(mlb, 'aria-label="0 wins"'), 0);
   assert.ok(text.includes('Matchup to be decided'));
+});
+
+test('IN PROGRESS (captured): the league page and the hub mark the game under way, with no score', () => {
+  const v = view(FIXTURE.mlbInGame, IN_GAME_AT);
+  const page = leagueHtml(v, { now: IN_GAME_AT });
+  // The card header and the game row, for the one game under way.
+  assert.equal(count(page, 'data-game-state="live"'), 2);
+  const card = page.slice(page.indexOf('data-series="NL-WC-A"'), page.indexOf('data-series="NL-WC-B"'));
+  assert.equal(count(card, 'data-game-state="live"'), 2);
+  assert.ok(card.includes('data-series-status="live"'));
+  assert.ok(textOf(card).includes('Game 1 in progress · Host: Braves · Truist Park'));
+  assert.ok(!textOf(card).includes('Final'));
+  assert.ok(!/\b(PHI|ATL) 1\b/.test(textOf(card)), 'the score in progress is not shown');
+  assert.ok(textOf(page).includes('Bracket updated Sep 29, 2:51 PM ET'));
+  // The game under way is not sold as an upcoming one.
+  assert.equal(count(page, 'data-home-game="MLB-NL-WC-A-1"'), 0);
+  assert.equal(count(page, 'data-home-game="MLB-NL-WC-A-2"'), 1);
+
+  const hub = hubHtml([ok(v)]);
+  assert.equal(count(hub, 'data-game-state="live"'), 1);
+  const line = element(hub, 'data-series="NL-WC-A"');
+  assert.ok(line.includes('data-game-state="live"'));
+  assert.ok(textOf(line).includes('Braves vs Phillies'));
+  assert.ok(textOf(line).includes('Game 1'));
 });
 
 test('IN PROGRESS: one badge per place a game is under way, and no score', () => {
@@ -378,7 +403,7 @@ for (const [name, make] of EVERY_VIEW) {
 
   test(`LEAKS (${name}): no operator value, no raw slug, no empty rendering`, () => {
     const v = make();
-    const fixture = { 'MLB live capture': FIXTURE.mlbLive, 'WNBA live capture': FIXTURE.wnbaLive, 'MLB 2025 final': FIXTURE.mlbFinal, 'WNBA 2025 final': FIXTURE.wnbaFinal, 'MLB 2025 mixed': FIXTURE.mlbMixed, 'WNBA 2025 mixed': FIXTURE.wnbaMixed }[name] as string;
+    const fixture = { 'MLB live capture': FIXTURE.mlbLive, 'MLB in-game capture': FIXTURE.mlbInGame, 'WNBA live capture': FIXTURE.wnbaLive, 'MLB 2025 final': FIXTURE.mlbFinal, 'WNBA 2025 final': FIXTURE.wnbaFinal, 'MLB 2025 mixed': FIXTURE.mlbMixed, 'WNBA 2025 mixed': FIXTURE.wnbaMixed }[name] as string;
     const d = JSON.parse(rawText(fixture)) as Doc & { seeds: Doc; source: { urls: string[] }; series: RawSeries[] };
     for (const html of [leagueHtml(v), hubHtml([ok(v)])]) {
       for (const secret of [d.runId, d.bracketSha256, d.lastRevalidatedSha256, d.validatedSeedSha256, d.seeds.authoredBy, d.seeds.file, ...d.source.urls]) {
