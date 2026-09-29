@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { canonicalOpenGraph } from '@/lib/og';
 import { notFound } from 'next/navigation';
 import { barlowCondensed } from '@/components/cfb/rivalry/fonts';
 import { archivoHouse } from '@/components/redesign/fonts-house';
@@ -12,6 +13,7 @@ import {
   postseasonPath,
 } from '@/lib/postseason/data';
 import { homeGamesWindow } from '@/lib/postseason/view';
+import { leagueCopy, leagueJsonLd } from '@/lib/postseason/metadata';
 import { PlayoffsLeague, type LeagueBody } from '@/components/playoffs/PlayoffsLeague';
 import { seriesTickets, ticketButtons } from '@/components/playoffs/tickets';
 
@@ -39,12 +41,16 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   const { league: slug } = await params;
   const league = postseasonLeagueFromSlug(slug);
   if (!league) return {};
-  // State-neutral on purpose, so the head cannot contradict the body. Open
-  // Graph and JSON-LD land at G3.
+  // Written from the same read the body renders, which is cached for the
+  // request, so the head says what the body says.
+  const page = await getLeaguePageData(league);
+  const copy = leagueCopy(POSTSEASON_SEASON, league, postseasonPath(league), page.state === 'ok' ? page.view : null);
   return {
-    title: `${POSTSEASON_SEASON} ${league} Playoffs Bracket`,
-    description: `The ${POSTSEASON_SEASON} ${league} postseason bracket: every series, seed and result, with game times in Eastern and the home games this week.`,
-    alternates: { canonical: `https://www.getpromonight.com${postseasonPath(league)}` },
+    title: copy.title,
+    description: copy.description,
+    alternates: { canonical: copy.canonical },
+    // og:url is the canonical, from the same string, so the two cannot drift.
+    openGraph: canonicalOpenGraph(copy.canonical),
   };
 }
 
@@ -80,6 +86,9 @@ export default async function PlayoffsLeaguePage({ params }: { params: Promise<P
     body = { state: page.state };
   }
 
+  const copy = leagueCopy(POSTSEASON_SEASON, league, postseasonPath(league), page.state === 'ok' ? page.view : null);
+  const schemas = leagueJsonLd(copy, league, page.state === 'ok' ? page.view.updatedAt : null);
+
   // The cross link goes only to a league whose postseason is underway.
   const others = await Promise.all(POSTSEASON_LEAGUES.filter((l) => l !== league).map((l) => getLeaguePageData(l)));
   const otherLeagues = others.flatMap((o) =>
@@ -88,6 +97,9 @@ export default async function PlayoffsLeaguePage({ params }: { params: Promise<P
 
   return (
     <div className={`${archivoHouse.variable} ${barlowCondensed.variable} rd-root min-h-screen bg-rd-cream`}>
+      {schemas.map((schema, i) => (
+        <script key={i} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+      ))}
       <PlayoffsLeague
         league={league}
         season={POSTSEASON_SEASON}

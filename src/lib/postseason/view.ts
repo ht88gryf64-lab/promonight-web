@@ -117,6 +117,8 @@ export interface LeagueView {
   season: number;
   /** "Sep 29, 1:42 PM ET". Null when the document carries no stamp. */
   updatedLabel: string | null;
+  /** The same moment as an ISO instant, for machine-readable dates. */
+  updatedAt: string | null;
   phase: PhaseView;
   rounds: RoundView[];
   /** Scheduled games with a known host, soonest first. */
@@ -508,6 +510,7 @@ export function buildLeagueView(
     league: bracket.league,
     season: bracket.season,
     updatedLabel: bracket.lastChangedAt ? easternStamp(bracket.lastChangedAt) : null,
+    updatedAt: bracket.lastChangedAt,
     phase,
     rounds,
     homeGames,

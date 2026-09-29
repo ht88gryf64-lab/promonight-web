@@ -3,11 +3,14 @@ import { TrackedLink } from '@/components/analytics/TrackedLink';
 import { currentRoundSeries, type HomeGamesWindow, type LeagueView, type SeriesView } from '@/lib/postseason/view';
 import type { PostseasonLeague } from '@/lib/postseason/types';
 import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
+import { AdSlot } from '@/components/ads/AdSlot';
+import { AD_SLOTS } from '@/lib/ads/slots';
 import { HomeGames } from './HomeGames';
 import { PredictionsCard } from './PredictionsCard';
 import { CONDENSED, InProgressBadge } from './ui';
 
 const SURFACE = 'web_playoffs' as const;
+const PAGE_TYPE = 'playoffs_hub';
 
 export type HubLeague =
   | { state: 'ok'; league: PostseasonLeague; href: string; view: LeagueView; predictionsLocked: boolean }
@@ -171,66 +174,81 @@ export function PlayoffsHub({
   const predictionsLocked = active.some((l) => l.predictionsLocked);
 
   return (
-    <div className="mx-auto max-w-2xl px-4 pb-20 pt-9 lg:max-w-5xl">
-      <header>
-        <p className="text-[13px] font-semibold uppercase tracking-[0.18em] text-rd-red" style={{ fontFamily: CONDENSED }}>
-          Postseason {season}
-        </p>
-        <h1
-          className="mt-1.5 font-extrabold uppercase leading-[0.98] text-rd-ink"
-          style={{ fontFamily: CONDENSED, fontSize: 'clamp(40px, 10vw, 60px)' }}
-        >
-          Playoffs
-        </h1>
-        <p className="mt-2.5 max-w-[52ch] text-[15px] text-rd-ink-soft">
-          Every series in the bracket and where it stands, with the home games coming up next and the parks that host them.
-        </p>
-      </header>
+    <div className="mx-auto max-w-2xl px-4 pb-20 pt-6 lg:max-w-5xl">
+      <div className="pb-3">
+        <AdSlot config={AD_SLOTS.HEADER_LEADERBOARD} pageType={PAGE_TYPE} />
+      </div>
 
-      {offseason && (
-        <div data-hub-state="offseason" className="mt-6 rounded-[10px] border border-rd-line bg-rd-card px-4 py-5">
-          <p className="text-[22px] font-extrabold uppercase leading-none text-rd-ink" style={{ fontFamily: CONDENSED }}>
-            No postseason is underway
+      {/* The article is the ad wrapper. See PlayoffsLeague for why it is an
+          article, why it carries page-content, and why its children are in
+          this order: the heading and the introduction take the two skips, so
+          the first unit can follow child three, the league cards. */}
+      <article className="page-content" data-ad-region="content" data-playoffs-article="hub">
+        <header>
+          <p className="text-[13px] font-semibold uppercase tracking-[0.18em] text-rd-red" style={{ fontFamily: CONDENSED }}>
+            Postseason {season}
           </p>
-          <p className="mt-2 max-w-[52ch] text-[14px] leading-relaxed text-rd-ink-soft">
-            A league appears here once its bracket is set.
-          </p>
-          <TrackedLink
-            href="/teams"
-            surface={SURFACE}
-            ctaId="playoffs_browse_teams"
-            ctaLabel="Browse promotions by team"
-            className="mt-3 inline-block font-semibold uppercase tracking-[0.12em] text-rd-red hover:text-rd-red-dark"
-            style={{ fontFamily: CONDENSED, fontSize: 15 }}
+          <h1
+            className="mt-1.5 font-extrabold uppercase leading-[0.98] text-rd-ink"
+            style={{ fontFamily: CONDENSED, fontSize: 'clamp(40px, 10vw, 60px)' }}
           >
-            Browse promotions by team
-          </TrackedLink>
+            Playoffs
+          </h1>
+        </header>
+
+        <div data-page-intro>
+          <p className="mt-2.5 max-w-[52ch] text-[15px] text-rd-ink-soft">
+            Every series in the bracket and where it stands, with the home games coming up next and the parks that host them.
+          </p>
+
+          {offseason && (
+            <div data-hub-state="offseason" className="mt-6 rounded-[10px] border border-rd-line bg-rd-card px-4 py-5">
+              <p className="text-[22px] font-extrabold uppercase leading-none text-rd-ink" style={{ fontFamily: CONDENSED }}>
+                No postseason is underway
+              </p>
+              <p className="mt-2 max-w-[52ch] text-[14px] leading-relaxed text-rd-ink-soft">
+                A league appears here once its bracket is set.
+              </p>
+              <TrackedLink
+                href="/teams"
+                surface={SURFACE}
+                ctaId="playoffs_browse_teams"
+                ctaLabel="Browse promotions by team"
+                className="mt-3 inline-block font-semibold uppercase tracking-[0.12em] text-rd-red hover:text-rd-red-dark"
+                style={{ fontFamily: CONDENSED, fontSize: 15 }}
+              >
+                Browse promotions by team
+              </TrackedLink>
+            </div>
+          )}
         </div>
-      )}
 
-      {ordered.length > 0 && (
-        <section aria-label="Leagues" className="mt-6">
-          <ul className="grid gap-3 lg:grid-cols-2">
-            {ordered.map((l) => (
-              <LeagueCard key={l.league} entry={l} />
-            ))}
-          </ul>
-        </section>
-      )}
+        {ordered.length > 0 && (
+          <section aria-label="Leagues" className="mt-6">
+            <ul className="grid gap-3 lg:grid-cols-2">
+              {ordered.map((l) => (
+                <LeagueCard key={l.league} entry={l} />
+              ))}
+            </ul>
+          </section>
+        )}
+        <AdSlot config={AD_SLOTS.IN_CONTENT_1} pageType={PAGE_TYPE} />
 
-      {active.length > 0 && (
-        <HomeGames
-          id="next-home-games"
-          heading="Next home games"
-          games={nextGames}
-          tickets={tickets}
-          surface={SURFACE}
-          showLeague
-          empty="No home game with a confirmed host is listed in the next three days."
-        />
-      )}
+        {active.length > 0 && (
+          <HomeGames
+            id="next-home-games"
+            heading="Next home games"
+            games={nextGames}
+            tickets={tickets}
+            surface={SURFACE}
+            showLeague
+            empty="No home game with a confirmed host is listed in the next three days."
+          />
+        )}
 
-      {predictionsLocked && <PredictionsCard heading="Predictions are locked" headingId="predictions-locked" />}
+        {predictionsLocked && <PredictionsCard heading="Predictions are locked" headingId="predictions-locked" />}
+        <AdSlot config={AD_SLOTS.IN_CONTENT_2} pageType={PAGE_TYPE} />
+      </article>
 
       <footer className="mt-10 space-y-2 border-t border-rd-line pt-4">
         <p className="text-[12.5px] leading-relaxed text-rd-ink-faint">

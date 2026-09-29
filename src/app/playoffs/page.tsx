@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { pageOpenGraph } from '@/lib/og';
 // Barlow Condensed is the display face here. The shared instance is imported
 // from its own module so its preloads land on the routes that render it.
 import { barlowCondensed } from '@/components/cfb/rivalry/fonts';
@@ -8,6 +9,7 @@ import { archivoHouse } from '@/components/redesign/fonts-house';
 import { getAllTeams } from '@/lib/data';
 import { POSTSEASON_LEAGUES, POSTSEASON_SEASON, getLeaguePageData, postseasonPath } from '@/lib/postseason/data';
 import { homeGamesWindow } from '@/lib/postseason/view';
+import { HUB_PATH, hubCopy, hubJsonLd, type HubLeagueState } from '@/lib/postseason/metadata';
 import { PlayoffsHub, type HubLeague } from '@/components/playoffs/PlayoffsHub';
 import { ticketButtons } from '@/components/playoffs/tickets';
 
@@ -17,19 +19,33 @@ import { ticketButtons } from '@/components/playoffs/tickets';
 // standing until the next bracket change.
 export const revalidate = 600;
 
-const PAGE_URL = 'https://www.getpromonight.com/playoffs';
+/** What the body renders a card for, which is also what the head is written
+ *  from. One read for both: getLeaguePageData is cached for the request. */
+async function hubStates(): Promise<{ pages: Awaited<ReturnType<typeof getLeaguePageData>>[]; states: HubLeagueState[] }> {
+  const pages = await Promise.all(POSTSEASON_LEAGUES.map((l) => getLeaguePageData(l)));
+  const states = pages.flatMap((p): HubLeagueState[] =>
+    p.state === 'ok' ? [{ league: p.league, state: 'ok', view: p.view }] : p.state === 'unavailable' ? [{ league: p.league, state: 'unavailable' }] : [],
+  );
+  return { pages, states };
+}
 
-// Title, description and canonical only. Open Graph and JSON-LD land with the
-// rest of the SEO work at G3. Nothing here depends on the bracket's state, so
-// the head cannot contradict the body.
-export const metadata: Metadata = {
-  title: `${POSTSEASON_SEASON} Playoffs: MLB and WNBA Brackets`,
-  description: `The ${POSTSEASON_SEASON} MLB and WNBA postseason brackets, series by series, with game times in Eastern and the home games coming up next.`,
-  alternates: { canonical: PAGE_URL },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { states } = await hubStates();
+  const copy = hubCopy(POSTSEASON_SEASON, POSTSEASON_LEAGUES, states);
+  return {
+    title: copy.title,
+    description: copy.description,
+    alternates: { canonical: copy.canonical },
+    // A complete openGraph, with the card and its alt. Without one the page
+    // inherits the root layout's, whose og:url is the homepage.
+    openGraph: pageOpenGraph(HUB_PATH),
+  };
+}
 
 export default async function PlayoffsHubPage() {
-  const pages = await Promise.all(POSTSEASON_LEAGUES.map((l) => getLeaguePageData(l)));
+  const { pages, states } = await hubStates();
+  const copy = hubCopy(POSTSEASON_SEASON, POSTSEASON_LEAGUES, states);
+  const schemas = hubJsonLd(copy, states.map((s) => (s.state === 'ok' ? s.view.updatedAt : null)));
 
   const leagues: HubLeague[] = [];
   for (const p of pages) {
@@ -60,6 +76,9 @@ export default async function PlayoffsHubPage() {
 
   return (
     <div className={`${archivoHouse.variable} ${barlowCondensed.variable} rd-root min-h-screen bg-rd-cream`}>
+      {schemas.map((schema, i) => (
+        <script key={i} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+      ))}
       <PlayoffsHub season={POSTSEASON_SEASON} leagues={leagues} nextGames={nextGames} tickets={tickets} />
     </div>
   );

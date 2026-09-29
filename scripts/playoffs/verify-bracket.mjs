@@ -188,7 +188,8 @@ try {
   const so = propsFor(c, 'playoffs_series_open', 'posthog')[0] || {};
   check('series: event names round, series id, status, and how it was opened', so.round_key === 'division_series' && so.series_id === 'division_series-3' && so.opened_by === 'tap' && ['upcoming', 'live', 'final'].includes(so.series_status), JSON.stringify({ round_key: so.round_key, series_id: so.series_id, series_status: so.series_status, opened_by: so.opened_by }));
   check('series: event is sent once', c.filter((x) => x.name === 'playoffs_series_open' && x.sink === 'posthog').length === 1);
-  check('no event carries a pipeline series key', !/[A-Z]+-[A-Z]+-[A-Z0-9]+/.test(JSON.stringify(c)));
+  // The exact forms the bracket documents use, and nothing looser.
+  check('no event carries a pipeline series key', !/\b(?:AL|NL)-(?:WC|DS)-[A-Z]\b|\b(?:AL|NL)-CS\b|\bR\d-\dv\d\b|\bSF-[A-Z]\b/.test(JSON.stringify(c)));
   await shot('mlb-390-series-open', 390, { full: false });
 
   await clearCalls();

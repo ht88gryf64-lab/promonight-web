@@ -10,7 +10,7 @@ import { mapBracketDoc } from '../../../../lib/postseason/map';
 import { playoffsLinkState } from '../../../../lib/postseason/gate';
 import { clubPlayoffs, homePlayoffs, leagueCard, venueGames, type InboundLeague } from '../../../../lib/postseason/inbound';
 import { buildLeagueView } from '../../../../lib/postseason/view';
-import { FIELDS_AT, FIXTURE, IN_GAME_AT, clubs, loadDoc, parks, rawText } from '../../../../lib/postseason/__tests__/helpers';
+import { FIELDS_AT, FIXTURE, IN_GAME_AT, clubs, loadDoc, parks, rawText, seriesKeyIn } from '../../../../lib/postseason/__tests__/helpers';
 import { TeamPlayoffsModule } from '../TeamPlayoffsModule';
 import { LeaguePlayoffsCard } from '../LeaguePlayoffsCard';
 import { HomePlayoffsModule } from '../HomePlayoffsModule';
@@ -48,12 +48,12 @@ function textOf(html: string): string {
 const count = (html: string, needle: string) => html.split(needle).length - 1;
 const hrefs = (html: string) => [...html.matchAll(/<a [^>]*href="([^"]+)"/g)].map((m) => m[1]);
 
-const KEY_SHAPES = [/[A-Z]+-[A-Z]+-[A-Z0-9]+/, /\b[A-Z]{2}-(?:CS|DS|WC)\b/, /\bR\d+-\d+v\d+\b/, /\bSF-[A-Z0-9]\b/, /#[A-Z]/];
 const FRESHNESS = /\bhourly\b|\breal[- ]time\b|\blive\b|\bup to the minute\b/i;
 const withoutBadges = (html: string) => html.replace(/<span data-game-state="live"[^>]*>Live<\/span>/g, '');
 /** What every module must satisfy, whatever it says. */
 function sound(html: string, where: string) {
-  for (const re of KEY_SHAPES) assert.ok(!re.test(html), `${where}: ${html.match(re)?.[0]} has the shape of a series key`);
+  assert.equal(seriesKeyIn(html), null, `${where}: ${seriesKeyIn(html)} has the form of a series key`);
+  assert.ok(!/#[A-Z]/.test(html), `${where}: a link target that is not one of the page's own ids`);
   assert.ok(!/<aside\b/.test(html), `${where}: an aside would be taken for the ad sidebar`);
   assert.ok(!/<article\b/.test(html), `${where}: an article would compete with the page's measured root`);
   assert.ok(!/[\u2014\u2013]/.test(html), `${where}: a dash`);

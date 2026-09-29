@@ -1081,10 +1081,32 @@ drop the "Last updated" clause and keep the promo count, which is real.
 
 ## 22. Latent unbacked freshness claims that re-arm on a flag flip or data shift
 
-**Status: OPEN.** Five claim sites assert update mechanisms that do not run,
+**Status: PARTLY RESOLVED. Group (1), the four `/playoffs` claims, is gone;
+groups (2) and (3) are still OPEN.**
+
+**Group (1) resolved on `feature/playoffs-v2`, commit `2527c11` (2026-09-29).**
+The page was replaced, not patched. `src/app/playoffs/page.tsx` is now the hub
+for the MLB and WNBA brackets and none of the four lines survives in it, in
+the DOM or in JSON-LD: no "Updated hourly", no "refreshes within an hour", no
+Article or FAQPage schema at all. What the page says about freshness is one
+thing, and it is a fact the document carries: "Bracket updated Sep 29, 1:42 PM
+ET", the bracket document's own `lastChangedAt`, as an absolute Eastern time.
+`src/components/playoffs/__tests__/render.test.tsx` fails on "hourly",
+"real-time", "up to the minute" or "live" anywhere in either page, for every
+fixture, with one exception that is not a claim about the page: the badge on a
+game the bracket document records as in progress. The flag the four lines
+waited on, `appConfig/playoffs.playoffsActive`, no longer gates the page or
+the link to it (`src/lib/postseason/gate.ts`). The code the old page left
+behind was deleted at the G3 gate of the same branch, in the commit titled
+"feat(playoffs): G3": `getAllPlayoffPromos`, `playoffs-headings` and its test,
+and the champions component and data.
+
+What follows is the entry as written, kept because groups (2) and (3) stand.
+
+Five claim sites assert update mechanisms that do not run,
 but currently render on zero pages only because of season or gate state, not
 because the copy was fixed. They re-arm without any deploy:
-(1) /playoffs "refreshes within an hour of the latest scanner update"
+(1) **[RESOLVED, see above]** /playoffs "refreshes within an hour of the latest scanner update"
 (src/app/playoffs/page.tsx:149, FAQPage JSON-LD plus DOM when active),
 "Updated hourly." (:298, Article JSON-LD), and "Updated hourly from official
 team sources." (:360 and :460, DOM). The playoff scanner cron is disabled;
@@ -3470,3 +3492,41 @@ open and is a separate change.
 
 **Severity: resolved.** Was High for this template: no in-content inventory on
 about 5% of pageviews for ten days, with no error anywhere.
+
+## 59. Pages that show the bracket outside `/playoffs` are not revalidated when the bracket changes
+
+**Status: OPEN, and the reason the playoffs merge is held.**
+
+**What it is.** The postseason feed in promo-pipeline revalidates two paths
+when a bracket document changes: `/playoffs` and `/playoffs/{league}`
+(`lib/postseason/revalidate.js`, `bracketPaths`). Since 2026-09-29 four more
+surfaces render from the same documents, and none of them is on that list:
+
+| surface | what it shows from the bracket | regenerates |
+| --- | --- | --- |
+| team pages of clubs in a bracket, `/{sport}/{team}` | round, opponent, series score, next game and time | every 24h |
+| venue pages of hosting parks, `/venues/{slug}` | the home games still to be played, with times | every 24h |
+| `/mlb` and `/wnba` | the round, and a status line for each series | every 6h |
+| the homepage | each league being played and its round | every 6h |
+
+So a team page can say "Series tied 1-1, Next: Game 3" for up to a day after
+Game 3 was played.
+
+**What limits the damage today.** Every module that states a score or a game
+time prints the bracket's own change stamp beside it ("Bracket updated Sep 29,
+4:10 PM ET"), so a stale module is dated rather than wrong about when it was
+true. The homepage module states the round and nothing faster, because `/`
+cannot be revalidated on demand at all: `/api/revalidate` rejects a bare `/`
+by design. A venue module drops a game on the day after it, at the next
+regeneration, and never lists one dated before the render.
+
+**The fix is in the pipeline, not here.** `bracketPaths(league)` has to grow
+to the team page of every club in the bracket, the venue page of every host,
+and the league hub. The web already accepts all of those paths (`PATH_RE`
+allows up to three segments). The homepage needs either a revalidate route
+that accepts `/`, or to be left at its six hours with the round-only module it
+has now.
+
+**Do not "fix" this by shortening `revalidate` on the team route.** It is one
+constant for all 169 team pages, all year, and the modules exist on about
+twenty of them for about six weeks.

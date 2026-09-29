@@ -3,6 +3,8 @@ import { TrackedLink } from '@/components/analytics/TrackedLink';
 import type { HomeGamesWindow, LeagueView } from '@/lib/postseason/view';
 import type { PostseasonLeague } from '@/lib/postseason/types';
 import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
+import { AdSlot } from '@/components/ads/AdSlot';
+import { AD_SLOTS } from '@/lib/ads/slots';
 import { BracketControlsProvider, type SeriesIndexEntry } from './controls';
 import { BracketExplorer } from './BracketExplorer';
 import { BracketUnavailable } from './BracketUnavailable';
@@ -13,6 +15,7 @@ import { PredictionsCard } from './PredictionsCard';
 import { CONDENSED } from './ui';
 
 const SURFACE = 'web_playoffs_league' as const;
+const PAGE_TYPE = 'playoffs_league';
 
 export type LeagueBody =
   | { state: 'ok'; view: LeagueView; predictionsLocked: boolean; homeGames: HomeGamesWindow }
@@ -53,100 +56,139 @@ export function PlayoffsLeague({
   const slug = league.toLowerCase();
   const firstConference = view ? view.rounds.flatMap((r) => r.groups).find((g) => g.conference !== null)?.conference ?? null : null;
   return (
-    <div className="mx-auto max-w-2xl px-4 pb-20 pt-9 lg:max-w-6xl">
+    <div className="mx-auto max-w-2xl px-4 pb-20 pt-6 lg:max-w-6xl">
       <LeagueViewTracker
         league={slug}
         season={season}
         phase={view ? view.phase.kind : 'unavailable'}
         roundKey={view && view.phase.kind === 'active' ? view.phase.roundKey : null}
       />
-      <nav aria-label="Breadcrumb">
-        <ol className="flex items-center gap-1.5 text-[13px] font-semibold uppercase tracking-[0.18em]" style={{ fontFamily: CONDENSED }}>
-          <li>
-            <TrackedLink
-              href="/playoffs"
-              surface={SURFACE}
-              ctaId="playoffs_breadcrumb"
-              ctaLabel="Playoffs"
-              className="text-rd-red transition-colors hover:text-rd-red-dark"
-            >
-              Playoffs
-            </TrackedLink>
-          </li>
-          <li aria-hidden className="text-rd-ink-faint">
-            /
-          </li>
-          <li aria-current="page" className="text-rd-ink-soft">
-            {league}
-          </li>
-        </ol>
-      </nav>
-      <h1
-        className="mt-1.5 font-extrabold uppercase leading-[0.98] text-rd-ink"
-        style={{ fontFamily: CONDENSED, fontSize: 'clamp(38px, 9vw, 56px)' }}
-      >
-        {season} {league} Playoffs
-      </h1>
-      {/* The lede describes the bracket, so it is shown only with one. */}
-      {view && (
-        <p data-lede className="mt-2.5 max-w-[52ch] text-[15px] text-rd-ink-soft">
-          The {season} {league} postseason bracket: every series, seed and result, with game times in Eastern.
-        </p>
-      )}
-      {view?.updatedLabel && (
-        <p data-bracket-updated className="mt-2 text-[12.5px] text-rd-ink-faint">
-          {`Bracket updated ${view.updatedLabel}`}
-        </p>
-      )}
+      <div className="pb-3">
+        <AdSlot config={AD_SLOTS.HEADER_LEADERBOARD} pageType={PAGE_TYPE} />
+      </div>
 
-      {body.state !== 'ok' && <BracketUnavailable league={league} season={season} />}
+      {/* THE ARTICLE IS THE AD WRAPPER, and three things about it are
+          load-bearing for ads. None of them is decoration.
 
-      {view && view.phase.kind === 'concluded' && (
-        <div
-          data-champion={view.phase.championTeamId}
-          className="mt-5 rounded-[10px] border border-rd-line bg-rd-card px-4 py-4"
-          style={{ borderLeft: '3px solid var(--color-rd-red)' }}
-        >
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-rd-ink-faint">{season} champion</p>
-          <p className="mt-0.5 text-[26px] font-extrabold uppercase leading-tight text-rd-ink" style={{ fontFamily: CONDENSED }}>
-            <TrackedLink
-              href={view.phase.championHref}
-              surface={SURFACE}
-              ctaId="playoffs_champion_team"
-              ctaLabel={view.phase.championName}
-              teamSlug={view.phase.championTeamId}
-              className="hover:text-rd-red"
+          It is an <article>. The ad placer sizes its unit count from one
+          height: the tallest parent of an anchor, or the tallest <article>
+          over 1.5 viewports (known-issues entries 49 and 58). This element is
+          both, and it is a real box at every width.
+
+          It carries page-content, so its DIRECT CHILDREN are the anchors
+          (".page-content > *", skip 2, insert after each remaining child).
+          The order below is chosen against that rule: the heading and the
+          introduction are children one and two and take the two skips, so
+          the first unit can follow child three, the bracket. Nothing with no
+          height is ever a child: a zero-height child is still an anchor.
+
+          Nothing inside the bracket is an anchor. The bracket is one child,
+          units are inserted AFTER children, and its state changes re-render
+          its own subtree only, so pressing a control cannot disturb a unit.
+
+          The footer notes and the cross link stay outside, so no unit sits
+          against the site footer. */}
+      <article className="page-content" data-ad-region="content" data-playoffs-article="league">
+        <header>
+          <nav aria-label="Breadcrumb">
+            <ol className="flex items-center gap-1.5 text-[13px] font-semibold uppercase tracking-[0.18em]" style={{ fontFamily: CONDENSED }}>
+              <li>
+                <TrackedLink
+                  href="/playoffs"
+                  surface={SURFACE}
+                  ctaId="playoffs_breadcrumb"
+                  ctaLabel="Playoffs"
+                  className="text-rd-red transition-colors hover:text-rd-red-dark"
+                >
+                  Playoffs
+                </TrackedLink>
+              </li>
+              <li aria-hidden className="text-rd-ink-faint">
+                /
+              </li>
+              <li aria-current="page" className="text-rd-ink-soft">
+                {league}
+              </li>
+            </ol>
+          </nav>
+          <h1
+            className="mt-1.5 font-extrabold uppercase leading-[0.98] text-rd-ink"
+            style={{ fontFamily: CONDENSED, fontSize: 'clamp(38px, 9vw, 56px)' }}
+          >
+            {season} {league} Playoffs
+          </h1>
+        </header>
+
+        <div data-page-intro>
+          {/* The lede describes the bracket, so it is shown only with one. */}
+          {view && (
+            <p data-lede className="mt-2.5 max-w-[52ch] text-[15px] text-rd-ink-soft">
+              The {season} {league} postseason bracket: every series, seed and result, with game times in Eastern.
+            </p>
+          )}
+          {view?.updatedLabel && (
+            <p data-bracket-updated className="mt-2 text-[12.5px] text-rd-ink-faint">
+              {`Bracket updated ${view.updatedLabel}`}
+            </p>
+          )}
+
+          {body.state !== 'ok' && <BracketUnavailable league={league} season={season} />}
+
+          {view && view.phase.kind === 'concluded' && (
+            <div
+              data-champion={view.phase.championTeamId}
+              className="mt-5 rounded-[10px] border border-rd-line bg-rd-card px-4 py-4"
+              style={{ borderLeft: '3px solid var(--color-rd-red)' }}
             >
-              {view.phase.championName}
-            </TrackedLink>
-          </p>
-          <p className="mt-0.5 text-[13.5px] text-rd-ink-soft">{view.phase.summary}</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-rd-ink-faint">{season} champion</p>
+              <p className="mt-0.5 text-[26px] font-extrabold uppercase leading-tight text-rd-ink" style={{ fontFamily: CONDENSED }}>
+                <TrackedLink
+                  href={view.phase.championHref}
+                  surface={SURFACE}
+                  ctaId="playoffs_champion_team"
+                  ctaLabel={view.phase.championName}
+                  teamSlug={view.phase.championTeamId}
+                  className="hover:text-rd-red"
+                >
+                  {view.phase.championName}
+                </TrackedLink>
+              </p>
+              <p className="mt-0.5 text-[13.5px] text-rd-ink-soft">{view.phase.summary}</p>
+            </div>
+          )}
         </div>
-      )}
 
-      {/* The provider renders no element. The bracket and the predictions
-          slot are separate children of this page that share its state. */}
-      {view && body.state === 'ok' && (
-        <BracketControlsProvider initialRound={openingRound(view)} initialConference={firstConference} index={seriesIndex(view)}>
-          <div className="mt-6">
-            <BracketExplorer league={league} leagueSlug={slug} season={season} rounds={view.rounds} panelTickets={panelTickets} />
-          </div>
-          <PredictedBracketSlot>
-            {body.predictionsLocked ? <PredictionsCard heading="Our Predictions" headingId="our-predictions" /> : null}
-          </PredictedBracketSlot>
-        </BracketControlsProvider>
-      )}
+        {/* The provider renders no element. The bracket and the predictions
+            slot are separate children of the article that share its state. */}
+        {view && body.state === 'ok' && (
+          <BracketControlsProvider initialRound={openingRound(view)} initialConference={firstConference} index={seriesIndex(view)}>
+            <div data-bracket-child className="mt-6">
+              <BracketExplorer league={league} leagueSlug={slug} season={season} rounds={view.rounds} panelTickets={panelTickets} />
+            </div>
+            <AdSlot config={AD_SLOTS.IN_CONTENT_1} pageType={PAGE_TYPE} />
+            {/* RESERVED for the predicted bracket. Rendered only when it has
+                something to show: an empty element here would be a child of
+                the article with no height, which is an anchor all the same. */}
+            {body.predictionsLocked ? (
+              <PredictedBracketSlot>
+                <PredictionsCard heading="Our Predictions" headingId="our-predictions" />
+              </PredictedBracketSlot>
+            ) : null}
+          </BracketControlsProvider>
+        )}
 
-      {body.state === 'ok' && view && view.phase.kind === 'active' && (
-        <HomeGames
-          id="home-games-this-week"
-          heading="Home games this week"
-          games={body.homeGames}
-          tickets={tickets}
-          surface={SURFACE}
-          empty="No home game with a confirmed host is listed in the next three days."
-        />
-      )}
+        {body.state === 'ok' && view && view.phase.kind === 'active' && (
+          <HomeGames
+            id="home-games-this-week"
+            heading="Home games this week"
+            games={body.homeGames}
+            tickets={tickets}
+            surface={SURFACE}
+            empty="No home game with a confirmed host is listed in the next three days."
+          />
+        )}
+        <AdSlot config={AD_SLOTS.IN_CONTENT_2} pageType={PAGE_TYPE} />
+      </article>
 
       {otherLeagues.length > 0 && (
         <p className="mt-10 text-[15px] text-rd-ink">

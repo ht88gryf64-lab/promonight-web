@@ -9,7 +9,7 @@ import { playoffsLinkState } from '../gate';
 import { clubPlayoffs, homePlayoffs, leagueCard, venueGames, type InboundLeague } from '../inbound';
 import { buildLeagueView } from '../view';
 import type { Bracket } from '../types';
-import { CAPTURED_AT, FIELDS_AT, FIXTURE, IN_GAME_AT, clubs, loadDoc, parks } from './helpers';
+import { CAPTURED_AT, FIELDS_AT, FIXTURE, IN_GAME_AT, clubs, loadDoc, parks, seriesKeyIn } from './helpers';
 
 type Doc = Record<string, unknown>;
 
@@ -180,7 +180,8 @@ test('TEAM: no state carries a pipeline series key', () => {
     const leagues = inbound(names, now);
     for (const c of clubs().keys()) {
       const text = JSON.stringify(clubPlayoffs(leagues, c));
-      assert.ok(!/[A-Z]+-[A-Z]+-[A-Z0-9]+|\bR\d+-\d+v\d+\b|\bSF-[A-Z]\b|#[A-Z]/.test(text), `${c}: ${text}`);
+      assert.equal(seriesKeyIn(text), null, `${c}: ${text}`);
+      assert.ok(!/#[A-Z]/.test(text), `${c}: ${text}`);
     }
   }
 });

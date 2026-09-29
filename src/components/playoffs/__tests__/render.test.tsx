@@ -9,7 +9,7 @@ import type { ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { mapBracketDoc } from '../../../lib/postseason/map';
 import { buildLeagueView, homeGamesWindow, type LeagueView } from '../../../lib/postseason/view';
-import { CAPTURED_AT, FIELDS_AT, FIXTURE, IN_GAME_AT, clubs, loadDoc, parks, rawText } from '../../../lib/postseason/__tests__/helpers';
+import { CAPTURED_AT, FIELDS_AT, FIXTURE, IN_GAME_AT, clubs, loadDoc, parks, rawText, seriesKeyIn } from '../../../lib/postseason/__tests__/helpers';
 import { PlayoffsHub, type HubLeague } from '../PlayoffsHub';
 import { PlayoffsLeague, type LeagueBody } from '../PlayoffsLeague';
 import { PREDICTIONS_COPY } from '../PredictionsCard';
@@ -113,11 +113,11 @@ const panel = (html: string, id: string) => element(html, `data-series-panel="${
 const withoutBadges = (html: string) => html.replace(/<span data-game-state="live"[^>]*>Live<\/span>/g, '');
 const FRESHNESS_WORDS = /\bhourly\b|\breal[- ]time\b|\blive\b|\bup to the minute\b|\bminute by minute\b/i;
 
-// A pipeline series key, by shape: AL-WC-B, NL-DS-A, AL-CS, R1-1v8, SF-A.
-// The page's own ids are lowercase (wild_card-2) and match none of these.
-const KEY_SHAPES = [/[A-Z]+-[A-Z]+-[A-Z0-9]+/, /\b[A-Z]{2}-(?:CS|DS|WC)\b/, /\bR\d+-\d+v\d+\b/, /\bSF-[A-Z0-9]\b/];
+// A pipeline series key, by the exact forms the documents use (see
+// SERIES_KEY_SHAPES), and then by name for every key of the fixture. The
+// page's own ids are lowercase (wild_card-2) and match none of these.
 function assertNoSeriesKey(html: string, keys: readonly string[], where: string) {
-  for (const re of KEY_SHAPES) assert.ok(!re.test(html), `${where}: ${html.match(re)?.[0]} has the shape of a series key`);
+  assert.equal(seriesKeyIn(html), null, `${where}: ${seriesKeyIn(html)} has the form of a series key`);
   for (const key of keys) {
     assert.ok(!html.includes(`"${key}"`), `${where}: series key ${key} is an attribute value`);
     assert.ok(!html.includes(`#${key}"`), `${where}: series key ${key} is a link target`);
@@ -539,8 +539,10 @@ test('PREDICTIONS SLOT: the locked card only when the inputs are frozen, and it 
   assert.equal(count(on, 'data-predictions="locked"'), 1);
   assert.equal(count(off, 'data-predictions="locked"'), 0);
   assert.ok(!textOf(off).includes('Our Predictions'));
-  // The slot itself stays, empty.
-  assert.match(off, /<div data-predicted-bracket-slot="true" data-round="wild_card" data-conference="AL"><\/div>/);
+  // With nothing to show, the slot is not in the page at all. An empty
+  // element would be a child of the article with no height, and a child
+  // with no height is still an anchor for the ad placer.
+  assert.equal(count(off, 'data-predicted-bracket-slot'), 0);
   assert.ok(element(on, 'data-predicted-bracket-slot').includes('data-predictions="locked"'));
   const cardHtml = element(on, 'data-predictions="locked"');
   const section = textOf(cardHtml);
@@ -550,6 +552,102 @@ test('PREDICTIONS SLOT: the locked card only when the inputs are frozen, and it 
   assert.ok(!/\b(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|tomorrow|tonight|today|week)\b/i.test(section));
   assert.match(cardHtml, /<svg[^>]*aria-hidden="true"[^>]*>/);
   assert.ok(!/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(cardHtml), 'no emoji stands in for the lock');
+});
+
+// ---- The article: what the ad placer reads ----
+
+/** The direct children of the article, as "tag" or "tag[marker]". */
+function articleChildren(html: string): string[] {
+  const article = element(html, 'data-playoffs-article=');
+  const inner = article.slice(article.indexOf('>') + 1, article.lastIndexOf('</article>'));
+  const out: string[] = [];
+  const re = /<([a-z0-9]+)\b([^>]*)>|<\/([a-z0-9]+)>/g;
+  // The void elements of HTML, and nothing else. React writes every SVG
+  // child with a closing tag, so none of them belongs here.
+  const VOID = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr']);
+  let depth = 0;
+  for (let m = re.exec(inner); m; m = re.exec(inner)) {
+    if (m[3]) {
+      depth -= 1;
+      continue;
+    }
+    const selfClosing = m[2].endsWith('/') || VOID.has(m[1]);
+    if (depth === 0) {
+      const mark = /data-(page-intro|bracket-child|predicted-bracket-slot|home-games|predictions)\b/.exec(m[2]);
+      out.push(mark ? `${m[1]}[${mark[1]}]` : m[1] === 'section' && /aria-label="Leagues"/.test(m[2]) ? 'section[leagues]' : m[1]);
+    }
+    if (!selfClosing) depth += 1;
+  }
+  return out;
+}
+
+test('ARTICLE, league page: an article that is the page-content wrapper, children in the order the ad rule needs', () => {
+  const html = leagueHtml(view(FIXTURE.mlbFields, FIELDS_AT), { now: FIELDS_AT });
+  assert.equal(count(html, '<article'), 1);
+  assert.match(html, /<article class="page-content" data-ad-region="content" data-playoffs-article="league">/);
+  assert.equal(count(html, 'page-content'), 1, 'one wrapper, so one set of anchors');
+  // The heading and the introduction take the two skips. The first unit can
+  // follow the third child, which is the bracket.
+  assert.deepEqual(articleChildren(html), ['header', 'div[page-intro]', 'div[bracket-child]', 'div[predicted-bracket-slot]', 'section[home-games]']);
+  const article = element(html, 'data-playoffs-article=');
+  assert.equal(count(article, '<h1'), 1, 'the heading is inside the article it names');
+  assert.ok(element(article, 'data-bracket-child').includes('data-bracket="MLB"'));
+});
+
+test('ARTICLE, league page: no child is ever empty, in any state', () => {
+  for (const [name, , make, now] of EVERY_VIEW) {
+    for (const locked of [true, false]) {
+      const html = leagueHtml(make(), { now, locked });
+      const kids = articleChildren(html);
+      assert.ok(kids.length >= 3, `${name}: ${kids.join(' ')}`);
+      assert.deepEqual(kids.slice(0, 3), ['header', 'div[page-intro]', 'div[bracket-child]'], name);
+      assert.equal(kids.includes('div[predicted-bracket-slot]'), locked, `${name}: the slot is a child only when it holds the card`);
+      // Nothing that renders as an empty element.
+      assert.ok(!/<(div|section|p|span)[^>]*><\/\1>/.test(element(html, 'data-playoffs-article=').replace(/<span aria-hidden="true"[^>]*><\/span>/g, '')), `${name}: an empty element inside the article`);
+    }
+  }
+});
+
+test('ARTICLE, league page: what must stay out of it, stays out', () => {
+  const html = leagueHtml(view(FIXTURE.mlbFields, FIELDS_AT), { now: FIELDS_AT, others: [{ league: 'WNBA', href: '/playoffs/wnba' }] });
+  const article = element(html, 'data-playoffs-article=');
+  // The notes, the disclosure and the cross link sit after the article, so
+  // no unit is placed against the site footer.
+  assert.ok(!article.includes('<footer'));
+  assert.ok(!article.includes('Open the WNBA bracket'));
+  assert.ok(!article.includes('PromoNight may earn a commission'));
+  assert.ok(html.indexOf('<footer') > html.indexOf('</article>'));
+  assert.ok(html.indexOf('Open the WNBA bracket') > html.indexOf('</article>'));
+  // No second wrapper and no aside anywhere in the page body.
+  assert.equal(count(html, '<aside'), 0);
+  assert.equal(count(html, 'data-ad-region'), 1);
+});
+
+test('ARTICLE, league page with no bracket: the heading and the notice, and nothing for a unit to follow', () => {
+  const html = renderToStaticMarkup(<PlayoffsLeague league="MLB" season={2026} body={{ state: 'unavailable' }} tickets={{}} panelTickets={{}} otherLeagues={[]} />);
+  assert.deepEqual(articleChildren(html), ['header', 'div[page-intro]']);
+  assert.ok(element(html, 'data-page-intro').includes('data-bracket-state="unavailable"'));
+});
+
+test('ARTICLE, hub: the same wrapper, with the league cards as the third child', () => {
+  const html = hubHtml([ok(view(FIXTURE.mlbFields, FIELDS_AT)), ok(view(FIXTURE.wnbaFields, FIELDS_AT))], FIELDS_AT);
+  assert.equal(count(html, '<article'), 1);
+  assert.match(html, /<article class="page-content" data-ad-region="content" data-playoffs-article="hub">/);
+  assert.equal(count(html, 'page-content'), 1);
+  assert.deepEqual(articleChildren(html), ['header', 'div[page-intro]', 'section[leagues]', 'section[home-games]', 'section[predictions]']);
+  const article = element(html, 'data-playoffs-article=');
+  assert.equal(count(article, '<h1'), 1);
+  assert.ok(!article.includes('<footer'));
+  assert.ok(html.indexOf('<footer') > html.indexOf('</article>'));
+  assert.equal(count(html, '<aside'), 0);
+});
+
+test('ARTICLE, hub in the offseason and with one unreadable league', () => {
+  const off = hubHtml([]);
+  assert.deepEqual(articleChildren(off), ['header', 'div[page-intro]']);
+  assert.ok(element(off, 'data-page-intro').includes('data-hub-state="offseason"'));
+  const bad = hubHtml([{ state: 'unavailable', league: 'MLB', href: '/playoffs/mlb' }]);
+  assert.deepEqual(articleChildren(bad), ['header', 'div[page-intro]', 'section[leagues]']);
 });
 
 // ---- Home games ----
@@ -795,6 +893,33 @@ test('the key scan would catch a key, were one there', () => {
     assert.throws(() => assertNoSeriesKey(leaked, ['AL-WC-B', 'NL-DS-A', 'AL-CS', 'WS', 'R1-1v8', 'SF-A', 'F'], 'probe'), assert.AssertionError, leaked);
   }
   assert.doesNotThrow(() => assertNoSeriesKey('<li data-series="wild_card-2"><a href="#world_series-1">NYY/BOS</a> SF/LAD</li>', ['AL-WC-B', 'WS', 'F'], 'probe'));
+});
+
+test('the key scan passes what is not a key: a sponsor, a score, a date, an id', () => {
+  for (const fine of [
+    'Presented by H-E-B.',
+    '"sponsor":"H-E-B"',
+    'T-Mobile Park',
+    'Coca-Cola',
+    'A-B-C',
+    'X-Y-Z1',
+    'U-S-A chant night',
+    'NYL leads 1-0',
+    'Best of 5 · 2-2-1',
+    'data-series="division_series-3"',
+    'href="/playoffs/wnba#first_round-1"',
+    'SF/LAD',
+    'AL Higher Seed',
+    'R1 results',
+  ]) {
+    assert.equal(seriesKeyIn(fine), null, fine);
+  }
+  // And catches every form the documents use.
+  for (const key of ['AL-WC-A', 'AL-WC-B', 'NL-WC-A', 'NL-DS-B', 'AL-DS-A', 'AL-CS', 'NL-CS', 'R1-1v8', 'R1-4v5', 'SF-A', 'SF-B']) {
+    assert.equal(seriesKeyIn(`Winner of ${key}`), key, key);
+  }
+  // Every key of every fixture is either caught by form or checked by name.
+  for (const f of Object.values(FIXTURE)) for (const key of keysOf(f)) assert.ok(seriesKeyIn(key) === key || key === 'WS' || key === 'F', `${f}: ${key}`);
 });
 
 // ---- Properties of every page ----

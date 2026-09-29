@@ -14,6 +14,7 @@
  */
 import { getAllTeams, getTeamPromos, getVenueForTeam } from '../src/lib/data';
 import type { Team } from '../src/lib/types';
+import { hubCopy, leagueCopy } from '../src/lib/postseason/metadata';
 
 const YEAR = new Date().getFullYear();
 const BASE = 'https://www.getpromonight.com';
@@ -57,6 +58,16 @@ const HOMEPAGE_TITLE =
 const HOMEPAGE_DESCRIPTION =
   'PromoNight tracks every giveaway, theme night, and food deal across 167 teams in MLB, NBA, NFL, NHL, MLS, and WNBA. Never miss bobblehead night.';
 
+// Season and leagues are written out here, not imported from the data module,
+// which is server-only. The pages read theirs from that module; if the two
+// ever disagree the titles below stop matching the served ones, which is
+// what this audit exists to notice.
+const PLAYOFFS_PAGES = [
+  hubCopy(2026, ['MLB', 'WNBA'], []),
+  leagueCopy(2026, 'MLB', '/playoffs/mlb', null),
+  leagueCopy(2026, 'WNBA', '/playoffs/wnba', null),
+];
+
 const STATIC_PAGES: PageMeta[] = [
   {
     url: `${BASE}/`,
@@ -69,13 +80,12 @@ const STATIC_PAGES: PageMeta[] = [
     description:
       '167 pro sports teams across MLB, NBA, NFL, NHL, MLS, and WNBA. Giveaways, theme nights, food deals, and kids days in one team directory.',
   },
-  {
-    url: `${BASE}/playoffs`,
-    title:
-      '2026 NBA & NHL Playoff Giveaways & Watch Parties' + ROOT_TEMPLATE,
-    description:
-      'Every 2026 NBA and NHL playoff promotion: rally towels, T-shirt giveaways, watch parties, and fan events at active teams. Updated hourly from official sources.',
-  },
+  // The playoffs hub and its league pages, from the builder the pages call.
+  ...PLAYOFFS_PAGES.map((c) => ({
+    url: c.canonical,
+    title: c.title + ROOT_TEMPLATE,
+    description: c.description,
+  })),
   {
     url: `${BASE}/about`,
     title: 'About PromoNight: The Indie App Behind the Promo Calendar',

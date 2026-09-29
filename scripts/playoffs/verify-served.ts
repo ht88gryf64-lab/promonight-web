@@ -1,0 +1,587 @@
+/* eslint-disable no-console */
+// Served-HTML verification for the playoffs pages.
+//
+// Every claim is derived here from the RAW bracket documents, with this
+// file's own formatting, and then looked for in the bytes the server sent.
+// Nothing is read through the mapper or the view: a check that renders the
+// expected page with the page's own code proves only that the code repeats
+// itself.
+//
+// Run:
+//   BASE=https://<host> node --require ./scripts/stub-server-only.cjs \
+//     --import tsx --env-file=.env.local scripts/playoffs/verify-served.ts
+//
+//   BASE    origin to fetch from. Default http://localhost:3468.
+//   BYPASS  Vercel protection bypass secret. Sent as a header, never printed.
+//   CASE=1  also request /playoffs/MLB and expect a 404. NOT for a local
+//           `next start` on a case-insensitive disk, where the 404 overwrites
+//           the prerendered lowercase entry.
+//   OUT     directory to save the fetched pages in.
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { db } from '../../src/lib/firebase';
+import { getAllTeams, getVenueForTeam } from '../../src/lib/data';
+import { getTeamVenueHubMap } from '../../src/lib/venue-hub';
+import { OG_IMAGE_ALT } from '../../src/lib/og';
+
+const BASE = (process.env.BASE || 'http://localhost:3468').replace(/\/$/, '');
+const BYPASS = process.env.BYPASS || '';
+const OUT = process.env.OUT || '';
+const SITE = 'https://www.getpromonight.com';
+const SEASON = 2026;
+const LEAGUES = ['MLB', 'WNBA'] as const;
+type League = (typeof LEAGUES)[number];
+
+// ---- Reporting ----
+const results: { name: string; ok: boolean; detail: string }[] = [];
+function check(name: string, ok: boolean, detail = '') {
+  results.push({ name, ok, detail });
+  console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? `  [${detail}]` : ''}`);
+}
+function same(name: string, actual: unknown, expected: unknown) {
+  const ok = actual === expected;
+  check(name, ok, ok ? String(expected).slice(0, 120) : `served ${JSON.stringify(actual)} expected ${JSON.stringify(expected)}`);
+}
+
+// ---- Fetching ----
+async function get(path: string): Promise<{ status: number; body: string; headers: Headers }> {
+  const headers: Record<string, string> = { 'user-agent': 'Mozilla/5.0 (playoffs served-HTML check)' };
+  if (BYPASS) headers['x-vercel-protection-bypass'] = BYPASS;
+  const res = await fetch(`${BASE}${path}`, { headers, redirect: 'manual' });
+  return { status: res.status, body: await res.text(), headers: res.headers };
+}
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// ---- Reading HTML ----
+const decode = (s: string) =>
+  s
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;/g, "'")
+    .replace(/&#39;/g, "'");
+
+/** The markup with every script and style removed: what becomes the DOM. */
+const domOf = (html: string) => html.replace(/<script\b[\s\S]*?<\/script>/g, '').replace(/<style\b[\s\S]*?<\/style>/g, '');
+
+/** Visible text: comments gone, tags turned to spaces, whitespace collapsed. */
+function textOf(markup: string): string {
+  return decode(
+    domOf(markup)
+      .replace(/<!--[\s\S]*?-->/g, '')
+      .replace(/<svg\b[\s\S]*?<\/svg>/g, ' ')
+      .replace(/<[^>]+>/g, ' '),
+  )
+    .replace(/\s+/g, ' ')
+    .replace(/ ([.,:])/g, '$1')
+    .trim();
+}
+
+/** The whole element whose opening tag holds `marker`, or null. */
+function element(markup: string, marker: string, from = 0): string | null {
+  const at = markup.indexOf(marker, from);
+  if (at < 0) return null;
+  const start = markup.lastIndexOf('<', at);
+  const tag = /^<([a-z0-9]+)/.exec(markup.slice(start))?.[1];
+  if (!tag) return null;
+  const re = new RegExp(`<${tag}\\b[^>]*>|</${tag}>`, 'g');
+  re.lastIndex = start;
+  let depth = 0;
+  for (let m = re.exec(markup); m; m = re.exec(markup)) {
+    if (m[0].startsWith('</')) depth -= 1;
+    else if (!m[0].endsWith('/>')) depth += 1;
+    if (depth === 0) return markup.slice(start, m.index + m[0].length);
+  }
+  return null;
+}
+function elements(markup: string, marker: string): string[] {
+  const out: string[] = [];
+  let from = 0;
+  for (;;) {
+    const at = markup.indexOf(marker, from);
+    if (at < 0) return out;
+    const el = element(markup, marker, from);
+    if (!el) return out;
+    out.push(el);
+    from = markup.lastIndexOf('<', at) + el.length;
+  }
+}
+const count = (s: string, needle: string) => s.split(needle).length - 1;
+const meta = (html: string, attr: 'name' | 'property', key: string) => {
+  const m = new RegExp(`<meta ${attr}="${key.replace(/[.:]/g, '\\$&')}" content="([^"]*)"`).exec(html);
+  return m ? decode(m[1]) : null;
+};
+
+// ---- The raw document, read by this file's own rules ----
+type RawSlot = { slug?: string; seed?: number | null; placeholder?: string; feederSeriesKey?: string; candidates?: string[] | null };
+type RawGame = {
+  gameNumber: number;
+  gameId?: string;
+  date: string | null;
+  start: string | null;
+  startTimeTBD: boolean;
+  home?: string | null;
+  away?: string | null;
+  homeSide: 'higher' | 'lower' | null;
+  status: string;
+  homeScore: number | null;
+  awayScore: number | null;
+  ifNecessary: boolean;
+};
+type RawSeries = {
+  round: string;
+  roundLabel: string;
+  seriesKey: string;
+  conference: string | null;
+  bestOf: number;
+  higher: RawSlot;
+  lower: RawSlot;
+  wins: { higher: number; lower: number };
+  status: string;
+  winner: string | null;
+  games: RawGame[];
+};
+type RawDoc = { league: string; season: number; series: RawSeries[]; lastChangedAt?: unknown; [k: string]: unknown };
+
+const ET = 'America/New_York';
+const parts = (d: Date, opts: Intl.DateTimeFormatOptions, tz = ET) =>
+  Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: tz, ...opts }).formatToParts(d).map((p) => [p.type, p.value]));
+function etDay(d: Date, tz = ET): string {
+  const p = parts(d, { weekday: 'short', month: 'short', day: 'numeric' }, tz);
+  return `${p.weekday}, ${p.month} ${p.day}`;
+}
+function etTime(d: Date): string {
+  const p = parts(d, { hour: 'numeric', minute: '2-digit', hour12: true });
+  return `${p.hour}:${p.minute} ${p.dayPeriod} ET`;
+}
+function etYmd(d: Date): string {
+  const p = parts(d, { year: 'numeric', month: '2-digit', day: '2-digit' });
+  return `${p.year}-${p.month}-${p.day}`;
+}
+function etStamp(d: Date): string {
+  const p = parts(d, { month: 'short', day: 'numeric' });
+  return `${p.month} ${p.day}, ${etTime(d)}`;
+}
+function whenOf(g: RawGame): string {
+  if (!g.startTimeTBD && g.start) return `${etDay(new Date(g.start))} · ${etTime(new Date(g.start))}`;
+  if (g.date) return `${etDay(new Date(`${g.date}T12:00:00Z`), 'UTC')} · Time TBD`;
+  return 'Date TBD';
+}
+function instantOf(v: unknown): Date | null {
+  if (!v) return null;
+  if (typeof v === 'string') return new Date(v);
+  if (typeof (v as { toDate?: unknown }).toDate === 'function') return (v as { toDate: () => Date }).toDate();
+  return null;
+}
+
+// The forms a series key takes in the bracket documents, and no others.
+const KEY_SHAPES = [/\b(?:AL|NL)-(?:WC|DS)-[A-Z]\b/, /\b(?:AL|NL)-CS\b/, /\bR\d-\dv\d\b/, /\bSF-[A-Z]\b/];
+const keyIn = (text: string) => {
+  for (const re of KEY_SHAPES) {
+    const m = re.exec(text);
+    if (m) return m[0];
+  }
+  return null;
+};
+
+interface Club {
+  name: string;
+  full: string;
+  abbr: string | null;
+  park: string | null;
+  venuePath: string | null;
+}
+
+async function main() {
+  console.log(`BASE ${BASE}${BYPASS ? '  (protection bypass header sent)' : ''}`);
+  if (OUT) mkdirSync(OUT, { recursive: true });
+
+  // ---- What the documents say ----
+  const docs = new Map<League, RawDoc>();
+  for (const league of LEAGUES) {
+    const snap = await db.collection('postseasonBrackets').doc(`${league}_${SEASON}`).get();
+    if (snap.exists) docs.set(league, snap.data() as RawDoc);
+  }
+  const teams = await getAllTeams();
+  const hubs = await getTeamVenueHubMap();
+  const clubs = new Map<string, Club>();
+  const wanted = new Set<string>();
+  for (const d of docs.values()) {
+    for (const s of d.series) {
+      for (const slot of [s.higher, s.lower]) {
+        if (slot.slug) wanted.add(slot.slug);
+        for (const c of slot.candidates ?? []) wanted.add(c);
+      }
+    }
+  }
+  for (const id of wanted) {
+    const t = teams.find((x) => x.id === id);
+    if (!t) continue;
+    const v = await getVenueForTeam(id);
+    const hub = hubs.get(id);
+    clubs.set(id, {
+      name: t.name,
+      full: `${t.city} ${t.name}`,
+      abbr: (t as { abbreviation?: string }).abbreviation ?? null,
+      park: v && v.name ? v.name : null,
+      venuePath: hub ? `/venues/${hub.slug}` : null,
+    });
+  }
+  check('documents read', docs.size === LEAGUES.length, [...docs.keys()].join(' '));
+  check('every club in the documents has a team record', [...wanted].every((w) => clubs.has(w)), `${clubs.size} of ${wanted.size}`);
+
+  /** What a slot is called on the page. */
+  function slotName(doc: RawDoc, slot: RawSlot): { name: string; club: Club | null; slug: string | null } {
+    if (slot.slug) {
+      const c = clubs.get(slot.slug) ?? null;
+      return { name: c ? c.name : slot.slug, club: c, slug: slot.slug };
+    }
+    // The winner, only from the feeder FIELD and only when that series is
+    // final in this same document.
+    if (slot.feederSeriesKey) {
+      const feeder = doc.series.find((s) => s.seriesKey === slot.feederSeriesKey);
+      if (feeder && feeder.status === 'final' && feeder.winner) {
+        const side = feeder.winner === 'higher' || feeder.winner === 'lower' ? feeder[feeder.winner] : [feeder.higher, feeder.lower].find((x) => x.slug === feeder.winner);
+        if (side && side.slug && clubs.has(side.slug)) {
+          const c = clubs.get(side.slug) as Club;
+          return { name: c.name, club: c, slug: side.slug };
+        }
+      }
+    }
+    if (slot.candidates && slot.candidates.length === 2) {
+      const [a, b] = slot.candidates.map((c) => clubs.get(c));
+      if (a && b) return { name: `${a.name} / ${b.name} winner`, club: null, slug: null };
+    }
+    const label = slot.placeholder ?? '';
+    if (!label || keyIn(label)) return { name: 'To be decided', club: null, slug: null };
+    return { name: label, club: null, slug: null };
+  }
+
+  const ids = (doc: RawDoc) => {
+    const seen = new Map<string, number>();
+    return doc.series.map((s) => {
+      const n = (seen.get(s.round) ?? 0) + 1;
+      seen.set(s.round, n);
+      return `${s.round}-${n}`;
+    });
+  };
+  const currentRound = (doc: RawDoc) => doc.series.find((s) => s.status !== 'final') ?? null;
+
+  function scoreLine(doc: RawDoc, s: RawSeries): string | null {
+    const hi = s.wins.higher;
+    const lo = s.wins.lower;
+    if (hi === 0 && lo === 0) return null;
+    const a = slotName(doc, s.higher);
+    const b = slotName(doc, s.lower);
+    const call = (x: typeof a) => (x.club && x.club.abbr ? x.club.abbr : x.name);
+    const top = `${Math.max(hi, lo)}-${Math.min(hi, lo)}`;
+    if (s.status === 'final') return `${call(hi > lo ? a : b)} won ${top}`;
+    if (hi === lo) return `Series tied ${hi}-${lo}`;
+    return `${call(hi > lo ? a : b)} leads ${top}`;
+  }
+
+  /** The text of one game row in a series panel, whole. */
+  function gameRow(doc: RawDoc, s: RawSeries, g: RawGame): string {
+    const home = g.homeSide ? slotName(doc, s[g.homeSide]) : null;
+    const away = g.homeSide ? slotName(doc, s[g.homeSide === 'higher' ? 'lower' : 'higher']) : null;
+    const out = [`G${g.gameNumber}`, whenOf(g)];
+    if (home && home.club) out.push(home.club.park ? `Host: ${home.name} · ${home.club.park}` : `Host: ${home.name}`);
+    if (g.status === 'final' && home && away && g.homeScore !== null && g.awayScore !== null) {
+      const h = home.club?.abbr ?? home.name;
+      const a = away.club?.abbr ?? away.name;
+      out.push(`Final: ${g.homeScore >= g.awayScore ? `${h} ${g.homeScore}, ${a} ${g.awayScore}` : `${a} ${g.awayScore}, ${h} ${g.homeScore}`}`);
+    } else if (g.status === 'live') out.push('Live');
+    else if (g.status === 'scheduled') {
+      if (g.ifNecessary) out.push('If necessary');
+    } else if (g.status !== 'final') out.push(g.status[0].toUpperCase() + g.status.slice(1));
+    return out.join(' ');
+  }
+
+  // ---- A page that is as new as the document ----
+  async function fresh(path: string, league: League | null): Promise<{ html: string; status: number; headers: Headers; doc: Map<League, RawDoc> }> {
+    // The pages regenerate every ten minutes. A page older than the document
+    // is asked for again until the window has passed, so that what is
+    // compared is one version of the bracket and not two.
+    let last = await get(path);
+    for (let attempt = 0; attempt < 26; attempt++) {
+      for (const l of LEAGUES) {
+        const snap = await db.collection('postseasonBrackets').doc(`${l}_${SEASON}`).get();
+        if (snap.exists) docs.set(l, snap.data() as RawDoc);
+      }
+      const need = (league ? [league] : [...LEAGUES]).map((l) => {
+        const at = instantOf(docs.get(l)?.lastChangedAt);
+        return at ? `Bracket updated ${etStamp(at)}` : null;
+      });
+      const text = textOf(last.body);
+      if (last.status !== 200 || need.every((n) => n === null || text.includes(n))) return { html: last.body, status: last.status, headers: last.headers, doc: docs };
+      if (attempt === 0) console.log(`      ${path}: the served page is older than the document; waiting for it to regenerate`);
+      await sleep(30000);
+      last = await get(path);
+    }
+    return { html: last.body, status: last.status, headers: last.headers, doc: docs };
+  }
+
+  function save(path: string, html: string) {
+    if (OUT) writeFileSync(join(OUT, `${path.replace(/^\//, '').replace(/\//g, '_') || 'home'}.html`), html);
+  }
+
+  // ---- What no page may carry ----
+  function leaks(where: string, html: string) {
+    const shape = keyIn(html);
+    check(`${where}: no series key by shape, anywhere in the response`, shape === null, shape ?? `${html.length} bytes scanned`);
+    const literal: string[] = [];
+    const values: string[] = [];
+    for (const d of docs.values()) {
+      for (const s of d.series) {
+        if (new RegExp(`(?<![A-Za-z0-9-])${s.seriesKey}(?![A-Za-z0-9-])`).test(html)) literal.push(s.seriesKey);
+        for (const g of s.games) if (g.gameId && new RegExp(`(?<![0-9])${g.gameId}(?![0-9])`).test(html)) values.push(`gameId ${g.gameId}`);
+      }
+      for (const k of ['runId', 'bracketSha256', 'validatedSeedSha256', 'lastRevalidatedSha256']) {
+        const v = d[k];
+        if (typeof v === 'string' && v.length >= 8 && html.includes(v)) values.push(k);
+      }
+    }
+    check(`${where}: no series key of either document, literally`, literal.length === 0, literal.join(' '));
+    check(`${where}: no game id, run id or hash from either document`, values.length === 0, values.join(' '));
+    const fields = ['operatorLog', 'runId', 'validatedSeedSha256', 'bracketSha256', 'lastRevalidatedSha256', 'writerVersion', 'feederSeriesKey', 'lastFetchedAt', 'unplaced', 'ticketmasterAttractionId', 'ticketmasterSlug', 'fanaticsUrl', 'fanaticsPath'].filter((f) => html.includes(f));
+    check(`${where}: no operator or team-record field name`, fields.length === 0, fields.join(' '));
+  }
+
+  function head(where: string, html: string, want: { title: string; description: string; canonical: string }) {
+    same(`${where}: <title>`, decode(/<title>([^<]*)<\/title>/.exec(html)?.[1] ?? ''), `${want.title} | PromoNight`);
+    same(`${where}: titles in the document`, count(html, '<title>'), 1);
+    same(`${where}: meta description`, meta(html, 'name', 'description'), want.description);
+    same(`${where}: canonical`, /<link rel="canonical" href="([^"]*)"/.exec(html)?.[1] ?? null, want.canonical);
+    same(`${where}: canonical links in the document`, count(html, 'rel="canonical"'), 1);
+    same(`${where}: og:url`, meta(html, 'property', 'og:url'), want.canonical);
+    same(`${where}: og:title`, meta(html, 'property', 'og:title'), `${want.title} | PromoNight`);
+    same(`${where}: og:description`, meta(html, 'property', 'og:description'), want.description);
+    same(`${where}: og:image`, meta(html, 'property', 'og:image'), `${SITE}/og-image.png`);
+    same(`${where}: og:image:alt`, meta(html, 'property', 'og:image:alt'), OG_IMAGE_ALT);
+    same(`${where}: og:image tags`, count(html, 'property="og:image"'), 1);
+    const robots = meta(html, 'name', 'robots');
+    check(`${where}: no noindex in the markup`, !robots || !/noindex/i.test(robots), robots ?? 'no robots meta');
+  }
+
+  function jsonLd(where: string, html: string, want: { title: string; description: string; canonical: string; crumbs: string[]; modified: string | null }) {
+    const blocks = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map((m) => JSON.parse(m[1]) as Record<string, unknown>);
+    same(`${where}: JSON-LD types`, blocks.map((b) => b['@type']).join(' '), 'WebPage BreadcrumbList');
+    const page = blocks[0] ?? {};
+    same(`${where}: JSON-LD WebPage url`, page.url, want.canonical);
+    same(`${where}: JSON-LD WebPage name`, page.name, want.title);
+    same(`${where}: JSON-LD WebPage description`, page.description, want.description);
+    same(`${where}: JSON-LD dateModified is the document's change time`, page.dateModified ?? null, want.modified);
+    const items = ((blocks[1] ?? {}).itemListElement ?? []) as { name: string; item: string; position: number }[];
+    same(`${where}: breadcrumb`, items.map((i) => `${i.position} ${i.name} ${i.item}`).join(' | '), want.crumbs.map((c, i) => `${i + 1} ${c}`).join(' | '));
+    const all = JSON.stringify(blocks);
+    check(`${where}: no Event markup`, !/"@type":"[A-Za-z]*Event"/.test(html) && !/startDate|"location"|"offers"/.test(all));
+  }
+
+  function article(where: string, html: string, kind: 'league' | 'hub'): string {
+    const dom = domOf(html);
+    same(`${where}: <article> elements`, count(dom, '<article'), 1);
+    same(`${where}: the article's opening tag`, /<article[^>]*>/.exec(dom)?.[0] ?? null, `<article class="page-content" data-ad-region="content" data-playoffs-article="${kind}">`);
+    same(`${where}: elements with the page-content class`, (dom.match(/class="[^"]*\bpage-content\b[^"]*"/g) ?? []).length, 1);
+    same(`${where}: data-ad-region attributes`, count(dom, 'data-ad-region='), 1);
+    same(`${where}: <aside> elements`, count(dom, '<aside'), 0);
+    const el = element(dom, 'data-playoffs-article=') ?? '';
+    same(`${where}: <h1> in the document, and it is inside the article`, `${count(dom, '<h1')} ${count(el, '<h1')}`, '1 1');
+    check(`${where}: the footer notes and the disclosure are outside the article`, !el.includes('<footer') && !/may earn a commission/i.test(textOf(el)));
+    const text = textOf(el);
+    check(`${where}: no dash in the article`, !/[—–]/.test(text));
+    const stale = /\b(hourly|real[- ]time|up to the minute|updated live|live scores?)\b/i.exec(text);
+    check(`${where}: no freshness claim`, !stale, stale ? stale[0] : '');
+    return el;
+  }
+
+  // ---- The league pages ----
+  for (const league of LEAGUES) {
+    const path = `/playoffs/${league.toLowerCase()}`;
+    const where = path;
+    const got = await fresh(path, league);
+    save(path, got.html);
+    same(`${where}: status`, got.status, 200);
+    const doc = docs.get(league);
+    if (!doc || got.status !== 200) continue;
+    const changed = instantOf(doc.lastChangedAt);
+    const open = currentRound(doc);
+    check(`${where}: the document has a series being played`, open !== null, open ? open.roundLabel : 'all final');
+    const description = open
+      ? `The ${SEASON} ${league} postseason bracket. Current round: ${open.roundLabel}. Every series, seed and result, with game times in Eastern and the home games coming up.`
+      : '(concluded: checked by hand)';
+    const want = { title: `${SEASON} ${league} Playoffs Bracket, Schedule and Scores`, description, canonical: `${SITE}${path}` };
+    head(where, got.html, want);
+    jsonLd(where, got.html, { ...want, crumbs: [`Home ${SITE}`, `Playoffs ${SITE}/playoffs`, `${league} ${SITE}${path}`], modified: changed ? changed.toISOString() : null });
+    const el = article(where, got.html, 'league');
+    leaks(where, got.html);
+
+    const text = textOf(el);
+    if (changed) check(`${where}: change stamp`, text.includes(`Bracket updated ${etStamp(changed)}`), `Bracket updated ${etStamp(changed)}`);
+    check(`${where}: heading`, textOf(element(el, '<h1') ?? '') === `${SEASON} ${league} Playoffs`, textOf(element(el, '<h1') ?? ''));
+
+    const pageIds = ids(doc);
+    const cards = elements(el, 'data-series-status=');
+    const panels = elements(el, 'data-series-panel=');
+    same(`${where}: series cards`, cards.length, doc.series.length);
+    same(`${where}: series panels`, panels.length, doc.series.length);
+    let rows = 0;
+    let rowsRight = 0;
+    const wrong: string[] = [];
+    doc.series.forEach((s, i) => {
+      const id = pageIds[i];
+      const a = slotName(doc, s.higher);
+      const b = slotName(doc, s.lower);
+      const line = scoreLine(doc, s);
+
+      // The card in the bracket.
+      const card = cards.find((c) => c.includes(`data-series="${id}"`)) ?? '';
+      const cardText = textOf(card);
+      const cardWant = [
+        /data-series-status="([^"]*)"/.exec(card)?.[1] === s.status,
+        cardText.includes(`${s.roundLabel}: ${a.name} vs ${b.name}`),
+        cardText.includes(`Best of ${s.bestOf}`),
+        typeof s.higher.seed === 'number' && a.club ? cardText.includes(`Seed ${s.higher.seed} ${a.name}`) : true,
+        typeof s.lower.seed === 'number' && b.club ? cardText.includes(`Seed ${s.lower.seed} ${b.name}`) : true,
+        line ? cardText.includes(line) : !/\b(leads|tied|won)\b/.test(cardText),
+        // Win counts appear once the series has started, which at 0-0 means
+        // a first game in progress.
+        s.status !== 'upcoming' ? cardText.includes(`${s.wins.higher} ${s.wins.higher === 1 ? 'win' : 'wins'}`) && cardText.includes(`${s.wins.lower} ${s.wins.lower === 1 ? 'win' : 'wins'}`) : !/\d+ wins?\b/.test(cardText),
+        new RegExp(`href="#${id}"`).test(card),
+      ];
+      if (cardWant.includes(false)) wrong.push(`card ${id} [${cardWant.map((x) => (x ? '.' : 'X')).join('')}] ${cardText.slice(0, 160)}`);
+
+      // The panel with its games.
+      const panel = panels.find((p) => p.includes(`data-series-panel="${id}"`)) ?? '';
+      const panelText = textOf(panel);
+      const panelWant = [
+        panelText.startsWith(`${s.roundLabel}${s.conference ? ` · ${s.conference}` : ''} ${a.name} vs ${b.name} Best of ${s.bestOf}`),
+        line ? panelText.includes(line) : !/\b(leads|tied|won)\b/.test(panelText),
+        new RegExp(`<section id="${id}"`).test(panel),
+      ];
+      if (panelWant.includes(false)) wrong.push(`panel ${id} [${panelWant.map((x) => (x ? '.' : 'X')).join('')}] ${panelText.slice(0, 160)}`);
+      for (const c of [a, b]) {
+        if (c.club && c.slug) {
+          const link = new RegExp(`<a[^>]*data-club-link="${c.slug}"[^>]*>`).exec(panel)?.[0] ?? '';
+          const sport = league.toLowerCase();
+          if (!link.includes(`href="/${sport}/${c.slug}"`) || !panelText.includes(`${c.club.full} promotions`)) wrong.push(`club link ${id} ${c.slug}`);
+        }
+      }
+      const served = elements(panel, 'data-game=');
+      if (served.length !== s.games.length) wrong.push(`games ${id}: served ${served.length}, document ${s.games.length}`);
+      s.games.forEach((g, k) => {
+        rows += 1;
+        const row = served[k] ?? '';
+        const wantRow = gameRow(doc, s, g);
+        const gotRow = textOf(row);
+        const home = g.homeSide ? slotName(doc, s[g.homeSide]) : null;
+        const parkOk = home && home.club && home.club.park && home.club.venuePath ? row.includes(`href="${home.club.venuePath}"`) || !row.includes('<a ') : !row.includes('<a ');
+        if (gotRow === wantRow && parkOk) rowsRight += 1;
+        else wrong.push(`row ${id} game ${g.gameNumber}: served "${gotRow}" expected "${wantRow}"${parkOk ? '' : ' (park link)'}`);
+      });
+    });
+    same(`${where}: game rows that say exactly what the document says`, rowsRight, rows);
+    check(`${where}: every card, panel and club link agrees with the document`, wrong.filter((w) => !w.startsWith('row ')).length === 0, `${doc.series.length} series`);
+    for (const w of wrong) console.log(`      ${w}`);
+
+    // Scores: only on finished games, and every one of them accounted for.
+    const finals = doc.series.flatMap((s) => s.games.filter((g) => g.status === 'final' && g.homeScore !== null && g.awayScore !== null));
+    same(`${where}: "Final:" lines against finished games in the document`, count(textOf(elements(el, 'data-series-panels=')[0] ?? panels.join(' ')), 'Final:'), finals.length);
+    const live = doc.series.flatMap((s) => s.games.filter((g) => g.status === 'live'));
+    same(`${where}: in-progress badges present exactly when a game is in progress`, count(el, 'data-game-state="live"') > 0, live.length > 0);
+    // A game in progress shows no score: its row is compared whole, above.
+    same(`${where}: rows of games in progress that show a score`, elements(el, 'data-game=').filter((r) => r.includes('data-game-state="live"') && /\d+, [A-Z]/.test(textOf(r))).length, 0);
+
+    // Home games: every row is a game the document lists as scheduled.
+    const list = elements(el, 'data-home-game=');
+    const known = new Set<string>();
+    for (const s of doc.series) {
+      if (s.status === 'final') continue;
+      for (const g of s.games) {
+        if (g.status !== 'scheduled' || !g.homeSide) continue;
+        const home = slotName(doc, s[g.homeSide]);
+        const away = slotName(doc, s[g.homeSide === 'higher' ? 'lower' : 'higher']);
+        if (!home.club) continue;
+        known.add([`${away.name} at ${home.name}`, `${s.roundLabel} · Game ${g.gameNumber}${g.ifNecessary ? ' · If necessary' : ''}`, whenOf(g), home.club.park ?? ''].join(' ').trim());
+      }
+    }
+    const strays = list.map((r) => textOf(r).replace(/ Get Tickets.*$/, '').trim()).filter((t) => !known.has(t));
+    check(`${where}: every home game row is a scheduled game in the document`, strays.length === 0, `${list.length} rows${strays.length ? `, not in the document: ${strays.join(' || ')}` : ''}`);
+    const today = etYmd(new Date());
+    const inThree = list.filter((r) => element(el, 'data-home-games-list="primary"')?.includes(r));
+    check(`${where}: the short list holds eight rows at most`, inThree.length <= 8, `${inThree.length} rows, today is ${today} in Eastern`);
+    same(`${where}: ticket links per home game row, at most one`, list.every((r) => count(r, 'rel="noopener noreferrer sponsored"') <= 1), true);
+  }
+
+  // ---- The hub ----
+  {
+    const path = '/playoffs';
+    const where = path;
+    const got = await fresh(path, null);
+    save(path, got.html);
+    same(`${where}: status`, got.status, 200);
+    if (got.status === 200) {
+      const playing = LEAGUES.filter((l) => docs.get(l) && currentRound(docs.get(l) as RawDoc));
+      const rounds = playing.map((l) => `${l}: ${(currentRound(docs.get(l) as RawDoc) as RawSeries).roundLabel}`).join('. ');
+      const names = playing.length === 2 ? `${playing[0]} and ${playing[1]}` : playing.join('');
+      const want = {
+        title: `${SEASON} Playoffs: MLB and WNBA Brackets`,
+        description: `The ${SEASON} postseason brackets for ${names}, series by series, with Eastern game times and the next home games. ${rounds}.`,
+        canonical: `${SITE}${path}`,
+      };
+      head(where, got.html, want);
+      const stamps = LEAGUES.map((l) => instantOf(docs.get(l)?.lastChangedAt)).filter((d): d is Date => d !== null).map((d) => d.toISOString()).sort();
+      jsonLd(where, got.html, { ...want, crumbs: [`Home ${SITE}`, `Playoffs ${SITE}/playoffs`], modified: stamps.length ? stamps[stamps.length - 1] : null });
+      const el = article(where, got.html, 'hub');
+      leaks(where, got.html);
+      for (const league of LEAGUES) {
+        const doc = docs.get(league);
+        if (!doc) continue;
+        const card = element(el, `data-league-card="${league}"`) ?? '';
+        const text = textOf(card);
+        const open = currentRound(doc);
+        const changed = instantOf(doc.lastChangedAt);
+        const pageIds = ids(doc);
+        const lines: string[] = [];
+        doc.series.forEach((s, i) => {
+          if (!open || s.round !== open.round) return;
+          const a = slotName(doc, s.higher);
+          const b = slotName(doc, s.lower);
+          const ok = text.includes(`${a.name} vs ${b.name}`) && (scoreLine(doc, s) ? text.includes(scoreLine(doc, s) as string) : true) && card.includes(`href="/playoffs/${league.toLowerCase()}#${pageIds[i]}"`);
+          if (!ok) lines.push(`${pageIds[i]} ${a.name} vs ${b.name}`);
+        });
+        check(`${where}: ${league} card names the round and each series in it, with its standing and its link`, !!open && text.startsWith(`${league} ${open.roundLabel}`) && lines.length === 0, lines.join(' | ') || (open ? open.roundLabel : ''));
+        if (changed) check(`${where}: ${league} card change stamp`, text.includes(`Bracket updated ${etStamp(changed)}`), etStamp(changed));
+        check(`${where}: ${league} card links to the league page`, card.includes(`href="/playoffs/${league.toLowerCase()}"`));
+      }
+      const rows = elements(el, 'data-home-game=');
+      check(`${where}: home game rows carry one ticket link at most, and a league each`, rows.every((r) => count(r, 'rel="noopener noreferrer sponsored"') <= 1 && /\b(MLB|WNBA)\b/.test(textOf(r))), `${rows.length} rows`);
+      // The hub names a game in progress and gives no score for any game.
+      const inProgress = LEAGUES.flatMap((l) => (docs.get(l)?.series ?? []).filter((s) => s.status !== 'final' && s.games.some((g) => g.status === 'live')));
+      same(`${where}: in-progress badges against series with a game in progress`, count(el, 'data-game-state="live"'), inProgress.length);
+      const scores = /Final:|\b[A-Z]{2,3} \d+, [A-Z]{2,3} \d+\b/.exec(textOf(el));
+      check(`${where}: no game score on the hub`, !scores, scores ? scores[0] : '');
+    }
+  }
+
+  // ---- Routes that must not exist, and the sitemap ----
+  same('/playoffs/nba: status', (await get('/playoffs/nba')).status, 404);
+  same('/playoffs/nhl: status', (await get('/playoffs/nhl')).status, 404);
+  if (process.env.CASE === '1') same('/playoffs/MLB: status (path case)', (await get('/playoffs/MLB')).status, 404);
+  const map = await get('/sitemap.xml');
+  same('/sitemap.xml: status', map.status, 200);
+  for (const p of ['/playoffs', '/playoffs/mlb', '/playoffs/wnba']) same(`/sitemap.xml: ${p} listed once, on the www host`, count(map.body, `<loc>${SITE}${p}</loc>`), 1);
+  same('/sitemap.xml: playoffs entries in all', (map.body.match(/<loc>[^<]*\/playoffs[^<]*<\/loc>/g) ?? []).length, 3);
+  const llms = await get('/llms.txt');
+  check('/llms.txt: served, and it makes no claim about /playoffs', llms.status === 200 && !/playoffs/i.test(llms.body), `status ${llms.status}`);
+
+  const failed = results.filter((r) => !r.ok);
+  console.log(`\n${results.length - failed.length} of ${results.length} checks pass`);
+  for (const f of failed) console.log(`FAILED  ${f.name}  [${f.detail}]`);
+  process.exit(failed.length ? 1 : 0);
+}
+
+main().catch((e) => {
+  console.error(e instanceof Error ? e.message : e);
+  process.exit(2);
+});

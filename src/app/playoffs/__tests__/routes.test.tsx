@@ -5,7 +5,7 @@ import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { FIXTURE, capturedTeams, fakeFirestore, loadDoc, parkNames, venuePages } from '../../../lib/postseason/__tests__/helpers';
+import { FIXTURE, capturedTeams, fakeFirestore, loadDoc, parkNames, seriesKeyIn, venuePages } from '../../../lib/postseason/__tests__/helpers';
 
 type Fake = ReturnType<typeof fakeFirestore>;
 const current: { db: Fake } = { db: fakeFirestore({}) };
@@ -151,7 +151,7 @@ test('ROUTE /playoffs/[league]: every internal link is there in the server HTML,
     assert.ok(html.includes(`href="${href}"`), href);
   }
   // No link on the page points at a series by the pipeline's key.
-  assert.ok(![...html.matchAll(/href="([^"]*)"/g)].some((m) => /[A-Z]+-[A-Z]+-[A-Z0-9]+|#[A-Z]/.test(m[1].split('?')[0])));
+  assert.ok(![...html.matchAll(/href="([^"]*)"/g)].some((m) => seriesKeyIn(m[1].split('?')[0]) !== null || /#[A-Z]/.test(m[1])));
 });
 
 test('ROUTE /playoffs: both leagues, the next home games, hub-tagged ticket links', async () => {
@@ -234,6 +234,95 @@ test('the pages take no font of their own and no palette of their own', () => {
   for (const src of [HUB_SRC, LEAGUE_SRC]) {
     assert.ok(!/next\/font/.test(src), 'no new font module');
     assert.ok(!/#[0-9a-fA-F]{6}\b/.test(src), 'no hex color in a page');
+  }
+});
+
+// ---- The head says what the body says ----
+
+type Meta = { title?: unknown; description?: unknown; alternates?: { canonical?: unknown }; openGraph?: { url?: unknown; images?: { url: string; alt: string }[] }; robots?: unknown };
+
+test('HEAD /playoffs/[league]: title, description, canonical and a complete openGraph, from the body\'s own read', async () => {
+  const { generateMetadata, default: Page } = await league();
+  current.db = fakeFirestore(BOTH());
+  const meta = (await generateMetadata(params('mlb'))) as Meta;
+  assert.equal(meta.title, '2026 MLB Playoffs Bracket, Schedule and Scores');
+  assert.equal(meta.description, 'The 2026 MLB postseason bracket. Current round: Wild Card Series. Every series, seed and result, with game times in Eastern and the home games coming up.');
+  assert.equal(meta.alternates?.canonical, 'https://www.getpromonight.com/playoffs/mlb');
+  assert.equal(meta.openGraph?.url, 'https://www.getpromonight.com/playoffs/mlb', 'og:url is the canonical, not the homepage');
+  assert.equal(meta.openGraph?.images?.length, 1);
+  assert.equal(meta.openGraph?.images?.[0].url, '/og-image.png');
+  const { OG_IMAGE_ALT } = await import('../../../lib/og');
+  assert.equal(meta.openGraph?.images?.[0].alt, OG_IMAGE_ALT);
+  assert.ok(OG_IMAGE_ALT.startsWith('PromoNight: '));
+  // The body agrees with it.
+  const html = renderToStaticMarkup(await Page(params('mlb')));
+  assert.ok(html.includes('Current round'));
+  assert.ok(html.includes('Wild Card Series'));
+});
+
+test('HEAD /playoffs/[league]: with no bracket the description claims none, as the body does', async () => {
+  const { generateMetadata, default: Page } = await league();
+  for (const docs of [{}, { 'postseasonBrackets/MLB_2026': new Error('UNAVAILABLE') }]) {
+    current.db = fakeFirestore(docs);
+    const meta = (await quiet(() => generateMetadata(params('mlb')))) as Meta;
+    assert.equal(meta.description, 'The 2026 MLB postseason bracket.');
+    assert.equal(meta.title, '2026 MLB Playoffs Bracket, Schedule and Scores');
+    assert.equal(meta.alternates?.canonical, 'https://www.getpromonight.com/playoffs/mlb');
+    const html = renderToStaticMarkup(await quiet(() => Page(params('mlb'))));
+    assert.ok(html.includes('data-bracket-state="unavailable"'));
+  }
+  assert.deepEqual(await generateMetadata(params('nba')), {}, 'a league outside the route table gets no head of its own; the page is a 404');
+});
+
+test('HEAD /playoffs: the three states of the hub', async () => {
+  const { generateMetadata } = await hub();
+  current.db = fakeFirestore(BOTH());
+  const playing = (await generateMetadata()) as Meta;
+  assert.equal(playing.title, '2026 Playoffs: MLB and WNBA Brackets');
+  assert.equal(playing.description, 'The 2026 postseason brackets for MLB and WNBA, series by series, with Eastern game times and the next home games. MLB: Wild Card Series. WNBA: First Round.');
+  assert.equal(playing.alternates?.canonical, 'https://www.getpromonight.com/playoffs');
+  assert.equal(playing.openGraph?.url, 'https://www.getpromonight.com/playoffs');
+  assert.equal(playing.openGraph?.images?.[0].url, '/og-image.png');
+
+  current.db = fakeFirestore({});
+  assert.equal(((await generateMetadata()) as Meta).description, "No postseason is underway. The MLB and WNBA brackets appear here once each league's postseason begins.");
+
+  current.db = fakeFirestore({ 'postseasonBrackets/MLB_2026': new Error('UNAVAILABLE') });
+  const unread = (await quiet(() => generateMetadata())) as Meta;
+  assert.equal(unread.description, 'The 2026 postseason brackets for MLB and WNBA.');
+});
+
+test('JSON-LD in the page: a WebPage and a BreadcrumbList on each route, and no Event', async () => {
+  const { default: League } = await league();
+  const { default: Hub } = await hub();
+  current.db = fakeFirestore(BOTH());
+  for (const [name, html, crumbs] of [
+    ['mlb', renderToStaticMarkup(await League(params('mlb'))), 3],
+    ['wnba', renderToStaticMarkup(await League(params('wnba'))), 3],
+    ['hub', renderToStaticMarkup(await Hub()), 2],
+  ] as const) {
+    const blocks = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map((m) => JSON.parse(m[1]) as Record<string, unknown>);
+    assert.deepEqual(blocks.map((b) => b['@type']), ['WebPage', 'BreadcrumbList'], name);
+    assert.equal((blocks[1].itemListElement as unknown[]).length, crumbs, name);
+    assert.equal(typeof blocks[0].dateModified, 'string', name);
+    assert.ok(!/"@type":"(Sports)?Event"/.test(html), `${name}: Event markup`);
+    assert.ok(!/startDate|"location"|"offers"/.test(html), name);
+    assert.equal(seriesKeyIn(blocks.map((b) => JSON.stringify(b)).join('')), null, name);
+  }
+});
+
+test('ARTICLE through the real pages: one article, which is the page-content wrapper, on each route', async () => {
+  const { default: League } = await league();
+  const { default: Hub } = await hub();
+  current.db = fakeFirestore(BOTH());
+  for (const [name, html] of [['mlb', renderToStaticMarkup(await League(params('mlb')))], ['wnba', renderToStaticMarkup(await League(params('wnba')))], ['hub', renderToStaticMarkup(await Hub())]] as const) {
+    assert.equal(count(html, '<article'), 1, name);
+    assert.match(html, /<article class="page-content" data-ad-region="content" data-playoffs-article="(league|hub)">/, name);
+    assert.equal(count(html, 'class="page-content"'), 1, name);
+    assert.equal(count(html, '<aside'), 0, name);
+    // With no ad network set, a slot renders nothing: no empty box is a
+    // child of the article.
+    assert.equal(count(html, 'data-ad-slot'), 0, name);
   }
 });
 

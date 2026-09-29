@@ -116,6 +116,35 @@ export function parks(): Map<string, ParkInfo> {
   return out;
 }
 
+// ---- What a series key looks like ----
+//
+// The scans for a leaked series key match the forms the bracket documents
+// actually use, and nothing looser. A loose pattern (letters, hyphen,
+// letters, hyphen, letters) also matches "H-E-B", a grocery chain that
+// sponsors Astros promotions, and a scan that cries wolf on a sponsor gets
+// switched off.
+//
+//   MLB   AL-WC-A  NL-DS-B  AL-CS  NL-CS  WS
+//   WNBA  R1-1v8   SF-A     F
+//
+// "WS" and "F" are too short to look for in free text. They are checked by
+// name, in the places a key would sit: an attribute value, a link target.
+export const SERIES_KEY_SHAPES: readonly RegExp[] = [
+  /\b(?:AL|NL)-(?:WC|DS)-[A-Z]\b/,
+  /\b(?:AL|NL)-CS\b/,
+  /\bR\d-\dv\d\b/,
+  /\bSF-[A-Z]\b/,
+];
+
+/** The first thing in `text` that has the form of a series key, or null. */
+export function seriesKeyIn(text: string): string | null {
+  for (const re of SERIES_KEY_SHAPES) {
+    const m = re.exec(text);
+    if (m) return m[0];
+  }
+  return null;
+}
+
 // ---- A Firestore that serves fixtures ----
 
 export interface FakeRead {
