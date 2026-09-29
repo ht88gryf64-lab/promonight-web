@@ -88,11 +88,15 @@ function instantOf(v: unknown): string | null {
 //   2. Else it names two candidate clubs: a placeholder that carries them.
 //   3. Else: a placeholder showing the stored label, verbatim.
 //
-// THE FEEDER KEY NEVER LEAVES THIS FILE. It is read from `feederSeriesKey`,
-// or from a stored label of the exact form the pipeline writes once a feeder
-// is decided, "Winner of AL-WC-B". Either way it is used for step 1 and
-// dropped. A stored label that holds a series key is never shown as written,
-// because a key is not copy: see safeLabel.
+// THE FEEDER KEY NEVER LEAVES THIS FILE. It is read from the
+// `feederSeriesKey` FIELD and from nowhere else, used for step 1, and
+// dropped. Label text is never read for a feeder: a label is copy, and the
+// web does not parse copy for facts.
+//
+// A stored label that holds a series key is not copy either. The pipeline
+// writes one such label itself, "Winner of AL-WC-B", once a feeder is
+// decided. It is never shown as written, and it resolves nothing: the slot
+// reads "To be decided" until the field, or the feed, names the club.
 
 interface StoredSlot {
   /** What the game rows call this slot: the slug, or the stored label. */
@@ -134,38 +138,34 @@ function parseSlot(v: unknown): StoredSlot | null {
 // SF-A. A token is also a key when it is, exactly, a key of this document,
 // which is what catches the short ones (WS, F).
 const KEY_SHAPES = [/^[A-Z]+-[A-Z]+-[A-Z0-9]+$/, /^[A-Z]+-[A-Z]{2}$/, /^R\d+-\d+v\d+$/, /^[A-Z]{1,3}-[A-Z0-9]$/];
-const PIPELINE_FEEDER_LABEL = /^Winner of (\S+)$/;
+/** What a slot shows when its stored label cannot be shown. */
+export const UNDECIDED_LABEL = 'To be decided';
 
 function holdsSeriesKey(label: string, keys: ReadonlySet<string>): boolean {
   return label.split(/[^A-Za-z0-9-]+/).some((t) => t.length > 0 && (keys.has(t) || KEY_SHAPES.some((re) => re.test(t))));
 }
 
-/** The label to show. The stored one, verbatim, unless it holds a series
- *  key. Then it is replaced by what the document says about the feeder, in
- *  the document's own words ("AL Wild Card Series winner"), or, when the
- *  document does not know the feeder, by "To be decided". */
-function safeLabel(label: string, keys: ReadonlySet<string>, feeder: BracketSeries | null): string {
-  if (!holdsSeriesKey(label, keys)) return label;
-  if (feeder) return `${feeder.conference ? `${feeder.conference} ` : ''}${feeder.roundLabel} winner`;
-  return 'To be decided';
+/** The label to show: the stored one, verbatim, unless it holds a series
+ *  key. Then "To be decided", whatever the key names and whatever state that
+ *  series is in. */
+function safeLabel(label: string, keys: ReadonlySet<string>): string {
+  return holdsSeriesKey(label, keys) ? UNDECIDED_LABEL : label;
 }
 
 function resolveSlot(slot: StoredSlot, keys: ReadonlySet<string>, mapped: ReadonlyMap<string, BracketSeries>): BracketSlot {
   if (slot.slug !== null) return { kind: 'club', slug: slot.slug, seed: slot.seed };
   const label = slot.label as string;
 
-  // The feeder: the stored key, or the key in the pipeline's own label.
-  const named = slot.feeder ?? PIPELINE_FEEDER_LABEL.exec(label)?.[1] ?? null;
-  // Only a series ALREADY mapped counts, which is every series that comes
-  // before this one in the document. A slot cannot be fed by its own series
-  // or by a later round.
-  const feeder = named !== null ? mapped.get(named) ?? null : null;
+  // The feeder, from the field alone. Only a series ALREADY mapped counts,
+  // which is every series that comes before this one in the document. A slot
+  // cannot be fed by its own series or by a later round.
+  const feeder = slot.feeder !== null ? mapped.get(slot.feeder) ?? null : null;
 
   if (feeder && feeder.status === 'final' && feeder.winnerSide) {
     const winner = feeder[feeder.winnerSide];
     if (winner.kind === 'club') return { kind: 'club', slug: winner.slug, seed: winner.seed };
   }
-  return { kind: 'placeholder', label: safeLabel(label, keys, feeder), seed: slot.seed, candidates: slot.candidates };
+  return { kind: 'placeholder', label: safeLabel(label, keys), seed: slot.seed, candidates: slot.candidates };
 }
 
 /** Does a game row name this slot? A row names a slot by what was stored

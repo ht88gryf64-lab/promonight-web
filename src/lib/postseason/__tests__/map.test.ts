@@ -323,58 +323,95 @@ test('FEEDER KEY: never emitted, whatever the slot resolves to', () => {
 // The pipeline writes this label itself, once a feeder is decided and before
 // the feed names the winner: `Winner of ${feederKey}` (resolveStalePairs). It
 // is the one stored label that holds a series key.
-test('STORED KEY: "Winner of AL-DS-A", its feeder final, resolves to the winner', () => {
-  const d = loadDoc(FIXTURE.mlbMixed);
-  const cs = seriesOf(d, 'AL-CS');
-  cs.higher = { placeholder: 'Winner of AL-DS-A', seed: null };
-  for (const g of cs.games) {
-    if (g.home === 'AL Higher Seed') g.home = 'Winner of AL-DS-A';
-    if (g.away === 'AL Higher Seed') g.away = 'Winner of AL-DS-A';
+//
+// RULING, 2026-09-29: label text resolves nothing. A label that holds a key
+// renders "To be decided". Only the feederSeriesKey FIELD resolves a winner.
+function withStoredLabel(d: Doc, key: string, which: 'higher' | 'lower', label: string, extra: Doc = {}) {
+  const s = seriesOf(d, key);
+  const was = (s[which].placeholder ?? s[which].slug) as string;
+  s[which] = { placeholder: label, seed: null, ...extra };
+  for (const g of s.games) {
+    if (g.home === was) g.home = label;
+    if (g.away === was) g.away = label;
   }
+}
+
+test('LABEL TEXT RESOLVES NOTHING: "Winner of AL-DS-A", its feeder final, reads "To be decided"', () => {
+  const d = loadDoc(FIXTURE.mlbMixed);
+  assert.deepEqual([seriesOf(d, 'AL-DS-A').status, seriesOf(d, 'AL-DS-A').winner], ['final', 'toronto-blue-jays']);
+  withStoredLabel(d, 'AL-CS', 'higher', 'Winner of AL-DS-A');
   const b = map(d) as Bracket;
-  assert.deepEqual(slotOf(b, 'AL-CS', 'higher'), { kind: 'club', slug: 'toronto-blue-jays', seed: 1 });
-  // And it hosts what the stored label hosted.
-  const games = b.series.find((s) => s.seriesKey === 'AL-CS')!.games;
-  assert.deepEqual(games.map((g) => g.homeSide), ['higher', 'higher', 'lower', 'lower', 'lower', 'higher', 'higher']);
-  assert.ok(!JSON.stringify(b.series.find((s) => s.seriesKey === 'AL-CS')).includes('AL-DS-A'));
+  assert.deepEqual(slotOf(b, 'AL-CS', 'higher'), { kind: 'placeholder', label: 'To be decided', seed: null, candidates: null });
+  // No club was read out of the label, anywhere in the series.
+  const cs = JSON.stringify(b.series.find((s) => s.seriesKey === 'AL-CS'));
+  assert.ok(!cs.includes('toronto-blue-jays'));
+  assert.ok(!cs.includes('AL-DS-A'));
+  // The slot still hosts what it hosted: the rows name the stored label.
+  assert.deepEqual(b.series.find((s) => s.seriesKey === 'AL-CS')!.games.map((g) => g.homeSide), ['higher', 'higher', 'lower', 'lower', 'lower', 'higher', 'higher']);
 });
 
-test('STORED KEY: a label that holds a key is never the text, resolved or not', () => {
-  // [series, side, stored label, what is shown]
-  const cases: [string, 'higher' | 'lower', string, string][] = [
-    // Its feeder is in the document, before it, and still being played: the
-    // document's own words for that feeder.
-    ['AL-DS-A', 'lower', 'Winner of AL-WC-B', 'AL Wild Card Series winner'],
-    ['WS', 'higher', 'Winner of AL-CS', 'AL Championship Series winner'],
-    ['WS', 'lower', 'Winner of NL-CS', 'NL Championship Series winner'],
-    // Not the pipeline's form, so it names no feeder.
-    ['AL-DS-A', 'lower', 'AL-WC-B winner', 'To be decided'],
-    ['AL-DS-A', 'lower', 'Winner of AL-WC-B or AL-WC-A', 'To be decided'],
+test('THE FIELD RESOLVES: the same slot, with feederSeriesKey, is the feeder\'s winner', () => {
+  // The same stored label, now beside the field. The field decides; the
+  // label was never consulted.
+  const d = loadDoc(FIXTURE.mlbMixed);
+  withStoredLabel(d, 'AL-CS', 'higher', 'Winner of AL-DS-A', { feederSeriesKey: 'AL-DS-A' });
+  assert.deepEqual(slotOf(map(d) as Bracket, 'AL-CS', 'higher'), { kind: 'club', slug: 'toronto-blue-jays', seed: 1 });
+  // And with a label that disagrees with the field, the field still decides.
+  const other = loadDoc(FIXTURE.mlbMixed);
+  withStoredLabel(other, 'AL-CS', 'higher', 'Winner of AL-WC-A', { feederSeriesKey: 'AL-DS-A' });
+  assert.deepEqual(slotOf(map(other) as Bracket, 'AL-CS', 'higher'), { kind: 'club', slug: 'toronto-blue-jays', seed: 1 });
+});
+
+test('THE FIELD, feeder not decided: candidates if there are two, else "To be decided" for a key-shaped label', () => {
+  const d = loadDoc(FIXTURE.mlbLive);
+  withStoredLabel(d, 'AL-DS-A', 'lower', 'Winner of AL-WC-B', { feederSeriesKey: 'AL-WC-B', candidates: ['new-york-yankees', 'boston-red-sox'] });
+  assert.deepEqual(slotOf(map(d) as Bracket, 'AL-DS-A', 'lower'), { kind: 'placeholder', label: 'To be decided', seed: null, candidates: ['new-york-yankees', 'boston-red-sox'] });
+  const bare = loadDoc(FIXTURE.mlbLive);
+  withStoredLabel(bare, 'AL-DS-A', 'lower', 'Winner of AL-WC-B', { feederSeriesKey: 'AL-WC-B' });
+  assert.deepEqual(slotOf(map(bare) as Bracket, 'AL-DS-A', 'lower'), { kind: 'placeholder', label: 'To be decided', seed: null, candidates: null });
+});
+
+test('STORED KEY: every label that holds a key reads "To be decided", whatever it names', () => {
+  // [series, side, stored label]
+  const cases: [string, 'higher' | 'lower', string][] = [
+    ['AL-DS-A', 'lower', 'Winner of AL-WC-B'],
+    ['WS', 'higher', 'Winner of AL-CS'],
+    ['WS', 'lower', 'Winner of NL-CS'],
+    ['AL-DS-A', 'lower', 'AL-WC-B winner'],
+    ['AL-DS-A', 'lower', 'Winner of AL-WC-B or AL-WC-A'],
     // Key-shaped, and in no document.
-    ['AL-DS-A', 'lower', 'Winner of AL-WC-Z', 'To be decided'],
-    ['AL-DS-A', 'lower', 'Winner of R1-1v8', 'To be decided'],
-    ['AL-DS-A', 'lower', 'Winner of SF-A', 'To be decided'],
-    // A series later in the document feeds nothing before it. The key is
-    // still a key, so it is still not shown.
-    ['AL-DS-A', 'lower', 'Winner of NL-CS', 'To be decided'],
+    ['AL-DS-A', 'lower', 'Winner of AL-WC-Z'],
+    ['AL-DS-A', 'lower', 'Winner of R1-1v8'],
+    ['AL-DS-A', 'lower', 'Winner of SF-A'],
+    // A series later in the document.
+    ['AL-DS-A', 'lower', 'Winner of NL-CS'],
     // A short key is a key when it is exactly a key of this document.
-    ['AL-DS-A', 'lower', 'Winner of WS', 'To be decided'],
-    ['AL-DS-A', 'lower', 'WS berth', 'To be decided'],
+    ['AL-DS-A', 'lower', 'Winner of WS'],
+    ['AL-DS-A', 'lower', 'WS berth'],
   ];
-  for (const [key, which, stored, shown] of cases) {
-    const d = loadDoc(FIXTURE.mlbLive);
-    seriesOf(d, key)[which] = { placeholder: stored, seed: null };
-    const b = map(d) as Bracket;
-    assert.ok(b, stored);
-    assert.deepEqual(slotOf(b, key, which), { kind: 'placeholder', label: shown, seed: null, candidates: null }, `${key} ${which}: ${stored}`);
+  for (const fixture of [FIXTURE.mlbLive, FIXTURE.mlbMixed, FIXTURE.mlbFinal]) {
+    for (const [key, which, stored] of cases) {
+      const d = loadDoc(fixture);
+      withStoredLabel(d, key, which, stored);
+      // In the final document the series has a winner, and a slot that is no
+      // longer a club cannot be that winner: the mapper refuses the document,
+      // which is its own correct answer. Only slots in series still open
+      // are read here.
+      if (seriesOf(d, key).status === 'final') continue;
+      const b = map(d) as Bracket;
+      assert.ok(b, `${fixture} ${stored}`);
+      assert.deepEqual(slotOf(b, key, which), { kind: 'placeholder', label: 'To be decided', seed: null, candidates: null }, `${fixture} ${key} ${which}: ${stored}`);
+    }
   }
-  // The WNBA's own short key, in a WNBA document.
+  // The WNBA's own forms, in a WNBA document.
   const w = loadDoc(FIXTURE.wnbaLive);
   seriesOf(w, 'F').higher = { placeholder: 'Winner of SF-A', seed: null };
   seriesOf(w, 'F').lower = { placeholder: 'Winner of F', seed: null };
+  seriesOf(w, 'SF-A').higher = { placeholder: 'Winner of R1-1v8', seed: null };
   const wb = map(w) as Bracket;
-  assert.deepEqual(slotOf(wb, 'F', 'higher'), { kind: 'placeholder', label: 'Semifinals winner', seed: null, candidates: null });
-  assert.deepEqual(slotOf(wb, 'F', 'lower'), { kind: 'placeholder', label: 'To be decided', seed: null, candidates: null });
+  for (const [key, which] of [['F', 'higher'], ['F', 'lower'], ['SF-A', 'higher']] as const) {
+    assert.deepEqual(slotOf(wb, key, which), { kind: 'placeholder', label: 'To be decided', seed: null, candidates: null }, `${key} ${which}`);
+  }
 });
 
 test('STORED KEY: a label with no key in it is left exactly as stored', () => {

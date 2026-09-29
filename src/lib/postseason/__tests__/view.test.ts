@@ -289,22 +289,43 @@ test('RESOLUTION 3: with neither, the stored label', () => {
   assert.equal(series(view(FIXTURE.mlbMixed, new Date('2025-10-09T03:08:00Z')), 'AL-CS').lower.label, 'AL Lower Seed');
 });
 
-test('STORED KEY: "Winner of AL-WC-B" is never what the reader sees', () => {
-  // Feeder still being played: the document's words for it.
+test('STORED KEY: "Winner of AL-WC-B" reads "To be decided", its feeder decided or not', () => {
+  // Feeder still being played.
   const live = view(FIXTURE.mlbLive, CAPTURED_AT, (d) => {
     raw(d, 'AL-DS-A').lower = { placeholder: 'Winner of AL-WC-B', seed: null };
     for (const g of raw(d, 'AL-DS-A').games) if (g.away === 'NYY/BOS') g.away = 'Winner of AL-WC-B';
   });
-  assert.equal(series(live, 'AL-DS-A').lower.label, 'AL Wild Card Series winner');
+  assert.equal(series(live, 'AL-DS-A').lower.label, 'To be decided');
+  assert.equal(series(live, 'AL-DS-A').lower.kind, 'placeholder');
+  assert.equal(series(live, 'AL-DS-A').games[0].matchup, 'To be decided at Rays');
   assert.ok(!JSON.stringify(live).includes('AL-WC-B'));
-  // Feeder decided, which is when the pipeline writes this label: the winner.
+  // Feeder decided, which is when the pipeline writes this label. The label
+  // is still not read for a club.
   const decided = view(FIXTURE.mlbMixed, new Date('2025-10-09T03:08:00Z'), (d) => {
     raw(d, 'AL-CS').higher = { placeholder: 'Winner of AL-DS-A', seed: null };
     for (const g of raw(d, 'AL-CS').games) if (g.home === 'AL Higher Seed') g.home = 'Winner of AL-DS-A';
   });
-  assert.equal(series(decided, 'AL-CS').higher.label, 'Blue Jays');
-  assert.equal(series(decided, 'AL-CS').higher.kind, 'club');
+  const cs = series(decided, 'AL-CS');
+  assert.equal(cs.higher.kind, 'placeholder');
+  assert.equal(cs.higher.label, 'To be decided');
+  assert.equal(cs.higher.teamHref, null);
+  assert.equal(cs.games[0].hostName, null, 'a slot with no club hosts at no park');
+  assert.ok(!JSON.stringify(cs).includes('Blue Jays'));
   assert.ok(!JSON.stringify(decided).includes('AL-DS-A'));
+});
+
+test('THE FIELD RESOLVES: the same label beside feederSeriesKey shows the winner', () => {
+  const v = view(FIXTURE.mlbMixed, new Date('2025-10-09T03:08:00Z'), (d) => {
+    raw(d, 'AL-CS').higher = { placeholder: 'Winner of AL-DS-A', seed: null, feederSeriesKey: 'AL-DS-A' };
+    for (const g of raw(d, 'AL-CS').games) if (g.home === 'AL Higher Seed') g.home = 'Winner of AL-DS-A';
+  });
+  const cs = series(v, 'AL-CS');
+  assert.equal(cs.higher.kind, 'club');
+  assert.equal(cs.higher.label, 'Blue Jays');
+  assert.equal(cs.higher.seed, 1);
+  assert.equal(cs.games[0].hostName, 'Blue Jays');
+  assert.equal(cs.games[0].park, 'Rogers Centre');
+  assert.ok(!JSON.stringify(v).includes('AL-DS-A'));
 });
 
 // OVERLAY. The ruling of 2026-09-29: a feeder key with no candidates renders

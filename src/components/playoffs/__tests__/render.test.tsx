@@ -730,7 +730,7 @@ for (const [name, fixture, make, now] of EVERY_VIEW) {
   });
 }
 
-test('NO SERIES KEY: a stored label "Winner of AL-WC-B" puts no key in the HTML, feeder decided or not', () => {
+test('STORED LABEL "Winner of AL-WC-B": renders "To be decided", and no key, feeder decided or not', () => {
   // Feeder still being played.
   const live = view(FIXTURE.mlbLive, CAPTURED_AT, (d) => {
     raw(d, 'AL-DS-A').lower = { placeholder: 'Winner of AL-WC-B', seed: null };
@@ -739,17 +739,36 @@ test('NO SERIES KEY: a stored label "Winner of AL-WC-B" puts no key in the HTML,
   const page = leagueHtml(live);
   assertNoSeriesKey(page, keysOf(FIXTURE.mlbLive), 'league page, feeder live');
   assertNoSeriesKey(hubHtml([ok(live)]), keysOf(FIXTURE.mlbLive), 'hub, feeder live');
-  assert.match(card(page, 'division_series-1'), /<span class="min-w-0">AL Wild Card Series winner<\/span>/);
-  assert.ok(textOf(panel(page, 'division_series-1')).includes('Rays vs AL Wild Card Series winner'));
+  assert.match(card(page, 'division_series-1'), /<span data-slot="placeholder" class="[^"]*border-dashed[^"]*"><span class="min-w-0">To be decided<\/span><\/span>/);
+  assert.ok(textOf(panel(page, 'division_series-1')).includes('Rays vs To be decided'));
 
-  // Feeder decided, which is when the pipeline writes this label.
+  // Feeder decided, which is when the pipeline writes this label. It is
+  // still a dashed slot with no club in it.
   const decided = view(FIXTURE.mlbMixed, MIXED_AT, (d) => {
     raw(d, 'AL-CS').higher = { placeholder: 'Winner of AL-DS-A', seed: null };
     for (const g of raw(d, 'AL-CS').games) if (g.home === 'AL Higher Seed') g.home = 'Winner of AL-DS-A';
   });
   const done = leagueHtml(decided, { now: MIXED_AT });
   assertNoSeriesKey(done, keysOf(FIXTURE.mlbMixed), 'league page, feeder decided');
-  assert.ok(textOf(card(done, 'championship_series-1')).includes('Seed 1 Blue Jays'));
+  const c = card(done, 'championship_series-1');
+  assert.equal(count(c, 'data-slot="placeholder"'), 2);
+  assert.equal(count(c, 'data-slot="club"'), 0);
+  assert.ok(textOf(c).includes('To be decided'));
+  assert.ok(!textOf(c).includes('Blue Jays'), 'no club was read out of the label');
+  assert.equal(count(panel(done, 'championship_series-1'), 'data-club-link="'), 0);
+});
+
+test('THE FIELD RESOLVES: the same label beside feederSeriesKey renders the winner as a club', () => {
+  const v = view(FIXTURE.mlbMixed, MIXED_AT, (d) => {
+    raw(d, 'AL-CS').higher = { placeholder: 'Winner of AL-DS-A', seed: null, feederSeriesKey: 'AL-DS-A' };
+    for (const g of raw(d, 'AL-CS').games) if (g.home === 'AL Higher Seed') g.home = 'Winner of AL-DS-A';
+  });
+  const html = leagueHtml(v, { now: MIXED_AT });
+  assertNoSeriesKey(html, keysOf(FIXTURE.mlbMixed), 'league page');
+  const c = card(html, 'championship_series-1');
+  assert.equal(count(c, 'data-slot="club"'), 1);
+  assert.ok(textOf(c).includes('Seed 1 Blue Jays'));
+  assert.match(panel(html, 'championship_series-1'), /href="\/mlb\/toronto-blue-jays"/);
 });
 
 test('NO SERIES KEY: a feeder key on a slot puts no key in the HTML, in any of the three outcomes', () => {
