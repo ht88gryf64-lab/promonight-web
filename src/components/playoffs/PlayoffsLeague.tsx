@@ -95,7 +95,7 @@ export function PlayoffsLeague({
       )}
       {view?.updatedLabel && (
         <p data-bracket-updated className="mt-2 text-[12.5px] text-rd-ink-faint">
-          Bracket updated {view.updatedLabel}
+          {`Bracket updated ${view.updatedLabel}`}
         </p>
       )}
 

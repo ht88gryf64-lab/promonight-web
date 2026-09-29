@@ -39,6 +39,9 @@ import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure
 import { AdSlot } from '@/components/ads/AdSlot';
 import { AD_SLOTS } from '@/lib/ads/slots';
 import { isRedesignEnabled } from '@/lib/redesign';
+import { getPlayoffsInboundOrNone, postseasonLeagueFromSlug } from '@/lib/postseason/data';
+import { clubPlayoffs } from '@/lib/postseason/inbound';
+import { TeamPlayoffsModule } from '@/components/playoffs/inbound/TeamPlayoffsModule';
 import { isTitleTreatmentTeam, teamMetaTitle } from '@/lib/title-treatment';
 import { getCoverageCounts } from '@/lib/get-coverage-counts';
 import { isSeasonScopeLive, resolveClaimMode } from '@/lib/season-scope';
@@ -373,8 +376,16 @@ export default async function TeamPage({
   // from the SAME data fetched above. Gate OFF renders the live template below,
   // unchanged. The data fetching is identical on both paths.
   if (isRedesignEnabled()) {
+    // The postseason module, for a club in a current-season bracket. Asked
+    // only for the leagues that have a playoffs route; every other team page
+    // makes no read for it. Closed gate, club not in a bracket, or a failed
+    // read: null, and the template renders as it did before.
+    const club = postseasonLeagueFromSlug(team.sportSlug)
+      ? clubPlayoffs(await getPlayoffsInboundOrNone(`/${team.sportSlug}/${team.id}`), team.id)
+      : null;
     return (
       <RedesignTeamPage
+        postseason={club ? <TeamPlayoffsModule club={club} teamId={team.id} teamName={team.name} /> : null}
         team={team}
         coverage={coverage}
         venue={venue}

@@ -7,6 +7,7 @@ import { getTeamVenueHubMap } from '../venue-hub';
 import { mapBracketDoc } from './map';
 import { playoffsLinkState, type PlayoffsLinkState } from './gate';
 import { buildLeagueView, clubSlugs, hostSlugs, type ClubInfo, type LeagueView, type ParkInfo } from './view';
+import type { InboundLeague } from './inbound';
 import type { Bracket, BracketRead, PostseasonLeague } from './types';
 
 // ---- What the web decides, and only that ----
@@ -85,50 +86,7 @@ export const getLeaguePageData = cache(async (league: PostseasonLeague): Promise
   if (read.state !== 'ok') return { state: read.state, league };
 
   try {
-    const teams = await getAllTeams();
-    const wanted = new Set(clubSlugs(read.bracket));
-    const clubs = new Map<string, ClubInfo>();
-    for (const t of teams) {
-      if (!wanted.has(t.id)) continue;
-      clubs.set(t.id, {
-        id: t.id,
-        city: t.city,
-        name: t.name,
-        abbreviation: t.abbreviation,
-        sportSlug: t.sportSlug,
-        primaryColor: t.primaryColor,
-      });
-    }
-
-    // A park is the web's own venue name for the host club. A club with no
-    // venue record gets no park line; nothing is filled in for it. The name
-    // links to the club's venue page when the web has one above the indexing
-    // floor, the same test the team page applies before it links there. A
-    // failed lookup costs the link, never the name.
-    let venuePages: Awaited<ReturnType<typeof getTeamVenueHubMap>> = new Map();
-    try {
-      venuePages = await getTeamVenueHubMap();
-    } catch (err) {
-      console.error('[postseason] venue page lookup failed; park names render as plain text', err);
-    }
-    const parks = new Map<string, ParkInfo>();
-    await Promise.all(
-      hostSlugs(read.bracket).map(async (slug) => {
-        try {
-          const venue = await getVenueForTeam(slug);
-          if (!venue || typeof venue.name !== 'string' || !venue.name.trim()) return;
-          const hub = venuePages.get(slug);
-          parks.set(slug, {
-            name: venue.name,
-            page: hub && hub.indexable ? { href: `/venues/${hub.slug}`, buildingSlug: hub.slug, buildingName: hub.displayName } : null,
-          });
-        } catch (err) {
-          console.error(`[postseason] venue lookup failed for ${slug}; its park line is omitted`, err);
-        }
-      }),
-    );
-
-    const view = buildLeagueView(read.bracket, clubs, parks, new Date());
+    const view = await buildViewFor(read.bracket, new Date());
     if (!view) {
       console.error(`[postseason] ${docId(league)} names a club with no team record; rendering it as unavailable`);
       return { state: 'unavailable', league };
@@ -140,6 +98,59 @@ export const getLeaguePageData = cache(async (league: PostseasonLeague): Promise
     return { state: 'unavailable', league };
   }
 });
+
+/**
+ * A bracket as a view: the clubs it names looked up, the parks its hosts
+ * play in, and every displayed string built. Null when the bracket names a
+ * club the web has no team record for. Throws when a read it depends on
+ * fails outright.
+ */
+async function buildViewFor(bracket: Bracket, now: Date): Promise<LeagueView | null> {
+  const teams = await getAllTeams();
+  const wanted = new Set(clubSlugs(bracket));
+  const clubs = new Map<string, ClubInfo>();
+  for (const t of teams) {
+    if (!wanted.has(t.id)) continue;
+    clubs.set(t.id, {
+      id: t.id,
+      city: t.city,
+      name: t.name,
+      abbreviation: t.abbreviation,
+      sportSlug: t.sportSlug,
+      primaryColor: t.primaryColor,
+    });
+  }
+
+  // A park is the web's own venue name for the host club. A club with no
+  // venue record gets no park line; nothing is filled in for it. The name
+  // links to the club's venue page when the web has one above the indexing
+  // floor, the same test the team page applies before it links there. A
+  // failed lookup costs the link, never the name.
+  let venuePages: Awaited<ReturnType<typeof getTeamVenueHubMap>> = new Map();
+  try {
+    venuePages = await getTeamVenueHubMap();
+  } catch (err) {
+    console.error('[postseason] venue page lookup failed; park names render as plain text', err);
+  }
+  const parks = new Map<string, ParkInfo>();
+  await Promise.all(
+    hostSlugs(bracket).map(async (slug) => {
+      try {
+        const venue = await getVenueForTeam(slug);
+        if (!venue || typeof venue.name !== 'string' || !venue.name.trim()) return;
+        const hub = venuePages.get(slug);
+        parks.set(slug, {
+          name: venue.name,
+          page: hub && hub.indexable ? { href: `/venues/${hub.slug}`, buildingSlug: hub.slug, buildingName: hub.displayName } : null,
+        });
+      } catch (err) {
+        console.error(`[postseason] venue lookup failed for ${slug}; its park line is omitted`, err);
+      }
+    }),
+  );
+
+  return buildLeagueView(bracket, clubs, parks, now);
+}
 
 /**
  * Were this league's prediction inputs frozen?
@@ -224,6 +235,52 @@ export async function getPlayoffsLinkState(now: Date = new Date()): Promise<Play
  */
 export async function isPlayoffsLinkActive(now: Date = new Date()): Promise<boolean> {
   return (await getPlayoffsLinkState(now)).state !== 'hidden';
+}
+
+/**
+ * What the pages OUTSIDE /playoffs show about the postseason: the team
+ * pages, the league hubs, the homepage and the venue pages.
+ *
+ * One answer for all four, under the same gate as the Playoffs link. When
+ * the gate is closed the answer is an empty list and nothing renders
+ * anywhere. When it is open, it is every current-season bracket that could
+ * be read and built.
+ *
+ * Behind the five-minute process cache. These pages are not revalidated
+ * when a bracket changes (the pipeline revalidates /playoffs and the league
+ * pages only), so they are as fresh as their own regeneration, and every
+ * module that states a score or a game time carries the bracket's own change
+ * stamp beside it. Throws when the read fails, so each caller fails closed.
+ */
+export async function buildPlayoffsInbound(brackets: readonly Bracket[], now: Date): Promise<InboundLeague[]> {
+  if (playoffsLinkState(brackets, now).state === 'hidden') return [];
+  const out: InboundLeague[] = [];
+  for (const bracket of brackets) {
+    const view = await buildViewFor(bracket, now);
+    if (!view) {
+      console.error(`[postseason] ${docId(bracket.league)} names a club with no team record; it is left out of the inbound modules`);
+      continue;
+    }
+    out.push({ league: bracket.league, href: postseasonPath(bracket.league), view });
+  }
+  return out;
+}
+
+const loadPlayoffsInbound = makeCollectionLoader(async () => buildPlayoffsInbound(await loadCurrentBrackets(), new Date()));
+
+export async function getPlayoffsInbound(): Promise<InboundLeague[]> {
+  return [...(await loadPlayoffsInbound())];
+}
+
+/** The same, for a page that must render whatever happens: a failed read is
+ *  logged and answered with nothing, so the page simply has no module. */
+export async function getPlayoffsInboundOrNone(where: string): Promise<InboundLeague[]> {
+  try {
+    return await getPlayoffsInbound();
+  } catch (err) {
+    console.error(`[postseason] inbound read failed on ${where}; the page renders without a playoffs module`, err);
+    return [];
+  }
 }
 
 /** What the sitemap lists: the hub and each league page that has a bracket,

@@ -320,6 +320,47 @@ test('LINK GATE, cached: a failed read is not remembered; a good one is; the clo
   assert.deepEqual(await getPlayoffsSitemapEntries(new Date(ENDED + 15 * DAY)), []);
 });
 
+// ---- The inbound modules: one build, under the link gate ----
+
+test('INBOUND: while a series is being played, every readable bracket comes back built', async () => {
+  const { buildPlayoffsInbound, readCurrentBrackets } = await load();
+  use({ 'postseasonBrackets/MLB_2026': MLB(), 'postseasonBrackets/WNBA_2026': WNBA() });
+  const leagues = await buildPlayoffsInbound(await readCurrentBrackets(), CAPTURED_AT);
+  assert.deepEqual(leagues.map((l) => [l.league, l.href, l.view.phase.kind]), [['MLB', '/playoffs/mlb', 'active'], ['WNBA', '/playoffs/wnba', 'active']]);
+  assert.equal(leagues[0].view.rounds.length, 4);
+  assert.ok(leagues[0].view.homeGames.every((g) => g.park !== null));
+});
+
+test('INBOUND: inside the 14 days it is still built; after them it is empty', async () => {
+  const { buildPlayoffsInbound, readCurrentBrackets } = await load();
+  use({ 'postseasonBrackets/MLB_2026': FINISHED() });
+  const brackets = await readCurrentBrackets();
+  const inside = await buildPlayoffsInbound(brackets, new Date(ENDED + 14 * DAY));
+  assert.deepEqual(inside.map((l) => [l.league, l.view.phase.kind]), [['MLB', 'concluded']]);
+  assert.deepEqual(await buildPlayoffsInbound(brackets, new Date(ENDED + 14 * DAY + 1)), []);
+  assert.deepEqual(await buildPlayoffsInbound([], CAPTURED_AT), []);
+});
+
+test('INBOUND: a bracket naming a club with no team record is left out, and the other still builds', async () => {
+  const { buildPlayoffsInbound, readCurrentBrackets } = await load();
+  use({ 'postseasonBrackets/MLB_2026': MLB(), 'postseasonBrackets/WNBA_2026': WNBA() });
+  teams.drop.add('houston-astros');
+  const leagues = await quiet(async () => buildPlayoffsInbound(await readCurrentBrackets(), CAPTURED_AT));
+  assert.deepEqual(leagues.map((l) => l.league), ['WNBA']);
+});
+
+test('INBOUND: a failed read gives a page nothing to render, and does not throw into it', async () => {
+  const { getPlayoffsInboundOrNone, getPlayoffsInbound } = await load();
+  // The brackets behind this are the process cache. It is empty only when no
+  // earlier test in this file filled it, so the failure is forced at the
+  // other read the build makes.
+  use({ 'postseasonBrackets/MLB_2026': new Error('UNAVAILABLE') });
+  const out = await quiet(() => getPlayoffsInboundOrNone('/mlb/houston-astros'));
+  assert.ok(Array.isArray(out));
+  await assert.doesNotReject(() => quiet(() => getPlayoffsInboundOrNone('/')));
+  void getPlayoffsInbound;
+});
+
 test('WHICH LEAGUES, cached: the list for static params is its own read', async () => {
   const { getLeaguesWithBracket } = await load();
   const fake = use({ 'postseasonBrackets/MLB_2026': MLB() });

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { IconArrowRight } from '@tabler/icons-react';
 import type { PromoWithTeam, Team } from '@/lib/types';
 import type { GameContext } from '@/lib/data';
@@ -67,6 +68,10 @@ export interface HomePageV2Props {
    *  FAQPage schema. */
   counts: HomepageCounts;
   resolvedContexts: Map<string, GameContext[]>;
+  /** The playoffs module, already rendered, while a league's postseason is
+   *  being played. Null or absent otherwise, and then this page emits
+   *  exactly what it emitted before the module existed. */
+  playoffs?: ReactNode;
 }
 
 export function HomePageV2({
@@ -84,6 +89,7 @@ export function HomePageV2({
   heroStats,
   counts,
   resolvedContexts,
+  playoffs = null,
 }: HomePageV2Props) {
   const contextsFor = (p: PromoWithTeam): GameContext[] | null =>
     resolvedContexts.get(`${p.team.id}:${p.date}`) ?? null;
@@ -112,6 +118,21 @@ export function HomePageV2({
       month: 'long',
       day: 'numeric',
     });
+
+  const tonightRail = (
+    <StubRail
+      eyebrow="Happening now"
+      dotColor="var(--color-rd-red)"
+      heading="Tonight"
+      lede={`${tonight.length} promo${tonight.length === 1 ? '' : 's'} at games starting today.`}
+      seeAllHref="/promos/today"
+      seeAllLabel="All tonight's promos"
+      items={tonight.map((p) => ({ promo: p, contexts: contextsFor(p) }))}
+      surface="web_home_tonight"
+      starPlacement="homepage_this_week_inline"
+      rail="tonight"
+    />
+  );
 
   return (
     <UpcomingPromoModalProvider showTeamLink>
@@ -143,20 +164,21 @@ export function HomePageV2({
             layout-neutral. Keep it OUT of any <Suspense>; see known-issues
             entry 50 for what happens to ads inside one. */}
         <div className="page-content">
-          <section className="px-6 pt-14">
-            <StubRail
-              eyebrow="Happening now"
-              dotColor="var(--color-rd-red)"
-              heading="Tonight"
-              lede={`${tonight.length} promo${tonight.length === 1 ? '' : 's'} at games starting today.`}
-              seeAllHref="/promos/today"
-              seeAllLabel="All tonight's promos"
-              items={tonight.map((p) => ({ promo: p, contexts: contextsFor(p) }))}
-              surface="web_home_tonight"
-              starPlacement="homepage_this_week_inline"
-              rail="tonight"
-            />
-          </section>
+          {/* THE PLAYOFFS MODULE rides inside the Tonight section, above the
+              rail, and is not a child of page-content in its own right. The
+              skip-2 arithmetic in the note above counts direct children: a
+              module of its own would take the first skip, the first ad would
+              land straight after the leaderboard slot, and every unit below
+              would move. With no module the second branch is the markup this
+              page has always emitted. */}
+          {playoffs ? (
+            <section className="px-6 pt-14">
+              {playoffs}
+              {tonightRail}
+            </section>
+          ) : (
+            <section className="px-6 pt-14">{tonightRail}</section>
+          )}
 
           <div className="mx-auto max-w-6xl px-6 pt-8">
             <AdSlot config={AD_SLOTS.HEADER_LEADERBOARD} pageType="homepage" />

@@ -126,6 +126,8 @@ export interface LeagueView {
 export interface HomeGameView {
   key: string;
   league: PostseasonLeague;
+  /** The page's id for the series the game belongs to. */
+  seriesId: string;
   roundLabel: string;
   matchup: string;
   gameTitle: string;
@@ -485,6 +487,7 @@ export function buildLeagueView(
       homeGames.push({
         key: `${bracket.league}-${s.id}-g${g.gameNumber}`,
         league: bracket.league,
+        seriesId: s.id,
         roundLabel: s.roundLabel,
         matchup: g.matchup,
         gameTitle: g.title,

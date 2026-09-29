@@ -76,6 +76,7 @@ export function VenueHubView({
   ticketTeam,
   tenantLinks,
   weekPromos,
+  postseason = null,
 }: {
   hub: VenueHub;
   canonicalUrl: string;
@@ -84,6 +85,9 @@ export function VenueHubView({
   /** Tenant promos in the next 7 days, already merged and date-sorted. Empty is
    *  the common off-season case and renders nothing (see HubPromosThisWeek). */
   weekPromos: VenueHubWeekPromo[];
+  /** "Postseason games here", already rendered, for a building whose club
+   *  still has a postseason home game to play. Null or absent otherwise. */
+  postseason?: ReactNode;
 }) {
   const short = displayVenueName(hub.name);
   const loc = cityState(hub);
@@ -473,7 +477,22 @@ export function VenueHubView({
         <div className={hasRail ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start lg:gap-6' : ''}>
           {/* main column */}
           <div className="min-w-0 page-content">
-            {bagCard}
+            {/* "Postseason games here" follows the bag capsule, which stays
+                first because it is the answer the page ranks for, and SHARES
+                the capsule's place among the children of page-content. Every
+                direct child here is an anchor for the ad placer: a module of
+                its own would be one more, and would move every unit below it.
+                (A building with no bag capsule has nothing to share with, and
+                there the module is the first child.) With nothing to show,
+                this renders the bag capsule alone, as it always has. */}
+            {postseason ? (
+              <div data-playoffs-top>
+                {bagCard}
+                {postseason}
+              </div>
+            ) : (
+              bagCard
+            )}
             {/* Promos this week: directly under the bag capsule and above
                 parking. The capsule stays first because it is the SEO answer the
                 page ranks for; a live promo is the highest-intent time-sensitive

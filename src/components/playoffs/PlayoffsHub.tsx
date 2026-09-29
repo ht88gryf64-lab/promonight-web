@@ -60,7 +60,7 @@ function CardShell({
         {children}
         {updatedLabel && (
           <p data-bracket-updated className="mt-2.5 text-[12px] text-rd-ink-faint">
-            Bracket updated {updatedLabel}
+            {`Bracket updated ${updatedLabel}`}
           </p>
         )}
       </div>

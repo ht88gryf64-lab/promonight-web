@@ -12,6 +12,9 @@ import {
   venueHubDescription,
 } from '@/lib/venue-hub';
 import { VenueHubView } from '@/components/venue-hub/VenueHubView';
+import { getPlayoffsInboundOrNone } from '@/lib/postseason/data';
+import { venueGames } from '@/lib/postseason/inbound';
+import { VenuePostseasonGames } from '@/components/playoffs/inbound/VenuePostseasonGames';
 import { canonicalOpenGraph } from '@/lib/og';
 
 // SSG/ISR, same pattern as the team pages. 24h ISR; on-demand revalidate stays
@@ -63,9 +66,15 @@ export default async function VenueHubPage({ params }: { params: Promise<{ slug:
     resolveTenantTeamLinks(hub),
     getVenueHubWeekPromos(hub),
   ]);
+  // Postseason games at this building: the home games still to be played by
+  // the clubs that play here. The building's clubs come from its own tenants
+  // list, the same list the team links below are built from.
+  const tenantIds = (hub.tenants ?? []).map((t) => t.teamId).filter((id): id is string => typeof id === 'string');
+  const postseason = tenantIds.length ? venueGames(await getPlayoffsInboundOrNone(`/venues/${slug}`), tenantIds) : null;
   return (
     <div className={`${archivoHouse.variable} rd-root min-h-screen`} data-ad-region="content">
       <VenueHubView
+        postseason={postseason ? <VenuePostseasonGames games={postseason} buildingSlug={hub.slug} /> : null}
         hub={hub}
         canonicalUrl={`${BASE_URL}/venues/${slug}`}
         ticketTeam={ticketTeam}
