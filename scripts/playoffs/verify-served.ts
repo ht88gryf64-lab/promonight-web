@@ -13,6 +13,8 @@
 //
 //   BASE    origin to fetch from. Default http://localhost:3468.
 //   BYPASS  Vercel protection bypass secret. Sent as a header, never printed.
+//   SHARE   a share link for a protected preview. Opened once for its access
+//           cookie, which is held in memory and never printed.
 //   CASE=1  also request /playoffs/MLB and expect a 404. NOT for a local
 //           `next start` on a case-insensitive disk, where the 404 overwrites
 //           the prerendered lowercase entry.
@@ -26,6 +28,8 @@ import { OG_IMAGE_ALT } from '../../src/lib/og';
 
 const BASE = (process.env.BASE || 'http://localhost:3468').replace(/\/$/, '');
 const BYPASS = process.env.BYPASS || '';
+const SHARE = process.env.SHARE || '';
+let cookie = '';
 const OUT = process.env.OUT || '';
 const SITE = 'https://www.getpromonight.com';
 const SEASON = 2026;
@@ -47,6 +51,7 @@ function same(name: string, actual: unknown, expected: unknown) {
 async function get(path: string): Promise<{ status: number; body: string; headers: Headers }> {
   const headers: Record<string, string> = { 'user-agent': 'Mozilla/5.0 (playoffs served-HTML check)' };
   if (BYPASS) headers['x-vercel-protection-bypass'] = BYPASS;
+  if (cookie) headers.cookie = cookie;
   const res = await fetch(`${BASE}${path}`, { headers, redirect: 'manual' });
   return { status: res.status, body: await res.text(), headers: res.headers };
 }
@@ -194,7 +199,13 @@ interface Club {
 }
 
 async function main() {
-  console.log(`BASE ${BASE}${BYPASS ? '  (protection bypass header sent)' : ''}`);
+  if (SHARE) {
+    // The share link answers with a redirect and the access cookie.
+    const res = await fetch(SHARE, { redirect: 'manual' });
+    cookie = res.headers.getSetCookie().map((c) => c.split(';')[0]).join('; ');
+    if (!cookie) throw new Error(`the share link set no cookie (status ${res.status})`);
+  }
+  console.log(`BASE ${BASE}${BYPASS ? '  (protection bypass header sent)' : ''}${SHARE ? '  (access cookie from the share link)' : ''}`);
   if (OUT) mkdirSync(OUT, { recursive: true });
 
   // ---- What the documents say ----

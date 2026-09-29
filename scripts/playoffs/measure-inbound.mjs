@@ -54,7 +54,7 @@ const MEASURE = (wrapper) => `(() => {
     article: (() => { const a = [...document.querySelectorAll('article')].sort((x, y) => y.offsetHeight - x.offsetHeight)[0]; return a ? a.offsetHeight : null; })(),
     asides: document.querySelectorAll('aside').length,
     module: m ? { kind: m.dataset.playoffsModule, state: m.dataset.playoffsState, top: Math.round(r.top + scrollY), height: Math.round(r.height), inWrapper: w.contains(m), directChild: m.parentElement === w, width: Math.round(r.width) } : null,
-    overflow: document.documentElement.scrollWidth > innerWidth,
+    overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
     pageHeight: document.documentElement.scrollHeight,
   }; })()`;
 const PAGES = [

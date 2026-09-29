@@ -650,6 +650,16 @@ test('ARTICLE, hub in the offseason and with one unreadable league', () => {
   assert.deepEqual(articleChildren(bad), ['header', 'div[page-intro]', 'section[leagues]']);
 });
 
+test('SCROLLERS: each one is the containing block for what it scrolls', () => {
+  // Screen-reader-only text is absolutely positioned. Inside a scroller that
+  // is not positioned it escapes the clip and widens the document.
+  const html = leagueHtml(view(FIXTURE.mlbFields, FIELDS_AT), { now: FIELDS_AT });
+  const scrollers = [...html.matchAll(/<[a-z]+[^>]*class="([^"]*\boverflow-x-auto\b[^"]*)"[^>]*>/g)];
+  assert.equal(scrollers.length, 2, 'the round pills and the rounds');
+  for (const m of scrollers) assert.match(m[1], /(^| )relative( |$)/, m[0].slice(0, 120));
+  assert.ok(count(element(html, 'data-rounds'), 'sr-only') > 0, 'the rounds do hold such text, so the rule has something to protect');
+});
+
 // ---- Home games ----
 
 test('HOME GAMES: the next three days, eight rows at most, one ticket button a row', () => {

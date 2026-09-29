@@ -278,7 +278,7 @@ try {
   await go('/playoffs/mlb', { width: 1280 });
   const wide = await ev(`(() => { const box = document.querySelector('[data-rounds]'); const cols = [...box.querySelectorAll(':scope > section')].map((s) => { const r = s.getBoundingClientRect(); return { key: s.dataset.round, left: Math.round(r.left), right: Math.round(r.right), top: Math.round(r.top) }; });
     const shown = (sel) => [...document.querySelectorAll(sel)].filter((e) => getComputedStyle(e).display !== 'none').length;
-    return { controls: getComputedStyle(document.querySelector('.po-controls')).display, display: getComputedStyle(box).display, scrollable: box.scrollWidth > box.clientWidth + 1, cols, al: shown('[data-conf="AL"]'), nl: shown('[data-conf="NL"]'), series: shown('[data-series]'), overflow: document.documentElement.scrollWidth > innerWidth }; })()`);
+    return { controls: getComputedStyle(document.querySelector('.po-controls')).display, display: getComputedStyle(box).display, scrollable: box.scrollWidth > box.clientWidth + 1, cols, al: shown('[data-conf="AL"]'), nl: shown('[data-conf="NL"]'), series: shown('[data-series]'), overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth }; })()`);
   check('1280: the whole bracket shows at once, four rounds side by side', wide.display === 'grid' && !wide.scrollable && wide.cols.length === 4 && wide.cols.every((x) => x.left >= 0 && x.right <= 1280) && new Set(wide.cols.map((x) => x.top)).size === 1, wide.cols.map((x) => `${x.key} ${x.left}-${x.right}`).join(', '));
   check('1280: both conferences and all 11 series show', wide.al === 3 && wide.nl === 3 && wide.series === 11, `AL ${wide.al} NL ${wide.nl}`);
   check('1280: the controls are hidden, nothing is left to choose', wide.controls === 'none');
@@ -310,7 +310,7 @@ try {
   await sleep(900);
   await shot('wnba-390-series-open', 390, { full: false });
   await go('/playoffs/wnba', { width: 1280 });
-  const ww = await ev(`(() => { const box = document.querySelector('[data-rounds]'); return { display: getComputedStyle(box).display, cols: [...box.querySelectorAll(':scope > section')].length, controls: getComputedStyle(document.querySelector('.po-controls')).display, overflow: document.documentElement.scrollWidth > innerWidth }; })()`);
+  const ww = await ev(`(() => { const box = document.querySelector('[data-rounds]'); return { display: getComputedStyle(box).display, cols: [...box.querySelectorAll(':scope > section')].length, controls: getComputedStyle(document.querySelector('.po-controls')).display, overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth }; })()`);
   check('WNBA 1280: three rounds side by side, controls hidden, no sideways scroll', ww.display === 'grid' && ww.cols === 3 && ww.controls === 'none' && !ww.overflow);
   await shot('wnba-1280-full', 1280);
 
@@ -319,7 +319,7 @@ try {
   await clearCalls();
   const hub = await ev(`(() => { const rows = [...document.querySelectorAll('[data-home-game]')]; const vis = rows.filter((e) => e.offsetParent !== null); const b = document.querySelector('[data-show-all]');
     return { visible: vis.length, total: rows.length, links: vis.map((r) => r.querySelectorAll('a[rel~="sponsored"]').length), button: b ? { expanded: b.getAttribute('aria-expanded'), label: b.textContent } : null,
-      deep: [...document.querySelectorAll('[data-league-card] [data-series] a')].map((a) => a.getAttribute('href')), overflow: document.documentElement.scrollWidth > innerWidth }; })()`);
+      deep: [...document.querySelectorAll('[data-league-card] [data-series] a')].map((a) => a.getAttribute('href')), overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth }; })()`);
   check('hub: eight rows at most, one ticket button each, the week behind the button', hub.visible <= 8 && hub.links.every((n) => n === 1) && hub.button && hub.button.expanded === 'false' && hub.total > hub.visible, `${hub.visible} of ${hub.total} rows, "${hub.button && hub.button.label}"`);
   check('hub: every series line is a link to that series', hub.deep.length === 8 && hub.deep.every((h) => /^\/playoffs\/(mlb|wnba)#[a-z_]+-\d+$/.test(h)), hub.deep.slice(0, 2).join(' '));
   await shot('hub-390-full', 390);
@@ -329,7 +329,7 @@ try {
   const landed = await ev(`({ path: location.pathname, hash: location.hash, open: [...document.querySelectorAll('.po-panel')].filter((e) => getComputedStyle(e).display !== 'none').map((e) => e.id) })`);
   check('hub to series: the link lands on the league page with that series open', landed.path === '/playoffs/mlb' && landed.open.length === 1 && '#' + landed.open[0] === landed.hash, JSON.stringify(landed));
   await go('/playoffs', { width: 1280 });
-  check('hub 1280: no sideways scroll', !(await ev(`document.documentElement.scrollWidth > innerWidth`)));
+  check('hub 1280: no sideways scroll', !(await ev(`document.documentElement.scrollWidth > document.documentElement.clientWidth`)));
   await shot('hub-1280-full', 1280);
 
   // ================= Tagged links =================
@@ -349,6 +349,31 @@ try {
   check('park link: venue_hub_click reaches both sinks from this surface', sinksFor(c, 'venue_hub_click') === 'ga4+posthog' && vh.surface === 'web_playoffs_league' && vh.destination_url === '/venues/' + vh.building_slug && !!vh.team_slug, JSON.stringify({ surface: vh.surface, placement: vh.placement, building_slug: vh.building_slug, team_slug: vh.team_slug }));
   const cc = propsFor(c, 'cta_click', 'posthog');
   check('club link and breadcrumb: cta_click reaches both sinks from this surface', sinksFor(c, 'cta_click') === 'ga4+posthog' && cc.length === 2 && cc.every((p) => p.surface === 'web_playoffs_league') && cc.some((p) => p.cta_id === 'playoffs_series_team' && /^\/mlb\//.test(p.cta_destination)) && cc.some((p) => p.cta_id === 'playoffs_breadcrumb'), cc.map((p) => `${p.cta_id} ${p.cta_destination}`).join(' | '));
+
+  // ================= Width at 390px =================
+  // Against clientWidth and against 390 itself. innerWidth alone proves
+  // nothing: on a phone a page wider than the screen reports its own width
+  // there, so "scrollWidth > innerWidth" can never be true.
+  const WIDTH = `(() => ({ doc: document.documentElement.scrollWidth, client: document.documentElement.clientWidth, inner: innerWidth, innerH: innerHeight }))()`;
+  const asWide = (w) => w.doc === 390 && w.client === 390 && w.inner === 390 && w.innerH === 844;
+  const said = (w) => `document ${w.doc}px, window ${w.inner}x${w.innerH}`;
+  for (const path of ['/playoffs/mlb', '/playoffs/wnba', '/playoffs']) {
+    await go(path, { width: 390 });
+    let w = await ev(WIDTH);
+    check(`390 ${path}: the page is as wide as the screen and no wider`, asWide(w), said(w));
+    if (path !== '/playoffs') {
+      // Every round in turn, then a series open: the rounds row scrolls, and
+      // nothing that scrolls with it may widen the page.
+      w = await ev(`(async () => { const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+        for (const b of document.querySelectorAll('[data-round-option]')) { b.click(); await wait(350); }
+        const a = [...document.querySelectorAll('.po-bracket [data-series] a')].filter((x) => x.offsetWidth > 0)[0]; if (a) { a.click(); await wait(350); }
+        return ${WIDTH}; })()`);
+      check(`390 ${path}: still so after every round is selected and a series opened`, asWide(w), said(w));
+      await go(path, { width: 390, js: false, settle: 1200 });
+      w = await ev(WIDTH);
+      check(`390 ${path}: and with scripts off`, asWide(w), said(w));
+    }
+  }
 
   // ================= The debug log =================
   const logged = [...new Set(consoleLines.filter((l) => l.startsWith('[analytics]')).map((l) => l.split(' ')[1]))].sort();

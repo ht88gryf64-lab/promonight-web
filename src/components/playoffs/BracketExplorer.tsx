@@ -229,7 +229,8 @@ export function BracketExplorer({
             ))}
           </div>
         )}
-        <div role="group" aria-label="Round" data-control="round" className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-0.5">
+        {/* relative: see the note on the rounds scroller below. */}
+        <div role="group" aria-label="Round" data-control="round" className="relative -mx-4 flex gap-1.5 overflow-x-auto px-4 pb-0.5">
           {rounds.map((r) => (
             <button
               key={r.key}
@@ -245,11 +246,17 @@ export function BracketExplorer({
         </div>
       </div>
 
+      {/* RELATIVE IS LOAD-BEARING. The cards hold screen-reader-only text,
+          which is absolutely positioned. A scroller clips only what it is the
+          containing block for; without `relative` those labels belong to a
+          box further up, escape the clip, and sit at their column's offset in
+          the DOCUMENT. The page then measures 956px wide on a 390px phone:
+          it pans sideways, and the ad placer reads a tablet. */}
       <div
         ref={scroller}
         data-rounds
         style={columns}
-        className="-mx-4 flex snap-x snap-mandatory scroll-pl-4 gap-3 overflow-x-auto px-4 pb-3 lg:mx-0 lg:grid lg:grid-cols-[repeat(var(--po-rounds),minmax(0,1fr))] lg:gap-4 lg:overflow-visible lg:px-0"
+        className="relative -mx-4 flex snap-x snap-mandatory scroll-pl-4 gap-3 overflow-x-auto px-4 pb-3 lg:mx-0 lg:grid lg:grid-cols-[repeat(var(--po-rounds),minmax(0,1fr))] lg:gap-4 lg:overflow-visible lg:px-0"
       >
         {rounds.map((r) => (
           <section
