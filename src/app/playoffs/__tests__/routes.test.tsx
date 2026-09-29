@@ -201,6 +201,15 @@ test('the pages take no font of their own and no palette of their own', () => {
   }
 });
 
+test('the sitemap lists the playoffs pages under the same gate as the link', () => {
+  const sitemap = readFileSync(new URL('../../sitemap.ts', import.meta.url), 'utf8');
+  assert.match(sitemap, /getPlayoffsSitemapEntries\(now\)/);
+  assert.ok(!/url: `\$\{BASE_URL\}\/playoffs`/.test(sitemap), 'the hardcoded /playoffs entry is gone');
+  assert.ok(!/changeFrequency: 'hourly'/.test(sitemap), 'no cadence is claimed that nothing proves');
+  // A failed read throws. It is not swallowed into a sitemap without the pages.
+  assert.match(sitemap, /getPlayoffsSitemapEntries\(now\)\.catch\(\(err\) => \{[\s\S]*?throw err;/);
+});
+
 test('the old flag no longer gates the Playoffs link', () => {
   const layout = readFileSync(new URL('../../layout.tsx', import.meta.url), 'utf8');
   assert.ok(/isPlayoffsLinkActive/.test(layout));

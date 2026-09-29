@@ -4,8 +4,9 @@ import { db } from '../firebase';
 import { makeCollectionLoader } from '../collection-cache';
 import { getAllTeams, getVenueForTeam } from '../data';
 import { mapBracketDoc } from './map';
+import { playoffsLinkState, type PlayoffsLinkState } from './gate';
 import { buildLeagueView, clubSlugs, hostSlugs, type ClubInfo, type LeagueView } from './view';
-import type { BracketRead, PostseasonLeague } from './types';
+import type { Bracket, BracketRead, PostseasonLeague } from './types';
 
 // ---- What the web decides, and only that ----
 //
@@ -168,8 +169,59 @@ export async function getLeaguesWithBracket(): Promise<PostseasonLeague[]> {
   return [...(await loadLeaguesWithBracket())];
 }
 
-/** The gate on the Playoffs link in the nav, the brand bar and the mobile
- *  menu: a bracket document exists for the current season. */
-export async function isPlayoffsLinkActive(): Promise<boolean> {
-  return (await loadLeaguesWithBracket()).length > 0;
+/**
+ * Every current-season bracket that can be read, for the link gate.
+ *
+ * One batched read with the same four-field mask the pages use. A league
+ * with no document is left out. A document the mapper refuses is left out
+ * and logged: it proves nothing about whether a series is still being
+ * played. Throws when the read itself fails, so each caller chooses its own
+ * failure.
+ */
+export async function readCurrentBrackets(): Promise<Bracket[]> {
+  const refs = POSTSEASON_LEAGUES.map((l) => db.collection(BRACKETS).doc(docId(l)));
+  const snaps = await db.getAll(...refs, { fieldMask: BRACKET_FIELDS });
+  const out: Bracket[] = [];
+  POSTSEASON_LEAGUES.forEach((league, i) => {
+    if (!snaps[i].exists) return;
+    const bracket = mapBracketDoc(snaps[i].data(), { league, season: POSTSEASON_SEASON });
+    if (bracket) out.push(bracket);
+    else console.error(`[postseason] ${docId(league)} is not in a shape the web reads; it is left out of the link gate`);
+  });
+  return out;
+}
+
+// Behind the five-minute process cache, like the list above and for the same
+// reason: the root layout asks on every route. The gate moves twice a season,
+// so five minutes of lag costs nothing. The clock is NOT cached: `now` is
+// taken on every call, against brackets at most five minutes old.
+const loadCurrentBrackets = makeCollectionLoader(readCurrentBrackets);
+
+/** The state of the Playoffs link, with the reason. See ./gate.ts. */
+export async function getPlayoffsLinkState(now: Date = new Date()): Promise<PlayoffsLinkState> {
+  return playoffsLinkState(await loadCurrentBrackets(), now);
+}
+
+/**
+ * The gate on the Playoffs link in the nav, the brand bar, the mobile menu
+ * and the sitemap. True while any current-season bracket has a series that is
+ * not final, and for 14 days after the last series in all of them went final.
+ */
+export async function isPlayoffsLinkActive(now: Date = new Date()): Promise<boolean> {
+  return (await getPlayoffsLinkState(now)).state !== 'hidden';
+}
+
+/** What the sitemap lists: the hub and each league page that has a bracket,
+ *  each with the moment its bracket last changed. Empty when the gate is
+ *  closed. Throws when the read fails, so the sitemap fails loudly rather
+ *  than serving a copy that is missing these pages. */
+export async function getPlayoffsSitemapEntries(now: Date = new Date()): Promise<{ path: string; lastModified: Date }[]> {
+  const brackets = await loadCurrentBrackets();
+  if (playoffsLinkState(brackets, now).state === 'hidden') return [];
+  const stamped = brackets.map((b) => ({
+    path: postseasonPath(b.league),
+    lastModified: b.lastChangedAt ? new Date(b.lastChangedAt) : now,
+  }));
+  const latest = stamped.reduce((m, e) => (e.lastModified > m ? e.lastModified : m), new Date(0));
+  return [{ path: '/playoffs', lastModified: stamped.length ? latest : now }, ...stamped];
 }

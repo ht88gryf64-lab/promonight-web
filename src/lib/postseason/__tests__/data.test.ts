@@ -181,14 +181,90 @@ test('WHICH LEAGUES: a failed read throws, so the caller decides what failure me
   await assert.rejects(() => readLeaguesWithBracket(), /UNAVAILABLE/);
 });
 
+// ---- The link gate, through the real reads ----
+//
+// The three states are tested as a pure rule in gate.test.ts. These hold the
+// read that feeds it. A finished current-season bracket does not exist yet,
+// so FINISHED is the 2025 final document with its season moved to 2026; its
+// games keep their 2025 dates, and the tests set the clock beside them.
+const FINISHED = (): Record<string, unknown> => ({ ...loadDoc(FIXTURE.mlbFinal), season: 2026 });
+const ENDED = Date.parse('2025-11-02T00:00:00.000Z');
+const DAY = 24 * 60 * 60 * 1000;
+
+test('LINK GATE: one batched read with the four-field mask', async () => {
+  const { readCurrentBrackets } = await load();
+  const fake = use({ 'postseasonBrackets/MLB_2026': MLB(), 'postseasonBrackets/WNBA_2026': WNBA() });
+  const brackets = await readCurrentBrackets();
+  assert.deepEqual(brackets.map((b) => b.league), ['MLB', 'WNBA']);
+  assert.deepEqual(fake.reads, [
+    { path: 'postseasonBrackets/MLB_2026', fieldMask: ['league', 'season', 'series', 'lastChangedAt'] },
+    { path: 'postseasonBrackets/WNBA_2026', fieldMask: ['league', 'season', 'series', 'lastChangedAt'] },
+  ]);
+});
+
+test('LINK GATE, all three states through the read: active, champion window, hidden', async () => {
+  const { readCurrentBrackets } = await load();
+  const { playoffsLinkState } = await import('../gate');
+
+  use({ 'postseasonBrackets/MLB_2026': MLB(), 'postseasonBrackets/WNBA_2026': WNBA() });
+  assert.deepEqual(playoffsLinkState(await readCurrentBrackets(), CAPTURED_AT), { state: 'active' });
+
+  use({ 'postseasonBrackets/MLB_2026': FINISHED() });
+  assert.equal(playoffsLinkState(await readCurrentBrackets(), new Date(ENDED + 5 * DAY)).state, 'champion_window');
+  assert.deepEqual(playoffsLinkState(await readCurrentBrackets(), new Date(ENDED + 15 * DAY)), { state: 'hidden', reason: 'window_closed' });
+
+  use({});
+  assert.deepEqual(playoffsLinkState(await readCurrentBrackets(), CAPTURED_AT), { state: 'hidden', reason: 'no_bracket' });
+});
+
+test('LINK GATE: a document the mapper refuses is left out, and opens nothing', async () => {
+  const { readCurrentBrackets } = await load();
+  const { playoffsLinkVisible } = await import('../gate');
+  const bad = MLB();
+  (bad.series as Record<string, unknown>[])[0].status = 'paused';
+  use({ 'postseasonBrackets/MLB_2026': bad });
+  const brackets = await quiet(() => readCurrentBrackets());
+  assert.deepEqual(brackets, []);
+  assert.equal(playoffsLinkVisible(brackets, CAPTURED_AT), false);
+  // Beside a league that reads, the readable one decides.
+  use({ 'postseasonBrackets/MLB_2026': bad, 'postseasonBrackets/WNBA_2026': WNBA() });
+  assert.equal(playoffsLinkVisible(await quiet(() => readCurrentBrackets()), CAPTURED_AT), true);
+});
+
+test('LINK GATE: a failed read throws, so the layout hides the link and the sitemap fails loudly', async () => {
+  const { readCurrentBrackets } = await load();
+  use({ 'postseasonBrackets/MLB_2026': new Error('UNAVAILABLE') });
+  await assert.rejects(() => readCurrentBrackets(), /UNAVAILABLE/);
+});
+
 // The cached gate. Order matters and is the point: a failure must not be
-// remembered, a success is.
-test('NAV GATE: a failed read rejects and is not cached; the next read decides', async () => {
-  const { isPlayoffsLinkActive, getLeaguesWithBracket } = await load();
+// remembered, a success is, and the clock is never cached with it.
+test('LINK GATE, cached: a failed read is not remembered; a good one is; the clock still moves', async () => {
+  const { isPlayoffsLinkActive, getPlayoffsLinkState, getPlayoffsSitemapEntries } = await load();
   use({ 'postseasonBrackets/MLB_2026': new Error('UNAVAILABLE') });
   await assert.rejects(() => isPlayoffsLinkActive(), /UNAVAILABLE/);
+  await assert.rejects(() => getPlayoffsSitemapEntries(), /UNAVAILABLE/);
+
+  const fake = use({ 'postseasonBrackets/MLB_2026': FINISHED() });
+  assert.equal(await isPlayoffsLinkActive(new Date(ENDED + DAY)), true);
+  assert.equal(fake.reads.length, 2, 'both documents asked for, once');
+  // Served from the process cache from here on, and the clock decides.
+  assert.equal((await getPlayoffsLinkState(new Date(ENDED + 14 * DAY))).state, 'champion_window');
+  assert.equal(await isPlayoffsLinkActive(new Date(ENDED + 14 * DAY + 1)), false);
+  assert.equal(fake.reads.length, 2, 'no second read inside the five minutes');
+
+  // The sitemap follows the same gate.
+  const open = await getPlayoffsSitemapEntries(new Date(ENDED + DAY));
+  assert.deepEqual(open.map((e) => e.path), ['/playoffs', '/playoffs/mlb']);
+  const stamp = (FINISHED().lastChangedAt as { toDate: () => Date }).toDate().toISOString();
+  assert.deepEqual(open.map((e) => e.lastModified.toISOString()), [stamp, stamp]);
+  assert.deepEqual(await getPlayoffsSitemapEntries(new Date(ENDED + 15 * DAY)), []);
+});
+
+test('WHICH LEAGUES, cached: the list for static params is its own read', async () => {
+  const { getLeaguesWithBracket } = await load();
   const fake = use({ 'postseasonBrackets/MLB_2026': MLB() });
-  assert.equal(await isPlayoffsLinkActive(), true);
+  assert.deepEqual(await getLeaguesWithBracket(), ['MLB']);
   assert.deepEqual(await getLeaguesWithBracket(), ['MLB']);
   assert.equal(fake.reads.length, 2, 'two documents asked for once; the second call was served from the process cache');
 });

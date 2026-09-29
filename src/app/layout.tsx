@@ -95,12 +95,13 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  // The Playoffs link shows when a bracket document exists for the current
-  // season. It used to follow appConfig/playoffs.playoffsActive, a flag
-  // flipped by hand for the NBA and NHL that says nothing about the MLB and
-  // WNBA brackets the page now renders. Fail-closed: if the read throws
-  // (Firestore outage, perms, etc.), hide the link rather than 500-ing every
-  // page site-wide.
+  // The Playoffs link shows while any current-season bracket has a series
+  // that is not final, and for 14 days after the last series in all of them
+  // went final (src/lib/postseason/gate.ts). It used to follow
+  // appConfig/playoffs.playoffsActive, a flag flipped by hand for the NBA and
+  // NHL that says nothing about the MLB and WNBA brackets the page now
+  // renders. Fail-closed: if the read throws (Firestore outage, perms, etc.),
+  // hide the link rather than 500-ing every page site-wide.
   let playoffsActive = false;
   try {
     playoffsActive = await isPlayoffsLinkActive();
