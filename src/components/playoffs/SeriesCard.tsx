@@ -88,7 +88,7 @@ export function SeriesCard({ series }: { series: SeriesView }) {
   const nextHost = series.next ? hostLine(series.next) : null;
   return (
     <li
-      data-series={series.seriesKey}
+      data-series={series.id}
       data-series-status={series.status}
       className="overflow-hidden rounded-[10px] border border-rd-line bg-rd-card shadow-sm"
     >

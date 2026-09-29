@@ -120,8 +120,8 @@ test('LEAGUE: every round is a section under the document label, every series is
     assert.match(html, new RegExp(`<h2 id="round-${key}"[^>]*>${label}</h2>`));
   }
   assert.equal(count(html, 'data-series="'), 11);
-  for (const key of ['AL-WC-A', 'AL-WC-B', 'NL-WC-A', 'NL-WC-B', 'AL-DS-A', 'AL-DS-B', 'NL-DS-A', 'NL-DS-B', 'AL-CS', 'NL-CS', 'WS']) {
-    assert.equal(count(html, `data-series="${key}"`), 1, key);
+  for (const id of ['wild_card-1', 'wild_card-2', 'wild_card-3', 'wild_card-4', 'division_series-1', 'division_series-2', 'division_series-3', 'division_series-4', 'championship_series-1', 'championship_series-2', 'world_series-1']) {
+    assert.equal(count(html, `data-series="${id}"`), 1, id);
   }
   // Rounds appear in the document's order.
   const at = (k: string) => html.indexOf(`data-round="${k}"`);
@@ -151,7 +151,7 @@ test('PLACEHOLDERS: a slot with no club is a dashed box holding the stored label
   }
   // The Division Series card for the Rays names the Rays and the stored
   // label, and no other club.
-  const card = html.slice(html.indexOf('data-series="AL-DS-A"'), html.indexOf('data-series="AL-DS-B"'));
+  const card = html.slice(html.indexOf('data-series="division_series-1"'), html.indexOf('data-series="division_series-2"'));
   assert.ok(card.includes('>Rays</a>'));
   assert.equal(count(card, '<a '), 1);
   assert.ok(!card.includes('Yankees') && !card.includes('Red Sox'));
@@ -163,7 +163,7 @@ test('OVERLAY: a published feeder pair renders the composed text, still unlinked
     Object.assign(s.lower, { feederSeriesKey: 'AL-WC-B', candidates: ['new-york-yankees', 'boston-red-sox'] });
   });
   const html = leagueHtml(v);
-  const card = html.slice(html.indexOf('data-series="AL-DS-A"'), html.indexOf('data-series="AL-DS-B"'));
+  const card = html.slice(html.indexOf('data-series="division_series-1"'), html.indexOf('data-series="division_series-2"'));
   assert.ok(card.includes('<span class="min-w-0">Yankees / Red Sox winner</span>'));
   assert.ok(!card.includes('NYY/BOS'));
   assert.equal(count(card, '<a '), 1, 'only the Rays are linked');
@@ -183,7 +183,7 @@ test('TBD TIME: untimed games read "Time TBD" and the filler instant is nowhere'
 test('SERIES SCORE: wins per side, the leader, and results', () => {
   const html = leagueHtml(view(FIXTURE.wnbaLive));
   const text = textOf(html);
-  const card = html.slice(html.indexOf('data-series="R1-1v8"'), html.indexOf('data-series="R1-2v7"'));
+  const card = html.slice(html.indexOf('data-series="first_round-1"'), html.indexOf('data-series="first_round-2"'));
   assert.ok(card.includes('data-series-status="live"'));
   assert.ok(card.includes('aria-label="0 wins"'));
   assert.ok(card.includes('aria-label="1 win"'));
@@ -201,7 +201,7 @@ test('IN PROGRESS (captured): the league page and the hub mark the game under wa
   const page = leagueHtml(v, { now: IN_GAME_AT });
   // The card header and the game row, for the one game under way.
   assert.equal(count(page, 'data-game-state="live"'), 2);
-  const card = page.slice(page.indexOf('data-series="NL-WC-A"'), page.indexOf('data-series="NL-WC-B"'));
+  const card = page.slice(page.indexOf('data-series="wild_card-3"'), page.indexOf('data-series="wild_card-4"'));
   assert.equal(count(card, 'data-game-state="live"'), 2);
   assert.ok(card.includes('data-series-status="live"'));
   assert.ok(textOf(card).includes('Game 1 in progress · Host: Braves · Truist Park'));
@@ -209,12 +209,12 @@ test('IN PROGRESS (captured): the league page and the hub mark the game under wa
   assert.ok(!/\b(PHI|ATL) 1\b/.test(textOf(card)), 'the score in progress is not shown');
   assert.ok(textOf(page).includes('Bracket updated Sep 29, 2:51 PM ET'));
   // The game under way is not sold as an upcoming one.
-  assert.equal(count(page, 'data-home-game="MLB-NL-WC-A-1"'), 0);
-  assert.equal(count(page, 'data-home-game="MLB-NL-WC-A-2"'), 1);
+  assert.equal(count(page, 'data-home-game="MLB-wild_card-3-g1"'), 0);
+  assert.equal(count(page, 'data-home-game="MLB-wild_card-3-g2"'), 1);
 
   const hub = hubHtml([ok(v)]);
   assert.equal(count(hub, 'data-game-state="live"'), 1);
-  const line = element(hub, 'data-series="NL-WC-A"');
+  const line = element(hub, 'data-series="wild_card-3"');
   assert.ok(line.includes('data-game-state="live"'));
   assert.ok(textOf(line).includes('Braves vs Phillies'));
   assert.ok(textOf(line).includes('Game 1'));
@@ -230,7 +230,7 @@ test('IN PROGRESS: one badge per place a game is under way, and no score', () =>
   const html = leagueHtml(v);
   // The card header and the game row.
   assert.equal(count(html, 'data-game-state="live"'), 2);
-  const card = html.slice(html.indexOf('data-series="R1-1v8"'), html.indexOf('data-series="R1-2v7"'));
+  const card = html.slice(html.indexOf('data-series="first_round-1"'), html.indexOf('data-series="first_round-2"'));
   assert.ok(textOf(card).includes('Game 2 in progress'));
   assert.ok(!/\b41\b/.test(textOf(card)) && !/\b38\b/.test(textOf(card)));
 });
@@ -288,7 +288,7 @@ test('HOME GAMES: this week, each with its park and its ticket buttons', () => {
   const html = leagueHtml(v);
   const week = homeGamesThisWeek(v, CAPTURED_AT);
   assert.equal(count(html, 'data-home-game="'), week.length);
-  const first = element(html, 'data-home-game="MLB-NL-WC-A-1"');
+  const first = element(html, 'data-home-game="MLB-wild_card-3-g1"');
   const row = textOf(first);
   assert.ok(row.includes('Phillies at Braves'));
   assert.ok(row.includes('Wild Card Series · Game 1'));
@@ -332,7 +332,7 @@ test('HUB: header, one card per league, current round, a line per series, a link
 test('HUB: next home games across leagues, with park and tickets', () => {
   const html = hubHtml([ok(view(FIXTURE.mlbLive)), ok(view(FIXTURE.wnbaLive))]);
   assert.equal(count(html, 'data-home-game="'), 8);
-  const third = element(html, 'data-home-game="WNBA-R1-3v6-2"');
+  const third = element(html, 'data-home-game="WNBA-first_round-3-g2"');
   const row = textOf(third);
   assert.ok(row.includes('Aces at Fever'));
   assert.ok(row.includes('WNBA'));
@@ -388,6 +388,35 @@ test('HUB: the locked card needs a league that is both playing and frozen', () =
   assert.ok(!/\d/.test(section));
 });
 
+// ---- The feeder key, and every other pipeline series key ----
+//
+// OVERLAY. The ruling of 2026-09-29: a slot with a feeder key and no
+// candidates renders its stored label, and the key appears nowhere in the HTML.
+test('FEEDER KEY: a slot with feederSeriesKey "AL-WC-B" and no candidates renders its label, and "AL-WC-B" is nowhere', () => {
+  for (const extra of [{ feederSeriesKey: 'AL-WC-B', candidates: null }, { feederSeriesKey: 'AL-WC-B' }]) {
+    const v = view(FIXTURE.mlbLive, CAPTURED_AT, (d) => {
+      const s = (d.series as RawSeries[]).find((x) => x.seriesKey === 'AL-DS-A') as RawSeries;
+      Object.assign(s.lower, extra);
+    });
+    const page = leagueHtml(v);
+    const card = element(page, 'data-series="division_series-1"');
+    assert.match(card, /<div data-slot="placeholder" class="[^"]*border-dashed[^"]*"><span class="min-w-0">NYY\/BOS<\/span><\/div>/);
+    assert.equal(count(page, 'AL-WC-B'), 0, 'the feeder key is in the league page');
+    assert.equal(count(hubHtml([ok(v)]), 'AL-WC-B'), 0, 'the feeder key is in the hub');
+  }
+});
+
+test('FEEDER KEY: with candidates the composed text renders, and "AL-WC-B" is still nowhere', () => {
+  const v = view(FIXTURE.mlbLive, CAPTURED_AT, (d) => {
+    const s = (d.series as RawSeries[]).find((x) => x.seriesKey === 'AL-DS-A') as RawSeries;
+    Object.assign(s.lower, { feederSeriesKey: 'AL-WC-B', candidates: ['new-york-yankees', 'boston-red-sox'] });
+  });
+  const page = leagueHtml(v);
+  assert.ok(page.includes('<span class="min-w-0">Yankees / Red Sox winner</span>'));
+  assert.equal(count(page, 'AL-WC-B'), 0);
+  assert.equal(count(hubHtml([ok(v)]), 'AL-WC-B'), 0);
+});
+
 // ---- Properties of every page ----
 
 for (const [name, make] of EVERY_VIEW) {
@@ -411,6 +440,15 @@ for (const [name, make] of EVERY_VIEW) {
         assert.ok(!html.includes(secret), `${secret.slice(0, 24)} is in the markup`);
       }
       for (const s of d.series) for (const g of s.games) assert.ok(!html.includes(String(g.gameId)), `feed game id ${g.gameId} is in the markup`);
+      // No pipeline series key, as an attribute value or as text. "F" and
+      // "WS" are too short to search for bare, so the short ones are
+      // checked where a key would sit: quoted, or as a whole word of text.
+      for (const s of d.series) {
+        const key = s.seriesKey as string;
+        assert.ok(!html.includes(`"${key}"`), `series key ${key} is an attribute value in the markup`);
+        if (key.length >= 4) assert.ok(!html.includes(key), `series key ${key} is in the markup`);
+        else assert.ok(!new RegExp(`(^| )${key}( |$)`).test(textOf(html)), `series key ${key} is text in the markup`);
+      }
       const text = textOf(html);
       assert.ok(!/\b(undefined|null|NaN|\[object Object\])\b/.test(text));
       assert.ok(!/[\u2014\u2013]/.test(html), 'an em or en dash is in the markup');

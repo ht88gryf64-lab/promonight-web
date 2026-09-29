@@ -1056,10 +1056,12 @@ export type LeagueFilterChangeProperties = {
 // ── Playoffs bracket pages (/playoffs/{league}) ──────────────────────────
 //
 // Three events, all dual-emit through track(). `league` is the lowercase route
-// segment ('mlb', 'wnba'). `round_key` and `series_key` are the bracket
-// document's own keys ('division_series', 'AL-DS-A'), so a dashboard joins on
-// what the pipeline wrote and no label is copied here. No property is named
-// `source`: track() fills that one with the attribution value.
+// segment ('mlb', 'wnba'). `round_key` is the bracket document's round key
+// ('division_series'). `series_id` is the PAGE's id for a series, its round
+// key and its position in that round ('division_series-2'); the pipeline's
+// series key never reaches the page, so it cannot reach an event. No label is
+// copied here. No property is named `source`: track() fills that one with
+// the attribution value.
 
 /** The bracket page was viewed. `phase` is what the body rendered. */
 export type PlayoffsLeagueViewProperties = {
@@ -1089,7 +1091,7 @@ export type PlayoffsSeriesOpenProperties = {
   league: string;
   season: number;
   round_key: string;
-  series_key: string;
+  series_id: string;
   series_status: 'upcoming' | 'live' | 'final';
 };
 

@@ -92,6 +92,10 @@ function mapSlot(v: unknown): BracketSlot | null {
   // The feeder pair is optional and all-or-nothing. A malformed pair is not a
   // reason to refuse the document: the stored label still renders, which is
   // the behaviour before the pipeline published the pair at all.
+  //
+  // feederSeriesKey is CONSUMED here and never emitted. It is a key, not
+  // copy. With no candidates beside it the slot shows its stored label,
+  // whether or not the key is present.
   const feeder = text(v.feederSeriesKey);
   const pair = Array.isArray(v.candidates) ? v.candidates.map(text) : null;
   const pairOk =
@@ -105,7 +109,6 @@ function mapSlot(v: unknown): BracketSlot | null {
     kind: 'placeholder',
     label: label as string,
     seed,
-    feederSeriesKey: pairOk ? feeder : null,
     candidates: pairOk ? [pair![0] as string, pair![1] as string] : null,
   };
 }

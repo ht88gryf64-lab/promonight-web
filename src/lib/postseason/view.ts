@@ -60,7 +60,10 @@ export interface GameView {
 }
 
 export interface SeriesView {
-  seriesKey: string;
+  /** The page's own id for the series: its round key and its position in
+   *  that round, "division_series-2". This is what markup and analytics
+   *  carry. The pipeline's series key ("AL-DS-B") is not in the view. */
+  id: string;
   round: string;
   roundLabel: string;
   conference: string | null;
@@ -221,18 +224,19 @@ function slotView(
 /**
  * The text of a slot no club fills yet.
  *
- * When the pipeline names the feeding series and the two clubs that can still
- * come out of it, the text is composed from the web's own team names:
- * "Yankees / Red Sox winner". Otherwise it is the stored label, verbatim.
- * The stored label is never parsed: "NYY/BOS" is two abbreviations from the
- * feed's table, and the web's team records already disagree with that table
- * on two clubs.
+ * When the slot carries two candidate clubs (the mapper sets them only when
+ * the stored slot also names its feeder series), the text is composed from
+ * the web's own team names: "Yankees / Red Sox winner". Otherwise it is the
+ * stored label, verbatim. The feeder series key is never text. The stored
+ * label is never parsed: "NYY/BOS" is two abbreviations from the feed's
+ * table, and the web's team records already disagree with that table on two
+ * clubs.
  */
 export function placeholderText(
   slot: Extract<BracketSlot, { kind: 'placeholder' }>,
   clubs: ReadonlyMap<string, ClubInfo>,
 ): string {
-  if (slot.feederSeriesKey && slot.candidates) {
+  if (slot.candidates) {
     const a = clubs.get(slot.candidates[0]);
     const b = clubs.get(slot.candidates[1]);
     if (a && b) return `${a.name} / ${b.name} winner`;
@@ -320,6 +324,7 @@ function homePattern(s: BracketSeries): string | null {
 // ---- Series ----
 function seriesView(
   s: BracketSeries,
+  id: string,
   clubs: ReadonlyMap<string, ClubInfo>,
   parks: ReadonlyMap<string, string>,
 ): SeriesView | null {
@@ -359,7 +364,7 @@ function seriesView(
 
   const pattern = homePattern(s);
   return {
-    seriesKey: s.seriesKey,
+    id,
     round: s.round,
     roundLabel: s.roundLabel,
     conference: s.conference,
@@ -393,8 +398,9 @@ export function buildLeagueView(
   const rounds: RoundView[] = [];
   const byKey = new Map<string, RoundView>();
   const flat: SeriesView[] = [];
+  const ids = seriesIds(bracket);
   for (const s of bracket.series) {
-    const v = seriesView(s, clubs, parks);
+    const v = seriesView(s, ids.get(s.seriesKey) as string, clubs, parks);
     if (!v) return null;
     flat.push(v);
     let round = byKey.get(s.round);
@@ -444,7 +450,7 @@ export function buildLeagueView(
       // up on. It is not an upcoming game and is not offered as one.
       if (g.day < today) continue;
       homeGames.push({
-        key: `${bracket.league}-${s.seriesKey}-${g.gameNumber}`,
+        key: `${bracket.league}-${s.id}-g${g.gameNumber}`,
         league: bracket.league,
         roundLabel: s.roundLabel,
         matchup: g.matchup,
@@ -469,6 +475,23 @@ export function buildLeagueView(
     rounds,
     homeGames,
   };
+}
+
+/**
+ * The page's id for each series, by the pipeline's series key: the round key
+ * and the series' position in that round, in the document's order.
+ * "AL-WC-B" is "wild_card-2". Server-side only; the view carries the id and
+ * not the key.
+ */
+export function seriesIds(bracket: Bracket): Map<string, string> {
+  const out = new Map<string, string>();
+  const seen = new Map<string, number>();
+  for (const s of bracket.series) {
+    const n = (seen.get(s.round) ?? 0) + 1;
+    seen.set(s.round, n);
+    out.set(s.seriesKey, `${s.round}-${n}`);
+  }
+  return out;
 }
 
 /** The series of the round the league is playing now, for the hub card. */

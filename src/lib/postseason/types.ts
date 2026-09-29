@@ -1,10 +1,13 @@
-// The bracket as the web holds it. Types only: safe to import from a client
-// component, and everything here is what a client component may receive.
+// The bracket as the web holds it on the server. Types only.
 //
 // This is NOT the stored document. The stored document also carries
 // operatorLog, source, runId, seeds, three hashes and the unplaced list, none
 // of which has a field here, so none of them can be passed along by accident.
 // The mapper in ./map.ts is the only thing that builds these values.
+//
+// It is not what a page renders either. A Bracket still holds the pipeline's
+// series keys ("AL-WC-B"), which are keys and not copy. The view in
+// ./view.ts is what reaches markup, and it carries no series key at all.
 
 export type PostseasonLeague = 'MLB' | 'WNBA';
 
@@ -31,10 +34,10 @@ export interface PlaceholderSlot {
   /** The feed's own label for the slot, stored verbatim. */
   label: string;
   seed: number | null;
-  /** The series whose winner fills this slot, when the pipeline publishes it. */
-  feederSeriesKey: string | null;
-  /** The two clubs that can still fill the slot, when the pipeline publishes
-   *  them. Both present or null: a half-populated pair is dropped whole. */
+  /** The two clubs that can still fill the slot. Set only when the stored
+   *  slot names both a feeder series and exactly two clubs; null otherwise.
+   *  The feeder series key itself is read as that condition and then
+   *  dropped: it has no field here, so it can never be rendered as text. */
   candidates: [string, string] | null;
 }
 

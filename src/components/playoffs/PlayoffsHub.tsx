@@ -114,7 +114,7 @@ function LeagueCard({ entry }: { entry: HubLeague }) {
     >
       <ul className="divide-y divide-rd-line">
         {series.map((s) => (
-          <li key={s.seriesKey} data-series={s.seriesKey} className="py-2 first:pt-0 last:pb-0">
+          <li key={s.id} data-series={s.id} className="py-2 first:pt-0 last:pb-0">
             <span className="block text-[15px] font-semibold leading-snug text-rd-ink">{seriesNames(s)}</span>
             <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-rd-ink-soft">
               {s.liveLabel ? <InProgressBadge /> : null}

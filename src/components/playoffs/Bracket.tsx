@@ -21,7 +21,7 @@ function Round({ round, current }: { round: RoundView; current: boolean }) {
             )}
             <ul className={`grid gap-2.5 ${round.groups.length === 1 ? 'lg:grid-cols-2' : ''}`}>
               {group.series.map((s) => (
-                <SeriesCard key={s.seriesKey} series={s} />
+                <SeriesCard key={s.id} series={s} />
               ))}
             </ul>
           </div>

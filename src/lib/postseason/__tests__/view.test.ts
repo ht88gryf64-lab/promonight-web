@@ -18,6 +18,7 @@ import {
   hostSlugs,
   nextHomeGames,
   placeholderText,
+  seriesIds,
   type LeagueView,
   type SeriesView,
 } from '../view';
@@ -33,14 +34,25 @@ function bracket(name: string, edit?: (d: Doc) => void): Bracket {
   assert.ok(b, `${name} maps`);
   return b;
 }
+// The view carries no pipeline series key, only the page's own id. Tests name
+// a series by the key in the fixture, so each view remembers the key-to-id
+// map of the bracket it was built from.
+const idsOf = new WeakMap<LeagueView, Map<string, string>>();
+function build(b: Bracket, c = clubs(), p = parks(), now: Date = CAPTURED_AT): LeagueView | null {
+  const v = buildLeagueView(b, c, p, now);
+  if (v) idsOf.set(v, seriesIds(b));
+  return v;
+}
 function view(name: string, now: Date = CAPTURED_AT, edit?: (d: Doc) => void): LeagueView {
-  const v = buildLeagueView(bracket(name, edit), clubs(), parks(), now);
+  const v = build(bracket(name, edit), clubs(), parks(), now);
   assert.ok(v, `${name} builds`);
   return v;
 }
 const all = (v: LeagueView): SeriesView[] => v.rounds.flatMap((r) => r.groups.flatMap((g) => g.series));
 const series = (v: LeagueView, key: string): SeriesView => {
-  const s = all(v).find((x) => x.seriesKey === key);
+  const id = idsOf.get(v)?.get(key);
+  assert.ok(id, `${key} is in the bracket`);
+  const s = all(v).find((x) => x.id === id);
   assert.ok(s, key);
   return s;
 };
@@ -86,11 +98,14 @@ test('MLB LIVE: rounds are the document rounds, in its order, under its labels',
     ['championship_series', 'Championship Series', null],
     ['world_series', 'World Series', null],
   ]);
-  assert.deepEqual(v.rounds[0].groups.map((g) => [g.conference, g.series.map((s) => s.seriesKey)]), [
-    ['AL', ['AL-WC-A', 'AL-WC-B']],
-    ['NL', ['NL-WC-A', 'NL-WC-B']],
+  // The id is the round key and the position in the round, document order.
+  assert.deepEqual(v.rounds[0].groups.map((g) => [g.conference, g.series.map((s) => s.id)]), [
+    ['AL', ['wild_card-1', 'wild_card-2']],
+    ['NL', ['wild_card-3', 'wild_card-4']],
   ]);
-  assert.deepEqual(v.rounds[3].groups.map((g) => [g.conference, g.series.map((s) => s.seriesKey)]), [[null, ['WS']]]);
+  assert.deepEqual(v.rounds[3].groups.map((g) => [g.conference, g.series.map((s) => s.id)]), [[null, ['world_series-1']]]);
+  assert.equal(series(v, 'AL-WC-B').id, 'wild_card-2');
+  assert.equal(series(v, 'NL-DS-A').id, 'division_series-3');
   assert.deepEqual(v.phase, { kind: 'active', roundKey: 'wild_card', roundLabel: 'Wild Card Series' });
   assert.equal(v.league, 'MLB');
   assert.equal(v.season, 2026);
@@ -144,7 +159,7 @@ test('TBD TIME: a game with no time and no date says so', () => {
     raw(d, 'AL-DS-A').games[0].date = null;
   });
   assert.equal(series(v, 'AL-DS-A').games[0].when, 'Date TBD');
-  assert.ok(!v.homeGames.some((g) => g.key === 'MLB-AL-DS-A-1'), 'a game with no day is not offered as an upcoming home game');
+  assert.ok(!v.homeGames.some((g) => g.key === 'MLB-division_series-1-g1'), 'a game with no day is not offered as an upcoming home game');
 });
 
 test('PLACEHOLDERS: the slot shows the stored label and no club', () => {
@@ -191,10 +206,47 @@ test('OVERLAY: a feeder key and two candidates render as "<Club A> / <Club B> wi
 });
 
 test('OVERLAY: a candidate the web has no team record for falls back to the stored label', () => {
-  const slot = { kind: 'placeholder' as const, label: 'NYY/BOS', seed: null, feederSeriesKey: 'AL-WC-B', candidates: ['new-york-yankees', 'no-such-club'] as [string, string] };
+  const slot = { kind: 'placeholder' as const, label: 'NYY/BOS', seed: null, candidates: ['new-york-yankees', 'no-such-club'] as [string, string] };
   assert.equal(placeholderText(slot, clubs()), 'NYY/BOS');
   assert.equal(placeholderText({ ...slot, candidates: ['new-york-yankees', 'boston-red-sox'] }, clubs()), 'Yankees / Red Sox winner');
-  assert.equal(placeholderText({ ...slot, feederSeriesKey: null, candidates: null }, clubs()), 'NYY/BOS');
+  assert.equal(placeholderText({ ...slot, candidates: null }, clubs()), 'NYY/BOS');
+});
+
+// OVERLAY. The ruling of 2026-09-29: a feeder key with no candidates renders
+// the stored label, and the key is text nowhere.
+test('FEEDER KEY: with no candidates the slot shows its stored label and the key is nowhere in the view', () => {
+  for (const extra of [{ feederSeriesKey: 'AL-WC-B' }, { feederSeriesKey: 'AL-WC-B', candidates: null }]) {
+    const v = view(FIXTURE.mlbLive, CAPTURED_AT, (d) => {
+      Object.assign(raw(d, 'AL-DS-A').lower, extra);
+    });
+    const ds = series(v, 'AL-DS-A');
+    assert.equal(ds.lower.label, 'NYY/BOS');
+    assert.equal(ds.lower.fullName, 'NYY/BOS');
+    assert.equal(ds.games[0].matchup, 'NYY/BOS at Rays');
+    assert.ok(!JSON.stringify(v).includes('AL-WC-B'), 'the feeder key is in the view');
+  }
+});
+
+test('FEEDER KEY: with candidates the text is composed and the key is still nowhere in the view', () => {
+  const v = view(FIXTURE.mlbLive, CAPTURED_AT, (d) => {
+    Object.assign(raw(d, 'AL-DS-A').lower, { feederSeriesKey: 'AL-WC-B', candidates: ['new-york-yankees', 'boston-red-sox'] });
+  });
+  assert.equal(series(v, 'AL-DS-A').lower.label, 'Yankees / Red Sox winner');
+  assert.ok(!JSON.stringify(v).includes('AL-WC-B'));
+});
+
+test('NO SERIES KEY: no pipeline series key is anywhere in any view', () => {
+  for (const f of Object.values(FIXTURE)) {
+    const d = loadDoc(f);
+    const text = JSON.stringify(view(f));
+    for (const s of d.series as RawSeries[]) {
+      const key = s.seriesKey as string;
+      // "F" and "WS" are too short to search for as bare strings. Quoted, as
+      // a JSON value would hold them, they are exact.
+      assert.ok(!text.includes(`"${key}"`), `${f}: ${key} is a value in the view`);
+      if (key.length >= 4) assert.ok(!text.includes(key), `${f}: ${key} is in the view`);
+    }
+  }
 });
 
 // ---- The live WNBA bracket, one game into the first round ----
@@ -267,12 +319,12 @@ test('IN PROGRESS (captured): Game 1 of Phillies at Braves, under way at 1 to 1'
   assert.equal(s.higher.leads, false);
   assert.equal(s.lower.leads, false);
   // The other ten series are untouched by it.
-  assert.deepEqual(all(v).filter((x) => x.liveLabel !== null).map((x) => x.seriesKey), ['NL-WC-A']);
+  assert.deepEqual(all(v).filter((x) => x.liveLabel !== null).map((x) => x.id), [series(v, 'NL-WC-A').id]);
   assert.deepEqual(v.phase, { kind: 'active', roundKey: 'wild_card', roundLabel: 'Wild Card Series' });
   // A game under way is not an upcoming home game. Its Game 2 still is.
-  assert.ok(!v.homeGames.some((g) => g.key === 'MLB-NL-WC-A-1'));
-  assert.ok(v.homeGames.some((g) => g.key === 'MLB-NL-WC-A-2'));
-  assert.equal(v.homeGames[0].key, 'MLB-AL-WC-A-1', 'the soonest game still ahead leads the list');
+  assert.ok(!v.homeGames.some((g) => g.key === 'MLB-wild_card-3-g1'));
+  assert.ok(v.homeGames.some((g) => g.key === 'MLB-wild_card-3-g2'));
+  assert.equal(v.homeGames[0].key, 'MLB-wild_card-1-g1', 'the soonest game still ahead leads the list');
   // Stored lastChangedAt 2026-09-29T18:51:14.414Z.
   assert.equal(v.updatedLabel, 'Sep 29, 2:51 PM ET');
 });
@@ -297,7 +349,7 @@ test('IN PROGRESS: a game under way is named, carries no score, and is the headl
   assert.equal(s.games[1].result, null);
   const text = JSON.stringify(s.games[1]);
   assert.ok(!text.includes('41') && !text.includes('38'), 'a score in progress is not shown');
-  assert.ok(!v.homeGames.some((g) => g.key === 'WNBA-R1-1v8-2'), 'a game under way is not offered as an upcoming home game');
+  assert.ok(!v.homeGames.some((g) => g.key === 'WNBA-first_round-1-g2'), 'a game under way is not offered as an upcoming home game');
 });
 
 test('POSTPONED and SUSPENDED: the next game says so and shows no time', () => {
@@ -307,7 +359,7 @@ test('POSTPONED and SUSPENDED: the next game says so and shows no time', () => {
     });
     const s = series(v, 'AL-WC-A');
     assert.equal(s.nextLabel, `Game 1 · ${label}`);
-    assert.ok(!v.homeGames.some((g) => g.key === 'MLB-AL-WC-A-1'));
+    assert.ok(!v.homeGames.some((g) => g.key === 'MLB-wild_card-1-g1'));
   }
 });
 
@@ -347,7 +399,7 @@ test('MIXED: tied, leading, and the round being played', () => {
   assert.equal(series(v, 'NL-DS-A').scoreLine, 'MIL leads 2-1');
   assert.equal(series(v, 'NL-DS-B').scoreLine, 'LAD leads 2-0');
   assert.equal(series(v, 'NL-DS-B').lower.leads, true);
-  assert.deepEqual(currentRoundSeries(v).map((s) => s.seriesKey), ['AL-DS-A', 'AL-DS-B', 'NL-DS-A', 'NL-DS-B']);
+  assert.deepEqual(currentRoundSeries(v).map((s) => s.id), ['division_series-1', 'division_series-2', 'division_series-3', 'division_series-4']);
 });
 
 test('CONCLUDED: the champion is the winner of the last round in the document', () => {
@@ -398,7 +450,7 @@ test('HOME GAMES: scheduled games with a confirmed host, soonest first', () => {
   assert.deepEqual(v.homeGames.map((g) => g.sortKey), sorted.map((g) => g.sortKey));
   // Every one has a club host. No game hosted by an unfilled slot is offered.
   assert.ok(v.homeGames.every((g) => clubs().has(g.hostTeamId)));
-  assert.ok(!v.homeGames.some((g) => g.key.startsWith('MLB-AL-CS') || g.key.startsWith('MLB-NL-CS') || g.key.startsWith('MLB-WS')));
+  assert.ok(!v.homeGames.some((g) => g.key.startsWith('MLB-championship_series') || g.key.startsWith('MLB-world_series')));
 });
 
 test('HOME GAMES: an untimed game sorts after the timed games of its day', () => {
@@ -413,8 +465,8 @@ test('HOME GAMES: an untimed game sorts after the timed games of its day', () =>
 test('HOME GAMES: a scheduled game dated before today is not offered', () => {
   const later = view(FIXTURE.mlbLive, new Date('2026-10-01T16:00:00Z'));
   assert.ok(later.homeGames.every((g) => g.day >= '2026-10-01'));
-  assert.ok(!later.homeGames.some((g) => g.key === 'MLB-AL-WC-A-1'));
-  assert.ok(view(FIXTURE.mlbLive).homeGames.some((g) => g.key === 'MLB-AL-WC-A-1'));
+  assert.ok(!later.homeGames.some((g) => g.key === 'MLB-wild_card-1-g1'));
+  assert.ok(view(FIXTURE.mlbLive).homeGames.some((g) => g.key === 'MLB-wild_card-1-g1'));
 });
 
 test('HOME GAMES: "this week" is today and the six days after it, on the Eastern calendar', () => {
@@ -447,11 +499,11 @@ test('PARK: a host with no venue record gets no park line, and nothing in its pl
   const b = bracket(FIXTURE.mlbLive);
   const some = parks();
   some.delete('houston-astros');
-  const v = buildLeagueView(b, clubs(), some, CAPTURED_AT) as LeagueView;
+  const v = build(b, clubs(), some) as LeagueView;
   const s = series(v, 'AL-WC-A');
   assert.equal(s.games[0].park, null);
   assert.equal(s.games[0].hostName, 'Astros');
-  assert.equal(v.homeGames.find((g) => g.key === 'MLB-AL-WC-A-1')?.park, null);
+  assert.equal(v.homeGames.find((g) => g.key === 'MLB-wild_card-1-g1')?.park, null);
   assert.equal(series(v, 'AL-WC-B').games[0].park, 'Yankee Stadium');
 });
 

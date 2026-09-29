@@ -135,6 +135,28 @@ test('ROUTE /playoffs: both leagues, the next home games, hub-tagged ticket link
   assert.ok(!links.some((h) => h.includes('web_playoffs_league')), 'no link from the hub is tagged as a league page');
 });
 
+test('FEEDER KEY: through the real pages, the label renders and "AL-WC-B" is nowhere in the HTML', async () => {
+  const { default: League } = await league();
+  const { default: Hub } = await hub();
+  type Raw = { seriesKey: string; lower: Record<string, unknown> };
+  for (const extra of [
+    { feederSeriesKey: 'AL-WC-B', candidates: null },
+    { feederSeriesKey: 'AL-WC-B' },
+    { feederSeriesKey: 'AL-WC-B', candidates: ['new-york-yankees', 'boston-red-sox'] },
+  ]) {
+    const docs = BOTH();
+    const mlb = docs['postseasonBrackets/MLB_2026'] as { series: Raw[] };
+    Object.assign((mlb.series.find((x) => x.seriesKey === 'AL-DS-A') as Raw).lower, extra);
+    current.db = fakeFirestore(docs);
+    const page = renderToStaticMarkup(await League(params('mlb')));
+    const text = extra.candidates ? 'Yankees / Red Sox winner' : 'NYY/BOS';
+    assert.ok(page.includes(`<span class="min-w-0">${text}</span>`), JSON.stringify(extra));
+    assert.equal(count(page, 'AL-WC-B'), 0, `league page, ${JSON.stringify(extra)}`);
+    assert.equal(count(renderToStaticMarkup(await League(params('wnba'))), 'AL-WC-B'), 0);
+    assert.equal(count(renderToStaticMarkup(await Hub()), 'AL-WC-B'), 0, `hub, ${JSON.stringify(extra)}`);
+  }
+});
+
 test('ROUTE /playoffs: no documents is the offseason state; a failed read is not', async () => {
   const { default: Page } = await hub();
   current.db = fakeFirestore({});
