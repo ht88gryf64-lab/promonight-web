@@ -435,7 +435,7 @@ async function main() {
     same(`${where}: <h1> in the document, and it is inside the article`, `${count(dom, '<h1')} ${count(el, '<h1')}`, '1 1');
     check(`${where}: the footer notes and the disclosure are outside the article`, !el.includes('<footer') && !/may earn a commission/i.test(textOf(el)));
     const text = textOf(el);
-    check(`${where}: no dash in the article`, !/[—–]/.test(text));
+    check(`${where}: no dash in the article`, !/[\u2014\u2013]/.test(text));
     const stale = /\b(hourly|real[- ]time|up to the minute|updated live|live scores?)\b/i.exec(text);
     check(`${where}: no freshness claim`, !stale, stale ? stale[0] : '');
     return el;
