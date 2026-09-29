@@ -109,6 +109,7 @@ test('LEAGUE: breadcrumb, heading, and the absolute change stamp', () => {
   assert.match(html, /<h1[^>]*>2026 MLB Playoffs<\/h1>/);
   assert.ok(text.includes('Bracket updated Sep 29, 1:10 PM ET'));
   assert.equal(count(html, 'data-bracket-updated'), 1);
+  assert.equal(count(html, 'data-lede'), 1);
 });
 
 test('LEAGUE: every round is a section under the document label, every series is in it', () => {
@@ -232,6 +233,8 @@ test('UNAVAILABLE: a missing or unreadable document renders that, and no bracket
     assert.equal(count(html, 'data-series="'), 0);
     assert.equal(count(html, 'data-round="'), 0);
     assert.equal(count(html, 'data-bracket-updated'), 0);
+    assert.equal(count(html, 'data-lede'), 0, 'no description of a bracket that is not shown');
+    assert.ok(!text.includes('every series'));
     assert.equal(count(html, 'data-predictions'), 0);
     assert.ok(!text.includes('Home games this week'));
     assert.ok(html.includes('href="/playoffs/wnba"'), 'the way to the other league still works');
@@ -332,6 +335,7 @@ test('HUB: no league at all is the offseason state, with no date in it', () => {
   assert.ok(!text.includes('Next home games'));
   const block = textOf(element(html, 'data-hub-state="offseason"'));
   assert.ok(block.includes('No postseason is underway'));
+  assert.ok(element(html, 'data-hub-state="offseason"').includes('href="/teams"'));
   assert.ok(!/\d/.test(block), 'the offseason state holds no digit, so no date');
 });
 

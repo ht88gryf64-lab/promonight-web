@@ -172,8 +172,15 @@ export function PlayoffsHub({
             No postseason is underway
           </p>
           <p className="mt-2 max-w-[52ch] text-[14px] leading-relaxed text-rd-ink-soft">
-            A league appears here once its bracket is set. Until then, team pages carry every promotion on the regular-season schedule.
+            A league appears here once its bracket is set.
           </p>
+          <Link
+            href="/teams"
+            className="mt-3 inline-block font-semibold uppercase tracking-[0.12em] text-rd-red hover:text-rd-red-dark"
+            style={{ fontFamily: CONDENSED, fontSize: 15 }}
+          >
+            Browse promotions by team
+          </Link>
         </div>
       )}
 

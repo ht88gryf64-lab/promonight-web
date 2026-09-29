@@ -52,9 +52,12 @@ export function PlayoffsLeague({
       >
         {season} {league} Playoffs
       </h1>
-      <p className="mt-2.5 max-w-[52ch] text-[15px] text-rd-ink-soft">
-        The {season} {league} postseason bracket: every series, seed and result, with game times in Eastern.
-      </p>
+      {/* The lede describes the bracket, so it is shown only with one. */}
+      {view && (
+        <p data-lede className="mt-2.5 max-w-[52ch] text-[15px] text-rd-ink-soft">
+          The {season} {league} postseason bracket: every series, seed and result, with game times in Eastern.
+        </p>
+      )}
       {view?.updatedLabel && (
         <p data-bracket-updated className="mt-2 text-[12.5px] text-rd-ink-faint">
           Bracket updated {view.updatedLabel}
