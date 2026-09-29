@@ -11,9 +11,9 @@ import {
   postseasonLeagueFromSlug,
   postseasonPath,
 } from '@/lib/postseason/data';
-import { homeGamesThisWeek } from '@/lib/postseason/view';
+import { homeGamesWindow } from '@/lib/postseason/view';
 import { PlayoffsLeague, type LeagueBody } from '@/components/playoffs/PlayoffsLeague';
-import { ticketButtons } from '@/components/playoffs/tickets';
+import { seriesTickets, ticketButtons } from '@/components/playoffs/tickets';
 
 // See the hub page: on-demand revalidation is the real path, the timer is
 // the backstop for a render that caught a failed read.
@@ -57,18 +57,25 @@ export default async function PlayoffsLeaguePage({ params }: { params: Promise<P
 
   let body: LeagueBody;
   let tickets = {};
+  let panelTickets = {};
   if (page.state === 'ok') {
-    const weekGames = page.view.phase.kind === 'active' ? homeGamesThisWeek(page.view, new Date()) : [];
-    body = { state: 'ok', view: page.view, predictionsLocked: page.predictionsLocked, weekGames };
-    if (weekGames.length > 0) {
-      const teams = new Map((await getAllTeams()).map((t) => [t.id, t]));
-      tickets = ticketButtons(
-        weekGames.map((g) => g.hostTeamId),
-        teams,
-        'web_playoffs_league',
-        'playoffs_league',
-      );
-    }
+    const homeGames = page.view.phase.kind === 'active' ? homeGamesWindow([page.view], new Date()) : { primary: [], rest: [] };
+    body = { state: 'ok', view: page.view, predictionsLocked: page.predictionsLocked, homeGames };
+    const teams = new Map((await getAllTeams()).map((t) => [t.id, t]));
+    tickets = ticketButtons(
+      [...homeGames.primary, ...homeGames.rest].map((g) => g.hostTeamId),
+      teams,
+      'web_playoffs_league',
+      'playoffs_league',
+    );
+    // A series' detail sells tickets for the host of its next game that is
+    // still to be played, and only when that host is a club.
+    const upcoming = page.view.rounds.flatMap((r) =>
+      r.groups.flatMap((g) =>
+        g.series.map((s) => ({ id: s.id, hostTeamId: s.next && s.next.state === 'scheduled' ? s.next.hostTeamId : null })),
+      ),
+    );
+    panelTickets = seriesTickets(upcoming, teams, 'web_playoffs_league', 'playoffs_league');
   } else {
     body = { state: page.state };
   }
@@ -81,7 +88,14 @@ export default async function PlayoffsLeaguePage({ params }: { params: Promise<P
 
   return (
     <div className={`${archivoHouse.variable} ${barlowCondensed.variable} rd-root min-h-screen bg-rd-cream`}>
-      <PlayoffsLeague league={league} season={POSTSEASON_SEASON} body={body} tickets={tickets} otherLeagues={otherLeagues} />
+      <PlayoffsLeague
+        league={league}
+        season={POSTSEASON_SEASON}
+        body={body}
+        tickets={tickets}
+        panelTickets={panelTickets}
+        otherLeagues={otherLeagues}
+      />
     </div>
   );
 }

@@ -14,15 +14,14 @@ import {
   easternStamp,
   easternTime,
   easternYmd,
-  homeGamesThisWeek,
+  homeGamesWindow,
   hostSlugs,
-  nextHomeGames,
   placeholderText,
   seriesIds,
   type LeagueView,
   type SeriesView,
 } from '../view';
-import { CAPTURED_AT, FIXTURE, IN_GAME_AT, clubs, loadDoc, parks } from './helpers';
+import { CAPTURED_AT, FIELDS_AT, FIXTURE, IN_GAME_AT, clubs, loadDoc, parks } from './helpers';
 
 type Doc = Record<string, unknown>;
 type RawSeries = Doc & { games: Doc[]; higher: Doc; lower: Doc };
@@ -133,6 +132,8 @@ test('MLB LIVE: the next game carries its Eastern day and time, its host and its
   assert.equal(a.nextLabel, 'Game 1 · Tue, Sep 29 · 5:00 PM ET');
   assert.equal(a.next?.hostName, 'Astros');
   assert.equal(a.next?.park, 'Daikin Park');
+  // The park's page on this site, from the web's own venue pages.
+  assert.deepEqual(a.next?.parkPage, { href: '/venues/daikin-park', buildingSlug: 'daikin-park', buildingName: 'Daikin Park' });
   assert.equal(a.next?.matchup, 'White Sox at Astros');
   // Stored start 2026-09-30T02:00:00Z: a 10 PM ET game on the 29th.
   assert.equal(series(v, 'NL-WC-B').nextLabel, 'Game 1 · Tue, Sep 29 · 10:00 PM ET');
@@ -210,6 +211,100 @@ test('OVERLAY: a candidate the web has no team record for falls back to the stor
   assert.equal(placeholderText(slot, clubs()), 'NYY/BOS');
   assert.equal(placeholderText({ ...slot, candidates: ['new-york-yankees', 'boston-red-sox'] }, clubs()), 'Yankees / Red Sox winner');
   assert.equal(placeholderText({ ...slot, candidates: null }, clubs()), 'NYY/BOS');
+});
+
+// ---- Placeholder resolution, as the reader sees it ----
+
+test('CAPTURED: a feeder being played, with two candidates, reads "<A> / <B> winner"', () => {
+  const v = view(FIXTURE.mlbFields, FIELDS_AT);
+  assert.equal(series(v, 'NL-WC-A').status, 'live');
+  const ds = series(v, 'NL-DS-B');
+  assert.equal(ds.lower.kind, 'placeholder');
+  assert.equal(ds.lower.label, 'Braves / Phillies winner');
+  assert.equal(ds.lower.teamHref, null);
+  assert.equal(ds.lower.seed, null);
+  assert.equal(ds.higher.label, 'Dodgers');
+  assert.equal(ds.games[0].matchup, 'Braves / Phillies winner at Dodgers');
+  assert.deepEqual(['AL-DS-A', 'AL-DS-B', 'NL-DS-A'].map((k) => series(v, k).lower.label), ['Yankees / Red Sox winner', 'Astros / White Sox winner', 'Padres / Cubs winner']);
+  // A slot with neither keeps the stored label.
+  assert.equal(series(v, 'AL-CS').higher.label, 'AL Higher Seed');
+  assert.equal(series(v, 'WS').lower.label, 'Lower Seed League Champion');
+  assert.equal(series(view(FIXTURE.wnbaFields, FIELDS_AT), 'SF-A').higher.label, 'TBD');
+});
+
+test('CAPTURED: rounds carry the short label for the pills and the full one for headings', () => {
+  assert.deepEqual(view(FIXTURE.mlbFields, FIELDS_AT).rounds.map((r) => [r.label, r.shortLabel]), [
+    ['Wild Card Series', 'Wild Card'],
+    ['Division Series', 'Division'],
+    ['Championship Series', 'LCS'],
+    ['World Series', 'World Series'],
+  ]);
+  assert.deepEqual(view(FIXTURE.wnbaFields, FIELDS_AT).rounds.map((r) => [r.label, r.shortLabel]), [
+    ['First Round', 'First Round'],
+    ['Semifinals', 'Semifinals'],
+    ['WNBA Finals', 'Finals'],
+  ]);
+});
+
+// OVERLAY: no captured document holds a slot whose feeder is decided.
+test('RESOLUTION 1: a decided feeder shows its winner by name, as a club, with the winner\'s seed', () => {
+  // Mixed 2025 document: AL-DS-A is final, won by Toronto, the 1 seed.
+  const v = view(FIXTURE.mlbMixed, new Date('2025-10-09T03:08:00Z'), (d) => {
+    Object.assign(raw(d, 'AL-CS').higher, { feederSeriesKey: 'AL-DS-A' });
+    for (const g of raw(d, 'AL-CS').games) if (g.home === 'AL Higher Seed') g.home = 'toronto-blue-jays';
+  });
+  const cs = series(v, 'AL-CS');
+  assert.equal(cs.higher.kind, 'club');
+  assert.equal(cs.higher.label, 'Blue Jays');
+  assert.equal(cs.higher.fullName, 'Toronto Blue Jays');
+  assert.equal(cs.higher.seed, 1);
+  assert.equal(cs.higher.teamHref, '/mlb/toronto-blue-jays');
+  assert.equal(cs.higher.abbreviation, 'TOR');
+  // The other slot's feeder is still being played. It stays as it was.
+  assert.equal(cs.lower.kind, 'placeholder');
+  assert.equal(cs.lower.label, 'AL Lower Seed');
+  // The winner hosts what the slot hosted, at its own park.
+  assert.equal(cs.games[0].hostName, 'Blue Jays');
+  assert.equal(cs.games[0].park, 'Rogers Centre');
+  assert.equal(cs.games[0].matchup, 'AL Lower Seed at Blue Jays');
+});
+
+test('RESOLUTION 2: a feeder still being played, with candidates, shows "<A> / <B> winner"', () => {
+  const v = view(FIXTURE.mlbMixed, new Date('2025-10-09T03:08:00Z'), (d) => {
+    assert.equal(raw(d, 'AL-DS-B').status, 'live');
+    Object.assign(raw(d, 'AL-CS').lower, { feederSeriesKey: 'AL-DS-B', candidates: ['seattle-mariners', 'detroit-tigers'] });
+  });
+  const cs = series(v, 'AL-CS');
+  assert.equal(cs.lower.kind, 'placeholder');
+  assert.equal(cs.lower.label, 'Mariners / Tigers winner');
+  assert.equal(cs.lower.teamHref, null);
+  assert.equal(cs.lower.seed, null);
+});
+
+test('RESOLUTION 3: with neither, the stored label', () => {
+  const v = view(FIXTURE.mlbMixed, new Date('2025-10-09T03:08:00Z'), (d) => {
+    Object.assign(raw(d, 'AL-CS').lower, { feederSeriesKey: 'AL-DS-B' });
+  });
+  assert.equal(series(v, 'AL-CS').lower.label, 'AL Lower Seed');
+  assert.equal(series(view(FIXTURE.mlbMixed, new Date('2025-10-09T03:08:00Z')), 'AL-CS').lower.label, 'AL Lower Seed');
+});
+
+test('STORED KEY: "Winner of AL-WC-B" is never what the reader sees', () => {
+  // Feeder still being played: the document's words for it.
+  const live = view(FIXTURE.mlbLive, CAPTURED_AT, (d) => {
+    raw(d, 'AL-DS-A').lower = { placeholder: 'Winner of AL-WC-B', seed: null };
+    for (const g of raw(d, 'AL-DS-A').games) if (g.away === 'NYY/BOS') g.away = 'Winner of AL-WC-B';
+  });
+  assert.equal(series(live, 'AL-DS-A').lower.label, 'AL Wild Card Series winner');
+  assert.ok(!JSON.stringify(live).includes('AL-WC-B'));
+  // Feeder decided, which is when the pipeline writes this label: the winner.
+  const decided = view(FIXTURE.mlbMixed, new Date('2025-10-09T03:08:00Z'), (d) => {
+    raw(d, 'AL-CS').higher = { placeholder: 'Winner of AL-DS-A', seed: null };
+    for (const g of raw(d, 'AL-CS').games) if (g.home === 'AL Higher Seed') g.home = 'Winner of AL-DS-A';
+  });
+  assert.equal(series(decided, 'AL-CS').higher.label, 'Blue Jays');
+  assert.equal(series(decided, 'AL-CS').higher.kind, 'club');
+  assert.ok(!JSON.stringify(decided).includes('AL-DS-A'));
 });
 
 // OVERLAY. The ruling of 2026-09-29: a feeder key with no candidates renders
@@ -469,22 +564,52 @@ test('HOME GAMES: a scheduled game dated before today is not offered', () => {
   assert.ok(view(FIXTURE.mlbLive).homeGames.some((g) => g.key === 'MLB-wild_card-1-g1'));
 });
 
-test('HOME GAMES: "this week" is today and the six days after it, on the Eastern calendar', () => {
+// ---- The list the pages show: three days, eight rows, the week behind it ----
+
+test('HOME GAMES WINDOW: the short list is today and the two days after it, Eastern', () => {
   const v = view(FIXTURE.mlbLive);
-  const week = homeGamesThisWeek(v, CAPTURED_AT);
-  assert.ok(week.length > 0);
-  assert.ok(week.every((g) => g.day >= '2026-09-29' && g.day <= '2026-10-05'));
-  assert.ok(v.homeGames.some((g) => g.day > '2026-10-05'), 'the capture holds a home game beyond the week');
-  assert.ok(!week.some((g) => g.day > '2026-10-05'));
-  // 03:00 UTC on Sep 30 is still Sep 29 in the East.
-  assert.deepEqual(homeGamesThisWeek(v, new Date('2026-09-30T03:00:00Z')).map((g) => g.key), week.map((g) => g.key));
+  const w = homeGamesWindow([v], CAPTURED_AT);
+  assert.ok(w.primary.length > 0);
+  assert.ok(w.primary.every((g) => g.day >= '2026-09-29' && g.day <= '2026-10-01'), 'Sep 29, Sep 30, Oct 1');
+  // The capture holds 12 Wild Card games on those three days. Eight show.
+  assert.equal(v.homeGames.filter((g) => g.day <= '2026-10-01').length, 12);
+  assert.equal(w.primary.length, 8);
+  assert.deepEqual(w.primary.map((g) => g.sortKey), [...w.primary.map((g) => g.sortKey)].sort(), 'soonest first');
+  assert.deepEqual(w.primary.slice(0, 2).map((g) => [g.matchup, g.when]), [
+    ['Phillies at Braves', 'Tue, Sep 29 · 2:00 PM ET'],
+    ['White Sox at Astros', 'Tue, Sep 29 · 5:00 PM ET'],
+  ]);
+  // 03:00 UTC on Sep 30 is still Sep 29 in the East: the same three days.
+  assert.deepEqual(homeGamesWindow([v], new Date('2026-09-30T03:00:00Z')).primary.map((g) => g.key), w.primary.map((g) => g.key));
 });
 
-test('HOME GAMES: the hub list merges leagues by start and stops at its limit', () => {
-  const mlb = view(FIXTURE.mlbLive);
-  const wnba = view(FIXTURE.wnbaLive);
-  const next = nextHomeGames([mlb, wnba], 6);
-  assert.deepEqual(next.map((g) => [g.league, g.matchup, g.when]), [
+test('HOME GAMES WINDOW: "Show all" holds the rest of the week, and nothing past it', () => {
+  const v = view(FIXTURE.mlbLive);
+  const w = homeGamesWindow([v], CAPTURED_AT);
+  const week = v.homeGames.filter((g) => g.day >= '2026-09-29' && g.day <= '2026-10-05');
+  assert.equal(w.primary.length + w.rest.length, week.length);
+  assert.deepEqual([...w.primary, ...w.rest].map((g) => g.key), week.map((g) => g.key), 'the two lists are the week, in order, with nothing twice');
+  // The rest begins with the four games of the first three days that did not
+  // fit in eight rows, then runs on to Oct 5.
+  assert.deepEqual(w.rest.slice(0, 4).map((g) => g.day), ['2026-10-01', '2026-10-01', '2026-10-01', '2026-10-01']);
+  assert.ok(w.rest.some((g) => g.day > '2026-10-01'));
+  assert.ok(v.homeGames.some((g) => g.day > '2026-10-05'), 'the capture holds a home game beyond the week');
+  assert.ok(![...w.primary, ...w.rest].some((g) => g.day > '2026-10-05'));
+});
+
+test('HOME GAMES WINDOW: one row for each game, however many times it arrives', () => {
+  const v = view(FIXTURE.mlbLive);
+  const once = homeGamesWindow([v], CAPTURED_AT);
+  const twice = homeGamesWindow([v, v], CAPTURED_AT);
+  assert.deepEqual(twice, once);
+  const keys = [...twice.primary, ...twice.rest].map((g) => g.key);
+  assert.equal(new Set(keys).size, keys.length);
+});
+
+test('HOME GAMES WINDOW: the hub merges leagues by start, under the same two limits', () => {
+  const w = homeGamesWindow([view(FIXTURE.mlbLive), view(FIXTURE.wnbaLive)], CAPTURED_AT);
+  assert.equal(w.primary.length, 8);
+  assert.deepEqual(w.primary.slice(0, 6).map((g) => [g.league, g.matchup, g.when]), [
     ['MLB', 'Phillies at Braves', 'Tue, Sep 29 · 2:00 PM ET'],
     ['MLB', 'White Sox at Astros', 'Tue, Sep 29 · 5:00 PM ET'],
     ['WNBA', 'Aces at Fever', 'Tue, Sep 29 · 6:30 PM ET'],
@@ -492,7 +617,17 @@ test('HOME GAMES: the hub list merges leagues by start and stops at its limit', 
     ['WNBA', 'Lynx at Liberty', 'Tue, Sep 29 · 8:30 PM ET'],
     ['MLB', 'Cubs at Padres', 'Tue, Sep 29 · 10:00 PM ET'],
   ]);
-  assert.deepEqual(nextHomeGames([], 6), []);
+  assert.ok(w.rest.some((g) => g.league === 'WNBA') && w.rest.some((g) => g.league === 'MLB'));
+  assert.deepEqual(homeGamesWindow([], CAPTURED_AT), { primary: [], rest: [] });
+});
+
+test('HOME GAMES WINDOW: a quiet three days leaves the short list empty and the week intact', () => {
+  // Sep 24: the first game is five days off. Nothing in three days, but the
+  // Wild Card openers fall inside the week.
+  const w = homeGamesWindow([view(FIXTURE.mlbLive, new Date('2026-09-24T16:00:00Z'))], new Date('2026-09-24T16:00:00Z'));
+  assert.deepEqual(w.primary, []);
+  assert.ok(w.rest.length > 0);
+  assert.ok(w.rest.every((g) => g.day >= '2026-09-24' && g.day <= '2026-09-30'));
 });
 
 test('PARK: a host with no venue record gets no park line, and nothing in its place', () => {
@@ -502,9 +637,24 @@ test('PARK: a host with no venue record gets no park line, and nothing in its pl
   const v = build(b, clubs(), some) as LeagueView;
   const s = series(v, 'AL-WC-A');
   assert.equal(s.games[0].park, null);
+  assert.equal(s.games[0].parkPage, null);
   assert.equal(s.games[0].hostName, 'Astros');
   assert.equal(v.homeGames.find((g) => g.key === 'MLB-wild_card-1-g1')?.park, null);
   assert.equal(series(v, 'AL-WC-B').games[0].park, 'Yankee Stadium');
+});
+
+test('PARK PAGE: a park with no page on this site is a name and no link', () => {
+  const b = bracket(FIXTURE.mlbLive);
+  const some = parks();
+  some.set('houston-astros', { name: 'Daikin Park', page: null });
+  const v = build(b, clubs(), some) as LeagueView;
+  const g = series(v, 'AL-WC-A').games[0];
+  assert.equal(g.park, 'Daikin Park');
+  assert.equal(g.parkPage, null);
+  const row = v.homeGames.find((x) => x.key === 'MLB-wild_card-1-g1');
+  assert.equal(row?.park, 'Daikin Park');
+  assert.equal(row?.parkPage, null);
+  assert.deepEqual(series(v, 'AL-WC-B').games[0].parkPage, { href: '/venues/yankee-stadium', buildingSlug: 'yankee-stadium', buildingName: 'Yankee Stadium' });
 });
 
 test('UNKNOWN CLUB: a club with no team record refuses the whole view', () => {

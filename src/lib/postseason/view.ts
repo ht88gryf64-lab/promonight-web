@@ -22,6 +22,19 @@ export interface ClubInfo {
   primaryColor: string;
 }
 
+/** A host club's park: the web's venue name for the club, and its venue page
+ *  when the web has one that is above the indexing floor. */
+export interface ParkInfo {
+  name: string;
+  page: ParkPage | null;
+}
+
+export interface ParkPage {
+  href: string;
+  buildingSlug: string;
+  buildingName: string;
+}
+
 export interface SlotView {
   kind: 'club' | 'placeholder';
   seed: number | null;
@@ -57,6 +70,9 @@ export interface GameView {
   hostTeamId: string | null;
   hostName: string | null;
   park: string | null;
+  /** The park's page on this site. Null when there is none: the name then
+   *  renders as plain text. */
+  parkPage: ParkPage | null;
 }
 
 export interface SeriesView {
@@ -120,7 +136,22 @@ export interface HomeGameView {
   hostTeamId: string;
   hostName: string;
   park: string | null;
+  parkPage: ParkPage | null;
 }
+
+/** The home games list as the pages show it: a short list first, and the
+ *  rest of the week behind "Show all". */
+export interface HomeGamesWindow {
+  primary: HomeGameView[];
+  rest: HomeGameView[];
+}
+
+/** The short list covers today and the two days after it, Eastern. */
+export const HOME_GAMES_DAYS = 3;
+/** And never more than this many rows. */
+export const HOME_GAMES_ROWS = 8;
+/** "Show all" reveals the rest of this many days, today included. */
+export const HOME_GAMES_WEEK_DAYS = 7;
 
 // ---- Time, always Eastern ----
 function parts(d: Date, zone: string, opts: Intl.DateTimeFormatOptions): Record<string, string> {
@@ -258,7 +289,7 @@ function gameView(
   g: BracketGame,
   higher: SlotView,
   lower: SlotView,
-  parks: ReadonlyMap<string, string>,
+  parks: ReadonlyMap<string, ParkInfo>,
 ): GameView {
   const timed = !g.startTimeTBD && g.start !== null;
   // The day a game is listed under. With a known time it is the Eastern day
@@ -287,6 +318,7 @@ function gameView(
   }
 
   const waiting = g.status === 'scheduled' && g.ifNecessary;
+  const park = host && host.teamId ? parks.get(host.teamId) ?? null : null;
   return {
     gameNumber: g.gameNumber,
     title: `Game ${g.gameNumber}`,
@@ -300,7 +332,8 @@ function gameView(
     matchup: home && away ? `${away.label} at ${home.label}` : `${lower.label} vs ${higher.label}`,
     hostTeamId: host ? host.teamId : null,
     hostName: host ? host.label : null,
-    park: host && host.teamId ? parks.get(host.teamId) ?? null : null,
+    park: park ? park.name : null,
+    parkPage: park ? park.page : null,
   };
 }
 
@@ -326,7 +359,7 @@ function seriesView(
   s: BracketSeries,
   id: string,
   clubs: ReadonlyMap<string, ClubInfo>,
-  parks: ReadonlyMap<string, string>,
+  parks: ReadonlyMap<string, ParkInfo>,
 ): SeriesView | null {
   const higher = slotView(s.higher, 'higher', s, clubs);
   const lower = slotView(s.lower, 'lower', s, clubs);
@@ -392,7 +425,7 @@ function seriesView(
 export function buildLeagueView(
   bracket: Bracket,
   clubs: ReadonlyMap<string, ClubInfo>,
-  parks: ReadonlyMap<string, string>,
+  parks: ReadonlyMap<string, ParkInfo>,
   now: Date,
 ): LeagueView | null {
   const rounds: RoundView[] = [];
@@ -462,10 +495,11 @@ export function buildLeagueView(
         hostTeamId: g.hostTeamId,
         hostName: g.hostName,
         park: g.park,
+        parkPage: g.parkPage,
       });
     }
   }
-  homeGames.sort((a, b) => (a.sortKey < b.sortKey ? -1 : a.sortKey > b.sortKey ? 1 : a.key < b.key ? -1 : 1));
+  homeGames.sort(bySoonest);
 
   return {
     league: bracket.league,
@@ -502,19 +536,34 @@ export function currentRoundSeries(view: LeagueView): SeriesView[] {
   return round ? round.groups.flatMap((g) => g.series) : [];
 }
 
-/** Home games on the next seven Eastern calendar days, today included. */
-export function homeGamesThisWeek(view: LeagueView, now: Date): HomeGameView[] {
-  const today = easternYmd(now);
-  const end = addDaysYmd(today, 6);
-  return view.homeGames.filter((g) => g.day >= today && g.day <= end);
-}
+const bySoonest = (a: HomeGameView, b: HomeGameView) =>
+  a.sortKey < b.sortKey ? -1 : a.sortKey > b.sortKey ? 1 : a.key < b.key ? -1 : a.key > b.key ? 1 : 0;
 
-/** The soonest home games across several leagues, for the hub. */
-export function nextHomeGames(views: readonly LeagueView[], limit: number): HomeGameView[] {
-  return views
-    .flatMap((v) => v.homeGames)
-    .sort((a, b) => (a.sortKey < b.sortKey ? -1 : a.sortKey > b.sortKey ? 1 : a.key < b.key ? -1 : 1))
-    .slice(0, limit);
+/**
+ * The home games of one league, or of several merged, as the pages list
+ * them.
+ *
+ * `primary` is the short list: games on the next three Eastern calendar
+ * days, today included, and no more than eight of them. `rest` is every
+ * other game in the next seven days, which "Show all" reveals. One row per
+ * game: a game that arrives twice is listed once.
+ */
+export function homeGamesWindow(views: readonly LeagueView[], now: Date): HomeGamesWindow {
+  const today = easternYmd(now);
+  const shortEnd = addDaysYmd(today, HOME_GAMES_DAYS - 1);
+  const weekEnd = addDaysYmd(today, HOME_GAMES_WEEK_DAYS - 1);
+  const seen = new Set<string>();
+  const week: HomeGameView[] = [];
+  for (const g of views.flatMap((v) => v.homeGames)) {
+    if (g.day < today || g.day > weekEnd) continue;
+    if (seen.has(g.key)) continue;
+    seen.add(g.key);
+    week.push(g);
+  }
+  week.sort(bySoonest);
+  const primary = week.filter((g) => g.day <= shortEnd).slice(0, HOME_GAMES_ROWS);
+  const shown = new Set(primary.map((g) => g.key));
+  return { primary, rest: week.filter((g) => !shown.has(g.key)) };
 }
 
 /** Every club slug a bracket names, so the caller can look each one up. */

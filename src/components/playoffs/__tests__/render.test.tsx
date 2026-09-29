@@ -1,54 +1,69 @@
-// What the two page bodies put in the HTML. These assert on the markup a
-// crawler would receive from the server render, built from the captured
-// documents through the real mapper and the real view builder.
+// What the two page bodies put in the HTML. These assert on the markup the
+// server render produces, built from the captured documents through the real
+// mapper and the real view builder. Nothing here runs a script: what passes
+// is what a reader with scripts off, or a crawler, receives.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import type { ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { mapBracketDoc } from '../../../lib/postseason/map';
-import { buildLeagueView, homeGamesThisWeek, nextHomeGames, type LeagueView } from '../../../lib/postseason/view';
-import { CAPTURED_AT, FIXTURE, IN_GAME_AT, clubs, loadDoc, parks, rawText } from '../../../lib/postseason/__tests__/helpers';
+import { buildLeagueView, homeGamesWindow, type LeagueView } from '../../../lib/postseason/view';
+import { CAPTURED_AT, FIELDS_AT, FIXTURE, IN_GAME_AT, clubs, loadDoc, parks, rawText } from '../../../lib/postseason/__tests__/helpers';
 import { PlayoffsHub, type HubLeague } from '../PlayoffsHub';
 import { PlayoffsLeague, type LeagueBody } from '../PlayoffsLeague';
 import { PREDICTIONS_COPY } from '../PredictionsCard';
 
 type Doc = Record<string, unknown>;
 type RawSeries = Doc & { games: Doc[]; higher: Doc; lower: Doc };
+type Edit = (d: Doc) => void;
 
-function view(name: string, now: Date = CAPTURED_AT, edit?: (d: Doc) => void): LeagueView {
+const MIXED_AT = new Date('2025-10-09T03:08:00Z');
+
+function view(name: string, now: Date = CAPTURED_AT, edit?: Edit): LeagueView {
   const d = loadDoc(name);
   if (edit) edit(d);
   const b = mapBracketDoc(d, { league: d.league as 'MLB' | 'WNBA', season: d.season as number });
-  assert.ok(b);
+  assert.ok(b, `${name} maps`);
   const v = buildLeagueView(b, clubs(), parks(), now);
-  assert.ok(v);
+  assert.ok(v, `${name} builds`);
   return v;
 }
+const raw = (d: Doc, key: string): RawSeries => (d.series as RawSeries[]).find((s) => s.seriesKey === key) as RawSeries;
 
-// Ticket buttons are rendered by the page and passed in. A marker stands in
-// for them here; their own tagging is tested in tickets.test.tsx.
-const stubTickets = (ids: string[]): Record<string, ReactNode> =>
-  Object.fromEntries(ids.map((id) => [id, <span data-tickets-for={id}>tickets</span>]));
+// Ticket buttons and blocks are rendered by the page and passed in. Markers
+// stand in for them here; the real ones are tested through the real pages in
+// routes.test.tsx.
+const rowTickets = (ids: string[]): Record<string, ReactNode> =>
+  Object.fromEntries(ids.map((id) => [id, <span data-tickets-for={id}>ticket</span>]));
+function panelTickets(v: LeagueView): Record<string, ReactNode> {
+  const out: Record<string, ReactNode> = {};
+  for (const r of v.rounds) for (const g of r.groups) for (const s of g.series) {
+    if (s.next && s.next.state === 'scheduled' && s.next.hostTeamId) out[s.id] = <span data-panel-tickets={s.next.hostTeamId}>tickets</span>;
+  }
+  return out;
+}
 
 function leagueHtml(v: LeagueView, opts: { locked?: boolean; now?: Date; others?: { league: 'MLB' | 'WNBA'; href: string }[] } = {}): string {
-  const weekGames = v.phase.kind === 'active' ? homeGamesThisWeek(v, opts.now ?? CAPTURED_AT) : [];
-  const body: LeagueBody = { state: 'ok', view: v, predictionsLocked: opts.locked ?? true, weekGames };
+  const homeGames = v.phase.kind === 'active' ? homeGamesWindow([v], opts.now ?? CAPTURED_AT) : { primary: [], rest: [] };
+  const body: LeagueBody = { state: 'ok', view: v, predictionsLocked: opts.locked ?? true, homeGames };
   return renderToStaticMarkup(
     <PlayoffsLeague
       league={v.league}
       season={v.season}
       body={body}
-      tickets={stubTickets(weekGames.map((g) => g.hostTeamId))}
+      tickets={rowTickets([...homeGames.primary, ...homeGames.rest].map((g) => g.hostTeamId))}
+      panelTickets={panelTickets(v)}
       otherLeagues={opts.others ?? []}
     />,
   );
 }
 
-function hubHtml(leagues: HubLeague[]): string {
+function hubHtml(leagues: HubLeague[], now: Date = CAPTURED_AT): string {
   const active = leagues.flatMap((l) => (l.state === 'ok' && l.view.phase.kind === 'active' ? [l.view] : []));
-  const next = nextHomeGames(active, 8);
+  const next = homeGamesWindow(active, now);
   return renderToStaticMarkup(
-    <PlayoffsHub season={2026} leagues={leagues} nextGames={next} tickets={stubTickets(next.map((g) => g.hostTeamId))} />,
+    <PlayoffsHub season={2026} leagues={leagues} nextGames={next} tickets={rowTickets([...next.primary, ...next.rest].map((g) => g.hostTeamId))} />,
   );
 }
 const ok = (v: LeagueView, locked = true): HubLeague => ({
@@ -59,9 +74,10 @@ const ok = (v: LeagueView, locked = true): HubLeague => ({
   predictionsLocked: locked,
 });
 
-/** Visible text: tags out, entities back, whitespace collapsed. */
+/** Visible text: style and script out, tags out, entities back. */
 function textOf(html: string): string {
   return html
+    .replace(/<(style|script|noscript)\b[\s\S]*?<\/\1>/g, ' ')
     .replace(/<[^>]+>/g, ' ')
     .replace(/&amp;/g, '&')
     .replace(/&#x27;/g, "'")
@@ -71,41 +87,65 @@ function textOf(html: string): string {
 }
 const count = (html: string, needle: string) => html.split(needle).length - 1;
 
-/** The element whose opening tag holds `marker`, from its "<" to its first
- *  closing tag. Only used on elements that nest none of their own kind. */
+/** The element whose opening tag holds `marker`, from its "<" to the close
+ *  that balances it. */
 function element(html: string, marker: string): string {
   const at = html.indexOf(marker);
   assert.ok(at >= 0, `${marker} is in the markup`);
   const open = html.lastIndexOf('<', at);
   const tag = /^<([a-z0-9]+)/.exec(html.slice(open))?.[1];
   assert.ok(tag);
-  const close = html.indexOf(`</${tag}>`, at);
-  return html.slice(open, close + tag.length + 3);
+  const re = new RegExp(`<${tag}\\b[^>]*>|</${tag}>`, 'g');
+  re.lastIndex = open;
+  let depth = 0;
+  for (let m = re.exec(html); m; m = re.exec(html)) {
+    if (m[0].startsWith('</')) depth -= 1;
+    else if (!m[0].endsWith('/>')) depth += 1;
+    if (depth === 0) return html.slice(open, m.index + m[0].length);
+  }
+  assert.fail(`${marker}: the element never closes`);
 }
+const card = (html: string, id: string) => element(html, `data-series="${id}"`);
+const panel = (html: string, id: string) => element(html, `data-series-panel="${id}"`);
 
 /** The markup with every in-progress badge removed. What is left must not
  *  contain the word at all. */
 const withoutBadges = (html: string) => html.replace(/<span data-game-state="live"[^>]*>Live<\/span>/g, '');
-
 const FRESHNESS_WORDS = /\bhourly\b|\breal[- ]time\b|\blive\b|\bup to the minute\b|\bminute by minute\b/i;
 
-const EVERY_VIEW: [string, () => LeagueView][] = [
-  ['MLB live capture', () => view(FIXTURE.mlbLive)],
-  ['MLB in-game capture', () => view(FIXTURE.mlbInGame, IN_GAME_AT)],
-  ['WNBA live capture', () => view(FIXTURE.wnbaLive)],
-  ['MLB 2025 final', () => view(FIXTURE.mlbFinal, new Date('2025-11-02T04:00:00Z'))],
-  ['WNBA 2025 final', () => view(FIXTURE.wnbaFinal, new Date('2025-10-11T04:00:00Z'))],
-  ['MLB 2025 mixed', () => view(FIXTURE.mlbMixed, new Date('2025-10-09T03:08:00Z'))],
-  ['WNBA 2025 mixed', () => view(FIXTURE.wnbaMixed, new Date('2025-09-19T05:30:00Z'))],
+// A pipeline series key, by shape: AL-WC-B, NL-DS-A, AL-CS, R1-1v8, SF-A.
+// The page's own ids are lowercase (wild_card-2) and match none of these.
+const KEY_SHAPES = [/[A-Z]+-[A-Z]+-[A-Z0-9]+/, /\b[A-Z]{2}-(?:CS|DS|WC)\b/, /\bR\d+-\d+v\d+\b/, /\bSF-[A-Z0-9]\b/];
+function assertNoSeriesKey(html: string, keys: readonly string[], where: string) {
+  for (const re of KEY_SHAPES) assert.ok(!re.test(html), `${where}: ${html.match(re)?.[0]} has the shape of a series key`);
+  for (const key of keys) {
+    assert.ok(!html.includes(`"${key}"`), `${where}: series key ${key} is an attribute value`);
+    assert.ok(!html.includes(`#${key}"`), `${where}: series key ${key} is a link target`);
+    if (key.length >= 4) assert.ok(!html.includes(key), `${where}: series key ${key} is in the markup`);
+    else assert.ok(!new RegExp(`(^| )${key}( |$)`).test(textOf(html)), `${where}: series key ${key} is text`);
+  }
+}
+const keysOf = (name: string) => (JSON.parse(rawText(name)) as { series: { seriesKey: string }[] }).series.map((s) => s.seriesKey);
+
+const EVERY_VIEW: [string, string, () => LeagueView, Date][] = [
+  ['MLB live capture', FIXTURE.mlbLive, () => view(FIXTURE.mlbLive), CAPTURED_AT],
+  ['MLB in-game capture', FIXTURE.mlbInGame, () => view(FIXTURE.mlbInGame, IN_GAME_AT), IN_GAME_AT],
+  ['WNBA live capture', FIXTURE.wnbaLive, () => view(FIXTURE.wnbaLive), CAPTURED_AT],
+  ['MLB capture, writer version 2', FIXTURE.mlbFields, () => view(FIXTURE.mlbFields, FIELDS_AT), FIELDS_AT],
+  ['WNBA capture, writer version 2', FIXTURE.wnbaFields, () => view(FIXTURE.wnbaFields, FIELDS_AT), FIELDS_AT],
+  ['MLB 2025 final', FIXTURE.mlbFinal, () => view(FIXTURE.mlbFinal, new Date('2025-11-02T04:00:00Z')), new Date('2025-11-02T04:00:00Z')],
+  ['WNBA 2025 final', FIXTURE.wnbaFinal, () => view(FIXTURE.wnbaFinal, new Date('2025-10-11T04:00:00Z')), new Date('2025-10-11T04:00:00Z')],
+  ['MLB 2025 mixed', FIXTURE.mlbMixed, () => view(FIXTURE.mlbMixed, MIXED_AT), MIXED_AT],
+  ['WNBA 2025 mixed', FIXTURE.wnbaMixed, () => view(FIXTURE.wnbaMixed, new Date('2025-09-19T05:30:00Z')), new Date('2025-09-19T05:30:00Z')],
 ];
 
-// ---- The league page ----
+// ---- The league page: head of the page ----
 
-test('LEAGUE: breadcrumb, heading, and the absolute change stamp', () => {
+test('LEAGUE: breadcrumb, heading, lede, and the absolute change stamp', () => {
   const html = leagueHtml(view(FIXTURE.mlbLive));
   const text = textOf(html);
   assert.ok(html.includes('<nav aria-label="Breadcrumb">'));
-  assert.ok(html.includes('<a class="text-rd-red transition-colors hover:text-rd-red-dark" href="/playoffs">Playoffs</a>'));
+  assert.match(html, /<a [^>]*href="\/playoffs"[^>]*>Playoffs<\/a>/);
   assert.equal(count(html, '<h1'), 1);
   assert.match(html, /<h1[^>]*>2026 MLB Playoffs<\/h1>/);
   assert.ok(text.includes('Bracket updated Sep 29, 1:10 PM ET'));
@@ -113,106 +153,338 @@ test('LEAGUE: breadcrumb, heading, and the absolute change stamp', () => {
   assert.equal(count(html, 'data-lede'), 1);
 });
 
-test('LEAGUE: every round is a section under the document label, every series is in it', () => {
+// ---- The bracket: everything is in the server HTML ----
+
+test('BRACKET: every round is a section under the document label, in its order', () => {
   const html = leagueHtml(view(FIXTURE.mlbLive));
+  const rounds = element(html, 'data-rounds');
   for (const [key, label] of [['wild_card', 'Wild Card Series'], ['division_series', 'Division Series'], ['championship_series', 'Championship Series'], ['world_series', 'World Series']]) {
-    assert.ok(html.includes(`<section aria-labelledby="round-${key}" data-round="${key}"`), key);
-    assert.match(html, new RegExp(`<h2 id="round-${key}"[^>]*>${label}</h2>`));
+    assert.match(rounds, new RegExp(`<section aria-labelledby="round-${key}" data-round="${key}"`), key);
+    assert.match(rounds, new RegExp(`<h2 id="round-${key}"[^>]*>${label}</h2>`));
   }
-  assert.equal(count(html, 'data-series="'), 11);
-  for (const id of ['wild_card-1', 'wild_card-2', 'wild_card-3', 'wild_card-4', 'division_series-1', 'division_series-2', 'division_series-3', 'division_series-4', 'championship_series-1', 'championship_series-2', 'world_series-1']) {
-    assert.equal(count(html, `data-series="${id}"`), 1, id);
-  }
-  // Rounds appear in the document's order.
-  const at = (k: string) => html.indexOf(`data-round="${k}"`);
+  const at = (k: string) => rounds.indexOf(`<section aria-labelledby="round-${k}"`);
   assert.ok(at('wild_card') < at('division_series') && at('division_series') < at('championship_series') && at('championship_series') < at('world_series'));
-  assert.equal(count(html, 'Current round'), 1);
+  assert.equal(count(rounds, '<section '), 4);
 });
 
-test('LEAGUE: seeds, clubs linked to their team pages, and the next game', () => {
+test('BRACKET: every series of BOTH conferences is in the HTML, whatever the toggle shows', () => {
   const html = leagueHtml(view(FIXTURE.mlbLive));
-  const text = textOf(html);
-  assert.ok(html.includes('aria-label="Seed 3"'));
-  assert.ok(html.includes('aria-label="Seed 6"'));
-  assert.match(html, /<a [^>]*href="\/mlb\/houston-astros"[^>]*>Astros<\/a>/);
-  assert.match(html, /<a [^>]*href="\/mlb\/chicago-white-sox"[^>]*>White Sox<\/a>/);
-  assert.ok(text.includes('Next: Game 1 · Tue, Sep 29 · 5:00 PM ET'));
-  assert.ok(text.includes('Host: Astros · Daikin Park'));
-  assert.ok(text.includes('Best of 5 · 2-2-1'));
-});
-
-test('PLACEHOLDERS: a slot with no club is a dashed box holding the stored label, with no link', () => {
-  const html = leagueHtml(view(FIXTURE.mlbLive));
-  // 4 Division Series visitors, 4 Championship Series slots, 2 World Series slots.
-  assert.equal(count(html, 'data-slot="placeholder"'), 10);
-  assert.equal(count(html, 'data-slot="club"'), 12);
-  for (const label of ['NYY/BOS', 'HOU/CWS', 'SD/CHC', 'ATL/PHI', 'AL Higher Seed', 'AL Lower Seed', 'NL Higher Seed', 'NL Lower Seed', 'Higher Seed League Champion', 'Lower Seed League Champion']) {
-    assert.match(html, new RegExp(`<div data-slot="placeholder" class="[^"]*border-dashed[^"]*">(?:<span[^>]*>\\d+</span>)?<span class="min-w-0">${label}</span></div>`), label);
+  const rounds = element(html, 'data-rounds');
+  assert.equal(count(rounds, 'data-series="'), 11);
+  for (const id of ['wild_card-1', 'wild_card-2', 'wild_card-3', 'wild_card-4', 'division_series-1', 'division_series-2', 'division_series-3', 'division_series-4', 'championship_series-1', 'championship_series-2', 'world_series-1']) {
+    assert.equal(count(rounds, `data-series="${id}"`), 1, id);
   }
-  // The Division Series card for the Rays names the Rays and the stored
-  // label, and no other club.
-  const card = html.slice(html.indexOf('data-series="division_series-1"'), html.indexOf('data-series="division_series-2"'));
-  assert.ok(card.includes('>Rays</a>'));
-  assert.equal(count(card, '<a '), 1);
-  assert.ok(!card.includes('Yankees') && !card.includes('Red Sox'));
+  // Three rounds split by conference: AL shown, NL in the HTML and not shown.
+  assert.equal(count(rounds, 'data-conf="AL" data-shown="true"'), 3);
+  assert.equal(count(rounds, 'data-conf="NL" data-shown="false"'), 3);
+  // The last round belongs to no conference and is always shown.
+  const ws = element(rounds, 'data-round="world_series"');
+  assert.equal(count(ws, 'data-conf='), 0);
+  assert.equal(count(ws, 'data-shown="true"'), 1);
+  // The NL series are there to be read.
+  assert.ok(textOf(element(rounds, 'data-series="wild_card-3"')).includes('Braves'));
 });
 
-test('OVERLAY: a published feeder pair renders the composed text, still unlinked and dashed', () => {
+test('BRACKET: state is never carried by the hidden attribute', () => {
+  // Tailwind's preflight makes [hidden] display:none !important in a layer.
+  // Neither the desktop layout nor the no-script rule could undo it.
+  for (const [name, , make] of EVERY_VIEW) {
+    assert.ok(!/<[^>]+\shidden(=""|\s|>)/.test(leagueHtml(make())), name);
+  }
+  assert.ok(!/<[^>]+\shidden(=""|\s|>)/.test(hubHtml([ok(view(FIXTURE.mlbLive)), ok(view(FIXTURE.wnbaLive))])));
+});
+
+test('BRACKET: with scripts off, both conferences show and the dead controls go', () => {
+  const html = leagueHtml(view(FIXTURE.mlbLive));
+  const bracket = element(html, 'data-bracket="MLB"');
+  assert.match(bracket, /<noscript><style>[^<]*\.po-bracket \[data-conf\]\[data-shown='false'\]\{display:revert!important\}[^<]*\.po-controls\{display:none!important\}[^<]*<\/style><\/noscript>/);
+  // The sticky bar and every Close button are controls.
+  assert.ok(count(bracket, 'po-controls') >= 1 + 11);
+  // The stylesheet holds the rules the markup relies on.
+  const css = readFileSync(new URL('../../../app/globals.css', import.meta.url), 'utf8');
+  assert.match(css, /@media \(max-width: 1023\.98px\) \{\s*\.po-bracket \[data-conf\]\[data-shown='false'\] \{\s*display: none;/);
+  assert.match(css, /\.po-panel \{\s*display: none;\s*\}/);
+  assert.match(css, /\.po-panel\[data-open='true'\] \{\s*display: block;/);
+  assert.match(css, /\.po-more\[data-open='false'\] \{\s*display: none;/);
+});
+
+// ---- Controls ----
+
+test('CONTROLS: real buttons with aria-pressed, the round being played pressed', () => {
+  const html = leagueHtml(view(FIXTURE.mlbMixed, MIXED_AT), { now: MIXED_AT });
+  const pills = element(html, 'data-control="round"');
+  assert.match(pills, /^<div role="group" aria-label="Round"/);
+  assert.equal(count(pills, '<button type="button"'), 4);
+  assert.equal(count(pills, '<button'), 4);
+  for (const [key, label, pressed] of [['wild_card', 'Wild Card Series', 'false'], ['division_series', 'Division Series', 'true'], ['championship_series', 'Championship Series', 'false'], ['world_series', 'World Series', 'false']]) {
+    assert.match(pills, new RegExp(`<button type="button" aria-pressed="${pressed}" data-round-option="${key}"[^>]*>${label}</button>`), key);
+  }
+  assert.match(html, /data-bracket="MLB" data-round="division_series" data-conference="AL"/);
+});
+
+test('CONTROLS: the conference toggle, from the document, for a league that has conferences', () => {
+  const mlb = leagueHtml(view(FIXTURE.mlbLive));
+  const toggle = element(mlb, 'data-control="conference"');
+  assert.match(toggle, /^<div role="group" aria-label="AL or NL"/);
+  assert.match(toggle, /<button type="button" aria-pressed="true" data-conference-option="AL"[^>]*>AL<\/button>/);
+  assert.match(toggle, /<button type="button" aria-pressed="false" data-conference-option="NL"[^>]*>NL<\/button>/);
+  assert.equal(count(toggle, '<button'), 2);
+  // The WNBA document names no conference, so there is nothing to toggle.
+  const wnba = leagueHtml(view(FIXTURE.wnbaLive));
+  assert.equal(count(wnba, 'data-control="conference"'), 0);
+  assert.equal(count(wnba, 'data-conf='), 0);
+  assert.equal(count(element(wnba, 'data-control="round"'), '<button'), 3);
+});
+
+test('CONTROLS: the toggle is gone on a round that no conference splits', () => {
+  // A concluded bracket opens on its last round, the World Series.
+  const html = leagueHtml(view(FIXTURE.mlbFinal, new Date('2025-11-02T04:00:00Z')));
+  assert.match(html, /data-bracket="MLB" data-round="world_series"/);
+  assert.equal(count(html, 'data-control="conference"'), 0);
+  assert.match(element(html, 'data-control="round"'), /aria-pressed="true" data-round-option="world_series"/);
+});
+
+test('CAPTURED: pills carry the document short labels, headings the full ones', () => {
+  const mlb = leagueHtml(view(FIXTURE.mlbFields, FIELDS_AT), { now: FIELDS_AT });
+  const pills = element(mlb, 'data-control="round"');
+  for (const [key, short, full] of [['wild_card', 'Wild Card', 'Wild Card Series'], ['division_series', 'Division', 'Division Series'], ['championship_series', 'LCS', 'Championship Series'], ['world_series', 'World Series', 'World Series']]) {
+    assert.match(pills, new RegExp(`data-round-option="${key}"[^>]*>${short}</button>`), key);
+    assert.match(mlb, new RegExp(`<h2 id="round-${key}"[^>]*>${full}</h2>`), key);
+  }
+  const wnba = leagueHtml(view(FIXTURE.wnbaFields, FIELDS_AT), { now: FIELDS_AT });
+  assert.match(element(wnba, 'data-control="round"'), /data-round-option="finals"[^>]*>Finals<\/button>/);
+  assert.match(wnba, /<h2 id="round-finals"[^>]*>WNBA Finals<\/h2>/);
+  // The hub's round badge is a heading, not a pill: the full label.
+  assert.ok(textOf(element(hubHtml([ok(view(FIXTURE.mlbFields, FIELDS_AT))], FIELDS_AT), 'data-league-card="MLB"')).includes('Wild Card Series'));
+});
+
+test('CAPTURED: a feeder being played, with candidates, renders "<A> / <B> winner" in a dashed slot', () => {
+  const html = leagueHtml(view(FIXTURE.mlbFields, FIELDS_AT), { now: FIELDS_AT });
+  for (const [id, text] of [['division_series-1', 'Yankees / Red Sox winner'], ['division_series-2', 'Astros / White Sox winner'], ['division_series-3', 'Padres / Cubs winner'], ['division_series-4', 'Braves / Phillies winner']]) {
+    assert.match(card(html, id), new RegExp(`<span data-slot="placeholder" class="[^"]*border-dashed[^"]*"><span class="min-w-0">${text}</span></span>`), id);
+  }
+  for (const stored of ['NYY/BOS', 'HOU/CWS', 'SD/CHC', 'ATL/PHI']) assert.equal(count(html, stored), 0, stored);
+  // The candidates are named, and not linked: neither has the slot yet.
+  const p = panel(html, 'division_series-4');
+  assert.ok(textOf(p).includes('Dodgers vs Braves / Phillies winner'));
+  assert.equal(count(p, 'data-club-link="'), 1);
+  assert.match(p, /data-club-link="los-angeles-dodgers"/);
+});
+
+test('CONTROLS: pills use the short label when the document has one; headings keep the full one', () => {
+  // OVERLAY: no stored document carries shortLabel yet.
   const v = view(FIXTURE.mlbLive, CAPTURED_AT, (d) => {
-    const s = (d.series as RawSeries[]).find((x) => x.seriesKey === 'AL-DS-A') as RawSeries;
-    Object.assign(s.lower, { feederSeriesKey: 'AL-WC-B', candidates: ['new-york-yankees', 'boston-red-sox'] });
+    for (const s of d.series as RawSeries[]) if (s.round === 'division_series') s.shortLabel = 'Division';
   });
   const html = leagueHtml(v);
-  const card = html.slice(html.indexOf('data-series="division_series-1"'), html.indexOf('data-series="division_series-2"'));
-  assert.ok(card.includes('<span class="min-w-0">Yankees / Red Sox winner</span>'));
-  assert.ok(!card.includes('NYY/BOS'));
-  assert.equal(count(card, '<a '), 1, 'only the Rays are linked');
+  const pills = element(html, 'data-control="round"');
+  assert.match(pills, /data-round-option="division_series"[^>]*>Division<\/button>/);
+  assert.match(pills, /data-round-option="wild_card"[^>]*>Wild Card Series<\/button>/);
+  assert.match(html, /<h2 id="round-division_series"[^>]*>Division Series<\/h2>/);
 });
 
-test('TBD TIME: untimed games read "Time TBD" and the filler instant is nowhere', () => {
+test('CONTROLS: the bar sticks below the brand bar and is off at desktop width', () => {
   const html = leagueHtml(view(FIXTURE.mlbLive));
-  const text = textOf(html);
-  // 41 of the 53 games in the capture carry no start time.
-  const d = JSON.parse(rawText(FIXTURE.mlbLive)) as { series: { games: { startTimeTBD: boolean }[] }[] };
-  const untimed = d.series.flatMap((s) => s.games).filter((g) => g.startTimeTBD).length;
-  assert.equal(untimed, 41);
-  assert.ok(count(text, 'Time TBD') >= untimed);
-  assert.ok(!/\b3:33|\b7:33|\b11:33/.test(text));
+  const bar = /<div class="(po-controls sticky[^"]*)"/.exec(html)?.[1] ?? '';
+  assert.ok(bar.split(' ').includes('top-14'), 'the brand bar above it is 56px tall and sticky');
+  assert.ok(bar.split(' ').includes('lg:hidden'));
 });
 
-test('SERIES SCORE: wins per side, the leader, and results', () => {
+// ---- Series cards ----
+
+test('SERIES CARD: a link to its own detail, with seeds, clubs and the next game', () => {
+  const html = leagueHtml(view(FIXTURE.mlbLive));
+  const c = card(html, 'wild_card-1');
+  assert.match(c, /<a href="#wild_card-1" aria-expanded="false" aria-controls="wild_card-1"/);
+  assert.equal(count(c, '<a '), 1, 'the card is one link and holds no other');
+  const text = textOf(c);
+  assert.ok(text.includes('Seed 3 Astros'));
+  assert.ok(text.includes('Seed 6 White Sox'));
+  assert.ok(text.includes('Next: Game 1 · Tue, Sep 29 · 5:00 PM ET'));
+  assert.ok(text.includes('Host: Astros · Daikin Park'));
+  assert.ok(textOf(card(html, 'division_series-1')).includes('Best of 5 · 2-2-1'));
+  assert.ok(c.includes('data-series-status="upcoming"'));
+});
+
+test('SERIES CARD: wins per side and the leader, only once a series has started', () => {
   const html = leagueHtml(view(FIXTURE.wnbaLive));
-  const text = textOf(html);
-  const card = html.slice(html.indexOf('data-series="first_round-1"'), html.indexOf('data-series="first_round-2"'));
-  assert.ok(card.includes('data-series-status="live"'));
-  assert.ok(card.includes('aria-label="0 wins"'));
-  assert.ok(card.includes('aria-label="1 win"'));
-  assert.ok(textOf(card).includes('NYL leads 1-0'));
-  assert.ok(textOf(card).includes('Final: NYL 91, MIN 75'));
-  assert.ok(textOf(card).includes('If necessary'));
-  // An upcoming series shows no win counts at all.
-  const mlb = leagueHtml(view(FIXTURE.mlbLive));
-  assert.equal(count(mlb, 'aria-label="0 wins"'), 0);
-  assert.ok(text.includes('Matchup to be decided'));
+  const c = card(html, 'first_round-1');
+  assert.ok(c.includes('data-series-status="live"'));
+  assert.ok(textOf(c).includes('Lynx 0 wins'));
+  assert.ok(textOf(c).includes('Liberty 1 win'));
+  assert.ok(textOf(c).includes('NYL leads 1-0'));
+  assert.ok(!/ wins?\b/.test(textOf(card(leagueHtml(view(FIXTURE.mlbLive)), 'wild_card-1'))), 'an upcoming series shows no win count');
+  assert.ok(textOf(card(html, 'semifinals-1')).includes('Matchup to be decided'));
 });
 
-test('IN PROGRESS (captured): the league page and the hub mark the game under way, with no score', () => {
+test('PLACEHOLDERS: a slot with no club is a dashed box holding the stored label', () => {
+  const html = leagueHtml(view(FIXTURE.mlbLive));
+  const rounds = element(html, 'data-rounds');
+  // 4 Division Series visitors, 4 Championship Series slots, 2 World Series slots.
+  assert.equal(count(rounds, 'data-slot="placeholder"'), 10);
+  assert.equal(count(rounds, 'data-slot="club"'), 12);
+  for (const label of ['NYY/BOS', 'HOU/CWS', 'SD/CHC', 'ATL/PHI', 'AL Higher Seed', 'AL Lower Seed', 'NL Higher Seed', 'NL Lower Seed', 'Higher Seed League Champion', 'Lower Seed League Champion']) {
+    assert.match(rounds, new RegExp(`<span data-slot="placeholder" class="[^"]*border-dashed[^"]*">(?:<span[^>]*>.*?</span>)?<span class="min-w-0">${label}</span></span>`), label);
+  }
+  const c = card(html, 'division_series-1');
+  assert.ok(textOf(c).includes('Rays'));
+  assert.ok(!c.includes('Yankees') && !c.includes('Red Sox'));
+});
+
+// ---- Placeholder resolution, in the HTML ----
+//
+// OVERLAY: no stored document carries feederSeriesKey or candidates yet.
+
+test('RESOLUTION 1: a decided feeder renders its winner by name, as a club, with its seed', () => {
+  const v = view(FIXTURE.mlbMixed, MIXED_AT, (d) => {
+    Object.assign(raw(d, 'AL-CS').higher, { feederSeriesKey: 'AL-DS-A' });
+  });
+  const html = leagueHtml(v, { now: MIXED_AT });
+  const c = card(html, 'championship_series-1');
+  assert.equal(count(c, 'data-slot="club"'), 1);
+  assert.equal(count(c, 'data-slot="placeholder"'), 1);
+  assert.ok(textOf(c).includes('Seed 1 Blue Jays'));
+  assert.ok(textOf(c).includes('AL Lower Seed'));
+  assert.ok(!textOf(c).includes('AL Higher Seed'));
+  // And in its detail: the club is linked, the park is the winner's.
+  const p = panel(html, 'championship_series-1');
+  assert.match(p, /<a [^>]*href="\/mlb\/toronto-blue-jays"[^>]*>Toronto Blue Jays promotions<\/a>/);
+  assert.ok(textOf(p).includes('Blue Jays vs AL Lower Seed'));
+  assert.ok(textOf(p).includes('Host: Blue Jays · Rogers Centre'));
+});
+
+test('RESOLUTION 2: a feeder still being played, with candidates, renders "<A> / <B> winner"', () => {
+  const v = view(FIXTURE.mlbMixed, MIXED_AT, (d) => {
+    Object.assign(raw(d, 'AL-CS').lower, { feederSeriesKey: 'AL-DS-B', candidates: ['seattle-mariners', 'detroit-tigers'] });
+  });
+  const c = card(leagueHtml(v, { now: MIXED_AT }), 'championship_series-1');
+  assert.match(c, /<span data-slot="placeholder" class="[^"]*border-dashed[^"]*"><span class="min-w-0">Mariners \/ Tigers winner<\/span><\/span>/);
+  assert.ok(!c.includes('AL Lower Seed'));
+});
+
+test('RESOLUTION 3: with neither, the stored label', () => {
+  for (const extra of [{}, { feederSeriesKey: 'AL-DS-B' }, { feederSeriesKey: 'AL-DS-B', candidates: null }]) {
+    const v = view(FIXTURE.mlbMixed, MIXED_AT, (d) => {
+      Object.assign(raw(d, 'AL-CS').lower, extra);
+    });
+    const c = card(leagueHtml(v, { now: MIXED_AT }), 'championship_series-1');
+    assert.match(c, /<span class="min-w-0">AL Lower Seed<\/span>/, JSON.stringify(extra));
+  }
+});
+
+// ---- Series detail ----
+
+test('SERIES DETAIL: one for every series, in the HTML, closed, and addressable by its id', () => {
+  const html = leagueHtml(view(FIXTURE.mlbLive));
+  const panels = element(html, 'data-series-panels');
+  assert.equal(count(panels, 'data-series-panel="'), 11);
+  assert.equal(count(panels, 'data-open="false"'), 11);
+  assert.equal(count(panels, 'data-open="true"'), 0);
+  for (const id of ['wild_card-1', 'division_series-3', 'world_series-1']) {
+    // The id is the fragment: /playoffs/mlb#division_series-3 lands here.
+    assert.match(panels, new RegExp(`<section id="${id}" tabindex="-1" aria-labelledby="${id}-title" data-series-panel="${id}" data-open="false" class="po-panel `), id);
+    assert.equal(count(html, `id="${id}"`), 1, 'an id names one element');
+  }
+});
+
+test('SERIES DETAIL: round, matchup, format, every game, park, result', () => {
+  const html = leagueHtml(view(FIXTURE.wnbaLive));
+  const p = panel(html, 'first_round-1');
+  const text = textOf(p);
+  assert.ok(text.startsWith('First Round Lynx vs Liberty Best of 3 · 1-1-1'));
+  assert.equal(count(p, 'data-game="'), 3);
+  assert.ok(textOf(element(p, 'data-game="1"')).includes('G1 Sun, Sep 27 · 2:00 PM ET Host: Lynx · Target Center Final: NYL 91, MIN 75'));
+  assert.ok(textOf(element(p, 'data-game="2"')).includes('G2 Tue, Sep 29 · 8:30 PM ET Host: Liberty · Barclays Center'));
+  assert.ok(textOf(element(p, 'data-game="3"')).includes('If necessary'));
+  assert.ok(text.includes('NYL leads 1-0'));
+  // A series with no games says so and lists none.
+  const empty = panel(html, 'semifinals-1');
+  assert.equal(count(empty, 'data-game="'), 0);
+  assert.ok(textOf(empty).includes('No games are listed for this series yet.'));
+});
+
+test('SERIES DETAIL: club names link to /{sport}/{team}; a slot with no club links nowhere', () => {
+  const html = leagueHtml(view(FIXTURE.mlbLive));
+  const p = panel(html, 'wild_card-1');
+  assert.match(p, /<a [^>]*data-club-link="houston-astros"[^>]*href="\/mlb\/houston-astros"|<a [^>]*href="\/mlb\/houston-astros"[^>]*data-club-link="houston-astros"/);
+  assert.match(p, /href="\/mlb\/chicago-white-sox"/);
+  assert.equal(count(p, 'data-club-link="'), 2);
+  assert.equal(count(panel(html, 'division_series-1'), 'data-club-link="'), 1, 'the Rays, and not the slot beside them');
+  assert.equal(count(panel(html, 'world_series-1'), 'data-club-link="'), 0);
+  const wnba = panel(leagueHtml(view(FIXTURE.wnbaLive)), 'first_round-1');
+  assert.match(wnba, /href="\/wnba\/minnesota-lynx"/);
+  assert.match(wnba, /href="\/wnba\/new-york-liberty"/);
+});
+
+test('SERIES DETAIL: the park links to its page on this site; a park without one is plain text', () => {
+  const html = leagueHtml(view(FIXTURE.mlbLive));
+  const g = element(panel(html, 'wild_card-1'), 'data-game="1"');
+  assert.match(g, /<a data-park-link="daikin-park"[^>]*href="\/venues\/daikin-park"[^>]*>Daikin Park<\/a>|<a [^>]*href="\/venues\/daikin-park"[^>]*data-park-link="daikin-park"[^>]*>Daikin Park<\/a>/);
+  // No page for the park: the name, and no link.
+  const b = mapBracketDoc(loadDoc(FIXTURE.mlbLive), { league: 'MLB', season: 2026 });
+  assert.ok(b);
+  const some = parks();
+  some.set('houston-astros', { name: 'Daikin Park', page: null });
+  const v = buildLeagueView(b, clubs(), some, CAPTURED_AT);
+  assert.ok(v);
+  const plain = element(panel(leagueHtml(v), 'wild_card-1'), 'data-game="1"');
+  assert.ok(textOf(plain).includes('Host: Astros · Daikin Park'));
+  assert.equal(count(plain, '<a '), 0);
+  assert.equal(count(plain, 'data-park-link'), 0);
+});
+
+test('SERIES DETAIL: tickets for the host of the next game still to be played', () => {
+  const html = leagueHtml(view(FIXTURE.mlbLive));
+  assert.ok(panel(html, 'wild_card-1').includes('data-panel-tickets="houston-astros"'));
+  assert.ok(panel(html, 'division_series-1').includes('data-panel-tickets="tampa-bay-rays"'));
+  // A series whose host is an unfilled slot sells nothing.
+  assert.equal(count(panel(html, 'championship_series-1'), 'data-panel-tickets'), 0);
+  // Nor does a decided one.
+  const done = leagueHtml(view(FIXTURE.mlbFinal, new Date('2025-11-02T04:00:00Z')));
+  assert.equal(count(done, 'data-panel-tickets'), 0);
+});
+
+test('SERIES DETAIL: a Close button that is a real button', () => {
+  const p = panel(leagueHtml(view(FIXTURE.mlbLive)), 'wild_card-1');
+  assert.match(p, /<button type="button" data-panel-close="wild_card-1" class="po-controls [^"]*">Close<\/button>/);
+});
+
+test('DEEP LINK: the fragment selects the series with no script, and steps aside once hydrated', () => {
+  const css = readFileSync(new URL('../../../app/globals.css', import.meta.url), 'utf8');
+  assert.match(css, /\.po-bracket:not\(\[data-hydrated\]\) \.po-panel:target \{\s*display: block;/);
+  const html = leagueHtml(view(FIXTURE.mlbLive));
+  // The server HTML is not hydrated, so the rule applies to it.
+  assert.ok(!/data-hydrated/.test(html));
+  // Every card's link names a panel that exists, so every fragment the page
+  // itself produces resolves.
+  const targets = [...html.matchAll(/<a href="#([^"]+)" aria-expanded/g)].map((m) => m[1]);
+  assert.equal(targets.length, 11);
+  for (const id of targets) assert.equal(count(html, `<section id="${id}" `), 1, id);
+  // An id the bracket does not have names nothing: the page stays as it is.
+  for (const unknown of ['wild_card-9', 'AL-WC-B', 'x']) assert.equal(count(html, `id="${unknown}"`), 0, unknown);
+});
+
+// ---- A game in progress ----
+
+test('IN PROGRESS (captured): the card, the detail and the hub mark the game under way, with no score', () => {
   const v = view(FIXTURE.mlbInGame, IN_GAME_AT);
   const page = leagueHtml(v, { now: IN_GAME_AT });
-  // The card header and the game row, for the one game under way.
-  assert.equal(count(page, 'data-game-state="live"'), 2);
-  const card = page.slice(page.indexOf('data-series="wild_card-3"'), page.indexOf('data-series="wild_card-4"'));
-  assert.equal(count(card, 'data-game-state="live"'), 2);
-  assert.ok(card.includes('data-series-status="live"'));
-  assert.ok(textOf(card).includes('Game 1 in progress · Host: Braves · Truist Park'));
-  assert.ok(!textOf(card).includes('Final'));
-  assert.ok(!/\b(PHI|ATL) 1\b/.test(textOf(card)), 'the score in progress is not shown');
+  // The card, the detail's status line, and the game row.
+  assert.equal(count(page, 'data-game-state="live"'), 3);
+  const c = card(page, 'wild_card-3');
+  assert.equal(count(c, 'data-game-state="live"'), 1);
+  assert.ok(c.includes('data-series-status="live"'));
+  assert.ok(textOf(c).includes('Game 1 in progress · Host: Braves · Truist Park'));
+  const p = panel(page, 'wild_card-3');
+  assert.equal(count(p, 'data-game-state="live"'), 2);
+  assert.ok(!textOf(p).includes('Final'));
+  assert.ok(!/\b(PHI|ATL) 1\b/.test(textOf(p)), 'the score in progress is not shown');
+  assert.equal(count(p, 'data-panel-tickets'), 0, 'no tickets are sold for a game under way');
   assert.ok(textOf(page).includes('Bracket updated Sep 29, 2:51 PM ET'));
-  // The game under way is not sold as an upcoming one.
   assert.equal(count(page, 'data-home-game="MLB-wild_card-3-g1"'), 0);
   assert.equal(count(page, 'data-home-game="MLB-wild_card-3-g2"'), 1);
 
-  const hub = hubHtml([ok(v)]);
+  const hub = hubHtml([ok(v)], IN_GAME_AT);
   assert.equal(count(hub, 'data-game-state="live"'), 1);
   const line = element(hub, 'data-series="wild_card-3"');
   assert.ok(line.includes('data-game-state="live"'));
@@ -220,81 +492,128 @@ test('IN PROGRESS (captured): the league page and the hub mark the game under wa
   assert.ok(textOf(line).includes('Game 1'));
 });
 
-test('IN PROGRESS: one badge per place a game is under way, and no score', () => {
-  const v = view(FIXTURE.wnbaLive, CAPTURED_AT, (d) => {
-    const g = ((d.series as RawSeries[]).find((x) => x.seriesKey === 'R1-1v8') as RawSeries).games[1];
-    g.status = 'live';
-    g.homeScore = 41;
-    g.awayScore = 38;
-  });
-  const html = leagueHtml(v);
-  // The card header and the game row.
-  assert.equal(count(html, 'data-game-state="live"'), 2);
-  const card = html.slice(html.indexOf('data-series="first_round-1"'), html.indexOf('data-series="first_round-2"'));
-  assert.ok(textOf(card).includes('Game 2 in progress'));
-  assert.ok(!/\b41\b/.test(textOf(card)) && !/\b38\b/.test(textOf(card)));
-});
+// ---- Concluded, unavailable ----
 
 test('CONCLUDED: the champion is named, nothing is "next", no home games are offered', () => {
-  const html = leagueHtml(view(FIXTURE.mlbFinal, new Date('2025-11-02T04:00:00Z')), { now: new Date('2025-11-02T04:00:00Z') });
+  const now = new Date('2025-11-02T04:00:00Z');
+  const html = leagueHtml(view(FIXTURE.mlbFinal, now), { now });
   const text = textOf(html);
   assert.ok(html.includes('data-champion="los-angeles-dodgers"'));
   assert.ok(text.includes('2025 champion Los Angeles Dodgers Won the World Series 4-3'));
   assert.ok(!text.includes('Next:'));
   assert.ok(!text.includes('Home games this week'));
-  assert.equal(count(html, 'Current round'), 0);
-  assert.equal(count(html, 'data-series-status="final"'), 11);
+  assert.equal(count(element(html, 'data-rounds'), 'data-series-status="final"'), 11);
 });
 
 test('UNAVAILABLE: a missing or unreadable document renders that, and no bracket', () => {
   for (const state of ['missing', 'unavailable'] as const) {
     const html = renderToStaticMarkup(
-      <PlayoffsLeague league="MLB" season={2026} body={{ state }} tickets={{}} otherLeagues={[{ league: 'WNBA', href: '/playoffs/wnba' }]} />,
+      <PlayoffsLeague league="MLB" season={2026} body={{ state }} tickets={{}} panelTickets={{}} otherLeagues={[{ league: 'WNBA', href: '/playoffs/wnba' }]} />,
     );
     const text = textOf(html);
     assert.ok(html.includes('data-bracket-state="unavailable"'), state);
     assert.ok(text.includes('Bracket not available'));
     assert.match(html, /<h1[^>]*>2026 MLB Playoffs<\/h1>/);
-    assert.equal(count(html, 'data-series="'), 0);
-    assert.equal(count(html, 'data-round="'), 0);
-    assert.equal(count(html, 'data-bracket-updated'), 0);
-    assert.equal(count(html, 'data-lede'), 0, 'no description of a bracket that is not shown');
+    for (const gone of ['data-series="', 'data-round="', 'data-bracket=', 'data-control=', 'data-series-panel', 'data-bracket-updated', 'data-lede', 'data-predictions', 'data-predicted-bracket-slot', 'data-home-games']) {
+      assert.equal(count(html, gone), 0, `${state}: ${gone}`);
+    }
     assert.ok(!text.includes('every series'));
-    assert.equal(count(html, 'data-predictions'), 0);
-    assert.ok(!text.includes('Home games this week'));
     assert.ok(html.includes('href="/playoffs/wnba"'), 'the way to the other league still works');
   }
 });
 
-test('PREDICTIONS: shown only when the inputs are frozen, and it names no date', () => {
+// ---- The reserved predictions slot ----
+
+test('PREDICTIONS SLOT: reserved below the bracket, outside it, tied to the same controls', () => {
+  const html = leagueHtml(view(FIXTURE.mlbMixed, MIXED_AT), { now: MIXED_AT });
+  assert.equal(count(html, 'data-predicted-bracket-slot'), 1);
+  assert.match(html, /<div data-predicted-bracket-slot="true" data-round="division_series" data-conference="AL">/);
+  const bracket = element(html, 'data-bracket="MLB"');
+  assert.equal(count(bracket, 'data-predicted-bracket-slot'), 0, 'a separate child of the page, so a unit can sit between the two');
+  assert.ok(html.indexOf('data-predicted-bracket-slot') > html.indexOf('data-series-panels'));
+});
+
+test('PREDICTIONS SLOT: the locked card only when the inputs are frozen, and it names no date', () => {
   const on = leagueHtml(view(FIXTURE.mlbLive), { locked: true });
   const off = leagueHtml(view(FIXTURE.mlbLive), { locked: false });
   assert.equal(count(on, 'data-predictions="locked"'), 1);
   assert.equal(count(off, 'data-predictions="locked"'), 0);
   assert.ok(!textOf(off).includes('Our Predictions'));
-  const card = element(on, 'data-predictions="locked"');
-  const section = textOf(card);
+  // The slot itself stays, empty.
+  assert.match(off, /<div data-predicted-bracket-slot="true" data-round="wild_card" data-conference="AL"><\/div>/);
+  assert.ok(element(on, 'data-predicted-bracket-slot').includes('data-predictions="locked"'));
+  const cardHtml = element(on, 'data-predictions="locked"');
+  const section = textOf(cardHtml);
   assert.ok(section.includes('Our Predictions'));
   assert.ok(section.includes(PREDICTIONS_COPY));
   assert.ok(!/\d/.test(section), 'the predictions card holds no digit, so no date');
   assert.ok(!/\b(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|tomorrow|tonight|today|week)\b/i.test(section));
-  // The lock is an inline SVG.
-  assert.match(card, /<svg[^>]*aria-hidden="true"[^>]*>/);
-  assert.ok(!/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(card), 'no emoji stands in for the lock');
+  assert.match(cardHtml, /<svg[^>]*aria-hidden="true"[^>]*>/);
+  assert.ok(!/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(cardHtml), 'no emoji stands in for the lock');
 });
 
-test('HOME GAMES: this week, each with its park and its ticket buttons', () => {
+// ---- Home games ----
+
+test('HOME GAMES: the next three days, eight rows at most, one ticket button a row', () => {
   const v = view(FIXTURE.mlbLive);
   const html = leagueHtml(v);
-  const week = homeGamesThisWeek(v, CAPTURED_AT);
-  assert.equal(count(html, 'data-home-game="'), week.length);
-  const first = element(html, 'data-home-game="MLB-wild_card-3-g1"');
+  const w = homeGamesWindow([v], CAPTURED_AT);
+  const list = element(html, 'data-home-games-list="primary"');
+  assert.equal(count(list, 'data-home-game="'), 8);
+  assert.equal(w.primary.length, 8);
+  assert.equal(count(list, 'data-tickets-for="'), 8, 'one to a row');
+  const first = element(list, 'data-home-game="MLB-wild_card-3-g1"');
   const row = textOf(first);
   assert.ok(row.includes('Phillies at Braves'));
   assert.ok(row.includes('Wild Card Series · Game 1'));
   assert.ok(row.includes('Tue, Sep 29 · 2:00 PM ET'));
   assert.ok(row.includes('Truist Park'));
-  assert.ok(first.includes('data-tickets-for="atlanta-braves"'));
+  assert.equal(count(first, 'data-tickets-for="atlanta-braves"'), 1);
+  assert.match(first, /href="\/venues\/truist-park"[^>]*>Truist Park<\/a>|data-park-link="truist-park"[^>]*>Truist Park<\/a>/);
+  // Nothing in the short list is later than Oct 1.
+  assert.ok(![...list.matchAll(/· (\w{3}, \w{3} \d+) ·|>(\w{3}, \w{3} \d+) · /g)].some((m) => /Oct [2-9]/.test(m[0])));
+});
+
+test('HOME GAMES: "Show all" is a real button, and the rest of the week is in the HTML behind it', () => {
+  const v = view(FIXTURE.mlbLive);
+  const html = leagueHtml(v);
+  const w = homeGamesWindow([v], CAPTURED_AT);
+  const section = element(html, 'data-home-games="home-games-this-week"');
+  assert.match(
+    section,
+    new RegExp(`<button type="button" data-show-all="home-games-this-week-more" aria-expanded="false" aria-controls="home-games-this-week-more" class="po-more-button [^"]*"[^>]*>Show all ${w.primary.length + w.rest.length} home games this week</button>`),
+  );
+  assert.match(section, /<div id="home-games-this-week-more" class="po-more [^"]*" data-open="false">/);
+  const rest = element(section, 'data-home-games-list="rest"');
+  assert.equal(count(rest, 'data-home-game="'), w.rest.length);
+  assert.ok(w.rest.length > 0);
+  assert.equal(count(section, 'data-home-game="'), w.primary.length + w.rest.length);
+  // No game is listed twice.
+  const keys = [...section.matchAll(/data-home-game="([^"]+)"/g)].map((m) => m[1]);
+  assert.equal(new Set(keys).size, keys.length);
+  // With scripts off the rows show and the button goes.
+  assert.match(section, /<noscript><style>#home-games-this-week-more\.po-more\{display:block!important\}\[data-show-all="home-games-this-week-more"\]\{display:none!important\}<\/style><\/noscript>/);
+});
+
+test('HOME GAMES: nothing behind the button means no button', () => {
+  // The WNBA capture holds eight home games in the week, six in three days.
+  const v = view(FIXTURE.wnbaLive);
+  const w = homeGamesWindow([v], CAPTURED_AT);
+  const html = leagueHtml(v);
+  const BUTTON = '<button type="button" data-show-all=';
+  assert.equal(w.rest.length, 2);
+  assert.equal(count(html, BUTTON), 1);
+  // The mixed 2025 document on Oct 10: three home games left in its week,
+  // on Oct 10 and 11, all inside three days.
+  const oct10 = new Date('2025-10-10T16:00:00Z');
+  const few = view(FIXTURE.mlbMixed, oct10);
+  const fw = homeGamesWindow([few], oct10);
+  assert.deepEqual([fw.primary.length, fw.rest.length], [3, 0]);
+  const none = leagueHtml(few, { now: oct10 });
+  assert.equal(count(none, BUTTON), 0);
+  assert.equal(count(none, 'po-more'), 0);
+  assert.equal(count(none, 'data-home-games-list="rest"'), 0);
+  assert.equal(count(element(none, 'data-home-games-list="primary"'), 'data-home-game="'), 3);
 });
 
 test('CROSS LINK: only the leagues passed in are linked', () => {
@@ -312,27 +631,39 @@ test('HUB: header, one card per league, current round, a line per series, a link
   assert.match(html, /<h1[^>]*>Playoffs<\/h1>/);
   assert.ok(text.includes('Postseason 2026'));
   assert.equal(count(html, 'data-league-card="'), 2);
-  const mlb = html.slice(html.indexOf('data-league-card="MLB"'), html.indexOf('data-league-card="WNBA"'));
+  const mlb = element(html, 'data-league-card="MLB"');
   assert.ok(textOf(mlb).includes('Wild Card Series'));
   assert.equal(count(mlb, 'data-series="'), 4, 'the four series of the round being played');
   assert.ok(textOf(mlb).includes('Astros vs White Sox Game 1 · Tue, Sep 29 · 5:00 PM ET'));
-  assert.ok(mlb.includes('href="/playoffs/mlb"'));
   assert.ok(textOf(mlb).includes('Open the MLB bracket'));
-  const wnba = html.slice(html.indexOf('data-league-card="WNBA"'));
+  assert.ok(textOf(mlb).includes('Bracket updated Sep 29, 1:10 PM ET'));
+  const wnba = element(html, 'data-league-card="WNBA"');
   assert.ok(textOf(wnba).includes('First Round'));
   assert.ok(textOf(wnba).includes('Lynx vs Liberty NYL leads 1-0'));
-  assert.ok(wnba.includes('href="/playoffs/wnba"'));
-  assert.equal(count(html, 'data-hub-state="offseason"'), 0);
-  // Every status on a card is as of that bracket's own change stamp.
-  assert.equal(count(html, 'data-bracket-updated'), 2);
-  assert.ok(textOf(mlb).includes('Bracket updated Sep 29, 1:10 PM ET'));
   assert.ok(textOf(wnba).includes('Bracket updated Sep 28, 8:02 PM ET'));
+  assert.equal(count(html, 'data-hub-state="offseason"'), 0);
+  assert.equal(count(html, 'data-bracket-updated'), 2);
 });
 
-test('HUB: next home games across leagues, with park and tickets', () => {
+test('HUB: each series line links to that series on the league page', () => {
   const html = hubHtml([ok(view(FIXTURE.mlbLive)), ok(view(FIXTURE.wnbaLive))]);
-  assert.equal(count(html, 'data-home-game="'), 8);
-  const third = element(html, 'data-home-game="WNBA-first_round-3-g2"');
+  assert.match(element(html, 'data-series="wild_card-1"'), /<a [^>]*href="\/playoffs\/mlb#wild_card-1"/);
+  assert.match(element(html, 'data-series="wild_card-4"'), /<a [^>]*href="\/playoffs\/mlb#wild_card-4"/);
+  assert.match(element(html, 'data-series="first_round-2"'), /<a [^>]*href="\/playoffs\/wnba#first_round-2"/);
+  // And every one of them is a fragment the league page has a panel for.
+  const league = leagueHtml(view(FIXTURE.mlbLive));
+  for (const m of html.matchAll(/href="\/playoffs\/mlb#([^"]+)"/g)) assert.equal(count(league, `<section id="${m[1]}" `), 1, m[1]);
+  assert.equal(count(element(html, 'data-league-card="MLB"'), 'href="/playoffs/mlb"'), 2, 'the heading and the footer link');
+});
+
+test('HUB: next home games across leagues: three days, eight rows, one button a row, the week behind "Show all"', () => {
+  const views = [view(FIXTURE.mlbLive), view(FIXTURE.wnbaLive)];
+  const w = homeGamesWindow(views, CAPTURED_AT);
+  const html = hubHtml(views.map((v) => ok(v)));
+  const list = element(html, 'data-home-games-list="primary"');
+  assert.equal(count(list, 'data-home-game="'), 8);
+  assert.equal(count(list, 'data-tickets-for="'), 8);
+  const third = element(list, 'data-home-game="WNBA-first_round-3-g2"');
   const row = textOf(third);
   assert.ok(row.includes('Aces at Fever'));
   assert.ok(row.includes('WNBA'));
@@ -340,10 +671,14 @@ test('HUB: next home games across leagues, with park and tickets', () => {
   assert.ok(row.includes('Tue, Sep 29 · 6:30 PM ET'));
   assert.ok(row.includes('Gainbridge Fieldhouse'));
   assert.ok(third.includes('data-tickets-for="indiana-fever"'));
+  assert.match(third, /href="\/venues\/gainbridge-fieldhouse"/);
+  const section = element(html, 'data-home-games="next-home-games"');
+  assert.match(section, new RegExp(`aria-expanded="false" aria-controls="next-home-games-more"[^>]*>Show all ${w.primary.length + w.rest.length} home games this week</button>`));
+  assert.equal(count(element(section, 'data-home-games-list="rest"'), 'data-home-game="'), w.rest.length);
 });
 
 test('HUB: a concluded league shows its champion and offers no games', () => {
-  const html = hubHtml([ok(view(FIXTURE.mlbFinal, new Date('2025-11-02T04:00:00Z')))]);
+  const html = hubHtml([ok(view(FIXTURE.mlbFinal, new Date('2025-11-02T04:00:00Z')))], new Date('2025-11-02T04:00:00Z'));
   const text = textOf(html);
   assert.ok(text.includes('2025 champion Los Angeles Dodgers Won the World Series 4-3'));
   assert.ok(html.includes('href="/mlb/los-angeles-dodgers"'));
@@ -358,10 +693,9 @@ test('HUB: no league at all is the offseason state, with no date in it', () => {
   assert.ok(text.includes('No postseason is underway'));
   assert.equal(count(html, 'data-league-card="'), 0);
   assert.ok(!text.includes('Next home games'));
-  const block = textOf(element(html, 'data-hub-state="offseason"'));
-  assert.ok(block.includes('No postseason is underway'));
-  assert.ok(element(html, 'data-hub-state="offseason"').includes('href="/teams"'));
-  assert.ok(!/\d/.test(block), 'the offseason state holds no digit, so no date');
+  const block = element(html, 'data-hub-state="offseason"');
+  assert.ok(!/\d/.test(textOf(block)), 'the offseason state holds no digit, so no date');
+  assert.ok(block.includes('href="/teams"'));
 });
 
 test('HUB: an unreadable league gets a card that says so, and the hub does not claim an offseason', () => {
@@ -372,7 +706,6 @@ test('HUB: an unreadable league gets a card that says so, and the hub does not c
   assert.equal(count(html, 'data-hub-state="offseason"'), 0);
   assert.ok(!text.includes('No postseason is underway'));
   assert.equal(count(html, 'data-bracket-updated'), 0, 'a bracket that was not read has no stamp to show');
-  // Beside a league that did load, the loaded one is unaffected.
   const both = hubHtml([{ state: 'unavailable', league: 'MLB', href: '/playoffs/mlb' }, ok(view(FIXTURE.wnbaLive))]);
   assert.equal(count(both, 'data-league-card="'), 2);
   assert.ok(textOf(both).includes('Lynx vs Liberty NYL leads 1-0'));
@@ -382,77 +715,96 @@ test('HUB: the locked card needs a league that is both playing and frozen', () =
   const v = view(FIXTURE.mlbLive);
   assert.equal(count(hubHtml([ok(v, true)]), 'data-predictions="locked"'), 1);
   assert.equal(count(hubHtml([ok(v, false)]), 'data-predictions="locked"'), 0);
-  const html = hubHtml([ok(v, true)]);
-  const section = textOf(element(html, 'data-predictions="locked"'));
+  const section = textOf(element(hubHtml([ok(v, true)]), 'data-predictions="locked"'));
   assert.ok(section.includes('Predictions are locked'));
   assert.ok(!/\d/.test(section));
 });
 
-// ---- The feeder key, and every other pipeline series key ----
-//
-// OVERLAY. The ruling of 2026-09-29: a slot with a feeder key and no
-// candidates renders its stored label, and the key appears nowhere in the HTML.
-test('FEEDER KEY: a slot with feederSeriesKey "AL-WC-B" and no candidates renders its label, and "AL-WC-B" is nowhere', () => {
-  for (const extra of [{ feederSeriesKey: 'AL-WC-B', candidates: null }, { feederSeriesKey: 'AL-WC-B' }]) {
-    const v = view(FIXTURE.mlbLive, CAPTURED_AT, (d) => {
-      const s = (d.series as RawSeries[]).find((x) => x.seriesKey === 'AL-DS-A') as RawSeries;
-      Object.assign(s.lower, extra);
+// ---- No series key, anywhere ----
+
+for (const [name, fixture, make, now] of EVERY_VIEW) {
+  test(`NO SERIES KEY (${name}): none in the league page or the hub, by shape or by name`, () => {
+    const v = make();
+    assertNoSeriesKey(leagueHtml(v, { now }), keysOf(fixture), 'league page');
+    assertNoSeriesKey(hubHtml([ok(v)], now), keysOf(fixture), 'hub');
+  });
+}
+
+test('NO SERIES KEY: a stored label "Winner of AL-WC-B" puts no key in the HTML, feeder decided or not', () => {
+  // Feeder still being played.
+  const live = view(FIXTURE.mlbLive, CAPTURED_AT, (d) => {
+    raw(d, 'AL-DS-A').lower = { placeholder: 'Winner of AL-WC-B', seed: null };
+    for (const g of raw(d, 'AL-DS-A').games) if (g.away === 'NYY/BOS') g.away = 'Winner of AL-WC-B';
+  });
+  const page = leagueHtml(live);
+  assertNoSeriesKey(page, keysOf(FIXTURE.mlbLive), 'league page, feeder live');
+  assertNoSeriesKey(hubHtml([ok(live)]), keysOf(FIXTURE.mlbLive), 'hub, feeder live');
+  assert.match(card(page, 'division_series-1'), /<span class="min-w-0">AL Wild Card Series winner<\/span>/);
+  assert.ok(textOf(panel(page, 'division_series-1')).includes('Rays vs AL Wild Card Series winner'));
+
+  // Feeder decided, which is when the pipeline writes this label.
+  const decided = view(FIXTURE.mlbMixed, MIXED_AT, (d) => {
+    raw(d, 'AL-CS').higher = { placeholder: 'Winner of AL-DS-A', seed: null };
+    for (const g of raw(d, 'AL-CS').games) if (g.home === 'AL Higher Seed') g.home = 'Winner of AL-DS-A';
+  });
+  const done = leagueHtml(decided, { now: MIXED_AT });
+  assertNoSeriesKey(done, keysOf(FIXTURE.mlbMixed), 'league page, feeder decided');
+  assert.ok(textOf(card(done, 'championship_series-1')).includes('Seed 1 Blue Jays'));
+});
+
+test('NO SERIES KEY: a feeder key on a slot puts no key in the HTML, in any of the three outcomes', () => {
+  const runs: [string, Date, string, 'higher' | 'lower', Doc][] = [
+    [FIXTURE.mlbMixed, MIXED_AT, 'AL-CS', 'higher', { feederSeriesKey: 'AL-DS-A' }],
+    [FIXTURE.mlbMixed, MIXED_AT, 'AL-CS', 'lower', { feederSeriesKey: 'AL-DS-B', candidates: ['seattle-mariners', 'detroit-tigers'] }],
+    [FIXTURE.mlbMixed, MIXED_AT, 'AL-CS', 'lower', { feederSeriesKey: 'AL-DS-B' }],
+    [FIXTURE.mlbLive, CAPTURED_AT, 'AL-DS-A', 'lower', { feederSeriesKey: 'AL-WC-B', candidates: null }],
+    [FIXTURE.wnbaMixed, new Date('2025-09-19T05:30:00Z'), 'SF-A', 'higher', { feederSeriesKey: 'R1-1v8' }],
+    [FIXTURE.wnbaMixed, new Date('2025-09-19T05:30:00Z'), 'F', 'higher', { feederSeriesKey: 'SF-A' }],
+  ];
+  for (const [fixture, now, key, which, extra] of runs) {
+    const v = view(fixture, now, (d) => {
+      Object.assign(raw(d, key)[which], extra);
     });
-    const page = leagueHtml(v);
-    const card = element(page, 'data-series="division_series-1"');
-    assert.match(card, /<div data-slot="placeholder" class="[^"]*border-dashed[^"]*"><span class="min-w-0">NYY\/BOS<\/span><\/div>/);
-    assert.equal(count(page, 'AL-WC-B'), 0, 'the feeder key is in the league page');
-    assert.equal(count(hubHtml([ok(v)]), 'AL-WC-B'), 0, 'the feeder key is in the hub');
+    assertNoSeriesKey(leagueHtml(v, { now }), keysOf(fixture), `league page ${JSON.stringify(extra)}`);
+    assertNoSeriesKey(hubHtml([ok(v)], now), keysOf(fixture), `hub ${JSON.stringify(extra)}`);
   }
 });
 
-test('FEEDER KEY: with candidates the composed text renders, and "AL-WC-B" is still nowhere', () => {
-  const v = view(FIXTURE.mlbLive, CAPTURED_AT, (d) => {
-    const s = (d.series as RawSeries[]).find((x) => x.seriesKey === 'AL-DS-A') as RawSeries;
-    Object.assign(s.lower, { feederSeriesKey: 'AL-WC-B', candidates: ['new-york-yankees', 'boston-red-sox'] });
-  });
-  const page = leagueHtml(v);
-  assert.ok(page.includes('<span class="min-w-0">Yankees / Red Sox winner</span>'));
-  assert.equal(count(page, 'AL-WC-B'), 0);
-  assert.equal(count(hubHtml([ok(v)]), 'AL-WC-B'), 0);
+test('the key scan would catch a key, were one there', () => {
+  // Guards the scans above against a pattern that matches nothing.
+  for (const leaked of ['<li data-series="AL-WC-B">', '<a href="#NL-DS-A">', '<span>Winner of AL-CS</span>', '<span>R1-1v8</span>', '<i>SF-A</i>', '<b>WS</b>', '<li data-k="F">']) {
+    assert.throws(() => assertNoSeriesKey(leaked, ['AL-WC-B', 'NL-DS-A', 'AL-CS', 'WS', 'R1-1v8', 'SF-A', 'F'], 'probe'), assert.AssertionError, leaked);
+  }
+  assert.doesNotThrow(() => assertNoSeriesKey('<li data-series="wild_card-2"><a href="#world_series-1">NYY/BOS</a> SF/LAD</li>', ['AL-WC-B', 'WS', 'F'], 'probe'));
 });
 
 // ---- Properties of every page ----
 
-for (const [name, make] of EVERY_VIEW) {
+for (const [name, fixture, make, now] of EVERY_VIEW) {
   test(`CLAIMS (${name}): no freshness wording, and "live" only as a game state`, () => {
     const v = make();
-    const now = v.updatedLabel ? undefined : CAPTURED_AT;
-    for (const html of [leagueHtml(v, { now }), hubHtml([ok(v)])]) {
+    for (const html of [leagueHtml(v, { now }), hubHtml([ok(v)], now)]) {
       const text = textOf(withoutBadges(html));
       assert.ok(!FRESHNESS_WORDS.test(text), `found ${text.match(FRESHNESS_WORDS)?.[0]}`);
       assert.ok(!/\bupdated (every|each)\b/i.test(text));
     }
   });
 
-  test(`LEAKS (${name}): no operator value, no raw slug, no empty rendering`, () => {
+  test(`LEAKS (${name}): no operator value, no empty rendering, no aside`, () => {
     const v = make();
-    const fixture = { 'MLB live capture': FIXTURE.mlbLive, 'MLB in-game capture': FIXTURE.mlbInGame, 'WNBA live capture': FIXTURE.wnbaLive, 'MLB 2025 final': FIXTURE.mlbFinal, 'WNBA 2025 final': FIXTURE.wnbaFinal, 'MLB 2025 mixed': FIXTURE.mlbMixed, 'WNBA 2025 mixed': FIXTURE.wnbaMixed }[name] as string;
     const d = JSON.parse(rawText(fixture)) as Doc & { seeds: Doc; source: { urls: string[] }; series: RawSeries[] };
-    for (const html of [leagueHtml(v), hubHtml([ok(v)])]) {
+    for (const html of [leagueHtml(v, { now }), hubHtml([ok(v)], now)]) {
       for (const secret of [d.runId, d.bracketSha256, d.lastRevalidatedSha256, d.validatedSeedSha256, d.seeds.authoredBy, d.seeds.file, ...d.source.urls]) {
         if (typeof secret !== 'string') continue;
         assert.ok(!html.includes(secret), `${secret.slice(0, 24)} is in the markup`);
       }
       for (const s of d.series) for (const g of s.games) assert.ok(!html.includes(String(g.gameId)), `feed game id ${g.gameId} is in the markup`);
-      // No pipeline series key, as an attribute value or as text. "F" and
-      // "WS" are too short to search for bare, so the short ones are
-      // checked where a key would sit: quoted, or as a whole word of text.
-      for (const s of d.series) {
-        const key = s.seriesKey as string;
-        assert.ok(!html.includes(`"${key}"`), `series key ${key} is an attribute value in the markup`);
-        if (key.length >= 4) assert.ok(!html.includes(key), `series key ${key} is in the markup`);
-        else assert.ok(!new RegExp(`(^| )${key}( |$)`).test(textOf(html)), `series key ${key} is text in the markup`);
-      }
       const text = textOf(html);
       assert.ok(!/\b(undefined|null|NaN|\[object Object\])\b/.test(text));
       assert.ok(!/[\u2014\u2013]/.test(html), 'an em or en dash is in the markup');
       assert.ok(!/<aside\b/.test(html), 'an aside would be taken for the ad sidebar');
+      assert.ok(!/<a [^>]*>(?:(?!<\/a>)[\s\S])*<a /.test(html), 'a link inside a link');
+      assert.ok(!/<button [^>]*>(?:(?!<\/button>)[\s\S])*<(a|button) /.test(html), 'a control inside a button');
     }
   });
 }

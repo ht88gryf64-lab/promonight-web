@@ -63,6 +63,11 @@ type Props = {
    *  (unchanged everywhere). 'inline' — horizontal equal-width brand-mark tiles,
    *  Ticketmaster-first, for the /promos/today card row. */
   layout?: 'stacked' | 'inline';
+  /** Render ONE button instead of two: the partner that leads the stack,
+   *  TicketNetwork, or Ticketmaster when the TicketNetwork link cannot be
+   *  resolved. For a dense list where every row carries a ticket link (the
+   *  playoffs home games). Tagging is unchanged. */
+  primaryOnly?: boolean;
 };
 
 export function TicketmasterCTA({
@@ -74,6 +79,7 @@ export function TicketmasterCTA({
   subKey,
   size = 'full',
   layout = 'stacked',
+  primaryOnly = false,
 }: Props) {
   // Both vendors receive the identical sub-ID: subKey verbatim when the call
   // site provides one (away rows pass the shared awayGameSubKey compound
@@ -197,6 +203,11 @@ export function TicketmasterCTA({
   // it monetizes better per click (resale commissions dwarf TM's single-game
   // ticket payouts), so it holds the top intercept slot. Keeping the order
   // identical across surfaces keeps the "TN on top" revenue test clean.
+  if (primaryOnly) {
+    // The same order as the pair: whichever button would have been first.
+    return <div className={wrapperClass}>{ticketNetworkButton ?? ticketmasterButton}</div>;
+  }
+
   return (
     <div className={wrapperClass}>
       {ticketNetworkButton}

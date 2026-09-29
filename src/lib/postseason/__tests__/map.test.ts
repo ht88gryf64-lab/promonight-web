@@ -66,7 +66,7 @@ test('WHITELIST: no operator field name and no operator value survives the mappe
     const always = [d.runId, d.bracketSha256, d.lastRevalidatedSha256, seeds.file, ...((d.source as { urls: string[] }).urls)];
     // The two live captures carry an author name and a seed hash. The 2025
     // documents were built from seed files that name no author.
-    const live = f === FIXTURE.mlbLive || f === FIXTURE.wnbaLive || f === FIXTURE.mlbInGame;
+    const live = ([FIXTURE.mlbLive, FIXTURE.wnbaLive, FIXTURE.mlbInGame, FIXTURE.mlbFields, FIXTURE.wnbaFields] as string[]).includes(f);
     const sometimes = [seeds.authoredBy, d.validatedSeedSha256];
     for (const v of always) assert.equal(typeof v, 'string', `${f}: the fixture carries the value being checked`);
     if (live) for (const v of sometimes) assert.equal(typeof v, 'string', `${f}: a live capture carries the author and the seed hash`);
@@ -151,58 +151,252 @@ test('PLACEHOLDERS: the stored label is kept verbatim, pair form and role form',
   assert.deepEqual(w.series.find((s) => s.seriesKey === 'SF-A')!.higher, { kind: 'placeholder', label: 'TBD', seed: null, candidates: null });
 });
 
-// OVERLAY. No stored document carries feederSeriesKey, candidates or
-// shortLabel yet. The three tests below add them to a live capture, in the
-// shape the G0 rulings name, to hold the mapper's side of that contract.
-test('OVERLAY: a feeder key with two candidate clubs carries the clubs; the label stays; the key is dropped', () => {
-  const d = loadDoc(FIXTURE.mlbLive);
-  Object.assign(seriesOf(d, 'AL-DS-A').lower, { feederSeriesKey: 'AL-WC-B', candidates: ['new-york-yankees', 'boston-red-sox'] });
-  const slot = (map(d) as Bracket).series.find((s) => s.seriesKey === 'AL-DS-A')!.lower;
-  assert.deepEqual(slot, { kind: 'placeholder', label: 'NYY/BOS', seed: null, candidates: ['new-york-yankees', 'boston-red-sox'] });
-  assert.ok(!JSON.stringify(slot).includes('AL-WC-B'));
+// ---- The display fields, as the pipeline's writer version 2 stores them ----
+
+test('CAPTURED: the stored slots carry a feeder key and two candidates; the mapped slots carry the candidates only', () => {
+  const d = loadDoc(FIXTURE.mlbFields);
+  assert.equal(d.writerVersion, 2);
+  // As stored.
+  assert.deepEqual(seriesOf(d, 'NL-DS-B').lower, { placeholder: 'ATL/PHI', seed: null, feederSeriesKey: 'NL-WC-A', candidates: ['atlanta-braves', 'philadelphia-phillies'] });
+  assert.equal(seriesOf(d, 'NL-WC-A').status, 'live', 'the feeder is being played');
+  assert.deepEqual(seriesOf(d, 'AL-CS').higher, { placeholder: 'AL Higher Seed', seed: null, feederSeriesKey: null, candidates: null });
+  // As mapped.
+  const b = map(d) as Bracket;
+  const lower = (key: string) => b.series.find((s) => s.seriesKey === key)!.lower;
+  assert.deepEqual(lower('NL-DS-B'), { kind: 'placeholder', label: 'ATL/PHI', seed: null, candidates: ['atlanta-braves', 'philadelphia-phillies'] });
+  assert.deepEqual(lower('AL-DS-A'), { kind: 'placeholder', label: 'NYY/BOS', seed: null, candidates: ['new-york-yankees', 'boston-red-sox'] });
+  assert.deepEqual(lower('AL-DS-B'), { kind: 'placeholder', label: 'HOU/CWS', seed: null, candidates: ['houston-astros', 'chicago-white-sox'] });
+  assert.deepEqual(lower('NL-DS-A'), { kind: 'placeholder', label: 'SD/CHC', seed: null, candidates: ['san-diego-padres', 'chicago-cubs'] });
+  assert.deepEqual(lower('AL-CS'), { kind: 'placeholder', label: 'AL Lower Seed', seed: null, candidates: null });
+  // No feeder key came through, on any slot, game or series.
+  const out = JSON.stringify(b.series.map((s) => [s.higher, s.lower, s.games]));
+  for (const key of ['AL-WC-A', 'AL-WC-B', 'NL-WC-A', 'NL-WC-B']) assert.ok(!out.includes(key), key);
+  assert.ok(!out.includes('feederSeriesKey'));
 });
 
-test('FEEDER KEY: never emitted on a slot, with candidates or without', () => {
-  for (const extra of [
-    { feederSeriesKey: 'AL-WC-B' },
-    { feederSeriesKey: 'AL-WC-B', candidates: null },
-    { feederSeriesKey: 'AL-WC-B', candidates: ['new-york-yankees', 'boston-red-sox'] },
-  ]) {
+test('CAPTURED: short labels, beside the full ones', () => {
+  const mlb = map(loadDoc(FIXTURE.mlbFields)) as Bracket;
+  assert.deepEqual([...new Map(mlb.series.map((s) => [s.round, [s.roundLabel, s.shortLabel]])).values()], [
+    ['Wild Card Series', 'Wild Card'],
+    ['Division Series', 'Division'],
+    ['Championship Series', 'LCS'],
+    ['World Series', 'World Series'],
+  ]);
+  const wnba = map(loadDoc(FIXTURE.wnbaFields)) as Bracket;
+  assert.deepEqual([...new Map(wnba.series.map((s) => [s.round, [s.roundLabel, s.shortLabel]])).values()], [
+    ['First Round', 'First Round'],
+    ['Semifinals', 'Semifinals'],
+    ['WNBA Finals', 'Finals'],
+  ]);
+});
+
+test('CAPTURED: the fields stored as null leave the slot as it was', () => {
+  const w = map(loadDoc(FIXTURE.wnbaFields)) as Bracket;
+  assert.deepEqual(w.series.find((s) => s.seriesKey === 'SF-A')!.higher, { kind: 'placeholder', label: 'TBD', seed: null, candidates: null });
+});
+
+// OVERLAY. No captured document holds a slot whose feeder is decided, since
+// no 2026 series had finished. The tests below add the fields to a capture or
+// to a 2025 document, to hold the mapper's side of that contract.
+const slotOf = (b: Bracket, key: string, which: 'higher' | 'lower') => b.series.find((s) => s.seriesKey === key)![which];
+const PAIR = ['new-york-yankees', 'boston-red-sox'];
+
+test('RESOLUTION 1: a feeder that is final resolves the slot to its winner, with the winner\'s own seed', () => {
+  // In the mixed 2025 document AL-DS-A is final, won by Toronto, the 1 seed.
+  const d = loadDoc(FIXTURE.mlbMixed);
+  const feeder = seriesOf(d, 'AL-DS-A');
+  assert.deepEqual([feeder.status, feeder.winner, feeder.higher], ['final', 'toronto-blue-jays', { slug: 'toronto-blue-jays', seed: 1 }]);
+  assert.deepEqual(slotOf(map(d) as Bracket, 'AL-CS', 'higher'), { kind: 'placeholder', label: 'AL Higher Seed', seed: null, candidates: null });
+
+  Object.assign(seriesOf(d, 'AL-CS').higher, { feederSeriesKey: 'AL-DS-A' });
+  assert.deepEqual(slotOf(map(d) as Bracket, 'AL-CS', 'higher'), { kind: 'club', slug: 'toronto-blue-jays', seed: 1 });
+});
+
+test('RESOLUTION 1: the winner may be the lower seed, and brings its own seed', () => {
+  // AL-WC-A is final, won by Detroit, the 6 seed and the lower slot.
+  const d = loadDoc(FIXTURE.mlbMixed);
+  assert.equal(seriesOf(d, 'AL-WC-A').winner, 'detroit-tigers');
+  Object.assign(seriesOf(d, 'AL-CS').lower, { feederSeriesKey: 'AL-WC-A' });
+  assert.deepEqual(slotOf(map(d) as Bracket, 'AL-CS', 'lower'), { kind: 'club', slug: 'detroit-tigers', seed: 6 });
+});
+
+test('RESOLUTION 1: a decided feeder beats candidates', () => {
+  const d = loadDoc(FIXTURE.mlbMixed);
+  Object.assign(seriesOf(d, 'AL-CS').higher, { feederSeriesKey: 'AL-DS-A', candidates: ['toronto-blue-jays', 'new-york-yankees'] });
+  assert.deepEqual(slotOf(map(d) as Bracket, 'AL-CS', 'higher'), { kind: 'club', slug: 'toronto-blue-jays', seed: 1 });
+});
+
+test('RESOLUTION 1: it chains, round to round, in document order', () => {
+  // The final document with its later slots put back to placeholders that
+  // name their feeders. Each round resolves against the one before it.
+  const d = loadDoc(FIXTURE.mlbFinal);
+  const back = (key: string, which: 'higher' | 'lower', feeder: string) => {
+    const s = seriesOf(d, key);
+    const was = s[which].slug as string;
+    s[which] = { placeholder: `${key} ${which}`, seed: null, feederSeriesKey: feeder };
+    for (const g of s.games) {
+      if (g.home === was) g.home = `${key} ${which}`;
+      if (g.away === was) g.away = `${key} ${which}`;
+    }
+  };
+  const clean = map(loadDoc(FIXTURE.mlbFinal)) as Bracket;
+  back('AL-DS-A', 'lower', 'AL-WC-B'); // Yankees, 4
+  back('AL-CS', 'higher', 'AL-DS-A'); // Blue Jays, 1
+  back('WS', 'higher', 'AL-CS'); // Blue Jays, 1
+  back('WS', 'lower', 'NL-CS'); // Dodgers, 3
+  const b = map(d) as Bracket;
+  assert.ok(b, 'the document maps, winners and all');
+  assert.deepEqual(slotOf(b, 'AL-DS-A', 'lower'), { kind: 'club', slug: 'new-york-yankees', seed: 4 });
+  assert.deepEqual(slotOf(b, 'AL-CS', 'higher'), { kind: 'club', slug: 'toronto-blue-jays', seed: 1 });
+  assert.deepEqual(slotOf(b, 'WS', 'higher'), { kind: 'club', slug: 'toronto-blue-jays', seed: 1 });
+  assert.deepEqual(slotOf(b, 'WS', 'lower'), { kind: 'club', slug: 'los-angeles-dodgers', seed: 3 });
+  // Hosts survive: a row that names the stored label is a row for the slot.
+  assert.deepEqual(b.series.map((s) => s.games.map((g) => g.homeSide)), clean.series.map((s) => s.games.map((g) => g.homeSide)));
+  assert.equal(b.series.find((s) => s.seriesKey === 'WS')!.winnerSide, 'lower');
+});
+
+test('RESOLUTION 1: a feeder that is not final, not in the document, or later in it resolves nothing', () => {
+  const plain = { kind: 'placeholder', label: 'NYY/BOS', seed: null, candidates: null };
+  for (const feeder of ['AL-WC-B', 'AL-WC-Z', 'AL-DS-A', 'AL-CS', 'WS', '']) {
+    const d = loadDoc(FIXTURE.mlbLive);
+    Object.assign(seriesOf(d, 'AL-DS-A').lower, { feederSeriesKey: feeder });
+    assert.deepEqual(slotOf(map(d) as Bracket, 'AL-DS-A', 'lower'), plain, `feeder "${feeder}"`);
+  }
+});
+
+test('RESOLUTION 2: a feeder still being played, with two candidates, carries the two clubs', () => {
+  const d = loadDoc(FIXTURE.mlbLive);
+  Object.assign(seriesOf(d, 'AL-DS-A').lower, { feederSeriesKey: 'AL-WC-B', candidates: PAIR });
+  assert.deepEqual(slotOf(map(d) as Bracket, 'AL-DS-A', 'lower'), { kind: 'placeholder', label: 'NYY/BOS', seed: null, candidates: PAIR });
+  // Candidates stand on their own: the rule is "if candidates are present".
+  const alone = loadDoc(FIXTURE.mlbLive);
+  Object.assign(seriesOf(alone, 'AL-DS-A').lower, { candidates: PAIR });
+  assert.deepEqual(slotOf(map(alone) as Bracket, 'AL-DS-A', 'lower'), { kind: 'placeholder', label: 'NYY/BOS', seed: null, candidates: PAIR });
+});
+
+test('RESOLUTION 3: with neither, the stored label, verbatim', () => {
+  const plain = { kind: 'placeholder', label: 'NYY/BOS', seed: null, candidates: null };
+  for (const extra of [{}, { feederSeriesKey: 'AL-WC-B' }, { feederSeriesKey: 'AL-WC-B', candidates: null }, { candidates: null }]) {
     const d = loadDoc(FIXTURE.mlbLive);
     Object.assign(seriesOf(d, 'AL-DS-A').lower, extra);
-    const b = map(d) as Bracket;
-    assert.ok(b, JSON.stringify(extra));
-    const slot = b.series.find((s) => s.seriesKey === 'AL-DS-A')!.lower;
-    assert.equal(slot.kind, 'placeholder');
-    assert.ok(!('feederSeriesKey' in slot), 'the mapped slot has no field for the feeder key');
-    assert.ok(!JSON.stringify(slot).includes('AL-WC-B'), 'the feeder key is on the mapped slot');
-    if (slot.kind === 'placeholder') assert.equal(slot.label, 'NYY/BOS');
+    assert.deepEqual(slotOf(map(d) as Bracket, 'AL-DS-A', 'lower'), plain, JSON.stringify(extra));
   }
-  // With no candidates the slot is exactly what it was before the key existed.
-  const plain = (map(loadDoc(FIXTURE.mlbLive)) as Bracket).series.find((s) => s.seriesKey === 'AL-DS-A')!.lower;
-  const d = loadDoc(FIXTURE.mlbLive);
-  Object.assign(seriesOf(d, 'AL-DS-A').lower, { feederSeriesKey: 'AL-WC-B', candidates: null });
-  assert.deepEqual((map(d) as Bracket).series.find((s) => s.seriesKey === 'AL-DS-A')!.lower, plain);
 });
 
-test('OVERLAY: half a pair is no pair, and the document still maps', () => {
+test('CANDIDATES: two distinct clubs or nothing, and the document still maps', () => {
   const cases: Doc[] = [
-    { candidates: ['new-york-yankees', 'boston-red-sox'] },
-    { feederSeriesKey: 'AL-WC-B' },
-    { feederSeriesKey: 'AL-WC-B', candidates: null },
-    { feederSeriesKey: 'AL-WC-B', candidates: ['new-york-yankees'] },
-    { feederSeriesKey: 'AL-WC-B', candidates: ['new-york-yankees', 'boston-red-sox', 'houston-astros'] },
-    { feederSeriesKey: 'AL-WC-B', candidates: ['new-york-yankees', 'new-york-yankees'] },
-    { feederSeriesKey: 'AL-WC-B', candidates: ['new-york-yankees', 7] },
-    { feederSeriesKey: '', candidates: ['new-york-yankees', 'boston-red-sox'] },
-    { feederSeriesKey: 'AL-WC-B', candidates: 'new-york-yankees,boston-red-sox' },
+    { candidates: ['new-york-yankees'] },
+    { candidates: ['new-york-yankees', 'boston-red-sox', 'houston-astros'] },
+    { candidates: ['new-york-yankees', 'new-york-yankees'] },
+    { candidates: ['new-york-yankees', 7] },
+    { candidates: ['new-york-yankees', ''] },
+    { candidates: 'new-york-yankees,boston-red-sox' },
+    { candidates: {} },
   ];
   for (const c of cases) {
     const d = loadDoc(FIXTURE.mlbLive);
-    Object.assign(seriesOf(d, 'AL-DS-A').lower, c);
+    Object.assign(seriesOf(d, 'AL-DS-A').lower, { feederSeriesKey: 'AL-WC-B', ...c });
     const b = map(d);
     assert.ok(b, JSON.stringify(c));
-    assert.deepEqual(b.series.find((s) => s.seriesKey === 'AL-DS-A')!.lower, { kind: 'placeholder', label: 'NYY/BOS', seed: null, candidates: null }, JSON.stringify(c));
+    assert.deepEqual(slotOf(b, 'AL-DS-A', 'lower'), { kind: 'placeholder', label: 'NYY/BOS', seed: null, candidates: null }, JSON.stringify(c));
+  }
+});
+
+test('FEEDER KEY: never emitted, whatever the slot resolves to', () => {
+  const runs: [string, string, 'higher' | 'lower', Doc][] = [
+    [FIXTURE.mlbLive, 'AL-DS-A', 'lower', { feederSeriesKey: 'AL-WC-B' }],
+    [FIXTURE.mlbLive, 'AL-DS-A', 'lower', { feederSeriesKey: 'AL-WC-B', candidates: null }],
+    [FIXTURE.mlbLive, 'AL-DS-A', 'lower', { feederSeriesKey: 'AL-WC-B', candidates: PAIR }],
+    [FIXTURE.mlbMixed, 'AL-CS', 'higher', { feederSeriesKey: 'AL-DS-A' }],
+  ];
+  for (const [fixture, key, which, extra] of runs) {
+    const d = loadDoc(fixture);
+    Object.assign(seriesOf(d, key)[which], extra);
+    const b = map(d) as Bracket;
+    assert.ok(b, JSON.stringify(extra));
+    const slot = slotOf(b, key, which);
+    assert.ok(!('feederSeriesKey' in slot), 'the mapped slot has no field for the feeder key');
+    assert.ok(!JSON.stringify(slot).includes(extra.feederSeriesKey as string), 'the feeder key is on the mapped slot');
+  }
+});
+
+// The pipeline writes this label itself, once a feeder is decided and before
+// the feed names the winner: `Winner of ${feederKey}` (resolveStalePairs). It
+// is the one stored label that holds a series key.
+test('STORED KEY: "Winner of AL-DS-A", its feeder final, resolves to the winner', () => {
+  const d = loadDoc(FIXTURE.mlbMixed);
+  const cs = seriesOf(d, 'AL-CS');
+  cs.higher = { placeholder: 'Winner of AL-DS-A', seed: null };
+  for (const g of cs.games) {
+    if (g.home === 'AL Higher Seed') g.home = 'Winner of AL-DS-A';
+    if (g.away === 'AL Higher Seed') g.away = 'Winner of AL-DS-A';
+  }
+  const b = map(d) as Bracket;
+  assert.deepEqual(slotOf(b, 'AL-CS', 'higher'), { kind: 'club', slug: 'toronto-blue-jays', seed: 1 });
+  // And it hosts what the stored label hosted.
+  const games = b.series.find((s) => s.seriesKey === 'AL-CS')!.games;
+  assert.deepEqual(games.map((g) => g.homeSide), ['higher', 'higher', 'lower', 'lower', 'lower', 'higher', 'higher']);
+  assert.ok(!JSON.stringify(b.series.find((s) => s.seriesKey === 'AL-CS')).includes('AL-DS-A'));
+});
+
+test('STORED KEY: a label that holds a key is never the text, resolved or not', () => {
+  // [series, side, stored label, what is shown]
+  const cases: [string, 'higher' | 'lower', string, string][] = [
+    // Its feeder is in the document, before it, and still being played: the
+    // document's own words for that feeder.
+    ['AL-DS-A', 'lower', 'Winner of AL-WC-B', 'AL Wild Card Series winner'],
+    ['WS', 'higher', 'Winner of AL-CS', 'AL Championship Series winner'],
+    ['WS', 'lower', 'Winner of NL-CS', 'NL Championship Series winner'],
+    // Not the pipeline's form, so it names no feeder.
+    ['AL-DS-A', 'lower', 'AL-WC-B winner', 'To be decided'],
+    ['AL-DS-A', 'lower', 'Winner of AL-WC-B or AL-WC-A', 'To be decided'],
+    // Key-shaped, and in no document.
+    ['AL-DS-A', 'lower', 'Winner of AL-WC-Z', 'To be decided'],
+    ['AL-DS-A', 'lower', 'Winner of R1-1v8', 'To be decided'],
+    ['AL-DS-A', 'lower', 'Winner of SF-A', 'To be decided'],
+    // A series later in the document feeds nothing before it. The key is
+    // still a key, so it is still not shown.
+    ['AL-DS-A', 'lower', 'Winner of NL-CS', 'To be decided'],
+    // A short key is a key when it is exactly a key of this document.
+    ['AL-DS-A', 'lower', 'Winner of WS', 'To be decided'],
+    ['AL-DS-A', 'lower', 'WS berth', 'To be decided'],
+  ];
+  for (const [key, which, stored, shown] of cases) {
+    const d = loadDoc(FIXTURE.mlbLive);
+    seriesOf(d, key)[which] = { placeholder: stored, seed: null };
+    const b = map(d) as Bracket;
+    assert.ok(b, stored);
+    assert.deepEqual(slotOf(b, key, which), { kind: 'placeholder', label: shown, seed: null, candidates: null }, `${key} ${which}: ${stored}`);
+  }
+  // The WNBA's own short key, in a WNBA document.
+  const w = loadDoc(FIXTURE.wnbaLive);
+  seriesOf(w, 'F').higher = { placeholder: 'Winner of SF-A', seed: null };
+  seriesOf(w, 'F').lower = { placeholder: 'Winner of F', seed: null };
+  const wb = map(w) as Bracket;
+  assert.deepEqual(slotOf(wb, 'F', 'higher'), { kind: 'placeholder', label: 'Semifinals winner', seed: null, candidates: null });
+  assert.deepEqual(slotOf(wb, 'F', 'lower'), { kind: 'placeholder', label: 'To be decided', seed: null, candidates: null });
+});
+
+test('STORED KEY: a label with no key in it is left exactly as stored', () => {
+  for (const stored of ['NYY/BOS', 'AL 4/5 Winner', 'AL Higher Seed', 'Higher Seed League Champion', 'TBD', 'SF/LAD', 'Winner of the AL Wild Card']) {
+    const d = loadDoc(FIXTURE.mlbLive);
+    seriesOf(d, 'AL-DS-A').lower = { placeholder: stored, seed: null };
+    assert.deepEqual(slotOf(map(d) as Bracket, 'AL-DS-A', 'lower'), { kind: 'placeholder', label: stored, seed: null, candidates: null }, stored);
+  }
+});
+
+test('NO SERIES KEY on any mapped slot or game, in any fixture', () => {
+  for (const f of ALL) {
+    const d = loadDoc(f);
+    const b = map(d) as Bracket;
+    for (const s of b.series) {
+      const text = JSON.stringify([s.higher, s.lower, s.games]);
+      for (const other of d.series as Series[]) {
+        const key = other.seriesKey as string;
+        assert.ok(!text.includes(`"${key}"`), `${f}: ${key} is a value on ${s.seriesKey}`);
+        if (key.length >= 4) assert.ok(!text.includes(key), `${f}: ${key} is on ${s.seriesKey}`);
+      }
+    }
   }
 });
 

@@ -17,6 +17,9 @@ the admin SDK hands the mapper.
 | `WNBA_2026.live-20260929T1715Z.json` | `postseasonBrackets/WNBA_2026` read at the same moment. Four first-round series underway at one final game each, `TBD` placeholders, three series with no games. |
 | `MLB_2026.live-ingame-20260929T1909Z.json` | `postseasonBrackets/MLB_2026` read at 2026-09-29T19:09Z, with Game 1 of Phillies at Braves in progress at 1 to 1. One series underway, ten upcoming. |
 
+| `MLB_2026.live-20260929T2008Z.json` | `postseasonBrackets/MLB_2026` read at 2026-09-29T20:08Z, after the pipeline's writer version 2. It carries `shortLabel` on every series and, on the four Division Series visitor slots, `feederSeriesKey` and two `candidates`. One of those feeders is being played. A game is in progress. |
+| `WNBA_2026.live-20260929T2008Z.json` | `postseasonBrackets/WNBA_2026` read at the same moment. `shortLabel` on every series. Its placeholder slots carry the two new fields as null. |
+
 Nothing in a live capture is edited.
 
 ## 2025 documents built by the pipeline
@@ -49,9 +52,13 @@ PIPELINE=$PWD OUT=/path/to/this/directory MLB_STEP=24 WNBA_STEP=10 \
   node /path/to/this/directory/generate-2025.cjs
 ```
 
-## Fields the pipeline does not write yet
+## What no capture holds yet
 
-`series.shortLabel`, `slot.feederSeriesKey` and `slot.candidates` are read by
-the mapper when present and appear in no fixture, because no stored document
-carries them. The tests for those paths overlay the fields on a live capture
-and say so at the overlay.
+The two 20:08Z captures carry `series.shortLabel`, `slot.feederSeriesKey` and
+`slot.candidates`, so the short labels and the "two candidates" outcome are
+tested against real documents.
+
+No captured document holds a slot whose feeder is already decided, because no
+2026 series had finished. That outcome, and a stored label of the form
+`Winner of AL-WC-B`, are tested by overlaying the field on a capture or a
+2025 document. Each such test says so where it does it.

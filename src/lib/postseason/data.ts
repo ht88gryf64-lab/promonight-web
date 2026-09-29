@@ -3,9 +3,10 @@ import { cache } from 'react';
 import { db } from '../firebase';
 import { makeCollectionLoader } from '../collection-cache';
 import { getAllTeams, getVenueForTeam } from '../data';
+import { getTeamVenueHubMap } from '../venue-hub';
 import { mapBracketDoc } from './map';
 import { playoffsLinkState, type PlayoffsLinkState } from './gate';
-import { buildLeagueView, clubSlugs, hostSlugs, type ClubInfo, type LeagueView } from './view';
+import { buildLeagueView, clubSlugs, hostSlugs, type ClubInfo, type LeagueView, type ParkInfo } from './view';
 import type { Bracket, BracketRead, PostseasonLeague } from './types';
 
 // ---- What the web decides, and only that ----
@@ -100,13 +101,27 @@ export const getLeaguePageData = cache(async (league: PostseasonLeague): Promise
     }
 
     // A park is the web's own venue name for the host club. A club with no
-    // venue record gets no park line; nothing is filled in for it.
-    const parks = new Map<string, string>();
+    // venue record gets no park line; nothing is filled in for it. The name
+    // links to the club's venue page when the web has one above the indexing
+    // floor, the same test the team page applies before it links there. A
+    // failed lookup costs the link, never the name.
+    let venuePages: Awaited<ReturnType<typeof getTeamVenueHubMap>> = new Map();
+    try {
+      venuePages = await getTeamVenueHubMap();
+    } catch (err) {
+      console.error('[postseason] venue page lookup failed; park names render as plain text', err);
+    }
+    const parks = new Map<string, ParkInfo>();
     await Promise.all(
       hostSlugs(read.bracket).map(async (slug) => {
         try {
           const venue = await getVenueForTeam(slug);
-          if (venue && typeof venue.name === 'string' && venue.name.trim()) parks.set(slug, venue.name);
+          if (!venue || typeof venue.name !== 'string' || !venue.name.trim()) return;
+          const hub = venuePages.get(slug);
+          parks.set(slug, {
+            name: venue.name,
+            page: hub && hub.indexable ? { href: `/venues/${hub.slug}`, buildingSlug: hub.slug, buildingName: hub.displayName } : null,
+          });
         } catch (err) {
           console.error(`[postseason] venue lookup failed for ${slug}; its park line is omitted`, err);
         }

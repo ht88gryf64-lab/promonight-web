@@ -7,7 +7,7 @@ import { barlowCondensed } from '@/components/cfb/rivalry/fonts';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 import { getAllTeams } from '@/lib/data';
 import { POSTSEASON_LEAGUES, POSTSEASON_SEASON, getLeaguePageData, postseasonPath } from '@/lib/postseason/data';
-import { nextHomeGames } from '@/lib/postseason/view';
+import { homeGamesWindow } from '@/lib/postseason/view';
 import { PlayoffsHub, type HubLeague } from '@/components/playoffs/PlayoffsHub';
 import { ticketButtons } from '@/components/playoffs/tickets';
 
@@ -18,8 +18,6 @@ import { ticketButtons } from '@/components/playoffs/tickets';
 export const revalidate = 600;
 
 const PAGE_URL = 'https://www.getpromonight.com/playoffs';
-// How many upcoming home games the hub lists across every league.
-const NEXT_HOME_GAMES = 8;
 
 // Title, description and canonical only. Open Graph and JSON-LD land with the
 // rest of the SEO work at G3. Nothing here depends on the bracket's state, so
@@ -44,13 +42,16 @@ export default async function PlayoffsHubPage() {
   }
 
   const active = leagues.flatMap((l) => (l.state === 'ok' && l.view.phase.kind === 'active' ? [l.view] : []));
-  const nextGames = nextHomeGames(active, NEXT_HOME_GAMES);
+  // The next three days, at most eight rows, across every league. The rest
+  // of the week is in the HTML behind "Show all".
+  const nextGames = homeGamesWindow(active, new Date());
+  const listed = [...nextGames.primary, ...nextGames.rest];
 
   let tickets = {};
-  if (nextGames.length > 0) {
+  if (listed.length > 0) {
     const teams = new Map((await getAllTeams()).map((t) => [t.id, t]));
     tickets = ticketButtons(
-      nextGames.map((g) => g.hostTeamId),
+      listed.map((g) => g.hostTeamId),
       teams,
       'web_playoffs',
       'playoffs_hub',

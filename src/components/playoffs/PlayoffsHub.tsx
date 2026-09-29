@@ -1,11 +1,13 @@
 import type { ReactNode } from 'react';
-import Link from 'next/link';
-import { currentRoundSeries, type HomeGameView, type LeagueView, type SeriesView } from '@/lib/postseason/view';
+import { TrackedLink } from '@/components/analytics/TrackedLink';
+import { currentRoundSeries, type HomeGamesWindow, type LeagueView, type SeriesView } from '@/lib/postseason/view';
 import type { PostseasonLeague } from '@/lib/postseason/types';
 import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
 import { HomeGames } from './HomeGames';
 import { PredictionsCard } from './PredictionsCard';
 import { CONDENSED, InProgressBadge } from './ui';
+
+const SURFACE = 'web_playoffs' as const;
 
 export type HubLeague =
   | { state: 'ok'; league: PostseasonLeague; href: string; view: LeagueView; predictionsLocked: boolean }
@@ -48,9 +50,9 @@ function CardShell({
     <li data-league-card={league} className="overflow-hidden rounded-[10px] border border-rd-line bg-rd-card shadow-sm">
       <div className="flex items-center justify-between gap-3 px-4 pt-4">
         <h2 className="text-[30px] font-extrabold uppercase leading-none text-rd-ink" style={{ fontFamily: CONDENSED }}>
-          <Link href={href} className="hover:text-rd-red">
+          <TrackedLink href={href} surface={SURFACE} ctaId="playoffs_hub_league" ctaLabel={league} className="hover:text-rd-red">
             {league}
-          </Link>
+          </TrackedLink>
         </h2>
         {badge}
       </div>
@@ -62,13 +64,16 @@ function CardShell({
           </p>
         )}
       </div>
-      <Link
+      <TrackedLink
         href={href}
+        surface={SURFACE}
+        ctaId="playoffs_hub_league"
+        ctaLabel={linkText}
         className="block border-t border-rd-line px-4 py-3 text-[13px] font-semibold uppercase tracking-[0.12em] text-rd-red hover:text-rd-red-dark"
         style={{ fontFamily: CONDENSED, fontSize: 15 }}
       >
         {linkText}
-      </Link>
+      </TrackedLink>
     </li>
   );
 }
@@ -95,9 +100,16 @@ function LeagueCard({ entry }: { entry: HubLeague }) {
       >
         <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-rd-ink-faint">{view.season} champion</p>
         <p className="mt-0.5 text-[24px] font-extrabold uppercase leading-tight text-rd-ink" style={{ fontFamily: CONDENSED }}>
-          <Link href={view.phase.championHref} className="hover:text-rd-red">
+          <TrackedLink
+            href={view.phase.championHref}
+            surface={SURFACE}
+            ctaId="playoffs_champion_team"
+            ctaLabel={view.phase.championName}
+            teamSlug={view.phase.championTeamId}
+            className="hover:text-rd-red"
+          >
             {view.phase.championName}
-          </Link>
+          </TrackedLink>
         </p>
         <p className="mt-0.5 text-[13.5px] text-rd-ink-soft">{view.phase.summary}</p>
       </CardShell>
@@ -115,12 +127,21 @@ function LeagueCard({ entry }: { entry: HubLeague }) {
       <ul className="divide-y divide-rd-line">
         {series.map((s) => (
           <li key={s.id} data-series={s.id} className="py-2 first:pt-0 last:pb-0">
-            <span className="block text-[15px] font-semibold leading-snug text-rd-ink">{seriesNames(s)}</span>
-            <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-rd-ink-soft">
-              {s.liveLabel ? <InProgressBadge /> : null}
-              <span>{s.liveLabel ? s.next?.title : s.headline}</span>
-              {s.liveLabel && s.scoreLine ? <span>{s.scoreLine}</span> : null}
-            </span>
+            {/* The line is a link to the series itself, on the league page. */}
+            <TrackedLink
+              href={`${entry.href}#${s.id}`}
+              surface={SURFACE}
+              ctaId="playoffs_hub_series"
+              ctaLabel={seriesNames(s)}
+              className="group block"
+            >
+              <span className="block text-[15px] font-semibold leading-snug text-rd-ink group-hover:text-rd-red">{seriesNames(s)}</span>
+              <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-rd-ink-soft">
+                {s.liveLabel ? <InProgressBadge /> : null}
+                <span>{s.liveLabel ? s.next?.title : s.headline}</span>
+                {s.liveLabel && s.scoreLine ? <span>{s.scoreLine}</span> : null}
+              </span>
+            </TrackedLink>
           </li>
         ))}
       </ul>
@@ -136,7 +157,7 @@ export function PlayoffsHub({
 }: {
   season: number;
   leagues: readonly HubLeague[];
-  nextGames: readonly HomeGameView[];
+  nextGames: HomeGamesWindow;
   tickets: Readonly<Record<string, ReactNode>>;
 }) {
   const ok = leagues.filter((l): l is Extract<HubLeague, { state: 'ok' }> => l.state === 'ok');
@@ -174,13 +195,16 @@ export function PlayoffsHub({
           <p className="mt-2 max-w-[52ch] text-[14px] leading-relaxed text-rd-ink-soft">
             A league appears here once its bracket is set.
           </p>
-          <Link
+          <TrackedLink
             href="/teams"
+            surface={SURFACE}
+            ctaId="playoffs_browse_teams"
+            ctaLabel="Browse promotions by team"
             className="mt-3 inline-block font-semibold uppercase tracking-[0.12em] text-rd-red hover:text-rd-red-dark"
             style={{ fontFamily: CONDENSED, fontSize: 15 }}
           >
             Browse promotions by team
-          </Link>
+          </TrackedLink>
         </div>
       )}
 
@@ -200,8 +224,9 @@ export function PlayoffsHub({
           heading="Next home games"
           games={nextGames}
           tickets={tickets}
+          surface={SURFACE}
           showLeague
-          empty="No upcoming home game with a confirmed host is listed yet."
+          empty="No home game with a confirmed host is listed in the next three days."
         />
       )}
 

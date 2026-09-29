@@ -5,7 +5,7 @@ import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { FIXTURE, capturedTeams, fakeFirestore, loadDoc, parks } from '../../../lib/postseason/__tests__/helpers';
+import { FIXTURE, capturedTeams, fakeFirestore, loadDoc, parkNames, venuePages } from '../../../lib/postseason/__tests__/helpers';
 
 type Fake = ReturnType<typeof fakeFirestore>;
 const current: { db: Fake } = { db: fakeFirestore({}) };
@@ -20,10 +20,13 @@ mock.module(new URL('../../../lib/data.ts', import.meta.url).href, {
   namedExports: {
     getAllTeams: async () => capturedTeams(),
     getVenueForTeam: async (id: string) => {
-      const name = parks().get(id);
+      const name = parkNames().get(id);
       return name ? { name } : null;
     },
   },
+});
+mock.module(new URL('../../../lib/venue-hub.ts', import.meta.url).href, {
+  namedExports: { getTeamVenueHubMap: async () => venuePages() },
 });
 // next/font needs the Next compiler. The pages only read `.variable`.
 mock.module(new URL('../../../components/cfb/rivalry/fonts.ts', import.meta.url).href, {
@@ -122,13 +125,46 @@ test('ROUTE /playoffs/[league]: ticket links carry the league surface in their s
   assert.ok(!links.some((h) => /web_playoffs_(?!league_)/.test(h)), 'no link from a league page is tagged as the hub');
 });
 
+test('ROUTE /playoffs/[league]: a home games row carries ONE ticket button, the partner that leads the stack', async () => {
+  const { default: Page } = await league();
+  current.db = fakeFirestore(BOTH());
+  const html = renderToStaticMarkup(await Page(params('mlb')));
+  const rows = [...html.matchAll(/<li data-home-game="[^"]+"[\s\S]*?<\/li>/g)].map((m) => m[0]);
+  assert.ok(rows.length > 8, 'the short list and the rest of the week');
+  for (const row of rows) {
+    assert.equal(count(row, 'rel="noopener noreferrer sponsored"'), 1, 'one ticket link to a row');
+    assert.equal(count(row, 'aria-label="Get tickets on TicketNetwork"'), 1);
+    assert.equal(count(row, 'aria-label="Get tickets on Ticketmaster"'), 0);
+  }
+  // The series detail keeps the full block: both partners, for one host.
+  const panel = /<section id="wild_card-1"[\s\S]*?<\/section>/.exec(html)?.[0] ?? '';
+  assert.equal(count(panel, 'aria-label="Get tickets on TicketNetwork"'), 1);
+  assert.equal(count(panel, 'aria-label="Get tickets on Ticketmaster"'), 1);
+  assert.ok(panel.includes('web_playoffs_league_houston-astros'));
+});
+
+test('ROUTE /playoffs/[league]: every internal link is there in the server HTML, to the right place', async () => {
+  const { default: Page } = await league();
+  current.db = fakeFirestore(BOTH());
+  const html = renderToStaticMarkup(await Page(params('mlb')));
+  for (const href of ['/playoffs', '/playoffs/wnba', '/mlb/houston-astros', '/mlb/chicago-white-sox', '/venues/daikin-park', '/venues/truist-park', '#wild_card-1', '#world_series-1']) {
+    assert.ok(html.includes(`href="${href}"`), href);
+  }
+  // No link on the page points at a series by the pipeline's key.
+  assert.ok(![...html.matchAll(/href="([^"]*)"/g)].some((m) => /[A-Z]+-[A-Z]+-[A-Z0-9]+|#[A-Z]/.test(m[1].split('?')[0])));
+});
+
 test('ROUTE /playoffs: both leagues, the next home games, hub-tagged ticket links', async () => {
   const { default: Page } = await hub();
   current.db = fakeFirestore(BOTH());
   const html = renderToStaticMarkup(await Page());
   assert.match(html, /<h1[^>]*>Playoffs<\/h1>/);
   assert.equal(count(html, 'data-league-card="'), 2);
-  assert.equal(count(html, 'data-home-game="'), 8);
+  const short = /<ul data-home-games-list="primary"[\s\S]*?<\/ul>/.exec(html)?.[0] ?? '';
+  assert.equal(count(short, 'data-home-game="'), 8);
+  assert.equal(count(short, 'rel="noopener noreferrer sponsored"'), 8, 'one ticket link to a row');
+  assert.ok(html.includes('href="/playoffs/mlb#wild_card-1"'));
+  assert.ok(html.includes('href="/playoffs/wnba#first_round-1"'));
   assert.equal(count(html, 'data-predictions="locked"'), 1);
   const links = [...html.matchAll(/<a [^>]*href="([^"]+)"[^>]*rel="noopener noreferrer sponsored"/g)].map((m) => m[1].replace(/&amp;/g, '&'));
   assert.ok(links.some((h) => h.includes('web_playoffs_atlanta-braves')));

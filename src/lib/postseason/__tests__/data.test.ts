@@ -3,7 +3,7 @@
 // proves the masked fields are enough to build the page.
 import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
-import { CAPTURED_AT, FIXTURE, capturedTeams, fakeFirestore, loadDoc, parks } from './helpers';
+import { CAPTURED_AT, FIXTURE, capturedTeams, fakeFirestore, loadDoc, parkNames, venuePages } from './helpers';
 
 type Fake = ReturnType<typeof fakeFirestore>;
 
@@ -15,6 +15,7 @@ const db = {
   getAll: (...args: unknown[]) => current.db.getAll(...args),
 };
 const venues = { fail: new Set<string>(), missing: new Set<string>(), asked: [] as string[] };
+const pages = { fail: false, held: new Set<string>(), none: new Set<string>() };
 const teams = { drop: new Set<string>() };
 
 mock.module('server-only', { namedExports: {} });
@@ -26,8 +27,22 @@ mock.module(new URL('../../data.ts', import.meta.url).href, {
       venues.asked.push(id);
       if (venues.fail.has(id)) throw new Error('venue read failed');
       if (venues.missing.has(id)) return null;
-      const name = parks().get(id);
+      const name = parkNames().get(id);
       return name ? { name } : null;
+    },
+  },
+});
+mock.module(new URL('../../venue-hub.ts', import.meta.url).href, {
+  namedExports: {
+    getTeamVenueHubMap: async () => {
+      if (pages.fail) throw new Error('venueHubs read failed');
+      const map = venuePages();
+      for (const id of pages.none) map.delete(id);
+      for (const id of pages.held) {
+        const p = map.get(id);
+        if (p) map.set(id, { ...p, indexable: false });
+      }
+      return map;
     },
   },
 });
@@ -40,6 +55,9 @@ function use(docs: Parameters<typeof fakeFirestore>[0]): Fake {
   venues.fail.clear();
   venues.missing.clear();
   venues.asked.length = 0;
+  pages.fail = false;
+  pages.held.clear();
+  pages.none.clear();
   teams.drop.clear();
   return current.db;
 }
@@ -137,6 +155,47 @@ test('PAGE DATA: venues are looked up for hosts only', async () => {
     'atlanta-braves', 'cleveland-guardians', 'houston-astros', 'los-angeles-dodgers',
     'milwaukee-brewers', 'new-york-yankees', 'san-diego-padres', 'tampa-bay-rays',
   ]);
+});
+
+test('PARK PAGE: the park links to its page only when the web has one above the indexing floor', async () => {
+  const { getLeaguePageData } = await load();
+  use({ 'postseasonBrackets/MLB_2026': MLB() });
+  pages.held.add('houston-astros'); // a page exists, held below the floor
+  pages.none.add('new-york-yankees'); // no page at all
+  const page = await getLeaguePageData('MLB');
+  assert.equal(page.state, 'ok');
+  if (page.state !== 'ok') return;
+  const of = (id: string) => page.view.homeGames.find((g) => g.hostTeamId === id);
+  assert.equal(of('houston-astros')?.park, 'Daikin Park');
+  assert.equal(of('houston-astros')?.parkPage, null);
+  assert.equal(of('new-york-yankees')?.park, 'Yankee Stadium');
+  assert.equal(of('new-york-yankees')?.parkPage, null);
+  assert.deepEqual(of('atlanta-braves')?.parkPage, { href: '/venues/truist-park', buildingSlug: 'truist-park', buildingName: 'Truist Park' });
+  // The page is the building's, under the building's own slug.
+  assert.deepEqual(of('tampa-bay-rays')?.parkPage, { href: '/venues/tropicana-field', buildingSlug: 'tropicana-field', buildingName: 'Tropicana Field' });
+});
+
+test('PARK PAGE: a failed venue page read costs every link and no name', async () => {
+  const { getLeaguePageData } = await load();
+  use({ 'postseasonBrackets/MLB_2026': MLB() });
+  pages.fail = true;
+  const page = await quiet(() => getLeaguePageData('MLB'));
+  assert.equal(page.state, 'ok');
+  if (page.state !== 'ok') return;
+  assert.ok(page.view.homeGames.length > 0);
+  assert.ok(page.view.homeGames.every((g) => g.park !== null && g.parkPage === null));
+});
+
+test('PARK PAGE: a club with no venue record gets no name, so no link either', async () => {
+  const { getLeaguePageData } = await load();
+  use({ 'postseasonBrackets/MLB_2026': MLB() });
+  venues.missing.add('houston-astros');
+  const page = await getLeaguePageData('MLB');
+  assert.equal(page.state, 'ok');
+  if (page.state !== 'ok') return;
+  const row = page.view.homeGames.find((g) => g.hostTeamId === 'houston-astros');
+  assert.equal(row?.park, null);
+  assert.equal(row?.parkPage, null);
 });
 
 test('PREDICTIONS: the read asks for frozenAt alone, so the corpus never crosses the wire', async () => {

@@ -31,15 +31,20 @@ export interface ClubSlot {
 
 export interface PlaceholderSlot {
   kind: 'placeholder';
-  /** The feed's own label for the slot, stored verbatim. */
+  /** The text to show for the slot. It is the stored label, verbatim, unless
+   *  the stored label held a series key: a key is never text, so the mapper
+   *  replaces such a label before it gets here (see ./map.ts). */
   label: string;
   seed: number | null;
-  /** The two clubs that can still fill the slot. Set only when the stored
-   *  slot names both a feeder series and exactly two clubs; null otherwise.
-   *  The feeder series key itself is read as that condition and then
-   *  dropped: it has no field here, so it can never be rendered as text. */
+  /** The two clubs that can still fill the slot, when the document names
+   *  exactly two. Null otherwise. */
   candidates: [string, string] | null;
 }
+
+// There is no field for the feeder series key, on purpose. The mapper reads
+// it, uses it, and drops it: a slot whose feeder is already decided comes out
+// of the mapper as a ClubSlot holding the winner, and any other slot comes
+// out with no trace of the key. What is not on the type cannot be serialized.
 
 export type BracketSlot = ClubSlot | PlaceholderSlot;
 

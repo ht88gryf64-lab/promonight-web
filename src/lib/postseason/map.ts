@@ -76,7 +76,35 @@ function instantOf(v: unknown): string | null {
   return Number.isNaN(ms) ? null : new Date(ms).toISOString();
 }
 
-function mapSlot(v: unknown): BracketSlot | null {
+// ---- Slots ----
+//
+// A slot is read in two steps. parseSlot reads what is stored. resolveSlot,
+// which runs once the series before it in the document are mapped, decides
+// what the slot IS:
+//
+//   1. It names a feeder series and that series is final in this document:
+//      the slot is the feeder's winner, a club, with the seed the winner
+//      carried in its own slot.
+//   2. Else it names two candidate clubs: a placeholder that carries them.
+//   3. Else: a placeholder showing the stored label, verbatim.
+//
+// THE FEEDER KEY NEVER LEAVES THIS FILE. It is read from `feederSeriesKey`,
+// or from a stored label of the exact form the pipeline writes once a feeder
+// is decided, "Winner of AL-WC-B". Either way it is used for step 1 and
+// dropped. A stored label that holds a series key is never shown as written,
+// because a key is not copy: see safeLabel.
+
+interface StoredSlot {
+  /** What the game rows call this slot: the slug, or the stored label. */
+  stored: string;
+  slug: string | null;
+  label: string | null;
+  seed: number | null;
+  feeder: string | null;
+  candidates: [string, string] | null;
+}
+
+function parseSlot(v: unknown): StoredSlot | null {
   if (!isObject(v)) return null;
   const slug = text(v.slug);
   const label = text(v.placeholder);
@@ -87,38 +115,72 @@ function mapSlot(v: unknown): BracketSlot | null {
     seed = wholeNumber(v.seed);
     if (seed === null || seed === 0) return null;
   }
-  if (slug !== null) return { kind: 'club', slug, seed };
-
-  // The feeder pair is optional and all-or-nothing. A malformed pair is not a
-  // reason to refuse the document: the stored label still renders, which is
-  // the behaviour before the pipeline published the pair at all.
-  //
-  // feederSeriesKey is CONSUMED here and never emitted. It is a key, not
-  // copy. With no candidates beside it the slot shows its stored label,
-  // whether or not the key is present.
-  const feeder = text(v.feederSeriesKey);
+  // Two clubs or none. A malformed pair is not a reason to refuse the
+  // document: the slot falls through to its label, which is the behaviour
+  // before the pipeline published the pair at all.
   const pair = Array.isArray(v.candidates) ? v.candidates.map(text) : null;
-  const pairOk =
-    feeder !== null &&
-    pair !== null &&
-    pair.length === 2 &&
-    pair[0] !== null &&
-    pair[1] !== null &&
-    pair[0] !== pair[1];
+  const pairOk = pair !== null && pair.length === 2 && pair[0] !== null && pair[1] !== null && pair[0] !== pair[1];
   return {
-    kind: 'placeholder',
-    label: label as string,
+    stored: (slug ?? label) as string,
+    slug,
+    label,
     seed,
-    candidates: pairOk ? [pair![0] as string, pair![1] as string] : null,
+    feeder: slug === null ? text(v.feederSeriesKey) : null,
+    candidates: slug === null && pairOk ? [pair![0] as string, pair![1] as string] : null,
   };
 }
 
-/** What a game row names for a slot: the slug, or the placeholder label. */
-function slotName(slot: BracketSlot): string {
-  return slot.kind === 'club' ? slot.slug : slot.label;
+// The shapes a series key takes. MLB: AL-WC-A, NL-DS-B, AL-CS. WNBA: R1-1v8,
+// SF-A. A token is also a key when it is, exactly, a key of this document,
+// which is what catches the short ones (WS, F).
+const KEY_SHAPES = [/^[A-Z]+-[A-Z]+-[A-Z0-9]+$/, /^[A-Z]+-[A-Z]{2}$/, /^R\d+-\d+v\d+$/, /^[A-Z]{1,3}-[A-Z0-9]$/];
+const PIPELINE_FEEDER_LABEL = /^Winner of (\S+)$/;
+
+function holdsSeriesKey(label: string, keys: ReadonlySet<string>): boolean {
+  return label.split(/[^A-Za-z0-9-]+/).some((t) => t.length > 0 && (keys.has(t) || KEY_SHAPES.some((re) => re.test(t))));
 }
 
-function mapGame(v: unknown, higher: BracketSlot, lower: BracketSlot): BracketGame | null {
+/** The label to show. The stored one, verbatim, unless it holds a series
+ *  key. Then it is replaced by what the document says about the feeder, in
+ *  the document's own words ("AL Wild Card Series winner"), or, when the
+ *  document does not know the feeder, by "To be decided". */
+function safeLabel(label: string, keys: ReadonlySet<string>, feeder: BracketSeries | null): string {
+  if (!holdsSeriesKey(label, keys)) return label;
+  if (feeder) return `${feeder.conference ? `${feeder.conference} ` : ''}${feeder.roundLabel} winner`;
+  return 'To be decided';
+}
+
+function resolveSlot(slot: StoredSlot, keys: ReadonlySet<string>, mapped: ReadonlyMap<string, BracketSeries>): BracketSlot {
+  if (slot.slug !== null) return { kind: 'club', slug: slot.slug, seed: slot.seed };
+  const label = slot.label as string;
+
+  // The feeder: the stored key, or the key in the pipeline's own label.
+  const named = slot.feeder ?? PIPELINE_FEEDER_LABEL.exec(label)?.[1] ?? null;
+  // Only a series ALREADY mapped counts, which is every series that comes
+  // before this one in the document. A slot cannot be fed by its own series
+  // or by a later round.
+  const feeder = named !== null ? mapped.get(named) ?? null : null;
+
+  if (feeder && feeder.status === 'final' && feeder.winnerSide) {
+    const winner = feeder[feeder.winnerSide];
+    if (winner.kind === 'club') return { kind: 'club', slug: winner.slug, seed: winner.seed };
+  }
+  return { kind: 'placeholder', label: safeLabel(label, keys, feeder), seed: slot.seed, candidates: slot.candidates };
+}
+
+/** Does a game row name this slot? A row names a slot by what was stored
+ *  for it, or, for a slot resolved to a feeder's winner, by that club. */
+function rowNames(row: unknown, stored: StoredSlot, resolved: BracketSlot): boolean {
+  const named = text(row);
+  if (named === null) return false;
+  return named === stored.stored || (resolved.kind === 'club' && named === resolved.slug);
+}
+
+function mapGame(
+  v: unknown,
+  stored: { higher: StoredSlot; lower: StoredSlot },
+  resolved: { higher: BracketSlot; lower: BracketSlot },
+): BracketGame | null {
   if (!isObject(v)) return null;
   const gameNumber = wholeNumber(v.gameNumber);
   if (gameNumber === null || gameNumber === 0) return null;
@@ -132,10 +194,7 @@ function mapGame(v: unknown, higher: BracketSlot, lower: BracketSlot): BracketGa
   // `home`. When the two disagree the row is kept and the host is dropped, so
   // the page names no park and sells no ticket for a host it cannot confirm.
   let homeSide = side(v.homeSide);
-  if (homeSide !== null) {
-    const named = slotName(homeSide === 'higher' ? higher : lower);
-    if (text(v.home) !== named) homeSide = null;
-  }
+  if (homeSide !== null && !rowNames(v.home, stored[homeSide], resolved[homeSide])) homeSide = null;
 
   const score = (s: unknown): number | null => (s === null || s === undefined ? null : wholeNumber(s));
   const winnerSide = status === 'final' ? side(v.winnerSide) : null;
@@ -156,7 +215,7 @@ function mapGame(v: unknown, higher: BracketSlot, lower: BracketSlot): BracketGa
   };
 }
 
-function mapSeries(v: unknown): BracketSeries | null {
+function mapSeries(v: unknown, keys: ReadonlySet<string>, mapped: ReadonlyMap<string, BracketSeries>): BracketSeries | null {
   if (!isObject(v)) return null;
   const round = text(v.round);
   const roundLabel = text(v.roundLabel);
@@ -166,9 +225,11 @@ function mapSeries(v: unknown): BracketSeries | null {
   if (typeof v.status !== 'string' || !SERIES_STATUSES.includes(v.status as SeriesStatus)) return null;
   const status = v.status as SeriesStatus;
 
-  const higher = mapSlot(v.higher);
-  const lower = mapSlot(v.lower);
-  if (!higher || !lower) return null;
+  const storedHigher = parseSlot(v.higher);
+  const storedLower = parseSlot(v.lower);
+  if (!storedHigher || !storedLower) return null;
+  const higher = resolveSlot(storedHigher, keys, mapped);
+  const lower = resolveSlot(storedLower, keys, mapped);
 
   if (!isObject(v.wins)) return null;
   const winsHigher = wholeNumber(v.wins.higher);
@@ -191,7 +252,7 @@ function mapSeries(v: unknown): BracketSeries | null {
   const games: BracketGame[] = [];
   const seen = new Set<number>();
   for (const g of v.games) {
-    const game = mapGame(g, higher, lower);
+    const game = mapGame(g, { higher: storedHigher, lower: storedLower }, { higher, lower });
     if (!game || seen.has(game.gameNumber)) return null;
     seen.add(game.gameNumber);
     games.push(game);
@@ -233,13 +294,23 @@ export function mapBracketDoc(
   if (data.season !== expected.season) return null;
   if (!Array.isArray(data.series) || data.series.length === 0) return null;
 
-  const series: BracketSeries[] = [];
+  // Every key in the document, known before any slot is read, so a stored
+  // label can be checked against them.
   const keys = new Set<string>();
   for (const s of data.series) {
-    const mapped = mapSeries(s);
-    if (!mapped || keys.has(mapped.seriesKey)) return null;
-    keys.add(mapped.seriesKey);
-    series.push(mapped);
+    const key = isObject(s) ? text(s.seriesKey) : null;
+    if (key === null || keys.has(key)) return null;
+    keys.add(key);
+  }
+
+  // In document order: a slot is resolved against the series before it.
+  const series: BracketSeries[] = [];
+  const mapped = new Map<string, BracketSeries>();
+  for (const s of data.series) {
+    const one = mapSeries(s, keys, mapped);
+    if (!one) return null;
+    mapped.set(one.seriesKey, one);
+    series.push(one);
   }
 
   return {

@@ -2,7 +2,7 @@
 // *.test.ts and *.test.tsx.
 import { readFileSync } from 'node:fs';
 import type { Team } from '../../types';
-import type { ClubInfo } from '../view';
+import type { ClubInfo, ParkInfo } from '../view';
 
 const FIXTURES = new URL('../__fixtures__/', import.meta.url);
 
@@ -10,6 +10,10 @@ export const FIXTURE = {
   mlbLive: 'MLB_2026.live-20260929T1715Z.json',
   wnbaLive: 'WNBA_2026.live-20260929T1715Z.json',
   mlbInGame: 'MLB_2026.live-ingame-20260929T1909Z.json',
+  // Writer version 2: the documents carry shortLabel, feederSeriesKey and
+  // candidates.
+  mlbFields: 'MLB_2026.live-20260929T2008Z.json',
+  wnbaFields: 'WNBA_2026.live-20260929T2008Z.json',
   mlbFinal: 'MLB_2025.final.json',
   wnbaFinal: 'WNBA_2025.final.json',
   mlbMixed: 'MLB_2025.replay-step-24.json',
@@ -22,6 +26,9 @@ export const CAPTURED_AT = new Date('2026-09-29T17:15:00Z');
 
 /** The moment the in-game document was read. */
 export const IN_GAME_AT = new Date('2026-09-29T19:09:00Z');
+
+/** The moment the writer version 2 documents were read. */
+export const FIELDS_AT = new Date('2026-09-29T20:08:00Z');
 
 /** What the admin SDK hands the mapper for a timestamp field. */
 class FakeTimestamp {
@@ -57,9 +64,15 @@ export function rawText(name: string): string {
   return readFileSync(new URL(name, FIXTURES), 'utf-8');
 }
 
+export interface CapturedVenuePage {
+  slug: string;
+  displayName: string;
+  indexable: boolean;
+}
 interface Captured {
   teams: Team[];
   parks: Record<string, string>;
+  venuePages: Record<string, CapturedVenuePage>;
 }
 const captured = JSON.parse(readFileSync(new URL('clubs.captured-20260929.json', FIXTURES), 'utf-8')) as Captured;
 
@@ -76,8 +89,31 @@ export function clubs(): Map<string, ClubInfo> {
   );
 }
 
-export function parks(): Map<string, string> {
+/** Park names as getVenueForTeam returned them, by club. */
+export function parkNames(): Map<string, string> {
   return new Map(Object.entries(captured.parks));
+}
+
+/** Venue pages as getTeamVenueHubMap returned them, by club. */
+export function venuePages(): Map<string, CapturedVenuePage> {
+  return new Map(Object.entries(captured.venuePages).map(([k, v]) => [k, { ...v }]));
+}
+
+/** What the data module builds from the two: the park name, and its page
+ *  when the page is above the indexing floor. Built here by the same rule,
+ *  from captured values, for the tests that do not go through the data
+ *  module. data.test.ts holds the rule itself. */
+export function parks(): Map<string, ParkInfo> {
+  const pages = venuePages();
+  const out = new Map<string, ParkInfo>();
+  for (const [id, name] of parkNames()) {
+    const p = pages.get(id);
+    out.set(id, {
+      name,
+      page: p && p.indexable ? { href: `/venues/${p.slug}`, buildingSlug: p.slug, buildingName: p.displayName } : null,
+    });
+  }
+  return out;
 }
 
 // ---- A Firestore that serves fixtures ----

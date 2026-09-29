@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-09-29T17:32:01.954Z",
+  "capturedAt": "2026-09-29T19:40:08.309Z",
   "teams": [
     {
       "id": "atlanta-braves",
@@ -419,5 +419,137 @@
     "tampa-bay-rays": "Tropicana Field",
     "toronto-blue-jays": "Rogers Centre",
     "washington-mystics": "CareFirst Arena"
+  },
+  "venuePages": {
+    "atlanta-braves": {
+      "slug": "truist-park",
+      "displayName": "Truist Park",
+      "indexable": true
+    },
+    "atlanta-dream": {
+      "slug": "state-farm-arena",
+      "displayName": "State Farm Arena",
+      "indexable": true
+    },
+    "boston-red-sox": {
+      "slug": "fenway-park",
+      "displayName": "Fenway Park",
+      "indexable": true
+    },
+    "chicago-cubs": {
+      "slug": "wrigley-field",
+      "displayName": "Wrigley Field",
+      "indexable": true
+    },
+    "chicago-white-sox": {
+      "slug": "guaranteed-rate-field",
+      "displayName": "Rate Field",
+      "indexable": true
+    },
+    "cincinnati-reds": {
+      "slug": "great-american-ball-park",
+      "displayName": "Great American Ball Park",
+      "indexable": true
+    },
+    "cleveland-guardians": {
+      "slug": "progressive-field",
+      "displayName": "Progressive Field",
+      "indexable": true
+    },
+    "dallas-wings": {
+      "slug": "college-park-center",
+      "displayName": "College Park Center",
+      "indexable": true
+    },
+    "detroit-tigers": {
+      "slug": "comerica-park",
+      "displayName": "Comerica Park",
+      "indexable": true
+    },
+    "golden-state-valkyries": {
+      "slug": "chase-center",
+      "displayName": "Chase Center",
+      "indexable": true
+    },
+    "houston-astros": {
+      "slug": "daikin-park",
+      "displayName": "Daikin Park",
+      "indexable": true
+    },
+    "indiana-fever": {
+      "slug": "gainbridge-fieldhouse",
+      "displayName": "Gainbridge Fieldhouse",
+      "indexable": true
+    },
+    "las-vegas-aces": {
+      "slug": "michelob-ultra-arena",
+      "displayName": "Michelob Ultra Arena",
+      "indexable": true
+    },
+    "los-angeles-dodgers": {
+      "slug": "dodger-stadium",
+      "displayName": "Dodger Stadium",
+      "indexable": true
+    },
+    "milwaukee-brewers": {
+      "slug": "american-family-field",
+      "displayName": "American Family Field",
+      "indexable": true
+    },
+    "minnesota-lynx": {
+      "slug": "target-center",
+      "displayName": "Target Center",
+      "indexable": true
+    },
+    "new-york-liberty": {
+      "slug": "barclays-center",
+      "displayName": "Barclays Center",
+      "indexable": true
+    },
+    "new-york-yankees": {
+      "slug": "yankee-stadium",
+      "displayName": "Yankee Stadium",
+      "indexable": true
+    },
+    "philadelphia-phillies": {
+      "slug": "citizens-bank-park",
+      "displayName": "Citizens Bank Park",
+      "indexable": true
+    },
+    "phoenix-mercury": {
+      "slug": "footprint-center",
+      "displayName": "Mortgage Matchup Center",
+      "indexable": true
+    },
+    "san-diego-padres": {
+      "slug": "petco-park",
+      "displayName": "Petco Park",
+      "indexable": true
+    },
+    "seattle-mariners": {
+      "slug": "t-mobile-park",
+      "displayName": "T-Mobile Park",
+      "indexable": true
+    },
+    "seattle-storm": {
+      "slug": "climate-pledge-arena",
+      "displayName": "Climate Pledge Arena",
+      "indexable": true
+    },
+    "tampa-bay-rays": {
+      "slug": "tropicana-field",
+      "displayName": "Tropicana Field",
+      "indexable": true
+    },
+    "toronto-blue-jays": {
+      "slug": "rogers-centre",
+      "displayName": "Rogers Centre",
+      "indexable": true
+    },
+    "washington-mystics": {
+      "slug": "entertainment-sports-arena",
+      "displayName": "CareFirst Arena",
+      "indexable": true
+    }
   }
 }

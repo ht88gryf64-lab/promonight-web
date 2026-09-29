@@ -39,7 +39,7 @@ test('the three bracket events are typed, and track() is a no-op on the server',
     surface: 'web_playoffs_league', league: 'mlb', season: 2026, round_key: 'division_series', conference: 'AL', control: 'round_pill',
   };
   const open: EventPropertiesMap['playoffs_series_open'] = {
-    surface: 'web_playoffs_league', league: 'wnba', season: 2026, round_key: 'first_round', series_id: 'first_round-1', series_status: 'live',
+    surface: 'web_playoffs_league', league: 'wnba', season: 2026, round_key: 'first_round', series_id: 'first_round-1', series_status: 'live', opened_by: 'link',
   };
   assert.equal(typeof window, 'undefined');
   assert.doesNotThrow(() => track('playoffs_league_view', view));
