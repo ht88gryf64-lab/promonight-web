@@ -7,6 +7,7 @@ export type TicketsBlockPlacement =
   | 'team_page_inline'
   | 'promo_card'
   | 'playoffs_hub'
+  | 'playoffs_league'
   | 'home_game_card'
   | 'away_game_card'
   | 'best_promos_card'

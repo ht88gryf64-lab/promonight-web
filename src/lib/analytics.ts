@@ -80,6 +80,9 @@ export type AnalyticsEvent =
   | 'cfb_conf_nav'
   | 'resale_click'
   | 'partner_app_click'
+  | 'playoffs_league_view'
+  | 'playoffs_round_select'
+  | 'playoffs_series_open'
   | 'hydration_mismatch';
 
 // `TONIGHT_AND_TOMORROW` is retained for backwards-compatibility with dashboards
@@ -115,6 +118,10 @@ export type AnalyticsSurface =
   | 'web_team_page_partner'
   | 'web_promo_detail'
   | 'web_playoffs'
+  // A league's bracket page (/playoffs/mlb, /playoffs/wnba). Split from
+  // web_playoffs, the hub, so a ticket click from inside a bracket is not
+  // counted as a click from the hub's home-games list.
+  | 'web_playoffs_league'
   | 'web_league_index'
   // College Football team pages (/cfb/[school]) and their affiliate CTAs, so
   // PostHog + GA4 can slice CFB clicks out from the pro surfaces.
@@ -1010,6 +1017,9 @@ export type EventPropertiesMap = {
   cfb_conf_nav: CfbConfNavProperties;
   resale_click: ResaleClickProperties;
   partner_app_click: PartnerAppClickProperties;
+  playoffs_league_view: PlayoffsLeagueViewProperties;
+  playoffs_round_select: PlayoffsRoundSelectProperties;
+  playoffs_series_open: PlayoffsSeriesOpenProperties;
   hydration_mismatch: HydrationMismatchProperties;
 };
 
@@ -1041,6 +1051,46 @@ export type LeagueFilterChangeProperties = {
   collection: string;
   from_league: string;
   to_league: string;
+};
+
+// ── Playoffs bracket pages (/playoffs/{league}) ──────────────────────────
+//
+// Three events, all dual-emit through track(). `league` is the lowercase route
+// segment ('mlb', 'wnba'). `round_key` and `series_key` are the bracket
+// document's own keys ('division_series', 'AL-DS-A'), so a dashboard joins on
+// what the pipeline wrote and no label is copied here. No property is named
+// `source`: track() fills that one with the attribution value.
+
+/** The bracket page was viewed. `phase` is what the body rendered. */
+export type PlayoffsLeagueViewProperties = {
+  surface: 'web_playoffs_league';
+  league: string;
+  season: number;
+  phase: 'active' | 'concluded' | 'unavailable';
+  /** The round being played. Null when concluded or unavailable. */
+  round_key: string | null;
+};
+
+/** A round pill, or the conference toggle, changed what the bracket shows. */
+export type PlayoffsRoundSelectProperties = {
+  surface: 'web_playoffs_league';
+  league: string;
+  season: number;
+  round_key: string;
+  /** The document's conference value ('AL', 'NL'), or null when the league
+   *  has none or the round spans both. */
+  conference: string | null;
+  control: 'round_pill' | 'conference_toggle';
+};
+
+/** A series was opened to its games. */
+export type PlayoffsSeriesOpenProperties = {
+  surface: 'web_playoffs_league';
+  league: string;
+  season: number;
+  round_key: string;
+  series_key: string;
+  series_status: 'upcoming' | 'live' | 'final';
 };
 
 // ── Utilities ────────────────────────────────────────────────────────────
@@ -1312,6 +1362,7 @@ const KNOWN_SURFACE_VALUES = [
   'web_team_page_partner',
   'web_promo_detail',
   'web_playoffs',
+  'web_playoffs_league',
   'web_league_index',
   'web_cfb',
   'web_cfb_venue_link',
@@ -1378,6 +1429,11 @@ function isKnownSurface(s: string): s is AnalyticsSurface {
 
 export function inferSurfaceFromPath(path: string): AnalyticsSurface {
   if (!path || path === '/') return 'web_home';
+  // MUST precede the /playoffs branch below, the same trap as
+  // /best-promos/bobbleheads and /cfb/rivalries: a league page's path starts
+  // with /playoffs, so without this it infers the hub's surface. Nothing
+  // typechecks this branch.
+  if (/^\/playoffs\/[a-z0-9-]+/.test(path)) return 'web_playoffs_league';
   if (path.startsWith('/playoffs')) return 'web_playoffs';
   if (path.startsWith('/world-cup')) return 'web_world_cup';
   if (path.startsWith('/promos/today')) return 'web_today';
