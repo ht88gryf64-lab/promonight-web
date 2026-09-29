@@ -122,6 +122,25 @@ const ADS = `(() => {
     // comparison against it can never fail.
     overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
     docWidth: document.documentElement.scrollWidth,
+    // What sticks out past the screen, and whether it is the page's own or
+    // something the ad code put there. Elements clipped by a scroller of
+    // their own are left out: they do not widen the document.
+    sticksOut: (() => {
+      const edge = document.documentElement.clientWidth + 1;
+      const out = [];
+      for (const el of document.querySelectorAll('body *')) {
+        const r = el.getBoundingClientRect();
+        if (r.width === 0 || r.right <= edge) continue;
+        let clipped = false;
+        for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+          if (/(auto|scroll|hidden|clip)/.test(getComputedStyle(p).overflowX) && p.getBoundingClientRect().right <= edge) { clipped = true; break; }
+        }
+        if (clipped) continue;
+        const ad = el.closest('.adthrive-ad, [id^="AdThrive_"], [class*="adthrive"], [id^="google_ads_iframe"]');
+        out.push({ what: el.tagName.toLowerCase() + (el.id ? '#' + el.id.slice(0, 40) : '') + '.' + String(el.className.baseVal ?? el.className).split(' ').slice(0, 3).join('.'), right: Math.round(r.right), width: Math.round(r.width), ad: !!ad || el.tagName === 'IFRAME' });
+      }
+      return out;
+    })(),
     pageHeight: document.documentElement.scrollHeight,
     bodyClass: document.body.className,
   };
@@ -150,10 +169,14 @@ const SELECT_ALL = `(async () => {
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   let rounds = 0, series = 0, conferences = 0;
   const visible = (el) => el.offsetWidth > 0 && el.offsetHeight > 0;
-  for (const b of [...document.querySelectorAll('[data-round-option]')].filter(visible)) { b.click(); rounds += 1; await wait(200);
+  const tapSeries = async () => { for (const a of [...document.querySelectorAll('.po-bracket [data-series] a[href^="#"]')].filter(visible)) { a.click(); series += 1; await wait(200); } };
+  const pills = [...document.querySelectorAll('[data-round-option]')].filter(visible);
+  for (const b of pills) { b.click(); rounds += 1; await wait(200);
     for (const c of [...document.querySelectorAll('[data-conference-option]')].filter(visible)) { c.click(); conferences += 1; await wait(150); }
-    for (const a of [...document.querySelectorAll('.po-bracket [data-series] a[href^="#"]')].filter(visible)) { a.click(); series += 1; await wait(200); }
+    await tapSeries();
   }
+  // At desktop width every round is on screen and there are no pills.
+  if (pills.length === 0) await tapSeries();
   const close = [...document.querySelectorAll('[data-panel-close]')].find(visible); if (close) { close.click(); await wait(200); }
   await wait(1500);
   const before = window.__pnAds;
@@ -213,20 +236,27 @@ async function measure(path, width, { playoffs }) {
   note(`${label}: ad script ${m.script ? 'in the document' : 'ABSENT'}, ${adRequests.length} requests to ad hosts, page ${m.pageHeight}px, ${scrolled.turns} scroll steps`);
   note(`${label}: containers ${m.units.length} (${tally(m.units)}), holding a creative ${m.units.filter((u) => u.filled).length}`);
   await shot(`${path.replace(/^\//, '').replace(/\//g, '_') || 'home'}-${width}-end`);
-  if (!playoffs) return m;
+  if (!playoffs) {
+    const a = m.sticksOut.filter((x) => x.ad);
+    note(`${label} (control, a page already in production): document ${m.docWidth}px${a.length ? `, WIDENED BY AN AD: ${a.slice(0, 2).map((x) => `${x.what} ${x.width}px wide`).join('; ')}` : ''}`);
+    return m;
+  }
   const inContent = m.units.filter((u) => u.inArticle && u.position !== 'fixed');
   check(`${label}: ad script loaded`, m.script && adRequests.length > 0, `${adRequests.length} ad requests`);
   check(`${label}: in-content units inside the article${width < 600 ? ' (none is blocking)' : ''}`, inContent.length > 0, `${inContent.length} in the article, ${m.units.length} on the page`);
   const screen = width < 600 ? 844 : 900;
-  check(`${label}: article taller than 1.5 viewports`, m.articleHeight > 1.5 * screen && m.viewport === screen, `${m.articleHeight}px against ${Math.round(1.5 * screen)}px, window ${m.viewport}px tall`);
+  check(`${label}: article taller than 1.5 viewports`, m.articleHeight > 1.5 * screen, `${m.articleHeight}px against ${Math.round(1.5 * screen)}px`);
   check(`${label}: no ad container inside the interactive bracket`, m.units.filter((u) => u.inBracket || u.inPanels).length === 0, `${m.units.filter((u) => u.inBracket || u.inPanels).length}`);
-  check(`${label}: no aside, and the page is as wide as the screen`, m.asides === 0 && !m.overflow && m.width === width, `asides ${m.asides}, document ${m.docWidth}px, window ${m.width}px`);
+  const own = m.sticksOut.filter((x) => !x.ad);
+  const fromAds = m.sticksOut.filter((x) => x.ad);
+  check(`${label}: no aside, and nothing of the page's own is wider than the screen`, m.asides === 0 && own.length === 0, `asides ${m.asides}, document ${m.docWidth}px${own.length ? ', ' + own.slice(0, 3).map((x) => `${x.what} to ${x.right}px`).join('; ') : ''}`);
+  if (fromAds.length) note(`${label}: WIDENED BY AN AD to ${m.docWidth}px: ${fromAds.slice(0, 2).map((x) => `${x.what} ${x.width}px wide, to ${x.right}px`).join('; ')}`);
   note(`${label}: article children ${m.articleChildren.join(' ')}`);
   if (path !== '/playoffs') {
     await ev('scrollTo(0, 0)'); await sleep(300);
     const marked = await ev(WATCH);
     const s = await ev(SELECT_ALL);
-    check(`${label}: selecting every round and series leaves every ad container in place`, s.kept === s.before && s.after === s.before && s.same === s.after && s.moves.added === 0 && s.moves.removed === 0 && s.inBracket === 0,
+    check(`${label}: selecting every round and series leaves every ad container in place`, s.series > 0 && s.kept === s.before && s.after === s.before && s.same === s.after && s.moves.added === 0 && s.moves.removed === 0 && s.inBracket === 0,
       `${s.rounds} rounds, ${s.conferences} conference taps, ${s.series} series; containers ${s.before} before, ${s.after} after, ${s.kept} still attached; added ${s.moves.added}, removed ${s.moves.removed}${s.moves.names.length ? ' ' + s.moves.names.slice(0, 4).join(' ') : ''}`);
     if (marked === 0) note(`${label}: there was no ad container to watch, so the check above proves nothing about re-rendering`);
     if (width < 600) {

@@ -9,7 +9,8 @@
 //   npm run build && npx next start -p 3468
 //   OUT=/tmp/playoffs-shots node scripts/playoffs/verify-bracket.mjs
 //
-// BASE defaults to http://localhost:3468. OUT is where screenshots go.
+// BASE defaults to http://localhost:3468. OUT is where screenshots go. SHARE
+// is a share link for a protected preview.
 //
 // NOTHING LEAVES THE MACHINE. Every analytics and ad host is blocked at the
 // network layer before the first page loads, so the events are observed at
@@ -108,6 +109,9 @@ try {
   await send('Page.enable'); await send('Runtime.enable'); await send('Network.enable');
   await send('Network.setBlockedURLs', { urls: ['*posthog.com*', '*google-analytics.com*', '*googletagmanager.com*', '*analytics.google.com*', '*doubleclick.net*', '*adthrive*', '*raptive*', '*cafemedia*'] });
   await send('Page.addScriptToEvaluateOnNewDocument', { source: RECORDER });
+  // A protected preview: the share link is opened first, so the browser
+  // holds the access cookie. It is never printed.
+  if (process.env.SHARE) { events.length = 0; await send('Page.navigate', { url: process.env.SHARE }); await waitFor('Page.loadEventFired'); await sleep(1500); }
 
   // ================= 390px, MLB =================
   await go('/playoffs/mlb', { width: 390 });
@@ -377,7 +381,11 @@ try {
 
   // ================= The debug log =================
   const logged = [...new Set(consoleLines.filter((l) => l.startsWith('[analytics]')).map((l) => l.split(' ')[1]))].sort();
-  check('debug log: the three bracket events were logged by track()', ['playoffs_league_view', 'playoffs_round_select', 'playoffs_series_open'].every((n) => logged.includes(n)), logged.join(', '));
+  // The debug log is switched on by an environment value that a deployed
+  // host does not carry. With it off there is nothing to read, and the
+  // checks above have already seen each event arrive at both sinks.
+  if (logged.length === 0) console.log('NOTE  debug log: off on this host, so not checked');
+  else check('debug log: the three bracket events were logged by track()', ['playoffs_league_view', 'playoffs_round_select', 'playoffs_series_open'].every((n) => logged.includes(n)), logged.join(', '));
   check('nothing left this machine: analytics requests were blocked', blocked.length > 0, `${blocked.length} requests blocked`);
   const errors = consoleLines.filter((l) => /Minified React error|Hydration|hydrat/i.test(l));
   check('no hydration error was logged on any page', errors.length === 0, errors.slice(0, 2).join(' | '));

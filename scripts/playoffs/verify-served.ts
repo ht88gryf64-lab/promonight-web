@@ -309,28 +309,63 @@ async function main() {
     return out.join(' ');
   }
 
-  // ---- A page that is as new as the document ----
-  async function fresh(path: string, league: League | null): Promise<{ html: string; status: number; headers: Headers; doc: Map<League, RawDoc> }> {
-    // The pages regenerate every ten minutes. A page older than the document
-    // is asked for again until the window has passed, so that what is
-    // compared is one version of the bracket and not two.
+  // ---- The page, and the version of the document it was built from ----
+  //
+  // The document changes about every ten minutes while games are played and
+  // the pages regenerate every ten minutes, so a page is often one version
+  // behind. Comparing it with the newest document would fail for a reason
+  // that is not a defect. Instead every version of each document is kept as
+  // it appears, and a page is compared with the version it names: the exact
+  // change time in its JSON-LD, or the stamp on each card of the hub.
+  const versions = new Map<League, Map<string, RawDoc>>(LEAGUES.map((l) => [l, new Map<string, RawDoc>()]));
+  async function capture() {
+    for (const l of LEAGUES) {
+      const snap = await db.collection('postseasonBrackets').doc(`${l}_${SEASON}`).get();
+      if (!snap.exists) continue;
+      const d = snap.data() as RawDoc;
+      const at = instantOf(d.lastChangedAt);
+      if (at) (versions.get(l) as Map<string, RawDoc>).set(at.toISOString(), d);
+      docs.set(l, d);
+    }
+  }
+  function versionOf(league: League, html: string, where: 'league' | 'hub'): RawDoc | null {
+    const seen = versions.get(league) as Map<string, RawDoc>;
+    if (where === 'league') {
+      const block = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map((m) => JSON.parse(m[1]) as Record<string, unknown>)[0];
+      const iso = block && typeof block.dateModified === 'string' ? block.dateModified : null;
+      return iso ? seen.get(iso) ?? null : null;
+    }
+    const card = textOf(element(domOf(html), `data-league-card="${league}"`) ?? '');
+    for (const [iso, d] of seen) if (card.includes(`Bracket updated ${etStamp(new Date(iso))}`)) return d;
+    return null;
+  }
+  let waited = 0;
+  async function fresh(path: string, league: League | null): Promise<{ html: string; status: number; headers: Headers; built: Map<League, RawDoc>; lag: string }> {
+    const want = league ? [league] : [...LEAGUES];
     let last = await get(path);
-    for (let attempt = 0; attempt < 26; attempt++) {
-      for (const l of LEAGUES) {
-        const snap = await db.collection('postseasonBrackets').doc(`${l}_${SEASON}`).get();
-        if (snap.exists) docs.set(l, snap.data() as RawDoc);
+    for (let attempt = 0; attempt < 45; attempt++) {
+      await capture();
+      const built = new Map<League, RawDoc>();
+      for (const l of want) {
+        const d = versionOf(l, last.body, league ? 'league' : 'hub');
+        if (d) built.set(l, d);
       }
-      const need = (league ? [league] : [...LEAGUES]).map((l) => {
-        const at = instantOf(docs.get(l)?.lastChangedAt);
-        return at ? `Bracket updated ${etStamp(at)}` : null;
-      });
-      const text = textOf(last.body);
-      if (last.status !== 200 || need.every((n) => n === null || text.includes(n))) return { html: last.body, status: last.status, headers: last.headers, doc: docs };
-      if (attempt === 0) console.log(`      ${path}: the served page is older than the document; waiting for it to regenerate`);
-      await sleep(30000);
+      if (last.status !== 200 || built.size === want.length) {
+        const lag = want
+          .map((l) => {
+            const page = instantOf(built.get(l)?.lastChangedAt);
+            const now = instantOf(docs.get(l)?.lastChangedAt);
+            return page && now ? `${l} ${page.getTime() === now.getTime() ? 'current' : `${Math.round((now.getTime() - page.getTime()) / 60000)} min behind the document`}` : `${l} unknown`;
+          })
+          .join(', ');
+        return { html: last.body, status: last.status, headers: last.headers, built, lag };
+      }
+      if (attempt === 0) console.log(`      ${path}: built from a version of the document older than any read in this run; asking again until it regenerates`);
+      await sleep(20000);
+      waited += 20;
       last = await get(path);
     }
-    return { html: last.body, status: last.status, headers: last.headers, doc: docs };
+    return { html: last.body, status: last.status, headers: last.headers, built: new Map(), lag: 'never matched' };
   }
 
   function save(path: string, html: string) {
@@ -413,7 +448,8 @@ async function main() {
     const got = await fresh(path, league);
     save(path, got.html);
     same(`${where}: status`, got.status, 200);
-    const doc = docs.get(league);
+    const doc = got.built.get(league);
+    check(`${where}: the page names a version of the document that was read in this run`, !!doc, got.lag);
     if (!doc || got.status !== 200) continue;
     const changed = instantOf(doc.lastChangedAt);
     const open = currentRound(doc);
@@ -531,9 +567,11 @@ async function main() {
     const got = await fresh(path, null);
     save(path, got.html);
     same(`${where}: status`, got.status, 200);
-    if (got.status === 200) {
-      const playing = LEAGUES.filter((l) => docs.get(l) && currentRound(docs.get(l) as RawDoc));
-      const rounds = playing.map((l) => `${l}: ${(currentRound(docs.get(l) as RawDoc) as RawSeries).roundLabel}`).join('. ');
+    check(`${where}: each card names a version of its document that was read in this run`, got.built.size === LEAGUES.length, got.lag);
+    if (got.status === 200 && got.built.size === LEAGUES.length) {
+      const at = got.built;
+      const playing = LEAGUES.filter((l) => at.get(l) && currentRound(at.get(l) as RawDoc));
+      const rounds = playing.map((l) => `${l}: ${(currentRound(at.get(l) as RawDoc) as RawSeries).roundLabel}`).join('. ');
       const names = playing.length === 2 ? `${playing[0]} and ${playing[1]}` : playing.join('');
       const want = {
         title: `${SEASON} Playoffs: MLB and WNBA Brackets`,
@@ -541,12 +579,12 @@ async function main() {
         canonical: `${SITE}${path}`,
       };
       head(where, got.html, want);
-      const stamps = LEAGUES.map((l) => instantOf(docs.get(l)?.lastChangedAt)).filter((d): d is Date => d !== null).map((d) => d.toISOString()).sort();
+      const stamps = LEAGUES.map((l) => instantOf(at.get(l)?.lastChangedAt)).filter((d): d is Date => d !== null).map((d) => d.toISOString()).sort();
       jsonLd(where, got.html, { ...want, crumbs: [`Home ${SITE}`, `Playoffs ${SITE}/playoffs`], modified: stamps.length ? stamps[stamps.length - 1] : null });
       const el = article(where, got.html, 'hub');
       leaks(where, got.html);
       for (const league of LEAGUES) {
-        const doc = docs.get(league);
+        const doc = at.get(league);
         if (!doc) continue;
         const card = element(el, `data-league-card="${league}"`) ?? '';
         const text = textOf(card);
@@ -568,7 +606,7 @@ async function main() {
       const rows = elements(el, 'data-home-game=');
       check(`${where}: home game rows carry one ticket link at most, and a league each`, rows.every((r) => count(r, 'rel="noopener noreferrer sponsored"') <= 1 && /\b(MLB|WNBA)\b/.test(textOf(r))), `${rows.length} rows`);
       // The hub names a game in progress and gives no score for any game.
-      const inProgress = LEAGUES.flatMap((l) => (docs.get(l)?.series ?? []).filter((s) => s.status !== 'final' && s.games.some((g) => g.status === 'live')));
+      const inProgress = LEAGUES.flatMap((l) => (at.get(l)?.series ?? []).filter((s) => s.status !== 'final' && s.games.some((g) => g.status === 'live')));
       same(`${where}: in-progress badges against series with a game in progress`, count(el, 'data-game-state="live"'), inProgress.length);
       const scores = /Final:|\b[A-Z]{2,3} \d+, [A-Z]{2,3} \d+\b/.exec(textOf(el));
       check(`${where}: no game score on the hub`, !scores, scores ? scores[0] : '');
@@ -587,7 +625,8 @@ async function main() {
   check('/llms.txt: served, and it makes no claim about /playoffs', llms.status === 200 && !/playoffs/i.test(llms.body), `status ${llms.status}`);
 
   const failed = results.filter((r) => !r.ok);
-  console.log(`\n${results.length - failed.length} of ${results.length} checks pass`);
+  console.log(`\nversions of the documents read in this run: ${LEAGUES.map((l) => `${l} ${(versions.get(l) as Map<string, RawDoc>).size}`).join(', ')}; waited ${waited}s for pages to regenerate`);
+  console.log(`${results.length - failed.length} of ${results.length} checks pass`);
   for (const f of failed) console.log(`FAILED  ${f.name}  [${f.detail}]`);
   process.exit(failed.length ? 1 : 0);
 }
