@@ -668,15 +668,23 @@ async function main() {
         const open = currentRound(doc);
         const changed = instantOf(doc.lastChangedAt);
         const pageIds = ids(doc);
+        // The card lists the series of the round being played that are not
+        // yet final, each with its standing and its link. A decided series of
+        // that round is in the results section and not on the card.
         const lines: string[] = [];
         doc.series.forEach((s, i) => {
           if (!open || s.round !== open.round) return;
           const a = slotName(doc, s.higher);
           const b = slotName(doc, s.lower);
-          const ok = text.includes(`${a.name} vs ${b.name}`) && (scoreLine(doc, s) ? text.includes(scoreLine(doc, s) as string) : true) && card.includes(`href="/playoffs/${league.toLowerCase()}#${pageIds[i]}"`);
+          const onCard = card.includes(`data-series="${pageIds[i]}"`);
+          if (s.status === 'final') {
+            if (onCard) lines.push(`${pageIds[i]} decided but on the card`);
+            return;
+          }
+          const ok = onCard && text.includes(`${a.name} vs ${b.name}`) && (scoreLine(doc, s) ? text.includes(scoreLine(doc, s) as string) : true) && card.includes(`href="/playoffs/${league.toLowerCase()}#${pageIds[i]}"`);
           if (!ok) lines.push(`${pageIds[i]} ${a.name} vs ${b.name}`);
         });
-        check(`${where}: ${league} card names the round and each series in it, with its standing and its link`, !!open && text.startsWith(`${league} ${open.roundLabel}`) && lines.length === 0, lines.join(' | ') || (open ? open.roundLabel : ''));
+        check(`${where}: ${league} card names the round and each series still being played, with its standing and its link, and no decided series`, !!open && text.startsWith(`${league} ${open.roundLabel}`) && lines.length === 0, lines.join(' | ') || (open ? open.roundLabel : ''));
         if (changed) check(`${where}: ${league} card change stamp`, text.includes(`Bracket updated ${etStamp(changed)}`), etStamp(changed));
         check(`${where}: ${league} card links to the league page`, card.includes(`href="/playoffs/${league.toLowerCase()}"`));
       }
