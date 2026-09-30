@@ -7,7 +7,6 @@ import {
   getPlayoffConfig,
   getActivePlayoffTeams,
   getPlayoffPromosForTeam,
-  getAllPlayoffPromos,
   isTeamInPlayoffs,
 } from '../src/lib/data';
 import type { PlayoffPromo } from '../src/lib/types';
@@ -70,63 +69,8 @@ async function main() {
     console.log(`     source: ${trunc(p.source, 80)}`);
   }
 
-  // ── 5. getAllPlayoffPromos ───────────────────────────────────────────
-  hr('5. getAllPlayoffPromos()');
-  const all = await getAllPlayoffPromos();
-  console.log(`Config loaded: ${!!all.config}`);
-  console.log(`Total promos: ${all.totalPromos}`);
-  console.log(`Total teams with promos: ${all.totalTeams}`);
-  console.log(`NBA teams: ${all.byLeague.NBA.length}`);
-  console.log(`NHL teams: ${all.byLeague.NHL.length}`);
-
-  // Type & recurring coverage across the full set
-  const allPromos: PlayoffPromo[] = [
-    ...all.byLeague.NBA.flatMap((g) => g.promos),
-    ...all.byLeague.NHL.flatMap((g) => g.promos),
-  ];
-  const typeCounts: Record<string, number> = {};
-  let dated = 0;
-  let recurring = 0;
-  let highlight = 0;
-  for (const p of allPromos) {
-    typeCounts[p.type] = (typeCounts[p.type] ?? 0) + 1;
-    if (p.date) dated++;
-    if (p.recurring) recurring++;
-    if (p.highlight) highlight++;
-  }
-  console.log('\n  Coverage across full result:');
-  console.log(`    type counts:       ${JSON.stringify(typeCounts)}`);
-  console.log(`    dated promos:      ${dated}`);
-  console.log(`    recurring promos:  ${recurring}`);
-  console.log(`    highlight=true:    ${highlight}`);
-
-  // One example per type + one recurring + one dated (user requested spot-check)
-  hr('    SPOT-CHECK: one example per type + dated/recurring');
-  const pickByType: Record<string, PlayoffPromo | undefined> = {};
-  for (const p of allPromos) if (!pickByType[p.type]) pickByType[p.type] = p;
-  const firstDated = allPromos.find((p) => p.date);
-  const firstRecurring = allPromos.find((p) => p.recurring);
-  const firstHighlight = allPromos.find((p) => p.highlight);
-
-  const printOne = (label: string, p: PlayoffPromo | undefined) => {
-    if (!p) return console.log(`  ${label}: (NONE FOUND)`);
-    console.log(`  ${label}:`);
-    console.log(`     teamId:      ${p.teamId} (${p.teamAbbr}, ${p.league})`);
-    console.log(`     title:       ${p.title}`);
-    console.log(`     type:        ${p.type}`);
-    console.log(`     date:        ${p.date ?? 'null (recurring)'}`);
-    console.log(`     gameInfo:    ${trunc(p.gameInfo, 60)}`);
-    console.log(`     recurring:   ${p.recurring} · detail: ${trunc(p.recurringDetail, 60)}`);
-    console.log(`     highlight:   ${p.highlight}`);
-    console.log(`     description: ${trunc(p.description, 120)}`);
-  };
-  printOne('type=giveaway ', pickByType.giveaway);
-  printOne('type=theme    ', pickByType.theme);
-  printOne('type=food     ', pickByType.food);
-  printOne('type=event    ', pickByType.event);
-  printOne('first dated   ', firstDated);
-  printOne('first recurrng', firstRecurring);
-  printOne('first highlght', firstHighlight);
+  // Section 5 read every playoff promo through getAllPlayoffPromos, which
+  // existed only for the old /playoffs page and was removed with it.
 
   process.exit(0);
 }

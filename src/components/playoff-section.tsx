@@ -1,5 +1,3 @@
-import Link from 'next/link';
-import { IconArrowRight } from '@tabler/icons-react';
 import type { PlayoffPromo, Team } from '@/lib/types';
 import { teamDisplayName, extractOpponent } from '@/lib/promo-helpers';
 
@@ -142,15 +140,9 @@ export function PlayoffSection({
             </div>
           )}
 
-          <div className="mt-10 pt-6 border-t border-rd-line">
-            <Link
-              href="/playoffs"
-              className="inline-flex items-center gap-1 font-rd text-[11px] tracking-[0.08em] uppercase text-rd-red"
-            >
-              See all playoff teams
-              <IconArrowRight size={14} stroke={2} />
-            </Link>
-          </div>
+          {/* The link to /playoffs that stood here was retired when that
+              page became the MLB and WNBA bracket hub: it named "all playoff
+              teams", which the hub is not. */}
         </div>
       </section>
     );
@@ -199,14 +191,7 @@ export function PlayoffSection({
           </div>
         )}
 
-        <div className="mt-10 pt-6 border-t border-border-subtle">
-          <Link
-            href="/playoffs"
-            className="font-mono text-[11px] tracking-[0.08em] uppercase text-accent-red hover:text-white transition-colors"
-          >
-            See all playoff teams →
-          </Link>
-        </div>
+        {/* The link to /playoffs that stood here was retired: see above. */}
       </div>
     </section>
   );

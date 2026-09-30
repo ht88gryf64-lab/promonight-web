@@ -532,3 +532,37 @@ body::before {
     order: 900;
   }
 }
+
+/* Playoffs bracket state (src/components/playoffs).
+ *
+ * Visibility is carried by data attributes and these rules, never by the
+ * `hidden` attribute. Tailwind's preflight sets [hidden] to display:none
+ * !important inside a layer, and an important declaration in a layer beats
+ * every later rule, so nothing could undo it. Two things here have to undo a
+ * hidden state: the desktop layout, which shows both conferences at once, and
+ * the no-script fallback the components render, which shows everything.
+ *
+ * Unlayered on purpose, so these win over utility classes. The elements they
+ * touch carry no display utility of their own. */
+@media (max-width: 1023.98px) {
+  .po-bracket [data-conf][data-shown='false'] {
+    display: none;
+  }
+}
+.po-panel {
+  display: none;
+}
+.po-panel[data-open='true'] {
+  display: block;
+}
+/* Before hydration, and with scripts off, the URL fragment selects the
+ * series: /playoffs/mlb#wild_card-2 shows that panel with no script at all.
+ * Once hydrated the component reads the fragment into state and this rule
+ * steps aside, because :target does not follow replaceState. */
+.po-bracket:not([data-hydrated]) .po-panel:target {
+  display: block;
+}
+.po-more[data-open='false'] {
+  display: none;
+}
+

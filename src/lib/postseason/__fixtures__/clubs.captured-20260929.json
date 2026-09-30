@@ -1,0 +1,555 @@
+{
+  "capturedAt": "2026-09-29T19:40:08.309Z",
+  "teams": [
+    {
+      "id": "atlanta-braves",
+      "city": "Atlanta",
+      "name": "Braves",
+      "abbreviation": "ATL",
+      "primaryColor": "#ce1141",
+      "secondaryColor": "#13274f",
+      "league": "MLB",
+      "sportSlug": "mlb",
+      "division": "NL East",
+      "ticketmasterSlug": "atlanta-braves",
+      "ticketmasterAttractionId": "805896",
+      "fanaticsUrl": "https://www.fanatics.com/mlb/atlanta-braves/o-1276+t-58999683+z-91996-3389985925",
+      "fanaticsPath": "/mlb/atlanta-braves/o-1276+t-58999683+z-91996-3389985925"
+    },
+    {
+      "id": "atlanta-dream",
+      "city": "Atlanta",
+      "name": "Dream",
+      "abbreviation": "ATL",
+      "primaryColor": "#e31837",
+      "secondaryColor": "#5091cd",
+      "league": "WNBA",
+      "sportSlug": "wnba",
+      "division": "Eastern",
+      "ticketmasterSlug": "atlanta-dream",
+      "ticketmasterAttractionId": "1205524",
+      "fanaticsUrl": "https://www.fanatics.com/wnba/atlanta-dream/o-1460+t-69434525+z-92374-3568125624",
+      "fanaticsPath": "/wnba/atlanta-dream/o-1460+t-69434525+z-92374-3568125624"
+    },
+    {
+      "id": "boston-red-sox",
+      "city": "Boston",
+      "name": "Red Sox",
+      "abbreviation": "BOS",
+      "primaryColor": "#bd3039",
+      "secondaryColor": "#0c2340",
+      "league": "MLB",
+      "sportSlug": "mlb",
+      "division": "AL East",
+      "ticketmasterSlug": "boston-red-sox",
+      "ticketmasterAttractionId": "805904",
+      "fanaticsUrl": "https://www.fanatics.com/mlb/boston-red-sox/o-9043+t-36440786+z-8922-3205083707",
+      "fanaticsPath": "/mlb/boston-red-sox/o-9043+t-36440786+z-8922-3205083707"
+    },
+    {
+      "id": "chicago-cubs",
+      "city": "Chicago",
+      "name": "Cubs",
+      "abbreviation": "CHC",
+      "primaryColor": "#0e3386",
+      "secondaryColor": "#cc3433",
+      "league": "MLB",
+      "sportSlug": "mlb",
+      "division": "NL Central",
+      "ticketmasterSlug": "chicago-cubs",
+      "ticketmasterAttractionId": "805915",
+      "fanaticsUrl": "https://www.fanatics.com/mlb/chicago-cubs/o-3443+t-25999766+z-97110-2817806339",
+      "fanaticsPath": "/mlb/chicago-cubs/o-3443+t-25999766+z-97110-2817806339"
+    },
+    {
+      "id": "chicago-white-sox",
+      "city": "Chicago",
+      "name": "White Sox",
+      "abbreviation": "CWS",
+      "primaryColor": "#27251f",
+      "secondaryColor": "#c4ced4",
+      "league": "MLB",
+      "sportSlug": "mlb",
+      "division": "AL Central",
+      "ticketmasterSlug": "chicago-white-sox",
+      "ticketmasterAttractionId": "805917",
+      "fanaticsUrl": "https://www.fanatics.com/mlb/chicago-white-sox/o-3498+t-03778634+z-95926-3872537457",
+      "fanaticsPath": "/mlb/chicago-white-sox/o-3498+t-03778634+z-95926-3872537457"
+    },
+    {
+      "id": "cincinnati-reds",
+      "city": "Cincinnati",
+      "name": "Reds",
+      "abbreviation": "CIN",
+      "primaryColor": "#c6011f",
+      "secondaryColor": "#000000",
+      "league": "MLB",
+      "sportSlug": "mlb",
+      "division": "NL Central",
+      "ticketmasterSlug": "cincinnati-reds",
+      "ticketmasterAttractionId": "805919",
+      "fanaticsUrl": "https://www.fanatics.com/mlb/cincinnati-reds/o-2354+t-03220802+z-95010-2613594857",
+      "fanaticsPath": "/mlb/cincinnati-reds/o-2354+t-03220802+z-95010-2613594857"
+    },
+    {
+      "id": "cleveland-guardians",
+      "city": "Cleveland",
+      "name": "Guardians",
+      "abbreviation": "CLE",
+      "primaryColor": "#00385d",
+      "secondaryColor": "#e31937",
+      "league": "MLB",
+      "sportSlug": "mlb",
+      "division": "AL Central",
+      "ticketmasterSlug": "cleveland-guardians",
+      "ticketmasterAttractionId": "805922",
+      "fanaticsUrl": "https://www.fanatics.com/mlb/cleveland-indians/o-2321+t-81553103+z-92098-1304698692",
+      "fanaticsPath": "/mlb/cleveland-indians/o-2321+t-81553103+z-92098-1304698692"
+    },
+    {
+      "id": "dallas-wings",
+      "city": "Dallas",
+      "name": "Wings",
+      "abbreviation": "DAL",
+      "primaryColor": "#002b5c",
+      "secondaryColor": "#c4d600",
+      "league": "WNBA",
+      "sportSlug": "wnba",
+      "division": "Western",
+      "ticketmasterSlug": "dallas-wings",
+      "ticketmasterAttractionId": "2198785",
+      "fanaticsUrl": "https://www.fanatics.com/wnba/dallas-wings/o-1471+t-25092395+z-92906-162900988",
+      "fanaticsPath": "/wnba/dallas-wings/o-1471+t-25092395+z-92906-162900988"
+    },
+    {
+      "id": "detroit-tigers",
+      "city": "Detroit",
+      "name": "Tigers",
+      "abbreviation": "DET",
+      "primaryColor": "#0c2340",
+      "secondaryColor": "#fa4616",
+      "league": "MLB",
+      "sportSlug": "mlb",
+      "division": "AL Central",
+      "ticketmasterSlug": "detroit-tigers",
+      "ticketmasterAttractionId": "805940",
+      "fanaticsUrl": "https://www.fanatics.com/mlb/detroit-tigers/o-2376+t-69117549+z-92031-1116528363",
+      "fanaticsPath": "/mlb/detroit-tigers/o-2376+t-69117549+z-92031-1116528363"
+    },
+    {
+      "id": "golden-state-valkyries",
+      "city": "Golden State",
+      "name": "Valkyries",
+      "abbreviation": "GSV",
+      "primaryColor": "#5b2b82",
+      "secondaryColor": "#fdb927",
+      "league": "WNBA",
+      "sportSlug": "wnba",
+      "division": "Western",
+      "ticketmasterSlug": "golden-state-valkyries",
+      "ticketmasterAttractionId": "3369949",
+      "fanaticsUrl": "https://www.fanatics.com/wnba/golden-state-valkyries/o-8126+t-46745985+z-8050-4214175585",
+      "fanaticsPath": "/wnba/golden-state-valkyries/o-8126+t-46745985+z-8050-4214175585"
+    },
+    {
+      "id": "houston-astros",
+      "city": "Houston",
+      "name": "Astros",
+      "abbreviation": "HOU",
+      "primaryColor": "#002d62",
+      "secondaryColor": "#eb6e1f",
+      "league": "MLB",
+      "sportSlug": "mlb",
+      "division": "AL West",
+      "ticketmasterSlug": "houston-astros",
+      "ticketmasterAttractionId": "805948",
+      "fanaticsUrl": "https://www.fanatics.com/mlb/houston-astros/o-3443+t-14555396+z-92721-4240067460",
+      "fanaticsPath": "/mlb/houston-astros/o-3443+t-14555396+z-92721-4240067460"
+    },
+    {
+      "id": "indiana-fever",
+      "city": "Indiana",
+      "name": "Fever",
+      "abbreviation": "IND",
+      "primaryColor": "#002d62",
+      "secondaryColor": "#e03a3e",
+      "league": "WNBA",
+      "sportSlug": "wnba",
+      "division": "Eastern",
+      "ticketmasterSlug": "indiana-fever",
+      "ticketmasterAttractionId": "805951",
+      "fanaticsUrl": "https://www.fanatics.com/wnba/indiana-fever/o-5837+t-69436785+z-8826-1776406336",
+      "fanaticsPath": "/wnba/indiana-fever/o-5837+t-69436785+z-8826-1776406336"
+    },
+    {
+      "id": "las-vegas-aces",
+      "city": "Las Vegas",
+      "name": "Aces",
+      "abbreviation": "LVA",
+      "primaryColor": "#a7a8aa",
+      "secondaryColor": "#000000",
+      "league": "WNBA",
+      "sportSlug": "wnba",
+      "division": "Western",
+      "ticketmasterSlug": "las-vegas-aces",
+      "ticketmasterAttractionId": "2462412",
+      "fanaticsUrl": "https://www.fanatics.com/wnba/las-vegas-aces/o-1482+t-87453972+z-90332-2920441961",
+      "fanaticsPath": "/wnba/las-vegas-aces/o-1482+t-87453972+z-90332-2920441961"
+    },
+    {
+      "id": "los-angeles-dodgers",
+      "city": "Los Angeles",
+      "name": "Dodgers",
+      "abbreviation": "LAD",
+      "primaryColor": "#005a9c",
+      "secondaryColor": "#ef3e42",
+      "league": "MLB",
+      "sportSlug": "mlb",
+      "division": "NL West",
+      "ticketmasterSlug": "los-angeles-dodgers",
+      "ticketmasterAttractionId": "805959",
+      "fanaticsUrl": "https://www.fanatics.com/mlb/los-angeles-dodgers/o-4510+t-14991099+z-94556-696061212",
+      "fanaticsPath": "/mlb/los-angeles-dodgers/o-4510+t-14991099+z-94556-696061212"
+    },
+    {
+      "id": "milwaukee-brewers",
+      "city": "Milwaukee",
+      "name": "Brewers",
+      "abbreviation": "MIL",
+      "primaryColor": "#12284b",
+      "secondaryColor": "#b6922e",
+      "league": "MLB",
+      "sportSlug": "mlb",
+      "division": "NL Central",
+      "ticketmasterSlug": "milwaukee-brewers",
+      "ticketmasterAttractionId": "805968",
+      "fanaticsUrl": "https://www.fanatics.com/mlb/milwaukee-brewers/o-2354+t-69663283+z-95460-3155175317",
+      "fanaticsPath": "/mlb/milwaukee-brewers/o-2354+t-69663283+z-95460-3155175317"
+    },
+    {
+      "id": "minnesota-lynx",
+      "city": "Minnesota",
+      "name": "Lynx",
+      "abbreviation": "MIN",
+      "primaryColor": "#236192",
+      "secondaryColor": "#0c2340",
+      "league": "WNBA",
+      "sportSlug": "wnba",
+      "division": "Western",
+      "ticketmasterSlug": "minnesota-lynx",
+      "ticketmasterAttractionId": "805970",
+      "fanaticsUrl": "https://www.fanatics.com/wnba/minnesota-lynx/o-3693+t-14981254+z-773-2726048771",
+      "fanaticsPath": "/wnba/minnesota-lynx/o-3693+t-14981254+z-773-2726048771"
+    },
+    {
+      "id": "new-york-liberty",
+      "city": "New York",
+      "name": "Liberty",
+      "abbreviation": "NYL",
+      "primaryColor": "#6eceb2",
+      "secondaryColor": "#000000",
+      "league": "WNBA",
+      "sportSlug": "wnba",
+      "division": "Eastern",
+      "ticketmasterSlug": "new-york-liberty",
+      "ticketmasterAttractionId": "805989",
+      "fanaticsUrl": "https://www.fanatics.com/wnba/new-york-liberty/o-1448+t-92983577+z-96745-4259593538",
+      "fanaticsPath": "/wnba/new-york-liberty/o-1448+t-92983577+z-96745-4259593538"
+    },
+    {
+      "id": "new-york-yankees",
+      "city": "New York",
+      "name": "Yankees",
+      "abbreviation": "NYY",
+      "primaryColor": "#003087",
+      "secondaryColor": "#c4ced4",
+      "league": "MLB",
+      "sportSlug": "mlb",
+      "division": "AL East",
+      "ticketmasterSlug": "new-york-yankees",
+      "ticketmasterAttractionId": "805992",
+      "fanaticsUrl": "https://www.fanatics.com/mlb/new-york-yankees/o-3454+t-81553209+z-96106-209395844",
+      "fanaticsPath": "/mlb/new-york-yankees/o-3454+t-81553209+z-96106-209395844"
+    },
+    {
+      "id": "philadelphia-phillies",
+      "city": "Philadelphia",
+      "name": "Phillies",
+      "abbreviation": "PHI",
+      "primaryColor": "#e81828",
+      "secondaryColor": "#002d72",
+      "league": "MLB",
+      "sportSlug": "mlb",
+      "division": "NL East",
+      "ticketmasterSlug": "philadelphia-phillies",
+      "ticketmasterAttractionId": "806001",
+      "fanaticsUrl": "https://www.fanatics.com/mlb/philadelphia-phillies/o-8921+t-47011101+z-774-3247407355",
+      "fanaticsPath": "/mlb/philadelphia-phillies/o-8921+t-47011101+z-774-3247407355"
+    },
+    {
+      "id": "phoenix-mercury",
+      "city": "Phoenix",
+      "name": "Mercury",
+      "abbreviation": "PHX",
+      "primaryColor": "#e56020",
+      "secondaryColor": "#1d1160",
+      "league": "WNBA",
+      "sportSlug": "wnba",
+      "division": "Western",
+      "ticketmasterSlug": "phoenix-mercury",
+      "ticketmasterAttractionId": "806003",
+      "fanaticsUrl": "https://www.fanatics.com/wnba/phoenix-mercury/o-7048+t-25659123+z-8840-3801808752",
+      "fanaticsPath": "/wnba/phoenix-mercury/o-7048+t-25659123+z-8840-3801808752"
+    },
+    {
+      "id": "san-diego-padres",
+      "city": "San Diego",
+      "name": "Padres",
+      "abbreviation": "SD",
+      "primaryColor": "#2f241d",
+      "secondaryColor": "#ffc425",
+      "league": "MLB",
+      "sportSlug": "mlb",
+      "division": "NL West",
+      "ticketmasterSlug": "san-diego-padres",
+      "ticketmasterAttractionId": "806014",
+      "fanaticsUrl": "https://www.fanatics.com/mlb/san-diego-padres/o-3454+t-47346626+z-99618-483804128",
+      "fanaticsPath": "/mlb/san-diego-padres/o-3454+t-47346626+z-99618-483804128"
+    },
+    {
+      "id": "seattle-mariners",
+      "city": "Seattle",
+      "name": "Mariners",
+      "abbreviation": "SEA",
+      "primaryColor": "#0c2c56",
+      "secondaryColor": "#005c5c",
+      "league": "MLB",
+      "sportSlug": "mlb",
+      "division": "AL West",
+      "ticketmasterSlug": "seattle-mariners",
+      "ticketmasterAttractionId": "806019",
+      "fanaticsUrl": "https://www.fanatics.com/mlb/seattle-mariners/o-1232+t-47896628+z-777-2334863592",
+      "fanaticsPath": "/mlb/seattle-mariners/o-1232+t-47896628+z-777-2334863592"
+    },
+    {
+      "id": "seattle-storm",
+      "city": "Seattle",
+      "name": "Storm",
+      "abbreviation": "SEA",
+      "primaryColor": "#2c5234",
+      "secondaryColor": "#fee11a",
+      "league": "WNBA",
+      "sportSlug": "wnba",
+      "division": "Western",
+      "ticketmasterSlug": "seattle-storm",
+      "ticketmasterAttractionId": "806022",
+      "fanaticsUrl": "https://www.fanatics.com/wnba/seattle-storm/o-3604+t-03094693+z-92283-1157218896",
+      "fanaticsPath": "/wnba/seattle-storm/o-3604+t-03094693+z-92283-1157218896"
+    },
+    {
+      "id": "tampa-bay-rays",
+      "city": "Tampa Bay",
+      "name": "Rays",
+      "abbreviation": "TB",
+      "primaryColor": "#092c5c",
+      "secondaryColor": "#8fbce6",
+      "league": "MLB",
+      "sportSlug": "mlb",
+      "division": "AL East",
+      "ticketmasterSlug": "tampa-bay-rays",
+      "ticketmasterAttractionId": "806027",
+      "fanaticsUrl": "https://www.fanatics.com/mlb/tampa-bay-rays/o-3465+t-25904555+z-95687-894620644",
+      "fanaticsPath": "/mlb/tampa-bay-rays/o-3465+t-25904555+z-95687-894620644"
+    },
+    {
+      "id": "toronto-blue-jays",
+      "city": "Toronto",
+      "name": "Blue Jays",
+      "abbreviation": "TOR",
+      "primaryColor": "#134a8e",
+      "secondaryColor": "#e8291c",
+      "league": "MLB",
+      "sportSlug": "mlb",
+      "division": "AL East",
+      "ticketmasterSlug": "toronto-blue-jays",
+      "ticketmasterAttractionId": "806032",
+      "fanaticsUrl": "https://www.fanatics.com/mlb/toronto-blue-jays/o-2387+t-36456735+z-98324-2265281901",
+      "fanaticsPath": "/mlb/toronto-blue-jays/o-2387+t-36456735+z-98324-2265281901"
+    },
+    {
+      "id": "washington-mystics",
+      "city": "Washington",
+      "name": "Mystics",
+      "abbreviation": "WSH",
+      "primaryColor": "#002b5c",
+      "secondaryColor": "#e31837",
+      "league": "WNBA",
+      "sportSlug": "wnba",
+      "division": "Eastern",
+      "ticketmasterSlug": "washington-mystics",
+      "ticketmasterAttractionId": "806040",
+      "fanaticsUrl": "https://www.fanatics.com/wnba/washington-mystics/o-3604+t-92091317+z-94317-630925064",
+      "fanaticsPath": "/wnba/washington-mystics/o-3604+t-92091317+z-94317-630925064"
+    }
+  ],
+  "parks": {
+    "atlanta-braves": "Truist Park",
+    "atlanta-dream": "State Farm Arena",
+    "boston-red-sox": "Fenway Park",
+    "chicago-cubs": "Wrigley Field",
+    "chicago-white-sox": "Rate Field",
+    "cincinnati-reds": "Great American Ball Park",
+    "cleveland-guardians": "Progressive Field",
+    "dallas-wings": "College Park Center",
+    "detroit-tigers": "Comerica Park",
+    "golden-state-valkyries": "Chase Center",
+    "houston-astros": "Daikin Park",
+    "indiana-fever": "Gainbridge Fieldhouse",
+    "las-vegas-aces": "Michelob Ultra Arena",
+    "los-angeles-dodgers": "Dodger Stadium",
+    "milwaukee-brewers": "American Family Field",
+    "minnesota-lynx": "Target Center",
+    "new-york-liberty": "Barclays Center",
+    "new-york-yankees": "Yankee Stadium",
+    "philadelphia-phillies": "Citizens Bank Park",
+    "phoenix-mercury": "Mortgage Matchup Center",
+    "san-diego-padres": "Petco Park",
+    "seattle-mariners": "T-Mobile Park",
+    "seattle-storm": "Climate Pledge Arena",
+    "tampa-bay-rays": "Tropicana Field",
+    "toronto-blue-jays": "Rogers Centre",
+    "washington-mystics": "CareFirst Arena"
+  },
+  "venuePages": {
+    "atlanta-braves": {
+      "slug": "truist-park",
+      "displayName": "Truist Park",
+      "indexable": true
+    },
+    "atlanta-dream": {
+      "slug": "state-farm-arena",
+      "displayName": "State Farm Arena",
+      "indexable": true
+    },
+    "boston-red-sox": {
+      "slug": "fenway-park",
+      "displayName": "Fenway Park",
+      "indexable": true
+    },
+    "chicago-cubs": {
+      "slug": "wrigley-field",
+      "displayName": "Wrigley Field",
+      "indexable": true
+    },
+    "chicago-white-sox": {
+      "slug": "guaranteed-rate-field",
+      "displayName": "Rate Field",
+      "indexable": true
+    },
+    "cincinnati-reds": {
+      "slug": "great-american-ball-park",
+      "displayName": "Great American Ball Park",
+      "indexable": true
+    },
+    "cleveland-guardians": {
+      "slug": "progressive-field",
+      "displayName": "Progressive Field",
+      "indexable": true
+    },
+    "dallas-wings": {
+      "slug": "college-park-center",
+      "displayName": "College Park Center",
+      "indexable": true
+    },
+    "detroit-tigers": {
+      "slug": "comerica-park",
+      "displayName": "Comerica Park",
+      "indexable": true
+    },
+    "golden-state-valkyries": {
+      "slug": "chase-center",
+      "displayName": "Chase Center",
+      "indexable": true
+    },
+    "houston-astros": {
+      "slug": "daikin-park",
+      "displayName": "Daikin Park",
+      "indexable": true
+    },
+    "indiana-fever": {
+      "slug": "gainbridge-fieldhouse",
+      "displayName": "Gainbridge Fieldhouse",
+      "indexable": true
+    },
+    "las-vegas-aces": {
+      "slug": "michelob-ultra-arena",
+      "displayName": "Michelob Ultra Arena",
+      "indexable": true
+    },
+    "los-angeles-dodgers": {
+      "slug": "dodger-stadium",
+      "displayName": "Dodger Stadium",
+      "indexable": true
+    },
+    "milwaukee-brewers": {
+      "slug": "american-family-field",
+      "displayName": "American Family Field",
+      "indexable": true
+    },
+    "minnesota-lynx": {
+      "slug": "target-center",
+      "displayName": "Target Center",
+      "indexable": true
+    },
+    "new-york-liberty": {
+      "slug": "barclays-center",
+      "displayName": "Barclays Center",
+      "indexable": true
+    },
+    "new-york-yankees": {
+      "slug": "yankee-stadium",
+      "displayName": "Yankee Stadium",
+      "indexable": true
+    },
+    "philadelphia-phillies": {
+      "slug": "citizens-bank-park",
+      "displayName": "Citizens Bank Park",
+      "indexable": true
+    },
+    "phoenix-mercury": {
+      "slug": "footprint-center",
+      "displayName": "Mortgage Matchup Center",
+      "indexable": true
+    },
+    "san-diego-padres": {
+      "slug": "petco-park",
+      "displayName": "Petco Park",
+      "indexable": true
+    },
+    "seattle-mariners": {
+      "slug": "t-mobile-park",
+      "displayName": "T-Mobile Park",
+      "indexable": true
+    },
+    "seattle-storm": {
+      "slug": "climate-pledge-arena",
+      "displayName": "Climate Pledge Arena",
+      "indexable": true
+    },
+    "tampa-bay-rays": {
+      "slug": "tropicana-field",
+      "displayName": "Tropicana Field",
+      "indexable": true
+    },
+    "toronto-blue-jays": {
+      "slug": "rogers-centre",
+      "displayName": "Rogers Centre",
+      "indexable": true
+    },
+    "washington-mystics": {
+      "slug": "entertainment-sports-arena",
+      "displayName": "CareFirst Arena",
+      "indexable": true
+    }
+  }
+}

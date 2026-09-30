@@ -15,7 +15,7 @@ import { RaptiveLoader } from '@/components/ads/RaptiveLoader';
 import { StarredTeamsProvider } from '@/hooks/use-starred-teams';
 import { ShareProvider } from '@/components/share';
 import { PostStarToastHost } from '@/components/post-star-toast';
-import { getPlayoffConfig } from '@/lib/data';
+import { isPlayoffsLinkActive } from '@/lib/postseason/data';
 import { getCoverageCounts } from '@/lib/get-coverage-counts';
 import './globals.css';
 
@@ -95,14 +95,18 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  // Fail-closed: if the config read throws (Firestore outage, perms, etc.),
-  // hide the Playoffs link rather than 500-ing every page site-wide.
+  // The Playoffs link shows while any current-season bracket has a series
+  // that is not final, and for 14 days after the last series in all of them
+  // went final (src/lib/postseason/gate.ts). It used to follow
+  // appConfig/playoffs.playoffsActive, a flag flipped by hand for the NBA and
+  // NHL that says nothing about the MLB and WNBA brackets the page now
+  // renders. Fail-closed: if the read throws (Firestore outage, perms, etc.),
+  // hide the link rather than 500-ing every page site-wide.
   let playoffsActive = false;
   try {
-    const config = await getPlayoffConfig();
-    playoffsActive = config?.playoffsActive === true;
+    playoffsActive = await isPlayoffsLinkActive();
   } catch (err) {
-    console.error('getPlayoffConfig failed in layout:', err);
+    console.error('isPlayoffsLinkActive failed in layout:', err);
   }
 
   // Global chrome gate (server-side, matching the team-page template branch).

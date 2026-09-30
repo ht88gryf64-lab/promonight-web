@@ -57,6 +57,7 @@ export interface FeedCandidate {
   score?: number | null;
   itemType?: string | null;
   tombstoned?: boolean;
+  isPostseason?: boolean;
 }
 
 export interface FeedWindow {
@@ -95,6 +96,7 @@ export function feedWindow(now: Date): FeedWindow {
 
 function isEligible(c: FeedCandidate, w: FeedWindow): boolean {
   if (c.tombstoned === true) return false;
+  if (c.isPostseason === true) return false;
   if (!PROMO_ID.test(c.promoId) || !PROMO_ID.test(c.teamId)) return false;
   if (typeof c.date !== 'string' || !YMD.test(c.date)) return false;
   if (c.date < w.start || c.date > w.end) return false;

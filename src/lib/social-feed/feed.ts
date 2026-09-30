@@ -34,6 +34,7 @@ async function loadScored(start: string, end: string): Promise<FeedPromo[]> {
     score: p.score,
     itemType: p.derivedSignals?.itemType ?? null,
     tombstoned: p.tombstoned,
+    isPostseason: p.isPostseason,
   }));
 }
 
@@ -84,6 +85,7 @@ async function readVisiblePromos(start: string, end: string): Promise<FeedPromo[
       score: p.score ?? null,
       itemType: p.derivedSignals?.itemType ?? null,
       tombstoned: p.tombstoned,
+      isPostseason: p.isPostseason,
     });
   }
   return out.filter(isVisiblePromo);

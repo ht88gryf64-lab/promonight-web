@@ -30,6 +30,9 @@ import { AdSlot } from '@/components/ads/AdSlot';
 import { AD_SLOTS } from '@/lib/ads/slots';
 import { isRedesignEnabled } from '@/lib/redesign';
 import { HomePageV2 } from '@/components/redesign/HomePageV2';
+import { getPlayoffsInboundOrNone } from '@/lib/postseason/data';
+import { homePlayoffs } from '@/lib/postseason/inbound';
+import { HomePlayoffsModule } from '@/components/playoffs/inbound/HomePlayoffsModule';
 
 // 6h fallback. Home is the only indexed route whose "Tonight" cards go stale on a
 // pure date rollover (no data write), so 6h bounds that staleness. On-demand
@@ -321,8 +324,10 @@ export default async function HomePage() {
       ...heroBuckets.tonight,
       ...weekPromos,
     ]);
+    const playoffs = homePlayoffs(await getPlayoffsInboundOrNone('/'));
     return (
       <HomePageV2
+        playoffs={playoffs ? <HomePlayoffsModule season={playoffs.season} leagues={playoffs.leagues} /> : null}
         heroBuckets={heroBuckets}
         weekPromos={weekPromos}
         bestPromos={pickBestStubPromos(allFuture, 8)}

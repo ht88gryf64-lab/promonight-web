@@ -141,6 +141,9 @@ export function mapPromoDoc(doc: FirebaseFirestore.DocumentSnapshot): Promo {
   // isVisiblePromo filter has the field to read. Without this the filter
   // would silently pass every doc.
   if (data.tombstoned !== undefined) promo.tombstoned = data.tombstoned;
+  // The postseason marker rides through the same way, so isVisiblePromo can
+  // keep these rows off every regular surface.
+  if (data.isPostseason === true) promo.isPostseason = true;
   return promo;
 }
 
@@ -446,6 +449,10 @@ export async function getPromoCount(): Promise<number> {
   // count() aggregate: there are no documents to array-filter and we never use
   // a Firestore inequality on tombstoned, so this may over-count by the
   // tombstoned total. Acceptable for a cosmetic homepage stat; not converted.
+  // Postseason rows (isPostseason) are inside this count the same way. They
+  // cannot be subtracted here: an equality on a collection GROUP needs an
+  // index that does not exist (the build failed on it), and this is the one
+  // reader that is a number, not rows.
   const snapshot = await db.collectionGroup('promos').count().get();
   return snapshot.data().count;
 }
@@ -744,72 +751,6 @@ export async function getPlayoffPromosInDateRange(
     });
   }
   return results;
-}
-
-export async function getAllPlayoffPromos(): Promise<{
-  config: PlayoffConfig | null;
-  byLeague: Record<
-    'NBA' | 'NHL',
-    { team: Team; promos: PlayoffPromo[] }[]
-  >;
-  totalPromos: number;
-  totalTeams: number;
-}> {
-  const config = await getPlayoffConfig();
-  const empty = {
-    config,
-    byLeague: { NBA: [], NHL: [] } as Record<
-      'NBA' | 'NHL',
-      { team: Team; promos: PlayoffPromo[] }[]
-    >,
-    totalPromos: 0,
-    totalTeams: 0,
-  };
-  if (!config || !config.playoffsActive) return empty;
-
-  const aliveIds = new Set(getStillAlivePlayoffTeamIds(config));
-  const [snapshot, allTeams] = await Promise.all([
-    db
-      .collection('playoffPromos')
-      .where('isPlayoff', '==', true)
-      .get(),
-    getAllTeams(),
-  ]);
-  const teamById = new Map(allTeams.map((t) => [t.id, t]));
-
-  const grouped = new Map<string, PlayoffPromo[]>();
-  for (const doc of snapshot.docs) {
-    const p = mapPlayoffPromoDoc(doc);
-    if (!aliveIds.has(p.teamId)) continue;
-    const arr = grouped.get(p.teamId) ?? [];
-    arr.push(p);
-    grouped.set(p.teamId, arr);
-  }
-
-  const byLeague: Record<
-    'NBA' | 'NHL',
-    { team: Team; promos: PlayoffPromo[] }[]
-  > = { NBA: [], NHL: [] };
-  let totalPromos = 0;
-  for (const [teamId, promos] of grouped) {
-    const team = teamById.get(teamId);
-    if (!team) continue;
-    promos.sort(sortByDateThenCreated);
-    const league = team.league as 'NBA' | 'NHL';
-    if (league !== 'NBA' && league !== 'NHL') continue;
-    byLeague[league].push({ team, promos });
-    totalPromos += promos.length;
-  }
-  for (const league of ['NBA', 'NHL'] as const) {
-    byLeague[league].sort((a, b) => a.team.city.localeCompare(b.team.city));
-  }
-
-  return {
-    config,
-    byLeague,
-    totalPromos,
-    totalTeams: grouped.size,
-  };
 }
 
 // ── Games (MLB only for now) ───────────────────────────────────────────────
@@ -1161,8 +1102,10 @@ async function fetchScoredPromos(
 
     const data = doc.data();
     // Visibility guard before building the scored object: only true hides;
-    // absent and false pass (same predicate as isVisiblePromo).
+    // absent and false pass (same predicate as isVisiblePromo). Postseason
+    // rows are kept off this surface the same way.
     if (data.tombstoned === true) continue;
+    if (data.isPostseason === true) continue;
     if (typeof data.score !== 'number') continue;
     if (!data.scoreBreakdown || !data.derivedSignals) continue;
 
@@ -1311,8 +1254,10 @@ export async function getTopPromosPerTeam(
 
     const data = doc.data();
     // Visibility guard before building the scored object: only true hides;
-    // absent and false pass (same predicate as isVisiblePromo).
+    // absent and false pass (same predicate as isVisiblePromo). Postseason
+    // rows are kept off this surface the same way.
     if (data.tombstoned === true) continue;
+    if (data.isPostseason === true) continue;
     if (typeof data.score !== 'number') continue;
     if (!data.scoreBreakdown || !data.derivedSignals) continue;
 

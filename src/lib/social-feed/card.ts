@@ -17,6 +17,7 @@ export interface CardPromoDoc {
   title?: string | null;
   opponent?: string | null;
   tombstoned?: boolean;
+  isPostseason?: boolean;
 }
 
 export interface CardDeps {
@@ -34,7 +35,9 @@ export async function resolveCard(key: string, deps: CardDeps): Promise<RssItemI
     deps.getTeam(parsed.teamId),
     deps.getPromo(parsed.teamId, parsed.promoId),
   ]);
-  if (!team || !promo || promo.tombstoned === true) return null;
+  // A postseason row is not a card: the feed never selects one, and a key
+  // built for one by hand gets nothing.
+  if (!team || !promo || promo.tombstoned === true || promo.isPostseason === true) return null;
   if (typeof promo.date !== 'string' || !YMD.test(promo.date)) return null;
   if (!cleanText(promo.title)) return null;
   return {

@@ -2,6 +2,7 @@ import type { Team, Venue, Promo, PromoType, PlayoffPromo } from '@/lib/types';
 import type { GameContext } from '@/lib/data';
 import type { PlayoffFAQContext, TeamFaqCoverage } from '@/lib/promo-helpers';
 import type { RecurringDeal } from '@/lib/recurring-deals';
+import type { ReactNode } from 'react';
 
 import Link from 'next/link';
 import { getLeagueHub } from '@/lib/league-hubs';
@@ -76,6 +77,10 @@ export interface RedesignTeamPageProps {
   playoffRound: string;
   playoffLastUpdated: string | null;
   playoffContext?: PlayoffFAQContext;
+  /** The postseason module, already rendered, for a club in a current-season
+   *  bracket. Null or absent for every other club, and then this template
+   *  emits exactly what it emitted before the module existed. */
+  postseason?: ReactNode;
 }
 
 /**
@@ -105,6 +110,7 @@ export function RedesignTeamPage({
   playoffRound,
   playoffLastUpdated,
   playoffContext,
+  postseason = null,
 }: RedesignTeamPageProps) {
   // The league segment links up to the league hub, but ONLY when that hub is
   // live, so the team page and its hub form a reciprocal loop (hub links down to
@@ -199,6 +205,27 @@ export function RedesignTeamPage({
       {team.division ? <> · {team.division}</> : null}
     </>
   );
+
+  // The season slot's one block: the schedule where it supersedes the
+  // calendar, the calendar everywhere else. Built here so the two branches of
+  // the wrapper below can hold the same element.
+  const seasonBlock =
+    showSchedule && gameContexts ? (
+      <ScheduleBlock contexts={gameContexts} team={team} teamName={displayName} />
+    ) : (
+      <SeasonExplorer
+        promos={upcomingPromos}
+        promoCounts={upcomingCounts}
+        seasonScoped={!!seasonScope}
+        homeOnlyPrerender={scopeLive}
+        teamName={displayName}
+        teamSlug={team.id}
+        sport={team.league}
+        team={team}
+        gameContexts={gameContexts}
+        today={today}
+      />
+    );
 
   return (
     <div className={`${archivo.variable} rd-root min-h-screen`}>
@@ -396,24 +423,30 @@ export function RedesignTeamPage({
                 Games. Rendering both would also put two emitters of
                 away_game_expanded on one page with identical payloads, which
                 cannot be untangled after ingestion. */}
-            <div className={`rd-weave-item ${showSchedule ? 'order-[11]' : 'order-[10]'}`}>
-              {showSchedule && gameContexts ? (
-                <ScheduleBlock contexts={gameContexts} team={team} teamName={displayName} />
-              ) : (
-                <SeasonExplorer
-                  promos={upcomingPromos}
-                  promoCounts={upcomingCounts}
-                  seasonScoped={!!seasonScope}
-                  homeOnlyPrerender={scopeLive}
-                  teamName={displayName}
-                  teamSlug={team.id}
-                  sport={team.league}
-                  team={team}
-                  gameContexts={gameContexts}
-                  today={today}
-                />
-              )}
-            </div>
+            {/* THE POSTSEASON MODULE rides INSIDE this wrapper, above the
+                season block, and is not a weave item of its own. Three reasons.
+                This wrapper holds the lowest order in the weave, so the module
+                is first in the mobile column and, with the ad slot above it
+                empty, first in the desktop main column: "near the top" at both
+                widths. A new weave item would be a new anchor for the ad
+                placer, which counts the children of this shell, and would move
+                every unit below it on 169 pages for the sake of the 20 that
+                carry the module. And nothing is appended to the shell's class
+                string, which the placer matches whole (known-issues entry 49).
+
+                Two branches rather than one wrapper with an optional child, for
+                the reason given above for the season slot: an absent module
+                would still serialize a null into the RSC payload of every team
+                page. With no module the first branch is the markup this
+                template has always emitted, byte for byte. */}
+            {postseason ? (
+              <div className={`rd-weave-item ${showSchedule ? 'order-[11]' : 'order-[10]'}`}>
+                {postseason}
+                {seasonBlock}
+              </div>
+            ) : (
+              <div className={`rd-weave-item ${showSchedule ? 'order-[11]' : 'order-[10]'}`}>{seasonBlock}</div>
+            )}
 
             {/* Rivals, zero-promo mount: directly under the schedule. */}
             {hasNoUpcoming ? rivalsBlock : null}

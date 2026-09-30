@@ -111,6 +111,11 @@ export interface Promo {
   // isVisiblePromo (never a Firestore inequality). Inherited by PromoWithTeam
   // and ScoredPromoWithTeam.
   tombstoned?: boolean;
+  // A postseason promotion, written by the postseason scanner and keyed on a
+  // bracket game rather than a date. Absent on every regular row. Excluded by
+  // every regular reader through isVisiblePromo; only the playoffs surfaces
+  // read these rows, and they ask for them by name.
+  isPostseason?: boolean;
 }
 
 export interface PromoWithTeam extends Promo {

@@ -1081,10 +1081,32 @@ drop the "Last updated" clause and keep the promo count, which is real.
 
 ## 22. Latent unbacked freshness claims that re-arm on a flag flip or data shift
 
-**Status: OPEN.** Five claim sites assert update mechanisms that do not run,
+**Status: PARTLY RESOLVED. Group (1), the four `/playoffs` claims, is gone;
+groups (2) and (3) are still OPEN.**
+
+**Group (1) resolved on `feature/playoffs-v2`, commit `2527c11` (2026-09-29).**
+The page was replaced, not patched. `src/app/playoffs/page.tsx` is now the hub
+for the MLB and WNBA brackets and none of the four lines survives in it, in
+the DOM or in JSON-LD: no "Updated hourly", no "refreshes within an hour", no
+Article or FAQPage schema at all. What the page says about freshness is one
+thing, and it is a fact the document carries: "Bracket updated Sep 29, 1:42 PM
+ET", the bracket document's own `lastChangedAt`, as an absolute Eastern time.
+`src/components/playoffs/__tests__/render.test.tsx` fails on "hourly",
+"real-time", "up to the minute" or "live" anywhere in either page, for every
+fixture, with one exception that is not a claim about the page: the badge on a
+game the bracket document records as in progress. The flag the four lines
+waited on, `appConfig/playoffs.playoffsActive`, no longer gates the page or
+the link to it (`src/lib/postseason/gate.ts`). The code the old page left
+behind was deleted at the G3 gate of the same branch, in the commit titled
+"feat(playoffs): G3": `getAllPlayoffPromos`, `playoffs-headings` and its test,
+and the champions component and data.
+
+What follows is the entry as written, kept because groups (2) and (3) stand.
+
+Five claim sites assert update mechanisms that do not run,
 but currently render on zero pages only because of season or gate state, not
 because the copy was fixed. They re-arm without any deploy:
-(1) /playoffs "refreshes within an hour of the latest scanner update"
+(1) **[RESOLVED, see above]** /playoffs "refreshes within an hour of the latest scanner update"
 (src/app/playoffs/page.tsx:149, FAQPage JSON-LD plus DOM when active),
 "Updated hourly." (:298, Article JSON-LD), and "Updated hourly from official
 team sources." (:360 and :460, DOM). The playoff scanner cron is disabled;
@@ -3470,3 +3492,91 @@ open and is a separate change.
 
 **Severity: resolved.** Was High for this template: no in-content inventory on
 about 5% of pageviews for ten days, with no error anywhere.
+
+## 59. Pages that show the bracket outside `/playoffs` are not revalidated when the bracket changes
+
+**Status: RESOLVED on both sides, 2026-09-30. Pipeline: promo-pipeline main
+`ba85ed8` (the fan-out). Web: `feature/playoffs-v2`, the G3 fix round.**
+
+**What it was.** The postseason feed revalidated two paths when a bracket
+document changed: `/playoffs` and `/playoffs/{league}`. Since 2026-09-29 four
+more surfaces render from the same documents, and none of them was on that
+list:
+
+| surface | what it shows from the bracket | regenerates |
+| --- | --- | --- |
+| team pages of clubs in a bracket, `/{sport}/{team}` | round, opponent, series score, next game and time | every 24h |
+| venue pages of hosting parks, `/venues/{slug}` | the home games still to be played, with times | every 24h |
+| `/mlb` and `/wnba` | the round, and a status line for each series | every 6h |
+| the homepage | each league being played and its round | every 6h |
+
+So a team page could say "Series tied 1-1, Next: Game 3" for up to a day
+after Game 3 was played, and, worse, carry a red "Live" badge and "Game 1 in
+progress" for a day after the game ended, because the team module stated the
+present tense.
+
+**Three parts to the fix, and the first alone would not have closed it.**
+
+1. *Pipeline fan-out.* `bracketPaths` now posts `/playoffs`,
+   `/playoffs/{league}`, `/{league}`, the team page of every club in a
+   changed series (a placeholder whose feeder is decided counts as its
+   winner; the last series going final names every club) and the venue page
+   of every host of a changed series, deduplicated, at most 60 a run. `/` is
+   withheld by ruling: the endpoint refuses a bare `/` and would fail the
+   batch on one bad path.
+2. *The web read the bracket for these modules through two stacked five
+   minute process caches* (`loadCurrentBrackets` and a loader built on it in
+   `src/lib/postseason/data.ts`). A team page regenerated right after the
+   pipeline's post would have been rebuilt from the bracket the post was
+   about to replace, and held for its whole window, while the pipeline had
+   recorded the revalidation as done. The G3 reviewer executed this with a
+   fake Firestore and a mocked clock: at 00:02:10Z the document said final
+   and the re-rendered team page still said live; correct only at 00:06:01Z.
+   The inbound read is now `getPlayoffsInbound`, a fresh read wrapped only
+   in React's per-request `cache()`, the same as `/playoffs` itself. The
+   five minute loader is kept for one reader: the nav-link gate, which the
+   root layout asks on every route. `data.test.ts` proves a second render
+   after a document change is built from the new document with no clock
+   moved.
+3. *Nothing in the present tense on any inbound module.* A team page still
+   stands for a day between bracket changes when nothing changes, and a hub
+   for six hours. The modules state a series score and a game's scheduled
+   time, both of which stay true; "Live" and "in progress" are gone from
+   them and belong to the playoffs pages, which the pipeline revalidates and
+   which regenerate every ten minutes besides. `inbound-render.test.tsx`
+   refuses any present-tense wording on any module in any state.
+
+**What stands.** The homepage is still at six hours with a round-only
+module, by ruling. Every module that states a score or a game time still
+prints the bracket's own change stamp beside it.
+
+**Do not "fix" the residue by shortening `revalidate` on the team route.** It
+is one constant for all 169 team pages, all year, and the modules exist on
+about twenty of them for about six weeks.
+
+## 60. The offseason `/playoffs` hub is 297px tall at 390px and places no in-content ad
+
+**Status: OPEN, no fix. Due before the 2027-04 NBA and NHL postseason.**
+
+**What it is.** With no current-season bracket document at all, `/playoffs`
+renders its heading, the one-paragraph introduction and the "No postseason is
+underway" block, and nothing else: 297px at 390px, measured by
+`scripts/playoffs/measure-states.mjs` (state `hub-empty`, informational). The
+ad placer sizes what it puts on a page by the article's height and places no
+in-content unit under about 1,000px, so the offseason hub carries none on a
+phone. A hub with one bracket only, between rounds with no home game in the
+window, measures 1,329px and is fine.
+
+**When it is reachable.** Not while both 2026 documents exist, which they do
+for the rest of this postseason and after it (a finished bracket keeps its
+document and its results). It becomes reachable the day `POSTSEASON_SEASON`
+in `src/lib/postseason/data.ts` is bumped to 2027 and before the pipeline
+creates the 2027 documents, and again each year at that boundary.
+
+**What a fix would be.** Real content, not filler: the previous season's
+results (both brackets are still in Firestore under their own season), or the
+page 404s in the offseason and returns with the first document. Either is a
+ruling.
+
+**Ruled 2026-09-30:** no fix in the G3 fix round; recorded here and in the
+coordination ledger.

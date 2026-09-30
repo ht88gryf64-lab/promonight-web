@@ -14,6 +14,9 @@ import { HubTeamGrid } from '@/components/hub/HubTeamGrid';
 import { HubVenueLinks } from '@/components/hub/HubVenueLinks';
 import { HubFaq, type HubFaqItem } from '@/components/hub/HubFaq';
 import { getVenueLinksForTeams } from '@/lib/venue-hub';
+import { getPlayoffsInboundOrNone } from '@/lib/postseason/data';
+import { leagueCard } from '@/lib/postseason/inbound';
+import { LeaguePlayoffsCard } from '@/components/playoffs/inbound/LeaguePlayoffsCard';
 
 // League hub accent (house palette, mirrors LEAGUE_HUB_REGISTRY WNBA entry).
 const ACCENT = '#c9581f';
@@ -89,6 +92,17 @@ export default async function WnbaHubPage() {
   // ItemList source for the CollectionPage JSON-LD: the current WNBA slate.
   const jsonLdGroups: AggregatorGroup[] = [{ label: 'This week across WNBA', promos: slate }];
 
+  const playoffs = leagueCard(await getPlayoffsInboundOrNone('/wnba'), 'WNBA');
+  const todayPromos = (
+    <HubTodayPromos
+      slate={today}
+      label="WNBA"
+      accent={ACCENT}
+      sectionId="wnba-today"
+      surface="web_wnba_hub"
+    />
+  );
+
   return (
     <div className={`${archivoHouse.variable} rd-root min-h-screen`} data-ad-region="content">
       <AggregatorJsonLd
@@ -114,13 +128,20 @@ export default async function WnbaHubPage() {
       </div>
 
       <div className="mx-auto max-w-6xl space-y-16 px-6 pb-20 pt-12 page-content">
-        <HubTodayPromos
-          slate={today}
-          label="WNBA"
-          accent={ACCENT}
-          sectionId="wnba-today"
-          surface="web_wnba_hub"
-        />
+        {/* THE PLAYOFFS CARD, while this league's postseason is being played.
+            It is at the top of page-content and SHARES the first child with
+            the Today section: every direct child of page-content is an anchor
+            for the ad placer, and a card of its own would move every unit
+            below it. With no card, the branch below is the markup this page
+            has always emitted. */}
+        {playoffs ? (
+          <div data-playoffs-top className="space-y-16">
+            <LeaguePlayoffsCard card={playoffs} surface="web_wnba_hub" />
+            {todayPromos}
+          </div>
+        ) : (
+          todayPromos
+        )}
         <HubThisWeek
           slate={slate}
           heading="This week across WNBA"

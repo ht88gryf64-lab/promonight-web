@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { getAllTeams, getPlayoffConfig, getStillAlivePlayoffTeamIds } from '@/lib/data';
+import { getPlayoffsSitemapEntries } from '@/lib/postseason/data';
 import { getIndexableCfbSchoolIds } from '@/lib/cfb/data';
 import { getAllMatchupSlugs } from '@/lib/cfb/matchups';
 import { isCfbHubLive, LEAGUE_HUBS } from '@/lib/league-hubs';
@@ -150,20 +151,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
-  // Only include the /playoffs hub in the sitemap when playoffs are active.
-  // When playoffsActive flips to false, next sitemap regeneration drops it.
-  const playoffHubEntries = playoffsActive
-    ? [
-        {
-          url: `${BASE_URL}/playoffs`,
-          // Uses scanner freshness rather than sitemap-generation time so
-          // Google's lastmod signal reflects real data change cadence.
-          lastModified: playoffUpdatedAt ?? now,
-          changeFrequency: 'hourly' as const,
-          priority: 0.8,
-        },
-      ]
-    : [];
+  // /playoffs and each league's bracket page, under the same gate as the nav
+  // link: listed while any current-season bracket has a series that is not
+  // final, and for 14 days after the last one went final. lastmod is the
+  // moment the bracket itself last changed. A failed read throws, like the
+  // venue read above: a sitemap missing these pages is not served.
+  const playoffEntries = await getPlayoffsSitemapEntries(now).catch((err) => {
+    console.error('[sitemap] postseasonBrackets read failed; refusing to serve a sitemap missing the playoffs pages', err);
+    throw err;
+  });
+  const playoffHubEntries = playoffEntries.map((e) => ({
+    url: `${BASE_URL}${e.path}`,
+    lastModified: e.lastModified,
+    changeFrequency: 'daily' as const,
+    priority: 0.8,
+  }));
 
   return [
     {
