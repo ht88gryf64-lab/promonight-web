@@ -141,6 +141,9 @@ export function mapPromoDoc(doc: FirebaseFirestore.DocumentSnapshot): Promo {
   // isVisiblePromo filter has the field to read. Without this the filter
   // would silently pass every doc.
   if (data.tombstoned !== undefined) promo.tombstoned = data.tombstoned;
+  // The postseason marker rides through the same way, so isVisiblePromo can
+  // keep these rows off every regular surface.
+  if (data.isPostseason === true) promo.isPostseason = true;
   return promo;
 }
 
@@ -446,6 +449,10 @@ export async function getPromoCount(): Promise<number> {
   // count() aggregate: there are no documents to array-filter and we never use
   // a Firestore inequality on tombstoned, so this may over-count by the
   // tombstoned total. Acceptable for a cosmetic homepage stat; not converted.
+  // Postseason rows (isPostseason) are inside this count the same way. They
+  // cannot be subtracted here: an equality on a collection GROUP needs an
+  // index that does not exist (the build failed on it), and this is the one
+  // reader that is a number, not rows.
   const snapshot = await db.collectionGroup('promos').count().get();
   return snapshot.data().count;
 }
@@ -1095,8 +1102,10 @@ async function fetchScoredPromos(
 
     const data = doc.data();
     // Visibility guard before building the scored object: only true hides;
-    // absent and false pass (same predicate as isVisiblePromo).
+    // absent and false pass (same predicate as isVisiblePromo). Postseason
+    // rows are kept off this surface the same way.
     if (data.tombstoned === true) continue;
+    if (data.isPostseason === true) continue;
     if (typeof data.score !== 'number') continue;
     if (!data.scoreBreakdown || !data.derivedSignals) continue;
 
@@ -1245,8 +1254,10 @@ export async function getTopPromosPerTeam(
 
     const data = doc.data();
     // Visibility guard before building the scored object: only true hides;
-    // absent and false pass (same predicate as isVisiblePromo).
+    // absent and false pass (same predicate as isVisiblePromo). Postseason
+    // rows are kept off this surface the same way.
     if (data.tombstoned === true) continue;
+    if (data.isPostseason === true) continue;
     if (typeof data.score !== 'number') continue;
     if (!data.scoreBreakdown || !data.derivedSignals) continue;
 

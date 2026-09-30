@@ -90,13 +90,12 @@ test('HUB, offseason: says so, and promises no date', () => {
   assert.ok(!/\d/.test(c.description));
 });
 
-test('HUB, a bracket that could not be read: no offseason is claimed, and nothing about what it holds', () => {
-  const c = hubCopy(2026, ROUTES, [{ league: 'MLB', state: 'unavailable' }]);
-  assert.equal(c.description, 'The 2026 postseason brackets for MLB and WNBA.');
-  assert.ok(!c.description.includes('No postseason'));
-  // Beside one that finished, "complete" would be a claim about the unread one.
-  const mixed = hubCopy(2025, ROUTES, [{ league: 'MLB', state: 'unavailable' }, okState(view(FIXTURE.wnbaFinal, FINAL_AT))]);
-  assert.ok(!mixed.description.includes('complete'));
+test('HUB: there is no "could not be read" state; the type admits only a rendered league', () => {
+  // A read that fails throws before the head is written, so the copy has
+  // exactly three branches: playing, complete, and no bracket at all.
+  const states: HubLeagueState[] = [okState(view(FIXTURE.mlbFinal, FINAL_AT))];
+  assert.equal(hubCopy(2025, ROUTES, states).description, 'The 2025 MLB postseason is complete. The final bracket, round by round, with each champion.');
+  assert.ok(hubCopy(2026, ROUTES, []).description.startsWith('No postseason is underway.'));
 });
 
 test('every title fits the audit, and every string is sound', () => {
@@ -110,7 +109,6 @@ test('every title fits the audit, and every string is sound', () => {
     hubCopy(2026, ROUTES, [okState(view(FIXTURE.mlbFields, FIELDS_AT)), okState(view(FIXTURE.wnbaFields, FIELDS_AT))]),
     hubCopy(2025, ROUTES, [okState(view(FIXTURE.mlbFinal, FINAL_AT)), okState(view(FIXTURE.wnbaFinal, FINAL_AT))]),
     hubCopy(2026, ROUTES, []),
-    hubCopy(2026, ROUTES, [{ league: 'MLB', state: 'unavailable' }]),
   ];
   for (const c of copies) {
     assert.ok((c.title + SUFFIX).length <= 65, `${c.title}: ${(c.title + SUFFIX).length} characters with the suffix`);

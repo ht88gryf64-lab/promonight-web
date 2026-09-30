@@ -10,8 +10,9 @@ import type { ParkPage } from '@/lib/postseason/view';
  *
  * Fires venue_hub_click, the event every other link into a venue page fires,
  * with this page as the surface. On mousedown, like the others, so it lands
- * even when the navigation tears the page down first. A real link in the
- * server HTML: the wrapper adds the handler and nothing else.
+ * even when the navigation tears the page down first; and on the Enter key,
+ * because a keyboard activation raises no mousedown at all. A real link in
+ * the server HTML: the wrapper adds the handlers and nothing else.
  */
 export function ParkLink({
   page,
@@ -42,7 +43,15 @@ export function ParkLink({
     });
   };
   return (
-    <Link href={page.href} onMouseDown={fire} data-park-link={page.buildingSlug} className={className}>
+    <Link
+      href={page.href}
+      onMouseDown={fire}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' && !e.repeat) fire();
+      }}
+      data-park-link={page.buildingSlug}
+      className={className}
+    >
       {children}
     </Link>
   );

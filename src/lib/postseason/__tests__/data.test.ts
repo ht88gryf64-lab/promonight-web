@@ -102,32 +102,45 @@ test('BRACKET READ: no document is "missing", which is not an error', async () =
   assert.deepEqual(await getLeaguePageData('MLB'), { state: 'missing', league: 'MLB' });
 });
 
-test('BRACKET READ: a failed read is "unavailable" and does not throw', async () => {
+// A read that fails, and a document the web cannot read, THROW. A render
+// that throws produces no page, so ISR keeps the last good one; a render
+// that returned "not available" would replace it, cached and indexable.
+test('BRACKET READ: a failed read throws, and so does the page data', async () => {
   const { getBracket, getLeaguePageData } = await load();
   use({ 'postseasonBrackets/MLB_2026': new Error('UNAVAILABLE: the service is down') });
-  assert.deepEqual(await quiet(() => getBracket('MLB')), { state: 'unavailable' });
-  assert.deepEqual(await quiet(() => getLeaguePageData('MLB')), { state: 'unavailable', league: 'MLB' });
+  await assert.rejects(() => getBracket('MLB'), /UNAVAILABLE/);
+  await assert.rejects(() => getLeaguePageData('MLB'), /UNAVAILABLE/);
 });
 
-test('BRACKET READ: a document the mapper refuses is "unavailable"', async () => {
+test('BRACKET READ: a document the mapper refuses throws, naming the document', async () => {
   const { getBracket } = await load();
   const bad = MLB();
   (bad.series as Record<string, unknown>[])[0].status = 'paused';
   use({ 'postseasonBrackets/MLB_2026': bad });
-  assert.deepEqual(await quiet(() => getBracket('MLB')), { state: 'unavailable' });
+  await assert.rejects(() => getBracket('MLB'), /MLB_2026 is not in a shape the web reads/);
 });
 
-test('BRACKET READ: a document stored under the wrong id is refused', async () => {
+test('BRACKET READ: a document stored under the wrong id throws', async () => {
   const { getBracket } = await load();
   use({ 'postseasonBrackets/MLB_2026': WNBA() });
-  assert.deepEqual(await quiet(() => getBracket('MLB')), { state: 'unavailable' });
+  await assert.rejects(() => getBracket('MLB'), /not in a shape the web reads/);
 });
 
-test('PAGE DATA: a club with no team record makes the bracket unavailable', async () => {
+test('PAGE DATA: a club with no team record throws, naming the document', async () => {
   const { getLeaguePageData } = await load();
   use({ 'postseasonBrackets/MLB_2026': MLB() });
   teams.drop.add('houston-astros');
-  assert.deepEqual(await quiet(() => getLeaguePageData('MLB')), { state: 'unavailable', league: 'MLB' });
+  await assert.rejects(() => getLeaguePageData('MLB'), /MLB_2026 names a club with no team record/);
+});
+
+test('BRACKET READ: nothing is ever "unavailable"', async () => {
+  const mod = await load();
+  const text = JSON.stringify(Object.keys(mod));
+  assert.ok(!text.includes('Unavailable'));
+  // The type has two states, and the page turns "missing" into a 404.
+  use({});
+  const r = await mod.getBracket('MLB');
+  assert.ok(r.state === 'missing' || r.state === 'ok');
 });
 
 test('PAGE DATA: a host with no venue, or a venue read that fails, costs only that park line', async () => {
@@ -351,14 +364,46 @@ test('INBOUND: a bracket naming a club with no team record is left out, and the 
 
 test('INBOUND: a failed read gives a page nothing to render, and does not throw into it', async () => {
   const { getPlayoffsInboundOrNone, getPlayoffsInbound } = await load();
-  // The brackets behind this are the process cache. It is empty only when no
-  // earlier test in this file filled it, so the failure is forced at the
-  // other read the build makes.
   use({ 'postseasonBrackets/MLB_2026': new Error('UNAVAILABLE') });
+  await assert.rejects(() => getPlayoffsInbound(), /UNAVAILABLE/);
   const out = await quiet(() => getPlayoffsInboundOrNone('/mlb/houston-astros'));
-  assert.ok(Array.isArray(out));
+  assert.deepEqual(out, []);
   await assert.doesNotReject(() => quiet(() => getPlayoffsInboundOrNone('/')));
-  void getPlayoffsInbound;
+});
+
+// THE INBOUND READ IS NOT CACHED. The pipeline revalidates a team page, a
+// venue page and a league hub when a bracket changes; the re-render must see
+// the new document, not one from a five-minute process cache. Two renders
+// in a row, the document changed between them, no clock moved.
+test('INBOUND, uncached: a page revalidated for a bracket change is built from the new document', async () => {
+  const { getPlayoffsInbound, getPlayoffsInboundOrNone, isPlayoffsLinkActive } = await load();
+  const before = MLB();
+  const fake = use({ 'postseasonBrackets/MLB_2026': before });
+  // The nav gate reads first, on every route, and fills its own cache. (Its
+  // answer here depends on what an earlier test left in that cache, which is
+  // the point of the cache; only its reads are asserted below.)
+  await isPlayoffsLinkActive(CAPTURED_AT);
+  const first = await getPlayoffsInbound();
+  const wc1 = first[0].view.rounds[0].groups[0].series[0];
+  assert.equal(wc1.scoreLine, null, 'no game has been played in the document as captured');
+  const readsAfterFirst = fake.reads.length;
+
+  // The document changes: game 1 of the first series goes final.
+  const after = MLB();
+  const series = (after.series as Record<string, unknown>[])[0];
+  const games = series.games as Record<string, unknown>[];
+  Object.assign(games[0], { status: 'final', homeScore: 4, awayScore: 1, winnerSide: 'higher' });
+  Object.assign(series, { status: 'live', wins: { higher: 1, lower: 0 } });
+  fake.docs['postseasonBrackets/MLB_2026'] = after;
+
+  const second = await getPlayoffsInboundOrNone('/mlb/houston-astros');
+  const wc1After = second[0].view.rounds[0].groups[0].series[0];
+  assert.equal(wc1After.scoreLine, 'HOU leads 1-0', 'the second render sees the change at once');
+  assert.ok(fake.reads.length > readsAfterFirst, 'the second render read the document again');
+  // And the nav gate still answers from its cache: it read nothing more.
+  const readsBeforeGate = fake.reads.length;
+  await isPlayoffsLinkActive(CAPTURED_AT);
+  assert.equal(fake.reads.length, readsBeforeGate, 'the gate is the one reader that keeps the cache');
 });
 
 test('WHICH LEAGUES, cached: the list for static params is its own read', async () => {

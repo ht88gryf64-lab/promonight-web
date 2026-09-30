@@ -31,6 +31,12 @@ function Row({
         {g.ifNecessary ? ' · If necessary' : ''}
       </p>
       <p className="mt-0.5 text-[13.5px] text-rd-ink">{g.when}</p>
+      {g.promo && (
+        <p data-game-promo={g.promo.type} className="text-[13.5px] text-rd-ink">
+          <span aria-hidden="true">{g.promo.icon} </span>
+          {g.promo.title}
+        </p>
+      )}
       {g.park && (
         <p className="text-[13px] text-rd-ink-soft">
           {g.parkPage ? (

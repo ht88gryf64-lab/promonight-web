@@ -53,7 +53,6 @@ test('TEAM, alive: round, opponent, series score, next game in Eastern time, and
     roundLabel: 'Wild Card Series',
     opponent: 'White Sox',
     scoreLine: null,
-    inProgress: null,
     nextLabel: 'Game 1 · Tue, Sep 29 · 5:00 PM ET',
     nextHost: 'Host: Astros · Daikin Park',
   });
@@ -80,14 +79,19 @@ test('TEAM, alive with a series score', () => {
   assert.equal(liberty.seriesHref, '/playoffs/wnba#first_round-1');
 });
 
-test('TEAM, alive with a game in progress: the game is named and nothing is "next"', () => {
+// NOTHING IN THE PRESENT TENSE. A team page stands for a day between
+// bracket changes, so a game in progress is stated by its scheduled time,
+// which stays true, and never as "in progress".
+test('TEAM, alive with a game in progress: the game is named by its scheduled time, and nothing says it has started', () => {
   const braves = clubPlayoffs(inbound([FIXTURE.mlbInGame], IN_GAME_AT), 'atlanta-braves');
   assert.equal(braves?.state, 'alive');
   if (braves?.state !== 'alive') return;
-  assert.equal(braves.inProgress, 'Game 1');
-  assert.equal(braves.nextLabel, null);
+  assert.ok(!('inProgress' in braves), 'no such field');
+  assert.equal(braves.nextLabel, 'Game 1 · Tue, Sep 29 · 2:00 PM ET');
   assert.equal(braves.opponent, 'Phillies');
   assert.equal(braves.nextHost, 'Host: Braves · Truist Park');
+  assert.equal(braves.scoreLine, null);
+  assert.ok(!/\blive\b|progress/i.test(JSON.stringify(braves)));
 });
 
 test('TEAM, alive against a slot no club fills yet: the opponent is the slot text', () => {
@@ -197,11 +201,13 @@ test('HUB, alive: the round being played, a line and a link for each of its seri
   assert.equal(card.roundLabel, 'Wild Card Series');
   assert.equal(card.updatedLabel, 'Sep 29, 4:00 PM ET');
   assert.deepEqual(card.series, [
-    { id: 'wild_card-1', href: '/playoffs/mlb#wild_card-1', names: 'Astros vs White Sox', status: 'Game 1 · Tue, Sep 29 · 5:00 PM ET', inProgress: false },
-    { id: 'wild_card-2', href: '/playoffs/mlb#wild_card-2', names: 'Yankees vs Red Sox', status: 'Game 1 · Tue, Sep 29 · 8:00 PM ET', inProgress: false },
-    { id: 'wild_card-3', href: '/playoffs/mlb#wild_card-3', names: 'Braves vs Phillies', status: 'Game 1 in progress', inProgress: true },
-    { id: 'wild_card-4', href: '/playoffs/mlb#wild_card-4', names: 'Padres vs Cubs', status: 'Game 1 · Tue, Sep 29 · 10:00 PM ET', inProgress: false },
+    { id: 'wild_card-1', href: '/playoffs/mlb#wild_card-1', names: 'Astros vs White Sox', status: 'Game 1 · Tue, Sep 29 · 5:00 PM ET' },
+    { id: 'wild_card-2', href: '/playoffs/mlb#wild_card-2', names: 'Yankees vs Red Sox', status: 'Game 1 · Tue, Sep 29 · 8:00 PM ET' },
+    // A game in progress: its scheduled time, not its state.
+    { id: 'wild_card-3', href: '/playoffs/mlb#wild_card-3', names: 'Braves vs Phillies', status: 'Game 1 · Tue, Sep 29 · 2:00 PM ET' },
+    { id: 'wild_card-4', href: '/playoffs/mlb#wild_card-4', names: 'Padres vs Cubs', status: 'Game 1 · Tue, Sep 29 · 10:00 PM ET' },
   ]);
+  assert.ok(!/\blive\b|progress/i.test(JSON.stringify(card)));
   const wnba = leagueCard(inbound([FIXTURE.mlbFields, FIXTURE.wnbaFields], FIELDS_AT), 'WNBA');
   assert.equal(wnba?.roundLabel, 'First Round');
   assert.equal(wnba?.series[0].status, 'NYL leads 1-0');
@@ -303,8 +309,9 @@ test('VENUE, eliminated: a club that is out hosts nothing', () => {
   const leagues = inbound([FIXTURE.mlbMixed], MIXED_AT);
   assert.equal(venueGames(leagues, ['boston-red-sox']), null);
   assert.equal(venueGames(leagues, ['new-york-yankees']), null);
-  // Beside one that is still in.
-  assert.deepEqual(venueGames(leagues, ['seattle-mariners'])?.games.map((g) => [g.matchup, g.gameTitle, g.ifNecessary]), [['Tigers at Mariners', 'Game 5', true]]);
+  // Beside one that is still in. Game 5 of a series tied 2-2 is the deciding
+  // game: it is certain to be played, whatever the document's format flag says.
+  assert.deepEqual(venueGames(leagues, ['seattle-mariners'])?.games.map((g) => [g.matchup, g.gameTitle, g.ifNecessary]), [['Tigers at Mariners', 'Game 5', false]]);
 });
 
 test('VENUE, not in the playoffs: nothing', () => {

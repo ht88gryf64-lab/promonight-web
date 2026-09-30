@@ -18,15 +18,17 @@ import { PlayoffsLeague, type LeagueBody } from '@/components/playoffs/PlayoffsL
 import { seriesTickets, ticketButtons } from '@/components/playoffs/tickets';
 
 // See the hub page: on-demand revalidation is the real path, the timer is
-// the backstop for a render that caught a failed read.
+// the backstop. A failed read throws and replaces nothing.
 export const revalidate = 600;
 
 type Params = { league: string };
 
 /**
  * One page per league that has a bracket document this season. A league in
- * the route table with no document yet is still rendered on demand, as
- * "bracket not available". Anything outside the route table is a 404.
+ * the route table with no document yet is a 404 until the document exists,
+ * and so is anything outside the route table. Nothing here is ever served
+ * as "not available": a read that fails throws, and the last good page
+ * stands.
  */
 export async function generateStaticParams(): Promise<Params[]> {
   try {
@@ -44,7 +46,8 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   // Written from the same read the body renders, which is cached for the
   // request, so the head says what the body says.
   const page = await getLeaguePageData(league);
-  const copy = leagueCopy(POSTSEASON_SEASON, league, postseasonPath(league), page.state === 'ok' ? page.view : null);
+  if (page.state !== 'ok') return {};
+  const copy = leagueCopy(POSTSEASON_SEASON, league, postseasonPath(league), page.view);
   return {
     title: copy.title,
     description: copy.description,
@@ -60,34 +63,28 @@ export default async function PlayoffsLeaguePage({ params }: { params: Promise<P
   if (!league) notFound();
 
   const page = await getLeaguePageData(league);
+  if (page.state !== 'ok') notFound();
 
-  let body: LeagueBody;
-  let tickets = {};
-  let panelTickets = {};
-  if (page.state === 'ok') {
-    const homeGames = page.view.phase.kind === 'active' ? homeGamesWindow([page.view], new Date()) : { primary: [], rest: [] };
-    body = { state: 'ok', view: page.view, predictionsLocked: page.predictionsLocked, homeGames };
-    const teams = new Map((await getAllTeams()).map((t) => [t.id, t]));
-    tickets = ticketButtons(
-      [...homeGames.primary, ...homeGames.rest].map((g) => g.hostTeamId),
-      teams,
-      'web_playoffs_league',
-      'playoffs_league',
-    );
-    // A series' detail sells tickets for the host of its next game that is
-    // still to be played, and only when that host is a club.
-    const upcoming = page.view.rounds.flatMap((r) =>
-      r.groups.flatMap((g) =>
-        g.series.map((s) => ({ id: s.id, hostTeamId: s.next && s.next.state === 'scheduled' ? s.next.hostTeamId : null })),
-      ),
-    );
-    panelTickets = seriesTickets(upcoming, teams, 'web_playoffs_league', 'playoffs_league');
-  } else {
-    body = { state: page.state };
-  }
+  const homeGames = page.view.phase.kind === 'active' ? homeGamesWindow([page.view], new Date()) : { primary: [], rest: [] };
+  const body: LeagueBody = { state: 'ok', view: page.view, predictionsLocked: page.predictionsLocked, homeGames };
+  const teams = new Map((await getAllTeams()).map((t) => [t.id, t]));
+  const tickets = ticketButtons(
+    [...homeGames.primary, ...homeGames.rest].map((g) => g.hostTeamId),
+    teams,
+    'web_playoffs_league',
+    'playoffs_league',
+  );
+  // A series' detail sells tickets for the host of its next game that is
+  // still to be played, and only when that host is a club.
+  const upcoming = page.view.rounds.flatMap((r) =>
+    r.groups.flatMap((g) =>
+      g.series.map((s) => ({ id: s.id, hostTeamId: s.next && s.next.state === 'scheduled' ? s.next.hostTeamId : null })),
+    ),
+  );
+  const panelTickets = seriesTickets(upcoming, teams, 'web_playoffs_league', 'playoffs_league');
 
-  const copy = leagueCopy(POSTSEASON_SEASON, league, postseasonPath(league), page.state === 'ok' ? page.view : null);
-  const schemas = leagueJsonLd(copy, league, page.state === 'ok' ? page.view.updatedAt : null);
+  const copy = leagueCopy(POSTSEASON_SEASON, league, postseasonPath(league), page.view);
+  const schemas = leagueJsonLd(copy, league, page.view.updatedAt);
 
   // The cross link goes only to a league whose postseason is underway.
   const others = await Promise.all(POSTSEASON_LEAGUES.filter((l) => l !== league).map((l) => getLeaguePageData(l)));

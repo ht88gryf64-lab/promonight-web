@@ -351,6 +351,19 @@ try {
   c = await calls();
   const vh = propsFor(c, 'venue_hub_click', 'posthog')[0] || {};
   check('park link: venue_hub_click reaches both sinks from this surface', sinksFor(c, 'venue_hub_click') === 'ga4+posthog' && vh.surface === 'web_playoffs_league' && vh.destination_url === '/venues/' + vh.building_slug && !!vh.team_slug, JSON.stringify({ surface: vh.surface, placement: vh.placement, building_slug: vh.building_slug, team_slug: vh.team_slug }));
+  // Keyboard activation raises no mousedown. The Enter key must fire the
+  // same event once, and a held key must not fire it again.
+  await ev(`(() => { const stop = (e) => e.preventDefault(); document.addEventListener('click', stop, true);
+    const park = document.querySelector('#wild_card-1 [data-park-link]'); park.focus();
+    park.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    park.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true, repeat: true }));
+    park.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
+    document.removeEventListener('click', stop, true); })()`);
+  await sleep(300);
+  const afterKey = await calls();
+  const keyed = afterKey.filter((x) => x.name === 'venue_hub_click');
+  const mousedOnly = c.filter((x) => x.name === 'venue_hub_click');
+  check('park link: the Enter key fires venue_hub_click at both sinks, once', keyed.length === mousedOnly.length + 2 && sinksFor(afterKey, 'venue_hub_click') === 'ga4+posthog', `${keyed.length - mousedOnly.length} more events after Enter, a held Enter and Space`);
   const cc = propsFor(c, 'cta_click', 'posthog');
   check('club link and breadcrumb: cta_click reaches both sinks from this surface', sinksFor(c, 'cta_click') === 'ga4+posthog' && cc.length === 2 && cc.every((p) => p.surface === 'web_playoffs_league') && cc.some((p) => p.cta_id === 'playoffs_series_team' && /^\/mlb\//.test(p.cta_destination)) && cc.some((p) => p.cta_id === 'playoffs_breadcrumb'), cc.map((p) => `${p.cta_id} ${p.cta_destination}`).join(' | '));
 

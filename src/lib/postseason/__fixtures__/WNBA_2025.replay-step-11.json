@@ -1,0 +1,593 @@
+{
+  "league": "WNBA",
+  "season": 2025,
+  "series": [
+    {
+      "round": "first_round",
+      "roundLabel": "First Round",
+      "seriesKey": "R1-1v8",
+      "conference": null,
+      "bestOf": 3,
+      "higher": {
+        "slug": "minnesota-lynx",
+        "seed": 1
+      },
+      "lower": {
+        "slug": "golden-state-valkyries",
+        "seed": 8
+      },
+      "wins": {
+        "higher": 2,
+        "lower": 0
+      },
+      "status": "final",
+      "winner": "minnesota-lynx",
+      "games": [
+        {
+          "gameNumber": 1,
+          "gameId": "401820272",
+          "date": "2025-09-14",
+          "start": "2025-09-14T17:00Z",
+          "startTimeTBD": false,
+          "home": "minnesota-lynx",
+          "away": "golden-state-valkyries",
+          "homeSide": "higher",
+          "status": "final",
+          "homeScore": 101,
+          "awayScore": 72,
+          "winnerSide": "higher",
+          "ifNecessary": false
+        },
+        {
+          "gameNumber": 2,
+          "gameId": "401820319",
+          "date": "2025-09-17",
+          "start": "2025-09-18T02:00Z",
+          "startTimeTBD": false,
+          "home": "golden-state-valkyries",
+          "away": "minnesota-lynx",
+          "homeSide": "lower",
+          "status": "final",
+          "homeScore": 74,
+          "awayScore": 75,
+          "winnerSide": "higher",
+          "ifNecessary": false
+        }
+      ]
+    },
+    {
+      "round": "first_round",
+      "roundLabel": "First Round",
+      "seriesKey": "R1-2v7",
+      "conference": null,
+      "bestOf": 3,
+      "higher": {
+        "slug": "las-vegas-aces",
+        "seed": 2
+      },
+      "lower": {
+        "slug": "seattle-storm",
+        "seed": 7
+      },
+      "wins": {
+        "higher": 2,
+        "lower": 1
+      },
+      "status": "final",
+      "winner": "las-vegas-aces",
+      "games": [
+        {
+          "gameNumber": 1,
+          "gameId": "401820315",
+          "date": "2025-09-14",
+          "start": "2025-09-15T02:00Z",
+          "startTimeTBD": false,
+          "home": "las-vegas-aces",
+          "away": "seattle-storm",
+          "homeSide": "higher",
+          "status": "final",
+          "homeScore": 102,
+          "awayScore": 77,
+          "winnerSide": "higher",
+          "ifNecessary": false
+        },
+        {
+          "gameNumber": 2,
+          "gameId": "401820317",
+          "date": "2025-09-16",
+          "start": "2025-09-17T01:30Z",
+          "startTimeTBD": false,
+          "home": "seattle-storm",
+          "away": "las-vegas-aces",
+          "homeSide": "lower",
+          "status": "final",
+          "homeScore": 86,
+          "awayScore": 83,
+          "winnerSide": "lower",
+          "ifNecessary": false
+        },
+        {
+          "gameNumber": 3,
+          "gameId": "401820321",
+          "date": "2025-09-18",
+          "start": "2025-09-19T01:30Z",
+          "startTimeTBD": false,
+          "home": "las-vegas-aces",
+          "away": "seattle-storm",
+          "homeSide": "higher",
+          "status": "final",
+          "homeScore": 74,
+          "awayScore": 73,
+          "winnerSide": "higher",
+          "ifNecessary": true
+        }
+      ]
+    },
+    {
+      "round": "first_round",
+      "roundLabel": "First Round",
+      "seriesKey": "R1-3v6",
+      "conference": null,
+      "bestOf": 3,
+      "higher": {
+        "slug": "atlanta-dream",
+        "seed": 3
+      },
+      "lower": {
+        "slug": "indiana-fever",
+        "seed": 6
+      },
+      "wins": {
+        "higher": 1,
+        "lower": 2
+      },
+      "status": "final",
+      "winner": "indiana-fever",
+      "games": [
+        {
+          "gameNumber": 1,
+          "gameId": "401820313",
+          "date": "2025-09-14",
+          "start": "2025-09-14T19:00Z",
+          "startTimeTBD": false,
+          "home": "atlanta-dream",
+          "away": "indiana-fever",
+          "homeSide": "higher",
+          "status": "final",
+          "homeScore": 80,
+          "awayScore": 68,
+          "winnerSide": "higher",
+          "ifNecessary": false
+        },
+        {
+          "gameNumber": 2,
+          "gameId": "401820316",
+          "date": "2025-09-16",
+          "start": "2025-09-16T23:30Z",
+          "startTimeTBD": false,
+          "home": "indiana-fever",
+          "away": "atlanta-dream",
+          "homeSide": "lower",
+          "status": "final",
+          "homeScore": 77,
+          "awayScore": 60,
+          "winnerSide": "lower",
+          "ifNecessary": false
+        },
+        {
+          "gameNumber": 3,
+          "gameId": "401820320",
+          "date": "2025-09-18",
+          "start": "2025-09-18T23:30Z",
+          "startTimeTBD": false,
+          "home": "atlanta-dream",
+          "away": "indiana-fever",
+          "homeSide": "higher",
+          "status": "final",
+          "homeScore": 85,
+          "awayScore": 87,
+          "winnerSide": "lower",
+          "ifNecessary": true
+        }
+      ]
+    },
+    {
+      "round": "first_round",
+      "roundLabel": "First Round",
+      "seriesKey": "R1-4v5",
+      "conference": null,
+      "bestOf": 3,
+      "higher": {
+        "slug": "phoenix-mercury",
+        "seed": 4
+      },
+      "lower": {
+        "slug": "new-york-liberty",
+        "seed": 5
+      },
+      "wins": {
+        "higher": 2,
+        "lower": 1
+      },
+      "status": "final",
+      "winner": "phoenix-mercury",
+      "games": [
+        {
+          "gameNumber": 1,
+          "gameId": "401820314",
+          "date": "2025-09-14",
+          "start": "2025-09-14T21:00Z",
+          "startTimeTBD": false,
+          "home": "phoenix-mercury",
+          "away": "new-york-liberty",
+          "homeSide": "higher",
+          "status": "final",
+          "homeScore": 69,
+          "awayScore": 76,
+          "winnerSide": "lower",
+          "ifNecessary": false
+        },
+        {
+          "gameNumber": 2,
+          "gameId": "401820318",
+          "date": "2025-09-17",
+          "start": "2025-09-18T00:00Z",
+          "startTimeTBD": false,
+          "home": "new-york-liberty",
+          "away": "phoenix-mercury",
+          "homeSide": "lower",
+          "status": "final",
+          "homeScore": 60,
+          "awayScore": 86,
+          "winnerSide": "higher",
+          "ifNecessary": false
+        },
+        {
+          "gameNumber": 3,
+          "gameId": "401820324",
+          "date": "2025-09-19",
+          "start": "2025-09-20T01:00Z",
+          "startTimeTBD": false,
+          "home": "phoenix-mercury",
+          "away": "new-york-liberty",
+          "homeSide": "higher",
+          "status": "final",
+          "homeScore": 79,
+          "awayScore": 73,
+          "winnerSide": "higher",
+          "ifNecessary": true
+        }
+      ]
+    },
+    {
+      "round": "semifinals",
+      "roundLabel": "Semifinals",
+      "seriesKey": "SF-A",
+      "conference": null,
+      "bestOf": 5,
+      "higher": {
+        "slug": "minnesota-lynx",
+        "seed": 1
+      },
+      "lower": {
+        "slug": "phoenix-mercury",
+        "seed": 4
+      },
+      "wins": {
+        "higher": 0,
+        "lower": 0
+      },
+      "status": "upcoming",
+      "winner": null,
+      "games": [
+        {
+          "gameNumber": 1,
+          "gameId": "401820328",
+          "date": "2025-09-21",
+          "start": "2025-09-21T21:00Z",
+          "startTimeTBD": true,
+          "home": "minnesota-lynx",
+          "away": "phoenix-mercury",
+          "homeSide": "higher",
+          "status": "scheduled",
+          "homeScore": 0,
+          "awayScore": 0,
+          "winnerSide": null,
+          "ifNecessary": false
+        },
+        {
+          "gameNumber": 2,
+          "gameId": "401820330",
+          "date": "2025-09-23",
+          "start": "2025-09-23T23:30Z",
+          "startTimeTBD": true,
+          "home": "minnesota-lynx",
+          "away": "phoenix-mercury",
+          "homeSide": "higher",
+          "status": "scheduled",
+          "homeScore": 0,
+          "awayScore": 0,
+          "winnerSide": null,
+          "ifNecessary": false
+        },
+        {
+          "gameNumber": 3,
+          "gameId": "401820333",
+          "date": "2025-09-27",
+          "start": "2025-09-27T01:40Z",
+          "startTimeTBD": true,
+          "home": "phoenix-mercury",
+          "away": "minnesota-lynx",
+          "homeSide": "lower",
+          "status": "scheduled",
+          "homeScore": 0,
+          "awayScore": 0,
+          "winnerSide": null,
+          "ifNecessary": false
+        },
+        {
+          "gameNumber": 4,
+          "gameId": "401820338",
+          "date": "2025-09-29",
+          "start": "2025-09-29T00:00Z",
+          "startTimeTBD": true,
+          "home": "phoenix-mercury",
+          "away": "minnesota-lynx",
+          "homeSide": "lower",
+          "status": "scheduled",
+          "homeScore": 0,
+          "awayScore": 0,
+          "winnerSide": null,
+          "ifNecessary": true
+        },
+        {
+          "gameNumber": 5,
+          "gameId": "syn-SF-A-5",
+          "date": "2025-09-30",
+          "start": "2025-09-30T00:00:00Z",
+          "startTimeTBD": true,
+          "home": "minnesota-lynx",
+          "away": "phoenix-mercury",
+          "homeSide": "higher",
+          "status": "scheduled",
+          "homeScore": 0,
+          "awayScore": 0,
+          "winnerSide": null,
+          "ifNecessary": true
+        }
+      ]
+    },
+    {
+      "round": "semifinals",
+      "roundLabel": "Semifinals",
+      "seriesKey": "SF-B",
+      "conference": null,
+      "bestOf": 5,
+      "higher": {
+        "slug": "las-vegas-aces",
+        "seed": 2
+      },
+      "lower": {
+        "slug": "indiana-fever",
+        "seed": 6
+      },
+      "wins": {
+        "higher": 0,
+        "lower": 0
+      },
+      "status": "upcoming",
+      "winner": null,
+      "games": [
+        {
+          "gameNumber": 1,
+          "gameId": "401820327",
+          "date": "2025-09-21",
+          "start": "2025-09-21T19:00Z",
+          "startTimeTBD": true,
+          "home": "las-vegas-aces",
+          "away": "indiana-fever",
+          "homeSide": "higher",
+          "status": "scheduled",
+          "homeScore": 0,
+          "awayScore": 0,
+          "winnerSide": null,
+          "ifNecessary": false
+        },
+        {
+          "gameNumber": 2,
+          "gameId": "401820331",
+          "date": "2025-09-24",
+          "start": "2025-09-24T01:30Z",
+          "startTimeTBD": true,
+          "home": "las-vegas-aces",
+          "away": "indiana-fever",
+          "homeSide": "higher",
+          "status": "scheduled",
+          "homeScore": 0,
+          "awayScore": 0,
+          "winnerSide": null,
+          "ifNecessary": false
+        },
+        {
+          "gameNumber": 3,
+          "gameId": "401820334",
+          "date": "2025-09-26",
+          "start": "2025-09-26T23:30Z",
+          "startTimeTBD": true,
+          "home": "indiana-fever",
+          "away": "las-vegas-aces",
+          "homeSide": "lower",
+          "status": "scheduled",
+          "homeScore": 0,
+          "awayScore": 0,
+          "winnerSide": null,
+          "ifNecessary": false
+        },
+        {
+          "gameNumber": 4,
+          "gameId": "401820337",
+          "date": "2025-09-28",
+          "start": "2025-09-28T19:00Z",
+          "startTimeTBD": true,
+          "home": "indiana-fever",
+          "away": "las-vegas-aces",
+          "homeSide": "lower",
+          "status": "scheduled",
+          "homeScore": 0,
+          "awayScore": 0,
+          "winnerSide": null,
+          "ifNecessary": true
+        },
+        {
+          "gameNumber": 5,
+          "gameId": "401820340",
+          "date": "2025-10-01",
+          "start": "2025-10-01T01:30Z",
+          "startTimeTBD": true,
+          "home": "las-vegas-aces",
+          "away": "indiana-fever",
+          "homeSide": "higher",
+          "status": "scheduled",
+          "homeScore": 0,
+          "awayScore": 0,
+          "winnerSide": null,
+          "ifNecessary": true
+        }
+      ]
+    },
+    {
+      "round": "finals",
+      "roundLabel": "WNBA Finals",
+      "seriesKey": "F",
+      "conference": null,
+      "bestOf": 7,
+      "higher": {
+        "placeholder": "TBD",
+        "seed": null
+      },
+      "lower": {
+        "placeholder": "TBD",
+        "seed": null
+      },
+      "wins": {
+        "higher": 0,
+        "lower": 0
+      },
+      "status": "upcoming",
+      "winner": null,
+      "games": []
+    }
+  ],
+  "unplaced": {
+    "series": [],
+    "games": [
+      {
+        "round": "finals",
+        "roundLabel": "WNBA Finals",
+        "gameNumber": 1,
+        "gameId": "401820322",
+        "start": "2025-10-04T00:00Z",
+        "startTimeTBD": true,
+        "home": "TBD",
+        "away": "TBD",
+        "status": "scheduled",
+        "ifNecessary": false
+      },
+      {
+        "round": "finals",
+        "roundLabel": "WNBA Finals",
+        "gameNumber": 2,
+        "gameId": "401820325",
+        "start": "2025-10-05T19:00Z",
+        "startTimeTBD": true,
+        "home": "TBD",
+        "away": "TBD",
+        "status": "scheduled",
+        "ifNecessary": false
+      },
+      {
+        "round": "finals",
+        "roundLabel": "WNBA Finals",
+        "gameNumber": 3,
+        "gameId": "401820326",
+        "start": "2025-10-09T00:00Z",
+        "startTimeTBD": true,
+        "home": "TBD",
+        "away": "TBD",
+        "status": "scheduled",
+        "ifNecessary": false
+      },
+      {
+        "round": "finals",
+        "roundLabel": "WNBA Finals",
+        "gameNumber": 4,
+        "gameId": "401820329",
+        "start": "2025-10-11T00:00Z",
+        "startTimeTBD": true,
+        "home": "TBD",
+        "away": "TBD",
+        "status": "scheduled",
+        "ifNecessary": false
+      },
+      {
+        "round": "finals",
+        "roundLabel": "WNBA Finals",
+        "gameNumber": 5,
+        "gameId": "syn-F-5",
+        "start": "2025-10-12T00:00:00Z",
+        "startTimeTBD": true,
+        "home": "TBD",
+        "away": "TBD",
+        "status": "scheduled",
+        "ifNecessary": true
+      },
+      {
+        "round": "finals",
+        "roundLabel": "WNBA Finals",
+        "gameNumber": 6,
+        "gameId": "syn-F-6",
+        "start": "2025-10-13T00:00:00Z",
+        "startTimeTBD": true,
+        "home": "TBD",
+        "away": "TBD",
+        "status": "scheduled",
+        "ifNecessary": true
+      },
+      {
+        "round": "finals",
+        "roundLabel": "WNBA Finals",
+        "gameNumber": 7,
+        "gameId": "syn-F-7",
+        "start": "2025-10-14T00:00:00Z",
+        "startTimeTBD": true,
+        "home": "TBD",
+        "away": "TBD",
+        "status": "scheduled",
+        "ifNecessary": true
+      }
+    ]
+  },
+  "seeds": {
+    "file": "seeds-wnba-2025.json",
+    "authoredBy": null,
+    "authoredOn": null
+  },
+  "bracketSha256": "bf1cb34bf603cddb6a2ad488644bcf2d442aaedb3adaeacc47c5cd787c7ccd6a",
+  "source": {
+    "kind": "espn-scoreboard",
+    "urls": [
+      "fixture: promo-pipeline lib/postseason/__fixtures__/wnba-2025-postseason-events.json"
+    ]
+  },
+  "runId": "fixture-WNBA_2025.replay-step-11",
+  "writerVersion": 1,
+  "operatorLog": [],
+  "validatedSeedSha256": null,
+  "lastFetchedAt": {
+    "__firestoreTimestamp": "2025-09-20T05:00:00.000Z"
+  },
+  "lastChangedAt": {
+    "__firestoreTimestamp": "2025-09-20T05:00:00.000Z"
+  },
+  "lastRevalidatedSha256": "bf1cb34bf603cddb6a2ad488644bcf2d442aaedb3adaeacc47c5cd787c7ccd6a"
+}

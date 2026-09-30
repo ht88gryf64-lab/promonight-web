@@ -3495,12 +3495,13 @@ about 5% of pageviews for ten days, with no error anywhere.
 
 ## 59. Pages that show the bracket outside `/playoffs` are not revalidated when the bracket changes
 
-**Status: OPEN, and the reason the playoffs merge is held.**
+**Status: RESOLVED on both sides, 2026-09-30. Pipeline: promo-pipeline main
+`ba85ed8` (the fan-out). Web: `feature/playoffs-v2`, the G3 fix round.**
 
-**What it is.** The postseason feed in promo-pipeline revalidates two paths
-when a bracket document changes: `/playoffs` and `/playoffs/{league}`
-(`lib/postseason/revalidate.js`, `bracketPaths`). Since 2026-09-29 four more
-surfaces render from the same documents, and none of them is on that list:
+**What it was.** The postseason feed revalidated two paths when a bracket
+document changed: `/playoffs` and `/playoffs/{league}`. Since 2026-09-29 four
+more surfaces render from the same documents, and none of them was on that
+list:
 
 | surface | what it shows from the bracket | regenerates |
 | --- | --- | --- |
@@ -3509,24 +3510,46 @@ surfaces render from the same documents, and none of them is on that list:
 | `/mlb` and `/wnba` | the round, and a status line for each series | every 6h |
 | the homepage | each league being played and its round | every 6h |
 
-So a team page can say "Series tied 1-1, Next: Game 3" for up to a day after
-Game 3 was played.
+So a team page could say "Series tied 1-1, Next: Game 3" for up to a day
+after Game 3 was played, and, worse, carry a red "Live" badge and "Game 1 in
+progress" for a day after the game ended, because the team module stated the
+present tense.
 
-**What limits the damage today.** Every module that states a score or a game
-time prints the bracket's own change stamp beside it ("Bracket updated Sep 29,
-4:10 PM ET"), so a stale module is dated rather than wrong about when it was
-true. The homepage module states the round and nothing faster, because `/`
-cannot be revalidated on demand at all: `/api/revalidate` rejects a bare `/`
-by design. A venue module drops a game on the day after it, at the next
-regeneration, and never lists one dated before the render.
+**Three parts to the fix, and the first alone would not have closed it.**
 
-**The fix is in the pipeline, not here.** `bracketPaths(league)` has to grow
-to the team page of every club in the bracket, the venue page of every host,
-and the league hub. The web already accepts all of those paths (`PATH_RE`
-allows up to three segments). The homepage needs either a revalidate route
-that accepts `/`, or to be left at its six hours with the round-only module it
-has now.
+1. *Pipeline fan-out.* `bracketPaths` now posts `/playoffs`,
+   `/playoffs/{league}`, `/{league}`, the team page of every club in a
+   changed series (a placeholder whose feeder is decided counts as its
+   winner; the last series going final names every club) and the venue page
+   of every host of a changed series, deduplicated, at most 60 a run. `/` is
+   withheld by ruling: the endpoint refuses a bare `/` and would fail the
+   batch on one bad path.
+2. *The web read the bracket for these modules through two stacked five
+   minute process caches* (`loadCurrentBrackets` and a loader built on it in
+   `src/lib/postseason/data.ts`). A team page regenerated right after the
+   pipeline's post would have been rebuilt from the bracket the post was
+   about to replace, and held for its whole window, while the pipeline had
+   recorded the revalidation as done. The G3 reviewer executed this with a
+   fake Firestore and a mocked clock: at 00:02:10Z the document said final
+   and the re-rendered team page still said live; correct only at 00:06:01Z.
+   The inbound read is now `getPlayoffsInbound`, a fresh read wrapped only
+   in React's per-request `cache()`, the same as `/playoffs` itself. The
+   five minute loader is kept for one reader: the nav-link gate, which the
+   root layout asks on every route. `data.test.ts` proves a second render
+   after a document change is built from the new document with no clock
+   moved.
+3. *Nothing in the present tense on any inbound module.* A team page still
+   stands for a day between bracket changes when nothing changes, and a hub
+   for six hours. The modules state a series score and a game's scheduled
+   time, both of which stay true; "Live" and "in progress" are gone from
+   them and belong to the playoffs pages, which the pipeline revalidates and
+   which regenerate every ten minutes besides. `inbound-render.test.tsx`
+   refuses any present-tense wording on any module in any state.
 
-**Do not "fix" this by shortening `revalidate` on the team route.** It is one
-constant for all 169 team pages, all year, and the modules exist on about
-twenty of them for about six weeks.
+**What stands.** The homepage is still at six hours with a round-only
+module, by ruling. Every module that states a score or a game time still
+prints the bracket's own change stamp beside it.
+
+**Do not "fix" the residue by shortening `revalidate` on the team route.** It
+is one constant for all 169 team pages, all year, and the modules exist on
+about twenty of them for about six weeks.

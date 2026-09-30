@@ -1,6 +1,5 @@
 import { TrackedLink } from '@/components/analytics/TrackedLink';
 import type { ClubPlayoffs } from '@/lib/postseason/inbound';
-import { InProgressBadge } from '../ui';
 
 // The postseason module on a club's team page. Server-rendered; the only
 // client code in it is the click handler on its link.
@@ -44,12 +43,6 @@ export function TeamPlayoffsModule({ club, teamId, teamName }: { club: ClubPlayo
             {teamName} vs {club.opponent}
           </p>
           {club.scoreLine && <p className="mt-0.5 font-rd text-[14px] text-rd-ink">{club.scoreLine}</p>}
-          {club.inProgress && (
-            <p className="mt-1 flex items-center gap-2 font-rd text-[13.5px] text-rd-ink-soft">
-              <InProgressBadge />
-              <span>{club.inProgress} in progress</span>
-            </p>
-          )}
           {club.nextLabel && (
             <p className="mt-1 font-rd text-[13.5px] text-rd-ink-soft">
               <span className="font-semibold text-rd-ink">Next:</span> {club.nextLabel}

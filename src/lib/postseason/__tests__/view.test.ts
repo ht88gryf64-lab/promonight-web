@@ -20,6 +20,7 @@ import {
   seriesIds,
   type LeagueView,
   type SeriesView,
+  isConditional,
 } from '../view';
 import { CAPTURED_AT, FIELDS_AT, FIXTURE, IN_GAME_AT, clubs, loadDoc, parks } from './helpers';
 
@@ -712,4 +713,59 @@ test('the view is plain data: it survives a JSON round trip unchanged', () => {
     const v = view(f);
     assert.deepEqual(JSON.parse(JSON.stringify(v)), v, f);
   }
+});
+
+// ---- "If necessary", computed from the series ----
+//
+// The document's flag is the format's: every game past the clinch number
+// carries it, and it stays on a deciding game. The page's flag is the
+// series': a scheduled game is conditional only while the leader could
+// still clinch before it comes up.
+
+test('CONDITIONAL: best of 3', () => {
+  const series = (hi: number, lo: number, status: 'upcoming' | 'live' | 'final' = hi + lo ? 'live' : 'upcoming') => ({ bestOf: 3, wins: { higher: hi, lower: lo }, status });
+  const game = (n: number, status: 'scheduled' | 'final' | 'live' = 'scheduled') => ({ gameNumber: n, status });
+  // Nothing played: game 3 may not happen, games 1 and 2 will.
+  assert.deepEqual([1, 2, 3].map((n) => isConditional(series(0, 0), game(n))), [false, false, true]);
+  // 1-0: game 3 still may not happen.
+  assert.deepEqual([2, 3].map((n) => isConditional(series(1, 0), game(n))), [false, true]);
+  // 1-1: game 3 decides the series and is certain.
+  assert.equal(isConditional(series(1, 1), game(3)), false);
+  // A game that has started or been played is never conditional.
+  assert.equal(isConditional(series(0, 0), game(3, 'live')), false);
+  assert.equal(isConditional(series(1, 1), game(3, 'final')), false);
+  // A decided series has no conditional game left, whatever the row says.
+  assert.equal(isConditional(series(2, 0, 'final'), game(3)), false);
+});
+
+test('CONDITIONAL: best of 5 and best of 7', () => {
+  const s = (bestOf: number, hi: number, lo: number) => ({ bestOf, wins: { higher: hi, lower: lo }, status: 'live' as const });
+  const g = (n: number) => ({ gameNumber: n, status: 'scheduled' as const });
+  assert.deepEqual([1, 2, 3, 4, 5].map((n) => isConditional(s(5, 0, 0), g(n))), [false, false, false, true, true]);
+  assert.deepEqual([3, 4, 5].map((n) => isConditional(s(5, 2, 0), g(n))), [false, true, true], 'at 2-0 game 3 is still certain: the leader needs a third win');
+  assert.deepEqual([4, 5].map((n) => isConditional(s(5, 2, 1), g(n))), [false, true], 'at 2-1 game 4 is certain');
+  assert.equal(isConditional(s(5, 2, 2), g(5)), false, 'a 2-2 series: game 5 is certain');
+  assert.deepEqual([4, 5, 6, 7].map((n) => isConditional(s(7, 0, 0), g(n))), [false, true, true, true]);
+  assert.deepEqual([5, 6, 7].map((n) => isConditional(s(7, 3, 1), g(n))), [false, true, true], 'at 3-1 game 5 is certain: the leader needs a fourth win');
+  assert.deepEqual([6, 7].map((n) => isConditional(s(7, 3, 2), g(n))), [false, true], 'at 3-2 game 6 is certain');
+  assert.equal(isConditional(s(7, 3, 3), g(7)), false, 'a 3-3 series: game 7 is certain');
+  assert.equal(isConditional(s(7, 2, 2), g(5)), false, 'game 5 at 2-2 is certain; games 6 and 7 are not');
+  assert.deepEqual([6, 7].map((n) => isConditional(s(7, 2, 2), g(n))), [false, true], 'at 2-2 game 6 is certain too; only game 7 is not');
+});
+
+test('CONDITIONAL, through a document: the deciding game of a tied series drops the label everywhere', () => {
+  // The mixed 2025 document holds a Division Series tied 2-2 with game 5
+  // scheduled and flagged by the format.
+  const d = loadDoc(FIXTURE.mlbMixed);
+  const tied = (d.series as { seriesKey: string; wins: { higher: number; lower: number }; games: { gameNumber: number; status: string; ifNecessary: boolean }[] }[]).find((s) => s.wins.higher === 2 && s.wins.lower === 2);
+  assert.ok(tied, 'the fixture holds a 2-2 series');
+  const five = tied.games.find((g) => g.gameNumber === 5);
+  assert.ok(five && five.status === 'scheduled' && five.ifNecessary === true, 'the document flags game 5');
+  const v = view(FIXTURE.mlbMixed, new Date('2025-10-09T03:08:00Z'));
+  const s = v.rounds.flatMap((r) => r.groups.flatMap((g) => g.series)).find((x) => x.scoreLine === 'Series tied 2-2');
+  assert.ok(s);
+  const g5 = s.games.find((g) => g.gameNumber === 5);
+  assert.equal(g5?.ifNecessary, false);
+  assert.equal(g5?.stateLabel, 'Scheduled');
+  assert.ok(v.homeGames.filter((g) => g.seriesId === s.id).every((g) => g.ifNecessary === false));
 });

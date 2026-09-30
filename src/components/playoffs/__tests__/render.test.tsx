@@ -505,22 +505,9 @@ test('CONCLUDED: the champion is named, nothing is "next", no home games are off
   assert.equal(count(element(html, 'data-rounds'), 'data-series-status="final"'), 11);
 });
 
-test('UNAVAILABLE: a missing or unreadable document renders that, and no bracket', () => {
-  for (const state of ['missing', 'unavailable'] as const) {
-    const html = renderToStaticMarkup(
-      <PlayoffsLeague league="MLB" season={2026} body={{ state }} tickets={{}} panelTickets={{}} otherLeagues={[{ league: 'WNBA', href: '/playoffs/wnba' }]} />,
-    );
-    const text = textOf(html);
-    assert.ok(html.includes('data-bracket-state="unavailable"'), state);
-    assert.ok(text.includes('Bracket not available'));
-    assert.match(html, /<h1[^>]*>2026 MLB Playoffs<\/h1>/);
-    for (const gone of ['data-series="', 'data-round="', 'data-bracket=', 'data-control=', 'data-series-panel', 'data-bracket-updated', 'data-lede', 'data-predictions', 'data-predicted-bracket-slot', 'data-home-games']) {
-      assert.equal(count(html, gone), 0, `${state}: ${gone}`);
-    }
-    assert.ok(!text.includes('every series'));
-    assert.ok(html.includes('href="/playoffs/wnba"'), 'the way to the other league still works');
-  }
-});
+// There is no "unavailable" state to render: a league with no document is a
+// 404 and a read that fails throws, so the page always has a bracket. The
+// type says so (LeagueBody has one member) and routes.test.tsx proves both.
 
 // ---- The reserved predictions slot ----
 
@@ -573,7 +560,7 @@ function articleChildren(html: string): string[] {
     }
     const selfClosing = m[2].endsWith('/') || VOID.has(m[1]);
     if (depth === 0) {
-      const mark = /data-(page-intro|bracket-child|predicted-bracket-slot|home-games|predictions)\b/.exec(m[2]);
+      const mark = /data-(page-intro|bracket-child|predicted-bracket-slot|home-games|predictions|series-results|hub-results)\b/.exec(m[2]);
       out.push(mark ? `${m[1]}[${mark[1]}]` : m[1] === 'section' && /aria-label="Leagues"/.test(m[2]) ? 'section[leagues]' : m[1]);
     }
     if (!selfClosing) depth += 1;
@@ -601,7 +588,9 @@ test('ARTICLE, league page: no child is ever empty, in any state', () => {
       const kids = articleChildren(html);
       assert.ok(kids.length >= 3, `${name}: ${kids.join(' ')}`);
       assert.deepEqual(kids.slice(0, 3), ['header', 'div[page-intro]', 'div[bracket-child]'], name);
-      assert.equal(kids.includes('div[predicted-bracket-slot]'), locked, `${name}: the slot is a child only when it holds the card`);
+      // The slot holds the card only while the postseason is being played
+      // and the inputs are frozen; a finished bracket has nothing to predict.
+      assert.equal(kids.includes('div[predicted-bracket-slot]'), locked && make().phase.kind === 'active', `${name}: the slot is a child only when it holds the card`);
       // Nothing that renders as an empty element.
       assert.ok(!/<(div|section|p|span)[^>]*><\/\1>/.test(element(html, 'data-playoffs-article=').replace(/<span aria-hidden="true"[^>]*><\/span>/g, '')), `${name}: an empty element inside the article`);
     }
@@ -623,10 +612,12 @@ test('ARTICLE, league page: what must stay out of it, stays out', () => {
   assert.equal(count(html, 'data-ad-region'), 1);
 });
 
-test('ARTICLE, league page with no bracket: the heading and the notice, and nothing for a unit to follow', () => {
-  const html = renderToStaticMarkup(<PlayoffsLeague league="MLB" season={2026} body={{ state: 'unavailable' }} tickets={{}} panelTickets={{}} otherLeagues={[]} />);
-  assert.deepEqual(articleChildren(html), ['header', 'div[page-intro]']);
-  assert.ok(element(html, 'data-page-intro').includes('data-bracket-state="unavailable"'));
+test('ARTICLE, league page, finished: the results carry the page', () => {
+  const now = new Date('2025-11-02T04:00:00Z');
+  const html = leagueHtml(view(FIXTURE.mlbFinal, now), { now, locked: true });
+  // No predictions slot and no home games once the bracket is finished; the
+  // results are the child that gives the article its height.
+  assert.deepEqual(articleChildren(html), ['header', 'div[page-intro]', 'div[bracket-child]', 'section[series-results]']);
 });
 
 test('ARTICLE, hub: the same wrapper, with the league cards as the third child', () => {
@@ -642,12 +633,13 @@ test('ARTICLE, hub: the same wrapper, with the league cards as the third child',
   assert.equal(count(html, '<aside'), 0);
 });
 
-test('ARTICLE, hub in the offseason and with one unreadable league', () => {
+test('ARTICLE, hub in the offseason, and hub with both leagues finished', () => {
   const off = hubHtml([]);
   assert.deepEqual(articleChildren(off), ['header', 'div[page-intro]']);
   assert.ok(element(off, 'data-page-intro').includes('data-hub-state="offseason"'));
-  const bad = hubHtml([{ state: 'unavailable', league: 'MLB', href: '/playoffs/mlb' }]);
-  assert.deepEqual(articleChildren(bad), ['header', 'div[page-intro]', 'section[leagues]']);
+  const now = new Date('2025-11-03T12:00:00Z');
+  const done = hubHtml([ok(view(FIXTURE.mlbFinal, now), false), ok(view(FIXTURE.wnbaFinal, now), false)], now);
+  assert.deepEqual(articleChildren(done), ['header', 'div[page-intro]', 'section[leagues]', 'section[hub-results]']);
 });
 
 test('SCROLLERS: each one is the containing block for what it scrolls', () => {
@@ -658,6 +650,68 @@ test('SCROLLERS: each one is the containing block for what it scrolls', () => {
   assert.equal(scrollers.length, 2, 'the round pills and the rounds');
   for (const m of scrollers) assert.match(m[1], /(^| )relative( |$)/, m[0].slice(0, 120));
   assert.ok(count(element(html, 'data-rounds'), 'sr-only') > 0, 'the rounds do hold such text, so the rule has something to protect');
+});
+
+// ---- Results: every decided series with every game score ----
+
+test('RESULTS, finished: every series of every round, each with all of its game scores, linking to its panel', () => {
+  const now = new Date('2025-11-02T04:00:00Z');
+  const v = view(FIXTURE.mlbFinal, now);
+  const html = leagueHtml(v, { now });
+  const section = element(html, 'data-series-results=');
+  assert.ok(section.includes('data-series-results="4"'), 'four rounds have decided series');
+  assert.equal(count(section, 'data-result="'), 11, 'every series');
+  const all = v.rounds.flatMap((r) => r.groups.flatMap((g) => g.series));
+  const played = all.flatMap((s) => s.games.filter((g) => g.state === 'final' && g.result));
+  assert.equal(count(section, 'data-result-game='), played.length, 'every game that was played');
+  const text = textOf(section);
+  assert.ok(text.startsWith('Results '));
+  for (const s of all) {
+    assert.ok(text.includes(`${s.higher.label} vs ${s.lower.label}`), s.id);
+    assert.ok(text.includes(s.scoreLine as string), s.scoreLine as string);
+    assert.ok(section.includes(`href="#${s.id}"`), `a link to ${s.id}`);
+    for (const g of s.games) if (g.result) assert.ok(text.includes(g.result), g.result);
+  }
+  // Every round label, in document order.
+  assert.deepEqual([...section.matchAll(/data-results-round="([^"]+)"/g)].map((m) => m[1]), v.rounds.map((r) => r.key));
+  // Nothing in it that is not a result: no time still to come, no ticket.
+  assert.ok(!text.includes('Next:') && !section.includes('data-tickets-for'));
+});
+
+test('RESULTS, being played: "Results so far" with the decided series only; none decided means no section', () => {
+  const v = view(FIXTURE.mlbMixed, MIXED_AT);
+  const html = leagueHtml(v, { now: MIXED_AT });
+  const section = element(html, 'data-series-results=');
+  assert.ok(textOf(section).startsWith('Results so far '));
+  const decided = v.rounds.flatMap((r) => r.groups.flatMap((g) => g.series.filter((s) => s.status === 'final')));
+  assert.equal(count(section, 'data-result="'), decided.length);
+  assert.ok(decided.length > 0);
+  const undecided = v.rounds.flatMap((r) => r.groups.flatMap((g) => g.series.filter((s) => s.status !== 'final')));
+  for (const s of undecided) assert.ok(!section.includes(`data-result="${s.id}"`), `${s.id} is not decided`);
+  // Nothing decided yet: no section at all, so no empty child in the article.
+  const fresh = leagueHtml(view(FIXTURE.mlbLive), { now: CAPTURED_AT });
+  assert.equal(count(fresh, 'data-series-results='), 0);
+  assert.ok(!textOf(fresh).includes('Results'));
+});
+
+test('HUB RESULTS: each league with a decided series lists them with the round and the score, linking to the league page', () => {
+  const now = new Date('2025-10-21T12:00:00Z');
+  const mlb = view('MLB_2025.replay-step-40.json', now);
+  const wnba = view(FIXTURE.wnbaFinal, now);
+  const html = hubHtml([ok(mlb, false), ok(wnba, false)], now);
+  const section = element(html, 'data-hub-results=');
+  assert.ok(section.includes('data-hub-results="2"'));
+  assert.ok(textOf(section).startsWith('Results so far MLB '), 'MLB is still being played');
+  assert.equal(count(element(section, 'data-results-league="MLB"'), 'data-result="'), 10);
+  assert.equal(count(element(section, 'data-results-league="WNBA"'), 'data-result="'), 7);
+  assert.ok(section.includes('href="/playoffs/mlb#championship_series-1"'));
+  assert.ok(textOf(section).includes('World Series') === false, 'the World Series is not decided');
+  assert.ok(textOf(section).includes('Championship Series ·'));
+  // With everything finished the heading is "Results".
+  const done = hubHtml([ok(view(FIXTURE.mlbFinal, now), false), ok(wnba, false)], now);
+  assert.ok(textOf(element(done, 'data-hub-results=')).startsWith('Results MLB '));
+  // Nothing decided anywhere: no section.
+  assert.equal(count(hubHtml([ok(view(FIXTURE.mlbLive)), ok(view(FIXTURE.wnbaLive))]), 'data-hub-results='), 0);
 });
 
 // ---- Home games ----
@@ -806,17 +860,18 @@ test('HUB: no league at all is the offseason state, with no date in it', () => {
   assert.ok(block.includes('href="/teams"'));
 });
 
-test('HUB: an unreadable league gets a card that says so, and the hub does not claim an offseason', () => {
-  const html = hubHtml([{ state: 'unavailable', league: 'MLB', href: '/playoffs/mlb' }]);
+test('HUB: finished leagues are not the offseason; nothing above their cards says no postseason is underway', () => {
+  const now = new Date('2025-11-03T12:00:00Z');
+  const html = hubHtml([ok(view(FIXTURE.mlbFinal, now), false), ok(view(FIXTURE.wnbaFinal, now), false)], now);
   const text = textOf(html);
-  assert.equal(count(html, 'data-league-card="MLB"'), 1);
-  assert.ok(text.includes('The MLB bracket is not available right now.'));
+  assert.equal(count(html, 'data-league-card="'), 2);
   assert.equal(count(html, 'data-hub-state="offseason"'), 0);
   assert.ok(!text.includes('No postseason is underway'));
-  assert.equal(count(html, 'data-bracket-updated'), 0, 'a bracket that was not read has no stamp to show');
-  const both = hubHtml([{ state: 'unavailable', league: 'MLB', href: '/playoffs/mlb' }, ok(view(FIXTURE.wnbaLive))]);
-  assert.equal(count(both, 'data-league-card="'), 2);
-  assert.ok(textOf(both).includes('Lynx vs Liberty NYL leads 1-0'));
+  assert.ok(!text.includes('A league appears here once'));
+  assert.ok(text.includes('Los Angeles Dodgers'));
+  assert.ok(text.includes('Las Vegas Aces'));
+  // Only with no bracket at all is it the offseason.
+  assert.equal(count(hubHtml([]), 'data-hub-state="offseason"'), 1);
 });
 
 test('HUB: the locked card needs a league that is both playing and frozen', () => {

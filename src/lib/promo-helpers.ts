@@ -166,11 +166,14 @@ export function dedupePromos<T extends { date: string; title: string }>(
   return out;
 }
 
-// Visibility predicate for a soft-deleted (tombstoned) promo. This is an
+// Visibility predicate for the regular surfaces. Hides a soft-deleted
+// (tombstoned) promo and a postseason promo (isPostseason). This is an
 // app-code array filter ONLY: absent and false are visible, only true is
 // hidden. It is never used as a Firestore inequality, which would drop
-// field-absent docs and break the "absent = visible" rule.
-export const isVisiblePromo = (p: { tombstoned?: boolean }): boolean => p.tombstoned !== true;
+// field-absent docs and break the "absent = visible" rule. The playoffs
+// surfaces do not use it: they read postseason rows by name.
+export const isVisiblePromo = (p: { tombstoned?: boolean; isPostseason?: boolean }): boolean =>
+  p.tombstoned !== true && p.isPostseason !== true;
 
 // ── Section 8 out-of-scope discipline, applied at the RENDER layer ───────────
 //

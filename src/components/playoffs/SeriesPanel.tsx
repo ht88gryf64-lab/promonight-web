@@ -34,6 +34,12 @@ function GameRow({ g, league }: { g: GameView; league: string }) {
             )}
           </span>
         )}
+        {g.promo && (
+          <span data-game-promo={g.promo.type} className="block text-rd-ink">
+            <span aria-hidden="true">{g.promo.icon} </span>
+            {g.promo.title}
+          </span>
+        )}
         {g.state === 'final' && g.result && <span className="block font-semibold text-rd-ink">Final: {g.result}</span>}
         {g.state === 'live' && (
           <span className="mt-0.5 block">

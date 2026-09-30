@@ -26,9 +26,9 @@ export interface PageCopy {
   canonical: string;
 }
 
-export type HubLeagueState =
-  | { league: PostseasonLeague; state: 'ok'; view: LeagueView }
-  | { league: PostseasonLeague; state: 'unavailable' };
+/** A league the hub rendered a card for. A league whose read failed is not
+ *  a state: the read throws and the last good page stands. */
+export type HubLeagueState = { league: PostseasonLeague; state: 'ok'; view: LeagueView };
 
 function list(names: readonly string[]): string {
   if (names.length <= 1) return names.join('');
@@ -43,9 +43,7 @@ function list(names: readonly string[]): string {
 export function hubCopy(season: number, routeLeagues: readonly PostseasonLeague[], leagues: readonly HubLeagueState[]): PageCopy {
   const title = `${season} Playoffs: ${list(routeLeagues)} Brackets`;
   const canonical = `${SITE_URL}${HUB_PATH}`;
-  const ok = leagues.flatMap((l) => (l.state === 'ok' ? [l] : []));
-  const active = ok.filter((l) => l.view.phase.kind === 'active');
-  const unreadable = leagues.some((l) => l.state === 'unavailable');
+  const active = leagues.filter((l) => l.view.phase.kind === 'active');
 
   if (active.length > 0) {
     const rounds = active.map((l) => `${l.league}: ${l.view.phase.kind === 'active' ? l.view.phase.roundLabel : ''}`).join('. ');
@@ -55,16 +53,12 @@ export function hubCopy(season: number, routeLeagues: readonly PostseasonLeague[
       description: `The ${season} postseason brackets for ${list(active.map((l) => l.league))}, series by series, with Eastern game times and the next home games. ${rounds}.`,
     };
   }
-  if (ok.length > 0 && !unreadable) {
+  if (leagues.length > 0) {
     return {
       title,
       canonical,
-      description: `The ${season} ${list(ok.map((l) => l.league))} postseason is complete. The final ${ok.length === 1 ? 'bracket' : 'brackets'}, round by round, with each champion.`,
+      description: `The ${season} ${list(leagues.map((l) => l.league))} postseason is complete. The final ${leagues.length === 1 ? 'bracket' : 'brackets'}, round by round, with each champion.`,
     };
-  }
-  if (unreadable) {
-    // A bracket could not be read. Nothing is claimed about what it holds.
-    return { title, canonical, description: `The ${season} postseason brackets for ${list(routeLeagues)}.` };
   }
   return {
     title,

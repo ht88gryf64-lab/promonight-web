@@ -14,18 +14,16 @@ import { PlayoffsHub, type HubLeague } from '@/components/playoffs/PlayoffsHub';
 import { ticketButtons } from '@/components/playoffs/tickets';
 
 // The pipeline revalidates this path whenever a bracket changes, and that is
-// the path a change reaches the page by. The timer is the backstop: a render
-// that caught a failed read is replaced within ten minutes instead of
-// standing until the next bracket change.
+// the path a change reaches the page by. The timer is the backstop. A render
+// whose read fails throws, so it replaces nothing: the last good page stands
+// until a render succeeds.
 export const revalidate = 600;
 
 /** What the body renders a card for, which is also what the head is written
  *  from. One read for both: getLeaguePageData is cached for the request. */
 async function hubStates(): Promise<{ pages: Awaited<ReturnType<typeof getLeaguePageData>>[]; states: HubLeagueState[] }> {
   const pages = await Promise.all(POSTSEASON_LEAGUES.map((l) => getLeaguePageData(l)));
-  const states = pages.flatMap((p): HubLeagueState[] =>
-    p.state === 'ok' ? [{ league: p.league, state: 'ok', view: p.view }] : p.state === 'unavailable' ? [{ league: p.league, state: 'unavailable' }] : [],
-  );
+  const states = pages.flatMap((p): HubLeagueState[] => (p.state === 'ok' ? [{ league: p.league, state: 'ok', view: p.view }] : []));
   return { pages, states };
 }
 
@@ -50,11 +48,10 @@ export default async function PlayoffsHubPage() {
   const leagues: HubLeague[] = [];
   for (const p of pages) {
     // A league with no document is simply not in the postseason. It gets no
-    // card. A league whose document could not be read gets one that says so.
+    // card. A league whose document could not be read is not a state: that
+    // read threw, this render produced nothing, and the last good page stands.
     if (p.state === 'missing') continue;
-    const href = postseasonPath(p.league);
-    if (p.state === 'unavailable') leagues.push({ state: 'unavailable', league: p.league, href });
-    else leagues.push({ state: 'ok', league: p.league, href, view: p.view, predictionsLocked: p.predictionsLocked });
+    leagues.push({ state: 'ok', league: p.league, href: postseasonPath(p.league), view: p.view, predictionsLocked: p.predictionsLocked });
   }
 
   const active = leagues.flatMap((l) => (l.state === 'ok' && l.view.phase.kind === 'active' ? [l.view] : []));

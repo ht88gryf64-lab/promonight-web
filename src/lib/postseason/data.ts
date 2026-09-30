@@ -6,7 +6,8 @@ import { getAllTeams, getVenueForTeam } from '../data';
 import { getTeamVenueHubMap } from '../venue-hub';
 import { mapBracketDoc } from './map';
 import { playoffsLinkState, type PlayoffsLinkState } from './gate';
-import { buildLeagueView, clubSlugs, hostSlugs, type ClubInfo, type LeagueView, type ParkInfo } from './view';
+import { buildLeagueView, clubSlugs, easternYmd, hostSlugs, type ClubInfo, type LeagueView, type ParkInfo } from './view';
+import { readPostseasonPromos } from './promos';
 import type { InboundLeague } from './inbound';
 import type { Bracket, BracketRead, PostseasonLeague } from './types';
 
@@ -49,30 +50,25 @@ function docId(league: PostseasonLeague): string {
  * re-render the bracket it is replacing. React cache() only shares the read
  * between generateMetadata and the page body of one render.
  *
- * Never throws. A failed read and a document the mapper refuses both come
- * back as "unavailable", which the page renders as such.
+ * THROWS when the read fails or the document is not in a shape the web
+ * reads. A render that throws is a render that produced no page, so ISR
+ * keeps serving the last good one; a render that returned "not available"
+ * would replace the last good page with that, cached and indexable, for
+ * the whole revalidation window. No document at all is not a failure: it is
+ * "missing", and the page for it is a 404.
  */
 export const getBracket = cache(async (league: PostseasonLeague): Promise<BracketRead> => {
-  try {
-    const ref = db.collection(BRACKETS).doc(docId(league));
-    const [snap] = await db.getAll(ref, { fieldMask: BRACKET_FIELDS });
-    if (!snap.exists) return { state: 'missing' };
-    const bracket = mapBracketDoc(snap.data(), { league, season: POSTSEASON_SEASON });
-    if (!bracket) {
-      console.error(`[postseason] ${docId(league)} is not in a shape the web reads; rendering it as unavailable`);
-      return { state: 'unavailable' };
-    }
-    return { state: 'ok', bracket };
-  } catch (err) {
-    console.error(`[postseason] reading ${docId(league)} failed`, err);
-    return { state: 'unavailable' };
-  }
+  const ref = db.collection(BRACKETS).doc(docId(league));
+  const [snap] = await db.getAll(ref, { fieldMask: BRACKET_FIELDS });
+  if (!snap.exists) return { state: 'missing' };
+  const bracket = mapBracketDoc(snap.data(), { league, season: POSTSEASON_SEASON });
+  if (!bracket) throw new Error(`[postseason] ${docId(league)} is not in a shape the web reads`);
+  return { state: 'ok', bracket };
 });
 
 export type LeaguePageData =
   | { state: 'ok'; league: PostseasonLeague; view: LeagueView; predictionsLocked: boolean }
-  | { state: 'missing'; league: PostseasonLeague }
-  | { state: 'unavailable'; league: PostseasonLeague };
+  | { state: 'missing'; league: PostseasonLeague };
 
 /**
  * Everything a league's page needs: the bracket, the clubs it names, the
@@ -80,23 +76,17 @@ export type LeaguePageData =
  *
  * `now` is taken once here, on the server, and decides only which scheduled
  * games are still ahead.
+ *
+ * Throws, like getBracket and for the same reason, when a read it depends on
+ * fails or the bracket names a club the web has no team record for.
  */
 export const getLeaguePageData = cache(async (league: PostseasonLeague): Promise<LeaguePageData> => {
   const read = await getBracket(league);
   if (read.state !== 'ok') return { state: read.state, league };
-
-  try {
-    const view = await buildViewFor(read.bracket, new Date());
-    if (!view) {
-      console.error(`[postseason] ${docId(league)} names a club with no team record; rendering it as unavailable`);
-      return { state: 'unavailable', league };
-    }
-    const predictionsLocked = await arePredictionInputsFrozen(league);
-    return { state: 'ok', league, view, predictionsLocked };
-  } catch (err) {
-    console.error(`[postseason] building the ${league} page failed`, err);
-    return { state: 'unavailable', league };
-  }
+  const view = await buildViewFor(read.bracket, new Date());
+  if (!view) throw new Error(`[postseason] ${docId(league)} names a club with no team record`);
+  const predictionsLocked = await arePredictionInputsFrozen(league);
+  return { state: 'ok', league, view, predictionsLocked };
 });
 
 /**
@@ -149,7 +139,11 @@ async function buildViewFor(bracket: Bracket, now: Date): Promise<LeagueView | n
     }),
   );
 
-  return buildLeagueView(bracket, clubs, parks, now);
+  // The postseason promotions at the hosts' games, today or later. Read by
+  // name; no regular reader sees these rows.
+  const promos = await readPostseasonPromos(bracket.league, bracket.season, hostSlugs(bracket), easternYmd(now));
+
+  return buildLeagueView(bracket, clubs, parks, now, promos);
 }
 
 /**
@@ -221,6 +215,10 @@ export async function readCurrentBrackets(): Promise<Bracket[]> {
 // reason: the root layout asks on every route. The gate moves twice a season,
 // so five minutes of lag costs nothing. The clock is NOT cached: `now` is
 // taken on every call, against brackets at most five minutes old.
+//
+// THE LINK GATE IS THE ONLY READER OF THIS LOADER. The inbound modules and
+// the sitemap read fresh (see getPlayoffsInbound): a page revalidated for a
+// bracket change must see that change.
 const loadCurrentBrackets = makeCollectionLoader(readCurrentBrackets);
 
 /** The state of the Playoffs link, with the reason. See ./gate.ts. */
@@ -246,11 +244,14 @@ export async function isPlayoffsLinkActive(now: Date = new Date()): Promise<bool
  * anywhere. When it is open, it is every current-season bracket that could
  * be read and built.
  *
- * Behind the five-minute process cache. These pages are not revalidated
- * when a bracket changes (the pipeline revalidates /playoffs and the league
- * pages only), so they are as fresh as their own regeneration, and every
- * module that states a score or a game time carries the bracket's own change
- * stamp beside it. Throws when the read fails, so each caller fails closed.
+ * NOT behind the process cache. The pipeline revalidates the team page of
+ * every club in a changed series, the host venue pages and the league hub
+ * when a bracket changes, and a re-render served from a cache would be
+ * rebuilt from the bracket it is replacing and then held for the page's
+ * whole window. The homepage is not revalidated (the endpoint refuses a
+ * bare "/"); its module states the round and nothing faster. Every module
+ * that states a score or a game time carries the bracket's own change stamp
+ * beside it. Throws when the read fails, so each caller fails closed.
  */
 export async function buildPlayoffsInbound(brackets: readonly Bracket[], now: Date): Promise<InboundLeague[]> {
   if (playoffsLinkState(brackets, now).state === 'hidden') return [];
@@ -266,11 +267,9 @@ export async function buildPlayoffsInbound(brackets: readonly Bracket[], now: Da
   return out;
 }
 
-const loadPlayoffsInbound = makeCollectionLoader(async () => buildPlayoffsInbound(await loadCurrentBrackets(), new Date()));
-
-export async function getPlayoffsInbound(): Promise<InboundLeague[]> {
-  return [...(await loadPlayoffsInbound())];
-}
+// A fresh read on every render, shared only between the parts of one render
+// (a team page's metadata and body, say) by React cache().
+export const getPlayoffsInbound = cache(async (): Promise<InboundLeague[]> => buildPlayoffsInbound(await readCurrentBrackets(), new Date()));
 
 /** The same, for a page that must render whatever happens: a failed read is
  *  logged and answered with nothing, so the page simply has no module. */
@@ -285,10 +284,11 @@ export async function getPlayoffsInboundOrNone(where: string): Promise<InboundLe
 
 /** What the sitemap lists: the hub and each league page that has a bracket,
  *  each with the moment its bracket last changed. Empty when the gate is
- *  closed. Throws when the read fails, so the sitemap fails loudly rather
- *  than serving a copy that is missing these pages. */
+ *  closed. Read fresh, so lastmod is the document's current stamp. Throws
+ *  when the read fails, so the sitemap fails loudly rather than serving a
+ *  copy that is missing these pages. */
 export async function getPlayoffsSitemapEntries(now: Date = new Date()): Promise<{ path: string; lastModified: Date }[]> {
-  const brackets = await loadCurrentBrackets();
+  const brackets = await readCurrentBrackets();
   if (playoffsLinkState(brackets, now).state === 'hidden') return [];
   const stamped = brackets.map((b) => ({
     path: postseasonPath(b.league),

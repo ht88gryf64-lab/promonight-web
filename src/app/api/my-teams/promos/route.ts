@@ -49,10 +49,11 @@ async function fetchPromosForTeam(
       .where('date', '<=', end)
       .get();
     // Visibility filter on the raw docs before shaping: only tombstoned:true
-    // is hidden; absent and false pass. App-code filter, never a Firestore
-    // inequality (which would drop field-absent docs).
+    // and isPostseason:true are hidden; absent and false pass. App-code
+    // filter, never a Firestore inequality (which would drop field-absent
+    // docs).
     return snapshot.docs
-      .filter((doc) => doc.data().tombstoned !== true)
+      .filter((doc) => doc.data().tombstoned !== true && doc.data().isPostseason !== true)
       .map((doc) => {
       const data = doc.data();
       const type = data.type as PromoType;

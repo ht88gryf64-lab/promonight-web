@@ -35,6 +35,10 @@ c7961e0). The web repo computes none of these values.
 | `WNBA_2025.final.json` | The real final 2025 payload, normalized. All seven series final. |
 | `MLB_2025.replay-step-24.json` | Replay step 24: Wild Card round and one Division Series final, three Division Series underway, later rounds still placeholders. |
 | `WNBA_2025.replay-step-10.json` | Replay step 10: three first-round series final, one underway. |
+| `MLB_2025.replay-step-11.json` | Replay step 11: the Wild Card round final, nothing else started. Between rounds. (promo-pipeline at 5e4cadb.) |
+| `MLB_2025.replay-step-40.json` | Replay step 40: everything but the World Series final, the World Series not started. One round left. |
+| `WNBA_2025.replay-step-11.json` | Replay step 11: the first round final, the semifinals not started. |
+| `WNBA_2025.replay-step-20.json` | Replay step 20: the semifinals final, the Finals not started. |
 
 Two caveats, both stated so nobody reads more into these than they hold:
 
@@ -51,6 +55,16 @@ To regenerate, from a promo-pipeline checkout:
 PIPELINE=$PWD OUT=/path/to/this/directory MLB_STEP=24 WNBA_STEP=10 \
   node /path/to/this/directory/generate-2025.cjs
 ```
+
+## Postseason promotion rows
+
+`promos.postseason-20260930.json` holds rows of `teams/{club}/promos` in the
+shape the postseason scanner writes (`isPostseason: true`, keyed on a bracket
+game), as the PROMOS session specified them on 2026-09-30, keyed to games in
+the two 20:08Z captures. No such row existed in Firestore when it was written.
+Two of its rows are made to be refused: one tombstoned, one dated before the
+capture. A regular row sits beside them so the reader filter has something
+to keep.
 
 ## What no capture holds yet
 

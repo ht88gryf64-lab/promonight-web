@@ -30,6 +30,11 @@ const OUT = process.env.OUT;
 const SHARE = process.env.SHARE || '';
 const CONTROL = process.env.CONTROL || '/mlb';
 if (!BASE || !OUT) { console.error('Set BASE to the deployed origin and OUT to a directory.'); process.exit(2); }
+// DEPLOYED HOSTS ONLY. This script lets the ad code run, which is the point
+// of it; every local run of every other script refuses the ad and analytics
+// hosts at the network layer, and this one must not be pointed at a local
+// server by mistake.
+if (/^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0)(:|\/|$)/.test(BASE)) { console.error('measure-ads.mjs runs against a deployed host only; a local run would let the ad code load. Use measure-states.mjs or verify-bracket.mjs locally.'); process.exit(2); }
 mkdirSync(OUT, { recursive: true });
 const PORT = 9352;
 const profile = mkdtempSync(join(tmpdir(), 'pn-ads-'));

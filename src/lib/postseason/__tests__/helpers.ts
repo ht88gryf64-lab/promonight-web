@@ -154,15 +154,52 @@ export interface FakeRead {
 
 /**
  * The slice of the admin SDK the postseason module uses: collection().doc()
- * and getAll(...refs, { fieldMask }). It APPLIES the mask, as Firestore does,
- * so a test that passes proves the masked fields are enough. It records every
- * read, so a test can assert what was asked for.
+ * and getAll(...refs, { fieldMask }), and for the postseason promotions
+ * collection().doc().collection().where('f', '==', v).get(). It APPLIES the
+ * mask, as Firestore does, so a test that passes proves the masked fields are
+ * enough, and it answers an equality the way Firestore does: a document
+ * without the field does not match. It records every read, so a test can
+ * assert what was asked for.
+ *
+ * Documents are keyed by path: "postseasonBrackets/MLB_2026", or
+ * "teams/houston-astros/promos/abc123" for a promotion row. A path stored as
+ * an Error throws when read; a subcollection whose parent path is stored as
+ * an Error throws when queried.
  */
 export function fakeFirestore(docs: Record<string, Record<string, unknown> | Error | undefined>) {
   const reads: FakeRead[] = [];
-  const ref = (path: string) => ({ path });
+  const ref = (path: string) => ({
+    path,
+    collection(sub: string) {
+      const prefix = `${path}/${sub}/`;
+      const clauses: [string, unknown][] = [];
+      const q = {
+        where(field: string, op: string, value: unknown) {
+          if (op !== '==') throw new Error(`the fake answers equality only, not ${op}`);
+          clauses.push([field, value]);
+          return q;
+        },
+        async get() {
+          reads.push({ path: prefix.slice(0, -1), fieldMask: null });
+          const parent = docs[path];
+          if (parent instanceof Error) throw parent;
+          const out: { id: string; data: () => Record<string, unknown>; ref: { parent: { parent: { id: string } } } }[] = [];
+          for (const [p, stored] of Object.entries(docs)) {
+            if (!p.startsWith(prefix) || stored === undefined) continue;
+            if (stored instanceof Error) throw stored;
+            if (!clauses.every(([f, v]) => f in stored && stored[f] === v)) continue;
+            out.push({ id: p.slice(prefix.length), data: () => stored, ref: { parent: { parent: { id: path.split('/')[1] } } } });
+          }
+          return { docs: out, empty: out.length === 0, size: out.length };
+        },
+      };
+      return q;
+    },
+  });
   const db = {
     reads,
+    /** The documents, live: a test can change one between two reads. */
+    docs,
     collection(name: string) {
       return {
         doc(id: string) {

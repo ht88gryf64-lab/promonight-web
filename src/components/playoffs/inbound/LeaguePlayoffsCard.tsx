@@ -1,7 +1,6 @@
 import { TrackedLink } from '@/components/analytics/TrackedLink';
 import type { AnalyticsSurface } from '@/lib/analytics';
 import type { LeagueCard } from '@/lib/postseason/inbound';
-import { InProgressBadge } from '../ui';
 
 /**
  * The playoffs card at the top of a league's hub, while that league's
@@ -42,10 +41,7 @@ export function LeaguePlayoffsCard({ card, surface }: { card: LeagueCard; surfac
           <li key={s.id} data-series={s.id} className="border-t border-rd-line py-2">
             <TrackedLink href={s.href} surface={surface} ctaId="playoffs_module_series" ctaLabel={s.names} className="group block">
               <span className="block font-rd text-[15px] font-semibold leading-snug text-rd-ink group-hover:text-rd-red">{s.names}</span>
-              <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 font-rd text-[13px] text-rd-ink-soft">
-                {s.inProgress ? <InProgressBadge /> : null}
-                <span>{s.status}</span>
-              </span>
+              <span className="mt-0.5 block font-rd text-[13px] text-rd-ink-soft">{s.status}</span>
             </TrackedLink>
           </li>
         ))}

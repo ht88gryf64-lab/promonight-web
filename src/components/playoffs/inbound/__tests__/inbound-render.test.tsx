@@ -49,15 +49,18 @@ const count = (html: string, needle: string) => html.split(needle).length - 1;
 const hrefs = (html: string) => [...html.matchAll(/<a [^>]*href="([^"]+)"/g)].map((m) => m[1]);
 
 const FRESHNESS = /\bhourly\b|\breal[- ]time\b|\blive\b|\bup to the minute\b/i;
-const withoutBadges = (html: string) => html.replace(/<span data-game-state="live"[^>]*>Live<\/span>/g, '');
+// NOTHING IN THE PRESENT TENSE, on any module, in any state. A team page
+// stands for a day and a hub for six hours between bracket changes.
+const PRESENT_TENSE = /\bin progress\b|\bunder way\b|\bunderway\b|\bnow playing\b|data-game-state="live"/i;
 /** What every module must satisfy, whatever it says. */
 function sound(html: string, where: string) {
+  assert.ok(!PRESENT_TENSE.test(html), `${where}: the present tense`);
   assert.equal(seriesKeyIn(html), null, `${where}: ${seriesKeyIn(html)} has the form of a series key`);
   assert.ok(!/#[A-Z]/.test(html), `${where}: a link target that is not one of the page's own ids`);
   assert.ok(!/<aside\b/.test(html), `${where}: an aside would be taken for the ad sidebar`);
   assert.ok(!/<article\b/.test(html), `${where}: an article would compete with the page's measured root`);
   assert.ok(!/[\u2014\u2013]/.test(html), `${where}: a dash`);
-  assert.ok(!FRESHNESS.test(textOf(withoutBadges(html))), `${where}: freshness wording`);
+  assert.ok(!FRESHNESS.test(textOf(html)), `${where}: freshness wording`);
   assert.ok(!/\b(undefined|null|NaN)\b/.test(textOf(html)), `${where}: an empty rendering`);
   assert.ok(!/<a [^>]*>(?:(?!<\/a>)[\s\S])*<a /.test(html), `${where}: a link inside a link`);
   assert.ok(!/\shidden(=""|\s|>)/.test(html), `${where}: the hidden attribute`);
@@ -92,12 +95,14 @@ test('TEAM, alive with a series score, and with a game in progress', () => {
   assert.ok(textOf(liberty).includes('First Round Liberty vs Lynx NYL leads 1-0 Next: Game 2 · Tue, Sep 29 · 8:30 PM ET Host: Liberty · Barclays Center'));
   assert.deepEqual(hrefs(liberty), ['/playoffs/wnba#first_round-1']);
 
+  // A game in progress: the module states its scheduled time and nothing
+  // about its state. The page it sits on stands for a day.
   const braves = team(inbound([FIXTURE.mlbInGame], IN_GAME_AT), 'atlanta-braves', 'Braves');
   assert.ok(braves);
-  sound(braves, 'team alive, in progress');
-  assert.equal(count(braves, 'data-game-state="live"'), 1);
-  assert.ok(textOf(braves).includes('Braves vs Phillies Live Game 1 in progress Host: Braves · Truist Park'));
-  assert.ok(!textOf(braves).includes('Next:'));
+  sound(braves, 'team alive, a game under way');
+  assert.equal(count(braves, 'data-game-state="live"'), 0);
+  assert.ok(textOf(braves).includes('Braves vs Phillies Next: Game 1 · Tue, Sep 29 · 2:00 PM ET Host: Braves · Truist Park'));
+  assert.ok(!/\bLive\b|in progress/i.test(textOf(braves)));
   assert.ok(!/\b(ATL|PHI) \d/.test(textOf(braves)), 'no score in progress');
 });
 
@@ -154,8 +159,9 @@ test('HUB, alive: the round, a linked line for each series, the league link, the
   assert.match(html, /^<section aria-labelledby="league-playoffs" data-playoffs-module="league" data-playoffs-state="active"/);
   assert.equal(
     textOf(html),
-    '2026 MLB Playoffs Wild Card Series Open the MLB bracket Astros vs White Sox Game 1 · Tue, Sep 29 · 5:00 PM ET Yankees vs Red Sox Game 1 · Tue, Sep 29 · 8:00 PM ET Braves vs Phillies Live Game 1 in progress Padres vs Cubs Game 1 · Tue, Sep 29 · 10:00 PM ET Bracket updated Sep 29, 4:00 PM ET',
+    '2026 MLB Playoffs Wild Card Series Open the MLB bracket Astros vs White Sox Game 1 · Tue, Sep 29 · 5:00 PM ET Yankees vs Red Sox Game 1 · Tue, Sep 29 · 8:00 PM ET Braves vs Phillies Game 1 · Tue, Sep 29 · 2:00 PM ET Padres vs Cubs Game 1 · Tue, Sep 29 · 10:00 PM ET Bracket updated Sep 29, 4:00 PM ET',
   );
+  assert.equal(count(html, 'data-game-state="live"'), 0, 'no badge on a page that stands for hours');
   assert.deepEqual(hrefs(html), ['/playoffs/mlb', '/playoffs/mlb#wild_card-1', '/playoffs/mlb#wild_card-2', '/playoffs/mlb#wild_card-3', '/playoffs/mlb#wild_card-4']);
   const wnba = hub(NOW, 'WNBA');
   assert.ok(wnba);

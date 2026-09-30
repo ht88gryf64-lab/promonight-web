@@ -91,7 +91,6 @@ export interface Bracket {
 
 export type BracketRead =
   | { state: 'ok'; bracket: Bracket }
-  /** No document for this league and season. */
-  | { state: 'missing' }
-  /** The read failed, or the document is not in the shape the web understands. */
-  | { state: 'unavailable' };
+  /** No document for this league and season. A failed read and a document
+   *  the web cannot read are not states: the read throws. */
+  | { state: 'missing' };

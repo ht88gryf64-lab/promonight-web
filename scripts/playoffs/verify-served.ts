@@ -552,12 +552,37 @@ async function main() {
         known.add([`${away.name} at ${home.name}`, `${s.roundLabel} · Game ${g.gameNumber}${g.ifNecessary ? ' · If necessary' : ''}`, whenOf(g), home.club.park ?? ''].join(' ').trim());
       }
     }
-    const strays = list.map((r) => textOf(r).replace(/ Get Tickets.*$/, '').trim()).filter((t) => !known.has(t));
+    // A promotion line is checked on its own below; it is taken out of the
+    // row before the row is compared.
+    const withoutPromo = (r: string) => r.replace(/<p data-game-promo=[^>]*>[\s\S]*?<\/p>/g, '');
+    const strays = list.map((r) => textOf(withoutPromo(r)).replace(/ Get Tickets.*$/, '').trim()).filter((t) => !known.has(t));
     check(`${where}: every home game row is a scheduled game in the document`, strays.length === 0, `${list.length} rows${strays.length ? `, not in the document: ${strays.join(' || ')}` : ''}`);
     const today = etYmd(new Date());
     const inThree = list.filter((r) => element(el, 'data-home-games-list="primary"')?.includes(r));
     check(`${where}: the short list holds eight rows at most`, inThree.length <= 8, `${inThree.length} rows, today is ${today} in Eastern`);
     same(`${where}: ticket links per home game row, at most one`, list.every((r) => count(r, 'rel="noopener noreferrer sponsored"') <= 1), true);
+
+    // Postseason promotions: every line on the page is a stored row of a
+    // host club, not tombstoned, for this league and season, and no row's
+    // keys are on the page. Read here by the same equality the page uses.
+    const hosts = new Set<string>();
+    for (const s of doc.series) for (const g of s.games) if (g.homeSide) { const h = slotName(doc, s[g.homeSide]); if (h.slug) hosts.add(h.slug); }
+    const stored = new Map<string, { title: string; key: string }>();
+    const internal: string[] = [];
+    for (const h of hosts) {
+      const snap = await db.collection('teams').doc(h).collection('promos').where('isPostseason', '==', true).get();
+      for (const d of snap.docs) {
+        const row = d.data() as Record<string, unknown>;
+        if (row.tombstoned === true || row.league !== league || row.season !== SEASON) continue;
+        if (typeof row.seriesKey === 'string' && typeof row.gameNumber === 'number') stored.set(`${row.seriesKey}#${row.gameNumber}`, { title: String(row.title), key: `${row.seriesKey}#${row.gameNumber}` });
+        for (const k of ['seriesKey', 'bracketGameId', 'sourceQuote', 'sourceUrl', 'opponentSlug']) if (typeof row[k] === 'string' && (row[k] as string).length > 5 && got.html.includes(row[k] as string)) internal.push(`${k} of ${d.id}`);
+      }
+    }
+    const lines = [...el.matchAll(/data-game-promo="[^"]*"[^>]*>([\s\S]*?)<\//g)].map((m) => textOf(m[1]));
+    const titles = new Set([...stored.values()].map((r) => r.title));
+    const unknownLines = lines.filter((l) => ![...titles].some((t) => l.endsWith(t)));
+    check(`${where}: every promotion line on the page is a stored postseason row of a host club`, unknownLines.length === 0, `${lines.length} lines, ${stored.size} rows stored${unknownLines.length ? ': ' + unknownLines.join(' | ') : ''}`);
+    check(`${where}: no postseason row's internal field is on the page`, internal.length === 0, internal.join(' '));
   }
 
   // ---- The hub ----

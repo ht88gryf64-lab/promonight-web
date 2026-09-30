@@ -90,27 +90,49 @@ test('ROUTE /playoffs/[league]: never reads the fields the web must not publish'
   current.db = fakeFirestore(BOTH());
   await Page(params('mlb'));
   for (const r of current.db.reads) {
+    // The promotion rows are whole documents of the promos subcollection,
+    // read by an equality on isPostseason; what leaves them is decided by
+    // postseasonPromoRow, tested in promos.test.ts.
+    if (/^teams\/[^/]+\/promos$/.test(r.path)) continue;
     assert.ok(r.fieldMask, `${r.path} was read with a mask`);
     for (const f of r.fieldMask) {
       assert.ok(['league', 'season', 'series', 'lastChangedAt', 'frozenAt'].includes(f), `${r.path} asked for ${f}`);
     }
   }
   assert.ok(current.db.reads.some((r) => r.path === 'postseasonBrackets/MLB_2026'));
+  assert.ok(current.db.reads.some((r) => r.path === 'teams/houston-astros/promos'), 'the host clubs are asked for their postseason promotions');
 });
 
-test('ROUTE /playoffs/[league]: a missing document and a failed read both render "not available"', async () => {
-  const { default: Page } = await league();
+// NOTHING IS EVER SERVED AS "NOT AVAILABLE". A league with no document is a
+// 404, which is not indexable and not cached as a page. A read that fails,
+// and a document the web cannot read, throw out of the render: ISR then
+// keeps the last good page instead of replacing it for ten minutes with a
+// page that says the bracket is unavailable, under a title that promises it.
+test('ROUTE /playoffs/[league]: no document is a 404; a failed read throws', async () => {
+  const { default: Page, generateMetadata } = await league();
   current.db = fakeFirestore({ 'postseasonBrackets/WNBA_2026': loadDoc(FIXTURE.wnbaLive) });
-  const missing = renderToStaticMarkup(await Page(params('mlb')));
-  assert.ok(missing.includes('data-bracket-state="unavailable"'));
-  assert.equal(count(missing, 'data-series="'), 0);
-  assert.ok(missing.includes('Open the WNBA bracket'));
+  await assert.rejects(() => Page(params('mlb')), (e: unknown) => /NEXT_NOT_FOUND|NEXT_HTTP_ERROR_FALLBACK;404/.test(String((e as { digest?: string }).digest ?? e)));
+  assert.deepEqual(await generateMetadata(params('mlb')), {}, 'no head of its own for a 404');
 
   current.db = fakeFirestore({ 'postseasonBrackets/MLB_2026': new Error('UNAVAILABLE'), 'postseasonBrackets/WNBA_2026': new Error('UNAVAILABLE') });
-  const failed = renderToStaticMarkup(await quiet(() => Page(params('mlb'))));
-  assert.ok(failed.includes('data-bracket-state="unavailable"'));
-  assert.equal(count(failed, 'data-series="'), 0);
-  assert.ok(!failed.includes('Open the WNBA bracket'), 'no link to a league that could not be read');
+  await assert.rejects(() => Page(params('mlb')), /UNAVAILABLE/);
+  await assert.rejects(() => generateMetadata(params('mlb')), /UNAVAILABLE/);
+
+  // A document the web cannot read is the same: nothing renders.
+  const bad = loadDoc(FIXTURE.mlbLive);
+  (bad.series as Record<string, unknown>[])[0].status = 'paused';
+  current.db = fakeFirestore({ 'postseasonBrackets/MLB_2026': bad });
+  await assert.rejects(() => Page(params('mlb')), /not in a shape the web reads/);
+});
+
+test('ROUTE /playoffs/[league]: the cross link names only a league whose read succeeded and whose postseason is underway', async () => {
+  const { default: Page } = await league();
+  current.db = fakeFirestore({ 'postseasonBrackets/MLB_2026': loadDoc(FIXTURE.mlbLive), 'postseasonBrackets/WNBA_2026': loadDoc(FIXTURE.wnbaLive) });
+  assert.ok(renderToStaticMarkup(await Page(params('mlb'))).includes('Open the WNBA bracket'));
+  current.db = fakeFirestore({ 'postseasonBrackets/MLB_2026': loadDoc(FIXTURE.mlbLive) });
+  assert.ok(!renderToStaticMarkup(await Page(params('mlb'))).includes('Open the WNBA bracket'), 'no link to a league with no document');
+  current.db = fakeFirestore({ 'postseasonBrackets/MLB_2026': loadDoc(FIXTURE.mlbLive), 'postseasonBrackets/WNBA_2026': new Error('UNAVAILABLE') });
+  await assert.rejects(() => Page(params('mlb')), /UNAVAILABLE/, 'the other league read failing fails this render too: it is one page or none');
 });
 
 test('ROUTE /playoffs/[league]: ticket links carry the league surface in their sub-ID', async () => {
@@ -193,18 +215,16 @@ test('FEEDER KEY: through the real pages, the label renders and "AL-WC-B" is now
   }
 });
 
-test('ROUTE /playoffs: no documents is the offseason state; a failed read is not', async () => {
-  const { default: Page } = await hub();
+test('ROUTE /playoffs: no documents is the offseason state; a failed read throws', async () => {
+  const { default: Page, generateMetadata } = await hub();
   current.db = fakeFirestore({});
   const off = renderToStaticMarkup(await Page());
   assert.equal(count(off, 'data-hub-state="offseason"'), 1);
   assert.equal(count(off, 'data-league-card="'), 0);
 
   current.db = fakeFirestore({ 'postseasonBrackets/MLB_2026': new Error('UNAVAILABLE') });
-  const failed = renderToStaticMarkup(await quiet(() => Page()));
-  assert.equal(count(failed, 'data-hub-state="offseason"'), 0);
-  assert.equal(count(failed, 'data-league-card="MLB"'), 1);
-  assert.ok(failed.includes('The MLB bracket is not available right now.'));
+  await assert.rejects(() => Page(), /UNAVAILABLE/);
+  await assert.rejects(() => generateMetadata(), /UNAVAILABLE/);
 });
 
 test('ROUTE /playoffs/[league]: static params are the leagues that have a document', async () => {
@@ -260,17 +280,10 @@ test('HEAD /playoffs/[league]: title, description, canonical and a complete open
   assert.ok(html.includes('Wild Card Series'));
 });
 
-test('HEAD /playoffs/[league]: with no bracket the description claims none, as the body does', async () => {
-  const { generateMetadata, default: Page } = await league();
-  for (const docs of [{}, { 'postseasonBrackets/MLB_2026': new Error('UNAVAILABLE') }]) {
-    current.db = fakeFirestore(docs);
-    const meta = (await quiet(() => generateMetadata(params('mlb')))) as Meta;
-    assert.equal(meta.description, 'The 2026 MLB postseason bracket.');
-    assert.equal(meta.title, '2026 MLB Playoffs Bracket, Schedule and Scores');
-    assert.equal(meta.alternates?.canonical, 'https://www.getpromonight.com/playoffs/mlb');
-    const html = renderToStaticMarkup(await quiet(() => Page(params('mlb'))));
-    assert.ok(html.includes('data-bracket-state="unavailable"'));
-  }
+test('HEAD /playoffs/[league]: a route outside the table, and a league with no document, get no head of their own', async () => {
+  const { generateMetadata } = await league();
+  current.db = fakeFirestore({});
+  assert.deepEqual(await generateMetadata(params('mlb')), {}, 'no document: the page is a 404');
   assert.deepEqual(await generateMetadata(params('nba')), {}, 'a league outside the route table gets no head of its own; the page is a 404');
 });
 
@@ -287,9 +300,12 @@ test('HEAD /playoffs: the three states of the hub', async () => {
   current.db = fakeFirestore({});
   assert.equal(((await generateMetadata()) as Meta).description, "No postseason is underway. The MLB and WNBA brackets appear here once each league's postseason begins.");
 
-  current.db = fakeFirestore({ 'postseasonBrackets/MLB_2026': new Error('UNAVAILABLE') });
-  const unread = (await quiet(() => generateMetadata())) as Meta;
-  assert.equal(unread.description, 'The 2026 postseason brackets for MLB and WNBA.');
+  // A finished postseason is the third state: complete, with each champion.
+  const finalMlb = loadDoc(FIXTURE.mlbFinal);
+  const finalWnba = loadDoc(FIXTURE.wnbaFinal);
+  current.db = fakeFirestore({ 'postseasonBrackets/MLB_2026': { ...finalMlb, season: 2026 }, 'postseasonBrackets/WNBA_2026': { ...finalWnba, season: 2026 } });
+  const done = (await generateMetadata()) as Meta;
+  assert.equal(done.description, 'The 2026 MLB and WNBA postseason is complete. The final brackets, round by round, with each champion.');
 });
 
 test('JSON-LD in the page: a WebPage and a BreadcrumbList on each route, and no Event', async () => {

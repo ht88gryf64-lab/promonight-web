@@ -7,14 +7,13 @@ import { AdSlot } from '@/components/ads/AdSlot';
 import { AD_SLOTS } from '@/lib/ads/slots';
 import { HomeGames } from './HomeGames';
 import { PredictionsCard } from './PredictionsCard';
+import { HubResults } from './HubResults';
 import { CONDENSED, InProgressBadge } from './ui';
 
 const SURFACE = 'web_playoffs' as const;
 const PAGE_TYPE = 'playoffs_hub';
 
-export type HubLeague =
-  | { state: 'ok'; league: PostseasonLeague; href: string; view: LeagueView; predictionsLocked: boolean }
-  | { state: 'unavailable'; league: PostseasonLeague; href: string };
+export type HubLeague = { state: 'ok'; league: PostseasonLeague; href: string; view: LeagueView; predictionsLocked: boolean };
 
 function seriesNames(s: SeriesView): string {
   return `${s.higher.label} vs ${s.lower.label}`;
@@ -82,15 +81,6 @@ function CardShell({
 }
 
 function LeagueCard({ entry }: { entry: HubLeague }) {
-  if (entry.state === 'unavailable') {
-    return (
-      <CardShell league={entry.league} href={entry.href} badge={<Badge tone="muted">Not available</Badge>} linkText={`Open the ${entry.league} page`}>
-        <p data-bracket-state="unavailable" className="text-[14px] text-rd-ink-soft">
-          The {entry.league} bracket is not available right now.
-        </p>
-      </CardShell>
-    );
-  }
   const { view } = entry;
   if (view.phase.kind === 'concluded') {
     return (
@@ -163,14 +153,15 @@ export function PlayoffsHub({
   nextGames: HomeGamesWindow;
   tickets: Readonly<Record<string, ReactNode>>;
 }) {
-  const ok = leagues.filter((l): l is Extract<HubLeague, { state: 'ok' }> => l.state === 'ok');
-  const active = ok.filter((l) => l.view.phase.kind === 'active');
-  const concluded = ok.filter((l) => l.view.phase.kind === 'concluded');
-  const unavailable = leagues.filter((l) => l.state === 'unavailable');
-  const ordered: HubLeague[] = [...active, ...concluded, ...unavailable];
-  // "Nothing is underway" is a claim. It is made only when every league was
-  // read and none is playing. An unreadable league proves nothing either way.
-  const offseason = active.length === 0 && unavailable.length === 0;
+  const active = leagues.filter((l) => l.view.phase.kind === 'active');
+  const concluded = leagues.filter((l) => l.view.phase.kind === 'concluded');
+  const ordered: HubLeague[] = [...active, ...concluded];
+  // "No postseason is underway" is a claim, made only when there is no
+  // bracket at all. A finished bracket is not the offseason: its card says
+  // who won, and nothing above it says otherwise. (A bracket that could not
+  // be read never reaches here: the read throws and the last good page
+  // stands.)
+  const offseason = leagues.length === 0;
   const predictionsLocked = active.some((l) => l.predictionsLocked);
 
   return (
@@ -246,6 +237,7 @@ export function PlayoffsHub({
           />
         )}
 
+        <HubResults leagues={ordered} heading={active.length > 0 ? 'Results so far' : 'Results'} />
         {predictionsLocked && <PredictionsCard heading="Predictions are locked" headingId="predictions-locked" />}
         <AdSlot config={AD_SLOTS.IN_CONTENT_2} pageType={PAGE_TYPE} />
       </article>

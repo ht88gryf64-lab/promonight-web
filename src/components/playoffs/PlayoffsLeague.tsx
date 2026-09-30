@@ -7,20 +7,19 @@ import { AdSlot } from '@/components/ads/AdSlot';
 import { AD_SLOTS } from '@/lib/ads/slots';
 import { BracketControlsProvider, type SeriesIndexEntry } from './controls';
 import { BracketExplorer } from './BracketExplorer';
-import { BracketUnavailable } from './BracketUnavailable';
 import { HomeGames } from './HomeGames';
 import { LeagueViewTracker } from './LeagueViewTracker';
 import { PredictedBracketSlot } from './PredictedBracketSlot';
 import { PredictionsCard } from './PredictionsCard';
+import { SeriesResults } from './SeriesResults';
 import { CONDENSED } from './ui';
 
 const SURFACE = 'web_playoffs_league' as const;
 const PAGE_TYPE = 'playoffs_league';
 
-export type LeagueBody =
-  | { state: 'ok'; view: LeagueView; predictionsLocked: boolean; homeGames: HomeGamesWindow }
-  | { state: 'missing' }
-  | { state: 'unavailable' };
+/** The page always has a bracket: with no document the route is a 404, and
+ *  a read that fails throws before anything renders. */
+export type LeagueBody = { state: 'ok'; view: LeagueView; predictionsLocked: boolean; homeGames: HomeGamesWindow };
 
 /** The round the bracket opens on: the one being played, or the last one
  *  once the postseason is over. */
@@ -52,16 +51,16 @@ export function PlayoffsLeague({
   /** Other leagues whose postseason is underway, for the cross link. */
   otherLeagues: readonly { league: PostseasonLeague; href: string }[];
 }) {
-  const view = body.state === 'ok' ? body.view : null;
+  const { view } = body;
   const slug = league.toLowerCase();
-  const firstConference = view ? view.rounds.flatMap((r) => r.groups).find((g) => g.conference !== null)?.conference ?? null : null;
+  const firstConference = view.rounds.flatMap((r) => r.groups).find((g) => g.conference !== null)?.conference ?? null;
   return (
     <div className="mx-auto max-w-2xl px-4 pb-20 pt-6 lg:max-w-6xl">
       <LeagueViewTracker
         league={slug}
         season={season}
-        phase={view ? view.phase.kind : 'unavailable'}
-        roundKey={view && view.phase.kind === 'active' ? view.phase.roundKey : null}
+        phase={view.phase.kind}
+        roundKey={view.phase.kind === 'active' ? view.phase.roundKey : null}
       />
       <div className="pb-3">
         <AdSlot config={AD_SLOTS.HEADER_LEADERBOARD} pageType={PAGE_TYPE} />
@@ -120,21 +119,16 @@ export function PlayoffsLeague({
         </header>
 
         <div data-page-intro>
-          {/* The lede describes the bracket, so it is shown only with one. */}
-          {view && (
-            <p data-lede className="mt-2.5 max-w-[52ch] text-[15px] text-rd-ink-soft">
-              The {season} {league} postseason bracket: every series, seed and result, with game times in Eastern.
-            </p>
-          )}
-          {view?.updatedLabel && (
+          <p data-lede className="mt-2.5 max-w-[52ch] text-[15px] text-rd-ink-soft">
+            The {season} {league} postseason bracket: every series, seed and result, with game times in Eastern.
+          </p>
+          {view.updatedLabel && (
             <p data-bracket-updated className="mt-2 text-[12.5px] text-rd-ink-faint">
               {`Bracket updated ${view.updatedLabel}`}
             </p>
           )}
 
-          {body.state !== 'ok' && <BracketUnavailable league={league} season={season} />}
-
-          {view && view.phase.kind === 'concluded' && (
+          {view.phase.kind === 'concluded' && (
             <div
               data-champion={view.phase.championTeamId}
               className="mt-5 rounded-[10px] border border-rd-line bg-rd-card px-4 py-4"
@@ -160,24 +154,25 @@ export function PlayoffsLeague({
 
         {/* The provider renders no element. The bracket and the predictions
             slot are separate children of the article that share its state. */}
-        {view && body.state === 'ok' && (
-          <BracketControlsProvider initialRound={openingRound(view)} initialConference={firstConference} index={seriesIndex(view)}>
+        <BracketControlsProvider initialRound={openingRound(view)} initialConference={firstConference} index={seriesIndex(view)}>
             <div data-bracket-child className="mt-6">
               <BracketExplorer league={league} leagueSlug={slug} season={season} rounds={view.rounds} panelTickets={panelTickets} />
             </div>
             <AdSlot config={AD_SLOTS.IN_CONTENT_1} pageType={PAGE_TYPE} />
             {/* RESERVED for the predicted bracket. Rendered only when it has
                 something to show: an empty element here would be a child of
-                the article with no height, which is an anchor all the same. */}
-            {body.predictionsLocked ? (
+                the article with no height, which is an anchor all the same.
+                Only while the postseason is being played: a finished bracket
+                has nothing left to predict, and "they will publish soon"
+                above one would be a promise about the past. */}
+            {body.predictionsLocked && view.phase.kind === 'active' ? (
               <PredictedBracketSlot>
                 <PredictionsCard heading="Our Predictions" headingId="our-predictions" />
               </PredictedBracketSlot>
             ) : null}
-          </BracketControlsProvider>
-        )}
+        </BracketControlsProvider>
 
-        {body.state === 'ok' && view && view.phase.kind === 'active' && (
+        {view.phase.kind === 'active' && (
           <HomeGames
             id="home-games-this-week"
             heading="Home games this week"
@@ -187,6 +182,7 @@ export function PlayoffsLeague({
             empty="No home game with a confirmed host is listed in the next three days."
           />
         )}
+        <SeriesResults view={view} heading={view.phase.kind === 'active' ? 'Results so far' : 'Results'} />
         <AdSlot config={AD_SLOTS.IN_CONTENT_2} pageType={PAGE_TYPE} />
       </article>
 

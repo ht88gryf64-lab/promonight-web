@@ -10,6 +10,14 @@
 // the document lists it in a series that is not final, "eliminated" because
 // the document names the other club the winner, and a game is at a park
 // because the document names the park's club as its host.
+//
+// NOTHING HERE IS IN THE PRESENT TENSE. The pages these modules sit on are
+// regenerated when a bracket changes, but a team page stands for a day and a
+// hub for six hours between changes, so "Live" or "in progress" would keep
+// being served long after the game ended. A module states a series score
+// and a game's scheduled time, both of which stay true; the badge for a game
+// in progress belongs to the playoffs pages, which the pipeline revalidates
+// and which regenerate every ten minutes besides.
 import type { PostseasonLeague } from './types';
 import type { HomeGameView, LeagueView, SeriesView, SlotView } from './view';
 
@@ -25,6 +33,15 @@ const seriesHref = (l: InboundLeague, s: SeriesView) => `${l.href}#${s.id}`;
 const sideOf = (s: SeriesView, teamId: string): { own: SlotView; other: SlotView } | null =>
   s.higher.teamId === teamId ? { own: s.higher, other: s.lower } : s.lower.teamId === teamId ? { own: s.lower, other: s.higher } : null;
 const tally = (own: SlotView, other: SlotView) => `${Math.max(own.wins, other.wins)}-${Math.min(own.wins, other.wins)}`;
+
+/** The next game by its scheduled time: "Game 2 · Wed, Sep 30 · 5:00 PM ET".
+ *  A game that has started is still the next game to be played, and its
+ *  scheduled time is still a fact; its state is not stated. */
+function nextGameLabel(s: SeriesView): string | null {
+  if (!s.next) return null;
+  if (s.next.state === 'scheduled' || s.next.state === 'live') return `${s.next.title} · ${s.next.when}`;
+  return `${s.next.title} · ${s.next.stateLabel}`;
+}
 
 // ---- A club's team page ----
 
@@ -46,9 +63,8 @@ export type ClubPlayoffs =
       opponent: string;
       /** "HOU leads 1-0", "Series tied 1-1". Null before a game is final. */
       scoreLine: string | null;
-      /** "Game 2" while that game is being played. */
-      inProgress: string | null;
-      /** "Game 2 · Wed, Sep 30 · 5:00 PM ET". */
+      /** "Game 2 · Wed, Sep 30 · 5:00 PM ET": the next game to be played,
+       *  by its scheduled time, whether or not it has started. */
       nextLabel: string | null;
       /** "Host: Astros · Daikin Park". */
       nextHost: string | null;
@@ -76,7 +92,6 @@ export function clubPlayoffs(leagues: readonly InboundLeague[], teamId: string):
     const base: ClubBase = { league: l.league, season: l.view.season, leagueHref: l.href, updatedLabel: l.view.updatedLabel };
 
     if (s.status !== 'final') {
-      const live = s.liveLabel !== null && s.next !== null;
       return {
         ...base,
         state: 'alive',
@@ -84,8 +99,7 @@ export function clubPlayoffs(leagues: readonly InboundLeague[], teamId: string):
         roundLabel: s.roundLabel,
         opponent: other.label,
         scoreLine: s.scoreLine,
-        inProgress: live ? (s.next as NonNullable<SeriesView['next']>).title : null,
-        nextLabel: s.nextLabel,
+        nextLabel: nextGameLabel(s),
         nextHost: s.next && s.next.hostName ? (s.next.park ? `Host: ${s.next.hostName} · ${s.next.park}` : `Host: ${s.next.hostName}`) : null,
       };
     }
@@ -114,9 +128,8 @@ export interface LeagueCardSeries {
   href: string;
   /** "Astros vs White Sox". */
   names: string;
-  /** The one status line the playoffs hub shows for the series. */
+  /** One line: the series score, else the next game's scheduled time. */
   status: string;
-  inProgress: boolean;
 }
 
 export interface LeagueCard {
@@ -146,8 +159,9 @@ export function leagueCard(leagues: readonly InboundLeague[], league: string): L
         id: s.id,
         href: seriesHref(l, s),
         names: `${s.higher.label} vs ${s.lower.label}`,
-        status: s.liveLabel && s.next ? `${s.next.title} in progress` : s.headline,
-        inProgress: s.liveLabel !== null,
+        // Never the series headline: that is the playoffs page's line, and
+        // while a game is being played it says so.
+        status: s.scoreLine ?? nextGameLabel(s) ?? (s.higher.kind === 'placeholder' || s.lower.kind === 'placeholder' ? 'Matchup to be decided' : 'No games listed'),
       })),
     ),
     updatedLabel: l.view.updatedLabel,

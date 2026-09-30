@@ -8,6 +8,7 @@
 //
 // The output is plain data with no functions and no class instances, so it
 // can be handed to a client component as it is.
+import type { PromoType } from '../types';
 import type { Bracket, BracketGame, BracketSeries, BracketSlot, GameStatus, PostseasonLeague, Side } from './types';
 
 export const EASTERN = 'America/New_York';
@@ -51,6 +52,27 @@ export interface SlotView {
   won: boolean;
 }
 
+/**
+ * A postseason promotion at a game, as the page shows it: the item and its
+ * kind, nothing that says which row it came from.
+ */
+export interface GamePromo {
+  title: string;
+  type: PromoType;
+  icon: string;
+}
+
+/**
+ * A postseason promotion row as the reader hands it in, keyed the way the
+ * pipeline keys it: the series and the game number, which name one game of
+ * one bracket. The series key never leaves this module; it is looked up
+ * here and dropped.
+ */
+export interface PromoRow extends GamePromo {
+  seriesKey: string;
+  gameNumber: number;
+}
+
 export interface GameView {
   gameNumber: number;
   title: string;
@@ -73,6 +95,8 @@ export interface GameView {
   /** The park's page on this site. Null when there is none: the name then
    *  renders as plain text. */
   parkPage: ParkPage | null;
+  /** The postseason promotion at this game, when the host has published one. */
+  promo: GamePromo | null;
 }
 
 export interface SeriesView {
@@ -141,6 +165,7 @@ export interface HomeGameView {
   hostName: string;
   park: string | null;
   parkPage: ParkPage | null;
+  promo: GamePromo | null;
 }
 
 /** The home games list as the pages show it: a short list first, and the
@@ -289,11 +314,30 @@ const STATE_LABEL: Record<GameStatus, string> = {
   final: 'Final',
 };
 
+/**
+ * Is this game played only if the series is still undecided when it comes
+ * up? Computed from the series, not read from the document: the document's
+ * flag is the format's (any game past the clinch number), and it stays set
+ * on a deciding game, which is certain to be played. Here a scheduled game
+ * is conditional only while the leader could still clinch before it, even
+ * by winning every game in between.
+ */
+export function isConditional(s: Pick<BracketSeries, 'bestOf' | 'wins' | 'status'>, g: Pick<BracketGame, 'gameNumber' | 'status'>): boolean {
+  if (g.status !== 'scheduled' || s.status === 'final') return false;
+  const clinch = Math.ceil(s.bestOf / 2);
+  const played = s.wins.higher + s.wins.lower;
+  const lead = Math.max(s.wins.higher, s.wins.lower);
+  const before = Math.max(0, g.gameNumber - 1 - played);
+  return lead + before >= clinch;
+}
+
 function gameView(
   g: BracketGame,
+  s: BracketSeries,
   higher: SlotView,
   lower: SlotView,
   parks: ReadonlyMap<string, ParkInfo>,
+  promos: ReadonlyMap<string, GamePromo>,
 ): GameView {
   const timed = !g.startTimeTBD && g.start !== null;
   // The day a game is listed under. With a known time it is the Eastern day
@@ -321,7 +365,8 @@ function gameView(
         : `${awayName} ${g.awayScore}, ${homeName} ${g.homeScore}`;
   }
 
-  const waiting = g.status === 'scheduled' && g.ifNecessary;
+  const conditional = isConditional(s, g);
+  const waiting = conditional;
   const park = host && host.teamId ? parks.get(host.teamId) ?? null : null;
   return {
     gameNumber: g.gameNumber,
@@ -331,15 +376,18 @@ function gameView(
     sortKey: timed ? `${dayYmd}T${easternClock(g.start as string)}` : `${g.date ?? '9999-99-99'}T99`,
     state: g.status,
     stateLabel: waiting ? 'If necessary' : STATE_LABEL[g.status],
-    ifNecessary: g.ifNecessary,
+    ifNecessary: conditional,
     result,
     matchup: home && away ? `${away.label} at ${home.label}` : `${lower.label} vs ${higher.label}`,
     hostTeamId: host ? host.teamId : null,
     hostName: host ? host.label : null,
     park: park ? park.name : null,
     parkPage: park ? park.page : null,
+    promo: promos.get(promoKey(s.seriesKey, g.gameNumber)) ?? null,
   };
 }
+
+const promoKey = (seriesKey: string, gameNumber: number) => `${seriesKey}#${gameNumber}`;
 
 /** "2-2-1" from the rows themselves: who hosts game 1, 2, 3 and so on. Null
  *  unless every game of the series is listed with a confirmed host, and null
@@ -364,11 +412,12 @@ function seriesView(
   id: string,
   clubs: ReadonlyMap<string, ClubInfo>,
   parks: ReadonlyMap<string, ParkInfo>,
+  promos: ReadonlyMap<string, GamePromo>,
 ): SeriesView | null {
   const higher = slotView(s.higher, 'higher', s, clubs);
   const lower = slotView(s.lower, 'lower', s, clubs);
   if (!higher || !lower) return null;
-  const games = s.games.map((g) => gameView(g, higher, lower, parks));
+  const games = s.games.map((g) => gameView(g, s, higher, lower, parks, promos));
 
   let scoreLine: string | null = null;
   const hi = s.wins.higher;
@@ -431,13 +480,26 @@ export function buildLeagueView(
   clubs: ReadonlyMap<string, ClubInfo>,
   parks: ReadonlyMap<string, ParkInfo>,
   now: Date,
+  promoRows: readonly PromoRow[] = [],
 ): LeagueView | null {
+  // One promotion per game. A second row for the same game is not shown:
+  // the page has one line for it, and which row to prefer is not the web's
+  // call. Keyed on the series key here and nowhere else.
+  const promos = new Map<string, GamePromo>();
+  const doubled = new Set<string>();
+  for (const r of promoRows) {
+    const k = promoKey(r.seriesKey, r.gameNumber);
+    if (promos.has(k)) doubled.add(k);
+    else promos.set(k, { title: r.title, type: r.type, icon: r.icon });
+  }
+  for (const k of doubled) promos.delete(k);
+
   const rounds: RoundView[] = [];
   const byKey = new Map<string, RoundView>();
   const flat: SeriesView[] = [];
   const ids = seriesIds(bracket);
   for (const s of bracket.series) {
-    const v = seriesView(s, ids.get(s.seriesKey) as string, clubs, parks);
+    const v = seriesView(s, ids.get(s.seriesKey) as string, clubs, parks, promos);
     if (!v) return null;
     flat.push(v);
     let round = byKey.get(s.round);
@@ -499,6 +561,7 @@ export function buildLeagueView(
         ifNecessary: g.ifNecessary,
         hostTeamId: g.hostTeamId,
         hostName: g.hostName,
+        promo: g.promo,
         park: g.park,
         parkPage: g.parkPage,
       });
