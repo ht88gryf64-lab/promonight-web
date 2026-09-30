@@ -3553,3 +3553,30 @@ prints the bracket's own change stamp beside it.
 **Do not "fix" the residue by shortening `revalidate` on the team route.** It
 is one constant for all 169 team pages, all year, and the modules exist on
 about twenty of them for about six weeks.
+
+## 60. The offseason `/playoffs` hub is 297px tall at 390px and places no in-content ad
+
+**Status: OPEN, no fix. Due before the 2027-04 NBA and NHL postseason.**
+
+**What it is.** With no current-season bracket document at all, `/playoffs`
+renders its heading, the one-paragraph introduction and the "No postseason is
+underway" block, and nothing else: 297px at 390px, measured by
+`scripts/playoffs/measure-states.mjs` (state `hub-empty`, informational). The
+ad placer sizes what it puts on a page by the article's height and places no
+in-content unit under about 1,000px, so the offseason hub carries none on a
+phone. A hub with one bracket only, between rounds with no home game in the
+window, measures 1,329px and is fine.
+
+**When it is reachable.** Not while both 2026 documents exist, which they do
+for the rest of this postseason and after it (a finished bracket keeps its
+document and its results). It becomes reachable the day `POSTSEASON_SEASON`
+in `src/lib/postseason/data.ts` is bumped to 2027 and before the pipeline
+creates the 2027 documents, and again each year at that boundary.
+
+**What a fix would be.** Real content, not filler: the previous season's
+results (both brackets are still in Firestore under their own season), or the
+page 404s in the offseason and returns with the first document. Either is a
+ruling.
+
+**Ruled 2026-09-30:** no fix in the G3 fix round; recorded here and in the
+coordination ledger.

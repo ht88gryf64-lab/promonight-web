@@ -136,7 +136,6 @@ test('TEAM, eliminated: the league is still playing, so there is a rest to follo
     season: 2025,
     leagueHref: '/playoffs/mlb',
     updatedLabel: 'Oct 8, 11:08 PM ET',
-    leagueActive: true,
     roundLabel: 'Wild Card Series',
     opponent: 'Yankees',
     lostLine: 'Lost the Wild Card Series 2-1',
@@ -179,8 +178,8 @@ test('TEAM, inside the 14 days after the last game: the champion, and everyone e
   const jays = clubPlayoffs(leagues, 'toronto-blue-jays');
   assert.equal(jays?.state, 'eliminated');
   if (jays?.state === 'eliminated') {
-    assert.equal(jays.leagueActive, false, 'nothing is left to follow');
     assert.equal(jays.lostLine, 'Lost the World Series 4-3');
+    assert.ok(!('leagueActive' in jays), 'the module has one label whatever the league is doing, so it is not told');
   }
   assert.equal(clubPlayoffs(leagues, 'minnesota-twins'), null);
 });

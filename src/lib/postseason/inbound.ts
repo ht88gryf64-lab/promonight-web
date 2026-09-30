@@ -77,8 +77,8 @@ export type ClubPlayoffs =
     })
   /** Won its last series; the next one has not named it yet. */
   | (ClubBase & { state: 'advanced'; seriesHref: string; roundLabel: string; opponent: string; wonLine: string })
-  /** Lost its last series. `leagueActive` says whether anything is left to follow. */
-  | (ClubBase & { state: 'eliminated'; leagueActive: boolean; roundLabel: string; opponent: string; lostLine: string })
+  /** Lost its last series. */
+  | (ClubBase & { state: 'eliminated'; roundLabel: string; opponent: string; lostLine: string })
   /** Won the last round of a finished bracket. */
   | (ClubBase & { state: 'champion'; summary: string });
 
@@ -121,7 +121,6 @@ export function clubPlayoffs(leagues: readonly InboundLeague[], teamId: string):
     return {
       ...base,
       state: 'eliminated',
-      leagueActive: l.view.phase.kind === 'active',
       roundLabel: s.roundLabel,
       opponent: other.label,
       lostLine: `Lost the ${s.roundLabel} ${tally(own, other)}`,

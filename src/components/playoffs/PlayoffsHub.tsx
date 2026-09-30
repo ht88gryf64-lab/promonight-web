@@ -108,7 +108,9 @@ function LeagueCard({ entry }: { entry: HubLeague }) {
       </CardShell>
     );
   }
-  const series = currentRoundSeries(view);
+  // Only the series still being played. A decided series of the current
+  // round is in the results section, and nowhere else on the hub.
+  const series = currentRoundSeries(view).filter((s) => s.status !== 'final');
   return (
     <CardShell
       league={entry.league}

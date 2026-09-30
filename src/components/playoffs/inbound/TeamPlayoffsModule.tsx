@@ -78,17 +78,20 @@ export function TeamPlayoffsModule({ club, teamId, teamName }: { club: ClubPlayo
             Season over
           </h2>
           <p className="mt-1 font-rd text-[14px] text-rd-ink-soft">{club.lostLine}</p>
-          {/* "The rest" is a claim that there is a rest. It is made only
-              while another series is still being played. */}
+          {/* One label whatever the league's state. "The rest of the
+              playoffs" was a claim that there is a rest, and a club that is
+              out is not in the series whose end would revalidate its page,
+              so the claim could stand for a day after the champion was
+              crowned. The bracket is there in every state. */}
           <TrackedLink
             href={club.leagueHref}
             surface={SURFACE}
             ctaId="playoffs_module_league"
-            ctaLabel={club.leagueActive ? `Follow the rest of the ${club.league} playoffs` : `See the final ${club.league} bracket`}
+            ctaLabel={`See the full ${club.league} playoff bracket`}
             teamSlug={teamId}
             className={LINK}
           >
-            {club.leagueActive ? `Follow the rest of the ${club.league} playoffs` : `See the final ${club.league} bracket`}
+            See the full {club.league} playoff bracket
           </TrackedLink>
           <Stamp at={club.updatedLabel} />
         </>

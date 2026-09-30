@@ -10,7 +10,7 @@ import { mapBracketDoc } from '../../../../lib/postseason/map';
 import { playoffsLinkState } from '../../../../lib/postseason/gate';
 import { clubPlayoffs, homePlayoffs, leagueCard, venueGames, type InboundLeague } from '../../../../lib/postseason/inbound';
 import { buildLeagueView } from '../../../../lib/postseason/view';
-import { FIELDS_AT, FIXTURE, IN_GAME_AT, clubs, loadDoc, parks, rawText, seriesKeyIn } from '../../../../lib/postseason/__tests__/helpers';
+import { FIELDS_AT, FIXTURE, IN_GAME_AT, capturedTeams, clubs, loadDoc, parks, rawText, seriesKeyIn } from '../../../../lib/postseason/__tests__/helpers';
 import { TeamPlayoffsModule } from '../TeamPlayoffsModule';
 import { LeaguePlayoffsCard } from '../LeaguePlayoffsCard';
 import { HomePlayoffsModule } from '../HomePlayoffsModule';
@@ -106,23 +106,37 @@ test('TEAM, alive with a series score, and with a game in progress', () => {
   assert.ok(!/\b(ATL|PHI) \d/.test(textOf(braves)), 'no score in progress');
 });
 
-test('TEAM, eliminated: "Season over" and the link to the rest of the league playoffs', () => {
+// ONE LABEL IN EVERY STATE. "Follow the rest of the playoffs" claimed there
+// was a rest, and a club that is out is not in the series whose end would
+// revalidate its page, so the claim could stand for a day after the
+// champion was crowned.
+test('TEAM, eliminated while the league plays on: "Season over" and one link to the full bracket', () => {
   const html = team(inbound([FIXTURE.mlbMixed], MIXED_AT), 'boston-red-sox', 'Red Sox');
   assert.ok(html);
   sound(html, 'team eliminated');
   assert.match(html, /data-playoffs-state="eliminated"/);
-  assert.equal(textOf(html), '2025 MLB Playoffs Season over Lost the Wild Card Series 2-1 Follow the rest of the MLB playoffs Bracket updated Oct 8, 11:08 PM ET');
-  assert.match(html, /<a [^>]*href="\/playoffs\/mlb"[^>]*>Follow the rest of the MLB playoffs<\/a>/);
+  assert.equal(textOf(html), '2025 MLB Playoffs Season over Lost the Wild Card Series 2-1 See the full MLB playoff bracket Bracket updated Oct 8, 11:08 PM ET');
+  assert.match(html, /<a [^>]*href="\/playoffs\/mlb"[^>]*>See the full MLB playoff bracket<\/a>/);
   assert.deepEqual(hrefs(html), ['/playoffs/mlb']);
   assert.ok(!textOf(html).includes('Next:'));
 });
 
-test('TEAM, eliminated once the bracket is finished: no "rest" is promised', () => {
+test('TEAM, eliminated once the bracket is finished: the same label, word for word', () => {
   const html = team(inbound([FIXTURE.mlbFinal], IN_WINDOW), 'toronto-blue-jays', 'Blue Jays');
   assert.ok(html);
   sound(html, 'team eliminated, concluded');
-  assert.ok(textOf(html).includes('Season over Lost the World Series 4-3 See the final MLB bracket'));
-  assert.ok(!textOf(html).includes('Follow the rest'));
+  assert.ok(textOf(html).includes('Season over Lost the World Series 4-3 See the full MLB playoff bracket'));
+  for (const fixture of [FIXTURE.mlbMixed, FIXTURE.mlbFinal, FIXTURE.wnbaMixed, FIXTURE.wnbaFinal]) {
+    const now = fixture.startsWith('MLB') ? (fixture === FIXTURE.mlbFinal ? IN_WINDOW : MIXED_AT) : new Date(fixture === FIXTURE.wnbaFinal ? '2025-10-12T04:00:00Z' : '2025-09-19T05:30:00Z');
+    const leagues = inbound([fixture], now);
+    for (const t of capturedTeams()) {
+      const m = team(leagues, t.id, t.name);
+      if (m && m.includes('data-playoffs-state="eliminated"')) {
+        assert.ok(textOf(m).includes(`See the full ${t.league} playoff bracket`), `${fixture} ${t.id}`);
+        assert.ok(!/Follow the rest|See the final/.test(textOf(m)), `${fixture} ${t.id}`);
+      }
+    }
+  }
 });
 
 test('TEAM, champion and advanced', () => {

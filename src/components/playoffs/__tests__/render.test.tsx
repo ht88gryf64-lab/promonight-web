@@ -694,6 +694,31 @@ test('RESULTS, being played: "Results so far" with the decided series only; none
   assert.ok(!textOf(fresh).includes('Results'));
 });
 
+test('HUB CARD: only series still being played; a decided series of the round is in the results and nowhere else', () => {
+  // Replay step 24: the Wild Card round and ONE Division Series are final,
+  // three Division Series are being played.
+  const v = view(FIXTURE.mlbMixed, MIXED_AT);
+  const html = hubHtml([ok(v, false)], MIXED_AT);
+  const card = element(html, 'data-league-card="MLB"');
+  const current = v.rounds.find((r) => r.key === (v.phase.kind === 'active' ? v.phase.roundKey : ''));
+  assert.ok(current);
+  const all = current.groups.flatMap((g) => g.series);
+  const playing = all.filter((s) => s.status !== 'final');
+  const decided = all.filter((s) => s.status === 'final');
+  assert.equal(decided.length, 1, 'the fixture holds one decided series in the round being played');
+  assert.equal(count(card, 'data-series="'), playing.length);
+  for (const s of playing) assert.ok(card.includes(`data-series="${s.id}"`), s.id);
+  for (const s of decided) {
+    assert.ok(!card.includes(`data-series="${s.id}"`), `${s.id} is decided, not on the card`);
+    assert.ok(!textOf(card).includes(`${s.higher.label} vs ${s.lower.label}`), s.id);
+    const results = element(html, 'data-hub-results=');
+    assert.ok(results.includes(`data-result="${s.id}"`), `${s.id} is in the results`);
+  }
+  // The card is never empty while the league is being played: the round
+  // being played is the first with a series not yet final.
+  assert.ok(playing.length > 0);
+});
+
 test('HUB RESULTS: each league with a decided series lists them with the round and the score, linking to the league page', () => {
   const now = new Date('2025-10-21T12:00:00Z');
   const mlb = view('MLB_2025.replay-step-40.json', now);
