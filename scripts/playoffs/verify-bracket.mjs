@@ -325,7 +325,11 @@ try {
     return { visible: vis.length, total: rows.length, links: vis.map((r) => r.querySelectorAll('a[rel~="sponsored"]').length), button: b ? { expanded: b.getAttribute('aria-expanded'), label: b.textContent } : null,
       deep: [...document.querySelectorAll('[data-league-card] [data-series] a')].map((a) => a.getAttribute('href')), overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth }; })()`);
   check('hub: eight rows at most, one ticket button each, the week behind the button', hub.visible <= 8 && hub.links.every((n) => n === 1) && hub.button && hub.button.expanded === 'false' && hub.total > hub.visible, `${hub.visible} of ${hub.total} rows, "${hub.button && hub.button.label}"`);
-  check('hub: every series line is a link to that series', hub.deep.length === 8 && hub.deep.every((h) => /^\/playoffs\/(mlb|wnba)#[a-z_]+-\d+$/.test(h)), hub.deep.slice(0, 2).join(' '));
+  // How many series the cards list is the document's business (a card lists
+  // the series of the round being played that are not yet final; the
+  // served-HTML verifier checks that count against the document). Here: at
+  // least one, and every one a link to a series on a league page.
+  check('hub: every series line is a link to that series', hub.deep.length >= 1 && hub.deep.every((h) => /^\/playoffs\/(mlb|wnba)#[a-z_]+-\d+$/.test(h)), `${hub.deep.length} links, ${hub.deep.slice(0, 2).join(' ')}`);
   await shot('hub-390-full', 390);
   await ev(`document.querySelector('[data-league-card="MLB"] [data-series] a').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))`).catch(() => {});
   await sleep(1500);

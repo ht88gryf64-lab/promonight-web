@@ -535,7 +535,9 @@ async function main() {
         rows += 1;
         const row = served[k] ?? '';
         const wantRow = gameRow(doc, s, g);
-        const gotRow = textOf(row);
+        // The promotion line, when there is one, is checked on its own below.
+        const promoEl = element(row, 'data-game-promo=');
+        const gotRow = textOf(promoEl ? row.replace(promoEl, '') : row);
         const home = g.homeSide ? slotName(doc, s[g.homeSide]) : null;
         const parkOk = home && home.club && home.club.park && home.club.venuePath ? row.includes(`href="${home.club.venuePath}"`) || !row.includes('<a ') : !row.includes('<a ');
         if (gotRow === wantRow && parkOk) rowsRight += 1;
@@ -627,10 +629,15 @@ async function main() {
         const row = d.data() as Record<string, unknown>;
         if (row.tombstoned === true || row.league !== league || row.season !== SEASON) continue;
         if (typeof row.seriesKey === 'string' && typeof row.gameNumber === 'number') stored.set(`${row.seriesKey}#${row.gameNumber}`, { title: String(row.title), key: `${row.seriesKey}#${row.gameNumber}` });
-        for (const k of ['seriesKey', 'bracketGameId', 'sourceQuote', 'sourceUrl', 'opponentSlug']) if (typeof row[k] === 'string' && (row[k] as string).length > 5 && got.html.includes(row[k] as string)) internal.push(`${k} of ${d.id}`);
+        // opponentSlug is a club's slug, which the page carries as a link
+        // to that club in any case; it is not a row's internal field.
+        for (const k of ['seriesKey', 'bracketGameId', 'sourceQuote', 'sourceUrl']) if (typeof row[k] === 'string' && (row[k] as string).length > 5 && got.html.includes(row[k] as string)) internal.push(`${k} of ${d.id}`);
+        if (got.html.includes(d.id)) internal.push(`the id of ${d.id}`);
       }
     }
-    const lines = [...el.matchAll(/data-game-promo="[^"]*"[^>]*>([\s\S]*?)<\//g)].map((m) => textOf(m[1]));
+    // Each line whole (the icon sits in a span of its own inside it). A row
+    // shows twice when its game is in the home games list as well.
+    const lines = elements(el, 'data-game-promo=').map((e) => textOf(e));
     const titles = new Set([...stored.values()].map((r) => r.title));
     const unknownLines = lines.filter((l) => ![...titles].some((t) => l.endsWith(t)));
     check(`${where}: every promotion line on the page is a stored postseason row of a host club`, unknownLines.length === 0, `${lines.length} lines, ${stored.size} rows stored${unknownLines.length ? ': ' + unknownLines.join(' | ') : ''}`);
