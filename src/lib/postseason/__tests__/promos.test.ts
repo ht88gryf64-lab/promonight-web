@@ -110,7 +110,7 @@ test('JOIN: a row lands on the one game its series key and game number name, and
   assert.equal(all.flatMap((s) => s.games).filter((g) => g.promo).length, 2);
 });
 
-test('JOIN: a row for a series or game the bracket does not have is ignored; two rows for one game show neither', () => {
+test('JOIN: a row for a series or game the bracket does not have is ignored; two rows that disagree show neither; two that agree are one', () => {
   const stray: PromoRow[] = [
     { seriesKey: 'AL-WC-Z', gameNumber: 1, title: 'No Such Series', type: 'giveaway', icon: '' },
     { seriesKey: 'AL-WC-A', gameNumber: 9, title: 'No Such Game', type: 'giveaway', icon: '' },
@@ -120,6 +120,17 @@ test('JOIN: a row for a series or game the bracket does not have is ignored; two
   const v = withPromos(FIXTURE.mlbFields, FIELDS_AT, stray);
   const games = v.rounds.flatMap((r) => r.groups.flatMap((g) => g.series.flatMap((s) => s.games)));
   assert.equal(games.filter((g) => g.promo).length, 0);
+
+  // A rescan can write the same promotion twice under two ids. That is one
+  // promotion, and it shows.
+  const twice: PromoRow[] = [
+    { seriesKey: 'AL-WC-A', gameNumber: 2, title: 'Postseason Rally Towel', type: 'giveaway', icon: '🏟️' },
+    { seriesKey: 'AL-WC-A', gameNumber: 2, title: 'Postseason Rally Towel', type: 'giveaway', icon: '🏟️' },
+  ];
+  const v2 = withPromos(FIXTURE.mlbFields, FIELDS_AT, twice);
+  const shown = v2.rounds.flatMap((r) => r.groups.flatMap((g) => g.series.flatMap((s) => s.games))).filter((g) => g.promo);
+  assert.equal(shown.length, 1);
+  assert.equal(shown[0].promo?.title, 'Postseason Rally Towel');
 });
 
 test('JOIN: the view carries the line and never the key it was joined on', () => {

@@ -86,10 +86,19 @@ export default async function PlayoffsLeaguePage({ params }: { params: Promise<P
   const copy = leagueCopy(POSTSEASON_SEASON, league, postseasonPath(league), page.view);
   const schemas = leagueJsonLd(copy, league, page.view.updatedAt);
 
-  // The cross link goes only to a league whose postseason is underway.
-  const others = await Promise.all(POSTSEASON_LEAGUES.filter((l) => l !== league).map((l) => getLeaguePageData(l)));
+  // The cross link goes only to a league whose postseason is underway. The
+  // other league's read failing costs the link, never this page: this page
+  // is about its own document, and that one was read.
+  const others = await Promise.all(
+    POSTSEASON_LEAGUES.filter((l) => l !== league).map((l) =>
+      getLeaguePageData(l).catch((err: unknown) => {
+        console.error(`[postseason] reading ${l} for the cross link on ${postseasonPath(league)} failed; no link`, err);
+        return null;
+      }),
+    ),
+  );
   const otherLeagues = others.flatMap((o) =>
-    o.state === 'ok' && o.view.phase.kind === 'active' ? [{ league: o.league, href: postseasonPath(o.league) }] : [],
+    o && o.state === 'ok' && o.view.phase.kind === 'active' ? [{ league: o.league, href: postseasonPath(o.league) }] : [],
   );
 
   return (

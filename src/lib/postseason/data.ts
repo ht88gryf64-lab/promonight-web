@@ -83,7 +83,7 @@ export type LeaguePageData =
 export const getLeaguePageData = cache(async (league: PostseasonLeague): Promise<LeaguePageData> => {
   const read = await getBracket(league);
   if (read.state !== 'ok') return { state: read.state, league };
-  const view = await buildViewFor(read.bracket, new Date());
+  const view = await buildViewFor(read.bracket, new Date(), { withPromos: true });
   if (!view) throw new Error(`[postseason] ${docId(league)} names a club with no team record`);
   const predictionsLocked = await arePredictionInputsFrozen(league);
   return { state: 'ok', league, view, predictionsLocked };
@@ -95,7 +95,7 @@ export const getLeaguePageData = cache(async (league: PostseasonLeague): Promise
  * club the web has no team record for. Throws when a read it depends on
  * fails outright.
  */
-async function buildViewFor(bracket: Bracket, now: Date): Promise<LeagueView | null> {
+async function buildViewFor(bracket: Bracket, now: Date, opts: { withPromos: boolean }): Promise<LeagueView | null> {
   const teams = await getAllTeams();
   const wanted = new Set(clubSlugs(bracket));
   const clubs = new Map<string, ClubInfo>();
@@ -140,8 +140,10 @@ async function buildViewFor(bracket: Bracket, now: Date): Promise<LeagueView | n
   );
 
   // The postseason promotions at the hosts' games, today or later. Read by
-  // name; no regular reader sees these rows.
-  const promos = await readPostseasonPromos(bracket.league, bracket.season, hostSlugs(bracket), easternYmd(now));
+  // name; no regular reader sees these rows. Only the playoffs pages show
+  // them, so only they pay for the read: the inbound modules on 169 team
+  // pages, the venue pages and the hubs do not ask.
+  const promos = opts.withPromos ? await readPostseasonPromos(bracket.league, bracket.season, hostSlugs(bracket), easternYmd(now)) : [];
 
   return buildLeagueView(bracket, clubs, parks, now, promos);
 }
@@ -172,10 +174,9 @@ export const arePredictionInputsFrozen = cache(async (league: PostseasonLeague):
  *
  * One batched read of document names only: the mask asks for `league` and
  * nothing else. Behind the five-minute process cache on purpose, unlike the
- * bracket itself, because the root layout asks on every route and the answer
+ * bracket itself: its one caller is generateStaticParams, and the answer
  * changes once a season, when a document is first created. Throws when the
- * read fails, so each caller chooses its own failure: the layout hides the
- * link, the sitemap fails loudly.
+ * read fails, so the caller chooses its own failure.
  */
 export async function readLeaguesWithBracket(): Promise<PostseasonLeague[]> {
   const refs = POSTSEASON_LEAGUES.map((l) => db.collection(BRACKETS).doc(docId(l)));
@@ -257,7 +258,7 @@ export async function buildPlayoffsInbound(brackets: readonly Bracket[], now: Da
   if (playoffsLinkState(brackets, now).state === 'hidden') return [];
   const out: InboundLeague[] = [];
   for (const bracket of brackets) {
-    const view = await buildViewFor(bracket, now);
+    const view = await buildViewFor(bracket, now, { withPromos: false });
     if (!view) {
       console.error(`[postseason] ${docId(bracket.league)} names a club with no team record; it is left out of the inbound modules`);
       continue;

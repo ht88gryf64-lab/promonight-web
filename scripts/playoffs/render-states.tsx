@@ -75,6 +75,11 @@ export const STATES: State[] = [
   { name: 'hub-no-home-games', what: 'hub, World Series four days out, WNBA finished: no home game in the window', kind: 'hub', docs: ['MLB_2025.replay-step-40.json', FIXTURE.wnbaFinal], now: '2025-10-21T12:00:00Z', gated: true },
   { name: 'hub-finished', what: 'hub, both leagues finished', kind: 'hub', docs: [FIXTURE.mlbFinal, FIXTURE.wnbaFinal], now: '2025-11-03T12:00:00Z', gated: true },
   { name: 'league-set-early-mlb', what: 'MLB, bracket set five days before its first game (has not occurred)', kind: 'league', docs: [FIXTURE.mlbLive], now: '2026-09-24T12:00:00Z', gated: false, locked: true },
+  // Two states the reviewer measured below the floor. Neither is reachable
+  // while both 2026 documents exist; both become reachable the day the season
+  // constant is bumped and before the new documents are created.
+  { name: 'hub-one-bracket-between-rounds', what: 'hub with one bracket only, WNBA between rounds with no home game in the window (not reachable this season)', kind: 'hub', docs: ['WNBA_2025.replay-step-11.json'], now: '2025-09-19T06:00:00Z', gated: false },
+  { name: 'hub-empty', what: 'hub with no bracket at all, the offseason (not reachable this season)', kind: 'hub', docs: [], now: '2026-01-15T12:00:00Z', gated: false },
 ];
 
 function leagueArticle(s: State, teams: Map<string, Team>): string {
@@ -96,7 +101,7 @@ function hubArticle(s: State, teams: Map<string, Team>): string {
   const active = leagues.flatMap((l) => (l.view.phase.kind === 'active' ? [l.view] : []));
   const next = homeGamesWindow(active, now);
   const tickets = ticketButtons([...next.primary, ...next.rest].map((g) => g.hostTeamId), teams, 'web_playoffs', 'playoffs_hub');
-  return renderToStaticMarkup(<PlayoffsHub season={leagues[0].view.season} leagues={leagues} nextGames={next} tickets={tickets} />);
+  return renderToStaticMarkup(<PlayoffsHub season={leagues[0]?.view.season ?? 2026} leagues={leagues} nextGames={next} tickets={tickets} />);
 }
 
 /** The served page with its article swapped for `article`. Everything else,

@@ -13,18 +13,21 @@ import { CAPTURED_AT, FIELDS_AT, FIXTURE, IN_GAME_AT, clubs, loadDoc, parks, ser
 
 type Doc = Record<string, unknown>;
 
+function bracketOf(d: Doc): Bracket {
+  const b = mapBracketDoc(d, { league: d.league as 'MLB' | 'WNBA', season: d.season as number });
+  assert.ok(b, 'the document maps');
+  return b;
+}
 function bracket(name: string, edit?: (d: Doc) => void): Bracket {
   const d = loadDoc(name);
   if (edit) edit(d);
-  const b = mapBracketDoc(d, { league: d.league as 'MLB' | 'WNBA', season: d.season as number });
-  assert.ok(b, `${name} maps`);
-  return b;
+  return bracketOf(d);
 }
 
 /** The leagues the gate lets through at `now`, built the way the data
  *  module builds them. The data module's own build is held in data.test.ts. */
-function inbound(names: readonly string[], now: Date): InboundLeague[] {
-  const brackets = names.map((n) => bracket(n));
+function inbound(names: readonly (string | Doc)[], now: Date): InboundLeague[] {
+  const brackets = names.map((n) => (typeof n === 'string' ? bracket(n) : bracketOf(n)));
   if (playoffsLinkState(brackets, now).state === 'hidden') return [];
   return brackets.map((b) => {
     const view = buildLeagueView(b, clubs(), parks(), now);
@@ -92,6 +95,26 @@ test('TEAM, alive with a game in progress: the game is named by its scheduled ti
   assert.equal(braves.nextHost, 'Host: Braves · Truist Park');
   assert.equal(braves.scoreLine, null);
   assert.ok(!/\blive\b|progress/i.test(JSON.stringify(braves)));
+});
+
+test('TEAM and HUB, a game suspended or postponed: the score is the whole line; no state, no time, no host', () => {
+  for (const status of ['suspended', 'postponed'] as const) {
+    const d = loadDoc(FIXTURE.mlbInGame);
+    const s = (d.series as { seriesKey: string; games: Record<string, unknown>[] }[]).find((x) => x.seriesKey === 'NL-WC-A');
+    assert.ok(s);
+    s.games[0].status = status;
+    const leagues = inbound([d], IN_GAME_AT);
+    const braves = clubPlayoffs(leagues, 'atlanta-braves');
+    assert.equal(braves?.state, 'alive');
+    if (braves?.state !== 'alive') return;
+    assert.equal(braves.nextLabel, null, status);
+    assert.equal(braves.nextHost, null, status);
+    assert.ok(!/suspend|postpon|\blive\b|progress/i.test(JSON.stringify(braves)), status);
+    const card = leagueCard(leagues, 'MLB');
+    const line = card?.series.find((x) => x.names === 'Braves vs Phillies');
+    assert.equal(line?.status, 'No games listed', `${status}: nothing is next, and nothing is claimed about the game`);
+    assert.ok(!/suspend|postpon/i.test(JSON.stringify(card)), status);
+  }
 });
 
 test('TEAM, alive against a slot no club fills yet: the opponent is the slot text', () => {

@@ -470,7 +470,8 @@ function seriesView(
 // ---- The league ----
 /**
  * The whole league page as data, or null when a club in the bracket has no
- * team record on the web (the caller renders "bracket not available").
+ * team record on the web (the caller treats that as a document it cannot
+ * read, and throws).
  *
  * `now` decides only which scheduled games are still ahead. It is the render
  * time on the server, never the visitor's clock.
@@ -482,17 +483,20 @@ export function buildLeagueView(
   now: Date,
   promoRows: readonly PromoRow[] = [],
 ): LeagueView | null {
-  // One promotion per game. A second row for the same game is not shown:
-  // the page has one line for it, and which row to prefer is not the web's
-  // call. Keyed on the series key here and nowhere else.
+  // One promotion per game. Two rows for one game that say the same thing
+  // (a rescan can write a row twice under two ids) are one promotion. Two
+  // that disagree are neither: the page has one line for the game, and
+  // which row to prefer is not the web's call. Keyed on the series key here
+  // and nowhere else.
   const promos = new Map<string, GamePromo>();
-  const doubled = new Set<string>();
+  const disputed = new Set<string>();
   for (const r of promoRows) {
     const k = promoKey(r.seriesKey, r.gameNumber);
-    if (promos.has(k)) doubled.add(k);
-    else promos.set(k, { title: r.title, type: r.type, icon: r.icon });
+    const seen = promos.get(k);
+    if (!seen) promos.set(k, { title: r.title, type: r.type, icon: r.icon });
+    else if (seen.title !== r.title || seen.type !== r.type) disputed.add(k);
   }
-  for (const k of doubled) promos.delete(k);
+  for (const k of disputed) promos.delete(k);
 
   const rounds: RoundView[] = [];
   const byKey = new Map<string, RoundView>();

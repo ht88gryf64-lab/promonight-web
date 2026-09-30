@@ -546,6 +546,43 @@ async function main() {
     check(`${where}: every card, panel and club link agrees with the document`, wrong.filter((w) => !w.startsWith('row ')).length === 0, `${doc.series.length} series`);
     for (const w of wrong) console.log(`      ${w}`);
 
+    // The results section: every decided series, with every game that was
+    // played and its score, and nothing that is not decided.
+    const results = element(el, 'data-series-results=');
+    const decided = doc.series.filter((s) => s.status === 'final');
+    if (decided.length === 0) check(`${where}: no results section when nothing is decided`, results === null);
+    else {
+      const rText = results ? textOf(results) : '';
+      const missing: string[] = [];
+      doc.series.forEach((s, i) => {
+        const inSection = results ? results.includes(`data-result="${pageIds[i]}"`) : false;
+        if (s.status !== 'final') {
+          if (inSection) missing.push(`${pageIds[i]} listed but not decided`);
+          return;
+        }
+        if (!inSection) { missing.push(`${pageIds[i]} not listed`); return; }
+        const a = slotName(doc, s.higher);
+        const b = slotName(doc, s.lower);
+        const line = scoreLine(doc, s);
+        if (!rText.includes(`${a.name} vs ${b.name}`) || (line && !rText.includes(line))) missing.push(`${pageIds[i]} names or score`);
+        const card = element(results as string, `data-result="${pageIds[i]}"`) ?? '';
+        const cardText = textOf(card);
+        for (const g of s.games) {
+          if (g.status !== 'final' || g.homeScore === null || g.awayScore === null || !g.homeSide) continue;
+          const home = slotName(doc, s[g.homeSide]);
+          const away = slotName(doc, s[g.homeSide === 'higher' ? 'lower' : 'higher']);
+          const h = home.club?.abbr ?? home.name;
+          const aw = away.club?.abbr ?? away.name;
+          const score = g.homeScore >= g.awayScore ? `${h} ${g.homeScore}, ${aw} ${g.awayScore}` : `${aw} ${g.awayScore}, ${h} ${g.homeScore}`;
+          if (!cardText.includes(`G${g.gameNumber} ${score}`)) missing.push(`${pageIds[i]} game ${g.gameNumber}: ${score}`);
+        }
+        const rows = count(card, 'data-result-game=');
+        const played = s.games.filter((g) => g.status === 'final' && g.homeScore !== null && g.awayScore !== null).length;
+        if (rows !== played) missing.push(`${pageIds[i]}: ${rows} game rows for ${played} played`);
+      });
+      check(`${where}: the results section lists every decided series with every game score, and nothing else`, missing.length === 0, `${decided.length} decided${missing.length ? ': ' + missing.slice(0, 4).join('; ') : ''}`);
+    }
+
     // Scores: only on finished games, and every one of them accounted for.
     const finals = doc.series.flatMap((s) => s.games.filter((g) => g.status === 'final' && g.homeScore !== null && g.awayScore !== null));
     same(`${where}: "Final:" lines against finished games in the document`, count(textOf(elements(el, 'data-series-panels=')[0] ?? panels.join(' ')), 'Final:'), finals.length);
@@ -645,6 +682,32 @@ async function main() {
       }
       const rows = elements(el, 'data-home-game=');
       check(`${where}: home game rows carry one ticket link at most, and a league each`, rows.every((r) => count(r, 'rel="noopener noreferrer sponsored"') <= 1 && /\b(MLB|WNBA)\b/.test(textOf(r))), `${rows.length} rows`);
+      // Results so far: each league's decided series, one line each, with
+      // its round and its score, linking to the series.
+      const hubResults = element(el, 'data-hub-results=');
+      const anyDecided = LEAGUES.some((l) => (at.get(l)?.series ?? []).some((s) => s.status === 'final'));
+      if (!anyDecided) check(`${where}: no results section when nothing is decided`, hubResults === null);
+      else {
+        const wrong: string[] = [];
+        for (const league of LEAGUES) {
+          const doc = at.get(league);
+          if (!doc) continue;
+          const ids = (() => { const seen = new Map<string, number>(); return doc.series.map((s) => { const n = (seen.get(s.round) ?? 0) + 1; seen.set(s.round, n); return `${s.round}-${n}`; }); })();
+          const block = hubResults ? element(hubResults, `data-results-league="${league}"`) : null;
+          const decidedHere = doc.series.filter((s) => s.status === 'final');
+          if (decidedHere.length === 0) { if (block) wrong.push(`${league} listed with nothing decided`); continue; }
+          if (!block) { wrong.push(`${league} missing`); continue; }
+          const bt = textOf(block);
+          doc.series.forEach((s, i) => {
+            const listed = block.includes(`data-result="${ids[i]}"`);
+            if (s.status !== 'final') { if (listed) wrong.push(`${league} ${ids[i]} not decided`); return; }
+            if (!listed) { wrong.push(`${league} ${ids[i]} missing`); return; }
+            const a = slotName(doc, s.higher); const b = slotName(doc, s.lower); const line = scoreLine(doc, s);
+            if (!bt.includes(`${a.name} vs ${b.name}`) || !bt.includes(`${s.roundLabel} · ${line}`) || !block.includes(`href="/playoffs/${league.toLowerCase()}#${ids[i]}"`)) wrong.push(`${league} ${ids[i]} line`);
+          });
+        }
+        check(`${where}: results so far list each league's decided series with round, score and link, and nothing else`, wrong.length === 0, wrong.slice(0, 4).join('; '));
+      }
       // The hub names a game in progress and gives no score for any game.
       const inProgress = LEAGUES.flatMap((l) => (at.get(l)?.series ?? []).filter((s) => s.status !== 'final' && s.games.some((g) => g.status === 'live')));
       same(`${where}: in-progress badges against series with a game in progress`, count(el, 'data-game-state="live"'), inProgress.length);

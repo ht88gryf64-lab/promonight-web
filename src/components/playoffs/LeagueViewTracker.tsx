@@ -21,7 +21,7 @@ export function LeagueViewTracker({
 }: {
   league: string;
   season: number;
-  phase: 'active' | 'concluded' | 'unavailable';
+  phase: 'active' | 'concluded';
   roundKey: string | null;
 }) {
   useEffect(

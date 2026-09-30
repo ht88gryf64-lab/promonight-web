@@ -36,11 +36,17 @@ const tally = (own: SlotView, other: SlotView) => `${Math.max(own.wins, other.wi
 
 /** The next game by its scheduled time: "Game 2 · Wed, Sep 30 · 5:00 PM ET".
  *  A game that has started is still the next game to be played, and its
- *  scheduled time is still a fact; its state is not stated. */
-function nextGameLabel(s: SeriesView): string | null {
+ *  scheduled time is still a fact; its state is not stated. A game that is
+ *  suspended or postponed has no time that is a fact, and its state is a
+ *  thing that changes while the page stands, so nothing is said about it:
+ *  the series score is the whole line. */
+function nextGame(s: SeriesView): SeriesView['next'] {
   if (!s.next) return null;
-  if (s.next.state === 'scheduled' || s.next.state === 'live') return `${s.next.title} · ${s.next.when}`;
-  return `${s.next.title} · ${s.next.stateLabel}`;
+  return s.next.state === 'scheduled' || s.next.state === 'live' ? s.next : null;
+}
+function nextGameLabel(s: SeriesView): string | null {
+  const g = nextGame(s);
+  return g ? `${g.title} · ${g.when}` : null;
 }
 
 // ---- A club's team page ----
@@ -100,7 +106,10 @@ export function clubPlayoffs(leagues: readonly InboundLeague[], teamId: string):
         opponent: other.label,
         scoreLine: s.scoreLine,
         nextLabel: nextGameLabel(s),
-        nextHost: s.next && s.next.hostName ? (s.next.park ? `Host: ${s.next.hostName} · ${s.next.park}` : `Host: ${s.next.hostName}`) : null,
+        nextHost: (() => {
+          const g = nextGame(s);
+          return g && g.hostName ? (g.park ? `Host: ${g.hostName} · ${g.park}` : `Host: ${g.hostName}`) : null;
+        })(),
       };
     }
     if (l.view.phase.kind === 'concluded' && l.view.phase.championTeamId === teamId) {

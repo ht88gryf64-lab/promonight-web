@@ -131,8 +131,12 @@ test('ROUTE /playoffs/[league]: the cross link names only a league whose read su
   assert.ok(renderToStaticMarkup(await Page(params('mlb'))).includes('Open the WNBA bracket'));
   current.db = fakeFirestore({ 'postseasonBrackets/MLB_2026': loadDoc(FIXTURE.mlbLive) });
   assert.ok(!renderToStaticMarkup(await Page(params('mlb'))).includes('Open the WNBA bracket'), 'no link to a league with no document');
+  // The other league's read failing costs the link and never the page:
+  // this page is about its own document, and that one was read.
   current.db = fakeFirestore({ 'postseasonBrackets/MLB_2026': loadDoc(FIXTURE.mlbLive), 'postseasonBrackets/WNBA_2026': new Error('UNAVAILABLE') });
-  await assert.rejects(() => Page(params('mlb')), /UNAVAILABLE/, 'the other league read failing fails this render too: it is one page or none');
+  const alone = renderToStaticMarkup(await quiet(() => Page(params('mlb'))));
+  assert.ok(!alone.includes('Open the WNBA bracket'), 'no link to a league that could not be read');
+  assert.equal(count(alone, 'data-series="'), 11, 'the page itself is whole');
 });
 
 test('ROUTE /playoffs/[league]: ticket links carry the league surface in their sub-ID', async () => {
