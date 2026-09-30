@@ -6,7 +6,7 @@ import { whenSinksReady } from './when-sinks-ready';
 
 /**
  * Sends playoffs_league_view once for the page. Renders nothing. `phase` is
- * what the body rendered, including "unavailable".
+ * what the body rendered.
  *
  * Sent when both analytics sinks can take it, not from a bare mount effect:
  * see when-sinks-ready.ts. The cleanup cancels a send that has not happened

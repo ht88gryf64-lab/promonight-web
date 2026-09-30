@@ -168,8 +168,14 @@ export function leagueCard(leagues: readonly InboundLeague[], league: string): L
         href: seriesHref(l, s),
         names: `${s.higher.label} vs ${s.lower.label}`,
         // Never the series headline: that is the playoffs page's line, and
-        // while a game is being played it says so.
-        status: s.scoreLine ?? nextGameLabel(s) ?? (s.higher.kind === 'placeholder' || s.lower.kind === 'placeholder' ? 'Matchup to be decided' : 'No games listed'),
+        // while a game is being played it says so. With no score and no game
+        // to name by its time (the next game suspended or postponed, say),
+        // the line is the format, which is true and stays true. "No games
+        // listed" is said only when the document lists none.
+        status:
+          s.scoreLine ??
+          nextGameLabel(s) ??
+          (s.higher.kind === 'placeholder' || s.lower.kind === 'placeholder' ? 'Matchup to be decided' : s.games.length > 0 ? s.formatLabel : 'No games listed'),
       })),
     ),
     updatedLabel: l.view.updatedLabel,

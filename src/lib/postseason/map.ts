@@ -9,10 +9,12 @@
 // someone names it here.
 //
 // WHY IT IS STRICT. The page states facts about real games. A document the
-// mapper does not fully understand returns null, and the read that asked
-// throws, so no page is rendered from it and the last good page stands. It
-// never renders the part it could read: a series with an unknown status,
-// shown as if it were known, is a false claim.
+// mapper does not fully understand returns null. On the playoffs pages the
+// read that asked then throws, so no page is rendered from it and the last
+// good page stands; on the pages outside /playoffs the league is left out
+// and logged, so those pages render without its module. Nothing renders
+// the part it could read: a series with an unknown status, shown as if it
+// were known, is a false claim.
 import type {
   Bracket,
   BracketGame,

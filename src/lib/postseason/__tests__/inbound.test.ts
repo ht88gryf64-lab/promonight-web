@@ -112,7 +112,9 @@ test('TEAM and HUB, a game suspended or postponed: the score is the whole line; 
     assert.ok(!/suspend|postpon|\blive\b|progress/i.test(JSON.stringify(braves)), status);
     const card = leagueCard(leagues, 'MLB');
     const line = card?.series.find((x) => x.names === 'Braves vs Phillies');
-    assert.equal(line?.status, 'No games listed', `${status}: nothing is next, and nothing is claimed about the game`);
+    // The document lists three games, so "No games listed" would be false;
+    // the format is the one true line left.
+    assert.equal(line?.status, 'Best of 3', `${status}: nothing is next by its time, and nothing is claimed about the game`);
     assert.ok(!/suspend|postpon/i.test(JSON.stringify(card)), status);
   }
 });

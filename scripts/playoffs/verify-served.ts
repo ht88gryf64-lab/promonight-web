@@ -552,7 +552,6 @@ async function main() {
     const decided = doc.series.filter((s) => s.status === 'final');
     if (decided.length === 0) check(`${where}: no results section when nothing is decided`, results === null);
     else {
-      const rText = results ? textOf(results) : '';
       const missing: string[] = [];
       doc.series.forEach((s, i) => {
         const inSection = results ? results.includes(`data-result="${pageIds[i]}"`) : false;
@@ -564,9 +563,10 @@ async function main() {
         const a = slotName(doc, s.higher);
         const b = slotName(doc, s.lower);
         const line = scoreLine(doc, s);
-        if (!rText.includes(`${a.name} vs ${b.name}`) || (line && !rText.includes(line))) missing.push(`${pageIds[i]} names or score`);
         const card = element(results as string, `data-result="${pageIds[i]}"`) ?? '';
         const cardText = textOf(card);
+        // On the series' own card, not somewhere in the section.
+        if (!cardText.includes(`${a.name} vs ${b.name}`) || (line && !cardText.includes(line))) missing.push(`${pageIds[i]} names or score`);
         for (const g of s.games) {
           if (g.status !== 'final' || g.homeScore === null || g.awayScore === null || !g.homeSide) continue;
           const home = slotName(doc, s[g.homeSide]);

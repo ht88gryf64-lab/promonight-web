@@ -7,6 +7,7 @@ import { getAllTeams } from '@/lib/data';
 import {
   POSTSEASON_LEAGUES,
   POSTSEASON_SEASON,
+  getBracket,
   getLeaguePageData,
   getLeaguesWithBracket,
   postseasonLeagueFromSlug,
@@ -86,20 +87,24 @@ export default async function PlayoffsLeaguePage({ params }: { params: Promise<P
   const copy = leagueCopy(POSTSEASON_SEASON, league, postseasonPath(league), page.view);
   const schemas = leagueJsonLd(copy, league, page.view.updatedAt);
 
-  // The cross link goes only to a league whose postseason is underway. The
-  // other league's read failing costs the link, never this page: this page
-  // is about its own document, and that one was read.
+  // The cross link goes only to a league whose postseason is underway: its
+  // bracket has a series not yet final. That is decided from the bracket
+  // alone, so only the bracket is read, not the other page's clubs, parks,
+  // promotions or predictions. The other league's read failing costs the
+  // link, never this page: this page is about its own document, and that
+  // one was read.
   const others = await Promise.all(
-    POSTSEASON_LEAGUES.filter((l) => l !== league).map((l) =>
-      getLeaguePageData(l).catch((err: unknown) => {
+    POSTSEASON_LEAGUES.filter((l) => l !== league).map(async (l) => {
+      try {
+        const read = await getBracket(l);
+        return read.state === 'ok' && read.bracket.series.some((s) => s.status !== 'final') ? { league: l, href: postseasonPath(l) } : null;
+      } catch (err) {
         console.error(`[postseason] reading ${l} for the cross link on ${postseasonPath(league)} failed; no link`, err);
         return null;
-      }),
-    ),
+      }
+    }),
   );
-  const otherLeagues = others.flatMap((o) =>
-    o && o.state === 'ok' && o.view.phase.kind === 'active' ? [{ league: o.league, href: postseasonPath(o.league) }] : [],
-  );
+  const otherLeagues = others.flatMap((o) => (o ? [o] : []));
 
   return (
     <div className={`${archivoHouse.variable} ${barlowCondensed.variable} rd-root min-h-screen bg-rd-cream`}>
