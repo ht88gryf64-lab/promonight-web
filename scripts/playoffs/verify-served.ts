@@ -292,6 +292,21 @@ async function main() {
     return `${call(hi > lo ? a : b)} leads ${top}`;
   }
 
+  /**
+   * Is a scheduled game played only if the series is still undecided when it
+   * comes up? Not the document's flag, which is the format's: a game is
+   * conditional while the side ahead could clinch before it, even by winning
+   * every game in between. A game in a decided series is never conditional.
+   */
+  function conditional(s: RawSeries, g: RawGame): boolean {
+    if (g.status !== 'scheduled' || s.status === 'final') return false;
+    const needed = Math.floor(s.bestOf / 2) + 1;
+    const decided = s.wins.higher + s.wins.lower;
+    const ahead = Math.max(s.wins.higher, s.wins.lower);
+    const stillBefore = Math.max(0, g.gameNumber - 1 - decided);
+    return ahead + stillBefore >= needed;
+  }
+
   /** The text of one game row in a series panel, whole. */
   function gameRow(doc: RawDoc, s: RawSeries, g: RawGame): string {
     const home = g.homeSide ? slotName(doc, s[g.homeSide]) : null;
@@ -304,7 +319,7 @@ async function main() {
       out.push(`Final: ${g.homeScore >= g.awayScore ? `${h} ${g.homeScore}, ${a} ${g.awayScore}` : `${a} ${g.awayScore}, ${h} ${g.homeScore}`}`);
     } else if (g.status === 'live') out.push('Live');
     else if (g.status === 'scheduled') {
-      if (g.ifNecessary) out.push('If necessary');
+      if (conditional(s, g)) out.push('If necessary');
     } else if (g.status !== 'final') out.push(g.status[0].toUpperCase() + g.status.slice(1));
     return out.join(' ');
   }
@@ -549,7 +564,7 @@ async function main() {
         const home = slotName(doc, s[g.homeSide]);
         const away = slotName(doc, s[g.homeSide === 'higher' ? 'lower' : 'higher']);
         if (!home.club) continue;
-        known.add([`${away.name} at ${home.name}`, `${s.roundLabel} · Game ${g.gameNumber}${g.ifNecessary ? ' · If necessary' : ''}`, whenOf(g), home.club.park ?? ''].join(' ').trim());
+        known.add([`${away.name} at ${home.name}`, `${s.roundLabel} · Game ${g.gameNumber}${conditional(s, g) ? ' · If necessary' : ''}`, whenOf(g), home.club.park ?? ''].join(' ').trim());
       }
     }
     // A promotion line is checked on its own below; it is taken out of the
