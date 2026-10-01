@@ -443,8 +443,8 @@ test('FINGERPRINTS: on each league page, the five allowed fingerprints appear on
     assert.equal([...method.matchAll(/[0-9a-f]{40,}/g)].length, 5, slug);
     assert.ok(method.includes('Fingerprints'), `${slug}: labeled as fingerprints`);
     const said = method.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
-    assert.ok(said.includes('Each is a SHA-256 fingerprint of something that was locked: four of the inputs and the published bracket.'), said);
-    assert.ok(said.includes('The bracket format and the published bracket are fingerprinted as files, the other three as their locked data written out in a fixed order.'), said);
+    assert.ok(said.includes('Each is a SHA-256 fingerprint of something that was locked: four of the inputs and the locked bracket file.'), said);
+    assert.ok(said.includes('The bracket format and the locked bracket file are fingerprinted as files, the other three as their locked data written out in a fixed order.'), said);
     // Three of the five are hashes of canonical data, not of files: nothing
     // may call them all files, or say every input has one.
     assert.ok(!/A change to any input|of what was locked\.|one locked file|those files/.test(said), said);
@@ -461,6 +461,9 @@ test('PREDICTIONS through the real pages: the section, the scorecard, the method
   current.db = fakeFirestore(BOTH());
   const mlb = renderToStaticMarkup(await League(params('mlb')));
   assert.equal(count(mlb, 'id="predictions"'), 1);
+  // The chances are dated by their inputs, beside the cards that show them.
+  const intro = elementOf(mlb, 'data-predictions="bracket"').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+  assert.ok(intro.includes('The chances come from regular-season results alone, so they take no account of postseason games already played when the bracket was locked.'), intro);
   assert.equal(count(mlb, 'data-pick="'), 11);
   assert.ok(!/publish soon/i.test(mlb));
   assert.equal(seriesKeyIn(mlb.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/g, '')), null);

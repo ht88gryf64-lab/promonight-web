@@ -231,11 +231,13 @@ export type PredictedRead = { state: 'ok'; predicted: PredictedBracket } | { sta
  * scored against that change. React cache() shares the read between the
  * metadata and the body of one render.
  *
- * NEVER THROWS. Unlike the real bracket, whose failure keeps the last good
- * page, a predictions failure must not freeze the page: the real bracket
- * goes on updating and only the predictions section drops out. A failed
- * read, no document, a document the mapper refuses and a fingerprint that
- * is not the one locked are all "unavailable", each with its category.
+ * NEVER LETS A FAILURE THROUGH. Unlike the real bracket, whose failure keeps
+ * the last good page, a predictions failure must not freeze the page: the
+ * real bracket goes on updating and only the predictions section drops out.
+ * A failed or slow read, no document, a document the mapper refuses and a
+ * lock that does not match are all "unavailable", each with its category.
+ * The mapper and the lock check run outside this function's try; anything
+ * they throw is caught by loadPredictions, its only caller, as build-failed.
  */
 export const getPredictedBracket = cache(async (league: PostseasonLeague): Promise<PredictedRead> => {
   let data: unknown;

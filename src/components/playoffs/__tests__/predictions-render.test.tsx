@@ -8,7 +8,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { isValidElement, type ReactElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { homeGamesWindow } from '../../../lib/postseason/view';
-import { FIXTURE, LYNX_OUT_AT, buildWithPredictions, decidedMlb, decidedWnba, rawText, seriesKeyIn, type Built, PREDICTED } from '../../../lib/postseason/__tests__/helpers';
+import { FIXTURE, LYNX_OUT_AT, PREDICTED, buildWithPredictions, decidedMlb, decidedWnba, rawText, seriesKeyIn, type Built } from '../../../lib/postseason/__tests__/helpers';
 import { PlayoffsLeague, type LeagueBody } from '../PlayoffsLeague';
 import { PredictionsMethodology } from '../Predictions';
 import { PredictedBracket } from '../PredictedBracket';
@@ -259,8 +259,32 @@ function innerType(t: unknown): unknown {
   return x;
 }
 
+// What no client prop may carry, besides a hash: a series key (by shape,
+// and the short ones by exact value), and every operator value, path, blob
+// and commit of the two stored predicted documents.
+const SHORT_KEYS = new Set(['WS', 'F']);
+const BANNED_VALUES = (() => {
+  const out = new Set<string>();
+  for (const name of [PREDICTED.wnba, PREDICTED.mlb]) {
+    const d = JSON.parse(rawText(name)) as Record<string, Record<string, unknown>>;
+    const p = d.provenance;
+    for (const v of [d.computedBy, d.engineCommitAtExecute, p.frozenBy, p.seedFileAuthoredBy, p.seedFileSourceUrl, p.seedFile, p.descriptor, p.canonicalDescriptor, p.engineCommitAtFreeze, p.engineCommitAtCompute])
+      if (typeof v === 'string') out.add(v);
+    for (const f of [...(p.coreFiles as Record<string, string>[]), ...(p.engineFiles as Record<string, string>[])]) for (const v of Object.values(f)) if (typeof v === 'string') out.add(v);
+  }
+  return out;
+})();
+
 function findHash(v: unknown, seen = new Set<unknown>()): string | null {
-  if (typeof v === 'string') return /[0-9a-f]{40,}/.exec(v)?.[0] ?? null;
+  if (typeof v === 'string') {
+    const hex = /[0-9a-f]{40,}/.exec(v)?.[0];
+    if (hex) return hex;
+    const key = seriesKeyIn(v);
+    if (key) return `series key ${key}`;
+    if (SHORT_KEYS.has(v)) return `series key ${v}`;
+    for (const b of BANNED_VALUES) if (v.includes(b)) return `banned value ${b}`;
+    return null;
+  }
   if (!v || typeof v !== 'object' || seen.has(v)) return null;
   seen.add(v);
   if (isValidElement(v)) return findHash((v as ReactElement<Record<string, unknown>>).props, seen);
@@ -292,7 +316,7 @@ function visit(node: ReactNode, client: Set<unknown>, hits: string[], path: stri
     if (isClient) {
       const { children, ...own } = props;
       const hit = findHash(own);
-      if (hit) hits.push(`${path} > ${name} receives ${hit.slice(0, 12)}`);
+      if (hit) hits.push(`${path} > ${name} receives ${hit.slice(0, 40)}`);
       visit(children as ReactNode, client, hits, `${path} > ${name}`, true);
       return;
     }
@@ -382,6 +406,17 @@ test('THE WALKER would see a leak: a hash handed to the predicted bracket throug
     const W = Wrapper as unknown as (p: Record<string, unknown>) => ReactElement;
     visit(<W league="MLB" leagueSlug="mlb" season={2026} rounds={[]}><PredictionsMethodology view={b.predictions.methodology} /></W>, client, w, label);
     assert.ok(w.some((h) => h.includes('is under a client component')), `${label}: ${w.join('\n')}`);
+  }
+  // Not only hashes: a series key, a short key by value, an operator value
+  // and a file path, each handed to the predicted bracket, are each seen.
+  const banned = JSON.parse(rawText(PREDICTED.mlb)) as Record<string, Record<string, unknown>>;
+  for (const value of ['AL-WC-A', 'WS', String(banned.computedBy), String(banned.provenance.seedFileAuthoredBy), 'predictions/elo.js']) {
+    const r = structuredClone(b.predictions.view.rounds);
+    r[0].groups[0].series[0].pickLabel = value;
+    const leak: Built = { ...b, predictions: { ...b.predictions, view: { ...b.predictions.view, rounds: r } } };
+    const h: string[] = [];
+    visit(page(leak, LYNX_OUT_AT), client, h, value);
+    assert.ok(h.some((x) => x.includes('PredictedBracket receives')), `${value}: ${h.join('\n')}`);
   }
   // A server component wrapped in memo() is expanded: a hash it hands to a
   // client component inside its own output is seen.

@@ -501,7 +501,7 @@ test('METHODOLOGY: the backtest is the only accuracy claim, and the fingerprints
   );
   assert.deepEqual(
     m.fingerprints.map((f) => f.label),
-    ['Regular-season results', 'Model settings', 'Bracket format', 'Team identifiers', 'Published bracket'],
+    ['Regular-season results', 'Simulation settings', 'Bracket format', 'Team identifiers', 'Locked bracket file'],
   );
 });
 
