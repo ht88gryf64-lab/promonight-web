@@ -13,6 +13,7 @@ import { LeagueViewTracker } from './LeagueViewTracker';
 import { PredictionsMethodology, PredictionsSection } from './Predictions';
 import { SeriesResults } from './SeriesResults';
 import { CONDENSED } from './ui';
+import { getLeagueHub } from '@/lib/league-hubs';
 
 const SURFACE = 'web_playoffs_league' as const;
 const PAGE_TYPE = 'playoffs_league';
@@ -189,25 +190,37 @@ export function PlayoffsLeague({
         <AdSlot config={AD_SLOTS.IN_CONTENT_2} pageType={PAGE_TYPE} />
       </article>
 
-      {otherLeagues.length > 0 && (
-        <p className="mt-10 text-[15px] text-rd-ink">
-          {otherLeagues.map((o, i) => (
-            <span key={o.league}>
-              {i > 0 ? ' ' : ''}
-              <TrackedLink
-                href={o.href}
-                surface={SURFACE}
-                ctaId="playoffs_other_league"
-                ctaLabel={`Open the ${o.league} bracket`}
-                className="font-semibold uppercase tracking-[0.1em] text-rd-red hover:text-rd-red-dark"
-                style={{ fontFamily: CONDENSED, fontSize: 16 }}
-              >
-                Open the {o.league} bracket
-              </TrackedLink>
-            </span>
-          ))}
-        </p>
-      )}
+      {/* The league's own hub first, always; then the other league's
+          bracket while it is being played. Outside the article, so neither
+          link is near an ad unit. */}
+      <p className="mt-10 flex flex-wrap gap-x-6 gap-y-2 text-[15px] text-rd-ink">
+        <span>
+          <TrackedLink
+            href={getLeagueHub(league)?.href ?? `/${league.toLowerCase()}`}
+            surface={SURFACE}
+            ctaId="playoffs_league_hub"
+            ctaLabel={`All ${league} promotions`}
+            className="font-semibold uppercase tracking-[0.1em] text-rd-red hover:text-rd-red-dark"
+            style={{ fontFamily: CONDENSED, fontSize: 16 }}
+          >
+            All {league} promotions
+          </TrackedLink>
+        </span>
+        {otherLeagues.map((o) => (
+          <span key={o.league}>
+            <TrackedLink
+              href={o.href}
+              surface={SURFACE}
+              ctaId="playoffs_other_league"
+              ctaLabel={`Open the ${o.league} bracket`}
+              className="font-semibold uppercase tracking-[0.1em] text-rd-red hover:text-rd-red-dark"
+              style={{ fontFamily: CONDENSED, fontSize: 16 }}
+            >
+              Open the {o.league} bracket
+            </TrackedLink>
+          </span>
+        ))}
+      </p>
 
       <footer className="mt-10 space-y-2 border-t border-rd-line pt-4">
         <p className="text-[12.5px] leading-relaxed text-rd-ink-faint">

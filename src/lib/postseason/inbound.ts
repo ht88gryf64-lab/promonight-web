@@ -18,7 +18,7 @@
 // and a game's scheduled time, both of which stay true; the badge for a game
 // in progress belongs to the playoffs pages, which the pipeline revalidates
 // and which regenerate every ten minutes besides.
-import type { PostseasonLeague } from './types';
+import type { Bracket, PostseasonLeague } from './types';
 import type { HomeGameView, LeagueView, SeriesView, SlotView } from './view';
 
 export interface InboundLeague {
@@ -26,6 +26,11 @@ export interface InboundLeague {
   /** The league's bracket page, "/playoffs/mlb". */
   href: string;
   view: LeagueView;
+  /** The mapped bracket the view was built from. SERVER ONLY: it holds the
+   *  series keys. It is here so a team page's PromoNight Predicts line is
+   *  scored against the same snapshot as the module above it, with no second
+   *  read. No builder below copies it into what it returns. */
+  bracket: Bracket;
 }
 
 const allSeries = (view: LeagueView): SeriesView[] => view.rounds.flatMap((r) => r.groups.flatMap((g) => g.series));
@@ -180,6 +185,43 @@ export function leagueCard(leagues: readonly InboundLeague[], league: string): L
     ),
     updatedLabel: l.view.updatedLabel,
   };
+}
+
+/** The one line in a league hub's hero while that league's postseason is
+ *  being played: "2026 MLB Playoffs: Wild Card Series. Open the bracket".
+ *  The round is the real bracket's current round; with no round to name the
+ *  line is "2026 MLB Playoffs. Open the bracket". Null unless the league is
+ *  being played. */
+export interface LeagueHeroLine {
+  league: PostseasonLeague;
+  href: string;
+  text: string;
+}
+
+export function leagueHeroLine(leagues: readonly InboundLeague[], league: string): LeagueHeroLine | null {
+  const l = leagues.find((x) => x.league === league);
+  if (!l || l.view.phase.kind !== 'active') return null;
+  const round = l.view.phase.roundLabel.trim();
+  const head = `${l.view.season} ${l.league} Playoffs`;
+  return { league: l.league, href: l.href, text: round ? `${head}: ${round}. Open the bracket` : `${head}. Open the bracket` };
+}
+
+/** The hub card once a league's bracket is finished, for as long as the
+ *  Playoffs link still shows: the leagues handed in are only ever non-empty
+ *  while the link gate is open (see buildPlayoffsInbound), so the card goes
+ *  when the window closes. Null for a league still being played (it has the
+ *  full card) and for one with no bracket. */
+export interface LeagueFinalCard {
+  league: PostseasonLeague;
+  href: string;
+  /** "2026 MLB Playoffs: final bracket". */
+  text: string;
+}
+
+export function leagueFinalCard(leagues: readonly InboundLeague[], league: string): LeagueFinalCard | null {
+  const l = leagues.find((x) => x.league === league);
+  if (!l || l.view.phase.kind !== 'concluded') return null;
+  return { league: l.league, href: l.href, text: `${l.view.season} ${l.league} Playoffs: final bracket` };
 }
 
 export interface HomeLeague {

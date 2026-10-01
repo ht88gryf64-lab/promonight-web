@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { cloneElement, type ReactElement, type ReactNode } from 'react';
 
 // Light-house league-hub hero. Warm charcoal (#1d1714) base carrying a radial
 // accent glow, matching the live /teams light hero. The glow hue is the league's
@@ -23,6 +23,7 @@ export function HubHero({
   subtitle,
   freshness,
   accent = '#d31145',
+  notice,
   children,
 }: {
   eyebrow: string;
@@ -34,8 +35,28 @@ export function HubHero({
   /** League house-palette accent (#rrggbb) for the hero glow. Defaults to the
    *  original brand red when unset. */
   accent?: string;
+  /** One line under the freshness line and above the stat bar: the league's
+   *  playoffs link while its postseason is being played. */
+  notice?: ReactNode;
   children?: ReactNode;
 }) {
+  const inner = (
+    <div className="relative z-10 mx-auto max-w-6xl px-6 pb-12 pt-16 md:pb-14 md:pt-20">
+      <p className="font-rd text-[11px] font-semibold uppercase tracking-[0.14em] text-white/55">
+        {eyebrow}
+      </p>
+      <h1 className="rd-display mt-1 text-4xl uppercase leading-[0.95] text-white md:text-6xl">
+        {title}
+      </h1>
+      {subtitle ? (
+        <p className="mt-3 max-w-2xl font-rd text-base text-white/65">{subtitle}</p>
+      ) : null}
+      {freshness ? (
+        <p className="mt-3 font-rd text-[12px] text-white/45">{freshness}</p>
+      ) : null}
+      {children ? <div className="mt-8">{children}</div> : null}
+    </div>
+  );
   return (
     <section className="relative overflow-hidden text-white" style={{ backgroundColor: '#1d1714' }}>
       <div
@@ -45,21 +66,15 @@ export function HubHero({
           backgroundImage: `radial-gradient(120% 80% at 100% 0%, ${glowRgba(accent, 0.18)} 0%, transparent 60%)`,
         }}
       />
-      <div className="relative z-10 mx-auto max-w-6xl px-6 pb-12 pt-16 md:pb-14 md:pt-20">
-        <p className="font-rd text-[11px] font-semibold uppercase tracking-[0.14em] text-white/55">
-          {eyebrow}
-        </p>
-        <h1 className="rd-display mt-1 text-4xl uppercase leading-[0.95] text-white md:text-6xl">
-          {title}
-        </h1>
-        {subtitle ? (
-          <p className="mt-3 max-w-2xl font-rd text-base text-white/65">{subtitle}</p>
-        ) : null}
-        {freshness ? (
-          <p className="mt-3 font-rd text-[12px] text-white/45">{freshness}</p>
-        ) : null}
-        {children ? <div className="mt-8">{children}</div> : null}
-      </div>
+      {/* With no notice the hero is the markup and payload it always was:
+          a conditional child written into the JSX would serialize a null
+          into every hub. The notice goes in before the stat bar. */}
+      {notice ? withNotice(inner, notice) : inner}
     </section>
   );
+}
+
+function withNotice(el: ReactElement<{ children?: ReactNode }>, notice: ReactNode): ReactElement {
+  const kids = el.props.children as ReactNode[];
+  return cloneElement(el, undefined, ...kids.slice(0, -1), notice, kids[kids.length - 1]);
 }

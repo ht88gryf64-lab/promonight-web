@@ -633,3 +633,201 @@ test('ROUTES: the league segment is lowercase and only the route table resolves'
   assert.equal(POSTSEASON_SEASON, 2026);
   void CAPTURED_AT;
 });
+
+// ---- The PromoNight Predicts line on a team page ----
+//
+// getTeamPostseason is everything the team route asks. The documents are the
+// two read 2026-10-01T16:25Z. The line fails the way the league page's
+// section fails, through the same read, mapper, lock and assembly, and the
+// failure costs the line only: the module above it is still returned.
+
+const TODAY_MLB = () => loadDoc('MLB_2026.live-20261001T1625Z.json');
+const TODAY_WNBA = () => loadDoc('WNBA_2026.live-20261001T1625Z.json');
+// Pass the MLB prediction to stand in for it; undefined is no document.
+const todayDocs = (...predictedMlb: [Record<string, unknown> | Error | undefined] | []) => ({
+  'postseasonBrackets/MLB_2026': TODAY_MLB(),
+  'postseasonBrackets/WNBA_2026': TODAY_WNBA(),
+  'predictedBrackets/MLB_2026': predictedMlb.length ? predictedMlb[0] : PREDICTED_MLB(),
+  'predictedBrackets/WNBA_2026': PREDICTED_WNBA(),
+});
+const teamLine = (reason: string, league = 'MLB') => `[predictions-unavailable] league=${league} surface=team reason=${reason}`;
+
+test('TEAM LINE: a club in a bracket gets its module and its line, from one bracket read and one predictions read, and logs nothing', async () => {
+  const { getTeamPostseason } = await load();
+  const fake = use(todayDocs());
+  const { value, lines } = await tagged(() => getTeamPostseason('mlb', 'boston-red-sox'));
+  assert.ok(value);
+  assert.equal(value.club.state, 'eliminated');
+  assert.ok(value.pick);
+  assert.equal(value.pick.kind, 'correct');
+  assert.equal(value.pick.statusLine, 'Pick correct: the Yankees beat the Red Sox 2-0 in the Wild Card Series.');
+  assert.deepEqual(lines, []);
+  assert.equal(fake.reads.filter((r) => r.path.startsWith('postseasonBrackets/')).length, 2, 'one batched read of the two brackets');
+  assert.deepEqual(
+    fake.reads.filter((r) => r.path.startsWith('predictedBrackets/')).map((r) => r.path),
+    ['predictedBrackets/MLB_2026'],
+    'one predictions read, of the club\'s own league',
+  );
+});
+
+test('TEAM LINE: a WNBA club gets its own league\'s line', async () => {
+  const { getTeamPostseason } = await load();
+  use(todayDocs());
+  const { value, lines } = await tagged(() => getTeamPostseason('wnba', 'golden-state-valkyries'));
+  assert.equal(value?.pick?.pickLine, "PromoNight's pick: Valkyries to win the WNBA Finals.");
+  assert.deepEqual(lines, []);
+});
+
+test('TEAM LINE: a club in no bracket makes no predictions read; a league with no playoffs route makes no read at all', async () => {
+  const { getTeamPostseason } = await load();
+  const fake = use(todayDocs());
+  const { value, lines } = await tagged(() => getTeamPostseason('mlb', 'seattle-mariners'));
+  assert.equal(value, null);
+  assert.deepEqual(lines, []);
+  assert.ok(!fake.reads.some((r) => r.path.startsWith('predictedBrackets/')), 'no predictions read for a club in no bracket');
+  const fake2 = use(todayDocs());
+  assert.equal(await getTeamPostseason('nfl', 'chicago-bears'), null);
+  assert.deepEqual(fake2.reads, [], 'a league with no playoffs route reads nothing');
+});
+
+test('TEAM LINE: a failed bracket read is no module and no line, and does not throw', async () => {
+  const { getTeamPostseason } = await load();
+  const fake = use({ ...todayDocs(), 'postseasonBrackets/MLB_2026': new Error('UNAVAILABLE') });
+  const value = await quiet(() => getTeamPostseason('mlb', 'boston-red-sox'));
+  assert.equal(value, null);
+  assert.ok(!fake.reads.some((r) => r.path.startsWith('predictedBrackets/')));
+});
+
+for (const [name, doc, reason] of FAILURES) {
+  test(`TEAM LINE FAILS CLOSED (${name}): the module stays, the line goes, one tagged line with surface=team`, async () => {
+    const { getTeamPostseason } = await load();
+    use(todayDocs(doc()));
+    const { value, lines } = await tagged(() => getTeamPostseason('mlb', 'boston-red-sox'));
+    assert.ok(value, 'the module is still returned');
+    assert.equal(value.club.state, 'eliminated');
+    assert.equal(value.pick, null);
+    assert.deepEqual(lines, [teamLine(reason)]);
+    assert.ok(!/PERMISSION|operator|MLB_2026|AL-WC|[0-9a-f]{16}|boston/.test(lines.join(' ')), 'no contents, no ids, no club in the log');
+  });
+}
+
+test('TEAM LINE FAILS CLOSED: keys that no longer match the lock, tagged no-join', async () => {
+  const { getTeamPostseason } = await load();
+  const b = TODAY_MLB();
+  (b.series as Record<string, unknown>[]).find((x) => x.seriesKey === 'NL-WC-B')!.seriesKey = 'NL-WC-Z';
+  use({ ...todayDocs(), 'postseasonBrackets/MLB_2026': b });
+  const { value, lines } = await tagged(() => getTeamPostseason('mlb', 'boston-red-sox'));
+  assert.ok(value);
+  assert.equal(value.pick, null);
+  assert.deepEqual(lines, [teamLine('no-join')]);
+});
+
+test('TEAM LINE FAILS CLOSED: a club the team list loses, tagged no-team-record', async () => {
+  const { getTeamPostseason } = await load();
+  use(todayDocs());
+  // The inbound read builds both brackets (two team-list reads); the line's
+  // is the third, and has lost the Brewers.
+  let n = 0;
+  teams.dropOn = () => (++n > 2 ? 'milwaukee-brewers' : null);
+  try {
+    const { value, lines } = await tagged(() => getTeamPostseason('mlb', 'boston-red-sox'));
+    assert.ok(value);
+    assert.equal(value.pick, null);
+    assert.deepEqual(lines, [teamLine('no-team-record')]);
+  } finally {
+    teams.dropOn = null;
+  }
+});
+
+test('TEAM LINE FAILS CLOSED: an exception after the read is caught, tagged build-failed', async () => {
+  const { getTeamPostseason } = await load();
+  use(todayDocs());
+  // The inbound read builds both brackets (two team-list reads); the line's
+  // is the third, and fails.
+  let calls = 0;
+  teams.failAfter = () => ++calls > 2;
+  try {
+    const { value, lines } = await tagged(() => getTeamPostseason('mlb', 'boston-red-sox'));
+    assert.ok(value);
+    assert.equal(value.pick, null);
+    assert.deepEqual(lines, [teamLine('build-failed')]);
+  } finally {
+    teams.failAfter = null;
+  }
+});
+
+test('TEAM LINE FAILS CLOSED: a club whose first real series is not its first predicted one, tagged first-series-mismatch', async () => {
+  const { getTeamPostseason } = await load();
+  const w = TODAY_WNBA();
+  const s = w.series as Record<string, unknown>[];
+  const a = s.find((x) => x.seriesKey === 'R1-2v7')!;
+  const b = s.find((x) => x.seriesKey === 'R1-3v6')!;
+  [a.lower, b.lower] = [b.lower, a.lower];
+  use({ ...todayDocs(), 'postseasonBrackets/WNBA_2026': w });
+  const { value, lines } = await tagged(() => getTeamPostseason('wnba', 'dallas-wings'));
+  assert.ok(value);
+  assert.equal(value.pick, null);
+  assert.deepEqual(lines, [teamLine('first-series-mismatch', 'WNBA')]);
+  const other = await tagged(() => getTeamPostseason('wnba', 'atlanta-dream'));
+  assert.ok(other.value?.pick, 'a club the swap did not touch keeps its line');
+  assert.deepEqual(other.lines, []);
+});
+
+test('TEAM LINE TIMEOUT: a predictions read that hangs is read-failed, and the module comes back without waiting', { timeout: 5000 }, async () => {
+  const { getTeamPostseason } = await load();
+  const fake = use(todayDocs());
+  const realGetAll = fake.getAll.bind(fake);
+  fake.getAll = (...args: unknown[]) => {
+    const ref = args[0] as { path: string };
+    return ref.path.startsWith('predictedBrackets/') ? new Promise(() => {}) : realGetAll(...args);
+  };
+  process.env.PREDICTIONS_READ_TIMEOUT_MS = '40';
+  try {
+    const started = Date.now();
+    const { value, lines } = await tagged(() => getTeamPostseason('mlb', 'boston-red-sox'));
+    assert.ok(Date.now() - started < 2000);
+    assert.ok(value);
+    assert.equal(value.pick, null);
+    assert.deepEqual(lines, [teamLine('read-failed')]);
+  } finally {
+    delete process.env.PREDICTIONS_READ_TIMEOUT_MS;
+  }
+});
+
+test('TEAM LINE PREDICTIONS_DISABLED: the line goes through the same path, tagged disabled, and nothing is read', async () => {
+  const { getTeamPostseason } = await load();
+  const fake = use(todayDocs());
+  process.env.PREDICTIONS_DISABLED = 'MLB';
+  try {
+    const { value, lines } = await tagged(() => getTeamPostseason('mlb', 'boston-red-sox'));
+    assert.ok(value);
+    assert.equal(value.pick, null);
+    assert.deepEqual(lines, [teamLine('disabled')]);
+    assert.ok(!fake.reads.some((r) => r.path.startsWith('predictedBrackets/')));
+    const other = await tagged(() => getTeamPostseason('wnba', 'golden-state-valkyries'));
+    assert.ok(other.value?.pick, 'another league switched off costs this one nothing');
+  } finally {
+    delete process.env.PREDICTIONS_DISABLED;
+  }
+});
+
+test('TEAM LINE: the line is scored against the bracket the module was built from, with no second bracket read', async () => {
+  const { getTeamPostseason } = await load();
+  const fake = use(todayDocs());
+  // A bracket that changes between two reads would show the module one
+  // state and the line another. Only the first read is ever answered with
+  // today's MLB document; a second would get the Red Sox a Wild Card series
+  // that is not over.
+  const realGetAll = fake.getAll.bind(fake);
+  let bracketReads = 0;
+  fake.getAll = (...args: unknown[]) => {
+    const ref = args[0] as { path: string };
+    if (ref.path.startsWith('postseasonBrackets/') && ++bracketReads > 1) throw new Error('a second bracket read');
+    return realGetAll(...args);
+  };
+  const { value, lines } = await tagged(() => getTeamPostseason('mlb', 'boston-red-sox'));
+  assert.equal(value?.club.state, 'eliminated');
+  assert.equal(value?.pick?.kind, 'correct');
+  assert.deepEqual(lines, []);
+  assert.equal(bracketReads, 1);
+});

@@ -1,6 +1,6 @@
 import { TrackedLink } from '@/components/analytics/TrackedLink';
 import type { AnalyticsSurface } from '@/lib/analytics';
-import type { LeagueCard } from '@/lib/postseason/inbound';
+import type { LeagueCard, LeagueFinalCard, LeagueHeroLine } from '@/lib/postseason/inbound';
 
 /**
  * The playoffs card at the top of a league's hub, while that league's
@@ -51,6 +51,56 @@ export function LeaguePlayoffsCard({ card, surface }: { card: LeagueCard; surfac
           {`Bracket updated ${card.updatedLabel}`}
         </p>
       )}
+    </section>
+  );
+}
+
+/**
+ * The playoffs line in a league hub's hero, while that league's postseason
+ * is being played. The whole line is the link. Server-rendered. It sits in
+ * the hero, which is outside page-content, so it is no anchor for the ad
+ * placer.
+ */
+export function LeaguePlayoffsHeroLine({ line, surface }: { line: LeagueHeroLine; surface: AnalyticsSurface }) {
+  return (
+    <p data-playoffs-hero className="mt-4 font-rd text-[15px] font-semibold leading-snug text-white">
+      <TrackedLink
+        href={line.href}
+        surface={surface}
+        ctaId="playoffs_hub_hero"
+        ctaLabel={line.text}
+        className="underline decoration-white/40 underline-offset-4 hover:decoration-white"
+      >
+        {line.text}
+      </TrackedLink>
+    </p>
+  );
+}
+
+/**
+ * The hub card once the league's bracket is finished, for as long as the
+ * Playoffs link still shows. One link to the final bracket. In the same place
+ * as the full card, sharing its first child with the Today section.
+ */
+export function LeagueFinalBracketCard({ card, surface }: { card: LeagueFinalCard; surface: AnalyticsSurface }) {
+  return (
+    <section
+      data-playoffs-module="league"
+      data-playoffs-state="final"
+      className="rounded-[14px] border border-rd-line bg-rd-card p-5 shadow-[0_1px_3px_rgba(33,29,24,0.06)]"
+      style={{ borderLeft: '3px solid var(--color-rd-red)' }}
+    >
+      <h2 className="rd-display text-2xl uppercase text-rd-ink md:text-3xl">
+        <TrackedLink
+          href={card.href}
+          surface={surface}
+          ctaId="playoffs_module_league_final"
+          ctaLabel={card.text}
+          className="hover:text-rd-red"
+        >
+          {card.text}
+        </TrackedLink>
+      </h2>
     </section>
   );
 }

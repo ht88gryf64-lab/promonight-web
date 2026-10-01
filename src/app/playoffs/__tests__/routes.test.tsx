@@ -162,6 +162,25 @@ test('ROUTE /playoffs/[league]: the cross link names only a league whose read su
   assert.equal(count(alone, 'data-series="'), 11, 'the page itself is whole');
 });
 
+test('ROUTE /playoffs/[league]: the back link to the league\'s own hub, always, outside the article, before the cross link', async () => {
+  const { default: Page } = await league();
+  for (const [slug, hub, other] of [['mlb', 'MLB', 'WNBA'], ['wnba', 'WNBA', 'MLB']] as const) {
+    current.db = fakeFirestore(BOTH());
+    const html = renderToStaticMarkup(await Page(params(slug)));
+    const back = new RegExp(`<a [^>]*href="/${slug}"[^>]*>All ${hub} promotions</a>`);
+    assert.match(html, back, `${slug}: the back link`);
+    assert.equal(count(html, `href="/${slug}"`), 1, `${slug}: one link to the hub`);
+    const article = html.indexOf('</article>');
+    assert.ok(article > 0 && html.search(back) > article, `${slug}: outside the article`);
+    assert.ok(html.indexOf(`Open the ${other} bracket`) > html.search(back), `${slug}: the hub link comes first`);
+  }
+  // With no other league to link to, the back link is still there.
+  current.db = fakeFirestore({ 'postseasonBrackets/MLB_2026': loadDoc(FIXTURE.mlbLive) });
+  const alone = renderToStaticMarkup(await Page(params('mlb')));
+  assert.match(alone, /<a [^>]*href="\/mlb"[^>]*>All MLB promotions<\/a>/);
+  assert.ok(!alone.includes('Open the WNBA bracket'));
+});
+
 test('ROUTE /playoffs/[league]: ticket links carry the league surface in their sub-ID', async () => {
   const { default: Page } = await league();
   current.db = fakeFirestore(BOTH());

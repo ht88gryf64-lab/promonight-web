@@ -15,8 +15,8 @@ import { HubVenueLinks } from '@/components/hub/HubVenueLinks';
 import { HubFaq, type HubFaqItem } from '@/components/hub/HubFaq';
 import { getVenueLinksForTeams } from '@/lib/venue-hub';
 import { getPlayoffsInboundOrNone } from '@/lib/postseason/data';
-import { leagueCard } from '@/lib/postseason/inbound';
-import { LeaguePlayoffsCard } from '@/components/playoffs/inbound/LeaguePlayoffsCard';
+import { leagueCard, leagueFinalCard, leagueHeroLine } from '@/lib/postseason/inbound';
+import { LeagueFinalBracketCard, LeaguePlayoffsCard, LeaguePlayoffsHeroLine } from '@/components/playoffs/inbound/LeaguePlayoffsCard';
 
 // League hub accent (house palette, mirrors LEAGUE_HUB_REGISTRY MLB entry).
 const ACCENT = '#7c4a3a';
@@ -92,7 +92,11 @@ export default async function MlbHubPage() {
   // ItemList source for the CollectionPage JSON-LD: the current MLB slate.
   const jsonLdGroups: AggregatorGroup[] = [{ label: 'This week across MLB', promos: slate }];
 
-  const playoffs = leagueCard(await getPlayoffsInboundOrNone('/mlb'), 'MLB');
+  const inbound = await getPlayoffsInboundOrNone('/mlb');
+  const playoffs = leagueCard(inbound, 'MLB');
+  // Once the bracket is finished, and only while the Playoffs link shows.
+  const finalCard = playoffs ? null : leagueFinalCard(inbound, 'MLB');
+  const heroLine = leagueHeroLine(inbound, 'MLB');
   const todayPromos = (
     <HubTodayPromos
       slate={today}
@@ -119,6 +123,7 @@ export default async function MlbHubPage() {
         subtitle="Giveaways, bobblehead nights, theme nights and food deals across the 30 MLB clubs, grouped by division."
         freshness="Rechecked weekly and updated as clubs announce promotions."
         accent={ACCENT}
+        notice={heroLine ? <LeaguePlayoffsHeroLine line={heroLine} surface="web_mlb_hub" /> : undefined}
       >
         <HubStatBar stats={stats} leagueLabel="MLB" />
       </HubHero>
@@ -134,9 +139,13 @@ export default async function MlbHubPage() {
             for the ad placer, and a card of its own would move every unit
             below it. With no card, the branch below is the markup this page
             has always emitted. */}
-        {playoffs ? (
+        {playoffs || finalCard ? (
           <div data-playoffs-top className="space-y-16">
-            <LeaguePlayoffsCard card={playoffs} surface="web_mlb_hub" />
+            {playoffs ? (
+              <LeaguePlayoffsCard card={playoffs} surface="web_mlb_hub" />
+            ) : (
+              <LeagueFinalBracketCard card={finalCard!} surface="web_mlb_hub" />
+            )}
             {todayPromos}
           </div>
         ) : (
