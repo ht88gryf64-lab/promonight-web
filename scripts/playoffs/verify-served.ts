@@ -578,6 +578,17 @@ async function main() {
     const section = element(el, 'data-predictions="bracket"');
     check(`${where}: the predictions section is on the page, with its anchor`, !!section && section.includes('id="predictions"'));
     if (!section) return;
+    // PROMONIGHT PREDICTS. The brand on the section and the labels, in the
+    // served DOM; and no "computer" anywhere in the served bytes, the RSC
+    // payload included.
+    const st = textOf(section);
+    check(`${where}: the section heading is "PromoNight Predicts"`, textOf(element(section, 'id="predictions-heading"') ?? '') === 'PromoNight Predicts');
+    const details = elements(section, 'data-pick-detail');
+    check(`${where}: every pick says "PromoNight's pick:"`, details.length === p.rounds.length && details.every((d) => textOf(d).startsWith("PromoNight's pick:")), `${details.length} picks`);
+    check(`${where}: the scorecard says "Predicted champion" and "PromoNight Predicts is" or "No series decided yet"`, st.includes('Predicted champion') && /PromoNight Predicts is \d+ for \d+|No series decided yet/.test(st));
+    check(`${where}: the methodology link says "How PromoNight Predicts works" and reaches the section`, section.includes(`href="#${METHODOLOGY_SECTION_ID}"`) && st.includes('How PromoNight Predicts works') && el.includes(`id="${METHODOLOGY_SECTION_ID}"`));
+    const comp = /computer/i.exec(html);
+    check(`${where}: no "computer" anywhere in the served bytes`, !comp, comp ? html.slice(Math.max(0, comp.index - 40), comp.index + 40) : '');
     check(`${where}: no "publish soon" placeholder`, !/publish soon/i.test(html));
     const sc = score(doc, p);
     const wrong: string[] = [];
@@ -872,6 +883,8 @@ async function main() {
       jsonLd(where, got.html, { ...want, crumbs: [`Home ${SITE}`, `Playoffs ${SITE}/playoffs`], modified: stamps.length ? stamps[stamps.length - 1] : null });
       const el = article(where, got.html, 'hub');
       leaks(where, got.html);
+      const compHub = /computer/i.exec(got.html);
+      check(`${where}: no "computer" anywhere in the served bytes`, !compHub, compHub ? got.html.slice(Math.max(0, compHub.index - 40), compHub.index + 40) : '');
       const anyPrint = [...preds.values()].flatMap(fingerprints).filter((f) => got.html.includes(f));
       check(`${where}: no fingerprint on the hub`, anyPrint.length === 0 && !/\b[0-9a-f]{64}\b/.test(got.html), anyPrint.map((f) => f.slice(0, 8)).join(' '));
       check(`${where}: no "publish soon" placeholder`, !/publish soon/i.test(got.html));
@@ -891,7 +904,7 @@ async function main() {
         }
         const sc = score(d, p);
         const champ = clubs.get(p.champion)?.full ?? p.champion;
-        const claim = sc.champion === 'eliminated' ? `PromoNight Predicts picked ${champ} to win it all` : sc.champion === 'won the title' ? `PromoNight Predicts: ${champ} won it all` : `PromoNight Predicts: ${champ} win it all`;
+        const claim = sc.champion === 'eliminated' ? `PromoNight Predicts picked ${champ} to win it all` : sc.champion === 'won the title' ? `PromoNight Predicts picked ${champ} to win it all, and they did` : `PromoNight Predicts: ${champ} win it all`;
         const text = `${claim} · ${sc.decided === 0 ? 'no series decided yet' : `${sc.correct} for ${sc.decided}`}`;
         wantLines.push(text);
         const line = card ? element(card, `data-predictions-league="${league.toLowerCase()}"`) : null;

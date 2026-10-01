@@ -11,7 +11,7 @@ import { CONDENSED, LockIcon } from './ui';
  *  picked, not what will happen. */
 export function hubPredictionClaim(l: HubPredictionLine): string {
   if (l.championStatus === 'out') return `PromoNight Predicts picked ${l.championName} to win it all`;
-  if (l.championStatus === 'won') return `PromoNight Predicts: ${l.championName} won it all`;
+  if (l.championStatus === 'won') return `PromoNight Predicts picked ${l.championName} to win it all, and they did`;
   return `PromoNight Predicts: ${l.championName} win it all`;
 }
 

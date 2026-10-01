@@ -130,6 +130,7 @@ const CASES = [
   ['simulation framing dropped', C, 'PromoNight Predicts is a simulation, not a staff pick. ', '', [T_ROUTES]],
   ['write-once and fixed-seed claim dropped', C, '. The locked bracket is written once and never changed, and the simulation runs from a fixed seed, so the same inputs always give\n          the same bracket.', '.', [T_ROUTES, T_RENDER]],
   ['the false "computed once" claim back', C, '? `The bracket was computed from those locked inputs and locked on ${view.computedOn}`', '? `The bracket was computed once from those locked inputs and locked on ${view.computedOn}, and it has not been recomputed since`', [T_ROUTES]],
+  ['the hub never told the champion is out', P, '      championName: view.scorecard.championName,\n      championStatus: card.champion.status,', "      championName: view.scorecard.championName,\n      championStatus: 'alive' as const,", [T_HUB]],
   ['the hub claims an eliminated champion will win', 'src/components/playoffs/PredictionsCard.tsx', "  if (l.championStatus === 'out') return `PromoNight Predicts picked ${l.championName} to win it all`;\n", '', [T_HUB]],
   ['the old section heading', C, '          PromoNight Predicts\n        </h2>', "          The Computer&apos;s Bracket\n        </h2>", [T_ROUTES]],
   ['two-day lock said as one', C, '          {view.computedOn === view.bracketLockedOn\n', '          {true\n', [T_RENDER]],
@@ -148,7 +149,7 @@ const run = (files) =>
   });
 
 // The tests pass untouched, or nothing below means anything.
-const base = run([T_PRED, T_DATA, T_FAIL, T_RENDER, T_ROUTES]);
+const base = run([T_PRED, T_DATA, T_FAIL, T_RENDER, T_ROUTES, T_HUB]);
 if (base.status !== 0) {
   console.error('the tests fail before any mutation; fix that first');
   process.exit(2);

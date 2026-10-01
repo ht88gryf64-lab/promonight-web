@@ -9,7 +9,7 @@ import type { ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { mapBracketDoc } from '../../../lib/postseason/map';
 import { buildLeagueView, homeGamesWindow, type LeagueView } from '../../../lib/postseason/view';
-import { CAPTURED_AT, FIELDS_AT, FIXTURE, IN_GAME_AT, LYNX_OUT_AT, buildWithPredictions, clubs, loadDoc, parks, rawText, seriesKeyIn, PREDICTED } from '../../../lib/postseason/__tests__/helpers';
+import { CAPTURED_AT, FIELDS_AT, FIXTURE, IN_GAME_AT, LYNX_OUT_AT, buildWithPredictions, clubs, decide, decidedWnba, loadDoc, parks, rawText, seriesKeyIn, PREDICTED } from '../../../lib/postseason/__tests__/helpers';
 import type { HubPredictionLine, LeaguePredictions } from '../../../lib/postseason/predictions';
 import { PlayoffsHub, type HubLeague } from '../PlayoffsHub';
 import { PlayoffsLeague, type LeagueBody } from '../PlayoffsLeague';
@@ -881,10 +881,24 @@ test('HUB: the line never says an eliminated champion pick will win it all', () 
   const text = (l: HubPredictionLine) => textOf(element(hubHtml([ok(view(FIXTURE.mlbFields, FIELDS_AT), l)], FIELDS_AT), 'data-predictions-league="mlb"'));
   assert.equal(text(base), 'PromoNight Predicts: Milwaukee Brewers win it all · 3 for 7');
   assert.equal(text({ ...base, championStatus: 'out' }), 'PromoNight Predicts picked Milwaukee Brewers to win it all · 3 for 7');
-  assert.equal(text({ ...base, championStatus: 'won' }), 'PromoNight Predicts: Milwaukee Brewers won it all · 3 for 7');
-  // Built from the data: the MLB bracket decided with the Brewers out.
-  const d = buildWithPredictions(FIXTURE.mlbWildCard, PREDICTED.mlb, LYNX_OUT_AT);
-  assert.equal(d.predictions.hub.championStatus, 'alive');
+  assert.equal(text({ ...base, championStatus: 'won' }), 'PromoNight Predicts picked Milwaukee Brewers to win it all, and they did · 3 for 7');
+});
+
+test('HUB: the champion state reaches the hub line from the data, in each state', () => {
+  // Still alive: the live Wild Card capture.
+  const alive = buildWithPredictions(FIXTURE.mlbWildCard, PREDICTED.mlb, LYNX_OUT_AT).predictions.hub;
+  assert.equal(alive.championStatus, 'alive');
+  // Out: the Brewers knocked out in the Division Series, the World Series not played.
+  const d = loadDoc(FIXTURE.mlbWildCard);
+  decide(d, 'NL-WC-B', { winner: 'san-diego-padres' });
+  decide(d, 'NL-DS-A', { winner: 'san-diego-padres' });
+  const out = buildWithPredictions(d, PREDICTED.mlb, LYNX_OUT_AT).predictions.hub;
+  assert.equal(out.championStatus, 'out');
+  const outHtml = hubHtml([ok(view(FIXTURE.mlbFields, FIELDS_AT), out)], FIELDS_AT);
+  assert.match(textOf(element(outHtml, 'data-predictions-league="mlb"')), /^PromoNight Predicts picked Milwaukee Brewers to win it all · \d+ for \d+$/);
+  // Won: the WNBA bracket decided with the Valkyries champions.
+  const won = buildWithPredictions(decidedWnba(), PREDICTED.wnba, new Date('2026-11-05T12:00:00Z')).predictions.hub;
+  assert.equal(won.championStatus, 'won');
 });
 
 test('HUB: the predictions card, one line per playing league with a locked bracket, each linking to its section', () => {

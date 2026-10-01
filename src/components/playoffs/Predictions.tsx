@@ -45,7 +45,7 @@ export function PredictionsSection({
         </h2>
       </div>
       <p className="mt-2.5 max-w-[60ch] text-[14.5px] leading-relaxed text-rd-ink-soft">
-        PromoNight&apos;s pick for every series, from a simulation built on regular-season results. The picks are locked and never change; each one is marked against the
+        PromoNight Predicts picks every series with a simulation built on regular-season results. The picks are locked and never change; each one is marked against the
         real bracket above as correct, busted or still alive. Each card shows the pick, how many games it most likely takes to win and its chance at lock. The
         chances come from regular-season results alone, so they take no account of postseason games already played when the bracket was
         locked.

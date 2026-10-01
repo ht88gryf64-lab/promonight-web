@@ -198,11 +198,11 @@ export interface Walk {
   keys: string[];
 }
 
-/** Walk the decoded tree, recording every string containing `needle`. */
 /** The methodology section's id: METHODOLOGY_ID in
  *  src/components/playoffs/Predictions.tsx (a test keeps the two equal). */
 export const METHODOLOGY_SECTION_ID = 'how-promonight-predicts-works';
 
+/** Walk the decoded tree, recording every string containing `needle`. */
 export async function walkTree(root: unknown, needle: string | null, sectionId: string = METHODOLOGY_SECTION_ID): Promise<Walk> {
   const out: Walk = { hits: [], sections: 0, errors: [], strings: [], keys: [] };
   let nodes = 0;
