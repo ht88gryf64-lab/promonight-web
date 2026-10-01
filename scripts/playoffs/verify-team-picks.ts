@@ -32,6 +32,8 @@ import { decodePayload, decodeEntities, walkTree } from './flight';
 
 const BASE = (process.env.BASE || '').replace(/\/$/, '');
 const PROD = (process.env.PROD || '').replace(/\/$/, '');
+/** Production, for the counts that are held to it. */
+const COMPARE = (process.env.PROD || 'https://www.getpromonight.com').replace(/\/$/, '');
 const SHARE = process.env.SHARE || '';
 const OUT = process.env.OUT || '';
 const DISABLED = new Set((process.env.EXPECT_DISABLED || '').split(',').map((s) => s.trim().toUpperCase()).filter(Boolean));
@@ -87,13 +89,36 @@ function moduleSection(html: string): string | null {
 
 /** The decoded payload node for the team module, as JSON with client
  *  references named, or null. */
-async function payloadModule(html: string): Promise<string | null> {
+export async function payloadModule(html: string): Promise<string | null> {
   const d = await decodePayload(html);
   if (d.error) return `ERROR ${d.error}`;
   const seen = new Set<unknown>();
   let found: unknown = null;
   const ELEMENT = Symbol.for('react.transitional.element');
-  const visit = async (v: unknown, depth: number): Promise<void> => {
+  const LAZY = Symbol.for('react.lazy');
+  /** A lazy or a thenable, resolved; anything else as it is. */
+  const settle = async (v: unknown): Promise<unknown> => {
+    for (let n = 0; n < 20; n++) {
+      if (v && typeof v === 'object' && (v as { $$typeof?: unknown }).$$typeof === LAZY) {
+        const lazy = v as { _init: (p: unknown) => unknown; _payload: unknown };
+        try {
+          v = lazy._init(lazy._payload);
+        } catch (thrown) {
+          if (thrown && typeof (thrown as { then?: unknown }).then === 'function') await Promise.race([Promise.resolve(thrown).catch(() => null), new Promise((r) => setTimeout(r, 2000))]);
+          else return null;
+        }
+        continue;
+      }
+      if (v && typeof (v as { then?: unknown }).then === 'function') {
+        v = await Promise.race([Promise.resolve(v as Promise<unknown>).catch(() => null), new Promise((r) => setTimeout(() => r(null), 2000))]);
+        continue;
+      }
+      return v;
+    }
+    return null;
+  };
+  const visit = async (raw: unknown, depth: number): Promise<void> => {
+    const v = await settle(raw);
     if (found || depth > 400 || !v || typeof v !== 'object' || seen.has(v)) return;
     seen.add(v);
     if (Array.isArray(v)) {
@@ -109,12 +134,14 @@ async function payloadModule(html: string): Promise<string | null> {
       for (const x of Object.values(el.props)) await visit(x, depth + 1);
       return;
     }
-    if (typeof (v as { then?: unknown }).then === 'function') return;
     for (const x of Object.values(v as Raw)) await visit(x, depth + 1);
   };
   await visit(d.root, 0);
   if (!found) return null;
-  return JSON.stringify(found, (k, val) => (k === '_owner' || k === '_store' || k === '_debugInfo' || k === '_debugStack' || k === '_debugTask' ? undefined : typeof val === 'function' ? `[fn ${val.name}]` : typeof val === 'symbol' ? String(val) : val));
+  // Client references carry the build's chunk files (content hash and
+  // deployment id): build artefacts, not page content. Everything else,
+  // the module ids included, is compared as served.
+  return JSON.stringify(found, (k, val) => (k === '_owner' || k === '_store' || k === '_debugInfo' || k === '_debugStack' || k === '_debugTask' ? undefined : typeof val === 'function' ? `[fn ${val.name}]` : typeof val === 'symbol' ? String(val) : typeof val === 'string' && /^static\/chunks\//.test(val) ? '[chunk]' : val));
 }
 
 async function main() {
@@ -176,13 +203,65 @@ async function main() {
     /^Pick busted: the [A-Z][A-Za-z ]+ went further than picked and won the [A-Z][A-Za-z ]+\.$/,
     /^Right round, different opponent: the [A-Z][A-Za-z ]+ lost to the [A-Z][A-Za-z ]+ \d-\d in the [A-Z][A-Za-z ]+\. PromoNight picked the [A-Z][A-Za-z ]+\.$/,
   ];
-  // Which kinds a module state allows.
-  const ALLOWED: Record<string, string[]> = {
-    alive: ['alive', 'decides', 'busted'],
-    advanced: ['alive', 'decides', 'busted'],
-    eliminated: ['correct', 'busted', 'different'],
-    champion: ['correct', 'busted'],
-  };
+  // The expected status line, worked out here from the raw documents with
+  // this file's own reading of the rules: the club's furthest real series
+  // against the round its locked pick names. A slot written as a
+  // placeholder whose feeder series is final is that series' winner, as
+  // the pipeline means it.
+  function expectedStatus(l: League, club: string): { kind: string; line: string } {
+    const raw = brackets.get(l)!.series as Raw[];
+    const byKey = new Map(raw.map((x) => [x.seriesKey as string, x]));
+    const slotClub = (slot: Raw): string | null => {
+      if (typeof slot.slug === 'string') return slot.slug;
+      const feeder = typeof slot.feederSeriesKey === 'string' ? byKey.get(slot.feederSeriesKey) : undefined;
+      return feeder && feeder.status === 'final' && typeof feeder.winner === 'string' ? (feeder.winner as string) : null;
+    };
+    const sides = (x: Raw) => [slotClub(x.higher as Raw), slotClub(x.lower as Raw)];
+    const order: string[] = [];
+    for (const x of raw) if (!order.includes(x.round as string)) order.push(x.round as string);
+    const at = (round: string) => order.indexOf(round);
+    const finalSeries = raw[raw.length - 1];
+    const finalLbl = finalSeries.roundLabel as string;
+    const mineReal = raw.filter((x) => sides(x).includes(club));
+    const last = mineReal[mineReal.length - 1];
+    const minePred = (predicted.get(l)!.rounds as Raw[]).filter((r) => r.higher === club || r.lower === club);
+    const exit = minePred[minePred.length - 1];
+    const toWin = exit.pick === club;
+    const exitAt = at(exit.round as string);
+    const n = (slug: string) => nick.get(slug) as string;
+    const score = (x: Raw) => {
+      const w = x.wins as { higher: number; lower: number };
+      return `${Math.max(w.higher, w.lower)}-${Math.min(w.higher, w.lower)}`;
+    };
+    const other = (x: Raw) => sides(x).find((c) => c !== club) as string;
+    const champion = finalSeries.status === 'final' && finalSeries.winner === club;
+    const further = () => {
+      if (champion) return { kind: 'busted', line: `Pick busted: the ${n(club)} went further than picked and won the ${finalLbl}.` };
+      const through = mineReal.find((x) => x.round === exit.round)!;
+      return { kind: 'busted', line: `Pick busted: the ${n(club)} went further than picked, beating the ${n(other(through))} ${score(through)} in the ${through.roundLabel}.` };
+    };
+    const r = at(last.round as string);
+    if (last.status !== 'final') {
+      if (r < exitAt) return { kind: 'alive', line: 'Pick still alive.' };
+      if (r === exitAt) {
+        const lbl = last.roundLabel as string;
+        return { kind: 'decides', line: `The ${lbl} ${/s$/.test(lbl) && !/Series$/.test(lbl) ? 'decide' : 'decides'} this pick.` };
+      }
+      return further();
+    }
+    if (last.winner === club) {
+      if (last === finalSeries) return toWin ? { kind: 'correct', line: `Pick correct: the ${n(club)} won the ${finalLbl}.` } : further();
+      return r < exitAt ? { kind: 'alive', line: 'Pick still alive.' } : further();
+    }
+    const opp = other(last);
+    if (r < exitAt || toWin) return { kind: 'busted', line: `Pick busted: the ${n(club)} went out earlier than picked, losing to the ${n(opp)} ${score(last)} in the ${last.roundLabel}.` };
+    if (r > exitAt) return further();
+    if (opp === exit.pick) return { kind: 'correct', line: `Pick correct: the ${n(opp)} beat the ${n(club)} ${score(last)} in the ${last.roundLabel}.` };
+    return { kind: 'different', line: `Right round, different opponent: the ${n(club)} lost to the ${n(opp)} ${score(last)} in the ${last.roundLabel}. PromoNight picked the ${n(exit.pick as string)}.` };
+  }
+  // The kind each status sentence belongs to, by its opening words.
+  const kindOf = (line: string) =>
+    line === 'Pick still alive.' ? 'alive' : line.startsWith('The ') ? 'decides' : line.startsWith('Pick correct:') ? 'correct' : line.startsWith('Pick busted:') ? 'busted' : line.startsWith('Right round, different opponent:') ? 'different' : '';
 
   const pages: { path: string; kind: 'team' | 'hub' | 'league' | 'control'; league: League; club?: string }[] = [];
   for (const l of LEAGUES) for (const c of clubsOf(l)) pages.push({ path: `/${sport.get(c)}/${c}`, kind: 'team', league: l, club: c });
@@ -206,6 +285,20 @@ async function main() {
     // ---- Leaks: keys, hashes, documents' own values ----
     const key = keyIn(html) ?? keyIn(decodeEntities(html)) ?? keyIn(payloadText);
     check(`${p.path}: no series key in the HTML or the payload`, key === null, key ?? '');
+    // "WS" and "F" are too short for free text: looked for where a key sits,
+    // as an attribute value or a link target, and as a whole payload string.
+    // A whole payload string "F" is ordinary page data (an affiliate
+    // component carries one on every team page in production), so the count
+    // is held to production's for the same path: one more is a leak.
+    const short = /(?:=|:)\s*"(?:WS|F)"|#(?:WS|F)\b/.exec(html)?.[0];
+    check(`${p.path}: no final-round key ("WS", "F") in an attribute or link`, !short, short ?? '');
+    const shortCount = (w: { strings: string[] } | null) => (w ? w.strings.filter((x) => x === 'WS' || x === 'F').length : -1);
+    const ref = await get(COMPARE, p.path);
+    const refDecoded = await decodePayload(ref.body);
+    const refWalk = refDecoded.error ? null : await walkTree(refDecoded.root, null);
+    check(`${p.path}: no more whole "WS"/"F" payload strings than production`, walked !== null && refWalk !== null && shortCount(walked) <= shortCount(refWalk), `${shortCount(walked)} vs ${shortCount(refWalk)}`);
+    const keyField = walked ? walked.keys.find((k) => /seriesKey|feederSeriesKey|bracketSha|runId|operatorLog/i.test(k)) : undefined;
+    check(`${p.path}: no bracket field name in the payload`, !keyField, keyField ?? '');
     const hashes = [...new Set([...(html.match(/[0-9a-f]{64}/g) ?? []), ...(payloadText.match(/[0-9a-f]{64}/g) ?? [])])];
     if (p.kind === 'league') {
       // The five fingerprints are allowed here, in the methodology section
@@ -253,7 +346,10 @@ async function main() {
       check(`${p.path}: eyebrow`, ps[0] === 'PromoNight Predicts', ps[0]);
       check(`${p.path}: the locked pick, from the raw document`, ps[1] === expectedPick(p.league, p.club!), `${ps[1]} | expected ${expectedPick(p.league, p.club!)}`);
       check(`${p.path}: a ruled status line`, STATUS.some((re) => re.test(ps[2] ?? '')), ps[2]);
-      check(`${p.path}: ${kind} fits the module's state ${state}`, (ALLOWED[state] ?? []).includes(kind));
+      const want = expectedStatus(p.league, p.club!);
+      check(`${p.path}: the status, from the raw documents`, ps[2] === want.line, `${ps[2]} | expected ${want.line}`);
+      check(`${p.path}: the kind ${kind} is the sentence's and the documents'`, kind === kindOf(ps[2] ?? '') && kind === want.kind, `${kind}/${kindOf(ps[2] ?? '')}/${want.kind}`);
+      void state;
       const hrefs = [...block.matchAll(/href="([^"]+)"/g)].map((m) => m[1]);
       check(`${p.path}: one link, to the league page's predictions`, hrefs.length === 1 && hrefs[0] === `/playoffs/${p.league.toLowerCase()}#predictions`, hrefs.join(','));
       check(`${p.path}: the line is inside the module's section, last`, section.endsWith('</a></div></section>'));
@@ -289,7 +385,9 @@ async function main() {
   process.exit(failed.length ? 1 : 0);
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+if (!process.env.NO_MAIN) {
+  main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}

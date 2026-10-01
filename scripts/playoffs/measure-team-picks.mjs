@@ -111,7 +111,9 @@ async function main() {
     for (const [state, path] of STATES) {
       await go(BASE, path, width, true);
       const lay = await ev(LAYOUT);
-      check(`${path} @${width}: the line is there, ${state}`, lay.pick !== null, lay.pick ? `${lay.pick.kind}, ${lay.pick.h}px` : 'none');
+      // busted-earlier and busted-further are both kind "busted".
+      const want = state.startsWith('busted') ? 'busted' : state;
+      check(`${path} @${width}: the line is there, kind ${want} (${state})`, lay.pick !== null && lay.pick.kind === want, lay.pick ? `${lay.pick.kind}, ${lay.pick.h}px` : 'none');
       check(`${path} @${width}: no ad container, no aside with ads blocked`, lay.ads === 0);
       const box = await clip('[data-playoffs-module="team"]', `team-${width}-${state}-${path.split('/')[2]}.png`);
       check(`${path} @${width}: module clipped`, !!box);
