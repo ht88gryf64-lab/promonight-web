@@ -1,4 +1,4 @@
-// The computer's bracket on a league page, in the server HTML, in every state
+// The PromoNight Predicts bracket on a league page, in the server HTML, in every state
 // the fixtures hold: the live WNBA bracket with the Lynx out, MLB mid Wild
 // Card, and both brackets decided to the end. Built through the real mappers,
 // the real view, the real assembly and the real components.
@@ -11,6 +11,7 @@ import { homeGamesWindow } from '../../../lib/postseason/view';
 import { FIXTURE, LYNX_OUT_AT, PREDICTED, buildWithPredictions, decidedMlb, decidedWnba, rawText, seriesKeyIn, type Built } from '../../../lib/postseason/__tests__/helpers';
 import { PlayoffsLeague, type LeagueBody } from '../PlayoffsLeague';
 import { PredictionsMethodology } from '../Predictions';
+import { PredictionsCard } from '../PredictionsCard';
 import { PredictedBracket } from '../PredictedBracket';
 import { BracketControlsProvider } from '../controls';
 
@@ -445,6 +446,21 @@ test('METHODOLOGY COPY: "before Game 1" only when the real bracket proves it', (
   assert.ok(unproven.includes('The inputs were locked on September 28, 2026.'), unproven);
   assert.ok(!/Game 1/.test(unproven), unproven);
 });
+
+// The picks were made once and locked; nothing about them refreshes. No
+// wording in the section, the methodology or the hub card may say otherwise.
+const FRESHNESS_WORDS = /\bhourly\b|\breal[- ]time\b|\blive\b|\bup to the minute\b|\bminute by minute\b|\bupdated (every|each|daily|nightly)\b|\bre-?(run|computed|calculated|simulated)\b|\b(daily|nightly|latest) (picks?|odds|update)\b/i;
+for (const [name, make, now] of STATES) {
+  test(`CLAIMS (${name}): no freshness wording in the predictions, the methodology or the hub card`, () => {
+    const b = make();
+    const h = html(b, now);
+    const hubCard = renderToStaticMarkup(<PredictionsCard heading="Predictions are locked" headingId="predictions-locked" lines={[b.predictions.hub]} />);
+    for (const t of [textOf(element(h, 'data-predictions="bracket"')), textOf(element(h, 'data-predictions-methodology')), textOf(hubCard)]) {
+      assert.ok(t.length > 0);
+      assert.ok(!FRESHNESS_WORDS.test(t), `found ${t.match(FRESHNESS_WORDS)?.[0]}`);
+    }
+  });
+}
 
 // predictions.ts holds the locked fingerprints and the core file paths. A
 // client component that imported a value from it would ship them in client

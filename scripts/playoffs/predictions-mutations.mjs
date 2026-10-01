@@ -136,12 +136,14 @@ const CASES = [
   ['staff or expert framing in the intro', C, 'PromoNight Predicts picks every series with a simulation', 'Our experts and PromoNight Predicts pick every series with a simulation', [T_ROUTES]],
   ['"computer" back on the pick label', 'src/components/playoffs/PredictedBracket.tsx', "PromoNight&apos;s pick:", "Computer&apos;s pick:", [T_ROUTES]],
   ['"computer" back on the scorecard', C, '>Predicted champion<', '>Computer&apos;s champion<', [T_ROUTES]],
-  ['"computer" back on the hub line', 'src/components/playoffs/PredictionsCard.tsx', '  return `PromoNight Predicts: ${l.championName} win it all`;', "  return `Computer's champion: ${l.championName}`;", [T_ROUTES]],
+  // These three add the banned word beside the true copy, so only the
+  // "no computer" guard can catch them.
+  ['"computer" back on the hub line', 'src/components/playoffs/PredictionsCard.tsx', '<li key={l.league} data-predictions-league', '<li key={l.league} title="Computer&apos;s champion" data-predictions-league', [T_ROUTES]],
   ['the won line reads as a past prediction', 'src/components/playoffs/PredictionsCard.tsx', ' to win it all, and they did`;', ' won it all`;', [T_HUB]],
-  ['"computer" back in the meta description', 'src/lib/postseason/metadata.ts', "with a simulation's locked pick for every series", "with the computer's locked pick for every series", [T_META]],
+  ['"computer" back in the meta description', 'src/lib/postseason/metadata.ts', "with a simulation's locked pick for every series", "with a computer simulation's locked pick for every series", [T_META]],
   ['the hub never told the champion is out', P, '      championName: view.scorecard.championName,\n      championStatus: card.champion.status,', "      championName: view.scorecard.championName,\n      championStatus: 'alive' as const,", [T_HUB]],
   ['the hub claims an eliminated champion will win', 'src/components/playoffs/PredictionsCard.tsx', "  if (l.championStatus === 'out') return `PromoNight Predicts picked ${l.championName} to win it all`;\n", '', [T_HUB]],
-  ['the old section heading', C, '          PromoNight Predicts\n        </h2>', "          The Computer&apos;s Bracket\n        </h2>", [T_ROUTES]],
+  ['the old section heading as the heading\'s title', C, '<h2 id="predictions-heading" className', '<h2 id="predictions-heading" title="The Computer&apos;s Bracket" className', [T_ROUTES]],
   ['two-day lock said as one', C, '          {view.computedOn === view.bracketLockedOn\n', '          {true\n', [T_RENDER]],
   ['chance described over every run', C, 'in the simulated\n          postseasons where that matchup came up,', 'in those simulated\n          postseasons,', [T_RENDER]],
   ['"at lock" left undefined', C, ' Every chance and title odd on this page is as\n          it stood when the bracket was locked.', '', [T_ROUTES]],

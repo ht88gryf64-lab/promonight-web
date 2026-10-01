@@ -448,7 +448,7 @@ try {
   c = await calls();
   const pts = propsFor(c, 'predictions_round_select', 'posthog')[0] || {};
   check('picks toggle: predictions_round_select reaches both sinks, as conference_toggle', sinksFor(c, 'predictions_round_select') === 'ga4+posthog' && pts.control === 'conference_toggle' && pts.conference === 'NL', `${sinksFor(c, 'predictions_round_select')} ${pts.control} ${pts.conference}`);
-  // And the other way: the real bracket's pill moves the predicted.
+  // And the other way: the real bracket's pill moves the predicted bracket.
   await ev(`document.querySelector('.po-bracket [data-round-option="championship_series"]').click()`);
   await sleep(1200);
   b = await both();

@@ -403,7 +403,7 @@ test('the old flag no longer gates the Playoffs link', () => {
   assert.match(layout, /let playoffsActive = false;\s*try \{\s*playoffsActive = await isPlayoffsLinkActive\(\);\s*\} catch/);
 });
 
-// ---- The computer's bracket, through the real pages ----
+// ---- PromoNight Predicts, through the real pages ----
 
 const FINGERPRINTS = (name: string): string[] => {
   const d = JSON.parse(readFileSync(new URL(`../../../lib/postseason/__fixtures__/${name}`, import.meta.url), 'utf-8')) as Record<string, Record<string, string>>;
@@ -473,7 +473,7 @@ test('PREDICTIONS through the real pages: the section, the scorecard, the method
   assert.ok(text.includes('plays out the postseason 10,000 times'));
   assert.ok(text.includes('The inputs were locked on September 28, 2026 , before Game 1.') || text.includes('The inputs were locked on September 28, 2026, before Game 1.'), text);
   assert.ok(text.includes('The bracket was computed from those locked inputs and locked on September 30, 2026. The locked bracket is written once and never changed, and the simulation runs from a fixed seed, so the same inputs always give the same bracket. The rating, simulation and bracket code is unchanged since the inputs were locked.'), text);
-  assert.ok(!/computed once|not been recomputed/.test(text), 'no claim that the engine ran only once');
+  assert.ok(!/\b(computed|run|ran|calculated|simulated) (only )?(once|one time|a single time)\b|\b(not been|never( been)?) re-?(computed|run|calculated)\b|\bre-?run\b/i.test(text), 'no claim that the engine ran only once');
   assert.ok(text.includes('PromoNight Predicts is a simulation, not a staff pick.'), text);
   // Nowhere in the section, the methodology or the hub line: no staff or expert framing.
   const section = elementOf(mlb, 'data-predictions="bracket"').replace(/<[^>]+>/g, ' ');
@@ -484,9 +484,9 @@ test('PREDICTIONS through the real pages: the section, the scorecard, the method
   assert.ok(text.includes('its length is how many games the pick most often took to win it'));
   assert.ok(text.includes('Every chance and title odd on this page is as it stood when the bracket was locked.'));
   assert.ok(text.includes('Postseason results are not among the inputs, so a pick can name a club that was already out by then.'));
-  assert.ok(!/engine (code )?(is )?unchanged|most common length|results come in/i.test(text), 'no engine-wide unchanged claim');
+  assert.ok(!/engine( code)? (is |has )?(not changed|unchanged|never changed)|most common length|results come in/i.test(text), 'no engine-wide unchanged claim');
   assert.ok(text.includes('the simulation called 5 of 11 series and got the champion wrong'));
-  assert.ok(!/bracket was (locked|set|picked|computed)[^.]*before Game 1/i.test(text), 'never says the bracket was set before Game 1');
+  assert.ok(!/(bracket|picks?) (was|were) (locked|set|picked|computed|made)[^.]*before (Game 1|the first (pitch|game|tip)|the postseason)/i.test(text), 'never says the bracket was set before Game 1');
   const wnba = renderToStaticMarkup(await League(params('wnba')));
   const wtext = elementOf(wnba, 'data-predictions-methodology').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
   assert.ok(/The inputs were locked on September 25, 2026 ?, before Game 1\./.test(wtext), wtext);

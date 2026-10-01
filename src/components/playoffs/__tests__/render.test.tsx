@@ -516,7 +516,7 @@ test('CONCLUDED: the champion is named, nothing is "next", no home games are off
 // 404 and a read that fails throws, so the page always has a bracket. The
 // type says so (LeagueBody has one member) and routes.test.tsx proves both.
 
-// ---- The computer's bracket: see predictions-render.test.tsx ----
+// ---- PromoNight Predicts: see predictions-render.test.tsx ----
 
 // ---- The article: what the ad placer reads ----
 

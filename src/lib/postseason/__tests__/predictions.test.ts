@@ -1,4 +1,4 @@
-// The computer's bracket: the mapper, the NCAA scoring rule, the scorecard,
+// PromoNight Predicts: the mapper, the NCAA scoring rule, the scorecard,
 // and the methodology's dates and fingerprints. Every state is built from a
 // stored document through the real mappers: the two locked predictedBrackets
 // documents as stored, the live WNBA bracket with the Lynx out, the live MLB
