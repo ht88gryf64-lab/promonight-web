@@ -3,7 +3,7 @@
 // proves the masked fields are enough to build the page.
 import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
-import { CAPTURED_AT, FIXTURE, capturedTeams, fakeFirestore, loadDoc, parkNames, venuePages } from './helpers';
+import { CAPTURED_AT, FIXTURE, capturedTeams, fakeFirestore, loadDoc, parkNames, rawText, venuePages, PREDICTED } from './helpers';
 
 type Fake = ReturnType<typeof fakeFirestore>;
 
@@ -71,7 +71,8 @@ const quiet = <T>(fn: () => Promise<T>): Promise<T> => {
 
 const MLB = () => loadDoc(FIXTURE.mlbLive);
 const WNBA = () => loadDoc(FIXTURE.wnbaLive);
-const FROZEN = { league: 'MLB', season: 2026, frozenAt: { toDate: () => new Date('2026-09-29T01:05:52.350Z') }, rows: ['a corpus the web must not pull'] };
+const PREDICTED_MLB = () => loadDoc(PREDICTED.mlb);
+const PREDICTED_WNBA = () => loadDoc(PREDICTED.wnba);
 
 test('BRACKET READ: asks for four fields and nothing else', async () => {
   const { getBracket } = await load();
@@ -83,13 +84,14 @@ test('BRACKET READ: asks for four fields and nothing else', async () => {
 
 test('BRACKET READ: the masked document is enough to build the whole page', async () => {
   const { getLeaguePageData } = await load();
-  use({ 'postseasonBrackets/MLB_2026': MLB(), 'predictionInputs/MLB_2026': FROZEN });
+  use({ 'postseasonBrackets/MLB_2026': MLB(), 'predictedBrackets/MLB_2026': PREDICTED_MLB() });
   const page = await getLeaguePageData('MLB');
   assert.equal(page.state, 'ok');
   if (page.state !== 'ok') return;
   assert.equal(page.view.rounds.length, 4);
   assert.equal(page.view.updatedLabel, 'Sep 29, 1:10 PM ET');
-  assert.equal(page.predictionsLocked, true);
+  assert.ok(page.predictions);
+  assert.equal(page.predictions.view.scorecard.championName, 'Milwaukee Brewers');
   const wc = page.view.rounds[0].groups[0].series[0];
   assert.equal(wc.higher.label, 'Astros');
   assert.equal(wc.games[0].park, 'Daikin Park');
@@ -211,26 +213,82 @@ test('PARK PAGE: a club with no venue record gets no name, so no link either', a
   assert.equal(row?.parkPage, null);
 });
 
-test('PREDICTIONS: the read asks for frozenAt alone, so the corpus never crosses the wire', async () => {
-  const { arePredictionInputsFrozen } = await load();
-  const fake = use({ 'predictionInputs/MLB_2026': FROZEN });
-  assert.equal(await arePredictionInputsFrozen('MLB'), true);
-  assert.deepEqual(fake.reads, [{ path: 'predictionInputs/MLB_2026', fieldMask: ['frozenAt'] }]);
+const PREDICTED_MASK = [
+  'league',
+  'season',
+  'target',
+  'lockedAt',
+  'simRuns',
+  'computedAt',
+  'reviewedSha256',
+  'champion',
+  'rounds',
+  'titleOdds',
+  'provenance.frozenAt',
+  'provenance.engineCommitAtFreeze',
+  'provenance.coreFiles',
+  'provenance.corpusSha256',
+  'provenance.paramsSha256',
+  'provenance.descriptorSha256',
+  'provenance.slugMapSha256',
+];
+
+test('PREDICTIONS READ: one masked read; no operator field, path list, run id or other hash is asked for', async () => {
+  const { getPredictedBracket } = await load();
+  const fake = use({ 'predictedBrackets/WNBA_2026': PREDICTED_WNBA() });
+  const p = await getPredictedBracket('WNBA');
+  assert.ok(p);
+  assert.deepEqual(fake.reads, [{ path: 'predictedBrackets/WNBA_2026', fieldMask: PREDICTED_MASK }]);
+  for (const f of PREDICTED_MASK) {
+    assert.ok(!/By$|acks|seedFile|canonical|engineFiles|engineCommitAt(Compute|Execute)|computedBy|executedAt|info|degeneracy|seeds/.test(f), f);
+  }
 });
 
-test('PREDICTIONS: no document, no freeze stamp, or a failed read all hide the card', async () => {
-  const { arePredictionInputsFrozen } = await load();
-  use({});
-  assert.equal(await arePredictionInputsFrozen('MLB'), false);
-  use({ 'predictionInputs/MLB_2026': { league: 'MLB', season: 2026 } });
-  assert.equal(await arePredictionInputsFrozen('MLB'), false);
-  use({ 'predictionInputs/MLB_2026': { league: 'MLB', frozenAt: null } });
-  assert.equal(await arePredictionInputsFrozen('MLB'), false);
-  use({ 'predictionInputs/MLB_2026': new Error('PERMISSION_DENIED') });
-  assert.equal(await quiet(() => arePredictionInputsFrozen('MLB')), false);
-  // One league's freeze says nothing about another's.
-  use({ 'predictionInputs/MLB_2026': FROZEN });
-  assert.equal(await arePredictionInputsFrozen('WNBA'), false);
+test('PREDICTIONS READ: the masked document is enough, and nothing outside the mask is in this process', async () => {
+  const { getPredictedBracket } = await load();
+  use({ 'predictedBrackets/MLB_2026': PREDICTED_MLB() });
+  const p = await getPredictedBracket('MLB');
+  assert.ok(p);
+  assert.equal(p.series.length, 11);
+  const out = JSON.stringify(p);
+  const stored = JSON.parse(rawText(PREDICTED.mlb)) as Record<string, Record<string, unknown>>;
+  for (const v of [stored.provenance.seedFileAuthoredBy, stored.provenance.seedFileSha256, stored.provenance.canonicalDescriptorSha256, stored.computedBy]) {
+    assert.ok(typeof v === 'string' && !out.includes(v));
+  }
+});
+
+test('PREDICTIONS READ: no document is null and the page shows no predictions; a failed read or a refused document throws', async () => {
+  const { getPredictedBracket, getLeaguePageData } = await load();
+  use({ 'postseasonBrackets/MLB_2026': MLB() });
+  assert.equal(await getPredictedBracket('MLB'), null);
+  const page = await getLeaguePageData('MLB');
+  assert.equal(page.state === 'ok' && page.predictions, null);
+
+  use({ 'postseasonBrackets/MLB_2026': MLB(), 'predictedBrackets/MLB_2026': new Error('PERMISSION_DENIED') });
+  await assert.rejects(() => getPredictedBracket('MLB'), /PERMISSION_DENIED/);
+  await assert.rejects(() => getLeaguePageData('MLB'), /PERMISSION_DENIED/);
+
+  const bad = PREDICTED_MLB();
+  bad.target = 'scratch';
+  use({ 'postseasonBrackets/MLB_2026': MLB(), 'predictedBrackets/MLB_2026': bad });
+  await assert.rejects(() => getLeaguePageData('MLB'), /predictedBrackets\/MLB_2026 is not in a shape the web reads/);
+});
+
+test('PREDICTIONS READ: a prediction that does not join the real bracket throws', async () => {
+  const { getLeaguePageData } = await load();
+  // The WNBA prediction against the MLB bracket, under the MLB id.
+  const wrong = PREDICTED_WNBA();
+  wrong.league = 'MLB';
+  wrong.champion = 'golden-state-valkyries';
+  use({ 'postseasonBrackets/MLB_2026': MLB(), 'predictedBrackets/MLB_2026': wrong });
+  await assert.rejects(() => getLeaguePageData('MLB'), /does not join the real bracket/);
+});
+
+test('PREDICTIONS READ: one league\'s prediction says nothing about another\'s', async () => {
+  const { getLeaguePageData } = await load();
+  use({ 'postseasonBrackets/WNBA_2026': WNBA(), 'predictedBrackets/MLB_2026': PREDICTED_MLB() });
+  const page = await getLeaguePageData('WNBA');
+  assert.equal(page.state === 'ok' && page.predictions, null);
 });
 
 test('WHICH LEAGUES: one batched read of names only', async () => {

@@ -48,7 +48,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   // request, so the head says what the body says.
   const page = await getLeaguePageData(league);
   if (page.state !== 'ok') return {};
-  const copy = leagueCopy(POSTSEASON_SEASON, league, postseasonPath(league), page.view);
+  const copy = leagueCopy(POSTSEASON_SEASON, league, postseasonPath(league), page.view, page.predictions !== null);
   return {
     title: copy.title,
     description: copy.description,
@@ -67,7 +67,7 @@ export default async function PlayoffsLeaguePage({ params }: { params: Promise<P
   if (page.state !== 'ok') notFound();
 
   const homeGames = page.view.phase.kind === 'active' ? homeGamesWindow([page.view], new Date()) : { primary: [], rest: [] };
-  const body: LeagueBody = { state: 'ok', view: page.view, predictionsLocked: page.predictionsLocked, homeGames };
+  const body: LeagueBody = { state: 'ok', view: page.view, predictions: page.predictions, homeGames };
   const teams = new Map((await getAllTeams()).map((t) => [t.id, t]));
   const tickets = ticketButtons(
     [...homeGames.primary, ...homeGames.rest].map((g) => g.hostTeamId),
@@ -84,7 +84,7 @@ export default async function PlayoffsLeaguePage({ params }: { params: Promise<P
   );
   const panelTickets = seriesTickets(upcoming, teams, 'web_playoffs_league', 'playoffs_league');
 
-  const copy = leagueCopy(POSTSEASON_SEASON, league, postseasonPath(league), page.view);
+  const copy = leagueCopy(POSTSEASON_SEASON, league, postseasonPath(league), page.view, page.predictions !== null);
   const schemas = leagueJsonLd(copy, league, page.view.updatedAt);
 
   // The cross link goes only to a league whose postseason is underway: its

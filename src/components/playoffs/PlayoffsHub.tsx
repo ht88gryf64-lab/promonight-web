@@ -7,13 +7,17 @@ import { AdSlot } from '@/components/ads/AdSlot';
 import { AD_SLOTS } from '@/lib/ads/slots';
 import { HomeGames } from './HomeGames';
 import { PredictionsCard } from './PredictionsCard';
+import type { HubPredictionLine } from '@/lib/postseason/predictions';
 import { HubResults } from './HubResults';
 import { CONDENSED, InProgressBadge } from './ui';
 
 const SURFACE = 'web_playoffs' as const;
 const PAGE_TYPE = 'playoffs_hub';
 
-export type HubLeague = { state: 'ok'; league: PostseasonLeague; href: string; view: LeagueView; predictionsLocked: boolean };
+/** `predictions` is the hub's one line for the league's locked computer
+ *  bracket, or null when none was locked. Only the line: the hub carries no
+ *  fingerprint and no series. */
+export type HubLeague = { state: 'ok'; league: PostseasonLeague; href: string; view: LeagueView; predictions: HubPredictionLine | null };
 
 function seriesNames(s: SeriesView): string {
   return `${s.higher.label} vs ${s.lower.label}`;
@@ -164,7 +168,7 @@ export function PlayoffsHub({
   // be read never reaches here: the read throws and the last good page
   // stands.)
   const offseason = leagues.length === 0;
-  const predictionsLocked = active.some((l) => l.predictionsLocked);
+  const predictionLines = active.flatMap((l) => (l.predictions ? [l.predictions] : []));
 
   return (
     <div className="mx-auto max-w-2xl px-4 pb-20 pt-6 lg:max-w-5xl">
@@ -240,7 +244,7 @@ export function PlayoffsHub({
         )}
 
         <HubResults leagues={ordered} heading={active.length > 0 ? 'Results so far' : 'Results'} />
-        {predictionsLocked && <PredictionsCard heading="Predictions are locked" headingId="predictions-locked" />}
+        <PredictionsCard heading="Predictions are locked" headingId="predictions-locked" lines={predictionLines} />
         <AdSlot config={AD_SLOTS.IN_CONTENT_2} pageType={PAGE_TYPE} />
       </article>
 

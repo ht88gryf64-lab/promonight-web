@@ -2,7 +2,10 @@
 // *.test.ts and *.test.tsx.
 import { readFileSync } from 'node:fs';
 import type { Team } from '../../types';
-import type { ClubInfo, ParkInfo } from '../view';
+import { mapBracketDoc } from '../map';
+import { assemblePredictions, mapPredictedDoc, type LeaguePredictions, type PredictedBracket } from '../predictions';
+import type { Bracket } from '../types';
+import { buildLeagueView, seriesIds, type ClubInfo, type LeagueView, type ParkInfo } from '../view';
 
 const FIXTURES = new URL('../__fixtures__/', import.meta.url);
 
@@ -18,7 +21,22 @@ export const FIXTURE = {
   wnbaFinal: 'WNBA_2025.final.json',
   mlbMixed: 'MLB_2025.replay-step-24.json',
   wnbaMixed: 'WNBA_2025.replay-step-10.json',
+  // 2026-10-01T00:17Z: the Lynx out (lost 0-2 to the Liberty), the other
+  // three WNBA first-round series live; all four MLB Wild Card series live.
+  wnbaLynxOut: 'WNBA_2026.live-20261001T0017Z.json',
+  mlbWildCard: 'MLB_2026.live-20261001T0017Z.json',
 } as const;
+
+/** The locked computer brackets, predictedBrackets/{LEAGUE}_2026, whole, as
+ *  stored (read 2026-10-01T00:17Z). Not bracket documents, so not in FIXTURE,
+ *  which tests walk as brackets. */
+export const PREDICTED = {
+  wnba: 'predicted.WNBA_2026.json',
+  mlb: 'predicted.MLB_2026.json',
+} as const;
+
+/** The moment the 2026-10-01 documents were read. */
+export const LYNX_OUT_AT = new Date('2026-10-01T00:17:37Z');
 
 /** The moment the two live documents were read. Tests that need a "now" use
  *  this one, so nothing depends on the day the suite runs. */
@@ -166,6 +184,29 @@ export interface FakeRead {
  * an Error throws when read; a subcollection whose parent path is stored as
  * an Error throws when queried.
  */
+/** A field mask applied the way Firestore applies one: "a.b" keeps field b
+ *  of map a and nothing else of a. A path through a non-map keeps nothing. */
+function applyMask(stored: Record<string, unknown>, mask: readonly string[]): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const path of mask) {
+    const parts = path.split('.');
+    let from: unknown = stored;
+    let to: Record<string, unknown> = out;
+    for (let i = 0; i < parts.length; i++) {
+      if (!from || typeof from !== 'object' || Array.isArray(from) || !(parts[i] in (from as object))) break;
+      const v = (from as Record<string, unknown>)[parts[i]];
+      if (i === parts.length - 1) {
+        to[parts[i]] = v;
+      } else {
+        if (!to[parts[i]] || typeof to[parts[i]] !== 'object') to[parts[i]] = {};
+        to = to[parts[i]] as Record<string, unknown>;
+        from = v;
+      }
+    }
+  }
+  return out;
+}
+
 export function fakeFirestore(docs: Record<string, Record<string, unknown> | Error | undefined>) {
   const reads: FakeRead[] = [];
   const ref = (path: string) => ({
@@ -221,7 +262,7 @@ export function fakeFirestore(docs: Record<string, Record<string, unknown> | Err
             ? undefined
             : mask === null
               ? stored
-              : Object.fromEntries(mask.filter((k) => k in stored).map((k) => [k, stored[k]]));
+              : applyMask(stored, mask);
         return {
           exists: stored !== undefined,
           data: () => data,
@@ -231,4 +272,106 @@ export function fakeFirestore(docs: Record<string, Record<string, unknown> | Err
     },
   };
   return db;
+}
+
+// ---- Deciding a captured bracket ----
+//
+// No 2026 bracket is finished, so the decided states are built here from a
+// live capture by setting the stored fields the pipeline sets when a series
+// ends: status, winner, wins. A slot that names a feeder resolves through
+// the mapper as it does in production. A slot that names none (the WNBA
+// semifinal and final slots, the MLB championship and World Series slots)
+// is filled with the club and seed given. Every test that uses this says so.
+
+type StoredDoc = Record<string, unknown>;
+type StoredSeries = StoredDoc & { seriesKey: string; bestOf: number; higher: StoredDoc; lower: StoredDoc; wins: StoredDoc };
+
+export interface Decision {
+  winner: string;
+  /** Clubs for slots with no feeder: [slug, seed]. */
+  higher?: [string, number];
+  lower?: [string, number];
+}
+
+export function decide(doc: StoredDoc, key: string, d: Decision): void {
+  const s = (doc.series as StoredSeries[]).find((x) => x.seriesKey === key);
+  if (!s) throw new Error(`no series ${key}`);
+  if (d.higher) s.higher = { slug: d.higher[0], seed: d.higher[1] };
+  if (d.lower) s.lower = { slug: d.lower[0], seed: d.lower[1] };
+  const need = Math.ceil(s.bestOf / 2);
+  // Which side won is read from the resolved slot by the mapper; the stored
+  // wins only need the winner to have the majority. The higher slot is a
+  // club here or the winner is the lower one.
+  const higherSlug = (s.higher as { slug?: string }).slug;
+  const winnerIsHigher = higherSlug === d.winner;
+  s.status = 'final';
+  s.winner = d.winner;
+  s.wins = winnerIsHigher ? { higher: need, lower: need - 1 } : { higher: need - 1, lower: need };
+}
+
+/** The WNBA bracket, decided. Liberty over Lynx (as it happened), then
+ *  Valkyries, Fever, Dream; Dream over Liberty, Valkyries over Fever;
+ *  Valkyries over Dream. */
+export function decidedWnba(): StoredDoc {
+  const d = loadDoc(FIXTURE.wnbaLynxOut);
+  decide(d, 'R1-2v7', { winner: 'golden-state-valkyries' });
+  decide(d, 'R1-3v6', { winner: 'indiana-fever' });
+  decide(d, 'R1-4v5', { winner: 'atlanta-dream' });
+  decide(d, 'SF-A', { winner: 'atlanta-dream', higher: ['atlanta-dream', 4], lower: ['new-york-liberty', 8] });
+  decide(d, 'SF-B', { winner: 'golden-state-valkyries', higher: ['golden-state-valkyries', 2], lower: ['indiana-fever', 6] });
+  decide(d, 'F', { winner: 'golden-state-valkyries', higher: ['golden-state-valkyries', 2], lower: ['atlanta-dream', 4] });
+  return d;
+}
+
+/** The MLB bracket, decided. White Sox (the coin flip goes against the
+ *  pick), Yankees, Phillies, Padres; Yankees, Guardians, Brewers, Dodgers;
+ *  Yankees over Guardians, Dodgers over Brewers; Dodgers over Yankees. */
+export function decidedMlb(): StoredDoc {
+  const d = loadDoc(FIXTURE.mlbWildCard);
+  decide(d, 'AL-WC-A', { winner: 'chicago-white-sox' });
+  decide(d, 'AL-WC-B', { winner: 'new-york-yankees' });
+  decide(d, 'NL-WC-A', { winner: 'philadelphia-phillies' });
+  decide(d, 'NL-WC-B', { winner: 'san-diego-padres' });
+  decide(d, 'AL-DS-A', { winner: 'new-york-yankees' });
+  decide(d, 'AL-DS-B', { winner: 'cleveland-guardians' });
+  decide(d, 'NL-DS-A', { winner: 'milwaukee-brewers' });
+  decide(d, 'NL-DS-B', { winner: 'los-angeles-dodgers' });
+  decide(d, 'AL-CS', { winner: 'new-york-yankees', higher: ['cleveland-guardians', 2], lower: ['new-york-yankees', 4] });
+  decide(d, 'NL-CS', { winner: 'los-angeles-dodgers', higher: ['milwaukee-brewers', 1], lower: ['los-angeles-dodgers', 2] });
+  decide(d, 'WS', { winner: 'los-angeles-dodgers', higher: ['los-angeles-dodgers', 2], lower: ['new-york-yankees', 4] });
+  return d;
+}
+
+
+// ---- The page's predictions, built the way ./data.ts builds them ----
+
+export function mapPredicted(name: string): PredictedBracket {
+  const d = loadDoc(name);
+  const p = mapPredictedDoc(d, { league: d.league as 'MLB' | 'WNBA', season: d.season as number });
+  if (!p) throw new Error(`${name} does not map`);
+  return p;
+}
+
+export interface Built {
+  bracket: Bracket;
+  view: LeagueView;
+  predicted: PredictedBracket;
+  predictions: LeaguePredictions;
+}
+
+/** A stored bracket (a fixture name, or a document already edited) and a
+ *  stored prediction, through the real mappers, the real view and the real
+ *  assembly. */
+export function buildWithPredictions(bracket: string | StoredDoc, predicted: string | StoredDoc, now: Date): Built {
+  const bd = typeof bracket === 'string' ? loadDoc(bracket) : bracket;
+  const b = mapBracketDoc(bd, { league: bd.league as 'MLB' | 'WNBA', season: bd.season as number });
+  if (!b) throw new Error('bracket does not map');
+  const v = buildLeagueView(b, clubs(), parks(), now);
+  if (!v) throw new Error('bracket does not build');
+  const pd = typeof predicted === 'string' ? loadDoc(predicted) : predicted;
+  const p = mapPredictedDoc(pd, { league: pd.league as 'MLB' | 'WNBA', season: pd.season as number });
+  if (!p) throw new Error('prediction does not map');
+  const out = assemblePredictions(b, p, clubs(), seriesIds(b), v.rounds.map((r) => ({ key: r.key, label: r.label, shortLabel: r.shortLabel })));
+  if (out instanceof Error) throw out;
+  return { bracket: b, view: v, predicted: p, predictions: out };
 }

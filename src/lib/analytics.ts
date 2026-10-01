@@ -83,6 +83,8 @@ export type AnalyticsEvent =
   | 'playoffs_league_view'
   | 'playoffs_round_select'
   | 'playoffs_series_open'
+  | 'predictions_round_select'
+  | 'predictions_series_open'
   | 'hydration_mismatch';
 
 // `TONIGHT_AND_TOMORROW` is retained for backwards-compatibility with dashboards
@@ -1020,6 +1022,8 @@ export type EventPropertiesMap = {
   playoffs_league_view: PlayoffsLeagueViewProperties;
   playoffs_round_select: PlayoffsRoundSelectProperties;
   playoffs_series_open: PlayoffsSeriesOpenProperties;
+  predictions_round_select: PredictionsRoundSelectProperties;
+  predictions_series_open: PredictionsSeriesOpenProperties;
   hydration_mismatch: HydrationMismatchProperties;
 };
 
@@ -1096,6 +1100,36 @@ export type PlayoffsSeriesOpenProperties = {
   /** 'tap': the reader opened it on this page. 'link': they arrived on a
    *  link that named it (/playoffs/mlb#division_series-2). */
   opened_by: 'tap' | 'link';
+};
+
+// ── The computer's bracket on /playoffs/{league} ─────────────────────────
+//
+// Two events, both dual-emit through track(), from the predicted bracket's
+// own controls. Its pills and toggle share their state with the real
+// bracket's, so a press on either moves both; each set sends its own event.
+// `series_id` is the page's id for the REAL series in the same slot
+// ('first_round-1'), so the two brackets' events join on it. No series key,
+// no team name, no probability.
+
+/** A round pill, or the conference toggle, of the predicted bracket. */
+export type PredictionsRoundSelectProperties = {
+  surface: 'web_playoffs_league';
+  league: string;
+  season: number;
+  round_key: string;
+  conference: string | null;
+  control: 'round_pill' | 'conference_toggle';
+};
+
+/** A predicted series was opened to its pick. `pick_outcome` is how the
+ *  pick stood against the real bracket when the page was rendered. */
+export type PredictionsSeriesOpenProperties = {
+  surface: 'web_playoffs_league';
+  league: string;
+  season: number;
+  round_key: string;
+  series_id: string;
+  pick_outcome: 'correct' | 'busted' | 'alive';
 };
 
 // ── Utilities ────────────────────────────────────────────────────────────

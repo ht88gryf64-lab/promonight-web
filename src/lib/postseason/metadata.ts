@@ -68,24 +68,36 @@ export function hubCopy(season: number, routeLeagues: readonly PostseasonLeague[
 }
 
 /** A league's page. `view` is null when the body rendered "bracket not
- *  available", and then nothing is said about the bracket. */
-export function leagueCopy(season: number, league: PostseasonLeague, path: string, view: LeagueView | null): PageCopy {
-  // 60 characters with the site suffix for the longest league name, inside
+ *  available", and then nothing is said about the bracket. `predictions` is
+ *  whether the body rendered the computer's locked bracket: the head names
+ *  predictions only when the body shows them. */
+export function leagueCopy(
+  season: number,
+  league: PostseasonLeague,
+  path: string,
+  view: LeagueView | null,
+  predictions: boolean = false,
+): PageCopy {
+  // 54 characters with the site suffix for the longest league name, inside
   // the 65 the title audit aims for.
-  const title = `${season} ${league} Playoffs Bracket, Schedule and Scores`;
+  const title = predictions ? `${season} ${league} Playoff Bracket and Predictions` : `${season} ${league} Playoffs Bracket, Schedule and Scores`;
   const canonical = `${SITE_URL}${path}`;
   if (!view) return { title, canonical, description: `The ${season} ${league} postseason bracket.` };
   if (view.phase.kind === 'concluded') {
     return {
       title,
       canonical,
-      description: `The ${season} ${league} postseason bracket, complete. ${view.phase.championName}: ${lowerFirst(view.phase.summary)}. Every series and result, round by round.`,
+      description: predictions
+        ? `The ${season} ${league} postseason bracket, complete. ${view.phase.championName}: ${lowerFirst(view.phase.summary)}. Every series and result, and how the computer's locked picks did.`
+        : `The ${season} ${league} postseason bracket, complete. ${view.phase.championName}: ${lowerFirst(view.phase.summary)}. Every series and result, round by round.`,
     };
   }
   return {
     title,
     canonical,
-    description: `The ${season} ${league} postseason bracket. Current round: ${view.phase.roundLabel}. Every series, seed and result, with game times in Eastern and the home games coming up.`,
+    description: predictions
+      ? `The ${season} ${league} postseason bracket and the computer's locked pick for every series, marked as the results come in. Current round: ${view.phase.roundLabel}. Game times in Eastern.`
+      : `The ${season} ${league} postseason bracket. Current round: ${view.phase.roundLabel}. Every series, seed and result, with game times in Eastern and the home games coming up.`,
   };
 }
 

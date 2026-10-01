@@ -1,0 +1,1122 @@
+{
+  "bracketSha256": "9e780aa249f2a8cacc2af903acd1a0bf092908842ae161b758771efae019a623",
+  "lastChangedAt": {
+    "__firestoreTimestamp": "2026-09-30T23:20:32.259Z"
+  },
+  "lastFetchedAt": {
+    "__firestoreTimestamp": "2026-10-01T00:10:29.909Z"
+  },
+  "lastRevalidatedSha256": "9e780aa249f2a8cacc2af903acd1a0bf092908842ae161b758771efae019a623",
+  "league": "MLB",
+  "operatorLog": [],
+  "revalidationPending": null,
+  "runId": "2026-09-30T23-20-30-110Z-dbaacd",
+  "season": 2026,
+  "seeds": {
+    "authoredBy": "Matt Kovalik",
+    "authoredOn": "2026-09-28",
+    "file": "mlb-2026.json"
+  },
+  "series": [
+    {
+      "bestOf": 3,
+      "conference": "AL",
+      "games": [
+        {
+          "away": "chicago-white-sox",
+          "awayScore": 6,
+          "date": "2026-09-29",
+          "gameId": "849849",
+          "gameNumber": 1,
+          "home": "houston-astros",
+          "homeScore": 3,
+          "homeSide": "higher",
+          "ifNecessary": false,
+          "start": "2026-09-29T21:00:00Z",
+          "startTimeTBD": false,
+          "status": "final",
+          "winnerSide": "lower"
+        },
+        {
+          "away": "chicago-white-sox",
+          "awayScore": 7,
+          "date": "2026-09-30",
+          "gameId": "849846",
+          "gameNumber": 2,
+          "home": "houston-astros",
+          "homeScore": 3,
+          "homeSide": "higher",
+          "ifNecessary": false,
+          "start": "2026-09-30T21:00:00Z",
+          "startTimeTBD": false,
+          "status": "live",
+          "winnerSide": null
+        },
+        {
+          "away": "chicago-white-sox",
+          "awayScore": null,
+          "date": "2026-10-01",
+          "gameId": "849850",
+          "gameNumber": 3,
+          "home": "houston-astros",
+          "homeScore": null,
+          "homeSide": "higher",
+          "ifNecessary": true,
+          "start": "2026-10-01T21:00:00Z",
+          "startTimeTBD": false,
+          "status": "scheduled",
+          "winnerSide": null
+        }
+      ],
+      "higher": {
+        "seed": 3,
+        "slug": "houston-astros"
+      },
+      "lower": {
+        "seed": 6,
+        "slug": "chicago-white-sox"
+      },
+      "round": "wild_card",
+      "roundLabel": "Wild Card Series",
+      "seriesKey": "AL-WC-A",
+      "shortLabel": "Wild Card",
+      "status": "live",
+      "winner": null,
+      "wins": {
+        "higher": 0,
+        "lower": 1
+      }
+    },
+    {
+      "bestOf": 3,
+      "conference": "AL",
+      "games": [
+        {
+          "away": "boston-red-sox",
+          "awayScore": 0,
+          "date": "2026-09-29",
+          "gameId": "849851",
+          "gameNumber": 1,
+          "home": "new-york-yankees",
+          "homeScore": 9,
+          "homeSide": "higher",
+          "ifNecessary": false,
+          "start": "2026-09-30T00:00:00Z",
+          "startTimeTBD": false,
+          "status": "final",
+          "winnerSide": "higher"
+        },
+        {
+          "away": "boston-red-sox",
+          "awayScore": 0,
+          "date": "2026-09-30",
+          "gameId": "849848",
+          "gameNumber": 2,
+          "home": "new-york-yankees",
+          "homeScore": 0,
+          "homeSide": "higher",
+          "ifNecessary": false,
+          "start": "2026-10-01T00:00:00Z",
+          "startTimeTBD": false,
+          "status": "scheduled",
+          "winnerSide": null
+        },
+        {
+          "away": "boston-red-sox",
+          "awayScore": null,
+          "date": "2026-10-01",
+          "gameId": "849847",
+          "gameNumber": 3,
+          "home": "new-york-yankees",
+          "homeScore": null,
+          "homeSide": "higher",
+          "ifNecessary": true,
+          "start": "2026-10-02T00:00:00Z",
+          "startTimeTBD": false,
+          "status": "scheduled",
+          "winnerSide": null
+        }
+      ],
+      "higher": {
+        "seed": 4,
+        "slug": "new-york-yankees"
+      },
+      "lower": {
+        "seed": 5,
+        "slug": "boston-red-sox"
+      },
+      "round": "wild_card",
+      "roundLabel": "Wild Card Series",
+      "seriesKey": "AL-WC-B",
+      "shortLabel": "Wild Card",
+      "status": "live",
+      "winner": null,
+      "wins": {
+        "higher": 1,
+        "lower": 0
+      }
+    },
+    {
+      "bestOf": 3,
+      "conference": "NL",
+      "games": [
+        {
+          "away": "philadelphia-phillies",
+          "awayScore": 3,
+          "date": "2026-09-29",
+          "gameId": "849845",
+          "gameNumber": 1,
+          "home": "atlanta-braves",
+          "homeScore": 5,
+          "homeSide": "higher",
+          "ifNecessary": false,
+          "start": "2026-09-29T18:00:00Z",
+          "startTimeTBD": false,
+          "status": "final",
+          "winnerSide": "higher"
+        },
+        {
+          "away": "philadelphia-phillies",
+          "awayScore": 4,
+          "date": "2026-09-30",
+          "gameId": "849841",
+          "gameNumber": 2,
+          "home": "atlanta-braves",
+          "homeScore": 3,
+          "homeSide": "higher",
+          "ifNecessary": false,
+          "start": "2026-09-30T18:00:00Z",
+          "startTimeTBD": false,
+          "status": "final",
+          "winnerSide": "lower"
+        },
+        {
+          "away": "philadelphia-phillies",
+          "awayScore": null,
+          "date": "2026-10-01",
+          "gameId": "849844",
+          "gameNumber": 3,
+          "home": "atlanta-braves",
+          "homeScore": null,
+          "homeSide": "higher",
+          "ifNecessary": true,
+          "start": "2026-10-01T18:00:00Z",
+          "startTimeTBD": false,
+          "status": "scheduled",
+          "winnerSide": null
+        }
+      ],
+      "higher": {
+        "seed": 3,
+        "slug": "atlanta-braves"
+      },
+      "lower": {
+        "seed": 6,
+        "slug": "philadelphia-phillies"
+      },
+      "round": "wild_card",
+      "roundLabel": "Wild Card Series",
+      "seriesKey": "NL-WC-A",
+      "shortLabel": "Wild Card",
+      "status": "live",
+      "winner": null,
+      "wins": {
+        "higher": 1,
+        "lower": 1
+      }
+    },
+    {
+      "bestOf": 3,
+      "conference": "NL",
+      "games": [
+        {
+          "away": "chicago-cubs",
+          "awayScore": 0,
+          "date": "2026-09-29",
+          "gameId": "849843",
+          "gameNumber": 1,
+          "home": "san-diego-padres",
+          "homeScore": 8,
+          "homeSide": "higher",
+          "ifNecessary": false,
+          "start": "2026-09-30T02:00:00Z",
+          "startTimeTBD": false,
+          "status": "final",
+          "winnerSide": "higher"
+        },
+        {
+          "away": "chicago-cubs",
+          "awayScore": 0,
+          "date": "2026-09-30",
+          "gameId": "849842",
+          "gameNumber": 2,
+          "home": "san-diego-padres",
+          "homeScore": 0,
+          "homeSide": "higher",
+          "ifNecessary": false,
+          "start": "2026-10-01T02:00:00Z",
+          "startTimeTBD": false,
+          "status": "scheduled",
+          "winnerSide": null
+        },
+        {
+          "away": "chicago-cubs",
+          "awayScore": null,
+          "date": "2026-10-01",
+          "gameId": "849840",
+          "gameNumber": 3,
+          "home": "san-diego-padres",
+          "homeScore": null,
+          "homeSide": "higher",
+          "ifNecessary": true,
+          "start": "2026-10-02T02:00:00Z",
+          "startTimeTBD": false,
+          "status": "scheduled",
+          "winnerSide": null
+        }
+      ],
+      "higher": {
+        "seed": 4,
+        "slug": "san-diego-padres"
+      },
+      "lower": {
+        "seed": 5,
+        "slug": "chicago-cubs"
+      },
+      "round": "wild_card",
+      "roundLabel": "Wild Card Series",
+      "seriesKey": "NL-WC-B",
+      "shortLabel": "Wild Card",
+      "status": "live",
+      "winner": null,
+      "wins": {
+        "higher": 1,
+        "lower": 0
+      }
+    },
+    {
+      "bestOf": 5,
+      "conference": "AL",
+      "games": [
+        {
+          "away": "NYY/BOS",
+          "awayScore": null,
+          "date": "2026-10-03",
+          "gameId": "849835",
+          "gameNumber": 1,
+          "home": "tampa-bay-rays",
+          "homeScore": null,
+          "homeSide": "higher",
+          "ifNecessary": false,
+          "start": "2026-10-03T22:30:00Z",
+          "startTimeTBD": false,
+          "status": "scheduled",
+          "winnerSide": null
+        },
+        {
+          "away": "NYY/BOS",
+          "awayScore": null,
+          "date": "2026-10-05",
+          "gameId": "849839",
+          "gameNumber": 2,
+          "home": "tampa-bay-rays",
+          "homeScore": null,
+          "homeSide": "higher",
+          "ifNecessary": false,
+          "start": "2026-10-06T00:00:00Z",
+          "startTimeTBD": false,
+          "status": "scheduled",
+          "winnerSide": null
+        },
+        {
+          "away": "tampa-bay-rays",
+          "awayScore": null,
+          "date": "2026-10-07",
+          "gameId": "849838",
+          "gameNumber": 3,
+          "home": "NYY/BOS",
+          "homeScore": null,
+          "homeSide": "lower",
+          "ifNecessary": false,
+          "start": "2026-10-07T07:33:00Z",
+          "startTimeTBD": true,
+          "status": "scheduled",
+          "winnerSide": null
+        },
+        {
+          "away": "tampa-bay-rays",
+          "awayScore": null,
+          "date": "2026-10-08",
+          "gameId": "849837",
+          "gameNumber": 4,
+          "home": "NYY/BOS",
+          "homeScore": null,
+          "homeSide": "lower",
+          "ifNecessary": true,
+          "start": "2026-10-08T07:33:00Z",
+          "startTimeTBD": true,
+          "status": "scheduled",
+          "winnerSide": null
+        },
+        {
+          "away": "NYY/BOS",
+          "awayScore": null,
+          "date": "2026-10-10",
+          "gameId": "849836",
+          "gameNumber": 5,
+          "home": "tampa-bay-rays",
+          "homeScore": null,
+          "homeSide": "higher",
+          "ifNecessary": true,
+          "start": "2026-10-10T07:33:00Z",
+          "startTimeTBD": true,
+          "status": "scheduled",
+          "winnerSide": null
+        }
+      ],
+      "higher": {
+        "seed": 1,
+        "slug": "tampa-bay-rays"
+      },
+      "lower": {
+        "candidates": [
+          "new-york-yankees",
+          "boston-red-sox"
+        ],
+        "feederSeriesKey": "AL-WC-B",
+        "placeholder": "NYY/BOS",
+        "seed": null
+      },
+      "round": "division_series",
+      "roundLabel": "Division Series",
+      "seriesKey": "AL-DS-A",
+      "shortLabel": "Division",
+      "status": "upcoming",
+      "winner": null,
+      "wins": {
+        "higher": 0,
+        "lower": 0
+      }
+    },
+    {
+      "bestOf": 5,
+      "conference": "AL",
+      "games": [
+        {
+          "away": "HOU/CWS",
+          "awayScore": null,
+          "date": "2026-10-03",
+          "gameId": "849829",
+          "gameNumber": 1,
+          "home": "cleveland-guardians",
+          "homeScore": null,
+          "homeSide": "higher",
+          "ifNecessary": false,
+          "start": "2026-10-03T17:00:00Z",
+          "startTimeTBD": false,
+          "status": "scheduled",
+          "winnerSide": null
+        },
+        {
+          "away": "HOU/CWS",
+          "awayScore": null,
+          "date": "2026-10-05",
+          "gameId": "849834",
+          "gameNumber": 2,
+          "home": "cleveland-guardians",
+          "homeScore": null,
+          "homeSide": "higher",
+          "ifNecessary": false,
+          "start": "2026-10-05T21:00:00Z",
+          "startTimeTBD": false,
+          "status": "scheduled",
+          "winnerSide": null
+        },
+        {
+          "away": "cleveland-guardians",
+          "awayScore": null,
+          "date": "2026-10-07",
+          "gameId": "849833",
+          "gameNumber": 3,
+          "home": "HOU/CWS",
+          "homeScore": null,
+          "homeSide": "lower",
+          "ifNecessary": false,
+          "start": "2026-10-07T07:33:00Z",
+          "startTimeTBD": true,
+          "status": "scheduled",
+          "winnerSide": null
+        },
+        {
+          "away": "cleveland-guardians",
+          "awayScore": null,
+          "date": "2026-10-08",
+          "gameId": "849832",
+          "gameNumber": 4,
+          "home": "HOU/CWS",
+          "homeScore": null,
+          "homeSide": "lower",
+          "ifNecessary": true,
+          "start": "2026-10-08T07:33:00Z",
+          "startTimeTBD": true,
+          "status": "scheduled",
+          "winnerSide": null
+        },
+        {
+          "away": "HOU/CWS",
+          "awayScore": null,
+          "date": "2026-10-10",
+          "gameId": "849831",
+          "gameNumber": 5,
+          "home": "cleveland-guardians",
+          "homeScore": null,
+          "homeSide": "higher",
+          "ifNecessary": true,
+          "start": "2026-10-10T07:33:00Z",
+          "startTimeTBD": true,
+          "status": "scheduled",
+          "winnerSide": null
+        }
+      ],
+      "higher": {
+        "seed": 2,
+        "slug": "cleveland-guardians"
+      },
+      "lower": {
+        "candidates": [
+          "houston-astros",
+          "chicago-white-sox"
+        ],
+        "feederSeriesKey": "AL-WC-A",
+        "placeholder": "HOU/CWS",
+        "seed": null
+      },
+      "round": "division_series",
+      "roundLabel": "Division Series",
+      "seriesKey": "AL-DS-B",
+      "shortLabel": "Division",
+      "status": "upcoming",
+      "winner": null,
+      "wins": {
+        "higher": 0,
+        "lower": 0
+      }
+    },
+    {
+      "bestOf": 5,
+      "conference": "NL",
+      "games": [
+        {
+          "away": "SD/CHC",
+          "awayScore": null,
+          "date": "2026-10-03",
+          "gameId": "849830",
+          "gameNumber": 1,
+          "home": "milwaukee-brewers",
+          "homeScore": null,
+          "homeSide": "higher",
+          "ifNecessary": false,
+          "start": "2026-10-03T08:33:00Z",
+          "startTimeTBD": true,
+          "status": "scheduled",
+          "winnerSide": null
+        },
+        {
+          "away": "SD/CHC",
+          "awayScore": null,
+          "date": "2026-10-04",
+          "gameId": "849825",
+          "gameNumber": 2,
+          "home": "milwaukee-brewers",
+          "homeScore": null,
+          "homeSide": "higher",
+          "ifNecessary": false,
+          "start": "2026-10-04T20:00:00Z",
+          "startTimeTBD": false,
+          "status": "scheduled",
+          "winnerSide": null
+        },
+        {
+          "away": "milwaukee-brewers",
+          "awayScore": null,
+          "date": "2026-10-06",
+          "gameId": "849826",
+          "gameNumber": 3,
+          "home": "SD/CHC",
+          "homeScore": null,
+          "homeSide": "lower",
+          "ifNecessary": false,
+          "start": "2026-10-06T07:33:00Z",
+          "startTimeTBD": true,
+          "status": "scheduled",
+          "winnerSide": null
+        },
+        {
+          "away": "milwaukee-brewers",
+          "awayScore": null,
+          "date": "2026-10-07",
+          "gameId": "849827",
+          "gameNumber": 4,
+          "home": "SD/CHC",
+          "homeScore": null,
+          "homeSide": "lower",
+          "ifNecessary": true,
+          "start": "2026-10-07T07:33:00Z",
+          "startTimeTBD": true,
+          "status": "scheduled",
+          "winnerSide": null
+        },
+        {
+          "away": "SD/CHC",
+          "awayScore": null,
+          "date": "2026-10-09",
+          "gameId": "849824",
+          "gameNumber": 5,
+          "home": "milwaukee-brewers",
+          "homeScore": null,
+          "homeSide": "higher",
+          "ifNecessary": true,
+          "start": "2026-10-09T08:33:00Z",
+          "startTimeTBD": true,
+          "status": "scheduled",
+          "winnerSide": null
+        }
+      ],
+      "higher": {
+        "seed": 1,
+        "slug": "milwaukee-brewers"
+      },
+      "lower": {
+        "candidates": [
+          "san-diego-padres",
+          "chicago-cubs"
+        ],
+        "feederSeriesKey": "NL-WC-B",
+        "placeholder": "SD/CHC",
+        "seed": null
+      },
+      "round": "division_series",
+      "roundLabel": "Division Series",
+      "seriesKey": "NL-DS-A",
+      "shortLabel": "Division",
+      "status": "upcoming",
+      "winner": null,
+      "wins": {
+        "higher": 0,
+        "lower": 0
+      }
+    },
+    {
+      "bestOf": 5,
+      "conference": "NL",
+      "games": [
+        {
+          "away": "ATL/PHI",
+          "awayScore": null,
+          "date": "2026-10-03",
+          "gameId": "849828",
+          "gameNumber": 1,
+          "home": "los-angeles-dodgers",
+          "homeScore": null,
+          "homeSide": "higher",
+          "ifNecessary": false,
+          "start": "2026-10-03T10:33:00Z",
+          "startTimeTBD": true,
+          "status": "scheduled",
+          "winnerSide": null
+        },
+        {
+          "away": "ATL/PHI",
+          "awayScore": null,
+          "date": "2026-10-04",
+          "gameId": "849823",
+          "gameNumber": 2,
+          "home": "los-angeles-dodgers",
+          "homeScore": null,
+          "homeSide": "higher",
+          "ifNecessary": false,
+          "start": "2026-10-05T00:00:00Z",
+          "startTimeTBD": false,
+          "status": "scheduled",
+          "winnerSide": null
+        },
+        {
+          "away": "los-angeles-dodgers",
+          "awayScore": null,
+          "date": "2026-10-06",
+          "gameId": "849819",
+          "gameNumber": 3,
+          "home": "ATL/PHI",
+          "homeScore": null,
+          "homeSide": "lower",
+          "ifNecessary": false,
+          "start": "2026-10-06T07:33:00Z",
+          "startTimeTBD": true,
+          "status": "scheduled",
+          "winnerSide": null
+        },
+        {
+          "away": "los-angeles-dodgers",
+          "awayScore": null,
+          "date": "2026-10-07",
+          "gameId": "849822",
+          "gameNumber": 4,
+          "home": "ATL/PHI",
+          "homeScore": null,
+          "homeSide": "lower",
+          "ifNecessary": true,
+          "start": "2026-10-07T07:33:00Z",
+          "startTimeTBD": true,
+          "status": "scheduled",
+          "winnerSide": null
+        },
+        {
+          "away": "ATL/PHI",
+          "awayScore": null,
+          "date": "2026-10-09",
+          "gameId": "849821",
+          "gameNumber": 5,
+          "home": "los-angeles-dodgers",
+          "homeScore": null,
+          "homeSide": "higher",
+          "ifNecessary": true,
+          "start": "2026-10-09T10:33:00Z",
+          "startTimeTBD": true,
+          "status": "scheduled",
+          "winnerSide": null
+        }
+      ],
+      "higher": {
+        "seed": 2,
+        "slug": "los-angeles-dodgers"
+      },
+      "lower": {
+        "candidates": [
+          "atlanta-braves",
+          "philadelphia-phillies"
+        ],
+        "feederSeriesKey": "NL-WC-A",
+        "placeholder": "ATL/PHI",
+        "seed": null
+      },
+      "round": "division_series",
+      "roundLabel": "Division Series",
+      "seriesKey": "NL-DS-B",
+      "shortLabel": "Division",
+      "status": "upcoming",
+      "winner": null,
+      "wins": {
+        "higher": 0,
+        "lower": 0
+      }
+    },
+    {
+      "bestOf": 7,
+      "conference": "AL",
+      "games": [
+        {
+          "away": "AL Lower Seed",
+          "awayScore": null,
+          "date": "2026-10-12",
+          "gameId": "849820",
+          "gameNumber": 1,
+          "home": "AL Higher Seed",
+          "homeScore": null,
+          "homeSide": "higher",
+          "ifNecessary": false,
+          "start": "2026-10-12T07:33:00Z",
+          "startTimeTBD": true,
+          "status": "scheduled",
+          "winnerSide": null
+        },
+        {
+          "away": "AL Lower Seed",
+          "awayScore": null,
+          "date": "2026-10-13",
+          "gameId": "849813",
+          "gameNumber": 2,
+          "home": "AL Higher Seed",
+          "homeScore": null,
+          "homeSide": "higher",
+          "ifNecessary": false,
+          "start": "2026-10-13T07:33:00Z",
+          "startTimeTBD": true,
+          "status": "scheduled",
+          "winnerSide": null
+        },
+        {
+          "away": "AL Higher Seed",
+          "awayScore": null,
+          "date": "2026-10-15",
+          "gameId": "849818",
+          "gameNumber": 3,
+          "home": "AL Lower Seed",
+          "homeScore": null,
+          "homeSide": "lower",
+          "ifNecessary": false,
+          "start": "2026-10-15T07:33:00Z",
+          "startTimeTBD": true,
+          "status": "scheduled",
+          "winnerSide": null
+        },
+        {
+          "away": "AL Higher Seed",
+          "awayScore": null,
+          "date": "2026-10-16",
+          "gameId": "849817",
+          "gameNumber": 4,
+          "home": "AL Lower Seed",
+          "homeScore": null,
+          "homeSide": "lower",
+          "ifNecessary": false,
+          "start": "2026-10-16T07:33:00Z",
+          "startTimeTBD": true,
+          "status": "scheduled",
+          "winnerSide": null
+        },
+        {
+          "away": "AL Higher Seed",
+          "awayScore": null,
+          "date": "2026-10-17",
+          "gameId": "849816",
+          "gameNumber": 5,
+          "home": "AL Lower Seed",
+          "homeScore": null,
+          "homeSide": "lower",
+          "ifNecessary": true,
+          "start": "2026-10-17T07:33:00Z",
+          "startTimeTBD": true,
+          "status": "scheduled",
+          "winnerSide": null
+        },
+        {
+          "away": "AL Lower Seed",
+          "awayScore": null,
+          "date": "2026-10-19",
+          "gameId": "849815",
+          "gameNumber": 6,
+          "home": "AL Higher Seed",
+          "homeScore": null,
+          "homeSide": "higher",
+          "ifNecessary": true,
+          "start": "2026-10-19T07:33:00Z",
+          "startTimeTBD": true,
+          "status": "scheduled",
+          "winnerSide": null
+        },
+        {
+          "away": "AL Lower Seed",
+          "awayScore": null,
+          "date": "2026-10-20",
+          "gameId": "849814",
+          "gameNumber": 7,
+          "home": "AL Higher Seed",
+          "homeScore": null,
+          "homeSide": "higher",
+          "ifNecessary": true,
+          "start": "2026-10-20T07:33:00Z",
+          "startTimeTBD": true,
+          "status": "scheduled",
+          "winnerSide": null
+        }
+      ],
+      "higher": {
+        "candidates": null,
+        "feederSeriesKey": null,
+        "placeholder": "AL Higher Seed",
+        "seed": null
+      },
+      "lower": {
+        "candidates": null,
+        "feederSeriesKey": null,
+        "placeholder": "AL Lower Seed",
+        "seed": null
+      },
+      "round": "championship_series",
+      "roundLabel": "Championship Series",
+      "seriesKey": "AL-CS",
+      "shortLabel": "LCS",
+      "status": "upcoming",
+      "winner": null,
+      "wins": {
+        "higher": 0,
+        "lower": 0
+      }
+    },
+    {
+      "bestOf": 7,
+      "conference": "NL",
+      "games": [
+        {
+          "away": "NL Lower Seed",
+          "awayScore": null,
+          "date": "2026-10-11",
+          "gameId": "849809",
+          "gameNumber": 1,
+          "home": "NL Higher Seed",
+          "homeScore": null,
+          "homeSide": "higher",
+          "ifNecessary": false,
+          "start": "2026-10-11T07:33:00Z",
+          "startTimeTBD": true,
+          "status": "scheduled",
+          "winnerSide": null
+        },
+        {
+          "away": "NL Lower Seed",
+          "awayScore": null,
+          "date": "2026-10-12",
+          "gameId": "849812",
+          "gameNumber": 2,
+          "home": "NL Higher Seed",
+          "homeScore": null,
+          "homeSide": "higher",
+          "ifNecessary": false,
+          "start": "2026-10-12T07:33:00Z",
+          "startTimeTBD": true,
+          "status": "scheduled",
+          "winnerSide": null
+        },
+        {
+          "away": "NL Higher Seed",
+          "awayScore": null,
+          "date": "2026-10-14",
+          "gameId": "849811",
+          "gameNumber": 3,
+          "home": "NL Lower Seed",
+          "homeScore": null,
+          "homeSide": "lower",
+          "ifNecessary": false,
+          "start": "2026-10-14T07:33:00Z",
+          "startTimeTBD": true,
+          "status": "scheduled",
+          "winnerSide": null
+        },
+        {
+          "away": "NL Higher Seed",
+          "awayScore": null,
+          "date": "2026-10-15",
+          "gameId": "849810",
+          "gameNumber": 4,
+          "home": "NL Lower Seed",
+          "homeScore": null,
+          "homeSide": "lower",
+          "ifNecessary": false,
+          "start": "2026-10-15T07:33:00Z",
+          "startTimeTBD": true,
+          "status": "scheduled",
+          "winnerSide": null
+        },
+        {
+          "away": "NL Higher Seed",
+          "awayScore": null,
+          "date": "2026-10-16",
+          "gameId": "849808",
+          "gameNumber": 5,
+          "home": "NL Lower Seed",
+          "homeScore": null,
+          "homeSide": "lower",
+          "ifNecessary": true,
+          "start": "2026-10-16T07:33:00Z",
+          "startTimeTBD": true,
+          "status": "scheduled",
+          "winnerSide": null
+        },
+        {
+          "away": "NL Lower Seed",
+          "awayScore": null,
+          "date": "2026-10-18",
+          "gameId": "849806",
+          "gameNumber": 6,
+          "home": "NL Higher Seed",
+          "homeScore": null,
+          "homeSide": "higher",
+          "ifNecessary": true,
+          "start": "2026-10-18T07:33:00Z",
+          "startTimeTBD": true,
+          "status": "scheduled",
+          "winnerSide": null
+        },
+        {
+          "away": "NL Lower Seed",
+          "awayScore": null,
+          "date": "2026-10-19",
+          "gameId": "849807",
+          "gameNumber": 7,
+          "home": "NL Higher Seed",
+          "homeScore": null,
+          "homeSide": "higher",
+          "ifNecessary": true,
+          "start": "2026-10-19T07:33:00Z",
+          "startTimeTBD": true,
+          "status": "scheduled",
+          "winnerSide": null
+        }
+      ],
+      "higher": {
+        "candidates": null,
+        "feederSeriesKey": null,
+        "placeholder": "NL Higher Seed",
+        "seed": null
+      },
+      "lower": {
+        "candidates": null,
+        "feederSeriesKey": null,
+        "placeholder": "NL Lower Seed",
+        "seed": null
+      },
+      "round": "championship_series",
+      "roundLabel": "Championship Series",
+      "seriesKey": "NL-CS",
+      "shortLabel": "LCS",
+      "status": "upcoming",
+      "winner": null,
+      "wins": {
+        "higher": 0,
+        "lower": 0
+      }
+    },
+    {
+      "bestOf": 7,
+      "conference": null,
+      "games": [
+        {
+          "away": "Lower Seed League Champion",
+          "awayScore": null,
+          "date": "2026-10-23",
+          "gameId": "849805",
+          "gameNumber": 1,
+          "home": "Higher Seed League Champion",
+          "homeScore": null,
+          "homeSide": "higher",
+          "ifNecessary": false,
+          "start": "2026-10-23T07:33:00Z",
+          "startTimeTBD": true,
+          "status": "scheduled",
+          "winnerSide": null
+        },
+        {
+          "away": "Lower Seed League Champion",
+          "awayScore": null,
+          "date": "2026-10-24",
+          "gameId": "849802",
+          "gameNumber": 2,
+          "home": "Higher Seed League Champion",
+          "homeScore": null,
+          "homeSide": "higher",
+          "ifNecessary": false,
+          "start": "2026-10-24T07:33:00Z",
+          "startTimeTBD": true,
+          "status": "scheduled",
+          "winnerSide": null
+        },
+        {
+          "away": "Higher Seed League Champion",
+          "awayScore": null,
+          "date": "2026-10-26",
+          "gameId": "849804",
+          "gameNumber": 3,
+          "home": "Lower Seed League Champion",
+          "homeScore": null,
+          "homeSide": "lower",
+          "ifNecessary": false,
+          "start": "2026-10-26T07:33:00Z",
+          "startTimeTBD": true,
+          "status": "scheduled",
+          "winnerSide": null
+        },
+        {
+          "away": "Higher Seed League Champion",
+          "awayScore": null,
+          "date": "2026-10-27",
+          "gameId": "849803",
+          "gameNumber": 4,
+          "home": "Lower Seed League Champion",
+          "homeScore": null,
+          "homeSide": "lower",
+          "ifNecessary": false,
+          "start": "2026-10-27T07:33:00Z",
+          "startTimeTBD": true,
+          "status": "scheduled",
+          "winnerSide": null
+        },
+        {
+          "away": "Higher Seed League Champion",
+          "awayScore": null,
+          "date": "2026-10-28",
+          "gameId": "849799",
+          "gameNumber": 5,
+          "home": "Lower Seed League Champion",
+          "homeScore": null,
+          "homeSide": "lower",
+          "ifNecessary": true,
+          "start": "2026-10-28T07:33:00Z",
+          "startTimeTBD": true,
+          "status": "scheduled",
+          "winnerSide": null
+        },
+        {
+          "away": "Lower Seed League Champion",
+          "awayScore": null,
+          "date": "2026-10-30",
+          "gameId": "849801",
+          "gameNumber": 6,
+          "home": "Higher Seed League Champion",
+          "homeScore": null,
+          "homeSide": "higher",
+          "ifNecessary": true,
+          "start": "2026-10-30T07:33:00Z",
+          "startTimeTBD": true,
+          "status": "scheduled",
+          "winnerSide": null
+        },
+        {
+          "away": "Lower Seed League Champion",
+          "awayScore": null,
+          "date": "2026-10-31",
+          "gameId": "849800",
+          "gameNumber": 7,
+          "home": "Higher Seed League Champion",
+          "homeScore": null,
+          "homeSide": "higher",
+          "ifNecessary": true,
+          "start": "2026-10-31T07:33:00Z",
+          "startTimeTBD": true,
+          "status": "scheduled",
+          "winnerSide": null
+        }
+      ],
+      "higher": {
+        "candidates": null,
+        "feederSeriesKey": null,
+        "placeholder": "Higher Seed League Champion",
+        "seed": null
+      },
+      "lower": {
+        "candidates": null,
+        "feederSeriesKey": null,
+        "placeholder": "Lower Seed League Champion",
+        "seed": null
+      },
+      "round": "world_series",
+      "roundLabel": "World Series",
+      "seriesKey": "WS",
+      "shortLabel": "World Series",
+      "status": "upcoming",
+      "winner": null,
+      "wins": {
+        "higher": 0,
+        "lower": 0
+      }
+    }
+  ],
+  "source": {
+    "kind": "statsapi",
+    "urls": [
+      "https://statsapi.mlb.com/api/v1/schedule/postseason?season=2026&sportId=1"
+    ]
+  },
+  "unplaced": null,
+  "validatedSeedSha256": "7df31b7a3830d9fe61471befeb4fc2b75f54e39a004485d42ca84d018f6a333c",
+  "writerVersion": 2
+}

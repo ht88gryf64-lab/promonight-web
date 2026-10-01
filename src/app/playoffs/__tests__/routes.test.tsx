@@ -5,7 +5,7 @@ import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { FIXTURE, capturedTeams, fakeFirestore, loadDoc, parkNames, seriesKeyIn, venuePages } from '../../../lib/postseason/__tests__/helpers';
+import { FIXTURE, capturedTeams, fakeFirestore, loadDoc, parkNames, seriesKeyIn, venuePages, PREDICTED } from '../../../lib/postseason/__tests__/helpers';
 
 type Fake = ReturnType<typeof fakeFirestore>;
 const current: { db: Fake } = { db: fakeFirestore({}) };
@@ -39,13 +39,35 @@ mock.module(new URL('../../../components/redesign/fonts-house.ts', import.meta.u
 const hub = () => import('../page');
 const league = () => import('../[league]/page');
 
-const FROZEN = { frozenAt: { toDate: () => new Date('2026-09-29T01:05:52.350Z') } };
 const BOTH = () => ({
   'postseasonBrackets/MLB_2026': loadDoc(FIXTURE.mlbLive),
   'postseasonBrackets/WNBA_2026': loadDoc(FIXTURE.wnbaLive),
-  'predictionInputs/MLB_2026': FROZEN,
-  'predictionInputs/WNBA_2026': FROZEN,
+  'predictedBrackets/MLB_2026': loadDoc(PREDICTED.mlb),
+  'predictedBrackets/WNBA_2026': loadDoc(PREDICTED.wnba),
 });
+// The fields a predictedBrackets read may ask for. The four input hashes and
+// the reviewed sha256 are published, in the methodology section only (Shared
+// contracts, exception of 2026-09-30); coreFiles is read only to check that
+// the engine code did not change, and the mapper drops it.
+const PREDICTED_FIELDS = [
+  'league',
+  'season',
+  'target',
+  'lockedAt',
+  'simRuns',
+  'computedAt',
+  'reviewedSha256',
+  'champion',
+  'rounds',
+  'titleOdds',
+  'provenance.frozenAt',
+  'provenance.engineCommitAtFreeze',
+  'provenance.coreFiles',
+  'provenance.corpusSha256',
+  'provenance.paramsSha256',
+  'provenance.descriptorSha256',
+  'provenance.slugMapSha256',
+];
 const quiet = async <T,>(fn: () => Promise<T>): Promise<T> => {
   const original = console.error;
   console.error = () => {};
@@ -95,8 +117,9 @@ test('ROUTE /playoffs/[league]: never reads the fields the web must not publish'
     // postseasonPromoRow, tested in promos.test.ts.
     if (/^teams\/[^/]+\/promos$/.test(r.path)) continue;
     assert.ok(r.fieldMask, `${r.path} was read with a mask`);
+    const allowed = r.path.startsWith('predictedBrackets/') ? PREDICTED_FIELDS : ['league', 'season', 'series', 'lastChangedAt'];
     for (const f of r.fieldMask) {
-      assert.ok(['league', 'season', 'series', 'lastChangedAt', 'frozenAt'].includes(f), `${r.path} asked for ${f}`);
+      assert.ok(allowed.includes(f), `${r.path} asked for ${f}`);
     }
   }
   assert.ok(current.db.reads.some((r) => r.path === 'postseasonBrackets/MLB_2026'));
@@ -192,6 +215,12 @@ test('ROUTE /playoffs: both leagues, the next home games, hub-tagged ticket link
   assert.ok(html.includes('href="/playoffs/mlb#wild_card-1"'));
   assert.ok(html.includes('href="/playoffs/wnba#first_round-1"'));
   assert.equal(count(html, 'data-predictions="locked"'), 1);
+  // One line per league, linking to its predictions section; no
+  // "publish soon" anywhere.
+  assert.match(html, /<a [^>]*href="\/playoffs\/mlb#predictions"[^>]*>Computer&#x27;s champion: Milwaukee Brewers <span class="whitespace-nowrap">· no series decided yet<\/span><\/a>/);
+  assert.match(html, /<a [^>]*href="\/playoffs\/wnba#predictions"[^>]*>Computer&#x27;s champion: Golden State Valkyries <span class="whitespace-nowrap">· no series decided yet<\/span><\/a>/);
+  assert.ok(!/publish soon/i.test(html));
+  assert.ok(!/\b[0-9a-f]{64}\b/.test(html), 'no fingerprint on the hub');
   const links = [...html.matchAll(/<a [^>]*href="([^"]+)"[^>]*rel="noopener noreferrer sponsored"/g)].map((m) => m[1].replace(/&amp;/g, '&'));
   assert.ok(links.some((h) => h.includes('web_playoffs_atlanta-braves')));
   assert.ok(!links.some((h) => h.includes('web_playoffs_league')), 'no link from the hub is tagged as a league page');
@@ -269,8 +298,18 @@ test('HEAD /playoffs/[league]: title, description, canonical and a complete open
   const { generateMetadata, default: Page } = await league();
   current.db = fakeFirestore(BOTH());
   const meta = (await generateMetadata(params('mlb'))) as Meta;
-  assert.equal(meta.title, '2026 MLB Playoffs Bracket, Schedule and Scores');
-  assert.equal(meta.description, 'The 2026 MLB postseason bracket. Current round: Wild Card Series. Every series, seed and result, with game times in Eastern and the home games coming up.');
+  assert.equal(meta.title, '2026 MLB Playoff Bracket and Predictions');
+  assert.equal(
+    meta.description,
+    "The 2026 MLB postseason bracket and the computer's locked pick for every series, marked as the results come in. Current round: Wild Card Series. Game times in Eastern.",
+  );
+  assert.equal(((await generateMetadata(params('wnba'))) as Meta).title, '2026 WNBA Playoff Bracket and Predictions');
+  // With no locked prediction the head does not promise one.
+  const noPicks = BOTH() as Record<string, unknown>;
+  delete noPicks['predictedBrackets/MLB_2026'];
+  current.db = fakeFirestore(noPicks as Parameters<typeof fakeFirestore>[0]);
+  assert.equal(((await generateMetadata(params('mlb'))) as Meta).title, '2026 MLB Playoffs Bracket, Schedule and Scores');
+  current.db = fakeFirestore(BOTH());
   assert.equal(meta.alternates?.canonical, 'https://www.getpromonight.com/playoffs/mlb');
   assert.equal(meta.openGraph?.url, 'https://www.getpromonight.com/playoffs/mlb', 'og:url is the canonical, not the homepage');
   assert.equal(meta.openGraph?.images?.length, 1);
@@ -363,3 +402,73 @@ test('the old flag no longer gates the Playoffs link', () => {
   // Fail-closed: the read sits in a try, and the default is false.
   assert.match(layout, /let playoffsActive = false;\s*try \{\s*playoffsActive = await isPlayoffsLinkActive\(\);\s*\} catch/);
 });
+
+// ---- The computer's bracket, through the real pages ----
+
+const FINGERPRINTS = (name: string): string[] => {
+  const d = JSON.parse(readFileSync(new URL(`../../../lib/postseason/__fixtures__/${name}`, import.meta.url), 'utf-8')) as Record<string, Record<string, string>>;
+  const p = d.provenance;
+  return [p.corpusSha256, p.paramsSha256, p.descriptorSha256, p.slugMapSha256, d.reviewedSha256 as unknown as string];
+};
+
+/** The element whose opening tag holds `marker`, to the close that balances it. */
+function elementOf(html: string, marker: string): string {
+  const at = html.indexOf(marker);
+  assert.ok(at >= 0, marker);
+  const open = html.lastIndexOf('<', at);
+  const tag = /^<([a-z0-9]+)/.exec(html.slice(open))?.[1] as string;
+  const re = new RegExp(`<${tag}\\b[^>]*>|</${tag}>`, 'g');
+  re.lastIndex = open;
+  let depth = 0;
+  for (let m = re.exec(html); m; m = re.exec(html)) {
+    depth += m[0].startsWith('</') ? -1 : 1;
+    if (depth === 0) return html.slice(open, m.index + m[0].length);
+  }
+  assert.fail('never closes');
+}
+
+test('FINGERPRINTS: on each league page, the five allowed fingerprints appear once each, inside the methodology section, and no other hash anywhere', async () => {
+  const { default: League } = await league();
+  current.db = fakeFirestore(BOTH());
+  for (const [slug, fixture] of [['mlb', PREDICTED.mlb], ['wnba', PREDICTED.wnba]] as const) {
+    const html = renderToStaticMarkup(await League(params(slug)));
+    const method = elementOf(html, 'data-predictions-methodology');
+    const outside = html.replace(method, '');
+    for (const f of FINGERPRINTS(fixture)) {
+      assert.equal(count(html, f), 1, `${slug}: ${f.slice(0, 8)} once`);
+      assert.equal(count(method, f), 1, `${slug}: ${f.slice(0, 8)} inside the methodology`);
+    }
+    assert.ok(!/[0-9a-f]{40,}/.test(outside), `${slug}: a hash or a blob outside the methodology`);
+    // Inside it, the five fingerprints and nothing else of that shape.
+    assert.equal([...method.matchAll(/[0-9a-f]{40,}/g)].length, 5, slug);
+    assert.ok(method.includes('Fingerprints'), `${slug}: labeled as fingerprints`);
+    // The banned values are nowhere.
+    const stored = JSON.parse(readFileSync(new URL(`../../../lib/postseason/__fixtures__/${fixture}`, import.meta.url), 'utf-8')) as Record<string, Record<string, string>>;
+    for (const v of [stored.provenance.seedFileSha256, stored.provenance.canonicalDescriptorSha256, stored.provenance.seedFileAuthoredBy, stored.computedBy as unknown as string, stored.provenance.engineCommitAtFreeze]) {
+      assert.ok(!html.includes(v), `${slug}: ${v} leaked`);
+    }
+  }
+});
+
+test('PREDICTIONS through the real pages: the section, the scorecard, the methodology copy; no series key; no "publish soon"', async () => {
+  const { default: League } = await league();
+  current.db = fakeFirestore(BOTH());
+  const mlb = renderToStaticMarkup(await League(params('mlb')));
+  assert.equal(count(mlb, 'id="predictions"'), 1);
+  assert.equal(count(mlb, 'data-pick="'), 11);
+  assert.ok(!/publish soon/i.test(mlb));
+  assert.equal(seriesKeyIn(mlb.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/g, '')), null);
+  assert.ok(!/data-[a-z-]+="(WS|F)"/.test(mlb) && !/href="#(WS|F)"/.test(mlb));
+  const method = elementOf(mlb, 'data-predictions-methodology');
+  const text = method.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+  assert.ok(text.includes('plays out the postseason 10,000 times'));
+  assert.ok(text.includes('The inputs were locked on September 28, 2026 , before Game 1.') || text.includes('The inputs were locked on September 28, 2026, before Game 1.'), text);
+  assert.ok(text.includes('The bracket was computed on September 30, 2026 from those locked inputs, with the engine code unchanged since the lock.'));
+  assert.ok(text.includes('the computer called 5 of 11 series and got the champion wrong'));
+  assert.ok(!/bracket was (locked|set|picked|computed)[^.]*before Game 1/i.test(text), 'never says the bracket was set before Game 1');
+  const wnba = renderToStaticMarkup(await League(params('wnba')));
+  const wtext = elementOf(wnba, 'data-predictions-methodology').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+  assert.ok(/The inputs were locked on September 25, 2026 ?, before Game 1\./.test(wtext), wtext);
+  assert.ok(wtext.includes('the computer called 5 of 7 series and got the champion right'));
+});
+

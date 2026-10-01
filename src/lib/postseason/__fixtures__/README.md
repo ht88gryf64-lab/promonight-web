@@ -20,7 +20,21 @@ the admin SDK hands the mapper.
 | `MLB_2026.live-20260929T2008Z.json` | `postseasonBrackets/MLB_2026` read at 2026-09-29T20:08Z, after the pipeline's writer version 2. It carries `shortLabel` on every series and, on the four Division Series visitor slots, `feederSeriesKey` and two `candidates`. One of those feeders is being played. A game is in progress. |
 | `WNBA_2026.live-20260929T2008Z.json` | `postseasonBrackets/WNBA_2026` read at the same moment. `shortLabel` on every series. Its placeholder slots carry the two new fields as null. |
 
+| `WNBA_2026.live-20261001T0017Z.json` | `postseasonBrackets/WNBA_2026` read at 2026-10-01T00:17Z. The Lynx out (lost 0-2 to the Liberty), the other three first-round series live, the semifinals and Finals still `TBD`. |
+| `MLB_2026.live-20261001T0017Z.json` | `postseasonBrackets/MLB_2026` read at the same moment. All four Wild Card series live, nothing final. |
+
 Nothing in a live capture is edited.
+
+## Locked computer brackets
+
+| File | What it is |
+| --- | --- |
+| `predicted.WNBA_2026.json` | `predictedBrackets/WNBA_2026`, whole, read at 2026-10-01T00:17Z. Locked 2026-09-30 by the PREDICT session; permanent. reviewedSha256 9062bcca... |
+| `predicted.MLB_2026.json` | `predictedBrackets/MLB_2026`, the same. reviewedSha256 f0af727d... One coin flip (AL-WC-A). |
+
+They hold the operator fields (`seedFileAuthoredBy`, `computedBy`, `frozenBy`, `acks`), file paths, git blobs and hashes the page must never publish, so the mapper tests can prove they are dropped. They are in `PREDICTED`, not `FIXTURE`, in the test helpers: they are not bracket documents.
+
+No 2026 bracket was decided when these were captured. The decided states (`decidedWnba`, `decidedMlb` in `__tests__/helpers.ts`) are built from the two 10-01 captures by setting the stored fields the pipeline sets when a series ends (status, winner, wins) and, for a slot with no feeder, the club and seed. The outcomes are chosen to exercise every rule, not predicted.
 
 ## 2025 documents built by the pipeline
 

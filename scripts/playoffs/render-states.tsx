@@ -24,7 +24,8 @@ import { PlayoffsLeague, type LeagueBody } from '../../src/components/playoffs/P
 import { seriesTickets, ticketButtons } from '../../src/components/playoffs/tickets';
 import { mapBracketDoc } from '../../src/lib/postseason/map';
 import { buildLeagueView, homeGamesWindow, type LeagueView } from '../../src/lib/postseason/view';
-import { FIXTURE, capturedTeams, clubs, loadDoc, parks } from '../../src/lib/postseason/__tests__/helpers';
+import { FIXTURE, buildWithPredictions, capturedTeams, clubs, decidedMlb, decidedWnba, loadDoc, parks, PREDICTED } from '../../src/lib/postseason/__tests__/helpers';
+import type { LeaguePredictions } from '../../src/lib/postseason/predictions';
 import type { Team } from '../../src/lib/types';
 
 const BASE = (process.env.BASE || 'http://localhost:3468').replace(/\/$/, '');
@@ -38,8 +39,13 @@ if (!OUT) {
  *  in-content unit on the page. */
 export const ARTICLE_FLOOR_PX = 1000;
 
+// A doc is a fixture file, or one of the two brackets decided to the end
+// from the 2026-10-01 captures (helpers.decidedWnba, helpers.decidedMlb).
+const DECIDED: Record<string, () => Record<string, unknown>> = { 'decided:WNBA': decidedWnba, 'decided:MLB': decidedMlb };
+const docOf = (name: string) => (DECIDED[name] ? DECIDED[name]() : loadDoc(name));
+
 function view(name: string, now: Date): LeagueView {
-  const d = loadDoc(name);
+  const d = docOf(name);
   const b = mapBracketDoc(d, { league: d.league as 'MLB' | 'WNBA', season: d.season as number });
   if (!b) throw new Error(`${name} does not map`);
   const v = buildLeagueView(b, clubs(), parks(), now);
@@ -57,24 +63,37 @@ interface State {
   now: string;
   /** False for a state that has not occurred and is measured for information only. */
   gated: boolean;
-  locked?: boolean;
+  /** The locked prediction for the page, a fixture file. Absent: none. */
+  predicted?: string;
 }
+
+function predictionsFor(s: State, doc: string): LeaguePredictions | null {
+  if (!s.predicted) return null;
+  return buildWithPredictions(docOf(doc), s.predicted, new Date(s.now)).predictions;
+}
+const P_MLB = PREDICTED.mlb;
+const P_WNBA = PREDICTED.wnba;
 
 // The five states the floor is required in, plus the ones between them and
 // one that has not occurred (a bracket set days before its first game).
 export const STATES: State[] = [
-  { name: 'league-live-mlb', what: 'MLB, first round being played, a game in progress', kind: 'league', docs: [FIXTURE.mlbInGame], now: '2026-09-29T19:09:00Z', gated: true, locked: true },
-  { name: 'league-live-wnba', what: 'WNBA, first round being played', kind: 'league', docs: [FIXTURE.wnbaFields], now: '2026-09-29T20:08:00Z', gated: true, locked: true },
+  { name: 'league-live-mlb', what: 'MLB, first round being played, a game in progress', kind: 'league', docs: [FIXTURE.mlbInGame], now: '2026-09-29T19:09:00Z', gated: true, predicted: P_MLB },
+  { name: 'league-live-wnba', what: 'WNBA, first round being played', kind: 'league', docs: [FIXTURE.wnbaFields], now: '2026-09-29T20:08:00Z', gated: true, predicted: P_WNBA },
   { name: 'league-between-rounds-mlb', what: 'MLB, Wild Card done, Division Series tomorrow', kind: 'league', docs: ['MLB_2025.replay-step-11.json'], now: '2025-10-03T14:00:00Z', gated: true },
   { name: 'league-between-rounds-wnba', what: 'WNBA, semifinals done, Finals three days out (no home game in the window)', kind: 'league', docs: ['WNBA_2025.replay-step-20.json'], now: '2025-10-01T12:00:00Z', gated: true },
   { name: 'league-one-round-left-mlb', what: 'MLB, only the World Series left, four days out', kind: 'league', docs: ['MLB_2025.replay-step-40.json'], now: '2025-10-21T12:00:00Z', gated: true },
   { name: 'league-finished-mlb', what: 'MLB, finished', kind: 'league', docs: [FIXTURE.mlbFinal], now: '2025-11-03T12:00:00Z', gated: true },
   { name: 'league-finished-wnba', what: 'WNBA, finished', kind: 'league', docs: [FIXTURE.wnbaFinal], now: '2025-10-12T12:00:00Z', gated: true },
-  { name: 'hub-live', what: 'hub, both leagues being played', kind: 'hub', docs: [FIXTURE.mlbFields, FIXTURE.wnbaFields], now: '2026-09-29T20:08:00Z', gated: true, locked: true },
+  { name: 'hub-live', what: 'hub, both leagues being played', kind: 'hub', docs: [FIXTURE.mlbFields, FIXTURE.wnbaFields], now: '2026-09-29T20:08:00Z', gated: true, predicted: 'both' },
   { name: 'hub-between-rounds', what: 'hub, MLB between rounds, WNBA semifinals done', kind: 'hub', docs: ['MLB_2025.replay-step-11.json', 'WNBA_2025.replay-step-20.json'], now: '2025-10-03T14:00:00Z', gated: true },
   { name: 'hub-no-home-games', what: 'hub, World Series four days out, WNBA finished: no home game in the window', kind: 'hub', docs: ['MLB_2025.replay-step-40.json', FIXTURE.wnbaFinal], now: '2025-10-21T12:00:00Z', gated: true },
   { name: 'hub-finished', what: 'hub, both leagues finished', kind: 'hub', docs: [FIXTURE.mlbFinal, FIXTURE.wnbaFinal], now: '2025-11-03T12:00:00Z', gated: true },
-  { name: 'league-set-early-mlb', what: 'MLB, bracket set five days before its first game (has not occurred)', kind: 'league', docs: [FIXTURE.mlbLive], now: '2026-09-24T12:00:00Z', gated: false, locked: true },
+  { name: 'league-lynx-out-wnba', what: 'WNBA, the Lynx out, three first-round series live, with the computer bracket', kind: 'league', docs: [FIXTURE.wnbaLynxOut], now: '2026-10-01T00:17:37Z', gated: true, predicted: P_WNBA },
+  { name: 'league-wild-card-mlb', what: 'MLB, all four Wild Card series live, with the computer bracket', kind: 'league', docs: [FIXTURE.mlbWildCard], now: '2026-10-01T00:17:37Z', gated: true, predicted: P_MLB },
+  { name: 'league-decided-wnba', what: 'WNBA, decided to the end (built from the 10-01 capture), with the final scorecard', kind: 'league', docs: ['decided:WNBA'], now: '2026-11-05T12:00:00Z', gated: true, predicted: P_WNBA },
+  { name: 'league-decided-mlb', what: 'MLB, decided to the end (built from the 10-01 capture), with the final scorecard', kind: 'league', docs: ['decided:MLB'], now: '2026-11-05T12:00:00Z', gated: true, predicted: P_MLB },
+  { name: 'hub-lynx-out', what: 'hub, both leagues live on 10-01, with the predictions card', kind: 'hub', docs: [FIXTURE.mlbWildCard, FIXTURE.wnbaLynxOut], now: '2026-10-01T00:17:37Z', gated: true, predicted: 'both' },
+  { name: 'league-set-early-mlb', what: 'MLB, bracket set five days before its first game (has not occurred)', kind: 'league', docs: [FIXTURE.mlbLive], now: '2026-09-24T12:00:00Z', gated: false, predicted: P_MLB },
   // Two states the reviewer measured below the floor. Neither is reachable
   // while both 2026 documents exist; both become reachable the day the season
   // constant is bumped and before the new documents are created.
@@ -85,7 +104,7 @@ export const STATES: State[] = [
 function leagueArticle(s: State, teams: Map<string, Team>): string {
   const v = view(s.docs[0], new Date(s.now));
   const homeGames = v.phase.kind === 'active' ? homeGamesWindow([v], new Date(s.now)) : { primary: [], rest: [] };
-  const body: LeagueBody = { state: 'ok', view: v, predictionsLocked: s.locked ?? false, homeGames };
+  const body: LeagueBody = { state: 'ok', view: v, predictions: predictionsFor(s, s.docs[0]), homeGames };
   const tickets = ticketButtons([...homeGames.primary, ...homeGames.rest].map((g) => g.hostTeamId), teams, 'web_playoffs_league', 'playoffs_league');
   const upcoming = v.rounds.flatMap((r) => r.groups.flatMap((g) => g.series.map((x) => ({ id: x.id, hostTeamId: x.next && x.next.state === 'scheduled' ? x.next.hostTeamId : null }))));
   const panelTickets = seriesTickets(upcoming, teams, 'web_playoffs_league', 'playoffs_league');
@@ -96,7 +115,9 @@ function hubArticle(s: State, teams: Map<string, Team>): string {
   const now = new Date(s.now);
   const leagues: HubLeague[] = s.docs.map((d) => {
     const v = view(d, now);
-    return { state: 'ok', league: v.league, href: `/playoffs/${v.league.toLowerCase()}`, view: v, predictionsLocked: s.locked ?? false };
+    const predicted = s.predicted ? (v.league === 'MLB' ? P_MLB : P_WNBA) : null;
+    const line = predicted ? buildWithPredictions(docOf(d), predicted, now).predictions.hub : null;
+    return { state: 'ok', league: v.league, href: `/playoffs/${v.league.toLowerCase()}`, view: v, predictions: line };
   });
   const active = leagues.flatMap((l) => (l.view.phase.kind === 'active' ? [l.view] : []));
   const next = homeGamesWindow(active, now);

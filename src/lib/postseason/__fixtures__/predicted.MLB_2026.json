@@ -1,0 +1,477 @@
+{
+  "champion": "milwaukee-brewers",
+  "computedAt": "2026-09-30T21:17:31.195Z",
+  "computedBy": "2026-09-30T21-17-31-195Z-a0fb5a",
+  "degeneracyChecks": [
+    "no-certain-pick",
+    "sufficient-support",
+    "leader-odds-ceiling",
+    "seed-reproducible"
+  ],
+  "degeneracyFlags": [],
+  "engineCommitAtExecute": "67aab9fc3933c5af06cfab5cacd0cd4a13e41c84",
+  "executedAt": "2026-09-30T21:22:21.930Z",
+  "info": [
+    "coin flip: AL-WC-A picks houston-astros over chicago-white-sox at 50.0%, between 49.5% and 50.5%"
+  ],
+  "league": "MLB",
+  "lockedAt": {
+    "__firestoreTimestamp": "2026-09-30T21:22:22.101Z"
+  },
+  "provenance": {
+    "ackedCancelled": [],
+    "acks": [
+      {
+        "count": 161,
+        "slug": "baltimore-orioles"
+      },
+      {
+        "count": 161,
+        "slug": "new-york-yankees"
+      }
+    ],
+    "canonicalDescriptor": "lib/postseason/formats/mlb-2026.json",
+    "canonicalDescriptorSha256": "cd9d05d72534614e25116b966cb6bef9617c9e098cb908546693454510519003",
+    "coreFiles": [
+      {
+        "blobAtCompute": "af4098fc01a80765cdb03ff5064c3a3d10f36a8c",
+        "blobAtFreeze": "af4098fc01a80765cdb03ff5064c3a3d10f36a8c",
+        "identical": true,
+        "path": "predictions/elo.js"
+      },
+      {
+        "blobAtCompute": "7fcf0b2f7478dd4822be47db6b18b6d5e86491b9",
+        "blobAtFreeze": "7fcf0b2f7478dd4822be47db6b18b6d5e86491b9",
+        "identical": true,
+        "path": "predictions/simulate.js"
+      },
+      {
+        "blobAtCompute": "bc7f87d831b54ec01457f144110ac918ee534d67",
+        "blobAtFreeze": "bc7f87d831b54ec01457f144110ac918ee534d67",
+        "identical": true,
+        "path": "predictions/bracket.js"
+      }
+    ],
+    "coreTouchingCommits": [
+      "f03b4ceffc7f41cd6461a70a31c174f8dc17ef06"
+    ],
+    "corpusRows": 2429,
+    "corpusSha256": "32d46402d4f94a155e99294f9dd9c613d1c76dd36d0e29a81210abbb99a6689f",
+    "cutoff": "2026-09-29T18:00:00.000Z",
+    "descriptor": "predictions/frozen/mlb-2026.json",
+    "descriptorSha256": "fb2ec31873f2791f88ca5eb4dc7743a6d84bf184cb11e5081ab3e138ecf3286a",
+    "elo": {
+      "homeAdvantage": 24,
+      "kFactor": 6,
+      "marginOfVictory": {
+        "kind": "log",
+        "scale": 1
+      },
+      "start": 1500
+    },
+    "engineCommitAtCompute": "67aab9fc3933c5af06cfab5cacd0cd4a13e41c84",
+    "engineCommitAtFreeze": "2eb87fc8aec8b69f3febb3cd29ffc90445fdb6f7",
+    "engineFiles": [
+      {
+        "blobAtCompute": "0169d0fdd8d59a75cb02f6534122922aaf2262e3",
+        "path": "predictions/compute.js"
+      },
+      {
+        "blobAtCompute": "fc7f5299eb7dad8bf6a8bbb330c5665d29e8545d",
+        "path": "predictions/series.js"
+      },
+      {
+        "blobAtCompute": "7daaac9755f5b6c206cd680b32f9e86d525b8136",
+        "path": "predictions/hash.js"
+      },
+      {
+        "blobAtCompute": "b33bcd3d74bb62661015cf86636bbccf85ee1d26",
+        "path": "predictions/inputs.js"
+      },
+      {
+        "blobAtCompute": "9d06ca3ae8be0bc5d40139d31ef7027376df8a31",
+        "path": "lib/postseason/records.js"
+      },
+      {
+        "blobAtCompute": "473f1293b5f5db461cc30b7534ebf940cc654d34",
+        "path": "lib/postseason/seeds.js"
+      },
+      {
+        "blobAtCompute": "24674e7c60be178bd88270cbf07173e0202a52c3",
+        "path": "lib/postseason/descriptor.js"
+      },
+      {
+        "blobAtCompute": "0d07ccb7029d18aa3d49fc685899c7e628c87aa5",
+        "path": "lib/postseason/mlb-team-ids.js"
+      },
+      {
+        "blobAtCompute": "ae32a984432010ad30ee73a5c4450eb1d9889f75",
+        "path": "lib/postseason/wnba-team-ids.js"
+      },
+      {
+        "blobAtCompute": "771c43078bfb6fc8d92a8e99164b1e40a6f4f00d",
+        "path": "team-configs/mlb.js"
+      }
+    ],
+    "frozenAt": "2026-09-29T01:05:52.350Z",
+    "frozenBy": "2026-09-29T01-05-51-110Z-40fb9a",
+    "node": {
+      "arch": "arm64",
+      "platform": "darwin",
+      "version": "v25.6.1"
+    },
+    "paramsSha256": "76829cfc6a376250e26082bb24c06327c13e70c6a7ddf14cbb08019d3155278a",
+    "ratingsFrom": {
+      "brier": 0.24688228391605938,
+      "games": 2429,
+      "skipped": 0
+    },
+    "seedFile": "seeds/mlb-2026.json",
+    "seedFileAuthoredBy": "Matt Kovalik",
+    "seedFileAuthoredOn": "2026-09-28",
+    "seedFileSha256": "7df31b7a3830d9fe61471befeb4fc2b75f54e39a004485d42ca84d018f6a333c",
+    "seedFileSourceUrl": "https://www.mlb.com/news/mlb-playoff-picture-and-bracket-2026",
+    "slugMapSha256": "29df25c91e18ef143c7bff5426b7a97635464d291934e39e94f903a5583a1568"
+  },
+  "reviewedSha256": "f0af727db7948eacab36ece31471ded74fbcd59e78f15f4d6cdfdd3e079a79d0",
+  "rounds": [
+    {
+      "bestOf": 3,
+      "coinFlip": true,
+      "conference": "AL",
+      "higher": "houston-astros",
+      "higherSeed": 3,
+      "lower": "chicago-white-sox",
+      "lowerSeed": 6,
+      "modalSeriesLength": 2,
+      "neutralSite": false,
+      "pick": "houston-astros",
+      "pickIsHigherSeed": true,
+      "pickProbability": 0.5001,
+      "round": "wild_card",
+      "roundLabel": "Wild Card Series",
+      "runsSupporting": 10000,
+      "seriesKey": "AL-WC-A",
+      "slot": "winner:wild_card:3v6:AL"
+    },
+    {
+      "bestOf": 3,
+      "coinFlip": false,
+      "conference": "AL",
+      "higher": "new-york-yankees",
+      "higherSeed": 4,
+      "lower": "boston-red-sox",
+      "lowerSeed": 5,
+      "modalSeriesLength": 2,
+      "neutralSite": false,
+      "pick": "new-york-yankees",
+      "pickIsHigherSeed": true,
+      "pickProbability": 0.5814,
+      "round": "wild_card",
+      "roundLabel": "Wild Card Series",
+      "runsSupporting": 10000,
+      "seriesKey": "AL-WC-B",
+      "slot": "winner:wild_card:4v5:AL"
+    },
+    {
+      "bestOf": 3,
+      "coinFlip": false,
+      "conference": "NL",
+      "higher": "atlanta-braves",
+      "higherSeed": 3,
+      "lower": "philadelphia-phillies",
+      "lowerSeed": 6,
+      "modalSeriesLength": 2,
+      "neutralSite": false,
+      "pick": "atlanta-braves",
+      "pickIsHigherSeed": true,
+      "pickProbability": 0.5617,
+      "round": "wild_card",
+      "roundLabel": "Wild Card Series",
+      "runsSupporting": 10000,
+      "seriesKey": "NL-WC-A",
+      "slot": "winner:wild_card:3v6:NL"
+    },
+    {
+      "bestOf": 3,
+      "coinFlip": false,
+      "conference": "NL",
+      "higher": "san-diego-padres",
+      "higherSeed": 4,
+      "lower": "chicago-cubs",
+      "lowerSeed": 5,
+      "modalSeriesLength": 2,
+      "neutralSite": false,
+      "pick": "san-diego-padres",
+      "pickIsHigherSeed": true,
+      "pickProbability": 0.5561,
+      "round": "wild_card",
+      "roundLabel": "Wild Card Series",
+      "runsSupporting": 10000,
+      "seriesKey": "NL-WC-B",
+      "slot": "winner:wild_card:4v5:NL"
+    },
+    {
+      "bestOf": 5,
+      "coinFlip": false,
+      "conference": "AL",
+      "higher": "tampa-bay-rays",
+      "higherSeed": 1,
+      "lower": "new-york-yankees",
+      "lowerSeed": 4,
+      "modalSeriesLength": 5,
+      "neutralSite": false,
+      "pick": "tampa-bay-rays",
+      "pickIsHigherSeed": true,
+      "pickProbability": 0.5153078775369797,
+      "round": "division_series",
+      "roundLabel": "Division Series",
+      "runsSupporting": 5814,
+      "seriesKey": "AL-DS-A",
+      "slot": "winner:division_series:1v4v5:AL"
+    },
+    {
+      "bestOf": 5,
+      "coinFlip": false,
+      "conference": "AL",
+      "higher": "cleveland-guardians",
+      "higherSeed": 2,
+      "lower": "houston-astros",
+      "lowerSeed": 3,
+      "modalSeriesLength": 5,
+      "neutralSite": false,
+      "pick": "cleveland-guardians",
+      "pickIsHigherSeed": true,
+      "pickProbability": 0.5422915416916617,
+      "round": "division_series",
+      "roundLabel": "Division Series",
+      "runsSupporting": 5001,
+      "seriesKey": "AL-DS-B",
+      "slot": "winner:division_series:2v3v6:AL"
+    },
+    {
+      "bestOf": 5,
+      "coinFlip": false,
+      "conference": "NL",
+      "higher": "milwaukee-brewers",
+      "higherSeed": 1,
+      "lower": "san-diego-padres",
+      "lowerSeed": 4,
+      "modalSeriesLength": 4,
+      "neutralSite": false,
+      "pick": "milwaukee-brewers",
+      "pickIsHigherSeed": true,
+      "pickProbability": 0.628304261823413,
+      "round": "division_series",
+      "roundLabel": "Division Series",
+      "runsSupporting": 5561,
+      "seriesKey": "NL-DS-A",
+      "slot": "winner:division_series:1v4v5:NL"
+    },
+    {
+      "bestOf": 5,
+      "coinFlip": false,
+      "conference": "NL",
+      "higher": "los-angeles-dodgers",
+      "higherSeed": 2,
+      "lower": "atlanta-braves",
+      "lowerSeed": 3,
+      "modalSeriesLength": 4,
+      "neutralSite": false,
+      "pick": "los-angeles-dodgers",
+      "pickIsHigherSeed": true,
+      "pickProbability": 0.6072636638775147,
+      "round": "division_series",
+      "roundLabel": "Division Series",
+      "runsSupporting": 5617,
+      "seriesKey": "NL-DS-B",
+      "slot": "winner:division_series:2v3v6:NL"
+    },
+    {
+      "bestOf": 7,
+      "coinFlip": false,
+      "conference": "AL",
+      "higher": "tampa-bay-rays",
+      "higherSeed": 1,
+      "lower": "cleveland-guardians",
+      "lowerSeed": 2,
+      "modalSeriesLength": 6,
+      "neutralSite": false,
+      "pick": "tampa-bay-rays",
+      "pickIsHigherSeed": true,
+      "pickProbability": 0.6420597767374865,
+      "round": "championship_series",
+      "roundLabel": "Championship Series",
+      "runsSupporting": 2777,
+      "seriesKey": "AL-CS",
+      "slot": "winner:championship_series:AL"
+    },
+    {
+      "bestOf": 7,
+      "coinFlip": false,
+      "conference": "NL",
+      "higher": "milwaukee-brewers",
+      "higherSeed": 1,
+      "lower": "los-angeles-dodgers",
+      "lowerSeed": 2,
+      "modalSeriesLength": 6,
+      "neutralSite": false,
+      "pick": "milwaukee-brewers",
+      "pickIsHigherSeed": true,
+      "pickProbability": 0.581509142415658,
+      "round": "championship_series",
+      "roundLabel": "Championship Series",
+      "runsSupporting": 3883,
+      "seriesKey": "NL-CS",
+      "slot": "winner:championship_series:NL"
+    },
+    {
+      "bestOf": 7,
+      "coinFlip": false,
+      "conference": null,
+      "higher": "milwaukee-brewers",
+      "higherSeed": 1,
+      "lower": "tampa-bay-rays",
+      "lowerSeed": 1,
+      "modalSeriesLength": 6,
+      "neutralSite": false,
+      "pick": "milwaukee-brewers",
+      "pickIsHigherSeed": true,
+      "pickProbability": 0.6493967352732435,
+      "round": "world_series",
+      "roundLabel": "World Series",
+      "runsSupporting": 1409,
+      "seriesKey": "WS",
+      "slot": "winner:world_series"
+    }
+  ],
+  "season": 2026,
+  "seeds": [
+    {
+      "conference": "AL",
+      "rating": 1557.6243799006834,
+      "seed": 1,
+      "slug": "tampa-bay-rays"
+    },
+    {
+      "conference": "AL",
+      "rating": 1513.6675612318318,
+      "seed": 2,
+      "slug": "cleveland-guardians"
+    },
+    {
+      "conference": "AL",
+      "rating": 1498.9634908348621,
+      "seed": 3,
+      "slug": "houston-astros"
+    },
+    {
+      "conference": "AL",
+      "rating": 1555.5440010961133,
+      "seed": 4,
+      "slug": "new-york-yankees"
+    },
+    {
+      "conference": "AL",
+      "rating": 1541.6494139951928,
+      "seed": 5,
+      "slug": "boston-red-sox"
+    },
+    {
+      "conference": "AL",
+      "rating": 1517.960908602452,
+      "seed": 6,
+      "slug": "chicago-white-sox"
+    },
+    {
+      "conference": "NL",
+      "rating": 1601.362256049843,
+      "seed": 1,
+      "slug": "milwaukee-brewers"
+    },
+    {
+      "conference": "NL",
+      "rating": 1576.40971703008,
+      "seed": 2,
+      "slug": "los-angeles-dodgers"
+    },
+    {
+      "conference": "NL",
+      "rating": 1536.2880093831288,
+      "seed": 3,
+      "slug": "atlanta-braves"
+    },
+    {
+      "conference": "NL",
+      "rating": 1555.382520530244,
+      "seed": 4,
+      "slug": "san-diego-padres"
+    },
+    {
+      "conference": "NL",
+      "rating": 1552.4964975585144,
+      "seed": 5,
+      "slug": "chicago-cubs"
+    },
+    {
+      "conference": "NL",
+      "rating": 1529.7294761211583,
+      "seed": 6,
+      "slug": "philadelphia-phillies"
+    }
+  ],
+  "seedsAreFinal": true,
+  "simRuns": 10000,
+  "simSeed": 852780034,
+  "target": "lock",
+  "titleOdds": [
+    {
+      "odds": 0.2782,
+      "slug": "milwaukee-brewers"
+    },
+    {
+      "odds": 0.1881,
+      "slug": "los-angeles-dodgers"
+    },
+    {
+      "odds": 0.1488,
+      "slug": "tampa-bay-rays"
+    },
+    {
+      "odds": 0.0795,
+      "slug": "new-york-yankees"
+    },
+    {
+      "odds": 0.0549,
+      "slug": "cleveland-guardians"
+    },
+    {
+      "odds": 0.0501,
+      "slug": "san-diego-padres"
+    },
+    {
+      "odds": 0.0436,
+      "slug": "chicago-cubs"
+    },
+    {
+      "odds": 0.043,
+      "slug": "boston-red-sox"
+    },
+    {
+      "odds": 0.038,
+      "slug": "atlanta-braves"
+    },
+    {
+      "odds": 0.0306,
+      "slug": "chicago-white-sox"
+    },
+    {
+      "odds": 0.0264,
+      "slug": "philadelphia-phillies"
+    },
+    {
+      "odds": 0.0188,
+      "slug": "houston-astros"
+    }
+  ]
+}

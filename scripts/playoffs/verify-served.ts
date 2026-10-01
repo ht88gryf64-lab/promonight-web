@@ -190,6 +190,36 @@ const keyIn = (text: string) => {
   return null;
 };
 
+// The locked computer bracket, as stored. Read raw; the page's mapper is not used.
+type RawPick = {
+  seriesKey: string;
+  round: string;
+  higher: string;
+  lower: string;
+  pick: string;
+  pickProbability: number;
+  modalSeriesLength: number;
+  coinFlip: boolean;
+};
+type RawPred = {
+  rounds: RawPick[];
+  titleOdds: { slug: string; odds: number }[];
+  champion: string;
+  simRuns: number;
+  computedAt: string;
+  reviewedSha256: string;
+  computedBy?: string;
+  provenance: Record<string, unknown>;
+};
+const longEt = (d: Date) => {
+  const p = parts(d, { year: 'numeric', month: 'long', day: 'numeric' });
+  return `${p.month} ${p.day}, ${p.year}`;
+};
+const BACKTEST: Record<League, string> = {
+  WNBA: 'Run on the 2025 WNBA postseason with the same settings, the computer called 5 of 7 series and got the champion right.',
+  MLB: 'Run on the 2025 MLB postseason with the same settings, the computer called 5 of 11 series and got the champion wrong.',
+};
+
 interface Club {
   name: string;
   full: string;
@@ -213,6 +243,11 @@ async function main() {
   for (const league of LEAGUES) {
     const snap = await db.collection('postseasonBrackets').doc(`${league}_${SEASON}`).get();
     if (snap.exists) docs.set(league, snap.data() as RawDoc);
+  }
+  const preds = new Map<League, RawPred>();
+  for (const league of LEAGUES) {
+    const snap = await db.collection('predictedBrackets').doc(`${league}_${SEASON}`).get();
+    if (snap.exists) preds.set(league, snap.data() as RawPred);
   }
   const teams = await getAllTeams();
   const hubs = await getTeamVenueHubMap();
@@ -240,6 +275,29 @@ async function main() {
     });
   }
   check('documents read', docs.size === LEAGUES.length, [...docs.keys()].join(' '));
+  check('locked predictions read', preds.size === LEAGUES.length, [...preds.keys()].join(' '));
+  for (const p of preds.values()) {
+    for (const id of [...p.rounds.flatMap((r) => [r.higher, r.lower]), ...p.titleOdds.map((o) => o.slug)]) {
+      if (clubs.has(id)) continue;
+      const t = teams.find((x) => x.id === id);
+      if (t) clubs.set(id, { name: t.name, full: `${t.city} ${t.name}`, abbr: (t as { abbreviation?: string }).abbreviation ?? null, park: null, venuePath: null });
+    }
+  }
+  /** The five fingerprints the contract lets a league page show. */
+  const fingerprints = (p: RawPred): string[] => [
+    p.provenance.corpusSha256 as string,
+    p.provenance.paramsSha256 as string,
+    p.provenance.descriptorSha256 as string,
+    p.provenance.slugMapSha256 as string,
+    p.reviewedSha256,
+  ];
+  /** Values of the predicted documents no page may carry. */
+  const predBanned = (p: RawPred): string[] => {
+    const v = p.provenance;
+    const out = [v.seedFileSha256, v.canonicalDescriptorSha256, v.seedFileAuthoredBy, v.frozenBy, v.engineCommitAtFreeze, v.engineCommitAtCompute, p.computedBy];
+    for (const f of [...((v.coreFiles as Record<string, unknown>[]) ?? []), ...((v.engineFiles as Record<string, unknown>[]) ?? [])]) out.push(f.path, f.blobAtFreeze, f.blobAtCompute);
+    return out.filter((x): x is string => typeof x === 'string' && x.length >= 6);
+  };
   check('every club in the documents has a team record', [...wanted].every((w) => clubs.has(w)), `${clubs.size} of ${wanted.size}`);
 
   /** What a slot is called on the page. */
@@ -405,6 +463,11 @@ async function main() {
     }
     check(`${where}: no series key of either document, literally`, literal.length === 0, literal.join(' '));
     check(`${where}: no game id, run id or hash from either document`, values.length === 0, values.join(' '));
+    const predLeaks: string[] = [];
+    for (const p of preds.values()) for (const v of predBanned(p)) if (html.includes(v)) predLeaks.push(v.slice(0, 16));
+    check(`${where}: no operator value, path, blob, commit or other hash from either predicted document`, predLeaks.length === 0, predLeaks.join(' '));
+    const predFields = ['pickProbability', 'modalSeriesLength', 'runsSupporting', 'coreFiles', 'engineFiles', 'seedFile', 'computedBy', 'frozenBy', 'reviewedSha256', 'corpusSha256', 'simSeed'].filter((f) => html.includes(f));
+    check(`${where}: no predicted-document field name`, predFields.length === 0, predFields.join(' '));
     const fields = ['operatorLog', 'runId', 'validatedSeedSha256', 'bracketSha256', 'lastRevalidatedSha256', 'writerVersion', 'feederSeriesKey', 'lastFetchedAt', 'unplaced', 'ticketmasterAttractionId', 'ticketmasterSlug', 'fanaticsUrl', 'fanaticsPath'].filter((f) => html.includes(f));
     check(`${where}: no operator or team-record field name`, fields.length === 0, fields.join(' '));
   }
@@ -456,6 +519,123 @@ async function main() {
     return el;
   }
 
+  // ---- The computer's bracket, derived from the raw documents ----
+  //
+  // The NCAA rule, written again here from the brief, not imported: a pick is
+  // correct when its club won the real slot, busted when the real slot went
+  // the other way or its club was knocked out earlier, alive otherwise. Only
+  // decided slots count. A predicted matchup that can no longer happen is
+  // dimmed.
+  function winnerOf(doc: RawDoc, s: RawSeries): string | null {
+    if (s.status !== 'final' || !s.winner) return null;
+    if (s.winner === 'higher' || s.winner === 'lower') return slotName(doc, s[s.winner]).slug;
+    return s.winner;
+  }
+  function eliminated(doc: RawDoc): Set<string> {
+    const out = new Set<string>();
+    for (const s of doc.series) {
+      const w = winnerOf(doc, s);
+      if (!w) continue;
+      for (const side of [s.higher, s.lower]) {
+        const slug = slotName(doc, side).slug;
+        if (slug && slug !== w) out.add(slug);
+      }
+    }
+    return out;
+  }
+  type Mark = { id: string; outcome: string; decided: boolean; dimmed: boolean; pick: RawPick };
+  function score(doc: RawDoc, p: RawPred): { marks: Mark[]; correct: number; decided: number; alive: number; champion: string } {
+    const out = eliminated(doc);
+    const pageIds = ids(doc);
+    const marks: Mark[] = p.rounds.map((r) => {
+      const i = doc.series.findIndex((s) => s.seriesKey === r.seriesKey);
+      const s = doc.series[i];
+      const w = winnerOf(doc, s);
+      const decided = w !== null;
+      const outcome = decided ? (w === r.pick ? 'correct' : 'busted') : out.has(r.pick) ? 'busted' : 'alive';
+      const real = [slotName(doc, s.higher).slug, slotName(doc, s.lower).slug].filter((x): x is string => !!x);
+      const pair = [r.higher, r.lower];
+      const dimmed = decided ? !(real.length === 2 && pair.every((x) => real.includes(x))) : pair.some((x) => out.has(x)) || real.some((x) => !pair.includes(x));
+      return { id: pageIds[i], outcome, decided, dimmed, pick: r };
+    });
+    const last = marks[marks.length - 1];
+    const champion = last.decided ? (last.outcome === 'correct' && last.pick.pick === p.champion ? 'won the title' : 'eliminated') : out.has(p.champion) ? 'eliminated' : 'still alive';
+    return {
+      marks,
+      correct: marks.filter((m) => m.decided && m.outcome === 'correct').length,
+      decided: marks.filter((m) => m.decided).length,
+      alive: marks.filter((m) => m.outcome === 'alive').length,
+      champion,
+    };
+  }
+
+  function predictionsOnPage(where: string, html: string, el: string, league: League, doc: RawDoc, p: RawPred) {
+    const section = element(el, 'data-predictions="bracket"');
+    check(`${where}: the predictions section is on the page, with its anchor`, !!section && section.includes('id="predictions"'));
+    if (!section) return;
+    check(`${where}: no "publish soon" placeholder`, !/publish soon/i.test(html));
+    const sc = score(doc, p);
+    const wrong: string[] = [];
+    for (const m of sc.marks) {
+      const li = element(section, `data-pick="${m.id}"`) ?? '';
+      const t = textOf(li);
+      const nick = clubs.get(m.pick.pick)?.name ?? m.pick.pick;
+      const chance = m.pick.coinFlip ? 'Coin flip' : `${Math.round(m.pick.pickProbability * 100)}%`;
+      const ok =
+        li.includes(`data-pick-outcome="${m.outcome}" data-pick-decided="${m.decided}" data-dimmed="${m.dimmed}"`) &&
+        t.includes(`${nick} in ${m.pick.modalSeriesLength} · ${chance}`) &&
+        (m.dimmed ? /<details[^>]*opacity-55/.test(li) : !/opacity-55/.test(li));
+      if (!ok) wrong.push(`${m.id} want ${m.outcome}/${m.decided}/${m.dimmed} ${nick} ${chance}`);
+    }
+    check(`${where}: every pick carries the mark the scoring rule gives it, its length and its chance`, wrong.length === 0 && sc.marks.length === doc.series.length, wrong.slice(0, 3).join('; ') || `${sc.marks.length} picks`);
+    const card = textOf(element(section, 'data-predictions-scorecard') ?? '');
+    const champ = clubs.get(p.champion)?.full ?? p.champion;
+    const record = sc.decided === 0 ? 'No series decided yet' : `The computer is ${sc.correct} for ${sc.decided}`;
+    check(`${where}: scorecard`, card.includes(record) && card.includes(`${sc.alive} ${sc.alive === 1 ? 'pick' : 'picks'} still alive`) && card.includes(`${champ}, ${sc.champion}`), card);
+    const odds = [...p.titleOdds].sort((a, b) => b.odds - a.odds).slice(0, 8);
+    const oddsText = textOf(element(section, 'data-title-odds') ?? '');
+    const pct = (x: number) => (Math.round(x * 100) < 1 ? 'Under 1%' : `${Math.round(x * 100)}%`);
+    check(`${where}: title odds at lock, top eight`, oddsText.startsWith('Title odds at lock') && odds.every((o) => oddsText.includes(`${clubs.get(o.slug)?.full ?? o.slug} ${pct(o.odds)}`)) && count(element(section, 'data-title-odds') ?? '', '<tr') === 9, oddsText.slice(0, 120));
+
+    // The methodology: dates from the stored instants in Eastern, nothing else.
+    const method = element(el, 'data-predictions-methodology');
+    check(`${where}: methodology section`, !!method);
+    if (!method) return;
+    const mt = textOf(method);
+    const frozen = new Date(p.provenance.frozenAt as string);
+    const first = doc.series.flatMap((s) => s.games).every((g) => (g.start ? new Date(g.start).getTime() > frozen.getTime() : g.date ? g.date > etYmd(frozen) : true)) && doc.series.some((s) => s.games.some((g) => g.start || g.date));
+    check(`${where}: methodology says when the inputs were locked`, mt.includes(`The inputs were locked on ${longEt(frozen)}${first ? ', before Game 1' : ''}.`), longEt(frozen));
+    check(`${where}: methodology says when the bracket was computed`, mt.includes(`The bracket was computed on ${longEt(new Date(p.computedAt))} from those locked inputs, with the engine code unchanged since the lock.`), longEt(new Date(p.computedAt)));
+    check(`${where}: methodology names ${p.simRuns.toLocaleString('en-US')} simulated postseasons`, mt.includes(`plays out the postseason ${p.simRuns.toLocaleString('en-US')} times`));
+    check(`${where}: the backtest, and no other accuracy claim`, mt.includes(BACKTEST[league]) && (mt.match(/\b\d+ of \d+\b/g) ?? []).length === 1 && !/\b(accura|correct|hit rate|record)\b/i.test(mt), BACKTEST[league]);
+    check(`${where}: never says the bracket was set before Game 1`, !/bracket was (locked|set|picked|computed)[^.]*before Game 1/i.test(mt));
+
+    // THE FINGERPRINT RULE. Each of the five appears in the served bytes
+    // exactly twice: once in the methodology section's markup, and once in
+    // the RSC payload's copy of that same markup. In the payload, the text
+    // between the methodology section's id and the fingerprint holds no
+    // client component reference ("$L"), so no client component carries it.
+    const dom = domOf(html);
+    const domMethod = element(dom, 'data-predictions-methodology') ?? '';
+    const flight = [...html.matchAll(/<script>self\.__next_f\.push\(([\s\S]*?)\)<\/script>/g)].map((m) => m[1]).join('');
+    const bad: string[] = [];
+    for (const f of fingerprints(p)) {
+      const inDom = count(dom, f);
+      const inMethod = count(domMethod, f);
+      const inFlight = count(flight, f);
+      const total = count(html, f);
+      const at = flight.indexOf(f);
+      const anchor = flight.lastIndexOf('how-the-computer-picked', at);
+      const between = anchor >= 0 ? flight.slice(anchor, at) : '';
+      const clean = inDom === 1 && inMethod === 1 && inFlight === 1 && total === 2 && anchor >= 0 && !/\$L[0-9a-z]/.test(between);
+      if (!clean) bad.push(`${f.slice(0, 8)} dom ${inDom} method ${inMethod} flight ${inFlight} total ${total} anchored ${anchor >= 0}`);
+    }
+    check(`${where}: the five fingerprints only in the methodology section and its RSC payload copy, labeled`, bad.length === 0 && mt.includes('Fingerprints'), bad.join('; ') || 'dom 1, payload 1, each');
+    const outsideDom = dom.replace(domMethod, '');
+    const other = /\b[0-9a-f]{40,}\b/.exec(outsideDom);
+    check(`${where}: no hash in the page outside the methodology`, !other, other ? other[0].slice(0, 16) : '');
+  }
+
   // ---- The league pages ----
   for (const league of LEAGUES) {
     const path = `/playoffs/${league.toLowerCase()}`;
@@ -469,14 +649,22 @@ async function main() {
     const changed = instantOf(doc.lastChangedAt);
     const open = currentRound(doc);
     check(`${where}: the document has a series being played`, open !== null, open ? open.roundLabel : 'all final');
+    const pred = preds.get(league) ?? null;
     const description = open
-      ? `The ${SEASON} ${league} postseason bracket. Current round: ${open.roundLabel}. Every series, seed and result, with game times in Eastern and the home games coming up.`
+      ? pred
+        ? `The ${SEASON} ${league} postseason bracket and the computer's locked pick for every series, marked as the results come in. Current round: ${open.roundLabel}. Game times in Eastern.`
+        : `The ${SEASON} ${league} postseason bracket. Current round: ${open.roundLabel}. Every series, seed and result, with game times in Eastern and the home games coming up.`
       : '(concluded: checked by hand)';
-    const want = { title: `${SEASON} ${league} Playoffs Bracket, Schedule and Scores`, description, canonical: `${SITE}${path}` };
+    const want = {
+      title: pred ? `${SEASON} ${league} Playoff Bracket and Predictions` : `${SEASON} ${league} Playoffs Bracket, Schedule and Scores`,
+      description,
+      canonical: `${SITE}${path}`,
+    };
     head(where, got.html, want);
     jsonLd(where, got.html, { ...want, crumbs: [`Home ${SITE}`, `Playoffs ${SITE}/playoffs`, `${league} ${SITE}${path}`], modified: changed ? changed.toISOString() : null });
     const el = article(where, got.html, 'league');
     leaks(where, got.html);
+    if (pred) predictionsOnPage(where, got.html, el, league, doc, pred);
 
     const text = textOf(el);
     if (changed) check(`${where}: change stamp`, text.includes(`Bracket updated ${etStamp(changed)}`), `Bracket updated ${etStamp(changed)}`);
@@ -667,6 +855,23 @@ async function main() {
       jsonLd(where, got.html, { ...want, crumbs: [`Home ${SITE}`, `Playoffs ${SITE}/playoffs`], modified: stamps.length ? stamps[stamps.length - 1] : null });
       const el = article(where, got.html, 'hub');
       leaks(where, got.html);
+      const anyPrint = [...preds.values()].flatMap(fingerprints).filter((f) => got.html.includes(f));
+      check(`${where}: no fingerprint on the hub`, anyPrint.length === 0 && !/\b[0-9a-f]{64}\b/.test(got.html), anyPrint.map((f) => f.slice(0, 8)).join(' '));
+      check(`${where}: no "publish soon" placeholder`, !/publish soon/i.test(got.html));
+      const card = element(el, 'data-predictions="locked"');
+      const wantLines: string[] = [];
+      for (const league of LEAGUES) {
+        const d = at.get(league);
+        const p = preds.get(league);
+        if (!d || !p || !currentRound(d)) continue;
+        const sc = score(d, p);
+        const champ = clubs.get(p.champion)?.full ?? p.champion;
+        const text = `Computer's champion: ${champ} · ${sc.decided === 0 ? 'no series decided yet' : `${sc.correct} for ${sc.decided}`}`;
+        wantLines.push(text);
+        const line = card ? element(card, `data-predictions-league="${league.toLowerCase()}"`) : null;
+        check(`${where}: ${league} predictions line`, !!line && textOf(line) === text && line.includes(`href="/playoffs/${league.toLowerCase()}#predictions"`), line ? textOf(line) : 'missing');
+      }
+      same(`${where}: predictions lines on the card`, card ? count(card, 'data-predictions-league=') : 0, wantLines.length);
       for (const league of LEAGUES) {
         const doc = at.get(league);
         if (!doc) continue;

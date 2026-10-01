@@ -55,6 +55,10 @@ export function BracketExplorer({
   // While a pill's own scroll is running, the scroll listener must not read
   // the rounds it passes on the way as the reader's choice.
   const steering = useRef(0);
+  // The round this bracket's own row was last swiped to. A swipe in the
+  // predicted bracket below also moves the shared round, and this row then
+  // follows it; a swipe here is already where it is.
+  const ownSwipe = useRef<string | null>(null);
   // Sends still waiting on the analytics sinks. Stopped when the bracket
   // unmounts, and not before: a series opened by the link the reader arrived
   // on is still that, whatever they press while the sinks load.
@@ -81,9 +85,12 @@ export function BracketExplorer({
 
   const base = { surface: SURFACE, league: leagueSlug, season };
 
-  // Bring the chosen round to the left edge, when a pill or a link chose it.
+  // Bring the chosen round to the left edge, when a pill or a link chose it,
+  // or a swipe in the other bracket did.
   useEffect(() => {
-    if (roundCause === 'swipe' || (roundCause === 'initial' && round === rounds[0].key)) return;
+    const own = roundCause === 'swipe' && ownSwipe.current === round;
+    ownSwipe.current = null;
+    if (own || (roundCause === 'initial' && round === rounds[0].key)) return;
     const box = scroller.current;
     const col = box?.querySelector<HTMLElement>(`[data-round="${round}"]`);
     if (!box || !col || box.scrollWidth <= box.clientWidth) return;
@@ -107,7 +114,10 @@ export function BracketExplorer({
         const gap = Math.abs(col.offsetLeft - box.offsetLeft - pad - box.scrollLeft);
         if (!best || gap < best.gap) best = { key: col.dataset.round as string, gap };
       }
-      if (best && best.key !== round) setRound(best.key, 'swipe');
+      if (best && best.key !== round) {
+        ownSwipe.current = best.key;
+        setRound(best.key, 'swipe');
+      }
     };
     const onScroll = () => {
       if (!frame) frame = requestAnimationFrame(read);

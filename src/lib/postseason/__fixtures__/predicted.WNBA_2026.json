@@ -1,0 +1,350 @@
+{
+  "champion": "golden-state-valkyries",
+  "computedAt": "2026-09-30T21:17:30.014Z",
+  "computedBy": "2026-09-30T21-17-30-014Z-61254a",
+  "degeneracyChecks": [
+    "no-certain-pick",
+    "sufficient-support",
+    "leader-odds-ceiling",
+    "seed-reproducible"
+  ],
+  "degeneracyFlags": [],
+  "engineCommitAtExecute": "67aab9fc3933c5af06cfab5cacd0cd4a13e41c84",
+  "executedAt": "2026-09-30T21:22:10.237Z",
+  "info": [],
+  "league": "WNBA",
+  "lockedAt": {
+    "__firestoreTimestamp": "2026-09-30T21:22:10.409Z"
+  },
+  "provenance": {
+    "ackedCancelled": [],
+    "acks": [],
+    "canonicalDescriptor": "lib/postseason/formats/wnba-2026.json",
+    "canonicalDescriptorSha256": "d59faeec28eddd6e554a509ae1a404f2a8a940ab331f28e6f8ac918c8edf3c40",
+    "coreFiles": [
+      {
+        "blobAtCompute": "af4098fc01a80765cdb03ff5064c3a3d10f36a8c",
+        "blobAtFreeze": "af4098fc01a80765cdb03ff5064c3a3d10f36a8c",
+        "identical": true,
+        "path": "predictions/elo.js"
+      },
+      {
+        "blobAtCompute": "7fcf0b2f7478dd4822be47db6b18b6d5e86491b9",
+        "blobAtFreeze": "7fcf0b2f7478dd4822be47db6b18b6d5e86491b9",
+        "identical": true,
+        "path": "predictions/simulate.js"
+      },
+      {
+        "blobAtCompute": "bc7f87d831b54ec01457f144110ac918ee534d67",
+        "blobAtFreeze": "bc7f87d831b54ec01457f144110ac918ee534d67",
+        "identical": true,
+        "path": "predictions/bracket.js"
+      }
+    ],
+    "coreTouchingCommits": [
+      "f03b4ceffc7f41cd6461a70a31c174f8dc17ef06"
+    ],
+    "corpusRows": 330,
+    "corpusSha256": "e4bcaddb1f2acebf37ece2f2c8f32d136609bd93469a30c8e5da104a6bd17a8d",
+    "cutoff": "2026-09-27T18:00:00.000Z",
+    "descriptor": "predictions/frozen/wnba-2026.json",
+    "descriptorSha256": "71c1700f4e5626ad049e3af83f4064efd6d2ee2255e3abceee59a16d723c6321",
+    "elo": {
+      "homeAdvantage": 55,
+      "kFactor": 20,
+      "marginOfVictory": {
+        "kind": "log",
+        "scale": 1
+      },
+      "start": 1500
+    },
+    "engineCommitAtCompute": "67aab9fc3933c5af06cfab5cacd0cd4a13e41c84",
+    "engineCommitAtFreeze": "2eb87fc8aec8b69f3febb3cd29ffc90445fdb6f7",
+    "engineFiles": [
+      {
+        "blobAtCompute": "0169d0fdd8d59a75cb02f6534122922aaf2262e3",
+        "path": "predictions/compute.js"
+      },
+      {
+        "blobAtCompute": "fc7f5299eb7dad8bf6a8bbb330c5665d29e8545d",
+        "path": "predictions/series.js"
+      },
+      {
+        "blobAtCompute": "7daaac9755f5b6c206cd680b32f9e86d525b8136",
+        "path": "predictions/hash.js"
+      },
+      {
+        "blobAtCompute": "b33bcd3d74bb62661015cf86636bbccf85ee1d26",
+        "path": "predictions/inputs.js"
+      },
+      {
+        "blobAtCompute": "9d06ca3ae8be0bc5d40139d31ef7027376df8a31",
+        "path": "lib/postseason/records.js"
+      },
+      {
+        "blobAtCompute": "473f1293b5f5db461cc30b7534ebf940cc654d34",
+        "path": "lib/postseason/seeds.js"
+      },
+      {
+        "blobAtCompute": "24674e7c60be178bd88270cbf07173e0202a52c3",
+        "path": "lib/postseason/descriptor.js"
+      },
+      {
+        "blobAtCompute": "0d07ccb7029d18aa3d49fc685899c7e628c87aa5",
+        "path": "lib/postseason/mlb-team-ids.js"
+      },
+      {
+        "blobAtCompute": "ae32a984432010ad30ee73a5c4450eb1d9889f75",
+        "path": "lib/postseason/wnba-team-ids.js"
+      },
+      {
+        "blobAtCompute": "771c43078bfb6fc8d92a8e99164b1e40a6f4f00d",
+        "path": "team-configs/mlb.js"
+      }
+    ],
+    "frozenAt": "2026-09-25T14:24:00.732Z",
+    "frozenBy": "2026-09-25T14-23-59-242Z-bd7ef2",
+    "node": {
+      "arch": "arm64",
+      "platform": "darwin",
+      "version": "v25.6.1"
+    },
+    "paramsSha256": "f953e58fabed3c981231b1b52761b9c22fcc3c1d4274abcac80749856ff61433",
+    "ratingsFrom": {
+      "brier": 0.20667163097334385,
+      "games": 330,
+      "skipped": 0
+    },
+    "seedFile": "seeds/wnba-2026.json",
+    "seedFileAuthoredBy": "Matt Kovalik",
+    "seedFileAuthoredOn": "2026-09-25",
+    "seedFileSha256": "364a947284a235b87048ad6908677663093e6ea8a8779c5f067afd3beb1dfbb4",
+    "seedFileSourceUrl": "https://www.wnba.com/playoffs/2026",
+    "slugMapSha256": "b5d2e82a40cbebcca98ef745634e986c64235e851e84b46047b94ceddf1f3c26"
+  },
+  "reviewedSha256": "9062bcca0613db2b716200c652fc416b08f786af6781d242fb17d62bf9f862fd",
+  "rounds": [
+    {
+      "bestOf": 3,
+      "coinFlip": false,
+      "conference": null,
+      "higher": "minnesota-lynx",
+      "higherSeed": 1,
+      "lower": "new-york-liberty",
+      "lowerSeed": 8,
+      "modalSeriesLength": 2,
+      "neutralSite": false,
+      "pick": "minnesota-lynx",
+      "pickIsHigherSeed": true,
+      "pickProbability": 0.7774,
+      "round": "first_round",
+      "roundLabel": "First Round",
+      "runsSupporting": 10000,
+      "seriesKey": "R1-1v8",
+      "slot": "winner:first_round:1v8"
+    },
+    {
+      "bestOf": 3,
+      "coinFlip": false,
+      "conference": null,
+      "higher": "golden-state-valkyries",
+      "higherSeed": 2,
+      "lower": "dallas-wings",
+      "lowerSeed": 7,
+      "modalSeriesLength": 2,
+      "neutralSite": false,
+      "pick": "golden-state-valkyries",
+      "pickIsHigherSeed": true,
+      "pickProbability": 0.7684,
+      "round": "first_round",
+      "roundLabel": "First Round",
+      "runsSupporting": 10000,
+      "seriesKey": "R1-2v7",
+      "slot": "winner:first_round:2v7"
+    },
+    {
+      "bestOf": 3,
+      "coinFlip": false,
+      "conference": null,
+      "higher": "las-vegas-aces",
+      "higherSeed": 3,
+      "lower": "indiana-fever",
+      "lowerSeed": 6,
+      "modalSeriesLength": 3,
+      "neutralSite": false,
+      "pick": "las-vegas-aces",
+      "pickIsHigherSeed": true,
+      "pickProbability": 0.5578,
+      "round": "first_round",
+      "roundLabel": "First Round",
+      "runsSupporting": 10000,
+      "seriesKey": "R1-3v6",
+      "slot": "winner:first_round:3v6"
+    },
+    {
+      "bestOf": 3,
+      "coinFlip": false,
+      "conference": null,
+      "higher": "atlanta-dream",
+      "higherSeed": 4,
+      "lower": "washington-mystics",
+      "lowerSeed": 5,
+      "modalSeriesLength": 3,
+      "neutralSite": false,
+      "pick": "atlanta-dream",
+      "pickIsHigherSeed": true,
+      "pickProbability": 0.6407,
+      "round": "first_round",
+      "roundLabel": "First Round",
+      "runsSupporting": 10000,
+      "seriesKey": "R1-4v5",
+      "slot": "winner:first_round:4v5"
+    },
+    {
+      "bestOf": 5,
+      "coinFlip": false,
+      "conference": null,
+      "higher": "minnesota-lynx",
+      "higherSeed": 1,
+      "lower": "atlanta-dream",
+      "lowerSeed": 4,
+      "modalSeriesLength": 5,
+      "neutralSite": false,
+      "pick": "minnesota-lynx",
+      "pickIsHigherSeed": true,
+      "pickProbability": 0.5434477222556693,
+      "round": "semifinals",
+      "roundLabel": "Semifinals",
+      "runsSupporting": 4983,
+      "seriesKey": "SF-A",
+      "slot": "winner:semifinals:1v8v4v5"
+    },
+    {
+      "bestOf": 5,
+      "coinFlip": false,
+      "conference": null,
+      "higher": "golden-state-valkyries",
+      "higherSeed": 2,
+      "lower": "las-vegas-aces",
+      "lowerSeed": 3,
+      "modalSeriesLength": 4,
+      "neutralSite": false,
+      "pick": "golden-state-valkyries",
+      "pickIsHigherSeed": true,
+      "pickProbability": 0.7405329593267882,
+      "round": "semifinals",
+      "roundLabel": "Semifinals",
+      "runsSupporting": 4278,
+      "seriesKey": "SF-B",
+      "slot": "winner:semifinals:2v7v3v6"
+    },
+    {
+      "bestOf": 7,
+      "coinFlip": false,
+      "conference": null,
+      "higher": "minnesota-lynx",
+      "higherSeed": 1,
+      "lower": "golden-state-valkyries",
+      "lowerSeed": 2,
+      "modalSeriesLength": 6,
+      "neutralSite": false,
+      "pick": "golden-state-valkyries",
+      "pickIsHigherSeed": false,
+      "pickProbability": 0.5887921241953805,
+      "round": "finals",
+      "roundLabel": "WNBA Finals",
+      "runsSupporting": 2641,
+      "seriesKey": "F",
+      "slot": "winner:finals"
+    }
+  ],
+  "season": 2026,
+  "seeds": [
+    {
+      "conference": null,
+      "rating": 1684.524825488006,
+      "seed": 1,
+      "slug": "minnesota-lynx"
+    },
+    {
+      "conference": null,
+      "rating": 1723.0134175154749,
+      "seed": 2,
+      "slug": "golden-state-valkyries"
+    },
+    {
+      "conference": null,
+      "rating": 1639.9080763631132,
+      "seed": 3,
+      "slug": "las-vegas-aces"
+    },
+    {
+      "conference": null,
+      "rating": 1679.0050914818032,
+      "seed": 4,
+      "slug": "atlanta-dream"
+    },
+    {
+      "conference": null,
+      "rating": 1632.9815982651207,
+      "seed": 5,
+      "slug": "washington-mystics"
+    },
+    {
+      "conference": null,
+      "rating": 1632.403281699107,
+      "seed": 6,
+      "slug": "indiana-fever"
+    },
+    {
+      "conference": null,
+      "rating": 1604.9859985102719,
+      "seed": 7,
+      "slug": "dallas-wings"
+    },
+    {
+      "conference": null,
+      "rating": 1563.2794024356547,
+      "seed": 8,
+      "slug": "new-york-liberty"
+    }
+  ],
+  "seedsAreFinal": true,
+  "simRuns": 10000,
+  "simSeed": 3837570523,
+  "target": "lock",
+  "titleOdds": [
+    {
+      "odds": 0.3733,
+      "slug": "golden-state-valkyries"
+    },
+    {
+      "odds": 0.2379,
+      "slug": "minnesota-lynx"
+    },
+    {
+      "odds": 0.1621,
+      "slug": "atlanta-dream"
+    },
+    {
+      "odds": 0.0792,
+      "slug": "las-vegas-aces"
+    },
+    {
+      "odds": 0.0545,
+      "slug": "indiana-fever"
+    },
+    {
+      "odds": 0.0538,
+      "slug": "washington-mystics"
+    },
+    {
+      "odds": 0.0294,
+      "slug": "dallas-wings"
+    },
+    {
+      "odds": 0.0098,
+      "slug": "new-york-liberty"
+    }
+  ]
+}

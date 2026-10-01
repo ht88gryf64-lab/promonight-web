@@ -1,0 +1,583 @@
+{
+  "bracketSha256": "375ac6d62fae247cda3fc65da8d67eedad206d7c660410030a201d81195dbbbb",
+  "lastChangedAt": {
+    "__firestoreTimestamp": "2026-10-01T00:00:51.842Z"
+  },
+  "lastFetchedAt": {
+    "__firestoreTimestamp": "2026-10-01T00:10:28.966Z"
+  },
+  "lastRevalidatedSha256": "375ac6d62fae247cda3fc65da8d67eedad206d7c660410030a201d81195dbbbb",
+  "league": "WNBA",
+  "operatorLog": [],
+  "revalidationPending": null,
+  "runId": "2026-10-01T00-00-49-439Z-ee8adf",
+  "season": 2026,
+  "seeds": {
+    "authoredBy": "Matt Kovalik",
+    "authoredOn": "2026-09-25",
+    "file": "wnba-2026.json"
+  },
+  "series": [
+    {
+      "bestOf": 3,
+      "conference": null,
+      "games": [
+        {
+          "away": "new-york-liberty",
+          "awayScore": 91,
+          "date": "2026-09-27",
+          "gameId": "401918014",
+          "gameNumber": 1,
+          "home": "minnesota-lynx",
+          "homeScore": 75,
+          "homeSide": "higher",
+          "ifNecessary": false,
+          "start": "2026-09-27T18:00Z",
+          "startTimeTBD": false,
+          "status": "final",
+          "winnerSide": "lower"
+        },
+        {
+          "away": "minnesota-lynx",
+          "awayScore": 71,
+          "date": "2026-09-29",
+          "gameId": "401918017",
+          "gameNumber": 2,
+          "home": "new-york-liberty",
+          "homeScore": 87,
+          "homeSide": "lower",
+          "ifNecessary": false,
+          "start": "2026-09-30T00:30Z",
+          "startTimeTBD": false,
+          "status": "final",
+          "winnerSide": "lower"
+        }
+      ],
+      "higher": {
+        "seed": 1,
+        "slug": "minnesota-lynx"
+      },
+      "lower": {
+        "seed": 8,
+        "slug": "new-york-liberty"
+      },
+      "round": "first_round",
+      "roundLabel": "First Round",
+      "seriesKey": "R1-1v8",
+      "shortLabel": "First Round",
+      "status": "final",
+      "winner": "new-york-liberty",
+      "wins": {
+        "higher": 0,
+        "lower": 2
+      }
+    },
+    {
+      "bestOf": 3,
+      "conference": null,
+      "games": [
+        {
+          "away": "dallas-wings",
+          "awayScore": 80,
+          "date": "2026-09-27",
+          "gameId": "401918016",
+          "gameNumber": 1,
+          "home": "golden-state-valkyries",
+          "homeScore": 104,
+          "homeSide": "higher",
+          "ifNecessary": false,
+          "start": "2026-09-28T01:00Z",
+          "startTimeTBD": false,
+          "status": "final",
+          "winnerSide": "higher"
+        },
+        {
+          "away": "golden-state-valkyries",
+          "awayScore": 0,
+          "date": "2026-09-30",
+          "gameId": "401918020",
+          "gameNumber": 2,
+          "home": "dallas-wings",
+          "homeScore": 0,
+          "homeSide": "lower",
+          "ifNecessary": false,
+          "start": "2026-10-01T01:00Z",
+          "startTimeTBD": false,
+          "status": "scheduled",
+          "winnerSide": null
+        },
+        {
+          "away": "dallas-wings",
+          "awayScore": 0,
+          "date": "2026-10-02",
+          "gameId": "401918294",
+          "gameNumber": 3,
+          "home": "golden-state-valkyries",
+          "homeScore": 0,
+          "homeSide": "higher",
+          "ifNecessary": true,
+          "start": "2026-10-02T04:00Z",
+          "startTimeTBD": true,
+          "status": "scheduled",
+          "winnerSide": null
+        }
+      ],
+      "higher": {
+        "seed": 2,
+        "slug": "golden-state-valkyries"
+      },
+      "lower": {
+        "seed": 7,
+        "slug": "dallas-wings"
+      },
+      "round": "first_round",
+      "roundLabel": "First Round",
+      "seriesKey": "R1-2v7",
+      "shortLabel": "First Round",
+      "status": "live",
+      "winner": null,
+      "wins": {
+        "higher": 1,
+        "lower": 0
+      }
+    },
+    {
+      "bestOf": 3,
+      "conference": null,
+      "games": [
+        {
+          "away": "indiana-fever",
+          "awayScore": 85,
+          "date": "2026-09-27",
+          "gameId": "401918015",
+          "gameNumber": 1,
+          "home": "las-vegas-aces",
+          "homeScore": 102,
+          "homeSide": "higher",
+          "ifNecessary": false,
+          "start": "2026-09-27T20:00Z",
+          "startTimeTBD": false,
+          "status": "final",
+          "winnerSide": "higher"
+        },
+        {
+          "away": "las-vegas-aces",
+          "awayScore": 89,
+          "date": "2026-09-29",
+          "gameId": "401918018",
+          "gameNumber": 2,
+          "home": "indiana-fever",
+          "homeScore": 99,
+          "homeSide": "lower",
+          "ifNecessary": false,
+          "start": "2026-09-29T22:30Z",
+          "startTimeTBD": false,
+          "status": "final",
+          "winnerSide": "lower"
+        },
+        {
+          "away": "indiana-fever",
+          "awayScore": 0,
+          "date": "2026-10-01",
+          "gameId": "401918022",
+          "gameNumber": 3,
+          "home": "las-vegas-aces",
+          "homeScore": 0,
+          "homeSide": "higher",
+          "ifNecessary": true,
+          "start": "2026-10-02T01:00Z",
+          "startTimeTBD": false,
+          "status": "scheduled",
+          "winnerSide": null
+        }
+      ],
+      "higher": {
+        "seed": 3,
+        "slug": "las-vegas-aces"
+      },
+      "lower": {
+        "seed": 6,
+        "slug": "indiana-fever"
+      },
+      "round": "first_round",
+      "roundLabel": "First Round",
+      "seriesKey": "R1-3v6",
+      "shortLabel": "First Round",
+      "status": "live",
+      "winner": null,
+      "wins": {
+        "higher": 1,
+        "lower": 1
+      }
+    },
+    {
+      "bestOf": 3,
+      "conference": null,
+      "games": [
+        {
+          "away": "washington-mystics",
+          "awayScore": 77,
+          "date": "2026-09-27",
+          "gameId": "401918013",
+          "gameNumber": 1,
+          "home": "atlanta-dream",
+          "homeScore": 92,
+          "homeSide": "higher",
+          "ifNecessary": false,
+          "start": "2026-09-27T23:00Z",
+          "startTimeTBD": false,
+          "status": "final",
+          "winnerSide": "higher"
+        },
+        {
+          "away": "atlanta-dream",
+          "awayScore": 41,
+          "date": "2026-09-30",
+          "gameId": "401918019",
+          "gameNumber": 2,
+          "home": "washington-mystics",
+          "homeScore": 35,
+          "homeSide": "lower",
+          "ifNecessary": false,
+          "start": "2026-09-30T23:00Z",
+          "startTimeTBD": false,
+          "status": "live",
+          "winnerSide": null
+        },
+        {
+          "away": "washington-mystics",
+          "awayScore": 0,
+          "date": "2026-10-02",
+          "gameId": "401918293",
+          "gameNumber": 3,
+          "home": "atlanta-dream",
+          "homeScore": 0,
+          "homeSide": "higher",
+          "ifNecessary": true,
+          "start": "2026-10-02T04:00Z",
+          "startTimeTBD": true,
+          "status": "scheduled",
+          "winnerSide": null
+        }
+      ],
+      "higher": {
+        "seed": 4,
+        "slug": "atlanta-dream"
+      },
+      "lower": {
+        "seed": 5,
+        "slug": "washington-mystics"
+      },
+      "round": "first_round",
+      "roundLabel": "First Round",
+      "seriesKey": "R1-4v5",
+      "shortLabel": "First Round",
+      "status": "live",
+      "winner": null,
+      "wins": {
+        "higher": 1,
+        "lower": 0
+      }
+    },
+    {
+      "bestOf": 5,
+      "conference": null,
+      "games": [],
+      "higher": {
+        "candidates": null,
+        "feederSeriesKey": null,
+        "placeholder": "TBD",
+        "seed": null
+      },
+      "lower": {
+        "candidates": null,
+        "feederSeriesKey": null,
+        "placeholder": "TBD",
+        "seed": null
+      },
+      "round": "semifinals",
+      "roundLabel": "Semifinals",
+      "seriesKey": "SF-A",
+      "shortLabel": "Semifinals",
+      "status": "upcoming",
+      "winner": null,
+      "wins": {
+        "higher": 0,
+        "lower": 0
+      }
+    },
+    {
+      "bestOf": 5,
+      "conference": null,
+      "games": [],
+      "higher": {
+        "candidates": null,
+        "feederSeriesKey": null,
+        "placeholder": "TBD",
+        "seed": null
+      },
+      "lower": {
+        "candidates": null,
+        "feederSeriesKey": null,
+        "placeholder": "TBD",
+        "seed": null
+      },
+      "round": "semifinals",
+      "roundLabel": "Semifinals",
+      "seriesKey": "SF-B",
+      "shortLabel": "Semifinals",
+      "status": "upcoming",
+      "winner": null,
+      "wins": {
+        "higher": 0,
+        "lower": 0
+      }
+    },
+    {
+      "bestOf": 7,
+      "conference": null,
+      "games": [],
+      "higher": {
+        "candidates": null,
+        "feederSeriesKey": null,
+        "placeholder": "TBD",
+        "seed": null
+      },
+      "lower": {
+        "candidates": null,
+        "feederSeriesKey": null,
+        "placeholder": "TBD",
+        "seed": null
+      },
+      "round": "finals",
+      "roundLabel": "WNBA Finals",
+      "seriesKey": "F",
+      "shortLabel": "Finals",
+      "status": "upcoming",
+      "winner": null,
+      "wins": {
+        "higher": 0,
+        "lower": 0
+      }
+    }
+  ],
+  "source": {
+    "kind": "espn-scoreboard",
+    "urls": [
+      "https://site.api.espn.com/apis/site/v2/sports/basketball/wnba/scoreboard?dates=202609&limit=1000",
+      "https://site.api.espn.com/apis/site/v2/sports/basketball/wnba/scoreboard?dates=202610&limit=1000",
+      "https://site.api.espn.com/apis/site/v2/sports/basketball/wnba/scoreboard?dates=202611&limit=1000"
+    ]
+  },
+  "unplaced": {
+    "games": [
+      {
+        "away": "new-york-liberty",
+        "gameId": "401918295",
+        "gameNumber": 1,
+        "home": "TBD",
+        "ifNecessary": false,
+        "round": "semifinals",
+        "roundLabel": "Semifinals",
+        "start": "2026-10-04T04:00Z",
+        "startTimeTBD": true,
+        "status": "scheduled"
+      },
+      {
+        "away": "TBD",
+        "gameId": "401918296",
+        "gameNumber": 1,
+        "home": "TBD",
+        "ifNecessary": false,
+        "round": "semifinals",
+        "roundLabel": "Semifinals",
+        "start": "2026-10-04T04:00Z",
+        "startTimeTBD": true,
+        "status": "scheduled"
+      },
+      {
+        "away": "new-york-liberty",
+        "gameId": "401918297",
+        "gameNumber": 2,
+        "home": "TBD",
+        "ifNecessary": false,
+        "round": "semifinals",
+        "roundLabel": "Semifinals",
+        "start": "2026-10-07T04:00Z",
+        "startTimeTBD": true,
+        "status": "scheduled"
+      },
+      {
+        "away": "TBD",
+        "gameId": "401918298",
+        "gameNumber": 2,
+        "home": "TBD",
+        "ifNecessary": false,
+        "round": "semifinals",
+        "roundLabel": "Semifinals",
+        "start": "2026-10-07T04:00Z",
+        "startTimeTBD": true,
+        "status": "scheduled"
+      },
+      {
+        "away": "TBD",
+        "gameId": "401918299",
+        "gameNumber": 3,
+        "home": "new-york-liberty",
+        "ifNecessary": false,
+        "round": "semifinals",
+        "roundLabel": "Semifinals",
+        "start": "2026-10-09T04:00Z",
+        "startTimeTBD": true,
+        "status": "scheduled"
+      },
+      {
+        "away": "TBD",
+        "gameId": "401918300",
+        "gameNumber": 3,
+        "home": "TBD",
+        "ifNecessary": false,
+        "round": "semifinals",
+        "roundLabel": "Semifinals",
+        "start": "2026-10-09T04:00Z",
+        "startTimeTBD": true,
+        "status": "scheduled"
+      },
+      {
+        "away": "TBD",
+        "gameId": "401918301",
+        "gameNumber": 4,
+        "home": "new-york-liberty",
+        "ifNecessary": true,
+        "round": "semifinals",
+        "roundLabel": "Semifinals",
+        "start": "2026-10-11T04:00Z",
+        "startTimeTBD": true,
+        "status": "scheduled"
+      },
+      {
+        "away": "TBD",
+        "gameId": "401918302",
+        "gameNumber": 4,
+        "home": "TBD",
+        "ifNecessary": true,
+        "round": "semifinals",
+        "roundLabel": "Semifinals",
+        "start": "2026-10-11T04:00Z",
+        "startTimeTBD": true,
+        "status": "scheduled"
+      },
+      {
+        "away": "new-york-liberty",
+        "gameId": "401918303",
+        "gameNumber": 5,
+        "home": "TBD",
+        "ifNecessary": true,
+        "round": "semifinals",
+        "roundLabel": "Semifinals",
+        "start": "2026-10-14T04:00Z",
+        "startTimeTBD": true,
+        "status": "scheduled"
+      },
+      {
+        "away": "TBD",
+        "gameId": "401918304",
+        "gameNumber": 5,
+        "home": "TBD",
+        "ifNecessary": true,
+        "round": "semifinals",
+        "roundLabel": "Semifinals",
+        "start": "2026-10-14T04:00Z",
+        "startTimeTBD": true,
+        "status": "scheduled"
+      },
+      {
+        "away": "TBD",
+        "gameId": "401918305",
+        "gameNumber": 1,
+        "home": "TBD",
+        "ifNecessary": false,
+        "round": "finals",
+        "roundLabel": "WNBA Finals",
+        "start": "2026-10-17T19:30Z",
+        "startTimeTBD": false,
+        "status": "scheduled"
+      },
+      {
+        "away": "TBD",
+        "gameId": "401918306",
+        "gameNumber": 2,
+        "home": "TBD",
+        "ifNecessary": false,
+        "round": "finals",
+        "roundLabel": "WNBA Finals",
+        "start": "2026-10-20T00:00Z",
+        "startTimeTBD": false,
+        "status": "scheduled"
+      },
+      {
+        "away": "TBD",
+        "gameId": "401918307",
+        "gameNumber": 3,
+        "home": "TBD",
+        "ifNecessary": false,
+        "round": "finals",
+        "roundLabel": "WNBA Finals",
+        "start": "2026-10-23T00:00Z",
+        "startTimeTBD": false,
+        "status": "scheduled"
+      },
+      {
+        "away": "TBD",
+        "gameId": "401918308",
+        "gameNumber": 4,
+        "home": "TBD",
+        "ifNecessary": false,
+        "round": "finals",
+        "roundLabel": "WNBA Finals",
+        "start": "2026-10-24T19:30Z",
+        "startTimeTBD": false,
+        "status": "scheduled"
+      },
+      {
+        "away": "TBD",
+        "gameId": "401918309",
+        "gameNumber": 5,
+        "home": "TBD",
+        "ifNecessary": true,
+        "round": "finals",
+        "roundLabel": "WNBA Finals",
+        "start": "2026-10-27T00:00Z",
+        "startTimeTBD": false,
+        "status": "scheduled"
+      },
+      {
+        "away": "TBD",
+        "gameId": "401918310",
+        "gameNumber": 6,
+        "home": "TBD",
+        "ifNecessary": true,
+        "round": "finals",
+        "roundLabel": "WNBA Finals",
+        "start": "2026-10-30T00:00Z",
+        "startTimeTBD": false,
+        "status": "scheduled"
+      },
+      {
+        "away": "TBD",
+        "gameId": "401918311",
+        "gameNumber": 7,
+        "home": "TBD",
+        "ifNecessary": true,
+        "round": "finals",
+        "roundLabel": "WNBA Finals",
+        "start": "2026-11-01T00:00Z",
+        "startTimeTBD": false,
+        "status": "scheduled"
+      }
+    ],
+    "series": []
+  },
+  "validatedSeedSha256": "364a947284a235b87048ad6908677663093e6ea8a8779c5f067afd3beb1dfbb4",
+  "writerVersion": 2
+}
