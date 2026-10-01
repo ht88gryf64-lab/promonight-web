@@ -25,6 +25,7 @@ import { db } from '../../src/lib/firebase';
 import { getAllTeams, getVenueForTeam } from '../../src/lib/data';
 import { getTeamVenueHubMap } from '../../src/lib/venue-hub';
 import { OG_IMAGE_ALT } from '../../src/lib/og';
+import { fingerprintPlacement } from './flight';
 
 const BASE = (process.env.BASE || 'http://localhost:3468').replace(/\/$/, '');
 const BYPASS = process.env.BYPASS || '';
@@ -626,18 +627,15 @@ async function main() {
     // client component reference ("$L"), so no client component carries it.
     const dom = domOf(html);
     const domMethod = element(dom, 'data-predictions-methodology') ?? '';
-    const flight = [...html.matchAll(/<script>self\.__next_f\.push\(([\s\S]*?)\)<\/script>/g)].map((m) => m[1]).join('');
+    const placement = fingerprintPlacement(html);
     const bad: string[] = [];
     for (const f of fingerprints(p)) {
       const inDom = count(dom, f);
       const inMethod = count(domMethod, f);
-      const inFlight = count(flight, f);
       const total = count(html, f);
-      const at = flight.indexOf(f);
-      const anchor = flight.lastIndexOf('how-the-computer-picked', at);
-      const between = anchor >= 0 ? flight.slice(anchor, at) : '';
-      const clean = inDom === 1 && inMethod === 1 && inFlight === 1 && total === 2 && anchor >= 0 && !/\$L[0-9a-z]/.test(between);
-      if (!clean) bad.push(`${f.slice(0, 8)} dom ${inDom} method ${inMethod} flight ${inFlight} total ${total} anchored ${anchor >= 0}`);
+      const where2 = placement(f);
+      const clean = inDom === 1 && inMethod === 1 && total === 2 && where2.ok;
+      if (!clean) bad.push(`${f.slice(0, 8)} dom ${inDom} method ${inMethod} total ${total} payload ${where2.detail}`);
     }
     check(`${where}: the five fingerprints only in the methodology section and its RSC payload copy, labeled`, bad.length === 0 && mt.includes('Fingerprints'), bad.join('; ') || 'dom 1, payload 1, each');
     const outsideDom = dom.replace(domMethod, '');
@@ -678,7 +676,9 @@ async function main() {
       const traces = ['id="predictions"', 'data-predictions', 'data-pick', 'po-picks', 'how-the-computer-picked', 'Title odds', 'Fingerprints', "Computer's", 'Computer&#x27;s', 'The Computer'].filter((m) => got.html.includes(m));
       check(`${where}: FORCED FAILURE: no predictions section, heading, card or methodology`, traces.length === 0, traces.join(' '));
       check(`${where}: FORCED FAILURE: no hash anywhere`, !/\b[0-9a-f]{40,}\b/.test(domOf(got.html)) && !fingerprints(preds.get(league) as RawPred).some((f) => got.html.includes(f)));
-      const said = /predictions-unavailable|unavailable|PREDICTIONS_DISABLED|predictedBrackets|\bdisabled\b/i.exec(got.html);
+      // The operator's tokens anywhere in the bytes; the plain words only in
+      // what a reader sees (a class such as "disabled:opacity-50" is not copy).
+      const said = /predictions-unavailable|PREDICTIONS_DISABLED|predictedBrackets/.exec(got.html) ?? /\b(unavailable|disabled|error)\b/i.exec(textOf(got.html));
       check(`${where}: FORCED FAILURE: nothing operator-facing in the served HTML`, !said, said ? said[0] : '');
     }
 
