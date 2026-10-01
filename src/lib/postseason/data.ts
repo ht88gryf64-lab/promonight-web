@@ -16,10 +16,11 @@ import {
 } from './predictions';
 
 import { checkLock } from './predictions-lock';
+import { teamPick, type TeamPickFailure, type TeamPickView } from './team-pick';
 
 export type { LeaguePredictions } from './predictions';
 import { readPostseasonPromos } from './promos';
-import type { InboundLeague } from './inbound';
+import { clubPlayoffs, type ClubPlayoffs, type InboundLeague } from './inbound';
 import type { Bracket, BracketRead, PostseasonLeague } from './types';
 
 // ---- What the web decides, and only that ----
@@ -305,6 +306,65 @@ async function loadPredictions(league: PostseasonLeague, bracket: Bracket, view:
 }
 
 /**
+ * The PromoNight Predicts line for one club's team page, or null.
+ *
+ * The same read, mapper, lock check and assembly as the league page, so the
+ * line shows exactly when that page's predictions section would, scored
+ * against the bracket the module above it was built from (`l.bracket`, read
+ * once for the whole render). Then the club's own line.
+ *
+ * NEVER THROWS. Any failure, the read's, the assembly's or the line's, hides
+ * the line and logs one tagged line with the league, the surface and a reason
+ * category. The module and the rest of the page render as they would with no
+ * predictions at all.
+ */
+export type TeamPickUnavailableReason = PredictionsUnavailableReason | TeamPickFailure;
+
+export async function loadTeamPick(l: InboundLeague, teamId: string): Promise<TeamPickView | null> {
+  let reason: TeamPickUnavailableReason;
+  try {
+    if (predictionsDisabled(l.league)) throw new DisabledSignal();
+    const read = await getPredictedBracket(l.league);
+    if (read.state === 'ok') {
+      const clubs = await clubsFor(predictionSlugs(l.bracket, read.predicted));
+      const rounds = l.view.rounds.map((r) => ({ key: r.key, label: r.label, shortLabel: r.shortLabel }));
+      const built = assemblePredictions(l.bracket, read.predicted, clubs, seriesIds(l.bracket), rounds);
+      if ('unavailable' in built) {
+        reason = built.unavailable;
+      } else {
+        const pick = teamPick(l.bracket, read.predicted, teamId, clubs);
+        if (typeof pick !== 'string') return pick;
+        reason = pick;
+      }
+    } else {
+      reason = read.reason;
+    }
+  } catch (e) {
+    reason = e instanceof DisabledSignal ? 'disabled' : 'build-failed';
+  }
+  console.error(`${PREDICTIONS_UNAVAILABLE} league=${l.league} surface=team reason=${reason}`);
+  return null;
+}
+
+/**
+ * What a team page shows about the postseason: the module, and the
+ * PromoNight Predicts line inside it. Null for a club in no bracket the gate
+ * lets through, and for every club of a league with no playoffs route, which
+ * makes no read at all. Only a club in a bracket costs a predictions read.
+ *
+ * NEVER THROWS: the inbound read answers a failure with nothing, and the
+ * line answers a failure with null.
+ */
+export async function getTeamPostseason(sportSlug: string, teamId: string): Promise<{ club: ClubPlayoffs; pick: TeamPickView | null } | null> {
+  if (!postseasonLeagueFromSlug(sportSlug)) return null;
+  const inbound = await getPlayoffsInboundOrNone(`/${sportSlug}/${teamId}`);
+  const club = clubPlayoffs(inbound, teamId);
+  if (!club) return null;
+  const l = inbound.find((x) => x.league === club.league);
+  return { club, pick: l ? await loadTeamPick(l, teamId) : null };
+}
+
+/**
  * The leagues that have a bracket document this season.
  *
  * One batched read of document names only: the mask asks for `league` and
@@ -398,7 +458,7 @@ export async function buildPlayoffsInbound(brackets: readonly Bracket[], now: Da
       console.error(`[postseason] ${docId(bracket.league)} names a club with no team record; it is left out of the inbound modules`);
       continue;
     }
-    out.push({ league: bracket.league, href: postseasonPath(bracket.league), view });
+    out.push({ league: bracket.league, href: postseasonPath(bracket.league), view, bracket });
   }
   return out;
 }

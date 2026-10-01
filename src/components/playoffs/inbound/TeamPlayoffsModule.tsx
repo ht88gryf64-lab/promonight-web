@@ -1,5 +1,7 @@
+import { cloneElement, type ReactElement, type ReactNode } from 'react';
 import { TrackedLink } from '@/components/analytics/TrackedLink';
 import type { ClubPlayoffs } from '@/lib/postseason/inbound';
+import type { TeamPickView } from '@/lib/postseason/team-pick';
 
 // The postseason module on a club's team page. Server-rendered; the only
 // client code in it is the click handler on its link.
@@ -20,7 +22,56 @@ function Stamp({ at }: { at: string | null }) {
   );
 }
 
-export function TeamPlayoffsModule({ club, teamId, teamName }: { club: ClubPlayoffs; teamId: string; teamName: string }) {
+/** The PromoNight Predicts line: the locked pick, its status, and a link to
+ *  every pick. Inside the module's own section, so it adds no anchor for the
+ *  ad placer and no element of its own to the page's column. */
+function PickLine({ pick, teamId }: { pick: TeamPickView; teamId: string }) {
+  return (
+    <div data-team-pick={pick.kind} className="mt-3 border-t border-rd-line pt-3">
+      <p className="font-rd text-[11px] font-semibold uppercase tracking-[0.14em] text-rd-ink-faint">PromoNight Predicts</p>
+      <p className="mt-1 font-rd text-[14px] font-semibold text-rd-ink">{pick.pickLine}</p>
+      <p className="mt-0.5 font-rd text-[13.5px] text-rd-ink-soft">{pick.statusLine}</p>
+      <TrackedLink
+        href={pick.href}
+        surface={SURFACE}
+        ctaId="predicts_team_pick"
+        ctaLabel="See every PromoNight Predicts pick"
+        teamSlug={teamId}
+        className={LINK}
+      >
+        See every PromoNight Predicts pick
+      </TrackedLink>
+    </div>
+  );
+}
+
+export function TeamPlayoffsModule({
+  club,
+  teamId,
+  teamName,
+  pick = null,
+}: {
+  club: ClubPlayoffs;
+  teamId: string;
+  teamName: string;
+  /** The PromoNight Predicts line, or null for none. */
+  pick?: TeamPickView | null;
+}) {
+  const section = moduleSection(club, teamId, teamName);
+  // With no pick, the section is returned as it is: the markup and the RSC
+  // payload are the module's as they were before the line existed. With a
+  // pick, the same section gets one more child, last. A conditional child
+  // written into the JSX would serialize a null into every page without one.
+  if (!pick) return section;
+  return withLastChild(section, <PickLine pick={pick} teamId={teamId} />);
+}
+
+function withLastChild(el: ReactElement<{ children?: ReactNode }>, child: ReactNode): ReactElement {
+  const kids = el.props.children;
+  return cloneElement(el, undefined, ...(Array.isArray(kids) ? kids : [kids]), child);
+}
+
+function moduleSection(club: ClubPlayoffs, teamId: string, teamName: string): ReactElement<{ children?: ReactNode }> {
   const headingId = 'team-playoffs';
   return (
     <section

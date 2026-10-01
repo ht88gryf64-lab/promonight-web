@@ -55,11 +55,17 @@ test('no module brings a font with it', () => {
 });
 
 test('every module is fed by the one gated read', () => {
-  for (const [name, route] of [['team', TEAM_ROUTE], ['home', HOME_ROUTE], ['venue', VENUE_ROUTE], ...HUBS.map(([l, , s]) => [l, s] as [string, string])]) {
+  for (const [name, route] of [['home', HOME_ROUTE], ['venue', VENUE_ROUTE], ...HUBS.map(([l, , s]) => [l, s] as [string, string])]) {
     assert.match(route, /getPlayoffsInboundOrNone\(/, `${name} asks the gated read`);
     assert.ok(!/getBracket\(|getLeaguePageData\(|readCurrentBrackets\(/.test(route), `${name} does not read a bracket around the gate`);
   }
+  // The team route asks through getTeamPostseason, which asks the gated read
+  // and nothing else for the bracket.
+  assert.ok(!/getBracket\(|getLeaguePageData\(|readCurrentBrackets\(/.test(TEAM_ROUTE), 'team does not read a bracket around the gate');
   const data = src('lib/postseason/data.ts');
+  const teamFn = data.slice(data.indexOf('export async function getTeamPostseason'), data.indexOf('export async function readLeaguesWithBracket'));
+  assert.match(teamFn, /await getPlayoffsInboundOrNone\(/);
+  assert.ok(!/getBracket\(|getLeaguePageData\(|readCurrentBrackets\(/.test(teamFn), 'the team function reads no bracket around the gate');
   assert.match(data, /export async function buildPlayoffsInbound\([^)]*\)[^{]*\{\s*if \(playoffsLinkState\(brackets, now\)\.state === 'hidden'\) return \[\];/);
 });
 
@@ -87,10 +93,15 @@ test('TEAM: the shells the ad placer matches by their whole class string are unt
   assert.equal((c.match(/<aside\b/g) ?? []).length, 1, 'the one aside is the sidebar column');
 });
 
-test('TEAM: only a league with a playoffs route asks, and the module is built from the club state', () => {
+test('TEAM: the route asks one function, and passes the module its club and its line', () => {
   const c = code(TEAM_ROUTE);
-  assert.match(c, /const club = postseasonLeagueFromSlug\(team\.sportSlug\)\s*\? clubPlayoffs\(await getPlayoffsInboundOrNone\([^)]*\), team\.id\)\s*: null;/);
-  assert.match(c, /postseason=\{club \? <TeamPlayoffsModule club=\{club\} teamId=\{team\.id\} teamName=\{team\.name\} \/> : null\}/);
+  assert.match(c, /const postseason = await getTeamPostseason\(team\.sportSlug, team\.id\);/);
+  assert.match(
+    c,
+    /postseason=\{\s*postseason \? <TeamPlayoffsModule club=\{postseason\.club\} teamId=\{team\.id\} teamName=\{team\.name\} pick=\{postseason\.pick\} \/> : null\s*\}/,
+  );
+  assert.equal((c.match(/getTeamPostseason\(/g) ?? []).length, 1);
+  assert.equal((c.match(/getPredictedBracket|predictedBrackets|loadTeamPick|getPlayoffsInbound/g) ?? []).length, 0, 'the route reads the postseason only through getTeamPostseason');
 });
 
 // ---- Hubs ----
@@ -104,15 +115,34 @@ for (const [league, lower, page] of HUBS) {
     assert.match(
       after,
       new RegExp(
-        `^<div className="mx-auto max-w-6xl space-y-16 px-6 pb-20 pt-12 page-content">\\s*\\{playoffs \\? \\(\\s*<div data-playoffs-top className="space-y-16">\\s*<LeaguePlayoffsCard card=\\{playoffs\\} surface="web_${lower}_hub" />\\s*\\{todayPromos\\}\\s*</div>\\s*\\) : \\(\\s*todayPromos\\s*\\)\\}\\s*<HubThisWeek`,
+        `^<div className="mx-auto max-w-6xl space-y-16 px-6 pb-20 pt-12 page-content">\\s*\\{playoffs \\|\\| finalCard \\? \\(\\s*<div data-playoffs-top className="space-y-16">\\s*\\{playoffs \\? \\(\\s*<LeaguePlayoffsCard card=\\{playoffs\\} surface="web_${lower}_hub" />\\s*\\) : \\(\\s*<LeagueFinalBracketCard card=\\{finalCard!\\} surface="web_${lower}_hub" />\\s*\\)\\}\\s*\\{todayPromos\\}\\s*</div>\\s*\\) : \\(\\s*todayPromos\\s*\\)\\}\\s*<HubThisWeek`,
       ),
     );
-    assert.match(c, new RegExp(`const playoffs = leagueCard\\(await getPlayoffsInboundOrNone\\('/${lower}'\\), '${league}'\\);`));
+    assert.match(c, new RegExp(`const inbound = await getPlayoffsInboundOrNone\\('/${lower}'\\);\\s*const playoffs = leagueCard\\(inbound, '${league}'\\);`));
+    assert.match(c, new RegExp(`const finalCard = playoffs \\? null : leagueFinalCard\\(inbound, '${league}'\\);`));
+    assert.equal((c.match(/<LeagueFinalBracketCard/g) ?? []).length, 1);
     assert.equal((c.match(/page-content/g) ?? []).length, 1);
     assert.equal((c.match(/<LeaguePlayoffsCard/g) ?? []).length, 1);
     assert.ok(!/<aside\b/.test(c));
   });
 }
+
+for (const [league, lower, page] of HUBS) {
+  test(`HUB /${lower}: the hero line is in the hero, above the stat bar, outside page-content`, () => {
+    const c = code(page);
+    assert.match(c, new RegExp(`const heroLine = leagueHeroLine\\(inbound, '${league}'\\);`));
+    const hero = c.slice(c.indexOf('<HubHero'), c.indexOf('</HubHero>'));
+    assert.match(hero, new RegExp(`notice=\\{heroLine \\? <LeaguePlayoffsHeroLine line=\\{heroLine\\} surface="web_${lower}_hub" /> : undefined\\}`));
+    assert.ok(c.indexOf('</HubHero>') < c.indexOf('page-content'), 'the hero closes before page-content opens');
+    assert.equal((c.match(/<LeaguePlayoffsHeroLine/g) ?? []).length, 1);
+  });
+}
+
+test('HUB HERO: with no notice the hero is the element it always was; the notice goes before the stat bar', () => {
+  const c = code(src('components/hub/HubHero.tsx'));
+  assert.match(c, /\{notice \? withNotice\(inner, notice\) : inner\}/);
+  assert.match(c, /cloneElement\(el, undefined, \.\.\.kids\.slice\(0, -1\), notice, kids\[kids\.length - 1\]\)/);
+});
 
 // ---- Homepage ----
 

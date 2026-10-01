@@ -48,7 +48,8 @@ const CASES = [
   ['refused document not reported as refused', D, "if (!predicted) return { state: 'unavailable', reason: 'refused' };", '', [T_DATA, T_FAIL]],
   ['lock check removed', D, "  if (lock !== 'ok') return { state: 'unavailable', reason: lock };\n", '', [T_DATA, T_FAIL]],
   ['read timeout removed', D, 'await withTimeout(db.getAll(ref, { fieldMask: PREDICTED_FIELDS }), predictionsReadTimeoutMs());', 'await db.getAll(ref, { fieldMask: PREDICTED_FIELDS });', [T_DATA]],
-  ['assembly exception escapes', D, "    reason = e instanceof DisabledSignal ? 'disabled' : 'build-failed';", '    throw e;', [T_DATA, T_FAIL]],
+  // The league page's catch; the team line has its own (team-picks-mutations.mjs).
+  ['assembly exception escapes', D, "    reason = e instanceof DisabledSignal ? 'disabled' : 'build-failed';\n  }\n  console.error(`${PREDICTIONS_UNAVAILABLE} league=${league} reason=${reason}`);", "    throw e;\n  }\n  console.error(`${PREDICTIONS_UNAVAILABLE} league=${league} reason=${reason}`);", [T_DATA, T_FAIL]],
   ['switch ignored', D, '    if (predictionsDisabled(league)) throw new DisabledSignal();\n', '', [T_DATA]],
   ['failure not logged', D, 'console.error(`${PREDICTIONS_UNAVAILABLE} league=${league} reason=${reason}`);', '', [T_DATA, T_FAIL]],
   ['failure logged with contents', D, 'console.error(`${PREDICTIONS_UNAVAILABLE} league=${league} reason=${reason}`);', 'console.error(`${PREDICTIONS_UNAVAILABLE} league=${league} reason=${reason} predictedBrackets/${league}_2026`);', [T_DATA]],

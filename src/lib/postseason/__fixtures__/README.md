@@ -22,6 +22,8 @@ the admin SDK hands the mapper.
 
 | `WNBA_2026.live-20261001T0017Z.json` | `postseasonBrackets/WNBA_2026` read at 2026-10-01T00:17Z. The Lynx out (lost 0-2 to the Liberty), the other three first-round series live, the semifinals and Finals still `TBD`. |
 | `MLB_2026.live-20261001T0017Z.json` | `postseasonBrackets/MLB_2026` read at the same moment. All four Wild Card series live, nothing final. |
+| `MLB_2026.live-20261001T1625Z.json` | `postseasonBrackets/MLB_2026` read at 2026-10-01T16:25Z (WEB3, read-only), the state the served pages showed that day (bracket stamp 05:10Z). Three Wild Card series final (White Sox, Yankees, Padres), Braves and Phillies tied 1-1; the three winners already written into their Division Series slots, the fourth slot `ATL/PHI`. The 20-club table in `team-pick.test.ts` is built on this and the next file. |
+| `WNBA_2026.live-20261001T1625Z.json` | `postseasonBrackets/WNBA_2026` read at the same moment (bracket stamp 04:20Z). Liberty and Dream through, Valkyries-Wings and Aces-Fever tied 1-1; semifinal A written as Dream against Liberty, semifinal B and the Finals `TBD`. |
 
 Nothing in a live capture is edited.
 

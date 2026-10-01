@@ -39,8 +39,7 @@ import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure
 import { AdSlot } from '@/components/ads/AdSlot';
 import { AD_SLOTS } from '@/lib/ads/slots';
 import { isRedesignEnabled } from '@/lib/redesign';
-import { getPlayoffsInboundOrNone, postseasonLeagueFromSlug } from '@/lib/postseason/data';
-import { clubPlayoffs } from '@/lib/postseason/inbound';
+import { getTeamPostseason } from '@/lib/postseason/data';
 import { TeamPlayoffsModule } from '@/components/playoffs/inbound/TeamPlayoffsModule';
 import { isTitleTreatmentTeam, teamMetaTitle } from '@/lib/title-treatment';
 import { getCoverageCounts } from '@/lib/get-coverage-counts';
@@ -379,13 +378,15 @@ export default async function TeamPage({
     // The postseason module, for a club in a current-season bracket. Asked
     // only for the leagues that have a playoffs route; every other team page
     // makes no read for it. Closed gate, club not in a bracket, or a failed
-    // read: null, and the template renders as it did before.
-    const club = postseasonLeagueFromSlug(team.sportSlug)
-      ? clubPlayoffs(await getPlayoffsInboundOrNone(`/${team.sportSlug}/${team.id}`), team.id)
-      : null;
+    // read: null, and the template renders as it did before. The module comes
+    // with the PromoNight Predicts line inside it for a club in a bracket.
+    // Never throws: a failed read is no module, a failed line is no line.
+    const postseason = await getTeamPostseason(team.sportSlug, team.id);
     return (
       <RedesignTeamPage
-        postseason={club ? <TeamPlayoffsModule club={club} teamId={team.id} teamName={team.name} /> : null}
+        postseason={
+          postseason ? <TeamPlayoffsModule club={postseason.club} teamId={team.id} teamName={team.name} pick={postseason.pick} /> : null
+        }
         team={team}
         coverage={coverage}
         venue={venue}

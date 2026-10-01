@@ -15,8 +15,8 @@ import { HubVenueLinks } from '@/components/hub/HubVenueLinks';
 import { HubFaq, type HubFaqItem } from '@/components/hub/HubFaq';
 import { getVenueLinksForTeams } from '@/lib/venue-hub';
 import { getPlayoffsInboundOrNone } from '@/lib/postseason/data';
-import { leagueCard } from '@/lib/postseason/inbound';
-import { LeaguePlayoffsCard } from '@/components/playoffs/inbound/LeaguePlayoffsCard';
+import { leagueCard, leagueFinalCard, leagueHeroLine } from '@/lib/postseason/inbound';
+import { LeagueFinalBracketCard, LeaguePlayoffsCard, LeaguePlayoffsHeroLine } from '@/components/playoffs/inbound/LeaguePlayoffsCard';
 
 // League hub accent (house palette, mirrors LEAGUE_HUB_REGISTRY WNBA entry).
 const ACCENT = '#c9581f';
@@ -92,7 +92,11 @@ export default async function WnbaHubPage() {
   // ItemList source for the CollectionPage JSON-LD: the current WNBA slate.
   const jsonLdGroups: AggregatorGroup[] = [{ label: 'This week across WNBA', promos: slate }];
 
-  const playoffs = leagueCard(await getPlayoffsInboundOrNone('/wnba'), 'WNBA');
+  const inbound = await getPlayoffsInboundOrNone('/wnba');
+  const playoffs = leagueCard(inbound, 'WNBA');
+  // Once the bracket is finished, and only while the Playoffs link shows.
+  const finalCard = playoffs ? null : leagueFinalCard(inbound, 'WNBA');
+  const heroLine = leagueHeroLine(inbound, 'WNBA');
   const todayPromos = (
     <HubTodayPromos
       slate={today}
@@ -119,6 +123,7 @@ export default async function WnbaHubPage() {
         subtitle="Theme nights, jersey giveaways and bobbleheads across the 15 WNBA teams, grouped by conference."
         freshness="Rechecked weekly in season and updated as clubs announce promotions."
         accent={ACCENT}
+        notice={heroLine ? <LeaguePlayoffsHeroLine line={heroLine} surface="web_wnba_hub" /> : undefined}
       >
         <HubStatBar stats={stats} leagueLabel="WNBA" />
       </HubHero>
@@ -134,9 +139,13 @@ export default async function WnbaHubPage() {
             for the ad placer, and a card of its own would move every unit
             below it. With no card, the branch below is the markup this page
             has always emitted. */}
-        {playoffs ? (
+        {playoffs || finalCard ? (
           <div data-playoffs-top className="space-y-16">
-            <LeaguePlayoffsCard card={playoffs} surface="web_wnba_hub" />
+            {playoffs ? (
+              <LeaguePlayoffsCard card={playoffs} surface="web_wnba_hub" />
+            ) : (
+              <LeagueFinalBracketCard card={finalCard!} surface="web_wnba_hub" />
+            )}
             {todayPromos}
           </div>
         ) : (

@@ -32,7 +32,7 @@ function inbound(names: readonly string[], now: Date): InboundLeague[] {
   return brackets.map((b) => {
     const view = buildLeagueView(b, clubs(), parks(), now);
     assert.ok(view);
-    return { league: b.league, href: `/playoffs/${b.league.toLowerCase()}`, view };
+    return { league: b.league, href: `/playoffs/${b.league.toLowerCase()}`, view, bracket: b };
   });
 }
 const MIXED_AT = new Date('2025-10-09T03:08:00Z');
