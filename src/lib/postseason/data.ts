@@ -260,7 +260,7 @@ export const getPredictedBracket = cache(async (league: PostseasonLeague): Promi
  * must not hold the render, or ISR keeps serving the old bracket. Overridable
  * for tests only.
  */
-function predictionsReadTimeoutMs(): number {
+export function predictionsReadTimeoutMs(): number {
   const v = Number(process.env.PREDICTIONS_READ_TIMEOUT_MS);
   return Number.isFinite(v) && v > 0 ? v : 4000;
 }

@@ -9,6 +9,7 @@ import assert from 'node:assert/strict';
 import { mapBracketDoc } from '../map';
 import {
   BACKTEST_2025,
+  buildMethodologyView,
   LOCKED_FINGERPRINTS,
   fingerprintsMatchLock,
   easternLongDate,
@@ -123,7 +124,8 @@ const BYPASSES: [string, (d: Doc) => void][] = [
   ['frozenAt after compute', (d) => (prov(d).frozenAt = '2026-10-01T00:00:00Z')],
   ['frozenAt equal to compute', (d) => (prov(d).frozenAt = d.computedAt)],
   ['frozenAt a bare date', (d) => (prov(d).frozenAt = '2026-09-25')],
-  ['frozenAt on a day that does not exist', (d) => (prov(d).frozenAt = '2026-09-31T14:24:00.732Z')],
+  // Rolls over to October 1, after the compute: the freeze order refuses it.
+  ['frozenAt on September 31 (rolls past the compute)', (d) => (prov(d).frozenAt = '2026-09-31T14:24:00.732Z')],
   // Rolls over to March 2: still before the compute, so only the round trip catches it.
   ['frozenAt on February 30', (d) => (prov(d).frozenAt = '2026-02-30T14:24:00.000Z')],
   ['frozenAt at an hour that does not exist', (d) => (prov(d).frozenAt = '2026-09-25T24:24:00.000Z')],
@@ -152,6 +154,7 @@ const BYPASSES: [string, (d: Doc) => void][] = [
   ['a round not an object', (d) => (rounds(d)[0] = 'R1-1v8' as unknown as Doc)],
   ['a key twice', (d) => (rounds(d)[1].seriesKey = 'R1-1v8')],
   ['a key blank', (d) => (r0(d).seriesKey = '  ')],
+  ['a round missing', (d) => delete r0(d).round],
   ['conference an empty string', (d) => (r0(d).conference = '')],
   ['conference a number', (d) => (r0(d).conference = 1)],
   // The pick is set to the same club, so only the same-club guard can catch it.
@@ -181,6 +184,8 @@ const BYPASSES: [string, (d: Doc) => void][] = [
   ['title odds above one', (d) => ((d.titleOdds as Doc[])[0].odds = 1.2)],
   ['title odds negative', (d) => ((d.titleOdds as Doc[])[0].odds = -0.1)],
   ['title odds as a string', (d) => ((d.titleOdds as Doc[])[0].odds = '0.37')],
+  ['title odds NaN', (d) => ((d.titleOdds as Doc[])[0].odds = NaN)],
+  ['a title-odds row that is null', (d) => ((d.titleOdds as unknown[])[0] = null)],
   ['title odds empty', (d) => (d.titleOdds = [])],
   ['a title-odds row with no club', (d) => delete (d.titleOdds as Doc[])[0].slug],
   ['a title-odds club from another league', (d) => ((d.titleOdds as Doc[])[0].slug = 'milwaukee-brewers')],
@@ -442,6 +447,16 @@ test('METHODOLOGY: dates are the Eastern days of the stored instants; MLB was fr
   assert.equal(w.lockedBeforeGame1, true);
 });
 
+test('METHODOLOGY: a bracket locked on a later Eastern day than it was computed says both days', () => {
+  const b = bracketOf(loadDoc(FIXTURE.mlbWildCard));
+  const p = mapPredicted(PREDICTED.mlb);
+  const m = buildMethodologyView({ ...p, lockedAt: '2026-10-01T05:00:00.000Z' }, b);
+  assert.equal(m.computedOn, 'September 30, 2026');
+  assert.equal(m.bracketLockedOn, 'October 1, 2026');
+  const same = buildMethodologyView(p, b);
+  assert.equal(same.bracketLockedOn, same.computedOn);
+});
+
 test('METHODOLOGY: "before Game 1" is proven from the real bracket, never assumed', () => {
   const b = bracketOf(loadDoc(FIXTURE.mlbWildCard));
   assert.equal(frozenBeforeFirstGame(b, '2026-09-29T01:05:52.350Z'), true);
@@ -496,6 +511,8 @@ test('TITLE ODDS: the top eight, highest first, as "at lock" percentages', () =>
   assert.equal(w.titleOdds.length, 8);
   assert.equal(w.titleOdds[0].name, 'Golden State Valkyries');
   assert.equal(w.titleOdds[0].oddsLabel, '37%');
+  assert.equal(w.titleOddsCaption, 'All 8 clubs, most likely champion first.');
+  assert.equal(v.titleOddsCaption, 'The 8 most likely champions of 12.');
 });
 
 // ---- The lock: golden, pins, and the hashes Matt verified ----

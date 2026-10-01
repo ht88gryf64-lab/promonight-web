@@ -363,6 +363,18 @@ test('PREDICTIONS FAIL CLOSED: an exception in assembly is caught, tagged build-
   }
 });
 
+test('PREDICTIONS READ TIMEOUT: the production bound is a few seconds, not minutes', async () => {
+  const { predictionsReadTimeoutMs } = await load();
+  delete process.env.PREDICTIONS_READ_TIMEOUT_MS;
+  const ms = predictionsReadTimeoutMs();
+  assert.ok(ms > 0 && ms <= 5000, String(ms));
+  for (const bad of ['0', '-5', 'soon', '']) {
+    process.env.PREDICTIONS_READ_TIMEOUT_MS = bad;
+    assert.equal(predictionsReadTimeoutMs(), ms, `${JSON.stringify(bad)} falls back to the bound`);
+  }
+  delete process.env.PREDICTIONS_READ_TIMEOUT_MS;
+});
+
 // Its own timeout: with the guard gone the read never settles, and the test
 // must fail, not hang.
 test('PREDICTIONS READ TIMEOUT: a read that hangs is read-failed, and the page goes on without it', { timeout: 5000 }, async () => {

@@ -34,14 +34,15 @@ const db = {
   collection: (name: string) => current.db.collection(name),
   getAll: (...args: unknown[]) => current.db.getAll(...args),
 };
-const teams: { failAfter: (() => boolean) | null } = { failAfter: null };
+const teams: { failAfter: (() => boolean) | null; dropOn: (() => string | null) | null } = { failAfter: null, dropOn: null };
 mock.module('server-only', { namedExports: {} });
 mock.module(new URL('../../../lib/firebase.ts', import.meta.url).href, { namedExports: { db } });
 mock.module(new URL('../../../lib/data.ts', import.meta.url).href, {
   namedExports: {
     getAllTeams: async () => {
       if (teams.failAfter && teams.failAfter()) throw new Error('teams read failed');
-      return capturedTeams();
+      const gone = teams.dropOn ? teams.dropOn() : null;
+      return capturedTeams().filter((t) => t.id !== gone);
     },
     getVenueForTeam: async (id: string) => {
       const name = parkNames().get(id);
@@ -66,7 +67,18 @@ const P_WNBA = () => loadDoc(PREDICTED.wnba);
 
 /** Every predictions failure the ruling names, plus the two the assembly can
  *  meet. `docs` replaces the MLB prediction; `before` sets up anything else. */
-const FAILURES: { name: string; reason: string; prediction: () => Record<string, unknown> | Error | undefined; bracket?: () => Record<string, unknown>; before?: () => void }[] = [
+const FAILURES: {
+  name: string;
+  reason: string;
+  prediction: () => Record<string, unknown> | Error | undefined;
+  bracket?: () => Record<string, unknown>;
+  before?: () => void;
+  after?: () => void;
+  /** Runs on the league page only (the hub reads its leagues in parallel). */
+  leagueOnly?: boolean;
+  /** The read never settles. */
+  hang?: boolean;
+}[] = [
   { name: 'a failed Firestore read', reason: 'read-failed', prediction: () => new Error('PERMISSION_DENIED: predictedBrackets/MLB_2026') },
   { name: 'a missing document', reason: 'missing', prediction: () => undefined },
   { name: 'a document the mapper refuses', reason: 'refused', prediction: () => ({ ...P_MLB(), target: 'scratch' }) },
@@ -101,12 +113,51 @@ const FAILURES: { name: string; reason: string; prediction: () => Record<string,
     },
   },
   {
+    name: 'a read that hangs',
+    reason: 'read-failed',
+    prediction: () => P_MLB(),
+    hang: true,
+    before: () => {
+      process.env.PREDICTIONS_READ_TIMEOUT_MS = '40';
+    },
+    after: () => {
+      delete process.env.PREDICTIONS_READ_TIMEOUT_MS;
+    },
+  },
+  {
+    name: 'PREDICTIONS_DISABLED',
+    reason: 'disabled',
+    prediction: () => P_MLB(),
+    before: () => {
+      process.env.PREDICTIONS_DISABLED = 'MLB';
+    },
+    after: () => {
+      delete process.env.PREDICTIONS_DISABLED;
+    },
+  },
+  {
+    // The team list loses a club between the bracket's read and the
+    // predictions' (the second of the page's three reads).
+    name: 'a club the team list loses',
+    reason: 'no-team-record',
+    prediction: () => P_MLB(),
+    leagueOnly: true,
+    before: () => {
+      let n = 0;
+      teams.dropOn = () => (++n === 2 ? 'milwaukee-brewers' : null);
+    },
+    after: () => {
+      teams.dropOn = null;
+    },
+  },
+  {
     name: 'an exception while building',
     reason: 'build-failed',
     prediction: () => P_MLB(),
     // The league page reads the team list three times, in order: the real
     // bracket's view, the predictions' clubs, the ticket buttons. Only the
     // second fails. (Not run on the hub, whose two leagues read in parallel.)
+    leagueOnly: true,
     before: () => {
       let n = 0;
       teams.failAfter = () => ++n === 2;
@@ -156,6 +207,13 @@ async function renderHub() {
   }
 }
 
+/** Make the MLB predictions read never settle on the current fake. */
+function hangPredictions() {
+  const fake = current.db;
+  const real = fake.getAll.bind(fake);
+  fake.getAll = (...args: unknown[]) => ((args[0] as { path: string }).path === 'predictedBrackets/MLB_2026' ? new Promise(() => {}) : real(...args)) as ReturnType<typeof real>;
+}
+
 /** Nothing of the predictions, and nothing about their failure, in a page. */
 function assertNoPredictions(html: string, where: string) {
   for (const marker of ['id="predictions"', 'data-predictions', 'data-pick', 'po-picks', 'how-the-computer-picked', 'Title odds', "Computer&#x27;s", 'The Computer', 'Fingerprints']) {
@@ -178,6 +236,7 @@ for (const f of FAILURES) {
     try {
       const bracket = f.bracket ? f.bracket() : MLB();
       current.db = fakeFirestore(docsWith(f.prediction(), bracket));
+      if (f.hang) hangPredictions();
       const { html, meta, lines } = await renderLeague('mlb');
       // It rendered: no throw, no notFound. The route's status is 200.
       assert.match(html, /<h1[^>]*>2026 MLB Playoffs<\/h1>/);
@@ -196,6 +255,7 @@ for (const f of FAILURES) {
       assert.deepEqual(w.lines, []);
     } finally {
       teams.failAfter = null;
+      f.after?.();
     }
   });
 }
@@ -231,10 +291,12 @@ test('(b) a broken prediction plus a real-bracket update: the next render serves
 // ---- (c): the hub ----
 
 test('(c) the hub stays up; the broken league loses its record line, the other keeps it', async () => {
-  for (const f of FAILURES.filter((x) => !x.before)) {
+  for (const f of FAILURES.filter((x) => !x.leagueOnly)) {
     teams.failAfter = null;
+    f.before?.();
     try {
       current.db = fakeFirestore(docsWith(f.prediction(), f.bracket ? f.bracket() : MLB()));
+      if (f.hang) hangPredictions();
       const { html, lines } = await renderHub();
       assert.equal(count(html, 'data-league-card="'), 2, `${f.name}: both league cards`);
       assert.equal(count(html, 'data-predictions-league="mlb"'), 0, `${f.name}: no MLB line`);
@@ -245,6 +307,7 @@ test('(c) the hub stays up; the broken league loses its record line, the other k
       assert.deepEqual(lines, [`[predictions-unavailable] league=MLB reason=${f.reason}`], f.name);
     } finally {
       teams.failAfter = null;
+      f.after?.();
     }
   }
   // Both broken: the card goes, with its heading. No empty shell.

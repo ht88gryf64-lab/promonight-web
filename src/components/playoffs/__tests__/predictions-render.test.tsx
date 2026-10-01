@@ -10,6 +10,9 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { homeGamesWindow } from '../../../lib/postseason/view';
 import { FIXTURE, LYNX_OUT_AT, buildWithPredictions, decidedMlb, decidedWnba, rawText, seriesKeyIn, type Built, PREDICTED } from '../../../lib/postseason/__tests__/helpers';
 import { PlayoffsLeague, type LeagueBody } from '../PlayoffsLeague';
+import { PredictionsMethodology } from '../Predictions';
+import { PredictedBracket } from '../PredictedBracket';
+import { BracketControlsProvider } from '../controls';
 
 const DECIDED_AT = new Date('2026-11-05T12:00:00Z');
 
@@ -250,9 +253,15 @@ function findHash(v: unknown, seen = new Set<unknown>()): string | null {
   return null;
 }
 
-function visit(node: ReactNode, client: Set<unknown>, hits: string[], path: string): void {
+// A client component's own props (everything but `children`) are its data:
+// a hash there is served in the RSC payload, rendered or not. Its `children`
+// are server output passed through it, so the walk continues into them, and
+// a client component reached inside them is checked the same way. The
+// methodology section, the one place a fingerprint may be, must never be
+// under a client component at all.
+function visit(node: ReactNode, client: Set<unknown>, hits: string[], path: string, inClient = false): void {
   if (Array.isArray(node)) {
-    for (const n of node) visit(n, client, hits, path);
+    for (const n of node) visit(n, client, hits, path, inClient);
     return;
   }
   if (!isValidElement(node)) return;
@@ -260,32 +269,64 @@ function visit(node: ReactNode, client: Set<unknown>, hits: string[], path: stri
   const { type, props } = el;
   if (typeof type === 'function') {
     const name = (type as { name?: string }).name ?? 'anonymous';
+    if (type === PredictionsMethodology && inClient) hits.push(`${path} > ${name} is under a client component`);
     if (client.has(type)) {
-      const hit = findHash(props);
+      const { children, ...own } = props;
+      const hit = findHash(own);
       if (hit) hits.push(`${path} > ${name} receives ${hit.slice(0, 12)}`);
+      visit(children as ReactNode, client, hits, `${path} > ${name}`, true);
       return;
     }
-    visit((type as (p: unknown) => ReactNode)(props), client, hits, `${path} > ${name}`);
+    visit((type as (p: unknown) => ReactNode)(props), client, hits, `${path} > ${name}`, inClient);
     return;
   }
-  visit(props.children as ReactNode, client, hits, `${path} > ${String(type)}`);
+  visit(props.children as ReactNode, client, hits, `${path} > ${String(type)}`, inClient);
 }
 
-test('NO CLIENT COMPONENT receives a fingerprint: the hashes reach the page only as the methodology section\'s own markup', async () => {
+test('NO CLIENT COMPONENT receives a fingerprint, at any depth, and the methodology is under none', async () => {
   const client = await clientComponents();
   assert.ok(client.size >= 4, 'the client components were found');
+  assert.ok(client.has(PredictedBracket) && client.has(BracketControlsProvider));
   for (const [name, make, now] of STATES) {
     const b = make();
     const hits: string[] = [];
     visit(page(b, now), client, hits, name);
     assert.deepEqual(hits, [], hits.join('\n'));
   }
-  // And the walker would see one, were it there.
+});
+
+test('THE WALKER would see a leak: a hash handed to the predicted bracket through the predictions section, and the methodology moved under a client', async () => {
+  const client = await clientComponents();
   const b = STATES[0][1]();
-  const leaky: Built = { ...b, predictions: { ...b.predictions, view: { ...b.predictions.view, titleOdds: [{ name: b.predicted.fingerprints.corpus, oddsLabel: '1%' }] } } };
+  const hash = b.predicted.fingerprints.corpus;
+  // A hash in a pick reaches PredictedBracket as a prop, inside
+  // PredictionsSection, inside BracketControlsProvider's children.
+  const rounds = structuredClone(b.predictions.view.rounds);
+  rounds[0].groups[0].series[0].pickName = hash;
+  const leaky: Built = { ...b, predictions: { ...b.predictions, view: { ...b.predictions.view, rounds } } };
   const hits: string[] = [];
   visit(page(leaky, LYNX_OUT_AT), client, hits, 'leaky');
-  assert.ok(hits.length > 0, 'a hash handed to the client side is caught');
+  assert.ok(hits.some((h) => h.includes('PredictedBracket receives')), hits.join('\n'));
+  // The methodology under a client component.
+  const moved: string[] = [];
+  visit(
+    <BracketControlsProvider initialRound="first_round" initialConference={null} index={[]}>
+      <PredictionsMethodology view={b.predictions.methodology} />
+    </BracketControlsProvider>,
+    client,
+    moved,
+    'moved',
+  );
+  assert.ok(moved.some((h) => h.includes('is under a client component')), moved.join('\n'));
+});
+
+test('METHODOLOGY COPY: computed and locked on one day, or on two, said as such', () => {
+  const b = STATES[1][1]();
+  const one = textOf(renderToStaticMarkup(<PredictionsMethodology view={b.predictions.methodology} />));
+  assert.ok(one.includes('The bracket was computed and locked on September 30, 2026 from those locked inputs'), one);
+  const two = textOf(renderToStaticMarkup(<PredictionsMethodology view={{ ...b.predictions.methodology, bracketLockedOn: 'October 1, 2026' }} />));
+  assert.ok(two.includes('The bracket was computed on September 30, 2026 and locked on October 1, 2026 from those locked inputs'), two);
+  assert.ok(one.includes('in the simulated postseasons where that matchup came up'));
 });
 
 test('THE METHODOLOGY COMPONENT is a server component, and so is the file that holds it', () => {

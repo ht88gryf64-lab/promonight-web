@@ -100,9 +100,19 @@ const CASES = [
   ['join accepts a missing key', P, JOIN, '    if (!real) continue;', [T_PRED]],
   ['join ignores the series length', P, JOIN, '    if (!real || real.round !== p.round || real.conference !== p.conference) return null;', [T_PRED]],
   ['join ignores the conference', P, JOIN, '    if (!real || real.round !== p.round || real.bestOf !== p.bestOf) return null;', [T_PRED]],
+  ['round unchecked', P, '  if (!seriesKey || !round || !bestOf) return null;', '  if (!seriesKey || !bestOf) return null;', [T_PRED]],
+  ['title odds NaN accepted', P, "    if (!slug || typeof odds !== 'number' || !Number.isFinite(odds) || odds < 0 || odds > 1) return null;", "    if (!slug || typeof odds !== 'number' || odds < 0 || odds > 1) return null;", [T_PRED]],
+  ['title-odds row shape unchecked', P, '    if (!isObject(o)) return null;\n    const slug = text(o.slug);', '    const slug = text(o.slug);', [T_PRED]],
+  ['read timeout default of minutes', D, '  return Number.isFinite(v) && v > 0 ? v : 4000;', '  return Number.isFinite(v) && v > 0 ? v : 400000;', [T_DATA]],
+  ['lock day taken from the compute', P, '    bracketLockedOn: easternLongDate(predicted.lockedAt),', '    bracketLockedOn: easternLongDate(predicted.computedAt),', [T_PRED]],
+  ['title-odds caption claims every club', P, '      titleOdds.length < predicted.titleOdds.length', '      false', [T_PRED]],
+  // ---- The client boundary ----
+  ['a hash handed to the predicted bracket', C, '<PredictedBracket league={league} leagueSlug={leagueSlug} season={season} rounds={view.rounds} />', "<PredictedBracket league={league} leagueSlug={leagueSlug} season={season} rounds={view.rounds} {...{ leak: 'e4bcaddb1f2acebf37ece2f2c8f32d136609bd93469a30c8e5da104a6bd17a8d' }} />", [T_RENDER]],
   // ---- Copy ----
   ['length described as the most common length', C, 'its length is how many games the pick most often took to win it.', 'its length is the matchup&apos;s most common length.', [T_ROUTES]],
   ['engine-wide unchanged claim', C, ', with the rating, simulation and bracket code unchanged since the inputs were locked.', ', with the engine code unchanged since the lock.', [T_ROUTES]],
+  ['two-day lock said as one', C, '          {view.computedOn === view.bracketLockedOn\n', '          {true\n', [T_RENDER]],
+  ['chance described over every run', C, 'in the simulated\n          postseasons where that matchup came up,', 'in those simulated\n          postseasons,', [T_RENDER]],
   ['"at lock" left undefined', C, ' Every chance and title odd on this page is as\n          it stood when the bracket was locked.', '', [T_ROUTES]],
 ];
 

@@ -452,6 +452,8 @@ export interface PredictionsView {
   rounds: PickRoundView[];
   scorecard: ScorecardView;
   titleOdds: TitleOddsRow[];
+  /** "The 8 most likely champions of 12." Says the table is not every club. */
+  titleOddsCaption: string;
 }
 
 /** The one line per league on the hub card. */
@@ -597,6 +599,10 @@ export function buildPredictionsView(
       championLine: `${championName}, ${CHAMPION_STATUS[card.champion.status]}`,
     },
     titleOdds,
+    titleOddsCaption:
+      titleOdds.length < predicted.titleOdds.length
+        ? `The ${titleOdds.length} most likely champions of ${predicted.titleOdds.length}.`
+        : `All ${titleOdds.length} clubs, most likely champion first.`,
   };
 }
 

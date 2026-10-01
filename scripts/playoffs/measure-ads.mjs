@@ -175,7 +175,7 @@ const SELECT_ALL = `(async () => {
   let rounds = 0, series = 0, conferences = 0;
   const visible = (el) => el.offsetWidth > 0 && el.offsetHeight > 0;
   const tapSeries = async () => { for (const a of [...document.querySelectorAll('.po-bracket [data-series] a[href^="#"]')].filter(visible)) { a.click(); series += 1; await wait(200); } };
-  const pills = [...document.querySelectorAll('[data-round-option]')].filter(visible);
+  const pills = [...document.querySelectorAll('.po-bracket [data-round-option]')].filter(visible);
   for (const b of pills) { b.click(); rounds += 1; await wait(200);
     for (const c of [...document.querySelectorAll('[data-conference-option]')].filter(visible)) { c.click(); conferences += 1; await wait(150); }
     await tapSeries();

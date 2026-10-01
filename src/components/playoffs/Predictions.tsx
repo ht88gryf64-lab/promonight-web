@@ -76,6 +76,7 @@ export function PredictionsSection({
         <h3 id="title-odds-heading" className="text-[18px] font-bold uppercase tracking-[0.04em] text-rd-ink" style={{ fontFamily: CONDENSED }}>
           Title odds at lock
         </h3>
+        <p className="mt-1 text-[13px] text-rd-ink-soft">{view.titleOddsCaption}</p>
         <table className="mt-2 w-full max-w-md border-collapse text-[14px]">
           <thead>
             <tr className="border-b border-rd-line text-left text-[11px] uppercase tracking-[0.1em] text-rd-ink-faint">
@@ -120,8 +121,8 @@ export function PredictionsMethodology({ view }: { view: MethodologyView }) {
       <div className="mt-3 max-w-[64ch] space-y-2.5 text-[14px] leading-relaxed text-rd-ink-soft">
         <p>
           Each club gets a rating from its regular-season results. The computer then plays out the postseason {view.simRuns} times from those
-          ratings and picks the side that won each matchup more often. A pick&apos;s chance is how often it won that matchup in those simulated
-          postseasons, and its length is how many games the pick most often took to win it.
+          ratings and picks the side that won each matchup more often. A pick&apos;s chance is how often it won that matchup in the simulated
+          postseasons where that matchup came up, and its length is how many games the pick most often took to win it.
         </p>
         <p data-locked-on>
           The inputs were locked on {view.lockedOn}
