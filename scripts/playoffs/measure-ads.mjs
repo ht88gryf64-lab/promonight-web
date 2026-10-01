@@ -51,7 +51,7 @@ async function target() {
   }
   throw new Error('Chrome did not start');
 }
-let ws, id = 0; const pending = new Map(); const events = []; const consoleLines = []; const requests = []; const responses = [];
+let ws, id = 0; const pending = new Map(); const events = []; const consoleLines = []; const requests = []; const responses = []; const requestUrls = new Map(); const blockedUrls = [];
 const send = (method, params = {}) => new Promise((res, rej) => { const i = ++id; pending.set(i, { res, rej }); ws.send(JSON.stringify({ id: i, method, params })); });
 const ev = async (expression) => {
   const r = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true });
@@ -102,6 +102,7 @@ const ADS = `(() => {
   // odds) and the methodology: no unit may sit inside either.
   const picks = document.querySelector('[data-predictions="bracket"]');
   const method = document.querySelector('[data-predictions-methodology]');
+  const hubCard = document.querySelector('[data-predictions="locked"]');
   const units = outer.map((el) => {
     const r = el.getBoundingClientRect();
     const frame = [...el.querySelectorAll('iframe')].find((f) => f.offsetWidth > 1 && f.offsetHeight > 1);
@@ -113,12 +114,14 @@ const ADS = `(() => {
       inArticle: !!(article && article.contains(el)),
       inBracket: !!(bracket && bracket.contains(el)),
       inPicks: !!((picks && picks.contains(el)) || (method && method.contains(el))),
+      inHubCard: !!(hubCard && hubCard.contains(el)),
       inPanels: !!(panels && panels.contains(el)),
       parent: el.parentElement ? el.parentElement.tagName.toLowerCase() + (el.parentElement.dataset.playoffsArticle ? '[article]' : '') : null,
     };
   });
   const a = document.querySelector('article[data-playoffs-article]') || [...document.querySelectorAll('article')].sort((x, y) => y.offsetHeight - x.offsetHeight)[0] || null;
   return {
+    hasPicks: !!picks, hasMethod: !!method, hasHubCard: !!hubCard,
     adthrive: typeof window.adthrive === 'object' && window.adthrive ? Object.keys(window.adthrive).slice(0, 30) : null,
     script: !!document.querySelector('script[src*="ads.min.js"]'),
     units,
@@ -202,7 +205,7 @@ const SELECT_ALL = `(async () => {
     for (const c of toggles) { c.click(); picksConferences += 1; await wait(150); await openVisible(); }
   }
   if (pickPills.length === 0) await openVisible();
-  const picksOpened = opened.size;
+  const picksOpened = [...document.querySelectorAll('.po-picks details')].filter((d) => d.open).length;
   const picksTotal = document.querySelectorAll('.po-picks details').length;
   await wait(1500);
   const before = window.__pnAds;
@@ -274,7 +277,8 @@ async function measure(path, width, { playoffs }) {
   const screen = width < 600 ? 844 : 900;
   check(`${label}: article taller than 1.5 viewports`, m.articleHeight > 1.5 * screen, `${m.articleHeight}px against ${Math.round(1.5 * screen)}px`);
   check(`${label}: no ad container inside the interactive bracket`, m.units.filter((u) => u.inBracket || u.inPanels).length === 0, `${m.units.filter((u) => u.inBracket || u.inPanels).length}`);
-  if (path !== '/playoffs') check(`${label}: no ad container inside the computer's bracket section or the methodology`, m.units.filter((u) => u.inPicks).length === 0, `${m.units.filter((u) => u.inPicks).length}`);
+  if (path !== '/playoffs') check(`${label}: the predictions section and the methodology are on the page, and no ad container is inside either`, m.hasPicks && m.hasMethod && m.units.filter((u) => u.inPicks).length === 0, `section ${m.hasPicks}, methodology ${m.hasMethod}, ${m.units.filter((u) => u.inPicks).length} inside`);
+  else check(`${label}: the predictions card is on the hub, and no ad container is inside it`, m.hasHubCard && m.units.filter((u) => u.inHubCard).length === 0, `card ${m.hasHubCard}, ${m.units.filter((u) => u.inHubCard).length} inside`);
   const own = m.sticksOut.filter((x) => !x.ad);
   const fromAds = m.sticksOut.filter((x) => x.ad);
   check(`${label}: no aside, and nothing of the page's own is wider than the screen`, m.asides === 0 && own.length === 0, `asides ${m.asides}, document ${m.docWidth}px${own.length ? ', ' + own.slice(0, 3).map((x) => `${x.what} to ${x.right}px`).join('; ') : ''}`);
@@ -308,7 +312,8 @@ try {
     if (msg.id && pending.has(msg.id)) { const { res, rej } = pending.get(msg.id); pending.delete(msg.id); msg.error ? rej(new Error(msg.error.message)) : res(msg.result); return; }
     if (msg.method === 'Runtime.consoleAPICalled') consoleLines.push(msg.params.args.map((a) => a.value ?? a.description ?? '').join(' '));
     else if (msg.method === 'Runtime.exceptionThrown') consoleLines.push(String(msg.params.exceptionDetails?.exception?.description || msg.params.exceptionDetails?.text || ''));
-    else if (msg.method === 'Network.requestWillBeSent') requests.push(msg.params.request.url);
+    else if (msg.method === 'Network.requestWillBeSent') { requests.push(msg.params.request.url); requestUrls.set(msg.params.requestId, msg.params.request.url); }
+    else if (msg.method === 'Network.loadingFailed' && msg.params.blockedReason) blockedUrls.push(requestUrls.get(msg.params.requestId) || '');
     else if (msg.method === 'Network.responseReceived') responses.push(msg.params.response.url);
     else if (msg.method) events.push(msg);
   };
@@ -328,10 +333,15 @@ try {
   await send('Network.setBlockedURLs', { urls: [...ANALYTICS, ...ADS_HOSTS] });
   for (const path of ['/playoffs', '/playoffs/mlb', '/playoffs/wnba']) {
     const from = responses.length;
+    const blockedFrom = blockedUrls.length;
     await go(path, 390);
     const answered = responses.slice(from).filter((u) => /adthrive|raptive|cafemedia|doubleclick|googlesyndication|amazon-adsystem|securepubads/.test(u));
-    check(`${path} @390 PRE-AD: no ad host answered`, answered.length === 0, answered.slice(0, 2).join(' ') || '0 responses from ad hosts');
-    const pre = await ev(`(() => { const a = document.querySelector('article[data-playoffs-article]'); return { height: a ? Math.round(a.getBoundingClientRect().height) : 0, ads: document.querySelectorAll('.adthrive-ad, [id^="AdThrive_"]').length, region: a ? a.getAttribute('data-ad-region') : null, pageContent: a ? a.classList.contains('page-content') : false }; })()`);
+    const blocked = blockedUrls.slice(blockedFrom).filter((u) => /adthrive/.test(u));
+    const pre = await ev(`(() => { const a = document.querySelector('article[data-playoffs-article]'); return { height: a ? Math.round(a.getBoundingClientRect().height) : 0, ads: document.querySelectorAll('.adthrive-ad, [id^="AdThrive_"], [class*="adthrive"]').length, runtime: typeof window.adthrive !== 'undefined' && !!window.adthrive && !!window.adthrive.siteAds, region: a ? a.getAttribute('data-ad-region') : null, pageContent: a ? a.classList.contains('page-content') : false }; })()`);
+    // The page asked for the ad script and Chrome refused it, no ad host
+    // answered, the ad runtime never started and no ad container exists: so
+    // the height below is the one the placer reads before it places a unit.
+    check(`${path} @390 PRE-AD: the ad script was requested and blocked; no ad host answered; no ad runtime; no ad container`, blocked.length > 0 && answered.length === 0 && !pre.runtime && pre.ads === 0, `${blocked.length} blocked ad-script requests, ${answered.length} ad-host responses, runtime ${pre.runtime}, ${pre.ads} containers`);
     check(`${path} @390 PRE-AD: article data-ad-region="content" intact and at least 1000px`, pre.region === 'content' && pre.pageContent && pre.height >= 1000, `${pre.height}px`);
   }
   await send('Network.setBlockedURLs', { urls: ANALYTICS });

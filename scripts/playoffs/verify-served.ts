@@ -574,7 +574,7 @@ async function main() {
     };
   }
 
-  function predictionsOnPage(where: string, html: string, el: string, league: League, doc: RawDoc, p: RawPred) {
+  async function predictionsOnPage(where: string, html: string, el: string, league: League, doc: RawDoc, p: RawPred) {
     const section = element(el, 'data-predictions="bracket"');
     check(`${where}: the predictions section is on the page, with its anchor`, !!section && section.includes('id="predictions"'));
     if (!section) return;
@@ -628,13 +628,13 @@ async function main() {
     // root (fingerprintPlacement in ./flight.ts).
     const dom = domOf(html);
     const domMethod = element(dom, 'data-predictions-methodology') ?? '';
-    const placement = fingerprintPlacement(html);
+    const placement = await fingerprintPlacement(html);
     const bad: string[] = [];
     for (const f of fingerprints(p)) {
       const inDom = count(dom, f);
       const inMethod = count(domMethod, f);
       const total = count(html, f);
-      const where2 = placement(f);
+      const where2 = await placement(f);
       const clean = inDom === 1 && inMethod === 1 && total === 2 && where2.ok;
       if (!clean) bad.push(`${f.slice(0, 8)} dom ${inDom} method ${inMethod} total ${total} payload ${where2.detail}`);
     }
@@ -672,13 +672,13 @@ async function main() {
     jsonLd(where, got.html, { ...want, crumbs: [`Home ${SITE}`, `Playoffs ${SITE}/playoffs`, `${league} ${SITE}${path}`], modified: changed ? changed.toISOString() : null });
     const el = article(where, got.html, 'league');
     leaks(where, got.html);
-    if (pred) predictionsOnPage(where, got.html, el, league, doc, pred);
+    if (pred) await predictionsOnPage(where, got.html, el, league, doc, pred);
     if (DISABLED.has(league)) {
       const traces = ['id="predictions"', 'data-predictions', 'data-pick', 'po-picks', 'how-the-computer-picked', 'Title odds', 'Fingerprints', "Computer's", 'Computer&#x27;s', 'The Computer'].filter((m) => got.html.includes(m));
       check(`${where}: FORCED FAILURE: no predictions section, heading, card or methodology`, traces.length === 0, traces.join(' '));
       check(`${where}: FORCED FAILURE: no hash anywhere`, !/\b[0-9a-f]{40,}\b/.test(domOf(got.html)) && !fingerprints(preds.get(league) as RawPred).some((f) => got.html.includes(f)));
       // See operatorText in ./flight.ts for where it looks and why.
-      const said = operatorText(got.html);
+      const said = await operatorText(got.html);
       check(`${where}: FORCED FAILURE: nothing operator-facing in the served HTML`, !said, said ?? '');
     }
 
@@ -874,6 +874,10 @@ async function main() {
       const anyPrint = [...preds.values()].flatMap(fingerprints).filter((f) => got.html.includes(f));
       check(`${where}: no fingerprint on the hub`, anyPrint.length === 0 && !/\b[0-9a-f]{64}\b/.test(got.html), anyPrint.map((f) => f.slice(0, 8)).join(' '));
       check(`${where}: no "publish soon" placeholder`, !/publish soon/i.test(got.html));
+      if (DISABLED.size > 0) {
+        const said = await operatorText(got.html);
+        check(`${where}: FORCED FAILURE: nothing operator-facing on the hub`, !said, said ?? '');
+      }
       const card = element(el, 'data-predictions="locked"');
       const wantLines: string[] = [];
       for (const league of LEAGUES) {

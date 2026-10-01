@@ -1,270 +1,422 @@
-// Reading the RSC payload of a served page. Used by verify-served.ts; tested
-// in src/lib/postseason/__tests__/flight.test.ts against a served page and
-// against payloads built to break each rule.
+// Reading the RSC payload of a served page, with React's own flight client.
+// Used by verify-served.ts; tested in src/lib/postseason/__tests__/
+// flight.test.ts against a page a preview served and against payloads built
+// to break each rule.
 //
-// THE PAYLOAD. The strings pushed to self.__next_f, joined, are a stream of
-// rows, "<id>:<row>". Most rows are one line of JSON. A text row is
-// "<id>:T<hex byte length>,<text>" and its text may hold raw newlines, so it
-// is consumed by its declared length, never by line. Other tagged rows
-// ("I" imports, debug and error rows) are one line, a tag and JSON. A hint
-// row (":HL[...]") has an empty id and is one line; it holds no tree.
+// WHY REACT'S CLIENT. A hand-written reader of the flight format has to
+// match React's grammar exactly (reference forms, maps, sets, binary rows,
+// lazy and path references, element shapes) or it can be shown a payload
+// that it reads one way and the browser reads another. So the payload is
+// decoded by the client the browser runs (Next's compiled
+// react-server-dom-webpack, edge build, production), and only the decoded
+// tree is judged. Every client component reference resolves to a marked
+// sentinel function, so the walk knows exactly where client components are.
 //
-// THE TREE. An element is ["$", type, key, props]. Its type is a tag name
-// (a host element), or a reference: "$L<id>" or "$<id>" to an import row
-// (a client component), or to a row whose value is "$Sreact.fragment" /
-// "$Sreact.suspense" (transparent wrappers). A string value "$<id>",
-// "$L<id>", "$@<id>" or "$F<id>" refers to row <id>, and "$<id>:a:b" to a
-// path inside it. "$$..." is a literal string starting with "$".
+// THE BYTES. Every <script> that calls self.__next_f.push must hold one
+// JSON array: [0] bootstrap and [2] form state are skipped, [1, string] is
+// UTF-8 payload, [3, base64] is binary payload, both in order. Anything else
+// fails closed.
 //
-// THE RULE. Walk the whole tree down from the root row, resolving every
-// reference where it is used. A fingerprint is in place when the payload
-// holds it exactly once, the walk meets it exactly once, and there it is the
-// whole `children` string of a host <code> element, inside the host
-// <section id="how-the-computer-picked">, with no client component anywhere
-// above it and no non-children prop on the way. Anything the reader does
-// not understand fails closed.
+// THE RULE for a fingerprint F. The payload bytes hold it exactly once; the
+// decoded tree holds exactly one host <section id="how-the-computer-picked">;
+// the walk from the root meets F exactly once; and there F is the whole
+// `children` string of a host <code> inside that section, with no client
+// component above it and no prop other than `children` on the way down from
+// the root. Anything unresolved, rejected or not understood fails closed.
+//
+// "No client component above it" is read precisely, because the app's
+// layouts wrap every page in client providers through `children`, which is
+// server output passed through and is expected. What fails: the fingerprint
+// anywhere inside a non-children prop of a client component (that is data
+// handed to the client, served whether rendered or not), any client
+// component between the methodology section and the <code>, and any prop
+// other than `children` between the section and the <code>.
 
-type Row = { kind: 'json'; value: unknown } | { kind: 'text'; value: string } | { kind: 'tagged'; tag: string; value: unknown };
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import { createRequire } from 'node:module';
 
-export interface Payload {
-  rows: Map<string, Row>;
-  /** The joined payload text, for counting. */
-  text: string;
-  /** Why the payload could not be read, or null. */
-  error: string | null;
-}
+const req = createRequire(import.meta.url);
 
-/** The payload strings, in order. Pushes of another shape (bootstrap, form
- *  state) are skipped. */
-function pushedStrings(html: string): string[] {
-  const out: string[] = [];
-  for (const m of html.matchAll(/<script\b[^>]*>self\.__next_f\.push\(([\s\S]*?)\)<\/script>/g)) {
-    try {
-      const arr = JSON.parse(m[1]) as unknown[];
-      if (arr[0] === 1 && typeof arr[1] === 'string') out.push(arr[1]);
-    } catch {
-      /* not a data push */
-    }
+type Decoded = { root: unknown; bytes: Buffer; error: string | null };
+
+const CLIENT = new Set<unknown>();
+const sentinels = new Map<string, unknown>();
+function sentinel(id: string, name: string): unknown {
+  const key = `${id}#${name}`;
+  let fn = sentinels.get(key);
+  if (!fn) {
+    fn = { [`Client(${key})`]: function () {} }[`Client(${key})`];
+    CLIENT.add(fn);
+    sentinels.set(key, fn);
   }
-  return out;
+  return fn;
+}
+function installModuleStubs() {
+  const g = globalThis as Record<string, unknown>;
+  // A module answers every export name with that export's sentinel. A
+  // default import ("" in the reference) reads `default`; a whole-module
+  // import ("*") gets the module itself, which is marked client too.
+  const modules = new Map<string, object>();
+  g.__next_require__ = g.__webpack_require__ = (id: string) => {
+    const known = modules.get(String(id));
+    if (known) return known;
+    const mod = new Proxy(
+      {},
+      {
+        get: (_t, k) => (typeof k === 'symbol' || k === 'then' ? undefined : k === '__esModule' ? true : sentinel(String(id), k)),
+        has: (_t, k) => typeof k === 'string',
+        getOwnPropertyDescriptor: (_t, k) =>
+          typeof k === 'string' ? { value: sentinel(String(id), k), configurable: true, enumerable: true, writable: false } : undefined,
+      },
+    );
+    CLIENT.add(mod);
+    modules.set(String(id), mod);
+    return mod;
+  };
+  g.__next_chunk_load__ = g.__webpack_chunk_load__ = () => Promise.resolve();
 }
 
-export function readPayload(html: string): Payload {
-  const text = pushedStrings(html).join('');
-  const buf = Buffer.from(text, 'utf-8');
-  const rows = new Map<string, Row>();
-  let i = 0;
-  const fail = (why: string): Payload => ({ rows, text, error: why });
-  while (i < buf.length) {
-    if (buf[i] === 0x0a) {
-      i++;
-      continue;
+/** The payload bytes, in push order. */
+export function payloadBytes(html: string): { bytes: Buffer; error: string | null } {
+  const parts: Buffer[] = [];
+  for (const m of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)) {
+    const body = m[1];
+    if (!body.includes('self.__next_f')) continue;
+    const call = /^\s*\(self\.__next_f\s*=\s*self\.__next_f\s*\|\|\s*\[\]\)\.push\(([\s\S]*)\)\s*;?\s*$/.exec(body) ?? /^\s*self\.__next_f\.push\(([\s\S]*)\)\s*;?\s*$/.exec(body);
+    if (!call) return { bytes: Buffer.concat(parts), error: 'a script touches self.__next_f in a shape this reader does not know' };
+    let arr: unknown;
+    try {
+      arr = JSON.parse(call[1]);
+    } catch {
+      return { bytes: Buffer.concat(parts), error: 'a push that is not JSON' };
     }
-    const colon = buf.indexOf(0x3a, i);
-    if (colon < 0) return fail(`no colon after byte ${i}`);
-    const id = buf.subarray(i, colon).toString('utf-8');
-    if (id === '') {
-      // A hint row (":HL[...]" preloads) has no id and holds no tree. One line.
-      const end = buf.indexOf(0x0a, colon);
-      if (!/^[A-Z]/.test(String.fromCharCode(buf[colon + 1]))) return fail('a row with no id that is not a hint');
-      i = end < 0 ? buf.length : end + 1;
-      continue;
-    }
-    if (!/^[0-9a-f]+$/.test(id)) return fail(`row id ${JSON.stringify(id.slice(0, 12))}`);
-    if (rows.has(id)) return fail(`row ${id} twice`);
-    i = colon + 1;
-    if (buf[i] === 0x54) {
-      // "T<hex length>,<text>"
-      const comma = buf.indexOf(0x2c, i);
-      const len = comma > 0 ? parseInt(buf.subarray(i + 1, comma).toString('utf-8'), 16) : NaN;
-      if (!Number.isFinite(len) || comma + 1 + len > buf.length) return fail(`text row ${id} length`);
-      rows.set(id, { kind: 'text', value: buf.subarray(comma + 1, comma + 1 + len).toString('utf-8') });
-      i = comma + 1 + len;
-      continue;
-    }
-    const end = buf.indexOf(0x0a, i);
-    const line = buf.subarray(i, end < 0 ? buf.length : end).toString('utf-8');
-    i = end < 0 ? buf.length : end + 1;
-    if (/^[A-Z]/.test(line)) {
-      let value: unknown = null;
+    if (!Array.isArray(arr)) return { bytes: Buffer.concat(parts), error: 'a push that is not an array' };
+    if (arr[0] === 0 || arr[0] === 2) continue;
+    if (arr[0] === 1 && typeof arr[1] === 'string') parts.push(Buffer.from(arr[1], 'utf-8'));
+    else if (arr[0] === 3 && typeof arr[1] === 'string') parts.push(Buffer.from(arr[1], 'base64'));
+    else return { bytes: Buffer.concat(parts), error: `a push of kind ${JSON.stringify(arr[0])}` };
+  }
+  return { bytes: Buffer.concat(parts), error: null };
+}
+
+export async function decodePayload(html: string): Promise<Decoded> {
+  const { bytes, error } = payloadBytes(html);
+  if (error) return { root: null, bytes, error };
+  if (bytes.length === 0) return { root: null, bytes, error: 'no payload' };
+  installModuleStubs();
+  const client = req('next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.edge.production.js') as {
+    createFromReadableStream: (s: ReadableStream<Uint8Array>, o: unknown) => Promise<unknown>;
+  };
+  const stream = new ReadableStream<Uint8Array>({
+    start(c) {
+      c.enqueue(new Uint8Array(bytes));
+      c.close();
+    },
+  });
+  try {
+    const root = await client.createFromReadableStream(stream, { serverConsumerManifest: { moduleMap: null, serverModuleMap: null, moduleLoading: null } });
+    return { root, bytes, error: null };
+  } catch (e) {
+    return { root: null, bytes, error: `decode: ${e instanceof Error ? e.message : String(e)}` };
+  }
+}
+
+const ELEMENT = Symbol.for('react.transitional.element');
+const LEGACY_ELEMENT = Symbol.for('react.element');
+const LAZY = Symbol.for('react.lazy');
+const TRANSPARENT = new Set(['react.fragment', 'react.suspense', 'react.activity', 'react.profiler', 'react.strict_mode', 'react.view_transition'].map((n) => Symbol.for(n)));
+
+/** A value, with every lazy and promise resolved. Rejection or a value that
+ *  never resolves is an error. */
+async function settle(v: unknown): Promise<{ v: unknown; error: string | null }> {
+  for (let n = 0; n < 20; n++) {
+    if (v && typeof v === 'object' && (v as { $$typeof?: unknown }).$$typeof === LAZY) {
+      const lazy = v as { _init: (p: unknown) => unknown; _payload: unknown };
       try {
-        value = JSON.parse(line.slice(1));
-      } catch {
-        value = line.slice(1);
+        v = lazy._init(lazy._payload);
+      } catch (p) {
+        if (p && typeof (p as { then?: unknown }).then === 'function') {
+          const r = await Promise.race([Promise.resolve(p).then(() => 'ok', () => 'rejected'), new Promise((res) => setTimeout(() => res('timeout'), 2000))]);
+          if (r !== 'ok') return { v: null, error: `lazy ${r}` };
+          continue;
+        }
+        return { v: null, error: `lazy threw: ${p instanceof Error ? p.message : String(p)}` };
       }
-      rows.set(id, { kind: 'tagged', tag: line[0], value });
       continue;
     }
-    try {
-      rows.set(id, { kind: 'json', value: JSON.parse(line) });
-    } catch {
-      return fail(`row ${id} is not JSON`);
+    if (v && typeof (v as { then?: unknown }).then === 'function') {
+      const r = await Promise.race([
+        Promise.resolve(v as Promise<unknown>).then((x) => ({ ok: true as const, x }), (e) => ({ ok: false as const, e })),
+        new Promise<{ ok: false; e: string }>((res) => setTimeout(() => res({ ok: false, e: 'timeout' }), 2000)),
+      ]);
+      if (!r.ok) return { v: null, error: `promise ${String((r as { e: unknown }).e)}` };
+      v = r.x;
+      continue;
     }
+    return { v, error: null };
   }
-  return { rows, text, error: null };
+  return { v: null, error: 'too many lazy layers' };
 }
 
-const ELEMENT_FIELDS: Record<string, number> = { type: 1, key: 2, props: 3 };
-const REF = /^\$(?:L|@|F)?([0-9a-f]+)((?::[^:]+)*)$/;
-
-/** What a reference string points to: undefined when it is not a reference,
- *  null when it points nowhere. */
-function deref(p: Payload, s: string): { value: unknown } | null | undefined {
-  if (!s.startsWith('$') || s.startsWith('$$')) return undefined;
-  const m = REF.exec(s);
-  if (!m) return undefined;
-  const row = p.rows.get(m[1]);
-  if (!row) return null;
-  let value: unknown = row.value;
-  for (const seg of m[2].split(':').filter(Boolean)) {
-    if (value === null || typeof value !== 'object') return null;
-    // An element is ["$", type, key, props] on the wire and {type, key,
-    // props} to the reader that resolves the path.
-    if (Array.isArray(value) && value[0] === '$' && value.length === 4 && ELEMENT_FIELDS[seg] !== undefined) value = value[ELEMENT_FIELDS[seg]];
-    else value = (value as Record<string, unknown>)[seg];
-  }
-  return { value };
-}
-
-type TypeKind = { kind: 'host'; tag: string } | { kind: 'transparent' } | { kind: 'client' };
-
-export function typeOf(p: Payload, t: unknown): TypeKind {
-  if (typeof t !== 'string') return { kind: 'client' };
-  if (!t.startsWith('$')) return { kind: 'host', tag: t };
-  if (/^\$Sreact\.(fragment|suspense)$/.test(t)) return { kind: 'transparent' };
-  const m = /^\$L?([0-9a-f]+)$/.exec(t);
-  const row = m ? p.rows.get(m[1]) : undefined;
-  if (row && row.kind === 'json' && typeof row.value === 'string' && /^\$Sreact\.(fragment|suspense)$/.test(row.value)) return { kind: 'transparent' };
-  // An import row, an unknown row, anything else: a client component, so
-  // the rule fails closed.
-  return { kind: 'client' };
+/** About the value being visited: it is the whole `children` of a host
+ *  <code>, and the prop key it was reached by, when it is a prop's value. */
+interface Direct {
+  code: boolean;
+  propKey?: string;
 }
 
 interface Ctx {
   inSection: boolean;
-  client: boolean;
-  /** The value is (inside) the `children` of this host tag, or null. */
-  childOf: string | null;
+  /** Inside a non-children prop of a client component. Sticky. */
+  clientData: boolean;
+  /** A client component between the section and here. Sticky. */
+  clientInSection: boolean;
+  /** A prop other than `children` between the section and here. Sticky. */
+  propInSection: boolean;
   depth: number;
 }
 
-export interface Occurrence {
-  ok: boolean;
-  why: string;
+export interface Walk {
+  /** Every place the needle was met. */
+  hits: { ok: boolean; why: string }[];
+  sections: number;
+  errors: string[];
+  strings: string[];
+  keys: string[];
 }
 
-/** Every place the walk from the root meets `needle`, with whether it is in place. */
-export function walkFor(p: Payload, needle: string, root = '0'): Occurrence[] {
-  const out: Occurrence[] = [];
-  const rootRow = p.rows.get(root);
-  if (!rootRow) return out;
-  const visit = (v: unknown, ctx: Ctx): void => {
-    if (ctx.depth > 400) {
-      out.push({ ok: false, why: 'too deep' });
+/** Walk the decoded tree, recording every string containing `needle`. */
+export async function walkTree(root: unknown, needle: string | null): Promise<Walk> {
+  const out: Walk = { hits: [], sections: 0, errors: [], strings: [], keys: [] };
+  let nodes = 0;
+  const record = (s: string, ctx: Ctx, direct: Direct) => {
+    if (direct.propKey !== 'className') out.strings.push(s);
+    if (!needle || !s.includes(needle)) return;
+    const ok = s === needle && direct.code && ctx.inSection && !ctx.clientData && !ctx.clientInSection && !ctx.propInSection;
+    out.hits.push({
+      ok,
+      why: ok
+        ? 'code text in the methodology'
+        : [
+            ctx.clientData && 'in data handed to a client component',
+            ctx.clientInSection && 'a client component between the section and it',
+            ctx.propInSection && 'a non-children prop between the section and it',
+            !ctx.inSection && 'outside the methodology',
+            !direct.code && 'not the whole text of a <code>',
+            s !== needle && 'not the whole string',
+          ]
+            .filter(Boolean)
+            .join('; '),
+    });
+  };
+  const visit = async (raw: unknown, ctx: Ctx, direct: Direct): Promise<void> => {
+    if (++nodes > 200000 || ctx.depth > 300) {
+      out.errors.push('tree too large or too deep');
       return;
     }
+    const s = await settle(raw);
+    if (s.error) {
+      out.errors.push(s.error);
+      return;
+    }
+    const v = s.v;
     const next = { ...ctx, depth: ctx.depth + 1 };
     if (typeof v === 'string') {
-      const r = deref(p, v);
-      if (r === null) return;
-      if (r !== undefined) {
-        visit(r.value, next);
-        return;
-      }
-      if (!v.includes(needle)) return;
-      const ok = v === needle && ctx.childOf === 'code' && ctx.inSection && !ctx.client;
-      const why = ok
-        ? 'code text in the methodology'
-        : [ctx.client && 'under a client component', !ctx.inSection && 'outside the methodology', ctx.childOf !== 'code' && `not code text (${ctx.childOf ?? 'a prop'})`, v !== needle && 'not the whole text']
-            .filter(Boolean)
-            .join('; ');
-      out.push({ ok, why });
+      record(v, ctx, direct);
       return;
     }
+    if (v === null || typeof v !== 'object') return;
+    const tag = (v as { $$typeof?: unknown }).$$typeof;
+    if (tag === ELEMENT || tag === LEGACY_ELEMENT) {
+      const el = v as { type: unknown; props: unknown };
+      const t = await settle(el.type);
+      if (t.error) {
+        out.errors.push(`element type: ${t.error}`);
+        return;
+      }
+      const type = t.v;
+      const host = typeof type === 'string';
+      const transparent = typeof type === 'symbol' && TRANSPARENT.has(type);
+      const client = !host && !transparent;
+      if (client && !CLIENT.has(type)) out.errors.push('an element type that is neither a tag, a known wrapper, nor a client reference');
+      const props = el.props && typeof el.props === 'object' ? (el.props as Record<string, unknown>) : null;
+      if (!props) {
+        out.errors.push('element props that are not an object');
+        return;
+      }
+      const isSection = host && type === 'section' && props.id === 'how-the-computer-picked';
+      if (isSection) out.sections++;
+      const inSection = ctx.inSection || isSection;
+      for (const [k, pv] of Object.entries(props)) {
+        out.keys.push(k);
+        const children = k === 'children';
+        const code = children && host && type === 'code';
+        await visit(
+          pv,
+          {
+            inSection,
+            clientData: ctx.clientData || (client && !children),
+            clientInSection: ctx.clientInSection || (inSection && client),
+            propInSection: ctx.propInSection || (inSection && !children && !isSection) || (ctx.inSection && !children),
+            depth: next.depth,
+          },
+          { code, propKey: k },
+        );
+      }
+      return;
+    }
+    // Anything else that holds values: arrays keep the context (children
+    // lists); every other container is a prop-like crossing.
     if (Array.isArray(v)) {
-      if (v[0] === '$' && v.length === 4 && (v[3] === null || typeof v[3] === 'object')) {
-        const t = typeOf(p, v[1]);
-        const props = (v[3] ?? {}) as Record<string, unknown>;
-        const isSection = t.kind === 'host' && t.tag === 'section' && props.id === 'how-the-computer-picked';
-        const inSection = ctx.inSection || isSection;
-        const client = ctx.client || t.kind === 'client';
-        for (const [k, pv] of Object.entries(props)) {
-          const childOf = k !== 'children' ? null : t.kind === 'host' ? t.tag : t.kind === 'transparent' ? ctx.childOf : null;
-          visit(pv, { inSection, client, childOf, depth: next.depth });
-        }
-        return;
-      }
-      for (const x of v) visit(x, next);
+      for (const x of v) await visit(x, next, { code: false });
       return;
     }
-    if (v && typeof v === 'object') for (const x of Object.values(v)) visit(x, { ...next, childOf: null });
+    // Inside the section, any container is a crossing that is not `children`.
+    const cross = { ...next, propInSection: next.propInSection || next.inSection };
+    if (v instanceof Map) {
+      for (const [k, x] of v) {
+        await visit(k, cross, { code: false });
+        await visit(x, cross, { code: false });
+      }
+      return;
+    }
+    if (v instanceof Set) {
+      for (const x of v) await visit(x, cross, { code: false });
+      return;
+    }
+    if (typeof FormData !== 'undefined' && v instanceof FormData) {
+      for (const [k, x] of v) {
+        out.keys.push(k);
+        await visit(x, cross, { code: false });
+      }
+      return;
+    }
+    if (typeof Blob !== 'undefined' && v instanceof Blob) {
+      await visit(await v.text(), cross, { code: false });
+      return;
+    }
+    if (v instanceof ArrayBuffer || ArrayBuffer.isView(v)) {
+      const b = v instanceof ArrayBuffer ? Buffer.from(v) : Buffer.from(v.buffer, v.byteOffset, v.byteLength);
+      await visit(b.toString('utf-8'), cross, { code: false });
+      await visit(b.toString('latin1'), cross, { code: false });
+      return;
+    }
+    if (typeof (v as { [Symbol.iterator]?: unknown })[Symbol.iterator] === 'function') {
+      try {
+        for (const x of v as Iterable<unknown>) await visit(x, cross, { code: false });
+      } catch (e) {
+        out.errors.push(`an iterable that does not iterate: ${e instanceof Error ? e.message : String(e)}`);
+      }
+      return;
+    }
+    if (typeof v === 'function') return;
+    for (const [k, x] of Object.entries(v)) {
+      out.keys.push(k);
+      await visit(x, cross, { code: false });
+    }
   };
-  visit(rootRow.value, { inSection: false, client: false, childOf: null, depth: 0 });
+  await visit(root, { inSection: false, clientData: false, clientInSection: false, propInSection: false, depth: 0 }, { code: false });
   return out;
 }
 
-/** The fingerprint rule for one served page. */
-export function fingerprintPlacement(html: string): (f: string) => { ok: boolean; detail: string } {
-  const p = readPayload(html);
-  return (f) => {
-    if (p.error) return { ok: false, detail: `payload unreadable: ${p.error}` };
-    const inText = p.text.split(f).length - 1;
-    if (inText !== 1) return { ok: false, detail: `${inText} times in the payload` };
-    const met = walkFor(p, f);
-    if (met.length !== 1) return { ok: false, detail: `met ${met.length} times from the root` };
-    return { ok: met[0].ok, detail: met[0].why };
+/** The fingerprint rule for one served page. Decodes once. */
+export async function fingerprintPlacement(html: string): Promise<(f: string) => Promise<{ ok: boolean; detail: string }>> {
+  const d = await decodePayload(html);
+  return async (f) => {
+    if (d.error) return { ok: false, detail: `payload: ${d.error}` };
+    const inBytes = d.bytes.toString('latin1').split(f).length - 1;
+    if (inBytes !== 1) return { ok: false, detail: `${inBytes} times in the payload bytes` };
+    const w = await walkTree(d.root, f);
+    if (w.errors.length) return { ok: false, detail: `walk: ${w.errors[0]}` };
+    if (w.sections !== 1) return { ok: false, detail: `${w.sections} methodology sections` };
+    if (w.hits.length !== 1) return { ok: false, detail: `met ${w.hits.length} times` };
+    return { ok: w.hits[0].ok, detail: w.hits[0].why };
   };
 }
 
 // ---- Operator text on a page whose predictions failed ----
 //
-// Nothing about a failure may reach a served page. The operator's tokens and
-// the reason categories are looked for in every byte, case-insensitively.
-// The plain words are looked for where a reader or a crawler meets words:
-// the visible text, the aria-label, title, alt and content attributes, and
-// every string in the RSC payload except class names and import rows (a
-// class such as "disabled:opacity-50" is not copy; a chunk path is not copy).
+// Nothing about a failure may reach a served page. Tokens (the tag, the
+// switch, the collection, the reason categories) are looked for
+// case-insensitively, with a hyphen, underscore or space between words, in
+// the raw HTML, the entity-decoded HTML and the decoded payload's strings
+// and keys. The plain words are looked for where a reader or a crawler
+// meets words: entity-decoded visible text (noscript included), JSON-LD,
+// every attribute but class, style, href, src, srcset and data-*, and every
+// string and key of the decoded payload except class names.
 
-const TOKENS = /predictions-unavailable|predictions_disabled|predictedbrackets|read-failed|fingerprint-mismatch|content-mismatch|no-join|no-team-record|build-failed|"reason"\s*:|\breason=/i;
-const WORDS = /\b(unavailable|disabled|error)\b/i;
+const SEP = '[-_ ]';
+const TOKENS = new RegExp(
+  [
+    `predictions${SEP}unavailable`,
+    `predictions${SEP}disabled`,
+    'predictedbrackets',
+    `read${SEP}failed`,
+    `fingerprint${SEP}mismatch`,
+    `content${SEP}mismatch`,
+    `no${SEP}join`,
+    `no${SEP}team${SEP}record`,
+    `build${SEP}failed`,
+    '\\breason\\b',
+  ].join('|'),
+  'i',
+);
+const WORDS = /\b(unavailable|disabled|errors?|failed|failure|mismatch|missing|refused)\b/i;
+
+export function decodeEntities(s: string): string {
+  return s
+    .replace(/&#x([0-9a-f]+);?/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);?/g, (_, d) => String.fromCodePoint(parseInt(d, 10)))
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&');
+}
 
 function visibleText(html: string): string {
-  return html
-    .replace(/<(script|style|noscript)\b[\s\S]*?<\/\1>/g, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\s+/g, ' ');
+  return decodeEntities(
+    html
+      .replace(/<(script|style)\b[\s\S]*?<\/\1>/g, ' ')
+      .replace(/<\/?noscript\b[^>]*>/g, ' ')
+      .replace(/<[^>]+>/g, ' '),
+  ).replace(/\s+/g, ' ');
 }
 
-function payloadStrings(p: Payload): string[] {
-  const out: string[] = [];
-  const walk = (v: unknown, key: string | null): void => {
-    if (typeof v === 'string') {
-      if (key !== 'className') out.push(v);
-      return;
-    }
-    if (Array.isArray(v)) v.forEach((x) => walk(x, null));
-    else if (v && typeof v === 'object') for (const [k, x] of Object.entries(v)) walk(x, k);
-  };
-  for (const row of p.rows.values()) {
-    if (row.kind === 'tagged') continue;
-    walk(row.value, null);
-  }
-  return out;
-}
+const SKIP_ATTR = /^(class|style|href|src|srcset|data-[\w-]+|id|for|type|rel|as|crossorigin|integrity|nonce|charset|lang|dir|xmlns(:\w+)?|viewbox|d|fill|stroke(-[\w-]+)?|width|height|sizes|media|loading|decoding|fetchpriority|tabindex|role|target|method|action|name|value)$/i;
 
 /** The first operator-facing word or token on the page, or null. */
-export function operatorText(html: string): string | null {
-  const t = TOKENS.exec(html);
-  if (t) return `token ${t[0]}`;
+export async function operatorText(html: string): Promise<string | null> {
+  const t = TOKENS.exec(html) ?? TOKENS.exec(decodeEntities(html));
+  if (t) return `token "${t[0]}" in the HTML`;
   const v = WORDS.exec(visibleText(html));
   if (v) return `visible text "${v[0]}"`;
-  for (const m of html.matchAll(/\s(aria-label|title|alt|content)="([^"]*)"/gi)) {
-    const w = WORDS.exec(m[2]);
-    if (w) return `${m[1]} attribute "${w[0]}"`;
+  for (const m of html.matchAll(/<script\b[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g)) {
+    const w = WORDS.exec(decodeEntities(m[1]));
+    if (w) return `JSON-LD "${w[0]}"`;
   }
-  const p = readPayload(html);
-  if (p.error) return `payload unreadable: ${p.error}`;
-  for (const s of payloadStrings(p)) {
+  for (const m of html.matchAll(/<[a-z][\w-]*\b([^>]*)>/gi)) {
+    for (const a of m[1].matchAll(/([^\s=/>]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) {
+      if (SKIP_ATTR.test(a[1])) continue;
+      const w = WORDS.exec(decodeEntities(a[2] ?? a[3] ?? ''));
+      if (w) return `${a[1]} attribute "${w[0]}"`;
+    }
+  }
+  const d = await decodePayload(html);
+  if (d.error) return `payload: ${d.error}`;
+  const walked = await walkTree(d.root, null);
+  if (walked.errors.length) return `payload walk: ${walked.errors[0]}`;
+  // Keys are names, not copy: "error" and "disabled" are ordinary prop
+  // names. Only the failure's own vocabulary is looked for, inside names too
+  // ("predictionsReason").
+  for (const k of walked.keys) {
+    if (TOKENS.exec(k) || /reason|unavailable|mismatch|failed|failure|refused|predictions_?disabled/i.test(k)) return `payload key "${k}"`;
+  }
+  // Class names were left out of the strings by their prop key.
+  for (const s of walked.strings) {
+    const tok = TOKENS.exec(s);
+    if (tok) return `payload token "${tok[0]}"`;
     const w = WORDS.exec(s);
     if (w) return `payload string "${s.slice(0, 60)}"`;
   }
