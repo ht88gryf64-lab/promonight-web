@@ -14,7 +14,7 @@ import { CONDENSED, InProgressBadge } from './ui';
 const SURFACE = 'web_playoffs' as const;
 const PAGE_TYPE = 'playoffs_hub';
 
-/** `predictions` is the hub's one line for the league's locked computer
+/** `predictions` is the hub's one line for the league's locked predicted
  *  bracket, or null when none was locked. Only the line: the hub carries no
  *  fingerprint and no series. */
 export type HubLeague = { state: 'ok'; league: PostseasonLeague; href: string; view: LeagueView; predictions: HubPredictionLine | null };

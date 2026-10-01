@@ -2,13 +2,13 @@ import type { MethodologyView, PredictionsView } from '@/lib/postseason/predicti
 import { PredictedBracket } from './PredictedBracket';
 import { CONDENSED, LockIcon } from './ui';
 
-// The computer's bracket on a league page, in two server components that are
+// The PromoNight Predicts bracket on a league page, in two server components that are
 // two separate children of the page's article:
 //
 //   PredictionsSection     the scorecard, the predicted bracket, title odds.
 //                          It sits in the reserved place below the real
 //                          bracket, inside the shared controls provider.
-//   PredictionsMethodology how the computer picked, with the fingerprints.
+//   PredictionsMethodology how PromoNight Predicts works, with the fingerprints.
 //                          Near the foot of the article, OUTSIDE the
 //                          provider and outside every client component.
 //

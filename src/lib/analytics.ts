@@ -1102,7 +1102,7 @@ export type PlayoffsSeriesOpenProperties = {
   opened_by: 'tap' | 'link';
 };
 
-// ── The computer's bracket on /playoffs/{league} ─────────────────────────
+// ── The PromoNight Predicts bracket on /playoffs/{league} ─────────────────────────
 //
 // Two events, both dual-emit through track(), from the predicted bracket's
 // own controls. Its pills and toggle share their state with the real

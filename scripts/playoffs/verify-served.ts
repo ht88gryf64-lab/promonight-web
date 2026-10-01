@@ -194,7 +194,7 @@ const keyIn = (text: string) => {
   return null;
 };
 
-// The locked computer bracket, as stored. Read raw; the page's mapper is not used.
+// The locked PromoNight Predicts bracket, as stored. Read raw; the page's mapper is not used.
 type RawPick = {
   seriesKey: string;
   round: string;
@@ -524,7 +524,7 @@ async function main() {
     return el;
   }
 
-  // ---- The computer's bracket, derived from the raw documents ----
+  // ---- The PromoNight Predicts bracket, derived from the raw documents ----
   //
   // The NCAA rule, written again here from the brief, not imported: a pick is
   // correct when its club won the real slot, busted when the real slot went
@@ -579,7 +579,7 @@ async function main() {
     check(`${where}: the predictions section is on the page, with its anchor`, !!section && section.includes('id="predictions"'));
     if (!section) return;
     // PROMONIGHT PREDICTS. The brand on the section and the labels, in the
-    // served DOM; and no "computer" anywhere in the served bytes, the RSC
+    // served DOM; and no "predicted" anywhere in the served bytes, the RSC
     // payload included.
     const st = textOf(section);
     check(`${where}: the section heading is "PromoNight Predicts"`, textOf(element(section, 'id="predictions-heading"') ?? '') === 'PromoNight Predicts');
@@ -627,7 +627,7 @@ async function main() {
     check(`${where}: methodology says when the bracket was computed and locked, that it is written once, and that the seed is fixed`, mt.includes(`The bracket was ${when}. The locked bracket is written once and never changed, and the simulation runs from a fixed seed, so the same inputs always give the same bracket. The rating, simulation and bracket code is unchanged since the inputs were locked.`) && !/computed once|not been recomputed/.test(mt), when);
     check(`${where}: methodology says it is a simulation, not a staff pick`, mt.includes('PromoNight Predicts is a simulation, not a staff pick.') && mt.includes('The simulation then plays out the postseason'));
     check(`${where}: methodology says what "at lock" means and why a pick can name a club already out`, mt.includes('Every chance and title odd on this page is as it stood when the bracket was locked.') && mt.includes('Postseason results are not among the inputs, so a pick can name a club that was already out by then.'));
-    check(`${where}: methodology states the length as the engine computes it`, mt.includes('its length is how many games the pick most often took to win it') && !/most common length|engine code unchanged/.test(mt));
+    check(`${where}: methodology states the length as the engine computes it`, mt.includes('its length is how many games the pick most often took to win it') && !/most common length|engine (code )?(is )?unchanged/i.test(mt));
     check(`${where}: methodology names ${p.simRuns.toLocaleString('en-US')} simulated postseasons`, mt.includes(`plays out the postseason ${p.simRuns.toLocaleString('en-US')} times`));
     check(`${where}: the backtest, and no other accuracy claim`, mt.includes(BACKTEST[league]) && (mt.match(/\b\d+ of \d+\b/g) ?? []).length === 1 && !/\b(accura\w*|correct\w*|hit rate|record)\b/i.test(mt), BACKTEST[league]);
     check(`${where}: never says the bracket was set before Game 1`, !/bracket was (locked|set|picked|computed)[^.]*before Game 1/i.test(mt));

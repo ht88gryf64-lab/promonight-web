@@ -5,18 +5,21 @@
 // let through (the first of them emitted by React 19.2 itself).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { METHODOLOGY_SECTION_ID, fingerprintPlacement, operatorText, payloadBytes } from '../../../../scripts/playoffs/flight';
 import { METHODOLOGY_ID } from '../../../components/playoffs/Predictions';
 import { PREDICTED, rawText } from './helpers';
 
 const served = rawText('served.playoffs-mlb-2c85650.html');
+const rawScript = (name: string) => readFileSync(new URL(`../../../../scripts/playoffs/${name}`, import.meta.url), 'utf-8');
 // The section id that page carried when it was served.
 const SERVED_SECTION_ID = 'how-the-computer-picked';
 const mlb = JSON.parse(rawText(PREDICTED.mlb)) as Record<string, Record<string, string>>;
 const FP = [mlb.provenance.corpusSha256, mlb.provenance.paramsSha256, mlb.provenance.descriptorSha256, mlb.provenance.slugMapSha256, mlb.reviewedSha256 as unknown as string];
 
-test('FLIGHT: the checker looks for the section id the page renders', () => {
+test('FLIGHT: the checker, and the browser script, look for the section id the page renders', () => {
   assert.equal(METHODOLOGY_SECTION_ID, METHODOLOGY_ID);
+  assert.ok(rawScript('verify-bracket.mjs').includes(`getElementById('${METHODOLOGY_ID}')`), 'verify-bracket.mjs scrolls to the live id');
 });
 
 test('FLIGHT: on the served /playoffs/mlb, every fingerprint is <code> text in the methodology, by React\'s own decoder', async () => {

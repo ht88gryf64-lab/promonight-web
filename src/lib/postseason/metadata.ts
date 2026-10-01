@@ -69,7 +69,7 @@ export function hubCopy(season: number, routeLeagues: readonly PostseasonLeague[
 
 /** A league's page. `view` is null when the body rendered "bracket not
  *  available", and then nothing is said about the bracket. `predictions` is
- *  whether the body rendered the computer's locked bracket: the head names
+ *  whether the body rendered the locked PromoNight Predicts bracket: the head names
  *  predictions only when the body shows them. */
 export function leagueCopy(
   season: number,

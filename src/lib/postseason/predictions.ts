@@ -1,4 +1,4 @@
-// The computer's bracket: the locked predictedBrackets document, mapped,
+// The PromoNight Predicts bracket: the locked predictedBrackets document, mapped,
 // scored against the real bracket, and turned into what the page says. PURE.
 //
 // THREE SHAPES, ONE DIRECTION.
@@ -618,7 +618,7 @@ function seriesOrder(id: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-/** The computer's bracket for a league, as its three readers need it: the
+/** The PromoNight Predicts bracket for a league, as its three readers need it: the
  *  client bracket and scorecard, the server-only methodology section, and
  *  the hub's one line. Built in ./data.ts; handed by the page to server
  *  components only, which pass each reader its own part. */

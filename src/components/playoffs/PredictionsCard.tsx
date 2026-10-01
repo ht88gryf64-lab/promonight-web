@@ -3,7 +3,7 @@ import type { HubPredictionLine } from '@/lib/postseason/predictions';
 import { CONDENSED, LockIcon } from './ui';
 
 // The hub's predictions card: one line per league whose postseason is being
-// played and whose computer bracket was locked, each linking to that
+// played and whose PromoNight Predicts bracket was locked, each linking to that
 // league's predictions section. It carries the champion pick and the record
 // and nothing else: no fingerprint, no date, no series.
 /** The claim, before the record. Present tense only while the predicted

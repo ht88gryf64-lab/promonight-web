@@ -484,7 +484,7 @@ test('PREDICTIONS through the real pages: the section, the scorecard, the method
   assert.ok(text.includes('its length is how many games the pick most often took to win it'));
   assert.ok(text.includes('Every chance and title odd on this page is as it stood when the bracket was locked.'));
   assert.ok(text.includes('Postseason results are not among the inputs, so a pick can name a club that was already out by then.'));
-  assert.ok(!/engine code unchanged|most common length|results come in/.test(text));
+  assert.ok(!/engine (code )?(is )?unchanged|most common length|results come in/i.test(text), 'no engine-wide unchanged claim');
   assert.ok(text.includes('the simulation called 5 of 11 series and got the champion wrong'));
   assert.ok(!/bracket was (locked|set|picked|computed)[^.]*before Game 1/i.test(text), 'never says the bracket was set before Game 1');
   const wnba = renderToStaticMarkup(await League(params('wnba')));

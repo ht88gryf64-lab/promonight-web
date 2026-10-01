@@ -6,7 +6,7 @@ import type { PickOutcome, PickRoundView, PickSeriesView, PickSideView } from '@
 import { useBracketControls } from './controls';
 import { CONDENSED } from './ui';
 
-// The computer's bracket, with its own controls.
+// The PromoNight Predicts bracket, with its own controls.
 //
 // IT NEVER MOVES. Every card is the locked pick for its slot, whatever the
 // real bracket did since. What changes is the mark on it: correct, busted or
