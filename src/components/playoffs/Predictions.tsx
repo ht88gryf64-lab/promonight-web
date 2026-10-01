@@ -65,7 +65,7 @@ export function PredictionsSection({
           </span>
         </p>
         <p data-champion-pick={scorecard.championStatus} className="rounded-[10px] border border-rd-line bg-rd-card px-4 py-3">
-          <span className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-rd-ink-faint">PromoNight&apos;s champion</span>
+          <span className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-rd-ink-faint">Predicted champion</span>
           <span className="mt-0.5 block text-[22px] font-extrabold uppercase leading-tight text-rd-ink" style={{ fontFamily: CONDENSED }}>
             {scorecard.championLine}
           </span>
@@ -130,9 +130,10 @@ export function PredictionsMethodology({ view }: { view: MethodologyView }) {
           The inputs were locked on {view.lockedOn}
           {view.lockedBeforeGame1 ? ', before Game 1' : ''}.{' '}
           {view.computedOn === view.bracketLockedOn
-            ? `The bracket was computed once from those locked inputs and locked on ${view.computedOn}`
-            : `The bracket was computed once from those locked inputs on ${view.computedOn} and locked on ${view.bracketLockedOn}`}
-          , and it has not been recomputed since; the rating, simulation and bracket code is unchanged since the inputs were locked. Every chance and title odd on this page is as
+            ? `The bracket was computed from those locked inputs and locked on ${view.computedOn}`
+            : `The bracket was computed from those locked inputs on ${view.computedOn} and locked on ${view.bracketLockedOn}`}
+          . The locked bracket is written once and never changed, and the simulation runs from a fixed seed, so the same inputs always give
+          the same bracket. The rating, simulation and bracket code is unchanged since the inputs were locked. Every chance and title odd on this page is as
           it stood when the bracket was locked. Postseason results are not among the inputs, so a pick can name a club that was already out by
           then.
         </p>

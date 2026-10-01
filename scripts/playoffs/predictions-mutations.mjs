@@ -31,6 +31,7 @@ const T_DATA = 'src/lib/postseason/__tests__/data.test.ts';
 const T_FAIL = 'src/app/playoffs/__tests__/predictions-failure.test.tsx';
 const T_RENDER = 'src/components/playoffs/__tests__/predictions-render.test.tsx';
 const T_ROUTES = 'src/app/playoffs/__tests__/routes.test.tsx';
+const T_HUB = 'src/components/playoffs/__tests__/render.test.tsx';
 
 const MAPPER_GATE = '  if (!lockedAt || !simRuns || !computedAt || Date.parse(computedAt) > Date.parse(lockedAt)) return null;';
 const CHANCE = "  if (typeof p !== 'number' || !Number.isFinite(p) || p < 0.5 || p >= 1) return null;";
@@ -125,9 +126,11 @@ const CASES = [
   ['a client component imports a value from predictions.ts', 'src/components/playoffs/PredictedBracket.tsx', "import type { PickOutcome, PickRoundView, PickSeriesView, PickSideView } from '@/lib/postseason/predictions';", "import { type PickOutcome, type PickRoundView, type PickSeriesView, type PickSideView, percent } from '@/lib/postseason/predictions';\nvoid percent;", [T_RENDER]],
   // ---- Copy ----
   ['length described as the most common length', C, 'its length is how many games the pick most often took to win it.', 'its length is the matchup&apos;s most common length.', [T_ROUTES]],
-  ['engine-wide unchanged claim', C, 'the rating, simulation and bracket code is unchanged since the inputs were locked.', 'the engine code is unchanged since the lock.', [T_ROUTES]],
+  ['engine-wide unchanged claim', C, 'The rating, simulation and bracket code is unchanged since the inputs were locked.', 'The engine code is unchanged since the lock.', [T_ROUTES]],
   ['simulation framing dropped', C, 'PromoNight Predicts is a simulation, not a staff pick. ', '', [T_ROUTES]],
-  ['never-recomputed claim dropped', C, ', and it has not been recomputed since;', ';', [T_ROUTES, T_RENDER]],
+  ['write-once and fixed-seed claim dropped', C, '. The locked bracket is written once and never changed, and the simulation runs from a fixed seed, so the same inputs always give\n          the same bracket.', '.', [T_ROUTES, T_RENDER]],
+  ['the false "computed once" claim back', C, '? `The bracket was computed from those locked inputs and locked on ${view.computedOn}`', '? `The bracket was computed once from those locked inputs and locked on ${view.computedOn}, and it has not been recomputed since`', [T_ROUTES]],
+  ['the hub claims an eliminated champion will win', 'src/components/playoffs/PredictionsCard.tsx', "  if (l.championStatus === 'out') return `PromoNight Predicts picked ${l.championName} to win it all`;\n", '', [T_HUB]],
   ['the old section heading', C, '          PromoNight Predicts\n        </h2>', "          The Computer&apos;s Bracket\n        </h2>", [T_ROUTES]],
   ['two-day lock said as one', C, '          {view.computedOn === view.bracketLockedOn\n', '          {true\n', [T_RENDER]],
   ['chance described over every run', C, 'in the simulated\n          postseasons where that matchup came up,', 'in those simulated\n          postseasons,', [T_RENDER]],

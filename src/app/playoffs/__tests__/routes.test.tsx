@@ -301,7 +301,7 @@ test('HEAD /playoffs/[league]: title, description, canonical and a complete open
   assert.equal(meta.title, '2026 MLB Playoff Bracket and Predictions');
   assert.equal(
     meta.description,
-    "The 2026 MLB postseason bracket, with a locked pick for every series from a postseason simulation, marked against the results. Current round: Wild Card Series. Game times in Eastern.",
+    "The 2026 MLB postseason bracket, with a simulation's locked pick for every series, marked against the results. Current round: Wild Card Series.",
   );
   assert.equal(((await generateMetadata(params('wnba'))) as Meta).title, '2026 WNBA Playoff Bracket and Predictions');
   // With no locked prediction the head does not promise one.
@@ -472,9 +472,15 @@ test('PREDICTIONS through the real pages: the section, the scorecard, the method
   const text = method.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
   assert.ok(text.includes('plays out the postseason 10,000 times'));
   assert.ok(text.includes('The inputs were locked on September 28, 2026 , before Game 1.') || text.includes('The inputs were locked on September 28, 2026, before Game 1.'), text);
-  assert.ok(text.includes('The bracket was computed once from those locked inputs and locked on September 30, 2026, and it has not been recomputed since; the rating, simulation and bracket code is unchanged since the inputs were locked.'), text);
+  assert.ok(text.includes('The bracket was computed from those locked inputs and locked on September 30, 2026. The locked bracket is written once and never changed, and the simulation runs from a fixed seed, so the same inputs always give the same bracket. The rating, simulation and bracket code is unchanged since the inputs were locked.'), text);
+  assert.ok(!/computed once|not been recomputed/.test(text), 'no claim that the engine ran only once');
   assert.ok(text.includes('PromoNight Predicts is a simulation, not a staff pick.'), text);
-  assert.ok(!/\b(expert|staff pick[^.]*by|our analysts|handpicked|hand-picked)\b/i.test(text.replace('not a staff pick', '')), 'no staff or expert framing');
+  // Nowhere in the section, the methodology or the hub line: no staff or expert framing.
+  const section = elementOf(mlb, 'data-predictions="bracket"').replace(/<[^>]+>/g, ' ');
+  const hubText = renderToStaticMarkup(await (await hub()).default()).replace(/<[^>]+>/g, ' ');
+  for (const t of [text.replace('not a staff pick', ''), section, hubText]) {
+    assert.ok(!/\b(experts?|staff|analysts?|editors?|handpicked|hand-picked|our (writers|team) (picks?|thinks?))\b/i.test(t), t.slice(0, 120));
+  }
   assert.ok(text.includes('its length is how many games the pick most often took to win it'));
   assert.ok(text.includes('Every chance and title odd on this page is as it stood when the bracket was locked.'));
   assert.ok(text.includes('Postseason results are not among the inputs, so a pick can name a club that was already out by then.'));

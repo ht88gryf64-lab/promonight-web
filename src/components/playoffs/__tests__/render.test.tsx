@@ -597,7 +597,7 @@ test('ARTICLE, league page, finished: the results carry the page', () => {
 });
 
 test('ARTICLE, hub: the same wrapper, with the league cards as the third child', () => {
-  const line = (league: 'MLB' | 'WNBA'): HubPredictionLine => ({ league, href: `/playoffs/${league.toLowerCase()}#predictions`, championName: 'A Club', record: '0 for 1' });
+  const line = (league: 'MLB' | 'WNBA'): HubPredictionLine => ({ league, href: `/playoffs/${league.toLowerCase()}#predictions`, championName: 'A Club', championStatus: 'alive', record: '0 for 1' });
   const html = hubHtml([ok(view(FIXTURE.mlbFields, FIELDS_AT), line('MLB')), ok(view(FIXTURE.wnbaFields, FIELDS_AT), line('WNBA'))], FIELDS_AT);
   assert.equal(count(html, '<article'), 1);
   assert.match(html, /<article class="page-content" data-ad-region="content" data-playoffs-article="hub">/);
@@ -874,6 +874,17 @@ test('HUB: finished leagues are not the offseason; nothing above their cards say
   assert.ok(text.includes('Las Vegas Aces'));
   // Only with no bracket at all is it the offseason.
   assert.equal(count(hubHtml([]), 'data-hub-state="offseason"'), 1);
+});
+
+test('HUB: the line never says an eliminated champion pick will win it all', () => {
+  const base: HubPredictionLine = { league: 'MLB', href: '/playoffs/mlb#predictions', championName: 'Milwaukee Brewers', championStatus: 'alive', record: '3 for 7' };
+  const text = (l: HubPredictionLine) => textOf(element(hubHtml([ok(view(FIXTURE.mlbFields, FIELDS_AT), l)], FIELDS_AT), 'data-predictions-league="mlb"'));
+  assert.equal(text(base), 'PromoNight Predicts: Milwaukee Brewers win it all · 3 for 7');
+  assert.equal(text({ ...base, championStatus: 'out' }), 'PromoNight Predicts picked Milwaukee Brewers to win it all · 3 for 7');
+  assert.equal(text({ ...base, championStatus: 'won' }), 'PromoNight Predicts: Milwaukee Brewers won it all · 3 for 7');
+  // Built from the data: the MLB bracket decided with the Brewers out.
+  const d = buildWithPredictions(FIXTURE.mlbWildCard, PREDICTED.mlb, LYNX_OUT_AT);
+  assert.equal(d.predictions.hub.championStatus, 'alive');
 });
 
 test('HUB: the predictions card, one line per playing league with a locked bracket, each linking to its section', () => {

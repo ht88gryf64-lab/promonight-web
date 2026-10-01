@@ -431,7 +431,7 @@ export interface ScorecardView {
   correct: number;
   decided: number;
   alive: number;
-  /** "PromoNight is 1 for 1", or the line for nothing decided yet. */
+  /** "PromoNight Predicts is 1 for 1", or the line for nothing decided yet. */
   recordLine: string;
   /** "6 picks still alive". */
   aliveLine: string;
@@ -461,6 +461,8 @@ export interface HubPredictionLine {
   league: PostseasonLeague;
   href: string;
   championName: string;
+  /** Whether the predicted champion won, is still alive, or is out. */
+  championStatus: ChampionStatus;
   /** "1 for 1", or "no series decided yet". */
   record: string;
 }
@@ -597,7 +599,7 @@ export function buildPredictionsView(
       correct: card.correct,
       decided: card.decided,
       alive: card.alive,
-      recordLine: card.decided === 0 ? 'No series decided yet' : `PromoNight is ${card.correct} for ${card.decided}`,
+      recordLine: card.decided === 0 ? 'No series decided yet' : `PromoNight Predicts is ${card.correct} for ${card.decided}`,
       aliveLine: `${card.alive} ${card.alive === 1 ? 'pick' : 'picks'} still alive`,
       championName,
       championStatus: card.champion.status,
@@ -669,6 +671,7 @@ export function assemblePredictions(
       league: predicted.league,
       href: `/playoffs/${predicted.league.toLowerCase()}#predictions`,
       championName: view.scorecard.championName,
+      championStatus: card.champion.status,
       record: recordText(card.correct, card.decided),
     },
   };

@@ -88,7 +88,7 @@ export function leagueCopy(
       title,
       canonical,
       description: predictions
-        ? `The ${season} ${league} postseason bracket, complete. ${view.phase.championName}: ${lowerFirst(view.phase.summary)}. Every series and result, and how the locked simulation picks did.`
+        ? `The ${season} ${league} postseason bracket, complete. ${view.phase.championName}: ${lowerFirst(view.phase.summary)}. Every series and result, and how the simulation's locked picks did.`
         : `The ${season} ${league} postseason bracket, complete. ${view.phase.championName}: ${lowerFirst(view.phase.summary)}. Every series and result, round by round.`,
     };
   }
@@ -96,7 +96,7 @@ export function leagueCopy(
     title,
     canonical,
     description: predictions
-      ? `The ${season} ${league} postseason bracket, with a locked pick for every series from a postseason simulation, marked against the results. Current round: ${view.phase.roundLabel}. Game times in Eastern.`
+      ? `The ${season} ${league} postseason bracket, with a simulation's locked pick for every series, marked against the results. Current round: ${view.phase.roundLabel}.`
       : `The ${season} ${league} postseason bracket. Current round: ${view.phase.roundLabel}. Every series, seed and result, with game times in Eastern and the home games coming up.`,
   };
 }
