@@ -31,6 +31,9 @@ const BYPASS = process.env.BYPASS || '';
 const SHARE = process.env.SHARE || '';
 let cookie = '';
 const OUT = process.env.OUT || '';
+// Leagues the deployment under test was built with PREDICTIONS_DISABLED for:
+// their pages must carry no trace of the predictions, and nothing about why.
+const DISABLED = new Set((process.env.EXPECT_DISABLED || '').split(',').map((s) => s.trim().toUpperCase()).filter(Boolean));
 const SITE = 'https://www.getpromonight.com';
 const SEASON = 2026;
 const LEAGUES = ['MLB', 'WNBA'] as const;
@@ -649,7 +652,7 @@ async function main() {
     const changed = instantOf(doc.lastChangedAt);
     const open = currentRound(doc);
     check(`${where}: the document has a series being played`, open !== null, open ? open.roundLabel : 'all final');
-    const pred = preds.get(league) ?? null;
+    const pred = DISABLED.has(league) ? null : preds.get(league) ?? null;
     const description = open
       ? pred
         ? `The ${SEASON} ${league} postseason bracket and the computer's locked pick for every series, marked as the results come in. Current round: ${open.roundLabel}. Game times in Eastern.`
@@ -665,6 +668,13 @@ async function main() {
     const el = article(where, got.html, 'league');
     leaks(where, got.html);
     if (pred) predictionsOnPage(where, got.html, el, league, doc, pred);
+    if (DISABLED.has(league)) {
+      const traces = ['id="predictions"', 'data-predictions', 'data-pick', 'po-picks', 'how-the-computer-picked', 'Title odds', 'Fingerprints', "Computer's", 'Computer&#x27;s', 'The Computer'].filter((m) => got.html.includes(m));
+      check(`${where}: FORCED FAILURE: no predictions section, heading, card or methodology`, traces.length === 0, traces.join(' '));
+      check(`${where}: FORCED FAILURE: no hash anywhere`, !/\b[0-9a-f]{40,}\b/.test(domOf(got.html)) && !fingerprints(preds.get(league) as RawPred).some((f) => got.html.includes(f)));
+      const said = /predictions-unavailable|unavailable|PREDICTIONS_DISABLED|predictedBrackets|\bdisabled\b/i.exec(got.html);
+      check(`${where}: FORCED FAILURE: nothing operator-facing in the served HTML`, !said, said ? said[0] : '');
+    }
 
     const text = textOf(el);
     if (changed) check(`${where}: change stamp`, text.includes(`Bracket updated ${etStamp(changed)}`), `Bracket updated ${etStamp(changed)}`);
@@ -864,6 +874,10 @@ async function main() {
         const d = at.get(league);
         const p = preds.get(league);
         if (!d || !p || !currentRound(d)) continue;
+        if (DISABLED.has(league)) {
+          check(`${where}: FORCED FAILURE: no ${league} predictions line`, !card || !card.includes(`data-predictions-league="${league.toLowerCase()}"`));
+          continue;
+        }
         const sc = score(d, p);
         const champ = clubs.get(p.champion)?.full ?? p.champion;
         const text = `Computer's champion: ${champ} · ${sc.decided === 0 ? 'no series decided yet' : `${sc.correct} for ${sc.decided}`}`;

@@ -1,0 +1,326 @@
+{
+  "league": "MLB",
+  "simSeed": 852780034,
+  "runs": 10000,
+  "seeds": [
+    {
+      "slug": "tampa-bay-rays",
+      "seed": 1,
+      "conference": "AL",
+      "rating": 1557.6243799006834
+    },
+    {
+      "slug": "cleveland-guardians",
+      "seed": 2,
+      "conference": "AL",
+      "rating": 1513.6675612318318
+    },
+    {
+      "slug": "houston-astros",
+      "seed": 3,
+      "conference": "AL",
+      "rating": 1498.9634908348621
+    },
+    {
+      "slug": "new-york-yankees",
+      "seed": 4,
+      "conference": "AL",
+      "rating": 1555.5440010961133
+    },
+    {
+      "slug": "boston-red-sox",
+      "seed": 5,
+      "conference": "AL",
+      "rating": 1541.6494139951928
+    },
+    {
+      "slug": "chicago-white-sox",
+      "seed": 6,
+      "conference": "AL",
+      "rating": 1517.960908602452
+    },
+    {
+      "slug": "milwaukee-brewers",
+      "seed": 1,
+      "conference": "NL",
+      "rating": 1601.362256049843
+    },
+    {
+      "slug": "los-angeles-dodgers",
+      "seed": 2,
+      "conference": "NL",
+      "rating": 1576.40971703008
+    },
+    {
+      "slug": "atlanta-braves",
+      "seed": 3,
+      "conference": "NL",
+      "rating": 1536.2880093831288
+    },
+    {
+      "slug": "san-diego-padres",
+      "seed": 4,
+      "conference": "NL",
+      "rating": 1555.382520530244
+    },
+    {
+      "slug": "chicago-cubs",
+      "seed": 5,
+      "conference": "NL",
+      "rating": 1552.4964975585144
+    },
+    {
+      "slug": "philadelphia-phillies",
+      "seed": 6,
+      "conference": "NL",
+      "rating": 1529.7294761211583
+    }
+  ],
+  "rounds": [
+    {
+      "round": "wild_card",
+      "roundLabel": "Wild Card Series",
+      "slot": "winner:wild_card:3v6:AL",
+      "conference": "AL",
+      "higherSeed": 3,
+      "lowerSeed": 6,
+      "higher": "houston-astros",
+      "lower": "chicago-white-sox",
+      "pick": "houston-astros",
+      "pickIsHigherSeed": true,
+      "pickProbability": 0.5001,
+      "modalSeriesLength": 2,
+      "bestOf": 3,
+      "runsSupporting": 10000,
+      "neutralSite": false
+    },
+    {
+      "round": "wild_card",
+      "roundLabel": "Wild Card Series",
+      "slot": "winner:wild_card:4v5:AL",
+      "conference": "AL",
+      "higherSeed": 4,
+      "lowerSeed": 5,
+      "higher": "new-york-yankees",
+      "lower": "boston-red-sox",
+      "pick": "new-york-yankees",
+      "pickIsHigherSeed": true,
+      "pickProbability": 0.5814,
+      "modalSeriesLength": 2,
+      "bestOf": 3,
+      "runsSupporting": 10000,
+      "neutralSite": false
+    },
+    {
+      "round": "wild_card",
+      "roundLabel": "Wild Card Series",
+      "slot": "winner:wild_card:3v6:NL",
+      "conference": "NL",
+      "higherSeed": 3,
+      "lowerSeed": 6,
+      "higher": "atlanta-braves",
+      "lower": "philadelphia-phillies",
+      "pick": "atlanta-braves",
+      "pickIsHigherSeed": true,
+      "pickProbability": 0.5617,
+      "modalSeriesLength": 2,
+      "bestOf": 3,
+      "runsSupporting": 10000,
+      "neutralSite": false
+    },
+    {
+      "round": "wild_card",
+      "roundLabel": "Wild Card Series",
+      "slot": "winner:wild_card:4v5:NL",
+      "conference": "NL",
+      "higherSeed": 4,
+      "lowerSeed": 5,
+      "higher": "san-diego-padres",
+      "lower": "chicago-cubs",
+      "pick": "san-diego-padres",
+      "pickIsHigherSeed": true,
+      "pickProbability": 0.5561,
+      "modalSeriesLength": 2,
+      "bestOf": 3,
+      "runsSupporting": 10000,
+      "neutralSite": false
+    },
+    {
+      "round": "division_series",
+      "roundLabel": "Division Series",
+      "slot": "winner:division_series:1v4v5:AL",
+      "conference": "AL",
+      "higherSeed": 1,
+      "lowerSeed": 4,
+      "higher": "tampa-bay-rays",
+      "lower": "new-york-yankees",
+      "pick": "tampa-bay-rays",
+      "pickIsHigherSeed": true,
+      "pickProbability": 0.5153078775369797,
+      "modalSeriesLength": 5,
+      "bestOf": 5,
+      "runsSupporting": 5814,
+      "neutralSite": false
+    },
+    {
+      "round": "division_series",
+      "roundLabel": "Division Series",
+      "slot": "winner:division_series:2v3v6:AL",
+      "conference": "AL",
+      "higherSeed": 2,
+      "lowerSeed": 3,
+      "higher": "cleveland-guardians",
+      "lower": "houston-astros",
+      "pick": "cleveland-guardians",
+      "pickIsHigherSeed": true,
+      "pickProbability": 0.5422915416916617,
+      "modalSeriesLength": 5,
+      "bestOf": 5,
+      "runsSupporting": 5001,
+      "neutralSite": false
+    },
+    {
+      "round": "division_series",
+      "roundLabel": "Division Series",
+      "slot": "winner:division_series:1v4v5:NL",
+      "conference": "NL",
+      "higherSeed": 1,
+      "lowerSeed": 4,
+      "higher": "milwaukee-brewers",
+      "lower": "san-diego-padres",
+      "pick": "milwaukee-brewers",
+      "pickIsHigherSeed": true,
+      "pickProbability": 0.628304261823413,
+      "modalSeriesLength": 4,
+      "bestOf": 5,
+      "runsSupporting": 5561,
+      "neutralSite": false
+    },
+    {
+      "round": "division_series",
+      "roundLabel": "Division Series",
+      "slot": "winner:division_series:2v3v6:NL",
+      "conference": "NL",
+      "higherSeed": 2,
+      "lowerSeed": 3,
+      "higher": "los-angeles-dodgers",
+      "lower": "atlanta-braves",
+      "pick": "los-angeles-dodgers",
+      "pickIsHigherSeed": true,
+      "pickProbability": 0.6072636638775147,
+      "modalSeriesLength": 4,
+      "bestOf": 5,
+      "runsSupporting": 5617,
+      "neutralSite": false
+    },
+    {
+      "round": "championship_series",
+      "roundLabel": "Championship Series",
+      "slot": "winner:championship_series:AL",
+      "conference": "AL",
+      "higherSeed": 1,
+      "lowerSeed": 2,
+      "higher": "tampa-bay-rays",
+      "lower": "cleveland-guardians",
+      "pick": "tampa-bay-rays",
+      "pickIsHigherSeed": true,
+      "pickProbability": 0.6420597767374865,
+      "modalSeriesLength": 6,
+      "bestOf": 7,
+      "runsSupporting": 2777,
+      "neutralSite": false
+    },
+    {
+      "round": "championship_series",
+      "roundLabel": "Championship Series",
+      "slot": "winner:championship_series:NL",
+      "conference": "NL",
+      "higherSeed": 1,
+      "lowerSeed": 2,
+      "higher": "milwaukee-brewers",
+      "lower": "los-angeles-dodgers",
+      "pick": "milwaukee-brewers",
+      "pickIsHigherSeed": true,
+      "pickProbability": 0.581509142415658,
+      "modalSeriesLength": 6,
+      "bestOf": 7,
+      "runsSupporting": 3883,
+      "neutralSite": false
+    },
+    {
+      "round": "world_series",
+      "roundLabel": "World Series",
+      "slot": "winner:world_series",
+      "conference": null,
+      "higherSeed": 1,
+      "lowerSeed": 1,
+      "higher": "milwaukee-brewers",
+      "lower": "tampa-bay-rays",
+      "pick": "milwaukee-brewers",
+      "pickIsHigherSeed": true,
+      "pickProbability": 0.6493967352732435,
+      "modalSeriesLength": 6,
+      "bestOf": 7,
+      "runsSupporting": 1409,
+      "neutralSite": false
+    }
+  ],
+  "titleOdds": [
+    {
+      "slug": "milwaukee-brewers",
+      "odds": 0.2782
+    },
+    {
+      "slug": "los-angeles-dodgers",
+      "odds": 0.1881
+    },
+    {
+      "slug": "tampa-bay-rays",
+      "odds": 0.1488
+    },
+    {
+      "slug": "new-york-yankees",
+      "odds": 0.0795
+    },
+    {
+      "slug": "cleveland-guardians",
+      "odds": 0.0549
+    },
+    {
+      "slug": "san-diego-padres",
+      "odds": 0.0501
+    },
+    {
+      "slug": "chicago-cubs",
+      "odds": 0.0436
+    },
+    {
+      "slug": "boston-red-sox",
+      "odds": 0.043
+    },
+    {
+      "slug": "atlanta-braves",
+      "odds": 0.038
+    },
+    {
+      "slug": "chicago-white-sox",
+      "odds": 0.0306
+    },
+    {
+      "slug": "philadelphia-phillies",
+      "odds": 0.0264
+    },
+    {
+      "slug": "houston-astros",
+      "odds": 0.0188
+    }
+  ],
+  "champion": "milwaukee-brewers",
+  "flags": [],
+  "checks": [
+    "no-certain-pick",
+    "sufficient-support",
+    "leader-odds-ceiling",
+    "seed-reproducible"
+  ]
+}

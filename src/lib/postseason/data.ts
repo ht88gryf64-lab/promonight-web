@@ -7,7 +7,14 @@ import { getTeamVenueHubMap } from '../venue-hub';
 import { mapBracketDoc } from './map';
 import { playoffsLinkState, type PlayoffsLinkState } from './gate';
 import { buildLeagueView, clubSlugs, easternYmd, hostSlugs, seriesIds, type ClubInfo, type LeagueView, type ParkInfo } from './view';
-import { assemblePredictions, mapPredictedDoc, predictionSlugs, type LeaguePredictions, type PredictedBracket } from './predictions';
+import {
+  assemblePredictions,
+  fingerprintsMatchLock,
+  mapPredictedDoc,
+  predictionSlugs,
+  type LeaguePredictions,
+  type PredictedBracket,
+} from './predictions';
 
 export type { LeaguePredictions } from './predictions';
 import { readPostseasonPromos } from './promos';
@@ -88,8 +95,9 @@ export const getLeaguePageData = cache(async (league: PostseasonLeague): Promise
   if (read.state !== 'ok') return { state: read.state, league };
   const view = await buildViewFor(read.bracket, new Date(), { withPromos: true });
   if (!view) throw new Error(`[postseason] ${docId(league)} names a club with no team record`);
-  const predicted = await getPredictedBracket(league);
-  const predictions = predicted ? await buildPredictions(read.bracket, predicted, view) : null;
+  // The predictions never cost the page: any failure hides the section and
+  // logs one line. The bracket above has already been read and built.
+  const predictions = await loadPredictions(league, read.bracket, view);
   return { state: 'ok', league, view, predictions };
 });
 
@@ -182,36 +190,94 @@ const PREDICTED_FIELDS = [
   'provenance.slugMapSha256',
 ];
 
+/** Why a league page shows no predictions. A category, never a message:
+ *  the log line carries no document contents and no ids. */
+export type PredictionsUnavailableReason =
+  | 'read-failed'
+  | 'missing'
+  | 'refused'
+  | 'fingerprint-mismatch'
+  | 'no-join'
+  | 'no-team-record'
+  | 'build-failed'
+  | 'disabled';
+
 /**
- * The computer's locked bracket for a league, read fresh, or null when none
- * was locked.
+ * The leagues whose predictions are switched off by the environment:
+ * PREDICTIONS_DISABLED="MLB,WNBA". The same path as every failure, so it is
+ * how a deployment proves the failure path (G2 preview) and how an operator
+ * hides a league's predictions without a code change. Read per call, never
+ * at import, so a test can set it.
+ */
+function predictionsDisabled(league: PostseasonLeague): boolean {
+  return (process.env.PREDICTIONS_DISABLED ?? '')
+    .split(',')
+    .map((s) => s.trim().toUpperCase())
+    .includes(league);
+}
+
+/** The one stable tag for every predictions failure. */
+export const PREDICTIONS_UNAVAILABLE = '[predictions-unavailable]';
+
+export type PredictedRead = { state: 'ok'; predicted: PredictedBracket } | { state: 'unavailable'; reason: PredictionsUnavailableReason };
+
+/**
+ * The computer's locked bracket for a league, read fresh.
  *
  * Uncached like the real bracket, and for the same reason: the page that
  * shows it is revalidated when the real bracket changes, and the picks are
  * scored against that change. React cache() shares the read between the
  * metadata and the body of one render.
  *
- * THROWS when the read fails or the document is not in a shape the web
- * reads: the page states facts from it, so a render that cannot read it
- * produces no page and the last good one stands.
+ * NEVER THROWS. Unlike the real bracket, whose failure keeps the last good
+ * page, a predictions failure must not freeze the page: the real bracket
+ * goes on updating and only the predictions section drops out. A failed
+ * read, no document, a document the mapper refuses and a fingerprint that
+ * is not the one locked are all "unavailable", each with its category.
  */
-export const getPredictedBracket = cache(async (league: PostseasonLeague): Promise<PredictedBracket | null> => {
-  const ref = db.collection(PREDICTED).doc(docId(league));
-  const [snap] = await db.getAll(ref, { fieldMask: PREDICTED_FIELDS });
-  if (!snap.exists) return null;
-  const predicted = mapPredictedDoc(snap.data(), { league, season: POSTSEASON_SEASON });
-  if (!predicted) throw new Error(`[postseason] ${PREDICTED}/${docId(league)} is not in a shape the web reads`);
-  return predicted;
+export const getPredictedBracket = cache(async (league: PostseasonLeague): Promise<PredictedRead> => {
+  let data: unknown;
+  try {
+    const ref = db.collection(PREDICTED).doc(docId(league));
+    const [snap] = await db.getAll(ref, { fieldMask: PREDICTED_FIELDS });
+    if (!snap.exists) return { state: 'unavailable', reason: 'missing' };
+    data = snap.data();
+  } catch {
+    return { state: 'unavailable', reason: 'read-failed' };
+  }
+  const predicted = mapPredictedDoc(data, { league, season: POSTSEASON_SEASON });
+  if (!predicted) return { state: 'unavailable', reason: 'refused' };
+  if (!fingerprintsMatchLock(predicted)) return { state: 'unavailable', reason: 'fingerprint-mismatch' };
+  return { state: 'ok', predicted };
 });
 
-/** The predictions against the real bracket. Throws when the two do not
- *  describe the same bracket or a club in the prediction has no team record. */
-async function buildPredictions(bracket: Bracket, predicted: PredictedBracket, view: LeagueView): Promise<LeaguePredictions> {
-  const clubs = await clubsFor(predictionSlugs(bracket, predicted));
-  const rounds = view.rounds.map((r) => ({ key: r.key, label: r.label, shortLabel: r.shortLabel }));
-  const out = assemblePredictions(bracket, predicted, clubs, seriesIds(bracket), rounds);
-  if (out instanceof Error) throw out;
-  return out;
+/**
+ * The page's predictions, or null. Every failure, the read's and the
+ * assembly's, ends here as one log line with the tag, the league and the
+ * reason category, and a null that hides the section and the hub's record
+ * line. Nothing about the failure reaches the page.
+ */
+class DisabledSignal extends Error {}
+
+async function loadPredictions(league: PostseasonLeague, bracket: Bracket, view: LeagueView): Promise<LeaguePredictions | null> {
+  let reason: PredictionsUnavailableReason;
+  try {
+    if (predictionsDisabled(league)) throw new DisabledSignal();
+    const read = await getPredictedBracket(league);
+    if (read.state === 'ok') {
+      const clubs = await clubsFor(predictionSlugs(bracket, read.predicted));
+      const rounds = view.rounds.map((r) => ({ key: r.key, label: r.label, shortLabel: r.shortLabel }));
+      const built = assemblePredictions(bracket, read.predicted, clubs, seriesIds(bracket), rounds);
+      if (!('unavailable' in built)) return built;
+      reason = built.unavailable;
+    } else {
+      reason = read.reason;
+    }
+  } catch (e) {
+    reason = e instanceof DisabledSignal ? 'disabled' : 'build-failed';
+  }
+  console.error(`${PREDICTIONS_UNAVAILABLE} league=${league} reason=${reason}`);
+  return null;
 }
 
 /**

@@ -9,6 +9,8 @@ import assert from 'node:assert/strict';
 import { mapBracketDoc } from '../map';
 import {
   BACKTEST_2025,
+  LOCKED_FINGERPRINTS,
+  fingerprintsMatchLock,
   easternLongDate,
   frozenBeforeFirstGame,
   mapPredictedDoc,
@@ -96,39 +98,97 @@ test('MAPPER: a whitelist. Operator fields, paths, blobs, run ids and every othe
   }
 });
 
-function refuses(name: string, edit: (d: Doc) => void, why: string) {
-  const d = loadDoc(name);
-  edit(d);
-  assert.equal(mapPredictedDoc(d, { league: d.league as 'MLB' | 'WNBA', season: 2026 }), null, why);
-}
 const rounds = (d: Doc) => d.rounds as Doc[];
 const prov = (d: Doc) => d.provenance as Doc;
 
-test('MAPPER: refuses what the page cannot state as fact', () => {
-  const W = PREDICTED.wnba;
-  assert.equal(mapPredictedDoc(loadDoc(W), { league: 'MLB', season: 2026 }), null, 'another league');
-  assert.equal(mapPredictedDoc(loadDoc(W), { league: 'WNBA', season: 2027 }), null, 'another season');
-  refuses(W, (d) => (d.target = 'scratch'), 'not a lock');
-  refuses(W, (d) => delete d.lockedAt, 'never locked');
-  refuses(W, (d) => ((prov(d).coreFiles as Doc[])[1].identical = false), 'core file changed: the page says the code did not');
-  refuses(W, (d) => ((prov(d).coreFiles as Doc[])[0].blobAtCompute = '0'.repeat(40)), 'core blobs differ');
-  refuses(W, (d) => (prov(d).coreFiles = []), 'no core files to check');
-  refuses(W, (d) => delete prov(d).engineCommitAtFreeze, 'no freeze commit');
-  refuses(W, (d) => (prov(d).corpusSha256 = 'E4BC'), 'a fingerprint that is not a sha256');
-  refuses(W, (d) => delete d.reviewedSha256, 'no reviewed sha256');
-  refuses(W, (d) => (prov(d).frozenAt = '2026-10-01T00:00:00Z'), 'frozen after it was computed');
-  refuses(W, (d) => (prov(d).frozenAt = '2026-09-25'), 'a bare date is not an instant');
-  refuses(W, (d) => (rounds(d)[0].pick = 'dallas-wings'), 'a pick outside its matchup');
-  refuses(W, (d) => (rounds(d)[0].pickProbability = 0.49), 'a pick the simulations favoured less');
-  refuses(W, (d) => (rounds(d)[0].pickProbability = 1), 'a certain pick');
-  refuses(W, (d) => (rounds(d)[0].modalSeriesLength = 1), 'a length no series of three can end in');
-  refuses(W, (d) => (rounds(d)[6].modalSeriesLength = 8), 'longer than the series');
-  refuses(W, (d) => delete rounds(d)[0].coinFlip, 'coin flip unstated');
-  refuses(W, (d) => (rounds(d)[1].seriesKey = 'R1-1v8'), 'a key twice');
-  refuses(W, (d) => (rounds(d)[0].higher = rounds(d)[0].lower), 'a club against itself');
-  refuses(W, (d) => (d.champion = 'minnesota-lynx'), 'a champion that is not the last pick');
-  refuses(W, (d) => ((d.titleOdds as Doc[])[0].odds = 1.2), 'odds above one');
-  refuses(W, (d) => (d.simRuns = 0), 'no simulations');
+// THE BYPASS TABLE. Each row is an edit to a stored document that must be
+// refused. Most rows are an attempt to slip a bad value past a guard by
+// changing its type or shape rather than its value: a guard that checks the
+// value and not the type is a guard a string walks through.
+const r0 = (d: Doc) => rounds(d)[0];
+const BYPASSES: [string, (d: Doc) => void][] = [
+  ['not a lock', (d) => (d.target = 'scratch')],
+  ['target missing', (d) => delete d.target],
+  ['never locked', (d) => delete d.lockedAt],
+  ['lockedAt a plain object', (d) => (d.lockedAt = { seconds: 1 })],
+  ['lockedAt a string', (d) => (d.lockedAt = '2026-09-30T21:22:10.409Z')],
+  ['league in lower case', (d) => (d.league = 'wnba')],
+  ['season as a string', (d) => (d.season = '2026')],
+  ['simRuns zero', (d) => (d.simRuns = 0)],
+  ['simRuns a string', (d) => (d.simRuns = '10000')],
+  ['simRuns fractional', (d) => (d.simRuns = 10000.5)],
+  ['computedAt with no zone', (d) => (d.computedAt = '2026-09-30T21:17:30.014')],
+  ['computedAt not a date', (d) => (d.computedAt = '2026-02-31T25:00:00Z')],
+  ['frozenAt after compute', (d) => (prov(d).frozenAt = '2026-10-01T00:00:00Z')],
+  ['frozenAt equal to compute', (d) => (prov(d).frozenAt = d.computedAt)],
+  ['frozenAt a bare date', (d) => (prov(d).frozenAt = '2026-09-25')],
+  ['frozenAt a Timestamp-like object', (d) => (prov(d).frozenAt = { toDate: () => new Date('2026-09-25T14:24:00Z') })],
+  ['provenance missing', (d) => delete d.provenance],
+  ['no freeze commit', (d) => delete prov(d).engineCommitAtFreeze],
+  ['core file changed', (d) => ((prov(d).coreFiles as Doc[])[1].identical = false)],
+  ['core identical as the string "true"', (d) => ((prov(d).coreFiles as Doc[])[1].identical = 'true')],
+  ['core blobs differ while identical says true', (d) => ((prov(d).coreFiles as Doc[])[0].blobAtCompute = '0'.repeat(40))],
+  ['core blob missing on both sides', (d) => { const f = (prov(d).coreFiles as Doc[])[2]; delete f.blobAtFreeze; delete f.blobAtCompute; }],
+  ['no core files', (d) => (prov(d).coreFiles = [])],
+  ['core files not a list', (d) => (prov(d).coreFiles = { 0: { identical: true } })],
+  ['a fingerprint in upper case', (d) => (prov(d).corpusSha256 = (prov(d).corpusSha256 as string).toUpperCase())],
+  ['a fingerprint one short', (d) => (prov(d).paramsSha256 = (prov(d).paramsSha256 as string).slice(1))],
+  ['a fingerprint with a prefix', (d) => (prov(d).descriptorSha256 = `sha256:${prov(d).descriptorSha256 as string}`)],
+  ['a fingerprint missing', (d) => delete prov(d).slugMapSha256],
+  ['no reviewed sha256', (d) => delete d.reviewedSha256],
+  ['rounds empty', (d) => (d.rounds = [])],
+  ['rounds not a list', (d) => (d.rounds = { 0: r0(d) })],
+  ['a round not an object', (d) => (rounds(d)[0] = 'R1-1v8' as unknown as Doc)],
+  ['a key twice', (d) => (rounds(d)[1].seriesKey = 'R1-1v8')],
+  ['a key blank', (d) => (r0(d).seriesKey = '  ')],
+  ['conference an empty string', (d) => (r0(d).conference = '')],
+  ['conference a number', (d) => (r0(d).conference = 1)],
+  // The pick is set to the same club, so only the same-club guard can catch it.
+  ['a club against itself', (d) => { r0(d).higher = r0(d).lower; r0(d).pick = r0(d).lower; }],
+  ['a seed of zero', (d) => (r0(d).higherSeed = 0)],
+  ['a fractional seed', (d) => (r0(d).lowerSeed = 7.5)],
+  ['a seed as a string', (d) => (r0(d).higherSeed = '1')],
+  ['a pick outside its matchup', (d) => (r0(d).pick = 'dallas-wings')],
+  ['a pick by side, not slug', (d) => (r0(d).pick = 'higher')],
+  ['chance under even', (d) => (r0(d).pickProbability = 0.49)],
+  ['a certain pick', (d) => (r0(d).pickProbability = 1)],
+  ['chance as a string', (d) => (r0(d).pickProbability = '0.7774')],
+  ['chance NaN', (d) => (r0(d).pickProbability = NaN)],
+  ['chance a percentage', (d) => (r0(d).pickProbability = 77.74)],
+  ['a length too short for the series', (d) => (r0(d).modalSeriesLength = 1)],
+  ['a length longer than the series', (d) => (rounds(d)[6].modalSeriesLength = 8)],
+  ['a fractional length', (d) => (r0(d).modalSeriesLength = 2.5)],
+  ['bestOf zero', (d) => (r0(d).bestOf = 0)],
+  ['coin flip unstated', (d) => delete r0(d).coinFlip],
+  ['coin flip as a string', (d) => (r0(d).coinFlip = 'false')],
+  ['a champion that is not the last pick', (d) => (d.champion = 'minnesota-lynx')],
+  ['no champion', (d) => delete d.champion],
+  ['two series in the last round', (d) => (rounds(d)[5].round = 'finals')],
+  ['title odds above one', (d) => ((d.titleOdds as Doc[])[0].odds = 1.2)],
+  ['title odds negative', (d) => ((d.titleOdds as Doc[])[0].odds = -0.1)],
+  ['title odds as a string', (d) => ((d.titleOdds as Doc[])[0].odds = '0.37')],
+  ['title odds empty', (d) => (d.titleOdds = [])],
+  ['a title-odds row with no club', (d) => delete (d.titleOdds as Doc[])[0].slug],
+];
+
+for (const [why, edit] of BYPASSES) {
+  test(`MAPPER BYPASS: ${why} is refused`, () => {
+    const d = loadDoc(PREDICTED.wnba);
+    edit(d);
+    assert.equal(mapPredictedDoc(d, { league: 'WNBA', season: 2026 }), null);
+  });
+}
+
+test('MAPPER BYPASS: the table is not vacuous; the untouched document maps, and so does each harmless edit', () => {
+  assert.ok(mapPredictedDoc(loadDoc(PREDICTED.wnba), { league: 'WNBA', season: 2026 }));
+  // Fields the page does not read may change without a refusal.
+  for (const edit of [(d: Doc) => (d.computedBy = 'x'), (d: Doc) => (d.info = ['anything']), (d: Doc) => (r0(d).runsSupporting = 1)]) {
+    const d = loadDoc(PREDICTED.wnba);
+    edit(d);
+    assert.ok(mapPredictedDoc(d, { league: 'WNBA', season: 2026 }));
+  }
+  assert.equal(mapPredictedDoc(loadDoc(PREDICTED.wnba), { league: 'MLB', season: 2026 }), null, 'another league');
+  assert.equal(mapPredictedDoc(loadDoc(PREDICTED.wnba), { league: 'WNBA', season: 2027 }), null, 'another season');
 });
 
 // ---- Scoring: the live WNBA bracket with the Lynx out ----
@@ -283,6 +343,17 @@ test('SCORING: the Rays pick for the AL pennant is busted when the Rays go out, 
   assert.equal(after.scorecard.decided, 3);
 });
 
+test('SCORING: the champion pick knocked out before the final is decided reads eliminated, while the final is still to play', () => {
+  const d = loadDoc(FIXTURE.mlbWildCard);
+  decide(d, 'NL-WC-B', { winner: 'san-diego-padres' });
+  decide(d, 'NL-DS-A', { winner: 'san-diego-padres' });
+  const v = buildWithPredictions(d, PREDICTED.mlb, LYNX_OUT_AT).predictions.view;
+  assert.equal(v.scorecard.championStatus, 'out');
+  assert.equal(v.scorecard.championLine, 'Milwaukee Brewers, eliminated');
+  // Its World Series pick is busted now, and not yet counted.
+  assert.deepEqual(state(pickOf(v, 'world_series-1')), { outcome: 'busted', decided: false, dimmed: true });
+});
+
 test('SCORECARD ARITHMETIC: in every state, correct <= decided, and decided + alive + busted-early = every series', () => {
   const states: [string, Doc | string, string, Date][] = [
     ['wnba lynx out', FIXTURE.wnbaLynxOut, PREDICTED.wnba, LYNX_OUT_AT],
@@ -405,4 +476,68 @@ test('TITLE ODDS: the top eight, highest first, as "at lock" percentages', () =>
   assert.equal(w.titleOdds.length, 8);
   assert.equal(w.titleOdds[0].name, 'Golden State Valkyries');
   assert.equal(w.titleOdds[0].oddsLabel, '37%');
+});
+
+// ---- The lock: golden, pins, and the hashes Matt verified ----
+//
+// predictions/golden/reference-{league}-2026.json and predictions/frozen/
+// pins.json are copied byte for byte from promo-pipeline main 67aab9f. The
+// golden files hash to the sha256 the pipeline's own golden test pins.
+
+const GOLDEN_SHA256 = {
+  WNBA: '1b132e45a659b8afc15b48b2ae682405cb2597aa14c5e71f99446bb59c870bcb',
+  MLB: '80aaf73a61783018b7776deeebd7dc24a32bc924f2de9491c0f2c49a1482c72d',
+};
+// Verified by Matt with shasum before each lock (COORDINATION.md, PREDICT
+// G4 lines, 2026-09-30 16:22 CT).
+const VERIFIED_REVIEWED = {
+  WNBA: '9062bcca0613db2b716200c652fc416b08f786af6781d242fb17d62bf9f862fd',
+  MLB: 'f0af727db7948eacab36ece31471ded74fbcd59e78f15f4d6cdfdd3e079a79d0',
+};
+
+test('GOLDEN: the copied references are the pipeline\'s, byte for byte', async () => {
+  const { createHash } = await import('node:crypto');
+  for (const [league, file] of [['WNBA', 'golden.reference-wnba-2026.json'], ['MLB', 'golden.reference-mlb-2026.json']] as const) {
+    assert.equal(createHash('sha256').update(rawText(file)).digest('hex'), GOLDEN_SHA256[league]);
+  }
+});
+
+test('GOLDEN: every locked pick, chance, length, title odd and the champion are the golden reference\'s', () => {
+  for (const [name, file] of [[PREDICTED.wnba, 'golden.reference-wnba-2026.json'], [PREDICTED.mlb, 'golden.reference-mlb-2026.json']] as const) {
+    const doc = JSON.parse(rawText(name)) as Doc;
+    const gold = JSON.parse(rawText(file)) as Doc;
+    const strip = (r: Doc) => Object.fromEntries(Object.entries(r).filter(([k]) => k !== 'seriesKey' && k !== 'coinFlip').sort(([a], [b]) => a.localeCompare(b)));
+    assert.deepEqual((doc.rounds as Doc[]).map(strip), (gold.rounds as Doc[]).map(strip), name);
+    assert.deepEqual(doc.titleOdds, gold.titleOdds, name);
+    assert.equal(doc.champion, gold.champion, name);
+    assert.equal(doc.simSeed, gold.simSeed, name);
+    assert.equal(doc.simRuns, gold.runs, name);
+  }
+});
+
+test('FINGERPRINTS: the pinned lock is the pipeline\'s pins and the hashes Matt verified, and the stored documents carry exactly these', () => {
+  const pins = JSON.parse(rawText('pins.predictions-frozen.json')) as Record<string, Record<string, string>>;
+  for (const [league, name] of [['WNBA', PREDICTED.wnba], ['MLB', PREDICTED.mlb]] as const) {
+    const pin = pins[`${league}_2026`];
+    const lock = LOCKED_FINGERPRINTS[`${league}_2026`];
+    assert.deepEqual(lock, {
+      corpus: pin.corpusSha256,
+      params: pin.paramsSha256,
+      descriptor: pin.descriptorSha256,
+      slugMap: pin.slugMapSha256,
+      reviewed: VERIFIED_REVIEWED[league],
+    });
+    assert.deepEqual(mapPredicted(name).fingerprints, lock, `${league}: the stored document`);
+    assert.equal(fingerprintsMatchLock(mapPredicted(name)), true);
+  }
+});
+
+test('FINGERPRINTS: any one of the five changed, or a season with no pin, is not the lock', () => {
+  const p = mapPredicted(PREDICTED.mlb);
+  for (const k of ['corpus', 'params', 'descriptor', 'slugMap', 'reviewed'] as const) {
+    assert.equal(fingerprintsMatchLock({ ...p, fingerprints: { ...p.fingerprints, [k]: 'c'.repeat(64) } }), false, k);
+  }
+  // The WNBA fingerprints on the MLB document.
+  assert.equal(fingerprintsMatchLock({ ...p, fingerprints: mapPredicted(PREDICTED.wnba).fingerprints }), false);
+  assert.equal(fingerprintsMatchLock({ ...p, season: 2027 }), false);
 });

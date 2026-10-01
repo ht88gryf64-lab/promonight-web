@@ -216,6 +216,39 @@ export function mapPredictedDoc(data: unknown, expected: { league: PostseasonLea
   };
 }
 
+// ---- The lock, pinned ----
+//
+// The five fingerprints the page may show, as they were locked. The four
+// input hashes are the pipeline's predictions/frozen/pins.json (the frozen
+// predictionInputs documents); the reviewed sha256 is the one Matt verified
+// with shasum before each lock (COORDINATION.md, PREDICT G4 lines,
+// 2026-09-30 16:22 CT). A document whose fingerprints are not these is not
+// the bracket that was locked, whatever else it says, and is not shown. A
+// new season adds a block; a league and season with no block shows nothing.
+export const LOCKED_FINGERPRINTS: Readonly<Record<string, Fingerprints>> = {
+  WNBA_2026: {
+    corpus: 'e4bcaddb1f2acebf37ece2f2c8f32d136609bd93469a30c8e5da104a6bd17a8d',
+    params: 'f953e58fabed3c981231b1b52761b9c22fcc3c1d4274abcac80749856ff61433',
+    descriptor: '71c1700f4e5626ad049e3af83f4064efd6d2ee2255e3abceee59a16d723c6321',
+    slugMap: 'b5d2e82a40cbebcca98ef745634e986c64235e851e84b46047b94ceddf1f3c26',
+    reviewed: '9062bcca0613db2b716200c652fc416b08f786af6781d242fb17d62bf9f862fd',
+  },
+  MLB_2026: {
+    corpus: '32d46402d4f94a155e99294f9dd9c613d1c76dd36d0e29a81210abbb99a6689f',
+    params: '76829cfc6a376250e26082bb24c06327c13e70c6a7ddf14cbb08019d3155278a',
+    descriptor: 'fb2ec31873f2791f88ca5eb4dc7743a6d84bf184cb11e5081ab3e138ecf3286a',
+    slugMap: '29df25c91e18ef143c7bff5426b7a97635464d291934e39e94f903a5583a1568',
+    reviewed: 'f0af727db7948eacab36ece31471ded74fbcd59e78f15f4d6cdfdd3e079a79d0',
+  },
+};
+
+/** Are the document's five fingerprints exactly the locked ones? */
+export function fingerprintsMatchLock(p: PredictedBracket): boolean {
+  const want = LOCKED_FINGERPRINTS[`${p.league}_${p.season}`];
+  if (!want) return false;
+  return (Object.keys(want) as (keyof Fingerprints)[]).every((k) => p.fingerprints[k] === want[k]);
+}
+
 // ---- Scoring (NCAA rule) ----
 //
 // A pick is CORRECT when its team is the real winner of the same slot, and
@@ -560,10 +593,13 @@ export function predictionSlugs(bracket: Bracket, predicted: PredictedBracket): 
   return [...out];
 }
 
+/** Why assembly could not build the predictions. */
+export type AssemblyFailure = { unavailable: 'no-join' | 'no-team-record' };
+
 /**
  * The predictions for a page, from the mapped documents and the web's own
- * team records. An Error (to throw) when the two documents do not describe
- * the same bracket, or a club has no team record.
+ * team records. A failure (the section is hidden) when the two documents do
+ * not describe the same bracket, or a club has no team record.
  *
  * `seriesIds` and `rounds` come from the real bracket and its view, so the
  * predicted cards carry the real page ids and the pills read the same.
@@ -574,13 +610,12 @@ export function assemblePredictions(
   clubs: ReadonlyMap<string, ClubInfo>,
   seriesIds: ReadonlyMap<string, string>,
   rounds: readonly RoundLabel[],
-): LeaguePredictions | Error {
-  const where = `predictedBrackets/${predicted.league}_${predicted.season}`;
+): LeaguePredictions | AssemblyFailure {
   const scored = scorePredictions(bracket, predicted);
-  if (!scored) return new Error(`[postseason] ${where} does not join the real bracket`);
+  if (!scored) return { unavailable: 'no-join' };
   const card = scorecard(scored, predicted, bracket);
   const view = buildPredictionsView(scored, card, predicted, clubs, seriesIds, rounds);
-  if (!view) return new Error(`[postseason] ${where} names a club with no team record`);
+  if (!view) return { unavailable: 'no-team-record' };
   return {
     view,
     methodology: buildMethodologyView(predicted, bracket),

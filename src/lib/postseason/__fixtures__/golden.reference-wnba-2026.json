@@ -1,0 +1,218 @@
+{
+  "league": "WNBA",
+  "simSeed": 3837570523,
+  "runs": 10000,
+  "seeds": [
+    {
+      "slug": "minnesota-lynx",
+      "seed": 1,
+      "conference": null,
+      "rating": 1684.524825488006
+    },
+    {
+      "slug": "golden-state-valkyries",
+      "seed": 2,
+      "conference": null,
+      "rating": 1723.0134175154749
+    },
+    {
+      "slug": "las-vegas-aces",
+      "seed": 3,
+      "conference": null,
+      "rating": 1639.9080763631132
+    },
+    {
+      "slug": "atlanta-dream",
+      "seed": 4,
+      "conference": null,
+      "rating": 1679.0050914818032
+    },
+    {
+      "slug": "washington-mystics",
+      "seed": 5,
+      "conference": null,
+      "rating": 1632.9815982651207
+    },
+    {
+      "slug": "indiana-fever",
+      "seed": 6,
+      "conference": null,
+      "rating": 1632.403281699107
+    },
+    {
+      "slug": "dallas-wings",
+      "seed": 7,
+      "conference": null,
+      "rating": 1604.9859985102719
+    },
+    {
+      "slug": "new-york-liberty",
+      "seed": 8,
+      "conference": null,
+      "rating": 1563.2794024356547
+    }
+  ],
+  "rounds": [
+    {
+      "round": "first_round",
+      "roundLabel": "First Round",
+      "slot": "winner:first_round:1v8",
+      "conference": null,
+      "higherSeed": 1,
+      "lowerSeed": 8,
+      "higher": "minnesota-lynx",
+      "lower": "new-york-liberty",
+      "pick": "minnesota-lynx",
+      "pickIsHigherSeed": true,
+      "pickProbability": 0.7774,
+      "modalSeriesLength": 2,
+      "bestOf": 3,
+      "runsSupporting": 10000,
+      "neutralSite": false
+    },
+    {
+      "round": "first_round",
+      "roundLabel": "First Round",
+      "slot": "winner:first_round:2v7",
+      "conference": null,
+      "higherSeed": 2,
+      "lowerSeed": 7,
+      "higher": "golden-state-valkyries",
+      "lower": "dallas-wings",
+      "pick": "golden-state-valkyries",
+      "pickIsHigherSeed": true,
+      "pickProbability": 0.7684,
+      "modalSeriesLength": 2,
+      "bestOf": 3,
+      "runsSupporting": 10000,
+      "neutralSite": false
+    },
+    {
+      "round": "first_round",
+      "roundLabel": "First Round",
+      "slot": "winner:first_round:3v6",
+      "conference": null,
+      "higherSeed": 3,
+      "lowerSeed": 6,
+      "higher": "las-vegas-aces",
+      "lower": "indiana-fever",
+      "pick": "las-vegas-aces",
+      "pickIsHigherSeed": true,
+      "pickProbability": 0.5578,
+      "modalSeriesLength": 3,
+      "bestOf": 3,
+      "runsSupporting": 10000,
+      "neutralSite": false
+    },
+    {
+      "round": "first_round",
+      "roundLabel": "First Round",
+      "slot": "winner:first_round:4v5",
+      "conference": null,
+      "higherSeed": 4,
+      "lowerSeed": 5,
+      "higher": "atlanta-dream",
+      "lower": "washington-mystics",
+      "pick": "atlanta-dream",
+      "pickIsHigherSeed": true,
+      "pickProbability": 0.6407,
+      "modalSeriesLength": 3,
+      "bestOf": 3,
+      "runsSupporting": 10000,
+      "neutralSite": false
+    },
+    {
+      "round": "semifinals",
+      "roundLabel": "Semifinals",
+      "slot": "winner:semifinals:1v8v4v5",
+      "conference": null,
+      "higherSeed": 1,
+      "lowerSeed": 4,
+      "higher": "minnesota-lynx",
+      "lower": "atlanta-dream",
+      "pick": "minnesota-lynx",
+      "pickIsHigherSeed": true,
+      "pickProbability": 0.5434477222556693,
+      "modalSeriesLength": 5,
+      "bestOf": 5,
+      "runsSupporting": 4983,
+      "neutralSite": false
+    },
+    {
+      "round": "semifinals",
+      "roundLabel": "Semifinals",
+      "slot": "winner:semifinals:2v7v3v6",
+      "conference": null,
+      "higherSeed": 2,
+      "lowerSeed": 3,
+      "higher": "golden-state-valkyries",
+      "lower": "las-vegas-aces",
+      "pick": "golden-state-valkyries",
+      "pickIsHigherSeed": true,
+      "pickProbability": 0.7405329593267882,
+      "modalSeriesLength": 4,
+      "bestOf": 5,
+      "runsSupporting": 4278,
+      "neutralSite": false
+    },
+    {
+      "round": "finals",
+      "roundLabel": "WNBA Finals",
+      "slot": "winner:finals",
+      "conference": null,
+      "higherSeed": 1,
+      "lowerSeed": 2,
+      "higher": "minnesota-lynx",
+      "lower": "golden-state-valkyries",
+      "pick": "golden-state-valkyries",
+      "pickIsHigherSeed": false,
+      "pickProbability": 0.5887921241953805,
+      "modalSeriesLength": 6,
+      "bestOf": 7,
+      "runsSupporting": 2641,
+      "neutralSite": false
+    }
+  ],
+  "titleOdds": [
+    {
+      "slug": "golden-state-valkyries",
+      "odds": 0.3733
+    },
+    {
+      "slug": "minnesota-lynx",
+      "odds": 0.2379
+    },
+    {
+      "slug": "atlanta-dream",
+      "odds": 0.1621
+    },
+    {
+      "slug": "las-vegas-aces",
+      "odds": 0.0792
+    },
+    {
+      "slug": "indiana-fever",
+      "odds": 0.0545
+    },
+    {
+      "slug": "washington-mystics",
+      "odds": 0.0538
+    },
+    {
+      "slug": "dallas-wings",
+      "odds": 0.0294
+    },
+    {
+      "slug": "new-york-liberty",
+      "odds": 0.0098
+    }
+  ],
+  "champion": "golden-state-valkyries",
+  "flags": [],
+  "checks": [
+    "no-certain-pick",
+    "sufficient-support",
+    "leader-odds-ceiling",
+    "seed-reproducible"
+  ]
+}

@@ -372,6 +372,6 @@ export function buildWithPredictions(bracket: string | StoredDoc, predicted: str
   const p = mapPredictedDoc(pd, { league: pd.league as 'MLB' | 'WNBA', season: pd.season as number });
   if (!p) throw new Error('prediction does not map');
   const out = assemblePredictions(b, p, clubs(), seriesIds(b), v.rounds.map((r) => ({ key: r.key, label: r.label, shortLabel: r.shortLabel })));
-  if (out instanceof Error) throw out;
+  if ('unavailable' in out) throw new Error(`assembly: ${out.unavailable}`);
   return { bracket: b, view: v, predicted: p, predictions: out };
 }

@@ -90,3 +90,10 @@ No captured document holds a slot whose feeder is already decided, because no
 2026 series had finished. That outcome, and a stored label of the form
 `Winner of AL-WC-B`, are tested by overlaying the field on a capture or a
 2025 document. Each such test says so where it does it.
+
+## The lock, from the pipeline
+
+| File | What it is |
+| --- | --- |
+| `golden.reference-wnba-2026.json`, `golden.reference-mlb-2026.json` | promo-pipeline `predictions/golden/reference-{league}-2026.json` at main 67aab9f, byte for byte (sha256 1b132e45... and 80aaf73a..., the values the pipeline's golden test pins). The locked documents' picks, chances, lengths, title odds and champion are tested against them. |
+| `pins.predictions-frozen.json` | promo-pipeline `predictions/frozen/pins.json` at main 67aab9f. The four input hashes the page pins (`LOCKED_FINGERPRINTS`) are tested against it. |

@@ -319,6 +319,21 @@ try {
   check('WNBA 1280: three rounds side by side, controls hidden, no sideways scroll', ww.display === 'grid' && ww.cols === 3 && ww.controls === 'none' && !ww.overflow);
   await shot('wnba-1280-full', 1280);
 
+  // ================= Hub: the predictions card at 390 =================
+  // The record stays on one line. The live documents may no longer show "no
+  // series decided yet", so the same span is also measured holding that text.
+  await go('/playoffs', { width: 390 });
+  const rec = await ev(`(() => { const spans = [...document.querySelectorAll('[data-predictions-league] .whitespace-nowrap')];
+    const lines = (el) => { const r = document.createRange(); r.selectNodeContents(el); return new Set([...r.getClientRects()].map((x) => Math.round(x.top))).size; };
+    const live = spans.map((s) => ({ text: s.textContent, lines: lines(s) }));
+    const probe = spans.map((s) => { const was = s.textContent; s.textContent = '· no series decided yet'; const n = lines(s); s.textContent = was; return n; });
+    return { live, probe, wide: document.documentElement.scrollWidth > document.documentElement.clientWidth }; })()`);
+  check('hub 390: each predictions record is on one line', rec.live.length > 0 && rec.live.every((x) => x.lines === 1), JSON.stringify(rec.live));
+  check('hub 390: "no series decided yet" stays on one line in the same span', rec.probe.length > 0 && rec.probe.every((n) => n === 1) && !rec.wide, JSON.stringify(rec.probe));
+  await ev(`document.querySelector('[data-predictions="locked"]').scrollIntoView({ block: 'center' })`);
+  await sleep(300);
+  await shot('hub-390-predictions-card', 390, { full: false });
+
   // ================= Hub =================
   await go('/playoffs', { width: 390 });
   await clearCalls();
@@ -439,6 +454,15 @@ try {
   b = await both();
   const pcs = b.picks.cols.find((x) => x.key === 'championship_series');
   check('real pill: moves the computer bracket, pill and row', b.picks.round === 'championship_series' && b.picks.pills.join() === 'championship_series' && Math.abs(pcs.gap) <= 2, `gap ${pcs.gap}px ${b.picks.pills.join()}`);
+  // A swipe in the computer's row moves the real bracket: its pills, and its
+  // row, which follows to the same round.
+  await clearCalls();
+  await ev(`(() => { const box = document.querySelector('[data-pick-rounds]'); const col = box.querySelector('[data-pick-round="world_series"]'); box.scrollTo({ left: col.offsetLeft - box.offsetLeft - parseFloat(getComputedStyle(box).paddingLeft), behavior: 'auto' }); })()`);
+  await sleep(1200);
+  b = await both();
+  const realRow = await ev(`(() => { const box = document.querySelector('[data-rounds]'); const pad = parseFloat(getComputedStyle(box).paddingLeft); const col = box.querySelector(':scope > section[data-round="world_series"]'); return Math.round(col.offsetLeft - box.offsetLeft - pad - box.scrollLeft); })()`);
+  check('picks swipe: the real bracket follows, pills and row', b.real.round === 'world_series' && b.real.pills.join() === 'world_series' && b.picks.pills.join() === 'world_series' && Math.abs(realRow) <= 2, `real ${b.real.pills.join()} gap ${realRow}px`);
+  check('picks swipe: no event is sent for it', (await calls()).filter((x) => /round_select/.test(x.name)).length === 0);
   await shot('mlb-390-predictions-nl-cs', 390, { full: false });
   // A pick opens, with no navigation, and sends one event.
   await clearCalls();
@@ -457,6 +481,30 @@ try {
   await go('/playoffs/mlb', { width: 390, js: false, settle: 1200 });
   const pnojs = await ev(`(() => { const p = document.querySelector('.po-picks'); const shown = (sel) => [...p.querySelectorAll(sel)].filter((e) => getComputedStyle(e).display !== 'none').length; return { picks: shown('[data-pick]'), al: shown('[data-conf="AL"]'), nl: shown('[data-conf="NL"]'), controls: shown('.po-controls') }; })()`);
   check('picks, scripts off: all 11 picks and both conferences show, the controls are gone', pnojs.picks === 11 && pnojs.al === 3 && pnojs.nl === 3 && pnojs.controls === 0, JSON.stringify(pnojs));
+
+  // ================= Every round pill and every busted mark, both leagues, 390 =================
+  for (const path of ['/playoffs/wnba', '/playoffs/mlb']) {
+    await go(path, { width: 390 });
+    await ev(`document.getElementById('predictions').scrollIntoView()`);
+    const keys = await ev(`[...document.querySelectorAll('.po-picks [data-round-option]')].map((b) => b.dataset.roundOption)`);
+    const bad = [];
+    for (const k of keys) {
+      await ev(`document.querySelector('.po-picks [data-round-option="${k}"]').click()`);
+      await sleep(900);
+      const st = await ev(`(() => { const p = document.querySelector('.po-picks'); const r = document.querySelector('.po-bracket'); const box = p.querySelector('[data-pick-rounds]'); const pad = parseFloat(getComputedStyle(box).paddingLeft); const col = box.querySelector('[data-pick-round="${k}"]');
+        return { picks: p.dataset.round, real: r.dataset.round, gap: Math.round(col.offsetLeft - box.offsetLeft - pad - box.scrollLeft), scrollable: box.scrollWidth > box.clientWidth }; })()`);
+      if (st.picks !== k || st.real !== k || (st.scrollable && Math.abs(st.gap) > 2 && k !== keys[keys.length - 1])) bad.push(`${k} ${JSON.stringify(st)}`);
+      await shot(`${path.split('/').pop()}-390-picks-${k}`, 390, { full: false });
+    }
+    check(`picks 390 ${path}: every round pill moves both brackets and brings its round in`, bad.length === 0 && keys.length >= 3, bad.join(' | ') || keys.join(','));
+    const marks = await ev(`(() => { const p = document.querySelector('.po-picks');
+      const busted = [...p.querySelectorAll('[data-pick-outcome="busted"]')];
+      return { busted: busted.length, badges: busted.filter((li) => li.querySelector('[data-outcome-badge="busted"]')).length,
+        struck: busted.filter((li) => getComputedStyle(li.querySelector('[data-pick-side="pick"] span.truncate')).textDecorationLine.includes('line-through')).length,
+        dimmedFaded: [...p.querySelectorAll('[data-dimmed="true"] details')].every((d) => parseFloat(getComputedStyle(d).opacity) < 1),
+        others: [...p.querySelectorAll('[data-pick-outcome]:not([data-pick-outcome="busted"])')].filter((li) => getComputedStyle(li.querySelector('[data-pick-side="pick"] span.truncate')).textDecorationLine.includes('line-through')).length }; })()`);
+    check(`picks 390 ${path}: every busted pick has its badge and is struck through, dimmed cards are faded, nothing else is struck`, marks.busted > 0 && marks.badges === marks.busted && marks.struck === marks.busted && marks.dimmedFaded && marks.others === 0, JSON.stringify(marks));
+  }
 
   // ================= The computer's bracket, the other views =================
   for (const [path, width] of [['/playoffs/wnba', 390], ['/playoffs/wnba', 1280], ['/playoffs/mlb', 1280]]) {
