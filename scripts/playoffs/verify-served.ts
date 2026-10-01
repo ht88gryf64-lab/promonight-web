@@ -25,7 +25,7 @@ import { db } from '../../src/lib/firebase';
 import { getAllTeams, getVenueForTeam } from '../../src/lib/data';
 import { getTeamVenueHubMap } from '../../src/lib/venue-hub';
 import { OG_IMAGE_ALT } from '../../src/lib/og';
-import { fingerprintPlacement } from './flight';
+import { fingerprintPlacement, operatorText } from './flight';
 
 const BASE = (process.env.BASE || 'http://localhost:3468').replace(/\/$/, '');
 const BYPASS = process.env.BYPASS || '';
@@ -622,9 +622,10 @@ async function main() {
 
     // THE FINGERPRINT RULE. Each of the five appears in the served bytes
     // exactly twice: once in the methodology section's markup, and once in
-    // the RSC payload's copy of that same markup. In the payload, the text
-    // between the methodology section's id and the fingerprint holds no
-    // client component reference ("$L"), so no client component carries it.
+    // the RSC payload's copy of that same markup. In the payload it must be
+    // the text of a host <code> inside the methodology section with no client
+    // component above it, found by walking the payload as a tree from its
+    // root (fingerprintPlacement in ./flight.ts).
     const dom = domOf(html);
     const domMethod = element(dom, 'data-predictions-methodology') ?? '';
     const placement = fingerprintPlacement(html);
@@ -676,10 +677,9 @@ async function main() {
       const traces = ['id="predictions"', 'data-predictions', 'data-pick', 'po-picks', 'how-the-computer-picked', 'Title odds', 'Fingerprints', "Computer's", 'Computer&#x27;s', 'The Computer'].filter((m) => got.html.includes(m));
       check(`${where}: FORCED FAILURE: no predictions section, heading, card or methodology`, traces.length === 0, traces.join(' '));
       check(`${where}: FORCED FAILURE: no hash anywhere`, !/\b[0-9a-f]{40,}\b/.test(domOf(got.html)) && !fingerprints(preds.get(league) as RawPred).some((f) => got.html.includes(f)));
-      // The operator's tokens anywhere in the bytes; the plain words only in
-      // what a reader sees (a class such as "disabled:opacity-50" is not copy).
-      const said = /predictions-unavailable|PREDICTIONS_DISABLED|predictedBrackets/.exec(got.html) ?? /\b(unavailable|disabled|error)\b/i.exec(textOf(got.html));
-      check(`${where}: FORCED FAILURE: nothing operator-facing in the served HTML`, !said, said ? said[0] : '');
+      // See operatorText in ./flight.ts for where it looks and why.
+      const said = operatorText(got.html);
+      check(`${where}: FORCED FAILURE: nothing operator-facing in the served HTML`, !said, said ?? '');
     }
 
     const text = textOf(el);
