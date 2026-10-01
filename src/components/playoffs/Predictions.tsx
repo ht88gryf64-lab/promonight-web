@@ -46,7 +46,7 @@ export function PredictionsSection({
       </div>
       <p className="mt-2.5 max-w-[60ch] text-[14.5px] leading-relaxed text-rd-ink-soft">
         Every series picked by a computer from regular-season results. The picks are locked and never change; each one is marked against the
-        real bracket above as correct, busted or still alive. Each card shows the pick, its most likely length and its chance at lock. The
+        real bracket above as correct, busted or still alive. Each card shows the pick, how many games it most likely takes to win and its chance at lock. The
         chances come from regular-season results alone, so they take no account of postseason games already played when the bracket was
         locked.
       </p>

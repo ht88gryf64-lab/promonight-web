@@ -761,7 +761,7 @@ export function buildMethodologyView(predicted: PredictedBracket, bracket: Brack
     }.`,
     fingerprints: [
       { label: 'Regular-season results', value: f.corpus },
-      { label: 'Simulation settings', value: f.params },
+      { label: 'Rating and simulation settings', value: f.params },
       { label: 'Bracket format', value: f.descriptor },
       { label: 'Team identifiers', value: f.slugMap },
       { label: 'Locked bracket file', value: f.reviewed },

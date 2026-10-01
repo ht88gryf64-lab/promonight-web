@@ -121,6 +121,8 @@ const CASES = [
   ['walker sees only hashes', T_RENDER, '    const key = seriesKeyIn(v);\n    if (key) return `series key ${key}`;\n    if (SHORT_KEYS.has(v)) return `series key ${v}`;\n    for (const b of BANNED_VALUES) if (v.includes(b)) return `banned value ${b}`;\n', '', [T_RENDER]],
   ['a series key handed to the predicted bracket', C, '<PredictedBracket league={league} leagueSlug={leagueSlug} season={season} rounds={view.rounds} />', "<PredictedBracket league={league} leagueSlug={leagueSlug} season={season} rounds={view.rounds} {...{ debug: { key: 'AL-WC-A' } }} />", [T_RENDER]],
   ['chances not dated by their inputs', C, ' The\n        chances come from regular-season results alone, so they take no account of postseason games already played when the bracket was\n        locked.', '', [T_ROUTES]],
+  ['"before Game 1" always printed', C, "{view.lockedBeforeGame1 ? ', before Game 1' : ''}", "{', before Game 1'}", [T_RENDER]],
+  ['a client component imports a value from predictions.ts', 'src/components/playoffs/PredictedBracket.tsx', "import type { PickOutcome, PickRoundView, PickSeriesView, PickSideView } from '@/lib/postseason/predictions';", "import { type PickOutcome, type PickRoundView, type PickSeriesView, type PickSideView, percent } from '@/lib/postseason/predictions';\nvoid percent;", [T_RENDER]],
   // ---- Copy ----
   ['length described as the most common length', C, 'its length is how many games the pick most often took to win it.', 'its length is the matchup&apos;s most common length.', [T_ROUTES]],
   ['engine-wide unchanged claim', C, ', with the rating, simulation and bracket code unchanged since the inputs were locked.', ', with the engine code unchanged since the lock.', [T_ROUTES]],

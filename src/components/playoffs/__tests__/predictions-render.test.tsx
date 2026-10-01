@@ -437,6 +437,39 @@ test('METHODOLOGY COPY: computed and locked on one day, or on two, said as such'
   assert.ok(one.includes('in the simulated postseasons where that matchup came up'));
 });
 
+test('METHODOLOGY COPY: "before Game 1" only when the real bracket proves it', () => {
+  const b = STATES[1][1]();
+  const proven = textOf(renderToStaticMarkup(<PredictionsMethodology view={b.predictions.methodology} />));
+  assert.ok(proven.includes('The inputs were locked on September 28, 2026, before Game 1.'), proven);
+  const unproven = textOf(renderToStaticMarkup(<PredictionsMethodology view={{ ...b.predictions.methodology, lockedBeforeGame1: false }} />));
+  assert.ok(unproven.includes('The inputs were locked on September 28, 2026.'), unproven);
+  assert.ok(!/Game 1/.test(unproven), unproven);
+});
+
+// predictions.ts holds the locked fingerprints and the core file paths. A
+// client component that imported a value from it would ship them in client
+// JavaScript; every client import of it must be type-only.
+test('NO CLIENT COMPONENT imports a value from predictions.ts or predictions-lock.ts', () => {
+  const offenders: string[] = [];
+  const walk = (dir: URL) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      if (e.isDirectory()) {
+        if (e.name !== 'node_modules') walk(new URL(`${e.name}/`, dir));
+        continue;
+      }
+      if (!/\.tsx?$/.test(e.name)) continue;
+      const url = new URL(e.name, dir);
+      const src = readFileSync(url, 'utf-8');
+      if (!/^\s*['"]use client['"]/.test(src)) continue;
+      for (const m of src.matchAll(/^import\s+(type\s+)?[^;]*?from\s+['"]([^'"]+)['"]/gm)) {
+        if (/postseason\/predictions(-lock)?$/.test(m[2]) && !m[1]) offenders.push(`${url.pathname}: ${m[0]}`);
+      }
+    }
+  };
+  walk(new URL('../../../', import.meta.url));
+  assert.deepEqual(offenders, []);
+});
+
 test('THE METHODOLOGY COMPONENT is a server component, and so is the file that holds it', () => {
   const src = readFileSync(new URL('../Predictions.tsx', import.meta.url), 'utf-8');
   assert.ok(!/^\s*['"]use client['"]/.test(src));
