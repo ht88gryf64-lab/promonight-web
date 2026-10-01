@@ -66,7 +66,7 @@ const P_WNBA = () => loadDoc(PREDICTED.wnba);
 
 /** Every predictions failure the ruling names, plus the two the assembly can
  *  meet. `docs` replaces the MLB prediction; `before` sets up anything else. */
-const FAILURES: { name: string; reason: string; prediction: () => Record<string, unknown> | Error | undefined; before?: () => void }[] = [
+const FAILURES: { name: string; reason: string; prediction: () => Record<string, unknown> | Error | undefined; bracket?: () => Record<string, unknown>; before?: () => void }[] = [
   { name: 'a failed Firestore read', reason: 'read-failed', prediction: () => new Error('PERMISSION_DENIED: predictedBrackets/MLB_2026') },
   { name: 'a missing document', reason: 'missing', prediction: () => undefined },
   { name: 'a document the mapper refuses', reason: 'refused', prediction: () => ({ ...P_MLB(), target: 'scratch' }) },
@@ -80,21 +80,24 @@ const FAILURES: { name: string; reason: string; prediction: () => Record<string,
     },
   },
   {
-    name: 'a prediction that does not join the bracket',
-    reason: 'no-join',
+    name: 'right fingerprints and a different pick',
+    reason: 'content-mismatch',
     prediction: () => {
       const d = P_MLB();
-      (d.rounds as Record<string, unknown>[])[3].seriesKey = 'NL-WC-Z';
+      (d.rounds as Record<string, unknown>[])[1].pickProbability = 0.5815;
       return d;
     },
   },
   {
-    name: 'a club with no team record',
-    reason: 'no-team-record',
-    prediction: () => {
-      const d = P_MLB();
-      (d.titleOdds as Record<string, unknown>[])[0].slug = 'nowhere-club';
-      return d;
+    // The bracket, not the prediction, changes: a renamed key leaves a
+    // locked pick with no real slot.
+    name: 'a real bracket that no longer joins the lock',
+    reason: 'no-join',
+    prediction: () => P_MLB(),
+    bracket: () => {
+      const b = MLB();
+      (b.series as Record<string, unknown>[]).find((x) => x.seriesKey === 'NL-WC-B')!.seriesKey = 'NL-WC-Z';
+      return b;
     },
   },
   {
@@ -173,7 +176,7 @@ for (const f of FAILURES) {
     teams.failAfter = null;
     f.before?.();
     try {
-      const bracket = MLB();
+      const bracket = f.bracket ? f.bracket() : MLB();
       current.db = fakeFirestore(docsWith(f.prediction(), bracket));
       const { html, meta, lines } = await renderLeague('mlb');
       // It rendered: no throw, no notFound. The route's status is 200.
@@ -231,7 +234,7 @@ test('(c) the hub stays up; the broken league loses its record line, the other k
   for (const f of FAILURES.filter((x) => !x.before)) {
     teams.failAfter = null;
     try {
-      current.db = fakeFirestore(docsWith(f.prediction()));
+      current.db = fakeFirestore(docsWith(f.prediction(), f.bracket ? f.bracket() : MLB()));
       const { html, lines } = await renderHub();
       assert.equal(count(html, 'data-league-card="'), 2, `${f.name}: both league cards`);
       assert.equal(count(html, 'data-predictions-league="mlb"'), 0, `${f.name}: no MLB line`);

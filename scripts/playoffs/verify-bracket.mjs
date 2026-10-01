@@ -455,13 +455,14 @@ try {
   const pcs = b.picks.cols.find((x) => x.key === 'championship_series');
   check('real pill: moves the computer bracket, pill and row', b.picks.round === 'championship_series' && b.picks.pills.join() === 'championship_series' && Math.abs(pcs.gap) <= 2, `gap ${pcs.gap}px ${b.picks.pills.join()}`);
   // A swipe in the computer's row moves the real bracket: its pills, and its
-  // row, which follows to the same round.
+  // row, which follows to the same round. A middle round: the last column
+  // cannot reach the left edge, the row stops at its end.
   await clearCalls();
-  await ev(`(() => { const box = document.querySelector('[data-pick-rounds]'); const col = box.querySelector('[data-pick-round="world_series"]'); box.scrollTo({ left: col.offsetLeft - box.offsetLeft - parseFloat(getComputedStyle(box).paddingLeft), behavior: 'auto' }); })()`);
+  await ev(`(() => { const box = document.querySelector('[data-pick-rounds]'); const col = box.querySelector('[data-pick-round="division_series"]'); box.scrollTo({ left: col.offsetLeft - box.offsetLeft - parseFloat(getComputedStyle(box).paddingLeft), behavior: 'auto' }); })()`);
   await sleep(1200);
   b = await both();
-  const realRow = await ev(`(() => { const box = document.querySelector('[data-rounds]'); const pad = parseFloat(getComputedStyle(box).paddingLeft); const col = box.querySelector(':scope > section[data-round="world_series"]'); return Math.round(col.offsetLeft - box.offsetLeft - pad - box.scrollLeft); })()`);
-  check('picks swipe: the real bracket follows, pills and row', b.real.round === 'world_series' && b.real.pills.join() === 'world_series' && b.picks.pills.join() === 'world_series' && Math.abs(realRow) <= 2, `real ${b.real.pills.join()} gap ${realRow}px`);
+  const realRow = await ev(`(() => { const box = document.querySelector('[data-rounds]'); const pad = parseFloat(getComputedStyle(box).paddingLeft); const col = box.querySelector(':scope > section[data-round="division_series"]'); return Math.round(col.offsetLeft - box.offsetLeft - pad - box.scrollLeft); })()`);
+  check('picks swipe: the real bracket follows, pills and row', b.real.round === 'division_series' && b.real.pills.join() === 'division_series' && b.picks.pills.join() === 'division_series' && Math.abs(realRow) <= 2, `real ${b.real.pills.join()} gap ${realRow}px`);
   check('picks swipe: no event is sent for it', (await calls()).filter((x) => /round_select/.test(x.name)).length === 0);
   await shot('mlb-390-predictions-nl-cs', 390, { full: false });
   // A pick opens, with no navigation, and sends one event.

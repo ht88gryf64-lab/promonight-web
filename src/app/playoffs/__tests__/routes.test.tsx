@@ -301,7 +301,7 @@ test('HEAD /playoffs/[league]: title, description, canonical and a complete open
   assert.equal(meta.title, '2026 MLB Playoff Bracket and Predictions');
   assert.equal(
     meta.description,
-    "The 2026 MLB postseason bracket and the computer's locked pick for every series, marked as the results come in. Current round: Wild Card Series. Game times in Eastern.",
+    "The 2026 MLB postseason bracket and the computer's locked pick for every series, marked against the results. Current round: Wild Card Series. Game times in Eastern.",
   );
   assert.equal(((await generateMetadata(params('wnba'))) as Meta).title, '2026 WNBA Playoff Bracket and Predictions');
   // With no locked prediction the head does not promise one.
@@ -463,7 +463,11 @@ test('PREDICTIONS through the real pages: the section, the scorecard, the method
   const text = method.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
   assert.ok(text.includes('plays out the postseason 10,000 times'));
   assert.ok(text.includes('The inputs were locked on September 28, 2026 , before Game 1.') || text.includes('The inputs were locked on September 28, 2026, before Game 1.'), text);
-  assert.ok(text.includes('The bracket was computed on September 30, 2026 from those locked inputs, with the engine code unchanged since the lock.'));
+  assert.ok(text.includes('The bracket was computed and locked on September 30, 2026 from those locked inputs, with the rating, simulation and bracket code unchanged since the inputs were locked.'), text);
+  assert.ok(text.includes('its length is how many games the pick most often took to win it'));
+  assert.ok(text.includes('Every chance and title odd on this page is as it stood when the bracket was locked.'));
+  assert.ok(text.includes('Postseason results are not among the inputs, so a pick can name a club that was already out by then.'));
+  assert.ok(!/engine code unchanged|most common length|results come in/.test(text));
   assert.ok(text.includes('the computer called 5 of 11 series and got the champion wrong'));
   assert.ok(!/bracket was (locked|set|picked|computed)[^.]*before Game 1/i.test(text), 'never says the bracket was set before Game 1');
   const wnba = renderToStaticMarkup(await League(params('wnba')));

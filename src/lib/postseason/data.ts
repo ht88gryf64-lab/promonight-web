@@ -9,12 +9,13 @@ import { playoffsLinkState, type PlayoffsLinkState } from './gate';
 import { buildLeagueView, clubSlugs, easternYmd, hostSlugs, seriesIds, type ClubInfo, type LeagueView, type ParkInfo } from './view';
 import {
   assemblePredictions,
-  fingerprintsMatchLock,
   mapPredictedDoc,
   predictionSlugs,
   type LeaguePredictions,
   type PredictedBracket,
 } from './predictions';
+
+import { checkLock } from './predictions-lock';
 
 export type { LeaguePredictions } from './predictions';
 import { readPostseasonPromos } from './promos';
@@ -197,6 +198,7 @@ export type PredictionsUnavailableReason =
   | 'missing'
   | 'refused'
   | 'fingerprint-mismatch'
+  | 'content-mismatch'
   | 'no-join'
   | 'no-team-record'
   | 'build-failed'
@@ -239,7 +241,7 @@ export const getPredictedBracket = cache(async (league: PostseasonLeague): Promi
   let data: unknown;
   try {
     const ref = db.collection(PREDICTED).doc(docId(league));
-    const [snap] = await db.getAll(ref, { fieldMask: PREDICTED_FIELDS });
+    const [snap] = await withTimeout(db.getAll(ref, { fieldMask: PREDICTED_FIELDS }), predictionsReadTimeoutMs());
     if (!snap.exists) return { state: 'unavailable', reason: 'missing' };
     data = snap.data();
   } catch {
@@ -247,9 +249,29 @@ export const getPredictedBracket = cache(async (league: PostseasonLeague): Promi
   }
   const predicted = mapPredictedDoc(data, { league, season: POSTSEASON_SEASON });
   if (!predicted) return { state: 'unavailable', reason: 'refused' };
-  if (!fingerprintsMatchLock(predicted)) return { state: 'unavailable', reason: 'fingerprint-mismatch' };
+  const lock = checkLock(predicted);
+  if (lock !== 'ok') return { state: 'unavailable', reason: lock };
   return { state: 'ok', predicted };
 });
+
+/**
+ * How long the predictions read may take before the page goes on without
+ * it. The real bracket has been read by then; a predictions read that hangs
+ * must not hold the render, or ISR keeps serving the old bracket. Overridable
+ * for tests only.
+ */
+function predictionsReadTimeoutMs(): number {
+  const v = Number(process.env.PREDICTIONS_READ_TIMEOUT_MS);
+  return Number.isFinite(v) && v > 0 ? v : 4000;
+}
+
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error('timeout')), ms);
+  });
+  return Promise.race([p, late]).finally(() => clearTimeout(timer));
+}
 
 /**
  * The page's predictions, or null. Every failure, the read's and the

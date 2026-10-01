@@ -96,7 +96,7 @@ export function leagueCopy(
     title,
     canonical,
     description: predictions
-      ? `The ${season} ${league} postseason bracket and the computer's locked pick for every series, marked as the results come in. Current round: ${view.phase.roundLabel}. Game times in Eastern.`
+      ? `The ${season} ${league} postseason bracket and the computer's locked pick for every series, marked against the results. Current round: ${view.phase.roundLabel}. Game times in Eastern.`
       : `The ${season} ${league} postseason bracket. Current round: ${view.phase.roundLabel}. Every series, seed and result, with game times in Eastern and the home games coming up.`,
   };
 }

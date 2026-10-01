@@ -20,6 +20,7 @@ import {
   type PickSeriesView,
   type PredictionsView,
 } from '../predictions';
+import { LOCKED_CONTENT_SHA256, checkLock, lockedContent, lockedContentSha256 } from '../predictions-lock';
 import type { Bracket } from '../types';
 import {
   FIXTURE,
@@ -122,6 +123,12 @@ const BYPASSES: [string, (d: Doc) => void][] = [
   ['frozenAt after compute', (d) => (prov(d).frozenAt = '2026-10-01T00:00:00Z')],
   ['frozenAt equal to compute', (d) => (prov(d).frozenAt = d.computedAt)],
   ['frozenAt a bare date', (d) => (prov(d).frozenAt = '2026-09-25')],
+  ['frozenAt on a day that does not exist', (d) => (prov(d).frozenAt = '2026-09-31T14:24:00.732Z')],
+  // Rolls over to March 2: still before the compute, so only the round trip catches it.
+  ['frozenAt on February 30', (d) => (prov(d).frozenAt = '2026-02-30T14:24:00.000Z')],
+  ['frozenAt at an hour that does not exist', (d) => (prov(d).frozenAt = '2026-09-25T24:24:00.000Z')],
+  ['frozenAt with an offset, not UTC', (d) => (prov(d).frozenAt = '2026-09-25T10:24:00.732-04:00')],
+  ['computedAt after the lock', (d) => (d.computedAt = '2026-09-30T23:00:00.000Z')],
   ['frozenAt a Timestamp-like object', (d) => (prov(d).frozenAt = { toDate: () => new Date('2026-09-25T14:24:00Z') })],
   ['provenance missing', (d) => delete d.provenance],
   ['no freeze commit', (d) => delete prov(d).engineCommitAtFreeze],
@@ -130,6 +137,10 @@ const BYPASSES: [string, (d: Doc) => void][] = [
   ['core blobs differ while identical says true', (d) => ((prov(d).coreFiles as Doc[])[0].blobAtCompute = '0'.repeat(40))],
   ['core blob missing on both sides', (d) => { const f = (prov(d).coreFiles as Doc[])[2]; delete f.blobAtFreeze; delete f.blobAtCompute; }],
   ['no core files', (d) => (prov(d).coreFiles = [])],
+  ['one core file only', (d) => (prov(d).coreFiles = (prov(d).coreFiles as Doc[]).slice(0, 1))],
+  ['a core file twice in place of another', (d) => { const f = prov(d).coreFiles as Doc[]; f[2] = { ...f[0] }; }],
+  ['a core file that is not a core file', (d) => ((prov(d).coreFiles as Doc[])[1].path = 'predictions/series.js')],
+  ['a fourth core file', (d) => (prov(d).coreFiles as Doc[]).push({ path: 'predictions/compute.js', blobAtFreeze: 'a'.repeat(40), blobAtCompute: 'a'.repeat(40), identical: true })],
   ['core files not a list', (d) => (prov(d).coreFiles = { 0: { identical: true } })],
   ['a fingerprint in upper case', (d) => (prov(d).corpusSha256 = (prov(d).corpusSha256 as string).toUpperCase())],
   ['a fingerprint one short', (d) => (prov(d).paramsSha256 = (prov(d).paramsSha256 as string).slice(1))],
@@ -150,7 +161,8 @@ const BYPASSES: [string, (d: Doc) => void][] = [
   ['a seed as a string', (d) => (r0(d).higherSeed = '1')],
   ['a pick outside its matchup', (d) => (r0(d).pick = 'dallas-wings')],
   ['a pick by side, not slug', (d) => (r0(d).pick = 'higher')],
-  ['chance under even', (d) => (r0(d).pickProbability = 0.49)],
+  // Flagged a coin flip, so only the under-even guard can catch it.
+  ['chance under even', (d) => { r0(d).pickProbability = 0.49; r0(d).coinFlip = true; }],
   ['a certain pick', (d) => (r0(d).pickProbability = 1)],
   ['chance as a string', (d) => (r0(d).pickProbability = '0.7774')],
   ['chance NaN', (d) => (r0(d).pickProbability = NaN)],
@@ -161,6 +173,8 @@ const BYPASSES: [string, (d: Doc) => void][] = [
   ['bestOf zero', (d) => (r0(d).bestOf = 0)],
   ['coin flip unstated', (d) => delete r0(d).coinFlip],
   ['coin flip as a string', (d) => (r0(d).coinFlip = 'false')],
+  ['coin flip on a clear pick', (d) => (r0(d).coinFlip = true)],
+  ['no coin flip on a 50.1% pick', (d) => (r0(d).pickProbability = 0.501)],
   ['a champion that is not the last pick', (d) => (d.champion = 'minnesota-lynx')],
   ['no champion', (d) => delete d.champion],
   ['two series in the last round', (d) => (rounds(d)[5].round = 'finals')],
@@ -169,6 +183,8 @@ const BYPASSES: [string, (d: Doc) => void][] = [
   ['title odds as a string', (d) => ((d.titleOdds as Doc[])[0].odds = '0.37')],
   ['title odds empty', (d) => (d.titleOdds = [])],
   ['a title-odds row with no club', (d) => delete (d.titleOdds as Doc[])[0].slug],
+  ['a title-odds club from another league', (d) => ((d.titleOdds as Doc[])[0].slug = 'milwaukee-brewers')],
+  ['a title-odds club twice', (d) => ((d.titleOdds as Doc[])[1].slug = (d.titleOdds as Doc[])[0].slug)],
 ];
 
 for (const [why, edit] of BYPASSES) {
@@ -384,6 +400,8 @@ test('JOIN: the two documents must describe the same bracket', () => {
   assert.equal(scorePredictions(b, { ...p, series: p.series.map((s, i) => (i === 0 ? { ...s, seriesKey: 'R1-9v9' } : s)) }), null, 'a key the bracket lacks');
   assert.equal(scorePredictions(b, { ...p, series: p.series.map((s, i) => (i === 0 ? { ...s, round: 'semifinals' } : s)) }), null, 'a round that disagrees');
   assert.equal(scorePredictions(b, { ...p, league: 'MLB' }), null, 'another league');
+  assert.equal(scorePredictions(b, { ...p, series: p.series.map((s, i) => (i === 0 ? { ...s, conference: 'AL' } : s)) }), null, 'a conference that disagrees');
+  assert.equal(scorePredictions(b, { ...p, series: p.series.map((s, i) => (i === 0 ? { ...s, bestOf: 7, modalSeriesLength: 7 } : s)) }), null, 'a series length that disagrees');
   assert.equal(scorePredictions(bracketOf(loadDoc(FIXTURE.mlbWildCard)), p), null);
 });
 
@@ -457,6 +475,8 @@ test('METHODOLOGY: the backtest is the only accuracy claim, and the fingerprints
 
 test('LABELS: percent and record', () => {
   assert.equal(percent(0.7774), '78%');
+  assert.equal(percent(0.996), 'Over 99%', 'never 100% for a pick that is not certain');
+  assert.equal(percent(0.994), '99%');
   assert.equal(percent(0.5001), '50%');
   assert.equal(percent(0.0098), '1%');
   assert.equal(percent(0.004), 'Under 1%');
@@ -540,4 +560,49 @@ test('FINGERPRINTS: any one of the five changed, or a season with no pin, is not
   // The WNBA fingerprints on the MLB document.
   assert.equal(fingerprintsMatchLock({ ...p, fingerprints: mapPredicted(PREDICTED.wnba).fingerprints }), false);
   assert.equal(fingerprintsMatchLock({ ...p, season: 2027 }), false);
+});
+
+// ---- The content lock ----
+
+test('CONTENT LOCK: the pinned digests are the stored documents\', whose content is the golden references\' and whose freeze instants are the pins\'', () => {
+  const pins = JSON.parse(rawText('pins.predictions-frozen.json')) as Record<string, Record<string, string>>;
+  for (const [league, name] of [['WNBA', PREDICTED.wnba], ['MLB', PREDICTED.mlb]] as const) {
+    const p = mapPredicted(name);
+    assert.equal(lockedContentSha256(p), LOCKED_CONTENT_SHA256[`${league}_2026`], league);
+    assert.equal(checkLock(p), 'ok', league);
+    assert.equal(p.frozenAt, pins[`${league}_2026`].frozenAt, `${league}: frozenAt is the pinned freeze`);
+    // The canonical form holds every field the page shows.
+    const c = JSON.parse(lockedContent(p)) as Record<string, unknown>;
+    assert.deepEqual(Object.keys(c).sort(), ['champion', 'computedAt', 'frozenAt', 'league', 'lockedAt', 'season', 'series', 'simRuns', 'titleOdds']);
+  }
+});
+
+// Each edit keeps the document mappable and the five fingerprints right, so
+// only the content lock can catch it.
+const CONTENT_EDITS: [string, (d: Doc) => void][] = [
+  ['a pick changed, with its champion', (d) => { const f = rounds(d)[6]; f.pick = f.higher; f.pickIsHigherSeed = true; d.champion = f.higher; }],
+  ['a chance changed', (d) => (r0(d).pickProbability = 0.7775)],
+  ['a length changed', (d) => (r0(d).modalSeriesLength = 3)],
+  ['a seed changed', (d) => (r0(d).lowerSeed = 7)],
+  ['title odds changed', (d) => ((d.titleOdds as Doc[])[0].odds = 0.4)],
+  ['two title-odds rows swapped', (d) => { const t = d.titleOdds as Doc[]; [t[0].slug, t[1].slug] = [t[1].slug, t[0].slug]; }],
+  ['the run count changed', (d) => (d.simRuns = 3)],
+  ['the freeze moved', (d) => (prov(d).frozenAt = '2026-09-25T14:24:00.000Z')],
+  ['the compute moved', (d) => (d.computedAt = '2026-09-30T21:17:31.000Z')],
+  ['a later-round pairing changed', (d) => { const r = rounds(d)[4]; r.lower = 'washington-mystics'; r.lowerSeed = 5; }],
+];
+for (const [why, edit] of CONTENT_EDITS) {
+  test(`CONTENT LOCK: ${why} maps, keeps its fingerprints, and is refused as content-mismatch`, () => {
+    const d = loadDoc(PREDICTED.wnba);
+    edit(d);
+    const p = mapPredictedDoc(d, { league: 'WNBA', season: 2026 });
+    assert.ok(p, 'still a document the mapper reads');
+    assert.equal(fingerprintsMatchLock(p), true, 'fingerprints unchanged');
+    assert.equal(checkLock(p), 'content-mismatch');
+  });
+}
+
+test('CONTENT LOCK: a season with no pin is not the lock', () => {
+  const p = mapPredicted(PREDICTED.mlb);
+  assert.notEqual(checkLock({ ...p, season: 2027 }), 'ok');
 });

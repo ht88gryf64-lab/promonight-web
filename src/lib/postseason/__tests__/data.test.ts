@@ -16,7 +16,7 @@ const db = {
 };
 const venues = { fail: new Set<string>(), missing: new Set<string>(), asked: [] as string[] };
 const pages = { fail: false, held: new Set<string>(), none: new Set<string>() };
-const teams: { drop: Set<string>; failAfter: (() => boolean) | null } = { drop: new Set<string>(), failAfter: null };
+const teams: { drop: Set<string>; failAfter: (() => boolean) | null; dropOn: (() => string | null) | null } = { drop: new Set<string>(), failAfter: null, dropOn: null };
 
 mock.module('server-only', { namedExports: {} });
 mock.module(new URL('../../firebase.ts', import.meta.url).href, { namedExports: { db } });
@@ -24,7 +24,8 @@ mock.module(new URL('../../data.ts', import.meta.url).href, {
   namedExports: {
     getAllTeams: async () => {
       if (teams.failAfter && teams.failAfter()) throw new Error('teams read failed');
-      return capturedTeams().filter((t) => !teams.drop.has(t.id));
+      const gone = teams.dropOn ? teams.dropOn() : null;
+      return capturedTeams().filter((t) => !teams.drop.has(t.id) && t.id !== gone);
     },
     getVenueForTeam: async (id: string) => {
       venues.asked.push(id);
@@ -291,13 +292,13 @@ const FAILURES: [string, () => Record<string, unknown> | Error | undefined, stri
     'fingerprint-mismatch',
   ],
   [
-    'a prediction that does not join the real bracket',
+    'right fingerprints, a different pick',
     () => {
       const d = PREDICTED_MLB();
-      (d.rounds as Record<string, unknown>[])[0].seriesKey = 'AL-WC-Z';
+      (d.rounds as Record<string, unknown>[])[1].pickProbability = 0.5815;
       return d;
     },
-    'no-join',
+    'content-mismatch',
   ],
 ];
 
@@ -315,16 +316,33 @@ for (const [name, doc, reason] of FAILURES) {
   });
 }
 
-test('PREDICTIONS FAIL CLOSED: a club with no team record hides the section, tagged no-team-record', async () => {
+test('PREDICTIONS FAIL CLOSED: a real bracket whose keys no longer match the lock hides the section, tagged no-join', async () => {
   const { getLeaguePageData } = await load();
-  // A title-odds row naming a club no team record has; the bracket itself
-  // names only real clubs, so the bracket builds.
-  const d = PREDICTED_MLB();
-  (d.titleOdds as Record<string, unknown>[])[0].slug = 'nowhere-club';
-  use({ 'postseasonBrackets/MLB_2026': MLB(), 'predictedBrackets/MLB_2026': d });
+  // The bracket is the document that can change after the lock: a key the
+  // pipeline renames leaves a locked pick with no real slot.
+  const b = MLB();
+  (b.series as Record<string, unknown>[]).find((x) => x.seriesKey === 'NL-WC-B')!.seriesKey = 'NL-WC-Z';
+  use({ 'postseasonBrackets/MLB_2026': b, 'predictedBrackets/MLB_2026': PREDICTED_MLB() });
   const { value: page, lines } = await tagged(() => getLeaguePageData('MLB'));
   assert.equal(page.state === 'ok' && page.predictions, null);
-  assert.deepEqual(lines, ['[predictions-unavailable] league=MLB reason=no-team-record']);
+  assert.equal(page.state === 'ok' && page.view.rounds.length, 4);
+  assert.deepEqual(lines, ['[predictions-unavailable] league=MLB reason=no-join']);
+});
+
+test('PREDICTIONS FAIL CLOSED: a club the team list loses between the bracket and the predictions, tagged no-team-record', async () => {
+  const { getLeaguePageData } = await load();
+  use({ 'postseasonBrackets/MLB_2026': MLB(), 'predictedBrackets/MLB_2026': PREDICTED_MLB() });
+  // The first team-list read builds the real bracket; the second, the
+  // predictions', no longer has the Brewers.
+  let n = 0;
+  teams.dropOn = () => (++n > 1 ? 'milwaukee-brewers' : null);
+  try {
+    const { value: page, lines } = await tagged(() => getLeaguePageData('MLB'));
+    assert.equal(page.state === 'ok' && page.predictions, null);
+    assert.deepEqual(lines, ['[predictions-unavailable] league=MLB reason=no-team-record']);
+  } finally {
+    teams.dropOn = null;
+  }
 });
 
 test('PREDICTIONS FAIL CLOSED: an exception in assembly is caught, tagged build-failed', async () => {
@@ -342,6 +360,30 @@ test('PREDICTIONS FAIL CLOSED: an exception in assembly is caught, tagged build-
   } finally {
     teams.failAfter = null;
     teams.drop = original;
+  }
+});
+
+// Its own timeout: with the guard gone the read never settles, and the test
+// must fail, not hang.
+test('PREDICTIONS READ TIMEOUT: a read that hangs is read-failed, and the page goes on without it', { timeout: 5000 }, async () => {
+  const { getLeaguePageData } = await load();
+  const fake = use({ 'postseasonBrackets/MLB_2026': MLB(), 'predictedBrackets/MLB_2026': PREDICTED_MLB() });
+  const realGetAll = fake.getAll.bind(fake);
+  fake.getAll = (...args: unknown[]) => {
+    const ref = args[0] as { path: string };
+    return ref.path.startsWith('predictedBrackets/') ? new Promise(() => {}) : realGetAll(...args);
+  };
+  process.env.PREDICTIONS_READ_TIMEOUT_MS = '40';
+  try {
+    const started = Date.now();
+    const { value: page, lines } = await tagged(() => getLeaguePageData('MLB'));
+    assert.ok(Date.now() - started < 2000, 'it did not wait for the hung read');
+    assert.equal(page.state, 'ok');
+    assert.equal(page.state === 'ok' && page.predictions, null);
+    assert.equal(page.state === 'ok' && page.view.rounds.length, 4);
+    assert.deepEqual(lines, ['[predictions-unavailable] league=MLB reason=read-failed']);
+  } finally {
+    delete process.env.PREDICTIONS_READ_TIMEOUT_MS;
   }
 });
 

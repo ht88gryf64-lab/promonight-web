@@ -205,6 +205,7 @@ type RawPick = {
   coinFlip: boolean;
 };
 type RawPred = {
+  lockedAt?: unknown;
   rounds: RawPick[];
   titleOdds: { slug: string; odds: number }[];
   champion: string;
@@ -608,7 +609,12 @@ async function main() {
     const frozen = new Date(p.provenance.frozenAt as string);
     const first = doc.series.flatMap((s) => s.games).every((g) => (g.start ? new Date(g.start).getTime() > frozen.getTime() : g.date ? g.date > etYmd(frozen) : true)) && doc.series.some((s) => s.games.some((g) => g.start || g.date));
     check(`${where}: methodology says when the inputs were locked`, mt.includes(`The inputs were locked on ${longEt(frozen)}${first ? ', before Game 1' : ''}.`), longEt(frozen));
-    check(`${where}: methodology says when the bracket was computed`, mt.includes(`The bracket was computed on ${longEt(new Date(p.computedAt))} from those locked inputs, with the engine code unchanged since the lock.`), longEt(new Date(p.computedAt)));
+    const computedOn = longEt(new Date(p.computedAt));
+    const lockedOn = longEt(instantOf(p.lockedAt as unknown) as Date);
+    const when = computedOn === lockedOn ? `computed and locked on ${computedOn}` : `computed on ${computedOn} and locked on ${lockedOn}`;
+    check(`${where}: methodology says when the bracket was computed and locked`, mt.includes(`The bracket was ${when} from those locked inputs, with the rating, simulation and bracket code unchanged since the inputs were locked.`), when);
+    check(`${where}: methodology says what "at lock" means and why a pick can name a club already out`, mt.includes('Every chance and title odd on this page is as it stood when the bracket was locked.') && mt.includes('Postseason results are not among the inputs, so a pick can name a club that was already out by then.'));
+    check(`${where}: methodology states the length as the engine computes it`, mt.includes('its length is how many games the pick most often took to win it') && !/most common length|engine code unchanged/.test(mt));
     check(`${where}: methodology names ${p.simRuns.toLocaleString('en-US')} simulated postseasons`, mt.includes(`plays out the postseason ${p.simRuns.toLocaleString('en-US')} times`));
     check(`${where}: the backtest, and no other accuracy claim`, mt.includes(BACKTEST[league]) && (mt.match(/\b\d+ of \d+\b/g) ?? []).length === 1 && !/\b(accura|correct|hit rate|record)\b/i.test(mt), BACKTEST[league]);
     check(`${where}: never says the bracket was set before Game 1`, !/bracket was (locked|set|picked|computed)[^.]*before Game 1/i.test(mt));
@@ -655,7 +661,7 @@ async function main() {
     const pred = DISABLED.has(league) ? null : preds.get(league) ?? null;
     const description = open
       ? pred
-        ? `The ${SEASON} ${league} postseason bracket and the computer's locked pick for every series, marked as the results come in. Current round: ${open.roundLabel}. Game times in Eastern.`
+        ? `The ${SEASON} ${league} postseason bracket and the computer's locked pick for every series, marked against the results. Current round: ${open.roundLabel}. Game times in Eastern.`
         : `The ${SEASON} ${league} postseason bracket. Current round: ${open.roundLabel}. Every series, seed and result, with game times in Eastern and the home games coming up.`
       : '(concluded: checked by hand)';
     const want = {

@@ -121,12 +121,17 @@ export function PredictionsMethodology({ view }: { view: MethodologyView }) {
         <p>
           Each club gets a rating from its regular-season results. The computer then plays out the postseason {view.simRuns} times from those
           ratings and picks the side that won each matchup more often. A pick&apos;s chance is how often it won that matchup in those simulated
-          postseasons, and its length is the matchup&apos;s most common length.
+          postseasons, and its length is how many games the pick most often took to win it.
         </p>
         <p data-locked-on>
           The inputs were locked on {view.lockedOn}
-          {view.lockedBeforeGame1 ? ', before Game 1' : ''}. The bracket was computed on {view.computedOn} from those locked inputs, with the
-          engine code unchanged since the lock.
+          {view.lockedBeforeGame1 ? ', before Game 1' : ''}.{' '}
+          {view.computedOn === view.bracketLockedOn
+            ? `The bracket was computed and locked on ${view.computedOn} from those locked inputs`
+            : `The bracket was computed on ${view.computedOn} and locked on ${view.bracketLockedOn} from those locked inputs`}
+          , with the rating, simulation and bracket code unchanged since the inputs were locked. Every chance and title odd on this page is as
+          it stood when the bracket was locked. Postseason results are not among the inputs, so a pick can name a club that was already out by
+          then.
         </p>
         <p data-backtest>{view.backtest}</p>
       </div>

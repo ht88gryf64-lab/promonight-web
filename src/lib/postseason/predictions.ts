@@ -61,6 +61,8 @@ export interface PredictedBracket {
   frozenAt: string;
   /** When the bracket was computed from them, ISO. */
   computedAt: string;
+  /** When the bracket was locked, ISO. */
+  lockedAt: string;
   champion: string;
   series: PredictedSeries[];
   titleOdds: { slug: string; odds: number }[];
@@ -82,13 +84,28 @@ const SHA256 = /^[0-9a-f]{64}$/;
 function sha(v: unknown): string | null {
   return typeof v === 'string' && SHA256.test(v) ? v : null;
 }
-/** A stored ISO instant with a zone. Anything else is null. */
+/** A stored UTC instant, "2026-09-25T14:24:00.732Z", that names a real
+ *  moment. The pipeline writes UTC only. A date that does not exist
+ *  ("2026-09-31") would roll over to another day in Date.parse and render
+ *  as a date nobody stored, so the parsed instant must give back the same
+ *  date and time it was read from. */
 function instant(v: unknown): string | null {
   const s = text(v);
-  if (!s || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/.test(s)) return null;
-  const ms = Date.parse(s);
-  return Number.isNaN(ms) ? null : new Date(ms).toISOString();
+  const m = s ? /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?)(?:\.\d{1,3})?Z$/.exec(s) : null;
+  if (!m) return null;
+  const ms = Date.parse(s as string);
+  if (Number.isNaN(ms)) return null;
+  const iso = new Date(ms).toISOString();
+  return iso.slice(0, m[1].length) === m[1] ? iso : null;
 }
+
+/** The pipeline's coin-flip band (predictions/compute.js, COIN_FLIP_LOW and
+ *  COIN_FLIP_HIGH): a pick whose chance is between 49.5% and 50.5%. */
+export const COIN_FLIP_HIGH = 0.505;
+
+/** The engine's core files, the ones whose identity between the freeze and
+ *  the compute the page states (predictions/compute.js CORE_FILES). */
+export const CORE_FILES = ['predictions/elo.js', 'predictions/simulate.js', 'predictions/bracket.js'] as const;
 
 function side(v: unknown): PredictedSide | null {
   if (!isObject(v)) return null;
@@ -115,7 +132,9 @@ function mapRound(v: unknown): PredictedSeries | null {
   if (typeof p !== 'number' || !Number.isFinite(p) || p < 0.5 || p >= 1) return null;
   const length = positiveInt(v.modalSeriesLength);
   if (!length || length < Math.ceil(bestOf / 2) || length > bestOf) return null;
-  if (typeof v.coinFlip !== 'boolean') return null;
+  // The flag must agree with the chance: "Coin flip" is shown in place of
+  // the number, so a flag on a 93% pick would hide a number the page owes.
+  if (typeof v.coinFlip !== 'boolean' || v.coinFlip !== (p <= COIN_FLIP_HIGH)) return null;
   return {
     seriesKey,
     round,
@@ -130,13 +149,14 @@ function mapRound(v: unknown): PredictedSeries | null {
   };
 }
 
-/** A Firestore Timestamp's presence. The lock stamp is checked, not shown. */
-function hasTimestamp(v: unknown): boolean {
-  if (!isObject(v) || typeof (v as { toDate?: unknown }).toDate !== 'function') return false;
+/** A Firestore Timestamp as an ISO instant, or null. */
+function timestampIso(v: unknown): string | null {
+  if (!isObject(v) || typeof (v as { toDate?: unknown }).toDate !== 'function') return null;
   try {
-    return !Number.isNaN((v as { toDate: () => Date }).toDate().getTime());
+    const d = (v as { toDate: () => unknown }).toDate();
+    return d instanceof Date && !Number.isNaN(d.getTime()) ? d.toISOString() : null;
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -152,19 +172,27 @@ function hasTimestamp(v: unknown): boolean {
 export function mapPredictedDoc(data: unknown, expected: { league: PostseasonLeague; season: number }): PredictedBracket | null {
   if (!isObject(data)) return null;
   if (data.league !== expected.league || data.season !== expected.season) return null;
-  if (data.target !== 'lock' || !hasTimestamp(data.lockedAt)) return null;
+  if (data.target !== 'lock') return null;
+  const lockedAt = timestampIso(data.lockedAt);
   const simRuns = positiveInt(data.simRuns);
   const computedAt = instant(data.computedAt);
-  if (!simRuns || !computedAt) return null;
+  if (!lockedAt || !simRuns || !computedAt || Date.parse(computedAt) > Date.parse(lockedAt)) return null;
 
   const prov = data.provenance;
   if (!isObject(prov)) return null;
   const frozenAt = instant(prov.frozenAt);
   if (!frozenAt || Date.parse(frozenAt) >= Date.parse(computedAt)) return null;
   if (!text(prov.engineCommitAtFreeze)) return null;
-  if (!Array.isArray(prov.coreFiles) || prov.coreFiles.length === 0) return null;
+  // Exactly the three core files, each identical at the freeze and the
+  // compute. The page says that code did not change; it says nothing about
+  // the engine's other files, which did not exist at the freeze.
+  if (!Array.isArray(prov.coreFiles) || prov.coreFiles.length !== CORE_FILES.length) return null;
+  const seen = new Set<string>();
   for (const f of prov.coreFiles) {
     if (!isObject(f) || f.identical !== true) return null;
+    const path = text(f.path);
+    if (!path || !(CORE_FILES as readonly string[]).includes(path) || seen.has(path)) return null;
+    seen.add(path);
     const a = text(f.blobAtFreeze);
     if (!a || a !== f.blobAtCompute) return null;
   }
@@ -192,6 +220,8 @@ export function mapPredictedDoc(data: unknown, expected: { league: PostseasonLea
   const last = series[series.length - 1];
   if (!champion || series.filter((s) => s.round === last.round).length !== 1 || last.pick !== champion) return null;
 
+  // Title odds name each club of this bracket once, and no other club.
+  const clubsHere = new Set(series.flatMap((s) => [s.higher.slug, s.lower.slug]));
   if (!Array.isArray(data.titleOdds) || data.titleOdds.length === 0) return null;
   const titleOdds: { slug: string; odds: number }[] = [];
   for (const o of data.titleOdds) {
@@ -199,6 +229,7 @@ export function mapPredictedDoc(data: unknown, expected: { league: PostseasonLea
     const slug = text(o.slug);
     const odds = o.odds;
     if (!slug || typeof odds !== 'number' || !Number.isFinite(odds) || odds < 0 || odds > 1) return null;
+    if (!clubsHere.has(slug) || titleOdds.some((t) => t.slug === slug)) return null;
     titleOdds.push({ slug, odds });
   }
   titleOdds.sort((a, b) => b.odds - a.odds);
@@ -209,6 +240,7 @@ export function mapPredictedDoc(data: unknown, expected: { league: PostseasonLea
     simRuns,
     frozenAt,
     computedAt,
+    lockedAt,
     champion,
     series,
     titleOdds,
@@ -314,7 +346,7 @@ export function scorePredictions(bracket: Bracket, predicted: PredictedBracket):
   const eliminated = eliminatedClubs(bracket);
   for (const p of predicted.series) {
     const real = byKey.get(p.seriesKey);
-    if (!real || real.round !== p.round || real.conference !== p.conference) return null;
+    if (!real || real.round !== p.round || real.conference !== p.conference || real.bestOf !== p.bestOf) return null;
     const decided = real.status === 'final' && real.winnerSide !== null;
     const realWinner = decided ? clubSlug(real[real.winnerSide!]) : null;
     let outcome: PickOutcome;
@@ -436,7 +468,10 @@ export const TITLE_ODDS_ROWS = 8;
 /** "72%". */
 export function percent(p: number): string {
   const n = Math.round(p * 100);
-  return n < 1 ? 'Under 1%' : `${n}%`;
+  if (n < 1) return 'Under 1%';
+  // Never "100%": the mapper refuses a certain pick, and a rounded one is not.
+  if (n > 99) return 'Over 99%';
+  return `${n}%`;
 }
 
 export function recordText(correct: number, decided: number): string {
@@ -652,6 +687,9 @@ export interface MethodologyView {
   lockedBeforeGame1: boolean;
   /** "September 30, 2026", the Eastern day the bracket was computed. */
   computedOn: string;
+  /** The Eastern day the bracket was locked. "At lock" on the page means
+   *  this moment, never the input freeze. */
+  bracketLockedOn: string;
   backtest: string;
   fingerprints: FingerprintRow[];
 }
@@ -706,6 +744,7 @@ export function buildMethodologyView(predicted: PredictedBracket, bracket: Brack
     lockedOn: easternLongDate(predicted.frozenAt),
     lockedBeforeGame1: frozenBeforeFirstGame(bracket, predicted.frozenAt),
     computedOn: easternLongDate(predicted.computedAt),
+    bracketLockedOn: easternLongDate(predicted.lockedAt),
     backtest: `Run on the 2025 ${predicted.league} postseason with the same settings, the computer called ${bt.right} of ${bt.of} series and ${
       bt.champion ? 'got the champion right' : 'got the champion wrong'
     }.`,
