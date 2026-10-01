@@ -140,8 +140,9 @@ export function PredictionsMethodology({ view }: { view: MethodologyView }) {
         Fingerprints
       </h3>
       <p className="mt-1 max-w-[64ch] text-[13px] leading-relaxed text-rd-ink-soft">
-        Each is the SHA-256 fingerprint of one locked file: four of the inputs and the published bracket. A change to any of those files would
-        change its fingerprint.
+        Each is a SHA-256 fingerprint of something that was locked: four of the inputs and the published bracket. The bracket format and the
+        published bracket are fingerprinted as files, the other three as their locked data written out in a fixed order. A change to any of
+        them would change its fingerprint.
       </p>
       <dl data-fingerprints className="mt-3 space-y-2.5">
         {view.fingerprints.map((f) => (

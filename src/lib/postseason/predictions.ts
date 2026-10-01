@@ -495,8 +495,9 @@ export interface RoundLabel {
 }
 
 /**
- * The predictions as the page shows them. Null when a club the document
- * names has no team record on the web.
+ * The predictions as the page shows them, or why not: 'no-join' when a
+ * series has no real page id or round, 'no-team-record' when a club the
+ * document names has no team record on the web.
  *
  * `seriesIds` is the real view's id for each series key (see seriesIds in
  * ./view.ts); the card ids are built from it, never from the key.

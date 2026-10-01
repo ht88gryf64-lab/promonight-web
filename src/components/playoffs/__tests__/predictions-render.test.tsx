@@ -226,11 +226,11 @@ for (const [name, make, now] of STATES) {
 // component receives, its children included, is searched for anything with
 // the shape of a hash.
 
-/** Every export of every 'use client' module under src/components and
- *  src/app (tests excluded): the client side of the tree, wherever it is. */
+/** Every export of every 'use client' module under src/components, src/app
+ *  and src/hooks (tests excluded): every directory that holds one today. */
 async function clientComponents(): Promise<Set<unknown>> {
   const out = new Set<unknown>();
-  const roots = [new URL('../../', import.meta.url), new URL('../../../app/', import.meta.url)];
+  const roots = [new URL('../../', import.meta.url), new URL('../../../app/', import.meta.url), new URL('../../../hooks/', import.meta.url)];
   const files: URL[] = [];
   const walk = (dir: URL) => {
     for (const e of readdirSync(dir, { withFileTypes: true })) {
@@ -296,8 +296,14 @@ function visit(node: ReactNode, client: Set<unknown>, hits: string[], path: stri
       visit(children as ReactNode, client, hits, `${path} > ${name}`, true);
       return;
     }
-    if (typeof type !== 'function') return;
     visit((type as (p: unknown) => ReactNode)(props), client, hits, `${path} > ${name}`, inClient);
+    return;
+  }
+  // A server component wrapped in memo() or forwardRef() is an object: run
+  // the function inside it, so what it renders is walked too.
+  const inner = innerType(type);
+  if (typeof inner === 'function') {
+    visit((inner as (p: unknown) => ReactNode)(props), client, hits, `${path} > ${(inner as { name?: string }).name ?? 'anonymous'}`, inClient);
     return;
   }
   visit(props.children as ReactNode, client, hits, `${path} > ${String(type)}`, inClient);
@@ -338,15 +344,53 @@ test('THE WALKER would see a leak: a hash handed to the predicted bracket throug
     'moved',
   );
   assert.ok(moved.some((h) => h.includes('is under a client component')), moved.join('\n'));
-  // A client wrapper from outside the playoffs directory, and a memo() one.
-  const { TrackedLink } = await import('../../analytics/TrackedLink');
-  const { memo } = await import('react');
-  for (const Wrapper of [TrackedLink, memo(PredictedBracket)]) {
+  // A real client export from a directory the walker did not always scan
+  // (src/app/error.tsx), and memo() and forwardRef() objects exported from a
+  // client module whose inner function is NOT exported (stood in for by
+  // adding the objects alone to the client set).
+  const { default: GlobalError } = await import('../../../app/error');
+  assert.ok(client.has(GlobalError), 'src/app is scanned');
+  const { memo, forwardRef } = await import('react');
+  const hidden = function HiddenClient(p: { children?: ReactNode }) {
+    return <div>{p.children}</div>;
+  };
+  const memoExport = memo(hidden);
+  const refExport = forwardRef(function HiddenRef(p: { children?: ReactNode }) {
+    return <div>{p.children}</div>;
+  });
+  const withObjects = new Set([...client, memoExport, refExport]);
+  assert.ok(!withObjects.has(hidden), 'the inner function is not itself in the set');
+  for (const [label, Wrapper, set] of [
+    ['error.tsx', GlobalError, client],
+    ['memo export', memoExport, withObjects],
+    ['forwardRef export', refExport, withObjects],
+  ] as const) {
     const w: string[] = [];
     const W = Wrapper as unknown as (p: Record<string, unknown>) => ReactElement;
-    visit(<W href="/" ctaId="x" ctaLabel="x" surface="web_playoffs_league" league="MLB" leagueSlug="mlb" season={2026} rounds={[]}><PredictionsMethodology view={b.predictions.methodology} /></W>, client, w, 'wrapped');
-    assert.ok(w.some((h) => h.includes('is under a client component')), w.join('\n'));
+    visit(<W error={new Error('x')} reset={() => {}}><PredictionsMethodology view={b.predictions.methodology} /></W>, set, w, label);
+    assert.ok(w.some((h) => h.includes('is under a client component')), `${label}: ${w.join('\n')}`);
   }
+  // memo() and forwardRef() around a client function that IS in the set:
+  // only unwrapping (innerType) recognises these as client components.
+  const unwrapped: [string, unknown][] = [
+    ['memo(PredictedBracket)', memo(PredictedBracket)],
+    ['forwardRef(PredictedBracket)', forwardRef(PredictedBracket as unknown as Parameters<typeof forwardRef>[0])],
+  ];
+  for (const [label, Wrapper] of unwrapped) {
+    assert.ok(!client.has(Wrapper), `${label}: the wrapper object is not in the set`);
+    const w: string[] = [];
+    const W = Wrapper as unknown as (p: Record<string, unknown>) => ReactElement;
+    visit(<W league="MLB" leagueSlug="mlb" season={2026} rounds={[]}><PredictionsMethodology view={b.predictions.methodology} /></W>, client, w, label);
+    assert.ok(w.some((h) => h.includes('is under a client component')), `${label}: ${w.join('\n')}`);
+  }
+  // A server component wrapped in memo() is expanded: a hash it hands to a
+  // client component inside its own output is seen.
+  const ServerWrap = memo(function ServerWrap() {
+    return <PredictedBracket league="MLB" leagueSlug="mlb" season={2026} rounds={[]} {...{ leak: hash }} />;
+  });
+  const sw: string[] = [];
+  visit(<ServerWrap />, client, sw, 'server memo');
+  assert.ok(sw.some((h) => h.includes('PredictedBracket receives')), sw.join('\n'));
 });
 
 test('METHODOLOGY COPY: computed and locked on one day, or on two, said as such', () => {

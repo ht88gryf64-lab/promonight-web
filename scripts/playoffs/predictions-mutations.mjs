@@ -108,9 +108,16 @@ const CASES = [
   ['title-odds caption claims every club', P, '      titleOdds.length < clubCount\n', '      false\n', [T_PRED]],
   ['view join failure called a missing club', P, "    if (!seriesId || !round) return 'no-join';", "    if (!seriesId || !round) return 'no-team-record';", [T_PRED]],
   ['caption counts the stored list', P, '      titleOdds.length < clubCount\n        ? `The ${titleOdds.length} most likely champions of ${clubCount}.`', '      titleOdds.length < predicted.titleOdds.length\n        ? `The ${titleOdds.length} most likely champions of ${predicted.titleOdds.length}.`', [T_PRED]],
-  ['fingerprints claimed for every input', C, 'Each is the SHA-256 fingerprint of one locked file: four of the inputs and the published bracket.', 'SHA-256 fingerprints of what was locked. A change to any input, or to the published bracket, would change its fingerprint.', [T_ROUTES]],
+  ['fingerprints claimed for every input', C, 'Each is a SHA-256 fingerprint of something that was locked: four of the inputs and the published bracket.', 'SHA-256 fingerprints of what was locked. A change to any input, or to the published bracket, would change its fingerprint.', [T_ROUTES]],
+  ['every fingerprint called a file', C, 'The bracket format and the\n        published bracket are fingerprinted as files, the other three as their locked data written out in a fixed order.', 'All five are fingerprinted as files.', [T_ROUTES]],
   // ---- The client boundary ----
   ['a hash handed to the predicted bracket', C, '<PredictedBracket league={league} leagueSlug={leagueSlug} season={season} rounds={view.rounds} />', "<PredictedBracket league={league} leagueSlug={leagueSlug} season={season} rounds={view.rounds} {...{ leak: 'e4bcaddb1f2acebf37ece2f2c8f32d136609bd93469a30c8e5da104a6bd17a8d' }} />", [T_RENDER]],
+  // ---- The test walker itself: each self-check must fail without its branch ----
+  ['walker scans only the old three directories', T_RENDER, "const roots = [new URL('../../', import.meta.url), new URL('../../../app/', import.meta.url), new URL('../../../hooks/', import.meta.url)];", "const roots = [new URL('../', import.meta.url), new URL('../../analytics/', import.meta.url), new URL('../../ads/', import.meta.url)];", [T_RENDER]],
+  ['walker does not unwrap forwardRef', T_RENDER, '    else if (x.render) x = x.render as typeof x;\n', '', [T_RENDER]],
+  ['walker does not unwrap memo', T_RENDER, '    if (x.type) x = x.type as typeof x;\n    else if', '    if', [T_RENDER]],
+  ['walker does not expand a server memo', T_RENDER, "  if (typeof inner === 'function') {\n    visit((inner as", '  if (false) {\n    visit((inner as', [T_RENDER]],
+  ['walker skips client children', T_RENDER, '      visit(children as ReactNode, client, hits, `${path} > ${name}`, true);\n', '', [T_RENDER]],
   // ---- Copy ----
   ['length described as the most common length', C, 'its length is how many games the pick most often took to win it.', 'its length is the matchup&apos;s most common length.', [T_ROUTES]],
   ['engine-wide unchanged claim', C, ', with the rating, simulation and bracket code unchanged since the inputs were locked.', ', with the engine code unchanged since the lock.', [T_ROUTES]],

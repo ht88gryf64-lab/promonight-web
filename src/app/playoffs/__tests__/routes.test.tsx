@@ -443,8 +443,11 @@ test('FINGERPRINTS: on each league page, the five allowed fingerprints appear on
     assert.equal([...method.matchAll(/[0-9a-f]{40,}/g)].length, 5, slug);
     assert.ok(method.includes('Fingerprints'), `${slug}: labeled as fingerprints`);
     const said = method.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
-    assert.ok(said.includes('Each is the SHA-256 fingerprint of one locked file: four of the inputs and the published bracket.'), said);
-    assert.ok(!/A change to any input|of what was locked/.test(said), 'no claim that every input is fingerprinted');
+    assert.ok(said.includes('Each is a SHA-256 fingerprint of something that was locked: four of the inputs and the published bracket.'), said);
+    assert.ok(said.includes('The bracket format and the published bracket are fingerprinted as files, the other three as their locked data written out in a fixed order.'), said);
+    // Three of the five are hashes of canonical data, not of files: nothing
+    // may call them all files, or say every input has one.
+    assert.ok(!/A change to any input|of what was locked\.|one locked file|those files/.test(said), said);
     // The banned values are nowhere.
     const stored = JSON.parse(readFileSync(new URL(`../../../lib/postseason/__fixtures__/${fixture}`, import.meta.url), 'utf-8')) as Record<string, Record<string, string>>;
     for (const v of [stored.provenance.seedFileSha256, stored.provenance.canonicalDescriptorSha256, stored.provenance.seedFileAuthoredBy, stored.computedBy as unknown as string, stored.provenance.engineCommitAtFreeze]) {
