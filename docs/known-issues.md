@@ -3580,3 +3580,38 @@ ruling.
 
 **Ruled 2026-09-30:** no fix in the G3 fix round; recorded here and in the
 coordination ledger.
+
+## 61. PromoNight Predicts copy guards: five hardening gaps from the G4 review
+
+**Status: OPEN, future hardening. Ruled 2026-10-01: record, do not fix now.**
+
+The last scoped review of the PromoNight Predicts rename (17434fb, merged to
+main as 15c051b) found no CRITICAL, HIGH or MEDIUM issue and five LOWs. None
+changes what a page serves today; each is a guard that would miss some future
+wording regression.
+
+1. **The freshness test misses phrasings.** `FRESHNESS_WORDS` in
+   `src/components/playoffs/__tests__/predictions-render.test.tsx` does not
+   catch "updates daily", "updated after every game", "refreshed",
+   "kept up to date", "reruns" or "as results come in". It reads text only,
+   so wording in a `title` or `aria-label` is unchecked. The list also
+   differs from `sound()` in `metadata.test.ts` and from the freshness check
+   in `verify-served.ts`. Fix: one exported constant used by all three, with
+   `\b(updat|refresh)\w*\b|results come in|\bre-?(run|ran|comput|calculat|simulat)\w*`.
+2. **That freshness test has no mutation-harness case.** Fix: add one to
+   `scripts/playoffs/predictions-mutations.mjs` that puts "Updated daily."
+   beside the backtest sentence in `Predictions.tsx`, with `T_RENDER`.
+3. **The negative claim guards miss near variants.** In `routes.test.tsx`
+   and `verify-served.ts`: "brackets/predictions were locked before Game 1",
+   "before the playoffs", "Game One"; "engine hasn't changed", "engine code
+   has not been changed", "engine was unchanged"; "not recomputed", "re-ran",
+   "ran just once". Fix: `(brackets?|picks?|predictions?)`, add `playoffs`
+   and `Game One`, widen the engine verb group, add `\bre-?ran\b` and
+   `\bnot re-?computed\b`, in both files.
+4. **The two engine-claim regexes differ.** `routes.test.tsx` also bans
+   "results come in"; `verify-served.ts` does not. Fix: add it there.
+5. **No positive check of the pick label in routes.test.** Only the
+   "no computer" guard there touches it, so a label that dropped the brand
+   (plain "Pick:") passes that file. `verify-served.ts` does check
+   "PromoNight's pick:" on the served page. Fix: assert the label in
+   `routes.test.tsx` too.
