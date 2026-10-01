@@ -15,7 +15,9 @@
 //   alive      the club is short of the round the pick names, and has not
 //              lost. "Pick still alive."
 //   decides    the club is in the round the pick names, and the series is
-//              not over. "The Division Series decides this pick."
+//              not over. "The Division Series decides this pick." When that
+//              series already names another club than the one picked: "...
+//              The Dream face the Liberty, not the Lynx as picked."
 //   correct    out in the round named, to the club named; or picked to win
 //              the title and won it.
 //   different  out in the round named, to another club. Neither correct nor
@@ -126,13 +128,14 @@ export function teamPick(
 
   let pickLine: string;
   let pickedOpponent: string | null = null;
+  let pickedName: string | null = null;
   if (toWinTitle) {
     pickLine = `PromoNight's pick: ${team} to win the ${finalLabel}.`;
   } else {
     pickedOpponent = exit.pick;
-    const y = name(pickedOpponent);
-    if (!y) return 'no-team-record';
-    pickLine = `PromoNight's pick: ${team} to lose the ${exitSeries.roundLabel} to the ${y}.`;
+    pickedName = name(pickedOpponent);
+    if (!pickedName) return 'no-team-record';
+    pickLine = `PromoNight's pick: ${team} to lose the ${exitSeries.roundLabel} to the ${pickedName}.`;
   }
 
   const href = `/playoffs/${bracket.league.toLowerCase()}#predictions`;
@@ -171,7 +174,20 @@ export function teamPick(
 
   if (last.status !== 'final') {
     if (lastRankReal < exitRank) return out('alive', 'Pick still alive.');
-    if (lastRankReal === exitRank) return out('decides', decidesLine(last.roundLabel));
+    if (lastRankReal === exitRank) {
+      // The club's own series already names another club than the one the
+      // pick line names (ruling 2026-10-01). A slot still a placeholder names
+      // nobody, and a title pick's line names no opponent: both keep the
+      // plain line.
+      const otherSlot = slugOf(last.higher) === teamId ? last.lower : last.higher;
+      const actual = slugOf(otherSlot);
+      if (!toWinTitle && actual !== null && actual !== pickedOpponent) {
+        const a = name(actual);
+        if (!a) return 'no-team-record';
+        return out('decides', `${decidesLine(last.roundLabel)} The ${team} face the ${a}, not the ${pickedName} as picked.`);
+      }
+      return out('decides', decidesLine(last.roundLabel));
+    }
     return further();
   }
 
@@ -193,12 +209,11 @@ export function teamPick(
   }
   if (lastRankReal > exitRank) return further();
   if (toWinTitle) {
-    // Picked to win the final, lost it: out earlier than picked.
-    return out('busted', `Pick busted: the ${team} went out earlier than picked, losing to the ${opp} ${tally(last)} in the ${last.roundLabel}.`);
+    // Picked to win the final, lost it (ruling 2026-10-01).
+    return out('busted', `Pick busted: the ${team} lost the ${last.roundLabel} to the ${opp} ${tally(last)}.`);
   }
   if (d.other === pickedOpponent) {
     return out('correct', `Pick correct: the ${opp} beat the ${team} ${tally(last)} in the ${last.roundLabel}.`);
   }
-  const y = name(pickedOpponent as string) as string;
-  return out('different', `Right round, different opponent: the ${team} lost to the ${opp} ${tally(last)} in the ${last.roundLabel}. PromoNight picked the ${y}.`);
+  return out('different', `Right round, different opponent: the ${team} lost to the ${opp} ${tally(last)} in the ${last.roundLabel}. PromoNight picked the ${pickedName}.`);
 }

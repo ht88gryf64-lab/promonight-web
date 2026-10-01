@@ -56,7 +56,7 @@ const TABLE: [string, 'mlb' | 'wnba', string, string, string][] = [
   ['dallas-wings', 'wnba', 'decides', "PromoNight's pick: Wings to lose the First Round to the Valkyries.", 'The First Round decides this pick.'],
   ['las-vegas-aces', 'wnba', 'alive', "PromoNight's pick: Aces to lose the Semifinals to the Valkyries.", 'Pick still alive.'],
   ['indiana-fever', 'wnba', 'decides', "PromoNight's pick: Fever to lose the First Round to the Aces.", 'The First Round decides this pick.'],
-  ['atlanta-dream', 'wnba', 'decides', "PromoNight's pick: Dream to lose the Semifinals to the Lynx.", 'The Semifinals decide this pick.'],
+  ['atlanta-dream', 'wnba', 'decides', "PromoNight's pick: Dream to lose the Semifinals to the Lynx.", 'The Semifinals decide this pick. The Dream face the Liberty, not the Lynx as picked.'],
   ['washington-mystics', 'wnba', 'correct', "PromoNight's pick: Mystics to lose the First Round to the Dream.", 'Pick correct: the Dream beat the Mystics 2-0 in the First Round.'],
 ];
 
@@ -109,6 +109,75 @@ test('DECIDES, the title pick in the final round', () => {
   const rays = line(d, 'mlb', 'tampa-bay-rays');
   assert.equal(rays.kind, 'decides');
   assert.equal(rays.statusLine, 'The World Series decides this pick.');
+});
+
+test('DECIDES, PICKED OPPONENT NOT IN THE SERIES: the club\'s own series names another club, both leagues', () => {
+  // Today: the Dream play the Liberty in the semifinal the pick names; the
+  // pick names the Lynx, who are out.
+  const dream = line(today('wnba'), 'wnba', 'atlanta-dream');
+  assert.equal(dream.kind, 'decides');
+  assert.equal(dream.statusLine, 'The Semifinals decide this pick. The Dream face the Liberty, not the Lynx as picked.');
+  // MLB: the Guardians are picked to lose the Championship Series to the
+  // Rays; the Yankees beat the Rays and meet the Guardians there.
+  const m = today('mlb');
+  decide(m, 'AL-DS-A', { winner: 'new-york-yankees' });
+  decide(m, 'AL-DS-B', { winner: 'cleveland-guardians' });
+  const cs = (m.series as Doc[]).find((x) => x.seriesKey === 'AL-CS')!;
+  cs.higher = { slug: 'cleveland-guardians', seed: 2 };
+  cs.lower = { slug: 'new-york-yankees', seed: 4 };
+  const g = line(m, 'mlb', 'cleveland-guardians');
+  assert.equal(g.kind, 'decides');
+  assert.equal(g.statusLine, 'The Championship Series decides this pick. The Guardians face the Yankees, not the Rays as picked.');
+});
+
+test('DECIDES, PLACEHOLDER OPPONENT: a slot that names nobody yet keeps the plain line', () => {
+  // The Aces win their first round and are written into semifinal B, whose
+  // other slot is still "TBD" (no feeder).
+  const w = today('wnba');
+  decide(w, 'R1-3v6', { winner: 'las-vegas-aces' });
+  const sf = (w.series as Doc[]).find((x) => x.seriesKey === 'SF-B')!;
+  sf.lower = { slug: 'las-vegas-aces', seed: 3 };
+  const aces = line(w, 'wnba', 'las-vegas-aces');
+  assert.equal(aces.kind, 'decides');
+  assert.equal(aces.statusLine, 'The Semifinals decide this pick.');
+});
+
+test('DECIDES, SAME OPPONENT: the club picked is the club faced, so the plain line', () => {
+  // The Yankees face the Rays, as picked; the Phillies face the Braves.
+  assert.equal(line(today('mlb'), 'mlb', 'new-york-yankees').statusLine, 'The Division Series decides this pick.');
+  assert.equal(line(today('mlb'), 'mlb', 'philadelphia-phillies').statusLine, 'The Wild Card Series decides this pick.');
+});
+
+test('DECIDES, TITLE PICK IN THE FINAL against a club the bracket did not have there: the plain line (its pick line names no opponent)', () => {
+  const d = today('mlb');
+  decide(d, 'NL-WC-A', { winner: 'atlanta-braves' });
+  decide(d, 'NL-DS-A', { winner: 'milwaukee-brewers' });
+  decide(d, 'NL-DS-B', { winner: 'los-angeles-dodgers' });
+  decide(d, 'NL-CS', { winner: 'milwaukee-brewers', higher: ['milwaukee-brewers', 1], lower: ['los-angeles-dodgers', 2] });
+  decide(d, 'AL-DS-A', { winner: 'tampa-bay-rays' });
+  decide(d, 'AL-DS-B', { winner: 'chicago-white-sox' });
+  decide(d, 'AL-CS', { winner: 'chicago-white-sox', higher: ['tampa-bay-rays', 1], lower: ['chicago-white-sox', 6] });
+  const ws = (d.series as Doc[]).find((x) => x.seriesKey === 'WS')!;
+  ws.higher = { slug: 'milwaukee-brewers', seed: 1 };
+  ws.lower = { slug: 'chicago-white-sox', seed: 6 };
+  ws.status = 'live';
+  assert.equal(line(d, 'mlb', 'milwaukee-brewers').statusLine, 'The World Series decides this pick.');
+});
+
+test('BUSTED, TITLE PICK THAT LOST THE FINAL: its own line, both leagues', () => {
+  assert.equal(line(mlbWorldSeries('tampa-bay-rays', 'tampa-bay-rays'), 'mlb', 'milwaukee-brewers').statusLine, 'Pick busted: the Brewers lost the World Series to the Rays 4-3.');
+  const t = today('wnba');
+  decide(t, 'R1-2v7', { winner: 'golden-state-valkyries' });
+  decide(t, 'SF-A', { winner: 'new-york-liberty' });
+  decide(t, 'SF-B', { winner: 'golden-state-valkyries', higher: ['golden-state-valkyries', 2], lower: ['las-vegas-aces', 3] });
+  decide(t, 'F', { winner: 'new-york-liberty', higher: ['golden-state-valkyries', 2], lower: ['new-york-liberty', 8] });
+  const v = line(t, 'wnba', 'golden-state-valkyries');
+  assert.equal(v.kind, 'busted');
+  assert.equal(v.statusLine, 'Pick busted: the Valkyries lost the WNBA Finals to the Liberty 4-3.');
+  // A title pick out before the final keeps the earlier-than-picked line.
+  const m = today('mlb');
+  decide(m, 'NL-DS-A', { winner: 'san-diego-padres' });
+  assert.match(line(m, 'mlb', 'milwaukee-brewers').statusLine, /^Pick busted: the Brewers went out earlier than picked, losing to the Padres 3-2 in the Division Series\.$/);
 });
 
 test('DECIDES: a plural round takes the plural verb; a Series is singular', () => {
@@ -185,7 +254,7 @@ test('BUSTED, out earlier than picked: a title pick out in an early round, and o
   const lost = mlbWorldSeries('tampa-bay-rays', 'tampa-bay-rays');
   assert.equal(
     line(lost, 'mlb', 'milwaukee-brewers').statusLine,
-    'Pick busted: the Brewers went out earlier than picked, losing to the Rays 4-3 in the World Series.',
+    'Pick busted: the Brewers lost the World Series to the Rays 4-3.',
   );
   assert.equal(line(today('wnba'), 'wnba', 'minnesota-lynx').kind, 'busted');
 });
@@ -216,7 +285,7 @@ test('BUSTED, further than picked: past the round named, with the series that di
   // The Valkyries, picked to win it, lost the final: out earlier than picked.
   assert.equal(
     line(t, 'wnba', 'golden-state-valkyries').statusLine,
-    'Pick busted: the Valkyries went out earlier than picked, losing to the Liberty 4-3 in the WNBA Finals.',
+    'Pick busted: the Valkyries lost the WNBA Finals to the Liberty 4-3.',
   );
   const m = mlbWorldSeries('chicago-white-sox', 'chicago-white-sox');
   assert.equal(line(m, 'mlb', 'chicago-white-sox').statusLine, 'Pick busted: the White Sox went further than picked and won the World Series.');
@@ -422,13 +491,15 @@ const ALL_LINES = (): TeamPickView[] => {
   out.push(line(w, 'wnba', 'atlanta-dream'));
   out.push(line(mlbWorldSeries('tampa-bay-rays', 'milwaukee-brewers'), 'mlb', 'milwaukee-brewers'));
   out.push(line(mlbWorldSeries('chicago-white-sox', 'chicago-white-sox'), 'mlb', 'chicago-white-sox'));
+  out.push(line(mlbWorldSeries('tampa-bay-rays', 'tampa-bay-rays'), 'mlb', 'milwaukee-brewers'));
   return out;
 };
 
 test('COPY: the pick line names PromoNight, every status line is one of the ruled shapes', () => {
   const STATUS = [
     /^Pick still alive\.$/,
-    /^The [A-Z][A-Za-z ]+ decides? this pick\.$/,
+    /^The [A-Z][A-Za-z ]+ decides? this pick\.( The [A-Z][A-Za-z ]+ face the [A-Z][A-Za-z ]+, not the [A-Z][A-Za-z ]+ as picked\.)?$/,
+    /^Pick busted: the [A-Z][A-Za-z ]+ lost the [A-Z][A-Za-z ]+ to the [A-Z][A-Za-z ]+ \d-\d\.$/,
     /^Pick correct: the [A-Z][A-Za-z ]+ (beat the [A-Z][A-Za-z ]+ \d-\d in|won) the [A-Z][A-Za-z ]+\.$/,
     /^Pick busted: the [A-Z][A-Za-z ]+ went (out earlier than picked, losing to|further than picked, beating) the [A-Z][A-Za-z ]+ \d-\d in the [A-Z][A-Za-z ]+\.$/,
     /^Pick busted: the [A-Z][A-Za-z ]+ went further than picked and won the [A-Z][A-Za-z ]+\.$/,

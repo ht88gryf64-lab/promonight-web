@@ -196,7 +196,8 @@ async function main() {
   }
   const STATUS = [
     /^Pick still alive\.$/,
-    /^The [A-Z][A-Za-z ]+ decides? this pick\.$/,
+    /^The [A-Z][A-Za-z ]+ decides? this pick\.( The [A-Z][A-Za-z ]+ face the [A-Z][A-Za-z ]+, not the [A-Z][A-Za-z ]+ as picked\.)?$/,
+    /^Pick busted: the [A-Z][A-Za-z ]+ lost the [A-Z][A-Za-z ]+ to the [A-Z][A-Za-z ]+ \d-\d\.$/,
     /^Pick correct: the [A-Z][A-Za-z ]+ (beat the [A-Z][A-Za-z ]+ \d-\d in|won) the [A-Z][A-Za-z ]+\.$/,
     /^Pick busted: the [A-Z][A-Za-z ]+ went (out earlier than picked, losing to|further than picked, beating) the [A-Z][A-Za-z ]+ \d-\d in the [A-Z][A-Za-z ]+\.$/,
     /^Pick busted: the [A-Z][A-Za-z ]+ went further than picked and won the [A-Z][A-Za-z ]+\.$/,
@@ -244,7 +245,15 @@ async function main() {
       if (r < exitAt) return { kind: 'alive', line: 'Pick still alive.' };
       if (r === exitAt) {
         const lbl = last.roundLabel as string;
-        return { kind: 'decides', line: `The ${lbl} ${/s$/.test(lbl) && !/Series$/.test(lbl) ? 'decide' : 'decides'} this pick.` };
+        const plain = `The ${lbl} ${/s$/.test(lbl) && !/Series$/.test(lbl) ? 'decide' : 'decides'} this pick.`;
+        // Ruling 2026-10-01: the club's own series names a club other than
+        // the one its pick line names. A placeholder names nobody; a title
+        // pick's line names no opponent.
+        const faced = sides(last).find((c) => c !== club) ?? null;
+        if (!toWin && faced !== null && faced !== exit.pick) {
+          return { kind: 'decides', line: `${plain} The ${n(club)} face the ${n(faced)}, not the ${n(exit.pick as string)} as picked.` };
+        }
+        return { kind: 'decides', line: plain };
       }
       return further();
     }
@@ -253,7 +262,9 @@ async function main() {
       return r < exitAt ? { kind: 'alive', line: 'Pick still alive.' } : further();
     }
     const opp = other(last);
-    if (r < exitAt || toWin) return { kind: 'busted', line: `Pick busted: the ${n(club)} went out earlier than picked, losing to the ${n(opp)} ${score(last)} in the ${last.roundLabel}.` };
+    if (r < exitAt) return { kind: 'busted', line: `Pick busted: the ${n(club)} went out earlier than picked, losing to the ${n(opp)} ${score(last)} in the ${last.roundLabel}.` };
+    // Ruling 2026-10-01: a title pick that lost the final.
+    if (toWin) return { kind: 'busted', line: `Pick busted: the ${n(club)} lost the ${last.roundLabel} to the ${n(opp)} ${score(last)}.` };
     if (r > exitAt) return further();
     if (opp === exit.pick) return { kind: 'correct', line: `Pick correct: the ${n(opp)} beat the ${n(club)} ${score(last)} in the ${last.roundLabel}.` };
     return { kind: 'different', line: `Right round, different opponent: the ${n(club)} lost to the ${n(opp)} ${score(last)} in the ${last.roundLabel}. PromoNight picked the ${n(exit.pick as string)}.` };

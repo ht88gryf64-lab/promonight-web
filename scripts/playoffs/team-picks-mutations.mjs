@@ -50,7 +50,7 @@ const CASES = [
   ['alive and decides boundary off by one', TP, "    if (lastRankReal < exitRank) return out('alive', 'Pick still alive.');", "    if (lastRankReal <= exitRank) return out('alive', 'Pick still alive.');", [T_PICK]],
   ['a won series is always alive', TP, "    return lastRankReal < exitRank ? out('alive', 'Pick still alive.') : further();", "    return out('alive', 'Pick still alive.');", [T_PICK]],
   ['another opponent counted correct', TP, '  if (d.other === pickedOpponent) {', '  if (true) {', [T_PICK]],
-  ['different-opponent line names the picked club as the winner', TP, 'lost to the ${opp} ${tally(last)} in the ${last.roundLabel}. PromoNight picked', 'lost to the ${y} ${tally(last)} in the ${last.roundLabel}. PromoNight picked', [T_PICK]],
+  ['different-opponent line names the picked club as the winner', TP, 'lost to the ${opp} ${tally(last)} in the ${last.roundLabel}. PromoNight picked', 'lost to the ${pickedName} ${tally(last)} in the ${last.roundLabel}. PromoNight picked', [T_PICK]],
   ['further-than-picked names the wrong series', TP, '    const through = real.find((s) => rankOf(s.round) === exitRank);', '    const through = last;', [T_PICK]],
   ['champion never detected', TP, '  const champion = last.status === \'final\' && lastRankReal === lastRank && decided(last)?.won === true;', '  const champion = false;', [T_PICK]],
   ['title pick that lost the final not busted', TP, '  if (toWinTitle) {\n    // Picked to win the final, lost it', '  if (false) {\n    // Picked to win the final, lost it', [T_PICK]],
@@ -65,6 +65,12 @@ const CASES = [
   ['exit series missing from the real bracket', TP, "  if (!exitSeries) return 'pick-inconsistent';\n", '', [T_PICK]],
   ['a last series with no decision', TP, "  const d = decided(last);\n  if (!d) return 'pick-inconsistent';\n", '  const d = decided(last)!;\n', [T_PICK]],
   ['a decided series with a placeholder side', TP, '    if (!hi || !lo) return null;\n', '', [T_PICK]],
+  // ---- Rulings 2026-10-01 ----
+  ['picked-opponent line names the wrong club', TP, 'The ${team} face the ${a}, not the ${pickedName} as picked.', 'The ${team} face the ${pickedName}, not the ${a} as picked.', [T_PICK]],
+  ['placeholder treated as an opponent', TP, '      const actual = slugOf(otherSlot);', "      const actual = otherSlot.kind === 'club' ? otherSlot.slug : otherSlot.label;", [T_PICK]],
+  ['the picked club faced still gets the new line', TP, '      if (!toWinTitle && actual !== null && actual !== pickedOpponent) {', '      if (!toWinTitle && actual !== null) {', [T_PICK]],
+  ['title pick in the final gets the new line', TP, '      if (!toWinTitle && actual !== null && actual !== pickedOpponent) {', '      if (actual !== null && actual !== pickedOpponent) {', [T_PICK]],
+  ['title loss falls back to the generic busted line', TP, '    return out(\'busted\', `Pick busted: the ${team} lost the ${last.roundLabel} to the ${opp} ${tally(last)}.`);', '    return out(\'busted\', `Pick busted: the ${team} went out earlier than picked, losing to the ${opp} ${tally(last)} in the ${last.roundLabel}.`);', [T_PICK]],
   // ---- Failure isolation and reads (data.ts) ----
   ['line failure rethrown', D, TEAM_CATCH, '    throw e;\n  }\n  ' + TEAM_LOG, [T_DATA]],
   ['line failure not logged', D, TEAM_LOG, '', [T_DATA]],
