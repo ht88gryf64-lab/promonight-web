@@ -341,7 +341,9 @@ try {
     // The page asked for the ad script and Chrome refused it, no ad host
     // answered, the ad runtime never started and no ad container exists: so
     // the height below is the one the placer reads before it places a unit.
-    check(`${path} @390 PRE-AD: the ad script was requested and blocked; no ad host answered; no ad runtime; no ad container`, blocked.length > 0 && answered.length === 0 && !pre.runtime && pre.ads === 0, `${blocked.length} blocked ad-script requests, ${answered.length} ad-host responses, runtime ${pre.runtime}, ${pre.ads} containers`);
+    check(`${path} @390 PRE-AD: the ad script was requested and blocked; no ad host answered; no ad container`, blocked.length > 0 && answered.length === 0 && pre.ads === 0, `${blocked.length} blocked ad-script requests, ${answered.length} ad-host responses, ${pre.ads} containers`);
+    // Information only: which field Raptive's runtime sets is not verified.
+    note(`${path} @390 PRE-AD: window.adthrive.siteAds present: ${pre.runtime}`);
     check(`${path} @390 PRE-AD: article data-ad-region="content" intact and at least 1000px`, pre.region === 'content' && pre.pageContent && pre.height >= 1000, `${pre.height}px`);
   }
   await send('Network.setBlockedURLs', { urls: ANALYTICS });

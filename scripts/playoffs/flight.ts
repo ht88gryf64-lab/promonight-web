@@ -20,9 +20,15 @@
 // THE RULE for a fingerprint F. The payload bytes hold it exactly once; the
 // decoded tree holds exactly one host <section id="how-the-computer-picked">;
 // the walk from the root meets F exactly once; and there F is the whole
-// `children` string of a host <code> inside that section, with no client
-// component above it and no prop other than `children` on the way down from
-// the root. Anything unresolved, rejected or not understood fails closed.
+// `children` string of a host <code> inside that section. Anything
+// unresolved, rejected or not understood fails closed, and so does any value
+// the walk cannot inspect fully and repeatably: a stream, an async iterable,
+// an iterator other than a Map or a Set, a function that is not a client
+// reference (a server action and its bound arguments). The app emits none.
+//
+// Production payloads only: development rows (D, W, J, N) throw in the
+// production client, so every check fails closed against `next dev`. An E
+// row (a server component error) also fails the operator-text check.
 //
 // "No client component above it" is read precisely, because the app's
 // layouts wrap every page in client providers through `children`, which is
@@ -79,9 +85,12 @@ function installModuleStubs() {
 /** The payload bytes, in push order. */
 export function payloadBytes(html: string): { bytes: Buffer; error: string | null } {
   const parts: Buffer[] = [];
-  for (const m of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)) {
+  for (const m of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script\s*>/gi)) {
     const body = m[1];
-    if (!body.includes('self.__next_f')) continue;
+    // Any script that touches __next_f, in any spelling, must be one of the
+    // two push shapes Next writes; anything else could add rows the browser
+    // runs and this reader does not see.
+    if (!/__next_f/.test(body)) continue;
     const call = /^\s*\(self\.__next_f\s*=\s*self\.__next_f\s*\|\|\s*\[\]\)\.push\(([\s\S]*)\)\s*;?\s*$/.exec(body) ?? /^\s*self\.__next_f\.push\(([\s\S]*)\)\s*;?\s*$/.exec(body);
     if (!call) return { bytes: Buffer.concat(parts), error: 'a script touches self.__next_f in a shape this reader does not know' };
     let arr: unknown;
@@ -136,7 +145,9 @@ async function settle(v: unknown): Promise<{ v: unknown; error: string | null }>
         v = lazy._init(lazy._payload);
       } catch (p) {
         if (p && typeof (p as { then?: unknown }).then === 'function') {
-          const r = await Promise.race([Promise.resolve(p).then(() => 'ok', () => 'rejected'), new Promise((res) => setTimeout(() => res('timeout'), 2000))]);
+          let timer: ReturnType<typeof setTimeout> | undefined;
+          const r = await Promise.race([Promise.resolve(p).then(() => 'ok', () => 'rejected'), new Promise((res) => (timer = setTimeout(() => res('timeout'), 2000)))]);
+          clearTimeout(timer);
           if (r !== 'ok') return { v: null, error: `lazy ${r}` };
           continue;
         }
@@ -145,10 +156,12 @@ async function settle(v: unknown): Promise<{ v: unknown; error: string | null }>
       continue;
     }
     if (v && typeof (v as { then?: unknown }).then === 'function') {
+      let timer: ReturnType<typeof setTimeout> | undefined;
       const r = await Promise.race([
         Promise.resolve(v as Promise<unknown>).then((x) => ({ ok: true as const, x }), (e) => ({ ok: false as const, e })),
-        new Promise<{ ok: false; e: string }>((res) => setTimeout(() => res({ ok: false, e: 'timeout' }), 2000)),
+        new Promise<{ ok: false; e: string }>((res) => (timer = setTimeout(() => res({ ok: false, e: 'timeout' }), 2000))),
       ]);
+      clearTimeout(timer);
       if (!r.ok) return { v: null, error: `promise ${String((r as { e: unknown }).e)}` };
       v = r.x;
       continue;
@@ -225,6 +238,10 @@ export async function walkTree(root: unknown, needle: string | null): Promise<Wa
       record(v, ctx, direct);
       return;
     }
+    if (typeof v === 'function') {
+      if (!CLIENT.has(v)) out.errors.push('a function that is not a client reference (a server action?)');
+      return;
+    }
     if (v === null || typeof v !== 'object') return;
     const tag = (v as { $$typeof?: unknown }).$$typeof;
     if (tag === ELEMENT || tag === LEGACY_ELEMENT) {
@@ -257,7 +274,9 @@ export async function walkTree(root: unknown, needle: string | null): Promise<Wa
             inSection,
             clientData: ctx.clientData || (client && !children),
             clientInSection: ctx.clientInSection || (inSection && client),
-            propInSection: ctx.propInSection || (inSection && !children && !isSection) || (ctx.inSection && !children),
+            // Any prop other than `children` on or below the section,
+            // the section's own included, is a crossing.
+            propInSection: ctx.propInSection || (inSection && !children),
             depth: next.depth,
           },
           { code, propKey: k },
@@ -301,15 +320,24 @@ export async function walkTree(root: unknown, needle: string | null): Promise<Wa
       await visit(b.toString('latin1'), cross, { code: false });
       return;
     }
-    if (typeof (v as { [Symbol.iterator]?: unknown })[Symbol.iterator] === 'function') {
-      try {
-        for (const x of v as Iterable<unknown>) await visit(x, cross, { code: false });
-      } catch (e) {
-        out.errors.push(`an iterable that does not iterate: ${e instanceof Error ? e.message : String(e)}`);
-      }
+    // Values the walk cannot read fully without consuming them, or cannot
+    // read at all: fail closed.
+    if (typeof ReadableStream !== 'undefined' && v instanceof ReadableStream) {
+      out.errors.push('a stream');
       return;
     }
-    if (typeof v === 'function') return;
+    if (typeof (v as { [Symbol.asyncIterator]?: unknown })[Symbol.asyncIterator] === 'function') {
+      out.errors.push('an async iterable');
+      return;
+    }
+    if (typeof (v as { [Symbol.iterator]?: unknown })[Symbol.iterator] === 'function') {
+      out.errors.push('an iterator');
+      return;
+    }
+    if (typeof v === 'function') {
+      if (!CLIENT.has(v)) out.errors.push('a function that is not a client reference (a server action?)');
+      return;
+    }
     for (const [k, x] of Object.entries(v)) {
       out.keys.push(k);
       await visit(x, cross, { code: false });
@@ -345,7 +373,8 @@ export async function fingerprintPlacement(html: string): Promise<(f: string) =>
 // every attribute but class, style, href, src, srcset and data-*, and every
 // string and key of the decoded payload except class names.
 
-const SEP = '[-_ ]';
+// Optional, so camelCase spellings ("predictionsUnavailable") match too.
+const SEP = '[-_ ]?';
 const TOKENS = new RegExp(
   [
     `predictions${SEP}unavailable`,
@@ -361,7 +390,7 @@ const TOKENS = new RegExp(
   ].join('|'),
   'i',
 );
-const WORDS = /\b(unavailable|disabled|errors?|failed|failure|mismatch|missing|refused)\b/i;
+const WORDS = /\b(unavailable|disabled|errors?|fail(s|ed|ing|ure)?|mismatch|missing|refused|unable|timed out|went wrong|try again)\b|\bcould ?n[o']t\b|\bnot available\b/i;
 
 export function decodeEntities(s: string): string {
   return s
@@ -384,7 +413,8 @@ function visibleText(html: string): string {
   ).replace(/\s+/g, ' ');
 }
 
-const SKIP_ATTR = /^(class|style|href|src|srcset|data-[\w-]+|id|for|type|rel|as|crossorigin|integrity|nonce|charset|lang|dir|xmlns(:\w+)?|viewbox|d|fill|stroke(-[\w-]+)?|width|height|sizes|media|loading|decoding|fetchpriority|tabindex|role|target|method|action|name|value)$/i;
+// `value` is read: on a button input it is text the reader sees.
+const SKIP_ATTR = /^(class|style|href|src|srcset|data-[\w-]+|id|for|type|rel|as|crossorigin|integrity|nonce|charset|lang|dir|xmlns(:\w+)?|viewbox|d|fill|stroke(-[\w-]+)?|width|height|sizes|media|loading|decoding|fetchpriority|tabindex|role|target|method|action|name)$/i;
 
 /** The first operator-facing word or token on the page, or null. */
 export async function operatorText(html: string): Promise<string | null> {

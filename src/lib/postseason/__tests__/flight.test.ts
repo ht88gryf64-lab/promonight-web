@@ -63,11 +63,38 @@ test('FLIGHT: out of place, each way, fails', async () => {
     ['twice', [`0:${SECTION(`[${CODE},${CODE}]`)}`]],
     ['a reference to a row that is not there', [`0:${SECTION('["$","dl",null,{"children":"$L9"}]')}`, `4:${CODE}`]],
     ['in a row the root never reaches', [`0:${SECTION('"x"')}`, `5:${CODE}`]],
+    ['a non-children prop of the section itself', [`0:["$","section",null,{"id":"how-the-computer-picked","data-x":${CODE},"children":"x"}]`]],
+    // Values the walk cannot inspect fully: each fails closed. Shapes as
+    // React 19.2's flight server emits them for a shared element.
+    ['a ReadableStream prop of a client component', [IMPORT, '2:R', `0:["$","div",null,{"children":[${SECTION(CODE)},["$","$L7",null,{"s":"$2"}]]}]`, '2:"$0:props:children:0:props:children"']],
+    ['an async iterable prop of a client component', [IMPORT, '2:X', `0:["$","div",null,{"children":[${SECTION(CODE)},["$","$L7",null,{"s":"$2"}]]}]`, '2:"$0:props:children:0:props:children"']],
+    ['an iterator prop of a client component', [IMPORT, '2:["$0:props:children:0:props:children"]', `0:["$","div",null,{"children":[${SECTION(CODE)},["$","$L7",null,{"picks":"$i2"}]]}]`]],
+    ['a server action with bound arguments', [IMPORT, '2:{"id":"actions#act","bound":"$@3"}', '3:["$0:props:children:0:props:children"]', `0:["$","div",null,{"children":[${SECTION(CODE)},["$","$L7",null,{"onPick":"$h2"}]]}]`]],
   ];
   for (const [why, rows] of cases) {
     const r = await place(page(rows));
     assert.equal(r.ok, false, `${why}: ${r.detail}`);
     if (process.env.FLIGHT_DEBUG) console.log(`${why} -> ${r.detail}`);
+  }
+});
+
+test('FLIGHT: an iterator is never consumed: asking twice, or for another fingerprint first, still fails', async () => {
+  const html = page([IMPORT, '2:["$0:props:children:0:props:children"]', `0:["$","div",null,{"children":[${SECTION(CODE)},["$","$L7",null,{"picks":"$i2"}]]}]`]);
+  const at = await fingerprintPlacement(html);
+  assert.equal((await at('b'.repeat(64))).ok, false);
+  assert.equal((await at(H)).ok, false);
+  assert.equal((await at(H)).ok, false);
+});
+
+test('FLIGHT: a push the reader does not see in full fails closed: an upper-case tag, another global spelling', async () => {
+  // An earlier push defines row 9 as a path to the code element; the
+  // visible payload defines row 9 as "ok" and hands it to a client. The
+  // browser keeps the first row 9, so the client gets the code.
+  const visible = page([IMPORT, `0:[${SECTION(CODE)},["$","$L7",null,{"x":"$L9"}]]`, '9:"ok"']).replace('<html><body>', '');
+  const hidden = (open: string, call: string) => `<html><body>${open}${call}(${JSON.stringify([1, '9:"$0:0:props:children"\n'])})</SCRIPT>${visible}`;
+  for (const [open, call] of [['<SCRIPT>', 'self.__next_f.push'], ['<script>', 'window.__next_f.push'], ['<script>', 'self["__next_f"].push'], ['<script>', 'globalThis.__next_f.push']]) {
+    const r = await place(hidden(open, call));
+    assert.equal(r.ok, false, `${open} ${call}: ${r.detail}`);
   }
 });
 
@@ -109,6 +136,12 @@ test('OPERATOR TEXT: every way failure text could reach a page is seen; class na
     ['a meta content', page(ok0, '<meta name="x" content="Predictions disabled">')],
     ['the switch name in lower case', page(ok0, '<!-- predictions_disabled -->')],
     ['the tag in another case', page(ok0, '<script>console.log("[Predictions-Unavailable]")</script>')],
+    ['a stream of text to a client', page([IMPORT, '2:R', '0:["$","$L7",null,{"s":"$2"}]', '2:"The computer picks failed to load"'])],
+    ['a camelCase token in a payload string', page(['0:["$","p",null,{"children":"predictionsUnavailable"}]'])],
+    ['a camelCase reason in visible text', page(ok0, '<p>readFailed</p>')],
+    ['"not available"', page(ok0, '<p>The computer\'s picks are not available right now.</p>')],
+    ['"could not"', page(ok0, '<p>Picks could not be loaded. Try again later.</p>')],
+    ['a button value', page(ok0, '<input type="button" value="Predictions failed">')],
     ['a [3] push', `<html><body><script>self.__next_f.push(${JSON.stringify([3, Buffer.from('0:["$","p",null,{"children":"Predictions unavailable"}]\n').toString('base64')])})</script></body></html>`],
   ];
   for (const [why, html] of caught) assert.notEqual(await operatorText(html), null, why);
