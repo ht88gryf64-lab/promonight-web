@@ -326,6 +326,85 @@ test('GUARD: a pick chain that does not end where it should gets no line', () =>
   assert.equal(teamPick(b, p4, 'boston-red-sox', clubs()), 'pick-inconsistent');
 });
 
+test('GUARD: a decided series whose score is not one a series ends on gets no line', () => {
+  // The mapper accepts these; the line would state the score.
+  const zero = bracketOf(today('mlb'));
+  const wc = zero.series.find((s) => s.seriesKey === 'AL-WC-A')!;
+  wc.wins = { higher: 0, lower: 0 };
+  assert.equal(teamPick(zero, predicted.mlb(), 'chicago-white-sox', clubs()), 'pick-inconsistent');
+  assert.equal(teamPick(zero, predicted.mlb(), 'houston-astros', clubs()), 'pick-inconsistent');
+  const backwards = bracketOf(today('mlb'));
+  backwards.series.find((s) => s.seriesKey === 'AL-WC-A')!.wins = { higher: 2, lower: 1 };
+  assert.equal(teamPick(backwards, predicted.mlb(), 'chicago-white-sox', clubs()), 'pick-inconsistent');
+  const short = bracketOf(today('mlb'));
+  short.series.find((s) => s.seriesKey === 'AL-WC-B')!.wins = { higher: 1, lower: 0 };
+  assert.equal(teamPick(short, predicted.mlb(), 'boston-red-sox', clubs()), 'pick-inconsistent');
+});
+
+test('GUARD: a real document whose rounds are out of order gets no line', () => {
+  // The World Series moved ahead of the two Championship Series: the last
+  // round would be the Championship Series, and the title pick would name it.
+  const d = today('mlb');
+  const all = d.series as Doc[];
+  const ws = all.find((x) => x.seriesKey === 'WS')!;
+  d.series = [...all.filter((x) => x !== ws && x.round !== 'championship_series'), ws, ...all.filter((x) => x.round === 'championship_series')];
+  const b = bracketOf(d);
+  assert.equal(teamPick(b, predicted.mlb(), 'milwaukee-brewers', clubs()), 'pick-inconsistent');
+  assert.equal(teamPick(b, predicted.mlb(), 'los-angeles-dodgers', clubs()), 'pick-inconsistent');
+  // The Championship Series ahead of the Division Series: the Brewers'
+  // rounds no longer run in the locked document's order.
+  const e = today('mlb');
+  const es = e.series as Doc[];
+  e.series = [...es.filter((x) => x.round === 'wild_card'), ...es.filter((x) => x.round === 'championship_series'), ...es.filter((x) => x.round === 'division_series'), ...es.filter((x) => x.round === 'world_series')];
+  assert.equal(teamPick(bracketOf(e), predicted.mlb(), 'milwaukee-brewers', clubs()), 'pick-inconsistent');
+});
+
+test('GUARD: a last round that is not one series, the locked document\'s last, gets no line', () => {
+  const b = bracketOf(today('mlb'));
+  const ws = b.series.find((s) => s.seriesKey === 'WS')!;
+  b.series.push({ ...ws, seriesKey: 'WS-2' });
+  assert.equal(teamPick(b, predicted.mlb(), 'milwaukee-brewers', clubs()), 'pick-inconsistent');
+  assert.equal(teamPick(b, predicted.mlb(), 'boston-red-sox', clubs()), 'pick-inconsistent');
+});
+
+test('GUARD: a title pick whose chain stops short of the final gets no line', () => {
+  const b = bracketOf(today('mlb'));
+  const p = predicted.mlb();
+  // The Brewers taken out of the predicted final, still the champion field.
+  const ws = p.series.find((s) => s.seriesKey === 'WS')!;
+  ws.higher = { slug: 'los-angeles-dodgers', seed: 2 };
+  ws.pick = 'los-angeles-dodgers';
+  assert.equal(teamPick(b, p, 'milwaukee-brewers', clubs()), 'pick-inconsistent');
+});
+
+test('GUARD: a club listed in a later series after losing its exit series gets no line, not "beating"', () => {
+  // The Yankees are picked to lose the Division Series to the Rays, lose it,
+  // and are written into the Championship Series anyway.
+  const d = today('mlb');
+  decide(d, 'AL-DS-A', { winner: 'tampa-bay-rays' });
+  const cs = (d.series as Doc[]).find((x) => x.seriesKey === 'AL-CS')!;
+  cs.higher = { slug: 'tampa-bay-rays', seed: 1 };
+  cs.lower = { slug: 'new-york-yankees', seed: 4 };
+  assert.equal(teamPick(bracketOf(d), predicted.mlb(), 'new-york-yankees', clubs()), 'pick-inconsistent');
+});
+
+test('GUARD: an exit series the real bracket does not have gets no line', () => {
+  const b = bracketOf(today('mlb'));
+  const p = predicted.mlb();
+  p.series.find((s) => s.seriesKey === 'AL-DS-A')!.seriesKey = 'AL-DS-Z';
+  assert.equal(teamPick(b, p, 'new-york-yankees', clubs()), 'pick-inconsistent');
+});
+
+test('GUARD: a last series that is final with no winner, or with a slot that is not a club, gets no line', () => {
+  const b = bracketOf(today('mlb'));
+  b.series.find((s) => s.seriesKey === 'AL-WC-B')!.winnerSide = null;
+  assert.equal(teamPick(b, predicted.mlb(), 'boston-red-sox', clubs()), 'pick-inconsistent');
+  const c = bracketOf(today('mlb'));
+  const wc = c.series.find((s) => s.seriesKey === 'AL-WC-B')!;
+  wc.higher = { kind: 'placeholder', label: 'NYY', seed: 4, candidates: null };
+  assert.equal(teamPick(c, predicted.mlb(), 'boston-red-sox', clubs()), 'pick-inconsistent');
+});
+
 test('GUARD: a club the line names with no team record gets no line', () => {
   const b = bracketOf(today('mlb'));
   const without = (slug: string) => new Map([...clubs()].filter(([k]) => k !== slug));

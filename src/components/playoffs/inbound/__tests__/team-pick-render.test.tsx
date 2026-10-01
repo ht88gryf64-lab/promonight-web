@@ -114,7 +114,7 @@ test('WITH A LINE: no ad container, no aside, no article, no dash, no "live", no
   }
 });
 
-test('WITH A LINE: today\'s five states are all there', () => {
+test('WITH A LINE: today\'s states are all there: alive, decides, correct, busted earlier and busted further', () => {
   const kinds = new Set(withLines().map((r) => r.pick.kind));
   assert.deepEqual([...kinds].sort(), ['alive', 'busted', 'correct', 'decides']);
   const busted = withLines().filter((r) => r.pick.kind === 'busted').map((r) => r.pick.statusLine);

@@ -97,9 +97,16 @@ export function teamPick(
 
   const realByKey = new Map(bracket.series.map((s) => [s.seriesKey, s]));
   const real = bracket.series.filter((s) => lists(s, teamId));
-  const mine = predicted.series.filter((s) => inPredicted(s, teamId)).sort((a, b) => rankOf(a.round) - rankOf(b.round));
+  // In the locked document's own order, which is the engine's round order.
+  // The real document must order the club's rounds the same way, and must
+  // end in one final series, the locked document's last: a reordered real
+  // document would otherwise name the wrong round as the final.
+  const mine = predicted.series.filter((s) => inPredicted(s, teamId));
   if (mine.length === 0) return 'no-team-pick';
   if (mine.some((s) => rankOf(s.round) < 0)) return 'pick-inconsistent';
+  for (let i = 1; i < mine.length; i++) if (rankOf(mine[i].round) <= rankOf(mine[i - 1].round)) return 'pick-inconsistent';
+  const finals = bracket.series.filter((s) => rankOf(s.round) === lastRank);
+  if (finals.length !== 1 || finals[0].seriesKey !== predicted.series[predicted.series.length - 1]?.seriesKey) return 'pick-inconsistent';
   if (real.length === 0 || real[0].seriesKey !== mine[0].seriesKey) return 'first-series-mismatch';
 
   // The chain: picked to win every series but the last.
@@ -115,7 +122,7 @@ export function teamPick(
   if (!team) return 'no-team-record';
   const exitSeries = realByKey.get(exit.seriesKey);
   if (!exitSeries) return 'pick-inconsistent';
-  const finalLabel = bracket.series.filter((s) => rankOf(s.round) === lastRank)[0].roundLabel;
+  const finalLabel = finals[0].roundLabel;
 
   let pickLine: string;
   let pickedOpponent: string | null = null;
@@ -134,12 +141,18 @@ export function teamPick(
   // The club's furthest real series, as the module above the line reads it.
   const last = real[real.length - 1];
   const lastRankReal = rankOf(last.round);
-  /** The other club in a decided series of this club, and who won. */
+  /** The other club in a decided series of this club, and who won. Null
+   *  unless the series is final with two clubs and a score a series can end
+   *  on: the winner at the clinching number, the loser short of it. The line
+   *  states that score. */
   const decided = (s: BracketSeries): { other: string; won: boolean } | null => {
     if (s.status !== 'final' || !s.winnerSide) return null;
     const hi = slugOf(s.higher);
     const lo = slugOf(s.lower);
     if (!hi || !lo) return null;
+    const need = Math.ceil(s.bestOf / 2);
+    const loserSide = s.winnerSide === 'higher' ? 'lower' : 'higher';
+    if (s.wins[s.winnerSide] !== need || s.wins[loserSide] >= need || s.wins[loserSide] < 0) return null;
     const other = hi === teamId ? lo : hi;
     return { other, won: slugOf(s[s.winnerSide]) === teamId };
   };
