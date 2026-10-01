@@ -216,7 +216,7 @@ function hangPredictions() {
 
 /** Nothing of the predictions, and nothing about their failure, in a page. */
 function assertNoPredictions(html: string, where: string) {
-  for (const marker of ['id="predictions"', 'data-predictions', 'data-pick', 'po-picks', 'how-the-computer-picked', 'Title odds', "Computer&#x27;s", 'The Computer', 'Fingerprints']) {
+  for (const marker of ['id="predictions"', 'data-predictions', 'data-pick', 'po-picks', 'how-promonight-predicts-works', 'Title odds', "Computer&#x27;s", 'The Computer', 'Fingerprints']) {
     assert.equal(count(html, marker), 0, `${where}: ${marker}`);
   }
   assert.ok(!/[0-9a-f]{40,}/.test(html), `${where}: a hash`);

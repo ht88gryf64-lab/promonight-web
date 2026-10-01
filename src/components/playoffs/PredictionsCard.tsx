@@ -7,7 +7,7 @@ import { CONDENSED, LockIcon } from './ui';
 // league's predictions section. It carries the champion pick and the record
 // and nothing else: no fingerprint, no date, no series.
 export function hubPredictionText(l: HubPredictionLine): string {
-  return `Computer's champion: ${l.championName} · ${l.record}`;
+  return `PromoNight Predicts: ${l.championName} win it all · ${l.record}`;
 }
 
 export function PredictionsCard({
@@ -44,7 +44,7 @@ export function PredictionsCard({
                 ctaLabel={text}
                 className="font-semibold text-rd-ink underline decoration-rd-line-strong underline-offset-2 hover:text-rd-red"
               >
-                {`Computer's champion: ${l.championName} `}
+                {`PromoNight Predicts: ${l.championName} win it all `}
                 <span className="whitespace-nowrap">{`· ${l.record}`}</span>
               </TrackedLink>
             </li>

@@ -221,8 +221,8 @@ const longEt = (d: Date) => {
   return `${p.month} ${p.day}, ${p.year}`;
 };
 const BACKTEST: Record<League, string> = {
-  WNBA: 'Run on the 2025 WNBA postseason with the same settings, the computer called 5 of 7 series and got the champion right.',
-  MLB: 'Run on the 2025 MLB postseason with the same settings, the computer called 5 of 11 series and got the champion wrong.',
+  WNBA: 'Run on the 2025 WNBA postseason with the same settings, the simulation called 5 of 7 series and got the champion right.',
+  MLB: 'Run on the 2025 MLB postseason with the same settings, the simulation called 5 of 11 series and got the champion wrong.',
 };
 
 interface Club {
@@ -595,7 +595,7 @@ async function main() {
     check(`${where}: every pick carries the mark the scoring rule gives it, its length and its chance`, wrong.length === 0 && sc.marks.length === doc.series.length, wrong.slice(0, 3).join('; ') || `${sc.marks.length} picks`);
     const card = textOf(element(section, 'data-predictions-scorecard') ?? '');
     const champ = clubs.get(p.champion)?.full ?? p.champion;
-    const record = sc.decided === 0 ? 'No series decided yet' : `The computer is ${sc.correct} for ${sc.decided}`;
+    const record = sc.decided === 0 ? 'No series decided yet' : `PromoNight is ${sc.correct} for ${sc.decided}`;
     check(`${where}: scorecard`, card.includes(record) && card.includes(`${sc.alive} ${sc.alive === 1 ? 'pick' : 'picks'} still alive`) && card.includes(`${champ}, ${sc.champion}`), card);
     const odds = [...p.titleOdds].sort((a, b) => b.odds - a.odds).slice(0, 8);
     const oddsText = textOf(element(section, 'data-title-odds') ?? '');
@@ -612,8 +612,9 @@ async function main() {
     check(`${where}: methodology says when the inputs were locked`, mt.includes(`The inputs were locked on ${longEt(frozen)}${first ? ', before Game 1' : ''}.`), longEt(frozen));
     const computedOn = longEt(new Date(p.computedAt));
     const lockedOn = longEt(instantOf(p.lockedAt as unknown) as Date);
-    const when = computedOn === lockedOn ? `computed and locked on ${computedOn}` : `computed on ${computedOn} and locked on ${lockedOn}`;
-    check(`${where}: methodology says when the bracket was computed and locked`, mt.includes(`The bracket was ${when} from those locked inputs, with the rating, simulation and bracket code unchanged since the inputs were locked.`), when);
+    const when = computedOn === lockedOn ? `computed once from those locked inputs and locked on ${computedOn}` : `computed once from those locked inputs on ${computedOn} and locked on ${lockedOn}`;
+    check(`${where}: methodology says when the bracket was computed and locked, and that it was never recomputed`, mt.includes(`The bracket was ${when}, and it has not been recomputed since; the rating, simulation and bracket code is unchanged since the inputs were locked.`), when);
+    check(`${where}: methodology says it is a simulation, not a staff pick`, mt.includes('PromoNight Predicts is a simulation, not a staff pick.') && mt.includes('The simulation then plays out the postseason'));
     check(`${where}: methodology says what "at lock" means and why a pick can name a club already out`, mt.includes('Every chance and title odd on this page is as it stood when the bracket was locked.') && mt.includes('Postseason results are not among the inputs, so a pick can name a club that was already out by then.'));
     check(`${where}: methodology states the length as the engine computes it`, mt.includes('its length is how many games the pick most often took to win it') && !/most common length|engine code unchanged/.test(mt));
     check(`${where}: methodology names ${p.simRuns.toLocaleString('en-US')} simulated postseasons`, mt.includes(`plays out the postseason ${p.simRuns.toLocaleString('en-US')} times`));
@@ -660,7 +661,7 @@ async function main() {
     const pred = DISABLED.has(league) ? null : preds.get(league) ?? null;
     const description = open
       ? pred
-        ? `The ${SEASON} ${league} postseason bracket and the computer's locked pick for every series, marked against the results. Current round: ${open.roundLabel}. Game times in Eastern.`
+        ? `The ${SEASON} ${league} postseason bracket, with a locked pick for every series from a postseason simulation, marked against the results. Current round: ${open.roundLabel}. Game times in Eastern.`
         : `The ${SEASON} ${league} postseason bracket. Current round: ${open.roundLabel}. Every series, seed and result, with game times in Eastern and the home games coming up.`
       : '(concluded: checked by hand)';
     const want = {
@@ -674,7 +675,7 @@ async function main() {
     leaks(where, got.html);
     if (pred) await predictionsOnPage(where, got.html, el, league, doc, pred);
     if (DISABLED.has(league)) {
-      const traces = ['id="predictions"', 'data-predictions', 'data-pick', 'po-picks', 'how-the-computer-picked', 'Title odds', 'Fingerprints', "Computer's", 'Computer&#x27;s', 'The Computer'].filter((m) => got.html.includes(m));
+      const traces = ['id="predictions"', 'data-predictions', 'data-pick', 'po-picks', 'how-promonight-predicts-works', 'Title odds', 'Fingerprints', "Computer's", 'Computer&#x27;s', 'The Computer'].filter((m) => got.html.includes(m));
       check(`${where}: FORCED FAILURE: no predictions section, heading, card or methodology`, traces.length === 0, traces.join(' '));
       check(`${where}: FORCED FAILURE: no hash anywhere`, !/\b[0-9a-f]{40,}\b/.test(domOf(got.html)) && !fingerprints(preds.get(league) as RawPred).some((f) => got.html.includes(f)));
       // See operatorText in ./flight.ts for where it looks and why.
@@ -890,7 +891,7 @@ async function main() {
         }
         const sc = score(d, p);
         const champ = clubs.get(p.champion)?.full ?? p.champion;
-        const text = `Computer's champion: ${champ} · ${sc.decided === 0 ? 'no series decided yet' : `${sc.correct} for ${sc.decided}`}`;
+        const text = `PromoNight Predicts: ${champ} win it all · ${sc.decided === 0 ? 'no series decided yet' : `${sc.correct} for ${sc.decided}`}`;
         wantLines.push(text);
         const line = card ? element(card, `data-predictions-league="${league.toLowerCase()}"`) : null;
         check(`${where}: ${league} predictions line`, !!line && textOf(line) === text && line.includes(`href="/playoffs/${league.toLowerCase()}#predictions"`), line ? textOf(line) : 'missing');

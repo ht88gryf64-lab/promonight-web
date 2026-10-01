@@ -5,15 +5,22 @@
 // let through (the first of them emitted by React 19.2 itself).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fingerprintPlacement, operatorText, payloadBytes } from '../../../../scripts/playoffs/flight';
+import { METHODOLOGY_SECTION_ID, fingerprintPlacement, operatorText, payloadBytes } from '../../../../scripts/playoffs/flight';
+import { METHODOLOGY_ID } from '../../../components/playoffs/Predictions';
 import { PREDICTED, rawText } from './helpers';
 
 const served = rawText('served.playoffs-mlb-2c85650.html');
+// The section id that page carried when it was served.
+const SERVED_SECTION_ID = 'how-the-computer-picked';
 const mlb = JSON.parse(rawText(PREDICTED.mlb)) as Record<string, Record<string, string>>;
 const FP = [mlb.provenance.corpusSha256, mlb.provenance.paramsSha256, mlb.provenance.descriptorSha256, mlb.provenance.slugMapSha256, mlb.reviewedSha256 as unknown as string];
 
+test('FLIGHT: the checker looks for the section id the page renders', () => {
+  assert.equal(METHODOLOGY_SECTION_ID, METHODOLOGY_ID);
+});
+
 test('FLIGHT: on the served /playoffs/mlb, every fingerprint is <code> text in the methodology, by React\'s own decoder', async () => {
-  const at = await fingerprintPlacement(served);
+  const at = await fingerprintPlacement(served, SERVED_SECTION_ID);
   for (const f of FP) assert.deepEqual(await at(f), { ok: true, detail: 'code text in the methodology' }, f.slice(0, 8));
 });
 
@@ -23,7 +30,7 @@ function page(rows: string[], extra = ''): string {
 }
 const H = 'a'.repeat(64);
 const CODE = `["$","code",null,{"children":"${H}"}]`;
-const SECTION = (kids: string) => `["$","section",null,{"id":"how-the-computer-picked","children":${kids}}]`;
+const SECTION = (kids: string) => `["$","section",null,{"id":"how-promonight-predicts-works","children":${kids}}]`;
 const IMPORT = '7:I["7",[],"Collapsible"]';
 const place = async (html: string) => (await fingerprintPlacement(html))(H);
 
@@ -46,7 +53,7 @@ test('FLIGHT: in place: inline, outlined, lazy, under a keyed Fragment, under Su
 test('FLIGHT: out of place, each way, fails', async () => {
   const cases: [string, string[]][] = [
     // React 19.2's own output for one element in the methodology and in a Map prop of a client component.
-    ['React-emitted: a Map prop of a client component', ['1:I["mod1",[],"Collapsible"]', '2:[["fp","$0:props:children:0:props:children:props:children"]]', `0:["$","div",null,{"children":[["$","section",null,{"id":"how-the-computer-picked","children":["$","dl",null,{"children":${CODE}}]}],["$","$L1",null,{"m":"$Q2"}]]}]`]],
+    ['React-emitted: a Map prop of a client component', ['1:I["mod1",[],"Collapsible"]', '2:[["fp","$0:props:children:0:props:children:props:children"]]', `0:["$","div",null,{"children":[["$","section",null,{"id":"how-promonight-predicts-works","children":["$","dl",null,{"children":${CODE}}]}],["$","$L1",null,{"m":"$Q2"}]]}]`]],
     ['a Set prop of a client component', [IMPORT, '2:["$0:props:children:0:props:children"]', `0:["$","div",null,{"children":[${SECTION(CODE)},["$","$L7",null,{"s":"$W2"}]]}]`]],
     ['a client component inside the section, wrapping the code', [IMPORT, `0:${SECTION(`["$","$L7",null,{"children":${CODE}}]`)}`]],
     ['the code as a non-children prop of a client component', [IMPORT, `0:${SECTION(`["$","$L7",null,{"data":${CODE}}]`)}`]],
@@ -59,11 +66,11 @@ test('FLIGHT: out of place, each way, fails', async () => {
     ['a non-children prop of a host element inside the section', [`0:${SECTION(`["$","div",null,{"data-x":${CODE}}]`)}`]],
     ['code children that hold more than the fingerprint', [`0:${SECTION(`["$","code",null,{"children":["leaked: ","${H}"]}]`)}`]],
     ['two methodology sections', [`0:[${SECTION(CODE)},${SECTION('"x"')}]`]],
-    ['the id on something other than a section', [`0:["$","div",null,{"id":"how-the-computer-picked","children":${CODE}}]`]],
+    ['the id on something other than a section', [`0:["$","div",null,{"id":"how-promonight-predicts-works","children":${CODE}}]`]],
     ['twice', [`0:${SECTION(`[${CODE},${CODE}]`)}`]],
     ['a reference to a row that is not there', [`0:${SECTION('["$","dl",null,{"children":"$L9"}]')}`, `4:${CODE}`]],
     ['in a row the root never reaches', [`0:${SECTION('"x"')}`, `5:${CODE}`]],
-    ['a non-children prop of the section itself', [`0:["$","section",null,{"id":"how-the-computer-picked","data-x":${CODE},"children":"x"}]`]],
+    ['a non-children prop of the section itself', [`0:["$","section",null,{"id":"how-promonight-predicts-works","data-x":${CODE},"children":"x"}]`]],
     // Values the walk cannot inspect fully: each fails closed. Shapes as
     // React 19.2's flight server emits them for a shared element.
     ['a ReadableStream prop of a client component', [IMPORT, '2:R', `0:["$","div",null,{"children":[${SECTION(CODE)},["$","$L7",null,{"s":"$2"}]]}]`, '2:"$0:props:children:0:props:children"']],

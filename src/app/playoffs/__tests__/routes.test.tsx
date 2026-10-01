@@ -217,8 +217,8 @@ test('ROUTE /playoffs: both leagues, the next home games, hub-tagged ticket link
   assert.equal(count(html, 'data-predictions="locked"'), 1);
   // One line per league, linking to its predictions section; no
   // "publish soon" anywhere.
-  assert.match(html, /<a [^>]*href="\/playoffs\/mlb#predictions"[^>]*>Computer&#x27;s champion: Milwaukee Brewers <span class="whitespace-nowrap">· no series decided yet<\/span><\/a>/);
-  assert.match(html, /<a [^>]*href="\/playoffs\/wnba#predictions"[^>]*>Computer&#x27;s champion: Golden State Valkyries <span class="whitespace-nowrap">· no series decided yet<\/span><\/a>/);
+  assert.match(html, /<a [^>]*href="\/playoffs\/mlb#predictions"[^>]*>PromoNight Predicts: Milwaukee Brewers win it all <span class="whitespace-nowrap">· no series decided yet<\/span><\/a>/);
+  assert.match(html, /<a [^>]*href="\/playoffs\/wnba#predictions"[^>]*>PromoNight Predicts: Golden State Valkyries win it all <span class="whitespace-nowrap">· no series decided yet<\/span><\/a>/);
   assert.ok(!/publish soon/i.test(html));
   assert.ok(!/\b[0-9a-f]{64}\b/.test(html), 'no fingerprint on the hub');
   const links = [...html.matchAll(/<a [^>]*href="([^"]+)"[^>]*rel="noopener noreferrer sponsored"/g)].map((m) => m[1].replace(/&amp;/g, '&'));
@@ -301,7 +301,7 @@ test('HEAD /playoffs/[league]: title, description, canonical and a complete open
   assert.equal(meta.title, '2026 MLB Playoff Bracket and Predictions');
   assert.equal(
     meta.description,
-    "The 2026 MLB postseason bracket and the computer's locked pick for every series, marked against the results. Current round: Wild Card Series. Game times in Eastern.",
+    "The 2026 MLB postseason bracket, with a locked pick for every series from a postseason simulation, marked against the results. Current round: Wild Card Series. Game times in Eastern.",
   );
   assert.equal(((await generateMetadata(params('wnba'))) as Meta).title, '2026 WNBA Playoff Bracket and Predictions');
   // With no locked prediction the head does not promise one.
@@ -472,16 +472,35 @@ test('PREDICTIONS through the real pages: the section, the scorecard, the method
   const text = method.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
   assert.ok(text.includes('plays out the postseason 10,000 times'));
   assert.ok(text.includes('The inputs were locked on September 28, 2026 , before Game 1.') || text.includes('The inputs were locked on September 28, 2026, before Game 1.'), text);
-  assert.ok(text.includes('The bracket was computed and locked on September 30, 2026 from those locked inputs, with the rating, simulation and bracket code unchanged since the inputs were locked.'), text);
+  assert.ok(text.includes('The bracket was computed once from those locked inputs and locked on September 30, 2026, and it has not been recomputed since; the rating, simulation and bracket code is unchanged since the inputs were locked.'), text);
+  assert.ok(text.includes('PromoNight Predicts is a simulation, not a staff pick.'), text);
+  assert.ok(!/\b(expert|staff pick[^.]*by|our analysts|handpicked|hand-picked)\b/i.test(text.replace('not a staff pick', '')), 'no staff or expert framing');
   assert.ok(text.includes('its length is how many games the pick most often took to win it'));
   assert.ok(text.includes('Every chance and title odd on this page is as it stood when the bracket was locked.'));
   assert.ok(text.includes('Postseason results are not among the inputs, so a pick can name a club that was already out by then.'));
   assert.ok(!/engine code unchanged|most common length|results come in/.test(text));
-  assert.ok(text.includes('the computer called 5 of 11 series and got the champion wrong'));
+  assert.ok(text.includes('the simulation called 5 of 11 series and got the champion wrong'));
   assert.ok(!/bracket was (locked|set|picked|computed)[^.]*before Game 1/i.test(text), 'never says the bracket was set before Game 1');
   const wnba = renderToStaticMarkup(await League(params('wnba')));
   const wtext = elementOf(wnba, 'data-predictions-methodology').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
   assert.ok(/The inputs were locked on September 25, 2026 ?, before Game 1\./.test(wtext), wtext);
-  assert.ok(wtext.includes('the computer called 5 of 7 series and got the champion right'));
+  assert.ok(wtext.includes('the simulation called 5 of 7 series and got the champion right'));
+});
+
+test('PROMONIGHT PREDICTS: no "Computer\'s", and no "computer" at all, on the hub or either league page', async () => {
+  const { default: League } = await league();
+  const { default: Hub } = await hub();
+  current.db = fakeFirestore(BOTH());
+  for (const [name, html] of [
+    ['mlb', renderToStaticMarkup(await League(params('mlb')))],
+    ['wnba', renderToStaticMarkup(await League(params('wnba')))],
+    ['hub', renderToStaticMarkup(await Hub())],
+  ] as const) {
+    assert.ok(!/Computer(&#x27;|&apos;|'|\u2019)s/i.test(html), `${name}: "Computer's"`);
+    assert.ok(!/computer/i.test(html), `${name}: "computer"`);
+  }
+  const mlb = renderToStaticMarkup(await League(params('mlb')));
+  assert.match(mlb, /<h2 id="predictions-heading"[^>]*>PromoNight Predicts<\/h2>/);
+  assert.match(renderToStaticMarkup(await Hub()), />PromoNight Predicts: Milwaukee Brewers win it all <span class="whitespace-nowrap">· no series decided yet<\/span><\/a>/);
 });
 

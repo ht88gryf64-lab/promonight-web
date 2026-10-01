@@ -882,8 +882,8 @@ test('HUB: the predictions card, one line per playing league with a locked brack
   const html = hubHtml([ok(mlb.view, mlb.predictions.hub), ok(built.view, built.predictions.hub)], LYNX_OUT_AT);
   const section = element(html, 'data-predictions="locked"');
   assert.ok(textOf(section).includes('Predictions are locked'));
-  assert.match(section, /<a [^>]*href="\/playoffs\/wnba#predictions"[^>]*>Computer&#x27;s champion: Golden State Valkyries <span class="whitespace-nowrap">· 0 for 1<\/span><\/a>/);
-  assert.match(section, /<a [^>]*href="\/playoffs\/mlb#predictions"[^>]*>Computer&#x27;s champion: Milwaukee Brewers <span class="whitespace-nowrap">· no series decided yet<\/span><\/a>/);
+  assert.match(section, /<a [^>]*href="\/playoffs\/wnba#predictions"[^>]*>PromoNight Predicts: Golden State Valkyries win it all <span class="whitespace-nowrap">· 0 for 1<\/span><\/a>/);
+  assert.match(section, /<a [^>]*href="\/playoffs\/mlb#predictions"[^>]*>PromoNight Predicts: Milwaukee Brewers win it all <span class="whitespace-nowrap">· no series decided yet<\/span><\/a>/);
   assert.ok(!/publish soon/i.test(html));
   assert.ok(!/[0-9a-f]{40,}/.test(html), 'no fingerprint on the hub');
   // Only leagues being played, and only with a locked bracket.

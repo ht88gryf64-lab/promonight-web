@@ -125,7 +125,10 @@ const CASES = [
   ['a client component imports a value from predictions.ts', 'src/components/playoffs/PredictedBracket.tsx', "import type { PickOutcome, PickRoundView, PickSeriesView, PickSideView } from '@/lib/postseason/predictions';", "import { type PickOutcome, type PickRoundView, type PickSeriesView, type PickSideView, percent } from '@/lib/postseason/predictions';\nvoid percent;", [T_RENDER]],
   // ---- Copy ----
   ['length described as the most common length', C, 'its length is how many games the pick most often took to win it.', 'its length is the matchup&apos;s most common length.', [T_ROUTES]],
-  ['engine-wide unchanged claim', C, ', with the rating, simulation and bracket code unchanged since the inputs were locked.', ', with the engine code unchanged since the lock.', [T_ROUTES]],
+  ['engine-wide unchanged claim', C, 'the rating, simulation and bracket code is unchanged since the inputs were locked.', 'the engine code is unchanged since the lock.', [T_ROUTES]],
+  ['simulation framing dropped', C, 'PromoNight Predicts is a simulation, not a staff pick. ', '', [T_ROUTES]],
+  ['never-recomputed claim dropped', C, ', and it has not been recomputed since;', ';', [T_ROUTES, T_RENDER]],
+  ['the old section heading', C, '          PromoNight Predicts\n        </h2>', "          The Computer&apos;s Bracket\n        </h2>", [T_ROUTES]],
   ['two-day lock said as one', C, '          {view.computedOn === view.bracketLockedOn\n', '          {true\n', [T_RENDER]],
   ['chance described over every run', C, 'in the simulated\n          postseasons where that matchup came up,', 'in those simulated\n          postseasons,', [T_RENDER]],
   ['"at lock" left undefined', C, ' Every chance and title odd on this page is as\n          it stood when the bracket was locked.', '', [T_ROUTES]],

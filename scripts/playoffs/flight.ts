@@ -18,7 +18,7 @@
 // fails closed.
 //
 // THE RULE for a fingerprint F. The payload bytes hold it exactly once; the
-// decoded tree holds exactly one host <section id="how-the-computer-picked">;
+// decoded tree holds exactly one host <section id="how-promonight-predicts-works">;
 // the walk from the root meets F exactly once; and there F is the whole
 // `children` string of a host <code> inside that section. Anything
 // unresolved, rejected or not understood fails closed, and so does any value
@@ -199,7 +199,11 @@ export interface Walk {
 }
 
 /** Walk the decoded tree, recording every string containing `needle`. */
-export async function walkTree(root: unknown, needle: string | null): Promise<Walk> {
+/** The methodology section's id: METHODOLOGY_ID in
+ *  src/components/playoffs/Predictions.tsx (a test keeps the two equal). */
+export const METHODOLOGY_SECTION_ID = 'how-promonight-predicts-works';
+
+export async function walkTree(root: unknown, needle: string | null, sectionId: string = METHODOLOGY_SECTION_ID): Promise<Walk> {
   const out: Walk = { hits: [], sections: 0, errors: [], strings: [], keys: [] };
   let nodes = 0;
   const record = (s: string, ctx: Ctx, direct: Direct) => {
@@ -261,7 +265,7 @@ export async function walkTree(root: unknown, needle: string | null): Promise<Wa
         out.errors.push('element props that are not an object');
         return;
       }
-      const isSection = host && type === 'section' && props.id === 'how-the-computer-picked';
+      const isSection = host && type === 'section' && props.id === sectionId;
       if (isSection) out.sections++;
       const inSection = ctx.inSection || isSection;
       for (const [k, pv] of Object.entries(props)) {
@@ -348,13 +352,13 @@ export async function walkTree(root: unknown, needle: string | null): Promise<Wa
 }
 
 /** The fingerprint rule for one served page. Decodes once. */
-export async function fingerprintPlacement(html: string): Promise<(f: string) => Promise<{ ok: boolean; detail: string }>> {
+export async function fingerprintPlacement(html: string, sectionId: string = METHODOLOGY_SECTION_ID): Promise<(f: string) => Promise<{ ok: boolean; detail: string }>> {
   const d = await decodePayload(html);
   return async (f) => {
     if (d.error) return { ok: false, detail: `payload: ${d.error}` };
     const inBytes = d.bytes.toString('latin1').split(f).length - 1;
     if (inBytes !== 1) return { ok: false, detail: `${inBytes} times in the payload bytes` };
-    const w = await walkTree(d.root, f);
+    const w = await walkTree(d.root, f, sectionId);
     if (w.errors.length) return { ok: false, detail: `walk: ${w.errors[0]}` };
     if (w.sections !== 1) return { ok: false, detail: `${w.sections} methodology sections` };
     if (w.hits.length !== 1) return { ok: false, detail: `met ${w.hits.length} times` };

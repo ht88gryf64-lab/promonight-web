@@ -107,7 +107,7 @@ function PickCard({ s, onOpen }: { s: PickSeriesView; onOpen: (s: PickSeriesView
       </summary>
       <div data-pick-detail className="space-y-1 border-t border-rd-line px-4 py-3 text-[13.5px] leading-relaxed text-rd-ink-soft">
         <p>
-          <span className="font-semibold text-rd-ink">Computer&apos;s pick:</span> {s.pickName} {s.lengthLabel}
+          <span className="font-semibold text-rd-ink">PromoNight&apos;s pick:</span> {s.pickName} {s.lengthLabel}
           {s.coinFlip ? ', a coin flip at lock.' : `, ${s.chanceLabel} at lock.`}
         </p>
         <p>

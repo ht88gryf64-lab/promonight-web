@@ -453,7 +453,7 @@ try {
   await sleep(1200);
   b = await both();
   const pcs = b.picks.cols.find((x) => x.key === 'championship_series');
-  check('real pill: moves the computer bracket, pill and row', b.picks.round === 'championship_series' && b.picks.pills.join() === 'championship_series' && Math.abs(pcs.gap) <= 2, `gap ${pcs.gap}px ${b.picks.pills.join()}`);
+  check('real pill: moves the predicted bracket, pill and row', b.picks.round === 'championship_series' && b.picks.pills.join() === 'championship_series' && Math.abs(pcs.gap) <= 2, `gap ${pcs.gap}px ${b.picks.pills.join()}`);
   // A swipe in the computer's row moves the real bracket: its pills, and its
   // row, which follows to the same round. A middle round: the last column
   // cannot reach the left edge, the row stops at its end.
@@ -518,7 +518,7 @@ try {
       const all = await ev(`(() => { const p = document.querySelector('.po-picks'); return { controls: getComputedStyle(p.querySelector('.po-controls')).display, shown: [...p.querySelectorAll('[data-pick]')].filter((x) => x.offsetWidth > 0).length, total: p.querySelectorAll('[data-pick]').length }; })()`);
       check(`picks 1280 ${path}: every pick shown at once, controls hidden`, all.controls === 'none' && all.shown === all.total && all.total > 0, JSON.stringify(all));
     }
-    await ev(`document.getElementById('how-the-computer-picked').scrollIntoView()`);
+    await ev(`document.getElementById('how-promonight-predicts-works').scrollIntoView()`);
     await sleep(300);
     await shot(`${name}-methodology`, width, { full: false });
   }

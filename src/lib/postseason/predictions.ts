@@ -431,7 +431,7 @@ export interface ScorecardView {
   correct: number;
   decided: number;
   alive: number;
-  /** "The computer is 1 for 1", or the line for nothing decided yet. */
+  /** "PromoNight is 1 for 1", or the line for nothing decided yet. */
   recordLine: string;
   /** "6 picks still alive". */
   aliveLine: string;
@@ -597,7 +597,7 @@ export function buildPredictionsView(
       correct: card.correct,
       decided: card.decided,
       alive: card.alive,
-      recordLine: card.decided === 0 ? 'No series decided yet' : `The computer is ${card.correct} for ${card.decided}`,
+      recordLine: card.decided === 0 ? 'No series decided yet' : `PromoNight is ${card.correct} for ${card.decided}`,
       aliveLine: `${card.alive} ${card.alive === 1 ? 'pick' : 'picks'} still alive`,
       championName,
       championStatus: card.champion.status,
@@ -756,7 +756,7 @@ export function buildMethodologyView(predicted: PredictedBracket, bracket: Brack
     lockedBeforeGame1: frozenBeforeFirstGame(bracket, predicted.frozenAt),
     computedOn: easternLongDate(predicted.computedAt),
     bracketLockedOn: easternLongDate(predicted.lockedAt),
-    backtest: `Run on the 2025 ${predicted.league} postseason with the same settings, the computer called ${bt.right} of ${bt.of} series and ${
+    backtest: `Run on the 2025 ${predicted.league} postseason with the same settings, the simulation called ${bt.right} of ${bt.of} series and ${
       bt.champion ? 'got the champion right' : 'got the champion wrong'
     }.`,
     fingerprints: [

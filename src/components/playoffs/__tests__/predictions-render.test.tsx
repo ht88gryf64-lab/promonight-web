@@ -129,16 +129,16 @@ test('PREDICTED BRACKET, WNBA with the Lynx out: every mark, as the scoring rule
     assert.doesNotMatch(pick(h, id), /opacity-55/, id);
   }
   const card = element(h, 'data-predictions-scorecard');
-  assert.ok(textOf(card).includes('The computer is 0 for 1'));
+  assert.ok(textOf(card).includes('PromoNight is 0 for 1'));
   assert.ok(textOf(card).includes('5 picks still alive'));
-  assert.ok(textOf(card).includes("Computer's champion Golden State Valkyries, still alive"));
+  assert.ok(textOf(card).includes("PromoNight's champion Golden State Valkyries, still alive"));
 });
 
 test('PREDICTED BRACKET, MLB mid Wild Card: the coin flip reads as one; nothing decided', () => {
   const h = html(STATES[1][1](), LYNX_OUT_AT);
   const flip = pick(h, 'wild_card-1');
   assert.ok(textOf(flip).includes('Astros in 2 · Coin flip'));
-  assert.ok(textOf(flip).includes("Computer's pick: Houston Astros in 2, a coin flip at lock."));
+  assert.ok(textOf(flip).includes("PromoNight's pick: Houston Astros in 2, a coin flip at lock."));
   assert.ok(!/50%/.test(textOf(flip)));
   assert.equal(count(h, 'data-pick-outcome="alive"'), 11);
   assert.equal(count(h, 'data-dimmed="true"'), 0);
@@ -149,13 +149,13 @@ test('PREDICTED BRACKET, MLB mid Wild Card: the coin flip reads as one; nothing 
 test('PREDICTED BRACKET, concluded: the final scorecard, nothing alive, the champion pick resolved', () => {
   const w = html(STATES[2][1](), DECIDED_AT);
   assert.ok(w.includes('data-champion="golden-state-valkyries"'), 'the real page is in its concluded state');
-  assert.ok(textOf(element(w, 'data-predictions-scorecard')).includes('The computer is 4 for 7'));
+  assert.ok(textOf(element(w, 'data-predictions-scorecard')).includes('PromoNight is 4 for 7'));
   assert.ok(textOf(element(w, 'data-predictions-scorecard')).includes('0 picks still alive'));
   assert.match(w, /data-champion-pick="won"/);
   assert.equal(count(w, 'data-pick-outcome="alive"'), 0);
   assert.ok(textOf(pick(w, 'finals-1')).includes('This matchup did not happen.'));
   const m = html(STATES[3][1](), DECIDED_AT);
-  assert.ok(textOf(element(m, 'data-predictions-scorecard')).includes('The computer is 5 for 11'));
+  assert.ok(textOf(element(m, 'data-predictions-scorecard')).includes('PromoNight is 5 for 11'));
   assert.match(m, /data-champion-pick="out"/);
   assert.ok(textOf(element(m, 'data-predictions-scorecard')).includes('Milwaukee Brewers, eliminated'));
 });
@@ -431,9 +431,9 @@ test('THE WALKER would see a leak: a hash handed to the predicted bracket throug
 test('METHODOLOGY COPY: computed and locked on one day, or on two, said as such', () => {
   const b = STATES[1][1]();
   const one = textOf(renderToStaticMarkup(<PredictionsMethodology view={b.predictions.methodology} />));
-  assert.ok(one.includes('The bracket was computed and locked on September 30, 2026 from those locked inputs'), one);
+  assert.ok(one.includes('The bracket was computed once from those locked inputs and locked on September 30, 2026, and it has not been recomputed since'), one);
   const two = textOf(renderToStaticMarkup(<PredictionsMethodology view={{ ...b.predictions.methodology, bracketLockedOn: 'October 1, 2026' }} />));
-  assert.ok(two.includes('The bracket was computed on September 30, 2026 and locked on October 1, 2026 from those locked inputs'), two);
+  assert.ok(two.includes('The bracket was computed once from those locked inputs on September 30, 2026 and locked on October 1, 2026, and it has not been recomputed since'), two);
   assert.ok(one.includes('in the simulated postseasons where that matchup came up'));
 });
 
