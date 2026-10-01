@@ -3,7 +3,7 @@
 // proves the masked fields are enough to build the page.
 import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
-import { CAPTURED_AT, FIXTURE, capturedTeams, fakeFirestore, loadDoc, parkNames, venuePages } from './helpers';
+import { CAPTURED_AT, FIXTURE, capturedTeams, fakeFirestore, loadDoc, parkNames, rawText, venuePages, PREDICTED } from './helpers';
 
 type Fake = ReturnType<typeof fakeFirestore>;
 
@@ -16,13 +16,17 @@ const db = {
 };
 const venues = { fail: new Set<string>(), missing: new Set<string>(), asked: [] as string[] };
 const pages = { fail: false, held: new Set<string>(), none: new Set<string>() };
-const teams = { drop: new Set<string>() };
+const teams: { drop: Set<string>; failAfter: (() => boolean) | null; dropOn: (() => string | null) | null } = { drop: new Set<string>(), failAfter: null, dropOn: null };
 
 mock.module('server-only', { namedExports: {} });
 mock.module(new URL('../../firebase.ts', import.meta.url).href, { namedExports: { db } });
 mock.module(new URL('../../data.ts', import.meta.url).href, {
   namedExports: {
-    getAllTeams: async () => capturedTeams().filter((t) => !teams.drop.has(t.id)),
+    getAllTeams: async () => {
+      if (teams.failAfter && teams.failAfter()) throw new Error('teams read failed');
+      const gone = teams.dropOn ? teams.dropOn() : null;
+      return capturedTeams().filter((t) => !teams.drop.has(t.id) && t.id !== gone);
+    },
     getVenueForTeam: async (id: string) => {
       venues.asked.push(id);
       if (venues.fail.has(id)) throw new Error('venue read failed');
@@ -71,7 +75,8 @@ const quiet = <T>(fn: () => Promise<T>): Promise<T> => {
 
 const MLB = () => loadDoc(FIXTURE.mlbLive);
 const WNBA = () => loadDoc(FIXTURE.wnbaLive);
-const FROZEN = { league: 'MLB', season: 2026, frozenAt: { toDate: () => new Date('2026-09-29T01:05:52.350Z') }, rows: ['a corpus the web must not pull'] };
+const PREDICTED_MLB = () => loadDoc(PREDICTED.mlb);
+const PREDICTED_WNBA = () => loadDoc(PREDICTED.wnba);
 
 test('BRACKET READ: asks for four fields and nothing else', async () => {
   const { getBracket } = await load();
@@ -83,13 +88,14 @@ test('BRACKET READ: asks for four fields and nothing else', async () => {
 
 test('BRACKET READ: the masked document is enough to build the whole page', async () => {
   const { getLeaguePageData } = await load();
-  use({ 'postseasonBrackets/MLB_2026': MLB(), 'predictionInputs/MLB_2026': FROZEN });
+  use({ 'postseasonBrackets/MLB_2026': MLB(), 'predictedBrackets/MLB_2026': PREDICTED_MLB() });
   const page = await getLeaguePageData('MLB');
   assert.equal(page.state, 'ok');
   if (page.state !== 'ok') return;
   assert.equal(page.view.rounds.length, 4);
   assert.equal(page.view.updatedLabel, 'Sep 29, 1:10 PM ET');
-  assert.equal(page.predictionsLocked, true);
+  assert.ok(page.predictions);
+  assert.equal(page.predictions.view.scorecard.championName, 'Milwaukee Brewers');
   const wc = page.view.rounds[0].groups[0].series[0];
   assert.equal(wc.higher.label, 'Astros');
   assert.equal(wc.games[0].park, 'Daikin Park');
@@ -211,26 +217,228 @@ test('PARK PAGE: a club with no venue record gets no name, so no link either', a
   assert.equal(row?.parkPage, null);
 });
 
-test('PREDICTIONS: the read asks for frozenAt alone, so the corpus never crosses the wire', async () => {
-  const { arePredictionInputsFrozen } = await load();
-  const fake = use({ 'predictionInputs/MLB_2026': FROZEN });
-  assert.equal(await arePredictionInputsFrozen('MLB'), true);
-  assert.deepEqual(fake.reads, [{ path: 'predictionInputs/MLB_2026', fieldMask: ['frozenAt'] }]);
+const PREDICTED_MASK = [
+  'league',
+  'season',
+  'target',
+  'lockedAt',
+  'simRuns',
+  'computedAt',
+  'reviewedSha256',
+  'champion',
+  'rounds',
+  'titleOdds',
+  'provenance.frozenAt',
+  'provenance.engineCommitAtFreeze',
+  'provenance.coreFiles',
+  'provenance.corpusSha256',
+  'provenance.paramsSha256',
+  'provenance.descriptorSha256',
+  'provenance.slugMapSha256',
+];
+
+test('PREDICTIONS READ: one masked read; no operator field, path list, run id or other hash is asked for', async () => {
+  const { getPredictedBracket } = await load();
+  const fake = use({ 'predictedBrackets/WNBA_2026': PREDICTED_WNBA() });
+  const p = await getPredictedBracket('WNBA');
+  assert.equal(p.state, 'ok');
+  assert.deepEqual(fake.reads, [{ path: 'predictedBrackets/WNBA_2026', fieldMask: PREDICTED_MASK }]);
+  for (const f of PREDICTED_MASK) {
+    assert.ok(!/By$|acks|seedFile|canonical|engineFiles|engineCommitAt(Compute|Execute)|computedBy|executedAt|info|degeneracy|seeds/.test(f), f);
+  }
 });
 
-test('PREDICTIONS: no document, no freeze stamp, or a failed read all hide the card', async () => {
-  const { arePredictionInputsFrozen } = await load();
-  use({});
-  assert.equal(await arePredictionInputsFrozen('MLB'), false);
-  use({ 'predictionInputs/MLB_2026': { league: 'MLB', season: 2026 } });
-  assert.equal(await arePredictionInputsFrozen('MLB'), false);
-  use({ 'predictionInputs/MLB_2026': { league: 'MLB', frozenAt: null } });
-  assert.equal(await arePredictionInputsFrozen('MLB'), false);
-  use({ 'predictionInputs/MLB_2026': new Error('PERMISSION_DENIED') });
-  assert.equal(await quiet(() => arePredictionInputsFrozen('MLB')), false);
-  // One league's freeze says nothing about another's.
-  use({ 'predictionInputs/MLB_2026': FROZEN });
-  assert.equal(await arePredictionInputsFrozen('WNBA'), false);
+test('PREDICTIONS READ: the masked document is enough, and nothing outside the mask is in this process', async () => {
+  const { getPredictedBracket } = await load();
+  use({ 'predictedBrackets/MLB_2026': PREDICTED_MLB() });
+  const p = await getPredictedBracket('MLB');
+  assert.ok(p.state === 'ok');
+  assert.equal(p.predicted.series.length, 11);
+  const out = JSON.stringify(p);
+  const stored = JSON.parse(rawText(PREDICTED.mlb)) as Record<string, Record<string, unknown>>;
+  for (const v of [stored.provenance.seedFileAuthoredBy, stored.provenance.seedFileSha256, stored.provenance.canonicalDescriptorSha256, stored.computedBy]) {
+    assert.ok(typeof v === 'string' && !out.includes(v));
+  }
+});
+
+/** console.error lines carrying the predictions tag, while `fn` runs. */
+async function tagged<T>(fn: () => Promise<T>): Promise<{ value: T; lines: string[] }> {
+  const original = console.error;
+  const lines: string[] = [];
+  console.error = (...a: unknown[]) => {
+    const line = a.map(String).join(' ');
+    if (line.includes('[predictions-unavailable]')) lines.push(line);
+  };
+  try {
+    return { value: await fn(), lines };
+  } finally {
+    console.error = original;
+  }
+}
+
+// Every way the predictions can fail. Each one hides the section, logs one
+// line with the tag, the league and the category, and never throws.
+const FAILURES: [string, () => Record<string, unknown> | Error | undefined, string][] = [
+  ['a failed read', () => new Error('PERMISSION_DENIED: predictedBrackets/MLB_2026 operator detail'), 'read-failed'],
+  ['no document', () => undefined, 'missing'],
+  ['a document the mapper refuses', () => ({ ...PREDICTED_MLB(), target: 'scratch' }), 'refused'],
+  [
+    'a fingerprint that is not the one locked',
+    () => {
+      const d = PREDICTED_MLB();
+      d.reviewedSha256 = 'a'.repeat(64);
+      return d;
+    },
+    'fingerprint-mismatch',
+  ],
+  [
+    'right fingerprints, a different pick',
+    () => {
+      const d = PREDICTED_MLB();
+      (d.rounds as Record<string, unknown>[])[1].pickProbability = 0.5815;
+      return d;
+    },
+    'content-mismatch',
+  ],
+];
+
+for (const [name, doc, reason] of FAILURES) {
+  test(`PREDICTIONS FAIL CLOSED (${name}): the page data is ok with no predictions, one tagged line, no contents or ids in it`, async () => {
+    const { getLeaguePageData } = await load();
+    const d = doc();
+    use(d === undefined ? { 'postseasonBrackets/MLB_2026': MLB() } : { 'postseasonBrackets/MLB_2026': MLB(), 'predictedBrackets/MLB_2026': d });
+    const { value: page, lines } = await tagged(() => getLeaguePageData('MLB'));
+    assert.equal(page.state, 'ok');
+    assert.equal(page.state === 'ok' && page.predictions, null);
+    assert.equal(page.state === 'ok' && page.view.rounds.length, 4, 'the real bracket is built');
+    assert.deepEqual(lines, [`[predictions-unavailable] league=MLB reason=${reason}`]);
+    assert.ok(!/PERMISSION|operator|MLB_2026|AL-WC|[0-9a-f]{16}/.test(lines.join(' ')), 'no contents and no ids in the log');
+  });
+}
+
+test('PREDICTIONS FAIL CLOSED: a real bracket whose keys no longer match the lock hides the section, tagged no-join', async () => {
+  const { getLeaguePageData } = await load();
+  // The bracket is the document that can change after the lock: a key the
+  // pipeline renames leaves a locked pick with no real slot.
+  const b = MLB();
+  (b.series as Record<string, unknown>[]).find((x) => x.seriesKey === 'NL-WC-B')!.seriesKey = 'NL-WC-Z';
+  use({ 'postseasonBrackets/MLB_2026': b, 'predictedBrackets/MLB_2026': PREDICTED_MLB() });
+  const { value: page, lines } = await tagged(() => getLeaguePageData('MLB'));
+  assert.equal(page.state === 'ok' && page.predictions, null);
+  assert.equal(page.state === 'ok' && page.view.rounds.length, 4);
+  assert.deepEqual(lines, ['[predictions-unavailable] league=MLB reason=no-join']);
+});
+
+test('PREDICTIONS FAIL CLOSED: a club the team list loses between the bracket and the predictions, tagged no-team-record', async () => {
+  const { getLeaguePageData } = await load();
+  use({ 'postseasonBrackets/MLB_2026': MLB(), 'predictedBrackets/MLB_2026': PREDICTED_MLB() });
+  // The first team-list read builds the real bracket; the second, the
+  // predictions', no longer has the Brewers.
+  let n = 0;
+  teams.dropOn = () => (++n > 1 ? 'milwaukee-brewers' : null);
+  try {
+    const { value: page, lines } = await tagged(() => getLeaguePageData('MLB'));
+    assert.equal(page.state === 'ok' && page.predictions, null);
+    assert.deepEqual(lines, ['[predictions-unavailable] league=MLB reason=no-team-record']);
+  } finally {
+    teams.dropOn = null;
+  }
+});
+
+test('PREDICTIONS FAIL CLOSED: an exception in assembly is caught, tagged build-failed', async () => {
+  const { getLeaguePageData } = await load();
+  use({ 'postseasonBrackets/MLB_2026': MLB(), 'predictedBrackets/MLB_2026': PREDICTED_MLB() });
+  // The bracket's own view reads the team list first and succeeds; the
+  // predictions' read of it is the second, and fails.
+  let calls = 0;
+  const original = teams.drop;
+  teams.failAfter = () => ++calls > 1;
+  try {
+    const { value: page, lines } = await tagged(() => getLeaguePageData('MLB'));
+    assert.equal(page.state === 'ok' && page.predictions, null);
+    assert.deepEqual(lines, ['[predictions-unavailable] league=MLB reason=build-failed']);
+  } finally {
+    teams.failAfter = null;
+    teams.drop = original;
+  }
+});
+
+test('PREDICTIONS READ TIMEOUT: the production bound is a few seconds, not minutes', async () => {
+  const { predictionsReadTimeoutMs } = await load();
+  delete process.env.PREDICTIONS_READ_TIMEOUT_MS;
+  const ms = predictionsReadTimeoutMs();
+  assert.ok(ms > 0 && ms <= 5000, String(ms));
+  for (const bad of ['0', '-5', 'soon', '']) {
+    process.env.PREDICTIONS_READ_TIMEOUT_MS = bad;
+    assert.equal(predictionsReadTimeoutMs(), ms, `${JSON.stringify(bad)} falls back to the bound`);
+  }
+  delete process.env.PREDICTIONS_READ_TIMEOUT_MS;
+});
+
+// Its own timeout: with the guard gone the read never settles, and the test
+// must fail, not hang.
+test('PREDICTIONS READ TIMEOUT: a read that hangs is read-failed, and the page goes on without it', { timeout: 5000 }, async () => {
+  const { getLeaguePageData } = await load();
+  const fake = use({ 'postseasonBrackets/MLB_2026': MLB(), 'predictedBrackets/MLB_2026': PREDICTED_MLB() });
+  const realGetAll = fake.getAll.bind(fake);
+  fake.getAll = (...args: unknown[]) => {
+    const ref = args[0] as { path: string };
+    return ref.path.startsWith('predictedBrackets/') ? new Promise(() => {}) : realGetAll(...args);
+  };
+  process.env.PREDICTIONS_READ_TIMEOUT_MS = '40';
+  try {
+    const started = Date.now();
+    const { value: page, lines } = await tagged(() => getLeaguePageData('MLB'));
+    assert.ok(Date.now() - started < 2000, 'it did not wait for the hung read');
+    assert.equal(page.state, 'ok');
+    assert.equal(page.state === 'ok' && page.predictions, null);
+    assert.equal(page.state === 'ok' && page.view.rounds.length, 4);
+    assert.deepEqual(lines, ['[predictions-unavailable] league=MLB reason=read-failed']);
+  } finally {
+    delete process.env.PREDICTIONS_READ_TIMEOUT_MS;
+  }
+});
+
+test('PREDICTIONS_DISABLED: the switched-off league hides its section through the same path, tagged disabled, and reads nothing', async () => {
+  const { getLeaguePageData } = await load();
+  const fake = use({ 'postseasonBrackets/MLB_2026': MLB(), 'predictedBrackets/MLB_2026': PREDICTED_MLB() });
+  process.env.PREDICTIONS_DISABLED = 'wnba, mlb';
+  try {
+    const { value: page, lines } = await tagged(() => getLeaguePageData('MLB'));
+    assert.equal(page.state === 'ok' && page.predictions, null);
+    assert.deepEqual(lines, ['[predictions-unavailable] league=MLB reason=disabled']);
+    assert.ok(!fake.reads.some((r) => r.path.startsWith('predictedBrackets/')));
+    process.env.PREDICTIONS_DISABLED = 'WNBA';
+    const other = await tagged(() => getLeaguePageData('MLB'));
+    assert.ok(other.value.state === 'ok' && other.value.predictions, 'another league switched off costs this one nothing');
+  } finally {
+    delete process.env.PREDICTIONS_DISABLED;
+  }
+});
+
+test('PREDICTIONS: a healthy document logs nothing', async () => {
+  const { getLeaguePageData } = await load();
+  use({ 'postseasonBrackets/MLB_2026': MLB(), 'predictedBrackets/MLB_2026': PREDICTED_MLB() });
+  const { value: page, lines } = await tagged(() => getLeaguePageData('MLB'));
+  assert.ok(page.state === 'ok' && page.predictions);
+  assert.deepEqual(lines, []);
+});
+
+test('THE REAL BRACKET STILL THROWS: a failed bracket read throws out of the page data, whatever the predictions do', async () => {
+  const { getLeaguePageData } = await load();
+  use({ 'postseasonBrackets/MLB_2026': new Error('UNAVAILABLE'), 'predictedBrackets/MLB_2026': PREDICTED_MLB() });
+  await assert.rejects(() => getLeaguePageData('MLB'), /UNAVAILABLE/);
+  const bad = MLB();
+  (bad.series as Record<string, unknown>[])[0].status = 'paused';
+  use({ 'postseasonBrackets/MLB_2026': bad, 'predictedBrackets/MLB_2026': PREDICTED_MLB() });
+  await assert.rejects(() => getLeaguePageData('MLB'), /MLB_2026 is not in a shape the web reads/);
+});
+
+test('PREDICTIONS READ: one league\'s prediction says nothing about another\'s', async () => {
+  const { getLeaguePageData } = await load();
+  use({ 'postseasonBrackets/WNBA_2026': WNBA(), 'predictedBrackets/MLB_2026': PREDICTED_MLB() });
+  const page = await quiet(() => getLeaguePageData('WNBA'));
+  assert.equal(page.state === 'ok' && page.predictions, null);
 });
 
 test('WHICH LEAGUES: one batched read of names only', async () => {

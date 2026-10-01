@@ -51,7 +51,7 @@ async function target() {
   }
   throw new Error('Chrome did not start');
 }
-let ws, id = 0; const pending = new Map(); const events = []; const consoleLines = []; const requests = [];
+let ws, id = 0; const pending = new Map(); const events = []; const consoleLines = []; const requests = []; const responses = []; const requestUrls = new Map(); const blockedUrls = [];
 const send = (method, params = {}) => new Promise((res, rej) => { const i = ++id; pending.set(i, { res, rej }); ws.send(JSON.stringify({ id: i, method, params })); });
 const ev = async (expression) => {
   const r = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true });
@@ -98,6 +98,11 @@ const ADS = `(() => {
   const article = document.querySelector('[data-playoffs-article]') || document.querySelector('.page-content');
   const bracket = document.querySelector('.po-bracket');
   const panels = document.querySelector('[data-series-panels]');
+  // The computer's bracket section (scorecard, predicted bracket, title
+  // odds) and the methodology: no unit may sit inside either.
+  const picks = document.querySelector('[data-predictions="bracket"]');
+  const method = document.querySelector('[data-predictions-methodology]');
+  const hubCard = document.querySelector('[data-predictions="locked"]');
   const units = outer.map((el) => {
     const r = el.getBoundingClientRect();
     const frame = [...el.querySelectorAll('iframe')].find((f) => f.offsetWidth > 1 && f.offsetHeight > 1);
@@ -108,12 +113,15 @@ const ADS = `(() => {
       filled: !!frame, position: style.position,
       inArticle: !!(article && article.contains(el)),
       inBracket: !!(bracket && bracket.contains(el)),
+      inPicks: !!((picks && picks.contains(el)) || (method && method.contains(el))),
+      inHubCard: !!(hubCard && hubCard.contains(el)),
       inPanels: !!(panels && panels.contains(el)),
       parent: el.parentElement ? el.parentElement.tagName.toLowerCase() + (el.parentElement.dataset.playoffsArticle ? '[article]' : '') : null,
     };
   });
   const a = document.querySelector('article[data-playoffs-article]') || [...document.querySelectorAll('article')].sort((x, y) => y.offsetHeight - x.offsetHeight)[0] || null;
   return {
+    hasPicks: !!picks, hasMethod: !!method, hasHubCard: !!hubCard,
     adthrive: typeof window.adthrive === 'object' && window.adthrive ? Object.keys(window.adthrive).slice(0, 30) : null,
     script: !!document.querySelector('script[src*="ads.min.js"]'),
     units,
@@ -175,20 +183,37 @@ const SELECT_ALL = `(async () => {
   let rounds = 0, series = 0, conferences = 0;
   const visible = (el) => el.offsetWidth > 0 && el.offsetHeight > 0;
   const tapSeries = async () => { for (const a of [...document.querySelectorAll('.po-bracket [data-series] a[href^="#"]')].filter(visible)) { a.click(); series += 1; await wait(200); } };
-  const pills = [...document.querySelectorAll('[data-round-option]')].filter(visible);
+  const pills = [...document.querySelectorAll('.po-bracket [data-round-option]')].filter(visible);
   for (const b of pills) { b.click(); rounds += 1; await wait(200);
-    for (const c of [...document.querySelectorAll('[data-conference-option]')].filter(visible)) { c.click(); conferences += 1; await wait(150); }
+    for (const c of [...document.querySelectorAll('.po-bracket [data-conference-option]')].filter(visible)) { c.click(); conferences += 1; await wait(150); }
     await tapSeries();
   }
   // At desktop width every round is on screen and there are no pills.
   if (pills.length === 0) await tapSeries();
   const close = [...document.querySelectorAll('[data-panel-close]')].find(visible); if (close) { close.click(); await wait(200); }
+  // The computer's bracket: its pills, its toggle, and every pick opened.
+  // Every pick opened: after each round and each conference, every summary
+  // then visible that has not been opened yet. At desktop width there are no
+  // controls and every pick is visible at once.
+  let picksRounds = 0, picksConferences = 0;
+  const opened = new Set();
+  const openVisible = async () => { for (const d of [...document.querySelectorAll('.po-picks details')].filter(visible)) { if (opened.has(d.id)) continue; d.querySelector('summary').click(); opened.add(d.id); await wait(100); } };
+  const pickPills = [...document.querySelectorAll('.po-picks [data-round-option]')].filter(visible);
+  for (const b of pickPills) { b.click(); picksRounds += 1; await wait(200);
+    const toggles = [...document.querySelectorAll('.po-picks [data-conference-option]')].filter(visible);
+    if (toggles.length === 0) await openVisible();
+    for (const c of toggles) { c.click(); picksConferences += 1; await wait(150); await openVisible(); }
+  }
+  if (pickPills.length === 0) await openVisible();
+  const picksOpened = [...document.querySelectorAll('.po-picks details')].filter((d) => d.open).length;
+  const picksTotal = document.querySelectorAll('.po-picks details').length;
   await wait(1500);
   const before = window.__pnAds;
   const now = [...document.querySelectorAll('.adthrive-ad, [id^="AdThrive_"]')];
   window.__pnObserver.disconnect();
   return {
-    rounds, series, conferences,
+    rounds, series, conferences, picksRounds, picksConferences, picksOpened, picksTotal,
+    inPicks: now.filter((el) => { const r = document.querySelector('[data-predictions="bracket"]'); const m = document.querySelector('[data-predictions-methodology]'); return (r && r.contains(el)) || (m && m.contains(el)); }).length,
     before: before.length, after: now.length,
     kept: before.filter((el) => el.isConnected).length,
     same: now.filter((el) => el.__pnProbe).length,
@@ -252,6 +277,8 @@ async function measure(path, width, { playoffs }) {
   const screen = width < 600 ? 844 : 900;
   check(`${label}: article taller than 1.5 viewports`, m.articleHeight > 1.5 * screen, `${m.articleHeight}px against ${Math.round(1.5 * screen)}px`);
   check(`${label}: no ad container inside the interactive bracket`, m.units.filter((u) => u.inBracket || u.inPanels).length === 0, `${m.units.filter((u) => u.inBracket || u.inPanels).length}`);
+  if (path !== '/playoffs') check(`${label}: the predictions section and the methodology are on the page, and no ad container is inside either`, m.hasPicks && m.hasMethod && m.units.filter((u) => u.inPicks).length === 0, `section ${m.hasPicks}, methodology ${m.hasMethod}, ${m.units.filter((u) => u.inPicks).length} inside`);
+  else check(`${label}: the predictions card is on the hub, and no ad container is inside it`, m.hasHubCard && m.units.filter((u) => u.inHubCard).length === 0, `card ${m.hasHubCard}, ${m.units.filter((u) => u.inHubCard).length} inside`);
   const own = m.sticksOut.filter((x) => !x.ad);
   const fromAds = m.sticksOut.filter((x) => x.ad);
   check(`${label}: no aside, and nothing of the page's own is wider than the screen`, m.asides === 0 && own.length === 0, `asides ${m.asides}, document ${m.docWidth}px${own.length ? ', ' + own.slice(0, 3).map((x) => `${x.what} to ${x.right}px`).join('; ') : ''}`);
@@ -261,8 +288,8 @@ async function measure(path, width, { playoffs }) {
     await ev('scrollTo(0, 0)'); await sleep(300);
     const marked = await ev(WATCH);
     const s = await ev(SELECT_ALL);
-    check(`${label}: selecting every round and series leaves every ad container in place`, s.series > 0 && s.kept === s.before && s.after === s.before && s.same === s.after && s.moves.added === 0 && s.moves.removed === 0 && s.inBracket === 0,
-      `${s.rounds} rounds, ${s.conferences} conference taps, ${s.series} series; containers ${s.before} before, ${s.after} after, ${s.kept} still attached; added ${s.moves.added}, removed ${s.moves.removed}${s.moves.names.length ? ' ' + s.moves.names.slice(0, 4).join(' ') : ''}`);
+    check(`${label}: selecting every round and series, in both brackets, and opening every pick leaves every ad container in place`, s.series > 0 && s.picksTotal > 0 && s.picksOpened === s.picksTotal && s.kept === s.before && s.after === s.before && s.same === s.after && s.moves.added === 0 && s.moves.removed === 0 && s.inBracket === 0 && s.inPicks === 0,
+      `${s.rounds} rounds, ${s.conferences} conference taps, ${s.series} series; predicted: ${s.picksRounds} rounds, ${s.picksConferences} conference taps, ${s.picksOpened} of ${s.picksTotal} picks opened; containers ${s.before} before, ${s.after} after, ${s.kept} still attached; added ${s.moves.added}, removed ${s.moves.removed}${s.moves.names.length ? ' ' + s.moves.names.slice(0, 4).join(' ') : ''}`);
     if (marked === 0) note(`${label}: there was no ad container to watch, so the check above proves nothing about re-rendering`);
     if (width < 600) {
       const st = await ev(STICKY);
@@ -285,7 +312,9 @@ try {
     if (msg.id && pending.has(msg.id)) { const { res, rej } = pending.get(msg.id); pending.delete(msg.id); msg.error ? rej(new Error(msg.error.message)) : res(msg.result); return; }
     if (msg.method === 'Runtime.consoleAPICalled') consoleLines.push(msg.params.args.map((a) => a.value ?? a.description ?? '').join(' '));
     else if (msg.method === 'Runtime.exceptionThrown') consoleLines.push(String(msg.params.exceptionDetails?.exception?.description || msg.params.exceptionDetails?.text || ''));
-    else if (msg.method === 'Network.requestWillBeSent') requests.push(msg.params.request.url);
+    else if (msg.method === 'Network.requestWillBeSent') { requests.push(msg.params.request.url); requestUrls.set(msg.params.requestId, msg.params.request.url); }
+    else if (msg.method === 'Network.loadingFailed' && msg.params.blockedReason) blockedUrls.push(requestUrls.get(msg.params.requestId) || '');
+    else if (msg.method === 'Network.responseReceived') responses.push(msg.params.response.url);
     else if (msg.method) events.push(msg);
   };
   await send('Page.enable'); await send('Runtime.enable'); await send('Network.enable');
@@ -296,6 +325,28 @@ try {
     console.log('Opened the share link; the browser holds the access cookie.');
   }
   console.log(`BASE ${BASE}`);
+  // PRE-AD. The ad placer sizes what it places from the article's height
+  // before any unit is in it. With the ad hosts blocked as well, nothing can
+  // add to the article: the height measured is the one the placer reads.
+  const ANALYTICS = ['*posthog.com*', '*google-analytics.com*', '*analytics.google.com*', '*googletagmanager.com/gtag/*'];
+  const ADS_HOSTS = ['*adthrive*', '*raptive*', '*cafemedia*', '*doubleclick*', '*googlesyndication*', '*amazon-adsystem*', '*securepubads*'];
+  await send('Network.setBlockedURLs', { urls: [...ANALYTICS, ...ADS_HOSTS] });
+  for (const path of ['/playoffs', '/playoffs/mlb', '/playoffs/wnba']) {
+    const from = responses.length;
+    const blockedFrom = blockedUrls.length;
+    await go(path, 390);
+    const answered = responses.slice(from).filter((u) => /adthrive|raptive|cafemedia|doubleclick|googlesyndication|amazon-adsystem|securepubads/.test(u));
+    const blocked = blockedUrls.slice(blockedFrom).filter((u) => /adthrive/.test(u));
+    const pre = await ev(`(() => { const a = document.querySelector('article[data-playoffs-article]'); return { height: a ? Math.round(a.getBoundingClientRect().height) : 0, ads: document.querySelectorAll('.adthrive-ad, [id^="AdThrive_"], [class*="adthrive"]').length, runtime: typeof window.adthrive !== 'undefined' && !!window.adthrive && !!window.adthrive.siteAds, region: a ? a.getAttribute('data-ad-region') : null, pageContent: a ? a.classList.contains('page-content') : false }; })()`);
+    // The page asked for the ad script and Chrome refused it, no ad host
+    // answered, the ad runtime never started and no ad container exists: so
+    // the height below is the one the placer reads before it places a unit.
+    check(`${path} @390 PRE-AD: the ad script was requested and blocked; no ad host answered; no ad container`, blocked.length > 0 && answered.length === 0 && pre.ads === 0, `${blocked.length} blocked ad-script requests, ${answered.length} ad-host responses, ${pre.ads} containers`);
+    // Information only: which field Raptive's runtime sets is not verified.
+    note(`${path} @390 PRE-AD: window.adthrive.siteAds present: ${pre.runtime}`);
+    check(`${path} @390 PRE-AD: article data-ad-region="content" intact and at least 1000px`, pre.region === 'content' && pre.pageContent && pre.height >= 1000, `${pre.height}px`);
+  }
+  await send('Network.setBlockedURLs', { urls: ANALYTICS });
   for (const width of [390, 1280]) {
     await measure(CONTROL, width, { playoffs: false });
     for (const path of ['/playoffs', '/playoffs/mlb', '/playoffs/wnba']) await measure(path, width, { playoffs: true });

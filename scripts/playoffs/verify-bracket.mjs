@@ -123,15 +123,15 @@ try {
   check('hydrated flag is set after mount', await ev(`document.querySelector('.po-bracket').hasAttribute('data-hydrated')`));
 
   const state = () => ev(`(() => { const q = (s) => document.querySelector(s); const b = q('.po-bracket'); const box = q('[data-rounds]');
-    const pressed = [...document.querySelectorAll('[data-round-option]')].filter((x) => x.getAttribute('aria-pressed') === 'true').map((x) => x.dataset.roundOption);
-    const conf = [...document.querySelectorAll('[data-conference-option]')].filter((x) => x.getAttribute('aria-pressed') === 'true').map((x) => x.dataset.conferenceOption);
-    const shown = (sel) => [...document.querySelectorAll(sel)].filter((e) => getComputedStyle(e).display !== 'none').length;
+    const pressed = [...b.querySelectorAll('[data-round-option]')].filter((x) => x.getAttribute('aria-pressed') === 'true').map((x) => x.dataset.roundOption);
+    const conf = [...b.querySelectorAll('[data-conference-option]')].filter((x) => x.getAttribute('aria-pressed') === 'true').map((x) => x.dataset.conferenceOption);
+    const shown = (sel) => [...b.querySelectorAll(sel)].filter((e) => getComputedStyle(e).display !== 'none').length;
     const pad = parseFloat(getComputedStyle(box).paddingLeft);
     const cols = [...box.querySelectorAll(':scope > section')].map((s) => ({ key: s.dataset.round, gap: Math.round(s.offsetLeft - box.offsetLeft - pad - box.scrollLeft) }));
     return { round: b.dataset.round, conference: b.dataset.conference ?? null, pressed, conf, scrollLeft: Math.round(box.scrollLeft), scrollable: box.scrollWidth > box.clientWidth, cols,
       al: shown('[data-conf="AL"]'), nl: shown('[data-conf="NL"]'), openPanels: [...document.querySelectorAll('.po-panel')].filter((e) => getComputedStyle(e).display !== 'none').map((e) => e.id),
       expanded: [...document.querySelectorAll('[data-series] > a[aria-expanded="true"]')].map((a) => a.getAttribute('href')), hash: location.hash,
-      slot: (() => { const s = q('[data-predicted-bracket-slot]'); return s ? { round: s.dataset.round, conference: s.dataset.conference ?? null } : null; })(),
+      slot: (() => { const s = q('[data-predicted-bracket]'); return s ? { round: s.dataset.round, conference: s.dataset.conference ?? null } : null; })(),
       controls: getComputedStyle(q('.po-controls')).display, controlsTop: Math.round(q('.po-controls').getBoundingClientRect().top), focus: document.activeElement ? (document.activeElement.id || document.activeElement.getAttribute('href') || document.activeElement.tagName) : null }; })()`);
 
   let s = await state();
@@ -151,7 +151,7 @@ try {
   check('pill: Division Series is pressed and the row is scrolled to it', s.pressed.join() === 'division_series' && Math.abs(ds.gap) <= 2 && s.scrollLeft > 0, `gap ${ds.gap}px scrollLeft ${s.scrollLeft}`);
   const next = s.cols.find((x) => x.key === 'championship_series');
   check('pill: the next round peeks in from the right', next.gap > 0 && next.gap < 390, `next column starts ${next.gap}px from the left of a 390px screen`);
-  check('pill: the predictions slot follows the same control', s.slot && s.slot.round === 'division_series', JSON.stringify(s.slot));
+  check('pill: the predicted bracket follows the same control', s.slot && s.slot.round === 'division_series', JSON.stringify(s.slot));
   c = await calls();
   check('pill: playoffs_round_select reaches both sinks', sinksFor(c, 'playoffs_round_select') === 'ga4+posthog', sinksFor(c, 'playoffs_round_select') || 'neither');
   const rs = propsFor(c, 'playoffs_round_select', 'posthog')[0] || {};
@@ -164,7 +164,7 @@ try {
   await sleep(400);
   s = await state();
   check('toggle: NL shown, AL not', s.nl === 3 && s.al === 0 && s.conf.join() === 'NL', `AL ${s.al} NL ${s.nl}`);
-  check('toggle: the predictions slot follows it', s.slot && s.slot.conference === 'NL', JSON.stringify(s.slot));
+  check('toggle: the predicted bracket follows it', s.slot && s.slot.conference === 'NL', JSON.stringify(s.slot));
   c = await calls();
   const ts = propsFor(c, 'playoffs_round_select', 'posthog')[0] || {};
   check('toggle: playoffs_round_select reaches both sinks, as conference_toggle', sinksFor(c, 'playoffs_round_select') === 'ga4+posthog' && ts.control === 'conference_toggle' && ts.conference === 'NL', `${sinksFor(c, 'playoffs_round_select')} ${ts.control} ${ts.conference}`);
@@ -198,6 +198,7 @@ try {
 
   await clearCalls();
   await ev(`document.querySelector('[data-panel-close="division_series-3"]').click()`);
+
   await sleep(400);
   s = await state();
   check('close: the detail closes, the address clears, focus returns to the card', s.openPanels.length === 0 && s.hash === '' && s.focus === '#division_series-3', `${s.openPanels.length} open, hash "${s.hash}", focus ${s.focus}`);
@@ -262,7 +263,7 @@ try {
 
   // Scripts off. The page is measured through the protocol, not by its own script.
   await go('/playoffs/mlb#division_series-3', { width: 390, js: false, settle: 1200 });
-  const nojs = await ev(`(() => { const shown = (sel) => [...document.querySelectorAll(sel)].filter((e) => getComputedStyle(e).display !== 'none'); const p = document.getElementById('division_series-3').getBoundingClientRect();
+  const nojs = await ev(`(() => { const shown = (sel) => [...document.querySelectorAll(sel)].filter((e) => getComputedStyle(e).display !== 'none' && e.closest('.po-picks') === null); const p = document.getElementById('division_series-3').getBoundingClientRect();
     return { panels: shown('.po-panel').map((e) => e.id), al: shown('[data-conf="AL"]').length, nl: shown('[data-conf="NL"]').length, controls: shown('.po-controls').length, hydrated: document.querySelector('.po-bracket').hasAttribute('data-hydrated'),
       onScreen: p.top < innerHeight && p.bottom > 0, series: shown('[data-series]').length, more: getComputedStyle(document.querySelector('.po-more')).display, button: getComputedStyle(document.querySelector('[data-show-all]')).display,
       rows: [...document.querySelectorAll('[data-home-game]')].filter((e) => e.offsetParent !== null).length, calls: (window.__calls || []).length }; })()`);
@@ -281,7 +282,7 @@ try {
   // ================= 1280px =================
   await go('/playoffs/mlb', { width: 1280 });
   const wide = await ev(`(() => { const box = document.querySelector('[data-rounds]'); const cols = [...box.querySelectorAll(':scope > section')].map((s) => { const r = s.getBoundingClientRect(); return { key: s.dataset.round, left: Math.round(r.left), right: Math.round(r.right), top: Math.round(r.top) }; });
-    const shown = (sel) => [...document.querySelectorAll(sel)].filter((e) => getComputedStyle(e).display !== 'none').length;
+    const shown = (sel) => [...document.querySelectorAll('.po-bracket ' + sel)].filter((e) => getComputedStyle(e).display !== 'none').length;
     return { controls: getComputedStyle(document.querySelector('.po-controls')).display, display: getComputedStyle(box).display, scrollable: box.scrollWidth > box.clientWidth + 1, cols, al: shown('[data-conf="AL"]'), nl: shown('[data-conf="NL"]'), series: shown('[data-series]'), overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth }; })()`);
   check('1280: the whole bracket shows at once, four rounds side by side', wide.display === 'grid' && !wide.scrollable && wide.cols.length === 4 && wide.cols.every((x) => x.left >= 0 && x.right <= 1280) && new Set(wide.cols.map((x) => x.top)).size === 1, wide.cols.map((x) => `${x.key} ${x.left}-${x.right}`).join(', '));
   check('1280: both conferences and all 11 series show', wide.al === 3 && wide.nl === 3 && wide.series === 11, `AL ${wide.al} NL ${wide.nl}`);
@@ -301,7 +302,7 @@ try {
   c = await calls();
   const wv = propsFor(c, 'playoffs_league_view', 'posthog')[0] || {};
   check('WNBA: page view event reaches both sinks', sinksFor(c, 'playoffs_league_view') === 'ga4+posthog' && wv.league === 'wnba', `${sinksFor(c, 'playoffs_league_view')} ${wv.league}`);
-  const w = await ev(`(() => { const shown = (sel) => [...document.querySelectorAll(sel)].filter((e) => getComputedStyle(e).display !== 'none').length; return { toggle: document.querySelector('[data-control="conference"]') !== null, pills: [...document.querySelectorAll('[data-round-option]')].map((b) => b.textContent), series: shown('[data-series]'), conf: document.querySelectorAll('[data-conf]').length }; })()`);
+  const w = await ev(`(() => { const shown = (sel) => [...document.querySelectorAll('.po-bracket ' + sel)].filter((e) => getComputedStyle(e).display !== 'none').length; return { toggle: document.querySelector('[data-control="conference"]') !== null, pills: [...document.querySelectorAll('.po-bracket [data-round-option]')].map((b) => b.textContent), series: shown('[data-series]'), conf: document.querySelectorAll('[data-conf]').length }; })()`);
   check('WNBA: three round pills, no conference toggle, all seven series showing', !w.toggle && w.pills.length === 3 && w.series === 7 && w.conf === 0, w.pills.join(' | '));
   await shot('wnba-390-full', 390);
   await shot('wnba-390-top', 390, { full: false });
@@ -317,6 +318,21 @@ try {
   const ww = await ev(`(() => { const box = document.querySelector('[data-rounds]'); return { display: getComputedStyle(box).display, cols: [...box.querySelectorAll(':scope > section')].length, controls: getComputedStyle(document.querySelector('.po-controls')).display, overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth }; })()`);
   check('WNBA 1280: three rounds side by side, controls hidden, no sideways scroll', ww.display === 'grid' && ww.cols === 3 && ww.controls === 'none' && !ww.overflow);
   await shot('wnba-1280-full', 1280);
+
+  // ================= Hub: the predictions card at 390 =================
+  // The record stays on one line. The live documents may no longer show "no
+  // series decided yet", so the same span is also measured holding that text.
+  await go('/playoffs', { width: 390 });
+  const rec = await ev(`(() => { const spans = [...document.querySelectorAll('[data-predictions-league] .whitespace-nowrap')];
+    const lines = (el) => { const r = document.createRange(); r.selectNodeContents(el); return new Set([...r.getClientRects()].map((x) => Math.round(x.top))).size; };
+    const live = spans.map((s) => ({ text: s.textContent, lines: lines(s) }));
+    const probe = spans.map((s) => { const was = s.textContent; s.textContent = '· no series decided yet'; const n = lines(s); s.textContent = was; return n; });
+    return { live, probe, wide: document.documentElement.scrollWidth > document.documentElement.clientWidth }; })()`);
+  check('hub 390: each predictions record is on one line', rec.live.length > 0 && rec.live.every((x) => x.lines === 1), JSON.stringify(rec.live));
+  check('hub 390: "no series decided yet" stays on one line in the same span', rec.probe.length > 0 && rec.probe.every((n) => n === 1) && !rec.wide, JSON.stringify(rec.probe));
+  await ev(`document.querySelector('[data-predictions="locked"]').scrollIntoView({ block: 'center' })`);
+  await sleep(300);
+  await shot('hub-390-predictions-card', 390, { full: false });
 
   // ================= Hub =================
   await go('/playoffs', { width: 390 });
@@ -394,6 +410,117 @@ try {
       w = await ev(WIDTH);
       check(`390 ${path}: and with scripts off`, asWide(w), said(w));
     }
+  }
+
+  // ================= The computer's bracket, 390px, MLB =================
+  // Its own pills and toggle, bound to the same state as the real bracket's:
+  // pressing either set moves both. It sends its own two events.
+  await go('/playoffs/mlb', { width: 390 });
+  const both = () => ev(`(() => { const r = document.querySelector('.po-bracket'); const p = document.querySelector('.po-picks');
+    const on = (root, sel, key) => [...root.querySelectorAll(sel)].filter((x) => x.getAttribute('aria-pressed') === 'true').map((x) => x.dataset[key]);
+    const box = p.querySelector('[data-pick-rounds]'); const pad = parseFloat(getComputedStyle(box).paddingLeft);
+    const cols = [...box.querySelectorAll(':scope > section')].map((x) => ({ key: x.dataset.pickRound, gap: Math.round(x.offsetLeft - box.offsetLeft - pad - box.scrollLeft) }));
+    return { real: { round: r.dataset.round, conference: r.dataset.conference ?? null, pills: on(r, '[data-round-option]', 'roundOption'), conf: on(r, '[data-conference-option]', 'conferenceOption') },
+      picks: { round: p.dataset.round, conference: p.dataset.conference ?? null, pills: on(p, '[data-round-option]', 'roundOption'), conf: on(p, '[data-conference-option]', 'conferenceOption'), cols,
+        al: [...p.querySelectorAll('[data-conf="AL"]')].filter((e) => getComputedStyle(e).display !== 'none').length, nl: [...p.querySelectorAll('[data-conf="NL"]')].filter((e) => getComputedStyle(e).display !== 'none').length } }; })()`);
+  let b = await both();
+  check('picks 390: present, on the same round and conference as the real bracket', b.picks.round === b.real.round && b.picks.conference === b.real.conference && b.picks.pills.join() === b.real.round, JSON.stringify(b.picks.pills));
+  await ev(`document.getElementById('predictions').scrollIntoView()`);
+  await sleep(400);
+  await shot('mlb-390-predictions', 390, { full: false });
+  await clearCalls();
+  await ev(`document.querySelector('.po-picks [data-round-option="division_series"]').click()`);
+  await sleep(1200);
+  b = await both();
+  const pds = b.picks.cols.find((x) => x.key === 'division_series');
+  check('picks pill: moves both brackets', b.real.round === 'division_series' && b.picks.round === 'division_series' && b.real.pills.join() === 'division_series' && b.picks.pills.join() === 'division_series', JSON.stringify({ real: b.real.pills, picks: b.picks.pills }));
+  check('picks pill: its own row is scrolled to the round', Math.abs(pds.gap) <= 2, `gap ${pds.gap}px`);
+  c = await calls();
+  check('picks pill: predictions_round_select reaches both sinks', sinksFor(c, 'predictions_round_select') === 'ga4+posthog', sinksFor(c, 'predictions_round_select') || 'neither');
+  const prs = propsFor(c, 'predictions_round_select', 'posthog')[0] || {};
+  check('picks pill: event names the round, conference and control', prs.round_key === 'division_series' && prs.conference === 'AL' && prs.control === 'round_pill' && prs.league === 'mlb' && prs.season === 2026 && prs.surface === 'web_playoffs_league', JSON.stringify(prs));
+  check('picks pill: the real bracket sent no event of its own', !c.some((x) => x.name === 'playoffs_round_select'));
+  await clearCalls();
+  await ev(`document.querySelector('.po-picks [data-conference-option="NL"]').click()`);
+  await sleep(500);
+  b = await both();
+  check('picks toggle: moves both brackets to NL', b.real.conference === 'NL' && b.picks.conference === 'NL' && b.real.conf.join() === 'NL' && b.picks.conf.join() === 'NL' && b.picks.nl > 0 && b.picks.al === 0, JSON.stringify({ real: b.real.conf, picks: b.picks.conf, al: b.picks.al, nl: b.picks.nl }));
+  c = await calls();
+  const pts = propsFor(c, 'predictions_round_select', 'posthog')[0] || {};
+  check('picks toggle: predictions_round_select reaches both sinks, as conference_toggle', sinksFor(c, 'predictions_round_select') === 'ga4+posthog' && pts.control === 'conference_toggle' && pts.conference === 'NL', `${sinksFor(c, 'predictions_round_select')} ${pts.control} ${pts.conference}`);
+  // And the other way: the real bracket's pill moves the computer's.
+  await ev(`document.querySelector('.po-bracket [data-round-option="championship_series"]').click()`);
+  await sleep(1200);
+  b = await both();
+  const pcs = b.picks.cols.find((x) => x.key === 'championship_series');
+  check('real pill: moves the computer bracket, pill and row', b.picks.round === 'championship_series' && b.picks.pills.join() === 'championship_series' && Math.abs(pcs.gap) <= 2, `gap ${pcs.gap}px ${b.picks.pills.join()}`);
+  // A swipe in the computer's row moves the real bracket: its pills, and its
+  // row, which follows to the same round. A middle round: the last column
+  // cannot reach the left edge, the row stops at its end.
+  await clearCalls();
+  await ev(`(() => { const box = document.querySelector('[data-pick-rounds]'); const col = box.querySelector('[data-pick-round="division_series"]'); box.scrollTo({ left: col.offsetLeft - box.offsetLeft - parseFloat(getComputedStyle(box).paddingLeft), behavior: 'auto' }); })()`);
+  await sleep(1200);
+  b = await both();
+  const realRow = await ev(`(() => { const box = document.querySelector('[data-rounds]'); const pad = parseFloat(getComputedStyle(box).paddingLeft); const col = box.querySelector(':scope > section[data-round="division_series"]'); return Math.round(col.offsetLeft - box.offsetLeft - pad - box.scrollLeft); })()`);
+  check('picks swipe: the real bracket follows, pills and row', b.real.round === 'division_series' && b.real.pills.join() === 'division_series' && b.picks.pills.join() === 'division_series' && Math.abs(realRow) <= 2, `real ${b.real.pills.join()} gap ${realRow}px`);
+  check('picks swipe: no event is sent for it', (await calls()).filter((x) => /round_select/.test(x.name)).length === 0);
+  await shot('mlb-390-predictions-nl-cs', 390, { full: false });
+  // A pick opens, with no navigation, and sends one event.
+  await clearCalls();
+  const hashBefore = await ev('location.hash');
+  await ev(`document.querySelector('.po-picks [data-pick-round="championship_series"] [data-conf="NL"] details summary').click()`);
+  await sleep(600);
+  c = await calls();
+  check('pick open: predictions_series_open reaches both sinks, once', sinksFor(c, 'predictions_series_open') === 'ga4+posthog' && c.filter((x) => x.name === 'predictions_series_open' && x.sink === 'posthog').length === 1, sinksFor(c, 'predictions_series_open') || 'neither');
+  const pso = propsFor(c, 'predictions_series_open', 'posthog')[0] || {};
+  check('pick open: event names round, the real series id and the mark', pso.round_key === 'championship_series' && /^championship_series-\d$/.test(pso.series_id) && ['correct', 'busted', 'alive'].includes(pso.pick_outcome), JSON.stringify(pso));
+  check('pick open: the address did not change', (await ev('location.hash')) === hashBefore);
+  check('no predictions event carries a pipeline series key or a hash', !/\b(?:AL|NL)-(?:WC|DS)-[A-Z]\b|\b(?:AL|NL)-CS\b|\bR\d-\dv\d\b|\bSF-[A-Z]\b|[0-9a-f]{40,}/.test(JSON.stringify(c)));
+  await shot('mlb-390-pick-open', 390, { full: false });
+
+  // Scripts off: every pick shows, both conferences, and the controls go.
+  await go('/playoffs/mlb', { width: 390, js: false, settle: 1200 });
+  const pnojs = await ev(`(() => { const p = document.querySelector('.po-picks'); const shown = (sel) => [...p.querySelectorAll(sel)].filter((e) => getComputedStyle(e).display !== 'none').length; return { picks: shown('[data-pick]'), al: shown('[data-conf="AL"]'), nl: shown('[data-conf="NL"]'), controls: shown('.po-controls') }; })()`);
+  check('picks, scripts off: all 11 picks and both conferences show, the controls are gone', pnojs.picks === 11 && pnojs.al === 3 && pnojs.nl === 3 && pnojs.controls === 0, JSON.stringify(pnojs));
+
+  // ================= Every round pill and every busted mark, both leagues, 390 =================
+  for (const path of ['/playoffs/wnba', '/playoffs/mlb']) {
+    await go(path, { width: 390 });
+    await ev(`document.getElementById('predictions').scrollIntoView()`);
+    const keys = await ev(`[...document.querySelectorAll('.po-picks [data-round-option]')].map((b) => b.dataset.roundOption)`);
+    const bad = [];
+    for (const k of keys) {
+      await ev(`document.querySelector('.po-picks [data-round-option="${k}"]').click()`);
+      await sleep(900);
+      const st = await ev(`(() => { const p = document.querySelector('.po-picks'); const r = document.querySelector('.po-bracket'); const box = p.querySelector('[data-pick-rounds]'); const pad = parseFloat(getComputedStyle(box).paddingLeft); const col = box.querySelector('[data-pick-round="${k}"]');
+        return { picks: p.dataset.round, real: r.dataset.round, gap: Math.round(col.offsetLeft - box.offsetLeft - pad - box.scrollLeft), scrollable: box.scrollWidth > box.clientWidth }; })()`);
+      if (st.picks !== k || st.real !== k || (st.scrollable && Math.abs(st.gap) > 2 && k !== keys[keys.length - 1])) bad.push(`${k} ${JSON.stringify(st)}`);
+      await shot(`${path.split('/').pop()}-390-picks-${k}`, 390, { full: false });
+    }
+    check(`picks 390 ${path}: every round pill moves both brackets and brings its round in`, bad.length === 0 && keys.length >= 3, bad.join(' | ') || keys.join(','));
+    const marks = await ev(`(() => { const p = document.querySelector('.po-picks');
+      const busted = [...p.querySelectorAll('[data-pick-outcome="busted"]')];
+      return { busted: busted.length, badges: busted.filter((li) => li.querySelector('[data-outcome-badge="busted"]')).length,
+        struck: busted.filter((li) => getComputedStyle(li.querySelector('[data-pick-side="pick"] span.truncate')).textDecorationLine.includes('line-through')).length,
+        dimmedFaded: [...p.querySelectorAll('[data-dimmed="true"] details')].every((d) => parseFloat(getComputedStyle(d).opacity) < 1),
+        others: [...p.querySelectorAll('[data-pick-outcome]:not([data-pick-outcome="busted"])')].filter((li) => getComputedStyle(li.querySelector('[data-pick-side="pick"] span.truncate')).textDecorationLine.includes('line-through')).length }; })()`);
+    check(`picks 390 ${path}: every busted pick has its badge and is struck through, dimmed cards are faded, nothing else is struck`, marks.busted > 0 && marks.badges === marks.busted && marks.struck === marks.busted && marks.dimmedFaded && marks.others === 0, JSON.stringify(marks));
+  }
+
+  // ================= The computer's bracket, the other views =================
+  for (const [path, width] of [['/playoffs/wnba', 390], ['/playoffs/wnba', 1280], ['/playoffs/mlb', 1280]]) {
+    await go(path, { width });
+    await ev(`document.getElementById('predictions').scrollIntoView()`);
+    await sleep(400);
+    const name = `${path.split('/').pop()}-${width}`;
+    await shot(`${name}-predictions`, width, { full: false });
+    if (width === 1280) {
+      const all = await ev(`(() => { const p = document.querySelector('.po-picks'); return { controls: getComputedStyle(p.querySelector('.po-controls')).display, shown: [...p.querySelectorAll('[data-pick]')].filter((x) => x.offsetWidth > 0).length, total: p.querySelectorAll('[data-pick]').length }; })()`);
+      check(`picks 1280 ${path}: every pick shown at once, controls hidden`, all.controls === 'none' && all.shown === all.total && all.total > 0, JSON.stringify(all));
+    }
+    await ev(`document.getElementById('how-the-computer-picked').scrollIntoView()`);
+    await sleep(300);
+    await shot(`${name}-methodology`, width, { full: false });
   }
 
   // ================= The debug log =================

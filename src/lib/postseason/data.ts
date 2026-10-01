@@ -6,7 +6,18 @@ import { getAllTeams, getVenueForTeam } from '../data';
 import { getTeamVenueHubMap } from '../venue-hub';
 import { mapBracketDoc } from './map';
 import { playoffsLinkState, type PlayoffsLinkState } from './gate';
-import { buildLeagueView, clubSlugs, easternYmd, hostSlugs, type ClubInfo, type LeagueView, type ParkInfo } from './view';
+import { buildLeagueView, clubSlugs, easternYmd, hostSlugs, seriesIds, type ClubInfo, type LeagueView, type ParkInfo } from './view';
+import {
+  assemblePredictions,
+  mapPredictedDoc,
+  predictionSlugs,
+  type LeaguePredictions,
+  type PredictedBracket,
+} from './predictions';
+
+import { checkLock } from './predictions-lock';
+
+export type { LeaguePredictions } from './predictions';
 import { readPostseasonPromos } from './promos';
 import type { InboundLeague } from './inbound';
 import type { Bracket, BracketRead, PostseasonLeague } from './types';
@@ -23,7 +34,7 @@ export const POSTSEASON_SEASON = 2026;
 export const POSTSEASON_LEAGUES: readonly PostseasonLeague[] = ['MLB', 'WNBA'];
 
 const BRACKETS = 'postseasonBrackets';
-const PREDICTION_INPUTS = 'predictionInputs';
+const PREDICTED = 'predictedBrackets';
 
 // The only fields of a bracket document that leave Firestore. operatorLog,
 // source, runId, seeds, the hashes and unplaced are not requested, so they are
@@ -67,12 +78,12 @@ export const getBracket = cache(async (league: PostseasonLeague): Promise<Bracke
 });
 
 export type LeaguePageData =
-  | { state: 'ok'; league: PostseasonLeague; view: LeagueView; predictionsLocked: boolean }
+  | { state: 'ok'; league: PostseasonLeague; view: LeagueView; predictions: LeaguePredictions | null }
   | { state: 'missing'; league: PostseasonLeague };
 
 /**
  * Everything a league's page needs: the bracket, the clubs it names, the
- * parks its hosts play in, and whether prediction inputs were frozen.
+ * parks its hosts play in, and the computer's bracket when it was locked.
  *
  * `now` is taken once here, on the server, and decides only which scheduled
  * games are still ahead.
@@ -85,8 +96,10 @@ export const getLeaguePageData = cache(async (league: PostseasonLeague): Promise
   if (read.state !== 'ok') return { state: read.state, league };
   const view = await buildViewFor(read.bracket, new Date(), { withPromos: true });
   if (!view) throw new Error(`[postseason] ${docId(league)} names a club with no team record`);
-  const predictionsLocked = await arePredictionInputsFrozen(league);
-  return { state: 'ok', league, view, predictionsLocked };
+  // The predictions never cost the page: any failure hides the section and
+  // logs one line. The bracket above has already been read and built.
+  const predictions = await loadPredictions(league, read.bracket, view);
+  return { state: 'ok', league, view, predictions };
 });
 
 /**
@@ -95,9 +108,9 @@ export const getLeaguePageData = cache(async (league: PostseasonLeague): Promise
  * club the web has no team record for. Throws when a read it depends on
  * fails outright.
  */
-async function buildViewFor(bracket: Bracket, now: Date, opts: { withPromos: boolean }): Promise<LeagueView | null> {
+async function clubsFor(slugs: Iterable<string>): Promise<Map<string, ClubInfo>> {
   const teams = await getAllTeams();
-  const wanted = new Set(clubSlugs(bracket));
+  const wanted = new Set(slugs);
   const clubs = new Map<string, ClubInfo>();
   for (const t of teams) {
     if (!wanted.has(t.id)) continue;
@@ -110,6 +123,11 @@ async function buildViewFor(bracket: Bracket, now: Date, opts: { withPromos: boo
       primaryColor: t.primaryColor,
     });
   }
+  return clubs;
+}
+
+async function buildViewFor(bracket: Bracket, now: Date, opts: { withPromos: boolean }): Promise<LeagueView | null> {
+  const clubs = await clubsFor(clubSlugs(bracket));
 
   // A park is the web's own venue name for the host club. A club with no
   // venue record gets no park line; nothing is filled in for it. The name
@@ -148,26 +166,143 @@ async function buildViewFor(bracket: Bracket, now: Date, opts: { withPromos: boo
   return buildLeagueView(bracket, clubs, parks, now, promos);
 }
 
+// The fields of a predictedBrackets document that leave Firestore. The
+// operator fields (computedBy, frozenBy, seedFileAuthoredBy, acks), the file
+// paths, the run ids and every other hash are not requested. The mapper
+// whitelists again on top of this, and coreFiles is read only to check that
+// the engine code did not change between the freeze and the compute.
+const PREDICTED_FIELDS = [
+  'league',
+  'season',
+  'target',
+  'lockedAt',
+  'simRuns',
+  'computedAt',
+  'reviewedSha256',
+  'champion',
+  'rounds',
+  'titleOdds',
+  'provenance.frozenAt',
+  'provenance.engineCommitAtFreeze',
+  'provenance.coreFiles',
+  'provenance.corpusSha256',
+  'provenance.paramsSha256',
+  'provenance.descriptorSha256',
+  'provenance.slugMapSha256',
+];
+
+/** Why a league page shows no predictions. A category, never a message:
+ *  the log line carries no document contents and no ids. */
+export type PredictionsUnavailableReason =
+  | 'read-failed'
+  | 'missing'
+  | 'refused'
+  | 'fingerprint-mismatch'
+  | 'content-mismatch'
+  | 'no-join'
+  | 'no-team-record'
+  | 'build-failed'
+  | 'disabled';
+
 /**
- * Were this league's prediction inputs frozen?
- *
- * The document holds the whole regular-season corpus (2,429 rows for MLB).
- * The mask asks for frozenAt alone, so the corpus never crosses the wire.
- * True only when the document exists AND carries a freeze stamp. A failed
- * read is false: the card makes a claim, and an unproven claim is not shown.
+ * The leagues whose predictions are switched off by the environment:
+ * PREDICTIONS_DISABLED="MLB,WNBA". The same path as every failure, so it is
+ * how a deployment proves the failure path (G2 preview) and how an operator
+ * hides a league's predictions without a code change. Read per call, never
+ * at import, so a test can set it.
  */
-export const arePredictionInputsFrozen = cache(async (league: PostseasonLeague): Promise<boolean> => {
+function predictionsDisabled(league: PostseasonLeague): boolean {
+  return (process.env.PREDICTIONS_DISABLED ?? '')
+    .split(',')
+    .map((s) => s.trim().toUpperCase())
+    .includes(league);
+}
+
+/** The one stable tag for every predictions failure. */
+export const PREDICTIONS_UNAVAILABLE = '[predictions-unavailable]';
+
+export type PredictedRead = { state: 'ok'; predicted: PredictedBracket } | { state: 'unavailable'; reason: PredictionsUnavailableReason };
+
+/**
+ * The computer's locked bracket for a league, read fresh.
+ *
+ * Uncached like the real bracket, and for the same reason: the page that
+ * shows it is revalidated when the real bracket changes, and the picks are
+ * scored against that change. React cache() shares the read between the
+ * metadata and the body of one render.
+ *
+ * NEVER LETS A FAILURE THROUGH. Unlike the real bracket, whose failure keeps
+ * the last good page, a predictions failure must not freeze the page: the
+ * real bracket goes on updating and only the predictions section drops out.
+ * A failed or slow read, no document, a document the mapper refuses and a
+ * lock that does not match are all "unavailable", each with its category.
+ * The mapper and the lock check run outside this function's try; anything
+ * they throw is caught by loadPredictions, its only caller, as build-failed.
+ */
+export const getPredictedBracket = cache(async (league: PostseasonLeague): Promise<PredictedRead> => {
+  let data: unknown;
   try {
-    const ref = db.collection(PREDICTION_INPUTS).doc(docId(league));
-    const [snap] = await db.getAll(ref, { fieldMask: ['frozenAt'] });
-    if (!snap.exists) return false;
-    const frozenAt = snap.get('frozenAt');
-    return frozenAt !== undefined && frozenAt !== null;
-  } catch (err) {
-    console.error(`[postseason] reading predictionInputs/${docId(league)} failed; the predictions card is hidden`, err);
-    return false;
+    const ref = db.collection(PREDICTED).doc(docId(league));
+    const [snap] = await withTimeout(db.getAll(ref, { fieldMask: PREDICTED_FIELDS }), predictionsReadTimeoutMs());
+    if (!snap.exists) return { state: 'unavailable', reason: 'missing' };
+    data = snap.data();
+  } catch {
+    return { state: 'unavailable', reason: 'read-failed' };
   }
+  const predicted = mapPredictedDoc(data, { league, season: POSTSEASON_SEASON });
+  if (!predicted) return { state: 'unavailable', reason: 'refused' };
+  const lock = checkLock(predicted);
+  if (lock !== 'ok') return { state: 'unavailable', reason: lock };
+  return { state: 'ok', predicted };
 });
+
+/**
+ * How long the predictions read may take before the page goes on without
+ * it. The real bracket has been read by then; a predictions read that hangs
+ * must not hold the render, or ISR keeps serving the old bracket. Overridable
+ * for tests only.
+ */
+export function predictionsReadTimeoutMs(): number {
+  const v = Number(process.env.PREDICTIONS_READ_TIMEOUT_MS);
+  return Number.isFinite(v) && v > 0 ? v : 4000;
+}
+
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error('timeout')), ms);
+  });
+  return Promise.race([p, late]).finally(() => clearTimeout(timer));
+}
+
+/**
+ * The page's predictions, or null. Every failure, the read's and the
+ * assembly's, ends here as one log line with the tag, the league and the
+ * reason category, and a null that hides the section and the hub's record
+ * line. Nothing about the failure reaches the page.
+ */
+class DisabledSignal extends Error {}
+
+async function loadPredictions(league: PostseasonLeague, bracket: Bracket, view: LeagueView): Promise<LeaguePredictions | null> {
+  let reason: PredictionsUnavailableReason;
+  try {
+    if (predictionsDisabled(league)) throw new DisabledSignal();
+    const read = await getPredictedBracket(league);
+    if (read.state === 'ok') {
+      const clubs = await clubsFor(predictionSlugs(bracket, read.predicted));
+      const rounds = view.rounds.map((r) => ({ key: r.key, label: r.label, shortLabel: r.shortLabel }));
+      const built = assemblePredictions(bracket, read.predicted, clubs, seriesIds(bracket), rounds);
+      if (!('unavailable' in built)) return built;
+      reason = built.unavailable;
+    } else {
+      reason = read.reason;
+    }
+  } catch (e) {
+    reason = e instanceof DisabledSignal ? 'disabled' : 'build-failed';
+  }
+  console.error(`${PREDICTIONS_UNAVAILABLE} league=${league} reason=${reason}`);
+  return null;
+}
 
 /**
  * The leagues that have a bracket document this season.

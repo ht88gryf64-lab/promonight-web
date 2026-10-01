@@ -1,0 +1,31 @@
+{
+  "_note": "The frozen documents this build knows, as read from Firestore on 2026-09-30. The loader refuses a predictionInputs document whose frozen facts are not these, so a replaced or edited document cannot compute even when its own hashes are self-consistent. The freeze is permanent; a new season adds a block here.",
+  "WNBA_2026": {
+    "frozenAt": "2026-09-25T14:24:00.732Z",
+    "frozenBy": "2026-09-25T14-23-59-242Z-bd7ef2",
+    "engineCommit": "2eb87fc8aec8b69f3febb3cd29ffc90445fdb6f7",
+    "cutoff": "2026-09-27T18:00:00.000Z",
+    "corpusRows": 330,
+    "corpusSha256": "e4bcaddb1f2acebf37ece2f2c8f32d136609bd93469a30c8e5da104a6bd17a8d",
+    "paramsSha256": "f953e58fabed3c981231b1b52761b9c22fcc3c1d4274abcac80749856ff61433",
+    "simSeed": 3837570523,
+    "descriptorSha256": "71c1700f4e5626ad049e3af83f4064efd6d2ee2255e3abceee59a16d723c6321",
+    "slugMapSha256": "b5d2e82a40cbebcca98ef745634e986c64235e851e84b46047b94ceddf1f3c26",
+    "acks": [],
+    "ackedCancelled": []
+  },
+  "MLB_2026": {
+    "frozenAt": "2026-09-29T01:05:52.350Z",
+    "frozenBy": "2026-09-29T01-05-51-110Z-40fb9a",
+    "engineCommit": "2eb87fc8aec8b69f3febb3cd29ffc90445fdb6f7",
+    "cutoff": "2026-09-29T18:00:00.000Z",
+    "corpusRows": 2429,
+    "corpusSha256": "32d46402d4f94a155e99294f9dd9c613d1c76dd36d0e29a81210abbb99a6689f",
+    "paramsSha256": "76829cfc6a376250e26082bb24c06327c13e70c6a7ddf14cbb08019d3155278a",
+    "simSeed": 852780034,
+    "descriptorSha256": "fb2ec31873f2791f88ca5eb4dc7743a6d84bf184cb11e5081ab3e138ecf3286a",
+    "slugMapSha256": "29df25c91e18ef143c7bff5426b7a97635464d291934e39e94f903a5583a1568",
+    "acks": [{ "slug": "baltimore-orioles", "count": 161 }, { "slug": "new-york-yankees", "count": 161 }],
+    "ackedCancelled": []
+  }
+}

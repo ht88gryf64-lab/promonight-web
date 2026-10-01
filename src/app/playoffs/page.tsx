@@ -51,7 +51,7 @@ export default async function PlayoffsHubPage() {
     // card. A league whose document could not be read is not a state: that
     // read threw, this render produced nothing, and the last good page stands.
     if (p.state === 'missing') continue;
-    leagues.push({ state: 'ok', league: p.league, href: postseasonPath(p.league), view: p.view, predictionsLocked: p.predictionsLocked });
+    leagues.push({ state: 'ok', league: p.league, href: postseasonPath(p.league), view: p.view, predictions: p.predictions ? p.predictions.hub : null });
   }
 
   const active = leagues.flatMap((l) => (l.state === 'ok' && l.view.phase.kind === 'active' ? [l.view] : []));

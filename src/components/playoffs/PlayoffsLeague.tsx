@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { TrackedLink } from '@/components/analytics/TrackedLink';
 import type { HomeGamesWindow, LeagueView } from '@/lib/postseason/view';
 import type { PostseasonLeague } from '@/lib/postseason/types';
+import type { LeaguePredictions } from '@/lib/postseason/predictions';
 import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
 import { AdSlot } from '@/components/ads/AdSlot';
 import { AD_SLOTS } from '@/lib/ads/slots';
@@ -9,8 +10,7 @@ import { BracketControlsProvider, type SeriesIndexEntry } from './controls';
 import { BracketExplorer } from './BracketExplorer';
 import { HomeGames } from './HomeGames';
 import { LeagueViewTracker } from './LeagueViewTracker';
-import { PredictedBracketSlot } from './PredictedBracketSlot';
-import { PredictionsCard } from './PredictionsCard';
+import { PredictionsMethodology, PredictionsSection } from './Predictions';
 import { SeriesResults } from './SeriesResults';
 import { CONDENSED } from './ui';
 
@@ -18,8 +18,9 @@ const SURFACE = 'web_playoffs_league' as const;
 const PAGE_TYPE = 'playoffs_league';
 
 /** The page always has a bracket: with no document the route is a 404, and
- *  a read that fails throws before anything renders. */
-export type LeagueBody = { state: 'ok'; view: LeagueView; predictionsLocked: boolean; homeGames: HomeGamesWindow };
+ *  a read that fails throws before anything renders. `predictions` is the
+ *  computer's locked bracket, or null when none was locked. */
+export type LeagueBody = { state: 'ok'; view: LeagueView; predictions: LeaguePredictions | null; homeGames: HomeGamesWindow };
 
 /** The round the bracket opens on: the one being played, or the last one
  *  once the postseason is over. */
@@ -152,23 +153,22 @@ export function PlayoffsLeague({
           )}
         </div>
 
-        {/* The provider renders no element. The bracket and the predictions
-            slot are separate children of the article that share its state. */}
+        {/* The provider renders no element. The bracket and the predicted
+            bracket are separate children of the article that share its
+            state, so an ad unit can sit between the two and never inside
+            either. */}
         <BracketControlsProvider initialRound={openingRound(view)} initialConference={firstConference} index={seriesIndex(view)}>
             <div data-bracket-child className="mt-6">
               <BracketExplorer league={league} leagueSlug={slug} season={season} rounds={view.rounds} panelTickets={panelTickets} />
             </div>
             <AdSlot config={AD_SLOTS.IN_CONTENT_1} pageType={PAGE_TYPE} />
-            {/* RESERVED for the predicted bracket. Rendered only when it has
-                something to show: an empty element here would be a child of
-                the article with no height, which is an anchor all the same.
-                Only while the postseason is being played: a finished bracket
-                has nothing left to predict, and "they will publish soon"
-                above one would be a promise about the past. */}
-            {body.predictionsLocked && view.phase.kind === 'active' ? (
-              <PredictedBracketSlot>
-                <PredictionsCard heading="Our Predictions" headingId="our-predictions" />
-              </PredictedBracketSlot>
+            {/* The computer's bracket, in the place reserved for it. Rendered
+                only when a bracket was locked: an empty element here would be
+                a child of the article with no height, which is an anchor all
+                the same. Shown in both phases; a finished postseason shows
+                the final scorecard. */}
+            {body.predictions ? (
+              <PredictionsSection league={league} leagueSlug={slug} season={season} view={body.predictions.view} />
             ) : null}
         </BracketControlsProvider>
 
@@ -183,6 +183,9 @@ export function PlayoffsLeague({
           />
         )}
         <SeriesResults view={view} heading={view.phase.kind === 'active' ? 'Results so far' : 'Results'} />
+        {/* Outside the controls provider and every client component: the
+            fingerprints reach the page here and nowhere else. */}
+        {body.predictions ? <PredictionsMethodology view={body.predictions.methodology} /> : null}
         <AdSlot config={AD_SLOTS.IN_CONTENT_2} pageType={PAGE_TYPE} />
       </article>
 

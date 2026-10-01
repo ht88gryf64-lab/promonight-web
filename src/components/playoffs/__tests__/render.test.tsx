@@ -9,10 +9,10 @@ import type { ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { mapBracketDoc } from '../../../lib/postseason/map';
 import { buildLeagueView, homeGamesWindow, type LeagueView } from '../../../lib/postseason/view';
-import { CAPTURED_AT, FIELDS_AT, FIXTURE, IN_GAME_AT, clubs, loadDoc, parks, rawText, seriesKeyIn } from '../../../lib/postseason/__tests__/helpers';
+import { CAPTURED_AT, FIELDS_AT, FIXTURE, IN_GAME_AT, LYNX_OUT_AT, buildWithPredictions, clubs, loadDoc, parks, rawText, seriesKeyIn, PREDICTED } from '../../../lib/postseason/__tests__/helpers';
+import type { HubPredictionLine, LeaguePredictions } from '../../../lib/postseason/predictions';
 import { PlayoffsHub, type HubLeague } from '../PlayoffsHub';
 import { PlayoffsLeague, type LeagueBody } from '../PlayoffsLeague';
-import { PREDICTIONS_COPY } from '../PredictionsCard';
 
 type Doc = Record<string, unknown>;
 type RawSeries = Doc & { games: Doc[]; higher: Doc; lower: Doc };
@@ -44,9 +44,12 @@ function panelTickets(v: LeagueView): Record<string, ReactNode> {
   return out;
 }
 
-function leagueHtml(v: LeagueView, opts: { locked?: boolean; now?: Date; others?: { league: 'MLB' | 'WNBA'; href: string }[] } = {}): string {
+function leagueHtml(
+  v: LeagueView,
+  opts: { predictions?: LeaguePredictions | null; now?: Date; others?: { league: 'MLB' | 'WNBA'; href: string }[] } = {},
+): string {
   const homeGames = v.phase.kind === 'active' ? homeGamesWindow([v], opts.now ?? CAPTURED_AT) : { primary: [], rest: [] };
-  const body: LeagueBody = { state: 'ok', view: v, predictionsLocked: opts.locked ?? true, homeGames };
+  const body: LeagueBody = { state: 'ok', view: v, predictions: opts.predictions ?? null, homeGames };
   return renderToStaticMarkup(
     <PlayoffsLeague
       league={v.league}
@@ -66,12 +69,12 @@ function hubHtml(leagues: HubLeague[], now: Date = CAPTURED_AT): string {
     <PlayoffsHub season={2026} leagues={leagues} nextGames={next} tickets={rowTickets([...next.primary, ...next.rest].map((g) => g.hostTeamId))} />,
   );
 }
-const ok = (v: LeagueView, locked = true): HubLeague => ({
+const ok = (v: LeagueView, predictions: HubPredictionLine | null = null): HubLeague => ({
   state: 'ok',
   league: v.league,
   href: `/playoffs/${v.league.toLowerCase()}`,
   view: v,
-  predictionsLocked: locked,
+  predictions,
 });
 
 /** Visible text: style and script out, tags out, entities back. */
@@ -125,7 +128,11 @@ function assertNoSeriesKey(html: string, keys: readonly string[], where: string)
     else assert.ok(!new RegExp(`(^| )${key}( |$)`).test(textOf(html)), `${where}: series key ${key} is text`);
   }
 }
-const keysOf = (name: string) => (JSON.parse(rawText(name)) as { series: { seriesKey: string }[] }).series.map((s) => s.seriesKey);
+// A bracket document lists its series under `series`, a predicted one under `rounds`.
+const keysOf = (name: string) => {
+  const d = JSON.parse(rawText(name)) as { series?: { seriesKey: string }[]; rounds?: { seriesKey: string }[] };
+  return (d.series ?? d.rounds ?? []).map((s) => s.seriesKey);
+};
 
 const EVERY_VIEW: [string, string, () => LeagueView, Date][] = [
   ['MLB live capture', FIXTURE.mlbLive, () => view(FIXTURE.mlbLive), CAPTURED_AT],
@@ -202,7 +209,7 @@ test('BRACKET: with scripts off, both conferences show and the dead controls go'
   assert.ok(count(bracket, 'po-controls') >= 1 + 11);
   // The stylesheet holds the rules the markup relies on.
   const css = readFileSync(new URL('../../../app/globals.css', import.meta.url), 'utf8');
-  assert.match(css, /@media \(max-width: 1023\.98px\) \{\s*\.po-bracket \[data-conf\]\[data-shown='false'\] \{\s*display: none;/);
+  assert.match(css, /@media \(max-width: 1023\.98px\) \{\s*\.po-bracket \[data-conf\]\[data-shown='false'\],\s*\.po-picks \[data-conf\]\[data-shown='false'\] \{\s*display: none;/);
   assert.match(css, /\.po-panel \{\s*display: none;\s*\}/);
   assert.match(css, /\.po-panel\[data-open='true'\] \{\s*display: block;/);
   assert.match(css, /\.po-more\[data-open='false'\] \{\s*display: none;/);
@@ -509,37 +516,7 @@ test('CONCLUDED: the champion is named, nothing is "next", no home games are off
 // 404 and a read that fails throws, so the page always has a bracket. The
 // type says so (LeagueBody has one member) and routes.test.tsx proves both.
 
-// ---- The reserved predictions slot ----
-
-test('PREDICTIONS SLOT: reserved below the bracket, outside it, tied to the same controls', () => {
-  const html = leagueHtml(view(FIXTURE.mlbMixed, MIXED_AT), { now: MIXED_AT });
-  assert.equal(count(html, 'data-predicted-bracket-slot'), 1);
-  assert.match(html, /<div data-predicted-bracket-slot="true" data-round="division_series" data-conference="AL">/);
-  const bracket = element(html, 'data-bracket="MLB"');
-  assert.equal(count(bracket, 'data-predicted-bracket-slot'), 0, 'a separate child of the page, so a unit can sit between the two');
-  assert.ok(html.indexOf('data-predicted-bracket-slot') > html.indexOf('data-series-panels'));
-});
-
-test('PREDICTIONS SLOT: the locked card only when the inputs are frozen, and it names no date', () => {
-  const on = leagueHtml(view(FIXTURE.mlbLive), { locked: true });
-  const off = leagueHtml(view(FIXTURE.mlbLive), { locked: false });
-  assert.equal(count(on, 'data-predictions="locked"'), 1);
-  assert.equal(count(off, 'data-predictions="locked"'), 0);
-  assert.ok(!textOf(off).includes('Our Predictions'));
-  // With nothing to show, the slot is not in the page at all. An empty
-  // element would be a child of the article with no height, and a child
-  // with no height is still an anchor for the ad placer.
-  assert.equal(count(off, 'data-predicted-bracket-slot'), 0);
-  assert.ok(element(on, 'data-predicted-bracket-slot').includes('data-predictions="locked"'));
-  const cardHtml = element(on, 'data-predictions="locked"');
-  const section = textOf(cardHtml);
-  assert.ok(section.includes('Our Predictions'));
-  assert.ok(section.includes(PREDICTIONS_COPY));
-  assert.ok(!/\d/.test(section), 'the predictions card holds no digit, so no date');
-  assert.ok(!/\b(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|tomorrow|tonight|today|week)\b/i.test(section));
-  assert.match(cardHtml, /<svg[^>]*aria-hidden="true"[^>]*>/);
-  assert.ok(!/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(cardHtml), 'no emoji stands in for the lock');
-});
+// ---- The computer's bracket: see predictions-render.test.tsx ----
 
 // ---- The article: what the ad placer reads ----
 
@@ -560,7 +537,7 @@ function articleChildren(html: string): string[] {
     }
     const selfClosing = m[2].endsWith('/') || VOID.has(m[1]);
     if (depth === 0) {
-      const mark = /data-(page-intro|bracket-child|predicted-bracket-slot|home-games|predictions|series-results|hub-results)\b/.exec(m[2]);
+      const mark = /data-(page-intro|bracket-child|home-games|predictions-methodology|predictions|series-results|hub-results)\b/.exec(m[2]);
       out.push(mark ? `${m[1]}[${mark[1]}]` : m[1] === 'section' && /aria-label="Leagues"/.test(m[2]) ? 'section[leagues]' : m[1]);
     }
     if (!selfClosing) depth += 1;
@@ -575,7 +552,7 @@ test('ARTICLE, league page: an article that is the page-content wrapper, childre
   assert.equal(count(html, 'page-content'), 1, 'one wrapper, so one set of anchors');
   // The heading and the introduction take the two skips. The first unit can
   // follow the third child, which is the bracket.
-  assert.deepEqual(articleChildren(html), ['header', 'div[page-intro]', 'div[bracket-child]', 'div[predicted-bracket-slot]', 'section[home-games]']);
+  assert.deepEqual(articleChildren(html), ['header', 'div[page-intro]', 'div[bracket-child]', 'section[home-games]']);
   const article = element(html, 'data-playoffs-article=');
   assert.equal(count(article, '<h1'), 1, 'the heading is inside the article it names');
   assert.ok(element(article, 'data-bracket-child').includes('data-bracket="MLB"'));
@@ -583,14 +560,13 @@ test('ARTICLE, league page: an article that is the page-content wrapper, childre
 
 test('ARTICLE, league page: no child is ever empty, in any state', () => {
   for (const [name, , make, now] of EVERY_VIEW) {
-    for (const locked of [true, false]) {
-      const html = leagueHtml(make(), { now, locked });
+    {
+      const html = leagueHtml(make(), { now });
       const kids = articleChildren(html);
       assert.ok(kids.length >= 3, `${name}: ${kids.join(' ')}`);
       assert.deepEqual(kids.slice(0, 3), ['header', 'div[page-intro]', 'div[bracket-child]'], name);
-      // The slot holds the card only while the postseason is being played
-      // and the inputs are frozen; a finished bracket has nothing to predict.
-      assert.equal(kids.includes('div[predicted-bracket-slot]'), locked && make().phase.kind === 'active', `${name}: the slot is a child only when it holds the card`);
+      // With no locked prediction, no predictions child at all.
+      assert.ok(!kids.some((k) => k.includes('predictions')), `${name}: a predictions child with nothing in it`);
       // Nothing that renders as an empty element.
       assert.ok(!/<(div|section|p|span)[^>]*><\/\1>/.test(element(html, 'data-playoffs-article=').replace(/<span aria-hidden="true"[^>]*><\/span>/g, '')), `${name}: an empty element inside the article`);
     }
@@ -614,14 +590,15 @@ test('ARTICLE, league page: what must stay out of it, stays out', () => {
 
 test('ARTICLE, league page, finished: the results carry the page', () => {
   const now = new Date('2025-11-02T04:00:00Z');
-  const html = leagueHtml(view(FIXTURE.mlbFinal, now), { now, locked: true });
-  // No predictions slot and no home games once the bracket is finished; the
-  // results are the child that gives the article its height.
+  const html = leagueHtml(view(FIXTURE.mlbFinal, now), { now });
+  // No home games once the bracket is finished; the results are the child
+  // that gives the article its height. (2025 has no locked prediction.)
   assert.deepEqual(articleChildren(html), ['header', 'div[page-intro]', 'div[bracket-child]', 'section[series-results]']);
 });
 
 test('ARTICLE, hub: the same wrapper, with the league cards as the third child', () => {
-  const html = hubHtml([ok(view(FIXTURE.mlbFields, FIELDS_AT)), ok(view(FIXTURE.wnbaFields, FIELDS_AT))], FIELDS_AT);
+  const line = (league: 'MLB' | 'WNBA'): HubPredictionLine => ({ league, href: `/playoffs/${league.toLowerCase()}#predictions`, championName: 'A Club', record: '0 for 1' });
+  const html = hubHtml([ok(view(FIXTURE.mlbFields, FIELDS_AT), line('MLB')), ok(view(FIXTURE.wnbaFields, FIELDS_AT), line('WNBA'))], FIELDS_AT);
   assert.equal(count(html, '<article'), 1);
   assert.match(html, /<article class="page-content" data-ad-region="content" data-playoffs-article="hub">/);
   assert.equal(count(html, 'page-content'), 1);
@@ -638,7 +615,7 @@ test('ARTICLE, hub in the offseason, and hub with both leagues finished', () => 
   assert.deepEqual(articleChildren(off), ['header', 'div[page-intro]']);
   assert.ok(element(off, 'data-page-intro').includes('data-hub-state="offseason"'));
   const now = new Date('2025-11-03T12:00:00Z');
-  const done = hubHtml([ok(view(FIXTURE.mlbFinal, now), false), ok(view(FIXTURE.wnbaFinal, now), false)], now);
+  const done = hubHtml([ok(view(FIXTURE.mlbFinal, now)), ok(view(FIXTURE.wnbaFinal, now))], now);
   assert.deepEqual(articleChildren(done), ['header', 'div[page-intro]', 'section[leagues]', 'section[hub-results]']);
 });
 
@@ -698,7 +675,7 @@ test('HUB CARD: only series still being played; a decided series of the round is
   // Replay step 24: the Wild Card round and ONE Division Series are final,
   // three Division Series are being played.
   const v = view(FIXTURE.mlbMixed, MIXED_AT);
-  const html = hubHtml([ok(v, false)], MIXED_AT);
+  const html = hubHtml([ok(v)], MIXED_AT);
   const card = element(html, 'data-league-card="MLB"');
   const current = v.rounds.find((r) => r.key === (v.phase.kind === 'active' ? v.phase.roundKey : ''));
   assert.ok(current);
@@ -723,7 +700,7 @@ test('HUB RESULTS: each league with a decided series lists them with the round a
   const now = new Date('2025-10-21T12:00:00Z');
   const mlb = view('MLB_2025.replay-step-40.json', now);
   const wnba = view(FIXTURE.wnbaFinal, now);
-  const html = hubHtml([ok(mlb, false), ok(wnba, false)], now);
+  const html = hubHtml([ok(mlb), ok(wnba)], now);
   const section = element(html, 'data-hub-results=');
   assert.ok(section.includes('data-hub-results="2"'));
   assert.ok(textOf(section).startsWith('Results so far MLB '), 'MLB is still being played');
@@ -733,7 +710,7 @@ test('HUB RESULTS: each league with a decided series lists them with the round a
   assert.ok(textOf(section).includes('World Series') === false, 'the World Series is not decided');
   assert.ok(textOf(section).includes('Championship Series ·'));
   // With everything finished the heading is "Results".
-  const done = hubHtml([ok(view(FIXTURE.mlbFinal, now), false), ok(wnba, false)], now);
+  const done = hubHtml([ok(view(FIXTURE.mlbFinal, now)), ok(wnba)], now);
   assert.ok(textOf(element(done, 'data-hub-results=')).startsWith('Results MLB '));
   // Nothing decided anywhere: no section.
   assert.equal(count(hubHtml([ok(view(FIXTURE.mlbLive)), ok(view(FIXTURE.wnbaLive))]), 'data-hub-results='), 0);
@@ -887,7 +864,7 @@ test('HUB: no league at all is the offseason state, with no date in it', () => {
 
 test('HUB: finished leagues are not the offseason; nothing above their cards says no postseason is underway', () => {
   const now = new Date('2025-11-03T12:00:00Z');
-  const html = hubHtml([ok(view(FIXTURE.mlbFinal, now), false), ok(view(FIXTURE.wnbaFinal, now), false)], now);
+  const html = hubHtml([ok(view(FIXTURE.mlbFinal, now)), ok(view(FIXTURE.wnbaFinal, now))], now);
   const text = textOf(html);
   assert.equal(count(html, 'data-league-card="'), 2);
   assert.equal(count(html, 'data-hub-state="offseason"'), 0);
@@ -899,13 +876,20 @@ test('HUB: finished leagues are not the offseason; nothing above their cards say
   assert.equal(count(hubHtml([]), 'data-hub-state="offseason"'), 1);
 });
 
-test('HUB: the locked card needs a league that is both playing and frozen', () => {
-  const v = view(FIXTURE.mlbLive);
-  assert.equal(count(hubHtml([ok(v, true)]), 'data-predictions="locked"'), 1);
-  assert.equal(count(hubHtml([ok(v, false)]), 'data-predictions="locked"'), 0);
-  const section = textOf(element(hubHtml([ok(v, true)]), 'data-predictions="locked"'));
-  assert.ok(section.includes('Predictions are locked'));
-  assert.ok(!/\d/.test(section));
+test('HUB: the predictions card, one line per playing league with a locked bracket, each linking to its section', () => {
+  const built = buildWithPredictions(FIXTURE.wnbaLynxOut, PREDICTED.wnba, LYNX_OUT_AT);
+  const mlb = buildWithPredictions(FIXTURE.mlbWildCard, PREDICTED.mlb, LYNX_OUT_AT);
+  const html = hubHtml([ok(mlb.view, mlb.predictions.hub), ok(built.view, built.predictions.hub)], LYNX_OUT_AT);
+  const section = element(html, 'data-predictions="locked"');
+  assert.ok(textOf(section).includes('Predictions are locked'));
+  assert.match(section, /<a [^>]*href="\/playoffs\/wnba#predictions"[^>]*>Computer&#x27;s champion: Golden State Valkyries <span class="whitespace-nowrap">· 0 for 1<\/span><\/a>/);
+  assert.match(section, /<a [^>]*href="\/playoffs\/mlb#predictions"[^>]*>Computer&#x27;s champion: Milwaukee Brewers <span class="whitespace-nowrap">· no series decided yet<\/span><\/a>/);
+  assert.ok(!/publish soon/i.test(html));
+  assert.ok(!/[0-9a-f]{40,}/.test(html), 'no fingerprint on the hub');
+  // Only leagues being played, and only with a locked bracket.
+  assert.equal(count(hubHtml([ok(mlb.view)], LYNX_OUT_AT), 'data-predictions'), 0);
+  const now = new Date('2025-11-03T12:00:00Z');
+  assert.equal(count(hubHtml([ok(view(FIXTURE.mlbFinal, now), mlb.predictions.hub)], now), 'data-predictions'), 0, 'a finished league adds no line');
 });
 
 // ---- No series key, anywhere ----
@@ -1009,7 +993,7 @@ test('the key scan passes what is not a key: a sponsor, a score, a date, an id',
     assert.equal(seriesKeyIn(`Winner of ${key}`), key, key);
   }
   // Every key of every fixture is either caught by form or checked by name.
-  for (const f of Object.values(FIXTURE)) for (const key of keysOf(f)) assert.ok(seriesKeyIn(key) === key || key === 'WS' || key === 'F', `${f}: ${key}`);
+  for (const f of [...Object.values(FIXTURE), ...Object.values(PREDICTED)]) for (const key of keysOf(f)) assert.ok(seriesKeyIn(key) === key || key === 'WS' || key === 'F', `${f}: ${key}`);
 });
 
 // ---- Properties of every page ----

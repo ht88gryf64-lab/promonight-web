@@ -545,7 +545,8 @@ body::before {
  * Unlayered on purpose, so these win over utility classes. The elements they
  * touch carry no display utility of their own. */
 @media (max-width: 1023.98px) {
-  .po-bracket [data-conf][data-shown='false'] {
+  .po-bracket [data-conf][data-shown='false'],
+  .po-picks [data-conf][data-shown='false'] {
     display: none;
   }
 }
