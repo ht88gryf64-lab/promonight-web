@@ -2,10 +2,9 @@
 // Served-HTML verification for the PromoNight Predicts line on the team
 // pages, the hub hero line, the final-bracket card and the playoffs back link.
 //
-// The expected pick line is derived here from the RAW locked documents (the
-// last predicted series that names the club) with this file's own wording.
-// The status line is judged against the ruled shapes and against the
-// module's own state on the same page. The page's code is not used to work
+// The expected pick line and status line are derived here from the RAW
+// locked and bracket documents (expectedStatus, with this file's own reading
+// of the rules) and required exactly. The page's code is not used to work
 // out what the page should say.
 //
 // Run:
@@ -280,6 +279,9 @@ async function main() {
     const d = await decodePayload(html);
     check(`${p.path}: the payload decodes`, !d.error, d.error ?? '');
     const walked = d.error ? null : await walkTree(d.root, null);
+    // A walk that stopped anywhere has not seen the whole payload: every
+    // check on its strings and keys below would pass on what it skipped.
+    check(`${p.path}: the payload walks cleanly`, !!walked && walked.errors.length === 0, walked ? walked.errors.slice(0, 2).join('; ') : 'not walked');
     const payloadText = walked ? walked.strings.join('\n') : '';
 
     // ---- Leaks: keys, hashes, documents' own values ----
@@ -296,7 +298,12 @@ async function main() {
     const ref = await get(COMPARE, p.path);
     const refDecoded = await decodePayload(ref.body);
     const refWalk = refDecoded.error ? null : await walkTree(refDecoded.root, null);
-    check(`${p.path}: no more whole "WS"/"F" payload strings than production`, walked !== null && refWalk !== null && shortCount(walked) <= shortCount(refWalk), `${shortCount(walked)} vs ${shortCount(refWalk)}`);
+    check(`${p.path}: production's payload walks cleanly`, !!refWalk && refWalk.errors.length === 0, refWalk ? refWalk.errors.slice(0, 2).join('; ') : 'not walked');
+    check(
+      `${p.path}: exactly production's count of whole "WS"/"F" payload strings`,
+      !!walked && !!refWalk && walked.errors.length === 0 && refWalk.errors.length === 0 && shortCount(walked) === shortCount(refWalk),
+      `${shortCount(walked)} vs ${shortCount(refWalk)}`,
+    );
     const keyField = walked ? walked.keys.find((k) => /seriesKey|feederSeriesKey|bracketSha|runId|operatorLog/i.test(k)) : undefined;
     check(`${p.path}: no bracket field name in the payload`, !keyField, keyField ?? '');
     const hashes = [...new Set([...(html.match(/[0-9a-f]{64}/g) ?? []), ...(payloadText.match(/[0-9a-f]{64}/g) ?? [])])];
@@ -320,7 +327,6 @@ async function main() {
       const section = moduleSection(html);
       check(`${p.path}: the module is there`, !!section);
       if (!section) continue;
-      const state = /data-playoffs-state="([a-z]+)"/.exec(section)?.[1] ?? '';
       const lines = (section.match(/data-team-pick="/g) ?? []).length;
       if (DISABLED.has(p.league)) {
         check(`${p.path}: no line (switched off)`, lines === 0 && !/PromoNight/.test(textOf(section)), `${lines}`);
@@ -349,7 +355,6 @@ async function main() {
       const want = expectedStatus(p.league, p.club!);
       check(`${p.path}: the status, from the raw documents`, ps[2] === want.line, `${ps[2]} | expected ${want.line}`);
       check(`${p.path}: the kind ${kind} is the sentence's and the documents'`, kind === kindOf(ps[2] ?? '') && kind === want.kind, `${kind}/${kindOf(ps[2] ?? '')}/${want.kind}`);
-      void state;
       const hrefs = [...block.matchAll(/href="([^"]+)"/g)].map((m) => m[1]);
       check(`${p.path}: one link, to the league page's predictions`, hrefs.length === 1 && hrefs[0] === `/playoffs/${p.league.toLowerCase()}#predictions`, hrefs.join(','));
       check(`${p.path}: the line is inside the module's section, last`, section.endsWith('</a></div></section>'));
