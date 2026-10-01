@@ -105,7 +105,10 @@ const CASES = [
   ['title-odds row shape unchecked', P, '    if (!isObject(o)) return null;\n    const slug = text(o.slug);', '    const slug = text(o.slug);', [T_PRED]],
   ['read timeout default of minutes', D, '  return Number.isFinite(v) && v > 0 ? v : 4000;', '  return Number.isFinite(v) && v > 0 ? v : 400000;', [T_DATA]],
   ['lock day taken from the compute', P, '    bracketLockedOn: easternLongDate(predicted.lockedAt),', '    bracketLockedOn: easternLongDate(predicted.computedAt),', [T_PRED]],
-  ['title-odds caption claims every club', P, '      titleOdds.length < predicted.titleOdds.length', '      false', [T_PRED]],
+  ['title-odds caption claims every club', P, '      titleOdds.length < clubCount\n', '      false\n', [T_PRED]],
+  ['view join failure called a missing club', P, "    if (!seriesId || !round) return 'no-join';", "    if (!seriesId || !round) return 'no-team-record';", [T_PRED]],
+  ['caption counts the stored list', P, '      titleOdds.length < clubCount\n        ? `The ${titleOdds.length} most likely champions of ${clubCount}.`', '      titleOdds.length < predicted.titleOdds.length\n        ? `The ${titleOdds.length} most likely champions of ${predicted.titleOdds.length}.`', [T_PRED]],
+  ['fingerprints claimed for every input', C, 'Each is the SHA-256 fingerprint of one locked file: four of the inputs and the published bracket.', 'SHA-256 fingerprints of what was locked. A change to any input, or to the published bracket, would change its fingerprint.', [T_ROUTES]],
   // ---- The client boundary ----
   ['a hash handed to the predicted bracket', C, '<PredictedBracket league={league} leagueSlug={leagueSlug} season={season} rounds={view.rounds} />', "<PredictedBracket league={league} leagueSlug={leagueSlug} season={season} rounds={view.rounds} {...{ leak: 'e4bcaddb1f2acebf37ece2f2c8f32d136609bd93469a30c8e5da104a6bd17a8d' }} />", [T_RENDER]],
   // ---- Copy ----

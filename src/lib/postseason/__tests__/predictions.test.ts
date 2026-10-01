@@ -9,6 +9,7 @@ import assert from 'node:assert/strict';
 import { mapBracketDoc } from '../map';
 import {
   BACKTEST_2025,
+  assemblePredictions,
   buildMethodologyView,
   LOCKED_FINGERPRINTS,
   fingerprintsMatchLock,
@@ -23,9 +24,11 @@ import {
 } from '../predictions';
 import { LOCKED_CONTENT_SHA256, checkLock, lockedContent, lockedContentSha256 } from '../predictions-lock';
 import type { Bracket } from '../types';
+import { seriesIds } from '../view';
 import {
   FIXTURE,
   LYNX_OUT_AT,
+  clubs,
   buildWithPredictions,
   decide,
   decidedMlb,
@@ -124,8 +127,10 @@ const BYPASSES: [string, (d: Doc) => void][] = [
   ['frozenAt after compute', (d) => (prov(d).frozenAt = '2026-10-01T00:00:00Z')],
   ['frozenAt equal to compute', (d) => (prov(d).frozenAt = d.computedAt)],
   ['frozenAt a bare date', (d) => (prov(d).frozenAt = '2026-09-25')],
-  // Rolls over to October 1, after the compute: the freeze order refuses it.
-  ['frozenAt on September 31 (rolls past the compute)', (d) => (prov(d).frozenAt = '2026-09-31T14:24:00.732Z')],
+  // V8 rolls it to October 1; the round trip refuses it before the freeze
+  // order is reached. (February 30 below is the row that only the round
+  // trip can catch.)
+  ['frozenAt on September 31 (round trip)', (d) => (prov(d).frozenAt = '2026-09-31T14:24:00.732Z')],
   // Rolls over to March 2: still before the compute, so only the round trip catches it.
   ['frozenAt on February 30', (d) => (prov(d).frozenAt = '2026-02-30T14:24:00.000Z')],
   ['frozenAt at an hour that does not exist', (d) => (prov(d).frozenAt = '2026-09-25T24:24:00.000Z')],
@@ -397,6 +402,18 @@ test('SCORECARD ARITHMETIC: in every state, correct <= decided, and decided + al
   }
 });
 
+test('ASSEMBLY: a series with no real page id or round is no-join; a club with no record is no-team-record', () => {
+  const b = bracketOf(loadDoc(FIXTURE.wnbaLynxOut));
+  const p = mapPredicted(PREDICTED.wnba);
+  const ids = new Map([...seriesIds(b)].filter(([k]) => k !== 'SF-A'));
+  const labels = [{ key: 'first_round', label: 'First Round', shortLabel: null }, { key: 'semifinals', label: 'Semifinals', shortLabel: null }, { key: 'finals', label: 'WNBA Finals', shortLabel: null }];
+  assert.deepEqual(assemblePredictions(b, p, clubs(), ids, labels), { unavailable: 'no-join' });
+  assert.deepEqual(assemblePredictions(b, p, clubs(), seriesIds(b), labels.slice(0, 2)), { unavailable: 'no-join' });
+  const fewer = new Map([...clubs()].filter(([k]) => k !== 'dallas-wings'));
+  assert.deepEqual(assemblePredictions(b, p, fewer, seriesIds(b), labels), { unavailable: 'no-team-record' });
+  assert.ok(!('unavailable' in assemblePredictions(b, p, clubs(), seriesIds(b), labels)));
+});
+
 test('JOIN: the two documents must describe the same bracket', () => {
   const b = bracketOf(loadDoc(FIXTURE.wnbaLynxOut));
   const p = mapPredicted(PREDICTED.wnba);
@@ -513,6 +530,11 @@ test('TITLE ODDS: the top eight, highest first, as "at lock" percentages', () =>
   assert.equal(w.titleOdds[0].oddsLabel, '37%');
   assert.equal(w.titleOddsCaption, 'All 8 clubs, most likely champion first.');
   assert.equal(v.titleOddsCaption, 'The 8 most likely champions of 12.');
+  // N counts the bracket's clubs, not the stored list: a short list does
+  // not read as every club.
+  const short = loadDoc(PREDICTED.wnba);
+  short.titleOdds = (short.titleOdds as Doc[]).slice(0, 5);
+  assert.equal(buildWithPredictions(FIXTURE.wnbaLynxOut, short, LYNX_OUT_AT).predictions.view.titleOddsCaption, 'The 5 most likely champions of 8.');
 });
 
 // ---- The lock: golden, pins, and the hashes Matt verified ----

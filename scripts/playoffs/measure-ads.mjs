@@ -177,7 +177,7 @@ const SELECT_ALL = `(async () => {
   const tapSeries = async () => { for (const a of [...document.querySelectorAll('.po-bracket [data-series] a[href^="#"]')].filter(visible)) { a.click(); series += 1; await wait(200); } };
   const pills = [...document.querySelectorAll('.po-bracket [data-round-option]')].filter(visible);
   for (const b of pills) { b.click(); rounds += 1; await wait(200);
-    for (const c of [...document.querySelectorAll('[data-conference-option]')].filter(visible)) { c.click(); conferences += 1; await wait(150); }
+    for (const c of [...document.querySelectorAll('.po-bracket [data-conference-option]')].filter(visible)) { c.click(); conferences += 1; await wait(150); }
     await tapSeries();
   }
   // At desktop width every round is on screen and there are no pills.

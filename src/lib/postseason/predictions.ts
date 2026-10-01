@@ -508,7 +508,7 @@ export function buildPredictionsView(
   clubs: ReadonlyMap<string, ClubInfo>,
   seriesIds: ReadonlyMap<string, string>,
   roundLabels: readonly RoundLabel[],
-): PredictionsView | null {
+): PredictionsView | 'no-join' | 'no-team-record' {
   const name = (slug: string) => clubs.get(slug) ?? null;
   const rounds: PickRoundView[] = [];
   for (const r of roundLabels) rounds.push({ key: r.key, label: r.label, shortLabel: r.shortLabel, groups: [] });
@@ -520,7 +520,8 @@ export function buildPredictionsView(
     const lo = name(p.lower.slug);
     const seriesId = seriesIds.get(p.seriesKey);
     const round = byRound.get(p.round);
-    if (!hi || !lo || !seriesId || !round) return null;
+    if (!seriesId || !round) return 'no-join';
+    if (!hi || !lo) return 'no-team-record';
     const sideView = (c: ClubInfo, seed: number): PickSideView => ({
       label: c.name,
       fullName: `${c.city} ${c.name}`,
@@ -536,7 +537,7 @@ export function buildPredictionsView(
     let resultLine: string | null = null;
     if (s.decided && s.realWinner) {
       const w = name(s.realWinner);
-      if (!w) return null;
+      if (!w) return 'no-team-record';
       const a = Math.max(s.real.wins.higher, s.real.wins.lower);
       const b = Math.min(s.real.wins.higher, s.real.wins.lower);
       resultLine = `${w.city} ${w.name} won ${a}-${b}`;
@@ -577,12 +578,15 @@ export function buildPredictionsView(
   for (const r of rounds) for (const g of r.groups) g.series.sort((a, b) => seriesOrder(a.seriesId) - seriesOrder(b.seriesId));
 
   const champ = name(card.champion.slug);
-  if (!champ) return null;
+  if (!champ) return 'no-team-record';
   const championName = `${champ.city} ${champ.name}`;
+  // N is the bracket's clubs, not the length of the stored list: a short
+  // list must not read as every club.
+  const clubCount = new Set(predicted.series.flatMap((x) => [x.higher.slug, x.lower.slug])).size;
   const titleOdds: TitleOddsRow[] = [];
   for (const o of predicted.titleOdds.slice(0, TITLE_ODDS_ROWS)) {
     const c = name(o.slug);
-    if (!c) return null;
+    if (!c) return 'no-team-record';
     titleOdds.push({ name: `${c.city} ${c.name}`, oddsLabel: percent(o.odds) });
   }
 
@@ -600,8 +604,8 @@ export function buildPredictionsView(
     },
     titleOdds,
     titleOddsCaption:
-      titleOdds.length < predicted.titleOdds.length
-        ? `The ${titleOdds.length} most likely champions of ${predicted.titleOdds.length}.`
+      titleOdds.length < clubCount
+        ? `The ${titleOdds.length} most likely champions of ${clubCount}.`
         : `All ${titleOdds.length} clubs, most likely champion first.`,
   };
 }
@@ -656,7 +660,7 @@ export function assemblePredictions(
   if (!scored) return { unavailable: 'no-join' };
   const card = scorecard(scored, predicted, bracket);
   const view = buildPredictionsView(scored, card, predicted, clubs, seriesIds, rounds);
-  if (!view) return { unavailable: 'no-team-record' };
+  if (typeof view === 'string') return { unavailable: view };
   return {
     view,
     methodology: buildMethodologyView(predicted, bracket),

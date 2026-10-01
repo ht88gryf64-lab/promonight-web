@@ -226,19 +226,37 @@ for (const [name, make, now] of STATES) {
 // component receives, its children included, is searched for anything with
 // the shape of a hash.
 
+/** Every export of every 'use client' module under src/components and
+ *  src/app (tests excluded): the client side of the tree, wherever it is. */
 async function clientComponents(): Promise<Set<unknown>> {
   const out = new Set<unknown>();
-  const dirs = [new URL('../', import.meta.url), new URL('../../analytics/', import.meta.url), new URL('../../ads/', import.meta.url)];
-  for (const dir of dirs) {
-    for (const f of readdirSync(dir)) {
-      if (!/\.tsx?$/.test(f)) continue;
-      const url = new URL(f, dir);
-      if (!/^\s*['"]use client['"]/.test(readFileSync(url, 'utf-8'))) continue;
-      const mod = (await import(url.href)) as Record<string, unknown>;
-      for (const v of Object.values(mod)) if (typeof v === 'function') out.add(v);
+  const roots = [new URL('../../', import.meta.url), new URL('../../../app/', import.meta.url)];
+  const files: URL[] = [];
+  const walk = (dir: URL) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      if (e.isDirectory()) {
+        if (e.name !== '__tests__' && e.name !== 'node_modules') walk(new URL(`${e.name}/`, dir));
+      } else if (/\.tsx?$/.test(e.name)) files.push(new URL(e.name, dir));
     }
+  };
+  for (const r of roots) walk(r);
+  for (const url of files) {
+    if (!/^\s*['"]use client['"]/.test(readFileSync(url, 'utf-8'))) continue;
+    const mod = (await import(url.href)) as Record<string, unknown>;
+    for (const v of Object.values(mod)) if (typeof v === 'function' || (v && typeof v === 'object')) out.add(v);
   }
   return out;
+}
+
+/** A component type, through memo() and forwardRef() wrappers. */
+function innerType(t: unknown): unknown {
+  let x = t as { type?: unknown; render?: unknown } | null;
+  for (let i = 0; i < 4 && x && typeof x === 'object'; i++) {
+    if (x.type) x = x.type as typeof x;
+    else if (x.render) x = x.render as typeof x;
+    else break;
+  }
+  return x;
 }
 
 function findHash(v: unknown, seen = new Set<unknown>()): string | null {
@@ -267,16 +285,18 @@ function visit(node: ReactNode, client: Set<unknown>, hits: string[], path: stri
   if (!isValidElement(node)) return;
   const el = node as ReactElement<Record<string, unknown>>;
   const { type, props } = el;
-  if (typeof type === 'function') {
-    const name = (type as { name?: string }).name ?? 'anonymous';
+  const isClient = client.has(type) || client.has(innerType(type));
+  if (typeof type === 'function' || isClient) {
+    const name = (innerType(type) as { name?: string } | null)?.name ?? 'anonymous';
     if (type === PredictionsMethodology && inClient) hits.push(`${path} > ${name} is under a client component`);
-    if (client.has(type)) {
+    if (isClient) {
       const { children, ...own } = props;
       const hit = findHash(own);
       if (hit) hits.push(`${path} > ${name} receives ${hit.slice(0, 12)}`);
       visit(children as ReactNode, client, hits, `${path} > ${name}`, true);
       return;
     }
+    if (typeof type !== 'function') return;
     visit((type as (p: unknown) => ReactNode)(props), client, hits, `${path} > ${name}`, inClient);
     return;
   }
@@ -318,6 +338,15 @@ test('THE WALKER would see a leak: a hash handed to the predicted bracket throug
     'moved',
   );
   assert.ok(moved.some((h) => h.includes('is under a client component')), moved.join('\n'));
+  // A client wrapper from outside the playoffs directory, and a memo() one.
+  const { TrackedLink } = await import('../../analytics/TrackedLink');
+  const { memo } = await import('react');
+  for (const Wrapper of [TrackedLink, memo(PredictedBracket)]) {
+    const w: string[] = [];
+    const W = Wrapper as unknown as (p: Record<string, unknown>) => ReactElement;
+    visit(<W href="/" ctaId="x" ctaLabel="x" surface="web_playoffs_league" league="MLB" leagueSlug="mlb" season={2026} rounds={[]}><PredictionsMethodology view={b.predictions.methodology} /></W>, client, w, 'wrapped');
+    assert.ok(w.some((h) => h.includes('is under a client component')), w.join('\n'));
+  }
 });
 
 test('METHODOLOGY COPY: computed and locked on one day, or on two, said as such', () => {
