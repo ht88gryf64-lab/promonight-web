@@ -27,7 +27,7 @@ export const FIXTURE = {
   mlbWildCard: 'MLB_2026.live-20261001T0017Z.json',
 } as const;
 
-/** The locked computer brackets, predictedBrackets/{LEAGUE}_2026, whole, as
+/** The locked PromoNight Predicts brackets, predictedBrackets/{LEAGUE}_2026, whole, as
  *  stored (read 2026-10-01T00:17Z). Not bracket documents, so not in FIXTURE,
  *  which tests walk as brackets. */
 export const PREDICTED = {

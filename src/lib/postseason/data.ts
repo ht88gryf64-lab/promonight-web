@@ -83,7 +83,7 @@ export type LeaguePageData =
 
 /**
  * Everything a league's page needs: the bracket, the clubs it names, the
- * parks its hosts play in, and the computer's bracket when it was locked.
+ * parks its hosts play in, and the PromoNight Predicts bracket when it was locked.
  *
  * `now` is taken once here, on the server, and decides only which scheduled
  * games are still ahead.
@@ -224,7 +224,7 @@ export const PREDICTIONS_UNAVAILABLE = '[predictions-unavailable]';
 export type PredictedRead = { state: 'ok'; predicted: PredictedBracket } | { state: 'unavailable'; reason: PredictionsUnavailableReason };
 
 /**
- * The computer's locked bracket for a league, read fresh.
+ * The locked PromoNight Predicts bracket for a league, read fresh.
  *
  * Uncached like the real bracket, and for the same reason: the page that
  * shows it is revalidated when the real bracket changes, and the picks are

@@ -1,4 +1,4 @@
-// The computer's bracket: the locked predictedBrackets document, mapped,
+// The PromoNight Predicts bracket: the locked predictedBrackets document, mapped,
 // scored against the real bracket, and turned into what the page says. PURE.
 //
 // THREE SHAPES, ONE DIRECTION.
@@ -431,7 +431,7 @@ export interface ScorecardView {
   correct: number;
   decided: number;
   alive: number;
-  /** "The computer is 1 for 1", or the line for nothing decided yet. */
+  /** "PromoNight Predicts is 1 for 1", or the line for nothing decided yet. */
   recordLine: string;
   /** "6 picks still alive". */
   aliveLine: string;
@@ -461,6 +461,8 @@ export interface HubPredictionLine {
   league: PostseasonLeague;
   href: string;
   championName: string;
+  /** Whether the predicted champion won, is still alive, or is out. */
+  championStatus: ChampionStatus;
   /** "1 for 1", or "no series decided yet". */
   record: string;
 }
@@ -597,7 +599,7 @@ export function buildPredictionsView(
       correct: card.correct,
       decided: card.decided,
       alive: card.alive,
-      recordLine: card.decided === 0 ? 'No series decided yet' : `The computer is ${card.correct} for ${card.decided}`,
+      recordLine: card.decided === 0 ? 'No series decided yet' : `PromoNight Predicts is ${card.correct} for ${card.decided}`,
       aliveLine: `${card.alive} ${card.alive === 1 ? 'pick' : 'picks'} still alive`,
       championName,
       championStatus: card.champion.status,
@@ -616,7 +618,7 @@ function seriesOrder(id: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-/** The computer's bracket for a league, as its three readers need it: the
+/** The PromoNight Predicts bracket for a league, as its three readers need it: the
  *  client bracket and scorecard, the server-only methodology section, and
  *  the hub's one line. Built in ./data.ts; handed by the page to server
  *  components only, which pass each reader its own part. */
@@ -669,6 +671,7 @@ export function assemblePredictions(
       league: predicted.league,
       href: `/playoffs/${predicted.league.toLowerCase()}#predictions`,
       championName: view.scorecard.championName,
+      championStatus: card.champion.status,
       record: recordText(card.correct, card.decided),
     },
   };
@@ -756,7 +759,7 @@ export function buildMethodologyView(predicted: PredictedBracket, bracket: Brack
     lockedBeforeGame1: frozenBeforeFirstGame(bracket, predicted.frozenAt),
     computedOn: easternLongDate(predicted.computedAt),
     bracketLockedOn: easternLongDate(predicted.lockedAt),
-    backtest: `Run on the 2025 ${predicted.league} postseason with the same settings, the computer called ${bt.right} of ${bt.of} series and ${
+    backtest: `Run on the 2025 ${predicted.league} postseason with the same settings, the simulation called ${bt.right} of ${bt.of} series and ${
       bt.champion ? 'got the champion right' : 'got the champion wrong'
     }.`,
     fingerprints: [

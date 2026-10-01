@@ -98,7 +98,7 @@ const ADS = `(() => {
   const article = document.querySelector('[data-playoffs-article]') || document.querySelector('.page-content');
   const bracket = document.querySelector('.po-bracket');
   const panels = document.querySelector('[data-series-panels]');
-  // The computer's bracket section (scorecard, predicted bracket, title
+  // The PromoNight Predicts section (scorecard, predicted bracket, title
   // odds) and the methodology: no unit may sit inside either.
   const picks = document.querySelector('[data-predictions="bracket"]');
   const method = document.querySelector('[data-predictions-methodology]');
@@ -191,7 +191,7 @@ const SELECT_ALL = `(async () => {
   // At desktop width every round is on screen and there are no pills.
   if (pills.length === 0) await tapSeries();
   const close = [...document.querySelectorAll('[data-panel-close]')].find(visible); if (close) { close.click(); await wait(200); }
-  // The computer's bracket: its pills, its toggle, and every pick opened.
+  // The predicted bracket: its pills, its toggle, and every pick opened.
   // Every pick opened: after each round and each conference, every summary
   // then visible that has not been opened yet. At desktop width there are no
   // controls and every pick is visible at once.

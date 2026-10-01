@@ -186,3 +186,25 @@ test('JSON-LD: dateModified is the bracket\'s own change time, and absent when t
   assert.deepEqual((hub[1].itemListElement as { name: string }[]).map((i) => i.name), ['Home', 'Playoffs']);
   assert.ok(!('dateModified' in hubJsonLd(hubCopy(2026, ROUTES, []), [])[0]));
 });
+
+test('WITH PREDICTIONS: every round and the finished season stay within 160 characters, say "simulation", and never say "computer"', () => {
+  const MLB_ROUNDS = ['Wild Card Series', 'Division Series', 'Championship Series', 'World Series'];
+  const WNBA_ROUNDS = ['First Round', 'Semifinals', 'WNBA Finals'];
+  const base = { MLB: view(FIXTURE.mlbFields, FIELDS_AT), WNBA: view(FIXTURE.wnbaFields, FIELDS_AT) };
+  const inRound = (league: 'MLB' | 'WNBA', roundLabel: string): LeagueView => ({ ...base[league], phase: { ...base[league].phase, roundLabel } as LeagueView['phase'] });
+  const all: { title: string; description: string }[] = [];
+  for (const r of MLB_ROUNDS) all.push(leagueCopy(2026, 'MLB', '/playoffs/mlb', inRound('MLB', r), true));
+  for (const r of WNBA_ROUNDS) all.push(leagueCopy(2026, 'WNBA', '/playoffs/wnba', inRound('WNBA', r), true));
+  const doneMlb = leagueCopy(2025, 'MLB', '/playoffs/mlb', view(FIXTURE.mlbFinal, FINAL_AT), true);
+  const doneWnba = leagueCopy(2025, 'WNBA', '/playoffs/wnba', view(FIXTURE.wnbaFinal, FINAL_AT), true);
+  all.push(doneMlb, doneWnba);
+  assert.equal(doneMlb.description, "The 2025 MLB postseason bracket, complete. Los Angeles Dodgers: won the World Series 4-3. Every series and result, and how the simulation's locked picks did.");
+  for (const c of all) {
+    assert.ok(c.description.length <= 160, `${c.description.length}: ${c.description}`);
+    assert.ok(/simulation/.test(c.description), c.description);
+    assert.ok(!/computer/i.test(c.title + c.description), c.description);
+    assert.match(c.title, /Playoff Bracket and Predictions$/);
+    sound(c.description, 'description');
+  }
+});
+

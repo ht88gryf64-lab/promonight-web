@@ -9,7 +9,7 @@ import type { ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { mapBracketDoc } from '../../../lib/postseason/map';
 import { buildLeagueView, homeGamesWindow, type LeagueView } from '../../../lib/postseason/view';
-import { CAPTURED_AT, FIELDS_AT, FIXTURE, IN_GAME_AT, LYNX_OUT_AT, buildWithPredictions, clubs, loadDoc, parks, rawText, seriesKeyIn, PREDICTED } from '../../../lib/postseason/__tests__/helpers';
+import { CAPTURED_AT, FIELDS_AT, FIXTURE, IN_GAME_AT, LYNX_OUT_AT, buildWithPredictions, clubs, decide, decidedWnba, loadDoc, parks, rawText, seriesKeyIn, PREDICTED } from '../../../lib/postseason/__tests__/helpers';
 import type { HubPredictionLine, LeaguePredictions } from '../../../lib/postseason/predictions';
 import { PlayoffsHub, type HubLeague } from '../PlayoffsHub';
 import { PlayoffsLeague, type LeagueBody } from '../PlayoffsLeague';
@@ -516,7 +516,7 @@ test('CONCLUDED: the champion is named, nothing is "next", no home games are off
 // 404 and a read that fails throws, so the page always has a bracket. The
 // type says so (LeagueBody has one member) and routes.test.tsx proves both.
 
-// ---- The computer's bracket: see predictions-render.test.tsx ----
+// ---- PromoNight Predicts: see predictions-render.test.tsx ----
 
 // ---- The article: what the ad placer reads ----
 
@@ -597,7 +597,7 @@ test('ARTICLE, league page, finished: the results carry the page', () => {
 });
 
 test('ARTICLE, hub: the same wrapper, with the league cards as the third child', () => {
-  const line = (league: 'MLB' | 'WNBA'): HubPredictionLine => ({ league, href: `/playoffs/${league.toLowerCase()}#predictions`, championName: 'A Club', record: '0 for 1' });
+  const line = (league: 'MLB' | 'WNBA'): HubPredictionLine => ({ league, href: `/playoffs/${league.toLowerCase()}#predictions`, championName: 'A Club', championStatus: 'alive', record: '0 for 1' });
   const html = hubHtml([ok(view(FIXTURE.mlbFields, FIELDS_AT), line('MLB')), ok(view(FIXTURE.wnbaFields, FIELDS_AT), line('WNBA'))], FIELDS_AT);
   assert.equal(count(html, '<article'), 1);
   assert.match(html, /<article class="page-content" data-ad-region="content" data-playoffs-article="hub">/);
@@ -876,14 +876,39 @@ test('HUB: finished leagues are not the offseason; nothing above their cards say
   assert.equal(count(hubHtml([]), 'data-hub-state="offseason"'), 1);
 });
 
+test('HUB: the line never says an eliminated champion pick will win it all', () => {
+  const base: HubPredictionLine = { league: 'MLB', href: '/playoffs/mlb#predictions', championName: 'Milwaukee Brewers', championStatus: 'alive', record: '3 for 7' };
+  const text = (l: HubPredictionLine) => textOf(element(hubHtml([ok(view(FIXTURE.mlbFields, FIELDS_AT), l)], FIELDS_AT), 'data-predictions-league="mlb"'));
+  assert.equal(text(base), 'PromoNight Predicts: Milwaukee Brewers win it all · 3 for 7');
+  assert.equal(text({ ...base, championStatus: 'out' }), 'PromoNight Predicts picked Milwaukee Brewers to win it all · 3 for 7');
+  assert.equal(text({ ...base, championStatus: 'won' }), 'PromoNight Predicts picked Milwaukee Brewers to win it all, and they did · 3 for 7');
+});
+
+test('HUB: the champion state reaches the hub line from the data, in each state', () => {
+  // Still alive: the live Wild Card capture.
+  const alive = buildWithPredictions(FIXTURE.mlbWildCard, PREDICTED.mlb, LYNX_OUT_AT).predictions.hub;
+  assert.equal(alive.championStatus, 'alive');
+  // Out: the Brewers knocked out in the Division Series, the World Series not played.
+  const d = loadDoc(FIXTURE.mlbWildCard);
+  decide(d, 'NL-WC-B', { winner: 'san-diego-padres' });
+  decide(d, 'NL-DS-A', { winner: 'san-diego-padres' });
+  const out = buildWithPredictions(d, PREDICTED.mlb, LYNX_OUT_AT).predictions.hub;
+  assert.equal(out.championStatus, 'out');
+  const outHtml = hubHtml([ok(view(FIXTURE.mlbFields, FIELDS_AT), out)], FIELDS_AT);
+  assert.match(textOf(element(outHtml, 'data-predictions-league="mlb"')), /^PromoNight Predicts picked Milwaukee Brewers to win it all · \d+ for \d+$/);
+  // Won: the WNBA bracket decided with the Valkyries champions.
+  const won = buildWithPredictions(decidedWnba(), PREDICTED.wnba, new Date('2026-11-05T12:00:00Z')).predictions.hub;
+  assert.equal(won.championStatus, 'won');
+});
+
 test('HUB: the predictions card, one line per playing league with a locked bracket, each linking to its section', () => {
   const built = buildWithPredictions(FIXTURE.wnbaLynxOut, PREDICTED.wnba, LYNX_OUT_AT);
   const mlb = buildWithPredictions(FIXTURE.mlbWildCard, PREDICTED.mlb, LYNX_OUT_AT);
   const html = hubHtml([ok(mlb.view, mlb.predictions.hub), ok(built.view, built.predictions.hub)], LYNX_OUT_AT);
   const section = element(html, 'data-predictions="locked"');
   assert.ok(textOf(section).includes('Predictions are locked'));
-  assert.match(section, /<a [^>]*href="\/playoffs\/wnba#predictions"[^>]*>Computer&#x27;s champion: Golden State Valkyries <span class="whitespace-nowrap">· 0 for 1<\/span><\/a>/);
-  assert.match(section, /<a [^>]*href="\/playoffs\/mlb#predictions"[^>]*>Computer&#x27;s champion: Milwaukee Brewers <span class="whitespace-nowrap">· no series decided yet<\/span><\/a>/);
+  assert.match(section, /<a [^>]*href="\/playoffs\/wnba#predictions"[^>]*>PromoNight Predicts: Golden State Valkyries win it all <span class="whitespace-nowrap">· 0 for 1<\/span><\/a>/);
+  assert.match(section, /<a [^>]*href="\/playoffs\/mlb#predictions"[^>]*>PromoNight Predicts: Milwaukee Brewers win it all <span class="whitespace-nowrap">· no series decided yet<\/span><\/a>/);
   assert.ok(!/publish soon/i.test(html));
   assert.ok(!/[0-9a-f]{40,}/.test(html), 'no fingerprint on the hub');
   // Only leagues being played, and only with a locked bracket.

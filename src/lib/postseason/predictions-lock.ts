@@ -1,4 +1,4 @@
-// The content of each locked computer bracket, pinned. SERVER ONLY: it uses
+// The content of each locked PromoNight Predicts bracket, pinned. SERVER ONLY: it uses
 // node:crypto, so no client component may import it (predictions.ts is kept
 // free of it for the same reason).
 //

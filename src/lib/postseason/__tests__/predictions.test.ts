@@ -1,4 +1,4 @@
-// The computer's bracket: the mapper, the NCAA scoring rule, the scorecard,
+// PromoNight Predicts: the mapper, the NCAA scoring rule, the scorecard,
 // and the methodology's dates and fingerprints. Every state is built from a
 // stored document through the real mappers: the two locked predictedBrackets
 // documents as stored, the live WNBA bracket with the Lynx out, the live MLB
@@ -242,7 +242,7 @@ test('SCORING, WNBA with the Lynx out: decided-busted, busted early, dimmed-but-
   // Scorecard: one decided slot, missed. Five picks alive.
   const sc = v.scorecard;
   assert.deepEqual([sc.correct, sc.decided, sc.alive], [0, 1, 5]);
-  assert.equal(sc.recordLine, 'The computer is 0 for 1');
+  assert.equal(sc.recordLine, 'PromoNight Predicts is 0 for 1');
   assert.equal(sc.aliveLine, '5 picks still alive');
   assert.equal(sc.championLine, 'Golden State Valkyries, still alive');
   assert.equal(predictions.hub.record, '0 for 1');
@@ -274,7 +274,7 @@ test('SCORING, MLB: the coin flip counts like any other pick, either way it goes
   decide(lost, 'AL-WC-A', { winner: 'chicago-white-sox' });
   const a = buildWithPredictions(lost, PREDICTED.mlb, LYNX_OUT_AT).predictions.view;
   assert.deepEqual(state(pickOf(a, 'wild_card-1')), { outcome: 'busted', decided: true, dimmed: false });
-  assert.equal(a.scorecard.recordLine, 'The computer is 0 for 1');
+  assert.equal(a.scorecard.recordLine, 'PromoNight Predicts is 0 for 1');
   // AL-DS-B was picked Guardians over Astros. The Astros are out, so the
   // matchup is dimmed; the Guardians pick is alive and counts as alive.
   assert.deepEqual(state(pickOf(a, 'division_series-2')), { outcome: 'alive', decided: false, dimmed: true });
@@ -284,7 +284,7 @@ test('SCORING, MLB: the coin flip counts like any other pick, either way it goes
   decide(won, 'AL-WC-A', { winner: 'houston-astros' });
   const b = buildWithPredictions(won, PREDICTED.mlb, LYNX_OUT_AT).predictions.view;
   assert.deepEqual(state(pickOf(b, 'wild_card-1')), { outcome: 'correct', decided: true, dimmed: false });
-  assert.equal(b.scorecard.recordLine, 'The computer is 1 for 1');
+  assert.equal(b.scorecard.recordLine, 'PromoNight Predicts is 1 for 1');
   assert.deepEqual(state(pickOf(b, 'division_series-2')), { outcome: 'alive', decided: false, dimmed: false });
 });
 
@@ -328,7 +328,7 @@ test('SCORING, WNBA fully decided: final scorecard, a correct pick in a matchup 
   assert.equal(pickOf(v, 'finals-1').note, 'This matchup did not happen.');
   assert.equal(pickOf(v, 'finals-1').resultLine, 'Golden State Valkyries won 4-3');
   assert.deepEqual([v.scorecard.correct, v.scorecard.decided, v.scorecard.alive], [4, 7, 0]);
-  assert.equal(v.scorecard.recordLine, 'The computer is 4 for 7');
+  assert.equal(v.scorecard.recordLine, 'PromoNight Predicts is 4 for 7');
   assert.equal(v.scorecard.aliveLine, '0 picks still alive');
   assert.equal(v.scorecard.championLine, 'Golden State Valkyries, won the title');
   assert.equal(predictions.hub.record, '4 for 7');
@@ -490,9 +490,9 @@ test('METHODOLOGY: "before Game 1" is proven from the real bracket, never assume
 test('METHODOLOGY: the backtest is the only accuracy claim, and the fingerprints are exactly the four inputs and the reviewed sha256', () => {
   assert.deepEqual(BACKTEST_2025, { WNBA: { right: 5, of: 7, champion: true }, MLB: { right: 5, of: 11, champion: false } });
   const w = buildWithPredictions(FIXTURE.wnbaLynxOut, PREDICTED.wnba, LYNX_OUT_AT).predictions.methodology;
-  assert.equal(w.backtest, 'Run on the 2025 WNBA postseason with the same settings, the computer called 5 of 7 series and got the champion right.');
+  assert.equal(w.backtest, 'Run on the 2025 WNBA postseason with the same settings, the simulation called 5 of 7 series and got the champion right.');
   const m = buildWithPredictions(FIXTURE.mlbWildCard, PREDICTED.mlb, LYNX_OUT_AT).predictions.methodology;
-  assert.equal(m.backtest, 'Run on the 2025 MLB postseason with the same settings, the computer called 5 of 11 series and got the champion wrong.');
+  assert.equal(m.backtest, 'Run on the 2025 MLB postseason with the same settings, the simulation called 5 of 11 series and got the champion wrong.');
   const stored = JSON.parse(rawText(PREDICTED.mlb)) as Doc;
   const p = stored.provenance as Doc;
   assert.deepEqual(

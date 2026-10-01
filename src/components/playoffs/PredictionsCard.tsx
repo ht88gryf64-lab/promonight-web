@@ -3,11 +3,20 @@ import type { HubPredictionLine } from '@/lib/postseason/predictions';
 import { CONDENSED, LockIcon } from './ui';
 
 // The hub's predictions card: one line per league whose postseason is being
-// played and whose computer bracket was locked, each linking to that
+// played and whose PromoNight Predicts bracket was locked, each linking to that
 // league's predictions section. It carries the champion pick and the record
 // and nothing else: no fingerprint, no date, no series.
+/** The claim, before the record. Present tense only while the predicted
+ *  champion can still win it: once it is out, the line says what was
+ *  picked, not what will happen. */
+export function hubPredictionClaim(l: HubPredictionLine): string {
+  if (l.championStatus === 'out') return `PromoNight Predicts picked ${l.championName} to win it all`;
+  if (l.championStatus === 'won') return `PromoNight Predicts picked ${l.championName} to win it all, and they did`;
+  return `PromoNight Predicts: ${l.championName} win it all`;
+}
+
 export function hubPredictionText(l: HubPredictionLine): string {
-  return `Computer's champion: ${l.championName} · ${l.record}`;
+  return `${hubPredictionClaim(l)} · ${l.record}`;
 }
 
 export function PredictionsCard({
@@ -44,7 +53,7 @@ export function PredictionsCard({
                 ctaLabel={text}
                 className="font-semibold text-rd-ink underline decoration-rd-line-strong underline-offset-2 hover:text-rd-red"
               >
-                {`Computer's champion: ${l.championName} `}
+                {`${hubPredictionClaim(l)} `}
                 <span className="whitespace-nowrap">{`· ${l.record}`}</span>
               </TrackedLink>
             </li>

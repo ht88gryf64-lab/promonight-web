@@ -14,6 +14,9 @@ import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import * as ReactNs from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+// The section id, from the module with no React in it (flight.test.ts keeps
+// it equal to METHODOLOGY_ID in Predictions.tsx).
+import { METHODOLOGY_SECTION_ID as METHODOLOGY_ID } from '../../../../scripts/playoffs/flight';
 import { FIXTURE, PREDICTED, capturedTeams, fakeFirestore, loadDoc, parkNames, venuePages } from '../../../lib/postseason/__tests__/helpers';
 
 let scope = new Map<unknown, Map<string, unknown>>();
@@ -216,7 +219,9 @@ function hangPredictions() {
 
 /** Nothing of the predictions, and nothing about their failure, in a page. */
 function assertNoPredictions(html: string, where: string) {
-  for (const marker of ['id="predictions"', 'data-predictions', 'data-pick', 'po-picks', 'how-the-computer-picked', 'Title odds', "Computer&#x27;s", 'The Computer', 'Fingerprints']) {
+  // Structure, and every piece of the section's copy, so a failure leaves
+  // nothing of it: the markers follow the copy (the constant, not a copy of it).
+  for (const marker of ['id="predictions"', 'data-predictions', 'data-pick', 'po-picks', METHODOLOGY_ID, 'Title odds', 'PromoNight Predicts', 'PromoNight&#x27;s', 'Predicted champion', 'Fingerprints']) {
     assert.equal(count(html, marker), 0, `${where}: ${marker}`);
   }
   assert.ok(!/[0-9a-f]{40,}/.test(html), `${where}: a hash`);

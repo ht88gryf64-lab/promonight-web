@@ -2,13 +2,13 @@ import type { MethodologyView, PredictionsView } from '@/lib/postseason/predicti
 import { PredictedBracket } from './PredictedBracket';
 import { CONDENSED, LockIcon } from './ui';
 
-// The computer's bracket on a league page, in two server components that are
+// The PromoNight Predicts bracket on a league page, in two server components that are
 // two separate children of the page's article:
 //
 //   PredictionsSection     the scorecard, the predicted bracket, title odds.
 //                          It sits in the reserved place below the real
 //                          bracket, inside the shared controls provider.
-//   PredictionsMethodology how the computer picked, with the fingerprints.
+//   PredictionsMethodology how PromoNight Predicts works, with the fingerprints.
 //                          Near the foot of the article, OUTSIDE the
 //                          provider and outside every client component.
 //
@@ -22,7 +22,7 @@ import { CONDENSED, LockIcon } from './ui';
 // client component.
 
 export const PREDICTIONS_ID = 'predictions';
-export const METHODOLOGY_ID = 'how-the-computer-picked';
+export const METHODOLOGY_ID = 'how-promonight-predicts-works';
 
 export function PredictionsSection({
   league,
@@ -41,11 +41,11 @@ export function PredictionsSection({
       <div className="flex items-center gap-2 border-b-2 border-rd-line pb-2 text-rd-ink-soft">
         <LockIcon />
         <h2 id="predictions-heading" className="text-[26px] font-extrabold uppercase leading-none text-rd-ink" style={{ fontFamily: CONDENSED }}>
-          The Computer&apos;s Bracket
+          PromoNight Predicts
         </h2>
       </div>
       <p className="mt-2.5 max-w-[60ch] text-[14.5px] leading-relaxed text-rd-ink-soft">
-        Every series picked by a computer from regular-season results. The picks are locked and never change; each one is marked against the
+        PromoNight Predicts picks every series with a simulation built on regular-season results. The picks are locked and never change; each one is marked against the
         real bracket above as correct, busted or still alive. Each card shows the pick, how many games it most likely takes to win and its chance at lock. The
         chances come from regular-season results alone, so they take no account of postseason games already played when the bracket was
         locked.
@@ -65,7 +65,7 @@ export function PredictionsSection({
           </span>
         </p>
         <p data-champion-pick={scorecard.championStatus} className="rounded-[10px] border border-rd-line bg-rd-card px-4 py-3">
-          <span className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-rd-ink-faint">Computer&apos;s champion</span>
+          <span className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-rd-ink-faint">Predicted champion</span>
           <span className="mt-0.5 block text-[22px] font-extrabold uppercase leading-tight text-rd-ink" style={{ fontFamily: CONDENSED }}>
             {scorecard.championLine}
           </span>
@@ -101,7 +101,7 @@ export function PredictionsSection({
         </table>
         <p className="mt-3 text-[13px] text-rd-ink-soft">
           <a href={`#${METHODOLOGY_ID}`} className="font-semibold text-rd-red hover:text-rd-red-dark">
-            How the computer picked
+            How PromoNight Predicts works
           </a>
         </p>
       </section>
@@ -118,21 +118,22 @@ export function PredictionsMethodology({ view }: { view: MethodologyView }) {
       className="mt-12 scroll-mt-20 rounded-[10px] border border-rd-line bg-rd-card px-4 py-5"
     >
       <h2 id="methodology-heading" className="text-[22px] font-extrabold uppercase leading-none text-rd-ink" style={{ fontFamily: CONDENSED }}>
-        How the computer picked
+        How PromoNight Predicts works
       </h2>
       <div className="mt-3 max-w-[64ch] space-y-2.5 text-[14px] leading-relaxed text-rd-ink-soft">
         <p>
-          Each club gets a rating from its regular-season results. The computer then plays out the postseason {view.simRuns} times from those
-          ratings and picks the side that won each matchup more often. A pick&apos;s chance is how often it won that matchup in the simulated
+          PromoNight Predicts is a simulation, not a staff pick. Each club gets a rating from its regular-season results. The simulation then
+          plays out the postseason {view.simRuns} times from those ratings and picks the side that won each matchup more often. A pick&apos;s chance is how often it won that matchup in the simulated
           postseasons where that matchup came up, and its length is how many games the pick most often took to win it.
         </p>
         <p data-locked-on>
           The inputs were locked on {view.lockedOn}
           {view.lockedBeforeGame1 ? ', before Game 1' : ''}.{' '}
           {view.computedOn === view.bracketLockedOn
-            ? `The bracket was computed and locked on ${view.computedOn} from those locked inputs`
-            : `The bracket was computed on ${view.computedOn} and locked on ${view.bracketLockedOn} from those locked inputs`}
-          , with the rating, simulation and bracket code unchanged since the inputs were locked. Every chance and title odd on this page is as
+            ? `The bracket was computed from those locked inputs and locked on ${view.computedOn}`
+            : `The bracket was computed from those locked inputs on ${view.computedOn} and locked on ${view.bracketLockedOn}`}
+          . The locked bracket is written once and never changed, and the simulation runs from a fixed seed, so the same inputs always give
+          the same bracket. The rating, simulation and bracket code is unchanged since the inputs were locked. Every chance and title odd on this page is as
           it stood when the bracket was locked. Postseason results are not among the inputs, so a pick can name a club that was already out by
           then.
         </p>

@@ -19,7 +19,7 @@ const PAGE_TYPE = 'playoffs_league';
 
 /** The page always has a bracket: with no document the route is a 404, and
  *  a read that fails throws before anything renders. `predictions` is the
- *  computer's locked bracket, or null when none was locked. */
+ *  locked PromoNight Predicts bracket, or null when none was locked. */
 export type LeagueBody = { state: 'ok'; view: LeagueView; predictions: LeaguePredictions | null; homeGames: HomeGamesWindow };
 
 /** The round the bracket opens on: the one being played, or the last one
@@ -162,7 +162,7 @@ export function PlayoffsLeague({
               <BracketExplorer league={league} leagueSlug={slug} season={season} rounds={view.rounds} panelTickets={panelTickets} />
             </div>
             <AdSlot config={AD_SLOTS.IN_CONTENT_1} pageType={PAGE_TYPE} />
-            {/* The computer's bracket, in the place reserved for it. Rendered
+            {/* The PromoNight Predicts bracket, in the place reserved for it. Rendered
                 only when a bracket was locked: an empty element here would be
                 a child of the article with no height, which is an anchor all
                 the same. Shown in both phases; a finished postseason shows

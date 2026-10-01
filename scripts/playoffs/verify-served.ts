@@ -25,7 +25,7 @@ import { db } from '../../src/lib/firebase';
 import { getAllTeams, getVenueForTeam } from '../../src/lib/data';
 import { getTeamVenueHubMap } from '../../src/lib/venue-hub';
 import { OG_IMAGE_ALT } from '../../src/lib/og';
-import { fingerprintPlacement, operatorText } from './flight';
+import { METHODOLOGY_SECTION_ID, fingerprintPlacement, operatorText } from './flight';
 
 const BASE = (process.env.BASE || 'http://localhost:3468').replace(/\/$/, '');
 const BYPASS = process.env.BYPASS || '';
@@ -194,7 +194,7 @@ const keyIn = (text: string) => {
   return null;
 };
 
-// The locked computer bracket, as stored. Read raw; the page's mapper is not used.
+// The locked PromoNight Predicts bracket, as stored. Read raw; the page's mapper is not used.
 type RawPick = {
   seriesKey: string;
   round: string;
@@ -221,8 +221,8 @@ const longEt = (d: Date) => {
   return `${p.month} ${p.day}, ${p.year}`;
 };
 const BACKTEST: Record<League, string> = {
-  WNBA: 'Run on the 2025 WNBA postseason with the same settings, the computer called 5 of 7 series and got the champion right.',
-  MLB: 'Run on the 2025 MLB postseason with the same settings, the computer called 5 of 11 series and got the champion wrong.',
+  WNBA: 'Run on the 2025 WNBA postseason with the same settings, the simulation called 5 of 7 series and got the champion right.',
+  MLB: 'Run on the 2025 MLB postseason with the same settings, the simulation called 5 of 11 series and got the champion wrong.',
 };
 
 interface Club {
@@ -524,7 +524,7 @@ async function main() {
     return el;
   }
 
-  // ---- The computer's bracket, derived from the raw documents ----
+  // ---- The PromoNight Predicts bracket, derived from the raw documents ----
   //
   // The NCAA rule, written again here from the brief, not imported: a pick is
   // correct when its club won the real slot, busted when the real slot went
@@ -578,6 +578,17 @@ async function main() {
     const section = element(el, 'data-predictions="bracket"');
     check(`${where}: the predictions section is on the page, with its anchor`, !!section && section.includes('id="predictions"'));
     if (!section) return;
+    // PROMONIGHT PREDICTS. The brand on the section and the labels, in the
+    // served DOM; and no "computer" anywhere in the served bytes, the RSC
+    // payload included.
+    const st = textOf(section);
+    check(`${where}: the section heading is "PromoNight Predicts"`, textOf(element(section, 'id="predictions-heading"') ?? '') === 'PromoNight Predicts');
+    const details = elements(section, 'data-pick-detail');
+    check(`${where}: every pick says "PromoNight's pick:"`, details.length === p.rounds.length && details.every((d) => textOf(d).startsWith("PromoNight's pick:")), `${details.length} picks`);
+    check(`${where}: the scorecard says "Predicted champion" and "PromoNight Predicts is" or "No series decided yet"`, st.includes('Predicted champion') && /PromoNight Predicts is \d+ for \d+|No series decided yet/.test(st));
+    check(`${where}: the methodology link says "How PromoNight Predicts works" and reaches the section`, section.includes(`href="#${METHODOLOGY_SECTION_ID}"`) && st.includes('How PromoNight Predicts works') && el.includes(`id="${METHODOLOGY_SECTION_ID}"`));
+    const comp = /computer/i.exec(html);
+    check(`${where}: no "computer" anywhere in the served bytes`, !comp, comp ? html.slice(Math.max(0, comp.index - 40), comp.index + 40) : '');
     check(`${where}: no "publish soon" placeholder`, !/publish soon/i.test(html));
     const sc = score(doc, p);
     const wrong: string[] = [];
@@ -595,7 +606,7 @@ async function main() {
     check(`${where}: every pick carries the mark the scoring rule gives it, its length and its chance`, wrong.length === 0 && sc.marks.length === doc.series.length, wrong.slice(0, 3).join('; ') || `${sc.marks.length} picks`);
     const card = textOf(element(section, 'data-predictions-scorecard') ?? '');
     const champ = clubs.get(p.champion)?.full ?? p.champion;
-    const record = sc.decided === 0 ? 'No series decided yet' : `The computer is ${sc.correct} for ${sc.decided}`;
+    const record = sc.decided === 0 ? 'No series decided yet' : `PromoNight Predicts is ${sc.correct} for ${sc.decided}`;
     check(`${where}: scorecard`, card.includes(record) && card.includes(`${sc.alive} ${sc.alive === 1 ? 'pick' : 'picks'} still alive`) && card.includes(`${champ}, ${sc.champion}`), card);
     const odds = [...p.titleOdds].sort((a, b) => b.odds - a.odds).slice(0, 8);
     const oddsText = textOf(element(section, 'data-title-odds') ?? '');
@@ -612,13 +623,14 @@ async function main() {
     check(`${where}: methodology says when the inputs were locked`, mt.includes(`The inputs were locked on ${longEt(frozen)}${first ? ', before Game 1' : ''}.`), longEt(frozen));
     const computedOn = longEt(new Date(p.computedAt));
     const lockedOn = longEt(instantOf(p.lockedAt as unknown) as Date);
-    const when = computedOn === lockedOn ? `computed and locked on ${computedOn}` : `computed on ${computedOn} and locked on ${lockedOn}`;
-    check(`${where}: methodology says when the bracket was computed and locked`, mt.includes(`The bracket was ${when} from those locked inputs, with the rating, simulation and bracket code unchanged since the inputs were locked.`), when);
+    const when = computedOn === lockedOn ? `computed from those locked inputs and locked on ${computedOn}` : `computed from those locked inputs on ${computedOn} and locked on ${lockedOn}`;
+    check(`${where}: methodology says when the bracket was computed and locked, that it is written once, and that the seed is fixed`, mt.includes(`The bracket was ${when}. The locked bracket is written once and never changed, and the simulation runs from a fixed seed, so the same inputs always give the same bracket. The rating, simulation and bracket code is unchanged since the inputs were locked.`) && !/\b(computed|run|ran|calculated|simulated) (only )?(once|one time|a single time)\b|\b(not been|never( been)?) re-?(computed|run|calculated)\b|\bre-?run\b/i.test(mt), when);
+    check(`${where}: methodology says it is a simulation, not a staff pick`, mt.includes('PromoNight Predicts is a simulation, not a staff pick.') && mt.includes('The simulation then plays out the postseason'));
     check(`${where}: methodology says what "at lock" means and why a pick can name a club already out`, mt.includes('Every chance and title odd on this page is as it stood when the bracket was locked.') && mt.includes('Postseason results are not among the inputs, so a pick can name a club that was already out by then.'));
-    check(`${where}: methodology states the length as the engine computes it`, mt.includes('its length is how many games the pick most often took to win it') && !/most common length|engine code unchanged/.test(mt));
+    check(`${where}: methodology states the length as the engine computes it`, mt.includes('its length is how many games the pick most often took to win it') && !/most common length|engine( code)? (is |has )?(not changed|unchanged|never changed)/i.test(mt));
     check(`${where}: methodology names ${p.simRuns.toLocaleString('en-US')} simulated postseasons`, mt.includes(`plays out the postseason ${p.simRuns.toLocaleString('en-US')} times`));
     check(`${where}: the backtest, and no other accuracy claim`, mt.includes(BACKTEST[league]) && (mt.match(/\b\d+ of \d+\b/g) ?? []).length === 1 && !/\b(accura\w*|correct\w*|hit rate|record)\b/i.test(mt), BACKTEST[league]);
-    check(`${where}: never says the bracket was set before Game 1`, !/bracket was (locked|set|picked|computed)[^.]*before Game 1/i.test(mt));
+    check(`${where}: never says the bracket was set before Game 1`, !/(bracket|picks?) (was|were) (locked|set|picked|computed|made)[^.]*before (Game 1|the first (pitch|game|tip)|the postseason)/i.test(mt));
 
     // THE FINGERPRINT RULE. Each of the five appears in the served bytes
     // exactly twice: once in the methodology section's markup, and once in
@@ -660,7 +672,7 @@ async function main() {
     const pred = DISABLED.has(league) ? null : preds.get(league) ?? null;
     const description = open
       ? pred
-        ? `The ${SEASON} ${league} postseason bracket and the computer's locked pick for every series, marked against the results. Current round: ${open.roundLabel}. Game times in Eastern.`
+        ? `The ${SEASON} ${league} postseason bracket, with a simulation's locked pick for every series, marked against the results. Current round: ${open.roundLabel}.`
         : `The ${SEASON} ${league} postseason bracket. Current round: ${open.roundLabel}. Every series, seed and result, with game times in Eastern and the home games coming up.`
       : '(concluded: checked by hand)';
     const want = {
@@ -674,7 +686,7 @@ async function main() {
     leaks(where, got.html);
     if (pred) await predictionsOnPage(where, got.html, el, league, doc, pred);
     if (DISABLED.has(league)) {
-      const traces = ['id="predictions"', 'data-predictions', 'data-pick', 'po-picks', 'how-the-computer-picked', 'Title odds', 'Fingerprints', "Computer's", 'Computer&#x27;s', 'The Computer'].filter((m) => got.html.includes(m));
+      const traces = ['id="predictions"', 'data-predictions', 'data-pick', 'po-picks', METHODOLOGY_SECTION_ID, 'Title odds', 'Fingerprints', 'PromoNight Predicts', "PromoNight's", 'PromoNight&#x27;s', 'Predicted champion'].filter((m) => got.html.includes(m));
       check(`${where}: FORCED FAILURE: no predictions section, heading, card or methodology`, traces.length === 0, traces.join(' '));
       check(`${where}: FORCED FAILURE: no hash anywhere`, !/\b[0-9a-f]{40,}\b/.test(domOf(got.html)) && !fingerprints(preds.get(league) as RawPred).some((f) => got.html.includes(f)));
       // See operatorText in ./flight.ts for where it looks and why.
@@ -871,6 +883,8 @@ async function main() {
       jsonLd(where, got.html, { ...want, crumbs: [`Home ${SITE}`, `Playoffs ${SITE}/playoffs`], modified: stamps.length ? stamps[stamps.length - 1] : null });
       const el = article(where, got.html, 'hub');
       leaks(where, got.html);
+      const compHub = /computer/i.exec(got.html);
+      check(`${where}: no "computer" anywhere in the served bytes`, !compHub, compHub ? got.html.slice(Math.max(0, compHub.index - 40), compHub.index + 40) : '');
       const anyPrint = [...preds.values()].flatMap(fingerprints).filter((f) => got.html.includes(f));
       check(`${where}: no fingerprint on the hub`, anyPrint.length === 0 && !/\b[0-9a-f]{64}\b/.test(got.html), anyPrint.map((f) => f.slice(0, 8)).join(' '));
       check(`${where}: no "publish soon" placeholder`, !/publish soon/i.test(got.html));
@@ -890,7 +904,8 @@ async function main() {
         }
         const sc = score(d, p);
         const champ = clubs.get(p.champion)?.full ?? p.champion;
-        const text = `Computer's champion: ${champ} · ${sc.decided === 0 ? 'no series decided yet' : `${sc.correct} for ${sc.decided}`}`;
+        const claim = sc.champion === 'eliminated' ? `PromoNight Predicts picked ${champ} to win it all` : sc.champion === 'won the title' ? `PromoNight Predicts picked ${champ} to win it all, and they did` : `PromoNight Predicts: ${champ} win it all`;
+        const text = `${claim} · ${sc.decided === 0 ? 'no series decided yet' : `${sc.correct} for ${sc.decided}`}`;
         wantLines.push(text);
         const line = card ? element(card, `data-predictions-league="${league.toLowerCase()}"`) : null;
         check(`${where}: ${league} predictions line`, !!line && textOf(line) === text && line.includes(`href="/playoffs/${league.toLowerCase()}#predictions"`), line ? textOf(line) : 'missing');

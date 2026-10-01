@@ -69,7 +69,7 @@ export function hubCopy(season: number, routeLeagues: readonly PostseasonLeague[
 
 /** A league's page. `view` is null when the body rendered "bracket not
  *  available", and then nothing is said about the bracket. `predictions` is
- *  whether the body rendered the computer's locked bracket: the head names
+ *  whether the body rendered the locked PromoNight Predicts bracket: the head names
  *  predictions only when the body shows them. */
 export function leagueCopy(
   season: number,
@@ -88,7 +88,7 @@ export function leagueCopy(
       title,
       canonical,
       description: predictions
-        ? `The ${season} ${league} postseason bracket, complete. ${view.phase.championName}: ${lowerFirst(view.phase.summary)}. Every series and result, and how the computer's locked picks did.`
+        ? `The ${season} ${league} postseason bracket, complete. ${view.phase.championName}: ${lowerFirst(view.phase.summary)}. Every series and result, and how the simulation's locked picks did.`
         : `The ${season} ${league} postseason bracket, complete. ${view.phase.championName}: ${lowerFirst(view.phase.summary)}. Every series and result, round by round.`,
     };
   }
@@ -96,7 +96,7 @@ export function leagueCopy(
     title,
     canonical,
     description: predictions
-      ? `The ${season} ${league} postseason bracket and the computer's locked pick for every series, marked against the results. Current round: ${view.phase.roundLabel}. Game times in Eastern.`
+      ? `The ${season} ${league} postseason bracket, with a simulation's locked pick for every series, marked against the results. Current round: ${view.phase.roundLabel}.`
       : `The ${season} ${league} postseason bracket. Current round: ${view.phase.roundLabel}. Every series, seed and result, with game times in Eastern and the home games coming up.`,
   };
 }

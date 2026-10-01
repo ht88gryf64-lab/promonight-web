@@ -6,7 +6,7 @@ import type { PickOutcome, PickRoundView, PickSeriesView, PickSideView } from '@
 import { useBracketControls } from './controls';
 import { CONDENSED } from './ui';
 
-// The computer's bracket, with its own controls.
+// The PromoNight Predicts bracket, with its own controls.
 //
 // IT NEVER MOVES. Every card is the locked pick for its slot, whatever the
 // real bracket did since. What changes is the mark on it: correct, busted or
@@ -107,7 +107,7 @@ function PickCard({ s, onOpen }: { s: PickSeriesView; onOpen: (s: PickSeriesView
       </summary>
       <div data-pick-detail className="space-y-1 border-t border-rd-line px-4 py-3 text-[13.5px] leading-relaxed text-rd-ink-soft">
         <p>
-          <span className="font-semibold text-rd-ink">Computer&apos;s pick:</span> {s.pickName} {s.lengthLabel}
+          <span className="font-semibold text-rd-ink">PromoNight&apos;s pick:</span> {s.pickName} {s.lengthLabel}
           {s.coinFlip ? ', a coin flip at lock.' : `, ${s.chanceLabel} at lock.`}
         </p>
         <p>
