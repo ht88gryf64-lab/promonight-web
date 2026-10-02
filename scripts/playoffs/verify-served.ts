@@ -618,14 +618,15 @@ async function main() {
           const left = s.games.filter((g) => unplayed.has(g.status));
           if (isSure && !left.length && !s.games.some((g) => g.status === 'live')) return null;
           for (const g of left) {
-            const timed = !g.startTimeTBD && !!g.start;
+            // A start is a time only when it is an instant; a bare date is untimed.
+            const timed = !g.startTimeTBD && typeof g.start === 'string' && /T\d\d:\d\d/.test(g.start);
             const day = timed ? etYmd(new Date(g.start as string)) : g.date ?? (isSure ? '' : null);
             if (day === null) continue;
             list.push({ s, g, sure: isSure, day, at: timed ? new Date(g.start as string).toISOString() : '' });
           }
         }
       }
-      list.sort((x, y) => (x.day + '|' + x.at < y.day + '|' + y.at ? -1 : x.day + '|' + x.at > y.day + '|' + y.at ? 1 : 0));
+      list.sort((x, y) => (x.day + ' ' + x.at < y.day + ' ' + y.at ? -1 : x.day + ' ' + x.at > y.day + ' ' + y.at ? 1 : 0));
       const [head, second] = list;
       if (!head || !head.sure || head.g.status !== 'scheduled' || !head.at || Date.parse(head.at) < now.getTime()) return null;
       if (second && second.day === head.day && second.at === head.at) return null;
@@ -638,7 +639,7 @@ async function main() {
       const away = g.homeSide ? slotName(doc, s[g.homeSide === 'higher' ? 'lower' : 'higher']).name : null;
       const matchup = home && away ? `${away} at ${home}` : `${slotName(doc, s.lower).name} vs ${slotName(doc, s.higher).name}`;
       const t = new Date(g.start as string);
-      return `Game ${g.gameNumber}, ${matchup}, ${etDay(t)}, ${etTime(t)}${conditional(s, g) ? ' (if necessary)' : ''}`;
+      return `Game ${g.gameNumber}, ${matchup}, ${etDay(t)}, ${etTime(t)}`;
     };
     const laterThan = (i: number, skip: string[]) => order.filter((r, k) => k >= i && !skip.includes(r)).flatMap(of);
     if (played.length === 0) {
@@ -649,7 +650,9 @@ async function main() {
     for (const r of played) {
       const clauses: string[] = [];
       let unset = 0;
-      for (const s of of(r)) {
+      // The page groups a round by conference, in order of first appearance.
+      const confs = [...new Set(of(r).map((s) => s.conference))];
+      for (const s of confs.flatMap((c) => of(r).filter((x) => x.conference === c))) {
         const a = slotName(doc, s.higher);
         const b = slotName(doc, s.lower);
         if (!a.club && !b.club) { unset++; continue; }
@@ -673,7 +676,7 @@ async function main() {
         }
       }
       if (clauses.length === 0) return null;
-      if (unset > 0) clauses.push(unset === 1 ? 'one matchup is still to be set' : `${unset} matchups are still to be set`);
+      if (unset > 0) clauses.push(unset === 1 ? 'one matchup is to be set' : `${unset} matchups are to be set`);
       parts.push(`${label(r)}: ${clauses.join('; ')}.`);
     }
     const f = sureNext(played.flatMap(of), laterThan(at, played));

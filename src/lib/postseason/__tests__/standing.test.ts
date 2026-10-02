@@ -136,6 +136,41 @@ test('NEXT GAME: two games starting at the same moment, neither is named', () =>
   assert.equal(build(doc, MIXED_AT).line, HEAD_MIXED);
 });
 
+test('NEXT GAME: a game with no time sorts first on its day, so it blocks a timed game that day', () => {
+  // Step 11 on Oct 2: Cubs at Brewers (18:08Z, Oct 4) opens the Division
+  // Series. Take the time off another Oct 4 opener that starts later: it
+  // could be earlier, so the opener is no longer named.
+  const { b, v } = build(loadDoc('MLB_2025.replay-step-11.json'), new Date('2025-10-02T12:00:00Z'));
+  const starts = gameStarts(b);
+  const ds = v.rounds.find((r) => r.key === 'division_series')!.groups.flatMap((g) => g.series);
+  const sameDayLater = ds.flatMap((s) => s.games.filter((g) => g.gameNumber === 1).map((g) => ({ s, g }))).filter(({ s, g }) => g.day === '2025-10-04' && starts.get(`${s.id}#1`) !== '2025-10-04T18:08:00.000Z');
+  assert.ok(sameDayLater.length > 0);
+  const edited = new Map(starts);
+  edited.delete(`${sameDayLater[0].s.id}#1`);
+  assert.equal(standingLine(v, edited, new Date('2025-10-02T12:00:00Z')), 'Next round: Division Series.');
+});
+
+test('NEXT GAME: a game in progress is neither unplayed nor missing; the next game after it is named', () => {
+  // 10-01 WNBA: Fever at Aces Game 3 (01:00Z Oct 2) in progress at 01:30Z.
+  const { b, v } = build(loadDoc('WNBA_2026.live-20261001T1625Z.json'), new Date('2026-10-02T01:30:00Z'));
+  const view = structuredClone(v);
+  const aces = view.rounds[0].groups.flatMap((g) => g.series).find((s) => s.higher.label === 'Aces' || s.lower.label === 'Aces')!;
+  const g3 = aces.games.find((g) => g.gameNumber === 3)!;
+  g3.state = 'live';
+  const line = standingLine(view, gameStarts(b), new Date('2026-10-02T01:30:00Z')) as string;
+  assert.ok(line.includes('the Aces and the Fever are tied 1-1'), line);
+  assert.ok(line.endsWith('Next game: Game 3, Wings at Valkyries, Fri, Oct 2, 9:00 PM ET.'), line);
+});
+
+test('A ROUND WITH A GAME IN PROGRESS is a round being played, even before its series says so', () => {
+  const { b, v } = build(loadDoc('MLB_2025.replay-step-11.json'), new Date('2025-10-04T18:30:00Z'));
+  const view = structuredClone(v);
+  const ds = view.rounds.find((r) => r.key === 'division_series')!.groups.flatMap((g) => g.series);
+  ds[0].games[0].state = 'live';
+  const line = standingLine(view, gameStarts(b), new Date('2025-10-04T18:30:00Z')) as string;
+  assert.ok(line.startsWith('Division Series:'), line);
+});
+
 test('BETWEEN ROUNDS: only the round about to open can open it; a later round never does', () => {
   const doc = loadDoc('MLB_2025.replay-step-11.json');
   for (const s of doc.series as Doc[]) if (s.round === 'division_series') s.games = [];

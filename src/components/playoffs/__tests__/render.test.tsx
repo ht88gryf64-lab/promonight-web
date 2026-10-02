@@ -13,6 +13,7 @@ import { CAPTURED_AT, FIELDS_AT, FIXTURE, IN_GAME_AT, LYNX_OUT_AT, buildWithPred
 import type { HubPredictionLine, LeaguePredictions } from '../../../lib/postseason/predictions';
 import { PlayoffsHub, type HubLeague } from '../PlayoffsHub';
 import { PlayoffsLeague, type LeagueBody } from '../PlayoffsLeague';
+import { HomeGames } from '../HomeGames';
 
 type Doc = Record<string, unknown>;
 type RawSeries = Doc & { games: Doc[]; higher: Doc; lower: Doc };
@@ -843,6 +844,13 @@ test('HOME GAMES: nothing behind the button means no button', () => {
   assert.equal(count(none, 'po-more'), 0);
   assert.equal(count(none, 'data-home-games-list="rest"'), 0);
   assert.equal(count(element(none, 'data-home-games-list="primary"'), 'data-home-game="'), 2);
+});
+
+test('HOME GAMES: with nothing in three days, the button says what it holds', () => {
+  const v = view(FIXTURE.mlbLive);
+  const w = homeGamesWindow([v], CAPTURED_AT);
+  const html = renderToStaticMarkup(<HomeGames id="x" heading="Upcoming playoff games" games={{ primary: [], rest: w.rest }} tickets={{}} surface="web_playoffs_league" empty="No playoff game with a confirmed date, time and host is listed in the next three days." />);
+  assert.match(html, new RegExp(`>Show ${w.rest.length} games with a set time in the next seven days</button>`));
 });
 
 test('CROSS LINK: only the leagues passed in are linked', () => {

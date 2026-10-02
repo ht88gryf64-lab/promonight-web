@@ -129,9 +129,11 @@ function nextGame(sure: SeriesView[], later: SeriesView[], startOf: (s: SeriesVi
   return next.g;
 }
 
-/** "Game 4, Cubs at Brewers, Fri, Oct 2, 7:08 PM ET". */
+/** "Game 4, Cubs at Brewers, Fri, Oct 2, 7:08 PM ET". No "if necessary":
+ *  a conditional game always has a lower-numbered game of its series
+ *  unplayed, which keeps it from being named. */
 function gameText(g: GameView): string {
-  return `${g.title}, ${g.matchup}, ${g.when.replace(' · ', ', ')}${g.ifNecessary ? ' (if necessary)' : ''}`;
+  return `${g.title}, ${g.matchup}, ${g.when.replace(' · ', ', ')}`;
 }
 
 /**

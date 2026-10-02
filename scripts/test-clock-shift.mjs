@@ -16,6 +16,7 @@ const offset = days * 86_400_000;
 // clock, a subclass (`class X extends Date`) keeps its own prototype through
 // Reflect.construct, and everything else (prototype, statics, name, length,
 // instanceof) is the real Date's.
+const now = () => RealDate.now() + offset;
 globalThis.Date = new Proxy(RealDate, {
   construct(target, args, newTarget) {
     return Reflect.construct(target, args.length ? args : [RealDate.now() + offset], newTarget);
@@ -24,7 +25,11 @@ globalThis.Date = new Proxy(RealDate, {
     return new RealDate(RealDate.now() + offset).toString();
   },
   get(target, prop, receiver) {
-    if (prop === 'now') return () => RealDate.now() + offset;
+    if (prop === 'now') return now;
     return Reflect.get(target, prop, receiver);
+  },
+  getOwnPropertyDescriptor(target, prop) {
+    const d = Reflect.getOwnPropertyDescriptor(target, prop);
+    return prop === 'now' && d ? { ...d, value: now } : d;
   },
 });

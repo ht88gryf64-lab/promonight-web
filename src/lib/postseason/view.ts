@@ -165,6 +165,9 @@ export interface HomeGameView {
    *  playoff games lists show only these (WEB4 addendum, 2026-10-02); the
    *  venue and team modules keep every scheduled game. */
   timed: boolean;
+  /** The start instant of a timed game; null otherwise. A game past it is
+   *  no longer upcoming, whatever the feed still says. */
+  startsAt: string | null;
   hostTeamId: string;
   hostName: string;
   park: string | null;
@@ -570,6 +573,7 @@ export function buildLeagueView(
         sortKey: g.sortKey,
         ifNecessary: g.ifNecessary,
         timed: !!stored && !stored.startTimeTBD && stored.start !== null,
+        startsAt: stored && !stored.startTimeTBD ? stored.start : null,
         hostTeamId: g.hostTeamId,
         hostName: g.hostName,
         promo: g.promo,
@@ -638,6 +642,8 @@ export function homeGamesWindow(views: readonly LeagueView[], now: Date): HomeGa
     // Only a game with a known date and time is an upcoming playoff game.
     if (!g.timed) continue;
     if (g.day < today || g.day > weekEnd) continue;
+    // Started, though the feed still lists it as scheduled: not upcoming.
+    if (g.startsAt && Date.parse(g.startsAt) < now.getTime()) continue;
     if (seen.has(g.key)) continue;
     seen.add(g.key);
     week.push(g);
