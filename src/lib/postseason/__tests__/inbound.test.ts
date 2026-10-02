@@ -311,6 +311,17 @@ test('VENUE, alive: the home games still to be played by the club that plays the
   });
 });
 
+test('VENUE: an untimed game dated before today stays off the park page, as before, though the playoffs lists keep it', () => {
+  const later = new Date('2026-10-05T16:00:00Z');
+  const leagues = inbound([FIXTURE.wnbaLive], later);
+  const past = leagues[0].view.homeGames.filter((g) => g.pastDate);
+  assert.equal(past.length, 2);
+  for (const g of past) {
+    const v = venueGames(leagues, [g.hostTeamId]);
+    assert.ok(!(v?.games ?? []).some((x) => x.key === g.key), g.key);
+  }
+});
+
 test('VENUE, alive but visiting: a club with no home game left in the document has nothing here', () => {
   // The White Sox are the 6 seed: all three Wild Card games are in Houston.
   assert.equal(venueGames(inbound([FIXTURE.mlbFields], FIELDS_AT), ['chicago-white-sox']), null);

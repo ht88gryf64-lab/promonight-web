@@ -85,10 +85,15 @@ function valuesIn<T>(window: Date[], docs: RawDoc[], f: (at: Date) => T): T[] {
     const t = isInstant(g.start) ? Date.parse(g.start) : NaN;
     if (t > lo && t <= hi) { at.add(t - 1); at.add(t); }
   }
-  // Eastern midnights inside the window: "today" moves there.
-  for (let t = lo; t <= hi; t += 3_600_000) {
-    const m = Date.parse(`${etYmd(new Date(t))}T00:00:00${etOffset(new Date(t))}`);
+  // Eastern midnights inside the window: "today" moves there. Each day from
+  // the window's first to its last, and the one after, is tried.
+  for (let day = etYmd(new Date(lo)), guard = 0; guard < 400; guard++) {
+    const noonUtc = Date.parse(`${day}T12:00:00Z`);
+    const next = new Date(noonUtc + 86_400_000).toISOString().slice(0, 10);
+    const m = Date.parse(`${next}T00:00:00${etOffset(new Date(noonUtc + 86_400_000))}`);
     if (m > lo && m <= hi) { at.add(m - 1); at.add(m); }
+    if (m > hi) break;
+    day = next;
   }
   const out: T[] = [];
   for (const t of [...at].sort((a, b) => a - b)) { const v = f(new Date(t)); if (!out.some((o) => JSON.stringify(o) === JSON.stringify(v))) out.push(v); }
@@ -213,7 +218,7 @@ function etStamp(d: Date): string {
   return `${p.month} ${p.day}, ${etTime(d)}`;
 }
 function whenOf(g: RawGame): string {
-  if (!g.startTimeTBD && g.start) return `${etDay(new Date(g.start))} · ${etTime(new Date(g.start))}`;
+  if (!g.startTimeTBD && isInstant(g.start)) return `${etDay(new Date(g.start))} · ${etTime(new Date(g.start))}`;
   if (g.date) return `${etDay(new Date(`${g.date}T12:00:00Z`), 'UTC')} · Time TBD`;
   return 'Date TBD';
 }
@@ -346,6 +351,30 @@ async function main() {
   check('every club in the documents has a team record', [...wanted].every((w) => clubs.has(w)), `${clubs.size} of ${wanted.size}`);
 
   /** What a slot is called on the page. */
+  /** The side that hosts a game, as the page's mapper confirms it: the row's
+   *  own `home` must name the slot (its stored slug or label, or the club it
+   *  resolved to); otherwise the game has no host (map.ts rowNames). */
+  function hostSide(doc: RawDoc, s: RawSeries, g: RawGame): 'higher' | 'lower' | null {
+    if (!g.homeSide) return null;
+    const slot = s[g.homeSide];
+    if (!g.home) return null;
+    return g.home === (slot.slug ?? slot.placeholder) || g.home === slotName(doc, slot).slug ? g.homeSide : null;
+  }
+  /** A stored label that is nothing but feed abbreviations ("NYY/BOS"), read
+   *  among the clubs this document names, by the web's own team records
+   *  (ruling of 2026-10-02); a code no club carries, or two carry, makes the
+   *  whole slot "TBD". */
+  function abbreviated(doc: RawDoc, label: string): string | null {
+    if (label === 'TBD' || !/^[A-Z]{2,4}(?:\/[A-Z]{2,4})*$/.test(label)) return null;
+    const here = new Set<string>();
+    for (const s of doc.series) for (const x of [s.higher, s.lower]) { if (x.slug) here.add(x.slug); for (const c of x.candidates ?? []) here.add(c); }
+    const names = label.split('/').map((code) => {
+      const hit = [...here].filter((id) => clubs.get(id)?.abbr === code);
+      return hit.length === 1 ? (clubs.get(hit[0]) as Club).name : null;
+    });
+    if (names.some((n) => n === null)) return 'TBD';
+    return names.length === 1 ? (names[0] as string) : `${names.join(' / ')} winner`;
+  }
   function slotName(doc: RawDoc, slot: RawSlot): { name: string; club: Club | null; slug: string | null } {
     if (slot.slug) {
       const c = clubs.get(slot.slug) ?? null;
@@ -369,7 +398,7 @@ async function main() {
     }
     const label = slot.placeholder ?? '';
     if (!label || keyIn(label)) return { name: 'To be decided', club: null, slug: null };
-    return { name: label, club: null, slug: null };
+    return { name: abbreviated(doc, label) ?? label, club: null, slug: null };
   }
 
   const ids = (doc: RawDoc) => {
@@ -412,8 +441,9 @@ async function main() {
 
   /** The text of one game row in a series panel, whole. */
   function gameRow(doc: RawDoc, s: RawSeries, g: RawGame): string {
-    const home = g.homeSide ? slotName(doc, s[g.homeSide]) : null;
-    const away = g.homeSide ? slotName(doc, s[g.homeSide === 'higher' ? 'lower' : 'higher']) : null;
+    const hs = hostSide(doc, s, g);
+    const home = hs ? slotName(doc, s[hs]) : null;
+    const away = hs ? slotName(doc, s[hs === 'higher' ? 'lower' : 'higher']) : null;
     const out = [`G${g.gameNumber}`, whenOf(g)];
     if (home && home.club) out.push(home.club.park ? `Host: ${home.name} · ${home.club.park}` : `Host: ${home.name}`);
     if (g.status === 'final' && home && away && g.homeScore !== null && g.awayScore !== null) {
@@ -630,21 +660,22 @@ async function main() {
       doc.series.forEach((s, i) => {
         if (s.status === 'final') return;
         for (const g of s.games) {
-          if (g.status !== 'scheduled' || !g.homeSide || !slotName(doc, s[g.homeSide]).club) continue;
-          // The mapper keeps a host only when the row's own `home` names the
-          // slot: its stored slug or label, or the club it resolved to.
-          const slot = s[g.homeSide];
-          if (!g.home || (g.home !== (slot.slug ?? slot.placeholder) && g.home !== slotName(doc, slot).slug)) continue;
+          const hs = hostSide(doc, s, g);
+          if (g.status !== 'scheduled' || !hs || !slotName(doc, s[hs]).club) continue;
           const timed = !g.startTimeTBD && isInstant(g.start);
           const day = timed ? etYmd(new Date(g.start as string)) : g.date;
-          if (!day || day < today || day > plus(6)) continue;
+          // A "Time TBD" game stays whatever its date until the bracket shows
+          // it played or its series over (ruling of 2026-10-02).
+          if (!day || (day < today && timed) || day > plus(6)) continue;
           if (timed && Date.parse(g.start as string) < at.getTime()) continue;
           rows.push({ key: `${league}-${pid[i]}-g${g.gameNumber}`, day, sort: timed ? `${day}T${clock(new Date(g.start as string))}` : `${day}T99` });
         }
       });
     }
     rows.sort((a, b) => (a.sort !== b.sort ? (a.sort < b.sort ? -1 : 1) : a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
-    const primary = rows.filter((r) => r.day <= plus(2)).slice(0, 8).map((r) => r.key);
+    // Nothing in three days: the soonest of the week are the short list.
+    const soon = rows.filter((r) => r.day <= plus(2));
+    const primary = (soon.length ? soon : rows).slice(0, 8).map((r) => r.key);
     return { primary, rest: rows.map((r) => r.key).filter((k) => !primary.includes(k)) };
   }
   /** The served lists and button, as keys and text. */
@@ -660,6 +691,31 @@ async function main() {
     check(`${where}: the games lists are every dated upcoming game in the document, in order, eight at most in three days, the rest of the week behind the button`, ok, ok ? `${got.primary.length} + ${got.rest.length}` : `served ${got.primary.join(',')} | ${got.rest.join(',')}; expected ${wants[0].primary.join(',')} | ${wants[0].rest.join(',')}`);
     const n = got.rest.length;
     check(`${where}: the button reads "Show N more games" for the rows behind it, and is absent with none`, n === 0 ? got.button === null : got.button === `Show ${n} more ${n === 1 ? 'game' : 'games'}`, got.button ?? 'no button');
+    const section = element(el, 'data-home-games=') ?? '';
+    const emptyShown = /No playoff game with a confirmed date and host is listed/.test(textOf(section));
+    // With no league being played the hub renders no games section at all.
+    const total = got.primary.length + got.rest.length;
+    check(`${where}: the empty state shows only with no upcoming game at all, and never with the button`, (section ? emptyShown === (total === 0) : total === 0) && !(emptyShown && got.button !== null), section ? (emptyShown ? 'empty state' : `${total} games`) : 'no games section');
+  }
+  /** No bare feed abbreviation where a team is named (ruling of 2026-10-02):
+   *  slot texts, game matchups, the standing line; and no "NYY/BOS"-shaped
+   *  text anywhere in the article. Score lines ("NYY 5, BOS 3") are not team
+   *  names and keep the web's own abbreviations. */
+  function noFeedCodes(where: string, el: string) {
+    const CODE = /^[A-Z]{2,4}(?:\/[A-Z]{2,4})*$/;
+    const bare: string[] = [];
+    // Promotion titles are a club's own words ("ALDS/ALCS Rally Towel"), not
+    // team names: taken out before the article-wide scan.
+    const pair = /\b[A-Z]{2,4}\/[A-Z]{2,4}\b/.exec(textOf(el.replace(/<p data-game-promo=[^>]*>[\s\S]*?<\/p>/g, '')));
+    if (pair) bare.push(`"${pair[0]}" in the article`);
+    for (const m of el.matchAll(/<span data-slot="placeholder"[^>]*>[\s\S]*?<span class="min-w-0">([^<]*)<\/span>/g)) if (m[1] !== 'TBD' && CODE.test(m[1].trim())) bare.push(`slot "${m[1]}"`);
+    for (const r of elements(el, 'data-home-game=')) {
+      const matchup = /<span[^>]*>([^<]*)<\/span>/.exec(r)?.[1] ?? '';
+      for (const part of matchup.split(/ (?:at|vs) /)) if (part !== 'TBD' && CODE.test(part.trim())) bare.push(`matchup "${matchup}"`);
+    }
+    const st = textOf(element(el, 'data-standing') ?? '');
+    if (/\b(?:the|await|awaits) [A-Z]{2,4}\b(?! \d)/.test(st)) bare.push(`standing "${st.slice(0, 60)}"`);
+    check(`${where}: no bare feed abbreviation where a team is named`, bare.length === 0, bare.slice(0, 3).join('; ') || 'none');
   }
 
   /** "Where things stand" from the raw document, independently of the page's
@@ -723,8 +779,9 @@ async function main() {
     };
     const singular = new Set(['Liberty', 'Dream', 'Fever', 'Lynx', 'Mercury', 'Sky', 'Storm', 'Sun', 'Tempo', 'Fire']);
     const gameText = (s: RawSeries, g: RawGame) => {
-      const home = g.homeSide ? slotName(doc, s[g.homeSide]).name : null;
-      const away = g.homeSide ? slotName(doc, s[g.homeSide === 'higher' ? 'lower' : 'higher']).name : null;
+      const hs = hostSide(doc, s, g);
+      const home = hs ? slotName(doc, s[hs]).name : null;
+      const away = hs ? slotName(doc, s[hs === 'higher' ? 'lower' : 'higher']).name : null;
       const matchup = home && away ? `${away} at ${home}` : `${slotName(doc, s.lower).name} vs ${slotName(doc, s.higher).name}`;
       const t = new Date(g.start as string);
       return `Game ${g.gameNumber}, ${matchup}, ${etDay(t)}, ${etTime(t)}`;
@@ -830,7 +887,7 @@ async function main() {
     if (!method) return;
     const mt = textOf(method);
     const frozen = new Date(p.provenance.frozenAt as string);
-    const first = doc.series.flatMap((s) => s.games).every((g) => (g.start ? new Date(g.start).getTime() > frozen.getTime() : g.date ? g.date > etYmd(frozen) : true)) && doc.series.some((s) => s.games.some((g) => g.start || g.date));
+    const first = doc.series.flatMap((s) => s.games).every((g) => (isInstant(g.start) ? new Date(g.start).getTime() > frozen.getTime() : g.date ? g.date > etYmd(frozen) : true)) && doc.series.some((s) => s.games.some((g) => isInstant(g.start) || g.date));
     check(`${where}: methodology says when the inputs were locked`, mt.includes(`The inputs were locked on ${longEt(frozen)}${first ? ', before Game 1' : ''}.`), longEt(frozen));
     const computedOn = longEt(new Date(p.computedAt));
     const lockedOn = longEt(instantOf(p.lockedAt as unknown) as Date);
@@ -983,7 +1040,8 @@ async function main() {
         // The promotion line, when there is one, is checked on its own below.
         const promoEl = element(row, 'data-game-promo=');
         const gotRow = textOf(promoEl ? row.replace(promoEl, '') : row);
-        const home = g.homeSide ? slotName(doc, s[g.homeSide]) : null;
+        const hsr = hostSide(doc, s, g);
+        const home = hsr ? slotName(doc, s[hsr]) : null;
         const parkOk = home && home.club && home.club.park && home.club.venuePath ? row.includes(`href="${home.club.venuePath}"`) || !row.includes('<a ') : !row.includes('<a ');
         if (gotRow === wantRow && parkOk) rowsRight += 1;
         else wrong.push(`row ${id} game ${g.gameNumber}: served "${gotRow}" expected "${wantRow}"${parkOk ? '' : ' (park link)'}`);
@@ -1015,9 +1073,10 @@ async function main() {
         // On the series' own card, not somewhere in the section.
         if (!cardText.includes(`${a.name} vs ${b.name}`) || (line && !cardText.includes(line))) missing.push(`${pageIds[i]} names or score`);
         for (const g of s.games) {
-          if (g.status !== 'final' || g.homeScore === null || g.awayScore === null || !g.homeSide) continue;
-          const home = slotName(doc, s[g.homeSide]);
-          const away = slotName(doc, s[g.homeSide === 'higher' ? 'lower' : 'higher']);
+          const hs = hostSide(doc, s, g);
+          if (g.status !== 'final' || g.homeScore === null || g.awayScore === null || !hs) continue;
+          const home = slotName(doc, s[hs]);
+          const away = slotName(doc, s[hs === 'higher' ? 'lower' : 'higher']);
           const h = home.club?.abbr ?? home.name;
           const aw = away.club?.abbr ?? away.name;
           const score = g.homeScore >= g.awayScore ? `${h} ${g.homeScore}, ${aw} ${g.awayScore}` : `${aw} ${g.awayScore}, ${h} ${g.homeScore}`;
@@ -1044,9 +1103,10 @@ async function main() {
     for (const s of doc.series) {
       if (s.status === 'final') continue;
       for (const g of s.games) {
-        if (g.status !== 'scheduled' || !g.homeSide) continue;
-        const home = slotName(doc, s[g.homeSide]);
-        const away = slotName(doc, s[g.homeSide === 'higher' ? 'lower' : 'higher']);
+        const hs = hostSide(doc, s, g);
+        if (g.status !== 'scheduled' || !hs) continue;
+        const home = slotName(doc, s[hs]);
+        const away = slotName(doc, s[hs === 'higher' ? 'lower' : 'higher']);
         if (!home.club) continue;
         known.add([`${away.name} at ${home.name}`, `${s.roundLabel} · Game ${g.gameNumber}${conditional(s, g) ? ' · If necessary' : ''}`, whenOf(g), home.club.park ?? ''].join(' ').trim());
       }
@@ -1069,6 +1129,7 @@ async function main() {
     check(`${where}: every listed game has a known date (an untimed one reads "Time TBD")`, list.every((r) => !/Date TBD/.test(textOf(r))), `${list.length} rows, ${list.filter((r) => /Time TBD/.test(textOf(r))).length} Time TBD`);
     const window = renderWindow(got.headers, got.fetchedAt, instantOf(doc.lastChangedAt));
     if (open) gamesMatch(where, el, [[league, doc]], window);
+    noFeedCodes(where, el);
     const homeWord = /\bhome games?\b/i.exec(textOf(el) + ' ' + (/<meta name="description" content="([^"]*)"/.exec(got.html)?.[1] ?? ''));
     check(`${where}: nothing in the article or the description says "home games"`, !homeWord, homeWord ? homeWord[0] : '');
     // TBD slots: dashed, on the light fill, in the quietest readable ink.
@@ -1097,7 +1158,7 @@ async function main() {
     // host club, not tombstoned, for this league and season, and no row's
     // keys are on the page. Read here by the same equality the page uses.
     const hosts = new Set<string>();
-    for (const s of doc.series) for (const g of s.games) if (g.homeSide) { const h = slotName(doc, s[g.homeSide]); if (h.slug) hosts.add(h.slug); }
+    for (const s of doc.series) for (const g of s.games) { const hs = hostSide(doc, s, g); if (hs) { const h = slotName(doc, s[hs]); if (h.slug) hosts.add(h.slug); } }
     const stored = new Map<string, { title: string; key: string }>();
     const internal: string[] = [];
     for (const h of hosts) {
@@ -1210,6 +1271,7 @@ async function main() {
       const builtAt = builtStamps.length ? new Date(Math.max(...builtStamps.map((d) => d.getTime()))) : null;
       // Always: with no league being played the lists are empty and there is no button.
       gamesMatch(where, el, activeDocs, renderWindow(got.headers, got.fetchedAt, builtAt));
+      noFeedCodes(where, el);
       const hubHome = /\bhome games?\b/i.exec(textOf(el) + ' ' + (/<meta name="description" content="([^"]*)"/.exec(got.html)?.[1] ?? ''));
       check(`${where}: nothing in the article or the description says "home games"`, !hubHome, hubHome ? hubHome[0] : '');
       // Results so far: each league's decided series, one line each, with

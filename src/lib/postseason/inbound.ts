@@ -272,7 +272,7 @@ export function venueGames(leagues: readonly InboundLeague[], tenantTeamIds: rea
   const updated: VenueGames['updated'] = [];
   for (const l of leagues) {
     if (l.view.phase.kind !== 'active') continue;
-    const here = l.view.homeGames.filter((g: HomeGameView) => tenants.has(g.hostTeamId));
+    const here = l.view.homeGames.filter((g: HomeGameView) => tenants.has(g.hostTeamId) && !g.pastDate);
     if (here.length === 0) continue;
     if (l.view.updatedLabel) updated.push({ league: l.league, updatedLabel: l.view.updatedLabel });
     for (const g of here) {

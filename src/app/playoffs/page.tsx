@@ -55,8 +55,9 @@ export default async function PlayoffsHubPage() {
   }
 
   const active = leagues.flatMap((l) => (l.state === 'ok' && l.view.phase.kind === 'active' ? [l.view] : []));
-  // The next three days, at most eight rows, across every league. The rest
-  // of the week is in the HTML behind "Show all".
+  // The next three days (or, with none, the soonest of the week), at most
+  // eight rows, across every league. The rest of the week is in the HTML
+  // behind "Show N more games".
   const nextGames = homeGamesWindow(active, new Date());
   const listed = [...nextGames.primary, ...nextGames.rest];
 

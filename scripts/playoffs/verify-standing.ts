@@ -28,7 +28,7 @@ const SEASON = 2026;
 const ET = 'America/New_York';
 
 type Doc = Record<string, any>;
-type Team = { name: string; full: string };
+type Team = { name: string; full: string; abbr: string | null };
 
 const fmt = (d: Date, o: Intl.DateTimeFormatOptions) => Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: ET, ...o }).formatToParts(d).map((p) => [p.type, p.value]));
 const ymd = (d: Date) => { const p = fmt(d, { year: 'numeric', month: '2-digit', day: '2-digit' }); return `${p.year}-${p.month}-${p.day}`; };
@@ -63,7 +63,20 @@ function expectedLine(doc: Doc, teams: Map<string, Team>, now: Date): string | n
       return { team: null, text: `${teams.get(x.candidates[0])!.name} / ${teams.get(x.candidates[1])!.name} winner` };
     }
     const label = String(x.placeholder ?? '');
-    return { team: null, text: !label || SERIES_KEY.some((re) => re.test(label)) ? 'To be decided' : label };
+    if (!label || SERIES_KEY.some((re) => re.test(label))) return { team: null, text: 'To be decided' };
+    // Feed abbreviations ("NYY/BOS"), read among the clubs this document
+    // names by their team records; one no club (or two) carries: "TBD".
+    if (label !== 'TBD' && /^[A-Z]{2,4}(?:\/[A-Z]{2,4})*$/.test(label)) {
+      const here = new Set<string>();
+      for (const s of series) for (const y of [s.higher, s.lower]) { if (y.slug) here.add(y.slug); for (const c of y.candidates ?? []) here.add(c); }
+      const names = label.split('/').map((code) => {
+        const hit = [...here].filter((id) => teams.get(id)?.abbr === code);
+        return hit.length === 1 ? teams.get(hit[0])!.name : null;
+      });
+      if (names.some((n) => n === null)) return { team: null, text: 'TBD' };
+      return { team: null, text: names.length === 1 ? (names[0] as string) : `${names.join(' / ')} winner` };
+    }
+    return { team: null, text: label };
   };
   const rounds: string[] = [];
   for (const s of series) if (!rounds.includes(s.round)) rounds.push(s.round);
@@ -122,10 +135,19 @@ function expectedLine(doc: Doc, teams: Map<string, Team>, now: Date): string | n
       !a.s.games.some((g: Doc) => g.gameNumber < a.g.gameNumber && UNPLAYED.includes(g.status));
     if (ok) next = { s: a.s, g: a.g };
   }
+  // The host as the page's mapper confirms it: the row's own `home` must
+  // name the slot (stored slug or label, or the club it resolved to).
+  const host = (s: Doc, g: Doc): 'higher' | 'lower' | null => {
+    if (g.homeSide !== 'higher' && g.homeSide !== 'lower') return null;
+    const x = s[g.homeSide];
+    const resolved = slot(x).team ? [...teams].find(([, t]) => t === slot(x).team)?.[0] : null;
+    return g.home && (g.home === (x.slug ?? x.placeholder) || g.home === resolved) ? g.homeSide : null;
+  };
   const gameText = ({ s, g }: { s: Doc; g: Doc }) => {
     const hi = slot(s.higher).text;
     const lo = slot(s.lower).text;
-    const matchup = g.homeSide === 'higher' ? `${lo} at ${hi}` : g.homeSide === 'lower' ? `${hi} at ${lo}` : `${lo} vs ${hi}`;
+    const hs = host(s, g);
+    const matchup = hs === 'higher' ? `${lo} at ${hi}` : hs === 'lower' ? `${hi} at ${lo}` : `${lo} vs ${hi}`;
     return `Game ${g.gameNumber}, ${matchup}, ${shortWhen(new Date(g.start))}`;
   };
 
@@ -182,7 +204,7 @@ function textOfElement(html: string, marker: string): string | null {
 }
 
 async function main() {
-  const teams = new Map<string, Team>((await getAllTeams()).map((t) => [t.id, { name: t.name, full: `${t.city} ${t.name}` }]));
+  const teams = new Map<string, Team>((await getAllTeams()).map((t) => [t.id, { name: t.name, full: `${t.city} ${t.name}`, abbr: (t as { abbreviation?: string }).abbreviation ?? null }]));
   let failed = 0;
   for (const league of ['MLB', 'WNBA'] as const) {
     const path = `/playoffs/${league.toLowerCase()}`;
@@ -198,7 +220,12 @@ async function main() {
       // before that stamp; the CDN's age (with two minutes' slack) narrows it.
       const ageHeader = res.headers.get('age');
       const age = Number(ageHeader);
-      const builtFloor = asDate(bracket.lastChangedAt)?.getTime() ?? -Infinity;
+      // The version the page carries (its JSON-LD dateModified), else the
+      // document's; an unparseable stamp gives no floor rather than NaN.
+      const stampServed = /"dateModified":"([^"]+)"/.exec(html)?.[1] ?? null;
+      const servedMs = stampServed ? Date.parse(stampServed) : NaN;
+      const docMs = asDate(bracket.lastChangedAt)?.getTime() ?? NaN;
+      const builtFloor = Number.isFinite(servedMs) ? servedMs : Number.isFinite(docMs) ? docMs : -Infinity;
       const fromAge = ageHeader !== null && Number.isFinite(age) ? now.getTime() - age * 1000 - 120_000 : -Infinity;
       const from = Math.min(now.getTime(), Number.isFinite(Math.max(builtFloor, fromAge)) ? Math.max(builtFloor, fromAge) : now.getTime());
       console.log(`      ${path}: age ${ageHeader ?? 'none'}, x-vercel-cache ${res.headers.get('x-vercel-cache') ?? 'none'}`);

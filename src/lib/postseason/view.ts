@@ -168,6 +168,12 @@ export interface HomeGameView {
   /** The start instant of a timed game; null otherwise. A game past it is
    *  no longer upcoming, whatever the feed still says. */
   startsAt: string | null;
+  /** An untimed game dated before today that the bracket still lists as
+   *  scheduled in a series not yet decided. The playoffs lists keep it
+   *  (Matt's ruling, 2026-10-02: a "Time TBD" game leaves only when the
+   *  bracket shows it played or its series over, never by the clock); the
+   *  venue pages leave it out, as before. */
+  pastDate: boolean;
   hostTeamId: string;
   hostName: string;
   park: string | null;
@@ -250,6 +256,7 @@ function slotView(
   which: Side,
   series: BracketSeries,
   clubs: ReadonlyMap<string, ClubInfo>,
+  league: PostseasonLeague,
 ): SlotView | null {
   const wins = series.wins[which];
   const other = series.wins[which === 'higher' ? 'lower' : 'higher'];
@@ -272,7 +279,7 @@ function slotView(
       won: series.winnerSide === which,
     };
   }
-  const label = placeholderText(slot, clubs);
+  const label = placeholderText(slot, clubs, league);
   return {
     kind: 'placeholder',
     seed: slot.seed,
@@ -293,23 +300,41 @@ function slotView(
  *
  * When the slot carries two candidate clubs (the mapper sets them only when
  * the stored slot also names its feeder series), the text is composed from
- * the web's own team names: "Yankees / Red Sox winner". Otherwise it is the
- * stored label, verbatim. The feeder series key is never text. The stored
- * label is never parsed: "NYY/BOS" is two abbreviations from the feed's
- * table, and the web's team records already disagree with that table on two
- * clubs.
+ * the web's own team names: "Yankees / Red Sox winner". An older document
+ * without candidates names the slot by the feed's abbreviations ("NYY/BOS");
+ * each is read through the web's own team records (the abbreviation of a
+ * club in this bracket) into the same text, and a code no record carries
+ * makes the whole slot "TBD", never the raw code (Matt's ruling, 2026-10-02;
+ * the feed and the web disagree on two MLB clubs, ATH/OAK and AZ/ARI, which
+ * therefore read "TBD"). Any other label is shown verbatim. The feeder series
+ * key is never text.
  */
 export function placeholderText(
   slot: Extract<BracketSlot, { kind: 'placeholder' }>,
   clubs: ReadonlyMap<string, ClubInfo>,
+  /** The bracket's league: a code is read among that league's clubs only
+   *  ("ATL" is the Braves in MLB and the Dream in the WNBA). */
+  league?: PostseasonLeague,
 ): string {
   if (slot.candidates) {
     const a = clubs.get(slot.candidates[0]);
     const b = clubs.get(slot.candidates[1]);
     if (a && b) return `${a.name} / ${b.name} winner`;
   }
+  if (slot.label !== 'TBD' && FEED_ABBREVIATIONS.test(slot.label)) {
+    const all = [...clubs.values()].filter((c) => !league || c.sportSlug === league.toLowerCase());
+    const names = slot.label.split('/').map((code) => {
+      const hit = all.filter((c) => c.abbreviation === code);
+      return hit.length === 1 ? hit[0].name : null;
+    });
+    if (names.some((n) => n === null)) return 'TBD';
+    return names.length === 1 ? (names[0] as string) : `${names.join(' / ')} winner`;
+  }
   return slot.label;
 }
+
+/** A label that is nothing but feed abbreviations: "NYY/BOS", "SD". */
+export const FEED_ABBREVIATIONS = /^[A-Z]{2,4}(?:\/[A-Z]{2,4})*$/;
 
 // ---- Games ----
 const STATE_LABEL: Record<GameStatus, string> = {
@@ -417,12 +442,13 @@ function homePattern(s: BracketSeries): string | null {
 function seriesView(
   s: BracketSeries,
   id: string,
+  league: PostseasonLeague,
   clubs: ReadonlyMap<string, ClubInfo>,
   parks: ReadonlyMap<string, ParkInfo>,
   promos: ReadonlyMap<string, GamePromo>,
 ): SeriesView | null {
-  const higher = slotView(s.higher, 'higher', s, clubs);
-  const lower = slotView(s.lower, 'lower', s, clubs);
+  const higher = slotView(s.higher, 'higher', s, clubs, league);
+  const lower = slotView(s.lower, 'lower', s, clubs, league);
   if (!higher || !lower) return null;
   const games = s.games.map((g) => gameView(g, s, higher, lower, parks, promos));
 
@@ -510,7 +536,7 @@ export function buildLeagueView(
   const flat: SeriesView[] = [];
   const ids = seriesIds(bracket);
   for (const s of bracket.series) {
-    const v = seriesView(s, ids.get(s.seriesKey) as string, clubs, parks, promos);
+    const v = seriesView(s, ids.get(s.seriesKey) as string, bracket.league, clubs, parks, promos);
     if (!v) return null;
     flat.push(v);
     let round = byKey.get(s.round);
@@ -558,9 +584,11 @@ export function buildLeagueView(
     for (const g of s.games) {
       if (g.state !== 'scheduled' || !g.hostTeamId || !g.hostName || !g.day) continue;
       const stored = raw.find((r) => r.gameNumber === g.gameNumber);
-      // A scheduled game dated before today is a row the feed has not caught
-      // up on. It is not an upcoming game and is not offered as one.
-      if (g.day < today) continue;
+      const timed = !!stored && !stored.startTimeTBD && stored.start !== null;
+      // A timed game dated before today is a row the feed has not caught up
+      // on: not upcoming. An untimed one stays until the bracket says it was
+      // played (it is then no longer 'scheduled') or its series is over.
+      if (g.day < today && timed) continue;
       homeGames.push({
         key: `${bracket.league}-${s.id}-g${g.gameNumber}`,
         league: bracket.league,
@@ -572,8 +600,9 @@ export function buildLeagueView(
         day: g.day,
         sortKey: g.sortKey,
         ifNecessary: g.ifNecessary,
-        timed: !!stored && !stored.startTimeTBD && stored.start !== null,
+        timed,
         startsAt: stored && !stored.startTimeTBD ? stored.start : null,
+        pastDate: !timed && g.day < today,
         hostTeamId: g.hostTeamId,
         hostName: g.hostName,
         promo: g.promo,
@@ -628,9 +657,11 @@ const bySoonest = (a: HomeGameView, b: HomeGameView) =>
  * them.
  *
  * `primary` is the short list: games on the next three Eastern calendar
- * days, today included, and no more than eight of them. `rest` is every
- * other game in the next seven days, which "Show all" reveals. One row per
- * game: a game that arrives twice is listed once.
+ * days, today included, and no more than eight of them; with none in those
+ * days, the soonest eight of the week. `rest` is every other game in the
+ * next seven days, which "Show N more games" reveals. A "Time TBD" game
+ * dated earlier stays until the bracket shows it played or its series over.
+ * One row per game: a game that arrives twice is listed once.
  */
 export function homeGamesWindow(views: readonly LeagueView[], now: Date): HomeGamesWindow {
   const today = easternYmd(now);
@@ -640,8 +671,10 @@ export function homeGamesWindow(views: readonly LeagueView[], now: Date): HomeGa
   const week: HomeGameView[] = [];
   for (const g of views.flatMap((v) => v.homeGames)) {
     // Every game with a known date is listed; an untimed one reads "Time
-    // TBD". A game with no date never reaches the list (buildLeagueView).
-    if (g.day < today || g.day > weekEnd) continue;
+    // TBD" and stays, whatever its date, until the bracket shows it played or
+    // its series over (buildLeagueView). A game with no date never reaches
+    // the list.
+    if ((g.day < today && g.timed) || g.day > weekEnd) continue;
     // Started, though the feed still lists it as scheduled: not upcoming.
     if (g.startsAt && Date.parse(g.startsAt) < now.getTime()) continue;
     if (seen.has(g.key)) continue;
@@ -649,7 +682,11 @@ export function homeGamesWindow(views: readonly LeagueView[], now: Date): HomeGa
     week.push(g);
   }
   week.sort(bySoonest);
-  const primary = week.filter((g) => g.day <= shortEnd).slice(0, HOME_GAMES_ROWS);
+  // Nothing in three days: the short list is the soonest of the week, so the
+  // empty state shows only when there is no game at all and never sits over
+  // a "Show N more games" button.
+  const soon = week.filter((g) => g.day <= shortEnd);
+  const primary = (soon.length ? soon : week).slice(0, HOME_GAMES_ROWS);
   const shown = new Set(primary.map((g) => g.key));
   return { primary, rest: week.filter((g) => !shown.has(g.key)) };
 }

@@ -272,7 +272,7 @@ test('FEEDER KEY: through the real pages, the label renders and "AL-WC-B" is now
     Object.assign((mlb.series.find((x) => x.seriesKey === 'AL-DS-A') as Raw).lower, extra);
     current.db = fakeFirestore(docs);
     const page = renderToStaticMarkup(await League(params('mlb')));
-    const text = extra.candidates ? 'Yankees / Red Sox winner' : 'NYY/BOS';
+    const text = 'Yankees / Red Sox winner';
     assert.ok(page.includes(`<span class="min-w-0">${text}</span>`), JSON.stringify(extra));
     assert.equal(count(page, 'AL-WC-B'), 0, `league page, ${JSON.stringify(extra)}`);
     assert.equal(count(renderToStaticMarkup(await League(params('wnba'))), 'AL-WC-B'), 0);
