@@ -79,6 +79,19 @@ const fakeDb = {
 mock.module('server-only', { namedExports: {} });
 mock.module(new URL('../firebase.ts', import.meta.url).href, { namedExports: { db: fakeDb } });
 
+// The clock is pinned for the whole file. Some readers keep only rows dated
+// today or later (getHighlightedPromos' fallback reads new Date() in UTC), and
+// the fixture rows are dated 2026-10-01 to 2026-10-03, so on the real clock
+// this file started failing at midnight UTC on 2026-10-02. NOW sits before
+// every fixture row in every US zone; only Date is mocked, timers run as usual.
+const NOW = new Date('2026-09-30T12:00:00Z');
+mock.timers.enable({ apis: ['Date'], now: NOW });
+
+test('the clock is pinned: new Date() and Date.now() read NOW, not the real date', () => {
+  assert.equal(new Date().toISOString(), NOW.toISOString());
+  assert.equal(Date.now(), NOW.getTime());
+});
+
 const titles = (rows: { title: string }[]) => rows.map((r) => r.title).sort();
 const REGULAR = ['Marked False', 'Regular Row'];
 

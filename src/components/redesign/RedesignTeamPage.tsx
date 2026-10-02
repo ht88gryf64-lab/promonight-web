@@ -11,6 +11,7 @@ import { Hero } from './Hero';
 import { StatScoreboard } from './StatScoreboard';
 import { SeasonExplorer } from './SeasonExplorer';
 import { ScheduleBlock } from './ScheduleBlock';
+import { regularSeasonContexts } from '@/lib/schedule-months';
 import { DivisionRivals } from './DivisionRivals';
 import { getDivisionRivals } from '@/lib/division-rivals';
 import { teamTitleSubtitle } from '@/lib/title-treatment';
@@ -167,7 +168,13 @@ export function RedesignTeamPage({
     upcomingCounts.food === 0 &&
     upcomingCounts.kids === 0;
   const hasNoPromosAtAll = promos.length === 0;
-  const showSchedule = hasNoUpcoming && (gameContexts?.length ?? 0) > 0;
+  // The regular season, one entry per game (src/lib/schedule-months.ts): the
+  // population the schedule list prints and the Games tile counts. Gating the
+  // schedule on it, not on the raw docs, keeps the season slot from rendering
+  // empty when every doc is postseason or another season (ScheduleBlock would
+  // return null). The identity on NFL.
+  const regularGames = gameContexts ? regularSeasonContexts(gameContexts, today) : undefined;
+  const showSchedule = hasNoUpcoming && (regularGames?.length ?? 0) > 0;
 
   // Same-division rivals, free from gameContexts (opponent Team docs are
   // already fetched by enrichGamesForTeam). Empty on leagues without game
@@ -211,7 +218,7 @@ export function RedesignTeamPage({
   // the wrapper below can hold the same element.
   const seasonBlock =
     showSchedule && gameContexts ? (
-      <ScheduleBlock contexts={gameContexts} team={team} teamName={displayName} />
+      <ScheduleBlock contexts={gameContexts} team={team} teamName={displayName} today={today} />
     ) : (
       <SeasonExplorer
         promos={upcomingPromos}
@@ -280,7 +287,11 @@ export function RedesignTeamPage({
         scoreboard={
           <StatScoreboard
             counts={seasonScope ? seasonScope.counts : upcomingCounts}
-            gamesCount={gameContexts?.length}
+            // Regular-season games, one per game: the population the
+            // schedule list prints, from the same helper, so the tile and the
+            // list cannot disagree. Was the raw doc count, which read 168 on
+            // the Braves (3 Wild Card games, 3 postponed originals).
+            gamesCount={regularGames?.length}
             note={seasonScope ? seasonClaimSentence(seasonScope) : undefined}
           />
         }

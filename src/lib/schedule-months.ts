@@ -1,0 +1,140 @@
+// The two rules behind the team-page schedule's regular-season list and its
+// Games tile. Pure, so both are tested as arithmetic, and shared, so the list
+// and the tile can never count two different populations.
+import type { GameContext } from './data';
+import { TITLE_SEASON_YEAR } from './title-treatment';
+
+/**
+ * The regular season, one entry per game actually on the schedule.
+ *
+ * Three kinds of document reach a team's games and are NOT a regular-season
+ * game. Each was measured on production MLB data on 2026-10-01:
+ *
+ * 1. POSTSEASON GAMES. MLB game docs carry `isPostseason: true` and no
+ *    `seasonType`, so `isRegularSeasonGame` (which reads seasonType only) lets
+ *    them through. The Braves list showed three Wild Card games under "Every
+ *    game of the 2026 regular season". The playoff module covers them.
+ * 2. A POSTPONED GAME'S ORIGINAL DATE. The MLB ingest keys docs on date and
+ *    upserts, so a postponed game leaves its original-date doc behind, still
+ *    reading 'scheduled', beside the makeup doc with the SAME mlbGameId. Most
+ *    clubs carry one to five of these; the Braves carried three.
+ * 3. A CANCELED GAME. Never played and never made up (the Orioles and Yankees
+ *    each carry one, 2026-09-27). It is not a game of the season. A canceled
+ *    doc outranks a stale 'scheduled' twin: cancellation is final, so a
+ *    makeup that is later called off takes its rained-out original with it.
+ *    A POSTPONED doc with no makeup twin is the one state that depends on
+ *    the date. While the season still has a scheduled game ahead it is a
+ *    game awaiting a makeup date, so it stays (row and tile; the expanded row
+ *    says "Postponed"). Once nothing is ahead it was never made up, so it is
+ *    not a game of the season (decided in G1 review round 2, 2026-10-01,
+ *    open to Matt's ruling; none on production today).
+ * 4. ANOTHER SEASON. getGamesForTeam has no season filter, and the MLB cron
+ *    writes the next season's docs from early January while the page still
+ *    says "2026". MLB docs count only when their date falls in
+ *    TITLE_SEASON_YEAR, the constant every hardcoded 2026 is bumped with.
+ *
+ * Rules 2 to 4 apply only to MLB documents (`league === 'mlb'`); the dedupe
+ * additionally needs a numeric `mlbGameId`. No NFL doc sets isPostseason
+ * (ingest-nfl writes seasonType, which getGamesForTeam already filters), so
+ * this is the identity on NFL: same contexts, same order. The NFL golden
+ * test holds it to that.
+ *
+ * Among docs sharing an mlbGameId the one kept is the most settled
+ * (completed, then canceled, then scheduled, then postponed). On production 2026-10-01 all
+ * 28 duplicate pairs are completed-versus-scheduled, so this is exact for the
+ * offseason. KNOWN LIMIT: between a reschedule and the makeup being played,
+ * both docs can read 'scheduled', and nothing stored tells them apart (both
+ * were created in the same ingest batch; neither field set nor timestamps
+ * separate them). The later date is kept, which is right when a game moves
+ * later and wrong when it moves earlier; it resolves itself once the makeup
+ * completes. The real fix is in the ingest (known-issues 62).
+ */
+export function regularSeasonContexts(contexts: readonly GameContext[], today?: string): GameContext[] {
+  const isMlb = (c: GameContext) => c.game.league === 'mlb';
+  const regular = contexts.filter(
+    (c) =>
+      c.game.isPostseason !== true &&
+      (!isMlb(c) || c.game.date.startsWith(`${TITLE_SEASON_YEAR}-`)),
+  );
+  const bestById = new Map<number, GameContext>();
+  for (const c of regular) {
+    const id = c.game.mlbGameId;
+    if (typeof id !== 'number') continue;
+    const held = bestById.get(id);
+    if (!held || outranks(c, held)) bestById.set(id, c);
+  }
+  const kept = regular.filter((c) => {
+    if (!isMlb(c)) return true;
+    const id = c.game.mlbGameId;
+    return typeof id !== 'number' || bestById.get(id) === c;
+  });
+  // Is anything still to be played? Decides the lone postponed doc. No clock
+  // read means no claim that the season is live.
+  const seasonLive =
+    today !== undefined && kept.some((c) => isMlb(c) && c.game.status === 'scheduled' && c.game.date >= today);
+  return kept.filter((c) => {
+    if (!isMlb(c)) return true;
+    if (c.game.status === 'canceled') return false;
+    if (c.game.status === 'postponed') return seasonLive;
+    return true;
+  });
+}
+
+const SETTLED: Record<string, number> = { completed: 4, canceled: 3, scheduled: 2, postponed: 1 };
+
+function outranks(a: GameContext, b: GameContext): boolean {
+  const ra = SETTLED[a.game.status] ?? 0;
+  const rb = SETTLED[b.game.status] ?? 0;
+  if (ra !== rb) return ra > rb;
+  return a.game.date > b.game.date;
+}
+
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+export interface ScheduleMonth<T> {
+  /** YYYY-MM, stable across renders; used as the React key. */
+  key: string;
+  /** "March 2026". */
+  label: string;
+  rows: T[];
+}
+
+/**
+ * Splits date-ordered rows into calendar months.
+ *
+ * THE MONTH IS THE ONE PRINTED ON THE ROW. `date` is the stored game date
+ * (MLB's officialDate, the home venue's local date), which is also what the
+ * row's own date label shows. For every North American start it is also the
+ * Eastern date: the latest regular start, 7:10 PM Pacific, is 10:10 PM
+ * Eastern on the same day. The month is NEVER derived from the UTC start
+ * time, which would put a 7:10 PM Pacific game on March 31 into April under a
+ * row reading "Mar 31".
+ *
+ * Only months that hold a row get a section; a month with no games renders
+ * nothing. Order within a month is the input order (so doubleheader game 1
+ * stays ahead of game 2). Returns null when any date is malformed, and the
+ * caller then renders the flat list rather than guessing a month. The same
+ * when a month recurs after another (input not in date order).
+ */
+export function groupByMonth<T>(rows: readonly T[], dateOf: (row: T) => string): ScheduleMonth<T>[] | null {
+  const out: ScheduleMonth<T>[] = [];
+  for (const row of rows) {
+    const m = /^(\d{4})-(\d{2})-\d{2}$/.exec(dateOf(row));
+    const month = m ? Number(m[2]) : 0;
+    if (!m || month < 1 || month > 12) return null;
+    const key = `${m[1]}-${m[2]}`;
+    const last = out[out.length - 1];
+    if (last && last.key === key) last.rows.push(row);
+    // A month seen before and then left means the input was not in date
+    // order; two sections for one month would be a wrong page, so refuse.
+    else if (out.some((g) => g.key === key)) return null;
+    else out.push({ key, label: `${MONTHS[month - 1]} ${m[1]}`, rows: [row] });
+  }
+  return out;
+}
+
+/** "1 game" / "27 games". */
+export const gamesLabel = (n: number): string => `${n} ${n === 1 ? 'game' : 'games'}`;
