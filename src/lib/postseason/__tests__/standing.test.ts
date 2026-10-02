@@ -88,14 +88,72 @@ test('NEXT GAME: a game the feed still lists as scheduled after its start blocks
   assert.equal(line, 'Next round: Division Series.');
 });
 
-test('NEXT GAME: a timed game of a later round that is not started can be the next game', () => {
+const HEAD_MIXED = 'Division Series: the Blue Jays beat the Yankees 3-1; the Mariners and the Tigers are tied 2-2; the Brewers lead the Cubs 2-1; the Dodgers lead the Phillies 2-0.';
+
+test('NEXT GAME: a later round not started only blocks; its earlier game leaves the clause out, its later games do not', () => {
   const doc = mixed();
-  // Give a Championship Series Game 1 a start before every Division Series game left.
   const cs = (doc.series as Doc[]).find((s) => s.round === 'championship_series')!;
   const g1 = (cs.games as Doc[]).find((g) => g.gameNumber === 1)!;
   Object.assign(g1, { start: '2025-10-08T16:00:00Z', startTimeTBD: false, date: '2025-10-08', status: 'scheduled' });
-  const line = build(doc, MIXED_AT).line as string;
-  assert.ok(line.includes('Next game: Game 1,') && line.includes('Wed, Oct 8, 12:00 PM ET'), line);
+  assert.equal(build(doc, MIXED_AT).line, HEAD_MIXED);
+  // Its undated games say nothing about the order.
+  const d2 = mixed();
+  for (const g of (d2.series as Doc[]).find((s) => s.round === 'championship_series')!.games as Doc[]) Object.assign(g, { start: null, date: null, startTimeTBD: true });
+  assert.ok((build(d2, MIXED_AT).line as string).endsWith('Next game: Game 3, Phillies at Dodgers, Wed, Oct 8, 9:08 PM ET.'));
+});
+
+test('NEXT GAME: an undated unplayed game in a round being played blocks the clause', () => {
+  const doc = mixed();
+  const ds = (doc.series as Doc[]).find((s) => s.seriesKey === 'AL-DS-B')!;
+  Object.assign((ds.games as Doc[]).find((g) => g.gameNumber === 5)!, { start: null, date: null, startTimeTBD: true });
+  assert.equal(build(doc, MIXED_AT).line, HEAD_MIXED);
+});
+
+test('NEXT GAME: a series being played that lists no game to play leaves the clause out', () => {
+  const doc = mixed();
+  const ds = (doc.series as Doc[]).find((s) => s.seriesKey === 'AL-DS-B')!;
+  ds.games = (ds.games as Doc[]).filter((g) => g.status === 'final');
+  assert.equal(build(doc, MIXED_AT).line, HEAD_MIXED);
+});
+
+test('NEXT GAME: a leftover row under a finished series does not block', () => {
+  const doc = mixed();
+  const done = (doc.series as Doc[]).find((s) => s.seriesKey === 'AL-DS-A')!;
+  (done.games as Doc[]).push({ ...(done.games as Doc[])[0], gameNumber: 5, status: 'scheduled', start: '2025-10-08T13:00:00Z', date: '2025-10-08', startTimeTBD: false, homeScore: null, awayScore: null, winner: null });
+  assert.ok((build(doc, MIXED_AT).line as string).endsWith('Next game: Game 3, Phillies at Dodgers, Wed, Oct 8, 9:08 PM ET.'));
+});
+
+test('NEXT GAME: a lower-numbered unplayed game of the same series blocks, whatever its day', () => {
+  const doc = mixed();
+  const g3 = gameOf(doc, 'NL-DS-B', 3);
+  Object.assign(g3, { status: 'postponed', date: '2025-10-10', start: null, startTimeTBD: true });
+  assert.equal(build(doc, MIXED_AT).line, HEAD_MIXED);
+});
+
+test('NEXT GAME: two games starting at the same moment, neither is named', () => {
+  const doc = mixed();
+  Object.assign(gameOf(doc, 'NL-DS-A', 4), { start: gameOf(doc, 'NL-DS-B', 3).start, date: '2025-10-08' });
+  assert.equal(build(doc, MIXED_AT).line, HEAD_MIXED);
+});
+
+test('BETWEEN ROUNDS: only the round about to open can open it; a later round never does', () => {
+  const doc = loadDoc('MLB_2025.replay-step-11.json');
+  for (const s of doc.series as Doc[]) if (s.round === 'division_series') s.games = [];
+  assert.equal(build(doc, new Date('2025-10-02T12:00:00Z')).line, 'Next round: Division Series.');
+});
+
+test('OVERLAPPING ROUNDS: a later round under way is said after the open round', () => {
+  const base = build(mixed(), MIXED_AT);
+  const v = structuredClone(base.v);
+  const ds = v.rounds.find((r) => r.key === 'division_series')!.groups.flatMap((g) => g.series);
+  const cs = v.rounds.find((r) => r.key === 'championship_series')!.groups.flatMap((g) => g.series)[0];
+  // The ALCS with two clubs and a first result, while the Division Series is open.
+  cs.higher = { ...structuredClone(ds[0].higher), wins: 1, leads: true, won: false };
+  cs.lower = { ...structuredClone(ds[1].higher), wins: 0, leads: false, won: false };
+  cs.status = 'live';
+  cs.games[0] = { ...cs.games[0], state: 'final' };
+  const line = standingLine(v, gameStarts(base.b), MIXED_AT) as string;
+  assert.ok(line.startsWith(`${HEAD_MIXED} Championship Series: the ${cs.higher.label} lead the ${cs.lower.label} 1-0`), line);
 });
 
 test('A SERIES WAITING ON AN OPPONENT is said, not skipped', () => {
@@ -108,7 +166,16 @@ test('A SERIES WAITING ON AN OPPONENT is said, not skipped', () => {
   const line = standingLine(view, gameStarts(v.b), LYNX_OUT_AT) as string;
   assert.ok(line.includes(`the ${s.higher.label} await the Yankees / Red Sox winner`), line);
   Object.assign(s.higher, { kind: 'placeholder', label: 'TBD' });
-  assert.ok((standingLine(view, gameStarts(v.b), LYNX_OUT_AT) as string).includes('one matchup is still to be set'));
+  assert.ok((standingLine(view, gameStarts(v.b), LYNX_OUT_AT) as string).includes('one matchup is to be set'));
+  const two = structuredClone(view);
+  Object.assign(two.rounds[0].groups[0].series[1].higher, { kind: 'placeholder', label: 'TBD', wins: 0, won: false });
+  Object.assign(two.rounds[0].groups[0].series[1].lower, { kind: 'placeholder', label: 'TBD', wins: 0, won: false });
+  Object.assign(two.rounds[0].groups[0].series[1], { status: 'upcoming', games: [] });
+  assert.ok((standingLine(two, gameStarts(v.b), LYNX_OUT_AT) as string).includes('2 matchups are to be set'));
+  // A singular nickname waits in the singular.
+  const lone = structuredClone(view);
+  Object.assign(lone.rounds[0].groups[0].series[0].higher, { kind: 'club', label: 'Liberty', wins: 0, won: false });
+  assert.ok((standingLine(lone, gameStarts(v.b), LYNX_OUT_AT) as string).includes('the Liberty awaits the Yankees / Red Sox winner'));
 });
 
 // ---- Between rounds ----
@@ -219,7 +286,7 @@ for (const [label, file, now] of [
 
 // ---- No clock words, in any state ----
 
-const CLOCK_WORDS = /\b(today|tonight|tomorrow|yesterday|live|latest|right now|now|currently|current|so far|this (week|morning|afternoon|evening)|updated|just)\b/i;
+const CLOCK_WORDS = /\b(today|tonight|tomorrow|yesterday|live|latest|right now|now|currently|current|so far|still|this (week|morning|afternoon|evening)|updated|just)\b/i;
 test('NO CLOCK WORDS in any state the fixtures hold, and no dash', () => {
   const lines = [
     build(loadDoc(FIXTURE.mlbLive), CAPTURED_AT).line,

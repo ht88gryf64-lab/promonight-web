@@ -599,18 +599,38 @@ async function main() {
     const started = (s: RawSeries) => s.status !== 'upcoming' || s.wins.higher + s.wins.lower > 0 || s.games.some((g) => g.status === 'final' || g.status === 'live');
     const at = order.indexOf(open);
     const played = order.filter((r, i) => i >= at && of(r).some(started));
-    // The next game is named only when nothing unplayed that is untimed,
-    // postponed, suspended or past its start falls on its Eastern day or
-    // before it (an undated one blocks only inside the rounds being played).
+    // The next game, derived differently from the page on purpose: every
+    // unplayed game of an unfinished series in the rounds concerned is put in
+    // one list sorted by Eastern day, then start, a game with no time first
+    // on its day (an undated one first of all where the round is being
+    // played; ignored in a later round). The head of the list is named only
+    // when it is a scheduled game, timed and ahead of the clock, in a round
+    // being played (or about to open), alone at its moment, with no
+    // lower-numbered game of its series unplayed, and every unfinished
+    // series of those rounds lists a game.
     const unplayed = new Set(['scheduled', 'postponed', 'suspended']);
-    const ahead = (g: RawGame) => g.status === 'scheduled' && !g.startTimeTBD && !!g.start && Date.parse(g.start) >= now.getTime();
-    const dayOf = (g: RawGame) => (!g.startTimeTBD && g.start ? etYmd(new Date(g.start)) : g.date);
     const sureNext = (sure: RawSeries[], later: RawSeries[]) => {
-      const rows = [...sure.map((s) => ({ s, sure: true })), ...later.map((s) => ({ s, sure: false }))].filter((x) => x.s.status !== 'final').flatMap((x) => x.s.games.filter((g) => unplayed.has(g.status)).map((g) => ({ s: x.s, g, sure: x.sure })));
-      const f = rows.filter((r) => ahead(r.g)).sort((x, y) => Date.parse(x.g.start as string) - Date.parse(y.g.start as string))[0];
-      if (!f) return null;
-      const day = dayOf(f.g) as string;
-      return rows.some((r) => r !== f && !ahead(r.g) && (dayOf(r.g) === null ? r.sure : (dayOf(r.g) as string) <= day)) ? null : f;
+      type Item = { s: RawSeries; g: RawGame; sure: boolean; day: string; at: string };
+      const list: Item[] = [];
+      for (const [group, isSure] of [[sure, true], [later, false]] as const) {
+        for (const s of group) {
+          if (s.status === 'final') continue;
+          const left = s.games.filter((g) => unplayed.has(g.status));
+          if (isSure && !left.length && !s.games.some((g) => g.status === 'live')) return null;
+          for (const g of left) {
+            const timed = !g.startTimeTBD && !!g.start;
+            const day = timed ? etYmd(new Date(g.start as string)) : g.date ?? (isSure ? '' : null);
+            if (day === null) continue;
+            list.push({ s, g, sure: isSure, day, at: timed ? new Date(g.start as string).toISOString() : '' });
+          }
+        }
+      }
+      list.sort((x, y) => (x.day + '|' + x.at < y.day + '|' + y.at ? -1 : x.day + '|' + x.at > y.day + '|' + y.at ? 1 : 0));
+      const [head, second] = list;
+      if (!head || !head.sure || head.g.status !== 'scheduled' || !head.at || Date.parse(head.at) < now.getTime()) return null;
+      if (second && second.day === head.day && second.at === head.at) return null;
+      if (head.s.games.some((g) => g.gameNumber < head.g.gameNumber && unplayed.has(g.status))) return null;
+      return { s: head.s, g: head.g };
     };
     const singular = new Set(['Liberty', 'Dream', 'Fever', 'Lynx', 'Mercury', 'Sky', 'Storm', 'Sun', 'Tempo', 'Fire']);
     const gameText = (s: RawSeries, g: RawGame) => {

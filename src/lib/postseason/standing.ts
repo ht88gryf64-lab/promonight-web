@@ -86,26 +86,47 @@ const started = (s: SeriesView) => s.status !== 'upcoming' || s.higher.wins + s.
 const UNPLAYED = new Set(['scheduled', 'postponed', 'suspended']);
 
 /**
- * The next game, or null when it cannot be named truthfully. `sure` series
- * are the rounds being played: there an unplayed game with no date blocks
- * the clause. `later` series (rounds not started) offer their timed games
- * and block on a dated unplayed game, but an undated one there says nothing
- * about the order.
+ * The next game, or null when it cannot be named truthfully.
+ *
+ * Every unplayed game gets an order key: its Eastern day, then its start
+ * instant, with a game that has no time sorting first on its day (it could
+ * be earlier). The candidate is the earliest scheduled, timed game ahead of
+ * the clock in a `sure` series: the rounds being played, or the round about
+ * to open. It is named only when
+ *   - every unfinished `sure` series lists a game to play (a series with
+ *     none could open first);
+ *   - no other unplayed game sorts at or before it: an earlier game, a game
+ *     with no time on its day, a game the feed still lists after its start,
+ *     a simultaneous start. A `sure` game with no date blocks too; a `later`
+ *     round's undated game says nothing about the order;
+ *   - no lower-numbered game of its own series is unplayed.
+ * `later` series (rounds not started) only ever block.
  */
 function nextGame(sure: SeriesView[], later: SeriesView[], startOf: (s: SeriesView) => (g: GameView) => string | null, now: Date): GameView | null {
-  type Row = { g: GameView; start: string | null; day: string | null; sure: boolean };
+  type Row = { s: SeriesView; g: GameView; start: string | null; day: string | null; sure: boolean };
   const rows: Row[] = [];
   for (const [list, isSure] of [[sure, true], [later, false]] as const) {
     for (const s of list) {
       if (s.status === 'final') continue;
-      for (const g of s.games) if (UNPLAYED.has(g.state)) rows.push({ g, start: startOf(s)(g), day: g.day, sure: isSure });
+      const unplayed = s.games.filter((g) => UNPLAYED.has(g.state));
+      if (isSure && unplayed.length === 0 && !s.games.some((g) => g.state === 'live')) return null;
+      for (const g of unplayed) rows.push({ s, g, start: startOf(s)(g), day: g.day, sure: isSure });
     }
   }
   const ahead = (r: Row) => r.g.state === 'scheduled' && r.start !== null && Date.parse(r.start) >= now.getTime();
-  const next = rows.filter(ahead).sort((x, y) => Date.parse(x.start as string) - Date.parse(y.start as string))[0];
+  const key = (r: Row) => `${r.day} ${r.start ?? ''}`;
+  const next = rows.filter((r) => r.sure && ahead(r)).sort((x, y) => Date.parse(x.start as string) - Date.parse(y.start as string))[0];
   if (!next) return null;
-  const blocked = rows.some((r) => r !== next && !ahead(r) && (r.day === null ? r.sure : r.day <= (next.day as string)));
-  return blocked ? null : next.g;
+  for (const r of rows) {
+    if (r === next) continue;
+    if (r.day === null) {
+      if (r.sure) return null;
+      continue;
+    }
+    if (key(r) <= key(next)) return null;
+    if (r.s === next.s && r.g.gameNumber < next.g.gameNumber) return null;
+  }
+  return next.g;
 }
 
 /** "Game 4, Cubs at Brewers, Fri, Oct 2, 7:08 PM ET". */
@@ -161,7 +182,7 @@ export function standingLine(view: LeagueView, starts: ReadonlyMap<string, strin
       else clauses.push(c);
     }
     if (clauses.length === 0) return null;
-    if (unset > 0) clauses.push(unset === 1 ? 'one matchup is still to be set' : `${unset} matchups are still to be set`);
+    if (unset > 0) clauses.push(unset === 1 ? 'one matchup is to be set' : `${unset} matchups are to be set`);
     parts.push(`${view.rounds[i].label}: ${clauses.join('; ')}.`);
   }
   const next = nextGame(played.flatMap(seriesOf), after(at, played), startOf, now);

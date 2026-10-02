@@ -801,7 +801,7 @@ test('HOME GAMES: "Show all" is a real button, and the rest of the week is in th
   assert.ok(!/\bhome games?\b/i.test(textOf(element(html, 'data-playoffs-article='))), 'nothing on the league page calls them home games');
   assert.match(
     section,
-    new RegExp(`<button type="button" data-show-all="home-games-this-week-more" aria-expanded="false" aria-controls="home-games-this-week-more" class="po-more-button [^"]*"[^>]*>Show all ${w.primary.length + w.rest.length} playoff games in the next seven days</button>`),
+    new RegExp(`<button type="button" data-show-all="home-games-this-week-more" aria-expanded="false" aria-controls="home-games-this-week-more" class="po-more-button [^"]*"[^>]*>Show ${w.rest.length} more games with a set time</button>`),
   );
   assert.match(section, /<div id="home-games-this-week-more" class="po-more [^"]*" data-open="false">/);
   const rest = element(section, 'data-home-games-list="rest"');
@@ -904,7 +904,7 @@ test('HUB: next home games across leagues: three days, eight rows, one button a 
   const section = element(html, 'data-home-games="next-home-games"');
   assert.match(section, /<h2[^>]*>Upcoming playoff games<\/h2>/);
   assert.ok(!/\bhome games?\b/i.test(textOf(element(html, 'data-playoffs-article='))), 'nothing on the hub calls them home games');
-  assert.match(section, new RegExp(`aria-expanded="false" aria-controls="next-home-games-more"[^>]*>Show all ${w.primary.length + w.rest.length} playoff games in the next seven days</button>`));
+  assert.match(section, new RegExp(`aria-expanded="false" aria-controls="next-home-games-more"[^>]*>Show ${w.rest.length} more games with a set time</button>`));
   assert.equal(count(element(section, 'data-home-games-list="rest"'), 'data-home-game="'), w.rest.length);
 });
 

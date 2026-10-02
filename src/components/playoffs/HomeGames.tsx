@@ -84,7 +84,6 @@ export function HomeGames({
   showLeague?: boolean;
   empty: string;
 }) {
-  const total = games.primary.length + games.rest.length;
   const rows = (list: readonly HomeGameView[]) =>
     list.map((g) => <Row key={g.key} g={g} ticket={tickets[g.hostTeamId] ?? null} showLeague={showLeague} surface={surface} />);
   return (
@@ -98,7 +97,7 @@ export function HomeGames({
         </ul>
       )}
       {games.rest.length > 0 && (
-        <ShowAll id={`${id}-more`} label={`Show all ${total} playoff games in the next seven days`}>
+        <ShowAll id={`${id}-more`} label={`Show ${games.rest.length} more ${games.rest.length === 1 ? 'game' : 'games'} with a set time`}>
           <ul data-home-games-list="rest" className="grid gap-2.5 lg:grid-cols-2">
             {rows(games.rest)}
           </ul>

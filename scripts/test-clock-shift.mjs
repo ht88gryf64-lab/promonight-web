@@ -12,13 +12,19 @@ const days = Number(process.env.TEST_CLOCK_SHIFT_DAYS ?? 365);
 if (!Number.isFinite(days)) throw new Error(`TEST_CLOCK_SHIFT_DAYS is not a number: ${process.env.TEST_CLOCK_SHIFT_DAYS}`);
 const RealDate = Date;
 const offset = days * 86_400_000;
-// A function, not a class, so `Date()` without `new` works as it does
-// natively (it returns the current time as a string).
-function ShiftedDate(...args) {
-  if (!new.target) return new RealDate(RealDate.now() + offset).toString();
-  return args.length === 0 ? new RealDate(RealDate.now() + offset) : new RealDate(...args);
-}
-ShiftedDate.prototype = RealDate.prototype;
-Object.setPrototypeOf(ShiftedDate, RealDate);
-ShiftedDate.now = () => RealDate.now() + offset;
-globalThis.Date = ShiftedDate;
+// A Proxy over the real Date: `new Date()` and `Date()` read the shifted
+// clock, a subclass (`class X extends Date`) keeps its own prototype through
+// Reflect.construct, and everything else (prototype, statics, name, length,
+// instanceof) is the real Date's.
+globalThis.Date = new Proxy(RealDate, {
+  construct(target, args, newTarget) {
+    return Reflect.construct(target, args.length ? args : [RealDate.now() + offset], newTarget);
+  },
+  apply() {
+    return new RealDate(RealDate.now() + offset).toString();
+  },
+  get(target, prop, receiver) {
+    if (prop === 'now') return () => RealDate.now() + offset;
+    return Reflect.get(target, prop, receiver);
+  },
+});

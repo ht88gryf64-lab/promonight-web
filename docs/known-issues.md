@@ -3711,7 +3711,9 @@ test workflow in this repo; run it before a merge. Limits: a file that pins
 its own clock (these two, `postseason-reader-filter.test.ts`) never sees the
 shift, so a new real-clock read added to one of them is not caught; and
 `Intl.DateTimeFormat#format()` with no date reads the engine clock (nothing
-in `src` does that today).
+in `src` does that today). The shift is a Proxy over Date, so subclasses,
+statics and `instanceof Date` behave natively; only
+`new Date().constructor === Date` is false under `test:future`.
 
 ## 63. The MLB import cannot tell a rescheduled game's makeup from its original date until the makeup is played
 
