@@ -2,6 +2,8 @@ import type { GameContext } from '@/lib/data';
 import type { Team } from '@/lib/types';
 import { teamDisplayName } from '@/lib/promo-helpers';
 import { formatGameTime } from '@/lib/format-game-time';
+import { gamesLabel, groupByMonth, regularSeasonContexts, type ScheduleMonth } from '@/lib/schedule-months';
+import { IconChevronDown } from '@tabler/icons-react';
 import { ScheduleRow } from './ScheduleRow';
 
 // Full-slate season schedule, rendered on team pages that have no promo data.
@@ -110,11 +112,35 @@ export interface ScheduleBlockProps {
   contexts: GameContext[];
   team: Team;
   teamName: string;
+  /** The page's one clock read (YYYY-MM-DD). Decides only whether the date
+   *  list may invite a visitor to open a row for tickets. Absent reads as
+   *  "no game remains", the direction that cannot make a false claim. */
+  today?: string;
 }
 
-export function ScheduleBlock({ contexts, team, teamName }: ScheduleBlockProps) {
-  const rows = buildRows(contexts);
+export function ScheduleBlock({ contexts, team, teamName, today }: ScheduleBlockProps) {
+  // Regular season only, one entry per game; see src/lib/schedule-months.ts.
+  // The identity on NFL, which the NFL golden test holds byte for byte.
+  const regular = regularSeasonContexts(contexts);
+  const rows = buildRows(regular);
   if (rows.length === 0) return null;
+
+  // THE WEEK GRID AND THE DATE LIST ARE TWO PAGES. NFL docs all carry a week,
+  // so buildRows returns a week grid and NFL takes the original markup below,
+  // unchanged. MLB docs carry no week, so MLB takes the month sections. The
+  // test is the same one buildRows uses, read off its output.
+  const isWeekGrid = rows.every((r) => r.week !== null);
+  if (!isWeekGrid) {
+    const remaining = today !== undefined && regular.some((c) => c.game.date >= today);
+    return (
+      <DateListSchedule
+        rows={rows as GameRow[]}
+        teamName={teamName}
+        remaining={remaining}
+        renderRow={(row) => renderGameRow(row, team, teamName)}
+      />
+    );
+  }
 
   // Weeks whose kickoff the league has not set. Named explicitly under the list
   // so "TBD" reads as a scheduling fact rather than as a hole in our data.
@@ -177,59 +203,168 @@ export function ScheduleBlock({ contexts, team, teamName }: ScheduleBlockProps) 
               );
             }
 
-            const { ctx } = row;
-            const { game, isHome, opponentTeam } = ctx;
-            const oppName = opponentTeam ? teamDisplayName(opponentTeam) : 'TBD';
-
-            // Away rows get a visible opponent anchor under the toggle. Home
-            // rows do not: home is this team's own surface, and the away
-            // expand (parking/hotels) is where cross-team travel intent lives.
-            // Computed here so the row stays a strings-only client component.
-            const opponentHref =
-              !isHome && opponentTeam
-                ? `/${opponentTeam.sportSlug}/${opponentTeam.id}`
-                : null;
-
-            // Kickoff: branch on timeTbd BEFORE formatting. The stored 05:00
-            // placeholder is a valid-looking UTC time, so formatting it would
-            // print a confident wrong kickoff that no field can flag.
-            const kickoffLabel = game.timeTbd
-              ? 'TBD'
-              : formatGameTime(game.gameTimeTz, game.gameTime, game.date, game.gameTimeZoneAbbrev);
-
-            // Venue is the per-game venueName and nothing else. The page-level
-            // venue prop is the team's own building, which is wrong for the
-            // neutral-site international games, and opponentVenue is the
-            // opponent's building, which is wrong for every home row.
-            const venueLabel = game.venueName || '';
-
-            const locationLabel = game.isInternational
-              ? `International, ${game.internationalLocation ?? game.venueName}`
-              : null;
-
-            return (
-              <ScheduleRow
-                key={row.key}
-                ctx={ctx}
-                weekLabel={row.week !== null ? `Week ${row.week}` : ''}
-                dateLabel={shortDate(game.date)}
-                matchupLabel={`${isHome ? 'vs' : 'at'} ${oppName}`}
-                kickoffLabel={kickoffLabel}
-                venueLabel={venueLabel}
-                locationLabel={locationLabel}
-                opponentHref={opponentHref}
-                opponentName={opponentHref ? oppName : null}
-                team={team}
-                teamSlug={team.id}
-                teamName={teamName}
-                sport={team.league}
-              />
-            );
+            return renderGameRow(row, team, teamName);
           })}
         </ul>
 
         {tbdNote && (
           <p className="mt-4 font-rd text-xs leading-relaxed text-rd-ink-faint">{tbdNote}</p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+type GameRow = Extract<Row, { kind: 'game' }>;
+
+// One game row. Shared by the week grid and the date list so the two can never
+// render a game differently; moved here verbatim from the week-grid map.
+function renderGameRow(row: GameRow, team: Team, teamName: string) {
+  const { ctx } = row;
+  const { game, isHome, opponentTeam } = ctx;
+  const oppName = opponentTeam ? teamDisplayName(opponentTeam) : 'TBD';
+
+  // Away rows get a visible opponent anchor under the toggle. Home
+  // rows do not: home is this team's own surface, and the away
+  // expand (parking/hotels) is where cross-team travel intent lives.
+  // Computed here so the row stays a strings-only client component.
+  const opponentHref =
+    !isHome && opponentTeam
+      ? `/${opponentTeam.sportSlug}/${opponentTeam.id}`
+      : null;
+
+  // Kickoff: branch on timeTbd BEFORE formatting. The stored 05:00
+  // placeholder is a valid-looking UTC time, so formatting it would
+  // print a confident wrong kickoff that no field can flag.
+  const kickoffLabel = game.timeTbd
+    ? 'TBD'
+    : formatGameTime(game.gameTimeTz, game.gameTime, game.date, game.gameTimeZoneAbbrev);
+
+  // Venue is the per-game venueName and nothing else. The page-level
+  // venue prop is the team's own building, which is wrong for the
+  // neutral-site international games, and opponentVenue is the
+  // opponent's building, which is wrong for every home row.
+  const venueLabel = game.venueName || '';
+
+  const locationLabel = game.isInternational
+    ? `International, ${game.internationalLocation ?? game.venueName}`
+    : null;
+
+  return (
+    <ScheduleRow
+      key={row.key}
+      ctx={ctx}
+      weekLabel={row.week !== null ? `Week ${row.week}` : ''}
+      dateLabel={shortDate(game.date)}
+      matchupLabel={`${isHome ? 'vs' : 'at'} ${oppName}`}
+      kickoffLabel={kickoffLabel}
+      venueLabel={venueLabel}
+      locationLabel={locationLabel}
+      opponentHref={opponentHref}
+      opponentName={opponentHref ? oppName : null}
+      team={team}
+      teamSlug={team.id}
+      teamName={teamName}
+      sport={team.league}
+    />
+  );
+}
+
+// ── The date list (MLB): the season as collapsed month sections ──
+//
+// In MLB's offseason this list is an archive of 162 played games, and as one
+// flat list it was about 23,400px on a phone and gave the ad placer no anchor
+// before its end (first in-content unit ~25,000px down on all 30 clubs,
+// measured 2026-10-01). Matt's ruling: an archive, not a wall.
+//
+// NATIVE <details>/<summary>, ALL COLLAPSED. No `open` attribute is ever
+// written, so every month starts shut and the browser, not React, owns the
+// state: keyboard toggling and the expanded/collapsed announcement are the
+// platform's own. The summary keeps its native role; nothing here sets a
+// role, a tabIndex or an outline style that would take any of that away.
+//
+// EVERY ROW IS IN THE SERVER HTML while collapsed. Closed details content is
+// still in the document, so crawlers read all 162 games; nothing loads on
+// open, and nothing is virtualized.
+//
+// AD ANCHORS SIT BETWEEN MONTHS, NEVER INSIDE ONE. Raptive's Content rule is
+// `.page-content > *` (skip 2, insert after each remaining child). Each month
+// is wrapped in a plain <div> and those wrappers are the page-content
+// children, so an inserted unit becomes a sibling of a wrapper: outside every
+// <details>, row and expanded panel, whatever the open state. Nothing inside a
+// month carries page-content or any other anchor class, and opening a month
+// adds no anchor (Raptive does not rescan). Same shape as the promo-row
+// groups (src/lib/promo-row-groups.ts): the last month renders OUTSIDE the
+// wrapper, so no unit lands between the schedule and the block after it, and a
+// single month gets no wrapper at all. Rule tests:
+// src/components/redesign/__tests__/schedule-months.test.tsx.
+function DateListSchedule({
+  rows,
+  teamName,
+  remaining,
+  renderRow,
+}: {
+  rows: GameRow[];
+  teamName: string;
+  remaining: boolean;
+  renderRow: (row: GameRow) => React.ReactNode;
+}) {
+  const months = groupByMonth(rows, (r) => r.ctx.game.date);
+
+  const month = (m: ScheduleMonth<GameRow>) => (
+    <details className="group">
+      <summary className="block cursor-pointer list-none rounded-2xl border border-rd-line bg-rd-card px-4 py-3.5 transition-colors hover:bg-rd-cream sm:px-5 [&::-webkit-details-marker]:hidden">
+        <span className="flex items-center justify-between gap-3">
+          <span className="font-rd text-sm font-semibold text-rd-ink sm:text-base">
+            {`${m.label} · ${gamesLabel(m.rows.length)}`}
+          </span>
+          <IconChevronDown
+            size={16}
+            stroke={2}
+            aria-hidden
+            className="shrink-0 text-rd-ink-decor transition-transform group-open:rotate-180"
+          />
+        </span>
+      </summary>
+      <ul className="mt-2 space-y-2">{m.rows.map((row) => renderRow(row))}</ul>
+    </details>
+  );
+
+  return (
+    <section className="py-12 px-6">
+      <div className="mx-auto max-w-5xl">
+        <div className="font-rd text-[11px] uppercase tracking-[0.14em] text-rd-ink-faint">
+          2026 season
+        </div>
+        <h2 className="rd-display mt-1 text-2xl text-rd-ink md:text-3xl">
+          {teamName} 2026 Game Schedule
+        </h2>
+        {/* Says what the list is: regular-season games, by month. The ticket
+            invitation only while a game is still ahead; over a fully played
+            season it would point at expands for games already over. */}
+        <p className="mt-2 max-w-2xl font-rd text-sm leading-relaxed text-rd-ink-soft">
+          {remaining
+            ? 'Every game of the 2026 regular season, by month. Open a month to see its games, and a game for tickets, parking and hotels on the road.'
+            : 'Every game of the 2026 regular season, by month. Open a month to see its games.'}
+        </p>
+
+        {months === null ? (
+          // Unreachable with date-ordered docs; a malformed date must not
+          // invent a month, so the rows render as the plain list instead.
+          <ul className="mt-6 space-y-2">{rows.map((row) => renderRow(row))}</ul>
+        ) : months.length === 1 ? (
+          <div className="mt-6">{month(months[0])}</div>
+        ) : (
+          <div className="mt-6 space-y-3">
+            {/* `page-content` here is a Raptive hook, not a style; do not
+                rename it, restyle it, or move it onto the <details>. */}
+            <div className="space-y-3 page-content">
+              {months.slice(0, -1).map((m) => (
+                <div key={m.key}>{month(m)}</div>
+              ))}
+            </div>
+            <div>{month(months[months.length - 1])}</div>
+          </div>
         )}
       </div>
     </section>

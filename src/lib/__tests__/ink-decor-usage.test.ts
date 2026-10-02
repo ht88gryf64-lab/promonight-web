@@ -54,6 +54,7 @@ const GLYPH_ALLOWLIST = new Set([
   'components/my-teams-view.tsx',
   'components/redesign/ExploreCard.tsx',
   'components/redesign/RedesignPromoRow.tsx',
+  'components/redesign/ScheduleBlock.tsx',
   'components/redesign/ScheduleRow.tsx',
   'components/team-related-aggregators.tsx',
   'components/venue-hub/HubTeamLink.tsx',

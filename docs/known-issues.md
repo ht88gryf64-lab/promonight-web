@@ -3615,3 +3615,47 @@ wording regression.
    (plain "Pick:") passes that file. `verify-served.ts` does check
    "PromoNight's pick:" on the served page. Fix: assert the label in
    `routes.test.tsx` too.
+
+## 62. MLB game docs carry postponed originals, canceled games and postseason games, and two team-page surfaces counted them as season games
+
+**Status: the schedule list and the Games tile FIXED in the schedule-months
+build (ADS G1, 2026-10-01). The documents themselves and the calendar are
+OPEN, no fix ruled.**
+
+**What it is.** Measured on production `games` for all 30 MLB clubs on
+2026-10-01, three kinds of document reach `getGamesForTeam` and are not a
+regular-season game:
+
+1. *Postseason games.* The MLB ingest writes `isPostseason: true` and no
+   `seasonType`, and `isRegularSeasonGame` reads `seasonType` only, so they
+   pass. Eight clubs carried three Wild Card docs each.
+2. *A postponed game's original date.* `ingest-mlb.ts` keys docs on date and
+   upserts with merge, so when a game moves, the original-date doc stays,
+   still `status: 'scheduled'`, beside the makeup doc with the same
+   `mlbGameId`. 21 of 30 clubs carry one to five (Braves 3, Orioles 5,
+   Yankees 5).
+3. *A canceled game.* Orioles at Yankees, 2026-09-27, `status: 'canceled'`.
+
+The team-page schedule list printed all three under "Every game of the 2026
+regular season", and the Games tile counted them (Braves 168, Yankees 170).
+
+**What changed.** `src/lib/schedule-months.ts` `regularSeasonContexts` drops
+postseason docs, keeps one doc per `mlbGameId` (the most settled: completed,
+scheduled, postponed; later date on a tie) and drops canceled MLB games. The
+list and the tile both read it, so they count one population (the Braves read
+162; the Orioles and Yankees, whose 2026-09-27 game was canceled, read 161).
+It is the identity on NFL, whose docs carry no `mlbGameId` and no
+`isPostseason`; `schedule-nfl-identity.test.tsx` holds NFL to main's bytes.
+
+**What is still open.** The stale and canceled documents are still in
+Firestore, and the in-season calendar (`SeasonExplorer`/`CalendarGrid`) and
+the division-rivals derivation still read the raw contexts, so in season a
+postponed original can show as a game on its old date. The calendar shows
+postseason games on purpose (`GameExpand` labels them "Playoffs"), so a fix
+there is a ruling, not a filter. The durable fix is in the ingest: delete or
+mark the original-date doc when a `gamePk` moves.
+
+**Also found (unrelated, pre-existing).** `postseason-reader-filter.test.ts`
+fixes a row at `2026-10-01` and `getHighlightedPromos` filters
+`date >= today` in UTC, so that case fails from 2026-10-02T00:00Z on, on main
+too. Fix: date the fixture relative to the clock or inject today.
