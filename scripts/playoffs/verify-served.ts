@@ -59,12 +59,21 @@ async function get(path: string): Promise<{ status: number; body: string; header
   const res = await fetch(`${BASE}${path}`, { headers, redirect: 'manual' });
   return { status: res.status, body: await res.text(), headers: res.headers, fetchedAt: new Date() };
 }
-/** When the served page was rendered: between the fetch minus the cache's
- *  `age` and the fetch. Every instant a page-time value may change at inside
- *  that window is a candidate; with no age header, only the fetch time. */
-function renderWindow(headers: Headers, fetchedAt: Date): Date[] {
+/** A start instant as the page's mapper reads one: a full instant with a
+ *  zone. A bare date or a zone-less time is no start time. */
+const INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})$/;
+const isInstant = (v: unknown): v is string => typeof v === 'string' && INSTANT.test(v);
+/** When the served page was rendered. It was built from the document version
+ *  stamped `built` (fresh() matched it), so never before that; and the CDN's
+ *  `age` says how long ago, with two minutes' slack for a cache that counts
+ *  from its own copy. With no age header (a local server), from `built`. */
+function renderWindow(headers: Headers, fetchedAt: Date, built: Date | null): Date[] {
   const age = Number(headers.get('age'));
-  return Number.isFinite(age) && age > 0 ? [new Date(fetchedAt.getTime() - age * 1000), fetchedAt] : [fetchedAt];
+  const floor = built ? built.getTime() : -Infinity;
+  const fromAge = Number.isFinite(age) && age >= 0 && headers.get('age') !== null ? fetchedAt.getTime() - age * 1000 - 120_000 : -Infinity;
+  const lo = Math.max(floor, fromAge);
+  console.log(`      render window: age ${headers.get('age') ?? 'none'}, x-vercel-cache ${headers.get('x-vercel-cache') ?? 'none'}, from ${Number.isFinite(lo) ? new Date(lo).toISOString() : 'the fetch'} to ${fetchedAt.toISOString()}`);
+  return Number.isFinite(lo) && lo < fetchedAt.getTime() ? [new Date(lo), fetchedAt] : [fetchedAt];
 }
 /** Each distinct value `f` takes at the window's ends and at every game start
  *  inside it (the only instants the page-time values change at). */
@@ -73,11 +82,16 @@ function valuesIn<T>(window: Date[], docs: RawDoc[], f: (at: Date) => T): T[] {
   const hi = window[window.length - 1].getTime();
   const at = new Set<number>([lo, hi]);
   for (const d of docs) for (const s of d.series) for (const g of s.games) {
-    const t = typeof g.start === 'string' ? Date.parse(g.start) : NaN;
+    const t = isInstant(g.start) ? Date.parse(g.start) : NaN;
     if (t > lo && t <= hi) { at.add(t - 1); at.add(t); }
   }
+  // Eastern midnights inside the window: "today" moves there.
+  for (let t = lo; t <= hi; t += 3_600_000) {
+    const m = Date.parse(`${etYmd(new Date(t))}T00:00:00${etOffset(new Date(t))}`);
+    if (m > lo && m <= hi) { at.add(m - 1); at.add(m); }
+  }
   const out: T[] = [];
-  for (const t of [...at].sort()) { const v = f(new Date(t)); if (!out.some((o) => JSON.stringify(o) === JSON.stringify(v))) out.push(v); }
+  for (const t of [...at].sort((a, b) => a - b)) { const v = f(new Date(t)); if (!out.some((o) => JSON.stringify(o) === JSON.stringify(v))) out.push(v); }
   return out;
 }
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -184,6 +198,11 @@ function etDay(d: Date, tz = ET): string {
 function etTime(d: Date): string {
   const p = parts(d, { hour: 'numeric', minute: '2-digit', hour12: true });
   return `${p.hour}:${p.minute} ${p.dayPeriod} ET`;
+}
+/** Eastern's UTC offset at an instant, "-04:00". */
+function etOffset(d: Date): string {
+  const name = new Intl.DateTimeFormat('en-US', { timeZone: ET, timeZoneName: 'longOffset' }).formatToParts(d).find((p) => p.type === 'timeZoneName')?.value ?? 'GMT-05:00';
+  return name === 'GMT' ? '+00:00' : name.replace('GMT', '');
 }
 function etYmd(d: Date): string {
   const p = parts(d, { year: 'numeric', month: '2-digit', day: '2-digit' });
@@ -612,7 +631,11 @@ async function main() {
         if (s.status === 'final') return;
         for (const g of s.games) {
           if (g.status !== 'scheduled' || !g.homeSide || !slotName(doc, s[g.homeSide]).club) continue;
-          const timed = !g.startTimeTBD && typeof g.start === 'string' && /T\d\d:\d\d/.test(g.start);
+          // The mapper keeps a host only when the row's own `home` names the
+          // slot: its stored slug or label, or the club it resolved to.
+          const slot = s[g.homeSide];
+          if (!g.home || (g.home !== (slot.slug ?? slot.placeholder) && g.home !== slotName(doc, slot).slug)) continue;
+          const timed = !g.startTimeTBD && isInstant(g.start);
           const day = timed ? etYmd(new Date(g.start as string)) : g.date;
           if (!day || day < today || day > plus(6)) continue;
           if (timed && Date.parse(g.start as string) < at.getTime()) continue;
@@ -684,7 +707,7 @@ async function main() {
           if (isSure && !left.length && !s.games.some((g) => g.status === 'live')) return null;
           for (const g of left) {
             // A start is a time only when it is an instant; a bare date is untimed.
-            const timed = !g.startTimeTBD && typeof g.start === 'string' && /T\d\d:\d\d/.test(g.start);
+            const timed = !g.startTimeTBD && isInstant(g.start);
             const day = timed ? etYmd(new Date(g.start as string)) : g.date ?? (isSure ? '' : null);
             if (day === null) continue;
             list.push({ s, g, sure: isSure, day, at: timed ? new Date(g.start as string).toISOString() : '' });
@@ -1044,7 +1067,7 @@ async function main() {
     const gamesSection = element(el, 'data-home-games=');
     if (gamesSection) check(`${where}: the games section is headed "Upcoming playoff games"`, /<h2[^>]*>Upcoming playoff games<\/h2>/.test(gamesSection));
     check(`${where}: every listed game has a known date (an untimed one reads "Time TBD")`, list.every((r) => !/Date TBD/.test(textOf(r))), `${list.length} rows, ${list.filter((r) => /Time TBD/.test(textOf(r))).length} Time TBD`);
-    const window = renderWindow(got.headers, got.fetchedAt);
+    const window = renderWindow(got.headers, got.fetchedAt, instantOf(doc.lastChangedAt));
     if (open) gamesMatch(where, el, [[league, doc]], window);
     const homeWord = /\bhome games?\b/i.exec(textOf(el) + ' ' + (/<meta name="description" content="([^"]*)"/.exec(got.html)?.[1] ?? ''));
     check(`${where}: nothing in the article or the description says "home games"`, !homeWord, homeWord ? homeWord[0] : '');
@@ -1183,7 +1206,10 @@ async function main() {
       if (hubGames) check(`${where}: the games section is headed "Upcoming playoff games"`, /<h2[^>]*>Upcoming playoff games<\/h2>/.test(hubGames));
       check(`${where}: every listed game has a known date (an untimed one reads "Time TBD")`, rows.every((r) => !/Date TBD/.test(textOf(r))), `${rows.length} rows, ${rows.filter((r) => /Time TBD/.test(textOf(r))).length} Time TBD`);
       const activeDocs = LEAGUES.filter((l) => at.get(l) && currentRound(at.get(l) as RawDoc)).map((l) => [l, at.get(l) as RawDoc] as [League, RawDoc]);
-      if (activeDocs.length) gamesMatch(where, el, activeDocs, renderWindow(got.headers, got.fetchedAt));
+      const builtStamps = LEAGUES.map((l) => instantOf(at.get(l)?.lastChangedAt)).filter((d): d is Date => d instanceof Date);
+      const builtAt = builtStamps.length ? new Date(Math.max(...builtStamps.map((d) => d.getTime()))) : null;
+      // Always: with no league being played the lists are empty and there is no button.
+      gamesMatch(where, el, activeDocs, renderWindow(got.headers, got.fetchedAt, builtAt));
       const hubHome = /\bhome games?\b/i.exec(textOf(el) + ' ' + (/<meta name="description" content="([^"]*)"/.exec(got.html)?.[1] ?? ''));
       check(`${where}: nothing in the article or the description says "home games"`, !hubHome, hubHome ? hubHome[0] : '');
       // Results so far: each league's decided series, one line each, with

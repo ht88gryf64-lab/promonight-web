@@ -38,7 +38,9 @@ const shortWhen = (d: Date) => {
   const t = fmt(d, { hour: 'numeric', minute: '2-digit', hour12: true });
   return `${a.weekday}, ${a.month} ${a.day}, ${t.hour}:${t.minute} ${t.dayPeriod} ET`;
 };
-const isInstant = (v: unknown): v is string => typeof v === 'string' && /T\d\d:\d\d/.test(v);
+// A full instant with a zone, as the page's mapper requires; a bare date or a
+// zone-less time is no start time.
+const isInstant = (v: unknown): v is string => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})$/.test(v);
 const asDate = (v: any): Date | null => (v == null ? null : typeof v === 'string' ? new Date(v) : typeof v.toDate === 'function' ? v.toDate() : null);
 // The pipeline's series keys ("AL-WC-B", "NL-CS", "R1-1v8", "SF-A"). A stored
 // label holding one is never shown; the page says "To be decided".
@@ -192,8 +194,14 @@ async function main() {
       const res = await fetch(`${BASE}${path}`, { headers: { 'user-agent': 'Mozilla/5.0 (standing check)', ...(BYPASS ? { 'x-vercel-protection-bypass': BYPASS } : {}) } });
       const html = await res.text();
       const now = new Date();
-      const age = Number(res.headers.get('age'));
-      const from = Number.isFinite(age) && age > 0 ? now.getTime() - age * 1000 : now.getTime();
+      // The page was built from the document version it carries, so never
+      // before that stamp; the CDN's age (with two minutes' slack) narrows it.
+      const ageHeader = res.headers.get('age');
+      const age = Number(ageHeader);
+      const builtFloor = asDate(bracket.lastChangedAt)?.getTime() ?? -Infinity;
+      const fromAge = ageHeader !== null && Number.isFinite(age) ? now.getTime() - age * 1000 - 120_000 : -Infinity;
+      const from = Math.min(now.getTime(), Number.isFinite(Math.max(builtFloor, fromAge)) ? Math.max(builtFloor, fromAge) : now.getTime());
+      console.log(`      ${path}: age ${ageHeader ?? 'none'}, x-vercel-cache ${res.headers.get('x-vercel-cache') ?? 'none'}`);
       const changed = asDate(bracket.lastChangedAt);
       const served = /"dateModified":"([^"]+)"/.exec(html)?.[1] ?? null;
       const stale = changed && served && Date.parse(served) < changed.getTime();
@@ -210,7 +218,7 @@ async function main() {
         const t = isInstant(g.start) ? Date.parse(g.start) : NaN;
         if (t > from && t <= now.getTime()) { instants.add(t - 1); instants.add(t); }
       }
-      const wants = [...new Set([...instants].sort().map((t) => expectedLine(bracket, teams, new Date(t))))];
+      const wants = [...new Set([...instants].sort((a, b) => a - b).map((t) => expectedLine(bracket, teams, new Date(t))))];
       const lockedAt = asDate(predicted?.lockedAt);
       const wantSummary = lockedAt ? `PromoNight's picks were locked on ${longDay(lockedAt)} from regular-season results only. They never change.` : null;
       const okLine = res.status === 200 && wants.includes(line);

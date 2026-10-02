@@ -320,11 +320,15 @@ async function measure(path, width, { playoffs }) {
     for (const b of document.querySelectorAll('[data-show-all]')) if (b.offsetWidth > 0) { b.click(); n++; await wait(150); }
     const a = [...document.querySelectorAll('.po-bracket [data-series] a[href^="#"]')].find((x) => x.offsetWidth > 0);
     if (a) { a.click(); n++; }
+    // Read the page again with everything open, the way the placer fills it.
+    let y = 0;
+    while (y < document.documentElement.scrollHeight - innerHeight) { y += Math.round(innerHeight * 0.6); scrollTo(0, y); await wait(300); }
     await wait(2500);
     const sel = 'details, .po-bracket, .po-picks, [data-league-card], [data-standing], [data-home-game], [data-game], [data-result], [data-result-game]';
-    return { opened: n, inside: [...document.querySelectorAll('.adthrive-ad, [id^="AdThrive_"]')].filter((el) => el.closest(sel)).length };
+    const openable = document.querySelectorAll('details').length + document.querySelectorAll('[data-show-all]').length + (a ? 1 : 0);
+    return { opened: n, openable, inside: [...document.querySelectorAll('.adthrive-ad, [id^="AdThrive_"]')].filter((el) => el.closest(sel)).length };
   })()`);
-  check(`${label}: AD CONTRACT: no ad container inside a <details>, a bracket, the standing line or a game row, with everything opened`, opened.opened > 0 && opened.inside === 0, `${opened.opened} opened, ${opened.inside} inside`);
+  check(`${label}: AD CONTRACT: no ad container inside a <details>, a bracket, the standing line or a game row, with everything opened`, (opened.openable === 0 || opened.opened > 0) && opened.inside === 0, `${opened.opened} opened of ${opened.openable} openable${opened.openable === 0 ? ' (nothing to open)' : ''}, ${opened.inside} inside`);
   const errors = consoleLines.filter((l) => /Minified React error|Hydration|hydrat/i.test(l));
   check(`${label}: no hydration error in the console`, errors.length === 0, errors[0] ? errors[0].slice(0, 120) : '');
   return m;
