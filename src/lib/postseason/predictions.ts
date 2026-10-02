@@ -704,6 +704,11 @@ export interface MethodologyView {
   /** The Eastern day the bracket was locked. "At lock" on the page means
    *  this moment, never the input freeze. */
   bracketLockedOn: string;
+  /** The visible line above the collapsed detail: the day the bracket was
+   *  locked, from lockedAt. Never "before Game 1": the bracket was locked
+   *  after Game 1 in both 2026 leagues; only the inputs were frozen before
+   *  it, which the detail says when the real bracket proves it. */
+  summary: string;
   backtest: string;
   fingerprints: FingerprintRow[];
 }
@@ -752,13 +757,15 @@ export function frozenBeforeFirstGame(bracket: Bracket, frozenAt: string): boole
 export function buildMethodologyView(predicted: PredictedBracket, bracket: Bracket): MethodologyView {
   const bt = BACKTEST_2025[predicted.league];
   const f = predicted.fingerprints;
+  const bracketLockedOn = easternLongDate(predicted.lockedAt);
   return {
     league: predicted.league,
     simRuns: predicted.simRuns.toLocaleString('en-US'),
     lockedOn: easternLongDate(predicted.frozenAt),
     lockedBeforeGame1: frozenBeforeFirstGame(bracket, predicted.frozenAt),
     computedOn: easternLongDate(predicted.computedAt),
-    bracketLockedOn: easternLongDate(predicted.lockedAt),
+    bracketLockedOn,
+    summary: `PromoNight's picks were locked on ${bracketLockedOn} from regular-season results only. They never change.`,
     backtest: `Run on the 2025 ${predicted.league} postseason with the same settings, the simulation called ${bt.right} of ${bt.of} series and ${
       bt.champion ? 'got the champion right' : 'got the champion wrong'
     }.`,

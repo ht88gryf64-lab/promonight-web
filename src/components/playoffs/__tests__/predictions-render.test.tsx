@@ -219,6 +219,49 @@ for (const [name, make, now] of STATES) {
   });
 }
 
+// ---- The methodology in two layers: a visible summary, a collapsed detail ----
+
+for (const [name, make, now] of STATES) {
+  test(`METHODOLOGY LAYERS (${name}): the summary and the backtest visible, everything else in a <details> collapsed by default, every fingerprint inside it once`, () => {
+    const b = make();
+    const h = html(b, now);
+    const method = element(h, 'data-predictions-methodology');
+    const detail = element(method, 'data-methodology-detail');
+    const fixture = b.predicted.league === 'MLB' ? PREDICTED.mlb : PREDICTED.wnba;
+    // Collapsed by default: a native <details> with no `open` attribute.
+    const opening = detail.slice(0, detail.indexOf('>') + 1);
+    assert.match(opening, /^<details\b/);
+    assert.ok(!/\sopen(=|\s|>)/.test(opening), opening);
+    assert.equal(count(method, '<details'), 1);
+    assert.match(detail, /<summary\b[^>]*>[\s\S]*How the picks were locked<\/summary>/);
+    // Visible, outside the detail: the summary line, then the backtest.
+    const visible = method.replace(detail, '');
+    const summary = textOf(element(visible, 'data-methodology-summary'));
+    assert.equal(summary, b.predictions.methodology.summary);
+    assert.match(summary, /^PromoNight's picks were locked on [A-Z][a-z]+ \d{1,2}, \d{4} from regular-season results only\. They never change\.$/);
+    assert.ok(!/Game 1/.test(summary), summary);
+    const backtest = textOf(element(visible, 'data-backtest'));
+    assert.ok(/^Run on the 2025 (MLB|WNBA) postseason with the same settings, the simulation called \d+ of \d+ series and got the champion (right|wrong)\.$/.test(backtest), backtest);
+    assert.ok(visible.indexOf('data-methodology-summary') < visible.indexOf('data-backtest'));
+    assert.ok(!detail.includes('data-backtest') && !detail.includes('data-methodology-summary'));
+    // Inside the detail: the method, the dates, the fingerprints, each once.
+    for (const f of fingerprints(fixture)) {
+      assert.equal(count(detail, f), 1, `${f.slice(0, 8)} inside the details`);
+      assert.equal(count(h, f), 1, `${f.slice(0, 8)} once on the page`);
+    }
+    assert.equal([...detail.matchAll(/[0-9a-f]{40,}/g)].length, 5);
+    const said = textOf(detail);
+    assert.ok(said.includes('PromoNight Predicts is a simulation, not a staff pick.'), said);
+    assert.ok(detail.includes('data-locked-on') && said.includes('The bracket was computed from those locked inputs'), said);
+    assert.ok(said.includes('Fingerprints') && said.includes('Each is a SHA-256 fingerprint of something that was locked'), said);
+    // The wording fix, and the old phrase nowhere on the page.
+    assert.ok(said.includes('Every percentage on this page is as it stood when the bracket was locked.'), said);
+    assert.ok(!/\btitle odd\b/i.test(h), 'no "title odd"');
+    // No ad marker, no page-content and no client boundary inside the detail.
+    assert.ok(!/data-ad-|adthrive|raptive|page-content/i.test(detail));
+  });
+}
+
 // ---- No client component receives a hash as a prop ----
 //
 // Every component in a 'use client' file of the playoffs and analytics

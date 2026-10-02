@@ -38,6 +38,19 @@ const MAPPER_GATE = '  if (!lockedAt || !simRuns || !computedAt || Date.parse(co
 const CHANCE = "  if (typeof p !== 'number' || !Number.isFinite(p) || p < 0.5 || p >= 1) return null;";
 const COIN = "  if (typeof v.coinFlip !== 'boolean' || v.coinFlip !== (p <= COIN_FLIP_HIGH)) return null;";
 const JOIN = '    if (!real || real.round !== p.round || real.conference !== p.conference || real.bestOf !== p.bestOf) return null;';
+// The methodology's markup, read from the source so the cases below move
+// with it. Each is checked to occur exactly once like any other `from`.
+const C_SRC = readFileSync(join(REPO, C), 'utf-8');
+const between = (a, b) => {
+  const i = C_SRC.indexOf(a);
+  const j = C_SRC.indexOf(b, i + a.length);
+  if (i < 0 || j < 0) throw new Error(`markers not found: ${a} / ${b}`);
+  return C_SRC.slice(i + a.length, j);
+};
+const BACKTEST_P = '<p data-backtest' + between('<p data-backtest', '</p>') + '</p>';
+const MID = between(BACKTEST_P, '<details data-methodology-detail') + '<details data-methodology-detail className="group mt-4 border-t border-rd-line pt-3">\n';
+const DETAIL_BODY = between('</summary>\n', '      </details>');
+const FINGERPRINTS_DL = '        <dl data-fingerprints' + between('        <dl data-fingerprints', '</dl>') + '</dl>';
 const DIM = '      dimmed = predictedPair.some((s) => eliminated.has(s)) || realClubs.some((s) => !predictedPair.includes(s));';
 
 /** [name, file, from, to, tests]. `from` must occur exactly once. */
@@ -107,12 +120,12 @@ const CASES = [
   ['title odds NaN accepted', P, "    if (!slug || typeof odds !== 'number' || !Number.isFinite(odds) || odds < 0 || odds > 1) return null;", "    if (!slug || typeof odds !== 'number' || odds < 0 || odds > 1) return null;", [T_PRED]],
   ['title-odds row shape unchecked', P, '    if (!isObject(o)) return null;\n    const slug = text(o.slug);', '    const slug = text(o.slug);', [T_PRED]],
   ['read timeout default of minutes', D, '  return Number.isFinite(v) && v > 0 ? v : 4000;', '  return Number.isFinite(v) && v > 0 ? v : 400000;', [T_DATA]],
-  ['lock day taken from the compute', P, '    bracketLockedOn: easternLongDate(predicted.lockedAt),', '    bracketLockedOn: easternLongDate(predicted.computedAt),', [T_PRED]],
+  ['lock day taken from the compute', P, '  const bracketLockedOn = easternLongDate(predicted.lockedAt);', '  const bracketLockedOn = easternLongDate(predicted.computedAt);', [T_PRED]],
   ['title-odds caption claims every club', P, '      titleOdds.length < clubCount\n', '      false\n', [T_PRED]],
   ['view join failure called a missing club', P, "    if (!seriesId || !round) return 'no-join';", "    if (!seriesId || !round) return 'no-team-record';", [T_PRED]],
   ['caption counts the stored list', P, '      titleOdds.length < clubCount\n        ? `The ${titleOdds.length} most likely champions of ${clubCount}.`', '      titleOdds.length < predicted.titleOdds.length\n        ? `The ${titleOdds.length} most likely champions of ${predicted.titleOdds.length}.`', [T_PRED]],
   ['fingerprints claimed for every input', C, 'Each is a SHA-256 fingerprint of something that was locked: four of the inputs and the locked bracket file.', 'SHA-256 fingerprints of what was locked. A change to any input, or to the published bracket, would change its fingerprint.', [T_ROUTES]],
-  ['every fingerprint called a file', C, 'The bracket format and the\n        locked bracket file are fingerprinted as files, the other three as their locked data written out in a fixed order.', 'All five are fingerprinted as files.', [T_ROUTES]],
+  ['every fingerprint called a file', C, 'The bracket format and the\n          locked bracket file are fingerprinted as files, the other three as their locked data written out in a fixed order.', 'All five are fingerprinted as files.', [T_ROUTES]],
   // ---- The client boundary ----
   ['a hash handed to the predicted bracket', C, '<PredictedBracket league={league} leagueSlug={leagueSlug} season={season} rounds={view.rounds} />', "<PredictedBracket league={league} leagueSlug={leagueSlug} season={season} rounds={view.rounds} {...{ leak: 'e4bcaddb1f2acebf37ece2f2c8f32d136609bd93469a30c8e5da104a6bd17a8d' }} />", [T_RENDER]],
   // ---- The test walker itself: each self-check must fail without its branch ----
@@ -130,10 +143,10 @@ const CASES = [
   ['length described as the most common length', C, 'its length is how many games the pick most often took to win it.', 'its length is the matchup&apos;s most common length.', [T_ROUTES]],
   // Each of these two adds the banned wording beside the true sentence, so
   // only its own negative guard can catch it.
-  ['engine-wide unchanged claim', C, '<p data-backtest>{view.backtest}</p>', '<p data-backtest>{view.backtest} The engine code is unchanged since the lock.</p>', [T_ROUTES]],
+  ['engine-wide unchanged claim', C, BACKTEST_P, BACKTEST_P.replace('{view.backtest}', '{view.backtest} The engine code is unchanged since the lock.'), [T_ROUTES]],
   ['simulation framing dropped', C, 'PromoNight Predicts is a simulation, not a staff pick. ', '', [T_ROUTES]],
-  ['write-once and fixed-seed claim dropped', C, '. The locked bracket is written once and never changed, and the simulation runs from a fixed seed, so the same inputs always give\n          the same bracket.', '.', [T_ROUTES, T_RENDER]],
-  ['the false "computed once" claim back', C, '<p data-backtest>{view.backtest}</p>', '<p data-backtest>{view.backtest} The bracket was computed once.</p>', [T_ROUTES]],
+  ['write-once and fixed-seed claim dropped', C, '. The locked bracket is written once and never changed, and the simulation runs from a fixed seed, so the same inputs always give\n            the same bracket.', '.', [T_ROUTES, T_RENDER]],
+  ['the false "computed once" claim back', C, BACKTEST_P, BACKTEST_P.replace('{view.backtest}', '{view.backtest} The bracket was computed once.'), [T_ROUTES]],
   ['staff or expert framing in the intro', C, 'PromoNight Predicts picks every series with a simulation', 'Our experts and PromoNight Predicts pick every series with a simulation', [T_ROUTES]],
   ['"computer" back on the pick label', 'src/components/playoffs/PredictedBracket.tsx', "PromoNight&apos;s pick:", "Computer&apos;s pick:", [T_ROUTES]],
   ['"computer" back on the scorecard', C, '>Predicted champion<', '>Computer&apos;s champion<', [T_ROUTES]],
@@ -145,9 +158,21 @@ const CASES = [
   ['the hub never told the champion is out', P, '      championName: view.scorecard.championName,\n      championStatus: card.champion.status,', "      championName: view.scorecard.championName,\n      championStatus: 'alive' as const,", [T_HUB]],
   ['the hub claims an eliminated champion will win', 'src/components/playoffs/PredictionsCard.tsx', "  if (l.championStatus === 'out') return `PromoNight Predicts picked ${l.championName} to win it all`;\n", '', [T_HUB]],
   ['the old section heading as the heading\'s title', C, '<h2 id="predictions-heading" className', '<h2 id="predictions-heading" title="The Computer&apos;s Bracket" className', [T_ROUTES]],
-  ['two-day lock said as one', C, '          {view.computedOn === view.bracketLockedOn\n', '          {true\n', [T_RENDER]],
-  ['chance described over every run', C, 'in the simulated\n          postseasons where that matchup came up,', 'in those simulated\n          postseasons,', [T_RENDER]],
-  ['"at lock" left undefined', C, ' Every chance and title odd on this page is as\n          it stood when the bracket was locked.', '', [T_ROUTES]],
+  ['two-day lock said as one', C, '            {view.computedOn === view.bracketLockedOn\n', '            {true\n', [T_RENDER]],
+  ['chance described over every run', C, 'in the simulated\n            postseasons where that matchup came up,', 'in those simulated\n            postseasons,', [T_RENDER]],
+  ['"at lock" left undefined', C, ' Every percentage on this page is as\n            it stood when the bracket was locked.', '', [T_ROUTES]],
+  // ---- The methodology in two layers (WEB4, 2026-10-02) ----
+  ['"title odd" back in the at-lock sentence', C, ' Every percentage on this page is as', ' Every percentage and title odd on this page is as', [T_ROUTES, T_RENDER]],
+  ['summary date hard-coded', P, "summary: `PromoNight's picks were locked on ${bracketLockedOn} from", "summary: `PromoNight's picks were locked on September 30, 2026 from", [T_PRED]],
+  ['summary date taken from the input freeze', P, "summary: `PromoNight's picks were locked on ${bracketLockedOn} from", "summary: `PromoNight's picks were locked on ${easternLongDate(predicted.frozenAt)} from", [T_PRED, T_ROUTES]],
+  ['summary says "before Game 1" (builder)', P, "from regular-season results only. They never change.`,", "from regular-season results only${frozenBeforeFirstGame(bracket, predicted.frozenAt) ? ', before Game 1' : ''}. They never change.`,", [T_PRED]],
+  ['summary says "before Game 1" (component)', C, '<p data-methodology-summary>{view.summary}</p>', "<p data-methodology-summary>{view.lockedBeforeGame1 ? view.summary.replace(' from', ', before Game 1, from') : view.summary}</p>", [T_RENDER, T_ROUTES]],
+  ['summary line removed', C, '        <p data-methodology-summary>{view.summary}</p>\n', '', [T_RENDER, T_ROUTES]],
+  ['detail open by default', C, '<details data-methodology-detail className=', '<details open data-methodology-detail className=', [T_RENDER]],
+  ['detail content removed', C, DETAIL_BODY, '', [T_RENDER, T_ROUTES]],
+  ['fingerprints outside the detail', C, FINGERPRINTS_DL + '\n      </details>', '      </details>\n' + FINGERPRINTS_DL, [T_RENDER]],
+  ['fingerprints duplicated beside the summary', C, '<p data-methodology-summary>{view.summary}</p>', '<p data-methodology-summary>{view.summary}</p>{view.fingerprints.map((f) => <code key={f.label}>{f.value}</code>)}', [T_RENDER, T_ROUTES]],
+  ['backtest hidden in the detail', C, BACKTEST_P + MID, MID + BACKTEST_P, [T_RENDER]],
 ];
 
 const run = (files) =>

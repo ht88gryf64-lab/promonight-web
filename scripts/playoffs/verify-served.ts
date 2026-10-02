@@ -626,11 +626,29 @@ async function main() {
     const when = computedOn === lockedOn ? `computed from those locked inputs and locked on ${computedOn}` : `computed from those locked inputs on ${computedOn} and locked on ${lockedOn}`;
     check(`${where}: methodology says when the bracket was computed and locked, that it is written once, and that the seed is fixed`, mt.includes(`The bracket was ${when}. The locked bracket is written once and never changed, and the simulation runs from a fixed seed, so the same inputs always give the same bracket. The rating, simulation and bracket code is unchanged since the inputs were locked.`) && !/\b(computed|run|ran|calculated|simulated) (only )?(once|one time|a single time)\b|\b(not been|never( been)?) re-?(computed|run|calculated)\b|\bre-?run\b/i.test(mt), when);
     check(`${where}: methodology says it is a simulation, not a staff pick`, mt.includes('PromoNight Predicts is a simulation, not a staff pick.') && mt.includes('The simulation then plays out the postseason'));
-    check(`${where}: methodology says what "at lock" means and why a pick can name a club already out`, mt.includes('Every chance and title odd on this page is as it stood when the bracket was locked.') && mt.includes('Postseason results are not among the inputs, so a pick can name a club that was already out by then.'));
+    check(`${where}: methodology says what "at lock" means and why a pick can name a club already out`, mt.includes('Every percentage on this page is as it stood when the bracket was locked.') && mt.includes('Postseason results are not among the inputs, so a pick can name a club that was already out by then.'));
     check(`${where}: methodology states the length as the engine computes it`, mt.includes('its length is how many games the pick most often took to win it') && !/most common length|engine( code)? (is |has )?(not changed|unchanged|never changed)/i.test(mt));
     check(`${where}: methodology names ${p.simRuns.toLocaleString('en-US')} simulated postseasons`, mt.includes(`plays out the postseason ${p.simRuns.toLocaleString('en-US')} times`));
     check(`${where}: the backtest, and no other accuracy claim`, mt.includes(BACKTEST[league]) && (mt.match(/\b\d+ of \d+\b/g) ?? []).length === 1 && !/\b(accura\w*|correct\w*|hit rate|record)\b/i.test(mt), BACKTEST[league]);
     check(`${where}: never says the bracket was set before Game 1`, !/(bracket|picks?) (was|were) (locked|set|picked|computed|made)[^.]*before (Game 1|the first (pitch|game|tip)|the postseason)/i.test(mt));
+
+    // TWO LAYERS (WEB4, 2026-10-02). Visible: the summary, from lockedAt in
+    // Eastern, and the backtest. Everything else in one native <details>
+    // with no `open` attribute, in the served HTML. The summary never says
+    // "before Game 1": the bracket was locked after it in both leagues.
+    const detail = element(method, 'data-methodology-detail') ?? '';
+    const opening = detail.slice(0, detail.indexOf('>') + 1);
+    check(`${where}: methodology detail is one native <details>, collapsed by default`, /^<details\b/.test(opening) && !/\sopen(=|\s|>)/.test(opening) && count(method, '<details') === 1, opening.slice(0, 80));
+    check(`${where}: the detail's summary reads "How the picks were locked"`, /<summary\b[^>]*>[\s\S]*How the picks were locked<\/summary>/.test(detail));
+    const visible = method.replace(detail, '');
+    const summaryText = textOf(element(visible, 'data-methodology-summary') ?? '');
+    same(`${where}: visible summary, dated by the bracket's own lockedAt`, summaryText, `PromoNight's picks were locked on ${lockedOn} from regular-season results only. They never change.`);
+    check(`${where}: the summary never says "before Game 1"`, summaryText.length > 0 && !/Game 1|before the (first|postseason)/i.test(summaryText), summaryText);
+    check(`${where}: the backtest is visible, outside the detail`, textOf(element(visible, 'data-backtest') ?? '') === BACKTEST[league] && !detail.includes('data-backtest'));
+    check(`${where}: the method, dates and fingerprints are inside the detail`, textOf(detail).includes('PromoNight Predicts is a simulation, not a staff pick.') && detail.includes('data-locked-on') && detail.includes('data-fingerprints') && fingerprints(p).every((f) => count(detail, f) === 1));
+    check(`${where}: no ad markup inside the detail`, !/adthrive|raptive|data-ad-|page-content/i.test(detail));
+    const titleOdd = /\btitle odd\b/i.exec(html);
+    check(`${where}: "title odd" nowhere in the served bytes`, !titleOdd, titleOdd ? html.slice(Math.max(0, titleOdd.index - 40), titleOdd.index + 40) : '');
 
     // THE FINGERPRINT RULE. Each of the five appears in the served bytes
     // exactly twice: once in the methodology section's markup, and once in

@@ -207,12 +207,18 @@ const SELECT_ALL = `(async () => {
   if (pickPills.length === 0) await openVisible();
   const picksOpened = [...document.querySelectorAll('.po-picks details')].filter((d) => d.open).length;
   const picksTotal = document.querySelectorAll('.po-picks details').length;
+  // The methodology's detail: collapsed as served, then opened like a reader.
+  const md = document.querySelector('[data-methodology-detail]');
+  const methodCollapsed = md ? !md.open : null;
+  if (md && !md.open) { md.querySelector('summary').click(); await wait(300); }
+  const methodOpened = md ? md.open : null;
   await wait(1500);
   const before = window.__pnAds;
   const now = [...document.querySelectorAll('.adthrive-ad, [id^="AdThrive_"]')];
   window.__pnObserver.disconnect();
   return {
-    rounds, series, conferences, picksRounds, picksConferences, picksOpened, picksTotal,
+    rounds, series, conferences, picksRounds, picksConferences, picksOpened, picksTotal, methodCollapsed, methodOpened,
+    inMethodDetail: md ? now.filter((el) => md.contains(el)).length : null,
     inPicks: now.filter((el) => { const r = document.querySelector('[data-predictions="bracket"]'); const m = document.querySelector('[data-predictions-methodology]'); return (r && r.contains(el)) || (m && m.contains(el)); }).length,
     before: before.length, after: now.length,
     kept: before.filter((el) => el.isConnected).length,
@@ -290,6 +296,7 @@ async function measure(path, width, { playoffs }) {
     const s = await ev(SELECT_ALL);
     check(`${label}: selecting every round and series, in both brackets, and opening every pick leaves every ad container in place`, s.series > 0 && s.picksTotal > 0 && s.picksOpened === s.picksTotal && s.kept === s.before && s.after === s.before && s.same === s.after && s.moves.added === 0 && s.moves.removed === 0 && s.inBracket === 0 && s.inPicks === 0,
       `${s.rounds} rounds, ${s.conferences} conference taps, ${s.series} series; predicted: ${s.picksRounds} rounds, ${s.picksConferences} conference taps, ${s.picksOpened} of ${s.picksTotal} picks opened; containers ${s.before} before, ${s.after} after, ${s.kept} still attached; added ${s.moves.added}, removed ${s.moves.removed}${s.moves.names.length ? ' ' + s.moves.names.slice(0, 4).join(' ') : ''}`);
+    check(`${label}: the methodology detail is collapsed as served, opens, and no ad container is inside it once open`, s.methodCollapsed === true && s.methodOpened === true && s.inMethodDetail === 0, `collapsed ${s.methodCollapsed}, opened ${s.methodOpened}, ${s.inMethodDetail} inside`);
     if (marked === 0) note(`${label}: there was no ad container to watch, so the check above proves nothing about re-rendering`);
     if (width < 600) {
       const st = await ev(STICKY);

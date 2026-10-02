@@ -501,7 +501,8 @@ test('PREDICTIONS through the real pages: the section, the scorecard, the method
     assert.ok(!/\b(experts?|staff|analysts?|editors?|handpicked|hand-picked|our (writers|team) (picks?|thinks?))\b/i.test(t), t.slice(0, 120));
   }
   assert.ok(text.includes('its length is how many games the pick most often took to win it'));
-  assert.ok(text.includes('Every chance and title odd on this page is as it stood when the bracket was locked.'));
+  assert.ok(text.includes('Every percentage on this page is as it stood when the bracket was locked.'));
+  assert.ok(!/\btitle odd\b/i.test(mlb), 'no "title odd" on the page');
   assert.ok(text.includes('Postseason results are not among the inputs, so a pick can name a club that was already out by then.'));
   assert.ok(!/engine( code)? (is |has )?(not changed|unchanged|never changed)|most common length|results come in/i.test(text), 'no engine-wide unchanged claim');
   assert.ok(text.includes('the simulation called 5 of 11 series and got the champion wrong'));
@@ -510,6 +511,14 @@ test('PREDICTIONS through the real pages: the section, the scorecard, the method
   const wtext = elementOf(wnba, 'data-predictions-methodology').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
   assert.ok(/The inputs were locked on September 25, 2026 ?, before Game 1\./.test(wtext), wtext);
   assert.ok(wtext.includes('the simulation called 5 of 7 series and got the champion right'));
+  assert.ok(!/\btitle odd\b/i.test(wnba), 'no "title odd" on the page');
+  // The visible summary, per league, from its own lockedAt (September 30
+  // for both), and never "before Game 1".
+  for (const [slug, h] of [['mlb', mlb], ['wnba', wnba]] as const) {
+    const summary = elementOf(h, 'data-methodology-summary').replace(/<[^>]+>/g, '').replace(/&#x27;/g, "'");
+    assert.equal(summary, "PromoNight's picks were locked on September 30, 2026 from regular-season results only. They never change.", slug);
+    assert.ok(!/Game 1/.test(summary), slug);
+  }
 });
 
 test('PROMONIGHT PREDICTS: no "Computer\'s", and no "computer" at all, on the hub or either league page', async () => {
