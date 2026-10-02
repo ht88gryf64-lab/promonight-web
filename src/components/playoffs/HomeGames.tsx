@@ -61,8 +61,9 @@ function Row({
 }
 
 /**
- * Upcoming playoff games, each with its host: the next three days first, at most eight rows, one
- * ticket button a row. "Show all" reveals the rest of the week.
+ * Upcoming playoff games, each with its host: the next three days first (or,
+ * with none, the soonest of the week), at most eight rows, one ticket button
+ * a row. "Show N more games" reveals the rest of the week.
  *
  * `tickets` maps a host club id to its ticket button, already rendered by
  * the page. This component never sees a team record.

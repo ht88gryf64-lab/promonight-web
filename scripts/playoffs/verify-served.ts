@@ -693,7 +693,9 @@ async function main() {
     check(`${where}: the button reads "Show N more games" for the rows behind it, and is absent with none`, n === 0 ? got.button === null : got.button === `Show ${n} more ${n === 1 ? 'game' : 'games'}`, got.button ?? 'no button');
     const section = element(el, 'data-home-games=') ?? '';
     const emptyShown = /No playoff game with a confirmed date and host is listed/.test(textOf(section));
-    check(`${where}: the empty state shows only with no upcoming game at all, and never with the button`, emptyShown === (got.primary.length + got.rest.length === 0) && !(emptyShown && got.button !== null), emptyShown ? 'empty state' : `${got.primary.length + got.rest.length} games`);
+    // With no league being played the hub renders no games section at all.
+    const total = got.primary.length + got.rest.length;
+    check(`${where}: the empty state shows only with no upcoming game at all, and never with the button`, (section ? emptyShown === (total === 0) : total === 0) && !(emptyShown && got.button !== null), section ? (emptyShown ? 'empty state' : `${total} games`) : 'no games section');
   }
   /** No bare feed abbreviation where a team is named (ruling of 2026-10-02):
    *  slot texts, game matchups, the standing line; and no "NYY/BOS"-shaped
@@ -702,7 +704,9 @@ async function main() {
   function noFeedCodes(where: string, el: string) {
     const CODE = /^[A-Z]{2,4}(?:\/[A-Z]{2,4})*$/;
     const bare: string[] = [];
-    const pair = /\b[A-Z]{2,4}\/[A-Z]{2,4}\b/.exec(textOf(el));
+    // Promotion titles are a club's own words ("ALDS/ALCS Rally Towel"), not
+    // team names: taken out before the article-wide scan.
+    const pair = /\b[A-Z]{2,4}\/[A-Z]{2,4}\b/.exec(textOf(el.replace(/<p data-game-promo=[^>]*>[\s\S]*?<\/p>/g, '')));
     if (pair) bare.push(`"${pair[0]}" in the article`);
     for (const m of el.matchAll(/<span data-slot="placeholder"[^>]*>[\s\S]*?<span class="min-w-0">([^<]*)<\/span>/g)) if (m[1] !== 'TBD' && CODE.test(m[1].trim())) bare.push(`slot "${m[1]}"`);
     for (const r of elements(el, 'data-home-game=')) {
@@ -883,7 +887,7 @@ async function main() {
     if (!method) return;
     const mt = textOf(method);
     const frozen = new Date(p.provenance.frozenAt as string);
-    const first = doc.series.flatMap((s) => s.games).every((g) => (isInstant(g.start) ? new Date(g.start).getTime() > frozen.getTime() : g.date ? g.date > etYmd(frozen) : true)) && doc.series.some((s) => s.games.some((g) => g.start || g.date));
+    const first = doc.series.flatMap((s) => s.games).every((g) => (isInstant(g.start) ? new Date(g.start).getTime() > frozen.getTime() : g.date ? g.date > etYmd(frozen) : true)) && doc.series.some((s) => s.games.some((g) => isInstant(g.start) || g.date));
     check(`${where}: methodology says when the inputs were locked`, mt.includes(`The inputs were locked on ${longEt(frozen)}${first ? ', before Game 1' : ''}.`), longEt(frozen));
     const computedOn = longEt(new Date(p.computedAt));
     const lockedOn = longEt(instantOf(p.lockedAt as unknown) as Date);

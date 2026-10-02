@@ -657,9 +657,11 @@ const bySoonest = (a: HomeGameView, b: HomeGameView) =>
  * them.
  *
  * `primary` is the short list: games on the next three Eastern calendar
- * days, today included, and no more than eight of them. `rest` is every
- * other game in the next seven days, which "Show all" reveals. One row per
- * game: a game that arrives twice is listed once.
+ * days, today included, and no more than eight of them; with none in those
+ * days, the soonest eight of the week. `rest` is every other game in the
+ * next seven days, which "Show N more games" reveals. A "Time TBD" game
+ * dated earlier stays until the bracket shows it played or its series over.
+ * One row per game: a game that arrives twice is listed once.
  */
 export function homeGamesWindow(views: readonly LeagueView[], now: Date): HomeGamesWindow {
   const today = easternYmd(now);
