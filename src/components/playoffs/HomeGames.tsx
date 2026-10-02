@@ -97,7 +97,7 @@ export function HomeGames({
         </ul>
       )}
       {games.rest.length > 0 && (
-        <ShowAll id={`${id}-more`} label={`Show ${games.rest.length}${games.primary.length ? ' more' : ''} ${games.rest.length === 1 ? 'game' : 'games'} with a set time${games.primary.length ? '' : ' in the next seven days'}`}>
+        <ShowAll id={`${id}-more`} label={`Show ${games.rest.length} more ${games.rest.length === 1 ? 'game' : 'games'}`}>
           <ul data-home-games-list="rest" className="grid gap-2.5 lg:grid-cols-2">
             {rows(games.rest)}
           </ul>

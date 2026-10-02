@@ -610,19 +610,18 @@ test('HOME GAMES WINDOW: the short list is today and the two days after it, East
   assert.ok(w.primary.some((g) => Date.parse(g.startsAt as string) < late.getTime()), 'the capture has games that started by then');
 });
 
-test('HOME GAMES WINDOW: "Show all" holds the rest of the week, and nothing past it; only games with a date and a time', () => {
+test('HOME GAMES WINDOW: "Show all" holds the rest of the week, and nothing past it; every dated game, "Time TBD" ones included', () => {
   const v = view(FIXTURE.mlbLive);
   const w = homeGamesWindow([v], CAPTURED_AT);
-  const week = v.homeGames.filter((g) => g.timed && g.day >= '2026-09-29' && g.day <= '2026-10-05');
+  const week = v.homeGames.filter((g) => g.day >= '2026-09-29' && g.day <= '2026-10-05');
   assert.equal(w.primary.length + w.rest.length, week.length);
   assert.deepEqual([...w.primary, ...w.rest].map((g) => g.key), week.map((g) => g.key), 'the two lists are the week, in order, with nothing twice');
-  // The rest is the four games of the first three days that did not fit in
-  // eight rows. Every later game in the capture is "Time TBD", so none is
-  // listed (WEB4 addendum, 2026-10-02: upcoming playoff games have a known
-  // date and time).
-  assert.deepEqual(w.rest.map((g) => g.day), ['2026-10-01', '2026-10-01', '2026-10-01', '2026-10-01']);
-  assert.ok(v.homeGames.some((g) => !g.timed && g.day > '2026-10-01' && g.day <= '2026-10-05'), 'the capture holds untimed games inside the week');
-  assert.ok(![...w.primary, ...w.rest].some((g) => !g.timed || g.when.includes('TBD')), 'none of them is listed');
+  // The rest begins with the four games of the first three days that did not
+  // fit in eight rows, then runs on to Oct 5 with the "Time TBD" games
+  // (Matt's ruling, 2026-10-02: every upcoming game with a known date).
+  assert.deepEqual(w.rest.slice(0, 4).map((g) => g.day), ['2026-10-01', '2026-10-01', '2026-10-01', '2026-10-01']);
+  const tbd = w.rest.filter((g) => !g.timed);
+  assert.ok(tbd.length > 0 && tbd.every((g) => g.when.endsWith('· Time TBD') && g.day > '2026-10-01'), 'dated games with no time are listed, as Time TBD');
   assert.ok(v.homeGames.some((g) => g.day > '2026-10-05'), 'the capture holds a home game beyond the week');
   assert.ok(![...w.primary, ...w.rest].some((g) => g.day > '2026-10-05'));
 });

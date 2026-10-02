@@ -978,7 +978,7 @@ async function main() {
     // games.
     const gamesSection = element(el, 'data-home-games=');
     if (gamesSection) check(`${where}: the games section is headed "Upcoming playoff games"`, /<h2[^>]*>Upcoming playoff games<\/h2>/.test(gamesSection));
-    check(`${where}: every listed game has a known date and time`, list.every((r) => !/Time TBD|Date TBD/.test(textOf(r))), `${list.length} rows`);
+    check(`${where}: every listed game has a known date (an untimed one reads "Time TBD")`, list.every((r) => !/Date TBD/.test(textOf(r))), `${list.length} rows, ${list.filter((r) => /Time TBD/.test(textOf(r))).length} Time TBD`);
     const homeWord = /\bhome games?\b/i.exec(textOf(el) + ' ' + (/<meta name="description" content="([^"]*)"/.exec(got.html)?.[1] ?? ''));
     check(`${where}: nothing in the article or the description says "home games"`, !homeWord, homeWord ? homeWord[0] : '');
     // TBD slots: dashed, on the light fill, in the quietest readable ink.
@@ -1113,7 +1113,7 @@ async function main() {
       check(`${where}: home game rows carry one ticket link at most, and a league each`, rows.every((r) => count(r, 'rel="noopener noreferrer sponsored"') <= 1 && /\b(MLB|WNBA)\b/.test(textOf(r))), `${rows.length} rows`);
       const hubGames = element(el, 'data-home-games=');
       if (hubGames) check(`${where}: the games section is headed "Upcoming playoff games"`, /<h2[^>]*>Upcoming playoff games<\/h2>/.test(hubGames));
-      check(`${where}: every listed game has a known date and time`, rows.every((r) => !/Time TBD|Date TBD/.test(textOf(r))), `${rows.length} rows`);
+      check(`${where}: every listed game has a known date (an untimed one reads "Time TBD")`, rows.every((r) => !/Date TBD/.test(textOf(r))), `${rows.length} rows, ${rows.filter((r) => /Time TBD/.test(textOf(r))).length} Time TBD`);
       const hubHome = /\bhome games?\b/i.exec(textOf(el) + ' ' + (/<meta name="description" content="([^"]*)"/.exec(got.html)?.[1] ?? ''));
       check(`${where}: nothing in the article or the description says "home games"`, !hubHome, hubHome ? hubHome[0] : '');
       // Results so far: each league's decided series, one line each, with

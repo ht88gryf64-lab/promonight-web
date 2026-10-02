@@ -13,7 +13,6 @@ import { CAPTURED_AT, FIELDS_AT, FIXTURE, IN_GAME_AT, LYNX_OUT_AT, buildWithPred
 import type { HubPredictionLine, LeaguePredictions } from '../../../lib/postseason/predictions';
 import { PlayoffsHub, type HubLeague } from '../PlayoffsHub';
 import { PlayoffsLeague, type LeagueBody } from '../PlayoffsLeague';
-import { HomeGames } from '../HomeGames';
 
 type Doc = Record<string, unknown>;
 type RawSeries = Doc & { games: Doc[]; higher: Doc; lower: Doc };
@@ -802,7 +801,7 @@ test('HOME GAMES: "Show all" is a real button, and the rest of the week is in th
   assert.ok(!/\bhome games?\b/i.test(textOf(element(html, 'data-playoffs-article='))), 'nothing on the league page calls them home games');
   assert.match(
     section,
-    new RegExp(`<button type="button" data-show-all="home-games-this-week-more" aria-expanded="false" aria-controls="home-games-this-week-more" class="po-more-button [^"]*"[^>]*>Show ${w.rest.length} more games with a set time</button>`),
+    new RegExp(`<button type="button" data-show-all="home-games-this-week-more" aria-expanded="false" aria-controls="home-games-this-week-more" class="po-more-button [^"]*"[^>]*>Show ${w.rest.length} more games</button>`),
   );
   assert.match(section, /<div id="home-games-this-week-more" class="po-more [^"]*" data-open="false">/);
   const rest = element(section, 'data-home-games-list="rest"');
@@ -817,40 +816,40 @@ test('HOME GAMES: "Show all" is a real button, and the rest of the week is in th
 });
 
 test('HOME GAMES: nothing behind the button means no button', () => {
-  // The MLB capture holds twelve timed games in three days: eight show, four
-  // are behind the button.
-  const v = view(FIXTURE.mlbLive);
+  // The WNBA capture holds eight home games in the week, six in three days;
+  // the two "Time TBD" games on Oct 2 are behind the button, and listed.
+  const v = view(FIXTURE.wnbaLive);
   const w = homeGamesWindow([v], CAPTURED_AT);
   const html = leagueHtml(v);
   const BUTTON = '<button type="button" data-show-all=';
-  assert.equal(w.rest.length, 4);
+  assert.equal(w.rest.length, 2);
   assert.equal(count(html, BUTTON), 1);
-  // The WNBA capture holds eight home games in the week, two of them "Time
-  // TBD". The six with a time all fall in three days: no button.
-  const wv = view(FIXTURE.wnbaLive);
-  const ww = homeGamesWindow([wv], CAPTURED_AT);
-  assert.deepEqual([wv.homeGames.length, ww.primary.length, ww.rest.length], [8, 6, 0]);
-  assert.equal(count(leagueHtml(wv), BUTTON), 0);
-  assert.ok(!textOf(element(leagueHtml(wv), 'data-home-games=')).includes('Time TBD'));
+  assert.equal(count(element(element(html, 'data-home-games='), 'data-home-games-list="rest"'), 'Time TBD'), 2);
   // The mixed 2025 document on Oct 10: three home games left in its week,
-  // on Oct 10 and 11, all inside three days; one is "Time TBD", so two list.
+  // on Oct 10 and 11, all inside three days, one of them "Time TBD".
   const oct10 = new Date('2025-10-10T16:00:00Z');
   const few = view(FIXTURE.mlbMixed, oct10);
   const fw = homeGamesWindow([few], oct10);
-  assert.equal(few.homeGames.filter((g) => g.day >= '2025-10-10' && g.day <= '2025-10-12').length, 3);
-  assert.deepEqual([fw.primary.length, fw.rest.length], [2, 0]);
+  assert.deepEqual([fw.primary.length, fw.rest.length], [3, 0]);
+  assert.equal(fw.primary.filter((g) => g.when.endsWith('· Time TBD')).length, 1);
   const none = leagueHtml(few, { now: oct10 });
   assert.equal(count(none, BUTTON), 0);
   assert.equal(count(none, 'po-more'), 0);
   assert.equal(count(none, 'data-home-games-list="rest"'), 0);
-  assert.equal(count(element(none, 'data-home-games-list="primary"'), 'data-home-game="'), 2);
+  assert.equal(count(element(none, 'data-home-games-list="primary"'), 'data-home-game="'), 3);
 });
 
-test('HOME GAMES: with nothing in three days, the button says what it holds', () => {
-  const v = view(FIXTURE.mlbLive);
+test('HOME GAMES: a game with no date is never listed', () => {
+  const doc = loadDoc(FIXTURE.wnbaLive) as Record<string, unknown>;
+  const series = doc.series as Record<string, unknown>[];
+  for (const s of series) for (const g of s.games as Record<string, unknown>[]) if (g.startTimeTBD) Object.assign(g, { date: null, start: null });
+  const b = mapBracketDoc(doc, { league: 'WNBA', season: 2026 });
+  assert.ok(b);
+  const v = buildLeagueView(b, clubs(), parks(), CAPTURED_AT);
+  assert.ok(v);
   const w = homeGamesWindow([v], CAPTURED_AT);
-  const html = renderToStaticMarkup(<HomeGames id="x" heading="Upcoming playoff games" games={{ primary: [], rest: w.rest }} tickets={{}} surface="web_playoffs_league" empty="No playoff game with a confirmed date, time and host is listed in the next three days." />);
-  assert.match(html, new RegExp(`>Show ${w.rest.length} games with a set time in the next seven days</button>`));
+  assert.equal(w.primary.length + w.rest.length, 6, 'the two undated games are gone');
+  assert.ok(![...w.primary, ...w.rest].some((g) => /Date TBD/.test(g.when)));
 });
 
 test('CROSS LINK: only the leagues passed in are linked', () => {
@@ -912,7 +911,7 @@ test('HUB: next home games across leagues: three days, eight rows, one button a 
   const section = element(html, 'data-home-games="next-home-games"');
   assert.match(section, /<h2[^>]*>Upcoming playoff games<\/h2>/);
   assert.ok(!/\bhome games?\b/i.test(textOf(element(html, 'data-playoffs-article='))), 'nothing on the hub calls them home games');
-  assert.match(section, new RegExp(`aria-expanded="false" aria-controls="next-home-games-more"[^>]*>Show ${w.rest.length} more games with a set time</button>`));
+  assert.match(section, new RegExp(`aria-expanded="false" aria-controls="next-home-games-more"[^>]*>Show ${w.rest.length} more games</button>`));
   assert.equal(count(element(section, 'data-home-games-list="rest"'), 'data-home-game="'), w.rest.length);
 });
 

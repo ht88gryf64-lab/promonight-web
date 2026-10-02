@@ -161,9 +161,9 @@ export interface HomeGameView {
   day: string;
   sortKey: string;
   ifNecessary: boolean;
-  /** The game has a start instant and its time is not TBD. The upcoming
-   *  playoff games lists show only these (WEB4 addendum, 2026-10-02); the
-   *  venue and team modules keep every scheduled game. */
+  /** The game has a start instant and its time is not TBD. A game without
+   *  one is listed with "Time TBD" (its `when`); a game with no date never
+   *  reaches this list (Matt's ruling, 2026-10-02). */
   timed: boolean;
   /** The start instant of a timed game; null otherwise. A game past it is
    *  no longer upcoming, whatever the feed still says. */
@@ -639,8 +639,8 @@ export function homeGamesWindow(views: readonly LeagueView[], now: Date): HomeGa
   const seen = new Set<string>();
   const week: HomeGameView[] = [];
   for (const g of views.flatMap((v) => v.homeGames)) {
-    // Only a game with a known date and time is an upcoming playoff game.
-    if (!g.timed) continue;
+    // Every game with a known date is listed; an untimed one reads "Time
+    // TBD". A game with no date never reaches the list (buildLeagueView).
     if (g.day < today || g.day > weekEnd) continue;
     // Started, though the feed still lists it as scheduled: not upcoming.
     if (g.startsAt && Date.parse(g.startsAt) < now.getTime()) continue;

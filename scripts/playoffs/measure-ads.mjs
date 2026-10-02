@@ -116,6 +116,9 @@ const ADS = `(() => {
       inPicks: !!((picks && picks.contains(el)) || (method && method.contains(el))),
       inHubCard: !!(hubCard && hubCard.contains(el)),
       inPanels: !!(panels && panels.contains(el)),
+      // The amended contract (Matt, 2026-10-02): no unit inside a <details>,
+      // a bracket, the "where things stand" line, or any game row.
+      inForbidden: !!el.closest('details, .po-bracket, .po-picks, [data-standing], [data-home-game], [data-game], [data-result-game]'),
       parent: el.parentElement ? el.parentElement.tagName.toLowerCase() + (el.parentElement.dataset.playoffsArticle ? '[article]' : '') : null,
     };
   });
@@ -285,6 +288,7 @@ async function measure(path, width, { playoffs }) {
   check(`${label}: no ad container inside the interactive bracket`, m.units.filter((u) => u.inBracket || u.inPanels).length === 0, `${m.units.filter((u) => u.inBracket || u.inPanels).length}`);
   if (path !== '/playoffs') check(`${label}: the predictions section and the methodology are on the page, and no ad container is inside either`, m.hasPicks && m.hasMethod && m.units.filter((u) => u.inPicks).length === 0, `section ${m.hasPicks}, methodology ${m.hasMethod}, ${m.units.filter((u) => u.inPicks).length} inside`);
   else check(`${label}: the predictions card is on the hub, and no ad container is inside it`, m.hasHubCard && m.units.filter((u) => u.inHubCard).length === 0, `card ${m.hasHubCard}, ${m.units.filter((u) => u.inHubCard).length} inside`);
+  check(`${label}: AD CONTRACT: no ad container inside a <details>, a bracket, the standing line or a game row`, m.units.filter((u) => u.inForbidden).length === 0, `${m.units.filter((u) => u.inForbidden).length} inside`);
   const own = m.sticksOut.filter((x) => !x.ad);
   const fromAds = m.sticksOut.filter((x) => x.ad);
   check(`${label}: no aside, and nothing of the page's own is wider than the screen`, m.asides === 0 && own.length === 0, `asides ${m.asides}, document ${m.docWidth}px${own.length ? ', ' + own.slice(0, 3).map((x) => `${x.what} to ${x.right}px`).join('; ') : ''}`);
@@ -297,6 +301,10 @@ async function measure(path, width, { playoffs }) {
     check(`${label}: selecting every round and series, in both brackets, and opening every pick leaves every ad container in place`, s.series > 0 && s.picksTotal > 0 && s.picksOpened === s.picksTotal && s.kept === s.before && s.after === s.before && s.same === s.after && s.moves.added === 0 && s.moves.removed === 0 && s.inBracket === 0 && s.inPicks === 0,
       `${s.rounds} rounds, ${s.conferences} conference taps, ${s.series} series; predicted: ${s.picksRounds} rounds, ${s.picksConferences} conference taps, ${s.picksOpened} of ${s.picksTotal} picks opened; containers ${s.before} before, ${s.after} after, ${s.kept} still attached; added ${s.moves.added}, removed ${s.moves.removed}${s.moves.names.length ? ' ' + s.moves.names.slice(0, 4).join(' ') : ''}`);
     check(`${label}: the methodology detail is collapsed as served, opens, and no ad container is inside it once open`, s.methodCollapsed === true && s.methodOpened === true && s.inMethodDetail === 0, `collapsed ${s.methodCollapsed}, opened ${s.methodOpened}, ${s.inMethodDetail} inside`);
+    // The amended contract again, with every round, series, pick and the
+    // methodology opened: nothing may have landed inside what opened.
+    const forbiddenOpen = await ev(`[...document.querySelectorAll('.adthrive-ad, [id^="AdThrive_"]')].filter((el) => el.closest('details, .po-bracket, .po-picks, [data-standing], [data-home-game], [data-game], [data-result-game]')).length`);
+    check(`${label}: AD CONTRACT: no ad container inside a <details>, a bracket, the standing line or a game row, with everything opened`, forbiddenOpen === 0, `${forbiddenOpen} inside`);
     if (marked === 0) note(`${label}: there was no ad container to watch, so the check above proves nothing about re-rendering`);
     if (width < 600) {
       const st = await ev(STICKY);

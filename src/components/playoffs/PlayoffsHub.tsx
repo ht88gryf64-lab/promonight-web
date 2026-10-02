@@ -239,7 +239,7 @@ export function PlayoffsHub({
             tickets={tickets}
             surface={SURFACE}
             showLeague
-            empty="No playoff game with a confirmed date, time and host is listed in the next three days."
+            empty="No playoff game with a confirmed date and host is listed in the next three days."
           />
         )}
 
