@@ -143,7 +143,7 @@ export function ScheduleBlock({ contexts, team, teamName, today }: ScheduleBlock
         rows={rows as GameRow[]}
         teamName={teamName}
         remaining={remaining}
-        renderRow={(row) => renderGameRow(row, team, teamName)}
+        renderRow={(row) => renderGameRow(row, team, teamName, { showPostponed: true })}
       />
     );
   }
@@ -225,7 +225,13 @@ type GameRow = Extract<Row, { kind: 'game' }>;
 
 // One game row. Shared by the week grid and the date list so the two can never
 // render a game differently; moved here verbatim from the week-grid map.
-function renderGameRow(row: GameRow, team: Team, teamName: string) {
+//
+// `showPostponed` is the date list's only difference, and the week grid never
+// passes it (NFL stays main's bytes). In season, a postponed MLB game with no
+// makeup date yet is still one of the season's games and keeps its row, but
+// printing its original first pitch would state a start that will not happen,
+// so the time cell says "Postponed" instead.
+function renderGameRow(row: GameRow, team: Team, teamName: string, opts: { showPostponed?: boolean } = {}) {
   const { ctx } = row;
   const { game, isHome, opponentTeam } = ctx;
   const oppName = opponentTeam ? teamDisplayName(opponentTeam) : 'TBD';
@@ -242,7 +248,9 @@ function renderGameRow(row: GameRow, team: Team, teamName: string) {
   // Kickoff: branch on timeTbd BEFORE formatting. The stored 05:00
   // placeholder is a valid-looking UTC time, so formatting it would
   // print a confident wrong kickoff that no field can flag.
-  const kickoffLabel = game.timeTbd
+  const kickoffLabel = opts.showPostponed && game.status === 'postponed'
+    ? 'Postponed'
+    : game.timeTbd
     ? 'TBD'
     : formatGameTime(game.gameTimeTz, game.gameTime, game.date, game.gameTimeZoneAbbrev);
 
@@ -349,7 +357,9 @@ function DateListSchedule({
             invitation only while a game is still ahead; over a fully played
             season it would point at expands for games already over. */}
         <p className="mt-2 max-w-2xl font-rd text-sm leading-relaxed text-rd-ink-soft">
-          {remaining
+          {months === null
+            ? `Every game of the ${TITLE_SEASON_YEAR} regular season.`
+            : remaining
             ? `Every game of the ${TITLE_SEASON_YEAR} regular season, by month. Open a month to see its games, and a game for tickets, parking and hotels on the road.`
             : `Every game of the ${TITLE_SEASON_YEAR} regular season, by month. Open a month to see its games.`}
         </p>

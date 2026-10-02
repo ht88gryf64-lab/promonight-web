@@ -71,6 +71,11 @@ const CASES = [
   ['another season counted', LIB, "      (!isMlb(c) || c.game.date.startsWith(`${TITLE_SEASON_YEAR}-`)),", '      true,', [T_LIB, T_RENDER]],
   ['season scope applied to NFL', LIB, "      (!isMlb(c) || c.game.date.startsWith(`${TITLE_SEASON_YEAR}-`)),", '      c.game.date.startsWith(`${TITLE_SEASON_YEAR}-`),', [T_LIB, T_NFL]],
   ['a game played today keeps the invitation', SB, "regular.some((c) => c.game.status === 'scheduled' && c.game.date >= today);", 'regular.some((c) => c.game.date >= today);', [T_RENDER]],
+  ['season live only strictly after today', LIB, "c.game.status === 'scheduled' && c.game.date >= today);\n  return kept.filter", "c.game.status === 'scheduled' && c.game.date > today);\n  return kept.filter", [T_LIB]],
+  ['a month hidden from assistive technology', SB, '    <details className="group/month">', '    <details className="group/month" aria-hidden="true">', [T_RENDER]],
+  ['postponed row prints its original first pitch', SB, "  const kickoffLabel = opts.showPostponed && game.status === 'postponed'", '  const kickoffLabel = false', [T_RENDER]],
+  ['fallback list claims months', SB, '            ? `Every game of the ${TITLE_SEASON_YEAR} regular season.`', '            ? `Every game of the ${TITLE_SEASON_YEAR} regular season, by month. Open a month to see its games.`', [T_RENDER]],
+  ['NFL output drifting: the postponed label reaches the week grid', SB, '            return renderGameRow(row, team, teamName);', '            return renderGameRow(row, team, teamName, { showPostponed: true });', [T_NFL, T_RENDER]],
   // ---- NFL byte identity ----
   ['NFL output drifting: a weekless NFL slate sent down the month path', SB, "  if (team.league === 'MLB' && !isWeekGrid) {", '  if (!isWeekGrid) {', [T_RENDER]],
   ['NFL output drifting: the league gate inverted', SB, "  if (team.league === 'MLB' && !isWeekGrid) {", "  if (team.league !== 'MLB' || !isWeekGrid) {", [T_NFL]],

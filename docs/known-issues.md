@@ -3662,6 +3662,18 @@ the stale doc is simply never rewritten. The later date is kept, which is
 wrong when a game moves earlier (the Yankees' 09-26 game played 09-25 as game
 2); it corrects itself once the makeup completes.
 
+**Open for a ruling (from the G1 reviews, none reachable on production
+today).**
+1. A postponed game with no makeup date, in season, keeps its row (time cell
+   "Postponed") and counts in the month of its original date. Whether it
+   should count in that month's header or only in the Games tile is open.
+2. A canceled doc outranks a stale 'scheduled' twin. That is right when a
+   makeup is later called off and wrong if a canceled game is ever
+   reinstated under the same gamePk (the reinstated date then drops).
+3. Opening any played game's row (lazy-mounted, not in the served HTML)
+   still shows "Get tickets", parking and hotels. Pre-existing in
+   `GameExpand`; the intro no longer invites it over a played season.
+
 **What is still open.** The stale and canceled documents are still in
 Firestore, and the in-season calendar (`SeasonExplorer`/`CalendarGrid`) and
 the division-rivals derivation still read the raw contexts, so in season a

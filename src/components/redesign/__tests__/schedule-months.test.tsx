@@ -216,3 +216,38 @@ test('the month uses a named group, so hover inside an open row cannot reach mon
     assert.doesNotMatch(d.attrs, /class="(?:[^"]* )?group(?: [^"]*)?"/);
   }
 });
+
+test('no month or header is hidden from assistive technology or the page', () => {
+  for (const d of details) {
+    // Attributes only: the summary's class carries the Tailwind marker hider.
+    const banned = /\saria-hidden=|\s(?:hidden|inert)(?:=|\s|$)/;
+    assert.doesNotMatch(d.attrs, banned);
+    assert.doesNotMatch(d.children[0].attrs, banned);
+  }
+});
+
+test('in season, a postponed game with no makeup keeps its row and says Postponed, not a first pitch', () => {
+  const lone = mlbCtx(mlbGame('2026-09-20', true, METS, { status: 'postponed', gameTime: '23:20' }), METS);
+  const ahead = mlbCtx(mlbGame('2026-09-26', true, METS, { status: 'scheduled' }), METS);
+  const html = render([lone, ahead], '2026-09-19');
+  const lis = all(parse(html), (n) => n.tag === 'li').map(textOf);
+  const row = lis.find((t) => t.includes('Sep 20'))!;
+  assert.ok(row, 'the postponed game keeps its row in season');
+  assert.match(row, /Postponed/);
+  assert.doesNotMatch(row, /7:20 PM/);
+  assert.match(lis.find((t) => t.includes('Sep 26'))!, /7:20 PM EDT/, 'a scheduled game keeps its time');
+});
+
+test('the fallback flat list (a malformed date) does not claim to be by month', () => {
+  const bad = mlbCtx(mlbGame('2026-09-2x', true, METS, { status: 'completed' }), METS);
+  const html = render([...SEASON.filter((c) => c.game.date.startsWith('2026-09')), bad], '2026-10-01');
+  assert.doesNotMatch(html, /<details|by month/);
+  assert.match(html, /Every game of the 2026 regular season\.</);
+});
+
+test("the Postponed label is the date list's only: an NFL postponed week keeps main's time cell", () => {
+  const ppd = NFL_CONTEXTS.map((c, i) => (i === 2 ? { ...c, game: { ...c.game, status: 'postponed' as const } } : c));
+  const html = renderToStaticMarkup(<ScheduleBlock contexts={ppd} team={LIONS} teamName="Detroit Lions" today="2026-09-01" />);
+  assert.doesNotMatch(html, /Postponed/);
+  assert.equal(html, renderToStaticMarkup(<ScheduleBlock contexts={NFL_CONTEXTS} team={LIONS} teamName="Detroit Lions" today="2026-09-01" />), 'status alone changes nothing NFL renders');
+});

@@ -159,3 +159,10 @@ test('the season scope never reaches NFL: a January game of the 2026 NFL season 
   assert.ok(jan.length > 0, 'fixture carries January 2027 NFL games');
   for (const c of jan) assert.ok(regularSeasonContexts(NFL_CONTEXTS).includes(c));
 });
+
+test("the season is live through the day of its last scheduled game (>= today, not >)", () => {
+  const lone = mlbCtx(mlbGame('2026-09-20', true, METS, { status: 'postponed' }), METS);
+  const last = mlbCtx(mlbGame('2026-09-27', true, METS, { status: 'scheduled' }), METS);
+  assert.deepStrictEqual(regularSeasonContexts([lone, last], '2026-09-27'), [lone, last]);
+  assert.deepStrictEqual(regularSeasonContexts([lone, last], '2026-09-28'), [last]);
+});
