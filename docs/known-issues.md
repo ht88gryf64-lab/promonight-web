@@ -3687,5 +3687,63 @@ production writes and needs its own ruling.
 
 **Also found (unrelated, pre-existing).** `postseason-reader-filter.test.ts`
 fixes a row at `2026-10-01` and `getHighlightedPromos` filters
-`date >= today` in UTC, so that case fails from 2026-10-02T00:00Z on, on main
-too. Fix: date the fixture relative to the clock or inject today.
+`date >= today` in UTC, so that case failed from 2026-10-02T00:00Z on, on main
+too. FIXED 2026-10-02 (c09f3b2): the file runs on a pinned clock
+(`mock.timers`, Date only, 2026-09-30T12:00Z); fixture dates unchanged.
+Still OPEN, same cause, not in that fix's scope: five tests in
+`src/lib/postseason/__tests__/data.test.ts` (3, "PAGE DATA" and "PARK PAGE")
+and `src/app/playoffs/__tests__/routes.test.tsx` (2, "ROUTE /playoffs") read
+the real clock through `getLeaguePageData`'s `new Date()`. They pass with the
+clock at 2026-09-30T12:00Z and fail at 2026-10-02T12:00Z, on main 7fd7e7c as
+well. The same pin (or passing `now` in) fixes them.
+
+## 63. The MLB import cannot tell a rescheduled game's makeup from its original date until the makeup is played
+
+**Status: OPEN. DEADLINE: before MLB Opening Night 2027 (Wednesday
+2027-03-24, per mlb.com's 2027 schedule release). The fix is in the Monday
+MLB ingest and needs its own pipeline gate (it changes production writes).**
+
+**What it is.** `src/lib/ingest-mlb.ts` (the `/api/cron/mlb-schedule` cron,
+Mondays 10:00 UTC) keys each `games` doc on the date and upserts with merge.
+When a game is rescheduled, the run writes a new doc for the makeup date and
+never touches the original-date doc, which stays `status: 'scheduled'` with
+the same `mlbGameId`. Until the makeup is played, the two docs read the same
+in every stored field the web uses: same `mlbGameId`, same status, same
+batch. Firestore `createTime` and `updateTime` do not separate them either
+(checked on production 2026-10-01).
+
+**What the web does today.** The schedule-months build (entry 62,
+`regularSeasonContexts` in `src/lib/schedule-months.ts`) keeps one doc per
+`mlbGameId` by rank (completed, canceled, scheduled, postponed) and, on a
+tie, the later date. In the offseason this is exact: all 28 production pairs
+are completed against scheduled. In season it fails three ways:
+
+1. *Makeup vs original, both 'scheduled'.* The later date wins, which is
+   wrong when a game moves earlier (the Yankees' 2026-09-26 game was played
+   09-25 as game 2 of a doubleheader). The wrong date shows on the team page
+   until the makeup completes.
+2. *A reinstated cancellation drops off the list.* A canceled doc outranks a
+   'scheduled' twin, so if a canceled game is later reinstated under the same
+   `gamePk`, the reinstated date is hidden.
+3. *A postponed makeup drops off the list.* If the makeup is itself
+   postponed, the stale 'scheduled' original outranks it, so the list shows
+   the original date and the real game is gone.
+
+None of the three is reachable on production before games are rescheduled in
+the 2027 season; the cron starts writing 2027 docs in early January.
+
+**Why the web cannot fix it.** Nothing stored tells the live doc from the
+stale one. Any rank or tie-break in the reader is a guess that is wrong for
+one of the cases above.
+
+**The durable fix (pipeline gate, not yet ruled).** In each ingest run, for
+every `mlbGameId` the run writes, delete or mark (`supersededBy`,
+`status: 'moved'`) any other doc carrying that `mlbGameId` under a different
+doc id; or write a per-run `lastSeenAt` and let readers keep only docs the
+latest run saw. Either changes production writes, so it needs its own gate:
+a dry run listing every doc it would touch on production (the 28 known
+pairs, the 2026-09-27 cancellation), Matt's ruling on delete versus mark,
+then an execute. Once the ingest marks stale docs, `regularSeasonContexts`
+should read the mark instead of ranking, and the in-season calendar
+(`SeasonExplorer`/`CalendarGrid`) and the division-rivals derivation, which
+still read the raw contexts, get the fix for free.
