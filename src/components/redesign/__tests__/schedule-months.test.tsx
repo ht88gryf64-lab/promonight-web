@@ -16,6 +16,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { ScheduleBlock } from '../ScheduleBlock';
 import { GameExpand } from '../GameExpand';
 import { regularSeasonContexts } from '@/lib/schedule-months';
+import { TITLE_SEASON_YEAR } from '@/lib/title-treatment';
 import type { GameContext } from '@/lib/data';
 import { BRAVES, LIONS, METS, NFL_CONTEXTS, PHILLIES, mlbCtx, mlbGame } from './fixtures/schedule-fixtures';
 
@@ -158,8 +159,13 @@ test("fix (c): the Games tile reads the list's population", () => {
   // The tile is fed by RedesignTeamPage; pin the call so it cannot drift back
   // to the raw doc count while the helper's own tests pass.
   const page = readFileSync('src/components/redesign/RedesignTeamPage.tsx', 'utf8');
-  assert.match(page, /gamesCount=\{gameContexts \? regularSeasonContexts\(gameContexts\)\.length : undefined\}/);
+  assert.match(page, /const regularGames = gameContexts \? regularSeasonContexts\(gameContexts, today\) : undefined;/);
+  assert.match(page, /gamesCount=\{regularGames\?\.length\}/);
   assert.doesNotMatch(page, /gamesCount=\{gameContexts\?\.length\}/);
+  // The schedule is gated on the same population, so the slot cannot render empty.
+  assert.match(page, /const showSchedule = hasNoUpcoming && \(regularGames\?\.length \?\? 0\) > 0;/);
+  // And the page's one clock read reaches the list, or the invitation could never return in season.
+  assert.match(page, /<ScheduleBlock contexts=\{gameContexts\} team=\{team\} teamName=\{displayName\} today=\{today\} \/>/);
   assert.equal(regularSeasonContexts(SEASON).length, rowsLi.length, 'tile population equals the list');
 });
 
@@ -193,4 +199,20 @@ test('month sections are MLB only: an NFL slate missing a week keeps main\'s fla
   const html = renderToStaticMarkup(<ScheduleBlock contexts={weekless} team={LIONS} teamName="Detroit Lions" today="2026-09-01" />);
   assert.doesNotMatch(html, /<details|page-content|by month/);
   assert.match(html, /week by week/);
+});
+
+test('the MLB copy and the population share one season constant', () => {
+  assert.equal(TITLE_SEASON_YEAR, 2026, 'bump this test with the constant, deliberately');
+  assert.match(OVER, new RegExp(`${TITLE_SEASON_YEAR} season</div>`));
+  assert.match(OVER, new RegExp(`Atlanta Braves ${TITLE_SEASON_YEAR} Game Schedule</h2>`));
+  const src = readFileSync('src/components/redesign/ScheduleBlock.tsx', 'utf8');
+  const dateList = src.slice(src.indexOf('function DateListSchedule'));
+  assert.doesNotMatch(dateList.replace(/\{\/\*[\s\S]*?\*\/\}|\/\/.*$/gm, ''), /\b2026\b/, 'no hardcoded year in the MLB branch');
+});
+
+test('the month uses a named group, so hover inside an open row cannot reach month styles or the reverse', () => {
+  for (const d of details) {
+    assert.match(d.attrs, /class="group\/month"/);
+    assert.doesNotMatch(d.attrs, /class="(?:[^"]* )?group(?: [^"]*)?"/);
+  }
 });

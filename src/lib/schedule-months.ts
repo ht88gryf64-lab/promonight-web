@@ -19,21 +19,28 @@ import { TITLE_SEASON_YEAR } from './title-treatment';
  *    reading 'scheduled', beside the makeup doc with the SAME mlbGameId. Most
  *    clubs carry one to five of these; the Braves carried three.
  * 3. A CANCELED GAME. Never played and never made up (the Orioles and Yankees
- *    each carry one, 2026-09-27). It is not a game of the season. Likewise a
- *    POSTPONED doc left standing with no makeup twin: no game is played on
- *    its date, so it is not a row (none on production today).
+ *    each carry one, 2026-09-27). It is not a game of the season. A canceled
+ *    doc outranks a stale 'scheduled' twin: cancellation is final, so a
+ *    makeup that is later called off takes its rained-out original with it.
+ *    A POSTPONED doc with no makeup twin is the one state that depends on
+ *    the date. While the season still has a scheduled game ahead it is a
+ *    game awaiting a makeup date, so it stays (row and tile; the expanded row
+ *    says "Postponed"). Once nothing is ahead it was never made up, so it is
+ *    not a game of the season (decided in G1 review round 2, 2026-10-01,
+ *    open to Matt's ruling; none on production today).
  * 4. ANOTHER SEASON. getGamesForTeam has no season filter, and the MLB cron
  *    writes the next season's docs from early January while the page still
  *    says "2026". MLB docs count only when their date falls in
  *    TITLE_SEASON_YEAR, the constant every hardcoded 2026 is bumped with.
  *
- * Rules 2 to 4 apply only to documents that carry an `mlbGameId`. NFL docs
- * never do, and no NFL doc sets isPostseason (ingest-nfl writes seasonType,
- * which getGamesForTeam already filters), so this is the identity on NFL:
- * same contexts, same order. The NFL golden test holds it to that.
+ * Rules 2 to 4 apply only to MLB documents (`league === 'mlb'`); the dedupe
+ * additionally needs a numeric `mlbGameId`. No NFL doc sets isPostseason
+ * (ingest-nfl writes seasonType, which getGamesForTeam already filters), so
+ * this is the identity on NFL: same contexts, same order. The NFL golden
+ * test holds it to that.
  *
  * Among docs sharing an mlbGameId the one kept is the most settled
- * (completed, then scheduled, then postponed). On production 2026-10-01 all
+ * (completed, then canceled, then scheduled, then postponed). On production 2026-10-01 all
  * 28 duplicate pairs are completed-versus-scheduled, so this is exact for the
  * offseason. KNOWN LIMIT: between a reschedule and the makeup being played,
  * both docs can read 'scheduled', and nothing stored tells them apart (both
@@ -42,11 +49,12 @@ import { TITLE_SEASON_YEAR } from './title-treatment';
  * later and wrong when it moves earlier; it resolves itself once the makeup
  * completes. The real fix is in the ingest (known-issues 62).
  */
-export function regularSeasonContexts(contexts: readonly GameContext[]): GameContext[] {
+export function regularSeasonContexts(contexts: readonly GameContext[], today?: string): GameContext[] {
+  const isMlb = (c: GameContext) => c.game.league === 'mlb';
   const regular = contexts.filter(
     (c) =>
       c.game.isPostseason !== true &&
-      (typeof c.game.mlbGameId !== 'number' || c.game.date.startsWith(`${TITLE_SEASON_YEAR}-`)),
+      (!isMlb(c) || c.game.date.startsWith(`${TITLE_SEASON_YEAR}-`)),
   );
   const bestById = new Map<number, GameContext>();
   for (const c of regular) {
@@ -55,15 +63,24 @@ export function regularSeasonContexts(contexts: readonly GameContext[]): GameCon
     const held = bestById.get(id);
     if (!held || outranks(c, held)) bestById.set(id, c);
   }
-  return regular.filter((c) => {
+  const kept = regular.filter((c) => {
+    if (!isMlb(c)) return true;
     const id = c.game.mlbGameId;
-    if (typeof id !== 'number') return true;
-    if (bestById.get(id) !== c) return false;
-    return c.game.status !== 'canceled' && c.game.status !== 'postponed';
+    return typeof id !== 'number' || bestById.get(id) === c;
+  });
+  // Is anything still to be played? Decides the lone postponed doc. No clock
+  // read means no claim that the season is live.
+  const seasonLive =
+    today !== undefined && kept.some((c) => isMlb(c) && c.game.status === 'scheduled' && c.game.date >= today);
+  return kept.filter((c) => {
+    if (!isMlb(c)) return true;
+    if (c.game.status === 'canceled') return false;
+    if (c.game.status === 'postponed') return seasonLive;
+    return true;
   });
 }
 
-const SETTLED: Record<string, number> = { completed: 3, scheduled: 2, postponed: 1, canceled: 0 };
+const SETTLED: Record<string, number> = { completed: 4, canceled: 3, scheduled: 2, postponed: 1 };
 
 function outranks(a: GameContext, b: GameContext): boolean {
   const ra = SETTLED[a.game.status] ?? 0;

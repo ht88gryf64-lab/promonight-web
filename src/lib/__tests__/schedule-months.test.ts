@@ -115,10 +115,36 @@ test('games label', () => {
   assert.equal(gamesLabel(27), '27 games');
 });
 
-test('a postponed doc with no makeup twin is not a row (no game is played on its date)', () => {
+test('a postponed doc with no makeup twin: kept while a game is still ahead, dropped once nothing is', () => {
   const lone = mlbCtx(mlbGame('2026-09-20', true, METS, { status: 'postponed' }), METS);
   const played = mlbCtx(mlbGame('2026-09-21', true, METS), METS);
-  assert.deepStrictEqual(regularSeasonContexts([lone, played]), [played]);
+  const ahead = mlbCtx(mlbGame('2026-09-26', true, METS, { status: 'scheduled' }), METS);
+  // Offseason: nothing ahead, so it was never made up.
+  assert.deepStrictEqual(regularSeasonContexts([lone, played], '2026-10-01'), [played]);
+  assert.deepStrictEqual(regularSeasonContexts([lone, played, ahead], '2026-09-27'), [played, ahead], 'the last scheduled game is behind, so the postponed doc goes');
+  // In season: it awaits a makeup date and is still one of the season's games.
+  assert.deepStrictEqual(regularSeasonContexts([lone, played, ahead], '2026-09-22'), [lone, played, ahead]);
+  // No clock read: no claim the season is live.
+  assert.deepStrictEqual(regularSeasonContexts([lone, played, ahead]), [played, ahead]);
+});
+
+test('a makeup that is later canceled takes its stale original with it', () => {
+  // Rained out 09-20 (doc left 'scheduled'), makeup 09-28 canceled: no game was played.
+  const stale = mlbCtx(mlbGame('2026-09-20', true, METS, { status: 'scheduled', mlbGameId: 77 }), METS);
+  const canceled = mlbCtx(mlbGame('2026-09-28', true, METS, { status: 'canceled', mlbGameId: 77 }), METS);
+  assert.deepStrictEqual(regularSeasonContexts([stale, canceled], '2026-10-01'), []);
+  assert.deepStrictEqual(regularSeasonContexts([canceled, stale], '2026-10-01'), []);
+  // But a completed game always wins over a canceled twin.
+  const done = mlbCtx(mlbGame('2026-09-29', true, METS, { status: 'completed', mlbGameId: 77 }), METS);
+  assert.deepStrictEqual(regularSeasonContexts([stale, canceled, done], '2026-10-01'), [done]);
+});
+
+test('the MLB rules key on the league, so an MLB doc without a numeric gamePk still gets them', () => {
+  const noPk = (d: string, extra = {}) => mlbCtx(mlbGame(d, true, METS, { mlbGameId: undefined, ...extra }), METS);
+  const next = noPk('2027-04-01', { status: 'scheduled' });
+  const canceled = noPk('2026-08-01', { status: 'canceled' });
+  const real = noPk('2026-08-02');
+  assert.deepStrictEqual(regularSeasonContexts([canceled, real, next], '2026-10-01'), [real]);
 });
 
 test("MLB docs from another season are not this season's games", () => {

@@ -3642,7 +3642,11 @@ regular season", and the Games tile counted them (Braves 168, Yankees 170).
 **What changed.** `src/lib/schedule-months.ts` `regularSeasonContexts` drops
 postseason docs, keeps one doc per `mlbGameId` (the most settled: completed,
 scheduled, postponed; later date on a tie), drops canceled MLB games and a
-postponed doc left with no makeup, and keeps only MLB docs dated in
+postponed doc left with no makeup once nothing is still scheduled ahead
+(while games remain it counts, as a game awaiting a makeup date; decided in
+review, open to a ruling), ranks a canceled doc above a stale 'scheduled' twin
+(a makeup later called off takes its original with it), applies all of this
+by `league === 'mlb'`, and keeps only MLB docs dated in
 `TITLE_SEASON_YEAR` (the cron writes next season's docs from early January,
 and `getGamesForTeam` has no season filter). The
 list and the tile both read it, so they count one population (the Braves read

@@ -3,6 +3,7 @@ import type { Team } from '@/lib/types';
 import { teamDisplayName } from '@/lib/promo-helpers';
 import { formatGameTime } from '@/lib/format-game-time';
 import { gamesLabel, groupByMonth, regularSeasonContexts, type ScheduleMonth } from '@/lib/schedule-months';
+import { TITLE_SEASON_YEAR } from '@/lib/title-treatment';
 import { IconChevronDown } from '@tabler/icons-react';
 import { ScheduleRow } from './ScheduleRow';
 
@@ -121,7 +122,7 @@ export interface ScheduleBlockProps {
 export function ScheduleBlock({ contexts, team, teamName, today }: ScheduleBlockProps) {
   // Regular season only, one entry per game; see src/lib/schedule-months.ts.
   // The identity on NFL, which the NFL golden test holds byte for byte.
-  const regular = regularSeasonContexts(contexts);
+  const regular = regularSeasonContexts(contexts, today);
   const rows = buildRows(regular);
   if (rows.length === 0) return null;
 
@@ -317,7 +318,7 @@ function DateListSchedule({
   const months = groupByMonth(rows, (r) => r.ctx.game.date);
 
   const month = (m: ScheduleMonth<GameRow>) => (
-    <details className="group">
+    <details className="group/month">
       <summary className="block cursor-pointer list-none rounded-2xl border border-rd-line bg-rd-card px-4 py-3.5 transition-colors hover:bg-rd-cream sm:px-5 [&::-webkit-details-marker]:hidden">
         <span className="flex items-center justify-between gap-3">
           <span className="font-rd text-sm font-semibold text-rd-ink sm:text-base">
@@ -327,7 +328,7 @@ function DateListSchedule({
             size={16}
             stroke={2}
             aria-hidden
-            className="shrink-0 text-rd-ink-decor transition-transform group-open:rotate-180"
+            className="shrink-0 text-rd-ink-decor transition-transform group-open/month:rotate-180"
           />
         </span>
       </summary>
@@ -339,18 +340,18 @@ function DateListSchedule({
     <section className="py-12 px-6">
       <div className="mx-auto max-w-5xl">
         <div className="font-rd text-[11px] uppercase tracking-[0.14em] text-rd-ink-faint">
-          2026 season
+          {`${TITLE_SEASON_YEAR} season`}
         </div>
         <h2 className="rd-display mt-1 text-2xl text-rd-ink md:text-3xl">
-          {teamName} 2026 Game Schedule
+          {`${teamName} ${TITLE_SEASON_YEAR} Game Schedule`}
         </h2>
         {/* Says what the list is: regular-season games, by month. The ticket
             invitation only while a game is still ahead; over a fully played
             season it would point at expands for games already over. */}
         <p className="mt-2 max-w-2xl font-rd text-sm leading-relaxed text-rd-ink-soft">
           {remaining
-            ? 'Every game of the 2026 regular season, by month. Open a month to see its games, and a game for tickets, parking and hotels on the road.'
-            : 'Every game of the 2026 regular season, by month. Open a month to see its games.'}
+            ? `Every game of the ${TITLE_SEASON_YEAR} regular season, by month. Open a month to see its games, and a game for tickets, parking and hotels on the road.`
+            : `Every game of the ${TITLE_SEASON_YEAR} regular season, by month. Open a month to see its games.`}
         </p>
 
         {months === null ? (
