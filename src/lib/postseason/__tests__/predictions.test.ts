@@ -474,6 +474,34 @@ test('METHODOLOGY: a bracket locked on a later Eastern day than it was computed 
   assert.equal(same.bracketLockedOn, same.computedOn);
 });
 
+test('METHODOLOGY SUMMARY: each league\'s line is built from its own lockedAt, the Eastern day the bracket was locked', () => {
+  // Both 2026 brackets were locked on September 30 (21:22Z), after Game 1.
+  const m = buildWithPredictions(FIXTURE.mlbWildCard, PREDICTED.mlb, LYNX_OUT_AT).predictions.methodology;
+  assert.equal(m.summary, "PromoNight's picks were locked on September 30, 2026 from regular-season results only. They never change.");
+  const w = buildWithPredictions(FIXTURE.wnbaLynxOut, PREDICTED.wnba, LYNX_OUT_AT).predictions.methodology;
+  assert.equal(w.summary, "PromoNight's picks were locked on September 30, 2026 from regular-season results only. They never change.");
+  // A different lockedAt gives a different day, per league: the date is
+  // never written into the line. 03:30Z is still the previous Eastern day.
+  const b = bracketOf(loadDoc(FIXTURE.mlbWildCard));
+  const p = mapPredicted(PREDICTED.mlb);
+  assert.equal(buildMethodologyView({ ...p, lockedAt: '2026-10-01T05:00:00.000Z' }, b).summary, "PromoNight's picks were locked on October 1, 2026 from regular-season results only. They never change.");
+  assert.equal(buildMethodologyView({ ...p, lockedAt: '2026-10-02T03:30:00.000Z' }, b).summary, "PromoNight's picks were locked on October 1, 2026 from regular-season results only. They never change.");
+  const wb = bracketOf(loadDoc(FIXTURE.wnbaLynxOut));
+  const wp = mapPredicted(PREDICTED.wnba);
+  assert.equal(buildMethodologyView({ ...wp, lockedAt: '2026-09-26T16:00:00.000Z' }, wb).summary, "PromoNight's picks were locked on September 26, 2026 from regular-season results only. They never change.");
+  // Not the freeze day and not the compute day.
+  assert.ok(!m.summary.includes(m.lockedOn), m.summary);
+});
+
+test('METHODOLOGY SUMMARY: never says "before Game 1", even when the inputs were frozen before it', () => {
+  for (const [fixture, predicted] of [[FIXTURE.mlbWildCard, PREDICTED.mlb], [FIXTURE.wnbaLynxOut, PREDICTED.wnba]] as const) {
+    const m = buildWithPredictions(fixture, predicted, LYNX_OUT_AT).predictions.methodology;
+    assert.equal(m.lockedBeforeGame1, true, 'the detail may say it of the inputs');
+    assert.ok(!/before (Game 1|the first (pitch|game|tip)|the postseason)|Game 1/i.test(m.summary), m.summary);
+    assert.ok(!/\u2014/.test(m.summary), "no em dash");
+  }
+});
+
 test('METHODOLOGY: "before Game 1" is proven from the real bracket, never assumed', () => {
   const b = bracketOf(loadDoc(FIXTURE.mlbWildCard));
   assert.equal(frozenBeforeFirstGame(b, '2026-09-29T01:05:52.350Z'), true);
@@ -516,18 +544,18 @@ test('LABELS: percent and record', () => {
   assert.equal(recordText(3, 4), '3 for 4');
 });
 
-test('TITLE ODDS: the top eight, highest first, as "at lock" percentages', () => {
+test('TITLE ODDS: the top eight, highest first, as plain "to win title" percentages', () => {
   const v = buildWithPredictions(FIXTURE.mlbWildCard, PREDICTED.mlb, LYNX_OUT_AT).predictions.view;
   assert.equal(v.titleOdds.length, 8);
   assert.deepEqual(v.titleOdds.slice(0, 3), [
-    { name: 'Milwaukee Brewers', oddsLabel: '28%' },
-    { name: 'Los Angeles Dodgers', oddsLabel: '19%' },
-    { name: 'Tampa Bay Rays', oddsLabel: '15%' },
+    { name: 'Milwaukee Brewers', oddsLabel: '28% to win title' },
+    { name: 'Los Angeles Dodgers', oddsLabel: '19% to win title' },
+    { name: 'Tampa Bay Rays', oddsLabel: '15% to win title' },
   ]);
   const w = buildWithPredictions(FIXTURE.wnbaLynxOut, PREDICTED.wnba, LYNX_OUT_AT).predictions.view;
   assert.equal(w.titleOdds.length, 8);
   assert.equal(w.titleOdds[0].name, 'Golden State Valkyries');
-  assert.equal(w.titleOdds[0].oddsLabel, '37%');
+  assert.equal(w.titleOdds[0].oddsLabel, '37% to win title');
   assert.equal(w.titleOddsCaption, 'All 8 clubs, most likely champion first.');
   assert.equal(v.titleOddsCaption, 'The 8 most likely champions of 12.');
   // N counts the bracket's clubs, not the stored list: a short list does

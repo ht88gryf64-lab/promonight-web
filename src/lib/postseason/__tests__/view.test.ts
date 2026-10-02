@@ -601,22 +601,37 @@ test('HOME GAMES WINDOW: the short list is today and the two days after it, East
     ['Phillies at Braves', 'Tue, Sep 29 · 2:00 PM ET'],
     ['White Sox at Astros', 'Tue, Sep 29 · 5:00 PM ET'],
   ]);
-  // 03:00 UTC on Sep 30 is still Sep 29 in the East: the same three days.
-  assert.deepEqual(homeGamesWindow([v], new Date('2026-09-30T03:00:00Z')).primary.map((g) => g.key), w.primary.map((g) => g.key));
+  // 03:00 UTC on Sep 30 is still Sep 29 in the East: the same three days,
+  // less the games that have started by then.
+  const late = new Date('2026-09-30T03:00:00Z');
+  const lw = homeGamesWindow([v], late);
+  assert.ok(lw.primary.length > 0);
+  assert.ok(lw.primary.every((g) => g.day >= '2026-09-29' && g.day <= '2026-10-01' && Date.parse(g.startsAt as string) >= late.getTime()));
+  assert.ok(w.primary.some((g) => Date.parse(g.startsAt as string) < late.getTime()), 'the capture has games that started by then');
 });
 
-test('HOME GAMES WINDOW: "Show all" holds the rest of the week, and nothing past it', () => {
+test('HOME GAMES WINDOW: "Show all" holds the rest of the week, and nothing past it; every dated game, "Time TBD" ones included', () => {
   const v = view(FIXTURE.mlbLive);
   const w = homeGamesWindow([v], CAPTURED_AT);
   const week = v.homeGames.filter((g) => g.day >= '2026-09-29' && g.day <= '2026-10-05');
   assert.equal(w.primary.length + w.rest.length, week.length);
   assert.deepEqual([...w.primary, ...w.rest].map((g) => g.key), week.map((g) => g.key), 'the two lists are the week, in order, with nothing twice');
   // The rest begins with the four games of the first three days that did not
-  // fit in eight rows, then runs on to Oct 5.
+  // fit in eight rows, then runs on to Oct 5 with the "Time TBD" games
+  // (Matt's ruling, 2026-10-02: every upcoming game with a known date).
   assert.deepEqual(w.rest.slice(0, 4).map((g) => g.day), ['2026-10-01', '2026-10-01', '2026-10-01', '2026-10-01']);
-  assert.ok(w.rest.some((g) => g.day > '2026-10-01'));
+  const tbd = w.rest.filter((g) => !g.timed);
+  assert.ok(tbd.length > 0 && tbd.every((g) => g.when.endsWith('· Time TBD') && g.day > '2026-10-01'), 'dated games with no time are listed, as Time TBD');
   assert.ok(v.homeGames.some((g) => g.day > '2026-10-05'), 'the capture holds a home game beyond the week');
   assert.ok(![...w.primary, ...w.rest].some((g) => g.day > '2026-10-05'));
+});
+
+test('HOME GAMES WINDOW: a game past its start is not upcoming, though the feed still lists it as scheduled', () => {
+  const v = view(FIXTURE.mlbLive);
+  const first = homeGamesWindow([v], CAPTURED_AT).primary[0];
+  assert.equal(first.when, 'Tue, Sep 29 · 2:00 PM ET');
+  const after = new Date(Date.parse(first.startsAt as string) + 60_000);
+  assert.ok(!homeGamesWindow([v], after).primary.some((g) => g.key === first.key));
 });
 
 test('HOME GAMES WINDOW: one row for each game, however many times it arrives', () => {

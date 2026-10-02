@@ -32,12 +32,12 @@ function sound(text: string, where: string) {
 test('LEAGUE, being played: the title names the page, the description names the round', () => {
   const c = leagueCopy(2026, 'MLB', '/playoffs/mlb', view(FIXTURE.mlbFields, FIELDS_AT));
   assert.deepEqual(c, {
-    title: '2026 MLB Playoffs Bracket, Schedule and Scores',
+    title: '2026 MLB Playoffs: Bracket and Schedule',
     canonical: 'https://www.getpromonight.com/playoffs/mlb',
-    description: 'The 2026 MLB postseason bracket. Current round: Wild Card Series. Every series, seed and result, with game times in Eastern and the home games coming up.',
+    description: 'The 2026 MLB postseason bracket. Current round: Wild Card Series. Every series, seed and result, with game times in Eastern and the upcoming playoff games.',
   });
   const w = leagueCopy(2026, 'WNBA', '/playoffs/wnba', view(FIXTURE.wnbaFields, FIELDS_AT));
-  assert.equal(w.title, '2026 WNBA Playoffs Bracket, Schedule and Scores');
+  assert.equal(w.title, '2026 WNBA Playoffs: Bracket and Schedule');
   assert.ok(w.description.includes('Current round: First Round.'));
   assert.equal(w.canonical, 'https://www.getpromonight.com/playoffs/wnba');
 });
@@ -50,14 +50,14 @@ test('LEAGUE, finished: the champion and the result, and no round "being played"
   const c = leagueCopy(2025, 'MLB', '/playoffs/mlb', view(FIXTURE.mlbFinal, FINAL_AT));
   assert.equal(c.description, 'The 2025 MLB postseason bracket, complete. Los Angeles Dodgers: won the World Series 4-3. Every series and result, round by round.');
   assert.ok(!c.description.includes('Current round'));
-  assert.equal(c.title, '2025 MLB Playoffs Bracket, Schedule and Scores');
+  assert.equal(c.title, '2025 MLB Playoffs: Bracket and Schedule');
   const w = leagueCopy(2025, 'WNBA', '/playoffs/wnba', view(FIXTURE.wnbaFinal, FINAL_AT));
   assert.ok(w.description.includes('Las Vegas Aces: won the WNBA Finals 4-0.'));
 });
 
 test('LEAGUE, no bracket: nothing is said about one', () => {
   assert.deepEqual(leagueCopy(2026, 'MLB', '/playoffs/mlb', null), {
-    title: '2026 MLB Playoffs Bracket, Schedule and Scores',
+    title: '2026 MLB Playoffs: Bracket and Schedule',
     canonical: 'https://www.getpromonight.com/playoffs/mlb',
     description: 'The 2026 MLB postseason bracket.',
   });
@@ -68,13 +68,13 @@ test('HUB, being played: the leagues playing and the round each is in', () => {
   assert.deepEqual(c, {
     title: '2026 Playoffs: MLB and WNBA Brackets',
     canonical: 'https://www.getpromonight.com/playoffs',
-    description: 'The 2026 postseason brackets for MLB and WNBA, series by series, with Eastern game times and the next home games. MLB: Wild Card Series. WNBA: First Round.',
+    description: 'The 2026 postseason brackets for MLB and WNBA, series by series, with Eastern game times and upcoming games. MLB: Wild Card Series. WNBA: First Round.',
   });
 });
 
 test('HUB, one league finished and one playing: the description is about the one playing', () => {
   const c = hubCopy(2025, ROUTES, [okState(view(FIXTURE.mlbMixed, MIXED_AT)), okState(view(FIXTURE.wnbaFinal, MIXED_AT))]);
-  assert.equal(c.description, 'The 2025 postseason brackets for MLB, series by series, with Eastern game times and the next home games. MLB: Division Series.');
+  assert.equal(c.description, 'The 2025 postseason brackets for MLB, series by series, with Eastern game times and upcoming games. MLB: Division Series.');
 });
 
 test('HUB, finished: complete, with no round and no next game', () => {
@@ -110,7 +110,12 @@ test('every title fits the audit, and every string is sound', () => {
     hubCopy(2025, ROUTES, [okState(view(FIXTURE.mlbFinal, FINAL_AT)), okState(view(FIXTURE.wnbaFinal, FINAL_AT))]),
     hubCopy(2026, ROUTES, []),
   ];
+  // The titles with predictions are Matt's wording, exactly; WNBA's is 66
+  // with the suffix by ruling (WEB4 addendum, 2026-10-02).
+  assert.equal(leagueCopy(2026, 'MLB', '/playoffs/mlb', null, true).title + SUFFIX, '2026 MLB Playoffs: Bracket, Schedule and Predictions | PromoNight');
+  assert.equal(leagueCopy(2026, 'WNBA', '/playoffs/wnba', null, true).title + SUFFIX, '2026 WNBA Playoffs: Bracket, Schedule and Predictions | PromoNight');
   for (const c of copies) {
+    assert.ok(!/home games?/i.test(c.description), c.description);
     assert.ok((c.title + SUFFIX).length <= 65, `${c.title}: ${(c.title + SUFFIX).length} characters with the suffix`);
     assert.ok(c.description.length <= 160, `${c.description.length}: ${c.description}`);
     assert.match(c.canonical, /^https:\/\/www\.getpromonight\.com\/playoffs(\/(mlb|wnba))?$/);
@@ -203,7 +208,7 @@ test('WITH PREDICTIONS: every round and the finished season stay within 160 char
     assert.ok(c.description.length <= 160, `${c.description.length}: ${c.description}`);
     assert.ok(/simulation/.test(c.description), c.description);
     assert.ok(!/computer/i.test(c.title + c.description), c.description);
-    assert.match(c.title, /Playoff Bracket and Predictions$/);
+    assert.match(c.title, /^20\d\d (MLB|WNBA) Playoffs: Bracket, Schedule and Predictions$/);
     sound(c.description, 'description');
   }
 });

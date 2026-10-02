@@ -51,6 +51,19 @@ mock.module(new URL('../../venue-hub.ts', import.meta.url).href, {
   },
 });
 
+// The clock is pinned for the whole file (known-issues 62). getLeaguePageData
+// and the pages read new Date() to drop scheduled games dated before today,
+// and the captures here were read on 2026-09-29, so on the real clock this
+// file began failing on 2026-10-02 once every hosted game was behind it.
+// CAPTURED_AT is the moment the captures were read. Only Date is mocked;
+// timers (the read timeouts) run as usual. Fixture dates are unchanged.
+mock.timers.enable({ apis: ['Date'], now: CAPTURED_AT });
+
+test('the clock is pinned: new Date() and Date.now() read CAPTURED_AT, not the real date', () => {
+  assert.equal(new Date().toISOString(), CAPTURED_AT.toISOString());
+  assert.equal(Date.now(), CAPTURED_AT.getTime());
+});
+
 // Loaded inside each test: a static import would be hoisted above the mocks.
 const load = () => import('../data');
 

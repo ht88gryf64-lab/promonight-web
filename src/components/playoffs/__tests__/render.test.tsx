@@ -46,10 +46,10 @@ function panelTickets(v: LeagueView): Record<string, ReactNode> {
 
 function leagueHtml(
   v: LeagueView,
-  opts: { predictions?: LeaguePredictions | null; now?: Date; others?: { league: 'MLB' | 'WNBA'; href: string }[] } = {},
+  opts: { predictions?: LeaguePredictions | null; now?: Date; others?: { league: 'MLB' | 'WNBA'; href: string }[]; standing?: string | null } = {},
 ): string {
   const homeGames = v.phase.kind === 'active' ? homeGamesWindow([v], opts.now ?? CAPTURED_AT) : { primary: [], rest: [] };
-  const body: LeagueBody = { state: 'ok', view: v, predictions: opts.predictions ?? null, homeGames };
+  const body: LeagueBody = { state: 'ok', view: v, predictions: opts.predictions ?? null, homeGames, standing: opts.standing ?? null };
   return renderToStaticMarkup(
     <PlayoffsLeague
       league={v.league}
@@ -508,7 +508,7 @@ test('CONCLUDED: the champion is named, nothing is "next", no home games are off
   assert.ok(html.includes('data-champion="los-angeles-dodgers"'));
   assert.ok(text.includes('2025 champion Los Angeles Dodgers Won the World Series 4-3'));
   assert.ok(!text.includes('Next:'));
-  assert.ok(!text.includes('Home games this week'));
+  assert.ok(!text.includes('Upcoming playoff games'));
   assert.equal(count(element(html, 'data-rounds'), 'data-series-status="final"'), 11);
 });
 
@@ -544,6 +544,60 @@ function articleChildren(html: string): string[] {
   }
   return out;
 }
+
+test('WHERE THINGS STAND: inside the introduction above the bracket, beside the bracket stamp; never a child of the article; absent renders nothing', () => {
+  const v = view(FIXTURE.mlbFields, FIELDS_AT);
+  const line = 'Wild Card Series: the Astros and the White Sox have not completed a game.';
+  const html = leagueHtml(v, { now: FIELDS_AT, standing: line });
+  const intro = element(html, 'data-page-intro');
+  assert.equal(count(html, 'data-standing'), 1);
+  assert.ok(intro.includes('data-standing'));
+  assert.equal(textOf(element(intro, 'data-standing')), line);
+  // Directly before the bracket's own change stamp.
+  assert.match(intro, /data-standing[^>]*>[^<]*<\/p><p data-bracket-updated/);
+  assert.ok(html.indexOf('data-standing') < html.indexOf('data-bracket-child'));
+  assert.deepEqual(articleChildren(html), ['header', 'div[page-intro]', 'div[bracket-child]', 'section[home-games]']);
+  const none = leagueHtml(v, { now: FIELDS_AT, standing: null });
+  assert.equal(count(none, 'data-standing'), 0);
+  assert.equal(none, leagueHtml(v, { now: FIELDS_AT }), 'no line, no trace');
+});
+
+// WCAG 2 relative luminance and contrast, for the TBD slot test.
+function luminance(hex: string): number {
+  const c = [0, 2, 4].map((i) => parseInt(hex.slice(1 + i, 3 + i), 16) / 255).map((x) => (x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+}
+const contrast = (a: string, b: string) => {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+};
+function mix(fg: string, bg: string, alpha: number): string {
+  const ch = (h: string, i: number) => parseInt(h.slice(1 + i, 3 + i), 16);
+  return `#${[0, 2, 4].map((i) => Math.round(ch(fg, i) * alpha + ch(bg, i) * (1 - alpha)).toString(16).padStart(2, '0')).join('')}`;
+}
+
+test('TBD SLOTS: dashed outline on a light cream fill, same box as a club slot row, text at WCAG AA or better', () => {
+  const html = leagueHtml(view(FIXTURE.mlbFields, FIELDS_AT), { now: FIELDS_AT });
+  const slots = [...html.matchAll(/<span data-slot="placeholder" class="([^"]+)"/g)].map((m) => m[1]);
+  assert.ok(slots.length > 0);
+  const css = readFileSync(new URL('../../../app/globals.css', import.meta.url), 'utf-8');
+  const token = (name: string) => {
+    const m = new RegExp(`--color-${name}:\\s*(#[0-9a-f]{6})`, 'i').exec(css);
+    assert.ok(m, name);
+    return m[1].toLowerCase();
+  };
+  for (const cls of slots) {
+    const c = cls.split(' ');
+    for (const k of ['border-dashed', 'px-2.5', 'py-2', 'text-[14px]', 'rounded-md']) assert.ok(c.includes(k), `${k} in ${cls}`);
+    const fill = /^bg-(rd-[a-z-]+)\/(\d+)$/.exec(c.find((x) => x.startsWith('bg-')) ?? '');
+    const ink = /^text-(rd-ink[a-z-]*)$/.exec(c.find((x) => /^text-rd-/.test(x)) ?? '');
+    assert.ok(fill && ink, cls);
+    // The slot sits on the white card.
+    const bg = mix(token(fill[1]), token('rd-card'), Number(fill[2]) / 100);
+    const ratio = contrast(token(ink[1]), bg);
+    assert.ok(ratio >= 4.5, `${ink[1]} on ${fill[1]}/${fill[2]}: ${ratio.toFixed(2)}:1`);
+  }
+});
 
 test('ARTICLE, league page: an article that is the page-content wrapper, children in the order the ad rule needs', () => {
   const html = leagueHtml(view(FIXTURE.mlbFields, FIELDS_AT), { now: FIELDS_AT });
@@ -743,9 +797,11 @@ test('HOME GAMES: "Show all" is a real button, and the rest of the week is in th
   const html = leagueHtml(v);
   const w = homeGamesWindow([v], CAPTURED_AT);
   const section = element(html, 'data-home-games="home-games-this-week"');
+  assert.match(section, /<h2[^>]*>Upcoming playoff games<\/h2>/);
+  assert.ok(!/\bhome games?\b/i.test(textOf(element(html, 'data-playoffs-article='))), 'nothing on the league page calls them home games');
   assert.match(
     section,
-    new RegExp(`<button type="button" data-show-all="home-games-this-week-more" aria-expanded="false" aria-controls="home-games-this-week-more" class="po-more-button [^"]*"[^>]*>Show all ${w.primary.length + w.rest.length} home games this week</button>`),
+    new RegExp(`<button type="button" data-show-all="home-games-this-week-more" aria-expanded="false" aria-controls="home-games-this-week-more" class="po-more-button [^"]*"[^>]*>Show ${w.rest.length} more games</button>`),
   );
   assert.match(section, /<div id="home-games-this-week-more" class="po-more [^"]*" data-open="false">/);
   const rest = element(section, 'data-home-games-list="rest"');
@@ -760,24 +816,40 @@ test('HOME GAMES: "Show all" is a real button, and the rest of the week is in th
 });
 
 test('HOME GAMES: nothing behind the button means no button', () => {
-  // The WNBA capture holds eight home games in the week, six in three days.
+  // The WNBA capture holds eight home games in the week, six in three days;
+  // the two "Time TBD" games on Oct 2 are behind the button, and listed.
   const v = view(FIXTURE.wnbaLive);
   const w = homeGamesWindow([v], CAPTURED_AT);
   const html = leagueHtml(v);
   const BUTTON = '<button type="button" data-show-all=';
   assert.equal(w.rest.length, 2);
   assert.equal(count(html, BUTTON), 1);
+  assert.equal(count(element(element(html, 'data-home-games='), 'data-home-games-list="rest"'), 'Time TBD'), 2);
   // The mixed 2025 document on Oct 10: three home games left in its week,
-  // on Oct 10 and 11, all inside three days.
+  // on Oct 10 and 11, all inside three days, one of them "Time TBD".
   const oct10 = new Date('2025-10-10T16:00:00Z');
   const few = view(FIXTURE.mlbMixed, oct10);
   const fw = homeGamesWindow([few], oct10);
   assert.deepEqual([fw.primary.length, fw.rest.length], [3, 0]);
+  assert.equal(fw.primary.filter((g) => g.when.endsWith('· Time TBD')).length, 1);
   const none = leagueHtml(few, { now: oct10 });
   assert.equal(count(none, BUTTON), 0);
   assert.equal(count(none, 'po-more'), 0);
   assert.equal(count(none, 'data-home-games-list="rest"'), 0);
   assert.equal(count(element(none, 'data-home-games-list="primary"'), 'data-home-game="'), 3);
+});
+
+test('HOME GAMES: a game with no date is never listed', () => {
+  const doc = loadDoc(FIXTURE.wnbaLive) as Record<string, unknown>;
+  const series = doc.series as Record<string, unknown>[];
+  for (const s of series) for (const g of s.games as Record<string, unknown>[]) if (g.startTimeTBD) Object.assign(g, { date: null, start: null });
+  const b = mapBracketDoc(doc, { league: 'WNBA', season: 2026 });
+  assert.ok(b);
+  const v = buildLeagueView(b, clubs(), parks(), CAPTURED_AT);
+  assert.ok(v);
+  const w = homeGamesWindow([v], CAPTURED_AT);
+  assert.equal(w.primary.length + w.rest.length, 6, 'the two undated games are gone');
+  assert.ok(![...w.primary, ...w.rest].some((g) => /Date TBD/.test(g.when)));
 });
 
 test('CROSS LINK: only the leagues passed in are linked', () => {
@@ -837,7 +909,9 @@ test('HUB: next home games across leagues: three days, eight rows, one button a 
   assert.ok(third.includes('data-tickets-for="indiana-fever"'));
   assert.match(third, /href="\/venues\/gainbridge-fieldhouse"/);
   const section = element(html, 'data-home-games="next-home-games"');
-  assert.match(section, new RegExp(`aria-expanded="false" aria-controls="next-home-games-more"[^>]*>Show all ${w.primary.length + w.rest.length} home games this week</button>`));
+  assert.match(section, /<h2[^>]*>Upcoming playoff games<\/h2>/);
+  assert.ok(!/\bhome games?\b/i.test(textOf(element(html, 'data-playoffs-article='))), 'nothing on the hub calls them home games');
+  assert.match(section, new RegExp(`aria-expanded="false" aria-controls="next-home-games-more"[^>]*>Show ${w.rest.length} more games</button>`));
   assert.equal(count(element(section, 'data-home-games-list="rest"'), 'data-home-game="'), w.rest.length);
 });
 
@@ -846,7 +920,7 @@ test('HUB: a concluded league shows its champion and offers no games', () => {
   const text = textOf(html);
   assert.ok(text.includes('2025 champion Los Angeles Dodgers Won the World Series 4-3'));
   assert.ok(html.includes('href="/mlb/los-angeles-dodgers"'));
-  assert.ok(!text.includes('Next home games'));
+  assert.ok(!text.includes('Upcoming playoff games'));
   assert.equal(count(html, 'data-predictions'), 0, 'the locked card is for a postseason still being played');
 });
 
@@ -856,7 +930,7 @@ test('HUB: no league at all is the offseason state, with no date in it', () => {
   assert.equal(count(html, 'data-hub-state="offseason"'), 1);
   assert.ok(text.includes('No postseason is underway'));
   assert.equal(count(html, 'data-league-card="'), 0);
-  assert.ok(!text.includes('Next home games'));
+  assert.ok(!text.includes('Upcoming playoff games'));
   const block = element(html, 'data-hub-state="offseason"');
   assert.ok(!/\d/.test(textOf(block)), 'the offseason state holds no digit, so no date');
   assert.ok(block.includes('href="/teams"'));

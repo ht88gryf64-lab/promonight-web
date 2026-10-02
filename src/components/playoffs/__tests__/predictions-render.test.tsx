@@ -139,7 +139,7 @@ test('PREDICTED BRACKET, MLB mid Wild Card: the coin flip reads as one; nothing 
   const h = html(STATES[1][1](), LYNX_OUT_AT);
   const flip = pick(h, 'wild_card-1');
   assert.ok(textOf(flip).includes('Astros in 2 · Coin flip'));
-  assert.ok(textOf(flip).includes("PromoNight's pick: Houston Astros in 2, a coin flip at lock."));
+  assert.ok(textOf(flip).includes("PromoNight's pick: Houston Astros in 2, a coin flip."));
   assert.ok(!/50%/.test(textOf(flip)));
   assert.equal(count(h, 'data-pick-outcome="alive"'), 11);
   assert.equal(count(h, 'data-dimmed="true"'), 0);
@@ -180,13 +180,34 @@ test('PREDICTED BRACKET: its own pills and toggle, the same rounds as the real o
   for (const m of scrollers) assert.match(m[1], /(^| )relative( |$)/);
 });
 
-test('TITLE ODDS: eight rows, labeled at lock', () => {
+test('TITLE ODDS: eight rows, each a plain percentage to win the title', () => {
   const h = html(STATES[0][1](), LYNX_OUT_AT);
   const t = element(h, 'data-title-odds');
-  assert.ok(textOf(t).startsWith('Title odds at lock'));
+  assert.ok(textOf(t).startsWith('Title odds') && !/at lock/i.test(textOf(t)));
   assert.equal(count(t, '<tr'), 9, 'a header row and eight teams');
-  assert.ok(textOf(t).includes('Golden State Valkyries 37%'));
+  assert.ok(textOf(t).includes('Golden State Valkyries 37% to win title'));
 });
+
+for (const [name, make, now] of STATES) {
+  test(`EVERY PERCENTAGE (${name}): no percentage on the page outside PromoNight Predicts, so the methodology's "every percentage on this page" holds`, () => {
+    const h = html(make(), now);
+    let outside = element(h, 'data-playoffs-article=');
+    for (const m of ['data-predictions="bracket"', 'data-predictions-methodology']) outside = outside.replace(element(outside, m), '');
+    assert.ok(!/\d\s?%/.test(textOf(outside)), textOf(outside).match(/.{0,30}\d\s?%/)?.[0]);
+  });
+}
+
+for (const [name, make, now] of STATES) {
+  test(`PERCENT LABELS (${name}): no "at lock" label anywhere; each pick's detail reads "{n}% to win series"`, () => {
+    const b = make();
+    const h = html(b, now);
+    assert.ok(!/\bat lock\b/i.test(textOf(h)), 'no "at lock"');
+    assert.ok(!/chance at lock/i.test(h));
+    const details = [...h.matchAll(/data-pick-detail[^>]*>([\s\S]*?)<\/div>/g)].map((m) => textOf(m[1]));
+    assert.equal(details.length, b.predicted.series.length);
+    for (const d of details) assert.match(d, /^PromoNight's pick: .+ in \d, (a coin flip|(\d{1,2}%|Over 99%|Under 1%) to win series)\./, d);
+  });
+}
 
 // ---- The contract: keys and fingerprints ----
 
@@ -216,6 +237,49 @@ for (const [name, make, now] of STATES) {
     }
     assert.ok(!/publish soon/i.test(h));
     assert.ok(!/—/.test(h), 'no em dash');
+  });
+}
+
+// ---- The methodology in two layers: a visible summary, a collapsed detail ----
+
+for (const [name, make, now] of STATES) {
+  test(`METHODOLOGY LAYERS (${name}): the summary and the backtest visible, everything else in a <details> collapsed by default, every fingerprint inside it once`, () => {
+    const b = make();
+    const h = html(b, now);
+    const method = element(h, 'data-predictions-methodology');
+    const detail = element(method, 'data-methodology-detail');
+    const fixture = b.predicted.league === 'MLB' ? PREDICTED.mlb : PREDICTED.wnba;
+    // Collapsed by default: a native <details> with no `open` attribute.
+    const opening = detail.slice(0, detail.indexOf('>') + 1);
+    assert.match(opening, /^<details\b/);
+    assert.ok(!/\sopen(=|\s|>)/.test(opening), opening);
+    assert.equal(count(method, '<details'), 1);
+    assert.match(detail, /<summary\b[^>]*>[\s\S]*How the picks were locked<\/summary>/);
+    // Visible, outside the detail: the summary line, then the backtest.
+    const visible = method.replace(detail, '');
+    const summary = textOf(element(visible, 'data-methodology-summary'));
+    assert.equal(summary, b.predictions.methodology.summary);
+    assert.match(summary, /^PromoNight's picks were locked on [A-Z][a-z]+ \d{1,2}, \d{4} from regular-season results only\. They never change\.$/);
+    assert.ok(!/Game 1/.test(summary), summary);
+    const backtest = textOf(element(visible, 'data-backtest'));
+    assert.ok(/^Run on the 2025 (MLB|WNBA) postseason with the same settings, the simulation called \d+ of \d+ series and got the champion (right|wrong)\.$/.test(backtest), backtest);
+    assert.ok(visible.indexOf('data-methodology-summary') < visible.indexOf('data-backtest'));
+    assert.ok(!detail.includes('data-backtest') && !detail.includes('data-methodology-summary'));
+    // Inside the detail: the method, the dates, the fingerprints, each once.
+    for (const f of fingerprints(fixture)) {
+      assert.equal(count(detail, f), 1, `${f.slice(0, 8)} inside the details`);
+      assert.equal(count(h, f), 1, `${f.slice(0, 8)} once on the page`);
+    }
+    assert.equal([...detail.matchAll(/[0-9a-f]{40,}/g)].length, 5);
+    const said = textOf(detail);
+    assert.ok(said.includes('PromoNight Predicts is a simulation, not a staff pick.'), said);
+    assert.ok(detail.includes('data-locked-on') && said.includes('The bracket was computed from those locked inputs'), said);
+    assert.ok(said.includes('Fingerprints') && said.includes('Each is a SHA-256 fingerprint of something that was locked'), said);
+    // The wording fix, and the old phrase nowhere on the page.
+    assert.ok(said.includes('Every percentage on this page is as it stood when the bracket was locked.'), said);
+    assert.ok(!/\btitle odd\b/i.test(h), 'no "title odd"');
+    // No ad marker, no page-content and no client boundary inside the detail.
+    assert.ok(!/data-ad-|adthrive|raptive|page-content/i.test(detail));
   });
 }
 

@@ -33,11 +33,27 @@ const T_RENDER = 'src/components/playoffs/__tests__/predictions-render.test.tsx'
 const T_ROUTES = 'src/app/playoffs/__tests__/routes.test.tsx';
 const T_HUB = 'src/components/playoffs/__tests__/render.test.tsx';
 const T_META = 'src/lib/postseason/__tests__/metadata.test.ts';
+const S = 'src/lib/postseason/standing.ts';
+const T_STAND = 'src/lib/postseason/__tests__/standing.test.ts';
+const T_VIEW = 'src/lib/postseason/__tests__/view.test.ts';
 
 const MAPPER_GATE = '  if (!lockedAt || !simRuns || !computedAt || Date.parse(computedAt) > Date.parse(lockedAt)) return null;';
 const CHANCE = "  if (typeof p !== 'number' || !Number.isFinite(p) || p < 0.5 || p >= 1) return null;";
 const COIN = "  if (typeof v.coinFlip !== 'boolean' || v.coinFlip !== (p <= COIN_FLIP_HIGH)) return null;";
 const JOIN = '    if (!real || real.round !== p.round || real.conference !== p.conference || real.bestOf !== p.bestOf) return null;';
+// The methodology's markup, read from the source so the cases below move
+// with it. Each is checked to occur exactly once like any other `from`.
+const C_SRC = readFileSync(join(REPO, C), 'utf-8');
+const between = (a, b) => {
+  const i = C_SRC.indexOf(a);
+  const j = C_SRC.indexOf(b, i + a.length);
+  if (i < 0 || j < 0) throw new Error(`markers not found: ${a} / ${b}`);
+  return C_SRC.slice(i + a.length, j);
+};
+const BACKTEST_P = '<p data-backtest' + between('<p data-backtest', '</p>') + '</p>';
+const MID = between(BACKTEST_P, '<details data-methodology-detail') + '<details data-methodology-detail className="group mt-4 border-t border-rd-line pt-3">\n';
+const DETAIL_BODY = between('</summary>\n', '      </details>');
+const FINGERPRINTS_DL = '        <dl data-fingerprints' + between('        <dl data-fingerprints', '</dl>') + '</dl>';
 const DIM = '      dimmed = predictedPair.some((s) => eliminated.has(s)) || realClubs.some((s) => !predictedPair.includes(s));';
 
 /** [name, file, from, to, tests]. `from` must occur exactly once. */
@@ -107,12 +123,12 @@ const CASES = [
   ['title odds NaN accepted', P, "    if (!slug || typeof odds !== 'number' || !Number.isFinite(odds) || odds < 0 || odds > 1) return null;", "    if (!slug || typeof odds !== 'number' || odds < 0 || odds > 1) return null;", [T_PRED]],
   ['title-odds row shape unchecked', P, '    if (!isObject(o)) return null;\n    const slug = text(o.slug);', '    const slug = text(o.slug);', [T_PRED]],
   ['read timeout default of minutes', D, '  return Number.isFinite(v) && v > 0 ? v : 4000;', '  return Number.isFinite(v) && v > 0 ? v : 400000;', [T_DATA]],
-  ['lock day taken from the compute', P, '    bracketLockedOn: easternLongDate(predicted.lockedAt),', '    bracketLockedOn: easternLongDate(predicted.computedAt),', [T_PRED]],
+  ['lock day taken from the compute', P, '  const bracketLockedOn = easternLongDate(predicted.lockedAt);', '  const bracketLockedOn = easternLongDate(predicted.computedAt);', [T_PRED]],
   ['title-odds caption claims every club', P, '      titleOdds.length < clubCount\n', '      false\n', [T_PRED]],
   ['view join failure called a missing club', P, "    if (!seriesId || !round) return 'no-join';", "    if (!seriesId || !round) return 'no-team-record';", [T_PRED]],
   ['caption counts the stored list', P, '      titleOdds.length < clubCount\n        ? `The ${titleOdds.length} most likely champions of ${clubCount}.`', '      titleOdds.length < predicted.titleOdds.length\n        ? `The ${titleOdds.length} most likely champions of ${predicted.titleOdds.length}.`', [T_PRED]],
   ['fingerprints claimed for every input', C, 'Each is a SHA-256 fingerprint of something that was locked: four of the inputs and the locked bracket file.', 'SHA-256 fingerprints of what was locked. A change to any input, or to the published bracket, would change its fingerprint.', [T_ROUTES]],
-  ['every fingerprint called a file', C, 'The bracket format and the\n        locked bracket file are fingerprinted as files, the other three as their locked data written out in a fixed order.', 'All five are fingerprinted as files.', [T_ROUTES]],
+  ['every fingerprint called a file', C, 'The bracket format and the\n          locked bracket file are fingerprinted as files, the other three as their locked data written out in a fixed order.', 'All five are fingerprinted as files.', [T_ROUTES]],
   // ---- The client boundary ----
   ['a hash handed to the predicted bracket', C, '<PredictedBracket league={league} leagueSlug={leagueSlug} season={season} rounds={view.rounds} />', "<PredictedBracket league={league} leagueSlug={leagueSlug} season={season} rounds={view.rounds} {...{ leak: 'e4bcaddb1f2acebf37ece2f2c8f32d136609bd93469a30c8e5da104a6bd17a8d' }} />", [T_RENDER]],
   // ---- The test walker itself: each self-check must fail without its branch ----
@@ -130,10 +146,10 @@ const CASES = [
   ['length described as the most common length', C, 'its length is how many games the pick most often took to win it.', 'its length is the matchup&apos;s most common length.', [T_ROUTES]],
   // Each of these two adds the banned wording beside the true sentence, so
   // only its own negative guard can catch it.
-  ['engine-wide unchanged claim', C, '<p data-backtest>{view.backtest}</p>', '<p data-backtest>{view.backtest} The engine code is unchanged since the lock.</p>', [T_ROUTES]],
+  ['engine-wide unchanged claim', C, BACKTEST_P, BACKTEST_P.replace('{view.backtest}', '{view.backtest} The engine code is unchanged since the lock.'), [T_ROUTES]],
   ['simulation framing dropped', C, 'PromoNight Predicts is a simulation, not a staff pick. ', '', [T_ROUTES]],
-  ['write-once and fixed-seed claim dropped', C, '. The locked bracket is written once and never changed, and the simulation runs from a fixed seed, so the same inputs always give\n          the same bracket.', '.', [T_ROUTES, T_RENDER]],
-  ['the false "computed once" claim back', C, '<p data-backtest>{view.backtest}</p>', '<p data-backtest>{view.backtest} The bracket was computed once.</p>', [T_ROUTES]],
+  ['write-once and fixed-seed claim dropped', C, '. The locked bracket is written once and never changed, and the simulation runs from a fixed seed, so the same inputs always give\n            the same bracket.', '.', [T_ROUTES, T_RENDER]],
+  ['the false "computed once" claim back', C, BACKTEST_P, BACKTEST_P.replace('{view.backtest}', '{view.backtest} The bracket was computed once.'), [T_ROUTES]],
   ['staff or expert framing in the intro', C, 'PromoNight Predicts picks every series with a simulation', 'Our experts and PromoNight Predicts pick every series with a simulation', [T_ROUTES]],
   ['"computer" back on the pick label', 'src/components/playoffs/PredictedBracket.tsx', "PromoNight&apos;s pick:", "Computer&apos;s pick:", [T_ROUTES]],
   ['"computer" back on the scorecard', C, '>Predicted champion<', '>Computer&apos;s champion<', [T_ROUTES]],
@@ -145,9 +161,67 @@ const CASES = [
   ['the hub never told the champion is out', P, '      championName: view.scorecard.championName,\n      championStatus: card.champion.status,', "      championName: view.scorecard.championName,\n      championStatus: 'alive' as const,", [T_HUB]],
   ['the hub claims an eliminated champion will win', 'src/components/playoffs/PredictionsCard.tsx', "  if (l.championStatus === 'out') return `PromoNight Predicts picked ${l.championName} to win it all`;\n", '', [T_HUB]],
   ['the old section heading as the heading\'s title', C, '<h2 id="predictions-heading" className', '<h2 id="predictions-heading" title="The Computer&apos;s Bracket" className', [T_ROUTES]],
-  ['two-day lock said as one', C, '          {view.computedOn === view.bracketLockedOn\n', '          {true\n', [T_RENDER]],
-  ['chance described over every run', C, 'in the simulated\n          postseasons where that matchup came up,', 'in those simulated\n          postseasons,', [T_RENDER]],
-  ['"at lock" left undefined', C, ' Every chance and title odd on this page is as\n          it stood when the bracket was locked.', '', [T_ROUTES]],
+  ['two-day lock said as one', C, '            {view.computedOn === view.bracketLockedOn\n', '            {true\n', [T_RENDER]],
+  ['chance described over every run', C, 'in the simulated\n            postseasons where that matchup came up,', 'in those simulated\n            postseasons,', [T_RENDER]],
+  ['"at lock" left undefined', C, ' Every percentage on this page is as\n            it stood when the bracket was locked.', '', [T_ROUTES]],
+  // ---- The methodology in two layers (WEB4, 2026-10-02) ----
+  ['"title odd" back in the at-lock sentence', C, ' Every percentage on this page is as', ' Every percentage and title odd on this page is as', [T_ROUTES, T_RENDER]],
+  ['summary date hard-coded', P, "summary: `PromoNight's picks were locked on ${bracketLockedOn} from", "summary: `PromoNight's picks were locked on September 30, 2026 from", [T_PRED]],
+  ['summary date taken from the input freeze', P, "summary: `PromoNight's picks were locked on ${bracketLockedOn} from", "summary: `PromoNight's picks were locked on ${easternLongDate(predicted.frozenAt)} from", [T_PRED, T_ROUTES]],
+  ['summary says "before Game 1" (builder)', P, "from regular-season results only. They never change.`,", "from regular-season results only${frozenBeforeFirstGame(bracket, predicted.frozenAt) ? ', before Game 1' : ''}. They never change.`,", [T_PRED]],
+  ['summary says "before Game 1" (component)', C, '<p data-methodology-summary>{view.summary}</p>', "<p data-methodology-summary>{view.lockedBeforeGame1 ? view.summary.replace(' from', ', before Game 1, from') : view.summary}</p>", [T_RENDER, T_ROUTES]],
+  ['summary line removed', C, '        <p data-methodology-summary>{view.summary}</p>\n', '', [T_RENDER, T_ROUTES]],
+  ['detail open by default', C, '<details data-methodology-detail className=', '<details open data-methodology-detail className=', [T_RENDER]],
+  ['detail content removed', C, DETAIL_BODY, '', [T_RENDER, T_ROUTES]],
+  ['fingerprints outside the detail', C, FINGERPRINTS_DL + '\n      </details>', '      </details>\n' + FINGERPRINTS_DL, [T_RENDER]],
+  ['fingerprints duplicated beside the summary', C, '<p data-methodology-summary>{view.summary}</p>', '<p data-methodology-summary>{view.summary}</p>{view.fingerprints.map((f) => <code key={f.label}>{f.value}</code>)}', [T_RENDER, T_ROUTES]],
+  ['backtest hidden in the detail', C, BACKTEST_P + MID, MID + BACKTEST_P, [T_RENDER]],
+  // ---- Where things stand, the games list, TBD slots, percentage labels (WEB4 addendum) ----
+  ['standing: wrong leader', S, '  const lead = a.wins > b.wins ? a : b;', '  const lead = a.wins < b.wins ? a : b;', [T_STAND]],
+  ['standing: wrong winner of a final series', S, '    const w = a.won ? a : b.won ? b : null;', '    const w = b.won ? a : a.won ? b : null;', [T_STAND]],
+  ['standing: stale score, one game behind', S, "the ${trail.label} ${lead.wins}-${trail.wins}`", "the ${trail.label} ${lead.wins - 1}-${trail.wins}`", [T_STAND]],
+  ['standing: plural verb on a singular nickname', S, "verb(lead.label, 'lead', 'leads')", "'lead'", [T_STAND, T_ROUTES]],
+  ['standing: stale final score', S, '`the ${w.label} beat the ${l.label} ${w.wins}-${l.wins}`', '`the ${w.label} beat the ${l.label} ${w.wins - 1}-${l.wins}`', [T_STAND]],
+  ['standing: champion score swapped', S, 'beating the ${l.fullName} ${w.wins}-${l.wins}.`', 'beating the ${l.fullName} ${l.wins}-${w.wins}.`', [T_STAND]],
+  ['standing: freshness word on the next game', S, '} Next game: ${gameText(next)}.`', '} Next game today: ${gameText(next)}.`', [T_STAND]],
+  ['standing: freshness word on the round', S, "parts.push(`${view.rounds[i].label}: ${clauses.join('; ')}.`);", "parts.push(`Live: ${view.rounds[i].label}: ${clauses.join('; ')}.`);", [T_STAND]],
+  ['standing: "right now" between rounds', S, "`Next round: ${round.label}.`", "`Right now: ${round.label}.`", [T_STAND]],
+  ['standing: a game behind the clock offered as next', S, "r.start !== null && Date.parse(r.start) >= now.getTime();", "r.start !== null;", [T_STAND]],
+  ['standing: an earlier untimed, postponed or suspended game ignored', S, '    if (key(r) <= key(next)) return null;\n', '', [T_STAND]],
+  ['standing: a simultaneous start named', S, '    if (key(r) <= key(next)) return null;', '    if (key(r) < key(next)) return null;', [T_STAND]],
+  ['standing: an undated game in a round being played never blocks', S, '      if (r.sure) return null;', '      if (false) return null;', [T_STAND]],
+  ['standing: an undated game in a later round blocks', S, '      if (r.sure) return null;\n      continue;', '      return null;', [T_STAND]],
+  ['standing: later rounds treated as being played', S, '[[sure, true], [later, false]]', '[[sure, true], [later, true]]', [T_STAND]],
+  ['standing: leftover rows of a finished series counted', S, "      if (s.status === 'final') continue;\n      const unplayed", '      const unplayed', [T_STAND]],
+  ['standing: a later round offers the opener', S, '.filter((r) => r.sure && ahead(r))', '.filter((r) => ahead(r))', [T_STAND]],
+  ['standing: a series with no game listed ignored', S, "      if (isSure && unplayed.length === 0 && !s.games.some((g) => g.state === 'live')) return null;\n", '', [T_STAND]],
+  ['standing: game order inside a series ignored', S, '    if (r.s === next.s && r.g.gameNumber < next.g.gameNumber) return null;\n', '', [T_STAND]],
+  ['standing: a later round under way never said', S, '.filter((i) => i > at && seriesOf(i).some(started))', '.filter(() => false)', [T_STAND]],
+  ['standing: a game with no time sorts last on its day', S, "`${r.day} ${r.start ?? ''}`", "`${r.day} ${r.start ?? '~'}`", [T_STAND]],
+  ['standing: a game in progress counts as missing', S, " && !s.games.some((g) => g.state === 'live')) return null;", ") return null;", [T_STAND]],
+  ['standing: a game in progress does not start a round', S, " || s.games.some((g) => g.state === 'final' || g.state === 'live');", " || s.games.some((g) => g.state === 'final');", [T_STAND]],
+  ['games list: a started game still listed as upcoming', 'src/lib/postseason/view.ts', '    if (g.startsAt && Date.parse(g.startsAt) < now.getTime()) continue;\n', '', [T_VIEW]],
+  ['standing: "awaits" always plural', S, "verb(club.label, 'await', 'awaits')", "'await'", [T_STAND]],
+  ['standing: only scheduled games count as unplayed', S, "const UNPLAYED = new Set(['scheduled', 'postponed', 'suspended']);", "const UNPLAYED = new Set(['scheduled']);", [T_STAND]],
+  ['standing: later rounds never block', S, '  const next = nextGame(played.flatMap(seriesOf), after(at, played), startOf, now);', '  const next = nextGame(played.flatMap(seriesOf), [], startOf, now);', [T_STAND]],
+  ['standing: a series waiting on an opponent skipped', S, "    return `the ${club.label} ${verb(club.label, 'await', 'awaits')} ${whom}`;", "    return 'unset';", [T_STAND]],
+  ['standing: unset matchups left unsaid', S, "    if (unset > 0) clauses.push(unset === 1 ? 'one matchup is to be set' : `${unset} matchups are to be set`);\n", '', [T_STAND]],
+  ['standing: "N matchup is" for several', S, '`${unset} matchups are to be set`', '`${unset} matchup is to be set`', [T_STAND]],
+  ['standing: "still" back in the unset clause', S, "'one matchup is to be set'", "'one matchup is still to be set'", [T_STAND]],
+  ['games list: Show-all label not "Show N more games"', 'src/components/playoffs/HomeGames.tsx', "label={`Show ${games.rest.length} more ", "label={`Show all ${games.primary.length + games.rest.length} ", [T_HUB]],
+  ['standing: half a summary when a series is unreadable', S, '      if (c === null) return null;', '      if (c === null) continue;', [T_STAND]],
+  ['standing: a placeholder phase still prints', S, '  if (at < 0) return null;', '  if (at < 0) return `Next round: ${view.phase.roundLabel}.`;', [T_STAND]],
+  ['games list: a dated "Time TBD" game hidden', 'src/lib/postseason/view.ts', '    if (g.day < today || g.day > weekEnd) continue;', '    if (!g.timed) continue;\n    if (g.day < today || g.day > weekEnd) continue;', [T_VIEW, T_HUB]],
+  ['games list: league heading reverted', 'src/components/playoffs/PlayoffsLeague.tsx', 'heading="Upcoming playoff games"', 'heading="Home games this week"', [T_HUB]],
+  ['games list: hub heading reverted', 'src/components/playoffs/PlayoffsHub.tsx', 'heading="Upcoming playoff games"', 'heading="Next home games"', [T_HUB]],
+  ['games list: "home games" back in the hub intro', 'src/components/playoffs/PlayoffsHub.tsx', 'with the upcoming playoff games and the parks', 'with the home games coming up next and the parks', [T_HUB]],
+  ['TBD slot text below AA', 'src/components/playoffs/SeriesCard.tsx', 'bg-rd-cream/60 px-2.5', 'bg-rd-ink-faint/30 px-2.5', [T_HUB]],
+  ['TBD slot loses its dashed outline', 'src/components/playoffs/SeriesCard.tsx', 'rounded-md border border-dashed border-rd-line-strong bg-rd-cream/60', 'rounded-md border border-rd-line-strong bg-rd-cream/60', [T_HUB]],
+  ['"at lock" back on a pick', 'src/components/playoffs/PredictedBracket.tsx', '`, ${s.chanceLabel} to win series.`', '`, ${s.chanceLabel} at lock.`', [T_RENDER]],
+  ['"at lock" back on the title odds', C, '          Title odds\n        </h3>', '          Title odds at lock\n        </h3>', [T_RENDER]],
+  ['title odds lose "to win title"', P, "oddsLabel: `${percent(o.odds)} to win title`", 'oddsLabel: percent(o.odds)', [T_PRED, T_RENDER]],
+  ['title with predictions not Matt\'s wording', 'src/lib/postseason/metadata.ts', '`${season} ${league} Playoffs: Bracket, Schedule and Predictions`', '`${season} ${league} Playoff Bracket and Predictions`', [T_META, T_ROUTES]],
+  ['standing rendered as a child of the article', 'src/components/playoffs/PlayoffsLeague.tsx', '<BracketControlsProvider initialRound', '{body.standing ? <p data-standing>{body.standing}</p> : null}\n        <BracketControlsProvider initialRound', [T_HUB]],
 ];
 
 const run = (files) =>
@@ -161,7 +235,7 @@ const run = (files) =>
   });
 
 // The tests pass untouched, or nothing below means anything.
-const base = run([T_PRED, T_DATA, T_FAIL, T_RENDER, T_ROUTES, T_HUB, T_META]);
+const base = run([T_PRED, T_DATA, T_FAIL, T_RENDER, T_ROUTES, T_HUB, T_META, T_STAND, T_VIEW]);
 if (base.status !== 0) {
   console.error('the tests fail before any mutation; fix that first');
   process.exit(2);

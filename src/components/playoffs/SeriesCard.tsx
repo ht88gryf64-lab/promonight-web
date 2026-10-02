@@ -18,11 +18,15 @@ function Seed({ seed }: { seed: number | null }) {
 
 function Slot({ slot, showWins }: { slot: SlotView; showWins: boolean }) {
   if (slot.kind === 'placeholder') {
-    // A slot no club fills yet. Dashed, and the text is the slot's own.
+    // A slot no club fills yet. Dashed, on a light cream fill, in the
+    // quietest readable ink, and the text is the slot's own. Same box as
+    // before, so the card does not change size. Ink-faint on cream at 60%
+    // over the white card is 4.71:1 (WCAG AA wants 4.5:1; a test computes
+    // it from the tokens in globals.css).
     return (
       <span
         data-slot="placeholder"
-        className="flex items-center gap-2.5 rounded-md border border-dashed border-rd-line-strong px-2.5 py-2 text-[14px] text-rd-ink-soft"
+        className="flex items-center gap-2.5 rounded-md border border-dashed border-rd-line-strong bg-rd-cream/60 px-2.5 py-2 text-[14px] text-rd-ink-faint"
       >
         <Seed seed={slot.seed} />
         <span className="min-w-0">{slot.label}</span>

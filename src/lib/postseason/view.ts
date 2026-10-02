@@ -161,6 +161,13 @@ export interface HomeGameView {
   day: string;
   sortKey: string;
   ifNecessary: boolean;
+  /** The game has a start instant and its time is not TBD. A game without
+   *  one is listed with "Time TBD" (its `when`); a game with no date never
+   *  reaches this list (Matt's ruling, 2026-10-02). */
+  timed: boolean;
+  /** The start instant of a timed game; null otherwise. A game past it is
+   *  no longer upcoming, whatever the feed still says. */
+  startsAt: string | null;
   hostTeamId: string;
   hostName: string;
   park: string | null;
@@ -545,10 +552,12 @@ export function buildLeagueView(
 
   const today = easternYmd(now);
   const homeGames: HomeGameView[] = [];
-  for (const s of flat) {
-    if (s.status === 'final') continue;
+  flat.forEach((s, i) => {
+    if (s.status === 'final') return;
+    const raw = bracket.series[i].games;
     for (const g of s.games) {
       if (g.state !== 'scheduled' || !g.hostTeamId || !g.hostName || !g.day) continue;
+      const stored = raw.find((r) => r.gameNumber === g.gameNumber);
       // A scheduled game dated before today is a row the feed has not caught
       // up on. It is not an upcoming game and is not offered as one.
       if (g.day < today) continue;
@@ -563,6 +572,8 @@ export function buildLeagueView(
         day: g.day,
         sortKey: g.sortKey,
         ifNecessary: g.ifNecessary,
+        timed: !!stored && !stored.startTimeTBD && stored.start !== null,
+        startsAt: stored && !stored.startTimeTBD ? stored.start : null,
         hostTeamId: g.hostTeamId,
         hostName: g.hostName,
         promo: g.promo,
@@ -570,7 +581,7 @@ export function buildLeagueView(
         parkPage: g.parkPage,
       });
     }
-  }
+  });
   homeGames.sort(bySoonest);
 
   return {
@@ -628,7 +639,11 @@ export function homeGamesWindow(views: readonly LeagueView[], now: Date): HomeGa
   const seen = new Set<string>();
   const week: HomeGameView[] = [];
   for (const g of views.flatMap((v) => v.homeGames)) {
+    // Every game with a known date is listed; an untimed one reads "Time
+    // TBD". A game with no date never reaches the list (buildLeagueView).
     if (g.day < today || g.day > weekEnd) continue;
+    // Started, though the feed still lists it as scheduled: not upcoming.
+    if (g.startsAt && Date.parse(g.startsAt) < now.getTime()) continue;
     if (seen.has(g.key)) continue;
     seen.add(g.key);
     week.push(g);

@@ -21,7 +21,14 @@ const PAGE_TYPE = 'playoffs_league';
 /** The page always has a bracket: with no document the route is a 404, and
  *  a read that fails throws before anything renders. `predictions` is the
  *  locked PromoNight Predicts bracket, or null when none was locked. */
-export type LeagueBody = { state: 'ok'; view: LeagueView; predictions: LeaguePredictions | null; homeGames: HomeGamesWindow };
+export type LeagueBody = {
+  state: 'ok';
+  view: LeagueView;
+  predictions: LeaguePredictions | null;
+  homeGames: HomeGamesWindow;
+  /** "Where things stand" (lib/postseason/standing.ts). Null renders nothing. */
+  standing?: string | null;
+};
 
 /** The round the bracket opens on: the one being played, or the last one
  *  once the postseason is over. */
@@ -124,6 +131,13 @@ export function PlayoffsLeague({
           <p data-lede className="mt-2.5 max-w-[52ch] text-[15px] text-rd-ink-soft">
             The {season} {league} postseason bracket: every series, seed and result, with game times in Eastern.
           </p>
+          {/* Inside the introduction, never a child of the article: a new
+              child would be an ad anchor above the bracket. */}
+          {body.standing ? (
+            <p data-standing className="mt-3 max-w-[60ch] text-[15.5px] font-medium leading-relaxed text-rd-ink">
+              {body.standing}
+            </p>
+          ) : null}
           {view.updatedLabel && (
             <p data-bracket-updated className="mt-2 text-[12.5px] text-rd-ink-faint">
               {`Bracket updated ${view.updatedLabel}`}
@@ -176,11 +190,11 @@ export function PlayoffsLeague({
         {view.phase.kind === 'active' && (
           <HomeGames
             id="home-games-this-week"
-            heading="Home games this week"
+            heading="Upcoming playoff games"
             games={body.homeGames}
             tickets={tickets}
             surface={SURFACE}
-            empty="No home game with a confirmed host is listed in the next three days."
+            empty="No playoff game with a confirmed date and host is listed in the next three days."
           />
         )}
         <SeriesResults view={view} heading={view.phase.kind === 'active' ? 'Results so far' : 'Results'} />
