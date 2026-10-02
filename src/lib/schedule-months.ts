@@ -2,6 +2,7 @@
 // Games tile. Pure, so both are tested as arithmetic, and shared, so the list
 // and the tile can never count two different populations.
 import type { GameContext } from './data';
+import { TITLE_SEASON_YEAR } from './title-treatment';
 
 /**
  * The regular season, one entry per game actually on the schedule.
@@ -18,20 +19,35 @@ import type { GameContext } from './data';
  *    reading 'scheduled', beside the makeup doc with the SAME mlbGameId. Most
  *    clubs carry one to five of these; the Braves carried three.
  * 3. A CANCELED GAME. Never played and never made up (the Orioles and Yankees
- *    each carry one, 2026-09-27). It is not a game of the season.
+ *    each carry one, 2026-09-27). It is not a game of the season. Likewise a
+ *    POSTPONED doc left standing with no makeup twin: no game is played on
+ *    its date, so it is not a row (none on production today).
+ * 4. ANOTHER SEASON. getGamesForTeam has no season filter, and the MLB cron
+ *    writes the next season's docs from early January while the page still
+ *    says "2026". MLB docs count only when their date falls in
+ *    TITLE_SEASON_YEAR, the constant every hardcoded 2026 is bumped with.
  *
- * Rules 2 and 3 apply only to documents that carry an `mlbGameId`. NFL docs
+ * Rules 2 to 4 apply only to documents that carry an `mlbGameId`. NFL docs
  * never do, and no NFL doc sets isPostseason (ingest-nfl writes seasonType,
  * which getGamesForTeam already filters), so this is the identity on NFL:
  * same contexts, same order. The NFL golden test holds it to that.
  *
  * Among docs sharing an mlbGameId the one kept is the most settled
- * (completed, then scheduled, then postponed), latest date on a tie. A
- * duplicate is never DROPPED for lack of a better twin: one doc per id
- * always survives unless that doc is canceled.
+ * (completed, then scheduled, then postponed). On production 2026-10-01 all
+ * 28 duplicate pairs are completed-versus-scheduled, so this is exact for the
+ * offseason. KNOWN LIMIT: between a reschedule and the makeup being played,
+ * both docs can read 'scheduled', and nothing stored tells them apart (both
+ * were created in the same ingest batch; neither field set nor timestamps
+ * separate them). The later date is kept, which is right when a game moves
+ * later and wrong when it moves earlier; it resolves itself once the makeup
+ * completes. The real fix is in the ingest (known-issues 62).
  */
 export function regularSeasonContexts(contexts: readonly GameContext[]): GameContext[] {
-  const regular = contexts.filter((c) => c.game.isPostseason !== true);
+  const regular = contexts.filter(
+    (c) =>
+      c.game.isPostseason !== true &&
+      (typeof c.game.mlbGameId !== 'number' || c.game.date.startsWith(`${TITLE_SEASON_YEAR}-`)),
+  );
   const bestById = new Map<number, GameContext>();
   for (const c of regular) {
     const id = c.game.mlbGameId;
@@ -43,7 +59,7 @@ export function regularSeasonContexts(contexts: readonly GameContext[]): GameCon
     const id = c.game.mlbGameId;
     if (typeof id !== 'number') return true;
     if (bestById.get(id) !== c) return false;
-    return c.game.status !== 'canceled';
+    return c.game.status !== 'canceled' && c.game.status !== 'postponed';
   });
 }
 

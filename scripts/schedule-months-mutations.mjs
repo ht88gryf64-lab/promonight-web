@@ -34,9 +34,9 @@ const WRAP = '<div key={m.key}>{month(m)}</div>';
 /** [name, file, from, to, tests]. `from` must occur exactly once. */
 const CASES = [
   // ---- Fix (b): the regular season only ----
-  ['postseason game in the list', LIB, '  const regular = contexts.filter((c) => c.game.isPostseason !== true);', '  const regular = [...contexts];', [T_LIB, T_RENDER]],
+  ['postseason game in the list', LIB, '      c.game.isPostseason !== true &&', '      true &&', [T_LIB, T_RENDER]],
   ['stale postponed original kept', LIB, '    if (bestById.get(id) !== c) return false;\n', '', [T_LIB, T_RENDER]],
-  ['canceled game kept', LIB, "    return c.game.status !== 'canceled';", '    return true;', [T_LIB, T_RENDER]],
+  ['canceled game kept', LIB, "    return c.game.status !== 'canceled' && c.game.status !== 'postponed';", "    return c.game.status !== 'postponed';", [T_LIB, T_RENDER]],
   ['duplicate resolved to the stale original', LIB, '  if (ra !== rb) return ra > rb;', '  if (ra !== rb) return ra < rb;', [T_LIB]],
   ['the filter dropped from the list', SB, '  const regular = regularSeasonContexts(contexts);', '  const regular = contexts;', [T_RENDER]],
   // ---- Fix (c): the Games tile ----
@@ -56,11 +56,16 @@ const CASES = [
   ['a single month wrapped as an anchor', SB, '          <div className="mt-6">{month(months[0])}</div>', '          <div className="mt-6 page-content">{month(months[0])}</div>', [T_RENDER]],
   // ---- Copy fixes (a) and (d) ----
   ['"week by week" back on the date list', SB, "'Every game of the 2026 regular season, by month. Open a month to see its games.'", "'Every game of the 2026 regular season, week by week. Open a month to see its games.'", [T_RENDER]],
-  ['ticket invitation over a fully played season', SB, "    const remaining = today !== undefined && regular.some((c) => c.game.date >= today);", '    const remaining = true;', [T_RENDER]],
-  ['no clock read treated as a game remaining', SB, "    const remaining = today !== undefined && regular.some((c) => c.game.date >= today);", '    const remaining = today === undefined || regular.some((c) => c.game.date >= today);', [T_RENDER]],
-  ['remaining read from postseason docs', SB, "    const remaining = today !== undefined && regular.some((c) => c.game.date >= today);", '    const remaining = today !== undefined && contexts.some((c) => c.game.date >= today);', [T_RENDER]],
+  ['ticket invitation over a fully played season', SB, "    const remaining =\n      today !== undefined && regular.some((c) => c.game.status === 'scheduled' && c.game.date >= today);", '    const remaining = true;', [T_RENDER]],
+  ['no clock read treated as a game remaining', SB, "    const remaining =\n      today !== undefined && regular.some((c) => c.game.status === 'scheduled' && c.game.date >= today);", "    const remaining =\n      today === undefined || regular.some((c) => c.game.status === 'scheduled' && c.game.date >= today);", [T_RENDER]],
+  ['remaining read from postseason docs', SB, "    const remaining =\n      today !== undefined && regular.some((c) => c.game.status === 'scheduled' && c.game.date >= today);", "    const remaining =\n      today !== undefined && contexts.some((c) => c.game.status === 'scheduled' && c.game.date >= today);", [T_RENDER]],
+  ['another season counted', LIB, "      (typeof c.game.mlbGameId !== 'number' || c.game.date.startsWith(`${TITLE_SEASON_YEAR}-`)),", '      true,', [T_LIB, T_RENDER]],
+  ['season scope applied to NFL', LIB, "      (typeof c.game.mlbGameId !== 'number' || c.game.date.startsWith(`${TITLE_SEASON_YEAR}-`)),", '      c.game.date.startsWith(`${TITLE_SEASON_YEAR}-`),', [T_LIB, T_NFL]],
+  ['lone postponed doc kept', LIB, "    return c.game.status !== 'canceled' && c.game.status !== 'postponed';", "    return c.game.status !== 'canceled';", [T_LIB]],
+  ['a game played today keeps the invitation', SB, "regular.some((c) => c.game.status === 'scheduled' && c.game.date >= today);", 'regular.some((c) => c.game.date >= today);', [T_RENDER]],
   // ---- NFL byte identity ----
-  ['NFL output drifting: week grid sent down the month path', SB, '  const isWeekGrid = rows.every((r) => r.week !== null);', '  const isWeekGrid = false;', [T_NFL]],
+  ['NFL output drifting: a weekless NFL slate sent down the month path', SB, "  if (team.league === 'MLB' && !isWeekGrid) {", '  if (!isWeekGrid) {', [T_RENDER]],
+  ['NFL output drifting: the league gate inverted', SB, "  if (team.league === 'MLB' && !isWeekGrid) {", "  if (team.league !== 'MLB' || !isWeekGrid) {", [T_NFL]],
   ['NFL output drifting: canceled rule applied without a gamePk', LIB, "    if (typeof id !== 'number') return true;", "    if (typeof id !== 'number') return c.game.status !== 'canceled';", [T_NFL, T_LIB]],
   ['NFL output drifting: week-grid intro edited', SB, 'Every game of the 2026 regular season, week by week.', 'Every game of the 2026 regular season, week by week, from kickoff.', [T_NFL]],
 ];

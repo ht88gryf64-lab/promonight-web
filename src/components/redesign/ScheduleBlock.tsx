@@ -125,13 +125,18 @@ export function ScheduleBlock({ contexts, team, teamName, today }: ScheduleBlock
   const rows = buildRows(regular);
   if (rows.length === 0) return null;
 
-  // THE WEEK GRID AND THE DATE LIST ARE TWO PAGES. NFL docs all carry a week,
-  // so buildRows returns a week grid and NFL takes the original markup below,
-  // unchanged. MLB docs carry no week, so MLB takes the month sections. The
-  // test is the same one buildRows uses, read off its output.
+  // THE MONTH SECTIONS ARE MLB ONLY. MLB docs carry no week, so buildRows
+  // returns a date list and MLB takes the month sections. Every other league
+  // takes the original markup below, unchanged: NFL docs all carry a week (a
+  // week grid), and even an NFL slate missing a week renders main's flat list
+  // rather than months, so no NFL data state can reach the new path.
   const isWeekGrid = rows.every((r) => r.week !== null);
-  if (!isWeekGrid) {
-    const remaining = today !== undefined && regular.some((c) => c.game.date >= today);
+  if (team.league === 'MLB' && !isWeekGrid) {
+    // A game still to be played: scheduled and not before today. A game
+    // played today is over even though its date is not past, and a page
+    // rendered that evening holds for a day under ISR.
+    const remaining =
+      today !== undefined && regular.some((c) => c.game.status === 'scheduled' && c.game.date >= today);
     return (
       <DateListSchedule
         rows={rows as GameRow[]}

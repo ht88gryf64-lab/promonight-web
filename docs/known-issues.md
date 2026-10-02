@@ -3641,19 +3641,33 @@ regular season", and the Games tile counted them (Braves 168, Yankees 170).
 
 **What changed.** `src/lib/schedule-months.ts` `regularSeasonContexts` drops
 postseason docs, keeps one doc per `mlbGameId` (the most settled: completed,
-scheduled, postponed; later date on a tie) and drops canceled MLB games. The
+scheduled, postponed; later date on a tie), drops canceled MLB games and a
+postponed doc left with no makeup, and keeps only MLB docs dated in
+`TITLE_SEASON_YEAR` (the cron writes next season's docs from early January,
+and `getGamesForTeam` has no season filter). The
 list and the tile both read it, so they count one population (the Braves read
 162; the Orioles and Yankees, whose 2026-09-27 game was canceled, read 161).
 It is the identity on NFL, whose docs carry no `mlbGameId` and no
 `isPostseason`; `schedule-nfl-identity.test.tsx` holds NFL to main's bytes.
+
+**Known limit of the dedupe.** On production all 28 duplicate pairs are
+completed-versus-scheduled, so the offseason list is exact. In season, between
+a reschedule and the makeup being played, both docs can read 'scheduled', and
+nothing stored separates them: both were created in the same ingest batch and
+the stale doc is simply never rewritten. The later date is kept, which is
+wrong when a game moves earlier (the Yankees' 09-26 game played 09-25 as game
+2); it corrects itself once the makeup completes.
 
 **What is still open.** The stale and canceled documents are still in
 Firestore, and the in-season calendar (`SeasonExplorer`/`CalendarGrid`) and
 the division-rivals derivation still read the raw contexts, so in season a
 postponed original can show as a game on its old date. The calendar shows
 postseason games on purpose (`GameExpand` labels them "Playoffs"), so a fix
-there is a ruling, not a filter. The durable fix is in the ingest: delete or
-mark the original-date doc when a `gamePk` moves.
+there is a ruling, not a filter. The durable fix is in the ingest
+(`src/lib/ingest-mlb.ts`, the Monday cron): in each run, delete or mark any
+doc whose `mlbGameId` the run wrote under a different doc id, or write a
+`lastSeenAt` per run so a reader can tell the live doc. Either changes
+production writes and needs its own ruling.
 
 **Also found (unrelated, pre-existing).** `postseason-reader-filter.test.ts`
 fixes a row at `2026-10-01` and `getHighlightedPromos` filters

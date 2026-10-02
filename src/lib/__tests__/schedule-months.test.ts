@@ -28,14 +28,16 @@ test('a stale original dated AFTER its makeup is still the one dropped (Yankees 
 });
 
 test('in season, a postponed original gives way to its scheduled makeup', () => {
-  const orig = mlbCtx(mlbGame('2027-05-01', true, METS, { status: 'postponed', mlbGameId: 9 }), METS);
-  const makeup = mlbCtx(mlbGame('2027-06-15', true, METS, { status: 'scheduled', mlbGameId: 9 }), METS);
+  const orig = mlbCtx(mlbGame('2026-05-01', true, METS, { status: 'postponed', mlbGameId: 9 }), METS);
+  const makeup = mlbCtx(mlbGame('2026-06-15', true, METS, { status: 'scheduled', mlbGameId: 9 }), METS);
   assert.deepStrictEqual(regularSeasonContexts([orig, makeup]), [makeup]);
 });
 
-test('two docs of equal standing keep the later date, and exactly one survives', () => {
-  const a = mlbCtx(mlbGame('2027-05-01', true, METS, { status: 'scheduled', mlbGameId: 7 }), METS);
-  const b = mlbCtx(mlbGame('2027-05-02', true, METS, { status: 'scheduled', mlbGameId: 7 }), METS);
+test('KNOWN LIMIT (known-issues 62): two scheduled docs for one game keep the later date, and exactly one survives', () => {
+  // Right when a game moves later, wrong when it moves earlier; nothing stored
+  // separates them. Pinned so the behaviour is deliberate, not accidental.
+  const a = mlbCtx(mlbGame('2026-05-01', true, METS, { status: 'scheduled', mlbGameId: 7 }), METS);
+  const b = mlbCtx(mlbGame('2026-05-02', true, METS, { status: 'scheduled', mlbGameId: 7 }), METS);
   assert.deepStrictEqual(regularSeasonContexts([b, a]), [b]);
 });
 
@@ -111,4 +113,23 @@ test('a malformed date or out-of-order months refuse rather than invent a month'
 test('games label', () => {
   assert.equal(gamesLabel(1), '1 game');
   assert.equal(gamesLabel(27), '27 games');
+});
+
+test('a postponed doc with no makeup twin is not a row (no game is played on its date)', () => {
+  const lone = mlbCtx(mlbGame('2026-09-20', true, METS, { status: 'postponed' }), METS);
+  const played = mlbCtx(mlbGame('2026-09-21', true, METS), METS);
+  assert.deepStrictEqual(regularSeasonContexts([lone, played]), [played]);
+});
+
+test("MLB docs from another season are not this season's games", () => {
+  const now = mlbCtx(mlbGame('2026-09-27', true, METS), METS);
+  const next = mlbCtx(mlbGame('2027-03-25', true, METS, { status: 'scheduled' }), METS);
+  const prior = mlbCtx(mlbGame('2025-09-28', true, METS), METS);
+  assert.deepStrictEqual(regularSeasonContexts([prior, now, next]), [now]);
+});
+
+test('the season scope never reaches NFL: a January game of the 2026 NFL season stays', () => {
+  const jan = NFL_CONTEXTS.filter((c) => c.game.date.startsWith('2027-'));
+  assert.ok(jan.length > 0, 'fixture carries January 2027 NFL games');
+  for (const c of jan) assert.ok(regularSeasonContexts(NFL_CONTEXTS).includes(c));
 });

@@ -23,11 +23,11 @@ import { RD_CATEGORIES, RD_CATEGORY_ORDER } from './categories';
 //   shipping status quo on all 101 populated non-MLB, non-NFL team pages.
 //
 // The Games tile is guarded on a POSITIVE count, not merely on the value being
-// a number. Today gamesCount cannot be 0 (the page passes gameContexts?.length,
-// and gameContexts is undefined rather than [] when a team has no games), so
-// the guard is a no-op on all 169 pages. It exists so a future caller that
-// passes an empty array cannot produce a five-zero band, which would read as
-// broken rather than as empty.
+// a number. The page passes the regular-season count from
+// regularSeasonContexts (src/lib/schedule-months.ts), undefined when a team has
+// no games. That count could in principle be 0 (every doc postseason or out of
+// season), and the guard keeps that from rendering a zero tile, which would
+// read as broken rather than as empty.
 
 export interface StatScoreboardProps {
   counts: Record<PromoType, number>; // promoCounts from the page

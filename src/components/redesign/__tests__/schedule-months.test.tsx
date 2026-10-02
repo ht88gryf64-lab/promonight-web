@@ -17,7 +17,7 @@ import { ScheduleBlock } from '../ScheduleBlock';
 import { GameExpand } from '../GameExpand';
 import { regularSeasonContexts } from '@/lib/schedule-months';
 import type { GameContext } from '@/lib/data';
-import { BRAVES, METS, PHILLIES, mlbCtx, mlbGame } from './fixtures/schedule-fixtures';
+import { BRAVES, LIONS, METS, NFL_CONTEXTS, PHILLIES, mlbCtx, mlbGame } from './fixtures/schedule-fixtures';
 
 // ── A minimal tree over React's static markup (no parser is installed) ──
 type Node = { tag: string; attrs: string; children: Node[]; text: string; parent: Node | null };
@@ -66,7 +66,7 @@ function season(): GameContext[] {
   rows.push(mlbCtx(mlbGame('2026-07-28', false, METS, { status: 'scheduled', mlbGameId: reg[100].game.mlbGameId }), METS));
   rows.push(mlbCtx(mlbGame('2026-04-03', false, METS, { status: 'scheduled', mlbGameId: reg[5].game.mlbGameId }), METS));
   rows.push(mlbCtx(mlbGame('2026-09-28', false, METS, { status: 'canceled' }), METS));
-  for (const d of ['2026-09-29', '2026-09-30', '2026-10-01']) rows.push(mlbCtx(mlbGame(d, true, PHILLIES, { isPostseason: true }), PHILLIES));
+  for (const d of ['2026-09-29', '2026-09-30', '2026-10-01']) rows.push(mlbCtx(mlbGame(d, true, PHILLIES, { isPostseason: true, status: 'scheduled' }), PHILLIES));
   return rows.sort((a, b) => a.game.date.localeCompare(b.game.date));
 }
 const SEASON = season();
@@ -166,9 +166,31 @@ test("fix (c): the Games tile reads the list's population", () => {
 test('fix (d): no ticket invitation over a fully played season; it returns while a game remains', () => {
   assert.doesNotMatch(OVER, /tickets/i);
   assert.match(OVER, /Open a month to see its games\./);
-  const midSeason = render(SEASON, '2026-06-01');
+  // Mid-season: games from today on are still scheduled.
+  const midSeason = render(SEASON.map((c) => (c.game.date >= '2026-06-01' && !c.game.isPostseason ? { ...c, game: { ...c.game, status: 'scheduled' as const } } : c)), '2026-06-01');
   assert.match(midSeason, /Open a month to see its games, and a game for tickets, parking and hotels on the road\./);
   assert.doesNotMatch(render(SEASON), /tickets/i, 'no clock read means no claim');
   // A postseason doc in the future must not revive the invitation.
   assert.doesNotMatch(render(SEASON, '2026-09-29'), /tickets/i);
+});
+
+test('fix (d): a game played today does not keep the invitation; a game still scheduled today does', () => {
+  const last = SEASON.filter((c) => !c.game.isPostseason && c.game.status === 'completed').at(-1)!;
+  assert.doesNotMatch(render(SEASON, last.game.date), /tickets/i, 'completed today, nothing left');
+  const tonight = SEASON.map((c) => (c === last ? { ...c, game: { ...c.game, status: 'scheduled' as const } } : c));
+  assert.match(render(tonight, last.game.date), /tickets/i, 'scheduled today is still ahead');
+});
+
+test('a 2027 doc landing in January joins neither the list nor the header counts', () => {
+  const html = render([...SEASON, mlbCtx(mlbGame('2027-03-25', true, METS, { status: 'scheduled' }), METS)], '2027-01-10');
+  assert.doesNotMatch(html, /2027 ·|March 2027/);
+  assert.equal((html.match(/<li class="overflow-hidden/g) ?? []).length, 162);
+  assert.doesNotMatch(html, /tickets/i);
+});
+
+test('month sections are MLB only: an NFL slate missing a week keeps main\'s flat list', () => {
+  const weekless = NFL_CONTEXTS.map((c, i) => (i === 3 ? { ...c, game: { ...c.game, week: undefined } } : c));
+  const html = renderToStaticMarkup(<ScheduleBlock contexts={weekless} team={LIONS} teamName="Detroit Lions" today="2026-09-01" />);
+  assert.doesNotMatch(html, /<details|page-content|by month/);
+  assert.match(html, /week by week/);
 });
