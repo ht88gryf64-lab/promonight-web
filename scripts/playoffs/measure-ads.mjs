@@ -118,7 +118,7 @@ const ADS = `(() => {
       inPanels: !!(panels && panels.contains(el)),
       // The amended contract (Matt, 2026-10-02): no unit inside a <details>,
       // a bracket, the "where things stand" line, or any game row.
-      inForbidden: !!el.closest('details, .po-bracket, .po-picks, [data-standing], [data-home-game], [data-game], [data-result-game]'),
+      inForbidden: !!el.closest('details, .po-bracket, .po-picks, [data-league-card], [data-standing], [data-home-game], [data-game], [data-result], [data-result-game]'),
       parent: el.parentElement ? el.parentElement.tagName.toLowerCase() + (el.parentElement.dataset.playoffsArticle ? '[article]' : '') : null,
     };
   });
@@ -301,10 +301,6 @@ async function measure(path, width, { playoffs }) {
     check(`${label}: selecting every round and series, in both brackets, and opening every pick leaves every ad container in place`, s.series > 0 && s.picksTotal > 0 && s.picksOpened === s.picksTotal && s.kept === s.before && s.after === s.before && s.same === s.after && s.moves.added === 0 && s.moves.removed === 0 && s.inBracket === 0 && s.inPicks === 0,
       `${s.rounds} rounds, ${s.conferences} conference taps, ${s.series} series; predicted: ${s.picksRounds} rounds, ${s.picksConferences} conference taps, ${s.picksOpened} of ${s.picksTotal} picks opened; containers ${s.before} before, ${s.after} after, ${s.kept} still attached; added ${s.moves.added}, removed ${s.moves.removed}${s.moves.names.length ? ' ' + s.moves.names.slice(0, 4).join(' ') : ''}`);
     check(`${label}: the methodology detail is collapsed as served, opens, and no ad container is inside it once open`, s.methodCollapsed === true && s.methodOpened === true && s.inMethodDetail === 0, `collapsed ${s.methodCollapsed}, opened ${s.methodOpened}, ${s.inMethodDetail} inside`);
-    // The amended contract again, with every round, series, pick and the
-    // methodology opened: nothing may have landed inside what opened.
-    const forbiddenOpen = await ev(`[...document.querySelectorAll('.adthrive-ad, [id^="AdThrive_"]')].filter((el) => el.closest('details, .po-bracket, .po-picks, [data-standing], [data-home-game], [data-game], [data-result-game]')).length`);
-    check(`${label}: AD CONTRACT: no ad container inside a <details>, a bracket, the standing line or a game row, with everything opened`, forbiddenOpen === 0, `${forbiddenOpen} inside`);
     if (marked === 0) note(`${label}: there was no ad container to watch, so the check above proves nothing about re-rendering`);
     if (width < 600) {
       const st = await ev(STICKY);
@@ -314,6 +310,21 @@ async function measure(path, width, { playoffs }) {
       await shot(`${path.replace(/^\//, '').replace(/\//g, '_')}-${width}-bracket`);
     }
   }
+  // The amended contract again, with everything that opens opened and left
+  // open: every <details>, every "Show N more" button, a series panel on a
+  // league page. Nothing may have landed inside what opened.
+  const opened = await ev(`(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    let n = 0;
+    for (const d of document.querySelectorAll('details')) if (!d.open) { d.open = true; n++; }
+    for (const b of document.querySelectorAll('[data-show-all]')) if (b.offsetWidth > 0) { b.click(); n++; await wait(150); }
+    const a = [...document.querySelectorAll('.po-bracket [data-series] a[href^="#"]')].find((x) => x.offsetWidth > 0);
+    if (a) { a.click(); n++; }
+    await wait(2500);
+    const sel = 'details, .po-bracket, .po-picks, [data-league-card], [data-standing], [data-home-game], [data-game], [data-result], [data-result-game]';
+    return { opened: n, inside: [...document.querySelectorAll('.adthrive-ad, [id^="AdThrive_"]')].filter((el) => el.closest(sel)).length };
+  })()`);
+  check(`${label}: AD CONTRACT: no ad container inside a <details>, a bracket, the standing line or a game row, with everything opened`, opened.opened > 0 && opened.inside === 0, `${opened.opened} opened, ${opened.inside} inside`);
   const errors = consoleLines.filter((l) => /Minified React error|Hydration|hydrat/i.test(l));
   check(`${label}: no hydration error in the console`, errors.length === 0, errors[0] ? errors[0].slice(0, 120) : '');
   return m;

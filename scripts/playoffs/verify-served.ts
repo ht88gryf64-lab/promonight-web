@@ -52,12 +52,33 @@ function same(name: string, actual: unknown, expected: unknown) {
 }
 
 // ---- Fetching ----
-async function get(path: string): Promise<{ status: number; body: string; headers: Headers }> {
+async function get(path: string): Promise<{ status: number; body: string; headers: Headers; fetchedAt: Date }> {
   const headers: Record<string, string> = { 'user-agent': 'Mozilla/5.0 (playoffs served-HTML check)' };
   if (BYPASS) headers['x-vercel-protection-bypass'] = BYPASS;
   if (cookie) headers.cookie = cookie;
   const res = await fetch(`${BASE}${path}`, { headers, redirect: 'manual' });
-  return { status: res.status, body: await res.text(), headers: res.headers };
+  return { status: res.status, body: await res.text(), headers: res.headers, fetchedAt: new Date() };
+}
+/** When the served page was rendered: between the fetch minus the cache's
+ *  `age` and the fetch. Every instant a page-time value may change at inside
+ *  that window is a candidate; with no age header, only the fetch time. */
+function renderWindow(headers: Headers, fetchedAt: Date): Date[] {
+  const age = Number(headers.get('age'));
+  return Number.isFinite(age) && age > 0 ? [new Date(fetchedAt.getTime() - age * 1000), fetchedAt] : [fetchedAt];
+}
+/** Each distinct value `f` takes at the window's ends and at every game start
+ *  inside it (the only instants the page-time values change at). */
+function valuesIn<T>(window: Date[], docs: RawDoc[], f: (at: Date) => T): T[] {
+  const lo = window[0].getTime();
+  const hi = window[window.length - 1].getTime();
+  const at = new Set<number>([lo, hi]);
+  for (const d of docs) for (const s of d.series) for (const g of s.games) {
+    const t = typeof g.start === 'string' ? Date.parse(g.start) : NaN;
+    if (t > lo && t <= hi) { at.add(t - 1); at.add(t); }
+  }
+  const out: T[] = [];
+  for (const t of [...at].sort()) { const v = f(new Date(t)); if (!out.some((o) => JSON.stringify(o) === JSON.stringify(v))) out.push(v); }
+  return out;
 }
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -418,7 +439,7 @@ async function main() {
     return null;
   }
   let waited = 0;
-  async function fresh(path: string, league: League | null): Promise<{ html: string; status: number; headers: Headers; built: Map<League, RawDoc>; lag: string }> {
+  async function fresh(path: string, league: League | null): Promise<{ html: string; status: number; headers: Headers; fetchedAt: Date; built: Map<League, RawDoc>; lag: string }> {
     const want = league ? [league] : [...LEAGUES];
     let last = await get(path);
     for (let attempt = 0; attempt < 45; attempt++) {
@@ -436,14 +457,14 @@ async function main() {
             return page && now ? `${l} ${page.getTime() === now.getTime() ? 'current' : `${Math.round((now.getTime() - page.getTime()) / 60000)} min behind the document`}` : `${l} unknown`;
           })
           .join(', ');
-        return { html: last.body, status: last.status, headers: last.headers, built, lag };
+        return { html: last.body, status: last.status, headers: last.headers, fetchedAt: last.fetchedAt, built, lag };
       }
       if (attempt === 0) console.log(`      ${path}: built from a version of the document older than any read in this run; asking again until it regenerates`);
       await sleep(20000);
       waited += 20;
       last = await get(path);
     }
-    return { html: last.body, status: last.status, headers: last.headers, built: new Map(), lag: 'never matched' };
+    return { html: last.body, status: last.status, headers: last.headers, fetchedAt: last.fetchedAt, built: new Map(), lag: 'never matched' };
   }
 
   function save(path: string, html: string) {
@@ -572,6 +593,50 @@ async function main() {
       alive: marks.filter((m) => m.outcome === 'alive').length,
       champion,
     };
+  }
+
+  /** The upcoming playoff games lists, from the raw documents (ruling of
+   *  2026-10-02): every scheduled game of an unfinished series with a club
+   *  hosting and a known date, today to six days on (Eastern), a timed one
+   *  only until its start; soonest first, a game with no time after the
+   *  timed ones of its day; the short list is the first eight within three
+   *  days, the rest is behind "Show N more games". */
+  function expectedGames(docs: [League, RawDoc][], at: Date): { primary: string[]; rest: string[] } {
+    const today = etYmd(at);
+    const plus = (n: number) => new Date(Date.UTC(+today.slice(0, 4), +today.slice(5, 7) - 1, +today.slice(8, 10) + n, 12)).toISOString().slice(0, 10);
+    const clock = (d: Date) => { const p = parts(d, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }); return `${p.hour}:${p.minute}`; };
+    const rows: { key: string; day: string; sort: string }[] = [];
+    for (const [league, doc] of docs) {
+      const pid = ids(doc);
+      doc.series.forEach((s, i) => {
+        if (s.status === 'final') return;
+        for (const g of s.games) {
+          if (g.status !== 'scheduled' || !g.homeSide || !slotName(doc, s[g.homeSide]).club) continue;
+          const timed = !g.startTimeTBD && typeof g.start === 'string' && /T\d\d:\d\d/.test(g.start);
+          const day = timed ? etYmd(new Date(g.start as string)) : g.date;
+          if (!day || day < today || day > plus(6)) continue;
+          if (timed && Date.parse(g.start as string) < at.getTime()) continue;
+          rows.push({ key: `${league}-${pid[i]}-g${g.gameNumber}`, day, sort: timed ? `${day}T${clock(new Date(g.start as string))}` : `${day}T99` });
+        }
+      });
+    }
+    rows.sort((a, b) => (a.sort !== b.sort ? (a.sort < b.sort ? -1 : 1) : a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+    const primary = rows.filter((r) => r.day <= plus(2)).slice(0, 8).map((r) => r.key);
+    return { primary, rest: rows.map((r) => r.key).filter((k) => !primary.includes(k)) };
+  }
+  /** The served lists and button, as keys and text. */
+  function servedGames(el: string): { primary: string[]; rest: string[]; button: string | null } {
+    const keysIn = (m: string) => [...(element(el, m) ?? '').matchAll(/data-home-game="([^"]+)"/g)].map((x) => x[1]);
+    const btn = /<button[^>]*data-show-all="[^"]*"[^>]*>([^<]*)<\/button>/.exec(element(el, 'data-home-games=') ?? '');
+    return { primary: keysIn('data-home-games-list="primary"'), rest: keysIn('data-home-games-list="rest"'), button: btn ? btn[1] : null };
+  }
+  function gamesMatch(where: string, el: string, docs: [League, RawDoc][], window: Date[]) {
+    const got = servedGames(el);
+    const wants = valuesIn(window, docs.map((d) => d[1]), (at) => expectedGames(docs, at));
+    const ok = wants.some((w) => JSON.stringify(w.primary) === JSON.stringify(got.primary) && JSON.stringify(w.rest) === JSON.stringify(got.rest));
+    check(`${where}: the games lists are every dated upcoming game in the document, in order, eight at most in three days, the rest of the week behind the button`, ok, ok ? `${got.primary.length} + ${got.rest.length}` : `served ${got.primary.join(',')} | ${got.rest.join(',')}; expected ${wants[0].primary.join(',')} | ${wants[0].rest.join(',')}`);
+    const n = got.rest.length;
+    check(`${where}: the button reads "Show N more games" for the rows behind it, and is absent with none`, n === 0 ? got.button === null : got.button === `Show ${n} more ${n === 1 ? 'game' : 'games'}`, got.button ?? 'no button');
   }
 
   /** "Where things stand" from the raw document, independently of the page's
@@ -973,12 +1038,14 @@ async function main() {
     check(`${where}: the short list holds eight rows at most`, inThree.length <= 8, `${inThree.length} rows, today is ${today} in Eastern`);
     same(`${where}: ticket links per home game row, at most one`, list.every((r) => count(r, 'rel="noopener noreferrer sponsored"') <= 1), true);
 
-    // WEB4 addendum. The games list is "Upcoming playoff games" and lists
-    // only games with a known date and time; nothing visible calls them home
-    // games.
+    // The games list is "Upcoming playoff games": every upcoming game with a
+    // known date, "Time TBD" when untimed (ruling of 2026-10-02); nothing
+    // visible calls them home games.
     const gamesSection = element(el, 'data-home-games=');
     if (gamesSection) check(`${where}: the games section is headed "Upcoming playoff games"`, /<h2[^>]*>Upcoming playoff games<\/h2>/.test(gamesSection));
     check(`${where}: every listed game has a known date (an untimed one reads "Time TBD")`, list.every((r) => !/Date TBD/.test(textOf(r))), `${list.length} rows, ${list.filter((r) => /Time TBD/.test(textOf(r))).length} Time TBD`);
+    const window = renderWindow(got.headers, got.fetchedAt);
+    if (open) gamesMatch(where, el, [[league, doc]], window);
     const homeWord = /\bhome games?\b/i.exec(textOf(el) + ' ' + (/<meta name="description" content="([^"]*)"/.exec(got.html)?.[1] ?? ''));
     check(`${where}: nothing in the article or the description says "home games"`, !homeWord, homeWord ? homeWord[0] : '');
     // TBD slots: dashed, on the light fill, in the quietest readable ink.
@@ -994,11 +1061,12 @@ async function main() {
     check(`${where}: no percentage in the article outside PromoNight Predicts`, !pct, pct ? pct[0] : '');
 
     // WHERE THINGS STAND, derived here from the raw document with this
-    // file's own formatting. "Next game" depends on the render time, which
-    // lies between the document's change stamp and now: either is accepted.
+    // file's own formatting. "Next game" depends on the render time, bounded
+    // by the response's age: a line derived anywhere in that window is
+    // accepted, and nothing else (a missing line only where it derives null).
     const standingEl = element(el, 'data-standing');
     const standingGot = standingEl ? textOf(standingEl) : null;
-    const wants = [standingWant(doc, new Date()), changed ? standingWant(doc, changed) : null];
+    const wants = valuesIn(window, [doc], (at) => standingWant(doc, at));
     check(`${where}: "where things stand" says exactly what the document says`, wants.includes(standingGot), `served ${JSON.stringify(standingGot)} expected ${JSON.stringify(wants[0])}`);
     check(`${where}: "where things stand" sits in the introduction, beside the change stamp, and uses no clock word`, standingGot === null || (!!element(el, 'data-page-intro')?.includes('data-standing') && !/\b(today|tonight|live|latest|right now|now|currently|just)\b/i.test(standingGot)));
 
@@ -1114,6 +1182,8 @@ async function main() {
       const hubGames = element(el, 'data-home-games=');
       if (hubGames) check(`${where}: the games section is headed "Upcoming playoff games"`, /<h2[^>]*>Upcoming playoff games<\/h2>/.test(hubGames));
       check(`${where}: every listed game has a known date (an untimed one reads "Time TBD")`, rows.every((r) => !/Date TBD/.test(textOf(r))), `${rows.length} rows, ${rows.filter((r) => /Time TBD/.test(textOf(r))).length} Time TBD`);
+      const activeDocs = LEAGUES.filter((l) => at.get(l) && currentRound(at.get(l) as RawDoc)).map((l) => [l, at.get(l) as RawDoc] as [League, RawDoc]);
+      if (activeDocs.length) gamesMatch(where, el, activeDocs, renderWindow(got.headers, got.fetchedAt));
       const hubHome = /\bhome games?\b/i.exec(textOf(el) + ' ' + (/<meta name="description" content="([^"]*)"/.exec(got.html)?.[1] ?? ''));
       check(`${where}: nothing in the article or the description says "home games"`, !hubHome, hubHome ? hubHome[0] : '');
       // Results so far: each league's decided series, one line each, with

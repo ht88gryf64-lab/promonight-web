@@ -9,10 +9,12 @@
 //   BASE=https://<host> BYPASS=<secret> node --require ./scripts/stub-server-only.cjs \
 //     --import tsx --env-file=.env.local scripts/playoffs/verify-standing.ts
 //
-// "Next game" depends on the moment the page was rendered, which lies between
-// the document's change stamp and now; a line derived at either is accepted.
-// When the page carries an older change stamp than the document (ISR not yet
-// regenerated), the check waits and refetches, up to three minutes.
+// "Next game" depends on the moment the page was rendered, which the response
+// bounds: between the fetch minus the cache's `age` header and the fetch. A
+// line derived anywhere in that window (at its ends and at every game start
+// inside it) is accepted, and nothing else. When the page carries an older
+// change stamp than the document (ISR not yet regenerated), the check waits
+// and refetches, up to three minutes.
 import { db } from '../../src/lib/firebase';
 import { getAllTeams } from '../../src/lib/data';
 
@@ -38,6 +40,9 @@ const shortWhen = (d: Date) => {
 };
 const isInstant = (v: unknown): v is string => typeof v === 'string' && /T\d\d:\d\d/.test(v);
 const asDate = (v: any): Date | null => (v == null ? null : typeof v === 'string' ? new Date(v) : typeof v.toDate === 'function' ? v.toDate() : null);
+// The pipeline's series keys ("AL-WC-B", "NL-CS", "R1-1v8", "SF-A"). A stored
+// label holding one is never shown; the page says "To be decided".
+const SERIES_KEY = [/\b(?:AL|NL)-(?:WC|DS)-[A-Z]\b/, /\b(?:AL|NL)-CS\b/, /\bR\d-\dv\d\b/, /\bSF-[A-Z]\b/];
 const ONE = new Set(['Liberty', 'Dream', 'Fever', 'Lynx', 'Mercury', 'Sky', 'Storm', 'Sun', 'Tempo', 'Fire']);
 
 function expectedLine(doc: Doc, teams: Map<string, Team>, now: Date): string | null {
@@ -55,7 +60,8 @@ function expectedLine(doc: Doc, teams: Map<string, Team>, now: Date): string | n
     if (Array.isArray(x.candidates) && x.candidates.length === 2 && x.candidates.every((c: string) => teams.has(c))) {
       return { team: null, text: `${teams.get(x.candidates[0])!.name} / ${teams.get(x.candidates[1])!.name} winner` };
     }
-    return { team: null, text: String(x.placeholder ?? '') };
+    const label = String(x.placeholder ?? '');
+    return { team: null, text: !label || SERIES_KEY.some((re) => re.test(label)) ? 'To be decided' : label };
   };
   const rounds: string[] = [];
   for (const s of series) if (!rounds.includes(s.round)) rounds.push(s.round);
@@ -183,9 +189,11 @@ async function main() {
       attempt++;
       const bracket = (await db.collection('postseasonBrackets').doc(`${league}_${SEASON}`).get()).data() as Doc;
       const predicted = (await db.collection('predictedBrackets').doc(`${league}_${SEASON}`).get()).data() as Doc;
-      const res = await fetch(`${BASE}${path}?standing=${Date.now()}`, { headers: { 'user-agent': 'Mozilla/5.0 (standing check)', ...(BYPASS ? { 'x-vercel-protection-bypass': BYPASS } : {}) } });
+      const res = await fetch(`${BASE}${path}`, { headers: { 'user-agent': 'Mozilla/5.0 (standing check)', ...(BYPASS ? { 'x-vercel-protection-bypass': BYPASS } : {}) } });
       const html = await res.text();
       const now = new Date();
+      const age = Number(res.headers.get('age'));
+      const from = Number.isFinite(age) && age > 0 ? now.getTime() - age * 1000 : now.getTime();
       const changed = asDate(bracket.lastChangedAt);
       const served = /"dateModified":"([^"]+)"/.exec(html)?.[1] ?? null;
       const stale = changed && served && Date.parse(served) < changed.getTime();
@@ -196,14 +204,20 @@ async function main() {
       }
       const line = textOfElement(html, 'data-standing');
       const summary = textOfElement(html, 'data-methodology-summary');
-      const wants = [expectedLine(bracket, teams, now), changed ? expectedLine(bracket, teams, changed) : null];
+      // The window's ends and every game start inside it.
+      const instants = new Set<number>([from, now.getTime()]);
+      for (const s of bracket.series) for (const g of s.games) {
+        const t = isInstant(g.start) ? Date.parse(g.start) : NaN;
+        if (t > from && t <= now.getTime()) { instants.add(t - 1); instants.add(t); }
+      }
+      const wants = [...new Set([...instants].sort().map((t) => expectedLine(bracket, teams, new Date(t))))];
       const lockedAt = asDate(predicted?.lockedAt);
       const wantSummary = lockedAt ? `PromoNight's picks were locked on ${longDay(lockedAt)} from regular-season results only. They never change.` : null;
       const okLine = res.status === 200 && wants.includes(line);
       const okSummary = res.status === 200 && summary === wantSummary && !/Game 1/.test(summary ?? '');
       console.log(`${okLine ? 'PASS' : 'FAIL'}  ${path} standing line (HTTP ${res.status})`);
       console.log(`      served:   ${JSON.stringify(line)}`);
-      console.log(`      expected: ${JSON.stringify(wants[0])}${wants[1] !== wants[0] ? ` or, at the document stamp, ${JSON.stringify(wants[1])}` : ''}`);
+      console.log(`      expected: ${wants.map((w) => JSON.stringify(w)).join(' or ')}  (render window ${new Date(from).toISOString()} to ${now.toISOString()})`);
       console.log(`${okSummary ? 'PASS' : 'FAIL'}  ${path} methodology summary`);
       console.log(`      served:   ${JSON.stringify(summary)}`);
       console.log(`      expected: ${JSON.stringify(wantSummary)}`);
