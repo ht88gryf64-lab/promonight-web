@@ -34,7 +34,7 @@ test('ROUND PLAYED: WNBA first round with the Lynx out, leads and a tie', () => 
   const { line } = build(loadDoc(FIXTURE.wnbaLynxOut), LYNX_OUT_AT);
   assert.equal(
     line,
-    'First Round: the Liberty beat the Lynx 2-0; the Valkyries lead the Wings 1-0; the Aces and the Fever are tied 1-1; the Dream lead the Mystics 1-0. Next game: Game 2, Valkyries at Wings, Wed, Sep 30, 9:00 PM ET.',
+    'First Round: the Liberty beat the Lynx 2-0; the Valkyries lead the Wings 1-0; the Aces and the Fever are tied 1-1; the Dream leads the Mystics 1-0. Next game: Game 2, Valkyries at Wings, Wed, Sep 30, 9:00 PM ET.',
   );
 });
 
@@ -52,6 +52,63 @@ test('ROUND PLAYED: a game the feed still lists as scheduled after its start is 
   const { line } = build(loadDoc('MLB_2026.live-20261001T1625Z.json'), new Date('2026-10-02T01:00:00Z'));
   assert.ok(line);
   assert.ok(!line.includes('Thu, Oct 1, 8:00 PM ET'), line);
+});
+
+test('ROUND PLAYED: singular nicknames take a singular verb, plural ones a plural verb', () => {
+  const { line } = build(loadDoc(FIXTURE.wnbaLive), CAPTURED_AT);
+  assert.ok(line?.startsWith('First Round: the Liberty leads the Lynx 1-0; the Valkyries lead the Wings 1-0; the Aces lead the Fever 1-0; the Dream leads the Mystics 1-0.'), line ?? '');
+});
+
+// ---- The next game is named only when it is surely next (round 1 M1, L2, L3) ----
+
+const mixed = () => loadDoc(FIXTURE.mlbMixed);
+const gameOf = (doc: Doc, key: string, n: number) => ((doc.series as Doc[]).find((s) => s.seriesKey === key)!.games as Doc[]).find((g) => g.gameNumber === n)!;
+
+test('NEXT GAME: an earlier unplayed game with no time, or postponed, or suspended, leaves the clause out', () => {
+  const base = build(mixed(), MIXED_AT).line as string;
+  assert.ok(base.endsWith('Next game: Game 3, Phillies at Dodgers, Wed, Oct 8, 9:08 PM ET.'), base);
+  const head = base.slice(0, base.indexOf(' Next game:'));
+  // The series whose next game that is: its Game 3 starts 2025-10-09T01:08Z.
+  const key = (mixed().series as Doc[]).find((s) => String(gameOf(mixed(), s.seriesKey as string, 3)?.start ?? '').startsWith('2025-10-09T01:08'))!.seriesKey as string;
+  for (const [why, edit] of [
+    ['time TBD', (g: Doc) => (g.startTimeTBD = true)],
+    ['postponed', (g: Doc) => (g.status = 'postponed')],
+    ['suspended', (g: Doc) => (g.status = 'suspended')],
+  ] as const) {
+    const doc = mixed();
+    edit(gameOf(doc, key, 3));
+    assert.equal(build(doc, MIXED_AT).line, head, why);
+  }
+});
+
+test('NEXT GAME: a game the feed still lists as scheduled after its start blocks the clause on its day', () => {
+  // Step 11 on Oct 4 at 18:30Z: Cubs at Brewers Game 1 (18:08Z) has started
+  // but is still listed as scheduled, so the round's opener is not named.
+  const line = build(loadDoc('MLB_2025.replay-step-11.json'), new Date('2025-10-04T18:30:00Z')).line;
+  assert.equal(line, 'Next round: Division Series.');
+});
+
+test('NEXT GAME: a timed game of a later round that is not started can be the next game', () => {
+  const doc = mixed();
+  // Give a Championship Series Game 1 a start before every Division Series game left.
+  const cs = (doc.series as Doc[]).find((s) => s.round === 'championship_series')!;
+  const g1 = (cs.games as Doc[]).find((g) => g.gameNumber === 1)!;
+  Object.assign(g1, { start: '2025-10-08T16:00:00Z', startTimeTBD: false, date: '2025-10-08', status: 'scheduled' });
+  const line = build(doc, MIXED_AT).line as string;
+  assert.ok(line.includes('Next game: Game 1,') && line.includes('Wed, Oct 8, 12:00 PM ET'), line);
+});
+
+test('A SERIES WAITING ON AN OPPONENT is said, not skipped', () => {
+  const v = build(loadDoc(FIXTURE.mlbWildCard), LYNX_OUT_AT);
+  const view = structuredClone(v.v);
+  const s = view.rounds[0].groups[0].series[0];
+  Object.assign(s, { status: 'upcoming', games: [] });
+  Object.assign(s.higher, { wins: 0 });
+  Object.assign(s.lower, { kind: 'placeholder', label: 'Yankees / Red Sox winner', wins: 0, won: false });
+  const line = standingLine(view, gameStarts(v.b), LYNX_OUT_AT) as string;
+  assert.ok(line.includes(`the ${s.higher.label} await the Yankees / Red Sox winner`), line);
+  Object.assign(s.higher, { kind: 'placeholder', label: 'TBD' });
+  assert.ok((standingLine(view, gameStarts(v.b), LYNX_OUT_AT) as string).includes('one matchup is still to be set'));
 });
 
 // ---- Between rounds ----
@@ -126,7 +183,9 @@ function oracle(s: Doc, n: Map<string, string>): string | null {
     return winHi ? `the ${a} beat the ${b} ${w.higher}-${w.lower}` : `the ${b} beat the ${a} ${w.lower}-${w.higher}`;
   }
   if (w.higher === w.lower) return w.higher === 0 ? null : `the ${a} and the ${b} are tied ${w.higher}-${w.lower}`;
-  return w.higher > w.lower ? `the ${a} lead the ${b} ${w.higher}-${w.lower}` : `the ${b} lead the ${a} ${w.lower}-${w.higher}`;
+  // Singular in form, singular verb: written out here, not imported.
+  const leads = (n: string) => (['Liberty', 'Dream', 'Fever', 'Lynx', 'Mercury', 'Sky', 'Storm', 'Sun', 'Tempo', 'Fire'].includes(n) ? 'leads' : 'lead');
+  return w.higher > w.lower ? `the ${a} ${leads(a)} the ${b} ${w.higher}-${w.lower}` : `the ${b} ${leads(b)} the ${a} ${w.lower}-${w.higher}`;
 }
 
 for (const [label, file, now] of [

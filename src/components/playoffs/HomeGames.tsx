@@ -98,7 +98,7 @@ export function HomeGames({
         </ul>
       )}
       {games.rest.length > 0 && (
-        <ShowAll id={`${id}-more`} label={`Show all ${total} upcoming playoff games`}>
+        <ShowAll id={`${id}-more`} label={`Show all ${total} playoff games in the next seven days`}>
           <ul data-home-games-list="rest" className="grid gap-2.5 lg:grid-cols-2">
             {rows(games.rest)}
           </ul>

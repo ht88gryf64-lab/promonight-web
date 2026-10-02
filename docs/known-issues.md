@@ -3707,7 +3707,11 @@ runs the whole suite with the clock moved a year ahead
 (`scripts/test-clock-shift.mjs`, `TEST_CLOCK_SHIFT_DAYS` to change it), so
 the next test that reads the real date against an aged fixture fails there
 first. Green on 2026-10-02 at today's clock and at +365 days. There is no CI
-test workflow in this repo; run it before a merge.
+test workflow in this repo; run it before a merge. Limits: a file that pins
+its own clock (these two, `postseason-reader-filter.test.ts`) never sees the
+shift, so a new real-clock read added to one of them is not caught; and
+`Intl.DateTimeFormat#format()` with no date reads the engine clock (nothing
+in `src` does that today).
 
 ## 63. The MLB import cannot tell a rescheduled game's makeup from its original date until the makeup is played
 

@@ -529,7 +529,7 @@ test('PREDICTIONS through the real pages: the section, the scorecard, the method
   // MLB capture before the first pitch, the WNBA capture after Game 1s.
   const standing = (h: string) => elementOf(h, 'data-standing').replace(/<[^>]+>/g, '');
   assert.equal(standing(mlb), 'Next round: Wild Card Series. It opens with Game 1, Phillies at Braves, Tue, Sep 29, 2:00 PM ET.');
-  assert.ok(standing(wnba).startsWith('First Round: the Liberty lead the Lynx 1-0;'), standing(wnba));
+  assert.ok(standing(wnba).startsWith('First Round: the Liberty leads the Lynx 1-0;'), standing(wnba));
   assert.ok(elementOf(mlb, 'data-page-intro').includes('data-standing'));
   // The visible summary, per league, from its own lockedAt (September 30
   // for both), and never "before Game 1".

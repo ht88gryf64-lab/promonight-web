@@ -599,7 +599,20 @@ async function main() {
     const started = (s: RawSeries) => s.status !== 'upcoming' || s.wins.higher + s.wins.lower > 0 || s.games.some((g) => g.status === 'final' || g.status === 'live');
     const at = order.indexOf(open);
     const played = order.filter((r, i) => i >= at && of(r).some(started));
-    const timedAhead = (s: RawSeries) => s.games.filter((g) => g.status === 'scheduled' && !g.startTimeTBD && !!g.start && Date.parse(g.start) >= now.getTime());
+    // The next game is named only when nothing unplayed that is untimed,
+    // postponed, suspended or past its start falls on its Eastern day or
+    // before it (an undated one blocks only inside the rounds being played).
+    const unplayed = new Set(['scheduled', 'postponed', 'suspended']);
+    const ahead = (g: RawGame) => g.status === 'scheduled' && !g.startTimeTBD && !!g.start && Date.parse(g.start) >= now.getTime();
+    const dayOf = (g: RawGame) => (!g.startTimeTBD && g.start ? etYmd(new Date(g.start)) : g.date);
+    const sureNext = (sure: RawSeries[], later: RawSeries[]) => {
+      const rows = [...sure.map((s) => ({ s, sure: true })), ...later.map((s) => ({ s, sure: false }))].filter((x) => x.s.status !== 'final').flatMap((x) => x.s.games.filter((g) => unplayed.has(g.status)).map((g) => ({ s: x.s, g, sure: x.sure })));
+      const f = rows.filter((r) => ahead(r.g)).sort((x, y) => Date.parse(x.g.start as string) - Date.parse(y.g.start as string))[0];
+      if (!f) return null;
+      const day = dayOf(f.g) as string;
+      return rows.some((r) => r !== f && !ahead(r.g) && (dayOf(r.g) === null ? r.sure : (dayOf(r.g) as string) <= day)) ? null : f;
+    };
+    const singular = new Set(['Liberty', 'Dream', 'Fever', 'Lynx', 'Mercury', 'Sky', 'Storm', 'Sun', 'Tempo', 'Fire']);
     const gameText = (s: RawSeries, g: RawGame) => {
       const home = g.homeSide ? slotName(doc, s[g.homeSide]).name : null;
       const away = g.homeSide ? slotName(doc, s[g.homeSide === 'higher' ? 'lower' : 'higher']).name : null;
@@ -607,18 +620,26 @@ async function main() {
       const t = new Date(g.start as string);
       return `Game ${g.gameNumber}, ${matchup}, ${etDay(t)}, ${etTime(t)}${conditional(s, g) ? ' (if necessary)' : ''}`;
     };
-    const first = (series: RawSeries[]) => series.flatMap((s) => timedAhead(s).map((g) => ({ s, g }))).sort((x, y) => Date.parse(x.g.start as string) - Date.parse(y.g.start as string))[0];
+    const laterThan = (i: number, skip: string[]) => order.filter((r, k) => k >= i && !skip.includes(r)).flatMap(of);
     if (played.length === 0) {
-      const f = first(of(open));
+      const f = sureNext(of(open), laterThan(at + 1, []));
       return f ? `Next round: ${label(open)}. It opens with ${gameText(f.s, f.g)}.` : `Next round: ${label(open)}.`;
     }
     const parts: string[] = [];
     for (const r of played) {
       const clauses: string[] = [];
+      let unset = 0;
       for (const s of of(r)) {
         const a = slotName(doc, s.higher);
         const b = slotName(doc, s.lower);
-        if (!a.club || !b.club) continue;
+        if (!a.club && !b.club) { unset++; continue; }
+        if (!a.club || !b.club) {
+          const c = (a.club ? a : b);
+          const other = a.club ? b : a;
+          if (s.wins.higher + s.wins.lower > 0 || s.status === 'final') return null;
+          clauses.push(`the ${c.name} ${singular.has(c.name) ? 'awaits' : 'await'} ${other.name.endsWith(' winner') ? `the ${other.name}` : 'an opponent'}`);
+          continue;
+        }
         const hi = s.wins.higher;
         const lo = s.wins.lower;
         if (s.status === 'final') {
@@ -626,12 +647,16 @@ async function main() {
           if (!w) return null;
           clauses.push(w === s.higher ? `the ${a.name} beat the ${b.name} ${hi}-${lo}` : `the ${b.name} beat the ${a.name} ${lo}-${hi}`);
         } else if (hi === lo) clauses.push(hi === 0 ? `the ${a.name} and the ${b.name} have not completed a game` : `the ${a.name} and the ${b.name} are tied ${hi}-${lo}`);
-        else clauses.push(hi > lo ? `the ${a.name} lead the ${b.name} ${hi}-${lo}` : `the ${b.name} lead the ${a.name} ${lo}-${hi}`);
+        else {
+          const [w, l, x, y] = hi > lo ? [a.name, b.name, hi, lo] : [b.name, a.name, lo, hi];
+          clauses.push(`the ${w} ${singular.has(w) ? 'leads' : 'lead'} the ${l} ${x}-${y}`);
+        }
       }
       if (clauses.length === 0) return null;
+      if (unset > 0) clauses.push(unset === 1 ? 'one matchup is still to be set' : `${unset} matchups are still to be set`);
       parts.push(`${label(r)}: ${clauses.join('; ')}.`);
     }
-    const f = first(played.flatMap((r) => of(r).filter((s) => s.status !== 'final')));
+    const f = sureNext(played.flatMap(of), laterThan(at, played));
     return f ? `${parts.join(' ')} Next game: ${gameText(f.s, f.g)}.` : parts.join(' ');
   }
 
@@ -655,11 +680,14 @@ async function main() {
     // in the section, and each pick's detail says "{n}% to win series" from
     // the stored chance (or "a coin flip").
     check(`${where}: no "at lock" label in the predictions section`, !/\bat lock\b/i.test(st), (/.{30}\bat lock\b.{10}/i.exec(st) ?? [''])[0]);
-    const pctWrong = p.rounds.filter((r) => {
-      const d = details.map((x) => textOf(x)).find((x) => x.includes(`${clubs.get(r.pick)?.full ?? r.pick} in ${r.modalSeriesLength},`)) ?? '';
+    // textOf puts a space where a tag closed ("in 2 , 58%"), so the comma is
+    // normalised; each detail is matched to its pick by its own position.
+    const detailText = details.map((x) => textOf(x).replace(/\s+,/g, ','));
+    const pctWrong = p.rounds.filter((r, i) => {
       const n = Math.round(r.pickProbability * 100);
       const label = n < 1 ? 'Under 1%' : n > 99 ? 'Over 99%' : `${n}%`;
-      return r.coinFlip ? !d.endsWith(', a coin flip.') : !d.endsWith(`, ${label} to win series.`);
+      const want = `PromoNight's pick: ${clubs.get(r.pick)?.full ?? r.pick} in ${r.modalSeriesLength}, ${r.coinFlip ? 'a coin flip.' : `${label} to win series.`}`;
+      return !detailText.some((d) => d.startsWith(want)) || !detailText[i];
     });
     check(`${where}: every pick's detail reads "{n}% to win series" from the stored chance, or "a coin flip"`, pctWrong.length === 0, pctWrong.map((r) => r.pick).join(' '));
     const sc = score(doc, p);

@@ -8,10 +8,16 @@
 //   champion       the last series is final: who won it, against whom, the
 //                  series score.
 //   round played   a round has a result or a game under way: where every
-//                  series of it stands, then the next game with a known
-//                  date and time.
+//                  series of it stands (a series still waiting on an
+//                  opponent says so), then the next game.
 //   between rounds the round to play next has not started: its name, and
-//                  its first game only when one has a date and a time.
+//                  its first game.
+//                  A game is named as next only when it is the earliest
+//                  unplayed game: timed, ahead of the clock, and with no
+//                  unplayed game that is untimed, postponed, suspended or
+//                  past its start on its day or before it. Otherwise the
+//                  clause is left out rather than name a game that may not
+//                  be next.
 //   anything else  null, and the page renders nothing in its place. A
 //                  series the view cannot read straight (final with no
 //                  winner, a winner with fewer wins) makes the whole line
@@ -19,8 +25,9 @@
 //
 // NO CLOCK WORDS. The page is cached and the bracket's own change stamp sits
 // beside this line, so nothing here says today, live, latest, now or
-// currently. `now` is used once: to skip a game the feed still lists as
-// scheduled after its start, which is a row the feed has not caught up on.
+// currently. `now` is used once: a game the feed still lists as scheduled
+// after its start is a row the feed has not caught up on, and it blocks the
+// next-game clause on its day.
 import type { Bracket } from './types';
 import { seriesIds, type GameView, type LeagueView, type SeriesView, type SlotView } from './view';
 
@@ -38,10 +45,24 @@ export function gameStarts(bracket: Bracket): Map<string, string> {
 type Club = SlotView & { kind: 'club' };
 const isClub = (s: SlotView): s is Club => s.kind === 'club';
 
+/** Nicknames that are singular in form take a singular verb ("the Liberty
+ *  leads"); the rest are plural ("the Brewers lead"). WNBA's, and the NBA's
+ *  and NHL's ahead of their pages. */
+const SINGULAR = new Set(['Liberty', 'Dream', 'Fever', 'Lynx', 'Mercury', 'Sky', 'Storm', 'Sun', 'Tempo', 'Fire', 'Heat', 'Magic', 'Thunder', 'Jazz', 'Wild', 'Kraken', 'Lightning', 'Avalanche', 'Mammoth']);
+const verb = (label: string, plural: string, singular: string) => (SINGULAR.has(label) ? singular : plural);
+
 /** "the Brewers lead the Cubs 2-1", or null when the series cannot be read
- *  straight. A series with a slot no club fills yet is 'skip'. */
-function clause(s: SeriesView): string | null | 'skip' {
-  if (!isClub(s.higher) || !isClub(s.lower)) return 'skip';
+ *  straight. A series with one slot no club fills yet says who waits for
+ *  whom; with none filled it is 'unset'. */
+function clause(s: SeriesView): string | null | 'unset' {
+  if (!isClub(s.higher) && !isClub(s.lower)) return 'unset';
+  if (!isClub(s.higher) || !isClub(s.lower)) {
+    const club = (isClub(s.higher) ? s.higher : s.lower) as Club;
+    const slot = isClub(s.higher) ? s.lower : s.higher;
+    if (club.wins + slot.wins > 0 || s.status === 'final') return null;
+    const whom = slot.label.endsWith(' winner') ? `the ${slot.label}` : 'an opponent';
+    return `the ${club.label} ${verb(club.label, 'await', 'awaits')} ${whom}`;
+  }
   const a = s.higher;
   const b = s.lower;
   if (s.status === 'final') {
@@ -57,19 +78,35 @@ function clause(s: SeriesView): string | null | 'skip' {
   }
   const lead = a.wins > b.wins ? a : b;
   const trail = lead === a ? b : a;
-  return `the ${lead.label} lead the ${trail.label} ${lead.wins}-${trail.wins}`;
+  return `the ${lead.label} ${verb(lead.label, 'lead', 'leads')} the ${trail.label} ${lead.wins}-${trail.wins}`;
 }
 
 const started = (s: SeriesView) => s.status !== 'upcoming' || s.higher.wins + s.lower.wins > 0 || s.games.some((g) => g.state === 'final' || g.state === 'live');
 
-/** A game with a date and a start time, not yet played, not behind `now`. */
-function upcomingTimed(g: GameView, startOf: (g: GameView) => string | null, now: Date): boolean {
-  if (g.state !== 'scheduled') return false;
-  const start = startOf(g);
-  return start !== null && Date.parse(start) >= now.getTime();
-}
+const UNPLAYED = new Set(['scheduled', 'postponed', 'suspended']);
 
-const bySortKey = (x: { g: GameView }, y: { g: GameView }) => (x.g.sortKey < y.g.sortKey ? -1 : x.g.sortKey > y.g.sortKey ? 1 : 0);
+/**
+ * The next game, or null when it cannot be named truthfully. `sure` series
+ * are the rounds being played: there an unplayed game with no date blocks
+ * the clause. `later` series (rounds not started) offer their timed games
+ * and block on a dated unplayed game, but an undated one there says nothing
+ * about the order.
+ */
+function nextGame(sure: SeriesView[], later: SeriesView[], startOf: (s: SeriesView) => (g: GameView) => string | null, now: Date): GameView | null {
+  type Row = { g: GameView; start: string | null; day: string | null; sure: boolean };
+  const rows: Row[] = [];
+  for (const [list, isSure] of [[sure, true], [later, false]] as const) {
+    for (const s of list) {
+      if (s.status === 'final') continue;
+      for (const g of s.games) if (UNPLAYED.has(g.state)) rows.push({ g, start: startOf(s)(g), day: g.day, sure: isSure });
+    }
+  }
+  const ahead = (r: Row) => r.g.state === 'scheduled' && r.start !== null && Date.parse(r.start) >= now.getTime();
+  const next = rows.filter(ahead).sort((x, y) => Date.parse(x.start as string) - Date.parse(y.start as string))[0];
+  if (!next) return null;
+  const blocked = rows.some((r) => r !== next && !ahead(r) && (r.day === null ? r.sure : r.day <= (next.day as string)));
+  return blocked ? null : next.g;
+}
 
 /** "Game 4, Cubs at Brewers, Fri, Oct 2, 7:08 PM ET". */
 function gameText(g: GameView): string {
@@ -104,30 +141,29 @@ export function standingLine(view: LeagueView, starts: ReadonlyMap<string, strin
   // The open round and every later round with a series already under way.
   const played = [at, ...view.rounds.map((_, i) => i).filter((i) => i > at && seriesOf(i).some(started))].filter((i) => seriesOf(i).some(started));
 
+  const after = (from: number, skip: readonly number[]) => view.rounds.flatMap((_, i) => (i >= from && !skip.includes(i) ? seriesOf(i) : []));
+
   if (played.length === 0) {
     // Between rounds, or before the first: the round to play next.
     const round = view.rounds[at];
-    const first = seriesOf(at)
-      .flatMap((s) => s.games.filter((g) => upcomingTimed(g, startOf(s), now)).map((g) => ({ s, g })))
-      .sort(bySortKey)[0];
-    return first ? `Next round: ${round.label}. It opens with ${gameText(first.g)}.` : `Next round: ${round.label}.`;
+    const first = nextGame(seriesOf(at), after(at + 1, []), startOf, now);
+    return first ? `Next round: ${round.label}. It opens with ${gameText(first)}.` : `Next round: ${round.label}.`;
   }
 
   const parts: string[] = [];
-  const open: { s: SeriesView; g: GameView }[] = [];
   for (const i of played) {
     const clauses: string[] = [];
+    let unset = 0;
     for (const s of seriesOf(i)) {
       const c = clause(s);
       if (c === null) return null;
-      if (c === 'skip') continue;
-      clauses.push(c);
-      if (s.status !== 'final') for (const g of s.games) if (upcomingTimed(g, startOf(s), now)) open.push({ s, g });
+      if (c === 'unset') unset++;
+      else clauses.push(c);
     }
     if (clauses.length === 0) return null;
+    if (unset > 0) clauses.push(unset === 1 ? 'one matchup is still to be set' : `${unset} matchups are still to be set`);
     parts.push(`${view.rounds[i].label}: ${clauses.join('; ')}.`);
   }
-  open.sort(bySortKey);
-  const next = open[0];
-  return next ? `${parts.join(' ')} Next game: ${gameText(next.g)}.` : parts.join(' ');
+  const next = nextGame(played.flatMap(seriesOf), after(at, played), startOf, now);
+  return next ? `${parts.join(' ')} Next game: ${gameText(next)}.` : parts.join(' ');
 }
