@@ -67,7 +67,7 @@ export default async function PlayoffsLeaguePage({ params }: { params: Promise<P
   if (page.state !== 'ok') notFound();
 
   const homeGames = page.view.phase.kind === 'active' ? homeGamesWindow([page.view], new Date()) : { primary: [], rest: [] };
-  const body: LeagueBody = { state: 'ok', view: page.view, predictions: page.predictions, homeGames };
+  const body: LeagueBody = { state: 'ok', view: page.view, predictions: page.predictions, homeGames, standing: page.standing };
   const teams = new Map((await getAllTeams()).map((t) => [t.id, t]));
   const tickets = ticketButtons(
     [...homeGames.primary, ...homeGames.rest].map((g) => g.hostTeamId),

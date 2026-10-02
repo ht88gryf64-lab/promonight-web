@@ -251,7 +251,7 @@ for (const f of FAILURES) {
       assert.equal(ld.dateModified, stampOf(bracket));
       assertNoPredictions(html, f.name);
       // The head does not promise predictions the body does not show.
-      assert.equal(meta.title, '2026 MLB Playoffs Bracket, Schedule and Scores');
+      assert.equal(meta.title, '2026 MLB Playoffs: Bracket and Schedule');
       // (d) Exactly one tagged line for the render: head and body share it.
       assert.deepEqual(lines, [`[predictions-unavailable] league=MLB reason=${f.reason}`]);
       // The other league's page is untouched by this one's failure.

@@ -544,18 +544,18 @@ test('LABELS: percent and record', () => {
   assert.equal(recordText(3, 4), '3 for 4');
 });
 
-test('TITLE ODDS: the top eight, highest first, as "at lock" percentages', () => {
+test('TITLE ODDS: the top eight, highest first, as plain "to win title" percentages', () => {
   const v = buildWithPredictions(FIXTURE.mlbWildCard, PREDICTED.mlb, LYNX_OUT_AT).predictions.view;
   assert.equal(v.titleOdds.length, 8);
   assert.deepEqual(v.titleOdds.slice(0, 3), [
-    { name: 'Milwaukee Brewers', oddsLabel: '28%' },
-    { name: 'Los Angeles Dodgers', oddsLabel: '19%' },
-    { name: 'Tampa Bay Rays', oddsLabel: '15%' },
+    { name: 'Milwaukee Brewers', oddsLabel: '28% to win title' },
+    { name: 'Los Angeles Dodgers', oddsLabel: '19% to win title' },
+    { name: 'Tampa Bay Rays', oddsLabel: '15% to win title' },
   ]);
   const w = buildWithPredictions(FIXTURE.wnbaLynxOut, PREDICTED.wnba, LYNX_OUT_AT).predictions.view;
   assert.equal(w.titleOdds.length, 8);
   assert.equal(w.titleOdds[0].name, 'Golden State Valkyries');
-  assert.equal(w.titleOdds[0].oddsLabel, '37%');
+  assert.equal(w.titleOdds[0].oddsLabel, '37% to win title');
   assert.equal(w.titleOddsCaption, 'All 8 clubs, most likely champion first.');
   assert.equal(v.titleOddsCaption, 'The 8 most likely champions of 12.');
   // N counts the bracket's clubs, not the stored list: a short list does

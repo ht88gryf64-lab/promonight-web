@@ -161,6 +161,10 @@ export interface HomeGameView {
   day: string;
   sortKey: string;
   ifNecessary: boolean;
+  /** The game has a start instant and its time is not TBD. The upcoming
+   *  playoff games lists show only these (WEB4 addendum, 2026-10-02); the
+   *  venue and team modules keep every scheduled game. */
+  timed: boolean;
   hostTeamId: string;
   hostName: string;
   park: string | null;
@@ -545,10 +549,12 @@ export function buildLeagueView(
 
   const today = easternYmd(now);
   const homeGames: HomeGameView[] = [];
-  for (const s of flat) {
-    if (s.status === 'final') continue;
+  flat.forEach((s, i) => {
+    if (s.status === 'final') return;
+    const raw = bracket.series[i].games;
     for (const g of s.games) {
       if (g.state !== 'scheduled' || !g.hostTeamId || !g.hostName || !g.day) continue;
+      const stored = raw.find((r) => r.gameNumber === g.gameNumber);
       // A scheduled game dated before today is a row the feed has not caught
       // up on. It is not an upcoming game and is not offered as one.
       if (g.day < today) continue;
@@ -563,6 +569,7 @@ export function buildLeagueView(
         day: g.day,
         sortKey: g.sortKey,
         ifNecessary: g.ifNecessary,
+        timed: !!stored && !stored.startTimeTBD && stored.start !== null,
         hostTeamId: g.hostTeamId,
         hostName: g.hostName,
         promo: g.promo,
@@ -570,7 +577,7 @@ export function buildLeagueView(
         parkPage: g.parkPage,
       });
     }
-  }
+  });
   homeGames.sort(bySoonest);
 
   return {
@@ -628,6 +635,8 @@ export function homeGamesWindow(views: readonly LeagueView[], now: Date): HomeGa
   const seen = new Set<string>();
   const week: HomeGameView[] = [];
   for (const g of views.flatMap((v) => v.homeGames)) {
+    // Only a game with a known date and time is an upcoming playoff game.
+    if (!g.timed) continue;
     if (g.day < today || g.day > weekEnd) continue;
     if (seen.has(g.key)) continue;
     seen.add(g.key);

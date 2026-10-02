@@ -3696,6 +3696,18 @@ and `src/app/playoffs/__tests__/routes.test.tsx` (2, "ROUTE /playoffs") read
 the real clock through `getLeaguePageData`'s `new Date()`. They pass with the
 clock at 2026-09-30T12:00Z and fail at 2026-10-02T12:00Z, on main 7fd7e7c as
 well. The same pin (or passing `now` in) fixes them.
+FIXED 2026-10-02 (WEB4, feature/methodology-collapse): all five were an aged
+fixture read through the real clock, not production behaving wrongly (on the
+live site the bracket documents are current, and a scheduled game dated
+before today is a feed row not caught up, which the page is right to drop).
+Both files now run on a pinned clock (`mock.timers`, Date only) at
+`CAPTURED_AT`, 2026-09-29T17:15Z, the moment the captures were read, each with
+a first test proving the pin; fixture dates unchanged. `npm run test:future`
+runs the whole suite with the clock moved a year ahead
+(`scripts/test-clock-shift.mjs`, `TEST_CLOCK_SHIFT_DAYS` to change it), so
+the next test that reads the real date against an aged fixture fails there
+first. Green on 2026-10-02 at today's clock and at +365 days. There is no CI
+test workflow in this repo; run it before a merge.
 
 ## 63. The MLB import cannot tell a rescheduled game's makeup from its original date until the makeup is played
 
@@ -3747,3 +3759,27 @@ then an execute. Once the ingest marks stale docs, `regularSeasonContexts`
 should read the mark instead of ranking, and the in-season calendar
 (`SeasonExplorer`/`CalendarGrid`) and the division-rivals derivation, which
 still read the raw contexts, get the fix for free.
+
+## 64. `/playoffs` will need league filters when the NBA and NHL postseasons arrive (April 2027)
+
+**Status: OPEN. Due before the 2027 NBA and NHL postseasons begin (mid
+April 2027).** Recorded 2026-10-02 (WEB4, at Matt's request).
+
+**What it is.** The hub at `/playoffs` lists every league with a bracket in
+one column of league cards, one merged "Upcoming playoff games" list (sorted
+across leagues, each row tagged with its league) and one results block. With
+MLB and WNBA that is two cards and a short list. In April 2027 the NBA and
+NHL postseasons run at the same time (16 clubs each, best-of-seven), so the
+hub would carry four cards and a merged games list dominated by two leagues
+a reader may not follow, with the eight-row short list filled from whichever
+league plays first each day.
+
+**What it needs.** A way to narrow the hub to one league: league filters on
+the hub (links to `/playoffs/{league}` already exist per card; the merged
+games list and results are what need a filter), or a per-league short list.
+Whatever is built must keep the hub's ad rules (the article is the
+`page-content` wrapper; a filter control is not an anchor and no unit may
+sit inside it) and must render every league's rows in the server HTML, with
+the filter only changing what shows, the same way "Show all" works today.
+The `PostseasonLeague` type is `'MLB' | 'WNBA'` today; adding NBA and NHL
+routes is its own build and comes first.

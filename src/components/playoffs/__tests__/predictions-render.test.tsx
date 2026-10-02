@@ -139,7 +139,7 @@ test('PREDICTED BRACKET, MLB mid Wild Card: the coin flip reads as one; nothing 
   const h = html(STATES[1][1](), LYNX_OUT_AT);
   const flip = pick(h, 'wild_card-1');
   assert.ok(textOf(flip).includes('Astros in 2 · Coin flip'));
-  assert.ok(textOf(flip).includes("PromoNight's pick: Houston Astros in 2, a coin flip at lock."));
+  assert.ok(textOf(flip).includes("PromoNight's pick: Houston Astros in 2, a coin flip."));
   assert.ok(!/50%/.test(textOf(flip)));
   assert.equal(count(h, 'data-pick-outcome="alive"'), 11);
   assert.equal(count(h, 'data-dimmed="true"'), 0);
@@ -180,13 +180,34 @@ test('PREDICTED BRACKET: its own pills and toggle, the same rounds as the real o
   for (const m of scrollers) assert.match(m[1], /(^| )relative( |$)/);
 });
 
-test('TITLE ODDS: eight rows, labeled at lock', () => {
+test('TITLE ODDS: eight rows, each a plain percentage to win the title', () => {
   const h = html(STATES[0][1](), LYNX_OUT_AT);
   const t = element(h, 'data-title-odds');
-  assert.ok(textOf(t).startsWith('Title odds at lock'));
+  assert.ok(textOf(t).startsWith('Title odds') && !/at lock/i.test(textOf(t)));
   assert.equal(count(t, '<tr'), 9, 'a header row and eight teams');
-  assert.ok(textOf(t).includes('Golden State Valkyries 37%'));
+  assert.ok(textOf(t).includes('Golden State Valkyries 37% to win title'));
 });
+
+for (const [name, make, now] of STATES) {
+  test(`EVERY PERCENTAGE (${name}): no percentage on the page outside PromoNight Predicts, so the methodology's "every percentage on this page" holds`, () => {
+    const h = html(make(), now);
+    let outside = element(h, 'data-playoffs-article=');
+    for (const m of ['data-predictions="bracket"', 'data-predictions-methodology']) outside = outside.replace(element(outside, m), '');
+    assert.ok(!/\d\s?%/.test(textOf(outside)), textOf(outside).match(/.{0,30}\d\s?%/)?.[0]);
+  });
+}
+
+for (const [name, make, now] of STATES) {
+  test(`PERCENT LABELS (${name}): no "at lock" label anywhere; each pick's detail reads "{n}% to win series"`, () => {
+    const b = make();
+    const h = html(b, now);
+    assert.ok(!/\bat lock\b/i.test(textOf(h)), 'no "at lock"');
+    assert.ok(!/chance at lock/i.test(h));
+    const details = [...h.matchAll(/data-pick-detail[^>]*>([\s\S]*?)<\/div>/g)].map((m) => textOf(m[1]));
+    assert.equal(details.length, b.predicted.series.length);
+    for (const d of details) assert.match(d, /^PromoNight's pick: .+ in \d, (a coin flip|(\d{1,2}%|Over 99%|Under 1%) to win series)\./, d);
+  });
+}
 
 // ---- The contract: keys and fingerprints ----
 

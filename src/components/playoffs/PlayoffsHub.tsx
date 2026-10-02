@@ -195,7 +195,7 @@ export function PlayoffsHub({
 
         <div data-page-intro>
           <p className="mt-2.5 max-w-[52ch] text-[15px] text-rd-ink-soft">
-            Every series in the bracket and where it stands, with the home games coming up next and the parks that host them.
+            Every series in the bracket and where it stands, with the upcoming playoff games and the parks that host them.
           </p>
 
           {offseason && (
@@ -234,12 +234,12 @@ export function PlayoffsHub({
         {active.length > 0 && (
           <HomeGames
             id="next-home-games"
-            heading="Next home games"
+            heading="Upcoming playoff games"
             games={nextGames}
             tickets={tickets}
             surface={SURFACE}
             showLeague
-            empty="No home game with a confirmed host is listed in the next three days."
+            empty="No playoff game with a confirmed date, time and host is listed in the next three days."
           />
         )}
 

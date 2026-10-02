@@ -5,7 +5,7 @@ import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { FIXTURE, capturedTeams, fakeFirestore, loadDoc, parkNames, seriesKeyIn, venuePages, PREDICTED } from '../../../lib/postseason/__tests__/helpers';
+import { CAPTURED_AT, FIXTURE, capturedTeams, fakeFirestore, loadDoc, parkNames, seriesKeyIn, venuePages, PREDICTED } from '../../../lib/postseason/__tests__/helpers';
 
 type Fake = ReturnType<typeof fakeFirestore>;
 const current: { db: Fake } = { db: fakeFirestore({}) };
@@ -34,6 +34,19 @@ mock.module(new URL('../../../components/cfb/rivalry/fonts.ts', import.meta.url)
 });
 mock.module(new URL('../../../components/redesign/fonts-house.ts', import.meta.url).href, {
   namedExports: { archivoHouse: { variable: 'font-archivo-var' } },
+});
+
+// The clock is pinned for the whole file (known-issues 62). getLeaguePageData
+// and the pages read new Date() to drop scheduled games dated before today,
+// and the captures here were read on 2026-09-29, so on the real clock this
+// file began failing on 2026-10-02 once every hosted game was behind it.
+// CAPTURED_AT is the moment the captures were read. Only Date is mocked;
+// timers (the read timeouts) run as usual. Fixture dates are unchanged.
+mock.timers.enable({ apis: ['Date'], now: CAPTURED_AT });
+
+test('the clock is pinned: new Date() and Date.now() read CAPTURED_AT, not the real date', () => {
+  assert.equal(new Date().toISOString(), CAPTURED_AT.toISOString());
+  assert.equal(Date.now(), CAPTURED_AT.getTime());
 });
 
 const hub = () => import('../page');
@@ -317,17 +330,17 @@ test('HEAD /playoffs/[league]: title, description, canonical and a complete open
   const { generateMetadata, default: Page } = await league();
   current.db = fakeFirestore(BOTH());
   const meta = (await generateMetadata(params('mlb'))) as Meta;
-  assert.equal(meta.title, '2026 MLB Playoff Bracket and Predictions');
+  assert.equal(meta.title, '2026 MLB Playoffs: Bracket, Schedule and Predictions');
   assert.equal(
     meta.description,
     "The 2026 MLB postseason bracket, with a simulation's locked pick for every series, marked against the results. Current round: Wild Card Series.",
   );
-  assert.equal(((await generateMetadata(params('wnba'))) as Meta).title, '2026 WNBA Playoff Bracket and Predictions');
+  assert.equal(((await generateMetadata(params('wnba'))) as Meta).title, '2026 WNBA Playoffs: Bracket, Schedule and Predictions');
   // With no locked prediction the head does not promise one.
   const noPicks = BOTH() as Record<string, unknown>;
   delete noPicks['predictedBrackets/MLB_2026'];
   current.db = fakeFirestore(noPicks as Parameters<typeof fakeFirestore>[0]);
-  assert.equal(((await generateMetadata(params('mlb'))) as Meta).title, '2026 MLB Playoffs Bracket, Schedule and Scores');
+  assert.equal(((await generateMetadata(params('mlb'))) as Meta).title, '2026 MLB Playoffs: Bracket and Schedule');
   current.db = fakeFirestore(BOTH());
   assert.equal(meta.alternates?.canonical, 'https://www.getpromonight.com/playoffs/mlb');
   assert.equal(meta.openGraph?.url, 'https://www.getpromonight.com/playoffs/mlb', 'og:url is the canonical, not the homepage');
@@ -354,7 +367,7 @@ test('HEAD /playoffs: the three states of the hub', async () => {
   current.db = fakeFirestore(BOTH());
   const playing = (await generateMetadata()) as Meta;
   assert.equal(playing.title, '2026 Playoffs: MLB and WNBA Brackets');
-  assert.equal(playing.description, 'The 2026 postseason brackets for MLB and WNBA, series by series, with Eastern game times and the next home games. MLB: Wild Card Series. WNBA: First Round.');
+  assert.equal(playing.description, 'The 2026 postseason brackets for MLB and WNBA, series by series, with Eastern game times and upcoming games. MLB: Wild Card Series. WNBA: First Round.');
   assert.equal(playing.alternates?.canonical, 'https://www.getpromonight.com/playoffs');
   assert.equal(playing.openGraph?.url, 'https://www.getpromonight.com/playoffs');
   assert.equal(playing.openGraph?.images?.[0].url, '/og-image.png');
@@ -512,6 +525,12 @@ test('PREDICTIONS through the real pages: the section, the scorecard, the method
   assert.ok(/The inputs were locked on September 25, 2026 ?, before Game 1\./.test(wtext), wtext);
   assert.ok(wtext.includes('the simulation called 5 of 7 series and got the champion right'));
   assert.ok(!/\btitle odd\b/i.test(wnba), 'no "title odd" on the page');
+  // Where things stand, from each bracket document on the pinned clock: the
+  // MLB capture before the first pitch, the WNBA capture after Game 1s.
+  const standing = (h: string) => elementOf(h, 'data-standing').replace(/<[^>]+>/g, '');
+  assert.equal(standing(mlb), 'Next round: Wild Card Series. It opens with Game 1, Phillies at Braves, Tue, Sep 29, 2:00 PM ET.');
+  assert.ok(standing(wnba).startsWith('First Round: the Liberty lead the Lynx 1-0;'), standing(wnba));
+  assert.ok(elementOf(mlb, 'data-page-intro').includes('data-standing'));
   // The visible summary, per league, from its own lockedAt (September 30
   // for both), and never "before Game 1".
   for (const [slug, h] of [['mlb', mlb], ['wnba', wnba]] as const) {

@@ -33,6 +33,9 @@ const T_RENDER = 'src/components/playoffs/__tests__/predictions-render.test.tsx'
 const T_ROUTES = 'src/app/playoffs/__tests__/routes.test.tsx';
 const T_HUB = 'src/components/playoffs/__tests__/render.test.tsx';
 const T_META = 'src/lib/postseason/__tests__/metadata.test.ts';
+const S = 'src/lib/postseason/standing.ts';
+const T_STAND = 'src/lib/postseason/__tests__/standing.test.ts';
+const T_VIEW = 'src/lib/postseason/__tests__/view.test.ts';
 
 const MAPPER_GATE = '  if (!lockedAt || !simRuns || !computedAt || Date.parse(computedAt) > Date.parse(lockedAt)) return null;';
 const CHANCE = "  if (typeof p !== 'number' || !Number.isFinite(p) || p < 0.5 || p >= 1) return null;";
@@ -173,6 +176,30 @@ const CASES = [
   ['fingerprints outside the detail', C, FINGERPRINTS_DL + '\n      </details>', '      </details>\n' + FINGERPRINTS_DL, [T_RENDER]],
   ['fingerprints duplicated beside the summary', C, '<p data-methodology-summary>{view.summary}</p>', '<p data-methodology-summary>{view.summary}</p>{view.fingerprints.map((f) => <code key={f.label}>{f.value}</code>)}', [T_RENDER, T_ROUTES]],
   ['backtest hidden in the detail', C, BACKTEST_P + MID, MID + BACKTEST_P, [T_RENDER]],
+  // ---- Where things stand, the games list, TBD slots, percentage labels (WEB4 addendum) ----
+  ['standing: wrong leader', S, '  const lead = a.wins > b.wins ? a : b;', '  const lead = a.wins < b.wins ? a : b;', [T_STAND]],
+  ['standing: wrong winner of a final series', S, '    const w = a.won ? a : b.won ? b : null;', '    const w = b.won ? a : a.won ? b : null;', [T_STAND]],
+  ['standing: stale score, one game behind', S, '`the ${lead.label} lead the ${trail.label} ${lead.wins}-${trail.wins}`', '`the ${lead.label} lead the ${trail.label} ${lead.wins - 1}-${trail.wins}`', [T_STAND]],
+  ['standing: stale final score', S, '`the ${w.label} beat the ${l.label} ${w.wins}-${l.wins}`', '`the ${w.label} beat the ${l.label} ${w.wins - 1}-${l.wins}`', [T_STAND]],
+  ['standing: champion score swapped', S, 'beating the ${l.fullName} ${w.wins}-${l.wins}.`', 'beating the ${l.fullName} ${l.wins}-${w.wins}.`', [T_STAND]],
+  ['standing: freshness word on the next game', S, '} Next game: ${gameText(next.g)}.`', '} Next game today: ${gameText(next.g)}.`', [T_STAND]],
+  ['standing: freshness word on the round', S, "parts.push(`${view.rounds[i].label}: ${clauses.join('; ')}.`);", "parts.push(`Live: ${view.rounds[i].label}: ${clauses.join('; ')}.`);", [T_STAND]],
+  ['standing: "right now" between rounds', S, "`Next round: ${round.label}.`", "`Right now: ${round.label}.`", [T_STAND]],
+  ['standing: a game behind the clock offered as next', S, '  return start !== null && Date.parse(start) >= now.getTime();', '  return start !== null;', [T_STAND]],
+  ['standing: an untimed game offered', S, '  return start !== null && Date.parse(start) >= now.getTime();', '  return true;', [T_STAND]],
+  ['standing: half a summary when a series is unreadable', S, '      if (c === null) return null;', '      if (c === null) continue;', [T_STAND]],
+  ['standing: a placeholder phase still prints', S, '  if (at < 0) return null;', '  if (at < 0) return `Next round: ${view.phase.roundLabel}.`;', [T_STAND]],
+  ['games list: untimed games listed', 'src/lib/postseason/view.ts', '    if (!g.timed) continue;\n', '', [T_VIEW, T_HUB]],
+  ['games list: league heading reverted', 'src/components/playoffs/PlayoffsLeague.tsx', 'heading="Upcoming playoff games"', 'heading="Home games this week"', [T_HUB]],
+  ['games list: hub heading reverted', 'src/components/playoffs/PlayoffsHub.tsx', 'heading="Upcoming playoff games"', 'heading="Next home games"', [T_HUB]],
+  ['games list: "home games" back in the hub intro', 'src/components/playoffs/PlayoffsHub.tsx', 'with the upcoming playoff games and the parks', 'with the home games coming up next and the parks', [T_HUB]],
+  ['TBD slot text below AA', 'src/components/playoffs/SeriesCard.tsx', 'bg-rd-cream/60 px-2.5', 'bg-rd-ink-faint/30 px-2.5', [T_HUB]],
+  ['TBD slot loses its dashed outline', 'src/components/playoffs/SeriesCard.tsx', 'rounded-md border border-dashed border-rd-line-strong bg-rd-cream/60', 'rounded-md border border-rd-line-strong bg-rd-cream/60', [T_HUB]],
+  ['"at lock" back on a pick', 'src/components/playoffs/PredictedBracket.tsx', '`, ${s.chanceLabel} to win series.`', '`, ${s.chanceLabel} at lock.`', [T_RENDER]],
+  ['"at lock" back on the title odds', C, '          Title odds\n        </h3>', '          Title odds at lock\n        </h3>', [T_RENDER]],
+  ['title odds lose "to win title"', P, "oddsLabel: `${percent(o.odds)} to win title`", 'oddsLabel: percent(o.odds)', [T_PRED, T_RENDER]],
+  ['title with predictions not Matt\'s wording', 'src/lib/postseason/metadata.ts', '`${season} ${league} Playoffs: Bracket, Schedule and Predictions`', '`${season} ${league} Playoff Bracket and Predictions`', [T_META, T_ROUTES]],
+  ['standing rendered as a child of the article', 'src/components/playoffs/PlayoffsLeague.tsx', '<BracketControlsProvider initialRound', '{body.standing ? <p data-standing>{body.standing}</p> : null}\n        <BracketControlsProvider initialRound', [T_HUB]],
 ];
 
 const run = (files) =>
@@ -186,7 +213,7 @@ const run = (files) =>
   });
 
 // The tests pass untouched, or nothing below means anything.
-const base = run([T_PRED, T_DATA, T_FAIL, T_RENDER, T_ROUTES, T_HUB, T_META]);
+const base = run([T_PRED, T_DATA, T_FAIL, T_RENDER, T_ROUTES, T_HUB, T_META, T_STAND, T_VIEW]);
 if (base.status !== 0) {
   console.error('the tests fail before any mutation; fix that first');
   process.exit(2);

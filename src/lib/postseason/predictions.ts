@@ -590,7 +590,7 @@ export function buildPredictionsView(
   for (const o of predicted.titleOdds.slice(0, TITLE_ODDS_ROWS)) {
     const c = name(o.slug);
     if (!c) return 'no-team-record';
-    titleOdds.push({ name: `${c.city} ${c.name}`, oddsLabel: percent(o.odds) });
+    titleOdds.push({ name: `${c.city} ${c.name}`, oddsLabel: `${percent(o.odds)} to win title` });
   }
 
   return {

@@ -50,7 +50,7 @@ export function hubCopy(season: number, routeLeagues: readonly PostseasonLeague[
     return {
       title,
       canonical,
-      description: `The ${season} postseason brackets for ${list(active.map((l) => l.league))}, series by series, with Eastern game times and the next home games. ${rounds}.`,
+      description: `The ${season} postseason brackets for ${list(active.map((l) => l.league))}, series by series, with Eastern game times and upcoming games. ${rounds}.`,
     };
   }
   if (leagues.length > 0) {
@@ -78,9 +78,10 @@ export function leagueCopy(
   view: LeagueView | null,
   predictions: boolean = false,
 ): PageCopy {
-  // 54 characters with the site suffix for the longest league name, inside
-  // the 65 the title audit aims for.
-  const title = predictions ? `${season} ${league} Playoff Bracket and Predictions` : `${season} ${league} Playoffs Bracket, Schedule and Scores`;
+  // Matt's wording (WEB4 addendum, 2026-10-02). With the site suffix it is
+  // 65 characters for MLB and 66 for WNBA, one over the 65 the title audit
+  // aims for, by ruling. "Predictions" drops out when the body shows none.
+  const title = predictions ? `${season} ${league} Playoffs: Bracket, Schedule and Predictions` : `${season} ${league} Playoffs: Bracket and Schedule`;
   const canonical = `${SITE_URL}${path}`;
   if (!view) return { title, canonical, description: `The ${season} ${league} postseason bracket.` };
   if (view.phase.kind === 'concluded') {
@@ -97,7 +98,7 @@ export function leagueCopy(
     canonical,
     description: predictions
       ? `The ${season} ${league} postseason bracket, with a simulation's locked pick for every series, marked against the results. Current round: ${view.phase.roundLabel}.`
-      : `The ${season} ${league} postseason bracket. Current round: ${view.phase.roundLabel}. Every series, seed and result, with game times in Eastern and the home games coming up.`,
+      : `The ${season} ${league} postseason bracket. Current round: ${view.phase.roundLabel}. Every series, seed and result, with game times in Eastern and the upcoming playoff games.`,
   };
 }
 

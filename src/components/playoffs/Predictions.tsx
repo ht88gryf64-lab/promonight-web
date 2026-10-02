@@ -46,7 +46,7 @@ export function PredictionsSection({
       </div>
       <p className="mt-2.5 max-w-[60ch] text-[14.5px] leading-relaxed text-rd-ink-soft">
         PromoNight Predicts picks every series with a simulation built on regular-season results. The picks are locked and never change; each one is marked against the
-        real bracket above as correct, busted or still alive. Each card shows the pick, how many games it most likely takes to win and its chance at lock. The
+        real bracket above as correct, busted or still alive. Each card shows the pick, how many games it most likely takes to win and its percentage to win the series. The
         chances come from regular-season results alone, so they take no account of postseason games already played when the bracket was
         locked.
       </p>
@@ -76,7 +76,7 @@ export function PredictionsSection({
 
       <section aria-labelledby="title-odds-heading" data-title-odds className="mt-6">
         <h3 id="title-odds-heading" className="text-[18px] font-bold uppercase tracking-[0.04em] text-rd-ink" style={{ fontFamily: CONDENSED }}>
-          Title odds at lock
+          Title odds
         </h3>
         <p className="mt-1 text-[13px] text-rd-ink-soft">{view.titleOddsCaption}</p>
         <table className="mt-2 w-full max-w-md border-collapse text-[14px]">
@@ -86,7 +86,7 @@ export function PredictionsSection({
                 Team
               </th>
               <th scope="col" className="py-1.5 text-right font-semibold">
-                Title odds
+                Chance
               </th>
             </tr>
           </thead>

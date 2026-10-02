@@ -574,6 +574,67 @@ async function main() {
     };
   }
 
+  /** "Where things stand" from the raw document, independently of the page's
+   *  code: the champion, the round being played, or the next round. */
+  function standingWant(doc: RawDoc, now: Date): string | null {
+    const order: string[] = [];
+    for (const s of doc.series) if (!order.includes(s.round)) order.push(s.round);
+    const of = (r: string) => doc.series.filter((s) => s.round === r);
+    const label = (r: string) => of(r)[0].roundLabel;
+    const winnerOf = (s: RawSeries) => (s.winner === 'higher' || s.winner === 'lower' ? s[s.winner] : [s.higher, s.lower].find((x) => x.slug === s.winner) ?? null);
+    const last = order[order.length - 1];
+    const open = order.find((r) => of(r).some((s) => s.status !== 'final'));
+    if (!open) {
+      const d = of(last);
+      if (d.length !== 1) return null;
+      const w = winnerOf(d[0]);
+      if (!w) return null;
+      const l = w === d[0].higher ? d[0].lower : d[0].higher;
+      const ww = w === d[0].higher ? d[0].wins.higher : d[0].wins.lower;
+      const lw = w === d[0].higher ? d[0].wins.lower : d[0].wins.higher;
+      const W = slotName(doc, w).club;
+      const L = slotName(doc, l).club;
+      return W && L ? `The ${W.full} won the ${doc.season} ${label(last)}, beating the ${L.full} ${ww}-${lw}.` : null;
+    }
+    const started = (s: RawSeries) => s.status !== 'upcoming' || s.wins.higher + s.wins.lower > 0 || s.games.some((g) => g.status === 'final' || g.status === 'live');
+    const at = order.indexOf(open);
+    const played = order.filter((r, i) => i >= at && of(r).some(started));
+    const timedAhead = (s: RawSeries) => s.games.filter((g) => g.status === 'scheduled' && !g.startTimeTBD && !!g.start && Date.parse(g.start) >= now.getTime());
+    const gameText = (s: RawSeries, g: RawGame) => {
+      const home = g.homeSide ? slotName(doc, s[g.homeSide]).name : null;
+      const away = g.homeSide ? slotName(doc, s[g.homeSide === 'higher' ? 'lower' : 'higher']).name : null;
+      const matchup = home && away ? `${away} at ${home}` : `${slotName(doc, s.lower).name} vs ${slotName(doc, s.higher).name}`;
+      const t = new Date(g.start as string);
+      return `Game ${g.gameNumber}, ${matchup}, ${etDay(t)}, ${etTime(t)}${conditional(s, g) ? ' (if necessary)' : ''}`;
+    };
+    const first = (series: RawSeries[]) => series.flatMap((s) => timedAhead(s).map((g) => ({ s, g }))).sort((x, y) => Date.parse(x.g.start as string) - Date.parse(y.g.start as string))[0];
+    if (played.length === 0) {
+      const f = first(of(open));
+      return f ? `Next round: ${label(open)}. It opens with ${gameText(f.s, f.g)}.` : `Next round: ${label(open)}.`;
+    }
+    const parts: string[] = [];
+    for (const r of played) {
+      const clauses: string[] = [];
+      for (const s of of(r)) {
+        const a = slotName(doc, s.higher);
+        const b = slotName(doc, s.lower);
+        if (!a.club || !b.club) continue;
+        const hi = s.wins.higher;
+        const lo = s.wins.lower;
+        if (s.status === 'final') {
+          const w = winnerOf(s);
+          if (!w) return null;
+          clauses.push(w === s.higher ? `the ${a.name} beat the ${b.name} ${hi}-${lo}` : `the ${b.name} beat the ${a.name} ${lo}-${hi}`);
+        } else if (hi === lo) clauses.push(hi === 0 ? `the ${a.name} and the ${b.name} have not completed a game` : `the ${a.name} and the ${b.name} are tied ${hi}-${lo}`);
+        else clauses.push(hi > lo ? `the ${a.name} lead the ${b.name} ${hi}-${lo}` : `the ${b.name} lead the ${a.name} ${lo}-${hi}`);
+      }
+      if (clauses.length === 0) return null;
+      parts.push(`${label(r)}: ${clauses.join('; ')}.`);
+    }
+    const f = first(played.flatMap((r) => of(r).filter((s) => s.status !== 'final')));
+    return f ? `${parts.join(' ')} Next game: ${gameText(f.s, f.g)}.` : parts.join(' ');
+  }
+
   async function predictionsOnPage(where: string, html: string, el: string, league: League, doc: RawDoc, p: RawPred) {
     const section = element(el, 'data-predictions="bracket"');
     check(`${where}: the predictions section is on the page, with its anchor`, !!section && section.includes('id="predictions"'));
@@ -590,6 +651,17 @@ async function main() {
     const comp = /computer/i.exec(html);
     check(`${where}: no "computer" anywhere in the served bytes`, !comp, comp ? html.slice(Math.max(0, comp.index - 40), comp.index + 40) : '');
     check(`${where}: no "publish soon" placeholder`, !/publish soon/i.test(html));
+    // Plain percentage labels (WEB4 addendum): no "at lock" label anywhere
+    // in the section, and each pick's detail says "{n}% to win series" from
+    // the stored chance (or "a coin flip").
+    check(`${where}: no "at lock" label in the predictions section`, !/\bat lock\b/i.test(st), (/.{30}\bat lock\b.{10}/i.exec(st) ?? [''])[0]);
+    const pctWrong = p.rounds.filter((r) => {
+      const d = details.map((x) => textOf(x)).find((x) => x.includes(`${clubs.get(r.pick)?.full ?? r.pick} in ${r.modalSeriesLength},`)) ?? '';
+      const n = Math.round(r.pickProbability * 100);
+      const label = n < 1 ? 'Under 1%' : n > 99 ? 'Over 99%' : `${n}%`;
+      return r.coinFlip ? !d.endsWith(', a coin flip.') : !d.endsWith(`, ${label} to win series.`);
+    });
+    check(`${where}: every pick's detail reads "{n}% to win series" from the stored chance, or "a coin flip"`, pctWrong.length === 0, pctWrong.map((r) => r.pick).join(' '));
     const sc = score(doc, p);
     const wrong: string[] = [];
     for (const m of sc.marks) {
@@ -611,7 +683,7 @@ async function main() {
     const odds = [...p.titleOdds].sort((a, b) => b.odds - a.odds).slice(0, 8);
     const oddsText = textOf(element(section, 'data-title-odds') ?? '');
     const pct = (x: number) => (Math.round(x * 100) < 1 ? 'Under 1%' : `${Math.round(x * 100)}%`);
-    check(`${where}: title odds at lock, top eight`, oddsText.startsWith('Title odds at lock') && odds.every((o) => oddsText.includes(`${clubs.get(o.slug)?.full ?? o.slug} ${pct(o.odds)}`)) && count(element(section, 'data-title-odds') ?? '', '<tr') === 9, oddsText.slice(0, 120));
+    check(`${where}: title odds, top eight, each a plain percentage to win the title`, oddsText.startsWith('Title odds') && odds.every((o) => oddsText.includes(`${clubs.get(o.slug)?.full ?? o.slug} ${pct(o.odds)} to win title`)) && count(element(section, 'data-title-odds') ?? '', '<tr') === 9, oddsText.slice(0, 120));
 
     // The methodology: dates from the stored instants in Eastern, nothing else.
     const method = element(el, 'data-predictions-methodology');
@@ -691,10 +763,10 @@ async function main() {
     const description = open
       ? pred
         ? `The ${SEASON} ${league} postseason bracket, with a simulation's locked pick for every series, marked against the results. Current round: ${open.roundLabel}.`
-        : `The ${SEASON} ${league} postseason bracket. Current round: ${open.roundLabel}. Every series, seed and result, with game times in Eastern and the home games coming up.`
+        : `The ${SEASON} ${league} postseason bracket. Current round: ${open.roundLabel}. Every series, seed and result, with game times in Eastern and the upcoming playoff games.`
       : '(concluded: checked by hand)';
     const want = {
-      title: pred ? `${SEASON} ${league} Playoff Bracket and Predictions` : `${SEASON} ${league} Playoffs Bracket, Schedule and Scores`,
+      title: pred ? `${SEASON} ${league} Playoffs: Bracket, Schedule and Predictions` : `${SEASON} ${league} Playoffs: Bracket and Schedule`,
       description,
       canonical: `${SITE}${path}`,
     };
@@ -850,6 +922,35 @@ async function main() {
     check(`${where}: the short list holds eight rows at most`, inThree.length <= 8, `${inThree.length} rows, today is ${today} in Eastern`);
     same(`${where}: ticket links per home game row, at most one`, list.every((r) => count(r, 'rel="noopener noreferrer sponsored"') <= 1), true);
 
+    // WEB4 addendum. The games list is "Upcoming playoff games" and lists
+    // only games with a known date and time; nothing visible calls them home
+    // games.
+    const gamesSection = element(el, 'data-home-games=');
+    if (gamesSection) check(`${where}: the games section is headed "Upcoming playoff games"`, /<h2[^>]*>Upcoming playoff games<\/h2>/.test(gamesSection));
+    check(`${where}: every listed game has a known date and time`, list.every((r) => !/Time TBD|Date TBD/.test(textOf(r))), `${list.length} rows`);
+    const homeWord = /\bhome games?\b/i.exec(textOf(el) + ' ' + (/<meta name="description" content="([^"]*)"/.exec(got.html)?.[1] ?? ''));
+    check(`${where}: nothing in the article or the description says "home games"`, !homeWord, homeWord ? homeWord[0] : '');
+    // TBD slots: dashed, on the light fill, in the quietest readable ink.
+    const tbd = [...el.matchAll(/<span data-slot="placeholder" class="([^"]+)"/g)].map((m) => m[1]);
+    check(`${where}: every TBD slot is dashed on the light cream fill in ink-faint`, tbd.every((c) => /\bborder-dashed\b/.test(c) && c.split(' ').includes('bg-rd-cream/60') && c.split(' ').includes('text-rd-ink-faint')), `${tbd.length} slots`);
+    // "Every percentage on this page" (the methodology) stays true: no
+    // percentage in the article outside the predictions section and the
+    // methodology (a promotion titled "20% off" would make it false).
+    let outside = el;
+    for (const x of [element(el, 'data-predictions="bracket"'), element(el, 'data-predictions-methodology')]) if (x) outside = outside.replace(x, '');
+    const outsidePct = textOf(outside);
+    const pct = /.{0,30}\d\s?%.{0,10}/.exec(outsidePct);
+    check(`${where}: no percentage in the article outside PromoNight Predicts`, !pct, pct ? pct[0] : '');
+
+    // WHERE THINGS STAND, derived here from the raw document with this
+    // file's own formatting. "Next game" depends on the render time, which
+    // lies between the document's change stamp and now: either is accepted.
+    const standingEl = element(el, 'data-standing');
+    const standingGot = standingEl ? textOf(standingEl) : null;
+    const wants = [standingWant(doc, new Date()), changed ? standingWant(doc, changed) : null];
+    check(`${where}: "where things stand" says exactly what the document says`, wants.includes(standingGot), `served ${JSON.stringify(standingGot)} expected ${JSON.stringify(wants[0])}`);
+    check(`${where}: "where things stand" sits in the introduction, beside the change stamp, and uses no clock word`, standingGot === null || (!!element(el, 'data-page-intro')?.includes('data-standing') && !/\b(today|tonight|live|latest|right now|now|currently|just)\b/i.test(standingGot)));
+
     // Postseason promotions: every line on the page is a stored row of a
     // host club, not tombstoned, for this league and season, and no row's
     // keys are on the page. Read here by the same equality the page uses.
@@ -893,7 +994,7 @@ async function main() {
       const names = playing.length === 2 ? `${playing[0]} and ${playing[1]}` : playing.join('');
       const want = {
         title: `${SEASON} Playoffs: MLB and WNBA Brackets`,
-        description: `The ${SEASON} postseason brackets for ${names}, series by series, with Eastern game times and the next home games. ${rounds}.`,
+        description: `The ${SEASON} postseason brackets for ${names}, series by series, with Eastern game times and upcoming games. ${rounds}.`,
         canonical: `${SITE}${path}`,
       };
       head(where, got.html, want);
@@ -959,6 +1060,11 @@ async function main() {
       }
       const rows = elements(el, 'data-home-game=');
       check(`${where}: home game rows carry one ticket link at most, and a league each`, rows.every((r) => count(r, 'rel="noopener noreferrer sponsored"') <= 1 && /\b(MLB|WNBA)\b/.test(textOf(r))), `${rows.length} rows`);
+      const hubGames = element(el, 'data-home-games=');
+      if (hubGames) check(`${where}: the games section is headed "Upcoming playoff games"`, /<h2[^>]*>Upcoming playoff games<\/h2>/.test(hubGames));
+      check(`${where}: every listed game has a known date and time`, rows.every((r) => !/Time TBD|Date TBD/.test(textOf(r))), `${rows.length} rows`);
+      const hubHome = /\bhome games?\b/i.exec(textOf(el) + ' ' + (/<meta name="description" content="([^"]*)"/.exec(got.html)?.[1] ?? ''));
+      check(`${where}: nothing in the article or the description says "home games"`, !hubHome, hubHome ? hubHome[0] : '');
       // Results so far: each league's decided series, one line each, with
       // its round and its score, linking to the series.
       const hubResults = element(el, 'data-hub-results=');

@@ -20,6 +20,7 @@ import { teamPick, type TeamPickFailure, type TeamPickView } from './team-pick';
 
 export type { LeaguePredictions } from './predictions';
 import { readPostseasonPromos } from './promos';
+import { gameStarts, standingLine } from './standing';
 import { clubPlayoffs, type ClubPlayoffs, type InboundLeague } from './inbound';
 import type { Bracket, BracketRead, PostseasonLeague } from './types';
 
@@ -79,7 +80,7 @@ export const getBracket = cache(async (league: PostseasonLeague): Promise<Bracke
 });
 
 export type LeaguePageData =
-  | { state: 'ok'; league: PostseasonLeague; view: LeagueView; predictions: LeaguePredictions | null }
+  | { state: 'ok'; league: PostseasonLeague; view: LeagueView; predictions: LeaguePredictions | null; standing: string | null }
   | { state: 'missing'; league: PostseasonLeague };
 
 /**
@@ -95,12 +96,16 @@ export type LeaguePageData =
 export const getLeaguePageData = cache(async (league: PostseasonLeague): Promise<LeaguePageData> => {
   const read = await getBracket(league);
   if (read.state !== 'ok') return { state: read.state, league };
-  const view = await buildViewFor(read.bracket, new Date(), { withPromos: true });
+  const now = new Date();
+  const view = await buildViewFor(read.bracket, now, { withPromos: true });
   if (!view) throw new Error(`[postseason] ${docId(league)} names a club with no team record`);
+  // "Where things stand", from the same document and the same clock. A throw
+  // here fails the page the way a bad bracket does.
+  const standing = standingLine(view, gameStarts(read.bracket), now);
   // The predictions never cost the page: any failure hides the section and
   // logs one line. The bracket above has already been read and built.
   const predictions = await loadPredictions(league, read.bracket, view);
-  return { state: 'ok', league, view, predictions };
+  return { state: 'ok', league, view, predictions, standing };
 });
 
 /**

@@ -61,7 +61,7 @@ function Row({
 }
 
 /**
- * Upcoming home games: the next three days first, at most eight rows, one
+ * Upcoming playoff games, each with its host: the next three days first, at most eight rows, one
  * ticket button a row. "Show all" reveals the rest of the week.
  *
  * `tickets` maps a host club id to its ticket button, already rendered by
@@ -98,7 +98,7 @@ export function HomeGames({
         </ul>
       )}
       {games.rest.length > 0 && (
-        <ShowAll id={`${id}-more`} label={`Show all ${total} home games this week`}>
+        <ShowAll id={`${id}-more`} label={`Show all ${total} upcoming playoff games`}>
           <ul data-home-games-list="rest" className="grid gap-2.5 lg:grid-cols-2">
             {rows(games.rest)}
           </ul>
