@@ -3791,3 +3791,28 @@ sit inside it) and must render every league's rows in the server HTML, with
 the filter only changing what shows, the same way "Show all" works today.
 The `PostseasonLeague` type is `'MLB' | 'WNBA'` today; adding NBA and NHL
 routes is its own build and comes first.
+
+## 65. Upcoming playoff games: three open product questions from the WEB4 round-4 review
+
+**Status: OPEN, for a ruling. Recorded 2026-10-02 (WEB4).** None is wrong
+today; each is a choice the list makes that the ruling of 2026-10-02 (every
+upcoming game with a known date, "Time TBD" when untimed, "Show N more
+games") did not settle.
+
+1. *A "Time TBD" game dated today stays listed all day.* Only a timed game
+   leaves the list once its start passes (`homeGamesWindow`, `startsAt`); an
+   untimed one has no start to pass, so it stays until the feed marks it
+   live or final, or until midnight Eastern.
+2. *"Show N more games" under the empty-state sentence.* When nothing falls
+   in the next three days the section reads "No playoff game with a
+   confirmed date and host is listed in the next three days." then "Show 3
+   more games": "more" after none shown. The button text is the ruling's
+   wording; dropping "more" when the short list is empty is a one-word
+   change.
+3. *Next-round rows show the bracket's own slot text.* Next-round Games 1
+   and 2 are usually "Time TBD", so they now list with placeholder
+   opponents. Writer-v2 documents name them from the web's team records
+   ("Yankees / Red Sox winner at Rays"); an older document without
+   candidates shows the feed's abbreviations ("NYY/BOS at Rays"), which the
+   web's team records disagree with on two clubs (map.ts). Live documents
+   are writer-v2 today.
