@@ -324,18 +324,36 @@ test('SERIES CARD: wins per side and the leader, only once a series has started'
   assert.ok(textOf(card(html, 'semifinals-1')).includes('Matchup to be decided'));
 });
 
-test('PLACEHOLDERS: a slot with no club is a dashed box holding the stored label', () => {
+test('PLACEHOLDERS: a slot with no club is a dashed box holding its text; feed abbreviations read as team names', () => {
   const html = leagueHtml(view(FIXTURE.mlbLive));
   const rounds = element(html, 'data-rounds');
   // 4 Division Series visitors, 4 Championship Series slots, 2 World Series slots.
   assert.equal(count(rounds, 'data-slot="placeholder"'), 10);
   assert.equal(count(rounds, 'data-slot="club"'), 12);
-  for (const label of ['NYY/BOS', 'HOU/CWS', 'SD/CHC', 'ATL/PHI', 'AL Higher Seed', 'AL Lower Seed', 'NL Higher Seed', 'NL Lower Seed', 'Higher Seed League Champion', 'Lower Seed League Champion']) {
+  // The older document stores "NYY/BOS", "HOU/CWS", "SD/CHC", "ATL/PHI".
+  for (const label of ['Yankees / Red Sox winner', 'Astros / White Sox winner', 'Padres / Cubs winner', 'Braves / Phillies winner', 'AL Higher Seed', 'AL Lower Seed', 'NL Higher Seed', 'NL Lower Seed', 'Higher Seed League Champion', 'Lower Seed League Champion']) {
     assert.match(rounds, new RegExp(`<span data-slot="placeholder" class="[^"]*border-dashed[^"]*">(?:<span[^>]*>.*?</span>)?<span class="min-w-0">${label}</span></span>`), label);
   }
+  assert.ok(!/\b[A-Z]{2,4}\/[A-Z]{2,4}\b/.test(textOf(html)), 'no raw feed code anywhere on the page');
   const c = card(html, 'division_series-1');
   assert.ok(textOf(c).includes('Rays'));
-  assert.ok(!c.includes('Yankees') && !c.includes('Red Sox'));
+  assert.ok(!c.includes('data-club-link="new-york-yankees"') && !c.includes('data-club-link="boston-red-sox"'));
+});
+
+test('EMPTY STATE: only with no upcoming game at all, and never with the button', () => {
+  const at = new Date('2026-09-24T16:00:00Z');
+  const quiet = leagueHtml(view(FIXTURE.mlbLive, at), { now: at });
+  const section = element(quiet, 'data-home-games=');
+  assert.ok(!textOf(section).includes('No playoff game'), 'games in the week: no empty sentence');
+  assert.ok(count(section, 'data-home-game="') > 0);
+  const empty = leagueHtml(view(FIXTURE.mlbLive, new Date('2026-09-10T16:00:00Z')), { now: new Date('2026-09-10T16:00:00Z') });
+  const es = element(empty, 'data-home-games=');
+  assert.ok(textOf(es).includes('No playoff game with a confirmed date and host is listed in the next seven days.'));
+  assert.equal(count(es, 'data-show-all'), 0);
+  for (const h of [quiet, empty, leagueHtml(view(FIXTURE.mlbLive))]) {
+    const sec = element(h, 'data-home-games=');
+    assert.ok(!(textOf(sec).includes('No playoff game') && sec.includes('data-show-all')), 'never both');
+  }
 });
 
 // ---- Placeholder resolution, in the HTML ----

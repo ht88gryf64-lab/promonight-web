@@ -36,6 +36,7 @@ const T_META = 'src/lib/postseason/__tests__/metadata.test.ts';
 const S = 'src/lib/postseason/standing.ts';
 const T_STAND = 'src/lib/postseason/__tests__/standing.test.ts';
 const T_VIEW = 'src/lib/postseason/__tests__/view.test.ts';
+const T_INBOUND = 'src/lib/postseason/__tests__/inbound.test.ts';
 
 const MAPPER_GATE = '  if (!lockedAt || !simRuns || !computedAt || Date.parse(computedAt) > Date.parse(lockedAt)) return null;';
 const CHANCE = "  if (typeof p !== 'number' || !Number.isFinite(p) || p < 0.5 || p >= 1) return null;";
@@ -200,6 +201,14 @@ const CASES = [
   ['standing: a game with no time sorts last on its day', S, "`${r.day} ${r.start ?? ''}`", "`${r.day} ${r.start ?? '~'}`", [T_STAND]],
   ['standing: a game in progress counts as missing', S, " && !s.games.some((g) => g.state === 'live')) return null;", ") return null;", [T_STAND]],
   ['standing: a game in progress does not start a round', S, " || s.games.some((g) => g.state === 'final' || g.state === 'live');", " || s.games.some((g) => g.state === 'final');", [T_STAND]],
+  // ---- Known-issues 65 (rulings of 2026-10-02) ----
+  ['games list: a Time TBD game dropped early by the clock (window)', 'src/lib/postseason/view.ts', '    if ((g.day < today && g.timed) || g.day > weekEnd) continue;', '    if (g.day < today || g.day > weekEnd) continue;', [T_VIEW]],
+  ['games list: a Time TBD game dropped early by the clock (view)', 'src/lib/postseason/view.ts', '      if (g.day < today && timed) continue;', '      if (g.day < today) continue;', [T_VIEW]],
+  ['games list: a past-dated Time TBD game reaches the venue page', 'src/lib/postseason/inbound.ts', ' && !g.pastDate);', ');', [T_INBOUND]],
+  ['games list: empty state over a full week', 'src/lib/postseason/view.ts', '  const primary = (soon.length ? soon : week).slice(0, HOME_GAMES_ROWS);', '  const primary = soon.slice(0, HOME_GAMES_ROWS);', [T_VIEW, T_HUB]],
+  ['feed codes: shown raw', 'src/lib/postseason/view.ts', "  if (slot.label !== 'TBD' && FEED_ABBREVIATIONS.test(slot.label)) {", "  if (false) {", [T_VIEW, T_HUB, T_ROUTES]],
+  ['feed codes: an unknown code shown raw', 'src/lib/postseason/view.ts', "    if (names.some((n) => n === null)) return 'TBD';", "    if (names.some((n) => n === null)) return slot.label;", [T_VIEW]],
+  ['feed codes: read across both leagues', 'src/lib/postseason/view.ts', ".filter((c) => !league || c.sportSlug === league.toLowerCase());", ";", [T_VIEW]],
   ['games list: a started game still listed as upcoming', 'src/lib/postseason/view.ts', '    if (g.startsAt && Date.parse(g.startsAt) < now.getTime()) continue;\n', '', [T_VIEW]],
   ['standing: "awaits" always plural', S, "verb(club.label, 'await', 'awaits')", "'await'", [T_STAND]],
   ['standing: only scheduled games count as unplayed', S, "const UNPLAYED = new Set(['scheduled', 'postponed', 'suspended']);", "const UNPLAYED = new Set(['scheduled']);", [T_STAND]],
@@ -211,7 +220,7 @@ const CASES = [
   ['games list: Show-all label not "Show N more games"', 'src/components/playoffs/HomeGames.tsx', "label={`Show ${games.rest.length} more ", "label={`Show all ${games.primary.length + games.rest.length} ", [T_HUB]],
   ['standing: half a summary when a series is unreadable', S, '      if (c === null) return null;', '      if (c === null) continue;', [T_STAND]],
   ['standing: a placeholder phase still prints', S, '  if (at < 0) return null;', '  if (at < 0) return `Next round: ${view.phase.roundLabel}.`;', [T_STAND]],
-  ['games list: a dated "Time TBD" game hidden', 'src/lib/postseason/view.ts', '    if (g.day < today || g.day > weekEnd) continue;', '    if (!g.timed) continue;\n    if (g.day < today || g.day > weekEnd) continue;', [T_VIEW, T_HUB]],
+  ['games list: a dated "Time TBD" game hidden', 'src/lib/postseason/view.ts', '    if ((g.day < today && g.timed) || g.day > weekEnd) continue;', '    if (!g.timed) continue;\n    if ((g.day < today && g.timed) || g.day > weekEnd) continue;', [T_VIEW, T_HUB]],
   ['games list: league heading reverted', 'src/components/playoffs/PlayoffsLeague.tsx', 'heading="Upcoming playoff games"', 'heading="Home games this week"', [T_HUB]],
   ['games list: hub heading reverted', 'src/components/playoffs/PlayoffsHub.tsx', 'heading="Upcoming playoff games"', 'heading="Next home games"', [T_HUB]],
   ['games list: "home games" back in the hub intro', 'src/components/playoffs/PlayoffsHub.tsx', 'with the upcoming playoff games and the parks', 'with the home games coming up next and the parks', [T_HUB]],
@@ -235,7 +244,7 @@ const run = (files) =>
   });
 
 // The tests pass untouched, or nothing below means anything.
-const base = run([T_PRED, T_DATA, T_FAIL, T_RENDER, T_ROUTES, T_HUB, T_META, T_STAND, T_VIEW]);
+const base = run([T_PRED, T_DATA, T_FAIL, T_RENDER, T_ROUTES, T_HUB, T_META, T_STAND, T_VIEW, T_INBOUND]);
 if (base.status !== 0) {
   console.error('the tests fail before any mutation; fix that first');
   process.exit(2);

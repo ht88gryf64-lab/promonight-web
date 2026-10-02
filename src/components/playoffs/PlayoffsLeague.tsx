@@ -194,7 +194,7 @@ export function PlayoffsLeague({
             games={body.homeGames}
             tickets={tickets}
             surface={SURFACE}
-            empty="No playoff game with a confirmed date and host is listed in the next three days."
+            empty="No playoff game with a confirmed date and host is listed in the next seven days."
           />
         )}
         <SeriesResults view={view} heading={view.phase.kind === 'active' ? 'Results so far' : 'Results'} />

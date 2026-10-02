@@ -164,11 +164,13 @@ test('TBD TIME: a game with no time and no date says so', () => {
   assert.ok(!v.homeGames.some((g) => g.key === 'MLB-division_series-1-g1'), 'a game with no day is not offered as an upcoming home game');
 });
 
-test('PLACEHOLDERS: the slot shows the stored label and no club', () => {
+test('PLACEHOLDERS: the slot shows its text and no club; feed abbreviations read through the team records', () => {
   const v = view(FIXTURE.mlbLive);
   const ds = series(v, 'AL-DS-A');
   assert.equal(ds.lower.kind, 'placeholder');
-  assert.equal(ds.lower.label, 'NYY/BOS');
+  // Stored as "NYY/BOS" (no candidates in this older document): read through
+  // the web's own team records, never shown raw (ruling of 2026-10-02).
+  assert.equal(ds.lower.label, 'Yankees / Red Sox winner');
   assert.equal(ds.lower.teamId, null);
   assert.equal(ds.lower.teamHref, null);
   assert.equal(ds.lower.abbreviation, null);
@@ -177,8 +179,8 @@ test('PLACEHOLDERS: the slot shows the stored label and no club', () => {
   assert.equal(series(v, 'AL-CS').higher.label, 'AL Higher Seed');
   assert.equal(series(v, 'WS').higher.label, 'Higher Seed League Champion');
   // A game hosted by a known club against a placeholder names the visitor by
-  // the slot's own text.
-  assert.equal(ds.games[0].matchup, 'NYY/BOS at Rays');
+  // the slot's text.
+  assert.equal(ds.games[0].matchup, 'Yankees / Red Sox winner at Rays');
   assert.equal(ds.games[0].park, 'Tropicana Field');
   // A game whose host is a placeholder has no host and no park.
   const cs = series(v, 'AL-CS');
@@ -186,13 +188,15 @@ test('PLACEHOLDERS: the slot shows the stored label and no club', () => {
   assert.equal(cs.games[0].park, null);
 });
 
-test('PLACEHOLDERS: no club name appears that the document does not name', () => {
-  // The Yankees and Red Sox are in the bracket, in AL-WC-B. They must appear
-  // in the Division Series only as the stored label until the feed resolves it.
+test('PLACEHOLDERS: no club is named that the document does not name, and the slot is never a club', () => {
+  // The Yankees and Red Sox are in the bracket, in AL-WC-B, and the stored
+  // label names both ("NYY/BOS"). They appear in the Division Series only as
+  // the two that can still fill the slot, never as the slot's club.
   const ds = series(view(FIXTURE.mlbLive), 'AL-DS-A');
-  const text = JSON.stringify(ds);
-  assert.ok(!text.includes('Yankees'));
-  assert.ok(!text.includes('Red Sox'));
+  assert.equal(ds.lower.kind, 'placeholder');
+  assert.equal(ds.lower.teamId, null);
+  assert.ok(!JSON.stringify(ds).includes('new-york-yankees') && !JSON.stringify(ds).includes('boston-red-sox'));
+  assert.ok(!/\b[A-Z]{2,4}\/[A-Z]{2,4}\b/.test(JSON.stringify(ds)), 'no raw feed code');
 });
 
 // OVERLAY: see the note in map.test.ts. No stored document carries the pair.
@@ -207,11 +211,27 @@ test('OVERLAY: a feeder key and two candidates render as "<Club A> / <Club B> wi
   assert.equal(ds.games[0].matchup, 'Yankees / Red Sox winner at Rays');
 });
 
-test('OVERLAY: a candidate the web has no team record for falls back to the stored label', () => {
+test('OVERLAY: a candidate the web has no team record for falls back to the label, read through the team records', () => {
   const slot = { kind: 'placeholder' as const, label: 'NYY/BOS', seed: null, candidates: ['new-york-yankees', 'no-such-club'] as [string, string] };
-  assert.equal(placeholderText(slot, clubs()), 'NYY/BOS');
+  assert.equal(placeholderText(slot, clubs()), 'Yankees / Red Sox winner');
   assert.equal(placeholderText({ ...slot, candidates: ['new-york-yankees', 'boston-red-sox'] }, clubs()), 'Yankees / Red Sox winner');
-  assert.equal(placeholderText({ ...slot, candidates: null }, clubs()), 'NYY/BOS');
+  assert.equal(placeholderText({ ...slot, candidates: null }, clubs()), 'Yankees / Red Sox winner');
+});
+
+test('FEED ABBREVIATIONS: mapped through the team records; a code no record carries is "TBD", never the raw code', () => {
+  const slot = (label: string) => ({ kind: 'placeholder' as const, label, seed: null, candidates: null });
+  assert.equal(placeholderText(slot('HOU/CWS'), clubs(), 'MLB'), 'Astros / White Sox winner');
+  // "ATL" is the Braves in MLB and the Dream in the WNBA: read in the bracket's league.
+  assert.equal(placeholderText(slot('ATL/PHI'), clubs(), 'MLB'), 'Braves / Phillies winner');
+  assert.equal(placeholderText(slot('ATL'), clubs(), 'WNBA'), 'Dream');
+  assert.equal(placeholderText(slot('ATL'), clubs()), 'TBD', 'a code two clubs carry is TBD');
+  assert.equal(placeholderText(slot('SD'), clubs()), 'Padres');
+  // The feed's codes for the Athletics and the Diamondbacks are not the web's
+  // (ATH/OAK, AZ/ARI), and neither club is in this bracket: "TBD".
+  assert.equal(placeholderText(slot('ATH/AZ'), clubs()), 'TBD');
+  assert.equal(placeholderText(slot('NYY/XYZ'), clubs()), 'TBD', 'one unknown code makes the whole slot TBD');
+  // Not abbreviations: shown as stored.
+  for (const label of ['TBD', 'AL Higher Seed', 'Higher Seed League Champion']) assert.equal(placeholderText(slot(label), clubs()), label);
 });
 
 // ---- Placeholder resolution, as the reader sees it ----
@@ -331,15 +351,15 @@ test('THE FIELD RESOLVES: the same label beside feederSeriesKey shows the winner
 
 // OVERLAY. The ruling of 2026-09-29: a feeder key with no candidates renders
 // the stored label, and the key is text nowhere.
-test('FEEDER KEY: with no candidates the slot shows its stored label and the key is nowhere in the view', () => {
+test('FEEDER KEY: with no candidates the slot reads its label through the team records and the key is nowhere in the view', () => {
   for (const extra of [{ feederSeriesKey: 'AL-WC-B' }, { feederSeriesKey: 'AL-WC-B', candidates: null }]) {
     const v = view(FIXTURE.mlbLive, CAPTURED_AT, (d) => {
       Object.assign(raw(d, 'AL-DS-A').lower, extra);
     });
     const ds = series(v, 'AL-DS-A');
-    assert.equal(ds.lower.label, 'NYY/BOS');
-    assert.equal(ds.lower.fullName, 'NYY/BOS');
-    assert.equal(ds.games[0].matchup, 'NYY/BOS at Rays');
+    assert.equal(ds.lower.label, 'Yankees / Red Sox winner');
+    assert.equal(ds.lower.fullName, 'Yankees / Red Sox winner');
+    assert.equal(ds.games[0].matchup, 'Yankees / Red Sox winner at Rays');
     assert.ok(!JSON.stringify(v).includes('AL-WC-B'), 'the feeder key is in the view');
   }
 });
@@ -658,13 +678,46 @@ test('HOME GAMES WINDOW: the hub merges leagues by start, under the same two lim
   assert.deepEqual(homeGamesWindow([], CAPTURED_AT), { primary: [], rest: [] });
 });
 
-test('HOME GAMES WINDOW: a quiet three days leaves the short list empty and the week intact', () => {
+test('HOME GAMES WINDOW: a quiet three days shows the soonest of the week, so the empty state never sits over the button', () => {
   // Sep 24: the first game is five days off. Nothing in three days, but the
-  // Wild Card openers fall inside the week.
-  const w = homeGamesWindow([view(FIXTURE.mlbLive, new Date('2026-09-24T16:00:00Z'))], new Date('2026-09-24T16:00:00Z'));
-  assert.deepEqual(w.primary, []);
-  assert.ok(w.rest.length > 0);
-  assert.ok(w.rest.every((g) => g.day >= '2026-09-24' && g.day <= '2026-09-30'));
+  // Wild Card openers fall inside the week: they are the short list.
+  const at = new Date('2026-09-24T16:00:00Z');
+  const v = view(FIXTURE.mlbLive, at);
+  const w = homeGamesWindow([v], at);
+  const week = v.homeGames.filter((g) => g.day >= '2026-09-24' && g.day <= '2026-09-30');
+  assert.ok(week.length > 0);
+  assert.deepEqual(w.primary.map((g) => g.key), week.slice(0, 8).map((g) => g.key));
+  assert.deepEqual(w.rest.map((g) => g.key), week.slice(8).map((g) => g.key));
+  // Nothing in the week at all: empty, and nothing behind a button.
+  const none = homeGamesWindow([v], new Date('2026-09-10T16:00:00Z'));
+  assert.deepEqual([none.primary.length, none.rest.length], [0, 0]);
+});
+
+test('HOME GAMES WINDOW: a "Time TBD" game stays until the bracket shows it played or its series over, never by the clock', () => {
+  // The WNBA capture has two untimed Game 3s on Oct 2. Days later, with the
+  // documents unchanged, they are still listed.
+  const later = new Date('2026-10-05T16:00:00Z');
+  const v = view(FIXTURE.wnbaLive, later);
+  const w = homeGamesWindow([v], later);
+  const tbd = [...w.primary, ...w.rest].filter((g) => !g.timed);
+  assert.equal(tbd.length, 2);
+  assert.ok(tbd.every((g) => g.day === '2026-10-02' && g.pastDate && g.when === 'Fri, Oct 2 · Time TBD'));
+  // A timed game dated before today is gone, as before.
+  assert.ok(![...w.primary, ...w.rest].some((g) => g.timed && g.day < '2026-10-05'));
+  // Exit 1: the bracket shows the game final.
+  const played = view(FIXTURE.wnbaLive, later, (d) => {
+    const g = ((raw(d, 'R1-2v7').games as Record<string, unknown>[]).find((x) => x.gameNumber === 3))!;
+    Object.assign(g, { status: 'final', homeScore: 80, awayScore: 70, winnerSide: g.homeSide });
+  });
+  assert.equal([...homeGamesWindow([played], later).primary].filter((g) => !g.timed).length, 1);
+  // Exit 2: the series ended without needing it.
+  const over = view(FIXTURE.wnbaLive, later, (d) => {
+    const s = raw(d, 'R1-4v5');
+    Object.assign(s, { status: 'final', wins: { higher: 2, lower: 0 }, winner: (s.higher as Record<string, unknown>).slug });
+  });
+  assert.equal([...homeGamesWindow([over], later).primary].filter((g) => !g.timed).length, 1);
+  // The venue pages keep leaving such a game out.
+  assert.ok(v.homeGames.filter((g) => g.pastDate).length === 2);
 });
 
 test('PARK: a host with no venue record gets no park line, and nothing in its place', () => {
