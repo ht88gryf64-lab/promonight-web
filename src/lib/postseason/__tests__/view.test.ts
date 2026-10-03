@@ -218,6 +218,19 @@ test('OVERLAY: a candidate the web has no team record for falls back to the labe
   assert.equal(placeholderText({ ...slot, candidates: null }, clubs()), 'Yankees / Red Sox winner');
 });
 
+test('FEED CODE ALIASES: the feed\'s ATH and AZ read as the Athletics (OAK) and Diamondbacks (ARI) records; an unknown code is still "TBD"', () => {
+  const rec = (id: string, name: string, abbreviation: string) => [id, { id, city: 'X', name, abbreviation, sportSlug: 'mlb', primaryColor: '#000' }] as const;
+  const club = new Map([rec('oakland-athletics', 'Athletics', 'OAK'), rec('arizona-diamondbacks', 'Diamondbacks', 'ARI'), rec('new-york-yankees', 'Yankees', 'NYY')]);
+  const slot = (label: string) => ({ kind: 'placeholder' as const, label, seed: null, candidates: null });
+  assert.equal(placeholderText(slot('ATH/AZ'), club, 'MLB'), 'Athletics / Diamondbacks winner');
+  assert.equal(placeholderText(slot('ATH'), club, 'MLB'), 'Athletics');
+  assert.equal(placeholderText(slot('AZ/NYY'), club, 'MLB'), 'Diamondbacks / Yankees winner');
+  // The web's own codes still read too.
+  assert.equal(placeholderText(slot('OAK/ARI'), club, 'MLB'), 'Athletics / Diamondbacks winner');
+  assert.equal(placeholderText(slot('ATH/XYZ'), club, 'MLB'), 'TBD');
+  assert.equal(placeholderText(slot('QQ'), club, 'MLB'), 'TBD');
+});
+
 test('FEED ABBREVIATIONS: mapped through the team records; a code no record carries is "TBD", never the raw code', () => {
   const slot = (label: string) => ({ kind: 'placeholder' as const, label, seed: null, candidates: null });
   assert.equal(placeholderText(slot('HOU/CWS'), clubs(), 'MLB'), 'Astros / White Sox winner');
@@ -227,7 +240,8 @@ test('FEED ABBREVIATIONS: mapped through the team records; a code no record carr
   assert.equal(placeholderText(slot('ATL'), clubs()), 'TBD', 'a code two clubs carry is TBD');
   assert.equal(placeholderText(slot('SD'), clubs()), 'Padres');
   // The feed's codes for the Athletics and the Diamondbacks are not the web's
-  // (ATH/OAK, AZ/ARI), and neither club is in this bracket: "TBD".
+  // (ATH/OAK, AZ/ARI): FEED_CODE_ALIASES bridges them (see the next test).
+  // Not in this bracket: no record to read them through, so "TBD".
   assert.equal(placeholderText(slot('ATH/AZ'), clubs()), 'TBD');
   assert.equal(placeholderText(slot('NYY/XYZ'), clubs()), 'TBD', 'one unknown code makes the whole slot TBD');
   // Not abbreviations: shown as stored.
@@ -496,8 +510,51 @@ test('POSTPONED and SUSPENDED: the next game says so and shows no time', () => {
     });
     const s = series(v, 'AL-WC-A');
     assert.equal(s.nextLabel, `Game 1 · ${label}`);
-    assert.ok(!v.homeGames.some((g) => g.key === 'MLB-wild_card-1-g1'));
+    // Upcoming playoff games keep it, labeled (Matt's ruling, 2026-10-02).
+    const row = v.homeGames.find((g) => g.key === 'MLB-wild_card-1-g1');
+    assert.equal(row?.status, status);
+    assert.equal(row?.when, status === 'postponed' ? 'Postponed · originally Tue, Sep 29' : 'Suspended · started Tue, Sep 29');
   }
+});
+
+/** The 09-29 MLB capture with Game 1 of White Sox at Astros held, read days later. */
+const LATER = new Date('2026-10-02T16:00:00Z');
+const heldView = (status: string, more: (d: Record<string, unknown>) => void = () => {}) =>
+  view(FIXTURE.mlbLive, LATER, (d) => {
+    raw(d, 'AL-WC-A').games[0].status = status;
+    more(d);
+  });
+const listed = (v: LeagueView, key: string) => {
+  const w = homeGamesWindow([v], LATER);
+  return [...w.primary, ...w.rest].find((g) => g.key === key) ?? null;
+};
+
+test('POSTPONED: stays in the upcoming list, labeled, past its date and its start, until the bracket gives it a new date or the series ends', () => {
+  const v = heldView('postponed');
+  assert.equal(listed(v, 'MLB-wild_card-1-g1')?.when, 'Postponed · originally Tue, Sep 29');
+  // Exit 1: the bracket gives it a new date (it is scheduled again).
+  const moved = heldView('scheduled', (d) => Object.assign(raw(d, 'AL-WC-A').games[0], { date: '2026-10-03', start: '2026-10-03T21:00:00Z', startTimeTBD: false }));
+  assert.equal(listed(moved, 'MLB-wild_card-1-g1')?.when, 'Sat, Oct 3 · 5:00 PM ET');
+  // Exit 2: the series ends without it.
+  const over = heldView('postponed', (d) => {
+    const s = raw(d, 'AL-WC-A');
+    Object.assign(s, { status: 'final', wins: { higher: 2, lower: 0 }, winner: (s.higher as Record<string, unknown>).slug });
+  });
+  assert.equal(listed(over, 'MLB-wild_card-1-g1'), null);
+});
+
+test('SUSPENDED: stays in the upcoming list, labeled, until the bracket shows it resumed or final', () => {
+  const v = heldView('suspended');
+  assert.equal(listed(v, 'MLB-wild_card-1-g1')?.when, 'Suspended · started Tue, Sep 29');
+  // Exit 1: resumed (in progress again).
+  assert.equal(listed(heldView('live'), 'MLB-wild_card-1-g1'), null);
+  // Exit 2: final.
+  const done = heldView('final', (d) => Object.assign(raw(d, 'AL-WC-A').games[0], { homeScore: 3, awayScore: 2, winnerSide: raw(d, 'AL-WC-A').games[0].homeSide }));
+  assert.equal(listed(done, 'MLB-wild_card-1-g1'), null);
+});
+
+test('LIVE and CANCELLED: leave the upcoming list (as built)', () => {
+  for (const status of ['live', 'cancelled']) assert.equal(listed(heldView(status), 'MLB-wild_card-1-g1'), null, status);
 });
 
 test('CANCELLED: a cancelled game is skipped as the next game', () => {

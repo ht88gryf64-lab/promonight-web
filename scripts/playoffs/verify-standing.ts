@@ -70,7 +70,9 @@ function expectedLine(doc: Doc, teams: Map<string, Team>, now: Date): string | n
       const here = new Set<string>();
       for (const s of series) for (const y of [s.higher, s.lower]) { if (y.slug) here.add(y.slug); for (const c of y.candidates ?? []) here.add(c); }
       const names = label.split('/').map((code) => {
-        const hit = [...here].filter((id) => teams.get(id)?.abbr === code);
+        // The feed's ATH and AZ are the web's OAK and ARI (ruling of 2026-10-02).
+        const alias = ({ ATH: 'OAK', AZ: 'ARI' } as Record<string, string>)[code];
+        const hit = [...here].filter((id) => { const a = teams.get(id)?.abbr; return a === code || (alias !== undefined && a === alias); });
         return hit.length === 1 ? teams.get(hit[0])!.name : null;
       });
       if (names.some((n) => n === null)) return { team: null, text: 'TBD' };

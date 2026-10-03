@@ -322,6 +322,15 @@ test('VENUE: an untimed game dated before today stays off the park page, as befo
   }
 });
 
+test('VENUE: a postponed or suspended game stays off the park page, as before', () => {
+  for (const status of ['postponed', 'suspended']) {
+    const doc = loadDoc(FIXTURE.mlbFields);
+    ((doc.series as Record<string, unknown>[]).find((s) => s.seriesKey === 'AL-WC-A')!.games as Record<string, unknown>[])[0].status = status;
+    const v = venueGames(inbound([doc], FIELDS_AT), ['houston-astros']);
+    assert.ok(!(v?.games ?? []).some((g) => g.key === 'MLB-wild_card-1-g1'), status);
+  }
+});
+
 test('VENUE, alive but visiting: a club with no home game left in the document has nothing here', () => {
   // The White Sox are the 6 seed: all three Wild Card games are in Houston.
   assert.equal(venueGames(inbound([FIXTURE.mlbFields], FIELDS_AT), ['chicago-white-sox']), null);
