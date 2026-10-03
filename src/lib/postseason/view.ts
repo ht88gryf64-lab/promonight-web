@@ -174,6 +174,13 @@ export interface HomeGameView {
    *  bracket shows it played or its series over, never by the clock); the
    *  venue pages leave it out, as before. */
   pastDate: boolean;
+  /** 'scheduled', or a game the bracket holds (Matt's ruling, 2026-10-02):
+   *  'postponed' stays, labeled, until the bracket gives it a new date (it is
+   *  then 'scheduled' again) or the series ends without it; 'suspended'
+   *  stays, labeled, until the bracket shows it resumed (live) or final. A
+   *  live or cancelled game leaves. The venue pages list scheduled games
+   *  only, as before. */
+  status: 'scheduled' | 'postponed' | 'suspended';
   hostTeamId: string;
   hostName: string;
   park: string | null;
@@ -305,9 +312,9 @@ function slotView(
  * each is read through the web's own team records (the abbreviation of a
  * club in this bracket) into the same text, and a code no record carries
  * makes the whole slot "TBD", never the raw code (Matt's ruling, 2026-10-02;
- * the feed and the web disagree on two MLB clubs, ATH/OAK and AZ/ARI, which
- * therefore read "TBD"). Any other label is shown verbatim. The feeder series
- * key is never text.
+ * the feed and the web spell two MLB clubs differently, ATH/OAK and AZ/ARI,
+ * which FEED_CODE_ALIASES bridges). Any other label is shown verbatim. The
+ * feeder series key is never text.
  */
 export function placeholderText(
   slot: Extract<BracketSlot, { kind: 'placeholder' }>,
@@ -324,7 +331,8 @@ export function placeholderText(
   if (slot.label !== 'TBD' && FEED_ABBREVIATIONS.test(slot.label)) {
     const all = [...clubs.values()].filter((c) => !league || c.sportSlug === league.toLowerCase());
     const names = slot.label.split('/').map((code) => {
-      const hit = all.filter((c) => c.abbreviation === code);
+      const alias = FEED_CODE_ALIASES[code];
+      const hit = all.filter((c) => c.abbreviation === code || (alias !== undefined && c.abbreviation === alias));
       return hit.length === 1 ? hit[0].name : null;
     });
     if (names.some((n) => n === null)) return 'TBD';
@@ -332,6 +340,12 @@ export function placeholderText(
   }
   return slot.label;
 }
+
+/** Feed codes the web's team records spell differently (Matt's ruling,
+ *  2026-10-02): the feed's ATH is the Athletics record (OAK), its AZ the
+ *  Diamondbacks record (ARI). Web-side only; no pipeline identifier, pin or
+ *  stored document changes. */
+export const FEED_CODE_ALIASES: Readonly<Record<string, string>> = { ATH: 'OAK', AZ: 'ARI' };
 
 /** A label that is nothing but feed abbreviations: "NYY/BOS", "SD". */
 export const FEED_ABBREVIATIONS = /^[A-Z]{2,4}(?:\/[A-Z]{2,4})*$/;
@@ -582,13 +596,16 @@ export function buildLeagueView(
     if (s.status === 'final') return;
     const raw = bracket.series[i].games;
     for (const g of s.games) {
-      if (g.state !== 'scheduled' || !g.hostTeamId || !g.hostName || !g.day) continue;
+      const held = g.state === 'postponed' || g.state === 'suspended';
+      if ((g.state !== 'scheduled' && !held) || !g.hostTeamId || !g.hostName || !g.day) continue;
       const stored = raw.find((r) => r.gameNumber === g.gameNumber);
       const timed = !!stored && !stored.startTimeTBD && stored.start !== null;
-      // A timed game dated before today is a row the feed has not caught up
-      // on: not upcoming. An untimed one stays until the bracket says it was
-      // played (it is then no longer 'scheduled') or its series is over.
-      if (g.day < today && timed) continue;
+      // A timed scheduled game dated before today is a row the feed has not
+      // caught up on: not upcoming. An untimed one stays until the bracket
+      // says it was played or its series is over; a held game (postponed,
+      // suspended) stays until the bracket moves it on.
+      if (!held && g.day < today && timed) continue;
+      const day = g.when.split(' · ')[0];
       homeGames.push({
         key: `${bracket.league}-${s.id}-g${g.gameNumber}`,
         league: bracket.league,
@@ -596,13 +613,15 @@ export function buildLeagueView(
         roundLabel: s.roundLabel,
         matchup: g.matchup,
         gameTitle: g.title,
-        when: g.when,
+        when: g.state === 'postponed' ? `Postponed · originally ${day}` : g.state === 'suspended' ? `Suspended · started ${day}` : g.when,
         day: g.day,
         sortKey: g.sortKey,
         ifNecessary: g.ifNecessary,
         timed,
-        startsAt: stored && !stored.startTimeTBD ? stored.start : null,
-        pastDate: !timed && g.day < today,
+        // A held game's start has passed by definition; it is no clock exit.
+        startsAt: !held && stored && !stored.startTimeTBD ? stored.start : null,
+        pastDate: !held && !timed && g.day < today,
+        status: g.state as HomeGameView['status'],
         hostTeamId: g.hostTeamId,
         hostName: g.hostName,
         promo: g.promo,
@@ -674,7 +693,7 @@ export function homeGamesWindow(views: readonly LeagueView[], now: Date): HomeGa
     // TBD" and stays, whatever its date, until the bracket shows it played or
     // its series over (buildLeagueView). A game with no date never reaches
     // the list.
-    if ((g.day < today && g.timed) || g.day > weekEnd) continue;
+    if ((g.day < today && g.timed && g.status === 'scheduled') || g.day > weekEnd) continue;
     // Started, though the feed still lists it as scheduled: not upcoming.
     if (g.startsAt && Date.parse(g.startsAt) < now.getTime()) continue;
     if (seen.has(g.key)) continue;

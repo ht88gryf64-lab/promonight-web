@@ -3794,7 +3794,19 @@ routes is its own build and comes first.
 
 ## 65. Upcoming playoff games: three open product questions from the WEB4 round-4 review
 
-**Status: OPEN, for a ruling. Recorded 2026-10-02 (WEB4).** None is wrong
+**Status: FIXED 2026-10-02 (WEB4; main 5957c47, with the postponed and
+suspended ruling and the ATH/AZ aliases after it).** Matt's rulings: (1) a
+"Time TBD" game stays until the bracket shows it played or its series over,
+decided from bracket state, never the clock; a postponed game stays,
+labeled, until the bracket gives it a new date or the series ends without
+it; a suspended one stays, labeled, until resumed or final; live and
+cancelled games leave; (2) the empty state shows only with no upcoming game
+at all and never with the button (with nothing in three days the short list
+is the soonest of the week); (3) feed abbreviations read through the web's
+team records in the bracket's league, with web-side aliases for the feed's
+ATH (OAK) and AZ (ARI), and "TBD" for any code still unmapped, never the raw
+code. Past-dated "Time TBD" rows still sort first, by ruling. As recorded
+before the fix: none was wrong
 today; each is a choice the list makes that the ruling of 2026-10-02 (every
 upcoming game with a known date, "Time TBD" when untimed, "Show N more
 games") did not settle.

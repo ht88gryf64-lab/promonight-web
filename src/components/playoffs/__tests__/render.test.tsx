@@ -340,6 +340,17 @@ test('PLACEHOLDERS: a slot with no club is a dashed box holding its text; feed a
   assert.ok(!c.includes('data-club-link="new-york-yankees"') && !c.includes('data-club-link="boston-red-sox"'));
 });
 
+test('HELD GAMES: a postponed or suspended game reads so in its row', () => {
+  for (const [status, text] of [['postponed', 'Postponed · originally Tue, Sep 29'], ['suspended', 'Suspended · started Tue, Sep 29']] as const) {
+    const later = new Date('2026-10-02T16:00:00Z');
+    const v = view(FIXTURE.mlbLive, later, (d) => {
+      ((d.series as Record<string, unknown>[]).find((s) => s.seriesKey === 'AL-WC-A')!.games as Record<string, unknown>[])[0].status = status;
+    });
+    const row = element(leagueHtml(v, { now: later }), 'data-home-game="MLB-wild_card-1-g1"');
+    assert.ok(textOf(row).includes(text), textOf(row));
+  }
+});
+
 test('EMPTY STATE: only with no upcoming game at all, and never with the button', () => {
   const at = new Date('2026-09-24T16:00:00Z');
   const quiet = leagueHtml(view(FIXTURE.mlbLive, at), { now: at });

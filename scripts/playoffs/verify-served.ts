@@ -369,7 +369,9 @@ async function main() {
     const here = new Set<string>();
     for (const s of doc.series) for (const x of [s.higher, s.lower]) { if (x.slug) here.add(x.slug); for (const c of x.candidates ?? []) here.add(c); }
     const names = label.split('/').map((code) => {
-      const hit = [...here].filter((id) => clubs.get(id)?.abbr === code);
+      // The feed's ATH and AZ are the web's OAK and ARI (ruling of 2026-10-02).
+      const alias = ({ ATH: 'OAK', AZ: 'ARI' } as Record<string, string>)[code];
+      const hit = [...here].filter((id) => { const a = clubs.get(id)?.abbr; return a === code || (alias !== undefined && a === alias); });
       return hit.length === 1 ? (clubs.get(hit[0]) as Club).name : null;
     });
     if (names.some((n) => n === null)) return 'TBD';
@@ -661,13 +663,16 @@ async function main() {
         if (s.status === 'final') return;
         for (const g of s.games) {
           const hs = hostSide(doc, s, g);
-          if (g.status !== 'scheduled' || !hs || !slotName(doc, s[hs]).club) continue;
+          // Postponed and suspended games stay, labeled, whatever the clock
+          // says (ruling of 2026-10-02); live and cancelled ones leave.
+          const held = g.status === 'postponed' || g.status === 'suspended';
+          if ((g.status !== 'scheduled' && !held) || !hs || !slotName(doc, s[hs]).club) continue;
           const timed = !g.startTimeTBD && isInstant(g.start);
           const day = timed ? etYmd(new Date(g.start as string)) : g.date;
           // A "Time TBD" game stays whatever its date until the bracket shows
           // it played or its series over (ruling of 2026-10-02).
-          if (!day || (day < today && timed) || day > plus(6)) continue;
-          if (timed && Date.parse(g.start as string) < at.getTime()) continue;
+          if (!day || (day < today && timed && !held) || day > plus(6)) continue;
+          if (timed && !held && Date.parse(g.start as string) < at.getTime()) continue;
           rows.push({ key: `${league}-${pid[i]}-g${g.gameNumber}`, day, sort: timed ? `${day}T${clock(new Date(g.start as string))}` : `${day}T99` });
         }
       });
@@ -1097,18 +1102,21 @@ async function main() {
     // A game in progress shows no score: its row is compared whole, above.
     same(`${where}: rows of games in progress that show a score`, elements(el, 'data-game=').filter((r) => r.includes('data-game-state="live"') && /\d+, [A-Z]/.test(textOf(r))).length, 0);
 
-    // Home games: every row is a game the document lists as scheduled.
+    // Home games: every row is a game the document lists as scheduled, or
+    // holds as postponed or suspended (labeled, with its original day).
     const list = elements(el, 'data-home-game=');
     const known = new Set<string>();
     for (const s of doc.series) {
       if (s.status === 'final') continue;
       for (const g of s.games) {
         const hs = hostSide(doc, s, g);
-        if (g.status !== 'scheduled' || !hs) continue;
+        if ((g.status !== 'scheduled' && g.status !== 'postponed' && g.status !== 'suspended') || !hs) continue;
         const home = slotName(doc, s[hs]);
         const away = slotName(doc, s[hs === 'higher' ? 'lower' : 'higher']);
         if (!home.club) continue;
-        known.add([`${away.name} at ${home.name}`, `${s.roundLabel} · Game ${g.gameNumber}${conditional(s, g) ? ' · If necessary' : ''}`, whenOf(g), home.club.park ?? ''].join(' ').trim());
+        const dayPart = whenOf(g).split(' · ')[0];
+        const when = g.status === 'postponed' ? `Postponed · originally ${dayPart}` : g.status === 'suspended' ? `Suspended · started ${dayPart}` : whenOf(g);
+        known.add([`${away.name} at ${home.name}`, `${s.roundLabel} · Game ${g.gameNumber}${conditional(s, g) ? ' · If necessary' : ''}`, when, home.club.park ?? ''].join(' ').trim());
       }
     }
     // A promotion line is checked on its own below; it is taken out of the
