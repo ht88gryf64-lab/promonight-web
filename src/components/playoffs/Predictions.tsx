@@ -156,7 +156,7 @@ export function PredictionsMethodology({ view }: { view: MethodologyView }) {
               ? `The bracket was computed from those locked inputs and locked on ${view.computedOn}`
               : `The bracket was computed from those locked inputs on ${view.computedOn} and locked on ${view.bracketLockedOn}`}
             . The locked bracket is written once and never changed, and the simulation runs from a fixed seed, so the same inputs always give
-            the same bracket. The rating, simulation and bracket code is unchanged since the inputs were locked. Every percentage on this page is as
+            the same picks and odds. The rating, simulation and bracket code is unchanged since the inputs were locked. Every percentage on this page is as
             it stood when the bracket was locked. Postseason results are not among the inputs, so a pick can name a club that was already out by
             then.
           </p>

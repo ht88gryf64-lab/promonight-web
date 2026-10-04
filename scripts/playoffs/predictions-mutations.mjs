@@ -149,7 +149,7 @@ const CASES = [
   // only its own negative guard can catch it.
   ['engine-wide unchanged claim', C, BACKTEST_P, BACKTEST_P.replace('{view.backtest}', '{view.backtest} The engine code is unchanged since the lock.'), [T_ROUTES]],
   ['simulation framing dropped', C, 'PromoNight Predicts is a simulation, not a staff pick. ', '', [T_ROUTES]],
-  ['write-once and fixed-seed claim dropped', C, '. The locked bracket is written once and never changed, and the simulation runs from a fixed seed, so the same inputs always give\n            the same bracket.', '.', [T_ROUTES, T_RENDER]],
+  ['write-once and fixed-seed claim dropped', C, '. The locked bracket is written once and never changed, and the simulation runs from a fixed seed, so the same inputs always give\n            the same picks and odds.', '.', [T_ROUTES, T_RENDER]],
   ['the false "computed once" claim back', C, BACKTEST_P, BACKTEST_P.replace('{view.backtest}', '{view.backtest} The bracket was computed once.'), [T_ROUTES]],
   ['staff or expert framing in the intro', C, 'PromoNight Predicts picks every series with a simulation', 'Our experts and PromoNight Predicts pick every series with a simulation', [T_ROUTES]],
   ['"computer" back on the pick label', 'src/components/playoffs/PredictedBracket.tsx', "PromoNight&apos;s pick:", "Computer&apos;s pick:", [T_ROUTES]],
