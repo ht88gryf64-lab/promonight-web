@@ -3828,3 +3828,41 @@ games") did not settle.
    candidates shows the feed's abbreviations ("NYY/BOS at Rays"), which the
    web's team records disagree with on two clubs (map.ts). Live documents
    are writer-v2 today.
+
+## 66. A game suspended a second time shows its first suspension's score until MLB stamps the new resume date
+
+**Status: OPEN, ACCEPTED BY RULING (Matt, 2026-10-04, PIPE G3). Severity:
+Low (display only, a bounded window, no postseason precedent).** The
+behavior lives in the pipeline (promo-pipeline main 73400b9 and later,
+`lib/postseason/adapters/mlb.js`, `suspendedRecord`); the web shows what the
+bracket document stores.
+
+**What it is.** MLB's Stats API lists a suspended game twice under one
+gamePk: the row it was suspended on (carrying `resumeDate`) and the
+resumption row (carrying `resumedFrom`). Matt's source rule (PIPE G2) takes
+a suspended game's score from the suspended row until the resumption row is
+live or final, and from the resumption row after that. The suspended row is
+the latest row MLB has stamped with a `resumeDate`.
+
+If the resumption itself is suspended (the game is suspended a second
+time), the resumption row turns to a suspended code before MLB stamps its
+own `resumeDate`. In that window it is neither live nor final, so by the
+literal rule the score comes from the FIRST suspended row again. Example:
+suspended at 3-2, resumed and played to 5-4, suspended again. The stored
+bracket reads live 5-4, then suspended 3-2, then suspended 5-4 once MLB
+stamps the second `resumeDate`. Each change is a bracket write and a
+revalidation, so `/playoffs/mlb` shows the lower score for every 10-minute
+poll in that window.
+
+**Why it is accepted.** Matt kept the literal reading (2026-10-04): a
+resumption row that is not live or final never supplies the score, which
+also means a waiting resumption row carrying a placeholder 0-0 can never
+replace the real score. The other reading ("once the resumption has gone
+live") would need the writer to check the stored game was live. No
+postseason game has been suspended twice.
+
+**What to watch.** A suspended MLB game whose score drops on `/playoffs/mlb`
+while the bracket document says suspended, then recovers within a few polls.
+Nothing refuses and nothing freezes; the bracket writes forward as usual.
+Evidence: the PIPE G2 scoped review (ledger `~/promonight/COORDINATION.md`,
+2026-10-04) and its probe in `~/promonight/audit-archive/pipe/g2/`.
