@@ -3866,3 +3866,42 @@ while the bracket document says suspended, then recovers within a few polls.
 Nothing refuses and nothing freezes; the bracket writes forward as usual.
 Evidence: the PIPE G2 scoped review (ledger `~/promonight/COORDINATION.md`,
 2026-10-04) and its probe in `~/promonight/audit-archive/pipe/g2/`.
+
+## 67. The postseason bracket writer refuses a whole league for one bad series
+
+**Status: OPEN, SCHEDULED (Matt, 2026-10-04, PIPE G4). Not before every 2026
+postseason has ended, MLS Cup included; no change to the guard while any
+postseason is live. Severity: Medium. It is a core guard redesign and needs
+the full PIPE gates: G0 read-only audit, G1 build with review rounds until two
+in a row are clean, G2 runner-parity dry runs and the post-merge check.**
+
+**What it is.** The postseason feed writer (promo-pipeline,
+`lib/postseason/run.js` `runOnce`, the adapters in `lib/postseason/adapters/`
+and the forward-only rule in `lib/postseason/forward.js`) decides one action
+per league per run. Any refusal anywhere in the league (a feed-shape problem,
+rows of one game that disagree, an impossible series, a forward-only
+regression) refuses the whole write: nothing is written, not even
+`lastFetchedAt`, and every later run refuses the same way until the feed or a
+human changes something. One bad series therefore freezes every series of that
+league on `/playoffs/{league}`, including the healthy ones.
+
+**What it should be.** Refuse per series, not per league: a series whose feed
+rows fail a check keeps its last good stored state, and the rest of the
+bracket writes. The refusal stays loud (the step summary, the cron-failure
+issue and the tripwire should still name the frozen series), and the hash,
+snapshot and read-back rules have to hold for a partly written bracket.
+
+**What has been done instead, for now.** PIPE G1 to G4 (2026-10-03 and
+2026-10-04, pipeline main cda01ab, 73400b9, ef47133 and later) removed the
+realistic single-row causes: a postponed or suspended MLB game listed twice
+under one gamePk is one game; a suspended game's score has a source rule; a
+corrected final score with the same winner is accepted; a malformed or null
+score on any game is treated as omitted (the stored score of the same game is
+kept, with a warning). What still refuses a whole league includes a final that
+names no winner by flags or by score, rows of one game that genuinely
+disagree, and any forward-only regression.
+
+**Where to start.** The G0 report for the duplicate-row freeze
+(`~/promonight/audit-archive/pipe/g0/REPORT.md`) maps the refusal paths, and
+the ledger (`~/promonight/COORDINATION.md`, PIPE lines) records each guard
+added since.
