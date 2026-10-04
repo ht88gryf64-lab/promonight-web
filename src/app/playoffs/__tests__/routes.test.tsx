@@ -504,7 +504,7 @@ test('PREDICTIONS through the real pages: the section, the scorecard, the method
   const text = method.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
   assert.ok(text.includes('plays out the postseason 10,000 times'));
   assert.ok(text.includes('The inputs were locked on September 28, 2026 , before Game 1.') || text.includes('The inputs were locked on September 28, 2026, before Game 1.'), text);
-  assert.ok(text.includes('The bracket was computed from those locked inputs and locked on September 30, 2026. The locked bracket is written once and never changed, and the simulation runs from a fixed seed, so the same inputs always give the same bracket. The rating, simulation and bracket code is unchanged since the inputs were locked.'), text);
+  assert.ok(text.includes('The bracket was computed from those locked inputs and locked on September 30, 2026. The locked bracket is written once and never changed, and the simulation runs from a fixed seed, so the same inputs always give the same picks and odds. The rating, simulation and bracket code is unchanged since the inputs were locked.'), text);
   assert.ok(!/\b(computed|run|ran|calculated|simulated) (only )?(once|one time|a single time)\b|\b(not been|never( been)?) re-?(computed|run|calculated)\b|\bre-?run\b/i.test(text), 'no claim that the engine ran only once');
   assert.ok(text.includes('PromoNight Predicts is a simulation, not a staff pick.'), text);
   // Nowhere in the section, the methodology or the hub line: no staff or expert framing.
