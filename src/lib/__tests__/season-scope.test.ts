@@ -82,16 +82,28 @@ describe('resolveSeasonScope', () => {
     );
   });
 
-  it('REFUSES a multi-year archive rather than summing across season boundaries', () => {
+  it('never sums across season boundaries: NHL counts only the 2026-27 rows (WEB6 ruling)', () => {
     // The Detroit Red Wings shape: a finished 2025-26 season plus the 2026-27
-    // season ahead. Summing them describes no season at all.
-    const rows = [promo('2025-11-02'), promo('2026-03-14'), promo('2027-01-08')];
-    assert.equal(resolveSeasonScope(rows, 'NHL', TODAY), null);
+    // season ahead. Summing them describes no season at all. Under the
+    // split-season model the page names 2026-27 and counts only its rows; the
+    // 2025-26 rows stay in the archive under their own heading.
+    const rows = [promo('2025-11-02'), promo('2026-03-14'), promo('2026-10-08'), promo('2027-01-08')];
+    const scope = resolveSeasonScope(rows, 'NHL', TODAY);
+    assert.ok(scope);
+    assert.equal(scope.label, '2026-27');
+    assert.deepEqual(scope.promos.map((p) => p.date), ['2026-10-08', '2027-01-08']);
   });
 
-  it('refuses a single-year archive whose year is not the page title year', () => {
-    // Four NBA clubs carry only 2025 rows under a page titled 2026.
+  it('a calendar-year league still refuses a multi-year archive', () => {
+    const rows = [promo('2025-11-02'), promo('2026-03-14')];
+    assert.equal(resolveSeasonScope(rows, 'MLS', TODAY), null);
+  });
+
+  it('refuses an NBA archive holding only last season (the Heat, Raptors and Wizards shape)', () => {
+    // Jan to Apr 2026 rows are the 2025-26 season. Before the ruling they
+    // resolved as "the 2026 season" because they fell in one calendar year.
     assert.equal(resolveSeasonScope([promo('2025-10-04')], 'NBA', TODAY), null);
+    assert.equal(resolveSeasonScope([promo('2026-01-10'), promo('2026-04-29')], 'NBA', TODAY), null);
   });
 
   it('refuses MLB before the rollout date and resolves it after', () => {
@@ -231,7 +243,9 @@ describe('resolveClaimMode', () => {
 
   it('reports remaining when the rows cannot support a season claim', () => {
     const multiYear = [promo('2026-12-01'), promo('2027-01-05')];
-    assert.deepEqual(resolveClaimMode(multiYear, 'NHL', TODAY), { kind: 'remaining' });
+    assert.deepEqual(resolveClaimMode(multiYear, 'MLS', TODAY), { kind: 'remaining' });
+    // On NHL the same rows ARE one season, 2026-27.
+    assert.equal(resolveClaimMode(multiYear, 'NHL', TODAY).kind, 'season');
   });
 
   it('reports season for a resolving non-MLB league today', () => {

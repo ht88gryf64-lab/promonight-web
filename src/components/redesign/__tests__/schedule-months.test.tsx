@@ -165,7 +165,7 @@ test("fix (c): the Games tile reads the list's population", () => {
   // The schedule is gated on the same population, so the slot cannot render empty.
   assert.match(page, /const showSchedule = hasNoUpcoming && \(regularGames\?\.length \?\? 0\) > 0;/);
   // And the page's one clock read reaches the list, or the invitation could never return in season.
-  assert.match(page, /<ScheduleBlock contexts=\{gameContexts\} team=\{team\} teamName=\{displayName\} today=\{today\} \/>/);
+  assert.match(page, /<ScheduleBlock contexts=\{gameContexts\} team=\{team\} teamName=\{displayName\} today=\{today\} statusLine=\{statusLine\} \/>/);
   assert.equal(regularSeasonContexts(SEASON).length, rowsLi.length, 'tile population equals the list');
 });
 

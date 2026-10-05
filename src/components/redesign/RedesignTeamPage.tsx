@@ -16,6 +16,7 @@ import { DivisionRivals } from './DivisionRivals';
 import { getDivisionRivals } from '@/lib/division-rivals';
 import { teamTitleSubtitle } from '@/lib/title-treatment';
 import { seasonClaimSentence, type ClaimMode } from '@/lib/season-scope';
+import { scheduleStatusLine } from '@/lib/announcement-status';
 import { UpcomingPromoModalProvider } from './UpcomingPromoModal';
 import { AffiliateRail } from './AffiliateRail';
 import { ExploreCard } from './ExploreCard';
@@ -175,6 +176,18 @@ export function RedesignTeamPage({
   // return null). The identity on NFL.
   const regularGames = gameContexts ? regularSeasonContexts(gameContexts, today) : undefined;
   const showSchedule = hasNoUpcoming && (regularGames?.length ?? 0) > 0;
+  // NHL and NBA only: the one line above the schedule on a page with no promos
+  // for the season it names (src/lib/announcement-status.ts). Null on every
+  // other league and on any NHL or NBA page whose season resolved, so those
+  // pages pass ScheduleBlock exactly the props they always did.
+  const statusLine = scheduleStatusLine({
+    league: team.league,
+    showSchedule,
+    seasonResolved: !!seasonScope,
+    teamId: team.id,
+    displayName,
+    today,
+  });
 
   // Same-division rivals, free from gameContexts (opponent Team docs are
   // already fetched by enrichGamesForTeam). Empty on leagues without game
@@ -218,7 +231,9 @@ export function RedesignTeamPage({
   // the wrapper below can hold the same element.
   const seasonBlock =
     showSchedule && gameContexts ? (
-      <ScheduleBlock contexts={gameContexts} team={team} teamName={displayName} today={today} />
+      // A server component: its props are not serialized, so a null statusLine
+      // leaves MLB and NFL output exactly as it was.
+      <ScheduleBlock contexts={gameContexts} team={team} teamName={displayName} today={today} statusLine={statusLine} />
     ) : (
       <SeasonExplorer
         promos={upcomingPromos}

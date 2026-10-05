@@ -794,6 +794,20 @@ function mapGameDoc(doc: FirebaseFirestore.DocumentSnapshot): Game {
     // first pitch as "2:10 AM". See resolveMlbZone for the map-miss policy.
     game.gameTimeTz = zone ? zone.tz : '';
   }
+  // ── NBA: no game time, by ruling (WEB6, 2026-10-05) ──────────────────────
+  //
+  // The NBA spine (pipeline lib/ingest/nba-schedule.js) stores no tip-off time,
+  // so every NBA row shows date, opponent and home/away only. Blanked HERE, at
+  // the mapper, and not at the render sites: a time that a future ingest adds
+  // unverified would otherwise reach the four render sites and the RSC payload
+  // of every NBA page the day it lands. NHL times ARE shown: the NHL spine
+  // stores the UTC start and the venue zone, the same convention as MLB, and
+  // formatGameTime converts it (pinned against the official schedule in
+  // src/lib/__tests__/nhl-nba-schedule.test.ts).
+  if (game.league === 'nba') {
+    game.gameTime = '';
+    game.gameTimeTz = '';
+  }
   // ── Zone label, every league (was MLB-only until 2026-09-04) ─────────────
   //
   // The gate this replaces read `game.league === 'mlb'`, justified by a claim
@@ -840,10 +854,17 @@ function mapGameDoc(doc: FirebaseFirestore.DocumentSnapshot): Game {
 }
 
 // Returns every game (home + away) involving `teamSlug`, sorted by date asc.
-// `league` is lowercase ('mlb' | 'nfl'). Other leagues currently have no
+// `league` is lowercase ('mlb' | 'nfl' | 'nhl' | 'nba'). Other leagues have no
 // games data; this returns an empty array for them rather than throwing.
+//
+// NHL and NBA joined 2026-10-05 (WEB6): both season spines have been in the
+// games collection since September (1,409 NHL and 1,266 NBA docs, season 2026),
+// and without them the 18 NHL and NBA pages with no promos showed an empty
+// calendar instead of the season's games. Preseason docs are dropped by
+// isRegularSeasonGame below, exactly as on NFL.
+export const GAME_LEAGUES: readonly string[] = ['mlb', 'nfl', 'nhl', 'nba'];
 export const getGamesForTeam = cache(async (teamSlug: string, league: string): Promise<Game[]> => {
-  if (league !== 'mlb' && league !== 'nfl') return [];
+  if (!GAME_LEAGUES.includes(league)) return [];
   const [homeSnap, awaySnap] = await Promise.all([
     db.collection('games')
       .where('league', '==', league)

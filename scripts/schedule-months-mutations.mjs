@@ -47,9 +47,9 @@ const CASES = [
   // ---- Fix (c): the Games tile ----
   ['tile counting postseason', PAGE, 'gamesCount={regularGames?.length}', 'gamesCount={gameContexts?.length}', [T_RENDER]],
   ['schedule gated on the raw docs', PAGE, '  const showSchedule = hasNoUpcoming && (regularGames?.length ?? 0) > 0;', '  const showSchedule = hasNoUpcoming && (gameContexts?.length ?? 0) > 0;', [T_RENDER]],
-  ['today not wired to the list', PAGE, ' teamName={displayName} today={today} />', ' teamName={displayName} />', [T_RENDER]],
+  ['today not wired to the list', PAGE, ' teamName={displayName} today={today} statusLine={statusLine} />', ' teamName={displayName} statusLine={statusLine} />', [T_RENDER]],
   ['bare group class on the month', SB, '    <details className="group/month">', '    <details className="group">', [T_RENDER]],
-  ['MLB copy year hardcoded', SB, "          {`${TITLE_SEASON_YEAR} season`}", '          2026 season', [T_RENDER]],
+  ['MLB copy year hardcoded', SB, '  seasonName = TITLE_SEASON_YEAR,', '  seasonName = 2026,', [T_RENDER]],
   // ---- The month sections ----
   ['a month rendered expanded by default', SB, '    <details className="group/month">', '    <details className="group/month" open>', [T_RENDER]],
   ['rows missing from the HTML while collapsed', SB, ROWS_UL, '<ul className="mt-2 space-y-2">{m.rows.slice(0, 3).map((row) => renderRow(row))}</ul>', [T_RENDER]],
@@ -64,7 +64,7 @@ const CASES = [
   ['last month inside the anchor wrapper', SB, '{months.slice(0, -1).map((m) => (', '{months.map((m) => (', [T_RENDER]],
   ['a single month wrapped as an anchor', SB, '          <div className="mt-6">{month(months[0])}</div>', '          <div className="mt-6 page-content">{month(months[0])}</div>', [T_RENDER]],
   // ---- Copy fixes (a) and (d) ----
-  ['"week by week" back on the date list', SB, '`Every game of the ${TITLE_SEASON_YEAR} regular season, by month. Open a month to see its games.`', '`Every game of the ${TITLE_SEASON_YEAR} regular season, week by week. Open a month to see its games.`', [T_RENDER]],
+  ['"week by week" back on the date list', SB, '`${every} of the ${seasonName} regular season, by month. Open a month to see its games.`', '`${every} of the ${seasonName} regular season, week by week. Open a month to see its games.`', [T_RENDER]],
   ['ticket invitation over a fully played season', SB, "    const remaining =\n      today !== undefined && regular.some((c) => c.game.status === 'scheduled' && c.game.date >= today);", '    const remaining = true;', [T_RENDER]],
   ['no clock read treated as a game remaining', SB, "    const remaining =\n      today !== undefined && regular.some((c) => c.game.status === 'scheduled' && c.game.date >= today);", "    const remaining =\n      today === undefined || regular.some((c) => c.game.status === 'scheduled' && c.game.date >= today);", [T_RENDER]],
   ['remaining read from postseason docs', SB, "    const remaining =\n      today !== undefined && regular.some((c) => c.game.status === 'scheduled' && c.game.date >= today);", "    const remaining =\n      today !== undefined && contexts.some((c) => c.game.status === 'scheduled' && c.game.date >= today);", [T_RENDER]],
@@ -74,7 +74,7 @@ const CASES = [
   ['season live only strictly after today', LIB, "c.game.status === 'scheduled' && c.game.date >= today);\n  return kept.filter", "c.game.status === 'scheduled' && c.game.date > today);\n  return kept.filter", [T_LIB]],
   ['a month hidden from assistive technology', SB, '    <details className="group/month">', '    <details className="group/month" aria-hidden="true">', [T_RENDER]],
   ['postponed row prints its original first pitch', SB, "  const kickoffLabel = opts.showPostponed && game.status === 'postponed'", '  const kickoffLabel = false', [T_RENDER]],
-  ['fallback list claims months', SB, '            ? `Every game of the ${TITLE_SEASON_YEAR} regular season.`', '            ? `Every game of the ${TITLE_SEASON_YEAR} regular season, by month. Open a month to see its games.`', [T_RENDER]],
+  ['fallback list claims months', SB, '            ? `${every} of the ${seasonName} regular season.`', '            ? `${every} of the ${seasonName} regular season, by month. Open a month to see its games.`', [T_RENDER]],
   ['NFL output drifting: the postponed label reaches the week grid', SB, '            return renderGameRow(row, team, teamName);', '            return renderGameRow(row, team, teamName, { showPostponed: true });', [T_NFL, T_RENDER]],
   // ---- NFL byte identity ----
   ['NFL output drifting: a weekless NFL slate sent down the month path', SB, "  if (team.league === 'MLB' && !isWeekGrid) {", '  if (!isWeekGrid) {', [T_RENDER]],

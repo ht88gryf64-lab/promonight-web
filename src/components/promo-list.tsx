@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import { PromoBadge } from './promo-badge';
 import { AppPushPitch } from './app-push-pitch';
 import { ShareButton, formatShareDate, type ShareItem } from './share';
@@ -10,7 +10,14 @@ import { PromoArrivalHighlight } from '@/components/redesign/PromoArrivalHighlig
 import { isBobbleheadGiveaway, isEbayResaleActive } from '@/lib/ebay';
 import { splitCompletedForRender } from '@/lib/render-windows';
 import { promoAnchorId, splitPromosByDate } from '@/lib/promo-helpers';
-import { seasonSpan, completedHeading, completedSubline } from '@/lib/season-label';
+import {
+  seasonSpan,
+  completedHeading,
+  completedSubline,
+  archiveGroups,
+  currentSeasonLabel,
+  isSplitSeasonLeague,
+} from '@/lib/season-label';
 import type { Promo, PromoType, Team } from '@/lib/types';
 import type { GameContext } from '@/lib/data';
 import { isPurchaseGated } from '@/lib/promo-helpers';
@@ -284,11 +291,30 @@ export function PromoList({
   // Byte-identical to "See completed 2026 promos below." on a single-year
   // archive. This line renders when a club has run out of upcoming promos, so
   // it IS an MLB surface at season end, not an NHL-only one.
-  const pastPointerYears = pastSpan ? `${pastSpan.yearLabel} ` : '';
+  //
+  // NHL AND NBA group the archive BY SEASON instead (ruling, WEB6 2026-10-05):
+  // the current season's completed rows under "COMPLETED 2026-27 PROMOS ...
+  // this season", last season's under "LAST SEASON (2025-26)", never one
+  // heading over both. `splitGroups` is null on every other league, and every
+  // line below that reads it leaves those leagues' output exactly as it was.
+  const splitGroups = isSplitSeasonLeague(league)
+    ? archiveGroups(past.map((p) => p.date)).map((g) => ({ ...g, rows: g.indexes.map((i) => past[i]) }))
+    : null;
+  const currentSeasonPast = splitGroups ? splitGroups.find((g) => g.isCurrent)?.rows ?? [] : past;
+  const pastPointerYears = splitGroups
+    ? splitGroups.length === 1
+      ? `${splitGroups[0].label} `
+      : ''
+    : pastSpan
+      ? `${pastSpan.yearLabel} `
+      : '';
 
   // State (b) from src/lib/season-scope.ts, recomputed here from the rows this
-  // component already holds rather than threaded as a fourth prop.
-  const seasonComplete = seasonScoped && upcoming.length === 0 && past.length > 0;
+  // component already holds rather than threaded as a fourth prop. On NHL and
+  // NBA it counts the named season's rows only, so "All N ... on record for
+  // the 2026-27 season" can never include a 2025-26 row.
+  const seasonComplete = seasonScoped && upcoming.length === 0 && currentSeasonPast.length > 0;
+  const seasonCompleteLabel = splitGroups ? currentSeasonLabel(league) : pastSpan?.yearLabel ?? '';
 
   const upcomingVisible = upcoming.slice(0, UPCOMING_VISIBLE);
   const upcomingHidden = upcoming.slice(UPCOMING_VISIBLE);
@@ -336,6 +362,103 @@ export function PromoList({
     ) : undefined;
 
   if (variant === 'light') {
+    // The archive block, one per season on NHL and NBA, exactly one elsewhere.
+    // A plain function, not a component, so the element tree it returns is the
+    // tree the inline JSX produced before: on every calendar-year league the
+    // single call below emits the same markup and the same RSC payload.
+    const archiveBlock = (
+      heading: string,
+      subline: string,
+      parts: { resale: Promo[]; ssr: Promo[]; collapsed: Promo[] },
+      keyPrefix: string,
+    ) => (
+            <div className="mt-12">
+              <div className="mb-4">
+                <span className="font-rd text-[11px] uppercase tracking-[0.14em] text-rd-ink-faint">
+                  Already happened
+                </span>
+                <h3 className="rd-display text-2xl md:text-3xl text-rd-ink-soft mt-1">
+                  {heading}
+                </h3>
+                {/* The archive states its own size. This is the ONE count on the
+                    page derived from past promos, and it sits under a heading
+                    that says COMPLETED, so it describes rather than advertises.
+                    Parity with the dark variant below. */}
+                <p className="text-rd-ink-faint text-xs font-rd mt-2">
+                  {subline}
+                </p>
+              </div>
+
+              {/* Lifted resale rows: at most RESALE_LIFT_VISIBLE, and the only
+               *  server-rendered rows that carry the eBay CTA. Together with the
+               *  season slice below the collapse admits at most
+               *  RESALE_LIFT_VISIBLE + COMPLETED_SSR_WHEN_SEASON_SCOPED rows,
+               *  which is what keeps the 1MB SSR-HTML concern handled. */}
+              {parts.resale.length > 0 && (
+                <div className="mb-3 space-y-3">
+                  {parts.resale.map((promo, i) => (
+                    <RedesignPromoRow
+                      key={`${keyPrefix}rb-${i}`}
+                      promo={promo}
+                      share={share}
+                      completed
+                      resaleSlot={resaleSlotFor(promo, 'light')}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* NO resaleSlot on these rows, and that is the point. The eBay
+               *  CTA is capped at RESALE_LIFT_VISIBLE lifted rows above; these
+               *  eight previously lived inside LazyPromoRows, which passes no
+               *  slot, so they carried no CTA. Passing one here would quietly
+               *  take the server-rendered affiliate surface from 3 to as many
+               *  as 11 and move the placement:'team_page' resale_click
+               *  baseline mid-rollout. They are here for the content, not the
+               *  CTA. */}
+              {parts.ssr.length > 0 && (
+                <div className="mb-3 space-y-3">
+                  {parts.ssr.map((promo, i) => (
+                    <RedesignPromoRow
+                      key={`${keyPrefix}ps-${i}`}
+                      promo={promo}
+                      share={share}
+                      completed
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Completed promos are fully collapsed behind the expander. The
+               *  count lives in the (server-rendered) button label so the
+               *  data-completeness signal is in the HTML; the rows themselves
+               *  lazy-mount on click and stay out of the SSR HTML / page weight. */}
+              {parts.collapsed.length > 0 && (
+                <LazyPromoRows
+                  promos={parts.collapsed}
+                  share={share}
+                  completed
+                  showLabel={`Show ${parts.collapsed.length} ${parts.resale.length + parts.ssr.length > 0 ? 'more ' : ''}completed ${parts.collapsed.length === 1 ? 'promo' : 'promos'}`}
+                  hideLabel={`Hide completed ${parts.collapsed.length === 1 ? 'promo' : 'promos'}`}
+                />
+              )}
+            </div>
+    );
+    // Per-season partitions. The resale lift stays capped at
+    // RESALE_LIFT_VISIBLE across the WHOLE archive (current season first), so
+    // grouping never widens the server-rendered affiliate surface; the
+    // season-evidence slice belongs to the named season only.
+    let resaleLeft = RESALE_LIFT_VISIBLE;
+    const splitParts = splitGroups?.map((g) => {
+      const parts = splitCompletedForRender(
+        g.rows,
+        isBobbleheadGiveaway,
+        resaleLeft,
+        seasonScoped && g.isCurrent ? COMPLETED_SSR_WHEN_SEASON_SCOPED : 0,
+      );
+      resaleLeft -= parts.resale.length;
+      return parts;
+    });
     const upcomingGroups = groupPromoRows(upcomingVisible);
     const renderUpcomingRow = (promo: Promo, i: number) => (
       <RedesignPromoRow
@@ -367,7 +490,7 @@ export function PromoList({
               {seasonComplete ? 'The full season' : 'Coming up'}
             </span>
             <h2 className="rd-display text-3xl md:text-4xl text-rd-ink mt-1">
-              {seasonComplete ? `${pastSpan?.yearLabel ?? ''} SEASON PROMOS`.trim() : 'UPCOMING PROMOS'}
+              {seasonComplete ? `${seasonCompleteLabel} SEASON PROMOS`.trim() : 'UPCOMING PROMOS'}
             </h2>
             {upcoming.length > 0 && (
               <p className="text-rd-ink-faint text-xs font-rd tracking-[0.02em] mt-2">
@@ -439,8 +562,8 @@ export function PromoList({
              * over or our record being exhaustive. */
             <div className="py-2">
               <p className="text-rd-ink-soft text-sm">
-                All {past.length} {teamName} {past.length === 1 ? 'promotion' : 'promotions'} on record for the{' '}
-                {pastSpan?.yearLabel} season are below.
+                All {currentSeasonPast.length} {teamName} {currentSeasonPast.length === 1 ? 'promotion' : 'promotions'} on record for the{' '}
+                {seasonCompleteLabel} season are below.
               </p>
             </div>
           ) : (
@@ -451,80 +574,12 @@ export function PromoList({
             </div>
           )}
 
-          {past.length > 0 && (
-            <div className="mt-12">
-              <div className="mb-4">
-                <span className="font-rd text-[11px] uppercase tracking-[0.14em] text-rd-ink-faint">
-                  Already happened
-                </span>
-                <h3 className="rd-display text-2xl md:text-3xl text-rd-ink-soft mt-1">
-                  {pastHeading}
-                </h3>
-                {/* The archive states its own size. This is the ONE count on the
-                    page derived from past promos, and it sits under a heading
-                    that says COMPLETED, so it describes rather than advertises.
-                    Parity with the dark variant below. */}
-                <p className="text-rd-ink-faint text-xs font-rd mt-2">
-                  {pastCount}
-                </p>
-              </div>
-
-              {/* Lifted resale rows: at most RESALE_LIFT_VISIBLE, and the only
-               *  server-rendered rows that carry the eBay CTA. Together with the
-               *  season slice below the collapse admits at most
-               *  RESALE_LIFT_VISIBLE + COMPLETED_SSR_WHEN_SEASON_SCOPED rows,
-               *  which is what keeps the 1MB SSR-HTML concern handled. */}
-              {pastResale.length > 0 && (
-                <div className="mb-3 space-y-3">
-                  {pastResale.map((promo, i) => (
-                    <RedesignPromoRow
-                      key={`rb-${i}`}
-                      promo={promo}
-                      share={share}
-                      completed
-                      resaleSlot={resaleSlotFor(promo, 'light')}
-                    />
-                  ))}
-                </div>
-              )}
-
-              {/* NO resaleSlot on these rows, and that is the point. The eBay
-               *  CTA is capped at RESALE_LIFT_VISIBLE lifted rows above; these
-               *  eight previously lived inside LazyPromoRows, which passes no
-               *  slot, so they carried no CTA. Passing one here would quietly
-               *  take the server-rendered affiliate surface from 3 to as many
-               *  as 11 and move the placement:'team_page' resale_click
-               *  baseline mid-rollout. They are here for the content, not the
-               *  CTA. */}
-              {pastSsr.length > 0 && (
-                <div className="mb-3 space-y-3">
-                  {pastSsr.map((promo, i) => (
-                    <RedesignPromoRow
-                      key={`ps-${i}`}
-                      promo={promo}
-                      share={share}
-                      completed
-                    />
-                  ))}
-                </div>
-              )}
-
-              {/* Completed promos are fully collapsed behind the expander. The
-               *  count lives in the (server-rendered) button label so the
-               *  data-completeness signal is in the HTML; the rows themselves
-               *  lazy-mount on click and stay out of the SSR HTML / page weight. */}
-              {pastCollapsed.length > 0 && (
-                <LazyPromoRows
-                  promos={pastCollapsed}
-                  share={share}
-                  completed
-                  showLabel={`Show ${pastCollapsed.length} ${pastResale.length + pastSsr.length > 0 ? 'more ' : ''}completed ${pastCollapsed.length === 1 ? 'promo' : 'promos'}`}
-                  hideLabel={`Hide completed ${pastCollapsed.length === 1 ? 'promo' : 'promos'}`}
-                />
-              )}
-            </div>
-          )}
-
+          {splitGroups && splitParts
+            ? splitGroups.map((g, gi) => (
+                <Fragment key={g.label}>{archiveBlock(g.heading, g.subline, splitParts[gi], `${g.label}-`)}</Fragment>
+              ))
+            : past.length > 0 &&
+              archiveBlock(pastHeading, pastCount, { resale: pastResale, ssr: pastSsr, collapsed: pastCollapsed }, '')}
           {showAppPitch && (
             <AppPushPitch variant="light" teamName={teamName} teamSlug={teamSlug} league={league} />
           )}
@@ -532,6 +587,21 @@ export function PromoList({
       </section>
     );
   }
+
+  // Rollback-only dark variant: one archive block, so on NHL and NBA it takes
+  // the single season's own heading when the archive holds one season, and a
+  // heading that names no season (with each season counted) when it holds
+  // more than one. It never says "this season" over another season's rows.
+  const darkHeading = splitGroups
+    ? splitGroups.length === 1
+      ? splitGroups[0].heading
+      : 'COMPLETED PROMOS'
+    : pastHeading;
+  const darkSubline = splitGroups
+    ? splitGroups.length === 1
+      ? splitGroups[0].subline
+      : splitGroups.map((g) => `${g.rows.length} in ${g.isCurrent ? 'this season' : `the ${g.label} season`}`).join(', ')
+    : pastCount;
 
   return (
     <section className="py-12 px-6">
@@ -594,10 +664,10 @@ export function PromoList({
                 Already happened
               </span>
               <h3 className="font-display text-2xl md:text-3xl tracking-[1px] mt-1 text-text-secondary">
-                {pastHeading}
+                {darkHeading}
               </h3>
               <p className="text-text-muted text-xs font-mono tracking-[0.5px] mt-2">
-                {pastCount}
+                {darkSubline}
               </p>
             </div>
 
