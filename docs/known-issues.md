@@ -3905,3 +3905,15 @@ disagree, and any forward-only regression.
 (`~/promonight/audit-archive/pipe/g0/REPORT.md`) maps the refusal paths, and
 the ledger (`~/promonight/COORDINATION.md`, PIPE lines) records each guard
 added since.
+
+## 68. Two Patriots theme rows sit on week 17 and 18 dates the NFL can still move
+
+**Status: OPEN (Matt, 2026-10-05, DATA G2). Severity: Low. No data-model change ruled.**
+
+**What it is.** new-england-patriots carries two hand-entered theme rows on late-season games: "Inspire Change" 2027-01-03 (week 17, vs Broncos) and "Thank You Fans" 2027-01-10 (week 18, vs Dolphins). The NFL sets the final day and time of weeks 17 and 18 late in the season, so either game can move off the stored date. A promo doc has no field for a tentative date (games carry `timeTbd`, which covers the time only), so neither row can be flagged on the page today, and the promo would then show on a date the game no longer has.
+
+**Why it is not caught.** The Patriots are not scanned (team-configs/nfl.js: inactive, no promoUrls). Their 12 live rows were entered by hand from the club's X graphic on 2026-09-13 and are locked (`manualCuration`); each carries a `manualProvenance` map (not read by `mapPromoDoc`). No run re-dates them when the games spine moves.
+
+**What to do.** When the NFL publishes the week 17 and 18 dates, compare both rows to the games spine and re-date by hand if a game moved (a re-date changes the promoId: tombstone the old id plus create the new one). If a tentative-date field is ever added, these two rows are its first users.
+
+**Where.** promo-pipeline scripts/seed-nfl-gameday-themes.js (the seed), scripts/nfl-patriots-ceremony-tombstones-2026-10-05.js (the ruling's write), ledger 2026-10-05 18:40 CT.
