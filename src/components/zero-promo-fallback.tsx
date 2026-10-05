@@ -1,5 +1,5 @@
 import type { Team, Venue } from '@/lib/types';
-import { isSplitSeasonLeague, splitSeasonLabel } from '@/lib/season-label';
+import { isSplitSeasonLeague, splitSeasonLabel, SPLIT_SEASON_START_YEAR } from '@/lib/season-label';
 
 // Hardcoded, never derived from the clock. A page that renders "2027 promo
 // schedule" on 2027-01-01 while its own title, FAQ and JSON-LD still say 2026 is
@@ -44,24 +44,26 @@ const LEAGUE_COPY: Record<string, LeagueCopy> = {
       `When promos are announced, you'll see every giveaway, theme night, ticket pack, and family event here at ${venueName}. Check back closer to the season opener, or star the ${teamName} here to get one weekly email once dates are confirmed.`,
     ],
   },
-  // NHL and NBA: the first sentence is scoped to OUR data, like NFL above, and
-  // names the two-year season. Whether the CLUB has announced anything is a
-  // claim about a real organization; it is made once per page, above the
-  // schedule, and only for a club whose page was checked
-  // (src/lib/announcement-status.ts). This block also renders on pages whose
-  // club HAS published (the Warriors did on 2026-10-05, before any scan), so it
-  // must not say they have not.
+  // NHL and NBA: no sentence about what is or is not listed. That is said ONCE
+  // per page, in the line above the schedule (src/lib/announcement-status.ts),
+  // which every NHL and NBA page that reaches this block also carries; a
+  // second "PromoNight has no ... listed yet" here repeated it a screen lower
+  // (review round 1). Whether the CLUB has announced anything is a claim about
+  // a real organization, made only in that line and only for a club whose page
+  // was checked. This block also renders on pages whose club HAS published
+  // (the Warriors did on 2026-10-05, before any scan), so it must not say they
+  // have not.
   NBA: {
     cadence: 'October–April regular season',
-    paragraphs: ({ teamName, venueName, year }) => [
-      `PromoNight has no ${teamName} ${year} promotions listed yet. Most NBA teams release their full promo schedules at the start of the regular season and then add dates throughout the year.`,
+    paragraphs: ({ teamName, venueName }) => [
+      `Most NBA teams release their full promo schedules at the start of the regular season and then add dates throughout the year.`,
       `When ${teamName} promos are confirmed at ${venueName}, they'll appear on this page. In the meantime, the free PromoNight app carries the same calendar, so confirmed events show up there too.`,
     ],
   },
   NHL: {
     cadence: 'October–April regular season',
-    paragraphs: ({ teamName, venueName, year }) => [
-      `PromoNight has no ${teamName} ${year} promotions listed yet. NHL teams typically release the bulk of their promo calendar at season open and continue adding dates through the playoffs.`,
+    paragraphs: ({ teamName, venueName }) => [
+      `NHL teams typically release the bulk of their promo calendar at season open and continue adding dates through the playoffs.`,
       `When ${teamName} giveaways, theme nights, or family events are confirmed at ${venueName}, they'll show up here. The free PromoNight app carries the same calendar as this page.`,
     ],
   },
@@ -133,7 +135,7 @@ export function ZeroPromoFallback({
   // number always rendered as), "2026-27" on NHL and NBA.
   // The NUMBER stays a number on those leagues: it is a JSX child in the H2
   // below, and the RSC payload serializes 2026 and "2026" differently.
-  const seasonName: string | number = isSplitSeasonLeague(team.league) ? splitSeasonLabel(SEASON_YEAR) : SEASON_YEAR;
+  const seasonName: string | number = isSplitSeasonLeague(team.league) ? splitSeasonLabel(SPLIT_SEASON_START_YEAR) : SEASON_YEAR;
   const paragraphs = copy
     ? copy.paragraphs({ teamName, venueName, city, year: String(seasonName) })
     : [`No ${teamName} promotions are listed for ${SEASON_YEAR} yet.`];

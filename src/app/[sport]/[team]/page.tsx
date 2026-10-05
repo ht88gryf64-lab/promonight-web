@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   getAllTeams,
   getTeamBySlug,
-  getTeamPromos,
+  getTeamPromoPartition,
   getVenueForTeam,
   getPlayoffConfig,
   getPlayoffPromosForTeam,
@@ -44,6 +44,8 @@ import { TeamPlayoffsModule } from '@/components/playoffs/inbound/TeamPlayoffsMo
 import { isTitleTreatmentTeam, teamMetaTitle } from '@/lib/title-treatment';
 import { getCoverageCounts } from '@/lib/get-coverage-counts';
 import { isSeasonScopeLive, resolveClaimMode } from '@/lib/season-scope';
+import { currentSeasonLabel, isSplitSeasonLeague } from '@/lib/season-label';
+import { upcomingTicketPackages } from '@/lib/ticket-packages';
 import { RedesignTeamPage } from '@/components/redesign/RedesignTeamPage';
 
 export const revalidate = 86400;
@@ -75,9 +77,12 @@ export async function generateMetadata({
   const team = await getTeamBySlug(teamSlug);
   if (!team) return {};
 
-  const [venue, promos] = await Promise.all([
+  // The promos the snippet may name: special-ticket rows (NHL and NBA) are
+  // not promotions on this page, so the snippet does not list them as such.
+  // Identical to getTeamPromos everywhere else (src/lib/ticket-packages.ts).
+  const [venue, { promos }] = await Promise.all([
     getVenueForTeam(team.id),
-    getTeamPromos(team.id),
+    getTeamPromoPartition(team.id, team.league),
   ]);
 
   // Hardcoded, NOT new Date().getFullYear(): an auto-rolling year would flip
@@ -146,9 +151,13 @@ export async function generateMetadata({
   const freshnessTail = ['MLB', 'WNBA', 'MLS', 'NHL'].includes(team.league)
     ? 'Rechecked weekly in season.'
     : 'From official team announcements.';
+  // NHL and NBA name their two-year season ("2026-27"), as the page body does;
+  // the number stays the number everywhere else (review round 1). The <title>
+  // is not touched here: it is the title-treatment flip point.
+  const seasonWord: string | number = isSplitSeasonLeague(team.league) ? currentSeasonLabel(team.league) : year;
   const fallbackDescription = venue
-    ? `${displayName} ${year} promotional schedule - bobbleheads, giveaways, theme nights, and food deals at ${venue.name}. ${freshnessTail}`
-    : `${displayName} ${year} promotional schedule - bobbleheads, giveaways, theme nights, and food deals. ${freshnessTail}`;
+    ? `${displayName} ${seasonWord} promotional schedule - bobbleheads, giveaways, theme nights, and food deals at ${venue.name}. ${freshnessTail}`
+    : `${displayName} ${seasonWord} promotional schedule - bobbleheads, giveaways, theme nights, and food deals. ${freshnessTail}`;
 
   // CTR diagnostic (ctr-diagnostic-sep2026, see src/lib/title-treatment.ts).
   // A treatment title promises "Theme Nights", so the snippet under it has to
@@ -189,7 +198,7 @@ export async function generateMetadata({
     .filter((p) => p !== nextThemeNight)
     .slice(0, 3);
 
-  const closer = ` See the full ${year} schedule at PromoNight.`;
+  const closer = ` See the full ${seasonWord} schedule at PromoNight.`;
   // Same rule as the promo entries below: an item that cannot fit the budget
   // whole is dropped, never truncated mid-title.
   const rawLead = nextThemeNight
@@ -282,8 +291,15 @@ export default async function TeamPage({
   // team count and league list that reach the FAQ answers and their FAQPage
   // schema. Issued alongside the reads already in flight, so it adds no
   // latency. It replaces hardcoded literals that had already gone stale.
-  const [promos, venue, playoffConfig, coverage] = await Promise.all([
-    getTeamPromos(team.id),
+  // THE SPLIT (src/lib/ticket-packages.ts). `promos` is everything that counts
+  // and is the only array any count site below ever reads: the hero, the "All
+  // N" line, the FAQ and its FAQPage schema, the JSON-LD events, the content
+  // sections, the calendar and the game rows. `ticketPackages` holds the NHL
+  // and NBA rows the pipeline marks as needing a special ticket, and reaches
+  // exactly one place, their own group. On every other page it is empty and
+  // `promos` is the array getTeamPromos returns.
+  const [{ promos, ticketPackages }, venue, playoffConfig, coverage] = await Promise.all([
+    getTeamPromoPartition(team.id, team.league),
     getVenueForTeam(team.id),
     shouldCheckPlayoffs ? getPlayoffConfig() : Promise.resolve(null),
     getCoverageCounts(),
@@ -339,6 +355,7 @@ export default async function TeamPage({
   // down as a prop, hydrates the same on both sides by construction.
   const todayStr = todayYmd();
   const { upcoming: upcomingPromos } = splitPromosByDate(promos, todayStr);
+  const packagesAhead = upcomingTicketPackages(ticketPackages, todayStr);
   const upcomingCounts = countPromosByType(upcomingPromos);
 
   // ── The second derivation, and the reason the paragraph above is now wrong ──
@@ -404,6 +421,7 @@ export default async function TeamPage({
         playoffRound={playoffRound}
         playoffLastUpdated={playoffConfig?.lastScanDate ?? null}
         playoffContext={playoffContext}
+        ticketPackages={packagesAhead}
       />
     );
   }

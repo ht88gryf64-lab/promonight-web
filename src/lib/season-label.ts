@@ -42,6 +42,17 @@
 // (late September) in both leagues, so no real game straddles it.
 import { TITLE_SEASON_YEAR } from './title-treatment';
 
+/**
+ * The NHL and NBA season this site names: 2026 means 2026-27. ITS OWN CONSTANT,
+ * deliberately NOT TITLE_SEASON_YEAR. That one is the MLB-paced title year, and
+ * its runbook bumps it to 2027 when the 2027 MLB content is ready, in January or
+ * February 2027, in the middle of the 2026-27 NHL and NBA seasons. Tied to it,
+ * that bump would drop every 2026-27 row out of season scope, head the live
+ * season "LAST SEASON (2026-27)" and title the schedule "2027-28". Bump this
+ * one in July, when the next NHL and NBA season opens (review round 1, WEB6).
+ */
+export const SPLIT_SEASON_START_YEAR = 2026;
+
 /** Leagues whose season spans two calendar years and is named "2026-27". */
 const SPLIT_SEASON_LEAGUES = new Set(['NHL', 'NBA']);
 
@@ -74,11 +85,11 @@ export function splitSeasonLabel(startYear: number): string {
 
 /**
  * The season label a page names for its league: "2026-27" on NHL and NBA, the
- * plain TITLE_SEASON_YEAR everywhere else. Hardcoded through TITLE_SEASON_YEAR,
- * never derived from the clock (see title-treatment.ts).
+ * plain TITLE_SEASON_YEAR everywhere else. Hardcoded through those two
+ * constants, never derived from the clock (see title-treatment.ts).
  */
 export function currentSeasonLabel(league: string | null | undefined): string {
-  return isSplitSeasonLeague(league) ? splitSeasonLabel(TITLE_SEASON_YEAR) : String(TITLE_SEASON_YEAR);
+  return isSplitSeasonLeague(league) ? splitSeasonLabel(SPLIT_SEASON_START_YEAR) : String(TITLE_SEASON_YEAR);
 }
 
 export interface SeasonSpan {
@@ -162,11 +173,12 @@ export function completedSubline(count: number, span: SeasonSpan | null): string
 
 /** One season's block of a split-season archive. */
 export interface ArchiveGroup {
-  /** The season's start year, e.g. 2025 for 2025-26. */
-  startYear: number;
+  /** The season's start year, e.g. 2025 for 2025-26; null for the trailing
+   *  group of rows whose date cannot be placed in a season. */
+  startYear: number | null;
   /** "2025-26". */
   label: string;
-  /** True for the season the page names (TITLE_SEASON_YEAR). */
+  /** True for the season the page names (SPLIT_SEASON_START_YEAR). */
   isCurrent: boolean;
   /** "COMPLETED 2026-27 PROMOS", "LAST SEASON (2025-26)", "2024-25 SEASON". */
   heading: string;
@@ -180,30 +192,35 @@ export interface ArchiveGroup {
  * Group a split-season league's completed rows by season, current season
  * first, then newest to oldest. Only the current season's block says "this
  * season"; the season before it is headed "LAST SEASON (2025-26)" and every
- * older one by its label. Rows with a malformed date fall into no group (the
- * same rows splitPromosByDate already keeps out of `past`).
+ * older one by its label. A row whose date cannot be placed in a season (a
+ * stored "2026-1-05" passes splitPromosByDate's empty-date check and lands in
+ * `past`) goes in a last group of its own, so it is never silently dropped.
  */
 export function archiveGroups(dates: readonly string[]): ArchiveGroup[] {
   const bySeason = new Map<number, number[]>();
+  const unplaced: number[] = [];
   dates.forEach((d, i) => {
     const y = splitSeasonStartYear(d);
-    if (y === null) return;
+    if (y === null) {
+      unplaced.push(i);
+      return;
+    }
     const list = bySeason.get(y) ?? [];
     list.push(i);
     bySeason.set(y, list);
   });
-  return [...bySeason.keys()]
+  const groups: ArchiveGroup[] = [...bySeason.keys()]
     .sort((a, b) => b - a)
     .map((startYear) => {
       const indexes = bySeason.get(startYear)!;
       const label = splitSeasonLabel(startYear);
-      const isCurrent = startYear === TITLE_SEASON_YEAR;
+      const isCurrent = startYear === SPLIT_SEASON_START_YEAR;
       const n = indexes.length;
       const events = n === 1 ? 'event' : 'events';
       const span = seasonSpan(indexes.map((i) => dates[i]));
       const heading = isCurrent
         ? `COMPLETED ${label} PROMOS`
-        : startYear === TITLE_SEASON_YEAR - 1
+        : startYear === SPLIT_SEASON_START_YEAR - 1
           ? `LAST SEASON (${label})`
           : `${label} SEASON`;
       const subline = isCurrent
@@ -213,6 +230,18 @@ export function archiveGroups(dates: readonly string[]): ArchiveGroup[] {
           : `${n} completed ${events}`;
       return { startYear, label, isCurrent, heading, subline, indexes };
     });
+  if (unplaced.length > 0) {
+    const n = unplaced.length;
+    groups.push({
+      startYear: null,
+      label: 'other',
+      isCurrent: false,
+      heading: 'OTHER COMPLETED PROMOS',
+      subline: `${n} completed ${n === 1 ? 'event' : 'events'}`,
+      indexes: unplaced,
+    });
+  }
+  return groups;
 }
 
 /**

@@ -40,7 +40,7 @@ const promo = (date: string, title: string, over: Partial<Promo> = {}): Promo =>
   date, time: '', opponent: 'Visitors', type: 'theme', title, description: '', highlight: false, icon: '', recurring: false, ...over,
 });
 
-const text = (html: string) => html.replace(/<!-- -->/g, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+const text = (html: string) => html.replace(/<!-- -->/g, '').replace(/<[^>]+>/g, ' ').replace(/&#x27;/g, "'").replace(/\s+/g, ' ');
 
 function list(team: Team, promos: Promo[], seasonScoped = false) {
   return renderToStaticMarkup(
@@ -234,7 +234,9 @@ describe('what the zero-promo pages may claim', () => {
     for (const team of [RANGERS, HEAT]) {
       const t = text(renderToStaticMarkup(<ZeroPromoFallback team={team} venue={null} teamName={`${team.city} ${team.name}`} variant="light" />));
       assert.match(t, /2026-27/);
-      assert.match(t, /PromoNight has no .* 2026-27 promotions listed yet\./);
+      // Says nothing about what is listed: the status line above the schedule
+      // says that once per page (review round 1 removed the repeat here).
+      assert.doesNotMatch(t, /PromoNight has no|hasn't recorded|listed yet/);
       assert.doesNotMatch(t, /haven't announced/);
       assert.doesNotMatch(t, /\b2026 (?!-)/);
     }
@@ -245,8 +247,10 @@ describe('what the zero-promo pages may claim', () => {
     assert.equal(announcementLine('golden-state-warriors', 'Golden State Warriors', '2026-10-05'), "PromoNight hasn't recorded any Golden State Warriors 2026-27 promotions yet.");
     // The window: verified 2026-10-05, good for VERIFIED_FOR_DAYS days.
     assert.equal(VERIFIED_FOR_DAYS, 14);
-    assert.equal(nothingPublishedVerified('new-york-knicks', '2026-10-18'), true, 'last good day');
-    assert.equal(nothingPublishedVerified('new-york-knicks', '2026-10-19'), false, 'expired');
+    // Rendered through 10-17; with the one-day ISR window a visitor can see it
+    // through 10-18, the 14th day, and never on 10-19.
+    assert.equal(nothingPublishedVerified('new-york-knicks', '2026-10-17'), true, 'last render day');
+    assert.equal(nothingPublishedVerified('new-york-knicks', '2026-10-18'), false, 'not rendered on the 14th day, it may be served stale through it');
     assert.equal(nothingPublishedVerified('new-york-knicks', '2026-10-04'), false, 'not before the check');
     assert.equal(nothingPublishedVerified('new-york-knicks', 'garbage'), false);
     assert.match(announcementLine('new-york-knicks', 'New York Knicks', '2026-10-19'), /^PromoNight hasn't recorded/);

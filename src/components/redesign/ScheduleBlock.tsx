@@ -315,6 +315,8 @@ function renderGameRow(
 
   const locationLabel = game.isInternational
     ? `International, ${game.internationalLocation ?? game.venueName}`
+    : game.neutralSite === true
+    ? `Neutral site, ${game.venueName}`
     : null;
 
   return (

@@ -1,7 +1,10 @@
 // NHL and NBA games on the team page (WEB6, 2026-10-05).
 //
-//  1. getGamesForTeam returns the NHL and NBA season spines, regular season
-//     only, and still returns nothing for a league with no games data.
+//  1. getGamesForTeam returns the NHL and NBA season spines WITH their
+//     preseason (a promo can sit on a preseason home game, and the calendar
+//     draws a cell only where a game is), and regularSeasonContexts drops the
+//     preseason before the schedule list or the Games tile sees it. A league
+//     with no games data still returns nothing.
 //  2. NHL game times are SHOWN, and they are right. Five games in five arena
 //     zones were checked on 2026-10-05 against the NHL's own game record
 //     (api-web.nhle.com/v1/gamecenter/{id}/landing: startTimeUTC plus
@@ -104,7 +107,14 @@ test('NHL: getGamesForTeam returns the spine, regular season only, times kept, r
     assert.ok(shown.startsWith(v.expect), `${v.id}: shows "${shown}", NHL record says ${v.expect}`);
   }
   const rangers = await getGamesForTeam('new-york-rangers', 'nhl');
-  assert.ok(!rangers.some((g) => g.id === 'nhl-pre'), 'preseason off the list');
+  assert.ok(rangers.some((g) => g.id === 'nhl-pre'), 'preseason kept for the calendar');
+  const { regularSeasonContexts } = await import('../schedule-months');
+  const ctx = rangers.map((game) => ({ game, isHome: true, opponentTeam: null, opponentVenue: null, promos: [] }));
+  assert.deepEqual(
+    regularSeasonContexts(ctx as never).map((c) => c.game.id),
+    rangers.filter((g) => g.id !== 'nhl-pre').map((g) => g.id),
+    'preseason off the schedule list and the Games tile',
+  );
   // The away side sees the same game.
   const leafs = await getGamesForTeam('toronto-maple-leafs', 'nhl');
   assert.deepEqual(leafs.map((g) => g.id).sort(), [VERIFIED[2].id, VERIFIED[3].id].sort());
@@ -114,7 +124,7 @@ test('NBA: getGamesForTeam returns the spine with every time blanked at the mapp
   const { getGamesForTeam } = await import('../data');
   const { formatGameTime } = await import('../format-game-time');
   const games = await getGamesForTeam('new-york-knicks', 'nba');
-  assert.deepEqual(games.map((g) => g.id), ['nba-1', 'nba-2'], 'regular season only, date order');
+  assert.deepEqual(games.map((g) => g.id), ['nba-pre', 'nba-1', 'nba-2'], 'preseason kept for the calendar, date order');
   for (const g of games) {
     assert.equal(g.gameTime, '', `${g.id}: no time`);
     assert.equal(g.gameTimeTz, '', `${g.id}: no zone`);

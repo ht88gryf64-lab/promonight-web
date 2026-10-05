@@ -3,6 +3,7 @@
 // and the tile can never count two different populations.
 import type { GameContext } from './data';
 import { TITLE_SEASON_YEAR } from './title-treatment';
+import { isSplitSeasonLeague, splitSeasonStartYear, SPLIT_SEASON_START_YEAR } from './season-label';
 
 /**
  * The regular season, one entry per game actually on the schedule.
@@ -33,6 +34,13 @@ import { TITLE_SEASON_YEAR } from './title-treatment';
  *    says "2026". MLB docs count only when their date falls in
  *    TITLE_SEASON_YEAR, the constant every hardcoded 2026 is bumped with.
  *
+ * 5. NHL AND NBA PRESEASON, AND ANOTHER NHL OR NBA SEASON. getGamesForTeam
+ *    keeps those two leagues' preseason games for the calendar (a promo can sit
+ *    on one), so they are dropped here; and a game counts only when its date
+ *    falls in the season the page names (SPLIT_SEASON_START_YEAR), so a
+ *    2027-28 spine written early cannot join the 2026-27 list (review round 1;
+ *    none on production 2026-10-05, every NHL and NBA doc is season 2026).
+ *
  * Rules 2 to 4 apply only to MLB documents (`league === 'mlb'`); the dedupe
  * additionally needs a numeric `mlbGameId`. No NFL doc sets isPostseason
  * (ingest-nfl writes seasonType, which getGamesForTeam already filters), so
@@ -54,7 +62,9 @@ export function regularSeasonContexts(contexts: readonly GameContext[], today?: 
   const regular = contexts.filter(
     (c) =>
       c.game.isPostseason !== true &&
-      (!isMlb(c) || c.game.date.startsWith(`${TITLE_SEASON_YEAR}-`)),
+      (!isMlb(c) || c.game.date.startsWith(`${TITLE_SEASON_YEAR}-`)) &&
+      (!isSplitSeasonLeague(c.game.league) ||
+        (c.game.seasonType !== 'preseason' && splitSeasonStartYear(c.game.date) === SPLIT_SEASON_START_YEAR)),
   );
   const bestById = new Map<number, GameContext>();
   for (const c of regular) {

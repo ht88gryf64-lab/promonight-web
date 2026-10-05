@@ -9,7 +9,7 @@ import { groupPromoRows } from '@/lib/promo-row-groups';
 import { PromoArrivalHighlight } from '@/components/redesign/PromoArrivalHighlight';
 import { isBobbleheadGiveaway, isEbayResaleActive } from '@/lib/ebay';
 import { splitCompletedForRender } from '@/lib/render-windows';
-import { promoAnchorId, splitPromosByDate } from '@/lib/promo-helpers';
+import { promoAnchorId, splitPromosByDate, todayYmd } from '@/lib/promo-helpers';
 import {
   seasonSpan,
   completedHeading,
@@ -281,7 +281,8 @@ export function PromoList({
   // page while every count around it was all-time, which is how the hero came to
   // advertise promos this list reported as gone. The predicate now lives in
   // promo-helpers so both read the same definition.
-  const { upcoming, past } = splitPromosByDate(promos);
+  const today = todayYmd();
+  const { upcoming, past } = splitPromosByDate(promos, today);
 
   // The archive labels itself from its own rows. splitPromosByDate is untouched:
   // `p.date >= today` is correct on all 169 teams and is not what was wrong.
@@ -313,7 +314,19 @@ export function PromoList({
   // component already holds rather than threaded as a fourth prop. On NHL and
   // NBA it counts the named season's rows only, so "All N ... on record for
   // the 2026-27 season" can never include a 2025-26 row.
-  const seasonComplete = seasonScoped && upcoming.length === 0 && currentSeasonPast.length > 0;
+  //
+  // On NHL and NBA, "THE FULL SEASON" also needs the season to have no game
+  // left to play. Every published 2026-27 row can be past in October (an
+  // opening-night promo, a few days later), and the heading would then call
+  // two weeks of a six-month season the full season (review round 1). With
+  // games still ahead the page keeps "Coming up" and points at the archive.
+  const splitSeasonStillPlaying =
+    !!splitGroups &&
+    (gameContexts ?? []).some(
+      (c) => c.game.seasonType !== 'preseason' && c.game.status === 'scheduled' && c.game.date >= today,
+    );
+  const seasonComplete =
+    seasonScoped && upcoming.length === 0 && currentSeasonPast.length > 0 && !splitSeasonStillPlaying;
   const seasonCompleteLabel = splitGroups ? currentSeasonLabel(league) : pastSpan?.yearLabel ?? '';
 
   const upcomingVisible = upcoming.slice(0, UPCOMING_VISIBLE);

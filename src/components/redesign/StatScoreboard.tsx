@@ -32,6 +32,11 @@ import { RD_CATEGORIES, RD_CATEGORY_ORDER } from './categories';
 export interface StatScoreboardProps {
   counts: Record<PromoType, number>; // promoCounts from the page
   gamesCount?: number; // optional total scheduled games
+  /** The Games tile's label. "Games" by default. NHL and NBA pages pass
+   *  "Scheduled games": the NBA publishes its last games in December, so on
+   *  2026-10-05 every NBA club showed 80 of its 82, and a bare "80 Games"
+   *  read as the season (review round 1). */
+  gamesLabel?: string;
   /**
    * The sentence that names the population the tiles count, e.g.
    * "98 promotions in the 2026 season, 19 still to come".
@@ -70,7 +75,7 @@ function StatTile({ count, label, color, Icon }: TileProps) {
   );
 }
 
-export function StatScoreboard({ counts, gamesCount, note, className = '' }: StatScoreboardProps) {
+export function StatScoreboard({ counts, gamesCount, gamesLabel = 'Games', note, className = '' }: StatScoreboardProps) {
   // NO NOTE, NO WRAPPER. The note only ever accompanies season counts, so on
   // every held or fallback page this must emit exactly the markup it emitted
   // before: one grid div carrying the merged class string. An always-on wrapper
@@ -99,7 +104,7 @@ export function StatScoreboard({ counts, gamesCount, note, className = '' }: Sta
         {typeof gamesCount === 'number' && gamesCount > 0 && (
           <StatTile
             count={gamesCount}
-            label="Games"
+            label={gamesLabel}
             color="#ffffff"
             Icon={IconCalendarEvent}
           />

@@ -39,15 +39,24 @@ const T_RENDER = 'src/components/redesign/__tests__/season-labels-render.test.ts
 const T_GAMES = 'src/lib/__tests__/nhl-nba-schedule.test.ts';
 const T_BYTES = 'src/components/redesign/__tests__/mlb-nfl-byte-identity.test.tsx';
 const T_MONTHS = 'src/components/redesign/__tests__/schedule-months.test.tsx';
+const T_PKG = 'src/components/redesign/__tests__/ticket-packages-render.test.tsx';
+const T_PKG_DATA = 'src/lib/__tests__/ticket-packages-data.test.ts';
+const T_R1 = 'src/components/redesign/__tests__/web6-review-r1.test.tsx';
+const ROUTE = 'src/app/[sport]/[team]/page.tsx';
+const TP = 'src/lib/ticket-packages.ts';
+const TPL = 'src/components/redesign/TicketPackageList.tsx';
+const MONTHS = 'src/lib/schedule-months.ts';
+const EXPAND = 'src/components/redesign/GameExpand.tsx';
+const SCORE = 'src/components/redesign/StatScoreboard.tsx';
 
 /** [name, file, from, to, tests]. `from` must occur exactly once. */
 const CASES = [
   // ---- Calendar-year scope for NHL/NBA (the ruling's core) ----
   ['calendar-year scope for NHL/NBA: the split branch skipped', SCOPE, '  if (isSplitSeasonLeague(league)) {', '  if (false) {', [T_LEAGUE, T_SCOPE]],
-  ['NHL/NBA season counts every season it holds', SCOPE, '(p) => splitSeasonStartYear(p.date) === TITLE_SEASON_YEAR', '() => true', [T_LEAGUE, T_SCOPE]],
+  ['NHL/NBA season counts every season it holds', SCOPE, '(p) => splitSeasonStartYear(p.date) === SPLIT_SEASON_START_YEAR', '() => true', [T_LEAGUE, T_SCOPE]],
   ['the season boundary moved to January 1 (calendar year)', LABEL, 'const SPLIT_SEASON_FIRST_MONTH = 7;', 'const SPLIT_SEASON_FIRST_MONTH = 1;', [T_LEAGUE]],
   ['the season boundary moved to October', LABEL, 'const SPLIT_SEASON_FIRST_MONTH = 7;', 'const SPLIT_SEASON_FIRST_MONTH = 10;', [T_LEAGUE]],
-  ['the label printed as a calendar year', SCOPE, 'buildScope(inSeason, TITLE_SEASON_YEAR, splitSeasonLabel(TITLE_SEASON_YEAR), today)', 'buildScope(inSeason, TITLE_SEASON_YEAR, String(TITLE_SEASON_YEAR), today)', [T_LEAGUE, T_SCOPE]],
+  ['the label printed as a calendar year', SCOPE, 'buildScope(inSeason, SPLIT_SEASON_START_YEAR, splitSeasonLabel(SPLIT_SEASON_START_YEAR), today)', 'buildScope(inSeason, SPLIT_SEASON_START_YEAR, String(SPLIT_SEASON_START_YEAR), today)', [T_LEAGUE, T_SCOPE]],
   ['the claim sentence reads the year, not the label', SCOPE, 'in the ${scope.label} season`;', 'in the ${scope.year} season`;', [T_LEAGUE]],
   ['the FAQ count reads the year, not the label', HELPERS, 'have in the ${season.label} season?`', 'have in the ${season.year} season?`', [T_LEAGUE]],
   ['NBA and NHL not split leagues', LABEL, "const SPLIT_SEASON_LEAGUES = new Set(['NHL', 'NBA']);", "const SPLIT_SEASON_LEAGUES = new Set<string>([]);", [T_LEAGUE, T_RENDER]],
@@ -56,7 +65,7 @@ const CASES = [
   ['"this season" over a past season (split archive)', LABEL, '      const subline = isCurrent\n', '      const subline = true\n', [T_LEAGUE, T_RENDER]],
   ['"this season" over an earlier calendar year', LABEL, '  if (!span.spansYears && span.years[0] === TITLE_SEASON_YEAR) return', '  if (!span.spansYears) return', [T_LEAGUE, T_BYTES]],
   ['last season headed as the current season', LABEL, '      const heading = isCurrent\n', '      const heading = true\n', [T_LEAGUE, T_RENDER]],
-  ['no "LAST SEASON" heading', LABEL, '        : startYear === TITLE_SEASON_YEAR - 1\n', '        : false\n', [T_LEAGUE, T_RENDER]],
+  ['no "LAST SEASON" heading', LABEL, '        : startYear === SPLIT_SEASON_START_YEAR - 1\n', '        : false\n', [T_LEAGUE, T_RENDER]],
   ['seasons out of order in the archive', LABEL, '    .sort((a, b) => b - a)', '    .sort((a, b) => a - b)', [T_LEAGUE, T_RENDER]],
   ['the archive not grouped on NHL/NBA', LIST, '  const splitGroups = isSplitSeasonLeague(league)\n', '  const splitGroups = false\n', [T_RENDER]],
   ['"All N on record" counts both seasons', LIST, "splitGroups.find((g) => g.isCurrent)?.rows ?? []", 'past', [T_RENDER]],
@@ -65,14 +74,16 @@ const CASES = [
   ['the archive keys renamed on calendar-year leagues', LIST, "archiveBlock(pastHeading, pastCount, { resale: pastResale, ssr: pastSsr, collapsed: pastCollapsed }, '')", "archiveBlock(pastHeading, pastCount, { resale: pastResale, ssr: pastSsr, collapsed: pastCollapsed }, 'x-')", [T_BYTES]],
   // ---- Byte identity on MLB and NFL ----
   ['a numeric year turned into a string in the content sections', TCS, '      : SEASON_YEAR;\n', '      : String(SEASON_YEAR);\n', [T_BYTES]],
-  ['a numeric year turned into a string in the zero-promo heading', ZERO, 'splitSeasonLabel(SEASON_YEAR) : SEASON_YEAR;', 'splitSeasonLabel(SEASON_YEAR) : String(SEASON_YEAR);', [T_BYTES]],
+  ['a numeric year turned into a string in the zero-promo heading', ZERO, 'splitSeasonLabel(SPLIT_SEASON_START_YEAR) : SEASON_YEAR;', 'splitSeasonLabel(SPLIT_SEASON_START_YEAR) : String(SEASON_YEAR);', [T_BYTES]],
   // ---- Zero-promo copy ----
-  ['zero-promo heading back to the calendar year on NHL/NBA', ZERO, 'const seasonName: string | number = isSplitSeasonLeague(team.league) ? splitSeasonLabel(SEASON_YEAR) : SEASON_YEAR;', 'const seasonName: string | number = SEASON_YEAR;', [T_RENDER]],
-  ['zero-promo copy claims the club has not announced', ZERO, '`PromoNight has no ${teamName} ${year} promotions listed yet. Most NBA', "`The ${teamName} haven't announced any ${year} promotional events yet. Most NBA", [T_RENDER]],
+  ['zero-promo heading back to the calendar year on NHL/NBA', ZERO, 'const seasonName: string | number = isSplitSeasonLeague(team.league) ? splitSeasonLabel(SPLIT_SEASON_START_YEAR) : SEASON_YEAR;', 'const seasonName: string | number = SEASON_YEAR;', [T_RENDER]],
+  ['zero-promo copy claims the club has not announced', ZERO, '`Most NBA teams', "`The ${teamName} haven't announced any 2026-27 promotional events yet. Most NBA teams", [T_RENDER]],
+  ['zero-promo copy repeats the status line (round 1)', ZERO, '`NHL teams typically', '`PromoNight has no ${teamName} 2026-27 promotions listed yet. NHL teams typically', [T_RENDER]],
   // ---- The status line ----
   ['"haven\'t announced" for an unverified club', ANN, '  return nothingPublishedVerified(teamId, today)\n', '  return true\n', [T_RENDER]],
-  ['the verification never expires', ANN, '  return today >= on && today < addDays(on, VERIFIED_FOR_DAYS);', '  return today >= on;', [T_RENDER]],
-  ['the verification holds before its own date', ANN, '  return today >= on && today < addDays(on, VERIFIED_FOR_DAYS);', '  return today < addDays(on, VERIFIED_FOR_DAYS);', [T_RENDER]],
+  ['the verification never expires', ANN, '  return today >= on && today < addDays(on, VERIFIED_FOR_DAYS - SERVED_STALE_DAYS);', '  return today >= on;', [T_RENDER]],
+  ['the verification holds before its own date', ANN, '  return today >= on && today < addDays(on, VERIFIED_FOR_DAYS - SERVED_STALE_DAYS);', '  return today < addDays(on, VERIFIED_FOR_DAYS - SERVED_STALE_DAYS);', [T_RENDER]],
+  ['the claim rendered on its last day and served stale past it (round 1)', ANN, '  return today >= on && today < addDays(on, VERIFIED_FOR_DAYS - SERVED_STALE_DAYS);', '  return today >= on && today < addDays(on, VERIFIED_FOR_DAYS);', [T_RENDER]],
   ['a club that had published put on the verified list', ANN, "  'new-york-knicks': '2026-10-05',", "  'new-york-knicks': '2026-10-05',\n  'golden-state-warriors': '2026-10-05',", [T_RENDER]],
   ['the status line not rendered', SB, '    if (!statusLine) return list;', '    return list;', [T_RENDER]],
   ['the status line put back inside the MLB list as a slot', SB, '      <div className="mx-auto max-w-5xl">\n        <div className="font-rd text-[11px] uppercase tracking-[0.14em] text-rd-ink-faint">\n          {`${seasonName} season`}', '      <div className="mx-auto max-w-5xl">\n        {null}\n        <div className="font-rd text-[11px] uppercase tracking-[0.14em] text-rd-ink-faint">\n          {`${seasonName} season`}', [T_BYTES]],
@@ -94,6 +105,34 @@ const CASES = [
   ['NHL times blanked too', DATA, "  if (game.league === 'nba') {\n    game.gameTime = '';", "  if (game.league === 'nba' || game.league === 'nhl') {\n    game.gameTime = '';", [T_GAMES]],
   // ---- The NHL season claim ----
   ['NHL home games back to 41', AUTH, '  NHL: 42,', '  NHL: 41,', [T_RENDER]],
+  // ---- Special-ticket items (WEB6 addendum) ----
+  ['special-ticket item counted as a theme night: the partition returns everything', TP, '  return { promos: all.filter((p) => !isPackage(p)), ticketPackages };', '  return { promos: all, ticketPackages };', [T_PKG, T_PKG_DATA]],
+  ['special-ticket item counted as a theme night: the flag never read', DATA, '      if (isTicketPackageDoc(doc.data())) packages.add(promo);\n      return promo;\n    });\n    return { all:', '      return promo;\n    });\n    return { all:', [T_PKG_DATA]],
+  ['special-ticket item counted as a theme night: the route reads getTeamPromos', ROUTE, '  const [{ promos, ticketPackages }, venue, playoffConfig, coverage] = await Promise.all([\n    getTeamPromoPartition(team.id, team.league),', '  const [promos, venue, playoffConfig, coverage] = await Promise.all([\n    getTeamPromos(team.id),', [T_PKG]],
+  ['special-ticket item counted as a theme night: the page adds packages back into the list', PAGE, '          promos={promos}\n          teamSlug={team.id}', '          promos={[...promos, ...ticketPackages]}\n          teamSlug={team.id}', [T_PKG]],
+  ['special-ticket item counted as a food deal on an away row', DATA, '  return partitionTicketPackages(dedupePromos(mapped.filter(isVisiblePromo)), (p) => packages.has(p), league)\n    .promos', '  return dedupePromos(mapped.filter(isVisiblePromo))', [T_PKG_DATA]],
+  ['the raw MLB flag read as a verdict', TP, "const TICKET_PACKAGE_LEAGUES: ReadonlySet<string> = new Set(['NHL', 'NBA']);", "const TICKET_PACKAGE_LEAGUES: ReadonlySet<string> = new Set(['NHL', 'NBA', 'MLB', 'MLS', 'WNBA', 'NFL']);", [T_PKG, T_PKG_DATA]],
+  ['a false flag read as a package', TP, '  return data?.ticketPackageRequired === true;', '  return data?.ticketPackageRequired !== undefined;', [T_PKG_DATA]],
+  ['the package group not rendered', PAGE, '            <TicketPackageList packages={ticketPackages} />\n', '', [T_PKG]],
+  ['a past package offered', TP, '  return rows.filter((p) => isUpcomingPromo(p, today)).sort((a, b) => a.date.localeCompare(b.date));', '  return [...rows].sort((a, b) => a.date.localeCompare(b.date));', [T_PKG]],
+  ['a package row without the special-ticket note', TPL, '      <p className="mt-1 font-rd text-sm leading-relaxed text-rd-ink-soft">{TICKET_PACKAGE_ROW_NOTE}</p>\n', '', [T_PKG]],
+  ['the group heading count off', TPL, '            {ticketPackagesHeading(packages.length)}', '            {ticketPackagesHeading(packages.length + 1)}', [T_PKG]],
+  ['an ad anchor inside the group', TPL, '        <ul className="space-y-3">', '        <ul className="space-y-3 page-content">', [T_PKG]],
+  ['an always-mounted group slot (a null child on every page)', PAGE, '              <div className="rd-weave-item order-[40]">{promoSlot}</div>', '              <div className="rd-weave-item order-[40]">{promoSlot}{null}</div>', [T_PKG, T_R1]],
+  // ---- Review round 1 ----
+  ['NHL/NBA season tied to the MLB title year', LABEL, 'export const SPLIT_SEASON_START_YEAR = 2026;', 'export const SPLIT_SEASON_START_YEAR = TITLE_SEASON_YEAR;', [T_R1]],
+  ['the archive current season read from the title year', LABEL, '      const isCurrent = startYear === SPLIT_SEASON_START_YEAR;', '      const isCurrent = startYear === TITLE_SEASON_YEAR;', [T_R1]],
+  ['neutral site read on every league', DATA, "  if ((d.league === 'nhl' || d.league === 'nba') && d.neutralSite === true) game.neutralSite = true;", '  if (d.neutralSite === true) game.neutralSite = true;', [T_PKG_DATA]],
+  ['neutral site not read', DATA, "  if ((d.league === 'nhl' || d.league === 'nba') && d.neutralSite === true) game.neutralSite = true;", '', [T_PKG_DATA]],
+  ['neutral-site game offered arena parking', EXPAND, '            {!awayFromBuildings && (\n              <ParkingCTA', '            {!game.isInternational && (\n              <ParkingCTA', [T_R1]],
+  ['neutral-site game called a home game', EXPAND, '    : game.neutralSite === true\n    ? `Neutral site · ${game.venueName}`\n', '', [T_R1]],
+  ['NBA Games tile unqualified', PAGE, "            {...(isSplitSeasonLeague(team.league) ? { gamesLabel: 'Scheduled games' } : {})}\n", '', [T_R1]],
+  ['NHL/NBA preseason counted in the schedule', MONTHS, "(c.game.seasonType !== 'preseason' && splitSeasonStartYear(c.game.date) === SPLIT_SEASON_START_YEAR)", '(splitSeasonStartYear(c.game.date) === SPLIT_SEASON_START_YEAR)', [T_R1, T_GAMES]],
+  ['another NHL/NBA season counted in the schedule', MONTHS, "(c.game.seasonType !== 'preseason' && splitSeasonStartYear(c.game.date) === SPLIT_SEASON_START_YEAR)", "(c.game.seasonType !== 'preseason')", [T_R1]],
+  ['NHL/NBA preseason dropped before the calendar', DATA, "    .filter((g) => isRegularSeasonGame(g) || (keepPreseason && g.seasonType === 'preseason'));", '    .filter(isRegularSeasonGame);', [T_R1, T_GAMES]],
+  ['"THE FULL SEASON" with games still to play', LIST, ' && !splitSeasonStillPlaying;', ';', [T_R1]],
+  ['the meta description back to the calendar year', ROUTE, "  const closer = ` See the full ${seasonWord} schedule at PromoNight.`;", "  const closer = ` See the full ${year} schedule at PromoNight.`;", [T_R1]],
+  ['an unplaceable archive row dropped', LABEL, '    if (y === null) {\n      unplaced.push(i);\n      return;\n    }', '    if (y === null) return;', [T_R1]],
 ];
 
 const run = (files) =>
@@ -104,7 +143,7 @@ const run = (files) =>
     timeout: 120000,
   });
 
-const base = run([T_LEAGUE, T_SCOPE, T_RENDER, T_GAMES, T_BYTES, T_MONTHS]);
+const base = run([T_LEAGUE, T_SCOPE, T_RENDER, T_GAMES, T_BYTES, T_MONTHS, T_PKG, T_PKG_DATA, T_R1]);
 if (base.status !== 0) {
   console.error('the tests fail before any mutation; fix that first');
   console.error(base.stdout.slice(-3000));

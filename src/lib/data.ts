@@ -38,6 +38,8 @@ import { VENUE_RESOLUTION_MAP } from './venue-resolution-map';
 import { VENUE_LOCATIONS_STATIC } from './venue-locations';
 import { resolveMlbZone } from './mlb-venue-tz';
 import { gameZoneAbbrev } from './format-game-time';
+import { isSplitSeasonLeague } from './season-label';
+import { isTicketPackageDoc, partitionTicketPackages, type TicketPackagePartition } from './ticket-packages';
 
 function tsToIso(v: unknown): string | null {
   if (!v) return null;
@@ -213,15 +215,45 @@ export async function getTeamBySlug(slug: string): Promise<Team | null> {
  *  /[sport]/[team] share ONE read instead of two — the same dedupe the CFB
  *  template gets from getCfbSchoolPage. Per-request only: promos stay uncached
  *  across renders so a scan write plus /api/revalidate surfaces immediately. */
+// One read of a team's promos, shared by getTeamPromos and
+// getTeamPromoPartition. `packages` holds the mapped objects whose doc carries
+// ticketPackageRequired true, by identity, so the field itself never has to
+// ride on a Promo (src/lib/ticket-packages.ts).
+const readTeamPromos = cache(
+  async (teamId: string): Promise<{ all: Promo[]; packages: WeakSet<Promo> }> => {
+    const snapshot = await db
+      .collection('teams')
+      .doc(teamId)
+      .collection('promos')
+      .orderBy('date', 'asc')
+      .get();
+    const packages = new WeakSet<Promo>();
+    const mapped = snapshot.docs.map((doc) => {
+      const promo = mapPromoDoc(doc);
+      if (isTicketPackageDoc(doc.data())) packages.add(promo);
+      return promo;
+    });
+    return { all: dedupePromos(mapped.filter(isVisiblePromo)), packages };
+  },
+);
+
 export const getTeamPromos = cache(async (teamId: string): Promise<Promo[]> => {
-  const snapshot = await db
-    .collection('teams')
-    .doc(teamId)
-    .collection('promos')
-    .orderBy('date', 'asc')
-    .get();
-  return dedupePromos(snapshot.docs.map(mapPromoDoc).filter(isVisiblePromo));
+  return (await readTeamPromos(teamId)).all;
 });
+
+/**
+ * A team's visible promos split into what counts and the special-ticket rows
+ * (src/lib/ticket-packages.ts). NHL and NBA only; on every other league, and on
+ * an NHL or NBA team with no flagged row, `promos` is the very array
+ * getTeamPromos returns and `ticketPackages` is empty.
+ */
+export async function getTeamPromoPartition(
+  teamId: string,
+  league: string,
+): Promise<TicketPackagePartition<Promo>> {
+  const { all, packages } = await readTeamPromos(teamId);
+  return partitionTicketPackages(all, (p) => packages.has(p), league);
+}
 
 export async function getPromosForDate(date: string): Promise<PromoWithTeam[]> {
   const teams = await getAllTeams();
@@ -842,6 +874,12 @@ function mapGameDoc(doc: FirebaseFirestore.DocumentSnapshot): Game {
   if (typeof d.week === 'number') game.week = d.week;
   if (typeof d.timeTbd === 'boolean') game.timeTbd = d.timeTbd;
   if (typeof d.isInternational === 'boolean') game.isInternational = d.isInternational;
+  // NHL and NBA neutral-site games (Paris, Manchester, Mexico City, Austin, a
+  // stadium game). Without it the expand said "Home game" for the Spurs in
+  // Paris and offered San Antonio parking for it (review round 1). Read only
+  // on those two leagues and only when true, so no other league's game object,
+  // and no other game's RSC payload, gains a key.
+  if ((d.league === 'nhl' || d.league === 'nba') && d.neutralSite === true) game.neutralSite = true;
   if (d.internationalLocation === null || typeof d.internationalLocation === 'string') {
     game.internationalLocation = d.internationalLocation;
   }
@@ -880,7 +918,18 @@ export const getGamesForTeam = cache(async (teamSlug: string, league: string): P
   // an absent field would drop all 2455 of them. Inert until preseason data is
   // ingested, which is the point: it can land ahead of that ingest, so the
   // Games tile and the team-page schedule never see a preseason row.
-  const games = [...homeSnap.docs, ...awaySnap.docs].map(mapGameDoc).filter(isRegularSeasonGame);
+  //
+  // EXCEPT NHL AND NBA, WHICH KEEP THEIR PRESEASON (review round 1, WEB6). Clubs
+  // in both leagues run real promotions at preseason home games: on 2026-10-05
+  // six upcoming rows sat on preseason dates (Lakers Pride Night 10-08,
+  // Grizzlies and Magic). The calendar draws a cell for a date only when a game
+  // is on it, so dropping the game hid the promo there. The schedule list and
+  // the Games tile still count the regular season only: regularSeasonContexts
+  // (src/lib/schedule-months.ts) drops preseason before either sees a game.
+  const keepPreseason = isSplitSeasonLeague(league);
+  const games = [...homeSnap.docs, ...awaySnap.docs]
+    .map(mapGameDoc)
+    .filter((g) => isRegularSeasonGame(g) || (keepPreseason && g.seasonType === 'preseason'));
   // Stable sort by date then gameTime, doubleheader game 2 after game 1.
   games.sort((a, b) => {
     if (a.date !== b.date) return a.date.localeCompare(b.date);
@@ -952,7 +1001,7 @@ function mergeDateRuns(dates: Iterable<string>): DateRun[] {
  *    because the dedupe key contains the date — a promo can only ever collide
  *    with another promo on its own date.
  */
-async function getTeamPromosOnDates(teamId: string, dates: Set<string>): Promise<Promo[]> {
+async function getTeamPromosOnDates(teamId: string, dates: Set<string>, league: string): Promise<Promo[]> {
   if (dates.size === 0) return [];
   const runs = mergeDateRuns(dates);
   const perRun = await Promise.all(
@@ -968,9 +1017,18 @@ async function getTeamPromosOnDates(teamId: string, dates: Set<string>): Promise
       return snapshot.docs;
     }),
   );
-  return dedupePromos(perRun.flat().map(mapPromoDoc).filter(isVisiblePromo)).filter((p) =>
-    dates.has(p.date),
-  );
+  // An opponent's special-ticket rows stay off this page's game rows on the
+  // leagues where the flag is a verdict, exactly as they stay off the
+  // opponent's own counts. Filtered after the dedupe so the surviving document
+  // of a duplicate pair is the one getTeamPromos keeps.
+  const packages = new WeakSet<Promo>();
+  const mapped = perRun.flat().map((doc) => {
+    const promo = mapPromoDoc(doc);
+    if (isTicketPackageDoc(doc.data())) packages.add(promo);
+    return promo;
+  });
+  return partitionTicketPackages(dedupePromos(mapped.filter(isVisiblePromo)), (p) => packages.has(p), league)
+    .promos.filter((p) => dates.has(p.date));
 }
 
 // Enriches a list of games with opponent team + venue + the promos occurring
@@ -1007,6 +1065,10 @@ export async function enrichGamesForTeam(
     awayDatesByOpp.get(g.homeTeamSlug)?.add(g.date);
   }
 
+  // The games list is one league's spine ('nhl', 'nba', 'mlb', 'nfl'), and an
+  // opponent always plays in it.
+  const gamesLeague = games[0]?.league ?? '';
+
   const teamById = new Map<string, Team>();
   const venueById = new Map<string, Venue | null>();
   const promosByOppDate = new Map<string, Map<string, Promo[]>>();
@@ -1016,7 +1078,7 @@ export async function enrichGamesForTeam(
       const [team, venue, promos] = await Promise.all([
         getTeamBySlug(slug),
         getVenueForTeam(slug),
-        getTeamPromosOnDates(slug, awayDatesByOpp.get(slug) ?? new Set()),
+        getTeamPromosOnDates(slug, awayDatesByOpp.get(slug) ?? new Set(), gamesLeague),
       ]);
       if (team) teamById.set(slug, team);
       venueById.set(slug, venue);

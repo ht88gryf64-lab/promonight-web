@@ -146,7 +146,8 @@ test('getGamesForTeam, away promos through getTeamPromosOnDates', async () => {
     // with isVisiblePromo (src/lib/data.ts, getTeamPromosOnDates).
     const src = (await import('node:fs')).readFileSync(new URL('../data.ts', import.meta.url), 'utf-8');
     const body = src.slice(src.indexOf('async function getTeamPromosOnDates'), src.indexOf('\n}\n', src.indexOf('async function getTeamPromosOnDates')));
-    assert.ok(body.includes('.map(mapPromoDoc).filter(isVisiblePromo)'), 'getTeamPromosOnDates filters through isVisiblePromo');
+    assert.ok(body.includes('mapPromoDoc(doc)'), 'getTeamPromosOnDates maps with mapPromoDoc');
+    assert.ok(body.includes('mapped.filter(isVisiblePromo)'), 'getTeamPromosOnDates filters through isVisiblePromo');
   }
 });
 

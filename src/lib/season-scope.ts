@@ -1,4 +1,4 @@
-import { isSplitSeasonLeague, seasonSpan, splitSeasonLabel, splitSeasonStartYear } from './season-label';
+import { isSplitSeasonLeague, seasonSpan, splitSeasonLabel, splitSeasonStartYear, SPLIT_SEASON_START_YEAR } from './season-label';
 import { countPromosByType, isPurchaseGated, isUpcomingPromo, todayYmd } from './promo-helpers';
 import { TITLE_SEASON_YEAR } from './title-treatment';
 import type { Promo, PromoType } from './types';
@@ -225,9 +225,9 @@ export function resolveSeasonScope(
   // sees these leagues, so a one-year population can never be read as their
   // season.
   if (isSplitSeasonLeague(league)) {
-    const inSeason = dated.filter((p) => splitSeasonStartYear(p.date) === TITLE_SEASON_YEAR);
+    const inSeason = dated.filter((p) => splitSeasonStartYear(p.date) === SPLIT_SEASON_START_YEAR);
     if (inSeason.length === 0) return null;
-    return buildScope(inSeason, TITLE_SEASON_YEAR, splitSeasonLabel(TITLE_SEASON_YEAR), today);
+    return buildScope(inSeason, SPLIT_SEASON_START_YEAR, splitSeasonLabel(SPLIT_SEASON_START_YEAR), today);
   }
 
   const span = seasonSpan(dated.map((p) => p.date));

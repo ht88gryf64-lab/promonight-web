@@ -24,15 +24,20 @@
 // page falls back to the safe sentence on its own, at render. Re-verifying is
 // a dated edit to this table, with the evidence saved beside the previous
 // pass (audit-archive/web6-announce/ for this one).
-import { isSplitSeasonLeague, splitSeasonLabel } from './season-label';
-import { TITLE_SEASON_YEAR } from './title-treatment';
+import { isSplitSeasonLeague, splitSeasonLabel, SPLIT_SEASON_START_YEAR } from './season-label';
 
 /** Days a "haven't announced" verification stays good. */
 export const VERIFIED_FOR_DAYS = 14;
 
+/** The team page's ISR window, in days (revalidate = 86400 in the route). A
+ *  page rendered on the last good day can be served for one more day, so the
+ *  render-time window stops one day early and the served claim never outlives
+ *  VERIFIED_FOR_DAYS (review round 1). */
+const SERVED_STALE_DAYS = 1;
+
 /**
  * Clubs verified on the given date to have published NOTHING for the season
- * TITLE_SEASON_YEAR names. Keyed on the team doc id.
+ * SPLIT_SEASON_START_YEAR names. Keyed on the team doc id.
  *
  * Evidence, 2026-10-05 (curl and one Firecrawl scrape; files in
  * ~/promonight/audit-archive/web6-announce/ and season-g0/):
@@ -68,14 +73,16 @@ function addDays(ymd: string, n: number): string {
 }
 
 /**
- * Whether the "haven't announced" claim may be made for this club today:
- * verified, and today within VERIFIED_FOR_DAYS of the verification (the last
- * good day is the date plus VERIFIED_FOR_DAYS - 1).
+ * Whether the "haven't announced" claim may be RENDERED for this club today:
+ * verified, and today early enough that the page, served for up to
+ * SERVED_STALE_DAYS after this render, still sits within VERIFIED_FOR_DAYS of
+ * the verification. The last render day is the date plus VERIFIED_FOR_DAYS -
+ * SERVED_STALE_DAYS - 1; the last day a visitor can see it is one day later.
  */
 export function nothingPublishedVerified(teamId: string, today: string): boolean {
   const on = NOTHING_PUBLISHED[teamId];
   if (!on || !/^\d{4}-\d{2}-\d{2}$/.test(today)) return false;
-  return today >= on && today < addDays(on, VERIFIED_FOR_DAYS);
+  return today >= on && today < addDays(on, VERIFIED_FOR_DAYS - SERVED_STALE_DAYS);
 }
 
 /**
@@ -83,7 +90,7 @@ export function nothingPublishedVerified(teamId: string, today: string): boolean
  * prints it ("New York Knicks", "Utah Mammoth").
  */
 export function announcementLine(teamId: string, displayName: string, today: string): string {
-  const season = splitSeasonLabel(TITLE_SEASON_YEAR);
+  const season = splitSeasonLabel(SPLIT_SEASON_START_YEAR);
   return nothingPublishedVerified(teamId, today)
     ? `The ${displayName} haven't announced ${season} promotions yet.`
     : `PromoNight hasn't recorded any ${displayName} ${season} promotions yet.`;
