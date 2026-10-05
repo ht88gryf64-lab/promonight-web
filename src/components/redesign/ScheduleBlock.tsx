@@ -166,7 +166,7 @@ export function ScheduleBlock({ contexts, team, teamName, today, statusLine }: S
   // the same comparison as MLB decides "remaining" by the date alone.
   if (isSplitSeasonLeague(team.league) && !isWeekGrid) {
     const splitRemaining = today !== undefined && regular.some((c) => c.game.date >= today && c.game.status === 'scheduled');
-    return (
+    const list = (
       <DateListSchedule
         rows={rows as GameRow[]}
         teamName={teamName}
@@ -174,8 +174,25 @@ export function ScheduleBlock({ contexts, team, teamName, today, statusLine }: S
         renderRow={(row) => renderGameRow(row, team, teamName, { hideVenue: true })}
         seasonName={currentSeasonLabel(team.league)}
         scheduledOnly
-        statusLine={statusLine ?? null}
+        tightTop={!!statusLine}
       />
+    );
+    // The status line is a SIBLING above the list, never a slot inside it: a
+    // conditional child inside DateListSchedule serializes as a null in the
+    // RSC payload of every MLB page even when it renders nothing (found by
+    // the preview payload diff, 2026-10-05).
+    if (!statusLine) return list;
+    return (
+      <>
+        <div className="px-6 pt-12">
+          <div className="mx-auto max-w-5xl">
+            <p className="rounded-2xl border border-rd-line bg-rd-card px-4 py-3 font-rd text-sm leading-relaxed text-rd-ink sm:px-5">
+              {statusLine}
+            </p>
+          </div>
+        </div>
+        {list}
+      </>
     );
   }
 
@@ -355,7 +372,7 @@ function DateListSchedule({
   renderRow,
   seasonName = TITLE_SEASON_YEAR,
   scheduledOnly = false,
-  statusLine = null,
+  tightTop = false,
 }: {
   rows: GameRow[];
   teamName: string;
@@ -366,7 +383,9 @@ function DateListSchedule({
   seasonName?: string | number;
   /** "Every scheduled game" instead of "Every game" (NHL and NBA). */
   scheduledOnly?: boolean;
-  statusLine?: string | null;
+  /** A status line sits directly above: halve the top padding. The class
+   *  string is unchanged when false, which is every MLB page. */
+  tightTop?: boolean;
 }) {
   const every = scheduledOnly ? 'Every scheduled game' : 'Every game';
   const months = groupByMonth(rows, (r) => r.ctx.game.date);
@@ -391,13 +410,8 @@ function DateListSchedule({
   );
 
   return (
-    <section className="py-12 px-6">
+    <section className={tightTop ? 'pb-12 pt-6 px-6' : 'py-12 px-6'}>
       <div className="mx-auto max-w-5xl">
-        {statusLine ? (
-          <p className="mb-6 rounded-2xl border border-rd-line bg-rd-card px-4 py-3 font-rd text-sm leading-relaxed text-rd-ink sm:px-5">
-            {statusLine}
-          </p>
-        ) : null}
         <div className="font-rd text-[11px] uppercase tracking-[0.14em] text-rd-ink-faint">
           {`${seasonName} season`}
         </div>

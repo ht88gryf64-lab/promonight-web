@@ -54,8 +54,30 @@ const SHAPES: Record<string, any[]> = {
 const venue = { id: 'v', name: 'Test Park', address: '1 Main St, Atlanta, GA 30315', team: 'x' } as any;
 const coverage = { teamCount: 169, leagueList: 'MLB, NBA, NFL, NHL, MLS, and WNBA', appLeagueList: 'MLB, NBA, NHL, and MLS' } as any;
 
+// Serializes an element tree the way the RSC payload sees it: server
+// components are EXPANDED (called with their props), because their output,
+// not their props, is what reaches the payload. A component that cannot be
+// called outside a render (it uses hooks: a client component) is kept as an
+// element with its props, which is what the payload carries for it. Without
+// the expansion a null child inside a nested server component (the shape of
+// the 2026-10-05 review finding on the MLB month list) is invisible here.
+function expand(node: any, depth = 0): any {
+  if (depth > 60 || node === null || typeof node !== 'object') return node;
+  if (Array.isArray(node)) return node.map((n) => expand(n, depth + 1));
+  if (node.$$typeof && typeof node.type === 'function') {
+    try {
+      return { expanded: node.type.displayName || node.type.name, key: node.key, out: expand(node.type(node.props), depth + 1) };
+    } catch {
+      return { client: node.type.displayName || node.type.name, key: node.key, props: expand(node.props, depth + 1) };
+    }
+  }
+  if (node.$$typeof) return { type: typeof node.type === 'string' ? node.type : String(node.type), key: node.key, props: expand(node.props, depth + 1) };
+  const o: any = {};
+  for (const [k, v] of Object.entries(node)) o[k] = expand(v, depth + 1);
+  return o;
+}
 function ser(x: any): any {
-  return JSON.stringify(x, (k, v) => (typeof v === 'function' ? `fn:${v.displayName || v.name}` : typeof v === 'symbol' ? String(v) : k === '_owner' || k === '_store' || k === '_debugInfo' || k === '_debugStack' || k === '_debugTask' ? undefined : v));
+  return JSON.stringify(expand(x), (k, v) => (typeof v === 'function' ? `fn:${v.displayName || v.name}` : typeof v === 'symbol' ? String(v) : v));
 }
 const out: Record<string, { html: string; tree: string }> = {};
 const add = (key: string, el: any, fn?: () => any) => { out[key] = { html: renderToStaticMarkup(el), tree: fn ? ser(fn()) : '' }; };

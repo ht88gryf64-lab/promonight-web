@@ -66,7 +66,6 @@ const CASES = [
   // ---- Byte identity on MLB and NFL ----
   ['a numeric year turned into a string in the content sections', TCS, '      : SEASON_YEAR;\n', '      : String(SEASON_YEAR);\n', [T_BYTES]],
   ['a numeric year turned into a string in the zero-promo heading', ZERO, 'splitSeasonLabel(SEASON_YEAR) : SEASON_YEAR;', 'splitSeasonLabel(SEASON_YEAR) : String(SEASON_YEAR);', [T_BYTES]],
-  ['the season field renamed on the section scope', TCS, '      year: isSplitSeasonLeague(team.league) ? season.label : season.year,', '      year: season.label,', [T_BYTES]],
   // ---- Zero-promo copy ----
   ['zero-promo heading back to the calendar year on NHL/NBA', ZERO, 'const seasonName: string | number = isSplitSeasonLeague(team.league) ? splitSeasonLabel(SEASON_YEAR) : SEASON_YEAR;', 'const seasonName: string | number = SEASON_YEAR;', [T_RENDER]],
   ['zero-promo copy claims the club has not announced', ZERO, '`PromoNight has no ${teamName} ${year} promotions listed yet. Most NBA', "`The ${teamName} haven't announced any ${year} promotional events yet. Most NBA", [T_RENDER]],
@@ -75,7 +74,8 @@ const CASES = [
   ['the verification never expires', ANN, '  return today >= on && today < addDays(on, VERIFIED_FOR_DAYS);', '  return today >= on;', [T_RENDER]],
   ['the verification holds before its own date', ANN, '  return today >= on && today < addDays(on, VERIFIED_FOR_DAYS);', '  return today < addDays(on, VERIFIED_FOR_DAYS);', [T_RENDER]],
   ['a club that had published put on the verified list', ANN, "  'new-york-knicks': '2026-10-05',", "  'new-york-knicks': '2026-10-05',\n  'golden-state-warriors': '2026-10-05',", [T_RENDER]],
-  ['the status line not rendered', SB, '        {statusLine ? (', '        {false ? (', [T_RENDER]],
+  ['the status line not rendered', SB, '    if (!statusLine) return list;', '    return list;', [T_RENDER]],
+  ['the status line put back inside the MLB list as a slot', SB, '      <div className="mx-auto max-w-5xl">\n        <div className="font-rd text-[11px] uppercase tracking-[0.14em] text-rd-ink-faint">\n          {`${seasonName} season`}', '      <div className="mx-auto max-w-5xl">\n        {null}\n        <div className="font-rd text-[11px] uppercase tracking-[0.14em] text-rd-ink-faint">\n          {`${seasonName} season`}', [T_BYTES]],
   ['the status line on a page whose season resolved', ANN, '  if (!opts.showSchedule || opts.seasonResolved || !isSplitSeasonLeague(opts.league)) return null;', '  if (!opts.showSchedule || !isSplitSeasonLeague(opts.league)) return null;', [T_RENDER]],
   ['the status line on MLB and NFL', ANN, '  if (!opts.showSchedule || opts.seasonResolved || !isSplitSeasonLeague(opts.league)) return null;', '  if (!opts.showSchedule || opts.seasonResolved) return null;', [T_RENDER]],
   ['the page passes the wrong season flag', PAGE, '    seasonResolved: !!seasonScope,', '    seasonResolved: false,', [T_RENDER, T_MONTHS]],
