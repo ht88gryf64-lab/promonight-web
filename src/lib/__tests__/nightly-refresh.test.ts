@@ -171,6 +171,26 @@ test('verify: re-asks only the paths still regenerating, in rounds, and fails wh
   assert.match(r.notFresh.find((n) => n.path === '/e')!.reason, /still regenerating/);
 });
 
+test('verify: a page answering non-200 twice fails with its status; no sleep starts past the deadline', async () => {
+  const { verifyFresh } = await import('../nightly-refresh');
+  const warm = { ok: 2, failed: [], cache: {}, skipped: 0, states: { '/broken': 'MISS', '/slow': 'STALE' } };
+  let clock = 1_000_000;
+  const slept: number[] = [];
+  const r = await verifyFresh('https://x.test', warm, ['/broken', '/slow'], {
+    deadline: clock + 50_000,
+    roundDelayMs: 20_000,
+    now: () => clock,
+    sleep: async (ms) => { slept.push(clock); clock += ms; },
+    fetcher: async (u) => (u.endsWith('/broken') ? resp(500) : resp(200, { 'x-vercel-cache': 'STALE' })),
+  });
+  const broken = r.notFresh.find((n) => n.path === '/broken')!;
+  assert.match(broken.reason, /500 twice/, 'its status, not "still regenerating"');
+  assert.equal(r.fresh, 0);
+  assert.ok(slept.every((t) => t + 20_000 < 1_050_000), 'never sleeps across the deadline');
+  assert.ok(clock <= 1_050_000, 'stops by the deadline');
+  assert.match(r.notFresh.find((n) => n.path === '/slow')!.reason, /still regenerating/);
+});
+
 test('budgets: each pass stops in time, and a request never outlives its pass', async () => {
   const { MAX_DURATION_S, WARM_BUDGET_MS, VERIFY_BUDGET_MS, FETCH_TIMEOUT_MS, warmPaths } = await import('../nightly-refresh');
   const route = readFileSync(new URL('../../app/api/cron/nightly-refresh/route.ts', import.meta.url), 'utf8');
@@ -178,7 +198,13 @@ test('budgets: each pass stops in time, and a request never outlives its pass', 
   assert.match(route, /verifyFresh\(origin, warmed, paths, \{ deadline: started \+ VERIFY_BUDGET_MS/, 'verify runs on its own budget');
   assert.ok(MAX_DURATION_S <= 800, 'Vercel Pro with Fluid compute');
   assert.ok(WARM_BUDGET_MS < VERIFY_BUDGET_MS);
-  assert.ok(VERIFY_BUDGET_MS + 5_000 < MAX_DURATION_S * 1000, 'room to answer after the last request is cut');
+  assert.ok(VERIFY_BUDGET_MS + 30_000 < MAX_DURATION_S * 1000, 'room to answer after the last request is cut');
+  const { SETTLE_MS, VERIFY_DELAY_MS, VERIFY_ROUND_MS } = await import('../nightly-refresh');
+  assert.ok(SETTLE_MS >= 2_000 && VERIFY_DELAY_MS >= 5_000 && VERIFY_ROUND_MS >= 5_000, 'production waits are real waits');
+  assert.match(route, /process\.env\.NIGHTLY_REFRESH_SETTLE_MS \?\? DEFAULT_SETTLE_MS/);
+  assert.match(route, /process\.env\.NIGHTLY_REFRESH_VERIFY_MS \?\? DEFAULT_VERIFY_DELAY_MS/);
+  assert.match(route, /process\.env\.NIGHTLY_REFRESH_ROUND_MS \?\? DEFAULT_VERIFY_ROUND_MS/);
+  assert.match(route, /warmPaths\(origin, paths, \{ deadline: started \+ WARM_BUDGET_MS \}\)/, 'the warm pass has its deadline');
   assert.ok(FETCH_TIMEOUT_MS <= 60_000);
   // A request started near its pass's deadline is cut at the deadline, not at
   // the full per-request timeout.
@@ -214,7 +240,8 @@ test('the origin: always www in production (cron calls the login-protected deplo
 
 test('the route: auth, the window, then revalidate through POST /api/revalidate on www, and only then warm and verify', async () => {
   const log: { method: string; url: string; paths?: string[] }[] = [];
-  let mode: 'ok' | 'login' | 'slow-first' | 'stale' | 'fanout-down' | 'warm-hit' = 'ok';
+  let mode: 'ok' | 'login' | 'slow-first' | 'stale' | 'fanout-down' | 'warm-hit' | 'race' = 'ok';
+  let racePosted = false;
   let getCount = 0;
   const seenOnce = new Set<string>();
   const warmedOnce = new Set<string>();
@@ -233,6 +260,7 @@ test('the route: auth, the window, then revalidate through POST /api/revalidate 
       assert.equal((init!.headers as Record<string, string>)['x-revalidate-secret'], 'r', 'the fan-out secret');
       const paths = JSON.parse(String(init!.body)).paths as string[];
       log.push({ method, url: String(u), paths });
+      if (mode === 'race' && paths.length === 1 && paths[0] === '/nhl') racePosted = true;
       return new Response(JSON.stringify({ ok: true, revalidated: paths.length }), { status: 200 });
     }
     log.push({ method, url: String(u) });
@@ -245,6 +273,9 @@ test('the route: auth, the window, then revalidate through POST /api/revalidate 
     getCount++;
     if (mode === 'stale' && path === '/nhl') return resp(200, { 'x-vercel-cache': 'STALE' });
     if (mode === 'warm-hit' && path === '/nhl') return resp(200, { 'x-vercel-cache': 'HIT' });
+    // Someone else regenerated /nhl before the warm-up: HIT until the job sends
+    // it through the fan-out again, then a fresh render.
+    if (mode === 'race' && path === '/nhl') return resp(200, { 'x-vercel-cache': racePosted ? 'REVALIDATED' : 'HIT' });
     // First request of a path renders it (MISS); later ones are cache HITs.
     return resp(200, { 'x-vercel-cache': warmedOnce.has(path) ? 'HIT' : 'MISS' });
   }) as typeof fetch;
@@ -322,6 +353,7 @@ test('the route: auth, the window, then revalidate through POST /api/revalidate 
     assert.equal(old.status, 500);
     assert.equal(oldBody.fresh, expected - 1);
     assert.match(oldBody.notFresh[0].reason, /did not take/);
+    assert.equal(oldBody.retried, 1, 'asked once more through the fan-out before failing');
 
     // A venue slug the fan-out would reject: listed, and red.
     mode = 'ok';
@@ -332,6 +364,16 @@ test('the route: auth, the window, then revalidate through POST /api/revalidate 
     assert.equal(withBad.status, 500);
     assert.deepEqual(withBadBody.dropped, ['/venues/Bad_Slug']);
     routeHubs = ['ppg-paints-arena', 'chase-center', 'target-field'];
+
+    // A visitor regenerated /nhl first: the job re-sends it once and stays green.
+    mode = 'race';
+    warmedOnce.clear();
+    const race = await call('Bearer s');
+    const raceBody = await race.json();
+    assert.equal(race.status, 200);
+    assert.equal(raceBody.retried, 1);
+    assert.equal(raceBody.fresh, expected);
+    assert.ok(racePosted, 'the ambiguous path went through the fan-out a second time');
 
     // A page that never finishes regenerating: re-asked in rounds, then red.
     mode = 'stale';
@@ -361,6 +403,7 @@ test('the fan-out batches at the endpoint cap and reports a failed or short batc
   const sizes: number[] = [];
   const r = await revalidateViaFanOut('https://x.test', paths, 'r', async (_u, init) => {
     assert.equal(init.redirect, 'manual');
+    assert.ok(init.signal instanceof AbortSignal, 'every fan-out request has a timeout');
     const batch = JSON.parse(String(init.body)).paths as string[];
     sizes.push(batch.length);
     if (batch[0] === '/p100') return resp(500);

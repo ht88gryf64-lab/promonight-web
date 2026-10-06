@@ -23,9 +23,13 @@ import {
   isNightlyRefreshWindow,
   nightlyRefreshPaths,
   refreshOrigin,
+  retryUntaken,
   revalidateViaFanOut,
+  SETTLE_MS as DEFAULT_SETTLE_MS,
   siteHour,
   VERIFY_BUDGET_MS,
+  VERIFY_DELAY_MS as DEFAULT_VERIFY_DELAY_MS,
+  VERIFY_ROUND_MS as DEFAULT_VERIFY_ROUND_MS,
   verifyFresh,
   WARM_BUDGET_MS,
   warmPaths,
@@ -36,12 +40,11 @@ export const dynamic = 'force-dynamic';
 // Must equal MAX_DURATION_S in src/lib/nightly-refresh.ts (a test pins both).
 export const maxDuration = 800;
 
-// Waits around the warm-up (see src/lib/nightly-refresh.ts, HOW). Overridable
-// only so tests do not sleep.
-const SETTLE_MS = Number(process.env.NIGHTLY_REFRESH_SETTLE_MS ?? 5_000);
-const VERIFY_DELAY_MS = Number(process.env.NIGHTLY_REFRESH_VERIFY_MS ?? 15_000);
-// Between verify rounds for pages still regenerating.
-const VERIFY_ROUND_MS = Number(process.env.NIGHTLY_REFRESH_ROUND_MS ?? 20_000);
+// Waits around the warm-up (src/lib/nightly-refresh.ts, HOW). The env
+// overrides exist only so tests do not sleep; production uses the defaults.
+const SETTLE_MS = Number(process.env.NIGHTLY_REFRESH_SETTLE_MS ?? DEFAULT_SETTLE_MS);
+const VERIFY_DELAY_MS = Number(process.env.NIGHTLY_REFRESH_VERIFY_MS ?? DEFAULT_VERIFY_DELAY_MS);
+const VERIFY_ROUND_MS = Number(process.env.NIGHTLY_REFRESH_ROUND_MS ?? DEFAULT_VERIFY_ROUND_MS);
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export async function GET(request: Request) {
@@ -70,6 +73,9 @@ export async function GET(request: Request) {
   const revalidated = await revalidateViaFanOut(origin, paths, fanOutSecret);
   await sleep(SETTLE_MS);
   const warmed = await warmPaths(origin, paths, { deadline: started + WARM_BUDGET_MS });
+  // A warm HIT or PRERENDER is ambiguous (see warmTookRevalidation): send those
+  // paths through the fan-out once more and ask again.
+  const retried = await retryUntaken(origin, warmed, fanOutSecret, { deadline: started + WARM_BUDGET_MS, settleMs: SETTLE_MS });
   const warmMs = Date.now() - started;
   await sleep(VERIFY_DELAY_MS);
   const verified = await verifyFresh(origin, warmed, paths, { deadline: started + VERIFY_BUDGET_MS, roundDelayMs: VERIFY_ROUND_MS });
@@ -85,7 +91,7 @@ export async function GET(request: Request) {
     verified.notFresh.length === 0 &&
     verified.fresh === paths.length;
   console.log(
-    `[cron:nightly-refresh] ok=${ok} paths=${paths.length} revalidated=${revalidated.revalidated} warmed=${warmed.ok} fresh=${verified.fresh} notFresh=${verified.notFresh.length} rounds=${verified.rounds} warmFailed=${warmed.failed.length} cache=${JSON.stringify(warmed.cache)} warmMs=${warmMs} ms=${ms}`,
+    `[cron:nightly-refresh] ok=${ok} paths=${paths.length} revalidated=${revalidated.revalidated} warmed=${warmed.ok} fresh=${verified.fresh} notFresh=${verified.notFresh.length} rounds=${verified.rounds} retried=${retried.retried} warmFailed=${warmed.failed.length} cache=${JSON.stringify(warmed.cache)} warmMs=${warmMs} ms=${ms}`,
   );
   return NextResponse.json(
     {
@@ -99,6 +105,8 @@ export async function GET(request: Request) {
       warmCache: warmed.cache,
       warmFailed: warmed.failed.slice(0, 20),
       warmSkipped: warmed.skipped,
+      retried: retried.retried,
+      retryFailedBatches: retried.failedBatches,
       fresh: verified.fresh,
       notFresh: verified.notFresh.slice(0, 20),
       verifyRounds: verified.rounds,

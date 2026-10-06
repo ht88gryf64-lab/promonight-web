@@ -133,6 +133,11 @@ export const WARM_BUDGET_MS = 480_000;
 export const VERIFY_BUDGET_MS = 720_000;
 /** Verify rounds at most (with 20s between rounds this is about 10 minutes). */
 export const MAX_VERIFY_ROUNDS = 30;
+/** Waits: after the last fan-out batch (its invalidations finish in waitUntil),
+ *  before the first verify round, and between verify rounds. */
+export const SETTLE_MS = 5_000;
+export const VERIFY_DELAY_MS = 15_000;
+export const VERIFY_ROUND_MS = 20_000;
 
 type Fetcher = (url: string, init: RequestInit) => Promise<Response>;
 const defaultFetch: Fetcher = (url, init) => fetch(url, init);
@@ -180,8 +185,12 @@ export async function revalidateViaFanOut(
 /** What a warm response says about this run's revalidation. MISS and
  *  REVALIDATED: the new copy was rendered for this request. STALE: the old copy
  *  was served and the new one is being regenerated in the background (Vercel's
- *  on-demand ISR). Any of those means the invalidation took. PRERENDER or HIT
- *  means the old copy was still valid: the revalidation did not apply. Age is
+ *  on-demand ISR). Any of those means the invalidation took, and the copy that
+ *  results is rendered after midnight. PRERENDER or HIT is ambiguous on a live
+ *  site: either the revalidation did not apply, or a visitor, crawler or link
+ *  prefetch regenerated the page between the fan-out and this request. The
+ *  route therefore sends those paths through the fan-out once more and asks
+ *  again (retryUntaken); only a second HIT or PRERENDER fails the path. Age is
  *  not used: on Vercel it is how long a copy has sat in the CDN, not how old
  *  the render is (review round 3). */
 export function warmTookRevalidation(state: string): boolean {
@@ -191,7 +200,11 @@ export function warmTookRevalidation(state: string): boolean {
 /** A verify response for a path whose warm-up took (or timed out after
  *  reaching the server, so its render had started): rendered now or served from
  *  cache after that render is the new copy; STALE means still regenerating, so
- *  ask again; anything else (PRERENDER, NONE) is a failure. */
+ *  ask again; anything else (PRERENDER, NONE) is a failure. CAVEAT, local only:
+ *  under `next start`, a background regeneration that throws writes the OLD
+ *  entry back for up to 30s, so a later HIT can be the old copy; on Vercel the
+ *  path answers STALE again instead. A local run's "fresh" count is therefore
+ *  checked against the served rows (the 12:40 AM check), not trusted alone. */
 export function verifyVerdict(state: string): 'fresh' | 'pending' | 'failed' {
   if (state === 'MISS' || state === 'REVALIDATED' || state === 'HIT') return 'fresh';
   if (state === 'STALE') return 'pending';
@@ -267,10 +280,36 @@ export interface VerifyResult {
   rounds: number;
 }
 
+export interface RetryResult {
+  retried: number;
+  failedBatches: FanOutResult['failedBatches'];
+}
+
+/** Sends every path whose warm-up answered PRERENDER, HIT or NONE through the
+ *  fan-out once more and warms it again, writing the new answers over the old
+ *  ones in `warm.states` (see warmTookRevalidation). */
+export async function retryUntaken(
+  origin: string,
+  warm: WarmResult,
+  secret: string,
+  opts: { deadline: number; settleMs: number; fetcher?: Fetcher; sleep?: (ms: number) => Promise<void> },
+): Promise<RetryResult> {
+  const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
+  const list = Object.keys(warm.states).filter((p) => warm.states[p] !== 'FAILED' && !warmTookRevalidation(warm.states[p]));
+  if (list.length === 0) return { retried: 0, failedBatches: [] };
+  const fanned = await revalidateViaFanOut(origin, list, secret, opts.fetcher);
+  await sleep(opts.settleMs);
+  const again = await warmPaths(origin, list, { fetcher: opts.fetcher, deadline: opts.deadline });
+  for (const p of list) if (again.states[p] !== undefined) warm.states[p] = again.states[p];
+  return { retried: list.length, failedBatches: fanned.failedBatches };
+}
+
 /** Re-requests, in rounds, every path whose warm-up took until each comes back
- *  fresh or the deadline passes. A path whose warm-up showed a PRERENDER or HIT
- *  fails at once (asking again cannot fix it). A path whose warm-up timed out
- *  is asked like any other: its render had started. */
+ *  fresh or the deadline passes. A path whose warm-up (after retryUntaken)
+ *  still showed a PRERENDER or HIT fails at once. A path whose warm-up timed
+ *  out is asked like any other: its render had started. A path that answers
+ *  non-200 twice in a row fails with that status. No round starts, and no
+ *  sleep begins, past the deadline. */
 export async function verifyFresh(
   origin: string,
   warm: WarmResult,
@@ -287,14 +326,27 @@ export async function verifyFresh(
     else if (w === 'FAILED' || warmTookRevalidation(w)) pending.push(p);
     else result.notFresh.push({ path: p, reason: `warm ${w}: revalidation did not take` });
   }
+  const failStreak = new Map<string, number>();
   while (pending.length && now() < opts.deadline && result.rounds < MAX_VERIFY_ROUNDS) {
-    if (result.rounds > 0) await sleep(opts.roundDelayMs);
+    if (result.rounds > 0) {
+      if (now() + opts.roundDelayMs >= opts.deadline) break;
+      await sleep(opts.roundDelayMs);
+    }
     result.rounds++;
     const asked = await warmPaths(origin, pending, { fetcher: opts.fetcher, deadline: opts.deadline, now });
+    const statusOf = new Map(asked.failed.map((f) => [f.path, f.status]));
     const still: string[] = [];
     for (const p of pending) {
       const v = asked.states[p];
-      const verdict = v === undefined || v === 'FAILED' ? 'pending' : verifyVerdict(v);
+      if (v === undefined || v === 'FAILED') {
+        const streak = (failStreak.get(p) ?? 0) + 1;
+        failStreak.set(p, streak);
+        if (streak >= 2) result.notFresh.push({ path: p, reason: `verify answered ${statusOf.get(p) ?? 'nothing'} twice` });
+        else still.push(p);
+        continue;
+      }
+      failStreak.delete(p);
+      const verdict = verifyVerdict(v);
       if (verdict === 'fresh') result.fresh++;
       else if (verdict === 'pending') still.push(p);
       else result.notFresh.push({ path: p, reason: `verify ${v}` });

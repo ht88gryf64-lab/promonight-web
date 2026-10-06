@@ -199,10 +199,8 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
   // count by the 410 volume (1 in the last 24h) and, since WEB6 G4, by the
   // nightly refresh's own page requests (about 800 a night, between 04:15 and
   // 05:30 UTC). Recorded for the Phase 3 reconciliation in
-  // docs/request-counter-notes.md.
-  //
-  // Not the nightly refresh's own page requests (WEB6 G4): about 800 a night,
-  // none of them a visit, each one a write to the hour's single counter doc.
+  // docs/request-counter-notes.md. The refresh's requests are not visits, and
+  // each counted one would be a write to the hour's single counter doc.
   if (!isNightlyRefreshRequest(userAgent)) countRequest(request, event, userAgent);
 
   const bot = detectBot(userAgent);
