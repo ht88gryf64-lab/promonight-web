@@ -875,9 +875,10 @@ function StateB({
     (t) => !teamsWithPromos.has(t.id) && !failedTeams.has(t.id),
   );
   // A failed team is left out of the quiet list, so say so rather than drop
-  // it silently (review round 3).
+  // it silently (review round 3). City and name: Rangers, Kings, Panthers,
+  // Jets, Giants and Cardinals each exist in two leagues.
   const failed = starredTeams.filter((t) => failedTeams.has(t.id));
-  const failedNames = failed.length > 0 ? failed.map((t) => t.name).join(', ') : null;
+  const failedNames = failed.length > 0 ? failed.map((t) => `${t.city} ${t.name}`).join(', ') : null;
 
   // Affiliate cluster anchor. Because `promos` is sorted asc, the first
   // entry is either today's TONIGHT promo (when one exists) or the next
