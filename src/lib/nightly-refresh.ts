@@ -78,10 +78,12 @@ export interface NightlyLoaders {
  *  same loaders their routes' generateStaticParams use. */
 export async function nightlyRefreshPaths(loaders: NightlyLoaders): Promise<string[]> {
   const [teams, hubs] = await Promise.all([loaders.teams(), loaders.venueHubSlugs()]);
+  // The fixed cross-team pages first: they are the slowest to render (each
+  // reads every upcoming promo) and the most visible, so they get the most time.
   const all = [
+    ...NIGHTLY_FIXED_PATHS,
     ...teams.map((t) => `/${t.sportSlug}/${t.id}`),
     ...hubs.map((slug) => `/venues/${slug}`),
-    ...NIGHTLY_FIXED_PATHS,
   ];
   const out: string[] = [];
   const seen = new Set<string>();
@@ -119,8 +121,10 @@ export function refreshOrigin(requestUrl: string, vercelEnv: string | undefined 
 export const REFRESH_USER_AGENT = 'PromoNightRefreshBot/1.0';
 
 /** Per-request ceiling, so one hung page cannot hold the function to its
- *  300s limit. */
-export const FETCH_TIMEOUT_MS = 20_000;
+ *  300s limit. The cross-team aggregators read every upcoming promo and took
+ *  over 20s each on a local build; 60s leaves them room. A request that times
+ *  out has still started the render, and the second pass reports it. */
+export const FETCH_TIMEOUT_MS = 60_000;
 
 type Fetcher = (url: string, init: RequestInit) => Promise<Response>;
 const defaultFetch: Fetcher = (url, init) => fetch(url, init);

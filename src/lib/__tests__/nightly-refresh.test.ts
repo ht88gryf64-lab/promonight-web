@@ -89,6 +89,7 @@ test('the paths: every team page, every venue hub, the hubs, /teams and the /pro
   assert.ok(paths.every((p) => PATH_RE.test(p)));
   assert.equal(paths.length, TEAMS.length + 3 + NIGHTLY_FIXED_PATHS.length);
   for (const p of ['/best-promos', '/best-promos/bobbleheads', '/team-rankings']) assert.ok(paths.includes(p), p);
+  assert.deepEqual(paths.slice(0, NIGHTLY_FIXED_PATHS.length), [...NIGHTLY_FIXED_PATHS], 'the slow cross-team pages are warmed first');
 });
 
 test('the shared fan-out: one failing path is reported, the rest still revalidate', async () => {
@@ -150,13 +151,18 @@ test('the origin: always www in production (cron calls the login-protected deplo
 
 test('the route: auth, the window, then revalidate through POST /api/revalidate on www, and only then warm and verify', async () => {
   const log: { method: string; url: string; paths?: string[] }[] = [];
-  let mode: 'ok' | 'login' = 'ok';
+  let mode: 'ok' | 'login' | 'slow-first' | 'stale' | 'fanout-down' = 'ok';
+  const seenOnce = new Set<string>();
   const realFetch = globalThis.fetch;
   globalThis.fetch = (async (u: string, init?: RequestInit) => {
     const method = init?.method ?? 'GET';
     if (mode === 'login') {
       log.push({ method, url: String(u) });
       return resp(307, { location: 'https://vercel.com/login' });
+    }
+    if (method === 'POST' && mode === 'fanout-down') {
+      log.push({ method, url: String(u) });
+      return resp(500);
     }
     if (method === 'POST') {
       assert.equal((init!.headers as Record<string, string>)['x-revalidate-secret'], 'r', 'the fan-out secret');
@@ -165,6 +171,12 @@ test('the route: auth, the window, then revalidate through POST /api/revalidate 
       return new Response(JSON.stringify({ ok: true, revalidated: paths.length }), { status: 200 });
     }
     log.push({ method, url: String(u) });
+    const path = new URL(String(u)).pathname;
+    if (mode === 'slow-first' && path === '/nhl' && !seenOnce.has(path)) {
+      seenOnce.add(path);
+      throw new Error('The operation was aborted due to timeout');
+    }
+    if (mode === 'stale' && path === '/nhl') return resp(200, { 'x-vercel-cache': 'STALE' });
     return resp(200, { 'x-vercel-cache': 'MISS' });
   }) as typeof fetch;
   const DEPLOY = 'https://promonight-abc123-btj8tk69dk-7318s-projects.vercel.app/api/cron/nightly-refresh';
@@ -216,6 +228,25 @@ test('the route: auth, the window, then revalidate through POST /api/revalidate 
     assert.equal(badBody.ok, false);
     assert.equal(badBody.revalidated, 0);
     assert.equal(badBody.warmed, 0);
+    // A first-pass timeout that rendered anyway: reported, not red.
+    mode = 'slow-first';
+    const slow = await call('Bearer s');
+    const slowBody = await slow.json();
+    assert.equal(slow.status, 200);
+    assert.equal(slowBody.ok, true);
+    assert.deepEqual(slowBody.warmFailed.map((f: { path: string }) => f.path), ['/nhl']);
+
+    // The fan-out is down but every page still answers (old copies): red.
+    mode = 'fanout-down';
+    const down = await call('Bearer s');
+    assert.equal(down.status, 500);
+    assert.equal((await down.json()).revalidated, 0);
+
+    // A page still stale on the second pass: red.
+    mode = 'stale';
+    const stale = await call('Bearer s');
+    assert.equal(stale.status, 500);
+    assert.equal((await stale.json()).fresh, expected - 1);
     mode = 'ok';
 
     // 05:15Z in October is 01:15 EDT: the other firing, skipped.

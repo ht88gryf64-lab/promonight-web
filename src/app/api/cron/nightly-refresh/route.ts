@@ -64,9 +64,17 @@ export async function GET(request: Request) {
   const verified = await warmPaths(origin, paths, { deadline, freshSince: started });
   const ms = Date.now() - started;
 
-  const ok = revalidated.failedBatches.length === 0 && revalidated.revalidated === paths.length && warmed.failed.length === 0 && warmed.skipped === 0;
+  // Judged on the end state: every path revalidated, and every path answered
+  // 200 with a copy that is not stale on the second pass. A first-pass timeout
+  // that rendered anyway is reported in warmFailed but is not a failure.
+  const ok =
+    revalidated.failedBatches.length === 0 &&
+    revalidated.revalidated === paths.length &&
+    verified.failed.length === 0 &&
+    verified.skipped === 0 &&
+    verified.fresh === paths.length;
   console.log(
-    `[cron:nightly-refresh] ok=${ok} paths=${paths.length} revalidated=${revalidated.revalidated} warmed=${warmed.ok} fresh=${verified.fresh} failed=${warmed.failed.length} skipped=${warmed.skipped} cache=${JSON.stringify(warmed.cache)} ms=${ms}`,
+    `[cron:nightly-refresh] ok=${ok} paths=${paths.length} revalidated=${revalidated.revalidated} warmed=${warmed.ok} fresh=${verified.fresh} warmFailed=${warmed.failed.length} verifyFailed=${verified.failed.length} skipped=${verified.skipped} cache=${JSON.stringify(warmed.cache)} ms=${ms}`,
   );
   return NextResponse.json(
     {
@@ -81,6 +89,8 @@ export async function GET(request: Request) {
       warmSkipped: warmed.skipped,
       fresh: verified.fresh,
       verifyCache: verified.cache,
+      verifyFailed: verified.failed.slice(0, 20),
+      verifySkipped: verified.skipped,
       ms,
     },
     // A red line in the Cron Jobs log when anything did not land.
