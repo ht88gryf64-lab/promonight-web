@@ -10,10 +10,12 @@
  *   3. submitToIndexNow([...]) — ping api.indexnow.org + Bing so Google/Bing
  *      re-crawl the freshly regenerated page daily.
  *
- * Schedule: see vercel.json ("crons"). 05:10 UTC daily, just past America/New_York
- * midnight year-round (04:00 UTC in EDT, 05:00 UTC in EST), so it fires after the
- * site's "today" boundary flips (src/lib/site-today.ts). It was 06:10 UTC, after
- * Chicago midnight, until WEB6 G3 (2026-10-06).
+ * RETIRED FROM THE CRON CONFIG (WEB6 G4, Matt, 2026-10-06). It ran at 05:10 UTC,
+ * but its warm step could not work: Next applies revalidatePath when the request
+ * that called it finishes, so a fetch inside the same request got the old copy.
+ * The nightly refresh (/api/cron/nightly-refresh, 00:15 Eastern) now rebuilds
+ * /promos/today through POST /api/revalidate. The route stays callable by hand
+ * (CRON_SECRET) for its IndexNow ping; nothing schedules it.
  *
  * Auth: Vercel Cron invocations carry `Authorization: Bearer <CRON_SECRET>`
  * automatically when CRON_SECRET is set. We reject anything without a matching

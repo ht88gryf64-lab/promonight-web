@@ -2,15 +2,17 @@
  * POST /api/revalidate
  *
  * Called by the promo-pipeline repo immediately after it writes new content
- * to Firestore. Flushes the Next.js ISR cache for affected paths so fans see
- * fresh data without waiting for the natural revalidate window (1h hub /
- * 6h team page).
+ * to Firestore, and by the nightly refresh cron (WEB6 G4). Flushes the Next.js
+ * ISR cache for affected paths so fans see fresh data without waiting for the
+ * natural revalidate window (24h team pages and venue hubs, 6h league hubs,
+ * 1h /promos/today).
  *
  * Auth:   header `x-revalidate-secret: <REVALIDATE_SECRET>`
  * Body:   { "paths": ["/playoffs", "/nba/minnesota-timberwolves", ...] }
  * Rules:
- *   - Each path must match `/[a-z0-9-]+(?:/[a-z0-9-]+)?` exactly. No query
- *     strings, no parent traversal, no uppercase.
+ *   - Each path must match PATH_RE (src/lib/revalidate-paths.ts): one to three
+ *     lowercase segments. No query strings, no parent traversal, no uppercase,
+ *     no bare "/".
  *   - Up to 100 paths per request (rejects with 400 above the cap).
  *   - Returns { ok: true, revalidated: <count> }.
  *   - revalidatePath is best-effort; failures for individual paths are logged
@@ -25,18 +27,16 @@
  * The secret value is never logged.
  */
 import { NextResponse } from 'next/server';
-import { revalidatePath } from 'next/cache';
+import { PATH_RE, revalidatePaths } from '@/lib/revalidate-paths';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-// One to THREE segments, lowercase alphanumeric and hyphen only, no trailing
-// slash. Widened from two to three for /cfb/rivalries/<slug>. The charset is
-// unchanged, so uppercase, underscores, dots and query strings still fail.
-// The pipeline keeps its own copy of this pattern in
-// promo-pipeline/lib/revalidate-notify.js; both must be widened together or the
-// client silently drops paths this endpoint would accept.
-const PATH_RE = /^\/[a-z0-9-]+(?:\/[a-z0-9-]+){0,2}$/;
+// The path pattern (PATH_RE) and the revalidatePath loop live in
+// src/lib/revalidate-paths.ts. The nightly refresh cron (WEB6 G4) reaches them
+// through THIS endpoint, so each batch's invalidations are queued by a request
+// of their own and applied as it completes (Next runs them in waitUntil, just
+// after the response), never inside the cron's own request.
 const MAX_PATHS = 100;
 
 export async function POST(request: Request) {
@@ -91,16 +91,7 @@ export async function POST(request: Request) {
 
   console.log(`[revalidate] request received, paths=${paths.length}`);
 
-  let succeeded = 0;
-  for (const p of paths) {
-    try {
-      revalidatePath(p);
-      succeeded++;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.warn(`[revalidate] failed for ${p}: ${message}`);
-    }
-  }
+  const { succeeded } = revalidatePaths(paths);
 
   console.log(`[revalidate] revalidated ${succeeded}/${paths.length}`);
   return NextResponse.json({ ok: true, revalidated: succeeded });

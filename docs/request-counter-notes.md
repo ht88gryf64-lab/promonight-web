@@ -137,3 +137,9 @@ NUMBER, not the deploy.
   been, so the bug is dormant. `/api/log-request` deliberately does NOT copy it
   and returns a null body, which matters because its own unconfigured branch is
   hit on every request until the env var is set.
+- **The nightly refresh is not counted (WEB6 G4, 2026-10-06).** The cron at
+  00:15 Eastern requests about 400 pages and re-requests them to verify, with the
+  user agent `PromoNightRefreshBot/1.0` (`src/lib/refresh-agent.ts`). The
+  middleware skips `countRequest` for that exact agent, so `requestCounters`
+  runs below Vercel's middleware invocation count by about 800 a night in the
+  04:00 or 05:00 UTC bucket, on top of the 410 volume above.

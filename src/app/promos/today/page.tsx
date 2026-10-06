@@ -25,9 +25,10 @@ import {
   formatBoardDate,
 } from '@/components/promos-today/helpers';
 
-// 1h ISR keeps the page cached + cheap; the daily post-midnight cron
-// (/api/cron/indexnow-daily) revalidates + warms this path so the rendered date
-// is regenerated just after the site's Eastern day rolls over (05:10 UTC).
+// 1h ISR keeps the page cached + cheap; the nightly refresh cron
+// (/api/cron/nightly-refresh, 00:15 Eastern) revalidates and rebuilds this path
+// just after the site's Eastern day rolls over. The old 05:10 UTC job
+// (/api/cron/indexnow-daily) is retired from the cron config (WEB6 G4).
 export const revalidate = 3600;
 
 const PAGE_URL = 'https://www.getpromonight.com/promos/today';

@@ -1,0 +1,171 @@
+// The mutation harness for WEB6 G4 (2026-10-06): the nightly refresh after
+// Eastern midnight. Each case breaks one guard (the schedule, the window, the
+// path list, the shared fan-out, the warm-up, the auth) and expects a test to
+// fail.
+//
+// IT NEVER TOUCHES THIS TREE. Sources, scripts and configs are copied to a
+// temporary directory (node_modules linked) and every mutation is made there.
+//
+//   node scripts/nightly-refresh-mutations.mjs
+//
+// Not part of `npm test` (it is slow). Same runner as
+// scripts/today-boundary-mutations.mjs.
+import { readFileSync, writeFileSync, mkdtempSync, cpSync, symlinkSync, rmSync, realpathSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+
+const REPO = resolve(new URL('..', import.meta.url).pathname);
+const WORK = mkdtempSync(join(tmpdir(), 'pn-nightly-refresh-mutations-'));
+for (const f of ['src', 'scripts', 'tsconfig.json', 'tsconfig.test.json', 'package.json', 'vercel.json']) cpSync(join(REPO, f), join(WORK, f), { recursive: true });
+symlinkSync(realpathSync(join(REPO, 'node_modules')), join(WORK, 'node_modules'));
+process.on('exit', () => rmSync(WORK, { recursive: true, force: true }));
+
+const LIB = 'src/lib/nightly-refresh.ts';
+const ROUTE = 'src/app/api/cron/nightly-refresh/route.ts';
+const FANOUT = 'src/lib/revalidate-paths.ts';
+const ENDPOINT = 'src/app/api/revalidate/route.ts';
+const T = 'src/lib/__tests__/nightly-refresh.test.ts';
+
+/** [name, file, from, to, tests]. `from` must occur exactly once. */
+const CASES = [
+  // ---- when ----
+  ['only the EDT firing (winter nights missed)', 'vercel.json', '"schedule": "15 4,5 * * *"', '"schedule": "15 4 * * *"', [T]],
+  ['only the EST firing (summer nights missed)', 'vercel.json', '"schedule": "15 4,5 * * *"', '"schedule": "15 5 * * *"', [T]],
+  ['a fixed UTC hour with no window check (runs twice or an hour late)', ROUTE, '  if (!isNightlyRefreshWindow(now, batch)) {', '  if (false) {', [T]],
+  ['the window on the UTC hour', LIB, '  return siteHour(instant) === BATCH_SITE_HOUR[batch];', "  return batch === 'site' ? instant.getUTCHours() === 4 || instant.getUTCHours() === 5 : instant.getUTCHours() === 7 || instant.getUTCHours() === 8;", [T]],
+  ['the window on the Chicago hour', LIB, "const SITE_HOUR = new Intl.DateTimeFormat('en-US', { timeZone: SITE_TIME_ZONE, hour: '2-digit', hourCycle: 'h23' });", "const SITE_HOUR = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', hour: '2-digit', hourCycle: 'h23' });", [T]],
+  ['the window an hour wide too many', LIB, '  return siteHour(instant) === BATCH_SITE_HOUR[batch];', '  const h = siteHour(instant);\n  return h === BATCH_SITE_HOUR[batch] || h === BATCH_SITE_HOUR[batch] + 1;', [T]],
+  // ---- what ----
+  ['venue hubs left out', LIB, "    ...hubs.map((slug) => `/venues/${slug}`),\n", '', [T]],
+  ['team pages left out', LIB, '    ...teams.map((t) => `/${t.sportSlug}/${t.id}`),\n', '', [T]],
+  ['/promos/today left out', LIB, "  '/promos/today',\n", '', [T]],
+  ['/nhl left out', LIB, "  '/nhl',\n", '', [T]],
+  ['an invalid slug sent to the fan-out', LIB, '    if (!PATH_RE.test(p)) {\n      dropped.push(p);\n      continue;\n    }', '', [T]],
+  ['no dedupe', LIB, '    if (seen.has(p)) continue;\n    if (!PATH_RE.test(p)) {', '    if (!PATH_RE.test(p)) {', [T]],
+  // ---- how ----
+  ['revalidate but never warm', ROUTE, '  const warmed = await warmPaths(origin, paths, { deadline: started + WARM_BUDGET_MS });', '  const warmed = { ok: paths.length, failed: [] as { path: string; status: number | string }[] };', [T]],
+  ['warm before revalidating (the old copies come back)', ROUTE, '  const revalidated = await revalidateViaFanOut(origin, paths, fanOutSecret);\n  await sleep(SETTLE_MS);\n  const warmed = await warmPaths(origin, paths, { deadline: started + WARM_BUDGET_MS });', '  const warmed = await warmPaths(origin, paths, { deadline: started + WARM_BUDGET_MS });\n  const revalidated = await revalidateViaFanOut(origin, paths, fanOutSecret);\n  await sleep(SETTLE_MS);', [T]],
+  ['batches above the endpoint cap (every batch rejected)', LIB, 'export const FANOUT_BATCH = 100;', 'export const FANOUT_BATCH = 101;', [T]],
+  ['the first failed batch stops the rest', LIB, '        result.failedBatches.push({ first: batch[0], status: res.status });\n        continue;', '        return result;', [T]],
+  ['a short batch counts as complete', LIB, '      if (body.ok && body.revalidated === batch.length) result.revalidated += batch.length;', '      if (body.ok) result.revalidated += batch.length;', [T]],
+  // ---- review round 1: the production origin and honest reporting ----
+  ['the origin from the incoming request (the login-protected deployment host)', LIB, "  return vercelEnv === 'production' ? SITE_ORIGIN : new URL(requestUrl).origin;", '  return new URL(requestUrl).origin;', [T]],
+  ['the warm-up follows redirects (login page counted as warmed)', LIB, "          redirect: 'manual',\n          signal: AbortSignal.timeout(Math.max(1, Math.min(FETCH_TIMEOUT_MS, left))),", "          signal: AbortSignal.timeout(Math.max(1, Math.min(FETCH_TIMEOUT_MS, left))),", [T]],
+  ['a 3xx counted as warmed', LIB, "        if (res.status !== 200) {\n          result.states[path] = 'FAILED';", "        if (res.status >= 400) {\n          result.states[path] = 'FAILED';", [T]],
+  ['the warm-up counted as human page loads', 'src/lib/refresh-agent.ts', "export const REFRESH_USER_AGENT = 'PromoNightRefreshBot/1.0';", "export const REFRESH_USER_AGENT = 'PromoNightRefresh/1.0';", [T]],
+  ['ok and 200 when nothing landed', ROUTE, '    revalidated.failedBatches.length === 0 &&\n    revalidated.revalidated === paths.length &&', '    true &&', [T]],
+  ['ok while a page is still regenerating or failed verification', ROUTE, '    verified.notFresh.length === 0 &&\n    verified.fresh === paths.length;', '    true;', [T]],
+  // ---- review round 3: freshness from what the requests answered ----
+  ['a STALE verify counted as fresh (no waiting for the regeneration)', LIB, "  if (state === 'MISS' || state === 'REVALIDATED' || state === 'HIT') return 'fresh';", "  if (state === 'MISS' || state === 'REVALIDATED' || state === 'HIT' || state === 'STALE') return 'fresh';", [T]],
+  ['a PRERENDER verify counted as fresh', LIB, "  if (state === 'STALE') return 'pending';\n  return 'failed';", "  if (state === 'STALE') return 'pending';\n  return 'fresh';", [T]],
+  ['a warm HIT taken as a revalidation that took', LIB, "  return state === 'MISS' || state === 'REVALIDATED' || state === 'STALE';", "  return state === 'MISS' || state === 'REVALIDATED' || state === 'STALE' || state === 'HIT';", [T]],
+  ['the warm verdict ignored (every path re-asked)', LIB, '    else if (w === \'FAILED\' || warmTookRevalidation(w)) pending.push(p);', '    else pending.push(p);', [T]],
+  ['one verify round only (a slow regeneration goes red)', LIB, 'export const MAX_VERIFY_ROUNDS = 30;', 'export const MAX_VERIFY_ROUNDS = 1;', [T]],
+  ['re-ask everything every round', LIB, '    pending = still;', '    pending = pending.slice();', [T]],
+  ['red on a warm-up timeout that rendered anyway', ROUTE, '    verified.notFresh.length === 0 &&', '    verified.notFresh.length === 0 && warmed.failed.length === 0 &&', [T]],
+  // ---- review round 4: the ambiguous warm HIT, verify failures, budgets ----
+  ['no second chance for an ambiguous warm HIT (spurious red)', ROUTE, '  const retried = await retryUntaken(origin, warmed, fanOutSecret, { deadline: started + WARM_BUDGET_MS, settleMs: SETTLE_MS });', '  const retried = { retried: 0, failedBatches: [] as { first: string; status: number | string }[] };', [T]],
+  ['the retry skips HIT paths', LIB, "  const list = Object.keys(warm.states).filter((p) => warm.states[p] !== 'FAILED' && !warmTookRevalidation(warm.states[p]));", '  const list: string[] = [];', [T]],
+  ['the retry answers are thrown away', LIB, "    if (a !== undefined && a !== 'FAILED') warm.states[p] = a;", '', [T]],
+  ['a page answering 500 at verify counted as fresh', LIB, "        if (streak >= 2) result.notFresh.push({ path: p, reason: `verify answered ${statusOf.get(p) ?? 'nothing'} twice` });", '        if (streak >= 2) result.fresh++;', [T]],
+  ['a broken page reported as still regenerating', LIB, '        if (streak >= 2)', '        if (streak >= 99)', [T]],
+  ['the verify loop sleeps across its deadline', LIB, '      if (now() + opts.roundDelayMs >= opts.deadline) break;\n', '', [T]],
+  ['a verify budget the function cannot survive', LIB, 'export const VERIFY_BUDGET_MS = 720_000;', 'export const VERIFY_BUDGET_MS = 790_000;', [T]],
+  ['the warm pass without its deadline', ROUTE, '  const warmed = await warmPaths(origin, paths, { deadline: started + WARM_BUDGET_MS });', '  const warmed = await warmPaths(origin, paths, {});', [T]],
+  ['a fan-out request without a timeout', LIB, "        signal: AbortSignal.timeout(Math.min(FETCH_TIMEOUT_MS, left)),\n        headers: { 'content-type': 'application/json'", "        headers: { 'content-type': 'application/json'", [T]],
+  ['no settle wait in production', LIB, 'export const SETTLE_MS = 5_000;', 'export const SETTLE_MS = 0;', [T]],
+  ['no wait between verify rounds in production', LIB, 'export const VERIFY_ROUND_MS = 20_000;', 'export const VERIFY_ROUND_MS = 0;', [T]],
+  // ---- review round 5: retry evidence, budgets, two strikes, bounds ----
+  ['a failed re-warm erases the HIT (false green)', LIB, "    if (a !== undefined && a !== 'FAILED') warm.states[p] = a;", '    if (a !== undefined) warm.states[p] = a;', [T]],
+  ['a skipped re-warm counted as a render', LIB, "    if (a !== undefined && a !== 'FAILED') warm.states[p] = a;", "    warm.states[p] = a ?? 'MISS';", [T]],
+  ['ok ignores a failed retry batch', ROUTE, '    retried.failedBatches.length === 0 &&\n', '', [T]],
+  ['the retry without its settle wait', LIB, '  const fanned = await revalidateViaFanOut(origin, list, secret, opts.fetcher, opts.deadline, now);\n  await sleep(opts.settleMs);', '  const fanned = await revalidateViaFanOut(origin, list, secret, opts.fetcher, opts.deadline, now);', [T]],
+  ['the retry runs with no time left', LIB, '  if (now() + opts.settleMs >= opts.deadline) return { ...none, skippedForTime: true };\n', '', [T]],
+  ['the retry eats the verify budget', ROUTE, 'retryUntaken(origin, warmed, fanOutSecret, { deadline: started + WARM_BUDGET_MS, settleMs: SETTLE_MS })', 'retryUntaken(origin, warmed, fanOutSecret, { deadline: started + VERIFY_BUDGET_MS, settleMs: SETTLE_MS })', [T]],
+  ['the fan-out ignores its deadline', LIB, "    if (left <= 0) {\n      result.failedBatches.push({ first: batch[0], status: 'past the deadline' });\n      continue;\n    }", '', [T]],
+  ['one transient verify blip fails a page', LIB, '        if (streak >= 2)', '        if (streak >= 1)', [T]],
+  ['a request timeout too short for the aggregators', LIB, 'export const FETCH_TIMEOUT_MS = 60_000;', 'export const FETCH_TIMEOUT_MS = 1_000;', [T]],
+  ['one request at a time (the site batch misses the warm budget)', LIB, 'export const WARM_CONCURRENCY = 6;', 'export const WARM_CONCURRENCY = 1;', [T]],
+  // ---- G4 approval: CFB pages, the retired 05:10 job, round-6 pins ----
+  ['the /cfb hub left out', LIB, "  '/cfb',\n", '', [T]],
+  ['the retired 05:10 job back in the cron config', 'vercel.json', '"crons": [', '"crons": [\n    { "path": "/api/cron/indexnow-daily", "schedule": "10 5 * * *" },', ['src/lib/__tests__/today-boundary.test.ts']],
+  ['verify requests not cut at the deadline', LIB, '    const asked = await warmPaths(origin, pending, { fetcher: opts.fetcher, deadline: opts.deadline, now });', '    const asked = await warmPaths(origin, pending, { fetcher: opts.fetcher, now });', [T]],
+  ['the re-warm not cut at the deadline', LIB, '  const again = await warmPaths(origin, list, { fetcher: opts.fetcher, deadline: opts.deadline, now });', '  const again = await warmPaths(origin, list, { fetcher: opts.fetcher, now });', [T]],
+  ['the retry fan-out not cut at the deadline', LIB, '  const fanned = await revalidateViaFanOut(origin, list, secret, opts.fetcher, opts.deadline, now);', '  const fanned = await revalidateViaFanOut(origin, list, secret, opts.fetcher);', [T]],
+  ['two failures in total, not in a row', LIB, '      failStreak.delete(p);\n', '', [T]],
+  ['a never-warmed path verified anyway', LIB, "    if (w === undefined) result.notFresh.push({ path: p, reason: 'not warmed' });", '    if (w === undefined) pending.push(p);', [T]],
+  ['the counter skip widened to every bot', 'src/lib/refresh-agent.ts', '  return userAgent === REFRESH_USER_AGENT;', "  return !!userAgent && userAgent.includes('Bot');", [T]],
+  // ---- two batches (review of the approval changes) ----
+  ['CFB school pages left out', LIB, "    all = [...schools.map((id) => `/cfb/${id}`), ...matchups.map((slug) => `/cfb/rivalries/${slug}`)];", '    all = [...matchups.map((slug) => `/cfb/rivalries/${slug}`)];', [T]],
+  ['CFB rivalry pages left out', LIB, "    all = [...schools.map((id) => `/cfb/${id}`), ...matchups.map((slug) => `/cfb/rivalries/${slug}`)];", '    all = [...schools.map((id) => `/cfb/${id}`)];', [T]],
+  ['CFB school pages back in the site batch (the venue-day flip held off)', LIB, '      ...hubs.map((slug) => `/venues/${slug}`),\n    ];', '      ...hubs.map((slug) => `/venues/${slug}`),\n      ...(await loaders.cfbSchoolIds()).map((id) => `/cfb/${id}`),\n    ];', [T]],
+  ['the CFB batch at Eastern midnight', LIB, 'export const BATCH_SITE_HOUR: Readonly<Record<RefreshBatch, number>> = { site: 0, cfb: 3 };', 'export const BATCH_SITE_HOUR: Readonly<Record<RefreshBatch, number>> = { site: 0, cfb: 0 };', [T]],
+  ['the CFB cron dropped', 'vercel.json', '"path": "/api/cron/nightly-refresh?batch=cfb"', '"path": "/api/cron/nightly-refresh-cfb-gone"', [T]],
+  ['an unknown batch runs as the site batch', LIB, "  if (value === 'cfb') return 'cfb';\n  return null;", "  if (value === 'cfb') return 'cfb';\n  return 'site';", [T]],
+  ['the daily IndexNow ping for /promos/today lost', ROUTE, "  if (batch === 'site' && process.env.VERCEL_ENV === 'production') {", '  if (false) {', [T]],
+  ['the CFB batch pings IndexNow too', ROUTE, "  if (batch === 'site' && process.env.VERCEL_ENV === 'production') {", "  if (process.env.VERCEL_ENV === 'production') {", [T]],
+  ['the slow cross-team pages warmed last', LIB, '    all = [\n      ...NIGHTLY_FIXED_PATHS,\n      ...teams.map((t) => `/${t.sportSlug}/${t.id}`),', '    all = [\n      ...teams.map((t) => `/${t.sportSlug}/${t.id}`),\n      ...NIGHTLY_FIXED_PATHS,', [T]],
+  // ---- the IndexNow ping's guarantees ----
+  ['a ping failure turns the night red', ROUTE, '    } catch {\n      indexnow = \'failed\';\n    }', "    } catch {\n      indexnow = 'failed';\n      return NextResponse.json({ ok: false }, { status: 500 });\n    }", [T]],
+  ['the ping unbounded (a stall holds the function)', ROUTE, '        sleep(INDEXNOW_TIMEOUT_MS).then(() => false),\n', '', [T]],
+  ['the ping sent from preview and local too', ROUTE, "  if (batch === 'site' && process.env.VERCEL_ENV === 'production') {", "  if (batch === 'site') {", [T]],
+  ['a request outlives its pass (no clamp)', LIB, '          signal: AbortSignal.timeout(Math.max(1, Math.min(FETCH_TIMEOUT_MS, left))),', '          signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),', [T]],
+  ['the route runs to Vercel\'s 300s default', ROUTE, 'export const maxDuration = 800;', 'export const maxDuration = 300;', [T]],
+  ['a dropped slug stays green', ROUTE, '    dropped.length === 0 &&\n', '', [T]],
+  ['the middleware counts the job\'s requests', 'src/middleware.ts', '  if (!isNightlyRefreshRequest(userAgent)) countRequest(request, event, userAgent);', '  countRequest(request, event, userAgent);', [T]],
+  ['no deadline (the run can outlive maxDuration)', LIB, '      if (opts.deadline !== undefined && now() > opts.deadline) {', '      if (false) {', [T]],
+  ['/best-promos left out', LIB, "  '/best-promos',\n", '', [T]],
+  ['runs without the fan-out secret', ROUTE, "  if (!fanOutSecret) {\n    return NextResponse.json({ ok: false, reason: 'fanout_not_configured' }, { status: 503 });\n  }", '', [T]],
+  ['warm only the first path of each worker', LIB, '    while (next < paths.length) {', '    if (next < paths.length) {', [T]],
+  ['revalidating inside the cron request (applies too late to warm)', ROUTE, '  const revalidated = await revalidateViaFanOut(origin, paths, fanOutSecret);', "  const { revalidatePath } = await import('next/cache');\n  for (const p of paths) revalidatePath(p);\n  const revalidated = { revalidated: paths.length, failedBatches: [] as { first: string; status: number | string }[] };", [T]],
+  ['one failing path aborts the whole fan-out', FANOUT, '      failed.push(p);', '      throw err;', [T]],
+  ['the endpoint keeps its own loop', ENDPOINT, '  const { succeeded } = revalidatePaths(paths);', "  let succeeded = 0;\n  for (const p of paths) { (await import('next/cache')).revalidatePath(p); succeeded++; }", [T]],
+  ['the endpoint accepts the bare root', FANOUT, 'export const PATH_RE = /^\\/[a-z0-9-]+(?:\\/[a-z0-9-]+){0,2}$/;', 'export const PATH_RE = /^\\/(?:[a-z0-9-]+(?:\\/[a-z0-9-]+){0,2})?$/;', [T]],
+  // ---- auth ----
+  ['no auth', ROUTE, "  if (request.headers.get('authorization') !== `Bearer ${secret}`) {", '  if (false) {', [T]],
+  ['open when the secret is unset', ROUTE, '  if (!secret) {\n    return NextResponse.json({ ok: false, reason: \'not_configured\' }, { status: 503 });\n  }', '', [T]],
+];
+
+const run = (files) =>
+  spawnSync('node', ['--import', 'tsx', '--experimental-test-module-mocks', '--test', ...files], {
+    cwd: WORK,
+    env: { ...process.env, TSX_TSCONFIG_PATH: 'tsconfig.test.json' },
+    encoding: 'utf-8',
+    timeout: 120000,
+  });
+
+const base = run([T]);
+if (base.status !== 0) {
+  console.error('the tests fail before any mutation; fix that first');
+  console.error(base.stdout.slice(-3000));
+  process.exit(2);
+}
+
+let caught = 0;
+const missed = [];
+for (const [name, rel, from, to, tests] of CASES) {
+  const file = join(WORK, rel);
+  const src = readFileSync(file, 'utf-8');
+  const n = src.split(from).length - 1;
+  if (n !== 1) {
+    console.log(`STALE   ${name}: the guard text occurs ${n} times in ${rel}; update the case`);
+    missed.push(name);
+    continue;
+  }
+  writeFileSync(file, src.replace(from, to));
+  try {
+    const r = run(tests);
+    if (r.status !== 0) {
+      caught++;
+      console.log(`CAUGHT  ${name}${r.error ? ' (by a hang, cut at two minutes)' : ''}`);
+    } else {
+      missed.push(name);
+      console.log(`MISSED  ${name}`);
+    }
+  } finally {
+    writeFileSync(file, src);
+  }
+}
+console.log(`\n${caught} of ${CASES.length} mutations caught`);
+process.exit(missed.length ? 1 : 0);

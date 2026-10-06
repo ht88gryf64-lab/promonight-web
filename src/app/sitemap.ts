@@ -214,9 +214,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     },
     {
-      // Daily "today" board. Highest-freshness promo hub: the daily cron
-      // (/api/cron/indexnow-daily) revalidates + re-pings it as the Chicago day
-      // rolls over, and its whole value is same-day accuracy.
+      // Daily "today" board. Highest-freshness promo hub: the nightly refresh
+      // (/api/cron/nightly-refresh, 00:15 Eastern) rebuilds and re-pings it as
+      // the site's Eastern day rolls over, and its whole value is same-day
+      // accuracy.
       url: `${BASE_URL}/promos/today`,
       lastModified: now,
       changeFrequency: 'daily',
