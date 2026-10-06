@@ -1672,6 +1672,7 @@ export const getLeagueUpcomingPromoCounts = cache(
     const teams = await getAllTeams();
     const counts: Record<string, number> = {};
     const inLeague = new Set<string>();
+    const teamById = new Map(teams.map((t) => [t.id, t]));
     for (const t of teams) {
       if (t.league === league) {
         inLeague.add(t.id);
@@ -1681,15 +1682,28 @@ export const getLeagueUpcomingPromoCounts = cache(
     const today = hubTodayChicagoYMD();
     const dropPackages = isTicketPackageLeague(league);
     const snapshot = await db.collectionGroup('promos').where('date', '>=', today).get();
+    if (!dropPackages) {
+      for (const doc of snapshot.docs) {
+        const teamId = doc.ref.parent.parent!.id;
+        if (!inLeague.has(teamId)) continue;
+        if (!isVisiblePromo(mapPromoDoc(doc))) continue;
+        counts[teamId] += 1;
+      }
+      return counts;
+    }
+    // NHL and NBA: the hub card links to the team page and must count what it
+    // counts. A special-ticket row is not a promotion there (WEB6 addendum;
+    // review round 5), and the team page dedupes before it splits, so the
+    // unflagged twin of a package counts nowhere (G2 review round 3). Same
+    // reader path as the aggregators: rows noted, deduped per team, dropped.
+    const rows: PromoWithTeam[] = [];
     for (const doc of snapshot.docs) {
-      const teamId = doc.ref.parent.parent!.id;
-      if (!inLeague.has(teamId)) continue;
-      if (!isVisiblePromo(mapPromoDoc(doc))) continue;
-      // The hub card links to the team page and must count what it counts: an
-      // NHL or NBA special-ticket row is not a promotion there (WEB6 addendum;
-      // review round 5). Inert on every other league.
-      if (dropPackages && isTicketPackageDoc(doc.data())) continue;
-      counts[teamId] += 1;
+      const team = teamById.get(doc.ref.parent.parent!.id);
+      if (!team || !inLeague.has(team.id)) continue;
+      rows.push(promoWithTeam(doc, team));
+    }
+    for (const p of dropTicketPackageRows(dedupePromos(rows.filter(isVisiblePromo), (r) => r.team.id))) {
+      counts[p.team.id] += 1;
     }
     return counts;
   },

@@ -63,6 +63,7 @@ const D2 = ymd(3);
 const TEAMS = [
   fakeDoc('detroit-red-wings', { league: 'NHL', city: 'Detroit', name: 'Red Wings', abbreviation: 'DET', primaryColor: 0, secondaryColor: 0, division: 'Atlantic', sportSlug: 'nhl' }),
   fakeDoc('minnesota-twins', { league: 'MLB', city: 'Minnesota', name: 'Twins', abbreviation: 'MIN', primaryColor: 0, secondaryColor: 0, division: 'Central', sportSlug: 'mlb' }),
+  fakeDoc('texas-rangers', { league: 'MLB', city: 'Texas', name: 'Rangers', abbreviation: 'TEX', primaryColor: 0, secondaryColor: 0, division: 'West', sportSlug: 'mlb' }),
 ];
 const GHOST = fakeDoc('ghost-nhl', { league: 'NHL', city: 'Ghost', name: 'Club', abbreviation: 'GHO', primaryColor: 0, secondaryColor: 0, division: 'X', sportSlug: 'nhl' });
 const row = (id: string, team: string, date: string, title: string, type: string, flagged: boolean) =>
@@ -80,6 +81,18 @@ const PROMOS = [
   row('e1', 'detroit-red-wings', D1, 'Order Night', 'theme', true),
   row('g1', 'ghost-nhl', D1, 'Ghost Pack', 'theme', true),
   row('g2', 'ghost-nhl', D1, 'Ghost Night', 'theme', false),
+  // The unflagged twin has the LOWER id, so it wins the team page's dedupe and
+  // is a counted promotion: its card stays (round 3).
+  row('a1', 'detroit-red-wings', D2, 'Lower Night', 'theme', false),
+  row('a2', 'detroit-red-wings', D2, 'Lower Night', 'theme', true),
+  // A tombstoned flagged twin with the lower id is not on the team page at
+  // all, so it must not take its live twin's card down (round 3).
+  { ...row('b1', 'detroit-red-wings', D2, 'Tomb Night', 'theme', true), data: () => ({ date: D2, title: 'Tomb Night', type: 'theme', description: '.', opponent: 'V', highlight: true, ticketPackageRequired: true, tombstoned: true }) },
+  row('b2', 'detroit-red-wings', D2, 'Tomb Night', 'theme', false),
+  // An MLB same-date, same-title pair: My Teams lists both, as it always has
+  // (only NHL/NBA are deduped there).
+  row('m1', 'texas-rangers', D1, 'Dup Night', 'theme', false),
+  row('m2', 'texas-rangers', D1, 'Dup Night', 'theme', false),
   row('d1', 'detroit-red-wings', D1, 'Free Night', 'theme', false),
   row('d2', 'detroit-red-wings', D1, 'Hoodie Pack', 'theme', true),
   row('d3', 'detroit-red-wings', D2, 'Lunch Box', 'food', true),
@@ -117,12 +130,12 @@ mock.module('server-only', { namedExports: {} });
 mock.module(new URL('../firebase.ts', import.meta.url).href, { namedExports: { db: fakeDb } });
 
 const titles = (rows: { title: string }[]) => rows.map((r) => r.title).sort();
-const COUNTED = ['Bobblehead', 'Fireworks', 'Free Night'];
+const COUNTED = ['Bobblehead', 'Dup Night', 'Fireworks', 'Free Night', 'Lower Night', 'Tomb Night'];
 
 test('getPromosForDate: the NHL package is not on the daily board', async () => {
   const { getPromosForDate } = await import('../data');
-  assert.deepEqual(titles(await getPromosForDate(D1)), ['Fireworks', 'Free Night']);
-  assert.deepEqual(titles(await getPromosForDate(D2)), ['Bobblehead'], 'MLB raw flag ignored');
+  assert.deepEqual(titles(await getPromosForDate(D1)), ['Dup Night', 'Fireworks', 'Free Night']);
+  assert.deepEqual(titles(await getPromosForDate(D2)), ['Bobblehead', 'Lower Night', 'Tomb Night'], 'MLB raw flag ignored; the winning unflagged twins kept');
 });
 
 test('getPromosInDateRange and getPromosFromDate: packages out, MLB untouched', async () => {
@@ -149,7 +162,7 @@ test('the venue hub week scroller: packages out', async () => {
   const { getVenueHubWeekPromos } = await import('../venue-hub');
   const hub = { tenants: [{ teamId: 'detroit-red-wings', league: 'NHL' }, { teamId: 'minnesota-twins', league: 'MLB' }] } as never;
   const out = await getVenueHubWeekPromos(hub);
-  assert.deepEqual(out.map((r) => r.promo.title).sort(), COUNTED);
+  assert.deepEqual(out.map((r) => r.promo.title).sort(), COUNTED.filter((t) => t !== 'Dup Night'), 'the hub\'s two tenants only');
 });
 
 test('the social feed: no package item, and no image card for one', async () => {
@@ -165,16 +178,17 @@ test('the social feed: no package item, and no image card for one', async () => 
 test('My Teams: neither listed nor counted', async () => {
   const { GET } = await import('../../app/api/my-teams/promos/route');
   const { NextRequest } = await import('next/server');
-  const res = await GET(new NextRequest(`http://localhost/api/my-teams/promos?teams=detroit-red-wings,minnesota-twins&start=${D1}&end=${D2}`));
+  const res = await GET(new NextRequest(`http://localhost/api/my-teams/promos?teams=detroit-red-wings,minnesota-twins,texas-rangers&start=${D1}&end=${D2}`));
   const body = (await res.json()) as { promos: { title: string }[] };
-  assert.deepEqual(titles(body.promos), COUNTED);
+  // MLB is read as before: both Dup Night docs listed, no dedupe.
+  assert.deepEqual(titles(body.promos), [...COUNTED, 'Dup Night'].sort());
 });
 
 test('the per-team fallback paths drop packages too (collection-group query unavailable)', async () => {
   const { getPromosForDate, getPromosInDateRange, getPromosFromDate, getHighlightedPromos } = await import('../data');
   groupThrows = true;
   try {
-    assert.deepEqual(titles(await getPromosForDate(D1)), ['Fireworks', 'Free Night']);
+    assert.deepEqual(titles(await getPromosForDate(D1)), ['Dup Night', 'Fireworks', 'Free Night']);
     assert.deepEqual(titles(await getPromosInDateRange(D1, D2)), COUNTED);
     assert.deepEqual(titles(await getPromosFromDate(D1)), COUNTED);
     assert.deepEqual(titles(await getHighlightedPromos(10)), COUNTED);
@@ -200,7 +214,9 @@ test('the feed keeps MLB rows that carry the raw flag', async () => {
   // returns: an MLB row with the flag is still a candidate.
   const card = await feed.findCardPromo('minnesota-twins~t2');
   assert.equal(card?.title, 'Bobblehead');
-  assert.deepEqual(sel.items.map((i) => i.title).sort(), COUNTED, 'every counted row selected, the MLB raw-flag row included');
+  const picked = sel.items.map((i) => i.title);
+  assert.ok(picked.every((t) => COUNTED.includes(t)), `only counted rows: ${picked}`);
+  assert.ok(picked.includes('Bobblehead'), 'the MLB raw-flag row is selected (Twins: Fireworks and Bobblehead, within the per-team cap of 2)');
 });
 
 test('My Teams sorts in Firestore order before the dedupe, and reads the league when the cached lookup misses', async () => {
@@ -218,4 +234,28 @@ test('no image card for the unflagged twin of a package', async () => {
   assert.equal(await feed.findCardPromo('detroit-red-wings~d5'), null, 'Twin Night: the flagged d4 wins the dedupe');
   assert.equal(await feed.findCardPromo('detroit-red-wings~e2'), null, 'Order Night: the flagged e1 wins by id');
   assert.equal((await feed.findCardPromo('detroit-red-wings~d1'))?.title, 'Free Night');
+});
+
+test('image cards: the winning unflagged twin keeps its card; a tombstoned flagged twin takes nothing down', async () => {
+  const feed = await import('../social-feed/feed');
+  assert.equal((await feed.findCardPromo('detroit-red-wings~a1'))?.title, 'Lower Night');
+  assert.equal(await feed.findCardPromo('detroit-red-wings~a2'), null);
+  assert.equal((await feed.findCardPromo('detroit-red-wings~b2'))?.title, 'Tomb Night');
+});
+
+test('starredTeamLeague fails closed: a throwing or missing lookup reads the doc; a failing doc read rejects', async () => {
+  const { starredTeamLeague } = await import('../starred-team-league');
+  const doc = async () => ({ league: 'NHL' });
+  assert.equal(await starredTeamLeague('x', async () => { throw new Error('UNAVAILABLE'); }, doc), 'NHL');
+  assert.equal(await starredTeamLeague('x', async () => null, doc), 'NHL');
+  assert.equal(await starredTeamLeague('x', async () => ({ league: 'NBA' }), async () => { throw new Error('never read'); }), 'NBA');
+  await assert.rejects(starredTeamLeague('x', async () => null, async () => { throw new Error('doc read failed'); }));
+});
+
+test('the /nhl hub card count: dedupe, then drop (the unflagged twin of a package is not counted)', async () => {
+  const { getLeagueUpcomingPromoCounts } = await import('../data');
+  const nhl = await getLeagueUpcomingPromoCounts('NHL');
+  // Counted Detroit rows: Free Night, Lower Night (wins its pair), Tomb Night;
+  // not Twin Night or Order Night (their flagged docs win), nor any package.
+  assert.equal(nhl['detroit-red-wings'], 3);
 });

@@ -5,7 +5,7 @@ import { bagPolicyUrlFor, nearbySilenced, redactClause } from '@/lib/venue-corpu
 import { getVenueOverride } from '@/lib/venue-overrides';
 import type { PromoType, Venue } from '@/lib/types';
 import { isTicketPackageDoc, isTicketPackageLeague } from '@/lib/ticket-packages';
-import { getTeamBySlug } from '@/lib/data';
+import { starredTeamLeague } from '@/lib/starred-team-league';
 
 // Maximum starred teams a single request will fan out for. 200 is well past
 // the practical ceiling (the user would have to star more than every team
@@ -63,7 +63,7 @@ async function fetchPromosForTeam(
   end: string,
 ): Promise<StarredPromo[]> {
   try {
-    const [snapshot, team] = await Promise.all([
+    const [snapshot, league] = await Promise.all([
       db
         .collection('teams')
         .doc(teamSlug)
@@ -71,8 +71,9 @@ async function fetchPromosForTeam(
         .where('date', '>=', start)
         .where('date', '<=', end)
         .get(),
-      // The cached teams loader: no extra document read per starred team.
-      getTeamBySlug(teamSlug).catch(() => null),
+      // The cached teams loader first (no extra read per starred team); the
+      // team doc if that misses or throws. See starredTeamLeague.
+      starredTeamLeague(teamSlug),
     ]);
     // NHL and NBA special-ticket rows are not promotions (WEB6 G2): My Teams
     // neither lists nor counts them, as the team page counts none of them. On
@@ -80,10 +81,6 @@ async function fetchPromosForTeam(
     // (date, then doc id), so the unflagged twin of a package never shows here
     // when the team page lists that pair as the package. Other leagues are
     // read exactly as before.
-    // If the cached lookup fails or misses, read the team doc's league rather
-    // than fail open and list packages (review round 2); a failure there
-    // falls to the catch below, which returns nothing for this team and logs.
-    const league = team ? team.league : String((await db.collection('teams').doc(teamSlug).get()).data()?.league ?? '');
     const dropPackages = isTicketPackageLeague(league);
     // Visibility filter on the raw docs before shaping: only tombstoned:true
     // and isPostseason:true are hidden; absent and false pass. App-code

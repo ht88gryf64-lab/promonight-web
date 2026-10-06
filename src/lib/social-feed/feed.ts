@@ -149,6 +149,9 @@ export async function findCardPromo(key: string): Promise<RssItemInput | null> {
       if (isTicketPackageLeague((await getTeamBySlug(teamId))?.league)) {
         if (isTicketPackageDoc(doc.data())) return null;
         const data = doc.data()!;
+        // No date: nothing to pair with, and an undefined equality value would
+        // throw. resolveCard rejects a dateless row on its own (round 3).
+        if (typeof data.date !== 'string' || data.date === '') return mapPromoDoc(doc);
         const key = String(data.title || '').trim().toLowerCase();
         const sameDay = await db.collection('teams').doc(teamId).collection('promos').where('date', '==', data.date).get();
         const winner = sameDay.docs
