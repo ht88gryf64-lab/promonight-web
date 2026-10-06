@@ -16,10 +16,11 @@
 // included (tests pin it).
 //
 // WHAT. Every team page, every venue hub, the league hubs, /teams, the /promos
-// pages, /best-promos (both) and /team-rankings. NOT refreshed here: the
-// homepage ("/" is rejected by the fan-out's path pattern by ruling; it keeps
-// its 6h window) and the CFB pages (/cfb, its 86 school pages and the rivalry
-// pages, 6h windows), which are an owner decision on cost.
+// pages, /best-promos (both), /team-rankings, and the CFB pages (the /cfb hub,
+// every school page, /cfb/rivalries and every rivalry page; added by Matt's
+// G4 approval, 2026-10-06). NOT refreshed here: the homepage ("/" is rejected
+// by the fan-out's path pattern by ruling; it keeps its 6h window).
+// /promos/today is covered here; its old 05:10 UTC cron is retired.
 //
 // HOW, AND WHY OVER HTTP. Through the existing fan-out, POST /api/revalidate,
 // in batches of its 100-path cap, and only then a GET of each path. Next
@@ -57,6 +58,11 @@ export const NIGHTLY_FIXED_PATHS: readonly string[] = [
   '/best-promos',
   '/best-promos/bobbleheads',
   '/team-rankings',
+  // CFB: the hub and the rivalries index (the school and matchup pages come
+  // from their loaders). Played/upcoming there is the venue's day, with the
+  // site day as fallback; 6h windows.
+  '/cfb',
+  '/cfb/rivalries',
 ];
 
 const SITE_HOUR = new Intl.DateTimeFormat('en-US', { timeZone: SITE_TIME_ZONE, hour: '2-digit', hourCycle: 'h23' });
@@ -74,6 +80,10 @@ export function isNightlyRefreshWindow(instant: Date): boolean {
 export interface NightlyLoaders {
   teams: () => Promise<{ id: string; sportSlug: string }[]>;
   venueHubSlugs: () => Promise<string[]>;
+  /** CFB school ids (getAllCfbSchoolIds) and rivalry matchup slugs
+   *  (getAllMatchupSlugs), the loaders of their routes' generateStaticParams. */
+  cfbSchoolIds: () => Promise<string[]>;
+  cfbMatchupSlugs: () => string[] | Promise<string[]>;
 }
 
 /** Every path the refresh revalidates and warms, deduped, each one checked
@@ -81,13 +91,20 @@ export interface NightlyLoaders {
  *  `dropped` for the route to report. Team pages and venue hubs come from the
  *  same loaders their routes' generateStaticParams use. */
 export async function nightlyRefreshPaths(loaders: NightlyLoaders): Promise<{ paths: string[]; dropped: string[] }> {
-  const [teams, hubs] = await Promise.all([loaders.teams(), loaders.venueHubSlugs()]);
+  const [teams, hubs, schools, matchups] = await Promise.all([
+    loaders.teams(),
+    loaders.venueHubSlugs(),
+    loaders.cfbSchoolIds(),
+    loaders.cfbMatchupSlugs(),
+  ]);
   // The fixed cross-team pages first: they are the slowest to render (each
   // reads every upcoming promo) and the most visible, so they get the most time.
   const all = [
     ...NIGHTLY_FIXED_PATHS,
     ...teams.map((t) => `/${t.sportSlug}/${t.id}`),
     ...hubs.map((slug) => `/venues/${slug}`),
+    ...schools.map((id) => `/cfb/${id}`),
+    ...matchups.map((slug) => `/cfb/rivalries/${slug}`),
   ];
   const out: string[] = [];
   const seen = new Set<string>();
@@ -332,7 +349,13 @@ export async function retryUntaken(
  *  still showed a PRERENDER or HIT fails at once. A path whose warm-up timed
  *  out is asked like any other: its render had started. A path that answers
  *  non-200 twice in a row fails with that status. No round starts, and no
- *  sleep begins, past the deadline. */
+ *  sleep begins, past the deadline.
+ *
+ *  ACCEPTED FALSE GREEN (Matt, G4 approval, 2026-10-06): every failed warm-up
+ *  is verified like a timed-out one, not only a timeout (a 5xx or network error
+ *  too). If that path's invalidation ALSO silently failed, a verify HIT on the
+ *  old copy counts as fresh. It needs two faults on the same path in the same
+ *  run; it is documented rather than handled. */
 export async function verifyFresh(
   origin: string,
   warm: WarmResult,

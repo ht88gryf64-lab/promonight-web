@@ -92,7 +92,7 @@ const CASES = [
   // ---- My Teams ----
   ['My Teams reads the device day', MYT, '  const todayYMD = useMemo(() => siteTodayYmd(), []);', `  const todayYMD = useMemo(() => ${DEVICE_DAY}, []);`, [T_TODAY]],
   // ---- the post-midnight refresh ----
-  ['the daily refresh fires before Eastern midnight in winter', 'vercel.json', '"schedule": "10 5 * * *"', '"schedule": "10 4 * * *"', [T_TODAY]],
+  ['/promos/today no longer rebuilt after Eastern midnight', 'src/lib/nightly-refresh.ts', "  '/promos/today',\n", '', [T_TODAY]],
   // ---- (a) Promos tracked ----
   ['"Promos tracked" counts ticket packages', DATA, '  return total.data().count - packages.reduce((n, s) => n + s.data().count, 0);', '  return total.data().count;', [T_TODAY]],
   ['"Promos tracked" subtracts the raw MLB flag', DATA, '  const packageClubs = teams.filter((t) => isTicketPackageLeague(t.league));', '  const packageClubs = teams;', [T_TODAY]],

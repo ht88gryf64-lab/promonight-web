@@ -10,10 +10,6 @@
       "schedule": "0 17 * * 2"
     },
     {
-      "path": "/api/cron/indexnow-daily",
-      "schedule": "10 5 * * *"
-    },
-    {
       "path": "/api/cron/nightly-refresh",
       "schedule": "15 4,5 * * *"
     }

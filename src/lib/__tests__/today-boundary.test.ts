@@ -238,7 +238,12 @@ test('after the nightly refresh, a 12:40 AM Eastern check finds no hub link to a
   assert.ok(stale.some((a) => a.includes('team-calendar')), `the defect reproduces: ${stale}`);
   assert.notEqual(before.card, after.page.size, 'and the old /nhl card disagrees with the page');
   // The refresh re-renders every one of those pages after midnight...
-  const { paths } = await nightlyRefreshPaths({ teams: async () => [{ id: 'pittsburgh-penguins', sportSlug: 'nhl' }], venueHubSlugs: async () => ['ppg-paints-arena'] });
+  const { paths } = await nightlyRefreshPaths({
+    teams: async () => [{ id: 'pittsburgh-penguins', sportSlug: 'nhl' }],
+    venueHubSlugs: async () => ['ppg-paints-arena'],
+    cfbSchoolIds: async () => [],
+    cfbMatchupSlugs: () => [],
+  });
   for (const p of ['/nhl/pittsburgh-penguins', '/venues/ppg-paints-arena', '/nhl', '/promos/today']) assert.ok(paths.includes(p), p);
   // ...so at 12:40 AM every link lands on an upcoming row and the card agrees.
   for (const a of after.links) assert.ok(after.page.has(a), `${a} is archived on the team page`);
@@ -260,16 +265,13 @@ test('the route cuts its page on todayYmd(), in the metadata and in the page', (
   assert.match(body, /return siteTodayYmd\(\);/);
 });
 
-test('the daily /promos/today refresh fires after Eastern midnight, summer and winter', () => {
+test('/promos/today is rebuilt after Eastern midnight by the nightly refresh; the 05:10 job is retired', async () => {
   const cfg = JSON.parse(readFileSync(new URL('../../../vercel.json', import.meta.url), 'utf8'));
-  const cron = cfg.crons.find((c: { path: string }) => c.path === '/api/cron/indexnow-daily');
-  const [min, hour, ...rest] = cron.schedule.split(' ');
-  assert.deepEqual(rest, ['*', '*', '*'], 'daily');
-  const utcMinutes = Number(hour) * 60 + Number(min);
-  // Eastern midnight is 04:00Z in EDT and 05:00Z in EST. Fire after both, and
-  // within two hours of the later one, so the board is regenerated before the
-  // morning rather than whenever the hourly ISR is next hit.
-  assert.ok(utcMinutes > 5 * 60 && utcMinutes <= 7 * 60, `cron at ${cron.schedule}`);
+  const paths = cfg.crons.map((c: { path: string }) => c.path);
+  assert.ok(paths.includes('/api/cron/nightly-refresh'));
+  assert.ok(!paths.includes('/api/cron/indexnow-daily'), 'its warm step could not work (WEB6 G4); retired by Matt');
+  const { NIGHTLY_FIXED_PATHS } = await import('../nightly-refresh');
+  assert.ok(NIGHTLY_FIXED_PATHS.includes('/promos/today'));
 });
 
 // ---- The guard: no second "today" anywhere in src ----

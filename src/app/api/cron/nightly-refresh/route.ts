@@ -19,6 +19,8 @@
 import { NextResponse } from 'next/server';
 import { getAllTeams } from '@/lib/data';
 import { getAllVenueHubSlugs } from '@/lib/venue-hub';
+import { getAllCfbSchoolIds } from '@/lib/cfb/data';
+import { getAllMatchupSlugs } from '@/lib/cfb/matchups';
 import {
   isNightlyRefreshWindow,
   nightlyRefreshPaths,
@@ -68,7 +70,12 @@ export async function GET(request: Request) {
   }
 
   const started = Date.now();
-  const { paths, dropped } = await nightlyRefreshPaths({ teams: getAllTeams, venueHubSlugs: getAllVenueHubSlugs });
+  const { paths, dropped } = await nightlyRefreshPaths({
+    teams: getAllTeams,
+    venueHubSlugs: getAllVenueHubSlugs,
+    cfbSchoolIds: getAllCfbSchoolIds,
+    cfbMatchupSlugs: getAllMatchupSlugs,
+  });
   const origin = refreshOrigin(request.url);
   const revalidated = await revalidateViaFanOut(origin, paths, fanOutSecret);
   await sleep(SETTLE_MS);

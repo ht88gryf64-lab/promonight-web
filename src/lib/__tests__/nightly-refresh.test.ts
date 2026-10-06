@@ -30,6 +30,10 @@ const HUBS = ['ppg-paints-arena', 'chase-center', 'target-field', 'Bad_Slug'];
 let routeHubs: string[] = ['ppg-paints-arena', 'chase-center', 'target-field'];
 mock.module(new URL('../data.ts', import.meta.url).href, { namedExports: { getAllTeams: async () => TEAMS } });
 mock.module(new URL('../venue-hub.ts', import.meta.url).href, { namedExports: { getAllVenueHubSlugs: async () => routeHubs } });
+const SCHOOLS = ['alabama', 'michigan'];
+const MATCHUPS = ['iron-bowl', 'the-game'];
+mock.module(new URL('../cfb/data.ts', import.meta.url).href, { namedExports: { getAllCfbSchoolIds: async () => SCHOOLS } });
+mock.module(new URL('../cfb/matchups.ts', import.meta.url).href, { namedExports: { getAllMatchupSlugs: () => MATCHUPS } });
 
 function cronSchedule(): { minute: number; hours: number[] } {
   const cfg = JSON.parse(readFileSync(new URL('../../../vercel.json', import.meta.url), 'utf8'));
@@ -79,7 +83,13 @@ test('the window is the 00:00 hour Eastern and nothing else', async () => {
 test('the paths: every team page, every venue hub, the hubs, /teams and the /promos pages, all valid fan-out paths', async () => {
   const { nightlyRefreshPaths, NIGHTLY_FIXED_PATHS } = await import('../nightly-refresh');
   const { PATH_RE } = await import('../revalidate-paths');
-  const { paths, dropped } = await nightlyRefreshPaths({ teams: async () => [...TEAMS, TEAMS[0]], venueHubSlugs: async () => HUBS });
+  const { paths, dropped } = await nightlyRefreshPaths({
+    teams: async () => [...TEAMS, TEAMS[0]],
+    venueHubSlugs: async () => HUBS,
+    cfbSchoolIds: async () => SCHOOLS,
+    cfbMatchupSlugs: () => MATCHUPS,
+  });
+  for (const p of ['/cfb', '/cfb/rivalries', '/cfb/alabama', '/cfb/michigan', '/cfb/rivalries/iron-bowl', '/cfb/rivalries/the-game']) assert.ok(paths.includes(p), p);
   assert.deepEqual(dropped, ['/venues/Bad_Slug'], 'reported, not silently lost');
   for (const t of TEAMS) assert.ok(paths.includes(`/${t.sportSlug}/${t.id}`), t.id);
   for (const h of HUBS.filter((h) => h !== 'Bad_Slug')) assert.ok(paths.includes(`/venues/${h}`), h);
@@ -91,7 +101,7 @@ test('the paths: every team page, every venue hub, the hubs, /teams and the /pro
   assert.equal(PATH_RE.test('/'), false, 'the fan-out still rejects the bare root, by ruling');
   assert.equal(new Set(paths).size, paths.length, 'deduped');
   assert.ok(paths.every((p) => PATH_RE.test(p)));
-  assert.equal(paths.length, TEAMS.length + 3 + NIGHTLY_FIXED_PATHS.length);
+  assert.equal(paths.length, TEAMS.length + 3 + SCHOOLS.length + MATCHUPS.length + NIGHTLY_FIXED_PATHS.length);
   for (const p of ['/best-promos', '/best-promos/bobbleheads', '/team-rankings']) assert.ok(paths.includes(p), p);
   assert.deepEqual(paths.slice(0, NIGHTLY_FIXED_PATHS.length), [...NIGHTLY_FIXED_PATHS], 'the slow cross-team pages are warmed first');
 });
@@ -248,6 +258,40 @@ test('the fan-out stops at its deadline and reports the batches it did not send'
   assert.deepEqual(r.failedBatches, [{ first: '/p100', status: 'past the deadline' }]);
 });
 
+test('pins (review round 6): requests cut at the deadline, a reset failure streak, "not warmed", the exact agent', async () => {
+  const { verifyFresh, retryUntaken } = await import('../nightly-refresh');
+  const { isNightlyRefreshRequest } = await import('../refresh-agent');
+  const hang = (_u: string, init: RequestInit) => new Promise<Response>((_r, rej) => init.signal!.addEventListener('abort', () => rej(new Error('aborted'))));
+  // Verify: a request started near the deadline is cut there, not at 60s.
+  let t0 = performance.now();
+  await verifyFresh('https://x.test', { ok: 1, failed: [], cache: {}, skipped: 0, states: { '/a': 'MISS' } }, ['/a'], {
+    deadline: Date.now() + 50, roundDelayMs: 0, sleep: async () => {}, fetcher: hang,
+  });
+  assert.ok(performance.now() - t0 < 5_000, 'verify request cut at the deadline');
+  // Retry: the fan-out POST and the re-warm are cut at the deadline too.
+  t0 = performance.now();
+  await retryUntaken('https://x.test', { ok: 1, failed: [], cache: {}, skipped: 0, states: { '/a': 'HIT' } }, 'r', {
+    deadline: Date.now() + 200, settleMs: 0, sleep: async () => {}, fetcher: hang,
+  });
+  assert.ok(performance.now() - t0 < 5_000, 'retry requests cut at the deadline');
+  // Two non-200s IN A ROW fail; blip, STALE, blip is still being asked.
+  const answers = [resp(502), resp(200, { 'x-vercel-cache': 'STALE' }), resp(502), resp(200, { 'x-vercel-cache': 'HIT' })];
+  let i = 0;
+  const r = await verifyFresh('https://x.test', { ok: 1, failed: [], cache: {}, skipped: 0, states: { '/b': 'STALE' } }, ['/b'], {
+    deadline: Date.now() + 60_000, roundDelayMs: 0, sleep: async () => {}, fetcher: async () => answers[i++],
+  });
+  assert.equal(r.fresh, 1, 'the streak resets on a real answer');
+  // A path the warm pass never requested fails as "not warmed".
+  const nw = await verifyFresh('https://x.test', { ok: 0, failed: [], cache: {}, skipped: 1, states: {} }, ['/c'], {
+    deadline: Date.now() + 60_000, roundDelayMs: 0, sleep: async () => {}, fetcher: async () => resp(200, { 'x-vercel-cache': 'HIT' }),
+  });
+  assert.deepEqual(nw.notFresh, [{ path: '/c', reason: 'not warmed' }]);
+  assert.equal(nw.fresh, 0);
+  // The middleware skip is for the job's exact agent only, never other bots.
+  assert.equal(isNightlyRefreshRequest('Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'), false);
+  assert.equal(isNightlyRefreshRequest('PromoNightRefreshBot/1.0 extra'), false);
+});
+
 test('budgets: each pass stops in time, and a request never outlives its pass', async () => {
   const { MAX_DURATION_S, WARM_BUDGET_MS, VERIFY_BUDGET_MS, FETCH_TIMEOUT_MS, warmPaths } = await import('../nightly-refresh');
   const route = readFileSync(new URL('../../app/api/cron/nightly-refresh/route.ts', import.meta.url), 'utf8');
@@ -367,7 +411,7 @@ test('the route: auth, the window, then revalidate through POST /api/revalidate 
     const res = await call('Bearer s');
     const body = await res.json();
     assert.equal(res.status, 200);
-    const expected = TEAMS.length + 3 + 16;
+    const expected = TEAMS.length + 3 + SCHOOLS.length + MATCHUPS.length + 18;
     assert.equal(body.paths, expected);
     assert.equal(body.revalidated, expected);
     assert.equal(body.warmed, expected);
