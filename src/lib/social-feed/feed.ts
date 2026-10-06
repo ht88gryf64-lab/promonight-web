@@ -142,8 +142,21 @@ export async function findCardPromo(key: string): Promise<RssItemInput | null> {
     getPromo: async (teamId, promoId) => {
       const doc = await db.collection('teams').doc(teamId).collection('promos').doc(promoId).get();
       if (!doc.exists) return null;
-      // No card for an NHL or NBA special-ticket row (WEB6 G2).
-      if (isTicketPackageDoc(doc.data()) && isTicketPackageLeague((await getTeamBySlug(teamId))?.league)) return null;
+      // No card for an NHL or NBA special-ticket row (WEB6 G2), nor for the
+      // unflagged twin of one: when a same-date, same-title pair dedupes on the
+      // team page to the flagged doc, the team page lists that row as a package
+      // (review round 2). Same order as getTeamPromos: doc id within a date.
+      if (isTicketPackageLeague((await getTeamBySlug(teamId))?.league)) {
+        if (isTicketPackageDoc(doc.data())) return null;
+        const data = doc.data()!;
+        const key = String(data.title || '').trim().toLowerCase();
+        const sameDay = await db.collection('teams').doc(teamId).collection('promos').where('date', '==', data.date).get();
+        const winner = sameDay.docs
+          .filter((d) => d.data().tombstoned !== true && d.data().isPostseason !== true)
+          .filter((d) => String(d.data().title || '').trim().toLowerCase() === key)
+          .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))[0];
+        if (winner && isTicketPackageDoc(winner.data())) return null;
+      }
       return mapPromoDoc(doc);
     },
     getTeam: (teamId) => getTeamBySlug(teamId),

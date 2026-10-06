@@ -1,5 +1,5 @@
 import type { Team } from './types';
-import { isSplitSeasonLeague, splitSeasonLabel, SPLIT_SEASON_START_YEAR } from './season-label';
+import { currentSeasonLabel } from './season-label';
 
 /**
  * CTR diagnostic, team-page title treatment.
@@ -91,7 +91,7 @@ export function teamTitleSubtitle(team: Pick<Team, 'id' | 'league'>): string {
  * experiments never touch NHL or NBA: both arms are MLB and NFL clubs.
  */
 function titleSeasonWord(team: Pick<Team, 'league'>): string {
-  return isSplitSeasonLeague(team.league) ? splitSeasonLabel(SPLIT_SEASON_START_YEAR) : String(TITLE_SEASON_YEAR);
+  return currentSeasonLabel(team.league);
 }
 
 /**

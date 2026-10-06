@@ -37,11 +37,16 @@ function isDate(value: string): boolean {
   return DATE_RE.test(value);
 }
 
+/** Firestore's order for strings (code units), not locale collation. */
+function byteOrder(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
 /** getTeamPromos' dedupe on raw docs: date then doc id order, first row per
  *  (date, trimmed lower-case title) wins. NHL and NBA only (see below). */
 function dedupeDocsLikeTeamPage<T extends { id: string; data: () => FirebaseFirestore.DocumentData }>(docs: T[]): T[] {
   const ordered = [...docs].sort(
-    (a, b) => String(a.data().date).localeCompare(String(b.data().date)) || a.id.localeCompare(b.id),
+    (a, b) => byteOrder(String(a.data().date), String(b.data().date)) || byteOrder(a.id, b.id),
   );
   const seen = new Set<string>();
   return ordered.filter((doc) => {
@@ -75,7 +80,11 @@ async function fetchPromosForTeam(
     // (date, then doc id), so the unflagged twin of a package never shows here
     // when the team page lists that pair as the package. Other leagues are
     // read exactly as before.
-    const dropPackages = isTicketPackageLeague(team?.league);
+    // If the cached lookup fails or misses, read the team doc's league rather
+    // than fail open and list packages (review round 2); a failure there
+    // falls to the catch below, which returns nothing for this team and logs.
+    const league = team ? team.league : String((await db.collection('teams').doc(teamSlug).get()).data()?.league ?? '');
+    const dropPackages = isTicketPackageLeague(league);
     // Visibility filter on the raw docs before shaping: only tombstoned:true
     // and isPostseason:true are hidden; absent and false pass. App-code
     // filter, never a Firestore inequality (which would drop field-absent

@@ -18,14 +18,17 @@ import assert from 'node:assert/strict';
 type Data = Record<string, unknown>;
 type Doc = ReturnType<typeof fakeDoc>;
 function fakeDoc(id: string, data: Data, teamId?: string) {
-  const ref: any = { parent: { parent: teamId ? { id: teamId, get: async () => TEAMS.find((t) => t.id === teamId) } : null } };
+  const ref: any = { parent: { parent: teamId ? { id: teamId, get: async () => [...TEAMS, GHOST].find((t) => t.id === teamId) } : null } };
   return { id, exists: true, data: () => data, get: (f: string) => data[f], ref };
 }
 function snap(docs: Doc[]) {
   return { docs, empty: docs.length === 0, size: docs.length, forEach: (fn: (d: Doc) => void) => docs.forEach(fn), data: () => ({ count: docs.length }) };
 }
+const docName = (d: Doc) => `${d.ref.parent.parent?.id ?? ''}/${d.id}`;
+const byName = (a: Doc, b: Doc) => (docName(a) < docName(b) ? -1 : docName(a) > docName(b) ? 1 : 0);
 function query(docs: Doc[]): any {
   let rows = docs;
+  let orderField: string | null = null;
   const q: any = {
     where: (field: string, op: string, value: any) => {
       const v = (d: Doc) => d.data()[field] as any;
@@ -34,13 +37,16 @@ function query(docs: Doc[]): any {
       if (op === '<=') rows = rows.filter((d) => v(d) <= value);
       return q;
     },
+    // Firestore returns documents in document-name order (team path, then id)
+    // unless ordered by a field, and breaks field ties the same way. The real
+    // readers' dedupe depends on it, so the fake does it too.
     orderBy: (f: string) => {
-      rows = [...rows].sort((a, b) => String(a.data()[f]).localeCompare(String(b.data()[f])));
+      orderField = f;
       return q;
     },
     limit: () => q,
     count: () => ({ get: async () => snap(rows) }),
-    get: async () => snap(rows),
+    get: async () => snap([...rows].sort((a, b) => (orderField ? String(a.data()[orderField]).localeCompare(String(b.data()[orderField])) : 0) || byName(a, b))),
   };
   return q;
 }
@@ -58,6 +64,7 @@ const TEAMS = [
   fakeDoc('detroit-red-wings', { league: 'NHL', city: 'Detroit', name: 'Red Wings', abbreviation: 'DET', primaryColor: 0, secondaryColor: 0, division: 'Atlantic', sportSlug: 'nhl' }),
   fakeDoc('minnesota-twins', { league: 'MLB', city: 'Minnesota', name: 'Twins', abbreviation: 'MIN', primaryColor: 0, secondaryColor: 0, division: 'Central', sportSlug: 'mlb' }),
 ];
+const GHOST = fakeDoc('ghost-nhl', { league: 'NHL', city: 'Ghost', name: 'Club', abbreviation: 'GHO', primaryColor: 0, secondaryColor: 0, division: 'X', sportSlug: 'nhl' });
 const row = (id: string, team: string, date: string, title: string, type: string, flagged: boolean) =>
   fakeDoc(id, { date, title, type, description: `${title}.`, opponent: 'Visitors', highlight: true, ...(flagged ? { ticketPackageRequired: true } : {}) }, team);
 const PROMOS = [
@@ -66,6 +73,13 @@ const PROMOS = [
   // so no reader may show the unflagged twin either. Drop-before-dedupe would.
   row('d4', 'detroit-red-wings', D2, 'Twin Night', 'theme', true),
   row('d5', 'detroit-red-wings', D2, 'Twin Night', 'theme', false),
+  // A twin pair stored so an unordered read returns the unflagged doc FIRST,
+  // while Firestore's id order puts the flagged one first (e1 < e2): My Teams
+  // must sort before it dedupes, or it keeps the wrong one.
+  row('e2', 'detroit-red-wings', D1, 'Order Night', 'theme', false),
+  row('e1', 'detroit-red-wings', D1, 'Order Night', 'theme', true),
+  row('g1', 'ghost-nhl', D1, 'Ghost Pack', 'theme', true),
+  row('g2', 'ghost-nhl', D1, 'Ghost Night', 'theme', false),
   row('d1', 'detroit-red-wings', D1, 'Free Night', 'theme', false),
   row('d2', 'detroit-red-wings', D1, 'Hoodie Pack', 'theme', true),
   row('d3', 'detroit-red-wings', D2, 'Lunch Box', 'food', true),
@@ -81,7 +95,9 @@ const fakeDb = {
       return {
         ...query(TEAMS),
         doc: (id: string) => ({
-          get: async () => TEAMS.find((t) => t.id === id) ?? { exists: false, data: () => undefined },
+          // ghost-nhl: readable by its doc, absent from the cached teams list,
+          // so My Teams has to fall back to reading the league from the doc.
+          get: async () => [...TEAMS, GHOST].find((t) => t.id === id) ?? { exists: false, data: () => undefined },
           collection: () => ({
             ...query(byTeam(id)),
             doc: (pid: string) => ({ get: async () => byTeam(id).find((d) => d.id === pid) ?? { exists: false, data: () => undefined } }),
@@ -117,7 +133,9 @@ test('getPromosInDateRange and getPromosFromDate: packages out, MLB untouched', 
 
 test('getHighlightedPromos: packages out', async () => {
   const { getHighlightedPromos } = await import('../data');
-  assert.deepEqual(titles(await getHighlightedPromos(10)), COUNTED);
+  // This reader resolves teams by their doc, so the club absent from the
+  // cached list (ghost-nhl) is read too: its counted row in, its package out.
+  assert.deepEqual(titles(await getHighlightedPromos(10)), [...COUNTED, 'Ghost Night'].sort());
 });
 
 test('dropTicketPackageRows leaves an unflagged NHL row and every MLB row', async () => {
@@ -183,4 +201,21 @@ test('the feed keeps MLB rows that carry the raw flag', async () => {
   const card = await feed.findCardPromo('minnesota-twins~t2');
   assert.equal(card?.title, 'Bobblehead');
   assert.deepEqual(sel.items.map((i) => i.title).sort(), COUNTED, 'every counted row selected, the MLB raw-flag row included');
+});
+
+test('My Teams sorts in Firestore order before the dedupe, and reads the league when the cached lookup misses', async () => {
+  const { GET } = await import('../../app/api/my-teams/promos/route');
+  const { NextRequest } = await import('next/server');
+  const res = await GET(new NextRequest(`http://localhost/api/my-teams/promos?teams=detroit-red-wings,ghost-nhl&start=${D1}&end=${D1}`));
+  const got = titles(((await res.json()) as { promos: { title: string }[] }).promos);
+  assert.ok(!got.includes('Order Night'), 'the flagged doc wins the dedupe (id order), so the pair is a package');
+  assert.ok(!got.includes('Ghost Pack'), 'league read from the doc: the package is dropped');
+  assert.ok(got.includes('Ghost Night'));
+});
+
+test('no image card for the unflagged twin of a package', async () => {
+  const feed = await import('../social-feed/feed');
+  assert.equal(await feed.findCardPromo('detroit-red-wings~d5'), null, 'Twin Night: the flagged d4 wins the dedupe');
+  assert.equal(await feed.findCardPromo('detroit-red-wings~e2'), null, 'Order Night: the flagged e1 wins by id');
+  assert.equal((await feed.findCardPromo('detroit-red-wings~d1'))?.title, 'Free Night');
 });
