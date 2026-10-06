@@ -282,6 +282,8 @@ export interface Game {
   // encodes season type in digits 5 and 6 (01 preseason, 02 regular).
   nhlGameId?: number;
   nhlSeasonCode?: number;
+  // NHL and NBA: the game is at a neutral site (venueName says where). Set by
+  // mapGameDoc only when true, on those two leagues only.
   neutralSite?: boolean;
   // ISO string at the data-layer boundary; stored as a Firestore Timestamp.
   ingestedAt?: string;

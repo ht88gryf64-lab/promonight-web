@@ -38,6 +38,8 @@ import { VENUE_RESOLUTION_MAP } from './venue-resolution-map';
 import { VENUE_LOCATIONS_STATIC } from './venue-locations';
 import { resolveMlbZone } from './mlb-venue-tz';
 import { gameZoneAbbrev } from './format-game-time';
+import { isSplitSeasonLeague } from './season-label';
+import { isTicketPackageDoc, isTicketPackageLeague, partitionTicketPackages } from './ticket-packages';
 
 function tsToIso(v: unknown): string | null {
   if (!v) return null;
@@ -213,6 +215,31 @@ export async function getTeamBySlug(slug: string): Promise<Team | null> {
  *  /[sport]/[team] share ONE read instead of two — the same dedupe the CFB
  *  template gets from getCfbSchoolPage. Per-request only: promos stay uncached
  *  across renders so a scan write plus /api/revalidate surfaces immediately. */
+// Promos whose doc carries ticketPackageRequired true, by object identity, so
+// the field itself never rides on a Promo (src/lib/ticket-packages.ts). Filled
+// by the readers below as they map each doc; a WeakSet, so a row leaves it when
+// nothing holds the row.
+const ticketPackageRows = new WeakSet<Promo>();
+
+/** Whether this row's doc was marked as needing a special ticket. Read only
+ *  through partitionTicketPackages, which applies it on NHL and NBA alone. */
+export function isTicketPackagePromo(p: Promo): boolean {
+  return ticketPackageRows.has(p);
+}
+
+function mapPromoDocNotingPackage(doc: FirebaseFirestore.DocumentSnapshot): Promo {
+  const promo = mapPromoDoc(doc);
+  if (isTicketPackageDoc(doc.data())) ticketPackageRows.add(promo);
+  return promo;
+}
+
+// THE SAME AWAIT SHAPE AS BEFORE THE SPLIT. The route calls this exactly as it
+// always did and splits the result synchronously afterwards, so a page without
+// packages goes through the very code path it went through before. (A preview
+// control on 2026-10-05 first blamed an extra await layer for 8 MLS pages
+// whose flight rows came out in a different order; the next control showed
+// main's own build does the same on 8 pages, a different 8 each build: the
+// metadata row's place in an on-demand render is a race, not this code.)
 export const getTeamPromos = cache(async (teamId: string): Promise<Promo[]> => {
   const snapshot = await db
     .collection('teams')
@@ -220,7 +247,7 @@ export const getTeamPromos = cache(async (teamId: string): Promise<Promo[]> => {
     .collection('promos')
     .orderBy('date', 'asc')
     .get();
-  return dedupePromos(snapshot.docs.map(mapPromoDoc).filter(isVisiblePromo));
+  return dedupePromos(snapshot.docs.map(mapPromoDocNotingPackage).filter(isVisiblePromo));
 });
 
 export async function getPromosForDate(date: string): Promise<PromoWithTeam[]> {
@@ -461,8 +488,9 @@ export async function getPromoCount(): Promise<number> {
 // rather than the one-or-two document reads it used to issue. On a build, and
 // on any instance that has already rendered a page, that is 148 reads once
 // instead of two per call across ~200 calls. On a COLD instance regenerating a
-// single NHL/NBA/MLS/WNBA team page — the leagues where getGamesForTeam
-// short-circuits, so nothing else here needs the collection — it is 2 -> 148.
+// single MLS/WNBA team page (the leagues where getGamesForTeam short-circuits;
+// NHL and NBA read games since WEB6, so nothing else here needs the
+// collection), it is 2 -> 148.
 // Unlike venueHubs (see the getVenueHub exemption in venue-hub.ts) there is no
 // carve-out, because the root layout already loads all 169 teams on every route
 // and the aggregator pages already read every venue; a second resolution regime
@@ -753,7 +781,7 @@ export async function getPlayoffPromosInDateRange(
   return results;
 }
 
-// ── Games (MLB only for now) ───────────────────────────────────────────────
+// ── Games (MLB and NFL; NHL and NBA since WEB6, see GAME_LEAGUES) ──────────
 
 function mapGameDoc(doc: FirebaseFirestore.DocumentSnapshot): Game {
   const d = doc.data()!;
@@ -794,6 +822,20 @@ function mapGameDoc(doc: FirebaseFirestore.DocumentSnapshot): Game {
     // first pitch as "2:10 AM". See resolveMlbZone for the map-miss policy.
     game.gameTimeTz = zone ? zone.tz : '';
   }
+  // ── NBA: no game time, by ruling (WEB6, 2026-10-05) ──────────────────────
+  //
+  // The NBA spine (pipeline lib/ingest/nba-schedule.js) stores no tip-off time,
+  // so every NBA row shows date, opponent and home/away only. Blanked HERE, at
+  // the mapper, and not at the render sites: a time that a future ingest adds
+  // unverified would otherwise reach the four render sites and the RSC payload
+  // of every NBA page the day it lands. NHL times ARE shown: the NHL spine
+  // stores the UTC start and the venue zone, the same convention as MLB, and
+  // formatGameTime converts it (pinned against the official schedule in
+  // src/lib/__tests__/nhl-nba-schedule.test.ts).
+  if (game.league === 'nba') {
+    game.gameTime = '';
+    game.gameTimeTz = '';
+  }
   // ── Zone label, every league (was MLB-only until 2026-09-04) ─────────────
   //
   // The gate this replaces read `game.league === 'mlb'`, justified by a claim
@@ -828,6 +870,12 @@ function mapGameDoc(doc: FirebaseFirestore.DocumentSnapshot): Game {
   if (typeof d.week === 'number') game.week = d.week;
   if (typeof d.timeTbd === 'boolean') game.timeTbd = d.timeTbd;
   if (typeof d.isInternational === 'boolean') game.isInternational = d.isInternational;
+  // NHL and NBA neutral-site games (Paris, Manchester, Mexico City, Austin, a
+  // stadium game). Without it the expand said "Home game" for the Spurs in
+  // Paris and offered San Antonio parking for it (review round 1). Read only
+  // on those two leagues and only when true, so no other league's game object,
+  // and no other game's RSC payload, gains a key.
+  if ((d.league === 'nhl' || d.league === 'nba') && d.neutralSite === true) game.neutralSite = true;
   if (d.internationalLocation === null || typeof d.internationalLocation === 'string') {
     game.internationalLocation = d.internationalLocation;
   }
@@ -840,10 +888,19 @@ function mapGameDoc(doc: FirebaseFirestore.DocumentSnapshot): Game {
 }
 
 // Returns every game (home + away) involving `teamSlug`, sorted by date asc.
-// `league` is lowercase ('mlb' | 'nfl'). Other leagues currently have no
+// `league` is lowercase ('mlb' | 'nfl' | 'nhl' | 'nba'). Other leagues have no
 // games data; this returns an empty array for them rather than throwing.
+//
+// NHL and NBA joined 2026-10-05 (WEB6): both season spines have been in the
+// games collection since September (1,409 NHL and 1,266 NBA docs, season 2026),
+// and without them the 18 NHL and NBA pages with no promos showed an empty
+// calendar instead of the season's games. Preseason docs: NFL drops them here
+// (isRegularSeasonGame); NHL and NBA KEEP them for the calendar (keepPreseason
+// below), and regularSeasonContexts drops them before the schedule list and
+// the Games tile.
+export const GAME_LEAGUES: readonly string[] = ['mlb', 'nfl', 'nhl', 'nba'];
 export const getGamesForTeam = cache(async (teamSlug: string, league: string): Promise<Game[]> => {
-  if (league !== 'mlb' && league !== 'nfl') return [];
+  if (!GAME_LEAGUES.includes(league)) return [];
   const [homeSnap, awaySnap] = await Promise.all([
     db.collection('games')
       .where('league', '==', league)
@@ -859,7 +916,18 @@ export const getGamesForTeam = cache(async (teamSlug: string, league: string): P
   // an absent field would drop all 2455 of them. Inert until preseason data is
   // ingested, which is the point: it can land ahead of that ingest, so the
   // Games tile and the team-page schedule never see a preseason row.
-  const games = [...homeSnap.docs, ...awaySnap.docs].map(mapGameDoc).filter(isRegularSeasonGame);
+  //
+  // EXCEPT NHL AND NBA, WHICH KEEP THEIR PRESEASON (review round 1, WEB6). Clubs
+  // in both leagues run real promotions at preseason home games: on 2026-10-05
+  // six upcoming rows sat on preseason dates (Lakers Pride Night 10-08,
+  // Grizzlies and Magic). The calendar draws a cell for a date only when a game
+  // is on it, so dropping the game hid the promo there. The schedule list and
+  // the Games tile still count the regular season only: regularSeasonContexts
+  // (src/lib/schedule-months.ts) drops preseason before either sees a game.
+  const keepPreseason = isSplitSeasonLeague(league);
+  const games = [...homeSnap.docs, ...awaySnap.docs]
+    .map(mapGameDoc)
+    .filter((g) => isRegularSeasonGame(g) || (keepPreseason && g.seasonType === 'preseason'));
   // Stable sort by date then gameTime, doubleheader game 2 after game 1.
   games.sort((a, b) => {
     if (a.date !== b.date) return a.date.localeCompare(b.date);
@@ -931,7 +999,7 @@ function mergeDateRuns(dates: Iterable<string>): DateRun[] {
  *    because the dedupe key contains the date — a promo can only ever collide
  *    with another promo on its own date.
  */
-async function getTeamPromosOnDates(teamId: string, dates: Set<string>): Promise<Promo[]> {
+async function getTeamPromosOnDates(teamId: string, dates: Set<string>, league: string): Promise<Promo[]> {
   if (dates.size === 0) return [];
   const runs = mergeDateRuns(dates);
   const perRun = await Promise.all(
@@ -947,9 +1015,13 @@ async function getTeamPromosOnDates(teamId: string, dates: Set<string>): Promise
       return snapshot.docs;
     }),
   );
-  return dedupePromos(perRun.flat().map(mapPromoDoc).filter(isVisiblePromo)).filter((p) =>
-    dates.has(p.date),
-  );
+  // An opponent's special-ticket rows stay off this page's game rows on the
+  // leagues where the flag is a verdict, exactly as they stay off the
+  // opponent's own counts. Filtered after the dedupe so the surviving document
+  // of a duplicate pair is the one getTeamPromos keeps.
+  const mapped = perRun.flat().map(mapPromoDocNotingPackage);
+  return partitionTicketPackages(dedupePromos(mapped.filter(isVisiblePromo)), isTicketPackagePromo, league)
+    .promos.filter((p) => dates.has(p.date));
 }
 
 // Enriches a list of games with opponent team + venue + the promos occurring
@@ -986,6 +1058,10 @@ export async function enrichGamesForTeam(
     awayDatesByOpp.get(g.homeTeamSlug)?.add(g.date);
   }
 
+  // The games list is one league's spine ('nhl', 'nba', 'mlb', 'nfl'), and an
+  // opponent always plays in it.
+  const gamesLeague = games[0]?.league ?? '';
+
   const teamById = new Map<string, Team>();
   const venueById = new Map<string, Venue | null>();
   const promosByOppDate = new Map<string, Map<string, Promo[]>>();
@@ -995,7 +1071,7 @@ export async function enrichGamesForTeam(
       const [team, venue, promos] = await Promise.all([
         getTeamBySlug(slug),
         getVenueForTeam(slug),
-        getTeamPromosOnDates(slug, awayDatesByOpp.get(slug) ?? new Set()),
+        getTeamPromosOnDates(slug, awayDatesByOpp.get(slug) ?? new Set(), gamesLeague),
       ]);
       if (team) teamById.set(slug, team);
       venueById.set(slug, venue);
@@ -1576,11 +1652,16 @@ export const getLeagueUpcomingPromoCounts = cache(
       }
     }
     const today = hubTodayChicagoYMD();
+    const dropPackages = isTicketPackageLeague(league);
     const snapshot = await db.collectionGroup('promos').where('date', '>=', today).get();
     for (const doc of snapshot.docs) {
       const teamId = doc.ref.parent.parent!.id;
       if (!inLeague.has(teamId)) continue;
       if (!isVisiblePromo(mapPromoDoc(doc))) continue;
+      // The hub card links to the team page and must count what it counts: an
+      // NHL or NBA special-ticket row is not a promotion there (WEB6 addendum;
+      // review round 5). Inert on every other league.
+      if (dropPackages && isTicketPackageDoc(doc.data())) continue;
       counts[teamId] += 1;
     }
     return counts;

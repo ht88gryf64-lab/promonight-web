@@ -1,4 +1,5 @@
 import type { Team, Venue } from '@/lib/types';
+import { isSplitSeasonLeague, splitSeasonLabel, SPLIT_SEASON_START_YEAR } from '@/lib/season-label';
 
 // Hardcoded, never derived from the clock. A page that renders "2027 promo
 // schedule" on 2027-01-01 while its own title, FAQ and JSON-LD still say 2026 is
@@ -8,7 +9,7 @@ const SEASON_YEAR = 2026;
 
 type LeagueCopy = {
   cadence: string;
-  paragraphs: (ctx: { teamName: string; venueName: string; city: string; year: number }) => string[];
+  paragraphs: (ctx: { teamName: string; venueName: string; city: string; year: string }) => string[];
 };
 
 // League-specific evergreen copy that renders in place of "Upcoming Promos"
@@ -43,17 +44,27 @@ const LEAGUE_COPY: Record<string, LeagueCopy> = {
       `When promos are announced, you'll see every giveaway, theme night, ticket pack, and family event here at ${venueName}. Check back closer to the season opener, or star the ${teamName} here to get one weekly email once dates are confirmed.`,
     ],
   },
+  // NHL and NBA: no sentence about what is or is not listed. That is said at
+  // most ONCE per page, in the line above the schedule
+  // (src/lib/announcement-status.ts), which a page reaching this block carries
+  // unless it shows playoff promos or every-game deals, or has no games; a
+  // second "PromoNight has no ... listed yet" here repeated it a screen lower
+  // (review round 1). Whether the CLUB has announced anything is a claim about
+  // a real organization, made only in that line and only for a club whose page
+  // was checked. This block also renders on pages whose club HAS published
+  // (the Warriors did on 2026-10-05, before any scan), so it must not say they
+  // have not.
   NBA: {
     cadence: 'October–April regular season',
-    paragraphs: ({ teamName, venueName, year }) => [
-      `The ${teamName} haven't announced any ${year} promotional events yet. Most NBA teams release their full promo schedules at the start of the regular season and then add dates throughout the year.`,
+    paragraphs: ({ teamName, venueName }) => [
+      `Most NBA teams release their full promo schedules at the start of the regular season and then add dates throughout the year.`,
       `When ${teamName} promos are confirmed at ${venueName}, they'll appear on this page. In the meantime, the free PromoNight app carries the same calendar, so confirmed events show up there too.`,
     ],
   },
   NHL: {
     cadence: 'October–April regular season',
-    paragraphs: ({ teamName, venueName, year }) => [
-      `The ${teamName} haven't announced any ${year} promotional events yet. NHL teams typically release the bulk of their promo calendar at season open and continue adding dates through the playoffs.`,
+    paragraphs: ({ teamName, venueName }) => [
+      `NHL teams typically release the bulk of their promo calendar at season open and continue adding dates through the playoffs.`,
       `When ${teamName} giveaways, theme nights, or family events are confirmed at ${venueName}, they'll show up here. The free PromoNight app carries the same calendar as this page.`,
     ],
   },
@@ -121,8 +132,13 @@ export function ZeroPromoFallback({
   const copy = LEAGUE_COPY[team.league];
   const venueName = venue?.name ?? `${team.name} home venues`;
   const city = extractCity(venue?.address) || team.city;
+  // The printed season: "2026" on calendar-year leagues (the same text the
+  // number always rendered as), "2026-27" on NHL and NBA.
+  // The NUMBER stays a number on those leagues: it is a JSX child in the H2
+  // below, and the RSC payload serializes 2026 and "2026" differently.
+  const seasonName: string | number = isSplitSeasonLeague(team.league) ? splitSeasonLabel(SPLIT_SEASON_START_YEAR) : SEASON_YEAR;
   const paragraphs = copy
-    ? copy.paragraphs({ teamName, venueName, city, year: SEASON_YEAR })
+    ? copy.paragraphs({ teamName, venueName, city, year: String(seasonName) })
     : [`No ${teamName} promotions are listed for ${SEASON_YEAR} yet.`];
 
   if (variant === 'light') {
@@ -134,7 +150,7 @@ export function ZeroPromoFallback({
               Coming up
             </span>
             <h2 className="rd-display mt-1 text-2xl text-rd-ink md:text-3xl">
-              {SEASON_YEAR} {teamName.toUpperCase()} PROMO SCHEDULE
+              {seasonName} {teamName.toUpperCase()} PROMO SCHEDULE
             </h2>
           </div>
 
@@ -158,7 +174,7 @@ export function ZeroPromoFallback({
             Coming up
           </span>
           <h2 className="font-display text-3xl md:text-4xl tracking-[1px] mt-1">
-            {SEASON_YEAR} {teamName.toUpperCase()} PROMO SCHEDULE
+            {seasonName} {teamName.toUpperCase()} PROMO SCHEDULE
           </h2>
         </div>
 

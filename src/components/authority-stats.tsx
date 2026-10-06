@@ -17,7 +17,10 @@ const HOME_GAMES_BY_LEAGUE: Record<string, number> = {
   MLB: 81,
   NBA: 41,
   NFL: 9, // 8 regular + 1 preseason
-  NHL: 41,
+  // 42, not 41: the 2026-27 NHL season is 84 games (measured on the season
+  // spine, 42 regular-season home games for each of the 32 clubs). This is a
+  // 2026-27 season claim and NHL pages only publish it for 2026-27 rows.
+  NHL: 42,
   MLS: 17,
   WNBA: 20,
 };

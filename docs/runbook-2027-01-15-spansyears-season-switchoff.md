@@ -56,7 +56,9 @@ earlier year as a labelled archive.
 The split is **observed, not modelled**. That is the whole point, and it is what
 keeps this from reintroducing the season model `src/lib/season-label.ts`
 explicitly refuses to build. Nothing here asserts that an NHL season "is"
-October to April, or that a calendar year "is" a season. It asserts only what the
+October to April, or that a calendar year "is" a season. (NHL and NBA pages
+have their own season constant, `SPLIT_SEASON_START_YEAR`, bumped on July 1, not
+here: see known-issues 69. Leave it alone when this runbook bumps the 2026s.) It asserts only what the
 rows show: two years, and everything still ahead is in one of them.
 
 `season-label.ts` already supplies the year span; the archive labelling for the

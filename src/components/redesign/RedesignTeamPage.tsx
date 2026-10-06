@@ -16,6 +16,8 @@ import { DivisionRivals } from './DivisionRivals';
 import { getDivisionRivals } from '@/lib/division-rivals';
 import { teamTitleSubtitle } from '@/lib/title-treatment';
 import { seasonClaimSentence, type ClaimMode } from '@/lib/season-scope';
+import { scheduleStatusLine } from '@/lib/announcement-status';
+import { isSplitSeasonLeague } from '@/lib/season-label';
 import { UpcomingPromoModalProvider } from './UpcomingPromoModal';
 import { AffiliateRail } from './AffiliateRail';
 import { ExploreCard } from './ExploreCard';
@@ -42,6 +44,7 @@ import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure
 import { AdSlot } from '@/components/ads/AdSlot';
 import { AD_SLOTS } from '@/lib/ads/slots';
 import { FollowCTA } from '@/components/follow/FollowCTA';
+import { TicketPackageList } from './TicketPackageList';
 import { AppPushPitch } from '@/components/app-push-pitch';
 
 export interface RedesignTeamPageProps {
@@ -82,6 +85,11 @@ export interface RedesignTeamPageProps {
    *  bracket. Null or absent for every other club, and then this template
    *  emits exactly what it emitted before the module existed. */
   postseason?: ReactNode;
+  /** NHL and NBA special-ticket rows still to come, already split out of
+   *  `promos` by the route (src/lib/ticket-packages.ts). They appear ONLY in
+   *  their own group under the promo list. Empty or absent on every other
+   *  page, which then renders exactly as before. */
+  ticketPackages?: Promo[];
 }
 
 /**
@@ -112,6 +120,7 @@ export function RedesignTeamPage({
   playoffLastUpdated,
   playoffContext,
   postseason = null,
+  ticketPackages = [],
 }: RedesignTeamPageProps) {
   // The league segment links up to the league hub, but ONLY when that hub is
   // live, so the team page and its hub form a reciprocal loop (hub links down to
@@ -175,6 +184,20 @@ export function RedesignTeamPage({
   // return null). The identity on NFL.
   const regularGames = gameContexts ? regularSeasonContexts(gameContexts, today) : undefined;
   const showSchedule = hasNoUpcoming && (regularGames?.length ?? 0) > 0;
+  // NHL and NBA only: the one line above the schedule on a page with no promos
+  // for the season it names (src/lib/announcement-status.ts). Null on every
+  // other league and on any NHL or NBA page whose season resolved, so those
+  // pages pass ScheduleBlock exactly the props they always did.
+  const statusLine = scheduleStatusLine({
+    league: team.league,
+    showSchedule,
+    seasonResolved: !!seasonScope,
+    hasTicketPackages: ticketPackages.length > 0,
+    hasOtherPromos: (inPlayoffs && playoffPromos.length > 0) || recurringDeals.length > 0,
+    teamId: team.id,
+    displayName,
+    today,
+  });
 
   // Same-division rivals, free from gameContexts (opponent Team docs are
   // already fetched by enrichGamesForTeam). Empty on leagues without game
@@ -189,7 +212,13 @@ export function RedesignTeamPage({
   // immediately after the promo list (order-[41], ahead of the follow
   // pairing at 42). Desktop ignores order-*, so the same hasNoUpcoming
   // branch also picks the SOURCE position at the two mounts below.
-  const rivals = getDivisionRivals(team, gameContexts);
+  // NOT on NHL or NBA. Those pages gained gameContexts in WEB6 for the
+  // schedule, which would have switched this block on for all 62 of them as a
+  // side effect: a new weave item (and so a new ad anchor) and a sentence that
+  // every rival has "its own promo and giveaway calendar", untrue for the
+  // clubs with nothing recorded yet. Off until it is ruled on (review round 2);
+  // those pages render no rivals block, exactly as before.
+  const rivals = isSplitSeasonLeague(team.league) ? [] : getDivisionRivals(team, gameContexts);
   const rivalsBlock =
     rivals.length > 0 ? (
       <div className={`rd-weave-item ${hasNoUpcoming ? 'order-[12]' : 'order-[41]'}`}>
@@ -218,7 +247,9 @@ export function RedesignTeamPage({
   // the wrapper below can hold the same element.
   const seasonBlock =
     showSchedule && gameContexts ? (
-      <ScheduleBlock contexts={gameContexts} team={team} teamName={displayName} today={today} />
+      // A server component: its props are not serialized, so a null statusLine
+      // leaves MLB and NFL output exactly as it was.
+      <ScheduleBlock contexts={gameContexts} team={team} teamName={displayName} today={today} statusLine={statusLine} />
     ) : (
       <SeasonExplorer
         promos={upcomingPromos}
@@ -233,6 +264,52 @@ export function RedesignTeamPage({
         today={today}
       />
     );
+
+  // Full promo list, or the league fallback on a page with no promos at all.
+  // Built here so the two branches of the order-[40] item below hold the same
+  // element.
+  const promoSlot = (
+    hasNoPromosAtAll ? (
+      /* League-contextual copy REPLACES the list ONLY on pages with no
+         promos at all, in any season. Replace rather than sit
+         alongside: both blocks render the same "Coming up" eyebrow and
+         a competing H2 about the same absent thing, and the branch
+         being replaced is the dead-end "No upcoming promos yet".
+         PromoArrivalHighlight goes with it, which is inert here: it is
+         a deep-link scroll effect with no promo rows to anchor to.
+
+         NOTE the gate is hasNoPromosAtAll, NOT hasNoUpcoming. A club
+         whose season has ended has zero upcoming but a full completed
+         archive, and that archive is real content a visitor may want.
+         Those pages keep PromoList, which states the empty upcoming
+         case in its own words and renders the archive beneath it. */
+      <ZeroPromoFallback
+        team={team}
+        venue={venue}
+        teamName={displayName}
+        variant="light"
+      />
+    ) : (
+      <UpcomingPromoModalProvider>
+        <PromoList
+          league={team.league}
+          promos={promos}
+          teamSlug={team.id}
+          teamName={displayName}
+          teamNickname={team.name}
+          sport={team.sportSlug}
+          primaryColor={team.primaryColor}
+          venueName={venue?.name ?? null}
+          variant="light"
+          showAppPitch={false}
+          seasonScoped={!!seasonScope}
+          scopeLive={scopeLive}
+          team={team}
+          gameContexts={gameContexts}
+        />
+      </UpcomingPromoModalProvider>
+    )
+  );
 
   return (
     <div className={`${archivo.variable} rd-root min-h-screen`}>
@@ -262,7 +339,11 @@ export function RedesignTeamPage({
           isRedesignEnabled(), so the trigger does not exist on the legacy
           team-page branch. */}
       {isCaptureTriggerEnabled() && (
-        <CaptureTriggerHost pageType="team_page" team={team} gameContexts={gameContexts} />
+        // NHL and NBA: no game contexts, as before WEB6. Their new contexts
+        // (for the schedule) would otherwise fill the capture sheet's opponent
+        // chips with every opponent on 62 pages, a side effect nobody ruled on
+        // (review round 7, like the rivals block in round 2).
+        <CaptureTriggerHost pageType="team_page" team={team} gameContexts={isSplitSeasonLeague(team.league) ? undefined : gameContexts} />
       )}
 
       {/* Chrome (BrandBar + Footer) is rendered globally by app/layout.tsx when
@@ -292,6 +373,7 @@ export function RedesignTeamPage({
             // list cannot disagree. Was the raw doc count, which read 168 on
             // the Braves (3 Wild Card games, 3 postponed originals).
             gamesCount={regularGames?.length}
+            {...(isSplitSeasonLeague(team.league) ? { gamesLabel: 'Scheduled games' } : {})}
             note={seasonScope ? seasonClaimSentence(seasonScope) : undefined}
           />
         }
@@ -467,48 +549,19 @@ export function RedesignTeamPage({
                 expands inline); the provider holds one Modal for the list.
                 showTeamLink defaults false — the user is already on this team's
                 page. */}
-            <div className="rd-weave-item order-[40]">
-              {hasNoPromosAtAll ? (
-                /* League-contextual copy REPLACES the list ONLY on pages with no
-                   promos at all, in any season. Replace rather than sit
-                   alongside: both blocks render the same "Coming up" eyebrow and
-                   a competing H2 about the same absent thing, and the branch
-                   being replaced is the dead-end "No upcoming promos yet".
-                   PromoArrivalHighlight goes with it, which is inert here: it is
-                   a deep-link scroll effect with no promo rows to anchor to.
-
-                   NOTE the gate is hasNoPromosAtAll, NOT hasNoUpcoming. A club
-                   whose season has ended has zero upcoming but a full completed
-                   archive, and that archive is real content a visitor may want.
-                   Those pages keep PromoList, which states the empty upcoming
-                   case in its own words and renders the archive beneath it. */
-                <ZeroPromoFallback
-                  team={team}
-                  venue={venue}
-                  teamName={displayName}
-                  variant="light"
-                />
-              ) : (
-                <UpcomingPromoModalProvider>
-                  <PromoList
-                    league={team.league}
-                    promos={promos}
-                    teamSlug={team.id}
-                    teamName={displayName}
-                    teamNickname={team.name}
-                    sport={team.sportSlug}
-                    primaryColor={team.primaryColor}
-                    venueName={venue?.name ?? null}
-                    variant="light"
-                    showAppPitch={false}
-                    seasonScoped={!!seasonScope}
-                    scopeLive={scopeLive}
-                    team={team}
-                    gameContexts={gameContexts}
-                  />
-                </UpcomingPromoModalProvider>
-              )}
-            </div>
+            {/* The promo slot. With ticket packages ahead (NHL and NBA only) the
+                group follows the list INSIDE this weave item, so it adds no ad
+                anchor and moves no order value. Two branches rather than an
+                optional child: an absent group would still serialize a null
+                into the RSC payload of every team page. */}
+            {ticketPackages.length > 0 ? (
+              <div className="rd-weave-item order-[40]">
+                {promoSlot}
+                <TicketPackageList packages={ticketPackages} arrivalHighlight={hasNoPromosAtAll} />
+              </div>
+            ) : (
+              <div className="rd-weave-item order-[40]">{promoSlot}</div>
+            )}
 
             {/* Rivals, populated mount: immediately after the promo list,
                 ahead of every conversion/browse module. */}

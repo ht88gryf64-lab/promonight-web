@@ -2,7 +2,7 @@ import { APP_LEAGUES, type CoverageCounts } from '@/lib/coverage-counts';
 import type { Team, Promo, PromoType, Venue, PlayoffPromo } from './types';
 import { PROMO_TYPE_LABELS } from './types';
 import { indefiniteArticleFor } from './indefinite-article';
-import { remainingPeriodPhrase } from './season-label';
+import { currentSeasonLabel, isSplitSeasonLeague, remainingPeriodPhrase } from './season-label';
 // TYPE-ONLY, and it has to stay that way: season-scope.ts imports this module
 // for countPromosByType / isUpcomingPromo, so a value import here would close a
 // runtime cycle. The one string this file needs off the object is precomputed
@@ -497,8 +497,8 @@ export function generateTeamFAQs(
     const gated = season.gatedDisclosure;
     const seasonBreakdown = breakdown(season.counts);
     faqs.push({
-      question: `How many promotional nights do the ${team.name} have in the ${season.year} season?`,
-      answer: `The ${fullName} have ${season.total} promotional ${season.total === 1 ? 'event' : 'events'} in the ${season.year} season${seasonBreakdown ? `, including ${seasonBreakdown}` : ''}.${remaining ? ` ${remaining}` : ''}${gated ? ` ${gated}` : ''} These events take place at ${venueName}${cityClause}.`,
+      question: `How many promotional nights do the ${team.name} have in the ${season.label} season?`,
+      answer: `The ${fullName} have ${season.total} promotional ${season.total === 1 ? 'event' : 'events'} in the ${season.label} season${seasonBreakdown ? `, including ${seasonBreakdown}` : ''}.${remaining ? ` ${remaining}` : ''}${gated ? ` ${gated}` : ''} These events take place at ${venueName}${cityClause}.`,
     });
   } else if (upcomingPromos.length > 0) {
     // HELD keeps the pre-change strings byte for byte, including the "in the
@@ -573,12 +573,12 @@ export function generateTeamFAQs(
       const aheadClause =
         ahead === 0 ? '' : `${ahead} ${ahead === 1 ? 'is' : 'are'} still to come${kidsList ? `: ${kidsList}` : ''}.`;
       faqs.push({
-        question: `When are ${team.name} kids and family events in the ${claim.scope.year} season?`,
-        answer: `The ${fullName} have ${kidsSeasonCount} kids and family ${kidsSeasonCount === 1 ? 'event' : 'events'} at ${venueName} in the ${claim.scope.year} season.${aheadClause ? ` ${aheadClause}` : ''} These events are designed for young fans and families attending games at ${venueName}.`,
+        question: `When are ${team.name} kids and family events in the ${claim.scope.label} season?`,
+        answer: `The ${fullName} have ${kidsSeasonCount} kids and family ${kidsSeasonCount === 1 ? 'event' : 'events'} at ${venueName} in the ${claim.scope.label} season.${aheadClause ? ` ${aheadClause}` : ''} These events are designed for young fans and families attending games at ${venueName}.`,
       });
     } else
     faqs.push({
-      question: `When are ${team.name} kids and family events in ${year}?`,
+      question: `When are ${team.name} kids and family events in ${isSplitSeasonLeague(team.league) ? currentSeasonLabel(team.league) : year}?`,
       // "still to come in 2026" was wrong on every club whose remaining rows
       // cross a New Year (29 of 32 NHL clubs on 2026-09-04). The period comes
       // from the rows being counted.
@@ -665,7 +665,7 @@ export function generateTeamFAQs(
     // upcoming-only N, which read as the whole schedule.
     const reflects =
       claim.kind === 'season'
-        ? `The ${claim.scope.year} schedule on this page holds ${claim.scope.total} events, ${claim.scope.upcomingCount} of them still to come.`
+        ? `The ${claim.scope.label} schedule on this page holds ${claim.scope.total} events, ${claim.scope.upcomingCount} of them still to come.`
         : claim.kind === 'held'
           ? `The current schedule reflects ${upcomingPromos.length} scheduled events.`
           : `The schedule on this page holds ${upcomingPromos.length} events still to come.`;

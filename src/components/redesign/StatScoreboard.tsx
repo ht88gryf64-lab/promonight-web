@@ -15,9 +15,11 @@ import { RD_CATEGORIES, RD_CATEGORY_ORDER } from './categories';
 //   home-only count would disagree with the list and would also move all 30 MLB
 //   pages, which is a separate change with its own gate.
 //
-//   Shape B, the 6 non-NFL zero-promo pages (4 NBA, 1 NHL, 1 MLS): four zeros
-//   and no Games tile at all, because getGamesForTeam short-circuits for every
-//   league but mlb and nfl, so gameContexts is undefined. The grid then holds 4
+//   Shape B, the non-NFL zero-promo pages of a league with no games data (MLS,
+//   WNBA): four zeros and no Games tile at all, because getGamesForTeam
+//   short-circuits for every league outside GAME_LEAGUES (mlb, nfl and, since
+//   WEB6, nhl and nba, which now show a "Scheduled games" tile), so
+//   gameContexts is undefined. The grid then holds 4
 //   tiles in a lg:grid-cols-5 track and leaves one column empty. HANDLING SHAPE
 //   B MEANS DELIBERATELY DOING NOTHING: that 4-in-5 layout is already the
 //   shipping status quo on all 101 populated non-MLB, non-NFL team pages.
@@ -32,6 +34,11 @@ import { RD_CATEGORIES, RD_CATEGORY_ORDER } from './categories';
 export interface StatScoreboardProps {
   counts: Record<PromoType, number>; // promoCounts from the page
   gamesCount?: number; // optional total scheduled games
+  /** The Games tile's label. "Games" by default. NHL and NBA pages pass
+   *  "Scheduled games": the NBA publishes its last games in December, so on
+   *  2026-10-05 every NBA club showed 80 of its 82, and a bare "80 Games"
+   *  read as the season (review round 1). */
+  gamesLabel?: string;
   /**
    * The sentence that names the population the tiles count, e.g.
    * "98 promotions in the 2026 season, 19 still to come".
@@ -70,7 +77,7 @@ function StatTile({ count, label, color, Icon }: TileProps) {
   );
 }
 
-export function StatScoreboard({ counts, gamesCount, note, className = '' }: StatScoreboardProps) {
+export function StatScoreboard({ counts, gamesCount, gamesLabel = 'Games', note, className = '' }: StatScoreboardProps) {
   // NO NOTE, NO WRAPPER. The note only ever accompanies season counts, so on
   // every held or fallback page this must emit exactly the markup it emitted
   // before: one grid div carrying the merged class string. An always-on wrapper
@@ -99,7 +106,7 @@ export function StatScoreboard({ counts, gamesCount, note, className = '' }: Sta
         {typeof gamesCount === 'number' && gamesCount > 0 && (
           <StatTile
             count={gamesCount}
-            label="Games"
+            label={gamesLabel}
             color="#ffffff"
             Icon={IconCalendarEvent}
           />

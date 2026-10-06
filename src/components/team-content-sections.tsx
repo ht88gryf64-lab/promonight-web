@@ -10,6 +10,7 @@ import {
 } from '@/lib/promo-helpers';
 import { RD_CATEGORIES } from '@/components/redesign/categories';
 import type { ClaimMode } from '@/lib/season-scope';
+import { currentSeasonLabel, isSplitSeasonLeague } from '@/lib/season-label';
 
 // Hardcoded, never derived from the clock. See the same rule at
 // generateTeamFAQs in promo-helpers.ts: the page title and meta description
@@ -64,7 +65,9 @@ interface SectionScope {
   isSeason: boolean;
   /** True inside a league's rollout hold: render the PRE-CHANGE sentence. */
   held: boolean;
-  year: number;
+  /** The season as printed: the number 2026 on calendar-year leagues (as it
+   *  always was), the label "2026-27" on NHL and NBA. */
+  year: number | string;
   /** Rows listed under the paragraph. */
   list: Promo[];
   /** True when `list` holds upcoming rows, false when it holds completed ones. */
@@ -83,7 +86,19 @@ export function TeamContentSections({
 }: TeamContentSectionsProps) {
   const season = claim.kind === 'season' ? claim.scope : null;
   const held = claim.kind === 'held';
-  const year = season ? season.year : SEASON_YEAR;
+  // The printed season name. On calendar-year leagues this is the same string
+  // the number always rendered as; on NHL and NBA it is the two-year label, so
+  // no heading asks what a club is doing "in 2026" over a 2026-27 list.
+  // A NUMBER on calendar-year leagues, as it always was: it is a JSX child in
+  // the question headings, and the RSC payload serializes 2026 and "2026"
+  // differently, which would move the bytes of every MLB and NFL page.
+  const year: string | number = isSplitSeasonLeague(team.league)
+    ? season
+      ? season.label
+      : currentSeasonLabel(team.league)
+    : season
+      ? season.year
+      : SEASON_YEAR;
   const fullName = teamDisplayName(team);
   const venueName = venue?.name || 'their home stadium';
 
@@ -111,7 +126,7 @@ export function TeamContentSections({
       upcomingCount: ahead.length,
       isSeason: true,
       held: false,
-      year: season.year,
+      year: isSplitSeasonLeague(team.league) ? season.label : season.year,
       list: ahead.length > 0 ? ahead : done,
       listIsUpcoming: ahead.length > 0,
       // Only the giveaway count is published broad enough to need it.

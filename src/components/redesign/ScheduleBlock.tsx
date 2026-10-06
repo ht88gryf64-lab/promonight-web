@@ -4,6 +4,7 @@ import { teamDisplayName } from '@/lib/promo-helpers';
 import { formatGameTime } from '@/lib/format-game-time';
 import { gamesLabel, groupByMonth, regularSeasonContexts, type ScheduleMonth } from '@/lib/schedule-months';
 import { TITLE_SEASON_YEAR } from '@/lib/title-treatment';
+import { currentSeasonLabel, isSplitSeasonLeague } from '@/lib/season-label';
 import { IconChevronDown } from '@tabler/icons-react';
 import { ScheduleRow } from './ScheduleRow';
 
@@ -113,13 +114,17 @@ export interface ScheduleBlockProps {
   contexts: GameContext[];
   team: Team;
   teamName: string;
+  /** NHL and NBA pages with no promos for the season the page names: ONE
+   *  line above the schedule saying so (src/lib/announcement-status.ts). Absent
+   *  everywhere else, and then the block renders exactly what it did. */
+  statusLine?: string | null;
   /** The page's one clock read (YYYY-MM-DD). Decides only whether the date
    *  list may invite a visitor to open a row for tickets. Absent reads as
    *  "no game remains", the direction that cannot make a false claim. */
   today?: string;
 }
 
-export function ScheduleBlock({ contexts, team, teamName, today }: ScheduleBlockProps) {
+export function ScheduleBlock({ contexts, team, teamName, today, statusLine }: ScheduleBlockProps) {
   // Regular season only, one entry per game; see src/lib/schedule-months.ts.
   // The identity on NFL, which the NFL golden test holds byte for byte.
   const regular = regularSeasonContexts(contexts, today);
@@ -145,6 +150,49 @@ export function ScheduleBlock({ contexts, team, teamName, today }: ScheduleBlock
         remaining={remaining}
         renderRow={(row) => renderGameRow(row, team, teamName, { showPostponed: true })}
       />
+    );
+  }
+
+  // NHL AND NBA (WEB6, 2026-10-05): the same collapsed month sections as MLB,
+  // every row in the HTML, units only between months. Three differences, each
+  // a copy-truth rule rather than a style choice:
+  //  - the season is named "2026-27", never "2026";
+  //  - the intro says "every SCHEDULED game": the NBA has published 80 of 82
+  //    (the two NBA Cup knockout games are set in December), so "every game
+  //    of the regular season" would be false on all 30 NBA pages until then;
+  //  - rows show date, opponent and home/away (plus the puck-drop time on NHL;
+  //    the NBA spine stores none), no venue line.
+  // The spine never updates a game's status (every doc reads 'scheduled'), so
+  // the same comparison as MLB decides "remaining" by the date alone.
+  if (isSplitSeasonLeague(team.league) && !isWeekGrid) {
+    const splitRemaining = today !== undefined && regular.some((c) => c.game.date >= today && c.game.status === 'scheduled');
+    const list = (
+      <DateListSchedule
+        rows={rows as GameRow[]}
+        teamName={teamName}
+        remaining={splitRemaining}
+        renderRow={(row) => renderGameRow(row, team, teamName, { hideVenue: true })}
+        seasonName={currentSeasonLabel(team.league)}
+        scheduledOnly
+        tightTop={!!statusLine}
+      />
+    );
+    // The status line is a SIBLING above the list, never a slot inside it: a
+    // conditional child inside DateListSchedule serializes as a null in the
+    // RSC payload of every MLB page even when it renders nothing (found by
+    // the preview payload diff, 2026-10-05).
+    if (!statusLine) return list;
+    return (
+      <>
+        <div className="px-6 pt-12">
+          <div className="mx-auto max-w-5xl">
+            <p className="rounded-2xl border border-rd-line bg-rd-card px-4 py-3 font-rd text-sm leading-relaxed text-rd-ink sm:px-5">
+              {statusLine}
+            </p>
+          </div>
+        </div>
+        {list}
+      </>
     );
   }
 
@@ -231,7 +279,12 @@ type GameRow = Extract<Row, { kind: 'game' }>;
 // makeup date yet is still one of the season's games and keeps its row, but
 // printing its original first pitch would state a start that will not happen,
 // so the time cell says "Postponed" instead.
-function renderGameRow(row: GameRow, team: Team, teamName: string, opts: { showPostponed?: boolean } = {}) {
+function renderGameRow(
+  row: GameRow,
+  team: Team,
+  teamName: string,
+  opts: { showPostponed?: boolean; hideVenue?: boolean } = {},
+) {
   const { ctx } = row;
   const { game, isHome, opponentTeam } = ctx;
   const oppName = opponentTeam ? teamDisplayName(opponentTeam) : 'TBD';
@@ -258,10 +311,12 @@ function renderGameRow(row: GameRow, team: Team, teamName: string, opts: { showP
   // venue prop is the team's own building, which is wrong for the
   // neutral-site international games, and opponentVenue is the
   // opponent's building, which is wrong for every home row.
-  const venueLabel = game.venueName || '';
+  const venueLabel = opts.hideVenue ? '' : game.venueName || '';
 
   const locationLabel = game.isInternational
     ? `International, ${game.internationalLocation ?? game.venueName}`
+    : game.neutralSite === true
+    ? `Neutral site, ${game.venueName}`
     : null;
 
   return (
@@ -317,12 +372,24 @@ function DateListSchedule({
   teamName,
   remaining,
   renderRow,
+  seasonName = TITLE_SEASON_YEAR,
+  scheduledOnly = false,
+  tightTop = false,
 }: {
   rows: GameRow[];
   teamName: string;
   remaining: boolean;
   renderRow: (row: GameRow) => React.ReactNode;
+  /** The printed season. TITLE_SEASON_YEAR on MLB (the number, as before),
+   *  the two-year label from currentSeasonLabel on NHL and NBA. */
+  seasonName?: string | number;
+  /** "Every scheduled game" instead of "Every game" (NHL and NBA). */
+  scheduledOnly?: boolean;
+  /** A status line sits directly above: halve the top padding. The class
+   *  string is unchanged when false, which is every MLB page. */
+  tightTop?: boolean;
 }) {
+  const every = scheduledOnly ? 'Every scheduled game' : 'Every game';
   const months = groupByMonth(rows, (r) => r.ctx.game.date);
 
   const month = (m: ScheduleMonth<GameRow>) => (
@@ -345,23 +412,23 @@ function DateListSchedule({
   );
 
   return (
-    <section className="py-12 px-6">
+    <section className={tightTop ? 'pb-12 pt-6 px-6' : 'py-12 px-6'}>
       <div className="mx-auto max-w-5xl">
         <div className="font-rd text-[11px] uppercase tracking-[0.14em] text-rd-ink-faint">
-          {`${TITLE_SEASON_YEAR} season`}
+          {`${seasonName} season`}
         </div>
         <h2 className="rd-display mt-1 text-2xl text-rd-ink md:text-3xl">
-          {`${teamName} ${TITLE_SEASON_YEAR} Game Schedule`}
+          {`${teamName} ${seasonName} Game Schedule`}
         </h2>
         {/* Says what the list is: regular-season games, by month. The ticket
             invitation only while a game is still ahead; over a fully played
             season it would point at expands for games already over. */}
         <p className="mt-2 max-w-2xl font-rd text-sm leading-relaxed text-rd-ink-soft">
           {months === null
-            ? `Every game of the ${TITLE_SEASON_YEAR} regular season.`
+            ? `${every} of the ${seasonName} regular season.`
             : remaining
-            ? `Every game of the ${TITLE_SEASON_YEAR} regular season, by month. Open a month to see its games, and a game for tickets, parking and hotels on the road.`
-            : `Every game of the ${TITLE_SEASON_YEAR} regular season, by month. Open a month to see its games.`}
+            ? `${every} of the ${seasonName} regular season, by month. Open a month to see its games, and a game for tickets, parking and hotels on the road.`
+            : `${every} of the ${seasonName} regular season, by month. Open a month to see its games.`}
         </p>
 
         {months === null ? (

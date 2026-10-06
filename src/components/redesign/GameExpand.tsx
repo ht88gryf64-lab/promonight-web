@@ -118,8 +118,13 @@ function GameExpandRow({
     ? awayGameSubKey(team?.id ?? game.awayTeamSlug, opponentTeam?.id ?? game.homeTeamSlug)
     : undefined;
 
+  // A neutral-site NHL or NBA game is at neither club's building: it names
+  // the venue it is at and offers no parking or hotels for either arena.
+  const awayFromBuildings = game.isInternational || game.neutralSite === true;
   const eyebrow = game.isInternational
     ? `International · ${game.internationalLocation ?? game.venueName}`
+    : game.neutralSite === true
+    ? `Neutral site · ${game.venueName}`
     : isHome
       ? 'Home game'
       : `At ${opponentVenue?.name || 'opponent venue'}`;
@@ -148,6 +153,7 @@ function GameExpandRow({
           {game.league === 'nfl' && game.week != null && ` · Week ${game.week}`}
           {game.doubleheaderGame && ` · Doubleheader Game ${game.doubleheaderGame}`}
           {game.status !== 'scheduled' && ` · ${game.status.toUpperCase()}`}
+          {game.seasonType === 'preseason' && ` · Preseason`}
           {game.isPostseason && ` · Playoffs`}
         </div>
       )}
@@ -163,7 +169,7 @@ function GameExpandRow({
           {game.isInternational && (
             <div className="text-rd-ink-soft text-xs mt-1">{game.venueName}</div>
           )}
-          {!game.isInternational && opponentVenue && !isHome && (
+          {!awayFromBuildings && opponentVenue && !isHome && (
             <div className="inline-flex items-center gap-1 text-rd-ink-soft text-xs mt-1">
               <IconMapPin size={12} stroke={2} />
               {opponentVenue.name}
@@ -211,7 +217,7 @@ function GameExpandRow({
         )}
         {!isHome && opponentTeam && (
           <>
-            {!game.isInternational && (
+            {!awayFromBuildings && (
               <ParkingCTA
                 team={opponentTeam}
                 venue={opponentVenue}
@@ -221,7 +227,7 @@ function GameExpandRow({
                 compact
               />
             )}
-            {!game.isInternational && (
+            {!awayFromBuildings && (
               <HotelsCTA
                 team={opponentTeam}
                 venue={opponentVenue}

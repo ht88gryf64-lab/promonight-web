@@ -28,6 +28,74 @@
 // src/, and guessing one (an NHL season "is" October to April) would be a new
 // assumption in the same shape as the one this replaces. These labels state the
 // span the data actually covers and nothing more.
+//
+// EXCEPT NHL AND NBA, BY RULING (WEB6, 2026-10-05). For those two leagues a
+// season is a fact, not a guess: it runs from autumn to the following June and
+// both leagues name it with two years ("2026-27"). Treating one calendar year as
+// the season put Jan to Apr 2026 rows from the finished 2025-26 season on the
+// Heat, Raptors and Wizards pages as "the 2026 season", in the hero counts, the
+// list and the FAQ, and labelled last season's archive "this season" on 16
+// pages. The split-season helpers below are the whole model: a row belongs to
+// the season that starts in the calendar year of its date when the date is on
+// or after July 1, and to the season that started the year before otherwise.
+// July 1 sits between the last Finals game (June) and the first preseason game
+// (late September) in both leagues, so no real game straddles it.
+import { TITLE_SEASON_YEAR } from './title-treatment';
+
+/**
+ * The NHL and NBA season this site names: 2026 means 2026-27. ITS OWN CONSTANT,
+ * deliberately NOT TITLE_SEASON_YEAR. That one is the MLB-paced title year, and
+ * its runbook bumps it to 2027 when the 2027 MLB content is ready, in January or
+ * February 2027, in the middle of the 2026-27 NHL and NBA seasons. Tied to it,
+ * that bump would drop every 2026-27 row out of season scope, head the live
+ * season "LAST SEASON (2026-27)" and title the schedule "2027-28". Bump this
+ * one in July, when the next NHL and NBA season opens (review round 1, WEB6).
+ *
+ * IT GOES STALE SILENTLY on 2027-07-01 (review round 3): every NHL and NBA page
+ * would keep calling 2026-27 "this season" through 2027-28. Known-issues 69 is
+ * the bump procedure (bump on July 1), and a test fails on the real clock from
+ * that day if it has not happened (season-labels-by-league.test.ts).
+ */
+export const SPLIT_SEASON_START_YEAR = 2026;
+
+/** Leagues whose season spans two calendar years and is named "2026-27". */
+const SPLIT_SEASON_LEAGUES = new Set(['NHL', 'NBA']);
+
+/** True for NHL and NBA, in any case ('NHL', 'nhl'). */
+export function isSplitSeasonLeague(league: string | null | undefined): boolean {
+  return typeof league === 'string' && SPLIT_SEASON_LEAGUES.has(league.toUpperCase());
+}
+
+/** First month (1-based) of a split season. July 1 opens the season. */
+const SPLIT_SEASON_FIRST_MONTH = 7;
+
+/**
+ * The calendar year a split season STARTS in, for a YYYY-MM-DD date:
+ * 2026-10-06 and 2027-04-10 are both 2026 (the 2026-27 season); 2026-04-10 is
+ * 2025 (the 2025-26 season). Null for a malformed date.
+ */
+export function splitSeasonStartYear(ymd: string): number | null {
+  const m = /^(\d{4})-(\d{2})-\d{2}$/.exec(ymd);
+  if (!m) return null;
+  const year = Number(m[1]);
+  const month = Number(m[2]);
+  if (month < 1 || month > 12) return null;
+  return month >= SPLIT_SEASON_FIRST_MONTH ? year : year - 1;
+}
+
+/** "2026-27" for 2026, "2099-00" for 2099. */
+export function splitSeasonLabel(startYear: number): string {
+  return `${startYear}-${String((startYear + 1) % 100).padStart(2, '0')}`;
+}
+
+/**
+ * The season label a page names for its league: "2026-27" on NHL and NBA, the
+ * plain TITLE_SEASON_YEAR everywhere else. Hardcoded through those two
+ * constants, never derived from the clock (see title-treatment.ts).
+ */
+export function currentSeasonLabel(league: string | null | undefined): string {
+  return isSplitSeasonLeague(league) ? splitSeasonLabel(SPLIT_SEASON_START_YEAR) : String(TITLE_SEASON_YEAR);
+}
 
 export interface SeasonSpan {
   /** Distinct calendar years present, ascending. */
@@ -87,18 +155,98 @@ export function completedHeading(span: SeasonSpan | null): string {
 }
 
 /**
- * The line under that heading.
+ * The line under that heading, for a calendar-year league.
  *
- * "this season" is kept for a single-year archive, unchanged. It is dropped for
- * a multi-year one, because that archive is not one season by the page's own
- * reckoning and saying so was the second half of the same false claim.
+ * "this season" is said ONLY for a single-year archive of the CURRENT season,
+ * TITLE_SEASON_YEAR. Every MLB, NFL, MLS and WNBA archive on production
+ * 2026-10-05 is exactly that, so their output is unchanged. A single-year
+ * archive of an earlier year (a club whose only rows are from 2025) is not
+ * "this season" by any reckoning, so it states its count and its months
+ * instead (ruling, WEB6 2026-10-05: never "this season" for completed
+ * past-season events, in any league). A multi-year archive was already
+ * dropping the phrase. Split-season leagues do not come here: their archive
+ * is grouped by season in promo-list.tsx with archiveGroups().
  */
 export function completedSubline(count: number, span: SeasonSpan | null): string {
   const events = count === 1 ? 'event' : 'events';
-  if (!span || !span.spansYears) return `${count} completed ${events} this season`;
+  if (!span) return `${count} completed ${events} this season`;
+  if (!span.spansYears && span.years[0] === TITLE_SEASON_YEAR) return `${count} completed ${events} this season`;
   return span.monthRangeLabel
     ? `${count} completed ${events}, ${span.monthRangeLabel}`
     : `${count} completed ${events}`;
+}
+
+/** One season's block of a split-season archive. */
+export interface ArchiveGroup {
+  /** The season's start year, e.g. 2025 for 2025-26; null for the trailing
+   *  group of rows whose date cannot be placed in a season. */
+  startYear: number | null;
+  /** "2025-26". */
+  label: string;
+  /** True for the season the page names (SPLIT_SEASON_START_YEAR). */
+  isCurrent: boolean;
+  /** "COMPLETED 2026-27 PROMOS", "LAST SEASON (2025-26)", "2024-25 SEASON". */
+  heading: string;
+  /** "3 completed events this season" / "22 completed events, October 2025 to April 2026". */
+  subline: string;
+  /** Indexes into the input array, input order preserved. */
+  indexes: number[];
+}
+
+/**
+ * Group a split-season league's completed rows by season, current season
+ * first, then newest to oldest. Only the current season's block says "this
+ * season"; the season before it is headed "LAST SEASON (2025-26)" and every
+ * older one by its label. A row whose date cannot be placed in a season (a
+ * stored "2026-1-05" passes splitPromosByDate's empty-date check and lands in
+ * `past`) goes in a last group of its own, so it is never silently dropped.
+ */
+export function archiveGroups(dates: readonly string[]): ArchiveGroup[] {
+  const bySeason = new Map<number, number[]>();
+  const unplaced: number[] = [];
+  dates.forEach((d, i) => {
+    const y = splitSeasonStartYear(d);
+    if (y === null) {
+      unplaced.push(i);
+      return;
+    }
+    const list = bySeason.get(y) ?? [];
+    list.push(i);
+    bySeason.set(y, list);
+  });
+  const groups: ArchiveGroup[] = [...bySeason.keys()]
+    .sort((a, b) => b - a)
+    .map((startYear) => {
+      const indexes = bySeason.get(startYear)!;
+      const label = splitSeasonLabel(startYear);
+      const isCurrent = startYear === SPLIT_SEASON_START_YEAR;
+      const n = indexes.length;
+      const events = n === 1 ? 'event' : 'events';
+      const span = seasonSpan(indexes.map((i) => dates[i]));
+      const heading = isCurrent
+        ? `COMPLETED ${label} PROMOS`
+        : startYear === SPLIT_SEASON_START_YEAR - 1
+          ? `LAST SEASON (${label})`
+          : `${label} SEASON`;
+      const subline = isCurrent
+        ? `${n} completed ${events} this season`
+        : span?.monthRangeLabel
+          ? `${n} completed ${events}, ${span.monthRangeLabel}`
+          : `${n} completed ${events}`;
+      return { startYear, label, isCurrent, heading, subline, indexes };
+    });
+  if (unplaced.length > 0) {
+    const n = unplaced.length;
+    groups.push({
+      startYear: null,
+      label: 'other',
+      isCurrent: false,
+      heading: 'OTHER COMPLETED PROMOS',
+      subline: `${n} completed ${n === 1 ? 'event' : 'events'}`,
+      indexes: unplaced,
+    });
+  }
+  return groups;
 }
 
 /**

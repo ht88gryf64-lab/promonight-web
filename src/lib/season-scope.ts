@@ -1,4 +1,4 @@
-import { seasonSpan } from './season-label';
+import { isSplitSeasonLeague, seasonSpan, splitSeasonLabel, splitSeasonStartYear, SPLIT_SEASON_START_YEAR } from './season-label';
 import { countPromosByType, isPurchaseGated, isUpcomingPromo, todayYmd } from './promo-helpers';
 import { TITLE_SEASON_YEAR } from './title-treatment';
 import type { Promo, PromoType } from './types';
@@ -111,8 +111,14 @@ function gatedDisclosureFor(gated: number, total: number): string | null {
 }
 
 export interface SeasonScope {
-  /** The single calendar year the rows resolve to. */
+  /** The calendar year the season STARTS in. For MLB, MLS, WNBA and NFL the
+   *  single calendar year the rows resolve to; for NHL and NBA the first year
+   *  of a two-year season (2026 for 2026-27). */
   year: number;
+  /** The season's name as printed: "2026" on calendar-year leagues (equal to
+   *  String(year), so their copy is unchanged), "2026-27" on NHL and NBA.
+   *  Every sentence that names the season reads THIS, never `year`. */
+  label: string;
   /** Every dated row in the season, date-ascending. */
   promos: Promo[];
   /** Category counts over the whole season population. */
@@ -209,6 +215,21 @@ export function resolveSeasonScope(
   );
   if (dated.length === 0) return null;
 
+  // NHL AND NBA: the season is the two-year season the page names, 2026-27,
+  // and ONLY its rows are counted. Rows from 2025-26 are last season: they
+  // stay in the archive under their own heading (promo-list.tsx) and are never
+  // a "2026 season". This is the whole fix for the Heat, Raptors and Wizards
+  // pages, whose only rows were Jan to Apr 2026: no 2026-27 row, no season
+  // claim, so the page falls back to what is still to come (nothing) and the
+  // archive says "LAST SEASON (2025-26)". The calendar-year path below never
+  // sees these leagues, so a one-year population can never be read as their
+  // season.
+  if (isSplitSeasonLeague(league)) {
+    const inSeason = dated.filter((p) => splitSeasonStartYear(p.date) === SPLIT_SEASON_START_YEAR);
+    if (inSeason.length === 0) return null;
+    return buildScope(inSeason, SPLIT_SEASON_START_YEAR, splitSeasonLabel(SPLIT_SEASON_START_YEAR), today);
+  }
+
   const span = seasonSpan(dated.map((p) => p.date));
   // DATED FAILURE, 2027-01-15: this line switches the season display off, and
   // it does so silently. MLB bobblehead calendars publish January to February,
@@ -224,6 +245,11 @@ export function resolveSeasonScope(
   const year = span.years[0];
   if (year !== TITLE_SEASON_YEAR) return null;
 
+  return buildScope(dated, year, String(year), today);
+}
+
+/** The scope over a population already known to be one season. */
+function buildScope(dated: Promo[], year: number, label: string, today: string): SeasonScope {
   const sorted = [...dated].sort((a, b) => a.date.localeCompare(b.date));
   const upcoming = sorted.filter((p) => isUpcomingPromo(p, today));
   const past = sorted.filter((p) => !isUpcomingPromo(p, today)).reverse();
@@ -235,6 +261,7 @@ export function resolveSeasonScope(
 
   return {
     year,
+    label,
     promos: sorted,
     counts,
     upcoming,
@@ -287,7 +314,7 @@ export function isSeasonComplete(scope: SeasonScope): boolean {
  * is exactly as strong as the evidence.
  */
 export function seasonClaimSentence(scope: SeasonScope): string {
-  const head = `${scope.total} ${plural(scope.total, 'promotion', 'promotions')} in the ${scope.year} season`;
+  const head = `${scope.total} ${plural(scope.total, 'promotion', 'promotions')} in the ${scope.label} season`;
   if (isSeasonComplete(scope)) return head;
   if (scope.completedCount === 0) return `${head}, all still to come`;
   return `${head}, ${scope.upcomingCount} still to come`;
