@@ -7,6 +7,7 @@ import { db } from '@/lib/firebase';
 import { getAllTeams, getScoredPromosInDateRange, getTeamBySlug, getVenueForTeam, mapPromoDoc } from '@/lib/data';
 import { dedupePromos, isVisiblePromo, teamDisplayName } from '@/lib/promo-helpers';
 import type { Team } from '@/lib/types';
+import { isTicketPackageDoc, isTicketPackageLeague } from '@/lib/ticket-packages';
 import type { RssItemInput } from './rss';
 import { resolveCard } from './card';
 import { selectFeedItems, type FeedCandidate, type FeedSelection } from './select';
@@ -42,6 +43,11 @@ async function loadScored(start: string, end: string): Promise<FeedPromo[]> {
 // on the existing index, per-team fallback, mapPromoDoc, isVisiblePromo,
 // dedupePromos), kept here only because that reader drops the doc id and the
 // feed needs promoId for guid, utm_content and the image route.
+// NHL and NBA special-ticket rows, by object identity: dropped after the dedupe,
+// as on the team page and every other cross-team reader (WEB6 G2). A package
+// is not a promotion, so it is never a feed item or an image card.
+const feedPackages = new WeakSet<FeedPromo>();
+
 async function readVisiblePromos(start: string, end: string): Promise<FeedPromo[]> {
   const teams = await getAllTeams();
   const teamById = new Map(teams.map((t) => [t.id, t]));
@@ -74,7 +80,7 @@ async function readVisiblePromos(start: string, end: string): Promise<FeedPromo[
     const team = doc.ref.parent.parent ? teamById.get(doc.ref.parent.parent.id) : undefined;
     if (!team) continue;
     const p = mapPromoDoc(doc);
-    out.push({
+    const row: FeedPromo = {
       promoId: doc.id,
       teamId: team.id,
       team,
@@ -86,13 +92,15 @@ async function readVisiblePromos(start: string, end: string): Promise<FeedPromo[
       itemType: p.derivedSignals?.itemType ?? null,
       tombstoned: p.tombstoned,
       isPostseason: p.isPostseason,
-    });
+    };
+    if (isTicketPackageLeague(team.league) && isTicketPackageDoc(doc.data())) feedPackages.add(row);
+    out.push(row);
   }
   return out.filter(isVisiblePromo);
 }
 
 async function readPromosInDateRange(start: string, end: string): Promise<FeedPromo[]> {
-  return dedupePromos(await readVisiblePromos(start, end), (p) => p.teamId);
+  return dedupePromos(await readVisiblePromos(start, end), (p) => p.teamId).filter((p) => !feedPackages.has(p));
 }
 
 export async function getFeedSelection(now: Date): Promise<FeedSelection<FeedPromo>> {
@@ -133,7 +141,26 @@ export async function findCardPromo(key: string): Promise<RssItemInput | null> {
   return resolveCard(key, {
     getPromo: async (teamId, promoId) => {
       const doc = await db.collection('teams').doc(teamId).collection('promos').doc(promoId).get();
-      return doc.exists ? mapPromoDoc(doc) : null;
+      if (!doc.exists) return null;
+      // No card for an NHL or NBA special-ticket row (WEB6 G2), nor for the
+      // unflagged twin of one: when a same-date, same-title pair dedupes on the
+      // team page to the flagged doc, the team page lists that row as a package
+      // (review round 2). Same order as getTeamPromos: doc id within a date.
+      if (isTicketPackageLeague((await getTeamBySlug(teamId))?.league)) {
+        if (isTicketPackageDoc(doc.data())) return null;
+        const data = doc.data()!;
+        // No date: nothing to pair with, and an undefined equality value would
+        // throw. resolveCard rejects a dateless row on its own (round 3).
+        if (typeof data.date !== 'string' || data.date === '') return mapPromoDoc(doc);
+        const key = String(data.title || '').trim().toLowerCase();
+        const sameDay = await db.collection('teams').doc(teamId).collection('promos').where('date', '==', data.date).get();
+        const winner = sameDay.docs
+          .filter((d) => d.data().tombstoned !== true && d.data().isPostseason !== true)
+          .filter((d) => String(d.data().title || '').trim().toLowerCase() === key)
+          .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))[0];
+        if (winner && isTicketPackageDoc(winner.data())) return null;
+      }
+      return mapPromoDoc(doc);
     },
     getTeam: (teamId) => getTeamBySlug(teamId),
     getVenueName: async (teamId) => (await getVenueForTeam(teamId))?.name ?? null,

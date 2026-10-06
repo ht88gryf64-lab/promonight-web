@@ -16,7 +16,7 @@ import { DivisionRivals } from './DivisionRivals';
 import { getDivisionRivals } from '@/lib/division-rivals';
 import { teamTitleSubtitle } from '@/lib/title-treatment';
 import { seasonClaimSentence, type ClaimMode } from '@/lib/season-scope';
-import { scheduleStatusLine } from '@/lib/announcement-status';
+import { scheduleStatusLine, statusLineSaysNothingAnnounced } from '@/lib/announcement-status';
 import { isSplitSeasonLeague } from '@/lib/season-label';
 import { UpcomingPromoModalProvider } from './UpcomingPromoModal';
 import { AffiliateRail } from './AffiliateRail';
@@ -188,7 +188,7 @@ export function RedesignTeamPage({
   // for the season it names (src/lib/announcement-status.ts). Null on every
   // other league and on any NHL or NBA page whose season resolved, so those
   // pages pass ScheduleBlock exactly the props they always did.
-  const statusLine = scheduleStatusLine({
+  const statusOpts = {
     league: team.league,
     showSchedule,
     seasonResolved: !!seasonScope,
@@ -197,7 +197,9 @@ export function RedesignTeamPage({
     teamId: team.id,
     displayName,
     today,
-  });
+  };
+  const statusLine = scheduleStatusLine(statusOpts);
+  const nothingAnnounced = statusLineSaysNothingAnnounced(statusOpts);
 
   // Same-division rivals, free from gameContexts (opponent Team docs are
   // already fetched by enrichGamesForTeam). Empty on leagues without game
@@ -306,6 +308,7 @@ export function RedesignTeamPage({
           scopeLive={scopeLive}
           team={team}
           gameContexts={gameContexts}
+          {...(nothingAnnounced ? { afterNothingAnnounced: true } : {})}
         />
       </UpcomingPromoModalProvider>
     )

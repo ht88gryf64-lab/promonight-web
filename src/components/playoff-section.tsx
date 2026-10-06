@@ -65,6 +65,19 @@ function typeColorLight(type: string): string {
   }
 }
 
+/** The calendar year of the playoffs: the latest dated playoff promo's year,
+ *  else the year of the last scan, else null. NHL and NBA playoffs run April to
+ *  June and are named by that year ("2027 Stanley Cup Playoffs"). */
+export function playoffYear(promos: Pick<PlayoffPromo, 'date'>[], lastUpdated: string | null): number | null {
+  const years = promos
+    .map((p) => (typeof p.date === 'string' ? /^(\d{4})-\d{2}-\d{2}/.exec(p.date)?.[1] : undefined))
+    .filter((y): y is string => !!y)
+    .map(Number);
+  if (years.length) return Math.max(...years);
+  const scanned = lastUpdated ? /^(\d{4})-/.exec(lastUpdated)?.[1] : undefined;
+  return scanned ? Number(scanned) : null;
+}
+
 interface PlayoffSectionProps {
   team: Team;
   promos: PlayoffPromo[];
@@ -98,19 +111,24 @@ export function PlayoffSection({
       .map((p) => extractOpponent(p.gameInfo))
       .find((o): o is string => !!o);
   const roundDisplay = roundLabel(round);
+  // The year comes from the data, not a constant (WEB6 G2): the playoffs a
+  // club is in are the ones its playoff promos are dated in, else the year of
+  // the last bracket scan. Neither present: no year rather than a guessed one.
+  const year = playoffYear(promos, lastUpdated);
+  const yearPrefix = year ? `${year} ` : '';
 
   if (variant === 'light') {
     return (
       <section className="py-10">
         <div className="max-w-5xl mx-auto rounded-2xl bg-rd-red/[0.04] px-6 py-10 md:px-8 md:py-12">
           <span className="font-rd text-[11px] uppercase tracking-[0.14em] text-rd-ink-faint">
-            2026 {team.league} Playoffs · {roundDisplay}
+            {yearPrefix}{team.league} Playoffs · {roundDisplay}
           </span>
           <h2 className="rd-display text-rd-ink text-3xl md:text-4xl mt-2 mb-4">
             {teamDisplayName(team).toUpperCase()} PLAYOFF PROMOTIONS
           </h2>
           <p className="text-rd-ink-soft text-base leading-relaxed max-w-3xl mb-3">
-            The {teamDisplayName(team)} are in the 2026 {roundDisplay.toLowerCase()} playoffs
+            The {teamDisplayName(team)} are in the {yearPrefix}{roundDisplay.toLowerCase()} playoffs
             {opponent ? ` against the ${opponent}` : ''}. Their scheduled promotions during this round:
           </p>
           <p className="font-rd text-[11px] uppercase tracking-[0.14em] text-rd-ink-faint mb-8">
@@ -155,13 +173,13 @@ export function PlayoffSection({
     >
       <div className="max-w-5xl mx-auto">
         <span className="font-mono text-[10px] tracking-[1.5px] uppercase text-accent-red">
-          2026 {team.league} Playoffs · {roundDisplay}
+          {yearPrefix}{team.league} Playoffs · {roundDisplay}
         </span>
         <h2 className="font-display text-3xl md:text-4xl tracking-[1px] mt-2 mb-4">
           {teamDisplayName(team).toUpperCase()} PLAYOFF PROMOTIONS
         </h2>
         <p className="text-text-secondary text-base leading-relaxed max-w-3xl mb-3">
-          The {teamDisplayName(team)} are in the 2026 {roundDisplay.toLowerCase()} playoffs
+          The {teamDisplayName(team)} are in the {yearPrefix}{roundDisplay.toLowerCase()} playoffs
           {opponent ? ` against the ${opponent}` : ''}. Their scheduled promotions during this round:
         </p>
         <p className="font-mono text-[10px] tracking-[1.5px] uppercase text-text-muted mb-8">

@@ -97,7 +97,7 @@ export default async function SoccerJerseyNightsPage() {
   // stored timestamp exists for this collection, so dateModified is omitted.
 
   const lead =
-    `A soccer jersey night is a pro sports game where the giveaway is a soccer-style jersey, and ${total} are on the upcoming calendar across MLB, WNBA, and MLS in 2026, ${wcCount} of them during the World Cup. ` +
+    `A soccer jersey night is a pro sports game where the giveaway is a soccer-style jersey, and ${total} ${total === 1 ? 'is' : 'are'} on the upcoming calendar across MLB, WNBA, and MLS in 2026, ${wcCount} of them during the World Cup. ` +
     'United States teams are timing these giveaways to the tournament the country co-hosts from June 11 to July 19. Arrive early: apparel nights are usually capped at the first 10,000 to 25,000 fans.';
 
   const collectionSchema = {

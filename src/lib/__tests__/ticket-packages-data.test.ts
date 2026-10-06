@@ -81,6 +81,10 @@ const GROUP = [
   fakeDoc('h3', { date: '2099-01-03', title: 'Lunch Box', type: 'food', ticketPackageRequired: true }, 'detroit-red-wings'),
   fakeDoc('h4', { date: '2099-01-01', title: 'Bobblehead', type: 'giveaway', ticketPackageRequired: true }, 'minnesota-twins'),
   fakeDoc('h5', { date: '2099-01-02', title: 'Fireworks', type: 'theme' }, 'minnesota-twins'),
+  // An MLB same-date, same-title pair: the MLB hub count is every visible doc,
+  // as before WEB6, with no dedupe (only NHL/NBA go through the team-page path).
+  fakeDoc('h6', { date: '2099-01-03', title: 'Dup Night', type: 'theme' }, 'minnesota-twins'),
+  fakeDoc('h7', { date: '2099-01-03', title: 'Dup Night', type: 'theme' }, 'minnesota-twins'),
 ];
 const fakeDb = {
   collection(name: string): any {
@@ -177,5 +181,5 @@ test('round 5: the league hub card counts what the team page counts (NHL drops p
   const nhl = await getLeagueUpcomingPromoCounts('NHL');
   assert.equal(nhl['detroit-red-wings'], 1, 'the two special-ticket rows are not promotions on the team page');
   const mlb = await getLeagueUpcomingPromoCounts('MLB');
-  assert.equal(mlb['minnesota-twins'], 2, 'MLB unchanged: its flag is the raw extractor guess');
+  assert.equal(mlb['minnesota-twins'], 4, 'MLB unchanged: its raw flag ignored, its duplicate pair both counted, as before');
 });

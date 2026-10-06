@@ -115,13 +115,7 @@ function checkedLabel(ymd: string): string {
   return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' });
 }
 
-/**
- * The page-level rule: the line shows only on an NHL or NBA page that is
- * showing the schedule AND has no rows for the season it names. A page whose
- * season resolved has promos for that season, and "hasn't recorded any" would
- * be false on it. Null everywhere else.
- */
-export function scheduleStatusLine(opts: {
+type StatusLineOpts = {
   league: string;
   showSchedule: boolean;
   seasonResolved: boolean;
@@ -134,7 +128,25 @@ export function scheduleStatusLine(opts: {
   teamId: string;
   displayName: string;
   today: string;
-}): string | null {
+};
+
+/**
+ * True when the line the page shows is the "haven't announced" one. The promo
+ * list then leaves out its own "No upcoming ... promos scheduled right now"
+ * (WEB6 G2): the status line has already said there is nothing ahead, and the
+ * stronger way. Same conditions as announcementLine, read from the same place.
+ */
+export function statusLineSaysNothingAnnounced(opts: StatusLineOpts): boolean {
+  return scheduleStatusLine(opts) !== null && nothingPublishedVerified(opts.teamId, opts.today) && !opts.hasTicketPackages;
+}
+
+/**
+ * The page-level rule: the line shows only on an NHL or NBA page that is
+ * showing the schedule AND has no rows for the season it names. A page whose
+ * season resolved has promos for that season, and "hasn't recorded any" would
+ * be false on it. Null everywhere else.
+ */
+export function scheduleStatusLine(opts: StatusLineOpts): string | null {
   if (!opts.showSchedule || opts.seasonResolved || !isSplitSeasonLeague(opts.league)) return null;
   if (opts.hasOtherPromos) return null;
   return announcementLine(opts.teamId, opts.displayName, opts.today, { hasTicketPackages: opts.hasTicketPackages });

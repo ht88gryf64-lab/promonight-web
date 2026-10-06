@@ -4,7 +4,8 @@ import 'server-only';
 import { cache } from 'react';
 import { db } from './firebase';
 import type { Promo, Team } from './types';
-import { getTeamBySlug, getTeamPromos, promoBoardChicagoYMD } from './data';
+import { getTeamBySlug, getTeamPromos, isTicketPackagePromo, promoBoardChicagoYMD } from './data';
+import { partitionTicketPackages } from './ticket-packages';
 import { getCfbSchool } from './cfb/data';
 import { toAffiliateTeam } from './cfb/page-extras';
 import { collectVenueLinksForTeams, type HubVenueLink, type VenueIndexEntry } from './venue-index';
@@ -829,8 +830,11 @@ export const getVenueHubWeekPromos = cache(async (hub: VenueHub): Promise<VenueH
 
   const perTenant = await Promise.all(
     proTenants.map(async (t) => {
-      const [team, promos] = await Promise.all([getTeamBySlug(t.teamId), getTeamPromos(t.teamId)]);
+      const [team, allPromos] = await Promise.all([getTeamBySlug(t.teamId), getTeamPromos(t.teamId)]);
       if (!team) return [];
+      // NHL and NBA special-ticket rows are not promotions (WEB6 G2): left off
+      // the venue scroller, as they are off every count on the team page.
+      const { promos } = partitionTicketPackages(allPromos, isTicketPackagePromo, team.league);
       // In-memory window filter: YYYY-MM-DD string compare, the same date math
       // the team page's upcoming/past split and the league hub slates use.
       return promos

@@ -150,8 +150,10 @@ const CASES = [
   ['a packages-only page with no arrival effect', TPL, '      {arrivalHighlight ? <PromoArrivalHighlight /> : null}\n', '', [T_R1]],
   ['the season-constant guard fires once due (its due date moved into the past)', T_LEAGUE, 'const due = Date.UTC(SPLIT_SEASON_START_YEAR + 1, 6, 1);', 'const due = Date.UTC(SPLIT_SEASON_START_YEAR, 6, 1);', [T_LEAGUE]],
   // ---- Review round 5 ----
-  ['the NHL hub card counts packages as promotions', DATA, '      if (dropPackages && isTicketPackageDoc(doc.data())) continue;\n', '', [T_PKG_DATA]],
-  ['the hub drops raw MLB flags too', DATA, '    const dropPackages = isTicketPackageLeague(league);', '    const dropPackages = true;', [T_PKG_DATA]],
+  ['the NHL hub card counts packages as promotions', DATA, '    for (const p of dropTicketPackageRows(dedupePromos(rows.filter(isVisiblePromo), (r) => r.team.id))) {', '    for (const p of dedupePromos(rows.filter(isVisiblePromo), (r) => r.team.id)) {', [T_PKG_DATA]],
+  // Other leagues' hub counts are read exactly as before: every visible doc,
+  // no dedupe (G2 round 4 pinned this; the old case targeted removed code).
+  ['the hub reroutes other leagues through the NHL/NBA path', DATA, '    const dropPackages = isTicketPackageLeague(league);', '    const dropPackages = true;', [T_PKG_DATA]],
   ['the row note says the night is exclusive', TP, "export const TICKET_PACKAGE_ROW_NOTE = 'Comes with a special ticket package.';", "export const TICKET_PACKAGE_ROW_NOTE = 'Comes with a special ticket package. Only fans who buy this package get it.';", [T_PKG]],
   ['the row note promises an item', TP, "export const TICKET_PACKAGE_ROW_NOTE = 'Comes with a special ticket package.';", "export const TICKET_PACKAGE_ROW_NOTE = 'The item comes with a special ticket package.';", [T_PKG]],
   ['the archive pointer prints "other"', LIST, '    ? splitGroups.length === 1 && splitGroups[0].startYear !== null', '    ? splitGroups.length === 1', [T_R1]],

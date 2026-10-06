@@ -22,6 +22,7 @@ import { HubTeamGrid } from '@/components/hub/HubTeamGrid';
 import { HubVenueLinks } from '@/components/hub/HubVenueLinks';
 import { HubFaq, type HubFaqItem } from '@/components/hub/HubFaq';
 import { getVenueLinksForTeams } from '@/lib/venue-hub';
+import { splitSeasonLabel, SPLIT_SEASON_START_YEAR } from '@/lib/season-label';
 
 // HELD ROUTE. This page exists on the feature/nhl-hub-held branch and is not
 // linked from anywhere: LEAGUE_HUB_REGISTRY keeps NHL live:false, so the nav,
@@ -50,7 +51,9 @@ export const revalidate = 21600;
 // The NHL season straddles the calendar year, so the label is the two-year
 // form. Hardcoded, never derived from the clock: an auto-rolling label would
 // flip mid-season before any 2027-28 data exists.
-const SEASON = '2026-27';
+// From the NHL/NBA season constant, so the hub cannot drift from the team
+// pages at the July 1 bump (known-issues 69).
+const SEASON = splitSeasonLabel(SPLIT_SEASON_START_YEAR);
 const HUB_URL = 'https://www.getpromonight.com/nhl';
 const TITLE = `NHL Promotions & Giveaways ${SEASON}`;
 const DESCRIPTION = `Every NHL club's ${SEASON} promo schedule in one place: theme nights, giveaways, bobblehead nights, and kids days across all 32 teams, grouped by division and refreshed through the season.`;

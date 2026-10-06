@@ -30,10 +30,18 @@ import { teamDisplayName } from '../src/lib/promo-helpers';
 import { teamMetaTitle, titleExperimentArm } from '../src/lib/title-treatment';
 import type { TitleArm } from '../src/lib/title-treatment';
 import type { Team } from '../src/lib/types';
+import { isSplitSeasonLeague } from '../src/lib/season-label';
 
 const YEAR = 2026; // must match the hardcoded `year` in the team/playoffs pages
 const TITLE_SUFFIX = ' | PromoNight'; // layout.tsx title.template = "%s | PromoNight"
 const TITLE_MAX = 60;
+// NHL and NBA titles name the two-year season ("2026-27", WEB6 G2, Matt's
+// ruling), three characters more than "2026". Up to this many over the budget
+// is ACCEPTED for them, like the MLB treatment arm: only the " | PromoNight"
+// suffix is clipped in a SERP, never the team or the season. Measured
+// 2026-10-05: five clubs at 61 or 62 (Trail Blazers, Timberwolves, Thunder,
+// Warriors, Blue Jackets). Anything past this is still a FAIL.
+const SPLIT_SEASON_TITLE_ALLOWANCE = 3;
 const DESC_MAX = 155;
 
 // MUST stay byte-identical to truncateAtWord in src/app/[sport]/[team]/page.tsx.
@@ -85,6 +93,7 @@ interface Row {
    * premise is that it fits the budget, so one going over 60 is a real failure.
    */
   arm: TitleArm;
+  league: string;
   title: string;
   titleLen: number;
   desc: string;
@@ -103,6 +112,7 @@ async function rowForTeam(team: Team): Promise<Row> {
     display,
     venueName: venue,
     arm: titleExperimentArm(team),
+    league: team.league,
     title,
     titleLen: title.length,
     desc,
@@ -151,9 +161,12 @@ async function main() {
 
   // Over-budget titles split by arm: a control team over 60 is a real defect,
   // a treatment team over 60 is the accepted cost of the experiment.
+  const splitSeasonAccepted = (r: Row) =>
+    r.arm === 'none' && isSplitSeasonLeague(r.league) && r.titleLen <= TITLE_MAX + SPLIT_SEASON_TITLE_ALLOWANCE;
   const titleOver = rows.filter(
-    (r) => r.titleLen > TITLE_MAX && r.arm !== 'mlb-ctr-treatment',
+    (r) => r.titleLen > TITLE_MAX && r.arm !== 'mlb-ctr-treatment' && !splitSeasonAccepted(r),
   );
+  const titleOverSplitSeason = rows.filter((r) => r.titleLen > TITLE_MAX && splitSeasonAccepted(r));
   const titleOverTreatment = rows.filter(
     (r) => r.titleLen > TITLE_MAX && r.arm === 'mlb-ctr-treatment',
   );
@@ -165,6 +178,8 @@ async function main() {
   console.log(`=== FULL SWEEP: ${rows.length} teams ===\n`);
   console.log(`Titles over ${TITLE_MAX} (FAIL): ${titleOver.length}`);
   console.log(`Titles over ${TITLE_MAX} (mlb-ctr treatment, accepted): ${titleOverTreatment.length}`);
+  console.log(`Titles over ${TITLE_MAX} (NHL/NBA "2026-27", accepted up to +${SPLIT_SEASON_TITLE_ALLOWANCE}): ${titleOverSplitSeason.length}`);
+  for (const r of titleOverSplitSeason) console.log(`  ${r.titleLen}  [${r.slug}] ${r.title}`);
   const byArm = new Map<TitleArm, number>();
   for (const r of rows) byArm.set(r.arm, (byArm.get(r.arm) ?? 0) + 1);
   console.log(
@@ -210,7 +225,7 @@ async function main() {
 
   const pass = titleOver.length === 0 && descOver.length === 0 && playoffTitle.length <= TITLE_MAX && playoffDesc.length <= DESC_MAX;
   console.log(
-    `\n=== RESULT: ${pass ? 'PASS: every title outside the mlb-ctr treatment arm <=60, descriptions <=155' : 'FAIL'} ===`,
+    `\n=== RESULT: ${pass ? 'PASS: every title outside the mlb-ctr treatment arm and the NHL/NBA 2026-27 allowance <=60, descriptions <=155' : 'FAIL'} ===`,
   );
   if (!pass) process.exit(1);
 }

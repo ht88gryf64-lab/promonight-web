@@ -227,6 +227,36 @@ export function isTicketPackagePromo(p: Promo): boolean {
   return ticketPackageRows.has(p);
 }
 
+/**
+ * A cross-team row with its team, noted as a package when its doc carries the
+ * flag. The readers below build every PromoWithTeam through this, dedupe as
+ * before, then drop the NHL and NBA package rows with dropTicketPackageRows,
+ * in that order: the same order the team page uses, so the row that survives a
+ * same-date same-title pair is the same row on both (WEB6 G2).
+ */
+function promoWithTeam(doc: FirebaseFirestore.DocumentSnapshot, team: Team): PromoWithTeam {
+  const row: PromoWithTeam = { ...mapPromoDoc(doc), team };
+  if (isTicketPackageDoc(doc.data())) ticketPackageRows.add(row);
+  return row;
+}
+
+/**
+ * Site-wide rule (WEB6 G2): an NHL or NBA row the pipeline marks as needing a
+ * special ticket is not a promotion anywhere the site lists or counts
+ * promotions. It appears only in its own team page's "Ticket packages" group.
+ * So every cross-team reader leaves it out: the homepage lists and tiles,
+ * /promos/*, the league hubs, the email digest and anything else built on these
+ * readers, and with it any card that would deep-link to a row the team page
+ * does not list as a promotion. NOT the homepage "Promos tracked" figure
+ * (getPromoCount): that is a raw count() of every promo document, which by an
+ * earlier ruling also includes tombstoned and postseason rows, and an
+ * aggregate query cannot filter on the flag. Inert on every other league (the flag there is the extractor's raw
+ * guess) and on any row without the flag.
+ */
+export function dropTicketPackageRows<T extends PromoWithTeam>(rows: T[]): T[] {
+  return rows.filter((p) => !(isTicketPackageLeague(p.team.league) && ticketPackageRows.has(p)));
+}
+
 function mapPromoDocNotingPackage(doc: FirebaseFirestore.DocumentSnapshot): Promo {
   const promo = mapPromoDoc(doc);
   if (isTicketPackageDoc(doc.data())) ticketPackageRows.add(promo);
@@ -262,9 +292,9 @@ export async function getPromosForDate(date: string): Promise<PromoWithTeam[]> {
     for (const doc of snapshot.docs) {
       const teamRef = doc.ref.parent.parent!;
       const team = teamById.get(teamRef.id);
-      if (team) results.push({ ...mapPromoDoc(doc), team });
+      if (team) results.push(promoWithTeam(doc, team));
     }
-    return dedupePromos(results.filter(isVisiblePromo), (p) => p.team.id);
+    return dropTicketPackageRows(dedupePromos(results.filter(isVisiblePromo), (p) => p.team.id));
   } catch {
     const all: PromoWithTeam[] = [];
     await Promise.all(
@@ -276,11 +306,11 @@ export async function getPromosForDate(date: string): Promise<PromoWithTeam[]> {
           .where('date', '==', date)
           .get();
         for (const doc of snapshot.docs) {
-          all.push({ ...mapPromoDoc(doc), team });
+          all.push(promoWithTeam(doc, team));
         }
       })
     );
-    return dedupePromos(all.filter(isVisiblePromo), (p) => p.team.id);
+    return dropTicketPackageRows(dedupePromos(all.filter(isVisiblePromo), (p) => p.team.id));
   }
 }
 
@@ -348,13 +378,10 @@ export async function getHighlightedPromos(limit: number = 6): Promise<PromoWith
       const teamRef = doc.ref.parent.parent!;
       const teamDoc = await teamRef.get();
       if (teamDoc.exists) {
-        results.push({
-          ...mapPromoDoc(doc),
-          team: mapTeamDoc(teamDoc),
-        });
+        results.push(promoWithTeam(doc, mapTeamDoc(teamDoc)));
       }
     }
-    return results.filter(isVisiblePromo);
+    return dropTicketPackageRows(dedupePromos(results.filter(isVisiblePromo), (p) => p.team.id));
   } catch {
     // Fallback: sample highlighted promos from a few teams
     const teams = await getAllTeams();
@@ -370,16 +397,16 @@ export async function getHighlightedPromos(limit: number = 6): Promise<PromoWith
           .where('highlight', '==', true)
           .get();
         for (const doc of snapshot.docs) {
-          const promo = mapPromoDoc(doc);
-          if (isUpcomingPromo(promo, today)) {
-            allHighlighted.push({ ...promo, team });
+          const row = promoWithTeam(doc, team);
+          if (isUpcomingPromo(row, today)) {
+            allHighlighted.push(row);
           }
         }
       })
     );
 
     allHighlighted.sort((a, b) => a.date.localeCompare(b.date));
-    return allHighlighted.filter(isVisiblePromo).slice(0, limit);
+    return dropTicketPackageRows(dedupePromos(allHighlighted.filter(isVisiblePromo), (p) => p.team.id)).slice(0, limit);
   }
 }
 
@@ -405,10 +432,10 @@ export async function getPromosInDateRange(
       const teamRef = doc.ref.parent.parent!;
       const team = teamById.get(teamRef.id);
       if (team) {
-        results.push({ ...mapPromoDoc(doc), team });
+        results.push(promoWithTeam(doc, team));
       }
     }
-    return dedupePromos(results.filter(isVisiblePromo), (p) => p.team.id);
+    return dropTicketPackageRows(dedupePromos(results.filter(isVisiblePromo), (p) => p.team.id));
   } catch {
     const allPromos: PromoWithTeam[] = [];
     await Promise.all(
@@ -421,12 +448,12 @@ export async function getPromosInDateRange(
           .where('date', '<=', endDate)
           .get();
         for (const doc of snapshot.docs) {
-          allPromos.push({ ...mapPromoDoc(doc), team });
+          allPromos.push(promoWithTeam(doc, team));
         }
       })
     );
     allPromos.sort((a, b) => a.date.localeCompare(b.date));
-    return dedupePromos(allPromos.filter(isVisiblePromo), (p) => p.team.id);
+    return dropTicketPackageRows(dedupePromos(allPromos.filter(isVisiblePromo), (p) => p.team.id));
   }
 }
 
@@ -448,10 +475,10 @@ export async function getPromosFromDate(startDate: string): Promise<PromoWithTea
       const teamRef = doc.ref.parent.parent!;
       const team = teamById.get(teamRef.id);
       if (team) {
-        results.push({ ...mapPromoDoc(doc), team });
+        results.push(promoWithTeam(doc, team));
       }
     }
-    return dedupePromos(results.filter(isVisiblePromo), (p) => p.team.id);
+    return dropTicketPackageRows(dedupePromos(results.filter(isVisiblePromo), (p) => p.team.id));
   } catch {
     const allPromos: PromoWithTeam[] = [];
     await Promise.all(
@@ -463,12 +490,12 @@ export async function getPromosFromDate(startDate: string): Promise<PromoWithTea
           .where('date', '>=', startDate)
           .get();
         for (const doc of snapshot.docs) {
-          allPromos.push({ ...mapPromoDoc(doc), team });
+          allPromos.push(promoWithTeam(doc, team));
         }
       })
     );
     allPromos.sort((a, b) => a.date.localeCompare(b.date));
-    return dedupePromos(allPromos.filter(isVisiblePromo), (p) => p.team.id);
+    return dropTicketPackageRows(dedupePromos(allPromos.filter(isVisiblePromo), (p) => p.team.id));
   }
 }
 
@@ -1638,13 +1665,16 @@ const HUB_GROUPING: Record<string, HubGroupingSpec> = {
 // falling off the map. One collectionGroup read; league scoping happens in
 // memory because promo docs carry no league field (see getLeagueSlate).
 //
-// Deliberately NOT getPromosFromDate: that helper dedupes to one promo per
-// team for the cross-team rails, which is exactly wrong for a count.
+// Deliberately NOT getPromosFromDate. On MLB, MLS, WNBA and NFL every visible
+// doc counts, as before. On NHL and NBA the rows go through the team page's
+// path (dedupe per team, date and title, then drop packages), so the card
+// matches the page it links to.
 export const getLeagueUpcomingPromoCounts = cache(
   async (league: string): Promise<Record<string, number>> => {
     const teams = await getAllTeams();
     const counts: Record<string, number> = {};
     const inLeague = new Set<string>();
+    const teamById = new Map(teams.map((t) => [t.id, t]));
     for (const t of teams) {
       if (t.league === league) {
         inLeague.add(t.id);
@@ -1654,15 +1684,28 @@ export const getLeagueUpcomingPromoCounts = cache(
     const today = hubTodayChicagoYMD();
     const dropPackages = isTicketPackageLeague(league);
     const snapshot = await db.collectionGroup('promos').where('date', '>=', today).get();
+    if (!dropPackages) {
+      for (const doc of snapshot.docs) {
+        const teamId = doc.ref.parent.parent!.id;
+        if (!inLeague.has(teamId)) continue;
+        if (!isVisiblePromo(mapPromoDoc(doc))) continue;
+        counts[teamId] += 1;
+      }
+      return counts;
+    }
+    // NHL and NBA: the hub card links to the team page and must count what it
+    // counts. A special-ticket row is not a promotion there (WEB6 addendum;
+    // review round 5), and the team page dedupes before it splits, so the
+    // unflagged twin of a package counts nowhere (G2 review round 3). Same
+    // reader path as the aggregators: rows noted, deduped per team, dropped.
+    const rows: PromoWithTeam[] = [];
     for (const doc of snapshot.docs) {
-      const teamId = doc.ref.parent.parent!.id;
-      if (!inLeague.has(teamId)) continue;
-      if (!isVisiblePromo(mapPromoDoc(doc))) continue;
-      // The hub card links to the team page and must count what it counts: an
-      // NHL or NBA special-ticket row is not a promotion there (WEB6 addendum;
-      // review round 5). Inert on every other league.
-      if (dropPackages && isTicketPackageDoc(doc.data())) continue;
-      counts[teamId] += 1;
+      const team = teamById.get(doc.ref.parent.parent!.id);
+      if (!team || !inLeague.has(team.id)) continue;
+      rows.push(promoWithTeam(doc, team));
+    }
+    for (const p of dropTicketPackageRows(dedupePromos(rows.filter(isVisiblePromo), (r) => r.team.id))) {
+      counts[p.team.id] += 1;
     }
     return counts;
   },
