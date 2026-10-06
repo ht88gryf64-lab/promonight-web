@@ -233,8 +233,11 @@ export function MyTeamsView({ teams, variant = 'dark' }: MyTeamsViewProps) {
     return <StateC starredTeams={starredTeams} hadError light={light} />;
   }
 
+  // A team whose read failed is not "quiet": no 60-day claim is made about it.
+  const failedTeams = new Set(data.failedTeams ?? []);
+
   if (data.promos.length === 0) {
-    return <StateC starredTeams={starredTeams} light={light} />;
+    return <StateC starredTeams={starredTeams} hadError={failedTeams.size > 0} light={light} />;
   }
 
   return (
@@ -242,6 +245,7 @@ export function MyTeamsView({ teams, variant = 'dark' }: MyTeamsViewProps) {
       starredTeams={starredTeams}
       promos={data.promos}
       venues={data.venues}
+      failedTeams={failedTeams}
       todayYMD={todayYMD}
       light={light}
     />
@@ -833,12 +837,14 @@ function StateB({
   starredTeams,
   promos,
   venues,
+  failedTeams,
   todayYMD,
   light = false,
 }: {
   starredTeams: Team[];
   promos: StarredPromo[];
   venues: Record<string, Venue | null>;
+  failedTeams: ReadonlySet<string>;
   todayYMD: string;
   light?: boolean;
 }) {
@@ -866,7 +872,7 @@ function StateB({
   // Teams in the starred set that have zero promos in the 60-day window.
   const teamsWithPromos = new Set(promos.map((p) => p.teamSlug));
   const quietTeams = starredTeams.filter(
-    (t) => !teamsWithPromos.has(t.id),
+    (t) => !teamsWithPromos.has(t.id) && !failedTeams.has(t.id),
   );
 
   // Affiliate cluster anchor. Because `promos` is sorted asc, the first

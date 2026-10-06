@@ -50,7 +50,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function BobbleheadsPage() {
   // Fetch the whole season (Jan 1 forward), not just today forward: completed
-  // bobbleheads feed the "Earlier this season" resale section while upcoming
+  // bobbleheads feed the past ("Already happened") resale section while upcoming
   // ones drive the month groups exactly as before.
   const all = await getPromosFromDate(LIST_FROM);
   const re = /bobblehead/i;

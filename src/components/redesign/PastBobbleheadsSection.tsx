@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import type { PromoWithTeam } from '@/lib/types';
-import { seasonSpan } from '@/lib/season-label';
+import { pastHeading } from '@/lib/season-label';
 import { teamDisplayName } from '@/lib/promo-helpers';
 import { isBobbleheadGiveaway, isEbayResaleActive } from '@/lib/ebay';
 import { EbayResaleLink } from '@/components/affiliates/EbayResaleLink';
@@ -76,17 +76,6 @@ function PastBobbleheadRow({ p, withResale }: { p: PromoWithTeam; withResale: bo
       </div>
     </div>
   );
-}
-
-// Headed by the span the rows cover, never "this season". The list runs from
-// Jan 1 2026: MLB's 2026 season plus NHL and NBA nights from the 2025-26
-// season, under a page now labelled 2026-27, so "EARLIER THIS SEASON" was
-// false (fixed 2026-10-06; WEB6 ruling: never "this season" for completed
-// past-season events).
-function pastHeading(promos: PromoWithTeam[]): string {
-  const span = seasonSpan(promos.map((p) => p.date));
-  if (!span) return 'EARLIER';
-  return (span.monthRangeLabel ? `Earlier: ${span.monthRangeLabel}` : `Earlier in ${span.yearLabel}`).toUpperCase();
 }
 
 export function PastBobbleheadsSection({ promos }: { promos: PromoWithTeam[] }) {

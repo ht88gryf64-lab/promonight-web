@@ -288,3 +288,18 @@ export function remainingPeriodPhrase(dates: readonly string[]): string {
   if (!span.spansYears || !span.monthRangeLabel) return ` in ${span.yearLabel}`;
   return ` between ${span.monthRangeLabel.replace(' to ', ' and ')}`;
 }
+
+// The past section of /promos/bobbleheads (PastBobbleheadsSection) is headed
+// by the span the rows cover, never "this season". The list runs from
+// Jan 1 2026: MLB's 2026 season plus NHL and NBA nights from the 2025-26
+// season, under a page now labelled 2026-27, so "EARLIER THIS SEASON" was
+// false (fixed 2026-10-06; WEB6 ruling: never "this season" for completed
+// past-season events).
+export function pastHeading(promos: ReadonlyArray<{ date: string }>): string {
+  const span = seasonSpan(promos.map((p) => p.date));
+  if (!span) return 'EARLIER';
+  if (!span.monthRangeLabel) return `EARLIER IN ${span.yearLabel}`.toUpperCase();
+  // One calendar year names it once: "JANUARY TO OCTOBER 2026".
+  const range = span.spansYears ? span.monthRangeLabel : span.monthRangeLabel.replace(/ \d{4} to /, ' to ');
+  return `Earlier: ${range}`.toUpperCase();
+}

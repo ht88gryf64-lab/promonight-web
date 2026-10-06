@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import type { AggregatorGroup } from '@/components/aggregator-layout';
 import { distinctPromoCount } from '@/lib/aggregator-count';
-import { crossLeagueSeasonLabel, splitSeasonLabel, SPLIT_SEASON_START_YEAR } from '@/lib/season-label';
+import { crossLeagueSeasonLabel, pastHeading, splitSeasonLabel, SPLIT_SEASON_START_YEAR } from '@/lib/season-label';
 
 /**
  * Three labels that were false or inconsistent on production 2026-10-06 (OPS,
@@ -80,6 +80,29 @@ describe('copy that follows from the rows', () => {
     const code = strip(readFileSync('src/components/redesign/PastBobbleheadsSection.tsx', 'utf8'));
     assert.doesNotMatch(code, /this season/i);
     assert.match(code, /\{pastHeading\(promos\)\}/);
+  });
+
+  it('names the past span once per year', () => {
+    const d = (...dates: string[]) => dates.map((date) => ({ date }));
+    assert.equal(pastHeading(d('2026-01-10', '2026-10-01')), 'EARLIER: JANUARY TO OCTOBER 2026');
+    assert.equal(pastHeading(d('2025-11-02', '2026-04-09')), 'EARLIER: NOVEMBER 2025 TO APRIL 2026');
+    assert.equal(pastHeading(d('2026-05-01', '2026-05-20')), 'EARLIER IN 2026');
+    assert.equal(pastHeading([]), 'EARLIER');
+  });
+
+  it('keeps the "no promos coming up" subline behind the error check', () => {
+    const code = strip(readFileSync('src/components/my-teams-view.tsx', 'utf8'));
+    assert.equal(code.split('No promos coming up yet').length - 1, 2);
+    assert.equal(code.split('{hadError ? null : <> · No promos coming up yet</>}').length - 1, 2);
+  });
+
+  it('never calls a team whose read failed quiet', () => {
+    const view = strip(readFileSync('src/components/my-teams-view.tsx', 'utf8'));
+    assert.match(view, /!teamsWithPromos\.has\(t\.id\) && !failedTeams\.has\(t\.id\)/);
+    assert.match(view, /hadError=\{failedTeams\.size > 0\}/);
+    const route = strip(readFileSync('src/app/api/my-teams/promos/route.ts', 'utf8'));
+    assert.match(route, /STARRED_PROMOS_TEAM_FETCH_ERR[\s\S]{0,200}return null;/);
+    assert.match(route, /NextResponse\.json\(\{ promos, venues, failedTeams \}\)/);
   });
 
   it('says nothing about the next 60 days after a failed load', () => {

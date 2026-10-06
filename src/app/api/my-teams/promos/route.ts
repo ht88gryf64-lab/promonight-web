@@ -31,6 +31,10 @@ export type StarredPromo = {
 export type StarredPromosResponse = {
   promos: StarredPromo[];
   venues: Record<string, Venue | null>;
+  /** Teams whose promo read failed. The client must not say "nothing in the
+   *  next 60 days" about them (OPS, 2026-10-06). Optional: older cached
+   *  responses carry no list. */
+  failedTeams?: string[];
 };
 
 function isDate(value: string): boolean {
@@ -61,7 +65,7 @@ async function fetchPromosForTeam(
   teamSlug: string,
   start: string,
   end: string,
-): Promise<StarredPromo[]> {
+): Promise<StarredPromo[] | null> {
   try {
     const [snapshot, league] = await Promise.all([
       db
@@ -111,7 +115,9 @@ async function fetchPromosForTeam(
     // will silently miss that team's promos for this request; the next
     // refetch (focus or 5-min dedupe expiry) gets a fresh shot.
     console.error('STARRED_PROMOS_TEAM_FETCH_ERR', { teamSlug, err });
-    return [];
+    // null, not []: an empty list would tell the client this team has
+    // nothing in the window, which a failed read cannot back.
+    return null;
   }
 }
 
@@ -197,7 +203,8 @@ export async function GET(
     Promise.all(slugs.map((slug) => fetchVenueForTeam(slug))),
   ]);
 
-  const promos = promosByTeam.flat();
+  const failedTeams = slugs.filter((_, i) => promosByTeam[i] === null);
+  const promos = promosByTeam.flatMap((list) => list ?? []);
   promos.sort((a, b) => {
     if (a.date !== b.date) return a.date.localeCompare(b.date);
     return a.time.localeCompare(b.time);
@@ -208,5 +215,5 @@ export async function GET(
     venues[slug] = venuesByTeam[i];
   });
 
-  return NextResponse.json({ promos, venues });
+  return NextResponse.json({ promos, venues, failedTeams });
 }
