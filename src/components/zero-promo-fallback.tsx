@@ -44,9 +44,10 @@ const LEAGUE_COPY: Record<string, LeagueCopy> = {
       `When promos are announced, you'll see every giveaway, theme night, ticket pack, and family event here at ${venueName}. Check back closer to the season opener, or star the ${teamName} here to get one weekly email once dates are confirmed.`,
     ],
   },
-  // NHL and NBA: no sentence about what is or is not listed. That is said ONCE
-  // per page, in the line above the schedule (src/lib/announcement-status.ts),
-  // which every NHL and NBA page that reaches this block also carries; a
+  // NHL and NBA: no sentence about what is or is not listed. That is said at
+  // most ONCE per page, in the line above the schedule
+  // (src/lib/announcement-status.ts), which a page reaching this block carries
+  // unless it shows playoff promos or every-game deals, or has no games; a
   // second "PromoNight has no ... listed yet" here repeated it a screen lower
   // (review round 1). Whether the CLUB has announced anything is a claim about
   // a real organization, made only in that line and only for a club whose page

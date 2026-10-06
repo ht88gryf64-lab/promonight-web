@@ -333,3 +333,35 @@ describe('round 6: the dark archive subline never prints the unplaced group labe
     assert.doesNotMatch(t, /other season/);
   });
 });
+
+/* ---- Review round 7 ---- */
+
+describe('round 7: label sites the harness did not pin', () => {
+  test('the FAQ "schedule on this page holds" sentence names the 2026-27 season on NHL', async () => {
+    const { generateTeamFAQs } = await import('@/lib/promo-helpers');
+    const { resolveClaimMode } = await import('@/lib/season-scope');
+    const rows = Array.from({ length: 12 }, (_, i) => promo(`2026-11-${String(i + 1).padStart(2, '0')}`, `Night ${i}`));
+    const claim = resolveClaimMode(rows, 'NHL', TODAY);
+    const faqs = generateTeamFAQs(WILD, rows, null, { giveaway: 0, theme: 12, food: 0, kids: 0 }, { teamCount: 169, leagueList: 'x', appLeagueList: 'y' } as never, undefined, claim);
+    const all = faqs.map((f) => f.answer).join(' ');
+    assert.match(all, /The 2026-27 schedule on this page holds 12 events, 12 of them still to come\./);
+    assert.doesNotMatch(all, /The 2026 schedule/);
+  });
+
+  test('a preseason game says so in its expand', async () => {
+    const { GameExpand } = await import('../GameExpand');
+    const pre = game('pre', 'nba', '2026-10-08', 'san-antonio-spurs', 'new-orleans-pelicans', { seasonType: 'preseason' });
+    const t = text(await html(<GameExpand dateStr="2026-10-08" contexts={[ctx(pre, true, PELICANS)]} team={SPURS} teamName="Spurs" />));
+    assert.match(t, /· Preseason/);
+  });
+
+  test('upcoming packages come out in date order whatever order they arrive in', async () => {
+    const { upcomingTicketPackages } = await import('@/lib/ticket-packages');
+    const out = upcomingTicketPackages([promo('2027-03-01', 'B'), promo('2026-11-01', 'A'), promo('2026-01-01', 'Past')], TODAY);
+    assert.deepEqual(out.map((p) => p.title), ['A', 'B']);
+  });
+
+  test('NHL/NBA pages give the capture sheet no game contexts, as before WEB6', () => {
+    assert.match(readFileSync('src/components/redesign/RedesignTeamPage.tsx', 'utf8'), /<CaptureTriggerHost pageType="team_page" team=\{team\} gameContexts=\{isSplitSeasonLeague\(team\.league\) \? undefined : gameContexts\} \/>/);
+  });
+});

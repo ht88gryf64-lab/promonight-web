@@ -339,7 +339,11 @@ export function RedesignTeamPage({
           isRedesignEnabled(), so the trigger does not exist on the legacy
           team-page branch. */}
       {isCaptureTriggerEnabled() && (
-        <CaptureTriggerHost pageType="team_page" team={team} gameContexts={gameContexts} />
+        // NHL and NBA: no game contexts, as before WEB6. Their new contexts
+        // (for the schedule) would otherwise fill the capture sheet's opponent
+        // chips with every opponent on 62 pages, a side effect nobody ruled on
+        // (review round 7, like the rivals block in round 2).
+        <CaptureTriggerHost pageType="team_page" team={team} gameContexts={isSplitSeasonLeague(team.league) ? undefined : gameContexts} />
       )}
 
       {/* Chrome (BrandBar + Footer) is rendered globally by app/layout.tsx when

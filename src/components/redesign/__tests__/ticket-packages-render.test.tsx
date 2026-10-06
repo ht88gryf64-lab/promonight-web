@@ -160,7 +160,7 @@ describe('the Warriors shape: 3 theme nights, 6 special-ticket rows', () => {
     const group = /<section[^>]*aria-labelledby="ticket-packages-heading"[\s\S]*?<\/section>/.exec(out)?.[0] ?? '';
     const t = text(group);
     assert.match(t, /Ticket packages \(5\)/);
-    assert.match(t, /not counted as theme nights, giveaways, food deals or kids events/);
+    assert.match(t, /The items below are sold as special ticket packages, so they are not counted as theme nights, giveaways, food deals or kids events/);
     assert.equal(t.split('Comes with a special ticket package.').length - 1, 5, 'one note per row');
     // True for an open night with a sold item (round 5) and for a package that
     // names no item (round 6): neither "only fans who buy" nor "the item".

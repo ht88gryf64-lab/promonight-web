@@ -71,9 +71,12 @@ export function ticketPackagesHeading(n: number): string {
 }
 
 /** The line under the heading: what these are, and why the counts above leave
- *  them out. */
+ *  them out. It claims ONLY the rows listed under it, never a page-wide rule:
+ *  a row whose copy mentions a package but which the pipeline left unflagged
+ *  (an open night with an optional add-on, by DATA's ruling) is counted
+ *  elsewhere on the same page (review round 7). */
 export const TICKET_PACKAGES_SUBLINE =
-  'Sold as special tickets, so they are not counted as theme nights, giveaways, food deals or kids events on this page.';
+  'The items below are sold as special ticket packages, so they are not counted as theme nights, giveaways, food deals or kids events on this page.';
 
 /** The sentence every row carries. */
 // TRUE FOR BOTH SHAPES OF FLAGGED ROW. Some are open theme nights where only an

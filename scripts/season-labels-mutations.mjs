@@ -156,6 +156,12 @@ const CASES = [
   ['the row note promises an item', TP, "export const TICKET_PACKAGE_ROW_NOTE = 'Comes with a special ticket package.';", "export const TICKET_PACKAGE_ROW_NOTE = 'The item comes with a special ticket package.';", [T_PKG]],
   ['the archive pointer prints "other"', LIST, '    ? splitGroups.length === 1 && splitGroups[0].startYear !== null', '    ? splitGroups.length === 1', [T_R1]],
   ['the dark subline prints the unplaced group label', LIST, "g.startYear === null ? 'with no season date' : `in the ${g.label} season`", "`in the ${g.label} season`", [T_R1]],
+  // ---- Review round 7 ----
+  ['the package subline claims a page-wide rule', TP, "'The items below are sold as special ticket packages, so", "'Sold as special tickets, so", [T_PKG]],
+  ['the FAQ schedule sentence names the calendar year', HELPERS, '`The ${claim.scope.label} schedule on this page holds', '`The ${claim.scope.year} schedule on this page holds', [T_R1]],
+  ['a preseason game unlabelled', 'src/components/redesign/GameExpand.tsx', "          {game.seasonType === 'preseason' && ` · Preseason`}\n", '', [T_R1]],
+  ['packages out of date order', TP, '.sort((a, b) => a.date.localeCompare(b.date));\n}\n\n/** The group heading. */', ';\n}\n\n/** The group heading. */', [T_R1]],
+  ['the capture sheet gets NHL/NBA game contexts', PAGE, 'gameContexts={isSplitSeasonLeague(team.league) ? undefined : gameContexts} />', 'gameContexts={gameContexts} />', [T_R1]],
   ['an unplaceable archive row dropped', LABEL, '    if (y === null) {\n      unplaced.push(i);\n      return;\n    }', '    if (y === null) return;', [T_R1]],
 ];
 
