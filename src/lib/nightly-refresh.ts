@@ -34,6 +34,8 @@
 // again and requests every path a second time to report how many are fresh.
 import { SITE_TIME_ZONE } from './site-today';
 import { PATH_RE } from './revalidate-paths';
+import { REFRESH_USER_AGENT } from './refresh-agent';
+export { REFRESH_USER_AGENT };
 
 /** Fixed day-dependent pages outside the team and venue routes. */
 export const NIGHTLY_FIXED_PATHS: readonly string[] = [
@@ -74,9 +76,10 @@ export interface NightlyLoaders {
 }
 
 /** Every path the refresh revalidates and warms, deduped, each one checked
- *  against the fan-out's path pattern. Team pages and venue hubs come from the
+ *  against the fan-out's path pattern; the ones it would reject come back as
+ *  `dropped` for the route to report. Team pages and venue hubs come from the
  *  same loaders their routes' generateStaticParams use. */
-export async function nightlyRefreshPaths(loaders: NightlyLoaders): Promise<string[]> {
+export async function nightlyRefreshPaths(loaders: NightlyLoaders): Promise<{ paths: string[]; dropped: string[] }> {
   const [teams, hubs] = await Promise.all([loaders.teams(), loaders.venueHubSlugs()]);
   // The fixed cross-team pages first: they are the slowest to render (each
   // reads every upcoming promo) and the most visible, so they get the most time.
@@ -87,18 +90,17 @@ export async function nightlyRefreshPaths(loaders: NightlyLoaders): Promise<stri
   ];
   const out: string[] = [];
   const seen = new Set<string>();
-  let dropped = 0;
+  const dropped: string[] = [];
   for (const p of all) {
     if (seen.has(p)) continue;
     if (!PATH_RE.test(p)) {
-      dropped++;
+      dropped.push(p);
       continue;
     }
     seen.add(p);
     out.push(p);
   }
-  if (dropped) console.warn(`[cron:nightly-refresh] ${dropped} path(s) the fan-out would reject were left out`);
-  return out;
+  return { paths: out, dropped };
 }
 
 /** The fan-out's per-request cap (POST /api/revalidate MAX_PATHS). */
@@ -116,15 +118,18 @@ export function refreshOrigin(requestUrl: string, vercelEnv: string | undefined 
   return vercelEnv === 'production' ? SITE_ORIGIN : new URL(requestUrl).origin;
 }
 
-/** Contains "bot", so the middleware's traffic classifier never counts the
- *  job's requests as human page loads. */
-export const REFRESH_USER_AGENT = 'PromoNightRefreshBot/1.0';
 
-/** Per-request ceiling, so one hung page cannot hold the function to its
- *  300s limit. The cross-team aggregators read every upcoming promo and took
+/** Per-request ceiling, so one hung page cannot hold a pass past its budget. The cross-team aggregators read every upcoming promo and took
  *  over 20s each on a local build; 60s leaves them room. A request that times
  *  out has still started the render, and the second pass reports it. */
 export const FETCH_TIMEOUT_MS = 60_000;
+
+/** The function may run 800s (Vercel Pro, Fluid compute). Each pass stops
+ *  STARTING requests at its budget, and a request never outlives the time its
+ *  pass has left, so the run always answers inside maxDuration. */
+export const MAX_DURATION_S = 800;
+export const WARM_BUDGET_MS = 480_000;
+export const VERIFY_BUDGET_MS = 720_000;
 
 type Fetcher = (url: string, init: RequestInit) => Promise<Response>;
 const defaultFetch: Fetcher = (url, init) => fetch(url, init);
@@ -169,6 +174,20 @@ export async function revalidateViaFanOut(
   return result;
 }
 
+/** Whether a response is a copy built during this run. Rendered now (MISS,
+ *  REVALIDATED) is fresh. A cached HIT is fresh only if its Age is younger
+ *  than the run; on Vercel a HIT always carries Age, so a Vercel HIT without
+ *  one is not trusted. A local build (x-nextjs-cache) sends no Age, and its
+ *  HIT counts. STALE, PRERENDER (a build-time copy) and anything else are not
+ *  fresh. With no `freshSince` the age test is skipped. */
+export function isFreshCopy(state: string, onVercel: boolean, age: string | null, freshSince: number | undefined, nowMs: number): boolean {
+  if (state === 'MISS' || state === 'REVALIDATED') return true;
+  if (state !== 'HIT') return false;
+  if (freshSince === undefined) return true;
+  if (age === null) return !onVercel;
+  return Number(age) * 1000 <= nowMs - freshSince;
+}
+
 export interface WarmResult {
   /** 200 responses. */
   ok: number;
@@ -176,8 +195,7 @@ export interface WarmResult {
   failed: { path: string; status: number | string }[];
   /** Responses by cache state (x-vercel-cache on Vercel, x-nextjs-cache locally). */
   cache: Record<string, number>;
-  /** 200 responses that are not a stale copy: a MISS, or a cached copy built
-   *  after `freshSince` (its Age is younger than the run). */
+  /** 200 responses that are a copy built during this run (isFreshCopy). */
   fresh: number;
   /** Paths not requested because the time budget ran out. */
   skipped: number;
@@ -202,23 +220,25 @@ export async function warmPaths(
         result.skipped++;
         continue;
       }
+      const left = opts.deadline === undefined ? FETCH_TIMEOUT_MS : opts.deadline - now();
       try {
         const res = await fetcher(origin + path, {
           cache: 'no-store',
           redirect: 'manual',
-          signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+          signal: AbortSignal.timeout(Math.max(1, Math.min(FETCH_TIMEOUT_MS, left))),
           headers: { 'user-agent': REFRESH_USER_AGENT },
         });
-        const state = (res.headers.get('x-vercel-cache') ?? res.headers.get('x-nextjs-cache') ?? 'NONE').toUpperCase();
+        // Headers are all the job reads; let the body go.
+        await res.body?.cancel().catch(() => {});
+        const vercel = res.headers.get('x-vercel-cache');
+        const state = (vercel ?? res.headers.get('x-nextjs-cache') ?? 'NONE').toUpperCase();
         result.cache[state] = (result.cache[state] ?? 0) + 1;
         if (res.status !== 200) {
           result.failed.push({ path, status: res.status });
           continue;
         }
         result.ok++;
-        const age = res.headers.get('age');
-        const youngEnough = opts.freshSince === undefined || age === null || Number(age) * 1000 <= now() - opts.freshSince;
-        if (state !== 'STALE' && youngEnough) result.fresh++;
+        if (isFreshCopy(state, vercel !== null, res.headers.get('age'), opts.freshSince, now())) result.fresh++;
       } catch (err) {
         result.failed.push({ path, status: err instanceof Error ? err.message : String(err) });
       }

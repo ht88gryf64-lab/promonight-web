@@ -32,7 +32,9 @@ export const dynamic = 'force-dynamic';
 
 // The path pattern (PATH_RE) and the revalidatePath loop live in
 // src/lib/revalidate-paths.ts. The nightly refresh cron (WEB6 G4) reaches them
-// through THIS endpoint, so each batch's invalidations apply when it returns.
+// through THIS endpoint, so each batch's invalidations are queued by a request
+// of their own and applied as it completes (Next runs them in waitUntil, just
+// after the response), never inside the cron's own request.
 const MAX_PATHS = 100;
 
 export async function POST(request: Request) {

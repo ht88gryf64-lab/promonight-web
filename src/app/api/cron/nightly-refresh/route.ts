@@ -19,18 +19,26 @@
 import { NextResponse } from 'next/server';
 import { getAllTeams } from '@/lib/data';
 import { getAllVenueHubSlugs } from '@/lib/venue-hub';
-import { isNightlyRefreshWindow, nightlyRefreshPaths, refreshOrigin, revalidateViaFanOut, siteHour, warmPaths } from '@/lib/nightly-refresh';
+import {
+  isNightlyRefreshWindow,
+  nightlyRefreshPaths,
+  refreshOrigin,
+  revalidateViaFanOut,
+  siteHour,
+  VERIFY_BUDGET_MS,
+  WARM_BUDGET_MS,
+  warmPaths,
+} from '@/lib/nightly-refresh';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const maxDuration = 300;
+// Must equal MAX_DURATION_S in src/lib/nightly-refresh.ts (a test pins both).
+export const maxDuration = 800;
 
 // Waits around the warm-up (see src/lib/nightly-refresh.ts, HOW). Overridable
 // only so tests do not sleep.
 const SETTLE_MS = Number(process.env.NIGHTLY_REFRESH_SETTLE_MS ?? 5_000);
 const VERIFY_DELAY_MS = Number(process.env.NIGHTLY_REFRESH_VERIFY_MS ?? 15_000);
-// Stop starting requests after this, leaving room to answer inside maxDuration.
-const BUDGET_MS = 240_000;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export async function GET(request: Request) {
@@ -54,33 +62,35 @@ export async function GET(request: Request) {
   }
 
   const started = Date.now();
-  const deadline = started + BUDGET_MS;
-  const paths = await nightlyRefreshPaths({ teams: getAllTeams, venueHubSlugs: getAllVenueHubSlugs });
+  const { paths, dropped } = await nightlyRefreshPaths({ teams: getAllTeams, venueHubSlugs: getAllVenueHubSlugs });
   const origin = refreshOrigin(request.url);
   const revalidated = await revalidateViaFanOut(origin, paths, fanOutSecret);
   await sleep(SETTLE_MS);
-  const warmed = await warmPaths(origin, paths, { deadline });
+  const warmed = await warmPaths(origin, paths, { deadline: started + WARM_BUDGET_MS });
+  const warmMs = Date.now() - started;
   await sleep(VERIFY_DELAY_MS);
-  const verified = await warmPaths(origin, paths, { deadline, freshSince: started });
+  const verified = await warmPaths(origin, paths, { deadline: started + VERIFY_BUDGET_MS, freshSince: started });
   const ms = Date.now() - started;
 
   // Judged on the end state: every path revalidated, and every path answered
   // 200 with a copy that is not stale on the second pass. A first-pass timeout
   // that rendered anyway is reported in warmFailed but is not a failure.
   const ok =
+    dropped.length === 0 &&
     revalidated.failedBatches.length === 0 &&
     revalidated.revalidated === paths.length &&
     verified.failed.length === 0 &&
     verified.skipped === 0 &&
     verified.fresh === paths.length;
   console.log(
-    `[cron:nightly-refresh] ok=${ok} paths=${paths.length} revalidated=${revalidated.revalidated} warmed=${warmed.ok} fresh=${verified.fresh} warmFailed=${warmed.failed.length} verifyFailed=${verified.failed.length} skipped=${verified.skipped} cache=${JSON.stringify(warmed.cache)} ms=${ms}`,
+    `[cron:nightly-refresh] ok=${ok} paths=${paths.length} revalidated=${revalidated.revalidated} warmed=${warmed.ok} fresh=${verified.fresh} warmFailed=${warmed.failed.length} verifyFailed=${verified.failed.length} skipped=${verified.skipped} cache=${JSON.stringify(warmed.cache)} warmMs=${warmMs} ms=${ms}`,
   );
   return NextResponse.json(
     {
       ok,
       origin,
       paths: paths.length,
+      dropped,
       revalidated: revalidated.revalidated,
       revalidateFailedBatches: revalidated.failedBatches,
       warmed: warmed.ok,
@@ -91,6 +101,7 @@ export async function GET(request: Request) {
       verifyCache: verified.cache,
       verifyFailed: verified.failed.slice(0, 20),
       verifySkipped: verified.skipped,
+      warmMs,
       ms,
     },
     // A red line in the Cron Jobs log when anything did not land.

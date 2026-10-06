@@ -25,8 +25,10 @@ const TEAMS = [
   { id: 'minnesota-twins', sportSlug: 'mlb' },
 ];
 const HUBS = ['ppg-paints-arena', 'chase-center', 'target-field', 'Bad_Slug'];
+// What the route's venue-hub loader returns; the route test sets it.
+let routeHubs: string[] = ['ppg-paints-arena', 'chase-center', 'target-field'];
 mock.module(new URL('../data.ts', import.meta.url).href, { namedExports: { getAllTeams: async () => TEAMS } });
-mock.module(new URL('../venue-hub.ts', import.meta.url).href, { namedExports: { getAllVenueHubSlugs: async () => HUBS } });
+mock.module(new URL('../venue-hub.ts', import.meta.url).href, { namedExports: { getAllVenueHubSlugs: async () => routeHubs } });
 
 function cronSchedule(): { minute: number; hours: number[] } {
   const cfg = JSON.parse(readFileSync(new URL('../../../vercel.json', import.meta.url), 'utf8'));
@@ -76,7 +78,8 @@ test('the window is the 00:00 hour Eastern and nothing else', async () => {
 test('the paths: every team page, every venue hub, the hubs, /teams and the /promos pages, all valid fan-out paths', async () => {
   const { nightlyRefreshPaths, NIGHTLY_FIXED_PATHS } = await import('../nightly-refresh');
   const { PATH_RE } = await import('../revalidate-paths');
-  const paths = await nightlyRefreshPaths({ teams: async () => [...TEAMS, TEAMS[0]], venueHubSlugs: async () => HUBS });
+  const { paths, dropped } = await nightlyRefreshPaths({ teams: async () => [...TEAMS, TEAMS[0]], venueHubSlugs: async () => HUBS });
+  assert.deepEqual(dropped, ['/venues/Bad_Slug'], 'reported, not silently lost');
   for (const t of TEAMS) assert.ok(paths.includes(`/${t.sportSlug}/${t.id}`), t.id);
   for (const h of HUBS.filter((h) => h !== 'Bad_Slug')) assert.ok(paths.includes(`/venues/${h}`), h);
   assert.ok(!paths.includes('/venues/Bad_Slug'), 'a slug the fan-out would reject is dropped, not sent');
@@ -142,6 +145,49 @@ test('freshness: a cached copy older than the run is not fresh; the deadline sto
   assert.equal(late.ok, 0);
 });
 
+test('freshness: rendered now, or a HIT younger than the run; never STALE, PRERENDER or an unaged Vercel HIT', async () => {
+  const { isFreshCopy } = await import('../nightly-refresh');
+  const t = 1_000_000;
+  assert.equal(isFreshCopy('MISS', true, null, t - 60_000, t), true);
+  assert.equal(isFreshCopy('REVALIDATED', true, '0', t - 60_000, t), true);
+  assert.equal(isFreshCopy('HIT', true, '30', t - 60_000, t), true);
+  assert.equal(isFreshCopy('HIT', true, '3600', t - 60_000, t), false, 'built before the run');
+  assert.equal(isFreshCopy('HIT', true, null, t - 60_000, t), false, 'a Vercel HIT always carries Age');
+  assert.equal(isFreshCopy('HIT', false, null, t - 60_000, t), true, 'a local build sends no Age');
+  assert.equal(isFreshCopy('PRERENDER', true, '0', t - 60_000, t), false, 'a build-time copy');
+  assert.equal(isFreshCopy('STALE', true, '0', t - 60_000, t), false);
+  assert.equal(isFreshCopy('NONE', false, null, t - 60_000, t), false);
+});
+
+test('budgets: each pass stops in time, and a request never outlives its pass', async () => {
+  const { MAX_DURATION_S, WARM_BUDGET_MS, VERIFY_BUDGET_MS, FETCH_TIMEOUT_MS, warmPaths } = await import('../nightly-refresh');
+  const route = readFileSync(new URL('../../app/api/cron/nightly-refresh/route.ts', import.meta.url), 'utf8');
+  assert.match(route, new RegExp(`export const maxDuration = ${MAX_DURATION_S};`));
+  assert.ok(MAX_DURATION_S <= 800, 'Vercel Pro with Fluid compute');
+  assert.ok(WARM_BUDGET_MS < VERIFY_BUDGET_MS);
+  assert.ok(VERIFY_BUDGET_MS + 5_000 < MAX_DURATION_S * 1000, 'room to answer after the last request is cut');
+  assert.ok(FETCH_TIMEOUT_MS <= 60_000);
+  // A request started near its pass's deadline is cut at the deadline, not at
+  // the full per-request timeout.
+  const t0 = performance.now();
+  const r = await warmPaths('https://x.test', ['/slow'], {
+    deadline: Date.now() + 50,
+    fetcher: (_u, init) => new Promise((_res, rej) => init.signal!.addEventListener('abort', () => rej(new Error('aborted')))),
+  });
+  assert.equal(r.failed.length, 1);
+  assert.ok(performance.now() - t0 < 5_000, 'cut at the deadline');
+});
+
+test('the middleware does not count the job\'s own requests', async () => {
+  const { isNightlyRefreshRequest, REFRESH_USER_AGENT } = await import('../refresh-agent');
+  assert.equal(isNightlyRefreshRequest(REFRESH_USER_AGENT), true);
+  assert.equal(isNightlyRefreshRequest('Mozilla/5.0'), false);
+  assert.equal(isNightlyRefreshRequest(null), false);
+  const mw = readFileSync(new URL('../../middleware.ts', import.meta.url), 'utf8');
+  assert.match(mw, /if \(!isNightlyRefreshRequest\(userAgent\)\) countRequest\(request, event, userAgent\);/);
+  assert.equal(mw.split('countRequest(request, event, userAgent)').length - 1, 1, 'no unguarded call');
+});
+
 test('the origin: always www in production (cron calls the login-protected deployment host), the request origin locally', async () => {
   const { refreshOrigin, SITE_ORIGIN } = await import('../nightly-refresh');
   assert.equal(SITE_ORIGIN, 'https://www.getpromonight.com');
@@ -151,7 +197,7 @@ test('the origin: always www in production (cron calls the login-protected deplo
 
 test('the route: auth, the window, then revalidate through POST /api/revalidate on www, and only then warm and verify', async () => {
   const log: { method: string; url: string; paths?: string[] }[] = [];
-  let mode: 'ok' | 'login' | 'slow-first' | 'stale' | 'fanout-down' = 'ok';
+  let mode: 'ok' | 'login' | 'slow-first' | 'stale' | 'fanout-down' | 'old-hit' = 'ok';
   const seenOnce = new Set<string>();
   const realFetch = globalThis.fetch;
   globalThis.fetch = (async (u: string, init?: RequestInit) => {
@@ -177,6 +223,7 @@ test('the route: auth, the window, then revalidate through POST /api/revalidate 
       throw new Error('The operation was aborted due to timeout');
     }
     if (mode === 'stale' && path === '/nhl') return resp(200, { 'x-vercel-cache': 'STALE' });
+    if (mode === 'old-hit' && path === '/nhl') return resp(200, { 'x-vercel-cache': 'HIT', age: '36000' });
     return resp(200, { 'x-vercel-cache': 'MISS' });
   }) as typeof fetch;
   const DEPLOY = 'https://promonight-abc123-btj8tk69dk-7318s-projects.vercel.app/api/cron/nightly-refresh';
@@ -241,6 +288,21 @@ test('the route: auth, the window, then revalidate through POST /api/revalidate 
     const down = await call('Bearer s');
     assert.equal(down.status, 500);
     assert.equal((await down.json()).revalidated, 0);
+
+    // A revalidation that silently did not apply: yesterday's copy as a HIT. Red.
+    mode = 'old-hit';
+    const old = await call('Bearer s');
+    assert.equal(old.status, 500);
+    assert.equal((await old.json()).fresh, expected - 1);
+
+    // A venue slug the fan-out would reject: listed, and red.
+    mode = 'ok';
+    routeHubs = ['ppg-paints-arena', 'chase-center', 'target-field', 'Bad_Slug'];
+    const withBad = await call('Bearer s');
+    const withBadBody = await withBad.json();
+    assert.equal(withBad.status, 500);
+    assert.deepEqual(withBadBody.dropped, ['/venues/Bad_Slug']);
+    routeHubs = ['ppg-paints-arena', 'chase-center', 'target-field'];
 
     // A page still stale on the second pass: red.
     mode = 'stale';

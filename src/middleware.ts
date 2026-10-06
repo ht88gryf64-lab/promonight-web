@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse, type NextFetchEvent } from 'next/server';
+import { isNightlyRefreshRequest } from '@/lib/refresh-agent';
 import {
   classifyRequestType,
   classifyTraffic,
@@ -197,7 +198,10 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
   // The cost is that `total` runs a hair below Vercel's middleware invocation
   // count by exactly the 410 volume (1 in the last 24h). Recorded for the
   // Phase 3 reconciliation in docs/request-counter-notes.md.
-  countRequest(request, event, userAgent);
+  //
+  // Not the nightly refresh's own page requests (WEB6 G4): about 800 a night,
+  // none of them a visit, each one a write to the hour's single counter doc.
+  if (!isNightlyRefreshRequest(userAgent)) countRequest(request, event, userAgent);
 
   const bot = detectBot(userAgent);
   if (!bot) return NextResponse.next();

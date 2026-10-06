@@ -238,7 +238,7 @@ test('after the nightly refresh, a 12:40 AM Eastern check finds no hub link to a
   assert.ok(stale.some((a) => a.includes('team-calendar')), `the defect reproduces: ${stale}`);
   assert.notEqual(before.card, after.page.size, 'and the old /nhl card disagrees with the page');
   // The refresh re-renders every one of those pages after midnight...
-  const paths = await nightlyRefreshPaths({ teams: async () => [{ id: 'pittsburgh-penguins', sportSlug: 'nhl' }], venueHubSlugs: async () => ['ppg-paints-arena'] });
+  const { paths } = await nightlyRefreshPaths({ teams: async () => [{ id: 'pittsburgh-penguins', sportSlug: 'nhl' }], venueHubSlugs: async () => ['ppg-paints-arena'] });
   for (const p of ['/nhl/pittsburgh-penguins', '/venues/ppg-paints-arena', '/nhl', '/promos/today']) assert.ok(paths.includes(p), p);
   // ...so at 12:40 AM every link lands on an upcoming row and the card agrees.
   for (const a of after.links) assert.ok(after.page.has(a), `${a} is archived on the team page`);
