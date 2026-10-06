@@ -25,18 +25,13 @@
  * The secret value is never logged.
  */
 import { NextResponse } from 'next/server';
-import { revalidatePath } from 'next/cache';
+import { PATH_RE, revalidatePaths } from '@/lib/revalidate-paths';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-// One to THREE segments, lowercase alphanumeric and hyphen only, no trailing
-// slash. Widened from two to three for /cfb/rivalries/<slug>. The charset is
-// unchanged, so uppercase, underscores, dots and query strings still fail.
-// The pipeline keeps its own copy of this pattern in
-// promo-pipeline/lib/revalidate-notify.js; both must be widened together or the
-// client silently drops paths this endpoint would accept.
-const PATH_RE = /^\/[a-z0-9-]+(?:\/[a-z0-9-]+){0,2}$/;
+// The path pattern (PATH_RE) and the revalidatePath loop live in
+// src/lib/revalidate-paths.ts, shared with the nightly refresh cron (WEB6 G4).
 const MAX_PATHS = 100;
 
 export async function POST(request: Request) {
@@ -91,16 +86,7 @@ export async function POST(request: Request) {
 
   console.log(`[revalidate] request received, paths=${paths.length}`);
 
-  let succeeded = 0;
-  for (const p of paths) {
-    try {
-      revalidatePath(p);
-      succeeded++;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.warn(`[revalidate] failed for ${p}: ${message}`);
-    }
-  }
+  const { succeeded } = revalidatePaths(paths);
 
   console.log(`[revalidate] revalidated ${succeeded}/${paths.length}`);
   return NextResponse.json({ ok: true, revalidated: succeeded });
