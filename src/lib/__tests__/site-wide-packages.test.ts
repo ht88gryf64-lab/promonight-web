@@ -61,6 +61,11 @@ const TEAMS = [
 const row = (id: string, team: string, date: string, title: string, type: string, flagged: boolean) =>
   fakeDoc(id, { date, title, type, description: `${title}.`, opponent: 'Visitors', highlight: true, ...(flagged ? { ticketPackageRequired: true } : {}) }, team);
 const PROMOS = [
+  // A same-date, same-title pair with the FLAGGED doc first: the team page
+  // dedupes first (the flagged one survives) and then lists it as a package,
+  // so no reader may show the unflagged twin either. Drop-before-dedupe would.
+  row('d4', 'detroit-red-wings', D2, 'Twin Night', 'theme', true),
+  row('d5', 'detroit-red-wings', D2, 'Twin Night', 'theme', false),
   row('d1', 'detroit-red-wings', D1, 'Free Night', 'theme', false),
   row('d2', 'detroit-red-wings', D1, 'Hoodie Pack', 'theme', true),
   row('d3', 'detroit-red-wings', D2, 'Lunch Box', 'food', true),
@@ -68,6 +73,7 @@ const PROMOS = [
   row('t2', 'minnesota-twins', D2, 'Bobblehead', 'giveaway', true),
 ];
 const byTeam = (id: string) => PROMOS.filter((d) => d.ref.parent.parent?.id === id);
+let groupThrows = false;
 
 const fakeDb = {
   collection(name: string): any {
@@ -86,6 +92,8 @@ const fakeDb = {
     return query([]);
   },
   collectionGroup(name: string): any {
+    // groupThrows: exercise every reader's per-team fallback path.
+    if (groupThrows) return { where: () => { throw new Error('no index'); }, orderBy: () => { throw new Error('no index'); }, count: () => ({ get: async () => snap(PROMOS) }) };
     return query(name === 'promos' ? PROMOS : []);
   },
 };
@@ -142,4 +150,37 @@ test('My Teams: neither listed nor counted', async () => {
   const res = await GET(new NextRequest(`http://localhost/api/my-teams/promos?teams=detroit-red-wings,minnesota-twins&start=${D1}&end=${D2}`));
   const body = (await res.json()) as { promos: { title: string }[] };
   assert.deepEqual(titles(body.promos), COUNTED);
+});
+
+test('the per-team fallback paths drop packages too (collection-group query unavailable)', async () => {
+  const { getPromosForDate, getPromosInDateRange, getPromosFromDate, getHighlightedPromos } = await import('../data');
+  groupThrows = true;
+  try {
+    assert.deepEqual(titles(await getPromosForDate(D1)), ['Fireworks', 'Free Night']);
+    assert.deepEqual(titles(await getPromosInDateRange(D1, D2)), COUNTED);
+    assert.deepEqual(titles(await getPromosFromDate(D1)), COUNTED);
+    assert.deepEqual(titles(await getHighlightedPromos(10)), COUNTED);
+  } finally {
+    groupThrows = false;
+  }
+});
+
+test('dedupe first, then drop: the unflagged twin of a package never shows', async () => {
+  const { getPromosInDateRange, getTeamPromos, isTicketPackagePromo } = await import('../data');
+  const team = await getTeamPromos('detroit-red-wings');
+  const twin = team.filter((p) => p.title === 'Twin Night');
+  assert.equal(twin.length, 1, 'the team page keeps one Twin Night');
+  assert.equal(isTicketPackagePromo(twin[0]), true, 'and it is the package');
+  assert.ok(!(await getPromosInDateRange(D1, D2)).some((p) => p.title === 'Twin Night'));
+});
+
+test('the feed keeps MLB rows that carry the raw flag', async () => {
+  const feed = await import('../social-feed/feed');
+  const sel = await feed.getFeedSelection(new Date());
+  assert.ok(!sel.items.some((i) => i.title === 'Twin Night'), 'no twin of a package');
+  // Selection is ranked and capped, so read the candidates the same reader
+  // returns: an MLB row with the flag is still a candidate.
+  const card = await feed.findCardPromo('minnesota-twins~t2');
+  assert.equal(card?.title, 'Bobblehead');
+  assert.deepEqual(sel.items.map((i) => i.title).sort(), COUNTED, 'every counted row selected, the MLB raw-flag row included');
 });

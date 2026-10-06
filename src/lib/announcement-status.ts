@@ -115,17 +115,15 @@ function checkedLabel(ymd: string): string {
   return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' });
 }
 
-/**
- * The page-level rule: the line shows only on an NHL or NBA page that is
- * showing the schedule AND has no rows for the season it names. A page whose
- * season resolved has promos for that season, and "hasn't recorded any" would
- * be false on it. Null everywhere else.
- */
 type StatusLineOpts = {
   league: string;
   showSchedule: boolean;
   seasonResolved: boolean;
+  /** The page lists special-ticket packages for the season. */
   hasTicketPackages?: boolean;
+  /** The page shows other promotions: playoff promos or every-game deals.
+   *  "Hasn't recorded any ... promotions" would sit next to them (review
+   *  round 3), so the line is left off. */
   hasOtherPromos?: boolean;
   teamId: string;
   displayName: string;
@@ -142,20 +140,13 @@ export function statusLineSaysNothingAnnounced(opts: StatusLineOpts): boolean {
   return scheduleStatusLine(opts) !== null && nothingPublishedVerified(opts.teamId, opts.today) && !opts.hasTicketPackages;
 }
 
-export function scheduleStatusLine(opts: {
-  league: string;
-  showSchedule: boolean;
-  seasonResolved: boolean;
-  /** The page lists special-ticket packages for the season. */
-  hasTicketPackages?: boolean;
-  /** The page shows other promotions: playoff promos or every-game deals.
-   *  "Hasn't recorded any ... promotions" would sit next to them (review
-   *  round 3), so the line is left off. */
-  hasOtherPromos?: boolean;
-  teamId: string;
-  displayName: string;
-  today: string;
-}): string | null {
+/**
+ * The page-level rule: the line shows only on an NHL or NBA page that is
+ * showing the schedule AND has no rows for the season it names. A page whose
+ * season resolved has promos for that season, and "hasn't recorded any" would
+ * be false on it. Null everywhere else.
+ */
+export function scheduleStatusLine(opts: StatusLineOpts): string | null {
   if (!opts.showSchedule || opts.seasonResolved || !isSplitSeasonLeague(opts.league)) return null;
   if (opts.hasOtherPromos) return null;
   return announcementLine(opts.teamId, opts.displayName, opts.today, { hasTicketPackages: opts.hasTicketPackages });

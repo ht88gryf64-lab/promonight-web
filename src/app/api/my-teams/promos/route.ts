@@ -5,6 +5,7 @@ import { bagPolicyUrlFor, nearbySilenced, redactClause } from '@/lib/venue-corpu
 import { getVenueOverride } from '@/lib/venue-overrides';
 import type { PromoType, Venue } from '@/lib/types';
 import { isTicketPackageDoc, isTicketPackageLeague } from '@/lib/ticket-packages';
+import { getTeamBySlug } from '@/lib/data';
 
 // Maximum starred teams a single request will fan out for. 200 is well past
 // the practical ceiling (the user would have to star more than every team
@@ -36,13 +37,28 @@ function isDate(value: string): boolean {
   return DATE_RE.test(value);
 }
 
+/** getTeamPromos' dedupe on raw docs: date then doc id order, first row per
+ *  (date, trimmed lower-case title) wins. NHL and NBA only (see below). */
+function dedupeDocsLikeTeamPage<T extends { id: string; data: () => FirebaseFirestore.DocumentData }>(docs: T[]): T[] {
+  const ordered = [...docs].sort(
+    (a, b) => String(a.data().date).localeCompare(String(b.data().date)) || a.id.localeCompare(b.id),
+  );
+  const seen = new Set<string>();
+  return ordered.filter((doc) => {
+    const key = `${doc.data().date}::${String(doc.data().title || '').trim().toLowerCase()}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 async function fetchPromosForTeam(
   teamSlug: string,
   start: string,
   end: string,
 ): Promise<StarredPromo[]> {
   try {
-    const [snapshot, teamDoc] = await Promise.all([
+    const [snapshot, team] = await Promise.all([
       db
         .collection('teams')
         .doc(teamSlug)
@@ -50,17 +66,22 @@ async function fetchPromosForTeam(
         .where('date', '>=', start)
         .where('date', '<=', end)
         .get(),
-      db.collection('teams').doc(teamSlug).get(),
+      // The cached teams loader: no extra document read per starred team.
+      getTeamBySlug(teamSlug).catch(() => null),
     ]);
     // NHL and NBA special-ticket rows are not promotions (WEB6 G2): My Teams
-    // neither lists nor counts them, as the team page counts none of them.
-    const dropPackages = isTicketPackageLeague(teamDoc.exists ? String(teamDoc.data()?.league ?? '') : '');
+    // neither lists nor counts them, as the team page counts none of them. On
+    // those leagues the rows are also deduped first, in the team page's order
+    // (date, then doc id), so the unflagged twin of a package never shows here
+    // when the team page lists that pair as the package. Other leagues are
+    // read exactly as before.
+    const dropPackages = isTicketPackageLeague(team?.league);
     // Visibility filter on the raw docs before shaping: only tombstoned:true
     // and isPostseason:true are hidden; absent and false pass. App-code
     // filter, never a Firestore inequality (which would drop field-absent
     // docs).
-    return snapshot.docs
-      .filter((doc) => doc.data().tombstoned !== true && doc.data().isPostseason !== true)
+    const visible = snapshot.docs.filter((doc) => doc.data().tombstoned !== true && doc.data().isPostseason !== true);
+    return (dropPackages ? dedupeDocsLikeTeamPage(visible) : visible)
       .filter((doc) => !(dropPackages && isTicketPackageDoc(doc.data())))
       .map((doc) => {
       const data = doc.data();

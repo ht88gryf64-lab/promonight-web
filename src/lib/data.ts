@@ -244,10 +244,13 @@ function promoWithTeam(doc: FirebaseFirestore.DocumentSnapshot, team: Team): Pro
  * Site-wide rule (WEB6 G2): an NHL or NBA row the pipeline marks as needing a
  * special ticket is not a promotion anywhere the site lists or counts
  * promotions. It appears only in its own team page's "Ticket packages" group.
- * So every cross-team reader leaves it out: the homepage, /promos/*, the league
- * hubs, the email digest and anything else built on these readers, and with it
- * any card that would deep-link to a row the team page does not list as a
- * promotion. Inert on every other league (the flag there is the extractor's raw
+ * So every cross-team reader leaves it out: the homepage lists and tiles,
+ * /promos/*, the league hubs, the email digest and anything else built on these
+ * readers, and with it any card that would deep-link to a row the team page
+ * does not list as a promotion. NOT the homepage "Promos tracked" figure
+ * (getPromoCount): that is a raw count() of every promo document, which by an
+ * earlier ruling also includes tombstoned and postseason rows, and an
+ * aggregate query cannot filter on the flag. Inert on every other league (the flag there is the extractor's raw
  * guess) and on any row without the flag.
  */
 export function dropTicketPackageRows<T extends PromoWithTeam>(rows: T[]): T[] {
@@ -378,7 +381,7 @@ export async function getHighlightedPromos(limit: number = 6): Promise<PromoWith
         results.push(promoWithTeam(doc, mapTeamDoc(teamDoc)));
       }
     }
-    return dropTicketPackageRows(results.filter(isVisiblePromo));
+    return dropTicketPackageRows(dedupePromos(results.filter(isVisiblePromo), (p) => p.team.id));
   } catch {
     // Fallback: sample highlighted promos from a few teams
     const teams = await getAllTeams();
@@ -403,7 +406,7 @@ export async function getHighlightedPromos(limit: number = 6): Promise<PromoWith
     );
 
     allHighlighted.sort((a, b) => a.date.localeCompare(b.date));
-    return dropTicketPackageRows(allHighlighted.filter(isVisiblePromo)).slice(0, limit);
+    return dropTicketPackageRows(dedupePromos(allHighlighted.filter(isVisiblePromo), (p) => p.team.id)).slice(0, limit);
   }
 }
 
