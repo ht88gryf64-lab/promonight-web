@@ -322,3 +322,14 @@ describe('round 5: the archive pointer never prints the unplaced group label', (
     assert.doesNotMatch(t, /completed other promos/);
   });
 });
+
+/* ---- Review round 6 ---- */
+
+describe('round 6: the dark archive subline never prints the unplaced group label', () => {
+  test('two groups, one unplaceable: "with no season date", not "the other season"', async () => {
+    const { PromoList } = await import('@/components/promo-list');
+    const t = text(await html(<PromoList promos={[promo('2026-04-11', 'Old Night'), promo('2026-1-05', 'Odd Date Night')]} teamSlug={WILD.id} teamName="Minnesota Wild" league="NHL" sport="nhl" />));
+    assert.match(t, /1 in the 2025-26 season, 1 with no season date/);
+    assert.doesNotMatch(t, /other season/);
+  });
+});

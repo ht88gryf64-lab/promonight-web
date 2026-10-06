@@ -161,8 +161,10 @@ describe('the Warriors shape: 3 theme nights, 6 special-ticket rows', () => {
     const t = text(group);
     assert.match(t, /Ticket packages \(5\)/);
     assert.match(t, /not counted as theme nights, giveaways, food deals or kids events/);
-    assert.equal(t.split('The item comes with a special ticket package.').length - 1, 5, 'one note per row');
-    assert.doesNotMatch(t, /Only fans who buy/, 'the note is about the item, not the night');
+    assert.equal(t.split('Comes with a special ticket package.').length - 1, 5, 'one note per row');
+    // True for an open night with a sold item (round 5) and for a package that
+    // names no item (round 6): neither "only fans who buy" nor "the item".
+    assert.doesNotMatch(t, /Only fans who buy|The item comes/);
     assert.ok(!t.includes('Expired Package Night'), 'a past package is not offered');
     for (const title of PACKAGE_TITLES.slice(1)) assert.ok(t.includes(title), title);
     // Four shown, the fifth behind a details toggle; no ad anchor inside.

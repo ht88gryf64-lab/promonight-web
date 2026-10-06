@@ -53,8 +53,8 @@ import { TITLE_SEASON_YEAR } from './title-treatment';
  *
  * IT GOES STALE SILENTLY on 2027-07-01 (review round 3): every NHL and NBA page
  * would keep calling 2026-27 "this season" through 2027-28. Known-issues 69 is
- * the bump procedure, and a test fails on the real clock from 2027-06-01 so the
- * bump is due before it is late (season-labels-by-league.test.ts).
+ * the bump procedure (bump on July 1), and a test fails on the real clock from
+ * that day if it has not happened (season-labels-by-league.test.ts).
  */
 export const SPLIT_SEASON_START_YEAR = 2026;
 

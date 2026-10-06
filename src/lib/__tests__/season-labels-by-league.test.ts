@@ -181,15 +181,17 @@ describe('FAQ counts only the season it names', () => {
 });
 
 describe('the NHL/NBA season constant is current (known-issues 69)', () => {
-  // Reads the WALL clock on purpose: this is the alarm for the June bump.
+  // Reads the WALL clock on purpose: it fails on July 1, the day the bump is due
+  // (known-issues 69), and not before. A June alarm turned the suite red for a
+  // month with only one way to green it early, the forbidden early bump.
   // performance.timeOrigin + performance.now() is not moved by test:future's
   // Date shift or by mock.timers, so it fires on the real date in every run.
   const wall = performance.timeOrigin + performance.now();
-  test('fails from June 1 of the year the season ends: bump SPLIT_SEASON_START_YEAR', () => {
-    const due = Date.UTC(SPLIT_SEASON_START_YEAR + 1, 5, 1);
+  test('fails from July 1 of the year the season ends: bump SPLIT_SEASON_START_YEAR', () => {
+    const due = Date.UTC(SPLIT_SEASON_START_YEAR + 1, 6, 1);
     assert.ok(
       wall < due,
-      `SPLIT_SEASON_START_YEAR is ${SPLIT_SEASON_START_YEAR} and the ${splitSeasonLabel(SPLIT_SEASON_START_YEAR)} season ends this summer: the bump is due July 1 (docs/known-issues.md entry 69; re-pin the 2026-27 fixtures with it)`,
+      `SPLIT_SEASON_START_YEAR is ${SPLIT_SEASON_START_YEAR} and the ${splitSeasonLabel(SPLIT_SEASON_START_YEAR)} season is over: bump it today (docs/known-issues.md entry 69; re-pin the 2026-27 fixtures with it)`,
     );
   });
 });

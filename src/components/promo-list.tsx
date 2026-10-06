@@ -619,7 +619,9 @@ export function PromoList({
   const darkSubline = splitGroups
     ? splitGroups.length === 1
       ? splitGroups[0].subline
-      : splitGroups.map((g) => `${g.rows.length} in ${g.isCurrent ? 'this season' : `the ${g.label} season`}`).join(', ')
+      : splitGroups
+          .map((g) => `${g.rows.length} ${g.isCurrent ? 'in this season' : g.startYear === null ? 'with no season date' : `in the ${g.label} season`}`)
+          .join(', ')
     : pastCount;
 
   return (

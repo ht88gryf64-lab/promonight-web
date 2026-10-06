@@ -3908,7 +3908,7 @@ added since.
 
 ## 69. The NHL and NBA season constant must be bumped every July
 
-**Status: OPEN, DATED (WEB6, 2026-10-05). Severity: High on 2027-07-01 if missed. Bump on 2027-07-01; the guard warns from 2027-06-01.**
+**Status: OPEN, DATED (WEB6, 2026-10-05). Severity: High on 2027-07-01 if missed. Bump on 2027-07-01; a test fails from that day.**
 
 **What it is.** `SPLIT_SEASON_START_YEAR` in `src/lib/season-label.ts` names the NHL and NBA season every team page speaks about (2026 means 2026-27). It is deliberately its own constant, not `TITLE_SEASON_YEAR`: that one follows MLB and is bumped in January or February (docs/runbook-2027-01-15-spansyears-season-switchoff.md), in the middle of an NHL and NBA season. Nothing derives this one from the clock, by the same rule as every season year on the site.
 
@@ -3918,10 +3918,10 @@ added since.
 - a zero-promo page's schedule reads "2026-27 Game Schedule";
 - the status line says "hasn't recorded any ... 2026-27 promotions".
 
-**How it is caught.** `season-labels-by-league.test.ts` ("the NHL/NBA season constant is current") fails from 2027-06-01, a month's warning before the bump date. It reads the wall clock (`performance.timeOrigin`), which `npm run test:future`'s Date shift does not move, so it passes there until the same date. LIMIT: nothing runs the tests on a schedule (the only workflow is indexnow-after-deploy, and the Vercel build runs no tests), so it fires only when someone runs `npm test` in June. Put the bump in the calendar too.
+**How it is caught.** `season-labels-by-league.test.ts` ("the NHL/NBA season constant is current") fails from 2027-07-01, the day the bump is due, and not before (a June alarm would leave the suite red for a month with only the forbidden early bump to green it). It reads the wall clock (`performance.timeOrigin`), which `npm run test:future`'s Date shift does not move, so it passes there until the same date. LIMIT: nothing runs the tests on a schedule (the only workflow is indexnow-after-deploy, and the Vercel build runs no tests), so it fires only when someone runs `npm test`. Put the bump in the calendar for July 1.
 
 **The bump.** On July 1, the module's own season boundary (`SPLIT_SEASON_FIRST_MONTH = 7`), whether or not the new NHL and NBA spines are in `games` yet (they landed in September in 2026). Not earlier: the Stanley Cup Final and NBA Finals run into June, which still belongs to the 2026-27 season, so a June bump would head the season being played "LAST SEASON". Bumping before the spines arrive is safe: `regularSeasonContexts` finds no game of the new season, so the schedule block stays off, and the finished season's rows read "LAST SEASON (2026-27)", which is then true.
-1. Set `SPLIT_SEASON_START_YEAR` to the new start year. The guard test's message tells you to; it is a one-month alarm, not the bump date.
+1. Set `SPLIT_SEASON_START_YEAR` to the new start year.
 2. Re-verify, or empty, `NOTHING_PUBLISHED` in `src/lib/announcement-status.ts`. Those dates are for the old season.
 3. Re-pin the tests. The constant is not a one-line edit: about 37 tests fail after it, because their fixtures pin today to 2026-10-05 and name "2026-27" (season-labels-by-league, season-scope, season-labels-render, ticket-packages-render, web6-review-r1). Move each fixture forward a year (the dates and the labels together), then run `npm test`, `npm run test:future` and both mutation harnesses (`scripts/season-labels-mutations.mjs`, `scripts/schedule-months-mutations.mjs`).
 4. Verify one NHL and one NBA page against served HTML: archive headings, hero sentence, schedule title.
