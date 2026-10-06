@@ -6,6 +6,7 @@ import { AppDownloadButtons } from './app-download-buttons';
 import { AdSlot } from './ads/AdSlot';
 import { AD_SLOTS } from '@/lib/ads/slots';
 import { AggregatorPaginatedGroups } from './aggregator-paginated-groups';
+import { distinctPromoCount } from '@/lib/aggregator-count';
 import { isRedesignEnabled } from '@/lib/redesign';
 import { archivoHouse } from './redesign/fonts-house';
 import { RedesignAggregatorList } from './redesign/RedesignAggregatorList';
@@ -73,7 +74,7 @@ function RedesignAggregatorPage({
   afterIntro,
   afterList,
 }: AggregatorPageProps) {
-  const totalCount = groups.reduce((acc, g) => acc + g.promos.length, 0);
+  const totalCount = distinctPromoCount(groups);
   const { color, Icon } = ACCENTS[accentKey];
 
   return (
@@ -195,7 +196,7 @@ function LegacyAggregatorPage({
   faqs,
   emptyMessage,
 }: AggregatorPageProps) {
-  const totalCount = groups.reduce((acc, g) => acc + g.promos.length, 0);
+  const totalCount = distinctPromoCount(groups);
 
   return (
     <div className="pt-28 pb-20 px-6">
@@ -302,7 +303,9 @@ export function AggregatorJsonLd({
   // ItemList is capped so the JSON-LD stays well under Bing's 1MB ceiling
   // (see the list-trim note in the page bodies).
   const ITEMLIST_CAP = 50;
-  const items = groups.flatMap((g) => g.promos).slice(0, ITEMLIST_CAP);
+  // Distinct, like the hero count: theme-nights files a night under every
+  // category it matches, and the list must not name one item twice.
+  const items = [...new Set(groups.flatMap((g) => g.promos))].slice(0, ITEMLIST_CAP);
 
   const schemas: Record<string, unknown>[] = [
     {

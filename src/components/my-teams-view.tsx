@@ -233,8 +233,11 @@ export function MyTeamsView({ teams, variant = 'dark' }: MyTeamsViewProps) {
     return <StateC starredTeams={starredTeams} hadError light={light} />;
   }
 
+  // A team whose read failed is not "quiet": no 60-day claim is made about it.
+  const failedTeams = new Set(data.failedTeams ?? []);
+
   if (data.promos.length === 0) {
-    return <StateC starredTeams={starredTeams} light={light} />;
+    return <StateC starredTeams={starredTeams} hadError={failedTeams.size > 0} light={light} />;
   }
 
   return (
@@ -242,6 +245,7 @@ export function MyTeamsView({ teams, variant = 'dark' }: MyTeamsViewProps) {
       starredTeams={starredTeams}
       promos={data.promos}
       venues={data.venues}
+      failedTeams={failedTeams}
       todayYMD={todayYMD}
       light={light}
     />
@@ -629,7 +633,7 @@ function StateC({
           manage
           subline={
             <p className="mt-4 font-rd text-[11px] uppercase tracking-[0.12em] text-white/55">
-              {starredTeams.length} starred · No promos coming up yet
+              {starredTeams.length} starred{hadError ? null : <> · No promos coming up yet</>}
             </p>
           }
         />
@@ -651,12 +655,16 @@ function StateC({
             </div>
           )}
 
-          <div className="mb-8 rounded-2xl border border-rd-line bg-rd-card p-5">
-            <p className="text-sm leading-relaxed text-rd-ink-soft">
-              Nothing in the next 60 days. Your teams are tracked and the
-              calendar will populate the moment promos are announced.
-            </p>
-          </div>
+          {/* Only when the fetch worked: after a failed load "nothing in the
+              next 60 days" is a claim the page cannot back. */}
+          {!hadError && (
+            <div className="mb-8 rounded-2xl border border-rd-line bg-rd-card p-5">
+              <p className="text-sm leading-relaxed text-rd-ink-soft">
+                Nothing in the next {PROMO_WINDOW_DAYS} days. Your teams are
+                tracked, and the calendar fills in as promos are announced.
+              </p>
+            </div>
+          )}
 
           <div className="mb-3">
             <span className="font-rd text-[11px] font-semibold uppercase tracking-[0.1em] text-rd-ink-faint">
@@ -665,7 +673,7 @@ function StateC({
           </div>
           <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
             {starredTeams.map((team) => (
-              <OffseasonTeamCard key={team.id} team={team} light />
+              <QuietTeamCard key={team.id} team={team} light />
             ))}
           </div>
 
@@ -689,7 +697,7 @@ function StateC({
               Your Teams
             </h1>
             <p className="font-mono text-[10px] tracking-[1.5px] uppercase text-text-dim mt-2">
-              {starredTeams.length} starred · No promos coming up yet
+              {starredTeams.length} starred{hadError ? null : <> · No promos coming up yet</>}
             </p>
           </div>
           <Link
@@ -717,12 +725,14 @@ function StateC({
           </div>
         )}
 
-        <div className="rounded-2xl border border-border-subtle bg-bg-card p-5 mb-8">
-          <p className="text-text-secondary text-sm leading-relaxed">
-            Nothing in the next 60 days. Your teams are tracked and the
-            calendar will populate the moment promos are announced.
-          </p>
-        </div>
+        {!hadError && (
+          <div className="rounded-2xl border border-border-subtle bg-bg-card p-5 mb-8">
+            <p className="text-text-secondary text-sm leading-relaxed">
+              Nothing in the next {PROMO_WINDOW_DAYS} days. Your teams are
+              tracked, and the calendar fills in as promos are announced.
+            </p>
+          </div>
+        )}
 
         <div className="mb-3">
           <span className="font-mono text-[10px] tracking-[1.5px] uppercase text-text-dim">
@@ -731,7 +741,7 @@ function StateC({
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
           {starredTeams.map((team) => (
-            <OffseasonTeamCard key={team.id} team={team} />
+            <QuietTeamCard key={team.id} team={team} />
           ))}
         </div>
 
@@ -746,7 +756,12 @@ function StateC({
   );
 }
 
-function OffseasonTeamCard({ team, light = false }: { team: Team; light?: boolean }) {
+// A starred team with no promos in the PROMO_WINDOW_DAYS window. This card and
+// its section heading said "Offseason" until 2026-10-06, which was false for
+// in-season clubs whose next promo is more than 60 days out or not announced
+// yet. The site has no season model to tell the two apart, so the label states
+// only what the code tested: nothing in the next 60 days.
+function QuietTeamCard({ team, light = false }: { team: Team; light?: boolean }) {
   const teamFullName = `${team.city} ${team.name}`;
 
   if (light) {
@@ -759,7 +774,7 @@ function OffseasonTeamCard({ team, light = false }: { team: Team; light?: boolea
         />
         <div className="p-3 pr-12">
           <div className="mb-1 font-rd text-[9px] uppercase tracking-[0.1em] text-rd-ink-faint">
-            {SPORT_ICONS[team.league]} {team.league} · Offseason
+            {SPORT_ICONS[team.league]} {team.league}
           </div>
           <Link href={`/${team.sportSlug}/${team.id}`} className="group block">
             <div className="text-[11px] text-rd-ink-soft">{team.city}</div>
@@ -793,7 +808,7 @@ function OffseasonTeamCard({ team, light = false }: { team: Team; light?: boolea
       />
       <div className="p-3 pr-12">
         <div className="font-mono text-[9px] tracking-[1px] uppercase text-text-dim mb-1">
-          {SPORT_ICONS[team.league]} {team.league} · Offseason
+          {SPORT_ICONS[team.league]} {team.league}
         </div>
         <Link href={`/${team.sportSlug}/${team.id}`} className="block group">
           <div className="text-text-secondary text-[11px]">{team.city}</div>
@@ -822,12 +837,14 @@ function StateB({
   starredTeams,
   promos,
   venues,
+  failedTeams,
   todayYMD,
   light = false,
 }: {
   starredTeams: Team[];
   promos: StarredPromo[];
   venues: Record<string, Venue | null>;
+  failedTeams: ReadonlySet<string>;
   todayYMD: string;
   light?: boolean;
 }) {
@@ -854,9 +871,14 @@ function StateB({
 
   // Teams in the starred set that have zero promos in the 60-day window.
   const teamsWithPromos = new Set(promos.map((p) => p.teamSlug));
-  const offseasonTeams = starredTeams.filter(
-    (t) => !teamsWithPromos.has(t.id),
+  const quietTeams = starredTeams.filter(
+    (t) => !teamsWithPromos.has(t.id) && !failedTeams.has(t.id),
   );
+  // A failed team is left out of the quiet list, so say so rather than drop
+  // it silently (review round 3). City and name: Rangers, Kings, Panthers,
+  // Jets, Giants and Cardinals each exist in two leagues.
+  const failed = starredTeams.filter((t) => failedTeams.has(t.id));
+  const failedNames = failed.length > 0 ? failed.map((t) => `${t.city} ${t.name}`).join(', ') : null;
 
   // Affiliate cluster anchor. Because `promos` is sorted asc, the first
   // entry is either today's TONIGHT promo (when one exists) or the next
@@ -879,6 +901,14 @@ function StateB({
         />
         <div className="mx-auto max-w-3xl px-6 pb-20 pt-8">
           <StarredChipsStrip teams={starredTeams} light />
+
+          {failedNames && (
+            <div className="mb-6 rounded-2xl border border-[rgba(211,17,69,0.25)] bg-[rgba(211,17,69,0.06)] p-4">
+              <p className="text-sm text-rd-red">
+                Couldn&apos;t load promos for {failedNames} right now. Refresh to try again.
+              </p>
+            </div>
+          )}
 
           {tonight.length > 0 && (
             <TonightSection
@@ -912,16 +942,16 @@ function StateB({
             <AffiliateClusterSection team={anchorTeam} venue={anchorVenue} light />
           )}
 
-          {offseasonTeams.length > 0 && (
+          {quietTeams.length > 0 && (
             <section className="mb-8">
               <div className="mb-3">
                 <span className="font-rd text-[11px] font-semibold uppercase tracking-[0.1em] text-rd-ink-faint">
-                  Tracking · Offseason
+                  Tracking · Nothing in the next {PROMO_WINDOW_DAYS} days
                 </span>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {offseasonTeams.map((team) => (
-                  <OffseasonTeamCard key={team.id} team={team} light />
+                {quietTeams.map((team) => (
+                  <QuietTeamCard key={team.id} team={team} light />
                 ))}
               </div>
             </section>
@@ -954,6 +984,14 @@ function StateB({
 
         <StarredChipsStrip teams={starredTeams} />
 
+        {failedNames && (
+          <div className="mb-6 rounded-2xl border border-accent-red-border bg-accent-red-bg p-4">
+            <p className="text-accent-red text-sm">
+              Couldn&apos;t load promos for {failedNames} right now. Refresh to try again.
+            </p>
+          </div>
+        )}
+
         {tonight.length > 0 && (
           <TonightSection
             promo={tonight[0]}
@@ -983,16 +1021,16 @@ function StateB({
           <AffiliateClusterSection team={anchorTeam} venue={anchorVenue} />
         )}
 
-        {offseasonTeams.length > 0 && (
+        {quietTeams.length > 0 && (
           <section className="mb-8">
             <div className="mb-3">
               <span className="font-mono text-[10px] tracking-[1.5px] uppercase text-text-dim">
-                Tracking · Offseason
+                Tracking · Nothing in the next {PROMO_WINDOW_DAYS} days
               </span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {offseasonTeams.map((team) => (
-                <OffseasonTeamCard key={team.id} team={team} />
+              {quietTeams.map((team) => (
+                <QuietTeamCard key={team.id} team={team} />
               ))}
             </div>
           </section>

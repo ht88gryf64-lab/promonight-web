@@ -6,6 +6,7 @@ import { IconChevronRight } from '@tabler/icons-react';
 import { getPromosFromDate } from '@/lib/data';
 import { AggregatorPage, AggregatorJsonLd, type AggregatorGroup } from '@/components/aggregator-layout';
 import { siteTodayYmd } from '@/lib/site-today';
+import { crossLeagueSeasonLabel, scheduledPeriodPhrase, seasonSpan } from '@/lib/season-label';
 
 export const revalidate = 21600;
 
@@ -23,19 +24,17 @@ function monthLabel(dateStr: string): string {
   });
 }
 
-// HARDCODED SEASON YEAR, never new Date().getFullYear(). This value reaches the
-// page title, the meta description and the on-page lead, so an auto-rolling year
-// would retitle this page to the next season at midnight on Jan 1 — with no
-// deploy, no review, and no jersey-giveaway data behind the new number. The page would
-// sit in the index advertising a season that does not exist yet.
-//
-// Bump this deliberately when next-season content is ready. Same rule as
-// /best-promos, the team pages, the venue pages and the CFB family.
-const YEAR = 2026;
+// The season label in the title, heading, description and JSON-LD: "2026-27",
+// from crossLeagueSeasonLabel() (src/lib/season-label.ts), never the clock.
+// This page lists every league, and the NHL and NBA seasons run into 2027, so
+// a bare "2026" here was false (ruling 2026-10-06). The label moves with the
+// July 1 bump in known-issues 69. The lead names the months the listed rows
+// actually span (scheduledPeriodPhrase), not a label.
+const SEASON = crossLeagueSeasonLabel();
 
 export const metadata: Metadata = {
-  title: `${YEAR} Jersey, Cap & Hoodie Giveaway Nights`,
-  description: `${YEAR} jersey, cap and apparel giveaways across pro sports. First 10,000 to 25,000 fans only. Arrive early. From official team announcements.`,
+  title: `${SEASON} Jersey, Cap & Hoodie Giveaway Nights`,
+  description: `${SEASON} jersey, cap and apparel giveaways across pro sports. First 10,000 to 25,000 fans only. Arrive early. From official team announcements.`,
   alternates: { canonical: 'https://www.getpromonight.com/promos/jersey-giveaways' },
   openGraph: pageOpenGraph('/promos/jersey-giveaways'),
 };
@@ -61,7 +60,8 @@ export default async function JerseyGiveawaysPage() {
     }));
 
   const c = await getCoverageCounts();
-  const lead = `Jersey, cap, hat, jacket, shirt and hoodie giveaways across ${c.leagueList} in ${YEAR}. Apparel giveaway nights are typically capped at the first 10,000 to 25,000 fans through the gates, which is why arrival time matters.`;
+  const period = scheduledPeriodPhrase(seasonSpan(jerseys.map((p) => p.date))) || `in ${SEASON}`;
+  const lead = `Jersey, cap, hat, jacket, shirt and hoodie giveaways across ${c.leagueList} ${period}. Apparel giveaway nights are typically capped at the first 10,000 to 25,000 fans through the gates, which is why arrival time matters.`;
 
   const faqs = [
     {
@@ -85,14 +85,14 @@ export default async function JerseyGiveawaysPage() {
     <>
       <AggregatorJsonLd
         url="https://www.getpromonight.com/promos/jersey-giveaways"
-        title={`Jersey & Apparel Giveaways in Pro Sports ${YEAR}`}
+        title={`Jersey & Apparel Giveaways in Pro Sports ${SEASON}`}
         description={lead}
         faqs={faqs}
         groups={groups}
       />
       <AggregatorPage
         eyebrow="Apparel giveaways"
-        title={`JERSEY, HAT & APPAREL GIVEAWAYS IN ${YEAR}`}
+        title={`JERSEY, HAT & APPAREL GIVEAWAYS IN ${SEASON}`}
         lead={lead}
         groups={groups}
         faqs={faqs}

@@ -1,0 +1,120 @@
+import { strict as assert } from 'node:assert';
+import { readFileSync } from 'node:fs';
+import { describe, it } from 'node:test';
+import type { AggregatorGroup } from '@/components/aggregator-layout';
+import { distinctPromoCount } from '@/lib/aggregator-count';
+import { crossLeagueSeasonLabel, pastHeading, splitSeasonLabel, SPLIT_SEASON_START_YEAR } from '@/lib/season-label';
+
+/**
+ * Three labels that were false or inconsistent on production 2026-10-06 (OPS,
+ * under Matt's standing ruling of that day):
+ *   - My Teams called every starred club with no promo in the next 60 days
+ *     "Offseason", including in-season clubs.
+ *   - The /promos category pages said "2026" in the title, heading and lead
+ *     while listing NHL and NBA nights into 2027.
+ *   - /promos/theme-nights headed 959 promos over a lead of 938 theme nights,
+ *     because a night matching two categories was counted in each.
+ */
+const strip = (s: string) => s.replace(/\{\/\*[\s\S]*?\*\/\}|\/\*[\s\S]*?\*\/|^\s*\/\/.*$/gm, '');
+
+describe('aggregator header count', () => {
+  const promo = (title: string) => ({ title }) as unknown as AggregatorGroup['promos'][number];
+
+  it('counts a promo filed under two groups once', () => {
+    const a = promo('Military Heritage Night');
+    const b = promo('Star Wars Night');
+    const c = promo('Fireworks Friday');
+    const groups: AggregatorGroup[] = [
+      { label: 'HERITAGE', promos: [a] },
+      { label: 'COMMUNITY', promos: [a, c] },
+      { label: 'STAR WARS', promos: [b] },
+    ];
+    assert.equal(distinctPromoCount(groups), 3);
+  });
+
+  it('equals the sum of group sizes when the groups partition the promos', () => {
+    const groups: AggregatorGroup[] = [
+      { label: 'OCTOBER 2026', promos: [promo('a'), promo('b')] },
+      { label: 'NOVEMBER 2026', promos: [promo('c')] },
+    ];
+    assert.equal(distinctPromoCount(groups), 3);
+  });
+
+  it('is what both hero layouts print', () => {
+    const code = strip(readFileSync('src/components/aggregator-layout.tsx', 'utf8'));
+    assert.equal(code.split('const totalCount = distinctPromoCount(groups);').length - 1, 2);
+    assert.doesNotMatch(code, /groups\.reduce\(\(acc, g\) => acc \+ g\.promos\.length/);
+  });
+});
+
+describe('cross-league category pages name the two-year season', () => {
+  it('labels them with the split-season label, not a calendar year', () => {
+    assert.equal(crossLeagueSeasonLabel(), splitSeasonLabel(SPLIT_SEASON_START_YEAR));
+    assert.match(crossLeagueSeasonLabel(), /^\d{4}-\d{2}$/);
+  });
+
+  for (const page of ['theme-nights', 'jersey-giveaways', 'food-deals', 'bobbleheads']) {
+    it(`/promos/${page} carries no bare year in its copy`, () => {
+      const code = strip(readFileSync(`src/app/promos/${page}/page.tsx`, 'utf8'));
+      assert.match(code, /const SEASON = crossLeagueSeasonLabel\(\);/);
+      assert.doesNotMatch(code, /\bYEAR\b/);
+      assert.doesNotMatch(code, /\b(?:in|of) 20\d\d\b/);
+      assert.match(code, /scheduledPeriodPhrase\(seasonSpan\(/, 'the lead names the span the rows cover');
+      const literals = code.replace(/^const LIST_FROM = '\d{4}-\d{2}-\d{2}';$/m, '').match(/`[^`]*`|'[^'\n]*'|"[^"\n]*"/g) ?? [];
+      assert.deepEqual(literals.filter((l) => /\b20\d\d\b/.test(l)), [], 'no year typed into copy');
+    });
+  }
+});
+
+describe('My Teams says what it tested', () => {
+  it('never labels a starred club "Offseason"', () => {
+    const code = strip(readFileSync('src/components/my-teams-view.tsx', 'utf8'));
+    assert.doesNotMatch(code, /offseason/i);
+    assert.match(code, /Tracking · Nothing in the next \{PROMO_WINDOW_DAYS\} days/);
+    assert.match(code, /const PROMO_WINDOW_DAYS = 60;/, 'the copy says 60 days');
+  });
+});
+
+describe('copy that follows from the rows', () => {
+  it('heads past bobbleheads by their span, never "this season"', () => {
+    const code = strip(readFileSync('src/components/redesign/PastBobbleheadsSection.tsx', 'utf8'));
+    assert.doesNotMatch(code, /this season/i);
+    assert.match(code, /\{pastHeading\(promos\)\}/);
+  });
+
+  it('names the past span once per year', () => {
+    const d = (...dates: string[]) => dates.map((date) => ({ date }));
+    assert.equal(pastHeading(d('2026-01-10', '2026-10-01')), 'EARLIER: JANUARY TO OCTOBER 2026');
+    assert.equal(pastHeading(d('2025-11-02', '2026-04-09')), 'EARLIER: NOVEMBER 2025 TO APRIL 2026');
+    assert.equal(pastHeading(d('2026-05-01', '2026-05-20')), 'EARLIER IN 2026');
+    assert.equal(pastHeading([]), 'EARLIER');
+  });
+
+  it('keeps the "no promos coming up" subline behind the error check', () => {
+    const code = strip(readFileSync('src/components/my-teams-view.tsx', 'utf8'));
+    assert.equal(code.split('No promos coming up yet').length - 1, 2);
+    assert.equal(code.split('{hadError ? null : <> · No promos coming up yet</>}').length - 1, 2);
+  });
+
+  it('never calls a team whose read failed quiet', () => {
+    const view = strip(readFileSync('src/components/my-teams-view.tsx', 'utf8'));
+    assert.match(view, /!teamsWithPromos\.has\(t\.id\) && !failedTeams\.has\(t\.id\)/);
+    assert.match(view, /hadError=\{failedTeams\.size > 0\}/);
+    assert.equal(view.split("Couldn&apos;t load promos for {failedNames} right now.").length - 1, 2, 'both StateB paths say so');
+    const route = strip(readFileSync('src/app/api/my-teams/promos/route.ts', 'utf8'));
+    assert.match(route, /STARRED_PROMOS_TEAM_FETCH_ERR[\s\S]{0,200}return null;/);
+    assert.match(route, /NextResponse\.json\(\{ promos, venues, failedTeams \}\)/);
+  });
+
+  it('says nothing about the next 60 days after a failed load', () => {
+    const code = strip(readFileSync('src/components/my-teams-view.tsx', 'utf8'));
+    assert.equal(code.split('{!hadError && (').length - 1, 2);
+    assert.doesNotMatch(code, /the moment promos are announced/);
+    assert.doesNotMatch(code, /next 60 days/, 'the window comes from PROMO_WINDOW_DAYS');
+  });
+
+  it('lists each promo once in the aggregator JSON-LD', () => {
+    const code = strip(readFileSync('src/components/aggregator-layout.tsx', 'utf8'));
+    assert.match(code, /const items = \[\.\.\.new Set\(groups\.flatMap\(\(g\) => g\.promos\)\)\]\.slice\(0, ITEMLIST_CAP\);/);
+  });
+});

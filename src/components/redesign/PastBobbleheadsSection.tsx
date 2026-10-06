@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import type { PromoWithTeam } from '@/lib/types';
+import { pastHeading } from '@/lib/season-label';
 import { teamDisplayName } from '@/lib/promo-helpers';
 import { isBobbleheadGiveaway, isEbayResaleActive } from '@/lib/ebay';
 import { EbayResaleLink } from '@/components/affiliates/EbayResaleLink';
@@ -93,7 +94,7 @@ export function PastBobbleheadsSection({ promos }: { promos: PromoWithTeam[] }) 
           Already happened
         </span>
         <h2 className="rd-display mt-1 text-2xl uppercase text-rd-ink-soft md:text-3xl">
-          EARLIER THIS SEASON
+          {pastHeading(promos)}
         </h2>
       </div>
 
