@@ -31,6 +31,8 @@ function query(docs: Doc[]): any {
   let orderField: string | null = null;
   const q: any = {
     where: (field: string, op: string, value: any) => {
+      // As Firestore does: an undefined filter value is an error.
+      if (value === undefined) throw new Error('Unsupported field value: undefined');
       const v = (d: Doc) => d.data()[field] as any;
       if (op === '==') rows = rows.filter((d) => v(d) === value);
       if (op === '>=') rows = rows.filter((d) => v(d) >= value);
@@ -93,6 +95,8 @@ const PROMOS = [
   // (only NHL/NBA are deduped there).
   row('m1', 'texas-rangers', D1, 'Dup Night', 'theme', false),
   row('m2', 'texas-rangers', D1, 'Dup Night', 'theme', false),
+  // A dateless NHL row: its image card must 404 cleanly, never throw.
+  { ...row('z1', 'detroit-red-wings', D1, 'No Date Night', 'theme', false), data: () => ({ title: 'No Date Night', type: 'theme', description: '.', opponent: 'V', highlight: false }) },
   row('d1', 'detroit-red-wings', D1, 'Free Night', 'theme', false),
   row('d2', 'detroit-red-wings', D1, 'Hoodie Pack', 'theme', true),
   row('d3', 'detroit-red-wings', D2, 'Lunch Box', 'food', true),
@@ -258,4 +262,27 @@ test('the /nhl hub card count: dedupe, then drop (the unflagged twin of a packag
   // Counted Detroit rows: Free Night, Lower Night (wins its pair), Tomb Night;
   // not Twin Night or Order Night (their flagged docs win), nor any package.
   assert.equal(nhl['detroit-red-wings'], 3);
+});
+
+test('a dateless NHL row: no card, and no throw', async () => {
+  const feed = await import('../social-feed/feed');
+  assert.equal(await feed.findCardPromo('detroit-red-wings~z1'), null);
+});
+
+test('the feed fallback path keeps the team page order (twins never selected)', async () => {
+  const feed = await import('../social-feed/feed');
+  groupThrows = true;
+  try {
+    const sel = await feed.getFeedSelection(new Date());
+    const picked = sel.items.map((i) => i.title);
+    assert.ok(picked.length > 0, 'the fallback path selects something');
+    assert.ok(!picked.some((t) => ['Twin Night', 'Order Night', 'Hoodie Pack', 'Lunch Box'].includes(t)), `no package or package twin: ${picked}`);
+  } finally {
+    groupThrows = false;
+  }
+});
+
+test('the /nhl hub season comes from the NHL/NBA constant', async () => {
+  const { readFileSync } = await import('node:fs');
+  assert.match(readFileSync(new URL('../../app/nhl/page.tsx', import.meta.url), 'utf8'), /\nconst SEASON = splitSeasonLabel\(SPLIT_SEASON_START_YEAR\);/);
 });

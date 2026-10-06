@@ -1665,8 +1665,10 @@ const HUB_GROUPING: Record<string, HubGroupingSpec> = {
 // falling off the map. One collectionGroup read; league scoping happens in
 // memory because promo docs carry no league field (see getLeagueSlate).
 //
-// Deliberately NOT getPromosFromDate: that helper dedupes to one promo per
-// team for the cross-team rails, which is exactly wrong for a count.
+// Deliberately NOT getPromosFromDate. On MLB, MLS, WNBA and NFL every visible
+// doc counts, as before. On NHL and NBA the rows go through the team page's
+// path (dedupe per team, date and title, then drop packages), so the card
+// matches the page it links to.
 export const getLeagueUpcomingPromoCounts = cache(
   async (league: string): Promise<Record<string, number>> => {
     const teams = await getAllTeams();

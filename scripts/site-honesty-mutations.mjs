@@ -64,6 +64,9 @@ const CASES = [
   ['My Teams dedupes every league', MYT, '    return (dropPackages ? dedupeDocsLikeTeamPage(visible) : visible)', '    return dedupeDocsLikeTeamPage(visible)', [T_SITE]],
   ['the starred-team lookup fails open when the loader throws', 'src/lib/starred-team-league.ts', '  const team = await lookup(slug).catch(() => null);\n  if (team) return team.league;\n  return String((await readDoc(slug))?.league ?? \'\');', '  const team = await lookup(slug).catch(() => null);\n  return team ? team.league : \'\';', [T_SITE]],
   ['the /nhl hub counts the unflagged twin of a package', DATA, '    for (const p of dropTicketPackageRows(dedupePromos(rows.filter(isVisiblePromo), (r) => r.team.id))) {', '    for (const p of dedupePromos(dropTicketPackageRows(rows.filter(isVisiblePromo)), (r) => r.team.id)) {', [T_SITE]],
+  ['a dateless card queries with an undefined date', FEED, "        if (typeof data.date !== 'string' || data.date === '') return mapPromoDoc(doc);\n", '', [T_SITE]],
+  ['the feed fallback reverses the team page order', FEED, "    docs = perTeam.flat().sort((a, b) => String(a.get('date')).localeCompare(String(b.get('date'))));", '    docs = perTeam.flat().reverse();', [T_SITE]],
+  ['the /nhl hub season back to a literal', 'src/app/nhl/page.tsx', 'const SEASON = splitSeasonLabel(SPLIT_SEASON_START_YEAR);', "const SEASON = '2026';", [T_SITE]],
   // ---- (b) titles and the playoffs year ----
   ['NHL/NBA titles name the calendar year', TITLE, '  return currentSeasonLabel(team.league);', '  return String(TITLE_SEASON_YEAR);', [T_G2]],
   ['every title names the split season', TITLE, '  return currentSeasonLabel(team.league);', "  return currentSeasonLabel('NHL');", [T_G2, T_BYTES]],
