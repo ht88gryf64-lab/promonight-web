@@ -2,15 +2,17 @@
  * POST /api/revalidate
  *
  * Called by the promo-pipeline repo immediately after it writes new content
- * to Firestore. Flushes the Next.js ISR cache for affected paths so fans see
- * fresh data without waiting for the natural revalidate window (1h hub /
- * 6h team page).
+ * to Firestore, and by the nightly refresh cron (WEB6 G4). Flushes the Next.js
+ * ISR cache for affected paths so fans see fresh data without waiting for the
+ * natural revalidate window (24h team pages and venue hubs, 6h league hubs,
+ * 1h /promos/today).
  *
  * Auth:   header `x-revalidate-secret: <REVALIDATE_SECRET>`
  * Body:   { "paths": ["/playoffs", "/nba/minnesota-timberwolves", ...] }
  * Rules:
- *   - Each path must match `/[a-z0-9-]+(?:/[a-z0-9-]+)?` exactly. No query
- *     strings, no parent traversal, no uppercase.
+ *   - Each path must match PATH_RE (src/lib/revalidate-paths.ts): one to three
+ *     lowercase segments. No query strings, no parent traversal, no uppercase,
+ *     no bare "/".
  *   - Up to 100 paths per request (rejects with 400 above the cap).
  *   - Returns { ok: true, revalidated: <count> }.
  *   - revalidatePath is best-effort; failures for individual paths are logged

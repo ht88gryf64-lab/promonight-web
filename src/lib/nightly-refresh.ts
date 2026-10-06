@@ -2,7 +2,7 @@
 //
 // WHY. Every page cuts upcoming from past on the site's Eastern day
 // (src/lib/site-today.ts), but cached copies live 24h (team pages, venue hubs,
-// /teams) or 6h (league hubs, /promos aggregators). A hub rendered at 9 PM and a
+// /teams), 6h (league hubs, most /promos aggregators) or 1h (/promos/today). A hub rendered at 9 PM and a
 // team page regenerated after midnight disagree until the older copy expires:
 // the hub card links to a row the team page has already moved to its archive.
 // Revalidating the day-dependent pages just after midnight, and then
@@ -28,10 +28,11 @@
 // old cached copies back and regenerated nothing (measured on a local
 // production build, 2026-10-06). A completed POST makes the next GET a cache
 // MISS that renders fresh on the new Eastern day. On Vercel an on-demand
-// revalidation can instead serve the old copy once and regenerate it in the
-// background, and the endpoint's invalidations finish in waitUntil after its
-// response; so the job waits a few seconds after the last batch, warms, waits
-// again and requests every path a second time to report how many are fresh.
+// revalidation can instead serve the old copy once (STALE) and regenerate it in
+// the background, and the endpoint's invalidations finish in waitUntil after
+// its response; so the job waits a few seconds after the last batch, warms,
+// then re-asks, in rounds, every page whose copy is still regenerating, and
+// reports how many came back fresh (warmTookRevalidation, verifyVerdict).
 import { SITE_TIME_ZONE } from './site-today';
 import { PATH_RE } from './revalidate-paths';
 import { REFRESH_USER_AGENT } from './refresh-agent';
@@ -130,6 +131,8 @@ export const FETCH_TIMEOUT_MS = 60_000;
 export const MAX_DURATION_S = 800;
 export const WARM_BUDGET_MS = 480_000;
 export const VERIFY_BUDGET_MS = 720_000;
+/** Verify rounds at most (with 20s between rounds this is about 10 minutes). */
+export const MAX_VERIFY_ROUNDS = 30;
 
 type Fetcher = (url: string, init: RequestInit) => Promise<Response>;
 const defaultFetch: Fetcher = (url, init) => fetch(url, init);
@@ -174,18 +177,25 @@ export async function revalidateViaFanOut(
   return result;
 }
 
-/** Whether a response is a copy built during this run. Rendered now (MISS,
- *  REVALIDATED) is fresh. A cached HIT is fresh only if its Age is younger
- *  than the run; on Vercel a HIT always carries Age, so a Vercel HIT without
- *  one is not trusted. A local build (x-nextjs-cache) sends no Age, and its
- *  HIT counts. STALE, PRERENDER (a build-time copy) and anything else are not
- *  fresh. With no `freshSince` the age test is skipped. */
-export function isFreshCopy(state: string, onVercel: boolean, age: string | null, freshSince: number | undefined, nowMs: number): boolean {
-  if (state === 'MISS' || state === 'REVALIDATED') return true;
-  if (state !== 'HIT') return false;
-  if (freshSince === undefined) return true;
-  if (age === null) return !onVercel;
-  return Number(age) * 1000 <= nowMs - freshSince;
+/** What a warm response says about this run's revalidation. MISS and
+ *  REVALIDATED: the new copy was rendered for this request. STALE: the old copy
+ *  was served and the new one is being regenerated in the background (Vercel's
+ *  on-demand ISR). Any of those means the invalidation took. PRERENDER or HIT
+ *  means the old copy was still valid: the revalidation did not apply. Age is
+ *  not used: on Vercel it is how long a copy has sat in the CDN, not how old
+ *  the render is (review round 3). */
+export function warmTookRevalidation(state: string): boolean {
+  return state === 'MISS' || state === 'REVALIDATED' || state === 'STALE';
+}
+
+/** A verify response for a path whose warm-up took (or timed out after
+ *  reaching the server, so its render had started): rendered now or served from
+ *  cache after that render is the new copy; STALE means still regenerating, so
+ *  ask again; anything else (PRERENDER, NONE) is a failure. */
+export function verifyVerdict(state: string): 'fresh' | 'pending' | 'failed' {
+  if (state === 'MISS' || state === 'REVALIDATED' || state === 'HIT') return 'fresh';
+  if (state === 'STALE') return 'pending';
+  return 'failed';
 }
 
 export interface WarmResult {
@@ -195,23 +205,22 @@ export interface WarmResult {
   failed: { path: string; status: number | string }[];
   /** Responses by cache state (x-vercel-cache on Vercel, x-nextjs-cache locally). */
   cache: Record<string, number>;
-  /** 200 responses that are a copy built during this run (isFreshCopy). */
-  fresh: number;
+  /** Each path's cache state, or "FAILED". */
+  states: Record<string, string>;
   /** Paths not requested because the time budget ran out. */
   skipped: number;
 }
 
-/** Requests each path, a few at a time. The first pass builds the new copy (or,
- *  on Vercel, starts its background regeneration); a second pass later reports
- *  how many came back fresh. `fetcher` is injectable for tests. */
+/** Requests each path once, a few at a time, and records what each answered.
+ *  `fetcher` is injectable for tests. */
 export async function warmPaths(
   origin: string,
   paths: readonly string[],
-  opts: { fetcher?: Fetcher; concurrency?: number; freshSince?: number; deadline?: number; now?: () => number } = {},
+  opts: { fetcher?: Fetcher; concurrency?: number; deadline?: number; now?: () => number } = {},
 ): Promise<WarmResult> {
   const fetcher = opts.fetcher ?? defaultFetch;
   const now = opts.now ?? (() => Date.now());
-  const result: WarmResult = { ok: 0, failed: [], cache: {}, fresh: 0, skipped: 0 };
+  const result: WarmResult = { ok: 0, failed: [], cache: {}, states: {}, skipped: 0 };
   let next = 0;
   async function worker() {
     while (next < paths.length) {
@@ -230,20 +239,68 @@ export async function warmPaths(
         });
         // Headers are all the job reads; let the body go.
         await res.body?.cancel().catch(() => {});
-        const vercel = res.headers.get('x-vercel-cache');
-        const state = (vercel ?? res.headers.get('x-nextjs-cache') ?? 'NONE').toUpperCase();
+        const state = (res.headers.get('x-vercel-cache') ?? res.headers.get('x-nextjs-cache') ?? 'NONE').toUpperCase();
         result.cache[state] = (result.cache[state] ?? 0) + 1;
         if (res.status !== 200) {
+          result.states[path] = 'FAILED';
           result.failed.push({ path, status: res.status });
           continue;
         }
         result.ok++;
-        if (isFreshCopy(state, vercel !== null, res.headers.get('age'), opts.freshSince, now())) result.fresh++;
+        result.states[path] = state;
       } catch (err) {
+        result.states[path] = 'FAILED';
         result.failed.push({ path, status: err instanceof Error ? err.message : String(err) });
       }
     }
   }
   await Promise.all(Array.from({ length: Math.min(opts.concurrency ?? 6, paths.length) }, worker));
+  return result;
+}
+
+export interface VerifyResult {
+  fresh: number;
+  /** Paths that never came back fresh: the warm-up showed the revalidation did
+   *  not take, or the copy is still regenerating at the deadline, or the page
+   *  failed. */
+  notFresh: { path: string; reason: string }[];
+  rounds: number;
+}
+
+/** Re-requests, in rounds, every path whose warm-up took until each comes back
+ *  fresh or the deadline passes. A path whose warm-up showed a PRERENDER or HIT
+ *  fails at once (asking again cannot fix it). A path whose warm-up timed out
+ *  is asked like any other: its render had started. */
+export async function verifyFresh(
+  origin: string,
+  warm: WarmResult,
+  paths: readonly string[],
+  opts: { deadline: number; roundDelayMs: number; fetcher?: Fetcher; now?: () => number; sleep?: (ms: number) => Promise<void> },
+): Promise<VerifyResult> {
+  const now = opts.now ?? (() => Date.now());
+  const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
+  const result: VerifyResult = { fresh: 0, notFresh: [], rounds: 0 };
+  let pending: string[] = [];
+  for (const p of paths) {
+    const w = warm.states[p];
+    if (w === undefined) result.notFresh.push({ path: p, reason: 'not warmed' });
+    else if (w === 'FAILED' || warmTookRevalidation(w)) pending.push(p);
+    else result.notFresh.push({ path: p, reason: `warm ${w}: revalidation did not take` });
+  }
+  while (pending.length && now() < opts.deadline && result.rounds < MAX_VERIFY_ROUNDS) {
+    if (result.rounds > 0) await sleep(opts.roundDelayMs);
+    result.rounds++;
+    const asked = await warmPaths(origin, pending, { fetcher: opts.fetcher, deadline: opts.deadline, now });
+    const still: string[] = [];
+    for (const p of pending) {
+      const v = asked.states[p];
+      const verdict = v === undefined || v === 'FAILED' ? 'pending' : verifyVerdict(v);
+      if (verdict === 'fresh') result.fresh++;
+      else if (verdict === 'pending') still.push(p);
+      else result.notFresh.push({ path: p, reason: `verify ${v}` });
+    }
+    pending = still;
+  }
+  for (const p of pending) result.notFresh.push({ path: p, reason: 'still regenerating when verification stopped' });
   return result;
 }

@@ -14,6 +14,7 @@ import { readFileSync } from 'node:fs';
 process.env.TZ = 'UTC';
 process.env.NIGHTLY_REFRESH_SETTLE_MS = '0';
 process.env.NIGHTLY_REFRESH_VERIFY_MS = '0';
+process.env.NIGHTLY_REFRESH_ROUND_MS = '0';
 mock.timers.enable({ apis: ['Date'], now: new Date('2026-10-07T04:15:00Z') });
 
 const revalidated: string[] = [];
@@ -109,7 +110,7 @@ test('the shared fan-out: one failing path is reported, the rest still revalidat
 
 const resp = (status: number, headers: Record<string, string> = {}, body = 'ok') => new Response(body, { status, headers });
 
-test('warming requests every path once, counts redirects and errors as failures, and reports cache state', async () => {
+test('warming requests every path once, records each answer, and counts redirects and errors as failures', async () => {
   const { warmPaths, REFRESH_USER_AGENT } = await import('../nightly-refresh');
   const seen: string[] = [];
   const r = await warmPaths('https://x.test', ['/a', '/b', '/c', '/d', '/e'], {
@@ -121,48 +122,60 @@ test('warming requests every path once, counts redirects and errors as failures,
       if (u.endsWith('/c')) return resp(500);
       if (u.endsWith('/d')) throw new Error('boom');
       if (u.endsWith('/e')) return resp(307, { location: 'https://vercel.com/login' });
-      return resp(200, { 'x-vercel-cache': u.endsWith('/a') ? 'MISS' : 'STALE' });
+      return resp(200, { 'x-vercel-cache': u.endsWith('/a') ? 'REVALIDATED' : 'STALE' });
     },
   });
   assert.equal(REFRESH_USER_AGENT, 'PromoNightRefreshBot/1.0');
   assert.deepEqual(seen.sort(), ['/a', '/b', '/c', '/d', '/e'].map((p) => 'https://x.test' + p));
   assert.equal(r.ok, 2);
   assert.deepEqual(r.failed.map((f) => f.path).sort(), ['/c', '/d', '/e']);
-  assert.equal(r.fresh, 1, 'a STALE copy is not fresh');
-  assert.equal(r.cache.MISS, 1);
+  assert.deepEqual(r.states, { '/a': 'REVALIDATED', '/b': 'STALE', '/c': 'FAILED', '/d': 'FAILED', '/e': 'FAILED' });
 });
 
-test('freshness: a cached copy older than the run is not fresh; the deadline stops new requests', async () => {
-  const { warmPaths } = await import('../nightly-refresh');
-  const t0 = Date.now();
-  const r = await warmPaths('https://x.test', ['/new', '/old'], {
-    freshSince: t0 - 30_000,
-    fetcher: async (u) => resp(200, { 'x-vercel-cache': 'HIT', age: u.endsWith('/new') ? '10' : '3600' }),
+test('freshness is judged from what the warm-up and verify requests answered, never from Age', async () => {
+  const { warmTookRevalidation, verifyVerdict } = await import('../nightly-refresh');
+  for (const s of ['MISS', 'REVALIDATED', 'STALE']) assert.equal(warmTookRevalidation(s), true, s);
+  for (const s of ['HIT', 'PRERENDER', 'NONE']) assert.equal(warmTookRevalidation(s), false, `${s}: the old copy was still valid`);
+  assert.equal(verifyVerdict('HIT'), 'fresh');
+  assert.equal(verifyVerdict('REVALIDATED'), 'fresh');
+  assert.equal(verifyVerdict('MISS'), 'fresh');
+  assert.equal(verifyVerdict('STALE'), 'pending');
+  assert.equal(verifyVerdict('PRERENDER'), 'failed');
+  assert.equal(verifyVerdict('NONE'), 'failed');
+  const lib = readFileSync(new URL('../nightly-refresh.ts', import.meta.url), 'utf8');
+  assert.doesNotMatch(lib, /get\('age'\)/, 'Age is how long a copy sat in the CDN, not how old the render is');
+});
+
+test('verify: re-asks only the paths still regenerating, in rounds, and fails what cannot be fixed', async () => {
+  const { verifyFresh } = await import('../nightly-refresh');
+  const warm = { ok: 4, failed: [], cache: {}, skipped: 0, states: { '/a': 'MISS', '/b': 'STALE', '/c': 'HIT', '/d': 'FAILED', '/e': 'STALE' } };
+  const asked: string[][] = [];
+  let round = 0;
+  const r = await verifyFresh('https://x.test', warm, ['/a', '/b', '/c', '/d', '/e'], {
+    deadline: Date.now() + 60_000,
+    roundDelayMs: 0,
+    sleep: async () => { round++; },
+    fetcher: async (u) => {
+      const p = new URL(u).pathname;
+      (asked[round] ??= []).push(p);
+      if (p === '/b') return resp(200, { 'x-vercel-cache': round === 0 ? 'STALE' : 'HIT' });
+      if (p === '/e') return resp(200, { 'x-vercel-cache': 'STALE' });
+      return resp(200, { 'x-vercel-cache': 'HIT' });
+    },
   });
-  assert.equal(r.fresh, 1);
-  const late = await warmPaths('https://x.test', ['/a', '/b'], { deadline: t0 - 1, fetcher: async () => resp(200) });
-  assert.equal(late.skipped, 2);
-  assert.equal(late.ok, 0);
-});
-
-test('freshness: rendered now, or a HIT younger than the run; never STALE, PRERENDER or an unaged Vercel HIT', async () => {
-  const { isFreshCopy } = await import('../nightly-refresh');
-  const t = 1_000_000;
-  assert.equal(isFreshCopy('MISS', true, null, t - 60_000, t), true);
-  assert.equal(isFreshCopy('REVALIDATED', true, '0', t - 60_000, t), true);
-  assert.equal(isFreshCopy('HIT', true, '30', t - 60_000, t), true);
-  assert.equal(isFreshCopy('HIT', true, '3600', t - 60_000, t), false, 'built before the run');
-  assert.equal(isFreshCopy('HIT', true, null, t - 60_000, t), false, 'a Vercel HIT always carries Age');
-  assert.equal(isFreshCopy('HIT', false, null, t - 60_000, t), true, 'a local build sends no Age');
-  assert.equal(isFreshCopy('PRERENDER', true, '0', t - 60_000, t), false, 'a build-time copy');
-  assert.equal(isFreshCopy('STALE', true, '0', t - 60_000, t), false);
-  assert.equal(isFreshCopy('NONE', false, null, t - 60_000, t), false);
+  assert.deepEqual(asked[0].sort(), ['/a', '/b', '/d', '/e'], 'a warm HIT is never re-asked: the revalidation did not take');
+  assert.deepEqual(asked[1].sort(), ['/b', '/e'], 'only the paths still regenerating');
+  assert.equal(r.fresh, 3, '/a, /b after its regeneration, /d after its timeout');
+  assert.deepEqual(r.notFresh.map((n) => n.path).sort(), ['/c', '/e']);
+  assert.match(r.notFresh.find((n) => n.path === '/c')!.reason, /did not take/);
+  assert.match(r.notFresh.find((n) => n.path === '/e')!.reason, /still regenerating/);
 });
 
 test('budgets: each pass stops in time, and a request never outlives its pass', async () => {
   const { MAX_DURATION_S, WARM_BUDGET_MS, VERIFY_BUDGET_MS, FETCH_TIMEOUT_MS, warmPaths } = await import('../nightly-refresh');
   const route = readFileSync(new URL('../../app/api/cron/nightly-refresh/route.ts', import.meta.url), 'utf8');
   assert.match(route, new RegExp(`export const maxDuration = ${MAX_DURATION_S};`));
+  assert.match(route, /verifyFresh\(origin, warmed, paths, \{ deadline: started \+ VERIFY_BUDGET_MS/, 'verify runs on its own budget');
   assert.ok(MAX_DURATION_S <= 800, 'Vercel Pro with Fluid compute');
   assert.ok(WARM_BUDGET_MS < VERIFY_BUDGET_MS);
   assert.ok(VERIFY_BUDGET_MS + 5_000 < MAX_DURATION_S * 1000, 'room to answer after the last request is cut');
@@ -176,6 +189,10 @@ test('budgets: each pass stops in time, and a request never outlives its pass', 
   });
   assert.equal(r.failed.length, 1);
   assert.ok(performance.now() - t0 < 5_000, 'cut at the deadline');
+  // Past the deadline nothing new starts.
+  const late = await warmPaths('https://x.test', ['/a', '/b'], { deadline: Date.now() - 1, fetcher: async () => resp(200) });
+  assert.equal(late.skipped, 2);
+  assert.equal(late.ok, 0);
 });
 
 test('the middleware does not count the job\'s own requests', async () => {
@@ -197,8 +214,10 @@ test('the origin: always www in production (cron calls the login-protected deplo
 
 test('the route: auth, the window, then revalidate through POST /api/revalidate on www, and only then warm and verify', async () => {
   const log: { method: string; url: string; paths?: string[] }[] = [];
-  let mode: 'ok' | 'login' | 'slow-first' | 'stale' | 'fanout-down' | 'old-hit' = 'ok';
+  let mode: 'ok' | 'login' | 'slow-first' | 'stale' | 'fanout-down' | 'warm-hit' = 'ok';
+  let getCount = 0;
   const seenOnce = new Set<string>();
+  const warmedOnce = new Set<string>();
   const realFetch = globalThis.fetch;
   globalThis.fetch = (async (u: string, init?: RequestInit) => {
     const method = init?.method ?? 'GET';
@@ -218,13 +237,16 @@ test('the route: auth, the window, then revalidate through POST /api/revalidate 
     }
     log.push({ method, url: String(u) });
     const path = new URL(String(u)).pathname;
+    queueMicrotask(() => warmedOnce.add(path));
     if (mode === 'slow-first' && path === '/nhl' && !seenOnce.has(path)) {
       seenOnce.add(path);
       throw new Error('The operation was aborted due to timeout');
     }
+    getCount++;
     if (mode === 'stale' && path === '/nhl') return resp(200, { 'x-vercel-cache': 'STALE' });
-    if (mode === 'old-hit' && path === '/nhl') return resp(200, { 'x-vercel-cache': 'HIT', age: '36000' });
-    return resp(200, { 'x-vercel-cache': 'MISS' });
+    if (mode === 'warm-hit' && path === '/nhl') return resp(200, { 'x-vercel-cache': 'HIT' });
+    // First request of a path renders it (MISS); later ones are cache HITs.
+    return resp(200, { 'x-vercel-cache': warmedOnce.has(path) ? 'HIT' : 'MISS' });
   }) as typeof fetch;
   const DEPLOY = 'https://promonight-abc123-btj8tk69dk-7318s-projects.vercel.app/api/cron/nightly-refresh';
   try {
@@ -244,6 +266,7 @@ test('the route: auth, the window, then revalidate through POST /api/revalidate 
     // 04:15Z in October is 00:15 EDT: acts.
     mock.timers.setTime(Date.parse('2026-10-07T04:15:00Z'));
     log.length = 0;
+    warmedOnce.clear();
     const res = await call('Bearer s');
     const body = await res.json();
     assert.equal(res.status, 200);
@@ -263,7 +286,7 @@ test('the route: auth, the window, then revalidate through POST /api/revalidate 
     assert.ok(lastPost < firstGet, 'every invalidation is queued (its request completed) before anything is warmed');
     const posted = posts.flatMap((e) => e.paths!).sort();
     const warmedPaths = gets.map((e) => new URL(e.url).pathname).sort();
-    assert.deepEqual(warmedPaths, [...posted, ...posted].sort(), 'every revalidated path is warmed, then verified');
+    assert.deepEqual(warmedPaths, [...posted, ...posted].sort(), 'every revalidated path is warmed, then verified once (all fresh)');
     assert.ok(posted.includes('/venues/ppg-paints-arena') && posted.includes('/nhl/pittsburgh-penguins') && posted.includes('/promos/today'));
 
     // The login page answers everything: red, not ok.
@@ -277,6 +300,7 @@ test('the route: auth, the window, then revalidate through POST /api/revalidate 
     assert.equal(badBody.warmed, 0);
     // A first-pass timeout that rendered anyway: reported, not red.
     mode = 'slow-first';
+    warmedOnce.clear();
     const slow = await call('Bearer s');
     const slowBody = await slow.json();
     assert.equal(slow.status, 200);
@@ -285,30 +309,38 @@ test('the route: auth, the window, then revalidate through POST /api/revalidate 
 
     // The fan-out is down but every page still answers (old copies): red.
     mode = 'fanout-down';
+    warmedOnce.clear();
     const down = await call('Bearer s');
     assert.equal(down.status, 500);
     assert.equal((await down.json()).revalidated, 0);
 
-    // A revalidation that silently did not apply: yesterday's copy as a HIT. Red.
-    mode = 'old-hit';
+    // A revalidation that silently did not apply: the warm-up gets a HIT. Red.
+    mode = 'warm-hit';
+    warmedOnce.clear();
     const old = await call('Bearer s');
+    const oldBody = await old.json();
     assert.equal(old.status, 500);
-    assert.equal((await old.json()).fresh, expected - 1);
+    assert.equal(oldBody.fresh, expected - 1);
+    assert.match(oldBody.notFresh[0].reason, /did not take/);
 
     // A venue slug the fan-out would reject: listed, and red.
     mode = 'ok';
     routeHubs = ['ppg-paints-arena', 'chase-center', 'target-field', 'Bad_Slug'];
+    warmedOnce.clear();
     const withBad = await call('Bearer s');
     const withBadBody = await withBad.json();
     assert.equal(withBad.status, 500);
     assert.deepEqual(withBadBody.dropped, ['/venues/Bad_Slug']);
     routeHubs = ['ppg-paints-arena', 'chase-center', 'target-field'];
 
-    // A page still stale on the second pass: red.
+    // A page that never finishes regenerating: re-asked in rounds, then red.
     mode = 'stale';
+    warmedOnce.clear();
     const stale = await call('Bearer s');
+    const staleBody = await stale.json();
     assert.equal(stale.status, 500);
-    assert.equal((await stale.json()).fresh, expected - 1);
+    assert.equal(staleBody.fresh, expected - 1);
+    assert.ok(staleBody.verifyRounds > 1, 'asked again before giving up');
     mode = 'ok';
 
     // 05:15Z in October is 01:15 EDT: the other firing, skipped.

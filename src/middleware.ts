@@ -196,8 +196,10 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
   // Placed after the 410 trap above on purpose: a leaked Fanatics catalog path
   // is not a page request, so counting it would put non-pages in the tally.
   // The cost is that `total` runs a hair below Vercel's middleware invocation
-  // count by exactly the 410 volume (1 in the last 24h). Recorded for the
-  // Phase 3 reconciliation in docs/request-counter-notes.md.
+  // count by the 410 volume (1 in the last 24h) and, since WEB6 G4, by the
+  // nightly refresh's own page requests (about 800 a night, between 04:15 and
+  // 05:30 UTC). Recorded for the Phase 3 reconciliation in
+  // docs/request-counter-notes.md.
   //
   // Not the nightly refresh's own page requests (WEB6 G4): about 800 a night,
   // none of them a visit, each one a write to the hour's single counter doc.

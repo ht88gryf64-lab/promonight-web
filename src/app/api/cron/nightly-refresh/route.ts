@@ -26,6 +26,7 @@ import {
   revalidateViaFanOut,
   siteHour,
   VERIFY_BUDGET_MS,
+  verifyFresh,
   WARM_BUDGET_MS,
   warmPaths,
 } from '@/lib/nightly-refresh';
@@ -39,6 +40,8 @@ export const maxDuration = 800;
 // only so tests do not sleep.
 const SETTLE_MS = Number(process.env.NIGHTLY_REFRESH_SETTLE_MS ?? 5_000);
 const VERIFY_DELAY_MS = Number(process.env.NIGHTLY_REFRESH_VERIFY_MS ?? 15_000);
+// Between verify rounds for pages still regenerating.
+const VERIFY_ROUND_MS = Number(process.env.NIGHTLY_REFRESH_ROUND_MS ?? 20_000);
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export async function GET(request: Request) {
@@ -69,21 +72,20 @@ export async function GET(request: Request) {
   const warmed = await warmPaths(origin, paths, { deadline: started + WARM_BUDGET_MS });
   const warmMs = Date.now() - started;
   await sleep(VERIFY_DELAY_MS);
-  const verified = await warmPaths(origin, paths, { deadline: started + VERIFY_BUDGET_MS, freshSince: started });
+  const verified = await verifyFresh(origin, warmed, paths, { deadline: started + VERIFY_BUDGET_MS, roundDelayMs: VERIFY_ROUND_MS });
   const ms = Date.now() - started;
 
-  // Judged on the end state: every path revalidated, and every path answered
-  // 200 with a copy that is not stale on the second pass. A first-pass timeout
-  // that rendered anyway is reported in warmFailed but is not a failure.
+  // Judged on the end state: every path revalidated, and every path came back
+  // fresh. A warm-up timeout that rendered anyway is reported in warmFailed but
+  // is not a failure.
   const ok =
     dropped.length === 0 &&
     revalidated.failedBatches.length === 0 &&
     revalidated.revalidated === paths.length &&
-    verified.failed.length === 0 &&
-    verified.skipped === 0 &&
+    verified.notFresh.length === 0 &&
     verified.fresh === paths.length;
   console.log(
-    `[cron:nightly-refresh] ok=${ok} paths=${paths.length} revalidated=${revalidated.revalidated} warmed=${warmed.ok} fresh=${verified.fresh} warmFailed=${warmed.failed.length} verifyFailed=${verified.failed.length} skipped=${verified.skipped} cache=${JSON.stringify(warmed.cache)} warmMs=${warmMs} ms=${ms}`,
+    `[cron:nightly-refresh] ok=${ok} paths=${paths.length} revalidated=${revalidated.revalidated} warmed=${warmed.ok} fresh=${verified.fresh} notFresh=${verified.notFresh.length} rounds=${verified.rounds} warmFailed=${warmed.failed.length} cache=${JSON.stringify(warmed.cache)} warmMs=${warmMs} ms=${ms}`,
   );
   return NextResponse.json(
     {
@@ -98,9 +100,8 @@ export async function GET(request: Request) {
       warmFailed: warmed.failed.slice(0, 20),
       warmSkipped: warmed.skipped,
       fresh: verified.fresh,
-      verifyCache: verified.cache,
-      verifyFailed: verified.failed.slice(0, 20),
-      verifySkipped: verified.skipped,
+      notFresh: verified.notFresh.slice(0, 20),
+      verifyRounds: verified.rounds,
       warmMs,
       ms,
     },
