@@ -243,7 +243,9 @@ describe('what the zero-promo pages may claim', () => {
   });
 
   test('"haven\'t announced" only for a verified club, inside its window; otherwise "hasn\'t recorded"', () => {
-    assert.equal(announcementLine('new-york-knicks', 'New York Knicks', '2026-10-05'), "The New York Knicks haven't announced 2026-27 promotions yet.");
+    // The check date rides in the sentence, so a page served stale long after
+    // the window (ISR is stale-while-revalidate) still states a true, dated fact.
+    assert.equal(announcementLine('new-york-knicks', 'New York Knicks', '2026-10-05'), "The New York Knicks haven't announced 2026-27 promotions yet (checked October 5).");
     assert.equal(announcementLine('golden-state-warriors', 'Golden State Warriors', '2026-10-05'), "PromoNight hasn't recorded any Golden State Warriors 2026-27 promotions yet.");
     // The window: verified 2026-10-05, good for VERIFIED_FOR_DAYS days.
     assert.equal(VERIFIED_FOR_DAYS, 14);
@@ -258,7 +260,11 @@ describe('what the zero-promo pages may claim', () => {
 
   test('the line shows only on an NHL or NBA schedule page with no season rows', () => {
     const base = { league: 'NBA', showSchedule: true, seasonResolved: false, teamId: 'new-york-knicks', displayName: 'New York Knicks', today: TODAY };
-    assert.equal(scheduleStatusLine(base), "The New York Knicks haven't announced 2026-27 promotions yet.");
+    assert.equal(scheduleStatusLine(base), "The New York Knicks haven't announced 2026-27 promotions yet (checked October 5).");
+    // A page listing special-ticket packages has published something: only the
+    // sentence about our record (review round 2).
+    assert.equal(scheduleStatusLine({ ...base, hasTicketPackages: true }), "PromoNight hasn't recorded any New York Knicks 2026-27 promotions yet.");
+    assert.match(readFileSync('src/components/redesign/RedesignTeamPage.tsx', 'utf8'), /hasTicketPackages: ticketPackages\.length > 0,/);
     assert.equal(scheduleStatusLine({ ...base, seasonResolved: true }), null, 'the season resolved: the club has rows');
     assert.equal(scheduleStatusLine({ ...base, showSchedule: false }), null, 'no schedule, nothing to sit above');
     assert.equal(scheduleStatusLine({ ...base, league: 'MLB' }), null);

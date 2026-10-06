@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import { pageOpenGraph } from '@/lib/og';
 import { isUpcomingPromo, todayYmd } from '@/lib/promo-helpers';
-import { getAllTeams, getTeamPromos } from '@/lib/data';
+import { getAllTeams, getTeamPromos, isTicketPackagePromo } from '@/lib/data';
+import { partitionTicketPackages } from '@/lib/ticket-packages';
 import { getCoverageCounts } from '@/lib/get-coverage-counts';
 import { TeamsBrowser } from '@/components/teams-browser';
 import { isRedesignEnabled } from '@/lib/redesign';
@@ -41,7 +42,10 @@ export default async function TeamsPage() {
   const promoCounts: Record<string, number> = {};
   await Promise.all(
     teams.map(async (t) => {
-      const promos = await getTeamPromos(t.id);
+      // Counted the way the team page counts: an NHL or NBA special-ticket
+      // row is not a promotion there, so it is not one here either (WEB6
+      // addendum). The same array on every other league.
+      const { promos } = partitionTicketPackages(await getTeamPromos(t.id), isTicketPackagePromo, t.league);
       promoCounts[t.id] = promos.filter((p) => isUpcomingPromo(p, today)).length;
     }),
   );

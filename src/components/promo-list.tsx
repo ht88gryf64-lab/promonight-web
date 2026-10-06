@@ -17,6 +17,8 @@ import {
   archiveGroups,
   currentSeasonLabel,
   isSplitSeasonLeague,
+  splitSeasonStartYear,
+  SPLIT_SEASON_START_YEAR,
 } from '@/lib/season-label';
 import type { Promo, PromoType, Team } from '@/lib/types';
 import type { GameContext } from '@/lib/data';
@@ -323,7 +325,11 @@ export function PromoList({
   const splitSeasonStillPlaying =
     !!splitGroups &&
     (gameContexts ?? []).some(
-      (c) => c.game.seasonType !== 'preseason' && c.game.status === 'scheduled' && c.game.date >= today,
+      (c) =>
+        c.game.seasonType !== 'preseason' &&
+        c.game.status === 'scheduled' &&
+        c.game.date >= today &&
+        splitSeasonStartYear(c.game.date) === SPLIT_SEASON_START_YEAR,
     );
   const seasonComplete =
     seasonScoped && upcoming.length === 0 && currentSeasonPast.length > 0 && !splitSeasonStillPlaying;

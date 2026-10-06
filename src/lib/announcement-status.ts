@@ -29,10 +29,12 @@ import { isSplitSeasonLeague, splitSeasonLabel, SPLIT_SEASON_START_YEAR } from '
 /** Days a "haven't announced" verification stays good. */
 export const VERIFIED_FOR_DAYS = 14;
 
-/** The team page's ISR window, in days (revalidate = 86400 in the route). A
- *  page rendered on the last good day can be served for one more day, so the
- *  render-time window stops one day early and the served claim never outlives
- *  VERIFIED_FOR_DAYS (review round 1). */
+/** The team page's ISR window, in days (revalidate = 86400 in the route). The
+ *  render-time window stops one day early so a page that is requested again
+ *  within the day never carries the undated claim past VERIFIED_FOR_DAYS. That
+ *  is all it guarantees: ISR here is stale-while-revalidate, so a quiet page can
+ *  be served long after, until its next request regenerates it. The sentence
+ *  carries its check date for exactly that case (announcementLine). */
 const SERVED_STALE_DAYS = 1;
 
 /**
@@ -89,11 +91,28 @@ export function nothingPublishedVerified(teamId: string, today: string): boolean
  * The line above the schedule. `displayName` is the full club name as the page
  * prints it ("New York Knicks", "Utah Mammoth").
  */
-export function announcementLine(teamId: string, displayName: string, today: string): string {
+export function announcementLine(
+  teamId: string,
+  displayName: string,
+  today: string,
+  opts: { hasTicketPackages?: boolean } = {},
+): string {
   const season = splitSeasonLabel(SPLIT_SEASON_START_YEAR);
-  return nothingPublishedVerified(teamId, today)
-    ? `The ${displayName} haven't announced ${season} promotions yet.`
+  // A club whose page lists special-ticket packages HAS published something
+  // for the season, so "haven't announced" would sit above its own "Ticket
+  // packages (N)" group. Only the sentence about our record is safe there.
+  return nothingPublishedVerified(teamId, today) && !opts.hasTicketPackages
+    ? `The ${displayName} haven't announced ${season} promotions yet (checked ${checkedLabel(NOTHING_PUBLISHED[teamId])}).`
     : `PromoNight hasn't recorded any ${displayName} ${season} promotions yet.`;
+}
+
+/** "October 5" for "2026-10-05". The check date rides in the sentence so the
+ *  claim stays true as a dated statement however long a cached page is served
+ *  (review round 2: ISR here is stale-while-revalidate, so a page can be served
+ *  long after the window closes, until its next request regenerates it). */
+function checkedLabel(ymd: string): string {
+  const [y, m, d] = ymd.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' });
 }
 
 /**
@@ -106,10 +125,12 @@ export function scheduleStatusLine(opts: {
   league: string;
   showSchedule: boolean;
   seasonResolved: boolean;
+  /** The page lists special-ticket packages for the season. */
+  hasTicketPackages?: boolean;
   teamId: string;
   displayName: string;
   today: string;
 }): string | null {
   if (!opts.showSchedule || opts.seasonResolved || !isSplitSeasonLeague(opts.league)) return null;
-  return announcementLine(opts.teamId, opts.displayName, opts.today);
+  return announcementLine(opts.teamId, opts.displayName, opts.today, { hasTicketPackages: opts.hasTicketPackages });
 }

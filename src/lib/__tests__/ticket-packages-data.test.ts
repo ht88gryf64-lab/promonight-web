@@ -129,9 +129,9 @@ test('NBA with nothing flagged: the counted array IS what getTeamPromos returned
   assert.equal(ticketPackages.length, 0);
 });
 
-test("getTeamPromos keeps main's await shape: one awaited read, no wrapper", () => {
-  // A wrapper reader moved the flight stream's row order on 8 package-free
-  // pages (preview control, 2026-10-05). Pin the body.
+test("getTeamPromos keeps main's shape: one awaited read, no wrapper", () => {
+  // A page without packages goes through the very code path it went through
+  // on main: the route reads, then splits synchronously. Pin the body.
   const src = readFileSync(new URL('../data.ts', import.meta.url), 'utf-8');
   const body = src.slice(src.indexOf('export const getTeamPromos = cache('), src.indexOf('\n});\n', src.indexOf('export const getTeamPromos = cache(')));
   assert.equal(body.match(/await/g)?.length, 1);

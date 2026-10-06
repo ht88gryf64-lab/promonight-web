@@ -80,7 +80,7 @@ const CASES = [
   ['zero-promo copy claims the club has not announced', ZERO, '`Most NBA teams', "`The ${teamName} haven't announced any 2026-27 promotional events yet. Most NBA teams", [T_RENDER]],
   ['zero-promo copy repeats the status line (round 1)', ZERO, '`NHL teams typically', '`PromoNight has no ${teamName} 2026-27 promotions listed yet. NHL teams typically', [T_RENDER]],
   // ---- The status line ----
-  ['"haven\'t announced" for an unverified club', ANN, '  return nothingPublishedVerified(teamId, today)\n', '  return true\n', [T_RENDER]],
+  ['"haven\'t announced" for an unverified club', ANN, '  return nothingPublishedVerified(teamId, today) && !opts.hasTicketPackages\n', '  return !opts.hasTicketPackages\n', [T_RENDER]],
   ['the verification never expires', ANN, '  return today >= on && today < addDays(on, VERIFIED_FOR_DAYS - SERVED_STALE_DAYS);', '  return today >= on;', [T_RENDER]],
   ['the verification holds before its own date', ANN, '  return today >= on && today < addDays(on, VERIFIED_FOR_DAYS - SERVED_STALE_DAYS);', '  return today < addDays(on, VERIFIED_FOR_DAYS - SERVED_STALE_DAYS);', [T_RENDER]],
   ['the claim rendered on its last day and served stale past it (round 1)', ANN, '  return today >= on && today < addDays(on, VERIFIED_FOR_DAYS - SERVED_STALE_DAYS);', '  return today >= on && today < addDays(on, VERIFIED_FOR_DAYS);', [T_RENDER]],
@@ -110,7 +110,7 @@ const CASES = [
   ['special-ticket item counted as a theme night: the flag never read', DATA, '  if (isTicketPackageDoc(doc.data())) ticketPackageRows.add(promo);\n', '', [T_PKG_DATA]],
   ['special-ticket item counted as a theme night: the route skips the split', ROUTE, '  const { promos, ticketPackages } = partitionTicketPackages(allPromos, isTicketPackagePromo, team.league);', '  const promos = allPromos;\n  const ticketPackages: Promo[] = [];', [T_PKG]],
   ['special-ticket item named in the meta description', ROUTE, '  const { promos } = partitionTicketPackages(allPromos, isTicketPackagePromo, team.league);', '  const promos = allPromos;', [T_PKG]],
-  ['a wrapper await reintroduced in getTeamPromos (flight row order moves)', DATA, '  return dedupePromos(snapshot.docs.map(mapPromoDocNotingPackage).filter(isVisiblePromo));', '  await null;\n  return dedupePromos(snapshot.docs.map(mapPromoDocNotingPackage).filter(isVisiblePromo));', [T_PKG_DATA]],
+  ['a wrapper await reintroduced in getTeamPromos', DATA, '  return dedupePromos(snapshot.docs.map(mapPromoDocNotingPackage).filter(isVisiblePromo));', '  await null;\n  return dedupePromos(snapshot.docs.map(mapPromoDocNotingPackage).filter(isVisiblePromo));', [T_PKG_DATA]],
   ['special-ticket item counted as a theme night: the page adds packages back into the list', PAGE, '          promos={promos}\n          teamSlug={team.id}', '          promos={[...promos, ...ticketPackages]}\n          teamSlug={team.id}', [T_PKG]],
   ['special-ticket item counted as a food deal on an away row', DATA, '  return partitionTicketPackages(dedupePromos(mapped.filter(isVisiblePromo)), isTicketPackagePromo, league)\n    .promos', '  return dedupePromos(mapped.filter(isVisiblePromo))', [T_PKG_DATA]],
   ['the raw MLB flag read as a verdict', TP, "const TICKET_PACKAGE_LEAGUES: ReadonlySet<string> = new Set(['NHL', 'NBA']);", "const TICKET_PACKAGE_LEAGUES: ReadonlySet<string> = new Set(['NHL', 'NBA', 'MLB', 'MLS', 'WNBA', 'NFL']);", [T_PKG, T_PKG_DATA]],
@@ -134,6 +134,13 @@ const CASES = [
   ['NHL/NBA preseason dropped before the calendar', DATA, "    .filter((g) => isRegularSeasonGame(g) || (keepPreseason && g.seasonType === 'preseason'));", '    .filter(isRegularSeasonGame);', [T_R1, T_GAMES]],
   ['"THE FULL SEASON" with games still to play', LIST, ' && !splitSeasonStillPlaying;', ';', [T_R1]],
   ['the meta description back to the calendar year', ROUTE, "  const closer = ` See the full ${seasonWord} schedule at PromoNight.`;", "  const closer = ` See the full ${year} schedule at PromoNight.`;", [T_R1]],
+  // ---- Review round 2 ----
+  ['"haven\'t announced" above the club\'s own ticket packages', ANN, '  return nothingPublishedVerified(teamId, today) && !opts.hasTicketPackages', '  return nothingPublishedVerified(teamId, today)', [T_RENDER, T_R1]],
+  ['the page does not tell the status line about packages', PAGE, '    hasTicketPackages: ticketPackages.length > 0,\n', '', [T_RENDER, T_R1]],
+  ['the "haven\'t announced" claim undated', ANN, " yet (checked ${checkedLabel(NOTHING_PUBLISHED[teamId])}).`", " yet.`", [T_RENDER]],
+  ['/teams counts packages as promotions', 'src/app/teams/page.tsx', '      const { promos } = partitionTicketPackages(await getTeamPromos(t.id), isTicketPackagePromo, t.league);', '      const promos = await getTeamPromos(t.id);', [T_R1]],
+  ['the rivals block switched on for NHL/NBA', PAGE, '  const rivals = isSplitSeasonLeague(team.league) ? [] : getDivisionRivals(team, gameContexts);', '  const rivals = getDivisionRivals(team, gameContexts);', [T_R1]],
+  ['"still playing" counts another season\'s games', LIST, '        c.game.date >= today &&\n        splitSeasonStartYear(c.game.date) === SPLIT_SEASON_START_YEAR,', '        c.game.date >= today,', [T_R1]],
   ['an unplaceable archive row dropped', LABEL, '    if (y === null) {\n      unplaced.push(i);\n      return;\n    }', '    if (y === null) return;', [T_R1]],
 ];
 

@@ -192,6 +192,7 @@ export function RedesignTeamPage({
     league: team.league,
     showSchedule,
     seasonResolved: !!seasonScope,
+    hasTicketPackages: ticketPackages.length > 0,
     teamId: team.id,
     displayName,
     today,
@@ -210,7 +211,13 @@ export function RedesignTeamPage({
   // immediately after the promo list (order-[41], ahead of the follow
   // pairing at 42). Desktop ignores order-*, so the same hasNoUpcoming
   // branch also picks the SOURCE position at the two mounts below.
-  const rivals = getDivisionRivals(team, gameContexts);
+  // NOT on NHL or NBA. Those pages gained gameContexts in WEB6 for the
+  // schedule, which would have switched this block on for all 62 of them as a
+  // side effect: a new weave item (and so a new ad anchor) and a sentence that
+  // every rival has "its own promo and giveaway calendar", untrue for the
+  // clubs with nothing recorded yet. Off until it is ruled on (review round 2);
+  // those pages render no rivals block, exactly as before.
+  const rivals = isSplitSeasonLeague(team.league) ? [] : getDivisionRivals(team, gameContexts);
   const rivalsBlock =
     rivals.length > 0 ? (
       <div className={`rd-weave-item ${hasNoUpcoming ? 'order-[12]' : 'order-[41]'}`}>

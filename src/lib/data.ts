@@ -233,12 +233,13 @@ function mapPromoDocNotingPackage(doc: FirebaseFirestore.DocumentSnapshot): Prom
   return promo;
 }
 
-// THE SAME AWAIT SHAPE AS BEFORE THE SPLIT, ON PURPOSE. The route calls this
-// exactly as it always did and splits the result synchronously afterwards. A
-// version that awaited an extra layer (a partition reader around this one)
-// moved when the flight stream emitted the metadata and affiliate rows, and
-// renumbered them on 8 MLB and MLS pages with no package at all: identical
-// content, different bytes (WEB6 preview control, 2026-10-05).
+// THE SAME AWAIT SHAPE AS BEFORE THE SPLIT. The route calls this exactly as it
+// always did and splits the result synchronously afterwards, so a page without
+// packages goes through the very code path it went through before. (A preview
+// control on 2026-10-05 first blamed an extra await layer for 8 MLS pages
+// whose flight rows came out in a different order; the next control showed
+// main's own build does the same on 8 pages, a different 8 each build: the
+// metadata row's place in an on-demand render is a race, not this code.)
 export const getTeamPromos = cache(async (teamId: string): Promise<Promo[]> => {
   const snapshot = await db
     .collection('teams')

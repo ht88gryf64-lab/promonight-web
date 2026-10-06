@@ -231,3 +231,52 @@ describe('LOW: an archive row with an unplaceable date is kept', () => {
     assert.equal(g[2].subline, '1 completed event');
   });
 });
+
+/* ---- Review round 2 ---- */
+
+describe('round 2: the status line beside ticket packages', () => {
+  test('a verified club whose page lists packages gets the safe sentence, on the page', async () => {
+    const { RedesignTeamPage } = await import('../RedesignTeamPage');
+    const { StarredTeamsProvider } = await import('@/hooks/use-starred-teams');
+    const KNICKS = mk('new-york-knicks', 'NBA', 'New York', 'Knicks');
+    const games = [ctx(game('k1', 'nba', '2026-10-21', 'new-york-knicks', 'boston-celtics'), true, null)];
+    const pk = [promo('2026-11-02', 'Knicks Hoodie Package')];
+    const out = text(await html(
+      <StarredTeamsProvider><RedesignTeamPage team={KNICKS} coverage={{ teamCount: 169, leagueList: 'x', appLeagueList: 'y' } as never} venue={null} promos={[]}
+        upcomingPromos={[]} upcomingCounts={{ giveaway: 0, theme: 0, food: 0, kids: 0 }} claim={{ kind: 'remaining' }} displayName="New York Knicks"
+        gameContexts={games} today={TODAY} recurringDeals={[]} playoffsActive={false} inPlayoffs={false} playoffPromos={[]} playoffRound=""
+        playoffLastUpdated={null} ticketPackages={pk} /></StarredTeamsProvider>,
+    ));
+    assert.match(out, /Ticket packages \(1\)/);
+    assert.doesNotMatch(out, /haven't announced/);
+    assert.match(out, /PromoNight hasn't recorded any New York Knicks 2026-27 promotions yet\./);
+  });
+});
+
+describe('round 2: /teams counts what the team page counts', () => {
+  test('the /teams upcoming count goes through the same split', () => {
+    const src = readFileSync('src/app/teams/page.tsx', 'utf8');
+    assert.match(src, /const \{ promos \} = partitionTicketPackages\(await getTeamPromos\(t\.id\), isTicketPackagePromo, t\.league\);\n\s+promoCounts\[t\.id\] = promos\.filter/);
+  });
+});
+
+describe('round 2: no rivals block on NHL or NBA', () => {
+  test('NHL/NBA with game contexts render no "Around the division"; the gate is in the source', async () => {
+    const DET = mk('detroit-red-wings', 'NHL', 'Detroit', 'Red Wings');
+    const CHI = { ...mk('chicago-blackhawks', 'NHL', 'Chicago', 'Blackhawks'), division: 'Test' } as Team;
+    const games = [ctx(game('d1', 'nhl', '2026-10-21', 'detroit-red-wings', 'chicago-blackhawks'), true, CHI)];
+    const out = await teamPage(DET, [promo('2026-11-02', 'Night')], games);
+    assert.doesNotMatch(text(out), /Around the division/i);
+    assert.match(readFileSync('src/components/redesign/RedesignTeamPage.tsx', 'utf8'), /const rivals = isSplitSeasonLeague\(team\.league\) \? \[\] : getDivisionRivals\(team, gameContexts\);/);
+  });
+});
+
+describe('round 2: "still playing" looks at the named season only', () => {
+  test('a 2027-28 game ahead does not hold the 2026-27 full-season heading off', async () => {
+    const { PromoList } = await import('@/components/promo-list');
+    const render = (gc: GameContext[]) =>
+      html(<PromoList promos={[promo('2026-10-02', 'Opening Night')]} teamSlug={WILD.id} teamName="Minnesota Wild" league="NHL" sport="nhl" variant="light" showAppPitch={false} seasonScoped scopeLive team={WILD} gameContexts={gc} />);
+    const next = text(await render([ctx(game('n', 'nhl', '2027-10-12', 'minnesota-wild', 'x', { season: 2027 }), true)]));
+    assert.match(next, /2026-27 SEASON PROMOS/);
+  });
+});

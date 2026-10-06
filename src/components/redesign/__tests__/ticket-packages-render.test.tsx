@@ -233,12 +233,13 @@ describe('the route wires every count site to the counted array', () => {
     assert.match(src, /const packagesAhead = upcomingTicketPackages\(ticketPackages, todayStr\);/);
     assert.match(src, /ticketPackages=\{packagesAhead\}/);
   });
-  test('RedesignTeamPage hands ticketPackages to the group and nowhere else', () => {
+  test('RedesignTeamPage hands ticketPackages to the group, and its presence to the status line, nowhere else', () => {
     const t = readFileSync('src/components/redesign/RedesignTeamPage.tsx', 'utf8');
     const uses = t.split('\n').filter((l) => /\bticketPackages\b/.test(l) && !/^\s*(\/\/|\*|\/\*)/.test(l));
     assert.deepEqual(uses.map((l) => l.trim()), [
       'ticketPackages?: Promo[];',
       'ticketPackages = [],',
+      'hasTicketPackages: ticketPackages.length > 0,',
       '{ticketPackages.length > 0 ? (',
       '<TicketPackageList packages={ticketPackages} />',
     ]);
