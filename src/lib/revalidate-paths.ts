@@ -1,6 +1,8 @@
 // The site's one revalidation fan-out: the path check and the revalidatePath
-// loop that POST /api/revalidate (the pipeline's after-write calls) and the
-// nightly refresh cron (WEB6 G4) both go through.
+// loop behind POST /api/revalidate, which the pipeline's after-write calls and
+// the nightly refresh cron (WEB6 G4) both go through. Call it only from a
+// request whose job is to revalidate: Next applies revalidatePath when that
+// request finishes, so the same request cannot also warm the new copies.
 import { revalidatePath } from 'next/cache';
 
 // One to THREE segments, lowercase alphanumeric and hyphen only, no trailing

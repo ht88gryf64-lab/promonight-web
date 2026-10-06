@@ -114,11 +114,18 @@ test('warming requests every path once and reports failures', async () => {
   assert.deepEqual(r.failed.map((f) => f.path).sort(), ['/c', '/d']);
 });
 
-test('the route: auth, the window, then revalidate and warm every path through the shared fan-out', async () => {
-  const fetched: string[] = [];
+test('the route: auth, the window, then revalidate through POST /api/revalidate and only then warm', async () => {
+  const log: { method: string; url: string; paths?: string[] }[] = [];
   const realFetch = globalThis.fetch;
-  globalThis.fetch = (async (u: string) => {
-    fetched.push(String(u));
+  globalThis.fetch = (async (u: string, init?: RequestInit) => {
+    const method = init?.method ?? 'GET';
+    if (method === 'POST') {
+      assert.equal((init!.headers as Record<string, string>)['x-revalidate-secret'], 'r', 'the fan-out secret');
+      const paths = JSON.parse(String(init!.body)).paths as string[];
+      log.push({ method, url: String(u), paths });
+      return new Response(JSON.stringify({ ok: true, revalidated: paths.length }), { status: 200 });
+    }
+    log.push({ method, url: String(u) });
     return new Response('ok', { status: 200 });
   }) as typeof fetch;
   try {
@@ -130,11 +137,13 @@ test('the route: auth, the window, then revalidate and warm every path through t
     process.env.CRON_SECRET = 's';
     assert.equal((await call()).status, 401);
     assert.equal((await call('Bearer wrong')).status, 401);
+    delete process.env.REVALIDATE_SECRET;
+    assert.equal((await call('Bearer s')).status, 503, 'no fan-out secret, no run');
+    process.env.REVALIDATE_SECRET = 'r';
 
     // 04:15Z in October is 00:15 EDT: acts.
     mock.timers.setTime(Date.parse('2026-10-07T04:15:00Z'));
-    revalidated.length = 0;
-    fetched.length = 0;
+    log.length = 0;
     const res = await call('Bearer s');
     const body = await res.json();
     assert.equal(res.status, 200);
@@ -142,27 +151,49 @@ test('the route: auth, the window, then revalidate and warm every path through t
     assert.equal(body.paths, expected);
     assert.equal(body.revalidated, expected);
     assert.equal(body.warmed, expected);
-    assert.deepEqual(revalidated.sort(), fetched.map((u) => new URL(u).pathname).sort(), 'every revalidated path is warmed');
-    assert.ok(fetched.every((u) => u.startsWith('https://www.getpromonight.com/')), 'warms its own origin');
-    assert.ok(revalidated.includes('/venues/ppg-paints-arena') && revalidated.includes('/nhl/pittsburgh-penguins') && revalidated.includes('/promos/today'));
+    const posts = log.filter((e) => e.method === 'POST');
+    const gets = log.filter((e) => e.method === 'GET');
+    assert.ok(posts.length >= 1 && posts.every((e) => e.url === 'https://www.getpromonight.com/api/revalidate'), 'through the existing endpoint');
+    assert.ok(posts.every((e) => e.paths!.length <= 100), "within the endpoint's 100-path cap");
+    const lastPost = log.map((e) => e.method).lastIndexOf('POST');
+    const firstGet = log.map((e) => e.method).indexOf('GET');
+    assert.ok(lastPost < firstGet, 'every invalidation is applied (its request completed) before anything is warmed');
+    const posted = posts.flatMap((e) => e.paths!).sort();
+    assert.deepEqual(gets.map((e) => new URL(e.url).pathname).sort(), posted, 'every revalidated path is warmed');
+    assert.ok(posted.includes('/venues/ppg-paints-arena') && posted.includes('/nhl/pittsburgh-penguins') && posted.includes('/promos/today'));
 
     // 05:15Z in October is 01:15 EDT: the other firing, skipped.
     mock.timers.setTime(Date.parse('2026-10-07T05:15:00Z'));
-    revalidated.length = 0;
-    fetched.length = 0;
+    log.length = 0;
     const skip = await (await call('Bearer s')).json();
     assert.equal(skip.skipped, 'outside_window');
-    assert.equal(revalidated.length + fetched.length, 0);
+    assert.equal(log.length, 0);
   } finally {
     globalThis.fetch = realFetch;
   }
 });
 
-test('/api/revalidate and the nightly refresh share one fan-out', () => {
+test('the fan-out batches at the endpoint cap and reports a failed batch without stopping', async () => {
+  const { revalidateViaFanOut } = await import('../nightly-refresh');
+  const paths = Array.from({ length: 205 }, (_, i) => `/p${i}`);
+  const sizes: number[] = [];
+  const r = await revalidateViaFanOut('https://x.test', paths, 'r', async (_u, init) => {
+    const batch = JSON.parse(String(init.body)).paths as string[];
+    sizes.push(batch.length);
+    if (batch[0] === '/p100') return { status: 500, json: async () => ({ ok: false }) };
+    return { status: 200, json: async () => ({ ok: true, revalidated: batch.length }) };
+  });
+  assert.deepEqual(sizes, [100, 100, 5]);
+  assert.equal(r.revalidated, 105);
+  assert.deepEqual(r.failedBatches, [{ first: '/p100', status: 500 }]);
+});
+
+test('one fan-out: the endpoint uses the shared loop; the cron calls the endpoint, never revalidatePath itself', () => {
   const route = readFileSync(new URL('../../app/api/revalidate/route.ts', import.meta.url), 'utf8');
   const cron = readFileSync(new URL('../../app/api/cron/nightly-refresh/route.ts', import.meta.url), 'utf8');
-  for (const src of [route, cron]) {
-    assert.match(src, /from '@\/lib\/revalidate-paths'/);
-    assert.doesNotMatch(src, /revalidatePath\(/, 'no private revalidatePath loop');
-  }
+  const lib = readFileSync(new URL('../nightly-refresh.ts', import.meta.url), 'utf8');
+  assert.match(route, /from '@\/lib\/revalidate-paths'/);
+  assert.match(route, /revalidatePaths\(paths\)/);
+  for (const src of [cron, lib]) assert.doesNotMatch(src, /revalidatePath\(|revalidatePaths\(/, 'the cron never revalidates inside its own request');
+  assert.match(lib, /\$\{origin\}\/api\/revalidate/);
 });

@@ -5,18 +5,18 @@
  * 04:15 and 05:15 UTC; acts only in the 00:00 hour America/New_York, which is
  * exactly one of the two firings every night (src/lib/nightly-refresh.ts).
  *   1. Revalidates every team page, venue hub, league hub, /teams and /promos
- *      page through the shared fan-out (src/lib/revalidate-paths.ts).
- *   2. Requests each one so the new copy, cut on the new Eastern day, is built
- *      before the first visitor or crawler.
+ *      page through the existing fan-out, POST /api/revalidate, in batches of
+ *      100. Over HTTP on purpose: see src/lib/nightly-refresh.ts.
+ *   2. Then requests each one, so the new copy, cut on the new Eastern day, is
+ *      built before the first visitor or crawler.
  *
  * Auth: Vercel Cron sends `Authorization: Bearer <CRON_SECRET>`; anything else
- * is rejected, as on the other cron routes.
+ * is rejected, as on the other cron routes. The fan-out needs REVALIDATE_SECRET.
  */
 import { NextResponse } from 'next/server';
 import { getAllTeams } from '@/lib/data';
 import { getAllVenueHubSlugs } from '@/lib/venue-hub';
-import { revalidatePaths } from '@/lib/revalidate-paths';
-import { isNightlyRefreshWindow, nightlyRefreshPaths, siteHour, warmPaths } from '@/lib/nightly-refresh';
+import { isNightlyRefreshWindow, nightlyRefreshPaths, revalidateViaFanOut, siteHour, warmPaths } from '@/lib/nightly-refresh';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -31,6 +31,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: false, reason: 'unauthorized' }, { status: 401 });
   }
 
+  const fanOutSecret = process.env.REVALIDATE_SECRET;
+  if (!fanOutSecret) {
+    return NextResponse.json({ ok: false, reason: 'fanout_not_configured' }, { status: 503 });
+  }
+
   const now = new Date();
   if (!isNightlyRefreshWindow(now)) {
     // The other of the two UTC firings: an hour before or after Eastern midnight.
@@ -39,18 +44,19 @@ export async function GET(request: Request) {
 
   const started = Date.now();
   const paths = await nightlyRefreshPaths({ teams: getAllTeams, venueHubSlugs: getAllVenueHubSlugs });
-  const revalidated = revalidatePaths(paths, undefined, 'cron:nightly-refresh');
-  const warmed = await warmPaths(new URL(request.url).origin, paths);
+  const origin = new URL(request.url).origin;
+  const revalidated = await revalidateViaFanOut(origin, paths, fanOutSecret);
+  const warmed = await warmPaths(origin, paths);
   const ms = Date.now() - started;
 
   console.log(
-    `[cron:nightly-refresh] paths=${paths.length} revalidated=${revalidated.succeeded} warmed=${warmed.ok} failed=${warmed.failed.length} ms=${ms}`,
+    `[cron:nightly-refresh] paths=${paths.length} revalidated=${revalidated.revalidated} warmed=${warmed.ok} failed=${warmed.failed.length} ms=${ms}`,
   );
   return NextResponse.json({
     ok: true,
     paths: paths.length,
-    revalidated: revalidated.succeeded,
-    revalidateFailed: revalidated.failed,
+    revalidated: revalidated.revalidated,
+    revalidateFailedBatches: revalidated.failedBatches,
     warmed: warmed.ok,
     warmFailed: warmed.failed,
     ms,

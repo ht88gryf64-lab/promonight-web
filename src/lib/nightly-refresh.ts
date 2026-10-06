@@ -15,11 +15,17 @@
 // two firings acts on every night of the year, the two DST change nights
 // included (tests pin it).
 //
-// WHAT. Through the site's one revalidation fan-out (src/lib/revalidate-paths.ts,
-// the same loop POST /api/revalidate runs): every team page, every venue hub,
-// the league hubs, /teams and the /promos pages. NOT the homepage: "/" is
-// rejected by the fan-out's path pattern by ruling, and it regenerates on its
-// own 6h window.
+// WHAT. Every team page, every venue hub, the league hubs, /teams and the
+// /promos pages. NOT the homepage: "/" is rejected by the fan-out's path pattern
+// by ruling, and it regenerates on its own 6h window.
+//
+// HOW, AND WHY OVER HTTP. Through the existing fan-out, POST /api/revalidate,
+// in batches of its 100-path cap, and only then a GET of each path. Next
+// applies revalidatePath when the request that called it FINISHES, so a route
+// that revalidated and then fetched its own pages in the same request got the
+// old cached copies back and regenerated nothing (measured on a local
+// production build, 2026-10-06). A completed POST makes the next GET a cache
+// MISS that renders fresh on the new Eastern day.
 import { SITE_TIME_ZONE } from './site-today';
 import { PATH_RE } from './revalidate-paths';
 
@@ -75,6 +81,43 @@ export async function nightlyRefreshPaths(loaders: NightlyLoaders): Promise<stri
     out.push(p);
   }
   return out;
+}
+
+/** The fan-out's per-request cap (POST /api/revalidate MAX_PATHS). */
+export const FANOUT_BATCH = 100;
+
+export interface FanOutResult {
+  revalidated: number;
+  failedBatches: { first: string; status: number | string }[];
+}
+
+/** Revalidates through POST /api/revalidate, one completed request per batch,
+ *  so every invalidation is applied before anything is warmed. `poster` is
+ *  injectable for tests. */
+export async function revalidateViaFanOut(
+  origin: string,
+  paths: readonly string[],
+  secret: string,
+  poster: (url: string, init: RequestInit) => Promise<{ status: number; json: () => Promise<unknown> }> = fetch,
+): Promise<FanOutResult> {
+  const result: FanOutResult = { revalidated: 0, failedBatches: [] };
+  for (let i = 0; i < paths.length; i += FANOUT_BATCH) {
+    const batch = paths.slice(i, i + FANOUT_BATCH);
+    try {
+      const res = await poster(`${origin}/api/revalidate`, {
+        method: 'POST',
+        cache: 'no-store',
+        headers: { 'content-type': 'application/json', 'x-revalidate-secret': secret },
+        body: JSON.stringify({ paths: batch }),
+      });
+      const body = (await res.json()) as { ok?: boolean; revalidated?: number };
+      if (res.status === 200 && body.ok) result.revalidated += body.revalidated ?? 0;
+      else result.failedBatches.push({ first: batch[0], status: res.status });
+    } catch (err) {
+      result.failedBatches.push({ first: batch[0], status: err instanceof Error ? err.message : String(err) });
+    }
+  }
+  return result;
 }
 
 export interface WarmResult {
