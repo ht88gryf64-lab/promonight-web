@@ -5,6 +5,7 @@ import { getPromosFromDate } from '@/lib/data';
 import { AggregatorPage, AggregatorJsonLd, type AggregatorGroup } from '@/components/aggregator-layout';
 import type { PromoWithTeam } from '@/lib/types';
 import { siteTodayYmd } from '@/lib/site-today';
+import { crossLeagueSeasonLabel, scheduledPeriodPhrase, seasonSpan } from '@/lib/season-label';
 
 export const revalidate = 21600;
 
@@ -15,15 +16,13 @@ function todayYMD(): string {
   return siteTodayYmd();
 }
 
-// HARDCODED SEASON YEAR, never new Date().getFullYear(). This value reaches the
-// page title, the meta description and the on-page lead, so an auto-rolling year
-// would retitle this page to the next season at midnight on Jan 1 — with no
-// deploy, no review, and no theme-night data behind the new number. The page would
-// sit in the index advertising a season that does not exist yet.
-//
-// Bump this deliberately when next-season content is ready. Same rule as
-// /best-promos, the team pages, the venue pages and the CFB family.
-const YEAR = 2026;
+// The season label in the title, heading, description and JSON-LD: "2026-27",
+// from crossLeagueSeasonLabel() (src/lib/season-label.ts), never the clock.
+// This page lists every league, and the NHL and NBA seasons run into 2027, so
+// a bare "2026" here was false (ruling 2026-10-06). The label moves with the
+// July 1 bump in known-issues 69. The lead names the months the listed rows
+// actually span (scheduledPeriodPhrase), not a label.
+const SEASON = crossLeagueSeasonLabel();
 
 interface ThemeCategory {
   label: string;
@@ -66,8 +65,8 @@ const CATEGORIES: ThemeCategory[] = [
 ];
 
 export const metadata: Metadata = {
-  title: `${YEAR} Theme Nights: Star Wars, Heritage & Fireworks`,
-  description: `${YEAR} theme nights across pro sports by category: Star Wars, heritage, fireworks, faith and community, and pop culture tie-ins. From official team announcements.`,
+  title: `${SEASON} Theme Nights: Star Wars, Heritage & Fireworks`,
+  description: `${SEASON} theme nights across pro sports by category: Star Wars, heritage, fireworks, faith and community, and pop culture tie-ins. From official team announcements.`,
   alternates: { canonical: 'https://www.getpromonight.com/promos/theme-nights' },
   openGraph: pageOpenGraph('/promos/theme-nights'),
 };
@@ -109,7 +108,8 @@ export default async function ThemeNightsPage() {
   }
 
   const c = await getCoverageCounts();
-  const lead = `Theme nights scheduled across ${c.leagueList} in ${YEAR}. Grouped by theme category, from Star Wars nights and fireworks spectaculars to heritage and community celebrations. ${themes.length} theme nights currently tracked across ${c.teamCount} teams.`;
+  const period = scheduledPeriodPhrase(seasonSpan(themes.map((p) => p.date))) || `in ${SEASON}`;
+  const lead = `Theme nights scheduled across ${c.leagueList} ${period}. Grouped by theme category, from Star Wars nights and fireworks spectaculars to heritage and community celebrations. ${themes.length} theme nights currently tracked across ${c.teamCount} teams.`;
 
   const faqs = [
     {
@@ -133,14 +133,14 @@ export default async function ThemeNightsPage() {
     <>
       <AggregatorJsonLd
         url="https://www.getpromonight.com/promos/theme-nights"
-        title={`Theme Nights in Pro Sports ${YEAR}`}
+        title={`Theme Nights in Pro Sports ${SEASON}`}
         description={lead}
         faqs={faqs}
         groups={groups}
       />
       <AggregatorPage
         eyebrow="Theme nights"
-        title={`THEME NIGHTS IN ${YEAR}`}
+        title={`THEME NIGHTS IN ${SEASON}`}
         lead={lead}
         groups={groups}
         faqs={faqs}

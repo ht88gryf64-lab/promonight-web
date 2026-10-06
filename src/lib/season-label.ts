@@ -97,6 +97,18 @@ export function currentSeasonLabel(league: string | null | undefined): string {
   return isSplitSeasonLeague(league) ? splitSeasonLabel(SPLIT_SEASON_START_YEAR) : String(TITLE_SEASON_YEAR);
 }
 
+/**
+ * The year label for a page that lists every league at once (the /promos
+ * category pages): "2026-27". Those pages carried a bare "2026" in the title,
+ * heading and lead until 2026-10-06 while listing NHL and NBA nights into
+ * April 2027 (OPS, ruling of 2026-10-06: no single year over a two-year
+ * season). The label follows SPLIT_SEASON_START_YEAR, so the July 1 bump in
+ * known-issues 69 moves it too.
+ */
+export function crossLeagueSeasonLabel(): string {
+  return splitSeasonLabel(SPLIT_SEASON_START_YEAR);
+}
+
 export interface SeasonSpan {
   /** Distinct calendar years present, ascending. */
   years: number[];

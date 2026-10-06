@@ -5,6 +5,7 @@ import { pageOpenGraph } from '@/lib/og';
 import { getPromosFromDate } from '@/lib/data';
 import { AggregatorPage, AggregatorJsonLd, type AggregatorGroup } from '@/components/aggregator-layout';
 import { siteTodayYmd } from '@/lib/site-today';
+import { crossLeagueSeasonLabel, scheduledPeriodPhrase, seasonSpan } from '@/lib/season-label';
 
 export const revalidate = 21600;
 
@@ -22,21 +23,19 @@ function monthLabel(dateStr: string): string {
   });
 }
 
-// HARDCODED SEASON YEAR, never new Date().getFullYear(). This value reaches the
-// page title, the meta description and the on-page lead, so an auto-rolling year
-// would retitle this page to the next season at midnight on Jan 1 — with no
-// deploy, no review, and no food-deal data behind the new number. The page would
-// sit in the index advertising a season that does not exist yet.
-//
-// Bump this deliberately when next-season content is ready. Same rule as
-// /best-promos, the team pages, the venue pages and the CFB family.
-const YEAR = 2026;
+// The season label in the title, heading, description and JSON-LD: "2026-27",
+// from crossLeagueSeasonLabel() (src/lib/season-label.ts), never the clock.
+// This page lists every league, and the NHL and NBA seasons run into 2027, so
+// a bare "2026" here was false (ruling 2026-10-06). The label moves with the
+// July 1 bump in known-issues 69. The lead names the months the listed rows
+// actually span (scheduledPeriodPhrase), not a label.
+const SEASON = crossLeagueSeasonLabel();
 
 export async function generateMetadata(): Promise<Metadata> {
   const c = await getCoverageCounts();
   return {
-    title: `${YEAR} Ballpark Food Deals: Discount Concession Nights`,
-    description: `${YEAR} food-deal promos across ${c.leagueList}. Dollar dogs, half-price concessions, and value menus by month with team, date, and opponent. From official team announcements.`,
+    title: `${SEASON} Ballpark Food Deals: Discount Concession Nights`,
+    description: `${SEASON} food-deal promos across ${c.leagueList}. Dollar dogs, half-price concessions, and value menus by month with team, date, and opponent. From official team announcements.`,
     alternates: { canonical: 'https://www.getpromonight.com/promos/food-deals' },
     openGraph: pageOpenGraph('/promos/food-deals'),
   };
@@ -62,12 +61,13 @@ export default async function FoodDealsPage() {
     }));
 
   const c = await getCoverageCounts();
-  const lead = `Food-deal promotions scheduled across ${c.leagueList} in ${YEAR}. Dollar-dog nights, half-price concessions, and value menus with the team, date, and opponent for each, grouped by month. ${foods.length} food deal${foods.length !== 1 ? 's' : ''} currently tracked across ${c.teamCount} teams.`;
+  const period = scheduledPeriodPhrase(seasonSpan(foods.map((p) => p.date))) || `in ${SEASON}`;
+  const lead = `Food-deal promotions scheduled across ${c.leagueList} ${period}. Dollar-dog nights, half-price concessions, and value menus with the team, date, and opponent for each, grouped by month. ${foods.length} food deal${foods.length !== 1 ? 's' : ''} currently tracked across ${c.teamCount} teams.`;
 
   const faqs = [
     {
-      question: `How many ballpark food deals are there in ${YEAR}?`,
-      answer: `PromoNight is tracking ${foods.length} food-deal promotion${foods.length !== 1 ? 's' : ''} across the ${numberWord(c.leagueCount)} major pro leagues in ${YEAR}. These include dollar-dog nights, half-price concessions, and themed value menus.`,
+      question: `How many ballpark food deals are there ${period}?`,
+      answer: `PromoNight is tracking ${foods.length} food-deal promotion${foods.length !== 1 ? 's' : ''} across the ${numberWord(c.leagueCount)} major pro leagues ${period}. These include dollar-dog nights, half-price concessions, and themed value menus.`,
     },
     {
       question: 'What counts as a food deal?',
@@ -85,14 +85,14 @@ export default async function FoodDealsPage() {
     <>
       <AggregatorJsonLd
         url="https://www.getpromonight.com/promos/food-deals"
-        title={`Ballpark Food Deals in Pro Sports ${YEAR}`}
+        title={`Ballpark Food Deals in Pro Sports ${SEASON}`}
         description={lead}
         faqs={faqs}
         groups={groups}
       />
       <AggregatorPage
         eyebrow="Food deals"
-        title={`FOOD DEALS IN ${YEAR}`}
+        title={`FOOD DEALS IN ${SEASON}`}
         lead={lead}
         groups={groups}
         faqs={faqs}

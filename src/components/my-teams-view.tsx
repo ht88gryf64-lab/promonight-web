@@ -665,7 +665,7 @@ function StateC({
           </div>
           <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
             {starredTeams.map((team) => (
-              <OffseasonTeamCard key={team.id} team={team} light />
+              <QuietTeamCard key={team.id} team={team} light />
             ))}
           </div>
 
@@ -731,7 +731,7 @@ function StateC({
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
           {starredTeams.map((team) => (
-            <OffseasonTeamCard key={team.id} team={team} />
+            <QuietTeamCard key={team.id} team={team} />
           ))}
         </div>
 
@@ -746,7 +746,12 @@ function StateC({
   );
 }
 
-function OffseasonTeamCard({ team, light = false }: { team: Team; light?: boolean }) {
+// A starred team with no promos in the PROMO_WINDOW_DAYS window. This card and
+// its section heading said "Offseason" until 2026-10-06, which was false for
+// in-season clubs whose next promo is more than 60 days out or not announced
+// yet. The site has no season model to tell the two apart, so the label states
+// only what the code tested: nothing in the next 60 days.
+function QuietTeamCard({ team, light = false }: { team: Team; light?: boolean }) {
   const teamFullName = `${team.city} ${team.name}`;
 
   if (light) {
@@ -759,7 +764,7 @@ function OffseasonTeamCard({ team, light = false }: { team: Team; light?: boolea
         />
         <div className="p-3 pr-12">
           <div className="mb-1 font-rd text-[9px] uppercase tracking-[0.1em] text-rd-ink-faint">
-            {SPORT_ICONS[team.league]} {team.league} · Offseason
+            {SPORT_ICONS[team.league]} {team.league}
           </div>
           <Link href={`/${team.sportSlug}/${team.id}`} className="group block">
             <div className="text-[11px] text-rd-ink-soft">{team.city}</div>
@@ -793,7 +798,7 @@ function OffseasonTeamCard({ team, light = false }: { team: Team; light?: boolea
       />
       <div className="p-3 pr-12">
         <div className="font-mono text-[9px] tracking-[1px] uppercase text-text-dim mb-1">
-          {SPORT_ICONS[team.league]} {team.league} · Offseason
+          {SPORT_ICONS[team.league]} {team.league}
         </div>
         <Link href={`/${team.sportSlug}/${team.id}`} className="block group">
           <div className="text-text-secondary text-[11px]">{team.city}</div>
@@ -854,7 +859,7 @@ function StateB({
 
   // Teams in the starred set that have zero promos in the 60-day window.
   const teamsWithPromos = new Set(promos.map((p) => p.teamSlug));
-  const offseasonTeams = starredTeams.filter(
+  const quietTeams = starredTeams.filter(
     (t) => !teamsWithPromos.has(t.id),
   );
 
@@ -912,16 +917,16 @@ function StateB({
             <AffiliateClusterSection team={anchorTeam} venue={anchorVenue} light />
           )}
 
-          {offseasonTeams.length > 0 && (
+          {quietTeams.length > 0 && (
             <section className="mb-8">
               <div className="mb-3">
                 <span className="font-rd text-[11px] font-semibold uppercase tracking-[0.1em] text-rd-ink-faint">
-                  Tracking · Offseason
+                  Tracking · Nothing in the next 60 days
                 </span>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {offseasonTeams.map((team) => (
-                  <OffseasonTeamCard key={team.id} team={team} light />
+                {quietTeams.map((team) => (
+                  <QuietTeamCard key={team.id} team={team} light />
                 ))}
               </div>
             </section>
@@ -983,16 +988,16 @@ function StateB({
           <AffiliateClusterSection team={anchorTeam} venue={anchorVenue} />
         )}
 
-        {offseasonTeams.length > 0 && (
+        {quietTeams.length > 0 && (
           <section className="mb-8">
             <div className="mb-3">
               <span className="font-mono text-[10px] tracking-[1.5px] uppercase text-text-dim">
-                Tracking · Offseason
+                Tracking · Nothing in the next 60 days
               </span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {offseasonTeams.map((team) => (
-                <OffseasonTeamCard key={team.id} team={team} />
+              {quietTeams.map((team) => (
+                <QuietTeamCard key={team.id} team={team} />
               ))}
             </div>
           </section>

@@ -6,6 +6,7 @@ import { AppDownloadButtons } from './app-download-buttons';
 import { AdSlot } from './ads/AdSlot';
 import { AD_SLOTS } from '@/lib/ads/slots';
 import { AggregatorPaginatedGroups } from './aggregator-paginated-groups';
+import { distinctPromoCount } from '@/lib/aggregator-count';
 import { isRedesignEnabled } from '@/lib/redesign';
 import { archivoHouse } from './redesign/fonts-house';
 import { RedesignAggregatorList } from './redesign/RedesignAggregatorList';
@@ -73,7 +74,7 @@ function RedesignAggregatorPage({
   afterIntro,
   afterList,
 }: AggregatorPageProps) {
-  const totalCount = groups.reduce((acc, g) => acc + g.promos.length, 0);
+  const totalCount = distinctPromoCount(groups);
   const { color, Icon } = ACCENTS[accentKey];
 
   return (
@@ -195,7 +196,7 @@ function LegacyAggregatorPage({
   faqs,
   emptyMessage,
 }: AggregatorPageProps) {
-  const totalCount = groups.reduce((acc, g) => acc + g.promos.length, 0);
+  const totalCount = distinctPromoCount(groups);
 
   return (
     <div className="pt-28 pb-20 px-6">
