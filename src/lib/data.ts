@@ -488,9 +488,9 @@ export async function getPromoCount(): Promise<number> {
 // rather than the one-or-two document reads it used to issue. On a build, and
 // on any instance that has already rendered a page, that is 148 reads once
 // instead of two per call across ~200 calls. On a COLD instance regenerating a
-// single MLS/WNBA team page — the leagues where getGamesForTeam short-circuits
-// (NHL and NBA read games since WEB6), so nothing else here needs the
-// collection — it is 2 -> 148.
+// single MLS/WNBA team page (the leagues where getGamesForTeam short-circuits;
+// NHL and NBA read games since WEB6, so nothing else here needs the
+// collection), it is 2 -> 148.
 // Unlike venueHubs (see the getVenueHub exemption in venue-hub.ts) there is no
 // carve-out, because the root layout already loads all 169 teams on every route
 // and the aggregator pages already read every venue; a second resolution regime
