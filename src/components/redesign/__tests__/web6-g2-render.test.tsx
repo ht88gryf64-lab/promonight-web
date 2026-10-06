@@ -148,3 +148,10 @@ describe('no "No upcoming ... right now" under a "haven\'t announced" line', () 
     }
   });
 });
+
+describe('soccer jersey nights: the count sentence agrees with its number', () => {
+  test('singular when one row is left', () => {
+    const src = readFileSync('src/app/promos/soccer-jersey-nights/page.tsx', 'utf8');
+    assert.match(src, /and \$\{total\} \$\{total === 1 \? 'is' : 'are'\} on the upcoming calendar/);
+  });
+});

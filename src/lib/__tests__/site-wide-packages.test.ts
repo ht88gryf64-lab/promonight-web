@@ -76,9 +76,11 @@ const PROMOS = [
   // so no reader may show the unflagged twin either. Drop-before-dedupe would.
   row('d4', 'detroit-red-wings', D2, 'Twin Night', 'theme', true),
   row('d5', 'detroit-red-wings', D2, 'Twin Night', 'theme', false),
-  // A twin pair stored so an unordered read returns the unflagged doc FIRST,
-  // while Firestore's id order puts the flagged one first (e1 < e2): My Teams
-  // must sort before it dedupes, or it keeps the wrong one.
+  // A twin pair stored in the reverse of Firestore's id order (e2 before e1).
+  // Firestore, and this fake, return range-query results in date then
+  // document-name order, so every reader sees e1 (flagged) first and the pair
+  // is a package everywhere. My Teams' own sort before its dedupe is
+  // defensive and redundant with that order; this fixture does not isolate it.
   row('e2', 'detroit-red-wings', D1, 'Order Night', 'theme', false),
   row('e1', 'detroit-red-wings', D1, 'Order Night', 'theme', true),
   row('g1', 'ghost-nhl', D1, 'Ghost Pack', 'theme', true),
