@@ -3905,3 +3905,25 @@ disagree, and any forward-only regression.
 (`~/promonight/audit-archive/pipe/g0/REPORT.md`) maps the refusal paths, and
 the ledger (`~/promonight/COORDINATION.md`, PIPE lines) records each guard
 added since.
+
+## 69. The NHL and NBA season constant must be bumped every July
+
+**Status: OPEN, DATED (WEB6, 2026-10-05). Severity: High on 2027-07-01 if missed. Due: between 2027-06-01 and 2027-07-01.**
+
+**What it is.** `SPLIT_SEASON_START_YEAR` in `src/lib/season-label.ts` names the NHL and NBA season every team page speaks about (2026 means 2026-27). It is deliberately its own constant, not `TITLE_SEASON_YEAR`: that one follows MLB and is bumped in January or February (docs/runbook-2027-01-15-spansyears-season-switchoff.md), in the middle of an NHL and NBA season. Nothing derives this one from the clock, by the same rule as every season year on the site.
+
+**What breaks if it is not bumped.** From 2027-07-01 every NHL and NBA page keeps naming 2026-27:
+- the completed 2026-27 rows are headed "COMPLETED 2026-27 PROMOS ... this season" while 2027-28 is being played;
+- the hero, FAQ and "All N on record" count only 2026-27 rows;
+- a zero-promo page's schedule reads "2026-27 Game Schedule";
+- the status line says "hasn't recorded any ... 2026-27 promotions".
+
+**How it is caught.** `season-labels-by-league.test.ts` fails on the real clock from 2027-06-01 ("the NHL/NBA season constant is current"). Under `npm run test:future` it skips itself, because the shifted clock would fail it a year early.
+
+**The bump.** In July, when the new NHL and NBA spines are in `games`:
+1. Set `SPLIT_SEASON_START_YEAR` to the new start year.
+2. Re-verify, or empty, `NOTHING_PUBLISHED` in `src/lib/announcement-status.ts`. Those dates are for the old season.
+3. Run `npm test`, `npm run test:future` and both mutation harnesses (`scripts/season-labels-mutations.mjs`, `scripts/schedule-months-mutations.mjs`).
+4. Verify one NHL and one NBA page against served HTML: archive headings, hero sentence, schedule title.
+
+**Where.** `src/lib/season-label.ts` (the constant), `src/lib/season-scope.ts`, `src/lib/schedule-months.ts`, `src/lib/announcement-status.ts`, `src/components/zero-promo-fallback.tsx`, `src/components/promo-list.tsx`.

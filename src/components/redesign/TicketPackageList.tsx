@@ -1,4 +1,6 @@
 import type { Promo } from '@/lib/types';
+import { promoAnchorId } from '@/lib/promo-helpers';
+import { PromoArrivalHighlight } from './PromoArrivalHighlight';
 import {
   TICKET_PACKAGE_ROW_NOTE,
   TICKET_PACKAGES_SUBLINE,
@@ -31,9 +33,13 @@ function packageDate(ymd: string): string {
   });
 }
 
+// Every row keeps the anchor id it had as a PromoList row, so the /promos/today,
+// venue-hub and hub cards that still link to #promo-... land on it (review
+// round 3). A row inside the closed <details> is opened by PromoArrivalHighlight,
+// which looks for data-ticket-packages on the details element.
 function PackageRow({ promo }: { promo: Promo }) {
   return (
-    <li className="rounded-2xl border border-rd-line bg-rd-card px-4 py-3 sm:px-5">
+    <li id={`promo-${promoAnchorId(promo)}`} className="rounded-2xl border border-rd-line bg-rd-card px-4 py-3 sm:px-5">
       <div className="font-rd text-[11px] uppercase tracking-[0.12em] text-rd-ink-faint">
         {packageDate(promo.date)}
         {promo.opponent ? ` · vs ${promo.opponent}` : ''}
@@ -47,12 +53,21 @@ function PackageRow({ promo }: { promo: Promo }) {
   );
 }
 
-export function TicketPackageList({ packages }: { packages: Promo[] }) {
+export function TicketPackageList({
+  packages,
+  arrivalHighlight = false,
+}: {
+  packages: Promo[];
+  /** Mount the deep-link arrival effect here. Only on a page with no promo list
+   *  (the list mounts its own); two instances would both scroll. */
+  arrivalHighlight?: boolean;
+}) {
   if (packages.length === 0) return null;
   const shown = packages.slice(0, TICKET_PACKAGES_VISIBLE);
   const rest = packages.slice(TICKET_PACKAGES_VISIBLE);
   return (
     <section className="px-6 pb-12" aria-labelledby="ticket-packages-heading">
+      {arrivalHighlight ? <PromoArrivalHighlight /> : null}
       <div className="mx-auto max-w-5xl">
         <div className="mb-4">
           <span className="font-rd text-[11px] uppercase tracking-[0.14em] text-rd-ink-faint">
@@ -69,7 +84,7 @@ export function TicketPackageList({ packages }: { packages: Promo[] }) {
           ))}
         </ul>
         {rest.length > 0 ? (
-          <details className="mt-3">
+          <details className="mt-3" data-ticket-packages>
             <summary className="cursor-pointer font-rd text-sm font-semibold text-rd-ink-soft">
               Show {rest.length} more ticket {rest.length === 1 ? 'package' : 'packages'}
             </summary>

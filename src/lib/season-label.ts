@@ -50,6 +50,11 @@ import { TITLE_SEASON_YEAR } from './title-treatment';
  * that bump would drop every 2026-27 row out of season scope, head the live
  * season "LAST SEASON (2026-27)" and title the schedule "2027-28". Bump this
  * one in July, when the next NHL and NBA season opens (review round 1, WEB6).
+ *
+ * IT GOES STALE SILENTLY on 2027-07-01 (review round 3): every NHL and NBA page
+ * would keep calling 2026-27 "this season" through 2027-28. Known-issues 69 is
+ * the bump procedure, and a test fails on the real clock from 2027-06-01 so the
+ * bump is due before it is late (season-labels-by-league.test.ts).
  */
 export const SPLIT_SEASON_START_YEAR = 2026;
 

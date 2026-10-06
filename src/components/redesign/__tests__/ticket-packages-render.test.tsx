@@ -168,6 +168,11 @@ describe('the Warriors shape: 3 theme nights, 6 special-ticket rows', () => {
     const details = /<details[\s\S]*<\/details>/.exec(group)?.[0] ?? '';
     assert.match(text(details), /^ ?Show 1 more ticket package Tue, Mar 9 · vs Brooklyn Nets Asian Heritage Night/);
     assert.doesNotMatch(group, /page-content/);
+    // Deep links: every row keeps its #promo- anchor (round 3), and the closed
+    // group is marked for PromoArrivalHighlight to open.
+    for (const p of PACKAGES.slice(1)) assert.ok(group.includes(`id="promo-${p.date}-`), `${p.title} anchor`);
+    assert.match(group, /<details class="mt-3" data-ticket-packages="true">/);
+    assert.doesNotMatch(group, /promo-arrival|PromoArrivalHighlight/, 'list page: the list mounts the arrival effect, not the group');
     // No HOT flame on a package, even one stored with highlight true.
     assert.doesNotMatch(group, /HOT/);
   });
@@ -241,7 +246,7 @@ describe('the route wires every count site to the counted array', () => {
       'ticketPackages = [],',
       'hasTicketPackages: ticketPackages.length > 0,',
       '{ticketPackages.length > 0 ? (',
-      '<TicketPackageList packages={ticketPackages} />',
+      '<TicketPackageList packages={ticketPackages} arrivalHighlight={hasNoPromosAtAll} />',
     ]);
   });
 });

@@ -193,6 +193,7 @@ export function RedesignTeamPage({
     showSchedule,
     seasonResolved: !!seasonScope,
     hasTicketPackages: ticketPackages.length > 0,
+    hasOtherPromos: (inPlayoffs && playoffPromos.length > 0) || recurringDeals.length > 0,
     teamId: team.id,
     displayName,
     today,
@@ -552,7 +553,7 @@ export function RedesignTeamPage({
             {ticketPackages.length > 0 ? (
               <div className="rd-weave-item order-[40]">
                 {promoSlot}
-                <TicketPackageList packages={ticketPackages} />
+                <TicketPackageList packages={ticketPackages} arrivalHighlight={hasNoPromosAtAll} />
               </div>
             ) : (
               <div className="rd-weave-item order-[40]">{promoSlot}</div>

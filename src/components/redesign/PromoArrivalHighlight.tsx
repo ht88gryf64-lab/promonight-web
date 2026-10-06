@@ -51,6 +51,11 @@ export function PromoArrivalHighlight() {
     const tryFlash = (id: string): boolean => {
       const el = document.getElementById(id);
       if (!el) return false;
+      // A ticket-package row past the first few sits in a closed <details>
+      // (TicketPackageList). Open that one group, and only that one: no other
+      // <details> on a team page is touched by an arrival.
+      const packages = el.closest<HTMLDetailsElement>('details[data-ticket-packages]');
+      if (packages && !packages.open) packages.open = true;
       highlight(el);
       return true;
     };

@@ -115,7 +115,7 @@ const CASES = [
   ['special-ticket item counted as a food deal on an away row', DATA, '  return partitionTicketPackages(dedupePromos(mapped.filter(isVisiblePromo)), isTicketPackagePromo, league)\n    .promos', '  return dedupePromos(mapped.filter(isVisiblePromo))', [T_PKG_DATA]],
   ['the raw MLB flag read as a verdict', TP, "const TICKET_PACKAGE_LEAGUES: ReadonlySet<string> = new Set(['NHL', 'NBA']);", "const TICKET_PACKAGE_LEAGUES: ReadonlySet<string> = new Set(['NHL', 'NBA', 'MLB', 'MLS', 'WNBA', 'NFL']);", [T_PKG, T_PKG_DATA]],
   ['a false flag read as a package', TP, '  return data?.ticketPackageRequired === true;', '  return data?.ticketPackageRequired !== undefined;', [T_PKG_DATA]],
-  ['the package group not rendered', PAGE, '            <TicketPackageList packages={ticketPackages} />\n', '', [T_PKG]],
+  ['the package group not rendered', PAGE, '            <TicketPackageList packages={ticketPackages} arrivalHighlight={hasNoPromosAtAll} />\n', '', [T_PKG]],
   ['a past package offered', TP, '  return rows.filter((p) => isUpcomingPromo(p, today)).sort((a, b) => a.date.localeCompare(b.date));', '  return [...rows].sort((a, b) => a.date.localeCompare(b.date));', [T_PKG]],
   ['a package row without the special-ticket note', TPL, '      <p className="mt-1 font-rd text-sm leading-relaxed text-rd-ink-soft">{TICKET_PACKAGE_ROW_NOTE}</p>\n', '', [T_PKG]],
   ['the group heading count off', TPL, '            {ticketPackagesHeading(packages.length)}', '            {ticketPackagesHeading(packages.length + 1)}', [T_PKG]],
@@ -141,6 +141,14 @@ const CASES = [
   ['/teams counts packages as promotions', 'src/app/teams/page.tsx', '      const { promos } = partitionTicketPackages(await getTeamPromos(t.id), isTicketPackagePromo, t.league);', '      const promos = await getTeamPromos(t.id);', [T_R1]],
   ['the rivals block switched on for NHL/NBA', PAGE, '  const rivals = isSplitSeasonLeague(team.league) ? [] : getDivisionRivals(team, gameContexts);', '  const rivals = getDivisionRivals(team, gameContexts);', [T_R1]],
   ['"still playing" counts another season\'s games', LIST, '        c.game.date >= today &&\n        splitSeasonStartYear(c.game.date) === SPLIT_SEASON_START_YEAR,', '        c.game.date >= today,', [T_R1]],
+  // ---- Review round 3 ----
+  ['the status line beside playoff promos or every-game deals', ANN, '  if (opts.hasOtherPromos) return null;\n', '', [T_R1]],
+  ['the page does not tell the status line about other promos', PAGE, '    hasOtherPromos: (inPlayoffs && playoffPromos.length > 0) || recurringDeals.length > 0,\n', '', [T_R1]],
+  ['package rows without their #promo- anchors', TPL, '    <li id={`promo-${promoAnchorId(promo)}`} className', '    <li className', [T_PKG]],
+  ['the package details not marked for the arrival effect', TPL, '<details className="mt-3" data-ticket-packages>', '<details className="mt-3">', [T_PKG]],
+  ['an arrival into a closed package group does not open it', 'src/components/redesign/PromoArrivalHighlight.tsx', '      if (packages && !packages.open) packages.open = true;\n', '', [T_R1]],
+  ['a packages-only page with no arrival effect', TPL, '      {arrivalHighlight ? <PromoArrivalHighlight /> : null}\n', '', [T_R1]],
+  ['the season-constant guard never fires (its due date moved past today)', T_LEAGUE, 'const due = Date.UTC(SPLIT_SEASON_START_YEAR + 1, 5, 1);', 'const due = Date.UTC(SPLIT_SEASON_START_YEAR, 5, 1);', [T_LEAGUE]],
   ['an unplaceable archive row dropped', LABEL, '    if (y === null) {\n      unplaced.push(i);\n      return;\n    }', '    if (y === null) return;', [T_R1]],
 ];
 

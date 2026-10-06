@@ -127,10 +127,15 @@ export function scheduleStatusLine(opts: {
   seasonResolved: boolean;
   /** The page lists special-ticket packages for the season. */
   hasTicketPackages?: boolean;
+  /** The page shows other promotions: playoff promos or every-game deals.
+   *  "Hasn't recorded any ... promotions" would sit next to them (review
+   *  round 3), so the line is left off. */
+  hasOtherPromos?: boolean;
   teamId: string;
   displayName: string;
   today: string;
 }): string | null {
   if (!opts.showSchedule || opts.seasonResolved || !isSplitSeasonLeague(opts.league)) return null;
+  if (opts.hasOtherPromos) return null;
   return announcementLine(opts.teamId, opts.displayName, opts.today, { hasTicketPackages: opts.hasTicketPackages });
 }

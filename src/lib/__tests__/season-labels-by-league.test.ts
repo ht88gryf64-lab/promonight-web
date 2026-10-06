@@ -22,6 +22,7 @@ import {
   seasonSpan,
   splitSeasonLabel,
   splitSeasonStartYear,
+  SPLIT_SEASON_START_YEAR,
 } from '../season-label';
 import { resolveClaimMode, resolveSeasonScope, seasonClaimSentence } from '../season-scope';
 import { generateTeamFAQs } from '../promo-helpers';
@@ -176,5 +177,21 @@ describe('FAQ counts only the season it names', () => {
     const claim = resolveClaimMode(rows, 'NBA', TODAY);
     const faqs = generateTeamFAQs(heat, [], null, { giveaway: 0, theme: 0, food: 0, kids: 0 }, coverage, undefined, claim);
     for (const f of faqs) assert.doesNotMatch(`${f.question} ${f.answer}`, /2026 season|2 theme nights|promotional events in the/, f.question);
+  });
+});
+
+describe('the NHL/NBA season constant is current (known-issues 69)', () => {
+  // Reads the REAL clock on purpose: this is the alarm for the July bump. Under
+  // `npm run test:future` the Date global is shifted a year ahead, which would
+  // fail it a year early; performance.timeOrigin + performance.now() is the
+  // unshifted wall clock, so the test can tell and skips itself there.
+  const wall = performance.timeOrigin + performance.now();
+  const shifted = Math.abs(Date.now() - wall) > 86_400_000;
+  test('fails from June 1 of the year the season ends: bump SPLIT_SEASON_START_YEAR', { skip: shifted ? 'clock shifted (test:future); this guard reads the real date' : false }, () => {
+    const due = Date.UTC(SPLIT_SEASON_START_YEAR + 1, 5, 1);
+    assert.ok(
+      wall < due,
+      `SPLIT_SEASON_START_YEAR is ${SPLIT_SEASON_START_YEAR} and the ${splitSeasonLabel(SPLIT_SEASON_START_YEAR)} season ends this summer: bump it before July 1 (docs/known-issues.md entry 69)`,
+    );
   });
 });
