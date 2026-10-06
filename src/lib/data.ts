@@ -39,7 +39,7 @@ import { VENUE_LOCATIONS_STATIC } from './venue-locations';
 import { resolveMlbZone } from './mlb-venue-tz';
 import { gameZoneAbbrev } from './format-game-time';
 import { isSplitSeasonLeague } from './season-label';
-import { isTicketPackageDoc, partitionTicketPackages, type TicketPackagePartition } from './ticket-packages';
+import { isTicketPackageDoc, partitionTicketPackages } from './ticket-packages';
 
 function tsToIso(v: unknown): string | null {
   if (!v) return null;
@@ -215,45 +215,39 @@ export async function getTeamBySlug(slug: string): Promise<Team | null> {
  *  /[sport]/[team] share ONE read instead of two — the same dedupe the CFB
  *  template gets from getCfbSchoolPage. Per-request only: promos stay uncached
  *  across renders so a scan write plus /api/revalidate surfaces immediately. */
-// One read of a team's promos, shared by getTeamPromos and
-// getTeamPromoPartition. `packages` holds the mapped objects whose doc carries
-// ticketPackageRequired true, by identity, so the field itself never has to
-// ride on a Promo (src/lib/ticket-packages.ts).
-const readTeamPromos = cache(
-  async (teamId: string): Promise<{ all: Promo[]; packages: WeakSet<Promo> }> => {
-    const snapshot = await db
-      .collection('teams')
-      .doc(teamId)
-      .collection('promos')
-      .orderBy('date', 'asc')
-      .get();
-    const packages = new WeakSet<Promo>();
-    const mapped = snapshot.docs.map((doc) => {
-      const promo = mapPromoDoc(doc);
-      if (isTicketPackageDoc(doc.data())) packages.add(promo);
-      return promo;
-    });
-    return { all: dedupePromos(mapped.filter(isVisiblePromo)), packages };
-  },
-);
+// Promos whose doc carries ticketPackageRequired true, by object identity, so
+// the field itself never rides on a Promo (src/lib/ticket-packages.ts). Filled
+// by the readers below as they map each doc; a WeakSet, so a row leaves it when
+// nothing holds the row.
+const ticketPackageRows = new WeakSet<Promo>();
 
-export const getTeamPromos = cache(async (teamId: string): Promise<Promo[]> => {
-  return (await readTeamPromos(teamId)).all;
-});
-
-/**
- * A team's visible promos split into what counts and the special-ticket rows
- * (src/lib/ticket-packages.ts). NHL and NBA only; on every other league, and on
- * an NHL or NBA team with no flagged row, `promos` is the very array
- * getTeamPromos returns and `ticketPackages` is empty.
- */
-export async function getTeamPromoPartition(
-  teamId: string,
-  league: string,
-): Promise<TicketPackagePartition<Promo>> {
-  const { all, packages } = await readTeamPromos(teamId);
-  return partitionTicketPackages(all, (p) => packages.has(p), league);
+/** Whether this row's doc was marked as needing a special ticket. Read only
+ *  through partitionTicketPackages, which applies it on NHL and NBA alone. */
+export function isTicketPackagePromo(p: Promo): boolean {
+  return ticketPackageRows.has(p);
 }
+
+function mapPromoDocNotingPackage(doc: FirebaseFirestore.DocumentSnapshot): Promo {
+  const promo = mapPromoDoc(doc);
+  if (isTicketPackageDoc(doc.data())) ticketPackageRows.add(promo);
+  return promo;
+}
+
+// THE SAME AWAIT SHAPE AS BEFORE THE SPLIT, ON PURPOSE. The route calls this
+// exactly as it always did and splits the result synchronously afterwards. A
+// version that awaited an extra layer (a partition reader around this one)
+// moved when the flight stream emitted the metadata and affiliate rows, and
+// renumbered them on 8 MLB and MLS pages with no package at all: identical
+// content, different bytes (WEB6 preview control, 2026-10-05).
+export const getTeamPromos = cache(async (teamId: string): Promise<Promo[]> => {
+  const snapshot = await db
+    .collection('teams')
+    .doc(teamId)
+    .collection('promos')
+    .orderBy('date', 'asc')
+    .get();
+  return dedupePromos(snapshot.docs.map(mapPromoDocNotingPackage).filter(isVisiblePromo));
+});
 
 export async function getPromosForDate(date: string): Promise<PromoWithTeam[]> {
   const teams = await getAllTeams();
@@ -1021,13 +1015,8 @@ async function getTeamPromosOnDates(teamId: string, dates: Set<string>, league: 
   // leagues where the flag is a verdict, exactly as they stay off the
   // opponent's own counts. Filtered after the dedupe so the surviving document
   // of a duplicate pair is the one getTeamPromos keeps.
-  const packages = new WeakSet<Promo>();
-  const mapped = perRun.flat().map((doc) => {
-    const promo = mapPromoDoc(doc);
-    if (isTicketPackageDoc(doc.data())) packages.add(promo);
-    return promo;
-  });
-  return partitionTicketPackages(dedupePromos(mapped.filter(isVisiblePromo)), (p) => packages.has(p), league)
+  const mapped = perRun.flat().map(mapPromoDocNotingPackage);
+  return partitionTicketPackages(dedupePromos(mapped.filter(isVisiblePromo)), isTicketPackagePromo, league)
     .promos.filter((p) => dates.has(p.date));
 }
 

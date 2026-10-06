@@ -1,7 +1,8 @@
 /* Special-ticket items are not theme nights, giveaways or food deals
  * (WEB6 addendum, 2026-10-05). Rendered as the WHOLE team page.
  *
- * The route splits a team's rows once (getTeamPromoPartition) and gives every
+ * The route splits a team's rows once (partitionTicketPackages, right after
+ * getTeamPromos) and gives every
  * count site the counted array. These tests render RedesignTeamPage the way the
  * route calls it and check each count site in the served markup:
  *   hero tiles and the season sentence, the promo list's "N upcoming events"
@@ -219,10 +220,11 @@ describe('pages with no special-ticket items render exactly as before', () => {
 
 describe('the route wires every count site to the counted array', () => {
   const src = readFileSync('src/app/[sport]/[team]/page.tsx', 'utf8');
-  test('both reads go through the partition; nothing reads getTeamPromos', () => {
-    assert.match(src, /const \[\{ promos, ticketPackages \}, venue, playoffConfig, coverage\] = await Promise\.all\(\[\n\s+getTeamPromoPartition\(team\.id, team\.league\),/);
-    assert.match(src, /const \[venue, \{ promos \}\] = await Promise\.all\(\[\n\s+getVenueForTeam\(team\.id\),\n\s+getTeamPromoPartition\(team\.id, team\.league\),/);
-    assert.doesNotMatch(src, /getTeamPromos\(/);
+  test('both reads are split right after the read, and nothing else reads allPromos', () => {
+    assert.match(src, /const \{ promos, ticketPackages \} = partitionTicketPackages\(allPromos, isTicketPackagePromo, team\.league\);/);
+    assert.match(src, /const \{ promos \} = partitionTicketPackages\(allPromos, isTicketPackagePromo, team\.league\);/);
+    const code = src.split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n');
+    assert.equal(code.match(/\ballPromos\b/g)?.length, 4, 'two reads, two splits, no other use');
   });
   test('ticketPackages reaches one place: the group, upcoming only', () => {
     const code = src.split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n');

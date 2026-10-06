@@ -15,10 +15,13 @@
 // and 40 clubs there carry it on rows that are real free nights. Reading it
 // there would hide real promotions, and would move pages that must not move.
 //
-// THE FIELD NEVER REACHES A PAGE. The split happens in the data layer
-// (getTeamPromoPartition) and the page receives two arrays of ordinary Promo
-// objects, so no new key enters any RSC payload, and a page with no package
-// rows receives exactly the array it received before.
+// THE FIELD NEVER REACHES A PAGE. getTeamPromos notes the flagged rows by
+// object identity as it maps them (isTicketPackagePromo in src/lib/data.ts),
+// and the route splits the array it read with partitionTicketPackages, in one
+// synchronous line after the read. The page receives two arrays of ordinary
+// Promo objects, so no new key enters any RSC payload, and a page with no
+// package rows receives exactly the array it received before, read with
+// exactly the same awaits.
 import { isUpcomingPromo } from './promo-helpers';
 
 /** Leagues whose stored ticketPackageRequired is a package-pass verdict. */

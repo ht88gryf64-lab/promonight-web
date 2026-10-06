@@ -5,13 +5,14 @@ import Link from 'next/link';
 import {
   getAllTeams,
   getTeamBySlug,
-  getTeamPromoPartition,
+  getTeamPromos,
   getVenueForTeam,
   getPlayoffConfig,
   getPlayoffPromosForTeam,
   getGamesForTeam,
   enrichGamesForTeam,
   getStillAlivePlayoffTeamIds,
+  isTicketPackagePromo,
 } from '@/lib/data';
 import type { Promo, PromoType } from '@/lib/types';
 import { TeamHero } from '@/components/team-hero';
@@ -45,7 +46,7 @@ import { isTitleTreatmentTeam, teamMetaTitle } from '@/lib/title-treatment';
 import { getCoverageCounts } from '@/lib/get-coverage-counts';
 import { isSeasonScopeLive, resolveClaimMode } from '@/lib/season-scope';
 import { currentSeasonLabel, isSplitSeasonLeague } from '@/lib/season-label';
-import { upcomingTicketPackages } from '@/lib/ticket-packages';
+import { partitionTicketPackages, upcomingTicketPackages } from '@/lib/ticket-packages';
 import { RedesignTeamPage } from '@/components/redesign/RedesignTeamPage';
 
 export const revalidate = 86400;
@@ -77,13 +78,14 @@ export async function generateMetadata({
   const team = await getTeamBySlug(teamSlug);
   if (!team) return {};
 
+  const [venue, allPromos] = await Promise.all([
+    getVenueForTeam(team.id),
+    getTeamPromos(team.id),
+  ]);
   // The promos the snippet may name: special-ticket rows (NHL and NBA) are
   // not promotions on this page, so the snippet does not list them as such.
-  // Identical to getTeamPromos everywhere else (src/lib/ticket-packages.ts).
-  const [venue, { promos }] = await Promise.all([
-    getVenueForTeam(team.id),
-    getTeamPromoPartition(team.id, team.league),
-  ]);
+  // The same array everywhere else (src/lib/ticket-packages.ts).
+  const { promos } = partitionTicketPackages(allPromos, isTicketPackagePromo, team.league);
 
   // Hardcoded, NOT new Date().getFullYear(): an auto-rolling year would flip
   // every title to "...2027" at midnight on Jan 1 — before the 2027 promo data
@@ -291,19 +293,21 @@ export default async function TeamPage({
   // team count and league list that reach the FAQ answers and their FAQPage
   // schema. Issued alongside the reads already in flight, so it adds no
   // latency. It replaces hardcoded literals that had already gone stale.
-  // THE SPLIT (src/lib/ticket-packages.ts). `promos` is everything that counts
-  // and is the only array any count site below ever reads: the hero, the "All
-  // N" line, the FAQ and its FAQPage schema, the JSON-LD events, the content
-  // sections, the calendar and the game rows. `ticketPackages` holds the NHL
-  // and NBA rows the pipeline marks as needing a special ticket, and reaches
-  // exactly one place, their own group. On every other page it is empty and
-  // `promos` is the array getTeamPromos returns.
-  const [{ promos, ticketPackages }, venue, playoffConfig, coverage] = await Promise.all([
-    getTeamPromoPartition(team.id, team.league),
+  const [allPromos, venue, playoffConfig, coverage] = await Promise.all([
+    getTeamPromos(team.id),
     getVenueForTeam(team.id),
     shouldCheckPlayoffs ? getPlayoffConfig() : Promise.resolve(null),
     getCoverageCounts(),
   ]);
+
+  // THE SPLIT (src/lib/ticket-packages.ts), synchronous, after the read. `promos`
+  // is everything that counts and is the only array any count site below ever
+  // reads: the hero, the "All N" line, the FAQ and its FAQPage schema, the
+  // JSON-LD events, the content sections, the calendar and the game rows.
+  // `ticketPackages` holds the NHL and NBA rows the pipeline marks as needing a
+  // special ticket, and reaches exactly one place, their own group. On every
+  // other page it is empty and `promos` IS allPromos.
+  const { promos, ticketPackages } = partitionTicketPackages(allPromos, isTicketPackagePromo, team.league);
 
   const inPlayoffs =
     !!playoffConfig?.playoffsActive &&
