@@ -386,7 +386,7 @@ test('no Eastern-day formatter written with a literal zone outside the known one
 const CLOCK_AND_FORMATTER = new Map<string, [number, string]>([
   ['lib/site-today.ts', [2, 'the site day itself']],
   ['lib/cfb/clock.ts', [1, "todayYMD(zone): a venue's day for CFB played/upcoming"]],
-  ['lib/nightly-refresh.ts', [2, 'Date.now() times the warm-up and verify budgets; the hour it formats is SITE_TIME_ZONE (the 00:00 window)']],
+  ['lib/nightly-refresh.ts', [4, 'Date.now() defaults for the budget clocks (fan-out, warm, retry, verify); the hour it formats is SITE_TIME_ZONE (the 00:00 window)']],
   ['components/my-teams-view.tsx', [2, 'Date.now() stamps the geo cache; the day is siteTodayYmd()']],
   ['components/team-hero.tsx', [2, 'legacy hero: the year label and an Eastern "Last updated"']],
   ['components/browse-collections.tsx', [1, 'the year suffix, formatted in SITE_TIME_ZONE']],
