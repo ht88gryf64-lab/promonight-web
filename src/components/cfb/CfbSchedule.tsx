@@ -34,7 +34,7 @@ function ScheduleRow({ g, last, onOpen, school, venue }: { g: CfbGameView; last:
   const detail = g.internationalVenue
     ? [g.internationalVenue.name, g.internationalVenue.city, 'Neutral site'].join(' · ')
     : [gameVenue?.name ?? null, venueCity(gameVenue), g.neutralSite ? 'Neutral site' : g.isHome ? 'Home' : 'Away'].filter(Boolean).join(' · ');
-  // A played game (dated before today, America/Chicago) is not a fixture: no
+  // A played game (dated before today where it is played) is not a fixture: no
   // gameday modal, no kickoff, no "Kickoff TBA". No result is known, so none is
   // shown; the row reads PLAYED and dims. Rendered as a div, not a button.
   const rowClass = `group grid w-full grid-cols-[56px_1fr_auto_16px] items-center gap-3 px-4 py-3.5 text-left transition-colors sm:grid-cols-[64px_1fr_auto_16px] sm:gap-5 sm:px-6 ${g.played ? 'opacity-50' : g.rivalry ? 'cursor-pointer hover:brightness-110' : 'cursor-pointer hover:bg-white/[0.03]'}`;

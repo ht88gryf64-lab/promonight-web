@@ -6,25 +6,13 @@ import { TrackedTapLink } from '@/components/analytics/TrackedTapLink';
 import { TicketsBlock } from '@/components/affiliates/TicketsBlock';
 import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
 import { IconFlame, IconArrowRight } from '@tabler/icons-react';
+import { siteTodayYmd } from '@/lib/site-today';
 
 // Cap the rail so it stays a focused lead-in. getMlbSlate is already one promo
 // per team, date-sorted, so this is the soonest teams. Exhaustive, crawlable
 // team coverage lives in the division grid below.
 const RAIL_LIMIT = 8;
 
-// Chicago-anchored today, matching getMlbSlate's window anchor, so days_out on
-// the tap event is consistent with the slate bounds. Duplicated small helper,
-// consistent with the existing date helpers scattered across the app.
-function chicagoTodayYMD(): string {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Chicago',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date());
-  const part = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
-  return `${part('year')}-${part('month')}-${part('day')}`;
-}
 
 function daysBetween(a: string, b: string): number {
   const [ay, am, ad] = a.split('-').map(Number);
@@ -61,7 +49,9 @@ export function HubThisWeek({
 }) {
   if (slate.length === 0) return null;
 
-  const today = chicagoTodayYMD();
+  // The site's day, the same one getLeagueSlate's window starts on, so days_out
+  // on the tap event agrees with the slate bounds.
+  const today = siteTodayYmd();
   const items = slate.slice(0, RAIL_LIMIT);
 
   const byDate = new Map<string, PromoWithTeam[]>();

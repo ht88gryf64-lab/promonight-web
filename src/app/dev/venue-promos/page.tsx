@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { archivoHouse } from '@/components/redesign/fonts-house';
-import { getTeamBySlug, getTeamPromos, promoBoardChicagoYMD } from '@/lib/data';
+import { getTeamBySlug, getTeamPromos, promoBoardYMD } from '@/lib/data';
 import type { VenueHubWeekPromo } from '@/lib/venue-hub';
 import { HubPromosThisWeek } from '@/components/venue-hub/HubPromosThisWeek';
 
@@ -24,8 +24,8 @@ export default async function VenuePromosDebugPage() {
     notFound();
   }
 
-  const start = promoBoardChicagoYMD(0);
-  const end = promoBoardChicagoYMD(7);
+  const start = promoBoardYMD(0);
+  const end = promoBoardYMD(7);
 
   const items: VenueHubWeekPromo[] = [];
   for (const slug of [LEFT_TEAM, RIGHT_TEAM]) {

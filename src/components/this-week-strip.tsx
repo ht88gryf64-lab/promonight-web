@@ -23,8 +23,8 @@ function formatDateParts(dateStr: string) {
   };
 }
 
-// `today` is YYYY-MM-DD in America/Chicago, passed by the homepage so the
-// strip can compute days_out without re-deriving "today" from a UTC clock.
+// `today` is the site's YYYY-MM-DD (America/New_York, src/lib/site-today.ts),
+// passed by the homepage so the strip computes days_out on the same day.
 export function ThisWeekStrip({ promos, today }: { promos: PromoWithTeam[]; today: string }) {
   if (promos.length === 0) return null;
 

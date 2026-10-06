@@ -9,6 +9,7 @@ import { prerenderWindowDates } from '@/lib/render-windows';
 import { IconChevronLeft, IconChevronRight, IconArrowRight, IconX } from '@tabler/icons-react';
 import { RD_CATEGORIES } from './categories';
 import { GameExpand, LegacyPromoExpand } from './GameExpand';
+import { siteTodayYmd } from '@/lib/site-today';
 
 // Redesign v2 season calendar. A faithful fork of team-calendar.tsx:
 //   - SAME data derivation (promosByDate, gameCtxsByDate, monthsWithContent,
@@ -50,8 +51,8 @@ interface CalendarGridProps {
    * down. NOT read from the clock here, and that is the whole point.
    *
    * This is a client component, so it renders twice: on the server when the
-   * ISR copy is generated (in UTC, then frozen for up to a day), and on the
-   * visitor's device at hydration (their clock, their timezone). It used to
+   * ISR copy is generated (the site's Eastern day, then frozen for up to a
+   * day), and on the visitor's device at hydration (their clock). It used to
    * call `new Date()` in render for "today", and "today" decides which game
    * days get a hidden, server-rendered detail panel below the grid. Whenever a
    * game date fell between the copy's today and the visitor's today, one side
@@ -60,8 +61,9 @@ interface CalendarGridProps {
    * and 82% of MLB pageviews in the 21:00 Central hour (known-issues entry 52).
    *
    * Rendering both sides from the SAME string makes the HTML identical by
-   * construction. The visitor's real today is read after mount, in an effect,
-   * and moves only the ring on the grid cell.
+   * construction. The real today (the site's Eastern day on the visitor's
+   * clock) is read after mount, in an effect, and moves only the ring on the
+   * grid cell.
    */
   today: string;
 }
@@ -106,15 +108,15 @@ export function CalendarGrid({
     [todayKey],
   );
 
-  // The visitor's own clock, read AFTER hydration so it can never disagree
-  // with the server HTML. It drives the isToday ring and nothing else: not the
+  // The visitor's clock, read AFTER hydration so it can never disagree with
+  // the server HTML. It drives the isToday ring and nothing else: not the
   // prerender window, not the initial month, not the next-game lookup.
   const [visitorTodayKey, setVisitorTodayKey] = useState<string | null>(null);
   useEffect(() => {
-    const d = new Date();
-    setVisitorTodayKey(
-      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
-    );
+    // The site's day (America/New_York) on the visitor's clock, not the
+    // device's own calendar day, so the ring sits on the same day as the
+    // server's todayStr, the hubs and the boards (src/lib/site-today.ts).
+    setVisitorTodayKey(siteTodayYmd());
   }, []);
   const ringKey = visitorTodayKey ?? todayKey;
 

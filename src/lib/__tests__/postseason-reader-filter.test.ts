@@ -19,7 +19,7 @@
 //   getFeedSelection (social)     mapPromoDoc + isVisiblePromo, and the candidate filter
 //   findCardPromo (social)        resolveCard's own check
 //   GET /api/my-teams/promos      the route's raw-doc filter
-//   getPromoCount                 NOT filtered: a count aggregate over the group; the postseason rows are inside it the way tombstones are (see data.ts)
+//   getPromoCount                 NOT filtered for postseason: a count aggregate over the group; the postseason rows are inside it the way tombstones are (see data.ts). NHL/NBA packages are subtracted (WEB6 G3)
 //
 // Run with: node --import tsx --experimental-test-module-mocks --test <this file>
 import { test, mock } from 'node:test';

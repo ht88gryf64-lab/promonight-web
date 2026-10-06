@@ -9,6 +9,7 @@ import { ScoringPageViewTracker } from '@/components/scoring/scoring-page-view-t
 import { teamDisplayName } from '@/lib/promo-helpers';
 import { isRedesignEnabled } from '@/lib/redesign';
 import { archivoHouse } from '@/components/redesign/fonts-house';
+import { siteYmd } from '@/lib/site-today';
 
 export const revalidate = 86400;
 
@@ -17,8 +18,10 @@ const PAGE_URL = 'https://www.getpromonight.com/team-rankings';
 // bump deliberately when next-season content is ready).
 const YEAR = 2026;
 
+// The site's calendar day, America/New_York (src/lib/site-today.ts). It was the
+// server's local day (UTC on Vercel) until WEB6 G3 (2026-10-06).
 function localYMD(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return siteYmd(d);
 }
 
 // Team count is DERIVED from teamScores at metadata time so it can never

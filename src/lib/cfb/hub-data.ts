@@ -7,10 +7,10 @@
 // Theme games were removed 2026-08-25: cfbTraditions has 2 docs and 0 school
 // references, so a theme rail had nothing to derive from. It returns with data.
 //
-// Weekly rail (§14a): the current CFB week's rivalry games (CT-anchored Mon–Sun
-// window) — on Monday AM the window advances so last weekend drops and the coming
-// weekend shows. This is a pure date-window ISR DISPLAY cutover (no scrape),
-// reusing the homepage's America/Chicago "today" anchor. Offseason (no games in
+// Weekly rail (§14a): the current CFB week's rivalry games (Mon–Sun window on
+// the site's Eastern day). On Monday AM the window advances so last weekend
+// drops and the coming weekend shows. This is a pure date-window ISR DISPLAY cutover (no scrape),
+// reusing the site's one "today" (src/lib/site-today.ts, Eastern since WEB6 G3). Offseason (no games in
 // the window) → falls back to the soonest upcoming rivalry games.
 
 import { db } from '@/lib/firebase';
@@ -18,10 +18,10 @@ import { matchupEntryForSlug } from '@/lib/cfb/matchup-registry';
 import { resolveMatchupDisplayName } from '@/lib/cfb/display-name';
 import { CFB_COLLECTIONS, type CfbSchool, type CfbGame, type CfbRivalry } from '@/lib/cfb/types';
 import { CFB_CONF_BUCKET_ORDER, type CfbConfBucket } from '@/lib/cfb/conferences';
-import { chicagoTodayYMD, dateRangeLabel } from '@/lib/cfb/clock';
+import { siteTodayYMD, dateRangeLabel } from '@/lib/cfb/clock';
 
-// ── CT-anchored date helpers (same anchor as the homepage; no scrape).
-//    chicagoTodayYMD lives in clock.ts now, shared with the school pages. ──
+// ── Date helpers on the site's day (same anchor as the homepage; no scrape).
+//    siteTodayYMD lives in clock.ts, shared with the school pages. ──
 function dow(ymd: string): number {
   const [y, m, d] = ymd.split('-').map(Number);
   return new Date(Date.UTC(y, m - 1, d)).getUTCDay();
@@ -117,7 +117,7 @@ export async function getCfbHubData(): Promise<CfbHubData> {
   const rivalryById = new Map<string, CfbRivalry>();
   for (const d of rivalriesSnap.docs) rivalryById.set(d.id, d.data() as CfbRivalry);
 
-  const today = chicagoTodayYMD();
+  const today = siteTodayYMD();
 
   // Build the rivalry-game list (both schools tracked + a date present).
   const games: HubRivalryGame[] = [];

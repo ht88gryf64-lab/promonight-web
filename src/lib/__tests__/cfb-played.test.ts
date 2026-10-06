@@ -1,10 +1,10 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { isPlayedGame, chicagoTodayYMD, todayYMD, venueTodayYMD, dateRangeLabel } from '../cfb/clock';
+import { isPlayedGame, siteTodayYMD, todayYMD, venueTodayYMD, dateRangeLabel } from '../cfb/clock';
 
 // No status transition exists: cfbGames.status is 'scheduled' on all 670 docs,
 // including the six Aug 29 games already played. "Played" is derived from the
-// date against the America/Chicago calendar day the hub already anchors on.
+// date against the venue's calendar day, falling back to the site's day.
 
 describe('isPlayedGame', () => {
   test('a game dated before today is played', () => {
@@ -22,8 +22,8 @@ describe('isPlayedGame', () => {
 });
 
 describe('today in a zone', () => {
-  test('chicagoTodayYMD returns a YYYY-MM-DD', () => {
-    assert.match(chicagoTodayYMD(), /^\d{4}-\d{2}-\d{2}$/);
+  test('siteTodayYMD returns a YYYY-MM-DD', () => {
+    assert.match(siteTodayYMD(), /^\d{4}-\d{2}-\d{2}$/);
   });
   test('the played boundary is the calendar day where the game is, not Chicago', () => {
     // Honolulu is 5 hours behind Chicago; the two can disagree on the date for
@@ -36,8 +36,8 @@ describe('today in a zone', () => {
     assert.equal(venueTodayYMD('Pacific/Honolulu'), hnl);
   });
   test('an unmapped venue falls back to the site anchor, an invalid zone too', () => {
-    assert.equal(venueTodayYMD(null), chicagoTodayYMD());
-    assert.equal(venueTodayYMD('Not/AZone'), chicagoTodayYMD());
+    assert.equal(venueTodayYMD(null), siteTodayYMD());
+    assert.equal(venueTodayYMD('Not/AZone'), siteTodayYMD());
   });
 });
 

@@ -11,6 +11,7 @@ import {
 } from '@/lib/ebay';
 import { synthPromoId } from '@/lib/promo-helpers';
 import type { Promo } from '@/lib/types';
+import { siteTodayYmd } from '@/lib/site-today';
 
 // "Missed it? Check resale on eBay" — tertiary CTA on completed bobblehead
 // giveaway rows. Self-guarding: renders nothing unless the EPN campid is set,
@@ -40,7 +41,7 @@ export function EbayResaleLink({
   variant?: 'light' | 'dark';
 }) {
   if (!isEbayResaleActive() || !isBobbleheadGiveaway(promo)) return null;
-  if (promo.date >= new Date().toISOString().slice(0, 10)) return null;
+  if (promo.date >= siteTodayYmd()) return null;
 
   const href = buildEbayResaleUrl({ promo, teamSlug, teamNickname, placement });
 

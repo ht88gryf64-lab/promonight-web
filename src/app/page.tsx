@@ -11,6 +11,7 @@ import {
   getPromosInDateRange,
 } from '@/lib/data';
 import type { GameContext } from '@/lib/data';
+import { SITE_TIME_ZONE, addDaysYmd, siteTodayYmd } from '@/lib/site-today';
 import type { PromoWithTeam, Team } from '@/lib/types';
 import { TonightStrip, pickHeroBuckets } from '@/components/tonight-strip';
 import { ThisWeekStrip } from '@/components/this-week-strip';
@@ -44,29 +45,13 @@ export const metadata: Metadata = {
   alternates: { canonical: 'https://www.getpromonight.com' },
 };
 
-// Date math anchored to America/Chicago so the homepage doesn't say "tonight"
-// for a UTC-day-ahead date (cosmetic bug we hit on the team pages).
-function chicagoTodayYMD(): string {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Chicago',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date());
-  const part = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
-  return `${part('year')}-${part('month')}-${part('day')}`;
-}
-
-function plusDays(ymd: string, n: number): string {
-  const [y, m, d] = ymd.split('-').map(Number);
-  const dt = new Date(Date.UTC(y, m - 1, d + n));
-  return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`;
-}
-
-function formatChicagoLong(ymd: string): string {
+// Date math on the site's one calendar day, America/New_York
+// (src/lib/site-today.ts), so "tonight" here is the same day the team pages,
+// hubs and boards are on. It was America/Chicago until WEB6 G3 (2026-10-06).
+function formatSiteLong(ymd: string): string {
   const [y, m, d] = ymd.split('-').map(Number);
   return new Date(Date.UTC(y, m - 1, d, 12)).toLocaleDateString('en-US', {
-    timeZone: 'America/Chicago',
+    timeZone: SITE_TIME_ZONE,
     month: 'long',
     day: 'numeric',
     year: 'numeric',
@@ -269,10 +254,10 @@ async function resolveCardContexts(
 }
 
 export default async function HomePage() {
-  const today = chicagoTodayYMD();
-  const weekStart = plusDays(today, 2);
-  const weekEnd = plusDays(today, 7);
-  const tonightWindowEnd = plusDays(today, 14);
+  const today = siteTodayYmd();
+  const weekStart = addDaysYmd(today, 2);
+  const weekEnd = addDaysYmd(today, 7);
+  const tonightWindowEnd = addDaysYmd(today, 14);
 
   const [regularWindow, playoffWindow, allFuture, allTeams, promoCount, venueCounts] =
     await Promise.all([
@@ -306,7 +291,7 @@ export default async function HomePage() {
   // virtue of TeamGrid taking the prop's order on the All filter.
   const teamsForGrid: Team[] = sortedTeams;
 
-  const lastUpdated = formatChicagoLong(today);
+  const lastUpdated = formatSiteLong(today);
   // Coverage facts derived from the teams already fetched above. Replaces the
   // hardcoded 169, the per-league split, and the league count that shipped in
   // homepage prose and in FAQPage schema on both gate variants.

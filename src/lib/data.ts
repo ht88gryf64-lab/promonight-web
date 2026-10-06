@@ -31,7 +31,8 @@ import {
   type NflWeekContext,
   type NflClubCounts,
 } from './nfl-week';
-import { dedupePromos, isUpcomingPromo, isVisiblePromo, resolveIcon } from './promo-helpers';
+import { dedupePromos, isUpcomingPromo, isVisiblePromo, resolveIcon, todayYmd } from './promo-helpers';
+import { addDaysYmd, siteTodayPlusDays, siteTodayYmd, siteYmd } from './site-today';
 import { getVenueOverride } from './venue-overrides';
 import { bagPolicyUrlFor, nearbySilenced, redactClause } from '@/lib/venue-corpus-silence';
 import { VENUE_RESOLUTION_MAP } from './venue-resolution-map';
@@ -247,11 +248,10 @@ function promoWithTeam(doc: FirebaseFirestore.DocumentSnapshot, team: Team): Pro
  * So every cross-team reader leaves it out: the homepage lists and tiles,
  * /promos/*, the league hubs, the email digest and anything else built on these
  * readers, and with it any card that would deep-link to a row the team page
- * does not list as a promotion. NOT the homepage "Promos tracked" figure
- * (getPromoCount): that is a raw count() of every promo document, which by an
- * earlier ruling also includes tombstoned and postseason rows, and an
- * aggregate query cannot filter on the flag. Inert on every other league (the flag there is the extractor's raw
- * guess) and on any row without the flag.
+ * does not list as a promotion. The homepage "Promos tracked" figure
+ * (getPromoCount) is a count() aggregate, not rows, so it subtracts the flagged
+ * NHL and NBA documents itself (WEB6 G3). Inert on every other league (the flag
+ * there is the extractor's raw guess) and on any row without the flag.
  */
 export function dropTicketPackageRows<T extends PromoWithTeam>(rows: T[]): T[] {
   return rows.filter((p) => !(isTicketPackageLeague(p.team.league) && ticketPackageRows.has(p)));
@@ -314,40 +314,28 @@ export async function getPromosForDate(date: string): Promise<PromoWithTeam[]> {
   }
 }
 
-// America/Chicago YMD, optionally offset by whole days. The single national
-// "today" boundary for the /promos/today board — mirrors the homepage + league
-// hub anchors so the page never shows tomorrow's date late-night on the East
-// coast or lags the day rollover. Offset math is pure calendar arithmetic
-// (Date.UTC), DST-safe because it never touches wall-clock time.
-export function promoBoardChicagoYMD(offsetDays = 0): string {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Chicago',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date());
-  const part = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
-  const base = `${part('year')}-${part('month')}-${part('day')}`;
-  if (!offsetDays) return base;
-  const [y, m, d] = base.split('-').map(Number);
-  const dt = new Date(Date.UTC(y, m - 1, d + offsetDays));
-  return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`;
+// The /promos/today board's day, optionally offset by whole days: the site's
+// one calendar day, America/New_York (src/lib/site-today.ts), the same day the
+// team pages, hubs and homepage use. It was America/Chicago until WEB6 G3
+// (2026-10-06).
+export function promoBoardYMD(offsetDays = 0): string {
+  return siteTodayPlusDays(offsetDays);
 }
 
-// All-league promos dated exactly today (Chicago-anchored). cache()-wrapped so
+// All-league promos dated exactly today (the site's Eastern day). cache()-wrapped so
 // the /promos/today page and every per-league hub today-module share ONE query
 // per request. getPromosForDate dedupes only exact (team, date, title) repeats,
 // so two different promos at the same game both survive — the right density for a
 // daily board.
 export const getTodayPromos = cache(async (): Promise<PromoWithTeam[]> => {
-  return getPromosForDate(promoBoardChicagoYMD(0));
+  return getPromosForDate(promoBoardYMD(0));
 });
 
 // All-league promos dated exactly tomorrow. Same single-date query path as
-// getTodayPromos, just the next Chicago calendar day — no separate tomorrow query
+// getTodayPromos, just the next calendar day; no separate tomorrow query
 // logic.
 export const getTomorrowPromos = cache(async (): Promise<PromoWithTeam[]> => {
-  return getPromosForDate(promoBoardChicagoYMD(1));
+  return getPromosForDate(promoBoardYMD(1));
 });
 
 // Today's promos narrowed to one league. The shared "promos dated today for
@@ -360,7 +348,7 @@ export async function getLeagueTodayPromos(league: string): Promise<PromoWithTea
 }
 
 export async function getHighlightedPromos(limit: number = 6): Promise<PromoWithTeam[]> {
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayYmd();
 
   // Try collection group query first (requires composite index).
   // Fall back to per-team sampling if the index doesn't exist yet.
@@ -507,8 +495,24 @@ export async function getPromoCount(): Promise<number> {
   // cannot be subtracted here: an equality on a collection GROUP needs an
   // index that does not exist (the build failed on it), and this is the one
   // reader that is a number, not rows.
-  const snapshot = await db.collectionGroup('promos').count().get();
-  return snapshot.data().count;
+  //
+  // TICKET PACKAGES ARE SUBTRACTED (WEB6 G3, 2026-10-06), the same rule as
+  // every other count on the site: an NHL or NBA row with
+  // ticketPackageRequired === true is not a promotion (src/lib/ticket-packages.ts).
+  // The collection-group equality is the index this cannot use, so it is one
+  // count() per NHL and NBA club, each on the automatic single-field index of
+  // that club's own promos collection. Flagged rows are subtracted whether or
+  // not they are tombstoned, because the total above holds both. The raw flag
+  // on MLB, MLS and WNBA rows is ignored here as everywhere.
+  const teams = await getAllTeams();
+  const packageClubs = teams.filter((t) => isTicketPackageLeague(t.league));
+  const [total, ...packages] = await Promise.all([
+    db.collectionGroup('promos').count().get(),
+    ...packageClubs.map((t) =>
+      db.collection('teams').doc(t.id).collection('promos').where('ticketPackageRequired', '==', true).count().get(),
+    ),
+  ]);
+  return total.data().count - packages.reduce((n, s) => n + s.data().count, 0);
 }
 
 // READ-COST NOTE. This resolves off the cached venues collection (148 docs)
@@ -741,19 +745,13 @@ export async function getPlayoffPromosForTeam(
   return promos.map((p) => ({ ...p, team, venue }));
 }
 
-// Converts a playoff promo's ISO timestamp to a YYYY-MM-DD string in
-// America/Chicago — same anchor the homepage uses for "tonight" math, so a
-// late-night East-coast playoff game doesn't slide into the next day on the UTC
-// clock and miss the tonight bucket.
-function isoToChicagoYMD(iso: string): string {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Chicago',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date(iso));
-  const part = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
-  return `${part('year')}-${part('month')}-${part('day')}`;
+// Converts a playoff promo's ISO timestamp (the game's start) to the site's
+// calendar day, America/New_York, the same day the "tonight" bucket is cut on
+// (src/lib/site-today.ts). The latest NBA and NHL playoff starts are 10:30 PM
+// Eastern, so a game never lands on the next Eastern day. It was
+// America/Chicago until WEB6 G3 (2026-10-06).
+function isoToSiteYMD(iso: string): string {
+  return siteYmd(new Date(iso));
 }
 
 function extractOpponentFromGameInfo(gameInfo: string): string {
@@ -787,7 +785,7 @@ export async function getPlayoffPromosInDateRange(
     const p = mapPlayoffPromoDoc(doc);
     if (!aliveIds.has(p.teamId)) continue;
     if (!p.date) continue;
-    const ymd = isoToChicagoYMD(p.date);
+    const ymd = isoToSiteYMD(p.date);
     if (ymd < startYMD || ymd > endYMD) continue;
     const team = teamById.get(p.teamId);
     if (!team) continue;
@@ -1499,31 +1497,17 @@ export async function getSchemaLocationsForTeams(
 // window and stats math are league-neutral; per-league taxonomy (division vs
 // conference grouping and optional super-headers) is driven by HUB_GROUPING.
 
-// Single shared America/Chicago anchor for every hub's rolling window, mirroring
-// the homepage anchor in src/app/page.tsx so the hub's "this week" window agrees
-// with the homepage rather than drifting a UTC day. One anchor for all leagues
-// on purpose: a per-league timezone would only nudge the far boundary day and
-// would desync the hubs from the homepage. Kept local to the data layer: a route
-// page is the wrong place for a lib module to reach into for a helper.
-function hubTodayChicagoYMD(): string {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Chicago',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date());
-  const part = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
-  return `${part('year')}-${part('month')}-${part('day')}`;
-}
-
-function hubPlusDays(ymd: string, n: number): string {
-  const [y, m, d] = ymd.split('-').map(Number);
-  const dt = new Date(Date.UTC(y, m - 1, d + n));
-  return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`;
+// Every hub's rolling window starts on the site's one calendar day,
+// America/New_York (src/lib/site-today.ts), the same day as the homepage, the
+// team pages and the /promos boards, so a hub card and the team page it links
+// to never disagree about what is still ahead. One anchor for all leagues on
+// purpose. It was America/Chicago until WEB6 G3 (2026-10-06).
+function hubTodayYMD(): string {
+  return siteTodayYmd();
 }
 
 // Rolling forward 7-day slate of a league's promos (today through today+7,
-// Chicago anchored). Reuses the cross-team date-range query and narrows to the
+// the site's Eastern day). Reuses the cross-team date-range query and narrows to the
 // league in memory (promo docs carry no league field; league lives on the parent
 // team), the same shape fetchScoredPromos uses. Every hub league runs a daily
 // cadence, so this is a rolling window, not a fixed weekly slate.
@@ -1531,8 +1515,8 @@ function hubPlusDays(ymd: string, n: number): string {
 // for a cross-team rail. Wrapped in cache() and keyed on `league`, so the page
 // and getLeagueHubStats share one query per request for the same league.
 export const getLeagueSlate = cache(async (league: string): Promise<PromoWithTeam[]> => {
-  const today = hubTodayChicagoYMD();
-  const end = hubPlusDays(today, 7);
+  const today = hubTodayYMD();
+  const end = addDaysYmd(today, 7);
   const all = await getPromosInDateRange(today, end);
   return all.filter((p) => p.team.league === league);
 });
@@ -1659,8 +1643,8 @@ const HUB_GROUPING: Record<string, HubGroupingSpec> = {
   },
 };
 
-// Upcoming visible promo count per team for one league, today (Chicago
-// anchored) onward, keyed by team id. Every team in the league is present in
+// Upcoming visible promo count per team for one league, today (the site's
+// Eastern day) onward, keyed by team id. Every team in the league is present in
 // the result, zero included, so a hub card can say what a zero means instead of
 // falling off the map. One collectionGroup read; league scoping happens in
 // memory because promo docs carry no league field (see getLeagueSlate).
@@ -1681,7 +1665,7 @@ export const getLeagueUpcomingPromoCounts = cache(
         counts[t.id] = 0;
       }
     }
-    const today = hubTodayChicagoYMD();
+    const today = hubTodayYMD();
     const dropPackages = isTicketPackageLeague(league);
     const snapshot = await db.collectionGroup('promos').where('date', '>=', today).get();
     if (!dropPackages) {
@@ -1800,7 +1784,7 @@ export const getNflWeekSlate = cache(async (): Promise<NflWeekSlate> => {
   const all = await getPromosInDateRange(dates[0], dates[dates.length - 1]);
   const nflPromos = all.filter((p) => p.team.league === 'NFL');
   const { byGameId, unmatched } = joinPromosToGames(games, nflPromos);
-  const context = selectDisplayBucket(buckets, byGameId, hubTodayChicagoYMD());
+  const context = selectDisplayBucket(buckets, byGameId, hubTodayYMD());
   if (!context.bucket) return { context, promosByGameId: {}, unmatchedPromos: unmatched };
   const bucketIds = new Set(context.bucket.games.map((g) => g.id));
   const promosByGameId: Record<string, PromoWithTeam[]> = {};
@@ -1821,5 +1805,5 @@ export const getNflClubCounts = cache(async (): Promise<Record<string, NflClubCo
   const dates = games.map((g) => g.date).sort();
   const promos = await getPromosInDateRange(dates[0], dates[dates.length - 1]);
   const nflPromos = promos.filter((p) => p.team.league === 'NFL');
-  return clubRegularSeasonCounts(games, nflPromos, hubTodayChicagoYMD());
+  return clubRegularSeasonCounts(games, nflPromos, hubTodayYMD());
 });

@@ -7,7 +7,7 @@ import {
   getTomorrowPromos,
   getPromosFromDate,
   getVenueForTeam,
-  promoBoardChicagoYMD,
+  promoBoardYMD,
 } from '@/lib/data';
 import type { Venue } from '@/lib/types';
 import { archivoHouse } from '@/components/redesign/fonts-house';
@@ -27,7 +27,7 @@ import {
 
 // 1h ISR keeps the page cached + cheap; the daily post-midnight cron
 // (/api/cron/indexnow-daily) revalidates + warms this path so the rendered date
-// is regenerated the moment the Chicago day rolls over and is never stale.
+// is regenerated just after the site's Eastern day rolls over (05:10 UTC).
 export const revalidate = 3600;
 
 const PAGE_URL = 'https://www.getpromonight.com/promos/today';
@@ -43,8 +43,8 @@ export const metadata: Metadata = {
 };
 
 export default async function PromosTodayPage() {
-  const todayYMD = promoBoardChicagoYMD(0);
-  const tomorrowYMD = promoBoardChicagoYMD(1);
+  const todayYMD = promoBoardYMD(0);
+  const tomorrowYMD = promoBoardYMD(1);
 
   const [today, tomorrow] = await Promise.all([getTodayPromos(), getTomorrowPromos()]);
 

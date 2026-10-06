@@ -67,17 +67,6 @@ export interface PrimetimeLogistics {
   transitText?: string;
 }
 
-function chicagoTodayYMD(): string {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Chicago',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date());
-  const part = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
-  return `${part('year')}-${part('month')}-${part('day')}`;
-}
-
 function formatDayLabel(ymd: string): string {
   return new Date(ymd + 'T12:00:00')
     .toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
@@ -307,7 +296,6 @@ export function NflWeekContainer({
   if (!bucket) return null;
 
   const { primetime, rest } = splitPrimetime(bucket);
-  void chicagoTodayYMD; // retained for parity with sibling hub components
 
   const cardFor = (g: Game, cardSurface: AnalyticsSurface, wide: boolean) => {
     const home = teamsById[g.homeTeamSlug];

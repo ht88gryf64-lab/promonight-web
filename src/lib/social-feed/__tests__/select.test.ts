@@ -49,7 +49,7 @@ async function run(scored: FeedCandidate[], fallback: FeedCandidate[], now = NOW
   return { ...sel, fallbackCalls };
 }
 
-test('window is today through today+7 in Central time, inclusive', () => {
+test('window is today through today+7 on the site\'s Eastern day, inclusive', () => {
   assert.deepEqual(WINDOW, { start: '2026-09-25', end: '2026-10-02' });
   const inside = [promo({ date: '2026-09-25' }), promo({ date: '2026-10-02' })];
   const outside = [promo({ date: '2026-09-24' }), promo({ date: '2026-10-03' })];
@@ -57,13 +57,15 @@ test('window is today through today+7 in Central time, inclusive', () => {
   assert.deepEqual(got.sort(), inside.map((p) => p.promoId).sort());
 });
 
-test('window flips at midnight Central, not midnight UTC (CDT and CST)', () => {
-  // 23:59:59 CDT on Sep 25 is already Sep 26 in UTC.
-  assert.equal(feedWindow(new Date('2026-09-26T04:59:59Z')).start, '2026-09-25');
-  assert.equal(feedWindow(new Date('2026-09-26T05:00:00Z')).start, '2026-09-26');
-  // Winter: offset is 6 hours.
-  assert.equal(feedWindow(new Date('2026-12-02T05:59:59Z')).start, '2026-12-01');
-  assert.equal(feedWindow(new Date('2026-12-02T06:00:00Z')).start, '2026-12-02');
+test('window flips at midnight Eastern, not midnight UTC or Central (EDT and EST)', () => {
+  // WEB6 G3: the site's one day (src/lib/site-today.ts). 23:59:59 EDT on Sep 25
+  // is already Sep 26 in UTC, and still Sep 25 in Central until 05:00Z.
+  assert.equal(feedWindow(new Date('2026-09-26T03:59:59Z')).start, '2026-09-25');
+  assert.equal(feedWindow(new Date('2026-09-26T04:00:00Z')).start, '2026-09-26');
+  assert.equal(feedWindow(new Date('2026-09-26T04:30:00Z')).start, '2026-09-26', 'Central would still say Sep 25');
+  // Winter: offset is 5 hours.
+  assert.equal(feedWindow(new Date('2026-12-02T04:59:59Z')).start, '2026-12-01');
+  assert.equal(feedWindow(new Date('2026-12-02T05:00:00Z')).start, '2026-12-02');
   // Month and year rollover on the end bound.
   assert.equal(feedWindow(new Date('2026-12-28T18:00:00Z')).end, '2027-01-04');
 });

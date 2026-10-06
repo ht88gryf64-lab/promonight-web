@@ -131,7 +131,7 @@ export async function generateMetadata({
   // Falls back to an evergreen sentence when there are no upcoming promos (or,
   // defensively, when not even the first promo fits the budget).
   const DESC_MAX = 160;
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = todayYmd();
   // The snippet is the ONE surface the ctr-diagnostic-sep2026 read measures
   // directly, and the rows this filter removes are all on los-angeles-dodgers,
   // which is in the treatment arm. So the exclusion rides the same league gate

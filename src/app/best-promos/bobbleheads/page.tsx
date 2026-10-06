@@ -11,6 +11,7 @@ import { ScoredJsonLd } from '@/components/scoring/scored-jsonld';
 import { ScoringPageViewTracker } from '@/components/scoring/scoring-page-view-tracker';
 import { isRedesignEnabled } from '@/lib/redesign';
 import { archivoHouse } from '@/components/redesign/fonts-house';
+import { addDaysYmd, siteYmd } from '@/lib/site-today';
 
 export const revalidate = 86400;
 
@@ -29,13 +30,13 @@ const SERVER_FETCH_CAP = 500;
 const ITEMLIST_SCHEMA_CAP = 50;
 const DEFAULT_VIEW_DAYS = 90;
 
+// The site's calendar day, America/New_York (src/lib/site-today.ts). It was the
+// server's local day (UTC on Vercel) until WEB6 G3 (2026-10-06).
 function localYMD(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return siteYmd(d);
 }
 function addDaysYMD(base: Date, days: number): string {
-  const d = new Date(base);
-  d.setDate(d.getDate() + days);
-  return localYMD(d);
+  return addDaysYmd(siteYmd(base), days);
 }
 
 // Distinct vs /best-promos via the item-type scope: the title names
