@@ -3,6 +3,7 @@ import type { Team, Venue, PromoType } from '@/lib/types';
 import { SPORT_ICONS, PROMO_TYPE_LABELS } from '@/lib/types';
 import { teamDisplayName } from '@/lib/promo-helpers';
 import { StarToggle } from './star-toggle';
+import { SITE_TIME_ZONE } from '@/lib/site-today';
 
 interface TeamHeroProps {
   team: Team;
@@ -79,7 +80,7 @@ export function TeamHero({ team, venue, promoCount, promoCounts }: TeamHeroProps
           {new Date().getFullYear()} PROMO SCHEDULE
         </p>
         <p className="text-text-muted text-xs font-mono tracking-[0.5px] mb-6">
-          Last updated {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+          Last updated {new Date().toLocaleDateString('en-US', { timeZone: SITE_TIME_ZONE, month: 'long', day: 'numeric', year: 'numeric' })}
         </p>
 
         {/* Venue info */}

@@ -816,7 +816,8 @@ function daysBetweenYMD(a: string, b: string): number {
 export const getVenueHubWeekPromos = cache(async (hub: VenueHub): Promise<VenueHubWeekPromo[]> => {
   // The site's one calendar day, America/New_York (src/lib/site-today.ts), the
   // same day the league hubs, the daily board and the team pages use, so a card
-  // here and the team row it links to agree on what is still ahead.
+  // here and the team row it links to agree on what is still ahead when both
+  // are rendered on the same Eastern day (CACHED COPIES, src/lib/site-today.ts).
   const start = promoBoardYMD(0);
   const end = promoBoardYMD(WEEK_PROMO_DAYS);
 

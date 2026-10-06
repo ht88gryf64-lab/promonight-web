@@ -133,10 +133,9 @@ export function MyTeamsView({ teams, variant = 'dark' }: MyTeamsViewProps) {
   const { starred, isHydrated, count } = useStarredTeams();
   const [region, setRegion] = useState<string | null>(null);
 
-  // Date stamps are computed once per render but kept stable across SWR
-  // refetches by depending on `count`/`starred` only — the SWR key carries
-  // the date strings, so a midnight crossover during a long-open session
-  // would naturally refetch when the day changes anyway.
+  // Date stamps are computed once, on mount, and kept stable across SWR
+  // refetches. A tab left open across midnight keeps the day it opened on
+  // until it is reloaded.
   //
   // The site's one calendar day, America/New_York (src/lib/site-today.ts), the
   // same day the team pages, hubs and boards use. It was the device's own

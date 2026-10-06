@@ -745,10 +745,10 @@ export async function getPlayoffPromosForTeam(
   return promos.map((p) => ({ ...p, team, venue }));
 }
 
-// Converts a playoff promo's ISO timestamp (the game's start) to the site's
-// calendar day, America/New_York, the same day the "tonight" bucket is cut on
-// (src/lib/site-today.ts). The latest NBA and NHL playoff starts are 10:30 PM
-// Eastern, so a game never lands on the next Eastern day. It was
+// Converts a playoff promo's stored timestamp to the site's calendar day,
+// America/New_York, the same day the "tonight" bucket is cut on
+// (src/lib/site-today.ts). The playoff scanner stores noon on the stated date
+// (scan-playoff-promos.js), so the Eastern day is the stated day. It was
 // America/Chicago until WEB6 G3 (2026-10-06).
 function isoToSiteYMD(iso: string): string {
   return siteYmd(new Date(iso));
@@ -1500,8 +1500,10 @@ export async function getSchemaLocationsForTeams(
 // Every hub's rolling window starts on the site's one calendar day,
 // America/New_York (src/lib/site-today.ts), the same day as the homepage, the
 // team pages and the /promos boards, so a hub card and the team page it links
-// to never disagree about what is still ahead. One anchor for all leagues on
-// purpose. It was America/Chicago until WEB6 G3 (2026-10-06).
+// to agree about what is still ahead whenever both are rendered on the same
+// Eastern day. One anchor for all leagues on purpose. It was America/Chicago
+// until WEB6 G3 (2026-10-06). Cached copies can still straddle midnight: see
+// the CACHED COPIES note in src/lib/site-today.ts.
 function hubTodayYMD(): string {
   return siteTodayYmd();
 }

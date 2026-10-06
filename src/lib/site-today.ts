@@ -14,6 +14,13 @@
 // PURE AND CLIENT-SAFE: no server-only import, so client components (the
 // calendar ring, My Teams) read the same day as the server render.
 //
+// CACHED COPIES. This fixes which day each render uses, so pages rendered on
+// the same Eastern day agree. It does not make cached copies expire together:
+// a team page (24h ISR), /nhl (6h) and a venue hub (24h) rendered on opposite
+// sides of Eastern midnight can still disagree until the older copy is
+// regenerated. Only /promos/today is refreshed just after midnight (05:10 UTC
+// cron); refreshing the others nightly is a separate cost decision.
+//
 // NOT A RULE FOR GAME DAYS. A game's own calendar day stays where it is played
 // or as the schedule states it (src/lib/cfb/clock.ts venueTodayYMD,
 // src/lib/nfl-week.ts gameEtYmd). This module is the day the SITE is on.

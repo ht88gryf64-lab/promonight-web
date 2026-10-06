@@ -295,6 +295,7 @@ export function RedesignTeamPage({
       <UpcomingPromoModalProvider>
         <PromoList
           league={team.league}
+          today={today}
           promos={promos}
           teamSlug={team.id}
           teamName={displayName}

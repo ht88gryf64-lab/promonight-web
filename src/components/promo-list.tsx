@@ -226,6 +226,7 @@ export function PromoList({
   team,
   gameContexts,
   afterNothingAnnounced = false,
+  today: todayProp,
 }: {
   promos: Promo[];
   teamSlug: string;
@@ -251,6 +252,11 @@ export function PromoList({
    *  the season, so the empty-upcoming sentence is left out (WEB6 G2). Passed
    *  only when true. */
   afterNothingAnnounced?: boolean;
+  /** The page's todayStr (the site's Eastern day, computed ONCE by the route),
+   *  so the list that carries the #promo- anchors cuts upcoming from completed
+   *  on exactly the day the rest of the page did (WEB6 G3 review). Both team
+   *  page renders pass it; the default exists only for isolated renders. */
+  today?: string;
   /** Whether this league's rollout gate has opened. Only the rollback-only dark
    *  variant reads it, for the Ticket Package pill. */
   scopeLive?: boolean;
@@ -288,7 +294,7 @@ export function PromoList({
   // page while every count around it was all-time, which is how the hero came to
   // advertise promos this list reported as gone. The predicate now lives in
   // promo-helpers so both read the same definition.
-  const today = todayYmd();
+  const today = todayProp ?? todayYmd();
   const { upcoming, past } = splitPromosByDate(promos, today);
 
   // The archive labels itself from its own rows. splitPromosByDate is untouched:

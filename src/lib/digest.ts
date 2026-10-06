@@ -1,6 +1,7 @@
 import 'server-only';
 import { getPromosInDateRange } from './data';
 import { PROMO_TYPE_LABELS, SPORT_ICONS, type PromoWithTeam } from './types';
+import { addDaysYmd, siteYmd } from './site-today';
 
 // Weekly-digest assembly. The window's promos are fetched ONCE per run via
 // getPromosInDateRange (a single deduped collection-group query, deduped by
@@ -42,23 +43,19 @@ export const DIGEST_COLLECTIONS: DigestCollection[] = [
   { label: 'Food deals', href: '/promos/food-deals' },
 ];
 
-function ymd(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-function addDays(base: Date, days: number): Date {
-  const d = new Date(base);
-  d.setDate(d.getDate() + days);
-  return d;
-}
-
 // Inclusive [start, end] YYYY-MM-DD window covering today plus the next 6 days =
 // 7 calendar days. Ending at now + (DAYS - 1) keeps it a true 7-day span: with
 // the weekly Tuesday cron, consecutive windows are contiguous (Tue..Mon, next
 // Tue..Mon) and never share a boundary date, so a promo can't land in two
 // back-to-back digests.
+//
+// The window starts on the site's Eastern day (src/lib/site-today.ts), like
+// every page the email links to. It was the server's local day (UTC on Vercel)
+// until WEB6 G3; the Tuesday 17:00 UTC cron sat on the same date either way,
+// a manual run between 00:00 and 05:00 UTC did not.
 export function digestWindow(now: Date): { start: string; end: string } {
-  return { start: ymd(now), end: ymd(addDays(now, DIGEST_WINDOW_DAYS - 1)) };
+  const start = siteYmd(now);
+  return { start, end: addDaysYmd(start, DIGEST_WINDOW_DAYS - 1) };
 }
 
 function toDigestPromo(p: PromoWithTeam): DigestPromo {

@@ -599,6 +599,7 @@ export default async function TeamPage({
       ) : (
         <PromoList
           league={team.league}
+          today={todayStr}
           scopeLive={claimMode.kind !== 'held'}
           promos={promos}
           teamSlug={team.id}

@@ -43,6 +43,10 @@ for (const file of CALENDARS) {
     it('reads the SITE day for the ring, imported from the one module', () => {
       assert.match(code, /import \{ siteTodayYmd \} from '@\/lib\/site-today';/);
       assert.match(code, /setVisitorTodayKey\(siteTodayYmd\(\)\);/);
+      // Named once outside the import, called or not: useState(siteTodayYmd)
+      // would read the clock during render, the #418 shape.
+      const uses = code.replace(/import \{ siteTodayYmd \} from '@\/lib\/site-today';/, '').split('siteTodayYmd').length - 1;
+      assert.equal(uses, 1, 'siteTodayYmd appears outside the effect');
     });
 
     it('takes today as a required string prop', () => {
@@ -70,7 +74,8 @@ describe('the page passes one today into both calendar owners', () => {
     const pageStart = code.indexOf('export default async function');
     const body = code.slice(pageStart);
     assert.equal(body.split('const todayStr = ').length - 1, 1);
-    assert.equal(body.split('today={todayStr}').length - 1, 2, 'RedesignTeamPage and TeamCalendar');
+    // RedesignTeamPage, TeamCalendar, and (WEB6 G3) the legacy PromoList.
+    assert.equal(body.split('today={todayStr}').length - 1, 3, 'RedesignTeamPage, TeamCalendar and PromoList');
   });
 });
 

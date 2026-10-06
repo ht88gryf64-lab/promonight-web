@@ -23,6 +23,9 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
+// The server zone on Vercel is UTC. Pin it, so a local-day read fails here the
+// way it would in production instead of hiding behind a Central test machine.
+process.env.TZ = 'UTC';
 mock.timers.enable({ apis: ['Date'], now: new Date('2026-10-06T16:00:00Z') });
 
 type Data = Record<string, unknown>;
@@ -189,6 +192,21 @@ test('in the evening window the team page, its /nhl card, its arena hub, the dai
   assert.ok(sawBugWindow, 'the instants cover the hours when UTC is a day ahead of Eastern');
 });
 
+test('the weekly digest window starts on the site day, even on a manual evening run', async () => {
+  const { digestWindow } = await import('../digest');
+  // Vercel's server zone is UTC; a test machine's local zone would hide a
+  // local-day read, so the case runs in UTC.
+  const tz = process.env.TZ;
+  process.env.TZ = 'UTC';
+  try {
+    assert.deepEqual(digestWindow(new Date('2026-10-07T02:30:00Z')), { start: '2026-10-06', end: '2026-10-12' });
+    assert.deepEqual(digestWindow(new Date('2026-10-06T17:00:00Z')), { start: '2026-10-06', end: '2026-10-12' });
+  } finally {
+    if (tz === undefined) delete process.env.TZ;
+    else process.env.TZ = tz;
+  }
+});
+
 test('"Promos tracked" counts every document except NHL and NBA ticket packages', async () => {
   const data = await import('../data');
   // 8 documents; p2 and p5 are Penguins packages (p5 tombstoned, still in the
@@ -233,8 +251,18 @@ const ALLOWED_CHICAGO = new Map<string, string>([
   ['lib/cfb/kickoff.ts', 'zone abbreviations for a printed kickoff time'],
   ['lib/social-feed/select.ts', 'the stable pubDate of feed items (noon Central), not the window day'],
 ]);
-const ALLOWED_LOCAL_DAY = new Map<string, string>([
-  ['lib/digest.ts', 'the weekly email window; the cron runs at 17:00 UTC Tuesday, the same date in every US zone'],
+const ALLOWED_LOCAL_DAY = new Map<string, string>([]);
+// A YYYY-MM-DD formatter ('en-CA') is a day. Only these may build one, each
+// with an explicit zone: the site's, a game's, or a venue's.
+const ALLOWED_YMD_FORMATTERS = new Map<string, string>([
+  ['lib/site-today.ts', 'the site day itself'],
+  ['lib/nfl-week.ts', "a game's Eastern day (gameEtYmd)"],
+  ['lib/cfb/clock.ts', "todayYMD(zone): a venue's day for CFB played/upcoming"],
+]);
+// A UTC cut of a timestamp is fine in pure date math (Date.UTC(...)) and in
+// game-time ingest; in a file that also reads the clock it is a UTC today.
+const ALLOWED_UTC_CUT_WITH_CLOCK = new Map<string, string>([
+  ['lib/ingest-nhl.ts', 'game dates from NHL API instants; the clock read is a takenAt timestamp'],
 ]);
 function walk(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
@@ -251,6 +279,34 @@ const strip = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:]
 test('no UTC day: new Date().toISOString() cut to a date', () => {
   const hits = walk(SRC).filter((f) => /new Date\(\)\.toISOString\(\)\.(split\('T'\)\[0\]|slice\(0, ?10\)|substring\(0, ?10\))/.test(strip(readFileSync(f, 'utf8'))));
   assert.deepEqual(hits.map((f) => relative(SRC, f)), []);
+});
+
+test('no UTC day by way of a variable: a toISOString() date cut in a file that reads the clock', () => {
+  const hits = walk(SRC)
+    .filter((f) => {
+      const s = strip(readFileSync(f, 'utf8'));
+      return /new Date\(\)/.test(s) && /\.toISOString\(\)\.(split\('T'\)\[0\]|slice\(0, ?10\)|substring\(0, ?10\))/.test(s);
+    })
+    .map((f) => relative(SRC, f))
+    .filter((f) => !ALLOWED_UTC_CUT_WITH_CLOCK.has(f));
+  assert.deepEqual(hits, []);
+});
+
+test('no other day by way of a YYYY-MM-DD formatter: en-CA only where a zone is named on purpose', () => {
+  const hits = walk(SRC)
+    .filter((f) => /['"]en-CA['"]/.test(strip(readFileSync(f, 'utf8'))))
+    .map((f) => relative(SRC, f))
+    .filter((f) => !ALLOWED_YMD_FORMATTERS.has(f));
+  assert.deepEqual(hits, []);
+});
+
+test('the promo list that carries the #promo- anchors cuts on the page\'s todayStr', () => {
+  const list = strip(readFileSync(new URL('../../components/promo-list.tsx', import.meta.url), 'utf8'));
+  assert.match(list, /const today = todayProp \?\? todayYmd\(\);/);
+  const route = strip(readFileSync(new URL('../../app/[sport]/[team]/page.tsx', import.meta.url), 'utf8'));
+  assert.match(route, /<PromoList\s+league=\{team\.league\}\s+today=\{todayStr\}/);
+  const redesign = strip(readFileSync(new URL('../../components/redesign/RedesignTeamPage.tsx', import.meta.url), 'utf8'));
+  assert.match(redesign, /<PromoList\s+league=\{team\.league\}\s+today=\{today\}/);
 });
 
 test('no device or server local day: a getFullYear() YYYY-MM-DD in a file that reads the clock', () => {
@@ -272,11 +328,12 @@ test('no Chicago day: America/Chicago only where it names a game or a feed times
   assert.deepEqual(hits, []);
 });
 
-test('the site zone is written in one place', () => {
+test('no Eastern-day formatter written with a literal zone outside the known ones', () => {
   const hits = walk(SRC)
     .filter((f) => /timeZone: 'America\/New_York'/.test(strip(readFileSync(f, 'utf8'))))
     .map((f) => relative(SRC, f));
-  // site-today.ts uses the constant; nothing else formats a site day with a
-  // literal. (Game zones live in maps as plain strings, not timeZone options.)
+  // site-today.ts uses the constant. nfl-week.ts (ET) and postseason/view.ts
+  // (EASTERN) keep their own Eastern constants for game days; neither writes
+  // the literal as a timeZone option, and nothing new may.
   assert.deepEqual(hits, []);
 });

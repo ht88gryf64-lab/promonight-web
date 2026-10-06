@@ -73,6 +73,14 @@ const CASES = [
   ['the social feed window is on the Chicago day', FEED, '  const start = siteYmd(now);', "  const start = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago' }).format(now);", [T_FEED, T_TODAY]],
   ['the CFB anchor is Chicago again', CFB, '  return siteTodayYmd();', "  return todayYMD('America/Chicago');", [T_TODAY]],
   ['the eBay resale guard cuts on the UTC day', EBAY, '  if (promo.date >= siteTodayYmd()) return null;', `  if (promo.date >= ${UTC_DAY}) return null;`, [T_TODAY]],
+  // ---- review round 1: evasions the first guard missed ----
+  ['the promo list (the anchors) cuts on a UTC day held in a variable', 'src/components/promo-list.tsx', '  const today = todayProp ?? todayYmd();', '  const now = new Date();\n  const today = now.toISOString().slice(0, 10);', [T_TODAY]],
+  ['the promo list ignores the page\'s todayStr', 'src/components/promo-list.tsx', '  const today = todayProp ?? todayYmd();', '  const today = todayYmd();', [T_TODAY]],
+  ['the route stops passing todayStr to the promo list', ROUTE, '          today={todayStr}\n          scopeLive', '          scopeLive', [T_TODAY, T_CAL]],
+  ['the redesign stops passing today to the promo list', 'src/components/redesign/RedesignTeamPage.tsx', '          league={team.league}\n          today={today}\n          promos={promos}', '          league={team.league}\n          promos={promos}', [T_TODAY]],
+  ['the homepage on the server day via toLocaleDateString', HOME, '  const today = siteTodayYmd();', "  const today = new Date().toLocaleDateString('en-CA');", [T_TODAY]],
+  ['the calendar reads the clock in render via a lazy useState', GRID, '  const [visitorTodayKey, setVisitorTodayKey] = useState<string | null>(null);', '  const [visitorTodayKey, setVisitorTodayKey] = useState<string | null>(siteTodayYmd);', [T_CAL]],
+  ['the digest window on the server day', 'src/lib/digest.ts', '  const start = siteYmd(now);', "  const start = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;", [T_TODAY]],
   // ---- My Teams ----
   ['My Teams reads the device day', MYT, '  const todayYMD = useMemo(() => siteTodayYmd(), []);', `  const todayYMD = useMemo(() => ${DEVICE_DAY}, []);`, [T_TODAY]],
   // ---- the post-midnight refresh ----

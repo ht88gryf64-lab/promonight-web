@@ -1069,8 +1069,9 @@ design pass, not a cleanup commit.
 
 ## 21. Homepage visible "Last updated" line is clock-derived
 
-**Status: OPEN, entry-17 class.** src/app/page.tsx:319 computes
-`lastUpdated = formatChicagoLong(today)` from the render clock and line 364
+**Status: OPEN, entry-17 class.** src/app/page.tsx computes
+`lastUpdated = formatSiteLong(today)` (formatChicagoLong until WEB6 G3, which
+moved it to the site's Eastern day) from the render clock and the hero
 renders "{promoCount} promos tracked · Last updated {lastUpdated}" in the
 homepage hero, so every ISR regeneration asserts updated-today regardless of
 whether any data changed. This is the same synthetic-freshness class as entry
