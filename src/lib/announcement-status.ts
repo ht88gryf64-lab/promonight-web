@@ -121,6 +121,27 @@ function checkedLabel(ymd: string): string {
  * season resolved has promos for that season, and "hasn't recorded any" would
  * be false on it. Null everywhere else.
  */
+type StatusLineOpts = {
+  league: string;
+  showSchedule: boolean;
+  seasonResolved: boolean;
+  hasTicketPackages?: boolean;
+  hasOtherPromos?: boolean;
+  teamId: string;
+  displayName: string;
+  today: string;
+};
+
+/**
+ * True when the line the page shows is the "haven't announced" one. The promo
+ * list then leaves out its own "No upcoming ... promos scheduled right now"
+ * (WEB6 G2): the status line has already said there is nothing ahead, and the
+ * stronger way. Same conditions as announcementLine, read from the same place.
+ */
+export function statusLineSaysNothingAnnounced(opts: StatusLineOpts): boolean {
+  return scheduleStatusLine(opts) !== null && nothingPublishedVerified(opts.teamId, opts.today) && !opts.hasTicketPackages;
+}
+
 export function scheduleStatusLine(opts: {
   league: string;
   showSchedule: boolean;

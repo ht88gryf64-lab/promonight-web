@@ -225,6 +225,7 @@ export function PromoList({
   scopeLive = false,
   team,
   gameContexts,
+  afterNothingAnnounced = false,
 }: {
   promos: Promo[];
   teamSlug: string;
@@ -246,6 +247,10 @@ export function PromoList({
    *  a bounded slice of the completed archive so the HTML carries evidence for
    *  the claim. False leaves the list byte-identical to before. */
   seasonScoped?: boolean;
+  /** NHL/NBA: the page's status line says the club has announced nothing for
+   *  the season, so the empty-upcoming sentence is left out (WEB6 G2). Passed
+   *  only when true. */
+  afterNothingAnnounced?: boolean;
   /** Whether this league's rollout gate has opened. Only the rollback-only dark
    *  variant reads it, for the Ticket Package pill. */
   scopeLive?: boolean;
@@ -587,9 +592,17 @@ export function PromoList({
             </div>
           ) : (
             <div className="text-center py-8">
+              {/* After a "haven't announced" status line (NHL/NBA, WEB6 G2) the
+                  page has already said nothing is ahead, so only the pointer.
+                  Two whole elements, not a conditional inside one: the second
+                  is the original <p>, byte for byte, on every other page. */}
+              {afterNothingAnnounced ? (
+                <p className="text-rd-ink-soft text-sm">See completed {pastPointerYears}promos below.</p>
+              ) : (
               <p className="text-rd-ink-soft text-sm">
                 No upcoming {teamName} promos scheduled right now. See completed {pastPointerYears}promos below.
               </p>
+              )}
             </div>
           )}
 

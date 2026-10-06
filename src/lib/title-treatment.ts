@@ -1,4 +1,5 @@
 import type { Team } from './types';
+import { isSplitSeasonLeague, splitSeasonLabel, SPLIT_SEASON_START_YEAR } from './season-label';
 
 /**
  * CTR diagnostic, team-page title treatment.
@@ -77,10 +78,20 @@ export function isTitleTreatmentTeam(team: Pick<Team, 'id'>): boolean {
  * hero already prints the team name as its <h1>, so repeating it in the
  * subtitle would read as a stutter.
  */
-export function teamTitleSubtitle(team: Pick<Team, 'id'>): string {
+export function teamTitleSubtitle(team: Pick<Team, 'id' | 'league'>): string {
   return isTitleTreatmentTeam(team)
     ? `Giveaways & Theme Nights ${TITLE_SEASON_YEAR}`
-    : `Promos & Giveaways ${TITLE_SEASON_YEAR}`;
+    : `Promos & Giveaways ${titleSeasonWord(team)}`;
+}
+
+/**
+ * The season the title names: "2026-27" on NHL and NBA, whose seasons span two
+ * calendar years (SPLIT_SEASON_START_YEAR, bumped every July 1, known-issues
+ * 69), and TITLE_SEASON_YEAR everywhere else, unchanged (WEB6 G2). The title
+ * experiments never touch NHL or NBA: both arms are MLB and NFL clubs.
+ */
+function titleSeasonWord(team: Pick<Team, 'league'>): string {
+  return isSplitSeasonLeague(team.league) ? splitSeasonLabel(SPLIT_SEASON_START_YEAR) : String(TITLE_SEASON_YEAR);
 }
 
 /**
@@ -94,7 +105,7 @@ export function teamTitleSubtitle(team: Pick<Team, 'id'>): string {
  * teamDisplayName() result they already computed, which is what handles the
  * doubled-city MLS cases.
  */
-export function teamBareTitle(team: Pick<Team, 'id'>, displayName: string): string {
+export function teamBareTitle(team: Pick<Team, 'id' | 'league'>, displayName: string): string {
   return `${displayName} ${teamTitleSubtitle(team)}`;
 }
 
@@ -198,7 +209,7 @@ export function isNflScheduleTitleTeam(team: Pick<Team, 'id'>): boolean {
  * other 12 NFL clubs cannot move even if this function is edited carelessly
  * later. There is no second copy of the control template to drift.
  */
-export function teamMetaTitle(team: Pick<Team, 'id'>, displayName: string): string {
+export function teamMetaTitle(team: Pick<Team, 'id' | 'league'>, displayName: string): string {
   if (isNflScheduleTitleTeam(team)) {
     return `${displayName} ${NFL_TITLE_SEASON_YEAR} Schedule & Giveaways`;
   }

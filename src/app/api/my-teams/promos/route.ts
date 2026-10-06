@@ -4,6 +4,7 @@ import { resolveIcon } from '@/lib/promo-helpers';
 import { bagPolicyUrlFor, nearbySilenced, redactClause } from '@/lib/venue-corpus-silence';
 import { getVenueOverride } from '@/lib/venue-overrides';
 import type { PromoType, Venue } from '@/lib/types';
+import { isTicketPackageDoc, isTicketPackageLeague } from '@/lib/ticket-packages';
 
 // Maximum starred teams a single request will fan out for. 200 is well past
 // the practical ceiling (the user would have to star more than every team
@@ -41,19 +42,26 @@ async function fetchPromosForTeam(
   end: string,
 ): Promise<StarredPromo[]> {
   try {
-    const snapshot = await db
-      .collection('teams')
-      .doc(teamSlug)
-      .collection('promos')
-      .where('date', '>=', start)
-      .where('date', '<=', end)
-      .get();
+    const [snapshot, teamDoc] = await Promise.all([
+      db
+        .collection('teams')
+        .doc(teamSlug)
+        .collection('promos')
+        .where('date', '>=', start)
+        .where('date', '<=', end)
+        .get(),
+      db.collection('teams').doc(teamSlug).get(),
+    ]);
+    // NHL and NBA special-ticket rows are not promotions (WEB6 G2): My Teams
+    // neither lists nor counts them, as the team page counts none of them.
+    const dropPackages = isTicketPackageLeague(teamDoc.exists ? String(teamDoc.data()?.league ?? '') : '');
     // Visibility filter on the raw docs before shaping: only tombstoned:true
     // and isPostseason:true are hidden; absent and false pass. App-code
     // filter, never a Firestore inequality (which would drop field-absent
     // docs).
     return snapshot.docs
       .filter((doc) => doc.data().tombstoned !== true && doc.data().isPostseason !== true)
+      .filter((doc) => !(dropPackages && isTicketPackageDoc(doc.data())))
       .map((doc) => {
       const data = doc.data();
       const type = data.type as PromoType;
