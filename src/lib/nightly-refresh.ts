@@ -79,7 +79,10 @@ export function siteHour(instant: Date): number {
  *  pages, which mark a game played on the VENUE's day, at 00:15 Pacific (03:15
  *  Eastern), after midnight at every mainland venue; refreshing them at 00:15
  *  Eastern would restart their 6h window before a Central or Pacific game day
- *  ends. Accepted edges: one Honolulu venue turns at 05:00 Eastern; and on the
+ *  ends. Accepted edges: Honolulu turns at 05:00 Eastern in EST and 06:00 in
+ *  EDT, so a Hawaii home night game is still on when the batch runs and every
+ *  page listing it (the schools' pages, any rivalry page) waits for its next
+ *  window; and on the
  *  two DST change nights Eastern switches three hours before Pacific, so the
  *  run lands at 01:15 Pacific (fall back) or 23:15 Pacific the evening before
  *  (spring forward, CFB off season). */

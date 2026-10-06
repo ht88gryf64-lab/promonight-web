@@ -12,7 +12,8 @@
  *   1. Revalidates the batch's pages through the existing fan-out,
  *      POST /api/revalidate, in batches of 100. Over HTTP on purpose: see
  *      src/lib/nightly-refresh.ts.
- *   2. Then requests each one, so the new copy, cut on the new Eastern day, is
+ *   2. Then requests each one, so the new copy, cut on the new day (Eastern for
+ *      the site batch, the venue's for the cfb batch), is
  *      built before the first visitor or crawler, and requests each one again
  *      to report how many came back fresh.
  * Always against https://www.getpromonight.com in production: Vercel Cron
@@ -56,6 +57,9 @@ const SETTLE_MS = Number(process.env.NIGHTLY_REFRESH_SETTLE_MS ?? DEFAULT_SETTLE
 const VERIFY_DELAY_MS = Number(process.env.NIGHTLY_REFRESH_VERIFY_MS ?? DEFAULT_VERIFY_DELAY_MS);
 const VERIFY_ROUND_MS = Number(process.env.NIGHTLY_REFRESH_ROUND_MS ?? DEFAULT_VERIFY_ROUND_MS);
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+// The IndexNow ping's ceiling. Verify stops at 720s; this keeps the run well
+// inside maxDuration (800s) even then.
+const INDEXNOW_TIMEOUT_MS = Number(process.env.NIGHTLY_REFRESH_INDEXNOW_MS ?? 10_000);
 
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
@@ -103,12 +107,18 @@ export async function GET(request: Request) {
   await sleep(VERIFY_DELAY_MS);
   const verified = await verifyFresh(origin, warmed, paths, { deadline: started + VERIFY_BUDGET_MS, roundDelayMs: VERIFY_ROUND_MS });
   // The daily IndexNow ping for /promos/today, which the retired 05:10 job used
-  // to send: production only, best-effort, never a reason for red.
-  let indexnow: 'sent' | 'skipped' | 'failed' = 'skipped';
+  // to send: production only, best-effort, bounded to INDEXNOW_TIMEOUT_MS so a
+  // stalled endpoint cannot hold the function past maxDuration, and never a
+  // reason for red. "attempted": submitToIndexNow swallows endpoint errors
+  // itself, so a normal return does not prove the endpoints accepted it.
+  let indexnow: 'attempted' | 'skipped' | 'failed' | 'timeout' = 'skipped';
   if (batch === 'site' && process.env.VERCEL_ENV === 'production') {
     try {
-      await submitToIndexNow([`${SITE_ORIGIN}/promos/today`]);
-      indexnow = 'sent';
+      const done = await Promise.race([
+        submitToIndexNow([`${SITE_ORIGIN}/promos/today`]).then(() => true),
+        sleep(INDEXNOW_TIMEOUT_MS).then(() => false),
+      ]);
+      indexnow = done ? 'attempted' : 'timeout';
     } catch {
       indexnow = 'failed';
     }

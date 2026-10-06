@@ -106,6 +106,10 @@ const CASES = [
   ['the daily IndexNow ping for /promos/today lost', ROUTE, "  if (batch === 'site' && process.env.VERCEL_ENV === 'production') {", '  if (false) {', [T]],
   ['the CFB batch pings IndexNow too', ROUTE, "  if (batch === 'site' && process.env.VERCEL_ENV === 'production') {", "  if (process.env.VERCEL_ENV === 'production') {", [T]],
   ['the slow cross-team pages warmed last', LIB, '    all = [\n      ...NIGHTLY_FIXED_PATHS,\n      ...teams.map((t) => `/${t.sportSlug}/${t.id}`),', '    all = [\n      ...teams.map((t) => `/${t.sportSlug}/${t.id}`),\n      ...NIGHTLY_FIXED_PATHS,', [T]],
+  // ---- the IndexNow ping's guarantees ----
+  ['a ping failure turns the night red', ROUTE, '    } catch {\n      indexnow = \'failed\';\n    }', "    } catch {\n      indexnow = 'failed';\n      return NextResponse.json({ ok: false }, { status: 500 });\n    }", [T]],
+  ['the ping unbounded (a stall holds the function)', ROUTE, '        sleep(INDEXNOW_TIMEOUT_MS).then(() => false),\n', '', [T]],
+  ['the ping sent from preview and local too', ROUTE, "  if (batch === 'site' && process.env.VERCEL_ENV === 'production') {", "  if (batch === 'site') {", [T]],
   ['a request outlives its pass (no clamp)', LIB, '          signal: AbortSignal.timeout(Math.max(1, Math.min(FETCH_TIMEOUT_MS, left))),', '          signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),', [T]],
   ['the route runs to Vercel\'s 300s default', ROUTE, 'export const maxDuration = 800;', 'export const maxDuration = 300;', [T]],
   ['a dropped slug stays green', ROUTE, '    dropped.length === 0 &&\n', '', [T]],

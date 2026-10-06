@@ -15,6 +15,7 @@ process.env.TZ = 'UTC';
 process.env.NIGHTLY_REFRESH_SETTLE_MS = '0';
 process.env.NIGHTLY_REFRESH_VERIFY_MS = '0';
 process.env.NIGHTLY_REFRESH_ROUND_MS = '0';
+process.env.NIGHTLY_REFRESH_INDEXNOW_MS = '50';
 mock.timers.enable({ apis: ['Date'], now: new Date('2026-10-07T04:15:00Z') });
 
 const revalidated: string[] = [];
@@ -35,7 +36,16 @@ const MATCHUPS = ['iron-bowl', 'the-game'];
 mock.module(new URL('../cfb/data.ts', import.meta.url).href, { namedExports: { getAllCfbSchoolIds: async () => SCHOOLS } });
 mock.module(new URL('../cfb/matchups.ts', import.meta.url).href, { namedExports: { getAllMatchupSlugs: () => MATCHUPS } });
 const indexnowCalls: string[][] = [];
-mock.module(new URL('../indexnow.ts', import.meta.url).href, { namedExports: { submitToIndexNow: async (urls: string[]) => { indexnowCalls.push(urls); } } });
+let indexnowMode: 'ok' | 'throw' | 'stall' = 'ok';
+mock.module(new URL('../indexnow.ts', import.meta.url).href, {
+  namedExports: {
+    submitToIndexNow: async (urls: string[]) => {
+      indexnowCalls.push(urls);
+      if (indexnowMode === 'throw') throw new Error('indexnow host check');
+      if (indexnowMode === 'stall') await new Promise(() => {});
+    },
+  },
+});
 
 function cronSchedule(path = '/api/cron/nightly-refresh'): { minute: number; hours: number[] } {
   const cfg = JSON.parse(readFileSync(new URL('../../../vercel.json', import.meta.url), 'utf8'));
@@ -455,8 +465,9 @@ test('the route: auth, the window, then revalidate through POST /api/revalidate 
     assert.equal(body.fresh, expected);
     assert.equal(body.ok, true);
     assert.equal(body.batch, 'site');
-    assert.equal(body.indexnow, 'sent', 'the daily /promos/today ping the retired job used to send');
+    assert.equal(body.indexnow, 'attempted', 'the daily /promos/today ping the retired job used to send');
     assert.deepEqual(indexnowCalls.at(-1), ['https://www.getpromonight.com/promos/today']);
+
     assert.ok(log.every((e) => e.url.startsWith('https://www.getpromonight.com/')), 'every request goes to www, never the deployment host');
     const posts = log.filter((e) => e.method === 'POST');
     const gets = log.filter((e) => e.method === 'GET');
@@ -469,6 +480,29 @@ test('the route: auth, the window, then revalidate through POST /api/revalidate 
     const warmedPaths = gets.map((e) => new URL(e.url).pathname).sort();
     assert.deepEqual(warmedPaths, [...posted, ...posted].sort(), 'every revalidated path is warmed, then verified once (all fresh)');
     assert.ok(posted.includes('/venues/ppg-paints-arena') && posted.includes('/nhl/pittsburgh-penguins') && posted.includes('/promos/today'));
+
+    // The ping never turns a night red: a throw, or a stall cut at its bound.
+    for (const [m, want] of [['throw', 'failed'], ['stall', 'timeout']] as const) {
+      indexnowMode = m;
+      warmedOnce.clear();
+      const r = await call('Bearer s');
+      const b = await r.json();
+      assert.equal(r.status, 200, `${m}: still green`);
+      assert.equal(b.ok, true);
+      assert.equal(b.indexnow, want);
+    }
+    indexnowMode = 'ok';
+    // And never outside production.
+    for (const env of ['preview', undefined]) {
+      if (env === undefined) delete process.env.VERCEL_ENV;
+      else process.env.VERCEL_ENV = env;
+      const n = indexnowCalls.length;
+      warmedOnce.clear();
+      const b = await (await call('Bearer s')).json();
+      assert.equal(b.indexnow, 'skipped', `no ping on ${env ?? 'local'}`);
+      assert.equal(indexnowCalls.length, n);
+    }
+    process.env.VERCEL_ENV = 'production';
 
     // The login page answers everything: red, not ok.
     mode = 'login';
