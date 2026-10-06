@@ -15,9 +15,11 @@ import { RD_CATEGORIES, RD_CATEGORY_ORDER } from './categories';
 //   home-only count would disagree with the list and would also move all 30 MLB
 //   pages, which is a separate change with its own gate.
 //
-//   Shape B, the 6 non-NFL zero-promo pages (4 NBA, 1 NHL, 1 MLS): four zeros
-//   and no Games tile at all, because getGamesForTeam short-circuits for every
-//   league but mlb and nfl, so gameContexts is undefined. The grid then holds 4
+//   Shape B, the non-NFL zero-promo pages of a league with no games data (MLS,
+//   WNBA): four zeros and no Games tile at all, because getGamesForTeam
+//   short-circuits for every league outside GAME_LEAGUES (mlb, nfl and, since
+//   WEB6, nhl and nba, which now show a "Scheduled games" tile), so
+//   gameContexts is undefined. The grid then holds 4
 //   tiles in a lg:grid-cols-5 track and leaves one column empty. HANDLING SHAPE
 //   B MEANS DELIBERATELY DOING NOTHING: that 4-in-5 layout is already the
 //   shipping status quo on all 101 populated non-MLB, non-NFL team pages.

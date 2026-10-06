@@ -365,3 +365,35 @@ describe('round 7: label sites the harness did not pin', () => {
     assert.match(readFileSync('src/components/redesign/RedesignTeamPage.tsx', 'utf8'), /<CaptureTriggerHost pageType="team_page" team=\{team\} gameContexts=\{isSplitSeasonLeague\(team\.league\) \? undefined : gameContexts\} \/>/);
   });
 });
+
+/* ---- Review round 8 ---- */
+
+describe('round 8: TeamContentSections names the two-year season on NHL/NBA', () => {
+  const DET = mk('detroit-red-wings', 'NHL', 'Detroit', 'Red Wings');
+  test('season mode: every question heading and the app plug say 2026-27', async () => {
+    const { TeamContentSections } = await import('@/components/team-content-sections');
+    const { resolveClaimMode } = await import('@/lib/season-scope');
+    const { countPromosByType } = await import('@/lib/promo-helpers');
+    const rows = [promo('2026-10-20', 'Hat Night', { type: 'giveaway' }), promo('2026-11-02', 'Pride Night'), promo('2027-01-10', 'Kids Day', { type: 'kids' })];
+    const t = text(await html(<TeamContentSections team={DET} promos={rows} venue={null} promoCounts={countPromosByType(rows)} claim={resolveClaimMode(rows, 'NHL', TODAY)} variant="light" />));
+    assert.match(t, /in 2026-27\?/);
+    assert.doesNotMatch(t, /in 2026\?/);
+    assert.doesNotMatch(t, /\b2026 calendar\b/);
+  });
+
+  test('remaining mode (no season rows): the plug says the 2026-27 calendar', async () => {
+    const { TeamContentSections } = await import('@/components/team-content-sections');
+    const KNICKS = mk('new-york-knicks', 'NBA', 'New York', 'Knicks');
+    const t = text(await html(<TeamContentSections team={KNICKS} promos={[]} venue={null} promoCounts={{ giveaway: 0, theme: 0, food: 0, kids: 0 }} claim={{ kind: 'remaining' }} variant="light" />));
+    assert.match(t, /2026-27 calendar/);
+    assert.doesNotMatch(t, /\b2026 calendar\b/);
+  });
+
+  test('the remaining-mode kids FAQ question names 2026-27 on NHL/NBA', async () => {
+    const { generateTeamFAQs } = await import('@/lib/promo-helpers');
+    const kids = [promo('2026-11-02', 'Kids Day', { type: 'kids' })];
+    const faqs = generateTeamFAQs(DET, kids, null, { giveaway: 0, theme: 0, food: 0, kids: 1 }, { teamCount: 169, leagueList: 'x', appLeagueList: 'y' } as never, undefined, { kind: 'remaining' });
+    const q = faqs.find((f) => /kids and family events/.test(f.question))!;
+    assert.equal(q.question, 'When are Red Wings kids and family events in 2026-27?');
+  });
+});

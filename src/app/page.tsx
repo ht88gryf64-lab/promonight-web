@@ -213,8 +213,9 @@ function rankTeamsByFuturePromos(
 // opens the same modal as the team-page calendar. Date-scoped: getGamesForTeam
 // runs once per unique MLB/NFL team (full schedule), then enrichGamesForTeam
 // touches ONLY the promo's date (one opponent) — never the whole season.
-// Game-less leagues (NBA/NHL/MLS/WNBA) get no entry and fall back to the legacy
-// promo detail, exactly as the calendar does. Called inside the redesign branch
+// Other leagues (NBA/NHL/MLS/WNBA) get no entry here, gated on sportSlug, and
+// fall back to the legacy promo detail. (NHL and NBA have games data since WEB6;
+// the homepage cards deliberately do not read it.) Called inside the redesign branch
 // only, so the gate-off path adds no reads; runs in the ISR render (revalidate
 // 21600), so reads are amortized per-regeneration, not per-request.
 async function resolveCardContexts(

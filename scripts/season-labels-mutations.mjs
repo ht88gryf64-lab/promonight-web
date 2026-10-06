@@ -162,6 +162,10 @@ const CASES = [
   ['a preseason game unlabelled', 'src/components/redesign/GameExpand.tsx', "          {game.seasonType === 'preseason' && ` · Preseason`}\n", '', [T_R1]],
   ['packages out of date order', TP, '.sort((a, b) => a.date.localeCompare(b.date));\n}\n\n/** The group heading. */', ';\n}\n\n/** The group heading. */', [T_R1]],
   ['the capture sheet gets NHL/NBA game contexts', PAGE, 'gameContexts={isSplitSeasonLeague(team.league) ? undefined : gameContexts} />', 'gameContexts={gameContexts} />', [T_R1]],
+  // ---- Review round 8 ----
+  ['content-section headings read the calendar year on NHL/NBA (season mode)', TCS, '    ? season\n      ? season.label\n      : currentSeasonLabel(team.league)', '    ? season\n      ? season.year\n      : currentSeasonLabel(team.league)', [T_R1]],
+  ['the content-section plug reads the calendar year on NHL/NBA (remaining mode)', TCS, '      ? season.label\n      : currentSeasonLabel(team.league)\n', '      ? season.label\n      : SEASON_YEAR\n', [T_R1]],
+  ['the remaining-mode kids FAQ reads the calendar year on NHL/NBA', HELPERS, 'kids and family events in ${isSplitSeasonLeague(team.league) ? currentSeasonLabel(team.league) : year}?', 'kids and family events in ${year}?', [T_R1]],
   ['an unplaceable archive row dropped', LABEL, '    if (y === null) {\n      unplaced.push(i);\n      return;\n    }', '    if (y === null) return;', [T_R1]],
 ];
 
