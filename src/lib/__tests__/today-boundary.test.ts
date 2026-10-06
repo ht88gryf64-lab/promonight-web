@@ -277,7 +277,7 @@ function walk(dir: string, out: string[] = []): string[] {
 const strip = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
 
 test('no UTC day: new Date().toISOString() cut to a date', () => {
-  const hits = walk(SRC).filter((f) => /new Date\(\)\.toISOString\(\)\.(split\('T'\)\[0\]|slice\(0, ?10\)|substring\(0, ?10\))/.test(strip(readFileSync(f, 'utf8'))));
+  const hits = walk(SRC).filter((f) => /new Date\(\)\.toISOString\(\)\.(split\(['"]T['"]\)\[0\]|slice\(0, ?10\)|substring\(0, ?10\))/.test(strip(readFileSync(f, 'utf8'))));
   assert.deepEqual(hits.map((f) => relative(SRC, f)), []);
 });
 
@@ -285,7 +285,7 @@ test('no UTC day by way of a variable: a toISOString() date cut in a file that r
   const hits = walk(SRC)
     .filter((f) => {
       const s = strip(readFileSync(f, 'utf8'));
-      return /new Date\(\)/.test(s) && /\.toISOString\(\)\.(split\('T'\)\[0\]|slice\(0, ?10\)|substring\(0, ?10\))/.test(s);
+      return /new Date\(\)/.test(s) && /\.toISOString\(\)\.(split\(['"]T['"]\)\[0\]|slice\(0, ?10\)|substring\(0, ?10\))/.test(s);
     })
     .map((f) => relative(SRC, f))
     .filter((f) => !ALLOWED_UTC_CUT_WITH_CLOCK.has(f));
@@ -336,4 +336,42 @@ test('no Eastern-day formatter written with a literal zone outside the known one
   // (EASTERN) keep their own Eastern constants for game days; neither writes
   // the literal as a timeZone option, and nothing new may.
   assert.deepEqual(hits, []);
+});
+
+// THE RATCHET (review round 2). The patterns above name spellings; this names
+// none. A file that reads the clock (new Date() or Date.now()) AND formats a
+// date (toISOString, toJSON, get[UTC]FullYear, toLocaleDateString,
+// DateTimeFormat) is where a second "today" can be made, in any spelling. Each
+// such file is listed with its reason and its exact number of clock reads; a
+// new file, or one more read in a listed file, fails until someone looks at it
+// and either routes the day through src/lib/site-today.ts or adds the entry.
+const CLOCK_AND_FORMATTER = new Map<string, [number, string]>([
+  ['lib/site-today.ts', [2, 'the site day itself']],
+  ['lib/cfb/clock.ts', [1, "todayYMD(zone): a venue's day for CFB played/upcoming"]],
+  ['components/my-teams-view.tsx', [2, 'Date.now() stamps the geo cache; the day is siteTodayYmd()']],
+  ['components/team-hero.tsx', [2, 'legacy hero: the year label and an Eastern "Last updated"']],
+  ['components/browse-collections.tsx', [1, 'the year suffix, formatted in SITE_TIME_ZONE']],
+  ['components/footer.tsx', [1, 'the copyright year']],
+  ['app/team-rankings/page.tsx', [1, 'now passed to localYMD, which is siteYmd']],
+  ['app/best-promos/page.tsx', [1, 'now passed to localYMD/addDaysYMD, which are siteYmd']],
+  ['app/best-promos/bobbleheads/page.tsx', [1, 'now passed to localYMD/addDaysYMD, which are siteYmd']],
+  ['app/ads.txt/route.ts', [1, 'a resolved-at timestamp header']],
+  ['app/api/log-request/route.ts', [1, 'a log timestamp']],
+  ['app/api/cfb/contribute/route.ts', [1, 'a submittedAt timestamp']],
+  ['lib/subscribers.ts', [1, 'a resend cooldown in milliseconds']],
+  ['lib/attribution.ts', [1, 'a landed_at timestamp']],
+  ['lib/ingest-mlb.ts', [1, 'game times from the MLB API; a takenAt timestamp']],
+  ['lib/ingest-nfl.ts', [1, 'game times in stadium zones; a takenAt timestamp']],
+  ['lib/ingest-nhl.ts', [1, 'game dates from NHL API instants; a takenAt timestamp']],
+]);
+
+test('the ratchet: every file that reads the clock and formats a date is listed, with its exact count of clock reads', () => {
+  const found = new Map<string, number>();
+  for (const f of walk(SRC)) {
+    const s = strip(readFileSync(f, 'utf8'));
+    const reads = (s.match(/new Date\(\s*\)|Date\.now\(\)/g) ?? []).length;
+    if (reads && /toISOString|toJSON\(|get(?:UTC)?FullYear|toLocaleDateString|DateTimeFormat/.test(s)) found.set(relative(SRC, f), reads);
+  }
+  const unexpected = [...found].filter(([f, n]) => CLOCK_AND_FORMATTER.get(f)?.[0] !== n).map(([f, n]) => `${f}: ${n} clock read(s)`);
+  assert.deepEqual(unexpected, [], 'route the day through src/lib/site-today.ts, or list the file with its reason');
 });

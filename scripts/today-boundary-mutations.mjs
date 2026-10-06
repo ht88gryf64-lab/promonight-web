@@ -81,6 +81,14 @@ const CASES = [
   ['the homepage on the server day via toLocaleDateString', HOME, '  const today = siteTodayYmd();', "  const today = new Date().toLocaleDateString('en-CA');", [T_TODAY]],
   ['the calendar reads the clock in render via a lazy useState', GRID, '  const [visitorTodayKey, setVisitorTodayKey] = useState<string | null>(null);', '  const [visitorTodayKey, setVisitorTodayKey] = useState<string | null>(siteTodayYmd);', [T_CAL]],
   ['the digest window on the server day', 'src/lib/digest.ts', '  const start = siteYmd(now);', "  const start = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;", [T_TODAY]],
+  // ---- review round 2: other spellings, caught by the ratchet ----
+  ['E2: the homepage on the server day via sv-SE', HOME, '  const today = siteTodayYmd();', "  const today = new Date().toLocaleDateString('sv-SE');", [T_TODAY]],
+  ['E3: theme-nights on the UTC day via Date.now()', THEME, '  return siteTodayYmd();', '  return new Date(Date.now()).toISOString().slice(0, 10);', [T_TODAY]],
+  ['E4: the homepage on the UTC day via getUTC*', HOME, '  const today = siteTodayYmd();', "  const n = new Date();\n  const today = `${n.getUTCFullYear()}-${String(n.getUTCMonth() + 1).padStart(2, '0')}-${String(n.getUTCDate()).padStart(2, '0')}`;", [T_TODAY]],
+  ['E5: the eBay guard on the UTC day via toJSON', EBAY, '  if (promo.date >= siteTodayYmd()) return null;', '  if (promo.date >= new Date().toJSON().slice(0, 10)) return null;', [T_TODAY]],
+  ['E6: the hub rail on the Pacific day', HUBRAIL, '  const today = siteTodayYmd();', "  const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Los_Angeles' }).format(new Date());", [T_TODAY]],
+  ['E7: this-week on the UTC day, double quotes', 'src/app/promos/this-week/page.tsx', '  return siteTodayYmd();', '  return new Date().toISOString().split("T")[0];', [T_TODAY]],
+  ['N4: My Teams on the device day via sv-SE', MYT, '  const todayYMD = useMemo(() => siteTodayYmd(), []);', "  const todayYMD = useMemo(() => new Date().toLocaleDateString('sv-SE'), []);", [T_TODAY]],
   // ---- My Teams ----
   ['My Teams reads the device day', MYT, '  const todayYMD = useMemo(() => siteTodayYmd(), []);', `  const todayYMD = useMemo(() => ${DEVICE_DAY}, []);`, [T_TODAY]],
   // ---- the post-midnight refresh ----
