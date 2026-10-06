@@ -207,6 +207,44 @@ test('the weekly digest window starts on the site day, even on a manual evening 
   }
 });
 
+test('after the nightly refresh, a 12:40 AM Eastern check finds no hub link to an archived row (WEB6 G4)', async () => {
+  const data = await import('../data');
+  const { partitionTicketPackages } = await import('../ticket-packages');
+  const { splitPromosByDate, todayYmd, promoAnchorId } = await import('../promo-helpers');
+  const { getVenueHubWeekPromos } = await import('../venue-hub');
+  const { nightlyRefreshPaths } = await import('../nightly-refresh');
+  const hub = { tenants: [{ teamId: 'pittsburgh-penguins', league: 'NHL' }] } as never;
+  // What each cached page holds, rendered at an instant.
+  async function render(iso: string) {
+    mock.timers.setTime(Date.parse(iso));
+    const all = await data.getTeamPromos('pittsburgh-penguins');
+    const { promos } = partitionTicketPackages(all, data.isTicketPackagePromo, 'NHL');
+    const upcoming = splitPromosByDate(promos, todayYmd()).upcoming;
+    return {
+      page: new Set(upcoming.map((p) => promoAnchorId(p))),
+      card: (await data.getLeagueUpcomingPromoCounts('NHL'))['pittsburgh-penguins'],
+      links: [
+        ...(await getVenueHubWeekPromos(hub)).map((r) => promoAnchorId(r.promo)),
+        ...(await data.getTodayPromos()).filter((p) => p.team.id === 'pittsburgh-penguins').map((p) => promoAnchorId(p)),
+      ],
+    };
+  }
+  // 11:30 PM Eastern Oct 6: the hub, /nhl and /promos/today copies are built.
+  const before = await render('2026-10-07T03:30:00Z');
+  // 12:40 AM Eastern Oct 7: the team page has been regenerated.
+  const after = await render('2026-10-07T04:40:00Z');
+  // Without the refresh, the old copies point at a row the page has archived.
+  const stale = before.links.filter((a) => !after.page.has(a));
+  assert.ok(stale.some((a) => a.includes('team-calendar')), `the defect reproduces: ${stale}`);
+  assert.notEqual(before.card, after.page.size, 'and the old /nhl card disagrees with the page');
+  // The refresh re-renders every one of those pages after midnight...
+  const paths = await nightlyRefreshPaths({ teams: async () => [{ id: 'pittsburgh-penguins', sportSlug: 'nhl' }], venueHubSlugs: async () => ['ppg-paints-arena'] });
+  for (const p of ['/nhl/pittsburgh-penguins', '/venues/ppg-paints-arena', '/nhl', '/promos/today']) assert.ok(paths.includes(p), p);
+  // ...so at 12:40 AM every link lands on an upcoming row and the card agrees.
+  for (const a of after.links) assert.ok(after.page.has(a), `${a} is archived on the team page`);
+  assert.equal(after.card, after.page.size);
+});
+
 test('"Promos tracked" counts every document except NHL and NBA ticket packages', async () => {
   const data = await import('../data');
   // 8 documents; p2 and p5 are Penguins packages (p5 tombstoned, still in the
@@ -348,6 +386,7 @@ test('no Eastern-day formatter written with a literal zone outside the known one
 const CLOCK_AND_FORMATTER = new Map<string, [number, string]>([
   ['lib/site-today.ts', [2, 'the site day itself']],
   ['lib/cfb/clock.ts', [1, "todayYMD(zone): a venue's day for CFB played/upcoming"]],
+  ['lib/nightly-refresh.ts', [1, 'Date.now() times the warm-up budget; the hour it formats is SITE_TIME_ZONE (the 00:00 window)']],
   ['components/my-teams-view.tsx', [2, 'Date.now() stamps the geo cache; the day is siteTodayYmd()']],
   ['components/team-hero.tsx', [2, 'legacy hero: the year label and an Eastern "Last updated"']],
   ['components/browse-collections.tsx', [1, 'the year suffix, formatted in SITE_TIME_ZONE']],

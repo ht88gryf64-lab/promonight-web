@@ -18,8 +18,9 @@
 // the same Eastern day agree. It does not make cached copies expire together:
 // a team page (24h ISR), /nhl (6h) and a venue hub (24h) rendered on opposite
 // sides of Eastern midnight can still disagree until the older copy is
-// regenerated. Only /promos/today is refreshed just after midnight (05:10 UTC
-// cron); refreshing the others nightly is a separate cost decision.
+// regenerated. The nightly refresh (src/lib/nightly-refresh.ts, 00:15 Eastern)
+// revalidates the team pages, venue hubs, league hubs and aggregators so they
+// meet on the new day; the homepage and the CFB pages keep their own windows.
 //
 // NOT A RULE FOR GAME DAYS. A game's own calendar day stays where it is played
 // or as the schedule states it (src/lib/cfb/clock.ts venueTodayYMD,

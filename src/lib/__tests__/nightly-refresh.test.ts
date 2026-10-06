@@ -12,6 +12,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 process.env.TZ = 'UTC';
+process.env.NIGHTLY_REFRESH_SETTLE_MS = '0';
+process.env.NIGHTLY_REFRESH_VERIFY_MS = '0';
 mock.timers.enable({ apis: ['Date'], now: new Date('2026-10-07T04:15:00Z') });
 
 const revalidated: string[] = [];
@@ -86,6 +88,7 @@ test('the paths: every team page, every venue hub, the hubs, /teams and the /pro
   assert.equal(new Set(paths).size, paths.length, 'deduped');
   assert.ok(paths.every((p) => PATH_RE.test(p)));
   assert.equal(paths.length, TEAMS.length + 3 + NIGHTLY_FIXED_PATHS.length);
+  for (const p of ['/best-promos', '/best-promos/bobbleheads', '/team-rankings']) assert.ok(paths.includes(p), p);
 });
 
 test('the shared fan-out: one failing path is reported, the rest still revalidate', async () => {
@@ -100,25 +103,61 @@ test('the shared fan-out: one failing path is reported, the rest still revalidat
   assert.deepEqual(r.failed, ['/b']);
 });
 
-test('warming requests every path once and reports failures', async () => {
-  const { warmPaths } = await import('../nightly-refresh');
+const resp = (status: number, headers: Record<string, string> = {}, body = 'ok') => new Response(body, { status, headers });
+
+test('warming requests every path once, counts redirects and errors as failures, and reports cache state', async () => {
+  const { warmPaths, REFRESH_USER_AGENT } = await import('../nightly-refresh');
   const seen: string[] = [];
-  const r = await warmPaths('https://x.test', ['/a', '/b', '/c', '/d'], async (u) => {
-    seen.push(u);
-    if (u.endsWith('/c')) return { status: 500 };
-    if (u.endsWith('/d')) throw new Error('boom');
-    return { status: 200 };
-  }, 2);
-  assert.deepEqual(seen.sort(), ['https://x.test/a', 'https://x.test/b', 'https://x.test/c', 'https://x.test/d']);
+  const r = await warmPaths('https://x.test', ['/a', '/b', '/c', '/d', '/e'], {
+    concurrency: 2,
+    fetcher: async (u, init) => {
+      seen.push(u);
+      assert.equal(init.redirect, 'manual', 'a redirect is never followed into a login page');
+      assert.match(String((init.headers as Record<string, string>)['user-agent']), /bot/i, 'not counted as a human page load');
+      if (u.endsWith('/c')) return resp(500);
+      if (u.endsWith('/d')) throw new Error('boom');
+      if (u.endsWith('/e')) return resp(307, { location: 'https://vercel.com/login' });
+      return resp(200, { 'x-vercel-cache': u.endsWith('/a') ? 'MISS' : 'STALE' });
+    },
+  });
+  assert.equal(REFRESH_USER_AGENT, 'PromoNightRefreshBot/1.0');
+  assert.deepEqual(seen.sort(), ['/a', '/b', '/c', '/d', '/e'].map((p) => 'https://x.test' + p));
   assert.equal(r.ok, 2);
-  assert.deepEqual(r.failed.map((f) => f.path).sort(), ['/c', '/d']);
+  assert.deepEqual(r.failed.map((f) => f.path).sort(), ['/c', '/d', '/e']);
+  assert.equal(r.fresh, 1, 'a STALE copy is not fresh');
+  assert.equal(r.cache.MISS, 1);
 });
 
-test('the route: auth, the window, then revalidate through POST /api/revalidate and only then warm', async () => {
+test('freshness: a cached copy older than the run is not fresh; the deadline stops new requests', async () => {
+  const { warmPaths } = await import('../nightly-refresh');
+  const t0 = Date.now();
+  const r = await warmPaths('https://x.test', ['/new', '/old'], {
+    freshSince: t0 - 30_000,
+    fetcher: async (u) => resp(200, { 'x-vercel-cache': 'HIT', age: u.endsWith('/new') ? '10' : '3600' }),
+  });
+  assert.equal(r.fresh, 1);
+  const late = await warmPaths('https://x.test', ['/a', '/b'], { deadline: t0 - 1, fetcher: async () => resp(200) });
+  assert.equal(late.skipped, 2);
+  assert.equal(late.ok, 0);
+});
+
+test('the origin: always www in production (cron calls the login-protected deployment host), the request origin locally', async () => {
+  const { refreshOrigin, SITE_ORIGIN } = await import('../nightly-refresh');
+  assert.equal(SITE_ORIGIN, 'https://www.getpromonight.com');
+  assert.equal(refreshOrigin('https://promonight-5ap8xjx4z-btj8tk69dk-7318s-projects.vercel.app/api/cron/nightly-refresh', 'production'), SITE_ORIGIN);
+  assert.equal(refreshOrigin('http://localhost:3104/api/cron/nightly-refresh', undefined), 'http://localhost:3104');
+});
+
+test('the route: auth, the window, then revalidate through POST /api/revalidate on www, and only then warm and verify', async () => {
   const log: { method: string; url: string; paths?: string[] }[] = [];
+  let mode: 'ok' | 'login' = 'ok';
   const realFetch = globalThis.fetch;
   globalThis.fetch = (async (u: string, init?: RequestInit) => {
     const method = init?.method ?? 'GET';
+    if (mode === 'login') {
+      log.push({ method, url: String(u) });
+      return resp(307, { location: 'https://vercel.com/login' });
+    }
     if (method === 'POST') {
       assert.equal((init!.headers as Record<string, string>)['x-revalidate-secret'], 'r', 'the fan-out secret');
       const paths = JSON.parse(String(init!.body)).paths as string[];
@@ -126,11 +165,12 @@ test('the route: auth, the window, then revalidate through POST /api/revalidate 
       return new Response(JSON.stringify({ ok: true, revalidated: paths.length }), { status: 200 });
     }
     log.push({ method, url: String(u) });
-    return new Response('ok', { status: 200 });
+    return resp(200, { 'x-vercel-cache': 'MISS' });
   }) as typeof fetch;
+  const DEPLOY = 'https://promonight-abc123-btj8tk69dk-7318s-projects.vercel.app/api/cron/nightly-refresh';
   try {
     const { GET } = await import('../../app/api/cron/nightly-refresh/route');
-    const call = (auth?: string) => GET(new Request('https://www.getpromonight.com/api/cron/nightly-refresh', { headers: auth ? { authorization: auth } : {} }));
+    const call = (auth?: string) => GET(new Request(DEPLOY, { headers: auth ? { authorization: auth } : {} }));
 
     delete process.env.CRON_SECRET;
     assert.equal((await call('Bearer s')).status, 503);
@@ -140,6 +180,7 @@ test('the route: auth, the window, then revalidate through POST /api/revalidate 
     delete process.env.REVALIDATE_SECRET;
     assert.equal((await call('Bearer s')).status, 503, 'no fan-out secret, no run');
     process.env.REVALIDATE_SECRET = 'r';
+    process.env.VERCEL_ENV = 'production';
 
     // 04:15Z in October is 00:15 EDT: acts.
     mock.timers.setTime(Date.parse('2026-10-07T04:15:00Z'));
@@ -147,20 +188,35 @@ test('the route: auth, the window, then revalidate through POST /api/revalidate 
     const res = await call('Bearer s');
     const body = await res.json();
     assert.equal(res.status, 200);
-    const expected = TEAMS.length + 3 + 13;
+    const expected = TEAMS.length + 3 + 16;
     assert.equal(body.paths, expected);
     assert.equal(body.revalidated, expected);
     assert.equal(body.warmed, expected);
+    assert.equal(body.fresh, expected);
+    assert.equal(body.ok, true);
+    assert.ok(log.every((e) => e.url.startsWith('https://www.getpromonight.com/')), 'every request goes to www, never the deployment host');
     const posts = log.filter((e) => e.method === 'POST');
     const gets = log.filter((e) => e.method === 'GET');
     assert.ok(posts.length >= 1 && posts.every((e) => e.url === 'https://www.getpromonight.com/api/revalidate'), 'through the existing endpoint');
     assert.ok(posts.every((e) => e.paths!.length <= 100), "within the endpoint's 100-path cap");
     const lastPost = log.map((e) => e.method).lastIndexOf('POST');
     const firstGet = log.map((e) => e.method).indexOf('GET');
-    assert.ok(lastPost < firstGet, 'every invalidation is applied (its request completed) before anything is warmed');
+    assert.ok(lastPost < firstGet, 'every invalidation is queued (its request completed) before anything is warmed');
     const posted = posts.flatMap((e) => e.paths!).sort();
-    assert.deepEqual(gets.map((e) => new URL(e.url).pathname).sort(), posted, 'every revalidated path is warmed');
+    const warmedPaths = gets.map((e) => new URL(e.url).pathname).sort();
+    assert.deepEqual(warmedPaths, [...posted, ...posted].sort(), 'every revalidated path is warmed, then verified');
     assert.ok(posted.includes('/venues/ppg-paints-arena') && posted.includes('/nhl/pittsburgh-penguins') && posted.includes('/promos/today'));
+
+    // The login page answers everything: red, not ok.
+    mode = 'login';
+    log.length = 0;
+    const bad = await call('Bearer s');
+    const badBody = await bad.json();
+    assert.equal(bad.status, 500);
+    assert.equal(badBody.ok, false);
+    assert.equal(badBody.revalidated, 0);
+    assert.equal(badBody.warmed, 0);
+    mode = 'ok';
 
     // 05:15Z in October is 01:15 EDT: the other firing, skipped.
     mock.timers.setTime(Date.parse('2026-10-07T05:15:00Z'));
@@ -170,22 +226,25 @@ test('the route: auth, the window, then revalidate through POST /api/revalidate 
     assert.equal(log.length, 0);
   } finally {
     globalThis.fetch = realFetch;
+    delete process.env.VERCEL_ENV;
   }
 });
 
-test('the fan-out batches at the endpoint cap and reports a failed batch without stopping', async () => {
+test('the fan-out batches at the endpoint cap and reports a failed or short batch without stopping', async () => {
   const { revalidateViaFanOut } = await import('../nightly-refresh');
   const paths = Array.from({ length: 205 }, (_, i) => `/p${i}`);
   const sizes: number[] = [];
   const r = await revalidateViaFanOut('https://x.test', paths, 'r', async (_u, init) => {
+    assert.equal(init.redirect, 'manual');
     const batch = JSON.parse(String(init.body)).paths as string[];
     sizes.push(batch.length);
-    if (batch[0] === '/p100') return { status: 500, json: async () => ({ ok: false }) };
-    return { status: 200, json: async () => ({ ok: true, revalidated: batch.length }) };
+    if (batch[0] === '/p100') return resp(500);
+    if (batch[0] === '/p200') return new Response(JSON.stringify({ ok: true, revalidated: 3 }), { status: 200 });
+    return new Response(JSON.stringify({ ok: true, revalidated: batch.length }), { status: 200 });
   });
   assert.deepEqual(sizes, [100, 100, 5]);
-  assert.equal(r.revalidated, 105);
-  assert.deepEqual(r.failedBatches, [{ first: '/p100', status: 500 }]);
+  assert.equal(r.revalidated, 100);
+  assert.deepEqual(r.failedBatches, [{ first: '/p100', status: 500 }, { first: '/p200', status: 'revalidated 3 of 5' }]);
 });
 
 test('one fan-out: the endpoint uses the shared loop; the cron calls the endpoint, never revalidatePath itself', () => {
