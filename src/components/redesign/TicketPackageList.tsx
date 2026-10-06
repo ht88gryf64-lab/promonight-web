@@ -10,10 +10,10 @@ import {
 // The special-ticket rows of an NHL or NBA team page, in their own group
 // (WEB6 addendum, 2026-10-05; the rule is in src/lib/ticket-packages.ts).
 //
-// A SERVER COMPONENT WITH NO CLIENT CHILD, so nothing here enters the RSC
-// payload as props, and the page mounts it only when there is at least one
-// package ahead: a page without packages renders exactly what it rendered
-// before.
+// A SERVER COMPONENT. Its only client child is PromoArrivalHighlight (no
+// props), mounted on a page with no promo list. The page mounts this block only
+// when there is at least one package ahead: a page without packages renders
+// exactly what it rendered before.
 //
 // AD CONTRACT. No `page-content` wrapper anywhere inside, so the ad placer has
 // no anchor in this block: no unit lands between two package rows or inside the

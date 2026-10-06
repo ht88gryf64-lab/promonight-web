@@ -148,7 +148,7 @@ const CASES = [
   ['the package details not marked for the arrival effect', TPL, '<details className="mt-3" data-ticket-packages>', '<details className="mt-3">', [T_PKG]],
   ['an arrival into a closed package group does not open it', 'src/components/redesign/PromoArrivalHighlight.tsx', '      if (packages && !packages.open) packages.open = true;\n', '', [T_R1]],
   ['a packages-only page with no arrival effect', TPL, '      {arrivalHighlight ? <PromoArrivalHighlight /> : null}\n', '', [T_R1]],
-  ['the season-constant guard never fires (its due date moved past today)', T_LEAGUE, 'const due = Date.UTC(SPLIT_SEASON_START_YEAR + 1, 5, 1);', 'const due = Date.UTC(SPLIT_SEASON_START_YEAR, 5, 1);', [T_LEAGUE]],
+  ['the season-constant guard fires once due (its due date moved into the past)', T_LEAGUE, 'const due = Date.UTC(SPLIT_SEASON_START_YEAR + 1, 5, 1);', 'const due = Date.UTC(SPLIT_SEASON_START_YEAR, 5, 1);', [T_LEAGUE]],
   ['an unplaceable archive row dropped', LABEL, '    if (y === null) {\n      unplaced.push(i);\n      return;\n    }', '    if (y === null) return;', [T_R1]],
 ];
 

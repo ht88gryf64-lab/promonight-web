@@ -160,7 +160,7 @@ describe('the Warriors shape: 3 theme nights, 6 special-ticket rows', () => {
     const group = /<section[^>]*aria-labelledby="ticket-packages-heading"[\s\S]*?<\/section>/.exec(out)?.[0] ?? '';
     const t = text(group);
     assert.match(t, /Ticket packages \(5\)/);
-    assert.match(t, /not counted as theme nights, giveaways or food deals/);
+    assert.match(t, /not counted as theme nights, giveaways, food deals or kids events/);
     assert.equal(t.split('Comes with a special ticket.').length - 1, 5, 'one note per row');
     assert.ok(!t.includes('Expired Package Night'), 'a past package is not offered');
     for (const title of PACKAGE_TITLES.slice(1)) assert.ok(t.includes(title), title);

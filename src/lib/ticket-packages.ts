@@ -73,7 +73,7 @@ export function ticketPackagesHeading(n: number): string {
 /** The line under the heading: what these are, and why the counts above leave
  *  them out. */
 export const TICKET_PACKAGES_SUBLINE =
-  'Sold as special tickets, so they are not counted as theme nights, giveaways or food deals on this page.';
+  'Sold as special tickets, so they are not counted as theme nights, giveaways, food deals or kids events on this page.';
 
 /** The sentence every row carries. */
 export const TICKET_PACKAGE_ROW_NOTE = 'Comes with a special ticket. Only fans who buy this package get it.';

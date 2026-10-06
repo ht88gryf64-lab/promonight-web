@@ -3908,7 +3908,7 @@ added since.
 
 ## 69. The NHL and NBA season constant must be bumped every July
 
-**Status: OPEN, DATED (WEB6, 2026-10-05). Severity: High on 2027-07-01 if missed. Due: between 2027-06-01 and 2027-07-01.**
+**Status: OPEN, DATED (WEB6, 2026-10-05). Severity: High on 2027-07-01 if missed. Bump on or after 2027-06-01, and before 2027-07-01.**
 
 **What it is.** `SPLIT_SEASON_START_YEAR` in `src/lib/season-label.ts` names the NHL and NBA season every team page speaks about (2026 means 2026-27). It is deliberately its own constant, not `TITLE_SEASON_YEAR`: that one follows MLB and is bumped in January or February (docs/runbook-2027-01-15-spansyears-season-switchoff.md), in the middle of an NHL and NBA season. Nothing derives this one from the clock, by the same rule as every season year on the site.
 
@@ -3918,12 +3918,14 @@ added since.
 - a zero-promo page's schedule reads "2026-27 Game Schedule";
 - the status line says "hasn't recorded any ... 2026-27 promotions".
 
-**How it is caught.** `season-labels-by-league.test.ts` fails on the real clock from 2027-06-01 ("the NHL/NBA season constant is current"). Under `npm run test:future` it skips itself, because the shifted clock would fail it a year early.
+**How it is caught.** `season-labels-by-league.test.ts` ("the NHL/NBA season constant is current") fails from 2027-06-01. It reads the wall clock (`performance.timeOrigin`), which `npm run test:future`'s Date shift does not move, so it passes there until the same date. LIMIT: nothing runs the tests on a schedule (the only workflow is indexnow-after-deploy, and the Vercel build runs no tests), so it fires only when someone runs `npm test` in June. Put the bump in the calendar too.
 
-**The bump.** In July, when the new NHL and NBA spines are in `games`:
+**The bump.** In June, whether or not the new NHL and NBA spines are in `games` yet (they landed in September in 2026). Bumping before they arrive is safe: `regularSeasonContexts` finds no game of the new season, so the schedule block stays off, and the finished season's rows read "LAST SEASON (2026-27)", which is then true.
 1. Set `SPLIT_SEASON_START_YEAR` to the new start year.
 2. Re-verify, or empty, `NOTHING_PUBLISHED` in `src/lib/announcement-status.ts`. Those dates are for the old season.
 3. Run `npm test`, `npm run test:future` and both mutation harnesses (`scripts/season-labels-mutations.mjs`, `scripts/schedule-months-mutations.mjs`).
 4. Verify one NHL and one NBA page against served HTML: archive headings, hero sentence, schedule title.
+
+Do NOT bump it with `TITLE_SEASON_YEAR` in January (docs/runbook-2027-01-15-spansyears-season-switchoff.md): that one is the MLB year.
 
 **Where.** `src/lib/season-label.ts` (the constant), `src/lib/season-scope.ts`, `src/lib/schedule-months.ts`, `src/lib/announcement-status.ts`, `src/components/zero-promo-fallback.tsx`, `src/components/promo-list.tsx`.
