@@ -4,7 +4,7 @@ import 'server-only';
 import { cache } from 'react';
 import { db } from './firebase';
 import type { Promo, Team } from './types';
-import { getTeamBySlug, getTeamPromos, isTicketPackagePromo, promoBoardChicagoYMD } from './data';
+import { getTeamBySlug, getTeamPromos, isTicketPackagePromo, promoBoardYMD } from './data';
 import { partitionTicketPackages } from './ticket-packages';
 import { getCfbSchool } from './cfb/data';
 import { toAffiliateTeam } from './cfb/page-extras';
@@ -814,11 +814,12 @@ function daysBetweenYMD(a: string, b: string): number {
  *  Empty array when the building has no promos in the window, which is what the
  *  caller conditional-renders on (an off-season arena shows no block at all). */
 export const getVenueHubWeekPromos = cache(async (hub: VenueHub): Promise<VenueHubWeekPromo[]> => {
-  // Chicago-anchored, the same national "today" boundary the league hubs and the
-  // daily board use, so a late-night East-coast visitor never sees the window
-  // roll a day early.
-  const start = promoBoardChicagoYMD(0);
-  const end = promoBoardChicagoYMD(WEEK_PROMO_DAYS);
+  // The site's one calendar day, America/New_York (src/lib/site-today.ts), the
+  // same day the league hubs, the daily board and the team pages use, so a card
+  // here and the team row it links to agree on what is still ahead when both
+  // are rendered on the same Eastern day (CACHED COPIES, src/lib/site-today.ts).
+  const start = promoBoardYMD(0);
+  const end = promoBoardYMD(WEEK_PROMO_DAYS);
 
   const seen = new Set<string>();
   const proTenants = hub.tenants.filter((t) => {

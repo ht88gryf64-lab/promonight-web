@@ -13,6 +13,7 @@ import { isRedesignEnabled } from '@/lib/redesign';
 import { numberWord } from '@/lib/coverage-counts';
 import { SCORED_LEAGUES } from '@/lib/types';
 import { archivoHouse } from '@/components/redesign/fonts-house';
+import { addDaysYmd, siteYmd } from '@/lib/site-today';
 
 // Server-side fetch runs once per ISR revalidate window. Scoring rides
 // each league's weekly scan (MLB Tue year-round; WNBA Wed and MLS Thu in
@@ -35,13 +36,13 @@ const SERVER_FETCH_DAYS = 180;
 const ITEMLIST_SCHEMA_CAP = 50;
 const DEFAULT_VIEW_DAYS = 90;
 
+// The site's calendar day, America/New_York (src/lib/site-today.ts). It was the
+// server's local day (UTC on Vercel) until WEB6 G3 (2026-10-06).
 function localYMD(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return siteYmd(d);
 }
 function addDaysYMD(base: Date, days: number): string {
-  const d = new Date(base);
-  d.setDate(d.getDate() + days);
-  return localYMD(d);
+  return addDaysYmd(siteYmd(base), days);
 }
 
 // Title and description carry no promo count: the old hardcoded cap

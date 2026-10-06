@@ -1069,8 +1069,9 @@ design pass, not a cleanup commit.
 
 ## 21. Homepage visible "Last updated" line is clock-derived
 
-**Status: OPEN, entry-17 class.** src/app/page.tsx:319 computes
-`lastUpdated = formatChicagoLong(today)` from the render clock and line 364
+**Status: OPEN, entry-17 class.** src/app/page.tsx computes
+`lastUpdated = formatSiteLong(today)` (formatChicagoLong until WEB6 G3, which
+moved it to the site's Eastern day) from the render clock and the hero
 renders "{promoCount} promos tracked · Last updated {lastUpdated}" in the
 homepage hero, so every ISR regeneration asserts updated-today regardless of
 whether any data changed. This is the same synthetic-freshness class as entry
@@ -3941,3 +3942,35 @@ added since.
 Do NOT bump it with `TITLE_SEASON_YEAR` in January (docs/runbook-2027-01-15-spansyears-season-switchoff.md): that one is the MLB year.
 
 **Where.** `src/lib/season-label.ts` (the constant), `src/lib/season-scope.ts`, `src/lib/schedule-months.ts`, `src/lib/announcement-status.ts`, `src/components/zero-promo-fallback.tsx`, `src/components/promo-list.tsx`.
+
+## 70. The playoff scanner never sets the special-ticket flag, so NHL and NBA playoff package rows would list as promotions
+
+**Status: OPEN, DATED (Matt, 2026-10-06, DATA G4 ruling 4). Severity: Medium from mid-April 2027. Deadline 2027-03-15.**
+
+**What it is.** promo-pipeline `playoff-scanner/scan-playoff-promos.js` extracts NBA and NHL playoff promotions into `playoffPromos` and never writes `ticketPackageRequired` (verified on pipeline main 9a66b37, 2026-10-06). The web reads `playoffPromos` separately (the homepage playoff window, `PlayoffSection`) and applies no package rule there, unlike the regular-season reads that WEB6 G1 and G2 group by the flag. A playoff night sold only as a ticket package would therefore list as an ordinary promotion and count toward playoff totals. Raised by WEB6 in G2 review round 4.
+
+**Ruling.** The playoff scanner should set `ticketPackageRequired` (Matt, 2026-10-06).
+
+**What to do, in this order.**
+1. DATA builds the flag into the playoff scanner through G0 to G2 over the winter, with the same model-only rule as the regular-season scanners: a flag with no deterministic rule and no ruling behind it is held for review, not written (promo-pipeline `lib/scanner/flag-backing.js`).
+2. WEB6 ships the web package rule for the playoff reads first (homepage playoff window, `PlayoffSection`, any other `playoffPromos` consumer), gated at the mapper.
+3. Only then does the playoff scanner start writing the flag. DATA tells WEB6 before the first run that writes it.
+
+All three by 2027-03-15, ahead of the April postseason.
+
+**Where.** promo-pipeline `playoff-scanner/scan-playoff-promos.js`, `playoff-scanner/post-playoff-promos.js`; web `src/components/playoff-section.tsx`, `src/lib/data.ts` (playoff reads). Ledger 2026-10-06 (DATA G4).
+
+## 71. MLB and NFL special-ticket flags are unreliable; the web must not read them until they are re-derived
+
+**Status: OPEN, DATED (Matt, 2026-10-06, DATA G5 ruling 3). Severity: Medium if the web starts reading them early. Deadline 2027-03-01.**
+
+**What it is.** 490 live MLB rows and 1 NFL row carried `ticketPackageRequired: true` on 2026-10-06, set by the extraction model. A spot check of 10 against the club pages (2026-10-06) found 5 correct, 3 wrong, 1 leaning wrong and 1 unclear: the Phillies Schwarber Bobble Figurine was all fans, the Rockies Mile High Value Play was a ticket price deal, and the Bears x Peanuts Kids Game was a public game with an optional keychain package (that NFL flag was cleared on 2026-10-06). 270 of the 490 MLB flags had no rule behind them at all.
+
+**Ruling.** Before the 2027 MLB season, DATA re-derives every MLB flag with the tightened rule (the purchase or package wording must be on the club's own page next to the row's title or date, and a "first N fans receive" or open-to-all night is not a package; promo-pipeline `lib/scanner/flag-backing.js`). Only then may the web start reading MLB and NFL flags. Today the web reads the flag on NHL and NBA only (WEB6 G1/G2), and no web change is made for MLB or NFL until this entry closes.
+
+**What to do, in order.**
+1. DATA re-derives the MLB flags (dry run, then a snapshot-first write) by 2027-03-01 and reports per club.
+2. DATA tells WEB6.
+3. WEB6 may then extend the package rule to MLB and NFL pages, gated at the mapper.
+
+**Where.** promo-pipeline `lib/scanner/flag-backing.js`, `lib/scanner/promo-diff.js`, scan-mlb.js, scan-nfl.js; web `mapPromoDoc` and the package grouping (WEB6 G1/G2). Ledger 2026-10-06 (DATA G5).

@@ -1,11 +1,14 @@
 // CFB calendar helpers. Pure (no Firestore, no server-only import) so the read
 // layer, the hub reader and the tests all share them.
 //
-// Two clocks, on purpose. America/Chicago is the site's date anchor (homepage
-// hot-promos rollover, the /cfb rail window). A game's played/upcoming boundary
-// is the calendar day in the VENUE's zone: a 7 PM kickoff in Honolulu is still
-// today there when Chicago has moved on. CFB has no week numbers on this site;
-// windows and games are labelled by date.
+// Two clocks, on purpose. The site's calendar day, America/New_York
+// (src/lib/site-today.ts), is the date anchor (homepage rollover, the /cfb rail
+// window); it was America/Chicago until WEB6 G3 (2026-10-06). A game's
+// played/upcoming boundary is the calendar day in the VENUE's zone: a 7 PM
+// kickoff in Honolulu is still today there when the East has moved on. CFB has
+// no week numbers on this site; windows and games are labelled by date.
+
+import { siteTodayYmd } from '@/lib/site-today';
 
 /** Today's YYYY-MM-DD in an IANA zone. Throws on an invalid zone (Intl). */
 export function todayYMD(zone: string): string {
@@ -15,16 +18,16 @@ export function todayYMD(zone: string): string {
 }
 
 /** The site's date anchor (hub rail window, homepage rollover). */
-export function chicagoTodayYMD(): string {
-  return todayYMD('America/Chicago');
+export function siteTodayYMD(): string {
+  return siteTodayYmd();
 }
 
 /** Today in the zone of the building a game is played in, falling back to the
  *  site anchor when the venue is unmapped. A game is played once the calendar
- *  day has turned where the game was, not in Chicago. */
+ *  day has turned where the game was, not on the site's day. */
 export function venueTodayYMD(venueZone: string | null): string {
-  if (!venueZone) return chicagoTodayYMD();
-  try { return todayYMD(venueZone); } catch { return chicagoTodayYMD(); }
+  if (!venueZone) return siteTodayYMD();
+  try { return todayYMD(venueZone); } catch { return siteTodayYMD(); }
 }
 
 /** House date format for a window: "AUG 31 – SEP 6", or one date when the

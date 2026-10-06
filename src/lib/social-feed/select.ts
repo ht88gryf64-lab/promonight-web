@@ -9,14 +9,20 @@
 //   promoId asc. Scoring covers MLB / MLS / WNBA only, so from the end of the
 //   MLB regular season until spring this pass carries the feed.
 // Both passes: giveaway and theme only, dated, not tombstoned, inside the
-// window [today, today + 7] in America/Chicago, inclusive.
+// window [today, today + 7] on the site's calendar day (America/New_York,
+// src/lib/site-today.ts), inclusive. It was America/Chicago until WEB6 G3.
 // Caps run across the combined list in order: max 2 per team, max 2 per
 // derivedSignals.itemType where that is a real category (null and 'generic'
 // are exempt; unscored promos carry no itemType), total 25. Duplicates by
 // feed key (team + promoId), and by team + date + title, are dropped.
 
 import { cleanText } from './text';
+import { siteYmd } from '../site-today';
 
+// The zone of the items' stable pubDate (12:00 wall clock, see rss.ts). NOT the
+// window's day: that is the site's (siteYmd below). Kept on Central so every
+// item already published keeps the pubDate it went out with; moving it would
+// re-date 25 live items by an hour and could re-fire a downstream automation.
 export const FEED_TIME_ZONE = 'America/Chicago';
 export const FEED_WINDOW_DAYS = 7;
 export const FEED_CAP = 25;
@@ -73,16 +79,6 @@ export interface FeedSelection<T extends FeedCandidate> {
   window: FeedWindow;
 }
 
-const centralYmdFormat = new Intl.DateTimeFormat('en-CA', {
-  timeZone: FEED_TIME_ZONE,
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-});
-
-export function centralYMD(now: Date): string {
-  return centralYmdFormat.format(now);
-}
 
 export function addDaysYMD(ymd: string, days: number): string {
   const [y, m, d] = ymd.split('-').map(Number);
@@ -90,7 +86,7 @@ export function addDaysYMD(ymd: string, days: number): string {
 }
 
 export function feedWindow(now: Date): FeedWindow {
-  const start = centralYMD(now);
+  const start = siteYmd(now);
   return { start, end: addDaysYMD(start, FEED_WINDOW_DAYS) };
 }
 

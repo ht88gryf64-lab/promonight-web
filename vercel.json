@@ -11,7 +11,7 @@
     },
     {
       "path": "/api/cron/indexnow-daily",
-      "schedule": "10 6 * * *"
+      "schedule": "10 5 * * *"
     }
   ]
 }

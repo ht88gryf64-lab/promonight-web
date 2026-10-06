@@ -6,6 +6,7 @@ import { AggregatorPage, type AggregatorGroup } from '@/components/aggregator-la
 import { isSoccerJerseyPromo } from '@/lib/soccer-jersey';
 import { teamDisplayName } from '@/lib/promo-helpers';
 import type { PromoWithTeam } from '@/lib/types';
+import { siteTodayYmd } from '@/lib/site-today';
 
 const PAGE_URL = 'https://www.getpromonight.com/promos/soccer-jersey-nights';
 
@@ -15,9 +16,11 @@ const WC_END = '2026-07-19';
 
 export const revalidate = 21600;
 
+// The site's calendar day, America/New_York (src/lib/site-today.ts), the same
+// day as the team pages and hubs. It was the server's local day (UTC on
+// Vercel) until WEB6 G3 (2026-10-06).
 function todayYMD(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return siteTodayYmd();
 }
 
 function monthLabel(dateStr: string): string {

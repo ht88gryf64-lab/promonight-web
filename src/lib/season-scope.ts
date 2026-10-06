@@ -74,11 +74,11 @@ import type { Promo, PromoType } from './types';
  * is derived from it, it gates only which of two truthful renderings ships, and
  * once it passes it never changes behaviour again.
  *
- * TIMEZONE: todayYmd() is UTC, so this opens at 2026-10-01T00:00Z, which is
- * 2026-09-30 17:00 PDT. Search Console reports in Pacific. The ISR behaviour
- * above makes a served-page change inside those seven hours very unlikely, and
- * the direction of error is late rather than early, but the gate does not
- * enforce Pacific and should not be read as if it does.
+ * TIMEZONE: todayYmd() was UTC when this opened (2026-10-01T00:00Z, which is
+ * 2026-09-30 17:00 PDT). Since WEB6 G3 (2026-10-06) it is the site's Eastern
+ * day, which changes nothing now: the date has passed in every zone. Search
+ * Console reports in Pacific; the gate never enforced Pacific and should not be
+ * read as if it did.
  */
 export const MLB_SEASON_SCOPE_START = '2026-10-01';
 

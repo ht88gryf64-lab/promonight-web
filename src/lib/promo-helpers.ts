@@ -2,6 +2,7 @@ import { APP_LEAGUES, type CoverageCounts } from '@/lib/coverage-counts';
 import type { Team, Promo, PromoType, Venue, PlayoffPromo } from './types';
 import { PROMO_TYPE_LABELS } from './types';
 import { indefiniteArticleFor } from './indefinite-article';
+import { siteTodayYmd } from './site-today';
 import { currentSeasonLabel, isSplitSeasonLeague, remainingPeriodPhrase } from './season-label';
 // TYPE-ONLY, and it has to stay that way: season-scope.ts imports this module
 // for countPromosByType / isUpcomingPromo, so a value import here would close a
@@ -290,8 +291,11 @@ export function isPurchaseGated(p: Pick<Promo, 'title' | 'description'>): boolea
 // src/lib/season-scope.ts resolves the season population, and refuses to when
 // the rows cannot support the claim; callers then fall back to the
 // upcoming-only wording rather than guessing.
+// The site's one calendar day, America/New_York (src/lib/site-today.ts). It was
+// the UTC day, five hours ahead of the hubs and aggregators every evening (WEB6
+// G3, 2026-10-06).
 export function todayYmd(): string {
-  return new Date().toISOString().split('T')[0];
+  return siteTodayYmd();
 }
 
 export const isUpcomingPromo = (p: { date: string }, today: string = todayYmd()): boolean =>

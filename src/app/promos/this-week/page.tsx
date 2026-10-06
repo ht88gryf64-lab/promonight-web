@@ -3,19 +3,15 @@ import { pageOpenGraph } from '@/lib/og';
 import { getCoverageCounts } from '@/lib/get-coverage-counts';
 import { getPromosInDateRange } from '@/lib/data';
 import { AggregatorPage, AggregatorJsonLd, type AggregatorGroup } from '@/components/aggregator-layout';
+import { addDaysYmd, siteTodayYmd } from '@/lib/site-today';
 
 export const revalidate = 21600;
 
+// The site's calendar day, America/New_York (src/lib/site-today.ts), the same
+// day as the team pages and hubs. It was the server's local day (UTC on
+// Vercel) until WEB6 G3 (2026-10-06).
 function todayYMD(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-function plusDays(baseYMD: string, days: number): string {
-  const [y, m, d] = baseYMD.split('-').map(Number);
-  const dt = new Date(y, m - 1, d);
-  dt.setDate(dt.getDate() + days);
-  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+  return siteTodayYmd();
 }
 
 function formatLongDate(dateStr: string): string {
@@ -39,7 +35,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function ThisWeekPage() {
   const start = todayYMD();
-  const end = plusDays(start, 7);
+  const end = addDaysYmd(start, 7);
   const promos = await getPromosInDateRange(start, end);
   const hot = promos.filter((p) => p.highlight);
 

@@ -3,7 +3,7 @@ import { getFeedRssItems } from '@/lib/social-feed/feed';
 
 // Public RSS 2.0 feed for social automation (Vista Social RSS import). Not in
 // the sitemap and noindex: it exists for the importer, not for search.
-// Regenerates hourly; "today" for the 7-day window is computed in Central time
+// Regenerates hourly; "today" for the 7-day window is the site's Eastern day
 // at each regeneration.
 export const revalidate = 3600;
 

@@ -8,6 +8,7 @@ import { synthPromoId } from '@/lib/promo-helpers';
 import type { GameContext } from '@/lib/data';
 import { Modal } from './ui/modal';
 import { GameDayDetail, LegacyPromoDetail, dayHeader } from '@/components/shared/game-day-detail';
+import { siteTodayYmd } from '@/lib/site-today';
 
 interface TeamCalendarProps {
   promos: Promo[];
@@ -68,10 +69,10 @@ export function TeamCalendar({ promos, teamName, teamSlug, sport, team, gameCont
   // The visitor's clock, after hydration, for the isToday ring only.
   const [visitorTodayKey, setVisitorTodayKey] = useState<string | null>(null);
   useEffect(() => {
-    const d = new Date();
-    setVisitorTodayKey(
-      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
-    );
+    // The site's day (America/New_York) on the visitor's clock, not the
+    // device's own calendar day, so the ring sits on the same day as the
+    // server's todayStr, the hubs and the boards (src/lib/site-today.ts).
+    setVisitorTodayKey(siteTodayYmd());
   }, []);
   const ringKey = visitorTodayKey ?? todayKey;
 

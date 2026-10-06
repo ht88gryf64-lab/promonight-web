@@ -5,12 +5,15 @@ import Link from 'next/link';
 import { IconChevronRight } from '@tabler/icons-react';
 import { getPromosFromDate } from '@/lib/data';
 import { AggregatorPage, AggregatorJsonLd, type AggregatorGroup } from '@/components/aggregator-layout';
+import { siteTodayYmd } from '@/lib/site-today';
 
 export const revalidate = 21600;
 
+// The site's calendar day, America/New_York (src/lib/site-today.ts), the same
+// day as the team pages and hubs. It was the server's local day (UTC on
+// Vercel) until WEB6 G3 (2026-10-06).
 function todayYMD(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return siteTodayYmd();
 }
 
 function monthLabel(dateStr: string): string {

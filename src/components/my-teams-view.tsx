@@ -14,6 +14,7 @@ import { FanaticsCTA } from './affiliates/FanaticsCTA';
 import { SpotHeroCTA } from './affiliates/SpotHeroCTA';
 import { ExpediaCTA } from './affiliates/ExpediaCTA';
 import { AffiliateDisclosure } from './affiliates/AffiliateDisclosure';
+import { addDaysYmd, endOfMonthYmd, siteTodayYmd } from '@/lib/site-today';
 import type {
   StarredPromo,
   StarredPromosResponse,
@@ -102,21 +103,6 @@ function pickFeatured(teams: Team[], region: string | null): Team[] {
   return result;
 }
 
-function localYMD(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
-
-function addDaysYMD(base: Date, days: number): string {
-  const d = new Date(base);
-  d.setDate(d.getDate() + days);
-  return localYMD(d);
-}
-
-function endOfMonthYMD(base: Date): string {
-  const d = new Date(base.getFullYear(), base.getMonth() + 1, 0);
-  return localYMD(d);
-}
-
 function daysBetweenYMD(from: string, to: string): number {
   const [fy, fm, fd] = from.split('-').map(Number);
   const [ty, tm, td] = to.split('-').map(Number);
@@ -147,15 +133,19 @@ export function MyTeamsView({ teams, variant = 'dark' }: MyTeamsViewProps) {
   const { starred, isHydrated, count } = useStarredTeams();
   const [region, setRegion] = useState<string | null>(null);
 
-  // Date stamps are computed once per render but kept stable across SWR
-  // refetches by depending on `count`/`starred` only — the SWR key carries
-  // the date strings, so a midnight crossover during a long-open session
-  // would naturally refetch when the day changes anyway.
-  const today = useMemo(() => new Date(), []);
-  const todayYMD = useMemo(() => localYMD(today), [today]);
+  // Date stamps are computed once, on mount, and kept stable across SWR
+  // refetches. A tab left open across midnight keeps the day it opened on
+  // until it is reloaded.
+  //
+  // The site's one calendar day, America/New_York (src/lib/site-today.ts), the
+  // same day the team pages, hubs and boards use. It was the device's own
+  // calendar day until WEB6 G3 (2026-10-06), so an evening visitor out West
+  // could see "tonight" on a day the rest of the site had not reached, or miss
+  // one it had.
+  const todayYMD = useMemo(() => siteTodayYmd(), []);
   const endYMD = useMemo(
-    () => addDaysYMD(today, PROMO_WINDOW_DAYS),
-    [today],
+    () => addDaysYmd(todayYMD, PROMO_WINDOW_DAYS),
+    [todayYMD],
   );
 
   // Sorted slug key so equal starred sets share a cache entry regardless of
@@ -847,15 +837,15 @@ function StateB({
   );
 
   const endOfMonth = useMemo(
-    () => endOfMonthYMD(new Date()),
-    [],
+    () => endOfMonthYmd(todayYMD),
+    [todayYMD],
   );
 
   const upcomingThisMonth = promos.filter(
     (p) => p.date >= todayYMD && p.date <= endOfMonth,
   ).length;
 
-  const week7 = addDaysYMD(new Date(), 7);
+  const week7 = addDaysYmd(todayYMD, 7);
   const tonight = promos.filter((p) => p.date === todayYMD);
   const thisWeek = promos.filter(
     (p) => p.date > todayYMD && p.date <= week7,

@@ -1,5 +1,6 @@
 import type { PlayoffPromo, Team } from '@/lib/types';
 import { teamDisplayName, extractOpponent } from '@/lib/promo-helpers';
+import { SITE_TIME_ZONE } from '@/lib/site-today';
 
 const ROUND_LABELS: Record<string, string> = {
   first_round: 'First Round',
@@ -25,7 +26,7 @@ function shortDate(iso: string | null): string {
 function fullTimestamp(iso: string | null): string {
   if (!iso) return 'unknown';
   return new Date(iso).toLocaleString('en-US', {
-    timeZone: 'America/Chicago',
+    timeZone: SITE_TIME_ZONE,
     month: 'long',
     day: 'numeric',
     year: 'numeric',

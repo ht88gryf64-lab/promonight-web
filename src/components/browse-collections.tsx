@@ -1,5 +1,6 @@
 import { TrackedTapLink } from './analytics/TrackedTapLink';
 import type { CollectionTileTapProperties } from '@/lib/analytics';
+import { SITE_TIME_ZONE } from '@/lib/site-today';
 
 export interface CollectionTile {
   href: string;
@@ -25,7 +26,7 @@ export function BrowseCollections({ tiles }: { tiles: CollectionTile[] }) {
   if (tiles.length === 0) return null;
 
   const yearSuffix = new Date().toLocaleDateString('en-US', {
-    timeZone: 'America/Chicago',
+    timeZone: SITE_TIME_ZONE,
     year: 'numeric',
   });
 

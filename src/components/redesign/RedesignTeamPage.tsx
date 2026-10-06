@@ -140,7 +140,7 @@ export function RedesignTeamPage({
   //
   // DERIVED FROM `claim`, NOT FROM A SECOND CLOCK READ. This was
   // isSeasonScopeLive(team.league), which calls todayYmd() again. Two
-  // independent reads of the clock inside one render can straddle the UTC
+  // independent reads of the clock inside one render can straddle the day
   // rollover and disagree, producing a page with held copy and home-only
   // prerendering, a combination neither state defines. `claim.kind !== 'held'`
   // is the same predicate, evaluated once, upstream.
@@ -295,6 +295,7 @@ export function RedesignTeamPage({
       <UpcomingPromoModalProvider>
         <PromoList
           league={team.league}
+          today={today}
           promos={promos}
           teamSlug={team.id}
           teamName={displayName}
