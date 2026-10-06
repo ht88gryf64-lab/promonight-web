@@ -191,6 +191,63 @@ test('verify: a page answering non-200 twice fails with its status; no sleep sta
   assert.match(r.notFresh.find((n) => n.path === '/slow')!.reason, /still regenerating/);
 });
 
+test('verify: one transient non-200 is asked again, not failed (two strikes)', async () => {
+  const { verifyFresh } = await import('../nightly-refresh');
+  const warm = { ok: 1, failed: [], cache: {}, skipped: 0, states: { '/blip': 'MISS' } };
+  let n = 0;
+  const r = await verifyFresh('https://x.test', warm, ['/blip'], {
+    deadline: Date.now() + 60_000,
+    roundDelayMs: 0,
+    sleep: async () => {},
+    fetcher: async () => (n++ === 0 ? resp(502) : resp(200, { 'x-vercel-cache': 'HIT' })),
+  });
+  assert.equal(r.fresh, 1);
+  assert.deepEqual(r.notFresh, []);
+});
+
+test('retry: POST, then the settle wait, then the re-warm; a failed or skipped re-warm keeps the HIT', async () => {
+  const { retryUntaken } = await import('../nightly-refresh');
+  const order: string[] = [];
+  const warm = { ok: 3, failed: [], cache: {}, skipped: 0, states: { '/a': 'HIT', '/b': 'PRERENDER', '/c': 'MISS' } };
+  const r = await retryUntaken('https://x.test', warm, 'r', {
+    deadline: Date.now() + 60_000,
+    settleMs: 5_000,
+    sleep: async (ms) => { order.push(`sleep ${ms}`); },
+    fetcher: async (u, init) => {
+      if ((init.method ?? 'GET') === 'POST') {
+        order.push('POST ' + JSON.parse(String(init.body)).paths.join(','));
+        return new Response(JSON.stringify({ ok: true, revalidated: 2 }), { status: 200 });
+      }
+      order.push('GET ' + new URL(u).pathname);
+      if (u.endsWith('/b')) throw new Error('boom');
+      return resp(200, { 'x-vercel-cache': 'REVALIDATED' });
+    },
+  });
+  assert.deepEqual(order.slice(0, 2), ['POST /a,/b', 'sleep 5000'], 'the fan-out, then the settle wait');
+  assert.deepEqual(order.slice(2).sort(), ['GET /a', 'GET /b'], 'then the re-warm, only of the ambiguous paths');
+  assert.equal(r.retried, 2);
+  assert.equal(warm.states['/a'], 'REVALIDATED', 'a real answer replaces the HIT');
+  assert.equal(warm.states['/b'], 'PRERENDER', 'a failed re-warm keeps the old answer, so verify still fails it');
+  assert.equal(warm.states['/c'], 'MISS');
+  // No time left for the retry: it does not run, and the HIT stays.
+  const late = { ok: 1, failed: [], cache: {}, skipped: 0, states: { '/a': 'HIT' } };
+  const skipped = await retryUntaken('https://x.test', late, 'r', { deadline: Date.now() + 1_000, settleMs: 5_000, fetcher: async () => { throw new Error('must not run'); } });
+  assert.equal(skipped.skippedForTime, true);
+  assert.equal(late.states['/a'], 'HIT');
+});
+
+test('the fan-out stops at its deadline and reports the batches it did not send', async () => {
+  const { revalidateViaFanOut } = await import('../nightly-refresh');
+  let clock = 0;
+  const r = await revalidateViaFanOut('https://x.test', Array.from({ length: 150 }, (_, i) => `/p${i}`), 'r', async (_u, init) => {
+    clock = 1_000;
+    const batch = JSON.parse(String(init.body)).paths as string[];
+    return new Response(JSON.stringify({ ok: true, revalidated: batch.length }), { status: 200 });
+  }, 500, () => clock);
+  assert.equal(r.revalidated, 100);
+  assert.deepEqual(r.failedBatches, [{ first: '/p100', status: 'past the deadline' }]);
+});
+
 test('budgets: each pass stops in time, and a request never outlives its pass', async () => {
   const { MAX_DURATION_S, WARM_BUDGET_MS, VERIFY_BUDGET_MS, FETCH_TIMEOUT_MS, warmPaths } = await import('../nightly-refresh');
   const route = readFileSync(new URL('../../app/api/cron/nightly-refresh/route.ts', import.meta.url), 'utf8');
@@ -205,7 +262,12 @@ test('budgets: each pass stops in time, and a request never outlives its pass', 
   assert.match(route, /process\.env\.NIGHTLY_REFRESH_VERIFY_MS \?\? DEFAULT_VERIFY_DELAY_MS/);
   assert.match(route, /process\.env\.NIGHTLY_REFRESH_ROUND_MS \?\? DEFAULT_VERIFY_ROUND_MS/);
   assert.match(route, /warmPaths\(origin, paths, \{ deadline: started \+ WARM_BUDGET_MS \}\)/, 'the warm pass has its deadline');
-  assert.ok(FETCH_TIMEOUT_MS <= 60_000);
+  assert.ok(FETCH_TIMEOUT_MS >= 30_000 && FETCH_TIMEOUT_MS <= 60_000, 'long enough for the slow aggregators, short of a pass');
+  const { WARM_CONCURRENCY } = await import('../nightly-refresh');
+  assert.ok(WARM_CONCURRENCY >= 4 && WARM_CONCURRENCY <= 10, '407 paths fit the warm budget without flooding the site');
+  const lib = readFileSync(new URL('../nightly-refresh.ts', import.meta.url), 'utf8');
+  assert.match(lib, /opts\.concurrency \?\? WARM_CONCURRENCY/);
+  assert.match(route, /retryUntaken\(origin, warmed, fanOutSecret, \{ deadline: started \+ WARM_BUDGET_MS, settleMs: SETTLE_MS \}\)/, 'the retry runs inside the warm budget');
   // A request started near its pass's deadline is cut at the deadline, not at
   // the full per-request timeout.
   const t0 = performance.now();
@@ -240,7 +302,7 @@ test('the origin: always www in production (cron calls the login-protected deplo
 
 test('the route: auth, the window, then revalidate through POST /api/revalidate on www, and only then warm and verify', async () => {
   const log: { method: string; url: string; paths?: string[] }[] = [];
-  let mode: 'ok' | 'login' | 'slow-first' | 'stale' | 'fanout-down' | 'warm-hit' | 'race' = 'ok';
+  let mode: 'ok' | 'login' | 'slow-first' | 'stale' | 'fanout-down' | 'warm-hit' | 'race' | 'race-retry-down' = 'ok';
   let racePosted = false;
   let getCount = 0;
   const seenOnce = new Set<string>();
@@ -261,6 +323,10 @@ test('the route: auth, the window, then revalidate through POST /api/revalidate 
       const paths = JSON.parse(String(init!.body)).paths as string[];
       log.push({ method, url: String(u), paths });
       if (mode === 'race' && paths.length === 1 && paths[0] === '/nhl') racePosted = true;
+      if (mode === 'race-retry-down' && paths.length === 1 && paths[0] === '/nhl') {
+        racePosted = true;
+        return resp(500);
+      }
       return new Response(JSON.stringify({ ok: true, revalidated: paths.length }), { status: 200 });
     }
     log.push({ method, url: String(u) });
@@ -275,7 +341,7 @@ test('the route: auth, the window, then revalidate through POST /api/revalidate 
     if (mode === 'warm-hit' && path === '/nhl') return resp(200, { 'x-vercel-cache': 'HIT' });
     // Someone else regenerated /nhl before the warm-up: HIT until the job sends
     // it through the fan-out again, then a fresh render.
-    if (mode === 'race' && path === '/nhl') return resp(200, { 'x-vercel-cache': racePosted ? 'REVALIDATED' : 'HIT' });
+    if ((mode === 'race' || mode === 'race-retry-down') && path === '/nhl') return resp(200, { 'x-vercel-cache': racePosted ? 'REVALIDATED' : 'HIT' });
     // First request of a path renders it (MISS); later ones are cache HITs.
     return resp(200, { 'x-vercel-cache': warmedOnce.has(path) ? 'HIT' : 'MISS' });
   }) as typeof fetch;
@@ -374,6 +440,15 @@ test('the route: auth, the window, then revalidate through POST /api/revalidate 
     assert.equal(raceBody.retried, 1);
     assert.equal(raceBody.fresh, expected);
     assert.ok(racePosted, 'the ambiguous path went through the fan-out a second time');
+
+    // The retry's fan-out fails, even if the page then answers: red, with the batch listed.
+    mode = 'race-retry-down';
+    racePosted = false;
+    warmedOnce.clear();
+    const downRetry = await call('Bearer s');
+    const downRetryBody = await downRetry.json();
+    assert.equal(downRetry.status, 500);
+    assert.equal(downRetryBody.retryFailedBatches.length, 1);
 
     // A page that never finishes regenerating: re-asked in rounds, then red.
     mode = 'stale';

@@ -88,6 +88,7 @@ export async function GET(request: Request) {
     dropped.length === 0 &&
     revalidated.failedBatches.length === 0 &&
     revalidated.revalidated === paths.length &&
+    retried.failedBatches.length === 0 &&
     verified.notFresh.length === 0 &&
     verified.fresh === paths.length;
   console.log(
@@ -107,6 +108,8 @@ export async function GET(request: Request) {
       warmSkipped: warmed.skipped,
       retried: retried.retried,
       retryFailedBatches: retried.failedBatches,
+      retryCache: retried.cache,
+      retrySkippedForTime: retried.skippedForTime,
       fresh: verified.fresh,
       notFresh: verified.notFresh.slice(0, 20),
       verifyRounds: verified.rounds,

@@ -126,8 +126,10 @@ export function refreshOrigin(requestUrl: string, vercelEnv: string | undefined 
 export const FETCH_TIMEOUT_MS = 60_000;
 
 /** The function may run 800s (Vercel Pro, Fluid compute). Each pass stops
- *  STARTING requests at its budget, and a request never outlives the time its
- *  pass has left, so the run always answers inside maxDuration. */
+ *  STARTING requests at its budget, and a request (fan-out POSTs included)
+ *  never outlives the time its pass has left, so the run always answers inside
+ *  maxDuration. The first fan-out runs before any budget and is bounded by its
+ *  five batches at FETCH_TIMEOUT_MS. */
 export const MAX_DURATION_S = 800;
 export const WARM_BUDGET_MS = 480_000;
 export const VERIFY_BUDGET_MS = 720_000;
@@ -138,6 +140,8 @@ export const MAX_VERIFY_ROUNDS = 30;
 export const SETTLE_MS = 5_000;
 export const VERIFY_DELAY_MS = 15_000;
 export const VERIFY_ROUND_MS = 20_000;
+/** Requests in flight at once during a pass. */
+export const WARM_CONCURRENCY = 6;
 
 type Fetcher = (url: string, init: RequestInit) => Promise<Response>;
 const defaultFetch: Fetcher = (url, init) => fetch(url, init);
@@ -155,16 +159,23 @@ export async function revalidateViaFanOut(
   paths: readonly string[],
   secret: string,
   fetcher: Fetcher = defaultFetch,
+  deadline?: number,
+  now: () => number = () => Date.now(),
 ): Promise<FanOutResult> {
   const result: FanOutResult = { revalidated: 0, failedBatches: [] };
   for (let i = 0; i < paths.length; i += FANOUT_BATCH) {
     const batch = paths.slice(i, i + FANOUT_BATCH);
+    const left = deadline === undefined ? FETCH_TIMEOUT_MS : deadline - now();
+    if (left <= 0) {
+      result.failedBatches.push({ first: batch[0], status: 'past the deadline' });
+      continue;
+    }
     try {
       const res = await fetcher(`${origin}/api/revalidate`, {
         method: 'POST',
         cache: 'no-store',
         redirect: 'manual',
-        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+        signal: AbortSignal.timeout(Math.min(FETCH_TIMEOUT_MS, left)),
         headers: { 'content-type': 'application/json', 'x-revalidate-secret': secret, 'user-agent': REFRESH_USER_AGENT },
         body: JSON.stringify({ paths: batch }),
       });
@@ -267,7 +278,7 @@ export async function warmPaths(
       }
     }
   }
-  await Promise.all(Array.from({ length: Math.min(opts.concurrency ?? 6, paths.length) }, worker));
+  await Promise.all(Array.from({ length: Math.min(opts.concurrency ?? WARM_CONCURRENCY, paths.length) }, worker));
   return result;
 }
 
@@ -283,25 +294,37 @@ export interface VerifyResult {
 export interface RetryResult {
   retried: number;
   failedBatches: FanOutResult['failedBatches'];
+  /** The re-warm's answers by cache state. */
+  cache: Record<string, number>;
+  /** True when the retry did not run because the warm budget was spent. */
+  skippedForTime: boolean;
 }
 
 /** Sends every path whose warm-up answered PRERENDER, HIT or NONE through the
- *  fan-out once more and warms it again, writing the new answers over the old
- *  ones in `warm.states` (see warmTookRevalidation). */
+ *  fan-out once more and warms it again, inside the warm budget. A new answer
+ *  replaces the old one in `warm.states` only when it is a real answer: a
+ *  re-warm that failed or was skipped leaves the HIT in place, so the path
+ *  still fails as "did not take" (review round 5). */
 export async function retryUntaken(
   origin: string,
   warm: WarmResult,
   secret: string,
-  opts: { deadline: number; settleMs: number; fetcher?: Fetcher; sleep?: (ms: number) => Promise<void> },
+  opts: { deadline: number; settleMs: number; fetcher?: Fetcher; sleep?: (ms: number) => Promise<void>; now?: () => number },
 ): Promise<RetryResult> {
   const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
+  const now = opts.now ?? (() => Date.now());
   const list = Object.keys(warm.states).filter((p) => warm.states[p] !== 'FAILED' && !warmTookRevalidation(warm.states[p]));
-  if (list.length === 0) return { retried: 0, failedBatches: [] };
-  const fanned = await revalidateViaFanOut(origin, list, secret, opts.fetcher);
+  const none: RetryResult = { retried: 0, failedBatches: [], cache: {}, skippedForTime: false };
+  if (list.length === 0) return none;
+  if (now() + opts.settleMs >= opts.deadline) return { ...none, skippedForTime: true };
+  const fanned = await revalidateViaFanOut(origin, list, secret, opts.fetcher, opts.deadline, now);
   await sleep(opts.settleMs);
-  const again = await warmPaths(origin, list, { fetcher: opts.fetcher, deadline: opts.deadline });
-  for (const p of list) if (again.states[p] !== undefined) warm.states[p] = again.states[p];
-  return { retried: list.length, failedBatches: fanned.failedBatches };
+  const again = await warmPaths(origin, list, { fetcher: opts.fetcher, deadline: opts.deadline, now });
+  for (const p of list) {
+    const a = again.states[p];
+    if (a !== undefined && a !== 'FAILED') warm.states[p] = a;
+  }
+  return { retried: list.length, failedBatches: fanned.failedBatches, cache: again.cache, skippedForTime: false };
 }
 
 /** Re-requests, in rounds, every path whose warm-up took until each comes back
