@@ -894,9 +894,10 @@ function mapGameDoc(doc: FirebaseFirestore.DocumentSnapshot): Game {
 // NHL and NBA joined 2026-10-05 (WEB6): both season spines have been in the
 // games collection since September (1,409 NHL and 1,266 NBA docs, season 2026),
 // and without them the 18 NHL and NBA pages with no promos showed an empty
-// calendar instead of the season's games. Preseason docs are dropped by
-// isRegularSeasonGame below, exactly as on NFL. (Changed in review round 1:
-// NHL and NBA now KEEP their preseason for the calendar; see keepPreseason.)
+// calendar instead of the season's games. Preseason docs: NFL drops them here
+// (isRegularSeasonGame); NHL and NBA KEEP them for the calendar (keepPreseason
+// below), and regularSeasonContexts drops them before the schedule list and
+// the Games tile.
 export const GAME_LEAGUES: readonly string[] = ['mlb', 'nfl', 'nhl', 'nba'];
 export const getGamesForTeam = cache(async (teamSlug: string, league: string): Promise<Game[]> => {
   if (!GAME_LEAGUES.includes(league)) return [];
