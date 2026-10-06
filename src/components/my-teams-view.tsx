@@ -874,6 +874,10 @@ function StateB({
   const quietTeams = starredTeams.filter(
     (t) => !teamsWithPromos.has(t.id) && !failedTeams.has(t.id),
   );
+  // A failed team is left out of the quiet list, so say so rather than drop
+  // it silently (review round 3).
+  const failed = starredTeams.filter((t) => failedTeams.has(t.id));
+  const failedNames = failed.length > 0 ? failed.map((t) => t.name).join(', ') : null;
 
   // Affiliate cluster anchor. Because `promos` is sorted asc, the first
   // entry is either today's TONIGHT promo (when one exists) or the next
@@ -896,6 +900,14 @@ function StateB({
         />
         <div className="mx-auto max-w-3xl px-6 pb-20 pt-8">
           <StarredChipsStrip teams={starredTeams} light />
+
+          {failedNames && (
+            <div className="mb-6 rounded-2xl border border-[rgba(211,17,69,0.25)] bg-[rgba(211,17,69,0.06)] p-4">
+              <p className="text-sm text-rd-red">
+                Couldn&apos;t load promos for {failedNames} right now. Refresh to try again.
+              </p>
+            </div>
+          )}
 
           {tonight.length > 0 && (
             <TonightSection
@@ -970,6 +982,14 @@ function StateB({
         </div>
 
         <StarredChipsStrip teams={starredTeams} />
+
+        {failedNames && (
+          <div className="mb-6 rounded-2xl border border-accent-red-border bg-accent-red-bg p-4">
+            <p className="text-accent-red text-sm">
+              Couldn&apos;t load promos for {failedNames} right now. Refresh to try again.
+            </p>
+          </div>
+        )}
 
         {tonight.length > 0 && (
           <TonightSection

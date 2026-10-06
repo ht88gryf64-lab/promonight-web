@@ -111,9 +111,9 @@ async function fetchPromosForTeam(
       };
     });
   } catch (err) {
-    // One bad team should not poison the rest of the response. The client
-    // will silently miss that team's promos for this request; the next
-    // refetch (focus or 5-min dedupe expiry) gets a fresh shot.
+    // One bad team should not poison the rest of the response. The team is
+    // reported in failedTeams, and the client says it could not load it; the
+    // next refetch (focus or 5-min dedupe expiry) gets a fresh shot.
     console.error('STARRED_PROMOS_TEAM_FETCH_ERR', { teamSlug, err });
     // null, not []: an empty list would tell the client this team has
     // nothing in the window, which a failed read cannot back.

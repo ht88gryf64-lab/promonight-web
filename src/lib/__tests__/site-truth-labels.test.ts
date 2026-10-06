@@ -100,6 +100,7 @@ describe('copy that follows from the rows', () => {
     const view = strip(readFileSync('src/components/my-teams-view.tsx', 'utf8'));
     assert.match(view, /!teamsWithPromos\.has\(t\.id\) && !failedTeams\.has\(t\.id\)/);
     assert.match(view, /hadError=\{failedTeams\.size > 0\}/);
+    assert.equal(view.split("Couldn&apos;t load promos for {failedNames} right now.").length - 1, 2, 'both StateB paths say so');
     const route = strip(readFileSync('src/app/api/my-teams/promos/route.ts', 'utf8'));
     assert.match(route, /STARRED_PROMOS_TEAM_FETCH_ERR[\s\S]{0,200}return null;/);
     assert.match(route, /NextResponse\.json\(\{ promos, venues, failedTeams \}\)/);
