@@ -26,7 +26,8 @@ function monthLabel(dateStr: string): string {
 }
 
 // The list starts on Jan 1 of the 2026 calendar year: completed bobbleheads feed
-// the resale section. Bump with TITLE_SEASON_YEAR's runbook.
+// the resale section. Bump it with SPLIT_SEASON_START_YEAR on July 1
+// (known-issues 69), or the page heads 2027-28 over rows from January 2026.
 const LIST_FROM = '2026-01-01';
 
 // The season label in the title, heading, description and JSON-LD: "2026-27",
@@ -106,7 +107,7 @@ export default async function BobbleheadsPage() {
     {
       question: 'Which team gives away the most bobbleheads?',
       answer: topTeams.length
-        ? `On the schedules we have on record, ${topTeams.slice(0, -1).join(', ')}${topTeams.length > 1 ? ' and ' : ''}${topTeams[topTeams.length - 1]} run the most bobblehead giveaways. Counts move through the season as teams announce more, and this answer is recomputed from the schedule rather than fixed.`
+        ? `On the schedules we have on record ${strictPeriod}, ${topTeams.slice(0, -1).join(', ')}${topTeams.length > 1 ? ' and ' : ''}${topTeams[topTeams.length - 1]} run the most bobblehead giveaways. Counts move through the season as teams announce more, and this answer is recomputed from the schedule rather than fixed.`
         : 'No bobblehead giveaways are on record yet.',
     },
     {

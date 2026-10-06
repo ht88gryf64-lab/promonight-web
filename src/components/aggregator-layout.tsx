@@ -303,7 +303,9 @@ export function AggregatorJsonLd({
   // ItemList is capped so the JSON-LD stays well under Bing's 1MB ceiling
   // (see the list-trim note in the page bodies).
   const ITEMLIST_CAP = 50;
-  const items = groups.flatMap((g) => g.promos).slice(0, ITEMLIST_CAP);
+  // Distinct, like the hero count: theme-nights files a night under every
+  // category it matches, and the list must not name one item twice.
+  const items = [...new Set(groups.flatMap((g) => g.promos))].slice(0, ITEMLIST_CAP);
 
   const schemas: Record<string, unknown>[] = [
     {

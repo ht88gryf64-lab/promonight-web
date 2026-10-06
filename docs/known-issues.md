@@ -3938,10 +3938,11 @@ added since.
 2. Re-verify, or empty, `NOTHING_PUBLISHED` in `src/lib/announcement-status.ts`. Those dates are for the old season.
 3. Re-pin the tests. The constant is not a one-line edit: 41 tests fail after it (measured in review round 9), because their fixtures pin today to 2026-10-05 and name "2026-27" (season-labels-by-league, season-scope, season-labels-render, ticket-packages-render, web6-review-r1). Move each fixture forward a year (the dates and the labels together), then run `npm test`, `npm run test:future` and both mutation harnesses (`scripts/season-labels-mutations.mjs`, `scripts/schedule-months-mutations.mjs`).
 4. Verify one NHL and one NBA page against served HTML: archive headings, hero sentence, schedule title.
+5. The /promos category pages (theme-nights, jersey-giveaways, food-deals, bobbleheads) take their "2026-27" from `crossLeagueSeasonLabel()`, so they move with the constant (OPS, 2026-10-06). Move `LIST_FROM` in `src/app/promos/bobbleheads/page.tsx` (`'2026-01-01'`) forward a year in the same commit, or the page heads 2027-28 over rows from January 2026. Check one of them against served HTML too.
 
 Do NOT bump it with `TITLE_SEASON_YEAR` in January (docs/runbook-2027-01-15-spansyears-season-switchoff.md): that one is the MLB year.
 
-**Where.** `src/lib/season-label.ts` (the constant), `src/lib/season-scope.ts`, `src/lib/schedule-months.ts`, `src/lib/announcement-status.ts`, `src/components/zero-promo-fallback.tsx`, `src/components/promo-list.tsx`.
+**Where.** `src/lib/season-label.ts` (the constant, and `crossLeagueSeasonLabel()`), `src/app/promos/bobbleheads/page.tsx` (`LIST_FROM`), `src/lib/season-scope.ts`, `src/lib/schedule-months.ts`, `src/lib/announcement-status.ts`, `src/components/zero-promo-fallback.tsx`, `src/components/promo-list.tsx`.
 
 ## 70. The playoff scanner never sets the special-ticket flag, so NHL and NBA playoff package rows would list as promotions
 

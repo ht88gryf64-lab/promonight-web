@@ -60,6 +60,8 @@ describe('cross-league category pages name the two-year season', () => {
       assert.doesNotMatch(code, /\bYEAR\b/);
       assert.doesNotMatch(code, /\b(?:in|of) 20\d\d\b/);
       assert.match(code, /scheduledPeriodPhrase\(seasonSpan\(/, 'the lead names the span the rows cover');
+      const literals = code.replace(/^const LIST_FROM = '\d{4}-\d{2}-\d{2}';$/m, '').match(/`[^`]*`|'[^'\n]*'|"[^"\n]*"/g) ?? [];
+      assert.deepEqual(literals.filter((l) => /\b20\d\d\b/.test(l)), [], 'no year typed into copy');
     });
   }
 });
@@ -68,7 +70,27 @@ describe('My Teams says what it tested', () => {
   it('never labels a starred club "Offseason"', () => {
     const code = strip(readFileSync('src/components/my-teams-view.tsx', 'utf8'));
     assert.doesNotMatch(code, /offseason/i);
-    assert.match(code, /Tracking · Nothing in the next 60 days/);
+    assert.match(code, /Tracking · Nothing in the next \{PROMO_WINDOW_DAYS\} days/);
     assert.match(code, /const PROMO_WINDOW_DAYS = 60;/, 'the copy says 60 days');
+  });
+});
+
+describe('copy that follows from the rows', () => {
+  it('heads past bobbleheads by their span, never "this season"', () => {
+    const code = strip(readFileSync('src/components/redesign/PastBobbleheadsSection.tsx', 'utf8'));
+    assert.doesNotMatch(code, /this season/i);
+    assert.match(code, /\{pastHeading\(promos\)\}/);
+  });
+
+  it('says nothing about the next 60 days after a failed load', () => {
+    const code = strip(readFileSync('src/components/my-teams-view.tsx', 'utf8'));
+    assert.equal(code.split('{!hadError && (').length - 1, 2);
+    assert.doesNotMatch(code, /the moment promos are announced/);
+    assert.doesNotMatch(code, /next 60 days/, 'the window comes from PROMO_WINDOW_DAYS');
+  });
+
+  it('lists each promo once in the aggregator JSON-LD', () => {
+    const code = strip(readFileSync('src/components/aggregator-layout.tsx', 'utf8'));
+    assert.match(code, /const items = \[\.\.\.new Set\(groups\.flatMap\(\(g\) => g\.promos\)\)\]\.slice\(0, ITEMLIST_CAP\);/);
   });
 });

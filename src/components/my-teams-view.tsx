@@ -629,7 +629,7 @@ function StateC({
           manage
           subline={
             <p className="mt-4 font-rd text-[11px] uppercase tracking-[0.12em] text-white/55">
-              {starredTeams.length} starred · No promos coming up yet
+              {starredTeams.length} starred{hadError ? null : <> · No promos coming up yet</>}
             </p>
           }
         />
@@ -651,12 +651,16 @@ function StateC({
             </div>
           )}
 
-          <div className="mb-8 rounded-2xl border border-rd-line bg-rd-card p-5">
-            <p className="text-sm leading-relaxed text-rd-ink-soft">
-              Nothing in the next 60 days. Your teams are tracked and the
-              calendar will populate the moment promos are announced.
-            </p>
-          </div>
+          {/* Only when the fetch worked: after a failed load "nothing in the
+              next 60 days" is a claim the page cannot back. */}
+          {!hadError && (
+            <div className="mb-8 rounded-2xl border border-rd-line bg-rd-card p-5">
+              <p className="text-sm leading-relaxed text-rd-ink-soft">
+                Nothing in the next {PROMO_WINDOW_DAYS} days. Your teams are
+                tracked, and the calendar fills in as promos are announced.
+              </p>
+            </div>
+          )}
 
           <div className="mb-3">
             <span className="font-rd text-[11px] font-semibold uppercase tracking-[0.1em] text-rd-ink-faint">
@@ -689,7 +693,7 @@ function StateC({
               Your Teams
             </h1>
             <p className="font-mono text-[10px] tracking-[1.5px] uppercase text-text-dim mt-2">
-              {starredTeams.length} starred · No promos coming up yet
+              {starredTeams.length} starred{hadError ? null : <> · No promos coming up yet</>}
             </p>
           </div>
           <Link
@@ -717,12 +721,14 @@ function StateC({
           </div>
         )}
 
-        <div className="rounded-2xl border border-border-subtle bg-bg-card p-5 mb-8">
-          <p className="text-text-secondary text-sm leading-relaxed">
-            Nothing in the next 60 days. Your teams are tracked and the
-            calendar will populate the moment promos are announced.
-          </p>
-        </div>
+        {!hadError && (
+          <div className="rounded-2xl border border-border-subtle bg-bg-card p-5 mb-8">
+            <p className="text-text-secondary text-sm leading-relaxed">
+              Nothing in the next {PROMO_WINDOW_DAYS} days. Your teams are
+              tracked, and the calendar fills in as promos are announced.
+            </p>
+          </div>
+        )}
 
         <div className="mb-3">
           <span className="font-mono text-[10px] tracking-[1.5px] uppercase text-text-dim">
@@ -921,7 +927,7 @@ function StateB({
             <section className="mb-8">
               <div className="mb-3">
                 <span className="font-rd text-[11px] font-semibold uppercase tracking-[0.1em] text-rd-ink-faint">
-                  Tracking · Nothing in the next 60 days
+                  Tracking · Nothing in the next {PROMO_WINDOW_DAYS} days
                 </span>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -992,7 +998,7 @@ function StateB({
           <section className="mb-8">
             <div className="mb-3">
               <span className="font-mono text-[10px] tracking-[1.5px] uppercase text-text-dim">
-                Tracking · Nothing in the next 60 days
+                Tracking · Nothing in the next {PROMO_WINDOW_DAYS} days
               </span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
