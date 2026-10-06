@@ -189,7 +189,7 @@ describe('the NHL/NBA season constant is current (known-issues 69)', () => {
     const due = Date.UTC(SPLIT_SEASON_START_YEAR + 1, 5, 1);
     assert.ok(
       wall < due,
-      `SPLIT_SEASON_START_YEAR is ${SPLIT_SEASON_START_YEAR} and the ${splitSeasonLabel(SPLIT_SEASON_START_YEAR)} season ends this summer: bump it now, before July 1 (docs/known-issues.md entry 69)`,
+      `SPLIT_SEASON_START_YEAR is ${SPLIT_SEASON_START_YEAR} and the ${splitSeasonLabel(SPLIT_SEASON_START_YEAR)} season ends this summer: the bump is due July 1 (docs/known-issues.md entry 69; re-pin the 2026-27 fixtures with it)`,
     );
   });
 });

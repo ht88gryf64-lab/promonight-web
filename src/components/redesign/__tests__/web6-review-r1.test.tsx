@@ -311,3 +311,14 @@ describe('round 3: deep links into the package group', () => {
     void createElement;
   });
 });
+
+/* ---- Review round 5 ---- */
+
+describe('round 5: the archive pointer never prints the unplaced group label', () => {
+  test('only unplaceable past rows: "See completed promos below.", not "other promos"', async () => {
+    const { PromoList } = await import('@/components/promo-list');
+    const t = text(await html(<PromoList promos={[promo('2026-1-05', 'Odd Date Night')]} teamSlug={WILD.id} teamName="Minnesota Wild" league="NHL" sport="nhl" variant="light" showAppPitch={false} seasonScoped={false} scopeLive team={WILD} />));
+    assert.match(t, /See completed promos below\./);
+    assert.doesNotMatch(t, /completed other promos/);
+  });
+});

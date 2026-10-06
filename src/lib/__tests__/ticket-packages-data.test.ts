@@ -16,8 +16,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 type Data = Record<string, unknown>;
-function fakeDoc(id: string, data: Data) {
-  return { id, exists: true, data: () => data, get: (f: string) => data[f] };
+function fakeDoc(id: string, data: Data, teamId?: string) {
+  return { id, exists: true, data: () => data, get: (f: string) => data[f], ref: { parent: { parent: teamId ? { id: teamId } : null } } };
 }
 type Doc = ReturnType<typeof fakeDoc>;
 function query(docs: Doc[]): any {
@@ -68,12 +68,26 @@ const GAMES = [
 ];
 
 const promosByTeam: Record<string, Doc[]> = { 'golden-state-warriors': WARRIORS, 'minnesota-twins': TWINS };
+
+// The league hub card count (getLeagueUpcomingPromoCounts) reads the promos
+// collection group. Far-future dates so the real-clock "today" never passes them.
+const TEAM_DOCS = [
+  fakeDoc('detroit-red-wings', { league: 'NHL', city: 'Detroit', name: 'Red Wings', abbreviation: 'DET', primaryColor: 0, secondaryColor: 0, division: 'Atlantic', sportSlug: 'nhl' }),
+  fakeDoc('minnesota-twins', { league: 'MLB', city: 'Minnesota', name: 'Twins', abbreviation: 'MIN', primaryColor: 0, secondaryColor: 0, division: 'Central', sportSlug: 'mlb' }),
+];
+const GROUP = [
+  fakeDoc('h1', { date: '2099-01-01', title: 'Free Night', type: 'theme' }, 'detroit-red-wings'),
+  fakeDoc('h2', { date: '2099-01-02', title: 'Hoodie Pack', type: 'theme', ticketPackageRequired: true }, 'detroit-red-wings'),
+  fakeDoc('h3', { date: '2099-01-03', title: 'Lunch Box', type: 'food', ticketPackageRequired: true }, 'detroit-red-wings'),
+  fakeDoc('h4', { date: '2099-01-01', title: 'Bobblehead', type: 'giveaway', ticketPackageRequired: true }, 'minnesota-twins'),
+  fakeDoc('h5', { date: '2099-01-02', title: 'Fireworks', type: 'theme' }, 'minnesota-twins'),
+];
 const fakeDb = {
   collection(name: string): any {
     if (name === 'games') return query(GAMES);
     if (name === 'teams') {
       return {
-        ...query([]),
+        ...query(TEAM_DOCS),
         doc: (teamId: string) => ({
           get: async () => ({ exists: false, data: () => undefined }),
           collection: () => query(promosByTeam[teamId] ?? []),
@@ -82,8 +96,8 @@ const fakeDb = {
     }
     return query([]);
   },
-  collectionGroup(): any {
-    return query([]);
+  collectionGroup(name: string): any {
+    return query(name === 'promos' ? GROUP : []);
   },
 };
 mock.module('server-only', { namedExports: {} });
@@ -156,4 +170,12 @@ test('round 1: neutralSite is read on NHL and NBA only, and only when true', asy
   assert.equal('neutralSite' in mlb[0], false, 'no key on another league');
   const warriors = await getGamesForTeam('golden-state-warriors', 'nba');
   for (const g of warriors) assert.equal('neutralSite' in g, false, `${g.id}: no key when false`);
+});
+
+test('round 5: the league hub card counts what the team page counts (NHL drops packages, MLB keeps its raw flags)', async () => {
+  const { getLeagueUpcomingPromoCounts } = await import('../data');
+  const nhl = await getLeagueUpcomingPromoCounts('NHL');
+  assert.equal(nhl['detroit-red-wings'], 1, 'the two special-ticket rows are not promotions on the team page');
+  const mlb = await getLeagueUpcomingPromoCounts('MLB');
+  assert.equal(mlb['minnesota-twins'], 2, 'MLB unchanged: its flag is the raw extractor guess');
 });

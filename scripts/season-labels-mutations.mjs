@@ -149,6 +149,11 @@ const CASES = [
   ['an arrival into a closed package group does not open it', 'src/components/redesign/PromoArrivalHighlight.tsx', '      if (packages && !packages.open) packages.open = true;\n', '', [T_R1]],
   ['a packages-only page with no arrival effect', TPL, '      {arrivalHighlight ? <PromoArrivalHighlight /> : null}\n', '', [T_R1]],
   ['the season-constant guard fires once due (its due date moved into the past)', T_LEAGUE, 'const due = Date.UTC(SPLIT_SEASON_START_YEAR + 1, 5, 1);', 'const due = Date.UTC(SPLIT_SEASON_START_YEAR, 5, 1);', [T_LEAGUE]],
+  // ---- Review round 5 ----
+  ['the NHL hub card counts packages as promotions', DATA, '      if (dropPackages && isTicketPackageDoc(doc.data())) continue;\n', '', [T_PKG_DATA]],
+  ['the hub drops raw MLB flags too', DATA, '    const dropPackages = isTicketPackageLeague(league);', '    const dropPackages = true;', [T_PKG_DATA]],
+  ['the row note says the night is exclusive', TP, "export const TICKET_PACKAGE_ROW_NOTE = 'The item comes with a special ticket package.';", "export const TICKET_PACKAGE_ROW_NOTE = 'The item comes with a special ticket package. Only fans who buy this package get it.';", [T_PKG]],
+  ['the archive pointer prints "other"', LIST, '    ? splitGroups.length === 1 && splitGroups[0].startYear !== null', '    ? splitGroups.length === 1', [T_R1]],
   ['an unplaceable archive row dropped', LABEL, '    if (y === null) {\n      unplaced.push(i);\n      return;\n    }', '    if (y === null) return;', [T_R1]],
 ];
 

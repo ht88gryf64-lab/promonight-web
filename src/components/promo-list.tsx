@@ -305,7 +305,7 @@ export function PromoList({
     : null;
   const currentSeasonPast = splitGroups ? splitGroups.find((g) => g.isCurrent)?.rows ?? [] : past;
   const pastPointerYears = splitGroups
-    ? splitGroups.length === 1
+    ? splitGroups.length === 1 && splitGroups[0].startYear !== null
       ? `${splitGroups[0].label} `
       : ''
     : pastSpan

@@ -39,7 +39,7 @@ import { VENUE_LOCATIONS_STATIC } from './venue-locations';
 import { resolveMlbZone } from './mlb-venue-tz';
 import { gameZoneAbbrev } from './format-game-time';
 import { isSplitSeasonLeague } from './season-label';
-import { isTicketPackageDoc, partitionTicketPackages } from './ticket-packages';
+import { isTicketPackageDoc, isTicketPackageLeague, partitionTicketPackages } from './ticket-packages';
 
 function tsToIso(v: unknown): string | null {
   if (!v) return null;
@@ -894,7 +894,8 @@ function mapGameDoc(doc: FirebaseFirestore.DocumentSnapshot): Game {
 // games collection since September (1,409 NHL and 1,266 NBA docs, season 2026),
 // and without them the 18 NHL and NBA pages with no promos showed an empty
 // calendar instead of the season's games. Preseason docs are dropped by
-// isRegularSeasonGame below, exactly as on NFL.
+// isRegularSeasonGame below, exactly as on NFL. (Changed in review round 1:
+// NHL and NBA now KEEP their preseason for the calendar; see keepPreseason.)
 export const GAME_LEAGUES: readonly string[] = ['mlb', 'nfl', 'nhl', 'nba'];
 export const getGamesForTeam = cache(async (teamSlug: string, league: string): Promise<Game[]> => {
   if (!GAME_LEAGUES.includes(league)) return [];
@@ -1649,11 +1650,16 @@ export const getLeagueUpcomingPromoCounts = cache(
       }
     }
     const today = hubTodayChicagoYMD();
+    const dropPackages = isTicketPackageLeague(league);
     const snapshot = await db.collectionGroup('promos').where('date', '>=', today).get();
     for (const doc of snapshot.docs) {
       const teamId = doc.ref.parent.parent!.id;
       if (!inLeague.has(teamId)) continue;
       if (!isVisiblePromo(mapPromoDoc(doc))) continue;
+      // The hub card links to the team page and must count what it counts: an
+      // NHL or NBA special-ticket row is not a promotion there (WEB6 addendum;
+      // review round 5). Inert on every other league.
+      if (dropPackages && isTicketPackageDoc(doc.data())) continue;
       counts[teamId] += 1;
     }
     return counts;

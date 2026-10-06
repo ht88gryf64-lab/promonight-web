@@ -76,4 +76,8 @@ export const TICKET_PACKAGES_SUBLINE =
   'Sold as special tickets, so they are not counted as theme nights, giveaways, food deals or kids events on this page.';
 
 /** The sentence every row carries. */
-export const TICKET_PACKAGE_ROW_NOTE = 'Comes with a special ticket. Only fans who buy this package get it.';
+// About the ITEM, not the night: many flagged rows are open theme nights where
+// only the item is sold with the package ("Tickets purchased through special
+// event link include a Pride Night Item"), so the note must not say the night
+// is exclusive (review round 5).
+export const TICKET_PACKAGE_ROW_NOTE = 'The item comes with a special ticket package.';
