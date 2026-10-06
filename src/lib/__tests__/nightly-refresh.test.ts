@@ -34,10 +34,12 @@ const SCHOOLS = ['alabama', 'michigan'];
 const MATCHUPS = ['iron-bowl', 'the-game'];
 mock.module(new URL('../cfb/data.ts', import.meta.url).href, { namedExports: { getAllCfbSchoolIds: async () => SCHOOLS } });
 mock.module(new URL('../cfb/matchups.ts', import.meta.url).href, { namedExports: { getAllMatchupSlugs: () => MATCHUPS } });
+const indexnowCalls: string[][] = [];
+mock.module(new URL('../indexnow.ts', import.meta.url).href, { namedExports: { submitToIndexNow: async (urls: string[]) => { indexnowCalls.push(urls); } } });
 
-function cronSchedule(): { minute: number; hours: number[] } {
+function cronSchedule(path = '/api/cron/nightly-refresh'): { minute: number; hours: number[] } {
   const cfg = JSON.parse(readFileSync(new URL('../../../vercel.json', import.meta.url), 'utf8'));
-  const c = cfg.crons.find((x: { path: string }) => x.path === '/api/cron/nightly-refresh');
+  const c = cfg.crons.find((x: { path: string }) => x.path === path);
   assert.ok(c, 'the nightly refresh is scheduled');
   const [m, h, ...rest] = c.schedule.split(' ');
   assert.deepEqual(rest, ['*', '*', '*'], 'every day');
@@ -69,6 +71,35 @@ test('exactly one firing acts on every Eastern night for a year, DST nights incl
   assert.equal(actedOn.get('2027-03-14'), 1, 'the spring-forward night');
 });
 
+test('the CFB batch: exactly one firing acts every night, at 00:15 Pacific (after midnight at every mainland venue)', async () => {
+  const { isNightlyRefreshWindow, parseRefreshBatch } = await import('../nightly-refresh');
+  assert.equal(parseRefreshBatch(null), 'site');
+  assert.equal(parseRefreshBatch('cfb'), 'cfb');
+  assert.equal(parseRefreshBatch('everything'), null);
+  const { minute, hours } = cronSchedule('/api/cron/nightly-refresh?batch=cfb');
+  const pacificTime = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  const actedOn = new Map<string, string[]>();
+  const start = Date.parse('2026-10-01T00:00:00Z');
+  for (let d = 0; d < 366; d++) {
+    for (const h of hours) {
+      const t = new Date(start + d * 86_400_000 + h * 3_600_000 + minute * 60_000);
+      assert.equal(isNightlyRefreshWindow(t), false, 'never in the site window');
+      if (!isNightlyRefreshWindow(t, 'cfb')) continue;
+      const day = t.toISOString().slice(0, 10);
+      actedOn.set(day, [...(actedOn.get(day) ?? []), pacificTime.format(t)]);
+    }
+  }
+  for (let d = 0; d < 366; d++) {
+    const day = new Date(start + d * 86_400_000).toISOString().slice(0, 10);
+    // Eastern changes clocks three hours before Pacific, so on the two change
+    // nights the run lands an hour off Pacific midnight: 01:15 on the fall-back
+    // night, 23:15 the evening before on the spring-forward night (CFB is out
+    // of season in March). Every other night, 00:15 Pacific.
+    const expected = day === '2026-11-01' ? '01:15' : day === '2027-03-14' ? '23:15' : '00:15';
+    assert.deepEqual(actedOn.get(day), [expected], `runs once on ${day}`);
+  }
+});
+
 test('the window is the 00:00 hour Eastern and nothing else', async () => {
   const { isNightlyRefreshWindow, siteHour } = await import('../nightly-refresh');
   assert.equal(isNightlyRefreshWindow(new Date('2026-10-07T04:00:00Z')), true);
@@ -83,13 +114,19 @@ test('the window is the 00:00 hour Eastern and nothing else', async () => {
 test('the paths: every team page, every venue hub, the hubs, /teams and the /promos pages, all valid fan-out paths', async () => {
   const { nightlyRefreshPaths, NIGHTLY_FIXED_PATHS } = await import('../nightly-refresh');
   const { PATH_RE } = await import('../revalidate-paths');
-  const { paths, dropped } = await nightlyRefreshPaths({
+  const loaders = {
     teams: async () => [...TEAMS, TEAMS[0]],
     venueHubSlugs: async () => HUBS,
     cfbSchoolIds: async () => SCHOOLS,
     cfbMatchupSlugs: () => MATCHUPS,
-  });
-  for (const p of ['/cfb', '/cfb/rivalries', '/cfb/alabama', '/cfb/michigan', '/cfb/rivalries/iron-bowl', '/cfb/rivalries/the-game']) assert.ok(paths.includes(p), p);
+  };
+  const { paths, dropped } = await nightlyRefreshPaths(loaders);
+  for (const p of ['/cfb', '/cfb/rivalries']) assert.ok(paths.includes(p), `${p} rides the site batch`);
+  assert.ok(!paths.some((p) => /^\/cfb\/(?!rivalries$)/.test(p)), 'no school or matchup page in the site batch');
+  const cfb = await nightlyRefreshPaths({ ...loaders, teams: async () => { throw new Error('must not run'); }, venueHubSlugs: async () => { throw new Error('must not run'); } }, 'cfb');
+  assert.deepEqual(cfb.paths, ['/cfb/alabama', '/cfb/michigan', '/cfb/rivalries/iron-bowl', '/cfb/rivalries/the-game']);
+  // The site batch never reads the CFB loaders, so a CFB failure cannot stop it.
+  await nightlyRefreshPaths({ ...loaders, cfbSchoolIds: async () => { throw new Error('cfb down'); } });
   assert.deepEqual(dropped, ['/venues/Bad_Slug'], 'reported, not silently lost');
   for (const t of TEAMS) assert.ok(paths.includes(`/${t.sportSlug}/${t.id}`), t.id);
   for (const h of HUBS.filter((h) => h !== 'Bad_Slug')) assert.ok(paths.includes(`/venues/${h}`), h);
@@ -101,7 +138,7 @@ test('the paths: every team page, every venue hub, the hubs, /teams and the /pro
   assert.equal(PATH_RE.test('/'), false, 'the fan-out still rejects the bare root, by ruling');
   assert.equal(new Set(paths).size, paths.length, 'deduped');
   assert.ok(paths.every((p) => PATH_RE.test(p)));
-  assert.equal(paths.length, TEAMS.length + 3 + SCHOOLS.length + MATCHUPS.length + NIGHTLY_FIXED_PATHS.length);
+  assert.equal(paths.length, TEAMS.length + 3 + NIGHTLY_FIXED_PATHS.length);
   for (const p of ['/best-promos', '/best-promos/bobbleheads', '/team-rankings']) assert.ok(paths.includes(p), p);
   assert.deepEqual(paths.slice(0, NIGHTLY_FIXED_PATHS.length), [...NIGHTLY_FIXED_PATHS], 'the slow cross-team pages are warmed first');
 });
@@ -308,7 +345,7 @@ test('budgets: each pass stops in time, and a request never outlives its pass', 
   assert.match(route, /warmPaths\(origin, paths, \{ deadline: started \+ WARM_BUDGET_MS \}\)/, 'the warm pass has its deadline');
   assert.ok(FETCH_TIMEOUT_MS >= 30_000 && FETCH_TIMEOUT_MS <= 60_000, 'long enough for the slow aggregators, short of a pass');
   const { WARM_CONCURRENCY } = await import('../nightly-refresh');
-  assert.ok(WARM_CONCURRENCY >= 4 && WARM_CONCURRENCY <= 10, '407 paths fit the warm budget without flooding the site');
+  assert.ok(WARM_CONCURRENCY >= 4 && WARM_CONCURRENCY <= 10, 'the site batch (~410 paths) fits the warm budget without flooding the site');
   const lib = readFileSync(new URL('../nightly-refresh.ts', import.meta.url), 'utf8');
   assert.match(lib, /opts\.concurrency \?\? WARM_CONCURRENCY/);
   assert.match(route, /retryUntaken\(origin, warmed, fanOutSecret, \{ deadline: started \+ WARM_BUDGET_MS, settleMs: SETTLE_MS \}\)/, 'the retry runs inside the warm budget');
@@ -392,7 +429,7 @@ test('the route: auth, the window, then revalidate through POST /api/revalidate 
   const DEPLOY = 'https://promonight-abc123-btj8tk69dk-7318s-projects.vercel.app/api/cron/nightly-refresh';
   try {
     const { GET } = await import('../../app/api/cron/nightly-refresh/route');
-    const call = (auth?: string) => GET(new Request(DEPLOY, { headers: auth ? { authorization: auth } : {} }));
+    const call = (auth?: string, query = '') => GET(new Request(DEPLOY + query, { headers: auth ? { authorization: auth } : {} }));
 
     delete process.env.CRON_SECRET;
     assert.equal((await call('Bearer s')).status, 503);
@@ -411,12 +448,15 @@ test('the route: auth, the window, then revalidate through POST /api/revalidate 
     const res = await call('Bearer s');
     const body = await res.json();
     assert.equal(res.status, 200);
-    const expected = TEAMS.length + 3 + SCHOOLS.length + MATCHUPS.length + 18;
+    const expected = TEAMS.length + 3 + 18;
     assert.equal(body.paths, expected);
     assert.equal(body.revalidated, expected);
     assert.equal(body.warmed, expected);
     assert.equal(body.fresh, expected);
     assert.equal(body.ok, true);
+    assert.equal(body.batch, 'site');
+    assert.equal(body.indexnow, 'sent', 'the daily /promos/today ping the retired job used to send');
+    assert.deepEqual(indexnowCalls.at(-1), ['https://www.getpromonight.com/promos/today']);
     assert.ok(log.every((e) => e.url.startsWith('https://www.getpromonight.com/')), 'every request goes to www, never the deployment host');
     const posts = log.filter((e) => e.method === 'POST');
     const gets = log.filter((e) => e.method === 'GET');
@@ -503,6 +543,28 @@ test('the route: auth, the window, then revalidate through POST /api/revalidate 
     assert.equal(staleBody.fresh, expected - 1);
     assert.ok(staleBody.verifyRounds > 1, 'asked again before giving up');
     mode = 'ok';
+
+    // The CFB batch: 07:15Z in October is 03:15 EDT (00:15 PDT). Only the
+    // school and rivalry pages, and no IndexNow ping.
+    mock.timers.setTime(Date.parse('2026-10-07T07:15:00Z'));
+    log.length = 0;
+    warmedOnce.clear();
+    const siteSkip = await (await call('Bearer s')).json();
+    assert.equal(siteSkip.skipped, 'outside_window', 'the site batch does not act at 03:15 Eastern');
+    const before = indexnowCalls.length;
+    const cfbRes = await call('Bearer s', '?batch=cfb');
+    const cfbBody = await cfbRes.json();
+    assert.equal(cfbRes.status, 200);
+    assert.equal(cfbBody.batch, 'cfb');
+    assert.equal(cfbBody.paths, SCHOOLS.length + MATCHUPS.length);
+    assert.equal(cfbBody.fresh, SCHOOLS.length + MATCHUPS.length);
+    assert.equal(cfbBody.indexnow, 'skipped');
+    assert.equal(indexnowCalls.length, before);
+    assert.ok(log.filter((e) => e.method === 'POST').flatMap((e) => e.paths!).every((p) => /^\/cfb\/./.test(p)));
+    assert.equal((await call('Bearer s', '?batch=nope')).status, 400);
+    mock.timers.setTime(Date.parse('2026-10-07T04:15:00Z'));
+    const cfbSkip = await (await call('Bearer s', '?batch=cfb')).json();
+    assert.equal(cfbSkip.skipped, 'outside_window', 'the CFB batch does not act at 00:15 Eastern');
 
     // 05:15Z in October is 01:15 EDT: the other firing, skipped.
     mock.timers.setTime(Date.parse('2026-10-07T05:15:00Z'));

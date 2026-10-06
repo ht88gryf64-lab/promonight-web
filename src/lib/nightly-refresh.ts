@@ -10,17 +10,19 @@
 // team pages and every page that links into their rows on the same day.
 //
 // WHEN. Vercel cron runs in UTC. Eastern midnight is 04:00 UTC in EDT and
-// 05:00 UTC in EST, so the cron fires at both 04:15 and 05:15 UTC and the route
-// acts only when it is the 00:00 hour in America/New_York. Exactly one of the
-// two firings acts on every night of the year, the two DST change nights
-// included (tests pin it).
+// 05:00 UTC in EST, so the "site" cron fires at both 04:15 and 05:15 UTC and
+// acts only in the 00:00 hour America/New_York; the "cfb" cron fires at 07:15
+// and 08:15 UTC and acts only in the 03:00 hour (00:15 Pacific). Exactly one
+// firing of each acts on every night of the year, the two DST change nights
+// included (tests pin it; Eastern and Pacific change on the same dates).
 //
-// WHAT. Every team page, every venue hub, the league hubs, /teams, the /promos
-// pages, /best-promos (both), /team-rankings, and the CFB pages (the /cfb hub,
-// every school page, /cfb/rivalries and every rivalry page; added by Matt's
-// G4 approval, 2026-10-06). NOT refreshed here: the homepage ("/" is rejected
-// by the fan-out's path pattern by ruling; it keeps its 6h window).
-// /promos/today is covered here; its old 05:10 UTC cron is retired.
+// WHAT. Site batch: every team page, every venue hub, the league hubs, /teams,
+// the /promos pages, /best-promos (both), /team-rankings, /cfb and
+// /cfb/rivalries. CFB batch: every CFB school page and every rivalry page
+// (added by Matt's G4 approval, 2026-10-06). NOT refreshed: the homepage ("/"
+// is rejected by the fan-out's path pattern by ruling; it keeps its 6h window).
+// /promos/today is covered by the site batch, which also sends its daily
+// IndexNow ping; its old 05:10 UTC cron is retired.
 //
 // HOW, AND WHY OVER HTTP. Through the existing fan-out, POST /api/revalidate,
 // in batches of its 100-path cap, and only then a GET of each path. Next
@@ -58,9 +60,9 @@ export const NIGHTLY_FIXED_PATHS: readonly string[] = [
   '/best-promos',
   '/best-promos/bobbleheads',
   '/team-rankings',
-  // CFB: the hub and the rivalries index (the school and matchup pages come
-  // from their loaders). Played/upcoming there is the venue's day, with the
-  // site day as fallback; 6h windows.
+  // CFB: the hub cuts its weekly rail on the site day; the rivalries index has
+  // no day cut. Both ride with the site batch. The school and matchup pages
+  // cut on the VENUE's day and refresh in the later "cfb" batch.
   '/cfb',
   '/cfb/rivalries',
 ];
@@ -72,9 +74,31 @@ export function siteHour(instant: Date): number {
   return Number(SITE_HOUR.formatToParts(instant).find((p) => p.type === 'hour')?.value ?? NaN);
 }
 
-/** True in the 00:00 hour, America/New_York: the one window the cron acts in. */
-export function isNightlyRefreshWindow(instant: Date): boolean {
-  return siteHour(instant) === 0;
+/** Two batches (review of the G4 approval changes). "site": everything cut on
+ *  the site's Eastern day, at 00:15 Eastern. "cfb": the CFB school and rivalry
+ *  pages, which mark a game played on the VENUE's day, at 00:15 Pacific (03:15
+ *  Eastern), after midnight at every mainland venue; refreshing them at 00:15
+ *  Eastern would restart their 6h window before a Central or Pacific game day
+ *  ends. Accepted edges: one Honolulu venue turns at 05:00 Eastern; and on the
+ *  two DST change nights Eastern switches three hours before Pacific, so the
+ *  run lands at 01:15 Pacific (fall back) or 23:15 Pacific the evening before
+ *  (spring forward, CFB off season). */
+export type RefreshBatch = 'site' | 'cfb';
+
+/** The Eastern hour each batch acts in. Its cron fires at that hour's :15 in
+ *  both EDT and EST UTC offsets; the other firing is skipped. */
+export const BATCH_SITE_HOUR: Readonly<Record<RefreshBatch, number>> = { site: 0, cfb: 3 };
+
+/** The batch a request asks for: none means "site"; anything unknown is null. */
+export function parseRefreshBatch(value: string | null): RefreshBatch | null {
+  if (value === null || value === 'site') return 'site';
+  if (value === 'cfb') return 'cfb';
+  return null;
+}
+
+/** True in the batch's Eastern hour: the one window that batch acts in. */
+export function isNightlyRefreshWindow(instant: Date, batch: RefreshBatch = 'site'): boolean {
+  return siteHour(instant) === BATCH_SITE_HOUR[batch];
 }
 
 export interface NightlyLoaders {
@@ -86,26 +110,29 @@ export interface NightlyLoaders {
   cfbMatchupSlugs: () => string[] | Promise<string[]>;
 }
 
-/** Every path the refresh revalidates and warms, deduped, each one checked
+/** Every path a batch revalidates and warms, deduped, each one checked
  *  against the fan-out's path pattern; the ones it would reject come back as
- *  `dropped` for the route to report. Team pages and venue hubs come from the
- *  same loaders their routes' generateStaticParams use. */
-export async function nightlyRefreshPaths(loaders: NightlyLoaders): Promise<{ paths: string[]; dropped: string[] }> {
-  const [teams, hubs, schools, matchups] = await Promise.all([
-    loaders.teams(),
-    loaders.venueHubSlugs(),
-    loaders.cfbSchoolIds(),
-    loaders.cfbMatchupSlugs(),
-  ]);
-  // The fixed cross-team pages first: they are the slowest to render (each
-  // reads every upcoming promo) and the most visible, so they get the most time.
-  const all = [
-    ...NIGHTLY_FIXED_PATHS,
-    ...teams.map((t) => `/${t.sportSlug}/${t.id}`),
-    ...hubs.map((slug) => `/venues/${slug}`),
-    ...schools.map((id) => `/cfb/${id}`),
-    ...matchups.map((slug) => `/cfb/rivalries/${slug}`),
-  ];
+ *  `dropped` for the route to report. The paths come from the same loaders the
+ *  routes' generateStaticParams use, and only the batch's own loaders run, so
+ *  a CFB read failure can never stop the site batch. */
+export async function nightlyRefreshPaths(
+  loaders: NightlyLoaders,
+  batch: RefreshBatch = 'site',
+): Promise<{ paths: string[]; dropped: string[] }> {
+  let all: string[];
+  if (batch === 'cfb') {
+    const [schools, matchups] = await Promise.all([loaders.cfbSchoolIds(), loaders.cfbMatchupSlugs()]);
+    all = [...schools.map((id) => `/cfb/${id}`), ...matchups.map((slug) => `/cfb/rivalries/${slug}`)];
+  } else {
+    const [teams, hubs] = await Promise.all([loaders.teams(), loaders.venueHubSlugs()]);
+    // The fixed cross-team pages first: they are the slowest to render (each
+    // reads every upcoming promo) and the most visible, so they get the most time.
+    all = [
+      ...NIGHTLY_FIXED_PATHS,
+      ...teams.map((t) => `/${t.sportSlug}/${t.id}`),
+      ...hubs.map((slug) => `/venues/${slug}`),
+    ];
+  }
   const out: string[] = [];
   const seen = new Set<string>();
   const dropped: string[] = [];
@@ -146,7 +173,8 @@ export const FETCH_TIMEOUT_MS = 60_000;
  *  STARTING requests at its budget, and a request (fan-out POSTs included)
  *  never outlives the time its pass has left, so the run always answers inside
  *  maxDuration. The first fan-out runs before any budget and is bounded by its
- *  five batches at FETCH_TIMEOUT_MS. */
+ *  batches at FETCH_TIMEOUT_MS (five for the site batch's ~410 paths, two for
+ *  the cfb batch's ~120). */
 export const MAX_DURATION_S = 800;
 export const WARM_BUDGET_MS = 480_000;
 export const VERIFY_BUDGET_MS = 720_000;
