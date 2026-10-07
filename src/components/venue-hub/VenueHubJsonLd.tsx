@@ -5,6 +5,7 @@ import type { HubFaqItem } from '@/components/hub/HubFaq';
 // (the FAQ is also where overflow bag-policy text lands).
 export function VenueHubJsonLd({
   name,
+  formerNames = [],
   description,
   url,
   city,
@@ -15,6 +16,9 @@ export function VenueHubJsonLd({
   faqs,
 }: {
   name: string;
+  /** A renamed building's former names, emitted as alternateName (a string for
+   *  one, an array for several). `name` stays the current name. */
+  formerNames?: string[];
   /** Same string as the page <meta name="description">, so the structured data
    *  and the rendered meta stay identical. */
   description?: string;
@@ -33,6 +37,7 @@ export function VenueHubJsonLd({
     name,
     url,
   };
+  if (formerNames.length) place.alternateName = formerNames.length === 1 ? formerNames[0] : formerNames;
   if (description) place.description = description;
   if (city || state) {
     place.address = {

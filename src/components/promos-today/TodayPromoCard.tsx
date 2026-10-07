@@ -10,7 +10,7 @@ import { SpotHeroCTA } from '@/components/affiliates/SpotHeroCTA';
 // tags, title, full description, "vs OPPONENT", share icon — is guaranteed
 // identical to team pages and stays in sync. The whole row deep-links to the
 // team page promo anchor (/[sport]/[team]#promo-{id}) via the row's `href` mode;
-// the compact inline TicketNetwork / Ticketmaster / SpotHero CTA row is appended
+// the compact inline Ticketmaster / TicketNetwork / SpotHero CTA row is appended
 // BELOW the row (the team-page row does not carry it). The CTA row sits outside
 // the row's stretched link, so CTAs fire their affiliate out while a row-body tap
 // navigates to the promo. All CTAs carry surface=web_today.

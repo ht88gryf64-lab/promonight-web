@@ -120,7 +120,7 @@ test('transitSuppressed answers for every suppressed hub and for nothing else', 
 test('the CFB condensed block withholds transit for a suppressed hub and keeps every other line', async () => {
   const { buildCondensedLogistics } = await import('../venue-hub-condensed');
   const hub = (slug: string): Hub => ({
-    slug, name: 'X Stadium', city: 'Town', state: 'ST', lat: 1, lng: 2, capacity: 50000,
+    slug, name: 'X Stadium', formerNames: [], city: 'Town', state: 'ST', lat: 1, lng: 2, capacity: 50000,
     tenants: [{ teamId: 'x', league: 'CFB', tenantKey: 'x' }],
     parkingLots: [{ name: 'Lot A', notes: null }], parkingLotMapUrl: 'https://x.edu/map', officialParkingUrls: [],
     publicTransit: { lines: ['Route 1'], notes: 'Take the bus. Then walk.' },
