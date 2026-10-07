@@ -35,9 +35,10 @@ export interface Subscriber {
   confirmationSentAt: string | null;
   confirmationSentFor: string | null;
   updatedAt: string | null;
-  // Approximate location captured from the Vercel edge geo headers at signup
-  // (additive; absent on records created before geo capture). Powers the
-  // empty-window digest's local section. null when not captured.
+  // LEGACY, read-only: the IP-derived location older signups stored. New
+  // records never carry it (no capture since 2026-10-07), so these are null on
+  // them. Still read by the empty-window digest's stored-geo level for the
+  // older records that have it, until Matt rules on those docs.
   geoCity: string | null;
   geoRegion: string | null;
   geoLat: number | null;
@@ -138,48 +139,10 @@ export function sanitizeTeams(teams: unknown): string[] {
   return out;
 }
 
-// Approximate location from the Vercel edge geo headers, threaded from the
-// subscribe route. All optional; captured only at first signup.
-export interface SubscriberGeo {
-  geoCity?: string | null;
-  geoRegion?: string | null;
-  geoLat?: number | null;
-  geoLng?: number | null;
-}
-
-// Normalize untrusted geo into stored fields, all null when absent/invalid. A
-// null-island (0,0) or a non-finite coord is dropped so it can never anchor a
-// local section on the equator.
-function sanitizeGeo(geo: SubscriberGeo | null | undefined): {
-  geoCity: string | null;
-  geoRegion: string | null;
-  geoLat: number | null;
-  geoLng: number | null;
-} {
-  const city =
-    typeof geo?.geoCity === 'string' && geo.geoCity.trim().length > 0
-      ? geo.geoCity.trim().slice(0, 120)
-      : null;
-  const region =
-    typeof geo?.geoRegion === 'string' && geo.geoRegion.trim().length > 0
-      ? geo.geoRegion.trim().slice(0, 40)
-      : null;
-  let lat = typeof geo?.geoLat === 'number' && Number.isFinite(geo.geoLat) ? geo.geoLat : null;
-  let lng = typeof geo?.geoLng === 'number' && Number.isFinite(geo.geoLng) ? geo.geoLng : null;
-  if (lat === 0 && lng === 0) {
-    lat = null;
-    lng = null;
-  }
-  return { geoCity: city, geoRegion: region, geoLat: lat, geoLng: lng };
-}
-
 export interface UpsertSubscriberInput {
   email: string;
   teams: string[];
   source: CaptureSurface | string;
-  // Additive: stored only on a brand-new record (signup), never backfilled onto
-  // an existing one.
-  geo?: SubscriberGeo | null;
 }
 
 export interface UpsertSubscriberResult {
@@ -259,8 +222,12 @@ export async function upsertSubscriber(
         // means that token reached the user.
         ...deliveryCleared(),
         updatedAt: now,
-        // Captured once, at signup. Existing records are never backfilled.
-        ...sanitizeGeo(input.geo),
+        // NO location. Signups stored the IP-derived city, region, latitude and
+        // longitude until 2026-10-07; Matt ruled the coordinates out, and
+        // nothing read the city or region except alongside them (the digest's
+        // stored-geo level needs valid coordinates), so none of the four is
+        // written now. The digest falls to the followed-team market for new
+        // records. Older records keep their fields until Matt rules on them.
       });
       return {
         id,
