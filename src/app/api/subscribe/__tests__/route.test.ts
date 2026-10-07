@@ -271,3 +271,39 @@ test('the suppressed response is byte-identical to a sending one apart from crea
     confirmation: 'not_needed',
   });
 });
+
+// ── no IP-derived location is stored (2026-10-07) ──────────────────────────
+
+test('a signup with every Vercel geo header present stores no location at all', async () => {
+  const { POST } = await import('../route');
+  const withGeo = new Request('https://www.getpromonight.com/api/subscribe', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-forwarded-for': '203.0.113.7',
+      'x-vercel-ip-city': 'Saint%20Paul',
+      'x-vercel-ip-country-region': 'MN',
+      'x-vercel-ip-latitude': '44.9537',
+      'x-vercel-ip-longitude': '-93.09',
+    },
+    body: JSON.stringify({ email: EMAIL, teams: ['twins'], source: 'web_team_page' }),
+  });
+
+  const res = await POST(withGeo);
+  assert.strictEqual(res.status, 200);
+
+  const doc = subscriberDoc();
+  for (const key of ['geoCity', 'geoRegion', 'geoLat', 'geoLng']) {
+    assert.ok(!(key in doc), `subscriber doc carries ${key}`);
+  }
+  // Belt and braces: no header value reached the record under any key.
+  const written = JSON.stringify(doc);
+  for (const leak of ['44.9537', '-93.09', 'Saint Paul', 'Saint%20Paul', '"MN"']) {
+    assert.ok(!written.includes(leak), `subscriber doc carries ${leak}`);
+  }
+  // Nor did any write in the request touch a geo field.
+  for (const w of writesTo('subscribers')) {
+    const data = JSON.stringify(w);
+    assert.ok(!/geo(City|Region|Lat|Lng)/.test(data), `a write touched a geo field: ${data}`);
+  }
+});

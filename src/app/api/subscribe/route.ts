@@ -25,7 +25,6 @@ import {
   markConfirmationSent,
   sanitizeTeams,
   upsertSubscriber,
-  type SubscriberGeo,
 } from '@/lib/subscribers';
 import { coerceCaptureSurface } from '@/lib/follow-surface';
 import { sendConfirmationEmail } from '@/lib/email';
@@ -38,31 +37,6 @@ interface SubscribeBody {
   email?: unknown;
   teams?: unknown;
   source?: unknown;
-}
-
-// Read the approximate location Vercel attaches at the edge, the same headers
-// /follow uses for geo ordering. Additive: any header may be absent (local dev,
-// non-Vercel) and the sanitizer downstream drops anything invalid. The city
-// header is URL-encoded by Vercel, so it is decoded defensively.
-function readVercelGeo(request: Request): SubscriberGeo {
-  const h = request.headers;
-  const rawCity = h.get('x-vercel-ip-city');
-  let geoCity: string | null = null;
-  if (rawCity) {
-    try {
-      geoCity = decodeURIComponent(rawCity);
-    } catch {
-      geoCity = rawCity;
-    }
-  }
-  const lat = h.get('x-vercel-ip-latitude');
-  const lng = h.get('x-vercel-ip-longitude');
-  return {
-    geoCity,
-    geoRegion: h.get('x-vercel-ip-country-region'),
-    geoLat: lat !== null && lat !== '' ? Number(lat) : null,
-    geoLng: lng !== null && lng !== '' ? Number(lng) : null,
-  };
 }
 
 export async function POST(request: Request) {
@@ -91,10 +65,11 @@ export async function POST(request: Request) {
 
   const teams = sanitizeTeams(body.teams);
   const source = coerceCaptureSurface(body.source);
-  const geo = readVercelGeo(request);
+  // No location is stored: the x-vercel-ip-* headers are not read here
+  // (2026-10-07). See upsertSubscriber.
 
   try {
-    const result = await upsertSubscriber({ email: body.email, teams, source, geo });
+    const result = await upsertSubscriber({ email: body.email, teams, source });
 
     // Send the confirmation email ONLY when upsertSubscriber says one is due.
     // needsConfirmation is false for an already-confirmed re-submit, and for the
