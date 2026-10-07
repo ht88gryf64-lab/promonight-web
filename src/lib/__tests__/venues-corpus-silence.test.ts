@@ -136,12 +136,30 @@ test('every redaction records a clause, a field and its evidence', () => {
   }
 });
 
-test('both mapping sites and the hub mapper apply the redaction', () => {
-  // The same duplication problem as everything else in this corpus: a redaction
-  // that lands in one mapper leaves the other serving the clause.
-  for (const p of ['src/lib/data.ts', 'src/app/api/my-teams/promos/route.ts']) {
-    assert.ok(/redactClause\(/.test(read(p)), `${p}: does not apply redactClause to parkingInfo`);
+// THE `venues` PROSE IS NO LONGER MAPPED AT ALL (Matt, 2026-10-07). Team pages
+// read the building's venueHubs published view, so parkingInfo, bagPolicyUrl,
+// accessibility and nearby left the Venue type and both `venues` mapping sites.
+// That is a stronger silence than a redaction: a clause cannot render from a
+// field nothing reads. The `venues` entries below stay as the record of what
+// was wrong, and their own-corpus behaviour is still tested, but no mapper
+// needs to apply them.
+const VENUES_MAPPERS = ['src/lib/data.ts', 'src/app/api/my-teams/promos/route.ts'];
+const VENUES_PROSE = ['parkingInfo', 'bagPolicyUrl', 'accessibility', 'nearby'];
+
+test('neither venues mapping site maps the prose fields, and the Venue type cannot carry them', () => {
+  for (const p of VENUES_MAPPERS) {
+    const src = read(p);
+    for (const f of VENUES_PROSE) {
+      assert.ok(!new RegExp(`^\\s*${f}:`, 'm').test(src), `${p}: still maps ${f} onto the Venue object`);
+    }
+    assert.ok(!/redactClause\(/.test(src), `${p}: still redacts a field it should no longer read`);
   }
+  const types = read('src/lib/types.ts');
+  const iface = types.slice(types.indexOf('export interface Venue'), types.indexOf('export type GameStatus'));
+  for (const f of VENUES_PROSE) assert.ok(!new RegExp(`^\\s*${f}\\?:`, 'm').test(iface), `Venue still declares ${f}`);
+});
+
+test('the hub mapper applies the redaction', () => {
   const hub = read('src/lib/venue-hub.ts');
   assert.ok(/redactClause\(slug, 'parkingLots'/.test(hub), 'venue-hub.ts does not redact lot notes');
   assert.ok(/redactClause\(slug, 'tailgating\.timeWindow'/.test(hub), 'venue-hub.ts does not redact the tailgate window');
@@ -179,12 +197,12 @@ test('a mid-sentence clause is replaced, not deleted, so the field stays grammat
   assert.ok(!/light rail/.test(out!), 'the transit assertion survived');
 });
 
-test('accessibility is redacted at all three mapping sites, not just the venues pair', () => {
+test('accessibility is redacted at the hub mapper, the one site that still reads it', () => {
   // guaranteed-rate-field is a venueHubs doc, so the venues mapping sites alone
   // would have left it publishing. Every corpus that stores the field needs the
   // gate, which is the whole lesson of this pass.
-  assert.ok(/redactClause\([^)]*'accessibility'/.test(read('src/lib/data.ts')), 'data.ts');
-  assert.ok(/redactClause\([^)]*'accessibility'/.test(read('src/app/api/my-teams/promos/route.ts')), 'my-teams route');
+  // The `venues` pair no longer maps accessibility at all (see above), so the
+  // hub mapper is the one site left, and it must still redact.
   assert.ok(/redactClause\(slug, 'accessibility'/.test(read('src/lib/venue-hub.ts')), 'venue-hub mapper');
 });
 
@@ -219,9 +237,8 @@ test('a redaction applies ONLY to the corpus its clause was found in', () => {
 });
 
 test('every caller names the corpus it is reading', () => {
+  // The `venues` mappers make no calls now (asserted above).
   for (const [file, corpus] of [
-    ['src/lib/data.ts', 'venues'],
-    ['src/app/api/my-teams/promos/route.ts', 'venues'],
     ['src/lib/venue-hub.ts', 'venueHubs'],
   ] as const) {
     const src = read(file);
@@ -296,9 +313,14 @@ test('EVERY field named by a redaction is actually redacted at its mapper', () =
   // instead of silently doing nothing.
   const MAPPERS: Record<string, string[]> = {
     venueHubs: ['src/lib/venue-hub.ts'],
-    venues: ['src/lib/data.ts', 'src/app/api/my-teams/promos/route.ts'],
   };
   for (const r of CLAUSE_REDACTIONS) {
+    // A `venues` entry is covered by the field not being mapped at all, which
+    // the prose-fields test above asserts for every field these entries name.
+    if (r.corpus === 'venues') {
+      assert.ok(VENUES_PROSE.includes(r.field), `${r.slug}.${r.field}: a venues field this file does not prove unread`);
+      continue;
+    }
     // A dotted sub-key is applied under its own name at the mapper.
     const needle = new RegExp(`redactClause\\([^)]*'${r.field.replace('.', '\\.')}'`);
     const files = MAPPERS[r.corpus];

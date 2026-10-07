@@ -22,7 +22,6 @@ import { PromoList } from '@/components/promo-list';
 import { RecurringDealsSection } from '@/components/recurring-deals-section';
 import { getRecurringDealsForTeam } from '@/lib/recurring-deals';
 import { ZeroPromoFallback } from '@/components/zero-promo-fallback';
-import { VenueInfoBlock } from '@/components/venue-info-block';
 import { AuthorityStats } from '@/components/authority-stats';
 import { TeamContentSections } from '@/components/team-content-sections';
 import { TeamFAQ } from '@/components/team-faq';
@@ -553,8 +552,6 @@ export default async function TeamPage({
           </div>
         </div>
       </section>
-
-      {venue && <VenueInfoBlock venue={venue} league={team.league} />}
 
       {/* NFL-only: official team schedule release video. Render gate is
        *  field presence on the team doc; MLB / NBA / NHL / MLS / WNBA

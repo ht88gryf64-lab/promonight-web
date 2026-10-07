@@ -351,8 +351,9 @@ export function transitSuppressed(hubSlug: string): boolean {
 }
 
 /**
- * True when the `venues` transit text for this building must not render. Read
- * by VenueInfoBlock, which is the team-page and world-cup surface.
+ * True when the `venues` transit text for this building must not render. No
+ * surface reads `venues` transit any more (VenueInfoBlock, its last reader,
+ * was removed 2026-10-07); kept as the record of the verified defects.
  *
  * Deliberately a different set from `transitSuppressed`. See the `applies`
  * doc on TransitSuppression: the two corpora store independent strings, and a

@@ -226,10 +226,14 @@ export interface Venue {
   // claims outright false, with the defects generated rather than stale. They
   // are omitted from this type so the compiler, not a reviewer, prevents a
   // consumer from reading them. See src/lib/venue-corpus-silence.ts.
-  parkingInfo?: string;
-  bagPolicyUrl?: string;
-  accessibility?: string;
-  nearby?: string;
+  //
+  // `parkingInfo`, `bagPolicyUrl`, `accessibility` and `nearby` are gone too
+  // (Matt, 2026-10-07). Team pages read those facts from the building's
+  // venueHubs published view, the same one /venues/[slug] renders, so the two
+  // pages cannot disagree. The `venues` strings stay in Firestore, unread.
+  // Removing them HERE, at the type every mapper returns, is what keeps them
+  // out of the RSC payload: a team page used to ship ~29 other ballparks'
+  // prose through its schedule rows without rendering a word of it.
 }
 
 export type GameStatus = 'scheduled' | 'postponed' | 'canceled' | 'completed';

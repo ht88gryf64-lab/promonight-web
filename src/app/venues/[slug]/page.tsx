@@ -8,6 +8,7 @@ import {
   resolveTicketTeam,
   resolveTenantTeamLinks,
   getVenueHubWeekPromos,
+  getVenueHubVendors,
   venueHubTitle,
   venueHubDescription,
 } from '@/lib/venue-hub';
@@ -61,10 +62,11 @@ export default async function VenueHubPage({ params }: { params: Promise<{ slug:
   if (!hub) notFound();
   // weekPromos is 1-3 per-tenant reads (getTeamPromos, the team page's own
   // read), never a collectionGroup scan. See getVenueHubWeekPromos.
-  const [ticketTeam, tenantLinks, weekPromos] = await Promise.all([
+  const [ticketTeam, tenantLinks, weekPromos, vendors] = await Promise.all([
     resolveTicketTeam(hub),
     resolveTenantTeamLinks(hub),
     getVenueHubWeekPromos(hub),
+    getVenueHubVendors(hub),
   ]);
   // Postseason games at this building: the home games still to be played by
   // the clubs that play here. The building's clubs come from its own tenants
@@ -80,6 +82,7 @@ export default async function VenueHubPage({ params }: { params: Promise<{ slug:
         ticketTeam={ticketTeam}
         tenantLinks={tenantLinks}
         weekPromos={weekPromos}
+        vendors={vendors}
       />
     </div>
   );

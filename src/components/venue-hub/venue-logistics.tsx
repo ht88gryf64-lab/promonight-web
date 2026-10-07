@@ -248,7 +248,17 @@ export function GettingInCard({ rows }: { rows: GettingInRow[] }) {
   );
 }
 
-export function ParkingLotsCard({ hub }: { hub: VenueHub }) {
+/** What the parking card states, decided once so the venue page and a team
+ *  page that mounts the same facts cannot say different things. Null when the
+ *  card would not render. */
+export interface ParkingLotsModel {
+  lots: VenueHub['parkingLots'];
+  sourceUrl: string | null;
+  verifiedOn: string | null;
+  officialUrls: string[];
+}
+
+export function parkingLotsModel(hub: VenueHub): ParkingLotsModel | null {
   const verified = hub.verified;
   // Parking lots: the per-lot harvested notes (895 verified values corpus-wide)
   // were dark; only the first 8 lot NAMES surfaced, inside one FAQ sentence.
@@ -265,12 +275,23 @@ export function ParkingLotsCard({ hub }: { hub: VenueHub }) {
   // the link instead of silently dropping the field it exists to render.
   const hasLotContent = lotsWithNotes.some((l) => l.notes) || officialUrls.length > 0;
   if (!(verified && hasLotContent)) return null;
+  return {
+    lots: lotsWithNotes.slice(0, 12),
+    sourceUrl: lotsWithNotes.length > 0 ? claimSourceUrl(hub, 'parkingLots') : null,
+    verifiedOn: lotsWithNotes.length > 0 ? claimSourceReadOn(hub, 'parkingLots') : null,
+    officialUrls: officialUrls.slice(0, 3),
+  };
+}
+
+export function ParkingLotsCard({ hub }: { hub: VenueHub }) {
+  const m = parkingLotsModel(hub);
+  if (!m) return null;
   return (
       <Card>
         <CardLabel>Parking lots</CardLabel>
-        {lotsWithNotes.length > 0 ? (
+        {m.lots.length > 0 ? (
           <div className="grid grid-cols-1 gap-2.5 font-rd text-[13px] leading-[1.5] text-rd-ink md:grid-cols-2">
-            {lotsWithNotes.slice(0, 12).map((l) => (
+            {m.lots.map((l) => (
               <div key={l.name}>
                 <strong>{l.name}.</strong>
                 {l.notes ? <> {l.notes}</> : null}
@@ -278,14 +299,11 @@ export function ParkingLotsCard({ hub }: { hub: VenueHub }) {
             ))}
           </div>
         ) : null}
-        <ClaimLine
-          sourceUrl={lotsWithNotes.length > 0 ? claimSourceUrl(hub, 'parkingLots') : null}
-          verifiedOn={lotsWithNotes.length > 0 ? claimSourceReadOn(hub, 'parkingLots') : null}
-        />
-        {officialUrls.length > 0 ? (
+        <ClaimLine sourceUrl={m.sourceUrl} verifiedOn={m.verifiedOn} />
+        {m.officialUrls.length > 0 ? (
           <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 font-rd text-[11px]">
             <span className="text-rd-ink-soft">Official parking:</span>
-            {officialUrls.slice(0, 3).map((u) => (
+            {m.officialUrls.map((u) => (
               <a
                 key={u}
                 href={u}
@@ -303,8 +321,18 @@ export function ParkingLotsCard({ hub }: { hub: VenueHub }) {
 
 }
 
+/** The building's food sentence when it may be published, else null. */
+export function publishedFood(hub: VenueHub): string | null {
+  return hub.verified && hub.food && hasProvenance(hub.sources, 'food') && !fieldExcluded(hub.slug, 'food') ? hub.food : null;
+}
+
+/** The building's neighborhood sentence when it may be published, else null. */
+export function publishedNearby(hub: VenueHub): string | null {
+  return hub.verified && hub.nearby && hasProvenance(hub.sources, 'nearby') && !fieldExcluded(hub.slug, 'nearby') ? hub.nearby : null;
+}
+
 export function FoodCard({ hub }: { hub: VenueHub }) {
-  if (!(hub.verified && hub.food && hasProvenance(hub.sources, 'food') && !fieldExcluded(hub.slug, 'food'))) return null;
+  if (!publishedFood(hub)) return null;
   return (
       <Card>
         <CardLabel>Food worth the line</CardLabel>
@@ -314,7 +342,7 @@ export function FoodCard({ hub }: { hub: VenueHub }) {
 }
 
 export function NearbyCard({ hub }: { hub: VenueHub }) {
-  if (!(hub.verified && hub.nearby && hasProvenance(hub.sources, 'nearby') && !fieldExcluded(hub.slug, 'nearby'))) return null;
+  if (!publishedNearby(hub)) return null;
   return (
       <Card>
         <CardLabel>In the neighborhood</CardLabel>
@@ -323,10 +351,50 @@ export function NearbyCard({ hub }: { hub: VenueHub }) {
   );
 }
 
-/** The bag capsule card. `hasBagFaq` is the view's wider gate (a policy URL
- *  alone is enough to send the reader somewhere); the view computes it and
- *  passes it in so the card and the FAQ stay on one gate. */
-export function BagCard({ hub, hasBagFaq }: { hub: VenueHub; hasBagFaq: boolean }) {
+/**
+ * The two bag gates, moved verbatim out of VenueHubView so a team page reads
+ * the same decision the venue page does.
+ *
+ * `hasBag`: a provenanced bag FACT exists. Each bag fact needs its own
+ * provenance, the same test the CFB block applies, so a claim cannot render
+ * here that is withheld there (report section 16).
+ *
+ * `hasBagFaq`: the wider gate. A building with only a policy URL has no FACT to
+ * put in the capsule, but it can still answer "has this venue published a bag
+ * policy" (the fifth case in bagFaqAnswers) and it can still send the reader to
+ * the venue's own page. So this, not hasBag, is what gates both the FAQ and the
+ * card: hasBag remains the narrower test for whether a bag fact exists at all,
+ * which is what venueHubIsIndexable and the capsule copy care about. The URL arm
+ * is a POINTER: it sends the reader to the venue's own policy page and asserts
+ * no fact, so it needs reachability, not provenance.
+ */
+export function bagGates(hub: VenueHub): { hasBag: boolean; hasBagFaq: boolean; bagExcluded: boolean } {
+  const verified = hub.verified;
+  const bagExcluded = fieldExcluded(hub.slug, 'bag');
+  const hasBag =
+    verified && !bagExcluded &&
+    ((hub.bagMaxDimensions !== null && hasProvenance(hub.sources, 'bagMaxDimensions')) ||
+      (hub.clearBagRequired !== null && hasProvenance(hub.sources, 'clearBagRequired')) ||
+      (hub.bagsProhibited === true && hasProvenance(hub.sources, 'bagsProhibited')) ||
+      (!!hub.bagPolicyNotes && hasProvenance(hub.sources, 'bagPolicyNotes')
+        && !subFieldExcluded(hub.slug, 'bag', 'notes')));
+  const hasBagFaq = hasBag || (verified && !bagExcluded && isReachableUrl(hub.bagPolicyUrl));
+  return { hasBag, hasBagFaq, bagExcluded };
+}
+
+/** What the bag capsule states. Null when the card would not render. */
+export interface BagCardModel {
+  cap: ReturnType<typeof bagCapsule>;
+  lead: string;
+  noOutsideFood: boolean;
+  sourceUrl: string | null;
+  verifiedOn: string | null;
+  clearBagReason: string | null;
+  clearBagReasonUrl: string | null;
+  policyLink: string | null;
+}
+
+export function bagCardModel(hub: VenueHub, hasBagFaq: boolean): BagCardModel | null {
   if (!hasBagFaq) return null;
   // Same rule as the FAQ: the capsule states a bag fact, so each fact it can
   // state needs its own provenance.
@@ -350,7 +418,27 @@ export function BagCard({ hub, hasBagFaq }: { hub: VenueHub; hasBagFaq: boolean 
     clearBagState === 'operator-conflict' || clearBagState === 'no-operator-page'
       ? CLAIM_STATE_REASON[clearBagState]
       : null;
-  const clearBagReasonUrl = clearBagState === 'operator-conflict' ? bagPolicyLink : null;
+  return {
+    cap,
+    lead: bagSplit.lead,
+    noOutsideFood,
+    sourceUrl: bagSplit.lead ? claimSourceUrl(hub, 'bagPolicyNotes') ?? claimSourceUrl(hub, 'bagMaxDimensions') : null,
+    verifiedOn: bagSplit.lead ? claimSourceReadOn(hub, 'bagPolicyNotes') ?? claimSourceReadOn(hub, 'bagMaxDimensions') : null,
+    clearBagReason,
+    clearBagReasonUrl: clearBagState === 'operator-conflict' ? bagPolicyLink : null,
+    policyLink: bagPolicyLink,
+  };
+}
+
+/** The bag capsule card. `hasBagFaq` is the view's wider gate (a policy URL
+ *  alone is enough to send the reader somewhere); the view computes it and
+ *  passes it in so the card and the FAQ stay on one gate. */
+export function BagCard({ hub, hasBagFaq }: { hub: VenueHub; hasBagFaq: boolean }) {
+  const m = bagCardModel(hub, hasBagFaq);
+  if (!m) return null;
+  const { cap, noOutsideFood, clearBagReason, clearBagReasonUrl } = m;
+  const bagSplit = { lead: m.lead };
+  const bagPolicyLink = m.policyLink;
   return (
     <Card accent>
       <CardLabel>What size bag can I bring?</CardLabel>
@@ -371,10 +459,7 @@ export function BagCard({ hub, hasBagFaq }: { hub: VenueHub; hasBagFaq: boolean 
               <strong>No outside food or drink.</strong>
             </>
           ) : null}
-          <ClaimLine
-            sourceUrl={bagSplit.lead ? claimSourceUrl(hub, 'bagPolicyNotes') ?? claimSourceUrl(hub, 'bagMaxDimensions') : null}
-            verifiedOn={bagSplit.lead ? claimSourceReadOn(hub, 'bagPolicyNotes') ?? claimSourceReadOn(hub, 'bagMaxDimensions') : null}
-          />
+          <ClaimLine sourceUrl={m.sourceUrl} verifiedOn={m.verifiedOn} />
           {/* The clear-bag question renders its own row when the pipeline nulled
               the answer: bridgestone-arena's operator says one thing in its bag
               policy and another in its screening section, so the page says so
@@ -440,14 +525,7 @@ export function bagChipFor(hub: VenueHub): { k: string; v: string } | null {
 }
 
 export function VenueLogisticsBlock({ hub, tenantName = (t) => t.displayName }: { hub: VenueHub; tenantName?: TenantNameResolver }) {
-  const verified = hub.verified;
-  const hasBag =
-    verified &&
-    (hub.bagMaxDimensions !== null || hub.clearBagRequired !== null || hub.bagsProhibited === true
-      // Notes count toward "has a bag policy" only if they would actually
-      // render; an excluded sub-field must not open a card it cannot fill.
-      || (!!hub.bagPolicyNotes && !subFieldExcluded(hub.slug, 'bag', 'notes')));
-  const hasBagFaq = hasBag || (verified && !!hub.bagPolicyUrl);
+  const { hasBagFaq } = bagGates(hub);
   const rows = buildGettingInRows(hub, tenantName);
   return (
     <>

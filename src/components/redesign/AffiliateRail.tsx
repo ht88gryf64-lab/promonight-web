@@ -3,10 +3,9 @@ import { TicketmasterCTA } from '@/components/affiliates/TicketmasterCTA';
 import { SpotHeroCTA } from '@/components/affiliates/SpotHeroCTA';
 import { ExpediaCTA } from '@/components/affiliates/ExpediaCTA';
 import { FanaticsCTA } from '@/components/affiliates/FanaticsCTA';
-import { VenueInfoBlock } from '@/components/venue-info-block';
 import { VenueHubLink } from '@/components/venue-hub/VenueHubLink';
-import { getVenueHubForTeam } from '@/lib/venue-hub';
-import { rendersVenuesBlock } from '@/lib/venue-index';
+import { getVenueHub, getVenueHubForTeam } from '@/lib/venue-hub';
+import { TeamVenueFacts } from '@/components/venue-hub/TeamVenueFacts';
 
 // AffiliateRail — the "plan your visit" module. The single tickets CTA lives
 // here now (the hero Get Tickets button was removed), so this is the one place
@@ -16,8 +15,7 @@ import { rendersVenuesBlock } from '@/lib/venue-index';
 // arrow); they are stacked VERTICALLY full-width (not in a grid). Affiliate
 // tracking is preserved by reuse — each fires `affiliate_click` on mousedown via
 // tracked-affiliate-link. Surface stays "web_team_page". Below the buttons, the
-// full VenueInfoBlock (light) extends downward with gate times, parking,
-// transit, bag policy, etc.
+// building's published game-day facts (TeamVenueFacts) extend downward.
 export interface AffiliateRailProps {
   team: Team;
   venue: Venue | null;
@@ -30,6 +28,10 @@ export async function AffiliateRail({ team, venue, className }: AffiliateRailPro
   // building has nothing useful yet, so no dead-end link into an empty hub.
   const hub = await getVenueHubForTeam(team.id);
   const showHubLink = hub !== null && hub.indexable;
+  // The building itself, through the published view: one doc plus its tenants,
+  // the read /venues/[slug] makes. Separate from the link above, whose cached
+  // map carries only the slug, name and index floor.
+  const building = hub ? await getVenueHub(hub.slug) : null;
 
   return (
     <section className={className}>
@@ -64,18 +66,17 @@ export async function AffiliateRail({ team, venue, className }: AffiliateRailPro
         ) : null}
       </div>
 
-      {/* Full venue & game-day detail flows below the buttons. RENDER RULE
-          (2026-09-03): once the building's venueHub is indexable, the hub is
-          the sourced record for this building and the old `venues` prose block
-          (provenance-free, 2026-05-23 batch) no longer renders beside its
-          link. The `venues` doc is untouched; a building that later drops
-          below the floor gets the block back. The decision is
-          rendersVenuesBlock in lib/venue-index so it is unit-testable. */}
-      {rendersVenuesBlock(venue, showHubLink) && (
+      {/* Game-day facts, from the building's venueHubs published view: the
+          same values its venue page shows, under the same gates (Matt,
+          2026-10-07). This replaced the `venues` prose block, which had no
+          provenance and disagreed with the venue pages. A field the view
+          withholds is a row that does not exist, and a building with nothing
+          published renders nothing here. */}
+      {building ? (
         <div className="mt-6">
-          <VenueInfoBlock venue={venue!} league={team.league} variant="light" />
+          <TeamVenueFacts hub={building} teamId={team.id} />
         </div>
-      )}
+      ) : null}
     </section>
   );
 }
