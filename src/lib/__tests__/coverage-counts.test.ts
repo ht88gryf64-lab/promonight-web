@@ -33,13 +33,14 @@ test('counts, canonical order, and the college count stay separate', () => {
   assert.equal(c.leagueCount, 6);
 });
 
-test('ranked subset follows SCORED_LEAGUES and the app list is the constant', () => {
+test('ranked subset follows SCORED_LEAGUES and the app routing is the constant', () => {
   const c = coverageFromTeams(TEAMS, 0);
   assert.deepEqual(c.rankedLeagues, ['MLB', 'MLS', 'WNBA']);
   assert.equal(c.rankedTeamCount, 3 + 1 + 2);
   assert.equal(c.rankedLeagueList, 'MLB, MLS, and WNBA');
-  assert.deepEqual([...APP_LEAGUES], ['MLB', 'NBA', 'NHL', 'MLS']);
-  assert.equal(c.appLeagueList, 'MLB, NBA, NHL, and MLS');
+  assert.deepEqual([...APP_LEAGUES], ['MLB', 'NBA', 'NFL', 'NHL', 'MLS', 'WNBA']);
+  // No copy names the app's leagues (2.0 launch); the list string is gone.
+  assert.ok(!('appLeagueList' in c));
 });
 
 test('a league the constant does not know is appended, not dropped', () => {

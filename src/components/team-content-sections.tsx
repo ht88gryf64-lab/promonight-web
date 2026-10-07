@@ -1,4 +1,4 @@
-import { APP_LEAGUES, joinList } from '@/lib/coverage-counts';
+import { APP_LEAGUES } from '@/lib/coverage-counts';
 import type { Team, Promo, PromoType, Venue } from '@/lib/types';
 import { PROMO_TYPE_LABELS } from '@/lib/types';
 import {
@@ -29,9 +29,6 @@ function monthDayShort(dateStr: string): string {
     day: 'numeric',
   });
 }
-
-
-const APP_LEAGUE_LIST = joinList(APP_LEAGUES);
 
 interface TeamContentSectionsProps {
   team: Team;
@@ -139,8 +136,9 @@ export function TeamContentSections({
     food: scopeFor('food'),
     kids: scopeFor('kids'),
   };
-  // The app covers APP_LEAGUES only; the plug names it on those pages and the
-  // weekly email everywhere else, on all 169 pages and both variants.
+  // APP_LEAGUES routes the plug: the app on those pages, the weekly email on
+  // the rest, on all 169 pages and both variants. The 2.0 app carries every
+  // league, so neither branch names the app's leagues or says what it lacks.
   const inApp = (APP_LEAGUES as readonly string[]).includes(team.league);
 
   if (variant === 'light') {
@@ -216,8 +214,8 @@ export function TeamContentSections({
             </h2>
             <p className="text-rd-ink-soft text-sm leading-relaxed">
               {inApp
-                ? `PromoNight tracks ${fullName} giveaways, theme nights, food deals and kids events in one place, free on this site. The free PromoNight app carries the same ${year} calendar on iOS and Android, and PromoNight Pro adds a morning-of reminder so you never miss a promotion at ${venueName}.`
-                : `PromoNight tracks ${fullName} giveaways, theme nights, food deals and kids events in one place, free on this site. Star the ${fullName} here to get one weekly email with what is coming up at ${venueName}. The PromoNight app covers ${APP_LEAGUE_LIST} and does not carry ${team.league} yet.`}
+                ? `PromoNight tracks ${fullName} giveaways, theme nights, food deals and kids events in one place, free on this site. The free PromoNight app carries the same ${year} calendar on iOS and Android and reminds you on the morning of a promotion at ${venueName}.`
+                : `PromoNight tracks ${fullName} giveaways, theme nights, food deals and kids events in one place, free on this site. Star the ${fullName} here to get one weekly email with what is coming up at ${venueName}.`}
             </p>
           </div>
         </div>
@@ -293,8 +291,8 @@ export function TeamContentSections({
           </h2>
           <p className="text-text-secondary text-sm leading-relaxed">
             {inApp
-                ? `PromoNight tracks ${fullName} giveaways, theme nights, food deals and kids events in one place, free on this site. The free PromoNight app carries the same ${year} calendar on iOS and Android, and PromoNight Pro adds a morning-of reminder so you never miss a promotion at ${venueName}.`
-                : `PromoNight tracks ${fullName} giveaways, theme nights, food deals and kids events in one place, free on this site. Star the ${fullName} here to get one weekly email with what is coming up at ${venueName}. The PromoNight app covers ${APP_LEAGUE_LIST} and does not carry ${team.league} yet.`}
+                ? `PromoNight tracks ${fullName} giveaways, theme nights, food deals and kids events in one place, free on this site. The free PromoNight app carries the same ${year} calendar on iOS and Android and reminds you on the morning of a promotion at ${venueName}.`
+                : `PromoNight tracks ${fullName} giveaways, theme nights, food deals and kids events in one place, free on this site. Star the ${fullName} here to get one weekly email with what is coming up at ${venueName}.`}
           </p>
         </div>
       </div>

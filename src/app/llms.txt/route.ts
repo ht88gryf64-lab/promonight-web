@@ -18,7 +18,7 @@ export async function GET() {
 
   const content = `# PromoNight
 
-PromoNight is a website, with a companion mobile app for ${c.appLeagueList}, that tracks promotional events -- giveaways, theme nights, food deals, and kids events -- for ${c.teamCount} professional sports teams in ${c.leagueList}, plus 2026 schedules, rivalry games, and gameday travel guides for ${cfbSchoolCount} college football programs.
+PromoNight is a website, with a free companion mobile app, that tracks promotional events -- giveaways, theme nights, food deals, and kids events -- for ${c.teamCount} professional sports teams in ${c.leagueList}, plus 2026 schedules, rivalry games, and gameday travel guides for ${cfbSchoolCount} college football programs.
 
 ## Content Categories
 
@@ -53,7 +53,7 @@ PromoNight is a website, with a companion mobile app for ${c.appLeagueList}, tha
 - Legal name: Kovalik Digital LLC
 - Founder and author: Matt Kovalik
 - Editorial method and sourcing: https://www.getpromonight.com/about
-- App: Available on iOS App Store and Google Play; covers ${c.appLeagueList}
+- App: Free on the iOS App Store and Google Play, supported by ads
 `;
 
   return new Response(content, {

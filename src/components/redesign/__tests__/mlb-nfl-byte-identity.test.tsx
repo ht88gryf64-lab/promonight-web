@@ -15,6 +15,14 @@
  *
  * MLS and WNBA are rendered too and held to the same hashes.
  *
+ * 2026-10-07, web/app-2-release: 168 TeamContentSections, TeamFAQ and faqs
+ * hashes moved ON A BRANCH, by ruling: the 2.0 app copy (no Pro, no app league
+ * list) and the app card on NFL and WNBA pages (APP_LEAGUES now all six). Not
+ * a blanket re-record: only keys whose origin/main hash equalled the golden
+ * value were updated, after a sentence diff of main's HTML against the
+ * branch's showed the app-copy sentences and nothing else moved. The RULED
+ * PromoList keys were left as recorded.
+ *
  * Re-record ONLY from main, never from a branch:
  *   GOLDEN_RECORD=<file> node --import tsx --experimental-test-module-mocks --test <this file>
  */

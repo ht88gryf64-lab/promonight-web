@@ -44,7 +44,6 @@ const team = (over: Partial<Team> = {}): Team =>
 const coverage: TeamFaqCoverage = {
   teamCount: 169,
   leagueList: 'MLB, NBA, NFL, NHL, MLS and WNBA',
-  appLeagueList: 'MLB, MLS and NBA',
 };
 
 const TODAY = '2026-09-04';

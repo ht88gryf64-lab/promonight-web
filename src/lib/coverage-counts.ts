@@ -24,10 +24,12 @@ import { LEAGUE_ORDER, SCORED_LEAGUES } from '@/lib/types';
  * chosen; this collapses the copy on the canonical one.
  */
 
-/** The leagues the native app covers. A fact about the Flutter app, not about
- *  the website's data, so it is a constant here rather than a Firestore read.
- *  Every "the app covers ..." sentence renders from this list. */
-export const APP_LEAGUES = ['MLB', 'NBA', 'NHL', 'MLS'] as const;
+/** Team pages in these leagues pitch the app; any other league pitches the
+ *  weekly email (AppPushPitch, the team-page plug, the team FAQ). Funnel
+ *  routing, not a coverage claim: no copy states the app's leagues, so there is
+ *  deliberately no list string derived from this. All six since the 2.0 app
+ *  launch (Matt's ruling 2026-10-07: the app card on NFL and WNBA pages too). */
+export const APP_LEAGUES = ['MLB', 'NBA', 'NFL', 'NHL', 'MLS', 'WNBA'] as const;
 
 export interface CoverageCounts {
   /** Pro teams in the teams collection. Never includes college programs. */
@@ -52,8 +54,6 @@ export interface CoverageCounts {
   rankedLeagues: string[];
   /** "MLB, MLS, and WNBA" */
   rankedLeagueList: string;
-  /** "MLB, NBA, NHL, and MLS" */
-  appLeagueList: string;
 }
 
 /** Oxford-comma list: "a, b, and c". */
@@ -93,7 +93,6 @@ export function coverageFromTeams(teams: readonly Team[], cfbSchoolCount: number
     rankedTeamCount,
     rankedLeagues,
     rankedLeagueList: joinList(rankedLeagues),
-    appLeagueList: joinList(APP_LEAGUES),
   };
 }
 

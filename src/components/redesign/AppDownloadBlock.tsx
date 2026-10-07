@@ -50,8 +50,8 @@ export function AppDownloadBlock() {
               Get promo reminders for your teams.
             </h2>
             <p className="mt-4 max-w-md font-rd text-[15px] leading-relaxed text-white/70">
-              PromoNight Pro sends a reminder the morning of every promo for the teams you
-              follow. The app is a free download and everything else lives here on the web.
+              The free PromoNight app reminds you on the morning of a promo for the teams
+              you follow. Everything else lives here on the web.
             </p>
             <div className="mt-7 flex justify-start">
               <AppDownloadButtons section="homepage_app_block" page="home" variant="compact" />

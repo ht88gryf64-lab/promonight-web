@@ -25,8 +25,9 @@ import { numberWord } from '@/lib/coverage-counts';
  *     thinner and the corpus-wide figure is under half
  *   - the source check is title-only, and auto-publish is the default for new
  *     dated promos and for wording changes; review is not
- *   - Pro is ONE entitlement sold at two prices, not two tiers of access
- *   - the app covers four leagues; the website covers six plus CFB
+ *   - the 2.0 app is free with ads: no subscription, no purchases, no unlocks
+ *     (2026-10-07; the 1.x Pro tier and its prices are gone)
+ *   - the app's league coverage is not stated here; it moves with the app
  * See docs/known-issues.md entry 37.
  */
 
@@ -44,10 +45,10 @@ import { numberWord } from '@/lib/coverage-counts';
  * quietly stale. The sitemap entry for /about reads this same constant, so the
  * visible date and <lastmod> cannot disagree.
  */
-export const ABOUT_LAST_REVIEWED = '2026-09-02';
+export const ABOUT_LAST_REVIEWED = '2026-10-07';
 
 /** Human rendering of ABOUT_LAST_REVIEWED. Fixed parts only, no locale clock. */
-export const ABOUT_LAST_REVIEWED_LABEL = 'September 2, 2026';
+export const ABOUT_LAST_REVIEWED_LABEL = 'October 7, 2026';
 
 // SHA-256 of this file with every line naming the fingerprint removed, so the
 // value cannot hash itself. The lockstep test recomputes it; a mismatch means
@@ -67,8 +68,11 @@ export const ABOUT_LAST_REVIEWED_LABEL = 'September 2, 2026';
 // NHL, the "added by hand" paragraph no longer says NHL is, and the coverage
 // line says NHL clubs are posting), so the prose moved and the date moved with
 // it. The wording was set by the enable brief and is quoted in its report.
+// 2026-10-07: the 2.0 app launch. The Pro tier, its prices and the Game Day
+// unlock are gone from the app section, the FAQ and the origin story, and the
+// app's league list is no longer stated. The date moved with the prose.
 // eslint-disable-next-line prettier/prettier
-export const ABOUT_COPY_FINGERPRINT = '7aadb2a27c4dc968add7bf45cc18e584512bcbd6de8c371d825794dfe11ed4ab';
+export const ABOUT_COPY_FINGERPRINT = 'ddca2146cfa948326a520f3b929f370f1763ba1a05ef248bac273b0a18236a23';
 
 export interface AboutCounts {
   teamCount: number;
@@ -168,7 +172,7 @@ export function aboutSections(c: AboutCounts): AboutSection[] {
         {
           kind: 'p',
           text:
-            'The app is still here and still free, and it is the only place that can do the one thing a webpage genuinely cannot: reach you on the morning of the game, when you have forgotten. That morning reminder is the Pro feature. It is a real job and it is worth having. It is just not the main one.',
+            'The app is still here and still free, and it is the only place that can do the one thing a webpage genuinely cannot: reach you on the morning of the game, when you have forgotten. That morning reminder is what the app is for. It is a real job and it is worth having. It is just not the main one.',
         },
       ],
     },
@@ -271,17 +275,17 @@ export function aboutSections(c: AboutCounts): AboutSection[] {
         {
           kind: 'p',
           text:
-            'The free PromoNight app covers MLB, NBA, NHL and MLS. You can follow teams, browse their promotional calendars, and unlock one venue’s Game Day details, which is yours to keep.',
+            'The free PromoNight app is on iPhone, iPad and Android. You can follow teams, browse their promotional calendars, get a reminder on the morning of a promo day, and use Game Day to check a building’s bag policy and parking before you go.',
         },
         {
           kind: 'p',
           text:
-            'PromoNight Pro is one subscription, sold at two prices: $5.99 for a season or $9.99 for a year, both auto-renewing. It adds a reminder on the morning of a promo day for the teams you follow, and unlimited Game Day venue unlocks instead of the single free one.',
+            'There is no paid tier. The app has no subscriptions or in-app purchases, and it carries a small number of ads.',
         },
         {
           kind: 'p',
           text:
-            'That is the entire paid product. The website stays free, complete and unrestricted, because the website is the point.',
+            'The website stays free and unrestricted too, because the website is the point.',
         },
       ],
     },
@@ -292,7 +296,7 @@ export function aboutSections(c: AboutCounts): AboutSection[] {
         {
           kind: 'p',
           text:
-            'The site runs display advertising, and some links to tickets and merchandise are affiliate links, which means PromoNight earns a commission if you buy through one. Nobody pays to be listed here, and no affiliate relationship changes which promotions appear or how they are scored. The full disclosure is in the [terms](/terms).',
+            'The site and the app run advertising, and some links to tickets and merchandise are affiliate links, which means PromoNight earns a commission if you buy through one. Nobody pays to be listed here, and no affiliate relationship changes which promotions appear or how they are scored. The full disclosure is in the [terms](/terms).',
         },
       ],
     },
@@ -332,7 +336,7 @@ export function aboutFaqs(c: AboutCounts): FAQItem[] {
     {
       question: 'Is PromoNight free?',
       answer:
-        'The website is completely free and always will be: the whole calendar and every venue guide, no account required. The app is a free download. PromoNight Pro is an optional subscription that adds promo-day reminders and unlimited Game Day venue unlocks.',
+        'The website is completely free and always will be: the whole calendar and every venue guide, no account required. The app is free too, with no subscriptions or in-app purchases and a small number of ads.',
     },
     {
       question: 'Where does the promo data come from?',
@@ -347,7 +351,7 @@ export function aboutFaqs(c: AboutCounts): FAQItem[] {
     {
       question: 'Which leagues are covered?',
       answer:
-        `The website covers ${c.leagueList}, plus schedules, venues and rivalries for ${c.cfbSchoolCount} college football programs. The app currently covers MLB, NBA, NHL and MLS.`,
+        `The website covers ${c.leagueList}, plus schedules, venues and rivalries for ${c.cfbSchoolCount} college football programs.`,
     },
     {
       question: 'Who runs PromoNight?',
