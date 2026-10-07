@@ -12,7 +12,7 @@ import { haversineKm } from '@/lib/geo/distance';
 // markets, not a whole region.
 export const LOCAL_RADIUS_KM = 150;
 
-export type AnchorSource = 'stored-geo' | 'team-proxy' | 'none';
+export type AnchorSource = 'team-proxy' | 'none';
 
 export interface LocalAnchor {
   source: AnchorSource;
@@ -21,19 +21,12 @@ export interface LocalAnchor {
   city: string | null;
 }
 
-// The three cascade levels as they RESOLVE (i.e. what actually produced the
-// body): stored-geo / team-proxy only when that level yielded >=1 local promo,
-// otherwise national-fallback.
-export type CascadeLevel = 'stored-geo' | 'team-proxy' | 'national-fallback';
-
-// Stored subscriber geo captured at signup (PART 1). All optional: records that
-// predate geo capture simply have none, which drops the cascade to team-proxy.
-export interface StoredGeo {
-  geoCity?: string | null;
-  geoRegion?: string | null;
-  geoLat?: number | null;
-  geoLng?: number | null;
-}
+// The cascade levels as they RESOLVE (i.e. what actually produced the body):
+// team-proxy only when the followed-team market yielded >=1 local promo,
+// otherwise national-fallback. There is no stored-geo level: subscribers carry
+// no location (signup capture stopped at main 59f2375 and the stored fields
+// were removed from existing records, 2026-10-07).
+export type CascadeLevel = 'team-proxy' | 'national-fallback';
 
 // Best human city label per team for the "Happening around {city}" heading.
 // League-aware because team.city and the venue's locality disagree in opposite
@@ -101,44 +94,29 @@ export interface ResolvedLocal {
 }
 
 /**
- * Resolve the empty-window anchor via the three-level cascade and return the
- * local promos it surfaces. Each level is tried only if the previous one found
- * NOTHING nearby, so a stored geo that happens to be quiet does not shortcut
- * past a followed-team market that has content:
+ * Resolve the empty-window anchor and return the local promos it surfaces:
  *
- *   1. stored-geo   the subscriber's captured signup geo, if valid AND it has
- *                   >=1 nearby promo
- *   2. team-proxy   else the followed team whose home market has the MOST promos
- *                   in the window (leads the local section with the market that
+ *   1. team-proxy   the followed team whose home market has the MOST promos in
+ *                   the window (leads the local section with the market that
  *                   actually has content), if that market has >=1
- *   3. national     else no local section: the email renders the national
- *                   hot-promos body. The reported anchor is the most specific
- *                   one tried (stored geo preferred) purely for dry-run context.
+ *   2. national     else no local section: the email renders the national
+ *                   hot-promos body. The reported anchor is the market tried,
+ *                   purely for dry-run context.
+ *
+ * Takes no subscriber location by design: "promos around you" is the
+ * followed-team market for everyone (Matt's ruling, 2026-10-07).
  */
 export function resolveLocalAnchor(opts: {
-  stored: StoredGeo | null | undefined;
   followedTeamIds: string[];
   windowPromos: DigestPromo[];
   coords: Map<string, TeamCoords>;
   cityByTeamId: Map<string, string>;
 }): ResolvedLocal {
-  const { stored, followedTeamIds, windowPromos, coords, cityByTeamId } = opts;
+  const { followedTeamIds, windowPromos, coords, cityByTeamId } = opts;
 
-  // Level 1: stored subscriber geo. Use it only when it actually surfaces nearby
-  // promos; if it is present but empty, remember the anchor and fall through to
-  // the team proxy before giving up to national.
-  let storedAnchor: LocalAnchor | null = null;
-  if (stored && hasValidCoords(stored.geoLat, stored.geoLng)) {
-    const lat = stored.geoLat as number;
-    const lng = stored.geoLng as number;
-    const localPromos = promosWithinKm(lat, lng, windowPromos, coords);
-    storedAnchor = { source: 'stored-geo', lat, lng, city: stored.geoCity ?? null };
-    if (localPromos.length > 0) return { anchor: storedAnchor, localPromos, level: 'stored-geo' };
-  }
-
-  // Level 2: team-market proxy. Consider every followed team with venue coords
-  // and pick the market with the most nearby promos (deterministic: ties keep
-  // the earlier-followed team). This maximizes the chance the local section has
+  // Team-market proxy. Consider every followed team with venue coords and pick
+  // the market with the most nearby promos (deterministic: ties keep the
+  // earlier-followed team). This maximizes the chance the local section has
   // content and picks the city the subscriber most plausibly cares about.
   let best: { lat: number; lng: number; city: string | null; localPromos: DigestPromo[] } | null = null;
   for (const id of followedTeamIds) {
@@ -154,13 +132,10 @@ export function resolveLocalAnchor(opts: {
     return { anchor, localPromos: best.localPromos, level: 'team-proxy' };
   }
 
-  // Level 3: national fallback. Neither anchor surfaced anything, so there is no
-  // local section. Report the most specific anchor we tried (stored geo first,
-  // else the team market) so the dry-run keeps context.
-  const fallbackAnchor: LocalAnchor =
-    storedAnchor ??
-    (best
-      ? { source: 'team-proxy', lat: best.lat, lng: best.lng, city: best.city }
-      : { source: 'none', lat: null, lng: null, city: null });
+  // National fallback. The market surfaced nothing, so there is no local
+  // section. Report the market tried so the dry-run keeps context.
+  const fallbackAnchor: LocalAnchor = best
+    ? { source: 'team-proxy', lat: best.lat, lng: best.lng, city: best.city }
+    : { source: 'none', lat: null, lng: null, city: null };
   return { anchor: fallbackAnchor, localPromos: [], level: 'national-fallback' };
 }
