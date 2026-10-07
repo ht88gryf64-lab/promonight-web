@@ -46,6 +46,8 @@ scripts/ticketmaster-mapping-errors.log
 public/*.txt
 # but DO commit ads.txt — required for AdSense verification, served at /ads.txt
 !public/ads.txt
+# and app-ads.txt: AdMob verification for the mobile app, served at /app-ads.txt
+!public/app-ads.txt
 
 # Sibling tool workspace, not part of the web app build.
 promo-pipeline/
