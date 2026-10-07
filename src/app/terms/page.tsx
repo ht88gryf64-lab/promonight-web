@@ -5,14 +5,14 @@ import { LegalLayout } from '@/components/legal-layout';
 export const metadata: Metadata = {
   title: 'Terms of Service: Usage Rules and Disclaimers',
   description:
-    'The rules for using PromoNight: as-is service, data accuracy disclaimers, subscription terms for PromoNight Pro, and the usual liability boilerplate.',
+    'The rules for using PromoNight: as-is service, data accuracy disclaimers, affiliate links and ads, and the usual liability boilerplate.',
   alternates: { canonical: 'https://www.getpromonight.com/terms' },
   openGraph: pageOpenGraph('/terms'),
 };
 
 export default function TermsPage() {
   return (
-    <LegalLayout title="Terms of Service" updated="April 26, 2026">
+    <LegalLayout title="Terms of Service" updated="October 7, 2026">
       <p>PromoNight is operated by Kovalik Digital LLC (&quot;we&quot;, &quot;our&quot;). By using the PromoNight website at <a href="https://www.getpromonight.com">getpromonight.com</a> (&quot;the site&quot;) or the PromoNight mobile application (&quot;the app&quot;), you agree to the following terms. If you do not agree, please do not use the site or the app.</p>
 
       <h2>1. Service Description</h2>
@@ -26,30 +26,23 @@ export default function TermsPage() {
       <p>Affiliate relationships do not influence which promotions we display or how they are ranked. We are not responsible for the products, services, pricing, or policies of any third-party site. When you click an affiliate link, you leave PromoNight and are subject to the terms and privacy policies of the third-party platform.</p>
 
       <h2>3a. Advertising</h2>
-      <p>The website may display advertisements served by Google AdSense and other advertising partners. We do not control the specific ads shown and do not endorse advertised products or services. Ads are served by third parties using cookies and similar technologies; see our <a href="/privacy">Privacy Policy</a> for opt-out information. Clicking an ad takes you to a third-party site governed by its own terms.</p>
+      <p>The website may display advertisements served by Google AdSense and other advertising partners. The app shows a small number of ads from Google AdMob, marked &quot;Sponsored&quot;. We do not control the specific ads shown and do not endorse advertised products or services, and advertisers do not influence which promotions we display. Ads are served by third parties; see our <a href="/privacy">Privacy Policy</a> for the data involved and for opt-out information. Clicking an ad takes you to a third-party site governed by its own terms.</p>
 
-      <h2>4. Subscriptions &amp; Payments</h2>
-      <p>PromoNight Pro is an optional paid subscription that unlocks additional features including promo-day reminders and Game Day venue access. Reminders are scheduled by the app on your device for the morning of a promo date; PromoNight does not send them from a server. Subscriptions are managed entirely through the Apple App Store or Google Play Store.</p>
-      <ul>
-        <li>Payment is charged to your App Store or Google Play account at confirmation of purchase.</li>
-        <li>Subscriptions automatically renew unless canceled at least 24 hours before the end of the current period.</li>
-        <li>Refunds are handled according to Apple&apos;s or Google&apos;s refund policies. PromoNight does not process refunds directly.</li>
-        <li>You can manage or cancel your subscription in your device&apos;s App Store or Google Play settings.</li>
-      </ul>
+      <h2>4. Price</h2>
+      <p>The site and the app are free. The app has no subscriptions or in-app purchases; PromoNight is supported by ads and affiliate commissions.</p>
 
       <h2>5. Game Day Feature</h2>
-      <p>The Game Day feature provides venue amenity information such as food, drink, and service locations within sports stadiums. Access to Game Day content may require a PromoNight Pro subscription or a one-time venue unlock.</p>
+      <p>The Game Day feature in the app shows venue information such as bag policies, parking, accessibility, and food and drink locations within sports stadiums.</p>
       <ul>
-        <li><strong>Venue data</strong> &mdash; amenity information is provided for informational purposes only. Venue layouts, offerings, locations, and availability may change without notice. PromoNight is not responsible for inaccuracies in venue amenity data.</li>
-        <li><strong>Unlock state</strong> &mdash; your Game Day venue unlock is linked to an anonymous account and persists across sessions. Uninstalling the app or requesting data deletion may reset your unlock state.</li>
-        <li><strong>Data availability</strong> &mdash; not all venues have amenity data available. If a venue has no data, no unlock or purchase will be prompted.</li>
+        <li><strong>Venue data.</strong> Venue information is provided for informational purposes only. Venue policies, layouts, offerings, locations, and availability may change without notice. PromoNight is not responsible for inaccuracies in venue data. Check with the venue before you go.</li>
+        <li><strong>Data availability.</strong> Not all venues have venue information available.</li>
       </ul>
 
       <h2>6. Location Services</h2>
       <p>PromoNight may request access to your device&apos;s location to enhance the Game Day experience, such as identifying nearby venues. Location access is entirely optional, and you may deny or revoke permission at any time through your device settings. The app remains fully functional without location access. Location data is processed on your device and is not stored on our servers or shared with third parties.</p>
 
-      <h2>7. Live Activities &amp; Widgets</h2>
-      <p>On supported devices, PromoNight may display game and promotion information through iOS Live Activities (lock screen and Dynamic Island) and home screen widgets. These features display promotional data already available within the app and do not collect additional personal information. You can remove Live Activities and widgets at any time through your device settings. The information displayed through these features is subject to the same accuracy limitations described in Section 2.</p>
+      <h2>7. Widgets</h2>
+      <p>On supported devices, PromoNight may display game and promotion information through home screen widgets. Widgets display promotional data already available within the app and do not collect additional personal information. You can remove widgets at any time through your device settings. The information displayed through widgets is subject to the same accuracy limitations described in Section 2.</p>
 
       <h2>8. User Conduct</h2>
       <p>You agree not to:</p>
