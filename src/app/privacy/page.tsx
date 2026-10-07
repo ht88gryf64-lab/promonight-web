@@ -34,7 +34,7 @@ export default function PrivacyPage() {
         <li><strong>Session recordings.</strong> PostHog records about one in four website visits (page layout, scrolling, clicks, and browser console messages) so we can see where the site is hard to use. Text you type into form fields is masked, recording is turned off on the email confirmation and email preferences pages, and recordings are deleted after 30 days.</li>
         <li><strong>Email updates.</strong> If you sign up for PromoNight emails, we store your email address, the teams you picked, the page you signed up from, and when you signed up and confirmed. We use them to send the emails you asked for. Every email has an unsubscribe link.</li>
         <li><strong>Cookies and similar storage.</strong> We use first-party cookies and browser local storage to keep an attribution context (for example, the campaign or referral that brought you to the site) and to power analytics. See Section 6 for details.</li>
-        <li><strong>Approximate location.</strong> We may infer city or region from your IP address to order content (for example, surfacing promos for teams near you). We do not request precise device GPS on the website.</li>
+        <li><strong>Approximate location.</strong> The /follow page reads an approximate location from your request (derived from your IP address) to list nearby teams first, and the homepage team list and My Teams use your state or region from the request the same way. It is not stored on our servers: only the state or region code is kept in your browser, for up to 24 hours, so the order stays steady. We do not request precise device GPS on the website.</li>
       </ul>
 
       <h2>2. Information We Collect in the Mobile App</h2>
