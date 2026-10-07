@@ -8,8 +8,8 @@ import { LegalLayout } from '@/components/legal-layout';
 // sample of sessions in PostHog (AnalyticsProvider), so that line stays scoped
 // to the app. Checked 2026-10-07: PostHog project 393054 has
 // session_recording_opt_in true, sample rate 0.25, retention 30d, console logs
-// on; the email signup stores email, teams, source, timestamps and the Vercel
-// IP city, region, latitude and longitude (api/subscribe). Re-check both lines
+// on; the email signup stores email, teams, source and timestamps, and no
+// IP-derived location since main 59f2375 (api/subscribe). Re-check both lines
 // when either setting changes.
 export const metadata: Metadata = {
   title: 'Privacy Policy: What We Collect and How It\'s Used',
@@ -32,7 +32,7 @@ export default function PrivacyPage() {
         <li><strong>Request metadata.</strong> IP address, user-agent (browser and operating system), referrer URL, and the pages you view. This is logged in standard server logs and used by our analytics tools.</li>
         <li><strong>Analytics events.</strong> Pages viewed, links clicked, scroll depth, time on page, search queries entered on the site, and similar interaction events.</li>
         <li><strong>Session recordings.</strong> PostHog records about one in four website visits (page layout, scrolling, clicks, and browser console messages) so we can see where the site is hard to use. Text you type into form fields is masked, recording is turned off on the email confirmation and email preferences pages, and recordings are deleted after 30 days.</li>
-        <li><strong>Email updates.</strong> If you sign up for PromoNight emails, we store your email address, the teams you picked, the page you signed up from, when you signed up and confirmed, and an approximate location (city, region and coordinates) inferred from your IP address. We use them to send the emails you asked for. Every email has an unsubscribe link.</li>
+        <li><strong>Email updates.</strong> If you sign up for PromoNight emails, we store your email address, the teams you picked, the page you signed up from, and when you signed up and confirmed. We use them to send the emails you asked for. Every email has an unsubscribe link.</li>
         <li><strong>Cookies and similar storage.</strong> We use first-party cookies and browser local storage to keep an attribution context (for example, the campaign or referral that brought you to the site) and to power analytics. See Section 6 for details.</li>
         <li><strong>Approximate location.</strong> We may infer city or region from your IP address to order content (for example, surfacing promos for teams near you). We do not request precise device GPS on the website.</li>
       </ul>
