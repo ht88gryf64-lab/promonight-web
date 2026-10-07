@@ -8,6 +8,7 @@ import {
   resolveTicketTeam,
   resolveTenantTeamLinks,
   getVenueHubWeekPromos,
+  getVenueHubVendors,
   venueHubTitle,
   venueHubDescription,
 } from '@/lib/venue-hub';
@@ -40,11 +41,12 @@ export async function generateMetadata({
   // INDEXING FLOOR (locked): below the floor the page renders what it has but
   // emits noindex (follow, so outbound links are still crawled).
   const indexable = venueHubIsIndexable(hub);
+  const vendors = await getVenueHubVendors(hub.slug, hub.verified);
   return {
     // League-split, query-led title (bare value; the root layout's
     // title.template appends " | PromoNight"). Season year is a deliberate
     // constant, never getFullYear() — see SEASON_YEAR in lib/venue-hub.
-    title: venueHubTitle(hub),
+    title: venueHubTitle(hub, { hasVendors: vendors.length > 0 }),
     // Per-building answer-first description generated from verified facts.
     description: venueHubDescription(hub),
     alternates: { canonical },
@@ -61,10 +63,11 @@ export default async function VenueHubPage({ params }: { params: Promise<{ slug:
   if (!hub) notFound();
   // weekPromos is 1-3 per-tenant reads (getTeamPromos, the team page's own
   // read), never a collectionGroup scan. See getVenueHubWeekPromos.
-  const [ticketTeam, tenantLinks, weekPromos] = await Promise.all([
+  const [ticketTeam, tenantLinks, weekPromos, vendors] = await Promise.all([
     resolveTicketTeam(hub),
     resolveTenantTeamLinks(hub),
     getVenueHubWeekPromos(hub),
+    getVenueHubVendors(hub.slug, hub.verified),
   ]);
   // Postseason games at this building: the home games still to be played by
   // the clubs that play here. The building's clubs come from its own tenants
@@ -80,6 +83,7 @@ export default async function VenueHubPage({ params }: { params: Promise<{ slug:
         ticketTeam={ticketTeam}
         tenantLinks={tenantLinks}
         weekPromos={weekPromos}
+        vendors={vendors}
       />
     </div>
   );

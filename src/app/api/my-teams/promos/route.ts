@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { resolveIcon } from '@/lib/promo-helpers';
-import { bagPolicyUrlFor, nearbySilenced, redactClause } from '@/lib/venue-corpus-silence';
-import { getVenueOverride } from '@/lib/venue-overrides';
 import type { PromoType, Venue } from '@/lib/types';
 import { isTicketPackageDoc, isTicketPackageLeague } from '@/lib/ticket-packages';
 import { starredTeamLeague } from '@/lib/starred-team-league';
@@ -136,7 +134,6 @@ async function fetchVenueForTeam(
       .get();
     if (snapshot.empty) return null;
     const data = snapshot.docs[0].data();
-    const override = getVenueOverride(teamSlug);
     return {
       slug: snapshot.docs[0].id,
       name: data.name,
@@ -152,13 +149,7 @@ async function fetchVenueForTeam(
       amenityCount: data.amenityCount,
       league: data.league,
       teamId: data.teamId,
-      // Same silencing as src/lib/data.ts. This mapping is a duplicate of that
-      // one, so anything applied there has to be applied here or the API keeps
-      // serving what the pages stopped serving.
-      parkingInfo: redactClause(snapshot.docs[0].id, 'parkingInfo', data.parkingInfo ?? override?.parkingInfo, 'venues') ?? undefined,
-      bagPolicyUrl: bagPolicyUrlFor(snapshot.docs[0].id, data.bagPolicyUrl ?? override?.bagPolicyUrl),
-      accessibility: redactClause(snapshot.docs[0].id, 'accessibility', data.accessibility ?? override?.accessibility, 'venues') ?? undefined,
-      nearby: nearbySilenced(snapshot.docs[0].id) ? undefined : (data.nearby ?? override?.nearby),
+      // No prose fields, same as getVenueForTeam: see `Venue` in types.ts.
     };
   } catch (err) {
     console.error('STARRED_PROMOS_VENUE_FETCH_ERR', { teamSlug, err });

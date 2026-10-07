@@ -12,6 +12,7 @@ import { collectVenueLinksForTeams, type HubVenueLink, type VenueIndexEntry } fr
 import { transitSuppressed } from './venue-transit-suppression';
 import { rendersBag, rendersParking, rendersFood, rendersGates, fieldExcluded, hasProvenance, hasSubProvenance } from './venue-field-exclusions';
 import { makeCollectionLoader, type CachedDoc, type CachedGroupDoc } from './collection-cache';
+import { toVenueVendor, visibleVendors, type VenueVendor } from './venue-vendors';
 
 // Read layer for the venue logistics hub (/venues/[slug]). Reads the venueHubs
 // collection ONLY. The legacy `venues` collection and getVenueForTeam are
@@ -406,6 +407,21 @@ export const getVenueHub = cache(async (slug: string): Promise<VenueHub | null> 
   // Fetch, map, then GATE. The view is applied here and nowhere else, so a
   // consumer cannot forget it: see src/lib/venue-published-view.ts.
   return publishedView(toVenueHub(slug, d, tenantOverlays));
+});
+
+/**
+ * The food and drink stands a venue page may list, read like the app reads
+ * them (src/lib/venue-vendors.ts). Empty unless the building is verified: the
+ * pipeline writes vendors only for verified hubs, and this holds the same line
+ * if one is written anyway or a hub is later unverified. One subcollection
+ * read, uncached for the same reason getVenueHub is.
+ */
+export const getVenueHubVendors = cache(async (slug: string, verified: boolean): Promise<VenueVendor[]> => {
+  // Primitive arguments so React cache() dedupes the read between
+  // generateMetadata (the title) and the page body.
+  if (verified !== true) return [];
+  const snap = await db.collection('venueHubs').doc(slug).collection('vendors').get();
+  return visibleVendors(snap.docs.map((d) => toVenueVendor(d.id, d.data())));
 });
 
 /** `formerNames` as names only: trimmed, non-empty, deduplicated, never the
@@ -1076,14 +1092,22 @@ export function rendersTransit(hub: Pick<VenueHub, 'slug' | 'publicTransit' | 's
 /** SEO title head, league-split, derived from the topics the doc carries, with
  *  the long-name guard applied. Returns the bare value; the root layout's
  *  title.template appends " | PromoNight". */
-export function venueHubTitle(hub: VenueHub): string {
+export function venueHubTitle(hub: VenueHub, opts: { hasVendors?: boolean } = {}): string {
   const short = displayVenueName(hub.name);
   const t = venueHubTopics(hub);
   // League-preferred order. A term appears only when its topic renders.
   const order: Array<[keyof VenueHubTopics, string]> = isCfbOnlyHub(hub)
     ? [['parking', 'Parking'], ['tailgating', 'Tailgating'], ['bag', 'Bag Policy'], ['gates', 'Gate Times'], ['transit', 'Transit']]
     : [['bag', 'Bag Policy'], ['parking', 'Parking'], ['gates', 'Gate Times'], ['transit', 'Transit'], ['food', 'Food']];
-  const terms = order.filter(([k]) => t[k]).map(([, label]) => label);
+  // A building whose page lists food and drink stands: "Bag Policy, Parking &
+  // Food" (Matt, 2026-10-07; dated on the status board for a Search Console
+  // comparison). Food takes the third slot, ahead of gate times and transit.
+  // Bag and parking still appear only when their topics render.
+  // The order is fixed, college stadiums included (whose usual order leads
+  // with Parking).
+  const terms = opts.hasVendors && hub.verified
+    ? [...(t.bag ? ['Bag Policy'] : []), ...(t.parking ? ['Parking'] : []), 'Food']
+    : order.filter(([k]) => t[k]).map(([, label]) => label);
   // The title is the CURRENT name only, never "(formerly X)": the H1 and the
   // StadiumOrArena alternateName carry the former name (Matt's ruling,
   // 2026-10-07; website-former-names-spec.md item 2).

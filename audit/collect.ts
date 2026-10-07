@@ -546,8 +546,13 @@ export async function collectAuto(deps: CollectDeps = {}): Promise<AuditData> {
   teams.forEach((team, i) => {
     const v = venues[i];
     const upCount = upcomingByTeam.get(team.id) ?? 0;
-    const hasPark = !!v && nonEmpty(v.parkingInfo);
-    const hasBag = !!v && nonEmpty(v.bagPolicyUrl);
+    // Parking and bag prose are no longer read from `venues` at all: since
+    // 2026-10-07 the team page shows the building's venueHubs published view
+    // (TeamVenueFacts), the same facts the venue page shows, so venue-hub
+    // coverage is the measure. Hard false here for the same reason as transit
+    // and gates below: this field counts what the `venues` corpus publishes.
+    const hasPark = false;
+    const hasBag = false;
     // Transit and gate times are stored in Firestore but SILENCED at the render
     // layer since 2026-08-29 (src/lib/venue-corpus-silence.ts), so no reader can
     // see them. This audit measures what the site publishes, not what the

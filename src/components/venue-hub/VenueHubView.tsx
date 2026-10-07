@@ -14,6 +14,8 @@ import { VenueHubJsonLd } from './VenueHubJsonLd';
 import { VenuePhotoHero } from './VenuePhotoHero';
 import { HubTeamLink } from './HubTeamLink';
 import { HubPromosThisWeek } from './HubPromosThisWeek';
+import { VendorsCard } from './VendorsCard';
+import type { VenueVendor } from '@/lib/venue-vendors';
 import {
   Card,
   CardLabel,
@@ -28,6 +30,7 @@ import {
   NearbyCard,
   BagCard,
   bagChipFor,
+  bagGates,
 } from './venue-logistics';
 import {
   type VenueHub,
@@ -77,6 +80,7 @@ export function VenueHubView({
   ticketTeam,
   tenantLinks,
   weekPromos,
+  vendors = [],
   postseason = null,
 }: {
   hub: VenueHub;
@@ -86,6 +90,9 @@ export function VenueHubView({
   /** Tenant promos in the next 7 days, already merged and date-sorted. Empty is
    *  the common off-season case and renders nothing (see HubPromosThisWeek). */
   weekPromos: VenueHubWeekPromo[];
+  /** Food and drink stands, already filtered by getVenueHubVendors. Empty on a
+   *  building with none, which renders no card. */
+  vendors?: VenueVendor[];
   /** "Postseason games here", already rendered, for a building whose club
    *  still has a postseason home game to play. Null or absent otherwise. */
   postseason?: ReactNode;
@@ -115,25 +122,9 @@ export function VenueHubView({
   const subtitle = [loc, ...tenantNames].filter(Boolean).join(' · ');
 
   // ── bag capsule (rule 3: length budget; label fix in bagCapsule) ──
-  // Each bag fact needs its own provenance, the same test the CFB block applies,
-  // so a claim cannot render here that is withheld there (report section 16).
-  const bagExcluded = fieldExcluded(hub.slug, 'bag');
-  const hasBag =
-    verified && !bagExcluded &&
-    ((hub.bagMaxDimensions !== null && hasProvenance(hub.sources, 'bagMaxDimensions')) ||
-      (hub.clearBagRequired !== null && hasProvenance(hub.sources, 'clearBagRequired')) ||
-      (hub.bagsProhibited === true && hasProvenance(hub.sources, 'bagsProhibited')) ||
-      (!!hub.bagPolicyNotes && hasProvenance(hub.sources, 'bagPolicyNotes')
-        && !subFieldExcluded(hub.slug, 'bag', 'notes')));
-  // A building with only a policy URL has no FACT to put in the capsule, but it
-  // can still answer "has this venue published a bag policy" (the fifth case in
-  // bagFaqAnswers) and it can still send the reader to the venue's own page. So
-  // this, not hasBag, is what gates both the FAQ and the card: hasBag remains the
-  // narrower test for whether a bag fact exists at all, which is what
-  // venueHubIsIndexable and the capsule copy care about.
-  // The URL arm is a POINTER: it sends the reader to the venue's own policy
-  // page and asserts no fact, so it needs reachability, not provenance.
-  const hasBagFaq = hasBag || (verified && !bagExcluded && isReachableUrl(hub.bagPolicyUrl));
+  // Both gates live in venue-logistics (bagGates) so a team page that shows
+  // this building's bag facts decides them exactly as this page does.
+  const { hasBagFaq } = bagGates(hub);
   const dimStr = hasProvenance(hub.sources, 'bagMaxDimensions') ? dimsString(hub.bagMaxDimensions) : null;
 
   // ── FAQ (rule: overflow bag text + long-tail queries land here) ──
@@ -371,6 +362,10 @@ export function VenueHubView({
 
   const foodCard = <FoodCard hub={hub} />;
 
+  // Food & drink: the stands themselves. A fact card like its siblings, so it
+  // sits behind hub.verified here as well as in the loader.
+  const vendorsCard = verified ? <VendorsCard vendors={vendors} /> : null;
+
   const nearbyCard = <NearbyCard hub={hub} />;
 
   // Tickets & gear: Ticketmaster (primary) + TicketNetwork paired inside
@@ -516,6 +511,7 @@ export function VenueHubView({
             {gettingInCard}
             {parkingLotsCard}
             {foodCard}
+            {vendorsCard}
             {nearbyCard}
             {/* mobile: Tickets & gear sits above the FAQ */}
             {ticketsCard ? <div className="lg:hidden">{ticketsCard}</div> : null}

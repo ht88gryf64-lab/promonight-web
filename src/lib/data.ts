@@ -33,8 +33,6 @@ import {
 } from './nfl-week';
 import { dedupePromos, isUpcomingPromo, isVisiblePromo, resolveIcon, todayYmd } from './promo-helpers';
 import { addDaysYmd, siteTodayPlusDays, siteTodayYmd, siteYmd } from './site-today';
-import { getVenueOverride } from './venue-overrides';
-import { bagPolicyUrlFor, nearbySilenced, redactClause } from '@/lib/venue-corpus-silence';
 import { VENUE_RESOLUTION_MAP } from './venue-resolution-map';
 import { VENUE_LOCATIONS_STATIC } from './venue-locations';
 import { resolveMlbZone } from './mlb-venue-tz';
@@ -561,7 +559,6 @@ export async function getVenueForTeam(teamId: string): Promise<Venue | null> {
 
   if (!data) return null;
 
-  const override = getVenueOverride(teamId);
   return {
     slug: slug!,
     name: data.name,
@@ -577,16 +574,7 @@ export async function getVenueForTeam(teamId: string): Promise<Venue | null> {
     amenityCount: data.amenityCount,
     league: data.league,
     teamId: data.teamId,
-    // Firestore takes precedence; overrides fill in when Firestore is empty.
-    // gatesOpen and publicTransit are not mapped at all: see venue-corpus-silence.
-    parkingInfo: redactClause(slug!, 'parkingInfo', data.parkingInfo ?? override?.parkingInfo, 'venues') ?? undefined,
-    // A pointer, so it is repointed rather than silenced, and the repoint has to
-    // WIN over the stored value (`stored ?? override` can only fill a gap).
-    bagPolicyUrl: bagPolicyUrlFor(slug!, data.bagPolicyUrl ?? override?.bagPolicyUrl),
-    accessibility: redactClause(slug!, 'accessibility', data.accessibility ?? override?.accessibility, 'venues') ?? undefined,
-    // Withheld where the sentence counts stops from a station the same record
-    // invented; a fabricated primitive propagates into what was derived from it.
-    nearby: nearbySilenced(slug!) ? undefined : (data.nearby ?? override?.nearby),
+    // No prose fields: see the note on `Venue` in types.ts.
   };
 }
 
