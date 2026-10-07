@@ -44,9 +44,9 @@ scripts/ticketmaster-mapping-errors.log
 
 # IndexNow key verification file — generated at prebuild from INDEXNOW_KEY env var
 public/*.txt
-# but DO commit ads.txt — required for AdSense verification, served at /ads.txt
-!public/ads.txt
-# and app-ads.txt: AdMob verification for the mobile app, served at /app-ads.txt
+# but DO commit app-ads.txt: AdMob verification for the mobile app, served at
+# /app-ads.txt. Deliberately NO exception for ads.txt: /ads.txt is the route
+# handler src/app/ads.txt/route.ts, and a public/ads.txt would shadow it.
 !public/app-ads.txt
 
 # Sibling tool workspace, not part of the web app build.
