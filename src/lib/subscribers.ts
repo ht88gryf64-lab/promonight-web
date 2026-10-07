@@ -35,14 +35,6 @@ export interface Subscriber {
   confirmationSentAt: string | null;
   confirmationSentFor: string | null;
   updatedAt: string | null;
-  // LEGACY, read-only: the IP-derived location older signups stored. New
-  // records never carry it (no capture since 2026-10-07), so these are null on
-  // them. Still read by the empty-window digest's stored-geo level for the
-  // older records that have it, until Matt rules on those docs.
-  geoCity: string | null;
-  geoRegion: string | null;
-  geoLat: number | null;
-  geoLng: number | null;
 }
 
 const SUBSCRIBERS = 'subscribers';
@@ -223,11 +215,9 @@ export async function upsertSubscriber(
         ...deliveryCleared(),
         updatedAt: now,
         // NO location. Signups stored the IP-derived city, region, latitude and
-        // longitude until 2026-10-07; Matt ruled the coordinates out, and
-        // nothing read the city or region except alongside them (the digest's
-        // stored-geo level needs valid coordinates), so none of the four is
-        // written now. The digest falls to the followed-team market for new
-        // records. Older records keep their fields until Matt rules on them.
+        // longitude until 2026-10-07 (main 59f2375 stopped it). Nothing reads
+        // them any more: the digest anchors on the followed-team market for
+        // everyone, and the fields were removed from existing records.
       });
       return {
         id,
@@ -454,10 +444,6 @@ function mapSubscriberDoc(doc: FirebaseFirestore.DocumentSnapshot): Subscriber {
     confirmationSentFor:
       typeof d.confirmationSentFor === 'string' ? d.confirmationSentFor : null,
     updatedAt: tsToIso(d.updatedAt),
-    geoCity: typeof d.geoCity === 'string' ? d.geoCity : null,
-    geoRegion: typeof d.geoRegion === 'string' ? d.geoRegion : null,
-    geoLat: typeof d.geoLat === 'number' ? d.geoLat : null,
-    geoLng: typeof d.geoLng === 'number' ? d.geoLng : null,
   };
 }
 

@@ -6,19 +6,23 @@
  *   - teams non-empty  -> personalized digest of their teams' promos in the next
  *     7 days. If that set is EMPTY, the subscriber gets the empty-window variant
  *     instead of being skipped: a personalized opener plus a local section of
- *     nearby promos (geo cascade: stored signup geo -> followed-team market
- *     proxy -> national fallback), counted in the dry-run by cascade level.
+ *     nearby promos around the followed-team market (team-proxy -> national
+ *     fallback), counted by cascade level. No subscriber location is read:
+ *     subscribers carry none (2026-10-07).
  *   - teams empty      -> generic "hot promos" email built from the same window
  *     data, with links to the aggregator pages.
  *
  * Auth: CRON_SECRET bearer, same as /api/cron/mlb-schedule.
  *
- * DRY-RUN BY DEFAULT. The route logs and returns the full plan (totals,
- * personalized / generic / empty-window counts with the empty-window cascade
- * breakdown, free-tier check) but sends NOTHING. A live send requires BOTH the
- * cron secret AND ?execute=true. The
- * scheduled Vercel cron (vercel.json) hits the bare path, so it stays in
- * dry-run until the path is changed to add ?execute=true.
+ * THE SCHEDULED RUN SENDS. vercel.json calls this path with ?execute=true
+ * every Tuesday at 17:00 UTC, and the sender is configured (SENDER_FROM is a
+ * real address, RESEND_API_KEY is set in Production), so that run emails every
+ * deduped confirmed recipient. Without ?execute=true (a manual call) the route
+ * is a dry run: it logs and returns the full plan (totals, personalized /
+ * generic / empty-window counts with the cascade breakdown, free-tier check)
+ * and sends NOTHING. Either way it needs the cron secret. (Until 2026-10-07
+ * this comment said the cron hit the bare path and stayed in dry-run; it had
+ * not for some time.)
  *
  * Execute is guarded: it refuses (409) unless the sender is configured
  * (SENDER_FROM off its placeholder + RESEND_API_KEY), refuses if the recipient
@@ -139,12 +143,6 @@ export async function GET(request: Request) {
     const nameById = new Map(allTeams.map((t) => [t.id, `${t.city} ${t.name}`]));
     for (const sub of emptyWindowSubs) {
       const { anchor, localPromos, level } = resolveLocalAnchor({
-        stored: {
-          geoCity: sub.geoCity,
-          geoRegion: sub.geoRegion,
-          geoLat: sub.geoLat,
-          geoLng: sub.geoLng,
-        },
         followedTeamIds: sub.teams,
         windowPromos,
         coords,
@@ -172,7 +170,7 @@ export async function GET(request: Request) {
       acc[e.level] += 1;
       return acc;
     },
-    { 'stored-geo': 0, 'team-proxy': 0, 'national-fallback': 0 } as Record<CascadeLevel, number>,
+    { 'team-proxy': 0, 'national-fallback': 0 } as Record<CascadeLevel, number>,
   );
 
   const summary = {
