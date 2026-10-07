@@ -49,6 +49,14 @@ test('the clock is pinned: new Date() and Date.now() read CAPTURED_AT, not the r
   assert.equal(Date.now(), CAPTURED_AT.getTime());
 });
 
+// Production sets the Ticketmaster Impact wrap, which is what carries the
+// sub-ID on a Ticketmaster link. Ticketmaster leads the ticket stack, so the
+// one-button rows are Ticketmaster links and the tagging assertions need the
+// wrap. affiliates.ts reads it at module scope, and the pages below are
+// imported lazily, so setting it here is before the first load.
+process.env.NEXT_PUBLIC_TICKETMASTER_IMPACT_WRAP =
+  'https://ticketmaster.evyy.net/c/7236189/264167/4272?u={TARGET}&sharedid={SHARED_ID}';
+
 const hub = () => import('../page');
 const league = () => import('../[league]/page');
 
@@ -214,13 +222,14 @@ test('ROUTE /playoffs/[league]: a home games row carries ONE ticket button, the 
   assert.ok(rows.length > 8, 'the short list and the rest of the week');
   for (const row of rows) {
     assert.equal(count(row, 'rel="noopener noreferrer sponsored"'), 1, 'one ticket link to a row');
-    assert.equal(count(row, 'aria-label="Get tickets on TicketNetwork"'), 1);
-    assert.equal(count(row, 'aria-label="Get tickets on Ticketmaster"'), 0);
+    assert.equal(count(row, 'aria-label="Get tickets on Ticketmaster"'), 1);
+    assert.equal(count(row, 'aria-label="Get tickets on TicketNetwork"'), 0);
   }
   // The series detail keeps the full block: both partners, for one host.
   const panel = /<section id="wild_card-1"[\s\S]*?<\/section>/.exec(html)?.[0] ?? '';
-  assert.equal(count(panel, 'aria-label="Get tickets on TicketNetwork"'), 1);
   assert.equal(count(panel, 'aria-label="Get tickets on Ticketmaster"'), 1);
+  assert.equal(count(panel, 'aria-label="Get tickets on TicketNetwork"'), 1);
+  assert.ok(panel.indexOf('Get tickets on Ticketmaster') < panel.indexOf('Get tickets on TicketNetwork'), 'Ticketmaster above TicketNetwork');
   assert.ok(panel.includes('web_playoffs_league_houston-astros'));
 });
 

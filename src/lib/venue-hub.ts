@@ -84,6 +84,13 @@ export type VenueFieldState = 'rendered' | 'operator-conflict' | 'no-operator-pa
 export interface VenueHub {
   slug: string;
   name: string;
+  /** Former names of a renamed building, newest first, as the pipeline stores
+   *  them in `formerNames[].name` (handoffs/website-former-names-spec.md).
+   *  Identity like `name`, not a claim: no verified gate. NAMES ONLY: each
+   *  stored entry also carries sourceUrl, announcementUrl and observedAt, and
+   *  this hub reaches client components, so the mapper drops them (CLAUDE.md,
+   *  RSC payload). Empty on every building that was never renamed. */
+  formerNames: string[];
   city: string | null;
   state: string | null;
   lat: number | null;
@@ -260,6 +267,7 @@ export function toVenueHub(
     // page URL (audit/affiliate-attribution-audit.md, ranked item 8).
     slug: d.slug === slug ? d.slug : slug,
     name: d.name,
+    formerNames: formerNamesOf(d.formerNames, d.name),
     city: d.city ?? null,
     state: d.state ?? null,
     lat: typeof d.lat === 'number' ? d.lat : null,
@@ -400,6 +408,20 @@ export const getVenueHub = cache(async (slug: string): Promise<VenueHub | null> 
   return publishedView(toVenueHub(slug, d, tenantOverlays));
 });
 
+/** `formerNames` as names only: trimmed, non-empty, deduplicated, never the
+ *  current name. Anything else on an entry stays out of the hub object. */
+export function formerNamesOf(v: unknown, currentName: unknown): string[] {
+  if (!Array.isArray(v)) return [];
+  const current = typeof currentName === 'string' ? currentName.trim().toLowerCase() : '';
+  const out: string[] = [];
+  for (const entry of v) {
+    const name = typeof entry?.name === 'string' ? entry.name.trim() : '';
+    if (!name || name.toLowerCase() === current || out.includes(name)) continue;
+    out.push(name);
+  }
+  return out;
+}
+
 // ── display helpers ────────────────────────────────────────────────────────
 
 /** The recognizable venue name for titles/hero: strip a leading sponsor lockup
@@ -408,6 +430,16 @@ export const getVenueHub = cache(async (slug: string): Promise<VenueHub | null> 
 export function displayVenueName(name: string): string {
   const idx = name.toLowerCase().lastIndexOf(' at ');
   return idx >= 0 ? name.slice(idx + 4).trim() : name;
+}
+
+/** The venue page H1: "{current} (formerly {X})" on a renamed building, with
+ *  X the most recent former name (formerNames is newest first); the display
+ *  name alone everywhere else. Only the H1 uses this: the <title>, the index,
+ *  team pages, chips and FAQ keep the current name (website-former-names-spec.md). */
+export function venueHubHeading(hub: Pick<VenueHub, 'name' | 'formerNames'>): string {
+  const short = displayVenueName(hub.name);
+  const former = hub.formerNames?.[0];
+  return former ? `${short} (formerly ${former})` : short;
 }
 
 /** First `max` sentences of a note (for the bag-capsule length budget); the rest
@@ -1052,6 +1084,9 @@ export function venueHubTitle(hub: VenueHub): string {
     ? [['parking', 'Parking'], ['tailgating', 'Tailgating'], ['bag', 'Bag Policy'], ['gates', 'Gate Times'], ['transit', 'Transit']]
     : [['bag', 'Bag Policy'], ['parking', 'Parking'], ['gates', 'Gate Times'], ['transit', 'Transit'], ['food', 'Food']];
   const terms = order.filter(([k]) => t[k]).map(([, label]) => label);
+  // The title is the CURRENT name only, never "(formerly X)": the H1 and the
+  // StadiumOrArena alternateName carry the former name (Matt's ruling,
+  // 2026-10-07; website-former-names-spec.md item 2).
   // A held building publishes nothing, so the head is the building name alone.
   // The suffix still names the page type, which is not a claim about content.
   let head = short;

@@ -23,16 +23,16 @@ import { TrackedAffiliateLink } from '@/components/tracked-affiliate-link';
 // TrackedAffiliateLink, with distinct `partner` values ('ticketmaster' /
 // 'ticketnetwork') and the page `surface` passed straight through.
 //
-// ORDER: TicketNetwork leads on every surface (better per-click monetization
-// holds the top intercept slot), Ticketmaster second. The order is identical in
-// both layouts so the "TN on top" revenue test stays consistent across surfaces.
+// ORDER: Ticketmaster leads on every surface, TicketNetwork second (2026-10-07,
+// the 2.0 app launch; the app's ticket sheet has the same rule). It replaced
+// the "TN on top" revenue order. The order is identical in both layouts.
 //
 // LAYOUT:
-//  - 'stacked' (default): the vertical two-button stack, TicketNetwork on top.
+//  - 'stacked' (default): the vertical two-button stack, Ticketmaster on top.
 //    Every existing caller is unchanged.
 //  - 'inline': a horizontal row of equal-width brand-mark tiles for the
-//    /promos/today card CTA row (alongside an inline SpotHeroCTA) — TicketNetwork
-//    leftmost, Ticketmaster second. It never wraps: flex-nowrap + min-w-0 +
+//    /promos/today card CTA row (alongside an inline SpotHeroCTA): Ticketmaster
+//    leftmost, TicketNetwork second. It never wraps: flex-nowrap + min-w-0 +
 //    overflow-hidden make wrapping impossible; the "Get Tickets" descriptor and
 //    the arrow are container-query-gated (revealed only when the card is wide
 //    enough) so three buttons fit down to 360px. Requires an `@container/cta`
@@ -59,12 +59,12 @@ type Props = {
   /** 'full' (default) — team-page hero / sidebar / standalone use.
    *  'compact' — tighter padding + gap, fits inside playoff cards / modal stacks. */
   size?: 'full' | 'compact';
-  /** 'stacked' (default) — vertical two-button stack, TicketNetwork-first
-   *  (unchanged everywhere). 'inline' — horizontal equal-width brand-mark tiles,
-   *  Ticketmaster-first, for the /promos/today card row. */
+  /** 'stacked' (default): vertical two-button stack, Ticketmaster-first.
+   *  'inline': horizontal equal-width brand-mark tiles, Ticketmaster-first,
+   *  for the /promos/today card row. */
   layout?: 'stacked' | 'inline';
   /** Render ONE button instead of two: the partner that leads the stack,
-   *  TicketNetwork, or Ticketmaster when the TicketNetwork link cannot be
+   *  Ticketmaster, or TicketNetwork when the Ticketmaster link cannot be
    *  resolved. For a dense list where every row carries a ticket link (the
    *  playoffs home games). Tagging is unchanged. */
   primaryOnly?: boolean;
@@ -199,19 +199,16 @@ export function TicketmasterCTA({
     </TrackedAffiliateLink>
   ) : null;
 
-  // TicketNetwork leads on every surface (stacked = top, inline = leftmost):
-  // it monetizes better per click (resale commissions dwarf TM's single-game
-  // ticket payouts), so it holds the top intercept slot. Keeping the order
-  // identical across surfaces keeps the "TN on top" revenue test clean.
+  // Ticketmaster leads on every surface (stacked = top, inline = leftmost).
   if (primaryOnly) {
     // The same order as the pair: whichever button would have been first.
-    return <div className={wrapperClass}>{ticketNetworkButton ?? ticketmasterButton}</div>;
+    return <div className={wrapperClass}>{ticketmasterButton ?? ticketNetworkButton}</div>;
   }
 
   return (
     <div className={wrapperClass}>
-      {ticketNetworkButton}
       {ticketmasterButton}
+      {ticketNetworkButton}
     </div>
   );
 }

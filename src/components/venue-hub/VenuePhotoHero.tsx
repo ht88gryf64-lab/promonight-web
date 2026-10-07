@@ -12,11 +12,15 @@ export function VenuePhotoHero({
   photoUrl,
   attribution,
   title,
+  imageName,
   subtitle,
 }: {
   photoUrl: string;
   attribution: string | null;
+  /** The H1. On a renamed building it carries "(formerly X)". */
   title: string;
+  /** The building's current name, for the photo's alt text. Defaults to title. */
+  imageName?: string;
   subtitle: string;
 }) {
   const [failed, setFailed] = useState(false);
@@ -36,7 +40,7 @@ export function VenuePhotoHero({
         // eslint-disable-next-line @next/next/no-img-element -- self-hosted hero art with an onError charcoal fallback; next/image cannot express the fail-to-gradient degrade.
         <img
           src={photoUrl}
-          alt={`${title} on gameday`}
+          alt={`${imageName ?? title} on gameday`}
           onError={() => setFailed(true)}
           className="absolute inset-0 h-full w-full object-cover"
           style={{ objectPosition: 'center 40%' }}

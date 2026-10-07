@@ -72,7 +72,7 @@ export default async function FoodDealsPage() {
     {
       question: 'What counts as a food deal?',
       answer:
-        'A food deal is any promotion centered on discounted or free concessions — dollar hot dogs, half-price beer, kids-eat-free nights, and value menus. Themed giveaways and bobbleheads are tracked on their own collection pages.',
+        'A food deal is any promotion centered on discounted or free concessions: dollar hot dogs, half-price beer, kids-eat-free nights, and value menus. Themed giveaways and bobbleheads are tracked on their own collection pages.',
     },
     {
       question: 'Can I get food-deal notifications?',

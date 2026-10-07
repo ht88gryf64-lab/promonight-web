@@ -34,6 +34,7 @@ import {
   type TenantTeamLink,
   type VenueHubWeekPromo,
   displayVenueName,
+  venueHubHeading,
   cityState,
   spotHeroCovers,
   dimsString,
@@ -90,6 +91,9 @@ export function VenueHubView({
   postseason?: ReactNode;
 }) {
   const short = displayVenueName(hub.name);
+  // H1 only: "(formerly X)" on a renamed building. Everything else on the page
+  // (FAQ, chips, cards) names the building by its current name, `short`.
+  const heading = venueHubHeading(hub);
   const loc = cityState(hub);
   // The overlay's stored displayName is the raw slug on 73 of 186 verified
   // tenants, nearly all CFB ("penn-state", "unlv", "purdue"), because
@@ -420,6 +424,7 @@ export function VenueHubView({
     <>
       <VenueHubJsonLd
         name={short}
+        formerNames={hub.formerNames}
         description={metaDescription}
         url={canonicalUrl}
         city={hub.city}
@@ -433,7 +438,7 @@ export function VenueHubView({
       {/* Hero: photo when a self-hosted photoUrl is present, else the house
           charcoal treatment (identical to the pre-photo hero). */}
       {hub.photoUrl ? (
-        <VenuePhotoHero photoUrl={hub.photoUrl} attribution={hub.photoAttribution} title={short} subtitle={subtitle} />
+        <VenuePhotoHero photoUrl={hub.photoUrl} attribution={hub.photoAttribution} title={heading} imageName={short} subtitle={subtitle} />
       ) : (
         <section className="relative overflow-hidden text-white" style={{ backgroundColor: '#211d18' }}>
           <div
@@ -443,7 +448,7 @@ export function VenueHubView({
           />
           <div className="relative z-10 mx-auto max-w-[980px] px-4 pb-5 pt-5 md:px-8 md:pb-6 md:pt-7">
             <p className="font-rd text-[10px] font-semibold uppercase tracking-[0.14em] text-white/60">Gameday Guide</p>
-            <h1 className="rd-display mt-1 text-2xl text-white md:text-4xl">{short}</h1>
+            <h1 className="rd-display mt-1 text-2xl text-white md:text-4xl">{heading}</h1>
             <p className="mt-0.5 font-rd text-[12px] text-white/65">{subtitle}</p>
           </div>
         </section>

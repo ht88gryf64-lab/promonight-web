@@ -12,7 +12,7 @@ const SRC = 'https://official.example.edu/guide';
 
 function hub(slug: string): VenueHub {
   return {
-    slug, name: 'X Stadium', city: 'T', state: 'ST', lat: 1, lng: 2, capacity: 5,
+    slug, name: 'X Stadium', formerNames: [], city: 'T', state: 'ST', lat: 1, lng: 2, capacity: 5,
     tenants: [{ teamId: 'x', league: 'CFB', tenantKey: 'x' }],
     parkingLots: [], parkingLotMapUrl: null, officialParkingUrls: [],
     publicTransit: null, rideshareDropoff: null, accessibility: null,
