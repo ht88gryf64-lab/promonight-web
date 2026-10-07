@@ -39,10 +39,12 @@ async function main() {
 
   // Remove any stale *.txt verification files from previous key values,
   // so the public/ directory only ever holds the current key.
-  // Keep checked-in *.txt files (ads.txt for AdSense verification, etc.) —
-  // those are not generated and must survive every build. app-ads.txt is the
-  // AdMob verification file for the mobile app.
-  const KEEP_TXT = new Set(['ads.txt', 'app-ads.txt']);
+  // Keep checked-in *.txt files: those are not generated and must survive
+  // every build. app-ads.txt is the AdMob verification file for the mobile app.
+  // ads.txt is deliberately NOT kept: /ads.txt is the route handler
+  // src/app/ads.txt/route.ts, and a public/ads.txt would shadow it, so a stray
+  // one is deleted here like any other stale file.
+  const KEEP_TXT = new Set(['app-ads.txt']);
   const entries = await readdir(PUBLIC_DIR);
   for (const name of entries) {
     if (name.endsWith('.txt') && name !== `${key}.txt` && !KEEP_TXT.has(name)) {
