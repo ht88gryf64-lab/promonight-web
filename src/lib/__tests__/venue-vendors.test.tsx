@@ -102,3 +102,30 @@ test('the card: heading, groups, chips, source line; nothing when there are no s
   assert.match(html, /Source read Oct 7, 2026/);
   assert.ok(!/—/.test(html), 'no em dashes');
 });
+
+test('the card folds after 12 rows: every stand stays in the HTML, inside one <details>', async () => {
+  const { VendorsCard, splitGroups, VENDORS_VISIBLE } = await import('../../components/venue-hub/VendorsCard');
+  assert.equal(VENDORS_VISIBLE, 12);
+  // 20 stands, each at two sections: 40 rows, 20 stands.
+  const vs = visibleVendors(Array.from({ length: 20 }, (_, i) =>
+    toVenueVendor(`s${i}`, doc(`Stand ${String(i).padStart(2, '0')}`, { locations: [loc(String(100 + i), [String(100 + i)]), loc(String(300 + i), [String(300 + i)])] })),
+  ));
+  const html = renderToStaticMarkup(<VendorsCard vendors={vs} />);
+  for (const v of vs) assert.ok(html.includes(v.name), `${v.name} missing from the HTML`);
+  assert.equal(html.match(/<details/g)?.length, 1);
+  assert.match(html, /Show all 20 stands/);
+  const [before, after] = html.split('<details');
+  assert.equal(before.match(/<li/g)?.length, 12, 'twelve rows above the fold');
+  assert.equal(after.match(/<li/g)?.length, 28, 'the rest folded');
+  assert.equal(html.match(/By section/g)?.length, 1, 'a group split by the fold is not headed twice');
+  // Order is unchanged by the split.
+  const { shown, rest } = splitGroups(groupVendors(vs), 12);
+  const flat = [...shown, ...rest].flatMap((g) => g.entries);
+  assert.deepEqual(flat, groupVendors(vs).flatMap((g) => g.entries));
+});
+
+test('twelve rows or fewer: no fold control', async () => {
+  const { VendorsCard } = await import('../../components/venue-hub/VendorsCard');
+  const vs = visibleVendors(Array.from({ length: 12 }, (_, i) => toVenueVendor(`s${i}`, doc(`S${i}`, { locations: [loc('1', ['1'])] }))));
+  assert.doesNotMatch(renderToStaticMarkup(<VendorsCard vendors={vs} />), /<details|Show all/);
+});
