@@ -10,7 +10,10 @@ import { LegalLayout } from '@/components/legal-layout';
 // session_recording_opt_in true, sample rate 0.25, retention 30d, console logs
 // on; the email signup stores email, teams, source and timestamps, and no
 // IP-derived location since main 59f2375 (api/subscribe). Re-check both lines
-// when either setting changes.
+// when either setting changes. App search terms (2026-10-08): the app's
+// search_query event carries `query` from Discover and from Add Teams, to both
+// sinks (app lib/services/analytics). Consent: UMP via admob_provider.dart; the
+// More tab row shows only when Google reports privacy options are required.
 export const metadata: Metadata = {
   title: 'Privacy Policy: What We Collect and How It\'s Used',
   description:
@@ -21,7 +24,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <LegalLayout title="Privacy Policy" updated="October 7, 2026">
+    <LegalLayout title="Privacy Policy" updated="October 8, 2026">
       <p>
         PromoNight is operated by Kovalik Digital LLC (&quot;we&quot;, &quot;our&quot;). This policy covers both the PromoNight website at <a href="https://www.getpromonight.com">getpromonight.com</a> and the PromoNight mobile application. It explains what data we collect, how we use it, who we share it with, and your rights.
       </p>
@@ -47,8 +50,9 @@ export default function PrivacyPage() {
         <li><strong>Firebase Cloud Messaging (FCM) token.</strong> A device identifier that push notifications can be sent to. The app stores it in your account record whenever it can obtain one, whether or not you allow notifications. We do not currently send push notifications; promo day reminders are scheduled on your device.</li>
         <li><strong>Venue feedback.</strong> If you send feedback from the Game Day tab, we store the text you write, the stadium it is about, and your anonymous account ID.</li>
         <li><strong>Analytics events.</strong> Anonymous usage data such as which screens you view, buttons you tap, and features you use. This includes starring a team, changing an alert setting, and which stadium the Game Day tab shows. Events are tied to the anonymous account ID, never to your name, email address or location. We send them to PostHog and to Firebase Analytics. The app does not record your screen or sessions, and it does not use the advertising identifier for analytics.</li>
+        <li><strong>Search terms.</strong> The words you type into the app&apos;s searches (the Discover search, and the team search when you add teams) are sent with these analytics events so we can improve search. Like other events, they are linked to the anonymous account ID. They are never used for ads.</li>
         <li><strong>Crash reports.</strong> If the app crashes, Firebase Crashlytics receives a report with the stack trace, the app version, your device model and operating system version, and a device identifier Crashlytics generates. It carries no name, email address or location.</li>
-        <li><strong>Advertising.</strong> The app shows a small number of ads from Google AdMob, marked &quot;Sponsored&quot;. To request and measure ads, Google&apos;s ads software collects your device&apos;s advertising identifier (where your device makes one available), your IP address, device and app information, and which ads were shown and tapped. The app does not ask for permission to track you across other companies&apos; apps and websites, and it requests non-personalized ads. Where the law requires consent for advertising, the app shows a consent form from Google before any ad is requested, and you can change your choice later under More, &quot;Ad privacy options&quot;.</li>
+        <li><strong>Advertising.</strong> The app shows a small number of ads from Google AdMob, marked &quot;Sponsored&quot;. To request and measure ads, Google&apos;s ads software collects your device&apos;s advertising identifier (where your device makes one available), your IP address, device and app information, and which ads were shown and tapped. The app does not ask for permission to track you across other companies&apos; apps and websites, and it requests non-personalized ads. If you are in the European Economic Area, the UK or Switzerland, the app shows Google&apos;s consent form before any ad is requested. If you are in a US state with its own privacy law, the app shows Google&apos;s US state privacy message. Either way, you can change your choice later from &quot;Ad privacy options&quot; in the app&apos;s More tab.</li>
       </ul>
       <p>The app has no purchases or subscriptions. We do not collect your name, email address, or phone number in the app unless you choose to give it to us (for example, by contacting support).</p>
 
