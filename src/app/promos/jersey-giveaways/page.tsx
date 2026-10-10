@@ -77,7 +77,7 @@ export default async function JerseyGiveawaysPage() {
     {
       question: `How do I track jersey nights for just my team?`,
       answer:
-        'Visit your team page from any promo in this list, or download the PromoNight app to pin a team, and add PromoNight Pro for a morning-of reminder before an apparel night.',
+        'Visit your team page from any promo in this list, or download the free PromoNight app to star a team and get a morning-of reminder before an apparel night.',
     },
   ];
 

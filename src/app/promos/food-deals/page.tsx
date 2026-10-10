@@ -77,7 +77,7 @@ export default async function FoodDealsPage() {
     {
       question: 'Can I get food-deal notifications?',
       answer:
-        'Yes, with PromoNight Pro, which sends a notification the morning of a promo day for the teams you follow, food deals included. The app is a free download and you can browse the full calendar on any team page.',
+        'Yes. The free PromoNight app sends a reminder on the morning of a promo day for the teams you follow, food deals included, and you can browse the full calendar on any team page.',
     },
   ];
 

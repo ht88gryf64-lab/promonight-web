@@ -427,7 +427,7 @@ export interface FAQItem {
 }
 
 /** The slice of CoverageCounts the team FAQs state. */
-export type TeamFaqCoverage = Pick<CoverageCounts, 'teamCount' | 'leagueList' | 'appLeagueList'>;
+export type TeamFaqCoverage = Pick<CoverageCounts, 'teamCount' | 'leagueList'>;
 
 export function generateTeamFAQs(
   team: Team,
@@ -590,16 +590,16 @@ export function generateTeamFAQs(
     });
   }
 
-  // 5. How to track (always shown). The app covers APP_LEAGUES only, so the
-  // answer names the app on those pages and the weekly email everywhere else:
-  // this ships as FAQPage schema, and it used to promise WNBA and NFL fans an
-  // app that does not carry their league.
+  // 5. How to track (always shown). APP_LEAGUES routes the answer: the app on
+  // those pages, the weekly email on the rest. This ships as FAQPage schema, so
+  // neither branch names the app's leagues or says what it lacks; the 2.0 app
+  // carries every league, and a list here would go stale with it.
   const inApp = (APP_LEAGUES as readonly string[]).includes(team.league);
   faqs.push({
     question: `How can I track ${fullName} promotional events?`,
     answer: inApp
-      ? `PromoNight tracks giveaways, theme nights, food deals and promotions for the ${fullName} and ${coverage.teamCount - 1} other teams across ${coverage.leagueList}, free on this site. The free PromoNight app carries the same ${fullName} calendar on iOS and Android, and PromoNight Pro adds a reminder on the morning of each promo day.`
-      : `PromoNight tracks giveaways, theme nights, food deals and promotions for the ${fullName} and ${coverage.teamCount - 1} other teams across ${coverage.leagueList}, free on this site. Star the ${fullName} here to get one weekly email with what is coming up. The PromoNight app covers ${coverage.appLeagueList} and does not carry ${team.league} yet.`,
+      ? `PromoNight tracks giveaways, theme nights, food deals and promotions for the ${fullName} and ${coverage.teamCount - 1} other teams across ${coverage.leagueList}, free on this site. The free PromoNight app carries the same ${fullName} calendar on iOS and Android and sends a reminder on the morning of each promo day.`
+      : `PromoNight tracks giveaways, theme nights, food deals and promotions for the ${fullName} and ${coverage.teamCount - 1} other teams across ${coverage.leagueList}, free on this site. Star the ${fullName} here to get one weekly email with what is coming up.`,
   });
 
   // 5b. Travel — gate times: REMOVED, not gated.
@@ -628,14 +628,14 @@ export function generateTeamFAQs(
   });
 
   // 5e. App — promo-day reminders (always shown, distinct from #5's general pitch).
-  // Reminders are a PromoNight Pro feature: the app schedules a local
-  // notification on the device for the morning of the promo date. Nothing is
-  // sent from a server, so this answer must not describe a push.
+  // Reminders are free in the 2.0 app, which has no paid tier: the app schedules
+  // a local notification on the device for the morning of the promo date.
+  // Nothing is sent from a server, so this answer must not describe a push.
   faqs.push({
     question: `Can I get notifications for ${team.name} promos?`,
     answer: inApp
-      ? `Yes, with PromoNight Pro. The app sends a notification on the morning of every ${team.name} promo game, covering bobblehead giveaways, theme nights, food deals, and kids events. Downloading the app and browsing the calendar is free. You can follow just the ${team.name} or multiple teams across ${coverage.appLeagueList}.`
-      : `Not on your phone yet. Promo-day reminders come from the PromoNight app, which covers ${coverage.appLeagueList} and does not carry ${team.league}. Star the ${team.name} on this site instead to get one weekly email with the giveaways, theme nights and food deals coming up.`,
+      ? `Yes. The free PromoNight app reminds you on the morning of each ${team.name} promo game, covering bobblehead giveaways, theme nights, food deals, and kids events. You can follow just the ${team.name} or several teams.`
+      : `Yes. The free PromoNight app reminds you on the morning of each ${team.name} promo game. You can also star the ${team.name} on this site to get one weekly email with the giveaways, theme nights and food deals coming up.`,
   });
 
   // 5f. App — away games (always shown)

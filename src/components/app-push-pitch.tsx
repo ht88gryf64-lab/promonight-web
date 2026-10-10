@@ -20,10 +20,10 @@ export function AppPushPitch({
 }: {
   teamName: string;
   teamSlug: string;
-  /** The team's league. The app covers APP_LEAGUES only. For the others the
-   *  slot carries the weekly email instead: a reminder offer for a league the
-   *  app does not carry was a promise the download could not keep, and the
-   *  email (Tuesdays, every league) is the thing those fans can actually use. */
+  /** The team's league. APP_LEAGUES routes the slot: the app pitch on those
+   *  leagues, the weekly email (Tuesdays, every league) on the rest. The 2.0
+   *  app carries every league; the routing is a funnel choice, not a claim,
+   *  and neither card names the app's leagues. */
   league: string;
   variant?: 'dark' | 'light';
   className?: string;
@@ -33,7 +33,7 @@ export function AppPushPitch({
     // Same card, same slot, same styling; the offer is the weekly digest, which
     // is what /api/cron/weekly-digest sends every Tuesday to subscribers who
     // starred this team. It is weekly, not a promo-day reminder (that is the
-    // Pro app feature), and the copy says so. Reuses the funnel's own entry
+    // app's feature), and the copy says so. Reuses the funnel's own entry
     // link so the click records as email_cta_click on web_team_page, the same
     // event and surface as every other team-page email CTA.
     return (
@@ -70,10 +70,10 @@ export function AppPushPitch({
       } rounded-2xl p-6 text-center`}
     >
       <p className={`${light ? 'text-rd-ink-soft' : 'text-text-secondary'} text-sm mb-1`}>
-        Want a reminder the morning of every {teamName} promo?
+        Want a reminder on {teamName} promo mornings?
       </p>
       <p className={`${light ? 'text-rd-ink-faint' : 'text-text-muted'} text-xs mb-5`}>
-        The PromoNight app is a free download, and PromoNight Pro adds a reminder on each promo morning. Optional, not required to use this site.
+        The free PromoNight app reminds you on the morning of each promo. Optional, not required to use this site.
       </p>
       <AppDownloadButtons
         section="promo_list_app_pitch"

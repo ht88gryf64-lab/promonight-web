@@ -8,18 +8,17 @@ import { TrackedAppLink } from '@/components/analytics-events';
 import { IOS_APP_URL, ANDROID_APP_URL } from '@/components/app-download-buttons';
 import { isRedesignEnabled } from '@/lib/redesign';
 import { archivoHouse } from '@/components/redesign/fonts-house';
-import { APP_LEAGUES, joinList } from '@/lib/coverage-counts';
 
-// The app covers four leagues (src/lib/coverage-counts.ts APP_LEAGUES); this
-// page used to list all six, which the app does not carry.
-const APP_LEAGUE_LIST = joinList(APP_LEAGUES);
+// 2.0 copy rules: the app is free with ads, so no Pro, subscription or price
+// language, and no league list, team count or "every promo" claim. League
+// coverage is the app's own fact and moves with it; this page states none.
 
 export const revalidate = 86400;
 
 export const metadata: Metadata = {
   title: { absolute: 'Download PromoNight: Free on iOS & Android' },
   description:
-    'Install PromoNight free on iOS or Android. Browse the giveaways, theme nights and food deals at your team\'s home games, and add Pro for morning-of reminders.',
+    'Install PromoNight free on iOS or Android. Browse the giveaways, theme nights and food deals at your team\'s home games, and get a reminder on the morning of a promo.',
   alternates: { canonical: 'https://www.getpromonight.com/download' },
   openGraph: pageOpenGraph('/download'),
 };
@@ -36,7 +35,7 @@ export default async function DownloadPage() {
             <span className="font-rd text-[11px] tracking-[0.14em] uppercase text-rd-ink-faint">Download</span>
             <h1 className="rd-display text-4xl md:text-6xl uppercase text-rd-ink mt-2">GET PROMONIGHT</h1>
             <p className="text-rd-ink-soft text-base md:text-lg mt-4 max-w-2xl mx-auto">
-              Giveaways, theme nights and food deals for {APP_LEAGUE_LIST} teams. Free to download. Pro tier adds promo-day reminders.
+              Giveaways, theme nights and food deals for the teams you follow, with a reminder on promo mornings. Free, with a few ads.
             </p>
           </div>
 
@@ -106,10 +105,9 @@ export default async function DownloadPage() {
                 </div>
               </div>
               <div>
-                <span className="font-rd text-[11px] tracking-[0.14em] uppercase text-rd-ink-faint">PromoNight Pro</span>
+                <span className="font-rd text-[11px] tracking-[0.14em] uppercase text-rd-ink-faint">Promo-day reminders</span>
                 <h2 className="rd-display text-3xl md:text-4xl uppercase text-rd-ink mt-2 mb-4">NEVER FORGET A PROMO DAY</h2>
-                <p className="text-rd-ink-soft text-sm leading-relaxed mb-4">Pro reminds you the morning of every promotional event for teams you follow. So you see &ldquo;Bobblehead night tonight at Target Field&rdquo; when you&apos;re deciding what to do after work, not after the game.</p>
-                <p className="text-rd-ink-faint text-xs font-rd tracking-[0.04em]">$5.99 per season per sport &middot; $9.99 per year for all sports</p>
+                <p className="text-rd-ink-soft text-sm leading-relaxed mb-4">The app reminds you on the morning of a promo for the teams you follow. So you see &ldquo;Bobblehead night tonight at Target Field&rdquo; when you&apos;re deciding what to do after work, not after the game.</p>
               </div>
             </div>
           </div>
@@ -129,7 +127,7 @@ export default async function DownloadPage() {
             GET PROMONIGHT
           </h1>
           <p className="text-text-secondary text-base md:text-lg mt-4 max-w-2xl mx-auto">
-            Giveaways, theme nights and food deals for {APP_LEAGUE_LIST} teams. Free to download. Pro tier adds promo-day reminders.
+            Giveaways, theme nights and food deals for the teams you follow, with a reminder on promo mornings. Free, with a few ads.
           </p>
         </div>
 
@@ -236,16 +234,13 @@ export default async function DownloadPage() {
             </div>
             <div>
               <span className="font-mono text-[10px] tracking-[1.5px] uppercase text-accent-red">
-                PromoNight Pro
+                Promo-day reminders
               </span>
               <h2 className="font-display text-3xl md:text-4xl tracking-[1px] mt-2 mb-4">
                 NEVER FORGET A PROMO DAY
               </h2>
               <p className="text-text-secondary text-sm leading-relaxed mb-4">
-                Pro reminds you the morning of every promotional event for teams you follow. So you see &ldquo;Bobblehead night tonight at Target Field&rdquo; when you&apos;re deciding what to do after work, not after the game.
-              </p>
-              <p className="text-text-muted text-xs font-mono tracking-[0.5px]">
-                $5.99 per season per sport &middot; $9.99 per year for all sports
+                The app reminds you on the morning of a promo for the teams you follow. So you see &ldquo;Bobblehead night tonight at Target Field&rdquo; when you&apos;re deciding what to do after work, not after the game.
               </p>
             </div>
           </div>

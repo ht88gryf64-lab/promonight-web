@@ -449,11 +449,11 @@ export default async function HomePage() {
               Promo reminders
             </span>
             <h2 className="font-display text-2xl md:text-3xl tracking-[1px] mt-2 mb-4">
-              WANT NOTIFICATIONS THE MORNING OF EVERY PROMO?
+              WANT A REMINDER ON PROMO MORNINGS?
             </h2>
             <p className="text-text-secondary text-sm md:text-base leading-relaxed max-w-2xl mb-6">
-              PromoNight Pro sends a reminder the morning of every promo for
-              your starred teams. The app is free to download. Web has everything else.
+              The free PromoNight app reminds you on the morning of a promo for
+              your starred teams. Web has everything else.
             </p>
             <AppDownloadButtons section="homepage_app_section" page="home" />
           </div>
