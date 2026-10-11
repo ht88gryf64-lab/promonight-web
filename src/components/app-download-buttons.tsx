@@ -1,8 +1,9 @@
 import Image from 'next/image';
 import { TrackedAppLink } from './analytics-events';
+import { ANDROID_APP_URL } from '@/lib/app-link';
 
-export const IOS_APP_URL = 'https://apps.apple.com/us/app/promonight/id6761309246';
-export const ANDROID_APP_URL = 'https://play.google.com/store/apps/details?id=com.promonight.app';
+// The store URLs live in src/lib/app-link.ts; re-exported for old importers.
+export { IOS_APP_URL, ANDROID_APP_URL } from '@/lib/app-link';
 
 export function AppDownloadButtons({
   section,

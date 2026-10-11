@@ -227,6 +227,7 @@ export function PromoList({
   gameContexts,
   afterNothingAnnounced = false,
   today: todayProp,
+  appCard,
 }: {
   promos: Promo[];
   teamSlug: string;
@@ -240,10 +241,15 @@ export function PromoList({
   primaryColor?: string;
   venueName?: string | null;
   variant?: 'dark' | 'light';
-  // When false, the trailing app push pitch is suppressed (the team page renders
-  // it separately in the email+app pairing). Default true keeps every other
-  // surface unchanged.
+  // When false, the trailing app push pitch is suppressed (the team page
+  // passes its own app card in `appCard` instead). Default true keeps every
+  // other surface unchanged.
   showAppPitch?: boolean;
+  /** Light variant only: the team page's app card, placed after the upcoming
+   *  rows (before "Show all" and the past promos), or after the line that
+   *  stands in for them when nothing is upcoming. Absent: the list renders
+   *  exactly as before. See AppAlertCard for why this spot. */
+  appCard?: ReactNode;
   /** True when the page published a SEASON count above this list. Server-renders
    *  a bounded slice of the completed archive so the HTML carries evidence for
    *  the claim. False leaves the list byte-identical to before. */
@@ -502,6 +508,75 @@ export function PromoList({
         adItem="promo"
       />
     );
+    // The pieces of the upcoming slot, built once so each branch below can
+    // come in two whole forms: with the team page's app card and without it.
+    // Without it the element tree is main's exactly (an optional child would
+    // add an empty slot to it, and mlb-nfl-byte-identity hashes the tree).
+    //
+    // Rows box. Unchanged: same element, same `space-y-3`. Inside it the rows
+    // are grouped so Raptive has anchors INSIDE the list; see
+    // src/lib/promo-row-groups.ts for why, why four, and why the tail sits
+    // outside `page-content`. Layout-neutral by construction: Tailwind v4's
+    // space-y puts the 12px on every non-last child, so nested `space-y-3`
+    // groups reproduce the exact gaps the flat list had (measured: zero rect
+    // differences). Server-rendered, and must stay OUT of any <Suspense>
+    // (known-issues entry 50). `page-content` here is a Raptive hook, not a
+    // style; do not rename or restyle it.
+    const upcomingRowsBox = (
+      <div className="space-y-3">
+        {upcomingGroups.anchors.length > 0 && (
+          <div className="space-y-3 page-content">
+            {upcomingGroups.anchors.map((group) => (
+              <div key={`g-${group.start}`} className="space-y-3">
+                {group.rows.map((promo, j) => renderUpcomingRow(promo, group.start + j))}
+              </div>
+            ))}
+          </div>
+        )}
+        {upcomingGroups.anchors.length > 0 ? (
+          <div className="space-y-3">
+            {upcomingGroups.tail.rows.map((promo, j) =>
+              renderUpcomingRow(promo, upcomingGroups.tail.start + j),
+            )}
+          </div>
+        ) : (
+          upcomingGroups.tail.rows.map((promo, j) => renderUpcomingRow(promo, j))
+        )}
+      </div>
+    );
+    const showAllUpcoming = upcomingHidden.length > 0 && (
+      <LazyPromoRows
+        promos={upcomingHidden}
+        share={share}
+        showLabel={`Show all ${upcoming.length} upcoming promos`}
+        hideLabel={`Hide ${upcomingHidden.length} additional promos`}
+        team={team}
+        contexts={upcomingHidden.map(contextsFor)}
+        interactive
+        /* Same id formula as the visible rows above. Without these the
+           hidden rows are unreachable by fragment, which is what made a
+           deep link into a week with more than UPCOMING_VISIBLE promos
+           land at the top of the page. */
+        anchorIds={upcomingHidden.map((p) => `promo-${promoAnchorId(p)}`)}
+      />
+    );
+    const onRecordLine = (
+      <p className="text-rd-ink-soft text-sm">
+        All {currentSeasonPast.length} {teamName} {currentSeasonPast.length === 1 ? 'promotion' : 'promotions'} on record for the{' '}
+        {seasonCompleteLabel} season are below.
+      </p>
+    );
+    // After a "haven't announced" status line (NHL/NBA, WEB6 G2) the page has
+    // already said nothing is ahead, so only the pointer. Two whole elements,
+    // not a conditional inside one: the second is the original <p>, byte for
+    // byte, on every other page.
+    const pastPointerLine = afterNothingAnnounced ? (
+      <p className="text-rd-ink-soft text-sm">See completed {pastPointerYears}promos below.</p>
+    ) : (
+      <p className="text-rd-ink-soft text-sm">
+        No upcoming {teamName} promos scheduled right now. See completed {pastPointerYears}promos below.
+      </p>
+    );
     return (
       <section className="py-12 px-6">
         <PromoArrivalHighlight />
@@ -531,55 +606,18 @@ export function PromoList({
           </div>
 
           {upcoming.length > 0 ? (
-            <>
-              {/* Rows box. Unchanged: same element, same `space-y-3`.
-                  Inside it the rows are grouped so Raptive has anchors INSIDE
-                  the list; see src/lib/promo-row-groups.ts for why, why four,
-                  and why the tail sits outside `page-content`. Layout-neutral
-                  by construction: Tailwind v4's space-y puts the 12px on every
-                  non-last child, so nested `space-y-3` groups reproduce the
-                  exact gaps the flat list had (measured: zero rect differences).
-                  Server-rendered, and must stay OUT of any <Suspense>
-                  (known-issues entry 50). `page-content` here is a Raptive hook,
-                  not a style; do not rename or restyle it. */}
-              <div className="space-y-3">
-                {upcomingGroups.anchors.length > 0 && (
-                  <div className="space-y-3 page-content">
-                    {upcomingGroups.anchors.map((group) => (
-                      <div key={`g-${group.start}`} className="space-y-3">
-                        {group.rows.map((promo, j) => renderUpcomingRow(promo, group.start + j))}
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {upcomingGroups.anchors.length > 0 ? (
-                  <div className="space-y-3">
-                    {upcomingGroups.tail.rows.map((promo, j) =>
-                      renderUpcomingRow(promo, upcomingGroups.tail.start + j),
-                    )}
-                  </div>
-                ) : (
-                  upcomingGroups.tail.rows.map((promo, j) => renderUpcomingRow(promo, j))
-                )}
-              </div>
-
-              {upcomingHidden.length > 0 && (
-                <LazyPromoRows
-                  promos={upcomingHidden}
-                  share={share}
-                  showLabel={`Show all ${upcoming.length} upcoming promos`}
-                  hideLabel={`Hide ${upcomingHidden.length} additional promos`}
-                  team={team}
-                  contexts={upcomingHidden.map(contextsFor)}
-                  interactive
-                  /* Same id formula as the visible rows above. Without these the
-                     hidden rows are unreachable by fragment, which is what made a
-                     deep link into a week with more than UPCOMING_VISIBLE promos
-                     land at the top of the page. */
-                  anchorIds={upcomingHidden.map((p) => `promo-${promoAnchorId(p)}`)}
-                />
-              )}
-            </>
+            appCard ? (
+              <>
+                {upcomingRowsBox}
+                {appCard}
+                {showAllUpcoming}
+              </>
+            ) : (
+              <>
+                {upcomingRowsBox}
+                {showAllUpcoming}
+              </>
+            )
           ) : past.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-rd-ink-soft text-lg">No upcoming promos yet</p>
@@ -590,26 +628,21 @@ export function PromoList({
              * not "the season is complete": zero upcoming rows means our data
              * holds nothing ahead, which is not the same as the season being
              * over or our record being exhaustive. */
-            <div className="py-2">
-              <p className="text-rd-ink-soft text-sm">
-                All {currentSeasonPast.length} {teamName} {currentSeasonPast.length === 1 ? 'promotion' : 'promotions'} on record for the{' '}
-                {seasonCompleteLabel} season are below.
-              </p>
+            appCard ? (
+              <div className="py-2">
+                {onRecordLine}
+                {appCard}
+              </div>
+            ) : (
+              <div className="py-2">{onRecordLine}</div>
+            )
+          ) : appCard ? (
+            <div className="text-center py-8">
+              {pastPointerLine}
+              {appCard}
             </div>
           ) : (
-            <div className="text-center py-8">
-              {/* After a "haven't announced" status line (NHL/NBA, WEB6 G2) the
-                  page has already said nothing is ahead, so only the pointer.
-                  Two whole elements, not a conditional inside one: the second
-                  is the original <p>, byte for byte, on every other page. */}
-              {afterNothingAnnounced ? (
-                <p className="text-rd-ink-soft text-sm">See completed {pastPointerYears}promos below.</p>
-              ) : (
-              <p className="text-rd-ink-soft text-sm">
-                No upcoming {teamName} promos scheduled right now. See completed {pastPointerYears}promos below.
-              </p>
-              )}
-            </div>
+            <div className="text-center py-8">{pastPointerLine}</div>
           )}
 
           {splitGroups && splitParts

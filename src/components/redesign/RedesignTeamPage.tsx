@@ -45,7 +45,7 @@ import { AdSlot } from '@/components/ads/AdSlot';
 import { AD_SLOTS } from '@/lib/ads/slots';
 import { FollowCTA } from '@/components/follow/FollowCTA';
 import { TicketPackageList } from './TicketPackageList';
-import { AppPushPitch } from '@/components/app-push-pitch';
+import { AppAlertCard } from '@/components/app-alert-card';
 
 export interface RedesignTeamPageProps {
   team: Team;
@@ -305,6 +305,7 @@ export function RedesignTeamPage({
           venueName={venue?.name ?? null}
           variant="light"
           showAppPitch={false}
+          appCard={<AppAlertCard teamId={team.id} teamName={displayName} />}
           seasonScoped={!!seasonScope}
           scopeLive={scopeLive}
           team={team}
@@ -571,18 +572,22 @@ export function RedesignTeamPage({
                 ahead of every conversion/browse module. */}
             {hasNoUpcoming ? null : rivalsBlock}
 
-            {/* Email + app conversion pairing, sitting after the promo slot
-                and the rivals grid, immediately before By the Numbers, on
-                both the desktop source order and the mobile order weave (the
-                pairing is order-[42], By the Numbers is order-[43]; rivals
-                holds order-[41] right after PromoList's order-[40]). Email
-                first (pre-stars this team, tags web_team_page, fires
-                email_cta_click), then the app push pitch moved out of
-                PromoList. */}
+            {/* Email conversion, sitting after the promo slot and the rivals
+                grid, immediately before By the Numbers, on both the desktop
+                source order and the mobile order weave (order-[42], By the
+                Numbers is order-[43]; rivals holds order-[41] right after
+                PromoList's order-[40]). It pre-stars this team, tags
+                web_team_page and fires email_cta_click.
+
+                The app card that sat here (AppPushPitch) moved INTO the promo
+                list as AppAlertCard (app funnel G1, 2026-10-11), passed above
+                as PromoList's appCard. This weave item stays, with the same
+                class string, so the main column keeps the same Raptive
+                in-content anchors (its selector matches the shell's
+                .rd-weave-item children). */}
             <div className="rd-weave-item order-[42]">
               <div className="mx-auto max-w-3xl px-6 py-8">
                 <FollowCTA surface="web_team_page" team={team} />
-                <AppPushPitch variant="light" teamName={displayName} teamSlug={team.id} league={team.league} />
               </div>
             </div>
 

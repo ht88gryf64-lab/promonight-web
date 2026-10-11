@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { event, trackInstallClick } from '@/lib/analytics';
+import type { AppLinkSurface } from '@/lib/app-link';
 
 // Fires team_page_view once on mount
 export function TeamPageTracker({
@@ -39,9 +40,11 @@ export function TrackedAppLink({
   children,
   target,
   rel,
+  surface,
 }: {
   href: string;
-  platform: 'ios' | 'android';
+  /** The destination store; 'unknown' for a link to /download. */
+  platform: 'ios' | 'android' | 'unknown';
   section: string;
   page: string;
   teamSlug?: string;
@@ -49,12 +52,14 @@ export function TrackedAppLink({
   children: React.ReactNode;
   target?: string;
   rel?: string;
+  /** For links built by src/lib/app-link.ts; otherwise inferred from the path. */
+  surface?: AppLinkSurface;
 }) {
   const isExternal = /^https?:\/\//.test(href);
   const resolvedTarget = target ?? (isExternal ? '_blank' : undefined);
   const resolvedRel = rel ?? (isExternal ? 'noopener' : undefined);
   const handleClick = () => {
-    trackInstallClick({ platform, section, page, teamSlug });
+    trackInstallClick({ platform, section, page, teamSlug, ...(surface ? { surface } : {}) });
   };
 
   return (
