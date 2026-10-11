@@ -134,7 +134,7 @@ test('the card: copy, icon, feature row, server-rendered /download link, nothing
 test('the off-season card (zero-promo pages): its heading, the same link', () => {
   const html = renderToStaticMarkup(<AppAlertCard teamId="dallas-cowboys" teamName="Dallas Cowboys" variant="offseason" />);
   const t = html.replace(/<!-- -->/g, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
-  assert.match(t, /Get alerts when Dallas Cowboys posts promos/);
+  assert.match(t, /Get alerts when Dallas Cowboys promos are posted/);
   assert.doesNotMatch(t, /Get alerts for/);
   assert.match(html, /href="\/download\?src=team_cta_dallas-cowboys"/);
 });

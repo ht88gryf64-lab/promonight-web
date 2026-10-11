@@ -79,7 +79,7 @@ export function AppAlertCard({
         />
         <div className="min-w-0 flex-1">
           <p className="font-rd text-base font-semibold leading-snug text-rd-ink">
-            {variant === 'offseason' ? `Get alerts when ${teamName} posts promos` : `Get alerts for ${teamName} promos`}
+            {variant === 'offseason' ? `Get alerts when ${teamName} promos are posted` : `Get alerts for ${teamName} promos`}
           </p>
           <p className="mt-1 font-rd text-sm leading-relaxed text-rd-ink-soft">
             Free app. A reminder the morning of every bobblehead night, giveaway and theme night.
