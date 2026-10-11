@@ -5,15 +5,31 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 import { QrCode } from '@/components/qr-code';
 import { TrackedAppLink } from '@/components/analytics-events';
-import { IOS_APP_URL, ANDROID_APP_URL } from '@/components/app-download-buttons';
+import { appStoreUrl, playStoreUrl, teamFromDownloadSrc } from '@/lib/app-link';
 import { isRedesignEnabled } from '@/lib/redesign';
 import { archivoHouse } from '@/components/redesign/fonts-house';
+
+// Store links come from src/lib/app-link.ts: the buttons as surface
+// `download`, each QR code as `download_qr` with its own placement (a scan
+// never fires a click event here, so the link's attribution is all a QR has).
+//
+// ?src=team_cta_{teamId} is the team-page app card's desktop link. The team
+// rides into every store link and QR code (App Store ct, Play utm_content) and
+// onto the click event's team_slug, so a desktop visitor who arrives from a
+// team page keeps that team's attribution. Reading searchParams makes this
+// page render per request; it was ISR (revalidate 86400) before app funnel G1.
+function storeLinks(teamId: string | undefined) {
+  return {
+    iosButton: appStoreUrl({ surface: 'download', teamId }),
+    androidButton: playStoreUrl({ surface: 'download', teamId }),
+    iosQr: appStoreUrl({ surface: 'download_qr', placement: 'qr_ios', teamId }),
+    androidQr: playStoreUrl({ surface: 'download_qr', placement: 'qr_android', teamId }),
+  };
+}
 
 // 2.0 copy rules: the app is free with ads, so no Pro, subscription or price
 // language, and no league list, team count or "every promo" claim. League
 // coverage is the app's own fact and moves with it; this page states none.
-
-export const revalidate = 86400;
 
 export const metadata: Metadata = {
   title: { absolute: 'Download PromoNight: Free on iOS & Android' },
@@ -23,7 +39,13 @@ export const metadata: Metadata = {
   openGraph: pageOpenGraph('/download'),
 };
 
-export default async function DownloadPage() {
+export default async function DownloadPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const teamId = teamFromDownloadSrc((await searchParams).src);
+  const links = storeLinks(teamId);
   const pushScreenshotExists = existsSync(
     join(process.cwd(), 'public', 'screenshots', 'push.png'),
   );
@@ -41,7 +63,7 @@ export default async function DownloadPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-[auto,1fr] gap-10 md:gap-16 items-center">
             <div className="text-center">
-              <QrCode value={IOS_APP_URL} size={200} caption="Scan for iOS" />
+              <QrCode value={links.iosQr} size={200} caption="Scan for iOS" />
             </div>
             <div className="space-y-6">
               <div>
@@ -49,9 +71,11 @@ export default async function DownloadPage() {
                 <h2 className="rd-display text-3xl uppercase text-rd-ink mb-3">DOWNLOAD ON THE APP STORE</h2>
                 <p className="text-rd-ink-soft text-sm mb-5">On your phone? Tap the button. On desktop? Point your phone camera at the QR code.</p>
                 <TrackedAppLink
-                  href={IOS_APP_URL}
+                  href={links.iosButton}
                   platform="ios"
                   section="download_page"
+                  surface="download"
+                  teamSlug={teamId}
                   page="download"
                   className="inline-flex items-center gap-2 bg-rd-red text-white font-bold text-[15px] px-7 py-3.5 rounded-xl transition-transform hover:-translate-y-0.5"
                 >
@@ -64,14 +88,14 @@ export default async function DownloadPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-[auto,1fr] gap-10 md:gap-16 items-center mt-16 pt-16 border-t border-rd-line">
             <div className="text-center">
-              <QrCode value={ANDROID_APP_URL} size={200} caption="Scan for Android" />
+              <QrCode value={links.androidQr} size={200} caption="Scan for Android" />
             </div>
             <div className="space-y-6">
               <div>
                 <div className="font-rd text-[11px] tracking-[0.1em] uppercase text-rd-ink-faint mb-2">Android</div>
                 <h2 className="rd-display text-3xl uppercase text-rd-ink mb-3">GET IT ON GOOGLE PLAY</h2>
                 <p className="text-rd-ink-soft text-sm mb-5">On your phone? Tap the badge. On desktop? Point your phone camera at the QR code.</p>
-                <TrackedAppLink href={ANDROID_APP_URL} platform="android" section="download_page" page="download" className="inline-flex items-center transition-transform hover:-translate-y-0.5">
+                <TrackedAppLink href={links.androidButton} platform="android" section="download_page" surface="download" teamSlug={teamId} page="download" className="inline-flex items-center transition-transform hover:-translate-y-0.5">
                   <Image src="/google-play-badge.png" alt="Get it on Google Play" width={60 * (646 / 250)} height={60} unoptimized />
                 </TrackedAppLink>
               </div>
@@ -134,7 +158,7 @@ export default async function DownloadPage() {
         <div className="grid grid-cols-1 md:grid-cols-[auto,1fr] gap-10 md:gap-16 items-center">
           {/* iOS column */}
           <div className="text-center">
-            <QrCode value={IOS_APP_URL} size={200} caption="Scan for iOS" />
+            <QrCode value={links.iosQr} size={200} caption="Scan for iOS" />
           </div>
 
           <div className="space-y-6">
@@ -149,9 +173,11 @@ export default async function DownloadPage() {
                 On your phone? Tap the button. On desktop? Point your phone camera at the QR code.
               </p>
               <TrackedAppLink
-                href={IOS_APP_URL}
+                href={links.iosButton}
                 platform="ios"
                 section="download_page"
+                surface="download"
+                teamSlug={teamId}
                 page="download"
                 className="inline-flex items-center gap-2 bg-accent-red text-white font-bold text-[15px] px-7 py-3.5 rounded-xl transition-all hover:-translate-y-0.5 hover:shadow-[0_0_40px_rgba(239,68,68,0.3)]"
               >
@@ -165,7 +191,7 @@ export default async function DownloadPage() {
         <div className="grid grid-cols-1 md:grid-cols-[auto,1fr] gap-10 md:gap-16 items-center mt-16 pt-16 border-t border-border-subtle">
           {/* Android column */}
           <div className="text-center">
-            <QrCode value={ANDROID_APP_URL} size={200} caption="Scan for Android" />
+            <QrCode value={links.androidQr} size={200} caption="Scan for Android" />
           </div>
 
           <div className="space-y-6">
@@ -180,9 +206,11 @@ export default async function DownloadPage() {
                 On your phone? Tap the badge. On desktop? Point your phone camera at the QR code.
               </p>
               <TrackedAppLink
-                href={ANDROID_APP_URL}
+                href={links.androidButton}
                 platform="android"
                 section="download_page"
+                surface="download"
+                teamSlug={teamId}
                 page="download"
                 className="inline-flex items-center transition-all hover:-translate-y-0.5"
               >

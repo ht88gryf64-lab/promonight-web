@@ -30,6 +30,9 @@ when retiring a CTA.
 | ticketnetwork_tickets_promo_card | team_page | tickets_block_promo_card | TicketNetwork logo → | ticketnetwork.com (Impact tracked) | affiliate_click | 2026-06-28 | active |
 | ticketnetwork_tickets_playoffs_card | playoffs_hub | tickets_block_playoffs_card | TicketNetwork logo → | ticketnetwork.com (Impact tracked) | affiliate_click | 2026-06-28 | active |
 | ticketnetwork_tickets_game_modal | team_page | tickets_block_game_modal | TicketNetwork logo → | ticketnetwork.com (Impact tracked) | affiliate_click | 2026-06-28 | active |
+| app_push_pitch_team | team_page | conversion_pairing_after_promo_list | Download for iOS / Get it on Google Play | /download (iOS) / Play Store | app_download_click | 2026-10-11 | deprecated (replaced by app_alert_card_team, app funnel G1) |
+| app_alert_card_team | team_page | inside_promo_list_after_upcoming_rows | Get the app | App Store on iOS, Play Store on Android, /download?src=team_cta_{teamId} elsewhere (src/lib/app-link.ts) | app_download_click (surface team_cta) | 2026-10-11 | active |
+| app_download_page_buttons | download | per_store_section | Download for iOS / Get it on Google Play | App Store / Play Store (src/lib/app-link.ts) | app_download_click (surface download) | 2026-10-11 | active |
 
 ## Removed CTAs
 

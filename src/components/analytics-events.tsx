@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { event, trackInstallClick } from '@/lib/analytics';
+import type { AppLinkSurface } from '@/lib/app-link';
 
 // Fires team_page_view once on mount
 export function TeamPageTracker({
@@ -39,9 +40,12 @@ export function TrackedAppLink({
   children,
   target,
   rel,
+  surface,
+  plainAnchor = false,
 }: {
   href: string;
-  platform: 'ios' | 'android';
+  /** The destination store; 'unknown' for a link to /download. */
+  platform: 'ios' | 'android' | 'unknown';
   section: string;
   page: string;
   teamSlug?: string;
@@ -49,14 +53,29 @@ export function TrackedAppLink({
   children: React.ReactNode;
   target?: string;
   rel?: string;
+  /** For links built by src/lib/app-link.ts; otherwise inferred from the path. */
+  surface?: AppLinkSurface;
+  /** Render a plain <a> instead of next/link: the link is never prefetched,
+   *  and following it is a full page load. For the team-page app card, whose
+   *  /download link sits on 169 pages (app funnel G1). Not a next/link
+   *  prefetch prop, which src/lib/analytics/__tests__/no-link-prefetch-prop
+   *  forbids outright to protect the request counter. */
+  plainAnchor?: boolean;
 }) {
   const isExternal = /^https?:\/\//.test(href);
   const resolvedTarget = target ?? (isExternal ? '_blank' : undefined);
   const resolvedRel = rel ?? (isExternal ? 'noopener' : undefined);
   const handleClick = () => {
-    trackInstallClick({ platform, section, page, teamSlug });
+    trackInstallClick({ platform, section, page, teamSlug, ...(surface ? { surface } : {}) });
   };
 
+  if (plainAnchor) {
+    return (
+      <a href={href} onClick={handleClick} className={className} target={resolvedTarget} rel={resolvedRel}>
+        {children}
+      </a>
+    );
+  }
   return (
     <Link
       href={href}

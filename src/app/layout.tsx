@@ -17,6 +17,7 @@ import { ShareProvider } from '@/components/share';
 import { PostStarToastHost } from '@/components/post-star-toast';
 import { isPlayoffsLinkActive } from '@/lib/postseason/data';
 import { getCoverageCounts } from '@/lib/get-coverage-counts';
+import { IOS_APP_ID } from '@/lib/app-link';
 import './globals.css';
 
 const bebasNeue = Bebas_Neue({
@@ -87,6 +88,11 @@ export async function generateMetadata(): Promise<Metadata> {
       creator: '@promo_night_app',
       images: ['/og-image.png'],
     },
+    // Apple Smart App Banner (app funnel G1B): renders
+    // <meta name="apple-itunes-app" content="app-id=6761309246"> on every page,
+    // since no page sets `itunes` of its own. No app-argument until Universal
+    // Links exist (Gate 3).
+    itunes: { appId: IOS_APP_ID },
     // FlexOffers affiliate-network site ownership verification.
     other: {
       'fo-verify': 'b823c9f6-a5b9-4492-9bac-65ea29c2cd38',

@@ -19,6 +19,7 @@ import type { TriggerSignal } from './capture/gesture-counter';
 import type { SuppressionReason } from './capture/suppression';
 import type { CaptureVariant } from './capture/variant';
 import { readAttribution } from './attribution';
+import { currentClientPlatform, type AppLinkSurface, type ClientPlatform } from './app-link';
 import type { CaptureSurface } from './follow-surface';
 // Type-only: the closed union of partner-app identities. No runtime import, so
 // analytics.ts gains no dependency on the config module.
@@ -371,7 +372,12 @@ export type AffiliateClickProperties = {
 };
 
 export type AppDownloadClickProperties = {
-  surface: AnalyticsSurface;
+  // The page surface inferred from the path, except on the links built by
+  // src/lib/app-link.ts, which name their own: team_cta (the team-page app
+  // card), download (/download's buttons). download_qr is the QR codes'
+  // surface; a scan never reaches this page, so it appears only in the store
+  // links' own attribution, never on this event.
+  surface: AnalyticsSurface | AppLinkSurface;
   // 'unknown' is for nav links that route to /download without a platform
   // hint; the destination page disambiguates. iOS/Android are direct store
   // links from in-section CTAs.
@@ -379,6 +385,14 @@ export type AppDownloadClickProperties = {
   placement: string;
   team_slug?: string;
   sport?: Sport;
+  // The page the click happened on, always inferred from the path (so it
+  // stays comparable when `surface` names the link instead). App funnel G1.
+  page_type: AnalyticsSurface;
+  // The visitor's device, not the destination store: a desktop click on the
+  // team card goes to /download with store 'unknown' and device_platform
+  // 'desktop'. Not named `platform`: the legacy GA events (app_store_click,
+  // app_install_click) already send `platform` meaning the store.
+  device_platform: ClientPlatform;
 };
 
 export type PromoCardTapProperties = {
@@ -1308,6 +1322,8 @@ export type InstallClickPayload = {
   section: string;
   page: string;
   teamSlug?: string;
+  /** Set by links built in src/lib/app-link.ts; otherwise inferred. */
+  surface?: AppLinkSurface;
 };
 
 export const trackInstallClick = (payload: InstallClickPayload) => {
@@ -1327,11 +1343,14 @@ export const trackInstallClick = (payload: InstallClickPayload) => {
 
   // New canonical event. Surface is inferred from the current pathname so call
   // sites don't have to plumb it through every tracked link.
+  const pageType = inferSurfaceFromPath(sourcePage);
   track('app_download_click', {
-    surface: inferSurfaceFromPath(sourcePage),
+    surface: payload.surface ?? pageType,
     store: payload.platform,
     placement: payload.section,
     team_slug: payload.teamSlug,
+    page_type: pageType,
+    device_platform: currentClientPlatform(),
   });
 };
 
