@@ -77,3 +77,18 @@ export function currentClientPlatform(): ClientPlatform {
   if (typeof navigator === 'undefined') return 'desktop';
   return detectClientPlatform(navigator.userAgent, navigator.maxTouchPoints ?? 0);
 }
+
+/** The team card's desktop link. /download reads the team back out of `src`
+ *  (teamFromDownloadSrc) so its store links and QR codes keep the team. */
+export function downloadHref(teamId: string): string {
+  return `/download?src=team_cta_${teamId}`;
+}
+
+/** The team id in a /download `src` value, or undefined. Only the team card's
+ *  own shape is accepted, and only a slug: anything else in the query string
+ *  is ignored rather than copied into a store link. */
+export function teamFromDownloadSrc(src: unknown): string | undefined {
+  if (typeof src !== 'string') return undefined;
+  const m = /^team_cta_([a-z0-9]+(?:-[a-z0-9]+)*)$/.exec(src);
+  return m && m[1].length <= 60 ? m[1] : undefined;
+}

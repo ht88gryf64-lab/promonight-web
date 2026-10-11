@@ -8,8 +8,10 @@ import {
   appStoreCampaign,
   appStoreUrl,
   detectClientPlatform,
+  downloadHref,
   playReferrer,
   playStoreUrl,
+  teamFromDownloadSrc,
 } from '@/lib/app-link';
 import { IOS_APP_URL as OLD_IOS, ANDROID_APP_URL as OLD_ANDROID } from '@/components/app-download-buttons';
 
@@ -84,4 +86,24 @@ test('device detection', () => {
   assert.equal(detectClientPlatform(mac), 'desktop');
   assert.equal(detectClientPlatform(mac, 5), 'ios', 'iPadOS reports a Mac user agent with touch');
   assert.equal(detectClientPlatform('Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/129'), 'desktop');
+});
+
+test('/download src: the team card link round-trips, anything else is ignored', () => {
+  assert.equal(downloadHref('minnesota-twins'), '/download?src=team_cta_minnesota-twins');
+  assert.equal(teamFromDownloadSrc('team_cta_minnesota-twins'), 'minnesota-twins');
+  assert.equal(teamFromDownloadSrc(new URL('https://x' + downloadHref('st-louis-cardinals')).searchParams.get('src')), 'st-louis-cardinals');
+  for (const bad of [undefined, '', 'team_cta_', 'nav', 'team_cta_Twins', 'team_cta_a b', 'team_cta_x&y=z', 'team_cta_../x', ['team_cta_x'], 'team_cta_' + 'a'.repeat(61), 'team_cta_-x', 'xteam_cta_y']) {
+    assert.equal(teamFromDownloadSrc(bad), undefined, String(bad));
+  }
+});
+
+test('/download with a team: App Store ct and Play utm_content carry it, QR placement kept on Play', () => {
+  process.env[KEY] = 'tok';
+  const team = teamFromDownloadSrc('team_cta_minnesota-twins');
+  assert.equal(new URL(appStoreUrl({ surface: 'download', teamId: team })).searchParams.get('ct'), 'web_download_minnesota-twins');
+  assert.equal(new URL(appStoreUrl({ surface: 'download_qr', placement: 'qr_ios', teamId: team })).searchParams.get('ct'), 'web_download_qr_minnesota-twin');
+  const qr = new URL(playStoreUrl({ surface: 'download_qr', placement: 'qr_android', teamId: team }));
+  assert.equal(qr.searchParams.get('referrer'), 'utm_source=web&utm_medium=download_qr&utm_content=minnesota-twins&utm_campaign=qr_android');
+  const btn = new URL(playStoreUrl({ surface: 'download', teamId: team }));
+  assert.equal(btn.searchParams.get('referrer'), 'utm_source=web&utm_medium=download&utm_content=minnesota-twins');
 });

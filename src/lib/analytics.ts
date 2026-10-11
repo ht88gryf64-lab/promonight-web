@@ -389,8 +389,10 @@ export type AppDownloadClickProperties = {
   // stays comparable when `surface` names the link instead). App funnel G1.
   page_type: AnalyticsSurface;
   // The visitor's device, not the destination store: a desktop click on the
-  // team card goes to /download with store 'unknown' and platform 'desktop'.
-  platform: ClientPlatform;
+  // team card goes to /download with store 'unknown' and device_platform
+  // 'desktop'. Not named `platform`: the legacy GA events (app_store_click,
+  // app_install_click) already send `platform` meaning the store.
+  device_platform: ClientPlatform;
 };
 
 export type PromoCardTapProperties = {
@@ -1348,7 +1350,7 @@ export const trackInstallClick = (payload: InstallClickPayload) => {
     placement: payload.section,
     team_slug: payload.teamSlug,
     page_type: pageType,
-    platform: currentClientPlatform(),
+    device_platform: currentClientPlatform(),
   });
 };
 

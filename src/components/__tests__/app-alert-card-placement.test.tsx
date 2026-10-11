@@ -110,22 +110,40 @@ test('nothing upcoming, season not over: after the pointer line', () => {
 
 test('without appCard the list is unchanged', () => {
   const a = list(WILD, [...upcoming, ...past], { withCard: false });
-  const b = list(WILD, [...upcoming, ...past]).replace(MARK, '');
+  const b = list(WILD, [...upcoming, ...past]).replace(`<div class="mt-3">${MARK}</div>`, '');
   assert.equal(a, b);
 });
 
-test('the card: copy, server-rendered /download link, nothing Raptive selects', () => {
+test('the card: copy, icon, feature row, server-rendered /download link, nothing Raptive selects', () => {
   const html = renderToStaticMarkup(<AppAlertCard teamId="minnesota-twins" teamName="Minnesota Twins" />);
   const t = html.replace(/<!-- -->/g, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-  assert.match(t, /Get alerts for Minnesota Twins giveaways/);
-  assert.match(t, /Free app\. A reminder the morning of every promo game\./);
+  assert.match(t, /Get alerts for Minnesota Twins promos/);
+  assert.match(t, /Free app\. A reminder the morning of every bobblehead night, giveaway and theme night\./);
+  assert.match(t, /Morning-of reminders Home screen widgets Game Day parking and bag policy/);
   assert.match(t, /Get the app/);
-  assert.match(html, /href="\/download\?src=team_cta_minnesota-twins"/);
-  assert.doesNotMatch(html, /\u2014/, "no em dash");
+  assert.match(html, /<img[^>]*alt="PromoNight app icon"[^>]*width="48"[^>]*height="48"/);
+  assert.match(html, /src="\/promonight-app-icon\.png"/);
+  assert.match(html, /<a href="\/download\?src=team_cta_minnesota-twins"/);
+  assert.doesNotMatch(html, /\u2014/, 'no em dash');
   assert.doesNotMatch(html, /<aside|<article/);
   for (const cls of ['contents', 'page-content', 'rd-weave-item', 'rd-weave-shell']) {
     assert.doesNotMatch(html, new RegExp(`class="[^"]*(?<![\\w-])${cls}(?![\\w-])`), cls);
   }
+});
+
+test('the off-season card (zero-promo pages): its heading, the same link', () => {
+  const html = renderToStaticMarkup(<AppAlertCard teamId="dallas-cowboys" teamName="Dallas Cowboys" variant="offseason" />);
+  const t = html.replace(/<!-- -->/g, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+  assert.match(t, /Get alerts when Dallas Cowboys posts promos/);
+  assert.doesNotMatch(t, /Get alerts for/);
+  assert.match(html, /href="\/download\?src=team_cta_dallas-cowboys"/);
+});
+
+test('spacing: 12px (mt-3) outside a row group, none inside one (space-y-3 gives it)', () => {
+  const after = list(WILD, [...upcoming, ...past]);
+  assert.ok(after.includes('<div class="mt-3">' + MARK + '</div>'));
+  const inGroup = list(WILD, upcoming.slice(0, 3));
+  assert.ok(!inGroup.includes('<div class="mt-3">' + MARK));
 });
 
 /* Nothing below the rows in the list (no "Show all", no archive): the card

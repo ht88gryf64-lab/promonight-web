@@ -584,12 +584,28 @@ export function RedesignTeamPage({
                 as PromoList's appCard. This weave item stays, with the same
                 class string, so the main column keeps the same Raptive
                 in-content anchors (its selector matches the shell's
-                .rd-weave-item children). */}
-            <div className="rd-weave-item order-[42]">
-              <div className="mx-auto max-w-3xl px-6 py-8">
-                <FollowCTA surface="web_team_page" team={team} />
+                .rd-weave-item children).
+
+                Pages with no promos at all have no promo list, so their card
+                (the off-season variant) stays here, under FollowCTA, where
+                AppPushPitch was. Two whole branches rather than an optional
+                child, so the 160 pages with a list emit no extra slot. */}
+            {hasNoPromosAtAll ? (
+              <div className="rd-weave-item order-[42]">
+                <div className="mx-auto max-w-3xl px-6 py-8">
+                  <FollowCTA surface="web_team_page" team={team} />
+                  <div className="mt-10">
+                    <AppAlertCard teamId={team.id} teamName={displayName} variant="offseason" />
+                  </div>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="rd-weave-item order-[42]">
+                <div className="mx-auto max-w-3xl px-6 py-8">
+                  <FollowCTA surface="web_team_page" team={team} />
+                </div>
+              </div>
+            )}
 
             <div className="rd-weave-item order-[43]">
               <AuthorityStats

@@ -545,7 +545,8 @@ export function PromoList({
       </div>
     );
     const upcomingRowsBox = rowsBox(renderUpcomingRow);
-    // The app card goes after the visible rows, unless nothing in this list
+    // The app card goes after the visible rows (12px above it, the gap between
+    // rows), unless nothing in this list
     // follows them (no "Show all", no archive). Then "after the rows" is the
     // end of the team page's promo weave item, where Raptive inserts an
     // in-content unit (`afterend` of each .rd-weave-item), so the card goes
@@ -636,7 +637,7 @@ export function PromoList({
             ) : appCard ? (
               <>
                 {upcomingRowsBox}
-                {appCard}
+                <div className="mt-3">{appCard}</div>
                 {showAllUpcoming}
               </>
             ) : (
@@ -658,7 +659,7 @@ export function PromoList({
             appCard ? (
               <div className="py-2">
                 {onRecordLine}
-                {appCard}
+                <div className="mt-3">{appCard}</div>
               </div>
             ) : (
               <div className="py-2">{onRecordLine}</div>
@@ -666,7 +667,7 @@ export function PromoList({
           ) : appCard ? (
             <div className="text-center py-8">
               {pastPointerLine}
-              {appCard}
+              <div className="mt-3">{appCard}</div>
             </div>
           ) : (
             <div className="text-center py-8">{pastPointerLine}</div>

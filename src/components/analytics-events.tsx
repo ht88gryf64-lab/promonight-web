@@ -41,6 +41,7 @@ export function TrackedAppLink({
   target,
   rel,
   surface,
+  plainAnchor = false,
 }: {
   href: string;
   /** The destination store; 'unknown' for a link to /download. */
@@ -54,6 +55,12 @@ export function TrackedAppLink({
   rel?: string;
   /** For links built by src/lib/app-link.ts; otherwise inferred from the path. */
   surface?: AppLinkSurface;
+  /** Render a plain <a> instead of next/link: the link is never prefetched,
+   *  and following it is a full page load. For the team-page app card, whose
+   *  /download link sits on 169 pages (app funnel G1). Not a next/link
+   *  prefetch prop, which src/lib/analytics/__tests__/no-link-prefetch-prop
+   *  forbids outright to protect the request counter. */
+  plainAnchor?: boolean;
 }) {
   const isExternal = /^https?:\/\//.test(href);
   const resolvedTarget = target ?? (isExternal ? '_blank' : undefined);
@@ -62,6 +69,13 @@ export function TrackedAppLink({
     trackInstallClick({ platform, section, page, teamSlug, ...(surface ? { surface } : {}) });
   };
 
+  if (plainAnchor) {
+    return (
+      <a href={href} onClick={handleClick} className={className} target={resolvedTarget} rel={resolvedRel}>
+        {children}
+      </a>
+    );
+  }
   return (
     <Link
       href={href}
