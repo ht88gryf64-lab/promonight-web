@@ -522,13 +522,13 @@ export function PromoList({
     // differences). Server-rendered, and must stay OUT of any <Suspense>
     // (known-issues entry 50). `page-content` here is a Raptive hook, not a
     // style; do not rename or restyle it.
-    const upcomingRowsBox = (
+    const rowsBox = (renderRow: (promo: Promo, i: number) => ReactNode) => (
       <div className="space-y-3">
         {upcomingGroups.anchors.length > 0 && (
           <div className="space-y-3 page-content">
             {upcomingGroups.anchors.map((group) => (
               <div key={`g-${group.start}`} className="space-y-3">
-                {group.rows.map((promo, j) => renderUpcomingRow(promo, group.start + j))}
+                {group.rows.map((promo, j) => renderRow(promo, group.start + j))}
               </div>
             ))}
           </div>
@@ -536,14 +536,39 @@ export function PromoList({
         {upcomingGroups.anchors.length > 0 ? (
           <div className="space-y-3">
             {upcomingGroups.tail.rows.map((promo, j) =>
-              renderUpcomingRow(promo, upcomingGroups.tail.start + j),
+              renderRow(promo, upcomingGroups.tail.start + j),
             )}
           </div>
         ) : (
-          upcomingGroups.tail.rows.map((promo, j) => renderUpcomingRow(promo, j))
+          upcomingGroups.tail.rows.map((promo, j) => renderRow(promo, j))
         )}
       </div>
     );
+    const upcomingRowsBox = rowsBox(renderUpcomingRow);
+    // The app card goes after the visible rows, unless nothing in this list
+    // follows them (no "Show all", no archive). Then "after the rows" is the
+    // end of the team page's promo weave item, where Raptive inserts an
+    // in-content unit (`afterend` of each .rd-weave-item), so the card goes
+    // BEFORE the last visible row instead and a row always separates it from
+    // that unit. One exception: when the last row sits alone in the tail
+    // (5 or 9 rows), the tail directly follows `.page-content`, whose last
+    // child may itself be a unit, so the card goes one row further up, into
+    // the last row group. Either way it is inside a row group, never a direct
+    // child of `.page-content`, so it is never an anchor itself.
+    const cardBeforeLastRow = !!appCard && upcomingHidden.length === 0 && past.length === 0;
+    const cardRow =
+      upcomingGroups.anchors.length > 0 && upcomingGroups.tail.rows.length === 1
+        ? upcomingVisible.length - 2
+        : upcomingVisible.length - 1;
+    const renderUpcomingRowWithCard = (promo: Promo, i: number) =>
+      i === cardRow ? (
+        <Fragment key={`u-${i}`}>
+          {appCard}
+          {renderUpcomingRow(promo, i)}
+        </Fragment>
+      ) : (
+        renderUpcomingRow(promo, i)
+      );
     const showAllUpcoming = upcomingHidden.length > 0 && (
       <LazyPromoRows
         promos={upcomingHidden}
@@ -606,7 +631,9 @@ export function PromoList({
           </div>
 
           {upcoming.length > 0 ? (
-            appCard ? (
+            appCard && cardBeforeLastRow ? (
+              rowsBox(renderUpcomingRowWithCard)
+            ) : appCard ? (
               <>
                 {upcomingRowsBox}
                 {appCard}

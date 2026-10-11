@@ -127,3 +127,52 @@ test('the card: copy, server-rendered /download link, nothing Raptive selects', 
     assert.doesNotMatch(html, new RegExp(`class="[^"]*(?<![\\w-])${cls}(?![\\w-])`), cls);
   }
 });
+
+/* Nothing below the rows in the list (no "Show all", no archive): the card
+ * would end the promo weave item, where Raptive inserts a unit, so it goes
+ * before the last visible row, and with a one-row tail into the last group. */
+const parentOfCard = (html: string) => {
+  const at = html.indexOf(MARK);
+  const open = [...html.slice(0, at).matchAll(/<div\b[^>]*>/g)];
+  // innermost still-open <div> before the card
+  for (let k = open.length - 1; k >= 0; k--) {
+    if (insideDiv(html, open[k].index!, at)) return open[k][0];
+  }
+  return '';
+};
+
+test('nothing below the rows: 1 row, the card comes before it', () => {
+  const html = list(WILD, upcoming.slice(0, 1));
+  const at = html.indexOf(MARK);
+  assert.ok(at > 0 && at < html.indexOf('Ahead 1'));
+  assert.equal(html.split(MARK).length - 1, 1);
+});
+
+test('nothing below the rows: 3 rows, between the second and the third', () => {
+  const html = list(WILD, upcoming.slice(0, 3));
+  const at = html.indexOf(MARK);
+  assert.ok(html.indexOf('Ahead 2') < at && at < html.indexOf('Ahead 3'));
+});
+
+test('nothing below the rows: 10 rows, before the tenth, in the tail (outside .page-content)', () => {
+  const html = list(WILD, upcoming.slice(0, 10));
+  const at = html.indexOf(MARK);
+  assert.ok(html.indexOf('Ahead 9') < at && at < html.indexOf('Ahead 10'));
+  const pcOpen = html.lastIndexOf('<div', html.indexOf('page-content'));
+  assert.equal(insideDiv(html, pcOpen, at), false);
+});
+
+test('nothing below the rows: 5 rows (one-row tail), inside the last group before its last row, never a direct child of .page-content', () => {
+  const html = list(WILD, upcoming.slice(0, 5));
+  const at = html.indexOf(MARK);
+  assert.ok(html.indexOf('Ahead 3') < at && at < html.indexOf('Ahead 4') && html.indexOf('Ahead 5') > at);
+  const pcOpen = html.lastIndexOf('<div', html.indexOf('page-content'));
+  assert.equal(insideDiv(html, pcOpen, at), true, 'inside .page-content ...');
+  assert.doesNotMatch(parentOfCard(html), /page-content/, '... but inside a row group, not as an anchor');
+  assert.match(parentOfCard(html), /class="space-y-3"/);
+});
+
+test('with rows hidden or an archive below, the card stays after the rows', () => {
+  const withArchive = list(WILD, [...upcoming.slice(0, 3), ...past]);
+  assert.ok(withArchive.indexOf('Ahead 3') < withArchive.indexOf(MARK));
+});
