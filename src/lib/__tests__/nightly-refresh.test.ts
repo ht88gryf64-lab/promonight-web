@@ -141,7 +141,7 @@ test('the paths: every team page, every venue hub, the hubs, /teams and the /pro
   for (const t of TEAMS) assert.ok(paths.includes(`/${t.sportSlug}/${t.id}`), t.id);
   for (const h of HUBS.filter((h) => h !== 'Bad_Slug')) assert.ok(paths.includes(`/venues/${h}`), h);
   assert.ok(!paths.includes('/venues/Bad_Slug'), 'a slug the fan-out would reject is dropped, not sent');
-  for (const p of ['/nhl', '/mlb', '/nfl', '/teams', '/promos/today', '/promos/this-week', '/promos/theme-nights', '/promos/food-deals', '/promos/bobbleheads', '/promos/jersey-giveaways', '/promos/soccer-jersey-nights']) {
+  for (const p of ['/nhl', '/nba', '/mlb', '/nfl', '/teams', '/promos/today', '/promos/this-week', '/promos/theme-nights', '/promos/food-deals', '/promos/bobbleheads', '/promos/jersey-giveaways', '/promos/soccer-jersey-nights']) {
     assert.ok(paths.includes(p), p);
   }
   assert.ok(!paths.includes('/'), 'the bare root is not a fan-out path');

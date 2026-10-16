@@ -28,7 +28,7 @@ import { splitSeasonLabel, SPLIT_SEASON_START_YEAR } from '@/lib/season-label';
 const ACCENT = '#b5642e';
 
 // Browse-by-promo-type tiles. Only tiles the corpus can fill (the NHL rule).
-// The NBA corpus was first written on 2026-09-29 (152 rows, ~15 clubs) and its
+// The NBA corpus was first written on 2026-09-29 (152 rows) and its
 // type mix has not been counted, so the hub ships the two tiles that hold for
 // any slate. Add bobbleheads or jerseys once a count clears the bar; do not
 // invent them.
@@ -47,7 +47,7 @@ export const revalidate = 21600;
 const SEASON = splitSeasonLabel(SPLIT_SEASON_START_YEAR);
 const HUB_URL = 'https://www.getpromonight.com/nba';
 const TITLE = `NBA Promotions & Giveaways ${SEASON}`;
-const DESCRIPTION = `Every NBA team's ${SEASON} promo schedule in one place: theme nights, giveaways, and fan nights across all 30 teams, grouped by division and refreshed through the season.`;
+const DESCRIPTION = `NBA promo schedules for the ${SEASON} season in one place: theme nights, giveaways, and fan nights, with every team grouped by division and schedules refreshed through the season.`;
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -60,7 +60,7 @@ const FAQS: HubFaqItem[] = [
   {
     question: 'What NBA promotions are happening this week?',
     answer:
-      'PromoNight tracks the theme nights, giveaways and fan nights announced by the 30 NBA teams. The this-week rail on this page lists the promotions scheduled at NBA arenas over the next seven days, and it updates as teams add dates.',
+      'PromoNight tracks the theme nights, giveaways and fan nights NBA teams announce. The this-week rail on this page lists the promotions scheduled at NBA arenas over the next seven days, and it updates as teams add dates.',
   },
   {
     question: 'When do NBA teams announce their promotional schedules?',
@@ -119,7 +119,7 @@ export default async function NbaHubPage() {
         eyebrow="NBA League Hub"
         title={`NBA PROMOTIONS ${SEASON}`}
         subtitle="Theme nights, giveaways and fan nights across the 30 NBA teams, grouped by division."
-        freshness="Rechecked weekly in season and updated as teams announce promotions."
+        freshness="Most teams are rechecked weekly in season; the rest are added as they announce."
         accent={ACCENT}
       >
         <HubStatBar stats={stats} leagueLabel="NBA" />
