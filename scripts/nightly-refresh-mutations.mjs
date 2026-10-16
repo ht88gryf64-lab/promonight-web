@@ -41,6 +41,7 @@ const CASES = [
   ['team pages left out', LIB, '    ...teams.map((t) => `/${t.sportSlug}/${t.id}`),\n', '', [T]],
   ['/promos/today left out', LIB, "  '/promos/today',\n", '', [T]],
   ['/nhl left out', LIB, "  '/nhl',\n", '', [T]],
+  ['/nba left out', LIB, "  '/nba',\n", '', [T]],
   ['an invalid slug sent to the fan-out', LIB, '    if (!PATH_RE.test(p)) {\n      dropped.push(p);\n      continue;\n    }', '', [T]],
   ['no dedupe', LIB, '    if (seen.has(p)) continue;\n    if (!PATH_RE.test(p)) {', '    if (!PATH_RE.test(p)) {', [T]],
   // ---- how ----

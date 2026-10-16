@@ -44,6 +44,7 @@ export { REFRESH_USER_AGENT };
 /** Fixed day-dependent pages outside the team and venue routes. */
 export const NIGHTLY_FIXED_PATHS: readonly string[] = [
   '/nhl',
+  '/nba',
   '/mlb',
   '/nfl',
   '/wnba',

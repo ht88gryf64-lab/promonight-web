@@ -45,10 +45,10 @@ import { numberWord } from '@/lib/coverage-counts';
  * quietly stale. The sitemap entry for /about reads this same constant, so the
  * visible date and <lastmod> cannot disagree.
  */
-export const ABOUT_LAST_REVIEWED = '2026-10-07';
+export const ABOUT_LAST_REVIEWED = '2026-10-16';
 
 /** Human rendering of ABOUT_LAST_REVIEWED. Fixed parts only, no locale clock. */
-export const ABOUT_LAST_REVIEWED_LABEL = 'October 7, 2026';
+export const ABOUT_LAST_REVIEWED_LABEL = 'October 16, 2026';
 
 // SHA-256 of this file with every line naming the fingerprint removed, so the
 // value cannot hash itself. The lockstep test recomputes it; a mismatch means
@@ -71,8 +71,12 @@ export const ABOUT_LAST_REVIEWED_LABEL = 'October 7, 2026';
 // 2026-10-07: the 2.0 app launch. The Pro tier, its prices and the Game Day
 // unlock are gone from the app section, the FAQ and the origin story, and the
 // app's league list is no longer stated. The date moved with the prose.
+// 2026-10-16: the NBA hub. The NHL enable's three-sentence shape: the cadence
+// list gains NBA (weekly scan enabled 2026-09-29, 20 of 30 active in
+// promo-pipeline team-configs/nba.js), the "added by hand" paragraph is NFL
+// alone, and the coverage line says NBA teams are posting. The date moved.
 // eslint-disable-next-line prettier/prettier
-export const ABOUT_COPY_FINGERPRINT = 'ddca2146cfa948326a520f3b929f370f1763ba1a05ef248bac273b0a18236a23';
+export const ABOUT_COPY_FINGERPRINT = '63b665a54d250a435afa64718c99c95b360fcc85deba31bc7334e2c2c0caa97e';
 
 export interface AboutCounts {
   teamCount: number;
@@ -201,17 +205,16 @@ export function aboutSections(c: AboutCounts): AboutSection[] {
             {
               lead: 'The schedules get rechecked on a cadence, where a cadence honestly exists.',
               text:
-                '[MLB](/mlb) is rechecked weekly, year round. [MLS](/mls) is rechecked weekly through its season. [WNBA](/wnba) is rechecked weekly from May through September. [NHL](/nhl) is rechecked weekly from August through June, which covers the summer window when clubs post their slates. Those four re-run on their own, though a couple of clubs publish at unpredictable addresses and need a URL added by hand.',
+                '[MLB](/mlb) is rechecked weekly, year round. [MLS](/mls) is rechecked weekly through its season. [WNBA](/wnba) is rechecked weekly from May through September. [NHL](/nhl) is rechecked weekly from August through June, which covers the summer window when clubs post their slates. [NBA](/nba) is rechecked weekly from September through June. Those five re-run on their own, though a couple of clubs publish at unpredictable addresses and need a URL added by hand.',
             },
             {
               lead: 'The other leagues work differently, and I would rather say so than imply a cadence that is not there.',
               text:
-                // NBA stays plain text on purpose: its hub route does not exist
-                // (LEAGUE_HUB_REGISTRY has it at live:false). NHL became a link
-                // on 2026-09-02, the day its hub and weekly scan went live. Every
-                // other surface reads the registry flag; this string is
-                // hand-written, so it has to be kept in step by hand.
-                'NBA and [NFL](/nfl) publish in bursts, mostly right before their seasons start, and they get added by hand when I run a sweep. NHL used to sit in that group; as of September 2026 it is on the weekly scan, with 27 of the 32 clubs checked automatically and the other five held back until their pages carry a current schedule. [College football](/cfb) is different again: those pages carry schedules, venues and rivalries, not promotions.',
+                // NHL became a link on 2026-09-02 and NBA on 2026-10-16, each
+                // the day its hub went live. Every other surface reads the
+                // registry flag; this string is hand-written, so it has to be
+                // kept in step by hand.
+                '[NFL](/nfl) publishes in a burst, mostly right before its season starts, and gets added by hand when I run a sweep. NHL and NBA used to sit in that group; NHL moved to the weekly scan in September 2026, with 27 of the 32 clubs checked automatically, and NBA followed at the end of that month, with 20 of the 30 teams checked automatically. In both leagues the rest are held back until their pages carry a current schedule. [College football](/cfb) is different again: those pages carry schedules, venues and rivalries, not promotions.',
             },
             {
               lead: 'A new promo’s title has to be built from words that are actually on the page it came from.',
@@ -242,7 +245,7 @@ export function aboutSections(c: AboutCounts): AboutSection[] {
             {
               lead: 'Team pages',
               text:
-                `for all ${c.teamCount} teams, carrying whatever promotional calendar the team has published, past and upcoming, plus venue details for the ballpark or arena. MLB, MLS and WNBA carry a full season, and NHL clubs are posting theirs now. NBA and most of the NFL are still waiting on team announcements. [Browse every team](/teams).`,
+                `for all ${c.teamCount} teams, carrying whatever promotional calendar the team has published, past and upcoming, plus venue details for the ballpark or arena. MLB, MLS and WNBA carry a full season, and NHL and NBA teams are posting theirs now. Most of the NFL is still waiting on team announcements. [Browse every team](/teams).`,
             },
             {
               lead: 'Collections',
@@ -346,7 +349,7 @@ export function aboutFaqs(c: AboutCounts): FAQItem[] {
     {
       question: 'How often is it updated?',
       answer:
-        'MLB is rechecked weekly year round. MLS is rechecked weekly through its season, WNBA weekly from May through September, and NHL weekly from August through June. NBA and NFL are added by hand as teams announce, which for both happens in a burst before the season starts.',
+        'MLB is rechecked weekly year round. MLS is rechecked weekly through its season, WNBA weekly from May through September, NHL weekly from August through June, and NBA weekly from September through June. NFL is added by hand as teams announce, which happens in a burst before the season starts.',
     },
     {
       question: 'Which leagues are covered?',
