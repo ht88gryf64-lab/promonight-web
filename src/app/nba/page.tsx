@@ -28,12 +28,13 @@ import { splitSeasonLabel, SPLIT_SEASON_START_YEAR } from '@/lib/season-label';
 const ACCENT = '#b5642e';
 
 // Browse-by-promo-type tiles. Only tiles the corpus can fill (the NHL rule).
-// The NBA corpus was first written on 2026-09-29 (152 rows) and its
-// type mix has not been counted, so the hub ships the two tiles that hold for
-// any slate. Add bobbleheads or jerseys once a count clears the bar; do not
-// invent them.
+// On 2026-10-16 the 463 upcoming NBA promos (visible, deduped, packages
+// dropped: the hub card path) were 260 theme, 171 giveaway (41 bobbleheads by
+// title), 31 kids, and 1 food, with 5 jersey titles. Theme nights anchor;
+// bobbleheads clear the bar; jerseys and food deals do not and are not invented.
 const BROWSE_TILES: HubBrowseTile[] = [
   { href: '/promos/theme-nights', label: 'Theme nights', collectionName: 'theme_nights', accentType: 'theme' },
+  { href: '/promos/bobbleheads', label: 'Bobblehead giveaways', collectionName: 'bobbleheads', accentType: 'giveaway' },
   { href: '/promos/this-week', label: 'Everything this week', collectionName: 'hot_this_week', accentType: 'giveaway' },
 ];
 

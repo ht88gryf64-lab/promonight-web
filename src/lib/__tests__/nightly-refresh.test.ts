@@ -458,7 +458,7 @@ test('the route: auth, the window, then revalidate through POST /api/revalidate 
     const res = await call('Bearer s');
     const body = await res.json();
     assert.equal(res.status, 200);
-    const expected = TEAMS.length + 3 + 18;
+    const expected = TEAMS.length + 3 + 19;
     assert.equal(body.paths, expected);
     assert.equal(body.revalidated, expected);
     assert.equal(body.warmed, expected);
