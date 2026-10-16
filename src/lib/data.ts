@@ -38,6 +38,7 @@ import { VENUE_LOCATIONS_STATIC } from './venue-locations';
 import { resolveMlbZone } from './mlb-venue-tz';
 import { gameZoneAbbrev } from './format-game-time';
 import { isSplitSeasonLeague } from './season-label';
+import { nbaConferenceOf } from './nba-hub';
 import { isTicketPackageDoc, isTicketPackageLeague, partitionTicketPackages } from './ticket-packages';
 
 function tsToIso(v: unknown): string | null {
@@ -1630,6 +1631,22 @@ const HUB_GROUPING: Record<string, HubGroupingSpec> = {
       { key: 'Western', label: 'Western Conference' },
     ],
     superGroupOf: (key) => (key === 'Central' || key === 'Pacific' ? 'Western' : 'Eastern'),
+  },
+  // NBA: six divisions under two conference bands, the NHL shape. Atlantic,
+  // Central and Pacific share names with NHL divisions; the spec is keyed by
+  // league, so they never mix. NOT verified against the teams collection from
+  // this session (no Firestore access); the strings match the team fixture in
+  // fan-tools.test.tsx ('Northwest' for the Timberwolves) and the pipeline's
+  // nba-teams.js grouping. A doc carrying any other string is not dropped:
+  // getLeagueTeamsGrouped appends unknown keys after the canonical six, and
+  // nbaConferenceOf still bands it by name.
+  NBA: {
+    groupOrder: ['Atlantic', 'Central', 'Southeast', 'Northwest', 'Pacific', 'Southwest'],
+    superGroups: [
+      { key: 'Eastern', label: 'Eastern Conference' },
+      { key: 'Western', label: 'Western Conference' },
+    ],
+    superGroupOf: nbaConferenceOf,
   },
 };
 

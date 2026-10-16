@@ -1,7 +1,7 @@
 // Single source of truth for league hubs. Every league carries its locked
 // house-palette accent (the LeagueChip monogram background). `live` gates which
-// hubs actually render in menus (MLB, WNBA, MLS, NFL and CFB today; NBA and NHL
-// are ready-but-inactive), so shipping a new hub is a one-line change (flip
+// hubs actually render in menus (every hub is live as of the NBA hub,
+// 2026-10-16), so shipping a new hub is a one-line change (flip
 // `live` to true once the /{sportSlug} route exists). A future homepage league
 // section and a /leagues index are meant to read this same registry.
 export interface LeagueHub {
@@ -30,7 +30,7 @@ export const LEAGUE_HUB_REGISTRY: LeagueHub[] = [
   { league: 'MLB', label: 'MLB', href: '/mlb', sportSlug: 'mlb', accent: '#7c4a3a', live: true },
   { league: 'WNBA', label: 'WNBA', href: '/wnba', sportSlug: 'wnba', accent: '#c9581f', live: true },
   { league: 'MLS', label: 'MLS', href: '/mls', sportSlug: 'mls', accent: '#3f7d5a', live: true },
-  { league: 'NBA', label: 'NBA', href: '/nba', sportSlug: 'nba', accent: '#b5642e', live: false },
+  { league: 'NBA', label: 'NBA', href: '/nba', sportSlug: 'nba', accent: '#b5642e', live: true },
   { league: 'NHL', label: 'NHL', href: '/nhl', sportSlug: 'nhl', accent: '#4a4f57', live: true },
   { league: 'NFL', label: 'NFL', href: '/nfl', sportSlug: 'nfl', accent: '#5f6b57', live: true },
   { league: 'CFB', label: 'CFB', navLabel: 'College football', href: '/cfb', sportSlug: 'cfb', accent: '#9a7d2e', live: true, sitemapChangeFrequency: 'weekly' },

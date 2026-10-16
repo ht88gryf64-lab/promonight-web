@@ -188,6 +188,13 @@ export type AnalyticsSurface =
   | 'web_nhl_hub_promo_type'
   | 'web_nhl_hub_team_card'
   | 'web_nhl_hub_venues'
+  // NBA league hub (/nba), the NHL shape: split season, division grid under two
+  // conference bands, mid-page this-week rail.
+  | 'web_nba_hub'
+  | 'web_nba_hub_this_week'
+  | 'web_nba_hub_promo_type'
+  | 'web_nba_hub_team_card'
+  | 'web_nba_hub_venues'
   | 'web_cfb_hub_venues'
   | 'web_venue_index'
   // Venue logistics hub (/venues/[slug]). Per-building attribution rides in the
@@ -1451,6 +1458,11 @@ const KNOWN_SURFACE_VALUES = [
   'web_nhl_hub_promo_type',
   'web_nhl_hub_team_card',
   'web_nhl_hub_venues',
+  'web_nba_hub',
+  'web_nba_hub_this_week',
+  'web_nba_hub_promo_type',
+  'web_nba_hub_team_card',
+  'web_nba_hub_venues',
   'web_cfb_hub_venues',
   'web_venue_index',
   'web_venue',
@@ -1526,6 +1538,8 @@ export function inferSurfaceFromPath(path: string): AnalyticsSurface {
   // Same trap for bare /nhl: without this branch the hub pageview infers
   // web_league_index. Held with the /nhl route; harmless while nothing links it.
   if (path === '/nhl') return 'web_nhl_hub';
+  // And bare /nba, for the same reason ('nba' is in the allowlist below).
+  if (path === '/nba') return 'web_nba_hub';
   // /[sport]/[team] — team pages. Sports are known; anything else falls through.
   const m = path.match(/^\/([a-z]+)(?:\/|$)/);
   if (m && ['mlb', 'nba', 'nhl', 'nfl', 'mls', 'wnba'].includes(m[1])) {
