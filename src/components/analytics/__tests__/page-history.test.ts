@@ -8,10 +8,13 @@
 
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert';
+import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import {
   enterPage,
   resetPageHistoryForTests,
   samePath,
+  settlePendingPageView,
   syncPageUrl,
 } from '../page-history';
 
@@ -72,4 +75,64 @@ test('samePath tolerates percent-encoding on one side only', () => {
   assert.ok(samePath('/venues/estadio-de-béisbol', '/venues/estadio-de-b%C3%A9isbol'));
   assert.ok(!samePath('/teams', '/teams/'));
   assert.ok(samePath('/%E0%A4%A', '/%E0%A4%A'), 'malformed escape compares raw, never throws');
+});
+
+test('enterPage records origin + pathname when the location has already moved on', () => {
+  // Back pressed before a just-committed page flushed its effects: the
+  // location is the previous page by the time this page registers.
+  enterPage('/teams', `${ORIGIN}/teams?league=NBA`, '');
+  const p = enterPage('/nhl/boston-bruins', `${ORIGIN}/teams?league=NBA`, '');
+  assert.strictEqual(p.url, `${ORIGIN}/nhl/boston-bruins`, 'never labelled with the page it left');
+  assert.strictEqual(p.referrer, `${ORIGIN}/teams?league=NBA`);
+});
+
+test('enterPage keeps the full href, query included, when it matches the page', () => {
+  const p = enterPage('/teams', `${ORIGIN}/teams?league=MLB`, '');
+  assert.strictEqual(p.url, `${ORIGIN}/teams?league=MLB`);
+});
+
+function fakePending() {
+  const calls: string[] = [];
+  return { calls, flush: () => calls.push('flush'), cancel: () => calls.push('cancel') };
+}
+
+test('settle: left for another pathname flushes the pending view, exactly once', () => {
+  const pending = fakePending();
+  assert.strictEqual(settlePendingPageView(pending, '/promos/today', '/nhl/buffalo-sabres'), 'flush');
+  assert.deepStrictEqual(pending.calls, ['flush']);
+});
+
+test('settle: still on the page (StrictMode re-run, unmount) cancels, never flushes', () => {
+  const pending = fakePending();
+  assert.strictEqual(settlePendingPageView(pending, '/nhl/buffalo-sabres', '/nhl/buffalo-sabres'), 'cancel');
+  assert.deepStrictEqual(pending.calls, ['cancel']);
+});
+
+test('settle: an encoding-only difference is the same page', () => {
+  const pending = fakePending();
+  assert.strictEqual(settlePendingPageView(pending, '/venues/b%C3%A9isbol', '/venues/béisbol'), 'cancel');
+});
+
+test("Next's HistoryUpdater still writes history from useInsertionEffect", () => {
+  // settlePendingPageView reads "left" from window.location at passive-cleanup
+  // time. That is only true because Next writes pushState/replaceState in a
+  // useInsertionEffect (mutation phase, before passive cleanups). If a Next
+  // upgrade moves the write to a layout or passive effect, cleanup sees the
+  // OLD location, cancels, and fast-leave page_views are dropped silently.
+  // This test is the tripwire for that upgrade.
+  const require = createRequire(import.meta.url);
+  const src = readFileSync(require.resolve('next/dist/client/components/app-router.js'), 'utf8');
+  const start = src.indexOf('function HistoryUpdater(');
+  assert.ok(start >= 0, 'HistoryUpdater not found in next/dist/client/components/app-router.js');
+  const next = src.indexOf('\nfunction ', start + 1);
+  const body = src.slice(start, next === -1 ? undefined : next);
+  const effectAt = body.search(/\.useInsertionEffect\)?\(/);
+  assert.ok(effectAt >= 0, 'HistoryUpdater no longer uses useInsertionEffect: re-check settlePendingPageView');
+  const afterEffect = body.slice(effectAt);
+  assert.ok(afterEffect.includes('window.history.pushState('), 'pushState is not written from the insertion effect');
+  assert.ok(afterEffect.includes('window.history.replaceState('), 'replaceState is not written from the insertion effect');
+  for (const later of ['useLayoutEffect', 'useEffect)(']) {
+    assert.ok(!body.includes(later) || body.indexOf(later) > body.indexOf('window.history.replaceState('),
+      `HistoryUpdater gained a ${later} before its history write: re-check settlePendingPageView`);
+  }
 });

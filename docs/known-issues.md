@@ -3986,4 +3986,6 @@ All three by 2027-03-15, ahead of the April postseason.
 
 **What remains.** With Enhanced Measurement history on, GA4 page_view is still about 2x on SPA navigations, and the /teams tabs still send 1 (Enhanced Measurement's own, on the replaceState). Turning the setting off leaves exactly ours: one per pathname change, none on tab flips, correct referrer. `src/lib/analytics/traffic-classifier.ts` says every GA4 page_view is fired by PageViewTracker; that is false until the setting is off.
 
+**Ordering caveat for funnels.** A page_view flushed as the visitor leaves inside the 500ms deadline is sent at navigation time, so it can arrive after a click the visitor made on that same page (both sinks timestamp at send). Strict-order PostHog funnels that require page_view before a same-page click will drop those sessions; use a loose ordering (any order within the funnel window) for page_view to same-page-action steps. Before this branch those views were not sent at all.
+
 **Where.** GA4 Admin > Data streams > Enhanced measurement > Page views > Advanced; `src/components/analytics/PageViewTracker.tsx`, `page-history.ts`, `page-view-deferral.ts`.

@@ -5,7 +5,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { inferSurfaceFromPath, track } from '@/lib/analytics';
 import { resolveBrowserVariant } from '@/lib/capture/variant';
 import { scheduleDeferredPageView } from './page-view-deferral';
-import { enterPage, samePath, syncPageUrl } from './page-history';
+import { enterPage, samePath, settlePendingPageView, syncPageUrl } from './page-history';
 
 // Fires page_view on initial load and on every App Router navigation that
 // changes the PATHNAME. A query-only change is not a page view: the /teams
@@ -104,12 +104,9 @@ export function PageViewTracker() {
     const pending = scheduleDeferredPageView(fire);
     return () => {
       titleObserver?.disconnect();
-      // Left for another pathname before the deadline: send this page's view
-      // now, labelled as this page. Still on it (an effect re-run, or the
-      // tracker unmounting with the document): cancel, and let the re-run or
-      // the pagehide flush own the emit.
-      if (onThisPage()) pending.cancel();
-      else pending.flush();
+      // Flush if the visitor left for another pathname, cancel if still here.
+      // The rule and why the location is a safe signal: settlePendingPageView.
+      settlePendingPageView(pending, window.location.pathname, pathname);
     };
   }, [pathname]);
 
