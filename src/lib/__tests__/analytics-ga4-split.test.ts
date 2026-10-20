@@ -160,3 +160,48 @@ test('subscribers still receive the full enriched payload including the triplet'
   assert.strictEqual(seen[0].game_id, 'game-4');
   off();
 });
+
+test('page_view keeps its own page_path and reaches GA4 with explicit page_location/page_referrer', async () => {
+  // PageViewTracker can emit after the router has moved on (a visitor who
+  // leaves inside the deadline). The row must stay labelled as the page it
+  // belongs to, not stamped with the current location.
+  const { track } = await import('../analytics');
+
+  track('page_view', {
+    surface: 'web_league_index',
+    page_title: 'All 169 Pro Sports Teams',
+    page_location: 'https://www.getpromonight.com/teams?league=MLB',
+    page_referrer: 'https://www.getpromonight.com/',
+    page_path: '/teams?league=MLB',
+    variant: 'variant_a',
+  });
+
+  const ga4 = gtagCalls[0].args[2] as Record<string, unknown>;
+  assert.strictEqual(ga4.page_path, '/teams?league=MLB', 'explicit page_path wins over location');
+  assert.strictEqual(ga4.page_location, 'https://www.getpromonight.com/teams?league=MLB');
+  assert.strictEqual(ga4.page_referrer, 'https://www.getpromonight.com/');
+  assert.strictEqual(captureCalls[0].props.page_path, '/teams?league=MLB', 'PostHog agrees');
+});
+
+test('every other event still takes page_path from the current location', async () => {
+  const { track } = await import('../analytics');
+
+  track('page_view', {
+    surface: 'web_team_page',
+    page_title: 'Twins',
+    page_location: 'https://www.getpromonight.com/mlb/minnesota-twins',
+    page_referrer: '',
+    variant: 'variant_a',
+  });
+  track('game_tap', {
+    surface: 'web_team_page',
+    team_slug: 'minnesota-twins',
+    game_id: 'game-3',
+    is_home: true,
+    has_promo: false,
+    opponent_slug: 'chicago-cubs',
+  });
+
+  assert.strictEqual((gtagCalls[0].args[2] as Record<string, unknown>).page_path, '/mlb/minnesota-twins', 'page_view without one falls back');
+  assert.strictEqual((gtagCalls[1].args[2] as Record<string, unknown>).page_path, '/mlb/minnesota-twins');
+});

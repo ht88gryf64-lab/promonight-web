@@ -22,16 +22,16 @@
 // engagement floors, so by any instant at which the trigger could promote a
 // prompt this page_view has long since fired and the flush is a no-op.
 //
-// THAT SAFETY PROPERTY IS CONTINGENT ON TWO CURRENT FACTS, not enforced by
-// any code: (1) every page_view refire today coincides with a pathname
-// change, which remounts the capture trigger's timer and counter, so a
-// pending page_view always means a fresh page whose engagement floors are
-// nowhere near crossed; and (2) no live tracked surface performs a
-// searchParams-only navigation (the scoring filter chips do, and scoring
-// routes are excluded from this tracker). A future surface that refires
-// page_view mid-engagement on the SAME pathname would reopen the teardown
-// evaluate() window; enforcing hidden-state suppression belongs inside the
-// capture trigger, which this module must not touch.
+// THAT SAFETY PROPERTY RESTS ON ONE FACT, now enforced by PageViewTracker
+// rather than merely true: page_view fires on a pathname change and on nothing
+// else, and a pathname change remounts the capture trigger's timer and
+// counter, so a pending page_view always means a fresh page whose engagement
+// floors are nowhere near crossed. The navigation flush (flush() below, called
+// when the visitor leaves inside the deadline) keeps it: it fires within 500ms
+// of the page it labels, against a trigger that was just reset. A future
+// emitter that fires page_view mid-engagement on the SAME pathname would
+// reopen the teardown evaluate() window; enforcing hidden-state suppression
+// belongs inside the capture trigger, which this module must not touch.
 export const PAGE_VIEW_DEADLINE_MS = 500;
 
 // Kept at the original value: this path only runs where requestIdleCallback
@@ -47,6 +47,13 @@ type IdleCapableWindow = {
   cancelIdleCallback?: (handle: number) => void;
 };
 
+export type DeferredPageView = {
+  /** Emit now if not yet emitted, then detach. For a navigation away. */
+  flush: () => void;
+  /** Latch closed without emitting, then detach. For an effect re-run on the same page. */
+  cancel: () => void;
+};
+
 /**
  * Schedules `emit` to run exactly once, whichever of these comes first:
  *
@@ -54,18 +61,20 @@ type IdleCapableWindow = {
  *   2. the 500ms deadline expires (the {timeout} option),
  *   3. the page is being torn down (pagehide),
  *   4. the tab is backgrounded (visibilitychange to hidden), which on mobile
- *      is frequently the only teardown signal that ever fires.
+ *      is frequently the only teardown signal that ever fires,
+ *   5. the caller flushes it, because the visitor navigated away first.
  *
- * Returns a cancel function. Cancelling both releases the timers/listeners
- * and hard-latches the schedule closed, so a stale idle callback that an
- * absent cancelIdleCallback could not revoke still cannot emit. The caller
- * cancels on SPA navigation ON PURPOSE: by cleanup time the router has
- * already moved location and title to the NEW route, so firing the pending
- * OLD-route closure would emit a row whose surface disagrees with its
- * page_path and page_title. A view abandoned inside the 500ms deadline is
- * deliberately dropped instead of mislabeled.
+ * A view the visitor leaves inside the deadline is SENT, not dropped. It used
+ * to be cancelled, on the reasoning that by cleanup time the router has moved
+ * location and title to the next route and firing would mislabel the row. The
+ * caller now owns that: its emit closure carries the page's own URL, path and
+ * title, so a late emit is labelled correctly and only cancel() suppresses one.
+ *
+ * Both returned functions release the timers/listeners and hard-latch the
+ * schedule closed, so a stale idle callback that an absent cancelIdleCallback
+ * could not revoke still cannot emit a second time.
  */
-export function scheduleDeferredPageView(emit: () => void): () => void {
+export function scheduleDeferredPageView(emit: () => void): DeferredPageView {
   // Sent-latch shared by all four triggers. The dedupe ref in the tracker
   // guards effect re-entry per route key; this guards emit re-entry per
   // schedule. Both are needed: without this latch, hidden-then-reshown fires
@@ -92,13 +101,23 @@ export function scheduleDeferredPageView(emit: () => void): () => void {
   window.addEventListener('pagehide', fire);
   document.addEventListener('visibilitychange', flushIfHidden);
 
-  return () => {
-    // Latch first: if cancelIdleCallback is unavailable the queued callback
-    // will still run someday, and it must find the schedule already closed.
-    done = true;
+  const detach = () => {
     if (idleHandle !== null) w.cancelIdleCallback?.(idleHandle);
     if (timerHandle !== null) window.clearTimeout(timerHandle);
     window.removeEventListener('pagehide', fire);
     document.removeEventListener('visibilitychange', flushIfHidden);
+  };
+
+  return {
+    flush: () => {
+      fire();
+      detach();
+    },
+    cancel: () => {
+      // Latch first: if cancelIdleCallback is unavailable the queued callback
+      // will still run someday, and it must find the schedule already closed.
+      done = true;
+      detach();
+    },
   };
 }

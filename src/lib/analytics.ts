@@ -241,6 +241,17 @@ export type CommonEventProperties = {
 export type PageViewProperties = {
   surface: AnalyticsSurface;
   page_title: string;
+  // Explicit on every page_view, never left to GA4's own dl/dr, which are wrong
+  // on client-side navigations (see components/analytics/page-history.ts).
+  // page_location and page_referrer are GA4's reserved event parameters, so
+  // they override the hit-level values for this event only.
+  page_location: string;
+  page_referrer: string;
+  // The one event allowed to set its own page_path, because PageViewTracker can
+  // emit after the router has moved on (a visitor who leaves inside the 500ms
+  // deadline still gets a page_view, sent as they go) and track()'s default
+  // would stamp that row with the NEXT page's path.
+  page_path?: string;
   // The A/B arm, on EVERY pageview rather than only on the three capture events.
   //
   // INERT AS OF THE CAPTURE-SHEET EXPERIMENT BEING DROPPED, AND RETAINED ON
@@ -1224,7 +1235,11 @@ export function track<E extends AnalyticsEvent>(
   const attribution = readAttribution();
   const enriched = {
     ...(props as Record<string, unknown>),
-    page_path: currentPath(),
+    // Only page_view can carry its own (the type allows it nowhere else).
+    page_path:
+      typeof (props as { page_path?: unknown }).page_path === 'string'
+        ? (props as { page_path: string }).page_path
+        : currentPath(),
     device_class: deviceClass(),
     source: attribution.source,
     source_medium: attribution.source_medium,
