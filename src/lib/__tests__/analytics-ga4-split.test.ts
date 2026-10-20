@@ -205,3 +205,48 @@ test('every other event still takes page_path from the current location', async 
   assert.strictEqual((gtagCalls[0].args[2] as Record<string, unknown>).page_path, '/mlb/minnesota-twins', 'page_view without one falls back');
   assert.strictEqual((gtagCalls[1].args[2] as Record<string, unknown>).page_path, '/mlb/minnesota-twins');
 });
+
+test('page_view: PostHog $current_url/$pathname come from page_location; GA4 and other events untouched', async () => {
+  // The flushed page_view case: the router is already on the next page when
+  // capture() runs, and posthog-js would stamp THAT location.
+  (globalThis as unknown as { window: W }).window.location = { pathname: '/promos/today', search: '' };
+  const { track } = await import('../analytics');
+
+  track('page_view', {
+    surface: 'web_team_page',
+    page_title: 'Buffalo Sabres Promos & Giveaways 2026-27',
+    page_location: 'https://www.getpromonight.com/nhl/buffalo-sabres?x=1',
+    page_referrer: 'https://www.getpromonight.com/teams?league=NHL',
+    page_path: '/nhl/buffalo-sabres?x=1',
+    variant: 'variant_a',
+  });
+  track('game_tap', {
+    surface: 'web_team_page',
+    team_slug: 'buffalo-sabres',
+    game_id: 'game-4',
+    is_home: true,
+    has_promo: false,
+    opponent_slug: 'boston-bruins',
+  });
+
+  const ph = captureCalls[0].props;
+  assert.strictEqual(ph.$current_url, 'https://www.getpromonight.com/nhl/buffalo-sabres?x=1');
+  assert.strictEqual(ph.$pathname, '/nhl/buffalo-sabres');
+  const ga4 = gtagCalls[0].args[2] as Record<string, unknown>;
+  assert.ok(!('$current_url' in ga4) && !('$pathname' in ga4), 'GA4 never gets $-prefixed params');
+  assert.ok(!('$current_url' in captureCalls[1].props), 'other events keep posthog-js stamping');
+});
+
+test('page_view with an unparseable page_location leaves PostHog stamping alone', async () => {
+  const { track } = await import('../analytics');
+
+  track('page_view', {
+    surface: 'web_team_page',
+    page_title: 'x',
+    page_location: 'not a url',
+    page_referrer: '',
+    variant: 'variant_a',
+  });
+
+  assert.ok(!('$current_url' in captureCalls[0].props));
+});
