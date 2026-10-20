@@ -1,10 +1,11 @@
 // The page_view deferral scheduler: idle callback with a 500ms deadline, a
-// teardown flush, a shared sent-latch, and cancel-on-navigation semantics.
+// teardown flush, a shared sent-latch, flush-on-navigation and
+// cancel-on-re-run semantics.
 //
-// These tests encode the Gate 2 behavioral guarantees that do not need a
-// browser: fast bounces still record their view, a hidden-then-reshown tab
-// does not double-fire, and an SPA navigation cancels rather than emitting a
-// stale-route row.
+// These tests encode the behavioral guarantees that do not need a browser:
+// fast bounces still record their view, a hidden-then-reshown tab does not
+// double-fire, an SPA navigation inside the deadline sends the pending view
+// exactly once, and a same-page effect re-run cancels without emitting.
 //
 // Run with:
 //   node --import tsx --experimental-test-module-mocks --test <this file>
@@ -180,17 +181,46 @@ test('visibilitychange while still visible does not flush', async () => {
   assert.strictEqual(emits, 0, 'visible transition is not a teardown signal');
 });
 
-test('SPA navigation: cancel drops the pending emit and detaches everything', async () => {
+test('SPA navigation inside the deadline: flush sends the pending emit once and detaches', async () => {
   const { scheduleDeferredPageView } = await import('../page-view-deferral');
   let emits = 0;
-  const cancel = scheduleDeferredPageView(() => emits++);
+  const pending = scheduleDeferredPageView(() => emits++);
 
-  cancel();
+  pending.flush();
+  assert.strictEqual(emits, 1, 'the page the visitor reached still gets its view');
+  assert.strictEqual(cancelledIdleHandles.length, 1, 'idle handle revoked');
+  runPendingIdleCallbacks();
+  dispatchWindow('pagehide');
+  fakeDocument.visibilityState = 'hidden';
+  dispatchDocument('visibilitychange');
+  pending.flush();
+  assert.strictEqual(emits, 1, 'nothing after the flush can send it again');
+  assert.strictEqual((windowListeners.get('pagehide') ?? []).length, 0);
+  assert.strictEqual((documentListeners.get('visibilitychange') ?? []).length, 0);
+});
+
+test('flush after the deadline already fired is a no-op', async () => {
+  const { scheduleDeferredPageView } = await import('../page-view-deferral');
+  let emits = 0;
+  const pending = scheduleDeferredPageView(() => emits++);
+
+  runPendingIdleCallbacks();
+  pending.flush();
+  assert.strictEqual(emits, 1);
+});
+
+test('same-page re-run: cancel suppresses the pending emit and detaches everything', async () => {
+  const { scheduleDeferredPageView } = await import('../page-view-deferral');
+  let emits = 0;
+  const pending = scheduleDeferredPageView(() => emits++);
+
+  pending.cancel();
   assert.strictEqual(cancelledIdleHandles.length, 1, 'idle handle revoked');
   runPendingIdleCallbacks();
   dispatchWindow('pagehide');
   dispatchDocument('visibilitychange');
-  assert.strictEqual(emits, 0, 'no stale-route page_view after cancel');
+  pending.flush();
+  assert.strictEqual(emits, 0, 'a cancelled schedule never emits, not even on a later flush');
   assert.strictEqual((windowListeners.get('pagehide') ?? []).length, 0);
   assert.strictEqual((documentListeners.get('visibilitychange') ?? []).length, 0);
 });
@@ -199,11 +229,22 @@ test('cancel latches even when cancelIdleCallback is missing', async () => {
   const { scheduleDeferredPageView } = await import('../page-view-deferral');
   delete (globalThis as unknown as { window: FakeWindow }).window.cancelIdleCallback;
   let emits = 0;
-  const cancel = scheduleDeferredPageView(() => emits++);
+  const pending = scheduleDeferredPageView(() => emits++);
 
-  cancel();
+  pending.cancel();
   runPendingIdleCallbacks();
   assert.strictEqual(emits, 0, 'unrevokable stale callback finds the latch closed');
+});
+
+test('flush latches even when cancelIdleCallback is missing', async () => {
+  const { scheduleDeferredPageView } = await import('../page-view-deferral');
+  delete (globalThis as unknown as { window: FakeWindow }).window.cancelIdleCallback;
+  let emits = 0;
+  const pending = scheduleDeferredPageView(() => emits++);
+
+  pending.flush();
+  runPendingIdleCallbacks();
+  assert.strictEqual(emits, 1, 'unrevokable stale callback cannot send a second view');
 });
 
 test('after the emit has fired, teardown flushes are no-ops', async () => {
@@ -227,7 +268,7 @@ test('fallback path without requestIdleCallback uses the 50ms timer', async () =
   installBrowser({ idleSupported: false });
   const mod = await import('../page-view-deferral');
   let emits = 0;
-  const cancel = mod.scheduleDeferredPageView(() => emits++);
+  const pending = mod.scheduleDeferredPageView(() => emits++);
 
   assert.strictEqual(timeoutCallbacks.size, 1, 'timer scheduled');
   const [{ cb, ms }] = [...timeoutCallbacks.values()];
@@ -235,7 +276,7 @@ test('fallback path without requestIdleCallback uses the 50ms timer', async () =
   cb();
   assert.strictEqual(emits, 1);
 
-  cancel();
+  pending.cancel();
   dispatchWindow('pagehide');
   assert.strictEqual(emits, 1);
 });
@@ -251,4 +292,16 @@ test('fallback path: pagehide before the timer still flushes once', async () => 
   assert.strictEqual(emits, 1);
   for (const { cb } of [...timeoutCallbacks.values()]) cb();
   assert.strictEqual(emits, 1, 'timer after flush is latched out');
+});
+
+test('fallback path: flush before the timer sends once and clears the timer', async () => {
+  removeBrowser();
+  installBrowser({ idleSupported: false });
+  const { scheduleDeferredPageView } = await import('../page-view-deferral');
+  let emits = 0;
+  const pending = scheduleDeferredPageView(() => emits++);
+
+  pending.flush();
+  assert.strictEqual(emits, 1);
+  assert.strictEqual(timeoutCallbacks.size, 0, 'timer cleared');
 });

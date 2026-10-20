@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { track, type AnalyticsSurface } from '@/lib/analytics';
 import { resolveBrowserVariant } from '@/lib/capture/variant';
+import { enterPage } from '@/components/analytics/page-history';
 
 type Props = {
   pageTitle: string;
@@ -57,9 +58,15 @@ export function ScoringPageViewTracker({
         ? searchParams.get('range') || defaultRange
         : undefined;
 
+    // Same entry PageViewTracker registers for this navigation, whichever of
+    // the two effects runs first, so both agree on the referrer.
+    const page = enterPage(window.location.pathname, window.location.href, document.referrer);
+
     track('page_view', {
       surface,
       page_title: pageTitle,
+      page_location: page.url,
+      page_referrer: page.referrer,
       score_count: scoreCount,
       league_filter: leagueFilter,
       date_range_filter: dateRangeFilter,

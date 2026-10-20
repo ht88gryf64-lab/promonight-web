@@ -241,6 +241,17 @@ export type CommonEventProperties = {
 export type PageViewProperties = {
   surface: AnalyticsSurface;
   page_title: string;
+  // Explicit on every page_view, never left to GA4's own dl/dr, which are wrong
+  // on client-side navigations (see components/analytics/page-history.ts).
+  // page_location and page_referrer are GA4's reserved event parameters, so
+  // they override the hit-level values for this event only.
+  page_location: string;
+  page_referrer: string;
+  // The one event allowed to set its own page_path, because PageViewTracker can
+  // emit after the router has moved on (a visitor who leaves inside the 500ms
+  // deadline still gets a page_view, sent as they go) and track()'s default
+  // would stamp that row with the NEXT page's path.
+  page_path?: string;
   // The A/B arm, on EVERY pageview rather than only on the three capture events.
   //
   // INERT AS OF THE CAPTURE-SHEET EXPERIMENT BEING DROPPED, AND RETAINED ON
@@ -1163,6 +1174,28 @@ function deviceClass(): DeviceClass {
   return 'desktop';
 }
 
+// posthog-js stamps $current_url and $pathname from window.location at
+// capture() time, and properties passed to capture() win its merge. A
+// page_view flushed as the visitor leaves (PageViewTracker, inside the 500ms
+// deadline) is captured after the router has moved, so without this the row
+// says page_location=/nhl/buffalo-sabres but $current_url=/promos/today
+// (measured on the preview 2026-10-20). PostHog-only: GA4 takes page_location
+// itself, and a $-prefixed name is not a GA4 parameter. No URL masking is
+// configured in AnalyticsProvider, so overriding skips no redaction; if
+// mask_personal_data_properties is ever turned on, mask here too.
+function withPageViewUrl(
+  eventName: string,
+  payload: Record<string, unknown>,
+): Record<string, unknown> {
+  if (eventName !== 'page_view' || typeof payload.page_location !== 'string') return payload;
+  try {
+    const url = new URL(payload.page_location);
+    return { ...payload, $current_url: url.href, $pathname: url.pathname };
+  } catch {
+    return payload;
+  }
+}
+
 function currentPath(): string {
   if (typeof window === 'undefined') return '';
   return window.location.pathname + window.location.search;
@@ -1224,7 +1257,11 @@ export function track<E extends AnalyticsEvent>(
   const attribution = readAttribution();
   const enriched = {
     ...(props as Record<string, unknown>),
-    page_path: currentPath(),
+    // Only page_view can carry its own (the type allows it nowhere else).
+    page_path:
+      typeof (props as { page_path?: unknown }).page_path === 'string'
+        ? (props as { page_path: string }).page_path
+        : currentPath(),
     device_class: deviceClass(),
     source: attribution.source,
     source_medium: attribution.source_medium,
@@ -1237,6 +1274,7 @@ export function track<E extends AnalyticsEvent>(
       posthog?: { capture?: (n: string, p?: unknown, o?: unknown) => void };
     }).posthog;
     if (ph && typeof ph.capture === 'function') {
+      const phPayload = withPageViewUrl(eventName, enriched);
       if (
         typeof document !== 'undefined' &&
         document.visibilityState === 'hidden'
@@ -1251,12 +1289,12 @@ export function track<E extends AnalyticsEvent>(
         // preserving the exact pageleave-without-pageview anomaly the flush
         // exists to fix. send_instantly bypasses the batch; sendBeacon
         // survives the unload.
-        ph.capture(eventName, enriched, {
+        ph.capture(eventName, phPayload, {
           transport: 'sendBeacon',
           send_instantly: true,
         });
       } else {
-        ph.capture(eventName, enriched);
+        ph.capture(eventName, phPayload);
       }
     }
   } catch {
