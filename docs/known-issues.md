@@ -3975,3 +3975,15 @@ All three by 2027-03-15, ahead of the April postseason.
 3. WEB6 may then extend the package rule to MLB and NFL pages, gated at the mapper.
 
 **Where.** promo-pipeline `lib/scanner/flag-backing.js`, `lib/scanner/promo-diff.js`, scan-mlb.js, scan-nfl.js; web `mapPromoDoc` and the package grouping (WEB6 G1/G2). Ledger 2026-10-06 (DATA G5).
+
+## 72. GA4 counts every client-side navigation twice while Enhanced Measurement history page views are on
+
+**Status: OPEN (2026-10-20). Severity: Medium. The fix is a GA4 admin setting, not code, and it waits on Matt.**
+
+**What it is.** GA4 Enhanced Measurement "page changes based on browser history events" sends its own `page_view` on every pushState, replaceState and popstate, about 5s later, alongside ours from `PageViewTracker`. `send_page_view: false` in the gtag config does not suppress it. Measured on production 2026-10-20: a card click, a header nav click and Back each produced 2 GA4 page_views and 1 PostHog page_view; a hard load produced 1 of each. The Enhanced Measurement row carries none of our parameters (`surface`, `variant`), so it is easy to tell apart in a hit, but in reports it is just another `page_view`.
+
+**What `fix/page-view-pathname-only` changed on our side (ff3af49).** `PageViewTracker` fires on pathname change only, so the /teams league tabs no longer send ours (they had sent one per click, to both sinks; a /follow footer self-link is excluded by the same rule, by ruling). Every page_view carries explicit `page_location` and `page_referrer` from `components/analytics/page-history.ts`, because GA4's own dl/dr on our hit were wrong on client-side navigations (dr empty on a card click, stale on header nav, the page itself after Back). A visitor who leaves inside the 500ms deadline now gets the pending page_view sent, not dropped. Verified on the preview 2026-10-20: ours correct on hard load, card, header nav, Back and header Teams; 0 of ours on three tab clicks; the fast-leave case sent ours where Enhanced Measurement sent nothing.
+
+**What remains.** With Enhanced Measurement history on, GA4 page_view is still about 2x on SPA navigations, and the /teams tabs still send 1 (Enhanced Measurement's own, on the replaceState). Turning the setting off leaves exactly ours: one per pathname change, none on tab flips, correct referrer. `src/lib/analytics/traffic-classifier.ts` says every GA4 page_view is fired by PageViewTracker; that is false until the setting is off.
+
+**Where.** GA4 Admin > Data streams > Enhanced measurement > Page views > Advanced; `src/components/analytics/PageViewTracker.tsx`, `page-history.ts`, `page-view-deferral.ts`.
