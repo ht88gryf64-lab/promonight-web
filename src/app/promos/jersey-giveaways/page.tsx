@@ -46,7 +46,8 @@ export default async function JerseyGiveawaysPage() {
   // ceremonies on a page titled giveaway nights: 51 of 141 rows on 2026-10-21
   // were type theme ("Caps Holiday Party", "Kopitar Jersey Retirement", "Fourth
   // Wing Ticket Pack"). The keyword still narrows giveaways to apparel. The
-  // homepage tiles that link here count with the same predicate.
+  // homepage tiles and team-page hints that link here count with the same
+  // predicate.
   const jerseys = all.filter(isJerseyHubRow);
 
   const byMonth = new Map<string, typeof jerseys>();

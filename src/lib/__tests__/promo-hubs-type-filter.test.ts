@@ -11,9 +11,8 @@ import { isBobbleheadHubRow, isJerseyHubRow } from '../promo-helpers';
  * "Kopitar Jersey Retirement", a "Fourth Wing Ticket Pack"), and
  * /promos/bobbleheads listed theme nights whose description named a
  * bobblehead. Every count that links to a hub (homepage tiles on both homepage
- * paths) filters with the hub's own predicate, so the number matches the list
- * the link lands on. The team-page "N on this team" hints follow on 2026-10-26,
- * after the team-page freeze (feature/team-hub-card-counts).
+ * paths, team-page "N on this team" hints) filters with the hub's own
+ * predicate, so the number matches the list the link lands on.
  */
 const row = (type: string, title: string, description = '') =>
   ({ type, title, description }) as Parameters<typeof isJerseyHubRow>[0];
@@ -51,6 +50,7 @@ describe('every surface that counts toward a hub uses the hub predicate', () => 
     ['src/app/promos/jersey-giveaways/page.tsx', ['isJerseyHubRow']],
     ['src/components/redesign/home-category-tiles.ts', ['isBobbleheadHubRow', 'isJerseyHubRow']],
     ['src/app/page.tsx', ['isBobbleheadHubRow', 'isJerseyHubRow']],
+    ['src/components/team-related-aggregators.tsx', ['isBobbleheadHubRow', 'isJerseyHubRow']],
   ];
   for (const [path, preds] of surfaces) {
     it(path, () => {

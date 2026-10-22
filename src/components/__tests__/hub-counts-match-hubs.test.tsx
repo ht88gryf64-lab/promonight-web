@@ -6,8 +6,10 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { renderToStaticMarkup } from 'react-dom/server';
 
 import { buildHomeCategoryTiles } from '../redesign/home-category-tiles';
+import { TeamRelatedAggregators } from '../team-related-aggregators';
 import { isBobbleheadHubRow, isJerseyHubRow } from '@/lib/promo-helpers';
 import type { PromoWithTeam } from '@/lib/types';
 
@@ -42,4 +44,17 @@ test('homepage category tiles count the hub rows', () => {
   const tiles = buildHomeCategoryTiles(slate, TODAY);
   assert.equal(tiles.find((t) => t.href === '/promos/jersey-giveaways')?.count, jerseyCount);
   assert.equal(tiles.find((t) => t.href === '/promos/bobbleheads')?.count, bobbleCount);
+});
+
+test('team-page hints state the hub rows', () => {
+  const html = renderToStaticMarkup(<TeamRelatedAggregators promos={slate} variant="light" />);
+  assert.match(html, new RegExp(`href="/promos/jersey-giveaways"[\\s\\S]*?${jerseyCount} on this team`));
+  assert.match(html, new RegExp(`href="/promos/bobbleheads"[\\s\\S]*?${bobbleCount} on this team`));
+});
+
+test('a team whose only keyword rows are theme nights shows no hub card', () => {
+  const themeOnly = slate.filter((p) => p.type === 'theme');
+  const html = renderToStaticMarkup(<TeamRelatedAggregators promos={themeOnly} />);
+  assert.doesNotMatch(html, /\/promos\/jersey-giveaways/);
+  assert.doesNotMatch(html, /\/promos\/bobbleheads/);
 });
