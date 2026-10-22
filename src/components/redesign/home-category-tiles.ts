@@ -1,6 +1,7 @@
 import type { PromoWithTeam } from '@/lib/types';
 import type { CollectionTileTapProperties } from '@/lib/analytics';
 import { isSoccerJerseyPromo } from '@/lib/soccer-jersey';
+import { isBobbleheadHubRow, isJerseyHubRow } from '@/lib/promo-helpers';
 
 // The redesigned category grid: 7 tiles, one per real aggregator route, per
 // the design target's audit correction 3 ("Hot this week" was cut because it
@@ -42,11 +43,8 @@ function plusDays(ymd: string, n: number): string {
   return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`;
 }
 
-// Destination filters, mirrored:
-//  - /promos/bobbleheads re at bobbleheads/page.tsx:35
-//  - /promos/jersey-giveaways re at jersey-giveaways/page.tsx:33
-const BOBBLEHEAD_RE = /bobblehead/i;
-const JERSEY_RE = /\b(jersey|jerseys|cap|caps|hat|hats|jacket|jackets|shirt|shirts|hoodie|hoodies)\b/i;
+// Destination filters, shared rather than mirrored: /promos/bobbleheads and
+// /promos/jersey-giveaways filter with these same predicates (promo-helpers.ts).
 
 export function buildHomeCategoryTiles(
   allFuture: PromoWithTeam[],
@@ -83,7 +81,7 @@ export function buildHomeCategoryTiles(
       blurb: 'Bobblehead nights on record',
       href: '/promos/bobbleheads',
       ink: '#a35a08',
-      match: (p) => BOBBLEHEAD_RE.test(p.title) || BOBBLEHEAD_RE.test(p.description),
+      match: isBobbleheadHubRow,
     },
     {
       key: 'theme-nights',
@@ -102,7 +100,7 @@ export function buildHomeCategoryTiles(
       blurb: 'Wear it home from the game',
       href: '/promos/jersey-giveaways',
       ink: '#a35a08',
-      match: (p) => JERSEY_RE.test(p.title) || JERSEY_RE.test(p.description),
+      match: isJerseyHubRow,
     },
     {
       key: 'soccer-jerseys',
