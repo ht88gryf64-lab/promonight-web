@@ -42,7 +42,11 @@ export const metadata: Metadata = {
 export default async function JerseyGiveawaysPage() {
   const all = await getPromosFromDate(todayYMD());
   const re = /\b(jersey|jerseys|cap|caps|hat|hats|jacket|jackets|shirt|shirts|hoodie|hoodies)\b/i;
-  const jerseys = all.filter((p) => re.test(p.title) || re.test(p.description));
+  // GIVEAWAY ROWS ONLY (2026-10-21). The keyword alone listed theme nights and
+  // ceremonies on a page titled giveaway nights: 51 of 141 rows on 2026-10-21
+  // were type theme ("Caps Holiday Party", "Kopitar Jersey Retirement", "Fourth
+  // Wing Ticket Pack"). The keyword still narrows giveaways to apparel.
+  const jerseys = all.filter((p) => p.type === 'giveaway' && (re.test(p.title) || re.test(p.description)));
 
   const byMonth = new Map<string, typeof jerseys>();
   for (const p of jerseys) {
@@ -67,7 +71,7 @@ export default async function JerseyGiveawaysPage() {
     {
       question: 'What counts as a jersey giveaway?',
       answer:
-        'This page pulls any promo whose title or description includes jersey, cap, hat, jacket, shirt, or hoodie. That covers replica jerseys, rally caps, hoodie nights, and novelty apparel like Hawaiian shirts.',
+        'This page lists giveaway nights whose title or description includes jersey, cap, hat, jacket, shirt, or hoodie. That covers replica jerseys, rally caps, hoodie nights, and novelty apparel like Hawaiian shirts. Theme nights and ceremonies without a giveaway are not listed.',
     },
     {
       question: 'Are jersey giveaways limited to certain sections?',

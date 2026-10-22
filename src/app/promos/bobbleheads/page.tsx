@@ -54,12 +54,16 @@ export default async function BobbleheadsPage() {
   // ones drive the month groups exactly as before.
   const all = await getPromosFromDate(LIST_FROM);
   const re = /bobblehead/i;
-  const bobbleheads = all.filter((p) => re.test(p.title) || re.test(p.description));
-  // The LIST above stays deliberately loose — a theme night whose description
-  // names a bobblehead is still worth showing a fan. Every published NUMBER,
-  // though, comes from the strict population, because "347 bobblehead
-  // giveaways" was counting description-only mentions and purchase-gated ticket
-  // packages as giveaways.
+  // GIVEAWAY ROWS ONLY (2026-10-21, Matt). The list used to be deliberately
+  // loose, showing theme nights whose description names a bobblehead, on a page
+  // titled bobblehead giveaways. It now requires type giveaway as well; on
+  // 2026-10-21 that removed 4 upcoming rows (washington-capitals "Star Wars
+  // Night", a ticket-package bobblehead) and 36 past ones.
+  const bobbleheads = all.filter((p) => p.type === 'giveaway' && (re.test(p.title) || re.test(p.description)));
+  // Every published NUMBER still comes from the strict population: a giveaway
+  // whose TITLE names a bobblehead and that is not purchase-gated. The list is
+  // wider than that count by description-only mentions and gated giveaways,
+  // because "347 bobblehead giveaways" once counted both.
   const strict = strictBobbleheadGiveaways(all);
   const strictCount = strict.length;
   const byTeam = new Map<string, number>();
@@ -97,7 +101,7 @@ export default async function BobbleheadsPage() {
   const faqs = [
     {
       question: `How many bobblehead giveaways are there ${strictPeriod}?`,
-      answer: `PromoNight has ${strictCount} bobblehead giveaway${strictCount !== 1 ? 's' : ''} on record across the ${numberWord(c.leagueCount)} major pro leagues ${strictPeriod}, counting only free gate giveaways whose title names a bobblehead. MLB teams schedule most of them. The list below is wider than that count: it also shows theme nights that include a bobblehead and nights where the figurine comes with a ticket package.`,
+      answer: `PromoNight has ${strictCount} bobblehead giveaway${strictCount !== 1 ? 's' : ''} on record across the ${numberWord(c.leagueCount)} major pro leagues ${strictPeriod}, counting only free gate giveaways whose title names a bobblehead. MLB teams schedule most of them. The list below is a little wider than that count: it also shows giveaway nights whose description, not title, names a bobblehead, and giveaways where the figurine comes with a ticket package.`,
     },
     {
       question: 'How do I get a bobblehead at a game?',
