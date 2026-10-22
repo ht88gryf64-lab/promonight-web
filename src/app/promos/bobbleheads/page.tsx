@@ -1,4 +1,4 @@
-import { splitPromosByDate, strictBobbleheadGiveaways, teamDisplayName } from '@/lib/promo-helpers';
+import { isBobbleheadHubRow, splitPromosByDate, strictBobbleheadGiveaways, teamDisplayName } from '@/lib/promo-helpers';
 import type { Metadata } from 'next';
 import { getCoverageCounts } from '@/lib/get-coverage-counts';
 import { numberWord } from '@/lib/coverage-counts';
@@ -53,13 +53,14 @@ export default async function BobbleheadsPage() {
   // bobbleheads feed the past ("Already happened") resale section while upcoming
   // ones drive the month groups exactly as before.
   const all = await getPromosFromDate(LIST_FROM);
-  const re = /bobblehead/i;
   // GIVEAWAY ROWS ONLY (2026-10-21, Matt). The list used to be deliberately
   // loose, showing theme nights whose description names a bobblehead, on a page
   // titled bobblehead giveaways. It now requires type giveaway as well; on
-  // 2026-10-21 that removed 4 upcoming rows (washington-capitals "Star Wars
-  // Night", a ticket-package bobblehead) and 36 past ones.
-  const bobbleheads = all.filter((p) => p.type === 'giveaway' && (re.test(p.title) || re.test(p.description)));
+  // 2026-10-21 that removed 4 upcoming theme rows (Sesame Street Day, Kids
+  // Night with Peanuts, Devils Fan Appreciation Night, Capitals Star Wars
+  // Night) and 36 past ones. The homepage tiles and team-page hints that link
+  // here count with the same predicate.
+  const bobbleheads = all.filter(isBobbleheadHubRow);
   // Every published NUMBER still comes from the strict population: a giveaway
   // whose TITLE names a bobblehead and that is not purchase-gated. The list is
   // wider than that count by description-only mentions and gated giveaways,

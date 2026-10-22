@@ -4,6 +4,7 @@ import { pageOpenGraph } from '@/lib/og';
 import Link from 'next/link';
 import { IconChevronRight } from '@tabler/icons-react';
 import { getPromosFromDate } from '@/lib/data';
+import { isJerseyHubRow } from '@/lib/promo-helpers';
 import { AggregatorPage, AggregatorJsonLd, type AggregatorGroup } from '@/components/aggregator-layout';
 import { siteTodayYmd } from '@/lib/site-today';
 import { crossLeagueSeasonLabel, scheduledPeriodPhrase, seasonSpan } from '@/lib/season-label';
@@ -41,12 +42,13 @@ export const metadata: Metadata = {
 
 export default async function JerseyGiveawaysPage() {
   const all = await getPromosFromDate(todayYMD());
-  const re = /\b(jersey|jerseys|cap|caps|hat|hats|jacket|jackets|shirt|shirts|hoodie|hoodies)\b/i;
   // GIVEAWAY ROWS ONLY (2026-10-21). The keyword alone listed theme nights and
   // ceremonies on a page titled giveaway nights: 51 of 141 rows on 2026-10-21
   // were type theme ("Caps Holiday Party", "Kopitar Jersey Retirement", "Fourth
-  // Wing Ticket Pack"). The keyword still narrows giveaways to apparel.
-  const jerseys = all.filter((p) => p.type === 'giveaway' && (re.test(p.title) || re.test(p.description)));
+  // Wing Ticket Pack"). The keyword still narrows giveaways to apparel. The
+  // homepage tiles and team-page hints that link here count with the same
+  // predicate.
+  const jerseys = all.filter(isJerseyHubRow);
 
   const byMonth = new Map<string, typeof jerseys>();
   for (const p of jerseys) {

@@ -223,6 +223,33 @@ export function strictBobbleheadGiveaways<T extends Pick<Promo, 'type' | 'title'
   );
 }
 
+/** The apparel keyword behind /promos/jersey-giveaways, plural forms included. */
+export const APPAREL_RE = /\b(jersey|jerseys|cap|caps|hat|hats|jacket|jackets|shirt|shirts|hoodie|hoodies)\b/i;
+
+type HubRow = Pick<Promo, 'type' | 'title' | 'description'>;
+
+/**
+ * THE row filter of the /promos/bobbleheads LIST, and of every count that links
+ * to it (homepage tiles, team-page "N on this team" hints). Wider than
+ * strictBobbleheadGiveaways, which feeds the page's published number: a
+ * description-only mention and a ticket-package figurine are listed, a theme
+ * night is not (2026-10-21, giveaway rows only). A count that links here and
+ * filters differently promises a list the reader will not find.
+ */
+export function isBobbleheadHubRow(p: HubRow): boolean {
+  return p.type === 'giveaway' && (BOBBLEHEAD_RE.test(p.title ?? '') || BOBBLEHEAD_RE.test(p.description ?? ''));
+}
+
+/**
+ * THE row filter of /promos/jersey-giveaways and of every count that links to
+ * it. Giveaway rows only: the keyword alone listed theme nights and ceremonies
+ * ("Caps Holiday Party", "Kopitar Jersey Retirement"), 51 of 141 rows on
+ * 2026-10-21.
+ */
+export function isJerseyHubRow(p: HubRow): boolean {
+  return p.type === 'giveaway' && (APPAREL_RE.test(p.title ?? '') || APPAREL_RE.test(p.description ?? ''));
+}
+
 /**
  * Rows that are a TICKET MECHANIC rather than a promotional event.
  *

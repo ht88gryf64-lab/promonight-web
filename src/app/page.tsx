@@ -13,6 +13,7 @@ import {
 import type { GameContext } from '@/lib/data';
 import { SITE_TIME_ZONE, addDaysYmd, siteTodayYmd } from '@/lib/site-today';
 import type { PromoWithTeam, Team } from '@/lib/types';
+import { isBobbleheadHubRow, isJerseyHubRow } from '@/lib/promo-helpers';
 import { TonightStrip, pickHeroBuckets } from '@/components/tonight-strip';
 import { ThisWeekStrip } from '@/components/this-week-strip';
 import { BrowseCollections, type CollectionTile } from '@/components/browse-collections';
@@ -58,8 +59,6 @@ function formatSiteLong(ymd: string): string {
   });
 }
 
-const BOBBLEHEAD_RE = /bobblehead/i;
-const JERSEY_RE = /\b(jersey|jerseys|cap|caps|hat|hats|jacket|jackets|shirt|shirts|hoodie|hoodies)\b/i;
 const FIREWORKS_RE = /fireworks|postgame concert|post-game concert|pyro|light show/i;
 
 function topExamples(
@@ -88,12 +87,9 @@ function topExamples(
 }
 
 function buildCollectionTiles(allFuture: PromoWithTeam[]): CollectionTile[] {
-  const bobbleheads = allFuture.filter(
-    (p) => BOBBLEHEAD_RE.test(p.title) || BOBBLEHEAD_RE.test(p.description),
-  );
-  const jerseys = allFuture.filter(
-    (p) => JERSEY_RE.test(p.title) || JERSEY_RE.test(p.description),
-  );
+  // The destination pages' own row filters, so each count is the list it links to.
+  const bobbleheads = allFuture.filter(isBobbleheadHubRow);
+  const jerseys = allFuture.filter(isJerseyHubRow);
   const themes = allFuture.filter((p) => p.type === 'theme');
   const fireworks = themes.filter(
     (p) => FIREWORKS_RE.test(p.title) || FIREWORKS_RE.test(p.description),
