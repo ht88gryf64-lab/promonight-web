@@ -230,7 +230,7 @@ type HubRow = Pick<Promo, 'type' | 'title' | 'description'>;
 
 /**
  * THE row filter of the /promos/bobbleheads LIST, and of every count that links
- * to it (homepage tiles, team-page "N on this team" hints). Wider than
+ * to it (the homepage tiles). Wider than
  * strictBobbleheadGiveaways, which feeds the page's published number: a
  * description-only mention and a ticket-package figurine are listed, a theme
  * night is not (2026-10-21, giveaway rows only). A count that links here and

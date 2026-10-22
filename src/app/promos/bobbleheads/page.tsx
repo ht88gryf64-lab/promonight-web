@@ -58,8 +58,8 @@ export default async function BobbleheadsPage() {
   // titled bobblehead giveaways. It now requires type giveaway as well; on
   // 2026-10-21 that removed 4 upcoming theme rows (Sesame Street Day, Kids
   // Night with Peanuts, Devils Fan Appreciation Night, Capitals Star Wars
-  // Night) and 36 past ones. The homepage tiles and team-page hints that link
-  // here count with the same predicate.
+  // Night) and 36 past ones. The homepage tiles that link here count with the
+  // same predicate.
   const bobbleheads = all.filter(isBobbleheadHubRow);
   // Every published NUMBER still comes from the strict population: a giveaway
   // whose TITLE names a bobblehead and that is not purchase-gated. The list is
