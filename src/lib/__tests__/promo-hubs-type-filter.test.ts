@@ -64,7 +64,7 @@ describe('every surface that counts toward a hub uses the hub predicate', () => 
   it('the hub FAQ copy describes the giveaway-only list', () => {
     const jersey = code('src/app/promos/jersey-giveaways/page.tsx');
     assert.doesNotMatch(jersey, /pulls any promo/);
-    assert.match(jersey, /Theme nights and ceremonies without a giveaway are not listed\./);
+    assert.match(jersey, /A theme night that includes apparel as part of the night is listed on the theme nights page rather than here\./);
     const bobble = code('src/app/promos/bobbleheads/page.tsx');
     assert.doesNotMatch(bobble, /it also shows theme nights/);
     // The published count still comes from the strict population.

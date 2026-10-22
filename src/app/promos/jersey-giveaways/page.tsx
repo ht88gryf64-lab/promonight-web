@@ -73,7 +73,7 @@ export default async function JerseyGiveawaysPage() {
     {
       question: 'What counts as a jersey giveaway?',
       answer:
-        'This page lists giveaway nights whose title or description includes jersey, cap, hat, jacket, shirt, or hoodie. That covers replica jerseys, rally caps, hoodie nights, and novelty apparel like Hawaiian shirts. Theme nights and ceremonies without a giveaway are not listed.',
+        'This page lists giveaway nights whose title or description includes jersey, cap, hat, jacket, shirt, or hoodie. That covers replica jerseys, rally caps, hoodie nights, and novelty apparel like Hawaiian shirts. A theme night that includes apparel as part of the night is listed on the theme nights page rather than here.',
     },
     {
       question: 'Are jersey giveaways limited to certain sections?',
