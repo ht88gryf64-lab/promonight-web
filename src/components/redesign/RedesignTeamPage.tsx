@@ -16,6 +16,7 @@ import { DivisionRivals } from './DivisionRivals';
 import { getDivisionRivals } from '@/lib/division-rivals';
 import { teamTitleSubtitle } from '@/lib/title-treatment';
 import { seasonClaimSentence, type ClaimMode } from '@/lib/season-scope';
+import { recurringFoodDealCount, recurringNoteTail } from '@/lib/recurring-deal-copy';
 import { scheduleStatusLine, statusLineSaysNothingAnnounced } from '@/lib/announcement-status';
 import { isSplitSeasonLeague } from '@/lib/season-label';
 import { UpcomingPromoModalProvider } from './UpcomingPromoModal';
@@ -102,6 +103,10 @@ export interface RedesignTeamPageProps {
  * trackers, TeamContentSections question-H2s, TeamFAQ, the five AdSlots, the full
  * PromoList) are preserved and rendered in their light variants.
  */
+function withRecurringFood(counts: Record<PromoType, number>, recurringFood: number): Record<PromoType, number> {
+  return recurringFood > 0 ? { ...counts, food: counts.food + recurringFood } : counts;
+}
+
 export function RedesignTeamPage({
   team,
   coverage,
@@ -177,6 +182,12 @@ export function RedesignTeamPage({
     upcomingCounts.food === 0 &&
     upcomingCounts.kids === 0;
   const hasNoPromosAtAll = promos.length === 0;
+  // Recurring food and drink records the hero's Food Deals tile adds (display
+  // only), leaving out any deal the tile already counts as dated food rows.
+  const recurringFood = recurringFoodDealCount(
+    recurringDeals,
+    (seasonScope ? seasonScope.promos : upcomingPromos).filter((p) => p.type === 'food'),
+  );
   // The regular season, one entry per game (src/lib/schedule-months.ts): the
   // population the schedule list prints and the Games tile counts. Gating the
   // schedule on it, not on the raw docs, keeps the season slot from rendering
@@ -194,6 +205,8 @@ export function RedesignTeamPage({
     seasonResolved: !!seasonScope,
     hasTicketPackages: ticketPackages.length > 0,
     hasOtherPromos: (inPlayoffs && playoffPromos.length > 0) || recurringDeals.length > 0,
+    hasPlayoffPromos: inPlayoffs && playoffPromos.length > 0,
+    recurringDealCount: recurringDeals.length,
     teamId: team.id,
     displayName,
     today,
@@ -372,14 +385,20 @@ export function RedesignTeamPage({
         venueLine={venue?.name ?? undefined}
         scoreboard={
           <StatScoreboard
-            counts={seasonScope ? seasonScope.counts : upcomingCounts}
+            // The Food Deals tile also counts recurring food and drink records,
+            // so a page showing a recurring deal never reads "0 Food Deals"
+            // above it (discovery-apply 2026-10-24). DISPLAY ONLY: upcomingCounts
+            // and hasNoUpcoming, which gate the layout, are untouched. On a
+            // season page the note names the added records, because the note
+            // names the population the tiles count.
+            counts={withRecurringFood(seasonScope ? seasonScope.counts : upcomingCounts, recurringFood)}
             // Regular-season games, one per game: the population the
             // schedule list prints, from the same helper, so the tile and the
             // list cannot disagree. Was the raw doc count, which read 168 on
             // the Braves (3 Wild Card games, 3 postponed originals).
             gamesCount={regularGames?.length}
             {...(isSplitSeasonLeague(team.league) ? { gamesLabel: 'Scheduled games' } : {})}
-            note={seasonScope ? seasonClaimSentence(seasonScope) : undefined}
+            note={seasonScope ? seasonClaimSentence(seasonScope) + recurringNoteTail(recurringFood) : undefined}
           />
         }
       />
