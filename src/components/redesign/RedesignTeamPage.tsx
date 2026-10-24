@@ -182,8 +182,12 @@ export function RedesignTeamPage({
     upcomingCounts.food === 0 &&
     upcomingCounts.kids === 0;
   const hasNoPromosAtAll = promos.length === 0;
-  // Recurring food and drink records the hero's Food Deals tile adds (display only).
-  const recurringFood = recurringFoodDealCount(recurringDeals);
+  // Recurring food and drink records the hero's Food Deals tile adds (display
+  // only), leaving out any deal the tile already counts as dated food rows.
+  const recurringFood = recurringFoodDealCount(
+    recurringDeals,
+    (seasonScope ? seasonScope.promos : upcomingPromos).filter((p) => p.type === 'food'),
+  );
   // The regular season, one entry per game (src/lib/schedule-months.ts): the
   // population the schedule list prints and the Games tile counts. Gating the
   // schedule on it, not on the raw docs, keeps the season slot from rendering

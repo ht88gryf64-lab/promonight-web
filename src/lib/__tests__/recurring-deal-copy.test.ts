@@ -49,3 +49,14 @@ test('the note tail names the records the tile adds, and is empty when it adds n
   assert.equal(recurringNoteTail(1), ', plus 1 recurring food deal');
   assert.equal(recurringNoteTail(3), ', plus 3 recurring food deals');
 });
+
+test('a recurring deal already counted as dated food rows is not counted twice', () => {
+  // Real pairs stored on 2026-10-24.
+  assert.equal(recurringFoodDealCount([deal('food', '$5 Tuesday', 'Every Tuesday home game')], [{ title: '$5 Tuesday' }]), 0);
+  assert.equal(
+    recurringFoodDealCount([deal('food', "Taco Tuesday presented by Tito's", 'Every Tuesday home game')], [{ title: 'Taco Tuesday' }]),
+    0,
+  );
+  // A different dated food deal does not suppress it.
+  assert.equal(recurringFoodDealCount([deal('food', 'Popcorn TWOsday', 'Every Tuesday home game')], [{ title: 'Dollar Dog Night' }]), 1);
+});

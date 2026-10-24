@@ -2,7 +2,7 @@
 //
 // WHY THIS EXISTS (discovery-apply, 2026-10-24). The section was headed "Every
 // home game / EVERY GAME DEALS" and its lead said the deals "happen at <team>
-// home games". On 2026-10-24 that heading sat over 22 records on 21 pages and
+// home games". On 2026-10-24 that heading sat over 33 records on 21 pages and
 // NONE of them ran at every home game: every stored frequency was a weekday
 // ("Every Tuesday home game"), a short list ("Select home games (3 dates)") or
 // "Most Sunday home games". The Knicks' first recurring deal, Popcorn TWOsday,
@@ -15,14 +15,39 @@
 // into recurring records (collapse-recurring.js COLLAPSE_ELIGIBLE_TYPES), and
 // splits them into food and drink by keyword. The kids category is left out:
 // its stored titles are activities ("Kids Run the Bases", "KidsFest").
+//
+// NO DOUBLE COUNT. On 2026-10-24, 18 of the 34 stored recurring records sat on
+// a page that ALSO carried the same deal as dated food rows (older scans wrote
+// "$5 Tuesday" dated before the collapse existed), and the tile already counts
+// those rows. A record is added only when no dated food row in the population
+// the tile counts names the same deal.
 import type { RecurringDeal, RecurringDealCategory } from './recurring-deals';
 
 /** Categories that count as a food deal on the hero tile. */
 const FOOD_DEAL_CATEGORIES: ReadonlySet<RecurringDealCategory> = new Set(['food', 'drink']);
 
-/** Recurring records the Food Deals tile adds to its dated count. */
-export function recurringFoodDealCount(deals: readonly RecurringDeal[]): number {
-  return deals.filter((d) => FOOD_DEAL_CATEGORIES.has(d.category)).length;
+const PRESENTER_RE = /\s*[,:-]?\s*\b(?:presented|sponsored|powered)\s+by\b.*$/i;
+
+/** Lowercased letters, digits and single spaces, presenter clause dropped. */
+function dealKey(title: string): string {
+  return title.replace(PRESENTER_RE, '').toLowerCase().replace(/[^a-z0-9$ ]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Recurring records the Food Deals tile adds to its dated count: food and drink
+ * records whose deal is not already a dated food row in `datedFood`, the rows
+ * the tile counts. Same deal = one normalized title contains the other.
+ */
+export function recurringFoodDealCount(
+  deals: readonly RecurringDeal[],
+  datedFood: readonly { title: string }[] = [],
+): number {
+  const dated = datedFood.map((p) => dealKey(p.title)).filter(Boolean);
+  return deals.filter((d) => {
+    if (!FOOD_DEAL_CATEGORIES.has(d.category)) return false;
+    const k = dealKey(d.title);
+    return !k || !dated.some((t) => t.includes(k) || k.includes(t));
+  }).length;
 }
 
 const EVERY_GAME_RE = /^every\s+home\s+game$/i;
