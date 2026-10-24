@@ -1,6 +1,7 @@
 import { IconCup, IconBeer, IconBalloon, IconTicket, IconMusic } from '@tabler/icons-react';
 import type { Team } from '@/lib/types';
 import { iconFor, type RecurringDeal, type RecurringDealCategory } from '@/lib/recurring-deals';
+import { recurringSectionCopy } from '@/lib/recurring-deal-copy';
 
 // Recurring-deal category → Tabler icon for the LIGHT template. The dark
 // (gate-off) template keeps the emoji from iconFor() unchanged.
@@ -29,6 +30,8 @@ export function RecurringDealsSection({
   variant?: 'dark' | 'light';
 }) {
   if (deals.length === 0) return null;
+  // Derived from the records, never asserted: see src/lib/recurring-deal-copy.ts.
+  const copy = recurringSectionCopy(deals, team.name, venueName);
 
   if (variant === 'light') {
     return (
@@ -36,13 +39,13 @@ export function RecurringDealsSection({
         <div className="max-w-3xl mx-auto">
           <div className="mb-5">
             <span className="font-rd text-[11px] uppercase tracking-[0.14em] text-rd-ink-faint">
-              Every home game
+              {copy.kicker}
             </span>
             <h2 className="rd-display text-3xl md:text-4xl text-rd-ink mt-1">
-              EVERY GAME DEALS
+              {copy.title}
             </h2>
             <p className="text-rd-ink-soft text-sm mt-2">
-              Recurring food, drink, and family deals that happen at {team.name} home games{venueName ? ` at ${venueName}` : ''}, regardless of the promo calendar.
+              {copy.lead}
             </p>
           </div>
 
@@ -79,13 +82,13 @@ export function RecurringDealsSection({
       <div className="max-w-3xl mx-auto">
         <div className="mb-5">
           <span className="font-mono text-[10px] tracking-[1.5px] uppercase text-accent-red">
-            Every home game
+            {copy.kicker}
           </span>
           <h2 className="font-display text-3xl md:text-4xl tracking-[1px] mt-1">
-            EVERY GAME DEALS
+            {copy.title}
           </h2>
           <p className="text-text-secondary text-sm mt-2">
-            Recurring food, drink, and family deals that happen at {team.name} home games{venueName ? ` at ${venueName}` : ''}, regardless of the promo calendar.
+            {copy.lead}
           </p>
         </div>
 

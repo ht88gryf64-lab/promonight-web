@@ -68,6 +68,27 @@ export const NOTHING_PUBLISHED: Readonly<Record<string, string>> = {
   'utah-hockey-club': '2026-10-05',
 };
 
+/**
+ * Clubs verified on the given date to have published NO dated promotion for
+ * the season (no giveaway, theme, food or kids night), only the recurring deal
+ * records the page shows in its recurring-deals section. Same expiry as
+ * NOTHING_PUBLISHED (VERIFIED_FOR_DAYS), same dated sentence, for the same
+ * reason: it is a claim about a real organization and a club can publish any
+ * day.
+ *
+ * Evidence, 2026-10-24 (discovery-apply; promonight-web
+ * docs/discovery-2026-10-24/evidence/nba-new-york-knicks.json and the verified
+ * re-fetch in phase3-verification.json): new-york-knicks publishes one 2026-27
+ * promotion, Popcorn TWOsday (/knicks/popcorn-twosday, $2 popcorn at the 7
+ * Tuesday regular-season home games). /knicks/tickets/theme-nights rendered
+ * "no games that match this filter combination", every home game's promotion
+ * field in the schedule data is empty, and no 2026-27 promo article exists in
+ * the news sitemap.
+ */
+export const RECURRING_ONLY_PUBLISHED: Readonly<Record<string, string>> = {
+  'new-york-knicks': '2026-10-24',
+};
+
 /** YYYY-MM-DD plus n days, without a clock or a zone. */
 function addDays(ymd: string, n: number): string {
   const [y, m, d] = ymd.split('-').map(Number);
@@ -82,7 +103,15 @@ function addDays(ymd: string, n: number): string {
  * SERVED_STALE_DAYS - 1; the last day a visitor can see it is one day later.
  */
 export function nothingPublishedVerified(teamId: string, today: string): boolean {
-  const on = NOTHING_PUBLISHED[teamId];
+  return withinVerification(NOTHING_PUBLISHED[teamId], today);
+}
+
+/** Whether the "recurring deals only" claim may be rendered today. */
+export function recurringOnlyVerified(teamId: string, today: string): boolean {
+  return withinVerification(RECURRING_ONLY_PUBLISHED[teamId], today);
+}
+
+function withinVerification(on: string | undefined, today: string): boolean {
   if (!on || !/^\d{4}-\d{2}-\d{2}$/.test(today)) return false;
   return today >= on && today < addDays(on, VERIFIED_FOR_DAYS - SERVED_STALE_DAYS);
 }
@@ -125,6 +154,10 @@ type StatusLineOpts = {
    *  "Hasn't recorded any ... promotions" would sit next to them (review
    *  round 3), so the line is left off. */
   hasOtherPromos?: boolean;
+  /** Of those, the page shows playoff promos. */
+  hasPlayoffPromos?: boolean;
+  /** Of those, how many recurring deal records the page shows. */
+  recurringDealCount?: number;
   teamId: string;
   displayName: string;
   today: string;
@@ -148,6 +181,18 @@ export function statusLineSaysNothingAnnounced(opts: StatusLineOpts): boolean {
  */
 export function scheduleStatusLine(opts: StatusLineOpts): string | null {
   if (!opts.showSchedule || opts.seasonResolved || !isSplitSeasonLeague(opts.league)) return null;
-  if (opts.hasOtherPromos) return null;
+  if (opts.hasOtherPromos) {
+    // A club verified to publish recurring deals and nothing dated: the one
+    // true sentence about the club, said once, beside the deal it names. Any
+    // playoff promo or package row, or a lapsed check, and the line stays off
+    // as before.
+    const n = opts.recurringDealCount ?? 0;
+    if (n > 0 && !opts.hasPlayoffPromos && !opts.hasTicketPackages && recurringOnlyVerified(opts.teamId, opts.today)) {
+      const season = splitSeasonLabel(SPLIT_SEASON_START_YEAR);
+      const deals = n === 1 ? 'The recurring deal they list is' : 'The recurring deals they list are';
+      return `The ${opts.displayName} haven't announced ${season} giveaways or theme nights yet (checked ${checkedLabel(RECURRING_ONLY_PUBLISHED[opts.teamId])}). ${deals} on this page.`;
+    }
+    return null;
+  }
   return announcementLine(opts.teamId, opts.displayName, opts.today, { hasTicketPackages: opts.hasTicketPackages });
 }
