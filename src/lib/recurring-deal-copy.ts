@@ -33,10 +33,25 @@ function dealKey(title: string): string {
   return title.replace(PRESENTER_RE, '').toLowerCase().replace(/[^a-z0-9$ ]/g, '').replace(/\s+/g, ' ').trim();
 }
 
+/** Connectives that carry no deal identity. Every other word is distinctive. */
+const NON_DISTINCTIVE = new Set(['a', 'an', 'and', 'the', 'of', 'at', 'with', 'for', 'on']);
+
+/** True when every distinctive word of the recurring title is a word of the
+ *  dated title: "$2 Happy Hour" is covered by "$2 Beers & Happy Hour"
+ *  (Twins, PR #29 review, 2026-10-24), though neither string contains the
+ *  other. */
+function wordsCovered(recurringKey: string, datedKey: string): boolean {
+  const words = recurringKey.split(' ').filter((w) => w && !NON_DISTINCTIVE.has(w));
+  if (words.length === 0) return false;
+  const dated = new Set(datedKey.split(' '));
+  return words.every((w) => dated.has(w));
+}
+
 /**
  * Recurring records the Food Deals tile adds to its dated count: food and drink
  * records whose deal is not already a dated food row in `datedFood`, the rows
- * the tile counts. Same deal = one normalized title contains the other.
+ * the tile counts. Same deal = one normalized title contains the other, or
+ * every distinctive word of the recurring title appears in the dated one.
  */
 export function recurringFoodDealCount(
   deals: readonly RecurringDeal[],
@@ -46,7 +61,7 @@ export function recurringFoodDealCount(
   return deals.filter((d) => {
     if (!FOOD_DEAL_CATEGORIES.has(d.category)) return false;
     const k = dealKey(d.title);
-    return !k || !dated.some((t) => t.includes(k) || k.includes(t));
+    return !k || !dated.some((t) => t.includes(k) || k.includes(t) || wordsCovered(k, t));
   }).length;
 }
 

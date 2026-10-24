@@ -60,3 +60,17 @@ test('a recurring deal already counted as dated food rows is not counted twice',
   // A different dated food deal does not suppress it.
   assert.equal(recurringFoodDealCount([deal('food', 'Popcorn TWOsday', 'Every Tuesday home game')], [{ title: 'Dollar Dog Night' }]), 1);
 });
+
+test('a dated title covers a recurring title holding all of its distinctive words (Twins, PR #29)', () => {
+  // The real Twins rows stored on 2026-10-24: one dated row, three recurring records.
+  const twinsDated = [{ title: '$2 Beers & Happy Hour' }];
+  const twins = [
+    deal('drink', '$2 Beers', 'Every Saturday home game'),
+    deal('drink', '$2 Happy Hour', 'Every Friday home game'),
+    deal('food', 'Dollar-A-Dog Day', 'Every Tuesday home game'),
+  ];
+  // "$2 Beers" by containment, "$2 Happy Hour" by word cover; only the dog deal adds.
+  assert.equal(recurringFoodDealCount(twins, twinsDated), 1);
+  // A shared connective or price alone is not cover.
+  assert.equal(recurringFoodDealCount([deal('drink', '$2 Margaritas', 'Every Friday home game')], twinsDated), 1);
+});
