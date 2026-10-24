@@ -1,0 +1,107 @@
+{
+  "team": "golden-state-warriors",
+  "league": "NBA",
+  "label": "UNDERCOUNT",
+  "ourCount": 13,
+  "officialDatedCount": 16,
+  "delta": 3,
+  "officialDomain": "www.nba.com/warriors",
+  "bestSourceUrls": [
+    "https://www.nba.com/warriors/tickets/promotions",
+    "https://www.nba.com/warriors/news/warriors-announce-2026-27-promotional-schedule-20260930"
+  ],
+  "shape": "client-rendered promo schedule; press release subset; ticket-package grid",
+  "undatedCount": 0,
+  "samples": [
+    {
+      "title": "Golden Dubs Bobblehead, first 10,000 fans",
+      "date": "2026-12-01",
+      "url": "https://www.nba.com/warriors/tickets/promotions"
+    },
+    {
+      "title": "Warriors beanie, all fans, presented by Chase Freedom",
+      "date": "2026-12-25",
+      "url": "https://www.nba.com/warriors/tickets/promotions"
+    },
+    {
+      "title": "Warriors Mahjong Magnet Set, first 10,000 fans",
+      "date": "2027-02-17",
+      "url": "https://www.nba.com/warriors/tickets/promotions"
+    }
+  ],
+  "exclusions": "Dates 'Mon. D' with year inferred, matched to homegames-nba.json regular-season games; preseason Nellie Night (Oct 6) excluded by type=preseason. Ticket-package entries (special event link) reported separately: 6 on the promotions page, 41 on the group page.",
+  "recommendedConfig": "multi-URL",
+  "credits": {
+    "map": 0,
+    "scrape": 1,
+    "total": 1
+  },
+  "notes": "Official open dated = 13 rendered open giveaways + Apr 11 Fan Night bag + 2 undescribed entries = 16 vs our 13. The configured press release only has 8; add https://www.nba.com/warriors/tickets/promotions (needs a rendering fetch). The rendered page may be truncated after Mar 19.",
+  "urlsTried": [
+    {
+      "url": "https://www.nba.com/sitemap_team_warriors_index.xml (base + news)",
+      "method": "sitemap",
+      "http": 200,
+      "shape": "sitemap",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "searched for promo vocabulary"
+    },
+    {
+      "url": "https://www.nba.com/warriors/news/warriors-announce-2026-27-promotional-schedule-20260930",
+      "method": "curl",
+      "http": 200,
+      "shape": "press release 2026-09-30",
+      "datedCurrentSeason": 8,
+      "undatedRefs": 0,
+      "note": "8 giveaways (Oct 30, Nov 1, Nov 7, Dec 1, Jan 2, Jan 9, Feb 15, Apr 11). Nellie Night Oct 6 is preseason, excluded."
+    },
+    {
+      "url": "https://www.nba.com/warriors/tickets/group-theme-nights-and-giveaways",
+      "method": "curl",
+      "http": 200,
+      "shape": "server-rendered tile grid",
+      "datedCurrentSeason": 41,
+      "undatedRefs": 0,
+      "note": "41 group theme nights, all 'Tickets purchased through special event link include a ... Item' (ticket packages)"
+    },
+    {
+      "url": "https://www.nba.com/warriors/tickets/promotions",
+      "method": "curl",
+      "http": 200,
+      "shape": "client-rendered shell ('There are no promotions at this moment' before render)",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "needs rendering"
+    },
+    {
+      "url": "https://www.nba.com/warriors/tickets/promotions",
+      "method": "firecrawl-scrape",
+      "http": 200,
+      "shape": "rendered 'Promotional Schedule' with filters Apparel/Misc/Themed Nights/Heritage/Bobblehead",
+      "datedCurrentSeason": 21,
+      "undatedRefs": 0,
+      "note": "21 entries Oct 30 to Mar 19: 13 open giveaways (adds Nov 5 Pride fan, Nov 25 Cup shirt, Dec 25 beanie, Jan 13 Guess Who game, Jan 30 vintage hat, Feb 17 mahjong magnets not in the press release), 6 special-event-link packages, 2 entries without description (Feb 1, Mar 4). Rendered list stops at Mar 19, so Apr 11 Fan Night bag (press release) is added from the release. Press release says Players Pins Nov 1 vs LAC; page says Nov 2 vs PHX."
+    },
+    {
+      "url": "https://www.nba.com/warriors/{17 common promo paths}",
+      "method": "curl",
+      "http": 404,
+      "shape": "probe",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "15 of 17 paths 404; /warriors/promotions redirects to /warriors/tickets/promotions"
+    },
+    {
+      "url": "https://content-api-prod.nba.com/public/1/leagues/nba/teams/1610612744/schedule?season=2026-27",
+      "method": "curl",
+      "http": 200,
+      "shape": "schedule JSON (per-game gameInfo/promotion fields)",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no promo annotations"
+    }
+  ],
+  "linksChecked": 23,
+  "datedCount": 16
+}

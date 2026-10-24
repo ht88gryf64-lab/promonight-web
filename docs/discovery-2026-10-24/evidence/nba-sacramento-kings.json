@@ -1,0 +1,79 @@
+{
+  "team": "sacramento-kings",
+  "league": "NBA",
+  "label": "MATCH",
+  "ourCount": 25,
+  "officialDatedCount": 23,
+  "delta": -2,
+  "officialDomain": "www.nba.com/kings",
+  "bestSourceUrls": [
+    "https://www.nba.com/kings/promotions"
+  ],
+  "shape": "server-rendered theme cards with giveaways in prose",
+  "undatedCount": 2,
+  "samples": [
+    {
+      "title": "Queen Night, Kings x Queen embroidered patch to first 7,000",
+      "date": "2026-11-21",
+      "url": "https://www.nba.com/kings/promotions"
+    },
+    {
+      "title": "SpongeBob Night, cooler bag to first 7,000",
+      "date": "2026-12-27",
+      "url": "https://www.nba.com/kings/promotions"
+    },
+    {
+      "title": "Lunar New Year, Kings Mahjong tiles to first 10,000",
+      "date": "2027-02-06",
+      "url": "https://www.nba.com/kings/promotions"
+    }
+  ],
+  "exclusions": "Month-name dates in prose, year inferred, matched to homegames-nba.json: all regular-season home. Emirates NBA Cup card excluded as a game reference. MLK and City Edition cards counted as undated (dates only in Ticketmaster link codes).",
+  "recommendedConfig": "single URL",
+  "credits": {
+    "map": 0,
+    "scrape": 0,
+    "total": 0
+  },
+  "notes": "Delta -2 within tolerance: likely the NBA Cup card and/or an Opening Night giveaway row in our data. Kings Family Pack and Kings Pass are season-long ticket offers, excluded.",
+  "urlsTried": [
+    {
+      "url": "https://www.nba.com/sitemap_team_kings_index.xml (base + news)",
+      "method": "sitemap",
+      "http": 200,
+      "shape": "sitemap",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "searched for promo vocabulary"
+    },
+    {
+      "url": "https://www.nba.com/kings/promotions",
+      "method": "curl",
+      "http": 200,
+      "shape": "server-rendered 'Promotions 2026-27' page (modified 2026-10-21): Ticket Offers + Theme Nights cards with prose; giveaways are inside theme prose",
+      "datedCurrentSeason": 23,
+      "undatedRefs": 2,
+      "note": "16 theme cards (1 is Emirates NBA Cup game reference; MLK and City Edition cards give opponent but no date in text) + 8 giveaways in prose (Queen patch, Peanuts hat, SpongeBob cooler bag, domino set, Elmo bobblehead select fans, Mahjong tiles, Hello Kitty surprise, Sixth Man shirt). 15 open themes + 8 giveaways = 23."
+    },
+    {
+      "url": "https://www.nba.com/kings/{17 common promo paths}",
+      "method": "curl",
+      "http": 404,
+      "shape": "probe",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "15 of 17 paths 404"
+    },
+    {
+      "url": "https://content-api-prod.nba.com/public/1/leagues/nba/teams/1610612758/schedule?season=2026-27",
+      "method": "curl",
+      "http": 200,
+      "shape": "schedule JSON (per-game gameInfo/promotion fields)",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "2 games carry gameInfo.eventDescription (Oct 23 opener, Oct 25 game copy)"
+    }
+  ],
+  "linksChecked": 20,
+  "datedCount": 23
+}

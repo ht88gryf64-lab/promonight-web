@@ -1,0 +1,88 @@
+{
+  "team": "milwaukee-bucks",
+  "league": "NBA",
+  "label": "MATCH",
+  "ourCount": 24,
+  "officialDatedCount": 24,
+  "delta": 0,
+  "officialDomain": "www.nba.com/bucks",
+  "bestSourceUrls": [
+    "https://www.nba.com/bucks/news/milwaukee-bucks-announce-theme-night-giveaway-and-crossover-game-schedule-for-2026-27-season"
+  ],
+  "shape": "press release lists",
+  "undatedCount": 0,
+  "samples": [
+    {
+      "title": "Halloween Game, pet bandana",
+      "date": "2026-10-31",
+      "url": "https://www.nba.com/bucks/news/milwaukee-bucks-announce-theme-night-giveaway-and-crossover-game-schedule-for-2026-27-season"
+    },
+    {
+      "title": "BMO Custom Cap Series designed by Tyler Herro",
+      "date": "2027-01-30",
+      "url": "https://www.nba.com/bucks/news/milwaukee-bucks-announce-theme-night-giveaway-and-crossover-game-schedule-for-2026-27-season"
+    },
+    {
+      "title": "Fan Appreciation Game, court replica blind box",
+      "date": "2027-04-08",
+      "url": "https://www.nba.com/bucks/news/milwaukee-bucks-announce-theme-night-giveaway-and-crossover-game-schedule-for-2026-27-season"
+    }
+  ],
+  "exclusions": "Weekday + month dates, year inferred, matched to homegames-nba.json: all regular-season home. NBA Cup games excluded as game references; crossover nights reported separately as ticket packages (5).",
+  "recommendedConfig": "single URL",
+  "credits": {
+    "map": 0,
+    "scrape": 0,
+    "total": 0
+  },
+  "notes": "Exact match on open rows.",
+  "urlsTried": [
+    {
+      "url": "https://www.nba.com/sitemap_team_bucks_index.xml (base + news)",
+      "method": "sitemap",
+      "http": 200,
+      "shape": "sitemap",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "searched for promo vocabulary"
+    },
+    {
+      "url": "https://www.nba.com/bucks/news/milwaukee-bucks-announce-theme-night-giveaway-and-crossover-game-schedule-for-2026-27-season",
+      "method": "curl",
+      "http": 200,
+      "shape": "press release with three lists (theme nights, giveaways, crossover ticket packages)",
+      "datedCurrentSeason": 31,
+      "undatedRefs": 0,
+      "note": "14 theme nights (2 Bucks NBA Cup Games are game references) + 12 giveaways + 5 crossover special ticket packages (Hello Kitty, Marvel, Sesame Street, Harry Potter, Star Wars). Open typed rows = 12 + 12 = 24."
+    },
+    {
+      "url": "https://www.nba.com/bucks/tickets/promos",
+      "method": "curl",
+      "http": 200,
+      "shape": "client-rendered shell",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "/bucks/promos and /bucks/giveaways redirect here; not rendered"
+    },
+    {
+      "url": "https://www.nba.com/bucks/{17 common promo paths}",
+      "method": "curl",
+      "http": 404,
+      "shape": "probe",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "14 of 17 paths 404"
+    },
+    {
+      "url": "https://content-api-prod.nba.com/public/1/leagues/nba/teams/1610612749/schedule?season=2026-27",
+      "method": "curl",
+      "http": 200,
+      "shape": "schedule JSON (per-game gameInfo/promotion fields)",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no promo annotations"
+    }
+  ],
+  "linksChecked": 21,
+  "datedCount": 24
+}

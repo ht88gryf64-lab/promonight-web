@@ -1,0 +1,107 @@
+{
+  "team": "philadelphia-76ers",
+  "league": "NBA",
+  "label": "THIN",
+  "ourCount": 0,
+  "officialDatedCount": 1,
+  "delta": 1,
+  "officialDomain": "www.nba.com/sixers",
+  "urlsTried": [
+    {
+      "url": "https://www.nba.com/sitemap_team_76ers_index.xml (base + news)",
+      "method": "sitemap",
+      "http": 200,
+      "shape": "sitemap",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "news hit: 2026-10-22 theme nights article, 2026-10-08 Blue Week article; base hits: tickets-and-promotions, game-day"
+    },
+    {
+      "url": "https://www.nba.com/sixers/tickets/theme-nights",
+      "method": "curl",
+      "http": 200,
+      "shape": "static HTML placeholder",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "title still 2025-26: 'We hope you enjoyed all the 76ers Theme Nights from the 2025-26 Season! Please come back to see the schedule for the 2026-27 Season.'"
+    },
+    {
+      "url": "https://www.nba.com/sixers/schedule/promotions",
+      "method": "firecrawl-scrape",
+      "http": 200,
+      "shape": "client-rendered promotions shell (Special Tickets / 25th Anniversary / Theme Nights tabs)",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no items rendered for 2026-27, only disclaimer text; title says 2025-26 (reached via /sixers/tickets-and-promotions redirect)"
+    },
+    {
+      "url": "https://www.nba.com/sixers/news/2026-27-76ers-theme-nights-and-fan-favorite-gameday-activations",
+      "method": "curl",
+      "http": 200,
+      "shape": "press release",
+      "datedCurrentSeason": 1,
+      "undatedRefs": 4,
+      "note": "dated: Opening Night T-shirt for all fans Oct 22 vs CLE. Undated: 5 Arena Club parachute drops (first Oct 22), Bricken for Chicken full-game 5 times, Goldfish blimp 15 games, trigger promos. Says theme nights are at /sixers/tickets/theme-nights, which is not yet updated."
+    },
+    {
+      "url": "https://www.nba.com/sixers/fans/goldfish",
+      "method": "curl",
+      "http": 200,
+      "shape": "static HTML; game list built in JS from 15 hard-coded game IDs joined to the content-api schedule",
+      "datedCurrentSeason": 15,
+      "undatedRefs": 0,
+      "note": "Goldfish blimp drops snacks and coupons at 15 games: 2026-10-22, 10-30, 11-15, 11-21, 11-25, 12-17, 12-23, 2027-01-06, 01-16, 02-07, 02-17, 03-03, 03-21, 04-04, 04-11. Sponsor in-game activation, not counted as a promo night in officialDatedCount."
+    },
+    {
+      "url": "https://www.nba.com/sixers/{17 common promo paths}",
+      "method": "curl",
+      "http": 404,
+      "shape": "probe",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "15 of 17 paths 404; tickets/theme-nights (placeholder) and game-day (generic) return 200"
+    },
+    {
+      "url": "https://content-api-prod.nba.com/public/1/leagues/nba/teams/1610612755/schedule?season=2026-27",
+      "method": "curl",
+      "http": 200,
+      "shape": "schedule JSON",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no promo annotations"
+    }
+  ],
+  "linksChecked": 24,
+  "bestSourceUrls": [
+    "https://www.nba.com/sixers/tickets/theme-nights",
+    "https://www.nba.com/sixers/news/2026-27-76ers-theme-nights-and-fan-favorite-gameday-activations"
+  ],
+  "shape": "theme-nights page still a 2025-26 placeholder; one press release with one dated giveaway",
+  "datedCount": 1,
+  "undatedCount": 4,
+  "samples": [
+    {
+      "title": "Opening Night T-shirt giveaway, presented by Independence Blue Cross",
+      "date": "2026-10-22",
+      "url": "https://www.nba.com/sixers/news/2026-27-76ers-theme-nights-and-fan-favorite-gameday-activations"
+    },
+    {
+      "title": "Goldfish blimp game (sponsor activation)",
+      "date": "2026-10-30",
+      "url": "https://www.nba.com/sixers/fans/goldfish"
+    },
+    {
+      "title": "Goldfish blimp game (sponsor activation)",
+      "date": "2026-11-15",
+      "url": "https://www.nba.com/sixers/fans/goldfish"
+    }
+  ],
+  "exclusions": "Month-name dates parsed and matched to homegames-nba.json regular-season games; the only dated promo (Oct 22) is a regular-season home game. Goldfish dates come from game IDs 00226xxxxx (002 prefix = regular season) mapped through the content-api schedule; preseason IDs (001 prefix) are absent.",
+  "recommendedConfig": "single URL",
+  "credits": {
+    "map": 0,
+    "scrape": 1,
+    "total": 1
+  },
+  "notes": "The configured theme-nights URL is correct but not yet published for 2026-27 as of 2026-10-24 (page still thanks fans for 2025-26). Re-check https://www.nba.com/sixers/tickets/theme-nights; it is the URL the 2026-10-22 press release points to. Opening Night Oct 22 is already past."
+}

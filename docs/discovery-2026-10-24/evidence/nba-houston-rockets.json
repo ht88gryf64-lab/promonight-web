@@ -1,0 +1,79 @@
+{
+  "team": "houston-rockets",
+  "league": "NBA",
+  "label": "MATCH",
+  "ourCount": 28,
+  "officialDatedCount": 28,
+  "delta": 0,
+  "officialDomain": "www.nba.com/rockets",
+  "bestSourceUrls": [
+    "https://www.nba.com/rockets/news/rockets-announce-2026-27-promotions-and-fan-experiences"
+  ],
+  "shape": "press release bullet lists",
+  "undatedCount": 1,
+  "samples": [
+    {
+      "title": "Fred VanVleet bobblehead",
+      "date": "2026-12-01",
+      "url": "https://www.nba.com/rockets/news/rockets-announce-2026-27-promotions-and-fan-experiences"
+    },
+    {
+      "title": "Rodeo Night, bolo tie for first 5,000 fans",
+      "date": "2027-01-29",
+      "url": "https://www.nba.com/rockets/news/rockets-announce-2026-27-promotions-and-fan-experiences"
+    },
+    {
+      "title": "Houston Comets T-shirt for every fan",
+      "date": "2027-04-07",
+      "url": "https://www.nba.com/rockets/news/rockets-announce-2026-27-promotions-and-fan-experiences"
+    }
+  ],
+  "exclusions": "Month-abbreviation dates, year inferred, matched to homegames-nba.json: all 27 regular-season home. No preseason dates.",
+  "recommendedConfig": "single URL",
+  "credits": {
+    "map": 0,
+    "scrape": 0,
+    "total": 0
+  },
+  "notes": "Typed rows: 7 giveaways + 5 kids + 13 themes = 25 open, 28 with the 3 package-night themes; our 28 (g8 th14 k5 f1) fits the package-inclusive count. Check whether the 3 ticket-package nights should be flagged.",
+  "urlsTried": [
+    {
+      "url": "https://www.nba.com/sitemap_team_rockets_index.xml (base + news)",
+      "method": "sitemap",
+      "http": 200,
+      "shape": "sitemap",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "searched for promo vocabulary"
+    },
+    {
+      "url": "https://www.nba.com/rockets/news/rockets-announce-2026-27-promotions-and-fan-experiences",
+      "method": "curl",
+      "http": 200,
+      "shape": "press release with bulleted '- Mon. D vs. Opponent: item' lists",
+      "datedCurrentSeason": 27,
+      "undatedRefs": 1,
+      "note": "27 dated entries: opener giveaway, 3 bobbleheads, 5 Kid Days (each with a kids giveaway), 4 Space City Saturdays, Rodeo Night bolo tie, Comets T-shirt, Yearbook, 8 theme nights, 3 special ticket packages (Oct 26 Filipino Heritage, Nov 23 Space Jam, Feb 28 Hello Kitty). Red Rush 90 runs every home game (undated)."
+    },
+    {
+      "url": "https://www.nba.com/rockets/{17 common promo paths}",
+      "method": "curl",
+      "http": 404,
+      "shape": "probe",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "all 17 paths 404"
+    },
+    {
+      "url": "https://content-api-prod.nba.com/public/1/leagues/nba/teams/1610612745/schedule?season=2026-27",
+      "method": "curl",
+      "http": 200,
+      "shape": "schedule JSON (per-game gameInfo/promotion fields)",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no promo annotations"
+    }
+  ],
+  "linksChecked": 20,
+  "datedCount": 28
+}

@@ -1,0 +1,79 @@
+{
+  "team": "minnesota-timberwolves",
+  "league": "NBA",
+  "label": "MATCH",
+  "ourCount": 29,
+  "officialDatedCount": 29,
+  "delta": 0,
+  "officialDomain": "www.nba.com/timberwolves",
+  "bestSourceUrls": [
+    "https://www.nba.com/timberwolves/promotions"
+  ],
+  "shape": "server-rendered tagged list",
+  "undatedCount": 0,
+  "samples": [
+    {
+      "title": "Home Opener, Jersey Rally Towel (all fans)",
+      "date": "2026-10-25",
+      "url": "https://www.nba.com/timberwolves/promotions"
+    },
+    {
+      "title": "KG Theme Night: The Draft, KG Draft Figurine (first 16,000)",
+      "date": "2026-12-17",
+      "url": "https://www.nba.com/timberwolves/promotions"
+    },
+    {
+      "title": "Ant Figurine (first 10,000)",
+      "date": "2027-01-21",
+      "url": "https://www.nba.com/timberwolves/promotions"
+    }
+  ],
+  "exclusions": "Full weekday dates, year inferred, matched to homegames-nba.json; all regular-season home. 28 ticket-package items excluded from the comparable count. Page shows upcoming games from the opener; no preseason.",
+  "recommendedConfig": "single URL",
+  "credits": {
+    "map": 0,
+    "scrape": 0,
+    "total": 0
+  },
+  "notes": "Exact match on open rows; page says more will be added during the season.",
+  "urlsTried": [
+    {
+      "url": "https://www.nba.com/sitemap_team_timberwolves_index.xml (base + news)",
+      "method": "sitemap",
+      "http": 200,
+      "shape": "sitemap",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "searched for promo vocabulary"
+    },
+    {
+      "url": "https://www.nba.com/timberwolves/promotions",
+      "method": "curl",
+      "http": 200,
+      "shape": "server-rendered month list, each item tagged Celebration / Giveaway / Ticket Package",
+      "datedCurrentSeason": 29,
+      "undatedRefs": 0,
+      "note": "18 Celebrations (1 is 'NBA Cup Game', game reference) + 12 Giveaways + 28 Ticket Packages (Alumni Hat Series, baseball jerseys, Wolves Night Out, Family Meal Deal, clinics). Open typed rows = 17 + 12 = 29."
+    },
+    {
+      "url": "https://www.nba.com/timberwolves/{17 common promo paths}",
+      "method": "curl",
+      "http": 404,
+      "shape": "probe",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "16 of 17 paths 404"
+    },
+    {
+      "url": "https://content-api-prod.nba.com/public/1/leagues/nba/teams/1610612750/schedule?season=2026-27",
+      "method": "curl",
+      "http": 200,
+      "shape": "schedule JSON (per-game gameInfo/promotion fields)",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no promo annotations"
+    }
+  ],
+  "linksChecked": 20,
+  "datedCount": 29
+}

@@ -1,0 +1,222 @@
+{
+  "team": "new-orleans-saints",
+  "league": "NFL",
+  "label": "RECOVERED",
+  "officialDomain": "www.neworleanssaints.com",
+  "urlsTried": [
+    {
+      "url": "https://www.neworleanssaints.com/robots.txt",
+      "method": "curl",
+      "http": 200,
+      "shape": "robots",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": ""
+    },
+    {
+      "url": "https://www.neworleanssaints.com/sitemap.xml",
+      "method": "curl",
+      "http": 200,
+      "shape": "sitemap 1879 URLs",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Revealed /tickets/2026/* per-game pages"
+    },
+    {
+      "url": "https://www.neworleanssaints.com/sitemap-news-archive_1.xml (through _5) and sitemap-fast-changing.xml",
+      "method": "curl",
+      "http": 200,
+      "shape": "news sitemaps",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Revealed per-game 'Gameday Guide' articles and 60th-season articles"
+    },
+    {
+      "url": "https://www.neworleanssaints.com/news/raiders-at-saints-entertainment-superdome-dome-foam-halftime-dj-diesel-shaq-galactic",
+      "method": "curl",
+      "http": 200,
+      "shape": "per-game news article",
+      "datedCurrentSeason": 2,
+      "undatedRefs": 0,
+      "note": "Home opener 9/27 vs Raiders: 60th season commemorative coin for all fans (Caesars); Dome Foam in commemorative branded cup; Legend Benjamin Watson; Kids Combine debut"
+    },
+    {
+      "url": "https://www.neworleanssaints.com/news/saints-vs-falcons-2026-nfl-week-4-gameday-guide",
+      "method": "firecrawl-map then curl",
+      "http": 200,
+      "shape": "per-game Gameday Guide with GAMEDAY PROMOTIONS block",
+      "datedCurrentSeason": 3,
+      "undatedRefs": 0,
+      "note": "10/5 vs Falcons: Domecoming 20th anniversary theme; Domecoming Rally Towel for all fans courtesy of Entergy; Bud Light limited-edition souvenir cup with draft purchase. Not in the news sitemap; found only via Firecrawl map."
+    },
+    {
+      "url": "https://www.neworleanssaints.com/news/saints-vs-vikings-2026-nfl-week-5-gameday-guide",
+      "method": "curl",
+      "http": 200,
+      "shape": "per-game Gameday Guide with GAMEDAY PROMOTIONS block",
+      "datedCurrentSeason": 2,
+      "undatedRefs": 0,
+      "note": "10/11 vs Vikings: commemorative Drew Brees banner for all fans; Crown Royal sampling and giveaways (21+). Ring of Honor halftime is recognition, not counted."
+    },
+    {
+      "url": "https://www.neworleanssaints.com/news/saints-60th-season-fan-experience-initiatives-historic-milestones",
+      "method": "curl",
+      "http": 200,
+      "shape": "season announcement",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 2,
+      "note": "Confirms 9/27 coin giveaway; training camp poster (preseason, excluded)"
+    },
+    {
+      "url": "https://www.neworleanssaints.com/news/saints-60th-season-fan-experiences-signature-moments-six-decades-black-and-gold",
+      "method": "curl",
+      "http": 200,
+      "shape": "season announcement",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 2,
+      "note": "$6 value menu every game; new concourse activations; Saints 5K 9/26 (not a game date)"
+    },
+    {
+      "url": "https://www.neworleanssaints.com/news/morning-break-saints-celebrate-20-years-of-domecoming-host-falcons-on-monday-night-football-new-orleans-news-headlines-10-5-2026",
+      "method": "curl",
+      "http": 200,
+      "shape": "news roundup",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Corroborates 10/5 Domecoming anniversary"
+    },
+    {
+      "url": "https://www.neworleanssaints.com/news/jacksonville-jaguars-vs-new-orleans-saints-2026-nfl-preseason-week-1-gameday-guide-stadium-entertainment-halftime",
+      "method": "sitemap only",
+      "http": 0,
+      "shape": "preseason guide",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Preseason, excluded by title; not fetched"
+    },
+    {
+      "url": "https://www.neworleanssaints.com/fans/saintsgameday",
+      "method": "curl",
+      "http": 200,
+      "shape": "JS shell",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Empty"
+    },
+    {
+      "url": "https://www.neworleanssaints.com/fans/saintsgameday",
+      "method": "firecrawl-scrape",
+      "http": 200,
+      "shape": "JS shell",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Rendered page also empty"
+    },
+    {
+      "url": "https://www.neworleanssaints.com/game-day/",
+      "method": "curl",
+      "http": 200,
+      "shape": "JS shell",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Empty"
+    },
+    {
+      "url": "https://www.neworleanssaints.com/stadium/concessions",
+      "method": "curl",
+      "http": 200,
+      "shape": "empty",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": ""
+    },
+    {
+      "url": "https://www.neworleanssaints.com/fans/saints-kids-club",
+      "method": "curl",
+      "http": 200,
+      "shape": "membership page",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Paid membership, not a game promo"
+    },
+    {
+      "url": "https://www.neworleanssaints.com/fans/superdome-light-show",
+      "method": "curl",
+      "http": 200,
+      "shape": "every-game app light show",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 1,
+      "note": "Undated"
+    },
+    {
+      "url": "https://www.neworleanssaints.com/tickets/2026/browns-at-saints-tickets-information-history-week-9-november-8-2026",
+      "method": "curl",
+      "http": 200,
+      "shape": "per-game ticket and history page",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "No promo content"
+    },
+    {
+      "url": "https://www.neworleanssaints.com/tickets/2026/falcons-at-saints-tickets-information-history-week-4-october-5-2026",
+      "method": "curl",
+      "http": 200,
+      "shape": "per-game ticket and history page",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Related links only, no promo block"
+    },
+    {
+      "url": "https://www.neworleanssaints.com/schedule/",
+      "method": "curl",
+      "http": 200,
+      "shape": "schedule list",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "No promo annotations"
+    },
+    {
+      "url": "https://www.neworleanssaints.com",
+      "method": "firecrawl-map",
+      "http": 200,
+      "shape": "map 4945 URLs, search=promotions",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Surfaced the Week 4 Falcons Gameday Guide missing from the news sitemap"
+    }
+  ],
+  "linksChecked": 24,
+  "bestSourceUrls": [
+    "https://www.neworleanssaints.com/news/saints-vs-vikings-2026-nfl-week-5-gameday-guide",
+    "https://www.neworleanssaints.com/news/saints-vs-falcons-2026-nfl-week-4-gameday-guide",
+    "https://www.neworleanssaints.com/news/raiders-at-saints-entertainment-superdome-dome-foam-halftime-dj-diesel-shaq-galactic"
+  ],
+  "shape": "One news article per home game (title pattern 'Saints vs. <Opponent> | 2026 NFL Week N | Gameday Guide') with a 'GAMEDAY PROMOTIONS' section, published about 2 to 4 days before kickoff.",
+  "datedCount": 7,
+  "undatedCount": 7,
+  "samples": [
+    {
+      "title": "60th season commemorative coin for all fans, presented by Caesars",
+      "date": "2026-09-27",
+      "url": "https://www.neworleanssaints.com/news/raiders-at-saints-entertainment-superdome-dome-foam-halftime-dj-diesel-shaq-galactic"
+    },
+    {
+      "title": "Domecoming Rally Towel for all fans courtesy of Entergy (Domecoming 20th anniversary game)",
+      "date": "2026-10-05",
+      "url": "https://www.neworleanssaints.com/news/saints-vs-falcons-2026-nfl-week-4-gameday-guide"
+    },
+    {
+      "title": "Commemorative Drew Brees banner for all fans",
+      "date": "2026-10-11",
+      "url": "https://www.neworleanssaints.com/news/saints-vs-vikings-2026-nfl-week-5-gameday-guide"
+    }
+  ],
+  "exclusions": "Only items tied to a 2026 regular-season home date from p0/homegames-nfl.json were counted. Pages or paths carrying 2025 (for example /gameday/2025/*, /tickets/2025/*, 2025 Salute to Service hometown hero text) were excluded by year in URL, byline date, or body text. Preseason items (August 2026, /preseason_* or /pre/ paths, 'Preseason Week N' guides) were excluded by path and date. Away-game watch parties and off-site fan fests were excluded because they are not on a home date. Rolling next-game pages were tied to a date only when the page body or its section banner named the opponent or kickoff time that matches one home date. Saints specifics: 2025 Gameday Guides and /tickets/2025/* pages excluded by year; 2026 Preseason Week 1 guide excluded by title; training camp poster excluded as preseason; Saints 5K (9/26) is not a game date; Drew Brees Ring of Honor and Legend of the Game are recognition and not counted.",
+  "recommendedConfig": "multi-URL",
+  "credits": {
+    "map": 1,
+    "scrape": 1,
+    "total": 2
+  },
+  "notes": "Dated count of 7 = 9/27 coin, 9/27 commemorative Dome Foam cup, 10/5 Domecoming theme, 10/5 rally towel, 10/5 Bud Light souvenir cup (with purchase), 10/11 Brees banner, 10/11 Crown Royal sampling and giveaways. Strict giveaway-only count is 3 (coin, towel, banner). The guide URLs are per-game news slugs, not a fixed page, so the config needs news discovery (news sitemap or the club news feed filtered on 'Gameday Guide') rather than one static URL; the Week 4 guide was missing from the news sitemap, so sitemap-only discovery would miss some. Next home games: 10/25 vs Steelers is played in Paris (Stade de France), then 11/8 Browns at the Superdome."
+}

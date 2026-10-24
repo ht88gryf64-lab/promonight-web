@@ -1,0 +1,277 @@
+{
+  "team": "detroit-lions",
+  "league": "NFL",
+  "label": "RECOVERED",
+  "officialDomain": "www.detroitlions.com",
+  "urlsTried": [
+    {
+      "url": "https://www.detroitlions.com/robots.txt",
+      "method": "curl",
+      "http": 200,
+      "shape": "robots",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": ""
+    },
+    {
+      "url": "https://www.detroitlions.com/sitemap.xml",
+      "method": "curl",
+      "http": 200,
+      "shape": "sitemap 1294 URLs",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Revealed the /game-day/* sub-pages below"
+    },
+    {
+      "url": "https://www.detroitlions.com/sitemap-news-archive_1.xml (through _3) and sitemap-fast-changing.xml",
+      "method": "curl",
+      "http": 200,
+      "shape": "news sitemaps",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Found Crucial Catch 10/25 article, $60 gameday ticket program, Munich game activations"
+    },
+    {
+      "url": "https://www.detroitlions.com/game-day/",
+      "method": "curl",
+      "http": 200,
+      "shape": "rolling next-game hub (Packers at Lions banner)",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 2,
+      "note": "Power Hour 2:00 PM, $5.49 hot dogs and $6.29 beer 2:00 to 3:00 PM; section banner and food link are Packers-specific (10/25)"
+    },
+    {
+      "url": "https://www.detroitlions.com/game-day/power-hour",
+      "method": "curl",
+      "http": 200,
+      "shape": "rolling next-game Power Hour page",
+      "datedCurrentSeason": 1,
+      "undatedRefs": 3,
+      "note": "'GAME DAY GIVEAWAY: The first 25,000 fans will receive a Detroit Lions Wrist Strap Keychain, courtesy of Henry Ford Health'. Section banner reads Packers at Detroit Lions, so tied to 10/25. Undated every-game items: Power Hour food/beer prices, free kids face painting at Cub Club Locker Room, Spin It To Win It."
+    },
+    {
+      "url": "https://www.detroitlions.com/game-day/entertainment",
+      "method": "curl",
+      "http": 200,
+      "shape": "rolling next-game entertainment",
+      "datedCurrentSeason": 1,
+      "undatedRefs": 0,
+      "note": "'All fans will receive a Motor City Muscle Light Up Wristband at their seat'. Halftime act Kameron Marlowe matches the 10/25 Crucial Catch article, so tied to 10/25."
+    },
+    {
+      "url": "https://www.detroitlions.com/news/detroit-lions-highlight-cancer-prevention-and-early-detection-with-annual-nfl-crucial-catch-initiative",
+      "method": "curl",
+      "http": 200,
+      "shape": "per-game news article",
+      "datedCurrentSeason": 1,
+      "undatedRefs": 0,
+      "note": "Crucial Catch theme game Oct 25 vs Packers: bell-ringing ceremony, 'In Honor Of' fan card moment (cards at Gates A and G), halftime Kameron Marlowe"
+    },
+    {
+      "url": "https://www.detroitlions.com/game-day/deals-in-the-den",
+      "method": "curl",
+      "http": 200,
+      "shape": "image-only food deals",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 2,
+      "note": "Images read: All-Day Deals in the Den ($14.99 beer+hot dog+chips, $12.99 soda combo, $6.99 value beer) and Grab and Go Markets. Every game, undated."
+    },
+    {
+      "url": "https://www.detroitlions.com/news/detroit-lions-announce-new-gameday-ticket-program-for-fans-at-ford-field",
+      "method": "curl",
+      "http": 200,
+      "shape": "news article",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 1,
+      "note": "$60 standing-room tickets starting Oct 25, every home game. Ticket program, BORDERLINE class, not counted. Mentions new Lions kid's meal and value menu."
+    },
+    {
+      "url": "https://www.detroitlions.com/game-day/salute-to-service",
+      "method": "curl",
+      "http": 200,
+      "shape": "theme page with 2025 content",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Names the 2025 Salute to Service Hometown Hero; excluded as last season. 2026 date not yet posted."
+    },
+    {
+      "url": "https://www.detroitlions.com/game-day/women-in-football",
+      "method": "curl",
+      "http": 200,
+      "shape": "theme page with 2024 content",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "'second installment' after 2023 debut, so 2024; excluded"
+    },
+    {
+      "url": "https://www.detroitlions.com/game-day/pride-plaza",
+      "method": "curl",
+      "http": 200,
+      "shape": "every-game plaza guide",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 3,
+      "note": "Sponsor tent giveaways: Sun Cruiser rally towel, Sam Bernstein swag, Ford truck push; every game, undated"
+    },
+    {
+      "url": "https://www.detroitlions.com/game-day/red-zone-giveaway",
+      "method": "curl",
+      "http": 200,
+      "shape": "every-game seat reward",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 1,
+      "note": "$10 Lions Loot for fans in 3rd Down Town; undated"
+    },
+    {
+      "url": "https://www.detroitlions.com/game-day/fan-appreciation",
+      "method": "curl",
+      "http": 200,
+      "shape": "image only",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "thank-you-fans image, no text"
+    },
+    {
+      "url": "https://www.detroitlions.com/game-day/hometown-heroes",
+      "method": "curl",
+      "http": 200,
+      "shape": "empty",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": ""
+    },
+    {
+      "url": "https://www.detroitlions.com/game-day/pride-plaza-dunhams",
+      "method": "curl",
+      "http": 200,
+      "shape": "empty",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": ""
+    },
+    {
+      "url": "https://www.detroitlions.com/game-day/stadium-guide",
+      "method": "curl",
+      "http": 200,
+      "shape": "policies",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": ""
+    },
+    {
+      "url": "https://www.detroitlions.com/game-day/good-sport",
+      "method": "curl",
+      "http": 200,
+      "shape": "designated driver",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": ""
+    },
+    {
+      "url": "https://www.detroitlions.com/game-day/did-you-know",
+      "method": "curl",
+      "http": 200,
+      "shape": "perks FAQ",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": ""
+    },
+    {
+      "url": "https://www.detroitlions.com/schedule/",
+      "method": "curl",
+      "http": 200,
+      "shape": "schedule list",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "No promo annotations"
+    },
+    {
+      "url": "https://www.detroitlions.com/game-day/2026/reg-week7/packers-vs-lions (and reg-week8/vikings-vs-lions)",
+      "method": "curl",
+      "http": 200,
+      "shape": "game center",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Stats only"
+    },
+    {
+      "url": "https://www.detroitlions.com/international/2026-munich-game-giveaways",
+      "method": "curl",
+      "http": 200,
+      "shape": "fan fest giveaway list",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 6,
+      "note": "Munich Fan Fest at Odeonsplatz Nov 13 to 14 giveaways (roll-a-banner, mini footballs, gloves, sunglasses). Off-site fan fest, not in-stadium on the 11/15 home date; not counted."
+    },
+    {
+      "url": "https://www.detroitlions.com/international/2026-munich-game-game-day",
+      "method": "curl",
+      "http": 200,
+      "shape": "placeholder",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "'Check back for more information' for 11/15 at Allianz Arena"
+    },
+    {
+      "url": "https://www.detroitlions.com/international/2026-munich-game-food-and-beverage",
+      "method": "curl",
+      "http": 200,
+      "shape": "fan fest food list",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Off-site"
+    },
+    {
+      "url": "https://www.detroitlions.com/news/detroit-lions-announce-munich-game-2026-fan-activations-and-fan-fest",
+      "method": "curl",
+      "http": 200,
+      "shape": "news article",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Dates for fan fest and fan pub, off-site"
+    },
+    {
+      "url": "https://www.detroitlions.com",
+      "method": "firecrawl-map",
+      "http": 200,
+      "shape": "map 4905 URLs, search=promotions",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Top hits /game-day/power-hour and /game-day/red-zone-giveaway, plus 2026 game-center URLs"
+    }
+  ],
+  "linksChecked": 30,
+  "bestSourceUrls": [
+    "https://www.detroitlions.com/game-day/power-hour",
+    "https://www.detroitlions.com/game-day/entertainment",
+    "https://www.detroitlions.com/game-day/",
+    "per-game news article, e.g. https://www.detroitlions.com/news/detroit-lions-highlight-cancer-prevention-and-early-detection-with-annual-nfl-crucial-catch-initiative"
+  ],
+  "shape": "Rolling next-game pages under /game-day/ (Power Hour giveaway block, entertainment, hub) plus per-game theme articles in news. Past games are overwritten.",
+  "datedCount": 3,
+  "undatedCount": 18,
+  "samples": [
+    {
+      "title": "First 25,000 fans: Detroit Lions Wrist Strap Keychain courtesy of Henry Ford Health",
+      "date": "2026-10-25",
+      "url": "https://www.detroitlions.com/game-day/power-hour"
+    },
+    {
+      "title": "Crucial Catch game vs Packers with 'In Honor Of' fan card moment",
+      "date": "2026-10-25",
+      "url": "https://www.detroitlions.com/news/detroit-lions-highlight-cancer-prevention-and-early-detection-with-annual-nfl-crucial-catch-initiative"
+    },
+    {
+      "title": "Motor City Muscle Light Up Wristband for all fans",
+      "date": "2026-10-25",
+      "url": "https://www.detroitlions.com/game-day/entertainment"
+    }
+  ],
+  "exclusions": "Only items tied to a 2026 regular-season home date from p0/homegames-nfl.json were counted. Pages or paths carrying 2025 (for example /gameday/2025/*, /tickets/2025/*, 2025 Salute to Service hometown hero text) were excluded by year in URL, byline date, or body text. Preseason items (August 2026, /preseason_* or /pre/ paths, 'Preseason Week N' guides) were excluded by path and date. Away-game watch parties and off-site fan fests were excluded because they are not on a home date. Rolling next-game pages were tied to a date only when the page body or its section banner named the opponent or kickoff time that matches one home date. Lions specifics: Salute to Service page text is 2025 and Women In Football page is 2024, both excluded; training-camp giveaway pages excluded as preseason; Munich fan fest items excluded as off-site.",
+  "recommendedConfig": "multi-URL",
+  "credits": {
+    "map": 1,
+    "scrape": 0,
+    "total": 1
+  },
+  "notes": "All three dated items fall on the one upcoming home game (10/25 vs Packers), because the /game-day/ pages roll forward to the next game. 9/13 and 9/27 promos were overwritten and cannot be recovered. A config would need /game-day/power-hour plus /game-day/entertainment polled weekly in the days before each home game, with the date taken from the section banner (opponent) rather than the page body. Food deals (Deals in the Den) are in images and are every-game."
+}

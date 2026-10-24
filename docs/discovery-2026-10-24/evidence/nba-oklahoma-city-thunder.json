@@ -1,0 +1,117 @@
+{
+  "team": "oklahoma-city-thunder",
+  "league": "NBA",
+  "label": "GENUINELY-NONE",
+  "ourCount": 0,
+  "officialDatedCount": 0,
+  "delta": 0,
+  "officialDomain": "www.nba.com/thunder",
+  "urlsTried": [
+    {
+      "url": "https://www.nba.com/sitemap_team_thunder_index.xml (base + news)",
+      "method": "sitemap",
+      "http": 200,
+      "shape": "sitemap",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "283 base pages: no promotions/theme/giveaway schedule page (hits are old sweepstakes rules). News since 2026-06: schedule, tickets on sale, Fan Fest Oct 11 (preseason-period event), Levy food partner; no promo schedule article"
+    },
+    {
+      "url": "https://www.nba.com/thunder/{promotions,promotional-schedule,promos,promo,giveaways,theme-nights,themes,tickets/theme-nights,tickets/promotions,specials,fan-experiences,game-day,specialty-nights,promotional-calendar,tickets/promotional-schedule,theme-nights-giveaways,tickets/specialty-nights}",
+      "method": "curl",
+      "http": 404,
+      "shape": "404",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "17 common promo paths, all 404"
+    },
+    {
+      "url": "https://www.nba.com/thunder/news/release-tickets-260923",
+      "method": "curl",
+      "http": 200,
+      "shape": "press release",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "single-game ticket on-sale (games through Dec. 31); no promos"
+    },
+    {
+      "url": "https://www.nba.com/thunder/gamenight",
+      "method": "curl",
+      "http": 200,
+      "shape": "A-Z game night guide",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 1,
+      "note": "generic 'distribution of promotional items' policy only"
+    },
+    {
+      "url": "https://www.nba.com/thunder/noches",
+      "method": "curl",
+      "http": 200,
+      "shape": "Noches landing",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no dates"
+    },
+    {
+      "url": "https://www.nba.com/thunder/experiences",
+      "method": "curl",
+      "http": 200,
+      "shape": "paid experiences",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no dates"
+    },
+    {
+      "url": "https://www.nba.com/thunder/blackheritage",
+      "method": "curl",
+      "http": 200,
+      "shape": "art contest rules (modified 2026-09-29)",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "contest deadlines only, not a game promo"
+    },
+    {
+      "url": "https://www.nba.com/thunder/tickets/single",
+      "method": "curl",
+      "http": 200,
+      "shape": "ticket page",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "only the game-promotion component config, no content"
+    },
+    {
+      "url": "https://www.nba.com/thunder/schedule",
+      "method": "firecrawl-scrape",
+      "http": 200,
+      "shape": "rendered schedule",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no giveaway/theme badges on any game"
+    },
+    {
+      "url": "https://content-api-prod.nba.com/public/1/leagues/nba/teams/1610612760/schedule?season=2026-27",
+      "method": "curl",
+      "http": 200,
+      "shape": "schedule JSON",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no promo annotations"
+    }
+  ],
+  "linksChecked": 27,
+  "bestSourceUrls": [],
+  "shape": "none",
+  "datedCount": 0,
+  "undatedCount": 0,
+  "samples": [],
+  "exclusions": "No current-season promo dates found; dates on the pages checked were contest deadlines and ticket on-sale cutoffs, excluded as non-promo.",
+  "recommendedConfig": "none",
+  "credits": {
+    "map": 0,
+    "scrape": 1,
+    "total": 1
+  },
+  "issue": "#65",
+  "issueResolution": "still nothing published: no Thunder promo, theme-night or giveaway schedule on nba.com/thunder as of 2026-10-24 (27 links checked, including the rendered schedule). Suggest new revisitAfter 2026-12-01 with reason: club has not published a 2026-27 slate after the opener, and nothing in the sitemap suggests one is pending; recheck the news sitemap for a promo article.",
+  "notes": "Thunder has not published a 2026-27 promo schedule as of today."
+}

@@ -1,0 +1,79 @@
+{
+  "team": "memphis-grizzlies",
+  "league": "NBA",
+  "label": "MATCH",
+  "ourCount": 43,
+  "officialDatedCount": 42,
+  "delta": -1,
+  "officialDomain": "www.nba.com/grizzlies",
+  "bestSourceUrls": [
+    "https://www.nba.com/grizzlies/news/memphis-grizzlies-announce-202627-promotional-schedule"
+  ],
+  "shape": "press release tables",
+  "undatedCount": 0,
+  "samples": [
+    {
+      "title": "Dia de los Muertos, T-shirt to first 5,000 fans",
+      "date": "2026-10-31",
+      "url": "https://www.nba.com/grizzlies/news/memphis-grizzlies-announce-202627-promotional-schedule"
+    },
+    {
+      "title": "Grizzlies Xtreme Sports Night, skate deck to first 3,000",
+      "date": "2027-02-06",
+      "url": "https://www.nba.com/grizzlies/news/memphis-grizzlies-announce-202627-promotional-schedule"
+    },
+    {
+      "title": "Memphis Music Night, vinyl album to first 3,000",
+      "date": "2027-03-20",
+      "url": "https://www.nba.com/grizzlies/news/memphis-grizzlies-announce-202627-promotional-schedule"
+    }
+  ],
+  "exclusions": "Rows marked '(preseason)' (Oct 7 Breast Cancer Awareness Night + schedule magnet, Oct 16 schedule magnet) excluded by label and by homegames-nba.json type=preseason. 4 'Game Day, presented by' rows excluded as presenting-sponsor only.",
+  "recommendedConfig": "single URL",
+  "credits": {
+    "map": 0,
+    "scrape": 0,
+    "total": 0
+  },
+  "notes": "OVER by 1 (43 vs 42), within tolerance: likely one preseason magnet row or one Game Day sponsor row in our data (our g19 exceeds the 14 regular-season giveaways, which points at the 2 preseason magnets).",
+  "urlsTried": [
+    {
+      "url": "https://www.nba.com/sitemap_team_grizzlies_index.xml (base + news)",
+      "method": "sitemap",
+      "http": 200,
+      "shape": "sitemap",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "searched for promo vocabulary"
+    },
+    {
+      "url": "https://www.nba.com/grizzlies/news/memphis-grizzlies-announce-202627-promotional-schedule",
+      "method": "curl",
+      "http": 200,
+      "shape": "press release with 3 tables (Big Memphis Nights 15, Sunday Family Funday 3, Theme Nights 16 incl 2 preseason)",
+      "datedCurrentSeason": 32,
+      "undatedRefs": 0,
+      "note": "32 regular-season nights; 4 are 'Game Day, presented by X' sponsor rows (presenting-sponsor class). Typed open rows: 28 themes + 14 giveaways = 42."
+    },
+    {
+      "url": "https://www.nba.com/grizzlies/{17 common promo paths}",
+      "method": "curl",
+      "http": 404,
+      "shape": "probe",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "all 17 paths 404"
+    },
+    {
+      "url": "https://content-api-prod.nba.com/public/1/leagues/nba/teams/1610612763/schedule?season=2026-27",
+      "method": "curl",
+      "http": 200,
+      "shape": "schedule JSON (per-game gameInfo/promotion fields)",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no promo annotations"
+    }
+  ],
+  "linksChecked": 20,
+  "datedCount": 42
+}

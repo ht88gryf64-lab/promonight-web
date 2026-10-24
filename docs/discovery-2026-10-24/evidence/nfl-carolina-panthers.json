@@ -1,0 +1,248 @@
+{
+  "team": "carolina-panthers",
+  "league": "NFL",
+  "label": "THIN",
+  "officialDomain": "www.panthers.com",
+  "urlsTried": [
+    {
+      "url": "https://www.panthers.com/fans/promotions",
+      "method": "curl",
+      "http": 200,
+      "shape": "image grid of 4 sponsor tiles",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 4,
+      "note": "Configured source. Main content is 4 image tiles linking off-site: American Airlines miles sweepstakes, Harris Teeter away-game sweepstakes, GMC trivia, Bojangles app. No gameday promos, no dates."
+    },
+    {
+      "url": "https://www.panthers.com/robots.txt",
+      "method": "curl",
+      "http": 200,
+      "shape": "robots",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Points to sitemap-index.xml"
+    },
+    {
+      "url": "https://www.panthers.com/sitemap.xml",
+      "method": "curl",
+      "http": 200,
+      "shape": "sitemap 1492 URLs",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Searched for promo vocabulary; candidates below"
+    },
+    {
+      "url": "https://www.panthers.com/sitemap-fast-changing.xml",
+      "method": "curl",
+      "http": 200,
+      "shape": "sitemap 100 URLs",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Recent news; no promo titles"
+    },
+    {
+      "url": "https://www.panthers.com/sitemap-news-archive_1.xml (and _2, _3)",
+      "method": "curl",
+      "http": 200,
+      "shape": "news sitemap with titles and dates",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "2026 titles searched for giveaway/theme/heritage/salute/fan vocabulary; only jersey schedule, Fan Fest (July 31), Game Day Express transit"
+    },
+    {
+      "url": "https://www.panthers.com/gameday/2026/week1 (also week2, week3, week4, week6, week7, preseason_week1)",
+      "method": "curl",
+      "http": 200,
+      "shape": "game center",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Stats and news feed only, no promo block"
+    },
+    {
+      "url": "https://www.panthers.com/gameday/guide",
+      "method": "curl",
+      "http": 200,
+      "shape": "rolling game day guide (Week 7 10/25 header)",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 3,
+      "note": "Every-game amenities: Panthers Play Yard (free family zone), Legends Row partner giveaways and games, 5th Quarter postgame. Not dated per game."
+    },
+    {
+      "url": "https://www.panthers.com/gameday/entertainment",
+      "method": "curl",
+      "http": 200,
+      "shape": "rolling next-game entertainment",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Ring of Excellence halftime ceremony for Luke Kuechly at the 10/25 game. Recognition event, BORDERLINE class, not counted."
+    },
+    {
+      "url": "https://www.panthers.com/community/panthersplayyard",
+      "method": "curl",
+      "http": 200,
+      "shape": "rolling next-game kids zone",
+      "datedCurrentSeason": 1,
+      "undatedRefs": 0,
+      "note": "Sunday 10/25: Play Yard 11:00 to 12:30 with LED Seesaws 'only in the Panthers Play Yard for this game', face painters, sign station. Counted as 1 dated family item."
+    },
+    {
+      "url": "https://www.panthers.com/gameday/2025/pregame-activities",
+      "method": "curl",
+      "http": 200,
+      "shape": "2025 page",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "2025 season, excluded"
+    },
+    {
+      "url": "https://www.panthers.com/schedule/",
+      "method": "curl",
+      "http": 200,
+      "shape": "JS schedule shell",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Static HTML has no game rows"
+    },
+    {
+      "url": "https://www.panthers.com/schedule/",
+      "method": "firecrawl-scrape",
+      "http": 200,
+      "shape": "schedule with per-game annotations",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Rendered rows carry only jersey color annotations and ticket links"
+    },
+    {
+      "url": "https://www.panthers.com/news/carolina-panthers-release-the-2026-jersey-schedule-uniforms-alternates",
+      "method": "curl",
+      "http": 200,
+      "shape": "article",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Uniform schedule only, not a promo"
+    },
+    {
+      "url": "https://www.panthers.com/black-helmet-giveaway",
+      "method": "curl",
+      "http": 200,
+      "shape": "sweepstakes entry",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 1,
+      "note": "Enter-to-win helmet, not in-stadium"
+    },
+    {
+      "url": "https://www.panthers.com/promotions/stand-and-cheer",
+      "method": "curl",
+      "http": 200,
+      "shape": "fan video submission",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Not a promo"
+    },
+    {
+      "url": "https://www.panthers.com/gamedayrsvp/buccaneers",
+      "method": "curl",
+      "http": 200,
+      "shape": "image plus Formstack RSVP",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Image read: invite-only Team President's suite experience Oct 25. Not a public promo."
+    },
+    {
+      "url": "https://www.panthers.com/fans/",
+      "method": "curl",
+      "http": 200,
+      "shape": "fan hub",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 1,
+      "note": "Bud Light watch party for the away Week 6 game (first 50 free beer). Away game, excluded."
+    },
+    {
+      "url": "https://www.panthers.com/fans/watchparty",
+      "method": "curl",
+      "http": 200,
+      "shape": "away watch party page",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Away game 10/18, excluded"
+    },
+    {
+      "url": "https://www.panthers.com/community/latino-heritage-month",
+      "method": "curl",
+      "http": 200,
+      "shape": "community recap",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Team Store exclusive Latino Heritage shirt tied to 9/13 Bears game is merchandise for sale, not a giveaway"
+    },
+    {
+      "url": "https://www.panthers.com/community/military",
+      "method": "curl",
+      "http": 200,
+      "shape": "archive",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Newest item Sep 2025"
+    },
+    {
+      "url": "https://www.panthers.com/community/mycausemycleats",
+      "method": "curl",
+      "http": 200,
+      "shape": "player cleats page",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Prior-season content"
+    },
+    {
+      "url": "https://www.panthers.com/heritage-helmet",
+      "method": "curl",
+      "http": 200,
+      "shape": "feature",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Player heritage stickers, not a promo"
+    },
+    {
+      "url": "https://www.panthers.com",
+      "method": "firecrawl-map",
+      "http": 200,
+      "shape": "map 4919 URLs, search=promotions",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Top hits are 2021 game-hub/promotions pages and /fans/promotions; 2026 gameday URLs same as sitemap"
+    }
+  ],
+  "linksChecked": 31,
+  "bestSourceUrls": [
+    "https://www.panthers.com/community/panthersplayyard",
+    "https://www.panthers.com/gameday/guide"
+  ],
+  "shape": "No promo schedule. Configured /fans/promotions is a sponsor sweepstakes image grid. Only rolling next-game pages (Play Yard, gameday guide, entertainment) carry game-specific items.",
+  "datedCount": 1,
+  "undatedCount": 8,
+  "samples": [
+    {
+      "title": "Panthers Play Yard LED Seesaws, only for this game (kids/family)",
+      "date": "2026-10-25",
+      "url": "https://www.panthers.com/community/panthersplayyard"
+    },
+    {
+      "title": "Ring of Excellence halftime ceremony for Luke Kuechly (recognition, not counted)",
+      "date": "2026-10-25",
+      "url": "https://www.panthers.com/gameday/entertainment"
+    },
+    {
+      "title": "Legends Row partner giveaways and games (every home game, undated)",
+      "date": "",
+      "url": "https://www.panthers.com/gameday/guide"
+    }
+  ],
+  "exclusions": "Only items tied to a 2026 regular-season home date from p0/homegames-nfl.json were counted. Pages or paths carrying 2025 (for example /gameday/2025/*, /tickets/2025/*, 2025 Salute to Service hometown hero text) were excluded by year in URL, byline date, or body text. Preseason items (August 2026, /preseason_* or /pre/ paths, 'Preseason Week N' guides) were excluded by path and date. Away-game watch parties and off-site fan fests were excluded because they are not on a home date. Rolling next-game pages were tied to a date only when the page body or its section banner named the opponent or kickoff time that matches one home date. Panthers specifics: /gameday/2025/* and 2021 game-hub promotion pages excluded by year; Week 6 watch party is an away game.",
+  "recommendedConfig": "none",
+  "credits": {
+    "map": 1,
+    "scrape": 1,
+    "total": 2
+  },
+  "notes": "The configured URL has never held gameday promos in 2026; it is a sponsor sweepstakes grid. Panthers do not publish giveaway nights. The one dated item is a kids-zone activity on a rolling page that only shows the next game, so it cannot be backfilled. Sitemaps, news sitemaps, robots and all pages above were fetched with plain curl at 0 credits."
+}

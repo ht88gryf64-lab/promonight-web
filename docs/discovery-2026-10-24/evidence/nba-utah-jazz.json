@@ -1,0 +1,112 @@
+{
+  "team": "utah-jazz",
+  "league": "NBA",
+  "label": "THIN",
+  "ourCount": 0,
+  "officialDatedCount": 2,
+  "delta": 2,
+  "officialDomain": "www.nba.com/jazz",
+  "urlsTried": [
+    {
+      "url": "https://www.nba.com/sitemap_team_jazz_index.xml (base + news)",
+      "method": "sitemap",
+      "http": 200,
+      "shape": "sitemap",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "26 base pages, none promo; news hits: Home Opener Celebration (2026-10-13), Cup Nights schedule (2026-08-12), SEG Delta Center offerings (2026-09-25)"
+    },
+    {
+      "url": "https://www.nba.com/jazz/{promotional-schedule,promos,promo,giveaways,theme-nights,themes,tickets/theme-nights,tickets/promotions,specials,fan-experiences,game-day,specialty-nights,promotional-calendar,tickets/promotional-schedule,theme-nights-giveaways,tickets/specialty-nights}",
+      "method": "curl",
+      "http": 404,
+      "shape": "404",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "16 paths 404; /jazz/promotions and utahjazz.com/promotions redirect to /jazz/tickets/offers"
+    },
+    {
+      "url": "https://www.nba.com/jazz/tickets/offers",
+      "method": "firecrawl-scrape",
+      "http": 200,
+      "shape": "client-rendered ticket offers (mini plans only)",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Weekend, All-Star, Game-A-Month, Western Rivals, Starting Five, Pick Em plans; no promo nights"
+    },
+    {
+      "url": "https://www.nba.com/jazz/news/utah-jazz-to-host-home-opener-celebration-at-the-delta-center-on-october-23",
+      "method": "curl",
+      "http": 200,
+      "shape": "press release 2026-10-13",
+      "datedCurrentSeason": 2,
+      "undatedRefs": 0,
+      "note": "Oct 23 vs NOP: free Chick-fil-A sandwiches for first 1,000 fans; free T-shirt for first 1,000 Jazz Rewards members"
+    },
+    {
+      "url": "https://www.nba.com/jazz/news/utah-jazz-announce-2026-cup-nights-schedule",
+      "method": "curl",
+      "http": 200,
+      "shape": "press release 2026-08-12",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "NBA Cup group games (Nov 20 PHX, Nov 27 DEN at home): game references, not promos"
+    },
+    {
+      "url": "https://www.nba.com/jazz/news/smith-entertainment-group-welcomes-fans-back-to-the-delta-center-with-elevated-offerings-for-2026-27-season",
+      "method": "curl",
+      "http": 200,
+      "shape": "press release 2026-09-25",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 1,
+      "note": "arena food and rewards program; open practice and preseason dates only (excluded)"
+    },
+    {
+      "url": "https://www.utahjazz.com/",
+      "method": "curl",
+      "http": 200,
+      "shape": "redirect to nba.com/jazz",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no separate club domain"
+    },
+    {
+      "url": "https://content-api-prod.nba.com/public/1/leagues/nba/teams/1610612762/schedule?season=2026-27",
+      "method": "curl",
+      "http": 200,
+      "shape": "schedule JSON",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no promo annotations"
+    }
+  ],
+  "linksChecked": 25,
+  "bestSourceUrls": [
+    "https://www.nba.com/jazz/news/utah-jazz-to-host-home-opener-celebration-at-the-delta-center-on-october-23"
+  ],
+  "shape": "one press release with opener giveaways",
+  "datedCount": 2,
+  "undatedCount": 1,
+  "samples": [
+    {
+      "title": "Home opener: free Chick-fil-A sandwich, first 1,000 fans",
+      "date": "2026-10-23",
+      "url": "https://www.nba.com/jazz/news/utah-jazz-to-host-home-opener-celebration-at-the-delta-center-on-october-23"
+    },
+    {
+      "title": "Home opener: free T-shirt, first 1,000 Jazz Rewards members",
+      "date": "2026-10-23",
+      "url": "https://www.nba.com/jazz/news/utah-jazz-to-host-home-opener-celebration-at-the-delta-center-on-october-23"
+    }
+  ],
+  "exclusions": "Dates matched to homegames-nba.json. Preseason Oct 6 and Oct 12 (SEG article) excluded as type=preseason; Oct 5 open practice and Utah Mammoth dates are not Jazz home games; Cup Nights away dates (Nov 6, Nov 13) excluded as non-home.",
+  "recommendedConfig": "none",
+  "credits": {
+    "map": 0,
+    "scrape": 1,
+    "total": 1
+  },
+  "issue": "#58",
+  "issueResolution": "still nothing published: no 2026-27 promo or theme-night schedule (the /jazz/promotions route lands on mini plans). Only dated items are the Oct 23 opener giveaways, already past. Suggest new revisitAfter 2026-11-16 with reason: no slate published by the opener; recheck the news sitemap and /jazz/tickets/offers 'Special Offers' tab.",
+  "notes": "Jazz have not published a 2026-27 promo schedule as of 2026-10-24."
+}

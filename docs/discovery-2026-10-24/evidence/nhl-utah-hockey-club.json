@@ -1,0 +1,372 @@
+{
+  "team": "utah-hockey-club",
+  "league": "NHL",
+  "label": "BORDERLINE",
+  "officialDomain": "www.nhl.com/utah (club name Utah Mammoth; utahmammoth.com forwards there)",
+  "clubIdentity": "Current name is Utah Mammoth (our slug utah-hockey-club is the 2024-25 placeholder name). Confirmed by: nhl.com/utah <title> 'Official Utah Mammoth Website | Utah Mammoth'; utahmammoth.com 301s to nhl.com/utah/; club socials and press site are @utahmammoth and utahmammothpr.com; NHL logo assets use code UTA. nhl.com/mammoth is a 404.",
+  "urlsTried": [
+    {
+      "url": "https://www.nhl.com/utah/",
+      "method": "curl",
+      "http": 200,
+      "shape": "club homepage",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "<title> 'Official Utah Mammoth Website | Utah Mammoth'; 18 mentions of Utah Mammoth, 0 of Utah Hockey Club. Game tiles (alt 'Mammoth vs X M/D') link to SeatGeek for home games and Mammoth+ for away games"
+    },
+    {
+      "url": "https://utahmammoth.com",
+      "method": "curl",
+      "http": 200,
+      "shape": "301 to https://www.nhl.com/utah/",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "confirms utahmammoth.com is the club's own domain and it forwards to nhl.com/utah"
+    },
+    {
+      "url": "https://www.utahmammoth.com/promotions",
+      "method": "curl",
+      "http": 404,
+      "shape": "404",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": ""
+    },
+    {
+      "url": "https://www.nhl.com/mammoth/",
+      "method": "curl",
+      "http": 200,
+      "shape": "redirects to /errors/not-found",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "club path is /utah, not /mammoth"
+    },
+    {
+      "url": "https://www.nhl.com/utah/<33 promo vocabulary paths>",
+      "method": "curl",
+      "http": 200,
+      "shape": "all redirect to /utah/errors/not-found",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Paths tried: promotions, promotional-schedule, promos, giveaways, theme-nights, themes, specials, fan-experiences, game-day, specialty-nights, fans/promotions, fans/promotional-schedule, fans/promo-schedule, fans/giveaways, fans/theme-nights, fans/game-day, fans/specials, tickets/promotions, tickets/promotional-schedule, tickets/giveaways, tickets/theme-nights, tickets/specialty-nights, tickets/theme-tickets, tickets/promotional-calendar, tickets/game-theme-schedule, community/theme-nights, community/celebration-nights, community/community-nights, arena/promotions, fans/kids, fans/kids-club, tickets/theme-night-packages, fans/theme-nights-schedule"
+    },
+    {
+      "url": "https://www.nhl.com/utah/tickets/single-game/",
+      "method": "curl",
+      "http": 200,
+      "shape": "per-game list shell (JS)",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "see Firecrawl row"
+    },
+    {
+      "url": "https://www.nhl.com/utah/tickets/value-tickets",
+      "method": "curl",
+      "http": 200,
+      "shape": "specialty ticket package",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 1,
+      "note": "Smith's Rewards $15 single-goal-view ticket with free hot dog and water; season-long, undated"
+    },
+    {
+      "url": "https://www.nhl.com/utah/tickets/student-section",
+      "method": "curl",
+      "http": 200,
+      "shape": "specialty ticket package",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 1,
+      "note": "Moxie College Club: $25 student ticket plus free meal, all regular-season home games, undated"
+    },
+    {
+      "url": "https://www.nhl.com/utah/fans/mammothwinyouwin",
+      "method": "curl",
+      "http": 200,
+      "shape": "sponsor offer",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 1,
+      "note": "Jack in the Box: free Jumbo Jack with large drink the day after a Mammoth win, code GOMAMMOTH26. Off-site, win-triggered, undated"
+    },
+    {
+      "url": "https://www.nhl.com/utah/community/home-ice-hero",
+      "method": "curl",
+      "http": 200,
+      "shape": "recognition program",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 1,
+      "note": "AFCU honours one veteran/first responder/military member at each home game; no named nights"
+    },
+    {
+      "url": "https://www.nhl.com/utah/fans/watch-parties",
+      "method": "curl",
+      "http": 200,
+      "shape": "dated bar watch-party list",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Michelob ULTRA watch parties Oct 6, Nov 3, Nov 11, Dec 5, Jan 12, Feb 3, Mar 23, Apr 9 at Salt Lake bars with swag giveaways. none of the 8 dates is a Utah home date in homegames-nhl.json (Oct 6 was at NJ, Nov 3 is at TOR); these are off-site viewing parties, not home-game promos, so not counted"
+    },
+    {
+      "url": "https://www.nhl.com/utah/fans/tusks-on-tap",
+      "method": "curl",
+      "http": 200,
+      "shape": "partner bar list",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "monthly watch parties 'coming soon'; no dates"
+    },
+    {
+      "url": "https://www.nhl.com/utah/fans/rewards",
+      "method": "curl",
+      "http": 200,
+      "shape": "loyalty program",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "points program, no dated items"
+    },
+    {
+      "url": "https://www.nhl.com/utah/fans/know-before-you-go",
+      "method": "curl",
+      "http": 200,
+      "shape": "arena FAQ",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "AFCU early entry perk; no promos"
+    },
+    {
+      "url": "https://www.nhl.com/utah/fans/fan-guide",
+      "method": "curl",
+      "http": 200,
+      "shape": "rules videos",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "none"
+    },
+    {
+      "url": "https://www.nhl.com/utah/community/",
+      "method": "curl",
+      "http": 200,
+      "shape": "community hub",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "programs (Vivint bench captain, STEM day, IKEA seat upgrade, Teamed Up, Home Ice Hero, Assists for Hope); no theme nights"
+    },
+    {
+      "url": "https://www.nhl.com/utah/community/kids-mammoth-gameday",
+      "method": "curl",
+      "http": 200,
+      "shape": "kids video series",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "video episodes, not an in-arena kids promo"
+    },
+    {
+      "url": "https://www.nhl.com/utah/community/communityticketprogram",
+      "method": "curl",
+      "http": 200,
+      "shape": "donated tickets",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "none"
+    },
+    {
+      "url": "https://www.nhl.com/utah/community/teamed-up",
+      "method": "curl",
+      "http": 200,
+      "shape": "youth scholarship",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "none"
+    },
+    {
+      "url": "https://www.nhl.com/utah/community/ikea-seat-upgrade",
+      "method": "curl",
+      "http": 200,
+      "shape": "sweepstakes form",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "undated contest"
+    },
+    {
+      "url": "https://www.nhl.com/utah/info/mammoth-museum-quest",
+      "method": "curl",
+      "http": 200,
+      "shape": "museum promo",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Nov 24 to Jan 4, 2026 (2025-26 window), excluded; not a game promo"
+    },
+    {
+      "url": "https://www.nhl.com/utah/tickets/",
+      "method": "curl",
+      "http": 200,
+      "shape": "ticket hub",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "carousel tiles: Winter Classic, Moxie College, Season Tickets, Single Game, Value Ticket Program"
+    },
+    {
+      "url": "https://www.nhl.com/utah/schedule",
+      "method": "curl",
+      "http": 200,
+      "shape": "schedule shell (JS)",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "NHL platform calendar, no promo fields (verified on the Leafs scrape, same template)"
+    },
+    {
+      "url": "https://www.nhl.com/utah/news/",
+      "method": "curl",
+      "http": 200,
+      "shape": "news index",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "39 articles; none promo or theme-night related"
+    },
+    {
+      "url": "https://www.nhl.com/utah/news/key-home-dates-for-the-2026-27-season-feature-7-16-26",
+      "method": "curl",
+      "http": 200,
+      "shape": "feature: key home dates",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "matchup storylines only (home opener, Winter Classic, rematches); no giveaways or theme nights"
+    },
+    {
+      "url": "https://www.nhl.com/utah/news/the-week-ahead-oct-19-25-feature-10-19-26",
+      "method": "curl",
+      "http": 200,
+      "shape": "weekly preview",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "matchups and broadcast info only"
+    },
+    {
+      "url": "https://www.nhl.com/utah/news/utah-hosts-pittsburgh-to-start-the-week-game-preview-10-19-26",
+      "method": "curl",
+      "http": 200,
+      "shape": "game preview",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no promo mention"
+    },
+    {
+      "url": "https://www.nhl.com/utah/news/utah-returns-home-hosts-toronto-game-preview-10-13-26",
+      "method": "curl",
+      "http": 200,
+      "shape": "game preview",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no promo mention"
+    },
+    {
+      "url": "https://www.nhl.com/utah/news/utah-s-home-and-home-series-with-edmonton-wraps-at-delta-center-game-preview-10-17-26",
+      "method": "curl",
+      "http": 200,
+      "shape": "game preview",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no promo mention"
+    },
+    {
+      "url": "https://www.nhl.com/utah",
+      "method": "firecrawl-map",
+      "http": 200,
+      "shape": "134 URLs",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no promo/theme/giveaway path; all fans/, community/, tickets/ pages fetched above"
+    },
+    {
+      "url": "https://www.nhl.com/utah/tickets/single-game/",
+      "method": "firecrawl-scrape",
+      "http": 200,
+      "shape": "per-game list, 38 rows from Oct 24",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "rows carry weekday, date, time, venue, opponent and SeatGeek link only; no theme/giveaway annotations"
+    },
+    {
+      "url": "https://media.d3.nhle.com/image/private/.../prd/{wh4p1yyurx8v3njfp9zh,genid2tcxmgxxktw5v0s,okx7x5qexdqbvuvgmpli,v1stashlbptgn7g44osj}.jpg",
+      "method": "curl",
+      "http": 200,
+      "shape": "homepage game tile images",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "checked for date-in-image promos: tiles show only 'OPP VS UTAH, date, time'"
+    },
+    {
+      "url": "https://www.nhl.com/fr/utah/",
+      "method": "curl",
+      "http": 200,
+      "shape": "French mirror",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "same content as English"
+    },
+    {
+      "url": "https://utahmammothpr.com/ (+ wp-json search: promotion, theme, giveaway, night, schedule)",
+      "method": "curl",
+      "http": 200,
+      "shape": "press-release hub (Elementor)",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "latest releases are roster/schedule; WP post search returns nothing (releases not exposed as posts)"
+    },
+    {
+      "url": "https://www.deltacenter.com/events + wp-json search 'mammoth' + 3 event pages (tampa-bay-lightning, minnesota-wild-2, carolina-hurricanes)",
+      "method": "curl",
+      "http": 200,
+      "shape": "arena event pages",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "event copy is date, doors, bag policy only; no theme or promo wording"
+    },
+    {
+      "url": "https://www.nhl.com/sitemap/sitemap.xml",
+      "method": "curl",
+      "http": 200,
+      "shape": "league sitemap, 51 URLs under /utah/",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no promo/theme/giveaway path for the club"
+    }
+  ],
+  "linksChecked": 80,
+  "bestSourceUrls": [
+    "https://www.nhl.com/utah/fans/mammothwinyouwin",
+    "https://www.nhl.com/utah/tickets/value-tickets",
+    "https://www.nhl.com/utah/tickets/student-section"
+  ],
+  "shape": "No promotional schedule, theme nights or giveaways anywhere on the club site. Only sponsor deals and specialty ticket packages, all season-long and undated.",
+  "datedCount": 0,
+  "undatedCount": 4,
+  "samples": [
+    {
+      "title": "Jack in the Box free Jumbo Jack the day after a Mammoth win (code GOMAMMOTH26)",
+      "date": "",
+      "url": "https://www.nhl.com/utah/fans/mammothwinyouwin"
+    },
+    {
+      "title": "Smith's $15 value ticket with free hot dog and water",
+      "date": "",
+      "url": "https://www.nhl.com/utah/tickets/value-tickets"
+    },
+    {
+      "title": "Moxie College Club $25 student ticket with free meal",
+      "date": "",
+      "url": "https://www.nhl.com/utah/tickets/student-section"
+    }
+  ],
+  "exclusions": "Museum Quest window (Nov 24 to Jan 4, 2026) is 2025-26, excluded. Watch-party dates are off-site bar events tied to away games, excluded as not home-game promos. Preseason home date 2026-09-26 (marked preseason in homegames-nhl.json) had no promo found. No other dated item existed to classify.",
+  "recommendedConfig": "none",
+  "credits": {
+    "map": 1,
+    "scrape": 1,
+    "total": 2
+  },
+  "creditLedger": [
+    "fc#1 map https://www.nhl.com/utah (1)",
+    "fc#2 scrape https://www.nhl.com/utah/tickets/single-game/ (1)",
+    "all other rows: plain curl, 0 credits"
+  ],
+  "notes": "Label BORDERLINE because the only promo-like content is sponsor offers and specialty ticket packages (value tickets, college club) plus a per-game recognition program (Home Ice Hero). The Jack in the Box win deal is a food deal but is redeemed off-site the day after a win, not at a game, so it is not a game-night promo. If the main session treats sponsor food deals as out of scope entirely, GENUINELY-NONE is the alternative label. Re-check in mid-season: Utah may announce theme nights by news article (none so far)."
+}

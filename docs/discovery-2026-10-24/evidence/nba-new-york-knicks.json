@@ -1,0 +1,91 @@
+{
+  "team": "new-york-knicks",
+  "league": "NBA",
+  "label": "RECOVERED",
+  "ourCount": 0,
+  "officialDatedCount": 7,
+  "officialDomain": "nba.com/knicks",
+  "urlsTried": [
+    {"url": "https://www.nba.com/knicks/popcorn-twosday", "method": "curl", "http": 200, "shape": "SSR __NEXT_DATA__ pageObject (date 2026-10-06, modified 2026-10-23); 7 game cards keyed by NBA gameId + Ticketmaster links; fine-print date list", "datedCurrentSeason": 7, "undatedRefs": 0, "note": "Popcorn TWOsday presented with DoorDash: $2 popcorn every Tuesday regular-season home game, 2026-27. Game cards: 0022600002 (2026-10-20 PHI), 0022600129 (2026-10-27 DET), 0022600211 (2026-11-10 MIL), 0022600672 (2027-01-26 PHX), 0022600780 (2027-02-09 CHA), 0022600890 (2027-03-02 MEM), 0022601044 (2027-03-23 NOP). Fine print says 11/20/26, which is a typo: there is no 11/20 home game; the game card id 0022600211 and the TM link (GM6) are 2026-11-10, a Tuesday. Page created 2026-10-06, the day after the 2026-10-05 check, and is not linked from the site nav."},
+    {"url": "https://www.nba.com/knicks/tickets/theme-nights", "method": "curl", "http": 200, "shape": "static-export shell, empty pageProps; client-rendered filter", "datedCurrentSeason": 0, "undatedRefs": 0, "note": "curl returns only title 'Theme and group nights'. Page chunk JS on cdn.nba.com returns Akamai 403 to curl."},
+    {"url": "https://www.nba.com/knicks/tickets/theme-nights", "method": "firecrawl-scrape", "http": 200, "shape": "rendered filter UI (TYPE Any/Group/Theme, DAY, OPPONENT)", "datedCurrentSeason": 0, "undatedRefs": 0, "note": "Rendered with default 'Any' filter: 'Thank you for your interest in attending a Knicks game! Unfortunately, there are no games that match this filter combination. Please reset your filters. See you at The Garden!'"},
+    {"url": "https://www.nba.com/knicks/tickets/statement-nights", "method": "curl", "http": 200, "shape": "redirect", "datedCurrentSeason": 0, "undatedRefs": 0, "note": "Redirects to /knicks/tickets/single. Configured URL is dead."},
+    {"url": "https://www.nba.com/knicks/tickets/season-of-giving", "method": "curl", "http": 200, "shape": "redirect", "datedCurrentSeason": 0, "undatedRefs": 0, "note": "Now redirects to /knicks/tickets/single (was a live sibling surface on 2026-10-05)."},
+    {"url": "https://www.nba.com/knicks/fivedaysofgiveaways", "method": "curl", "http": 200, "shape": "redirect", "datedCurrentSeason": 0, "undatedRefs": 0, "note": "Redirects to /knicks/fans/sweepstakes."},
+    {"url": "https://www.nba.com/knicks/tickets/fan-first", "method": "curl", "http": 200, "shape": "SSR presale registration page", "datedCurrentSeason": 0, "undatedRefs": 0, "note": "Presale registration and FAQ only. No promo nights."},
+    {"url": "https://www.nba.com/knicks/tickets/single", "method": "firecrawl-scrape", "http": 200, "shape": "rendered single-game list with day/opponent/daytype filters", "datedCurrentSeason": 0, "undatedRefs": 0, "note": "Each home game lists only a uniform tag (Association or Statement), How to watch, and BUY TICKETS. No theme, giveaway or promo labels."},
+    {"url": "https://www.nba.com/knicks/tickets/groups", "method": "firecrawl-scrape", "http": 200, "shape": "rendered group sales page + lead form", "datedCurrentSeason": 0, "undatedRefs": 0, "note": "Group pricing, own area, GardenVision welcome. No dated group or theme nights."},
+    {"url": "https://www.nba.com/knicks/schedule", "method": "curl", "http": 200, "shape": "SSR scheduleData (90 games)", "datedCurrentSeason": 0, "undatedRefs": 0, "note": "Every home game has promotion {media:null}, ticketOffers.promotionTypes [], gameInfo []. A generic nba/game-promotion carousel config (promotionTypes giveaway, theme-night) is attached to every home game but carries no content."},
+    {"url": "https://www.nba.com/knicks/2026champions", "method": "firecrawl-scrape", "http": 200, "shape": "Ceros experience 'champs-fingers-crossed'", "datedCurrentSeason": 0, "undatedRefs": 0, "note": "Playoff recap, videos, merch links. No mention of Champions Night giveaway, shirt or banner night details. /knicks/2026-nba-champions and /knicks/fans/sweepstakes/knicks-championship-ceremony-sweepstakes both redirect here."},
+    {"url": "https://www.nba.com/knicks/fans/sweepstakes", "method": "curl", "http": 200, "shape": "SSR card list", "datedCurrentSeason": 0, "undatedRefs": 1, "note": "One card: 'Championship Banner Sweepstakes' (a contest, not an attendee giveaway). /knicks/sweepstakes-and-promotions redirects here."},
+    {"url": "https://www.nba.com/knicks/videos/full-banner-raising-and-ring-ceremony-2025-26-nba-champions-champions-night", "method": "curl", "http": 200, "shape": "SSR video page", "datedCurrentSeason": 0, "undatedRefs": 0, "note": "Official title 'Full Banner Raising and Ring Ceremony | 2025-26 NBA Champions | Champions Night', dated 2026-10-20. No description text; no shirt mention."},
+    {"url": "https://www.nba.com/knicks/videos/the-ring-2025-26-nba-champions-champions-night", "method": "curl", "http": 200, "shape": "SSR video page", "datedCurrentSeason": 0, "undatedRefs": 0, "note": "Title 'The Ring | 2025-26 NBA Champions | Champions Night'. No giveaway text."},
+    {"url": "https://www.nba.com/knicks/news/knicks-vs-76ers-game-notes-october-20-2026", "method": "curl", "http": 200, "shape": "SSR article", "datedCurrentSeason": 0, "undatedRefs": 0, "note": "Game notes only. No ceremony giveaway text."},
+    {"url": "https://www.nba.com/knicks/schedule-release", "method": "firecrawl-scrape", "http": 200, "shape": "Ceros experience with embedded official @nyknicks X feed (Flockler)", "datedCurrentSeason": 0, "undatedRefs": 0, "note": "Schedule release copy, Fan First, app/SMS sign-up. Embedded feed shows only the latest ~10 posts (2026-10-24), none about promotions."},
+    {"url": "https://cdn.nba.com/teams/uploads/sites/1610612752/2026/08/NYK2627_PrintableSchedule-0813-Revised.jpg", "method": "curl", "http": 200, "shape": "image (printable 2026-27 schedule, presented by DoorDash)", "datedCurrentSeason": 0, "undatedRefs": 0, "note": "Home/away/NBA Cup coloring only. No promo icons."},
+    {"url": "https://www.nba.com/knicks/community/sweetwater", "method": "curl", "http": 200, "shape": "SSR award page", "datedCurrentSeason": 0, "undatedRefs": 4, "note": "Names 2025-26 theme nights (Women's Empowerment Night, Celebrating the Black Experience Night, Hispanic Heritage Night, Pride Night) as award occasions. Prior season, undated, not 2026-27."},
+    {"url": "https://www.nba.com/knicks/siegelmanstable", "method": "curl", "http": 200, "shape": "SSR page", "datedCurrentSeason": 0, "undatedRefs": 0, "note": "Team-store Chase cardholder event on February 1 (2026), first 300 fans. Retail, past, not a game promo."},
+    {"url": "https://www.nba.com/sitemap_team_knicks_index.xml (base, news, games, videos, photos)", "method": "sitemap", "http": 200, "shape": "sitemaps", "datedCurrentSeason": 7, "undatedRefs": 0, "note": "base 148 URLs (all 148 fetched with curl and scanned), news 1894, games 1363, videos 8557, photos 2276. Only promo-shaped 2026-27 hit is /knicks/popcorn-twosday. Newest news is game notes and signings; promo article series last ran 2019-20 ('Knicks Announce Schedule of Theme Nights for 2019-20 Season', 2019-09-10)."},
+    {"url": "https://www.msg.com/sitemap_index.xml (sitemap.xml + sitemap_2.xml)", "method": "sitemap", "http": 200, "shape": "sitemaps", "datedCurrentSeason": 0, "undatedRefs": 0, "note": "2149 URLs. Knicks entries are per-game event pages and seating pages. No promo, giveaway or news section."},
+    {"url": "https://www.msg.com", "method": "firecrawl-map", "http": 200, "shape": "map search=knicks, 408 links", "datedCurrentSeason": 0, "undatedRefs": 0, "note": "Surfaced msg.com/knicks-theme-nights (legacy 2018 page) plus shop and ticket-plan pages."},
+    {"url": "https://www.msg.com/knicks-theme-nights", "method": "curl", "http": 200, "shape": "legacy page, title only", "datedCurrentSeason": 0, "undatedRefs": 0, "note": "Title 'Knicks Theme Nights presented by adidas'; meta description '2018 celebrations include: Black History Night Celebration, Chinese New Year...'. Stale 2018 content, exclude."},
+    {"url": "https://www.msg.com/events-tickets/new-york-knicks-madison-square-garden-october-2026/3B006511E91D862B", "method": "curl", "http": 200, "shape": "SSR event page (Know Before You Go)", "datedCurrentSeason": 0, "undatedRefs": 0, "note": "Oct 27 vs DET: entry, mobile tickets, bag policy, MSG Eats. No promo or popcorn mention. Oct 25 (3B006511E91C8629) and Nov 10 (3B006511E91F8631) pages identical in shape. The Oct 20 event URL (3B006511E91B8627) now redirects to the Oct 25 page."},
+    {"url": "https://www.msg.com/madison-square-garden/food-drink", "method": "curl", "http": 200, "shape": "SSR venue page", "datedCurrentSeason": 0, "undatedRefs": 0, "note": "No Knicks food deals listed."},
+    {"url": "https://nbaanalysis.net/why-the-new-york-knicks-title-celebration-fan-jerseys-say-2026-27-for-madison-square-garden-ring-ceremony", "method": "firecrawl-scrape", "http": 200, "shape": "third-party article", "datedCurrentSeason": 0, "undatedRefs": 0, "note": "THIRD-PARTY, not official. Found via firecrawl-map of nbaanalysis.net (curl hits Cloudflare challenge). Cites an X post by Philadelphia Inquirer editor DeAntae Prince, not a Knicks or MSG source."}
+  ],
+  "linksChecked": 190,
+  "sitemapTermHits": {
+    "promo": 3,
+    "promotion": 1,
+    "giveaway": 7,
+    "theme": 3,
+    "statement": 13,
+    "champions": 12,
+    "banner": 1,
+    "ring": 37,
+    "opening": 7,
+    "night": 119,
+    "fan-first": 1,
+    "giving": 8,
+    "bobblehead": 0,
+    "t-shirt": 0,
+    "shirt": 0,
+    "2026-27": 0,
+    "202627": 0,
+    "popcorn": 1
+  },
+  "answers": {
+    "promoNights2026_27": {
+      "answer": "partial",
+      "quotes": [
+        {"text": "The Knicks and DoorDash are bringing Popcorn TWOsday back, all season long! Ticketed fans can purchase popcorn for just $2 during all Tuesday Knicks home games this season.", "url": "https://www.nba.com/knicks/popcorn-twosday"},
+        {"text": "Offer valid only on select popcorn boxes at participating concession stands in Madison Square Garden each Tuesday during Knicks regular season home games during the 2026-27 season. Offer applies to food item only and not to applicable taxes or other charges. Eligible game dates as follows: 10/20/26, 10/27/26, 11/20/26, 1/26/27, 2/9/27, 3/2/27 and 3/23/27.", "url": "https://www.nba.com/knicks/popcorn-twosday"},
+        {"text": "Thank you for your interest in attending a Knicks game! Unfortunately, there are no games that match this filter combination. Please reset your filters. See you at The Garden!", "url": "https://www.nba.com/knicks/tickets/theme-nights"}
+      ]
+    },
+    "championsNightTshirt": {
+      "answer": "not found",
+      "quotes": [
+        {"text": "Full Banner Raising and Ring Ceremony | 2025-26 NBA Champions | Champions Night", "url": "https://www.nba.com/knicks/videos/full-banner-raising-and-ring-ceremony-2025-26-nba-champions-champions-night"},
+        {"text": "Enter for a chance to win a signed replica Championship Banner and see your name featured in our Champions Night Video.", "url": "https://www.nba.com/knicks/fans/sweepstakes"}
+      ],
+      "thirdPartySource": "nbaanalysis.net (Dan Coombs, 2026-10-20): 'Fans will also be given a commemorative T-shirt to wear' and 'The Knicks' T-shirt reads: \"2026-27 Champions Night,\"'. Its only cited source is an X post by DeAntae Prince of the Philadelphia Inquirer (x.com/DeAntae/status/2112539113631125830, posted 2026-10-20 13:39 UTC) linking a t.co URL. No Knicks, NBA or MSG page found that states the shirt giveaway. The official quotes above confirm only the event name and a sweepstakes."
+    }
+  },
+  "samples": [
+    {"title": "Popcorn TWOsday ($2 popcorn, presented by DoorDash) vs Philadelphia 76ers", "date": "2026-10-20", "url": "https://www.nba.com/knicks/popcorn-twosday"},
+    {"title": "Popcorn TWOsday ($2 popcorn, presented by DoorDash) vs Detroit Pistons", "date": "2026-10-27", "url": "https://www.nba.com/knicks/popcorn-twosday"},
+    {"title": "Popcorn TWOsday ($2 popcorn, presented by DoorDash) vs Milwaukee Bucks", "date": "2026-11-10", "url": "https://www.nba.com/knicks/popcorn-twosday"},
+    {"title": "Popcorn TWOsday ($2 popcorn, presented by DoorDash) vs Phoenix Suns", "date": "2027-01-26", "url": "https://www.nba.com/knicks/popcorn-twosday"},
+    {"title": "Popcorn TWOsday ($2 popcorn, presented by DoorDash) vs Charlotte Hornets", "date": "2027-02-09", "url": "https://www.nba.com/knicks/popcorn-twosday"},
+    {"title": "Popcorn TWOsday ($2 popcorn, presented by DoorDash) vs Memphis Grizzlies", "date": "2027-03-02", "url": "https://www.nba.com/knicks/popcorn-twosday"},
+    {"title": "Popcorn TWOsday ($2 popcorn, presented by DoorDash) vs New Orleans Pelicans", "date": "2027-03-23", "url": "https://www.nba.com/knicks/popcorn-twosday"}
+  ],
+  "exclusions": "Excluded: Championship Banner Sweepstakes and all other sweepstakes (contests, not attendee promos); Champions Night 2026-10-20 T-shirt (third-party only, unconfirmed); msg.com/knicks-theme-nights (2018 legacy page); 2025-26 theme nights named on the Sweetwater award page (prior season, undated); Siegelman Stable team-store event (retail, Feb 2026, past); Fan First presale, Flex Plans, Tap Takeovers (ticketing or off-site bars, not game-night promos); uniform tags Association/Statement on the single-game list (jersey schedule, not promos). The fine-print date 11/20/26 is excluded as a typo and replaced by 2026-11-10 from the page's own game card (gameId 0022600211, TM GM6); there is no Knicks home game on 2026-11-20.",
+  "recommendedConfig": "single URL",
+  "issue": "#64",
+  "issueResolution": "enable/repoint to https://www.nba.com/knicks/popcorn-twosday (SSR __NEXT_DATA__, curl-readable at 0 credits; 7 dated 2026-27 Tuesday food-deal nights, 6 still upcoming). Drop https://www.nba.com/knicks/tickets/statement-nights (redirects to /tickets/single). Keep https://www.nba.com/knicks/tickets/theme-nights as the watch URL for giveaways and theme nights, which are still unpublished; suggest revisitAfter 2026-11-16 (after the first month of home dates, when a Knicks theme or giveaway schedule would most plausibly appear; the filter rendered empty on 2026-10-24). Extraction must take dates from the game cards (gameIds), not the fine print, because the fine print says 11/20/26 for the 2026-11-10 game.",
+  "draftEmptyStateCopy": "The Knicks have not published a 2026-27 giveaway or theme night schedule on their official site. The one promotion they list is Popcorn TWOsday with DoorDash: $2 popcorn for ticketed fans at every Tuesday home game this season. We will add giveaways and theme nights here when the team announces them.",
+  "credits": {"map": 2, "scrape": 6, "total": 8},
+  "notes": "Firecrawl calls: 8 of 10 allowed, 8 credits of 50 (1 credit each; map responses did not return creditsUsed, counted as 1 each). Ledger: 1 scrape tickets/theme-nights, 2 scrape 2026champions, 3 map msg.com search=knicks, 4 map nbaanalysis.net, 5 scrape nbaanalysis article, 6 scrape tickets/single, 7 scrape tickets/groups, 8 scrape schedule-release. nba.com/knicks utility pages (theme-nights, tickets, tickets/single, groups, 2026champions, schedule-release) are static-export shells with empty pageProps; their page JS on cdn.nba.com returns Akamai 403 to curl, so rendering them needs Firecrawl. Content pages (popcorn-twosday, fan-first, sweepstakes, articles, videos, schedule) are SSR and curl-readable. Popcorn TWOsday is a food deal, not a giveaway; if the pipeline's promo types exclude food deals, the label would drop to GENUINELY-NONE for giveaways and theme nights. The draft copy assumes the Popcorn TWOsday rows are ingested; if they are not, the second sentence still holds as a sourced statement. Raw downloads: /private/tmp/claude-501/-Users-mattkovalik-promonight-web/77ab4b20-4ce3-40f2-9617-c69701937719/scratchpad/knicks/raw/."
+}

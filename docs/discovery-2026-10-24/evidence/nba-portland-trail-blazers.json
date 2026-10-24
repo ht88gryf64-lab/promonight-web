@@ -1,0 +1,90 @@
+{
+  "team": "portland-trail-blazers",
+  "league": "NBA",
+  "label": "RECOVERED",
+  "ourCount": 0,
+  "officialDatedCount": 16,
+  "delta": 16,
+  "officialDomain": "www.nba.com/blazers",
+  "urlsTried": [
+    {
+      "url": "https://www.nba.com/sitemap_team_trail%20blazers_index.xml (base + news)",
+      "method": "sitemap",
+      "http": 200,
+      "shape": "sitemap",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "news hit: 2026-27 Celebration and Theme Night Schedule (2026-10-14); no promo page in base sitemap (sitemap name has a literal space: 'trail blazers')"
+    },
+    {
+      "url": "https://www.nba.com/blazers/news/portland-trail-blazers-announce-2026-27-celebration-and-theme-night-schedule",
+      "method": "curl",
+      "http": 200,
+      "shape": "press release, server-rendered __NEXT_DATA__, list 'Weekday, Month D - Theme (vs. Opponent)'",
+      "datedCurrentSeason": 16,
+      "undatedRefs": 0,
+      "note": "16 theme nights. Hello Kitty Night (mystery box plush bag charm) and Harry Potter Night (scarf) items are purchase-with-ticket packages; the nights themselves are open."
+    },
+    {
+      "url": "https://www.nba.com/blazers/dei",
+      "method": "curl",
+      "http": 200,
+      "shape": "landing page",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no dates"
+    },
+    {
+      "url": "https://www.nba.com/blazers/{promotions,promotional-schedule,giveaways,theme-nights,tickets/theme-nights,tickets/promotions}",
+      "method": "curl",
+      "http": 404,
+      "shape": "404",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "all 404"
+    },
+    {
+      "url": "https://content-api-prod.nba.com/public/1/leagues/nba/teams/1610612757/schedule?season=2026-27",
+      "method": "curl",
+      "http": 200,
+      "shape": "schedule JSON",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no promo annotations"
+    }
+  ],
+  "linksChecked": 10,
+  "bestSourceUrls": [
+    "https://www.nba.com/blazers/news/portland-trail-blazers-announce-2026-27-celebration-and-theme-night-schedule"
+  ],
+  "shape": "press release with dated theme list",
+  "datedCount": 16,
+  "undatedCount": 0,
+  "samples": [
+    {
+      "title": "Native American Heritage Celebration presented by Nike N7",
+      "date": "2026-11-07",
+      "url": "https://www.nba.com/blazers/news/portland-trail-blazers-announce-2026-27-celebration-and-theme-night-schedule"
+    },
+    {
+      "title": "Harry Potter Night (co-branded scarf with ticket package)",
+      "date": "2026-12-29",
+      "url": "https://www.nba.com/blazers/news/portland-trail-blazers-announce-2026-27-celebration-and-theme-night-schedule"
+    },
+    {
+      "title": "1977 50th Anniversary Championship Celebration",
+      "date": "2027-03-13",
+      "url": "https://www.nba.com/blazers/news/portland-trail-blazers-announce-2026-27-celebration-and-theme-night-schedule"
+    }
+  ],
+  "exclusions": "Weekday + month-name dates parsed, year inferred (Oct to Dec = 2026, Jan to Apr = 2027), matched to homegames-nba.json: all 16 are regular-season home games. The only non-home date is the press-release dateline (Oct 14, 2026). No preseason dates.",
+  "recommendedConfig": "single URL",
+  "credits": {
+    "map": 0,
+    "scrape": 0,
+    "total": 0
+  },
+  "issue": "#66",
+  "issueResolution": "enable/repoint to https://www.nba.com/blazers/news/portland-trail-blazers-announce-2026-27-celebration-and-theme-night-schedule (16 dated theme nights, published 2026-10-14). No giveaway schedule is published; theme nights only.",
+  "notes": "Published 2026-10-14, six days before the opener. No giveaway list found; Opening Night Oct 21 and Fan Appreciation Apr 7 are listed as theme nights only."
+}

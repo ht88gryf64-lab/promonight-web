@@ -1,0 +1,82 @@
+{
+  "team": "san-antonio-spurs",
+  "league": "NBA",
+  "label": "RECOVERED",
+  "ourCount": 0,
+  "officialDatedCount": 25,
+  "delta": 25,
+  "officialDomain": "www.nba.com/spurs",
+  "urlsTried": [
+    {
+      "url": "https://www.nba.com/sitemap_team_spurs_index.xml (base + news)",
+      "method": "sitemap",
+      "http": 200,
+      "shape": "sitemap",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "news hits: theme night schedule 2026-09-30, watch party schedules 2026-10-02, Tipoff Week 2026-10-07; base hits: spurs-bobblehead-updates (old), branchnights"
+    },
+    {
+      "url": "https://www.nba.com/spurs/tickets/deals",
+      "method": "curl",
+      "http": 200,
+      "shape": "server-rendered HTML promotional schedule with sections: Theme Nights (20 listed), Giveaways (5 listed), Offsite Games (3), Value Add Packages (undated), Ticket Packages (4 featured + 18 additional)",
+      "datedCurrentSeason": 25,
+      "undatedRefs": 2,
+      "note": "configured URL, previously inactive, now titled '2026-27 Spurs Promotional Schedule, Theme Nights, Giveaways and Ticket Packages'. /spurs/promotions redirects here. Ticket packages: 21 regular-season items (Oct 27 Filipino Heritage Jersey, Nov 4 Healthcare Jersey, Dec 3 Harry Potter Jersey, Dec 18 Faith and Family Jersey, Jan 6 Navy Lanyard, Jan 27 Air Force Lanyard, Mar 18 Women Veterans Barbie Jersey, Mar 29 Space Jam, Apr 6 Star Wars Bobblehead, plus more); one preseason package (Oct 14 Space Force lanyard) excluded."
+    },
+    {
+      "url": "https://www.nba.com/spurs/news/san-antonio-spurs-announce-theme-night-schedule-for-2026-27-season",
+      "method": "curl",
+      "http": 200,
+      "shape": "press release (2026-09-30) with prose plus a 23-row THEME NIGHTS SCHEDULE table",
+      "datedCurrentSeason": 29,
+      "undatedRefs": 0,
+      "note": "29 distinct dated rows, all regular-season home dates: 20 promo nights, 5 game references, 4 ticket-package-only dates. See issueResolution."
+    },
+    {
+      "url": "https://content-api-prod.nba.com/public/1/leagues/nba/teams/1610612759/schedule?season=2026-27",
+      "method": "curl",
+      "http": 200,
+      "shape": "schedule JSON",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no promo annotations"
+    }
+  ],
+  "linksChecked": 5,
+  "bestSourceUrls": [
+    "https://www.nba.com/spurs/tickets/deals",
+    "https://www.nba.com/spurs/news/san-antonio-spurs-announce-theme-night-schedule-for-2026-27-season"
+  ],
+  "shape": "server-rendered promo page with typed sections; dates as 'Mon. D' card headers",
+  "datedCount": 25,
+  "undatedCount": 2,
+  "samples": [
+    {
+      "title": "Halloween Night, T-shirts to first 5,000 fans",
+      "date": "2026-10-31",
+      "url": "https://www.nba.com/spurs/tickets/deals"
+    },
+    {
+      "title": "Dia de los Muertos T-shirt, first 5K fans",
+      "date": "2026-11-02",
+      "url": "https://www.nba.com/spurs/tickets/deals"
+    },
+    {
+      "title": "Elf Ugly Sweater Night",
+      "date": "2026-12-13",
+      "url": "https://www.nba.com/spurs/tickets/deals"
+    }
+  ],
+  "exclusions": "Dates parsed from 'Mon. D' headers (Oct to Dec = 2026, Jan to Apr = 2027) and matched to homegames-nba.json: all theme/giveaway dates are regular-season home games. The Oct 14 Space Force lanyard package falls on a preseason home game and is excluded. No pre-2026-07-01 dates. Value Add meal/beer packages are weekday-pattern offers with no dates and are counted as undated (2).",
+  "recommendedConfig": "single URL",
+  "credits": {
+    "map": 0,
+    "scrape": 0,
+    "total": 0
+  },
+  "issue": "#54",
+  "issueResolution": "CONFIRMED with corrections. The article has 29 distinct dated 2026-27 rows, all on regular-season home dates. Real promo nights (20): Oct 20 Opening Night, Oct 31 Halloween (T-shirts first 5,000), Nov 2 Dia de los Muertos T-shirts, Nov 17 Veterans Appreciation, Nov 19 Thanksgiving T-shirts, Nov 21 Hispanic Heritage, Dec 13 Elf Ugly Sweater, Jan 8 Pride, Jan 22 / Feb 6 / Mar 7 / Mar 11 / Apr 7 Fiesta Nights, Jan 24 Hello Kitty Kids Game, Jan 26 Salute Night, Feb 4 Black Heritage, Mar 9 Military Appreciation, Mar 19 Barbie Game Day Women's Night, Mar 31 Box Out Cancer, Apr 11 Fan Appreciation (full-arena giveaway). Game references (5): Nov 13 and Nov 27 Road to the Cup (NBA Cup games), Oct 23 / Feb 26 / Feb 28 I-35 Series games at Moody Center ('series will tip off on Friday, Oct. 23 against the Houston Rockets'). Ticket-package-only dates (4): Dec 3 Harry Potter Jersey, Jan 6 Classic Ringer Tee, Mar 29 Space Jam T-shirt, Apr 6 Star Wars Bobblehead (Jan 24 plushie, Mar 19 jersey, Apr 7 Beerfest packages share promo dates). Article says six Fiesta Nights but its table lists five. Enable the configured URL https://www.nba.com/spurs/tickets/deals: it is now live with the 2026-27 schedule and separates theme nights, giveaways and ticket packages.",
+  "notes": "Officially published 2026-09-30 (press release). Page counts: 20 theme nights (2 are Road to the Cup game references) + 5 giveaways (3 share theme dates) = 25 rows on 22 distinct nights; 21 regular-season ticket packages reported separately."
+}

@@ -1,0 +1,328 @@
+{
+  "team": "toronto-maple-leafs",
+  "league": "NHL",
+  "label": "GENUINELY-NONE",
+  "officialDomain": "www.nhl.com/mapleleafs (plus culture.mapleleafs.com)",
+  "urlsTried": [
+    {
+      "url": "https://culture.mapleleafs.com/celebration-nights",
+      "method": "curl",
+      "http": 200,
+      "shape": "Webflow CMS card grid (4 celebration nights), date and opponent fields empty (w-dyn-bind-empty)",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 4,
+      "note": "Configured watch URL. Cards: Black Excellence Game, Pride Celebration Game, Indigenous Celebration Game, Women's Celebration Game. No dates rendered. Detail slugs carry 2025-26 dates (pride-11-18-25, indigenous-01-10-26, womens-celebration-game-03-07-26), so this is stale 2025-26 content under an unstamped URL."
+    },
+    {
+      "url": "https://culture.mapleleafs.com/celebration-nights/black-excellence",
+      "method": "curl",
+      "http": 200,
+      "shape": "celebration-night detail article, no date in body",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Black History Month copy, no date, 'get tickets' button only"
+    },
+    {
+      "url": "https://culture.mapleleafs.com/celebration-nights/indigenous-01-10-26",
+      "method": "curl",
+      "http": 200,
+      "shape": "celebration-night detail article, no date in body",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "slug date 2026-01-10 is 2025-26 season, excluded"
+    },
+    {
+      "url": "https://culture.mapleleafs.com/celebration-nights/pride-11-18-25",
+      "method": "curl",
+      "http": 200,
+      "shape": "celebration-night detail article, no date in body",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "slug date 2025-11-18 is 2025-26 season, excluded"
+    },
+    {
+      "url": "https://culture.mapleleafs.com/celebration-nights/womens-celebration-game-03-07-26",
+      "method": "curl",
+      "http": 200,
+      "shape": "celebration-night detail article, no date in body",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "slug date 2026-03-07 is 2025-26 season, excluded"
+    },
+    {
+      "url": "https://culture.mapleleafs.com/sitemap.xml",
+      "method": "curl",
+      "http": 404,
+      "shape": "404",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": ""
+    },
+    {
+      "url": "https://culture.mapleleafs.com",
+      "method": "firecrawl-map",
+      "http": 200,
+      "shape": "52 URLs",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Only celebration-nights, 2 old detail slugs and team-videos. No 2026-27 celebration-night slug exists."
+    },
+    {
+      "url": "https://culture.mapleleafs.com/ (via nhl.com/mapleleafs/community/ redirect)",
+      "method": "curl",
+      "http": 200,
+      "shape": "culture landing page",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 1,
+      "note": "'Upcoming CELEBRATION NIGHT' block still shows the 2025-26 Women's Celebration Game, no date"
+    },
+    {
+      "url": "https://www.nhl.com/mapleleafs/",
+      "method": "curl",
+      "http": 200,
+      "shape": "club homepage",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "nav: Tickets, Single Game, Flex Packs, Ultimate Hockey Pack, Memberships, Culture, 50/50, Outdoor Practice. No promotions/theme/giveaway link"
+    },
+    {
+      "url": "https://www.nhl.com/mapleleafs/<33 promo vocabulary paths>",
+      "method": "curl",
+      "http": 200,
+      "shape": "all redirect to /mapleleafs/errors/not-found",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Paths tried: promotions, promotional-schedule, promos, giveaways, theme-nights, themes, specials, fan-experiences, game-day, specialty-nights, fans/promotions, fans/promotional-schedule, fans/promo-schedule, fans/giveaways, fans/theme-nights, fans/game-day, fans/specials, tickets/promotions, tickets/promotional-schedule, tickets/giveaways, tickets/theme-nights, tickets/specialty-nights, tickets/theme-tickets, tickets/promotional-calendar, tickets/game-theme-schedule, community/theme-nights, community/celebration-nights, community/community-nights, arena/promotions, fans/kids, fans/kids-club, tickets/theme-night-packages, fans/theme-nights-schedule"
+    },
+    {
+      "url": "https://www.nhl.com/mapleleafs/tickets/single",
+      "method": "curl",
+      "http": 200,
+      "shape": "per-game list, 34 rows Nov 3 to Apr 5",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "opponent, weekday date, time and Tickets link only; no theme, giveaway or sponsor annotation on any row"
+    },
+    {
+      "url": "https://www.nhl.com/mapleleafs/tickets/",
+      "method": "curl",
+      "http": 200,
+      "shape": "ticket hub",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "2026-27 single game on sale, flex pack, UHP sold out; no promos"
+    },
+    {
+      "url": "https://www.nhl.com/mapleleafs/fans/",
+      "method": "curl",
+      "http": 200,
+      "shape": "fans hub",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "app, plan your night, transit, parking, Fan Assist; app blurb mentions 'giveaways' generically, nothing dated"
+    },
+    {
+      "url": "https://www.nhl.com/mapleleafs/schedule",
+      "method": "curl",
+      "http": 200,
+      "shape": "schedule shell (JS)",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "server HTML empty; see Firecrawl scrape row"
+    },
+    {
+      "url": "https://www.nhl.com/mapleleafs/tickets/ultimate-hockey-pack",
+      "method": "curl",
+      "http": 200,
+      "shape": "ticket package page",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "empty server shell"
+    },
+    {
+      "url": "https://www.nhl.com/mapleleafs/tailgate/",
+      "method": "curl",
+      "http": 200,
+      "shape": "tailgate",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "empty"
+    },
+    {
+      "url": "https://www.nhl.com/mapleleafs/tailgate/gamezone",
+      "method": "curl",
+      "http": 200,
+      "shape": "tailgate",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no promo text"
+    },
+    {
+      "url": "https://www.nhl.com/mapleleafs/members/",
+      "method": "curl",
+      "http": 200,
+      "shape": "season ticket member hub",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no promos"
+    },
+    {
+      "url": "https://www.nhl.com/mapleleafs/community/player-appearances",
+      "method": "curl",
+      "http": 200,
+      "shape": "form",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "closed for requests"
+    },
+    {
+      "url": "https://www.nhl.com/mapleleafs/arena/fan-poll",
+      "method": "curl",
+      "http": 200,
+      "shape": "poll",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no promos"
+    },
+    {
+      "url": "https://www.nhl.com/mapleleafs/arena/",
+      "method": "curl",
+      "http": 200,
+      "shape": "redirects to scotiabankarena.com",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "arena events list"
+    },
+    {
+      "url": "https://www.nhl.com/mapleleafs/news/",
+      "method": "curl",
+      "http": 200,
+      "shape": "news index",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "38 articles listed; none promo/theme-night related"
+    },
+    {
+      "url": "https://www.nhl.com/mapleleafs/news/game-day-vs-rangers-oct-22-2026",
+      "method": "curl",
+      "http": 200,
+      "shape": "game-day article",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no promo/theme mention"
+    },
+    {
+      "url": "https://www.nhl.com/mapleleafs/news/game-day-vs-sharks-oct-19-2026",
+      "method": "curl",
+      "http": 200,
+      "shape": "game-day article",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no promo/theme mention"
+    },
+    {
+      "url": "https://www.nhl.com/mapleleafs/news/game-day-vs-islanders-oct-17-2026",
+      "method": "curl",
+      "http": 200,
+      "shape": "game-day article",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no promo/theme mention"
+    },
+    {
+      "url": "https://www.nhl.com/mapleleafs/news/maple-leafs-announce-2026-27-nhl-regular-season-schedule",
+      "method": "curl",
+      "http": 200,
+      "shape": "schedule release",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no promo/theme mention"
+    },
+    {
+      "url": "https://www.nhl.com/mapleleafs/news/maple-leafs-announce-2026-nhl-preseason-schedule",
+      "method": "curl",
+      "http": 200,
+      "shape": "preseason release",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "preseason, excluded"
+    },
+    {
+      "url": "https://www.nhl.com/mapleleafs",
+      "method": "firecrawl-map",
+      "http": 200,
+      "shape": "148 URLs",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Keyword filter (promo, giveaway, theme, special, night, celebrat, fan-exp, game-day, kids, food, deal, soiree, cadeau) matched only 4 game-day news articles, checked above"
+    },
+    {
+      "url": "https://www.nhl.com/mapleleafs/schedule",
+      "method": "firecrawl-scrape",
+      "http": 200,
+      "shape": "NHL platform calendar grid",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Rows carry opponent, time, result, broadcaster, gamecenter link. No promo fields. Same NHL club-site template for all 32 clubs."
+    },
+    {
+      "url": "https://www.scotiabankarena.com/teams/detail/toronto-maple-leafs",
+      "method": "curl",
+      "http": 406,
+      "shape": "WAF block",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "retried with Firecrawl"
+    },
+    {
+      "url": "https://www.scotiabankarena.com/teams/detail/toronto-maple-leafs",
+      "method": "firecrawl-scrape",
+      "http": 200,
+      "shape": "arena event list, 34 Leafs home games",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Event titles are plain 'Toronto Maple Leafs vs X'; no theme or promo wording"
+    },
+    {
+      "url": "https://www.nhl.com/fr/mapleleafs/",
+      "method": "curl",
+      "http": 200,
+      "shape": "French mirror of English club site (lang=fr)",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Same nav and content as English; /fr/mapleleafs/promotions and /fr/mapleleafs/billets both not-found"
+    },
+    {
+      "url": "https://www.nhl.com/sitemap/sitemap.xml",
+      "method": "curl",
+      "http": 200,
+      "shape": "league sitemap, 9437 URLs, 70 under /mapleleafs/",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "No promo, theme, giveaway or special-night path under /mapleleafs/ (other clubs do have them, e.g. /bruins/fans/promotions-schedule)"
+    }
+  ],
+  "linksChecked": 67,
+  "bestSourceUrls": [
+    "https://culture.mapleleafs.com/celebration-nights"
+  ],
+  "shape": "No 2026-27 promo content. Only promo-adjacent page is the celebration-nights card grid, which still shows the 2025-26 set with empty date fields.",
+  "datedCount": 0,
+  "undatedCount": 4,
+  "samples": [],
+  "exclusions": "Celebration-night detail slugs carry 2025-26 dates (11-18-25, 01-10-26, 03-07-26) and were excluded as last season. Preseason schedule article (Sept 2026) excluded; preseason home dates 2026-09-19 and 2026-09-23 are marked preseason in homegames-nhl.json. No other date was found to classify.",
+  "recommendedConfig": "none",
+  "credits": {
+    "map": 2,
+    "scrape": 2,
+    "total": 4
+  },
+  "creditLedger": [
+    "fc#1 map https://www.nhl.com/mapleleafs (1)",
+    "fc#2 scrape https://www.scotiabankarena.com/teams/detail/toronto-maple-leafs (1)",
+    "fc#3 map https://culture.mapleleafs.com (1)",
+    "fc#4 scrape https://www.nhl.com/mapleleafs/schedule (1)",
+    "all other rows: plain curl, 0 credits"
+  ],
+  "notes": "Leafs run no giveaway or promotional schedule on nhl.com/mapleleafs: 33 vocabulary paths 404, the league sitemap lists no promo path for the club, the per-game ticket list and the Scotiabank Arena event list carry no annotations, and recent game-day articles mention none. The 4 undated refs are the 2025-26 celebration nights (Black Excellence, Pride, Indigenous, Women's), which are recognition/heritage nights and would sit in the BORDERLINE class even once re-dated. Keep culture.mapleleafs.com/celebration-nights as a watch URL: new dated slugs for 2026-27 should appear there first. French paths checked (nhl.com/fr/mapleleafs mirrors English, no French-only pages)."
+}

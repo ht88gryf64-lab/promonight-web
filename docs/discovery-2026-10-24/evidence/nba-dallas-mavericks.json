@@ -1,0 +1,116 @@
+{
+  "team": "dallas-mavericks",
+  "league": "NBA",
+  "label": "MATCH",
+  "ourCount": 6,
+  "officialDatedCount": 7,
+  "delta": 1,
+  "officialDomain": "www.nba.com/mavs",
+  "bestSourceUrls": [
+    "https://www.nba.com/mavs/tickets/single?theme=all",
+    "https://www.nba.com/mavs/news/2026-27-dallas-maverickstheme-nights-schedule"
+  ],
+  "shape": "client-rendered schedule cards with theme labels",
+  "undatedCount": 0,
+  "samples": [
+    {
+      "title": "Breast Health Awareness Night",
+      "date": "2026-10-28",
+      "url": "https://www.nba.com/mavs/tickets/single?theme=all"
+    },
+    {
+      "title": "Honoring Dr. Martin Luther King Jr.",
+      "date": "2027-01-18",
+      "url": "https://www.nba.com/mavs/tickets/single?theme=all"
+    },
+    {
+      "title": "Harry Potter Night (special ticket required)",
+      "date": "2026-12-14",
+      "url": "https://www.nba.com/mavs/tickets/single?theme=all"
+    }
+  ],
+  "exclusions": "Bobblehead page dates are 2026 Jan to Apr (2025-26 season) and excluded by the 2026-07-01 cutoff. Cup Nights excluded as game references. Package nights ('SPECIAL TICKET REQUIRED') counted separately (13 upcoming).",
+  "recommendedConfig": "single URL",
+  "credits": {
+    "map": 0,
+    "scrape": 1,
+    "total": 1
+  },
+  "notes": "Open nights: 6 upcoming on the rendered page + Home Opener Oct 24 (today, dropped from the upcoming list) = 7 vs our 6; delta 1 is explained by today's opener. 13 package-only nights (Pride/Fourth Wing, Harry Potter, Peanuts, Space Jam, Seats for Heroes, Anime, Hello Kitty, AAHN, Lunar New Year, Women's, Los Mavs, Star Wars, South Asian). Cards show '2 Promotions Available' on Nov 8 and '1 Promotion' on Dec 26 behind an expander that was not captured.",
+  "urlsTried": [
+    {
+      "url": "https://www.nba.com/sitemap_team_mavericks_index.xml (base + news)",
+      "method": "sitemap",
+      "http": 200,
+      "shape": "sitemap",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "searched for promo vocabulary"
+    },
+    {
+      "url": "https://www.nba.com/mavs/tickets/single?theme=all",
+      "method": "curl",
+      "http": 200,
+      "shape": "client-rendered filterable ticket list",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "filters only before render"
+    },
+    {
+      "url": "https://www.nba.com/mavs/tickets/single?theme=all",
+      "method": "firecrawl-scrape",
+      "http": 200,
+      "shape": "rendered game cards with theme label; 'SPECIAL TICKET REQUIRED' suffix on package nights",
+      "datedCurrentSeason": 19,
+      "undatedRefs": 0,
+      "note": "19 upcoming theme games: 6 open (Breast Health Oct 28, MLK Jan 18, City Edition Jan 23, Heart Health Feb 9, Brain Health Mar 31, Fan Appreciation Apr 11) + 13 special ticket required"
+    },
+    {
+      "url": "https://www.nba.com/mavs/news/2026-27-dallas-maverickstheme-nights-schedule",
+      "method": "curl",
+      "http": 200,
+      "shape": "press release 2026-09-09",
+      "datedCurrentSeason": 23,
+      "undatedRefs": 0,
+      "note": "23 entries: 7 new specialty ticket-pack games + 16 annual nights incl. Home Opener Oct 24 and 2 Cup Nights (Oct 30, Nov 6, game references)"
+    },
+    {
+      "url": "https://www.nba.com/mavs/themenights",
+      "method": "curl",
+      "http": 200,
+      "shape": "redirect to tickets/single?theme=all",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": ""
+    },
+    {
+      "url": "https://www.nba.com/mavs/bobbleheads",
+      "method": "curl",
+      "http": 200,
+      "shape": "2025-26 Legends bobblehead page",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "all dates Jan to Apr 2026 (2025-26), excluded"
+    },
+    {
+      "url": "https://www.nba.com/mavs/{17 common promo paths}",
+      "method": "curl",
+      "http": 404,
+      "shape": "probe",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "all 17 paths 404"
+    },
+    {
+      "url": "https://content-api-prod.nba.com/public/1/leagues/nba/teams/1610612742/schedule?season=2026-27",
+      "method": "curl",
+      "http": 200,
+      "shape": "schedule JSON (per-game gameInfo/promotion fields)",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no promo annotations"
+    }
+  ],
+  "linksChecked": 24,
+  "datedCount": 7
+}

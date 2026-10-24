@@ -1,0 +1,229 @@
+{
+  "team": "dallas-cowboys",
+  "league": "NFL",
+  "label": "THIN",
+  "officialDomain": "www.dallascowboys.com",
+  "urlsTried": [
+    {
+      "url": "https://www.dallascowboys.com/robots.txt",
+      "method": "curl",
+      "http": 200,
+      "shape": "robots",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": ""
+    },
+    {
+      "url": "https://www.dallascowboys.com/sitemap.xml",
+      "method": "curl",
+      "http": 200,
+      "shape": "sitemap 1680 URLs",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Searched for promo vocabulary"
+    },
+    {
+      "url": "https://www.dallascowboys.com/sitemap-news-archive_1.xml (through _8) and sitemap-fast-changing.xml",
+      "method": "curl",
+      "http": 200,
+      "shape": "news sitemaps with titles",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "2026 titles: uniform schedule, Brazil game, Thanksgiving host; no theme-game or giveaway announcements"
+    },
+    {
+      "url": "https://www.dallascowboys.com/fans/promotions-team",
+      "method": "curl",
+      "http": 200,
+      "shape": "cheer/promotions squad roster page",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "'New Roster Coming Soon', not promos"
+    },
+    {
+      "url": "https://www.dallascowboys.com/fans/kids-zone",
+      "method": "curl",
+      "http": 200,
+      "shape": "2018 article",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 1,
+      "note": "Kids Zone every game in AT&T East Plaza with giveaways, face painting; undated"
+    },
+    {
+      "url": "https://www.dallascowboys.com/game-day/",
+      "method": "curl",
+      "http": 200,
+      "shape": "JS shell",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Empty"
+    },
+    {
+      "url": "https://www.dallascowboys.com/game-day/",
+      "method": "firecrawl-scrape",
+      "http": 200,
+      "shape": "JS shell",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Rendered page also empty of promo content"
+    },
+    {
+      "url": "https://www.dallascowboys.com/stadium/know-before-you-go",
+      "method": "curl",
+      "http": 200,
+      "shape": "rolling next-game KBYG",
+      "datedCurrentSeason": 1,
+      "undatedRefs": 3,
+      "note": "Still set to Thu Oct 8 2026 Buccaneers vs Cowboys: 'Halftime Crucial Catch Tribute Performance'. Every game: $5 12oz beers at Miller Lite House, Item of the Game, Legend of the Game."
+    },
+    {
+      "url": "https://www.dallascowboys.com/stadium/fan-gameday-playbook",
+      "method": "curl",
+      "http": 200,
+      "shape": "2020 COVID guidance",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Stale"
+    },
+    {
+      "url": "https://www.dallascowboys.com/specialevents",
+      "method": "curl",
+      "http": 200,
+      "shape": "venue rental",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Not promos"
+    },
+    {
+      "url": "https://www.dallascowboys.com/fans/tostitos-gameday-everyday",
+      "method": "curl",
+      "http": 200,
+      "shape": "sweepstakes rules",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": ""
+    },
+    {
+      "url": "https://www.dallascowboys.com/fans/",
+      "method": "curl",
+      "http": 200,
+      "shape": "fan hub",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Links only"
+    },
+    {
+      "url": "https://www.dallascowboys.com/fans/zone",
+      "method": "curl",
+      "http": 200,
+      "shape": "fan zone",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": ""
+    },
+    {
+      "url": "https://www.dallascowboys.com/fans/zone",
+      "method": "firecrawl-scrape",
+      "http": 200,
+      "shape": "fan zone rendered",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Stale video tiles from 2022"
+    },
+    {
+      "url": "https://www.dallascowboys.com/schedule/",
+      "method": "curl",
+      "http": 200,
+      "shape": "schedule list",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Rows carry only 'Presented By' sponsor and travel links, no promo annotations"
+    },
+    {
+      "url": "https://www.dallascowboys.com/fans/carneasada",
+      "method": "curl",
+      "http": 200,
+      "shape": "ticketed event page",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 1,
+      "note": "Carne Asada presented by H-E-B, Saturday Sept 19 at Miller Lite House. Paid ticket, day before the 9/20 home game, not on a game date; not counted."
+    },
+    {
+      "url": "https://www.dallascowboys.com/fans/watch-party",
+      "method": "curl",
+      "http": 200,
+      "shape": "away-game watch party",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Oct 18 at Packers, away game, excluded"
+    },
+    {
+      "url": "https://www.dallascowboys.com/community/hispanic-outreach",
+      "method": "curl",
+      "http": 200,
+      "shape": "evergreen page",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 1,
+      "note": "Annual Hispanic Heritage game (plaza Ballet Folklorico, flag presentations); 2026 game date not stated anywhere found"
+    },
+    {
+      "url": "https://www.dallascowboys.com/stadium/item-of-game",
+      "method": "curl",
+      "http": 404,
+      "shape": "404",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": ""
+    },
+    {
+      "url": "https://www.dallascowboys.com/stadium/game-day-timeline-menu",
+      "method": "curl",
+      "http": 404,
+      "shape": "404",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": ""
+    },
+    {
+      "url": "https://www.dallascowboys.com",
+      "method": "firecrawl-map",
+      "http": 200,
+      "shape": "map 4932 URLs, search=promotions",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Hits are coaching-staff promotions news, shop promo pages, old sweepstakes rules"
+    }
+  ],
+  "linksChecked": 24,
+  "bestSourceUrls": [
+    "https://www.dallascowboys.com/stadium/know-before-you-go"
+  ],
+  "shape": "No promo schedule. A rolling Know Before You Go page lists the next home game's timeline, including any halftime theme element, and every-game food deals.",
+  "datedCount": 1,
+  "undatedCount": 6,
+  "samples": [
+    {
+      "title": "Halftime Crucial Catch Tribute Performance (Buccaneers vs Cowboys)",
+      "date": "2026-10-08",
+      "url": "https://www.dallascowboys.com/stadium/know-before-you-go"
+    },
+    {
+      "title": "$5 12oz beers all day at Miller Lite House (every home game, undated)",
+      "date": "",
+      "url": "https://www.dallascowboys.com/stadium/know-before-you-go"
+    },
+    {
+      "title": "Kids Zone with giveaways and face painting (every home game, undated)",
+      "date": "",
+      "url": "https://www.dallascowboys.com/fans/kids-zone"
+    }
+  ],
+  "exclusions": "Only items tied to a 2026 regular-season home date from p0/homegames-nfl.json were counted. Pages or paths carrying 2025 (for example /gameday/2025/*, /tickets/2025/*, 2025 Salute to Service hometown hero text) were excluded by year in URL, byline date, or body text. Preseason items (August 2026, /preseason_* or /pre/ paths, 'Preseason Week N' guides) were excluded by path and date. Away-game watch parties and off-site fan fests were excluded because they are not on a home date. Rolling next-game pages were tied to a date only when the page body or its section banner named the opponent or kickoff time that matches one home date. Cowboys specifics: Carne Asada (9/19) is a paid Saturday event, not a home date; Oct 18 watch party is for an away game; 2021 to 2023 giveaway pages excluded by year in path.",
+  "recommendedConfig": "single URL",
+  "credits": {
+    "map": 1,
+    "scrape": 2,
+    "total": 3
+  },
+  "notes": "If anything is configured, it is the rolling /stadium/know-before-you-go page polled in the days before each home game; it overwrites itself, so past games cannot be backfilled. The Cowboys run no giveaway calendar on the club site. The Hispanic Heritage game is annual but its 2026 date was not found."
+}

@@ -1,0 +1,403 @@
+{
+  "team": "vancouver-canucks",
+  "league": "NHL",
+  "label": "THIN",
+  "officialDomain": "www.nhl.com/canucks (plus community.canucks.com and ticket.canucks.com)",
+  "urlsTried": [
+    {
+      "url": "https://community.canucks.com/community-nights/",
+      "method": "curl",
+      "http": 200,
+      "shape": "WordPress (Avada) page, title image only; card grid hidden by CSS and empty",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Configured watch URL, linked as 'Theme Nights' in the nhl.com/canucks nav. WP API (pages/2812) shows last modified 2025-12-17 and content is CSS plus one header image. No 2026-27 content."
+    },
+    {
+      "url": "https://community.canucks.com/wp-json/wp/v2/pages?orderby=modified (42 pages) + posts",
+      "method": "curl",
+      "http": 200,
+      "shape": "WP REST listing",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Enumerated every community page by modified date; only pages touched since Oct 2026 are home, contests-promotions, community-hero, donations, scholarships, fans, NDTR, mini-minor"
+    },
+    {
+      "url": "https://community.canucks.com/wp-json/tribe/events/v1/events?start_date=2026-10-01&end_date=2027-06-30",
+      "method": "curl",
+      "http": 200,
+      "shape": "The Events Calendar API",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "0 events"
+    },
+    {
+      "url": "https://community.canucks.com/diwali/",
+      "method": "curl (WP REST)",
+      "http": 200,
+      "shape": "community page",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "modified 2025-11-04; no 2026-27 date (superseded by Oct 19 2026 news article, see below)"
+    },
+    {
+      "url": "https://community.canucks.com/black-history-month/",
+      "method": "curl (WP REST)",
+      "http": 200,
+      "shape": "community page",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 1,
+      "note": "dates February 20 and March 2 are 2025-26 (modified 2026-02-10), excluded"
+    },
+    {
+      "url": "https://community.canucks.com/lunar-new-year/",
+      "method": "curl (WP REST)",
+      "http": 200,
+      "shape": "community page",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 1,
+      "note": "Year of the Horse copy (2026), no date, 2025-26"
+    },
+    {
+      "url": "https://community.canucks.com/pride-night/",
+      "method": "curl (WP REST)",
+      "http": 200,
+      "shape": "community page",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 1,
+      "note": "modified 2026-01-07, no date, 2025-26"
+    },
+    {
+      "url": "https://community.canucks.com/celebration-women-in-sport/",
+      "method": "curl (WP REST)",
+      "http": 200,
+      "shape": "community page",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 1,
+      "note": "March 4 is 2025-26 (modified 2026-03-04), excluded"
+    },
+    {
+      "url": "https://community.canucks.com/filipino-heritage-night/",
+      "method": "curl (WP REST)",
+      "http": 200,
+      "shape": "community page",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 1,
+      "note": "December 5 is 2025-26 (modified 2025-12-04), excluded"
+    },
+    {
+      "url": "https://community.canucks.com/hockey-fights-cancer/",
+      "method": "curl (WP REST)",
+      "http": 200,
+      "shape": "community page",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 1,
+      "note": "dates November 17 and December 19 2024, excluded"
+    },
+    {
+      "url": "https://community.canucks.com/national-day-for-truth-and-reconciliation/",
+      "method": "curl (WP REST)",
+      "http": 200,
+      "shape": "community page",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Sept 24 (Abbotsford) and Sept 26 (Rogers Arena) preseason games, excluded as preseason"
+    },
+    {
+      "url": "https://community.canucks.com/contests-promotions/",
+      "method": "curl (WP REST)",
+      "http": 200,
+      "shape": "community page",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "only a link to canucks.com/PacificPuck (Tradable Bits contest)"
+    },
+    {
+      "url": "https://community.canucks.com/fans/",
+      "method": "curl (WP REST)",
+      "http": 200,
+      "shape": "community page",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "links to contests, game entertainment, tours, 50/50"
+    },
+    {
+      "url": "https://community.canucks.com/community-hero/",
+      "method": "curl (WP REST)",
+      "http": 200,
+      "shape": "community page",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "BCLC Community Hero nomination, per-game recognition, undated"
+    },
+    {
+      "url": "https://www.nhl.com/canucks/<33 promo vocabulary paths>",
+      "method": "curl",
+      "http": 200,
+      "shape": "all not-found except community/theme-nights which redirects to community.canucks.com",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Paths tried: promotions, promotional-schedule, promos, giveaways, theme-nights, themes, specials, fan-experiences, game-day, specialty-nights, fans/promotions, fans/promotional-schedule, fans/promo-schedule, fans/giveaways, fans/theme-nights, fans/game-day, fans/specials, tickets/promotions, tickets/promotional-schedule, tickets/giveaways, tickets/theme-nights, tickets/specialty-nights, tickets/theme-tickets, tickets/promotional-calendar, tickets/game-theme-schedule, community/theme-nights, community/celebration-nights, community/community-nights, arena/promotions, fans/kids, fans/kids-club, tickets/theme-night-packages, fans/theme-nights-schedule"
+    },
+    {
+      "url": "https://www.nhl.com/canucks/",
+      "method": "curl",
+      "http": 200,
+      "shape": "club homepage",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "nav: Theme Nights -> community.canucks.com/community-nights, Contests & Promotions, Kids Club (vanbase.ca merch), Canucks Game Day Live, Tickets -> ticket.canucks.com"
+    },
+    {
+      "url": "https://ticket.canucks.com/singlegame",
+      "method": "curl",
+      "http": 200,
+      "shape": "Next.js ticket page; per-game JSON records in the RSC flight payload (self.__next_f), 37 home games from Oct 25",
+      "datedCurrentSeason": 1,
+      "undatedRefs": 0,
+      "note": "Fields per game: date, time, opponent, ticket_url, plus optional sponsor_name (17 games, presenting sponsors such as Toyota, Rogers, McDonalds, Lululemon), alternate_jersey 'black_skate' (13 games), and community_night (1 game: 'Naruto Night' 1-5-2027 with offer_url gofevo.com/event/Narutonight3). Past games (Oct 1 to Oct 22) already dropped from the list."
+    },
+    {
+      "url": "https://ticket.canucks.com/gamepresentation",
+      "method": "curl",
+      "http": 404,
+      "shape": "404",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": ""
+    },
+    {
+      "url": "https://ticket.canucks.com/promotions",
+      "method": "curl",
+      "http": 404,
+      "shape": "404",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": ""
+    },
+    {
+      "url": "https://ticket.canucks.com/theme-nights",
+      "method": "curl",
+      "http": 404,
+      "shape": "404",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": ""
+    },
+    {
+      "url": "https://ticket.canucks.com/robots.txt",
+      "method": "curl",
+      "http": 404,
+      "shape": "404",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": ""
+    },
+    {
+      "url": "https://ticket.canucks.com/sitemap.xml",
+      "method": "curl",
+      "http": 404,
+      "shape": "404",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": ""
+    },
+    {
+      "url": "https://ticket.canucks.com/groups",
+      "method": "curl",
+      "http": 200,
+      "shape": "ticket subpage",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "group sales, no dated items"
+    },
+    {
+      "url": "https://ticket.canucks.com/ticketsforacause",
+      "method": "curl",
+      "http": 200,
+      "shape": "ticket subpage",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "fundraising ticket program, undated"
+    },
+    {
+      "url": "https://ticket.canucks.com/membership",
+      "method": "curl",
+      "http": 200,
+      "shape": "ticket subpage",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "season tickets"
+    },
+    {
+      "url": "https://ticket.canucks.com/minorhockey",
+      "method": "curl",
+      "http": 200,
+      "shape": "ticket subpage",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "minor hockey group packages (popcorn voucher etc.), undated"
+    },
+    {
+      "url": "https://www.gofevo.com/event/Narutonight3",
+      "method": "curl",
+      "http": 200,
+      "shape": "JS shell; og:description '1/5/27 @ 7:00 PM - Naruto Night'",
+      "datedCurrentSeason": 1,
+      "undatedRefs": 0,
+      "note": "same item as the Firecrawl row"
+    },
+    {
+      "url": "https://www.gofevo.com/event/Narutonight3",
+      "method": "firecrawl-scrape",
+      "http": 200,
+      "shape": "theme-night ticket offer page",
+      "datedCurrentSeason": 1,
+      "undatedRefs": 0,
+      "note": "Jan 5 vs NY Islanders: every ticket bought through the link includes a limited-edition Naruto headband with a metal Canucks Orca. Specialty theme ticket package (item only with this link)."
+    },
+    {
+      "url": "https://www.nhl.com/canucks/news/",
+      "method": "curl",
+      "http": 200,
+      "shape": "news index, 27 articles",
+      "datedCurrentSeason": 1,
+      "undatedRefs": 0,
+      "note": "one theme-night article (Diwali)"
+    },
+    {
+      "url": "https://www.nhl.com/canucks/news/the-festival-of-lights-takes-over-rogers-arena-for-canucks-10th-annual-diwali-night-on-november-3",
+      "method": "curl",
+      "http": 200,
+      "shape": "press release, dated theme night",
+      "datedCurrentSeason": 1,
+      "undatedRefs": 0,
+      "note": "10th annual Diwali Night, Nov 3 2026 vs Anaheim, 7:00pm: RBC Landing festivities from 5pm, Jazzy B ceremonial puck drop, South Asian vendors and food samples (chai, butter chicken, samosas), henna, photobooth, 2026.27 Diwali merchandise. Published 2026-10-19."
+    },
+    {
+      "url": "https://www.nhl.com/canucks/news/canucks-host-hurricanes-to-begin-three-game-homestand",
+      "method": "curl",
+      "http": 200,
+      "shape": "club page",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "home game preview, no promo"
+    },
+    {
+      "url": "https://www.nhl.com/canucks/news/canucks-host-red-wings-as-homestand-continues-on-thursday-night",
+      "method": "curl",
+      "http": 200,
+      "shape": "club page",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "home game preview, no promo"
+    },
+    {
+      "url": "https://www.nhl.com/canucks/news/game-notes-canucks-vs-red-wings-102226",
+      "method": "curl",
+      "http": 200,
+      "shape": "club page",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "game notes, no promo"
+    },
+    {
+      "url": "https://www.nhl.com/canucks/news/canucks-announce-2026-27-regular-season-schedule",
+      "method": "curl",
+      "http": 200,
+      "shape": "club page",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "schedule release, no promo"
+    },
+    {
+      "url": "https://www.nhl.com/canucks/fans/boomi",
+      "method": "curl",
+      "http": 200,
+      "shape": "club page",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "empty"
+    },
+    {
+      "url": "https://www.nhl.com/canucks/info/young-stars",
+      "method": "curl",
+      "http": 200,
+      "shape": "club page",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Young Stars prospect tournament Sept 13 to 16, preseason, excluded"
+    },
+    {
+      "url": "https://www.nhl.com/canucks",
+      "method": "firecrawl-map",
+      "http": 200,
+      "shape": "112 URLs",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no promo/theme/giveaway path; relevant pages fetched above"
+    },
+    {
+      "url": "https://hq.canucks.com/gdl",
+      "method": "curl",
+      "http": 200,
+      "shape": "Canucks Game Day Live (Molson bar viewing parties)",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "off-site watch parties with giveaways, next one Oct 17 at a New Westminster pub during an away game; not a home-game promo"
+    },
+    {
+      "url": "https://www.nhl.com/fr/canucks/",
+      "method": "curl",
+      "http": 200,
+      "shape": "French mirror",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "same nav as English; /fr/canucks/promotions and /fr/canucks/billets not-found"
+    },
+    {
+      "url": "https://www.nhl.com/sitemap/sitemap.xml",
+      "method": "curl",
+      "http": 200,
+      "shape": "league sitemap, 27 URLs under /canucks/",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no promo/theme/giveaway path for the club"
+    }
+  ],
+  "linksChecked": 77,
+  "bestSourceUrls": [
+    "https://ticket.canucks.com/singlegame",
+    "https://www.nhl.com/canucks/news/the-festival-of-lights-takes-over-rogers-arena-for-canucks-10th-annual-diwali-night-on-november-3"
+  ],
+  "shape": "No promotional schedule page. Dated items come from (a) a structured community_night field on the ticket site's per-game records and (b) individual theme-night press releases on nhl.com/canucks/news. The configured Theme Nights page is an empty 2025-26 shell.",
+  "datedCount": 2,
+  "undatedCount": 6,
+  "samples": [
+    {
+      "title": "10th annual Diwali Night (Jazzy B puck drop, RBC Landing festival, food samples)",
+      "date": "2026-11-03",
+      "url": "https://www.nhl.com/canucks/news/the-festival-of-lights-takes-over-rogers-arena-for-canucks-10th-annual-diwali-night-on-november-3"
+    },
+    {
+      "title": "Naruto Night (theme ticket with limited-edition Naruto x Canucks headband)",
+      "date": "2027-01-05",
+      "url": "https://www.gofevo.com/event/Narutonight3"
+    }
+  ],
+  "homeGameMatch": "2026-11-03 vs anaheim-ducks and 2027-01-05 vs new-york-islanders are both regular-season home games in homegames-nhl.json",
+  "exclusions": "Every community-night detail page date (Feb 20, Mar 2, Mar 4, Dec 5, Nov 17, Dec 19) was checked against the page's WP modified date and the 2026 calendar and falls in 2025-26 or earlier, so excluded. National Day for Truth and Reconciliation (Sept 24 and 26) and Young Stars (Sept 13 to 16) excluded as preseason; 2026-09-24 and 2026-09-26 are marked preseason in homegames-nhl.json. Only items on Oct 2026 to Apr 2027 regular-season home dates were counted.",
+  "recommendedConfig": "multi-URL",
+  "recommendedConfigDetail": "ticket.canucks.com/singlegame as a schedule-annotation source (read the community_night field from the RSC flight payload or rawHtml; a markdown-only scrape may not surface it) plus nhl.com/canucks/news for theme-night press releases. Keep community.canucks.com/community-nights as a watch only.",
+  "credits": {
+    "map": 1,
+    "scrape": 1,
+    "total": 2
+  },
+  "creditLedger": [
+    "fc#1 map https://www.nhl.com/canucks (1)",
+    "fc#2 scrape https://www.gofevo.com/event/Narutonight3 (1)",
+    "all other rows: plain curl, 0 credits"
+  ],
+  "notes": "THIN: two dated 2026-27 items, one a true theme night open to all fans (Diwali, Nov 3) and one a theme ticket package (Naruto Night, Jan 5), which on its own is BORDERLINE-class. Per-game sponsor_name (17 games) and alternate_jersey black_skate (13 games) fields are presenting-sponsor and jersey annotations, BORDERLINE-class, not counted. The 6 undated refs are recurring theme nights named on community.canucks.com (Black History Month, Lunar New Year, Pride, Celebration of Women in Sport, Filipino Heritage, Hockey Fights Cancer) whose pages still carry 2025-26 content; expect them to be re-dated through news releases like Diwali. Our data showing zero is a real miss for at least Diwali Night."
+}

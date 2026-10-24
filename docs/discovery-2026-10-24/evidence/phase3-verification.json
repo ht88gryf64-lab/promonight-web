@@ -1,0 +1,48 @@
+{
+ "verifier": "main session (did not produce any of these labels)",
+ "date": "2026-10-24",
+ "creditsUsed": 0,
+ "method": "fresh plain curl with browser UA, 0 Firecrawl credits",
+ "checks": [
+  {
+   "team": "nfl-new-orleans-saints",
+   "label": "RECOVERED",
+   "held": true,
+   "saw": "Week 4 guide (Falcons, Oct 5 2026) has a GAMEDAY PROMOTIONS block: 'Domecoming Rally Towel Giveaway courtesy of Entergy. All fans in attendance at the Saints Week 4 game against the Falcons will receive a special Domecoming Rally Towel'. Home opener article dated Sep 22, 2026 lists 'a special 60th season commemorative coin for all fans'."
+  },
+  {
+   "team": "nba-new-york-knicks",
+   "label": "RECOVERED",
+   "held": true,
+   "saw": "nba.com/knicks/popcorn-twosday served 'The Knicks and DoorDash are bringing Popcorn TWOsday back, all season long!' and the 2026-27 fine print. 7 gameIds on the page; the 7 Tuesday regular-season Knicks home dates in our spine are exactly 10-20, 10-27, 11-10, 01-26, 02-09, 03-02, 03-23. Fine print '11/20/26' is a typo (no home game 11-20). Plain curl without a browser UA got HTTP 403."
+  },
+  {
+   "team": "nba-portland-trail-blazers",
+   "label": "RECOVERED",
+   "held": true,
+   "saw": "Article published 2026-10-14, 16 distinct weekday-dated nights; 16 of 16 match a Blazers regular-season home date with the right weekday. Some nights are ticket-package items (Harry Potter scarf)."
+  },
+  {
+   "team": "nhl-toronto-maple-leafs",
+   "label": "GENUINELY-NONE",
+   "held": true,
+   "saw": "culture.mapleleafs.com/celebration-nights still links only -11-18-25, -01-10-26, -03-07-26 slugs. Three 2026-27 game-day articles (Oct 6, 19, 22) have 0 hits for giveaway, all fans, first N fans, theme night, celebration."
+  },
+  {
+   "team": "nba-oklahoma-city-thunder",
+   "label": "GENUINELY-NONE",
+   "held": true,
+   "saw": "Thunder base (283) and news (5,982) sitemaps: 35 news slugs dated 2607xx to 2610xx, none promo, theme or giveaway. /thunder/gamenight has 0 giveaway/theme hits (only a handouts ban). release-tickets-260923 has 0 giveaway/theme hits."
+  },
+  {
+   "team": "nfl-washington-commanders",
+   "label": "BORDERLINE",
+   "held": true,
+   "substituteFor": "third GENUINELY-NONE (only 2 exist across all leagues; NFL has none)",
+   "saw": "gameday-experiences: 11 'Night Out' mentions, 3 'Stay tuned for more information!', 0 giveaway/all fans; the only dates are 2022 photo captions. Fast-changing news sitemap: gameday blogs only."
+  }
+ ],
+ "extra": {
+  "nba-washington-wizards": "25 weekday+opponent headers on /wizards/promotions, 25 of 25 valid 2026-27 home dates; page says 'Our 2026-27 promotions and giveaways are back.'"
+ }
+}

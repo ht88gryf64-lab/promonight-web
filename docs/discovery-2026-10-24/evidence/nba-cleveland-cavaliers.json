@@ -1,0 +1,90 @@
+{
+  "team": "cleveland-cavaliers",
+  "league": "NBA",
+  "label": "UNDERCOUNT",
+  "ourCount": 24,
+  "officialDatedCount": 28,
+  "delta": 4,
+  "officialDomain": "www.nba.com/cavaliers",
+  "bestSourceUrls": [
+    "https://www.nba.com/cavaliers/promo"
+  ],
+  "shape": "client-rendered filterable list",
+  "undatedCount": 0,
+  "samples": [
+    {
+      "title": "Home Opener T-Shirt & Rally Towel",
+      "date": "2026-10-24",
+      "url": "https://www.nba.com/cavaliers/promo"
+    },
+    {
+      "title": "10th Anniversary Celebration & Matthew Dellavedova Bobblehead Giveaway",
+      "date": "2026-12-12",
+      "url": "https://www.nba.com/cavaliers/promo"
+    },
+    {
+      "title": "James Harden Bobblehead",
+      "date": "2027-02-09",
+      "url": "https://www.nba.com/cavaliers/promo"
+    }
+  ],
+  "exclusions": "Only upcoming games are listed (past games behind 'Show past games'), so no preseason rows. Day numbers read under '## Month' headers, year inferred, matched to homegames-nba.json. Offer-only rows (ticket plans) excluded; Cavs Cup theme rows excluded as NBA Cup game references.",
+  "recommendedConfig": "single URL",
+  "credits": {
+    "map": 0,
+    "scrape": 1,
+    "total": 1
+  },
+  "issue": "#62",
+  "issueResolution": "keep active, config URL still correct (https://www.nba.com/cavaliers/promo renders the 2026-27 list; needs a rendering fetch). Our 24 undercounts by about 4: the page carries 11 giveaways vs our 7 (e.g. Nov 14 mini banner, Dec 12 Dellavedova bobblehead, Dec 20 Merrill bobblehead, Dec 21 Spida foam finger, Jan 27 Sword magazine, Feb 9 Harden bobblehead, Mar 4 cap, Apr 1 mini water cooler, Apr 11 stash bag).",
+  "notes": "'+N more' cards (Oct 28, Nov 16, Nov 18, Dec 12, Dec 20) hide extra items behind an expander; true count may be higher.",
+  "urlsTried": [
+    {
+      "url": "https://www.nba.com/sitemap_team_cavaliers_index.xml (base + news)",
+      "method": "sitemap",
+      "http": 200,
+      "shape": "sitemap",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "news sitemap split in 2 parts; no 2026-27 promo article found"
+    },
+    {
+      "url": "https://www.nba.com/cavaliers/promo",
+      "method": "curl",
+      "http": 200,
+      "shape": "client-rendered shell",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "/cavaliers/promotions redirects here"
+    },
+    {
+      "url": "https://www.nba.com/cavaliers/promo",
+      "method": "firecrawl-scrape",
+      "http": 200,
+      "shape": "rendered month list, per game tags (Theme Night / Giveaway / Special Event / Offer) + promo text, some '+N more' truncations",
+      "datedCurrentSeason": 28,
+      "undatedRefs": 0,
+      "note": "35 upcoming games with promotions (Oct 24 onward): 18 Theme Night tags (2 are Cavs Cup game references), 11 Giveaway tags, 1 Special Event (Bow Tie Game Mar 6), 16 Offer tags (ticket plans: Payactiv Pick 2, Family Fun Pack, 10th Anniversary Plan, 3-1 Plan, Bobblehead Mini Plan). Open typed rows = 16 themes + 11 giveaways + 1 special event = 28."
+    },
+    {
+      "url": "https://www.nba.com/cavaliers/{17 common promo paths}",
+      "method": "curl",
+      "http": 404,
+      "shape": "probe",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "15 of 17 paths 404; /cavaliers/promotions redirects to /cavaliers/promo"
+    },
+    {
+      "url": "https://content-api-prod.nba.com/public/1/leagues/nba/teams/1610612739/schedule?season=2026-27",
+      "method": "curl",
+      "http": 200,
+      "shape": "schedule JSON (per-game gameInfo/promotion fields)",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no promo annotations"
+    }
+  ],
+  "linksChecked": 21,
+  "datedCount": 28
+}

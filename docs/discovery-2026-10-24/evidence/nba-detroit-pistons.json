@@ -1,0 +1,88 @@
+{
+  "team": "detroit-pistons",
+  "league": "NBA",
+  "label": "MATCH",
+  "ourCount": 46,
+  "officialDatedCount": 47,
+  "delta": 1,
+  "officialDomain": "www.nba.com/pistons",
+  "bestSourceUrls": [
+    "https://www.nba.com/pistons/news/detroit-pistons-announce-2026-27-home-game-promotionaltheme-night-and-group-night-schedules"
+  ],
+  "shape": "press release table",
+  "undatedCount": 0,
+  "samples": [
+    {
+      "title": "Los Pistons, Los Pistons Beanie",
+      "date": "2026-10-28",
+      "url": "https://www.nba.com/pistons/news/detroit-pistons-announce-2026-27-home-game-promotionaltheme-night-and-group-night-schedules"
+    },
+    {
+      "title": "Ausar Thompson Bobblehead",
+      "date": "2027-01-22",
+      "url": "https://www.nba.com/pistons/news/detroit-pistons-announce-2026-27-home-game-promotionaltheme-night-and-group-night-schedules"
+    },
+    {
+      "title": "313 Day, 313 Day Chain",
+      "date": "2027-03-13",
+      "url": "https://www.nba.com/pistons/news/detroit-pistons-announce-2026-27-home-game-promotionaltheme-night-and-group-night-schedules"
+    }
+  ],
+  "exclusions": "Table dates ('Oct. 20', 'March 1'), year inferred, matched to homegames-nba.json: all 32 regular-season home. Preseason dates on content.pistons.com are excluded; group nights excluded as ticket packages.",
+  "recommendedConfig": "single URL",
+  "credits": {
+    "map": 0,
+    "scrape": 0,
+    "total": 0
+  },
+  "notes": "Delta 1 within tolerance (likely one Cup Night row). Quality flag: 9 theme rows are game references or uniform nights (2 Cup, 7 City Edition).",
+  "urlsTried": [
+    {
+      "url": "https://www.nba.com/sitemap_team_pistons_index.xml (base + news)",
+      "method": "sitemap",
+      "http": 200,
+      "shape": "sitemap",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "searched for promo vocabulary"
+    },
+    {
+      "url": "https://www.nba.com/pistons/news/detroit-pistons-announce-2026-27-home-game-promotionaltheme-night-and-group-night-schedules",
+      "method": "curl",
+      "http": 200,
+      "shape": "press release with table DATE | OPPONENT | THEME NIGHT | GIVEAWAY plus group-night prose",
+      "datedCurrentSeason": 32,
+      "undatedRefs": 0,
+      "note": "32 dated rows: 32 theme entries and 15 giveaways = 47 typed rows. Theme rows include 2 Cup Nights (Nov 20, Nov 27) and 7 City Edition Night/Debut uniform rows. Group nights are ticket packages, not counted."
+    },
+    {
+      "url": "https://content.pistons.com/themeNight/",
+      "method": "curl",
+      "http": 200,
+      "shape": "club-owned group/theme ticket site (/pistons/theme-nights redirects here)",
+      "datedCurrentSeason": 34,
+      "undatedRefs": 0,
+      "note": "group-night ticket offers (packages), 2 preseason dates present; not counted"
+    },
+    {
+      "url": "https://www.nba.com/pistons/{17 common promo paths}",
+      "method": "curl",
+      "http": 404,
+      "shape": "probe",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "16 of 17 paths 404; theme-nights redirects to content.pistons.com/themeNight/"
+    },
+    {
+      "url": "https://content-api-prod.nba.com/public/1/leagues/nba/teams/1610612765/schedule?season=2026-27",
+      "method": "curl",
+      "http": 200,
+      "shape": "schedule JSON (per-game gameInfo/promotion fields)",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no promo annotations"
+    }
+  ],
+  "linksChecked": 21,
+  "datedCount": 47
+}

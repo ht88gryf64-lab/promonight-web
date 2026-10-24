@@ -1,0 +1,126 @@
+{
+  "team": "washington-wizards",
+  "league": "NBA",
+  "label": "RECOVERED",
+  "ourCount": 0,
+  "officialDatedCount": 54,
+  "delta": 54,
+  "officialDomain": "www.nba.com/wizards",
+  "urlsTried": [
+    {
+      "url": "https://www.nba.com/sitemap_team_wizards_index.xml (base + news)",
+      "method": "sitemap",
+      "http": 200,
+      "shape": "sitemap",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "base hits: promotional-giveaways, theme-night, group-theme-nights-giveaways, give-go-promotions, special-offers, game-day-announcements; news hit: 2026-27 home opener activations (2026-10-15)"
+    },
+    {
+      "url": "https://www.nba.com/wizards/promotions",
+      "method": "curl",
+      "http": 200,
+      "shape": "static server-rendered HTML (no __NEXT_DATA__), month-anchored list, date headers 'WED. OCT. 21 VS. MIL', tabs Giveaways / College Series / Heritage Series / Ticket Packages",
+      "datedCurrentSeason": 54,
+      "undatedRefs": 0,
+      "note": "'Our 2026-27 promotions and giveaways are back.' 25 date headers, 54 items. 9 open giveaways to first N fans; 45 items are ticket-package offers (College Series 15, Heritage Series 20 including Muslim Family Day and Lunar New Year, plus 10 other package nights: Military, Kids Day squishy, Fit Night, Marvel bobblehead, Dybantsa Draft Night bobblehead, First Responders, HBCU and D9, Scout Night, Cherry Blossom Night, Pride)."
+    },
+    {
+      "url": "https://www.nba.com/wizards/promotional-giveaways",
+      "method": "curl",
+      "http": 200,
+      "shape": "stale page, modified 2024-03-27",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "2023-24 content"
+    },
+    {
+      "url": "https://www.nba.com/wizards/theme-night",
+      "method": "curl",
+      "http": 200,
+      "shape": "stale page, 2023-24 icons, modified 2024-03-27",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "date parser hits are 2023-24 dates that coincide with 2026-27 month/day; not current"
+    },
+    {
+      "url": "https://www.nba.com/wizards/group-theme-nights-giveaways",
+      "method": "curl",
+      "http": 200,
+      "shape": "stale page, modified 2024-03-27",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "2023-24 content"
+    },
+    {
+      "url": "https://www.nba.com/wizards/give-go-promotions",
+      "method": "curl",
+      "http": 200,
+      "shape": "2025-26 monthly pass",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "ticket plan, 2025-26"
+    },
+    {
+      "url": "https://www.nba.com/wizards/special-offers",
+      "method": "curl",
+      "http": 200,
+      "shape": "ticket offers",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no dated promos"
+    },
+    {
+      "url": "https://www.nba.com/wizards/news/wizards-announce-2026-27-home-opener-activations",
+      "method": "curl",
+      "http": 200,
+      "shape": "press release 2026-10-15",
+      "datedCurrentSeason": 1,
+      "undatedRefs": 0,
+      "note": "Oct 21 opener rally towel, already on /promotions"
+    },
+    {
+      "url": "https://content-api-prod.nba.com/public/1/leagues/nba/teams/1610612764/schedule?season=2026-27",
+      "method": "curl",
+      "http": 200,
+      "shape": "schedule JSON",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no promo annotations"
+    }
+  ],
+  "linksChecked": 9,
+  "bestSourceUrls": [
+    "https://www.nba.com/wizards/promotions"
+  ],
+  "shape": "single server-rendered page, date headers with weekday + opponent abbreviation, multiple items per date",
+  "datedCount": 54,
+  "undatedCount": 0,
+  "samples": [
+    {
+      "title": "Home Opener rally towel, first 15,000 fans",
+      "date": "2026-10-21",
+      "url": "https://www.nba.com/wizards/promotions"
+    },
+    {
+      "title": "'Ice' Trae Young Bobblehead, first 10,000 fans",
+      "date": "2026-11-16",
+      "url": "https://www.nba.com/wizards/promotions"
+    },
+    {
+      "title": "AJ Dybantsa Rookie Edition Bobblehead, first 10,000 fans",
+      "date": "2027-03-06",
+      "url": "https://www.nba.com/wizards/promotions"
+    }
+  ],
+  "exclusions": "Headers parsed as WEEKDAY. MONTH. D VS. OPP, year inferred (Oct to Dec = 2026, Jan to Apr = 2027). All 25 headers checked: weekday matches the 2026-27 calendar and the date plus opponent matches a regular-season home game in homegames-nba.json (0 mismatches). No preseason or pre-2026-07-01 dates.",
+  "recommendedConfig": "single URL",
+  "credits": {
+    "map": 0,
+    "scrape": 0,
+    "total": 0
+  },
+  "issue": "#55",
+  "issueResolution": "CONFIRMED as 2026-27, count corrected from 23 to 25 date headers (54 items). Every weekday/date pair is valid for 2026-27 (e.g. WED. OCT. 21 = 2026-10-21 Wednesday vs MIL, SUN. APRIL 11 = 2027-04-11 Sunday vs DET) and matches our schedule file; content names 2026 draftee AJ Dybantsa and the page says 'Our 2026-27 promotions and giveaways are back'. The watcher's 23 likely missed the 'SAT. MARCH 6' / 'SUN. APRIL 11' headers, which have no period after the month. Not stale: the 2023-24 slate lives on the old pages /wizards/theme-night, /wizards/promotional-giveaways and /wizards/group-theme-nights-giveaways (modified 2024-03-27), which should never be configured. Enable/repoint to https://www.nba.com/wizards/promotions (the configured URL).",
+  "notes": "Ticket-package split: 9 open giveaways (Oct 21, Nov 16, Dec 12, Jan 17, Feb 8, Feb 17, Mar 6, Mar 24, Apr 11) and 45 package-only items. If we drop package-only rows, our comparable count would be 9."
+}

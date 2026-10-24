@@ -1,0 +1,265 @@
+{
+  "team": "washington-commanders",
+  "league": "NFL",
+  "label": "BORDERLINE",
+  "officialDomain": "www.commanders.com",
+  "urlsTried": [
+    {
+      "url": "https://www.commanders.com/inclusion/gameday-experiences",
+      "method": "curl",
+      "http": 200,
+      "shape": "evergreen theme-night list",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 3,
+      "note": "Configured watch URL. Pride Night Out, Hispanic Heritage Night Out, HBCU Night Out, each 'Stay tuned for more information', sold as special ticket packages with exclusive items. No 2026 dates."
+    },
+    {
+      "url": "https://www.commanders.com/robots.txt",
+      "method": "curl",
+      "http": 200,
+      "shape": "robots",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": ""
+    },
+    {
+      "url": "https://www.commanders.com/sitemap.xml",
+      "method": "curl",
+      "http": 200,
+      "shape": "sitemap 819 URLs",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": ""
+    },
+    {
+      "url": "https://www.commanders.com/sitemap-news-archive_1.xml (through _5) and sitemap-fast-changing.xml",
+      "method": "curl",
+      "http": 200,
+      "shape": "news sitemaps",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "2026 titles: halftime tribute at home opener, Crucial Catch game, gameday blogs"
+    },
+    {
+      "url": "https://www.commanders.com/news/commanders-to-pay-tribute-to-sonny-jurgensen-and-monte-coleman-at-halftime-of-home-opener",
+      "method": "curl",
+      "http": 200,
+      "shape": "news article",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "9/27 vs Seahawks halftime tribute and helmet stickers. Recognition event, BORDERLINE class."
+    },
+    {
+      "url": "https://www.commanders.com/news/all-you-want-to-do-is-be-there-for-them-commanders-players-open-up-about-personal-connections-to-cancer-in-lead-up-to-crucial-catch-game",
+      "method": "curl",
+      "http": 200,
+      "shape": "feature article",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 1,
+      "note": "Week 5 (10/11 vs Giants) is the Crucial Catch game; article covers player stories only, no fan-facing giveaway or activation"
+    },
+    {
+      "url": "https://www.commanders.com/news/gameday-blog-commanders-vs-seahawks-week-3",
+      "method": "curl",
+      "http": 200,
+      "shape": "live game blog",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Game action only"
+    },
+    {
+      "url": "https://www.commanders.com/news/gameday-blog-commanders-vs-giants-week-5",
+      "method": "curl",
+      "http": 200,
+      "shape": "live game blog",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "No Crucial Catch or giveaway mention"
+    },
+    {
+      "url": "https://www.commanders.com/stadium/game-day",
+      "method": "curl",
+      "http": 200,
+      "shape": "link hub",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Links to parking, concessions guide, Bud Light Party Pavilion"
+    },
+    {
+      "url": "https://www.commanders.com/stadium/gameday-information-guest-service",
+      "method": "curl",
+      "http": 200,
+      "shape": "empty",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": ""
+    },
+    {
+      "url": "https://www.commanders.com/stadium/gameday-employee-portal/gameday-information/give-away",
+      "method": "curl",
+      "http": 200,
+      "shape": "password-protected",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Staff-only giveaway page exists behind a password; not accessed"
+    },
+    {
+      "url": "https://www.commanders.com/salute/salute-to-service-month",
+      "method": "curl",
+      "http": 200,
+      "shape": "archive",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Newest items are 2025"
+    },
+    {
+      "url": "https://www.commanders.com/salute/uso-club",
+      "method": "curl",
+      "http": 200,
+      "shape": "every-game military club",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": ""
+    },
+    {
+      "url": "https://www.commanders.com/forms/ticketing/hispanic-heritage-night",
+      "method": "curl",
+      "http": 200,
+      "shape": "Formstack interest form (JS)",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 1,
+      "note": "No date rendered"
+    },
+    {
+      "url": "https://www.commanders.com/fans/rally/mgm_giveaways",
+      "method": "curl",
+      "http": 200,
+      "shape": "empty",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": ""
+    },
+    {
+      "url": "https://www.commanders.com/forms/rally/giveaways",
+      "method": "curl",
+      "http": 200,
+      "shape": "empty",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": ""
+    },
+    {
+      "url": "https://www.commanders.com/tickets/2026-stadium-event",
+      "method": "curl",
+      "http": 200,
+      "shape": "empty",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": ""
+    },
+    {
+      "url": "https://www.commanders.com/tickets/stm/night-out",
+      "method": "firecrawl-scrape",
+      "http": 200,
+      "shape": "empty",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Rendered page has no body"
+    },
+    {
+      "url": "https://www.commanders.com/tickets/2026/family-field-day",
+      "method": "firecrawl-scrape",
+      "http": 200,
+      "shape": "empty",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Rendered page has no body"
+    },
+    {
+      "url": "https://www.commanders.com/forms/goldmembers/2026-legends-nightout",
+      "method": "firecrawl-scrape",
+      "http": 200,
+      "shape": "empty form",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Gold member form, no content"
+    },
+    {
+      "url": "https://www.commanders.com/tickets/suites/themed-suites",
+      "method": "curl",
+      "http": 200,
+      "shape": "suite rental",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Paid themed suites, not promos"
+    },
+    {
+      "url": "https://www.commanders.com/community/inspire-change-index",
+      "method": "curl",
+      "http": 200,
+      "shape": "foundation page",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": ""
+    },
+    {
+      "url": "https://www.commanders.com/schedule/",
+      "method": "curl",
+      "http": 200,
+      "shape": "schedule list",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "No promo annotations"
+    },
+    {
+      "url": "https://www.commanders.com/fans/",
+      "method": "curl",
+      "http": 200,
+      "shape": "fan hub",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": ""
+    },
+    {
+      "url": "https://www.commanders.com",
+      "method": "firecrawl-map",
+      "http": 200,
+      "shape": "map 4977 URLs, search=promotions",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "Hits are staff-promotion news and shop pages; surfaced employee-portal and night-out URLs"
+    }
+  ],
+  "linksChecked": 29,
+  "bestSourceUrls": [
+    "https://www.commanders.com/inclusion/gameday-experiences"
+  ],
+  "shape": "Evergreen theme-night list with no dates, sold as specialty ticket packages; dated items found are recognition events in news.",
+  "datedCount": 0,
+  "undatedCount": 5,
+  "samples": [
+    {
+      "title": "A Tribute to Sonny Jurgensen and Monte Coleman, halftime of home opener (recognition)",
+      "date": "2026-09-27",
+      "url": "https://www.commanders.com/news/commanders-to-pay-tribute-to-sonny-jurgensen-and-monte-coleman-at-halftime-of-home-opener"
+    },
+    {
+      "title": "Crucial Catch game vs Giants (awareness game, no fan activation described)",
+      "date": "2026-10-11",
+      "url": "https://www.commanders.com/news/all-you-want-to-do-is-be-there-for-them-commanders-players-open-up-about-personal-connections-to-cancer-in-lead-up-to-crucial-catch-game"
+    },
+    {
+      "title": "Hispanic Heritage Night Out, special ticket package (undated)",
+      "date": "",
+      "url": "https://www.commanders.com/inclusion/gameday-experiences"
+    }
+  ],
+  "exclusions": "Only items tied to a 2026 regular-season home date from p0/homegames-nfl.json were counted. Pages or paths carrying 2025 (for example /gameday/2025/*, /tickets/2025/*, 2025 Salute to Service hometown hero text) were excluded by year in URL, byline date, or body text. Preseason items (August 2026, /preseason_* or /pre/ paths, 'Preseason Week N' guides) were excluded by path and date. Away-game watch parties and off-site fan fests were excluded because they are not on a home date. Rolling next-game pages were tied to a date only when the page body or its section banner named the opponent or kickoff time that matches one home date. Commanders specifics: Salute to Service archive items are 2025; preseason gameday blogs (Aug 2026) excluded; the 10/4 Colts home game appears to have been played in London (club news: London food mailbag, fans at BrewDog Waterloo), and no promo content was found for it.",
+  "recommendedConfig": "none",
+  "credits": {
+    "map": 1,
+    "scrape": 3,
+    "total": 4
+  },
+  "notes": "Same exclusion class as Red Sox Destinations: theme nights exist but only as ticket packages, with no dates posted. If the club posts 2026 dates for Pride, HBCU or Hispanic Heritage Night Out, the watch URL is the place they would appear, so keep the watch. A staff-only giveaway page sits behind a password at /stadium/gameday-employee-portal/gameday-information/give-away; that suggests giveaways happen but are not published publicly."
+}

@@ -1,0 +1,99 @@
+{
+  "team": "brooklyn-nets",
+  "league": "NBA",
+  "label": "RECOVERED",
+  "ourCount": 0,
+  "officialDatedCount": 6,
+  "delta": 6,
+  "officialDomain": "www.nba.com/nets",
+  "urlsTried": [
+    {
+      "url": "https://www.nba.com/sitemap_team_nets_index.xml (base + news)",
+      "method": "sitemap",
+      "http": 200,
+      "shape": "sitemap",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "48 base pages, no promo/theme/giveaway page; news since 2026-06 has one promo article (60th season, 2026-09-02)"
+    },
+    {
+      "url": "https://www.nba.com/nets/news/brooklyn-nets-unveil-60th-season-celebration-honoring-six-decades-of-history-culture-and-reinvention",
+      "method": "curl",
+      "http": 200,
+      "shape": "press release, server-rendered __NEXT_DATA__, one bullet per Eras Night with (Mon. D vs. Opponent)",
+      "datedCurrentSeason": 6,
+      "undatedRefs": 7,
+      "note": "6 Eras Nights, each with a giveaway (Erving, Buck Williams, Petrovic, Swamp Dragons bobbleheads, ECF mystery box, Hello Brooklyn mystery giveaway). Nets Unite nights (AAPI, Noche Latina, BHM, Pride, CNY, Caribbean Carnival, HBCU) named without dates. Published 2026-09-02."
+    },
+    {
+      "url": "https://www.nba.com/nets/60",
+      "method": "curl",
+      "http": 200,
+      "shape": "redirects to /nets/team/60th-season-celebration, history essay",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no game dates"
+    },
+    {
+      "url": "https://www.nba.com/nets/news/brooklyn-nets-unveil-classic-edition-uniform-and-dedicated-court-ahead-of-milestone-60th-season",
+      "method": "curl",
+      "http": 200,
+      "shape": "press release",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "uniform/court debut at Oct 21 opener, not a promo"
+    },
+    {
+      "url": "https://www.nba.com/nets/{promotions,promotional-schedule,promos,promo,giveaways,theme-nights,themes,tickets/theme-nights,tickets/promotions,specials,fan-experiences,game-day,specialty-nights,promotional-calendar,tickets/promotional-schedule,theme-nights-giveaways,tickets/specialty-nights}",
+      "method": "curl",
+      "http": 404,
+      "shape": "404",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "17 common promo paths, all 404"
+    },
+    {
+      "url": "https://content-api-prod.nba.com/public/1/leagues/nba/teams/1610612751/schedule?season=2026-27",
+      "method": "curl",
+      "http": 200,
+      "shape": "schedule JSON (per-game gameInfo.eventDescription)",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no promo annotations on 40 home regular-season games"
+    }
+  ],
+  "linksChecked": 21,
+  "bestSourceUrls": [
+    "https://www.nba.com/nets/news/brooklyn-nets-unveil-60th-season-celebration-honoring-six-decades-of-history-culture-and-reinvention"
+  ],
+  "shape": "press release with dated Eras Nights bullets",
+  "datedCount": 6,
+  "undatedCount": 7,
+  "samples": [
+    {
+      "title": "ABA Night (Julius Erving bobblehead)",
+      "date": "2026-11-18",
+      "url": "https://www.nba.com/nets/news/brooklyn-nets-unveil-60th-season-celebration-honoring-six-decades-of-history-culture-and-reinvention"
+    },
+    {
+      "title": "90s Night (Drazen Petrovic bobblehead)",
+      "date": "2027-01-09",
+      "url": "https://www.nba.com/nets/news/brooklyn-nets-unveil-60th-season-celebration-honoring-six-decades-of-history-culture-and-reinvention"
+    },
+    {
+      "title": "Hello Brooklyn Night (mystery giveaway)",
+      "date": "2027-03-31",
+      "url": "https://www.nba.com/nets/news/brooklyn-nets-unveil-60th-season-celebration-honoring-six-decades-of-history-culture-and-reinvention"
+    }
+  ],
+  "exclusions": "Dates parsed as month-name + day, year inferred (Jul to Dec = 2026, Jan to Jun = 2027), then matched to homegames-nba.json; all 6 land on 2026-27 regular-season home games (Nov 18 CHI, Dec 18 ORL, Jan 9 HOU, Jan 29 LAC, Mar 15 IND, Mar 31 CLE). No preseason or pre-2026-07-01 dates on the page.",
+  "recommendedConfig": "single URL",
+  "credits": {
+    "map": 0,
+    "scrape": 0,
+    "total": 0
+  },
+  "issue": "#61",
+  "issueResolution": "enable/repoint to https://www.nba.com/nets/news/brooklyn-nets-unveil-60th-season-celebration-honoring-six-decades-of-history-culture-and-reinvention (6 dated Eras Nights with bobblehead giveaways, published 2026-09-02). Keep watching https://www.nba.com/nets/60: the article says more giveaways will be announced through the season.",
+  "notes": "Published 2026-09-02, seven weeks before the 2026-10-20 opener. Only the 6 Eras Nights are dated; each is both a theme night and a giveaway, so typed rows could be 12 while the night count is 6."
+}

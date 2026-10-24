@@ -1,0 +1,91 @@
+{
+  "team": "los-angeles-clippers",
+  "league": "NBA",
+  "label": "THIN",
+  "ourCount": 0,
+  "officialDatedCount": 1,
+  "delta": 1,
+  "officialDomain": "www.nba.com/clippers",
+  "urlsTried": [
+    {
+      "url": "https://www.nba.com/sitemap_team_clippers_index.xml (base + news)",
+      "method": "sitemap",
+      "http": 200,
+      "shape": "sitemap",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "66 base pages (sweepstakes terms); promotions-giveaways is not in the sitemap; no promo article in news since 2026-06"
+    },
+    {
+      "url": "https://www.nba.com/clippers/{promotions,promotional-schedule,promos,promo,theme-nights,...}",
+      "method": "curl",
+      "http": 404,
+      "shape": "404",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "16 of 17 common paths 404; /clippers/giveaways redirects to /clippers/singlegametickets"
+    },
+    {
+      "url": "https://www.nba.com/clippers/singlegametickets",
+      "method": "curl",
+      "http": 200,
+      "shape": "server-rendered Next.js (Sanity CMS): __NEXT_DATA__ initialGames[40] each with promos[] (promotionalItem with label, detailItems 'WHAT YOU'LL RECEIVE' / 'HOW TO GET IT')",
+      "datedCurrentSeason": 41,
+      "undatedRefs": 0,
+      "note": "41 promo rows on 31 dates for remaining home games (Oct 28 onward). 1 open giveaway: Trunk or Treat Oct 28, free trick-or-treat bucket to first 10,000 fans. 40 rows are 'SPECIAL TICKET PACK' (purchase required, gofevo.com), including heritage nights, Pride, Black History, HBCU, Kids Takeover."
+    },
+    {
+      "url": "https://www.nba.com/clippers/promotions-giveaways",
+      "method": "curl",
+      "http": 200,
+      "shape": "server-rendered page titled '2026-27 LA Clippers Giveaways, Theme Nights & Promotions'; specialTicketPacks.items[40]",
+      "datedCurrentSeason": 40,
+      "undatedRefs": 0,
+      "note": "linked from game cards as promotions-giveaways?month=YYYY-MM; lists 40 special ticket packs (includes past Oct 21 Jr. Clippers night); giveaways are only on the schedule cards"
+    },
+    {
+      "url": "https://content-api-prod.nba.com/public/1/leagues/nba/teams/1610612746/schedule?season=2026-27",
+      "method": "curl",
+      "http": 200,
+      "shape": "schedule JSON",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no promo annotations"
+    }
+  ],
+  "linksChecked": 21,
+  "bestSourceUrls": [
+    "https://www.nba.com/clippers/singlegametickets",
+    "https://www.nba.com/clippers/promotions-giveaways"
+  ],
+  "shape": "per-game promo objects inside server-rendered game list; separate ticket-pack catalog page",
+  "datedCount": 1,
+  "undatedCount": 0,
+  "samples": [
+    {
+      "title": "Trunk or Treat Before Tipoff, free trick-or-treat bucket for first 10,000 fans",
+      "date": "2026-10-28",
+      "url": "https://www.nba.com/clippers/singlegametickets"
+    },
+    {
+      "title": "Dia de los Clippers (special ticket pack, exclusive T-shirt)",
+      "date": "2026-11-02",
+      "url": "https://www.nba.com/clippers/promotions-giveaways"
+    },
+    {
+      "title": "Pride Night (special ticket pack)",
+      "date": "2027-01-09",
+      "url": "https://www.nba.com/clippers/promotions-giveaways"
+    }
+  ],
+  "exclusions": "eventTime is UTC; converted to Pacific (UTC-7 before 2026-11-01 and from 2027-03-14, UTC-8 between) and matched to homegames-nba.json. 40 of 41 rows land on regular-season home games; the Ugly Christmas Sweater pack sits on a 2026-12-07 game with opponent TBA (NBA Cup knockout slot) that is not in our schedule file. initialGames starts after today (past games, including preseason, are not listed), so no preseason rows.",
+  "recommendedConfig": "multi-URL",
+  "credits": {
+    "map": 0,
+    "scrape": 0,
+    "total": 0
+  },
+  "issue": "#63",
+  "issueResolution": "enable/repoint to https://www.nba.com/clippers/singlegametickets (per-game promos, the only place the open giveaway appears) plus https://www.nba.com/clippers/promotions-giveaways (40 special ticket packs). Comparable open-promo count is only 1 (Oct 28 Trunk or Treat); the other 40 rows are ticket-package-only and would be flagged.",
+  "notes": "Published for 2026-27 (page title says 2026-27; asset paths /giveaways/26-27/). If ticket-package rows are counted, the total is 41 rows; open promos = 1. Opening Night Oct 21/22 has already passed and is no longer listed."
+}

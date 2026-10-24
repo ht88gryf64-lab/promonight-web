@@ -1,0 +1,89 @@
+{
+  "team": "miami-heat",
+  "league": "NBA",
+  "label": "THIN",
+  "ourCount": 0,
+  "officialDatedCount": 1,
+  "delta": 1,
+  "officialDomain": "www.nba.com/heat",
+  "urlsTried": [
+    {
+      "url": "https://www.nba.com/sitemap_team_heat_index.xml (base + news)",
+      "method": "sitemap",
+      "http": 200,
+      "shape": "sitemap",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "192 base pages (mostly bios, sweepstakes terms); no 2026-27 promo schedule page or article; one themed-night article (Vice City, 2026-10-02)"
+    },
+    {
+      "url": "https://www.nba.com/heat/tickets/theme-nights",
+      "method": "curl",
+      "http": 200,
+      "shape": "static shell with FAQ text; offers load client-side",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "/heat/promotions and /heat/tickets/promotions redirect here"
+    },
+    {
+      "url": "https://www.nba.com/heat/tickets/theme-nights",
+      "method": "firecrawl-scrape",
+      "http": 200,
+      "shape": "rendered page: heading 'Tickets Offers & Theme Nights' + FAQ only",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no offers, theme nights or giveaways rendered as of 2026-10-24"
+    },
+    {
+      "url": "https://www.nba.com/heat/news/miami-heat-and-rockstar-games-bring-a-night-in-vice-city-to-kaseya-center",
+      "method": "curl",
+      "http": 200,
+      "shape": "press release 2026-10-02",
+      "datedCurrentSeason": 1,
+      "undatedRefs": 0,
+      "note": "'A Night in Vice City' themed game Nov 18 vs Milwaukee (team plays as Vice City); no giveaway stated"
+    },
+    {
+      "url": "https://www.nba.com/heat/{promotional-schedule,promos,promo,giveaways,theme-nights,themes,specials,fan-experiences,game-day,specialty-nights,promotional-calendar,...}",
+      "method": "curl",
+      "http": 404,
+      "shape": "404",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "14 other common paths 404"
+    },
+    {
+      "url": "https://content-api-prod.nba.com/public/1/leagues/nba/teams/1610612748/schedule?season=2026-27",
+      "method": "curl",
+      "http": 200,
+      "shape": "schedule JSON with per-game eventDescription on all 40 home games",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "descriptions are generic marketing copy ('Make it a night at Kaseya Center...'), no promos"
+    }
+  ],
+  "linksChecked": 22,
+  "bestSourceUrls": [
+    "https://www.nba.com/heat/tickets/theme-nights"
+  ],
+  "shape": "configured page is an empty client-rendered shell; one themed-night press release",
+  "datedCount": 1,
+  "undatedCount": 0,
+  "samples": [
+    {
+      "title": "A Night in Vice City (Rockstar Games / GTA VI themed game)",
+      "date": "2026-11-18",
+      "url": "https://www.nba.com/heat/news/miami-heat-and-rockstar-games-bring-a-night-in-vice-city-to-kaseya-center"
+    }
+  ],
+  "exclusions": "Dates matched to homegames-nba.json; Nov 18 is a regular-season home game vs MIL. Oct 1 (signage lighting) and Nov 19 (game release date) are not home games and are excluded.",
+  "recommendedConfig": "single URL",
+  "credits": {
+    "map": 0,
+    "scrape": 1,
+    "total": 1
+  },
+  "issue": "#57",
+  "issueResolution": "still nothing published on the configured page https://www.nba.com/heat/tickets/theme-nights (rendered via Firecrawl: FAQ only, no offers). Suggest new revisitAfter 2026-11-09 with reason: Heat have published no 2026-27 theme/giveaway schedule; the only dated item is the Nov 18 Vice City night (press release 2026-10-02), which can be hand-added if wanted.",
+  "notes": "Heat have not published a 2026-27 promo schedule as of 2026-10-24 (season opened 2026-10-20)."
+}

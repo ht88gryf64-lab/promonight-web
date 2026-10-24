@@ -1,0 +1,88 @@
+{
+  "team": "orlando-magic",
+  "league": "NBA",
+  "label": "MATCH",
+  "ourCount": 19,
+  "officialDatedCount": 17,
+  "delta": -2,
+  "officialDomain": "www.nba.com/magic",
+  "bestSourceUrls": [
+    "https://www.nba.com/magic/theme-nights"
+  ],
+  "shape": "client-rendered cards",
+  "undatedCount": 0,
+  "samples": [
+    {
+      "title": "Seats for Soldiers presented by L3Harris",
+      "date": "2026-11-02",
+      "url": "https://www.nba.com/magic/theme-nights"
+    },
+    {
+      "title": "Jewish Heritage Night",
+      "date": "2026-12-27",
+      "url": "https://www.nba.com/magic/theme-nights"
+    },
+    {
+      "title": "Fan Appreciation Night",
+      "date": "2027-04-09",
+      "url": "https://www.nba.com/magic/theme-nights"
+    }
+  ],
+  "exclusions": "Oct 13 and Oct 16 cards match type=preseason home games in homegames-nba.json and are excluded; all other dates are regular-season home games.",
+  "recommendedConfig": "single URL",
+  "credits": {
+    "map": 0,
+    "scrape": 1,
+    "total": 1
+  },
+  "notes": "OVER (delta -2) explained by preseason: the page still lists 2 preseason theme nights under 'Past', which we likely hold as rows. No giveaway schedule found on nba.com/magic.",
+  "urlsTried": [
+    {
+      "url": "https://www.nba.com/sitemap_team_magic_index.xml (base + news)",
+      "method": "sitemap",
+      "http": 200,
+      "shape": "sitemap",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "news sitemap split in 2 parts"
+    },
+    {
+      "url": "https://www.nba.com/magic/theme-nights",
+      "method": "curl",
+      "http": 200,
+      "shape": "client-rendered shell",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "needs rendering"
+    },
+    {
+      "url": "https://www.nba.com/magic/theme-nights",
+      "method": "firecrawl-scrape",
+      "http": 200,
+      "shape": "rendered 'Theme & Unity Nights' cards with 'Weekday, Month D at time' plus a 'Past Theme & Unity Nights' section",
+      "datedCurrentSeason": 17,
+      "undatedRefs": 0,
+      "note": "16 upcoming + Opening Night Oct 21 (past, regular season) = 17 regular-season nights; 2 past preseason nights (Hispanic Heritage Celebration Oct 13 vs CLE, Pink in the Paint Oct 16 vs MIA)."
+    },
+    {
+      "url": "https://www.nba.com/magic/{17 common promo paths}",
+      "method": "curl",
+      "http": 404,
+      "shape": "probe",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "16 of 17 paths 404"
+    },
+    {
+      "url": "https://content-api-prod.nba.com/public/1/leagues/nba/teams/1610612753/schedule?season=2026-27",
+      "method": "curl",
+      "http": 200,
+      "shape": "schedule JSON (per-game gameInfo/promotion fields)",
+      "datedCurrentSeason": 0,
+      "undatedRefs": 0,
+      "note": "no promo annotations"
+    }
+  ],
+  "linksChecked": 21,
+  "datedCount": 17
+}
