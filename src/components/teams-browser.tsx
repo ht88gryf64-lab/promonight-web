@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type { Team } from '@/lib/types';
 import { LEAGUE_ORDER, SPORT_ICONS } from '@/lib/types';
@@ -79,6 +79,21 @@ export function TeamsBrowser({ teams, promoCounts, sections = [], variant = 'dar
     },
     [cfbLive],
   );
+  // An arrival ?league= is applied HERE, in a layout effect, not only through
+  // LeagueParamReader. The hidden sections must lose `page-content` before
+  // Raptive scans (known-issues entry 73), and only this ordering guarantees it.
+  // LeagueParamReader's update comes from a passive effect, so React renders it
+  // in a later task, and that task races the async ads.min.js. A layout-effect
+  // update is synchronous: React finishes it before the hydration task ends,
+  // flushing the passive effects first (RaptiveLoader only APPENDS the async
+  // script there). Raptive's code therefore cannot run until the hidden
+  // sections are already hidden and unanchored. The first render still
+  // matches the server (All), and LeagueParamReader's first call becomes a
+  // no-op setActive that still fires teams_browser_view.
+  useLayoutEffect(() => {
+    setActive(paramToLeague(new URLSearchParams(window.location.search).get('league')));
+  }, [paramToLeague]);
+
   const viewFired = useRef(false);
   const syncFromParam = useCallback(
     (param: string | null) => {
@@ -223,33 +238,40 @@ export function TeamsBrowser({ teams, promoCounts, sections = [], variant = 'dar
             never re-order or remove a direct child of `page-content`.
           */}
           <article data-ad-region="content" className={active === CFB_CHIP ? 'hidden' : 'space-y-14'}>
-            {sections.map((section) => (
-              <section
-                key={section.league}
-                aria-labelledby={`teams-${section.league.toLowerCase()}`}
-                className={active !== ALL && active !== section.league ? 'hidden' : undefined}
-              >
-                <h2
-                  id={`teams-${section.league.toLowerCase()}`}
-                  className="rd-display text-2xl text-rd-ink md:text-3xl"
+            {sections.map((section) => {
+              const shown = active === ALL || active === section.league;
+              return (
+                <section
+                  key={section.league}
+                  aria-labelledby={`teams-${section.league.toLowerCase()}`}
+                  className={shown ? undefined : 'hidden'}
                 >
-                  {section.league}
-                </h2>
-                <div className="page-content mt-6 space-y-8">
-                  {section.groups.map((group) => (
-                    <div key={group.key}>
-                      <h3 className="rd-display text-base text-rd-ink">{groupLabel(group)}</h3>
-                      <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                        {group.teamIds.map((id) => {
-                          const team = teamById.get(id);
-                          return team ? lightCard(team, team.id) : null;
-                        })}
+                  <h2
+                    id={`teams-${section.league.toLowerCase()}`}
+                    className="rd-display text-2xl text-rd-ink md:text-3xl"
+                  >
+                    {section.league}
+                  </h2>
+                  {/* `page-content` only while the league is shown (entry 73): a
+                      hidden section's groups would still be Raptive anchors, and
+                      a unit filled inside display:none. A class change, never an
+                      unmount, so Raptive's inserted nodes stay put. */}
+                  <div className={shown && active !== CFB_CHIP ? 'page-content mt-6 space-y-8' : 'mt-6 space-y-8'}>
+                    {section.groups.map((group) => (
+                      <div key={group.key}>
+                        <h3 className="rd-display text-base text-rd-ink">{groupLabel(group)}</h3>
+                        <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                          {group.teamIds.map((id) => {
+                            const team = teamById.get(id);
+                            return team ? lightCard(team, team.id) : null;
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            ))}
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
           </article>
         </>
       ) : active === CFB_CHIP ? (

@@ -50,11 +50,19 @@ describe('TeamsBrowser light layout anchors', () => {
 
   it('puts page-content on the per-league division wrapper and nowhere else', () => {
     assert.equal(code.split('page-content').length - 1, 1);
-    assert.match(code, /<div className="page-content mt-6 space-y-8">\s*\{section\.groups\.map\(\(group\) => \(\s*<div key=\{group\.key\}>/);
+    assert.match(code, /<div className=\{shown && active !== CFB_CHIP \? 'page-content mt-6 space-y-8' : 'mt-6 space-y-8'\}>\s*\{section\.groups\.map\(\(group\) => \(\s*<div key=\{group\.key\}>/);
+  });
+
+  it('anchors only shown leagues: a hidden section drops page-content by class, not by unmount', () => {
+    assert.match(code, /const shown = active === ALL \|\| active === section\.league;/);
+    assert.match(code, /className=\{shown \? undefined : 'hidden'\}/);
+  });
+
+  it('applies an arrival ?league= in a layout effect, so it beats the async Raptive script', () => {
+    assert.match(code, /useLayoutEffect\(\(\) => \{\s*setActive\(paramToLeague\(new URLSearchParams\(window\.location\.search\)\.get\('league'\)\)\);\s*\}, \[paramToLeague\]\);/);
   });
 
   it('filters by toggling hidden, never by unmounting a section', () => {
-    assert.match(code, /className=\{active !== ALL && active !== section\.league \? 'hidden' : undefined\}/);
     assert.match(code, /className=\{active === CFB_CHIP \? 'hidden' : 'space-y-14'\}/);
     assert.doesNotMatch(code, /sections\s*\.filter\(/);
   });
