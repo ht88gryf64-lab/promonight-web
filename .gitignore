@@ -67,3 +67,8 @@ docs/SITE-AUDIT.generated.md
 # dumps and fetch logs. The wave REPORTS (audit/nhl-arena-data-*.md) stay
 # committable on purpose -- see CLAUDE.md.
 audit/nhl-wave*/
+
+# Raptive Creator API pulls. Dashboard data is confidential under the Raptive
+# agreement and this repo is public: snapshots live in
+# ~/promonight/audit-archive/ads/, never here.
+audit/raptive-snapshot-*.json
