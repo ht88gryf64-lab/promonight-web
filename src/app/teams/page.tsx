@@ -4,7 +4,9 @@ import { isUpcomingPromo, todayYmd } from '@/lib/promo-helpers';
 import { getAllTeams, getTeamPromos, isTicketPackagePromo } from '@/lib/data';
 import { partitionTicketPackages } from '@/lib/ticket-packages';
 import { getCoverageCounts } from '@/lib/get-coverage-counts';
-import { TeamsBrowser } from '@/components/teams-browser';
+import { TeamsBrowser, type TeamsBrowserSection } from '@/components/teams-browser';
+import { groupLeagueTeams } from '@/lib/hub-grouping';
+import { LEAGUE_ORDER } from '@/lib/types';
 import { isRedesignEnabled } from '@/lib/redesign';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 
@@ -50,6 +52,20 @@ export default async function TeamsPage() {
     }),
   );
 
+  // Per-league sections in pill order, each split into its divisions (the hub
+  // taxonomy in src/lib/hub-grouping.ts). Grouped here, on the server, so the
+  // client renders a fixed structure: no clock, locale or window read decides
+  // which group a card lands in. Ids only, because every Team object already
+  // travels in `teams`; sending them twice would double that part of the RSC
+  // payload. Teams keep getAllTeams() order inside a group.
+  const sections: TeamsBrowserSection[] = LEAGUE_ORDER.map((league) => ({
+    league,
+    groups: groupLeagueTeams(
+      teams.filter((t) => t.league === league),
+      league,
+    ).map((g) => ({ key: g.key, superGroup: g.superGroup, teamIds: g.teams.map((t) => t.id) })),
+  })).filter((s) => s.groups.length > 0);
+
   if (isRedesignEnabled()) {
     return (
       <div className={`${archivoHouse.variable} rd-root min-h-screen`}>
@@ -73,7 +89,7 @@ export default async function TeamsPage() {
         </section>
 
         <div className="mx-auto max-w-6xl px-6 pb-20 pt-10">
-          <TeamsBrowser teams={teams} promoCounts={promoCounts} variant="light" />
+          <TeamsBrowser teams={teams} promoCounts={promoCounts} sections={sections} variant="light" />
         </div>
       </div>
     );
