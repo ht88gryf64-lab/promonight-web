@@ -500,7 +500,7 @@ Overall reflects current-season promo presence (5 of 10 points require upcoming 
   - League hubs `/mlb` `/nba` `/nfl` `/nhl` `/mls` `/wnba`: a `page-content` wrapper in each `page.tsx`.
   - Homepage (`HomePageV2`), CFB school pages (`CfbSchoolPage`), venue hubs (`VenueHubView`).
   - `/playoffs` and `/playoffs/<league>` (`PlayoffsHub`, `PlayoffsLeague`). The offseason hub places none (entry 60).
-  - `/teams`: ADDED 2026-10-25 (`feature/teams-division-split`), known-issues entry 73. A `<section>` per league, with division groups as anchors. 17 units at 390px and 7 at 1440px on the preview, up from 0. Only the shown league is anchored on a `?league=` landing.
+  - `/teams`: ADDED 2026-10-25 (`feature/teams-division-split`), known-issues entry 73. A `<section>` per league, with division groups as anchors. Merged `6abf198`. Production at 390px: 17 units, and 3 on `?league=NBA`, all inside NBA. Preview at 1440px: 7. Before: 0. Only the shown league is anchored on a `?league=` landing.
 - Newsletter: Resend system, sending domain mail.getpromonight.com, in phased build. Subscriber count: CONFIRM (likely pre-launch/0). Capture wired on /world-cup and aggregator pages (web_world_cup, web_aggregator sources).
 - Pro subs: RevenueCat, $5.99/season single sport, $9.99/year all sports.
 
