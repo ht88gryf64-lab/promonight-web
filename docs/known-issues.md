@@ -3990,7 +3990,7 @@ All three by 2027-03-15, ahead of the April postseason.
 
 **Where.** GA4 Admin > Data streams > Enhanced measurement > Page views > Advanced; `src/components/analytics/PageViewTracker.tsx`, `page-history.ts`, `page-view-deferral.ts`.
 
-## 73. /teams placed zero in-content ads: one 169-card grid gave Raptive nothing to anchor on or measure (built on `feature/teams-division-split`, NOT merged)
+## 73. /teams placed zero in-content ads: one 169-card grid gave Raptive nothing to anchor on or measure (resolved: league sections with division anchors, merged 2026-10-25)
 
 **What it was.** `/teams` is the most-viewed URL on the site, and since the
 Raptive install it has been nearly unmonetized. The light browser in
@@ -4098,6 +4098,18 @@ Zero React or hydration errors on all three loads, read from CDP
 of the page. The in-page timing instrument for the ordering failed on this run
 (it observed `document` before it existed). The ordering claim rests on the
 React source above, and the landing result is consistent with it.
+
+**Shipped.** Merged as `6abf198` on 2026-10-25, production deploy
+`dpl_DxTpfKTxYD8mk8AC587KjCao4GoK`. The guard in
+`src/lib/__tests__/teams-sections.test.ts` fails, citing this entry, if a
+`loading` file exists on the route or at the root, or if a Suspense boundary
+wraps the root layout's main element. It was proven to fail by adding a
+temporary `src/app/teams/loading.tsx`. Production, 390px, fresh storage per load, same method:
+
+| load | Content units | outside the shown league | React / hydration errors |
+| --- | --- | --- | --- |
+| `/teams` | 17, first y 2,144 (after AL West); gaps 795 to 1,898px | n/a | 0 |
+| `/teams?league=NBA` | 3, after Southeast, Northwest and Pacific | **0** (1 `page-content` in the DOM, article 4,034px) | 0 |
 
 **Where.** `src/components/teams-browser.tsx`, `src/app/teams/page.tsx`,
 `src/lib/hub-grouping.ts`, `src/lib/__tests__/teams-sections.test.ts`.
