@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 
 import { groupLeagueTeams } from '../hub-grouping';
+import { leaguesByUpcoming } from '../teams-order';
 import type { Team } from '../types';
 
 /**
@@ -50,7 +51,8 @@ describe('TeamsBrowser light layout anchors', () => {
 
   it('puts page-content on the per-league division wrapper and nowhere else', () => {
     assert.equal(code.split('page-content').length - 1, 1);
-    assert.match(code, /<div className=\{shown && active !== CFB_CHIP \? 'page-content mt-6 space-y-8' : 'mt-6 space-y-8'\}>\s*\{section\.groups\.map\(\(group\) => \(\s*<div key=\{group\.key\}>/);
+    assert.match(code, /<div className=\{shown && active !== CFB_CHIP \? 'page-content mt-6' : 'mt-6'\}>\s*\{section\.groups\.map\(\(group\) => \(\s*<div key=\{group\.key\} className="py-4 first:pt-0 last:pb-0">/);
+    assert.doesNotMatch(code, /page-content[^'"]*space-y/, 'space-y left about 10px under an ad');
   });
 
   it('anchors only shown leagues: a hidden section drops page-content by class, not by unmount', () => {
@@ -83,7 +85,7 @@ describe('/teams page groups on the server', () => {
   const code = strip(readFileSync(PAGE, 'utf8'));
 
   it('builds the sections from the hub taxonomy in pill order', () => {
-    assert.match(code, /LEAGUE_ORDER\.map\(\(league\) => \(\{/);
+    assert.match(code, /leaguesByUpcoming\(LEAGUE_ORDER, upcomingByLeague\)\.map\(\(league\) => \(\{/);
     assert.match(code, /groupLeagueTeams\(/);
     assert.match(code, /sections=\{sections\}/);
   });
@@ -131,5 +133,16 @@ describe('/teams hydrates in the same commit as RaptiveLoader (known-issues entr
         `${f} adds a Suspense boundary around /teams (known-issues entry 73).`,
       );
     }
+  });
+});
+
+describe('leaguesByUpcoming', () => {
+  const PILLS = ['MLB', 'NBA', 'NFL', 'NHL', 'MLS', 'WNBA'];
+  it('puts the league with the most upcoming promos first', () => {
+    assert.deepEqual(leaguesByUpcoming(PILLS, { NHL: 500, NBA: 400, NFL: 90, MLS: 20 }), ['NHL', 'NBA', 'NFL', 'MLS', 'MLB', 'WNBA']);
+  });
+  it('breaks ties, zeros included, by pill order', () => {
+    assert.deepEqual(leaguesByUpcoming(PILLS, { WNBA: 5, NBA: 5 }), ['NBA', 'WNBA', 'MLB', 'NFL', 'NHL', 'MLS']);
+    assert.deepEqual(leaguesByUpcoming(PILLS, {}), PILLS);
   });
 });

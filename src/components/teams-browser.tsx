@@ -259,9 +259,14 @@ export function TeamsBrowser({ teams, promoCounts, sections = [], variant = 'dar
                       hidden section's groups would still be Raptive anchors, and
                       a unit filled inside display:none. A class change, never an
                       unmount, so Raptive's inserted nodes stay put. */}
-                  <div className={shown && active !== CFB_CHIP ? 'page-content mt-6 space-y-8' : 'mt-6 space-y-8'}>
+                  {/* Group spacing is symmetric padding, not space-y: 16px above
+                      and below each group (none at the ends), so two groups sit
+                      32px apart and a Raptive unit inserted between them gets
+                      equal room on both sides on top of its own margin. space-y
+                      gave 32px above an ad and about 10px below it. */}
+                  <div className={shown && active !== CFB_CHIP ? 'page-content mt-6' : 'mt-6'}>
                     {section.groups.map((group) => (
-                      <div key={group.key}>
+                      <div key={group.key} className="py-4 first:pt-0 last:pb-0">
                         <h3 className="rd-display text-base text-rd-ink">{groupLabel(group)}</h3>
                         <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                           {group.teamIds.map((id) => {
