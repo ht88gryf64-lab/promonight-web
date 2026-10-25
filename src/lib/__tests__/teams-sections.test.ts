@@ -1,5 +1,5 @@
 import { strict as assert } from 'node:assert';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 
 import { groupLeagueTeams } from '../hub-grouping';
@@ -86,5 +86,50 @@ describe('/teams page groups on the server', () => {
     assert.match(code, /LEAGUE_ORDER\.map\(\(league\) => \(\{/);
     assert.match(code, /groupLeagueTeams\(/);
     assert.match(code, /sections=\{sections\}/);
+  });
+});
+
+describe('/teams hydrates in the same commit as RaptiveLoader (known-issues entry 73)', () => {
+  // TeamsBrowser applies an arrival ?league= in a layout effect so the hidden
+  // sections lose page-content before the async Raptive script can run. That
+  // ordering holds only while /teams hydrates in ONE commit with the root
+  // layout's RaptiveLoader. A loading boundary or a Suspense around the root layout's main element lets
+  // the loader's effect run in an earlier commit, and an ad can fill inside a
+  // hidden section again.
+  it('has no loading boundary on the route or above it', () => {
+    for (const dir of ['src/app/teams', 'src/app']) {
+      for (const ext of ['tsx', 'ts', 'jsx', 'js']) {
+        const f = `${dir}/loading.${ext}`;
+        assert.ok(
+          !existsSync(f),
+          `${f} exists. It wraps /teams in a Suspense boundary, so the ?league= filter can apply after Raptive scans (known-issues entry 73).`,
+        );
+      }
+    }
+  });
+
+  it('keeps the main element outside every Suspense boundary in the root layout', () => {
+    const layout = strip(readFileSync('src/app/layout.tsx', 'utf8'));
+    const at = layout.indexOf('<main');
+    assert.ok(at > 0, 'root layout renders no main element');
+    const before = layout.slice(0, at);
+    const open = before.split('<Suspense').length - 1;
+    const closed = before.split('</Suspense>').length - 1;
+    assert.equal(
+      open - closed,
+      0,
+      'src/app/layout.tsx wraps its main element in a Suspense boundary, so the /teams ?league= filter can apply after Raptive scans (known-issues entry 73).',
+    );
+  });
+
+  it('adds no Suspense-bearing layout or template of its own', () => {
+    for (const f of ['src/app/teams/layout.tsx', 'src/app/teams/template.tsx']) {
+      if (!existsSync(f)) continue;
+      assert.doesNotMatch(
+        strip(readFileSync(f, 'utf8')),
+        /<Suspense/,
+        `${f} adds a Suspense boundary around /teams (known-issues entry 73).`,
+      );
+    }
   });
 });

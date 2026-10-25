@@ -90,6 +90,9 @@ export function TeamsBrowser({ teams, promoCounts, sections = [], variant = 'dar
   // sections are already hidden and unanchored. The first render still
   // matches the server (All), and LeagueParamReader's first call becomes a
   // no-op setActive that still fires teams_browser_view.
+  // It holds only while /teams hydrates in the same commit as RaptiveLoader: no
+  // loading.tsx and no Suspense around the root layout's main element (known-issues entry 73, enforced
+  // by src/lib/__tests__/teams-sections.test.ts).
   useLayoutEffect(() => {
     setActive(paramToLeague(new URLSearchParams(window.location.search).get('league')));
   }, [paramToLeague]);
