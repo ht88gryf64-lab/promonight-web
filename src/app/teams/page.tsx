@@ -7,6 +7,7 @@ import { getCoverageCounts } from '@/lib/get-coverage-counts';
 import { TeamsBrowser, type TeamsBrowserSection } from '@/components/teams-browser';
 import { groupLeagueTeams } from '@/lib/hub-grouping';
 import { LEAGUE_ORDER } from '@/lib/types';
+import { leaguesByUpcoming } from '@/lib/teams-order';
 import { isRedesignEnabled } from '@/lib/redesign';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 
@@ -57,8 +58,14 @@ export default async function TeamsPage() {
   // client renders a fixed structure: no clock, locale or window read decides
   // which group a card lands in. Ids only, because every Team object already
   // travels in `teams`; sending them twice would double that part of the RSC
-  // payload. Teams keep getAllTeams() order inside a group.
-  const sections: TeamsBrowserSection[] = LEAGUE_ORDER.map((league) => ({
+  // payload. Teams keep getAllTeams() order inside a group. Sections run by
+  // total upcoming promos, most first, from the counts above (server-side, so
+  // the order is fixed in the HTML); ties keep pill order.
+  const upcomingByLeague: Record<string, number> = {};
+  for (const t of teams) {
+    upcomingByLeague[t.league] = (upcomingByLeague[t.league] ?? 0) + (promoCounts[t.id] ?? 0);
+  }
+  const sections: TeamsBrowserSection[] = leaguesByUpcoming(LEAGUE_ORDER, upcomingByLeague).map((league) => ({
     league,
     groups: groupLeagueTeams(
       teams.filter((t) => t.league === league),

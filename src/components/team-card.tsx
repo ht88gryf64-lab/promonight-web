@@ -86,7 +86,7 @@ export function TeamCard({
             {SPORT_ICONS[team.league]} {team.league}
           </span>
           {promoCount !== undefined && (
-            <span className={light ? 'text-rd-ink-faint text-[11px] font-mono' : 'text-text-dim text-[11px] font-mono'}>
+            <span className={light ? 'whitespace-nowrap text-rd-ink-faint text-[11px] font-mono' : 'whitespace-nowrap text-text-dim text-[11px] font-mono'}>
               {promoCount} {countLabel}
             </span>
           )}
