@@ -4111,5 +4111,36 @@ temporary `src/app/teams/loading.tsx`. Production, 390px, fresh storage per load
 | `/teams` | 17, first y 2,144 (after AL West); gaps 795 to 1,898px | n/a | 0 |
 | `/teams?league=NBA` | 3, after Southeast, Northwest and Pacific | **0** (1 `page-content` in the DOM, article 4,034px) | 0 |
 
+**Polish, 2026-10-25** (`feature/teams-polish`: `55127de`, then `673299a`).
+
+- **Raptive's slot has a 10px margin, top and bottom.** That comes from the
+  in-content div's computed style, read on the preview. With `space-y-8` on the
+  `page-content` wrapper, the group above an ad kept its 32px bottom margin,
+  which absorbed the ad's 10px top margin; nothing sat below the ad but its
+  own 10px. So every ad had 32px above it and about 10px before the next
+  heading.
+- **16/16 padding, no space-y.** Each division group carries
+  `py-4 first:pt-0 last:pb-0`, so two groups still sit 32px apart. An ad
+  between groups now gets 16 + 10 = 26px on each side. Padding does not
+  collapse with the ad's margin. No Raptive class is targeted. An ad that ends
+  a league has 26px above it and the 56px league gap below it, accepted by
+  design.
+- **Leagues run busiest first.** Sections are ordered by total upcoming promos
+  (the card counts, summed per league), most first, with ties in pill order.
+  This is `leaguesByUpcoming` in `src/lib/teams-order.ts`, called on the
+  server, so no client clock decides layout (entry 52 and this entry). The pills
+  keep their fixed order. On 2026-10-25 the order was NHL, NBA, NFL, MLS, MLB,
+  WNBA. The first unit moved from MLB's AL West to NHL's Central.
+- **The one-line promo count was tried and reverted.** `whitespace-nowrap` on
+  the count made the league chip wrap instead: at 390px its icon and league
+  code stacked into a circle, and a two-digit count ended 2px from the star. A
+  162px card has no room for chip, count and star on one line at 390px.
+  Fixing it means a card layout change, not a class.
+
+Measured on preview `dpl_Do6sqEk9TSjfsAroKg7CmzbL3hU4` (55127de; its nowrap
+class does not affect spacing or desktop): 390px gets 17 units, first at y
+2,686, 26/26 on all 12 in-league ads. 1440px gets 7 units, first at y 1,505,
+26/26 on all 6 in-league ads. Zero React errors on both.
+
 **Where.** `src/components/teams-browser.tsx`, `src/app/teams/page.tsx`,
 `src/lib/hub-grouping.ts`, `src/lib/__tests__/teams-sections.test.ts`.
