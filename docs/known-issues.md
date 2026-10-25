@@ -3989,3 +3989,77 @@ All three by 2027-03-15, ahead of the April postseason.
 **Ordering caveat for funnels.** A page_view flushed as the visitor leaves inside the 500ms deadline is sent at navigation time, so it can arrive after a click the visitor made on that same page (both sinks timestamp at send). Strict-order PostHog funnels that require page_view before a same-page click will drop those sessions; use a loose ordering (any order within the funnel window) for page_view to same-page-action steps. Before this branch those views were not sent at all.
 
 **Where.** GA4 Admin > Data streams > Enhanced measurement > Page views > Advanced; `src/components/analytics/PageViewTracker.tsx`, `page-history.ts`, `page-view-deferral.ts`.
+
+## 73. /teams placed zero in-content ads: one 169-card grid gave Raptive nothing to anchor on or measure (built on `feature/teams-division-split`, NOT merged; two defects open)
+
+**What it was.** `/teams` is the most-viewed URL on the site, and since the
+Raptive install it has been nearly unmonetized. The light browser in
+`src/components/teams-browser.tsx` rendered every team as one CSS grid of 169
+`<article>` cards: 14,260px at 390px and 5,050px at 1440px. The page had no
+`page-content`, so the Content rule (`.page-content > *`, skip 2, insert after
+each remaining child) matched nothing. Its tallest `<article>` was one card, so
+there was nothing for the entry 49 density formula to measure either. Footer,
+sticky video and interstitial were all it served.
+
+**The pattern.** One `<article data-ad-region="content">` holds a `<section>`
+per league in pill order (MLB, NBA, NFL, NHL, MLS, WNBA), each with an `h2`.
+Inside each section, a `div.page-content` whose ONLY direct children are the
+division groups (`h3` plus the unchanged card grid). Every unit therefore lands
+between two divisions or two leagues, never inside a grid. The groups come from
+the hub taxonomy, now in the pure `src/lib/hub-grouping.ts` (moved out of
+`data.ts`, which delegates to it unchanged). The server groups in
+`src/app/teams/page.tsx` and passes team ids only. Filters and the CFB chip
+toggle `hidden` and never unmount, because Raptive inserts its containers
+between the groups and never rescans. Starred teams render in a "Your teams"
+row above the article, only after hydration. The dark browser is unchanged.
+`src/lib/__tests__/teams-sections.test.ts` asserts the article, the single
+`page-content` placement, hidden-not-unmount, the post-hydration row, and no
+`<aside>`, clock or locale read.
+
+**The `<article>` is load-bearing**, for the reason in entries 49 and 58: the
+largest anchor parent is one league section, a few thousand pixels at most.
+Retagging the root to a `<div>` cuts the unit count.
+
+**Data.** WNBA splits by the conference stored in `division`: Eastern 7,
+Western 8. MLS splits 15 and 15. All 169 teams land in a spec group.
+
+**Measured** on preview `dpl_61ikMeLmSqzRNTevnJkWtrFaZj4Y` (c6c45ea) on
+2026-10-25: headless Chrome with a Safari iPhone or Mac Chrome UA (Raptive does
+not initialize on a HeadlessChrome UA), analytics hosts blocked, ad hosts
+allowed, slow scroll. The preview fills only some units.
+
+| load | Content units | first unit | gaps between consecutive units |
+| --- | --- | --- | --- |
+| 390px `/teams` | 17 (0 before) | y 2,144, after AL West (3rd anchor; skip 2) | 795 to 1,848px; NFL 1,373 to 1,609 |
+| 1440px `/teams` | 9 (0 before) | y 1,064, after AL West | 943 to 1,638px, plus **two stacked pairs at 260px** |
+| 390px `/teams?league=NFL` | 2: one visible, **one inside hidden MLB** | y 1,652, after AFC South | n/a |
+| 390px `/teams`, two teams starred | 17 | y 2,395 (the article starts 250px lower) | unchanged |
+
+Across the short NFL divisions (339px each on a phone), Raptive took every
+other or every third anchor, not every one. The tightest mobile gap is MLB's
+795px. On the `?league=NFL` landing the article measured only its visible
+height (3,244px). Zero `#418`, zero console or window errors on every load,
+starred included.
+
+**Open defect 1: an ad filled inside a hidden section.** On a `?league=`
+landing the hidden sections keep `page-content`, so their groups still count as
+anchors. Skip 2 consumed AL East and AL Central, and `adthrive-content-1` went
+after AL West inside the `display:none` MLB section. It FILLED (iframe present)
+while invisible: a served, unviewable impression. Proposed fix: render the
+`page-content` class only on visible sections (a class change, not an unmount,
+so it is safe for Raptive's nodes). A landing then anchors only the shown
+league. Returning to All later shows the other leagues with no ads, since
+Raptive does not rescan. This must land before merge. The landing is common:
+in PostHog for Oct 1-22, 26 of 56 sessions that landed on `/teams` carried
+`?league=`, as did 39 of 77 `/teams` page_views after the 2026-10-20
+pathname-only change. Before that change, pill taps fired page_views, so the
+pre-10-20 share (441 of 700) is inflated.
+
+**Open defect 2: stacked units on desktop.** At 1440px Raptive placed nine
+units, two more than the formula gives for the pre-ad height (about 7,100px),
+and put the extras directly under another unit: two units after MLS Eastern
+(y 7,792 and 8,052) and two after WNBA Western (9,561 and 9,821). Not
+diagnosed. Mobile showed no stacking.
+
+**Where.** `src/components/teams-browser.tsx`, `src/app/teams/page.tsx`,
+`src/lib/hub-grouping.ts`, `src/lib/__tests__/teams-sections.test.ts`.
