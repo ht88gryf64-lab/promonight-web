@@ -4073,8 +4073,9 @@ two pairs of units 260px apart at 1440px (two after MLS Eastern, two after WNBA
 Western), 9 units where the formula gives 7. Our DOM rules it out: every direct
 child of every `page-content` is a division group 160 to 458px tall, with no
 empty or zero-height child and no anchor pair across a section boundary (each
-league has its own wrapper). The unfiltered 1440 DOM is byte-for-byte the same
-before and after `75cdc2f`. On the re-measure the same page placed 7 units and
+league has its own wrapper). On unfiltered `/teams`, `75cdc2f` changes nothing in
+the DOM by construction (every league is shown, so the class string is
+unchanged and the layout effect sets All again). Not diffed. On the re-measure the same page placed 7 units and
 no pairs. Raptive's live Content config explains how a pair is possible:
 `dynamic: { skip: 2, every: 1, spacing: 0, max: 2, lazy: true, lazyMax: 97,
 position: "afterend" }`. `spacing: 0` lets a lazy unit land `afterend` of an
