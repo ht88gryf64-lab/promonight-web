@@ -57,14 +57,24 @@ const LEAGUE_COPY: Record<string, LeagueCopy> = {
   NBA: {
     cadence: 'October–April regular season',
     paragraphs: ({ teamName, venueName }) => [
-      `Most NBA teams release their full promo schedules at the start of the regular season and then add dates throughout the year.`,
+      // MEASURED 2026-10-24 (discovery-apply): all 20 NBA clubs with 2026-27
+      // promos were first seen by the scanner between 2026-09-14 and
+      // 2026-10-13, before the 2026-10-20 opener (590 rows before, 5 after).
+      // The old sentence said the schedules came out "at the start of the
+      // regular season", which was false. "2026-27" is literal on purpose: a
+      // statement about that season stays true after the July 1 bump.
+      `Most NBA teams published their 2026-27 promo schedules before the season opened in October. Some clubs announce promo nights one at a time instead.`,
       `When ${teamName} promos are confirmed at ${venueName}, they'll appear on this page. In the meantime, the free PromoNight app carries the same calendar, so confirmed events show up there too.`,
     ],
   },
   NHL: {
     cadence: 'October–April regular season',
     paragraphs: ({ teamName, venueName }) => [
-      `NHL teams typically release the bulk of their promo calendar at season open and continue adding dates through the playoffs.`,
+      // MEASURED 2026-10-24 (discovery-apply): of the 29 NHL clubs with
+      // 2026-27 promos, 27 had most of them first seen by the scanner before
+      // the 2026-09-29 opener (898 rows before, 111 after), from 2026-08-22.
+      // The old sentence put the bulk "at season open", which was false.
+      `Most NHL teams published their 2026-27 promo calendars before the season opened, and some add dates as the season goes on.`,
       `When ${teamName} giveaways, theme nights, or family events are confirmed at ${venueName}, they'll show up here. The free PromoNight app carries the same calendar as this page.`,
     ],
   },
