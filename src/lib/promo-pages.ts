@@ -11,8 +11,10 @@
 // sides go live on one switch.
 //
 // READS. One subcollection read for the team (its rows, the siblings and the
-// previous edition all come out of it), one games window for the display
-// slots, the building hub the team page already reads, the team's scan stamp,
+// previous edition all come out of it), the team's own games (the two
+// equality reads the team page makes, never a cross-league date window) for
+// the display slots, the building hub the team page already reads, the team's
+// scan stamp,
 // and, for the cross-team block and the sitemap, the upcoming index: every
 // promo dated today or later, one collection-group read on the date index
 // the other cross-team readers use (there is no collection-group index on
@@ -23,7 +25,8 @@ import 'server-only';
 import { cache } from 'react';
 import { Timestamp } from 'firebase-admin/firestore';
 import { db } from './firebase';
-import { getAllTeams, getVenueForTeam, mapPromoDoc, withGameDisplay } from './data';
+import { getAllTeams, getGamesForTeam, getVenueForTeam, mapPromoDoc } from './data';
+import { applyGameDisplay, buildGameIndex } from './promo-game-join';
 import { makeKeyedTtlCache, STATIC_TTL_MS } from './collection-cache';
 import { getVenueHub, getVenueHubForTeam, type TeamVenueHubLink } from './venue-hub';
 import { buildCondensedLogistics, type CondensedLine } from './venue-hub-condensed';
@@ -57,8 +60,12 @@ const str = (v: unknown): string | null => (typeof v === 'string' && v.trim() ? 
 const bool = (v: unknown): boolean | null => (typeof v === 'boolean' ? v : null);
 const tierOf = (v: unknown): ImageTier | null => (v === 1 || v === 3 ? v : null);
 
-/** The page row from a mapped promo (display slots filled) and its raw data. */
-function toPageRow(promoId: string, promo: Promo, data: FirebaseFirestore.DocumentData): PromoPageRow {
+/** The page row from a mapped promo (display slots filled) and its raw data.
+ *  The special-ticket fields are read for NHL and NBA only: outside those two
+ *  leagues the stored flag is the extractor's raw guess the site ignores
+ *  everywhere (src/lib/ticket-packages.ts), so the page ignores it too. */
+function toPageRow(promoId: string, promo: Promo, data: FirebaseFirestore.DocumentData, league: string): PromoPageRow {
+  const packages = isTicketPackageLeague(league);
   return {
     promoId,
     date: typeof promo.date === 'string' && YMD_RE.test(promo.date) ? promo.date : '',
@@ -74,8 +81,8 @@ function toPageRow(promoId: string, promo: Promo, data: FirebaseFirestore.Docume
     gateOpenTime: str(data.gateOpenTime),
     ageRestriction: str(data.ageRestriction),
     redemptionLocation: str(data.redemptionLocation),
-    ticketPackageRequired: bool(data.ticketPackageRequired),
-    ticketPackageName: str(data.ticketPackageName),
+    ticketPackageRequired: packages ? bool(data.ticketPackageRequired) : null,
+    ticketPackageName: packages ? str(data.ticketPackageName) : null,
     sourceUrl: str(data.sourceUrl),
     pageSlug: str(data.pageSlug) ?? '',
     pageSeason: str(data.pageSeason),
@@ -102,15 +109,16 @@ const loadTeamPromoDocs = cache(async (teamId: string): Promise<TeamDoc[]> => {
   return snap.docs.map((d) => ({ id: d.id, data: d.data() })).filter((d) => d.data.isPostseason !== true);
 });
 
-/** Page rows for a team, display slots filled from the games spine in one
- *  window. Tombstoned rows are KEPT here (the page resolver needs them for the
- *  removed state); every list built from this filters them. */
+/** Page rows for a team, display slots filled from the team's own games (the
+ *  same two equality reads the team page makes, src/lib/data.ts
+ *  getGamesForTeam; a cross-league date window pulled up to 2,400 docs per
+ *  render, review finding 1). Tombstoned rows are KEPT here (the page resolver
+ *  needs them for the removed state); every list built from this filters them. */
 const loadTeamPageRows = cache(async (team: Team): Promise<PromoPageRow[]> => {
-  const docs = await loadTeamPromoDocs(team.id);
+  const [docs, games, teams] = await Promise.all([loadTeamPromoDocs(team.id), getGamesForTeam(team.id, team.sportSlug), getAllTeams()]);
   const mapped = docs.map((d) => ({ id: d.id, data: d.data, promo: { ...mapPromoDoc({ id: d.id, data: () => d.data } as FirebaseFirestore.DocumentSnapshot), team } as PromoWithTeam }));
-  // One games read for the whole team, the rows mutated in place.
-  await withGameDisplay(mapped.map((m) => m.promo));
-  return mapped.map((m) => toPageRow(m.id, m.promo, m.data));
+  applyGameDisplay(mapped.map((m) => m.promo), buildGameIndex(games), new Map(teams.map((t) => [t.id, t])));
+  return mapped.map((m) => toPageRow(m.id, m.promo, m.data, team.league));
 });
 
 // ── the page ─────────────────────────────────────────────────────────────────
@@ -122,8 +130,10 @@ export interface PromoPage {
   season: string | null;
   /** Live rows, date-ascending, one per date. */
   rows: PromoPageRow[];
-  /** Tombstoned rows under the slug, date-ascending. */
+  /** Tombstoned rows under the slug, date-ascending, one per date. */
   removedRows: PromoPageRow[];
+  /** Their dates, ascending, unique, valid only. */
+  removedDates: string[];
   /** 'removed' when every row under the slug is tombstoned. */
   state: 'live' | 'removed';
   /** The row the head and the hero describe: the next upcoming live row, else
@@ -156,16 +166,22 @@ const maxIso = (a: string | null, b: string | null): string | null => (a && b ? 
  * no row carries the slug.
  */
 export const resolvePromoPage = cache(async (team: Team, slug: string, today: string): Promise<PromoPage | null> => {
+  // The cheap check first: a slug no document carries is a 404 before the
+  // games read and the display join.
+  if (!(await loadTeamPromoDocs(team.id)).some((d) => d.data.pageSlug === slug)) return null;
   const all = (await loadTeamPageRows(team)).filter((r) => r.pageSlug === slug);
   if (all.length === 0) return null;
   const groups = groupBySeason(all);
   const current = seasonLabelFor(team.league, today);
   const season = current && groups.has(current) ? current : [...groups.keys()].sort().pop() ?? '';
   const under = groups.get(season) ?? [];
-  const rows = under.filter((r) => !r.tombstoned).sort(byDate);
-  const removedRows = under.filter((r) => r.tombstoned).sort(byDate);
+  // One row per date: two live documents on one date under one slug (a
+  // same-date, same-title twin) are one game line and one Event.
+  const rows = onePerKey(under.filter((r) => !r.tombstoned).sort(byDate), (r) => r.date);
+  const removedRows = onePerKey(under.filter((r) => r.tombstoned).sort(byDate), (r) => r.date);
   const state: PromoPage['state'] = rows.length > 0 ? 'live' : 'removed';
   const dates = [...new Set(rows.map((r) => r.date).filter((d) => YMD_RE.test(d)))].sort();
+  const removedDates = [...new Set(removedRows.map((r) => r.date).filter((d) => YMD_RE.test(d)))].sort();
   const primary = rows.find((r) => r.date >= today) ?? rows[rows.length - 1] ?? removedRows[removedRows.length - 1];
   let updatedAt: string | null = null;
   let removedAt: string | null = null;
@@ -173,7 +189,7 @@ export const resolvePromoPage = cache(async (team: Team, slug: string, today: st
     updatedAt = maxIso(updatedAt, r.updatedAt);
     removedAt = maxIso(removedAt, r.tombstonedAt);
   }
-  return { team, slug, season: season || null, rows, removedRows, state, primary, dates, updatedAt, removedAt };
+  return { team, slug, season: season || null, rows, removedRows, removedDates, state, primary, dates, updatedAt, removedAt };
 });
 
 // ── the links and the building ───────────────────────────────────────────────
@@ -201,19 +217,22 @@ export interface PromoPageContext {
   location: PromoPageLocation | null;
   /** The building's coordinates (the hub's, else the venue doc's) for parking. */
   coords: { lat: number; lng: number } | null;
-  /** When the source was last read: the later of the team's scan stamp and
-   *  the row's updatedAt, as an ISO instant. */
+  /** When the team's source was last read: the scan stamp
+   *  (scannerState/{LEAGUE}/hashes/{team}.updatedAt), null when the team has
+   *  none. NOT the row's updatedAt: that is a write instant (the backfill and
+   *  the image step stamp it too), not a read (review finding 2). */
   observedAt: string | null;
   /** Other promos on the same team and date(s), one per slug. */
   alsoAtGame: LinkedPromo[];
   /** The team's next two upcoming promos under other slugs. */
   nextTeamPromos: LinkedPromo[];
-  /** Other teams running the same theme this season (3 to 5), else empty. */
-  sameTheme: LinkedPromo[];
-  /** When no theme match reaches 3: other clubs in the league with the same
-   *  kind of promo coming up (3 to 5). The spec's section 10 slot, filled so
-   *  a page with no theme still links out to its league (see the view). */
-  leaguePromos: LinkedPromo[];
+  /** The section 10 block: the same theme at other clubs (3 to 5), else the
+   *  league's other clubs with the same kind of promo, else the league's other
+   *  clubs with any promo, else the same kind of promo across the leagues.
+   *  Each step needs 3 to fire; `kind` names which one did. Null when none
+   *  reaches 3. The cascade is what keeps the 8-link floor on a kids or food
+   *  page with no theme (review finding 6). */
+  crossTeam: { kind: 'theme' | 'league-type' | 'league' | 'type'; links: LinkedPromo[] } | null;
   /** The prior season's page under the same base slug, when one exists. */
   previousEdition: { href: string; season: string; date: string } | null;
 }
@@ -378,13 +397,12 @@ export const loadPromoPageContext = cache(async (page: PromoPage, today: string)
     previousEdition = { href: promoPagePath(team.sportSlug, team.id, r.pageSlug), season: r.pageSeason, date: r.date };
   }
 
-  // Cross-team: the same theme at other clubs (3 to 5), else other clubs in
-  // the league with the same kind of promo coming up. On a removed page too:
-  // a reader who came for a promotion that is gone is offered the next one.
-  let sameTheme: LinkedPromo[] = [];
-  let leaguePromos: LinkedPromo[] = [];
-  const themeKey = page.primary.themeKey && page.primary.themeKey !== 'none' ? page.primary.themeKey : null;
+  // Cross-team (section 10): the same theme at other clubs, else the cascade
+  // documented on PromoPageContext. On a removed page too: a reader who came
+  // for a promotion that is gone is offered the next one.
+  let crossTeam: PromoPageContext['crossTeam'] = null;
   {
+    const themeKey = page.primary.themeKey && page.primary.themeKey !== 'none' ? page.primary.themeKey : null;
     const index = await getUpcomingPromoIndex(today);
     const teams = await getAllTeams();
     const teamById = new Map(teams.map((t) => [t.id, t]));
@@ -393,14 +411,20 @@ export const loadPromoPageContext = cache(async (page: PromoPage, today: string)
       return t ? link(t, { pageSlug: r.pageSlug, title: r.title, date: r.date, type: r.type, displayTime: '', displayOpponent: '' }) : null;
     };
     const elsewhere = index.filter((r) => r.teamId !== team.id && !r.ticketPackage);
-    if (themeKey) {
-      const matches = onePerKey(elsewhere.filter((r) => r.themeKey === themeKey), (r) => r.teamId).slice(0, 5).map(toLink).filter((x): x is LinkedPromo => !!x);
-      if (matches.length >= 3) sameTheme = matches;
-    }
-    if (sameTheme.length === 0) {
-      const sameLeague = elsewhere.filter((r) => teamById.get(r.teamId)?.league === team.league && r.type === page.primary.type);
-      const picks = onePerKey(sameLeague, (r) => r.teamId).slice(0, 5).map(toLink).filter((x): x is LinkedPromo => !!x);
-      if (picks.length >= 3) leaguePromos = picks;
+    const sameLeague = (r: IndexedPromo) => teamById.get(r.teamId)?.league === team.league;
+    const sameType = (r: IndexedPromo) => r.type === page.primary.type;
+    const steps: ['theme' | 'league-type' | 'league' | 'type', (r: IndexedPromo) => boolean][] = [
+      ['theme', (r) => !!themeKey && r.themeKey === themeKey],
+      ['league-type', (r) => sameLeague(r) && sameType(r)],
+      ['league', sameLeague],
+      ['type', sameType],
+    ];
+    for (const [kind, keep] of steps) {
+      const picks = onePerKey(elsewhere.filter(keep), (r) => r.teamId).slice(0, 5).map(toLink).filter((x): x is LinkedPromo => !!x);
+      if (picks.length >= 3) {
+        crossTeam = { kind, links: picks };
+        break;
+      }
     }
   }
 
@@ -417,11 +441,10 @@ export const loadPromoPageContext = cache(async (page: PromoPage, today: string)
     quickFacts,
     location,
     coords,
-    observedAt: maxIso(scanStamp, page.primary.updatedAt),
+    observedAt: scanStamp,
     alsoAtGame,
     nextTeamPromos,
-    sameTheme,
-    leaguePromos,
+    crossTeam,
     previousEdition,
   };
 });
@@ -453,7 +476,9 @@ export async function getPromoPageSitemapEntries(today: string): Promise<PromoSi
 }
 
 /** The card route's one document read: the row named by team and promo id,
- *  display slots filled. Null for a missing, tombstoned or postseason row. */
+ *  display slots filled from the team's games. Null for a missing or
+ *  postseason row. A tombstoned row IS returned: the removed page's card
+ *  draws it with the Removed badge. */
 export const getPromoCardRow = cache(async (teamId: string, promoId: string): Promise<{ team: Team; row: PromoPageRow } | null> => {
   const teams = await getAllTeams();
   const team = teams.find((t) => t.id === teamId);
@@ -463,6 +488,7 @@ export const getPromoCardRow = cache(async (teamId: string, promoId: string): Pr
   const data = doc.data() ?? {};
   if (data.isPostseason === true) return null;
   const promo = { ...mapPromoDoc(doc), team } as PromoWithTeam;
-  await withGameDisplay([promo]);
-  return { team, row: toPageRow(doc.id, promo, data) };
+  const games = await getGamesForTeam(team.id, team.sportSlug);
+  applyGameDisplay([promo], buildGameIndex(games), new Map(teams.map((t) => [t.id, t])));
+  return { team, row: toPageRow(doc.id, promo, data, team.league) };
 });

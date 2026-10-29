@@ -30,6 +30,8 @@ import {
   promoPageTitle,
   quantityLine,
   themeLabel,
+  typeNoun,
+  typePlural,
 } from '@/lib/promo-page-copy';
 
 // The per-promo page (Phase 3b, 2026-10-29). Spacing, type scale, tile shape
@@ -71,7 +73,7 @@ export function promoPageHead(page: PromoPage, ctx: PromoPageContext, today: str
   const removed = page.state === 'removed';
   const canonical = `${SITE_URL}${promoPagePath(team.sportSlug, team.id, page.slug)}`;
   const venueName = ctx.hub?.displayName ?? ctx.venue?.name ?? null;
-  const title = promoPageTitle(primary.title, teamName, removed ? page.removedRows.map((r) => r.date) : dates, page.season);
+  const title = promoPageTitle(primary.title, teamName, removed ? page.removedDates : dates, page.season);
   const description = promoPageDescription({
     description: primary.description,
     title: primary.title,
@@ -83,7 +85,7 @@ export function promoPageHead(page: PromoPage, ctx: PromoPageContext, today: str
   });
   const image = pageImage(primary, team.id, teamName, primary.date || null);
   const imageUrl = image.kind === 'photo' ? image.url : `${SITE_URL}${image.url}`;
-  const indexable = promoPageIndexable({ title: primary.title, dates: removed ? page.removedRows.map((r) => r.date) : dates, removed, today });
+  const indexable = promoPageIndexable({ title: primary.title, dates: removed ? page.removedDates : dates, removed, today });
   return { teamName, canonical, title, description, image, imageUrl, indexable, venueName };
 }
 
@@ -158,9 +160,16 @@ export function PromoPageView({ page, ctx, today }: PromoPageViewProps) {
   const hotels = resolveHotelLink({ team, venue: ctx.venue, surface: PROMO_PAGE_SURFACE, gameDate: multi ? null : primary.date || null });
 
   const theme = themeLabel(primary.themeKey);
-  const crossTeam = ctx.sameTheme.length ? ctx.sameTheme : ctx.leaguePromos;
-  const crossHeading = ctx.sameTheme.length ? 'Same promo, other teams' : `More ${team.league} ${(PROMO_TYPE_LABELS[primary.type] ?? 'promo').toLowerCase()}s coming up`;
-  const crossSub = ctx.sameTheme.length && theme ? `${theme} at other clubs this season` : null;
+  const crossTeam = ctx.crossTeam?.links ?? [];
+  const crossHeading =
+    ctx.crossTeam?.kind === 'theme'
+      ? 'Same promo, other teams'
+      : ctx.crossTeam?.kind === 'league-type'
+        ? `More ${team.league} ${typePlural(primary.type)} coming up`
+        : ctx.crossTeam?.kind === 'league'
+          ? `More ${team.league} promos coming up`
+          : `More ${typePlural(primary.type)} across pro sports`;
+  const crossSub = ctx.crossTeam?.kind === 'theme' && theme ? `${theme} at other clubs this season` : null;
 
   const jsonLd = promoPageJsonLd({
     canonical,
@@ -217,7 +226,6 @@ export function PromoPageView({ page, ctx, today }: PromoPageViewProps) {
           {removed ? (
             <p className="m-0 text-[15px] leading-[1.45] text-rd-ink-soft">
               <strong className="text-rd-ink">{`Removed from the ${teamName} schedule${removedOn ? ` on ${removedOn}` : ''}.`}</strong>
-              <span className="block">The game itself is unchanged; the promotion is no longer listed by the team.</span>
             </p>
           ) : null}
           {!multi ? (
@@ -282,7 +290,7 @@ export function PromoPageView({ page, ctx, today }: PromoPageViewProps) {
                   placement="promo_page_secondary"
                   target="_blank"
                   rel="noopener noreferrer sponsored"
-                  ariaLabel={`Find hotels near ${hotels.venueName} on Expedia`}
+                  ariaLabel={`Find hotels near ${venueName ?? teamName} on Expedia`}
                   className="flex h-11 flex-1 items-center justify-center rounded-xl border border-rd-line-strong bg-rd-card font-rd text-[14px] font-medium text-rd-ink no-underline hover:border-rd-ink"
                 >
                   Hotels
@@ -334,7 +342,7 @@ export function PromoPageView({ page, ctx, today }: PromoPageViewProps) {
         ) : null}
 
         <section className="mt-6 flex flex-col gap-2">
-          <H2>{`About this ${removed ? 'promotion' : (PROMO_TYPE_LABELS[primary.type] ?? 'promotion').toLowerCase()}`}</H2>
+          <H2>{`About this ${removed ? 'promotion' : typeNoun(primary.type)}`}</H2>
           {description ? <p className="m-0 text-[15px] leading-[1.55] text-rd-ink-soft">{description}</p> : null}
           {primary.ticketPackageRequired === true && primary.ticketPackageName ? (
             <p className="m-0 text-[15px] leading-[1.55] text-rd-ink-soft">Comes with the {cleanText(primary.ticketPackageName)} ticket package.</p>

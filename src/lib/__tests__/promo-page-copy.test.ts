@@ -24,6 +24,8 @@ import {
   themeLabel,
   truncateAtSentence,
   truncateAtWord,
+  typeNoun,
+  typePlural,
   type PromoPageRow,
 } from '../promo-page-copy';
 
@@ -176,6 +178,8 @@ test('category aggregator by type and title; theme labels', () => {
   assert.equal(themeLabel('aapi-heritage'), 'AAPI Heritage');
   assert.equal(themeLabel('dia-de-los-muertos'), 'Día de los Muertos');
   assert.equal(themeLabel('none'), null);
+  assert.deepEqual((['giveaway', 'theme', 'food', 'kids'] as const).map(typePlural), ['giveaways', 'theme nights', 'food deals', 'kids promos']);
+  assert.deepEqual((['giveaway', 'theme', 'food', 'kids'] as const).map(typeNoun), ['giveaway', 'theme night', 'food deal', 'promotion']);
   assert.equal(formatLongDate('2026-10-29'), 'Thursday, Oct 29, 2026');
 });
 

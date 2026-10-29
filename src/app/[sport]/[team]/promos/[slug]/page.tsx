@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import { getTeamBySlug } from '@/lib/data';
 import { todayYmd } from '@/lib/promo-helpers';
@@ -32,13 +33,16 @@ export async function generateStaticParams(): Promise<{ sport: string; team: str
 
 type Params = Promise<{ sport: string; team: string; slug: string }>;
 
+// The route's ONE clock read per request: the site's day (America/New_York),
+// shared by generateMetadata and the body through React's request cache, so
+// the noindex decision and the page cannot straddle Eastern midnight.
+const todayForRequest = cache(() => todayYmd());
+
 async function resolve(params: Params) {
   const { sport, team: teamSlug, slug } = await params;
   const team = await getTeamBySlug(teamSlug);
   if (!team || team.sportSlug !== sport) return null;
-  // The route's ONE clock read: the site's day (America/New_York). The
-  // resolver and the context take it as an argument.
-  const today = todayYmd();
+  const today = todayForRequest();
   const page = await resolvePromoPage(team, slug, today);
   if (!page) return null;
   const ctx = await loadPromoPageContext(page, today);

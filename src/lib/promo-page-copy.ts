@@ -333,6 +333,16 @@ export function pageImage(row: PromoPageRow, teamId: string, teamName: string, d
 
 // ── badge, quantity, tiles (spec Page 1 and 4) ──────────────────────────────
 
+/** The noun a page uses for its own kind ("About this giveaway"), and the
+ *  plural a cross-team heading uses ("More NHL theme nights coming up").
+ *  A kids row is a promotion: "kidss" is not a word (review finding 4). */
+export function typeNoun(type: PromoType): string {
+  return type === 'giveaway' ? 'giveaway' : type === 'theme' ? 'theme night' : type === 'food' ? 'food deal' : 'promotion';
+}
+export function typePlural(type: PromoType): string {
+  return type === 'giveaway' ? 'giveaways' : type === 'theme' ? 'theme nights' : type === 'food' ? 'food deals' : 'kids promos';
+}
+
 export function badgeLabel(row: Pick<PromoPageRow, 'type' | 'tombstoned' | 'ticketPackageRequired'>): string {
   if (row.tombstoned) return 'Removed';
   if (row.ticketPackageRequired === true) return 'Ticket package';
@@ -435,9 +445,7 @@ export function promoFaqs(opts: {
   if (removed) {
     pool.push({
       question: `Is ${title} still happening?`,
-      answer: opts.removedOn
-        ? `No. The ${teamName} removed it from their schedule on ${opts.removedOn}. The game itself is unaffected.`
-        : `No. The ${teamName} removed it from their schedule. The game itself is unaffected.`,
+      answer: opts.removedOn ? `No. The ${teamName} removed it from their schedule on ${opts.removedOn}.` : `No. The ${teamName} removed it from their schedule.`,
     });
   }
 
