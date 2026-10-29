@@ -931,6 +931,12 @@ const loadGamesInDateRange = cache(async (startDate: string, endDate: string): P
   return snap.docs.map(mapGameDoc);
 });
 
+/** Yesterday in the site's own day (America/New_York), the lower edge of the
+ *  games window every withGameDisplay caller shares. */
+export function gameWindowFloorYmd(): string {
+  return siteTodayPlusDays(-1);
+}
+
 /**
  * Fill displayTime / displayOpponent on a loader's rows from the games spine
  * (src/lib/promo-game-join.ts). The window is the date span of the rows the
@@ -940,8 +946,18 @@ const loadGamesInDateRange = cache(async (startDate: string, endDate: string): P
  * for why). A failed games read degrades to the stored values and logs: a
  * missing first pitch must not take /promos/today down with it.
  */
-export async function withGameDisplay<T extends PromoWithTeam>(rows: T[]): Promise<T[]> {
-  const needs = rows.filter(needsGameDisplay);
+export async function withGameDisplay<T extends PromoWithTeam>(
+  rows: T[],
+  floorYmd: string = gameWindowFloorYmd(),
+): Promise<T[]> {
+  // Lower edge of the window (B5, 2026-10-29): a row dated before yesterday,
+  // the site's own day, keeps its stored values and never widens the read.
+  // Without the floor the /promos/bobbleheads loader, which lists from
+  // 2026-01-01, pulled the whole 2026 MLB season (about 6,000 docs) on every
+  // regeneration and the open-ended loaders about 2,500. Yesterday rather
+  // than today so a page regenerated just after midnight still fills last
+  // night's rows, which /promos/today keeps showing through the morning.
+  const needs = rows.filter((p) => p.date >= floorYmd && needsGameDisplay(p));
   if (needs.length === 0) return rows;
   let start = needs[0].date;
   let end = needs[0].date;

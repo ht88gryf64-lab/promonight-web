@@ -187,3 +187,20 @@ test('normalizeClockLabel: narrow no-break space before AM/PM reads as the store
   assert.equal(normalizeClockLabel('19:10'), '');
   assert.equal(normalizeClockLabel(''), '');
 });
+
+test('withGameDisplay floor: a row dated before yesterday keeps stored values and never widens the window', async () => {
+  const { withGameDisplay } = await import('../data');
+  // A past row with empty slots and a home game on its date in the fake spine.
+  const past = promo(YANKEES, '2026-07-19');
+  const future = promo(WILD, '2026-10-30');
+  gamesReads = 0;
+  gamesWhere = [];
+  await withGameDisplay([past, future], '2026-10-29');
+  assert.equal(gamesReads, 1);
+  assert.deepEqual(gamesWhere, [['date', '>=', '2026-10-30'], ['date', '<=', '2026-10-30']], 'the past row is outside the window');
+  assert.deepEqual([past.displayTime, past.displayOpponent], ['', ''], 'stored (empty) values kept below the floor');
+  assert.deepEqual([future.displayTime, future.displayOpponent], ['7:00 PM', 'Penguins']);
+  gamesReads = 0;
+  await withGameDisplay([promo(YANKEES, '2026-07-19')], '2026-10-29');
+  assert.equal(gamesReads, 0, 'nothing above the floor: no read at all');
+});
