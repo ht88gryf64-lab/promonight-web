@@ -5,7 +5,7 @@ import Link from 'next/link';
 import type { PromoWithTeam } from '@/lib/types';
 import { LEAGUE_ORDER } from '@/lib/types';
 import { track, type AnalyticsSurface } from '@/lib/analytics';
-import { teamDisplayName } from '@/lib/promo-helpers';
+import { teamDisplayName, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
 import { StarToggleInline } from '@/components/star-toggle';
 import type { AggregatorGroup } from '@/components/aggregator-layout';
 import { groupPromoRows } from '@/lib/promo-row-groups';
@@ -189,7 +189,7 @@ export function RedesignAggregatorList({
                             />
                             <span className="truncate">
                               {teamDisplayName(p.team)}
-                              {p.opponent && <span className="text-rd-ink-faint"> vs {p.opponent}</span>}
+                              {promoDisplayOpponent(p) && <span className="text-rd-ink-faint"> vs {promoDisplayOpponent(p)}</span>}
                               <span className="text-rd-ink-faint"> · {p.team.league}</span>
                             </span>
                           </div>

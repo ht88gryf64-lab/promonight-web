@@ -1,4 +1,5 @@
 import type { PromoWithTeam } from '@/lib/types';
+import { promoDisplayTime } from '@/lib/promo-helpers';
 
 // Decorative scrolling strip of tonight's promos, welded to the bottom edge of
 // the dark hero band. Server component: no 'use client', no matchMedia, no
@@ -38,7 +39,7 @@ function ribbonLabel(promo: PromoWithTeam): string {
   // string is used as-is, the same value TicketStubCard prints, so one page
   // never shows two time formats.
   const parts = [promo.title, promo.team.name];
-  if (promo.time) parts.push(promo.time);
+  if (promoDisplayTime(promo)) parts.push(promoDisplayTime(promo));
   return parts.join(' · ');
 }
 

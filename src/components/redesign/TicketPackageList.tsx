@@ -1,5 +1,5 @@
 import type { Promo } from '@/lib/types';
-import { promoAnchorId } from '@/lib/promo-helpers';
+import { promoAnchorId, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
 import { PromoArrivalHighlight } from './PromoArrivalHighlight';
 import {
   TICKET_PACKAGE_ROW_NOTE,
@@ -42,7 +42,7 @@ function PackageRow({ promo }: { promo: Promo }) {
     <li id={`promo-${promoAnchorId(promo)}`} className="rounded-2xl border border-rd-line bg-rd-card px-4 py-3 sm:px-5">
       <div className="font-rd text-[11px] uppercase tracking-[0.12em] text-rd-ink-faint">
         {packageDate(promo.date)}
-        {promo.opponent ? ` · vs ${promo.opponent}` : ''}
+        {promoDisplayOpponent(promo) ? ` · vs ${promoDisplayOpponent(promo)}` : ''}
       </div>
       <div className="mt-1 font-rd text-base font-semibold text-rd-ink">{promo.title}</div>
       <p className="mt-1 font-rd text-sm leading-relaxed text-rd-ink-soft">{TICKET_PACKAGE_ROW_NOTE}</p>

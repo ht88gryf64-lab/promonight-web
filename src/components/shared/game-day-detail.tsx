@@ -6,7 +6,7 @@ import { TicketsBlock } from '@/components/affiliates/TicketsBlock';
 import { ParkingCTA } from '@/components/affiliates/ParkingCTA';
 import { HotelsCTA } from '@/components/affiliates/HotelsCTA';
 import { awayGameSubKey } from '@/lib/affiliates';
-import { teamDisplayName } from '@/lib/promo-helpers';
+import { teamDisplayName, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
 import type { GameContext } from '@/lib/data';
 import { formatGameTime } from '@/lib/format-game-time';
 import type { AnalyticsSurface } from '@/lib/analytics';
@@ -315,8 +315,8 @@ export function LegacyPromoDetail({
                     HOT
                   </span>
                 )}
-                {p.time && (
-                  <span className="text-text-dim text-[10px] font-mono">{p.time}</span>
+                {promoDisplayTime(p) && (
+                  <span className="text-text-dim text-[10px] font-mono">{promoDisplayTime(p)}</span>
                 )}
               </div>
               <div className="text-white font-semibold text-sm">{p.title}</div>
@@ -325,9 +325,9 @@ export function LegacyPromoDetail({
                   {p.description}
                 </p>
               )}
-              {p.opponent && (
+              {promoDisplayOpponent(p) && (
                 <div className="text-text-dim text-[10px] font-mono mt-1 uppercase tracking-[0.5px]">
-                  vs {p.opponent}
+                  vs {promoDisplayOpponent(p)}
                 </div>
               )}
               {team && teamSlug && (

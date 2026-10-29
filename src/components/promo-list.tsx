@@ -9,7 +9,7 @@ import { groupPromoRows } from '@/lib/promo-row-groups';
 import { PromoArrivalHighlight } from '@/components/redesign/PromoArrivalHighlight';
 import { isBobbleheadGiveaway, isEbayResaleActive } from '@/lib/ebay';
 import { splitCompletedForRender } from '@/lib/render-windows';
-import { promoAnchorId, splitPromosByDate, todayYmd } from '@/lib/promo-helpers';
+import { promoAnchorId, splitPromosByDate, todayYmd, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
 import {
   seasonSpan,
   completedHeading,
@@ -130,8 +130,8 @@ function PromoRow({
               HOT
             </span>
           )}
-          {promo.time && (
-            <span className="text-text-dim text-[10px] font-mono">{promo.time}</span>
+          {promoDisplayTime(promo) && (
+            <span className="text-text-dim text-[10px] font-mono">{promoDisplayTime(promo)}</span>
           )}
         </div>
         <div className="text-white font-semibold text-sm md:text-base">
@@ -142,9 +142,9 @@ function PromoRow({
             {promo.description}
           </p>
         )}
-        {promo.opponent && (
+        {promoDisplayOpponent(promo) && (
           <div className="mt-2 inline-flex items-center gap-1.5 text-text-dim text-[10px] font-mono tracking-[0.5px] uppercase">
-            vs {promo.opponent}
+            vs {promoDisplayOpponent(promo)}
           </div>
         )}
         {resaleSlot && <div>{resaleSlot}</div>}

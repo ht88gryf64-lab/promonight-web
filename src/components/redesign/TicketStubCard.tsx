@@ -3,13 +3,13 @@
 import { IconFlame } from '@tabler/icons-react';
 import type { PromoType, PromoWithTeam } from '@/lib/types';
 import type { GameContext } from '@/lib/data';
-import { teamDisplayName } from '@/lib/promo-helpers';
+import { teamDisplayName, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
 import { chipInk } from '@/lib/chip-contrast';
 import { categoryForPromo } from './categories';
 import { StarToggleInline } from '@/components/star-toggle';
 import type { StarPlacement } from '@/hooks/use-starred-teams';
 import { useUpcomingPromoModal, type UpcomingPromoSurface } from './UpcomingPromoModal';
-import { isPurchaseGated, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
+import { isPurchaseGated } from '@/lib/promo-helpers';
 
 // Ticket-stub promo card for the homepage redesign (docs/homepage-redesign-
 // target.html). Built ALONGSIDE LightHomePromoCard; nothing imports this yet.

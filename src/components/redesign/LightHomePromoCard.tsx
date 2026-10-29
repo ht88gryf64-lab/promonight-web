@@ -3,7 +3,7 @@
 import { IconFlame } from '@tabler/icons-react';
 import type { PromoWithTeam } from '@/lib/types';
 import type { GameContext } from '@/lib/data';
-import { teamDisplayName } from '@/lib/promo-helpers';
+import { teamDisplayName, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
 import { categoryForPromo } from './categories';
 import { StarToggleInline } from '@/components/star-toggle';
 import type { StarPlacement } from '@/hooks/use-starred-teams';
@@ -85,14 +85,14 @@ export function LightHomePromoCard({
                 HOT
               </span>
             )}
-            {promo.time && <span className="font-rd text-[10px] text-rd-ink-faint">{promo.time}</span>}
+            {promoDisplayTime(promo) && <span className="font-rd text-[10px] text-rd-ink-faint">{promoDisplayTime(promo)}</span>}
           </div>
           <div className="line-clamp-2 text-sm font-semibold text-rd-ink transition-colors group-hover:text-rd-red md:text-base">
             {promo.title}
           </div>
           <div className="mt-1 truncate font-rd text-xs text-rd-ink-soft">
             {teamName}
-            {promo.opponent && <span className="text-rd-ink-faint"> vs {promo.opponent}</span>}
+            {promoDisplayOpponent(promo) && <span className="text-rd-ink-faint"> vs {promoDisplayOpponent(promo)}</span>}
           </div>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import type { PromoWithTeam } from '@/lib/types';
 import { categoryForPromo } from '@/components/redesign/categories';
-import { teamDisplayName, synthPromoId } from '@/lib/promo-helpers';
+import { teamDisplayName, synthPromoId, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
 import { normalizeSport, type AnalyticsSurface } from '@/lib/analytics';
 import { TrackedTapLink } from '@/components/analytics/TrackedTapLink';
 import { TicketsBlock } from '@/components/affiliates/TicketsBlock';
@@ -127,8 +127,8 @@ export function HubThisWeek({
                       </div>
                       <div className="mt-0.5 font-rd text-[13px] text-rd-ink-soft">
                         {name}
-                        {p.opponent ? (
-                          <span className="text-rd-ink-faint"> vs {p.opponent}</span>
+                        {promoDisplayOpponent(p) ? (
+                          <span className="text-rd-ink-faint"> vs {promoDisplayOpponent(p)}</span>
                         ) : null}
                       </div>
                     </TrackedTapLink>

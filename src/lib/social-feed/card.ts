@@ -7,7 +7,7 @@
 // title resolves to null, which the route serves as 404.
 
 import type { Team } from '@/lib/types';
-import { teamDisplayName } from '@/lib/promo-helpers';
+import { teamDisplayName, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
 import type { RssItemInput } from './rss';
 import { cleanText } from './text';
 import { parseFeedKey } from './select';
@@ -47,7 +47,7 @@ export async function resolveCard(key: string, deps: CardDeps): Promise<RssItemI
     teamName: teamDisplayName(team),
     title: promo.title as string,
     date: promo.date,
-    opponent: promo.opponent ?? '',
+    opponent: promoDisplayOpponent(promo),
     venue: await deps.getVenueName(team.id),
   };
 }

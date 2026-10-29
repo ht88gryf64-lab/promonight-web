@@ -1,6 +1,6 @@
 import type { PromoWithTeam } from '@/lib/types';
 import { PromoBadge } from './promo-badge';
-import { teamDisplayName, synthPromoId } from '@/lib/promo-helpers';
+import { teamDisplayName, synthPromoId, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
 import { normalizeSport } from '@/lib/analytics';
 import { TrackedTapLink } from './analytics/TrackedTapLink';
 import { StarToggleInline } from './star-toggle';
@@ -121,8 +121,8 @@ export function ThisWeekStrip({ promos, today }: { promos: PromoWithTeam[]; toda
                           </div>
                           <div className="text-text-secondary text-xs mt-0.5 truncate">
                             {teamDisplayName(p.team)}
-                            {p.opponent && (
-                              <span className="text-text-dim"> vs {p.opponent}</span>
+                            {promoDisplayOpponent(p) && (
+                              <span className="text-text-dim"> vs {promoDisplayOpponent(p)}</span>
                             )}
                             <span className="text-text-dim"> · {p.team.league}</span>
                           </div>

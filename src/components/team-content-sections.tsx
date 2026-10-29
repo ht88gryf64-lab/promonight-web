@@ -7,6 +7,8 @@ import {
   getTopGiveaway,
   promosInCategory,
   teamDisplayName,
+  promoDisplayOpponent,
+  promoDisplayTime,
 } from '@/lib/promo-helpers';
 import { RD_CATEGORIES } from '@/components/redesign/categories';
 import type { ClaimMode } from '@/lib/season-scope';
@@ -373,7 +375,7 @@ function GiveawaySection({
         <p>
           {lead}
           {top
-            ? ` Highlights include ${top.title} on ${formatDateReadable(top.date)}${top.opponent ? ` against the ${top.opponent}` : ''}.`
+            ? ` Highlights include ${top.title} on ${formatDateReadable(top.date)}${promoDisplayOpponent(top) ? ` against the ${promoDisplayOpponent(top)}` : ''}.`
             : ''}
         </p>
         {scope.gatedDisclosure ? <p>{scope.gatedDisclosure}</p> : null}
@@ -382,7 +384,7 @@ function GiveawaySection({
           {giveaways.slice(0, 6).map((p, i) => (
             <li key={i}>
               <span className="text-rd-ink font-medium">{formatDateReadable(p.date)}</span> · {p.title}
-              {p.opponent ? ` (vs ${p.opponent})` : ''}
+              {promoDisplayOpponent(p) ? ` (vs ${promoDisplayOpponent(p)})` : ''}
             </li>
           ))}
           {giveaways.length > 6 && (
@@ -400,7 +402,7 @@ function GiveawaySection({
       <p>
         {lead}
         {top
-          ? ` Highlights include ${top.title} on ${formatDateReadable(top.date)}${top.opponent ? ` against the ${top.opponent}` : ''}.`
+          ? ` Highlights include ${top.title} on ${formatDateReadable(top.date)}${promoDisplayOpponent(top) ? ` against the ${promoDisplayOpponent(top)}` : ''}.`
           : ''}
       </p>
       {scope.gatedDisclosure ? <p>{scope.gatedDisclosure}</p> : null}
@@ -409,7 +411,7 @@ function GiveawaySection({
         {giveaways.slice(0, 6).map((p, i) => (
           <li key={i}>
             <span className="text-white font-medium">{formatDateReadable(p.date)}</span> · {p.title}
-            {p.opponent ? ` (vs ${p.opponent})` : ''}
+            {promoDisplayOpponent(p) ? ` (vs ${promoDisplayOpponent(p)})` : ''}
           </li>
         ))}
         {giveaways.length > 6 && (
@@ -491,7 +493,7 @@ function ThemeSection({
           {themes.slice(0, 6).map((p, i) => (
             <li key={i}>
               <span className="text-rd-ink font-medium">{formatDateReadable(p.date)}</span> · {p.title}
-              {p.opponent ? ` (vs ${p.opponent})` : ''}
+              {promoDisplayOpponent(p) ? ` (vs ${promoDisplayOpponent(p)})` : ''}
             </li>
           ))}
           {themes.length > 6 && (
@@ -512,7 +514,7 @@ function ThemeSection({
         {themes.slice(0, 6).map((p, i) => (
           <li key={i}>
             <span className="text-white font-medium">{formatDateReadable(p.date)}</span> · {p.title}
-            {p.opponent ? ` (vs ${p.opponent})` : ''}
+            {promoDisplayOpponent(p) ? ` (vs ${promoDisplayOpponent(p)})` : ''}
           </li>
         ))}
         {themes.length > 6 && (

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import type { PromoWithTeam } from '@/lib/types';
 import { PromoBadge } from './promo-badge';
-import { teamDisplayName } from '@/lib/promo-helpers';
+import { teamDisplayName, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
 import type { AggregatorGroup } from './aggregator-layout';
 import { StarToggleInline } from './star-toggle';
 import { isPurchaseGated } from '@/lib/promo-helpers';
@@ -103,8 +103,8 @@ export function AggregatorPaginatedGroups({ groups }: { groups: AggregatorGroup[
                         )}
                         <div className="text-text-secondary text-xs truncate min-w-0">
                           {teamDisplayName(p.team)}
-                          {p.opponent && (
-                            <span className="text-text-dim"> vs {p.opponent}</span>
+                          {promoDisplayOpponent(p) && (
+                            <span className="text-text-dim"> vs {promoDisplayOpponent(p)}</span>
                           )}
                           <span className="text-text-dim"> &middot; {p.team.league}</span>
                         </div>

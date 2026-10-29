@@ -7,7 +7,7 @@ import { TicketsBlock } from '@/components/affiliates/TicketsBlock';
 import { ParkingCTA } from '@/components/affiliates/ParkingCTA';
 import { HotelsCTA } from '@/components/affiliates/HotelsCTA';
 import { awayGameSubKey } from '@/lib/affiliates';
-import { teamDisplayName } from '@/lib/promo-helpers';
+import { teamDisplayName, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
 import { formatGameTime } from '@/lib/format-game-time';
 import { categoryForPromo } from './categories';
 import { IconFlame, IconMapPin, IconArrowRight } from '@tabler/icons-react';
@@ -60,8 +60,8 @@ function PromoLine({ promo }: { promo: Promo }) {
               Hot
             </span>
           )}
-          {promo.time && (
-            <span className="text-rd-ink-faint text-[11px] font-rd">{promo.time}</span>
+          {promoDisplayTime(promo) && (
+            <span className="text-rd-ink-faint text-[11px] font-rd">{promoDisplayTime(promo)}</span>
           )}
         </div>
         <div className="text-rd-ink font-rd font-semibold text-sm">{promo.title}</div>
@@ -339,9 +339,9 @@ export function LegacyPromoExpand({
         {promos.map((p, i) => (
           <div key={i}>
             <PromoLine promo={p} />
-            {p.opponent && (
+            {promoDisplayOpponent(p) && (
               <div className="text-rd-ink-faint text-[10px] font-rd mt-1 ml-[27px] uppercase tracking-[0.08em]">
-                vs {p.opponent}
+                vs {promoDisplayOpponent(p)}
               </div>
             )}
             {team && teamSlug && (

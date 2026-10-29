@@ -3,7 +3,7 @@ import type { PromoWithTeam } from '@/lib/types';
 import type { AnalyticsSurface } from '@/lib/analytics';
 import { normalizeSport } from '@/lib/analytics';
 import { categoryForPromo } from '@/components/redesign/categories';
-import { teamDisplayName, synthPromoId, promoAnchorId } from '@/lib/promo-helpers';
+import { teamDisplayName, synthPromoId, promoAnchorId, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
 import { formatClock } from '@/components/promos-today/helpers';
 import { TrackedTapLink } from '@/components/analytics/TrackedTapLink';
 
@@ -78,7 +78,7 @@ export function HubTodayPromos({
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         {slate.map((p) => {
           const cat = categoryForPromo(p);
-          const clock = formatClock(p.time);
+          const clock = formatClock(promoDisplayTime(p));
           return (
             <TrackedTapLink
               key={`${p.team.id}-${p.date}-${p.title}`}

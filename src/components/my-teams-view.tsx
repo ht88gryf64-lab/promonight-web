@@ -15,6 +15,7 @@ import { SpotHeroCTA } from './affiliates/SpotHeroCTA';
 import { ExpediaCTA } from './affiliates/ExpediaCTA';
 import { AffiliateDisclosure } from './affiliates/AffiliateDisclosure';
 import { addDaysYmd, endOfMonthYmd, siteTodayYmd } from '@/lib/site-today';
+import { promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
 import type {
   StarredPromo,
   StarredPromosResponse,
@@ -1125,8 +1126,8 @@ function TonightSection({
   if (!team) return null;
 
   const matchup = [
-    promo.opponent ? `vs ${promo.opponent}` : null,
-    promo.time || null,
+    promoDisplayOpponent(promo) ? `vs ${promoDisplayOpponent(promo)}` : null,
+    promoDisplayTime(promo) || null,
   ]
     .filter(Boolean)
     .join(' · ');
@@ -1284,8 +1285,8 @@ function ThisWeekSection({
                       <span className="inline-block rounded bg-rd-cream px-1.5 py-0.5 font-rd text-[9px] uppercase tracking-[0.04em] text-rd-ink-soft">
                         {PROMO_TYPE_LABELS[promo.type]}
                       </span>
-                      {promo.time && (
-                        <span className="font-rd text-[9px] text-rd-ink-faint">{promo.time}</span>
+                      {promoDisplayTime(promo) && (
+                        <span className="font-rd text-[9px] text-rd-ink-faint">{promoDisplayTime(promo)}</span>
                       )}
                     </div>
                   </div>
@@ -1343,9 +1344,9 @@ function ThisWeekSection({
                     >
                       {PROMO_TYPE_LABELS[promo.type]}
                     </span>
-                    {promo.time && (
+                    {promoDisplayTime(promo) && (
                       <span className="font-mono text-[9px] text-white/70">
-                        {promo.time}
+                        {promoDisplayTime(promo)}
                       </span>
                     )}
                   </div>

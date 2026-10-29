@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
+import { getAllTeams, withGameDisplay } from '@/lib/data';
 import { resolveIcon } from '@/lib/promo-helpers';
 import type { PromoType, Venue } from '@/lib/types';
 import { isTicketPackageDoc, isTicketPackageLeague } from '@/lib/ticket-packages';
@@ -18,6 +19,12 @@ export type StarredPromo = {
   date: string;
   time: string;
   opponent: string;
+  // What the client SHOWS: the stored value, else the home game's from the
+  // games spine (src/lib/promo-game-join.ts), else ''. Filled once per request
+  // in GET below, so a starred promo reads the same time here as on its team
+  // page and on /promos/today. `time` / `opponent` above stay the stored text.
+  displayTime: string;
+  displayOpponent: string;
   type: PromoType;
   title: string;
   description: string;
@@ -100,6 +107,8 @@ async function fetchPromosForTeam(
         date: data.date,
         time: data.time || '',
         opponent: data.opponent || '',
+        displayTime: data.time || '',
+        displayOpponent: data.opponent || '',
         type,
         title: data.title || '',
         description: data.description || '',
@@ -196,9 +205,30 @@ export async function GET(
 
   const failedTeams = slugs.filter((_, i) => promosByTeam[i] === null);
   const promos = promosByTeam.flatMap((list) => list ?? []);
+
+  // The display slots, filled the way every page fills them
+  // (src/lib/promo-game-join.ts): one games read for the whole request
+  // window, none per promo, stored values never replaced. The join wants
+  // PromoWithTeam rows, so each row is paired with its cached team doc and
+  // the result is copied back by promo id; a slug with no team doc keeps its
+  // stored values. A failed join degrades to stored inside withGameDisplay.
+  const teamById = new Map((await getAllTeams()).map((t) => [t.id, t]));
+  const joinRows = promos.flatMap((p) => {
+    const team = teamById.get(p.teamSlug);
+    return team ? [{ ...p, team }] : [];
+  });
+  await withGameDisplay(joinRows);
+  const joined = new Map(joinRows.map((r) => [`${r.teamSlug}~${r.promoId}`, r]));
+  for (const p of promos) {
+    const r = joined.get(`${p.teamSlug}~${p.promoId}`);
+    if (!r) continue;
+    p.displayTime = r.displayTime ?? p.time;
+    p.displayOpponent = r.displayOpponent ?? p.opponent;
+  }
+
   promos.sort((a, b) => {
     if (a.date !== b.date) return a.date.localeCompare(b.date);
-    return a.time.localeCompare(b.time);
+    return a.displayTime.localeCompare(b.displayTime);
   });
 
   const venues: Record<string, Venue | null> = {};

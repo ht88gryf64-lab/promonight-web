@@ -1,13 +1,13 @@
 import { IconFlame } from '@tabler/icons-react';
 import type { ScoredPromoWithTeam } from '@/lib/types';
 import type { AnalyticsSurface, ScoringPageSurface } from '@/lib/analytics';
-import { teamDisplayName } from '@/lib/promo-helpers';
+import { teamDisplayName, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
 import { PromoBadge } from '../promo-badge';
 import { TrackedTapLink } from '../analytics/TrackedTapLink';
 import { TicketsBlock, type TicketsBlockPlacement } from '../affiliates/TicketsBlock';
 import { categoryForPromo } from '../redesign/categories';
 import { ScoreBadge } from './score-badge';
-import { isPurchaseGated, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
+import { isPurchaseGated } from '@/lib/promo-helpers';
 
 type ScoredPromoCardProps = {
   promo: ScoredPromoWithTeam;

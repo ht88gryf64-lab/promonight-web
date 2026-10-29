@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import type { PromoWithTeam } from '@/lib/types';
 import { pastHeading } from '@/lib/season-label';
-import { teamDisplayName } from '@/lib/promo-helpers';
+import { teamDisplayName, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
 import { isBobbleheadGiveaway, isEbayResaleActive } from '@/lib/ebay';
 import { EbayResaleLink } from '@/components/affiliates/EbayResaleLink';
 import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
@@ -58,7 +58,7 @@ function PastBobbleheadRow({ p, withResale }: { p: PromoWithTeam; withResale: bo
           />
           <span className="truncate">
             {teamDisplayName(p.team)}
-            {p.opponent && <span className="text-rd-ink-faint"> vs {p.opponent}</span>}
+            {promoDisplayOpponent(p) && <span className="text-rd-ink-faint"> vs {promoDisplayOpponent(p)}</span>}
             <span className="text-rd-ink-faint"> · {p.team.league}</span>
           </span>
         </div>

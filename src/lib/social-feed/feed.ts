@@ -5,7 +5,7 @@
 import 'server-only';
 import { db } from '@/lib/firebase';
 import { getAllTeams, getScoredPromosInDateRange, getTeamBySlug, getVenueForTeam, mapPromoDoc } from '@/lib/data';
-import { dedupePromos, isVisiblePromo, teamDisplayName } from '@/lib/promo-helpers';
+import { dedupePromos, isVisiblePromo, teamDisplayName, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
 import type { Team } from '@/lib/types';
 import { isTicketPackageDoc, isTicketPackageLeague } from '@/lib/ticket-packages';
 import type { RssItemInput } from './rss';
@@ -31,7 +31,7 @@ async function loadScored(start: string, end: string): Promise<FeedPromo[]> {
     date: p.date,
     title: p.title,
     type: p.type,
-    opponent: p.opponent,
+    opponent: promoDisplayOpponent(p),
     score: p.score,
     itemType: p.derivedSignals?.itemType ?? null,
     tombstoned: p.tombstoned,
@@ -87,7 +87,7 @@ async function readVisiblePromos(start: string, end: string): Promise<FeedPromo[
       date: p.date,
       title: p.title,
       type: p.type,
-      opponent: p.opponent,
+      opponent: promoDisplayOpponent(p),
       score: p.score ?? null,
       itemType: p.derivedSignals?.itemType ?? null,
       tombstoned: p.tombstoned,
@@ -125,7 +125,7 @@ function toRssItem(p: FeedPromo, venue: string | null): RssItemInput {
     teamName: teamDisplayName(p.team),
     title: p.title,
     date: p.date,
-    opponent: p.opponent,
+    opponent: promoDisplayOpponent(p),
     venue,
   };
 }

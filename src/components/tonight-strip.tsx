@@ -2,7 +2,7 @@ import Link from 'next/link';
 import type { PromoWithTeam } from '@/lib/types';
 import { LEAGUE_ORDER } from '@/lib/types';
 import { PromoBadge } from './promo-badge';
-import { teamDisplayName, synthPromoId } from '@/lib/promo-helpers';
+import { teamDisplayName, synthPromoId, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
 import { normalizeSport, type EyebrowState } from '@/lib/analytics';
 import { TrackedTapLink } from './analytics/TrackedTapLink';
 import { StarToggleInline } from './star-toggle';
@@ -235,8 +235,8 @@ function BucketSection({ title, promos, eyebrowState, isFirst }: BucketSectionPr
                     </div>
                     <div className="text-text-secondary text-xs mt-1.5 truncate">
                       {teamDisplayName(promo.team)}
-                      {promo.opponent && (
-                        <span className="text-text-dim"> vs {promo.opponent}</span>
+                      {promoDisplayOpponent(promo) && (
+                        <span className="text-text-dim"> vs {promoDisplayOpponent(promo)}</span>
                       )}
                     </div>
                   </div>

@@ -181,9 +181,9 @@ export const isVisiblePromo = (p: { tombstoned?: boolean; isPostseason?: boolean
 // spine (src/lib/promo-game-join.ts). The fallback to the stored field is for
 // objects that never passed through mapPromoDoc (test fixtures, legacy
 // shapes), so a row rendered from one of those is unchanged by the join.
-export const promoDisplayTime = (p: { time?: string; displayTime?: string }): string =>
+export const promoDisplayTime = (p: { time?: string | null; displayTime?: string | null }): string =>
   p.displayTime ?? p.time ?? '';
-export const promoDisplayOpponent = (p: { opponent?: string; displayOpponent?: string }): string =>
+export const promoDisplayOpponent = (p: { opponent?: string | null; displayOpponent?: string | null }): string =>
   p.displayOpponent ?? p.opponent ?? '';
 
 // ── Section 8 out-of-scope discipline, applied at the RENDER layer ───────────

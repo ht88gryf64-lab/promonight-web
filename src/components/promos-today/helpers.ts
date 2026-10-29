@@ -1,6 +1,6 @@
 import type { PromoWithTeam } from '@/lib/types';
 import { LEAGUE_HUB_REGISTRY, getLeagueHub } from '@/lib/league-hubs';
-import { teamDisplayName } from '@/lib/promo-helpers';
+import { teamDisplayName, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
 
 // Shared helpers for the /promos/today "Daily Board". League grouping, the hero
 // answer sentence, and per-card copy — all derived from the live promo set so the
@@ -22,8 +22,8 @@ export interface LeagueGroup {
 const REGISTRY_ORDER = LEAGUE_HUB_REGISTRY.map((h) => h.league);
 
 function sortWithinLeague(a: PromoWithTeam, b: PromoWithTeam): number {
-  const at = a.time || '99:99';
-  const bt = b.time || '99:99';
+  const at = promoDisplayTime(a) || '99:99';
+  const bt = promoDisplayTime(b) || '99:99';
   return at.localeCompare(bt) || a.title.localeCompare(b.title);
 }
 
