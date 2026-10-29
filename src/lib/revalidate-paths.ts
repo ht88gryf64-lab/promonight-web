@@ -13,6 +13,18 @@ import { revalidatePath } from 'next/cache';
 // together or the client silently drops paths this endpoint would accept.
 export const PATH_RE = /^\/[a-z0-9-]+(?:\/[a-z0-9-]+){0,2}$/;
 
+// A per-promo page path, /{league}/{team}/promos/{pageSlug}: four segments,
+// the third fixed (Phase 3b, brief B.9). Its own pattern rather than a wider
+// PATH_RE so the three-segment rule above stays byte-identical to the
+// pipeline's copy in revalidate-notify.js, and so no other four-segment path
+// is let in. The pipeline keeps the identical copy of THIS pattern in
+// promo-pipeline/lib/promo-pages-notify.js (PROMO_PATH_RE) and sends promo
+// paths in a request of their own; the two must be widened together.
+export const PROMO_PATH_RE = /^\/[a-z0-9-]+\/[a-z0-9-]+\/promos\/[a-z0-9-]+$/;
+
+/** A path the endpoint revalidates: a site path or a promo page path. */
+export const isRevalidatePath = (p: string): boolean => PATH_RE.test(p) || PROMO_PATH_RE.test(p);
+
 export interface RevalidateResult {
   /** Paths revalidatePath accepted. */
   succeeded: number;

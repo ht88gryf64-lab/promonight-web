@@ -68,9 +68,43 @@ test('the pipeline copy behaves identically on every case', () => {
   }
 });
 
-test('MAX_PATHS is still 100, and the endpoint validates with the shared pattern', () => {
+test('MAX_PATHS is still 100, and the endpoint validates with the shared patterns', () => {
   const src = readFileSync(ENDPOINT, 'utf8');
   assert.match(src, /^const MAX_PATHS = 100;$/m);
-  assert.match(src, /import \{ PATH_RE, revalidatePaths \} from '@\/lib\/revalidate-paths';/);
-  assert.match(src, /if \(!PATH_RE\.test\(p\)\)/);
+  assert.match(src, /import \{ PATH_RE, PROMO_PATH_RE, revalidatePaths \} from '@\/lib\/revalidate-paths';/);
+  assert.match(src, /if \(!PATH_RE\.test\(p\) && !PROMO_PATH_RE\.test\(p\)\)/);
+});
+
+// ── Phase 3b: the four-segment promo page path, its own pattern ──────────────
+// PATH_RE itself is unchanged (the byte-identity test above still holds), so
+// the only four-segment paths let in are /{league}/{team}/promos/{slug}.
+const PROMO_PIPELINE = '../promonight/promo-pipeline/lib/promo-pages-notify.js';
+
+function extractPromoPathRe(file: string): RegExp {
+  const src = readFileSync(file, 'utf8');
+  const m = src.match(/^(?:export )?const PROMO_PATH_RE = (\/.*\/);$/m);
+  assert.ok(m, `no PROMO_PATH_RE literal found in ${file}`);
+  // eslint-disable-next-line no-eval
+  return eval(m![1]) as RegExp;
+}
+
+const PROMO_ACCEPT = ['/nhl/minnesota-wild/promos/blaze-orange-hat', '/mlb/los-angeles-dodgers/promos/pride-night-0612', '/nhl/detroit-red-wings/promos/star-wars-night-2025-26'];
+const PROMO_REJECT = ['/a/b/c/d', '/nhl/minnesota-wild/promo/blaze-orange-hat', '/nhl/minnesota-wild/promos/', '/nhl/minnesota-wild/promos/Blaze', '/nhl/minnesota-wild/promos/x/y', '/promos/blaze-orange-hat', '/nhl/minnesota-wild/promos/x?y=1'];
+
+test('PROMO_PATH_RE accepts exactly the promo page shape and nothing else four segments long', () => {
+  const re = extractPromoPathRe(ROUTE);
+  for (const p of PROMO_ACCEPT) assert.equal(re.test(p), true, `${p} should be ACCEPTED`);
+  for (const p of [...PROMO_REJECT, ...REJECT]) assert.equal(re.test(p), false, `${p} should be REJECTED`);
+  // The three-segment paths are PATH_RE's, not this pattern's.
+  for (const p of ACCEPT) assert.equal(re.test(p), false, `${p} is PATH_RE's`);
+});
+
+test('the pipeline promo-pages copy is byte-identical and judges every case the same', () => {
+  const routeSrc = readFileSync(ROUTE, 'utf8').match(/^export const PROMO_PATH_RE = (\/.*\/);$/m);
+  const pipeSrc = readFileSync(PROMO_PIPELINE, 'utf8').match(/^const PROMO_PATH_RE = (\/.*\/);$/m);
+  assert.ok(routeSrc && pipeSrc);
+  assert.equal(pipeSrc![1], routeSrc![1]);
+  const a = extractPromoPathRe(ROUTE);
+  const b = extractPromoPathRe(PROMO_PIPELINE);
+  for (const p of [...PROMO_ACCEPT, ...PROMO_REJECT, ...ACCEPT, ...REJECT]) assert.equal(b.test(p), a.test(p), p);
 });

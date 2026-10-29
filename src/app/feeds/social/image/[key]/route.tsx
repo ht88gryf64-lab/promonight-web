@@ -1,13 +1,13 @@
-import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
 import { ImageResponse } from 'next/og';
 import { findCardPromo } from '@/lib/social-feed/feed';
+import { loadCardFonts } from '@/lib/social-feed/fonts';
 import { formatShortDate, IMAGE_SIZE } from '@/lib/social-feed/rss';
 import { cleanText } from '@/lib/social-feed/text';
 
 // 1080x1080 PNG card for one social-feed item, at /feeds/social/image/{teamId}~{promoId}. Text only: no team logos or
 // league marks. Fonts are the static DM Sans TTFs committed beside this route
-// (Satori reads neither variable fonts nor WOFF2); OFL.txt sits with them.
+// (Satori reads neither variable fonts nor WOFF2); OFL.txt sits with them. The
+// loader is shared with the promo page card (src/lib/social-feed/fonts.ts).
 
 const HEADERS = {
   'x-robots-tag': 'noindex',
@@ -15,16 +15,6 @@ const HEADERS = {
   // cache-control default, and a differently cased key would append instead.
   'cache-control': 'public, s-maxage=3600, stale-while-revalidate=86400',
 };
-
-const FONT_DIR = join(process.cwd(), 'src/app/feeds/social/image/_fonts');
-let fontsPromise: Promise<[Buffer, Buffer]> | null = null;
-function loadFonts() {
-  fontsPromise ??= Promise.all([
-    readFile(join(FONT_DIR, 'DMSans-Regular.ttf')),
-    readFile(join(FONT_DIR, 'DMSans-Bold.ttf')),
-  ]);
-  return fontsPromise;
-}
 
 const CREAM = '#f7f3ea';
 const INK = '#211d18';
@@ -49,7 +39,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ key: st
     });
   }
 
-  const [regular, bold] = await loadFonts();
+  const [regular, bold] = await loadCardFonts();
   const title = cleanText(promo.title);
   const teamName = cleanText(promo.teamName);
   const venue = cleanText(promo.venue);

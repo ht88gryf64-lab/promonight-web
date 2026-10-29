@@ -6,6 +6,8 @@ import { getAllMatchupSlugs } from '@/lib/cfb/matchups';
 import { isCfbHubLive, LEAGUE_HUBS } from '@/lib/league-hubs';
 import { getIndexableVenueHubSitemapEntries } from '@/lib/venue-hub';
 import { ABOUT_LAST_REVIEWED } from '@/lib/about-copy';
+import { getPromoPageSitemapEntries } from '@/lib/promo-pages';
+import { siteTodayYmd } from '@/lib/site-today';
 
 const BASE_URL = 'https://www.getpromonight.com';
 
@@ -180,6 +182,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
+  // Per-promo pages (Phase 3b, brief C.11): listed only while PROMO_PAGES_LIVE
+  // is true, upcoming promos only, one URL per page (team + slug), lastmod the
+  // latest updatedAt of the page's rows and omitted when the rows carry none.
+  // NEVER the build clock. Empty with the flag unset, so the section is
+  // absent rather than a list of 404s. Fail-loud like the reads above: a
+  // sitemap silently missing every promo page would tell Google nothing
+  // changed there.
+  const promoEntries = await getPromoPageSitemapEntries(siteTodayYmd(now)).catch((err) => {
+    console.error('[sitemap] promos read failed; refusing to serve a sitemap missing the promo pages', err);
+    throw err;
+  });
+  const promoPages = promoEntries.map((e) => ({
+    url: `${BASE_URL}${e.path}`,
+    ...(e.lastModified ? { lastModified: e.lastModified } : {}),
+    changeFrequency: 'weekly' as const,
+    priority: 0.7,
+  }));
+
   return [
     {
       url: BASE_URL,
@@ -216,6 +236,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...cfbTeamPages,
     ...cfbMatchupPages,
     ...venuePages,
+    ...promoPages,
     {
       url: `${BASE_URL}/about`,
       // Bound to the same editorial constant the page renders as its visible
