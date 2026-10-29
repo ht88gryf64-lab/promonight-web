@@ -2,10 +2,11 @@
 // Templated. Formerly TIER-DERIVED on editorialStatus; the destination tier was
 // retired 2026-08-25 because nothing loads the blocks it promised (data.ts:311).
 // (Original note: reads editorialStatus, so a school's description auto-
-// enriches on graduation — no hand edit). "Schedule" is MANDATORY in every title:
-// "[school] football schedule 2026" is the head term with real volume (Ohio State
-// 10k, Alabama 8.3k, Notre Dame 7.8k), so it never gets dropped for a trophy token —
-// the token is featured only when it also fits. Descriptions NAME THE RIVAL SCHOOL
+// enriches on graduation — no hand edit). Every title is "[School Mascot]
+// Football Schedule 2026": "[school] football schedule 2026" is the head term
+// with real volume (Ohio State 10k, Alabama 8.3k, Notre Dame 7.8k). The rivalry
+// is named in the DESCRIPTION ONLY (2026-10-29): a token-led title doubled
+// fourteen schools' names and lowercased one. Descriptions NAME THE RIVAL SCHOOL
 // (where the rivalry volume actually is — "ohio state michigan rivalry" 900/mo, not
 // the generic "rivalry games" 10/mo) and carry "[stadium] parking" (a KD-1 logistics
 // term). Within engine limits (rendered title ≤60, description ≤155). OG uses the
@@ -28,50 +29,67 @@ const YEAR = 2026;
 const BASE = 'https://www.getpromonight.com';
 const OG_IMAGE = { url: '/og-image.png', width: 1200, height: 630, alt: OG_IMAGE_ALT };
 
-// §13 rivalry traffic priority. `token` = the short form for the (char-tight)
-// title; `name` = the full trophy/rivalry name for the description. Higher rank =
-// higher traffic potential — the best-ranked of a school's rivalry games is featured.
-interface Marquee { re: RegExp; token: string; name: string; rank: number }
+// §13 rivalry traffic priority. `name` = the full trophy/rivalry name the
+// description carries ("The Game vs Michigan"). Higher rank = higher traffic
+// potential — the best-ranked of a school's rivalry games is featured. The
+// title never carries it (see buildCfbTeamMetadata).
+interface Marquee { re: RegExp; name: string; rank: number }
 const MARQUEE: Marquee[] = [
-  { re: /\bthe game\b/i, token: 'The Game', name: 'The Game', rank: 100 },
-  { re: /red river/i, token: 'Red River', name: 'the Red River Rivalry', rank: 95 },
-  { re: /cocktail party|world'?s largest/i, token: 'Cocktail Party', name: 'the Cocktail Party', rank: 90 },
-  { re: /iron bowl/i, token: 'Iron Bowl', name: 'the Iron Bowl', rank: 85 },
-  { re: /third saturday/i, token: 'Third Saturday', name: 'the Third Saturday in October', rank: 80 },
-  { re: /egg bowl/i, token: 'Egg Bowl', name: 'the Egg Bowl', rank: 78 },
-  { re: /apple cup/i, token: 'Apple Cup', name: 'the Apple Cup', rank: 76 },
-  { re: /bedlam/i, token: 'Bedlam', name: 'Bedlam', rank: 74 },
+  { re: /\bthe game\b/i, name: 'The Game', rank: 100 },
+  { re: /red river/i, name: 'the Red River Rivalry', rank: 95 },
+  { re: /cocktail party|world'?s largest/i, name: 'the Cocktail Party', rank: 90 },
+  { re: /iron bowl/i, name: 'the Iron Bowl', rank: 85 },
+  { re: /third saturday/i, name: 'the Third Saturday in October', rank: 80 },
+  { re: /egg bowl/i, name: 'the Egg Bowl', rank: 78 },
+  { re: /apple cup/i, name: 'the Apple Cup', rank: 76 },
+  { re: /bedlam/i, name: 'Bedlam', rank: 74 },
   // MUST require "axe" — "Paul Bunyan's Axe" is Minnesota–Wisconsin; the bare
   // "Paul Bunyan Trophy" is MSU–Michigan, a DIFFERENT rivalry (§5 collision trap).
-  { re: /paul bunyan'?s axe/i, token: 'the Axe', name: "Paul Bunyan's Axe", rank: 72 },
+  { re: /paul bunyan'?s axe/i, name: "Paul Bunyan's Axe", rank: 72 },
   // MSU–Michigan Paul Bunyan Trophy — negative lookahead keeps it off the Axe.
-  { re: /paul bunyan(?!'?s axe)/i, token: 'Paul Bunyan', name: 'the Paul Bunyan Trophy', rank: 50 },
-  { re: /holy war/i, token: 'Holy War', name: 'the Holy War', rank: 70 },
-  { re: /backyard brawl/i, token: 'Backyard Brawl', name: 'the Backyard Brawl', rank: 68 },
-  { re: /palmetto bowl/i, token: 'Palmetto Bowl', name: 'the Palmetto Bowl', rank: 66 },
-  { re: /iron skillet/i, token: 'Iron Skillet', name: 'the Battle for the Iron Skillet', rank: 64 },
-  { re: /border war/i, token: 'Border War', name: 'the Border War', rank: 62 },
-  { re: /territorial cup/i, token: 'Territorial Cup', name: 'the Territorial Cup', rank: 60 },
-  { re: /clean.*hate/i, token: 'the Hate', name: 'Clean, Old-Fashioned Hate', rank: 58 },
-  { re: /floyd of rosedale/i, token: 'Floyd of Rosedale', name: 'Floyd of Rosedale', rank: 45 },
-  { re: /little brown jug/i, token: 'Little Brown Jug', name: 'the Little Brown Jug', rank: 45 },
-  { re: /old oaken bucket/i, token: 'Old Oaken Bucket', name: 'the Old Oaken Bucket', rank: 44 },
-  { re: /keg of nails/i, token: 'Keg of Nails', name: 'the Keg of Nails', rank: 40 },
+  { re: /paul bunyan(?!'?s axe)/i, name: 'the Paul Bunyan Trophy', rank: 50 },
+  { re: /holy war/i, name: 'the Holy War', rank: 70 },
+  { re: /backyard brawl/i, name: 'the Backyard Brawl', rank: 68 },
+  { re: /palmetto bowl/i, name: 'the Palmetto Bowl', rank: 66 },
+  { re: /iron skillet/i, name: 'the Battle for the Iron Skillet', rank: 64 },
+  { re: /border war/i, name: 'the Border War', rank: 62 },
+  { re: /territorial cup/i, name: 'the Territorial Cup', rank: 60 },
+  { re: /clean.*hate/i, name: 'Clean, Old-Fashioned Hate', rank: 58 },
+  { re: /floyd of rosedale/i, name: 'Floyd of Rosedale', rank: 45 },
+  { re: /little brown jug/i, name: 'the Little Brown Jug', rank: 45 },
+  { re: /old oaken bucket/i, name: 'the Old Oaken Bucket', rank: 44 },
+  { re: /keg of nails/i, name: 'the Keg of Nails', rank: 40 },
 ];
 
 // `rival` = the featured rivalry's OPPONENT school (resolved, display-name form).
 // It is what the description leads with ("The Game vs Michigan") — the §13 volume
 // term names BOTH schools. Null only when a school has no 2026 rivalry game.
-export interface FeaturedRivalry { token: string | null; name: string | null; source: 'marquee' | 'trophy' | 'none'; rival: string | null }
+// `name` is null for source 'rivalry': the game is tagged as a rivalry but
+// carries no trophy, and its stored label is a bare "School–School" pair, which
+// is not a name anyone searches for. The description then says "the {rival}
+// rivalry" rather than echoing the pair.
+export interface FeaturedRivalry { name: string | null; source: 'marquee' | 'trophy' | 'rivalry' | 'none'; rival: string | null }
+
+/** A stored rivalry label that is just the two schools joined by a dash
+ *  ("Maryland–Rutgers", "Army–Navy Game"). Detected by the dash plus either
+ *  school's name, so a trophy with a dashed personal name ("Jefferson–Eppes
+ *  Trophy") still counts as a trophy. */
+function isPairLabel(label: string, school: string, rival: string): boolean {
+  if (!/[–-]/.test(label)) return false;
+  const l = label.toLowerCase();
+  return l.includes(school.toLowerCase()) || l.includes(rival.toLowerCase());
+}
 
 /** Select the featured rivalry from a school's 2026 rivalry games (§13 priority:
- *  best marquee, else the most recognizable trophy, else none). Tracks the winning
- *  tag so the RIVAL SCHOOL rides along (the description names it). */
+ *  best marquee, else the most recognizable trophy, else the rivalry with no
+ *  name, else none). Tracks the winning tag so the RIVAL SCHOOL rides along
+ *  (the description names it). */
 export function selectFeaturedRivalry(data: CfbSchoolPage): FeaturedRivalry {
+  const school = data.school.name;
   const tags = data.games
     .filter((g) => g.rivalry)
     .map((g) => ({ trophy: g.rivalry!.trophy, name: g.rivalry!.name, rival: g.opponentName }));
-  if (tags.length === 0) return { token: null, name: null, source: 'none', rival: null };
+  if (tags.length === 0) return { name: null, source: 'none', rival: null };
   // best marquee across all this school's rivalry tags — track the winning tag so we
   // can surface the rival (opponentName is already resolved: nameById || prettifySlug).
   let best: Marquee | null = null;
@@ -80,13 +98,14 @@ export function selectFeaturedRivalry(data: CfbSchoolPage): FeaturedRivalry {
     const hay = `${t.trophy ?? ''} ${t.name}`;
     for (const m of MARQUEE) if (m.re.test(hay) && (!best || m.rank > best.rank)) { best = m; bestTag = t; }
   }
-  if (best && bestTag) return { token: best.token, name: best.name, source: 'marquee', rival: bestTag.rival };
-  // no marquee → most recognizable trophy (prefer a tag that carries a trophy name).
-  // No length cap: the title fallback chain drops the token when it won't fit, so a
-  // short-named school still gets its trophy featured (Toledo → "Battle of I-75 Trophy").
-  const pickTag = tags.find((t) => t.trophy) ?? tags[0];
-  const pick = pickTag.trophy ?? pickTag.name;
-  return { token: pick, name: pick, source: 'trophy', rival: pickTag.rival };
+  if (best && bestTag) return { name: best.name, source: 'marquee', rival: bestTag.rival };
+  // No marquee: the first tag whose trophy is a real name, not a pair label.
+  // Formerly `trophy ?? name`, which let a bare "Maryland–Rutgers" through as
+  // the featured name and, when it led the title, doubled the school's own
+  // name ("Maryland Maryland–Rutgers 2026").
+  const trophyTag = tags.find((t) => t.trophy && !isPairLabel(t.trophy, school, t.rival));
+  if (trophyTag) return { name: trophyTag.trophy!, source: 'trophy', rival: trophyTag.rival };
+  return { name: null, source: 'rivalry', rival: tags[0].rival };
 }
 
 function firstFit(cands: string[], max: number): string {
@@ -107,34 +126,26 @@ export function buildCfbTeamMetadata(data: CfbSchoolPage): Metadata {
   const stadium = venue?.name ?? null;
   const rival = feat.rival;
 
-  // ── TITLE (field ≤47 → rendered ≤60 after the ' | PromoNight' template). "Schedule"
-  //    is MANDATORY in every candidate — it is the head term with real volume. The
-  //    trophy token is featured only when it FITS alongside "Schedule"; when it will
-  //    not, we drop the TOKEN (never "Schedule"), keeping a truthful "Rivalries" hook,
-  //    then "& Gameday", then bare. A school with NO 2026 rivalry game never claims
-  //    "Rivalries" (no over-claim) — it takes the no-rivalry chain. ──
-  // INVERTED: the rivalry token LEADS and "Football Schedule YEAR" is demoted to
-  // a trailing qualifier. Schedule-intent queries are unwinnable, sitting at
-  // position 34 to 56 against Google's own sports panel, so leading with
-  // "Football Schedule" spends the most valuable characters in the title on a
-  // term we cannot rank for. The rivalry token is the term that does rank: GSC
-  // shows these pages at 3.7 to 9.3 on rivalry and trophy queries with no
-  // deliberate targeting at all. A school with no 2026 rivalry game has no token
-  // to lead with and keeps the schedule-first shape.
-  const titleCands = hasRivalry
-    ? [
-        `${s.name} ${feat.token} ${YEAR}: Gameday & Football Schedule`,
-        `${s.name} ${feat.token} ${YEAR}: Football Schedule`,
-        `${s.name} ${feat.token} ${YEAR}`,
-        `${s.name} Rivalries ${YEAR}: Football Schedule & Gameday`,
-        `${s.name} Rivalries ${YEAR}: Football Schedule`,
-        `${s.name} Rivalries ${YEAR}`,
-        `${s.name} Football Schedule ${YEAR}`,
-      ]
-    : [
-        `${s.name} Football Schedule ${YEAR} & Gameday`,
-        `${s.name} Football Schedule ${YEAR}`,
-      ];
+  // ── TITLE (field ≤47 → rendered ≤60 after the ' | PromoNight' template).
+  //    "[School Mascot] Football Schedule 2026", the same name the description
+  //    leads with, plus "& Gameday" when it fits. The rivalry is NOT in the
+  //    title: the token-led shape that replaced this on 2026-08 doubled a
+  //    school's own name wherever the fallback token was a bare pair label
+  //    ("Army Army–Navy Game 2026", fourteen pages on 2026-10-29) and put a
+  //    lowercase article in a title ("Minnesota the Axe 2026"). The featured
+  //    rivalry now lives in the description only.
+  //    Seven schools' name plus mascot overrun the field with the year attached
+  //    (Coastal Carolina Chanticleers, Georgia Tech Yellow Jackets, Mississippi
+  //    State Bulldogs, Northern Illinois Huskies, Notre Dame Fighting Irish,
+  //    Wake Forest Demon Deacons, West Virginia Mountaineers). Those take the
+  //    school name alone, same two shapes, rather than letting firstFit trim
+  //    the year off the end. ──
+  const titleCands = [
+    `${fullName} Football Schedule ${YEAR} & Gameday`,
+    `${fullName} Football Schedule ${YEAR}`,
+    `${s.name} Football Schedule ${YEAR} & Gameday`,
+    `${s.name} Football Schedule ${YEAR}`,
+  ];
   const title = firstFit(titleCands, TITLE_MAX);
 
   // ── DESCRIPTION (≤155), TIER-DERIVED, and NAMES THE RIVAL SCHOOL (that is where the
@@ -147,13 +158,14 @@ export function buildCfbTeamMetadata(data: CfbSchoolPage): Metadata {
   //    loads (src/lib/cfb/data.ts:311 hardcodes the editorial block to nulls); it was
   //    removed 2026-08-25 and returns only with the blocks it describes. ──
   const stadClause = stadium ? `${stadium} parking` : 'parking';
-  const genericLabel = hasRivalry && rival != null && feat.name != null
-    && /–/.test(feat.name) && (feat.name.includes(rival) || feat.name.includes(s.name));
+  // The featured rivalry lives HERE and only here. A marquee or trophy name
+  // reads "The Game vs Michigan"; a rivalry with no trophy (source 'rivalry',
+  // name null) reads "the Rutgers rivalry", never the stored pair label.
   const rivalClause = !hasRivalry || rival == null
     ? ''
-    : genericLabel
-      ? `the ${rival} rivalry, `
-      : `${feat.name} vs ${rival}, `;
+    : feat.name
+      ? `${feat.name} vs ${rival}, `
+      : `the ${rival} rivalry, `;
   const descCands = [
         `${fullName} ${YEAR} football schedule, ${rivalClause}plus tickets, ${stadClause} and hotels for every home game.`,
         `${fullName} ${YEAR} football schedule, ${rivalClause}plus tickets, ${stadClause} and hotels.`,

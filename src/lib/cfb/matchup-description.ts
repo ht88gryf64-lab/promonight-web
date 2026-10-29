@@ -17,6 +17,8 @@
 // contain EN dashes (Bryant-Denny, Vaught-Hemingway, Rice-Eccles); those are the
 // buildings' real names and pass through untouched.
 
+import { schoolIdDisplayName } from '@/lib/cfb/display-name';
+
 /** Google truncates around 160. The brief's window is 140 to 160. */
 export const DESC_MAX = 160;
 export const DESC_MIN = 140;
@@ -38,9 +40,13 @@ export interface MatchupDescriptionInput {
   venueCity: string | null;
 }
 
-/** "washington-state" -> "Washington State". The one place this lives, so the
- *  description and the page agree on how an untracked school is named. */
+/** "washington-state" -> "Washington State", with the explicit map in
+ *  src/lib/cfb/display-name.ts consulted first ("uab" -> "UAB", "miami-oh" ->
+ *  "Miami (OH)"). The one place this lives, so the description and the page
+ *  agree on how an untracked school is named. */
 export function prettySchoolId(id: string): string {
+  const mapped = schoolIdDisplayName(id);
+  if (mapped) return mapped;
   return id
     .split('-')
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))

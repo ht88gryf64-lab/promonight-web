@@ -19,6 +19,7 @@ import { isVisibleGame } from '@/lib/cfb/human-owned';
 import { venueLocalKickoff } from '@/lib/cfb/kickoff';
 import { resolveVenueZone } from '@/lib/cfb/venue-timezones';
 import { venueTodayYMD, isPlayedGame } from '@/lib/cfb/clock';
+import { schoolIdDisplayName } from '@/lib/cfb/display-name';
 
 export interface CfbGameView {
   id: string;
@@ -86,7 +87,11 @@ function safeHttpUrl(source: string | null | undefined): string | null {
   try { new URL(trophy); return trophy; } catch { return null; }
 }
 
+// The explicit display-name map first (src/lib/cfb/display-name.ts), so an
+// untracked opponent reads "UAB" and "Miami (OH)", never "Uab" and "Miami Oh".
 function prettifySlug(slug: string): string {
+  const mapped = schoolIdDisplayName(slug);
+  if (mapped) return mapped;
   return slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
     .replace(/\bNc\b/, 'NC').replace(/\bUnlv\b/, 'UNLV').replace(/\bUcf\b/, 'UCF')
     .replace(/\bByu\b/, 'BYU').replace(/\bSmu\b/, 'SMU').replace(/\bTcu\b/, 'TCU')

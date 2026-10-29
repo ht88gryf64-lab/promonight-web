@@ -32,3 +32,56 @@ export function findDisplayNameCollisions(
     .filter(([, slugs]) => slugs.length > 1)
     .map(([, slugs]) => ({ name: rows.find((r) => r.slug === slugs[0])!.name, slugs }));
 }
+
+// ── Untracked school ids that do not title-case into their name ──────────────
+//
+// A school with no cfbSchools doc is named from its game-row id, and
+// title-casing "uab" gives "Uab" and "miami-oh" gives "Miami Oh", both of
+// which reached live descriptions ("The Bones vs Uab", "Victory Bell vs Miami
+// Oh"). This map is consulted by both prettifiers (prettySchoolId in
+// matchup-description.ts, prettifySlug in data.ts) before they fall back to
+// title-casing, so every surface names an untracked school the same way. Ids
+// that title-case correctly are deliberately absent. Several ids here are
+// aliases of tracked schools ("iowa-st", "jmu", "niu", "usf", "cal"): the row
+// keeps its alias id, so this only fixes the display; linking the row to the
+// tracked school is a pipeline data fix.
+export const SCHOOL_ID_DISPLAY_NAMES: Readonly<Record<string, string>> = {
+  'arizona-st': 'Arizona State',
+  'arkansas-pine-bluff': 'Arkansas-Pine Bluff',
+  'bethune-cookman': 'Bethune-Cookman',
+  cal: 'California',
+  ecu: 'East Carolina',
+  fau: 'FAU',
+  fiu: 'FIU',
+  'florida-am': 'Florida A&M',
+  'gardner-webb': 'Gardner-Webb',
+  'iowa-st': 'Iowa State',
+  jmu: 'James Madison',
+  liu: 'LIU',
+  mcneese: 'McNeese',
+  'miami-fla': 'Miami (FL)',
+  'miami-oh': 'Miami (OH)',
+  ndsu: 'North Dakota State',
+  niu: 'Northern Illinois',
+  'oklahoma-st': 'Oklahoma State',
+  'prairie-view-am': 'Prairie View A&M',
+  'san-jos-state': 'San Jose State',
+  uab: 'UAB',
+  'uc-davis': 'UC Davis',
+  ulm: 'UL Monroe',
+  umass: 'UMass',
+  uni: 'Northern Iowa',
+  unr: 'Nevada',
+  usf: 'USF',
+  'ut-martin': 'UT Martin',
+  utep: 'UTEP',
+  utsa: 'UTSA',
+  vmi: 'VMI',
+  'william-mary': 'William & Mary',
+};
+
+/** The mapped display name for an untracked school id, or null when the id
+ *  title-cases correctly and needs no entry. */
+export function schoolIdDisplayName(id: string): string | null {
+  return SCHOOL_ID_DISPLAY_NAMES[id] ?? null;
+}
