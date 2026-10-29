@@ -501,9 +501,12 @@ export const getPromoCardRow = cache(async (teamId: string, promoId: string): Pr
   const rows = await loadTeamPageRows(team);
   const row = rows.find((r) => r.promoId === promoId);
   if (!row) return null;
-  const series = rows.filter((r) => r.pageSlug && r.pageSlug === row.pageSlug && r.pageSeason === row.pageSeason && !r.tombstoned);
-  const seriesDates = [...new Set(series.map((r) => r.date).filter((d) => YMD_RE.test(d)))].sort();
+  // The same set the page's stamp is taken over: every row under the slug
+  // and season, tombstoned ones included (a tombstone carries the newest
+  // stamp, and the page keys the card on it). The dates are the live ones.
+  const under = row.pageSlug ? rows.filter((r) => r.pageSlug === row.pageSlug && r.pageSeason === row.pageSeason) : [row];
+  const seriesDates = [...new Set(under.filter((r) => !r.tombstoned).map((r) => r.date).filter((d) => YMD_RE.test(d)))].sort();
   let updatedAt: string | null = null;
-  for (const r of series.length ? series : [row]) updatedAt = maxIso(updatedAt, r.updatedAt);
+  for (const r of under) updatedAt = maxIso(updatedAt, r.updatedAt);
   return { team, row, seriesDates: seriesDates.length ? seriesDates : YMD_RE.test(row.date) ? [row.date] : [], updatedAt };
 });

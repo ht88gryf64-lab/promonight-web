@@ -29,6 +29,7 @@ import {
   promoPagePath,
   promoPageTitle,
   quantityLine,
+  YMD_RE,
   themeLabel,
   typeNoun,
   typePlural,
@@ -184,10 +185,12 @@ export function PromoPageView({ page, ctx, today }: PromoPageViewProps) {
     ticketUrl: tickets,
     dateModified: page.updatedAt,
     faqs,
+    // The visible trail, item for item (Google asks the markup to reflect it):
+    // league hub, team page, the team's promos (its anchor on the team page).
     breadcrumbs: [
       { name: team.league, url: `${SITE_URL}${leagueHref ?? '/'}` },
       { name: teamName, url: `${SITE_URL}${teamHref}` },
-      { name: cleanText(primary.title), url: canonical },
+      { name: 'Promos', url: `${SITE_URL}${crumbHref}` },
     ],
   });
 
@@ -199,13 +202,21 @@ export function PromoPageView({ page, ctx, today }: PromoPageViewProps) {
       {withOpponent && row.displayOpponent ? <span className="block">{`vs ${row.displayOpponent}`}</span> : null}
     </li>
   );
-  // A series shows its next three dates and folds the rest into a native
-  // expander (no script, every date in the HTML), so the CTA row follows a
-  // short list. The full list stays in the FAQ and in the per-date Events.
-  const upcomingRows = page.rows.filter((r) => r.date >= today);
-  const shownRows = upcomingRows.length ? upcomingRows.slice(0, 3) : page.rows.slice(-3);
+  // A series shows three dates and folds the rest into a native expander (no
+  // script, every date in the HTML), so the CTA row follows a short list: the
+  // next three, padded with the most recent played dates when fewer than
+  // three remain. The fold says "earlier" when everything in it has been
+  // played. The full list stays in the FAQ and in the per-date Events. Only
+  // dated rows, the same filter the Events use.
+  const datedRows = page.rows.filter((r) => YMD_RE.test(r.date));
+  const upcomingRows = datedRows.filter((r) => r.date >= today);
+  const playedRows = datedRows.filter((r) => r.date < today);
+  const nextRows = upcomingRows.slice(0, 3);
+  const shownRows = [...playedRows.slice(Math.max(0, playedRows.length - (3 - nextRows.length))), ...nextRows];
   const shownIds = new Set(shownRows.map((r) => r.promoId));
-  const foldedRows = page.rows.filter((r) => !shownIds.has(r.promoId));
+  const foldedRows = datedRows.filter((r) => !shownIds.has(r.promoId));
+  const foldedAllPlayed = foldedRows.length > 0 && foldedRows.every((r) => r.date < today);
+  const foldLabel = `+${foldedRows.length} ${foldedAllPlayed ? 'earlier' : 'more'} date${foldedRows.length === 1 ? '' : 's'}`;
 
   return (
     <div className={`${archivoHouse.variable} rd-root min-h-screen`}>
@@ -249,7 +260,7 @@ export function PromoPageView({ page, ctx, today }: PromoPageViewProps) {
           ) : null}
           {multi && foldedRows.length ? (
             <details className="m-0">
-              <summary className="cursor-pointer font-rd text-[14px] font-medium text-rd-red">{`+${foldedRows.length} more date${foldedRows.length === 1 ? '' : 's'}`}</summary>
+              <summary className="cursor-pointer font-rd text-[14px] font-medium text-rd-red">{foldLabel}</summary>
               <ul className="m-0 mt-1.5 flex flex-col gap-1.5 p-0">
                 {foldedRows.map((r) => gameLine(r.date, r, r.promoId, true))}
               </ul>
@@ -259,6 +270,9 @@ export function PromoPageView({ page, ctx, today }: PromoPageViewProps) {
             <p className="m-0 text-[15px] leading-[1.45] text-rd-ink-soft">
               {venueHref ? <Link href={venueHref} className="text-rd-red no-underline hover:underline">{venueName}</Link> : venueName}
               {ctx.hub?.city ? <span>{`, ${ctx.hub.city}`}</span> : null}
+              {/* A renamed building names its former name in the quick-facts
+                  block; when that block has nothing to show, here instead. */}
+              {ctx.formerNames.length && !ctx.quickFacts.length ? <span>{` · formerly ${ctx.formerNames.join(', ')}`}</span> : null}
             </p>
           ) : null}
         </header>

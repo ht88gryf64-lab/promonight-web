@@ -2,7 +2,7 @@ import { ImageResponse } from 'next/og';
 import { loadCardFonts } from '@/lib/social-feed/fonts';
 import { cleanText } from '@/lib/social-feed/text';
 import { getPromoCardRow, isPromoPagesLive } from '@/lib/promo-pages';
-import { badgeLabel, CARD_HEIGHT, CARD_WIDTH, formatLongDate, seriesLine } from '@/lib/promo-page-copy';
+import { badgeLabel, CARD_HEIGHT, CARD_WIDTH, formatLongDate, formatMonDayYear, seriesLine } from '@/lib/promo-page-copy';
 import { teamDisplayName } from '@/lib/promo-helpers';
 
 // The tier 3 image for a promo page (Phase 3b, brief A.4; redrawn to the
@@ -30,7 +30,6 @@ const HEX_RE = /^#[0-9a-f]{6}$/i;
 
 const INK = '#211d18';
 const CREAM = '#f7f3ea';
-const ACCENT = '#dc2626';
 
 function titleSize(title: string): number {
   if (title.length <= 24) return 88;
@@ -47,6 +46,13 @@ function luminance(hex: string): number {
     return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
   });
   return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+}
+
+/** WCAG contrast ratio between two colours. */
+function contrast(a: string, b: string): number {
+  const la = luminance(a);
+  const lb = luminance(b);
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
 }
 
 function notFound(): Response {
@@ -83,16 +89,23 @@ export async function GET(req: Request, { params }: { params: Promise<{ promoId:
   const series = seriesDates.length > 1;
   const opponent = cleanText(row.displayOpponent);
   const time = cleanText(row.displayTime);
+  // One line at 36px holds about 60 characters; a stored full-club-name
+  // opponent can pass that, so the weekday goes first.
+  const singleLine = (date: string) => [date || null, time || null, opponent ? `vs ${opponent}` : null].filter(Boolean).join(' · ');
   const dateLine = series
     ? seriesLine(seriesDates)
-    : [row.date ? formatLongDate(row.date) : null, time || null, opponent ? `vs ${opponent}` : null].filter(Boolean).join(' · ');
+    : row.date
+      ? (singleLine(formatLongDate(row.date)).length > 56 ? singleLine(formatMonDayYear(row.date)) : singleLine(formatLongDate(row.date)))
+      : singleLine('');
   const badge = row.tombstoned ? 'Removed' : badgeLabel(row);
 
-  // The team's colours as stored (mapTeamDoc gives #rrggbb); the house ink
-  // and cream when a colour is missing. Text follows the ground's luminance.
+  // The team's colours as stored (mapTeamDoc gives #rrggbb, black for a
+  // missing one; the HEX_RE guard is for a malformed string). Text is
+  // whichever of white and the house ink contrasts more with the ground
+  // (orange and gold grounds take ink), and the badge follows the same flag.
   const ground = HEX_RE.test(team.primaryColor) ? team.primaryColor : INK;
   const rule = HEX_RE.test(team.secondaryColor) && team.secondaryColor.toLowerCase() !== ground.toLowerCase() ? team.secondaryColor : CREAM;
-  const dark = luminance(ground) < 0.4;
+  const dark = contrast(ground, '#ffffff') >= contrast(ground, INK);
   const text = dark ? '#ffffff' : INK;
   const soft = dark ? 'rgba(255,255,255,0.78)' : '#50483f';
   const badgeBg = dark ? '#ffffff' : INK;
@@ -113,7 +126,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ promoId:
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18, borderTop: `5px solid ${rule}`, paddingTop: 22 }}>
           {dateLine ? <div style={{ display: 'block', fontSize: 36, fontWeight: 700, lineClamp: 1 }}>{dateLine}</div> : null}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: soft }}>
-            <div style={{ width: 14, height: 14, borderRadius: 7, background: ACCENT, display: 'flex' }} />
+            {/* The mark in the text colour: the brand red disappears on a red ground. */}
+            <div style={{ width: 14, height: 14, borderRadius: 7, background: text, display: 'flex' }} />
             <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: -0.5 }}>PromoNight</div>
           </div>
         </div>
