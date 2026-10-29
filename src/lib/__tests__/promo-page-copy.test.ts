@@ -20,6 +20,7 @@ import {
   quantityLine,
   renderedTitleLength,
   seasonLabelFor,
+  seriesLine,
   storageImageUrl,
   themeLabel,
   truncateAtSentence,
@@ -140,6 +141,9 @@ test('badge, quantity line and tiles exist only for the fields that exist', () =
 test('FAQs come only from stored fields, two at most, in pool order', () => {
   const none = promoFaqs({ row: row({ presentedBy: null, displayTime: '' }), teamName: 'Minnesota Wild', dates: ['2026-10-29'], removed: false, removedOn: null });
   assert.deepEqual(none, []);
+  // A game time alone is not an arrival answer (ruling 2026-10-29): the FAQ needs a door time.
+  const timeOnly = promoFaqs({ row: row({ presentedBy: null }), teamName: 'Minnesota Wild', dates: ['2026-10-29'], removed: false, removedOn: null });
+  assert.deepEqual(timeOnly, []);
   const capped = promoFaqs({ row: row({ attendanceCap: 10000, gateOpenTime: '5:30 PM' }), teamName: 'Minnesota Wild', dates: ['2026-10-29'], removed: false, removedOn: null });
   assert.deepEqual(capped.map((f) => f.question), ['Do I need a special ticket for the Blaze Orange Hat?', 'What time should I arrive?']);
   assert.equal(capped[0].answer, 'The Minnesota Wild listing names no special ticket, so any game ticket should count. The first 10,000 fans through the gates receive one.');
@@ -181,6 +185,10 @@ test('category aggregator by type and title; theme labels', () => {
   assert.deepEqual((['giveaway', 'theme', 'food', 'kids'] as const).map(typePlural), ['giveaways', 'theme nights', 'food deals', 'kids promos']);
   assert.deepEqual((['giveaway', 'theme', 'food', 'kids'] as const).map(typeNoun), ['giveaway', 'theme night', 'food deal', 'promotion']);
   assert.equal(formatLongDate('2026-10-29'), 'Thursday, Oct 29, 2026');
+  assert.equal(seriesLine(['2026-10-29', '2026-11-18', '2027-03-20', '2026-10-29']), '3 home games \u00b7 Oct 29, 2026 to Mar 20, 2027');
+  assert.equal(seriesLine(['2026-11-01', '2026-11-08']), '2 home games \u00b7 Nov 1 to Nov 8, 2026');
+  assert.equal(seriesLine(['2026-11-15']), 'Sunday, Nov 15, 2026');
+  assert.equal(seriesLine(['bad']), '');
 });
 
 test('JSON-LD: WebPage with dateModified = updatedAt, one Event per date with image, location, offers and status, FAQPage, BreadcrumbList', () => {

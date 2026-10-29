@@ -153,6 +153,17 @@ export function formatLongDate(ymd: string): string {
   return p ? `${DAYS[p.dow]}, ${MONTHS[p.m - 1]} ${p.d}, ${p.y}` : ymd;
 }
 
+/** The generated card's date line for a series: "8 home games · Oct 29 to Mar 20, 2027". */
+export function seriesLine(dates: readonly string[]): string {
+  const valid = [...new Set(dates.filter((d) => YMD_RE.test(d)))].sort();
+  if (valid.length === 0) return '';
+  if (valid.length === 1) return formatLongDate(valid[0]);
+  const first = valid[0];
+  const last = valid[valid.length - 1];
+  const sameYear = first.slice(0, 4) === last.slice(0, 4);
+  return `${valid.length} home games \u00b7 ${sameYear ? formatMonDay(first) : formatMonDayYear(first)} to ${formatMonDayYear(last)}`;
+}
+
 /** The date-block pieces a card prints: "OCT" / "29" / "THU". */
 export function dateBlock(ymd: string): { month: string; day: string; weekday: string } {
   const p = dateParts(ymd);
@@ -470,12 +481,12 @@ export function promoFaqs(opts: {
     pool.push({ question: `Do I need a special ticket for ${item}?`, answer: parts.join(' ') });
   }
 
-  // Arrival: the stored door time, else the game time.
+  // Arrival: only when the team lists a door time (ruling 2026-10-29); a
+  // game time alone does not answer "what time should I arrive".
   const doors = cleanText(row.gateOpenTime);
   const time = cleanText(row.displayTime);
-  if (doors || time) {
-    const parts: string[] = [];
-    if (doors) parts.push(`Doors open at ${doors}.`);
+  if (doors) {
+    const parts: string[] = [`Doors open at ${doors}.`];
     if (time) parts.push(`Game time is ${time}.`);
     if (cap !== null) parts.push(`Only the first ${formatCount(cap)} fans receive one, so arrive early.`);
     else if (row.whileSuppliesLast === true) parts.push('It is while supplies last, so arrive early.');

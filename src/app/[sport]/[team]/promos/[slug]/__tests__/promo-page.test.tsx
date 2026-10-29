@@ -98,7 +98,7 @@ mock.module(new URL('../../../../../../components/redesign/fonts-house.ts', impo
 // bag rule, two lots, a transit line and an outside-food rule. The real
 // venue-hub loaders read it from the fake, through the published view.
 put('venueHubs/xcel-energy-center', {
-  slug: 'xcel-energy-center', name: 'Grand Casino Arena', city: 'St Paul', state: 'Minnesota', lat: 44.9448, lng: -93.101, verified: true,
+  slug: 'xcel-energy-center', name: 'Grand Casino Arena', formerNames: [{ name: 'Xcel Energy Center', sourceUrl: 'https://x/rename' }], city: 'St Paul', state: 'Minnesota', lat: 44.9448, lng: -93.101, verified: true,
   tenants: [{ teamId: 'minnesota-wild', league: 'NHL' }], parkingLots: [{ name: 'RiverCentre Ramp' }, { name: 'Lawson Ramp' }], publicTransit: { lines: ['Green Line'], notes: 'Green Line to Central Station, two blocks east.' },
   bagMaxDimensions: { unit: 'in', d: 6, w: 12, h: 12 }, clearBagRequired: false, outsideFoodAllowed: false,
   sources: { bagMaxDimensions: 'https://x/bag', clearBagRequired: 'https://x/bag', parkingLots: 'https://x/parking', 'publicTransit.notes': 'https://x/transit', 'publicTransit.lines': 'https://x/transit', outsideFoodAllowed: 'https://x/food' },
@@ -146,7 +146,9 @@ for (const [id, date, opp] of [['o1', '2026-10-29', 'Blackhawks'], ['o2', '2026-
 }
 promo('detroit-red-wings', 'p1', { title: 'Pride Night', pageSlug: 'pride-night', type: 'theme', themeKey: 'pride', date: '2026-11-05', opponent: 'Flyers' });
 promo('anaheim-ducks', 'p2', { title: 'Pride Night', pageSlug: 'pride-night', type: 'theme', themeKey: 'pride', date: '2026-11-12' });
-promo('anaheim-ducks', 'g2', { title: 'Kids Socks Giveaway', pageSlug: 'kids-socks-giveaway', date: '2026-11-01' });
+for (const [id, date] of [['g2', '2026-11-01'], ['g2b', '2026-11-08'], ['g2c', '2026-11-15'], ['g2d', '2026-11-22'], ['g2e', '2026-11-29']] as const) {
+  promo('anaheim-ducks', id, { title: 'Kids Socks Giveaway', pageSlug: 'kids-socks-giveaway', date, opponent: 'Sharks' });
+}
 promo('pittsburgh-penguins', 'p3', { title: 'Pride Night', pageSlug: 'pride-night', type: 'theme', themeKey: 'pride', date: '2026-11-20' });
 promo('pittsburgh-penguins', 'g3', { title: 'Lapel Pin Set', pageSlug: 'lapel-pin-set', date: '2026-11-05', attendanceCap: 7500 });
 promo('dallas-stars', 'p4', { title: 'Pride Night', pageSlug: 'pride-night', type: 'theme', themeKey: 'pride', date: '2027-01-05' });
@@ -233,6 +235,15 @@ test('tier 1 single-date NHL page: H1, the stored photo, the head, the schema an
   process.env.PROMO_PAGES_LIVE = 'true';
   const { h, meta } = await render('nhl', 'minnesota-wild', 'blaze-orange-hat');
   assert.match(h, /<h1 class="rd-display[^"]*">Blaze Orange Hat<\/h1>/);
+  // Rulings 2026-10-29: the third crumb is Promos on every page; a single-date
+  // page names the opponent once (the matchup line), not again under the date;
+  // the secondary CTA row wraps rather than clips; a renamed building shows its
+  // former name; a cross-team card names the club and never repeats the tile date.
+  assert.match(h, /href="\/nhl\/minnesota-wild#promo-2026-10-29-blaze-orange-hat">Promos<\/a>/);
+  assert.ok(!h.slice(h.indexOf('<header'), h.indexOf('</header>')).includes('<span class="block">vs Islanders</span>'), 'no repeated opponent line');
+  assert.match(h, /<div class="flex flex-wrap gap-2"><a href="https:\/\/tracking\.spothero\.com[^"]*" class="flex h-11 min-w-\[104px\] flex-1 basis-0/);
+  assert.match(h, /Formerly Xcel Energy Center\./);
+  assert.ok(!/Dallas Stars · Nov 15/.test(h), 'cross-team card subtitle never repeats the tile date');
   assert.match(h, /<img src="https:\/\/firebasestorage\.googleapis\.com\/v0\/b\/promonight\.firebasestorage\.app\/o\/promo-images%2Fc7057219198efd77\.png\?alt=media" alt="Blaze Orange Hat, the Minnesota Wild giveaway item"/);
   assert.match(h, /Image: Minnesota Wild/);
   assert.match(h, /Minnesota Wild vs Islanders/);
@@ -276,8 +287,31 @@ test('tier 1 single-date NHL page: H1, the stored photo, the head, the schema an
   assert.match(ld[1].offers.url, /^https:\/\/www\.ticketmaster\.com\/minnesota-wild-tickets\/artist\/805974/);
   assert.equal(ld[1].eventStatus, 'https://schema.org/EventScheduled');
   assert.deepEqual(ld[1].image, [og.images[0].url]);
-  assert.equal(ld[2].mainEntity.length, 2);
+  // One FAQ: no door time is stored, so "What time should I arrive?" does not exist.
+  assert.equal(ld[2].mainEntity.length, 1);
+  assert.equal(ld[2].mainEntity[0].name, 'Who presents the Blaze Orange Hat?');
   assert.equal(ld[3].itemListElement.length, 3);
+});
+
+test('a series with more than three dates shows the next three and folds the rest; every date stays in the FAQ and the Events', async () => {
+  process.env.PROMO_PAGES_LIVE = 'true';
+  const { h, meta } = await render('nhl', 'anaheim-ducks', 'kids-socks-giveaway');
+  const header = h.slice(h.indexOf('<header'), h.indexOf('</header>'));
+  const open = header.slice(0, header.indexOf('<details'));
+  const folded = header.slice(header.indexOf('<details'));
+  assert.equal((open.match(/<li /g) ?? []).length, 3, 'three dates shown');
+  assert.match(folded, /<summary[^>]*>\+2 more dates<\/summary>/);
+  assert.equal((folded.match(/<li /g) ?? []).length, 2, 'two dates folded');
+  for (const d of ['Sunday, Nov 1, 2026', 'Sunday, Nov 8, 2026', 'Sunday, Nov 15, 2026', 'Sunday, Nov 22, 2026', 'Sunday, Nov 29, 2026']) assert.ok(header.includes(d), d);
+  assert.ok(open.includes('<span class="block">vs Sharks</span>'), 'a series names the opponent per date');
+  assert.equal(meta.title, 'Kids Socks Giveaway | Anaheim Ducks 2026-27');
+  const ld = jsonLd(h);
+  assert.equal(ld.filter((s) => s['@type'] === 'Event').length, 5);
+  const faq = ld.find((s) => s['@type'] === 'FAQPage');
+  assert.ok(faq, 'a FAQPage');
+  assert.match(faq!.mainEntity[0].acceptedAnswer.text, /^5 Anaheim Ducks home games this season: Nov 1, 2026, Nov 8, 2026, Nov 15, 2026, Nov 22, 2026, Nov 29, 2026\.$/);
+  // The CTA row follows the header directly.
+  assert.match(h, /<\/header><section class="mt-4 flex flex-col gap-2\.5"><a href="https:\/\/www\.ticketmaster\.com/);
 });
 
 test('multi-date series: a dates list in place of the game line, one Event per date, the season in the title, dateModified the latest row', async () => {
@@ -287,9 +321,11 @@ test('multi-date series: a dates list in place of the game line, one Event per d
   for (const d of ['Thursday, Oct 29, 2026', 'Wednesday, Nov 18, 2026', 'Friday, Dec 11, 2026']) assert.ok(h.includes(d), d);
   assert.ok(!h.includes('Detroit Red Wings vs Blackhawks</p>'), 'no single game line');
   assert.equal((h.slice(h.indexOf('<header'), h.indexOf('</header>')).match(/<li /g) ?? []).length, 3, 'three dates in the header');
-  assert.match(h, /<img src="\/api\/promo-card\/o1\?team=detroit-red-wings&amp;v=1793294994000" alt="Original Six Matchup: Detroit Red Wings, Oct 29, 2026" width="1200" height="630"/);
+  // The card is keyed on the page's latest stamp (o2, 2026-10-30T09:00Z), not the primary row's.
+  assert.match(h, /<img src="\/api\/promo-card\/o1\?team=detroit-red-wings&amp;v=1793350800000" alt="Original Six Matchup: Detroit Red Wings, Oct 29, 2026" width="1200" height="630"/);
   assert.equal(meta.title, 'Original Six Matchup | Detroit Red Wings 2026-27');
-  assert.equal((meta.openGraph as any).images[0].url, 'https://www.getpromonight.com/api/promo-card/o1?team=detroit-red-wings&v=1793294994000');
+  assert.equal((meta.openGraph as any).images[0].url, 'https://www.getpromonight.com/api/promo-card/o1?team=detroit-red-wings&v=1793350800000');
+  assert.ok(!h.slice(h.indexOf('<header'), h.indexOf('</header>')).includes('<details'), 'three dates: nothing to fold');
   const ld = jsonLd(h);
   assert.deepEqual(ld.map((s) => s['@type']), ['WebPage', 'Event', 'Event', 'Event', 'FAQPage', 'BreadcrumbList']);
   assert.deepEqual(ld.slice(1, 4).map((e) => e.startDate), ['2026-10-29', '2026-11-18', '2026-12-11']);
@@ -343,7 +379,7 @@ test('a same-date twin is one date, and a flagged row outside NHL and NBA is not
   process.env.PROMO_PAGES_LIVE = 'true';
   const twin = await render('nhl', 'minnesota-wild', 'twin-night');
   assert.equal((twin.h.slice(twin.h.indexOf('<header'), twin.h.indexOf('</header>')).match(/<li /g) ?? []).length, 1, 'one game line');
-  assert.deepEqual(jsonLd(twin.h).map((s) => s['@type']), ['WebPage', 'Event', 'FAQPage', 'BreadcrumbList']);
+  assert.deepEqual(jsonLd(twin.h).map((s) => s['@type']), ['WebPage', 'Event', 'BreadcrumbList']);
   assert.equal(twin.meta.title, 'Twin Night | Minnesota Wild Dec 20, 2026');
   const mls = await render('mls', 'houston-dynamo', 'family-4-pack');
   assert.match(mls.h, />Kids</);
@@ -361,7 +397,7 @@ test('tombstoned past its date: noindex; a row with no date: noindex', async () 
   const dateless = await render('nhl', 'minnesota-wild', 'dateless-deal');
   assert.deepEqual(dateless.meta.robots, { index: false, follow: true });
   assert.equal(dateless.meta.title, 'Dateless Deal | Minnesota Wild');
-  assert.deepEqual(jsonLd(dateless.h).map((s) => s['@type']), ['WebPage', 'FAQPage', 'BreadcrumbList'], 'no Event without a date');
+  assert.deepEqual(jsonLd(dateless.h).map((s) => s['@type']), ['WebPage', 'BreadcrumbList'], 'no Event without a date, no FAQ without a door time');
 });
 
 // ── Inbound stays OFF this phase (brief C.10) ───────────────────────────────

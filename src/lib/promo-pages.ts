@@ -217,6 +217,9 @@ export interface PromoPageContext {
   location: PromoPageLocation | null;
   /** The building's coordinates (the hub's, else the venue doc's) for parking. */
   coords: { lat: number; lng: number } | null;
+  /** The building's former names, newest first, as the hub stores them
+   *  (website-former-names-spec.md); empty on a building never renamed. */
+  formerNames: string[];
   /** When the team's source was last read: the scan stamp
    *  (scannerState/{LEAGUE}/hashes/{team}.updatedAt), null when the team has
    *  none. NOT the row's updatedAt: that is a write instant (the backfill and
@@ -441,6 +444,7 @@ export const loadPromoPageContext = cache(async (page: PromoPage, today: string)
     quickFacts,
     location,
     coords,
+    formerNames: building?.formerNames ?? [],
     observedAt: scanStamp,
     alsoAtGame,
     nextTeamPromos,
@@ -475,20 +479,31 @@ export async function getPromoPageSitemapEntries(today: string): Promise<PromoSi
   return [...byPage.values()];
 }
 
-/** The card route's one document read: the row named by team and promo id,
- *  display slots filled from the team's games. Null for a missing or
- *  postseason row. A tombstoned row IS returned: the removed page's card
- *  draws it with the Removed badge. */
-export const getPromoCardRow = cache(async (teamId: string, promoId: string): Promise<{ team: Team; row: PromoPageRow } | null> => {
+export interface PromoCardRow {
+  team: Team;
+  row: PromoPageRow;
+  /** Every live date under the row's slug and season (the series), ascending
+   *  and unique; one entry for a single-date promo. */
+  seriesDates: string[];
+  /** The latest updatedAt across the series: the page's own stamp, so the
+   *  card's cache key turns over when a sibling date is added. */
+  updatedAt: string | null;
+}
+
+/** The card route's read: the row named by team and promo id out of the
+ *  team's rows (one subcollection read, display slots from the team's games),
+ *  with its series. Null for a missing or postseason row. A tombstoned row IS
+ *  returned: the removed page's card draws it with the Removed badge. */
+export const getPromoCardRow = cache(async (teamId: string, promoId: string): Promise<PromoCardRow | null> => {
   const teams = await getAllTeams();
   const team = teams.find((t) => t.id === teamId);
   if (!team) return null;
-  const doc = await db.collection('teams').doc(teamId).collection('promos').doc(promoId).get();
-  if (!doc.exists) return null;
-  const data = doc.data() ?? {};
-  if (data.isPostseason === true) return null;
-  const promo = { ...mapPromoDoc(doc), team } as PromoWithTeam;
-  const games = await getGamesForTeam(team.id, team.sportSlug);
-  applyGameDisplay([promo], buildGameIndex(games), new Map(teams.map((t) => [t.id, t])));
-  return { team, row: toPageRow(doc.id, promo, data, team.league) };
+  const rows = await loadTeamPageRows(team);
+  const row = rows.find((r) => r.promoId === promoId);
+  if (!row) return null;
+  const series = rows.filter((r) => r.pageSlug && r.pageSlug === row.pageSlug && r.pageSeason === row.pageSeason && !r.tombstoned);
+  const seriesDates = [...new Set(series.map((r) => r.date).filter((d) => YMD_RE.test(d)))].sort();
+  let updatedAt: string | null = null;
+  for (const r of series.length ? series : [row]) updatedAt = maxIso(updatedAt, r.updatedAt);
+  return { team, row, seriesDates: seriesDates.length ? seriesDates : YMD_RE.test(row.date) ? [row.date] : [], updatedAt };
 });
