@@ -15,6 +15,7 @@ import {
   isTicketPackagePromo,
 } from '@/lib/data';
 import type { Promo, PromoType } from '@/lib/types';
+import { applyGameDisplayForTeam } from '@/lib/promo-game-join';
 import { TeamHero } from '@/components/team-hero';
 import { TeamCalendar } from '@/components/team-calendar';
 import { ScheduleReleaseVideoCard } from '@/components/ScheduleReleaseVideoCard';
@@ -389,6 +390,14 @@ export default async function TeamPage({
   const gameContexts = games.length > 0
     ? await enrichGamesForTeam(team.id, games, promos)
     : undefined;
+  // Time and opponent slots from the contexts just built, so a promo shows the
+  // same time here as on /promos/today (src/lib/promo-game-join.ts). No read:
+  // the index is this page's own home games and the opponent names are the
+  // ones enrichGamesForTeam resolved. Over `promos`, whose objects the
+  // upcoming and completed lists share by reference, so every rendered row
+  // sees the filled slots. Ticket-package rows are not promotions and stay as
+  // stored.
+  if (gameContexts) applyGameDisplayForTeam(promos, team, gameContexts);
 
   // Preview-gated redesign. Gate ON (every non-production Vercel env + local
   // dev, or the NEXT_PUBLIC_REDESIGN_V2 launch flag) renders the new template

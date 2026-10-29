@@ -31,7 +31,8 @@
 //  - In-place. `applyGameDisplay` mutates the row objects it is given rather
 //    than copying them: data.ts tracks ticket-package rows by object identity
 //    (ticketPackageRows), and a copy would fall out of that set.
-import type { Game, PromoWithTeam, Team } from './types';
+import type { Game, Promo, PromoWithTeam, Team } from './types';
+import type { GameContext } from './data';
 import { formatGameTime } from './format-game-time';
 
 export interface ResolvedGame {
@@ -131,4 +132,35 @@ export function applyGameDisplay<T extends PromoWithTeam>(
     if (!storedOpponent && resolved.opponent) p.displayOpponent = resolved.opponent;
   }
   return rows;
+}
+
+// ── Team page: the same join over the contexts the page already holds ───────
+//
+// A team page loads its season (getGamesForTeam) and resolves every game's
+// opponent (enrichGamesForTeam) before it renders, so the join there costs no
+// read at all: the index is the page's own home contexts and the opponent map
+// is the `opponentTeam` each context already carries. Same resolver, same
+// rules as the cross-team surfaces, so a promo shows the same time on its team
+// page as it does on /promos/today.
+export function applyGameDisplayForTeam(
+  promos: Promo[],
+  team: Pick<Team, 'id' | 'sportSlug'>,
+  contexts: readonly GameContext[],
+): Promo[] {
+  const home = contexts.filter((c) => c.isHome);
+  const index = buildGameIndex(home.map((c) => c.game));
+  const teamsById = new Map<string, Pick<Team, 'name'>>();
+  for (const c of home) if (c.opponentTeam) teamsById.set(c.opponentTeam.id, c.opponentTeam);
+  for (const p of promos) {
+    const storedTime = p.time || '';
+    const storedOpponent = p.opponent || '';
+    p.displayTime = storedTime;
+    p.displayOpponent = storedOpponent;
+    if (storedTime && storedOpponent) continue;
+    const resolved = resolveGameForPromo({ date: p.date, team }, index, teamsById);
+    if (!resolved) continue;
+    if (!storedTime && resolved.time) p.displayTime = resolved.time;
+    if (!storedOpponent && resolved.opponent) p.displayOpponent = resolved.opponent;
+  }
+  return promos;
 }

@@ -39,10 +39,10 @@ test('TicketStubCard and ScoredPromoCard show the joined slots; the scored card 
   );
   assert.ok(stub.includes('7:00 PM') && stub.includes('Penguins'));
   const scored: ScoredPromoWithTeam = { ...joined, promoId: 'x', score: 10, scoreBreakdown: { baseType: 10 } as any, derivedSignals: { itemType: 'generic' } as any, scoredAt: '' };
-  for (const redesign of [true, false]) {
-    const html = renderToStaticMarkup(<ScoredPromoCard promo={scored} rank={1} surface="web_best_promos" redesign={redesign} />);
-    assert.ok(html.includes('7:00 PM'), `time rendered (redesign=${redesign})`);
-    assert.ok(html.includes('Penguins'), `opponent rendered (redesign=${redesign})`);
+  for (const variant of ['light', 'dark'] as const) {
+    const html = renderToStaticMarkup(<ScoredPromoCard promo={scored} trackingSurface="best_promos" ticketsSurface="web_best_promos" variant={variant} />);
+    assert.ok(html.includes('7:00 PM'), `time rendered (${variant})`);
+    assert.ok(html.includes('Penguins'), `opponent rendered (${variant})`);
   }
 });
 

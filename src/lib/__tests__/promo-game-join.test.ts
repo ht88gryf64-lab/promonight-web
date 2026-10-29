@@ -147,3 +147,18 @@ test('withGameDisplay through getPromosInDateRange: one games read, empty slots 
   await withGameDisplay([promo(WILD, '2026-10-30', { time: '7:00 PM', opponent: 'Penguins' })]);
   assert.equal(gamesReads, 0, 'no read when nothing can be filled');
 });
+
+test('applyGameDisplayForTeam: fills from the page\'s own home contexts, away contexts ignored, stored kept', async () => {
+  const { applyGameDisplayForTeam } = await import('../promo-game-join');
+  const homeCtx = { game: GAMES[0], isHome: true, opponentTeam: PENS, opponentVenue: null, promos: [] };
+  // An away game the same night elsewhere must not feed the join.
+  const awayCtx = { game: game({ league: 'nhl', date: '2026-10-31', homeTeamSlug: PENS.id, awayTeamSlug: WILD.id, gameTime: '23:00', gameTimeTz: 'America/New_York' }), isHome: false, opponentTeam: PENS, opponentVenue: null, promos: [] };
+  const empty = { ...promo(WILD, '2026-10-30') } as any; delete empty.team;
+  const awayNight = { ...promo(WILD, '2026-10-31') } as any; delete awayNight.team;
+  const stored = { ...promo(WILD, '2026-10-30', { time: '6:30 PM', opponent: 'Pens' }) } as any; delete stored.team;
+  const rows = applyGameDisplayForTeam([empty, awayNight, stored], WILD, [homeCtx, awayCtx] as any);
+  assert.equal(rows.length, 3);
+  assert.deepEqual([empty.displayTime, empty.displayOpponent], ['7:00 PM', 'Penguins']);
+  assert.deepEqual([awayNight.displayTime, awayNight.displayOpponent], ['', ''], 'no home game that night');
+  assert.deepEqual([stored.displayTime, stored.displayOpponent, stored.time, stored.opponent], ['6:30 PM', 'Pens', '6:30 PM', 'Pens']);
+});
