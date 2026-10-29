@@ -21,7 +21,7 @@ import type {
   DerivedSignals,
 } from './types';
 import { SCORED_LEAGUES, isRegularSeasonGame } from './types';
-import { makeCollectionLoader, type CachedDoc } from './collection-cache';
+import { makeCollectionLoader, makeKeyedTtlCache, type CachedDoc } from './collection-cache';
 import {
   buildWeekBuckets,
   selectWeekContext,
@@ -931,6 +931,43 @@ const loadGamesInDateRange = cache(async (startDate: string, endDate: string): P
   return snap.docs.map(mapGameDoc);
 });
 
+// Process-local TTL copy of a games window, for the one caller that is not an
+// ISR render: /api/my-teams/promos answers a client fetch per visit, so without
+// this every /my-teams view paid the window read again (B7, 2026-10-29).
+// Keyed on the window actually read; the entry outlives the request and is
+// replaced after `ttlMs`. ISR renders do not use it: their regeneration is
+// already the bound, and a stale window there would outlive the page.
+const gamesWindowCaches = new Map<number, (key: string, read: () => Promise<Game[]>) => Promise<Game[]>>();
+function loadGamesInDateRangeCached(startDate: string, endDate: string, ttlMs: number): Promise<Game[]> {
+  let cache = gamesWindowCaches.get(ttlMs);
+  if (!cache) {
+    cache = makeKeyedTtlCache<Game[]>(ttlMs);
+    gamesWindowCaches.set(ttlMs, cache);
+  }
+  return cache(`${startDate}|${endDate}`, () => loadGamesInDateRange(startDate, endDate));
+}
+
+/** Per-team scan stamps for the sitemap: scannerState/{LEAGUE}/hashes/{team}
+ *  .updatedAt, the moment a scan's write plan was last applied to that team.
+ *  Promo docs carry no updatedAt of their own and the team doc no timestamp
+ *  at all, so this is the team's "most recent promo update" (ruling
+ *  2026-10-29). One collection-group read over `hashes`; keyed league|team
+ *  because the hashes also exist under the postseason state docs. Entries
+ *  without a timestamp (CFB's arbitration doc) are skipped. Fails loud like
+ *  the other sitemap reads. */
+export const getTeamScanStamps = cache(async (): Promise<Map<string, Date>> => {
+  const snap = await db.collectionGroup('hashes').get();
+  const out = new Map<string, Date>();
+  for (const d of snap.docs) {
+    const leagueDoc = d.ref.parent.parent;
+    if (!leagueDoc || leagueDoc.parent.id !== 'scannerState') continue;
+    const ts = d.data().updatedAt;
+    if (!ts || typeof ts.toDate !== 'function') continue;
+    out.set(`${leagueDoc.id}|${d.id}`, ts.toDate());
+  }
+  return out;
+});
+
 /** Yesterday in the site's own day (America/New_York), the lower edge of the
  *  games window every withGameDisplay caller shares. */
 export function gameWindowFloorYmd(): string {
@@ -949,6 +986,7 @@ export function gameWindowFloorYmd(): string {
 export async function withGameDisplay<T extends PromoWithTeam>(
   rows: T[],
   floorYmd: string = gameWindowFloorYmd(),
+  opts: { cacheTtlMs?: number } = {},
 ): Promise<T[]> {
   // Lower edge of the window (B5, 2026-10-29): a row dated before yesterday,
   // the site's own day, keeps its stored values and never widens the read.
@@ -966,7 +1004,11 @@ export async function withGameDisplay<T extends PromoWithTeam>(
     if (p.date > end) end = p.date;
   }
   try {
-    const [games, teams] = await Promise.all([loadGamesInDateRange(start, end), getAllTeams()]);
+    const ttl = opts.cacheTtlMs ?? 0;
+    const [games, teams] = await Promise.all([
+      ttl > 0 ? loadGamesInDateRangeCached(start, end, ttl) : loadGamesInDateRange(start, end),
+      getAllTeams(),
+    ]);
     return applyGameDisplay(rows, buildGameIndex(games), new Map(teams.map((t) => [t.id, t])));
   } catch (err) {
     console.error('[withGameDisplay] games read failed; rows keep their stored time and opponent', err);

@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next';
-import { getAllTeams, getPlayoffConfig, getStillAlivePlayoffTeamIds } from '@/lib/data';
+import { getAllTeams, getPlayoffConfig, getStillAlivePlayoffTeamIds, getTeamScanStamps } from '@/lib/data';
 import { getPlayoffsSitemapEntries } from '@/lib/postseason/data';
 import { getIndexableCfbSchoolIds } from '@/lib/cfb/data';
 import { getAllMatchupSlugs } from '@/lib/cfb/matchups';
@@ -10,11 +10,18 @@ import { ABOUT_LAST_REVIEWED } from '@/lib/about-copy';
 const BASE_URL = 'https://www.getpromonight.com';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [teams, playoffConfig] = await Promise.all([
+  const [teams, playoffConfig, scanStamps] = await Promise.all([
     getAllTeams(),
     // Fail-closed: if the playoff config read throws, skip the playoff hub
-    // entry and fall back to default team lastmod for everyone.
+    // entry; a team then falls back to its scan stamp alone.
     getPlayoffConfig().catch(() => null),
+    // Per-team scan stamps (scannerState/{LEAGUE}/hashes/{team}.updatedAt).
+    // FAIL LOUDLY like the venue and CFB reads below: a sitemap whose team
+    // lastmods silently vanished would tell Google nothing changed anywhere.
+    getTeamScanStamps().catch((err) => {
+      console.error('[sitemap] scannerState read failed; refusing to serve a sitemap without team lastmods', err);
+      throw err;
+    }),
   ]);
 
   const now = new Date();
@@ -28,19 +35,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   );
 
   const teamPages = teams.map((t) => {
-    // Active playoff team: lastmod = scanner freshness (playoffUpdatedAt).
-    // Non-playoff team: lastmod = sitemap generation time (existing behavior).
-    //
-    // Using playoffUpdatedAt directly (rather than Math.max(now, playoff))
-    // because `now` always wins that max — scanner timestamps are in the
-    // past. The goal is for Google's lastmod signal to reflect when the
-    // page's playoff content actually changed, which is the scanner run,
-    // not the sitemap regeneration.
+    // lastmod = the team's most recent promo update: the scan stamp for the
+    // team (scannerState/{LEAGUE}/hashes/{team}.updatedAt, written when a
+    // scan's write plan was last applied), falling back to the playoff
+    // scanner stamp for a team still alive in a bracket, and OMITTED when
+    // neither exists. NEVER the build clock (B3, 2026-10-29): until then every
+    // team URL carried the sitemap's own generation time, 314 of 503 URLs
+    // stamped with one build instant, which told Google that every team page
+    // changed on every deploy.
+    const scanStamp = scanStamps.get(`${t.league}|${t.id}`) ?? null;
     const teamLastmod =
-      activePlayoffIds.has(t.id) && playoffUpdatedAt ? playoffUpdatedAt : now;
+      scanStamp ?? (activePlayoffIds.has(t.id) && playoffUpdatedAt ? playoffUpdatedAt : null);
     return {
       url: `${BASE_URL}/${t.sportSlug}/${t.id}`,
-      lastModified: teamLastmod,
+      ...(teamLastmod ? { lastModified: teamLastmod } : {}),
       changeFrequency: 'daily' as const,
       priority: 0.8,
     };

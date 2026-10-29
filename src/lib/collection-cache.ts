@@ -80,3 +80,20 @@ export interface CachedGroupDoc extends CachedDoc {
   /** Id of the grandparent document (e.g. the venueHubs slug for a tenant). */
   parentId: string;
 }
+
+/**
+ * A keyed TTL cache for a read whose argument picks the entry, e.g. a games
+ * window keyed on its date span (data.ts, the /api/my-teams/promos join). The
+ * clock read lives here with the other one, so the today-boundary ratchet
+ * (src/lib/__tests__/today-boundary.test.ts) keeps seeing no clock in data.ts.
+ */
+export function makeKeyedTtlCache<T>(ttlMs: number): (key: string, read: () => Promise<T>) => Promise<T> {
+  const entries = new Map<string, { at: number; value: T }>();
+  return async (key, read) => {
+    const hit = entries.get(key);
+    if (hit && Date.now() - hit.at < ttlMs) return hit.value;
+    const value = await read();
+    entries.set(key, { at: Date.now(), value });
+    return value;
+  };
+}

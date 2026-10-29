@@ -68,19 +68,19 @@ test('HUB, being played: the leagues playing and the round each is in', () => {
   assert.deepEqual(c, {
     title: '2026 Playoffs: MLB and WNBA Brackets',
     canonical: 'https://www.getpromonight.com/playoffs',
-    description: 'The 2026 postseason brackets for MLB and WNBA, series by series, with Eastern game times and upcoming games. MLB: Wild Card Series. WNBA: First Round.',
+    description: 'The 2026 postseason brackets for MLB and WNBA, series by series, with Eastern game times. MLB: Wild Card Series. WNBA: First Round.',
   });
 });
 
-test('HUB, one league finished and one playing: the description is about the one playing', () => {
+test('HUB, one league finished and one playing: both are named, the finished one with its champion', () => {
   const c = hubCopy(2025, ROUTES, [okState(view(FIXTURE.mlbMixed, MIXED_AT)), okState(view(FIXTURE.wnbaFinal, MIXED_AT))]);
-  assert.equal(c.description, 'The 2025 postseason brackets for MLB, series by series, with Eastern game times and upcoming games. MLB: Division Series.');
+  assert.equal(c.description, 'The 2025 postseason brackets for MLB and WNBA, series by series, with Eastern game times. MLB: Division Series. WNBA champion: Las Vegas Aces.');
 });
 
 test('HUB, finished: complete, with no round and no next game', () => {
   const c = hubCopy(2025, ROUTES, [okState(view(FIXTURE.mlbFinal, FINAL_AT)), okState(view(FIXTURE.wnbaFinal, FINAL_AT))]);
-  assert.equal(c.description, 'The 2025 MLB and WNBA postseason is complete. The final brackets, round by round, with each champion.');
-  assert.equal(hubCopy(2025, ROUTES, [okState(view(FIXTURE.mlbFinal, FINAL_AT))]).description, 'The 2025 MLB postseason is complete. The final bracket, round by round, with each champion.');
+  assert.equal(c.description, 'The 2025 MLB and WNBA postseason is complete, the final brackets round by round. MLB champion: Los Angeles Dodgers. WNBA champion: Las Vegas Aces.');
+  assert.equal(hubCopy(2025, ROUTES, [okState(view(FIXTURE.mlbFinal, FINAL_AT))]).description, 'The 2025 MLB postseason is complete, the final bracket round by round. MLB champion: Los Angeles Dodgers.');
 });
 
 test('HUB, offseason: says so, and promises no date', () => {
@@ -94,7 +94,7 @@ test('HUB: there is no "could not be read" state; the type admits only a rendere
   // A read that fails throws before the head is written, so the copy has
   // exactly three branches: playing, complete, and no bracket at all.
   const states: HubLeagueState[] = [okState(view(FIXTURE.mlbFinal, FINAL_AT))];
-  assert.equal(hubCopy(2025, ROUTES, states).description, 'The 2025 MLB postseason is complete. The final bracket, round by round, with each champion.');
+  assert.equal(hubCopy(2025, ROUTES, states).description, 'The 2025 MLB postseason is complete, the final bracket round by round. MLB champion: Los Angeles Dodgers.');
   assert.ok(hubCopy(2026, ROUTES, []).description.startsWith('No postseason is underway.'));
 });
 

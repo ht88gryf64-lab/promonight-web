@@ -78,25 +78,25 @@ test('title: the current name and its topic terms, never "(formerly X)" (ruling 
   // Byte-identical to the same building with no former name.
   assert.equal(renamed, venueHubTitle(hub({ formerNames: [] })));
   assert.ok(renamed.startsWith('Grand Casino Arena Bag Policy'), renamed);
-  assert.ok(renamed.endsWith(' | 2026 Gameday Guide'), renamed);
+  assert.ok(!renamed.includes('Gameday Guide') && !renamed.includes(' | '), renamed);
 });
 
 test('title on a building with vendors: "Bag Policy, Parking & Food" (Matt, 2026-10-07)', async () => {
   const { venueHubTitle } = await load();
   const t = venueHubTitle(hub(), { hasVendors: true });
-  assert.equal(t, 'Grand Casino Arena Bag Policy, Parking & Food | 2026 Gameday Guide');
+  assert.equal(t, 'Grand Casino Arena Bag Policy, Parking & Food');
   assert.equal(venueHubTitle(hub(), { hasVendors: false }), venueHubTitle(hub()), 'no vendors: title unchanged');
   // A college stadium too: the fixed order, not its Parking-first one.
   const cfb = venueHubTitle(hub({ slug: 'tiger-stadium-louisiana', name: 'Tiger Stadium', tenants: [{ teamId: 'lsu', league: 'CFB', tenantKey: 'lsu' }] } as never), { hasVendors: true });
-  assert.equal(cfb, 'Tiger Stadium Bag Policy, Parking & Food | 2026 Gameday Guide');
+  assert.equal(cfb, 'Tiger Stadium Bag Policy, Parking & Food');
   // A held building publishes no topics, vendors or not.
-  assert.equal(venueHubTitle(hub({ verified: false }), { hasVendors: true }), 'Grand Casino Arena | 2026 Gameday Guide');
+  assert.equal(venueHubTitle(hub({ verified: false }), { hasVendors: true }), 'Grand Casino Arena');
 });
 
 test('title on a held renamed building: the current name alone', async () => {
   const { venueHubTitle } = await load();
   const t = venueHubTitle(hub({ slug: 'wells-fargo-center', name: 'Xfinity Mobile Arena', formerNames: ['Wells Fargo Center'], verified: false }));
-  assert.equal(t, 'Xfinity Mobile Arena | 2026 Gameday Guide');
+  assert.equal(t, 'Xfinity Mobile Arena');
 });
 
 test('JSON-LD: alternateName is a string for one former name, an array for several; name stays current', () => {

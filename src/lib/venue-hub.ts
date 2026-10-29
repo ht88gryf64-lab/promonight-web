@@ -1037,10 +1037,14 @@ export function bagCapsule(hub: Pick<VenueHub, 'bagMaxDimensions' | 'clearBagReq
 // Both the <title>/<meta> and the StadiumOrArena JSON-LD read from these so the
 // rendered copy and the structured data stay byte-identical.
 
-// Head budget BEFORE the " | {year} Gameday Guide" suffix. Long CFB stadium
-// names trip this; the guard drops the softest query term rather than truncate
-// a name mid-word (two clean terms beat three with the third cut).
-const TITLE_HEAD_MAX = 60;
+// Field budget for the whole title: the root layout appends " | PromoNight"
+// (13 chars) and the house ceiling is a RENDERED title of 60, so 47 here. The
+// "| {year} Gameday Guide" segment that used to follow the head was dropped on
+// 2026-10-29 (B5): with it, 171 venue titles rendered past 60 in Ahrefs. Long
+// CFB stadium names still trip the budget; the guard drops the softest query
+// term rather than truncate a name mid-word (two clean terms beat three with
+// the third cut).
+const TITLE_HEAD_MAX = 47;
 
 /**
  * Which topics this building actually publishes.
@@ -1111,8 +1115,8 @@ export function venueHubTitle(hub: VenueHub, opts: { hasVendors?: boolean } = {}
   // The title is the CURRENT name only, never "(formerly X)": the H1 and the
   // StadiumOrArena alternateName carry the former name (Matt's ruling,
   // 2026-10-07; website-former-names-spec.md item 2).
-  // A held building publishes nothing, so the head is the building name alone.
-  // The suffix still names the page type, which is not a claim about content.
+  // A held building publishes nothing, so the title is the building name
+  // alone.
   let head = short;
   for (let n = Math.min(terms.length, 3); n >= 1; n--) {
     const candidate = `${short} ${joinTitleTerms(terms.slice(0, n))}`;
@@ -1121,7 +1125,7 @@ export function venueHubTitle(hub: VenueHub, opts: { hasVendors?: boolean } = {}
       break;
     }
   }
-  return `${head} | ${SEASON_YEAR} Gameday Guide`;
+  return head;
 }
 
 function joinTitleTerms(terms: string[]): string {

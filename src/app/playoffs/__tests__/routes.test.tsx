@@ -376,7 +376,7 @@ test('HEAD /playoffs: the three states of the hub', async () => {
   current.db = fakeFirestore(BOTH());
   const playing = (await generateMetadata()) as Meta;
   assert.equal(playing.title, '2026 Playoffs: MLB and WNBA Brackets');
-  assert.equal(playing.description, 'The 2026 postseason brackets for MLB and WNBA, series by series, with Eastern game times and upcoming games. MLB: Wild Card Series. WNBA: First Round.');
+  assert.equal(playing.description, 'The 2026 postseason brackets for MLB and WNBA, series by series, with Eastern game times. MLB: Wild Card Series. WNBA: First Round.');
   assert.equal(playing.alternates?.canonical, 'https://www.getpromonight.com/playoffs');
   assert.equal(playing.openGraph?.url, 'https://www.getpromonight.com/playoffs');
   assert.equal(playing.openGraph?.images?.[0].url, '/og-image.png');
@@ -389,7 +389,7 @@ test('HEAD /playoffs: the three states of the hub', async () => {
   const finalWnba = loadDoc(FIXTURE.wnbaFinal);
   current.db = fakeFirestore({ 'postseasonBrackets/MLB_2026': { ...finalMlb, season: 2026 }, 'postseasonBrackets/WNBA_2026': { ...finalWnba, season: 2026 } });
   const done = (await generateMetadata()) as Meta;
-  assert.equal(done.description, 'The 2026 MLB and WNBA postseason is complete. The final brackets, round by round, with each champion.');
+  assert.equal(done.description, 'The 2026 MLB and WNBA postseason is complete, the final brackets round by round. MLB champion: Los Angeles Dodgers. WNBA champion: Las Vegas Aces.');
 });
 
 test('JSON-LD in the page: a WebPage and a BreadcrumbList on each route, and no Event', async () => {

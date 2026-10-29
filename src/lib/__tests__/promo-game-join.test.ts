@@ -204,3 +204,16 @@ test('withGameDisplay floor: a row dated before yesterday keeps stored values an
   await withGameDisplay([promo(YANKEES, '2026-07-19')], '2026-10-29');
   assert.equal(gamesReads, 0, 'nothing above the floor: no read at all');
 });
+
+test('withGameDisplay cacheTtlMs: the same window is read once within the TTL, and again without one', async () => {
+  const { withGameDisplay } = await import('../data');
+  gamesReads = 0;
+  await withGameDisplay([promo(WILD, '2026-10-30')], '2026-10-29', { cacheTtlMs: 60_000 });
+  await withGameDisplay([promo(WILD, '2026-10-30')], '2026-10-29', { cacheTtlMs: 60_000 });
+  assert.equal(gamesReads, 1, 'second call within the TTL served from the process cache');
+  await withGameDisplay([promo(WILD, '2026-10-30')], '2026-10-29');
+  assert.equal(gamesReads, 2, 'a call without a TTL reads again (ISR renders never use the cache)');
+  const filled = promo(WILD, '2026-10-30');
+  await withGameDisplay([filled], '2026-10-29', { cacheTtlMs: 60_000 });
+  assert.deepEqual([filled.displayTime, filled.displayOpponent], ['7:00 PM', 'Penguins'], 'the cached window still fills the slots');
+});

@@ -155,7 +155,7 @@ test('the title names only the topics the building publishes', async () => {
 test('a held building gets its name and the page type, and promises no content', async () => {
   const { venueHubTitle } = await load();
   const t = venueHubTitle(titleHub({ verified: false }));
-  assert.equal(t, 'X Arena | 2026 Gameday Guide');
+  assert.equal(t, 'X Arena');
   for (const promise of ['Bag Policy', 'Parking', 'Food', 'Gate Times', 'Transit']) {
     assert.ok(!t.includes(promise), `a held hub's title promises ${promise}: ${t}`);
   }

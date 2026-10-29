@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
-import { getAllTeams, withGameDisplay } from '@/lib/data';
+import { gameWindowFloorYmd, getAllTeams, withGameDisplay } from '@/lib/data';
+import { STATIC_TTL_MS } from '@/lib/collection-cache';
 import { resolveIcon } from '@/lib/promo-helpers';
 import type { PromoType, Venue } from '@/lib/types';
 import { isTicketPackageDoc, isTicketPackageLeague } from '@/lib/ticket-packages';
@@ -217,7 +218,11 @@ export async function GET(
     const team = teamById.get(p.teamSlug);
     return team ? [{ ...p, team }] : [];
   });
-  await withGameDisplay(joinRows);
+  // The games window is cached in-process for five minutes, keyed on the
+  // window read (B7, 2026-10-29): this route answers a client fetch per
+  // /my-teams visit, not an ISR regeneration, so without the cache every
+  // visit paid the read again.
+  await withGameDisplay(joinRows, gameWindowFloorYmd(), { cacheTtlMs: STATIC_TTL_MS });
   const joined = new Map(joinRows.map((r) => [`${r.teamSlug}~${r.promoId}`, r]));
   for (const p of promos) {
     const r = joined.get(`${p.teamSlug}~${p.promoId}`);

@@ -45,20 +45,21 @@ export function hubCopy(season: number, routeLeagues: readonly PostseasonLeague[
   const canonical = `${SITE_URL}${HUB_PATH}`;
   const active = leagues.filter((l) => l.view.phase.kind === 'active');
 
-  if (active.length > 0) {
-    const rounds = active.map((l) => `${l.league}: ${l.view.phase.kind === 'active' ? l.view.phase.roundLabel : ''}`).join('. ');
-    return {
-      title,
-      canonical,
-      description: `The ${season} postseason brackets for ${list(active.map((l) => l.league))}, series by series, with Eastern game times and upcoming games. ${rounds}.`,
-    };
-  }
+  // Every league with a bracket this season is named, the finished ones with
+  // their champion (B6, 2026-10-29). Before this the active-season sentence
+  // named only the leagues still playing, so once the WNBA had crowned a
+  // champion the description read as if MLB were the whole postseason.
+  const stateOf = (l: HubLeagueState): string =>
+    l.view.phase.kind === 'active'
+      ? `${l.league}: ${l.view.phase.roundLabel}`
+      : `${l.league} champion: ${l.view.phase.championName}`;
   if (leagues.length > 0) {
-    return {
-      title,
-      canonical,
-      description: `The ${season} ${list(leagues.map((l) => l.league))} postseason is complete. The final ${leagues.length === 1 ? 'bracket' : 'brackets'}, round by round, with each champion.`,
-    };
+    const names = list(leagues.map((l) => l.league));
+    const states = leagues.map(stateOf).join('. ');
+    const lead = active.length > 0
+      ? `The ${season} postseason brackets for ${names}, series by series, with Eastern game times.`
+      : `The ${season} ${names} postseason is complete, the final ${leagues.length === 1 ? 'bracket' : 'brackets'} round by round.`;
+    return { title, canonical, description: `${lead} ${states}.` };
   }
   return {
     title,

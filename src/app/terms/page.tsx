@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <LegalLayout title="Terms of Service" updated="October 7, 2026">
+    <LegalLayout title="Terms of Service" updated="October 29, 2026">
       <p>PromoNight is operated by Kovalik Digital LLC (&quot;we&quot;, &quot;our&quot;). By using the PromoNight website at <a href="https://www.getpromonight.com">getpromonight.com</a> (&quot;the site&quot;) or the PromoNight mobile application (&quot;the app&quot;), you agree to the following terms. If you do not agree, please do not use the site or the app.</p>
 
       <h2>1. Service Description</h2>
@@ -26,7 +26,7 @@ export default function TermsPage() {
       <p>Affiliate relationships do not influence which promotions we display or how they are ranked. We are not responsible for the products, services, pricing, or policies of any third-party site. When you click an affiliate link, you leave PromoNight and are subject to the terms and privacy policies of the third-party platform.</p>
 
       <h2>3a. Advertising</h2>
-      <p>The website may display advertisements served by Google AdSense and other advertising partners. The app shows a small number of ads from Google AdMob, marked &quot;Sponsored&quot;. We do not control the specific ads shown and do not endorse advertised products or services, and advertisers do not influence which promotions we display. Ads are served by third parties; see our <a href="/privacy">Privacy Policy</a> for the data involved and for opt-out information. Clicking an ad takes you to a third-party site governed by its own terms.</p>
+      <p>The website displays advertisements served by Raptive, our display advertising partner, and the ad networks it works with. The app shows a small number of ads from Google AdMob, marked &quot;Sponsored&quot;. We do not control the specific ads shown and do not endorse advertised products or services, and advertisers do not influence which promotions we display. Ads are served by third parties; see our <a href="/privacy">Privacy Policy</a> for the data involved and for opt-out information. Clicking an ad takes you to a third-party site governed by its own terms.</p>
 
       <h2>4. Price</h2>
       <p>The site and the app are free. The app has no subscriptions or in-app purchases; PromoNight is supported by ads and affiliate commissions.</p>
