@@ -9,7 +9,7 @@ import { categoryForPromo } from './categories';
 import { StarToggleInline } from '@/components/star-toggle';
 import type { StarPlacement } from '@/hooks/use-starred-teams';
 import { useUpcomingPromoModal, type UpcomingPromoSurface } from './UpcomingPromoModal';
-import { isPurchaseGated } from '@/lib/promo-helpers';
+import { isPurchaseGated, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
 
 // Ticket-stub promo card for the homepage redesign (docs/homepage-redesign-
 // target.html). Built ALONGSIDE LightHomePromoCard; nothing imports this yet.
@@ -88,6 +88,9 @@ export function TicketStubCard({
   const spine = spineColor(promo.team.primaryColor);
   const spineInk = chipInk(spine);
   const open = () => openModal({ promo, contexts, surface });
+  // Stored value, else the home game's (src/lib/promo-game-join.ts).
+  const displayTime = promoDisplayTime(promo);
+  const displayOpponent = promoDisplayOpponent(promo);
 
   return (
     <div
@@ -146,9 +149,9 @@ export function TicketStubCard({
       {/* Body. */}
       <div className="flex min-w-0 flex-col p-[18px] pb-4">
         <div className="mb-3 flex items-center gap-2">
-          {promo.time && (
+          {displayTime && (
             <span className="font-mono text-[13px] font-semibold tracking-[0.06em] text-rd-ink-soft">
-              {promo.time}
+              {displayTime}
             </span>
           )}
           {promo.highlight && !isPurchaseGated(promo) && (
@@ -184,7 +187,7 @@ export function TicketStubCard({
           <span aria-hidden className="h-[15px] w-[3px] flex-none rounded-[2px]" style={{ background: spine }} />
           <span className="truncate">
             {teamName}
-            {promo.opponent && <span className="text-rd-ink-faint"> vs {promo.opponent}</span>}
+            {displayOpponent && <span className="text-rd-ink-faint"> vs {displayOpponent}</span>}
           </span>
         </div>
 

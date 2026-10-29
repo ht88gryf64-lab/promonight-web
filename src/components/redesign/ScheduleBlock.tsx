@@ -3,6 +3,7 @@ import type { Team } from '@/lib/types';
 import { teamDisplayName } from '@/lib/promo-helpers';
 import { formatGameTime } from '@/lib/format-game-time';
 import { gamesLabel, groupByMonth, regularSeasonContexts, type ScheduleMonth } from '@/lib/schedule-months';
+import { doubleheaderLabels } from '@/lib/doubleheader-labels';
 import { TITLE_SEASON_YEAR } from '@/lib/title-treatment';
 import { currentSeasonLabel, isSplitSeasonLeague } from '@/lib/season-label';
 import { IconChevronDown } from '@tabler/icons-react';
@@ -128,6 +129,8 @@ export function ScheduleBlock({ contexts, team, teamName, today, statusLine }: S
   // Regular season only, one entry per game; see src/lib/schedule-months.ts.
   // The identity on NFL, which the NFL golden test holds byte for byte.
   const regular = regularSeasonContexts(contexts, today);
+  // "Game 1" / "Game 2" for a doubleheader pair; empty for every other row.
+  const gameLabels = doubleheaderLabels(regular);
   const rows = buildRows(regular);
   if (rows.length === 0) return null;
 
@@ -148,7 +151,7 @@ export function ScheduleBlock({ contexts, team, teamName, today, statusLine }: S
         rows={rows as GameRow[]}
         teamName={teamName}
         remaining={remaining}
-        renderRow={(row) => renderGameRow(row, team, teamName, { showPostponed: true })}
+        renderRow={(row) => renderGameRow(row, team, teamName, { showPostponed: true, gameLabels })}
       />
     );
   }
@@ -171,7 +174,7 @@ export function ScheduleBlock({ contexts, team, teamName, today, statusLine }: S
         rows={rows as GameRow[]}
         teamName={teamName}
         remaining={splitRemaining}
-        renderRow={(row) => renderGameRow(row, team, teamName, { hideVenue: true })}
+        renderRow={(row) => renderGameRow(row, team, teamName, { hideVenue: true, gameLabels })}
         seasonName={currentSeasonLabel(team.league)}
         scheduledOnly
         tightTop={!!statusLine}
@@ -257,7 +260,7 @@ export function ScheduleBlock({ contexts, team, teamName, today, statusLine }: S
               );
             }
 
-            return renderGameRow(row, team, teamName);
+            return renderGameRow(row, team, teamName, { gameLabels });
           })}
         </ul>
 
@@ -283,9 +286,12 @@ function renderGameRow(
   row: GameRow,
   team: Team,
   teamName: string,
-  opts: { showPostponed?: boolean; hideVenue?: boolean } = {},
+  opts: { showPostponed?: boolean; hideVenue?: boolean; gameLabels?: ReadonlyMap<string, string> } = {},
 ) {
   const { ctx } = row;
+  // Present only on a doubleheader row, so every other row's props are
+  // exactly what they were (the NFL golden pins them).
+  const gameLabel = opts.gameLabels?.get(ctx.game.id);
   const { game, isHome, opponentTeam } = ctx;
   const oppName = opponentTeam ? teamDisplayName(opponentTeam) : 'TBD';
 
@@ -329,6 +335,7 @@ function renderGameRow(
       kickoffLabel={kickoffLabel}
       venueLabel={venueLabel}
       locationLabel={locationLabel}
+      {...(gameLabel ? { gameLabel } : {})}
       opponentHref={opponentHref}
       opponentName={opponentHref ? oppName : null}
       team={team}

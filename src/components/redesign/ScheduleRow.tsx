@@ -41,6 +41,11 @@ export interface ScheduleRowProps {
   venueLabel: string;
   /** "International, Melbourne" style tag, or null for a domestic game. */
   locationLabel: string | null;
+  /** "Game 1" / "Game 2" when two rows share a date and an opponent (a
+      doubleheader), computed by the parent from src/lib/doubleheader-labels.ts.
+      Omitted entirely for every other row, so the props of a single game are
+      unchanged. */
+  gameLabel?: string;
   /** Away rows only: opponent team-page href + display name for the visible
       anchor under the toggle. Null/omitted renders no anchor (home rows, and
       away rows whose opponent doc is missing). */
@@ -61,6 +66,7 @@ export function ScheduleRow({
   kickoffLabel,
   venueLabel,
   locationLabel,
+  gameLabel,
   opponentHref,
   opponentName,
   team,
@@ -140,6 +146,11 @@ export function ScheduleRow({
             {locationLabel && (
               <span className="inline-flex rounded-full bg-rd-ink/[0.06] px-1.5 py-px font-rd text-[10px] font-semibold uppercase tracking-[0.08em] text-rd-ink-faint">
                 {locationLabel}
+              </span>
+            )}
+            {gameLabel && (
+              <span className="inline-flex rounded-full bg-rd-ink/[0.06] px-1.5 py-px font-rd text-[10px] font-semibold uppercase tracking-[0.08em] text-rd-ink-faint">
+                {gameLabel}
               </span>
             )}
           </span>

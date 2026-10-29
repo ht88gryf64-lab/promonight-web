@@ -176,6 +176,16 @@ export function dedupePromos<T extends { date: string; title: string }>(
 export const isVisiblePromo = (p: { tombstoned?: boolean; isPostseason?: boolean }): boolean =>
   p.tombstoned !== true && p.isPostseason !== true;
 
+// The time and opponent a card SHOWS. `displayTime` / `displayOpponent` carry
+// the stored value or, when that is empty, the home game's value from the games
+// spine (src/lib/promo-game-join.ts). The fallback to the stored field is for
+// objects that never passed through mapPromoDoc (test fixtures, legacy
+// shapes), so a row rendered from one of those is unchanged by the join.
+export const promoDisplayTime = (p: { time?: string; displayTime?: string }): string =>
+  p.displayTime ?? p.time ?? '';
+export const promoDisplayOpponent = (p: { opponent?: string; displayOpponent?: string }): string =>
+  p.displayOpponent ?? p.opponent ?? '';
+
 // ── Section 8 out-of-scope discipline, applied at the RENDER layer ───────────
 //
 // scanner-framework.md section 8: "Specialty ticket packages / experiences —

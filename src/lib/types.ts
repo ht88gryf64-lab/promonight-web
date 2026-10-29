@@ -83,6 +83,16 @@ export interface Promo {
   highlight: boolean;
   icon: string;
   recurring: boolean;
+  // What the time and opponent slots SHOW: the stored value when it is
+  // non-empty, else the home game's value from the games spine (the join in
+  // src/lib/promo-game-join.ts, applied by the cross-team loaders in data.ts),
+  // else ''. The stored `time` / `opponent` above are never overwritten.
+  // Optional on the type so test fixtures and legacy objects still compile;
+  // mapPromoDoc always sets both, and the card components fall back to the
+  // stored field when a slot is absent (promoDisplayTime / promoDisplayOpponent
+  // in src/lib/promo-helpers.ts).
+  displayTime?: string;
+  displayOpponent?: string;
   // Optional scoring + ingest-extended fields. Populated by the
   // promo-pipeline scoring layer (PR #19) on MLB / MLS / WNBA promos.
   // Absent on NBA / NHL promos (not in scoring scope) and on any promo

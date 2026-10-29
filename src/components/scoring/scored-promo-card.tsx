@@ -7,7 +7,7 @@ import { TrackedTapLink } from '../analytics/TrackedTapLink';
 import { TicketsBlock, type TicketsBlockPlacement } from '../affiliates/TicketsBlock';
 import { categoryForPromo } from '../redesign/categories';
 import { ScoreBadge } from './score-badge';
-import { isPurchaseGated } from '@/lib/promo-helpers';
+import { isPurchaseGated, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
 
 type ScoredPromoCardProps = {
   promo: ScoredPromoWithTeam;
@@ -61,6 +61,10 @@ export function ScoredPromoCard({
 }: ScoredPromoCardProps) {
   const { team, derivedSignals } = promo;
   const teamName = teamDisplayName(team);
+  // Stored value, else the home game's (src/lib/promo-game-join.ts). This
+  // card never rendered a time before the join; it now shows one when known.
+  const displayTime = promoDisplayTime(promo);
+  const displayOpponent = promoDisplayOpponent(promo);
   const { day, weekday, month } = formatDateParts(promo.date);
   const itemType = derivedSignals.itemType;
   const quantityCap = derivedSignals.quantityCap;
@@ -102,13 +106,16 @@ export function ScoredPromoCard({
               {itemType && (
                 <span className="font-rd text-[10px] uppercase tracking-[0.08em] text-rd-ink-faint">{itemType}</span>
               )}
+              {displayTime && (
+                <span className="font-rd text-[10px] text-rd-ink-faint">{displayTime}</span>
+              )}
             </div>
             <div className="text-sm font-semibold leading-snug text-rd-ink transition-colors group-hover:text-rd-red">
               {promo.title}
             </div>
             <div className="mt-1 truncate font-rd text-xs text-rd-ink-soft">
               {teamName}
-              {promo.opponent && <span className="text-rd-ink-faint"> vs {promo.opponent}</span>}
+              {displayOpponent && <span className="text-rd-ink-faint"> vs {displayOpponent}</span>}
               <span className="text-rd-ink-faint"> · {team.league}</span>
             </div>
             {(quantityCap || sponsor) && (
@@ -170,14 +177,17 @@ export function ScoredPromoCard({
                 {itemType}
               </span>
             )}
+            {displayTime && (
+              <span className="text-[10px] font-mono text-text-secondary">{displayTime}</span>
+            )}
           </div>
           <div className="text-white font-semibold text-sm group-hover:text-accent-red transition-colors leading-snug">
             {promo.title}
           </div>
           <div className="text-text-secondary text-xs mt-1 truncate">
             {teamName}
-            {promo.opponent && (
-              <span className="text-text-dim"> vs {promo.opponent}</span>
+            {displayOpponent && (
+              <span className="text-text-dim"> vs {displayOpponent}</span>
             )}
             <span className="text-text-dim"> · {team.league}</span>
           </div>

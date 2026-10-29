@@ -3,6 +3,7 @@ import type { GameContext } from '@/lib/data';
 import type { PromoType, Team } from '@/lib/types';
 import { isSoccerJerseyPromo } from '@/lib/soccer-jersey';
 import { categoryFor } from '@/components/redesign/categories';
+import { doubleheaderLabels } from '@/lib/doubleheader-labels';
 
 // Completed fixture rows for the /world-cup retrospective. Server component.
 //
@@ -51,12 +52,15 @@ function PromoBadge({ type, title, soccer }: { type: PromoType; title: string; s
   );
 }
 
-function GameRow({ ctx, league }: { ctx: GameContext; league?: string }) {
+function GameRow({ ctx, league, gameLabel }: { ctx: GameContext; league?: string; gameLabel?: string }) {
   const { weekday, mon, day } = ymd(ctx.game.date);
   const opponent = ctx.opponentTeam?.name ?? ctx.game.awayTeamSlug;
+  // "Game 1" / "Game 2" on a doubleheader pair (src/lib/doubleheader-labels.ts);
+  // absent on every other row, which renders exactly as before.
+  const gameSuffix = gameLabel ? `, ${gameLabel}` : '';
   return (
     <div
-      aria-label={`Completed game, vs ${opponent}, ${weekday} ${mon} ${day}, 2026`}
+      aria-label={`Completed game, vs ${opponent}${gameSuffix}, ${weekday} ${mon} ${day}, 2026`}
       className="flex w-full items-start gap-3 py-2.5 text-left"
     >
       <div className="w-11 shrink-0 text-center">
@@ -65,7 +69,13 @@ function GameRow({ ctx, league }: { ctx: GameContext; league?: string }) {
         <div className="font-rd text-[9px] uppercase tracking-[0.08em] text-rd-ink-faint">{mon}</div>
       </div>
       <div className="min-w-0 flex-1">
-        <div className="font-rd text-sm font-semibold text-rd-ink [overflow-wrap:anywhere]">vs {opponent}</div>
+        <div className="font-rd text-sm font-semibold text-rd-ink [overflow-wrap:anywhere]">vs {opponent}
+          {gameLabel && (
+            <span className="ml-2 inline-flex rounded-full bg-rd-ink/[0.06] px-1.5 py-px font-rd text-[10px] font-semibold uppercase tracking-[0.08em] text-rd-ink-faint align-middle">
+              {gameLabel}
+            </span>
+          )}
+        </div>
         {ctx.promos.length > 0 && (
           <div className="mt-1 flex flex-wrap gap-1.5">
             {ctx.promos.map((p, i) => (
@@ -90,6 +100,7 @@ interface WorldCupGameRowsProps {
 // row fires neither.
 
 export function WorldCupGameRows({ games, team }: WorldCupGameRowsProps) {
+  const gameLabels = doubleheaderLabels(games);
   return (
     <div className="divide-y divide-rd-line border-t border-rd-line">
       {games.map((ctx) => (
@@ -97,6 +108,7 @@ export function WorldCupGameRows({ games, team }: WorldCupGameRowsProps) {
           key={`${ctx.game.date}-${ctx.game.doubleheaderGame ?? 0}`}
           ctx={ctx}
           league={team.league}
+          {...(gameLabels.has(ctx.game.id) ? { gameLabel: gameLabels.get(ctx.game.id) } : {})}
         />
       ))}
     </div>

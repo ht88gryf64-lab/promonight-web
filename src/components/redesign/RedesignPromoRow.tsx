@@ -8,7 +8,7 @@ import { categoryForPromo } from './categories';
 import type { Promo, Team } from '@/lib/types';
 import type { GameContext } from '@/lib/data';
 import { useUpcomingPromoModal, type UpcomingPromoSurface } from './UpcomingPromoModal';
-import { isPurchaseGated } from '@/lib/promo-helpers';
+import { isPurchaseGated, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
 
 // One light-theme promo row (used by the gate-on PromoList for both the
 // server-rendered visible rows and the client lazy-mounted hidden rows). Keeps
@@ -83,6 +83,11 @@ export function RedesignPromoRow({
   const openModal = useUpcomingPromoModal();
   const { day, weekday, month } = formatPromoDate(promo.date);
   const { color, label, Icon, ink } = categoryForPromo(promo);
+  // The slots show the stored value or, when that is empty, the home game's
+  // (src/lib/promo-game-join.ts). Falls back to the stored field for objects
+  // that never passed through mapPromoDoc.
+  const displayTime = promoDisplayTime(promo);
+  const displayOpponent = promoDisplayOpponent(promo);
 
   const shareItem: ShareItem = {
     icon: promo.icon,
@@ -181,17 +186,17 @@ export function RedesignPromoRow({
               HOT
             </span>
           )}
-          {promo.time && (
-            <span className="font-rd text-[10px] text-rd-ink-faint">{promo.time}</span>
+          {displayTime && (
+            <span className="font-rd text-[10px] text-rd-ink-faint">{displayTime}</span>
           )}
         </div>
         <div className="text-sm font-semibold text-rd-ink md:text-base">{promo.title}</div>
         {promo.description && (
           <p className="mt-1 text-xs text-rd-ink-soft md:text-sm">{promo.description}</p>
         )}
-        {promo.opponent && (
+        {displayOpponent && (
           <div className="mt-2 inline-flex items-center gap-1.5 font-rd text-[10px] uppercase tracking-[0.05em] text-rd-ink-faint">
-            vs {promo.opponent}
+            vs {displayOpponent}
           </div>
         )}
         {resaleSlot && <div>{resaleSlot}</div>}

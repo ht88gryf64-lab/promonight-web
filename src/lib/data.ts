@@ -37,6 +37,7 @@ import { VENUE_RESOLUTION_MAP } from './venue-resolution-map';
 import { VENUE_LOCATIONS_STATIC } from './venue-locations';
 import { resolveMlbZone } from './mlb-venue-tz';
 import { gameZoneAbbrev } from './format-game-time';
+import { applyGameDisplay, buildGameIndex, needsGameDisplay } from './promo-game-join';
 import { isSplitSeasonLeague } from './season-label';
 import { groupLeagueTeams, leagueSuperGroups, type HubSuperGroup, type HubTeamGroup } from './hub-grouping';
 import { isTicketPackageDoc, isTicketPackageLeague, partitionTicketPackages } from './ticket-packages';
@@ -122,6 +123,11 @@ export function mapPromoDoc(doc: FirebaseFirestore.DocumentSnapshot): Promo {
     highlight: data.highlight || false,
     icon: resolveIcon(data.title, type, data.icon || ''),
     recurring: data.recurring || false,
+    // Display slots start as the stored values. The cross-team loaders below
+    // run withGameDisplay over their rows, which fills an EMPTY slot from the
+    // home game (src/lib/promo-game-join.ts) and leaves a stored value alone.
+    displayTime: data.time || '',
+    displayOpponent: data.opponent || '',
   };
   // Optional scoring + ingest-extended fields, read defensively. Missing on
   // NBA / NHL promos and on any older docs.
@@ -293,7 +299,7 @@ export async function getPromosForDate(date: string): Promise<PromoWithTeam[]> {
       const team = teamById.get(teamRef.id);
       if (team) results.push(promoWithTeam(doc, team));
     }
-    return dropTicketPackageRows(dedupePromos(results.filter(isVisiblePromo), (p) => p.team.id));
+    return withGameDisplay(dropTicketPackageRows(dedupePromos(results.filter(isVisiblePromo), (p) => p.team.id)));
   } catch {
     const all: PromoWithTeam[] = [];
     await Promise.all(
@@ -309,7 +315,7 @@ export async function getPromosForDate(date: string): Promise<PromoWithTeam[]> {
         }
       })
     );
-    return dropTicketPackageRows(dedupePromos(all.filter(isVisiblePromo), (p) => p.team.id));
+    return withGameDisplay(dropTicketPackageRows(dedupePromos(all.filter(isVisiblePromo), (p) => p.team.id)));
   }
 }
 
@@ -368,7 +374,7 @@ export async function getHighlightedPromos(limit: number = 6): Promise<PromoWith
         results.push(promoWithTeam(doc, mapTeamDoc(teamDoc)));
       }
     }
-    return dropTicketPackageRows(dedupePromos(results.filter(isVisiblePromo), (p) => p.team.id));
+    return withGameDisplay(dropTicketPackageRows(dedupePromos(results.filter(isVisiblePromo), (p) => p.team.id)));
   } catch {
     // Fallback: sample highlighted promos from a few teams
     const teams = await getAllTeams();
@@ -393,7 +399,7 @@ export async function getHighlightedPromos(limit: number = 6): Promise<PromoWith
     );
 
     allHighlighted.sort((a, b) => a.date.localeCompare(b.date));
-    return dropTicketPackageRows(dedupePromos(allHighlighted.filter(isVisiblePromo), (p) => p.team.id)).slice(0, limit);
+    return withGameDisplay(dropTicketPackageRows(dedupePromos(allHighlighted.filter(isVisiblePromo), (p) => p.team.id)).slice(0, limit));
   }
 }
 
@@ -422,7 +428,7 @@ export async function getPromosInDateRange(
         results.push(promoWithTeam(doc, team));
       }
     }
-    return dropTicketPackageRows(dedupePromos(results.filter(isVisiblePromo), (p) => p.team.id));
+    return withGameDisplay(dropTicketPackageRows(dedupePromos(results.filter(isVisiblePromo), (p) => p.team.id)));
   } catch {
     const allPromos: PromoWithTeam[] = [];
     await Promise.all(
@@ -440,7 +446,7 @@ export async function getPromosInDateRange(
       })
     );
     allPromos.sort((a, b) => a.date.localeCompare(b.date));
-    return dropTicketPackageRows(dedupePromos(allPromos.filter(isVisiblePromo), (p) => p.team.id));
+    return withGameDisplay(dropTicketPackageRows(dedupePromos(allPromos.filter(isVisiblePromo), (p) => p.team.id)));
   }
 }
 
@@ -465,7 +471,7 @@ export async function getPromosFromDate(startDate: string): Promise<PromoWithTea
         results.push(promoWithTeam(doc, team));
       }
     }
-    return dropTicketPackageRows(dedupePromos(results.filter(isVisiblePromo), (p) => p.team.id));
+    return withGameDisplay(dropTicketPackageRows(dedupePromos(results.filter(isVisiblePromo), (p) => p.team.id)));
   } catch {
     const allPromos: PromoWithTeam[] = [];
     await Promise.all(
@@ -482,7 +488,7 @@ export async function getPromosFromDate(startDate: string): Promise<PromoWithTea
       })
     );
     allPromos.sort((a, b) => a.date.localeCompare(b.date));
-    return dropTicketPackageRows(dedupePromos(allPromos.filter(isVisiblePromo), (p) => p.team.id));
+    return withGameDisplay(dropTicketPackageRows(dedupePromos(allPromos.filter(isVisiblePromo), (p) => p.team.id)));
   }
 }
 
@@ -913,6 +919,44 @@ function mapGameDoc(doc: FirebaseFirestore.DocumentSnapshot): Game {
 // below), and regularSeasonContexts drops them before the schedule list and
 // the Games tile.
 export const GAME_LEAGUES: readonly string[] = ['mlb', 'nfl', 'nhl', 'nba'];
+
+// ── Promo-to-game join: the one games read per surface ───────────────────────
+//
+// Every games doc dated inside [startDate, endDate], one single-field range
+// query, cached per request on the window so the homepage loaders that share a
+// window share the read. mapGameDoc applies the same zone and NBA-time rules
+// the schedule pages see, so a joined time matches the time a team page shows.
+const loadGamesInDateRange = cache(async (startDate: string, endDate: string): Promise<Game[]> => {
+  const snap = await db.collection('games').where('date', '>=', startDate).where('date', '<=', endDate).get();
+  return snap.docs.map(mapGameDoc);
+});
+
+/**
+ * Fill displayTime / displayOpponent on a loader's rows from the games spine
+ * (src/lib/promo-game-join.ts). The window is the date span of the rows the
+ * join could still improve, so a result set whose rows all carry both values
+ * costs no read at all, and the read is one query per call, never one per
+ * promo. Returns the same array, rows mutated in place (see applyGameDisplay
+ * for why). A failed games read degrades to the stored values and logs: a
+ * missing first pitch must not take /promos/today down with it.
+ */
+export async function withGameDisplay<T extends PromoWithTeam>(rows: T[]): Promise<T[]> {
+  const needs = rows.filter(needsGameDisplay);
+  if (needs.length === 0) return rows;
+  let start = needs[0].date;
+  let end = needs[0].date;
+  for (const p of needs) {
+    if (p.date < start) start = p.date;
+    if (p.date > end) end = p.date;
+  }
+  try {
+    const [games, teams] = await Promise.all([loadGamesInDateRange(start, end), getAllTeams()]);
+    return applyGameDisplay(rows, buildGameIndex(games), new Map(teams.map((t) => [t.id, t])));
+  } catch (err) {
+    console.error('[withGameDisplay] games read failed; rows keep their stored time and opponent', err);
+    return rows;
+  }
+}
 export const getGamesForTeam = cache(async (teamSlug: string, league: string): Promise<Game[]> => {
   if (!GAME_LEAGUES.includes(league)) return [];
   const [homeSnap, awaySnap] = await Promise.all([
@@ -1224,6 +1268,11 @@ async function fetchScoredPromos(
       highlight: data.highlight === true,
       icon: resolveIcon(data.title, type, data.icon || ''),
       recurring: data.recurring === true,
+      // Same display slots as mapPromoDoc (src/lib/types.ts). The /best-promos
+      // loader runs withGameDisplay over its rows afterwards; the per-team top
+      // map does not and shows the stored values.
+      displayTime: data.time || '',
+      displayOpponent: data.opponent || '',
       score: data.score,
       scoreBreakdown: data.scoreBreakdown as ScoreBreakdown,
       derivedSignals: data.derivedSignals as DerivedSignals,
@@ -1239,7 +1288,9 @@ async function fetchScoredPromos(
     if (b.score !== a.score) return b.score - a.score;
     return a.date.localeCompare(b.date);
   });
-  return out;
+  // Only MLB rows can resolve here (MLS and WNBA have no games spine), and
+  // only the ones with an empty slot cost the read; see withGameDisplay.
+  return withGameDisplay(out);
 }
 
 // Returns the top N scored promos in [start, end] across MLB / MLS / WNBA,
@@ -1374,6 +1425,11 @@ export async function getTopPromosPerTeam(
       highlight: data.highlight === true,
       icon: resolveIcon(data.title, type, data.icon || ''),
       recurring: data.recurring === true,
+      // Same display slots as mapPromoDoc (src/lib/types.ts). The /best-promos
+      // loader runs withGameDisplay over its rows afterwards; the per-team top
+      // map does not and shows the stored values.
+      displayTime: data.time || '',
+      displayOpponent: data.opponent || '',
       score: data.score,
       scoreBreakdown: data.scoreBreakdown as ScoreBreakdown,
       derivedSignals: data.derivedSignals as DerivedSignals,
