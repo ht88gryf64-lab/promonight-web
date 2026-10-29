@@ -312,7 +312,7 @@ test('tombstoned before its date: the removed page, indexable, cancelled in the 
   const { h, meta } = await render('nhl', 'minnesota-wild', 'removed-future-poster');
   // PROMO_PAGE_DUMP=1 prints this render's header and image, the Gate A
   // tombstoned evidence: no production row was tombstoned with a slug yet.
-  if (process.env.PROMO_PAGE_DUMP) console.log('[dump removed-future-poster]\n' + h.slice(h.indexOf('<article'), h.indexOf('</figure>') + 9) + '\n[meta] ' + JSON.stringify(meta));
+  if (process.env.PROMO_PAGE_DUMP) console.log('[dump removed-future-poster]\n' + h.slice(h.indexOf('<article'), h.indexOf('</figure>') + 9) + '\n[meta] ' + JSON.stringify(meta) + '\n[jsonld] ' + JSON.stringify(jsonLd(h)));
   assert.match(h, /<h1 class="rd-display[^"]*">Removed Future Poster<\/h1>/);
   assert.match(h, /Removed from the Minnesota Wild schedule on Oct 5, 2026\./);
   assert.match(h, />Removed</);

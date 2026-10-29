@@ -32,11 +32,15 @@ import {
   themeLabel,
 } from '@/lib/promo-page-copy';
 
-// The per-promo page (Phase 3b, 2026-10-29). Section order, spacing, type
-// scale, tile shape and CTA block follow docs/promo-page-mockup.html, drawn
-// with the site's rd-* tokens (Archivo through .rd-display and .rd-numerals,
-// the cream surface, white cards, brand red). The copy in the mockup is
-// example data; every word here comes from the stored row and the team.
+// The per-promo page (Phase 3b, 2026-10-29). Spacing, type scale, tile shape
+// and the CTA block follow docs/promo-page-mockup.html, drawn with the site's
+// rd-* tokens (Archivo through .rd-display and .rd-numerals, the cream
+// surface, white cards, brand red). The copy in the mockup is example data;
+// every word here comes from the stored row and the team. ONE ORDER CHANGE
+// from the mockup, by Gate A ruling (2026-10-29): the CTA row sits above the
+// image, so the primary button clears the 390px fold with the image's
+// height to spare. The order is breadcrumb, badge, H1, game line, CTA row,
+// image, tiles, then the sections.
 //
 // THE ARTICLE IS THE AD WRAPPER (spec Raptive; the same rule as the playoffs
 // pages). It is a real <article> with real height at every width, it carries
@@ -234,36 +238,6 @@ export function PromoPageView({ page, ctx, today }: PromoPageViewProps) {
           ) : null}
         </header>
 
-        <figure className="m-0 mt-4 overflow-hidden rounded-2xl border border-rd-line bg-rd-card">
-          {/* eslint-disable-next-line @next/next/no-img-element -- the tier 1 photo is a stored object whose dimensions are not on the row, and the card is served by our own route; next/image would add a second request and a remote-pattern entry for nothing. */}
-          <img
-            src={image.url}
-            alt={image.alt}
-            width={image.width ?? undefined}
-            height={image.height ?? undefined}
-            loading="eager"
-            decoding="async"
-            className={`block h-[220px] w-full bg-[#ebe4d6] ${image.kind === 'photo' ? 'object-contain' : 'object-cover'}`}
-          />
-          {image.kind === 'photo' ? (
-            <figcaption className="px-3 py-2 font-rd text-[11px] text-rd-ink-faint">
-              <span>{`${image.credit ?? `Image: ${teamName}`}${image.sourceUrl ? ' · ' : ''}`}</span>
-              {image.sourceUrl ? <a href={image.sourceUrl} target="_blank" rel="noopener nofollow" className="text-rd-red">source</a> : null}
-            </figcaption>
-          ) : null}
-        </figure>
-
-        {tiles.length ? (
-          <section className={`mt-4 grid gap-2 ${tiles.length === 3 ? 'grid-cols-3' : tiles.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-            {tiles.map((t) => (
-              <div key={t.label} className="flex flex-col gap-0.5 rounded-xl border border-rd-line bg-rd-card p-2.5">
-                <span className="font-rd text-[10px] uppercase tracking-[0.12em] text-rd-ink-faint">{t.label}</span>
-                <span className={t.numeral ? 'rd-numerals text-[20px] text-rd-ink' : 'font-rd text-[16px] font-bold leading-[1.1] text-rd-ink'}>{t.value}</span>
-              </div>
-            ))}
-          </section>
-        ) : null}
-
         {!removed ? (
           <section className="mt-4 flex flex-col gap-2.5">
             <TrackedAffiliateLink
@@ -326,6 +300,36 @@ export function PromoPageView({ page, ctx, today }: PromoPageViewProps) {
                 Remind me
               </TrackedAppLink>
             </div>
+          </section>
+        ) : null}
+
+        <figure className="m-0 mt-4 overflow-hidden rounded-2xl border border-rd-line bg-rd-card">
+          {/* eslint-disable-next-line @next/next/no-img-element -- the tier 1 photo is a stored object whose dimensions are not on the row, and the card is served by our own route; next/image would add a second request and a remote-pattern entry for nothing. */}
+          <img
+            src={image.url}
+            alt={image.alt}
+            width={image.width ?? undefined}
+            height={image.height ?? undefined}
+            loading="eager"
+            decoding="async"
+            className={`block h-[220px] w-full bg-[#ebe4d6] ${image.kind === 'photo' ? 'object-contain' : 'object-cover'}`}
+          />
+          {image.kind === 'photo' ? (
+            <figcaption className="px-3 py-2 font-rd text-[11px] text-rd-ink-faint">
+              <span>{`${image.credit ?? `Image: ${teamName}`}${image.sourceUrl ? ' · ' : ''}`}</span>
+              {image.sourceUrl ? <a href={image.sourceUrl} target="_blank" rel="noopener nofollow" className="text-rd-red">source</a> : null}
+            </figcaption>
+          ) : null}
+        </figure>
+
+        {tiles.length ? (
+          <section className={`mt-4 grid gap-2 ${tiles.length === 3 ? 'grid-cols-3' : tiles.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            {tiles.map((t) => (
+              <div key={t.label} className="flex flex-col gap-0.5 rounded-xl border border-rd-line bg-rd-card p-2.5">
+                <span className="font-rd text-[10px] uppercase tracking-[0.12em] text-rd-ink-faint">{t.label}</span>
+                <span className={t.numeral ? 'rd-numerals text-[20px] text-rd-ink' : 'font-rd text-[16px] font-bold leading-[1.1] text-rd-ink'}>{t.value}</span>
+              </div>
+            ))}
           </section>
         ) : null}
 

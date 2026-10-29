@@ -22,6 +22,7 @@ import {
   seasonLabelFor,
   storageImageUrl,
   themeLabel,
+  truncateAtSentence,
   truncateAtWord,
   type PromoPageRow,
 } from '../promo-page-copy';
@@ -80,7 +81,7 @@ test('title: {Promo} | {Team} {Mon D, YYYY}, the year dropped past 60 rendered, 
   assert.equal(promoPageTitle('No Date', 'Minnesota Wild', [], '2026-27'), 'No Date | Minnesota Wild');
 });
 
-test('description: the source text, then the game line while it fits, cut at a word at 155', () => {
+test('description: the source text, then the game line, cut at the last sentence boundary under 155', () => {
   const d = promoPageDescription({ description: 'All fans receive a blaze orange hat. Presented by Federal Ammunition.', title: 'Blaze Orange Hat', teamName: 'Minnesota Wild', opponentName: 'Islanders', date: '2026-10-29', venueName: 'Grand Casino Arena' });
   assert.equal(d, 'All fans receive a blaze orange hat. Presented by Federal Ammunition. Minnesota Wild vs Islanders, Oct 29, 2026 at Grand Casino Arena.');
   assert.ok(d.length <= 155);
@@ -90,6 +91,16 @@ test('description: the source text, then the game line while it fits, cut at a w
   assert.equal(promoPageDescription({ description: '', title: 'Blaze Orange Hat', teamName: 'Minnesota Wild', opponentName: '', date: '2026-10-29', venueName: null }), 'Blaze Orange Hat. Minnesota Wild, Oct 29, 2026.');
   assert.match(promoPageDescription({ description: 'First 10,000 fans.', title: 'Mystery Bobblehead', teamName: 'Anaheim Ducks', opponentName: 'Wild', date: '2027-01-05', venueName: null, removed: true }), /^Removed from the Anaheim Ducks schedule\. First 10,000 fans\./);
   assert.equal(truncateAtWord('alpha beta, gamma', 12), 'alpha beta');
+  // The Stars row as stored: the second sentence does not fit, so the cut is
+  // after the first, never "handed out as fans".
+  const stars = promoPageDescription({ description: 'Early arriving fans have the opportunity to grab a one-of-a-kind Esa Lindell bobblehead, courtesy of Ticketmaster. Bobbleheads will be handed out as fans enter the arena.', title: 'Esa Lindell Bobblehead', teamName: 'Dallas Stars', opponentName: 'Panthers', date: '2026-11-15', venueName: 'American Airlines Center' });
+  assert.equal(stars, 'Early arriving fans have the opportunity to grab a one-of-a-kind Esa Lindell bobblehead, courtesy of Ticketmaster.');
+  // Sentence boundaries: abbreviations and initials are not ends.
+  assert.equal(truncateAtSentence('Doors at 5 p.m. sharp. Lines form at St. Paul gates. Arrive early.', 40), 'Doors at 5 p.m. sharp.');
+  assert.equal(truncateAtSentence('Meet J. Smith at the gate. Then go in.', 30), 'Meet J. Smith at the gate.');
+  assert.equal(truncateAtSentence('Short one! Second one? Third.', 22), 'Short one! Second one?');
+  assert.equal(truncateAtSentence('No boundary here at all for a very long first sentence that runs on', 30), 'No boundary here at all for a');
+  assert.equal(truncateAtSentence('Fits.', 155), 'Fits.');
 });
 
 test('image: the stored object through the Firebase download endpoint for tier 1, else the card keyed on promo id and updatedAt', () => {

@@ -187,6 +187,37 @@ export function truncateAtWord(s: string, max: number): string {
   return (lastSpace > 0 ? slice.slice(0, lastSpace) : slice).replace(/[\s,;:]+$/, '');
 }
 
+// A terminator that ends a sentence: . ! or ? followed by a space or the end,
+// unless the word before it is an abbreviation or an initial ("St. Paul",
+// "7 p.m.", "J. Smith"), which is a dot inside a sentence, not its end.
+const ABBREVIATIONS = new Set(['st', 'mt', 'ft', 'dr', 'mr', 'mrs', 'ms', 'jr', 'sr', 'vs', 'no', 'inc', 'co', 'ltd', 'p.m', 'a.m', 'pm', 'am', 'u.s', 'e.g', 'i.e']);
+function sentenceEnds(s: string): number[] {
+  const ends: number[] = [];
+  const re = /[.!?]+(?=\s|$)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(s)) !== null) {
+    const end = m.index + m[0].length;
+    const before = s.slice(0, m.index);
+    const word = (before.match(/(\S+)$/) ?? ['', ''])[1].toLowerCase();
+    if (/^[a-z]$/.test(word) || ABBREVIATIONS.has(word) || ABBREVIATIONS.has(word.replace(/\.$/, ''))) continue;
+    ends.push(end);
+  }
+  return ends;
+}
+
+/**
+ * Trim to the last sentence boundary at or before `max` (Gate A ruling,
+ * 2026-10-29): a description never ends in a fragment. Only when the FIRST
+ * sentence alone is longer than `max` is there no boundary to cut at, and
+ * then the word boundary inside it is the cut.
+ */
+export function truncateAtSentence(s: string, max: number): string {
+  if (s.length <= max) return s;
+  const ends = sentenceEnds(s).filter((e) => e <= max);
+  if (ends.length === 0) return truncateAtWord(s, max);
+  return s.slice(0, ends[ends.length - 1]).trimEnd();
+}
+
 function sentence(s: string): string {
   const t = cleanText(s);
   if (!t) return '';
@@ -217,9 +248,10 @@ export function renderedTitleLength(bareTitle: string): number {
 
 /**
  * The meta description: the source text (the stored description, which the
- * About section shows verbatim), then the game line when it still fits, cut
- * at a word boundary at 155. A promo with no source text gets its name and the
- * game line. A removed promo says so first.
+ * About section shows verbatim), then the game line, cut at the last sentence
+ * boundary under 155 (a word boundary only when the first sentence alone is
+ * longer than that). A promo with no source text gets its name and the game
+ * line. A removed promo says so first.
  */
 export function promoPageDescription(opts: {
   description: string;
@@ -239,8 +271,8 @@ export function promoPageDescription(opts: {
   let out: string;
   if (opts.removed) out = `Removed from the ${opts.teamName} schedule. ${source || sentence(opts.title)}`;
   else if (!source) out = `${sentence(opts.title)} ${tail}`;
-  else out = `${source} ${tail}`.length <= DESCRIPTION_MAX ? `${source} ${tail}` : source;
-  return truncateAtWord(out, DESCRIPTION_MAX);
+  else out = `${source} ${tail}`;
+  return truncateAtSentence(out, DESCRIPTION_MAX);
 }
 
 // ── image by tier (spec Images; brief A.4) ───────────────────────────────────
