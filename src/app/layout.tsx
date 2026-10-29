@@ -155,6 +155,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 })(window, document);`,
           }}
         />
+        {/* The deployment that rendered this HTML (Phase 3b, brief B.8). The
+            pipeline's publish verifier (promo-pipeline/lib/publish-verify.js)
+            reads it from every promo page it checks, and it is site-wide so a
+            served page can always be traced to its deploy. Vercel sets
+            VERCEL_DEPLOYMENT_ID at build and run time; a local render has none
+            and emits no tag rather than an empty one. */}
+        {process.env.VERCEL_DEPLOYMENT_ID ? <meta name="promonight-deploy" content={process.env.VERCEL_DEPLOYMENT_ID} /> : null}
         {/* Impact site verification. Spread bypasses React's typed prop
             check on <meta> so the attribute renders as `value=` exactly
             as Impact's verifier requires (it does not accept `content=`). */}

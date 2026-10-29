@@ -120,6 +120,11 @@ export type AnalyticsSurface =
   // recommendation into the same bucket as the tickets CTA.
   | 'web_team_page_partner'
   | 'web_promo_detail'
+  // A per-promo page (/{league}/{team}/promos/{slug}, Phase 3b) and its
+  // ticket, parking and hotel CTAs. Its own surface so a click from a promo's
+  // page is never counted as a team-page click; the sub-ID is
+  // web_promo_page_{teamId} and the promo rides in promo_id.
+  | 'web_promo_page'
   | 'web_playoffs'
   // A league's bracket page (/playoffs/mlb, /playoffs/wnba). Split from
   // web_playoffs, the hub, so a ticket click from inside a bracket is not
@@ -1464,6 +1469,7 @@ const KNOWN_SURFACE_VALUES = [
   'web_team_page_promolist',
   'web_team_page_partner',
   'web_promo_detail',
+  'web_promo_page',
   'web_playoffs',
   'web_playoffs_league',
   'web_league_index',
