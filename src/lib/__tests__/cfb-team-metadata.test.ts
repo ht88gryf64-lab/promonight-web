@@ -89,3 +89,12 @@ test('an untracked opponent is named from the explicit map', () => {
   assert.equal(prettySchoolId('william-mary'), 'William & Mary');
   assert.equal(prettySchoolId('washington-state'), 'Washington State', 'an id that title-cases correctly is untouched');
 });
+
+test('a trophy-less rivalry with a real name keeps that name in the description', () => {
+  const bigGame = page('California', 'Golden Bears', [{ opp: 'Stanford', rivalry: { name: 'Big Game', trophy: null } }]);
+  assert.match(descOf(bigGame), /Big Game vs Stanford, /);
+  assert.equal(selectFeaturedRivalry(bigGame).name, 'Big Game');
+  // A pair label as the name with no trophy still falls to "the {rival} rivalry".
+  const pairOnly = page('Houston', 'Cougars', [{ opp: 'Texas Tech', rivalry: { name: 'Houston–Texas Tech', trophy: null } }]);
+  assert.match(descOf(pairOnly), /the Texas Tech rivalry, /);
+});

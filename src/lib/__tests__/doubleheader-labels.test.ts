@@ -33,3 +33,16 @@ test('an away pair keys on the home club', () => {
   const labels = doubleheaderLabels([g1, g2]);
   assert.deepEqual([labels.get('a1'), labels.get('a2')], ['Game 1', 'Game 2']);
 });
+
+test('two docs for one game (shared mlbGameId) are not a doubleheader and get no label', () => {
+  const a = ctx('2026-07-19', 'dodgers', { mlbGameId: 823523 });
+  const b = { ...ctx('2026-07-19', 'dodgers', { mlbGameId: 823523, doubleheaderGame: 2 }) };
+  assert.equal(doubleheaderLabels([a, b]).size, 0);
+});
+
+test('a pair that shares a doubleheaderGame number gets no label rather than Game 2 twice', () => {
+  const a = ctx('2026-07-19', 'dodgers', { mlbGameId: 1, doubleheaderGame: 2 });
+  const b = { ...ctx('2026-07-19', 'dodgers', { mlbGameId: 2, doubleheaderGame: 2 }) };
+  b.game = { ...b.game, id: 'other-g2' };
+  assert.equal(doubleheaderLabels([a, b]).size, 0);
+});

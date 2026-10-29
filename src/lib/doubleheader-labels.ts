@@ -30,6 +30,14 @@ export function doubleheaderLabels(contexts: readonly GameContext[]): Map<string
   const labels = new Map<string, string>();
   for (const list of groups.values()) {
     if (list.length < 2) continue;
+    // Two docs for ONE game (a postponed or suspended game listed twice under
+    // its gamePk, known-issues 66 and 67) are not a doubleheader. A pair that
+    // shares an mlbGameId, or shares a doubleheaderGame number, gets no label
+    // rather than "Game 2" twice.
+    const gamePks = list.map((c) => c.game.mlbGameId).filter((n): n is number => typeof n === 'number');
+    if (new Set(gamePks).size !== gamePks.length) continue;
+    const numbers = list.map((c) => c.game.doubleheaderGame).filter((n): n is number => typeof n === 'number');
+    if (new Set(numbers).size !== numbers.length) continue;
     list.sort(byGameOrder);
     list.forEach((c, i) => labels.set(c.game.id, `Game ${c.game.doubleheaderGame ?? i + 1}`));
   }

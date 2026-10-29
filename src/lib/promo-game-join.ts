@@ -26,6 +26,10 @@
 //    not a time), and so does any instant the formatter cannot resolve. NBA
 //    games carry no time by ruling (mapGameDoc blanks it), so an NBA row gains
 //    an opponent only.
+//  - A postponed or canceled game is not a game. The MLB ingest upserts by
+//    date, so a rained-out game's original-date doc stays behind reading
+//    'postponed' with its old first pitch (src/lib/schedule-months.ts rule 2);
+//    the join skips it rather than print a start that will not happen.
 //  - The opponent is the away club's nickname (`Team.name`, "Grizzlies"), the
 //    shape the scanner stores, so a joined value reads like a stored one.
 //  - In-place. `applyGameDisplay` mutates the row objects it is given rather
@@ -79,13 +83,21 @@ export function buildGameIndex(games: readonly Game[]): GameIndex {
 
 // The shape a stored promo time takes ("7:10 PM"). formatGameTime returns the
 // raw "19:10" when it cannot resolve the instant; that is not a display value.
+// Newer ICU builds put a narrow no-break space (U+202F) before AM/PM; the
+// stored promos use a plain space, so the label is normalized to match (the
+// postseason view does the same by assembling parts).
 const CLOCK_RE = /^\d{1,2}:\d{2} [AP]M$/;
+
+/** A clock label in the stored shape, or '' when the input is not one. */
+export function normalizeClockLabel(label: string): string {
+  const plain = label.replace(/\u202F/g, ' ');
+  return CLOCK_RE.test(plain) ? plain : '';
+}
 
 function gameDisplayTime(g: Game): string {
   if (g.timeTbd === true) return '';
   if (!g.gameTime) return '';
-  const label = formatGameTime(g.gameTimeTz, g.gameTime, g.date);
-  return CLOCK_RE.test(label) ? label : '';
+  return normalizeClockLabel(formatGameTime(g.gameTimeTz, g.gameTime, g.date));
 }
 
 /** The home game(s) behind a promo, or null when the spine has none for that
@@ -95,8 +107,10 @@ export function resolveGameForPromo(
   index: GameIndex,
   teamsById: ReadonlyMap<string, Pick<Team, 'name'>>,
 ): ResolvedGame | null {
-  const games = index.get(gameIndexKey(promo.team.sportSlug, promo.date, promo.team.id));
-  if (!games || games.length === 0) return null;
+  const games = (index.get(gameIndexKey(promo.team.sportSlug, promo.date, promo.team.id)) ?? []).filter(
+    (g) => g.status !== 'postponed' && g.status !== 'canceled',
+  );
+  if (games.length === 0) return null;
   const awaySlugs = new Set(games.map((g) => g.awayTeamSlug));
   const opponent = awaySlugs.size === 1 ? (teamsById.get(games[0].awayTeamSlug)?.name ?? '') : '';
   const time = games.length === 1 ? gameDisplayTime(games[0]) : '';

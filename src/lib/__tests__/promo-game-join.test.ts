@@ -107,8 +107,9 @@ function fakeSnap(docs: ReturnType<typeof fakeDoc>[]) {
   return { docs, empty: docs.length === 0, size: docs.length, forEach: (fn: (d: (typeof docs)[number]) => void) => docs.forEach(fn), data: () => ({ count: docs.length }) };
 }
 let gamesReads = 0;
-function query(snap: ReturnType<typeof fakeSnap>, onGet?: () => void): any {
-  const q: any = { where: () => q, orderBy: () => q, limit: () => q, count: () => ({ get: async () => snap }), get: async () => { onGet?.(); return snap; } };
+let gamesWhere: unknown[][] = [];
+function query(snap: ReturnType<typeof fakeSnap>, onGet?: () => void, onWhere?: (args: unknown[]) => void): any {
+  const q: any = { where: (...args: unknown[]) => { onWhere?.(args); return q; }, orderBy: () => q, limit: () => q, count: () => ({ get: async () => snap }), get: async () => { onGet?.(); return snap; } };
   return q;
 }
 const teamDoc = (t: Team) => fakeDoc(t.id, { league: t.league, city: t.city, name: t.name, abbreviation: 'X', primaryColor: 4278190080, secondaryColor: 4278190080, division: 'D' });
@@ -121,7 +122,7 @@ const gameDocs = GAMES.map((g) => fakeDoc(g.id, g as unknown as Data));
 const fakeDb = {
   collection(name: string): any {
     if (name === 'teams') return { get: async () => fakeSnap([teamDoc(WILD), teamDoc(PENS)]), doc: () => ({ get: async () => ({ exists: false, data: () => undefined }), collection: () => query(fakeSnap(promoDocs)) }) };
-    if (name === 'games') return query(fakeSnap(gameDocs), () => { gamesReads++; });
+    if (name === 'games') return query(fakeSnap(gameDocs), () => { gamesReads++; }, (args) => { gamesWhere.push(args); });
     return query(fakeSnap([]));
   },
   collectionGroup(name: string): any {
@@ -137,8 +138,10 @@ test('withGameDisplay through getPromosInDateRange: one games read, empty slots 
   const mapped = mapPromoDoc(promoDocs[1] as any);
   assert.deepEqual([mapped.displayTime, mapped.displayOpponent], ['6:30 PM', 'Pens'], 'mapPromoDoc seeds the slots from the stored values');
   gamesReads = 0;
+  gamesWhere = [];
   const rows = await getPromosInDateRange('2026-10-30', '2026-10-30');
   assert.equal(gamesReads, 1, 'one games read for the window');
+  assert.deepEqual(gamesWhere, [['date', '>=', '2026-10-30'], ['date', '<=', '2026-10-30']], "the window is the rows' own date span, inclusive, start before end");
   const byTitle = new Map(rows.map((r) => [r.title, r]));
   assert.deepEqual([byTitle.get('Empty Slots')!.displayTime, byTitle.get('Empty Slots')!.displayOpponent], ['7:00 PM', 'Penguins']);
   assert.deepEqual([byTitle.get('Empty Slots')!.time, byTitle.get('Empty Slots')!.opponent], ['', ''], 'stored fields untouched');
@@ -161,4 +164,26 @@ test('applyGameDisplayForTeam: fills from the page\'s own home contexts, away co
   assert.deepEqual([empty.displayTime, empty.displayOpponent], ['7:00 PM', 'Penguins']);
   assert.deepEqual([awayNight.displayTime, awayNight.displayOpponent], ['', ''], 'no home game that night');
   assert.deepEqual([stored.displayTime, stored.displayOpponent, stored.time, stored.opponent], ['6:30 PM', 'Pens', '6:30 PM', 'Pens']);
+});
+
+test('resolveGameForPromo: a postponed or canceled doc is not a game; the live twin still resolves', async () => {
+  const { buildGameIndex, resolveGameForPromo } = await import('../promo-game-join');
+  const rainedOut = game({ league: 'mlb', date: '2026-07-20', homeTeamSlug: YANKEES.id, awayTeamSlug: DODGERS.id, gameTime: '23:05', gameTimeTz: 'America/New_York', status: 'postponed' });
+  const canceled = game({ league: 'mlb', date: '2026-07-21', homeTeamSlug: YANKEES.id, awayTeamSlug: DODGERS.id, gameTime: '23:05', gameTimeTz: 'America/New_York', status: 'canceled' });
+  // The makeup written over the original date beside the stale doc.
+  const makeup = game({ league: 'mlb', date: '2026-07-20', homeTeamSlug: YANKEES.id, awayTeamSlug: DODGERS.id, gameTime: '17:05', gameTimeTz: 'America/New_York', doubleheaderGame: 2 });
+  const index = buildGameIndex([rainedOut, canceled, makeup]);
+  const r = resolveGameForPromo(promo(YANKEES, '2026-07-20'), index, TEAMS);
+  assert.ok(r);
+  assert.equal(r.games.length, 1, 'the postponed doc is dropped before the doubleheader rule');
+  assert.equal(r.time, '1:05 PM', 'the one live game gives its time');
+  assert.equal(resolveGameForPromo(promo(YANKEES, '2026-07-21'), index, TEAMS), null, 'a canceled game alone resolves nothing');
+});
+
+test('normalizeClockLabel: narrow no-break space before AM/PM reads as the stored shape; anything else is no time', async () => {
+  const { normalizeClockLabel } = await import('../promo-game-join');
+  assert.equal(normalizeClockLabel('7:10 PM'), '7:10 PM');
+  assert.equal(normalizeClockLabel('7:10 PM'), '7:10 PM');
+  assert.equal(normalizeClockLabel('19:10'), '');
+  assert.equal(normalizeClockLabel(''), '');
 });

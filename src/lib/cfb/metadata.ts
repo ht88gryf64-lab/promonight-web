@@ -99,12 +99,15 @@ export function selectFeaturedRivalry(data: CfbSchoolPage): FeaturedRivalry {
     for (const m of MARQUEE) if (m.re.test(hay) && (!best || m.rank > best.rank)) { best = m; bestTag = t; }
   }
   if (best && bestTag) return { name: best.name, source: 'marquee', rival: bestTag.rival };
-  // No marquee: the first tag whose trophy is a real name, not a pair label.
-  // Formerly `trophy ?? name`, which let a bare "Maryland–Rutgers" through as
-  // the featured name and, when it led the title, doubled the school's own
-  // name ("Maryland Maryland–Rutgers 2026").
-  const trophyTag = tags.find((t) => t.trophy && !isPairLabel(t.trophy, school, t.rival));
-  if (trophyTag) return { name: trophyTag.trophy!, source: 'trophy', rival: trophyTag.rival };
+  // No marquee: the first tag whose label (the trophy, else the rivalry's own
+  // name, so a trophy-less "Big Game" or "Civil War" still counts) is a real
+  // name and not a bare pair label. The old `trophy ?? name` let
+  // "Maryland–Rutgers" through as the featured name and, when it led the
+  // title, doubled the school's own name ("Maryland Maryland–Rutgers 2026").
+  const named = tags
+    .map((t) => ({ label: t.trophy ?? t.name, rival: t.rival }))
+    .find((t) => t.label && !isPairLabel(t.label, school, t.rival));
+  if (named) return { name: named.label, source: 'trophy', rival: named.rival };
   return { name: null, source: 'rivalry', rival: tags[0].rival };
 }
 
