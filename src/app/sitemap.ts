@@ -43,9 +43,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // team URL carried the sitemap's own generation time, 314 of 503 URLs
     // stamped with one build instant, which told Google that every team page
     // changed on every deploy.
+    // A club still in a bracket has two stamps; the later one is when the
+    // page last changed (Gate B ruling, 2026-10-29). Neither: no lastmod.
     const scanStamp = scanStamps.get(`${t.league}|${t.id}`) ?? null;
+    const playoffStamp = activePlayoffIds.has(t.id) && playoffUpdatedAt ? playoffUpdatedAt : null;
     const teamLastmod =
-      scanStamp ?? (activePlayoffIds.has(t.id) && playoffUpdatedAt ? playoffUpdatedAt : null);
+      scanStamp && playoffStamp
+        ? (playoffStamp > scanStamp ? playoffStamp : scanStamp)
+        : (scanStamp ?? playoffStamp);
     return {
       url: `${BASE_URL}/${t.sportSlug}/${t.id}`,
       ...(teamLastmod ? { lastModified: teamLastmod } : {}),
