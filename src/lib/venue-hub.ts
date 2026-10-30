@@ -6,6 +6,7 @@ import { db } from './firebase';
 import type { Promo, Team } from './types';
 import { getTeamBySlug, getTeamPromos, isTicketPackagePromo, promoBoardYMD } from './data';
 import { partitionTicketPackages } from './ticket-packages';
+import { promoPageHref } from './promo-page-href';
 import { getCfbSchool } from './cfb/data';
 import { toAffiliateTeam } from './cfb/page-extras';
 import { collectVenueLinksForTeams, type HubVenueLink, type VenueIndexEntry } from './venue-index';
@@ -902,6 +903,52 @@ export const getVenueHubWeekPromos = cache(async (hub: VenueHub): Promise<VenueH
       a.promo.title.localeCompare(b.promo.title),
   );
   return merged;
+});
+
+// ── next giveaways (Phase 3c, the inbound block after the quick facts) ──────
+export interface VenueHubNextGiveaway {
+  promo: Promo;
+  team: Team;
+  /** The promo's own page, through the one helper (src/lib/promo-page-href.ts). */
+  href: string;
+}
+
+const NEXT_GIVEAWAYS = 3;
+
+/** The next three upcoming giveaways at the building across every pro
+ *  tenant, each with its page link. The SAME per-tenant read as the week
+ *  scroller (getTeamPromos is request-cached, so a page that renders both
+ *  reads each tenant once). Giveaways only, so the heading "Next giveaways
+ *  here" is true of every row; a row the helper will not link (no page,
+ *  dateless, or the flag off) is left out rather than shown unlinked, so the
+ *  block is empty, and omitted, until the pages exist. */
+export const getVenueHubNextGiveaways = cache(async (hub: VenueHub): Promise<VenueHubNextGiveaway[]> => {
+  const today = promoBoardYMD(0);
+  const seen = new Set<string>();
+  const proTenants = hub.tenants.filter((t) => {
+    if (!t?.teamId || t.league === 'CFB' || seen.has(t.teamId)) return false;
+    seen.add(t.teamId);
+    return true;
+  });
+  if (proTenants.length === 0) return [];
+  const perTenant = await Promise.all(
+    proTenants.map(async (t) => {
+      const [team, allPromos] = await Promise.all([getTeamBySlug(t.teamId), getTeamPromos(t.teamId)]);
+      if (!team) return [];
+      const { promos } = partitionTicketPackages(allPromos, isTicketPackagePromo, team.league);
+      const out: VenueHubNextGiveaway[] = [];
+      for (const promo of promos) {
+        if (promo.date < today || !(promo.type === 'giveaway' || promo.isGiveaway === true)) continue;
+        const href = promoPageHref(promo, team);
+        if (href) out.push({ promo, team, href });
+      }
+      return out;
+    }),
+  );
+  return perTenant
+    .flat()
+    .sort((a, b) => a.promo.date.localeCompare(b.promo.date) || a.team.id.localeCompare(b.team.id) || a.promo.title.localeCompare(b.promo.title))
+    .slice(0, NEXT_GIVEAWAYS);
 });
 
 // ── season year (deliberate, never getFullYear) ─────────────────────────────

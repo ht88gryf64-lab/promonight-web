@@ -8,7 +8,9 @@ import { categoryForPromo } from './categories';
 import { StarToggleInline } from '@/components/star-toggle';
 import type { StarPlacement } from '@/hooks/use-starred-teams';
 import { useUpcomingPromoModal, type UpcomingPromoSurface } from './UpcomingPromoModal';
-import { isPurchaseGated } from '@/lib/promo-helpers';
+import { isPurchaseGated, synthPromoId } from '@/lib/promo-helpers';
+import { promoPageHref } from '@/lib/promo-page-href';
+import { PromoPageLink } from '@/components/promo-page-link';
 
 // Light-house promo card for the redesigned homepage Tonight + This Week
 // sections. Visually it matches the team-page RedesignPromoRow (date column,
@@ -44,6 +46,9 @@ export function LightHomePromoCard({
   const { color, ink, label, Icon } = categoryForPromo(promo);
   const teamName = teamDisplayName(promo.team);
   const open = () => openModal({ promo, contexts, surface });
+  // The title links to the promo's own page when it has one (Phase 3c); the
+  // rest of the card still opens the modal. Null leaves the card as it was.
+  const pageHref = promoPageHref(promo);
 
   return (
     <div
@@ -88,7 +93,20 @@ export function LightHomePromoCard({
             {promoDisplayTime(promo) && <span className="font-rd text-[10px] text-rd-ink-faint">{promoDisplayTime(promo)}</span>}
           </div>
           <div className="line-clamp-2 text-sm font-semibold text-rd-ink transition-colors group-hover:text-rd-red md:text-base">
-            {promo.title}
+            {pageHref ? (
+              <PromoPageLink
+                href={pageHref}
+                surface={surface}
+                teamSlug={promo.team.id}
+                promoId={synthPromoId(promo.team.id, promo)}
+                onClick={(e) => e.stopPropagation()}
+                className="focus-visible:outline-none focus-visible:underline"
+              >
+                {promo.title}
+              </PromoPageLink>
+            ) : (
+              promo.title
+            )}
           </div>
           <div className="mt-1 truncate font-rd text-xs text-rd-ink-soft">
             {teamName}

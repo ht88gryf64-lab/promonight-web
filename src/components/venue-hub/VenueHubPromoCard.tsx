@@ -4,6 +4,7 @@ import type { MouseEvent } from 'react';
 import type { Promo, Team } from '@/lib/types';
 import { RedesignPromoRow, type PromoRowShare } from '@/components/redesign/RedesignPromoRow';
 import { promoAnchorId, synthPromoId, teamDisplayName } from '@/lib/promo-helpers';
+import { promoPageHref } from '@/lib/promo-page-href';
 import { track, normalizeSport } from '@/lib/analytics';
 
 // One card in the venue hub "Promos this week" scroller. The card itself IS the
@@ -36,7 +37,8 @@ export function VenueHubPromoCard({
    *  pass false and the card renders exactly as it does site-wide. */
   showTeamMarker: boolean;
 }) {
-  const href = `/${team.sportSlug}/${team.id}#promo-${promoAnchorId(promo)}`;
+  // The promo's own page (Phase 3c) when it has one, else the team-page anchor.
+  const href = promoPageHref(promo, team) ?? `/${team.sportSlug}/${team.id}#promo-${promoAnchorId(promo)}`;
 
   const share: PromoRowShare = {
     teamName: teamDisplayName(team),
@@ -95,7 +97,7 @@ export function VenueHubPromoCard({
           </span>
         </div>
       ) : null}
-      <RedesignPromoRow promo={promo} share={share} href={href} />
+      <RedesignPromoRow promo={promo} share={share} href={href} linkSurface="web_venue" />
     </div>
   );
 }

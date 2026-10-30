@@ -44,6 +44,10 @@ export type AnalyticsEvent =
   | 'venue_hub_promo_click'
   | 'app_download_click'
   | 'promo_card_tap'
+  // A click on a promo name that leads to the promo's own page (Phase 3c):
+  // every inbound surface (team rows, the aggregators, the homepage cards and
+  // ribbon, the venue block, /best-promos) fires it through PromoPageLink.
+  | 'promo_link_click'
   | 'tonight_card_tap'
   | 'this_week_card_tap'
   | 'team_page_engaged'
@@ -424,6 +428,19 @@ export type PromoCardTapProperties = {
   team_slug: string;
   sport?: Sport;
   promo_type: string;
+};
+
+// promo_link_click: the inbound link into a per-promo page (Phase 3c). The
+// surface is the page the click happened on; team_slug and promo_id name the
+// promo (promo_id is the synthetic team:date:title id the other promo events
+// carry, src/lib/promo-helpers.ts synthPromoId, so the three join);
+// destination_url is the promo page path. Pages-per-session reads pair it
+// with page_view rows whose surface is web_promo_page.
+export type PromoLinkClickProperties = {
+  surface: AnalyticsSurface;
+  team_slug: string;
+  promo_id: string;
+  destination_url: string;
 };
 
 // Hero "Tonight" rail — fires when a tonight/tonight+tomorrow/coming-up card
@@ -1019,6 +1036,7 @@ export type EventPropertiesMap = {
   affiliate_click: AffiliateClickProperties;
   app_download_click: AppDownloadClickProperties;
   promo_card_tap: PromoCardTapProperties;
+  promo_link_click: PromoLinkClickProperties;
   tonight_card_tap: TonightCardTapProperties;
   this_week_card_tap: ThisWeekCardTapProperties;
   team_page_engaged: TeamPageEngagedProperties;
@@ -1584,6 +1602,12 @@ export function inferSurfaceFromPath(path: string): AnalyticsSurface {
   if (path === '/nhl') return 'web_nhl_hub';
   // And bare /nba, for the same reason ('nba' is in the allowlist below).
   if (path === '/nba') return 'web_nba_hub';
+  // A per-promo page, /{league}/{team}/promos/{slug} (Phase 3b): its own
+  // page type on page_view, web_promo_page, the surface its CTAs already
+  // carry. MUST precede the generic sport match below, which would otherwise
+  // count every promo page view as a team page view (the path has a second
+  // segment). Nothing typechecks this branch.
+  if (/^\/(?:mlb|nba|nhl|nfl|mls|wnba)\/[a-z0-9-]+\/promos\/[a-z0-9-]+\/?$/.test(path)) return 'web_promo_page';
   // /[sport]/[team] — team pages. Sports are known; anything else falls through.
   const m = path.match(/^\/([a-z]+)(?:\/|$)/);
   if (m && ['mlb', 'nba', 'nhl', 'nfl', 'mls', 'wnba'].includes(m[1])) {

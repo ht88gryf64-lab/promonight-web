@@ -8,7 +8,10 @@ import { categoryForPromo } from './categories';
 import type { Promo, Team } from '@/lib/types';
 import type { GameContext } from '@/lib/data';
 import { useUpcomingPromoModal, type UpcomingPromoSurface } from './UpcomingPromoModal';
-import { isPurchaseGated, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
+import { isPurchaseGated, promoDisplayOpponent, promoDisplayTime, synthPromoId } from '@/lib/promo-helpers';
+import { promoPageHref } from '@/lib/promo-page-href';
+import { PromoPageLink } from '@/components/promo-page-link';
+import type { AnalyticsSurface } from '@/lib/analytics';
 
 // One light-theme promo row (used by the gate-on PromoList for both the
 // server-rendered visible rows and the client lazy-mounted hidden rows). Keeps
@@ -48,6 +51,7 @@ export function RedesignPromoRow({
   anchorId,
   href,
   adItem,
+  linkSurface,
 }: {
   promo: Promo;
   share: PromoRowShare;
@@ -75,6 +79,10 @@ export function RedesignPromoRow({
    *  ShareButton stays above the overlay, so sharing still works; any appended
    *  CTA row is rendered outside the row and is unaffected. */
   href?: string;
+  /** The surface promo_link_click reports when the title (or, in `href` mode,
+   *  the overlay) leads to the promo's own page (Phase 3c). Defaults to
+   *  `surface`, the team-page list; the cross-team hosts name their own. */
+  linkSurface?: AnalyticsSurface;
   /** Ad-placement item type, supplied by the host page. Only the hosts inside
    * the selector-hook scope pass it (team page promo list, /promos/today), so
    * the venue-hub and home-page rows get no item without an enclosing region. */
@@ -108,12 +116,25 @@ export function RedesignPromoRow({
     if (team) openModal({ promo: { ...promo, team }, contexts: contexts ?? null, surface });
   };
 
+  // The promo's own page (Phase 3c), through the one helper. Null while the
+  // flag is off or the row may not be linked, and then nothing below changes.
+  // In `href` mode the host passes the same value as `href` (or its team
+  // anchor fallback), so the overlay is the page link; otherwise the title is.
+  const pageHref = promoPageHref(promo, { id: share.teamSlug, sportSlug: share.sport });
+  const overlayIsPage = !!href && href === pageHref;
+  const titleIsPage = !href && !!pageHref;
+  const clickSurface: AnalyticsSurface = linkSurface ?? surface;
+  const promoKey = synthPromoId(share.teamSlug, promo);
+
   const interactiveProps = openable
     ? {
         role: 'button' as const,
         tabIndex: 0,
         onClick: open,
         onKeyDown: (e: React.KeyboardEvent) => {
+          // Keydowns from the title link bubble here; Enter on it must follow
+          // the link, not open the modal (LightHomePromoCard's guard).
+          if (e.target !== e.currentTarget) return;
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             open();
@@ -146,13 +167,26 @@ export function RedesignPromoRow({
       {/* Stretched deep-link overlay. Positioned first in DOM so the ShareButton
           (a later positioned sibling) paints above it and stays clickable; the
           static row content sits below it, so a body tap navigates. */}
-      {href && (
+      {href && overlayIsPage ? (
+        <PromoPageLink
+          href={href}
+          surface={clickSurface}
+          teamSlug={share.teamSlug}
+          promoId={promoKey}
+          className="absolute inset-0 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rd-red focus-visible:ring-offset-2"
+        >
+          {/* The promo name as the anchor text (the inbound-link rule), read
+              by crawlers and by assistive tech alike; visually the overlay
+              stays empty. */}
+          <span className="sr-only">{promo.title}</span>
+        </PromoPageLink>
+      ) : href ? (
         <Link
           href={href}
           aria-label={promo.title}
           className="absolute inset-0 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rd-red focus-visible:ring-offset-2"
         />
-      )}
+      ) : null}
       <ShareButton
         item={shareItem}
         placement="promo_card"
@@ -190,7 +224,24 @@ export function RedesignPromoRow({
             <span className="font-rd text-[10px] text-rd-ink-faint">{displayTime}</span>
           )}
         </div>
-        <div className="text-sm font-semibold text-rd-ink md:text-base">{promo.title}</div>
+        {titleIsPage ? (
+          <div className="text-sm font-semibold text-rd-ink md:text-base">
+            {/* The title is the link (anchor text = the promo name); the
+                click stops here so the row's modal does not open under it. */}
+            <PromoPageLink
+              href={pageHref}
+              surface={clickSurface}
+              teamSlug={share.teamSlug}
+              promoId={promoKey}
+              onClick={(e) => e.stopPropagation()}
+              className="transition-colors hover:text-rd-red focus-visible:outline-none focus-visible:underline"
+            >
+              {promo.title}
+            </PromoPageLink>
+          </div>
+        ) : (
+          <div className="text-sm font-semibold text-rd-ink md:text-base">{promo.title}</div>
+        )}
         {promo.description && (
           <p className="mt-1 text-xs text-rd-ink-soft md:text-sm">{promo.description}</p>
         )}

@@ -285,13 +285,14 @@ export const EMAIL_SURFACE_GENERIC = 'web_email_generic';
 // this surface so its ticket clicks separate from the other two variants.
 export const EMAIL_SURFACE_EMPTY = 'web_email_empty';
 
-// Team-page URL for a promo, tagged with the email surface via the subId1
+// The row's URL: the promo's own page when it has one, else the team page
+// (DigestPromo.href, Phase 3c), tagged with the email surface via the subId1
 // `${surface}_${team.id}` convention. team.id already sits in the path; keeping
 // it in the subId1 value too makes the token byte-identical to the affiliate
-// subId1 so both join on one key. Sport slugs and team ids are lowercase-hyphen,
-// so the value is already URL-safe.
+// subId1 so both join on one key. Sport slugs, team ids and page slugs are
+// lowercase-hyphen, so the value is already URL-safe.
 function teamPromoUrl(p: DigestPromo, surface: string): string {
-  return `${SITE_URL}/${p.sportSlug}/${p.teamId}?subId1=${surface}_${p.teamId}`;
+  return `${SITE_URL}${p.href}?subId1=${surface}_${p.teamId}`;
 }
 
 function promoRowHtml(p: DigestPromo, surface: string): string {

@@ -25,6 +25,9 @@ export interface RssItemInput {
   date: string;
   opponent?: string | null;
   venue?: string | null;
+  /** Root-relative path of the promo's own page when it has one (Phase 3c);
+   *  the item's link then points there instead of at the team page. */
+  pageHref?: string | null;
 }
 
 export function escapeXml(value: string): string {
@@ -78,8 +81,11 @@ export function teamPageUrl(sportSlug: string, teamId: string): string {
   return `${SITE_URL}/${sportSlug}/${teamId}`;
 }
 
-export function itemLink(item: Pick<RssItemInput, 'promoId' | 'sportSlug' | 'teamId'>): string {
-  return buildUtmUrl(teamPageUrl(item.sportSlug, item.teamId), {
+/** The item's link: the promo's own page when it has one (Phase 3c), else
+ *  the team page, with the feed's utm set either way. The guid is the feed
+ *  key and does not move with the link. */
+export function itemLink(item: Pick<RssItemInput, 'promoId' | 'sportSlug' | 'teamId' | 'pageHref'>): string {
+  return buildUtmUrl(item.pageHref ? `${SITE_URL}${item.pageHref}` : teamPageUrl(item.sportSlug, item.teamId), {
     source: 'promonight_feed',
     medium: 'social',
     campaign: 'social_rss',

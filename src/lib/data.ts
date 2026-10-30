@@ -38,6 +38,7 @@ import { VENUE_LOCATIONS_STATIC } from './venue-locations';
 import { resolveMlbZone } from './mlb-venue-tz';
 import { gameZoneAbbrev } from './format-game-time';
 import { applyGameDisplay, buildGameIndex, needsGameDisplay } from './promo-game-join';
+import { attachPromoPageFields, stampPromoPageCanonical } from './promo-page-stamp';
 import { isSplitSeasonLeague } from './season-label';
 import { groupLeagueTeams, leagueSuperGroups, type HubSuperGroup, type HubTeamGroup } from './hub-grouping';
 import { isTicketPackageDoc, isTicketPackageLeague, partitionTicketPackages } from './ticket-packages';
@@ -152,7 +153,22 @@ export function mapPromoDoc(doc: FirebaseFirestore.DocumentSnapshot): Promo {
   // The postseason marker rides through the same way, so isVisiblePromo can
   // keep these rows off every regular surface.
   if (data.isPostseason === true) promo.isPostseason = true;
+  // The per-promo page link fields, only while PROMO_PAGES_LIVE is on
+  // (src/lib/promo-page-stamp.ts): the mapper is where a doc field is gated
+  // before it reaches a client component.
+  attachPromoPageFields(promo, data);
   return promo;
+}
+
+/** The canonical stamp over a cross-team reader's finished rows (Phase 3c).
+ *  The date-window readers read every team's rows on each date, so the
+ *  losers are known here. getHighlightedPromos reads highlighted rows only:
+ *  a highlighted loser whose winner is not highlighted keeps its own slug
+ *  there, and its page points rel=canonical at the winner (the scored
+ *  loader's caveat, src/lib/promo-page-stamp.ts). A no-op while the flag is
+ *  off. */
+function linkPromoPages<T extends PromoWithTeam>(rows: T[]): T[] {
+  return stampPromoPageCanonical(rows, (p) => p.team);
 }
 
 // ── Static-collection loaders ───────────────────────────────────────────────
@@ -241,7 +257,12 @@ export function isTicketPackagePromo(p: Promo): boolean {
  * same-date same-title pair is the same row on both (WEB6 G2).
  */
 function promoWithTeam(doc: FirebaseFirestore.DocumentSnapshot, team: Team): PromoWithTeam {
-  const row: PromoWithTeam = { ...mapPromoDoc(doc), team };
+  // The team is ASSIGNED, not spread onto a copy: the canonical stamp
+  // (src/lib/promo-page-stamp.ts) keeps the row's image tier and package flag
+  // by object identity, and a spread here would hand every cross-team reader
+  // a row that has lost both (review finding 1, 2026-10-30).
+  const row = mapPromoDoc(doc) as PromoWithTeam;
+  row.team = team;
   if (isTicketPackageDoc(doc.data())) ticketPackageRows.add(row);
   return row;
 }
@@ -282,7 +303,13 @@ export const getTeamPromos = cache(async (teamId: string): Promise<Promo[]> => {
     .collection('promos')
     .orderBy('date', 'asc')
     .get();
-  return dedupePromos(snapshot.docs.map(mapPromoDocNotingPackage).filter(isVisiblePromo));
+  const rows = dedupePromos(snapshot.docs.map(mapPromoDocNotingPackage).filter(isVisiblePromo));
+  // The canonical stamp (Phase 3c) over the team's own rows, the same set the
+  // page's lists draw from. Only when some row carries a slug (the flag is
+  // on), so the flag-off path makes exactly the reads it made before.
+  if (!rows.some((r) => r.pageSlug)) return rows;
+  const league = (await getTeamBySlug(teamId))?.league ?? '';
+  return stampPromoPageCanonical(rows, () => ({ id: teamId, league }));
 });
 
 export async function getPromosForDate(date: string): Promise<PromoWithTeam[]> {
@@ -299,7 +326,7 @@ export async function getPromosForDate(date: string): Promise<PromoWithTeam[]> {
       const team = teamById.get(teamRef.id);
       if (team) results.push(promoWithTeam(doc, team));
     }
-    return withGameDisplay(dropTicketPackageRows(dedupePromos(results.filter(isVisiblePromo), (p) => p.team.id)));
+    return withGameDisplay(linkPromoPages(dropTicketPackageRows(dedupePromos(results.filter(isVisiblePromo), (p) => p.team.id))));
   } catch {
     const all: PromoWithTeam[] = [];
     await Promise.all(
@@ -315,7 +342,7 @@ export async function getPromosForDate(date: string): Promise<PromoWithTeam[]> {
         }
       })
     );
-    return withGameDisplay(dropTicketPackageRows(dedupePromos(all.filter(isVisiblePromo), (p) => p.team.id)));
+    return withGameDisplay(linkPromoPages(dropTicketPackageRows(dedupePromos(all.filter(isVisiblePromo), (p) => p.team.id))));
   }
 }
 
@@ -374,7 +401,7 @@ export async function getHighlightedPromos(limit: number = 6): Promise<PromoWith
         results.push(promoWithTeam(doc, mapTeamDoc(teamDoc)));
       }
     }
-    return withGameDisplay(dropTicketPackageRows(dedupePromos(results.filter(isVisiblePromo), (p) => p.team.id)));
+    return withGameDisplay(linkPromoPages(dropTicketPackageRows(dedupePromos(results.filter(isVisiblePromo), (p) => p.team.id))));
   } catch {
     // Fallback: sample highlighted promos from a few teams
     const teams = await getAllTeams();
@@ -399,7 +426,7 @@ export async function getHighlightedPromos(limit: number = 6): Promise<PromoWith
     );
 
     allHighlighted.sort((a, b) => a.date.localeCompare(b.date));
-    return withGameDisplay(dropTicketPackageRows(dedupePromos(allHighlighted.filter(isVisiblePromo), (p) => p.team.id)).slice(0, limit));
+    return withGameDisplay(linkPromoPages(dropTicketPackageRows(dedupePromos(allHighlighted.filter(isVisiblePromo), (p) => p.team.id))).slice(0, limit));
   }
 }
 
@@ -428,7 +455,7 @@ export async function getPromosInDateRange(
         results.push(promoWithTeam(doc, team));
       }
     }
-    return withGameDisplay(dropTicketPackageRows(dedupePromos(results.filter(isVisiblePromo), (p) => p.team.id)));
+    return withGameDisplay(linkPromoPages(dropTicketPackageRows(dedupePromos(results.filter(isVisiblePromo), (p) => p.team.id))));
   } catch {
     const allPromos: PromoWithTeam[] = [];
     await Promise.all(
@@ -446,7 +473,7 @@ export async function getPromosInDateRange(
       })
     );
     allPromos.sort((a, b) => a.date.localeCompare(b.date));
-    return withGameDisplay(dropTicketPackageRows(dedupePromos(allPromos.filter(isVisiblePromo), (p) => p.team.id)));
+    return withGameDisplay(linkPromoPages(dropTicketPackageRows(dedupePromos(allPromos.filter(isVisiblePromo), (p) => p.team.id))));
   }
 }
 
@@ -471,7 +498,7 @@ export async function getPromosFromDate(startDate: string): Promise<PromoWithTea
         results.push(promoWithTeam(doc, team));
       }
     }
-    return withGameDisplay(dropTicketPackageRows(dedupePromos(results.filter(isVisiblePromo), (p) => p.team.id)));
+    return withGameDisplay(linkPromoPages(dropTicketPackageRows(dedupePromos(results.filter(isVisiblePromo), (p) => p.team.id))));
   } catch {
     const allPromos: PromoWithTeam[] = [];
     await Promise.all(
@@ -488,7 +515,7 @@ export async function getPromosFromDate(startDate: string): Promise<PromoWithTea
       })
     );
     allPromos.sort((a, b) => a.date.localeCompare(b.date));
-    return withGameDisplay(dropTicketPackageRows(dedupePromos(allPromos.filter(isVisiblePromo), (p) => p.team.id)));
+    return withGameDisplay(linkPromoPages(dropTicketPackageRows(dedupePromos(allPromos.filter(isVisiblePromo), (p) => p.team.id))));
   }
 }
 
@@ -1314,7 +1341,7 @@ async function fetchScoredPromos(
       scoredAtIso = data.scoredAt;
     }
 
-    out.push({
+    out.push(attachPromoPageFields({
       promoId: doc.id,
       team,
       date: data.date,
@@ -1338,8 +1365,12 @@ async function fetchScoredPromos(
       attendanceCap: data.attendanceCap ?? null,
       presentedBy: data.presentedBy ?? null,
       whileSuppliesLast: data.whileSuppliesLast === true,
-    });
+    }, data));
   }
+  // The canonical stamp (Phase 3c) over the scored rows. Scored rows only, so
+  // a loser whose winner is unscored keeps its own slug here; its page points
+  // rel=canonical at the winner (src/lib/promo-page-stamp.ts).
+  linkPromoPages(out);
 
   // Sort by score desc with date asc as tiebreaker, then cap.
   out.sort((a, b) => {

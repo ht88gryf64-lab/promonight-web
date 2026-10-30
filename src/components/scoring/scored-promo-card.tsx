@@ -1,7 +1,9 @@
 import { IconFlame } from '@tabler/icons-react';
 import type { ScoredPromoWithTeam } from '@/lib/types';
 import type { AnalyticsSurface, ScoringPageSurface } from '@/lib/analytics';
-import { teamDisplayName, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
+import { teamDisplayName, promoDisplayOpponent, promoDisplayTime, synthPromoId } from '@/lib/promo-helpers';
+import { promoPageHref } from '@/lib/promo-page-href';
+import { track } from '@/lib/analytics';
 import { PromoBadge } from '../promo-badge';
 import { TrackedTapLink } from '../analytics/TrackedTapLink';
 import { TicketsBlock, type TicketsBlockPlacement } from '../affiliates/TicketsBlock';
@@ -69,13 +71,26 @@ export function ScoredPromoCard({
   const itemType = derivedSignals.itemType;
   const quantityCap = derivedSignals.quantityCap;
   const sponsor = derivedSignals.sponsor;
+  // The card is one anchor (the TicketsBlock sits beside it, never inside), so
+  // the whole card goes to the promo's own page when it has one (Phase 3c),
+  // else to the team page as before. scored_promo_card_tap keeps firing; the
+  // page link also fires promo_link_click, the inbound event every surface
+  // shares. The two surface vocabularies differ (ScoringPageSurface here,
+  // AnalyticsSurface there), so the click carries the tickets surface, the
+  // page's AnalyticsSurface.
+  const pageHref = promoPageHref(promo);
+  const cardHref = pageHref ?? `/${team.sportSlug}/${team.id}`;
+  const onCardClick = pageHref
+    ? () => track('promo_link_click', { surface: ticketsSurface, team_slug: team.id, promo_id: synthPromoId(team.id, promo), destination_url: pageHref })
+    : undefined;
 
   if (variant === 'light') {
     const { color, label, Icon, ink } = categoryForPromo(promo);
     return (
       <article className="overflow-hidden rounded-2xl border border-rd-line bg-rd-card transition-colors hover:border-rd-line-strong">
         <TrackedTapLink
-          href={`/${team.sportSlug}/${team.id}`}
+          href={cardHref}
+          onClick={onCardClick}
           trackEvent="scored_promo_card_tap"
           trackProps={{
             surface: trackingSurface,
@@ -142,7 +157,8 @@ export function ScoredPromoCard({
   return (
     <article className="bg-bg-card border border-border-subtle rounded-xl overflow-hidden hover:border-border-hover transition-colors">
       <TrackedTapLink
-        href={`/${team.sportSlug}/${team.id}`}
+        href={cardHref}
+        onClick={onCardClick}
         trackEvent="scored_promo_card_tap"
         trackProps={{
           surface: trackingSurface,

@@ -17,6 +17,14 @@ import { PROMO_TYPE_LABELS } from './types';
 import { APPAREL_RE, BOBBLEHEAD_RE } from './promo-helpers';
 import { siteYmd } from './site-today';
 
+/** THE FLAG. PROMO_PAGES_LIVE gates the route, the card route, the sitemap
+ *  section and (Phase 3c) the page fields the mapper attaches, so the inbound
+ *  links appear and disappear with the pages. Lives here, in the pure half,
+ *  so the data layer can read it without importing the server half. */
+export function isPromoPagesLive(env: NodeJS.ProcessEnv = process.env): boolean {
+  return String(env.PROMO_PAGES_LIVE ?? '').trim().toLowerCase() === 'true';
+}
+
 export const SITE_URL = 'https://www.getpromonight.com';
 export const STORAGE_BUCKET = 'promonight.firebasestorage.app';
 /** Google's snippet width; the brief's cap. */
@@ -238,18 +246,40 @@ function sentence(s: string): string {
 // ── title and description (brief B.6) ───────────────────────────────────────
 
 /**
- * The bare <title> (the root layout's template appends " | PromoNight"):
- * `{Promo} | {Team} {Mon D, YYYY}`, the year dropped when the rendered title
- * would pass 60 characters; `{Promo} | {Team} {Season}` for a multi-date slug.
+ * The bare <title> (the root layout's template appends " | PromoNight"): the
+ * first shape whose rendered length does not pass 60 wins (ruling
+ * 2026-10-30), in this order:
+ *   1. `{Promo} | {Team} {Mon D, YYYY}`   the full team name with the year
+ *   2. `{Promo} | {Team} {Mon D}`         the full team name, no year
+ *   3. `{Promo} | {Nickname} {Mon D}`     the club's nickname with the date
+ *   4. `{Promo} | {Nickname}`             the nickname alone
+ *   5. `{Promo}`                          the promo name alone
+ * A multi-date slug runs the same cascade with the season in place of the
+ * date (`{Promo} | {Team} {Season}`, then without the season, then the
+ * nickname with and without it, then the name). A page with no date runs it
+ * from shape 2. The nickname shapes are skipped when no nickname is given.
+ * The last shape is taken even when it passes 60: the name is the title.
  */
-export function promoPageTitle(title: string, teamName: string, dates: readonly string[], season: string | null): string {
+export function promoPageTitle(title: string, teamName: string, dates: readonly string[], season: string | null, teamNickname?: string | null): string {
   const name = cleanText(title);
-  if (dates.length > 1) return season ? `${name} | ${teamName} ${season}` : `${name} | ${teamName}`;
-  const date = dates[0];
-  if (!date) return `${name} | ${teamName}`;
-  const withYear = `${name} | ${teamName} ${formatMonDayYear(date)}`;
-  if ((withYear + TITLE_SUFFIX).length <= TITLE_MAX) return withYear;
-  return `${name} | ${teamName} ${formatMonDay(date)}`;
+  const series = dates.length > 1;
+  const date = dates.length === 1 ? dates[0] : null;
+  // Shape 1's tail: the year form of the date, or the season on a series.
+  // Shape 2's tail: the short date; a series (and a dateless page) has none,
+  // the full name stands alone. Shape 3's tail: the short date, or the season.
+  const long = series ? season : date ? formatMonDayYear(date) : null;
+  const short = series ? null : date ? formatMonDay(date) : null;
+  const nickTail = series ? season : short;
+  const nick = teamNickname && teamNickname.trim() && teamNickname.trim() !== teamName ? teamNickname.trim() : null;
+  const shapes: string[] = [];
+  if (long) shapes.push(`${name} | ${teamName} ${long}`);
+  shapes.push(short ? `${name} | ${teamName} ${short}` : `${name} | ${teamName}`);
+  if (nick) {
+    if (nickTail) shapes.push(`${name} | ${nick} ${nickTail}`);
+    shapes.push(`${name} | ${nick}`);
+  }
+  shapes.push(name);
+  return shapes.find((s) => renderedTitleLength(s) <= TITLE_MAX) ?? name;
 }
 
 /** The rendered length of a bare title, suffix included, for the report. */

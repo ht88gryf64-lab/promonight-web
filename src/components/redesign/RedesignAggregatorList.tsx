@@ -5,7 +5,9 @@ import Link from 'next/link';
 import type { PromoWithTeam } from '@/lib/types';
 import { LEAGUE_ORDER } from '@/lib/types';
 import { track, type AnalyticsSurface } from '@/lib/analytics';
-import { teamDisplayName, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
+import { teamDisplayName, promoDisplayOpponent, promoDisplayTime, synthPromoId } from '@/lib/promo-helpers';
+import { promoPageHref } from '@/lib/promo-page-href';
+import { PromoPageLink } from '@/components/promo-page-link';
 import { StarToggleInline } from '@/components/star-toggle';
 import type { AggregatorGroup } from '@/components/aggregator-layout';
 import { groupPromoRows } from '@/lib/promo-row-groups';
@@ -158,15 +160,14 @@ export function RedesignAggregatorList({
             const showStar = visible && !seen.has(p.team.id);
             if (showStar) seen.add(p.team.id);
             const { day, weekday, month } = dateParts(p.date);
-            return (
-                    <div
-                      key={`${group.label}-${i}`}
-                      className={`relative ${visible ? '' : 'hidden'}`}
-                    >
-                      <Link
-                        href={`/${p.team.sportSlug}/${p.team.id}`}
-                        className="group flex items-center gap-4 rounded-xl border border-rd-line bg-rd-card py-4 pl-5 pr-12 transition-colors hover:border-rd-line-strong"
-                      >
+            // The row links to the promo's own page when it has one (Phase
+            // 3c), else to the team page as it always did. One body, two
+            // anchors: the page link is the client leaf that fires
+            // promo_link_click; the team link stays a plain <Link>.
+            const pageHref = promoPageHref(p);
+            const rowClass = 'group flex items-center gap-4 rounded-xl border border-rd-line bg-rd-card py-4 pl-5 pr-12 transition-colors hover:border-rd-line-strong';
+            const rowBody = (
+                      <>
                         <span
                           aria-hidden
                           className="absolute inset-y-0 left-0 w-1.5"
@@ -194,7 +195,22 @@ export function RedesignAggregatorList({
                             </span>
                           </div>
                         </div>
-                      </Link>
+                      </>
+            );
+            return (
+                    <div
+                      key={`${group.label}-${i}`}
+                      className={`relative ${visible ? '' : 'hidden'}`}
+                    >
+                      {pageHref ? (
+                        <PromoPageLink href={pageHref} surface={surface} teamSlug={p.team.id} promoId={synthPromoId(p.team.id, p)} className={rowClass}>
+                          {rowBody}
+                        </PromoPageLink>
+                      ) : (
+                        <Link href={`/${p.team.sportSlug}/${p.team.id}`} className={rowClass}>
+                          {rowBody}
+                        </Link>
+                      )}
                       {showStar && (
                         <div className="absolute right-3 top-3 z-10">
                           <StarToggleInline

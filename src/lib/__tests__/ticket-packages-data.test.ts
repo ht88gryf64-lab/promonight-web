@@ -147,13 +147,19 @@ test('NBA with nothing flagged: the counted array IS what getTeamPromos returned
   assert.equal(ticketPackages.length, 0);
 });
 
-test("getTeamPromos keeps main's shape: one awaited read, no wrapper", () => {
+test("getTeamPromos keeps main's shape with the promo pages off: one awaited read, no wrapper", () => {
   // A page without packages goes through the very code path it went through
-  // on main: the route reads, then splits synchronously. Pin the body.
+  // on main: the route reads, then splits synchronously. Pin the body. Since
+  // Phase 3c the flag-ON path (some row carries a pageSlug) takes one more
+  // awaited lookup, the cached team record, for the canonical stamp's league
+  // rule; the flag-off path returns before it, from the same expression.
   const src = readFileSync(new URL('../data.ts', import.meta.url), 'utf-8');
   const body = src.slice(src.indexOf('export const getTeamPromos = cache('), src.indexOf('\n});\n', src.indexOf('export const getTeamPromos = cache(')));
-  assert.equal(body.match(/await/g)?.length, 1);
-  assert.match(body, /return dedupePromos\(snapshot\.docs\.map\(mapPromoDocNotingPackage\)\.filter\(isVisiblePromo\)\);/);
+  assert.equal(body.match(/await/g)?.length, 2);
+  assert.match(body, /const rows = dedupePromos\(snapshot\.docs\.map\(mapPromoDocNotingPackage\)\.filter\(isVisiblePromo\)\);/);
+  const earlyReturn = body.indexOf('if (!rows.some((r) => r.pageSlug)) return rows;');
+  const lookup = body.indexOf('await getTeamBySlug(teamId)');
+  assert.ok(earlyReturn > 0 && lookup > earlyReturn, 'the flag-off return precedes the only other await');
 });
 
 test("away games: the opponent's packages stay off the row on NBA, stay on for MLB", async () => {
