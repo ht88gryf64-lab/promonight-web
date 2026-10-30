@@ -17,6 +17,14 @@ import { PROMO_TYPE_LABELS } from './types';
 import { APPAREL_RE, BOBBLEHEAD_RE } from './promo-helpers';
 import { siteYmd } from './site-today';
 
+/** THE FLAG. PROMO_PAGES_LIVE gates the route, the card route, the sitemap
+ *  section and (Phase 3c) the page fields the mapper attaches, so the inbound
+ *  links appear and disappear with the pages. Lives here, in the pure half,
+ *  so the data layer can read it without importing the server half. */
+export function isPromoPagesLive(env: NodeJS.ProcessEnv = process.env): boolean {
+  return String(env.PROMO_PAGES_LIVE ?? '').trim().toLowerCase() === 'true';
+}
+
 export const SITE_URL = 'https://www.getpromonight.com';
 export const STORAGE_BUCKET = 'promonight.firebasestorage.app';
 /** Google's snippet width; the brief's cap. */

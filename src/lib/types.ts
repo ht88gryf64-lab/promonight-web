@@ -126,6 +126,18 @@ export interface Promo {
   // every regular reader through isVisiblePromo; only the playoffs surfaces
   // read these rows, and they ask for them by name.
   isPostseason?: boolean;
+  // The per-promo page link (Phase 3c, 2026-10-30). Set by mapPromoDoc from
+  // the document's pageSlug and pageSeason ONLY while PROMO_PAGES_LIVE is
+  // "true" (src/lib/promo-page-stamp.ts); absent, no surface links to a promo
+  // page. pageCanonicalSlug is the winner's slug when this row is a canonical
+  // loser on its team and date (stamped by the loader over the sibling set),
+  // and the one helper that builds the href, src/lib/promo-page-href.ts
+  // promoPageHref, reads it first. These three reach client components, so
+  // they are published in the RSC payload: all three are the page's own URL
+  // parts, nothing more.
+  pageSlug?: string;
+  pageSeason?: string | null;
+  pageCanonicalSlug?: string | null;
 }
 
 export interface PromoWithTeam extends Promo {

@@ -3,6 +3,7 @@ import { getPromosInDateRange } from './data';
 import { PROMO_TYPE_LABELS, SPORT_ICONS, type PromoWithTeam } from './types';
 import { addDaysYmd, siteYmd } from './site-today';
 import { promoDisplayOpponent, promoDisplayTime } from './promo-helpers';
+import { promoPageHref } from './promo-page-href';
 
 // Weekly-digest assembly. The window's promos are fetched ONCE per run via
 // getPromosInDateRange (a single deduped collection-group query, deduped by
@@ -28,6 +29,10 @@ export interface DigestPromo {
   league: string;
   leagueIcon: string;
   sportSlug: string;
+  /** Root-relative link for the row (Phase 3c): the promo's own page when it
+   *  has one, else the team page. The email builder makes it absolute and
+   *  appends its subId1. */
+  href: string;
 }
 
 export interface DigestCollection {
@@ -73,6 +78,7 @@ function toDigestPromo(p: PromoWithTeam): DigestPromo {
     league: p.team.league,
     leagueIcon: SPORT_ICONS[p.team.league] ?? '',
     sportSlug: p.team.sportSlug,
+    href: promoPageHref(p) ?? `/${p.team.sportSlug}/${p.team.id}`,
   };
 }
 

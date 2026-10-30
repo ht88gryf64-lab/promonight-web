@@ -9,7 +9,9 @@ import { categoryForPromo } from './categories';
 import { StarToggleInline } from '@/components/star-toggle';
 import type { StarPlacement } from '@/hooks/use-starred-teams';
 import { useUpcomingPromoModal, type UpcomingPromoSurface } from './UpcomingPromoModal';
-import { isPurchaseGated } from '@/lib/promo-helpers';
+import { isPurchaseGated, synthPromoId } from '@/lib/promo-helpers';
+import { promoPageHref } from '@/lib/promo-page-href';
+import { PromoPageLink } from '@/components/promo-page-link';
 
 // Ticket-stub promo card for the homepage redesign (docs/homepage-redesign-
 // target.html). Built ALONGSIDE LightHomePromoCard; nothing imports this yet.
@@ -88,6 +90,9 @@ export function TicketStubCard({
   const spine = spineColor(promo.team.primaryColor);
   const spineInk = chipInk(spine);
   const open = () => openModal({ promo, contexts, surface });
+  // The title links to the promo's own page when it has one (Phase 3c); the
+  // rest of the stub still opens the modal. Null leaves the stub as it was.
+  const pageHref = promoPageHref(promo);
   // Stored value, else the home game's (src/lib/promo-game-join.ts).
   const displayTime = promoDisplayTime(promo);
   const displayOpponent = promoDisplayOpponent(promo);
@@ -180,7 +185,20 @@ export function TicketStubCard({
             clamp ceiling (3 lines x 27px leading-none = 81px) so the
             reservation and the clamp agree. */}
         <p className="line-clamp-3 min-h-[81px] font-rd text-[27px] font-bold leading-none tracking-[0.004em] text-rd-ink transition-colors group-hover:text-rd-red">
-          {promo.title}
+          {pageHref ? (
+            <PromoPageLink
+              href={pageHref}
+              surface={surface}
+              teamSlug={promo.team.id}
+              promoId={synthPromoId(promo.team.id, promo)}
+              onClick={(e) => e.stopPropagation()}
+              className="focus-visible:outline-none focus-visible:underline"
+            >
+              {promo.title}
+            </PromoPageLink>
+          ) : (
+            promo.title
+          )}
         </p>
 
         <div className="mt-3 flex items-center gap-2 text-[12.5px] text-rd-ink-soft">

@@ -8,6 +8,7 @@ import {
   resolveTicketTeam,
   resolveTenantTeamLinks,
   getVenueHubWeekPromos,
+  getVenueHubNextGiveaways,
   getVenueHubVendors,
   venueHubTitle,
   venueHubDescription,
@@ -63,10 +64,12 @@ export default async function VenueHubPage({ params }: { params: Promise<{ slug:
   if (!hub) notFound();
   // weekPromos is 1-3 per-tenant reads (getTeamPromos, the team page's own
   // read), never a collectionGroup scan. See getVenueHubWeekPromos.
-  const [ticketTeam, tenantLinks, weekPromos, vendors] = await Promise.all([
+  const [ticketTeam, tenantLinks, weekPromos, nextGiveaways, vendors] = await Promise.all([
     resolveTicketTeam(hub),
     resolveTenantTeamLinks(hub),
     getVenueHubWeekPromos(hub),
+    // The same per-tenant getTeamPromos read as the week scroller, request-cached.
+    getVenueHubNextGiveaways(hub),
     getVenueHubVendors(hub.slug, hub.verified),
   ]);
   // Postseason games at this building: the home games still to be played by
@@ -83,6 +86,7 @@ export default async function VenueHubPage({ params }: { params: Promise<{ slug:
         ticketTeam={ticketTeam}
         tenantLinks={tenantLinks}
         weekPromos={weekPromos}
+        nextGiveaways={nextGiveaways}
         vendors={vendors}
       />
     </div>

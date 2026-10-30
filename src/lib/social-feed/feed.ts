@@ -6,7 +6,9 @@ import 'server-only';
 import { db } from '@/lib/firebase';
 import { getAllTeams, getScoredPromosInDateRange, getTeamBySlug, getVenueForTeam, mapPromoDoc } from '@/lib/data';
 import { dedupePromos, isVisiblePromo, teamDisplayName, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
-import type { Team } from '@/lib/types';
+import { promoPageHref } from '@/lib/promo-page-href';
+import { stampPromoPageCanonical } from '@/lib/promo-page-stamp';
+import type { PromoWithTeam, Team } from '@/lib/types';
 import { isTicketPackageDoc, isTicketPackageLeague } from '@/lib/ticket-packages';
 import type { RssItemInput } from './rss';
 import { resolveCard } from './card';
@@ -18,6 +20,9 @@ export interface FeedPromo extends FeedCandidate {
   date: string;
   team: Team;
   opponent: string;
+  /** The promo's own page (Phase 3c), through the one helper; null keeps the
+   *  item on the team page. */
+  pageHref: string | null;
 }
 
 // Pass 1 source: the /best-promos reader. The cap is set well above anything a
@@ -36,6 +41,7 @@ async function loadScored(start: string, end: string): Promise<FeedPromo[]> {
     itemType: p.derivedSignals?.itemType ?? null,
     tombstoned: p.tombstoned,
     isPostseason: p.isPostseason,
+    pageHref: promoPageHref(p),
   }));
 }
 
@@ -75,11 +81,17 @@ async function readVisiblePromos(start: string, end: string): Promise<FeedPromo[
     );
     docs = perTeam.flat().sort((a, b) => String(a.get('date')).localeCompare(String(b.get('date'))));
   }
-  const out: FeedPromo[] = [];
+  // The mapped rows first, so the canonical stamp (Phase 3c) sees every
+  // team's siblings on each date of the window before the items are shaped.
+  const mapped: { doc: FirebaseFirestore.QueryDocumentSnapshot; team: Team; p: PromoWithTeam }[] = [];
   for (const doc of docs) {
     const team = doc.ref.parent.parent ? teamById.get(doc.ref.parent.parent.id) : undefined;
     if (!team) continue;
-    const p = mapPromoDoc(doc);
+    mapped.push({ doc, team, p: { ...mapPromoDoc(doc), team } });
+  }
+  stampPromoPageCanonical(mapped.map((m) => m.p).filter(isVisiblePromo), (p) => p.team);
+  const out: FeedPromo[] = [];
+  for (const { doc, team, p } of mapped) {
     const row: FeedPromo = {
       promoId: doc.id,
       teamId: team.id,
@@ -92,6 +104,7 @@ async function readVisiblePromos(start: string, end: string): Promise<FeedPromo[
       itemType: p.derivedSignals?.itemType ?? null,
       tombstoned: p.tombstoned,
       isPostseason: p.isPostseason,
+      pageHref: promoPageHref(p),
     };
     if (isTicketPackageLeague(team.league) && isTicketPackageDoc(doc.data())) feedPackages.add(row);
     out.push(row);
@@ -127,6 +140,7 @@ function toRssItem(p: FeedPromo, venue: string | null): RssItemInput {
     date: p.date,
     opponent: promoDisplayOpponent(p),
     venue,
+    pageHref: p.pageHref,
   };
 }
 

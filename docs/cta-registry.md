@@ -33,6 +33,15 @@ when retiring a CTA.
 | app_push_pitch_team | team_page | conversion_pairing_after_promo_list | Download for iOS / Get it on Google Play | /download (iOS) / Play Store | app_download_click | 2026-10-11 | deprecated (replaced by app_alert_card_team, app funnel G1) |
 | app_alert_card_team | team_page | inside_promo_list_after_upcoming_rows | Get the app | App Store on iOS, Play Store on Android, /download?src=team_cta_{teamId} elsewhere (src/lib/app-link.ts) | app_download_click (surface team_cta) | 2026-10-11 | active |
 | app_download_page_buttons | download | per_store_section | Download for iOS / Get it on Google Play | App Store / Play Store (src/lib/app-link.ts) | app_download_click (surface download) | 2026-10-11 | active |
+| promo_link_team_row | team_page | promo_list_row_title | (promo title) | /[sport]/[team]/promos/[slug] | promo_link_click (surface web_team_page_promolist) | 2026-10-30 | active |
+| promo_link_today_card | aggregator | today_card_overlay | (promo title, sr-only) | /[sport]/[team]/promos/[slug] | promo_link_click (surface web_today) | 2026-10-30 | active |
+| promo_link_aggregator_row | aggregator | collection_row | (promo title) | /[sport]/[team]/promos/[slug] | promo_link_click (surface web_article) | 2026-10-30 | active |
+| promo_link_home_tonight | homepage | tonight_rail_card_title + tonight_ribbon | (promo title) | /[sport]/[team]/promos/[slug] | promo_link_click (surface web_home_tonight) | 2026-10-30 | active |
+| promo_link_home_this_week | homepage | this_week_card_title | (promo title) | /[sport]/[team]/promos/[slug] | promo_link_click (surface web_home_this_week) | 2026-10-30 | active |
+| promo_link_home_best | homepage | best_promos_rail_card_title | (promo title) | /[sport]/[team]/promos/[slug] | promo_link_click (surface web_home_best) | 2026-10-30 | active |
+| promo_link_venue_next_giveaways | venue_page | next_giveaways_here | (promo title) | /[sport]/[team]/promos/[slug] | promo_link_click (surface web_venue) | 2026-10-30 | active |
+| promo_link_venue_week_card | venue_page | promos_this_week_card_overlay | (promo title, sr-only) | /[sport]/[team]/promos/[slug] | promo_link_click (surface web_venue) + venue_hub_promo_click | 2026-10-30 | active |
+| promo_link_best_promos_card | best_promos | scored_card | (card) | /[sport]/[team]/promos/[slug] | promo_link_click (surface web_best_promos / web_best_promos_bobbleheads) + scored_promo_card_tap | 2026-10-30 | active |
 
 ## Removed CTAs
 

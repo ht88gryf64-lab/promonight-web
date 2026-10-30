@@ -1,6 +1,7 @@
 import type { PromoWithTeam, Venue } from '@/lib/types';
 import type { AnalyticsSurface } from '@/lib/analytics';
 import { promoAnchorId, synthPromoId, teamDisplayName } from '@/lib/promo-helpers';
+import { promoPageHref } from '@/lib/promo-page-href';
 import { RedesignPromoRow, type PromoRowShare } from '@/components/redesign/RedesignPromoRow';
 import { TicketmasterCTA } from '@/components/affiliates/TicketmasterCTA';
 import { SpotHeroCTA } from '@/components/affiliates/SpotHeroCTA';
@@ -26,7 +27,9 @@ export function TodayPromoCard({
   dimmed?: boolean;
 }) {
   const p = promo;
-  const anchorHref = `/${p.team.sportSlug}/${p.team.id}#promo-${promoAnchorId(p)}`;
+  // The promo's own page (Phase 3c) when it has one, else the team-page
+  // anchor the card always linked to.
+  const anchorHref = promoPageHref(p) ?? `/${p.team.sportSlug}/${p.team.id}#promo-${promoAnchorId(p)}`;
   const promoKey = synthPromoId(p.team.id, p);
   const share: PromoRowShare = {
     teamName: teamDisplayName(p.team),
@@ -39,7 +42,7 @@ export function TodayPromoCard({
   return (
     <div className={dimmed ? 'opacity-70' : undefined}>
       {/* Full team-page row visual, deep-linked to the team promo anchor. */}
-      <RedesignPromoRow promo={p} share={share} href={anchorHref} adItem="promo" />
+      <RedesignPromoRow promo={p} share={share} href={anchorHref} adItem="promo" linkSurface={surface} />
 
       {/* Compact inline CTA row appended below the row. Independent affiliate
           links (new tab); container-queried so descriptors reveal only when wide

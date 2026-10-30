@@ -14,6 +14,8 @@ import { VenueHubJsonLd } from './VenueHubJsonLd';
 import { VenuePhotoHero } from './VenuePhotoHero';
 import { HubTeamLink } from './HubTeamLink';
 import { HubPromosThisWeek } from './HubPromosThisWeek';
+import { HubNextGiveaways } from './HubNextGiveaways';
+import type { VenueHubNextGiveaway } from '@/lib/venue-hub';
 import { VendorsCard } from './VendorsCard';
 import type { VenueVendor } from '@/lib/venue-vendors';
 import {
@@ -80,6 +82,7 @@ export function VenueHubView({
   ticketTeam,
   tenantLinks,
   weekPromos,
+  nextGiveaways = [],
   vendors = [],
   postseason = null,
 }: {
@@ -90,6 +93,9 @@ export function VenueHubView({
   /** Tenant promos in the next 7 days, already merged and date-sorted. Empty is
    *  the common off-season case and renders nothing (see HubPromosThisWeek). */
   weekPromos: VenueHubWeekPromo[];
+  /** The next three upcoming giveaways here with their page links (Phase
+   *  3c), rendered after the quick facts. Empty renders nothing. */
+  nextGiveaways?: VenueHubNextGiveaway[];
   /** Food and drink stands, already filtered by getVenueHubVendors. Empty on a
    *  building with none, which renders no card. */
   vendors?: VenueVendor[];
@@ -464,6 +470,11 @@ export function VenueHubView({
           </div>
         </div>
       ) : null}
+
+      {/* Next giveaways here (Phase 3c): after the quick facts, before the
+          content grid, so it is not a child of page-content and takes no ad
+          anchor. Omitted with nothing to show. */}
+      <HubNextGiveaways items={nextGiveaways} buildingName={short} />
 
       {/* Content: single stack on mobile, two columns + sticky rail from lg up.
           The rail cards (planCard, ticketsCard) render inline on mobile and in

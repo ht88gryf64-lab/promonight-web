@@ -465,15 +465,33 @@ test('tombstoned past its date: noindex; a row with no date: noindex', async () 
   assert.deepEqual(jsonLd(dateless.h).map((s) => s['@type']), ['WebPage', 'BreadcrumbList'], 'no Event without a date, no FAQ without a door time');
 });
 
-// ── Inbound stays OFF this phase (brief C.10) ───────────────────────────────
-// Team rows, the aggregators, the homepage cards, the venue pages, the digest
-// and the social feed keep their anchors until the flip. This static guard
-// refuses a promo page path built anywhere outside the promo page family.
-test('no surface outside the promo page family links to a promo page yet', async () => {
+// ── Inbound links go through the one helper (Phase 3c) ──────────────────────
+// Team rows, the aggregators, the homepage cards and ribbon, the venue block
+// and cards, the digest, the social feed and the My Teams route all link to a
+// promo page through promoPageHref (src/lib/promo-page-href.ts), which owns
+// the rule (canonical winner, never a tombstoned, dateless or noindexed row).
+// This static test replaces the Phase 3b guard that refused any promo path
+// outside the family: the path is still built in one place (the family and
+// the helper), and every inbound surface is checked to import the helper.
+test('every inbound surface links through promoPageHref, and nothing else builds a promo page path', async () => {
   const { readdirSync, readFileSync, statSync } = await import('node:fs');
   const { join, relative } = await import('node:path');
   const ROOT = process.cwd();
-  const ALLOWED = new Set(['src/lib/promo-pages.ts', 'src/lib/promo-page-copy.ts', 'src/components/promo-page/PromoPageView.tsx', 'src/app/[sport]/[team]/promos/[slug]/page.tsx', 'src/app/api/promo-card/[promoId]/route.tsx', 'src/app/sitemap.ts']);
+  const FAMILY = new Set(['src/lib/promo-pages.ts', 'src/lib/promo-page-copy.ts', 'src/lib/promo-page-href.ts', 'src/components/promo-page/PromoPageView.tsx', 'src/app/[sport]/[team]/promos/[slug]/page.tsx', 'src/app/api/promo-card/[promoId]/route.tsx', 'src/app/sitemap.ts']);
+  const SURFACES = [
+    'src/components/redesign/RedesignPromoRow.tsx',
+    'src/components/promos-today/TodayPromoCard.tsx',
+    'src/components/redesign/RedesignAggregatorList.tsx',
+    'src/components/redesign/LightHomePromoCard.tsx',
+    'src/components/redesign/TicketStubCard.tsx',
+    'src/components/redesign/TonightRibbon.tsx',
+    'src/components/scoring/scored-promo-card.tsx',
+    'src/components/venue-hub/VenueHubPromoCard.tsx',
+    'src/lib/venue-hub.ts',
+    'src/lib/digest.ts',
+    'src/lib/social-feed/feed.ts',
+    'src/app/api/my-teams/promos/route.ts',
+  ];
   const offenders: string[] = [];
   const walk = (dir: string) => {
     for (const name of readdirSync(dir)) {
@@ -484,13 +502,20 @@ test('no surface outside the promo page family links to a promo page yet', async
       }
       if (!/\.(ts|tsx)$/.test(name) || /\.test\.tsx?$/.test(name)) continue;
       const rel = relative(ROOT, full);
-      if (ALLOWED.has(rel)) continue;
+      if (FAMILY.has(rel)) continue;
       const text = readFileSync(full, 'utf8');
       if (/promoPagePath\(|\/promos\/\$\{|getPromoPageSitemapEntries|from '@\/lib\/promo-pages'/.test(text)) offenders.push(rel);
     }
   };
   for (const dir of ['src/app', 'src/components', 'src/lib']) walk(join(ROOT, dir));
-  assert.deepEqual(offenders, [], `promo page links outside the family:\n${offenders.join('\n')}`);
+  assert.deepEqual(offenders, [], `promo page paths built outside the family and the helper:\n${offenders.join('\n')}`);
+  for (const rel of SURFACES) {
+    const text = readFileSync(join(ROOT, rel), 'utf8');
+    assert.match(text, /import \{[^}]*\bpromoPageHref\b[^}]*\} from '(?:@\/lib|\.|\.\.)\/promo-page-href'/, `${rel} must link through promoPageHref`);
+  }
+  // The helper is the only module that builds the path outside the family.
+  const helper = readFileSync(join(ROOT, 'src/lib/promo-page-href.ts'), 'utf8');
+  assert.match(helper, /promoPagePath\(t\.sportSlug, t\.id, promo\.pageCanonicalSlug \|\| promo\.pageSlug\)/);
 });
 
 test('the sitemap section: upcoming pages only, one URL per page, lastmod the latest row, nothing with the flag off', async () => {

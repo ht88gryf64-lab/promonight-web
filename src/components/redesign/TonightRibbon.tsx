@@ -1,5 +1,7 @@
 import type { PromoWithTeam } from '@/lib/types';
-import { promoDisplayTime } from '@/lib/promo-helpers';
+import { promoDisplayTime, synthPromoId } from '@/lib/promo-helpers';
+import { promoPageHref } from '@/lib/promo-page-href';
+import { PromoPageLink } from '@/components/promo-page-link';
 
 // Decorative scrolling strip of tonight's promos, welded to the bottom edge of
 // the dark hero band. Server component: no 'use client', no matchMedia, no
@@ -33,14 +35,35 @@ const MIN_DURATION_S = 24;
 // it is announced once, properly, by the Tonight rail below.
 const TARGET_ENTRIES_PER_COPY = 6;
 
-function ribbonLabel(promo: PromoWithTeam): string {
-  // Time is optional on a real promo (a genuine minority carry an empty
-  // string), so the clock segment is dropped rather than faked. The raw stored
-  // string is used as-is, the same value TicketStubCard prints, so one page
-  // never shows two time formats.
-  const parts = [promo.title, promo.team.name];
+/** The segments after the title: the club, and the time when the promo has
+ *  one. Time is optional on a real promo (a genuine minority carry an empty
+ *  string), so the clock segment is dropped rather than faked. The raw stored
+ *  string is used as-is, the same value TicketStubCard prints, so one page
+ *  never shows two time formats. */
+function ribbonTail(promo: PromoWithTeam): string {
+  const parts = [promo.team.name];
   if (promoDisplayTime(promo)) parts.push(promoDisplayTime(promo));
-  return parts.join(' · ');
+  return ` · ${parts.join(' · ')}`;
+}
+
+/** One ribbon entry: the title, then the tail. The title is a link to the
+ *  promo's own page when it has one (Phase 3c, the same swap as the rail
+ *  below), with tabIndex -1 because the strip is aria-hidden and decorative:
+ *  a crawler follows it, a keyboard never lands on it. */
+function RibbonItem({ promo }: { promo: PromoWithTeam }) {
+  const pageHref = promoPageHref(promo);
+  return (
+    <span className="rd-ticker-item">
+      {pageHref ? (
+        <PromoPageLink href={pageHref} surface="web_home_tonight" teamSlug={promo.team.id} promoId={synthPromoId(promo.team.id, promo)} tabIndex={-1}>
+          {promo.title}
+        </PromoPageLink>
+      ) : (
+        promo.title
+      )}
+      {ribbonTail(promo)}
+    </span>
+  );
 }
 
 export function TonightRibbon({ items }: { items: PromoWithTeam[] }) {
@@ -58,9 +81,7 @@ export function TonightRibbon({ items }: { items: PromoWithTeam[] }) {
           by construction: pickHeroBuckets only puts today's promos here. */}
       <span className="rd-ticker-item">Tonight</span>
       {entries.map((promo, i) => (
-        <span className="rd-ticker-item" key={`${promo.team.id}-${promo.date}-${i}`}>
-          {ribbonLabel(promo)}
-        </span>
+        <RibbonItem promo={promo} key={`${promo.team.id}-${promo.date}-${i}`} />
       ))}
     </div>
   ));

@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
-import { gameWindowFloorYmd, getAllTeams, withGameDisplay } from '@/lib/data';
+import { gameWindowFloorYmd, getAllTeams, getTeamBySlug, withGameDisplay } from '@/lib/data';
 import { STATIC_TTL_MS } from '@/lib/collection-cache';
 import { resolveIcon } from '@/lib/promo-helpers';
-import type { PromoType, Venue } from '@/lib/types';
+import { promoPageHref } from '@/lib/promo-page-href';
+import { attachPromoPageFields, stampPromoPageCanonical } from '@/lib/promo-page-stamp';
+import type { Promo, PromoType, Venue } from '@/lib/types';
 import { isTicketPackageDoc, isTicketPackageLeague } from '@/lib/ticket-packages';
 import { starredTeamLeague } from '@/lib/starred-team-league';
 
@@ -32,6 +34,11 @@ export type StarredPromo = {
   highlight: boolean;
   icon: string;
   recurring: boolean;
+  /** The promo's own page, root-relative (Phase 3c), through the one helper
+   *  (src/lib/promo-page-href.ts): a canonical loser carries its winner's
+   *  path. Null while the pages are off or the row has none; the app then
+   *  keeps its team-page deep link. Optional for older cached responses. */
+  promoPageHref?: string | null;
 };
 
 export type StarredPromosResponse = {
@@ -73,7 +80,7 @@ async function fetchPromosForTeam(
   end: string,
 ): Promise<StarredPromo[] | null> {
   try {
-    const [snapshot, league] = await Promise.all([
+    const [snapshot, league, team] = await Promise.all([
       db
         .collection('teams')
         .doc(teamSlug)
@@ -84,6 +91,9 @@ async function fetchPromosForTeam(
       // The cached teams loader first (no extra read per starred team); the
       // team doc if that misses or throws. See starredTeamLeague.
       starredTeamLeague(teamSlug),
+      // For the page link's sport slug (Phase 3c): the same cached loader; a
+      // miss means no link, never a failed team.
+      getTeamBySlug(teamSlug).catch(() => null),
     ]);
     // NHL and NBA special-ticket rows are not promotions (WEB6 G2): My Teams
     // neither lists nor counts them, as the team page counts none of them. On
@@ -97,12 +107,16 @@ async function fetchPromosForTeam(
     // filter, never a Firestore inequality (which would drop field-absent
     // docs).
     const visible = snapshot.docs.filter((doc) => doc.data().tombstoned !== true && doc.data().isPostseason !== true);
-    return (dropPackages ? dedupeDocsLikeTeamPage(visible) : visible)
+    const shaped = (dropPackages ? dedupeDocsLikeTeamPage(visible) : visible)
       .filter((doc) => !(dropPackages && isTicketPackageDoc(doc.data())))
       .map((doc) => {
       const data = doc.data();
       const type = data.type as PromoType;
-      return {
+      // The page link rides on a mapped shadow of the row (Phase 3c): the
+      // canonical stamp wants the team's sibling rows on each date, and this
+      // window holds them all.
+      const shadow = attachPromoPageFields({ date: data.date, title: data.title || '', type } as Promo, data);
+      const row: StarredPromo = {
         promoId: doc.id,
         teamSlug,
         date: data.date,
@@ -117,7 +131,10 @@ async function fetchPromosForTeam(
         icon: resolveIcon(data.title || '', type, data.icon || ''),
         recurring: data.recurring === true,
       };
+      return { row, shadow };
     });
+    stampPromoPageCanonical(shaped.map((s) => s.shadow), () => ({ id: teamSlug, league }));
+    return shaped.map(({ row, shadow }) => ({ ...row, promoPageHref: team ? promoPageHref(shadow, team) : null }));
   } catch (err) {
     // One bad team should not poison the rest of the response. The team is
     // reported in failedTeams, and the client says it could not load it; the

@@ -37,6 +37,7 @@ import {
   baseSlugOf,
   canonicalGroups,
   canonicalSlugFor,
+  isPromoPagesLive,
   laterSeason,
   promoPagePath,
   seasonLabelFor,
@@ -46,9 +47,10 @@ import {
   type PromoPageRow,
 } from './promo-page-copy';
 
-export function isPromoPagesLive(env: NodeJS.ProcessEnv = process.env): boolean {
-  return String(env.PROMO_PAGES_LIVE ?? '').trim().toLowerCase() === 'true';
-}
+// The flag itself lives in the pure half since Phase 3c (the mapper in
+// src/lib/data.ts reads it too); re-exported so the route and the card route
+// keep their import.
+export { isPromoPagesLive };
 
 // ── document mapping ─────────────────────────────────────────────────────────
 
