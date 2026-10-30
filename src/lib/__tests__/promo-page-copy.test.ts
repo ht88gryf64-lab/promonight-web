@@ -79,14 +79,37 @@ test('seasonLabelFor mirrors the pipeline: calendar year, or the July-bounded tw
   assert.equal(promoPagePath('nhl', 'detroit-red-wings', 'star-wars-night'), '/nhl/detroit-red-wings/promos/star-wars-night');
 });
 
-test('title: {Promo} | {Team} {Mon D, YYYY}, the year dropped past 60 rendered, the season on a multi-date slug', () => {
-  const short = promoPageTitle('Blaze Orange Hat', 'Minnesota Wild', ['2026-10-29'], '2026-27');
+test('title cascade: the first shape inside 60 rendered wins; the season stands in for the date on a series', () => {
+  // 1. full name with the year.
+  const short = promoPageTitle('Blaze Orange Hat', 'Minnesota Wild', ['2026-10-29'], '2026-27', 'Wild');
   assert.equal(short, 'Blaze Orange Hat | Minnesota Wild Oct 29, 2026');
   assert.ok(renderedTitleLength(short) <= 60, String(renderedTitleLength(short)));
-  const long = promoPageTitle('Hall of Fame Mystery Bag Charms', 'Pittsburgh Penguins', ['2026-11-14'], '2026-27');
-  assert.equal(long, 'Hall of Fame Mystery Bag Charms | Pittsburgh Penguins Nov 14');
-  assert.equal(promoPageTitle('Original Six Matchup', 'Detroit Red Wings', ['2026-10-29', '2026-11-18'], '2026-27'), 'Original Six Matchup | Detroit Red Wings 2026-27');
-  assert.equal(promoPageTitle('No Date', 'Minnesota Wild', [], '2026-27'), 'No Date | Minnesota Wild');
+  // 2. full name without the year (64 rendered with it, 58 without).
+  assert.equal(promoPageTitle('Blaze Orange Hat Night', 'Minnesota Wild', ['2026-10-29'], '2026-27', 'Wild'), 'Blaze Orange Hat Night | Minnesota Wild Oct 29');
+  // 3. the nickname with the date (the full name without the year is 65).
+  assert.equal(promoPageTitle('Hall of Fame Mystery Bag', 'Pittsburgh Penguins', ['2026-11-14'], '2026-27', 'Penguins'), 'Hall of Fame Mystery Bag | Penguins Nov 14');
+  // 4. the nickname alone (the nickname with the date is 61). The Malkin
+  // bobblehead page is this shape: 74 under the old rule, 56 here.
+  const nick = promoPageTitle('Hall of Fame Mystery Bag Charms', 'Pittsburgh Penguins', ['2026-11-14'], '2026-27', 'Penguins');
+  assert.equal(nick, 'Hall of Fame Mystery Bag Charms | Penguins');
+  assert.ok(renderedTitleLength(nick) <= 60, String(renderedTitleLength(nick)));
+  const malkin = promoPageTitle('Evgeni Malkin Talking Bobblehead', 'Pittsburgh Penguins', ['2027-01-23'], '2026-27', 'Penguins');
+  assert.equal(malkin, 'Evgeni Malkin Talking Bobblehead | Penguins');
+  assert.equal(renderedTitleLength(malkin), 56);
+  // 5. the promo name alone, taken even when it still passes 60.
+  const only = promoPageTitle('Hall of Fame Mystery Bag Charms and Commemorative Puck Set', 'Pittsburgh Penguins', ['2026-11-14'], '2026-27', 'Penguins');
+  assert.equal(only, 'Hall of Fame Mystery Bag Charms and Commemorative Puck Set');
+  // Without a nickname the cascade skips to the name: the old second shape
+  // (full name, no year) is kept when it fits and the name is taken otherwise.
+  assert.equal(promoPageTitle('Hall of Fame Mystery Bag Charms', 'Pittsburgh Penguins', ['2026-11-14'], '2026-27'), 'Hall of Fame Mystery Bag Charms');
+  // A series: the season in place of the date, the same order. The suffix
+  // " | PromoNight" is 13 characters, so a 48-character bare title is 61.
+  assert.equal(promoPageTitle('Original Six Puck', 'Detroit Red Wings', ['2026-10-29', '2026-11-18'], '2026-27', 'Red Wings'), 'Original Six Puck | Detroit Red Wings 2026-27');
+  assert.equal(promoPageTitle('Original Six Matchup', 'Detroit Red Wings', ['2026-10-29', '2026-11-18'], '2026-27', 'Red Wings'), 'Original Six Matchup | Detroit Red Wings', 'with the season it is 61: the full name alone');
+  assert.equal(promoPageTitle('Warriors Cup Games T-Shirt', 'Golden State Warriors', ['2026-11-01', '2026-11-14'], '2026-27', 'Warriors'), 'Warriors Cup Games T-Shirt | Warriors 2026-27');
+  assert.equal(promoPageTitle('Warriors Cup Games Shirt Giveaway', 'Golden State Warriors', ['2026-11-01', '2026-11-14'], '2026-27', 'Warriors'), 'Warriors Cup Games Shirt Giveaway | Warriors');
+  // No date: from the second shape.
+  assert.equal(promoPageTitle('No Date', 'Minnesota Wild', [], '2026-27', 'Wild'), 'No Date | Minnesota Wild');
 });
 
 test('description: the source text, then the game line, cut at the last sentence boundary under 155', () => {

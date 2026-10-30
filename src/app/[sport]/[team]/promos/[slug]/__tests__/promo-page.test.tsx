@@ -388,7 +388,9 @@ test('multi-date series: a dates list in place of the game line, one Event per d
   assert.equal((h.slice(h.indexOf('<header'), h.indexOf('</header>')).match(/<li /g) ?? []).length, 3, 'three dates in the header');
   // The card is keyed on the page's latest stamp (the tombstoned o4, 2026-10-31T10:00Z), not the primary row's.
   assert.match(h, /<img src="\/api\/promo-card\/o1\?team=detroit-red-wings&amp;v=1793440800000" alt="Original Six Matchup: Detroit Red Wings, Oct 29, 2026" width="1200" height="630"/);
-  assert.equal(meta.title, 'Original Six Matchup | Detroit Red Wings 2026-27');
+  // The title cascade (ruling 2026-10-30): with the season the bare title is
+  // 48, 61 rendered, so the full name alone is the shape taken.
+  assert.equal(meta.title, 'Original Six Matchup | Detroit Red Wings');
   assert.equal((meta.openGraph as any).images[0].url, 'https://www.getpromonight.com/api/promo-card/o1?team=detroit-red-wings&v=1793440800000');
   assert.ok(!h.slice(h.indexOf('<header'), h.indexOf('</header>')).includes('<details'), 'three dates: nothing to fold');
   const ld = jsonLd(h);

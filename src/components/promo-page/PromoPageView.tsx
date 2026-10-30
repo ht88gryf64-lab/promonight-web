@@ -77,7 +77,9 @@ export function promoPageHead(page: PromoPage, ctx: PromoPageContext, today: str
   // WebPage and Event url in the schema. It still renders its own body.
   const canonical = `${SITE_URL}${promoPagePath(team.sportSlug, team.id, page.canonicalSlug ?? page.slug)}`;
   const venueName = ctx.hub?.displayName ?? ctx.venue?.name ?? null;
-  const title = promoPageTitle(primary.title, teamName, removed ? page.removedDates : dates, page.season);
+  // The cascade (ruling 2026-10-30) falls back to the club's nickname, then
+  // the promo name alone, so the rendered title stays inside 60.
+  const title = promoPageTitle(primary.title, teamName, removed ? page.removedDates : dates, page.season, team.name);
   const description = promoPageDescription({
     description: primary.description,
     title: primary.title,
