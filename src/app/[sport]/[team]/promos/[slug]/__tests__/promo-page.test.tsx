@@ -603,3 +603,22 @@ test('an old slug in previousSlugs is a permanent redirect to the current slug; 
   const paths = (await getPromoPageSitemapEntries(TODAY)).map((e) => e.path);
   assert.ok(!paths.includes('/nba/phoenix-suns/promos/d-a-de-los-muertos'));
 });
+
+// ── The family wrapper (hotfix 2026-10-30, option 3) ────────────────────────
+// The route's layout renders ONE server-rendered <div class="pn-promo-page">
+// as the first-byte parent of the page's <article>, the hook Raptive's
+// custom layout targets by descendant selector. Nothing sits between the two.
+test('the route layout wraps the page in div.pn-promo-page, the direct parent of the article', async () => {
+  const { default: Layout } = await import('../layout');
+  const { default: Page } = await page();
+  const h = await html(Layout({ children: await Page(params('nhl', 'minnesota-wild', 'blaze-orange-hat')) }));
+  assert.equal((h.match(/pn-promo-page/g) ?? []).length, 1, 'one wrapper');
+  // The wrapper opens, the JSON-LD scripts follow as earlier children, then the article: no other element between.
+  assert.match(h, /<div class="[^"]*\brd-root\b[^"]*\bpn-promo-page\b[^"]*">(?:<script type="application\/ld\+json">[^<]*<\/script>)*<article class="page-content[^"]*" data-ad-region="content">/, 'the wrapper is the article\'s parent');
+  assert.ok(h.trimEnd().endsWith('</article></div>'), 'the wrapper closes right after the article');
+  // The house wrapper and the hook are the layout's; the view renders no wrapper of its own.
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync(new URL('../layout.tsx', import.meta.url), 'utf8');
+  assert.match(src, /rd-root min-h-screen pn-promo-page/);
+  assert.doesNotMatch(readFileSync(new URL('../../../../../../components/promo-page/PromoPageView.tsx', import.meta.url), 'utf8'), /rd-root min-h-screen/);
+});
