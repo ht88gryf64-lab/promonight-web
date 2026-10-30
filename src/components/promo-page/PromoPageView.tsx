@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { archivoHouse } from '@/components/redesign/fonts-house';
 import { TrackedAffiliateLink } from '@/components/tracked-affiliate-link';
 import { TrackedAppLink } from '@/components/analytics-events';
 import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
@@ -223,8 +222,11 @@ export function PromoPageView({ page, ctx, today }: PromoPageViewProps) {
   const foldedAllPlayed = foldedRows.length > 0 && foldedRows.every((r) => r.date < today);
   const foldLabel = `+${foldedRows.length} ${foldedAllPlayed ? 'earlier' : 'more'} date${foldedRows.length === 1 ? '' : 's'}`;
 
+  // No wrapper of its own since the hotfix of 2026-10-30: the route's layout
+  // (src/app/[sport]/[team]/promos/[slug]/layout.tsx) renders the rd-root
+  // wrapper, with the pn-promo-page hook, as the article's parent.
   return (
-    <div className={`${archivoHouse.variable} rd-root min-h-screen`}>
+    <>
       {jsonLd.map((s, i) => (
         // eslint-disable-next-line react/no-array-index-key
         <script key={i} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(s) }} />
@@ -489,6 +491,6 @@ export function PromoPageView({ page, ctx, today }: PromoPageViewProps) {
 
         <AffiliateDisclosure className="mt-6" />
       </article>
-    </div>
+    </>
   );
 }
