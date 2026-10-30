@@ -5,6 +5,10 @@ import assert from 'node:assert/strict';
 import {
   badgeLabel,
   baseSlugOf,
+  canonicalGroups,
+  canonicalSlugFor,
+  canonicalTitleKey,
+  canonicalWinner,
   cardImagePath,
   categoryAggregatorFor,
   factTiles,
@@ -20,8 +24,10 @@ import {
   quantityLine,
   renderedTitleLength,
   seasonLabelFor,
+  seriesLine,
   storageImageUrl,
   themeLabel,
+  titlesNest,
   truncateAtSentence,
   truncateAtWord,
   typeNoun,
@@ -140,6 +146,9 @@ test('badge, quantity line and tiles exist only for the fields that exist', () =
 test('FAQs come only from stored fields, two at most, in pool order', () => {
   const none = promoFaqs({ row: row({ presentedBy: null, displayTime: '' }), teamName: 'Minnesota Wild', dates: ['2026-10-29'], removed: false, removedOn: null });
   assert.deepEqual(none, []);
+  // A game time alone is not an arrival answer (ruling 2026-10-29): the FAQ needs a door time.
+  const timeOnly = promoFaqs({ row: row({ presentedBy: null }), teamName: 'Minnesota Wild', dates: ['2026-10-29'], removed: false, removedOn: null });
+  assert.deepEqual(timeOnly, []);
   const capped = promoFaqs({ row: row({ attendanceCap: 10000, gateOpenTime: '5:30 PM' }), teamName: 'Minnesota Wild', dates: ['2026-10-29'], removed: false, removedOn: null });
   assert.deepEqual(capped.map((f) => f.question), ['Do I need a special ticket for the Blaze Orange Hat?', 'What time should I arrive?']);
   assert.equal(capped[0].answer, 'The Minnesota Wild listing names no special ticket, so any game ticket should count. The first 10,000 fans through the gates receive one.');
@@ -181,6 +190,10 @@ test('category aggregator by type and title; theme labels', () => {
   assert.deepEqual((['giveaway', 'theme', 'food', 'kids'] as const).map(typePlural), ['giveaways', 'theme nights', 'food deals', 'kids promos']);
   assert.deepEqual((['giveaway', 'theme', 'food', 'kids'] as const).map(typeNoun), ['giveaway', 'theme night', 'food deal', 'promotion']);
   assert.equal(formatLongDate('2026-10-29'), 'Thursday, Oct 29, 2026');
+  assert.equal(seriesLine(['2026-10-29', '2026-11-18', '2027-03-20', '2026-10-29']), '3 home games \u00b7 Oct 29, 2026 to Mar 20, 2027');
+  assert.equal(seriesLine(['2026-11-01', '2026-11-08']), '2 home games \u00b7 Nov 1 to Nov 8, 2026');
+  assert.equal(seriesLine(['2026-11-15']), 'Sunday, Nov 15, 2026');
+  assert.equal(seriesLine(['bad']), '');
 });
 
 test('JSON-LD: WebPage with dateModified = updatedAt, one Event per date with image, location, offers and status, FAQPage, BreadcrumbList', () => {
@@ -217,4 +230,57 @@ test('JSON-LD: WebPage with dateModified = updatedAt, one Event per date with im
   assert.equal((gone[1] as Record<string, any>).offers, undefined);
   assert.equal('dateModified' in gone[0], false);
   assert.deepEqual(gone.map((s) => s['@type']), ['WebPage', 'Event', 'BreadcrumbList']);
+});
+
+// ── the canonical rule (ruling 2026-10-29) ───────────────────────────────────
+test('canonical rule: the title key folds diacritics; titles nest by substring or token subset', () => {
+  assert.equal(canonicalTitleKey('Día de los Muertos Night!'), 'dia de los muertos night');
+  assert.equal(canonicalTitleKey('  Hometown Remix & Catfish Gravy Boat '), 'hometown remix catfish gravy boat');
+  assert.ok(titlesNest('Star Wars Night', 'Star Wars Night Layered Hoodie'), 'substring');
+  assert.ok(titlesNest('Catfish Gravy Boat', 'Hometown Remix & Catfish Gravy Boat'), 'substring inside');
+  assert.ok(titlesNest('Pride Night', 'Night of Pride'), 'token subset');
+  assert.ok(titlesNest('Dia de los Muertos', 'Día de los Muertos Night'), 'folded');
+  assert.ok(titlesNest('Twin Night', 'Twin Night'), 'equal');
+  assert.ok(!titlesNest('Lapel Pin Set', 'Community Night'));
+  assert.ok(!titlesNest('Pen', 'Opening Night'), 'a substring inside a word is not a match');
+  assert.ok(!titlesNest('Tee', 'Steelers Night'));
+  assert.ok(!titlesNest('', 'Community Night'), 'empty nests with nothing');
+});
+
+test('canonical rule: the three ruled examples (2026-10-29), the tie-breaks and the slug lookup', () => {
+  const c = (pageSlug: string, title: string, type: PromoPageRow['type'] = 'giveaway', imageTier: 1 | 3 | null = null) => ({ pageSlug, title, type, imageTier });
+  // Suns Nov 7: tier 1 giveaway wins when the group has one; the most specific of two.
+  const suns7 = [c('originativ-night', 'ORIGINATIV Night', 'theme'), c('originativ', 'ORIGINATIV', 'giveaway', 1), c('artist-collaboration-originativ-replica-jersey', 'Artist Collaboration Originativ Replica Jersey', 'giveaway', 1)];
+  const g7 = canonicalGroups(suns7);
+  assert.equal(g7.length, 1);
+  assert.equal(g7[0].winner.pageSlug, 'artist-collaboration-originativ-replica-jersey');
+  assert.deepEqual(g7[0].members.map((m) => m.pageSlug).sort(), ['artist-collaboration-originativ-replica-jersey', 'originativ', 'originativ-night']);
+  // Suns Nov 4: no tier 1 giveaway; most tokens wins.
+  const suns4 = [c('dia-de-los-muertos-night', 'Día de los Muertos Night', 'theme'), c('dia-de-los-muertos', 'Día de los Muertos', 'giveaway', 3)];
+  assert.equal(canonicalWinner(suns4).pageSlug, 'dia-de-los-muertos-night');
+  assert.equal(canonicalSlugFor('dia-de-los-muertos', suns4), 'dia-de-los-muertos-night');
+  assert.equal(canonicalSlugFor('dia-de-los-muertos-night', suns4), null, 'the winner is its own canonical');
+  // Predators Nov 7: the tier 1 giveaway beats the longer theme title.
+  const preds = [c('hometown-remix-catfish-gravy-boat', 'Hometown Remix & Catfish Gravy Boat', 'theme'), c('catfish-gravy-boat', 'Catfish Gravy Boat', 'giveaway', 1)];
+  assert.equal(canonicalWinner(preds).pageSlug, 'catfish-gravy-boat');
+  assert.equal(canonicalSlugFor('hometown-remix-catfish-gravy-boat', preds), 'catfish-gravy-boat');
+  // Ties: equal tokens, the longer key; equal keys, the lower slug.
+  assert.equal(canonicalWinner([c('a-b', 'Pride Night'), c('a-c', 'Pride Nights')]).pageSlug, 'a-c');
+  assert.equal(canonicalWinner([c('twin-night-b', 'Twin Night'), c('twin-night-a', 'Twin Night')]).pageSlug, 'twin-night-a');
+  // Two tier 1 giveaways: the most specific of the two (Predators Feb 18).
+  assert.equal(canonicalWinner([c('billy-strings-bobblehead', 'Billy Strings Bobblehead', 'giveaway', 1), c('music-city-billy-strings-bobblehead', 'Music City Billy Strings Bobblehead', 'giveaway', 1)]).pageSlug, 'music-city-billy-strings-bobblehead');
+  // No group: unrelated titles, a lone page, a slug not in the set.
+  assert.deepEqual(canonicalGroups([c('lapel-pin-set', 'Lapel Pin Set'), c('community-night', 'Community Night', 'theme')]), []);
+  assert.equal(canonicalSlugFor('lapel-pin-set', [c('lapel-pin-set', 'Lapel Pin Set'), c('community-night', 'Community Night', 'theme')]), null);
+  assert.equal(canonicalSlugFor('elsewhere', suns7), null);
+  // One candidate per slug: a second row under a slug (a same-date twin) is the same page.
+  assert.equal(canonicalGroups([c('twin-night', 'Twin Night', 'theme'), c('twin-night', 'Twin Night', 'theme')]).length, 0);
+  // A twin that is a tier 1 giveaway stands for its slug whichever twin comes first.
+  const twins = [c('bobblehead', 'Bobblehead', 'giveaway', 3), c('bobblehead', 'Bobblehead', 'giveaway', 1), c('bobblehead-night', 'Bobblehead Night', 'theme')];
+  assert.equal(canonicalGroups(twins)[0].winner.pageSlug, 'bobblehead');
+  assert.equal(canonicalGroups([twins[1], twins[0], twins[2]])[0].winner.pageSlug, 'bobblehead');
+  // Components join through a shared member: A nests B, B nests C, A and C do not nest.
+  const chain = [c('pride', 'Pride', 'theme'), c('pride-night-tank-top', 'Pride Night Tank Top'), c('night-tank-top', 'Night Tank Top')];
+  assert.equal(canonicalGroups(chain).length, 1);
+  assert.equal(canonicalGroups(chain)[0].members.length, 3);
 });

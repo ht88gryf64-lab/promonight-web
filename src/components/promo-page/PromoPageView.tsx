@@ -29,6 +29,7 @@ import {
   promoPagePath,
   promoPageTitle,
   quantityLine,
+  YMD_RE,
   themeLabel,
   typeNoun,
   typePlural,
@@ -71,7 +72,10 @@ export function promoPageHead(page: PromoPage, ctx: PromoPageContext, today: str
   const { team, primary, dates } = page;
   const teamName = teamDisplayName(team);
   const removed = page.state === 'removed';
-  const canonical = `${SITE_URL}${promoPagePath(team.sportSlug, team.id, page.slug)}`;
+  // A duplicate under the canonical rule (page.canonicalSlug) points every
+  // URL signal at its canonical: the link rel=canonical, og:url, and the
+  // WebPage and Event url in the schema. It still renders its own body.
+  const canonical = `${SITE_URL}${promoPagePath(team.sportSlug, team.id, page.canonicalSlug ?? page.slug)}`;
   const venueName = ctx.hub?.displayName ?? ctx.venue?.name ?? null;
   const title = promoPageTitle(primary.title, teamName, removed ? page.removedDates : dates, page.season);
   const description = promoPageDescription({
@@ -83,7 +87,7 @@ export function promoPageHead(page: PromoPage, ctx: PromoPageContext, today: str
     venueName,
     removed,
   });
-  const image = pageImage(primary, team.id, teamName, primary.date || null);
+  const image = pageImage({ ...primary, updatedAt: page.updatedAt ?? primary.updatedAt }, team.id, teamName, primary.date || null);
   const imageUrl = image.kind === 'photo' ? image.url : `${SITE_URL}${image.url}`;
   const indexable = promoPageIndexable({ title: primary.title, dates: removed ? page.removedDates : dates, removed, today });
   return { teamName, canonical, title, description, image, imageUrl, indexable, venueName };
@@ -111,11 +115,12 @@ function hostOf(url: string | null): string | null {
 
 const H2 = ({ children }: { children: ReactNode }) => <h2 className="rd-display m-0 text-[22px] uppercase text-rd-ink">{children}</h2>;
 
+// The date is the tile; the subtitle never repeats it. A cross-team card
+// names the club, a same-team card the opponent and the time (ruling
+// 2026-10-29).
 function PromoCard({ p, showTeam }: { p: LinkedPromo; showTeam: boolean }) {
   const d = dateBlock(p.date);
-  const sub = showTeam
-    ? [p.teamName, formatMonDay(p.date)].join(' · ')
-    : [p.displayOpponent ? `vs ${p.displayOpponent}` : null, p.displayTime || null].filter(Boolean).join(' · ');
+  const sub = showTeam ? p.teamName : [p.displayOpponent ? `vs ${p.displayOpponent}` : null, p.displayTime || null].filter(Boolean).join(' · ');
   return (
     <Link href={p.href} className="flex items-center gap-3 rounded-xl border border-rd-line bg-rd-card p-2.5 text-rd-ink no-underline transition-colors hover:border-rd-line-strong">
       <span className="w-11 shrink-0 text-center leading-none">
@@ -142,7 +147,6 @@ export function PromoPageView({ page, ctx, today }: PromoPageViewProps) {
   const venueHref = ctx.hub && ctx.hub.indexable ? `/venues/${ctx.hub.slug}` : null;
   const venueName = head.venueName;
   const venueLine = [venueName, ctx.hub?.city ?? null].filter(Boolean).join(', ');
-  const crumbLabel = primary.type === 'giveaway' ? 'Giveaways' : 'Promos';
   const crumbHref = `${teamHref}#promo-${promoAnchorId({ date: primary.date, title: primary.title })}`;
 
   const badge = badgeLabel({ type: primary.type, tombstoned: removed, ticketPackageRequired: primary.ticketPackageRequired });
@@ -184,19 +188,38 @@ export function PromoPageView({ page, ctx, today }: PromoPageViewProps) {
     ticketUrl: tickets,
     dateModified: page.updatedAt,
     faqs,
+    // The visible trail, item for item (Google asks the markup to reflect it):
+    // league hub, team page, the team's promos (its anchor on the team page).
     breadcrumbs: [
       { name: team.league, url: `${SITE_URL}${leagueHref ?? '/'}` },
       { name: teamName, url: `${SITE_URL}${teamHref}` },
-      { name: cleanText(primary.title), url: canonical },
+      { name: 'Promos', url: `${SITE_URL}${crumbHref}` },
     ],
   });
 
-  const gameLine = (date: string, row: { displayTime: string; displayOpponent: string }, key?: string) => (
-    <li key={key ?? date} className="m-0 list-none text-[15px] leading-[1.45] text-rd-ink-soft">
+  // A single-date page names the opponent once, in the matchup line above the
+  // date; a series names it per date (ruling 2026-10-29).
+  const gameLine = (date: string, row: { displayTime: string; displayOpponent: string }, key: string, withOpponent: boolean) => (
+    <li key={key} className="m-0 list-none text-[15px] leading-[1.45] text-rd-ink-soft">
       <strong className="text-rd-ink">{`${formatLongDate(date)}${row.displayTime ? ` · ${row.displayTime}` : ''}`}</strong>
-      {row.displayOpponent ? <span className="block">{`vs ${row.displayOpponent}`}</span> : null}
+      {withOpponent && row.displayOpponent ? <span className="block">{`vs ${row.displayOpponent}`}</span> : null}
     </li>
   );
+  // A series shows three dates and folds the rest into a native expander (no
+  // script, every date in the HTML), so the CTA row follows a short list: the
+  // next three, padded with the most recent played dates when fewer than
+  // three remain. The fold says "earlier" when everything in it has been
+  // played. The full list stays in the FAQ and in the per-date Events. Only
+  // dated rows, the same filter the Events use.
+  const datedRows = page.rows.filter((r) => YMD_RE.test(r.date));
+  const upcomingRows = datedRows.filter((r) => r.date >= today);
+  const playedRows = datedRows.filter((r) => r.date < today);
+  const nextRows = upcomingRows.slice(0, 3);
+  const shownRows = [...playedRows.slice(Math.max(0, playedRows.length - (3 - nextRows.length))), ...nextRows];
+  const shownIds = new Set(shownRows.map((r) => r.promoId));
+  const foldedRows = datedRows.filter((r) => !shownIds.has(r.promoId));
+  const foldedAllPlayed = foldedRows.length > 0 && foldedRows.every((r) => r.date < today);
+  const foldLabel = `+${foldedRows.length} ${foldedAllPlayed ? 'earlier' : 'more'} date${foldedRows.length === 1 ? '' : 's'}`;
 
   return (
     <div className={`${archivoHouse.variable} rd-root min-h-screen`}>
@@ -214,7 +237,7 @@ export function PromoPageView({ page, ctx, today }: PromoPageViewProps) {
           <span aria-hidden="true">/</span>
           <Link href={teamHref} className="no-underline hover:text-rd-ink">{team.name}</Link>
           <span aria-hidden="true">/</span>
-          <Link href={crumbHref} className="no-underline hover:text-rd-ink">{crumbLabel}</Link>
+          <Link href={crumbHref} className="no-underline hover:text-rd-ink">Promos</Link>
         </nav>
 
         <header className="flex flex-col gap-2.5 pt-3">
@@ -233,15 +256,26 @@ export function PromoPageView({ page, ctx, today }: PromoPageViewProps) {
           ) : null}
           {multi ? (
             <ul className="m-0 flex flex-col gap-1.5 p-0">
-              {page.rows.map((r) => gameLine(r.date, r, r.promoId))}
+              {shownRows.map((r) => gameLine(r.date, r, r.promoId, true))}
             </ul>
           ) : primary.date ? (
-            <ul className="m-0 p-0">{gameLine(primary.date, primary)}</ul>
+            <ul className="m-0 p-0">{gameLine(primary.date, primary, primary.promoId, false)}</ul>
+          ) : null}
+          {multi && foldedRows.length ? (
+            <details className="m-0">
+              <summary className="cursor-pointer font-rd text-[14px] font-medium text-rd-red">{foldLabel}</summary>
+              <ul className="m-0 mt-1.5 flex flex-col gap-1.5 p-0">
+                {foldedRows.map((r) => gameLine(r.date, r, r.promoId, true))}
+              </ul>
+            </details>
           ) : null}
           {venueLine ? (
             <p className="m-0 text-[15px] leading-[1.45] text-rd-ink-soft">
               {venueHref ? <Link href={venueHref} className="text-rd-red no-underline hover:underline">{venueName}</Link> : venueName}
               {ctx.hub?.city ? <span>{`, ${ctx.hub.city}`}</span> : null}
+              {/* A renamed building names its former name in the quick-facts
+                  block; when that block has nothing to show, here instead. */}
+              {ctx.formerNames.length && !ctx.quickFacts.length ? <span>{` · formerly ${ctx.formerNames.join(', ')}`}</span> : null}
             </p>
           ) : null}
         </header>
@@ -263,7 +297,7 @@ export function PromoPageView({ page, ctx, today }: PromoPageViewProps) {
             >
               Get tickets
             </TrackedAffiliateLink>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <TrackedAffiliateLink
                 href={parking}
                 partner="spothero"
@@ -275,7 +309,7 @@ export function PromoPageView({ page, ctx, today }: PromoPageViewProps) {
                 target="_blank"
                 rel="noopener noreferrer sponsored"
                 ariaLabel={`Reserve parking near ${venueName ?? teamName} on SpotHero`}
-                className="flex h-11 flex-1 items-center justify-center rounded-xl border border-rd-line-strong bg-rd-card font-rd text-[14px] font-medium text-rd-ink no-underline hover:border-rd-ink"
+                className="flex h-11 min-w-[104px] flex-1 basis-0 items-center justify-center whitespace-nowrap rounded-xl border border-rd-line-strong bg-rd-card px-2 font-rd text-[14px] font-medium text-rd-ink no-underline hover:border-rd-ink"
               >
                 Parking
               </TrackedAffiliateLink>
@@ -291,7 +325,7 @@ export function PromoPageView({ page, ctx, today }: PromoPageViewProps) {
                   target="_blank"
                   rel="noopener noreferrer sponsored"
                   ariaLabel={`Find hotels near ${venueName ?? teamName} on Expedia`}
-                  className="flex h-11 flex-1 items-center justify-center rounded-xl border border-rd-line-strong bg-rd-card font-rd text-[14px] font-medium text-rd-ink no-underline hover:border-rd-ink"
+                  className="flex h-11 min-w-[104px] flex-1 basis-0 items-center justify-center whitespace-nowrap rounded-xl border border-rd-line-strong bg-rd-card px-2 font-rd text-[14px] font-medium text-rd-ink no-underline hover:border-rd-ink"
                 >
                   Hotels
                 </TrackedAffiliateLink>
@@ -303,7 +337,7 @@ export function PromoPageView({ page, ctx, today }: PromoPageViewProps) {
                 page="promo_page"
                 teamSlug={team.id}
                 plainAnchor
-                className="flex h-11 flex-1 items-center justify-center rounded-xl border border-rd-line-strong bg-rd-card font-rd text-[14px] font-medium text-rd-ink no-underline hover:border-rd-ink"
+                className="flex h-11 min-w-[104px] flex-1 basis-0 items-center justify-center whitespace-nowrap rounded-xl border border-rd-line-strong bg-rd-card px-2 font-rd text-[14px] font-medium text-rd-ink no-underline hover:border-rd-ink"
               >
                 Remind me
               </TrackedAppLink>
@@ -381,6 +415,7 @@ export function PromoPageView({ page, ctx, today }: PromoPageViewProps) {
         {ctx.quickFacts.length && venueName ? (
           <section className="mt-6 flex flex-col gap-2.5 rounded-2xl border border-rd-line bg-rd-card p-3.5">
             <H2>{`${venueName}, quick facts`}</H2>
+            {ctx.formerNames.length ? <p className="m-0 font-rd text-[12px] text-rd-ink-faint">{`Formerly ${ctx.formerNames.join(', ')}.`}</p> : null}
             <dl className="m-0 grid grid-cols-2 gap-2.5 text-[14px] text-rd-ink">
               {ctx.quickFacts.map((l) => (
                 <div key={l.key}>

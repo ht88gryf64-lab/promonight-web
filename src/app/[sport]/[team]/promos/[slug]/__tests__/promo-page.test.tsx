@@ -98,7 +98,7 @@ mock.module(new URL('../../../../../../components/redesign/fonts-house.ts', impo
 // bag rule, two lots, a transit line and an outside-food rule. The real
 // venue-hub loaders read it from the fake, through the published view.
 put('venueHubs/xcel-energy-center', {
-  slug: 'xcel-energy-center', name: 'Grand Casino Arena', city: 'St Paul', state: 'Minnesota', lat: 44.9448, lng: -93.101, verified: true,
+  slug: 'xcel-energy-center', name: 'Grand Casino Arena', formerNames: [{ name: 'Xcel Energy Center', sourceUrl: 'https://x/rename' }], city: 'St Paul', state: 'Minnesota', lat: 44.9448, lng: -93.101, verified: true,
   tenants: [{ teamId: 'minnesota-wild', league: 'NHL' }], parkingLots: [{ name: 'RiverCentre Ramp' }, { name: 'Lawson Ramp' }], publicTransit: { lines: ['Green Line'], notes: 'Green Line to Central Station, two blocks east.' },
   bagMaxDimensions: { unit: 'in', d: 6, w: 12, h: 12 }, clearBagRequired: false, outsideFoodAllowed: false,
   sources: { bagMaxDimensions: 'https://x/bag', clearBagRequired: 'https://x/bag', parkingLots: 'https://x/parking', 'publicTransit.notes': 'https://x/transit', 'publicTransit.lines': 'https://x/transit', outsideFoodAllowed: 'https://x/food' },
@@ -113,6 +113,8 @@ team('anaheim-ducks', 'Anaheim', 'Ducks');
 team('pittsburgh-penguins', 'Pittsburgh', 'Penguins');
 team('dallas-stars', 'Dallas', 'Stars');
 team('houston-dynamo', 'Houston', 'Dynamo', 'MLS');
+team('phoenix-suns', 'Phoenix', 'Suns', 'NBA');
+team('nashville-predators', 'Nashville', 'Predators');
 put('venues/xcel-energy-center', { name: 'Grand Casino Arena', address: '199 W Kellogg Blvd, St Paul, MN 55102', lat: 44.9448, lng: -93.101, team: 'Minnesota Wild', sport: 'NHL', league: 'NHL', teamId: 'min' });
 put('scannerState/NHL/hashes/minnesota-wild', { updatedAt: ts('2026-10-23T13:38:09.000Z') });
 
@@ -144,13 +146,46 @@ promo('houston-dynamo', 'm1', { title: 'Family 4-Pack', pageSlug: 'family-4-pack
 for (const [id, date, opp] of [['o1', '2026-10-29', 'Blackhawks'], ['o2', '2026-11-18', 'Bruins'], ['o3', '2026-12-11', 'NY Rangers']] as const) {
   promo('detroit-red-wings', id, { title: 'Original Six Matchup', pageSlug: 'original-six-matchup', type: 'theme', date, opponent: opp, description: 'Original Six matchup theme night.', updatedAt: ts(id === 'o2' ? '2026-10-30T09:00:00.000Z' : UPDATED) });
 }
+// A tombstoned sibling under the series carries the newest stamp: the page
+// and the card key on it.
+promo('detroit-red-wings', 'o4', { title: 'Original Six Matchup', pageSlug: 'original-six-matchup', type: 'theme', date: '2027-01-09', opponent: 'Bruins', tombstoned: true, tombstonedAt: ts('2026-10-31T10:00:00.000Z'), updatedAt: ts('2026-10-31T10:00:00.000Z') });
 promo('detroit-red-wings', 'p1', { title: 'Pride Night', pageSlug: 'pride-night', type: 'theme', themeKey: 'pride', date: '2026-11-05', opponent: 'Flyers' });
+// A series with two played dates and three to come, and one with one to come.
+for (const [id, date] of [['c1', '2026-10-10'], ['c2', '2026-10-20'], ['c3', '2026-11-05'], ['c4', '2026-11-20'], ['c5', '2026-12-01']] as const) {
+  promo('pittsburgh-penguins', id, { title: 'Community Night', pageSlug: 'community-night', type: 'theme', date, opponent: 'Rangers' });
+}
+for (const [id, date] of [['r1', '2026-10-05'], ['r2', '2026-10-15'], ['r3', '2026-10-25'], ['r4', '2026-11-10']] as const) {
+  // A theme night, so the Stars' earliest upcoming GIVEAWAY stays the bobblehead the league block names.
+  promo('dallas-stars', id, { title: 'Rally Towel', pageSlug: 'rally-towel', type: 'theme', date, opponent: 'Kings' });
+}
 promo('anaheim-ducks', 'p2', { title: 'Pride Night', pageSlug: 'pride-night', type: 'theme', themeKey: 'pride', date: '2026-11-12' });
-promo('anaheim-ducks', 'g2', { title: 'Kids Socks Giveaway', pageSlug: 'kids-socks-giveaway', date: '2026-11-01' });
+for (const [id, date] of [['g2', '2026-11-01'], ['g2b', '2026-11-08'], ['g2c', '2026-11-15'], ['g2d', '2026-11-22'], ['g2e', '2026-11-29']] as const) {
+  promo('anaheim-ducks', id, { title: 'Kids Socks Giveaway', pageSlug: 'kids-socks-giveaway', date, opponent: 'Sharks' });
+}
 promo('pittsburgh-penguins', 'p3', { title: 'Pride Night', pageSlug: 'pride-night', type: 'theme', themeKey: 'pride', date: '2026-11-20' });
 promo('pittsburgh-penguins', 'g3', { title: 'Lapel Pin Set', pageSlug: 'lapel-pin-set', date: '2026-11-05', attendanceCap: 7500 });
 promo('dallas-stars', 'p4', { title: 'Pride Night', pageSlug: 'pride-night', type: 'theme', themeKey: 'pride', date: '2027-01-05' });
 promo('dallas-stars', 'g4', { title: 'Esa Lindell Bobblehead', pageSlug: 'esa-lindell-bobblehead', date: '2026-11-15', gateOpenTime: '5:30 PM', imageTier: 1, imageRef: 'promo-images/g4.png', imageCredit: 'Image: Dallas Stars' });
+// ── the canonical rule (ruling 2026-10-29): the three ruled examples ─────────
+// Suns Nov 7: a theme night and two tier 1 giveaways; the most specific tier 1
+// giveaway, the jersey, is the canonical of all three.
+const suns = (id: string, over: Data) => promo('phoenix-suns', id, { opponent: 'Lakers', sourceUrl: 'https://www.nba.com/suns/promotions', ...over });
+suns('s1', { title: 'ORIGINATIV Night', pageSlug: 'originativ-night', type: 'theme', date: '2026-11-07' });
+suns('s2', { title: 'ORIGINATIV', pageSlug: 'originativ', date: '2026-11-07', imageTier: 1, imageRef: 'promo-images/s2.png', imageSourceUrl: 'https://www.nba.com/suns/promotions', imageCredit: 'Image: Phoenix Suns' });
+suns('s3', { title: 'Artist Collaboration Originativ Replica Jersey', pageSlug: 'artist-collaboration-originativ-replica-jersey', date: '2026-11-07', imageTier: 1, imageRef: 'promo-images/s3.png', imageSourceUrl: 'https://www.nba.com/suns/promotions', imageCredit: 'Image: Phoenix Suns' });
+// Suns Nov 4: a theme night and a giveaway with no stored image; the longer
+// title wins. The giveaway's slug was re-minted (the old slugifier dropped the
+// accented letter), so its old slug lives in previousSlugs.
+suns('s4', { title: 'Día de los Muertos Night', pageSlug: 'dia-de-los-muertos-night', type: 'theme', themeKey: 'dia-de-los-muertos', date: '2026-11-04', opponent: 'Nuggets' });
+suns('s5', { title: 'Día de los Muertos', pageSlug: 'dia-de-los-muertos', themeKey: 'dia-de-los-muertos', previousSlugs: ['d-a-de-los-muertos'], date: '2026-11-04', opponent: 'Nuggets' });
+// Predators Nov 7: a theme night whose title contains the tier 1 giveaway's;
+// the giveaway is the canonical.
+promo('nashville-predators', 'n1', { title: 'Hometown Remix & Catfish Gravy Boat', pageSlug: 'hometown-remix-catfish-gravy-boat', type: 'theme', date: '2026-11-07', opponent: 'Blues', sourceUrl: 'https://www.nhl.com/predators/fans/promotions' });
+promo('nashville-predators', 'n2', { title: 'Catfish Gravy Boat', pageSlug: 'catfish-gravy-boat', date: '2026-11-07', opponent: 'Blues', imageTier: 1, imageRef: 'promo-images/n2.png', imageSourceUrl: 'https://www.nhl.com/predators/fans/promotions', imageCredit: 'Image: Nashville Predators' });
+// A series is never a duplicate: the Stars' four-date Rally Towel shares its
+// last date with a more specific single-date night. In the upcoming index the
+// series has ONE date left, which is the sitemap's trap.
+promo('dallas-stars', 'r5', { title: 'Rally Towel Night', pageSlug: 'rally-towel-night', type: 'theme', date: '2026-11-10', opponent: 'Kings' });
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 async function html(el: React.ReactElement): Promise<string> {
@@ -233,6 +268,17 @@ test('tier 1 single-date NHL page: H1, the stored photo, the head, the schema an
   process.env.PROMO_PAGES_LIVE = 'true';
   const { h, meta } = await render('nhl', 'minnesota-wild', 'blaze-orange-hat');
   assert.match(h, /<h1 class="rd-display[^"]*">Blaze Orange Hat<\/h1>/);
+  // Rulings 2026-10-29: the third crumb is Promos on every page; a single-date
+  // page names the opponent once (the matchup line), not again under the date;
+  // the secondary CTA row wraps rather than clips; a renamed building shows its
+  // former name; a cross-team card names the club and never repeats the tile date.
+  assert.match(h, /href="\/nhl\/minnesota-wild#promo-2026-10-29-blaze-orange-hat">Promos<\/a>/);
+  assert.ok(!h.slice(h.indexOf('<header'), h.indexOf('</header>')).includes('<span class="block">vs Islanders</span>'), 'no repeated opponent line');
+  assert.match(h, /<div class="[^"]*\bflex-wrap\b[^"]*"><a href="https:\/\/tracking\.spothero\.com[^"]*" class="[^"]*\bmin-w-\[104px\][^"]*"[^>]*aria-label="Reserve parking near Grand Casino Arena on SpotHero">Parking<\/a>/);
+  // Same-team cards: the opponent and the time, never the tile date.
+  assert.match(h, /<span class="block font-semibold">Hockey Fights Cancer Night<\/span><span class="block text-\[12px\] text-rd-ink-faint">vs Bruins · 7:00 PM<\/span>/);
+  assert.match(h, /Formerly Xcel Energy Center\./);
+  assert.ok(!/Dallas Stars · Nov 15/.test(h), 'cross-team card subtitle never repeats the tile date');
   assert.match(h, /<img src="https:\/\/firebasestorage\.googleapis\.com\/v0\/b\/promonight\.firebasestorage\.app\/o\/promo-images%2Fc7057219198efd77\.png\?alt=media" alt="Blaze Orange Hat, the Minnesota Wild giveaway item"/);
   assert.match(h, /Image: Minnesota Wild/);
   assert.match(h, /Minnesota Wild vs Islanders/);
@@ -276,8 +322,61 @@ test('tier 1 single-date NHL page: H1, the stored photo, the head, the schema an
   assert.match(ld[1].offers.url, /^https:\/\/www\.ticketmaster\.com\/minnesota-wild-tickets\/artist\/805974/);
   assert.equal(ld[1].eventStatus, 'https://schema.org/EventScheduled');
   assert.deepEqual(ld[1].image, [og.images[0].url]);
-  assert.equal(ld[2].mainEntity.length, 2);
+  // One FAQ: no door time is stored, so "What time should I arrive?" does not exist.
+  assert.equal(ld[2].mainEntity.length, 1);
+  assert.equal(ld[2].mainEntity[0].name, 'Who presents the Blaze Orange Hat?');
   assert.equal(ld[3].itemListElement.length, 3);
+  assert.deepEqual(ld[3].itemListElement.map((i: any) => i.name), ['NHL', 'Minnesota Wild', 'Promos']);
+  assert.equal(ld[3].itemListElement[2].item, 'https://www.getpromonight.com/nhl/minnesota-wild#promo-2026-10-29-blaze-orange-hat');
+});
+
+test('a series with more than three dates shows the next three and folds the rest; every date stays in the FAQ and the Events', async () => {
+  process.env.PROMO_PAGES_LIVE = 'true';
+  const { h, meta } = await render('nhl', 'anaheim-ducks', 'kids-socks-giveaway');
+  const header = h.slice(h.indexOf('<header'), h.indexOf('</header>'));
+  const open = header.slice(0, header.indexOf('<details'));
+  const folded = header.slice(header.indexOf('<details'));
+  assert.equal((open.match(/<li /g) ?? []).length, 3, 'three dates shown');
+  assert.match(folded, /<summary[^>]*>\+2 more dates<\/summary>/);
+  assert.equal((folded.match(/<li /g) ?? []).length, 2, 'two dates folded');
+  for (const d of ['Sunday, Nov 1, 2026', 'Sunday, Nov 8, 2026', 'Sunday, Nov 15, 2026', 'Sunday, Nov 22, 2026', 'Sunday, Nov 29, 2026']) assert.ok(header.includes(d), d);
+  assert.ok(open.includes('<span class="block">vs Sharks</span>'), 'a series names the opponent per date');
+  assert.equal(meta.title, 'Kids Socks Giveaway | Anaheim Ducks 2026-27');
+  const ld = jsonLd(h);
+  assert.equal(ld.filter((s) => s['@type'] === 'Event').length, 5);
+  const faq = ld.find((s) => s['@type'] === 'FAQPage');
+  assert.ok(faq, 'a FAQPage');
+  assert.match(faq!.mainEntity[0].acceptedAnswer.text, /^5 Anaheim Ducks home games this season: Nov 1, 2026, Nov 8, 2026, Nov 15, 2026, Nov 22, 2026, Nov 29, 2026\.$/);
+  // The CTA row follows the header directly.
+  assert.match(h, /<\/header><section class="[^"]*"><a href="https:\/\/www\.ticketmaster\.com[^"]*"[^>]*aria-label="Get Anaheim Ducks tickets on Ticketmaster"/);
+});
+
+test('a series pads the open list to three with played dates, and a fold of played dates says "earlier"', async () => {
+  process.env.PROMO_PAGES_LIVE = 'true';
+  const pens = await render('nhl', 'pittsburgh-penguins', 'community-night');
+  let header = pens.h.slice(pens.h.indexOf('<header'), pens.h.indexOf('</header>'));
+  let open = header.slice(0, header.indexOf('<details'));
+  assert.equal((open.match(/<li /g) ?? []).length, 3);
+  for (const d of ['Thursday, Nov 5, 2026', 'Friday, Nov 20, 2026', 'Tuesday, Dec 1, 2026']) assert.ok(open.includes(d), d);
+  assert.match(header, /<summary[^>]*>\+2 earlier dates<\/summary>/);
+  const stars = await render('nhl', 'dallas-stars', 'rally-towel');
+  header = stars.h.slice(stars.h.indexOf('<header'), stars.h.indexOf('</header>'));
+  open = header.slice(0, header.indexOf('<details'));
+  assert.equal((open.match(/<li /g) ?? []).length, 3, 'one upcoming date, padded with the two most recent played');
+  for (const d of ['Thursday, Oct 15, 2026', 'Sunday, Oct 25, 2026', 'Tuesday, Nov 10, 2026']) assert.ok(open.includes(d), d);
+  assert.match(header, /<summary[^>]*>\+1 earlier date<\/summary>/);
+  assert.equal(stars.meta.title, 'Rally Towel | Dallas Stars 2026-27');
+});
+
+test('the card stamp is the page stamp: the newest row under the slug, tombstoned or not', async () => {
+  process.env.PROMO_PAGES_LIVE = 'true';
+  const { getPromoCardRow } = await import('@/lib/promo-pages');
+  const card = await getPromoCardRow('detroit-red-wings', 'o1');
+  assert.ok(card);
+  assert.equal(card!.updatedAt, '2026-10-31T10:00:00.000Z');
+  assert.deepEqual(card!.seriesDates, ['2026-10-29', '2026-11-18', '2026-12-11'], 'live dates only');
+  const { h } = await render('nhl', 'detroit-red-wings', 'original-six-matchup');
+  assert.ok(h.includes(`/api/promo-card/o1?team=detroit-red-wings&amp;v=${Date.parse('2026-10-31T10:00:00.000Z')}"`), 'the page keys the card on the same stamp');
 });
 
 test('multi-date series: a dates list in place of the game line, one Event per date, the season in the title, dateModified the latest row', async () => {
@@ -287,13 +386,15 @@ test('multi-date series: a dates list in place of the game line, one Event per d
   for (const d of ['Thursday, Oct 29, 2026', 'Wednesday, Nov 18, 2026', 'Friday, Dec 11, 2026']) assert.ok(h.includes(d), d);
   assert.ok(!h.includes('Detroit Red Wings vs Blackhawks</p>'), 'no single game line');
   assert.equal((h.slice(h.indexOf('<header'), h.indexOf('</header>')).match(/<li /g) ?? []).length, 3, 'three dates in the header');
-  assert.match(h, /<img src="\/api\/promo-card\/o1\?team=detroit-red-wings&amp;v=1793294994000" alt="Original Six Matchup: Detroit Red Wings, Oct 29, 2026" width="1200" height="630"/);
+  // The card is keyed on the page's latest stamp (the tombstoned o4, 2026-10-31T10:00Z), not the primary row's.
+  assert.match(h, /<img src="\/api\/promo-card\/o1\?team=detroit-red-wings&amp;v=1793440800000" alt="Original Six Matchup: Detroit Red Wings, Oct 29, 2026" width="1200" height="630"/);
   assert.equal(meta.title, 'Original Six Matchup | Detroit Red Wings 2026-27');
-  assert.equal((meta.openGraph as any).images[0].url, 'https://www.getpromonight.com/api/promo-card/o1?team=detroit-red-wings&v=1793294994000');
+  assert.equal((meta.openGraph as any).images[0].url, 'https://www.getpromonight.com/api/promo-card/o1?team=detroit-red-wings&v=1793440800000');
+  assert.ok(!h.slice(h.indexOf('<header'), h.indexOf('</header>')).includes('<details'), 'three dates: nothing to fold');
   const ld = jsonLd(h);
   assert.deepEqual(ld.map((s) => s['@type']), ['WebPage', 'Event', 'Event', 'Event', 'FAQPage', 'BreadcrumbList']);
   assert.deepEqual(ld.slice(1, 4).map((e) => e.startDate), ['2026-10-29', '2026-11-18', '2026-12-11']);
-  assert.equal(ld[0].dateModified, '2026-10-30T09:00:00.000Z');
+  assert.equal(ld[0].dateModified, '2026-10-31T10:00:00.000Z');
   assert.match(ld[4].mainEntity[0].name, /Which games is Original Six Matchup on\?/);
   // No hub for the Red Wings in this fixture: no venue link, no quick facts; the
   // guard still clears 8 through the breadcrumb, the aggregator, the team's
@@ -343,7 +444,7 @@ test('a same-date twin is one date, and a flagged row outside NHL and NBA is not
   process.env.PROMO_PAGES_LIVE = 'true';
   const twin = await render('nhl', 'minnesota-wild', 'twin-night');
   assert.equal((twin.h.slice(twin.h.indexOf('<header'), twin.h.indexOf('</header>')).match(/<li /g) ?? []).length, 1, 'one game line');
-  assert.deepEqual(jsonLd(twin.h).map((s) => s['@type']), ['WebPage', 'Event', 'FAQPage', 'BreadcrumbList']);
+  assert.deepEqual(jsonLd(twin.h).map((s) => s['@type']), ['WebPage', 'Event', 'BreadcrumbList']);
   assert.equal(twin.meta.title, 'Twin Night | Minnesota Wild Dec 20, 2026');
   const mls = await render('mls', 'houston-dynamo', 'family-4-pack');
   assert.match(mls.h, />Kids</);
@@ -361,7 +462,7 @@ test('tombstoned past its date: noindex; a row with no date: noindex', async () 
   const dateless = await render('nhl', 'minnesota-wild', 'dateless-deal');
   assert.deepEqual(dateless.meta.robots, { index: false, follow: true });
   assert.equal(dateless.meta.title, 'Dateless Deal | Minnesota Wild');
-  assert.deepEqual(jsonLd(dateless.h).map((s) => s['@type']), ['WebPage', 'FAQPage', 'BreadcrumbList'], 'no Event without a date');
+  assert.deepEqual(jsonLd(dateless.h).map((s) => s['@type']), ['WebPage', 'BreadcrumbList'], 'no Event without a date, no FAQ without a door time');
 });
 
 // ── Inbound stays OFF this phase (brief C.10) ───────────────────────────────
@@ -404,4 +505,74 @@ test('the sitemap section: upcoming pages only, one URL per page, lastmod the la
   assert.equal(paths.filter((p) => p === '/nhl/detroit-red-wings/promos/original-six-matchup').length, 1);
   for (const bad of ['/nhl/minnesota-wild/promos/tombstoned-past-hat', '/nhl/minnesota-wild/promos/removed-future-poster', '/nhl/minnesota-wild/promos/dateless-deal', '/nhl/minnesota-wild/promos/pride-night-2025-26', '/nhl/minnesota-wild/promos/postseason-row']) assert.ok(!paths.includes(bad), bad);
   assert.equal(entries.find((e) => e.path === '/nhl/detroit-red-wings/promos/original-six-matchup')?.lastModified?.toISOString(), '2026-10-30T09:00:00.000Z');
+});
+
+// ── the canonical rule (ruling 2026-10-29) ───────────────────────────────────
+test('canonical: the three ruled examples; a duplicate points every URL signal at its winner, leaves the sitemap and stays in the lists', async () => {
+  process.env.PROMO_PAGES_LIVE = 'true';
+  const C = 'https://www.getpromonight.com';
+  const canonicalOf = async (sport: string, team: string, slug: string) => {
+    const { h, meta } = await render(sport, team, slug);
+    const canonical = meta.alternates?.canonical;
+    assert.equal((meta.openGraph as any).url, canonical, `${slug}: og:url`);
+    assert.equal(jsonLd(h)[0].url, canonical, `${slug}: WebPage url`);
+    assert.equal(jsonLd(h)[1].url, canonical, `${slug}: Event url`);
+    assert.equal(meta.robots, undefined, `${slug}: a duplicate is not noindexed`);
+    return { canonical, h };
+  };
+  // Suns Nov 7: the jersey, the most specific tier 1 giveaway, is canonical; the night and the bare giveaway point at it.
+  const jersey = `${C}/nba/phoenix-suns/promos/artist-collaboration-originativ-replica-jersey`;
+  assert.equal((await canonicalOf('nba', 'phoenix-suns', 'artist-collaboration-originativ-replica-jersey')).canonical, jersey);
+  const night = await canonicalOf('nba', 'phoenix-suns', 'originativ-night');
+  assert.equal(night.canonical, jersey);
+  assert.match(night.h, /<h1 class="rd-display[^"]*">ORIGINATIV Night<\/h1>/, 'the duplicate renders its own body');
+  assert.equal((await canonicalOf('nba', 'phoenix-suns', 'originativ')).canonical, jersey);
+  // Suns Nov 4: no tier 1 giveaway in the group; the title with more tokens wins.
+  const muertosNight = `${C}/nba/phoenix-suns/promos/dia-de-los-muertos-night`;
+  assert.equal((await canonicalOf('nba', 'phoenix-suns', 'dia-de-los-muertos-night')).canonical, muertosNight);
+  assert.equal((await canonicalOf('nba', 'phoenix-suns', 'dia-de-los-muertos')).canonical, muertosNight);
+  // Predators Nov 7: the tier 1 giveaway wins over the longer theme title.
+  const boat = `${C}/nhl/nashville-predators/promos/catfish-gravy-boat`;
+  const boatPage = await canonicalOf('nhl', 'nashville-predators', 'catfish-gravy-boat');
+  assert.equal(boatPage.canonical, boat);
+  assert.equal((await canonicalOf('nhl', 'nashville-predators', 'hometown-remix-catfish-gravy-boat')).canonical, boat);
+  // The winner's "Also at this game" keeps the duplicate.
+  assert.match(boatPage.h, /Also at this game/);
+  assert.match(boatPage.h, /href="\/nhl\/nashville-predators\/promos\/hometown-remix-catfish-gravy-boat"/);
+  // A series is never a duplicate: the four-date Rally Towel keeps itself as
+  // canonical beside the more specific single-date night on its last date.
+  assert.equal((await canonicalOf('nhl', 'dallas-stars', 'rally-towel')).canonical, `${C}/nhl/dallas-stars/promos/rally-towel`);
+  assert.equal((await canonicalOf('nhl', 'dallas-stars', 'rally-towel-night')).canonical, `${C}/nhl/dallas-stars/promos/rally-towel-night`);
+  // Pages in no group are untouched.
+  assert.equal((await canonicalOf('nhl', 'minnesota-wild', 'blaze-orange-hat')).canonical, `${C}/nhl/minnesota-wild/promos/blaze-orange-hat`);
+  // The sitemap lists the winners and leaves the duplicates out; the series
+  // with one upcoming date stays (its stored rows say four).
+  const { getPromoPageSitemapEntries } = await import('@/lib/promo-pages');
+  const paths = (await getPromoPageSitemapEntries(TODAY)).map((e) => e.path);
+  for (const p of ['/nba/phoenix-suns/promos/artist-collaboration-originativ-replica-jersey', '/nba/phoenix-suns/promos/dia-de-los-muertos-night', '/nhl/nashville-predators/promos/catfish-gravy-boat', '/nhl/dallas-stars/promos/rally-towel', '/nhl/dallas-stars/promos/rally-towel-night']) assert.ok(paths.includes(p), `listed: ${p}`);
+  for (const p of ['/nba/phoenix-suns/promos/originativ-night', '/nba/phoenix-suns/promos/originativ', '/nba/phoenix-suns/promos/dia-de-los-muertos', '/nhl/nashville-predators/promos/hometown-remix-catfish-gravy-boat']) assert.ok(!paths.includes(p), `not listed: ${p}`);
+});
+
+// ── old slugs (the re-mint of 2026-10-29) ────────────────────────────────────
+test('an old slug in previousSlugs is a permanent redirect to the current slug; the sitemap never lists it; an unknown slug is still a 404', async () => {
+  process.env.PROMO_PAGES_LIVE = 'true';
+  const { default: Page, generateMetadata } = await page();
+  await assert.rejects(
+    () => Page(params('nba', 'phoenix-suns', 'd-a-de-los-muertos')),
+    (err: { digest?: string }) => {
+      const d = String(err.digest ?? '');
+      assert.ok(d.startsWith('NEXT_REDIRECT;'), d);
+      assert.ok(d.includes(';/nba/phoenix-suns/promos/dia-de-los-muertos;308;'), d);
+      return true;
+    },
+  );
+  assert.deepEqual(await generateMetadata(params('nba', 'phoenix-suns', 'd-a-de-los-muertos')), {});
+  await assert.rejects(() => Page(params('nba', 'phoenix-suns', 'no-such-slug')), is404);
+  // Flag off: the old slug is a 404 like every promo path, before any read.
+  delete process.env.PROMO_PAGES_LIVE;
+  await assert.rejects(() => Page(params('nba', 'phoenix-suns', 'd-a-de-los-muertos')), is404);
+  process.env.PROMO_PAGES_LIVE = 'true';
+  const { getPromoPageSitemapEntries } = await import('@/lib/promo-pages');
+  const paths = (await getPromoPageSitemapEntries(TODAY)).map((e) => e.path);
+  assert.ok(!paths.includes('/nba/phoenix-suns/promos/d-a-de-los-muertos'));
 });

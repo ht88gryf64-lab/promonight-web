@@ -153,6 +153,17 @@ export function formatLongDate(ymd: string): string {
   return p ? `${DAYS[p.dow]}, ${MONTHS[p.m - 1]} ${p.d}, ${p.y}` : ymd;
 }
 
+/** The generated card's date line for a series: "8 home games · Oct 29 to Mar 20, 2027". */
+export function seriesLine(dates: readonly string[]): string {
+  const valid = [...new Set(dates.filter((d) => YMD_RE.test(d)))].sort();
+  if (valid.length === 0) return '';
+  if (valid.length === 1) return formatLongDate(valid[0]);
+  const first = valid[0];
+  const last = valid[valid.length - 1];
+  const sameYear = first.slice(0, 4) === last.slice(0, 4);
+  return `${valid.length} home games \u00b7 ${sameYear ? formatMonDay(first) : formatMonDayYear(first)} to ${formatMonDayYear(last)}`;
+}
+
 /** The date-block pieces a card prints: "OCT" / "29" / "THU". */
 export function dateBlock(ymd: string): { month: string; day: string; weekday: string } {
   const p = dateParts(ymd);
@@ -470,12 +481,12 @@ export function promoFaqs(opts: {
     pool.push({ question: `Do I need a special ticket for ${item}?`, answer: parts.join(' ') });
   }
 
-  // Arrival: the stored door time, else the game time.
+  // Arrival: only when the team lists a door time (ruling 2026-10-29); a
+  // game time alone does not answer "what time should I arrive".
   const doors = cleanText(row.gateOpenTime);
   const time = cleanText(row.displayTime);
-  if (doors || time) {
-    const parts: string[] = [];
-    if (doors) parts.push(`Doors open at ${doors}.`);
+  if (doors) {
+    const parts: string[] = [`Doors open at ${doors}.`];
     if (time) parts.push(`Game time is ${time}.`);
     if (cap !== null) parts.push(`Only the first ${formatCount(cap)} fans receive one, so arrive early.`);
     else if (row.whileSuppliesLast === true) parts.push('It is while supplies last, so arrive early.');
@@ -492,6 +503,121 @@ export function promoFaqs(opts: {
   if (by) pool.push({ question: `Who presents ${item}?`, answer: `${by}.` });
 
   return pool.slice(0, 2);
+}
+
+// ── canonical pages (ruling 2026-10-29) ──────────────────────────────────────
+// A scan often writes a theme night and its giveaway as two rows on one game
+// ("Star Wars Night", "Star Wars Night Layered Hoodie"), each with a page. On
+// one team and date, pages whose normalized titles nest (one is a substring
+// or a token subset of the other) are ONE group with ONE canonical page: a
+// tier 1 giveaway when the group has one (the most specific of several), else
+// the title with the most tokens, the longest on a tie, the lower slug on a
+// full tie. The others render with rel=canonical to it and leave the sitemap;
+// the lists ("Also at this game") keep them. Only a single-date page can be
+// the duplicate: a series page has dates its winner does not describe. The
+// server half applies this at render (resolvePromoPage) and in the sitemap
+// builder from the same function.
+
+export interface CanonicalCandidate {
+  pageSlug: string;
+  title: string;
+  type: PromoType;
+  imageTier: ImageTier | null;
+}
+
+export interface CanonicalGroup<T extends CanonicalCandidate> {
+  winner: T;
+  members: T[];
+}
+
+/** The title as the rule compares it: diacritics folded, lowercase, every
+ *  run of anything but a letter or digit one space. */
+export function canonicalTitleKey(title: string): string {
+  return String(title || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+/** Two titles nest: equal, one a substring of the other at word boundaries
+ *  (a run of whole tokens; "Pen" is not inside "Opening Night"), or every
+ *  token of the shorter in the longer. An empty title nests with nothing. */
+export function titlesNest(a: string, b: string): boolean {
+  const ka = canonicalTitleKey(a);
+  const kb = canonicalTitleKey(b);
+  if (!ka || !kb) return false;
+  if (ka === kb) return true;
+  const [short, long] = ka.length <= kb.length ? [ka, kb] : [kb, ka];
+  if (` ${long} `.includes(` ${short} `)) return true;
+  const tokens = new Set(long.split(' '));
+  return short.split(' ').every((t) => tokens.has(t));
+}
+
+const tokenCount = (title: string): number => canonicalTitleKey(title).split(' ').filter(Boolean).length;
+
+/** The most specific member: most tokens, the longest key on a tie, the
+ *  lower slug on a full tie (deterministic across renders). */
+function mostSpecific<T extends CanonicalCandidate>(members: readonly T[]): T {
+  return [...members].sort(
+    (a, b) =>
+      tokenCount(b.title) - tokenCount(a.title) ||
+      canonicalTitleKey(b.title).length - canonicalTitleKey(a.title).length ||
+      a.pageSlug.localeCompare(b.pageSlug),
+  )[0];
+}
+
+/** The canonical page of a group: a tier 1 giveaway when the group has one
+ *  (the most specific of several), else the most specific title. */
+export function canonicalWinner<T extends CanonicalCandidate>(members: readonly T[]): T {
+  const tier1 = members.filter((m) => m.type === 'giveaway' && m.imageTier === 1);
+  return mostSpecific(tier1.length ? tier1 : members);
+}
+
+/** The groups among one team's pages on ONE date, one candidate per slug
+ *  (same-date twins under one slug are one page; the twin that is a tier 1
+ *  giveaway stands for it, so the winner does not depend on document
+ *  order): the connected components under titlesNest with two or more
+ *  members, each with its winner. Pages in no group are not returned. */
+export function canonicalGroups<T extends CanonicalCandidate>(candidates: readonly T[]): CanonicalGroup<T>[] {
+  const bySlug = new Map<string, T>();
+  const isTier1Giveaway = (c: T) => c.type === 'giveaway' && c.imageTier === 1;
+  for (const c of candidates) {
+    if (!c.pageSlug) continue;
+    const prior = bySlug.get(c.pageSlug);
+    if (!prior || (!isTier1Giveaway(prior) && isTier1Giveaway(c))) bySlug.set(c.pageSlug, c);
+  }
+  const pages = [...bySlug.values()];
+  const grouped = new Set<number>();
+  const out: CanonicalGroup<T>[] = [];
+  for (let i = 0; i < pages.length; i++) {
+    if (grouped.has(i)) continue;
+    const comp = [i];
+    grouped.add(i);
+    for (let x = 0; x < comp.length; x++) {
+      for (let j = 0; j < pages.length; j++) {
+        if (grouped.has(j) || !titlesNest(pages[comp[x]].title, pages[j].title)) continue;
+        grouped.add(j);
+        comp.push(j);
+      }
+    }
+    if (comp.length < 2) continue;
+    const members = comp.map((k) => pages[k]);
+    out.push({ winner: canonicalWinner(members), members });
+  }
+  return out;
+}
+
+/** The slug the page `pageSlug` is a duplicate of among `candidates` (the
+ *  team's pages on its date), or null when it is its own canonical or in
+ *  no group. */
+export function canonicalSlugFor<T extends CanonicalCandidate>(pageSlug: string, candidates: readonly T[]): string | null {
+  for (const g of canonicalGroups(candidates)) {
+    if (g.winner.pageSlug === pageSlug) return null;
+    if (g.members.some((m) => m.pageSlug === pageSlug)) return g.winner.pageSlug;
+  }
+  return null;
 }
 
 // ── indexability (brief A.5, spec Lifecycle) ─────────────────────────────────

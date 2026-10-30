@@ -35,6 +35,8 @@ import { isVisiblePromo, promoDisplayOpponent, promoDisplayTime, teamDisplayName
 import type { Promo, PromoType, PromoWithTeam, Team, Venue } from './types';
 import {
   baseSlugOf,
+  canonicalGroups,
+  canonicalSlugFor,
   laterSeason,
   promoPagePath,
   seasonLabelFor,
@@ -145,6 +147,12 @@ export interface PromoPage {
   updatedAt: string | null;
   /** The latest tombstonedAt, for the removed line. */
   removedAt: string | null;
+  /** The slug this page is a duplicate of under the canonical rule
+   *  (promo-page-copy.ts canonicalSlugFor): a single-date page sharing its
+   *  team and date with a more specific page. Null when the page is its own
+   *  canonical. The head points rel=canonical, og:url and the schema's url
+   *  at it; the sitemap leaves the duplicate out; the lists keep it. */
+  canonicalSlug: string | null;
 }
 
 function groupBySeason(rows: PromoPageRow[]): Map<string, PromoPageRow[]> {
@@ -189,7 +197,35 @@ export const resolvePromoPage = cache(async (team: Team, slug: string, today: st
     updatedAt = maxIso(updatedAt, r.updatedAt);
     removedAt = maxIso(removedAt, r.tombstonedAt);
   }
-  return { team, slug, season: season || null, rows, removedRows, removedDates, state, primary, dates, updatedAt, removedAt };
+  // The canonical rule (ruling 2026-10-29) over the team's pages on this
+  // page's one date: the same rows the lists draw from, so a special-ticket
+  // row, a tombstoned row or a dateless row is never a candidate. A series
+  // page (two or more live dates) and a removed page (none) are never
+  // duplicates.
+  const canonicalSlug = dates.length === 1 ? canonicalSlugFor(slug, (await loadTeamPageRows(team)).filter((r) => r.date === dates[0] && linkable(r, team.league))) : null;
+  return { team, slug, season: season || null, rows, removedRows, removedDates, state, primary, dates, updatedAt, removedAt, canonicalSlug };
+});
+
+/**
+ * The current slug of a page whose OLD slug is `slug`: the re-mint of
+ * 2026-10-29 folded diacritics into the slug rule (promo-pipeline
+ * slugifyTitle) and kept every slug a document used to carry in its
+ * `previousSlugs` array, so the route can answer the old URL with a
+ * permanent redirect. Null when no document on the team carries it. A slug
+ * some document still carries as its pageSlug is that document's page and
+ * the resolver answers first; this is asked only after it returns null. Two
+ * seasons re-minted under one old slug resolve to the later season's page.
+ */
+export const resolvePreviousSlug = cache(async (team: Team, slug: string): Promise<string | null> => {
+  let best: { slug: string; season: string | null } | null = null;
+  for (const d of await loadTeamPromoDocs(team.id)) {
+    const previous = d.data.previousSlugs;
+    const current = str(d.data.pageSlug);
+    if (!Array.isArray(previous) || !previous.includes(slug) || !current || current === slug) continue;
+    const season = str(d.data.pageSeason);
+    if (!best || (season !== null && (best.season === null || season > best.season))) best = { slug: current, season };
+  }
+  return best?.slug ?? null;
 });
 
 // ── the links and the building ───────────────────────────────────────────────
@@ -217,6 +253,9 @@ export interface PromoPageContext {
   location: PromoPageLocation | null;
   /** The building's coordinates (the hub's, else the venue doc's) for parking. */
   coords: { lat: number; lng: number } | null;
+  /** The building's former names, newest first, as the hub stores them
+   *  (website-former-names-spec.md); empty on a building never renamed. */
+  formerNames: string[];
   /** When the team's source was last read: the scan stamp
    *  (scannerState/{LEAGUE}/hashes/{team}.updatedAt), null when the team has
    *  none. NOT the row's updatedAt: that is a write instant (the backfill and
@@ -278,6 +317,7 @@ export interface IndexedPromo {
   pageSlug: string;
   pageSeason: string | null;
   themeKey: string | null;
+  imageTier: ImageTier | null;
   updatedAt: string | null;
   /** An NHL or NBA special-ticket row. */
   ticketPackage: boolean;
@@ -327,6 +367,7 @@ export const getUpcomingPromoIndex = cache(async (today: string): Promise<Indexe
         pageSlug,
         pageSeason: str(data.pageSeason),
         themeKey: str(data.themeKey),
+        imageTier: tierOf(data.imageTier),
         updatedAt: isoOf(data.updatedAt),
         ticketPackage: isTicketPackageLeague(team.league) && isTicketPackageDoc(data),
       });
@@ -441,6 +482,7 @@ export const loadPromoPageContext = cache(async (page: PromoPage, today: string)
     quickFacts,
     location,
     coords,
+    formerNames: building?.formerNames ?? [],
     observedAt: scanStamp,
     alsoAtGame,
     nextTeamPromos,
@@ -456,8 +498,47 @@ export interface PromoSitemapEntry {
   lastModified: Date | null;
 }
 
+/** The paths the canonical rule makes duplicates among the upcoming index:
+ *  on each team and date the losers of canonicalGroups (special-ticket rows
+ *  aside, as at render), each confirmed single-date against the team's
+ *  stored rows. The index holds upcoming dates only, so a series whose
+ *  played dates are behind it looks single-date there while its page is
+ *  not a duplicate; one subcollection read per team with a loser settles
+ *  it, the same read the page makes. */
+async function sitemapDuplicates(index: readonly IndexedPromo[], teamById: Map<string, Team>): Promise<Set<string>> {
+  const byTeamDate = new Map<string, IndexedPromo[]>();
+  for (const r of index) {
+    if (r.ticketPackage) continue;
+    const k = `${r.teamId}|${r.date}`;
+    byTeamDate.set(k, [...(byTeamDate.get(k) ?? []), r]);
+  }
+  const losers: IndexedPromo[] = [];
+  for (const rows of byTeamDate.values()) {
+    if (rows.length < 2) continue;
+    for (const g of canonicalGroups(rows)) for (const m of g.members) if (m !== g.winner) losers.push(m);
+  }
+  const out = new Set<string>();
+  // One read per team, held here: the sitemap is not a React render, where
+  // cache() would dedupe the loader for us.
+  const docsByTeam = new Map<string, Promise<TeamDoc[]>>();
+  for (const r of losers) {
+    const team = teamById.get(r.teamId);
+    if (!team) continue;
+    if (!docsByTeam.has(team.id)) docsByTeam.set(team.id, loadTeamPromoDocs(team.id));
+    const docs = await docsByTeam.get(team.id)!;
+    const liveDates = new Set(
+      docs
+        .filter((d) => d.data.pageSlug === r.pageSlug && str(d.data.pageSeason) === r.pageSeason && d.data.tombstoned !== true && typeof d.data.date === 'string' && YMD_RE.test(d.data.date))
+        .map((d) => d.data.date as string),
+    );
+    if (liveDates.size === 1) out.add(promoPagePath(team.sportSlug, team.id, r.pageSlug));
+  }
+  return out;
+}
+
 /** One URL per upcoming page (team + slug), lastmod = the latest updatedAt of
- *  its rows, omitted when no row carries one. Empty when the flag is off. */
+ *  its rows, omitted when no row carries one. Duplicates under the canonical
+ *  rule are left out (their canonical is listed). Empty when the flag is off. */
 export async function getPromoPageSitemapEntries(today: string): Promise<PromoSitemapEntry[]> {
   if (!isPromoPagesLive()) return [];
   const [index, teams] = await Promise.all([getUpcomingPromoIndex(today), getAllTeams()]);
@@ -472,23 +553,38 @@ export async function getPromoPageSitemapEntries(today: string): Promise<PromoSi
     if (!prior) byPage.set(path, { path, lastModified: stamp });
     else if (stamp && (!prior.lastModified || stamp > prior.lastModified)) prior.lastModified = stamp;
   }
-  return [...byPage.values()];
+  const duplicates = await sitemapDuplicates(index, teamById);
+  return [...byPage.values()].filter((e) => !duplicates.has(e.path));
 }
 
-/** The card route's one document read: the row named by team and promo id,
- *  display slots filled from the team's games. Null for a missing or
- *  postseason row. A tombstoned row IS returned: the removed page's card
- *  draws it with the Removed badge. */
-export const getPromoCardRow = cache(async (teamId: string, promoId: string): Promise<{ team: Team; row: PromoPageRow } | null> => {
+export interface PromoCardRow {
+  team: Team;
+  row: PromoPageRow;
+  /** Every live date under the row's slug and season (the series), ascending
+   *  and unique; one entry for a single-date promo. */
+  seriesDates: string[];
+  /** The latest updatedAt across the series: the page's own stamp, so the
+   *  card's cache key turns over when a sibling date is added. */
+  updatedAt: string | null;
+}
+
+/** The card route's read: the row named by team and promo id out of the
+ *  team's rows (one subcollection read, display slots from the team's games),
+ *  with its series. Null for a missing or postseason row. A tombstoned row IS
+ *  returned: the removed page's card draws it with the Removed badge. */
+export const getPromoCardRow = cache(async (teamId: string, promoId: string): Promise<PromoCardRow | null> => {
   const teams = await getAllTeams();
   const team = teams.find((t) => t.id === teamId);
   if (!team) return null;
-  const doc = await db.collection('teams').doc(teamId).collection('promos').doc(promoId).get();
-  if (!doc.exists) return null;
-  const data = doc.data() ?? {};
-  if (data.isPostseason === true) return null;
-  const promo = { ...mapPromoDoc(doc), team } as PromoWithTeam;
-  const games = await getGamesForTeam(team.id, team.sportSlug);
-  applyGameDisplay([promo], buildGameIndex(games), new Map(teams.map((t) => [t.id, t])));
-  return { team, row: toPageRow(doc.id, promo, data, team.league) };
+  const rows = await loadTeamPageRows(team);
+  const row = rows.find((r) => r.promoId === promoId);
+  if (!row) return null;
+  // The same set the page's stamp is taken over: every row under the slug
+  // and season, tombstoned ones included (a tombstone carries the newest
+  // stamp, and the page keys the card on it). The dates are the live ones.
+  const under = row.pageSlug ? rows.filter((r) => r.pageSlug === row.pageSlug && r.pageSeason === row.pageSeason) : [row];
+  const seriesDates = [...new Set(under.filter((r) => !r.tombstoned).map((r) => r.date).filter((d) => YMD_RE.test(d)))].sort();
+  let updatedAt: string | null = null;
+  for (const r of under) updatedAt = maxIso(updatedAt, r.updatedAt);
+  return { team, row, seriesDates: seriesDates.length ? seriesDates : YMD_RE.test(row.date) ? [row.date] : [], updatedAt };
 });
