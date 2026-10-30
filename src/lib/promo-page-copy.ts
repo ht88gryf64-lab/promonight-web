@@ -541,15 +541,16 @@ export function canonicalTitleKey(title: string): string {
     .trim();
 }
 
-/** Two titles nest: equal, one a substring of the other, or every token of
- *  the shorter in the longer. An empty title nests with nothing. */
+/** Two titles nest: equal, one a substring of the other at word boundaries
+ *  (a run of whole tokens; "Pen" is not inside "Opening Night"), or every
+ *  token of the shorter in the longer. An empty title nests with nothing. */
 export function titlesNest(a: string, b: string): boolean {
   const ka = canonicalTitleKey(a);
   const kb = canonicalTitleKey(b);
   if (!ka || !kb) return false;
   if (ka === kb) return true;
   const [short, long] = ka.length <= kb.length ? [ka, kb] : [kb, ka];
-  if (long.includes(short)) return true;
+  if (` ${long} `.includes(` ${short} `)) return true;
   const tokens = new Set(long.split(' '));
   return short.split(' ').every((t) => tokens.has(t));
 }
@@ -574,18 +575,20 @@ export function canonicalWinner<T extends CanonicalCandidate>(members: readonly 
   return mostSpecific(tier1.length ? tier1 : members);
 }
 
-/** The groups among one team's pages on ONE date, one candidate per slug (a
- *  later candidate under a slug already seen is ignored): the connected
- *  components under titlesNest with two or more members, each with its
- *  winner. Pages in no group are not returned. */
+/** The groups among one team's pages on ONE date, one candidate per slug
+ *  (same-date twins under one slug are one page; the twin that is a tier 1
+ *  giveaway stands for it, so the winner does not depend on document
+ *  order): the connected components under titlesNest with two or more
+ *  members, each with its winner. Pages in no group are not returned. */
 export function canonicalGroups<T extends CanonicalCandidate>(candidates: readonly T[]): CanonicalGroup<T>[] {
-  const seen = new Set<string>();
-  const pages: T[] = [];
+  const bySlug = new Map<string, T>();
+  const isTier1Giveaway = (c: T) => c.type === 'giveaway' && c.imageTier === 1;
   for (const c of candidates) {
-    if (!c.pageSlug || seen.has(c.pageSlug)) continue;
-    seen.add(c.pageSlug);
-    pages.push(c);
+    if (!c.pageSlug) continue;
+    const prior = bySlug.get(c.pageSlug);
+    if (!prior || (!isTier1Giveaway(prior) && isTier1Giveaway(c))) bySlug.set(c.pageSlug, c);
   }
+  const pages = [...bySlug.values()];
   const grouped = new Set<number>();
   const out: CanonicalGroup<T>[] = [];
   for (let i = 0; i < pages.length; i++) {

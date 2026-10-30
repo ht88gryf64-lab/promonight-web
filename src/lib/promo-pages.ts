@@ -518,13 +518,17 @@ async function sitemapDuplicates(index: readonly IndexedPromo[], teamById: Map<s
     for (const g of canonicalGroups(rows)) for (const m of g.members) if (m !== g.winner) losers.push(m);
   }
   const out = new Set<string>();
+  // One read per team, held here: the sitemap is not a React render, where
+  // cache() would dedupe the loader for us.
+  const docsByTeam = new Map<string, Promise<TeamDoc[]>>();
   for (const r of losers) {
     const team = teamById.get(r.teamId);
     if (!team) continue;
-    const docs = await loadTeamPromoDocs(team.id);
+    if (!docsByTeam.has(team.id)) docsByTeam.set(team.id, loadTeamPromoDocs(team.id));
+    const docs = await docsByTeam.get(team.id)!;
     const liveDates = new Set(
       docs
-        .filter((d) => d.data.pageSlug === r.pageSlug && (str(d.data.pageSeason) ?? null) === r.pageSeason && d.data.tombstoned !== true && typeof d.data.date === 'string' && YMD_RE.test(d.data.date))
+        .filter((d) => d.data.pageSlug === r.pageSlug && str(d.data.pageSeason) === r.pageSeason && d.data.tombstoned !== true && typeof d.data.date === 'string' && YMD_RE.test(d.data.date))
         .map((d) => d.data.date as string),
     );
     if (liveDates.size === 1) out.add(promoPagePath(team.sportSlug, team.id, r.pageSlug));

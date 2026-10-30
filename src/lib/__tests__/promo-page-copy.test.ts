@@ -242,6 +242,8 @@ test('canonical rule: the title key folds diacritics; titles nest by substring o
   assert.ok(titlesNest('Dia de los Muertos', 'Día de los Muertos Night'), 'folded');
   assert.ok(titlesNest('Twin Night', 'Twin Night'), 'equal');
   assert.ok(!titlesNest('Lapel Pin Set', 'Community Night'));
+  assert.ok(!titlesNest('Pen', 'Opening Night'), 'a substring inside a word is not a match');
+  assert.ok(!titlesNest('Tee', 'Steelers Night'));
   assert.ok(!titlesNest('', 'Community Night'), 'empty nests with nothing');
 });
 
@@ -271,8 +273,12 @@ test('canonical rule: the three ruled examples (2026-10-29), the tie-breaks and 
   assert.deepEqual(canonicalGroups([c('lapel-pin-set', 'Lapel Pin Set'), c('community-night', 'Community Night', 'theme')]), []);
   assert.equal(canonicalSlugFor('lapel-pin-set', [c('lapel-pin-set', 'Lapel Pin Set'), c('community-night', 'Community Night', 'theme')]), null);
   assert.equal(canonicalSlugFor('elsewhere', suns7), null);
-  // One candidate per slug: a second row under a slug (a same-date twin) is ignored.
+  // One candidate per slug: a second row under a slug (a same-date twin) is the same page.
   assert.equal(canonicalGroups([c('twin-night', 'Twin Night', 'theme'), c('twin-night', 'Twin Night', 'theme')]).length, 0);
+  // A twin that is a tier 1 giveaway stands for its slug whichever twin comes first.
+  const twins = [c('bobblehead', 'Bobblehead', 'giveaway', 3), c('bobblehead', 'Bobblehead', 'giveaway', 1), c('bobblehead-night', 'Bobblehead Night', 'theme')];
+  assert.equal(canonicalGroups(twins)[0].winner.pageSlug, 'bobblehead');
+  assert.equal(canonicalGroups([twins[1], twins[0], twins[2]])[0].winner.pageSlug, 'bobblehead');
   // Components join through a shared member: A nests B, B nests C, A and C do not nest.
   const chain = [c('pride', 'Pride', 'theme'), c('pride-night-tank-top', 'Pride Night Tank Top'), c('night-tank-top', 'Night Tank Top')];
   assert.equal(canonicalGroups(chain).length, 1);
