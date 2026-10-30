@@ -22,8 +22,16 @@ export const PATH_RE = /^\/[a-z0-9-]+(?:\/[a-z0-9-]+){0,2}$/;
 // paths in a request of their own; the two must be widened together.
 export const PROMO_PATH_RE = /^\/[a-z0-9-]+\/[a-z0-9-]+\/promos\/[a-z0-9-]+$/;
 
-/** A path the endpoint revalidates: a site path or a promo page path. */
-export const isRevalidatePath = (p: string): boolean => PATH_RE.test(p) || PROMO_PATH_RE.test(p);
+/** The sitemap: the one path with a dot the fan-out accepts. It is built at
+ *  deploy (src/app/sitemap.ts) and would miss every row a scan writes until
+ *  the next deploy; revalidatePath regenerates it on the next request. The
+ *  nightly refresh sends it daily and the pipeline's weekly staleness run
+ *  sends it on Mondays (promo pages flip, 2026-10-30, step 4b). Exact match
+ *  only: no other dotted path is let in. */
+export const SITEMAP_PATH = '/sitemap.xml';
+
+/** A path the endpoint revalidates: a site path, a promo page path, or the sitemap. */
+export const isRevalidatePath = (p: string): boolean => p === SITEMAP_PATH || PATH_RE.test(p) || PROMO_PATH_RE.test(p);
 
 export interface RevalidateResult {
   /** Paths revalidatePath accepted. */
