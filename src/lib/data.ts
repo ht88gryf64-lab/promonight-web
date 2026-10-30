@@ -160,9 +160,13 @@ export function mapPromoDoc(doc: FirebaseFirestore.DocumentSnapshot): Promo {
   return promo;
 }
 
-/** The canonical stamp over a cross-team reader's finished rows (Phase 3c):
- *  every reader below reads a complete sibling set for each team and date,
- *  so the losers are known here. A no-op while the flag is off. */
+/** The canonical stamp over a cross-team reader's finished rows (Phase 3c).
+ *  The date-window readers read every team's rows on each date, so the
+ *  losers are known here. getHighlightedPromos reads highlighted rows only:
+ *  a highlighted loser whose winner is not highlighted keeps its own slug
+ *  there, and its page points rel=canonical at the winner (the scored
+ *  loader's caveat, src/lib/promo-page-stamp.ts). A no-op while the flag is
+ *  off. */
 function linkPromoPages<T extends PromoWithTeam>(rows: T[]): T[] {
   return stampPromoPageCanonical(rows, (p) => p.team);
 }
@@ -253,7 +257,12 @@ export function isTicketPackagePromo(p: Promo): boolean {
  * same-date same-title pair is the same row on both (WEB6 G2).
  */
 function promoWithTeam(doc: FirebaseFirestore.DocumentSnapshot, team: Team): PromoWithTeam {
-  const row: PromoWithTeam = { ...mapPromoDoc(doc), team };
+  // The team is ASSIGNED, not spread onto a copy: the canonical stamp
+  // (src/lib/promo-page-stamp.ts) keeps the row's image tier and package flag
+  // by object identity, and a spread here would hand every cross-team reader
+  // a row that has lost both (review finding 1, 2026-10-30).
+  const row = mapPromoDoc(doc) as PromoWithTeam;
+  row.team = team;
   if (isTicketPackageDoc(doc.data())) ticketPackageRows.add(row);
   return row;
 }

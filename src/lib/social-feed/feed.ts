@@ -87,7 +87,9 @@ async function readVisiblePromos(start: string, end: string): Promise<FeedPromo[
   for (const doc of docs) {
     const team = doc.ref.parent.parent ? teamById.get(doc.ref.parent.parent.id) : undefined;
     if (!team) continue;
-    mapped.push({ doc, team, p: { ...mapPromoDoc(doc), team } });
+    // Assigned, not spread: the stamp keys the row's tier and package flag on
+    // the mapped object's identity (data.ts promoWithTeam, the same reason).
+    mapped.push({ doc, team, p: Object.assign(mapPromoDoc(doc), { team }) });
   }
   stampPromoPageCanonical(mapped.map((m) => m.p).filter(isVisiblePromo), (p) => p.team);
   const out: FeedPromo[] = [];

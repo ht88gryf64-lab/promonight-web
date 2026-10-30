@@ -49,19 +49,22 @@ function ribbonTail(promo: PromoWithTeam): string {
 /** One ribbon entry: the title, then the tail. The title is a link to the
  *  promo's own page when it has one (Phase 3c, the same swap as the rail
  *  below), with tabIndex -1 because the strip is aria-hidden and decorative:
- *  a crawler follows it, a keyboard never lands on it. */
+ *  a crawler follows it, a keyboard never lands on it. Without a page the
+ *  item is ONE string child, the bytes the ribbon always emitted (two
+ *  children would put a text-node comment between them); with one, the link
+ *  and the tail sit in one inner span, so the item's inline-flex gap
+ *  (globals.css .rd-ticker-item) is not applied between them. */
 function RibbonItem({ promo }: { promo: PromoWithTeam }) {
   const pageHref = promoPageHref(promo);
+  if (!pageHref) return <span className="rd-ticker-item">{`${promo.title}${ribbonTail(promo)}`}</span>;
   return (
     <span className="rd-ticker-item">
-      {pageHref ? (
+      <span>
         <PromoPageLink href={pageHref} surface="web_home_tonight" teamSlug={promo.team.id} promoId={synthPromoId(promo.team.id, promo)} tabIndex={-1}>
           {promo.title}
         </PromoPageLink>
-      ) : (
-        promo.title
-      )}
-      {ribbonTail(promo)}
+        {ribbonTail(promo)}
+      </span>
     </span>
   );
 }

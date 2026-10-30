@@ -110,6 +110,10 @@ test('title cascade: the first shape inside 60 rendered wins; the season stands 
   assert.equal(promoPageTitle('Warriors Cup Games Shirt Giveaway', 'Golden State Warriors', ['2026-11-01', '2026-11-14'], '2026-27', 'Warriors'), 'Warriors Cup Games Shirt Giveaway | Warriors');
   // No date: from the second shape.
   assert.equal(promoPageTitle('No Date', 'Minnesota Wild', [], '2026-27', 'Wild'), 'No Date | Minnesota Wild');
+  // A nickname equal to the full name adds no shape: the name is next.
+  assert.equal(promoPageTitle('Fan Appreciation T-Shirt Giveaway', 'Charlotte FC', ['2026-10-31'], '2026', 'Charlotte FC'), 'Fan Appreciation T-Shirt Giveaway');
+  // A series with no season label: shapes 1 and 3 drop out.
+  assert.equal(promoPageTitle('Warriors Cup Games T-Shirt', 'Golden State Warriors', ['2026-11-01', '2026-11-14'], null, 'Warriors'), 'Warriors Cup Games T-Shirt | Warriors');
 });
 
 test('description: the source text, then the game line, cut at the last sentence boundary under 155', () => {

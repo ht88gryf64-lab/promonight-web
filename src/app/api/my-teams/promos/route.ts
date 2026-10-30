@@ -134,7 +134,12 @@ async function fetchPromosForTeam(
       return { row, shadow };
     });
     stampPromoPageCanonical(shaped.map((s) => s.shadow), () => ({ id: teamSlug, league }));
-    return shaped.map(({ row, shadow }) => ({ ...row, promoPageHref: team ? promoPageHref(shadow, team) : null }));
+    // The key is present only when there is a page: with the flag off the
+    // response is byte-identical to before.
+    return shaped.map(({ row, shadow }) => {
+      const href = team ? promoPageHref(shadow, team) : null;
+      return href ? { ...row, promoPageHref: href } : row;
+    });
   } catch (err) {
     // One bad team should not poison the rest of the response. The team is
     // reported in failedTeams, and the client says it could not load it; the
