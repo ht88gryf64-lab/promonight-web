@@ -37,7 +37,7 @@
 // then re-asks, in rounds, every page whose copy is still regenerating, and
 // reports how many came back fresh (warmTookRevalidation, verifyVerdict).
 import { SITE_TIME_ZONE } from './site-today';
-import { PATH_RE } from './revalidate-paths';
+import { isRevalidatePath, SITEMAP_PATH } from './revalidate-paths';
 import { REFRESH_USER_AGENT } from './refresh-agent';
 export { REFRESH_USER_AGENT };
 
@@ -66,6 +66,10 @@ export const NIGHTLY_FIXED_PATHS: readonly string[] = [
   // cut on the VENUE's day and refresh in the later "cfb" batch.
   '/cfb',
   '/cfb/rivalries',
+  // The sitemap is built at deploy; regenerated here nightly so the promo
+  // pages a scan wrote during the day are listed before the next deploy
+  // (promo pages flip, 2026-10-30, step 4b). Last: the heaviest single read.
+  SITEMAP_PATH,
 ];
 
 const SITE_HOUR = new Intl.DateTimeFormat('en-US', { timeZone: SITE_TIME_ZONE, hour: '2-digit', hourCycle: 'h23' });
@@ -142,7 +146,7 @@ export async function nightlyRefreshPaths(
   const dropped: string[] = [];
   for (const p of all) {
     if (seen.has(p)) continue;
-    if (!PATH_RE.test(p)) {
+    if (!isRevalidatePath(p)) {
       dropped.push(p);
       continue;
     }

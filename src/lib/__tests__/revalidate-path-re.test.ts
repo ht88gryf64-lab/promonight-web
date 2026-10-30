@@ -71,8 +71,8 @@ test('the pipeline copy behaves identically on every case', () => {
 test('MAX_PATHS is still 100, and the endpoint validates with the shared patterns', () => {
   const src = readFileSync(ENDPOINT, 'utf8');
   assert.match(src, /^const MAX_PATHS = 100;$/m);
-  assert.match(src, /import \{ PATH_RE, PROMO_PATH_RE, revalidatePaths \} from '@\/lib\/revalidate-paths';/);
-  assert.match(src, /if \(!PATH_RE\.test\(p\) && !PROMO_PATH_RE\.test\(p\)\)/);
+  assert.match(src, /import \{ isRevalidatePath, revalidatePaths \} from '@\/lib\/revalidate-paths';/);
+  assert.match(src, /if \(!isRevalidatePath\(p\)\)/);
 });
 
 // ── Phase 3b: the four-segment promo page path, its own pattern ──────────────
@@ -107,4 +107,17 @@ test('the pipeline promo-pages copy is byte-identical and judges every case the 
   const a = extractPromoPathRe(ROUTE);
   const b = extractPromoPathRe(PROMO_PIPELINE);
   for (const p of [...PROMO_ACCEPT, ...PROMO_REJECT, ...ACCEPT, ...REJECT]) assert.equal(b.test(p), a.test(p), p);
+});
+
+// ── 2026-10-30, promo pages flip step 4b: the sitemap is the one dotted path ─
+// PATH_RE and PROMO_PATH_RE are unchanged (the byte-identity tests above still
+// hold); the shared validator adds one exact string, so the nightly refresh and
+// the pipeline's weekly staleness run can regenerate the deploy-built sitemap.
+test('the shared validator accepts /sitemap.xml exactly, and no other dotted path', async () => {
+  const { isRevalidatePath, SITEMAP_PATH } = await import('../revalidate-paths');
+  assert.equal(SITEMAP_PATH, '/sitemap.xml');
+  assert.equal(isRevalidatePath('/sitemap.xml'), true);
+  for (const p of ['/Sitemap.xml', '/sitemap.xml/', '/sitemap.xml?x=1', '/sitemap.xml/x', '/sitemap-0.xml', '/robots.txt', '/ads.txt', 'sitemap.xml', '/promos/today.xml']) assert.equal(isRevalidatePath(p), false, p);
+  for (const p of [...ACCEPT, ...PROMO_ACCEPT]) assert.equal(isRevalidatePath(p), true, p);
+  for (const p of [...REJECT, ...PROMO_REJECT.filter((x) => x !== '/promos/blaze-orange-hat')]) assert.equal(isRevalidatePath(p), false, p);
 });

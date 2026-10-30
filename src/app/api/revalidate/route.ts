@@ -12,8 +12,9 @@
  * Rules:
  *   - Each path must match PATH_RE (src/lib/revalidate-paths.ts): one to three
  *     lowercase segments, or PROMO_PATH_RE, a four-segment promo page path
- *     /{league}/{team}/promos/{slug}. No query strings, no parent traversal, no
- *     uppercase, no bare "/".
+ *     /{league}/{team}/promos/{slug}, or be exactly SITEMAP_PATH (/sitemap.xml,
+ *     the one dotted path, since 2026-10-30). No query strings, no parent
+ *     traversal, no uppercase, no bare "/".
  *   - Up to 100 paths per request (rejects with 400 above the cap).
  *   - Returns { ok: true, revalidated: <count> }.
  *   - revalidatePath is best-effort; failures for individual paths are logged
@@ -28,7 +29,7 @@
  * The secret value is never logged.
  */
 import { NextResponse } from 'next/server';
-import { PATH_RE, PROMO_PATH_RE, revalidatePaths } from '@/lib/revalidate-paths';
+import { isRevalidatePath, revalidatePaths } from '@/lib/revalidate-paths';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -80,7 +81,7 @@ export async function POST(request: Request) {
   const paths: string[] = [];
   for (const p of rawPaths) {
     if (seen.has(p)) continue;
-    if (!PATH_RE.test(p) && !PROMO_PATH_RE.test(p)) {
+    if (!isRevalidatePath(p)) {
       return NextResponse.json(
         { ok: false, reason: 'invalid_path', path: p },
         { status: 400 },

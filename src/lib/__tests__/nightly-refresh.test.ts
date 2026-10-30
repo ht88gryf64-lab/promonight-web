@@ -123,7 +123,7 @@ test('the window is the 00:00 hour Eastern and nothing else', async () => {
 
 test('the paths: every team page, every venue hub, the hubs, /teams and the /promos pages, all valid fan-out paths', async () => {
   const { nightlyRefreshPaths, NIGHTLY_FIXED_PATHS } = await import('../nightly-refresh');
-  const { PATH_RE } = await import('../revalidate-paths');
+  const { PATH_RE, isRevalidatePath } = await import('../revalidate-paths');
   const loaders = {
     teams: async () => [...TEAMS, TEAMS[0]],
     venueHubSlugs: async () => HUBS,
@@ -147,7 +147,11 @@ test('the paths: every team page, every venue hub, the hubs, /teams and the /pro
   assert.ok(!paths.includes('/'), 'the bare root is not a fan-out path');
   assert.equal(PATH_RE.test('/'), false, 'the fan-out still rejects the bare root, by ruling');
   assert.equal(new Set(paths).size, paths.length, 'deduped');
-  assert.ok(paths.every((p) => PATH_RE.test(p)));
+  assert.ok(paths.every((p) => isRevalidatePath(p)), 'every path passes the shared validator');
+  // The sitemap rides the site batch (flip step 4b): the one dotted path, accepted exactly, never dropped.
+  assert.ok(paths.includes('/sitemap.xml'), 'the sitemap regenerates nightly');
+  assert.ok(!dropped.includes('/sitemap.xml'));
+  assert.equal(paths.filter((p) => !PATH_RE.test(p)).join(','), '/sitemap.xml', 'the sitemap is the only path outside PATH_RE');
   assert.equal(paths.length, TEAMS.length + 3 + NIGHTLY_FIXED_PATHS.length);
   for (const p of ['/best-promos', '/best-promos/bobbleheads', '/team-rankings']) assert.ok(paths.includes(p), p);
   assert.deepEqual(paths.slice(0, NIGHTLY_FIXED_PATHS.length), [...NIGHTLY_FIXED_PATHS], 'the slow cross-team pages are warmed first');
@@ -458,7 +462,8 @@ test('the route: auth, the window, then revalidate through POST /api/revalidate 
     const res = await call('Bearer s');
     const body = await res.json();
     assert.equal(res.status, 200);
-    const expected = TEAMS.length + 3 + 19;
+    // 20 fixed paths: 19 pages plus /sitemap.xml (flip step 4b, 2026-10-30).
+    const expected = TEAMS.length + 3 + 20;
     assert.equal(body.paths, expected);
     assert.equal(body.revalidated, expected);
     assert.equal(body.warmed, expected);
