@@ -72,7 +72,10 @@ export function promoPageHead(page: PromoPage, ctx: PromoPageContext, today: str
   const { team, primary, dates } = page;
   const teamName = teamDisplayName(team);
   const removed = page.state === 'removed';
-  const canonical = `${SITE_URL}${promoPagePath(team.sportSlug, team.id, page.slug)}`;
+  // A duplicate under the canonical rule (page.canonicalSlug) points every
+  // URL signal at its canonical: the link rel=canonical, og:url, and the
+  // WebPage and Event url in the schema. It still renders its own body.
+  const canonical = `${SITE_URL}${promoPagePath(team.sportSlug, team.id, page.canonicalSlug ?? page.slug)}`;
   const venueName = ctx.hub?.displayName ?? ctx.venue?.name ?? null;
   const title = promoPageTitle(primary.title, teamName, removed ? page.removedDates : dates, page.season);
   const description = promoPageDescription({

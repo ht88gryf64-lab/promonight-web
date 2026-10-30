@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
 import { cache } from 'react';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { getTeamBySlug } from '@/lib/data';
 import { todayYmd } from '@/lib/promo-helpers';
-import { isPromoPagesLive, loadPromoPageContext, resolvePromoPage } from '@/lib/promo-pages';
+import { isPromoPagesLive, loadPromoPageContext, resolvePreviousSlug, resolvePromoPage, type PromoPage, type PromoPageContext } from '@/lib/promo-pages';
+import { promoPagePath } from '@/lib/promo-page-copy';
 import { PromoPageView, promoPageHead } from '@/components/promo-page/PromoPageView';
 
 // Per-promo pages (Phase 3b, 2026-10-29): /{league}/{team}/promos/{pageSlug}.
@@ -20,8 +21,10 @@ import { PromoPageView, promoPageHead } from '@/components/promo-page/PromoPageV
 // nothing, so the family does not exist for a crawler until the switch.
 //
 // RESOLUTION. The slug's rows for this team, the current season's group
-// winning (src/lib/promo-pages.ts resolvePromoPage). A slug no row carries is
-// a 404. A slug whose every row is tombstoned renders the removed page; a row
+// winning (src/lib/promo-pages.ts resolvePromoPage). A slug no row carries
+// but some row lists in previousSlugs (the slug re-mint of 2026-10-29) is a
+// permanent redirect to that row's current slug; a slug no row knows is a
+// 404. A slug whose every row is tombstoned renders the removed page; a row
 // with no usable date or name renders with noindex (brief A.5).
 
 export const revalidate = 86400;
@@ -38,21 +41,28 @@ type Params = Promise<{ sport: string; team: string; slug: string }>;
 // the noindex decision and the page cannot straddle Eastern midnight.
 const todayForRequest = cache(() => todayYmd());
 
-async function resolve(params: Params) {
+type Resolved = { kind: 'page'; page: PromoPage; ctx: PromoPageContext; today: string } | { kind: 'redirect'; to: string } | null;
+
+async function resolve(params: Params): Promise<Resolved> {
   const { sport, team: teamSlug, slug } = await params;
   const team = await getTeamBySlug(teamSlug);
   if (!team || team.sportSlug !== sport) return null;
   const today = todayForRequest();
   const page = await resolvePromoPage(team, slug, today);
-  if (!page) return null;
+  if (!page) {
+    // An old slug: the page body answers with the redirect (the metadata of
+    // a redirected response is never read).
+    const current = await resolvePreviousSlug(team, slug);
+    return current ? { kind: 'redirect', to: promoPagePath(sport, team.id, current) } : null;
+  }
   const ctx = await loadPromoPageContext(page, today);
-  return { page, ctx, today };
+  return { kind: 'page', page, ctx, today };
 }
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   if (!isPromoPagesLive()) return {};
   const r = await resolve(params);
-  if (!r) return {};
+  if (!r || r.kind === 'redirect') return {};
   const head = promoPageHead(r.page, r.ctx, r.today);
   const socialTitle = `${head.title} | PromoNight`;
   return {
@@ -93,5 +103,8 @@ export default async function PromoPage({ params }: { params: Params }) {
   if (!isPromoPagesLive()) notFound();
   const r = await resolve(params);
   if (!r) notFound();
+  // 308, the permanent redirect the App Router issues (a 301 is not
+  // available to a page); search engines treat the two alike.
+  if (r.kind === 'redirect') permanentRedirect(r.to);
   return <PromoPageView page={r.page} ctx={r.ctx} today={r.today} />;
 }
