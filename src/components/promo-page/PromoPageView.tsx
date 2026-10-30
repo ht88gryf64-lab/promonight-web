@@ -348,6 +348,10 @@ export function PromoPageView({ page, ctx, today }: PromoPageViewProps) {
         ) : null}
 
         <figure className="m-0 mt-4 overflow-hidden rounded-2xl border border-rd-line bg-rd-card">
+          {/* object-contain for BOTH kinds (hotfix 2026-10-30): the generated
+              card is 1200x630 and the box is 390x220 on a phone, so object-cover
+              cropped its edges and cut the team wordmark; contained on a cream
+              ground, the whole card shows with a thin band above and below. */}
           {/* eslint-disable-next-line @next/next/no-img-element -- the tier 1 photo is a stored object whose dimensions are not on the row, and the card is served by our own route; next/image would add a second request and a remote-pattern entry for nothing. */}
           <img
             src={image.url}
@@ -356,7 +360,7 @@ export function PromoPageView({ page, ctx, today }: PromoPageViewProps) {
             height={image.height ?? undefined}
             loading="eager"
             decoding="async"
-            className={`block h-[220px] w-full bg-[#ebe4d6] ${image.kind === 'photo' ? 'object-contain' : 'object-cover'}`}
+            className={`block h-[220px] w-full object-contain ${image.kind === 'photo' ? 'bg-[#ebe4d6]' : 'bg-rd-cream'}`}
           />
           {image.kind === 'photo' ? (
             <figcaption className="px-3 py-2 font-rd text-[11px] text-rd-ink-faint">
