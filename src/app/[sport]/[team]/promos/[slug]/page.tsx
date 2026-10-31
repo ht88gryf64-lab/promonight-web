@@ -5,7 +5,8 @@ import { getTeamBySlug } from '@/lib/data';
 import { todayYmd } from '@/lib/promo-helpers';
 import { isPromoPagesLive, loadPromoPageContext, resolvePreviousSlug, resolvePromoPage, type PromoPage, type PromoPageContext } from '@/lib/promo-pages';
 import { promoPagePath } from '@/lib/promo-page-copy';
-import { PromoPageView, promoPageHead } from '@/components/promo-page/PromoPageView';
+import { PromoPageView, heroImage, promoPageHead } from '@/components/promo-page/PromoPageView';
+import { storedImageSize, type ImageSize } from '@/lib/image-dimensions';
 
 // Per-promo pages (Phase 3b, 2026-10-29): /{league}/{team}/promos/{pageSlug}.
 //
@@ -41,7 +42,7 @@ type Params = Promise<{ sport: string; team: string; slug: string }>;
 // the noindex decision and the page cannot straddle Eastern midnight.
 const todayForRequest = cache(() => todayYmd());
 
-type Resolved = { kind: 'page'; page: PromoPage; ctx: PromoPageContext; today: string } | { kind: 'redirect'; to: string } | null;
+type Resolved = { kind: 'page'; page: PromoPage; ctx: PromoPageContext; today: string; imageSize: ImageSize | null } | { kind: 'redirect'; to: string } | null;
 
 async function resolve(params: Params): Promise<Resolved> {
   const { sport, team: teamSlug, slug } = await params;
@@ -56,14 +57,18 @@ async function resolve(params: Params): Promise<Resolved> {
     return current ? { kind: 'redirect', to: promoPagePath(sport, team.id, current) } : null;
   }
   const ctx = await loadPromoPageContext(page, today);
-  return { kind: 'page', page, ctx, today };
+  // The hero's width and height: the card's are fixed, a stored photo's are
+  // read from its own header (src/lib/image-dimensions.ts), once per request.
+  const hero = heroImage(page);
+  const imageSize = hero.kind === 'photo' ? await storedImageSize(hero.url) : null;
+  return { kind: 'page', page, ctx, today, imageSize };
 }
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   if (!isPromoPagesLive()) return {};
   const r = await resolve(params);
   if (!r || r.kind === 'redirect') return {};
-  const head = promoPageHead(r.page, r.ctx, r.today);
+  const head = promoPageHead(r.page, r.ctx, r.today, r.imageSize);
   const socialTitle = `${head.title} | PromoNight`;
   return {
     // Bare: the root layout's title.template appends " | PromoNight".
@@ -106,5 +111,5 @@ export default async function PromoPage({ params }: { params: Params }) {
   // 308, the permanent redirect the App Router issues (a 301 is not
   // available to a page); search engines treat the two alike.
   if (r.kind === 'redirect') permanentRedirect(r.to);
-  return <PromoPageView page={r.page} ctx={r.ctx} today={r.today} />;
+  return <PromoPageView page={r.page} ctx={r.ctx} today={r.today} imageSize={r.imageSize} />;
 }

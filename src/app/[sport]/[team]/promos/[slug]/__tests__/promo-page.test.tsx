@@ -94,6 +94,18 @@ mock.module('server-only', { namedExports: {} });
 mock.module(new URL('../../../../../../lib/firebase.ts', import.meta.url).href, { namedExports: { db } });
 mock.module(new URL('../../../../../../components/redesign/fonts-house.ts', import.meta.url).href, { namedExports: { archivoHouse: { variable: 'font-archivo-var' } } });
 
+// The stored photos, as the route reads their size (src/lib/image-dimensions.ts):
+// a PNG header naming 800x600, served for a range request.
+const PNG_800x600 = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52, 0, 0, 0x03, 0x20, 0, 0, 0x02, 0x58, 8, 6, 0, 0, 0]);
+const photoFetches: string[] = [];
+const realFetch = globalThis.fetch;
+globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+  const url = String(input instanceof Request ? input.url : input);
+  if (!url.startsWith('https://firebasestorage.googleapis.com/')) return realFetch(input, init);
+  photoFetches.push(`${url} ${new Headers(init?.headers).get('range')}`);
+  return new Response(PNG_800x600, { status: 206, headers: { 'content-type': 'image/png' } });
+}) as typeof fetch;
+
 // The building hub, as stored: the Wild's arena, verified, with a sourced
 // bag rule, two lots, a transit line and an outside-food rule. The real
 // venue-hub loaders read it from the fake, through the published view.
@@ -280,6 +292,12 @@ test('tier 1 single-date NHL page: H1, the stored photo, the head, the schema an
   assert.match(h, /Formerly Xcel Energy Center\./);
   assert.ok(!/Dallas Stars · Nov 15/.test(h), 'cross-team card subtitle never repeats the tile date');
   assert.match(h, /<img src="https:\/\/firebasestorage\.googleapis\.com\/v0\/b\/promonight\.firebasestorage\.app\/o\/promo-images%2Fc7057219198efd77\.png\?alt=media" alt="Blaze Orange Hat, the Minnesota Wild giveaway item"/);
+  // The hero (follow-up 2026-10-31): the stored photo's own size from its
+  // header, never lazy, high priority; og:image carries the same size.
+  assert.match(h, /<img src="https:\/\/firebasestorage[^"]*c7057219198efd77\.png\?alt=media" alt="[^"]*" width="800" height="600" loading="eager" fetchPriority="high" decoding="async"/);
+  assert.ok(photoFetches.some((f) => f.includes('c7057219198efd77.png') && f.endsWith('bytes=0-65535')), photoFetches.join('\n'));
+  assert.deepEqual([(meta.openGraph as any).images[0].width, (meta.openGraph as any).images[0].height], [800, 600]);
+  assert.ok(!/loading="lazy"/.test(h), 'no lazy image on the page');
   assert.match(h, /Image: Minnesota Wild/);
   assert.match(h, /Minnesota Wild vs Islanders/);
   assert.match(h, /Thursday, Oct 29, 2026 · 7:00 PM/);
@@ -391,7 +409,7 @@ test('multi-date series: a dates list in place of the game line, one Event per d
   assert.ok(!h.includes('Detroit Red Wings vs Blackhawks</p>'), 'no single game line');
   assert.equal((h.slice(h.indexOf('<header'), h.indexOf('</header>')).match(/<li /g) ?? []).length, 3, 'three dates in the header');
   // The card is keyed on the page's latest stamp (the tombstoned o4, 2026-10-31T10:00Z), not the primary row's.
-  assert.match(h, /<img src="\/api\/promo-card\/o1\?team=detroit-red-wings&amp;v=1793440800000" alt="Original Six Matchup: Detroit Red Wings, Oct 29, 2026" width="1200" height="630"/);
+  assert.match(h, /<img src="\/api\/promo-card\/o1\?team=detroit-red-wings&amp;v=1793440800000" alt="Original Six Matchup: Detroit Red Wings, Oct 29, 2026" width="1200" height="630" loading="eager" fetchPriority="high" decoding="async"/);
   // The title cascade (ruling 2026-10-30): with the season the bare title is
   // 48, 61 rendered, so the full name alone is the shape taken.
   assert.equal(meta.title, 'Original Six Matchup | Detroit Red Wings');

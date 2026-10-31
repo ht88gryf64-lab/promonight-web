@@ -20,8 +20,9 @@ import { archivoHouse } from '@/components/redesign/fonts-house';
 // page render per request; it was ISR (revalidate 86400) before app funnel G1.
 //
 // ?src=promo_cta_{teamId}&promoId=…&pageSlug=… is a promo page's "Remind me"
-// link (hotfix 2026-10-31). The team rides in as above, and the promo id and
-// page slug follow it into every store link (src/lib/app-link.ts).
+// link (hotfix 2026-10-31). The team rides in as above; the promo id and page
+// slug follow it into Play's utm_content, and every App Store link's ct is
+// pc_{teamId} (src/lib/app-link.ts).
 function storeLinks(teamId: string | undefined, promo: Pick<AppLinkOptions, 'promoId' | 'pageSlug'> = {}) {
   return {
     iosButton: appStoreUrl({ surface: 'download', teamId, ...promo }),

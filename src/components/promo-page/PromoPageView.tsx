@@ -10,6 +10,7 @@ import { promoDownloadHref } from '@/lib/app-link';
 import { promoAnchorId, teamDisplayName } from '@/lib/promo-helpers';
 import { PROMO_TYPE_LABELS } from '@/lib/types';
 import type { LinkedPromo, PromoPage, PromoPageContext } from '@/lib/promo-pages';
+import type { ImageSize } from '@/lib/image-dimensions';
 import {
   SITE_URL,
   badgeLabel,
@@ -64,10 +65,19 @@ export interface PromoPageViewProps {
   ctx: PromoPageContext;
   /** The site's day, the route's one clock read. */
   today: string;
+  /** The stored photo's pixel size, read by the route (storedImageSize);
+   *  the card's is fixed. */
+  imageSize?: ImageSize | null;
+}
+
+/** The page's hero image, before the tier 1 photo's size is known. */
+export function heroImage(page: PromoPage) {
+  const { team, primary } = page;
+  return pageImage({ ...primary, updatedAt: page.updatedAt ?? primary.updatedAt }, team.id, teamDisplayName(team), primary.date || null);
 }
 
 /** The head values and the schema, from the same inputs the body renders. */
-export function promoPageHead(page: PromoPage, ctx: PromoPageContext, today: string) {
+export function promoPageHead(page: PromoPage, ctx: PromoPageContext, today: string, imageSize?: ImageSize | null) {
   const { team, primary, dates } = page;
   const teamName = teamDisplayName(team);
   const removed = page.state === 'removed';
@@ -88,7 +98,8 @@ export function promoPageHead(page: PromoPage, ctx: PromoPageContext, today: str
     venueName,
     removed,
   });
-  const image = pageImage({ ...primary, updatedAt: page.updatedAt ?? primary.updatedAt }, team.id, teamName, primary.date || null);
+  const base = heroImage(page);
+  const image = base.kind === 'photo' && imageSize ? { ...base, width: imageSize.width, height: imageSize.height } : base;
   const imageUrl = image.kind === 'photo' ? image.url : `${SITE_URL}${image.url}`;
   const indexable = promoPageIndexable({ title: primary.title, dates: removed ? page.removedDates : dates, removed, today });
   return { teamName, canonical, title, description, image, imageUrl, indexable, venueName };
@@ -136,10 +147,10 @@ function PromoCard({ p, showTeam }: { p: LinkedPromo; showTeam: boolean }) {
   );
 }
 
-export function PromoPageView({ page, ctx, today }: PromoPageViewProps) {
+export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProps) {
   const { team, primary, dates } = page;
   const removed = page.state === 'removed';
-  const head = promoPageHead(page, ctx, today);
+  const head = promoPageHead(page, ctx, today, imageSize);
   const { teamName, canonical, image } = head;
   const multi = dates.length > 1;
   const teamHref = `/${team.sportSlug}/${team.id}`;
@@ -356,7 +367,11 @@ export function PromoPageView({ page, ctx, today }: PromoPageViewProps) {
           {/* object-contain for BOTH kinds (hotfix 2026-10-30): the generated
               card is 1200x630 and the box is 390x220 on a phone, so object-cover
               cropped its edges and cut the team wordmark; contained on a cream
-              ground, the whole card shows with a thin band above and below. */}
+              ground, the whole card shows with a thin band above and below.
+              It is the page's largest paint (follow-up 2026-10-31): never lazy,
+              fetched at high priority, and its width and height are the
+              source's (1200x630 for the card, the stored photo's own size
+              read by the route), so the browser knows its shape up front. */}
           {/* eslint-disable-next-line @next/next/no-img-element -- the tier 1 photo is a stored object whose dimensions are not on the row, and the card is served by our own route; next/image would add a second request and a remote-pattern entry for nothing. */}
           <img
             src={image.url}
@@ -364,6 +379,7 @@ export function PromoPageView({ page, ctx, today }: PromoPageViewProps) {
             width={image.width ?? undefined}
             height={image.height ?? undefined}
             loading="eager"
+            fetchPriority="high"
             decoding="async"
             className={`block h-[220px] w-full object-contain ${image.kind === 'photo' ? 'bg-[#ebe4d6]' : 'bg-rd-cream'}`}
           />

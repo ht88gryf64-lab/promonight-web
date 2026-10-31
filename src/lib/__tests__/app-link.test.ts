@@ -138,18 +138,12 @@ test('/download from a promo page: promo_cta src keeps the team, promoId and pag
   }
 });
 
-test('/download with a promo: ct appends promoId and pageSlug after the team, cut to 30; utm_content carries all three', () => {
+test('/download with a promo: every App Store ct is pc_{teamId}, utm_content carries team, promo id and slug', () => {
   process.env[KEY] = 'tok';
   const promo = { promoId: '681fc85299a82ba4', pageSlug: 'esa-lindell-bobblehead' };
-  const ct = new URL(appStoreUrl({ surface: 'download', teamId: 'dallas-stars', ...promo })).searchParams.get('ct');
-  assert.equal(ct, 'web_download_dallas-stars_681f');
-  assert.equal(appStoreCampaign({ surface: 'download', teamId: 'nyy', ...promo }), 'web_download_nyy_681fc85299a82');
-  // Never left ending on the joiner.
-  assert.equal(appStoreCampaign({ surface: 'download', teamId: 'dallas-star', ...promo }), 'web_download_dallas-star_681fc');
-  assert.equal(appStoreCampaign({ surface: 'download', teamId: 'a'.repeat(16), ...promo }), 'web_download_' + 'a'.repeat(16));
-  for (const surface of ['download', 'download_qr'] as const) {
-    assert.ok(appStoreCampaign({ surface, teamId: 'minnesota-timberwolves', ...promo }).length <= APP_STORE_CAMPAIGN_MAX);
-  }
+  assert.equal(new URL(appStoreUrl({ surface: 'download', teamId: 'dallas-stars', ...promo })).searchParams.get('ct'), 'pc_dallas-stars');
+  assert.equal(new URL(appStoreUrl({ surface: 'download_qr', placement: 'qr_ios', teamId: 'dallas-stars', ...promo })).searchParams.get('ct'), 'pc_dallas-stars');
+  assert.equal(appStoreCampaign({ surface: 'download', teamId: 'minnesota-timberwolves', ...promo }), 'pc_minnesota-timberwolves');
   const btn = new URL(playStoreUrl({ surface: 'download', teamId: 'dallas-stars', ...promo }));
   assert.equal(btn.searchParams.get('referrer'), 'utm_source=web&utm_medium=download&utm_content=dallas-stars_681fc85299a82ba4_esa-lindell-bobblehead');
   const qr = new URL(playStoreUrl({ surface: 'download_qr', placement: 'qr_android', teamId: 'dallas-stars', ...promo }));
