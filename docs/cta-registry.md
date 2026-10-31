@@ -42,6 +42,7 @@ when retiring a CTA.
 | promo_link_venue_next_giveaways | venue_page | next_giveaways_here | (promo title) | /[sport]/[team]/promos/[slug] | promo_link_click (surface web_venue) | 2026-10-30 | active |
 | promo_link_venue_week_card | venue_page | promos_this_week_card_overlay | (promo title, sr-only) | /[sport]/[team]/promos/[slug] | promo_link_click (surface web_venue) + venue_hub_promo_click | 2026-10-30 | active |
 | promo_link_best_promos_card | best_promos | scored_card | (card) | /[sport]/[team]/promos/[slug] | promo_link_click (surface web_best_promos / web_best_promos_bobbleheads) + scored_promo_card_tap | 2026-10-30 | active |
+| promo_link_team_package_row | team_page | ticket_packages_group_row_title (NBA and NHL only) | (promo title) | /[sport]/[team]/promos/[slug] | promo_link_click (surface web_team_page_promolist) | 2026-10-31 | active |
 | app_remind_promo_page | promo_page | cta_row_secondary | Remind me | /download?src=promo_cta_{teamId}&promoId={promoId}&pageSlug={pageSlug}; on /download every App Store ct is pc (amended 2026-10-31, see App Store campaign tokens below) and Play utm_content is {teamId}_{promoId}_{pageSlug} (src/lib/app-link.ts) | web_app_cta_click (surface promo_cta) + app_download_click (surface promo_cta) | 2026-10-31 | active |
 
 ## App Store campaign tokens (ruling 2026-10-31)

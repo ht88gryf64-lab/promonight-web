@@ -93,6 +93,8 @@ const db = {
 mock.module('server-only', { namedExports: {} });
 mock.module(new URL('../../../../../../lib/firebase.ts', import.meta.url).href, { namedExports: { db } });
 mock.module(new URL('../../../../../../components/redesign/fonts-house.ts', import.meta.url).href, { namedExports: { archivoHouse: { variable: 'font-archivo-var' } } });
+// The team page the data guard renders loads the redesign face.
+mock.module(new URL('../../../../../../components/redesign/fonts.ts', import.meta.url).href, { namedExports: { archivo: { variable: 'font-archivo' } } });
 
 // The stored photos, as the route reads their size (src/lib/image-dimensions.ts):
 // a PNG header naming 800x600, served for a range request.
@@ -147,6 +149,11 @@ promo('minnesota-wild', 'a4', { title: 'Tombstoned Past Hat', pageSlug: 'tombsto
 promo('minnesota-wild', 'a5', { title: 'Removed Future Poster', pageSlug: 'removed-future-poster', date: '2026-11-30', tombstoned: true, tombstonedAt: ts('2026-10-05T21:46:46Z'), attendanceCap: 5000, description: 'First 5,000 fans receive a poster.' });
 promo('minnesota-wild', 'a6', { title: 'Pride Night', pageSlug: 'pride-night-2025-26', pageSeason: '2025-26', type: 'theme', themeKey: 'pride', date: '2026-03-10', updatedAt: ts('2026-03-01T00:00:00Z') });
 promo('minnesota-wild', 'a7', { title: 'Scout Pack', pageSlug: 'scout-pack', ticketPackageRequired: true, ticketPackageName: 'Scout Pack' });
+// Two more package rows (2026-10-31): one with no stored name, one whose name
+// already ends in "Ticket Package" (the shape that used to read "... Ticket
+// Package ticket package.").
+promo('minnesota-wild', 'p1', { title: 'Puck Package Night', pageSlug: 'puck-package-night', type: 'theme', date: '2026-11-12', opponent: 'Kraken', ticketPackageRequired: true, ticketPackageName: null });
+promo('minnesota-wild', 'p2', { title: 'Wizard Night', pageSlug: 'wizard-night', type: 'theme', date: '2026-11-14', opponent: 'Stars', ticketPackageRequired: true, ticketPackageName: 'Wizard Night Special Ticket Package' });
 promo('minnesota-wild', 'a8', { title: 'Dateless Deal', pageSlug: 'dateless-deal', date: null, type: 'food' });
 promo('minnesota-wild', 'a9', { title: 'Postseason Row', pageSlug: 'postseason-row', isPostseason: true, date: '2027-04-20' });
 // A same-date, same-title twin under one slug: one game line, one Event.
@@ -190,6 +197,16 @@ suns('s3', { title: 'Artist Collaboration Originativ Replica Jersey', pageSlug: 
 // accented letter), so its old slug lives in previousSlugs.
 suns('s4', { title: 'Día de los Muertos Night', pageSlug: 'dia-de-los-muertos-night', type: 'theme', themeKey: 'dia-de-los-muertos', date: '2026-11-04', opponent: 'Nuggets' });
 suns('s5', { title: 'Día de los Muertos', pageSlug: 'dia-de-los-muertos', themeKey: 'dia-de-los-muertos', previousSlugs: ['d-a-de-los-muertos'], date: '2026-11-04', opponent: 'Nuggets' });
+// Ten more Suns nights (2026-10-31), so the Suns carry more upcoming rows than
+// the team page shows before "Show all": the first orphan cause of
+// 2026-10-31, which the data guard below must see.
+for (const [i, [title, date]] of ([
+  ['Noche Latina', '2026-11-20'], ['Hockey Watch Party Night', '2026-11-25'], ['Veterans Appreciation Night', '2026-12-01'],
+  ['Holiday Sweater Night', '2026-12-15'], ['Kids Day', '2026-12-28'], ['Lunar New Year Night', '2027-01-29'],
+  ['Black History Month Night', '2027-02-10'], ['Pride Night', '2027-03-05'], ['Fan Appreciation Night', '2027-04-02'], ['Fireworks Night', '2027-04-10'],
+] as const).entries()) {
+  suns(`sx${i}`, { title, pageSlug: title.toLowerCase().replace(/[^a-z0-9]+/g, '-'), type: 'theme', date, opponent: 'Spurs' });
+}
 // Predators Nov 7: a theme night whose title contains the tier 1 giveaway's;
 // the giveaway is the canonical.
 promo('nashville-predators', 'n1', { title: 'Hometown Remix & Catfish Gravy Boat', pageSlug: 'hometown-remix-catfish-gravy-boat', type: 'theme', date: '2026-11-07', opponent: 'Blues', sourceUrl: 'https://www.nhl.com/predators/fans/promotions' });
@@ -327,7 +344,9 @@ test('tier 1 single-date NHL page: H1, the stored photo, the head, the schema an
   for (const must of ['/nhl', '/nhl/minnesota-wild', '/venues/xcel-energy-center', '/promos/jersey-giveaways']) assert.ok(links.includes(must), must);
 
   assert.equal(meta.title, 'Blaze Orange Hat | Minnesota Wild Oct 29, 2026');
-  assert.equal(meta.description, 'All fans receive a blaze orange hat. Presented by Federal Ammunition. Minnesota Wild vs Islanders, Oct 29, 2026 at Grand Casino Arena.');
+  // The structured lead first, then whole source sentences (2026-10-31): the
+  // second sentence would pass 155, so it stops at 125.
+  assert.equal(meta.description, 'Blaze Orange Hat: Minnesota Wild giveaway vs Islanders, Oct 29, 2026 at Grand Casino Arena. All fans receive a blaze orange hat.');
   assert.equal(meta.alternates?.canonical, 'https://www.getpromonight.com/nhl/minnesota-wild/promos/blaze-orange-hat');
   const og = meta.openGraph as any;
   assert.equal(og.url, meta.alternates?.canonical);
@@ -454,7 +473,7 @@ test('tombstoned before its date: the removed page, indexable, cancelled in the 
   assert.match(h, /<img src="\/api\/promo-card\/a5\?team=minnesota-wild&amp;v=/);
   assert.match(h, /First 5,000 fans receive a poster\./);
   assert.equal(meta.robots, undefined);
-  assert.match(String(meta.description), /^Removed from the Minnesota Wild schedule\. First 5,000 fans receive a poster\./);
+  assert.equal(meta.description, 'Removed from the Minnesota Wild schedule: Removed Future Poster vs Islanders, Nov 30, 2026 at Grand Casino Arena. First 5,000 fans receive a poster.');
   const ld = jsonLd(h);
   assert.equal(ld[1]['@type'], 'Event');
   assert.equal(ld[1].eventStatus, 'https://schema.org/EventCancelled');
@@ -462,6 +481,30 @@ test('tombstoned before its date: the removed page, indexable, cancelled in the 
   assert.equal(ld[0].dateModified, UPDATED);
   assert.match(ld[2].mainEntity[0].name, /still happening/);
   guard(h, 'removed-future-poster');
+});
+
+test('package rows: "Comes with a special ticket package." on every one, the stored name on its own line, never doubled (ruling 2026-10-24)', async () => {
+  process.env.PROMO_PAGES_LIVE = 'true';
+  const article = (h: string) => h.slice(h.indexOf('<article '), h.lastIndexOf('</article>'));
+  const SENTENCE = '>Comes with a special ticket package.</p>';
+  const named = article((await render('nhl', 'minnesota-wild', 'wizard-night')).h);
+  const scout = article((await render('nhl', 'minnesota-wild', 'scout-pack')).h);
+  const unnamed = article((await render('nhl', 'minnesota-wild', 'puck-package-night')).h);
+  for (const [name, h] of [['wizard-night', named], ['scout-pack', scout], ['puck-package-night', unnamed]] as const) {
+    assert.equal(h.split(SENTENCE).length - 1, 1, `${name}: the sentence exactly once`);
+    assert.match(h, />Ticket package</, `${name}: the badge`);
+    assert.ok(!/Comes with the /.test(h), `${name}: the old "Comes with the {name}" form is gone`);
+    // The doubled wording cannot occur: no "ticket package" directly after another, in any case.
+    assert.ok(!/ticket package(?:\s|<!-- -->)*ticket package/i.test(h), `${name}: doubled wording`);
+    assert.ok(!/package(?:\s|<!-- -->)+ticket package/i.test(h), `${name}: "Package ticket package"`);
+  }
+  // With a stored name: on its own line, exactly as stored, nothing appended.
+  assert.ok(named.includes('>Package: Wizard Night Special Ticket Package</p>'), 'the name line, as stored');
+  assert.ok(scout.includes('>Package: Scout Pack</p>'));
+  // Without one: no name line at all.
+  assert.ok(!unnamed.includes('Package:'), 'no name line without a stored name');
+  // The meta description of a package row says "ticket package".
+  assert.match(String((await render('nhl', 'minnesota-wild', 'puck-package-night')).meta.description), /special ticket package/);
 });
 
 test('a same-date twin is one date, and a flagged row outside NHL and NBA is not a package', async () => {
@@ -489,57 +532,98 @@ test('tombstoned past its date: noindex; a row with no date: noindex', async () 
   assert.deepEqual(jsonLd(dateless.h).map((s) => s['@type']), ['WebPage', 'BreadcrumbList'], 'no Event without a date, no FAQ without a door time');
 });
 
-// ── Inbound links go through the one helper (Phase 3c) ──────────────────────
-// Team rows, the aggregators, the homepage cards and ribbon, the venue block
-// and cards, the digest, the social feed and the My Teams route all link to a
-// promo page through promoPageHref (src/lib/promo-page-href.ts), which owns
-// the rule (canonical winner, never a tombstoned, dateless or noindexed row).
-// This static test replaces the Phase 3b guard that refused any promo path
-// outside the family: the path is still built in one place (the family and
-// the helper), and every inbound surface is checked to import the helper.
-test('every inbound surface links through promoPageHref, and nothing else builds a promo page path', async () => {
-  const { readdirSync, readFileSync, statSync } = await import('node:fs');
-  const { join, relative } = await import('node:path');
-  const ROOT = process.cwd();
-  const FAMILY = new Set(['src/lib/promo-pages.ts', 'src/lib/promo-page-copy.ts', 'src/lib/promo-page-href.ts', 'src/components/promo-page/PromoPageView.tsx', 'src/app/[sport]/[team]/promos/[slug]/page.tsx', 'src/app/api/promo-card/[promoId]/route.tsx', 'src/app/sitemap.ts']);
-  const SURFACES = [
-    'src/components/redesign/RedesignPromoRow.tsx',
-    'src/components/promos-today/TodayPromoCard.tsx',
-    'src/components/redesign/RedesignAggregatorList.tsx',
-    'src/components/redesign/LightHomePromoCard.tsx',
-    'src/components/redesign/TicketStubCard.tsx',
-    'src/components/redesign/TonightRibbon.tsx',
-    'src/components/scoring/scored-promo-card.tsx',
-    'src/components/venue-hub/VenueHubPromoCard.tsx',
-    'src/lib/venue-hub.ts',
-    'src/lib/digest.ts',
-    'src/lib/social-feed/feed.ts',
-    'src/app/api/my-teams/promos/route.ts',
-  ];
-  const offenders: string[] = [];
-  const walk = (dir: string) => {
-    for (const name of readdirSync(dir)) {
-      const full = join(dir, name);
-      if (statSync(full).isDirectory()) {
-        if (name !== '__tests__' && name !== 'node_modules') walk(full);
-        continue;
-      }
-      if (!/\.(ts|tsx)$/.test(name) || /\.test\.tsx?$/.test(name)) continue;
-      const rel = relative(ROOT, full);
-      if (FAMILY.has(rel)) continue;
-      const text = readFileSync(full, 'utf8');
-      if (/promoPagePath\(|\/promos\/\$\{|getPromoPageSitemapEntries|from '@\/lib\/promo-pages'/.test(text)) offenders.push(rel);
-    }
-  };
-  for (const dir of ['src/app', 'src/components', 'src/lib']) walk(join(ROOT, dir));
-  assert.deepEqual(offenders, [], `promo page paths built outside the family and the helper:\n${offenders.join('\n')}`);
-  for (const rel of SURFACES) {
-    const text = readFileSync(join(ROOT, rel), 'utf8');
-    assert.match(text, /import \{[^}]*\bpromoPageHref\b[^}]*\} from '(?:@\/lib|\.|\.\.)\/promo-page-href'/, `${rel} must link through promoPageHref`);
+// ── The data guard (fix/promo-orphans-meta, 2026-10-31) ─────────────────────
+// Every indexable promo URL in the sitemap is an href in its team page's
+// server HTML. This replaces the Phase 3c static test that checked each
+// surface IMPORTED promoPageHref: that test passed while 786 sitemap URLs had
+// no inbound link on production (the rows past "Show all" mounted on click,
+// and the ticket-package names were plain text), because importing the helper
+// says nothing about which rows reach the HTML.
+//
+// Both sides are production code over the same stored docs: the sitemap's own
+// getPromoPageSitemapEntries, and the team page's own promo read
+// (getTeamPromos, then the route's package partition) rendered as the whole
+// RedesignTeamPage, through prerender, the way the server sends it. The
+// expected hrefs are the sitemap's paths, never promoPageHref's output, so the
+// guard cannot agree with itself. The live twin, against a deployed host's
+// real sitemap and team pages, is scripts/live/team-pages.live.test.ts.
+async function teamPageHtml(teamId: string): Promise<{ html: string; upcoming: number; packagesAhead: number }> {
+  const { getTeamBySlug, getTeamPromos, isTicketPackagePromo } = await import('@/lib/data');
+  const { partitionTicketPackages, upcomingTicketPackages } = await import('@/lib/ticket-packages');
+  const { splitPromosByDate, countPromosByType, teamDisplayName } = await import('@/lib/promo-helpers');
+  const { resolveClaimMode } = await import('@/lib/season-scope');
+  const { RedesignTeamPage } = await import('@/components/redesign/RedesignTeamPage');
+  const team = (await getTeamBySlug(teamId))!;
+  const all = await getTeamPromos(team.id);
+  const { promos, ticketPackages } = partitionTicketPackages(all, isTicketPackagePromo, team.league);
+  const { upcoming } = splitPromosByDate(promos, TODAY);
+  const packagesAhead = upcomingTicketPackages(ticketPackages, TODAY);
+  const out = await html(
+    <RedesignTeamPage
+      team={team}
+      coverage={{ teamCount: 169, leagueList: 'MLB, NBA, NFL, NHL, MLS, and WNBA', appLeagueList: 'MLB, NBA, NHL, and MLS' } as never}
+      venue={null}
+      promos={promos}
+      upcomingPromos={upcoming}
+      upcomingCounts={countPromosByType(upcoming)}
+      claim={resolveClaimMode(promos, team.league, TODAY)}
+      displayName={teamDisplayName(team)}
+      today={TODAY}
+      recurringDeals={[]}
+      playoffsActive={false}
+      inPlayoffs={false}
+      playoffPromos={[]}
+      playoffRound=""
+      playoffLastUpdated={null}
+      ticketPackages={packagesAhead}
+    />,
+  );
+  return { html: out, upcoming: upcoming.length, packagesAhead: packagesAhead.length };
+}
+
+test('data guard: every indexable promo URL in the sitemap is an href in its team page server HTML', async () => {
+  process.env.PROMO_PAGES_LIVE = 'true';
+  const { getPromoPageSitemapEntries } = await import('@/lib/promo-pages');
+  const entries = await getPromoPageSitemapEntries(TODAY);
+  const byTeam = new Map<string, string[]>();
+  for (const { path } of entries) {
+    const teamId = path.split('/')[2];
+    byTeam.set(teamId, [...(byTeam.get(teamId) ?? []), path]);
   }
-  // The helper is the only module that builds the path outside the family.
-  const helper = readFileSync(join(ROOT, 'src/lib/promo-page-href.ts'), 'utf8');
-  assert.match(helper, /promoPagePath\(t\.sportSlug, t\.id, promo\.pageCanonicalSlug \|\| promo\.pageSlug\)/);
+  const seen = { collapsed: false, packages: false };
+  const missing: string[] = [];
+  for (const [teamId, paths] of byTeam) {
+    const page = await teamPageHtml(teamId);
+    // The fixture must exercise both orphan causes, or the guard proves nothing.
+    if (page.upcoming > 10) seen.collapsed = true;
+    if (page.packagesAhead > 0) seen.packages = true;
+    for (const p of paths) if (!page.html.includes(`href="${p}"`)) missing.push(p);
+  }
+  assert.ok(seen.collapsed, 'the fixture has a team with more upcoming rows than the page shows before "Show all"');
+  assert.ok(seen.packages, 'the fixture has a team with upcoming ticket packages');
+  assert.ok(entries.length >= 20, `${entries.length} sitemap entries`);
+  assert.deepEqual(missing, [], `${missing.length} of ${entries.length} sitemap promo URLs have no href on their team page:\n${missing.join('\n')}`);
+});
+
+// The collapse stays visual: the rows past UPCOMING_VISIBLE and past the first
+// four packages are in the HTML inside a closed <details>, never mounted on
+// click, and a linked package row still says it comes with a special ticket.
+test('team page: the extra upcoming rows and packages sit in closed <details>, rendered; package rows keep the special-ticket note', async () => {
+  process.env.PROMO_PAGES_LIVE = 'true';
+  const suns = (await teamPageHtml('phoenix-suns')).html;
+  const details = suns.slice(suns.indexOf('<details class="group/upcoming'), suns.indexOf('</details>', suns.indexOf('<details class="group/upcoming')));
+  assert.ok(details.length > 0, 'the upcoming <details>');
+  assert.ok(!/<details[^>]*\bopen\b/.test(details.slice(0, 200)), 'closed by default');
+  assert.match(details.replace(/<!-- -->/g, ''), /Show all 15 upcoming promos/);
+  assert.match(details, /href="\/nba\/phoenix-suns\/promos\/fireworks-night"/, 'the last row is in the HTML');
+  assert.match(details, /id="promo-2027-04-10-fireworks-night"/, 'with its deep-link anchor');
+  assert.ok(!suns.includes('aria-expanded="false"'), 'no click-to-mount expander for upcoming rows');
+  const wild = (await teamPageHtml('minnesota-wild')).html;
+  const group = wild.slice(wild.indexOf('aria-labelledby="ticket-packages-heading"'), wild.indexOf('</section>', wild.indexOf('aria-labelledby="ticket-packages-heading"')));
+  for (const slug of ['puck-package-night', 'wizard-night']) {
+    const row = group.slice(group.lastIndexOf('<li', group.indexOf(`href="/nhl/minnesota-wild/promos/${slug}"`)), group.indexOf('</li>', group.indexOf(`href="/nhl/minnesota-wild/promos/${slug}"`)));
+    assert.match(row, /Comes with a special ticket package\./, `${slug}: the note under the linked name`);
+  }
 });
 
 test('the sitemap section: upcoming pages only, one URL per page, lastmod the latest row, nothing with the flag off', async () => {

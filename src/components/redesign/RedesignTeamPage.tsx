@@ -562,7 +562,7 @@ export function RedesignTeamPage({
             {ticketPackages.length > 0 ? (
               <div className="rd-weave-item order-[40]">
                 {promoSlot}
-                <TicketPackageList packages={ticketPackages} arrivalHighlight={hasNoPromosAtAll} />
+                <TicketPackageList packages={ticketPackages} team={team} arrivalHighlight={hasNoPromosAtAll} />
               </div>
             ) : (
               <div className="rd-weave-item order-[40]">{promoSlot}</div>

@@ -209,7 +209,20 @@ export function truncateAtWord(s: string, max: number): string {
 // A terminator that ends a sentence: . ! or ? followed by a space or the end,
 // unless the word before it is an abbreviation or an initial ("St. Paul",
 // "7 p.m.", "J. Smith"), which is a dot inside a sentence, not its end.
-const ABBREVIATIONS = new Set(['st', 'mt', 'ft', 'dr', 'mr', 'mrs', 'ms', 'jr', 'sr', 'vs', 'no', 'inc', 'co', 'ltd', 'p.m', 'a.m', 'pm', 'am', 'u.s', 'e.g', 'i.e']);
+// Months and weekdays joined the list on 2026-10-31: "the Dec. 20 game" was
+// cut as if "Dec." ended a sentence (Winnipeg's holiday-weekend row). "May" is
+// left out on purpose: it is also a word that ends sentences.
+const ABBREVIATIONS = new Set([
+  'st', 'mt', 'ft', 'dr', 'mr', 'mrs', 'ms', 'jr', 'sr', 'vs', 'no', 'inc', 'co', 'ltd', 'corp', 'bros',
+  'p.m', 'a.m', 'pm', 'am', 'u.s', 'e.g', 'i.e', 'etc', 'approx', 'est', 'ave', 'blvd', 'rd', 'hwy', 'dept',
+  'gen', 'gov', 'lt', 'col', 'capt', 'sgt', 'prof', 'rev', 'hon', 'vol', 'univ', 'intl',
+  'jan', 'feb', 'mar', 'apr', 'jun', 'jul', 'aug', 'sep', 'sept', 'oct', 'nov', 'dec',
+  'mon', 'tue', 'tues', 'wed', 'thu', 'thur', 'thurs', 'fri', 'sat', 'sun',
+]);
+const isAbbreviation = (word: string): boolean => {
+  const w = word.toLowerCase().replace(/[.!?]+$/, '');
+  return /^[a-z]$/.test(w) || ABBREVIATIONS.has(w);
+};
 function sentenceEnds(s: string): number[] {
   const ends: number[] = [];
   const re = /[.!?]+(?=\s|$)/g;
@@ -217,8 +230,8 @@ function sentenceEnds(s: string): number[] {
   while ((m = re.exec(s)) !== null) {
     const end = m.index + m[0].length;
     const before = s.slice(0, m.index);
-    const word = (before.match(/(\S+)$/) ?? ['', ''])[1].toLowerCase();
-    if (/^[a-z]$/.test(word) || ABBREVIATIONS.has(word) || ABBREVIATIONS.has(word.replace(/\.$/, ''))) continue;
+    const word = (before.match(/(\S+)$/) ?? ['', ''])[1];
+    if (isAbbreviation(word)) continue;
     ends.push(end);
   }
   return ends;
@@ -303,17 +316,135 @@ export function promoPageDescription(opts: {
   date: string | null;
   venueName: string | null;
   removed?: boolean;
+  type?: PromoType;
+  /** NBA and NHL package rows only (the stored flag is null elsewhere). */
+  ticketPackage?: boolean;
+  attendanceCap?: number | null;
+  whileSuppliesLast?: boolean | null;
 }): string {
-  const source = sentence(opts.description);
-  const who = opts.opponentName ? `${opts.teamName} vs ${cleanText(opts.opponentName)}` : opts.teamName;
+  const lead = descriptionLead(opts);
+  let out = lead;
+  const fits = (piece: string) => out.length + 1 + piece.length <= DESCRIPTION_MAX;
+
+  // The source text, whole sentences only, in order, stopping at the first that
+  // does not fit. A sentence is cut only at a real end (sentenceEnds skips the
+  // dot of "Dec." or "St."), and a trailing fragment that would end on an
+  // abbreviation never counts as whole.
+  const parts = sourceSentences(opts.description, opts.title);
+  let i = 0;
+  for (; i < parts.length && fits(parts[i].text) && parts[i].whole; i++) out = `${out} ${parts[i].text}`;
+
+  // Still short: the next sentence as a clause, cut at a word, never on an
+  // abbreviation or a dangling small word, marked with an ellipsis.
+  if (out.length < DESCRIPTION_MIN && i < parts.length) {
+    const clause = clauseWithin(parts[i].text, DESCRIPTION_MAX - out.length - 1, DESCRIPTION_MIN - out.length - 1);
+    if (clause) out = `${out} ${clause}`;
+  }
+
+  // Still short: sentences built from the stored fields, then generic ones.
+  if (out.length < DESCRIPTION_MIN) {
+    const said = out.toLowerCase();
+    const fillers: string[] = [];
+    if (opts.ticketPackage) fillers.push('A standard game ticket does not include it.');
+    else if (opts.attendanceCap && !said.includes('first ')) fillers.push(`First ${opts.attendanceCap.toLocaleString('en-US')} fans receive one.`);
+    else if (opts.whileSuppliesLast === true && !said.includes('supplies last')) fillers.push('While supplies last.');
+    fillers.push(...DESCRIPTION_FILLERS);
+    let usedPromoNight = said.includes('promonight');
+    for (const f of fillers) {
+      if (out.length >= DESCRIPTION_MIN) break;
+      const namesSite = f.includes('PromoNight');
+      if (namesSite && usedPromoNight) continue;
+      if (!fits(f)) continue;
+      out = `${out} ${f}`;
+      usedPromoNight ||= namesSite;
+    }
+  }
+  return out;
+}
+
+/** The floor of the promo meta description (fix/promo-orphans-meta,
+ *  2026-10-31: 715 promo pages read "too short" at 2026-10-30). */
+export const DESCRIPTION_MIN = 120;
+
+/** Generic closers, longest first; at most one names the site. They claim
+ *  nothing about the promo, only what every promo page carries. */
+const DESCRIPTION_FILLERS = [
+  'Dates, tickets and parking for this game on PromoNight.',
+  'Plan the trip with ticket and parking links.',
+  'Tickets and parking on PromoNight.',
+  'Plan your visit.',
+];
+
+/** The structured sentence: "{title}: {team} {type} vs {opponent}, {date} at
+ *  {venue}." The longest form that fits wins (venue drops first, then the
+ *  opponent, then the date); a package row's type is "special ticket
+ *  package", so every package description carries the words. */
+function descriptionLead(opts: Parameters<typeof promoPageDescription>[0]): string {
+  const title = cleanText(opts.title);
+  const team = cleanText(opts.teamName);
+  const kind = opts.ticketPackage ? 'special ticket package' : opts.type ? typeNoun(opts.type) : '';
+  const joiner = /[.!?]$/.test(title) ? ' ' : ': ';
+  const head = opts.removed ? `Removed from the ${team} schedule: ${title}` : `${title}${joiner}${team}${kind ? ` ${kind}` : ''}`;
+  const vs = cleanText(opts.opponentName) ? ` vs ${cleanText(opts.opponentName)}` : '';
   const when = opts.date && YMD_RE.test(opts.date) ? `, ${formatMonDayYear(opts.date)}` : '';
-  const where = opts.venueName ? ` at ${opts.venueName}` : '';
-  const tail = `${who}${when}${where}.`;
-  let out: string;
-  if (opts.removed) out = `Removed from the ${opts.teamName} schedule. ${source || sentence(opts.title)}`;
-  else if (!source) out = `${sentence(opts.title)} ${tail}`;
-  else out = `${source} ${tail}`;
-  return truncateAtSentence(out, DESCRIPTION_MAX);
+  const at = cleanText(opts.venueName) ? ` at ${cleanText(opts.venueName)}` : '';
+  for (const body of [`${head}${vs}${when}${at}`, `${head}${vs}${when}`, `${head}${when}`, head]) {
+    const lead = /[.!?]$/.test(body) ? body : `${body}.`;
+    if (lead.length <= DESCRIPTION_MAX && !endsOnAbbreviation(lead)) return lead;
+  }
+  return `${truncateAtWord(head, DESCRIPTION_MAX - 1)}…`;
+}
+
+/** The last word, without its closing punctuation, is an abbreviation. */
+function endsOnAbbreviation(s: string): boolean {
+  const last = (s.trim().match(/(\S+)$/) ?? ['', ''])[1].replace(/[)"'”’]+$/, '');
+  return isAbbreviation(last);
+}
+
+/** The source text as sentences, the title-only sentence dropped (the lead
+ *  already says it). `whole` is false for a trailing fragment that would end
+ *  on an abbreviation once closed. */
+function sourceSentences(description: string, title: string): { text: string; whole: boolean }[] {
+  const t = cleanText(description);
+  if (!t) return [];
+  const out: { text: string; whole: boolean }[] = [];
+  let from = 0;
+  for (const end of [...sentenceEnds(t), t.length]) {
+    const raw = t.slice(from, end).trim();
+    from = end;
+    if (!raw) continue;
+    const closed = /[.!?]$/.test(raw) ? raw : `${raw}.`;
+    if (closed.replace(/[.!?]+$/, '').toLowerCase() === cleanText(title).toLowerCase()) continue;
+    out.push({ text: closed, whole: !endsOnAbbreviation(closed) });
+  }
+  return out;
+}
+
+// A clause never ends on one of these.
+const DANGLING = new Set(['a', 'an', 'the', 'and', 'or', 'but', 'of', 'with', 'for', 'to', 'at', 'by', 'in', 'on', 'from', 'as', 'into', 'its', 'their', 'your', 'our', 'his', 'her', 'presented', 'featuring', 'including', 'courtesy']);
+
+/** The longest word-boundary prefix of `text` that fits `room` with its
+ *  ellipsis, ending on a real word; '' when under three words survive. When
+ *  the cut lands inside a phrase ("with a special"), it backs off to the
+ *  last phrase boundary (a comma, or just before a joining word) as long as
+ *  the clause stays at least `floor` long. */
+function clauseWithin(text: string, room: number, floor: number): string {
+  if (room < 12) return '';
+  const words = text.replace(/[.!?]+$/, '').split(' ');
+  const bare = (w: string) => w.toLowerCase().replace(/[,;:]+$/, '');
+  const len = (n: number) => words.slice(0, n).join(' ').length + 1;
+  let n = 0;
+  while (n < words.length && len(n + 1) <= room) n++;
+  const settles = (k: number) => k > 0 && !DANGLING.has(bare(words[k - 1])) && !isAbbreviation(words[k - 1]);
+  const atBoundary = (k: number) => k === words.length || /[,;:]$/.test(words[k - 1]) || DANGLING.has(bare(words[k]));
+  while (n > 0 && !settles(n)) n--;
+  if (!atBoundary(n)) {
+    for (let k = n - 1; k >= 3 && len(k) >= floor; k--) {
+      if (settles(k) && atBoundary(k)) { n = k; break; }
+    }
+  }
+  if (n < 3) return '';
+  return `${words.slice(0, n).join(' ').replace(/[\s,;:–-]+$/, '')}…`;
 }
 
 // ── image by tier (spec Images; brief A.4) ───────────────────────────────────

@@ -29,6 +29,8 @@ import {
   themeLabel,
   titlesNest,
   truncateAtSentence,
+  DESCRIPTION_MIN,
+  DESCRIPTION_MAX,
   truncateAtWord,
   typeNoun,
   typePlural,
@@ -116,26 +118,74 @@ test('title cascade: the first shape inside 60 rendered wins; the season stands 
   assert.equal(promoPageTitle('Warriors Cup Games T-Shirt', 'Golden State Warriors', ['2026-11-01', '2026-11-14'], null, 'Warriors'), 'Warriors Cup Games T-Shirt | Warriors');
 });
 
-test('description: the source text, then the game line, cut at the last sentence boundary under 155', () => {
-  const d = promoPageDescription({ description: 'All fans receive a blaze orange hat. Presented by Federal Ammunition.', title: 'Blaze Orange Hat', teamName: 'Minnesota Wild', opponentName: 'Islanders', date: '2026-10-29', venueName: 'Grand Casino Arena' });
-  assert.equal(d, 'All fans receive a blaze orange hat. Presented by Federal Ammunition. Minnesota Wild vs Islanders, Oct 29, 2026 at Grand Casino Arena.');
-  assert.ok(d.length <= 155);
-  const long = promoPageDescription({ description: 'x'.repeat(40) + ' ' + 'y'.repeat(200), title: 'T', teamName: 'Team', opponentName: '', date: null, venueName: null });
-  assert.ok(long.length <= 155);
-  assert.equal(long, 'x'.repeat(40));
-  assert.equal(promoPageDescription({ description: '', title: 'Blaze Orange Hat', teamName: 'Minnesota Wild', opponentName: '', date: '2026-10-29', venueName: null }), 'Blaze Orange Hat. Minnesota Wild, Oct 29, 2026.');
-  assert.match(promoPageDescription({ description: 'First 10,000 fans.', title: 'Mystery Bobblehead', teamName: 'Anaheim Ducks', opponentName: 'Wild', date: '2027-01-05', venueName: null, removed: true }), /^Removed from the Anaheim Ducks schedule\. First 10,000 fans\./);
+test('description: the structured lead, then whole source sentences, then fillers, 120 to 155 (2026-10-31)', () => {
+  // The rows the ruling names, with their stored text.
+  const jets = promoPageDescription({ description: 'Kick off the holiday season with the Jets! Wear your favourite festive outfit and get excited for tons of giveaways during the season of giving at the Dec. 20 game against the Sabres.', title: 'Holiday Weekend', teamName: 'Winnipeg Jets', opponentName: 'Sabres', date: '2026-12-20', venueName: 'Canada Life Centre', type: 'theme' });
+  assert.equal(jets, 'Holiday Weekend: Winnipeg Jets theme night vs Sabres, Dec 20, 2026 at Canada Life Centre. Kick off the holiday season with the Jets!');
+  const hornets = promoPageDescription({ description: 'Buzz City Appreciation celebration on the final home game of the season. Presented by Dr Pepper.', title: 'Buzz City Appreciation', teamName: 'Charlotte Hornets', opponentName: 'Nets', date: '2027-04-09', venueName: 'Spectrum Center', type: 'theme' });
+  assert.equal(hornets, 'Buzz City Appreciation: Charlotte Hornets theme night vs Nets, Apr 9, 2027 at Spectrum Center. Buzz City Appreciation celebration on the final home game…');
+  const kitty = promoPageDescription({ description: 'Hello Kitty Night presented by Eva Air with a special ticket package including a plush Hello Kitty bag charm.', title: 'Hello Kitty Night', teamName: 'Houston Rockets', opponentName: 'Jazz', date: '2027-01-05', venueName: 'Toyota Center', type: 'theme', ticketPackage: true });
+  assert.equal(kitty, 'Hello Kitty Night: Houston Rockets special ticket package vs Jazz, Jan 5, 2027 at Toyota Center. Hello Kitty Night presented by Eva Air…');
+  // A package row with no stored name and no description.
+  const hoodie = promoPageDescription({ description: '', title: 'Hoodie Night', teamName: 'San Antonio Spurs', opponentName: 'Suns', date: '2026-12-02', venueName: 'Frost Bank Center', type: 'giveaway', ticketPackage: true });
+  assert.equal(hoodie, 'Hoodie Night: San Antonio Spurs special ticket package vs Suns, Dec 2, 2026 at Frost Bank Center. A standard game ticket does not include it.');
+  // The stored cap fills a short giveaway.
+  assert.equal(
+    promoPageDescription({ description: '', title: 'Blaze Orange Hat', teamName: 'Minnesota Wild', opponentName: 'Islanders', date: '2026-10-29', venueName: 'Grand Casino Arena', type: 'giveaway', attendanceCap: 10000 }),
+    'Blaze Orange Hat: Minnesota Wild giveaway vs Islanders, Oct 29, 2026 at Grand Casino Arena. First 10,000 fans receive one.',
+  );
+  assert.match(promoPageDescription({ description: 'First 10,000 fans.', title: 'Mystery Bobblehead', teamName: 'Anaheim Ducks', opponentName: 'Wild', date: '2027-01-05', venueName: null, removed: true }), /^Removed from the Anaheim Ducks schedule: Mystery Bobblehead vs Wild, Jan 5, 2027\. First 10,000 fans\./);
   assert.equal(truncateAtWord('alpha beta, gamma', 12), 'alpha beta');
-  // The Stars row as stored: the second sentence does not fit, so the cut is
-  // after the first, never "handed out as fans".
-  const stars = promoPageDescription({ description: 'Early arriving fans have the opportunity to grab a one-of-a-kind Esa Lindell bobblehead, courtesy of Ticketmaster. Bobbleheads will be handed out as fans enter the arena.', title: 'Esa Lindell Bobblehead', teamName: 'Dallas Stars', opponentName: 'Panthers', date: '2026-11-15', venueName: 'American Airlines Center' });
-  assert.equal(stars, 'Early arriving fans have the opportunity to grab a one-of-a-kind Esa Lindell bobblehead, courtesy of Ticketmaster.');
-  // Sentence boundaries: abbreviations and initials are not ends.
+  // Sentence boundaries: abbreviations, initials, months and weekdays are not ends.
   assert.equal(truncateAtSentence('Doors at 5 p.m. sharp. Lines form at St. Paul gates. Arrive early.', 40), 'Doors at 5 p.m. sharp.');
   assert.equal(truncateAtSentence('Meet J. Smith at the gate. Then go in.', 30), 'Meet J. Smith at the gate.');
+  assert.equal(truncateAtSentence('Fans get a scarf at the Dec. 20 game. Then more.', 45), 'Fans get a scarf at the Dec. 20 game.');
+  assert.equal(truncateAtSentence('Open Sat. and Sun. only. Then more.', 30), 'Open Sat. and Sun. only.');
   assert.equal(truncateAtSentence('Short one! Second one? Third.', 22), 'Short one! Second one?');
   assert.equal(truncateAtSentence('No boundary here at all for a very long first sentence that runs on', 30), 'No boundary here at all for a');
   assert.equal(truncateAtSentence('Fits.', 155), 'Fits.');
+});
+
+test('description invariants: 120 to 155, never mid-word, never on an abbreviation, never split on one, packages say "ticket package"', () => {
+  const SOURCES = [
+    '',
+    'Fun night.',
+    'Kick off the holiday season with the Jets! Wear your favourite festive outfit and get excited for tons of giveaways during the season of giving at the Dec.',
+    'Presented by Dr Pepper. Gates open at 5 p.m. for St. Louis fans on Sat. and Sun. Arrive early for the best seats in the house tonight.',
+    'Cultural celebration of Native American heritage featuring a custom scarf designed by Travis Stewart, a contemporary Northwest artist of Chinook, Rogue River and Kalapuya descent.',
+    'A'.repeat(60) + ' ' + 'supercalifragilisticexpialidocious '.repeat(8),
+    'First 9,000 fans in attendance will receive a military cap courtesy of Prudential Financial. Military members receive discounted tickets through the special offer link.',
+    'Join us at the Dec. 20 game vs the Sabres for an ugly sweater contest, carolers on the concourse and a visit from Santa.',
+  ];
+  const ROWS = [
+    { title: 'ELF Night', teamName: 'Los Angeles Kings', opponentName: 'Canucks', date: '2026-12-12', venueName: 'Crypto.com Arena', type: 'theme' as const },
+    { title: 'Devin Booker #15 Bobblehead', teamName: 'Phoenix Suns', opponentName: 'Grizzlies', date: '2027-04-09', venueName: 'Mortgage Matchup Center', type: 'giveaway' as const, attendanceCap: 5000 },
+    { title: 'Hat', teamName: 'Minnesota Wild', opponentName: '', date: '2026-11-01', venueName: null, type: 'giveaway' as const, whileSuppliesLast: true },
+    { title: 'Go Jets Go!', teamName: 'Winnipeg Jets', opponentName: 'Sabres', date: '2026-12-20', venueName: 'Canada Life Centre', type: 'theme' as const },
+    { title: 'Harry Potter Night', teamName: 'Milwaukee Bucks', opponentName: 'Celtics', date: '2027-02-01', venueName: 'Fiserv Forum', type: 'theme' as const, ticketPackage: true },
+    { title: 'Kids Pack Day', teamName: 'Golden State Warriors', opponentName: 'Brooklyn Nets', date: '2027-01-10', venueName: 'Chase Center', type: 'kids' as const, ticketPackage: true },
+    { title: 'Hockey Fights Cancer Night presented by a very long sponsor name for the whole evening', teamName: 'Columbus Blue Jackets', opponentName: 'Utah Hockey Club', date: '2026-11-21', venueName: 'Nationwide Arena', type: 'theme' as const },
+  ];
+  const words = (s: string) => new Set(s.split(/[\s,;:!?.()…]+/).filter(Boolean));
+  for (const row of ROWS) {
+    for (const description of SOURCES) {
+      const d = promoPageDescription({ ...row, description });
+      const label = `${row.title} / ${description.slice(0, 40)}: ${d}`;
+      assert.ok(d.length >= DESCRIPTION_MIN && d.length <= DESCRIPTION_MAX, `${d.length} chars: ${label}`);
+      assert.match(d, /[.!?…]$/, `ends on a sentence or an ellipsis: ${label}`);
+      // Never mid-word: every word in the output is a whole word of an input or of the builder's own copy.
+      const known = new Set([...words(description), ...words(row.title), ...words(row.teamName), ...words(row.opponentName), ...words(row.venueName ?? ''),
+        ...words('Dec Nov Oct Jan Feb Mar Apr Jun Jul Aug Sep May 1 2 5 9 10 12 20 21 2026 2027 vs at theme night giveaway food deal promotion special ticket package Removed from the schedule'),
+        ...words('A standard game ticket does not include it First fans receive one While supplies last Dates tickets and parking for this game on PromoNight Plan the trip with parking links Tickets Plan your visit 5,000 9,000')]);
+      for (const w of words(d)) assert.ok(known.has(w), `"${w}" is not a whole input word: ${label}`);
+      // Never ends on an abbreviation, and "Dec." is never cut as an end.
+      const last = d.replace(/[.!?…]+$/, '').split(' ').pop()!;
+      assert.ok(!/^(dec|st|dr|sat|sun|p\.m|jan|nov)$/i.test(last), `ends on an abbreviation: ${label}`);
+      assert.ok(!/\bDec\.$/.test(d) && !/\bDec\.…$/.test(d), `cut at "Dec.": ${label}`);
+      if (row.ticketPackage) assert.match(d, /ticket package/, `package row: ${label}`);
+      else assert.doesNotMatch(d, /ticket package/, `not a package row: ${label}`);
+    }
+  }
 });
 
 test('image: the stored object through the Firebase download endpoint for tier 1, else the card keyed on promo id and updatedAt', () => {

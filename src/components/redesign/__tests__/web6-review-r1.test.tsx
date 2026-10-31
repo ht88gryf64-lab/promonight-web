@@ -294,19 +294,21 @@ describe('round 3: no status line beside playoff promos or every-game deals', ()
 });
 
 describe('round 3: deep links into the package group', () => {
-  test('PromoArrivalHighlight opens the package details, and no other details', () => {
+  test('PromoArrivalHighlight opens the package details or the upcoming details, and no other details', () => {
     const src = readFileSync('src/components/redesign/PromoArrivalHighlight.tsx', 'utf8');
-    assert.match(src, /el\.closest<HTMLDetailsElement>\('details\[data-ticket-packages\]'\)/);
-    assert.match(src, /if \(packages && !packages\.open\) packages\.open = true;/);
+    // Since 2026-10-31 one lookup opens either collapsed group: the upcoming
+    // rows' <details> or the ticket packages'.
+    assert.match(src, /el\.closest<HTMLDetailsElement>\('details\[data-promo-anchors\], details\[data-ticket-packages\]'\)/);
+    assert.match(src, /if \(group && !group\.open\) group\.open = true;/);
   });
 
   test('a packages-only page mounts the arrival effect in the group', async () => {
     const { TicketPackageList } = await import('../TicketPackageList');
     const { createElement } = await import('react');
-    const el = TicketPackageList({ packages: [promo('2026-11-02', 'Hoodie Package')], arrivalHighlight: true }) as any;
+    const el = TicketPackageList({ packages: [promo('2026-11-02', 'Hoodie Package')], team: SPURS, arrivalHighlight: true }) as any;
     const kids = ([] as any[]).concat(el.props.children);
     assert.ok(kids.some((k) => k && k.type && k.type.name === 'PromoArrivalHighlight'));
-    const off = TicketPackageList({ packages: [promo('2026-11-02', 'Hoodie Package')] }) as any;
+    const off = TicketPackageList({ packages: [promo('2026-11-02', 'Hoodie Package')], team: SPURS }) as any;
     assert.ok(!([] as any[]).concat(off.props.children).some((k) => k && k.type && k.type.name === 'PromoArrivalHighlight'));
     void createElement;
   });

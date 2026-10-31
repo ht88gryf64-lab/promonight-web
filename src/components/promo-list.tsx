@@ -570,21 +570,38 @@ export function PromoList({
       ) : (
         renderUpcomingRow(promo, i)
       );
+    // Every upcoming row is in the server HTML (fix/promo-orphans-meta,
+    // 2026-10-31): the rows past UPCOMING_VISIBLE used to lazy-mount on click
+    // (LazyPromoRows), which left their promo pages with no inbound link in
+    // the HTML a crawler reads. The collapse is now visual only: a native
+    // <details> over rows that are already rendered, the TicketPackageList
+    // pattern. Closed, it adds only the summary's height, so nothing shifts on
+    // load. No `page-content` inside, so no ad anchor lands between hidden
+    // rows. data-promo-anchors tags it for PromoArrivalHighlight, which opens
+    // it when a #promo- deep link targets a row inside. The completed rows
+    // still lazy-mount (ruling 2026-10-31): past promo pages are not in the
+    // sitemap, and their bytes are what keep MLB pages under 950 KB.
     const showAllUpcoming = upcomingHidden.length > 0 && (
-      <LazyPromoRows
-        promos={upcomingHidden}
-        share={share}
-        showLabel={`Show all ${upcoming.length} upcoming promos`}
-        hideLabel={`Hide ${upcomingHidden.length} additional promos`}
-        team={team}
-        contexts={upcomingHidden.map(contextsFor)}
-        interactive
-        /* Same id formula as the visible rows above. Without these the
-           hidden rows are unreachable by fragment, which is what made a
-           deep link into a week with more than UPCOMING_VISIBLE promos
-           land at the top of the page. */
-        anchorIds={upcomingHidden.map((p) => `promo-${promoAnchorId(p)}`)}
-      />
+      <details className="group/upcoming mt-3" data-promo-anchors>
+        <summary className="inline-flex cursor-pointer list-none items-center gap-2 rounded-full border border-rd-line bg-rd-card px-5 py-2.5 font-rd text-[11px] uppercase tracking-[0.1em] text-rd-ink-soft transition-colors hover:border-rd-line-strong hover:text-rd-ink [&::-webkit-details-marker]:hidden">
+          <span className="inline-block transition-transform group-open/upcoming:rotate-90" aria-hidden="true">▸</span>
+          <span className="group-open/upcoming:hidden">Show all {upcoming.length} upcoming promos</span>
+          <span className="hidden group-open/upcoming:inline">Hide {upcomingHidden.length} additional promos</span>
+        </summary>
+        <div className="mt-4 space-y-3">
+          {upcomingHidden.map((promo, j) => (
+            <RedesignPromoRow
+              key={`uh-${j}`}
+              promo={promo}
+              share={share}
+              team={team}
+              contexts={contextsFor(promo)}
+              interactive
+              anchorId={`promo-${promoAnchorId(promo)}`}
+            />
+          ))}
+        </div>
+      </details>
     );
     const onRecordLine = (
       <p className="text-rd-ink-soft text-sm">
