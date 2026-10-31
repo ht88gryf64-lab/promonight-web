@@ -344,9 +344,10 @@ test('tier 1 single-date NHL page: H1, the stored photo, the head, the schema an
   for (const must of ['/nhl', '/nhl/minnesota-wild', '/venues/xcel-energy-center', '/promos/jersey-giveaways']) assert.ok(links.includes(must), must);
 
   assert.equal(meta.title, 'Blaze Orange Hat | Minnesota Wild Oct 29, 2026');
-  // The structured lead first, then whole source sentences (2026-10-31): the
-  // second sentence would pass 155, so it stops at 125.
-  assert.equal(meta.description, 'Blaze Orange Hat: Minnesota Wild giveaway vs Islanders, Oct 29, 2026 at Grand Casino Arena. All fans receive a blaze orange hat.');
+  // The structured lead, then whole source sentences that do not name the
+  // promo (rulings 2026-10-31): "All fans receive a blaze orange hat." names
+  // it, so the next sentence is taken.
+  assert.equal(meta.description, 'Blaze Orange Hat: Minnesota Wild giveaway vs Islanders, Oct 29, 2026 at Grand Casino Arena. Presented by Federal Ammunition.');
   assert.equal(meta.alternates?.canonical, 'https://www.getpromonight.com/nhl/minnesota-wild/promos/blaze-orange-hat');
   const og = meta.openGraph as any;
   assert.equal(og.url, meta.alternates?.canonical);

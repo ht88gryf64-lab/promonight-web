@@ -99,9 +99,12 @@ export function promoPageHead(page: PromoPage, ctx: PromoPageContext, today: str
     venueName,
     removed,
     type: primary.type,
+    league: team.league,
     ticketPackage: primary.ticketPackageRequired === true,
     attendanceCap: primary.attendanceCap,
     whileSuppliesLast: primary.whileSuppliesLast,
+    presentedBy: primary.presentedBy,
+    displayTime: dates.length === 1 ? primary.displayTime : '',
   });
   const base = heroImage(page);
   const image = base.kind === 'photo' && imageSize ? { ...base, width: imageSize.width, height: imageSize.height } : base;
@@ -186,7 +189,7 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
     ctx.crossTeam?.kind === 'theme'
       ? 'Same promo, other teams'
       : ctx.crossTeam?.kind === 'league-type'
-        ? `More ${team.league} ${typePlural(primary.type)} coming up`
+        ? `More ${team.league} ${typePlural(primary.type, team.league)} coming up`
         : ctx.crossTeam?.kind === 'league'
           ? `More ${team.league} promos coming up`
           : `More ${typePlural(primary.type)} across pro sports`;
@@ -408,7 +411,7 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
         ) : null}
 
         <section className="mt-6 flex flex-col gap-2">
-          <H2>{`About this ${removed ? 'promotion' : typeNoun(primary.type)}`}</H2>
+          <H2>{`About this ${removed ? 'promotion' : typeNoun(primary.type, team.league)}`}</H2>
           {description ? <p className="m-0 text-[15px] leading-[1.55] text-rd-ink-soft">{description}</p> : null}
           {/* Every package row says so in the ruling's own words (2026-10-24),
               the sentence the team page's package rows carry. The stored

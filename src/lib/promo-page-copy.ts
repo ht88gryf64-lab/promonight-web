@@ -301,11 +301,24 @@ export function renderedTitleLength(bareTitle: string): number {
 }
 
 /**
- * The meta description: the source text (the stored description, which the
- * About section shows verbatim), then the game line, cut at the last sentence
- * boundary under 155 (a word boundary only when the first sentence alone is
- * longer than that). A promo with no source text gets its name and the game
- * line. A removed promo says so first.
+ * The meta description (fix/promo-orphans-meta, rulings 2026-10-31): 120 to
+ * 155 characters, built in this order.
+ *
+ * 1. The structured lead: "{title}: {team} {type} vs {opponent}, {date} at
+ *    {venue}." (descriptionLead). A package row's type is "special ticket
+ *    package", so every package description carries the words.
+ * 2. Whole sentences of the stored description, in order, while they fit. A
+ *    sentence that names the promo is skipped (the lead already does), and the
+ *    next one is tried. A sentence ends only at a real end: sentenceEnds never
+ *    cuts at the dot of "Dec." or "St.".
+ * 3. Only when not one whole sentence fit: the first eligible sentence as a
+ *    clause, cut at a word, never on an abbreviation, ended with "…".
+ * 4. Still under 120: sentences from the stored fields (the package flag, the
+ *    attendance cap or supplies, the sponsor), then the lead again with the
+ *    weekday and the game time. No generic filler.
+ *
+ * Nothing ends mid-word or on an abbreviation. When the stored fields cannot
+ * reach 120, the description is the longest of these that fits 155.
  */
 export function promoPageDescription(opts: {
   description: string;
@@ -317,76 +330,92 @@ export function promoPageDescription(opts: {
   venueName: string | null;
   removed?: boolean;
   type?: PromoType;
+  /** The team's league: NFL theme rows read "theme game" (typeNoun). */
+  league?: string;
   /** NBA and NHL package rows only (the stored flag is null elsewhere). */
   ticketPackage?: boolean;
   attendanceCap?: number | null;
   whileSuppliesLast?: boolean | null;
+  presentedBy?: string | null;
+  /** The game time as displayed (the display slot), '' when unknown. */
+  displayTime?: string;
 }): string {
-  const lead = descriptionLead(opts);
-  let out = lead;
-  const fits = (piece: string) => out.length + 1 + piece.length <= DESCRIPTION_MAX;
-
-  // The source text, whole sentences only, in order, stopping at the first that
-  // does not fit. A sentence is cut only at a real end (sentenceEnds skips the
-  // dot of "Dec." or "St."), and a trailing fragment that would end on an
-  // abbreviation never counts as whole.
-  const parts = sourceSentences(opts.description, opts.title);
-  let i = 0;
-  for (; i < parts.length && fits(parts[i].text) && parts[i].whole; i++) out = `${out} ${parts[i].text}`;
-
-  // Still short: the next sentence as a clause, cut at a word, never on an
-  // abbreviation or a dangling small word, marked with an ellipsis.
-  if (out.length < DESCRIPTION_MIN && i < parts.length) {
-    const clause = clauseWithin(parts[i].text, DESCRIPTION_MAX - out.length - 1, DESCRIPTION_MIN - out.length - 1);
-    if (clause) out = `${out} ${clause}`;
+  let best = '';
+  for (const richness of [0, 1, 2] as const) {
+    const d = describeWith(opts, richness);
+    if (d.length >= DESCRIPTION_MIN) return d;
+    if (d.length > best.length) best = d;
   }
-
-  // Still short: sentences built from the stored fields, then generic ones.
-  if (out.length < DESCRIPTION_MIN) {
-    const said = out.toLowerCase();
-    const fillers: string[] = [];
-    if (opts.ticketPackage) fillers.push('A standard game ticket does not include it.');
-    else if (opts.attendanceCap && !said.includes('first ')) fillers.push(`First ${opts.attendanceCap.toLocaleString('en-US')} fans receive one.`);
-    else if (opts.whileSuppliesLast === true && !said.includes('supplies last')) fillers.push('While supplies last.');
-    fillers.push(...DESCRIPTION_FILLERS);
-    let usedPromoNight = said.includes('promonight');
-    for (const f of fillers) {
-      if (out.length >= DESCRIPTION_MIN) break;
-      const namesSite = f.includes('PromoNight');
-      if (namesSite && usedPromoNight) continue;
-      if (!fits(f)) continue;
-      out = `${out} ${f}`;
-      usedPromoNight ||= namesSite;
-    }
-  }
-  return out;
+  return best;
 }
 
 /** The floor of the promo meta description (fix/promo-orphans-meta,
  *  2026-10-31: 715 promo pages read "too short" at 2026-10-30). */
 export const DESCRIPTION_MIN = 120;
 
-/** Generic closers, longest first; at most one names the site. They claim
- *  nothing about the promo, only what every promo page carries. */
-const DESCRIPTION_FILLERS = [
-  'Dates, tickets and parking for this game on PromoNight.',
-  'Plan the trip with ticket and parking links.',
-  'Tickets and parking on PromoNight.',
-  'Plan your visit.',
-];
+function describeWith(opts: Parameters<typeof promoPageDescription>[0], richness: 0 | 1 | 2): string {
+  let out = descriptionLead(opts, richness);
+  const fits = (piece: string) => out.length + 1 + piece.length <= DESCRIPTION_MAX;
+
+  const eligible = sourceSentences(opts.description).filter((s) => !namesPromo(s.text, opts.title));
+  let appended = 0;
+  for (const s of eligible) {
+    if (!s.whole || !fits(s.text)) break;
+    out = `${out} ${s.text}`;
+    appended++;
+  }
+  if (appended === 0 && eligible.length > 0 && out.length < DESCRIPTION_MIN) {
+    const clause = clauseWithin(eligible[0].text, DESCRIPTION_MAX - out.length - 1, DESCRIPTION_MIN - out.length - 1);
+    if (clause) out = `${out} ${clause}`;
+  }
+
+  if (out.length < DESCRIPTION_MIN) {
+    const said = out.toLowerCase();
+    const sponsor = cleanText(opts.presentedBy);
+    const facts: string[] = [];
+    if (opts.ticketPackage) facts.push('A standard game ticket does not include it.');
+    if (opts.attendanceCap && !said.includes('first ')) facts.push(`First ${opts.attendanceCap.toLocaleString('en-US')} fans receive one.`);
+    else if (opts.whileSuppliesLast === true && !said.includes('supplies last')) facts.push('While supplies last.');
+    if (sponsor && !said.includes(sponsor.toLowerCase())) facts.push(sentence(`Presented by ${sponsor}`));
+    for (const f of facts) {
+      if (out.length >= DESCRIPTION_MIN) break;
+      if (fits(f) && !endsOnAbbreviation(f)) out = `${out} ${f}`;
+    }
+  }
+  return out;
+}
+
+// Generic words a promo name ends in: "Dungeon Crawler Carl Night" is named by
+// "Dungeon Crawler Carl-themed game night" too.
+const GENERIC_NAME_TAIL = new Set(['night', 'nights', 'game', 'games', 'day', 'days', 'weekend', 'celebration', 'party', 'event', 'giveaway', 'theme']);
+const normalized = (s: string) => ` ${s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim()} `;
+
+/** The sentence names the promo: its whole name, or (for a name of three or
+ *  more words) the name without its generic last word, case-insensitive. */
+export function namesPromo(sentenceText: string, title: string): boolean {
+  const text = normalized(sentenceText);
+  const name = normalized(cleanText(title)).trim();
+  if (!name) return false;
+  if (text.includes(` ${name} `)) return true;
+  const words = name.split(' ');
+  while (words.length > 2 && GENERIC_NAME_TAIL.has(words[words.length - 1])) words.pop();
+  return words.length >= 2 && words.join(' ') !== name && text.includes(` ${words.join(' ')} `);
+}
 
 /** The structured sentence: "{title}: {team} {type} vs {opponent}, {date} at
  *  {venue}." The longest form that fits wins (venue drops first, then the
- *  opponent, then the date); a package row's type is "special ticket
- *  package", so every package description carries the words. */
-function descriptionLead(opts: Parameters<typeof promoPageDescription>[0]): string {
+ *  opponent, then the date). `richness` 1 writes the date with its weekday,
+ *  2 adds the game time: used only when the description would otherwise fall
+ *  under 120. */
+function descriptionLead(opts: Parameters<typeof promoPageDescription>[0], richness: 0 | 1 | 2 = 0): string {
   const title = cleanText(opts.title);
   const team = cleanText(opts.teamName);
-  const kind = opts.ticketPackage ? 'special ticket package' : opts.type ? typeNoun(opts.type) : '';
+  const kind = opts.ticketPackage ? 'special ticket package' : opts.type ? typeNoun(opts.type, opts.league) : '';
   const joiner = /[.!?]$/.test(title) ? ' ' : ': ';
   const head = opts.removed ? `Removed from the ${team} schedule: ${title}` : `${title}${joiner}${team}${kind ? ` ${kind}` : ''}`;
   const vs = cleanText(opts.opponentName) ? ` vs ${cleanText(opts.opponentName)}` : '';
-  const when = opts.date && YMD_RE.test(opts.date) ? `, ${formatMonDayYear(opts.date)}` : '';
+  const time = richness === 2 && cleanText(opts.displayTime) ? `, ${cleanText(opts.displayTime)}` : '';
+  const when = opts.date && YMD_RE.test(opts.date) ? `, ${richness > 0 ? formatLongDate(opts.date) : formatMonDayYear(opts.date)}${time}` : '';
   const at = cleanText(opts.venueName) ? ` at ${cleanText(opts.venueName)}` : '';
   for (const body of [`${head}${vs}${when}${at}`, `${head}${vs}${when}`, `${head}${when}`, head]) {
     const lead = /[.!?]$/.test(body) ? body : `${body}.`;
@@ -401,10 +430,9 @@ function endsOnAbbreviation(s: string): boolean {
   return isAbbreviation(last);
 }
 
-/** The source text as sentences, the title-only sentence dropped (the lead
- *  already says it). `whole` is false for a trailing fragment that would end
- *  on an abbreviation once closed. */
-function sourceSentences(description: string, title: string): { text: string; whole: boolean }[] {
+/** The source text as sentences. `whole` is false for a trailing fragment
+ *  that would end on an abbreviation once closed. */
+function sourceSentences(description: string): { text: string; whole: boolean }[] {
   const t = cleanText(description);
   if (!t) return [];
   const out: { text: string; whole: boolean }[] = [];
@@ -414,7 +442,6 @@ function sourceSentences(description: string, title: string): { text: string; wh
     from = end;
     if (!raw) continue;
     const closed = /[.!?]$/.test(raw) ? raw : `${raw}.`;
-    if (closed.replace(/[.!?]+$/, '').toLowerCase() === cleanText(title).toLowerCase()) continue;
     out.push({ text: closed, whole: !endsOnAbbreviation(closed) });
   }
   return out;
@@ -508,12 +535,17 @@ export function pageImage(row: PromoPageRow, teamId: string, teamName: string, d
 /** The noun a page uses for its own kind ("About this giveaway"), and the
  *  plural a cross-team heading uses ("More NHL theme nights coming up").
  *  A kids row is a promotion: "kidss" is not a word (review finding 4). */
-export function typeNoun(type: PromoType): string {
+export function typeNoun(type: PromoType, league?: string | null): string {
+  if (type === 'theme' && isNfl(league)) return 'theme game';
   return type === 'giveaway' ? 'giveaway' : type === 'theme' ? 'theme night' : type === 'food' ? 'food deal' : 'promotion';
 }
-export function typePlural(type: PromoType): string {
+export function typePlural(type: PromoType, league?: string | null): string {
+  if (type === 'theme' && isNfl(league)) return 'theme games';
   return type === 'giveaway' ? 'giveaways' : type === 'theme' ? 'theme nights' : type === 'food' ? 'food deals' : 'kids promos';
 }
+/** NFL theme rows are "theme games" (ruling 2026-10-31): most NFL games are
+ *  not at night. Every other league keeps "theme night". */
+const isNfl = (league?: string | null) => String(league ?? '').toUpperCase() === 'NFL';
 
 export function badgeLabel(row: Pick<PromoPageRow, 'type' | 'tombstoned' | 'ticketPackageRequired'>): string {
   if (row.tombstoned) return 'Removed';
