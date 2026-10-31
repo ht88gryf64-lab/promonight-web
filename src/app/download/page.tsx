@@ -5,7 +5,7 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 import { QrCode } from '@/components/qr-code';
 import { TrackedAppLink } from '@/components/analytics-events';
-import { appStoreUrl, playStoreUrl, promoFromDownloadParams, teamFromDownloadSrc, type AppLinkOptions } from '@/lib/app-link';
+import { appStoreUrl, downloadOrigin, playStoreUrl, promoFromDownloadParams, teamFromDownloadSrc, type AppLinkOptions } from '@/lib/app-link';
 import { isRedesignEnabled } from '@/lib/redesign';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 
@@ -14,21 +14,21 @@ import { archivoHouse } from '@/components/redesign/fonts-house';
 // never fires a click event here, so the link's attribution is all a QR has).
 //
 // ?src=team_cta_{teamId} is the team-page app card's desktop link. The team
-// rides into every store link and QR code (App Store ct, Play utm_content) and
-// onto the click event's team_slug, so a desktop visitor who arrives from a
-// team page keeps that team's attribution. Reading searchParams makes this
+// rides into every Play link and QR code (utm_content) and onto the click
+// event's team_slug, so a desktop visitor who arrives from a team page keeps
+// that team's attribution. The App Store ct names the CTA that sent them (tc,
+// pc), or the page itself (dl) on a direct visit; never the team. Reading searchParams makes this
 // page render per request; it was ISR (revalidate 86400) before app funnel G1.
 //
 // ?src=promo_cta_{teamId}&promoId=…&pageSlug=… is a promo page's "Remind me"
 // link (hotfix 2026-10-31). The team rides in as above; the promo id and page
-// slug follow it into Play's utm_content, and every App Store link's ct is
-// pc_{teamId} (src/lib/app-link.ts).
-function storeLinks(teamId: string | undefined, promo: Pick<AppLinkOptions, 'promoId' | 'pageSlug'> = {}) {
+// slug follow it into Play's utm_content (src/lib/app-link.ts).
+function storeLinks(teamId: string | undefined, visit: Pick<AppLinkOptions, 'promoId' | 'pageSlug' | 'from'> = {}) {
   return {
-    iosButton: appStoreUrl({ surface: 'download', teamId, ...promo }),
-    androidButton: playStoreUrl({ surface: 'download', teamId, ...promo }),
-    iosQr: appStoreUrl({ surface: 'download_qr', placement: 'qr_ios', teamId, ...promo }),
-    androidQr: playStoreUrl({ surface: 'download_qr', placement: 'qr_android', teamId, ...promo }),
+    iosButton: appStoreUrl({ surface: 'download', teamId, ...visit }),
+    androidButton: playStoreUrl({ surface: 'download', teamId, ...visit }),
+    iosQr: appStoreUrl({ surface: 'download_qr', placement: 'qr_ios', teamId, ...visit }),
+    androidQr: playStoreUrl({ surface: 'download_qr', placement: 'qr_android', teamId, ...visit }),
   };
 }
 
@@ -51,7 +51,7 @@ export default async function DownloadPage({
 }) {
   const params = await searchParams;
   const teamId = teamFromDownloadSrc(params.src);
-  const links = storeLinks(teamId, promoFromDownloadParams(params));
+  const links = storeLinks(teamId, { ...promoFromDownloadParams(params), from: downloadOrigin(params.src) });
   const pushScreenshotExists = existsSync(
     join(process.cwd(), 'public', 'screenshots', 'push.png'),
   );

@@ -4,11 +4,13 @@ import assert from 'node:assert/strict';
 import {
   ANDROID_APP_URL,
   APP_STORE_CAMPAIGN_MAX,
+  APP_STORE_CT,
   IOS_APP_URL,
   appStoreCampaign,
   appStoreUrl,
   detectClientPlatform,
   downloadHref,
+  downloadOrigin,
   playReferrer,
   playStoreUrl,
   promoDownloadHref,
@@ -40,21 +42,21 @@ test('App Store, token set: pt, ct and mt=8', () => {
   const u = new URL(appStoreUrl({ surface: 'team_cta', teamId: 'minnesota-twins' }));
   assert.equal(u.origin + u.pathname, IOS_APP_URL);
   assert.equal(u.searchParams.get('pt'), '123456');
-  assert.equal(u.searchParams.get('ct'), 'web_team_cta_minnesota-twins');
+  assert.equal(u.searchParams.get('ct'), 'tc');
   assert.equal(u.searchParams.get('mt'), '8');
   assert.deepEqual([...u.searchParams.keys()], ['pt', 'ct', 'mt']);
 });
 
-test('campaign token: web_{surface}_{teamId}, else the placement, cut to 30 characters', () => {
-  assert.equal(APP_STORE_CAMPAIGN_MAX, 30);
-  assert.equal(appStoreCampaign({ surface: 'team_cta', teamId: 'minnesota-twins' }), 'web_team_cta_minnesota-twins');
-  const long = appStoreCampaign({ surface: 'team_cta', teamId: 'minnesota-timberwolves' });
-  assert.equal(long, 'web_team_cta_minnesota-timberw');
-  assert.equal(long.length, 30);
-  assert.equal(appStoreCampaign({ surface: 'download' }), 'web_download');
-  assert.equal(appStoreCampaign({ surface: 'download_qr', placement: 'qr_ios' }), 'web_download_qr_qr_ios');
-  // The team wins over the placement when both are given.
-  assert.equal(appStoreCampaign({ surface: 'team_cta', teamId: 'chicago-cubs', placement: 'x' }), 'web_team_cta_chicago-cubs');
+test('campaign token: a short fixed token per surface, never the team, placement or promo', () => {
+  assert.deepEqual(APP_STORE_CT, { promo_cta: 'pc', team_cta: 'tc', download: 'dl', download_qr: 'dl' });
+  for (const t of Object.values(APP_STORE_CT)) assert.ok(/^[a-z]{2}$/.test(t) && t.length <= APP_STORE_CAMPAIGN_MAX, t);
+  assert.equal(appStoreCampaign({ surface: 'team_cta', teamId: 'minnesota-timberwolves' }), 'tc');
+  assert.equal(appStoreCampaign({ surface: 'promo_cta', teamId: 'dallas-stars', promoId: '681fc85299a82ba4', pageSlug: 'x' }), 'pc');
+  assert.equal(appStoreCampaign({ surface: 'download' }), 'dl');
+  assert.equal(appStoreCampaign({ surface: 'download_qr', placement: 'qr_ios', teamId: 'chicago-cubs' }), 'dl');
+  // On /download, the CTA that sent the visitor wins over the page's own token.
+  assert.equal(appStoreCampaign({ surface: 'download', teamId: 'chicago-cubs', from: 'team_cta' }), 'tc');
+  assert.equal(appStoreCampaign({ surface: 'download_qr', placement: 'qr_ios', teamId: 'chicago-cubs', from: 'promo_cta' }), 'pc');
 });
 
 test('Play: the referrer is one encoded parameter that decodes to the utm pairs', () => {
@@ -99,11 +101,16 @@ test('/download src: the team card link round-trips, anything else is ignored', 
   }
 });
 
-test('/download with a team: App Store ct and Play utm_content carry it, QR placement kept on Play', () => {
+test('/download from a team card: App Store ct is tc on button and QR, Play utm_content carries the team, QR placement kept on Play', () => {
   process.env[KEY] = 'tok';
   const team = teamFromDownloadSrc('team_cta_minnesota-twins');
-  assert.equal(new URL(appStoreUrl({ surface: 'download', teamId: team })).searchParams.get('ct'), 'web_download_minnesota-twins');
-  assert.equal(new URL(appStoreUrl({ surface: 'download_qr', placement: 'qr_ios', teamId: team })).searchParams.get('ct'), 'web_download_qr_minnesota-twin');
+  const from = downloadOrigin('team_cta_minnesota-twins');
+  assert.equal(from, 'team_cta');
+  assert.equal(new URL(appStoreUrl({ surface: 'download', teamId: team, from })).searchParams.get('ct'), 'tc');
+  assert.equal(new URL(appStoreUrl({ surface: 'download_qr', placement: 'qr_ios', teamId: team, from })).searchParams.get('ct'), 'tc');
+  // A direct visit (no src) is the page's own token.
+  assert.equal(downloadOrigin(undefined), undefined);
+  assert.equal(new URL(appStoreUrl({ surface: 'download' })).searchParams.get('ct'), 'dl');
   const qr = new URL(playStoreUrl({ surface: 'download_qr', placement: 'qr_android', teamId: team }));
   assert.equal(qr.searchParams.get('referrer'), 'utm_source=web&utm_medium=download_qr&utm_content=minnesota-twins&utm_campaign=qr_android');
   const btn = new URL(playStoreUrl({ surface: 'download', teamId: team }));
@@ -138,16 +145,16 @@ test('/download from a promo page: promo_cta src keeps the team, promoId and pag
   }
 });
 
-test('/download with a promo: every App Store ct is pc_{teamId}, utm_content carries team, promo id and slug', () => {
+test('/download from a promo page: every App Store ct is pc, utm_content carries team, promo id and slug', () => {
   process.env[KEY] = 'tok';
   const promo = { promoId: '681fc85299a82ba4', pageSlug: 'esa-lindell-bobblehead' };
-  assert.equal(new URL(appStoreUrl({ surface: 'download', teamId: 'dallas-stars', ...promo })).searchParams.get('ct'), 'pc_dallas-stars');
-  assert.equal(new URL(appStoreUrl({ surface: 'download_qr', placement: 'qr_ios', teamId: 'dallas-stars', ...promo })).searchParams.get('ct'), 'pc_dallas-stars');
-  assert.equal(appStoreCampaign({ surface: 'download', teamId: 'minnesota-timberwolves', ...promo }), 'pc_minnesota-timberwolves');
+  const from = downloadOrigin('promo_cta_dallas-stars');
+  assert.equal(from, 'promo_cta');
+  assert.equal(downloadOrigin('promo_cta_Dallas'), undefined);
+  assert.equal(new URL(appStoreUrl({ surface: 'download', teamId: 'dallas-stars', ...promo, from })).searchParams.get('ct'), 'pc');
+  assert.equal(new URL(appStoreUrl({ surface: 'download_qr', placement: 'qr_ios', teamId: 'dallas-stars', ...promo, from })).searchParams.get('ct'), 'pc');
   const btn = new URL(playStoreUrl({ surface: 'download', teamId: 'dallas-stars', ...promo }));
   assert.equal(btn.searchParams.get('referrer'), 'utm_source=web&utm_medium=download&utm_content=dallas-stars_681fc85299a82ba4_esa-lindell-bobblehead');
   const qr = new URL(playStoreUrl({ surface: 'download_qr', placement: 'qr_android', teamId: 'dallas-stars', ...promo }));
   assert.equal(qr.searchParams.get('referrer'), 'utm_source=web&utm_medium=download_qr&utm_content=dallas-stars_681fc85299a82ba4_esa-lindell-bobblehead&utm_campaign=qr_android');
-  // A team-only visit is unchanged.
-  assert.equal(appStoreCampaign({ surface: 'download', teamId: 'dallas-stars' }), 'web_download_dallas-stars');
 });
