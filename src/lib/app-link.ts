@@ -9,6 +9,12 @@
 //   the variable and rebuilding is the whole switch; no code change.
 // - Google Play: an install `referrer` carrying utm_source=web,
 //   utm_medium=<surface>, utm_content=<teamId>, utm_campaign=<placement>.
+// - A visitor who reaches /download from a promo page's "Remind me" button
+//   (surface promo_cta, hotfix 2026-10-31) also carries the promo: promoId and
+//   pageSlug follow the team in both the ct token and utm_content, joined by
+//   `_` (team ids, slugs and promo ids never contain one, so utm_content
+//   splits back into its three parts). Play keeps all three; the ct token is
+//   still cut to 30, so it keeps the promo only when the team id is short.
 //
 // NEXT_PUBLIC_ variables are inlined at build time, so the token is read with
 // its literal name inside the function (the client bundle gets the value; the
@@ -23,7 +29,7 @@ export const IOS_APP_URL = `https://apps.apple.com/app/apple-store/id${IOS_APP_I
 export const ANDROID_APP_URL = `https://play.google.com/store/apps/details?id=${ANDROID_PACKAGE}`;
 
 /** Where a store link sits. Recorded as `surface` on app_download_click. */
-export type AppLinkSurface = 'team_cta' | 'download' | 'download_qr';
+export type AppLinkSurface = 'team_cta' | 'promo_cta' | 'download' | 'download_qr';
 
 export type AppLinkOptions = {
   surface: AppLinkSurface;
@@ -31,16 +37,24 @@ export type AppLinkOptions = {
   teamId?: string;
   /** Which link on the surface, e.g. which QR code on /download. */
   placement?: string;
+  /** The promo page the visitor came from, with pageSlug (both or neither). */
+  promoId?: string;
+  pageSlug?: string;
 };
 
 /** App Store Connect caps a campaign token at 30 characters. */
 export const APP_STORE_CAMPAIGN_MAX = 30;
 
-/** `web_{surface}_{teamId}` (or the placement when there is no team), cut to
- *  30 characters. Across the 169 team ids no two cut tokens collide (checked
- *  2026-10-11); 54 are cut. */
-export function appStoreCampaign({ surface, teamId, placement }: AppLinkOptions): string {
-  return ['web', surface, teamId ?? placement].filter(Boolean).join('_').slice(0, APP_STORE_CAMPAIGN_MAX);
+/** `web_{surface}_{teamId}` (or the placement when there is no team), then
+ *  the promo's id and page slug when there is one, cut to 30 characters (and
+ *  never left ending on the joiner). Across the 169 team ids no two cut team
+ *  tokens collide (checked 2026-10-11); 54 are cut. */
+export function appStoreCampaign({ surface, teamId, placement, promoId, pageSlug }: AppLinkOptions): string {
+  return ['web', surface, teamId ?? placement, promoId, pageSlug]
+    .filter(Boolean)
+    .join('_')
+    .slice(0, APP_STORE_CAMPAIGN_MAX)
+    .replace(/_+$/, '');
 }
 
 export function appStoreUrl(opts: AppLinkOptions): string {
@@ -51,9 +65,10 @@ export function appStoreUrl(opts: AppLinkOptions): string {
 }
 
 /** The decoded Play install referrer: utm pairs, in a fixed order. */
-export function playReferrer({ surface, teamId, placement }: AppLinkOptions): string {
+export function playReferrer({ surface, teamId, placement, promoId, pageSlug }: AppLinkOptions): string {
   const q = new URLSearchParams({ utm_source: 'web', utm_medium: surface });
-  if (teamId) q.set('utm_content', teamId);
+  const content = [teamId, promoId, pageSlug].filter(Boolean).join('_');
+  if (content) q.set('utm_content', content);
   if (placement) q.set('utm_campaign', placement);
   return q.toString();
 }
@@ -84,11 +99,35 @@ export function downloadHref(teamId: string): string {
   return `/download?src=team_cta_${teamId}`;
 }
 
+/** The promo page's "Remind me" link: the team in `src` as the team card
+ *  does, the promo as two separate params /download carries into its store
+ *  links (promoFromDownloadParams). */
+export function promoDownloadHref(teamId: string, promoId: string, pageSlug: string): string {
+  return `/download?${new URLSearchParams({ src: `promo_cta_${teamId}`, promoId, pageSlug }).toString()}`;
+}
+
+const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
 /** The team id in a /download `src` value, or undefined. Only the team card's
- *  own shape is accepted, and only a slug: anything else in the query string
- *  is ignored rather than copied into a store link. */
+ *  and the promo page's own shapes are accepted, and only a slug: anything
+ *  else in the query string is ignored rather than copied into a store link. */
 export function teamFromDownloadSrc(src: unknown): string | undefined {
   if (typeof src !== 'string') return undefined;
-  const m = /^team_cta_([a-z0-9]+(?:-[a-z0-9]+)*)$/.exec(src);
-  return m && m[1].length <= 60 ? m[1] : undefined;
+  const m = /^(?:team_cta|promo_cta)_(.+)$/.exec(src);
+  return m && SLUG_RE.test(m[1]) && m[1].length <= 60 ? m[1] : undefined;
+}
+
+/** The promo a /download visit came from: only on a promo_cta `src` with a
+ *  team, and only when promoId (letters and digits) and pageSlug (a slug) are
+ *  both well formed. Otherwise neither is carried. */
+export function promoFromDownloadParams(params: {
+  src?: unknown;
+  promoId?: unknown;
+  pageSlug?: unknown;
+}): { promoId: string; pageSlug: string } | undefined {
+  const { src, promoId, pageSlug } = params;
+  if (typeof src !== 'string' || !src.startsWith('promo_cta_') || !teamFromDownloadSrc(src)) return undefined;
+  if (typeof promoId !== 'string' || !/^[A-Za-z0-9]{1,64}$/.test(promoId)) return undefined;
+  if (typeof pageSlug !== 'string' || !SLUG_RE.test(pageSlug) || pageSlug.length > 120) return undefined;
+  return { promoId, pageSlug };
 }

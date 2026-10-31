@@ -286,6 +286,10 @@ test('tier 1 single-date NHL page: H1, the stored photo, the head, the schema an
   assert.match(h, /href="\/venues\/xcel-energy-center"[^>]*>Grand Casino Arena</);
   assert.match(h, /Presented by<\/span><span class="font-rd[^"]*">Federal Ammunition</);
   assert.match(h, /Get tickets<\/a>/);
+  // "Remind me" is the promo_cta surface (hotfix 2026-10-31): the team in src,
+  // the promo id and page slug as their own params, never team_cta.
+  assert.match(h, /<a href="\/download\?src=promo_cta_minnesota-wild&amp;promoId=[A-Za-z0-9]+&amp;pageSlug=blaze-orange-hat"[^>]*>Remind me<\/a>/);
+  assert.ok(!h.includes('team_cta_'), 'no team_cta link on a promo page');
   // The read date is the team's scan stamp, never the row's updatedAt.
   assert.match(h, /Source: <a href="https:\/\/www\.nhl\.com\/wild\/fans\/giveaway-schedule"[^>]*>nhl\.com<\/a><span> · read Oct 23, 2026<\/span>/);
   // Quick facts from the building: bag, transit, parking, outside food.
