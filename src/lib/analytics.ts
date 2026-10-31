@@ -43,6 +43,10 @@ export type AnalyticsEvent =
   | 'hub_to_team'
   | 'venue_hub_promo_click'
   | 'app_download_click'
+  // The promo page's "Remind me" app CTA (surface promo_cta, hotfix
+  // 2026-10-31). Fires beside app_download_click, which the same click still
+  // sends for the install funnel; this one carries the promo.
+  | 'web_app_cta_click'
   | 'promo_card_tap'
   // A click on a promo name that leads to the promo's own page (Phase 3c):
   // every inbound surface (team rows, the aggregators, the homepage cards and
@@ -401,7 +405,8 @@ export type AffiliateClickProperties = {
 export type AppDownloadClickProperties = {
   // The page surface inferred from the path, except on the links built by
   // src/lib/app-link.ts, which name their own: team_cta (the team-page app
-  // card), download (/download's buttons). download_qr is the QR codes'
+  // card), promo_cta (the promo page's "Remind me"), download (/download's
+  // buttons). download_qr is the QR codes'
   // surface; a scan never reaches this page, so it appears only in the store
   // links' own attribution, never on this event.
   surface: AnalyticsSurface | AppLinkSurface;
@@ -419,6 +424,20 @@ export type AppDownloadClickProperties = {
   // team card goes to /download with store 'unknown' and device_platform
   // 'desktop'. Not named `platform`: the legacy GA events (app_store_click,
   // app_install_click) already send `platform` meaning the store.
+  device_platform: ClientPlatform;
+};
+
+// web_app_cta_click: an in-page app CTA that names what it was pitching. Only
+// the promo page's "Remind me" fires it today (surface promo_cta); promo_id is
+// the stored document id, page_slug the promo page's slug, so the click joins
+// to the /download store links' ct / utm_content, which carry the same two.
+export type WebAppCtaClickProperties = {
+  surface: Extract<AppLinkSurface, 'promo_cta'>;
+  team_slug: string;
+  promo_id: string;
+  page_slug: string;
+  destination_url: string;
+  page_type: AnalyticsSurface;
   device_platform: ClientPlatform;
 };
 
@@ -1035,6 +1054,7 @@ export type EventPropertiesMap = {
   gameday_card_tap: GamedayCardTapProperties;
   affiliate_click: AffiliateClickProperties;
   app_download_click: AppDownloadClickProperties;
+  web_app_cta_click: WebAppCtaClickProperties;
   promo_card_tap: PromoCardTapProperties;
   promo_link_click: PromoLinkClickProperties;
   tonight_card_tap: TonightCardTapProperties;
@@ -1418,6 +1438,25 @@ export const trackInstallClick = (payload: InstallClickPayload) => {
     placement: payload.section,
     team_slug: payload.teamSlug,
     page_type: pageType,
+    device_platform: currentClientPlatform(),
+  });
+};
+
+export const trackAppCtaClick = (payload: {
+  surface: WebAppCtaClickProperties['surface'];
+  teamSlug: string;
+  promoId: string;
+  pageSlug: string;
+  href: string;
+}) => {
+  const sourcePage = typeof window !== 'undefined' ? window.location.pathname : '';
+  track('web_app_cta_click', {
+    surface: payload.surface,
+    team_slug: payload.teamSlug,
+    promo_id: payload.promoId,
+    page_slug: payload.pageSlug,
+    destination_url: payload.href,
+    page_type: inferSurfaceFromPath(sourcePage),
     device_platform: currentClientPlatform(),
   });
 };

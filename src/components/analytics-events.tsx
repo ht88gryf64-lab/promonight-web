@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import Link from 'next/link';
-import { event, trackInstallClick } from '@/lib/analytics';
+import { event, trackAppCtaClick, trackInstallClick } from '@/lib/analytics';
 import type { AppLinkSurface } from '@/lib/app-link';
 
 // Fires team_page_view once on mount
@@ -41,6 +41,8 @@ export function TrackedAppLink({
   target,
   rel,
   surface,
+  promoId,
+  pageSlug,
   plainAnchor = false,
 }: {
   href: string;
@@ -55,6 +57,10 @@ export function TrackedAppLink({
   rel?: string;
   /** For links built by src/lib/app-link.ts; otherwise inferred from the path. */
   surface?: AppLinkSurface;
+  /** The promo a promo_cta link pitches; with teamSlug, the click also fires
+   *  web_app_cta_click. */
+  promoId?: string;
+  pageSlug?: string;
   /** Render a plain <a> instead of next/link: the link is never prefetched,
    *  and following it is a full page load. For the team-page app card, whose
    *  /download link sits on 169 pages (app funnel G1). Not a next/link
@@ -67,6 +73,9 @@ export function TrackedAppLink({
   const resolvedRel = rel ?? (isExternal ? 'noopener' : undefined);
   const handleClick = () => {
     trackInstallClick({ platform, section, page, teamSlug, ...(surface ? { surface } : {}) });
+    if (surface === 'promo_cta' && teamSlug && promoId && pageSlug) {
+      trackAppCtaClick({ surface, teamSlug, promoId, pageSlug, href });
+    }
   };
 
   if (plainAnchor) {

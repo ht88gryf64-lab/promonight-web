@@ -5,7 +5,7 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 import { QrCode } from '@/components/qr-code';
 import { TrackedAppLink } from '@/components/analytics-events';
-import { appStoreUrl, playStoreUrl, teamFromDownloadSrc } from '@/lib/app-link';
+import { appStoreUrl, playStoreUrl, promoFromDownloadParams, teamFromDownloadSrc, type AppLinkOptions } from '@/lib/app-link';
 import { isRedesignEnabled } from '@/lib/redesign';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 
@@ -18,12 +18,16 @@ import { archivoHouse } from '@/components/redesign/fonts-house';
 // onto the click event's team_slug, so a desktop visitor who arrives from a
 // team page keeps that team's attribution. Reading searchParams makes this
 // page render per request; it was ISR (revalidate 86400) before app funnel G1.
-function storeLinks(teamId: string | undefined) {
+//
+// ?src=promo_cta_{teamId}&promoId=…&pageSlug=… is a promo page's "Remind me"
+// link (hotfix 2026-10-31). The team rides in as above, and the promo id and
+// page slug follow it into every store link (src/lib/app-link.ts).
+function storeLinks(teamId: string | undefined, promo: Pick<AppLinkOptions, 'promoId' | 'pageSlug'> = {}) {
   return {
-    iosButton: appStoreUrl({ surface: 'download', teamId }),
-    androidButton: playStoreUrl({ surface: 'download', teamId }),
-    iosQr: appStoreUrl({ surface: 'download_qr', placement: 'qr_ios', teamId }),
-    androidQr: playStoreUrl({ surface: 'download_qr', placement: 'qr_android', teamId }),
+    iosButton: appStoreUrl({ surface: 'download', teamId, ...promo }),
+    androidButton: playStoreUrl({ surface: 'download', teamId, ...promo }),
+    iosQr: appStoreUrl({ surface: 'download_qr', placement: 'qr_ios', teamId, ...promo }),
+    androidQr: playStoreUrl({ surface: 'download_qr', placement: 'qr_android', teamId, ...promo }),
   };
 }
 
@@ -44,8 +48,9 @@ export default async function DownloadPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const teamId = teamFromDownloadSrc((await searchParams).src);
-  const links = storeLinks(teamId);
+  const params = await searchParams;
+  const teamId = teamFromDownloadSrc(params.src);
+  const links = storeLinks(teamId, promoFromDownloadParams(params));
   const pushScreenshotExists = existsSync(
     join(process.cwd(), 'public', 'screenshots', 'push.png'),
   );

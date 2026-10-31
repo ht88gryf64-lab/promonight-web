@@ -6,7 +6,7 @@ import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure
 import { getLeagueHub } from '@/lib/league-hubs';
 import { buildSpotHeroUrl, buildTicketmasterUrl } from '@/lib/affiliates';
 import { resolveHotelLink } from '@/lib/hotel-link';
-import { downloadHref } from '@/lib/app-link';
+import { promoDownloadHref } from '@/lib/app-link';
 import { promoAnchorId, teamDisplayName } from '@/lib/promo-helpers';
 import { PROMO_TYPE_LABELS } from '@/lib/types';
 import type { LinkedPromo, PromoPage, PromoPageContext } from '@/lib/promo-pages';
@@ -335,11 +335,14 @@ export function PromoPageView({ page, ctx, today }: PromoPageViewProps) {
                 </TrackedAffiliateLink>
               ) : null}
               <TrackedAppLink
-                href={downloadHref(team.id)}
+                href={promoDownloadHref(team.id, primary.promoId, page.slug)}
                 platform="unknown"
                 section="promo_page_cta"
                 page="promo_page"
+                surface="promo_cta"
                 teamSlug={team.id}
+                promoId={primary.promoId}
+                pageSlug={page.slug}
                 plainAnchor
                 className="flex h-11 min-w-[104px] flex-1 basis-0 items-center justify-center whitespace-nowrap rounded-xl border border-rd-line-strong bg-rd-card px-2 font-rd text-[14px] font-medium text-rd-ink no-underline hover:border-rd-ink"
               >
