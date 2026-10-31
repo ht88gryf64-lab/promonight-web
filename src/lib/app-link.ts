@@ -6,16 +6,20 @@
 // ATTRIBUTION
 // - App Store: campaign parameters only when NEXT_PUBLIC_APPSTORE_PROVIDER_TOKEN
 //   is set (?pt=<token>&ct=<campaign>&mt=8). Unset, the link is bare. Setting
-//   the variable and rebuilding is the whole switch; no code change.
+//   the variable and rebuilding is the whole switch; no code change. The ct is
+//   a short fixed token per surface, never a team or a promo
+//   (appStoreCampaign).
 // - Google Play: an install `referrer` carrying utm_source=web,
 //   utm_medium=<surface>, utm_content=<teamId>, utm_campaign=<placement>.
 // - A visitor who reaches /download from a promo page's "Remind me" button
 //   (surface promo_cta, hotfix 2026-10-31) also carries the promo. Play gets
 //   promoId and pageSlug after the team in utm_content, joined by `_` (team
 //   ids, slugs and promo ids never contain one, so it splits back into its
-//   three parts). The App Store ct is `pc_{teamId}`, surface and team only:
-//   App Store Connect hides a campaign under 5 downloads, so a per-promo
-//   token would never report (follow-up 2026-10-31).
+//   three parts).
+// - Team and promo detail lives in Play's utm_content and in PostHog
+//   (app_download_click, web_app_cta_click), never in the App Store ct: App
+//   Store Connect hides a campaign under 5 installs, so a per-team or
+//   per-promo token would never report (ruling 2026-10-31).
 //
 // NEXT_PUBLIC_ variables are inlined at build time, so the token is read with
 // its literal name inside the function (the client bundle gets the value; the
@@ -38,6 +42,8 @@ export type AppLinkOptions = {
   teamId?: string;
   /** Which link on the surface, e.g. which QR code on /download. */
   placement?: string;
+  /** On /download: the CTA that sent the visitor there (downloadOrigin). */
+  from?: DownloadOrigin;
   /** The promo page the visitor came from, with pageSlug (both or neither). */
   promoId?: string;
   pageSlug?: string;
@@ -46,14 +52,26 @@ export type AppLinkOptions = {
 /** App Store Connect caps a campaign token at 30 characters. */
 export const APP_STORE_CAMPAIGN_MAX = 30;
 
-/** `web_{surface}_{teamId}` (or the placement when there is no team), cut to
- *  30 characters. Across the 169 team ids no two cut tokens collide (checked
- *  2026-10-11); 54 are cut. A visit from a promo page is `pc_{teamId}` on
- *  every App Store link /download shows, the promo itself left out; across
- *  the 256 site ids none is cut and none collides (checked 2026-10-31). */
-export function appStoreCampaign({ surface, teamId, placement, promoId }: AppLinkOptions): string {
-  if (promoId && teamId) return `pc_${teamId}`.slice(0, APP_STORE_CAMPAIGN_MAX);
-  return ['web', surface, teamId ?? placement].filter(Boolean).join('_').slice(0, APP_STORE_CAMPAIGN_MAX);
+/** The CTAs that link to /download with a `src`. */
+export type DownloadOrigin = 'team_cta' | 'promo_cta';
+
+/** The App Store ct for each surface: short, fixed, no team, no promo
+ *  (ruling 2026-10-31). The /download QR codes share the page's token. Every
+ *  surface in docs/cta-registry.md that reaches the App Store does so through
+ *  one of these (the homepage, about, aggregator and nav buttons all go
+ *  through /download). */
+export const APP_STORE_CT: Record<AppLinkSurface, string> = {
+  promo_cta: 'pc',
+  team_cta: 'tc',
+  download: 'dl',
+  download_qr: 'dl',
+};
+
+/** The surface's token; on /download, the token of the CTA that sent the
+ *  visitor there, so a promo page's or a team card's installs count under its
+ *  own token whichever /download link (button or QR) finished the trip. */
+export function appStoreCampaign({ surface, from }: AppLinkOptions): string {
+  return APP_STORE_CT[from ?? surface];
 }
 
 export function appStoreUrl(opts: AppLinkOptions): string {
@@ -114,6 +132,13 @@ export function teamFromDownloadSrc(src: unknown): string | undefined {
   if (typeof src !== 'string') return undefined;
   const m = /^(?:team_cta|promo_cta)_(.+)$/.exec(src);
   return m && SLUG_RE.test(m[1]) && m[1].length <= 60 ? m[1] : undefined;
+}
+
+/** The CTA a /download `src` names, when it is one of the accepted shapes
+ *  with a valid team. */
+export function downloadOrigin(src: unknown): DownloadOrigin | undefined {
+  if (!teamFromDownloadSrc(src)) return undefined;
+  return (src as string).startsWith('promo_cta_') ? 'promo_cta' : 'team_cta';
 }
 
 /** The promo a /download visit came from: only on a promo_cta `src` with a
