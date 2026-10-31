@@ -411,7 +411,9 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
         ) : null}
 
         <section className="mt-6 flex flex-col gap-2">
-          <H2>{`About this ${removed ? 'promotion' : typeNoun(primary.type, team.league)}`}</H2>
+          {/* A package row is not a theme night or a giveaway (the team page's
+              package group says so): its heading names the package. */}
+          <H2>{`About this ${removed ? 'promotion' : primary.ticketPackageRequired === true ? 'ticket package' : typeNoun(primary.type, team.league)}`}</H2>
           {description ? <p className="m-0 text-[15px] leading-[1.55] text-rd-ink-soft">{description}</p> : null}
           {/* Every package row says so in the ruling's own words (2026-10-24),
               the sentence the team page's package rows carry. The stored

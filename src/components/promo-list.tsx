@@ -153,7 +153,7 @@ function PromoRow({
   );
 }
 
-const UPCOMING_VISIBLE = 10;
+export const UPCOMING_VISIBLE = 10;
 const COMPLETED_VISIBLE = 5;
 
 /**
@@ -580,7 +580,11 @@ export function PromoList({
     // rows. data-promo-anchors tags it for PromoArrivalHighlight, which opens
     // it when a #promo- deep link targets a row inside. The completed rows
     // still lazy-mount (ruling 2026-10-31): past promo pages are not in the
-    // sitemap, and their bytes are what keep MLB pages under 950 KB.
+    // sitemap. WEIGHT: each row rendered here costs ~3.4 KB of HTML (measured
+    // on the Kings and Bulls, 2026-10-31). MLB pages measured ~945 KB in the
+    // offseason with NO upcoming rows, so a full 2027 MLB schedule here would
+    // pass the 950 KB cap and Bing's 1 MB ceiling; issue #30 must land before
+    // the 2027 MLB schedules load (`npm run test:live` measures it).
     const showAllUpcoming = upcomingHidden.length > 0 && (
       <details className="group/upcoming mt-3" data-promo-anchors>
         <summary className="inline-flex cursor-pointer list-none items-center gap-2 rounded-full border border-rd-line bg-rd-card px-5 py-2.5 font-rd text-[11px] uppercase tracking-[0.1em] text-rd-ink-soft transition-colors hover:border-rd-line-strong hover:text-rd-ink [&::-webkit-details-marker]:hidden">

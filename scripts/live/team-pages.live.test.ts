@@ -26,14 +26,26 @@ const VIA_CLI = /\.vercel\.app$/.test(new URL(HOST).hostname);
 const MAX_TEAM_PAGE_BYTES = 950_000;
 const CONCURRENCY = VIA_CLI ? 6 : 10;
 const run = promisify(execFile);
+const STATUS_MARK = 'LIVE_GUARD_HTTP_STATUS:';
+
+/** The href of every <a> in the HTML: a link a crawler follows, never a
+ *  string that merely appears in a script or the flight payload. */
+function anchorHrefs(html: string): Set<string> {
+  return new Set([...html.matchAll(/<a\b[^>]*?\shref="([^"]+)"/g)].map((m) => m[1].replace(/&amp;/g, '&')));
+}
 
 async function get(path: string): Promise<string> {
   const url = `${HOST}${path}`;
   for (let attempt = 1; ; attempt++) {
     try {
       if (VIA_CLI) {
-        const { stdout } = await run('npx', ['vercel', 'curl', url, '-s'], { maxBuffer: 16 * 1024 * 1024 });
-        return stdout;
+        // The status rides on the last line: a 404, a 500 or an SSO page must
+        // fail the guard, never pass it as a small page (review finding 4).
+        const { stdout } = await run('npx', ['vercel', 'curl', url, '-s', '-w', `\n${STATUS_MARK}%{http_code}`], { maxBuffer: 16 * 1024 * 1024 });
+        const at = stdout.lastIndexOf(`\n${STATUS_MARK}`);
+        const status = at >= 0 ? stdout.slice(at + STATUS_MARK.length + 1).trim() : 'none';
+        if (status !== '200') throw new Error(`${status} ${url}`);
+        return stdout.slice(0, at);
       }
       const res = await fetch(url, { headers: { 'cache-control': 'no-cache' } });
       if (!res.ok) throw new Error(`${res.status} ${url}`);
@@ -83,8 +95,8 @@ test(`every sitemap promo URL is an href in its team page server HTML (${HOST})`
   }
   const missing = (
     await pool([...byTeam], async ([team, paths]) => {
-      const html = await teamPage(team);
-      return paths.filter((p) => !html.includes(`href="${p}"`));
+      const hrefs = anchorHrefs(await teamPage(team));
+      return paths.filter((p) => !hrefs.has(p));
     })
   ).flat();
   console.log(`promo URLs ${promos.length}, team pages ${byTeam.size}, linked ${promos.length - missing.length}, missing ${missing.length}`);

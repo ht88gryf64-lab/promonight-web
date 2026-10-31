@@ -494,6 +494,9 @@ test('package rows: "Comes with a special ticket package." on every one, the sto
   for (const [name, h] of [['wizard-night', named], ['scout-pack', scout], ['puck-package-night', unnamed]] as const) {
     assert.equal(h.split(SENTENCE).length - 1, 1, `${name}: the sentence exactly once`);
     assert.match(h, />Ticket package</, `${name}: the badge`);
+    // Review finding 5: the heading names the package, never a promo type.
+    assert.match(h, />About this ticket package</, `${name}: the heading`);
+    assert.ok(!/About this (theme night|giveaway|food deal|promotion)/.test(h), `${name}: no promo-type heading`);
     assert.ok(!/Comes with the /.test(h), `${name}: the old "Comes with the {name}" form is gone`);
     // The doubled wording cannot occur: no "ticket package" directly after another, in any case.
     assert.ok(!/ticket package(?:\s|<!-- -->)*ticket package/i.test(h), `${name}: doubled wording`);
@@ -543,11 +546,14 @@ test('tombstoned past its date: noindex; a row with no date: noindex', async () 
 //
 // Both sides are production code over the same stored docs: the sitemap's own
 // getPromoPageSitemapEntries, and the team page's own promo read
-// (getTeamPromos, then the route's package partition) rendered as the whole
-// RedesignTeamPage, through prerender, the way the server sends it. The
-// expected hrefs are the sitemap's paths, never promoPageHref's output, so the
-// guard cannot agree with itself. The live twin, against a deployed host's
-// real sitemap and team pages, is scripts/live/team-pages.live.test.ts.
+// (getTeamPromos, then the route's package partition and date split) rendered
+// as the whole RedesignTeamPage, through prerender. The route itself is not
+// rendered (it also loads venues, games, playoffs and coverage); its wiring of
+// these props is pinned by source below instead, so a route edit that drops or
+// slices them fails here (review finding 3, 2026-10-31). The expected hrefs
+// are the sitemap's paths, never promoPageHref's output, so the guard cannot
+// agree with itself. The live twin, against a deployed host's real sitemap and
+// team pages, is scripts/live/team-pages.live.test.ts.
 async function teamPageHtml(teamId: string): Promise<{ html: string; upcoming: number; packagesAhead: number }> {
   const { getTeamBySlug, getTeamPromos, isTicketPackagePromo } = await import('@/lib/data');
   const { partitionTicketPackages, upcomingTicketPackages } = await import('@/lib/ticket-packages');
@@ -591,12 +597,24 @@ test('data guard: every indexable promo URL in the sitemap is an href in its tea
     const teamId = path.split('/')[2];
     byTeam.set(teamId, [...(byTeam.get(teamId) ?? []), path]);
   }
+  // The route derives and passes exactly what teamPageHtml passes.
+  const { readFileSync } = await import('node:fs');
+  const route = readFileSync('src/app/[sport]/[team]/page.tsx', 'utf8');
+  for (const wiring of [
+    'const { promos, ticketPackages } = partitionTicketPackages(allPromos, isTicketPackagePromo, team.league);',
+    'const { upcoming: upcomingPromos } = splitPromosByDate(promos, todayStr);',
+    'const packagesAhead = upcomingTicketPackages(ticketPackages, todayStr);',
+    'ticketPackages={packagesAhead}',
+    'upcomingPromos={upcomingPromos}',
+    'promos={promos}',
+  ]) assert.ok(route.includes(wiring), `the team route no longer wires: ${wiring}`);
+  const { UPCOMING_VISIBLE } = await import('@/components/promo-list');
   const seen = { collapsed: false, packages: false };
   const missing: string[] = [];
   for (const [teamId, paths] of byTeam) {
     const page = await teamPageHtml(teamId);
     // The fixture must exercise both orphan causes, or the guard proves nothing.
-    if (page.upcoming > 10) seen.collapsed = true;
+    if (page.upcoming > UPCOMING_VISIBLE) seen.collapsed = true;
     if (page.packagesAhead > 0) seen.packages = true;
     for (const p of paths) if (!page.html.includes(`href="${p}"`)) missing.push(p);
   }
