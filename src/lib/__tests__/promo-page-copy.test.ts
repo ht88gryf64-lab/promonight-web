@@ -140,6 +140,12 @@ test('description: the structured lead, then whole source sentences that do not 
   // "…" only when not one whole sentence fits; NFL theme rows are theme games.
   const nfl = promoPageDescription({ description: 'As the regular season nears its conclusion, the Cardinals honor the climb.', title: 'Cardinals Climb', teamName: 'Arizona Cardinals', opponentName: 'Raiders', date: '2027-01-03', venueName: 'State Farm Stadium', type: 'theme', league: 'NFL' });
   assert.equal(nfl, 'Cardinals Climb: Arizona Cardinals theme game vs Raiders, Jan 3, 2027 at State Farm Stadium. As the regular season nears its conclusion…');
+  // Gate 3 ruling: when the skip leaves it under 120 even with the weekday
+  // and the time, the promo-naming sentence comes back as fill.
+  const xmas = promoPageDescription({ description: 'Specialty game on Christmas Day.', title: 'Christmas Day Game', teamName: 'Boston Celtics', opponentName: 'Heat', date: '2026-12-25', venueName: 'TD Garden', type: 'theme' });
+  assert.equal(xmas, 'Christmas Day Game: Boston Celtics theme night vs Heat, Friday, Dec 25, 2026 at TD Garden. Specialty game on Christmas Day.');
+  // ... and stays skipped whenever the description reaches 120 without it (the
+  // Hornets, Rockets and Avalanche rows above keep their outputs).
   // One whole sentence fits: no ellipsis, even if a second would have.
   const two = promoPageDescription({ description: 'A short one. A much longer second sentence that could never fit inside the remaining room of the meta description at all.', title: 'X Night', teamName: 'Minnesota Wild', opponentName: 'Islanders', date: '2026-10-29', venueName: 'Grand Casino Arena', type: 'theme' });
   assert.ok(!two.endsWith('…') && two.includes('A short one.'), two);
