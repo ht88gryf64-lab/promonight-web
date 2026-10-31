@@ -10,11 +10,12 @@
 // - Google Play: an install `referrer` carrying utm_source=web,
 //   utm_medium=<surface>, utm_content=<teamId>, utm_campaign=<placement>.
 // - A visitor who reaches /download from a promo page's "Remind me" button
-//   (surface promo_cta, hotfix 2026-10-31) also carries the promo: promoId and
-//   pageSlug follow the team in both the ct token and utm_content, joined by
-//   `_` (team ids, slugs and promo ids never contain one, so utm_content
-//   splits back into its three parts). Play keeps all three; the ct token is
-//   still cut to 30, so it keeps the promo only when the team id is short.
+//   (surface promo_cta, hotfix 2026-10-31) also carries the promo. Play gets
+//   promoId and pageSlug after the team in utm_content, joined by `_` (team
+//   ids, slugs and promo ids never contain one, so it splits back into its
+//   three parts). The App Store ct is `pc_{teamId}`, surface and team only:
+//   App Store Connect hides a campaign under 5 downloads, so a per-promo
+//   token would never report (follow-up 2026-10-31).
 //
 // NEXT_PUBLIC_ variables are inlined at build time, so the token is read with
 // its literal name inside the function (the client bundle gets the value; the
@@ -45,16 +46,14 @@ export type AppLinkOptions = {
 /** App Store Connect caps a campaign token at 30 characters. */
 export const APP_STORE_CAMPAIGN_MAX = 30;
 
-/** `web_{surface}_{teamId}` (or the placement when there is no team), then
- *  the promo's id and page slug when there is one, cut to 30 characters (and
- *  never left ending on the joiner). Across the 169 team ids no two cut team
- *  tokens collide (checked 2026-10-11); 54 are cut. */
-export function appStoreCampaign({ surface, teamId, placement, promoId, pageSlug }: AppLinkOptions): string {
-  return ['web', surface, teamId ?? placement, promoId, pageSlug]
-    .filter(Boolean)
-    .join('_')
-    .slice(0, APP_STORE_CAMPAIGN_MAX)
-    .replace(/_+$/, '');
+/** `web_{surface}_{teamId}` (or the placement when there is no team), cut to
+ *  30 characters. Across the 169 team ids no two cut tokens collide (checked
+ *  2026-10-11); 54 are cut. A visit from a promo page is `pc_{teamId}` on
+ *  every App Store link /download shows, the promo itself left out; across
+ *  the 256 site ids none is cut and none collides (checked 2026-10-31). */
+export function appStoreCampaign({ surface, teamId, placement, promoId }: AppLinkOptions): string {
+  if (promoId && teamId) return `pc_${teamId}`.slice(0, APP_STORE_CAMPAIGN_MAX);
+  return ['web', surface, teamId ?? placement].filter(Boolean).join('_').slice(0, APP_STORE_CAMPAIGN_MAX);
 }
 
 export function appStoreUrl(opts: AppLinkOptions): string {
