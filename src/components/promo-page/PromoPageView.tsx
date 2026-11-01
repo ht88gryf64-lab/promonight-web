@@ -9,6 +9,7 @@ import { resolveHotelLink } from '@/lib/hotel-link';
 import { promoDownloadHref } from '@/lib/app-link';
 import { promoAnchorId, teamDisplayName } from '@/lib/promo-helpers';
 import { PROMO_TYPE_LABELS } from '@/lib/types';
+import { TICKET_PACKAGE_ROW_NOTE } from '@/lib/ticket-packages';
 import type { LinkedPromo, PromoPage, PromoPageContext } from '@/lib/promo-pages';
 import type { ImageSize } from '@/lib/image-dimensions';
 import {
@@ -97,6 +98,13 @@ export function promoPageHead(page: PromoPage, ctx: PromoPageContext, today: str
     date: dates.length === 1 ? dates[0] : primary.date || null,
     venueName,
     removed,
+    type: primary.type,
+    league: team.league,
+    ticketPackage: primary.ticketPackageRequired === true,
+    attendanceCap: primary.attendanceCap,
+    whileSuppliesLast: primary.whileSuppliesLast,
+    presentedBy: primary.presentedBy,
+    displayTime: dates.length === 1 ? primary.displayTime : '',
   });
   const base = heroImage(page);
   const image = base.kind === 'photo' && imageSize ? { ...base, width: imageSize.width, height: imageSize.height } : base;
@@ -181,7 +189,7 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
     ctx.crossTeam?.kind === 'theme'
       ? 'Same promo, other teams'
       : ctx.crossTeam?.kind === 'league-type'
-        ? `More ${team.league} ${typePlural(primary.type)} coming up`
+        ? `More ${team.league} ${typePlural(primary.type, team.league)} coming up`
         : ctx.crossTeam?.kind === 'league'
           ? `More ${team.league} promos coming up`
           : `More ${typePlural(primary.type)} across pro sports`;
@@ -403,10 +411,21 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
         ) : null}
 
         <section className="mt-6 flex flex-col gap-2">
-          <H2>{`About this ${removed ? 'promotion' : typeNoun(primary.type)}`}</H2>
+          {/* A package row is not a theme night or a giveaway (the team page's
+              package group says so): its heading names the package. */}
+          <H2>{`About this ${removed ? 'promotion' : primary.ticketPackageRequired === true ? 'ticket package' : typeNoun(primary.type, team.league)}`}</H2>
           {description ? <p className="m-0 text-[15px] leading-[1.55] text-rd-ink-soft">{description}</p> : null}
-          {primary.ticketPackageRequired === true && primary.ticketPackageName ? (
-            <p className="m-0 text-[15px] leading-[1.55] text-rd-ink-soft">Comes with the {cleanText(primary.ticketPackageName)} ticket package.</p>
+          {/* Every package row says so in the ruling's own words (2026-10-24),
+              the sentence the team page's package rows carry. The stored
+              package name, when there is one, goes on its own line with
+              nothing appended: names often end in "Ticket Package" already,
+              and the old "Comes with the {name} ticket package." doubled it.
+              ticketPackageRequired is null outside NBA and NHL. */}
+          {primary.ticketPackageRequired === true ? (
+            <p className="m-0 text-[15px] leading-[1.55] text-rd-ink-soft">{TICKET_PACKAGE_ROW_NOTE}</p>
+          ) : null}
+          {primary.ticketPackageRequired === true && cleanText(primary.ticketPackageName) ? (
+            <p className="m-0 text-[15px] leading-[1.55] text-rd-ink-soft">{`Package: ${cleanText(primary.ticketPackageName)}`}</p>
           ) : null}
           <p className="m-0 font-rd text-[12px] text-rd-ink-faint">
             {primary.sourceUrl && sourceHost ? (

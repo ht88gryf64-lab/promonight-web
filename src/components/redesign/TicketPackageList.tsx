@@ -1,7 +1,10 @@
-import type { Promo } from '@/lib/types';
-import { promoAnchorId, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
+import type { Promo, Team } from '@/lib/types';
+import { promoAnchorId, promoDisplayOpponent, synthPromoId } from '@/lib/promo-helpers';
+import { promoPageHref } from '@/lib/promo-page-href';
+import { PromoPageLink } from '@/components/promo-page-link';
 import { PromoArrivalHighlight } from './PromoArrivalHighlight';
 import {
+  isTicketPackageLeague,
   TICKET_PACKAGE_ROW_NOTE,
   TICKET_PACKAGES_SUBLINE,
   ticketPackagesHeading,
@@ -37,14 +40,38 @@ function packageDate(ymd: string): string {
 // venue-hub and hub cards that still link to #promo-... land on it (review
 // round 3). A row inside the closed <details> is opened by PromoArrivalHighlight,
 // which looks for data-ticket-packages on the details element.
-function PackageRow({ promo }: { promo: Promo }) {
+//
+// THE NAME LINKS to the promo's own page through the one helper
+// (fix/promo-orphans-meta, 2026-10-31): these pages are in the sitemap and had
+// no inbound link. NBA and NHL only (ruling 2026-10-24: only there is the
+// package flag a verdict, and only there does the promo page say "Comes with a
+// special ticket package."). The row note directly under the name is
+// unchanged, so a linked package row still never reads as a free promo.
+type PackageTeam = Pick<Team, 'id' | 'sportSlug' | 'league'>;
+
+function PackageRow({ promo, team }: { promo: Promo; team: PackageTeam }) {
+  const href = isTicketPackageLeague(team.league) ? promoPageHref(promo, team) : null;
   return (
     <li id={`promo-${promoAnchorId(promo)}`} className="rounded-2xl border border-rd-line bg-rd-card px-4 py-3 sm:px-5">
       <div className="font-rd text-[11px] uppercase tracking-[0.12em] text-rd-ink-faint">
         {packageDate(promo.date)}
         {promoDisplayOpponent(promo) ? ` · vs ${promoDisplayOpponent(promo)}` : ''}
       </div>
-      <div className="mt-1 font-rd text-base font-semibold text-rd-ink">{promo.title}</div>
+      <div className="mt-1 font-rd text-base font-semibold text-rd-ink">
+        {href ? (
+          <PromoPageLink
+            href={href}
+            surface="web_team_page_promolist"
+            teamSlug={team.id}
+            promoId={synthPromoId(team.id, promo)}
+            className="text-rd-ink no-underline hover:underline"
+          >
+            {promo.title}
+          </PromoPageLink>
+        ) : (
+          promo.title
+        )}
+      </div>
       <p className="mt-1 font-rd text-sm leading-relaxed text-rd-ink-soft">{TICKET_PACKAGE_ROW_NOTE}</p>
       {promo.description ? (
         <p className="mt-1 font-rd text-xs leading-relaxed text-rd-ink-faint">{promo.description}</p>
@@ -55,9 +82,12 @@ function PackageRow({ promo }: { promo: Promo }) {
 
 export function TicketPackageList({
   packages,
+  team,
   arrivalHighlight = false,
 }: {
   packages: Promo[];
+  /** The page's team: the promo page links and their click events. */
+  team: PackageTeam;
   /** Mount the deep-link arrival effect here. Only on a page with no promo list
    *  (the list mounts its own); two instances would both scroll. */
   arrivalHighlight?: boolean;
@@ -80,7 +110,7 @@ export function TicketPackageList({
         </div>
         <ul className="space-y-3">
           {shown.map((p, i) => (
-            <PackageRow key={`tp-${i}`} promo={p} />
+            <PackageRow key={`tp-${i}`} promo={p} team={team} />
           ))}
         </ul>
         {rest.length > 0 ? (
@@ -90,7 +120,7 @@ export function TicketPackageList({
             </summary>
             <ul className="mt-3 space-y-3">
               {rest.map((p, i) => (
-                <PackageRow key={`tp-${TICKET_PACKAGES_VISIBLE + i}`} promo={p} />
+                <PackageRow key={`tp-${TICKET_PACKAGES_VISIBLE + i}`} promo={p} team={team} />
               ))}
             </ul>
           </details>

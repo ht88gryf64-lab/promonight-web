@@ -249,7 +249,7 @@ describe('the route wires every count site to the counted array', () => {
       'ticketPackages = [],',
       'hasTicketPackages: ticketPackages.length > 0,',
       '{ticketPackages.length > 0 ? (',
-      '<TicketPackageList packages={ticketPackages} arrivalHighlight={hasNoPromosAtAll} />',
+      '<TicketPackageList packages={ticketPackages} team={team} arrivalHighlight={hasNoPromosAtAll} />',
     ]);
   });
 });

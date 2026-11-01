@@ -133,7 +133,12 @@ const fakeDb = {
 mock.module('server-only', { namedExports: {} });
 mock.module(new URL('../firebase.ts', import.meta.url).href, { namedExports: { db: fakeDb } });
 
-test('withGameDisplay through getPromosInDateRange: one games read, empty slots filled, stored kept', async () => {
+test('withGameDisplay through getPromosInDateRange: one games read, empty slots filled, stored kept', async (t) => {
+  // The site's day is pinned to the fixture date: withGameDisplay's floor is
+  // yesterday on the site clock, and the 2026-10-30 rows fell under it on
+  // 2026-11-01 when this read the wall clock.
+  mock.timers.enable({ apis: ['Date'], now: new Date('2026-10-30T16:00:00Z') });
+  t.after(() => mock.timers.reset());
   const { getPromosInDateRange, withGameDisplay, mapPromoDoc } = await import('../data');
   const mapped = mapPromoDoc(promoDocs[1] as any);
   assert.deepEqual([mapped.displayTime, mapped.displayOpponent], ['6:30 PM', 'Pens'], 'mapPromoDoc seeds the slots from the stored values');
@@ -149,6 +154,12 @@ test('withGameDisplay through getPromosInDateRange: one games read, empty slots 
   gamesReads = 0;
   await withGameDisplay([promo(WILD, '2026-10-30', { time: '7:00 PM', opponent: 'Penguins' })]);
   assert.equal(gamesReads, 0, 'no read when nothing can be filled');
+  // The floor itself: two site days later the same rows are before yesterday
+  // and keep their stored values without a read.
+  mock.timers.setTime(Date.parse('2026-11-01T16:00:00Z'));
+  gamesReads = 0;
+  await getPromosInDateRange('2026-10-30', '2026-10-30');
+  assert.equal(gamesReads, 0, 'rows dated before yesterday never widen the read');
 });
 
 test('applyGameDisplayForTeam: fills from the page\'s own home contexts, away contexts ignored, stored kept', async () => {
