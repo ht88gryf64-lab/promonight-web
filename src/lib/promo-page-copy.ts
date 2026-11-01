@@ -319,6 +319,9 @@ export function renderedTitleLength(bareTitle: string): number {
  * 5. Still under 120 after all of that: steps 2 to 4 again with the
  *    promo-naming sentences allowed back (Gate 3 ruling, 2026-10-31). The skip
  *    holds whenever the description reaches 120 without them.
+ * 6. Still under 120 with stored text left over: steps 2 to 4 again, with the
+ *    next unused sentence as a "…" clause after the whole ones, kept only when
+ *    it reaches 120 (Option B ruling, 2026-11-01).
  *
  * Nothing ends mid-word or on an abbreviation. When the stored fields cannot
  * reach 120, the description is the longest of these that fits 155.
@@ -346,9 +349,15 @@ export function promoPageDescription(opts: {
   let best = '';
   for (const allowName of [false, true]) {
     for (const richness of [0, 1, 2] as const) {
-      const d = describeWith(opts, richness, allowName);
+      const d = describeWith(opts, richness, allowName, false);
       if (d.length >= DESCRIPTION_MIN) return d;
       if (d.length > best.length) best = d;
+    }
+  }
+  for (const allowName of [false, true]) {
+    for (const richness of [0, 1, 2] as const) {
+      const d = describeWith(opts, richness, allowName, true);
+      if (d.length >= DESCRIPTION_MIN) return d;
     }
   }
   return best;
@@ -358,7 +367,7 @@ export function promoPageDescription(opts: {
  *  2026-10-31: 715 promo pages read "too short" at 2026-10-30). */
 export const DESCRIPTION_MIN = 120;
 
-function describeWith(opts: Parameters<typeof promoPageDescription>[0], richness: 0 | 1 | 2, allowName: boolean): string {
+function describeWith(opts: Parameters<typeof promoPageDescription>[0], richness: 0 | 1 | 2, allowName: boolean, clauseAfterWhole: boolean): string {
   let out = descriptionLead(opts, richness);
   const fits = (piece: string) => out.length + 1 + piece.length <= DESCRIPTION_MAX;
 
@@ -369,8 +378,8 @@ function describeWith(opts: Parameters<typeof promoPageDescription>[0], richness
     out = `${out} ${s.text}`;
     appended++;
   }
-  if (appended === 0 && eligible.length > 0 && out.length < DESCRIPTION_MIN) {
-    const clause = clauseWithin(eligible[0].text, DESCRIPTION_MAX - out.length - 1, DESCRIPTION_MIN - out.length - 1);
+  if ((appended === 0 || clauseAfterWhole) && eligible.length > appended && out.length < DESCRIPTION_MIN) {
+    const clause = clauseWithin(eligible[appended].text, DESCRIPTION_MAX - out.length - 1, DESCRIPTION_MIN - out.length - 1);
     if (clause) out = `${out} ${clause}`;
   }
 

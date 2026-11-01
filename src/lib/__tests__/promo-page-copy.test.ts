@@ -146,9 +146,13 @@ test('description: the structured lead, then whole source sentences that do not 
   assert.equal(xmas, 'Christmas Day Game: Boston Celtics theme night vs Heat, Friday, Dec 25, 2026 at TD Garden. Specialty game on Christmas Day.');
   // ... and stays skipped whenever the description reaches 120 without it (the
   // Hornets, Rockets and Avalanche rows above keep their outputs).
-  // One whole sentence fits: no ellipsis, even if a second would have.
+  // A whole sentence that reaches 120 takes no ellipsis (the Jets row above).
+  // Option B ruling (2026-11-01): under 120 with stored text left over, the
+  // next sentence follows the whole ones as a "…" clause when that reaches 120.
   const two = promoPageDescription({ description: 'A short one. A much longer second sentence that could never fit inside the remaining room of the meta description at all.', title: 'X Night', teamName: 'Minnesota Wild', opponentName: 'Islanders', date: '2026-10-29', venueName: 'Grand Casino Arena', type: 'theme' });
-  assert.ok(!two.endsWith('…') && two.includes('A short one.'), two);
+  assert.equal(two, 'X Night: Minnesota Wild theme night vs Islanders, Oct 29, 2026 at Grand Casino Arena. A short one. A much longer second sentence that could never fit…');
+  const pride = promoPageDescription({ description: 'Pride celebration. Presented by the Froedtert & the Medical College of Wisconsin health network.', title: 'Pride Night', teamName: 'Milwaukee Bucks', opponentName: 'Bulls', date: '2027-04-06', venueName: 'Fiserv Forum', type: 'theme' });
+  assert.equal(pride, 'Pride Night: Milwaukee Bucks theme night vs Bulls, Apr 6, 2027 at Fiserv Forum. Pride celebration. Presented by the Froedtert & the Medical College…');
   // The stored cap fills a short giveaway.
   assert.equal(
     promoPageDescription({ description: '', title: 'Blaze Orange Hat', teamName: 'Minnesota Wild', opponentName: 'Islanders', date: '2026-10-29', venueName: 'Grand Casino Arena', type: 'giveaway', attendanceCap: 10000 }),
@@ -198,8 +202,17 @@ test('description invariants: at most 155, never mid-word, never on an abbreviat
       const d = promoPageDescription({ ...row, description });
       const label = `${row.title} / ${description.slice(0, 40)}: ${d}`;
       assert.ok(d.length <= DESCRIPTION_MAX, `${d.length} chars: ${label}`);
-      // Under 120 only when every source sentence was used up or names the promo.
-      if (d.length < DESCRIPTION_MIN) assert.ok(!d.endsWith('…'), `short and cut: ${label}`);
+      // Under 120 only when the whole stored description is used (or there is
+      // none), never cut (ruling 2026-11-01). The 100 floor for those rows is
+      // a property of the real data, checked live (scripts/live).
+      // The one other way: no three whole words of the text fit the room left
+      // (a clause is at least three words and never cuts one).
+      if (d.length < DESCRIPTION_MIN) {
+        assert.ok(!d.endsWith('…'), `short and cut: ${label}`);
+        const w = description.trim().split(/\s+/);
+        const shortestClause = Math.min(...w.slice(0, -2).map((_, i) => w.slice(i, i + 3).join(' ').length + 1));
+        assert.ok(d.includes(description.trim()) || d.length + 1 + shortestClause > DESCRIPTION_MAX, `short with stored text unused: ${label}`);
+      }
       assert.match(d, /[.!?…]$/, `ends on a sentence or an ellipsis: ${label}`);
       // Never mid-word: every word in the output is a whole word of an input or of the builder's own copy.
       const known = new Set([...words(description), ...words(row.title), ...words(row.teamName), ...words(row.opponentName), ...words(row.venueName ?? ''),

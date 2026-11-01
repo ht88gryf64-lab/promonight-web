@@ -15,6 +15,11 @@
 // 2. No team page's server HTML passes 950,000 bytes (ruling 2026-10-31):
 //    headroom under Bing's 1 MB ceiling, now that every upcoming row is
 //    server-rendered. The completed rows stay lazy-mounted for this reason.
+// 3. Every sitemap promo page's meta description is 100 to 155 characters,
+//    and under 120 only when it carries the page's whole stored description
+//    (the About paragraph) or there is none (ruling 2026-11-01). The 100 floor
+//    is a property of the real data, so it lives here and not in the unit
+//    battery in src/lib/__tests__/promo-page-copy.test.ts.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -111,4 +116,30 @@ test(`no team page's server HTML passes ${MAX_TEAM_PAGE_BYTES.toLocaleString('en
   console.log('largest:', sizes.slice(0, 5).map((s) => `${s.t} ${s.bytes}`).join(', '));
   const over = sizes.filter((s) => s.bytes > MAX_TEAM_PAGE_BYTES);
   assert.deepEqual(over, [], `team pages over ${MAX_TEAM_PAGE_BYTES} bytes:\n${over.map((s) => `${s.t} ${s.bytes}`).join('\n')}`);
+});
+
+const unescape = (s: string) =>
+  s.replace(/&quot;/g, '"').replace(/&#x27;|&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+// The stored description as the About section renders it: the first paragraph
+// after the "About this …" heading, unless that is the package note or line.
+const ABOUT_RE = /About this [^<]*<\/h2><p class="m-0 text-\[15px\] leading-\[1\.55\] text-rd-ink-soft">([^<]*)<\/p>/;
+const PACKAGE_LINES = /^(Comes with a special ticket package\.|Package: )/;
+
+test(`every sitemap promo page's meta description is 100 to 155, under 120 only with its whole description (${HOST})`, async () => {
+  const promos = (await sitemap()).filter((p) => PROMO_RE.test(p));
+  const rows = await pool(promos, async (p) => {
+    const html = await get(p);
+    const meta = unescape(/<meta name="description" content="([^"]*)"/.exec(html)?.[1] ?? '');
+    const about = unescape(ABOUT_RE.exec(html)?.[1] ?? '');
+    return { p, meta, stored: PACKAGE_LINES.test(about) ? '' : about };
+  });
+  const bad = rows.flatMap(({ p, meta, stored }) => {
+    const n = meta.length;
+    if (n < 100 || n > 155) return [`${p} ${n}: ${meta}`];
+    if (n < 120 && (meta.endsWith('…') || !meta.includes(stored.replace(/[.!?]$/, '')))) return [`${p} ${n}, stored text unused: ${meta}`];
+    return [];
+  });
+  const short = rows.filter((r) => r.meta.length < 120).length;
+  console.log(`promo pages ${rows.length}, under 120 ${short}, shortest ${Math.min(...rows.map((r) => r.meta.length))}, longest ${Math.max(...rows.map((r) => r.meta.length))}, failing ${bad.length}`);
+  assert.deepEqual(bad, [], `${bad.length} promo meta descriptions break the rule:\n${bad.join('\n')}`);
 });
