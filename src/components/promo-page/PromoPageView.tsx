@@ -217,6 +217,12 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
     imageUrl: head.imageUrl,
     location: ctx.location,
     ticketUrl: tickets,
+    // Each date's Event offers that date's own game: the event page when the
+    // pipeline matched it, else the team performer page. On a single-date page
+    // this is the primary href (rulings 2026-11-02); on a series it keeps the
+    // Dec 11 Event from offering the Nov 18 game. Falls back to the primary
+    // href only if TicketNetwork cannot be built at all.
+    ticketUrlFor: (r) => buildTicketNetworkLink({ team, surface: PROMO_PAGE_SURFACE, eventUrl: r.tnEventUrl ?? null }),
     dateModified: page.updatedAt,
     faqs,
     // The visible trail, item for item (Google asks the markup to reflect it):

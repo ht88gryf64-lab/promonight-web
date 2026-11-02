@@ -863,6 +863,10 @@ export interface PromoJsonLdInput {
   imageUrl: string;
   location: PromoPageLocation | null;
   ticketUrl: string | null;
+  /** Per-date ticket link. When given, each Event's offers.url is ITS row's
+   *  link (a series' Dec 11 Event must not offer the Nov 18 game's tickets);
+   *  ticketUrl is the fallback for a row it returns null for. */
+  ticketUrlFor?: (row: PromoPageRow) => string | null;
   /** The latest updatedAt across the page's rows. */
   dateModified: string | null;
   faqs: readonly PromoFaq[];
@@ -912,7 +916,8 @@ export function promoPageJsonLd(input: PromoJsonLdInput): Schema[] {
       if (place) e.location = place;
       const doors = cleanText(r.gateOpenTime);
       if (doors) e.doorTime = doors;
-      if (input.ticketUrl && !input.removed) e.offers = { '@type': 'Offer', url: input.ticketUrl, availability: 'https://schema.org/InStock' };
+      const offer = (input.ticketUrlFor ? input.ticketUrlFor(r) : null) ?? input.ticketUrl;
+      if (offer && !input.removed) e.offers = { '@type': 'Offer', url: offer, availability: 'https://schema.org/InStock' };
       return e;
     });
 

@@ -44,14 +44,15 @@ function anchor(html: string, text: string): string {
   return /href="([^"]+)"/.exec(html.slice(open, at))?.[1] as string;
 }
 const anchors = (html: string, text: string) => html.split(`>${text}</a>`).length - 1;
-const offersUrl = (html: string) => {
+const eventOffers = (html: string) => {
+  const out: [string, string][] = [];
   for (const m of html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)) {
-    const s = JSON.stringify(JSON.parse(m[1]));
-    const o = /"offers":\{[^}]*"url":"([^"]+)"/.exec(s);
-    if (o) return o[1];
+    const d = JSON.parse(m[1]);
+    if (d['@type'] === 'Event' && d.offers) out.push([d.startDate, d.offers.url]);
   }
-  return null;
+  return out;
 };
+const offersUrl = (html: string) => eventOffers(html)[0]?.[1] ?? null;
 
 test('matched single-date page: primary wraps the event, Ticketmaster is the secondary text link, offers.url follows', () => {
   const html = render([row({ tnEventUrl: BRUINS })]);
@@ -79,5 +80,7 @@ test('series: primary is the next upcoming date; every upcoming date links its o
   assert.equal(anchor(html, 'Get tickets'), tn(BRUINS));
   const perDate = [...html.matchAll(/<a [^>]*href="([^"]+)"[^>]*>Tickets<\/a>/g)].map((m) => m[1]);
   assert.deepEqual(perDate, [tn(BRUINS), tn(HAWKS), tn(PERFORMER)]);
-  assert.ok(!html.includes(encodeURIComponent(EV(1, 'played'))));
+  assert.ok(!html.includes(`<a href="${tn(EV(1, 'played'))}`));
+  // Each date's Event offers its own game, never another date's.
+  assert.deepEqual(eventOffers(html).filter(([d]) => d >= '2026-11-02'), [['2026-11-18', tn(BRUINS)], ['2026-12-12', tn(HAWKS)], ['2027-01-30', tn(PERFORMER)]]);
 });
