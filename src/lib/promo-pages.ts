@@ -26,7 +26,7 @@ import { cache } from 'react';
 import { Timestamp } from 'firebase-admin/firestore';
 import { db } from './firebase';
 import { getAllTeams, getGamesForTeam, getVenueForTeam, mapPromoDoc } from './data';
-import { applyGameDisplay, buildGameIndex } from './promo-game-join';
+import { applyGameDisplay, buildGameIndex, resolveTnEventUrl } from './promo-game-join';
 import { makeKeyedTtlCache, STATIC_TTL_MS } from './collection-cache';
 import { getVenueHub, getVenueHubForTeam, type TeamVenueHubLink } from './venue-hub';
 import { buildCondensedLogistics, type CondensedLine } from './venue-hub-condensed';
@@ -121,8 +121,9 @@ const loadTeamPromoDocs = cache(async (teamId: string): Promise<TeamDoc[]> => {
 const loadTeamPageRows = cache(async (team: Team): Promise<PromoPageRow[]> => {
   const [docs, games, teams] = await Promise.all([loadTeamPromoDocs(team.id), getGamesForTeam(team.id, team.sportSlug), getAllTeams()]);
   const mapped = docs.map((d) => ({ id: d.id, data: d.data, promo: { ...mapPromoDoc({ id: d.id, data: () => d.data } as FirebaseFirestore.DocumentSnapshot), team } as PromoWithTeam }));
-  applyGameDisplay(mapped.map((m) => m.promo), buildGameIndex(games), new Map(teams.map((t) => [t.id, t])));
-  return mapped.map((m) => toPageRow(m.id, m.promo, m.data, team.league));
+  const index = buildGameIndex(games);
+  applyGameDisplay(mapped.map((m) => m.promo), index, new Map(teams.map((t) => [t.id, t])));
+  return mapped.map((m) => ({ ...toPageRow(m.id, m.promo, m.data, team.league), tnEventUrl: resolveTnEventUrl(m.promo, index) }));
 });
 
 // ── the page ─────────────────────────────────────────────────────────────────

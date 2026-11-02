@@ -30,6 +30,9 @@ export type TrackedAffiliateLinkProps = {
    *  CTA buttons, which render the partner brand + arrow but no "Get Tickets"
    *  copy. Falls through to the inner content's accessible name when unset. */
   ariaLabel?: string;
+  /** Ticket links only: 'event' (the game's own event page) or 'team'.
+   *  Sent as ticket_link_level on affiliate_click; omit for other partners. */
+  ticketLinkLevel?: 'event' | 'team';
 };
 
 // Fires on mousedown (not click) so the event is captured even when the
@@ -52,6 +55,7 @@ export function TrackedAffiliateLink({
   target = '_blank',
   rel = 'noopener sponsored',
   ariaLabel,
+  ticketLinkLevel,
 }: TrackedAffiliateLinkProps) {
   const taggedHref = buildAffiliateUrl(partner as AffiliateUrlPartner, href, {
     surface,
@@ -72,6 +76,7 @@ export function TrackedAffiliateLink({
       destination_url: taggedHref,
       placement: placement ?? surface,
       affiliate_tracking_active: trackingActive,
+      ...(ticketLinkLevel ? { ticket_link_level: ticketLinkLevel } : {}),
     });
   };
 

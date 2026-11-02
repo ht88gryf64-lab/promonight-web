@@ -212,6 +212,7 @@ function GameExpandRow({
             placement={placement}
             promoId={teamSlug ? `${teamSlug}:${game.date}:${game.id}` : undefined}
             subKey={awaySubKey}
+            eventUrl={game.tnEventUrl ?? null}
             variant="card"
           />
         )}

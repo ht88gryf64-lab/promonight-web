@@ -21,8 +21,9 @@ type TicketsBlockProps = {
   /** Complete sub-ID override forwarded to both ticket vendors. Away-game rows
    *  pass the shared awayGameSubKey compound token computed at the call site. */
   subKey?: string;
-  /** Reserved for when per-event Ticketmaster URLs are wired; unused today. */
-  event?: string;
+  /** The game's TicketNetwork event page (Game.tnEventUrl), forwarded to the
+   *  TicketNetwork button. Every caller that renders one game passes it. */
+  eventUrl?: string | null;
   /** 'section' (default): full team-page section with eyebrow + h2 + CTA.
    *  'card': modal/playoffs row look — eyebrow + CTA only, no h2; matchup
    *  context is supplied by the surrounding card. */
@@ -60,6 +61,7 @@ export function TicketsBlock({
   placement,
   promoId,
   subKey,
+  eventUrl = null,
   variant = 'section',
 }: TicketsBlockProps) {
   if (variant === 'card') {
@@ -75,6 +77,7 @@ export function TicketsBlock({
           placement={placement}
           promoId={promoId}
           subKey={subKey}
+          eventUrl={eventUrl}
           size="compact"
         />
       </div>
@@ -103,6 +106,7 @@ export function TicketsBlock({
             placement={placement}
             promoId={promoId}
             subKey={subKey}
+            eventUrl={eventUrl}
             size="full"
           />
         </div>

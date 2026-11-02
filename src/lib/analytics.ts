@@ -400,6 +400,11 @@ export type AffiliateClickProperties = {
   // URL during the pre-approval phase. Lets dashboards quantify how much
   // attributable revenue is being deferred until each partner approves.
   affiliate_tracking_active?: boolean;
+  // Ticket links only (rulings 2026-11-02): 'event' when the outbound link
+  // lands on the game's own event page, 'team' when it lands on the team or
+  // performer page. Absent on every non-ticket partner, so their events keep
+  // their exact shape.
+  ticket_link_level?: 'event' | 'team';
 };
 
 export type AppDownloadClickProperties = {
@@ -1476,6 +1481,7 @@ export type AffiliateClickPayload = {
   destination_url?: string;
   placement?: string;
   affiliate_tracking_active?: boolean;
+  ticket_link_level?: 'event' | 'team';
 };
 
 export const trackAffiliateClick = (payload: AffiliateClickPayload) => {
@@ -1505,6 +1511,7 @@ export const trackAffiliateClick = (payload: AffiliateClickPayload) => {
     sport: normalizeSport(payload.sport),
     is_hot_promo: payload.is_hot_promo,
     affiliate_tracking_active: payload.affiliate_tracking_active,
+    ...(payload.ticket_link_level ? { ticket_link_level: payload.ticket_link_level } : {}),
   });
 };
 

@@ -42,6 +42,7 @@ import { attachPromoPageFields, stampPromoPageCanonical } from './promo-page-sta
 import { isSplitSeasonLeague } from './season-label';
 import { groupLeagueTeams, leagueSuperGroups, type HubSuperGroup, type HubTeamGroup } from './hub-grouping';
 import { isTicketPackageDoc, isTicketPackageLeague, partitionTicketPackages } from './ticket-packages';
+import { isTicketNetworkEventUrl } from './affiliates';
 
 function tsToIso(v: unknown): string | null {
   if (!v) return null;
@@ -931,6 +932,9 @@ function mapGameDoc(doc: FirebaseFirestore.DocumentSnapshot): Game {
   }
   if (typeof d.espnGameId === 'string') game.espnGameId = d.espnGameId;
   if (d.ingestedAt) game.ingestedAt = tsToIso(d.ingestedAt) ?? undefined;
+  // tnEventUrl ONLY (ruling 6, 2026-11-02): a public URL that is published as
+  // an href anyway. tnEventId, tnObservedAt and tnCheckedAt stay unmapped.
+  if (isTicketNetworkEventUrl(d.tnEventUrl)) game.tnEventUrl = d.tnEventUrl;
   return game;
 }
 

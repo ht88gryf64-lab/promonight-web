@@ -77,6 +77,10 @@ export interface PromoPageRow {
   tombstoned: boolean;
   /** ISO instant the row was tombstoned, when it was. */
   tombstonedAt: string | null;
+  /** The TicketNetwork event page of this date's home game (Game.tnEventUrl
+   *  through resolveTnEventUrl), or null: the ticket links then fall back to
+   *  the team performer page. */
+  tnEventUrl?: string | null;
 }
 
 export interface PromoPageLocation {

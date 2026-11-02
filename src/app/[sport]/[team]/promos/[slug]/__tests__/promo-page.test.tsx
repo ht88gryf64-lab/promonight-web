@@ -361,7 +361,11 @@ test('tier 1 single-date NHL page: H1, the stored photo, the head, the schema an
   assert.equal(ld[1].location.name, 'Grand Casino Arena');
   assert.equal(ld[1].location.address.streetAddress, '199 W Kellogg Blvd, St Paul, MN 55102');
   assert.equal(ld[1].location.address.addressLocality, 'St Paul');
-  assert.match(ld[1].offers.url, /^https:\/\/www\.ticketmaster\.com\/minnesota-wild-tickets\/artist\/805974/);
+  // offers.url follows the primary "Get tickets": TicketNetwork since the
+  // event-link rulings of 2026-11-02 (performer page here: no game doc carries
+  // a tnEventUrl in this fixture).
+  assert.equal(ld[1].offers.url, 'https://ticketnetwork.lusg.net/c/7236189/120057/2322?u=https%3A%2F%2Fwww.ticketnetwork.com%2Fe%2Fperformers%2Fminnesota-wild-tickets&partnerpropertyid=8313917&MediaPartnerPropertyId=8313917&subId1=web_promo_page_minnesota-wild');
+  assert.match(h, />Also on Ticketmaster<\/a>/);
   assert.equal(ld[1].eventStatus, 'https://schema.org/EventScheduled');
   assert.deepEqual(ld[1].image, [og.images[0].url]);
   // One FAQ: no door time is stored, so "What time should I arrive?" does not exist.
@@ -390,7 +394,7 @@ test('a series with more than three dates shows the next three and folds the res
   assert.ok(faq, 'a FAQPage');
   assert.match(faq!.mainEntity[0].acceptedAnswer.text, /^5 Anaheim Ducks home games this season: Nov 1, 2026, Nov 8, 2026, Nov 15, 2026, Nov 22, 2026, Nov 29, 2026\.$/);
   // The CTA row follows the header directly.
-  assert.match(h, /<\/header><section class="[^"]*"><a href="https:\/\/www\.ticketmaster\.com[^"]*"[^>]*aria-label="Get Anaheim Ducks tickets on Ticketmaster"/);
+  assert.match(h, /<\/header><section class="[^"]*"><a href="https:\/\/ticketnetwork\.lusg\.net\/[^"]*"[^>]*aria-label="Get Anaheim Ducks tickets on TicketNetwork"/);
 });
 
 test('a series pads the open list to three with played dates, and a fold of played dates says "earlier"', async () => {
