@@ -20,6 +20,11 @@
 //    (the About paragraph) or there is none (ruling 2026-11-01). The 100 floor
 //    is a property of the real data, so it lives here and not in the unit
 //    battery in src/lib/__tests__/promo-page-copy.test.ts.
+// 4. /ads.txt and /app-ads.txt answer 200 text/plain to every client
+//    (chore/bot-firewall, 2026-11-02; unit twin src/app/__tests__/ads-files.test.ts).
+// 5. Every always-allow agent's user agent gets 200 on a promo page and an
+//    image from its /api/promo-card card (ops/firewall/PROPOSAL.md).
+// 6. Every /download? anchor on a sitemap team or promo page is rel="nofollow".
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -89,6 +94,24 @@ const teamPage = (path: string) => {
   if (!teamPages.has(path)) teamPages.set(path, get(path));
   return teamPages.get(path)!;
 };
+const promoPages = new Map<string, Promise<string>>();
+const promoPage = (path: string) => {
+  if (!promoPages.has(path)) promoPages.set(path, get(path));
+  return promoPages.get(path)!;
+};
+
+/** Status and content type of one request sent with exactly this user agent
+ *  ('' sends none). curl, not fetch, so the header is what we say it is. */
+async function probe(path: string, ua: string): Promise<string> {
+  const url = `${HOST}${path}`;
+  const args = ['-s', '-o', '/dev/null', '--user-agent', ua, '-w', '%{http_code} %{content_type}'];
+  // vercel curl's own flags come before `--` (its global -A is --local-config),
+  // curl's after it.
+  const { stdout } = VIA_CLI
+    ? await run('npx', ['vercel', 'curl', url, '--', ...args])
+    : await run('curl', [...args, url]);
+  return stdout.trim();
+}
 
 test(`every sitemap promo URL is an href in its team page server HTML (${HOST})`, async () => {
   const promos = (await sitemap()).filter((p) => PROMO_RE.test(p));
@@ -128,7 +151,7 @@ const PACKAGE_LINES = /^(Comes with a special ticket package\.|Package: )/;
 test(`every sitemap promo page's meta description is 100 to 155, under 120 only with its whole description (${HOST})`, async () => {
   const promos = (await sitemap()).filter((p) => PROMO_RE.test(p));
   const rows = await pool(promos, async (p) => {
-    const html = await get(p);
+    const html = await promoPage(p);
     const meta = unescape(/<meta name="description" content="([^"]*)"/.exec(html)?.[1] ?? '');
     const about = unescape(ABOUT_RE.exec(html)?.[1] ?? '');
     return { p, meta, stored: PACKAGE_LINES.test(about) ? '' : about };
@@ -142,4 +165,105 @@ test(`every sitemap promo page's meta description is 100 to 155, under 120 only 
   const short = rows.filter((r) => r.meta.length < 120).length;
   console.log(`promo pages ${rows.length}, under 120 ${short}, shortest ${Math.min(...rows.map((r) => r.meta.length))}, longest ${Math.max(...rows.map((r) => r.meta.length))}, failing ${bad.length}`);
   assert.deepEqual(bad, [], `${bad.length} promo meta descriptions break the rule:\n${bad.join('\n')}`);
+});
+
+// 4-6 (chore/bot-firewall, 2026-11-02). One real user agent per always-allow
+// class: verified search, Google ads, Criteo, AI search and assistants, SEO,
+// link previews, ad verification (ops/firewall/PROPOSAL.md, allow list).
+// Sent from this machine they are not Vercel-verified, so a 200 here proves no
+// rule of ours keys on these agents' user agents; it cannot prove what the
+// firewall does for the vendors' own IPs.
+const ALLOW_LIST_AGENTS = [
+  'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+  'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm) Chrome/116.0.1938.76 Safari/537.36',
+  'DuckDuckBot/1.1; (+http://duckduckgo.com/duckduckbot.html)',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15 (Applebot/0.1; +http://www.apple.com/go/applebot)',
+  'Mediapartners-Google',
+  'Mozilla/5.0 (compatible; AdsBot-Google/1.0; +http://www.google.com/adsbot.html)',
+  'CriteoBot/0.1 (+https://www.criteo.com/criteo-crawler/)',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36; compatible; OAI-SearchBot/1.4; +https://openai.com/searchbot',
+  'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; ChatGPT-User/1.0; +https://openai.com/bot',
+  'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Claude-SearchBot/1.0; +claude-searchbot@anthropic.com)',
+  'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Claude-User/1.0; +claude-user@anthropic.com)',
+  'Mozilla/5.0 (compatible; PerplexityBot/1.0; +https://perplexity.ai/perplexitybot)',
+  'Mozilla/5.0 (compatible; AhrefsBot/7.0; +http://ahrefs.com/robot/)',
+  'Mozilla/5.0 (compatible; AhrefsSiteAudit/6.1; +http://ahrefs.com/robot/site-audit)',
+  'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
+  'Twitterbot/1.0',
+  'Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)',
+  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.96 Safari/537.36 (compatible; DoubleVerifyBot/1.1; +http://www.doubleverify.com)',
+  'IAS Crawler (ias_crawler; http://integralads.com/site-indexing-policy/)',
+  'ias-sync/3.3 (former https://www.admantx.com + https://integralads.com/about-ias/)',
+  'peer39_crawler/1.0',
+  'Mozilla/5.0 (compatible; proximic; +https://www.comscore.com/Web-Crawler)',
+  'Verity/1.1 (https://gumgum.com/verity; verity-support@gumgum.com)',
+  'Mozilla/5.0 (compatible; TTD-Content; +https://www.thetradedesk.com/general/ttd-content)',
+  'PubMatic Crawler Bot',
+  'Mozilla/5.0 (Windows NT 6.3;compatible; Leikibot/1.0; +http://www.leiki.com)',
+  'RaptiveMegacrawler/1.0 (+https://megacrawler-bot-auth.development.raptive.com)',
+  'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; AudigentAdBot; +http://www.audigent.com/bot.html) Chrome/W.X.Y.Z Safari/537.36',
+  'weborama-fetcher (+http://www.weborama.com)',
+  'Mozilla/5.0 (compatible; DVBot/1.0; +http://www.doubleverify.com)',
+  'IAS_wombles/1.0 (+https://integralads.com/site-indexing-policy/)',
+  'Mozilla/5.0 (compatible; SlickBot/1.0)',
+  'Mozilla/5.0 (compatible; SinceraSyntheticUser/1.0)',
+  'Mozilla/5.0 (compatible; AmazonAdBot/1.0; +https://adbot.amazon.com)',
+  'LinkedInBot/1.0 (compatible; Mozilla/5.0; Apache-HttpClient +http://www.linkedin.com)',
+  'Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)',
+  'WhatsApp/2.23.20.0',
+  'TelegramBot (like TwitterBot)',
+  'Pinterest/0.2 (+https://www.pinterest.com/bot.html)',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36 Edg/91.0.864.54 MicrosoftPreview/2.0 +https://aka.ms/MicrosoftPreview',
+  'Bluesky Cardyb/1.1',
+];
+
+test(`/ads.txt and /app-ads.txt answer 200 text/plain to every client (${HOST})`, async () => {
+  const agents = [
+    '',
+    'curl/8.7.1',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36',
+    'Google-adstxt',
+    'bidswitchbot/1.0',
+    ...ALLOW_LIST_AGENTS.slice(0, 2),
+  ];
+  const bad: string[] = [];
+  for (const path of ['/ads.txt', '/app-ads.txt']) {
+    for (const ua of agents) {
+      const got = await probe(path, ua);
+      if (!/^200 text\/plain/.test(got)) bad.push(`${path} [${ua || 'no UA'}] -> ${got}`);
+    }
+  }
+  assert.deepEqual(bad, []);
+});
+
+test(`every always-allow agent gets 200 on a promo page and an image from its card (${HOST})`, async () => {
+  const promo = (await sitemap()).find((p) => PROMO_RE.test(p));
+  assert.ok(promo, 'a promo page in the sitemap');
+  const card = /<meta property="og:image" content="https?:\/\/[^/"]+(\/api\/promo-card\/[^"]+)"/.exec(await promoPage(promo))?.[1]?.replace(/&amp;/g, '&');
+  const bad: string[] = [];
+  for (const ua of [...ALLOW_LIST_AGENTS, 'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; ClaudeBot/1.0; +claudebot@anthropic.com)']) {
+    const page = await probe(promo, ua);
+    if (!/^200 text\/html/.test(page)) bad.push(`${promo} [${ua}] -> ${page}`);
+    if (card) {
+      const img = await probe(card, ua);
+      if (!/^200 image\//.test(img)) bad.push(`${card} [${ua}] -> ${img}`);
+    }
+  }
+  console.log(`agents ${ALLOW_LIST_AGENTS.length + 1}, promo ${promo}, card ${card ?? 'none (page uses another image)'}`);
+  assert.deepEqual(bad, []);
+});
+
+test(`every /download? anchor on sitemap pages is rel="nofollow" (${HOST})`, async () => {
+  const paths = (await sitemap()).filter((p) => PROMO_RE.test(p) || TEAM_RE.test(p));
+  const rows = await pool(paths, async (p) => {
+    const html = PROMO_RE.test(p) ? await promoPage(p) : await teamPage(p);
+    const anchors = [...html.matchAll(/<a\b[^>]*?\shref="\/download\?[^"]*"[^>]*>/g)].map((m) => m[0]);
+    return { p, anchors, missing: anchors.filter((a) => !/\srel="[^"]*\bnofollow\b[^"]*"/.test(a)) };
+  });
+  const total = rows.reduce((n, r) => n + r.anchors.length, 0);
+  const bad = rows.flatMap((r) => r.missing.map((a) => `${r.p}: ${a}`));
+  console.log(`pages ${rows.length}, /download? anchors ${total}, without nofollow ${bad.length}`);
+  assert.ok(total > 0, 'found /download? anchors');
+  assert.deepEqual(bad, [], `${bad.length} /download? anchors lack rel="nofollow":\n${bad.slice(0, 20).join('\n')}`);
 });

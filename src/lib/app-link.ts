@@ -123,6 +123,20 @@ export function promoDownloadHref(teamId: string, promoId: string, pageSlug: str
   return `/download?${new URLSearchParams({ src: `promo_cta_${teamId}`, promoId, pageSlug }).toString()}`;
 }
 
+/** The rel for an app CTA link: `nofollow` on every /download link that
+ *  carries a query, merged with whatever rel the link already has
+ *  (chore/bot-firewall, 2026-11-02). The team card and the promo page each put
+ *  a distinct `?src=` variant on every page (1,535 of them), and all of them
+ *  canonicalize to /download, so crawlers have nothing to gain from following
+ *  them. The bare /download (nav, footer, buttons) stays followable: it is
+ *  the canonical page. Every other href keeps its rel unchanged. */
+export function downloadLinkRel(href: string, rel?: string): string | undefined {
+  if (!/^\/download\?/.test(href)) return rel;
+  const tokens = new Set((rel ?? '').split(/\s+/).filter(Boolean));
+  tokens.add('nofollow');
+  return [...tokens].join(' ');
+}
+
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 /** The team id in a /download `src` value, or undefined. Only the team card's
