@@ -166,10 +166,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
-  // /playoffs and each league's bracket page, under the same gate as the nav
-  // link: listed while any current-season bracket has a series that is not
-  // final, and for 14 days after the last one went final. lastmod is the
-  // moment the bracket itself last changed. A failed read throws, like the
+  // /playoffs and each league's bracket page: listed whenever a current-season
+  // bracket exists, finished or not (Matt, 2026-11-02: the pages stay in the
+  // sitemap through the offseason; only the nav link and the inbound modules
+  // follow the 14-day champion window). lastmod is the moment the bracket
+  // itself last changed. A failed read throws, like the
   // venue read above: a sitemap missing these pages is not served.
   const playoffEntries = await getPlayoffsSitemapEntries(now).catch((err) => {
     console.error('[sitemap] postseasonBrackets read failed; refusing to serve a sitemap missing the playoffs pages', err);
