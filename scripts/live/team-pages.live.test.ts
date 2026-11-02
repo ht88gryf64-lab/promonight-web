@@ -203,6 +203,18 @@ const ALLOW_LIST_AGENTS = [
   'RaptiveMegacrawler/1.0 (+https://megacrawler-bot-auth.development.raptive.com)',
   'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; AudigentAdBot; +http://www.audigent.com/bot.html) Chrome/W.X.Y.Z Safari/537.36',
   'weborama-fetcher (+http://www.weborama.com)',
+  'Mozilla/5.0 (compatible; DVBot/1.0; +http://www.doubleverify.com)',
+  'IAS_wombles/1.0 (+https://integralads.com/site-indexing-policy/)',
+  'Mozilla/5.0 (compatible; SlickBot/1.0)',
+  'Mozilla/5.0 (compatible; SinceraSyntheticUser/1.0)',
+  'Mozilla/5.0 (compatible; AmazonAdBot/1.0; +https://adbot.amazon.com)',
+  'LinkedInBot/1.0 (compatible; Mozilla/5.0; Apache-HttpClient +http://www.linkedin.com)',
+  'Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)',
+  'WhatsApp/2.23.20.0',
+  'TelegramBot (like TwitterBot)',
+  'Pinterest/0.2 (+https://www.pinterest.com/bot.html)',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36 Edg/91.0.864.54 MicrosoftPreview/2.0 +https://aka.ms/MicrosoftPreview',
+  'Bluesky Cardyb/1.1',
 ];
 
 test(`/ads.txt and /app-ads.txt answer 200 text/plain to every client (${HOST})`, async () => {
