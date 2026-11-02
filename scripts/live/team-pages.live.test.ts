@@ -104,10 +104,12 @@ const promoPage = (path: string) => {
  *  ('' sends none). curl, not fetch, so the header is what we say it is. */
 async function probe(path: string, ua: string): Promise<string> {
   const url = `${HOST}${path}`;
-  const args = ['-s', '-o', '/dev/null', '-A', ua, '-w', '%{http_code} %{content_type}', url];
+  const args = ['-s', '-o', '/dev/null', '--user-agent', ua, '-w', '%{http_code} %{content_type}'];
+  // vercel curl's own flags come before `--` (its global -A is --local-config),
+  // curl's after it.
   const { stdout } = VIA_CLI
-    ? await run('npx', ['vercel', 'curl', url, ...args.slice(0, -1)])
-    : await run('curl', args);
+    ? await run('npx', ['vercel', 'curl', url, '--', ...args])
+    : await run('curl', [...args, url]);
   return stdout.trim();
 }
 
