@@ -72,3 +72,7 @@ audit/nhl-wave*/
 # agreement and this repo is public: snapshots live in
 # ~/promonight/audit-archive/ads/, never here.
 audit/raptive-snapshot-*.json
+
+# Firewall working files: raw configs, payloads, IPs and the exclusion regex.
+# Only ops/firewall/RUNBOOK.md is tracked (chore/bot-firewall, 2026-11-02).
+ops/firewall/private/
