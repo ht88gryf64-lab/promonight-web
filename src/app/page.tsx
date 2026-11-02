@@ -201,6 +201,7 @@ function rankTeamsByFuturePromos(
 // 21600), so reads are amortized per-regeneration, not per-request.
 async function resolveCardContexts(
   promos: PromoWithTeam[],
+  today: string,
 ): Promise<Map<string, GameContext[]>> {
   const result = new Map<string, GameContext[]>();
 
@@ -242,7 +243,7 @@ async function resolveCardContexts(
       const dayHomeGames = games.filter((g) => g.date === date && g.homeTeamSlug === team.id);
       if (dayHomeGames.length === 0) return; // no home game -> legacy promo detail
       const dayPromos = promos.filter((p) => p.team.id === team.id && p.date === date);
-      result.set(key, await enrichGamesForTeam(team.id, dayHomeGames, dayPromos));
+      result.set(key, await enrichGamesForTeam(team.id, dayHomeGames, dayPromos, { today }));
     }),
   );
 
@@ -305,7 +306,7 @@ export default async function HomePage() {
     const resolvedContexts = await resolveCardContexts([
       ...heroBuckets.tonight,
       ...weekPromos,
-    ]);
+    ], today);
     const playoffs = homePlayoffs(await getPlayoffsInboundOrNone('/'));
     return (
       <HomePageV2

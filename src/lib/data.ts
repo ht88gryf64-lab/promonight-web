@@ -37,12 +37,12 @@ import { VENUE_RESOLUTION_MAP } from './venue-resolution-map';
 import { VENUE_LOCATIONS_STATIC } from './venue-locations';
 import { resolveMlbZone } from './mlb-venue-tz';
 import { gameZoneAbbrev } from './format-game-time';
-import { applyGameDisplay, buildGameIndex, needsGameDisplay } from './promo-game-join';
+import { applyGameDisplay, buildGameIndex, gameEventLinkUrl, needsGameDisplay } from './promo-game-join';
 import { attachPromoPageFields, stampPromoPageCanonical } from './promo-page-stamp';
 import { isSplitSeasonLeague } from './season-label';
 import { groupLeagueTeams, leagueSuperGroups, type HubSuperGroup, type HubTeamGroup } from './hub-grouping';
 import { isTicketPackageDoc, isTicketPackageLeague, partitionTicketPackages } from './ticket-packages';
-import { isTicketNetworkEventUrl } from './affiliates';
+import { ticketNetworkEventUrlFor } from './affiliates';
 
 function tsToIso(v: unknown): string | null {
   if (!v) return null;
@@ -934,7 +934,8 @@ function mapGameDoc(doc: FirebaseFirestore.DocumentSnapshot): Game {
   if (d.ingestedAt) game.ingestedAt = tsToIso(d.ingestedAt) ?? undefined;
   // tnEventUrl ONLY (ruling 6, 2026-11-02): a public URL that is published as
   // an href anyway. tnEventId, tnObservedAt and tnCheckedAt stay unmapped.
-  if (isTicketNetworkEventUrl(d.tnEventUrl)) game.tnEventUrl = d.tnEventUrl;
+  const tnUrl = ticketNetworkEventUrlFor(d.tnEventUrl, game.date);
+  if (tnUrl) game.tnEventUrl = tnUrl;
   return game;
 }
 
@@ -1181,6 +1182,11 @@ export async function enrichGamesForTeam(
   teamSlug: string,
   games: Game[],
   ownPromos: Promo[],
+  /** The render's one clock read. A game keeps its tnEventUrl in the context
+   *  (and so in the RSC payload and the game detail's TicketNetwork button)
+   *  only when gameEventLinkUrl says it may link: upcoming, scheduled, not a
+   *  doubleheader game. Without it no context carries an event link. */
+  opts: { today?: string } = {},
 ): Promise<GameContext[]> {
   const opponentSlugs = Array.from(new Set(
     games.map((g) => (g.homeTeamSlug === teamSlug ? g.awayTeamSlug : g.homeTeamSlug)),
@@ -1247,7 +1253,15 @@ export async function enrichGamesForTeam(
     const promos = isHome
       ? ownPromosByDate.get(g.date) ?? []
       : promosByOppDate.get(oppSlug)?.get(g.date) ?? [];
-    return { game: g, isHome, opponentTeam, opponentVenue, promos };
+    // A copy without tnEventUrl when it may not link; the cached Game object
+    // itself is never mutated (getGamesForTeam is shared within a request).
+    let game = g;
+    if (g.tnEventUrl && !gameEventLinkUrl(g, opts.today)) {
+      const { tnEventUrl: _drop, ...rest } = g;
+      void _drop;
+      game = rest;
+    }
+    return { game, isHome, opponentTeam, opponentVenue, promos };
   });
 }
 

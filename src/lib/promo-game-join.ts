@@ -118,6 +118,20 @@ export function resolveGameForPromo(
   return { time, opponent, venueName: games[0].venueName ?? '', games };
 }
 
+/** The event link a single-game surface may render for this game, or null.
+ *  Only an UPCOMING (date on or after the site's day, the server's one clock
+ *  read), still-scheduled game, never one game of a doubleheader: a played
+ *  game's event page has expired, and the performer page is the right
+ *  landing for it (review round 2, H1/H2/M2). */
+export function gameEventLinkUrl(
+  game: Pick<Game, 'date' | 'status' | 'doubleheaderGame' | 'tnEventUrl'>,
+  today: string | null | undefined,
+): string | null {
+  if (!today || !isTicketNetworkEventUrl(game.tnEventUrl)) return null;
+  if (game.date < today || game.status !== 'scheduled' || game.doubleheaderGame) return null;
+  return game.tnEventUrl;
+}
+
 /** The TicketNetwork event page of the home game behind a promo
  *  (Game.tnEventUrl), or null. Only when exactly ONE live home game sits on the
  *  promo's date: the promo doc does not say which game of a doubleheader it
@@ -129,7 +143,7 @@ export function resolveTnEventUrl(
   const games = (index.get(gameIndexKey(promo.team.sportSlug, promo.date, promo.team.id)) ?? []).filter(
     (g) => g.status !== 'postponed' && g.status !== 'canceled',
   );
-  if (games.length !== 1) return null;
+  if (games.length !== 1 || games[0].status === 'completed') return null;
   return isTicketNetworkEventUrl(games[0].tnEventUrl) ? games[0].tnEventUrl : null;
 }
 

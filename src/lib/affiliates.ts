@@ -270,6 +270,22 @@ export function isTicketNetworkEventUrl(u: unknown): u is string {
   return typeof u === 'string' && TN_EVENT_URL_RE.test(u);
 }
 
+// A TicketNetwork event slug carries its venue-local date,
+// "...-tickets-sun-nov-15-2026-american-airlines-center". A stored URL whose slug
+// date is not the game's date is from another game (a rescheduled game's old
+// doc, review round 2 L4) and is not exposed.
+const TN_MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+const TN_SLUG_DATE_RE = /-(?:mon|tue|wed|thu|fri|sat|sun)-(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)-(\d{1,2})-(\d{4})-/;
+export function ticketNetworkEventDate(u: string): string | null {
+  const m = TN_SLUG_DATE_RE.exec(u);
+  if (!m) return null;
+  return `${m[3]}-${String(TN_MONTHS.indexOf(m[1]) + 1).padStart(2, '0')}-${m[2].padStart(2, '0')}`;
+}
+/** The stored event URL when it is a TicketNetwork event page FOR THIS DATE. */
+export function ticketNetworkEventUrlFor(u: unknown, gameDate: string): string | null {
+  return isTicketNetworkEventUrl(u) && ticketNetworkEventDate(u) === gameDate ? u : null;
+}
+
 /** 'event' when the TicketNetwork link lands on the game's own event page,
  *  'team' when it lands on the team performer page. The affiliate_click
  *  property ticket_link_level carries it. */
@@ -362,7 +378,7 @@ export function buildTicketNetworkLink(opts: TicketNetworkLinkOpts): string | nu
   const subId1 =
     TN_SUBID_OVERRIDE ??
     (opts.subKey ? tnSubIdToken(opts.subKey) : null) ??
-    tnSubId(opts.surface, opts.venueSlug ?? opts.team.id);
+    tnSubId(opts.surface, opts.venueSlug || opts.team.id);
   return (
     `${TICKETNETWORK.prefix}?u=${encodeURIComponent(landing)}` +
     `&partnerpropertyid=${TICKETNETWORK.partnerPropertyId}` +

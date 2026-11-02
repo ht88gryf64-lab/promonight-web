@@ -187,7 +187,11 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
   // else the team performer page; subId1 web_promo_page_{team}. Ticketmaster
   // is the secondary text link. JSON-LD offers.url follows the primary href.
   const ticketmaster = ticketHref(page);
-  const primaryEventUrl = primary.tnEventUrl ?? null;
+  // Only a date still to be played links its event (review round 2, H2): a
+  // page whose dates have all been played keeps a live row as primary, and a
+  // played game's event page has expired.
+  const eventUrlOf = (r: { date: string; tnEventUrl?: string | null }) => (r.date >= today ? r.tnEventUrl ?? null : null);
+  const primaryEventUrl = eventUrlOf(primary);
   const ticketNetwork = buildTicketNetworkLink({ team, surface: PROMO_PAGE_SURFACE, eventUrl: primaryEventUrl });
   const tickets = ticketNetwork ?? ticketmaster;
   const ticketsPartner = ticketNetwork ? 'ticketnetwork' : 'ticketmaster';
@@ -220,11 +224,12 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
     location: ctx.location,
     ticketUrl: tickets,
     // Each date's Event offers that date's own game: the event page when the
-    // pipeline matched it, else the team performer page. On a single-date page
+    // pipeline matched it and the date is still to be played, else the team
+    // performer page. On a single-date page
     // this is the primary href (rulings 2026-11-02); on a series it keeps the
     // Dec 11 Event from offering the Nov 18 game. Falls back to the primary
     // href only if TicketNetwork cannot be built at all.
-    ticketUrlFor: (r) => buildTicketNetworkLink({ team, surface: PROMO_PAGE_SURFACE, eventUrl: r.tnEventUrl ?? null }),
+    ticketUrlFor: (r) => buildTicketNetworkLink({ team, surface: PROMO_PAGE_SURFACE, eventUrl: eventUrlOf(r) }),
     dateModified: page.updatedAt,
     faqs,
     // The visible trail, item for item (Google asks the markup to reflect it):

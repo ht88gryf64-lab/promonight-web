@@ -388,7 +388,7 @@ export default async function TeamPage({
   // fall through to the legacy promo-only rendering inside TeamCalendar.
   const games = await getGamesForTeam(team.id, team.sportSlug);
   const gameContexts = games.length > 0
-    ? await enrichGamesForTeam(team.id, games, promos)
+    ? await enrichGamesForTeam(team.id, games, promos, { today: todayStr })
     : undefined;
   // Time and opponent slots from the contexts just built, so a promo shows the
   // same time here as on /promos/today (src/lib/promo-game-join.ts). No read:

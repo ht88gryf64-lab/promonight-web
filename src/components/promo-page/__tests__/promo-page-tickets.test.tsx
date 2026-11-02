@@ -118,3 +118,16 @@ for (const [name, team, rows] of FIXTURES) {
     assert.match(anchor(html, 'Also on Ticketmaster'), /^https:\/\/www\.ticketmaster\.com\//);
   });
 }
+
+test('a page whose dates have all been played links no event: primary and offers fall back to the performer page', () => {
+  const html = render([row({ date: '2026-10-20', tnEventUrl: EV(2, 'detroit-red-wings-vs-x-tickets-tue-oct-20-2026-little-caesars-arena') })], '2026-11-02');
+  assert.equal(anchor(html, 'Get tickets'), tn(PERFORMER));
+  assert.equal(offersUrl(html), tn(PERFORMER));
+  assert.ok(!html.includes(encodeURIComponent('tue-oct-20-2026')));
+  assert.equal(anchors(html, 'Also on Ticketmaster'), 1);
+});
+
+test('a series links no played date in its JSON-LD offers', () => {
+  const html = render([row({ promoId: 'a', date: '2026-10-20', tnEventUrl: EV(1, 'played') }), row({ promoId: 'b', date: '2026-11-18', tnEventUrl: BRUINS })]);
+  assert.deepEqual(eventOffers(html), [['2026-10-20', tn(PERFORMER)], ['2026-11-18', tn(BRUINS)]]);
+});
