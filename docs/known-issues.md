@@ -3961,20 +3961,52 @@ All three by 2027-03-15, ahead of the April postseason.
 
 **Where.** promo-pipeline `playoff-scanner/scan-playoff-promos.js`, `playoff-scanner/post-playoff-promos.js`; web `src/components/playoff-section.tsx`, `src/lib/data.ts` (playoff reads). Ledger 2026-10-06 (DATA G4).
 
-## 71. MLB and NFL special-ticket flags are unreliable; the web must not read them until they are re-derived
+## 71. MLB, MLS, WNBA and NFL special-ticket flags are unreliable; the web must not read them until they are re-derived
 
-**Status: OPEN, DATED (Matt, 2026-10-06, DATA G5 ruling 3). Severity: Medium if the web starts reading them early. Deadline 2027-03-01.**
+**Status: OPEN, DATED (Matt, 2026-10-06, DATA G5 ruling 3; extended to MLS and WNBA 2026-11-02, promo-pipeline issue #80). Severity: Medium if the web starts reading them early. Deadlines: MLB 2027-03-01; MLS and WNBA before each league's 2027 season (see below).**
+
+**Extension, 2026-11-02 (Matt, ruling on promo-pipeline issue #80).** The same
+problem holds on MLS and WNBA: on 2026-10-31, 712 MLB, 56 MLS and 20 WNBA rows
+carried `ticketPackageRequired: true` as the extractor's raw guess, and the web,
+reading the flag on NHL and NBA only, shows those rows as free promos with
+their own promo pages. Ruled:
+- No bulk hold. The MLB flags were wrong on 3 or 4 of 10 in the October spot
+  check, so holding every flagged row would hide real free nights.
+- All three leagues' flags (MLB, MLS, WNBA) are re-derived under the tightened
+  page rule (`lib/scanner/flag-backing.js`) before each league's 2027 season,
+  and only then does the web hold or group them. Working deadlines (OPS):
+  MLS by 2027-02-01 (its 2027 "Sprint Season" has home matches from
+  2027-02-20 on the LA Galaxy page); MLB by 2027-03-01 as before; WNBA a
+  month before its 2027 opener, date set when the schedule is published.
+- Past MLB rows stay as they are until that re-derivation.
+- The five UPCOMING pages the issue named (all MLS) were hand-checked on the
+  clubs' own pages and fixed on 2026-11-02: 10 rows tombstoned (San Diego FC
+  Italian, Portuguese and Chinese Heritage Scarf, package-only; Houston Dynamo
+  Family 4 Pack, a ticket bundle, 6 rows; LA Galaxy Fourth Wing T-Shirt, a
+  ticket-offer item), pageSlug cleared so the five URLs 404, San Diego FC
+  team-locked through its 11-07 last match. Ledger 2026-11-02 12:58 to 13:15 CT;
+  promo-pipeline `scripts/mls-package-rows-2026-11-02.js`.
+
+**Related gap found while fixing them.** A slug whose rows are all tombstoned
+renders the REMOVED state ("Removed from the {team} schedule", FAQ "No. The
+{team} removed it from their schedule", JSON-LD `EventCancelled`). That copy
+assumes the club dropped a real promotion. For a row tombstoned because it was
+never a free promotion (a package item, a ticket bundle, a uniform note) every
+one of those three claims is false; clearing `pageSlug` (404) is the
+workaround used here. The re-derivation above will tombstone more rows of this
+kind, so a structured "never a promotion" marker that the promo page answers
+with a 404 is a prerequisite for it, not an afterthought.
 
 **What it is.** 490 live MLB rows and 1 NFL row carried `ticketPackageRequired: true` on 2026-10-06, set by the extraction model. A spot check of 10 against the club pages (2026-10-06) found 5 correct, 3 wrong, 1 leaning wrong and 1 unclear: the Phillies Schwarber Bobble Figurine was all fans, the Rockies Mile High Value Play was a ticket price deal, and the Bears x Peanuts Kids Game was a public game with an optional keychain package (that NFL flag was cleared on 2026-10-06). 270 of the 490 MLB flags had no rule behind them at all.
 
 **Ruling.** Before the 2027 MLB season, DATA re-derives every MLB flag with the tightened rule (the purchase or package wording must be on the club's own page next to the row's title or date, and a "first N fans receive" or open-to-all night is not a package; promo-pipeline `lib/scanner/flag-backing.js`). Only then may the web start reading MLB and NFL flags. Today the web reads the flag on NHL and NBA only (WEB6 G1/G2), and no web change is made for MLB or NFL until this entry closes.
 
 **What to do, in order.**
-1. DATA re-derives the MLB flags (dry run, then a snapshot-first write) by 2027-03-01 and reports per club.
-2. DATA tells WEB6.
-3. WEB6 may then extend the package rule to MLB and NFL pages, gated at the mapper.
+1. OPS (was DATA) re-derives the MLB, MLS and WNBA flags (dry run, then a snapshot-first write) by the deadlines above and reports per club. Rows that turn out never to have been free promotions need the "never a promotion" 404 path first (gap above).
+2. OPS (which now owns the web too) records the re-derivation here.
+3. Only then may the web extend the package rule to MLB, MLS, WNBA and NFL pages, gated at the mapper.
 
-**Where.** promo-pipeline `lib/scanner/flag-backing.js`, `lib/scanner/promo-diff.js`, scan-mlb.js, scan-nfl.js; web `mapPromoDoc` and the package grouping (WEB6 G1/G2). Ledger 2026-10-06 (DATA G5).
+**Where.** promo-pipeline `lib/scanner/flag-backing.js`, `lib/scanner/promo-diff.js`, scan-mlb.js, scan-mls.js, scan-wnba.js, scan-nfl.js; web `mapPromoDoc`, `src/lib/ticket-packages.ts`, `src/lib/promo-pages.ts` and the package grouping (WEB6 G1/G2). Ledger 2026-10-06 (DATA G5) and 2026-11-02 (OPS).
 
 ## 72. GA4 counts every client-side navigation twice while Enhanced Measurement history page views are on
 
