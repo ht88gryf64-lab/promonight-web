@@ -278,6 +278,42 @@ export function ticketNetworkLinkLevel(eventUrl?: string | null): TicketLinkLeve
   return isTicketNetworkEventUrl(eventUrl) ? 'event' : 'team';
 }
 
+// SUB IDs (ruling 2026-11-02). Every TicketNetwork link carries subId1 in the
+// Fanatics convention, {surface}_{slug}: web_team_page_dallas-stars,
+// web_venue_canada-life-centre, web_promo_page_dallas-stars. The surface is a
+// REQUIRED argument of buildTicketNetworkLink (no default), so a call site
+// cannot compile without one. Lowercase, [a-z0-9_-] only, at most 64
+// characters; the slug part is what gets truncated. The surface table lives in
+// docs/cta-registry.md ("TicketNetwork subId1").
+export const TN_SUBID_RE = /^[a-z0-9_-]{1,64}$/;
+const TN_SUBID_MAX = 64;
+
+/** The subId1 surface segment of a TicketNetwork link: every analytics
+ *  surface, plus web_promo_date for the promo page's per-date "Tickets"
+ *  links (their clicks still report surface web_promo_page; only the
+ *  partner-side sub ID tells the two promo-page placements apart). */
+export type TnSubIdSurface = AnalyticsSurface | 'web_promo_date';
+
+function subIdPart(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^[-_]+|[-_]+$/g, '');
+}
+
+/** {surface}_{slug}, sanitised and capped at 64 characters by truncating the
+ *  slug. A complete token (the away-game key) passes as `slug` with an empty
+ *  surface handled by the caller; see buildTicketNetworkLink. */
+export function tnSubId(surface: TnSubIdSurface, slug: string): string {
+  const head = subIdPart(surface).slice(0, TN_SUBID_MAX);
+  const tail = subIdPart(slug);
+  const room = TN_SUBID_MAX - head.length - 1;
+  if (!tail || room <= 0) return head;
+  return `${head}_${tail.slice(0, room).replace(/[-_]+$/, '')}`;
+}
+
+/** A complete sub-ID token (away-game rows), sanitised and capped. */
+function tnSubIdToken(token: string): string {
+  return subIdPart(token).slice(0, TN_SUBID_MAX).replace(/[-_]+$/, '');
+}
+
 // Gate B2 PREVIEW HOOK (2026-11-02). On a Vercel PREVIEW build only, a
 // NEXT_PUBLIC_TN_SUBID_OVERRIDE value replaces every TicketNetwork subId1 so
 // test clicks are identifiable in Impact (preview_tn_test). Inert in
@@ -288,7 +324,7 @@ export function ticketNetworkLinkLevel(eventUrl?: string | null): TicketLinkLeve
 export function tnSubIdOverride(env: { vercelEnv?: string; override?: string }): string | null {
   if (env.vercelEnv !== 'preview') return null;
   const v = (env.override || '').trim();
-  return /^[a-z0-9_]{1,40}$/.test(v) ? v : null;
+  return TN_SUBID_RE.test(v) ? v : null;
 }
 // Literal process.env reads, so Next inlines both into the client bundle.
 const TN_SUBID_OVERRIDE = tnSubIdOverride({
@@ -306,8 +342,8 @@ export type TicketNetworkLinkOpts = {
    *  key (see awayGameSubKey). */
   subKey?: string;
   /** subId1 surface segment, already including the `web_` prefix
-   *  (e.g. 'web_team_page'). */
-  surface: AnalyticsSurface;
+   *  (e.g. 'web_team_page'). REQUIRED: there is no default sub ID. */
+  surface: TnSubIdSurface;
   /** The game's TicketNetwork event page (Game.tnEventUrl). When it is a valid
    *  event URL the link wraps it unchanged; otherwise, or when absent, the
    *  team performer page as before. */
@@ -321,7 +357,12 @@ export type TicketNetworkLinkOpts = {
 export function buildTicketNetworkLink(opts: TicketNetworkLinkOpts): string | null {
   const landing = isTicketNetworkEventUrl(opts.eventUrl) ? opts.eventUrl : ticketNetworkLandingUrl(opts.team);
   if (!landing) return null;
-  const subId1 = TN_SUBID_OVERRIDE ?? opts.subKey ?? (opts.venueSlug ? `${opts.surface}_${opts.venueSlug}` : `${opts.surface}_${opts.team.id}`);
+  // The preview override wins (Gate B2 testing); then a complete away-game
+  // token; then {surface}_{building} on a venue hub; else {surface}_{team}.
+  const subId1 =
+    TN_SUBID_OVERRIDE ??
+    (opts.subKey ? tnSubIdToken(opts.subKey) : null) ??
+    tnSubId(opts.surface, opts.venueSlug ?? opts.team.id);
   return (
     `${TICKETNETWORK.prefix}?u=${encodeURIComponent(landing)}` +
     `&partnerpropertyid=${TICKETNETWORK.partnerPropertyId}` +

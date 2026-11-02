@@ -18,7 +18,8 @@ const EV = (id: number, slug: string) => `https://www.ticketnetwork.com/tickets/
 const BRUINS = EV(8138650, 'detroit-red-wings-vs-boston-bruins-tickets-wed-nov-18-2026-little-caesars-arena');
 const HAWKS = EV(8138700, 'detroit-red-wings-vs-chicago-blackhawks-tickets-sat-dec-12-2026-little-caesars-arena');
 const PREFIX = 'https://ticketnetwork.lusg.net/c/7236189/120057/2322';
-const tn = (landing: string) => `${PREFIX}?u=${encodeURIComponent(landing)}&partnerpropertyid=8313917&MediaPartnerPropertyId=8313917&subId1=web_promo_page_detroit-red-wings`;
+const tn = (landing: string, sub = 'web_promo_page_detroit-red-wings') => `${PREFIX}?u=${encodeURIComponent(landing)}&partnerpropertyid=8313917&MediaPartnerPropertyId=8313917&subId1=${sub}`;
+const tnDate = (landing: string) => tn(landing, 'web_promo_date_detroit-red-wings');
 const PERFORMER = 'https://www.ticketnetwork.com/e/performers/detroit-red-wings-tickets';
 
 const row = (over: Partial<PromoPageRow>): PromoPageRow => ({
@@ -30,12 +31,12 @@ const row = (over: Partial<PromoPageRow>): PromoPageRow => ({
   tombstoned: false, tombstonedAt: null, tnEventUrl: null, ...over,
 });
 
-function page(rows: PromoPageRow[], today: string): PromoPage {
+function page(rows: PromoPageRow[], today: string, team: Team = TEAM): PromoPage {
   const primary = rows.find((r) => r.date >= today) ?? rows[rows.length - 1];
-  return { team: TEAM, slug: rows[0].pageSlug, season: '2026-27', rows, removedRows: [], removedDates: [], state: 'live', primary, dates: rows.map((r) => r.date), updatedAt: null, removedAt: null, canonicalSlug: null };
+  return { team, slug: rows[0].pageSlug, season: '2026-27', rows, removedRows: [], removedDates: [], state: 'live', primary, dates: rows.map((r) => r.date), updatedAt: null, removedAt: null, canonicalSlug: null };
 }
 const CTX: PromoPageContext = { venue: null, hub: null, quickFacts: [], location: null, coords: null, formerNames: [], observedAt: null, alsoAtGame: [], nextTeamPromos: [], crossTeam: null, previousEdition: null };
-const render = (rows: PromoPageRow[], today = '2026-11-02') => renderToStaticMarkup(<PromoPageView page={page(rows, today)} ctx={CTX} today={today} />).replace(/&amp;/g, '&');
+const render = (rows: PromoPageRow[], today = '2026-11-02', team: Team = TEAM) => renderToStaticMarkup(<PromoPageView page={page(rows, today, team)} ctx={CTX} today={today} />).replace(/&amp;/g, '&');
 
 function anchor(html: string, text: string): string {
   const at = html.indexOf(`>${text}</a>`);
@@ -79,8 +80,41 @@ test('series: primary is the next upcoming date; every upcoming date links its o
   const html = render(rows);
   assert.equal(anchor(html, 'Get tickets'), tn(BRUINS));
   const perDate = [...html.matchAll(/<a [^>]*href="([^"]+)"[^>]*>Tickets<\/a>/g)].map((m) => m[1]);
-  assert.deepEqual(perDate, [tn(BRUINS), tn(HAWKS), tn(PERFORMER)]);
-  assert.ok(!html.includes(`<a href="${tn(EV(1, 'played'))}`));
+  assert.deepEqual(perDate, [tnDate(BRUINS), tnDate(HAWKS), tnDate(PERFORMER)]);
+  assert.ok(!html.includes(`<a href="${tnDate(EV(1, 'played'))}`));
   // Each date's Event offers its own game, never another date's.
   assert.deepEqual(eventOffers(html).filter(([d]) => d >= '2026-11-02'), [['2026-11-18', tn(BRUINS)], ['2026-12-12', tn(HAWKS)], ['2027-01-30', tn(PERFORMER)]]);
 });
+
+// ── subId1 on every TicketNetwork href (ruling 2026-11-02, before merge) ────
+
+const STARS = { ...TEAM, id: 'dallas-stars', name: 'Stars', city: 'Dallas', abbreviation: 'DAL', division: 'Central' } as unknown as Team;
+const CELTICS = { ...TEAM, id: 'boston-celtics', name: 'Celtics', city: 'Boston', league: 'NBA', sportSlug: 'nba', abbreviation: 'BOS' } as unknown as Team;
+const FIXTURES: [string, Team, PromoPageRow[]][] = [
+  ['Stars, Esa Lindell (event link)', STARS, [row({ promoId: 's1', date: '2026-11-15', title: 'Esa Lindell Bobblehead', type: 'giveaway', displayOpponent: 'Panthers', pageSlug: 'esa-lindell-bobblehead', tnEventUrl: EV(8139510, 'dallas-stars-vs-florida-panthers-tickets-sun-nov-15-2026-american-airlines-center') })]],
+  ['Red Wings, Original Six (per-date links)', TEAM, [
+    row({ promoId: 'w1', date: '2026-11-18', tnEventUrl: BRUINS }),
+    row({ promoId: 'w2', date: '2026-12-11', displayOpponent: 'Rangers', tnEventUrl: EV(8138675, 'detroit-red-wings-vs-new-york-rangers-tickets-fri-dec-11-2026-little-caesars-arena') }),
+    row({ promoId: 'w3', date: '2027-01-27', displayOpponent: 'Maple Leafs', tnEventUrl: null }),
+  ]],
+  ['Celtics, Neemias Queta (performer fallback)', CELTICS, [row({ promoId: 'c1', date: '2027-01-27', title: 'Neemias Queta Bobblehead', type: 'giveaway', displayOpponent: 'Clippers', pageSlug: 'neemias-queta-bobblehead', tnEventUrl: null })]],
+];
+const SUBID_RE = /^[a-z0-9_-]{1,64}$/;
+
+for (const [name, team, rows] of FIXTURES) {
+  test(`every TicketNetwork href on ${name} carries a valid subId1`, () => {
+    const html = render(rows, '2026-11-02', team);
+    const hrefs = [...html.matchAll(/https:\/\/ticketnetwork\.lusg\.net\/c\/[^"\s]+/g)].map((m) => m[0]);
+    assert.ok(hrefs.length >= 2, 'the anchor and the JSON-LD offer at least');
+    for (const h of hrefs) {
+      const sub = new URL(h).searchParams.get('subId1');
+      assert.ok(sub, `subId1 present: ${h}`);
+      assert.match(sub as string, SUBID_RE, h);
+      assert.ok(sub === `web_promo_page_${team.id}` || sub === `web_promo_date_${team.id}`, sub as string);
+    }
+    assert.equal(new URL(anchor(html, 'Get tickets')).searchParams.get('subId1'), `web_promo_page_${team.id}`);
+    for (const m of html.matchAll(/<a [^>]*href="([^"]+)"[^>]*>Tickets<\/a>/g)) assert.equal(new URL(m[1]).searchParams.get('subId1'), `web_promo_date_${team.id}`);
+    // The Ticketmaster secondary link is still there, untouched.
+    assert.match(anchor(html, 'Also on Ticketmaster'), /^https:\/\/www\.ticketmaster\.com\//);
+  });
+}

@@ -60,6 +60,8 @@ import {
 // block, the previous edition) is what the guard test counts.
 
 export const PROMO_PAGE_SURFACE = 'web_promo_page' as const;
+/** subId1 surface of the per-date "Tickets" links (TicketNetwork only). */
+const PROMO_DATE_SUBID_SURFACE = 'web_promo_date' as const;
 
 export interface PromoPageViewProps {
   page: PromoPage;
@@ -239,7 +241,9 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
   // A series row still to be played carries its own small "Tickets" link to
   // that date's event (team performer page when unmatched).
   const gameLine = (date: string, row: { displayTime: string; displayOpponent: string; promoId: string; tnEventUrl?: string | null }, key: string, withOpponent: boolean) => {
-    const rowTickets = withOpponent && !removed && date >= today ? buildTicketNetworkLink({ team, surface: PROMO_PAGE_SURFACE, eventUrl: row.tnEventUrl ?? null }) : null;
+    // subId1 web_promo_date_{team}: the per-date link, told apart from the
+    // primary CTA partner-side (the click event keeps surface web_promo_page).
+    const rowTickets = withOpponent && !removed && date >= today ? buildTicketNetworkLink({ team, surface: PROMO_DATE_SUBID_SURFACE, eventUrl: row.tnEventUrl ?? null }) : null;
     return (
       <li key={key} className="m-0 list-none text-[15px] leading-[1.45] text-rd-ink-soft">
         <strong className="text-rd-ink">{`${formatLongDate(date)}${row.displayTime ? ` · ${row.displayTime}` : ''}`}</strong>

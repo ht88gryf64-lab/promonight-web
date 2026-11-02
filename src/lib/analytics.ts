@@ -1524,7 +1524,7 @@ export const trackAffiliateClick = (payload: AffiliateClickPayload) => {
 // trackAffiliateClick, with no runtime signal. The hand-kept pair drifted three
 // times (web_cfb, web_cfb_venue_link, web_venue — the last mislabeling every
 // venue-hub affiliate click from 2026-07-15 until this list was derived).
-const KNOWN_SURFACE_VALUES = [
+export const KNOWN_SURFACE_VALUES = [
   'web_home',
   'web_home_tonight',
   'web_home_best',

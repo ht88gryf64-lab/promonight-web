@@ -10,7 +10,10 @@ import {
   ticketNetworkLinkLevel,
   ticketNetworkLandingUrl,
   tnSubIdOverride,
+  tnSubId,
+  TN_SUBID_RE,
 } from '../affiliates';
+import { KNOWN_SURFACE_VALUES } from '../analytics';
 import { buildGameIndex, resolveTnEventUrl } from '../promo-game-join';
 import type { Game } from '../types';
 
@@ -77,4 +80,48 @@ test('resolveTnEventUrl: unmatched, two games on the date, postponed, or a bad v
   assert.equal(resolveTnEventUrl(promo, buildGameIndex([g({ tnEventUrl: 'https://x.example/tickets/1/a' })])), null);
   // A postponed twin does not make the live game ambiguous.
   assert.equal(resolveTnEventUrl(promo, buildGameIndex([g({ tnEventUrl: EVENT }), g({ id: 'g2', status: 'postponed' })])), EVENT);
+});
+
+// ── subId1 (ruling 2026-11-02, before merge) ────────────────────────────────
+
+test('surface is a required argument: omitting it is a type error, not a default', () => {
+  // Never called: the assertion is the @ts-expect-error, which tsc fails on if
+  // surface ever becomes optional.
+  const typeOnly = () =>
+    // @ts-expect-error surface is required
+    buildTicketNetworkLink({ team: STARS });
+  assert.equal(typeof typeOnly, 'function');
+});
+
+test('tnSubId: {surface}_{slug}, lowercase, [a-z0-9_-] only, at most 64, the slug truncated', () => {
+  assert.equal(tnSubId('web_promo_page', 'dallas-stars'), 'web_promo_page_dallas-stars');
+  assert.equal(tnSubId('web_promo_date', 'Dallas Stars!'), 'web_promo_date_dallas-stars');
+  assert.equal(tnSubId('web_venue', "levi's-stadium"), 'web_venue_levi-s-stadium');
+  const long = tnSubId('web_promo_date', 'a'.repeat(100));
+  assert.equal(long.length, 64);
+  assert.ok(long.startsWith('web_promo_date_aaa'));
+  assert.ok(!/[-_]$/.test(tnSubId('web_team_page', 'x'.repeat(48) + '-tail')));
+});
+
+test('every analytics surface and web_promo_date yields a valid subId1, even with a long or odd slug', () => {
+  for (const surface of [...KNOWN_SURFACE_VALUES, 'web_promo_date' as const]) {
+    for (const slug of ['dallas-stars', 'St. Louis Blues', 'z'.repeat(120)]) {
+      const href = buildTicketNetworkLink({ team: { id: slug, ticketNetworkSlug: undefined } as never, surface }) as string;
+      const sub = new URL(href).searchParams.get('subId1') as string;
+      assert.match(sub, TN_SUBID_RE, `${surface} / ${slug}`);
+      assert.ok(sub.startsWith(surface.slice(0, 64)), `${surface} / ${slug}`);
+    }
+  }
+});
+
+test('a venue hub keys on the building; an away row keeps its complete token, sanitised and capped', () => {
+  const v = new URL(buildTicketNetworkLink({ team: STARS, surface: 'web_venue', venueSlug: 'canada-life-centre' }) as string);
+  assert.equal(v.searchParams.get('subId1'), 'web_venue_canada-life-centre');
+  const a = new URL(buildTicketNetworkLink({ team: STARS, surface: 'web_team_page', subKey: 'web_away_game_' + 'q'.repeat(80) }) as string);
+  assert.match(a.searchParams.get('subId1') as string, TN_SUBID_RE);
+});
+
+test('the preview override accepts hyphens up to 64 characters', () => {
+  assert.equal(tnSubIdOverride({ vercelEnv: 'preview', override: 'preview-tn_test' }), 'preview-tn_test');
+  assert.equal(tnSubIdOverride({ vercelEnv: 'preview', override: 'p'.repeat(65) }), null);
 });
