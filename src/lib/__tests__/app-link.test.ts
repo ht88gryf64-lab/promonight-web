@@ -10,6 +10,7 @@ import {
   appStoreUrl,
   detectClientPlatform,
   downloadHref,
+  downloadLinkRel,
   downloadOrigin,
   playReferrer,
   playStoreUrl,
@@ -157,4 +158,19 @@ test('/download from a promo page: every App Store ct is pc, utm_content carries
   assert.equal(btn.searchParams.get('referrer'), 'utm_source=web&utm_medium=download&utm_content=dallas-stars_681fc85299a82ba4_esa-lindell-bobblehead');
   const qr = new URL(playStoreUrl({ surface: 'download_qr', placement: 'qr_android', teamId: 'dallas-stars', ...promo }));
   assert.equal(qr.searchParams.get('referrer'), 'utm_source=web&utm_medium=download_qr&utm_content=dallas-stars_681fc85299a82ba4_esa-lindell-bobblehead&utm_campaign=qr_android');
+});
+
+test('downloadLinkRel: nofollow on both /download?src= shapes, merged with an existing rel, nothing else touched', () => {
+  assert.equal(downloadLinkRel(downloadHref('minnesota-twins')), 'nofollow');
+  assert.equal(downloadLinkRel(promoDownloadHref('dallas-stars', '681fc85299a82ba4', 'esa-lindell-bobblehead')), 'nofollow');
+  assert.equal(downloadLinkRel('/download?src=team_cta_x', 'noopener'), 'noopener nofollow');
+  assert.equal(downloadLinkRel('/download?src=team_cta_x', 'nofollow  noopener'), 'nofollow noopener', 'no duplicate token');
+  // The bare /download is the canonical page and stays followable.
+  assert.equal(downloadLinkRel('/download'), undefined);
+  assert.equal(downloadLinkRel('/download', 'noopener'), 'noopener');
+  // Store links and other paths keep exactly the rel they were given.
+  assert.equal(downloadLinkRel(IOS_APP_URL, 'noopener'), 'noopener');
+  assert.equal(downloadLinkRel(appStoreUrl({ surface: 'team_cta', teamId: 'minnesota-twins' }), 'noopener'), 'noopener');
+  assert.equal(downloadLinkRel('/downloads?x=1'), undefined);
+  assert.equal(downloadLinkRel('/nhl/boston-bruins?src=x'), undefined);
 });
