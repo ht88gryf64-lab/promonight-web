@@ -116,6 +116,13 @@ export interface NightlyLoaders {
    *  (getAllMatchupSlugs), the loaders of their routes' generateStaticParams. */
   cfbSchoolIds: () => Promise<string[]>;
   cfbMatchupSlugs: () => string[] | Promise<string[]>;
+  /** Site batch only: the per-promo pages with a game on the day that just
+   *  ended. Their next game moved, so their dates, their primary ticket link
+   *  (a TicketNetwork event page since 2026-11-02) and their JSON-LD offers
+   *  change at midnight; without this they kept last night's game for up to a
+   *  day (review round 2, M1). Optional, and a failure adds nothing: it can
+   *  never stop the site batch. */
+  promoPagesDatedYesterday?: () => Promise<string[]>;
 }
 
 /** Every path a batch revalidates and warms, deduped, each one checked
@@ -132,13 +139,18 @@ export async function nightlyRefreshPaths(
     const [schools, matchups] = await Promise.all([loaders.cfbSchoolIds(), loaders.cfbMatchupSlugs()]);
     all = [...schools.map((id) => `/cfb/${id}`), ...matchups.map((slug) => `/cfb/rivalries/${slug}`)];
   } else {
-    const [teams, hubs] = await Promise.all([loaders.teams(), loaders.venueHubSlugs()]);
+    const [teams, hubs, yesterdayPromoPages] = await Promise.all([
+      loaders.teams(),
+      loaders.venueHubSlugs(),
+      loaders.promoPagesDatedYesterday ? loaders.promoPagesDatedYesterday().catch(() => [] as string[]) : Promise.resolve([] as string[]),
+    ]);
     // The fixed cross-team pages first: they are the slowest to render (each
     // reads every upcoming promo) and the most visible, so they get the most time.
     all = [
       ...NIGHTLY_FIXED_PATHS,
       ...teams.map((t) => `/${t.sportSlug}/${t.id}`),
       ...hubs.map((slug) => `/venues/${slug}`),
+      ...yesterdayPromoPages,
     ];
   }
   const out: string[] = [];

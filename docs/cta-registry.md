@@ -44,6 +44,45 @@ when retiring a CTA.
 | promo_link_best_promos_card | best_promos | scored_card | (card) | /[sport]/[team]/promos/[slug] | promo_link_click (surface web_best_promos / web_best_promos_bobbleheads) + scored_promo_card_tap | 2026-10-30 | active |
 | promo_link_team_package_row | team_page | ticket_packages_group_row_title (NBA and NHL only) | (promo title) | /[sport]/[team]/promos/[slug] | promo_link_click (surface web_team_page_promolist) | 2026-10-31 | active |
 | app_remind_promo_page | promo_page | cta_row_secondary | Remind me | /download?src=promo_cta_{teamId}&promoId={promoId}&pageSlug={pageSlug}; on /download every App Store ct is pc (amended 2026-10-31, see App Store campaign tokens below) and Play utm_content is {teamId}_{promoId}_{pageSlug} (src/lib/app-link.ts) | web_app_cta_click (surface promo_cta) + app_download_click (surface promo_cta) | 2026-10-31 | active |
+| ticketnetwork_promo_page_primary | promo_page | cta_row_primary | Get tickets | TicketNetwork event page of the next date's game when the pipeline matched it (games.tnEventUrl), else the team performer page; Impact tracked, subId1 web_promo_page_{team} | affiliate_click (surface web_promo_page, placement promo_page_primary, ticket_link_level event / team) | 2026-11-02 | active |
+| ticketmaster_promo_page_secondary | promo_page | cta_row_primary_text_link | Also on Ticketmaster | ticketmaster.com team page (Impact wrap when env set) | affiliate_click (surface web_promo_page, placement promo_page_ticketmaster, ticket_link_level team) | 2026-11-02 | active |
+| ticketnetwork_promo_page_date | promo_page | series_date_row (upcoming dates only) | Tickets | TicketNetwork event page of that date's game when matched, else the team performer page; Impact tracked, subId1 web_promo_date_{team} | affiliate_click (surface web_promo_page, placement promo_page_date, ticket_link_level event / team) | 2026-11-02 | active |
+
+## TicketNetwork subId1 (ruling 2026-11-02)
+
+Every TicketNetwork link carries `subId1` in the Fanatics convention,
+`{surface}_{slug}`, built by `buildTicketNetworkLink` in `src/lib/affiliates.ts`
+from a REQUIRED `surface` argument (a type error when omitted; no default).
+Lowercase, `[a-z0-9_-]` only, at most 64 characters, the slug truncated when
+needed (`tnSubId`). `NEXT_PUBLIC_TN_SUBID_OVERRIDE` replaces it on a Vercel
+PREVIEW build only (Gate B2 testing, `preview_tn_test`); production ignores it.
+The landing is the game's TicketNetwork event page wherever the surface renders
+one game and the pipeline matched it (`games.tnEventUrl`), else the team
+performer page; `ticket_link_level` on `affiliate_click` says which.
+
+| subId1 | surface | where |
+|---|---|---|
+| web_promo_page_{team} | web_promo_page | Promo page primary "Get tickets", and its JSON-LD `offers.url` |
+| web_promo_date_{team} | web_promo_date (sub ID only; the click reports web_promo_page) | Promo page per-date "Tickets" links on a series |
+| web_team_page_{team} | web_team_page | Team page tickets block and sidebar rail (AffiliateRail); team-page schedule game detail for home games (GameExpand, game-day-detail; event link when matched) |
+| web_away_game_{team}_at_{opponent} | (away-game token, `awayGameSubKey`) | Team-page schedule game detail for away games (event link when matched) |
+| web_home_{team} | web_home | Homepage promo modal (UpcomingPromoModal) |
+| web_today_{team} | web_today | /promos/today cards |
+| web_{league}_hub_this_week_{team} | web_nhl_hub_this_week, web_nba_hub_this_week, web_mlb_hub_this_week, web_wnba_hub_this_week, web_mls_hub_this_week | League hub "This week" cards |
+| web_best_promos_{team} | web_best_promos | /best-promos cards |
+| web_best_promos_bobbleheads_{team} | web_best_promos_bobbleheads | /best-promos/bobbleheads cards |
+| web_playoffs_{team} | web_playoffs | Playoffs hub ticket buttons |
+| web_playoffs_league_{team} | web_playoffs_league | Playoffs league page ticket buttons |
+| web_my_teams_{team} | web_my_teams | /my-teams ticket CTAs |
+| web_venue_{building} | web_venue | Venue hub tickets (keyed on the building, no team) |
+| web_cfb_{school} | web_cfb | CFB school page signature game, gameday block and game modal |
+| web_cfb_rivalry_{school} | web_cfb_rivalry | CFB rivalry matchup "tickets" trip step |
+| web_team_page_{team} | web_team_page | /dev/affiliate-check (dev only, not linked) |
+
+Ticketmaster links are not covered by this table: their sub ID rides the
+Impact wrap's SharedID (`NEXT_PUBLIC_TICKETMASTER_IMPACT_WRAP`), and the
+2026-11-02 Impact report showed 91 Ticketmaster raw clicks with an empty Sub
+ID. That is an open follow-up, deliberately not changed with this table.
 
 ## App Store campaign tokens (ruling 2026-10-31)
 

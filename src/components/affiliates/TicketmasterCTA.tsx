@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import type { Team } from '@/lib/types';
 import type { AnalyticsSurface } from '@/lib/analytics';
-import { buildTicketmasterUrl, buildTicketNetworkLink } from '@/lib/affiliates';
+import { buildTicketmasterUrl, buildTicketNetworkLink, ticketNetworkLinkLevel } from '@/lib/affiliates';
 import { TrackedAffiliateLink } from '@/components/tracked-affiliate-link';
 
 // Two-button ticket CTA — Ticketmaster + TicketNetwork. Each button is an
@@ -68,6 +68,11 @@ type Props = {
    *  resolved. For a dense list where every row carries a ticket link (the
    *  playoffs home games). Tagging is unchanged. */
   primaryOnly?: boolean;
+  /** The game's TicketNetwork event page (Game.tnEventUrl) when the surface
+   *  renders one game. The TicketNetwork button then lands on that event;
+   *  without it, on the team performer page as before. Ticketmaster stays
+   *  team-level either way. */
+  eventUrl?: string | null;
 };
 
 export function TicketmasterCTA({
@@ -80,6 +85,7 @@ export function TicketmasterCTA({
   size = 'full',
   layout = 'stacked',
   primaryOnly = false,
+  eventUrl = null,
 }: Props) {
   // Both vendors receive the identical sub-ID: subKey verbatim when the call
   // site provides one (away rows pass the shared awayGameSubKey compound
@@ -95,7 +101,8 @@ export function TicketmasterCTA({
     surface,
     promoId,
   });
-  const ticketNetworkHref = buildTicketNetworkLink({ team, surface, venueSlug, subKey });
+  const ticketNetworkHref = buildTicketNetworkLink({ team, surface, venueSlug, subKey, eventUrl });
+  const tnLevel = ticketNetworkLinkLevel(eventUrl);
 
   // Graceful fallback — never render a broken ticket link. If neither vendor
   // resolves, hide the CTA entirely; otherwise render whichever buttons resolve.
@@ -159,6 +166,7 @@ export function TicketmasterCTA({
       target="_blank"
       rel="noopener noreferrer sponsored"
       ariaLabel="Get tickets on Ticketmaster"
+      ticketLinkLevel="team"
       className={cardClass}
     >
       <span className={wordmarkClass} style={{ letterSpacing: '-0.3px' }}>
@@ -183,6 +191,7 @@ export function TicketmasterCTA({
       target="_blank"
       rel="noopener noreferrer sponsored"
       ariaLabel="Get tickets on TicketNetwork"
+      ticketLinkLevel={tnLevel}
       className={cardClass}
     >
       <Image

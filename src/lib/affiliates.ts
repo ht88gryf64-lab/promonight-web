@@ -260,6 +260,94 @@ export function ticketNetworkLandingUrl(team: Pick<Team, 'id' | 'ticketNetworkSl
   return `${TICKETNETWORK.performerHost}${path}${slug}-tickets`;
 }
 
+// Event-level landing (rulings 2026-11-02). A TicketNetwork event page,
+// /tickets/{eventId}/{slug}, as the pipeline stores it on the games doc
+// (Game.tnEventUrl) after an exact match. Anything else is not an event URL
+// and the link falls back to the team performer page, never to a guess.
+const TN_EVENT_URL_RE = /^https:\/\/www\.ticketnetwork\.com\/tickets\/\d+\/[^\s"<>]+$/;
+
+export function isTicketNetworkEventUrl(u: unknown): u is string {
+  return typeof u === 'string' && TN_EVENT_URL_RE.test(u);
+}
+
+// A TicketNetwork event slug carries its venue-local date,
+// "...-tickets-sun-nov-15-2026-american-airlines-center". A stored URL whose slug
+// date is not the game's date is from another game (a rescheduled game's old
+// doc, review round 2 L4) and is not exposed.
+const TN_MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+const TN_SLUG_DATE_RE = /-(?:mon|tue|wed|thu|fri|sat|sun)-(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)-(\d{1,2})-(\d{4})-/;
+export function ticketNetworkEventDate(u: string): string | null {
+  const m = TN_SLUG_DATE_RE.exec(u);
+  if (!m) return null;
+  return `${m[3]}-${String(TN_MONTHS.indexOf(m[1]) + 1).padStart(2, '0')}-${m[2].padStart(2, '0')}`;
+}
+/** The stored event URL when it is a TicketNetwork event page FOR THIS DATE. */
+export function ticketNetworkEventUrlFor(u: unknown, gameDate: string): string | null {
+  return isTicketNetworkEventUrl(u) && ticketNetworkEventDate(u) === gameDate ? u : null;
+}
+
+/** 'event' when the TicketNetwork link lands on the game's own event page,
+ *  'team' when it lands on the team performer page. The affiliate_click
+ *  property ticket_link_level carries it. */
+export type TicketLinkLevel = 'event' | 'team';
+export function ticketNetworkLinkLevel(eventUrl?: string | null): TicketLinkLevel {
+  return isTicketNetworkEventUrl(eventUrl) ? 'event' : 'team';
+}
+
+// SUB IDs (ruling 2026-11-02). Every TicketNetwork link carries subId1 in the
+// Fanatics convention, {surface}_{slug}: web_team_page_dallas-stars,
+// web_venue_canada-life-centre, web_promo_page_dallas-stars. The surface is a
+// REQUIRED argument of buildTicketNetworkLink (no default), so a call site
+// cannot compile without one. Lowercase, [a-z0-9_-] only, at most 64
+// characters; the slug part is what gets truncated. The surface table lives in
+// docs/cta-registry.md ("TicketNetwork subId1").
+export const TN_SUBID_RE = /^[a-z0-9_-]{1,64}$/;
+const TN_SUBID_MAX = 64;
+
+/** The subId1 surface segment of a TicketNetwork link: every analytics
+ *  surface, plus web_promo_date for the promo page's per-date "Tickets"
+ *  links (their clicks still report surface web_promo_page; only the
+ *  partner-side sub ID tells the two promo-page placements apart). */
+export type TnSubIdSurface = AnalyticsSurface | 'web_promo_date';
+
+function subIdPart(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^[-_]+|[-_]+$/g, '');
+}
+
+/** {surface}_{slug}, sanitised and capped at 64 characters by truncating the
+ *  slug. A complete token (the away-game key) passes as `slug` with an empty
+ *  surface handled by the caller; see buildTicketNetworkLink. */
+export function tnSubId(surface: TnSubIdSurface, slug: string): string {
+  const head = subIdPart(surface).slice(0, TN_SUBID_MAX);
+  const tail = subIdPart(slug);
+  const room = TN_SUBID_MAX - head.length - 1;
+  if (!tail || room <= 0) return head;
+  return `${head}_${tail.slice(0, room).replace(/[-_]+$/, '')}`;
+}
+
+/** A complete sub-ID token (away-game rows), sanitised and capped. */
+function tnSubIdToken(token: string): string {
+  return subIdPart(token).slice(0, TN_SUBID_MAX).replace(/[-_]+$/, '');
+}
+
+// Gate B2 PREVIEW HOOK (2026-11-02). On a Vercel PREVIEW build only, a
+// NEXT_PUBLIC_TN_SUBID_OVERRIDE value replaces every TicketNetwork subId1 so
+// test clicks are identifiable in Impact (preview_tn_test). Inert in
+// production twice over: the variable is set only in the Preview scope of the
+// feature branch, and the override is ignored unless the build's
+// NEXT_PUBLIC_VERCEL_ENV is "preview". Both are inlined at build time, so the
+// server render and the client hydration agree.
+export function tnSubIdOverride(env: { vercelEnv?: string; override?: string }): string | null {
+  if (env.vercelEnv !== 'preview') return null;
+  const v = (env.override || '').trim();
+  return TN_SUBID_RE.test(v) ? v : null;
+}
+// Literal process.env reads, so Next inlines both into the client bundle.
+const TN_SUBID_OVERRIDE = tnSubIdOverride({
+  vercelEnv: process.env.NEXT_PUBLIC_VERCEL_ENV,
+  override: process.env.NEXT_PUBLIC_TN_SUBID_OVERRIDE,
+});
+
 export type TicketNetworkLinkOpts = {
   team: Pick<Team, 'id' | 'ticketNetworkSlug'>;
   /** Venue hub only: building slug. When set, subId1 is the building-keyed
@@ -270,8 +358,12 @@ export type TicketNetworkLinkOpts = {
    *  key (see awayGameSubKey). */
   subKey?: string;
   /** subId1 surface segment, already including the `web_` prefix
-   *  (e.g. 'web_team_page'). */
-  surface: AnalyticsSurface;
+   *  (e.g. 'web_team_page'). REQUIRED: there is no default sub ID. */
+  surface: TnSubIdSurface;
+  /** The game's TicketNetwork event page (Game.tnEventUrl). When it is a valid
+   *  event URL the link wraps it unchanged; otherwise, or when absent, the
+   *  team performer page as before. */
+  eventUrl?: string | null;
 };
 
 // Assembles the full tracked TicketNetwork link. Returns null when the landing
@@ -279,8 +371,14 @@ export type TicketNetworkLinkOpts = {
 // <a>). subId1 uses team.id (matches analytics team_slug + the Expedia pubref
 // for cross-partner joinability) even when the landing slug is overridden.
 export function buildTicketNetworkLink(opts: TicketNetworkLinkOpts): string | null {
-  const landing = ticketNetworkLandingUrl(opts.team);
+  const landing = isTicketNetworkEventUrl(opts.eventUrl) ? opts.eventUrl : ticketNetworkLandingUrl(opts.team);
   if (!landing) return null;
+  // The preview override wins (Gate B2 testing); then a complete away-game
+  // token; then {surface}_{building} on a venue hub; else {surface}_{team}.
+  const subId1 =
+    TN_SUBID_OVERRIDE ??
+    (opts.subKey ? tnSubIdToken(opts.subKey) : null) ??
+    tnSubId(opts.surface, opts.venueSlug || opts.team.id);
   return (
     `${TICKETNETWORK.prefix}?u=${encodeURIComponent(landing)}` +
     `&partnerpropertyid=${TICKETNETWORK.partnerPropertyId}` +
@@ -289,7 +387,7 @@ export function buildTicketNetworkLink(opts: TicketNetworkLinkOpts): string | nu
     // the subId is web_venue_{slug} with NO team suffix. Team-keyed attribution
     // (surface_team.id) is for the team-page block, where the team is known.
     `&MediaPartnerPropertyId=${TICKETNETWORK.partnerPropertyId}` +
-    `&subId1=${opts.subKey ?? (opts.venueSlug ? `${opts.surface}_${opts.venueSlug}` : `${opts.surface}_${opts.team.id}`)}`
+    `&subId1=${subId1}`
   );
 }
 

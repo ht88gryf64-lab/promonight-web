@@ -644,3 +644,21 @@ test('one fan-out: the endpoint uses the shared loop; the cron calls the endpoin
   for (const src of [cron, lib]) assert.doesNotMatch(src, /revalidatePath\(|revalidatePaths\(/, 'the cron never revalidates inside its own request');
   assert.match(lib, /\$\{origin\}\/api\/revalidate/);
 });
+
+test("the site batch adds the promo pages dated yesterday; a failing loader adds none; the CFB batch never asks", async () => {
+  const { nightlyRefreshPaths } = await import('../nightly-refresh');
+  const base = {
+    teams: async () => TEAMS,
+    venueHubSlugs: async () => [] as string[],
+    cfbSchoolIds: async () => SCHOOLS,
+    cfbMatchupSlugs: () => MATCHUPS,
+  };
+  const yesterday = ['/nhl/dallas-stars/promos/esa-lindell-bobblehead', '/nhl/detroit-red-wings/promos/original-six-matchup'];
+  const withPages = await nightlyRefreshPaths({ ...base, promoPagesDatedYesterday: async () => yesterday });
+  for (const p of yesterday) assert.ok(withPages.paths.includes(p), p);
+  const failing = await nightlyRefreshPaths({ ...base, promoPagesDatedYesterday: async () => { throw new Error('index down'); } });
+  const without = await nightlyRefreshPaths(base);
+  assert.deepEqual(failing.paths, without.paths, 'a loader failure leaves the batch exactly as it was');
+  const cfb = await nightlyRefreshPaths({ ...base, promoPagesDatedYesterday: async () => { throw new Error('must not run'); } }, 'cfb');
+  assert.ok(!cfb.paths.some((p) => p.includes('/promos/')));
+});

@@ -77,6 +77,7 @@ export function TripStepAffiliate(
         sport="cfb"
         surface="web_cfb_rivalry"
         placement="cfb_rivalry_timeline"
+        ticketLinkLevel={partner === 'ticketnetwork' || partner === 'ticketmaster' ? 'team' : undefined}
         className={buttonClass(tone)}
       >
         {cta}

@@ -4,7 +4,7 @@ import { TrackedAffiliateLink } from '@/components/tracked-affiliate-link';
 import { TrackedAppLink } from '@/components/analytics-events';
 import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
 import { getLeagueHub } from '@/lib/league-hubs';
-import { buildSpotHeroUrl, buildTicketmasterUrl } from '@/lib/affiliates';
+import { buildSpotHeroUrl, buildTicketmasterUrl, buildTicketNetworkLink, ticketNetworkLinkLevel } from '@/lib/affiliates';
 import { resolveHotelLink } from '@/lib/hotel-link';
 import { promoDownloadHref } from '@/lib/app-link';
 import { promoAnchorId, teamDisplayName } from '@/lib/promo-helpers';
@@ -60,6 +60,8 @@ import {
 // block, the previous edition) is what the guard test counts.
 
 export const PROMO_PAGE_SURFACE = 'web_promo_page' as const;
+/** subId1 surface of the per-date "Tickets" links (TicketNetwork only). */
+const PROMO_DATE_SUBID_SURFACE = 'web_promo_date' as const;
 
 export interface PromoPageViewProps {
   page: PromoPage;
@@ -179,7 +181,22 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
   const readOn = formatInstantDate(ctx.observedAt);
   const description = cleanText(primary.description);
 
-  const tickets = ticketHref(page);
+  // TICKETS (rulings 2026-11-02). The primary "Get tickets" is TicketNetwork:
+  // the event page of the primary row's game when the pipeline matched it
+  // (primary is the next upcoming date, so a series links its next game),
+  // else the team performer page; subId1 web_promo_page_{team}. Ticketmaster
+  // is the secondary text link. JSON-LD offers.url follows the primary href.
+  const ticketmaster = ticketHref(page);
+  // Only a date still to be played links its event (review round 2, H2): a
+  // page whose dates have all been played keeps a live row as primary, and a
+  // played game's event page has expired.
+  const eventUrlOf = (r: { date: string; tnEventUrl?: string | null }) => (r.date >= today ? r.tnEventUrl ?? null : null);
+  const primaryEventUrl = eventUrlOf(primary);
+  const ticketNetwork = buildTicketNetworkLink({ team, surface: PROMO_PAGE_SURFACE, eventUrl: primaryEventUrl });
+  const tickets = ticketNetwork ?? ticketmaster;
+  const ticketsPartner = ticketNetwork ? 'ticketnetwork' : 'ticketmaster';
+  const ticketsLevel = ticketNetwork ? ticketNetworkLinkLevel(primaryEventUrl) : 'team';
+  const ticketsBrand = ticketNetwork ? 'TicketNetwork' : 'Ticketmaster';
   const parking = buildSpotHeroUrl({ latitude: ctx.coords?.lat, longitude: ctx.coords?.lng, subKey: `${PROMO_PAGE_SURFACE}_${team.id}` });
   const hotels = resolveHotelLink({ team, venue: ctx.venue, surface: PROMO_PAGE_SURFACE, gameDate: multi ? null : primary.date || null });
 
@@ -206,6 +223,13 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
     imageUrl: head.imageUrl,
     location: ctx.location,
     ticketUrl: tickets,
+    // Each date's Event offers that date's own game: the event page when the
+    // pipeline matched it and the date is still to be played, else the team
+    // performer page. On a single-date page
+    // this is the primary href (rulings 2026-11-02); on a series it keeps the
+    // Dec 11 Event from offering the Nov 18 game. Falls back to the primary
+    // href only if TicketNetwork cannot be built at all.
+    ticketUrlFor: (r) => buildTicketNetworkLink({ team, surface: PROMO_PAGE_SURFACE, eventUrl: eventUrlOf(r) }),
     dateModified: page.updatedAt,
     faqs,
     // The visible trail, item for item (Google asks the markup to reflect it):
@@ -219,12 +243,40 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
 
   // A single-date page names the opponent once, in the matchup line above the
   // date; a series names it per date (ruling 2026-10-29).
-  const gameLine = (date: string, row: { displayTime: string; displayOpponent: string }, key: string, withOpponent: boolean) => (
-    <li key={key} className="m-0 list-none text-[15px] leading-[1.45] text-rd-ink-soft">
-      <strong className="text-rd-ink">{`${formatLongDate(date)}${row.displayTime ? ` · ${row.displayTime}` : ''}`}</strong>
-      {withOpponent && row.displayOpponent ? <span className="block">{`vs ${row.displayOpponent}`}</span> : null}
-    </li>
-  );
+  // A series row still to be played carries its own small "Tickets" link to
+  // that date's event (team performer page when unmatched).
+  const gameLine = (date: string, row: { displayTime: string; displayOpponent: string; promoId: string; tnEventUrl?: string | null }, key: string, withOpponent: boolean) => {
+    // subId1 web_promo_date_{team}: the per-date link, told apart from the
+    // primary CTA partner-side (the click event keeps surface web_promo_page).
+    const rowTickets = withOpponent && !removed && date >= today ? buildTicketNetworkLink({ team, surface: PROMO_DATE_SUBID_SURFACE, eventUrl: row.tnEventUrl ?? null }) : null;
+    return (
+      <li key={key} className="m-0 list-none text-[15px] leading-[1.45] text-rd-ink-soft">
+        <strong className="text-rd-ink">{`${formatLongDate(date)}${row.displayTime ? ` · ${row.displayTime}` : ''}`}</strong>
+        {rowTickets ? (
+          <>
+            {' '}
+            <TrackedAffiliateLink
+              href={rowTickets}
+              partner="ticketnetwork"
+              teamId={team.id}
+              sport={team.league}
+              promoId={row.promoId}
+              surface={PROMO_PAGE_SURFACE}
+              placement="promo_page_date"
+              ticketLinkLevel={ticketNetworkLinkLevel(row.tnEventUrl)}
+              target="_blank"
+              rel="noopener noreferrer sponsored"
+              ariaLabel={`Tickets for ${formatLongDate(date)}${row.displayOpponent ? ` vs ${row.displayOpponent}` : ''} on TicketNetwork`}
+              className="ml-1 font-rd text-[13px] font-semibold text-rd-red no-underline hover:underline"
+            >
+              Tickets
+            </TrackedAffiliateLink>
+          </>
+        ) : null}
+        {withOpponent && row.displayOpponent ? <span className="block">{`vs ${row.displayOpponent}`}</span> : null}
+      </li>
+    );
+  };
   // A series shows three dates and folds the rest into a native expander (no
   // script, every date in the HTML), so the CTA row follows a short list: the
   // next three, padded with the most recent played dates when fewer than
@@ -307,19 +359,38 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
           <section className="mt-4 flex flex-col gap-2.5">
             <TrackedAffiliateLink
               href={tickets}
-              partner="ticketmaster"
+              partner={ticketsPartner}
               teamId={team.id}
               sport={team.league}
               promoId={primary.promoId}
               surface={PROMO_PAGE_SURFACE}
               placement="promo_page_primary"
+              ticketLinkLevel={ticketsLevel}
               target="_blank"
               rel="noopener noreferrer sponsored"
-              ariaLabel={multi ? `Get ${teamName} tickets on Ticketmaster` : `Get tickets for ${teamName}${primary.displayOpponent ? ` vs ${primary.displayOpponent}` : ''} on Ticketmaster`}
+              ariaLabel={ticketsLevel === 'event' || !multi ? `Get tickets for ${teamName}${primary.displayOpponent ? ` vs ${primary.displayOpponent}` : ''} on ${ticketsBrand}` : `Get ${teamName} tickets on ${ticketsBrand}`}
               className="flex h-[52px] items-center justify-center rounded-[14px] bg-rd-red font-rd text-[16px] font-semibold text-white no-underline hover:bg-rd-red-dark"
             >
               Get tickets
             </TrackedAffiliateLink>
+            {ticketNetwork ? (
+              <TrackedAffiliateLink
+                href={ticketmaster}
+                partner="ticketmaster"
+                teamId={team.id}
+                sport={team.league}
+                promoId={primary.promoId}
+                surface={PROMO_PAGE_SURFACE}
+                placement="promo_page_ticketmaster"
+                ticketLinkLevel="team"
+                target="_blank"
+                rel="noopener noreferrer sponsored"
+                ariaLabel={`${teamName} tickets, also on Ticketmaster`}
+                className="self-center font-rd text-[14px] font-medium text-rd-red no-underline hover:underline"
+              >
+                Also on Ticketmaster
+              </TrackedAffiliateLink>
+            ) : null}
             <div className="flex flex-wrap gap-2">
               <TrackedAffiliateLink
                 href={parking}

@@ -28,6 +28,26 @@ import { getAllVenueHubSlugs } from '@/lib/venue-hub';
 import { getAllCfbSchoolIds } from '@/lib/cfb/data';
 import { getAllMatchupSlugs } from '@/lib/cfb/matchups';
 import { submitToIndexNow } from '@/lib/indexnow';
+import { isPromoPagesLive, promoPagePath } from '@/lib/promo-page-copy';
+import { addDaysYmd, siteTodayYmd } from '@/lib/site-today';
+
+/** The promo pages with a game on the site day that just ended (see
+ *  NightlyLoaders.promoPagesDatedYesterday). Empty while promo pages are off. */
+async function promoPagesDatedYesterday(): Promise<string[]> {
+  if (!isPromoPagesLive()) return [];
+  const yesterday = addDaysYmd(siteTodayYmd(), -1);
+  // Loaded here, not at the top: the route's other loaders stay as light as
+  // before, and a load failure is the loader's failure (it adds no paths).
+  const { getUpcomingPromoIndex } = await import('@/lib/promo-pages');
+  const [index, teams] = await Promise.all([getUpcomingPromoIndex(yesterday), getAllTeams()]);
+  const sportOf = new Map(teams.map((t) => [t.id, t.sportSlug]));
+  const out = new Set<string>();
+  for (const p of index) {
+    const sport = sportOf.get(p.teamId);
+    if (p.date === yesterday && sport) out.add(promoPagePath(sport, p.teamId, p.pageSlug));
+  }
+  return [...out];
+}
 import {
   isNightlyRefreshWindow,
   nightlyRefreshPaths,
@@ -93,6 +113,7 @@ export async function GET(request: Request) {
       venueHubSlugs: getAllVenueHubSlugs,
       cfbSchoolIds: getAllCfbSchoolIds,
       cfbMatchupSlugs: getAllMatchupSlugs,
+      promoPagesDatedYesterday,
     },
     batch,
   );

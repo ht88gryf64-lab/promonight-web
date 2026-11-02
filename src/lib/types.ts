@@ -313,6 +313,13 @@ export interface Game {
   neutralSite?: boolean;
   // ISO string at the data-layer boundary; stored as a Firestore Timestamp.
   ingestedAt?: string;
+  // The TicketNetwork event page for this game, written by the pipeline
+  // (promo-pipeline scripts/tn-event-links.js) only after an exact match on
+  // home club + venue-local date + opponent. mapGameDoc exposes it only when it
+  // is a TicketNetwork /tickets/{id}/ URL. The pipeline's other tn* fields
+  // (tnEventId, tnObservedAt, tnCheckedAt) are never mapped, so they never
+  // reach a client component or the RSC payload.
+  tnEventUrl?: string;
 }
 
 // Which games a team page counts and renders. Regular season only.
