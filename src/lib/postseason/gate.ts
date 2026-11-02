@@ -1,6 +1,7 @@
 // When the Playoffs link shows. PURE.
 //
-// One rule, used by the nav, the brand bar, the mobile menu and the sitemap:
+// One rule, used by the nav, the brand bar, the mobile menu and the inbound
+// modules (not the sitemap, since 2026-11-02: see getPlayoffsSitemapEntries):
 //
 //   ACTIVE           any current-season bracket has a series that is not
 //                    final. The link shows.

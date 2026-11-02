@@ -484,13 +484,16 @@ export async function getPlayoffsInboundOrNone(where: string): Promise<InboundLe
 }
 
 /** What the sitemap lists: the hub and each league page that has a bracket,
- *  each with the moment its bracket last changed. Empty when the gate is
- *  closed. Read fresh, so lastmod is the document's current stamp. Throws
- *  when the read fails, so the sitemap fails loudly rather than serving a
- *  copy that is missing these pages. */
+ *  each with the moment its bracket last changed. NOT under the link gate
+ *  (Matt, 2026-11-02): a finished season's pages stay listed through the
+ *  offseason, while the nav link and the inbound modules still switch off
+ *  when the champion window closes. Empty only when no current-season bracket
+ *  exists at all. Read fresh, so lastmod is the document's current stamp.
+ *  Throws when the read fails, so the sitemap fails loudly rather than serving
+ *  a copy that is missing these pages. */
 export async function getPlayoffsSitemapEntries(now: Date = new Date()): Promise<{ path: string; lastModified: Date }[]> {
   const brackets = await readCurrentBrackets();
-  if (playoffsLinkState(brackets, now).state === 'hidden') return [];
+  if (brackets.length === 0) return [];
   const stamped = brackets.map((b) => ({
     path: postseasonPath(b.league),
     lastModified: b.lastChangedAt ? new Date(b.lastChangedAt) : now,

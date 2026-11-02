@@ -546,12 +546,23 @@ test('LINK GATE, cached: a failed read is not remembered; a good one is; the clo
   assert.equal(await isPlayoffsLinkActive(new Date(ENDED + 14 * DAY + 1)), false);
   assert.equal(fake.reads.length, 2, 'no second read inside the five minutes');
 
-  // The sitemap follows the same gate.
+  // The sitemap does NOT follow the gate (Matt, 2026-11-02): inside the window
+  // and long after it, a finished bracket's pages stay listed with the
+  // bracket's own stamp.
   const open = await getPlayoffsSitemapEntries(new Date(ENDED + DAY));
   assert.deepEqual(open.map((e) => e.path), ['/playoffs', '/playoffs/mlb']);
   const stamp = (FINISHED().lastChangedAt as { toDate: () => Date }).toDate().toISOString();
   assert.deepEqual(open.map((e) => e.lastModified.toISOString()), [stamp, stamp]);
-  assert.deepEqual(await getPlayoffsSitemapEntries(new Date(ENDED + 15 * DAY)), []);
+  const later = await getPlayoffsSitemapEntries(new Date(ENDED + 15 * DAY));
+  assert.deepEqual(later.map((e) => e.path), ['/playoffs', '/playoffs/mlb'], 'still listed after the window closes');
+  assert.deepEqual(later.map((e) => e.lastModified.toISOString()), [stamp, stamp]);
+  assert.equal(await isPlayoffsLinkActive(new Date(ENDED + 15 * DAY)), false, 'while the link itself is hidden');
+});
+
+test('SITEMAP: with no current-season bracket at all, the playoffs pages are not listed', async () => {
+  const { getPlayoffsSitemapEntries } = await load();
+  use({});
+  assert.deepEqual(await getPlayoffsSitemapEntries(new Date(ENDED + 400 * DAY)), []);
 });
 
 // ---- The inbound modules: one build, under the link gate ----
