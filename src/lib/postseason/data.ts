@@ -428,8 +428,8 @@ export async function getPlayoffsLinkState(now: Date = new Date()): Promise<Play
 }
 
 /**
- * The gate on the Playoffs link in the nav, the brand bar, the mobile menu
- * and the sitemap. True while any current-season bracket has a series that is
+ * The gate on the Playoffs link in the nav, the brand bar and the mobile
+ * menu (the sitemap no longer follows it: see getPlayoffsSitemapEntries). True while any current-season bracket has a series that is
  * not final, and for 14 days after the last series in all of them went final.
  */
 export async function isPlayoffsLinkActive(now: Date = new Date()): Promise<boolean> {
