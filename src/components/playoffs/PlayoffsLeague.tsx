@@ -129,7 +129,13 @@ export function PlayoffsLeague({
 
         <div data-page-intro>
           <p data-lede className="mt-2.5 max-w-[52ch] text-[15px] text-rd-ink-soft">
-            The {season} {league} postseason bracket: every series, seed and result, with game times in Eastern.
+            {league === 'MLS' ? (
+              `The ${season} MLS postseason bracket: every matchup, seed and result, with game times in Eastern.`
+            ) : (
+              <>
+                The {season} {league} postseason bracket: every series, seed and result, with game times in Eastern.
+              </>
+            )}
           </p>
           {/* Inside the introduction, never a child of the article: a new
               child would be an ad anchor above the bracket. */}

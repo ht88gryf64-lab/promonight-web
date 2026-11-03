@@ -100,8 +100,15 @@ function moduleSection(club: ClubPlayoffs, teamId: string, teamName: string): Re
             </p>
           )}
           {club.nextHost && <p className="font-rd text-[13.5px] text-rd-ink-soft">{club.nextHost}</p>}
-          <TrackedLink href={club.seriesHref} surface={SURFACE} ctaId="playoffs_module_series" ctaLabel="See the series" teamSlug={teamId} className={LINK}>
-            See the series
+          <TrackedLink
+            href={club.seriesHref}
+            surface={SURFACE}
+            ctaId="playoffs_module_series"
+            ctaLabel={club.single ? 'See the matchup' : 'See the series'}
+            teamSlug={teamId}
+            className={LINK}
+          >
+            {club.single ? 'See the matchup' : 'See the series'}
           </TrackedLink>
           <Stamp at={club.updatedLabel} />
         </>

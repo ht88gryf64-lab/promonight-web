@@ -5,7 +5,7 @@ import { makeCollectionLoader } from '../collection-cache';
 import { getAllTeams, getVenueForTeam } from '../data';
 import { getTeamVenueHubMap } from '../venue-hub';
 import { mapBracketDoc } from './map';
-import { playoffsLinkState, type PlayoffsLinkState } from './gate';
+import { inboundBrackets, playoffsLinkState, type PlayoffsLinkState } from './gate';
 import { buildLeagueView, clubSlugs, easternYmd, hostSlugs, seriesIds, type ClubInfo, type LeagueView, type ParkInfo } from './view';
 import {
   assemblePredictions,
@@ -33,7 +33,18 @@ export const POSTSEASON_SEASON = 2026;
 // The leagues with a playoffs route. This is the route table, not a copy of
 // anything in a format file: rounds, labels, seeds and hosts all come from
 // the document.
-export const POSTSEASON_LEAGUES: readonly PostseasonLeague[] = ['MLB', 'WNBA'];
+export const POSTSEASON_LEAGUES: readonly PostseasonLeague[] = ['MLB', 'WNBA', 'MLS'];
+
+// The leagues with PromoNight Predicts. MLS has a bracket and no predictions
+// (Matt's ruling, 2026-11-03): no predictedBrackets read, no pick line, no
+// methodology. A league outside this set never asks for the document, so a
+// missing MLS_2026 prediction is not a failure and logs nothing.
+export const PREDICTIONS_LEAGUES: ReadonlySet<PostseasonLeague> = new Set<PostseasonLeague>(['MLB', 'WNBA']);
+
+// The leagues whose hosts publish postseason promotions the playoffs pages
+// read. No MLS playoff promotions in 2026 (Matt's ruling, 2026-11-03): the
+// MLS page makes no promotions read and lists none.
+export const POSTSEASON_PROMO_LEAGUES: ReadonlySet<PostseasonLeague> = new Set<PostseasonLeague>(['MLB', 'WNBA']);
 
 const BRACKETS = 'postseasonBrackets';
 const PREDICTED = 'predictedBrackets';
@@ -167,7 +178,7 @@ async function buildViewFor(bracket: Bracket, now: Date, opts: { withPromos: boo
   // name; no regular reader sees these rows. Only the playoffs pages show
   // them, so only they pay for the read: the inbound modules on 169 team
   // pages, the venue pages and the hubs do not ask.
-  const promos = opts.withPromos ? await readPostseasonPromos(bracket.league, bracket.season, hostSlugs(bracket), easternYmd(now)) : [];
+  const promos = opts.withPromos && POSTSEASON_PROMO_LEAGUES.has(bracket.league) ? await readPostseasonPromos(bracket.league, bracket.season, hostSlugs(bracket), easternYmd(now)) : [];
 
   return buildLeagueView(bracket, clubs, parks, now, promos);
 }
@@ -290,6 +301,8 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
 class DisabledSignal extends Error {}
 
 async function loadPredictions(league: PostseasonLeague, bracket: Bracket, view: LeagueView): Promise<LeaguePredictions | null> {
+  // No predictions for this league at all: no read, no log line.
+  if (!PREDICTIONS_LEAGUES.has(league)) return null;
   let reason: PredictionsUnavailableReason;
   try {
     if (predictionsDisabled(league)) throw new DisabledSignal();
@@ -326,6 +339,7 @@ async function loadPredictions(league: PostseasonLeague, bracket: Bracket, view:
 export type TeamPickUnavailableReason = PredictionsUnavailableReason | TeamPickFailure;
 
 export async function loadTeamPick(l: InboundLeague, teamId: string): Promise<TeamPickView | null> {
+  if (!PREDICTIONS_LEAGUES.has(l.league)) return null;
   let reason: TeamPickUnavailableReason;
   try {
     if (predictionsDisabled(l.league)) throw new DisabledSignal();
@@ -440,10 +454,13 @@ export async function isPlayoffsLinkActive(now: Date = new Date()): Promise<bool
  * What the pages OUTSIDE /playoffs show about the postseason: the team
  * pages, the league hubs, the homepage and the venue pages.
  *
- * One answer for all four, under the same gate as the Playoffs link. When
- * the gate is closed the answer is an empty list and nothing renders
- * anywhere. When it is open, it is every current-season bracket that could
- * be read and built.
+ * One answer for all four, gated PER LEAGUE (2026-11-03): each league is in
+ * the answer while its own bracket is being played or inside its own
+ * champion window, and out of it once that window closes, whatever the other
+ * leagues are doing (see inboundBrackets in ./gate.ts). So the MLB and WNBA
+ * modules switch off on their own dates while MLS is still being played. The
+ * Playoffs link keeps the all-league rule: it shows while any league is
+ * being played or in its window.
  *
  * NOT behind the process cache. The pipeline revalidates the team page of
  * every club in a changed series, the host venue pages and the league hub
@@ -455,9 +472,8 @@ export async function isPlayoffsLinkActive(now: Date = new Date()): Promise<bool
  * beside it. Throws when the read fails, so each caller fails closed.
  */
 export async function buildPlayoffsInbound(brackets: readonly Bracket[], now: Date): Promise<InboundLeague[]> {
-  if (playoffsLinkState(brackets, now).state === 'hidden') return [];
   const out: InboundLeague[] = [];
-  for (const bracket of brackets) {
+  for (const bracket of inboundBrackets(brackets, now)) {
     const view = await buildViewFor(bracket, now, { withPromos: false });
     if (!view) {
       console.error(`[postseason] ${docId(bracket.league)} names a club with no team record; it is left out of the inbound modules`);

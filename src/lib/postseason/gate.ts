@@ -1,7 +1,9 @@
 // When the Playoffs link shows. PURE.
 //
-// One rule, used by the nav, the brand bar, the mobile menu and the inbound
-// modules (not the sitemap, since 2026-11-02: see getPlayoffsSitemapEntries):
+// One rule, used by the nav, the brand bar and the mobile menu across all
+// leagues at once, and by the inbound modules ONE LEAGUE AT A TIME (since
+// 2026-11-03: see inboundBrackets). Not the sitemap, since 2026-11-02: see
+// getPlayoffsSitemapEntries.
 //
 //   ACTIVE           any current-season bracket has a series that is not
 //                    final. The link shows.
@@ -76,4 +78,16 @@ export function playoffsLinkState(brackets: readonly Bracket[], now: Date): Play
 
 export function playoffsLinkVisible(brackets: readonly Bracket[], now: Date): boolean {
   return playoffsLinkState(brackets, now).state !== 'hidden';
+}
+
+/**
+ * The brackets whose modules may show on the pages outside /playoffs: each
+ * league judged by the same rule on its own bracket alone. A league being
+ * played is in; a finished league is in for 14 days from its own last final
+ * game and out after that, even while another league is still being played
+ * (MLB and WNBA finish in October, MLS in December). The order of the input
+ * is kept.
+ */
+export function inboundBrackets(brackets: readonly Bracket[], now: Date): Bracket[] {
+  return brackets.filter((b) => playoffsLinkState([b], now).state !== 'hidden');
 }

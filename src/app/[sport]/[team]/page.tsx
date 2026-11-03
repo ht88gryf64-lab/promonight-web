@@ -42,6 +42,7 @@ import { AD_SLOTS } from '@/lib/ads/slots';
 import { isRedesignEnabled } from '@/lib/redesign';
 import { getTeamPostseason } from '@/lib/postseason/data';
 import { TeamPlayoffsModule } from '@/components/playoffs/inbound/TeamPlayoffsModule';
+import { teamShortName } from '@/lib/team-display-name';
 import { isTitleTreatmentTeam, teamMetaTitle } from '@/lib/title-treatment';
 import { getCoverageCounts } from '@/lib/get-coverage-counts';
 import { isSeasonScopeLive, resolveClaimMode } from '@/lib/season-scope';
@@ -414,7 +415,16 @@ export default async function TeamPage({
     return (
       <RedesignTeamPage
         postseason={
-          postseason ? <TeamPlayoffsModule club={postseason.club} teamId={team.id} teamName={team.name} pick={postseason.pick} /> : null
+          // An MLS nickname is a fragment ("United"); the module says
+          // "Minnesota United vs Seattle Sounders". Other leagues as before.
+          postseason ? (
+            <TeamPlayoffsModule
+              club={postseason.club}
+              teamId={team.id}
+              teamName={team.league === 'MLS' ? teamShortName(team) : team.name}
+              pick={postseason.pick}
+            />
+          ) : null
         }
         team={team}
         coverage={coverage}

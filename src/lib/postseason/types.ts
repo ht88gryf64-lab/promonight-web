@@ -9,7 +9,7 @@
 // series keys ("AL-WC-B"), which are keys and not copy. The view in
 // ./view.ts is what reaches markup, and it carries no series key at all.
 
-export type PostseasonLeague = 'MLB' | 'WNBA';
+export type PostseasonLeague = 'MLB' | 'WNBA' | 'MLS';
 
 export type SeriesStatus = 'upcoming' | 'live' | 'final';
 
@@ -62,7 +62,16 @@ export interface BracketGame {
   awayScore: number | null;
   winnerSide: Side | null;
   ifNecessary: boolean;
+  /** MLS only, and only on a final game: how it was decided. The key is
+   *  absent on every MLB and WNBA game, so their brackets are unchanged. */
+  decidedBy?: DecidedBy;
+  /** MLS only, set only when decidedBy is 'penalties': the shootout score.
+   *  The match score is then level. */
+  homeShootout?: number;
+  awayShootout?: number;
 }
+
+export type DecidedBy = 'regulation' | 'extra_time' | 'penalties';
 
 export interface BracketSeries {
   round: string;

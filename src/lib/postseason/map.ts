@@ -18,6 +18,7 @@
 import type {
   Bracket,
   BracketGame,
+  DecidedBy,
   BracketSeries,
   BracketSlot,
   GameStatus,
@@ -138,9 +139,10 @@ function parseSlot(v: unknown): StoredSlot | null {
 }
 
 // The shapes a series key takes. MLB: AL-WC-A, NL-DS-B, AL-CS. WNBA: R1-1v8,
-// SF-A. A token is also a key when it is, exactly, a key of this document,
-// which is what catches the short ones (WS, F).
-const KEY_SHAPES = [/^[A-Z]+-[A-Z]+-[A-Z0-9]+$/, /^[A-Z]+-[A-Z]{2}$/, /^R\d+-\d+v\d+$/, /^[A-Z]{1,3}-[A-Z0-9]$/];
+// SF-A. MLS: E-WC, W-WC, E-R1-1, W-SF-A, E-CF. A token is also a key when it
+// is, exactly, a key of this document, which is what catches the short ones
+// (WS, F, CUP).
+const KEY_SHAPES = [/^[A-Z]+-[A-Z]+-[A-Z0-9]+$/, /^[A-Z]+-[A-Z]{2}$/, /^R\d+-\d+v\d+$/, /^[A-Z]{1,3}-[A-Z0-9]$/, /^[A-Z]+-R\d+-\d+$/];
 /** What a slot shows when its stored label cannot be shown. */
 export const UNDECIDED_LABEL = 'To be decided';
 
@@ -183,6 +185,7 @@ function mapGame(
   v: unknown,
   stored: { higher: StoredSlot; lower: StoredSlot },
   resolved: { higher: BracketSlot; lower: BracketSlot },
+  league: PostseasonLeague,
 ): BracketGame | null {
   if (!isObject(v)) return null;
   const gameNumber = wholeNumber(v.gameNumber);
@@ -204,7 +207,7 @@ function mapGame(
   // A final game with no winner is a result the page cannot state.
   if (status === 'final' && winnerSide === null) return null;
 
-  return {
+  const game: BracketGame = {
     gameNumber,
     date,
     start: instantOf(v.start),
@@ -216,9 +219,59 @@ function mapGame(
     winnerSide,
     ifNecessary: v.ifNecessary === true,
   };
+  // MLB and WNBA games are returned exactly as before: the soccer fields are
+  // not read for them and no key for them is added.
+  return league === 'MLS' ? soccerGame(v, game) : game;
 }
 
-function mapSeries(v: unknown, keys: ReadonlySet<string>, mapped: ReadonlyMap<string, BracketSeries>): BracketSeries | null {
+const DECIDED_BY: readonly DecidedBy[] = ['regulation', 'extra_time', 'penalties'];
+const absent = (x: unknown) => x === null || x === undefined;
+
+/**
+ * An MLS game, with how a final one was decided, or null when the row breaks
+ * the contract (the pipeline writes exactly this, and anything else is a
+ * document the page cannot state facts from):
+ *   - decidedBy is null unless the game is final, and one of the three
+ *     values when it is;
+ *   - the shootout scores are set exactly when decidedBy is 'penalties', are
+ *     whole numbers, and differ;
+ *   - a final game has both match scores; they are level exactly when it went
+ *     to penalties;
+ *   - the winner is the side that scored more, or won the shootout. Checked
+ *     only where the row's host is confirmed: with no host the sides of the
+ *     scores are unknown, and the page shows no result for the game.
+ */
+function soccerGame(v: Raw, game: BracketGame): BracketGame | null {
+  const by = v.decidedBy;
+  const hs = v.homeShootout;
+  const as = v.awayShootout;
+  if (game.status !== 'final') {
+    if (!absent(by) || !absent(hs) || !absent(as)) return null;
+    return game;
+  }
+  if (typeof by !== 'string' || !DECIDED_BY.includes(by as DecidedBy)) return null;
+  const decidedBy = by as DecidedBy;
+  if (game.homeScore === null || game.awayScore === null) return null;
+  const level = game.homeScore === game.awayScore;
+  if (decidedBy === 'penalties') {
+    const h = wholeNumber(hs);
+    const a = wholeNumber(as);
+    if (h === null || a === null || h === a || !level) return null;
+    if (game.homeSide !== null) {
+      const shootoutWinner = h > a ? game.homeSide : game.homeSide === 'higher' ? 'lower' : 'higher';
+      if (shootoutWinner !== game.winnerSide) return null;
+    }
+    return { ...game, decidedBy, homeShootout: h, awayShootout: a };
+  }
+  if (!absent(hs) || !absent(as) || level) return null;
+  if (game.homeSide !== null) {
+    const scoreWinner = game.homeScore > game.awayScore ? game.homeSide : game.homeSide === 'higher' ? 'lower' : 'higher';
+    if (scoreWinner !== game.winnerSide) return null;
+  }
+  return { ...game, decidedBy };
+}
+
+function mapSeries(v: unknown, keys: ReadonlySet<string>, mapped: ReadonlyMap<string, BracketSeries>, league: PostseasonLeague): BracketSeries | null {
   if (!isObject(v)) return null;
   const round = text(v.round);
   const roundLabel = text(v.roundLabel);
@@ -255,7 +308,7 @@ function mapSeries(v: unknown, keys: ReadonlySet<string>, mapped: ReadonlyMap<st
   const games: BracketGame[] = [];
   const seen = new Set<number>();
   for (const g of v.games) {
-    const game = mapGame(g, { higher: storedHigher, lower: storedLower }, { higher, lower });
+    const game = mapGame(g, { higher: storedHigher, lower: storedLower }, { higher, lower }, league);
     if (!game || seen.has(game.gameNumber)) return null;
     seen.add(game.gameNumber);
     games.push(game);
@@ -310,7 +363,7 @@ export function mapBracketDoc(
   const series: BracketSeries[] = [];
   const mapped = new Map<string, BracketSeries>();
   for (const s of data.series) {
-    const one = mapSeries(s, keys, mapped);
+    const one = mapSeries(s, keys, mapped, expected.league);
     if (!one) return null;
     mapped.set(one.seriesKey, one);
     series.push(one);

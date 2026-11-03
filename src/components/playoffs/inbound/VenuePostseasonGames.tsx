@@ -23,7 +23,13 @@ export function VenuePostseasonGames({ games, buildingSlug }: { games: VenueGame
               <TrackedLink href={g.href} surface={SURFACE} ctaId="playoffs_module_series" ctaLabel={g.matchup} className="group block">
                 <span className="block font-rd text-[15px] font-bold leading-snug text-rd-ink group-hover:text-rd-red">{g.matchup}</span>
                 <span className="mt-0.5 block font-rd text-[13px] text-rd-ink-soft">
-                  {g.roundLabel} · {g.gameTitle}
+                  {g.gameTitle ? (
+                    <>
+                      {g.roundLabel} · {g.gameTitle}
+                    </>
+                  ) : (
+                    g.roundLabel
+                  )}
                   {g.ifNecessary ? ' · If necessary' : ''}
                 </span>
                 <span className="mt-0.5 block font-rd text-[13.5px] text-rd-ink">{g.when}</span>

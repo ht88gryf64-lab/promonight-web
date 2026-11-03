@@ -9,6 +9,7 @@
 // The output is plain data with no functions and no class instances, so it
 // can be handed to a client component as it is.
 import type { PromoType } from '../types';
+import { MLS_SHORT_NAMES, teamDisplayName, teamShortName } from '../team-display-name';
 import type { Bracket, BracketGame, BracketSeries, BracketSlot, GameStatus, PostseasonLeague, Side } from './types';
 
 export const EASTERN = 'America/New_York';
@@ -113,7 +114,9 @@ export interface SeriesView {
   status: BracketSeries['status'];
   /** "ATL leads 1-0", "Series tied 1-1", "NYY won 2-1". Null at 0-0. */
   scoreLine: string | null;
-  /** "Game 2 live" while a game is in progress. */
+  /** "Game 2 live" while a game is in progress. Never set for MLS: an MLS
+   *  game that has started and is not final reads as its scheduled game
+   *  (Matt's ruling, 2026-11-03: no freshness claim for MLS anywhere). */
   liveLabel: string | null;
   /** "Game 2 · Wed, Sep 30 · 3:08 PM ET". Null when nothing is scheduled. */
   nextLabel: string | null;
@@ -121,6 +124,13 @@ export interface SeriesView {
   headline: string;
   next: GameView | null;
   games: GameView[];
+  /** A one-game round (MLS). Present only then, so an MLB or WNBA series
+   *  serializes exactly as before. Its game has no "Game 1" title and its
+   *  card shows no win count. */
+  single?: true;
+  /** A decided one-game round (MLS): how the match ended, from the winner's
+   *  side, "2-1 after extra time". Present only then. */
+  matchScore?: string;
 }
 
 export interface RoundView {
@@ -272,11 +282,15 @@ function slotView(
     // A club the web has no record of cannot be named. The caller treats this
     // as an unavailable bracket, never as a slug turned into a title.
     if (!club) return null;
+    // An MLS club's stored nickname is a fragment ("United", "Real"), so
+    // MLS cards and prose use the club's short brand and its full name.
+    // Every other league is as it was.
+    const mls = league === 'MLS';
     return {
       kind: 'club',
       seed: slot.seed,
-      label: club.name,
-      fullName: `${club.city} ${club.name}`,
+      label: mls ? teamShortName(club) : club.name,
+      fullName: mls ? teamDisplayName(club) : `${club.city} ${club.name}`,
       abbreviation: club.abbreviation,
       teamId: club.id,
       teamHref: `/${club.sportSlug}/${club.id}`,
@@ -323,17 +337,18 @@ export function placeholderText(
    *  ("ATL" is the Braves in MLB and the Dream in the WNBA). */
   league?: PostseasonLeague,
 ): string {
+  const short = (c: ClubInfo) => (league === 'MLS' ? teamShortName(c) : c.name);
   if (slot.candidates) {
     const a = clubs.get(slot.candidates[0]);
     const b = clubs.get(slot.candidates[1]);
-    if (a && b) return `${a.name} / ${b.name} winner`;
+    if (a && b) return `${short(a)} / ${short(b)} winner`;
   }
   if (slot.label !== 'TBD' && FEED_ABBREVIATIONS.test(slot.label)) {
     const all = [...clubs.values()].filter((c) => !league || c.sportSlug === league.toLowerCase());
     const names = slot.label.split('/').map((code) => {
       const alias = FEED_CODE_ALIASES[code];
       const hit = all.filter((c) => c.abbreviation === code || (alias !== undefined && c.abbreviation === alias));
-      return hit.length === 1 ? hit[0].name : null;
+      return hit.length === 1 ? short(hit[0]) : null;
     });
     if (names.some((n) => n === null)) return 'TBD';
     return names.length === 1 ? (names[0] as string) : `${names.join(' / ')} winner`;
@@ -377,6 +392,39 @@ export function isConditional(s: Pick<BracketSeries, 'bestOf' | 'wins' | 'status
   return lead + before >= clinch;
 }
 
+/** The verb for a club in short prose: "leads" or "lead". MLS uses the short
+ *  name map's own number; every other league's labels are nicknames, which
+ *  the standing line handles with its own list. */
+export function mlsVerb(teamId: string | null, plural: string, singular: string): string {
+  return teamId && MLS_SHORT_NAMES[teamId]?.plural ? plural : singular;
+}
+
+/** "Game 2 · Wed, Sep 30 · 3:08 PM ET", or, for a game with no title (the
+ *  one game of an MLS single-game round), the rest alone. */
+export function titled(title: string, rest: string): string {
+  return title ? `${title} · ${rest}` : rest;
+}
+
+/**
+ * How a final game ended, from the winner's side: "2-1", "2-1 after extra
+ * time", "4-3 on penalties after a 1-1 draw". Who won is the stored
+ * winnerSide, never the scores. Null when the row has no confirmed host
+ * (the scores' sides are then unknown) or no score.
+ */
+export function matchPhrase(g: BracketGame): string | null {
+  if (g.status !== 'final' || g.winnerSide === null || g.homeSide === null || g.homeScore === null || g.awayScore === null) return null;
+  const winnerHome = g.winnerSide === g.homeSide;
+  const w = winnerHome ? g.homeScore : g.awayScore;
+  const l = winnerHome ? g.awayScore : g.homeScore;
+  if (g.decidedBy === 'penalties' && g.homeShootout !== undefined && g.awayShootout !== undefined) {
+    const ws = winnerHome ? g.homeShootout : g.awayShootout;
+    const ls = winnerHome ? g.awayShootout : g.homeShootout;
+    return `${ws}-${ls} on penalties after a ${w}-${l} draw`;
+  }
+  if (g.decidedBy === 'extra_time') return `${w}-${l} after extra time`;
+  return `${w}-${l}`;
+}
+
 function gameView(
   g: BracketGame,
   s: BracketSeries,
@@ -384,7 +432,12 @@ function gameView(
   lower: SlotView,
   parks: ReadonlyMap<string, ParkInfo>,
   promos: ReadonlyMap<string, GamePromo>,
+  league: PostseasonLeague,
 ): GameView {
+  const mls = league === 'MLS';
+  // An MLS game under way is shown as the game it was scheduled to be: no
+  // score, no state, no badge (Matt's ruling, 2026-11-03).
+  const status: GameStatus = mls && g.status === 'live' ? 'scheduled' : g.status;
   const timed = !g.startTimeTBD && g.start !== null;
   // The day a game is listed under. With a known time it is the Eastern day
   // of the instant, so the day and the time shown beside it agree. With no
@@ -404,24 +457,33 @@ function gameView(
   if (g.status === 'final' && home && away && g.homeScore !== null && g.awayScore !== null) {
     const homeName = home.abbreviation ?? home.label;
     const awayName = away.abbreviation ?? away.label;
-    // Winner first, the way a line score is read aloud.
-    result =
-      g.homeScore >= g.awayScore
-        ? `${homeName} ${g.homeScore}, ${awayName} ${g.awayScore}`
-        : `${awayName} ${g.awayScore}, ${homeName} ${g.homeScore}`;
+    // Winner first, the way a line score is read aloud. The winner is the
+    // stored winnerSide: a level score (an MLS shootout) names no winner.
+    const homeFirst = g.winnerSide !== null ? g.winnerSide === g.homeSide : g.homeScore >= g.awayScore;
+    result = homeFirst
+      ? `${homeName} ${g.homeScore}, ${awayName} ${g.awayScore}`
+      : `${awayName} ${g.awayScore}, ${homeName} ${g.homeScore}`;
+    if (mls && g.decidedBy === 'extra_time') result += ' after extra time';
+    if (mls && g.decidedBy === 'penalties' && g.homeShootout !== undefined && g.awayShootout !== undefined) {
+      const winnerName = homeFirst ? homeName : awayName;
+      const ws = homeFirst ? g.homeShootout : g.awayShootout;
+      const ls = homeFirst ? g.awayShootout : g.homeShootout;
+      result += `, ${winnerName} won ${ws}-${ls} on penalties`;
+    }
   }
 
-  const conditional = isConditional(s, g);
+  const conditional = isConditional(s, { gameNumber: g.gameNumber, status });
   const waiting = conditional;
   const park = host && host.teamId ? parks.get(host.teamId) ?? null : null;
   return {
     gameNumber: g.gameNumber,
-    title: `Game ${g.gameNumber}`,
+    // The one game of a one-game round is not "Game 1" of anything.
+    title: s.bestOf === 1 && mls ? '' : `Game ${g.gameNumber}`,
     when,
     day: dayYmd,
     sortKey: timed ? `${dayYmd}T${easternClock(g.start as string)}` : `${g.date ?? '9999-99-99'}T99`,
-    state: g.status,
-    stateLabel: waiting ? 'If necessary' : STATE_LABEL[g.status],
+    state: status,
+    stateLabel: waiting ? 'If necessary' : STATE_LABEL[status],
     ifNecessary: conditional,
     result,
     matchup: home && away ? `${away.label} at ${home.label}` : `${lower.label} vs ${higher.label}`,
@@ -464,12 +526,16 @@ function seriesView(
   const higher = slotView(s.higher, 'higher', s, clubs, league);
   const lower = slotView(s.lower, 'lower', s, clubs, league);
   if (!higher || !lower) return null;
-  const games = s.games.map((g) => gameView(g, s, higher, lower, parks, promos));
+  const games = s.games.map((g) => gameView(g, s, higher, lower, parks, promos, league));
+  const mls = league === 'MLS';
+  const single = mls && s.bestOf === 1;
 
   let scoreLine: string | null = null;
   const hi = s.wins.higher;
   const lo = s.wins.lower;
-  if (s.status === 'final' && s.winnerSide) {
+  if (mls) {
+    scoreLine = mlsScoreLine(s, higher, lower, single);
+  } else if (s.status === 'final' && s.winnerSide) {
     const w = s.winnerSide === 'higher' ? higher : lower;
     scoreLine = `${w.abbreviation ?? w.label} won ${Math.max(hi, lo)}-${Math.min(hi, lo)}`;
   } else if (hi + lo > 0) {
@@ -488,23 +554,26 @@ function seriesView(
   const liveLabel = inProgress ? `${inProgress.title} live` : null;
   let nextLabel: string | null = null;
   if (next && next !== inProgress) {
-    if (next.state === 'scheduled') nextLabel = `${next.title} · ${next.when}`;
-    else nextLabel = `${next.title} · ${next.stateLabel}`;
+    if (next.state === 'scheduled') nextLabel = titled(next.title, next.when);
+    else nextLabel = titled(next.title, next.stateLabel);
   }
 
   const undecided = higher.kind === 'placeholder' || lower.kind === 'placeholder';
   const headline = liveLabel ?? scoreLine ?? nextLabel ?? (undecided ? 'Matchup to be decided' : 'No games listed');
 
   const pattern = homePattern(s);
-  return {
+  const view: SeriesView = {
     id,
     round: s.round,
     roundLabel: s.roundLabel,
     conference: s.conference,
-    formatLabel: pattern ? `Best of ${s.bestOf} · ${pattern}` : `Best of ${s.bestOf}`,
+    formatLabel: single ? 'Single game' : pattern ? `Best of ${s.bestOf} · ${pattern}` : `Best of ${s.bestOf}`,
     higher,
     lower,
-    status: s.status,
+    // An MLS series the document calls live only because its first game
+    // has started says nothing more than that it is upcoming: no game of it
+    // is final and no win is recorded.
+    status: mls && s.status === 'live' && hi + lo === 0 && !s.games.some((g) => g.status === 'final') ? 'upcoming' : s.status,
     scoreLine,
     liveLabel,
     nextLabel,
@@ -512,6 +581,43 @@ function seriesView(
     next,
     games,
   };
+  if (single) {
+    view.single = true;
+    const game = s.status === 'final' ? s.games.find((g) => g.status === 'final' && g.winnerSide === s.winnerSide) ?? null : null;
+    const phrase = game ? matchPhrase(game) : null;
+    if (phrase) view.matchScore = phrase;
+  }
+  return view;
+}
+
+/**
+ * The score line of an MLS series. A one-game round states the match:
+ * "LAFC beat Vancouver Whitecaps 2-1 after extra time", "Vancouver
+ * Whitecaps beat LAFC 4-3 on penalties after a 1-1 draw". Round One, a
+ * best-of-three, states the series in wins, and says "series", since a bare
+ * "1-0" reads as a match score: "Minnesota United leads the series 1-0",
+ * "Series tied 1-1", "Seattle Sounders won the series 2-1". Null before
+ * anything is decided.
+ */
+function mlsScoreLine(s: BracketSeries, higher: SlotView, lower: SlotView, single: boolean): string | null {
+  const hi = s.wins.higher;
+  const lo = s.wins.lower;
+  if (single) {
+    if (s.status !== 'final' || !s.winnerSide) return null;
+    const w = s.winnerSide === 'higher' ? higher : lower;
+    const l = w === higher ? lower : higher;
+    const game = s.games.find((g) => g.status === 'final' && g.winnerSide === s.winnerSide) ?? null;
+    const phrase = game ? matchPhrase(game) : null;
+    return phrase ? `${w.label} beat ${l.label} ${phrase}` : `${w.label} beat ${l.label}`;
+  }
+  if (s.status === 'final' && s.winnerSide) {
+    const w = s.winnerSide === 'higher' ? higher : lower;
+    return `${w.label} won the series ${Math.max(hi, lo)}-${Math.min(hi, lo)}`;
+  }
+  if (hi + lo === 0) return null;
+  if (hi === lo) return `Series tied ${hi}-${lo}`;
+  const l = hi > lo ? higher : lower;
+  return `${l.label} ${mlsVerb(l.teamId, 'lead', 'leads')} the series ${Math.max(hi, lo)}-${Math.min(hi, lo)}`;
 }
 
 // ---- The league ----
@@ -578,12 +684,20 @@ export function buildLeagueView(
   if (!open && champion && champion.teamId && champion.teamHref) {
     const hi = Math.max(decider!.higher.wins, decider!.lower.wins);
     const lo = Math.min(decider!.higher.wins, decider!.lower.wins);
+    // A one-game final is won by the match score, not "1-0" in wins.
+    let summary = `Won the ${last.label} ${hi}-${lo}`;
+    if (decider!.single) {
+      const raw = bracket.series.find((x) => ids.get(x.seriesKey) === decider!.id) as BracketSeries;
+      const game = raw.games.find((g) => g.status === 'final' && g.winnerSide === raw.winnerSide) ?? null;
+      const phrase = game ? matchPhrase(game) : null;
+      summary = phrase ? `Won the ${last.label} ${phrase}` : `Won the ${last.label}`;
+    }
     phase = {
       kind: 'concluded',
       championTeamId: champion.teamId,
       championName: champion.fullName,
       championHref: champion.teamHref,
-      summary: `Won the ${last.label} ${hi}-${lo}`,
+      summary,
     };
   } else {
     const current = open ?? last;

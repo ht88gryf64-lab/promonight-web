@@ -66,7 +66,8 @@ test('every module is fed by the one gated read', () => {
   const teamFn = data.slice(data.indexOf('export async function getTeamPostseason'), data.indexOf('export async function readLeaguesWithBracket'));
   assert.match(teamFn, /await getPlayoffsInboundOrNone\(/);
   assert.ok(!/getBracket\(|getLeaguePageData\(|readCurrentBrackets\(/.test(teamFn), 'the team function reads no bracket around the gate');
-  assert.match(data, /export async function buildPlayoffsInbound\([^)]*\)[^{]*\{\s*if \(playoffsLinkState\(brackets, now\)\.state === 'hidden'\) return \[\];/);
+  // Gated per league (2026-11-03): each league by its own window.
+  assert.match(data, /export async function buildPlayoffsInbound\([^)]*\)[^{]*\{\s*const out: InboundLeague\[\] = \[\];\s*for \(const bracket of inboundBrackets\(brackets, now\)\) \{/);
 });
 
 // ---- Team page ----
@@ -98,7 +99,7 @@ test('TEAM: the route asks one function, and passes the module its club and its 
   assert.match(c, /const postseason = await getTeamPostseason\(team\.sportSlug, team\.id\);/);
   assert.match(
     c,
-    /postseason=\{\s*postseason \? <TeamPlayoffsModule club=\{postseason\.club\} teamId=\{team\.id\} teamName=\{team\.name\} pick=\{postseason\.pick\} \/> : null\s*\}/,
+    /postseason=\{\s*(?:\/\/[^\n]*\n\s*)*postseason \? \(\s*<TeamPlayoffsModule\s+club=\{postseason\.club\}\s+teamId=\{team\.id\}\s+teamName=\{team\.league === 'MLS' \? teamShortName\(team\) : team\.name\}\s+pick=\{postseason\.pick\}\s*\/>\s*\) : null\s*\}/,
   );
   assert.equal((c.match(/getTeamPostseason\(/g) ?? []).length, 1);
   assert.equal((c.match(/getPredictedBracket|predictedBrackets|loadTeamPick|getPlayoffsInbound/g) ?? []).length, 0, 'the route reads the postseason only through getTeamPostseason');

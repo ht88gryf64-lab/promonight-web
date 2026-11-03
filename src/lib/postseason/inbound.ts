@@ -19,7 +19,7 @@
 // in progress belongs to the playoffs pages, which the pipeline revalidates
 // and which regenerate every ten minutes besides.
 import type { Bracket, PostseasonLeague } from './types';
-import type { HomeGameView, LeagueView, SeriesView, SlotView } from './view';
+import { titled, type HomeGameView, type LeagueView, type SeriesView, type SlotView } from './view';
 
 export interface InboundLeague {
   league: PostseasonLeague;
@@ -51,7 +51,7 @@ function nextGame(s: SeriesView): SeriesView['next'] {
 }
 function nextGameLabel(s: SeriesView): string | null {
   const g = nextGame(s);
-  return g ? `${g.title} · ${g.when}` : null;
+  return g ? titled(g.title, g.when) : null;
 }
 
 // ---- A club's team page ----
@@ -79,6 +79,9 @@ export type ClubPlayoffs =
       nextLabel: string | null;
       /** "Host: Astros · Daikin Park". */
       nextHost: string | null;
+      /** A one-game round (MLS): the link reads "See the matchup", not "See
+       *  the series". Present only then. */
+      single?: true;
     })
   /** Won its last series; the next one has not named it yet. */
   | (ClubBase & { state: 'advanced'; seriesHref: string; roundLabel: string; opponent: string; wonLine: string })
@@ -103,7 +106,7 @@ export function clubPlayoffs(leagues: readonly InboundLeague[], teamId: string):
     const base: ClubBase = { league: l.league, season: l.view.season, leagueHref: l.href, updatedLabel: l.view.updatedLabel };
 
     if (s.status !== 'final') {
-      return {
+      const alive: ClubPlayoffs = {
         ...base,
         state: 'alive',
         seriesHref: seriesHref(l, s),
@@ -116,9 +119,22 @@ export function clubPlayoffs(leagues: readonly InboundLeague[], teamId: string):
           return g && g.hostName ? (g.park ? `Host: ${g.hostName} · ${g.park}` : `Host: ${g.hostName}`) : null;
         })(),
       };
+      if (s.single) alive.single = true;
+      return alive;
     }
     if (l.view.phase.kind === 'concluded' && l.view.phase.championTeamId === teamId) {
       return { ...base, state: 'champion', summary: l.view.phase.summary };
+    }
+    if (l.league === 'MLS') {
+      // MLS rounds are named "Round One", "Conference Semifinals": "Won the
+      // Round One 1-0" is neither English nor true of a one-game round. The
+      // line names the round, the opponent and the result.
+      const result = s.single ? s.matchScore ?? null : `${tally(own, other)} in the series`;
+      const tail = result ? ` ${result}` : '';
+      if (own.won) {
+        return { ...base, state: 'advanced', seriesHref: seriesHref(l, s), roundLabel: s.roundLabel, opponent: other.label, wonLine: s.single ? `Won${tail}` : `Won the series${result ? ` ${tally(own, other)}` : ''}` };
+      }
+      return { ...base, state: 'eliminated', roundLabel: s.roundLabel, opponent: other.label, lostLine: `${s.roundLabel}: lost to ${other.label}${tail}` };
     }
     if (own.won) {
       return { ...base, state: 'advanced', seriesHref: seriesHref(l, s), roundLabel: s.roundLabel, opponent: other.label, wonLine: `Won the ${s.roundLabel} ${tally(own, other)}` };
