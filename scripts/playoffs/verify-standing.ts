@@ -54,6 +54,8 @@ const ONE = new Set(['Liberty', 'Dream', 'Fever', 'Lynx', 'Mercury', 'Sky', 'Sto
  *  after extra time", "4-3 on penalties after a 1-1 draw". */
 function mlsScore(s: Doc, winner: 'higher' | 'lower'): string | null {
   const g = (s.games as Doc[]).find((x) => x.status === 'final' && x.winnerSide === winner);
+  // Served with no score: how it was decided, and no number.
+  if (g && g.homeScore == null && g.awayScore == null) return g.decidedBy === 'extra_time' ? 'after extra time' : null;
   if (!g || (g.homeSide !== 'higher' && g.homeSide !== 'lower') || g.homeScore == null || g.awayScore == null) return null;
   const home = g.homeSide === winner;
   const [w, l] = home ? [g.homeScore, g.awayScore] : [g.awayScore, g.homeScore];
@@ -83,6 +85,12 @@ function expectedLine(doc: Doc, teams: Map<string, Team>, now: Date): string | n
       return { team: null, text: `${teams.get(x.candidates[0])!.name} / ${teams.get(x.candidates[1])!.name} winner` };
     }
     const label = String(x.placeholder ?? '');
+    // MLS: a "TBD" slot with a feeder still undecided is that round's winner.
+    if (mls && x.feederSeriesKey && (label === 'TBD' || SERIES_KEY.some((re) => re.test(label)))) {
+      const f = series.find((s) => s.seriesKey === x.feederSeriesKey);
+      if (f) return { team: null, text: `${f.roundLabel} winner` };
+    }
+    if (mls && label === 'TBD') return { team: null, text: 'To be decided' };
     if (!label || SERIES_KEY.some((re) => re.test(label))) return { team: null, text: 'To be decided' };
     // Feed abbreviations ("NYY/BOS"), read among the clubs this document
     // names by their team records; one no club (or two) carries: "TBD".

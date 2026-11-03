@@ -117,10 +117,12 @@ export const STATES: State[] = [
   // MLS (2026-11-03). No predictions and no promotions. Informational until
   // OPS confirms them on the preview with a real or seeded document: a page
   // under 1,000px simply places no in-content unit.
-  { name: 'league-mls-early', what: 'MLS, Wild Card set, nothing played (only the Wild Card and Round One known)', kind: 'league', docs: [MLS_FIXTURE.early], now: '2026-10-20T12:00:00Z', gated: false },
+  { name: 'league-mls-decision-day', what: 'MLS, the morning after Decision Day: only the two Wild Card matches posted', kind: 'league', docs: [MLS_FIXTURE.decisionDay], now: '2026-10-19T12:00:00Z', gated: false },
+  { name: 'league-mls-early', what: 'MLS, Wild Card and Round One dates posted, nothing played', kind: 'league', docs: [MLS_FIXTURE.early], now: '2026-10-20T12:00:00Z', gated: false },
   { name: 'league-mls-round-one', what: 'MLS, Round One part played (three series 2-0, four 1-1, one 1-0)', kind: 'league', docs: [MLS_FIXTURE.roundOne], now: '2026-11-02T12:00:00Z', gated: false },
   { name: 'league-mls-semis-done', what: 'MLS, Conference Semifinals done, Conference Finals ahead', kind: 'league', docs: [MLS_FIXTURE.semisDone], now: '2026-11-25T12:00:00Z', gated: false },
   { name: 'league-mls-final', what: 'MLS, champion crowned', kind: 'league', docs: [MLS_FIXTURE.final], now: '2026-12-07T12:00:00Z', gated: false },
+  { name: 'hub-mls-decision-day', what: 'hub, MLB and WNBA finished, MLS only the Wild Card posted', kind: 'hub', docs: ['final2026:MLB', 'final2026:WNBA', MLS_FIXTURE.decisionDay], now: '2026-10-19T12:00:00Z', gated: false },
   { name: 'hub-mls-early', what: 'hub, MLB and WNBA finished, MLS Wild Card set', kind: 'hub', docs: ['final2026:MLB', 'final2026:WNBA', MLS_FIXTURE.early], now: '2026-10-20T12:00:00Z', gated: false },
   { name: 'hub-mls-round-one', what: 'hub, MLB and WNBA finished, MLS in Round One', kind: 'hub', docs: ['final2026:MLB', 'final2026:WNBA', MLS_FIXTURE.roundOne], now: '2026-11-02T12:00:00Z', gated: false },
   { name: 'hub-mls-only-final', what: 'hub, MLS champion window, MLB and WNBA finished', kind: 'hub', docs: ['final2026:MLB', 'final2026:WNBA', MLS_FIXTURE.final], now: '2026-12-07T12:00:00Z', gated: false },

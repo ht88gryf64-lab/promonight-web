@@ -425,6 +425,14 @@ async function main() {
       if (a && b) return { name: `${a.name} / ${b.name} winner`, club: null, slug: null };
     }
     const label = slot.placeholder ?? '';
+    // MLS: a "TBD" slot whose feeder field names a series in this document,
+    // not yet decided, is that round's winner ("Wild Card winner").
+    if (doc.league === 'MLS' && slot.feederSeriesKey && (label === 'TBD' || keyIn(label))) {
+      const i = doc.series.findIndex((x) => x.seriesKey === slot.feederSeriesKey);
+      const self = doc.series.findIndex((x) => x.higher === slot || x.lower === slot);
+      if (i >= 0 && (self < 0 || i < self)) return { name: `${doc.series[i].roundLabel} winner`, club: null, slug: null };
+    }
+    if (doc.league === 'MLS' && label === 'TBD') return { name: 'To be decided', club: null, slug: null };
     if (!label || keyIn(label)) return { name: 'To be decided', club: null, slug: null };
     return { name: abbreviated(doc, label) ?? label, club: null, slug: null };
   }
@@ -448,8 +456,15 @@ async function main() {
   const statusOf = (doc: RawDoc, g: RawGame) => (isMls(doc) && g.status === 'live' ? 'scheduled' : g.status);
   /** The status a series card carries: an MLS series the feed calls live with
    *  no result in it yet is upcoming on the page. */
+  // For MLS no "live" token at all: "underway" once a result is in, else upcoming.
   const seriesStatusOf = (doc: RawDoc, s: RawSeries) =>
-    isMls(doc) && s.status === 'live' && s.wins.higher + s.wins.lower === 0 && !s.games.some((g) => g.status === 'final') ? 'upcoming' : s.status;
+    isMls(doc) && s.status === 'live' ? (s.wins.higher + s.wins.lower > 0 || s.games.some((g) => g.status === 'final') ? 'underway' : 'upcoming') : s.status;
+  /** An MLS final the feed served with no score: the winner is named, no score. */
+  const blankFinal = (doc: RawDoc, g: RawGame) => isMls(doc) && g.status === 'final' && g.homeScore === null && g.awayScore === null && !!g.winnerSide;
+  function blankText(doc: RawDoc, s: RawSeries, g: RawGame): string {
+    const w = slotName(doc, s[g.winnerSide as 'higher' | 'lower']);
+    return `${w.club?.abbr ?? w.name} won${g.decidedBy === 'extra_time' ? ' after extra time' : ''}`;
+  }
   /** The side that won a series. */
   function seriesWinner(doc: RawDoc, s: RawSeries): 'higher' | 'lower' | null {
     if (s.status !== 'final' || !s.winner) return null;
@@ -479,6 +494,7 @@ async function main() {
   function mlsPhrase(doc: RawDoc, s: RawSeries): string | null {
     const side = seriesWinner(doc, s);
     const g = s.games.find((x) => x.status === 'final' && x.winnerSide === side);
+    if (g && g.homeScore === null && g.awayScore === null) return g.decidedBy === 'extra_time' ? 'after extra time' : null;
     const hs = g ? hostSide(doc, s, g) : null;
     if (!g || !hs || g.homeScore === null || g.awayScore === null) return null;
     const homeWon = g.winnerSide === hs;
@@ -562,7 +578,8 @@ async function main() {
     const st = statusOf(doc, g);
     if (g.status === 'final' && home && away && hs && g.homeScore !== null && g.awayScore !== null) {
       out.push(`Final: ${finalText(doc, s, g, hs)}`);
-    } else if (st === 'live') out.push('Live');
+    } else if (blankFinal(doc, g)) out.push(`Final: ${blankText(doc, s, g)}`);
+    else if (st === 'live') out.push('Live');
     else if (st === 'scheduled') {
       if (conditional(s, { ...g, status: st })) out.push('If necessary');
     } else if (st !== 'final') out.push(st[0].toUpperCase() + st.slice(1));
@@ -1239,20 +1256,20 @@ async function main() {
         if (!cardText.includes(`${a.name} vs ${b.name}`) || (line && !cardText.includes(line))) missing.push(`${pageIds[i]} names or score`);
         for (const g of s.games) {
           const hs = hostSide(doc, s, g);
-          if (g.status !== 'final' || g.homeScore === null || g.awayScore === null || !hs) continue;
-          const score = finalText(doc, s, g, hs);
+          if (!blankFinal(doc, g) && (g.status !== 'final' || g.homeScore === null || g.awayScore === null || !hs)) continue;
+          const score = blankFinal(doc, g) ? blankText(doc, s, g) : finalText(doc, s, g, hs as 'higher' | 'lower');
           const label = single(doc, s) ? score : `G${g.gameNumber} ${score}`;
           if (!cardText.includes(label) || (single(doc, s) && /\bG1\b/.test(cardText))) missing.push(`${pageIds[i]} game ${g.gameNumber}: ${label}`);
         }
         const rows = count(card, 'data-result-game=');
-        const played = s.games.filter((g) => g.status === 'final' && g.homeScore !== null && g.awayScore !== null).length;
+        const played = s.games.filter((g) => blankFinal(doc, g) || (g.status === 'final' && g.homeScore !== null && g.awayScore !== null)).length;
         if (rows !== played) missing.push(`${pageIds[i]}: ${rows} game rows for ${played} played`);
       });
       check(`${where}: the results section lists every decided series with every game score, and nothing else`, missing.length === 0, `${decided.length} decided${missing.length ? ': ' + missing.slice(0, 4).join('; ') : ''}`);
     }
 
     // Scores: only on finished games, and every one of them accounted for.
-    const finals = doc.series.flatMap((s) => s.games.filter((g) => g.status === 'final' && g.homeScore !== null && g.awayScore !== null));
+    const finals = doc.series.flatMap((s) => s.games.filter((g) => blankFinal(doc, g) || (g.status === 'final' && g.homeScore !== null && g.awayScore !== null)));
     same(`${where}: "Final:" lines against finished games in the document`, count(textOf(elements(el, 'data-series-panels=')[0] ?? panels.join(' ')), 'Final:'), finals.length);
     // MLS never shows one (ruling of 2026-11-03).
     const live = doc.series.flatMap((s) => s.games.filter((g) => statusOf(doc, g) === 'live'));
