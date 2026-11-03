@@ -1,7 +1,9 @@
 // When the Playoffs link shows. PURE.
 //
-// One rule, used by the nav, the brand bar, the mobile menu and the inbound
-// modules (not the sitemap, since 2026-11-02: see getPlayoffsSitemapEntries):
+// One rule, used by the nav, the brand bar and the mobile menu across all
+// leagues at once, and by the inbound modules ONE LEAGUE AT A TIME (since
+// 2026-11-03: see inboundBrackets). Not the sitemap, since 2026-11-02: see
+// getPlayoffsSitemapEntries.
 //
 //   ACTIVE           any current-season bracket has a series that is not
 //                    final. The link shows.
@@ -76,4 +78,48 @@ export function playoffsLinkState(brackets: readonly Bracket[], now: Date): Play
 
 export function playoffsLinkVisible(brackets: readonly Bracket[], now: Date): boolean {
   return playoffsLinkState(brackets, now).state !== 'hidden';
+}
+
+/**
+ * The brackets whose modules may show on the pages outside /playoffs.
+ *
+ * A league being played is always in. Finished leagues are grouped into
+ * COHORTS (ruling of 2026-11-03): sorted by the start of each one's last
+ * final game, a league joins the cohort before it when its last final is
+ * within 14 days of the previous league's. Every league in a cohort keeps its
+ * modules until 14 days after the cohort's LATEST final game, and loses them
+ * together (the close instant itself still inside, as the nav rule has it). So MLB (last final 2026-10-29) and WNBA (2026-11-01) share one
+ * close, 2026-11-15T00:00Z, while MLS, finishing in December, is a cohort of
+ * its own and its finish never reopens them. A league can only join a cohort
+ * while that cohort is still open (its last final is within 14 days of a
+ * member's), so nothing that closed ever comes back. A league with no final
+ * time it can state is out, as before. The order of the input is kept.
+ *
+ * The nav link and the hub keep the all-league rule (playoffsLinkState).
+ */
+export function inboundBrackets(brackets: readonly Bracket[], now: Date): Bracket[] {
+  const finished = brackets
+    .filter((b) => b.series.length > 0 && b.series.every((s) => s.status === 'final'))
+    .map((b) => ({ b, at: lastFinalInstant(b) }))
+    .filter((x): x is { b: Bracket; at: number } => x.at !== null)
+    .sort((x, y) => x.at - y.at);
+  const closesAt = new Map<Bracket, number>();
+  const window = CHAMPION_WINDOW_DAYS * DAY_MS;
+  let cohort: { b: Bracket; at: number }[] = [];
+  const close = () => {
+    if (cohort.length === 0) return;
+    const end = cohort[cohort.length - 1].at + window;
+    for (const x of cohort) closesAt.set(x.b, end);
+    cohort = [];
+  };
+  for (const x of finished) {
+    if (cohort.length > 0 && x.at - cohort[cohort.length - 1].at > window) close();
+    cohort.push(x);
+  }
+  close();
+  return brackets.filter((b) => {
+    if (b.series.some((s) => s.status !== 'final')) return true;
+    const end = closesAt.get(b);
+    return end !== undefined && now.getTime() <= end;
+  });
 }

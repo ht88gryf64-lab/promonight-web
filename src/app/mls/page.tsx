@@ -6,6 +6,9 @@ import { AggregatorJsonLd, type AggregatorGroup } from '@/components/aggregator-
 import { AdSlot } from '@/components/ads/AdSlot';
 import { AD_SLOTS } from '@/lib/ads/slots';
 import { HubHero } from '@/components/hub/HubHero';
+import { getPlayoffsInboundOrNone } from '@/lib/postseason/data';
+import { leagueCard, leagueFinalCard, leagueHeroLine } from '@/lib/postseason/inbound';
+import { LeagueFinalBracketCard, LeaguePlayoffsCard, LeaguePlayoffsHeroLine } from '@/components/playoffs/inbound/LeaguePlayoffsCard';
 import { HubStatBar } from '@/components/hub/HubStatBar';
 import { HubTodayPromos } from '@/components/hub/HubTodayPromos';
 import { HubThisWeek } from '@/components/hub/HubThisWeek';
@@ -89,6 +92,23 @@ export default async function MlsHubPage() {
   // ItemList source for the CollectionPage JSON-LD: the current MLS slate.
   const jsonLdGroups: AggregatorGroup[] = [{ label: 'This week across MLS', promos: slate }];
 
+  // The MLS postseason, as /mlb and /wnba show theirs: a card while it is
+  // being played, a link to the final bracket inside its champion window,
+  // nothing otherwise (the gate is per league; see buildPlayoffsInbound).
+  const inbound = await getPlayoffsInboundOrNone('/mls');
+  const playoffs = leagueCard(inbound, 'MLS');
+  const finalCard = playoffs ? null : leagueFinalCard(inbound, 'MLS');
+  const heroLine = leagueHeroLine(inbound, 'MLS');
+  const todayPromos = (
+    <HubTodayPromos
+      slate={today}
+      label="MLS"
+      accent={ACCENT}
+      sectionId="mls-today"
+      surface="web_mls_hub"
+    />
+  );
+
   return (
     <div className={`${archivoHouse.variable} rd-root min-h-screen`} data-ad-region="content">
       <AggregatorJsonLd
@@ -104,6 +124,7 @@ export default async function MlsHubPage() {
         title={`MLS PROMOTIONS ${YEAR}`}
         subtitle="Jersey giveaways, scarf nights and theme nights across the 30 MLS clubs, grouped by conference."
         freshness="Rechecked weekly in season and updated as clubs announce promotions."
+        notice={heroLine ? <LeaguePlayoffsHeroLine line={heroLine} surface="web_mls_hub" /> : undefined}
         accent={ACCENT}
       >
         <HubStatBar stats={stats} leagueLabel="MLS" />
@@ -114,13 +135,22 @@ export default async function MlsHubPage() {
       </div>
 
       <div className="mx-auto max-w-6xl space-y-16 px-6 pb-20 pt-12 page-content">
-        <HubTodayPromos
-          slate={today}
-          label="MLS"
-          accent={ACCENT}
-          sectionId="mls-today"
-          surface="web_mls_hub"
-        />
+        {/* THE PLAYOFFS CARD shares the first child of page-content with the
+            Today section, as on /mlb: a card of its own would be one more ad
+            anchor and move every unit below it. With no card, the branch
+            below is the markup this page has always emitted. */}
+        {playoffs || finalCard ? (
+          <div data-playoffs-top className="space-y-16">
+            {playoffs ? (
+              <LeaguePlayoffsCard card={playoffs} surface="web_mls_hub" />
+            ) : (
+              <LeagueFinalBracketCard card={finalCard!} surface="web_mls_hub" />
+            )}
+            {todayPromos}
+          </div>
+        ) : (
+          todayPromos
+        )}
         <HubThisWeek
           slate={slate}
           heading="This week across MLS"

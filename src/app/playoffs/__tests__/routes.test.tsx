@@ -26,7 +26,7 @@ mock.module(new URL('../../../lib/data.ts', import.meta.url).href, {
   },
 });
 mock.module(new URL('../../../lib/venue-hub.ts', import.meta.url).href, {
-  namedExports: { getTeamVenueHubMap: async () => venuePages() },
+  namedExports: { getTeamVenueHubMap: async () => venuePages(), getTeamBuildingCounts: async () => new Map() },
 });
 // next/font needs the Next compiler. The pages only read `.variable`.
 mock.module(new URL('../../../components/cfb/rivalry/fonts.ts', import.meta.url).href, {
@@ -382,7 +382,7 @@ test('HEAD /playoffs: the three states of the hub', async () => {
   assert.equal(playing.openGraph?.images?.[0].url, '/og-image.png');
 
   current.db = fakeFirestore({});
-  assert.equal(((await generateMetadata()) as Meta).description, "No postseason is underway. The MLB and WNBA brackets appear here once each league's postseason begins.");
+  assert.equal(((await generateMetadata()) as Meta).description, "No postseason is underway. The MLB, WNBA and MLS brackets appear here once each league's postseason begins.");
 
   // A finished postseason is the third state: complete, with each champion.
   const finalMlb = loadDoc(FIXTURE.mlbFinal);

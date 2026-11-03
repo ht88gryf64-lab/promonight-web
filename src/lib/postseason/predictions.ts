@@ -681,7 +681,7 @@ export function assemblePredictions(
 
 /** The 2025 backtest, run with the same settings. Stated by the PREDICT
  *  session's G0; these are the only accuracy claims the page makes. */
-export const BACKTEST_2025: Record<PostseasonLeague, { right: number; of: number; champion: boolean }> = {
+export const BACKTEST_2025: Partial<Record<PostseasonLeague, { right: number; of: number; champion: boolean }>> = {
   WNBA: { right: 5, of: 7, champion: true },
   MLB: { right: 5, of: 11, champion: false },
 };
@@ -756,6 +756,10 @@ export function frozenBeforeFirstGame(bracket: Bracket, frozenAt: string): boole
 
 export function buildMethodologyView(predicted: PredictedBracket, bracket: Bracket): MethodologyView {
   const bt = BACKTEST_2025[predicted.league];
+  // Only a league with PromoNight Predicts has a backtest. A league without
+  // one never reaches here (PREDICTIONS_LEAGUES in ./data.ts); if one did, the
+  // section fails closed rather than state a number nobody measured.
+  if (!bt) throw new Error(`no backtest for ${predicted.league}`);
   const f = predicted.fingerprints;
   const bracketLockedOn = easternLongDate(predicted.lockedAt);
   return {

@@ -27,6 +27,24 @@ export const FIXTURE = {
   mlbWildCard: 'MLB_2026.live-20261001T0017Z.json',
 } as const;
 
+/** The MLS bracket fixtures: the pipeline's own documents from its 2025 MLS
+ *  replay (promo-pipeline 9c995898), captured by generate-mls-2026.cjs, moved
+ *  to 2026 and 52 weeks forward. Each with the moment it stands at. */
+export const MLS_FIXTURE = {
+  decisionDay: 'MLS_2026.decision-day.json',
+  early: 'MLS_2026.early.json',
+  roundOne: 'MLS_2026.round-one.json',
+  semisDone: 'MLS_2026.semis-done.json',
+  final: 'MLS_2026.final.json',
+} as const;
+export const MLS_AT = {
+  decisionDay: new Date('2026-10-19T12:00:00Z'),
+  early: new Date('2026-10-20T12:00:00Z'),
+  roundOne: new Date('2026-11-02T12:00:00Z'),
+  semisDone: new Date('2026-11-25T12:00:00Z'),
+  final: new Date('2026-12-07T12:00:00Z'),
+} as const;
+
 /** The locked PromoNight Predicts brackets, predictedBrackets/{LEAGUE}_2026, whole, as
  *  stored (read 2026-10-01T00:17Z). Not bracket documents, so not in FIXTURE,
  *  which tests walk as brackets. */
@@ -93,6 +111,35 @@ interface Captured {
   venuePages: Record<string, CapturedVenuePage>;
 }
 const captured = JSON.parse(readFileSync(new URL('clubs.captured-20260929.json', FIXTURES), 'utf-8')) as Captured;
+// The 30 MLS team records, their parks and venue pages, read 2026-11-03.
+// Kept apart so every MLB and WNBA test sees exactly the clubs it always did.
+const capturedMls = JSON.parse(readFileSync(new URL('clubs.mls.captured-20261103.json', FIXTURES), 'utf-8')) as Captured;
+
+export function mlsTeams(): Team[] {
+  return capturedMls.teams.map((t) => ({ ...t }));
+}
+
+const clubInfo = (t: Team): ClubInfo => ({ id: t.id, city: t.city, name: t.name, abbreviation: t.abbreviation, sportSlug: t.sportSlug, primaryColor: t.primaryColor });
+
+/** The MLS clubs, and their parks with pages, as the data module builds them. */
+export function mlsClubs(): Map<string, ClubInfo> {
+  return new Map(capturedMls.teams.map((t) => [t.id, clubInfo(t)]));
+}
+export function mlsParks(): Map<string, ParkInfo> {
+  const out = new Map<string, ParkInfo>();
+  for (const [id, name] of Object.entries(capturedMls.parks)) {
+    const p = capturedMls.venuePages[id];
+    out.set(id, { name, page: p && p.indexable ? { href: `/venues/${p.slug}`, buildingSlug: p.slug, buildingName: p.displayName } : null });
+  }
+  return out;
+}
+/** Every captured club of the three leagues, for a page that shows them together. */
+export function allClubs(): Map<string, ClubInfo> {
+  return new Map([...clubs(), ...mlsClubs()]);
+}
+export function allParks(): Map<string, ParkInfo> {
+  return new Map([...parks(), ...mlsParks()]);
+}
 
 export function capturedTeams(): Team[] {
   return captured.teams.map((t) => ({ ...t }));
@@ -144,14 +191,17 @@ export function parks(): Map<string, ParkInfo> {
 //
 //   MLB   AL-WC-A  NL-DS-B  AL-CS  NL-CS  WS
 //   WNBA  R1-1v8   SF-A     F
+//   MLS   E-WC  W-WC  E-R1-1  W-R1-4  E-SF-A  W-SF-B  E-CF  W-CF  CUP
 //
-// "WS" and "F" are too short to look for in free text. They are checked by
-// name, in the places a key would sit: an attribute value, a link target.
+// "WS", "F" and "CUP" are too short (or too common) to look for in free text.
+// They are checked by name, in the places a key would sit: an attribute
+// value, a link target.
 export const SERIES_KEY_SHAPES: readonly RegExp[] = [
   /\b(?:AL|NL)-(?:WC|DS)-[A-Z]\b/,
   /\b(?:AL|NL)-CS\b/,
   /\bR\d-\dv\d\b/,
   /\bSF-[A-Z]\b/,
+  /\b[EW]-(?:WC|CF|R1-[1-4]|SF-[AB])\b/,
 ];
 
 /** The first thing in `text` that has the form of a series key, or null. */

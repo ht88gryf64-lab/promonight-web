@@ -10,7 +10,8 @@ function GameRow({ g, league }: { g: GameView; league: string }) {
   return (
     <li data-game={g.gameNumber} className="grid grid-cols-[2.25rem_1fr] gap-x-2 text-[13.5px] leading-snug">
       <span className="font-bold uppercase text-rd-ink" style={{ fontFamily: CONDENSED, fontSize: 15 }}>
-        G{g.gameNumber}
+        {/* The one game of a one-game round (MLS) has no title and no number. */}
+        {g.title ? <>G{g.gameNumber}</> : null}
       </span>
       <span className="min-w-0">
         <span className="block text-rd-ink">{g.when}</span>
@@ -136,7 +137,7 @@ export function SeriesPanel({
         )}
         {series.nextLabel && (
           <p className="text-[13.5px] text-rd-ink-soft">
-            <span className="font-semibold text-rd-ink">Next:</span> {series.nextLabel}
+            <span className="font-semibold text-rd-ink">{series.nextPrefix ?? 'Next:'}</span> {series.nextLabel}
           </p>
         )}
         {!series.scoreLine && !series.liveLabel && !series.nextLabel && <p className="text-[13.5px] text-rd-ink-soft">{series.headline}</p>}
@@ -149,7 +150,7 @@ export function SeriesPanel({
           ))}
         </ol>
       ) : (
-        <p className="mt-4 text-[13.5px] text-rd-ink-soft">No games are listed for this series yet.</p>
+        <p className="mt-4 text-[13.5px] text-rd-ink-soft">{series.single ? 'No game is listed for this matchup yet.' : 'No games are listed for this series yet.'}</p>
       )}
 
       {tickets ? <div className="mt-4 max-w-sm">{tickets}</div> : null}

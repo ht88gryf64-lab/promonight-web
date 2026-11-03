@@ -38,6 +38,8 @@ mock.module(new URL('../../data.ts', import.meta.url).href, {
 });
 mock.module(new URL('../../venue-hub.ts', import.meta.url).href, {
   namedExports: {
+    // Asked only for MLS brackets, which this file never serves.
+    getTeamBuildingCounts: async () => new Map(),
     getTeamVenueHubMap: async () => {
       if (pages.fail) throw new Error('venueHubs read failed');
       const map = venuePages();
@@ -461,6 +463,7 @@ test('WHICH LEAGUES: one batched read of names only', async () => {
   assert.deepEqual(fake.reads, [
     { path: 'postseasonBrackets/MLB_2026', fieldMask: ['league'] },
     { path: 'postseasonBrackets/WNBA_2026', fieldMask: ['league'] },
+    { path: 'postseasonBrackets/MLS_2026', fieldMask: ['league'] },
   ]);
   use({ 'postseasonBrackets/WNBA_2026': WNBA() });
   assert.deepEqual(await readLeaguesWithBracket(), ['WNBA']);
@@ -492,6 +495,7 @@ test('LINK GATE: one batched read with the four-field mask', async () => {
   assert.deepEqual(fake.reads, [
     { path: 'postseasonBrackets/MLB_2026', fieldMask: ['league', 'season', 'series', 'lastChangedAt'] },
     { path: 'postseasonBrackets/WNBA_2026', fieldMask: ['league', 'season', 'series', 'lastChangedAt'] },
+    { path: 'postseasonBrackets/MLS_2026', fieldMask: ['league', 'season', 'series', 'lastChangedAt'] },
   ]);
 });
 
@@ -540,11 +544,11 @@ test('LINK GATE, cached: a failed read is not remembered; a good one is; the clo
 
   const fake = use({ 'postseasonBrackets/MLB_2026': FINISHED() });
   assert.equal(await isPlayoffsLinkActive(new Date(ENDED + DAY)), true);
-  assert.equal(fake.reads.length, 2, 'both documents asked for, once');
+  assert.equal(fake.reads.length, 3, 'the three documents asked for, once');
   // Served from the process cache from here on, and the clock decides.
   assert.equal((await getPlayoffsLinkState(new Date(ENDED + 14 * DAY))).state, 'champion_window');
   assert.equal(await isPlayoffsLinkActive(new Date(ENDED + 14 * DAY + 1)), false);
-  assert.equal(fake.reads.length, 2, 'no second read inside the five minutes');
+  assert.equal(fake.reads.length, 3, 'no second read inside the five minutes');
 
   // The sitemap does NOT follow the gate (Matt, 2026-11-02): inside the window
   // and long after it, a finished bracket's pages stay listed with the
@@ -643,17 +647,19 @@ test('WHICH LEAGUES, cached: the list for static params is its own read', async 
   const fake = use({ 'postseasonBrackets/MLB_2026': MLB() });
   assert.deepEqual(await getLeaguesWithBracket(), ['MLB']);
   assert.deepEqual(await getLeaguesWithBracket(), ['MLB']);
-  assert.equal(fake.reads.length, 2, 'two documents asked for once; the second call was served from the process cache');
+  assert.equal(fake.reads.length, 3, 'three documents asked for once; the second call was served from the process cache');
 });
 
 test('ROUTES: the league segment is lowercase and only the route table resolves', async () => {
   const { postseasonLeagueFromSlug, postseasonPath, POSTSEASON_LEAGUES, POSTSEASON_SEASON } = await load();
   assert.equal(postseasonLeagueFromSlug('mlb'), 'MLB');
   assert.equal(postseasonLeagueFromSlug('wnba'), 'WNBA');
+  assert.equal(postseasonLeagueFromSlug('mls'), 'MLS');
   for (const s of ['MLB', 'Mlb', 'nba', 'nhl', '', 'mlb ', 'mlb/x']) assert.equal(postseasonLeagueFromSlug(s), null, s);
   assert.equal(postseasonPath('MLB'), '/playoffs/mlb');
   assert.equal(postseasonPath('WNBA'), '/playoffs/wnba');
-  assert.deepEqual([...POSTSEASON_LEAGUES], ['MLB', 'WNBA']);
+  assert.equal(postseasonPath('MLS'), '/playoffs/mls');
+  assert.deepEqual([...POSTSEASON_LEAGUES], ['MLB', 'WNBA', 'MLS']);
   assert.equal(POSTSEASON_SEASON, 2026);
   void CAPTURED_AT;
 });
@@ -686,7 +692,7 @@ test('TEAM LINE: a club in a bracket gets its module and its line, from one brac
   assert.equal(value.pick.kind, 'correct');
   assert.equal(value.pick.statusLine, 'Pick correct: the Yankees beat the Red Sox 2-0 in the Wild Card Series.');
   assert.deepEqual(lines, []);
-  assert.equal(fake.reads.filter((r) => r.path.startsWith('postseasonBrackets/')).length, 2, 'one batched read of the two brackets');
+  assert.equal(fake.reads.filter((r) => r.path.startsWith('postseasonBrackets/')).length, 3, 'one batched read of the three brackets');
   assert.deepEqual(
     fake.reads.filter((r) => r.path.startsWith('predictedBrackets/')).map((r) => r.path),
     ['predictedBrackets/MLB_2026'],

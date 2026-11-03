@@ -27,7 +27,13 @@ function Row({
         )}
       </div>
       <p className="mt-0.5 text-[13px] text-rd-ink-soft">
-        {g.roundLabel} · {g.gameTitle}
+        {g.gameTitle ? (
+          <>
+            {g.roundLabel} · {g.gameTitle}
+          </>
+        ) : (
+          g.roundLabel
+        )}
         {g.ifNecessary ? ' · If necessary' : ''}
       </p>
       <p className="mt-0.5 text-[13.5px] text-rd-ink">{g.when}</p>

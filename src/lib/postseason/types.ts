@@ -9,7 +9,7 @@
 // series keys ("AL-WC-B"), which are keys and not copy. The view in
 // ./view.ts is what reaches markup, and it carries no series key at all.
 
-export type PostseasonLeague = 'MLB' | 'WNBA';
+export type PostseasonLeague = 'MLB' | 'WNBA' | 'MLS';
 
 export type SeriesStatus = 'upcoming' | 'live' | 'final';
 
@@ -39,6 +39,11 @@ export interface PlaceholderSlot {
   /** The two clubs that can still fill the slot, when the document names
    *  exactly two. Null otherwise. */
   candidates: [string, string] | null;
+  /** MLS only: the round label of the slot's feeder series while that series
+   *  is undecided ("Wild Card"), read from the feederSeriesKey FIELD, so a
+   *  slot written "TBD" reads "Wild Card winner". Absent for every other
+   *  league. */
+  feederRoundLabel?: string;
 }
 
 // There is no field for the feeder series key, on purpose. The mapper reads
@@ -62,7 +67,16 @@ export interface BracketGame {
   awayScore: number | null;
   winnerSide: Side | null;
   ifNecessary: boolean;
+  /** MLS only, and only on a final game: how it was decided. The key is
+   *  absent on every MLB and WNBA game, so their brackets are unchanged. */
+  decidedBy?: DecidedBy;
+  /** MLS only, set only when decidedBy is 'penalties': the shootout score.
+   *  The match score is then level. */
+  homeShootout?: number;
+  awayShootout?: number;
 }
+
+export type DecidedBy = 'regulation' | 'extra_time' | 'penalties';
 
 export interface BracketSeries {
   round: string;

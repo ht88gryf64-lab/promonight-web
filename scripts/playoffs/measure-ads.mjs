@@ -15,6 +15,8 @@
 //
 //   SHARE    a share link for a protected preview. Opened first, so the
 //            browser holds the access cookie. Never printed.
+//   MLS=1    also measure /playoffs/mls (found on its own on an open host;
+//            on a protected preview say so, since Node's fetch has no cookie).
 //   CONTROL  a page that is live in production, measured the same way on the
 //            same host, to show what the placer does there. Default /mlb.
 //
@@ -282,11 +284,17 @@ async function measure(path, width, { playoffs }) {
   }
   const inContent = m.units.filter((u) => u.inArticle && u.position !== 'fixed');
   check(`${label}: ad script loaded`, m.script && adRequests.length > 0, `${adRequests.length} ad requests`);
-  check(`${label}: in-content units inside the article${width < 600 ? ' (none is blocking)' : ''}`, inContent.length > 0, `${inContent.length} in the article, ${m.units.length} on the page`);
+  // MLS (2026-11-03): a page whose article is under 1,000px pre-ad places no
+  // in-content unit by the placer's own rule, which is not a breach; it is
+  // reported. The units it does place must still obey the contract below.
+  const mlsShort = path === '/playoffs/mls' && width < 600 && m.articleHeight < 1000;
+  if (mlsShort) note(`${label}: article ${m.articleHeight}px, under 1,000px: no in-content unit is expected (${inContent.length} in the article)`);
+  else check(`${label}: in-content units inside the article${width < 600 ? ' (none is blocking)' : ''}`, inContent.length > 0, `${inContent.length} in the article, ${m.units.length} on the page`);
   const screen = width < 600 ? 844 : 900;
   check(`${label}: article taller than 1.5 viewports`, m.articleHeight > 1.5 * screen, `${m.articleHeight}px against ${Math.round(1.5 * screen)}px`);
   check(`${label}: no ad container inside the interactive bracket`, m.units.filter((u) => u.inBracket || u.inPanels).length === 0, `${m.units.filter((u) => u.inBracket || u.inPanels).length}`);
-  if (path !== '/playoffs') check(`${label}: the predictions section and the methodology are on the page, and no ad container is inside either`, m.hasPicks && m.hasMethod && m.units.filter((u) => u.inPicks).length === 0, `section ${m.hasPicks}, methodology ${m.hasMethod}, ${m.units.filter((u) => u.inPicks).length} inside`);
+  if (path === '/playoffs/mls') check(`${label}: MLS has no predictions section and no methodology`, !m.hasPicks && !m.hasMethod);
+  else if (path !== '/playoffs') check(`${label}: the predictions section and the methodology are on the page, and no ad container is inside either`, m.hasPicks && m.hasMethod && m.units.filter((u) => u.inPicks).length === 0, `section ${m.hasPicks}, methodology ${m.hasMethod}, ${m.units.filter((u) => u.inPicks).length} inside`);
   else check(`${label}: the predictions card is on the hub, and no ad container is inside it`, m.hasHubCard && m.units.filter((u) => u.inHubCard).length === 0, `card ${m.hasHubCard}, ${m.units.filter((u) => u.inHubCard).length} inside`);
   check(`${label}: AD CONTRACT: no ad container inside a <details>, a bracket, the standing line or a game row`, m.units.filter((u) => u.inForbidden).length === 0, `${m.units.filter((u) => u.inForbidden).length} inside`);
   const own = m.sticksOut.filter((x) => !x.ad);
@@ -298,9 +306,10 @@ async function measure(path, width, { playoffs }) {
     await ev('scrollTo(0, 0)'); await sleep(300);
     const marked = await ev(WATCH);
     const s = await ev(SELECT_ALL);
-    check(`${label}: selecting every round and series, in both brackets, and opening every pick leaves every ad container in place`, s.series > 0 && s.picksTotal > 0 && s.picksOpened === s.picksTotal && s.kept === s.before && s.after === s.before && s.same === s.after && s.moves.added === 0 && s.moves.removed === 0 && s.inBracket === 0 && s.inPicks === 0,
+    const noPicks = path === '/playoffs/mls';
+    check(`${label}: selecting every round and series, in both brackets, and opening every pick leaves every ad container in place`, s.series > 0 && (noPicks || s.picksTotal > 0) && s.picksOpened === s.picksTotal && s.kept === s.before && s.after === s.before && s.same === s.after && s.moves.added === 0 && s.moves.removed === 0 && s.inBracket === 0 && s.inPicks === 0,
       `${s.rounds} rounds, ${s.conferences} conference taps, ${s.series} series; predicted: ${s.picksRounds} rounds, ${s.picksConferences} conference taps, ${s.picksOpened} of ${s.picksTotal} picks opened; containers ${s.before} before, ${s.after} after, ${s.kept} still attached; added ${s.moves.added}, removed ${s.moves.removed}${s.moves.names.length ? ' ' + s.moves.names.slice(0, 4).join(' ') : ''}`);
-    check(`${label}: the methodology detail is collapsed as served, opens, and no ad container is inside it once open`, s.methodCollapsed === true && s.methodOpened === true && s.inMethodDetail === 0, `collapsed ${s.methodCollapsed}, opened ${s.methodOpened}, ${s.inMethodDetail} inside`);
+    if (!noPicks) check(`${label}: the methodology detail is collapsed as served, opens, and no ad container is inside it once open`, s.methodCollapsed === true && s.methodOpened === true && s.inMethodDetail === 0, `collapsed ${s.methodCollapsed}, opened ${s.methodOpened}, ${s.inMethodDetail} inside`);
     if (marked === 0) note(`${label}: there was no ad container to watch, so the check above proves nothing about re-rendering`);
     if (width < 600) {
       const st = await ev(STICKY);
@@ -365,7 +374,13 @@ try {
   const ANALYTICS = ['*posthog.com*', '*google-analytics.com*', '*analytics.google.com*', '*googletagmanager.com/gtag/*'];
   const ADS_HOSTS = ['*adthrive*', '*raptive*', '*cafemedia*', '*doubleclick*', '*googlesyndication*', '*amazon-adsystem*', '*securepubads*'];
   await send('Network.setBlockedURLs', { urls: [...ANALYTICS, ...ADS_HOSTS] });
-  for (const path of ['/playoffs', '/playoffs/mlb', '/playoffs/wnba']) {
+  // /playoffs/mls joins once its document exists and the page is served.
+  // On a protected preview Node's own fetch has no access cookie: MLS=1 says
+  // the page is there.
+  const mlsServed = process.env.MLS === '1' || (await fetch(`${BASE}/playoffs/mls`, { redirect: 'manual' }).catch(() => ({ status: 0 }))).status === 200;
+  if (!mlsServed) note('/playoffs/mls is not served (no MLS document): not measured');
+  const PATHS = ['/playoffs', '/playoffs/mlb', '/playoffs/wnba', ...(mlsServed ? ['/playoffs/mls'] : [])];
+  for (const path of PATHS) {
     const from = responses.length;
     const blockedFrom = blockedUrls.length;
     await go(path, 390);
@@ -378,12 +393,15 @@ try {
     check(`${path} @390 PRE-AD: the ad script was requested and blocked; no ad host answered; no ad container`, blocked.length > 0 && answered.length === 0 && pre.ads === 0, `${blocked.length} blocked ad-script requests, ${answered.length} ad-host responses, ${pre.ads} containers`);
     // Information only: which field Raptive's runtime sets is not verified.
     note(`${path} @390 PRE-AD: window.adthrive.siteAds present: ${pre.runtime}`);
-    check(`${path} @390 PRE-AD: article data-ad-region="content" intact and at least 1000px`, pre.region === 'content' && pre.pageContent && pre.height >= 1000, `${pre.height}px`);
+    if (path === '/playoffs/mls' && pre.height < 1000) {
+      check(`${path} @390 PRE-AD: article data-ad-region="content" intact`, pre.region === 'content' && pre.pageContent, `${pre.height}px`);
+      note(`${path} @390 PRE-AD: article ${pre.height}px, under 1,000px: the placer puts no in-content unit here (not a contract breach)`);
+    } else check(`${path} @390 PRE-AD: article data-ad-region="content" intact and at least 1000px`, pre.region === 'content' && pre.pageContent && pre.height >= 1000, `${pre.height}px`);
   }
   await send('Network.setBlockedURLs', { urls: ANALYTICS });
   for (const width of [390, 1280]) {
     await measure(CONTROL, width, { playoffs: false });
-    for (const path of ['/playoffs', '/playoffs/mlb', '/playoffs/wnba']) await measure(path, width, { playoffs: true });
+    for (const path of PATHS) await measure(path, width, { playoffs: true });
   }
   writeFileSync(join(OUT, 'ads.json'), JSON.stringify(report, null, 2));
   const failed = results.filter((r) => !r.ok);

@@ -74,8 +74,10 @@ export function SeriesCardBody({ series }: { series: SeriesView }) {
         {series.liveLabel && <InProgressBadge />}
       </span>
       <span className="block space-y-1">
-        <Slot slot={series.higher} showWins={started} />
-        <Slot slot={series.lower} showWins={started} />
+        {/* A one-game round shows no win count: "1" beside a club would read
+            as a goal. Its result is the score line below. */}
+        <Slot slot={series.higher} showWins={started && !series.single} />
+        <Slot slot={series.lower} showWins={started && !series.single} />
       </span>
       <span className="mt-2 block space-y-0.5 px-2.5">
         {series.scoreLine && <span className="block text-[14px] font-semibold text-rd-ink">{series.scoreLine}</span>}
@@ -86,7 +88,7 @@ export function SeriesCardBody({ series }: { series: SeriesView }) {
         )}
         {series.nextLabel && (
           <span className="block text-[13px] text-rd-ink-soft">
-            <span className="font-semibold text-rd-ink">Next:</span> {series.nextLabel}
+            <span className="font-semibold text-rd-ink">{series.nextPrefix ?? 'Next:'}</span> {series.nextLabel}
           </span>
         )}
         {series.nextLabel && nextHost && <span className="block text-[13px] text-rd-ink-soft">{nextHost}</span>}

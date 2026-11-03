@@ -1216,7 +1216,7 @@ export type PlayoffsSeriesOpenProperties = {
   season: number;
   round_key: string;
   series_id: string;
-  series_status: 'upcoming' | 'live' | 'final';
+  series_status: 'upcoming' | 'live' | 'underway' | 'final';
   /** 'tap': the reader opened it on this page. 'link': they arrived on a
    *  link that named it (/playoffs/mlb#division_series-2). */
   opened_by: 'tap' | 'link';

@@ -193,7 +193,7 @@ try {
   check('series: event names round, series id, status, and how it was opened', so.round_key === 'division_series' && so.series_id === 'division_series-3' && so.opened_by === 'tap' && ['upcoming', 'live', 'final'].includes(so.series_status), JSON.stringify({ round_key: so.round_key, series_id: so.series_id, series_status: so.series_status, opened_by: so.opened_by }));
   check('series: event is sent once', c.filter((x) => x.name === 'playoffs_series_open' && x.sink === 'posthog').length === 1);
   // The exact forms the bracket documents use, and nothing looser.
-  check('no event carries a pipeline series key', !/\b(?:AL|NL)-(?:WC|DS)-[A-Z]\b|\b(?:AL|NL)-CS\b|\bR\d-\dv\d\b|\bSF-[A-Z]\b/.test(JSON.stringify(c)));
+  check('no event carries a pipeline series key', !/\b(?:AL|NL)-(?:WC|DS)-[A-Z]\b|\b(?:AL|NL)-CS\b|\bR\d-\dv\d\b|\bSF-[A-Z]\b|\b[EW]-(?:WC|CF|R1-[1-4]|SF-[AB])\b/.test(JSON.stringify(c)));
   await shot('mlb-390-series-open', 390, { full: false });
 
   await clearCalls();
@@ -319,6 +319,27 @@ try {
   check('WNBA 1280: three rounds side by side, controls hidden, no sideways scroll', ww.display === 'grid' && ww.cols === 3 && ww.controls === 'none' && !ww.overflow);
   await shot('wnba-1280-full', 1280);
 
+  // ================= MLS (2026-11-03), when its page exists =================
+  // Five round pills (Wild Card to MLS Cup), the East/West toggle on the
+  // conference rounds, no live badge, no predictions, no wide page.
+  if (process.env.MLS === '1' || (await fetch(`${BASE}/playoffs/mls`, { redirect: 'manual' }).catch(() => ({ status: 0 }))).status === 200) {
+    await go('/playoffs/mls', { width: 390 });
+    c = await calls();
+    const mv = propsFor(c, 'playoffs_league_view', 'posthog')[0] || {};
+    check('MLS: page view event reaches both sinks', sinksFor(c, 'playoffs_league_view') === 'ga4+posthog' && mv.league === 'mls', `${sinksFor(c, 'playoffs_league_view')} ${mv.league}`);
+    const m = await ev(`(() => ({ pills: [...document.querySelectorAll('.po-bracket [data-round-option]')].map((b) => b.textContent), toggle: document.querySelector('[data-control="conference"]') !== null, badges: document.querySelectorAll('[data-game-state]').length, predictions: document.querySelectorAll('[data-predictions]').length, text: document.querySelector('article[data-playoffs-article]').innerText, wide: document.documentElement.scrollWidth > document.documentElement.clientWidth }))()`);
+    check('MLS: five round pills', m.pills.length === 5, m.pills.join(' | '));
+    check('MLS: no in-progress badge, no predictions section', m.badges === 0 && m.predictions === 0, `${m.badges} badges, ${m.predictions} predictions elements`);
+    check('MLS: no live, in-progress or "Best of 1" wording in the article', !/\blive\b|in progress|Best of 1\b/i.test(m.text));
+    check('MLS 390: no sideways scroll', !m.wide);
+    await shot('mls-390-full', 390);
+    await shot('mls-390-top', 390, { full: false });
+    await go('/playoffs/mls', { width: 1280 });
+    const mw = await ev(`(() => ({ overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth }))()`);
+    check('MLS 1280: no sideways scroll', !mw.overflow);
+    await shot('mls-1280-full', 1280);
+  } else console.log('NOTE  /playoffs/mls is not served (no MLS document): MLS browser checks skipped');
+
   // ================= Hub: the predictions card at 390 =================
   // The record stays on one line. The live documents may no longer show "no
   // series decided yet", so the same span is also measured holding that text.
@@ -345,7 +366,7 @@ try {
   // the series of the round being played that are not yet final; the
   // served-HTML verifier checks that count against the document). Here: at
   // least one, and every one a link to a series on a league page.
-  check('hub: every series line is a link to that series', hub.deep.length >= 1 && hub.deep.every((h) => /^\/playoffs\/(mlb|wnba)#[a-z_]+-\d+$/.test(h)), `${hub.deep.length} links, ${hub.deep.slice(0, 2).join(' ')}`);
+  check('hub: every series line is a link to that series', hub.deep.length >= 1 && hub.deep.every((h) => /^\/playoffs\/(mlb|wnba|mls)#[a-z_]+-\d+$/.test(h)), `${hub.deep.length} links, ${hub.deep.slice(0, 2).join(' ')}`);
   await shot('hub-390-full', 390);
   await ev(`document.querySelector('[data-league-card="MLB"] [data-series] a').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))`).catch(() => {});
   await sleep(1500);
@@ -475,7 +496,7 @@ try {
   const pso = propsFor(c, 'predictions_series_open', 'posthog')[0] || {};
   check('pick open: event names round, the real series id and the mark', pso.round_key === 'championship_series' && /^championship_series-\d$/.test(pso.series_id) && ['correct', 'busted', 'alive'].includes(pso.pick_outcome), JSON.stringify(pso));
   check('pick open: the address did not change', (await ev('location.hash')) === hashBefore);
-  check('no predictions event carries a pipeline series key or a hash', !/\b(?:AL|NL)-(?:WC|DS)-[A-Z]\b|\b(?:AL|NL)-CS\b|\bR\d-\dv\d\b|\bSF-[A-Z]\b|[0-9a-f]{40,}/.test(JSON.stringify(c)));
+  check('no predictions event carries a pipeline series key or a hash', !/\b(?:AL|NL)-(?:WC|DS)-[A-Z]\b|\b(?:AL|NL)-CS\b|\bR\d-\dv\d\b|\bSF-[A-Z]\b|\b[EW]-(?:WC|CF|R1-[1-4]|SF-[AB])\b|[0-9a-f]{40,}/.test(JSON.stringify(c)));
   await shot('mlb-390-pick-open', 390, { full: false });
 
   // Scripts off: every pick shows, both conferences, and the controls go.

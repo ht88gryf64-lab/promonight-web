@@ -63,9 +63,10 @@ const HOMEPAGE_DESCRIPTION =
 // ever disagree the titles below stop matching the served ones, which is
 // what this audit exists to notice.
 const PLAYOFFS_PAGES = [
-  hubCopy(2026, ['MLB', 'WNBA'], []),
+  hubCopy(2026, ['MLB', 'WNBA', 'MLS'], []),
   leagueCopy(2026, 'MLB', '/playoffs/mlb', null),
   leagueCopy(2026, 'WNBA', '/playoffs/wnba', null),
+  leagueCopy(2026, 'MLS', '/playoffs/mls', null),
 ];
 
 const STATIC_PAGES: PageMeta[] = [

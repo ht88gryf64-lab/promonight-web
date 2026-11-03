@@ -641,6 +641,17 @@ export const getVenueHubForTeam = cache(async (teamId: string): Promise<TeamVenu
   return map.get(teamId) ?? null;
 });
 
+/** How many buildings list each team as a tenant, by team id. The playoffs
+ *  pages name an MLS host's park only when its club has exactly one. */
+export const getTeamBuildingCounts = cache(async (): Promise<Map<string, number>> => {
+  const out = new Map<string, number>();
+  for (const doc of await loadVenueHubDocs()) {
+    const tenants: VenueHubTenantRef[] = Array.isArray(doc.data.tenants) ? doc.data.tenants : [];
+    for (const t of new Set(tenants.map((x) => x.teamId))) out.set(t, (out.get(t) ?? 0) + 1);
+  }
+  return out;
+});
+
 export interface VenueHubSitemapEntry {
   slug: string;
   lastModified: Date;

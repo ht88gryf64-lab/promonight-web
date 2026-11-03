@@ -51,7 +51,7 @@ function Result({ s }: { s: SeriesView }) {
           {played.map((g) => (
             <li key={g.gameNumber} data-result-game={g.gameNumber} className="grid grid-cols-[2.25rem_1fr] gap-x-2 text-[13px] leading-snug text-rd-ink-soft">
               <span className="font-bold uppercase text-rd-ink" style={{ fontFamily: CONDENSED, fontSize: 14 }}>
-                G{g.gameNumber}
+                {g.title ? <>G{g.gameNumber}</> : null}
               </span>
               <span>
                 <span className="text-rd-ink">{g.result}</span>

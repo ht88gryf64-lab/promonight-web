@@ -19,12 +19,22 @@
 //           `next start` on a case-insensitive disk, where the 404 overwrites
 //           the prerendered lowercase entry.
 //   OUT     directory to save the fetched pages in.
+//   EXPECT_MLS=1  require postseasonBrackets/MLS_2026 and /playoffs/mls. Without
+//           it, MLS is checked when its document exists and skipped (and said
+//           so) when it does not.
+//
+// MLS (2026-11-03): no predictions, no promotions, one-game rounds after
+// Round One, shootouts, and no live state of any kind. The MLS rules are
+// written again here from the brief; only the short-name table (data, not
+// logic) and the display-name rule are shared with the page.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { db } from '../../src/lib/firebase';
 import { getAllTeams, getVenueForTeam } from '../../src/lib/data';
-import { getTeamVenueHubMap } from '../../src/lib/venue-hub';
+import { getTeamBuildingCounts, getTeamVenueHubMap } from '../../src/lib/venue-hub';
+import { MLS_CLUBS_WITH_MORE_THAN_ONE_HOME_GROUND } from '../../src/lib/postseason/grounds';
 import { OG_IMAGE_ALT } from '../../src/lib/og';
+import { MLS_SHORT_NAMES, teamDisplayName } from '../../src/lib/team-display-name';
 import { METHODOLOGY_SECTION_ID, fingerprintPlacement, operatorText } from './flight';
 
 const BASE = (process.env.BASE || 'http://localhost:3468').replace(/\/$/, '');
@@ -37,8 +47,14 @@ const OUT = process.env.OUT || '';
 const DISABLED = new Set((process.env.EXPECT_DISABLED || '').split(',').map((s) => s.trim().toUpperCase()).filter(Boolean));
 const SITE = 'https://www.getpromonight.com';
 const SEASON = 2026;
-const LEAGUES = ['MLB', 'WNBA'] as const;
-type League = (typeof LEAGUES)[number];
+const ALL_LEAGUES = ['MLB', 'WNBA', 'MLS'] as const;
+type League = (typeof ALL_LEAGUES)[number];
+// The leagues checked in this run: MLB and WNBA always, MLS once its
+// document exists (or always, with EXPECT_MLS=1). Set in main().
+let LEAGUES: League[] = ['MLB', 'WNBA'];
+// The leagues with PromoNight Predicts. MLS has none (ruling of 2026-11-03).
+const PRED_LEAGUES: readonly League[] = ['MLB', 'WNBA'];
+const EXPECT_MLS = process.env.EXPECT_MLS === '1';
 
 // ---- Reporting ----
 const results: { name: string; ok: boolean; detail: string }[] = [];
@@ -176,7 +192,12 @@ type RawGame = {
   status: string;
   homeScore: number | null;
   awayScore: number | null;
+  winnerSide?: 'higher' | 'lower' | null;
   ifNecessary: boolean;
+  /** MLS only. */
+  decidedBy?: 'regulation' | 'extra_time' | 'penalties' | null;
+  homeShootout?: number | null;
+  awayShootout?: number | null;
 };
 type RawSeries = {
   round: string;
@@ -230,7 +251,7 @@ function instantOf(v: unknown): Date | null {
 }
 
 // The forms a series key takes in the bracket documents, and no others.
-const KEY_SHAPES = [/\b(?:AL|NL)-(?:WC|DS)-[A-Z]\b/, /\b(?:AL|NL)-CS\b/, /\bR\d-\dv\d\b/, /\bSF-[A-Z]\b/];
+const KEY_SHAPES = [/\b(?:AL|NL)-(?:WC|DS)-[A-Z]\b/, /\b(?:AL|NL)-CS\b/, /\bR\d-\dv\d\b/, /\bSF-[A-Z]\b/, /\b[EW]-(?:WC|CF|R1-[1-4]|SF-[AB])\b/];
 const keyIn = (text: string) => {
   for (const re of KEY_SHAPES) {
     const m = re.exec(text);
@@ -265,7 +286,7 @@ const longEt = (d: Date) => {
   const p = parts(d, { year: 'numeric', month: 'long', day: 'numeric' });
   return `${p.month} ${p.day}, ${p.year}`;
 };
-const BACKTEST: Record<League, string> = {
+const BACKTEST: Partial<Record<League, string>> = {
   WNBA: 'Run on the 2025 WNBA postseason with the same settings, the simulation called 5 of 7 series and got the champion right.',
   MLB: 'Run on the 2025 MLB postseason with the same settings, the simulation called 5 of 11 series and got the champion wrong.',
 };
@@ -290,17 +311,22 @@ async function main() {
 
   // ---- What the documents say ----
   const docs = new Map<League, RawDoc>();
-  for (const league of LEAGUES) {
+  for (const league of ALL_LEAGUES) {
     const snap = await db.collection('postseasonBrackets').doc(`${league}_${SEASON}`).get();
     if (snap.exists) docs.set(league, snap.data() as RawDoc);
   }
+  LEAGUES = ALL_LEAGUES.filter((l) => l !== 'MLS' || docs.has('MLS') || EXPECT_MLS);
+  if (!LEAGUES.includes('MLS')) console.log('NOTE  postseasonBrackets/MLS_2026 does not exist: MLS is not checked in this run (EXPECT_MLS=1 requires it)');
   const preds = new Map<League, RawPred>();
-  for (const league of LEAGUES) {
+  for (const league of PRED_LEAGUES) {
     const snap = await db.collection('predictedBrackets').doc(`${league}_${SEASON}`).get();
     if (snap.exists) preds.set(league, snap.data() as RawPred);
   }
   const teams = await getAllTeams();
   const hubs = await getTeamVenueHubMap();
+  // MLS: a host club that does not play at exactly one ground gets no park
+  // (the reviewed list is data; the building count is the venue data's).
+  const buildings = await getTeamBuildingCounts();
   const clubs = new Map<string, Club>();
   const wanted = new Set<string>();
   for (const d of docs.values()) {
@@ -316,16 +342,20 @@ async function main() {
     if (!t) continue;
     const v = await getVenueForTeam(id);
     const hub = hubs.get(id);
+    // An MLS club is its short brand and its display name (the stored
+    // nickname is a fragment); every other club its nickname and city + name.
+    const mlsName = MLS_SHORT_NAMES[id]?.name;
     clubs.set(id, {
-      name: t.name,
-      full: `${t.city} ${t.name}`,
+      name: mlsName ?? t.name,
+      full: mlsName ? teamDisplayName(t) : `${t.city} ${t.name}`,
       abbr: (t as { abbreviation?: string }).abbreviation ?? null,
-      park: v && v.name ? v.name : null,
+      park: mlsName && (MLS_CLUBS_WITH_MORE_THAN_ONE_HOME_GROUND.has(id) || buildings.get(id) !== 1) ? null : v && v.name ? v.name : null,
       venuePath: hub ? `/venues/${hub.slug}` : null,
     });
   }
   check('documents read', docs.size === LEAGUES.length, [...docs.keys()].join(' '));
-  check('locked predictions read', preds.size === LEAGUES.length, [...preds.keys()].join(' '));
+  check('locked predictions read', preds.size === PRED_LEAGUES.length, [...preds.keys()].join(' '));
+  check('no predictions document is read for MLS', !preds.has('MLS'));
   for (const p of preds.values()) {
     for (const id of [...p.rounds.flatMap((r) => [r.higher, r.lower]), ...p.titleOdds.map((o) => o.slug)]) {
       if (clubs.has(id)) continue;
@@ -399,6 +429,14 @@ async function main() {
       if (a && b) return { name: `${a.name} / ${b.name} winner`, club: null, slug: null };
     }
     const label = slot.placeholder ?? '';
+    // MLS: a "TBD" slot whose feeder field names a series in this document,
+    // not yet decided, is that round's winner ("Wild Card winner").
+    if (doc.league === 'MLS' && slot.feederSeriesKey && (label === 'TBD' || keyIn(label))) {
+      const i = doc.series.findIndex((x) => x.seriesKey === slot.feederSeriesKey);
+      const self = doc.series.findIndex((x) => x.higher === slot || x.lower === slot);
+      if (i >= 0 && (self < 0 || i < self)) return { name: `${doc.series[i].roundLabel} winner`, club: null, slug: null };
+    }
+    if (doc.league === 'MLS' && label === 'TBD') return { name: 'To be decided', club: null, slug: null };
     if (!label || keyIn(label)) return { name: 'To be decided', club: null, slug: null };
     return { name: abbreviated(doc, label) ?? label, club: null, slug: null };
   }
@@ -413,9 +451,101 @@ async function main() {
   };
   const currentRound = (doc: RawDoc) => doc.series.find((s) => s.status !== 'final') ?? null;
 
+  // ---- MLS, from the brief (2026-11-03) ----
+  const isMls = (doc: RawDoc) => doc.league === 'MLS';
+  /** A one-game round. */
+  const single = (doc: RawDoc, s: RawSeries) => isMls(doc) && s.bestOf === 1;
+  const formatOf = (doc: RawDoc, s: RawSeries) => (single(doc, s) ? 'Single game' : `Best of ${s.bestOf}`);
+  /** An MLS game under way is shown as the game it was scheduled to be. */
+  const statusOf = (doc: RawDoc, g: RawGame) => (isMls(doc) && g.status === 'live' ? 'scheduled' : g.status);
+  /** The status a series card carries: an MLS series the feed calls live with
+   *  no result in it yet is upcoming on the page. */
+  // For MLS no "live" token at all: "underway" once a result is in, else upcoming.
+  const seriesStatusOf = (doc: RawDoc, s: RawSeries) =>
+    isMls(doc) && s.status === 'live' ? (s.wins.higher + s.wins.lower > 0 || s.games.some((g) => g.status === 'final') ? 'underway' : 'upcoming') : s.status;
+  /** An MLS final the feed served with no score: the winner is named, no score. */
+  const blankFinal = (doc: RawDoc, g: RawGame) => isMls(doc) && g.status === 'final' && g.homeScore === null && g.awayScore === null && !!g.winnerSide;
+  function blankText(doc: RawDoc, s: RawSeries, g: RawGame): string {
+    const w = slotName(doc, s[g.winnerSide as 'higher' | 'lower']);
+    return `${w.club?.abbr ?? w.name} won${g.decidedBy === 'extra_time' ? ' after extra time' : ''}`;
+  }
+  /** The side that won a series. */
+  function seriesWinner(doc: RawDoc, s: RawSeries): 'higher' | 'lower' | null {
+    if (s.status !== 'final' || !s.winner) return null;
+    if (s.winner === 'higher' || s.winner === 'lower') return s.winner;
+    return slotName(doc, s.higher).slug === s.winner ? 'higher' : slotName(doc, s.lower).slug === s.winner ? 'lower' : null;
+  }
+  /** Who won a final game: the stored winnerSide. */
+  const gameWinnerHome = (g: RawGame, hs: 'higher' | 'lower') => (g.winnerSide ? g.winnerSide === hs : (g.homeScore as number) >= (g.awayScore as number));
+  /** A final game's line, winner first: "HOU 5, CWS 3"; for MLS with "after
+   *  extra time" or ", VAN won 4-3 on penalties". */
+  function finalText(doc: RawDoc, s: RawSeries, g: RawGame, hs: 'higher' | 'lower'): string {
+    const home = slotName(doc, s[hs]);
+    const away = slotName(doc, s[hs === 'higher' ? 'lower' : 'higher']);
+    const h = home.club?.abbr ?? home.name;
+    const a = away.club?.abbr ?? away.name;
+    const homeFirst = gameWinnerHome(g, hs);
+    let out = homeFirst ? `${h} ${g.homeScore}, ${a} ${g.awayScore}` : `${a} ${g.awayScore}, ${h} ${g.homeScore}`;
+    if (isMls(doc) && g.decidedBy === 'extra_time') out += ' after extra time';
+    if (isMls(doc) && g.decidedBy === 'penalties') {
+      const [w, ws, ls] = homeFirst ? [h, g.homeShootout, g.awayShootout] : [a, g.awayShootout, g.homeShootout];
+      out += `, ${w} won ${ws}-${ls} on penalties`;
+    }
+    return out;
+  }
+  /** An MLS one-game result from the winner's side: "2-1", "2-1 after extra
+   *  time", "4-3 on penalties after a 1-1 draw". */
+  function mlsPhrase(doc: RawDoc, s: RawSeries): string | null {
+    const side = seriesWinner(doc, s);
+    const g = s.games.find((x) => x.status === 'final' && x.winnerSide === side);
+    if (g && g.homeScore === null && g.awayScore === null) return g.decidedBy === 'extra_time' ? 'after extra time' : null;
+    const hs = g ? hostSide(doc, s, g) : null;
+    if (!g || !hs || g.homeScore === null || g.awayScore === null) return null;
+    const homeWon = g.winnerSide === hs;
+    const [w, l] = homeWon ? [g.homeScore, g.awayScore] : [g.awayScore, g.homeScore];
+    if (g.decidedBy === 'penalties') {
+      const [ws, ls] = homeWon ? [g.homeShootout, g.awayShootout] : [g.awayShootout, g.homeShootout];
+      return `${ws}-${ls} on penalties after a ${w}-${l} draw`;
+    }
+    return g.decidedBy === 'extra_time' ? `${w}-${l} after extra time` : `${w}-${l}`;
+  }
+  const mlsPlural = (slug: string | null) => !!(slug && MLS_SHORT_NAMES[slug]?.plural);
+  /** The champion's summary line: "Won the World Series 4-3", "Won the MLS
+   *  Cup 2-1 after extra time". */
+  function summaryOf(doc: RawDoc): { champ: Club; summary: string } | null {
+    const last = doc.series[doc.series.length - 1];
+    const side = seriesWinner(doc, last);
+    if (!side) return null;
+    const champ = slotName(doc, last[side]).club;
+    if (!champ) return null;
+    if (single(doc, last)) {
+      const ph = mlsPhrase(doc, last);
+      return { champ, summary: ph ? `Won the ${last.roundLabel} ${ph}` : `Won the ${last.roundLabel}` };
+    }
+    return { champ, summary: `Won the ${last.roundLabel} ${Math.max(last.wins.higher, last.wins.lower)}-${Math.min(last.wins.higher, last.wins.lower)}` };
+  }
+  const lowerFirst = (x: string) => (x ? x[0].toLowerCase() + x.slice(1) : x);
+
   function scoreLine(doc: RawDoc, s: RawSeries): string | null {
     const hi = s.wins.higher;
     const lo = s.wins.lower;
+    if (isMls(doc)) {
+      const a = slotName(doc, s.higher);
+      const b = slotName(doc, s.lower);
+      const side = seriesWinner(doc, s);
+      if (single(doc, s)) {
+        if (!side) return null;
+        const [W, L] = side === 'higher' ? [a, b] : [b, a];
+        const ph = mlsPhrase(doc, s);
+        return ph ? `${W.name} beat ${L.name} ${ph}` : `${W.name} beat ${L.name}`;
+      }
+      if (hi === 0 && lo === 0) return null;
+      const top = `${Math.max(hi, lo)}-${Math.min(hi, lo)}`;
+      if (s.status === 'final' && side) return `${(side === 'higher' ? a : b).name} won the series ${top}`;
+      if (hi === lo) return `Series tied ${hi}-${lo}`;
+      const lead = hi > lo ? a : b;
+      return `${lead.name} ${mlsPlural(lead.slug) ? 'lead' : 'leads'} the series ${top}`;
+    }
     if (hi === 0 && lo === 0) return null;
     const a = slotName(doc, s.higher);
     const b = slotName(doc, s.lower);
@@ -446,16 +576,17 @@ async function main() {
     const hs = hostSide(doc, s, g);
     const home = hs ? slotName(doc, s[hs]) : null;
     const away = hs ? slotName(doc, s[hs === 'higher' ? 'lower' : 'higher']) : null;
-    const out = [`G${g.gameNumber}`, whenOf(g)];
+    // The one game of a one-game round has no "G1".
+    const out = single(doc, s) ? [whenOf(g)] : [`G${g.gameNumber}`, whenOf(g)];
     if (home && home.club) out.push(home.club.park ? `Host: ${home.name} · ${home.club.park}` : `Host: ${home.name}`);
-    if (g.status === 'final' && home && away && g.homeScore !== null && g.awayScore !== null) {
-      const h = home.club?.abbr ?? home.name;
-      const a = away.club?.abbr ?? away.name;
-      out.push(`Final: ${g.homeScore >= g.awayScore ? `${h} ${g.homeScore}, ${a} ${g.awayScore}` : `${a} ${g.awayScore}, ${h} ${g.homeScore}`}`);
-    } else if (g.status === 'live') out.push('Live');
-    else if (g.status === 'scheduled') {
-      if (conditional(s, g)) out.push('If necessary');
-    } else if (g.status !== 'final') out.push(g.status[0].toUpperCase() + g.status.slice(1));
+    const st = statusOf(doc, g);
+    if (g.status === 'final' && home && away && hs && g.homeScore !== null && g.awayScore !== null) {
+      out.push(`Final: ${finalText(doc, s, g, hs)}`);
+    } else if (blankFinal(doc, g)) out.push(`Final: ${blankText(doc, s, g)}`);
+    else if (st === 'live') out.push('Live');
+    else if (st === 'scheduled') {
+      if (conditional(s, { ...g, status: st })) out.push('If necessary');
+    } else if (st !== 'final') out.push(st[0].toUpperCase() + st.slice(1));
     return out.join(' ');
   }
 
@@ -661,7 +792,8 @@ async function main() {
       const pid = ids(doc);
       doc.series.forEach((s, i) => {
         if (s.status === 'final') return;
-        for (const g of s.games) {
+        for (const raw of s.games) {
+          const g = { ...raw, status: statusOf(doc, raw) };
           const hs = hostSide(doc, s, g);
           // Postponed and suspended games stay, labeled, whatever the clock
           // says (ruling of 2026-10-02); live and cancelled ones leave.
@@ -726,6 +858,10 @@ async function main() {
   /** "Where things stand" from the raw document, independently of the page's
    *  code: the champion, the round being played, or the next round. */
   function standingWant(doc: RawDoc, now: Date): string | null {
+    const mls = isMls(doc);
+    // The status each game shows: an MLS game under way is its scheduled game.
+    doc = mls ? { ...doc, series: doc.series.map((s) => ({ ...s, games: s.games.map((g) => ({ ...g, status: statusOf(doc, g) })) })) } : doc;
+    const the = (n: string) => (mls ? n : `the ${n}`);
     const order: string[] = [];
     for (const s of doc.series) if (!order.includes(s.round)) order.push(s.round);
     const of = (r: string) => doc.series.filter((s) => s.round === r);
@@ -743,9 +879,15 @@ async function main() {
       const lw = w === d[0].higher ? d[0].wins.lower : d[0].wins.higher;
       const W = slotName(doc, w).club;
       const L = slotName(doc, l).club;
+      if (W && L && mls) {
+        const score = single(doc, d[0]) ? mlsPhrase(doc, d[0]) : `${ww}-${lw}`;
+        return `${W.full} won the ${doc.season} ${label(last)}, beating ${L.full}${score ? ` ${score}` : ''}.`;
+      }
       return W && L ? `The ${W.full} won the ${doc.season} ${label(last)}, beating the ${L.full} ${ww}-${lw}.` : null;
     }
-    const started = (s: RawSeries) => s.status !== 'upcoming' || s.wins.higher + s.wins.lower > 0 || s.games.some((g) => g.status === 'final' || g.status === 'live');
+    // MLS: only a result starts a series (a game under way is its scheduled game).
+    const started = (s: RawSeries) =>
+      mls ? s.wins.higher + s.wins.lower > 0 || s.games.some((g) => g.status === 'final') : s.status !== 'upcoming' || s.wins.higher + s.wins.lower > 0 || s.games.some((g) => g.status === 'final' || g.status === 'live');
     const at = order.indexOf(open);
     const played = order.filter((r, i) => i >= at && of(r).some(started));
     // The next game, derived differently from the page on purpose: every
@@ -789,9 +931,18 @@ async function main() {
       const away = hs ? slotName(doc, s[hs === 'higher' ? 'lower' : 'higher']).name : null;
       const matchup = home && away ? `${away} at ${home}` : `${slotName(doc, s.lower).name} vs ${slotName(doc, s.higher).name}`;
       const t = new Date(g.start as string);
-      return `Game ${g.gameNumber}, ${matchup}, ${etDay(t)}, ${etTime(t)}`;
+      return `${single(doc, s) ? '' : `Game ${g.gameNumber}, `}${matchup}, ${etDay(t)}, ${etTime(t)}`;
     };
     const laterThan = (i: number, skip: string[]) => order.filter((r, k) => k >= i && !skip.includes(r)).flatMap(of);
+    if (played.length === 0 && mls) {
+    // MLS: the round and its scheduled days, never "next" (2026-11-03).
+    const longOf = (ymd: string) => { const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', weekday: 'long', month: 'long', day: 'numeric' }).formatToParts(new Date(`${ymd}T12:00:00Z`)).map((x) => [x.type, x.value])); return `${p.weekday}, ${p.month} ${p.day}`; };
+    const andList = (xs: string[]) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
+      // Only games certain to be played on their day: scheduled, not
+      // conditional ("if necessary"), not postponed or suspended.
+      const days = [...new Set(of(open).flatMap((s) => s.games.filter((g) => g.status === 'scheduled' && !conditional(s, g)).map((g) => (!g.startTimeTBD && isInstant(g.start) ? etYmd(new Date(g.start)) : g.date)).filter((d): d is string => !!d)))].sort();
+      return days.length ? `${label(open)}: ${andList(days.map(longOf))}.` : `${label(open)}: dates not yet listed.`;
+    }
     if (played.length === 0) {
       const f = sureNext(of(open), laterThan(at + 1, []));
       return f ? `Next round: ${label(open)}. It opens with ${gameText(f.s, f.g)}.` : `Next round: ${label(open)}.`;
@@ -810,11 +961,31 @@ async function main() {
           const c = (a.club ? a : b);
           const other = a.club ? b : a;
           if (s.wins.higher + s.wins.lower > 0 || s.status === 'final') return null;
-          clauses.push(`the ${c.name} ${singular.has(c.name) ? 'awaits' : 'await'} ${other.name.endsWith(' winner') ? `the ${other.name}` : 'an opponent'}`);
+          const one = mls ? !mlsPlural(c.slug) : singular.has(c.name);
+          clauses.push(`${the(c.name)} ${one ? 'awaits' : 'await'} ${other.name.endsWith(' winner') ? `the ${other.name}` : 'an opponent'}`);
           continue;
         }
         const hi = s.wins.higher;
         const lo = s.wins.lower;
+        if (mls) {
+          const one = single(doc, s);
+          if (s.status === 'final') {
+            const w = winnerOf(s);
+            if (!w) return null;
+            const [W, L, x, y] = w === s.higher ? [a, b, hi, lo] : [b, a, lo, hi];
+            if (one) { const ph = mlsPhrase(doc, s); clauses.push(`${W.name} beat ${L.name}${ph ? ` ${ph}` : ''}`); }
+            else clauses.push(`${W.name} beat ${L.name} ${x}-${y} in the series`);
+          } else if (hi === lo) {
+            if (hi === 0) clauses.push(`${a.name} and ${b.name} have not completed ${one ? 'their game' : 'a game'}`);
+            else if (one) return null;
+            else clauses.push(`${a.name} and ${b.name} are tied ${hi}-${lo} in the series`);
+          } else {
+            if (one) return null;
+            const [W, L, x, y] = hi > lo ? [a, b, hi, lo] : [b, a, lo, hi];
+            clauses.push(`${W.name} ${mlsPlural(W.slug) ? 'lead' : 'leads'} ${L.name} ${x}-${y} in the series`);
+          }
+          continue;
+        }
         if (s.status === 'final') {
           const w = winnerOf(s);
           if (!w) return null;
@@ -830,6 +1001,8 @@ async function main() {
       parts.push(`${label(r)}: ${clauses.join('; ')}.`);
     }
     const f = sureNext(played.flatMap(of), laterThan(at, played));
+    // MLS names the game by its schedule, never "next".
+    if (f && mls) return `${parts.join(' ')} ${single(doc, f.s) ? 'Kickoff:' : `Game ${f.g.gameNumber}:`} ${gameText(f.s, f.g).replace(/^Game \d+, /, '')}.`;
     return f ? `${parts.join(' ')} Next game: ${gameText(f.s, f.g)}.` : parts.join(' ');
   }
 
@@ -902,7 +1075,7 @@ async function main() {
     check(`${where}: methodology says what "at lock" means and why a pick can name a club already out`, mt.includes('Every percentage on this page is as it stood when the bracket was locked.') && mt.includes('Postseason results are not among the inputs, so a pick can name a club that was already out by then.'));
     check(`${where}: methodology states the length as the engine computes it`, mt.includes('its length is how many games the pick most often took to win it') && !/most common length|engine( code)? (is |has )?(not changed|unchanged|never changed)/i.test(mt));
     check(`${where}: methodology names ${p.simRuns.toLocaleString('en-US')} simulated postseasons`, mt.includes(`plays out the postseason ${p.simRuns.toLocaleString('en-US')} times`));
-    check(`${where}: the backtest, and no other accuracy claim`, mt.includes(BACKTEST[league]) && (mt.match(/\b\d+ of \d+\b/g) ?? []).length === 1 && !/\b(accura\w*|correct\w*|hit rate|record)\b/i.test(mt), BACKTEST[league]);
+    check(`${where}: the backtest, and no other accuracy claim`, mt.includes(BACKTEST[league] ?? '(none)') && (mt.match(/\b\d+ of \d+\b/g) ?? []).length === 1 && !/\b(accura\w*|correct\w*|hit rate|record)\b/i.test(mt), BACKTEST[league] ?? '');
     check(`${where}: never says the bracket was set before Game 1`, !/(bracket|picks?) (was|were) (locked|set|picked|computed|made)[^.]*before (Game 1|the first (pitch|game|tip)|the postseason)/i.test(mt));
 
     // TWO LAYERS (WEB4, 2026-10-02). Visible: the summary, from lockedAt in
@@ -959,13 +1132,23 @@ async function main() {
     if (!doc || got.status !== 200) continue;
     const changed = instantOf(doc.lastChangedAt);
     const open = currentRound(doc);
-    check(`${where}: the document has a series being played`, open !== null, open ? open.roundLabel : 'all final');
+    console.log(`      ${where}: ${open ? `being played, ${open.roundLabel}` : 'complete'}`);
     const pred = DISABLED.has(league) ? null : preds.get(league) ?? null;
-    const description = open
-      ? pred
+    const done = open ? null : summaryOf(doc);
+    let description: string;
+    if (league === 'MLS') {
+      if (open) description = `The ${SEASON} MLS postseason bracket. Current round: ${open.roundLabel}. Every matchup, seed and result, with Eastern game times and the upcoming playoff games.`;
+      else {
+        const lead = `The ${SEASON} MLS postseason bracket, complete. ${done?.champ.full}: ${lowerFirst(done?.summary ?? '')}.`;
+        description = `${lead} Every matchup and result, round by round.`.length <= 160 ? `${lead} Every matchup and result, round by round.` : lead;
+      }
+    } else if (open) {
+      description = pred
         ? `The ${SEASON} ${league} postseason bracket, with a simulation's locked pick for every series, marked against the results. Current round: ${open.roundLabel}.`
-        : `The ${SEASON} ${league} postseason bracket. Current round: ${open.roundLabel}. Every series, seed and result, with game times in Eastern and the upcoming playoff games.`
-      : '(concluded: checked by hand)';
+        : `The ${SEASON} ${league} postseason bracket. Current round: ${open.roundLabel}. Every series, seed and result, with game times in Eastern and the upcoming playoff games.`;
+    } else {
+      description = `The ${SEASON} ${league} postseason bracket, complete. ${done?.champ.full}: ${lowerFirst(done?.summary ?? '')}. ${pred ? "Every series and result, and how the simulation's locked picks did." : 'Every series and result, round by round.'}`;
+    }
     const want = {
       title: pred ? `${SEASON} ${league} Playoffs: Bracket, Schedule and Predictions` : `${SEASON} ${league} Playoffs: Bracket and Schedule`,
       description,
@@ -976,6 +1159,14 @@ async function main() {
     const el = article(where, got.html, 'league');
     leaks(where, got.html);
     if (pred) await predictionsOnPage(where, got.html, el, league, doc, pred);
+    if (league === 'MLS') {
+      // No PromoNight Predicts for MLS, no promotions, and no live state.
+      const traces = ['id="predictions"', 'data-predictions', 'data-pick', 'po-picks', METHODOLOGY_SECTION_ID, 'Title odds', 'Fingerprints', 'PromoNight Predicts', "PromoNight's", 'PromoNight&#x27;s', 'Predicted champion', 'data-game-promo'].filter((m) => got.html.includes(m));
+      check(`${where}: no predictions section, line, methodology or promotion`, traces.length === 0, traces.join(' '));
+      const liveWord = /.{0,40}(\blive\b|in progress|under way|real[- ]time).{0,20}/i.exec(textOf(el));
+      check(`${where}: no live, in-progress or freshness wording anywhere in the article`, !liveWord, liveWord ? liveWord[0] : '');
+      check(`${where}: no "Best of 1", no "won 1-0" for a one-game round`, !/Best of 1\b/.test(textOf(el)));
+    }
     if (DISABLED.has(league)) {
       const traces = ['id="predictions"', 'data-predictions', 'data-pick', 'po-picks', METHODOLOGY_SECTION_ID, 'Title odds', 'Fingerprints', 'PromoNight Predicts', "PromoNight's", 'PromoNight&#x27;s', 'Predicted champion'].filter((m) => got.html.includes(m));
       check(`${where}: FORCED FAILURE: no predictions section, heading, card or methodology`, traces.length === 0, traces.join(' '));
@@ -1007,15 +1198,16 @@ async function main() {
       const card = cards.find((c) => c.includes(`data-series="${id}"`)) ?? '';
       const cardText = textOf(card);
       const cardWant = [
-        /data-series-status="([^"]*)"/.exec(card)?.[1] === s.status,
+        /data-series-status="([^"]*)"/.exec(card)?.[1] === seriesStatusOf(doc, s),
         cardText.includes(`${s.roundLabel}: ${a.name} vs ${b.name}`),
-        cardText.includes(`Best of ${s.bestOf}`),
+        cardText.includes(formatOf(doc, s)),
         typeof s.higher.seed === 'number' && a.club ? cardText.includes(`Seed ${s.higher.seed} ${a.name}`) : true,
         typeof s.lower.seed === 'number' && b.club ? cardText.includes(`Seed ${s.lower.seed} ${b.name}`) : true,
         line ? cardText.includes(line) : !/\b(leads|tied|won)\b/.test(cardText),
         // Win counts appear once the series has started, which at 0-0 means
         // a first game in progress.
-        s.status !== 'upcoming' ? cardText.includes(`${s.wins.higher} ${s.wins.higher === 1 ? 'win' : 'wins'}`) && cardText.includes(`${s.wins.lower} ${s.wins.lower === 1 ? 'win' : 'wins'}`) : !/\d+ wins?\b/.test(cardText),
+        // A one-game round (MLS) shows no win count at all.
+        seriesStatusOf(doc, s) !== 'upcoming' && !single(doc, s) ? cardText.includes(`${s.wins.higher} ${s.wins.higher === 1 ? 'win' : 'wins'}`) && cardText.includes(`${s.wins.lower} ${s.wins.lower === 1 ? 'win' : 'wins'}`) : !/\d+ wins?\b/.test(cardText),
         new RegExp(`href="#${id}"`).test(card),
       ];
       if (cardWant.includes(false)) wrong.push(`card ${id} [${cardWant.map((x) => (x ? '.' : 'X')).join('')}] ${cardText.slice(0, 160)}`);
@@ -1024,7 +1216,7 @@ async function main() {
       const panel = panels.find((p) => p.includes(`data-series-panel="${id}"`)) ?? '';
       const panelText = textOf(panel);
       const panelWant = [
-        panelText.startsWith(`${s.roundLabel}${s.conference ? ` · ${s.conference}` : ''} ${a.name} vs ${b.name} Best of ${s.bestOf}`),
+        panelText.startsWith(`${s.roundLabel}${s.conference ? ` · ${s.conference}` : ''} ${a.name} vs ${b.name} ${formatOf(doc, s)}`),
         line ? panelText.includes(line) : !/\b(leads|tied|won)\b/.test(panelText),
         new RegExp(`<section id="${id}"`).test(panel),
       ];
@@ -1079,26 +1271,24 @@ async function main() {
         if (!cardText.includes(`${a.name} vs ${b.name}`) || (line && !cardText.includes(line))) missing.push(`${pageIds[i]} names or score`);
         for (const g of s.games) {
           const hs = hostSide(doc, s, g);
-          if (g.status !== 'final' || g.homeScore === null || g.awayScore === null || !hs) continue;
-          const home = slotName(doc, s[hs]);
-          const away = slotName(doc, s[hs === 'higher' ? 'lower' : 'higher']);
-          const h = home.club?.abbr ?? home.name;
-          const aw = away.club?.abbr ?? away.name;
-          const score = g.homeScore >= g.awayScore ? `${h} ${g.homeScore}, ${aw} ${g.awayScore}` : `${aw} ${g.awayScore}, ${h} ${g.homeScore}`;
-          if (!cardText.includes(`G${g.gameNumber} ${score}`)) missing.push(`${pageIds[i]} game ${g.gameNumber}: ${score}`);
+          if (!blankFinal(doc, g) && (g.status !== 'final' || g.homeScore === null || g.awayScore === null || !hs)) continue;
+          const score = blankFinal(doc, g) ? blankText(doc, s, g) : finalText(doc, s, g, hs as 'higher' | 'lower');
+          const label = single(doc, s) ? score : `G${g.gameNumber} ${score}`;
+          if (!cardText.includes(label) || (single(doc, s) && /\bG1\b/.test(cardText))) missing.push(`${pageIds[i]} game ${g.gameNumber}: ${label}`);
         }
         const rows = count(card, 'data-result-game=');
-        const played = s.games.filter((g) => g.status === 'final' && g.homeScore !== null && g.awayScore !== null).length;
+        const played = s.games.filter((g) => blankFinal(doc, g) || (g.status === 'final' && g.homeScore !== null && g.awayScore !== null)).length;
         if (rows !== played) missing.push(`${pageIds[i]}: ${rows} game rows for ${played} played`);
       });
       check(`${where}: the results section lists every decided series with every game score, and nothing else`, missing.length === 0, `${decided.length} decided${missing.length ? ': ' + missing.slice(0, 4).join('; ') : ''}`);
     }
 
     // Scores: only on finished games, and every one of them accounted for.
-    const finals = doc.series.flatMap((s) => s.games.filter((g) => g.status === 'final' && g.homeScore !== null && g.awayScore !== null));
+    const finals = doc.series.flatMap((s) => s.games.filter((g) => blankFinal(doc, g) || (g.status === 'final' && g.homeScore !== null && g.awayScore !== null)));
     same(`${where}: "Final:" lines against finished games in the document`, count(textOf(elements(el, 'data-series-panels=')[0] ?? panels.join(' ')), 'Final:'), finals.length);
-    const live = doc.series.flatMap((s) => s.games.filter((g) => g.status === 'live'));
-    same(`${where}: in-progress badges present exactly when a game is in progress`, count(el, 'data-game-state="live"') > 0, live.length > 0);
+    // MLS never shows one (ruling of 2026-11-03).
+    const live = doc.series.flatMap((s) => s.games.filter((g) => statusOf(doc, g) === 'live'));
+    same(`${where}: in-progress badges present exactly when a game is in progress${league === 'MLS' ? ' (never, for MLS)' : ''}`, count(el, 'data-game-state="live"') > 0, live.length > 0);
     // A game in progress shows no score: its row is compared whole, above.
     same(`${where}: rows of games in progress that show a score`, elements(el, 'data-game=').filter((r) => r.includes('data-game-state="live"') && /\d+, [A-Z]/.test(textOf(r))).length, 0);
 
@@ -1108,7 +1298,8 @@ async function main() {
     const known = new Set<string>();
     for (const s of doc.series) {
       if (s.status === 'final') continue;
-      for (const g of s.games) {
+      for (const raw of s.games) {
+        const g = { ...raw, status: statusOf(doc, raw) };
         const hs = hostSide(doc, s, g);
         if ((g.status !== 'scheduled' && g.status !== 'postponed' && g.status !== 'suspended') || !hs) continue;
         const home = slotName(doc, s[hs]);
@@ -1116,13 +1307,14 @@ async function main() {
         if (!home.club) continue;
         const dayPart = whenOf(g).split(' · ')[0];
         const when = g.status === 'postponed' ? `Postponed · originally ${dayPart}` : g.status === 'suspended' ? `Suspended · started ${dayPart}` : whenOf(g);
-        known.add([`${away.name} at ${home.name}`, `${s.roundLabel} · Game ${g.gameNumber}${conditional(s, g) ? ' · If necessary' : ''}`, when, home.club.park ?? ''].join(' ').trim());
+        const title = single(doc, s) ? s.roundLabel : `${s.roundLabel} · Game ${g.gameNumber}`;
+        known.add([`${away.name} at ${home.name}`, `${title}${conditional(s, g) ? ' · If necessary' : ''}`, when, home.club.park ?? ''].join(' ').trim());
       }
     }
     // A promotion line is checked on its own below; it is taken out of the
     // row before the row is compared.
     const withoutPromo = (r: string) => r.replace(/<p data-game-promo=[^>]*>[\s\S]*?<\/p>/g, '');
-    const strays = list.map((r) => textOf(withoutPromo(r)).replace(/ Get Tickets.*$/, '').trim()).filter((t) => !known.has(t));
+    const strays = list.map((r) => textOf(withoutPromo(r)).replace(/ (?:ticketmaster )?Get Tickets.*$/i, '').trim()).filter((t) => !known.has(t));
     check(`${where}: every home game row is a scheduled game in the document`, strays.length === 0, `${list.length} rows${strays.length ? `, not in the document: ${strays.join(' || ')}` : ''}`);
     const today = etYmd(new Date());
     const inThree = list.filter((r) => element(el, 'data-home-games-list="primary"')?.includes(r));
@@ -1200,12 +1392,29 @@ async function main() {
     check(`${where}: each card names a version of its document that was read in this run`, got.built.size === LEAGUES.length, got.lag);
     if (got.status === 200 && got.built.size === LEAGUES.length) {
       const at = got.built;
-      const playing = LEAGUES.filter((l) => at.get(l) && currentRound(at.get(l) as RawDoc));
-      const rounds = playing.map((l) => `${l}: ${(currentRound(at.get(l) as RawDoc) as RawSeries).roundLabel}`).join('. ');
-      const names = playing.length === 2 ? `${playing[0]} and ${playing[1]}` : playing.join('');
+      // The hub names every league with a bracket, in route order: a league
+      // being played by its round, a finished one by its champion. The long
+      // lead is used when it fits 160 characters, then a shorter one, then
+      // the states alone (three leagues, 2026-11-03).
+      const withDoc = LEAGUES.filter((l) => at.get(l));
+      const playing = withDoc.filter((l) => currentRound(at.get(l) as RawDoc));
+      const listOf = (xs: readonly string[]) => (xs.length <= 1 ? xs.join('') : xs.length === 2 ? `${xs[0]} and ${xs[1]}` : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
+      const states = withDoc
+        .map((l) => {
+          const d = at.get(l) as RawDoc;
+          const open = currentRound(d);
+          return open ? `${l}: ${open.roundLabel}` : `${l} champion: ${summaryOf(d)?.champ.full ?? '?'}`;
+        })
+        .join('. ');
+      const names = listOf(withDoc);
+      const longLead = playing.length > 0
+        ? `The ${SEASON} postseason brackets for ${names}, series by series, with Eastern game times.`
+        : `The ${SEASON} ${names} postseason is complete, the final ${withDoc.length === 1 ? 'bracket' : 'brackets'} round by round.`;
+      const shortForm = `The ${SEASON} ${names} playoff brackets${playing.length > 0 ? '' : ', complete'}. ${states}.`;
+      const description = `${longLead} ${states}.`.length <= 160 ? `${longLead} ${states}.` : shortForm.length <= 160 ? shortForm : `${SEASON} playoffs. ${states}.`;
       const want = {
-        title: `${SEASON} Playoffs: MLB and WNBA Brackets`,
-        description: `The ${SEASON} postseason brackets for ${names}, series by series, with Eastern game times and upcoming games. ${rounds}.`,
+        title: `${SEASON} Playoffs: ${names} Brackets`,
+        description,
         canonical: `${SITE}${path}`,
       };
       head(where, got.html, want);
@@ -1224,6 +1433,7 @@ async function main() {
       }
       const card = element(el, 'data-predictions="locked"');
       const wantLines: string[] = [];
+      check(`${where}: no MLS predictions line`, !card || !card.includes('data-predictions-league="mls"'));
       for (const league of LEAGUES) {
         const d = at.get(league);
         const p = preds.get(league);
@@ -1265,12 +1475,20 @@ async function main() {
           const ok = onCard && text.includes(`${a.name} vs ${b.name}`) && (scoreLine(doc, s) ? text.includes(scoreLine(doc, s) as string) : true) && card.includes(`href="/playoffs/${league.toLowerCase()}#${pageIds[i]}"`);
           if (!ok) lines.push(`${pageIds[i]} ${a.name} vs ${b.name}`);
         });
-        check(`${where}: ${league} card names the round and each series still being played, with its standing and its link, and no decided series`, !!open && text.startsWith(`${league} ${open.roundLabel}`) && lines.length === 0, lines.join(' | ') || (open ? open.roundLabel : ''));
+        if (open) check(`${where}: ${league} card names the round and each series still being played, with its standing and its link, and no decided series`, text.startsWith(`${league} ${open.roundLabel}`) && lines.length === 0, lines.join(' | ') || open.roundLabel);
+        else {
+          const done = summaryOf(doc);
+          check(`${where}: ${league} card, finished: "Final", the champion and the summary`, !!done && text.startsWith(`${league} Final ${SEASON} champion ${done.champ.full} ${done.summary}`), text.slice(0, 120));
+        }
+        if (league === 'MLS') {
+          const liveWord = /.{0,30}(\blive\b|in progress).{0,20}/i.exec(text);
+          check(`${where}: MLS card carries no live or in-progress wording and no badge`, !liveWord && !card.includes('data-game-state'), liveWord ? liveWord[0] : '');
+        }
         if (changed) check(`${where}: ${league} card change stamp`, text.includes(`Bracket updated ${etStamp(changed)}`), etStamp(changed));
         check(`${where}: ${league} card links to the league page`, card.includes(`href="/playoffs/${league.toLowerCase()}"`));
       }
       const rows = elements(el, 'data-home-game=');
-      check(`${where}: home game rows carry one ticket link at most, and a league each`, rows.every((r) => count(r, 'rel="noopener noreferrer sponsored"') <= 1 && /\b(MLB|WNBA)\b/.test(textOf(r))), `${rows.length} rows`);
+      check(`${where}: home game rows carry one ticket link at most, and a league each`, rows.every((r) => count(r, 'rel="noopener noreferrer sponsored"') <= 1 && /\b(MLB|WNBA|MLS)\b/.test(textOf(r))), `${rows.length} rows`);
       const hubGames = element(el, 'data-home-games=');
       if (hubGames) check(`${where}: the games section is headed "Upcoming playoff games"`, /<h2[^>]*>Upcoming playoff games<\/h2>/.test(hubGames));
       check(`${where}: every listed game has a known date (an untimed one reads "Time TBD")`, rows.every((r) => !/Date TBD/.test(textOf(r))), `${rows.length} rows, ${rows.filter((r) => /Time TBD/.test(textOf(r))).length} Time TBD`);
@@ -1309,7 +1527,8 @@ async function main() {
         check(`${where}: results so far list each league's decided series with round, score and link, and nothing else`, wrong.length === 0, wrong.slice(0, 4).join('; '));
       }
       // The hub names a game in progress and gives no score for any game.
-      const inProgress = LEAGUES.flatMap((l) => (at.get(l)?.series ?? []).filter((s) => s.status !== 'final' && s.games.some((g) => g.status === 'live')));
+      // MLS never shows one.
+      const inProgress = LEAGUES.filter((l) => l !== 'MLS').flatMap((l) => (at.get(l)?.series ?? []).filter((s) => s.status !== 'final' && s.games.some((g) => g.status === 'live')));
       same(`${where}: in-progress badges against series with a game in progress`, count(el, 'data-game-state="live"'), inProgress.length);
       const scores = /Final:|\b[A-Z]{2,3} \d+, [A-Z]{2,3} \d+\b/.exec(textOf(el));
       check(`${where}: no game score on the hub`, !scores, scores ? scores[0] : '');
@@ -1322,8 +1541,10 @@ async function main() {
   if (process.env.CASE === '1') same('/playoffs/MLB: status (path case)', (await get('/playoffs/MLB')).status, 404);
   const map = await get('/sitemap.xml');
   same('/sitemap.xml: status', map.status, 200);
-  for (const p of ['/playoffs', '/playoffs/mlb', '/playoffs/wnba']) same(`/sitemap.xml: ${p} listed once, on the www host`, count(map.body, `<loc>${SITE}${p}</loc>`), 1);
-  same('/sitemap.xml: playoffs entries in all', (map.body.match(/<loc>[^<]*\/playoffs[^<]*<\/loc>/g) ?? []).length, 3);
+  const listed = ['/playoffs', ...ALL_LEAGUES.filter((l) => docs.has(l)).map((l) => `/playoffs/${l.toLowerCase()}`)];
+  for (const p of listed) same(`/sitemap.xml: ${p} listed once, on the www host`, count(map.body, `<loc>${SITE}${p}</loc>`), 1);
+  same('/sitemap.xml: playoffs entries in all', (map.body.match(/<loc>[^<]*\/playoffs[^<]*<\/loc>/g) ?? []).length, listed.length);
+  if (!docs.has('MLS')) same('/playoffs/mls: status with no MLS document', (await get('/playoffs/mls')).status, 404);
   const llms = await get('/llms.txt');
   check('/llms.txt: served, and it makes no claim about /playoffs', llms.status === 200 && !/playoffs/i.test(llms.body), `status ${llms.status}`);
 

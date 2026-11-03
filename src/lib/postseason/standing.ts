@@ -29,7 +29,7 @@
 // after its start is a row the feed has not caught up on, and it blocks the
 // next-game clause on its day.
 import type { Bracket } from './types';
-import { seriesIds, type GameView, type LeagueView, type SeriesView, type SlotView } from './view';
+import { mlsVerb, seriesIds, type GameView, type LeagueView, type SeriesView, type SlotView } from './view';
 
 /** Each timed game's start instant, by the page's series id and game
  *  number. A game whose time is TBD, or with no start, has no entry. */
@@ -51,18 +51,35 @@ const isClub = (s: SlotView): s is Club => s.kind === 'club';
 const SINGULAR = new Set(['Liberty', 'Dream', 'Fever', 'Lynx', 'Mercury', 'Sky', 'Storm', 'Sun', 'Tempo', 'Fire', 'Heat', 'Magic', 'Thunder', 'Jazz', 'Wild', 'Kraken', 'Lightning', 'Avalanche', 'Mammoth']);
 const verb = (label: string, plural: string, singular: string) => (SINGULAR.has(label) ? singular : plural);
 
+/** How a league's clubs are named in a sentence. MLB and WNBA nicknames take
+ *  "the" and a verb by the SINGULAR list, as before. An MLS club is its short
+ *  brand, with no article ("Minnesota United", "LAFC"), and a verb by the
+ *  short name map's own number. */
+interface Speech {
+  mls: boolean;
+  the: (c: SlotView) => string;
+  verb: (c: SlotView, plural: string, singular: string) => string;
+}
+const SPEECH: Record<'mls' | 'other', Speech> = {
+  other: { mls: false, the: (c) => `the ${c.label}`, verb: (c, p, sg) => verb(c.label, p, sg) },
+  mls: { mls: true, the: (c) => c.label, verb: (c, p, sg) => mlsVerb(c.teamId, p, sg) },
+};
+
 /** "the Brewers lead the Cubs 2-1", or null when the series cannot be read
  *  straight. A series with one slot no club fills yet says who waits for
- *  whom; with none filled it is 'unset'. */
-function clause(s: SeriesView): string | null | 'unset' {
+ *  whom; with none filled it is 'unset'. For MLS a one-game round states the
+ *  match ("LAFC beat Vancouver Whitecaps 2-1 after extra time") and Round
+ *  One says "in the series", since a bare "1-0" reads as a match score. */
+function clause(s: SeriesView, sp: Speech): string | null | 'unset' {
   if (!isClub(s.higher) && !isClub(s.lower)) return 'unset';
   if (!isClub(s.higher) || !isClub(s.lower)) {
     const club = (isClub(s.higher) ? s.higher : s.lower) as Club;
     const slot = isClub(s.higher) ? s.lower : s.higher;
     if (club.wins + slot.wins > 0 || s.status === 'final') return null;
     const whom = slot.label.endsWith(' winner') ? `the ${slot.label}` : 'an opponent';
-    return `the ${club.label} ${verb(club.label, 'await', 'awaits')} ${whom}`;
+    return `${sp.the(club)} ${sp.verb(club, 'await', 'awaits')} ${whom}`;
   }
+  if (sp.mls) return mlsClause(s, s.higher as Club, s.lower as Club);
   const a = s.higher;
   const b = s.lower;
   if (s.status === 'final') {
@@ -81,7 +98,35 @@ function clause(s: SeriesView): string | null | 'unset' {
   return `the ${lead.label} ${verb(lead.label, 'lead', 'leads')} the ${trail.label} ${lead.wins}-${trail.wins}`;
 }
 
-const started = (s: SeriesView) => s.status !== 'upcoming' || s.higher.wins + s.lower.wins > 0 || s.games.some((g) => g.state === 'final' || g.state === 'live');
+/** An MLS series, both clubs known. */
+function mlsClause(s: SeriesView, a: Club, b: Club): string | null {
+  const single = s.single === true;
+  if (s.status === 'final') {
+    const winner = a.won ? a : b.won ? b : null;
+    if (!winner) return null;
+    const loser = winner === a ? b : a;
+    if (winner.wins <= loser.wins) return null;
+    if (single) return s.matchScore ? `${winner.label} beat ${loser.label} ${s.matchScore}` : `${winner.label} beat ${loser.label}`;
+    return `${winner.label} beat ${loser.label} ${winner.wins}-${loser.wins} in the series`;
+  }
+  if (a.won || b.won) return null;
+  if (a.wins === b.wins) {
+    if (a.wins === 0) return `${a.label} and ${b.label} have not completed ${single ? 'their game' : 'a game'}`;
+    return single ? null : `${a.label} and ${b.label} are tied ${a.wins}-${b.wins} in the series`;
+  }
+  if (single) return null;
+  const leader = a.wins > b.wins ? a : b;
+  const trailer = leader === a ? b : a;
+  return `${leader.label} ${mlsVerb(leader.teamId, 'lead', 'leads')} ${trailer.label} ${leader.wins}-${trailer.wins} in the series`;
+}
+
+/** Has the series begun? For MLS only a result counts: a game under way is
+ *  shown as its scheduled game, and the document's series status moves to
+ *  live when the first game starts, which is not a fact the page states. */
+const startedOf = (sp: Speech) => (s: SeriesView) =>
+  sp.mls
+    ? s.higher.wins + s.lower.wins > 0 || s.games.some((g) => g.state === 'final')
+    : s.status !== 'upcoming' || s.higher.wins + s.lower.wins > 0 || s.games.some((g) => g.state === 'final' || g.state === 'live');
 
 const UNPLAYED = new Set(['scheduled', 'postponed', 'suspended']);
 
@@ -129,11 +174,20 @@ function nextGame(sure: SeriesView[], later: SeriesView[], startOf: (s: SeriesVi
   return next.g;
 }
 
+/** "Saturday, November 21", from a YYYY-MM-DD with no zone arithmetic. */
+function longDay(ymd: string): string {
+  const [y, m, d] = ymd.split('-').map(Number);
+  const p: Record<string, string> = {};
+  for (const x of new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', weekday: 'long', month: 'long', day: 'numeric' }).formatToParts(new Date(Date.UTC(y, m - 1, d, 12)))) p[x.type] = x.value;
+  return `${p.weekday}, ${p.month} ${p.day}`;
+}
+const listOf = (xs: readonly string[]) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
+
 /** "Game 4, Cubs at Brewers, Fri, Oct 2, 7:08 PM ET". No "if necessary":
  *  a conditional game always has a lower-numbered game of its series
  *  unplayed, which keeps it from being named. */
 function gameText(g: GameView): string {
-  return `${g.title}, ${g.matchup}, ${g.when.replace(' · ', ', ')}`;
+  return `${g.title ? `${g.title}, ` : ''}${g.matchup}, ${g.when.replace(' · ', ', ')}`;
 }
 
 /**
@@ -143,6 +197,8 @@ function gameText(g: GameView): string {
  */
 export function standingLine(view: LeagueView, starts: ReadonlyMap<string, string>, now: Date): string | null {
   const startOf = (s: SeriesView) => (g: GameView) => starts.get(`${s.id}#${g.gameNumber}`) ?? null;
+  const sp = SPEECH[view.league === 'MLS' ? 'mls' : 'other'];
+  const started = startedOf(sp);
 
   if (view.phase.kind === 'concluded') {
     const last = view.rounds[view.rounds.length - 1];
@@ -154,6 +210,11 @@ export function standingLine(view: LeagueView, starts: ReadonlyMap<string, strin
     if (!w || w.teamId !== view.phase.championTeamId) return null;
     const l = w === s.higher ? s.lower : s.higher;
     if (w.wins <= l.wins) return null;
+    if (sp.mls) {
+      // MLS Cup is one game: the match score, never "1-0" in wins.
+      const score = s.single ? s.matchScore : `${w.wins}-${l.wins}`;
+      return score ? `${w.fullName} won the ${view.season} ${last.label}, beating ${l.fullName} ${score}.` : `${w.fullName} won the ${view.season} ${last.label}, beating ${l.fullName}.`;
+    }
     return `The ${w.fullName} won the ${view.season} ${last.label}, beating the ${l.fullName} ${w.wins}-${l.wins}.`;
   }
 
@@ -166,6 +227,17 @@ export function standingLine(view: LeagueView, starts: ReadonlyMap<string, strin
 
   const after = (from: number, skip: readonly number[]) => view.rounds.flatMap((_, i) => (i >= from && !skip.includes(i) ? seriesOf(i) : []));
 
+  if (played.length === 0 && sp.mls) {
+    // MLS: the round and its scheduled days, from the document. Nothing here
+    // says "next": while the round's first match is under way it is not (the
+    // page shows no live state), and the days stay true before, during and
+    // after kickoff (2026-11-03).
+    // Only games certain to be played on their day: scheduled, not "if
+    // necessary", and not postponed or suspended.
+    const days = [...new Set(seriesOf(at).flatMap((s) => s.games.filter((g) => g.state === 'scheduled' && !g.ifNecessary && g.day).map((g) => g.day as string)))].sort();
+    const round = view.rounds[at];
+    return days.length ? `${round.label}: ${listOf(days.map(longDay))}.` : `${round.label}: dates not yet listed.`;
+  }
   if (played.length === 0) {
     // Between rounds, or before the first: the round to play next.
     const round = view.rounds[at];
@@ -178,7 +250,7 @@ export function standingLine(view: LeagueView, starts: ReadonlyMap<string, strin
     const clauses: string[] = [];
     let unset = 0;
     for (const s of seriesOf(i)) {
-      const c = clause(s);
+      const c = clause(s, sp);
       if (c === null) return null;
       if (c === 'unset') unset++;
       else clauses.push(c);
@@ -188,5 +260,8 @@ export function standingLine(view: LeagueView, starts: ReadonlyMap<string, strin
     parts.push(`${view.rounds[i].label}: ${clauses.join('; ')}.`);
   }
   const next = nextGame(played.flatMap(seriesOf), after(at, played), startOf, now);
+  // MLS names the game by its schedule, with no "next": the line stays true
+  // after kickoff until the page is rebuilt (2026-11-03).
+  if (next && sp.mls) return `${parts.join(' ')} ${next.title ? `${next.title}:` : 'Kickoff:'} ${next.matchup}, ${next.when.replace(' · ', ', ')}.`;
   return next ? `${parts.join(' ')} Next game: ${gameText(next)}.` : parts.join(' ');
 }

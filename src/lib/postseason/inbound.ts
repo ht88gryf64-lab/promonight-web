@@ -19,7 +19,7 @@
 // in progress belongs to the playoffs pages, which the pipeline revalidates
 // and which regenerate every ten minutes besides.
 import type { Bracket, PostseasonLeague } from './types';
-import type { HomeGameView, LeagueView, SeriesView, SlotView } from './view';
+import { titled, type HomeGameView, type LeagueView, type SeriesView, type SlotView } from './view';
 
 export interface InboundLeague {
   league: PostseasonLeague;
@@ -51,7 +51,7 @@ function nextGame(s: SeriesView): SeriesView['next'] {
 }
 function nextGameLabel(s: SeriesView): string | null {
   const g = nextGame(s);
-  return g ? `${g.title} · ${g.when}` : null;
+  return g ? titled(g.title, g.when) : null;
 }
 
 // ---- A club's team page ----
@@ -79,6 +79,12 @@ export type ClubPlayoffs =
       nextLabel: string | null;
       /** "Host: Astros · Daikin Park". */
       nextHost: string | null;
+      /** A one-game round (MLS): the link reads "See the matchup", not "See
+       *  the series". Present only then. */
+      single?: true;
+      /** MLS: "Kickoff:" in place of "Next:" before a scheduled game time.
+       *  Present only then. */
+      nextPrefix?: 'Kickoff:';
     })
   /** Won its last series; the next one has not named it yet. */
   | (ClubBase & { state: 'advanced'; seriesHref: string; roundLabel: string; opponent: string; wonLine: string })
@@ -103,7 +109,7 @@ export function clubPlayoffs(leagues: readonly InboundLeague[], teamId: string):
     const base: ClubBase = { league: l.league, season: l.view.season, leagueHref: l.href, updatedLabel: l.view.updatedLabel };
 
     if (s.status !== 'final') {
-      return {
+      const alive: ClubPlayoffs = {
         ...base,
         state: 'alive',
         seriesHref: seriesHref(l, s),
@@ -116,9 +122,23 @@ export function clubPlayoffs(leagues: readonly InboundLeague[], teamId: string):
           return g && g.hostName ? (g.park ? `Host: ${g.hostName} · ${g.park}` : `Host: ${g.hostName}`) : null;
         })(),
       };
+      if (s.single) alive.single = true;
+      if (l.league === 'MLS' && alive.nextLabel && nextGame(s)?.state === 'scheduled') alive.nextPrefix = 'Kickoff:';
+      return alive;
     }
     if (l.view.phase.kind === 'concluded' && l.view.phase.championTeamId === teamId) {
       return { ...base, state: 'champion', summary: l.view.phase.summary };
+    }
+    if (l.league === 'MLS') {
+      // MLS rounds are named "Round One", "Conference Semifinals": "Won the
+      // Round One 1-0" is neither English nor true of a one-game round. The
+      // line names the round, the opponent and the result.
+      const result = s.single ? s.matchScore ?? null : `${tally(own, other)} in the series`;
+      const tail = result ? ` ${result}` : '';
+      if (own.won) {
+        return { ...base, state: 'advanced', seriesHref: seriesHref(l, s), roundLabel: s.roundLabel, opponent: other.label, wonLine: s.single ? `Won${tail}` : `Won the series${result ? ` ${tally(own, other)}` : ''}` };
+      }
+      return { ...base, state: 'eliminated', roundLabel: s.roundLabel, opponent: other.label, lostLine: `${s.roundLabel}: lost to ${other.label}${tail}` };
     }
     if (own.won) {
       return { ...base, state: 'advanced', seriesHref: seriesHref(l, s), roundLabel: s.roundLabel, opponent: other.label, wonLine: `Won the ${s.roundLabel} ${tally(own, other)}` };
@@ -179,7 +199,7 @@ export function leagueCard(leagues: readonly InboundLeague[], league: string): L
         // listed" is said only when the document lists none.
         status:
           s.scoreLine ??
-          nextGameLabel(s) ??
+          (l.league === 'MLS' && nextGame(s)?.state === 'scheduled' ? `Kickoff: ${nextGameLabel(s)}` : nextGameLabel(s)) ??
           (s.higher.kind === 'placeholder' || s.lower.kind === 'placeholder' ? 'Matchup to be decided' : s.games.length > 0 ? s.formatLabel : 'No games listed'),
       })),
     ),
@@ -272,7 +292,9 @@ export function venueGames(leagues: readonly InboundLeague[], tenantTeamIds: rea
   const updated: VenueGames['updated'] = [];
   for (const l of leagues) {
     if (l.view.phase.kind !== 'active') continue;
-    const here = l.view.homeGames.filter((g: HomeGameView) => tenants.has(g.hostTeamId) && g.status === 'scheduled' && !g.pastDate);
+    // MLS: a game with no park (its host club has no one ground) is listed on
+    // no venue page; the bracket names a club, not a building.
+    const here = l.view.homeGames.filter((g: HomeGameView) => tenants.has(g.hostTeamId) && g.status === 'scheduled' && !g.pastDate && (l.league !== 'MLS' || g.park !== null));
     if (here.length === 0) continue;
     if (l.view.updatedLabel) updated.push({ league: l.league, updatedLabel: l.view.updatedLabel });
     for (const g of here) {

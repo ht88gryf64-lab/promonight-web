@@ -19,6 +19,8 @@ import type { LeagueView } from './view';
 
 export const SITE_URL = 'https://www.getpromonight.com';
 export const HUB_PATH = '/playoffs';
+/** The longest description the title audit allows. */
+export const DESCRIPTION_MAX = 160;
 
 export interface PageCopy {
   title: string;
@@ -41,7 +43,12 @@ function list(names: readonly string[]): string {
  * what the title names; `leagues` is what the body rendered a card for.
  */
 export function hubCopy(season: number, routeLeagues: readonly PostseasonLeague[], leagues: readonly HubLeagueState[]): PageCopy {
-  const title = `${season} Playoffs: ${list(routeLeagues)} Brackets`;
+  // The title names the leagues the page has a bracket for, in route order,
+  // so a league whose document does not exist yet is not named as a bracket
+  // on the page (MLS before its document is written). With no bracket at all
+  // it names the route table, as before.
+  const withBracket = routeLeagues.filter((r) => leagues.some((l) => l.league === r));
+  const title = `${season} Playoffs: ${list(withBracket.length > 0 ? withBracket : routeLeagues)} Brackets`;
   const canonical = `${SITE_URL}${HUB_PATH}`;
   const active = leagues.filter((l) => l.view.phase.kind === 'active');
 
@@ -59,7 +66,15 @@ export function hubCopy(season: number, routeLeagues: readonly PostseasonLeague[
     const lead = active.length > 0
       ? `The ${season} postseason brackets for ${names}, series by series, with Eastern game times.`
       : `The ${season} ${names} postseason is complete, the final ${leagues.length === 1 ? 'bracket' : 'brackets'} round by round.`;
-    return { title, canonical, description: `${lead} ${states}.` };
+    const full = `${lead} ${states}.`;
+    if (full.length <= DESCRIPTION_MAX) return { title, canonical, description: full };
+    // Three leagues do not fit the long lead (2026-11-03: MLB and WNBA
+    // finished, MLS being played). The same facts, a shorter lead; then the
+    // states alone. Two leagues always fit the long one, so their copy is
+    // unchanged.
+    const short = `The ${season} ${names} playoff brackets${active.length > 0 ? '' : ', complete'}. ${states}.`;
+    if (short.length <= DESCRIPTION_MAX) return { title, canonical, description: short };
+    return { title, canonical, description: `${season} playoffs. ${states}.` };
   }
   return {
     title,
@@ -85,6 +100,7 @@ export function leagueCopy(
   const title = predictions ? `${season} ${league} Playoffs: Bracket, Schedule and Predictions` : `${season} ${league} Playoffs: Bracket and Schedule`;
   const canonical = `${SITE_URL}${path}`;
   if (!view) return { title, canonical, description: `The ${season} ${league} postseason bracket.` };
+  if (league === 'MLS') return { title, canonical, description: mlsDescription(season, view) };
   if (view.phase.kind === 'concluded') {
     return {
       title,
@@ -101,6 +117,16 @@ export function leagueCopy(
       ? `The ${season} ${league} postseason bracket, with a simulation's locked pick for every series, marked against the results. Current round: ${view.phase.roundLabel}.`
       : `The ${season} ${league} postseason bracket. Current round: ${view.phase.roundLabel}. Every series, seed and result, with game times in Eastern and the upcoming playoff games.`,
   };
+}
+
+/** MLS has no predictions and plays one-game rounds after Round One, so its
+ *  page says "matchup", not "series". */
+function mlsDescription(season: number, view: LeagueView): string {
+  if (view.phase.kind === 'concluded') {
+    const long = `The ${season} MLS postseason bracket, complete. ${view.phase.championName}: ${lowerFirst(view.phase.summary)}. Every matchup and result, round by round.`;
+    return long.length <= DESCRIPTION_MAX ? long : `The ${season} MLS postseason bracket, complete. ${view.phase.championName}: ${lowerFirst(view.phase.summary)}.`;
+  }
+  return `The ${season} MLS postseason bracket. Current round: ${view.phase.roundLabel}. Every matchup, seed and result, with Eastern game times and the upcoming playoff games.`;
 }
 
 function lowerFirst(s: string): string {

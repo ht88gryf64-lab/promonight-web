@@ -13,7 +13,7 @@ export interface SeriesIndexEntry {
   id: string;
   round: string;
   conference: string | null;
-  status: 'upcoming' | 'live' | 'final';
+  status: 'upcoming' | 'live' | 'underway' | 'final';
 }
 
 /** Why the round last changed. The bracket scrolls to a round that a pill or
