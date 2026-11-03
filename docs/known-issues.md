@@ -4176,3 +4176,21 @@ class does not affect spacing or desktop): 390px gets 17 units, first at y
 
 **Where.** `src/components/teams-browser.tsx`, `src/app/teams/page.tsx`,
 `src/lib/hub-grouping.ts`, `src/lib/__tests__/teams-sections.test.ts`.
+
+## 74. At 320px, Get tickets sits only 48 to 52px above the fold on long-name and series promo pages, and one page scrolls sideways (open follow-up, logged 2026-11-03)
+
+**Symptom.** At 320x568, the promo page's Get tickets row ends 48 to 52px
+above the fold on long-name and series pages (the promo page brief's floor is
+60px), and the Cavaliers 10th anniversary page
+(`/nba/cleveland-cavaliers/promos/10th-anniversary-celebration-2016-championship-mini-banner-g`)
+scrolls sideways (scrollWidth 345 against a 320 clientWidth).
+
+**Not introduced by Share.** Found by the Gate B review of promo page sharing
+(feature/promo-share); the numbers were identical on production before the
+change: Cavaliers 48.3px, Timberwolves Family Meal Deal series 51.5px.
+
+**Follow-up (ruled 2026-11-03, out of the share change).** Fix the overflow
+and tighten the header block on long names.
+
+**Where.** `src/components/promo-page/PromoPageView.tsx` (the header block
+and the CTA section above the image).

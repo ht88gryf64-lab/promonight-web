@@ -16,8 +16,8 @@ import { textWidth } from './share-card-metrics';
 // getpromonight.com footer. On the right, a rounded panel: the stored item
 // photo (tier 1, with its credit printed small in the footer), or for tier 3
 // a solid block of the team's primary colour with the team's name in the
-// display face, white (Gate A ruling 2026-11-03), so every share reads as
-// one family.
+// display face, white (Gate A ruling 2026-11-03), or ink where white is under
+// 3:1 on that colour (Gate B ruling), so every share reads as one family.
 //
 // LEGIBILITY AT ~300px WIDE (an iMessage thumbnail is a quarter scale): the
 // smallest text that carries meaning is the badge at 28px (7px at quarter
@@ -200,9 +200,16 @@ export function separates(c: string): boolean {
   return HEX_RE.test(c) && contrast(c, INK) >= 1.6;
 }
 
-/** White text on `c`: the WCAG ratio, for the Gate B colour audit. */
+/** White text on `c`: the WCAG ratio. */
 export function whiteContrast(c: string): number {
   return HEX_RE.test(c) ? contrast(c, WHITE) : 0;
+}
+
+/** The tier 3 team name's colour on its block (Gate B F1, ruled 2026-11-03):
+ *  white, unless white is under 3:1 on the team colour (gold, silver, light
+ *  pink grounds), then the house ink. The promo card's rule. */
+export function teamNameColor(c: string): string {
+  return whiteContrast(c) >= 3 ? WHITE : INK;
 }
 
 /** The stripe colour: the team's primary when it shows on the ink ground,
@@ -269,7 +276,7 @@ export async function renderShareCard(model: ShareCardModel, headers?: Record<st
               </div>
             ) : model.panel?.kind === 'team' ? (
               <div style={{ width: PHOTO_W, height: panelH, display: 'flex', alignItems: 'flex-end', background: model.panel.color, borderRadius: 20, padding: TEAM_PANEL_PAD, ...(separates(model.panel.color) ? {} : { border: '3px solid rgba(255,255,255,0.18)' }) }}>
-                <div style={{ display: 'block', width: TEAM_NAME_W, overflowWrap: 'break-word', fontFamily: 'Archivo', fontSize: teamNameFit(model.panel.name), fontWeight: 800, lineHeight: TITLE_LH, letterSpacing: TITLE_LS, textTransform: 'uppercase', color: WHITE, lineClamp: 3 }}>
+                <div style={{ display: 'block', width: TEAM_NAME_W, overflowWrap: 'break-word', fontFamily: 'Archivo', fontSize: teamNameFit(model.panel.name), fontWeight: 800, lineHeight: TITLE_LH, letterSpacing: TITLE_LS, textTransform: 'uppercase', color: teamNameColor(model.panel.color), lineClamp: 3 }}>
                   {model.panel.name}
                 </div>
               </div>

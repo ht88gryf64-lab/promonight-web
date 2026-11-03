@@ -18,7 +18,7 @@ import {
   withShareSubId2,
   xIntentHref,
 } from '../promo-share';
-import { TEAM_NAME_W, accentFor, gameLayout, photoBox, separates, teamNameFit, titleFit, wordsFit, wrapLines } from '../share-card-render';
+import { TEAM_NAME_W, teamNameColor, accentFor, gameLayout, photoBox, separates, teamNameFit, titleFit, wordsFit, wrapLines } from '../share-card-render';
 import { textWidth } from '../share-card-metrics';
 import { buildFanaticsUrl, buildSpotHeroUrl, buildTicketNetworkLink, buildExpediaHotelLink } from '../affiliates';
 
@@ -139,6 +139,10 @@ test('the card: measured widths, the name fits width and height, the game line s
   }
   assert.ok(wordsFit('AUSTIN REAVES BOBBLEHEAD', titleFit('Austin Reaves Bobblehead', 622, 2).size, 622, 'extrabold', -1));
   assert.ok(teamNameFit('Dallas Stars') > teamNameFit('Columbus Blue Jackets'));
+  // Gate B F1: white unless under 3:1, then ink.
+  assert.equal(teamNameColor('#006847'), '#ffffff');
+  assert.equal(teamNameColor('#860038'), '#ffffff');
+  for (const light of ['#ffb81c', '#c4ced4', '#ece83a', '#fedd00', '#f7b5cd', '#ffb612']) assert.equal(teamNameColor(light), '#211d18', light);
   assert.equal(separates('#000000'), false);
   assert.equal(separates('#006847'), true);
 });
