@@ -310,10 +310,11 @@ test('tier 1 single-date NHL page: H1, the stored photo, the head, the schema an
   assert.ok(!/Dallas Stars · Nov 15/.test(h), 'cross-team card subtitle never repeats the tile date');
   assert.match(h, /<img src="https:\/\/firebasestorage\.googleapis\.com\/v0\/b\/promonight\.firebasestorage\.app\/o\/promo-images%2Fc7057219198efd77\.png\?alt=media" alt="Blaze Orange Hat, the Minnesota Wild giveaway item"/);
   // The hero (follow-up 2026-10-31): the stored photo's own size from its
-  // header, never lazy, high priority; og:image carries the same size.
+  // header, never lazy, high priority. og:image is the share card
+  // (2026-11-03), 1200x630, never the photo's own size.
   assert.match(h, /<img src="https:\/\/firebasestorage[^"]*c7057219198efd77\.png\?alt=media" alt="[^"]*" width="800" height="600" loading="eager" fetchPriority="high" decoding="async"/);
   assert.ok(photoFetches.some((f) => f.includes('c7057219198efd77.png') && f.endsWith('bytes=0-65535')), photoFetches.join('\n'));
-  assert.deepEqual([(meta.openGraph as any).images[0].width, (meta.openGraph as any).images[0].height], [800, 600]);
+  assert.deepEqual([(meta.openGraph as any).images[0].width, (meta.openGraph as any).images[0].height], [1200, 630]);
   assert.ok(!/loading="lazy"/.test(h), 'no lazy image on the page');
   assert.match(h, /Image: Minnesota Wild/);
   assert.match(h, /Minnesota Wild vs Islanders/);
@@ -351,7 +352,12 @@ test('tier 1 single-date NHL page: H1, the stored photo, the head, the schema an
   assert.equal(meta.alternates?.canonical, 'https://www.getpromonight.com/nhl/minnesota-wild/promos/blaze-orange-hat');
   const og = meta.openGraph as any;
   assert.equal(og.url, meta.alternates?.canonical);
-  assert.equal(og.images[0].url, 'https://firebasestorage.googleapis.com/v0/b/promonight.firebasestorage.app/o/promo-images%2Fc7057219198efd77.png?alt=media');
+  // The share card (2026-11-03) on og:image and twitter:image, keyed on the
+  // page's stamp; the Event schema keeps the stored photo.
+  assert.match(og.images[0].url, /^https:\/\/www\.getpromonight\.com\/api\/share-card\/[A-Za-z0-9]+\?team=minnesota-wild&v=\d+$/);
+  assert.equal((meta.twitter as any).card, 'summary_large_image');
+  assert.equal((meta.twitter as any).images[0].url, og.images[0].url);
+  assert.equal(og.images[0].alt, 'Blaze Orange Hat: Minnesota Wild, Oct 29, 2026');
   assert.equal(meta.robots, undefined);
 
   const ld = jsonLd(h);
@@ -367,7 +373,8 @@ test('tier 1 single-date NHL page: H1, the stored photo, the head, the schema an
   assert.equal(ld[1].offers.url, 'https://ticketnetwork.lusg.net/c/7236189/120057/2322?u=https%3A%2F%2Fwww.ticketnetwork.com%2Fe%2Fperformers%2Fminnesota-wild-tickets&partnerpropertyid=8313917&MediaPartnerPropertyId=8313917&subId1=web_promo_page_minnesota-wild');
   assert.match(h, />Also on Ticketmaster<\/a>/);
   assert.equal(ld[1].eventStatus, 'https://schema.org/EventScheduled');
-  assert.deepEqual(ld[1].image, [og.images[0].url]);
+  // The Event image stays the stored photo, unchanged by the share card.
+  assert.deepEqual(ld[1].image, ['https://firebasestorage.googleapis.com/v0/b/promonight.firebasestorage.app/o/promo-images%2Fc7057219198efd77.png?alt=media']);
   // One FAQ: no door time is stored, so "What time should I arrive?" does not exist.
   assert.equal(ld[2].mainEntity.length, 1);
   assert.equal(ld[2].mainEntity[0].name, 'Who presents the Blaze Orange Hat?');
@@ -394,7 +401,7 @@ test('a series with more than three dates shows the next three and folds the res
   assert.ok(faq, 'a FAQPage');
   assert.match(faq!.mainEntity[0].acceptedAnswer.text, /^5 Anaheim Ducks home games this season: Nov 1, 2026, Nov 8, 2026, Nov 15, 2026, Nov 22, 2026, Nov 29, 2026\.$/);
   // The CTA row follows the header directly.
-  assert.match(h, /<\/header><section class="[^"]*"><a href="https:\/\/ticketnetwork\.lusg\.net\/[^"]*"[^>]*aria-label="Get Anaheim Ducks tickets on TicketNetwork"/);
+  assert.match(h, /<\/header><section class="[^"]*"><div class="flex gap-2"><a href="https:\/\/ticketnetwork\.lusg\.net\/[^"]*"[^>]*aria-label="Get Anaheim Ducks tickets on TicketNetwork"/);
 });
 
 test('a series pads the open list to three with played dates, and a fold of played dates says "earlier"', async () => {
@@ -437,7 +444,8 @@ test('multi-date series: a dates list in place of the game line, one Event per d
   // The title cascade (ruling 2026-10-30): with the season the bare title is
   // 48, 61 rendered, so the full name alone is the shape taken.
   assert.equal(meta.title, 'Original Six Matchup | Detroit Red Wings');
-  assert.equal((meta.openGraph as any).images[0].url, 'https://www.getpromonight.com/api/promo-card/o1?team=detroit-red-wings&v=1793440800000');
+  // og:image is the share card on the same stamp; the card stays the Event image.
+  assert.equal((meta.openGraph as any).images[0].url, 'https://www.getpromonight.com/api/share-card/o1?team=detroit-red-wings&v=1793440800000');
   assert.ok(!h.slice(h.indexOf('<header'), h.indexOf('</header>')).includes('<details'), 'three dates: nothing to fold');
   const ld = jsonLd(h);
   assert.deepEqual(ld.map((s) => s['@type']), ['WebPage', 'Event', 'Event', 'Event', 'FAQPage', 'BreadcrumbList']);
@@ -591,6 +599,51 @@ async function teamPageHtml(teamId: string): Promise<{ html: string; upcoming: n
   );
   return { html: out, upcoming: upcoming.length, packagesAhead: packagesAhead.length };
 }
+
+test('share (2026-11-03): the share card on og:image and twitter:image on every variant; Share beside Get tickets and on the image; no subId2 in served HTML', async () => {
+  process.env.PROMO_PAGES_LIVE = 'true';
+  const CARD = /^https:\/\/www\.getpromonight\.com\/api\/share-card\/[A-Za-z0-9_-]+\?team=[a-z0-9-]+&v=\d+$/;
+  const variants: [string, string, string, 'live' | 'removed'][] = [
+    ['nhl', 'minnesota-wild', 'blaze-orange-hat', 'live'], // tier 1, single date
+    ['nhl', 'detroit-red-wings', 'original-six-matchup', 'live'], // series, tier 3
+    ['nhl', 'pittsburgh-penguins', 'community-night', 'live'], // series with played dates
+    ['nhl', 'minnesota-wild', 'removed-future-poster', 'removed'], // tombstoned before its date
+    ['nhl', 'minnesota-wild', 'tombstoned-past-hat', 'removed'], // tombstoned and played
+  ];
+  for (const [sport, team, slug, kind] of variants) {
+    const { h, meta } = await render(sport, team, slug);
+    const og = meta.openGraph as any;
+    const tw = meta.twitter as any;
+    assert.match(og.images[0].url, CARD, `${slug}: og:image`);
+    assert.ok(og.images[0].url.includes(`team=${team}&`), `${slug}: the card names the team`);
+    assert.deepEqual([og.images[0].width, og.images[0].height], [1200, 630], `${slug}: og:image size`);
+    assert.equal(tw.card, 'summary_large_image', `${slug}: twitter:card`);
+    assert.equal(tw.images[0].url, og.images[0].url, `${slug}: twitter:image`);
+    assert.ok(og.title && og.description, `${slug}: og:title and og:description`);
+    // The canonical stays the clean URL.
+    assert.ok(!String(meta.alternates?.canonical).includes('?'), `${slug}: clean canonical`);
+    // The Event schema never carries the share card.
+    for (const e of jsonLd(h).filter((x) => x['@type'] === 'Event')) assert.ok(!JSON.stringify(e.image ?? '').includes('/api/share-card/'), `${slug}: Event image`);
+    // Never subId2 in served HTML: it is added on the client, in a shared session only.
+    assert.ok(!/subId2/i.test(h), `${slug}: no subId2 in the served HTML`);
+    const shares = (h.match(/aria-label="Share this promo"/g) ?? []).length;
+    if (kind === 'removed') {
+      assert.equal(shares, 0, `${slug}: no Share on a removed page`);
+    } else {
+      assert.equal(shares, 2, `${slug}: the row Share and the image icon`);
+      // Tickets and Share on one row, tickets first and filling the width.
+      assert.match(h, /<div class="flex gap-2"><a href="[^"]*"[^>]*class="flex h-\[52px\] min-w-0 flex-1 [^"]*bg-rd-red[^"]*"[^>]*>Get tickets<\/a><div class="relative shrink-0"><button type="button" aria-label="Share this promo"[^>]*class="flex h-\[52px\] [^"]*bg-white[^"]*text-rd-ink shadow-\[inset_0_0_0_1\.5px_var\(--color-rd-ink\)\][^"]*">/, `${slug}: the tickets + Share row (1.5px ink outline as an inset shadow)`);
+      assert.match(h, /<span class="max-\[339px\]:sr-only">Share<\/span>/, `${slug}: the label hides at very narrow widths`);
+      // The image icon: absolutely placed in the (now relative) figure.
+      assert.match(h, /<figure class="relative [^"]*">[\s\S]*?<div class="absolute right-2\.5 top-2\.5 z-10"><button type="button" aria-label="Share this promo"[^>]*class="flex h-10 w-10 [^"]*bg-white text-rd-ink shadow-\[inset_0_0_0_1\.5px_var\(--color-rd-ink\)/, `${slug}: the image icon`);
+      // Share is never brand red, and nothing about it is fixed or sticky.
+      const shareMarkup = h.match(/<button type="button" aria-label="Share this promo"[^>]*>/g) ?? [];
+      for (const b of shareMarkup) assert.ok(!/rd-red|\bfixed\b|\bsticky\b/.test(b), `${slug}: ${b}`);
+    }
+    // Still one article with its anchor children free of display:contents.
+    assert.equal((h.match(/<article /g) ?? []).length, 1, `${slug}: one article`);
+  }
+});
 
 test('data guard: every indexable promo URL in the sitemap is an href in its team page server HTML', async () => {
   process.env.PROMO_PAGES_LIVE = 'true';

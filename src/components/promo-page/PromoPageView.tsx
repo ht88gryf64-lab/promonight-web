@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { TrackedAffiliateLink } from '@/components/tracked-affiliate-link';
 import { TrackedAppLink } from '@/components/analytics-events';
+import { PromoShareImageButton, PromoShareRowButton, ShareLandingCapture, type PromoShareProps } from '@/components/promo-page/PromoShare';
 import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
 import { getLeagueHub } from '@/lib/league-hubs';
 import { buildSpotHeroUrl, buildTicketmasterUrl, buildTicketNetworkLink, ticketNetworkLinkLevel } from '@/lib/affiliates';
@@ -14,6 +15,8 @@ import type { LinkedPromo, PromoPage, PromoPageContext } from '@/lib/promo-pages
 import type { ImageSize } from '@/lib/image-dimensions';
 import {
   SITE_URL,
+  CARD_HEIGHT,
+  CARD_WIDTH,
   badgeLabel,
   categoryAggregatorFor,
   cleanText,
@@ -22,6 +25,7 @@ import {
   formatInstantDate,
   formatLongDate,
   formatMonDay,
+  formatMonDayYear,
   pageImage,
   promoFaqs,
   promoPageDescription,
@@ -30,6 +34,8 @@ import {
   promoPagePath,
   promoPageTitle,
   quantityLine,
+  shareCardOrigin,
+  shareCardPath,
   YMD_RE,
   themeLabel,
   typeNoun,
@@ -112,7 +118,16 @@ export function promoPageHead(page: PromoPage, ctx: PromoPageContext, today: str
   const image = base.kind === 'photo' && imageSize ? { ...base, width: imageSize.width, height: imageSize.height } : base;
   const imageUrl = image.kind === 'photo' ? image.url : `${SITE_URL}${image.url}`;
   const indexable = promoPageIndexable({ title: primary.title, dates: removed ? page.removedDates : dates, removed, today });
-  return { teamName, canonical, title, description, image, imageUrl, indexable, venueName };
+  // The og:image (2026-11-03): the PromoNight share card, keyed on the page's
+  // stamp. The Event schema keeps the tier image (imageUrl), unchanged.
+  const shareCardDate = primary.date || null;
+  const shareCard = {
+    url: `${shareCardOrigin()}${shareCardPath(team.id, primary.promoId, page.updatedAt ?? primary.updatedAt)}`,
+    width: CARD_WIDTH,
+    height: CARD_HEIGHT,
+    alt: shareCardDate ? `${cleanText(primary.title)}: ${teamName}, ${formatMonDayYear(shareCardDate)}` : `${cleanText(primary.title)}: ${teamName}`,
+  };
+  return { teamName, canonical, title, description, image, imageUrl, indexable, venueName, shareCard };
 }
 
 function ticketHref(page: PromoPage): string {
@@ -212,6 +227,18 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
           : `More ${typePlural(primary.type)} across pro sports`;
   const crossSub = ctx.crossTeam?.kind === 'theme' && theme ? `${theme} at other clubs this season` : null;
 
+  // SHARE (2026-11-03). Stored fields only, the next date's game. Only these
+  // strings cross into the client components (CLAUDE.md: every field handed
+  // to a client component is published in the flight payload).
+  const shareProps: PromoShareProps = {
+    canonical,
+    facts: { promoName: cleanText(primary.title) || 'Untitled promotion', teamName, displayOpponent: cleanText(primary.displayOpponent), date: primary.date },
+    promoId: primary.promoId,
+    team: team.id,
+    league: team.league,
+    pageSlug: page.slug,
+  };
+
   const jsonLd = promoPageJsonLd({
     canonical,
     title: head.title,
@@ -302,6 +329,10 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
         // eslint-disable-next-line react/no-array-index-key
         <script key={i} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(s) }} />
       ))}
+      {/* Renders nothing: on a shared-link landing it records the share
+          session, then cleans the address bar. Outside the article, so the
+          article's children (the ad anchors) are unchanged. */}
+      <ShareLandingCapture promoId={primary.promoId} team={team.id} league={team.league} pageSlug={page.slug} />
       <article className="page-content mx-auto w-full max-w-[640px] px-4 pb-10 lg:max-w-3xl" data-ad-region="content">
         <nav aria-label="Breadcrumb" className="flex flex-wrap gap-1.5 pt-3.5 text-[12px] text-rd-ink-faint">
           {leagueHref ? (
@@ -357,22 +388,29 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
 
         {!removed ? (
           <section className="mt-4 flex flex-col gap-2.5">
-            <TrackedAffiliateLink
-              href={tickets}
-              partner={ticketsPartner}
-              teamId={team.id}
-              sport={team.league}
-              promoId={primary.promoId}
-              surface={PROMO_PAGE_SURFACE}
-              placement="promo_page_primary"
-              ticketLinkLevel={ticketsLevel}
-              target="_blank"
-              rel="noopener noreferrer sponsored"
-              ariaLabel={ticketsLevel === 'event' || !multi ? `Get tickets for ${teamName}${primary.displayOpponent ? ` vs ${primary.displayOpponent}` : ''} on ${ticketsBrand}` : `Get ${teamName} tickets on ${ticketsBrand}`}
-              className="flex h-[52px] items-center justify-center rounded-[14px] bg-rd-red font-rd text-[16px] font-semibold text-white no-underline hover:bg-rd-red-dark"
-            >
-              Get tickets
-            </TrackedAffiliateLink>
+            {/* Get tickets and Share on ONE row (2026-11-03): tickets fills the
+                width, Share is the compact outline at the right, same 52px.
+                The row's height is the button's, so the section is as tall as
+                before. nowrap by construction: Share never drops below. */}
+            <div className="flex gap-2">
+              <TrackedAffiliateLink
+                href={tickets}
+                partner={ticketsPartner}
+                teamId={team.id}
+                sport={team.league}
+                promoId={primary.promoId}
+                surface={PROMO_PAGE_SURFACE}
+                placement="promo_page_primary"
+                ticketLinkLevel={ticketsLevel}
+                target="_blank"
+                rel="noopener noreferrer sponsored"
+                ariaLabel={ticketsLevel === 'event' || !multi ? `Get tickets for ${teamName}${primary.displayOpponent ? ` vs ${primary.displayOpponent}` : ''} on ${ticketsBrand}` : `Get ${teamName} tickets on ${ticketsBrand}`}
+                className="flex h-[52px] min-w-0 flex-1 items-center justify-center rounded-[14px] bg-rd-red font-rd text-[16px] font-semibold text-white no-underline hover:bg-rd-red-dark"
+              >
+                Get tickets
+              </TrackedAffiliateLink>
+              <PromoShareRowButton {...shareProps} />
+            </div>
             {ticketNetwork ? (
               <TrackedAffiliateLink
                 href={ticketmaster}
@@ -442,7 +480,10 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
           </section>
         ) : null}
 
-        <figure className="m-0 mt-4 overflow-hidden rounded-2xl border border-rd-line bg-rd-card">
+        {/* relative, and the clipping moved from the figure to the image
+            (2026-11-03): the share icon sits on the image's corner and its
+            desktop popover must not be clipped by the figure. */}
+        <figure className="relative m-0 mt-4 rounded-2xl border border-rd-line bg-rd-card">
           {/* object-contain for BOTH kinds (hotfix 2026-10-30): the generated
               card is 1200x630 and the box is 390x220 on a phone, so object-cover
               cropped its edges and cut the team wordmark; contained on a cream
@@ -460,8 +501,9 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
             loading="eager"
             fetchPriority="high"
             decoding="async"
-            className={`block h-[220px] w-full object-contain ${image.kind === 'photo' ? 'bg-[#ebe4d6]' : 'bg-rd-cream'}`}
+            className={`block h-[220px] w-full object-contain ${image.kind === 'photo' ? 'rounded-t-[15px] bg-[#ebe4d6]' : 'rounded-[15px] bg-rd-cream'}`}
           />
+          {!removed ? <PromoShareImageButton {...shareProps} /> : null}
           {image.kind === 'photo' ? (
             <figcaption className="px-3 py-2 font-rd text-[11px] text-rd-ink-faint">
               <span>{`${image.credit ?? `Image: ${teamName}`}${image.sourceUrl ? ' · ' : ''}`}</span>

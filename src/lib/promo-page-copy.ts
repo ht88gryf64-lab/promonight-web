@@ -521,6 +521,22 @@ export function cardImagePath(teamId: string, promoId: string, updatedAt: string
   return `/api/promo-card/${encodeURIComponent(promoId)}?team=${encodeURIComponent(teamId)}&v=${v}`;
 }
 
+/** The share card route for a row (2026-11-03), keyed exactly as the promo
+ *  card: promo id, team, and the page's stamp as `v`, so an edit changes the
+ *  URL and messaging apps fetch the card again. */
+export function shareCardPath(teamId: string, promoId: string, updatedAt: string | null): string {
+  const t = updatedAt ? Date.parse(updatedAt) : NaN;
+  const v = Number.isNaN(t) ? '0' : String(t);
+  return `/api/share-card/${encodeURIComponent(promoId)}?team=${encodeURIComponent(teamId)}&v=${v}`;
+}
+
+/** The host the share card is served from. Production (and any build that
+ *  is not a Vercel preview) is the site; a preview serves its own card, so a
+ *  preview page's og:image is the card this build draws. */
+export function shareCardOrigin(env: { vercelEnv?: string; vercelUrl?: string } = { vercelEnv: process.env.VERCEL_ENV, vercelUrl: process.env.VERCEL_URL }): string {
+  return env.vercelEnv === 'preview' && env.vercelUrl ? `https://${env.vercelUrl}` : SITE_URL;
+}
+
 /** The page's one image: the official item photo when the row is tier 1 with
  *  a stored object, else the generated card. A removed row never shows the
  *  photo: the item is no longer offered, and the card says so in words. */
