@@ -1062,7 +1062,7 @@ function StarredChipsStrip({ teams, light = false }: { teams: Team[]; light?: bo
               >
                 {SPORT_ICONS[team.league]}
               </span>
-              <span className="font-rd text-[12px] font-bold text-white">{team.name}</span>
+              <span className="font-rd text-[12px] font-bold text-white">{teamMainLine(team)}</span>
               <span className="font-rd text-[8px] tracking-[0.06em] text-white/70">
                 {team.league}
               </span>
@@ -1092,7 +1092,7 @@ function StarredChipsStrip({ teams, light = false }: { teams: Team[]; light?: bo
               {SPORT_ICONS[team.league]}
             </span>
             <span className="font-outfit font-extrabold text-[12px] text-white">
-              {team.name}
+              {teamMainLine(team)}
             </span>
             <span className="font-mono text-[8px] text-white/70 tracking-[0.5px]">
               {team.league}
@@ -1158,7 +1158,7 @@ function TonightSection({
                 <span />
               )}
               <span className="inline-flex items-center gap-1.5 rounded-full border border-rd-line bg-rd-cream px-2 py-0.5 font-rd text-[10px] text-rd-ink-soft">
-                {SPORT_ICONS[team.league]} {team.abbreviation} · {team.name}
+                {SPORT_ICONS[team.league]} {team.abbreviation} · {teamMainLine(team)}
               </span>
             </div>
             <div className="flex items-center gap-3">
@@ -1213,7 +1213,7 @@ function TonightSection({
               <span />
             )}
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-black/40 text-white text-[10px] font-mono tracking-[0.5px]">
-              {SPORT_ICONS[team.league]} {team.abbreviation} · {team.name}
+              {SPORT_ICONS[team.league]} {team.abbreviation} · {teamMainLine(team)}
             </span>
           </div>
           <div className="flex items-center gap-3 mb-4">
@@ -1451,7 +1451,7 @@ function ComingUpRow({
               {PROMO_TYPE_LABELS[promo.type]}
             </span>
             <span className="text-[10px] text-rd-ink-faint">
-              {team.abbreviation} · {team.name}
+              {team.abbreviation} · {teamMainLine(team)}
             </span>
           </div>
         </div>
@@ -1505,7 +1505,7 @@ function ComingUpRow({
             {PROMO_TYPE_LABELS[promo.type]}
           </span>
           <span className="text-text-dim text-[10px]">
-            {team.abbreviation} · {team.name}
+            {team.abbreviation} · {teamMainLine(team)}
           </span>
         </div>
       </div>
