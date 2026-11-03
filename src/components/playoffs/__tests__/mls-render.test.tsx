@@ -71,6 +71,7 @@ function element(html: string, marker: string): string {
 }
 
 const STATES: [string, string, Date][] = [
+  ['decision day', MLS_FIXTURE.decisionDay, MLS_AT.decisionDay],
   ['early', MLS_FIXTURE.early, MLS_AT.early],
   ['round one', MLS_FIXTURE.roundOne, MLS_AT.roundOne],
   ['semifinals done', MLS_FIXTURE.semisDone, MLS_AT.semisDone],
@@ -95,6 +96,9 @@ function assertClean(html: string, fixture: string, where: string) {
   assert.ok(!/Best of 1\b|won 1-0\b|Won the [^.]* 1-0\b/.test(text), where);
   assert.ok(!/PromoNight Predicts|predictions|simulation|PromoNight's pick/i.test(text), `${where}: predictions`);
   assert.ok(!html.includes('data-predictions') && !html.includes('data-game-promo'), `${where}: predictions or promo markup`);
+  // No bare "TBD" slot, and no seed beside a slot with no club.
+  assert.ok(!/(?<!Time |Date )\bTBD\b/.test(text), `${where}: TBD`);
+  assert.ok(!/Seed \d+ (TBD|To be decided)/.test(text), `${where}: a seed on an empty slot`);
   // No article before an MLS club name.
   assert.ok(!/\bthe (Minnesota|Seattle|Vancouver|LAFC|Inter Miami|Philadelphia|San Diego|Chicago Fire|FC |New York City|Charlotte|Columbus|Nashville|Portland|Austin|Orlando|Real Salt)/.test(text), `${where}: ${(/.{30}\bthe (Minnesota|Seattle|Vancouver|LAFC|Inter Miami|Philadelphia|San Diego).{20}/.exec(text) ?? [''])[0]}`);
 }
@@ -110,6 +114,23 @@ for (const [name, fixture, now] of STATES) {
     assert.ok(text.includes('Single game'));
   });
 }
+
+test('NO "live" ANYWHERE: the MLS page markup, the view and the series index (the client payload) never carry the word, as copy or as a token', () => {
+  const liveWord = (x: string) => /.{0,40}\blive\b.{0,20}/i.exec(x.replace(/aria-live="[a-z]+"/g, ''));
+  for (const [name, fixture, now] of STATES) {
+    const html = leagueHtml(fixture, now);
+    const hit = liveWord(html);
+    assert.equal(hit, null, `${name}: ${hit?.[0]}`);
+    const { v } = build(fixture, now);
+    // What the client components are handed: the rounds, and the index the
+    // controls are built from (PlayoffsLeague's seriesIndex).
+    const payload = JSON.stringify([v, v.rounds.flatMap((r) => r.groups.flatMap((g) => g.series.map((x) => ({ id: x.id, round: x.round, conference: x.conference, status: x.status }))))]);
+    const p = liveWord(payload.replace(/"liveLabel":null/g, ''));
+    assert.equal(p, null, `${name} payload: ${p?.[0]}`);
+  }
+  // Round One mid-series is "underway".
+  assert.ok(leagueHtml(MLS_FIXTURE.roundOne, MLS_AT.roundOne).includes('data-series-status="underway"'));
+});
 
 test('LEAGUE PAGE: a one-game round has no win count and no "G1"; Round One keeps both', () => {
   const html = leagueHtml(MLS_FIXTURE.semisDone, MLS_AT.semisDone);

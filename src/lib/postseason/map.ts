@@ -157,7 +157,7 @@ function safeLabel(label: string, keys: ReadonlySet<string>): string {
   return holdsSeriesKey(label, keys) ? UNDECIDED_LABEL : label;
 }
 
-function resolveSlot(slot: StoredSlot, keys: ReadonlySet<string>, mapped: ReadonlyMap<string, BracketSeries>): BracketSlot {
+function resolveSlot(slot: StoredSlot, keys: ReadonlySet<string>, mapped: ReadonlyMap<string, BracketSeries>, league: PostseasonLeague): BracketSlot {
   if (slot.slug !== null) return { kind: 'club', slug: slot.slug, seed: slot.seed };
   const label = slot.label as string;
 
@@ -170,7 +170,17 @@ function resolveSlot(slot: StoredSlot, keys: ReadonlySet<string>, mapped: Readon
     const winner = feeder[feeder.winnerSide];
     if (winner.kind === 'club') return { kind: 'club', slug: winner.slug, seed: winner.seed };
   }
-  return { kind: 'placeholder', label: safeLabel(label, keys), seed: slot.seed, candidates: slot.candidates };
+  if (league === 'MLS') {
+    // MLS: a slot with no club says "To be decided" and carries no seed. The
+    // pipeline fills every fixed-seed slot from its seed file; a slot left as
+    // { placeholder: "TBD", seed: 1 } (no seed file) must never read "Seed 1
+    // TBD" (2026-11-03).
+    const out: Extract<BracketSlot, { kind: 'placeholder' }> = { kind: 'placeholder', label: label === 'TBD' ? UNDECIDED_LABEL : safeLabel(label, keys), seed: null, candidates: slot.candidates };
+    if (feeder) out.feederRoundLabel = feeder.roundLabel;
+    return out;
+  }
+  const out: Extract<BracketSlot, { kind: 'placeholder' }> = { kind: 'placeholder', label: safeLabel(label, keys), seed: slot.seed, candidates: slot.candidates };
+  return out;
 }
 
 /** Does a game row name this slot? A row names a slot by what was stored
@@ -251,7 +261,19 @@ function soccerGame(v: Raw, game: BracketGame): BracketGame | null {
   }
   if (typeof by !== 'string' || !DECIDED_BY.includes(by as DecidedBy)) return null;
   const decidedBy = by as DecidedBy;
-  if (game.homeScore === null || game.awayScore === null) return null;
+  // A score the row carries but that is not a whole number is refused, never
+  // read as "no score".
+  if ((!absent(v.homeScore) && game.homeScore === null) || (!absent(v.awayScore) && game.awayScore === null)) return null;
+  if (game.homeScore === null || game.awayScore === null) {
+    // No score at all (ESPN served the final blank and the pipeline had none
+    // stored to keep, 2026-11-03 review). The result is still known, so the
+    // game is read: the page names the winner and invents no score. One score
+    // without the other, and a penalties final with no level score, are not
+    // results the contract allows.
+    if (game.homeScore !== game.awayScore) return null;
+    if (decidedBy === 'penalties' || !absent(hs) || !absent(as)) return null;
+    return { ...game, decidedBy };
+  }
   const level = game.homeScore === game.awayScore;
   if (decidedBy === 'penalties') {
     const h = wholeNumber(hs);
@@ -284,8 +306,8 @@ function mapSeries(v: unknown, keys: ReadonlySet<string>, mapped: ReadonlyMap<st
   const storedHigher = parseSlot(v.higher);
   const storedLower = parseSlot(v.lower);
   if (!storedHigher || !storedLower) return null;
-  const higher = resolveSlot(storedHigher, keys, mapped);
-  const lower = resolveSlot(storedLower, keys, mapped);
+  const higher = resolveSlot(storedHigher, keys, mapped, league);
+  const lower = resolveSlot(storedLower, keys, mapped, league);
 
   if (!isObject(v.wins)) return null;
   const winsHigher = wholeNumber(v.wins.higher);

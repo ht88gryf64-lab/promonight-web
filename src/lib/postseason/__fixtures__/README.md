@@ -102,22 +102,22 @@ No captured document holds a slot whose feeder is already decided, because no
 
 ## MLS (2026-11-03)
 
-No MLS bracket document existed when MLS support was built. These four are
-built by `generate-mls-2026.cjs` in the document shape the pipeline writes to
-`postseasonBrackets/MLS_2026` (the contract of 2026-11-03: `decidedBy`,
-`homeShootout`, `awayShootout` on each game; keys E-WC, E-R1-1 to E-R1-4,
-E-SF-A, E-SF-B, E-CF, the same W-, and CUP; writerVersion 3), from the real
-2025 MLS postseason as ESPN served it (the month scoreboards captured by the
-MLS G0 audit). Scores, shootouts, hosts, kickoff times and order are ESPN's;
-dates are moved forward 364 days so every weekday holds; seeds are the 2025
-conference ranks. An unneeded Round One Game 3 is omitted once its series is
-decided, and a played Game 3 keeps `ifNecessary: true`, as the pipeline
-stores it. 2025 had no extra-time game; tests rewrite one row to cover it.
+No MLS bracket document existed when MLS support was built. These five are
+the PIPELINE'S OWN DOCUMENTS: `generate-mls-2026.cjs` runs promo-pipeline's
+2025 MLS replay (`lib/postseason/replay.js`, the real ESPN payloads it
+carries) through its writer, `runOnce`, against its fake Firestore, in memory,
+at promo-pipeline 9c995898 with the seed file drafted from the 2025 standings,
+and captures the stored document at each instant. Then, and only then: season
+2026, every date and kickoff 364 days later (weekdays hold), and the writer's
+placeholder stamps (`TS12`) made real instants. Nothing else is edited. 2025
+had no extra-time match and no final served without a score; tests rewrite
+rows to cover both.
 
 | File | What it is |
 | --- | --- |
-| `MLS_2026.early.json` | Wild Card set, nothing played (stands at 2026-10-20T12:00Z). The 1 seeds' opponents are `Winner of E-WC` / `W-WC` placeholders with feeder and candidates; later rounds are placeholders with no games. |
-| `MLS_2026.round-one.json` | Wild Card done, Round One part played (2026-11-02T12:00Z): three series 2-0, four 1-1, Minnesota 1-0 Seattle; five shootouts so far. |
-| `MLS_2026.semis-done.json` | Conference Semifinals done, Vancouver over LAFC on penalties (2-2, 4-3); Conference Finals scheduled (2026-11-25T12:00Z). |
-| `MLS_2026.final.json` | MLS Cup played: Inter Miami 3, Vancouver 1 (2026-12-07T12:00Z). |
+| `MLS_2026.decision-day.json` | The morning after Decision Day (stands at 2026-10-19T12:00Z): only the two Wild Card matches posted. Every fixed-seed slot `{ slug, seed }`, Round One with no games, the 1 seeds' opponents `{ placeholder: "TBD", feederSeriesKey, candidates }`, later rounds `TBD`. |
+| `MLS_2026.early.json` | The replay's first step (2026-10-20T12:00Z): Wild Card and Round One dates posted, nothing played. |
+| `MLS_2026.round-one.json` | Replay step 17 (2026-11-02T12:00Z): Wild Card done, Round One part played. |
+| `MLS_2026.semis-done.json` | Replay step 27 (2026-11-25T12:00Z): Conference Semifinals done, Vancouver over LAFC on penalties (2-2, 4-3). |
+| `MLS_2026.final.json` | Replay step 30 (2026-12-07T12:00Z): Inter Miami 3, Vancouver 1. |
 | `clubs.mls.captured-20261103.json` | The 30 MLS team records, parks and venue pages, through the web's own data layer (`capture-mls-clubs.ts`). Kept apart from `clubs.captured-20260929.json` so every MLB and WNBA test sees exactly the clubs it always did. |

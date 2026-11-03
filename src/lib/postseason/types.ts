@@ -39,6 +39,11 @@ export interface PlaceholderSlot {
   /** The two clubs that can still fill the slot, when the document names
    *  exactly two. Null otherwise. */
   candidates: [string, string] | null;
+  /** MLS only: the round label of the slot's feeder series while that series
+   *  is undecided ("Wild Card"), read from the feederSeriesKey FIELD, so a
+   *  slot written "TBD" reads "Wild Card winner". Absent for every other
+   *  league. */
+  feederRoundLabel?: string;
 }
 
 // There is no field for the feeder series key, on purpose. The mapper reads

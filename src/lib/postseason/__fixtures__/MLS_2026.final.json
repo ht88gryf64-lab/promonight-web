@@ -1,31 +1,6 @@
 {
  "league": "MLS",
  "season": 2026,
- "writerVersion": 3,
- "unplaced": null,
- "seeds": {
-  "file": "mls-2026.json",
-  "authoredBy": "Fixture Author",
-  "authoredOn": "2026-11-03"
- },
- "bracketSha256": "f1x7ure0000000000000000000000000000000000000000000000000000000001",
- "source": {
-  "kind": "espn",
-  "urls": [
-   "https://site.api.espn.com/apis/site/v2/sports/soccer/usa.1/scoreboard"
-  ]
- },
- "runId": "final-fixture-run",
- "operatorLog": [],
- "validatedSeedSha256": "f1x7ure0000000000000000000000000000000000000000000000000000000002",
- "lastChangedAt": {
-  "__firestoreTimestamp": "2026-12-05T22:00:00.000Z"
- },
- "lastRevalidatedSha256": "f1x7ure0000000000000000000000000000000000000000000000000000000001",
- "revalidationPending": null,
- "lastFetchedAt": {
-  "__firestoreTimestamp": "2026-12-07T11:59:00.000Z"
- },
  "series": [
   {
    "round": "wild_card",
@@ -57,6 +32,48 @@
      "startTimeTBD": false,
      "home": "chicago-fire",
      "away": "orlando-city",
+     "homeSide": "higher",
+     "status": "final",
+     "homeScore": 3,
+     "awayScore": 1,
+     "winnerSide": "higher",
+     "ifNecessary": false,
+     "decidedBy": "regulation",
+     "homeShootout": null,
+     "awayShootout": null
+    }
+   ]
+  },
+  {
+   "round": "wild_card",
+   "roundLabel": "Wild Card",
+   "shortLabel": "Wild Card",
+   "seriesKey": "W-WC",
+   "conference": "West",
+   "bestOf": 1,
+   "higher": {
+    "slug": "portland-timbers",
+    "seed": 8
+   },
+   "lower": {
+    "slug": "real-salt-lake",
+    "seed": 9
+   },
+   "wins": {
+    "higher": 1,
+    "lower": 0
+   },
+   "status": "final",
+   "winner": "portland-timbers",
+   "games": [
+    {
+     "gameNumber": 1,
+     "gameId": "760058",
+     "date": "2026-10-21",
+     "start": "2026-10-22T02:30:00Z",
+     "startTimeTBD": false,
+     "home": "portland-timbers",
+     "away": "real-salt-lake",
      "homeSide": "higher",
      "status": "final",
      "homeScore": 3,
@@ -364,174 +381,6 @@
    ]
   },
   {
-   "round": "conference_semifinals",
-   "roundLabel": "Conference Semifinals",
-   "shortLabel": "Conf. Semifinals",
-   "seriesKey": "E-SF-A",
-   "conference": "East",
-   "bestOf": 1,
-   "higher": {
-    "slug": "philadelphia-union",
-    "seed": 1
-   },
-   "lower": {
-    "slug": "new-york-city-fc",
-    "seed": 5
-   },
-   "wins": {
-    "higher": 0,
-    "lower": 1
-   },
-   "status": "final",
-   "winner": "new-york-city-fc",
-   "games": [
-    {
-     "gameNumber": 1,
-     "gameId": "760834",
-     "date": "2026-11-22",
-     "start": "2026-11-23T00:45:00Z",
-     "startTimeTBD": false,
-     "home": "philadelphia-union",
-     "away": "new-york-city-fc",
-     "homeSide": "higher",
-     "status": "final",
-     "homeScore": 0,
-     "awayScore": 1,
-     "winnerSide": "lower",
-     "ifNecessary": false,
-     "decidedBy": "regulation",
-     "homeShootout": null,
-     "awayShootout": null
-    }
-   ]
-  },
-  {
-   "round": "conference_semifinals",
-   "roundLabel": "Conference Semifinals",
-   "shortLabel": "Conf. Semifinals",
-   "seriesKey": "E-SF-B",
-   "conference": "East",
-   "bestOf": 1,
-   "higher": {
-    "slug": "fc-cincinnati",
-    "seed": 2
-   },
-   "lower": {
-    "slug": "inter-miami",
-    "seed": 3
-   },
-   "wins": {
-    "higher": 0,
-    "lower": 1
-   },
-   "status": "final",
-   "winner": "inter-miami",
-   "games": [
-    {
-     "gameNumber": 1,
-     "gameId": "760862",
-     "date": "2026-11-22",
-     "start": "2026-11-22T22:00:00Z",
-     "startTimeTBD": false,
-     "home": "fc-cincinnati",
-     "away": "inter-miami",
-     "homeSide": "higher",
-     "status": "final",
-     "homeScore": 0,
-     "awayScore": 4,
-     "winnerSide": "lower",
-     "ifNecessary": false,
-     "decidedBy": "regulation",
-     "homeShootout": null,
-     "awayShootout": null
-    }
-   ]
-  },
-  {
-   "round": "conference_finals",
-   "roundLabel": "Conference Finals",
-   "shortLabel": "Conf. Final",
-   "seriesKey": "E-CF",
-   "conference": "East",
-   "bestOf": 1,
-   "higher": {
-    "slug": "inter-miami",
-    "seed": 3
-   },
-   "lower": {
-    "slug": "new-york-city-fc",
-    "seed": 5
-   },
-   "wins": {
-    "higher": 1,
-    "lower": 0
-   },
-   "status": "final",
-   "winner": "inter-miami",
-   "games": [
-    {
-     "gameNumber": 1,
-     "gameId": "761971",
-     "date": "2026-11-28",
-     "start": "2026-11-28T23:00:00Z",
-     "startTimeTBD": false,
-     "home": "inter-miami",
-     "away": "new-york-city-fc",
-     "homeSide": "higher",
-     "status": "final",
-     "homeScore": 5,
-     "awayScore": 1,
-     "winnerSide": "higher",
-     "ifNecessary": false,
-     "decidedBy": "regulation",
-     "homeShootout": null,
-     "awayShootout": null
-    }
-   ]
-  },
-  {
-   "round": "wild_card",
-   "roundLabel": "Wild Card",
-   "shortLabel": "Wild Card",
-   "seriesKey": "W-WC",
-   "conference": "West",
-   "bestOf": 1,
-   "higher": {
-    "slug": "portland-timbers",
-    "seed": 8
-   },
-   "lower": {
-    "slug": "real-salt-lake",
-    "seed": 9
-   },
-   "wins": {
-    "higher": 1,
-    "lower": 0
-   },
-   "status": "final",
-   "winner": "portland-timbers",
-   "games": [
-    {
-     "gameNumber": 1,
-     "gameId": "760058",
-     "date": "2026-10-21",
-     "start": "2026-10-22T02:30:00Z",
-     "startTimeTBD": false,
-     "home": "portland-timbers",
-     "away": "real-salt-lake",
-     "homeSide": "higher",
-     "status": "final",
-     "homeScore": 3,
-     "awayScore": 1,
-     "winnerSide": "higher",
-     "ifNecessary": false,
-     "decidedBy": "regulation",
-     "homeShootout": null,
-     "awayShootout": null
-    }
-   ]
-  },
-  {
    "round": "round_one",
    "roundLabel": "Round One",
    "shortLabel": "Round One",
@@ -811,6 +660,90 @@
    "round": "conference_semifinals",
    "roundLabel": "Conference Semifinals",
    "shortLabel": "Conf. Semifinals",
+   "seriesKey": "E-SF-A",
+   "conference": "East",
+   "bestOf": 1,
+   "higher": {
+    "slug": "philadelphia-union",
+    "seed": 1
+   },
+   "lower": {
+    "slug": "new-york-city-fc",
+    "seed": 5
+   },
+   "wins": {
+    "higher": 0,
+    "lower": 1
+   },
+   "status": "final",
+   "winner": "new-york-city-fc",
+   "games": [
+    {
+     "gameNumber": 1,
+     "gameId": "760834",
+     "date": "2026-11-22",
+     "start": "2026-11-23T00:45:00Z",
+     "startTimeTBD": false,
+     "home": "philadelphia-union",
+     "away": "new-york-city-fc",
+     "homeSide": "higher",
+     "status": "final",
+     "homeScore": 0,
+     "awayScore": 1,
+     "winnerSide": "lower",
+     "ifNecessary": false,
+     "decidedBy": "regulation",
+     "homeShootout": null,
+     "awayShootout": null
+    }
+   ]
+  },
+  {
+   "round": "conference_semifinals",
+   "roundLabel": "Conference Semifinals",
+   "shortLabel": "Conf. Semifinals",
+   "seriesKey": "E-SF-B",
+   "conference": "East",
+   "bestOf": 1,
+   "higher": {
+    "slug": "fc-cincinnati",
+    "seed": 2
+   },
+   "lower": {
+    "slug": "inter-miami",
+    "seed": 3
+   },
+   "wins": {
+    "higher": 0,
+    "lower": 1
+   },
+   "status": "final",
+   "winner": "inter-miami",
+   "games": [
+    {
+     "gameNumber": 1,
+     "gameId": "760862",
+     "date": "2026-11-22",
+     "start": "2026-11-22T22:00:00Z",
+     "startTimeTBD": false,
+     "home": "fc-cincinnati",
+     "away": "inter-miami",
+     "homeSide": "higher",
+     "status": "final",
+     "homeScore": 0,
+     "awayScore": 4,
+     "winnerSide": "lower",
+     "ifNecessary": false,
+     "decidedBy": "regulation",
+     "homeShootout": null,
+     "awayShootout": null
+    }
+   ]
+  },
+  {
+   "round": "conference_semifinals",
+   "roundLabel": "Conference Semifinals",
+   "shortLabel": "Conf. Semifinals",
    "seriesKey": "W-SF-A",
    "conference": "West",
    "bestOf": 1,
@@ -888,6 +821,48 @@
      "decidedBy": "penalties",
      "homeShootout": 4,
      "awayShootout": 3
+    }
+   ]
+  },
+  {
+   "round": "conference_finals",
+   "roundLabel": "Conference Finals",
+   "shortLabel": "Conf. Final",
+   "seriesKey": "E-CF",
+   "conference": "East",
+   "bestOf": 1,
+   "higher": {
+    "slug": "inter-miami",
+    "seed": 3
+   },
+   "lower": {
+    "slug": "new-york-city-fc",
+    "seed": 5
+   },
+   "wins": {
+    "higher": 1,
+    "lower": 0
+   },
+   "status": "final",
+   "winner": "inter-miami",
+   "games": [
+    {
+     "gameNumber": 1,
+     "gameId": "761971",
+     "date": "2026-11-28",
+     "start": "2026-11-28T23:00:00Z",
+     "startTimeTBD": false,
+     "home": "inter-miami",
+     "away": "new-york-city-fc",
+     "homeSide": "higher",
+     "status": "final",
+     "homeScore": 5,
+     "awayScore": 1,
+     "winnerSide": "higher",
+     "ifNecessary": false,
+     "decidedBy": "regulation",
+     "homeShootout": null,
+     "awayShootout": null
     }
    ]
   },
@@ -975,5 +950,64 @@
     }
    ]
   }
- ]
+ ],
+ "unplaced": null,
+ "seeds": null,
+ "bracketSha256": "1a0a6b943e6e9d2f5d032416eb321c15085d28fd80d1abe1e56994e844db4776",
+ "source": {
+  "kind": "espn",
+  "urls": [
+   "https://site.api.espn.com/apis/site/v2/sports/soccer/usa.1/scoreboard"
+  ]
+ },
+ "runId": "replay-2025-step-30",
+ "writerVersion": 3,
+ "operatorLog": [],
+ "validatedSeedSha256": null,
+ "revalidationPending": {
+  "clubs": [
+   "austin-fc",
+   "charlotte-fc",
+   "chicago-fire",
+   "columbus-crew",
+   "fc-cincinnati",
+   "fc-dallas",
+   "inter-miami",
+   "lafc",
+   "minnesota-united",
+   "nashville-sc",
+   "new-york-city-fc",
+   "orlando-city",
+   "philadelphia-union",
+   "portland-timbers",
+   "real-salt-lake",
+   "san-diego-fc",
+   "seattle-sounders",
+   "vancouver-whitecaps"
+  ],
+  "hosts": [
+   "austin-fc",
+   "charlotte-fc",
+   "chicago-fire",
+   "columbus-crew",
+   "fc-cincinnati",
+   "fc-dallas",
+   "inter-miami",
+   "lafc",
+   "minnesota-united",
+   "nashville-sc",
+   "new-york-city-fc",
+   "philadelphia-union",
+   "portland-timbers",
+   "san-diego-fc",
+   "seattle-sounders",
+   "vancouver-whitecaps"
+  ]
+ },
+ "lastFetchedAt": {
+  "__firestoreTimestamp": "2026-12-07T11:59:00.000Z"
+ },
+ "lastChangedAt": {
+  "__firestoreTimestamp": "2026-12-05T22:00:00.000Z"
+ }
 }

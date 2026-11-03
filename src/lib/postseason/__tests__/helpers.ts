@@ -27,16 +27,18 @@ export const FIXTURE = {
   mlbWildCard: 'MLB_2026.live-20261001T0017Z.json',
 } as const;
 
-/** The MLS bracket fixtures: the contract of 2026-11-03, built by
- *  generate-mls-2026.cjs from the real 2025 MLS postseason on ESPN, moved to
- *  2026 keys and 52 weeks forward. Each with the moment it stands at. */
+/** The MLS bracket fixtures: the pipeline's own documents from its 2025 MLS
+ *  replay (promo-pipeline 9c995898), captured by generate-mls-2026.cjs, moved
+ *  to 2026 and 52 weeks forward. Each with the moment it stands at. */
 export const MLS_FIXTURE = {
+  decisionDay: 'MLS_2026.decision-day.json',
   early: 'MLS_2026.early.json',
   roundOne: 'MLS_2026.round-one.json',
   semisDone: 'MLS_2026.semis-done.json',
   final: 'MLS_2026.final.json',
 } as const;
 export const MLS_AT = {
+  decisionDay: new Date('2026-10-19T12:00:00Z'),
   early: new Date('2026-10-20T12:00:00Z'),
   roundOne: new Date('2026-11-02T12:00:00Z'),
   semisDone: new Date('2026-11-25T12:00:00Z'),

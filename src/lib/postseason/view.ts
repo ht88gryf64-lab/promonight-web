@@ -11,6 +11,7 @@
 import type { PromoType } from '../types';
 import { MLS_SHORT_NAMES, teamDisplayName, teamShortName } from '../team-display-name';
 import type { Bracket, BracketGame, BracketSeries, BracketSlot, GameStatus, PostseasonLeague, Side } from './types';
+import { UNDECIDED_LABEL } from './map';
 
 export const EASTERN = 'America/New_York';
 
@@ -36,6 +37,10 @@ export interface ParkPage {
   buildingSlug: string;
   buildingName: string;
 }
+
+/** A series' status as the page carries it: the document's, and for MLS
+ *  "underway" where the document says "live". */
+export type SeriesViewStatus = BracketSeries['status'] | 'underway';
 
 export interface SlotView {
   kind: 'club' | 'placeholder';
@@ -111,7 +116,8 @@ export interface SeriesView {
   formatLabel: string;
   higher: SlotView;
   lower: SlotView;
-  status: BracketSeries['status'];
+  /** The document's status; for MLS, "underway" in place of "live". */
+  status: SeriesViewStatus;
   /** "ATL leads 1-0", "Series tied 1-1", "NYY won 2-1". Null at 0-0. */
   scoreLine: string | null;
   /** "Game 2 live" while a game is in progress. Never set for MLS: an MLS
@@ -343,6 +349,9 @@ export function placeholderText(
     const b = clubs.get(slot.candidates[1]);
     if (a && b) return `${short(a)} / ${short(b)} winner`;
   }
+  // MLS: a slot written "TBD" (or holding a key) whose feeder is known reads
+  // as that round's winner: "Wild Card winner".
+  if (league === 'MLS' && slot.feederRoundLabel && (slot.label === 'TBD' || slot.label === UNDECIDED_LABEL)) return `${slot.feederRoundLabel} winner`;
   if (slot.label !== 'TBD' && FEED_ABBREVIATIONS.test(slot.label)) {
     const all = [...clubs.values()].filter((c) => !league || c.sportSlug === league.toLowerCase());
     const names = slot.label.split('/').map((code) => {
@@ -412,7 +421,11 @@ export function titled(title: string, rest: string): string {
  * (the scores' sides are then unknown) or no score.
  */
 export function matchPhrase(g: BracketGame): string | null {
-  if (g.status !== 'final' || g.winnerSide === null || g.homeSide === null || g.homeScore === null || g.awayScore === null) return null;
+  if (g.status !== 'final' || g.winnerSide === null) return null;
+  // A final with no score (the feed served it blank): how it was decided is
+  // still known, the score is not, and none is made up.
+  if (g.homeScore === null && g.awayScore === null) return g.decidedBy === 'extra_time' ? 'after extra time' : null;
+  if (g.homeSide === null || g.homeScore === null || g.awayScore === null) return null;
   const winnerHome = g.winnerSide === g.homeSide;
   const w = winnerHome ? g.homeScore : g.awayScore;
   const l = winnerHome ? g.awayScore : g.homeScore;
@@ -470,6 +483,10 @@ function gameView(
       const ls = homeFirst ? g.awayShootout : g.homeShootout;
       result += `, ${winnerName} won ${ws}-${ls} on penalties`;
     }
+  } else if (mls && g.status === 'final' && g.winnerSide !== null && g.homeScore === null && g.awayScore === null) {
+    // An MLS final served with no score: the winner, and how, and no number.
+    const w = g.winnerSide === 'higher' ? higher : lower;
+    result = `${w.abbreviation ?? w.label} won${g.decidedBy === 'extra_time' ? ' after extra time' : ''}`;
   }
 
   const conditional = isConditional(s, { gameNumber: g.gameNumber, status });
@@ -573,7 +590,7 @@ function seriesView(
     // An MLS series the document calls live only because its first game
     // has started says nothing more than that it is upcoming: no game of it
     // is final and no win is recorded.
-    status: mls && s.status === 'live' && hi + lo === 0 && !s.games.some((g) => g.status === 'final') ? 'upcoming' : s.status,
+    status: mls ? mlsSeriesStatus(s) : s.status,
     scoreLine,
     liveLabel,
     nextLabel,
@@ -588,6 +605,17 @@ function seriesView(
     if (phrase) view.matchScore = phrase;
   }
   return view;
+}
+
+/**
+ * An MLS series' status token. No "live" for MLS anywhere, not even as a
+ * token in the markup or the payload (2026-11-03 review): a series with a
+ * result in it and more to play is "underway"; one the feed calls live only
+ * because its first game has kicked off says no more than "upcoming".
+ */
+function mlsSeriesStatus(s: BracketSeries): SeriesViewStatus {
+  if (s.status !== 'live') return s.status;
+  return s.wins.higher + s.wins.lower > 0 || s.games.some((g) => g.status === 'final') ? 'underway' : 'upcoming';
 }
 
 /**

@@ -330,9 +330,10 @@ test('NO LIVE: a game under way reads as its scheduled game, with no score, labe
   const card = leagueCard(inbound(b, v), 'MLS');
   assert.ok(!/\blive\b|in progress/i.test(JSON.stringify(card)));
   for (const id of ['vancouver-whitecaps', 'lafc']) assert.ok(!/\blive\b|in progress/i.test(JSON.stringify(clubPlayoffs(inbound(b, v), id))));
-  // Round One mid-series stays "live" in its status, which is a fact (a game
-  // of it is final) and is not copy.
-  assert.equal(seriesById(v, 'round_one-8').status, 'live');
+  // A Round One series with a result in it is "underway": no "live" token
+  // for MLS anywhere, not even in a status attribute.
+  assert.equal(seriesById(v, 'round_one-8').status, 'underway');
+  assert.ok(!allSeries(v).some((x) => x.status === 'live'));
 });
 
 test('NO LIVE: an MLB game in progress still reads as live (unchanged)', () => {
@@ -342,6 +343,150 @@ test('NO LIVE: an MLB game in progress still reads as live (unchanged)', () => {
   const v = buildLeagueView(b, clubs(), parks(), new Date('2026-09-29T19:09:00Z'));
   assert.ok(v);
   assert.ok(allSeries(v).some((s) => s.liveLabel === 'Game 1 live'));
+});
+
+// ---- A final served with no score (2026-11-03 review, HIGH) ----
+
+/** The Wild Card East (Chicago Fire 3, Orlando City 1) as the feed can leave
+ *  it: final, decided, a winner, and no score. */
+function blankWildCard(decidedBy: string) {
+  return (d: Doc) => Object.assign(raw(d, 'E-WC').games[0], { homeScore: null, awayScore: null, decidedBy });
+}
+
+test('NO SCORE: a regulation or extra-time final with no score is read, and the page names the winner and invents no score', () => {
+  for (const [by, line, row] of [
+    ['regulation', 'Chicago Fire beat Orlando City', 'CHI won'],
+    ['extra_time', 'Chicago Fire beat Orlando City after extra time', 'CHI won after extra time'],
+  ] as const) {
+    const { v } = viewOf(MLS_FIXTURE.roundOne, MLS_AT.roundOne, blankWildCard(by));
+    const s = seriesById(v, 'wild_card-1');
+    assert.equal(s.scoreLine, line);
+    assert.equal(s.games[0].result, row);
+    assert.ok(!/\d/.test(s.scoreLine ?? ''), 'no number at all');
+  }
+});
+
+test('NO SCORE: refused for a penalties final, for one score without the other, and for a score that is not a number', () => {
+  for (const edit of [
+    (g: RawGame) => Object.assign(g, { homeScore: null, awayScore: null, decidedBy: 'penalties', homeShootout: 4, awayShootout: 3 }),
+    (g: RawGame) => Object.assign(g, { homeScore: null, awayScore: null, decidedBy: 'penalties' }),
+    (g: RawGame) => Object.assign(g, { homeScore: 3, awayScore: null }),
+    (g: RawGame) => Object.assign(g, { homeScore: '3', awayScore: 1 }),
+    (g: RawGame) => Object.assign(g, { homeScore: null, awayScore: null, winnerSide: null }),
+  ]) {
+    const d = loadDoc(MLS_FIXTURE.roundOne);
+    edit(raw(d, 'E-WC').games[0]);
+    assert.equal(mls(d), null, JSON.stringify(raw(d, 'E-WC').games[0]));
+  }
+});
+
+test('NO SCORE: a Round One game, the team modules, the standing line and the champion, all without a score', () => {
+  // Philadelphia's Game 2 win at Chicago (3-0) served blank.
+  const r1 = viewOf(MLS_FIXTURE.roundOne, MLS_AT.roundOne, (d) => Object.assign(raw(d, 'E-R1-1').games[1], { homeScore: null, awayScore: null }));
+  assert.equal(seriesById(r1.v, 'round_one-1').games[1].result, 'PHI won');
+  assert.equal(seriesById(r1.v, 'round_one-1').scoreLine, 'Philadelphia Union won the series 2-0');
+  // The Western semifinal at San Diego (1-0) and the MLS Cup (3-1) blank.
+  const fin = viewOf(MLS_FIXTURE.final, MLS_AT.final, (d) => {
+    Object.assign(raw(d, 'W-SF-A').games[0], { homeScore: null, awayScore: null });
+    Object.assign(raw(d, 'CUP').games[0], { homeScore: null, awayScore: null, decidedBy: 'extra_time' });
+  });
+  const L = inbound(fin.b, fin.v);
+  const min = clubPlayoffs(L, 'minnesota-united');
+  assert.ok(min && min.state === 'eliminated');
+  assert.equal(min.lostLine, 'Conference Semifinals: lost to San Diego FC');
+  const van = clubPlayoffs(L, 'vancouver-whitecaps');
+  assert.ok(van && van.state === 'eliminated');
+  assert.equal(van.lostLine, 'MLS Cup: lost to Inter Miami after extra time');
+  const mia = clubPlayoffs(L, 'inter-miami');
+  assert.ok(mia && mia.state === 'champion');
+  assert.equal(mia.summary, 'Won the MLS Cup after extra time');
+  assert.equal(standingLine(fin.v, gameStarts(fin.b), MLS_AT.final), 'Inter Miami CF won the 2026 MLS Cup, beating Vancouver Whitecaps FC after extra time.');
+  // Regulation, blank: no score and nothing after the names.
+  const reg = viewOf(MLS_FIXTURE.final, MLS_AT.final, (d) => Object.assign(raw(d, 'CUP').games[0], { homeScore: null, awayScore: null }));
+  assert.equal(standingLine(reg.v, gameStarts(reg.b), MLS_AT.final), 'Inter Miami CF won the 2026 MLS Cup, beating Vancouver Whitecaps FC.');
+  assert.equal(reg.v.phase.kind === 'concluded' && reg.v.phase.summary, 'Won the MLS Cup');
+  // Advanced with a blank one-game win: "Won", nothing invented.
+  const adv = viewOf(MLS_FIXTURE.semisDone, MLS_AT.semisDone, (d) => {
+    Object.assign(raw(d, 'W-SF-A').games[0], { homeScore: null, awayScore: null });
+    const cf = raw(d, 'W-CF');
+    cf.games = [];
+    cf.higher = { placeholder: 'TBD', seed: null, feederSeriesKey: null, candidates: null };
+  });
+  const sd = clubPlayoffs(inbound(adv.b, adv.v), 'san-diego-fc');
+  assert.ok(sd && sd.state === 'advanced');
+  assert.equal(sd.wonLine, 'Won');
+  // The standing line while that semifinal round is the one being reported.
+  const mid = new Date('2026-11-24T12:00:00Z');
+  const half = viewOf(MLS_FIXTURE.semisDone, mid, (d) => {
+    Object.assign(raw(d, 'W-SF-A').games[0], { homeScore: null, awayScore: null });
+    // The Eastern semifinal A not played yet, so the round is still open.
+    const a = raw(d, 'E-SF-A');
+    Object.assign(a, { status: 'upcoming', winner: null, wins: { higher: 0, lower: 0 } });
+    Object.assign(a.games[0], { status: 'scheduled', homeScore: null, awayScore: null, winnerSide: null, decidedBy: null });
+    for (const k of ['E-CF', 'W-CF']) Object.assign(raw(d, k), { games: [], higher: { placeholder: 'TBD', seed: null, feederSeriesKey: null, candidates: null }, lower: { placeholder: 'TBD', seed: null, feederSeriesKey: null, candidates: null } });
+  });
+  const line = standingLine(half.v, gameStarts(half.b), mid) ?? '';
+  assert.ok(line.includes('San Diego FC beat Minnesota United;') || line.includes('San Diego FC beat Minnesota United.'), line);
+});
+
+// ---- The early state, as the pipeline writes it ----
+
+test('EARLY: the seed-1 club fills its slot, the Wild Card slot reads "<A> / <B> winner", and never "TBD" beside seed 1', () => {
+  const { b, v } = viewOf(MLS_FIXTURE.early, MLS_AT.early);
+  for (const [id, club, wc] of [['round_one-1', 'Philadelphia Union', 'Chicago Fire / Orlando City winner'], ['round_one-5', 'San Diego FC', 'Portland Timbers / Real Salt Lake winner']] as const) {
+    const s = seriesById(v, id);
+    assert.equal(s.higher.kind, 'club');
+    assert.equal(s.higher.label, club);
+    assert.equal(s.higher.seed, 1);
+    assert.equal(s.lower.label, wc);
+  }
+  for (const s of allSeries(v)) for (const slot of [s.higher, s.lower]) if (slot.seed !== null) assert.equal(slot.kind, 'club', `${s.id}: a seed beside "${slot.label}"`);
+  // The 1 seed's team page gets its module: Round One, opponent to be decided.
+  const phi = clubPlayoffs(inbound(b, v), 'philadelphia-union');
+  assert.ok(phi && phi.state === 'alive');
+  assert.equal(phi.roundLabel, 'Round One');
+  assert.equal(phi.opponent, 'Chicago Fire / Orlando City winner');
+  assert.equal(phi.nextLabel, null);
+  assert.equal(phi.scoreLine, null);
+});
+
+test("DECISION DAY: only the Wild Card posted; every seeded club in its slot, the 1 seed's module up, Round One with no games", () => {
+  const { b, v } = viewOf(MLS_FIXTURE.decisionDay, MLS_AT.decisionDay);
+  assert.equal(v.phase.kind === 'active' && v.phase.roundLabel, 'Wild Card');
+  const r1 = allSeries(v).filter((s) => s.round === 'round_one');
+  assert.equal(r1.length, 8);
+  for (const s of r1) {
+    assert.equal(s.games.length, 0);
+    assert.equal(s.higher.kind, 'club');
+  }
+  assert.equal(seriesById(v, 'round_one-1').lower.label, 'Chicago Fire / Orlando City winner');
+  for (const s of allSeries(v)) for (const slot of [s.higher, s.lower]) {
+    assert.notEqual(slot.label, 'TBD');
+    if (slot.kind === 'placeholder') assert.equal(slot.seed, null);
+  }
+  const L = inbound(b, v);
+  for (const id of ['philadelphia-union', 'san-diego-fc', 'fc-cincinnati', 'chicago-fire']) assert.equal(clubPlayoffs(L, id)?.state, 'alive', id);
+  const cin = clubPlayoffs(L, 'fc-cincinnati');
+  assert.ok(cin && cin.state === 'alive');
+  assert.equal(cin.opponent, 'Columbus Crew');
+  assert.equal(cin.nextLabel, null);
+  assert.equal(standingLine(v, gameStarts(b), MLS_AT.decisionDay), 'Next round: Wild Card. It opens with Orlando City at Chicago Fire, Wed, Oct 21, 8:30 PM ET.');
+});
+
+test('NO SEED FILE: a fixed slot left { placeholder: "TBD", seed: 1 } reads "To be decided" with no seed, never "Seed 1 TBD"', () => {
+  const { v } = viewOf(MLS_FIXTURE.decisionDay, MLS_AT.decisionDay, (d) => {
+    for (const s of d.series as RawSeries[]) if (/-R1-/.test(s.seriesKey)) s.higher = { placeholder: 'TBD', seed: Number(s.seriesKey.slice(-1)), feederSeriesKey: null, candidates: null };
+  });
+  for (const s of allSeries(v).filter((x) => x.round === 'round_one')) {
+    assert.equal(s.higher.kind, 'placeholder');
+    assert.equal(s.higher.label, 'To be decided');
+    assert.equal(s.higher.seed, null);
+  }
+});
+
+test('EARLY: a Wild Card slot with no candidates reads "Wild Card winner", not "TBD"', () => {
+  const { v } = viewOf(MLS_FIXTURE.early, MLS_AT.early, (d) => Object.assign(raw(d, 'E-R1-1').lower, { candidates: null }));
+  assert.equal(seriesById(v, 'round_one-1').lower.label, 'Wild Card winner');
 });
 
 // ---- Standing lines ----
@@ -541,6 +686,59 @@ test('GATE: each league keeps its own window: MLB in its window while MLS is pla
   const now = new Date(lastMlb + 3 * DAY);
   const live = bracketOf(MLS_FIXTURE.roundOne);
   assert.deepEqual(inboundBrackets([mlb, wnbaFinal(), live], now).map((b) => b.league), ['MLB', 'MLS']);
+});
+
+// ---- The gate: finished leagues close together, by cohort ----
+
+/** A finished bracket whose last final game kicked off at `iso`: every start
+ *  in the stored document moved by the same amount. */
+function finishedAt(name: string, league: 'MLB' | 'WNBA' | 'MLS', iso: string): Bracket {
+  const d = loadDoc(name);
+  d.season = 2026;
+  const games = (d.series as RawSeries[]).flatMap((s) => s.games);
+  const last = Math.max(...games.filter((g) => g.status === 'final' && typeof g.start === 'string').map((g) => Date.parse(g.start as string)));
+  const by = Date.parse(iso) - last;
+  for (const g of games) if (typeof g.start === 'string') g.start = new Date(Date.parse(g.start) + by).toISOString();
+  const b = mapBracketDoc(d, { league, season: 2026 });
+  assert.ok(b);
+  return b;
+}
+const MLB_DONE = () => finishedAt(FIXTURE.mlbFinal, 'MLB', '2026-10-29T00:00:00Z');
+const WNBA_DONE = () => finishedAt(FIXTURE.wnbaFinal, 'WNBA', '2026-11-01T00:00:00Z');
+const leaguesAt = (bs: Bracket[], iso: string) => inboundBrackets(bs, new Date(iso)).map((b) => b.league);
+
+test('COHORT: MLB (10-29) and WNBA (11-01) close together at 2026-11-15T00:00Z; MLS being played stays on throughout', () => {
+  const all = () => [MLB_DONE(), WNBA_DONE(), bracketOf(MLS_FIXTURE.roundOne)];
+  assert.deepEqual(leaguesAt(all(), '2026-11-03T19:30:00Z'), ['MLB', 'WNBA', 'MLS'], 'today');
+  assert.deepEqual(leaguesAt(all(), '2026-11-12T12:00:00Z'), ['MLB', 'WNBA', 'MLS'], 'MLB alone would have closed 11-12');
+  // The close instant is the window's last, as for the nav (inclusive, the
+  // rule the MLB and WNBA tests already pin); off from the next millisecond.
+  assert.deepEqual(leaguesAt(all(), '2026-11-15T00:00:00.000Z'), ['MLB', 'WNBA', 'MLS']);
+  assert.deepEqual(leaguesAt(all(), '2026-11-15T00:00:00.001Z'), ['MLS'], 'both off after the close, MLS on');
+  // The nav and hub keep the any-league rule: on while MLS is played.
+  assert.equal(playoffsLinkState(all(), new Date('2026-11-15T00:00:00.001Z')).state, 'active');
+});
+
+test('COHORT: the MLS champion window never reopens MLB or WNBA', () => {
+  const mls = finishedAt(MLS_FIXTURE.final, 'MLS', '2026-12-18T20:00:00Z');
+  const all = [MLB_DONE(), WNBA_DONE(), mls];
+  assert.deepEqual(leaguesAt(all, '2026-12-19T12:00:00Z'), ['MLS']);
+  assert.deepEqual(leaguesAt(all, '2027-01-01T20:00:00.000Z'), ['MLS']);
+  assert.deepEqual(leaguesAt(all, '2027-01-01T20:00:00.001Z'), []);
+});
+
+test('COHORT: two leagues finishing 10 days apart share one close; 15 days apart they do not', () => {
+  const near = [finishedAt(FIXTURE.mlbFinal, 'MLB', '2026-10-01T00:00:00Z'), finishedAt(FIXTURE.wnbaFinal, 'WNBA', '2026-10-11T00:00:00Z')];
+  assert.deepEqual(leaguesAt(near, '2026-10-20T00:00:00Z'), ['MLB', 'WNBA'], 'MLB alone would have closed 10-15');
+  assert.deepEqual(leaguesAt(near, '2026-10-25T00:00:00.000Z'), ['MLB', 'WNBA']);
+  assert.deepEqual(leaguesAt(near, '2026-10-25T00:00:00.001Z'), []);
+  const far = [finishedAt(FIXTURE.mlbFinal, 'MLB', '2026-10-01T00:00:00Z'), finishedAt(FIXTURE.wnbaFinal, 'WNBA', '2026-10-16T00:00:00Z')];
+  assert.deepEqual(leaguesAt(far, '2026-10-20T00:00:00Z'), ['WNBA']);
+});
+
+test('COHORT: a league still being played is in no cohort and holds no other league open', () => {
+  const live = bracketOf(MLS_FIXTURE.roundOne);
+  assert.deepEqual(leaguesAt([finishedAt(FIXTURE.mlbFinal, 'MLB', '2026-10-01T00:00:00Z'), live], '2026-10-16T00:00:00Z'), ['MLS']);
 });
 
 // ---- Metadata ----
