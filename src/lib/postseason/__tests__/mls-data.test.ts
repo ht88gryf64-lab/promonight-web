@@ -7,6 +7,7 @@ import { FIXTURE, MLS_AT, MLS_FIXTURE, capturedTeams, fakeFirestore, loadDoc, ml
 import { readFileSync } from 'node:fs';
 
 type Fake = ReturnType<typeof fakeFirestore>;
+const counts = { fail: false };
 const current: { db: Fake } = { db: fakeFirestore({}) };
 const db = {
   collection: (name: string) => current.db.collection(name),
@@ -28,14 +29,21 @@ mock.module(new URL('../../data.ts', import.meta.url).href, {
 mock.module(new URL('../../venue-hub.ts', import.meta.url).href, {
   namedExports: {
     getTeamVenueHubMap: async () => venuePages(),
-    // One building for every MLS club, as the venue data has it (2026-11-03).
-    getTeamBuildingCounts: async () => new Map(mlsTeams().map((t) => [t.id, 1])),
+    // One building for every MLS club, as the venue data has it (2026-11-03),
+    // unless a test makes the count fail.
+    getTeamBuildingCounts: async () => {
+      if (counts.fail) throw new Error('venueHubs read failed');
+      return new Map(mlsTeams().map((t) => [t.id, 1]));
+    },
   },
 });
 mock.timers.enable({ apis: ['Date'], now: MLS_AT.roundOne });
 
 const load = () => import('../data');
-const use = (docs: Parameters<typeof fakeFirestore>[0]) => (current.db = fakeFirestore(docs));
+const use = (docs: Parameters<typeof fakeFirestore>[0]) => {
+  counts.fail = false;
+  return (current.db = fakeFirestore(docs));
+};
 
 async function logged<T>(fn: () => Promise<T>): Promise<{ value: T; lines: string[] }> {
   const original = console.error;
@@ -112,4 +120,50 @@ test('SITEMAP: /playoffs/mls is listed once its document exists, and not before'
   delete without['postseasonBrackets/MLS_2026'];
   use(without as Parameters<typeof fakeFirestore>[0]);
   assert.deepEqual((await getPlayoffsSitemapEntries()).map((e) => e.path), ['/playoffs', '/playoffs/mlb', '/playoffs/wnba']);
+});
+
+// ---- Parks: one ground or none (2026-11-03 review) ----
+
+/** Round One with New York City FC to host Game 3 against Charlotte (the
+ *  stored Game 3 is at Charlotte), so a park and a venue listing are possible. */
+const nycHosts = () => {
+  const d = docs();
+  const s = (d['postseasonBrackets/MLS_2026'].series as Record<string, any>[]).find((x) => x.seriesKey === 'E-R1-4') as Record<string, any>;
+  Object.assign(s.games[2], { home: 'new-york-city-fc', away: 'charlotte-fc', homeSide: 'lower' });
+  return d;
+};
+const gameOf = (view: any, id: string, n: number) => view.rounds.flatMap((r: any) => r.groups.flatMap((g: any) => g.series)).find((x: any) => x.id === id).games.find((g: any) => g.gameNumber === n);
+
+test('PARKS: NYCFC hosting, through the data layer: the club and no park, and on no venue page; a one-ground host keeps its park', async () => {
+  const { getLeaguePageData, getPlayoffsInbound } = await load();
+  const { venueGames } = await import('../inbound');
+  use(nycHosts());
+  const page = await getLeaguePageData('MLS');
+  assert.equal(page.state, 'ok');
+  if (page.state !== 'ok') return;
+  const g3 = gameOf(page.view, 'round_one-4', 3);
+  assert.equal(g3.hostName, 'New York City FC');
+  assert.equal(g3.park, null);
+  assert.equal(g3.parkPage, null);
+  assert.equal(gameOf(page.view, 'round_one-3', 3).park, 'Nu Stadium');
+  const inbound = await getPlayoffsInbound();
+  assert.equal(venueGames(inbound, ['new-york-city-fc', 'new-york-yankees']), null, 'not on the Yankee Stadium page');
+  assert.ok(venueGames(inbound, ['inter-miami']), 'a one-ground host is still listed');
+});
+
+test('PARKS: the building count fails: every MLS park withheld, nothing listed on a venue page, and the page still renders', async () => {
+  const { getLeaguePageData, getPlayoffsInbound } = await load();
+  const { venueGames } = await import('../inbound');
+  use(nycHosts());
+  counts.fail = true;
+  const { value: page, lines } = await logged(() => getLeaguePageData('MLS'));
+  assert.equal(page.state, 'ok');
+  if (page.state !== 'ok') return;
+  const games = page.view.rounds.flatMap((r) => r.groups.flatMap((g) => g.series.flatMap((x) => x.games)));
+  assert.ok(games.some((g) => g.hostName), 'hosts are still named');
+  assert.ok(games.every((g) => g.park === null), 'no MLS park at all');
+  assert.ok(lines.some((l) => l.includes('building count failed')), 'and it is logged');
+  counts.fail = true;
+  const inbound = await getPlayoffsInbound();
+  for (const id of ['inter-miami', 'seattle-sounders', 'fc-cincinnati', 'new-york-city-fc']) assert.equal(venueGames(inbound, [id]), null, id);
 });

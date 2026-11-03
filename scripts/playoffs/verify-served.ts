@@ -938,8 +938,10 @@ async function main() {
     // MLS: the round and its scheduled days, never "next" (2026-11-03).
     const longOf = (ymd: string) => { const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', weekday: 'long', month: 'long', day: 'numeric' }).formatToParts(new Date(`${ymd}T12:00:00Z`)).map((x) => [x.type, x.value])); return `${p.weekday}, ${p.month} ${p.day}`; };
     const andList = (xs: string[]) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
-      const days = [...new Set(of(open).flatMap((s) => s.games.filter((g) => g.status !== 'cancelled').map((g) => (!g.startTimeTBD && isInstant(g.start) ? etYmd(new Date(g.start)) : g.date)).filter((d): d is string => !!d)))].sort();
-      return days.length ? `${label(open)}: ${andList(days.map(longOf))}.` : `${label(open)}: dates to be set.`;
+      // Only games certain to be played on their day: scheduled, not
+      // conditional ("if necessary"), not postponed or suspended.
+      const days = [...new Set(of(open).flatMap((s) => s.games.filter((g) => g.status === 'scheduled' && !conditional(s, g)).map((g) => (!g.startTimeTBD && isInstant(g.start) ? etYmd(new Date(g.start)) : g.date)).filter((d): d is string => !!d)))].sort();
+      return days.length ? `${label(open)}: ${andList(days.map(longOf))}.` : `${label(open)}: dates not yet listed.`;
     }
     if (played.length === 0) {
       const f = sureNext(of(open), laterThan(at + 1, []));
@@ -999,6 +1001,8 @@ async function main() {
       parts.push(`${label(r)}: ${clauses.join('; ')}.`);
     }
     const f = sureNext(played.flatMap(of), laterThan(at, played));
+    // MLS names the game by its schedule, never "next".
+    if (f && mls) return `${parts.join(' ')} ${single(doc, f.s) ? 'Kickoff:' : `Game ${f.g.gameNumber}:`} ${gameText(f.s, f.g).replace(/^Game \d+, /, '')}.`;
     return f ? `${parts.join(' ')} Next game: ${gameText(f.s, f.g)}.` : parts.join(' ');
   }
 

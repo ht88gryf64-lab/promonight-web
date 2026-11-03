@@ -500,7 +500,7 @@ test('WHERE THINGS STAND: every state, true and with no article before MLS names
   assert.equal(at(MLS_FIXTURE.early, MLS_AT.early), 'Wild Card: Wednesday, October 21.');
   assert.equal(
     at(MLS_FIXTURE.roundOne, MLS_AT.roundOne),
-    'Round One: Philadelphia Union beat Chicago Fire 2-0 in the series; FC Cincinnati and Columbus Crew are tied 1-1 in the series; Inter Miami and Nashville SC are tied 1-1 in the series; Charlotte FC and New York City FC are tied 1-1 in the series; San Diego FC and Portland Timbers are tied 1-1 in the series; Vancouver Whitecaps beat FC Dallas 2-0 in the series; LAFC beat Austin FC 2-0 in the series; Minnesota United leads Seattle Sounders 1-0 in the series. Next game: Game 2, Minnesota United at Seattle Sounders, Mon, Nov 2, 10:45 PM ET.',
+    'Round One: Philadelphia Union beat Chicago Fire 2-0 in the series; FC Cincinnati and Columbus Crew are tied 1-1 in the series; Inter Miami and Nashville SC are tied 1-1 in the series; Charlotte FC and New York City FC are tied 1-1 in the series; San Diego FC and Portland Timbers are tied 1-1 in the series; Vancouver Whitecaps beat FC Dallas 2-0 in the series; LAFC beat Austin FC 2-0 in the series; Minnesota United leads Seattle Sounders 1-0 in the series. Game 2: Minnesota United at Seattle Sounders, Mon, Nov 2, 10:45 PM ET.',
   );
   assert.equal(at(MLS_FIXTURE.semisDone, MLS_AT.semisDone), 'Conference Finals: Saturday, November 28.');
   assert.equal(at(MLS_FIXTURE.final, MLS_AT.final), 'Inter Miami CF won the 2026 MLS Cup, beating Vancouver Whitecaps FC 3-1.');
@@ -546,6 +546,53 @@ test('WHERE THINGS STAND: a round not yet started is its days, never "next", and
   const line = standingLine(live.v, gameStarts(live.b), during);
   assert.equal(line, want);
   assert.ok(!/\bnext\b/i.test(line ?? ''));
+});
+
+test('WHERE THINGS STAND: no "Next game" for MLS; a one-game kickoff is named by its schedule', () => {
+  // The semifinals half played: Vancouver through, the other three ahead.
+  const now = new Date('2026-11-22T12:00:00Z');
+  const { b, v } = viewOf(MLS_FIXTURE.semisDone, now, (d) => {
+    for (const k of ['E-SF-A', 'E-SF-B', 'W-SF-A']) {
+      const s = raw(d, k);
+      Object.assign(s, { status: 'upcoming', winner: null, wins: { higher: 0, lower: 0 } });
+      Object.assign(s.games[0], { status: 'scheduled', homeScore: null, awayScore: null, winnerSide: null, decidedBy: null });
+    }
+    for (const k of ['E-CF', 'W-CF']) Object.assign(raw(d, k), { status: 'upcoming', winner: null, wins: { higher: 0, lower: 0 }, games: [], higher: { placeholder: 'TBD', seed: null, feederSeriesKey: null, candidates: null }, lower: { placeholder: 'TBD', seed: null, feederSeriesKey: null, candidates: null } });
+  });
+  const line = standingLine(v, gameStarts(b), now) ?? '';
+  assert.ok(!/\bnext\b/i.test(line), line);
+  assert.ok(line.endsWith('Kickoff: Inter Miami at FC Cincinnati, Sun, Nov 22, 5:00 PM ET.'), line);
+});
+
+test('ROUND DAYS: only scheduled games certain to be played count; none listed says "dates not yet listed"', () => {
+  // Round One posted, nothing played: Game 3s are "if necessary" and do not
+  // count, nor does a postponed game.
+  const now = new Date('2026-10-20T12:00:00Z');
+  const edit = (d: Doc) => {
+    for (const k of ['E-WC', 'W-WC']) {
+      const s = raw(d, k);
+      Object.assign(s, { status: 'final', winner: s.higher.slug, wins: { higher: 1, lower: 0 } });
+      Object.assign(s.games[0], { status: 'final', homeScore: 1, awayScore: 0, winnerSide: 'higher', decidedBy: 'regulation' });
+    }
+    // Cincinnati's Game 1 postponed, on a day no other game is played.
+    Object.assign(raw(d, 'E-R1-2').games[0], { status: 'postponed', date: '2026-10-29', start: '2026-10-29T22:45:00Z' });
+  };
+  const { b, v } = viewOf(MLS_FIXTURE.early, now, edit);
+  const line = standingLine(v, gameStarts(b), now) ?? '';
+  assert.match(line, /^Round One: /);
+  const g3days = allSeries(v).filter((s) => s.round === 'round_one').flatMap((s) => s.games.filter((g) => g.gameNumber === 3).map((g) => g.day));
+  const longOf = (ymd: string) => new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', weekday: 'long', month: 'long', day: 'numeric' }).format(new Date(`${ymd}T12:00:00Z`));
+  const listed = allSeries(v).filter((s) => s.round === 'round_one').flatMap((s) => s.games.filter((g) => g.gameNumber < 3 && g.state === 'scheduled').map((g) => g.day as string));
+  for (const d of g3days) if (d && !listed.includes(d)) assert.ok(!line.includes(longOf(d)), `${d} is only an if-necessary day: ${line}`);
+  assert.equal(seriesById(v, 'round_one-2').games[0].state, 'postponed');
+  assert.ok(!listed.includes('2026-10-29'));
+  assert.ok(!line.includes('Thursday, October 29'), `a postponed game's day is not listed: ${line}`);
+  assert.ok(!line.includes('Friday, November 6') && !line.includes('Saturday, November 7'), `no if-necessary day: ${line}`);
+  // Nothing dated in the round: "dates not yet listed".
+  const none = viewOf(MLS_FIXTURE.decisionDay, MLS_AT.decisionDay, (d) => {
+    for (const k of ['E-WC', 'W-WC']) Object.assign(raw(d, k).games[0], { date: null, start: null, startTimeTBD: true });
+  });
+  assert.equal(standingLine(none.v, gameStarts(none.b), MLS_AT.decisionDay), 'Wild Card: dates not yet listed.');
 });
 
 test('KICKOFF: MLS labels a game time "Kickoff:", true before, during and after; MLB keeps "Next:"', () => {

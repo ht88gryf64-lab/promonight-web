@@ -190,8 +190,10 @@ function expectedLine(doc: Doc, teams: Map<string, Team>, now: Date): string | n
     const longOf = (ymd: string) => { const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', weekday: 'long', month: 'long', day: 'numeric' }).formatToParts(new Date(`${ymd}T12:00:00Z`)).map((x) => [x.type, x.value])); return `${p.weekday}, ${p.month} ${p.day}`; };
     const andList = (xs: string[]) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
     const r = rounds[open];
-    const days = [...new Set(inRound(r).flatMap((s: Doc) => s.games.filter((g: Doc) => g.status !== 'cancelled').map((g: Doc) => (!g.startTimeTBD && isInstant(g.start) ? ymd(new Date(g.start)) : g.date)).filter(Boolean)))].sort() as string[];
-    return days.length ? `${labelOf(r)}: ${andList(days.map(longOf))}.` : `${labelOf(r)}: dates to be set.`;
+    // Scheduled games certain to be played: not conditional, not held.
+    const conditional = (s: Doc, g: Doc) => { const need = Math.ceil(s.bestOf / 2); const lead = Math.max(s.wins.higher, s.wins.lower); return lead + Math.max(0, g.gameNumber - 1 - (s.wins.higher + s.wins.lower)) >= need; };
+    const days = [...new Set(inRound(r).flatMap((s: Doc) => s.games.filter((g: Doc) => g.status === 'scheduled' && !conditional(s, g)).map((g: Doc) => (!g.startTimeTBD && isInstant(g.start) ? ymd(new Date(g.start)) : g.date)).filter(Boolean)))].sort() as string[];
+    return days.length ? `${labelOf(r)}: ${andList(days.map(longOf))}.` : `${labelOf(r)}: dates not yet listed.`;
   }
   if (!playing.length) {
     const r = rounds[open];
@@ -249,6 +251,8 @@ function expectedLine(doc: Doc, teams: Map<string, Team>, now: Date): string | n
     if (unset) said.push(unset === 1 ? 'one matchup is to be set' : `${unset} matchups are to be set`);
     sentences.push(`${labelOf(r)}: ${said.join('; ')}.`);
   }
+  // MLS names the game by its schedule, never "next".
+  if (next && mls) return `${sentences.join(' ')} ${one(next.s) ? 'Kickoff:' : `Game ${next.g.gameNumber}:`} ${gameText(next).replace(/^Game \d+, /, '')}.`;
   return next ? `${sentences.join(' ')} Next game: ${gameText(next)}.` : sentences.join(' ');
 }
 

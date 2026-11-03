@@ -232,9 +232,11 @@ export function standingLine(view: LeagueView, starts: ReadonlyMap<string, strin
     // says "next": while the round's first match is under way it is not (the
     // page shows no live state), and the days stay true before, during and
     // after kickoff (2026-11-03).
-    const days = [...new Set(seriesOf(at).flatMap((s) => s.games.filter((g) => g.state !== 'cancelled' && g.day).map((g) => g.day as string)))].sort();
+    // Only games certain to be played on their day: scheduled, not "if
+    // necessary", and not postponed or suspended.
+    const days = [...new Set(seriesOf(at).flatMap((s) => s.games.filter((g) => g.state === 'scheduled' && !g.ifNecessary && g.day).map((g) => g.day as string)))].sort();
     const round = view.rounds[at];
-    return days.length ? `${round.label}: ${listOf(days.map(longDay))}.` : `${round.label}: dates to be set.`;
+    return days.length ? `${round.label}: ${listOf(days.map(longDay))}.` : `${round.label}: dates not yet listed.`;
   }
   if (played.length === 0) {
     // Between rounds, or before the first: the round to play next.
@@ -258,5 +260,8 @@ export function standingLine(view: LeagueView, starts: ReadonlyMap<string, strin
     parts.push(`${view.rounds[i].label}: ${clauses.join('; ')}.`);
   }
   const next = nextGame(played.flatMap(seriesOf), after(at, played), startOf, now);
+  // MLS names the game by its schedule, with no "next": the line stays true
+  // after kickoff until the page is rebuilt (2026-11-03).
+  if (next && sp.mls) return `${parts.join(' ')} ${next.title ? `${next.title}:` : 'Kickoff:'} ${next.matchup}, ${next.when.replace(' · ', ', ')}.`;
   return next ? `${parts.join(' ')} Next game: ${gameText(next)}.` : parts.join(' ');
 }

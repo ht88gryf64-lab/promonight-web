@@ -34,6 +34,12 @@ const ALL = [T_MLS, T_DATA, T_RENDER];
 
 /** [name, file, from, to, tests]. `from` must occur exactly once. */
 const CASES = [
+  ['data: the noPark filter removed (NYCFC gets a park)', D, '    hostSlugs(bracket).filter((slug) => !noPark.has(slug)).map(async (slug) => {', '    hostSlugs(bracket).map(async (slug) => {', [T_DATA]],
+  ['data: a failed building count not caught', D, "    try {\n      counts = await getTeamBuildingCounts();\n    } catch (err) {\n      console.error('[postseason] building count failed; MLS hosts render with no park', err);\n    }", '    counts = await getTeamBuildingCounts();', [T_DATA]],
+  ['standing: "Next game:" back for MLS', S, "  if (next && sp.mls) return", '  if (false) return', [T_MLS]],
+  ['standing: if-necessary days listed', S, "g.state === 'scheduled' && !g.ifNecessary && g.day", "g.state === 'scheduled' && g.day", [T_MLS]],
+  ['standing: postponed days listed', S, "g.state === 'scheduled' && !g.ifNecessary && g.day", "g.state !== 'cancelled' && !g.ifNecessary && g.day", [T_MLS]],
+  ['standing: "dates to be set" back', S, '`${round.label}: dates not yet listed.`', '`${round.label}: dates to be set.`', [T_MLS]],
   ['standing: an unstarted MLS round says "Next round"', S, '  if (played.length === 0 && sp.mls) {', '  if (false) {', [T_MLS]],
   ['view: "Next:" before an MLS kickoff', V, "  if (kickoff) view.nextPrefix = 'Kickoff:';", '', [T_MLS, T_RENDER]],
   ['inbound: "Next:" on the MLS team module', I, "      if (l.league === 'MLS' && alive.nextLabel && nextGame(s)?.state === 'scheduled') alive.nextPrefix = 'Kickoff:';", '', [T_MLS, T_RENDER]],
