@@ -80,7 +80,7 @@ export function FooterTeamSitemap({ teams }: { teams: Team[] }) {
                   href={`/${t.sportSlug}/${t.id}`}
                   className="text-text-secondary text-sm hover:text-white transition-colors truncate min-w-0"
                 >
-                  {t.city} {t.name}
+                  {teamDisplayName(t)}
                 </Link>
               </div>
             ))}

@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import type { Team } from '@/lib/types';
 import { LEAGUE_ORDER, SPORT_ICONS } from '@/lib/types';
 import { StarIcon } from '@/components/star-icon';
+import { teamDisplayName } from '@/lib/team-display-name';
 
 // Controlled team star picker: searchable, league-grouped toggle list plus a
 // removable selected-chips row. Selection state and the analytics side effects
@@ -64,7 +65,7 @@ function PickerTeamButton({
       />
       <span className="min-w-0 flex-1">
         <span className="block truncate font-rd text-sm font-bold text-rd-ink">
-          {team.city} {team.name}
+          {teamDisplayName(team)}
         </span>
         <span className="block font-rd text-[10px] uppercase tracking-[0.08em] text-rd-ink-faint">
           {team.abbreviation}
@@ -106,6 +107,7 @@ export function TeamStarPicker({
       !q ||
       t.name.toLowerCase().includes(q) ||
       t.city.toLowerCase().includes(q) ||
+      teamDisplayName(t).toLowerCase().includes(q) ||
       t.league.toLowerCase().includes(q) ||
       t.abbreviation.toLowerCase().includes(q);
     return LEAGUE_ORDER.map((league) => ({

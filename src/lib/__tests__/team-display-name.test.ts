@@ -54,18 +54,18 @@ test('ordinary city + nickname pairs are unchanged', () => {
   assert.equal(teamDisplayName({ city: 'Ann', name: 'Annapolis Club' }), 'Ann Annapolis Club');
 });
 
-// GUARD: a reader-facing `${x.city} ${x.name}` is how the wrong names got out.
-// The only raw joins left are lookup keys that must match the venues
-// collection's stored `team` string byte for byte.
+// GUARD: a reader-facing city + name join (template literal or JSX) is how the
+// wrong names got out. The raw joins left are venue lookup keys that must match
+// the venues collection's stored `team` string byte for byte, plus team
+// search, which matches the raw join as well as the display name.
 test('no raw city + name join outside the venue lookup keys', () => {
   const ALLOWED = new Set([
     'src/lib/data.ts:const fullName = `${team.city} ${team.name}`;',
     'src/lib/data.ts:for (const t of teams) fullNameToId.set(`${t.city} ${t.name}`, t.id);',
-    'src/lib/data.ts:g.teams.sort((a, b) => `${a.city} ${a.name}`.localeCompare(`${b.city} ${b.name}`));',
     'src/app/api/my-teams/promos/route.ts:const fullName = `${teamData.city} ${teamData.name}`;',
     'src/components/team-search.tsx:`${t.city} ${t.name}`.toLowerCase().includes(query.toLowerCase()) ||',
   ]);
-  const RAW = /\$\{\s*[\w.]*city\s*\}\s\$\{\s*[\w.]*name\s*\}/;
+  const RAW = /\$?\{\s*[\w.]*city\s*\}\s\$?\{\s*[\w.]*name\s*\}/;
   const hits: string[] = [];
   const walk = (dir: string) => {
     for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -73,7 +73,9 @@ test('no raw city + name join outside the venue lookup keys', () => {
       if (e.isDirectory()) { if (e.name !== '__tests__' && e.name !== '__fixtures__') walk(p); continue; }
       if (!/\.(ts|tsx)$/.test(e.name)) continue;
       fs.readFileSync(p, 'utf8').split('\n').forEach((line) => {
-        if (RAW.test(line)) hits.push(`${p}:${line.trim()}`);
+        const t = line.trim();
+        if (t.startsWith('//') || t.startsWith('*')) return; // comments may describe the join
+        if (RAW.test(line)) hits.push(`${p}:${t}`);
       });
     }
   };
