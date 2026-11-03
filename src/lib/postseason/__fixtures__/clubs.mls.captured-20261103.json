@@ -1,0 +1,639 @@
+{
+  "capturedAt": "2026-11-03T19:02:03.625Z",
+  "teams": [
+    {
+      "id": "atlanta-united",
+      "city": "Atlanta",
+      "name": "United FC",
+      "abbreviation": "ATL",
+      "primaryColor": "#80000a",
+      "secondaryColor": "#231f20",
+      "league": "MLS",
+      "sportSlug": "mls",
+      "division": "Eastern",
+      "ticketmasterSlug": "atlanta-united-fc",
+      "ticketmasterAttractionId": "2213124",
+      "fanaticsUrl": "https://www.fanatics.com/mls/atlanta-united-fc/o-1355+t-03121274+z-93648-1656080836",
+      "fanaticsPath": "/mls/atlanta-united-fc/o-1355+t-03121274+z-93648-1656080836"
+    },
+    {
+      "id": "austin-fc",
+      "city": "Austin",
+      "name": "Austin FC",
+      "abbreviation": "ATX",
+      "primaryColor": "#00b140",
+      "secondaryColor": "#000000",
+      "league": "MLS",
+      "sportSlug": "mls",
+      "division": "Western",
+      "ticketmasterSlug": "austin-fc",
+      "ticketmasterAttractionId": "2772483",
+      "fanaticsUrl": "https://www.fanatics.com/mls/austin-fc/o-1333+t-32701197+z-90074-2612190885",
+      "fanaticsPath": "/mls/austin-fc/o-1333+t-32701197+z-90074-2612190885"
+    },
+    {
+      "id": "cf-montreal",
+      "city": "Montreal",
+      "name": "CF Montréal",
+      "abbreviation": "MTL",
+      "primaryColor": "#0033a1",
+      "secondaryColor": "#000000",
+      "league": "MLS",
+      "sportSlug": "mls",
+      "division": "Eastern",
+      "ticketmasterSlug": "cf-montreal",
+      "ticketmasterAttractionId": "806614",
+      "fanaticsUrl": "https://www.fanatics.com/mls/cf-montreal/o-2499+t-25675796+z-97834-726755796",
+      "fanaticsPath": "/mls/cf-montreal/o-2499+t-25675796+z-97834-726755796"
+    },
+    {
+      "id": "charlotte-fc",
+      "city": "Charlotte",
+      "name": "Charlotte FC",
+      "abbreviation": "CLT",
+      "primaryColor": "#1a85c8",
+      "secondaryColor": "#000000",
+      "league": "MLS",
+      "sportSlug": "mls",
+      "division": "Eastern",
+      "ticketmasterSlug": "charlotte-fc",
+      "ticketmasterAttractionId": "2765955",
+      "fanaticsUrl": "https://www.fanatics.com/mls/charlotte-fc/o-7933+t-65427121+z-764-2338734225",
+      "fanaticsPath": "/mls/charlotte-fc/o-7933+t-65427121+z-764-2338734225"
+    },
+    {
+      "id": "chicago-fire",
+      "city": "Chicago",
+      "name": "Fire FC",
+      "abbreviation": "CHI",
+      "primaryColor": "#af2626",
+      "secondaryColor": "#0a174a",
+      "league": "MLS",
+      "sportSlug": "mls",
+      "division": "Eastern",
+      "ticketmasterSlug": "chicago-fire-fc",
+      "ticketmasterAttractionId": "805916",
+      "fanaticsUrl": "https://www.fanatics.com/mls/chicago-fire/o-3588+t-58565619+z-91327-2577666847",
+      "fanaticsPath": "/mls/chicago-fire/o-3588+t-58565619+z-91327-2577666847"
+    },
+    {
+      "id": "colorado-rapids",
+      "city": "Colorado",
+      "name": "Rapids",
+      "abbreviation": "COL",
+      "primaryColor": "#862633",
+      "secondaryColor": "#8bb8e8",
+      "league": "MLS",
+      "sportSlug": "mls",
+      "division": "Western",
+      "ticketmasterSlug": "colorado-rapids",
+      "ticketmasterAttractionId": "805925",
+      "fanaticsUrl": "https://www.fanatics.com/mls/colorado-rapids/o-3522+t-58897854+z-91383-2402135378",
+      "fanaticsPath": "/mls/colorado-rapids/o-3522+t-58897854+z-91383-2402135378"
+    },
+    {
+      "id": "columbus-crew",
+      "city": "Columbus",
+      "name": "Crew",
+      "abbreviation": "CLB",
+      "primaryColor": "#fedd00",
+      "secondaryColor": "#000000",
+      "league": "MLS",
+      "sportSlug": "mls",
+      "division": "Eastern",
+      "ticketmasterSlug": "columbus-crew",
+      "ticketmasterAttractionId": "805928",
+      "fanaticsUrl": "https://www.fanatics.com/mls/columbus-crew/o-2455+t-92345722+z-96722-1104442559",
+      "fanaticsPath": "/mls/columbus-crew/o-2455+t-92345722+z-96722-1104442559"
+    },
+    {
+      "id": "dc-united",
+      "city": "D.C.",
+      "name": "United",
+      "abbreviation": "DC",
+      "primaryColor": "#000000",
+      "secondaryColor": "#ef3e42",
+      "league": "MLS",
+      "sportSlug": "mls",
+      "division": "Eastern",
+      "ticketmasterSlug": "dc-united",
+      "ticketmasterAttractionId": "806390",
+      "fanaticsUrl": "https://www.fanatics.com/mls/dc-united/o-2455+t-47450290+z-90814-1060664237",
+      "fanaticsPath": "/mls/dc-united/o-2455+t-47450290+z-90814-1060664237"
+    },
+    {
+      "id": "fc-cincinnati",
+      "city": "Cincinnati",
+      "name": "FC Cincinnati",
+      "abbreviation": "CIN",
+      "primaryColor": "#f05323",
+      "secondaryColor": "#263b80",
+      "league": "MLS",
+      "sportSlug": "mls",
+      "division": "Eastern",
+      "ticketmasterSlug": "fc-cincinnati",
+      "ticketmasterAttractionId": "2427786",
+      "fanaticsUrl": "https://www.fanatics.com/mls/fc-cincinnati/o-1377+t-65804377+z-95516-2284996072",
+      "fanaticsPath": "/mls/fc-cincinnati/o-1377+t-65804377+z-95516-2284996072"
+    },
+    {
+      "id": "fc-dallas",
+      "city": "Dallas",
+      "name": "FC Dallas",
+      "abbreviation": "DAL",
+      "primaryColor": "#e81f3e",
+      "secondaryColor": "#2a4076",
+      "league": "MLS",
+      "sportSlug": "mls",
+      "division": "Western",
+      "ticketmasterSlug": "fc-dallas",
+      "ticketmasterAttractionId": "805930",
+      "fanaticsUrl": "https://www.fanatics.com/mls/fc-dallas/o-1322+t-14349179+z-98852-3554681276",
+      "fanaticsPath": "/mls/fc-dallas/o-1322+t-14349179+z-98852-3554681276"
+    },
+    {
+      "id": "houston-dynamo",
+      "city": "Houston",
+      "name": "Dynamo FC",
+      "abbreviation": "HOU",
+      "primaryColor": "#ff6b00",
+      "secondaryColor": "#101820",
+      "league": "MLS",
+      "sportSlug": "mls",
+      "division": "Western",
+      "ticketmasterSlug": "houston-dynamo",
+      "ticketmasterAttractionId": "1017951",
+      "fanaticsUrl": "https://www.fanatics.com/mls/houston-dynamo-fc/o-3566+t-47674692+z-90580-1137553623",
+      "fanaticsPath": "/mls/houston-dynamo-fc/o-3566+t-47674692+z-90580-1137553623"
+    },
+    {
+      "id": "inter-miami",
+      "city": "Miami",
+      "name": "Inter CF",
+      "abbreviation": "MIA",
+      "primaryColor": "#f7b5cd",
+      "secondaryColor": "#231f20",
+      "league": "MLS",
+      "sportSlug": "mls",
+      "division": "Eastern",
+      "ticketmasterSlug": "inter-miami-cf",
+      "ticketmasterAttractionId": "2641625",
+      "fanaticsUrl": "https://www.fanatics.com/mls/inter-miami-cf/o-3577+t-76706629+z-97877-2244091536",
+      "fanaticsPath": "/mls/inter-miami-cf/o-3577+t-76706629+z-97877-2244091536"
+    },
+    {
+      "id": "la-galaxy",
+      "city": "Los Angeles",
+      "name": "Galaxy",
+      "abbreviation": "LA",
+      "primaryColor": "#00245d",
+      "secondaryColor": "#ffd200",
+      "league": "MLS",
+      "sportSlug": "mls",
+      "division": "Western",
+      "ticketmasterSlug": "la-galaxy",
+      "ticketmasterAttractionId": "805960",
+      "fanaticsUrl": "https://www.fanatics.com/mls/la-galaxy/o-6888+t-92902482+z-8553-2785146629",
+      "fanaticsPath": "/mls/la-galaxy/o-6888+t-92902482+z-8553-2785146629"
+    },
+    {
+      "id": "lafc",
+      "city": "Los Angeles",
+      "name": "LAFC",
+      "abbreviation": "LAFC",
+      "primaryColor": "#000000",
+      "secondaryColor": "#c39e6d",
+      "league": "MLS",
+      "sportSlug": "mls",
+      "division": "Western",
+      "ticketmasterSlug": "los-angeles-football-club",
+      "ticketmasterAttractionId": "2451856",
+      "fanaticsUrl": "https://www.fanatics.com/mls/lafc/o-2488+t-25125738+z-98488-2046415463",
+      "fanaticsPath": "/mls/lafc/o-2488+t-25125738+z-98488-2046415463"
+    },
+    {
+      "id": "minnesota-united",
+      "city": "Minnesota",
+      "name": "United FC",
+      "abbreviation": "MIN",
+      "primaryColor": "#231f20",
+      "secondaryColor": "#8bb8e8",
+      "league": "MLS",
+      "sportSlug": "mls",
+      "division": "Western",
+      "ticketmasterSlug": "minnesota-united-fc",
+      "ticketmasterAttractionId": "1501648",
+      "fanaticsUrl": "https://www.fanatics.com/mls/minnesota-united-fc/o-1311+t-98001180+z-8285-3766705679",
+      "fanaticsPath": "/mls/minnesota-united-fc/o-1311+t-98001180+z-8285-3766705679"
+    },
+    {
+      "id": "nashville-sc",
+      "city": "Nashville",
+      "name": "Nashville SC",
+      "abbreviation": "NSH",
+      "primaryColor": "#ece83a",
+      "secondaryColor": "#1f1646",
+      "league": "MLS",
+      "sportSlug": "mls",
+      "division": "Eastern",
+      "ticketmasterSlug": "nashville-sc",
+      "ticketmasterAttractionId": "2452438",
+      "fanaticsUrl": "https://www.fanatics.com/mls/nashville-sc/o-1322+t-87255807+z-98978-1561662958",
+      "fanaticsPath": "/mls/nashville-sc/o-1322+t-87255807+z-98978-1561662958"
+    },
+    {
+      "id": "new-england-revolution",
+      "city": "New England",
+      "name": "Revolution",
+      "abbreviation": "NE",
+      "primaryColor": "#0a2240",
+      "secondaryColor": "#ce0e2d",
+      "league": "MLS",
+      "sportSlug": "mls",
+      "division": "Eastern",
+      "ticketmasterSlug": "new-england-revolution",
+      "ticketmasterAttractionId": "805981",
+      "fanaticsUrl": "https://www.fanatics.com/mls/new-england-revolution/o-3577+t-36234675+z-94241-3796964712",
+      "fanaticsPath": "/mls/new-england-revolution/o-3577+t-36234675+z-94241-3796964712"
+    },
+    {
+      "id": "new-york-city-fc",
+      "city": "New York",
+      "name": "City FC",
+      "abbreviation": "NYC",
+      "primaryColor": "#6cace4",
+      "secondaryColor": "#041e42",
+      "league": "MLS",
+      "sportSlug": "mls",
+      "division": "Eastern",
+      "ticketmasterSlug": "new-york-city-fc",
+      "ticketmasterAttractionId": "1991293",
+      "fanaticsUrl": "https://www.fanatics.com/mls/new-york-city-fc/o-1300+t-69230232+z-93385-2634257827",
+      "fanaticsPath": "/mls/new-york-city-fc/o-1300+t-69230232+z-93385-2634257827"
+    },
+    {
+      "id": "new-york-red-bulls",
+      "city": "New York",
+      "name": "Red Bulls",
+      "abbreviation": "RBNY",
+      "primaryColor": "#ed1e36",
+      "secondaryColor": "#23326a",
+      "league": "MLS",
+      "sportSlug": "mls",
+      "division": "Eastern",
+      "ticketmasterSlug": "new-york-red-bulls",
+      "ticketmasterAttractionId": "806601",
+      "fanaticsUrl": "https://www.fanatics.com/mls/new-york-red-bulls/o-2488+t-92123622+z-97999-2543475619",
+      "fanaticsPath": "/mls/new-york-red-bulls/o-2488+t-92123622+z-97999-2543475619"
+    },
+    {
+      "id": "orlando-city",
+      "city": "Orlando",
+      "name": "City SC",
+      "abbreviation": "ORL",
+      "primaryColor": "#633492",
+      "secondaryColor": "#fde192",
+      "league": "MLS",
+      "sportSlug": "mls",
+      "division": "Eastern",
+      "ticketmasterSlug": "orlando-city-sc",
+      "ticketmasterAttractionId": "1550331",
+      "fanaticsUrl": "https://www.fanatics.com/mls/orlando-city-sc/o-1344+t-70233678+z-98075-3490170477",
+      "fanaticsPath": "/mls/orlando-city-sc/o-1344+t-70233678+z-98075-3490170477"
+    },
+    {
+      "id": "philadelphia-union",
+      "city": "Philadelphia",
+      "name": "Union",
+      "abbreviation": "PHI",
+      "primaryColor": "#071b2c",
+      "secondaryColor": "#b48b51",
+      "league": "MLS",
+      "sportSlug": "mls",
+      "division": "Eastern",
+      "ticketmasterSlug": "philadelphia-union",
+      "ticketmasterAttractionId": "1418418",
+      "fanaticsUrl": "https://www.fanatics.com/mls/philadelphia-union/o-2400+t-92128102+z-96353-1082316039",
+      "fanaticsPath": "/mls/philadelphia-union/o-2400+t-92128102+z-96353-1082316039"
+    },
+    {
+      "id": "portland-timbers",
+      "city": "Portland",
+      "name": "Timbers",
+      "abbreviation": "POR",
+      "primaryColor": "#004812",
+      "secondaryColor": "#d69a00",
+      "league": "MLS",
+      "sportSlug": "mls",
+      "division": "Western",
+      "ticketmasterSlug": "portland-timbers",
+      "ticketmasterAttractionId": "806820",
+      "fanaticsUrl": "https://www.fanatics.com/mls/portland-timbers/o-2499+t-69563614+z-95868-1752881252",
+      "fanaticsPath": "/mls/portland-timbers/o-2499+t-69563614+z-95868-1752881252"
+    },
+    {
+      "id": "real-salt-lake",
+      "city": "Salt Lake",
+      "name": "Real",
+      "abbreviation": "RSL",
+      "primaryColor": "#b30838",
+      "secondaryColor": "#013a81",
+      "league": "MLS",
+      "sportSlug": "mls",
+      "division": "Western",
+      "ticketmasterSlug": "real-salt-lake",
+      "ticketmasterAttractionId": "959263",
+      "fanaticsUrl": "https://www.fanatics.com/mls/real-salt-lake/o-3599+t-25673626+z-98333-4294378559",
+      "fanaticsPath": "/mls/real-salt-lake/o-3599+t-25673626+z-98333-4294378559"
+    },
+    {
+      "id": "san-diego-fc",
+      "city": "San Diego",
+      "name": "San Diego FC",
+      "abbreviation": "SD",
+      "primaryColor": "#8b2346",
+      "secondaryColor": "#211747",
+      "league": "MLS",
+      "sportSlug": "mls",
+      "division": "Western",
+      "ticketmasterSlug": "san-diego-fc",
+      "ticketmasterAttractionId": "3149423",
+      "fanaticsUrl": "https://www.fanatics.com/mls/san-diego-fc/o-7900+t-36869512+z-736-702708783",
+      "fanaticsPath": "/mls/san-diego-fc/o-7900+t-36869512+z-736-702708783"
+    },
+    {
+      "id": "san-jose-earthquakes",
+      "city": "San Jose",
+      "name": "Earthquakes",
+      "abbreviation": "SJ",
+      "primaryColor": "#0067b1",
+      "secondaryColor": "#000000",
+      "league": "MLS",
+      "sportSlug": "mls",
+      "division": "Western",
+      "ticketmasterSlug": "san-jose-earthquakes",
+      "ticketmasterAttractionId": "806017",
+      "fanaticsUrl": "https://www.fanatics.com/mls/san-jose-earthquakes/o-7933+t-58127005+z-8754-4202980274",
+      "fanaticsPath": "/mls/san-jose-earthquakes/o-7933+t-58127005+z-8754-4202980274"
+    },
+    {
+      "id": "seattle-sounders",
+      "city": "Seattle",
+      "name": "Sounders FC",
+      "abbreviation": "SEA",
+      "primaryColor": "#005695",
+      "secondaryColor": "#658d1b",
+      "league": "MLS",
+      "sportSlug": "mls",
+      "division": "Western",
+      "ticketmasterSlug": "seattle-sounders-fc",
+      "ticketmasterAttractionId": "1292961",
+      "fanaticsUrl": "https://www.fanatics.com/mls/seattle-sounders-fc/o-2477+t-14896940+z-99268-4294915717",
+      "fanaticsPath": "/mls/seattle-sounders-fc/o-2477+t-14896940+z-99268-4294915717"
+    },
+    {
+      "id": "sporting-kansas-city",
+      "city": "Kansas City",
+      "name": "Sporting",
+      "abbreviation": "SKC",
+      "primaryColor": "#002f65",
+      "secondaryColor": "#9bcbeb",
+      "league": "MLS",
+      "sportSlug": "mls",
+      "division": "Western",
+      "ticketmasterSlug": "sporting-kansas-city",
+      "ticketmasterAttractionId": "805957",
+      "fanaticsUrl": "https://www.fanatics.com/mls/sporting-kansas-city/o-3588+t-03679207+z-91101-3858168827",
+      "fanaticsPath": "/mls/sporting-kansas-city/o-3588+t-03679207+z-91101-3858168827"
+    },
+    {
+      "id": "st-louis-city-sc",
+      "city": "St. Louis",
+      "name": "City SC",
+      "abbreviation": "STL",
+      "primaryColor": "#d2003e",
+      "secondaryColor": "#0a1e3f",
+      "league": "MLS",
+      "sportSlug": "mls",
+      "division": "Western",
+      "ticketmasterSlug": "st-louis-city-sc",
+      "ticketmasterAttractionId": "2962724",
+      "fanaticsUrl": "https://www.fanatics.com/mls/st-louis-city-sc/o-2422+t-09984570+z-95265-2627912546",
+      "fanaticsPath": "/mls/st-louis-city-sc/o-2422+t-09984570+z-95265-2627912546"
+    },
+    {
+      "id": "toronto-fc",
+      "city": "Toronto",
+      "name": "Toronto FC",
+      "abbreviation": "TOR",
+      "primaryColor": "#b81137",
+      "secondaryColor": "#455560",
+      "league": "MLS",
+      "sportSlug": "mls",
+      "division": "Eastern",
+      "ticketmasterSlug": "toronto-fc",
+      "ticketmasterAttractionId": "1110670",
+      "fanaticsUrl": "https://www.fanatics.com/mls/toronto-fc/o-1311+t-70677097+z-93361-2614871098",
+      "fanaticsPath": "/mls/toronto-fc/o-1311+t-70677097+z-93361-2614871098"
+    },
+    {
+      "id": "vancouver-whitecaps",
+      "city": "Vancouver",
+      "name": "Whitecaps FC",
+      "abbreviation": "VAN",
+      "primaryColor": "#00245e",
+      "secondaryColor": "#9dc2ea",
+      "league": "MLS",
+      "sportSlug": "mls",
+      "division": "Western",
+      "ticketmasterSlug": "vancouver-whitecaps-fc",
+      "ticketmasterAttractionId": "821721",
+      "fanaticsUrl": "https://www.fanatics.com/mls/vancouver-whitecaps-fc/o-4611+t-92785876+z-93500-3816429169",
+      "fanaticsPath": "/mls/vancouver-whitecaps-fc/o-4611+t-92785876+z-93500-3816429169"
+    }
+  ],
+  "parks": {
+    "atlanta-united": "Mercedes-Benz Stadium",
+    "austin-fc": "Q2 Stadium",
+    "cf-montreal": "Saputo Stadium",
+    "charlotte-fc": "Bank of America Stadium",
+    "chicago-fire": "Soldier Field",
+    "colorado-rapids": "Dick's Sporting Goods Park",
+    "columbus-crew": "ScottsMiracle-Gro Field",
+    "dc-united": "Audi Field",
+    "fc-cincinnati": "TQL Stadium",
+    "fc-dallas": "Toyota Stadium",
+    "houston-dynamo": "Shell Energy Stadium",
+    "inter-miami": "Nu Stadium",
+    "la-galaxy": "Dignity Health Sports Park",
+    "lafc": "BMO Stadium",
+    "minnesota-united": "Allianz Field",
+    "nashville-sc": "Geodis Park",
+    "new-england-revolution": "Gillette Stadium",
+    "new-york-city-fc": "Yankee Stadium",
+    "new-york-red-bulls": "Sports Illustrated Stadium",
+    "orlando-city": "Inter&Co Stadium",
+    "philadelphia-union": "Subaru Park",
+    "portland-timbers": "Providence Park",
+    "real-salt-lake": "America First Field",
+    "san-diego-fc": "Snapdragon Stadium",
+    "san-jose-earthquakes": "PayPal Park",
+    "seattle-sounders": "Lumen Field",
+    "sporting-kansas-city": "Children's Mercy Park",
+    "st-louis-city-sc": "Energizer Park",
+    "toronto-fc": "BMO Field",
+    "vancouver-whitecaps": "BC Place"
+  },
+  "venuePages": {
+    "atlanta-united": {
+      "slug": "mercedes-benz-stadium",
+      "displayName": "Mercedes-Benz Stadium",
+      "indexable": true
+    },
+    "austin-fc": {
+      "slug": "q2-stadium",
+      "displayName": "Q2 Stadium",
+      "indexable": true
+    },
+    "cf-montreal": {
+      "slug": "saputo-stadium",
+      "displayName": "Saputo Stadium",
+      "indexable": true
+    },
+    "charlotte-fc": {
+      "slug": "bank-of-america-stadium",
+      "displayName": "Bank of America Stadium",
+      "indexable": true
+    },
+    "chicago-fire": {
+      "slug": "soldier-field",
+      "displayName": "Soldier Field",
+      "indexable": true
+    },
+    "colorado-rapids": {
+      "slug": "dicks-sporting-goods-park",
+      "displayName": "Dick's Sporting Goods Park",
+      "indexable": true
+    },
+    "columbus-crew": {
+      "slug": "lower-com-field",
+      "displayName": "ScottsMiracle-Gro Field",
+      "indexable": true
+    },
+    "dc-united": {
+      "slug": "audi-field",
+      "displayName": "Audi Field",
+      "indexable": true
+    },
+    "fc-cincinnati": {
+      "slug": "tql-stadium",
+      "displayName": "TQL Stadium",
+      "indexable": true
+    },
+    "fc-dallas": {
+      "slug": "toyota-stadium",
+      "displayName": "Toyota Stadium",
+      "indexable": true
+    },
+    "houston-dynamo": {
+      "slug": "shell-energy-stadium",
+      "displayName": "Shell Energy Stadium",
+      "indexable": true
+    },
+    "inter-miami": {
+      "slug": "chase-stadium",
+      "displayName": "Nu Stadium",
+      "indexable": true
+    },
+    "la-galaxy": {
+      "slug": "dignity-health-sports-park",
+      "displayName": "Dignity Health Sports Park",
+      "indexable": true
+    },
+    "lafc": {
+      "slug": "bmo-stadium",
+      "displayName": "BMO Stadium",
+      "indexable": true
+    },
+    "minnesota-united": {
+      "slug": "allianz-field",
+      "displayName": "Allianz Field",
+      "indexable": true
+    },
+    "nashville-sc": {
+      "slug": "geodis-park",
+      "displayName": "Geodis Park",
+      "indexable": true
+    },
+    "new-england-revolution": {
+      "slug": "gillette-stadium",
+      "displayName": "Gillette Stadium",
+      "indexable": true
+    },
+    "new-york-city-fc": {
+      "slug": "yankee-stadium",
+      "displayName": "Yankee Stadium",
+      "indexable": true
+    },
+    "new-york-red-bulls": {
+      "slug": "red-bull-arena",
+      "displayName": "Sports Illustrated Stadium",
+      "indexable": true
+    },
+    "orlando-city": {
+      "slug": "exploria-stadium",
+      "displayName": "Inter&Co Stadium",
+      "indexable": true
+    },
+    "philadelphia-union": {
+      "slug": "subaru-park",
+      "displayName": "Subaru Park",
+      "indexable": true
+    },
+    "portland-timbers": {
+      "slug": "providence-park",
+      "displayName": "Providence Park",
+      "indexable": true
+    },
+    "real-salt-lake": {
+      "slug": "americas-first-field",
+      "displayName": "America First Field",
+      "indexable": true
+    },
+    "san-diego-fc": {
+      "slug": "snapdragon-stadium",
+      "displayName": "Snapdragon Stadium",
+      "indexable": true
+    },
+    "san-jose-earthquakes": {
+      "slug": "paypal-park",
+      "displayName": "PayPal Park",
+      "indexable": true
+    },
+    "seattle-sounders": {
+      "slug": "lumen-field",
+      "displayName": "Lumen Field",
+      "indexable": true
+    },
+    "sporting-kansas-city": {
+      "slug": "childrens-mercy-park",
+      "displayName": "Children's Mercy Park",
+      "indexable": true
+    },
+    "st-louis-city-sc": {
+      "slug": "energizer-park",
+      "displayName": "Energizer Park",
+      "indexable": true
+    },
+    "toronto-fc": {
+      "slug": "bmo-field",
+      "displayName": "BMO Field",
+      "indexable": true
+    },
+    "vancouver-whitecaps": {
+      "slug": "bc-place",
+      "displayName": "BC Place",
+      "indexable": true
+    }
+  }
+}

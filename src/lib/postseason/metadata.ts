@@ -126,7 +126,7 @@ function mlsDescription(season: number, view: LeagueView): string {
     const long = `The ${season} MLS postseason bracket, complete. ${view.phase.championName}: ${lowerFirst(view.phase.summary)}. Every matchup and result, round by round.`;
     return long.length <= DESCRIPTION_MAX ? long : `The ${season} MLS postseason bracket, complete. ${view.phase.championName}: ${lowerFirst(view.phase.summary)}.`;
   }
-  return `The ${season} MLS postseason bracket. Current round: ${view.phase.roundLabel}. Every matchup, seed and result, with game times in Eastern and the upcoming playoff games.`;
+  return `The ${season} MLS postseason bracket. Current round: ${view.phase.roundLabel}. Every matchup, seed and result, with Eastern game times and the upcoming playoff games.`;
 }
 
 function lowerFirst(s: string): string {

@@ -99,3 +99,25 @@ No captured document holds a slot whose feeder is already decided, because no
 | --- | --- |
 | `golden.reference-wnba-2026.json`, `golden.reference-mlb-2026.json` | promo-pipeline `predictions/golden/reference-{league}-2026.json` at main 67aab9f, byte for byte (sha256 1b132e45... and 80aaf73a..., the values the pipeline's golden test pins). The locked documents' picks, chances, lengths, title odds and champion are tested against them. |
 | `pins.predictions-frozen.json` | promo-pipeline `predictions/frozen/pins.json` at main 67aab9f. The four input hashes the page pins (`LOCKED_FINGERPRINTS`) are tested against it. |
+
+## MLS (2026-11-03)
+
+No MLS bracket document existed when MLS support was built. These four are
+built by `generate-mls-2026.cjs` in the document shape the pipeline writes to
+`postseasonBrackets/MLS_2026` (the contract of 2026-11-03: `decidedBy`,
+`homeShootout`, `awayShootout` on each game; keys E-WC, E-R1-1 to E-R1-4,
+E-SF-A, E-SF-B, E-CF, the same W-, and CUP; writerVersion 3), from the real
+2025 MLS postseason as ESPN served it (the month scoreboards captured by the
+MLS G0 audit). Scores, shootouts, hosts, kickoff times and order are ESPN's;
+dates are moved forward 364 days so every weekday holds; seeds are the 2025
+conference ranks. An unneeded Round One Game 3 is omitted once its series is
+decided, and a played Game 3 keeps `ifNecessary: true`, as the pipeline
+stores it. 2025 had no extra-time game; tests rewrite one row to cover it.
+
+| File | What it is |
+| --- | --- |
+| `MLS_2026.early.json` | Wild Card set, nothing played (stands at 2026-10-20T12:00Z). The 1 seeds' opponents are `Winner of E-WC` / `W-WC` placeholders with feeder and candidates; later rounds are placeholders with no games. |
+| `MLS_2026.round-one.json` | Wild Card done, Round One part played (2026-11-02T12:00Z): three series 2-0, four 1-1, Minnesota 1-0 Seattle; five shootouts so far. |
+| `MLS_2026.semis-done.json` | Conference Semifinals done, Vancouver over LAFC on penalties (2-2, 4-3); Conference Finals scheduled (2026-11-25T12:00Z). |
+| `MLS_2026.final.json` | MLS Cup played: Inter Miami 3, Vancouver 1 (2026-12-07T12:00Z). |
+| `clubs.mls.captured-20261103.json` | The 30 MLS team records, parks and venue pages, through the web's own data layer (`capture-mls-clubs.ts`). Kept apart from `clubs.captured-20260929.json` so every MLB and WNBA test sees exactly the clubs it always did. |

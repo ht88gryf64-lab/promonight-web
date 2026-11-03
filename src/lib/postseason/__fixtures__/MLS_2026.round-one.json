@@ -1,0 +1,889 @@
+{
+ "league": "MLS",
+ "season": 2026,
+ "writerVersion": 3,
+ "unplaced": null,
+ "seeds": {
+  "file": "mls-2026.json",
+  "authoredBy": "Fixture Author",
+  "authoredOn": "2026-11-03"
+ },
+ "bracketSha256": "f1x7ure0000000000000000000000000000000000000000000000000000000001",
+ "source": {
+  "kind": "espn",
+  "urls": [
+   "https://site.api.espn.com/apis/site/v2/sports/soccer/usa.1/scoreboard"
+  ]
+ },
+ "runId": "round-one-fixture-run",
+ "operatorLog": [],
+ "validatedSeedSha256": "f1x7ure0000000000000000000000000000000000000000000000000000000002",
+ "lastChangedAt": {
+  "__firestoreTimestamp": "2026-11-02T04:15:00.000Z"
+ },
+ "lastRevalidatedSha256": "f1x7ure0000000000000000000000000000000000000000000000000000000001",
+ "revalidationPending": null,
+ "lastFetchedAt": {
+  "__firestoreTimestamp": "2026-11-02T11:59:00.000Z"
+ },
+ "series": [
+  {
+   "round": "wild_card",
+   "roundLabel": "Wild Card",
+   "shortLabel": "Wild Card",
+   "seriesKey": "E-WC",
+   "conference": "East",
+   "bestOf": 1,
+   "higher": {
+    "slug": "chicago-fire",
+    "seed": 8
+   },
+   "lower": {
+    "slug": "orlando-city",
+    "seed": 9
+   },
+   "wins": {
+    "higher": 1,
+    "lower": 0
+   },
+   "status": "final",
+   "winner": "chicago-fire",
+   "games": [
+    {
+     "gameNumber": 1,
+     "gameId": "760057",
+     "date": "2026-10-21",
+     "start": "2026-10-22T00:30:00Z",
+     "startTimeTBD": false,
+     "home": "chicago-fire",
+     "away": "orlando-city",
+     "homeSide": "higher",
+     "status": "final",
+     "homeScore": 3,
+     "awayScore": 1,
+     "winnerSide": "higher",
+     "ifNecessary": false,
+     "decidedBy": "regulation",
+     "homeShootout": null,
+     "awayShootout": null
+    }
+   ]
+  },
+  {
+   "round": "round_one",
+   "roundLabel": "Round One",
+   "shortLabel": "Round One",
+   "seriesKey": "E-R1-1",
+   "conference": "East",
+   "bestOf": 3,
+   "higher": {
+    "slug": "philadelphia-union",
+    "seed": 1
+   },
+   "lower": {
+    "slug": "chicago-fire",
+    "seed": 8
+   },
+   "wins": {
+    "higher": 2,
+    "lower": 0
+   },
+   "status": "final",
+   "winner": "philadelphia-union",
+   "games": [
+    {
+     "gameNumber": 1,
+     "gameId": "760067",
+     "date": "2026-10-25",
+     "start": "2026-10-25T21:30:00Z",
+     "startTimeTBD": false,
+     "home": "philadelphia-union",
+     "away": "chicago-fire",
+     "homeSide": "higher",
+     "status": "final",
+     "homeScore": 2,
+     "awayScore": 2,
+     "winnerSide": "higher",
+     "ifNecessary": false,
+     "decidedBy": "penalties",
+     "homeShootout": 4,
+     "awayShootout": 2
+    },
+    {
+     "gameNumber": 2,
+     "gameId": "760068",
+     "date": "2026-10-31",
+     "start": "2026-10-31T21:30:00Z",
+     "startTimeTBD": false,
+     "home": "chicago-fire",
+     "away": "philadelphia-union",
+     "homeSide": "lower",
+     "status": "final",
+     "homeScore": 0,
+     "awayScore": 3,
+     "winnerSide": "higher",
+     "ifNecessary": false,
+     "decidedBy": "regulation",
+     "homeShootout": null,
+     "awayShootout": null
+    }
+   ]
+  },
+  {
+   "round": "round_one",
+   "roundLabel": "Round One",
+   "shortLabel": "Round One",
+   "seriesKey": "E-R1-2",
+   "conference": "East",
+   "bestOf": 3,
+   "higher": {
+    "slug": "fc-cincinnati",
+    "seed": 2
+   },
+   "lower": {
+    "slug": "columbus-crew",
+    "seed": 7
+   },
+   "wins": {
+    "higher": 1,
+    "lower": 1
+   },
+   "status": "live",
+   "winner": null,
+   "games": [
+    {
+     "gameNumber": 1,
+     "gameId": "760073",
+     "date": "2026-10-26",
+     "start": "2026-10-26T22:45:00Z",
+     "startTimeTBD": false,
+     "home": "fc-cincinnati",
+     "away": "columbus-crew",
+     "homeSide": "higher",
+     "status": "final",
+     "homeScore": 1,
+     "awayScore": 0,
+     "winnerSide": "higher",
+     "ifNecessary": false,
+     "decidedBy": "regulation",
+     "homeShootout": null,
+     "awayShootout": null
+    },
+    {
+     "gameNumber": 2,
+     "gameId": "760074",
+     "date": "2026-11-01",
+     "start": "2026-11-01T23:30:00Z",
+     "startTimeTBD": false,
+     "home": "columbus-crew",
+     "away": "fc-cincinnati",
+     "homeSide": "lower",
+     "status": "final",
+     "homeScore": 4,
+     "awayScore": 0,
+     "winnerSide": "lower",
+     "ifNecessary": false,
+     "decidedBy": "regulation",
+     "homeShootout": null,
+     "awayShootout": null
+    },
+    {
+     "gameNumber": 3,
+     "gameId": "760075",
+     "date": "2026-11-07",
+     "start": "2026-11-07T23:00:00Z",
+     "startTimeTBD": false,
+     "home": "fc-cincinnati",
+     "away": "columbus-crew",
+     "homeSide": "higher",
+     "status": "scheduled",
+     "homeScore": null,
+     "awayScore": null,
+     "winnerSide": null,
+     "ifNecessary": true,
+     "decidedBy": null,
+     "homeShootout": null,
+     "awayShootout": null
+    }
+   ]
+  },
+  {
+   "round": "round_one",
+   "roundLabel": "Round One",
+   "shortLabel": "Round One",
+   "seriesKey": "E-R1-3",
+   "conference": "East",
+   "bestOf": 3,
+   "higher": {
+    "slug": "inter-miami",
+    "seed": 3
+   },
+   "lower": {
+    "slug": "nashville-sc",
+    "seed": 6
+   },
+   "wins": {
+    "higher": 1,
+    "lower": 1
+   },
+   "status": "live",
+   "winner": null,
+   "games": [
+    {
+     "gameNumber": 1,
+     "gameId": "760079",
+     "date": "2026-10-23",
+     "start": "2026-10-24T00:00:00Z",
+     "startTimeTBD": false,
+     "home": "inter-miami",
+     "away": "nashville-sc",
+     "homeSide": "higher",
+     "status": "final",
+     "homeScore": 3,
+     "awayScore": 1,
+     "winnerSide": "higher",
+     "ifNecessary": false,
+     "decidedBy": "regulation",
+     "homeShootout": null,
+     "awayShootout": null
+    },
+    {
+     "gameNumber": 2,
+     "gameId": "760080",
+     "date": "2026-10-31",
+     "start": "2026-10-31T23:30:00Z",
+     "startTimeTBD": false,
+     "home": "nashville-sc",
+     "away": "inter-miami",
+     "homeSide": "lower",
+     "status": "final",
+     "homeScore": 2,
+     "awayScore": 1,
+     "winnerSide": "lower",
+     "ifNecessary": false,
+     "decidedBy": "regulation",
+     "homeShootout": null,
+     "awayShootout": null
+    },
+    {
+     "gameNumber": 3,
+     "gameId": "760081",
+     "date": "2026-11-07",
+     "start": "2026-11-08T01:00:00Z",
+     "startTimeTBD": false,
+     "home": "inter-miami",
+     "away": "nashville-sc",
+     "homeSide": "higher",
+     "status": "scheduled",
+     "homeScore": null,
+     "awayScore": null,
+     "winnerSide": null,
+     "ifNecessary": true,
+     "decidedBy": null,
+     "homeShootout": null,
+     "awayShootout": null
+    }
+   ]
+  },
+  {
+   "round": "round_one",
+   "roundLabel": "Round One",
+   "shortLabel": "Round One",
+   "seriesKey": "E-R1-4",
+   "conference": "East",
+   "bestOf": 3,
+   "higher": {
+    "slug": "charlotte-fc",
+    "seed": 4
+   },
+   "lower": {
+    "slug": "new-york-city-fc",
+    "seed": 5
+   },
+   "wins": {
+    "higher": 1,
+    "lower": 1
+   },
+   "status": "live",
+   "winner": null,
+   "games": [
+    {
+     "gameNumber": 1,
+     "gameId": "760085",
+     "date": "2026-10-27",
+     "start": "2026-10-27T22:45:00Z",
+     "startTimeTBD": false,
+     "home": "charlotte-fc",
+     "away": "new-york-city-fc",
+     "homeSide": "higher",
+     "status": "final",
+     "homeScore": 0,
+     "awayScore": 1,
+     "winnerSide": "lower",
+     "ifNecessary": false,
+     "decidedBy": "regulation",
+     "homeShootout": null,
+     "awayShootout": null
+    },
+    {
+     "gameNumber": 2,
+     "gameId": "760086",
+     "date": "2026-10-31",
+     "start": "2026-10-31T19:30:00Z",
+     "startTimeTBD": false,
+     "home": "new-york-city-fc",
+     "away": "charlotte-fc",
+     "homeSide": "lower",
+     "status": "final",
+     "homeScore": 0,
+     "awayScore": 0,
+     "winnerSide": "higher",
+     "ifNecessary": false,
+     "decidedBy": "penalties",
+     "homeShootout": 6,
+     "awayShootout": 7
+    },
+    {
+     "gameNumber": 3,
+     "gameId": "760087",
+     "date": "2026-11-06",
+     "start": "2026-11-07T00:00:00Z",
+     "startTimeTBD": false,
+     "home": "charlotte-fc",
+     "away": "new-york-city-fc",
+     "homeSide": "higher",
+     "status": "scheduled",
+     "homeScore": null,
+     "awayScore": null,
+     "winnerSide": null,
+     "ifNecessary": true,
+     "decidedBy": null,
+     "homeShootout": null,
+     "awayShootout": null
+    }
+   ]
+  },
+  {
+   "round": "conference_semifinals",
+   "roundLabel": "Conference Semifinals",
+   "shortLabel": "Conf. Semifinals",
+   "seriesKey": "E-SF-A",
+   "conference": "East",
+   "bestOf": 1,
+   "higher": {
+    "placeholder": "Winner of E-R1-1",
+    "seed": null,
+    "feederSeriesKey": "E-R1-1",
+    "candidates": null
+   },
+   "lower": {
+    "placeholder": "Winner of E-R1-4",
+    "seed": null,
+    "feederSeriesKey": "E-R1-4",
+    "candidates": null
+   },
+   "wins": {
+    "higher": 0,
+    "lower": 0
+   },
+   "status": "upcoming",
+   "winner": null,
+   "games": []
+  },
+  {
+   "round": "conference_semifinals",
+   "roundLabel": "Conference Semifinals",
+   "shortLabel": "Conf. Semifinals",
+   "seriesKey": "E-SF-B",
+   "conference": "East",
+   "bestOf": 1,
+   "higher": {
+    "placeholder": "Winner of E-R1-2",
+    "seed": null,
+    "feederSeriesKey": "E-R1-2",
+    "candidates": null
+   },
+   "lower": {
+    "placeholder": "Winner of E-R1-3",
+    "seed": null,
+    "feederSeriesKey": "E-R1-3",
+    "candidates": null
+   },
+   "wins": {
+    "higher": 0,
+    "lower": 0
+   },
+   "status": "upcoming",
+   "winner": null,
+   "games": []
+  },
+  {
+   "round": "conference_finals",
+   "roundLabel": "Conference Finals",
+   "shortLabel": "Conf. Final",
+   "seriesKey": "E-CF",
+   "conference": "East",
+   "bestOf": 1,
+   "higher": {
+    "placeholder": "Winner of E-SF-A",
+    "seed": null,
+    "feederSeriesKey": "E-SF-A",
+    "candidates": null
+   },
+   "lower": {
+    "placeholder": "Winner of E-SF-B",
+    "seed": null,
+    "feederSeriesKey": "E-SF-B",
+    "candidates": null
+   },
+   "wins": {
+    "higher": 0,
+    "lower": 0
+   },
+   "status": "upcoming",
+   "winner": null,
+   "games": []
+  },
+  {
+   "round": "wild_card",
+   "roundLabel": "Wild Card",
+   "shortLabel": "Wild Card",
+   "seriesKey": "W-WC",
+   "conference": "West",
+   "bestOf": 1,
+   "higher": {
+    "slug": "portland-timbers",
+    "seed": 8
+   },
+   "lower": {
+    "slug": "real-salt-lake",
+    "seed": 9
+   },
+   "wins": {
+    "higher": 1,
+    "lower": 0
+   },
+   "status": "final",
+   "winner": "portland-timbers",
+   "games": [
+    {
+     "gameNumber": 1,
+     "gameId": "760058",
+     "date": "2026-10-21",
+     "start": "2026-10-22T02:30:00Z",
+     "startTimeTBD": false,
+     "home": "portland-timbers",
+     "away": "real-salt-lake",
+     "homeSide": "higher",
+     "status": "final",
+     "homeScore": 3,
+     "awayScore": 1,
+     "winnerSide": "higher",
+     "ifNecessary": false,
+     "decidedBy": "regulation",
+     "homeShootout": null,
+     "awayShootout": null
+    }
+   ]
+  },
+  {
+   "round": "round_one",
+   "roundLabel": "Round One",
+   "shortLabel": "Round One",
+   "seriesKey": "W-R1-1",
+   "conference": "West",
+   "bestOf": 3,
+   "higher": {
+    "slug": "san-diego-fc",
+    "seed": 1
+   },
+   "lower": {
+    "slug": "portland-timbers",
+    "seed": 8
+   },
+   "wins": {
+    "higher": 1,
+    "lower": 1
+   },
+   "status": "live",
+   "winner": null,
+   "games": [
+    {
+     "gameNumber": 1,
+     "gameId": "760070",
+     "date": "2026-10-25",
+     "start": "2026-10-26T01:30:00Z",
+     "startTimeTBD": false,
+     "home": "san-diego-fc",
+     "away": "portland-timbers",
+     "homeSide": "higher",
+     "status": "final",
+     "homeScore": 2,
+     "awayScore": 1,
+     "winnerSide": "higher",
+     "ifNecessary": false,
+     "decidedBy": "regulation",
+     "homeShootout": null,
+     "awayShootout": null
+    },
+    {
+     "gameNumber": 2,
+     "gameId": "760071",
+     "date": "2026-10-31",
+     "start": "2026-11-01T01:30:00Z",
+     "startTimeTBD": false,
+     "home": "portland-timbers",
+     "away": "san-diego-fc",
+     "homeSide": "lower",
+     "status": "final",
+     "homeScore": 2,
+     "awayScore": 2,
+     "winnerSide": "lower",
+     "ifNecessary": false,
+     "decidedBy": "penalties",
+     "homeShootout": 3,
+     "awayShootout": 2
+    },
+    {
+     "gameNumber": 3,
+     "gameId": "760072",
+     "date": "2026-11-08",
+     "start": "2026-11-09T02:00:00Z",
+     "startTimeTBD": false,
+     "home": "san-diego-fc",
+     "away": "portland-timbers",
+     "homeSide": "higher",
+     "status": "scheduled",
+     "homeScore": null,
+     "awayScore": null,
+     "winnerSide": null,
+     "ifNecessary": true,
+     "decidedBy": null,
+     "homeShootout": null,
+     "awayShootout": null
+    }
+   ]
+  },
+  {
+   "round": "round_one",
+   "roundLabel": "Round One",
+   "shortLabel": "Round One",
+   "seriesKey": "W-R1-2",
+   "conference": "West",
+   "bestOf": 3,
+   "higher": {
+    "slug": "vancouver-whitecaps",
+    "seed": 2
+   },
+   "lower": {
+    "slug": "fc-dallas",
+    "seed": 7
+   },
+   "wins": {
+    "higher": 2,
+    "lower": 0
+   },
+   "status": "final",
+   "winner": "vancouver-whitecaps",
+   "games": [
+    {
+     "gameNumber": 1,
+     "gameId": "760076",
+     "date": "2026-10-25",
+     "start": "2026-10-25T23:30:00Z",
+     "startTimeTBD": false,
+     "home": "vancouver-whitecaps",
+     "away": "fc-dallas",
+     "homeSide": "higher",
+     "status": "final",
+     "homeScore": 3,
+     "awayScore": 0,
+     "winnerSide": "higher",
+     "ifNecessary": false,
+     "decidedBy": "regulation",
+     "homeShootout": null,
+     "awayShootout": null
+    },
+    {
+     "gameNumber": 2,
+     "gameId": "760077",
+     "date": "2026-10-31",
+     "start": "2026-11-01T01:30:00Z",
+     "startTimeTBD": false,
+     "home": "fc-dallas",
+     "away": "vancouver-whitecaps",
+     "homeSide": "lower",
+     "status": "final",
+     "homeScore": 1,
+     "awayScore": 1,
+     "winnerSide": "higher",
+     "ifNecessary": false,
+     "decidedBy": "penalties",
+     "homeShootout": 2,
+     "awayShootout": 4
+    }
+   ]
+  },
+  {
+   "round": "round_one",
+   "roundLabel": "Round One",
+   "shortLabel": "Round One",
+   "seriesKey": "W-R1-3",
+   "conference": "West",
+   "bestOf": 3,
+   "higher": {
+    "slug": "lafc",
+    "seed": 3
+   },
+   "lower": {
+    "slug": "austin-fc",
+    "seed": 6
+   },
+   "wins": {
+    "higher": 2,
+    "lower": 0
+   },
+   "status": "final",
+   "winner": "lafc",
+   "games": [
+    {
+     "gameNumber": 1,
+     "gameId": "760082",
+     "date": "2026-10-28",
+     "start": "2026-10-29T02:30:00Z",
+     "startTimeTBD": false,
+     "home": "lafc",
+     "away": "austin-fc",
+     "homeSide": "higher",
+     "status": "final",
+     "homeScore": 2,
+     "awayScore": 1,
+     "winnerSide": "higher",
+     "ifNecessary": false,
+     "decidedBy": "regulation",
+     "homeShootout": null,
+     "awayShootout": null
+    },
+    {
+     "gameNumber": 2,
+     "gameId": "760083",
+     "date": "2026-11-01",
+     "start": "2026-11-02T01:45:00Z",
+     "startTimeTBD": false,
+     "home": "austin-fc",
+     "away": "lafc",
+     "homeSide": "lower",
+     "status": "final",
+     "homeScore": 1,
+     "awayScore": 4,
+     "winnerSide": "higher",
+     "ifNecessary": false,
+     "decidedBy": "regulation",
+     "homeShootout": null,
+     "awayShootout": null
+    }
+   ]
+  },
+  {
+   "round": "round_one",
+   "roundLabel": "Round One",
+   "shortLabel": "Round One",
+   "seriesKey": "W-R1-4",
+   "conference": "West",
+   "bestOf": 3,
+   "higher": {
+    "slug": "minnesota-united",
+    "seed": 4
+   },
+   "lower": {
+    "slug": "seattle-sounders",
+    "seed": 5
+   },
+   "wins": {
+    "higher": 1,
+    "lower": 0
+   },
+   "status": "live",
+   "winner": null,
+   "games": [
+    {
+     "gameNumber": 1,
+     "gameId": "760088",
+     "date": "2026-10-26",
+     "start": "2026-10-27T01:00:00Z",
+     "startTimeTBD": false,
+     "home": "minnesota-united",
+     "away": "seattle-sounders",
+     "homeSide": "higher",
+     "status": "final",
+     "homeScore": 0,
+     "awayScore": 0,
+     "winnerSide": "higher",
+     "ifNecessary": false,
+     "decidedBy": "penalties",
+     "homeShootout": 3,
+     "awayShootout": 2
+    },
+    {
+     "gameNumber": 2,
+     "gameId": "760089",
+     "date": "2026-11-02",
+     "start": "2026-11-03T03:45:00Z",
+     "startTimeTBD": false,
+     "home": "seattle-sounders",
+     "away": "minnesota-united",
+     "homeSide": "lower",
+     "status": "scheduled",
+     "homeScore": null,
+     "awayScore": null,
+     "winnerSide": null,
+     "ifNecessary": false,
+     "decidedBy": null,
+     "homeShootout": null,
+     "awayShootout": null
+    },
+    {
+     "gameNumber": 3,
+     "gameId": "760090",
+     "date": "2026-11-07",
+     "start": "2026-11-07T21:00:00Z",
+     "startTimeTBD": false,
+     "home": "minnesota-united",
+     "away": "seattle-sounders",
+     "homeSide": "higher",
+     "status": "scheduled",
+     "homeScore": null,
+     "awayScore": null,
+     "winnerSide": null,
+     "ifNecessary": true,
+     "decidedBy": null,
+     "homeShootout": null,
+     "awayShootout": null
+    }
+   ]
+  },
+  {
+   "round": "conference_semifinals",
+   "roundLabel": "Conference Semifinals",
+   "shortLabel": "Conf. Semifinals",
+   "seriesKey": "W-SF-A",
+   "conference": "West",
+   "bestOf": 1,
+   "higher": {
+    "placeholder": "Winner of W-R1-1",
+    "seed": null,
+    "feederSeriesKey": "W-R1-1",
+    "candidates": null
+   },
+   "lower": {
+    "placeholder": "Winner of W-R1-4",
+    "seed": null,
+    "feederSeriesKey": "W-R1-4",
+    "candidates": null
+   },
+   "wins": {
+    "higher": 0,
+    "lower": 0
+   },
+   "status": "upcoming",
+   "winner": null,
+   "games": []
+  },
+  {
+   "round": "conference_semifinals",
+   "roundLabel": "Conference Semifinals",
+   "shortLabel": "Conf. Semifinals",
+   "seriesKey": "W-SF-B",
+   "conference": "West",
+   "bestOf": 1,
+   "higher": {
+    "slug": "vancouver-whitecaps",
+    "seed": 2
+   },
+   "lower": {
+    "slug": "lafc",
+    "seed": 3
+   },
+   "wins": {
+    "higher": 0,
+    "lower": 0
+   },
+   "status": "upcoming",
+   "winner": null,
+   "games": [
+    {
+     "gameNumber": 1,
+     "gameId": "760833",
+     "date": "2026-11-21",
+     "start": "2026-11-22T02:30:00Z",
+     "startTimeTBD": false,
+     "home": "vancouver-whitecaps",
+     "away": "lafc",
+     "homeSide": "higher",
+     "status": "scheduled",
+     "homeScore": null,
+     "awayScore": null,
+     "winnerSide": null,
+     "ifNecessary": false,
+     "decidedBy": null,
+     "homeShootout": null,
+     "awayShootout": null
+    }
+   ]
+  },
+  {
+   "round": "conference_finals",
+   "roundLabel": "Conference Finals",
+   "shortLabel": "Conf. Final",
+   "seriesKey": "W-CF",
+   "conference": "West",
+   "bestOf": 1,
+   "higher": {
+    "placeholder": "Winner of W-SF-A",
+    "seed": null,
+    "feederSeriesKey": "W-SF-A",
+    "candidates": null
+   },
+   "lower": {
+    "placeholder": "Winner of W-SF-B",
+    "seed": null,
+    "feederSeriesKey": "W-SF-B",
+    "candidates": null
+   },
+   "wins": {
+    "higher": 0,
+    "lower": 0
+   },
+   "status": "upcoming",
+   "winner": null,
+   "games": []
+  },
+  {
+   "round": "mls_cup",
+   "roundLabel": "MLS Cup",
+   "shortLabel": "MLS Cup",
+   "seriesKey": "CUP",
+   "conference": null,
+   "bestOf": 1,
+   "higher": {
+    "placeholder": "Winner of E-CF",
+    "seed": null,
+    "feederSeriesKey": "E-CF",
+    "candidates": null
+   },
+   "lower": {
+    "placeholder": "Winner of W-CF",
+    "seed": null,
+    "feederSeriesKey": "W-CF",
+    "candidates": null
+   },
+   "wins": {
+    "higher": 0,
+    "lower": 0
+   },
+   "status": "upcoming",
+   "winner": null,
+   "games": []
+  }
+ ]
+}
