@@ -25,7 +25,9 @@ import { isSelfOpen, recordCreatedShare, setShareSession } from '@/lib/promo-sha
 // script and no dependency: every channel is a plain URL.
 //
 // COLOUR (ruling 2026-11-03): the outline is the house ink, rd-ink #211d18,
-// on white. Not brand red, and no new colour.
+// on white. Not brand red, and no new colour. The 1.5px outline is an inset
+// box-shadow, not a border: Chrome floors a 1.5px border width to 1px (seen
+// on the Gate A preview), a shadow's spread is drawn as given.
 //
 // Both controls render on the server, at their final size, so nothing shifts
 // when the bundle hydrates. Nothing here is sticky or fixed.
@@ -235,7 +237,7 @@ export function PromoShareRowButton(props: PromoShareProps) {
     <ShareControl
       props={props}
       placement="cta_row"
-      buttonClass="flex h-[52px] items-center justify-center gap-2 rounded-[14px] border-[1.5px] border-rd-ink bg-white px-4 font-rd text-[16px] font-semibold text-rd-ink hover:bg-rd-cream max-[339px]:px-3.5"
+      buttonClass="flex h-[52px] items-center justify-center gap-2 rounded-[14px] bg-white px-4 font-rd text-[16px] font-semibold text-rd-ink shadow-[inset_0_0_0_1.5px_var(--color-rd-ink)] hover:bg-rd-cream max-[339px]:px-3.5"
       iconClass="h-[18px] w-[18px]"
       label={<span className="max-[339px]:sr-only">Share</span>}
     />
@@ -249,7 +251,7 @@ export function PromoShareImageButton(props: PromoShareProps) {
     <ShareControl
       props={props}
       placement="image"
-      buttonClass="flex h-10 w-10 items-center justify-center rounded-full border-[1.5px] border-rd-ink bg-white text-rd-ink shadow-sm hover:bg-rd-cream"
+      buttonClass="flex h-10 w-10 items-center justify-center rounded-full bg-white text-rd-ink shadow-[inset_0_0_0_1.5px_var(--color-rd-ink),0_1px_2px_0_rgb(0_0_0/0.05)] hover:bg-rd-cream"
       iconClass="h-[18px] w-[18px]"
       label={null}
     />

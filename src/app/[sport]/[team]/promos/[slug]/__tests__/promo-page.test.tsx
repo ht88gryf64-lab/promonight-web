@@ -632,10 +632,10 @@ test('share (2026-11-03): the share card on og:image and twitter:image on every 
     } else {
       assert.equal(shares, 2, `${slug}: the row Share and the image icon`);
       // Tickets and Share on one row, tickets first and filling the width.
-      assert.match(h, /<div class="flex gap-2"><a href="[^"]*"[^>]*class="flex h-\[52px\] min-w-0 flex-1 [^"]*bg-rd-red[^"]*"[^>]*>Get tickets<\/a><div class="relative shrink-0"><button type="button" aria-label="Share this promo"[^>]*class="flex h-\[52px\] [^"]*border-\[1\.5px\] border-rd-ink bg-white[^"]*text-rd-ink[^"]*">/, `${slug}: the tickets + Share row`);
+      assert.match(h, /<div class="flex gap-2"><a href="[^"]*"[^>]*class="flex h-\[52px\] min-w-0 flex-1 [^"]*bg-rd-red[^"]*"[^>]*>Get tickets<\/a><div class="relative shrink-0"><button type="button" aria-label="Share this promo"[^>]*class="flex h-\[52px\] [^"]*bg-white[^"]*text-rd-ink shadow-\[inset_0_0_0_1\.5px_var\(--color-rd-ink\)\][^"]*">/, `${slug}: the tickets + Share row (1.5px ink outline as an inset shadow)`);
       assert.match(h, /<span class="max-\[339px\]:sr-only">Share<\/span>/, `${slug}: the label hides at very narrow widths`);
       // The image icon: absolutely placed in the (now relative) figure.
-      assert.match(h, /<figure class="relative [^"]*">[\s\S]*?<div class="absolute right-2\.5 top-2\.5 z-10"><button type="button" aria-label="Share this promo"[^>]*class="flex h-10 w-10 [^"]*border-rd-ink bg-white text-rd-ink/, `${slug}: the image icon`);
+      assert.match(h, /<figure class="relative [^"]*">[\s\S]*?<div class="absolute right-2\.5 top-2\.5 z-10"><button type="button" aria-label="Share this promo"[^>]*class="flex h-10 w-10 [^"]*bg-white text-rd-ink shadow-\[inset_0_0_0_1\.5px_var\(--color-rd-ink\)/, `${slug}: the image icon`);
       // Share is never brand red, and nothing about it is fixed or sticky.
       const shareMarkup = h.match(/<button type="button" aria-label="Share this promo"[^>]*>/g) ?? [];
       for (const b of shareMarkup) assert.ok(!/rd-red|\bfixed\b|\bsticky\b/.test(b), `${slug}: ${b}`);
