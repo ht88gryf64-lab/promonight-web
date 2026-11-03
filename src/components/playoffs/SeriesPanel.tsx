@@ -137,7 +137,7 @@ export function SeriesPanel({
         )}
         {series.nextLabel && (
           <p className="text-[13.5px] text-rd-ink-soft">
-            <span className="font-semibold text-rd-ink">Next:</span> {series.nextLabel}
+            <span className="font-semibold text-rd-ink">{series.nextPrefix ?? 'Next:'}</span> {series.nextLabel}
           </p>
         )}
         {!series.scoreLine && !series.liveLabel && !series.nextLabel && <p className="text-[13.5px] text-rd-ink-soft">{series.headline}</p>}

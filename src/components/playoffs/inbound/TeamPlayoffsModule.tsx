@@ -96,7 +96,7 @@ function moduleSection(club: ClubPlayoffs, teamId: string, teamName: string): Re
           {club.scoreLine && <p className="mt-0.5 font-rd text-[14px] text-rd-ink">{club.scoreLine}</p>}
           {club.nextLabel && (
             <p className="mt-1 font-rd text-[13.5px] text-rd-ink-soft">
-              <span className="font-semibold text-rd-ink">Next:</span> {club.nextLabel}
+              <span className="font-semibold text-rd-ink">{club.nextPrefix ?? 'Next:'}</span> {club.nextLabel}
             </p>
           )}
           {club.nextHost && <p className="font-rd text-[13.5px] text-rd-ink-soft">{club.nextHost}</p>}

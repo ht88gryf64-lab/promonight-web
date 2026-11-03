@@ -11,6 +11,7 @@ import { buildLeagueView, homeGamesWindow, type LeagueView, type SeriesView } fr
 import { gameStarts, standingLine } from '../standing';
 import { clubPlayoffs, homePlayoffs, leagueCard, leagueFinalCard, leagueHeroLine, venueGames, type InboundLeague } from '../inbound';
 import { DESCRIPTION_MAX, hubCopy, leagueCopy, leagueJsonLd } from '../metadata';
+import { mlsHostsWithoutOneGround } from '../grounds';
 import type { Bracket } from '../types';
 import { FIXTURE, MLS_AT, MLS_FIXTURE, clubs, loadDoc, mlsClubs, mlsParks, mlsTeams, parks, rawText, seriesKeyIn } from './helpers';
 
@@ -470,7 +471,7 @@ test("DECISION DAY: only the Wild Card posted; every seeded club in its slot, th
   assert.ok(cin && cin.state === 'alive');
   assert.equal(cin.opponent, 'Columbus Crew');
   assert.equal(cin.nextLabel, null);
-  assert.equal(standingLine(v, gameStarts(b), MLS_AT.decisionDay), 'Next round: Wild Card. It opens with Orlando City at Chicago Fire, Wed, Oct 21, 8:30 PM ET.');
+  assert.equal(standingLine(v, gameStarts(b), MLS_AT.decisionDay), 'Wild Card: Wednesday, October 21.');
 });
 
 test('NO SEED FILE: a fixed slot left { placeholder: "TBD", seed: 1 } reads "To be decided" with no seed, never "Seed 1 TBD"', () => {
@@ -496,12 +497,12 @@ test('WHERE THINGS STAND: every state, true and with no article before MLS names
     const { b, v } = viewOf(name, now);
     return standingLine(v, gameStarts(b), now);
   };
-  assert.equal(at(MLS_FIXTURE.early, MLS_AT.early), 'Next round: Wild Card. It opens with Orlando City at Chicago Fire, Wed, Oct 21, 8:30 PM ET.');
+  assert.equal(at(MLS_FIXTURE.early, MLS_AT.early), 'Wild Card: Wednesday, October 21.');
   assert.equal(
     at(MLS_FIXTURE.roundOne, MLS_AT.roundOne),
     'Round One: Philadelphia Union beat Chicago Fire 2-0 in the series; FC Cincinnati and Columbus Crew are tied 1-1 in the series; Inter Miami and Nashville SC are tied 1-1 in the series; Charlotte FC and New York City FC are tied 1-1 in the series; San Diego FC and Portland Timbers are tied 1-1 in the series; Vancouver Whitecaps beat FC Dallas 2-0 in the series; LAFC beat Austin FC 2-0 in the series; Minnesota United leads Seattle Sounders 1-0 in the series. Next game: Game 2, Minnesota United at Seattle Sounders, Mon, Nov 2, 10:45 PM ET.',
   );
-  assert.equal(at(MLS_FIXTURE.semisDone, MLS_AT.semisDone), 'Next round: Conference Finals. It opens with New York City FC at Inter Miami, Sat, Nov 28, 6:00 PM ET.');
+  assert.equal(at(MLS_FIXTURE.semisDone, MLS_AT.semisDone), 'Conference Finals: Saturday, November 28.');
   assert.equal(at(MLS_FIXTURE.final, MLS_AT.final), 'Inter Miami CF won the 2026 MLS Cup, beating Vancouver Whitecaps FC 3-1.');
 });
 
@@ -518,6 +519,76 @@ test('WHERE THINGS STAND: a club waiting on the Wild Card winner, with no articl
   assert.ok(line.startsWith('Round One: Philadelphia Union awaits the Chicago Fire / Orlando City winner; '), line);
   assert.ok(line.includes('San Diego FC awaits the Portland Timbers / Real Salt Lake winner'), line);
   assert.ok(line.includes('Vancouver Whitecaps leads FC Dallas 1-0 in the series') === false && line.includes('Vancouver Whitecaps lead FC Dallas 1-0 in the series'), line);
+});
+
+test('WHERE THINGS STAND: a round not yet started is its days, never "next", and stays so while its first match is under way', () => {
+  // The Conference Semifinals, all four scheduled over two days.
+  const now = new Date('2026-11-20T12:00:00Z');
+  const reset = (d: Doc) => {
+    for (const k of ['E-SF-A', 'E-SF-B', 'W-SF-A', 'W-SF-B']) {
+      const s = raw(d, k);
+      Object.assign(s, { status: 'upcoming', winner: null, wins: { higher: 0, lower: 0 } });
+      Object.assign(s.games[0], { status: 'scheduled', homeScore: null, awayScore: null, winnerSide: null, decidedBy: null, homeShootout: null, awayShootout: null });
+    }
+    for (const k of ['E-CF', 'W-CF']) Object.assign(raw(d, k), { status: 'upcoming', winner: null, wins: { higher: 0, lower: 0 }, games: [], higher: { placeholder: 'TBD', seed: null, feederSeriesKey: null, candidates: null }, lower: { placeholder: 'TBD', seed: null, feederSeriesKey: null, candidates: null } });
+  };
+  const before = viewOf(MLS_FIXTURE.semisDone, now, reset);
+  const want = 'Conference Semifinals: Saturday, November 21, Sunday, November 22 and Monday, November 23.';
+  assert.equal(standingLine(before.v, gameStarts(before.b), now), want);
+  // Vancouver v LAFC under way: the same line, and no "next".
+  const during = new Date('2026-11-22T03:30:00Z');
+  const live = viewOf(MLS_FIXTURE.semisDone, during, (d) => {
+    reset(d);
+    const s = raw(d, 'W-SF-B');
+    s.status = 'live';
+    Object.assign(s.games[0], { status: 'live', homeScore: 1, awayScore: 0 });
+  });
+  const line = standingLine(live.v, gameStarts(live.b), during);
+  assert.equal(line, want);
+  assert.ok(!/\bnext\b/i.test(line ?? ''));
+});
+
+test('KICKOFF: MLS labels a game time "Kickoff:", true before, during and after; MLB keeps "Next:"', () => {
+  const { b, v } = viewOf(MLS_FIXTURE.roundOne, MLS_AT.roundOne);
+  const r8 = seriesById(v, 'round_one-8');
+  assert.equal(r8.nextPrefix, 'Kickoff:');
+  assert.equal(r8.nextLabel, 'Game 2 · Mon, Nov 2 · 10:45 PM ET');
+  assert.equal(seriesById(v, 'conference_semifinals-4').headline, 'Kickoff: Sat, Nov 21 · 9:30 PM ET');
+  const L = inbound(b, v);
+  const min = clubPlayoffs(L, 'minnesota-united');
+  assert.ok(min && min.state === 'alive');
+  assert.equal(min.nextPrefix, 'Kickoff:');
+  const early = viewOf(MLS_FIXTURE.early, MLS_AT.early);
+  assert.equal(leagueCard(inbound(early.b, early.v), 'MLS')?.series[0].status, 'Kickoff: Wed, Oct 21 · 8:30 PM ET');
+  const vanCard = leagueCard(inbound(b, v), 'MLS')?.series.find((s) => s.names === 'Minnesota United vs Seattle Sounders');
+  assert.equal(vanCard?.status, 'Minnesota United leads the series 1-0');
+  const mlb = buildLeagueView(mapBracketDoc(loadDoc(FIXTURE.mlbFields), { league: 'MLB', season: 2026 })!, clubs(), parks(), new Date('2026-09-29T20:08:00Z'))!;
+  assert.ok(allSeries(mlb).every((s) => !('nextPrefix' in s)));
+});
+
+test('GROUNDS: NYCFC hosting is shown with no park and listed on no venue page; a one-ground host keeps its park', () => {
+  // The data layer withholds the park (mlsHostsWithoutOneGround): the view is
+  // built here as the data module builds it, without NYCFC's park.
+  const noNyc = new Map([...mlsParks()].filter(([id]) => !mlsHostsWithoutOneGround(['new-york-city-fc', 'inter-miami'], new Map([['new-york-city-fc', 1], ['inter-miami', 1]])).has(id)));
+  const b = bracketOf(MLS_FIXTURE.roundOne);
+  const v = buildLeagueView(b, mlsClubs(), noNyc, MLS_AT.roundOne)!;
+  const nycHome = seriesById(v, 'round_one-4').games[1];
+  assert.equal(nycHome.hostName, 'New York City FC');
+  assert.equal(nycHome.park, null);
+  assert.equal(seriesById(v, 'round_one-3').games[2].park, 'Nu Stadium');
+  // Not on the Yankee Stadium page (or any): NYCFC hosts nothing listable.
+  const r = viewOf(MLS_FIXTURE.roundOne, MLS_AT.roundOne, (d) => {
+    // NYCFC to host Game 3, so a venue listing would be possible.
+    const g3 = raw(d, 'E-R1-4').games[2];
+    Object.assign(g3, { home: 'new-york-city-fc', away: 'charlotte-fc', homeSide: 'lower' });
+  });
+  const v2 = buildLeagueView(r.b, mlsClubs(), noNyc, MLS_AT.roundOne)!;
+  assert.equal(venueGames(inbound(r.b, v2), ['new-york-city-fc', 'new-york-yankees']), null);
+  assert.ok(venueGames(inbound(r.b, v2), ['inter-miami']));
+  // The rule itself: the list, a club with two buildings, a club with none,
+  // and a failed count.
+  assert.deepEqual([...mlsHostsWithoutOneGround(['new-york-city-fc', 'lafc', 'la-galaxy', 'austin-fc'], new Map([['new-york-city-fc', 1], ['lafc', 1], ['la-galaxy', 2]]))].sort(), ['austin-fc', 'la-galaxy', 'new-york-city-fc']);
+  assert.deepEqual([...mlsHostsWithoutOneGround(['lafc'], null)], ['lafc']);
 });
 
 test('WHERE THINGS STAND: one-game rounds state the match, and a game not yet completed says so', () => {

@@ -82,6 +82,9 @@ export type ClubPlayoffs =
       /** A one-game round (MLS): the link reads "See the matchup", not "See
        *  the series". Present only then. */
       single?: true;
+      /** MLS: "Kickoff:" in place of "Next:" before a scheduled game time.
+       *  Present only then. */
+      nextPrefix?: 'Kickoff:';
     })
   /** Won its last series; the next one has not named it yet. */
   | (ClubBase & { state: 'advanced'; seriesHref: string; roundLabel: string; opponent: string; wonLine: string })
@@ -120,6 +123,7 @@ export function clubPlayoffs(leagues: readonly InboundLeague[], teamId: string):
         })(),
       };
       if (s.single) alive.single = true;
+      if (l.league === 'MLS' && alive.nextLabel && nextGame(s)?.state === 'scheduled') alive.nextPrefix = 'Kickoff:';
       return alive;
     }
     if (l.view.phase.kind === 'concluded' && l.view.phase.championTeamId === teamId) {
@@ -195,7 +199,7 @@ export function leagueCard(leagues: readonly InboundLeague[], league: string): L
         // listed" is said only when the document lists none.
         status:
           s.scoreLine ??
-          nextGameLabel(s) ??
+          (l.league === 'MLS' && nextGame(s)?.state === 'scheduled' ? `Kickoff: ${nextGameLabel(s)}` : nextGameLabel(s)) ??
           (s.higher.kind === 'placeholder' || s.lower.kind === 'placeholder' ? 'Matchup to be decided' : s.games.length > 0 ? s.formatLabel : 'No games listed'),
       })),
     ),
@@ -288,7 +292,9 @@ export function venueGames(leagues: readonly InboundLeague[], tenantTeamIds: rea
   const updated: VenueGames['updated'] = [];
   for (const l of leagues) {
     if (l.view.phase.kind !== 'active') continue;
-    const here = l.view.homeGames.filter((g: HomeGameView) => tenants.has(g.hostTeamId) && g.status === 'scheduled' && !g.pastDate);
+    // MLS: a game with no park (its host club has no one ground) is listed on
+    // no venue page; the bracket names a club, not a building.
+    const here = l.view.homeGames.filter((g: HomeGameView) => tenants.has(g.hostTeamId) && g.status === 'scheduled' && !g.pastDate && (l.league !== 'MLS' || g.park !== null));
     if (here.length === 0) continue;
     if (l.view.updatedLabel) updated.push({ league: l.league, updatedLabel: l.view.updatedLabel });
     for (const g of here) {

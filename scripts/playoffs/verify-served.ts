@@ -31,7 +31,8 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { db } from '../../src/lib/firebase';
 import { getAllTeams, getVenueForTeam } from '../../src/lib/data';
-import { getTeamVenueHubMap } from '../../src/lib/venue-hub';
+import { getTeamBuildingCounts, getTeamVenueHubMap } from '../../src/lib/venue-hub';
+import { MLS_CLUBS_WITH_MORE_THAN_ONE_HOME_GROUND } from '../../src/lib/postseason/grounds';
 import { OG_IMAGE_ALT } from '../../src/lib/og';
 import { MLS_SHORT_NAMES, teamDisplayName } from '../../src/lib/team-display-name';
 import { METHODOLOGY_SECTION_ID, fingerprintPlacement, operatorText } from './flight';
@@ -323,6 +324,9 @@ async function main() {
   }
   const teams = await getAllTeams();
   const hubs = await getTeamVenueHubMap();
+  // MLS: a host club that does not play at exactly one ground gets no park
+  // (the reviewed list is data; the building count is the venue data's).
+  const buildings = await getTeamBuildingCounts();
   const clubs = new Map<string, Club>();
   const wanted = new Set<string>();
   for (const d of docs.values()) {
@@ -345,7 +349,7 @@ async function main() {
       name: mlsName ?? t.name,
       full: mlsName ? teamDisplayName(t) : `${t.city} ${t.name}`,
       abbr: (t as { abbreviation?: string }).abbreviation ?? null,
-      park: v && v.name ? v.name : null,
+      park: mlsName && (MLS_CLUBS_WITH_MORE_THAN_ONE_HOME_GROUND.has(id) || buildings.get(id) !== 1) ? null : v && v.name ? v.name : null,
       venuePath: hub ? `/venues/${hub.slug}` : null,
     });
   }
@@ -930,6 +934,13 @@ async function main() {
       return `${single(doc, s) ? '' : `Game ${g.gameNumber}, `}${matchup}, ${etDay(t)}, ${etTime(t)}`;
     };
     const laterThan = (i: number, skip: string[]) => order.filter((r, k) => k >= i && !skip.includes(r)).flatMap(of);
+    if (played.length === 0 && mls) {
+    // MLS: the round and its scheduled days, never "next" (2026-11-03).
+    const longOf = (ymd: string) => { const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', weekday: 'long', month: 'long', day: 'numeric' }).formatToParts(new Date(`${ymd}T12:00:00Z`)).map((x) => [x.type, x.value])); return `${p.weekday}, ${p.month} ${p.day}`; };
+    const andList = (xs: string[]) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
+      const days = [...new Set(of(open).flatMap((s) => s.games.filter((g) => g.status !== 'cancelled').map((g) => (!g.startTimeTBD && isInstant(g.start) ? etYmd(new Date(g.start)) : g.date)).filter((d): d is string => !!d)))].sort();
+      return days.length ? `${label(open)}: ${andList(days.map(longOf))}.` : `${label(open)}: dates to be set.`;
+    }
     if (played.length === 0) {
       const f = sureNext(of(open), laterThan(at + 1, []));
       return f ? `Next round: ${label(open)}. It opens with ${gameText(f.s, f.g)}.` : `Next round: ${label(open)}.`;

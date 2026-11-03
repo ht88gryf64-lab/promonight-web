@@ -3,7 +3,8 @@ import { cache } from 'react';
 import { db } from '../firebase';
 import { makeCollectionLoader } from '../collection-cache';
 import { getAllTeams, getVenueForTeam } from '../data';
-import { getTeamVenueHubMap } from '../venue-hub';
+import { getTeamBuildingCounts, getTeamVenueHubMap } from '../venue-hub';
+import { mlsHostsWithoutOneGround } from './grounds';
 import { mapBracketDoc } from './map';
 import { inboundBrackets, playoffsLinkState, type PlayoffsLinkState } from './gate';
 import { buildLeagueView, clubSlugs, easternYmd, hostSlugs, seriesIds, type ClubInfo, type LeagueView, type ParkInfo } from './view';
@@ -157,9 +158,21 @@ async function buildViewFor(bracket: Bracket, now: Date, opts: { withPromos: boo
   } catch (err) {
     console.error('[postseason] venue page lookup failed; park names render as plain text', err);
   }
+  // MLS: no park for a host club that does not play at exactly one ground
+  // (./grounds.ts). A failed count withholds every MLS park rather than guess.
+  let noPark = new Set<string>();
+  if (bracket.league === 'MLS') {
+    let counts: Map<string, number> | null = null;
+    try {
+      counts = await getTeamBuildingCounts();
+    } catch (err) {
+      console.error('[postseason] building count failed; MLS hosts render with no park', err);
+    }
+    noPark = mlsHostsWithoutOneGround(hostSlugs(bracket), counts);
+  }
   const parks = new Map<string, ParkInfo>();
   await Promise.all(
-    hostSlugs(bracket).map(async (slug) => {
+    hostSlugs(bracket).filter((slug) => !noPark.has(slug)).map(async (slug) => {
       try {
         const venue = await getVenueForTeam(slug);
         if (!venue || typeof venue.name !== 'string' || !venue.name.trim()) return;

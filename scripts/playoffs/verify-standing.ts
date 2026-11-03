@@ -185,6 +185,14 @@ function expectedLine(doc: Doc, teams: Map<string, Team>, now: Date): string | n
     return `${one(s) ? '' : `Game ${g.gameNumber}, `}${matchup}, ${shortWhen(new Date(g.start))}`;
   };
 
+  if (!playing.length && mls) {
+  // MLS: the round and its scheduled days, never "next" (2026-11-03).
+    const longOf = (ymd: string) => { const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', weekday: 'long', month: 'long', day: 'numeric' }).formatToParts(new Date(`${ymd}T12:00:00Z`)).map((x) => [x.type, x.value])); return `${p.weekday}, ${p.month} ${p.day}`; };
+    const andList = (xs: string[]) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
+    const r = rounds[open];
+    const days = [...new Set(inRound(r).flatMap((s: Doc) => s.games.filter((g: Doc) => g.status !== 'cancelled').map((g: Doc) => (!g.startTimeTBD && isInstant(g.start) ? ymd(new Date(g.start)) : g.date)).filter(Boolean)))].sort() as string[];
+    return days.length ? `${labelOf(r)}: ${andList(days.map(longOf))}.` : `${labelOf(r)}: dates to be set.`;
+  }
   if (!playing.length) {
     const r = rounds[open];
     return next ? `Next round: ${labelOf(r)}. It opens with ${gameText(next)}.` : `Next round: ${labelOf(r)}.`;

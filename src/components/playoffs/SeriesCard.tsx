@@ -88,7 +88,7 @@ export function SeriesCardBody({ series }: { series: SeriesView }) {
         )}
         {series.nextLabel && (
           <span className="block text-[13px] text-rd-ink-soft">
-            <span className="font-semibold text-rd-ink">Next:</span> {series.nextLabel}
+            <span className="font-semibold text-rd-ink">{series.nextPrefix ?? 'Next:'}</span> {series.nextLabel}
           </span>
         )}
         {series.nextLabel && nextHost && <span className="block text-[13px] text-rd-ink-soft">{nextHost}</span>}

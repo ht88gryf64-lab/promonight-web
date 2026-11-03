@@ -137,6 +137,9 @@ export interface SeriesView {
   /** A decided one-game round (MLS): how the match ended, from the winner's
    *  side, "2-1 after extra time". Present only then. */
   matchScore?: string;
+  /** MLS, when nextLabel is a scheduled kickoff: the word before it, in place
+   *  of "Next:". Present only then. */
+  nextPrefix?: 'Kickoff:';
 }
 
 export interface RoundView {
@@ -576,7 +579,10 @@ function seriesView(
   }
 
   const undecided = higher.kind === 'placeholder' || lower.kind === 'placeholder';
-  const headline = liveLabel ?? scoreLine ?? nextLabel ?? (undecided ? 'Matchup to be decided' : 'No games listed');
+  // MLS labels a game time "Kickoff:", which stays true before, during and
+  // after the match; "Next:" would not once it has kicked off (2026-11-03).
+  const kickoff = mls && next !== null && next.state === 'scheduled';
+  const headline = liveLabel ?? scoreLine ?? (kickoff && nextLabel ? `Kickoff: ${nextLabel}` : nextLabel) ?? (undecided ? 'Matchup to be decided' : 'No games listed');
 
   const pattern = homePattern(s);
   const view: SeriesView = {
@@ -598,6 +604,7 @@ function seriesView(
     next,
     games,
   };
+  if (kickoff) view.nextPrefix = 'Kickoff:';
   if (single) {
     view.single = true;
     const game = s.status === 'final' ? s.games.find((g) => g.status === 'final' && g.winnerSide === s.winnerSide) ?? null : null;

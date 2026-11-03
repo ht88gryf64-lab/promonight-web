@@ -26,7 +26,7 @@ mock.module(new URL('../../../lib/data.ts', import.meta.url).href, {
   },
 });
 mock.module(new URL('../../../lib/venue-hub.ts', import.meta.url).href, {
-  namedExports: { getTeamVenueHubMap: async () => venuePages() },
+  namedExports: { getTeamVenueHubMap: async () => venuePages(), getTeamBuildingCounts: async () => new Map() },
 });
 // next/font needs the Next compiler. The pages only read `.variable`.
 mock.module(new URL('../../../components/cfb/rivalry/fonts.ts', import.meta.url).href, {

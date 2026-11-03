@@ -25,7 +25,13 @@ mock.module(new URL('../../data.ts', import.meta.url).href, {
     },
   },
 });
-mock.module(new URL('../../venue-hub.ts', import.meta.url).href, { namedExports: { getTeamVenueHubMap: async () => venuePages() } });
+mock.module(new URL('../../venue-hub.ts', import.meta.url).href, {
+  namedExports: {
+    getTeamVenueHubMap: async () => venuePages(),
+    // One building for every MLS club, as the venue data has it (2026-11-03).
+    getTeamBuildingCounts: async () => new Map(mlsTeams().map((t) => [t.id, 1])),
+  },
+});
 mock.timers.enable({ apis: ['Date'], now: MLS_AT.roundOne });
 
 const load = () => import('../data');

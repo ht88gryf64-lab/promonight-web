@@ -53,7 +53,7 @@ mock.module(new URL('../../../lib/data.ts', import.meta.url).href, {
     },
   },
 });
-mock.module(new URL('../../../lib/venue-hub.ts', import.meta.url).href, { namedExports: { getTeamVenueHubMap: async () => venuePages() } });
+mock.module(new URL('../../../lib/venue-hub.ts', import.meta.url).href, { namedExports: { getTeamVenueHubMap: async () => venuePages(), getTeamBuildingCounts: async () => new Map() } });
 mock.module(new URL('../../../components/cfb/rivalry/fonts.ts', import.meta.url).href, { namedExports: { barlowCondensed: { variable: 'v1' } } });
 mock.module(new URL('../../../components/redesign/fonts-house.ts', import.meta.url).href, { namedExports: { archivoHouse: { variable: 'v2' } } });
 

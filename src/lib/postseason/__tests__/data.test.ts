@@ -38,6 +38,8 @@ mock.module(new URL('../../data.ts', import.meta.url).href, {
 });
 mock.module(new URL('../../venue-hub.ts', import.meta.url).href, {
   namedExports: {
+    // Asked only for MLS brackets, which this file never serves.
+    getTeamBuildingCounts: async () => new Map(),
     getTeamVenueHubMap: async () => {
       if (pages.fail) throw new Error('venueHubs read failed');
       const map = venuePages();

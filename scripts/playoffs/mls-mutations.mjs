@@ -34,6 +34,11 @@ const ALL = [T_MLS, T_DATA, T_RENDER];
 
 /** [name, file, from, to, tests]. `from` must occur exactly once. */
 const CASES = [
+  ['standing: an unstarted MLS round says "Next round"', S, '  if (played.length === 0 && sp.mls) {', '  if (false) {', [T_MLS]],
+  ['view: "Next:" before an MLS kickoff', V, "  if (kickoff) view.nextPrefix = 'Kickoff:';", '', [T_MLS, T_RENDER]],
+  ['inbound: "Next:" on the MLS team module', I, "      if (l.league === 'MLS' && alive.nextLabel && nextGame(s)?.state === 'scheduled') alive.nextPrefix = 'Kickoff:';", '', [T_MLS, T_RENDER]],
+  ['grounds: NYCFC given a park', 'src/lib/postseason/grounds.ts', "new Set(['new-york-city-fc'])", 'new Set([])', [T_MLS]],
+  ['venue page lists a game with no park', I, " && (l.league !== 'MLS' || g.park !== null));", ');', [T_MLS]],
   ['live MLS game shown live', V, "const status: GameStatus = mls && g.status === 'live' ? 'scheduled' : g.status;", 'const status: GameStatus = g.status;', [T_MLS, T_RENDER]],
   ['MLS series status left live with nothing final', V, '    status: mls ? mlsSeriesStatus(s) : s.status,', '    status: s.status,', [T_MLS, T_RENDER]],
   ['"Game 1" on a one-game round', V, "title: s.bestOf === 1 && mls ? '' : `Game ${g.gameNumber}`,", 'title: `Game ${g.gameNumber}`,', ALL],

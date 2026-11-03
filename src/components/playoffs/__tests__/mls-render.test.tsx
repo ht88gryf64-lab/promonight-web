@@ -96,6 +96,9 @@ function assertClean(html: string, fixture: string, where: string) {
   assert.ok(!/Best of 1\b|won 1-0\b|Won the [^.]* 1-0\b/.test(text), where);
   assert.ok(!/PromoNight Predicts|predictions|simulation|PromoNight's pick/i.test(text), `${where}: predictions`);
   assert.ok(!html.includes('data-predictions') && !html.includes('data-game-promo'), `${where}: predictions or promo markup`);
+  // A game time reads "Kickoff:", never "Next:" (no fixture holds a
+  // postponed game, the one case "Next:" is kept for).
+  assert.ok(!/\bNext:/.test(text), `${where}: "Next:"`);
   // No bare "TBD" slot, and no seed beside a slot with no club.
   assert.ok(!/(?<!Time |Date )\bTBD\b/.test(text), `${where}: TBD`);
   assert.ok(!/Seed \d+ (TBD|To be decided)/.test(text), `${where}: a seed on an empty slot`);
@@ -206,6 +209,7 @@ test('TEAM MODULE: MLS clubs by their short brand; "See the matchup" for a one-g
   assert.ok(textOf(min).includes('Minnesota United vs Seattle Sounders'));
   assert.ok(textOf(min).includes('See the series'));
   assert.ok(textOf(min).includes('Minnesota United leads the series 1-0'));
+  assert.ok(textOf(min).includes('Kickoff: Game 2 · Mon, Nov 2 · 10:45 PM ET'), textOf(min));
   const van = renderToStaticMarkup(<TeamPlayoffsModule club={clubPlayoffs(L, 'vancouver-whitecaps')!} teamId="vancouver-whitecaps" teamName="Vancouver Whitecaps" />);
   assert.ok(textOf(van).includes('Vancouver Whitecaps vs LAFC'));
   assert.ok(textOf(van).includes('See the matchup'));

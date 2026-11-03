@@ -174,6 +174,15 @@ function nextGame(sure: SeriesView[], later: SeriesView[], startOf: (s: SeriesVi
   return next.g;
 }
 
+/** "Saturday, November 21", from a YYYY-MM-DD with no zone arithmetic. */
+function longDay(ymd: string): string {
+  const [y, m, d] = ymd.split('-').map(Number);
+  const p: Record<string, string> = {};
+  for (const x of new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', weekday: 'long', month: 'long', day: 'numeric' }).formatToParts(new Date(Date.UTC(y, m - 1, d, 12)))) p[x.type] = x.value;
+  return `${p.weekday}, ${p.month} ${p.day}`;
+}
+const listOf = (xs: readonly string[]) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
+
 /** "Game 4, Cubs at Brewers, Fri, Oct 2, 7:08 PM ET". No "if necessary":
  *  a conditional game always has a lower-numbered game of its series
  *  unplayed, which keeps it from being named. */
@@ -218,6 +227,15 @@ export function standingLine(view: LeagueView, starts: ReadonlyMap<string, strin
 
   const after = (from: number, skip: readonly number[]) => view.rounds.flatMap((_, i) => (i >= from && !skip.includes(i) ? seriesOf(i) : []));
 
+  if (played.length === 0 && sp.mls) {
+    // MLS: the round and its scheduled days, from the document. Nothing here
+    // says "next": while the round's first match is under way it is not (the
+    // page shows no live state), and the days stay true before, during and
+    // after kickoff (2026-11-03).
+    const days = [...new Set(seriesOf(at).flatMap((s) => s.games.filter((g) => g.state !== 'cancelled' && g.day).map((g) => g.day as string)))].sort();
+    const round = view.rounds[at];
+    return days.length ? `${round.label}: ${listOf(days.map(longDay))}.` : `${round.label}: dates to be set.`;
+  }
   if (played.length === 0) {
     // Between rounds, or before the first: the round to play next.
     const round = view.rounds[at];
