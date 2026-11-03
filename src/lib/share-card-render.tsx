@@ -14,8 +14,10 @@ import { textWidth } from './share-card-metrics';
 // (with the quantity when stored); the promo name in the display face
 // (Archivo 800, uppercase, as the page's H1); the game line; the
 // getpromonight.com footer. On the right, a rounded panel: the stored item
-// photo (tier 1, with its credit printed small in the footer) or the promo
-// card artwork (tier 3), so every share reads as one family.
+// photo (tier 1, with its credit printed small in the footer), or for tier 3
+// a solid block of the team's primary colour with the team's name in the
+// display face, white (Gate A ruling 2026-11-03), so every share reads as
+// one family.
 //
 // LEGIBILITY AT ~300px WIDE (an iMessage thumbnail is a quarter scale): the
 // smallest text that carries meaning is the badge at 28px (7px at quarter
@@ -43,7 +45,7 @@ export function loadShareCardFonts(): Promise<[Buffer, Buffer, Buffer]> {
 
 export type ShareCardPanel =
   | { kind: 'photo'; src: string; credit: string; width: number; height: number }
-  | { kind: 'card'; src: string; ground: string }
+  | { kind: 'team'; name: string; color: string }
   | null;
 
 export interface ShareCardModel {
@@ -68,7 +70,8 @@ const PAD_TOP = 40;
 const PAD_BOTTOM = 34;
 const GAP = 40;
 const PHOTO_W = 400;
-const CARD_PANEL_W = 440;
+const TEAM_PANEL_PAD = 32;
+const TEAM_SIZES = [84, 76, 68, 60, 54, 48, 44, 40, 36];
 const INNER_W = SHARE_CARD_WIDTH - 2 * FRAME;
 const INNER_H = SHARE_CARD_HEIGHT - 2 * FRAME;
 
@@ -83,7 +86,7 @@ export function photoBox(width: number, height: number, maxH: number): { w: numb
 function columnWidth(panel: ShareCardPanel): number {
   const free = INNER_W - STRIPE - 2 * PAD_X;
   if (!panel) return free;
-  return free - GAP - (panel.kind === 'photo' ? PHOTO_W : CARD_PANEL_W);
+  return free - GAP - PHOTO_W;
 }
 
 const TITLE_SIZES = [96, 88, 80, 72, 64, 58, 54, 50];
@@ -122,6 +125,13 @@ export function wrapLines(text: string, size: number, width: number, face: 'extr
   return lines;
 }
 
+/** Whether every word of `text` fits `width` on its own. Satori never breaks
+ *  inside a word, so a size where one word is wider than the line overflows
+ *  the box however few lines the wrap counts. */
+export function wordsFit(text: string, size: number, width: number, face: 'extrabold' | 'semibold', letterSpacing = 0): boolean {
+  return text.split(/\s+/).filter(Boolean).every((w) => textWidth(w, size, face, letterSpacing) <= width);
+}
+
 /** The game line's layout: one line when "{lead} · {tail}" fits the column,
  *  else lead and tail on lines of their own. */
 export function gameLayout(game: { lead: string; tail: string }, width: number): string[] {
@@ -137,11 +147,25 @@ export function titleFit(title: string, width: number, gameLines = 1): { size: n
   const game = gameLines ? STACK_GAP + gameLines * GAME_SIZE * GAME_LH : 0;
   const upper = title.toUpperCase();
   for (const size of TITLE_SIZES) {
+    if (!wordsFit(upper, size, width, 'extrabold', TITLE_LS)) continue;
     const lines = wrapLines(upper, size, width, 'extrabold', TITLE_LS);
     const height = BADGE_H + STACK_GAP + lines * size * TITLE_LH + game;
     if (lines <= 3 && height <= STACK_MAX) return { size, lines };
   }
   return { size: TITLE_SIZES[TITLE_SIZES.length - 1], lines: 4 };
+}
+
+/** The team name's size in the tier 3 block: the largest at which every
+ *  word fits the block's inner width and the name takes at most 3 lines.
+ *  The floor, 36px, is 9px at a 300px-wide thumbnail; the longest stored
+ *  name word ("PHILADELPHIA") sets at 48. */
+export const TEAM_NAME_W = PHOTO_W - 2 * TEAM_PANEL_PAD - 6; // 6: the outline a dark block takes
+export function teamNameFit(name: string): number {
+  const upper = name.toUpperCase();
+  for (const size of TEAM_SIZES) {
+    if (wordsFit(upper, size, TEAM_NAME_W, 'extrabold', TITLE_LS) && wrapLines(upper, size, TEAM_NAME_W, 'extrabold', TITLE_LS) <= 3) return size;
+  }
+  return TEAM_SIZES[TEAM_SIZES.length - 1];
 }
 
 // ── colour ──────────────────────────────────────────────────────────────────
@@ -159,6 +183,17 @@ function contrast(a: string, b: string): number {
   const la = luminance(a);
   const lb = luminance(b);
   return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+
+/** Whether a colour stands off the ink ground on its own. A black or
+ *  near-black team block takes a faint outline so it still reads as a panel. */
+export function separates(c: string): boolean {
+  return HEX_RE.test(c) && contrast(c, INK) >= 1.6;
+}
+
+/** White text on `c`: the WCAG ratio, for the Gate B colour audit. */
+export function whiteContrast(c: string): number {
+  return HEX_RE.test(c) ? contrast(c, WHITE) : 0;
 }
 
 /** The stripe colour: the team's primary when it shows on the ink ground,
@@ -199,7 +234,7 @@ export async function renderShareCard(model: ShareCardModel, headers?: Record<st
                     {model.badge}
                   </div>
                 </div>
-                <div style={{ display: 'block', fontSize: fit.size, fontWeight: 800, lineHeight: TITLE_LH, letterSpacing: TITLE_LS, textTransform: 'uppercase', lineClamp: fit.lines }}>{model.title}</div>
+                <div style={{ display: 'block', overflowWrap: 'break-word', fontSize: fit.size, fontWeight: 800, lineHeight: TITLE_LH, letterSpacing: TITLE_LS, textTransform: 'uppercase', lineClamp: fit.lines }}>{model.title}</div>
                 {gameLines.length ? (
                   <div style={{ display: 'flex', flexDirection: 'column', fontSize: GAME_SIZE, fontWeight: 600, lineHeight: GAME_LH, color: 'rgba(255,255,255,0.86)' }}>
                     {gameLines.map((l) => (
@@ -222,11 +257,10 @@ export async function renderShareCard(model: ShareCardModel, headers?: Record<st
                   <img src={model.panel.src} width={box.w} height={box.h} style={{ width: box.w, height: box.h, objectFit: 'contain' }} alt="" />
                 </div>
               </div>
-            ) : model.panel?.kind === 'card' ? (
-              <div style={{ width: CARD_PANEL_W, height: panelH, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ display: 'flex', borderRadius: 18, overflow: 'hidden', border: '3px solid rgba(255,255,255,0.14)', background: model.panel.ground }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element -- Satori draws <img>, not next/image */}
-                  <img src={model.panel.src} width={CARD_PANEL_W - 6} height={Math.round(((CARD_PANEL_W - 6) * 630) / 1200)} style={{ width: CARD_PANEL_W - 6, height: Math.round(((CARD_PANEL_W - 6) * 630) / 1200) }} alt="" />
+            ) : model.panel?.kind === 'team' ? (
+              <div style={{ width: PHOTO_W, height: panelH, display: 'flex', alignItems: 'flex-end', background: model.panel.color, borderRadius: 20, padding: TEAM_PANEL_PAD, ...(separates(model.panel.color) ? {} : { border: '3px solid rgba(255,255,255,0.18)' }) }}>
+                <div style={{ display: 'block', width: TEAM_NAME_W, overflowWrap: 'break-word', fontFamily: 'Archivo', fontSize: teamNameFit(model.panel.name), fontWeight: 800, lineHeight: TITLE_LH, letterSpacing: TITLE_LS, textTransform: 'uppercase', color: WHITE, lineClamp: 3 }}>
+                  {model.panel.name}
                 </div>
               </div>
             ) : null}

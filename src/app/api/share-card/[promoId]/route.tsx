@@ -3,7 +3,6 @@ import { getPromoCardRow, isPromoPagesLive, type PromoCardRow } from '@/lib/prom
 import { storageImageUrl } from '@/lib/promo-page-copy';
 import { teamDisplayName } from '@/lib/promo-helpers';
 import { imageSizeFromBytes } from '@/lib/image-dimensions';
-import { renderPromoCard } from '@/lib/promo-card-render';
 import { shareBadge, shareCardGame } from '@/lib/share-card-model';
 import { accentFor, renderShareCard, type ShareCardModel, type ShareCardPanel } from '@/lib/share-card-render';
 
@@ -24,9 +23,8 @@ import { accentFor, renderShareCard, type ShareCardModel, type ShareCardPanel } 
 // cached for ten minutes, so the next request draws it properly.
 //
 // PANEL. Tier 1 (a stored photo, row not tombstoned): our Firebase Storage
-// copy, never a team CDN, with the page's credit line. Otherwise the promo
-// card artwork, rendered in process (no self-fetch, so a protected preview
-// draws it too).
+// copy, never a team CDN, with the page's credit line. Otherwise a solid
+// block of the team's primary colour carrying the team's name.
 //
 // Gated with the pages: with PROMO_PAGES_LIVE unset nothing here renders.
 
@@ -59,10 +57,10 @@ async function photoPanel(found: PromoCardRow): Promise<ShareCardPanel> {
   }
 }
 
-async function cardPanel(found: PromoCardRow): Promise<ShareCardPanel> {
-  const png = Buffer.from(await (await renderPromoCard(found)).arrayBuffer());
-  const ground = HEX_RE.test(found.team.primaryColor) ? found.team.primaryColor : '#211d18';
-  return { kind: 'card', src: `data:image/png;base64,${png.toString('base64')}`, ground };
+/** Tier 3 (and a tier 1 row whose photo could not be read): the team's
+ *  primary colour with its name (Gate A ruling 2026-11-03). */
+function teamPanel(found: PromoCardRow): ShareCardPanel {
+  return { kind: 'team', name: cleanText(teamDisplayName(found.team)), color: HEX_RE.test(found.team.primaryColor) ? found.team.primaryColor : '#211d18' };
 }
 
 export async function GET(req: Request, { params }: { params: Promise<{ promoId: string }> }) {
@@ -81,7 +79,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ promoId:
   const wantsPhoto = found.row.imageTier === 1 && !!found.row.imageRef && !found.row.tombstoned;
   const photo = wantsPhoto ? await photoPanel(found) : null;
   const degraded = wantsPhoto && !photo;
-  const panel = photo ?? (await cardPanel(found));
+  const panel = photo ?? teamPanel(found);
 
   const model: ShareCardModel = {
     badge: shareBadge(found.row),

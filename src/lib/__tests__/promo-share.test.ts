@@ -18,7 +18,7 @@ import {
   withShareSubId2,
   xIntentHref,
 } from '../promo-share';
-import { accentFor, gameLayout, photoBox, titleFit, wrapLines } from '../share-card-render';
+import { TEAM_NAME_W, accentFor, gameLayout, photoBox, separates, teamNameFit, titleFit, wordsFit, wrapLines } from '../share-card-render';
 import { textWidth } from '../share-card-metrics';
 import { buildFanaticsUrl, buildSpotHeroUrl, buildTicketNetworkLink, buildExpediaHotelLink } from '../affiliates';
 
@@ -125,4 +125,15 @@ test('the card: measured widths, the name fits width and height, the game line s
   assert.equal(accentFor('#006847', '#8f8f8c'), '#006847');
   assert.equal(accentFor('#000000', '#fcb514'), '#fcb514');
   assert.equal(accentFor('#000000', '#111111'), '#f7f3ea');
+  // Tier 3 block (Gate A ruling): the team name fits the block in 3 lines at most; a black block takes an outline.
+  const size = teamNameFit('Columbus Blue Jackets');
+  assert.ok(size >= 36 && wrapLines('COLUMBUS BLUE JACKETS', size, TEAM_NAME_W, 'extrabold', -1) <= 3, String(size));
+  // Satori never breaks inside a word: every word must fit (the Penguins overflow, Gate B prep).
+  for (const n of ['Pittsburgh Penguins', 'Philadelphia Flyers', 'Minnesota Timberwolves', 'Vancouver Whitecaps FC', 'Washington Commanders']) {
+    assert.ok(wordsFit(n.toUpperCase(), teamNameFit(n), TEAM_NAME_W, 'extrabold', -1), n);
+  }
+  assert.ok(wordsFit('AUSTIN REAVES BOBBLEHEAD', titleFit('Austin Reaves Bobblehead', 622, 2).size, 622, 'extrabold', -1));
+  assert.ok(teamNameFit('Dallas Stars') > teamNameFit('Columbus Blue Jackets'));
+  assert.equal(separates('#000000'), false);
+  assert.equal(separates('#006847'), true);
 });
