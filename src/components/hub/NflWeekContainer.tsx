@@ -7,6 +7,7 @@ import { rivalryBlockColors } from '@/lib/cfb/hub-theme';
 import { formatGameTime } from '@/lib/format-game-time';
 import { normalizeSport, type AnalyticsSurface } from '@/lib/analytics';
 import { TrackedTapLink } from '@/components/analytics/TrackedTapLink';
+import { teamDisplayName } from '@/lib/team-display-name';
 
 // Partition rails for /nfl (supersedes the subsection shape by explicit
 // ruling): Rail 1 "This week" holds every game EXCEPT primetime; Rail 2
@@ -182,7 +183,7 @@ function NflGameCard({
         </div>
         <TrackedTapLink
           href={`/${home.sportSlug}/${home.id}`}
-          aria-label={`${away.name} at ${home.name}: ${home.city} ${home.name} promotions and schedule`}
+          aria-label={`${away.name} at ${home.name}: ${teamDisplayName(home)} promotions and schedule`}
           trackEvent="game_tap"
           trackProps={{
             surface,

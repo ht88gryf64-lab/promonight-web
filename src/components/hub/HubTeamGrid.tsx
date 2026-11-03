@@ -7,9 +7,10 @@ import { track, type AnalyticsSurface } from '@/lib/analytics';
 import { IconChevronRight } from '@tabler/icons-react';
 import { chipInk } from '@/lib/chip-contrast';
 import { HubTeamSelector, ALL_DIVISIONS } from './HubTeamSelector';
+import { teamDisplayName } from '@/lib/team-display-name';
 
 function TeamCard({ team, subtitle }: { team: Team; subtitle?: string }) {
-  const name = `${team.city} ${team.name}`;
+  const name = teamDisplayName(team);
   return (
     <a
       href={`/${team.sportSlug}/${team.id}`}

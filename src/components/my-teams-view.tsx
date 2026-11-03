@@ -20,6 +20,7 @@ import type {
   StarredPromo,
   StarredPromosResponse,
 } from '@/app/api/my-teams/promos/route';
+import { teamDisplayName } from '@/lib/team-display-name';
 
 // Featured-six default mix used in State A's empty-state grid when geo
 // reordering returns no in-state teams or hasn't loaded yet. Picked across
@@ -549,7 +550,7 @@ function HowItWorksRow({
 }
 
 function FeaturedTeamCard({ team, light = false }: { team: Team; light?: boolean }) {
-  const teamFullName = `${team.city} ${team.name}`;
+  const teamFullName = teamDisplayName(team);
 
   if (light) {
     return (
@@ -763,7 +764,7 @@ function StateC({
 // yet. The site has no season model to tell the two apart, so the label states
 // only what the code tested: nothing in the next 60 days.
 function QuietTeamCard({ team, light = false }: { team: Team; light?: boolean }) {
-  const teamFullName = `${team.city} ${team.name}`;
+  const teamFullName = teamDisplayName(team);
 
   if (light) {
     return (
@@ -879,7 +880,7 @@ function StateB({
   // it silently (review round 3). City and name: Rangers, Kings, Panthers,
   // Jets, Giants and Cardinals each exist in two leagues.
   const failed = starredTeams.filter((t) => failedTeams.has(t.id));
-  const failedNames = failed.length > 0 ? failed.map((t) => `${t.city} ${t.name}`).join(', ') : null;
+  const failedNames = failed.length > 0 ? failed.map((t) => teamDisplayName(t)).join(', ') : null;
 
   // Affiliate cluster anchor. Because `promos` is sorted asc, the first
   // entry is either today's TONIGHT promo (when one exists) or the next

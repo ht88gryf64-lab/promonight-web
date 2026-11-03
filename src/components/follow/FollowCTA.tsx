@@ -2,6 +2,7 @@ import { IconArrowRight } from '@tabler/icons-react';
 import type { Team } from '@/lib/types';
 import type { CaptureSurface } from '@/lib/follow-surface';
 import { EmailCtaLink } from '@/components/follow/EmailCtaLink';
+import { teamDisplayName } from '@/lib/team-display-name';
 
 // Entry CTA for the email capture funnel. Links to /follow carrying the entry
 // surface (and a pre-star team slug when on a team page) and dual-emits
@@ -48,7 +49,7 @@ export function FollowCTA({
   const resolvedSub =
     sub ??
     (team
-      ? `Get the ${team.city} ${team.name} bobbleheads, theme nights and food deals, plus any other teams you follow, in one free email a week.`
+      ? `Get the ${teamDisplayName(team)} bobbleheads, theme nights and food deals, plus any other teams you follow, in one free email a week.`
       : 'Get the giveaways, theme nights and food deals for the teams you follow in one free email a week.');
 
   if (layout === 'split') {

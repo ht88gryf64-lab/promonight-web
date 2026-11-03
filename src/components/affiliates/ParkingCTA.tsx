@@ -2,6 +2,7 @@ import type { Team, Venue } from '@/lib/types';
 import type { AnalyticsSurface } from '@/lib/analytics';
 import { buildSpotHeroUrl } from '@/lib/affiliates';
 import { TrackedAffiliateLink } from '@/components/tracked-affiliate-link';
+import { teamDisplayName } from '@/lib/team-display-name';
 
 type ParkingCTAProps = {
   team: Team;
@@ -77,7 +78,7 @@ export function ParkingCTA({
   // Button renders regardless of SpotHero env state — bare URL fallback
   // routes the user to SpotHero's coordinate search even pre-approval.
   // Tracking-active state is surfaced to PostHog via TrackedAffiliateLink.
-  const teamName = `${team.city} ${team.name}`;
+  const teamName = teamDisplayName(team);
   // Label prefers the venue name so "Find Parking at Rogers Centre" beats
   // "Find Parking at Toronto Blue Jays". Falls back to team name when we
   // have no venue doc (all MLS today, most NBA, most WNBA).

@@ -54,6 +54,7 @@ import {
   sendGenericDigest,
   sendPersonalizedDigest,
 } from '@/lib/email';
+import { teamDisplayName } from '@/lib/team-display-name';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -140,7 +141,7 @@ export async function GET(request: Request) {
     const allTeams = await getAllTeams();
     const coords = await getTeamVenueCoords(allTeams);
     const cityByTeamId = buildTeamCityMap(allTeams, await getSchemaLocationsForTeams(allTeams));
-    const nameById = new Map(allTeams.map((t) => [t.id, `${t.city} ${t.name}`]));
+    const nameById = new Map(allTeams.map((t) => [t.id, teamDisplayName(t)]));
     for (const sub of emptyWindowSubs) {
       const { anchor, localPromos, level } = resolveLocalAnchor({
         followedTeamIds: sub.teams,

@@ -44,21 +44,10 @@ export function promoAnchorId(promo: Pick<Promo, 'date' | 'title'>): string {
   return `${promo.date}-${safe}`;
 }
 
-// Returns the display name for a team, avoiding the "Cincinnati FC Cincinnati"
-// doubled-city case for MLS clubs whose `name` already includes the city
-// (FC Cincinnati, FC Dallas, Atlanta United, etc.). When the city appears as a
-// whole word inside the name, the name alone is the brand — return just the
-// name. Otherwise, prepend the city as usual ("Kansas City" + "Royals").
-export function teamDisplayName(team: Pick<Team, 'city' | 'name'>): string {
-  const city = team.city?.trim() ?? '';
-  const name = team.name?.trim() ?? '';
-  if (!city) return name;
-  if (!name) return city;
-  const escaped = city.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const cityInName = new RegExp(`\\b${escaped}\\b`, 'i').test(name);
-  if (cityInName) return name;
-  return `${city} ${name}`;
-}
+// The display name for a team: see ./team-display-name (kept here as a
+// re-export so every existing caller keeps its import).
+import { teamDisplayName } from './team-display-name';
+export { teamDisplayName };
 
 const ROUND_LABELS: Record<string, string> = {
   first_round: 'First Round',

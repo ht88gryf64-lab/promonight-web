@@ -6,6 +6,7 @@ import { SPORT_ICONS } from '@/lib/types';
 import { event, track } from '@/lib/analytics';
 import { StarToggle } from './star-toggle';
 import type { StarPlacement } from '@/hooks/use-starred-teams';
+import { teamDisplayName } from '@/lib/team-display-name';
 
 interface TeamCardProps {
   team: Team;
@@ -105,7 +106,7 @@ export function TeamCard({
       <div className="absolute top-3 right-3 z-10">
         <StarToggle
           teamSlug={team.id}
-          teamName={`${team.city} ${team.name}`}
+          teamName={teamDisplayName(team)}
           league={team.league}
           sport={team.sportSlug}
           placement={starPlacement}

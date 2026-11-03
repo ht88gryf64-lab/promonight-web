@@ -19,6 +19,7 @@ import type { Team, Venue } from './types';
 import type { AnalyticsSurface } from './analytics';
 import { buildExpediaHotelLink, nextDayISO } from './affiliates';
 import { VENUE_CITY_OVERRIDES } from './venue-cities';
+import { teamDisplayName } from '@/lib/team-display-name';
 
 export interface HotelLinkInput {
   team: Team;
@@ -66,7 +67,7 @@ export function resolveHotelLink(input: HotelLinkInput): HotelLink | null {
   const city = VENUE_CITY_OVERRIDES[team.id] ?? team.city ?? '';
   if (!hasCoords && !city) return null;
 
-  const venueName = venue?.name || `${team.city} ${team.name}`;
+  const venueName = venue?.name || teamDisplayName(team);
   const dated = Boolean(gameDate);
   const checkIn = gameDate ?? null;
   const checkOut = gameDate ? nextDayISO(gameDate) : null;
