@@ -207,7 +207,7 @@ function SharePopover({ id, copied, onChoose, onClose, anchor }: { id: string; c
     };
   }, [anchor, onClose]);
   return (
-    <div id={id} role="dialog" aria-label="Share options" className="absolute right-0 top-full z-30 mt-2 w-48 overflow-hidden rounded-xl border border-rd-line-strong bg-white py-1 shadow-lg">
+    <div id={id} role="dialog" aria-label="Share via" className="absolute right-0 top-full z-30 mt-2 w-48 overflow-hidden rounded-xl border border-rd-line-strong bg-white py-1 shadow-lg">
       {OPTIONS.map((o, i) => (
         <button
           key={o.channel}
