@@ -310,7 +310,7 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
             <span>{team.league}</span>
           )}
           <span aria-hidden="true">/</span>
-          <Link href={teamHref} className="no-underline hover:text-rd-ink">{team.name}</Link>
+          <Link href={teamHref} className="no-underline hover:text-rd-ink">{teamDisplayName(team)}</Link>
           <span aria-hidden="true">/</span>
           <Link href={crumbHref} className="no-underline hover:text-rd-ink">Promos</Link>
         </nav>
@@ -556,7 +556,7 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
         ) : null}
 
         <section className="mt-6 flex flex-col gap-2.5">
-          <H2>{`More ${team.name} ${ctx.nextTeamPromos.length && ctx.nextTeamPromos.every((p) => p.type === 'giveaway') ? 'giveaways' : 'promos'}`}</H2>
+          <H2>{`More ${teamDisplayName(team)} ${ctx.nextTeamPromos.length && ctx.nextTeamPromos.every((p) => p.type === 'giveaway') ? 'giveaways' : 'promos'}`}</H2>
           {ctx.nextTeamPromos.map((p) => (
             <PromoCard key={p.href} p={p} showTeam={false} />
           ))}

@@ -1,5 +1,6 @@
 import type { Team, Venue } from '@/lib/types';
 import { isSplitSeasonLeague, splitSeasonLabel, SPLIT_SEASON_START_YEAR } from '@/lib/season-label';
+import { teamDisplayName } from '@/lib/team-display-name';
 
 // Hardcoded, never derived from the clock. A page that renders "2027 promo
 // schedule" on 2027-01-01 while its own title, FAQ and JSON-LD still say 2026 is
@@ -130,7 +131,7 @@ export function ZeroPromoFallback({
   // in the table. All six pro leagues have entries today, so this branch is
   // unreachable by a real page; it exists so the failure mode is honest.
   const copy = LEAGUE_COPY[team.league];
-  const venueName = venue?.name ?? `${team.name} home venues`;
+  const venueName = venue?.name ?? `${teamDisplayName(team)} home venues`;
   const city = extractCity(venue?.address) || team.city;
   // The printed season: "2026" on calendar-year leagues (the same text the
   // number always rendered as), "2026-27" on NHL and NBA.

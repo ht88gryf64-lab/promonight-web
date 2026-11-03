@@ -6,6 +6,7 @@ import { archivoHouse } from '@/components/redesign/fonts-house';
 import { coerceEntrySurface } from '@/lib/follow-surface';
 import { getNearTeamIds } from '@/lib/geo/near-teams';
 import { FollowForm } from '@/components/follow/FollowForm';
+import { teamDisplayName } from '@/lib/team-display-name';
 
 // Combined capture page. Server-rendered: loads all teams for the selector and
 // resolves entry context (?team pre-stars a team, ?source tags the surface).
@@ -83,7 +84,7 @@ export default async function FollowPage({
           </h1>
           <p className="mt-4 max-w-xl font-rd text-base leading-relaxed text-white/70">
             {seededTeam
-              ? `Get the ${seededTeam.city} ${seededTeam.name} bobbleheads, theme nights and food deals, plus any other teams you star, in one email a week.`
+              ? `Get the ${teamDisplayName(seededTeam)} bobbleheads, theme nights and food deals, plus any other teams you star, in one email a week.`
               : 'Star your teams and get the giveaways, theme nights and food deals coming up in one email a week.'}
           </p>
         </div>

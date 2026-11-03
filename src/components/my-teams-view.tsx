@@ -20,6 +20,7 @@ import type {
   StarredPromo,
   StarredPromosResponse,
 } from '@/app/api/my-teams/promos/route';
+import { teamDisplayName, teamMainLine } from '@/lib/team-display-name';
 
 // Featured-six default mix used in State A's empty-state grid when geo
 // reordering returns no in-state teams or hasn't loaded yet. Picked across
@@ -549,7 +550,7 @@ function HowItWorksRow({
 }
 
 function FeaturedTeamCard({ team, light = false }: { team: Team; light?: boolean }) {
-  const teamFullName = `${team.city} ${team.name}`;
+  const teamFullName = teamDisplayName(team);
 
   if (light) {
     return (
@@ -565,7 +566,7 @@ function FeaturedTeamCard({ team, light = false }: { team: Team; light?: boolean
           </div>
           <div className="text-[11px] text-rd-ink-soft">{team.city}</div>
           <div className="font-rd text-[15px] font-bold leading-tight text-rd-ink">
-            {team.name}
+            {teamMainLine(team)}
           </div>
         </div>
         <div className="absolute right-2 top-2">
@@ -597,7 +598,7 @@ function FeaturedTeamCard({ team, light = false }: { team: Team; light?: boolean
         </div>
         <div className="text-text-secondary text-[11px]">{team.city}</div>
         <div className="font-outfit font-extrabold text-[15px] text-white leading-tight">
-          {team.name}
+          {teamMainLine(team)}
         </div>
       </div>
       <div className="absolute top-2 right-2">
@@ -763,7 +764,7 @@ function StateC({
 // yet. The site has no season model to tell the two apart, so the label states
 // only what the code tested: nothing in the next 60 days.
 function QuietTeamCard({ team, light = false }: { team: Team; light?: boolean }) {
-  const teamFullName = `${team.city} ${team.name}`;
+  const teamFullName = teamDisplayName(team);
 
   if (light) {
     return (
@@ -780,7 +781,7 @@ function QuietTeamCard({ team, light = false }: { team: Team; light?: boolean })
           <Link href={`/${team.sportSlug}/${team.id}`} className="group block">
             <div className="text-[11px] text-rd-ink-soft">{team.city}</div>
             <div className="font-rd text-[15px] font-bold leading-tight text-rd-ink transition-colors group-hover:text-rd-red">
-              {team.name}
+              {teamMainLine(team)}
             </div>
           </Link>
         </div>
@@ -814,7 +815,7 @@ function QuietTeamCard({ team, light = false }: { team: Team; light?: boolean })
         <Link href={`/${team.sportSlug}/${team.id}`} className="block group">
           <div className="text-text-secondary text-[11px]">{team.city}</div>
           <div className="font-outfit font-extrabold text-[15px] text-white leading-tight group-hover:text-white transition-colors">
-            {team.name}
+            {teamMainLine(team)}
           </div>
         </Link>
       </div>
@@ -879,7 +880,7 @@ function StateB({
   // it silently (review round 3). City and name: Rangers, Kings, Panthers,
   // Jets, Giants and Cardinals each exist in two leagues.
   const failed = starredTeams.filter((t) => failedTeams.has(t.id));
-  const failedNames = failed.length > 0 ? failed.map((t) => `${t.city} ${t.name}`).join(', ') : null;
+  const failedNames = failed.length > 0 ? failed.map((t) => teamDisplayName(t)).join(', ') : null;
 
   // Affiliate cluster anchor. Because `promos` is sorted asc, the first
   // entry is either today's TONIGHT promo (when one exists) or the next
@@ -1061,7 +1062,7 @@ function StarredChipsStrip({ teams, light = false }: { teams: Team[]; light?: bo
               >
                 {SPORT_ICONS[team.league]}
               </span>
-              <span className="font-rd text-[12px] font-bold text-white">{team.name}</span>
+              <span className="font-rd text-[12px] font-bold text-white">{teamDisplayName(team)}</span>
               <span className="font-rd text-[8px] tracking-[0.06em] text-white/70">
                 {team.league}
               </span>
@@ -1091,7 +1092,7 @@ function StarredChipsStrip({ teams, light = false }: { teams: Team[]; light?: bo
               {SPORT_ICONS[team.league]}
             </span>
             <span className="font-outfit font-extrabold text-[12px] text-white">
-              {team.name}
+              {teamDisplayName(team)}
             </span>
             <span className="font-mono text-[8px] text-white/70 tracking-[0.5px]">
               {team.league}
@@ -1157,7 +1158,7 @@ function TonightSection({
                 <span />
               )}
               <span className="inline-flex items-center gap-1.5 rounded-full border border-rd-line bg-rd-cream px-2 py-0.5 font-rd text-[10px] text-rd-ink-soft">
-                {SPORT_ICONS[team.league]} {team.abbreviation} · {team.name}
+                {SPORT_ICONS[team.league]} {team.abbreviation} · {teamDisplayName(team)}
               </span>
             </div>
             <div className="flex items-center gap-3">
@@ -1212,7 +1213,7 @@ function TonightSection({
               <span />
             )}
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-black/40 text-white text-[10px] font-mono tracking-[0.5px]">
-              {SPORT_ICONS[team.league]} {team.abbreviation} · {team.name}
+              {SPORT_ICONS[team.league]} {team.abbreviation} · {teamDisplayName(team)}
             </span>
           </div>
           <div className="flex items-center gap-3 mb-4">
@@ -1450,7 +1451,7 @@ function ComingUpRow({
               {PROMO_TYPE_LABELS[promo.type]}
             </span>
             <span className="text-[10px] text-rd-ink-faint">
-              {team.abbreviation} · {team.name}
+              {team.abbreviation} · {teamDisplayName(team)}
             </span>
           </div>
         </div>
@@ -1504,7 +1505,7 @@ function ComingUpRow({
             {PROMO_TYPE_LABELS[promo.type]}
           </span>
           <span className="text-text-dim text-[10px]">
-            {team.abbreviation} · {team.name}
+            {team.abbreviation} · {teamDisplayName(team)}
           </span>
         </div>
       </div>

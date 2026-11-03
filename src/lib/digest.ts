@@ -4,6 +4,7 @@ import { PROMO_TYPE_LABELS, SPORT_ICONS, type PromoWithTeam } from './types';
 import { addDaysYmd, siteYmd } from './site-today';
 import { promoDisplayOpponent, promoDisplayTime } from './promo-helpers';
 import { promoPageHref } from './promo-page-href';
+import { teamDisplayName } from '@/lib/team-display-name';
 
 // Weekly-digest assembly. The window's promos are fetched ONCE per run via
 // getPromosInDateRange (a single deduped collection-group query, deduped by
@@ -74,7 +75,7 @@ function toDigestPromo(p: PromoWithTeam): DigestPromo {
     time: promoDisplayTime(p),
     opponent: promoDisplayOpponent(p),
     teamId: p.team.id,
-    teamName: `${p.team.city} ${p.team.name}`,
+    teamName: teamDisplayName(p.team),
     league: p.team.league,
     leagueIcon: SPORT_ICONS[p.team.league] ?? '',
     sportSlug: p.team.sportSlug,

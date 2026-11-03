@@ -5,6 +5,7 @@ import { TeamCard } from './team-card';
 import type { Team } from '@/lib/types';
 import { LEAGUE_ORDER } from '@/lib/types';
 import { event } from '@/lib/analytics';
+import { teamDisplayName } from '@/lib/team-display-name';
 
 interface TeamSearchProps {
   teams: Team[];
@@ -21,6 +22,7 @@ export function TeamSearch({ teams, promoCounts, initialLeague }: TeamSearchProp
     const matchesQuery =
       !query ||
       `${t.city} ${t.name}`.toLowerCase().includes(query.toLowerCase()) ||
+      teamDisplayName(t).toLowerCase().includes(query.toLowerCase()) ||
       t.abbreviation.toLowerCase().includes(query.toLowerCase());
     return matchesLeague && matchesQuery;
   });

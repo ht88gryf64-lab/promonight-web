@@ -11,6 +11,7 @@ import { isCfbHubLive } from '@/lib/league-hubs';
 import { CfbConferenceSubRow } from '@/components/cfb/CfbConferenceSubRow';
 import { StarToggle } from './star-toggle';
 import { TeamCard } from './team-card';
+import { teamDisplayName, teamMainLine } from '@/lib/team-display-name';
 
 // One league's block on the light /teams page: its divisions (or conferences)
 // in hub order, as team ids into `teams`. Built on the server by
@@ -360,7 +361,7 @@ function TeamBrowserCard({
   promoCount: number;
 }) {
   const hasPromos = promoCount > 0;
-  const teamFullName = `${team.city} ${team.name}`;
+  const teamFullName = teamDisplayName(team);
 
   return (
     <article className="relative group bg-bg-card border border-border-subtle rounded-2xl overflow-hidden transition-all hover:-translate-y-0.5 hover:border-border-hover">
@@ -391,7 +392,7 @@ function TeamBrowserCard({
         <div>
           <div className="text-text-secondary text-xs">{team.city}</div>
           <div className="font-outfit font-extrabold text-[17px] text-white leading-tight mt-0.5">
-            {team.name}
+            {teamMainLine(team)}
           </div>
         </div>
         <div className="mt-3 text-[11px] font-mono">

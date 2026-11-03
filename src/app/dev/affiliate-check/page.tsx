@@ -7,6 +7,7 @@ import {
   isPartnerActive,
   TICKET_VENDOR,
 } from '@/lib/affiliates';
+import { teamDisplayName } from '@/lib/team-display-name';
 
 export const dynamic = 'force-dynamic';
 
@@ -97,7 +98,7 @@ export default async function AffiliateCheckPage() {
             <tr key={t.id}>
               <td style={cellStyle}>{t.league}</td>
               <td style={cellStyle}>
-                {t.city} {t.name}
+                {teamDisplayName(t)}
               </td>
               <td style={cellStyle}>{t.id}</td>
               <td style={cellStyle}>{t.ticketmasterSlug ?? '—'}</td>

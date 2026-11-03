@@ -5,6 +5,7 @@ import { useState } from 'react';
 import type { Team } from '@/lib/types';
 import { LEAGUE_ORDER } from '@/lib/types';
 import { StarToggleInline } from './star-toggle';
+import { teamDisplayName } from '@/lib/team-display-name';
 
 export function FooterTeamSitemap({ teams }: { teams: Team[] }) {
   const [open, setOpen] = useState(false);
@@ -18,7 +19,7 @@ export function FooterTeamSitemap({ teams }: { teams: Team[] }) {
     byLeague.set(t.league, list);
   }
   for (const list of byLeague.values()) {
-    list.sort((a, b) => a.city.localeCompare(b.city));
+    list.sort((a, b) => teamDisplayName(a).localeCompare(teamDisplayName(b)));
   }
 
   const activeList = byLeague.get(activeLeague) ?? [];
@@ -69,7 +70,7 @@ export function FooterTeamSitemap({ teams }: { teams: Team[] }) {
               <div key={t.id} className="flex items-center gap-1.5 min-w-0">
                 <StarToggleInline
                   teamSlug={t.id}
-                  teamName={`${t.city} ${t.name}`}
+                  teamName={teamDisplayName(t)}
                   league={t.league}
                   sport={t.sportSlug}
                   placement="footer_team_list"
@@ -79,7 +80,7 @@ export function FooterTeamSitemap({ teams }: { teams: Team[] }) {
                   href={`/${t.sportSlug}/${t.id}`}
                   className="text-text-secondary text-sm hover:text-white transition-colors truncate min-w-0"
                 >
-                  {t.city} {t.name}
+                  {teamDisplayName(t)}
                 </Link>
               </div>
             ))}

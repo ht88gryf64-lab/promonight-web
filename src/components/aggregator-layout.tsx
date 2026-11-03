@@ -14,6 +14,7 @@ import { FollowCTA } from './follow/FollowCTA';
 import { CaptureTrigger } from './capture/CaptureTrigger';
 import { EMPTY_CHIP_POOL } from '@/lib/capture/chips';
 import { isCaptureTriggerEnabled } from '@/lib/capture/gate';
+import { teamDisplayName } from '@/lib/team-display-name';
 
 export interface AggregatorGroup {
   label: string;
@@ -329,7 +330,7 @@ export function AggregatorJsonLd({
       itemListElement: items.map((p, i) => ({
         '@type': 'ListItem',
         position: i + 1,
-        name: `${p.team.city} ${p.team.name}: ${p.title}`,
+        name: `${teamDisplayName(p.team)}: ${p.title}`,
         url: `https://www.getpromonight.com/${p.team.sportSlug}/${p.team.id}`,
       })),
     },

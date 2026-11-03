@@ -32,6 +32,7 @@ import {
   type NflClubCounts,
 } from './nfl-week';
 import { dedupePromos, isUpcomingPromo, isVisiblePromo, resolveIcon, todayYmd } from './promo-helpers';
+import { teamDisplayName } from './team-display-name';
 import { addDaysYmd, siteTodayPlusDays, siteTodayYmd, siteYmd } from './site-today';
 import { VENUE_RESOLUTION_MAP } from './venue-resolution-map';
 import { VENUE_LOCATIONS_STATIC } from './venue-locations';
@@ -1795,7 +1796,7 @@ export async function getLeagueTeamsGrouped(league: string): Promise<HubTeamGrou
   const teams = await getAllTeams();
   const groups = groupLeagueTeams(teams.filter((t) => t.league === league), league);
   for (const g of groups) {
-    g.teams.sort((a, b) => `${a.city} ${a.name}`.localeCompare(`${b.city} ${b.name}`));
+    g.teams.sort((a, b) => teamDisplayName(a).localeCompare(teamDisplayName(b)));
   }
   return groups;
 }

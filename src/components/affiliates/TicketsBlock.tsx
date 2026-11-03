@@ -1,6 +1,7 @@
 import type { Team } from '@/lib/types';
 import type { AnalyticsSurface } from '@/lib/analytics';
 import { TicketmasterCTA } from './TicketmasterCTA';
+import { teamDisplayName } from '@/lib/team-display-name';
 
 export type TicketsBlockPlacement =
   | 'team_page_hero'
@@ -85,7 +86,7 @@ export function TicketsBlock({
   }
 
   // Section variant — preserved team-page hero layout.
-  const teamName = `${team.city} ${team.name}`;
+  const teamName = teamDisplayName(team);
 
   return (
     <section className="py-8 px-6 border-t border-border-subtle">
