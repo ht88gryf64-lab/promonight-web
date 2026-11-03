@@ -19,7 +19,7 @@ const MLS: [string, string, string][] = [
   ['Dallas', 'FC Dallas', 'FC Dallas'],
   ['Houston', 'Dynamo FC', 'Houston Dynamo FC'],
   ['Miami', 'Inter CF', 'Inter Miami CF'],
-  ['Los Angeles', 'Galaxy', 'Los Angeles Galaxy'],
+  ['Los Angeles', 'Galaxy', 'LA Galaxy'],
   ['Los Angeles', 'LAFC', 'LAFC'],
   ['Minnesota', 'United FC', 'Minnesota United FC'],
   ['Nashville', 'Nashville SC', 'Nashville SC'],

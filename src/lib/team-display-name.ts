@@ -16,6 +16,7 @@ const BRAND_BY_STORED_PAIR: Readonly<Record<string, string>> = {
   'Miami|Inter CF': 'Inter Miami CF',
   'Kansas City|Sporting': 'Sporting Kansas City',
   'Los Angeles|LAFC': 'LAFC',
+  'Los Angeles|Galaxy': 'LA Galaxy',
 };
 
 const fold = (s: string): string => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
