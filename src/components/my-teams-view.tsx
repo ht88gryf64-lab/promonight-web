@@ -20,7 +20,7 @@ import type {
   StarredPromo,
   StarredPromosResponse,
 } from '@/app/api/my-teams/promos/route';
-import { teamDisplayName } from '@/lib/team-display-name';
+import { teamDisplayName, teamMainLine } from '@/lib/team-display-name';
 
 // Featured-six default mix used in State A's empty-state grid when geo
 // reordering returns no in-state teams or hasn't loaded yet. Picked across
@@ -566,7 +566,7 @@ function FeaturedTeamCard({ team, light = false }: { team: Team; light?: boolean
           </div>
           <div className="text-[11px] text-rd-ink-soft">{team.city}</div>
           <div className="font-rd text-[15px] font-bold leading-tight text-rd-ink">
-            {team.name}
+            {teamMainLine(team)}
           </div>
         </div>
         <div className="absolute right-2 top-2">
@@ -598,7 +598,7 @@ function FeaturedTeamCard({ team, light = false }: { team: Team; light?: boolean
         </div>
         <div className="text-text-secondary text-[11px]">{team.city}</div>
         <div className="font-outfit font-extrabold text-[15px] text-white leading-tight">
-          {team.name}
+          {teamMainLine(team)}
         </div>
       </div>
       <div className="absolute top-2 right-2">
@@ -781,7 +781,7 @@ function QuietTeamCard({ team, light = false }: { team: Team; light?: boolean })
           <Link href={`/${team.sportSlug}/${team.id}`} className="group block">
             <div className="text-[11px] text-rd-ink-soft">{team.city}</div>
             <div className="font-rd text-[15px] font-bold leading-tight text-rd-ink transition-colors group-hover:text-rd-red">
-              {team.name}
+              {teamMainLine(team)}
             </div>
           </Link>
         </div>
@@ -815,7 +815,7 @@ function QuietTeamCard({ team, light = false }: { team: Team; light?: boolean })
         <Link href={`/${team.sportSlug}/${team.id}`} className="block group">
           <div className="text-text-secondary text-[11px]">{team.city}</div>
           <div className="font-outfit font-extrabold text-[15px] text-white leading-tight group-hover:text-white transition-colors">
-            {team.name}
+            {teamMainLine(team)}
           </div>
         </Link>
       </div>

@@ -19,7 +19,7 @@ export function FooterTeamSitemap({ teams }: { teams: Team[] }) {
     byLeague.set(t.league, list);
   }
   for (const list of byLeague.values()) {
-    list.sort((a, b) => a.city.localeCompare(b.city));
+    list.sort((a, b) => teamDisplayName(a).localeCompare(teamDisplayName(b)));
   }
 
   const activeList = byLeague.get(activeLeague) ?? [];

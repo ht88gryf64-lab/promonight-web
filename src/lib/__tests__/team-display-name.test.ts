@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { teamDisplayName } from '../team-display-name';
+import { teamDisplayName, teamMainLine } from '../team-display-name';
 
 // Every MLS team record as stored on 2026-11-03 (city, name) and the club's
 // own brand. A wrong pair here was a wrong name on live pages.
@@ -52,6 +52,16 @@ test('ordinary city + nickname pairs are unchanged', () => {
   assert.equal(teamDisplayName({ city: 'Chicago', name: '' }), 'Chicago');
   // A city that is only part of a word is not "in" the name.
   assert.equal(teamDisplayName({ city: 'Ann', name: 'Annapolis Club' }), 'Ann Annapolis Club');
+});
+
+test('stacked cards: city over the main line never spells a false name', () => {
+  for (const [city, name, brand] of MLS) {
+    const main = teamMainLine({ city, name });
+    assert.ok(main === brand || `${city} ${main}` === brand, `${city} / ${main}`);
+  }
+  assert.equal(teamMainLine({ city: 'Kansas City', name: 'Royals' }), 'Royals');
+  assert.equal(teamMainLine({ city: 'Salt Lake', name: 'Real' }), 'Real Salt Lake');
+  assert.equal(teamMainLine({ city: 'Austin', name: 'Austin FC' }), 'Austin FC');
 });
 
 // GUARD: a reader-facing city + name join (template literal or JSX) is how the

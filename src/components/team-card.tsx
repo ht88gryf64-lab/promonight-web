@@ -6,7 +6,7 @@ import { SPORT_ICONS } from '@/lib/types';
 import { event, track } from '@/lib/analytics';
 import { StarToggle } from './star-toggle';
 import type { StarPlacement } from '@/hooks/use-starred-teams';
-import { teamDisplayName } from '@/lib/team-display-name';
+import { teamDisplayName, teamMainLine } from '@/lib/team-display-name';
 
 interface TeamCardProps {
   team: Team;
@@ -95,7 +95,7 @@ export function TeamCard({
         <div className={light ? 'font-rd' : 'text-white font-body'}>
           <div className={light ? 'text-rd-ink-soft text-xs' : 'text-text-secondary text-xs'}>{team.city}</div>
           <div className={light ? 'text-lg font-bold text-rd-ink transition-colors' : 'text-lg font-bold group-hover:text-white transition-colors'}>
-            {team.name}
+            {teamMainLine(team)}
           </div>
         </div>
         <div

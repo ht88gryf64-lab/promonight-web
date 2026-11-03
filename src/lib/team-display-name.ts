@@ -31,3 +31,16 @@ export function teamDisplayName(team: { city?: string | null; name?: string | nu
   if (new RegExp(`(^|[^a-z0-9])${escaped}($|[^a-z0-9])`).test(fold(name))) return name;
   return `${city} ${name}`;
 }
+
+// The big line of a card that stacks the city (small) over the club (big).
+// The nickname alone when city + nickname is the club's name ("Kansas City" /
+// "Royals"); otherwise the full brand, so the pair never spells a false name
+// ("Salt Lake" / "Real Salt Lake", "Austin" / "Austin FC", not "Real", not
+// "Austin FC" read as "Austin Austin FC").
+export function teamMainLine(team: { city?: string | null; name?: string | null }): string {
+  const city = team.city?.trim() ?? '';
+  const name = team.name?.trim() ?? '';
+  if (!city) return name;
+  const display = teamDisplayName(team);
+  return display === `${city} ${name}` ? name : display;
+}
