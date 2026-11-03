@@ -11,6 +11,8 @@ import {
   type AffiliatePartner,
   type AnalyticsSurface,
 } from '@/lib/analytics';
+import { withShareSubId2 } from '@/lib/promo-share';
+import { useShareSession } from '@/lib/promo-share-session';
 
 export type TrackedAffiliateLinkProps = {
   href: string;
@@ -57,10 +59,19 @@ export function TrackedAffiliateLink({
   ariaLabel,
   ticketLinkLevel,
 }: TrackedAffiliateLinkProps) {
-  const taggedHref = buildAffiliateUrl(partner as AffiliateUrlPartner, href, {
+  const builtHref = buildAffiliateUrl(partner as AffiliateUrlPartner, href, {
     surface,
     promoId,
   });
+  // SHARED-LINK SESSIONS (2026-11-03). A visit that arrived on a shared promo
+  // link adds subId2=share to every Impact link for the rest of the tab's
+  // session (src/lib/promo-share-session.ts); subId1 is untouched, so the
+  // surface comparison reads exactly as before. A self-open adds nothing.
+  // Null on the server and during hydration, so the served HTML never
+  // carries subId2 and hydration cannot mismatch.
+  const shareSession = useShareSession();
+  const taggedHref =
+    shareSession && !shareSession.selfOpen ? withShareSubId2(builtHref, partner) : builtHref;
   // True when the partner's tracking-ID env var is set, i.e. the outbound
   // URL is commissionable. False during pre-approval — click still fires.
   const trackingActive = isPartnerActive(partner as AffiliateUrlPartner);
@@ -77,6 +88,7 @@ export function TrackedAffiliateLink({
       placement: placement ?? surface,
       affiliate_tracking_active: trackingActive,
       ...(ticketLinkLevel ? { ticket_link_level: ticketLinkLevel } : {}),
+      ...(shareSession ? { share_id: shareSession.shareId, share_self_open: shareSession.selfOpen } : {}),
     });
   };
 

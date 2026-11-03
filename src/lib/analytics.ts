@@ -63,6 +63,12 @@ export type AnalyticsEvent =
   | 'newsletter_signup'
   | 'search_query'
   | 'share_initiated'
+  // Promo page sharing (2026-11-03): a tap on either Share control, a share
+  // that went out (native sheet resolved, or a desktop option chosen), and a
+  // visit that arrived on a shared link. src/lib/promo-share.ts.
+  | 'share_click'
+  | 'share_complete'
+  | 'share_landing'
   | 'game_day_view'
   | 'game_tap'
   | 'away_game_expanded'
@@ -405,6 +411,10 @@ export type AffiliateClickProperties = {
   // performer page. Absent on every non-ticket partner, so their events keep
   // their exact shape.
   ticket_link_level?: 'event' | 'team';
+  // Shared-link sessions only (2026-11-03): the share id the session arrived
+  // on, and whether it was the visitor's own share. Absent otherwise.
+  share_id?: string;
+  share_self_open?: boolean;
 };
 
 export type AppDownloadClickProperties = {
@@ -607,6 +617,33 @@ export type ShareInitiatedProperties = {
   promo_type?: string;
   team_slug?: string;
   sport?: Sport;
+};
+
+// Promo page share events. The property names are camelCase BY THE BRIEF
+// (2026-11-03), unlike the rest of this file; the dashboard reads them as
+// named. No user data: shareId is 8 random characters.
+export type PromoShareEventProperties = {
+  shareId: string;
+  /** share_click: 'native' when the native sheet opens, 'menu' when the
+   *  desktop popover does. share_complete: the channel that went out. */
+  channel: 'native' | 'menu' | 'copy' | 'sms' | 'email' | 'x' | 'facebook';
+  promoId: string;
+  team: string;
+  league: string;
+  pageSlug: string;
+  /** Which control: the row button beside Get tickets, or the image icon. */
+  placement: 'cta_row' | 'image';
+};
+
+export type ShareLandingProperties = {
+  share_id: string;
+  share_channel: string;
+  share_promo_id: string;
+  share_self_open: boolean;
+  promoId: string;
+  team: string;
+  league: string;
+  pageSlug: string;
 };
 
 export type GameDayViewProperties = {
@@ -1073,6 +1110,9 @@ export type EventPropertiesMap = {
   newsletter_signup: NewsletterSignupProperties;
   search_query: SearchQueryProperties;
   share_initiated: ShareInitiatedProperties;
+  share_click: PromoShareEventProperties;
+  share_complete: PromoShareEventProperties;
+  share_landing: ShareLandingProperties;
   game_day_view: GameDayViewProperties;
   game_tap: GameTapProperties;
   away_game_expanded: AwayGameExpandedProperties;
@@ -1482,6 +1522,8 @@ export type AffiliateClickPayload = {
   placement?: string;
   affiliate_tracking_active?: boolean;
   ticket_link_level?: 'event' | 'team';
+  share_id?: string;
+  share_self_open?: boolean;
 };
 
 export const trackAffiliateClick = (payload: AffiliateClickPayload) => {
@@ -1512,6 +1554,8 @@ export const trackAffiliateClick = (payload: AffiliateClickPayload) => {
     is_hot_promo: payload.is_hot_promo,
     affiliate_tracking_active: payload.affiliate_tracking_active,
     ...(payload.ticket_link_level ? { ticket_link_level: payload.ticket_link_level } : {}),
+    // Shared-link sessions only, so every other click keeps its exact shape.
+    ...(payload.share_id ? { share_id: payload.share_id, share_self_open: payload.share_self_open === true } : {}),
   });
 };
 

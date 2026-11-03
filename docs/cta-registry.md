@@ -47,6 +47,46 @@ when retiring a CTA.
 | ticketnetwork_promo_page_primary | promo_page | cta_row_primary | Get tickets | TicketNetwork event page of the next date's game when the pipeline matched it (games.tnEventUrl), else the team performer page; Impact tracked, subId1 web_promo_page_{team} | affiliate_click (surface web_promo_page, placement promo_page_primary, ticket_link_level event / team) | 2026-11-02 | active |
 | ticketmaster_promo_page_secondary | promo_page | cta_row_primary_text_link | Also on Ticketmaster | ticketmaster.com team page (Impact wrap when env set) | affiliate_click (surface web_promo_page, placement promo_page_ticketmaster, ticket_link_level team) | 2026-11-02 | active |
 | ticketnetwork_promo_page_date | promo_page | series_date_row (upcoming dates only) | Tickets | TicketNetwork event page of that date's game when matched, else the team performer page; Impact tracked, subId1 web_promo_date_{team} | affiliate_click (surface web_promo_page, placement promo_page_date, ticket_link_level event / team) | 2026-11-02 | active |
+| share_promo_page_row | promo_page | cta_row_primary_right (same row as Get tickets, right of it) | Share (icon only below 340px) | navigator.share sheet where it exists, else a popover: Copy link, Text (sms:), Email (mailto:), X intent, Facebook sharer. Shared URL = canonical + utm_source=share, utm_medium={native,copy,sms,email,x,facebook}, utm_campaign=promo_page, s={8-char share id} | share_click (placement cta_row) + share_complete | 2026-11-03 | active |
+| share_promo_page_image | promo_page | promo_image_top_right_overlay | (share icon, aria-label "Share this promo") | same as share_promo_page_row | share_click (placement image) + share_complete | 2026-11-03 | active |
+
+## Promo page share attribution (2026-11-03)
+
+Both Share controls (`share_promo_page_row`, `share_promo_page_image`) live in
+`src/components/promo-page/PromoShare.tsx`; the pure rules are
+`src/lib/promo-share.ts`, the per-tab storage `src/lib/promo-share-session.ts`.
+
+- **Share id.** 8 random characters `[a-z0-9]` from the CSPRNG, minted on the
+  tap, spent by the first channel that goes out. No user data, never derived
+  from the distinct_id. The shared URL carries only the share id, the channel
+  and the fixed campaign. On a Vercel preview the URL is the preview host.
+- **Copy.** Share text `{Promo name}: {Team} vs {Opponent}, {Day Mon D}. All
+  the details:` + URL; email subject `{Promo name} at the {Team} game, {Mon
+  D}`. Stored fields only; a missing opponent or date drops its part.
+- **Events.** `share_click` on the tap (channel `native` or `menu`),
+  `share_complete` when `navigator.share` resolves (never on AbortError) or a
+  desktop option is chosen (copy only once the clipboard write succeeds).
+  Properties: shareId, channel, promoId, team, league, pageSlug, placement.
+- **Landing.** A URL with a valid `s` and utm_source=share sets the tab's
+  share session, registers the PostHog session properties `share_id`,
+  `share_channel`, `share_promo_id`, `share_self_open`, fires one
+  `share_landing`, then strips `s` and every `utm_*` with
+  `history.replaceState`.
+- **Self-open.** A share id this browser minted (localStorage
+  `pn_share_created`, id to distinct_id) opened under the same distinct_id is
+  `share_self_open=true`: no subId2, and excluded from the "Promo sharing"
+  dashboard. The dashboard also excludes sessions whose distinct_id made the
+  share_complete, which catches what the browser record cannot.
+- **subId2.** In a shared-link session (not a self-open) every Impact link
+  rendered by `TrackedAffiliateLink` adds `subId2=share`: TicketNetwork,
+  Ticketmaster (Impact wrap only) and Fanatics. subId1 and Ticketmaster's
+  sharedid are untouched. SpotHero (HasOffers) and Expedia (in-house) are not
+  Impact and are never touched. Added on the client after hydration, so no
+  served HTML ever carries subId2. `affiliate_click` in a shared session
+  carries `share_id` and `share_self_open`.
+- **og:image.** The share card, `/api/share-card/{promoId}?team={teamId}&v={page
+  stamp ms}`, on every promo page variant; the Event JSON-LD image is still the
+  tier image.
 
 ## TicketNetwork subId1 (ruling 2026-11-02)
 

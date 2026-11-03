@@ -77,20 +77,15 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     alternates: { canonical: head.canonical },
     // A complete openGraph, never a partial one: the root's would otherwise be
     // inherited wholesale and og:url would be the homepage (src/lib/og.ts).
-    // The image is the tier image, the same one the Event schema carries.
+    // The image is the share card (2026-11-03), on every variant (single,
+    // series, played, removed); the Event schema keeps the tier image.
     openGraph: {
       type: 'website',
       siteName: 'PromoNight',
       url: head.canonical,
       title: socialTitle,
       description: head.description,
-      images: [
-        {
-          url: head.imageUrl,
-          ...(head.image.width && head.image.height ? { width: head.image.width, height: head.image.height } : {}),
-          alt: head.image.alt,
-        },
-      ],
+      images: [{ url: head.shareCard.url, width: head.shareCard.width, height: head.shareCard.height, alt: head.shareCard.alt }],
     },
     twitter: {
       card: 'summary_large_image',
@@ -98,7 +93,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
       creator: '@promo_night_app',
       title: socialTitle,
       description: head.description,
-      images: [head.imageUrl],
+      images: [{ url: head.shareCard.url, alt: head.shareCard.alt }],
     },
     robots: head.indexable ? undefined : { index: false, follow: true },
   };
