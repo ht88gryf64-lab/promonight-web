@@ -102,12 +102,12 @@ function clause(s: SeriesView, sp: Speech): string | null | 'unset' {
 function mlsClause(s: SeriesView, a: Club, b: Club): string | null {
   const single = s.single === true;
   if (s.status === 'final') {
-    const w = a.won ? a : b.won ? b : null;
-    if (!w) return null;
-    const l = w === a ? b : a;
-    if (w.wins <= l.wins) return null;
-    if (single) return s.matchScore ? `${w.label} beat ${l.label} ${s.matchScore}` : `${w.label} beat ${l.label}`;
-    return `${w.label} beat ${l.label} ${w.wins}-${l.wins} in the series`;
+    const winner = a.won ? a : b.won ? b : null;
+    if (!winner) return null;
+    const loser = winner === a ? b : a;
+    if (winner.wins <= loser.wins) return null;
+    if (single) return s.matchScore ? `${winner.label} beat ${loser.label} ${s.matchScore}` : `${winner.label} beat ${loser.label}`;
+    return `${winner.label} beat ${loser.label} ${winner.wins}-${loser.wins} in the series`;
   }
   if (a.won || b.won) return null;
   if (a.wins === b.wins) {
@@ -115,9 +115,9 @@ function mlsClause(s: SeriesView, a: Club, b: Club): string | null {
     return single ? null : `${a.label} and ${b.label} are tied ${a.wins}-${b.wins} in the series`;
   }
   if (single) return null;
-  const lead = a.wins > b.wins ? a : b;
-  const trail = lead === a ? b : a;
-  return `${lead.label} ${mlsVerb(lead.teamId, 'lead', 'leads')} ${trail.label} ${lead.wins}-${trail.wins} in the series`;
+  const leader = a.wins > b.wins ? a : b;
+  const trailer = leader === a ? b : a;
+  return `${leader.label} ${mlsVerb(leader.teamId, 'lead', 'leads')} ${trailer.label} ${leader.wins}-${trailer.wins} in the series`;
 }
 
 /** Has the series begun? For MLS only a result counts: a game under way is

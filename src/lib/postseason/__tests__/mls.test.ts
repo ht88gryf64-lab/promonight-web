@@ -141,6 +141,9 @@ const REFUSALS: [string, (g: RawGame) => void][] = [
   ['a final game with no score', (g) => Object.assign(g, { homeScore: null })],
   ['a fractional shootout score', (g) => Object.assign(g, { homeScore: 1, awayScore: 1, decidedBy: 'penalties', homeShootout: 4.5, awayShootout: 3 })],
   ['a winner who scored fewer', (g) => Object.assign(g, { winnerSide: g.winnerSide === 'higher' ? 'lower' : 'higher' })],
+  // Level, in regulation, with the winner set to the side the score check
+  // would accept (the away side is not behind): only the level rule refuses it.
+  ['a level regulation score whatever the winner', (g) => Object.assign(g, { homeScore: 1, awayScore: 1, winnerSide: 'lower' })],
 ];
 
 for (const [what, edit] of REFUSALS) {
@@ -167,6 +170,13 @@ test('CONTRACT: refuses a decidedBy or a shootout score on a game that is not fi
     Object.assign(raw(d, 'E-WC').games[0], extra);
     assert.equal(mls(d), null, JSON.stringify(extra));
   }
+});
+
+test('CONTRACT: a stored label holding an MLS-shaped key is never shown, even a key the document does not have', () => {
+  const { v } = viewOf(MLS_FIXTURE.early, MLS_AT.early, (d) => {
+    Object.assign(raw(d, 'W-SF-B').higher, { placeholder: 'Winner of W-R2-3', feederSeriesKey: null, candidates: null });
+  });
+  assert.equal(seriesById(v, 'conference_semifinals-4').higher.label, 'To be decided');
 });
 
 // ---- One-game rounds and shootouts ----
@@ -348,6 +358,21 @@ test('WHERE THINGS STAND: every state, true and with no article before MLS names
   );
   assert.equal(at(MLS_FIXTURE.semisDone, MLS_AT.semisDone), 'Next round: Conference Finals. It opens with New York City FC at Inter Miami, Sat, Nov 28, 6:00 PM ET.');
   assert.equal(at(MLS_FIXTURE.final, MLS_AT.final), 'Inter Miami CF won the 2026 MLS Cup, beating Vancouver Whitecaps FC 3-1.');
+});
+
+test('WHERE THINGS STAND: a club waiting on the Wild Card winner, with no article and a singular verb', () => {
+  // Round One under way (Vancouver 3, Dallas 0 in Game 1) before the Wild
+  // Card is played: the 1 seeds wait on its winner.
+  const now = new Date('2026-10-21T12:00:00Z');
+  const { b, v } = viewOf(MLS_FIXTURE.early, now, (d) => {
+    const s = raw(d, 'W-R1-2');
+    Object.assign(s.games[0], { status: 'final', homeScore: 3, awayScore: 0, winnerSide: 'higher', decidedBy: 'regulation' });
+    Object.assign(s, { status: 'live', wins: { higher: 1, lower: 0 } });
+  });
+  const line = standingLine(v, gameStarts(b), now) ?? '';
+  assert.ok(line.startsWith('Round One: Philadelphia Union awaits the Chicago Fire / Orlando City winner; '), line);
+  assert.ok(line.includes('San Diego FC awaits the Portland Timbers / Real Salt Lake winner'), line);
+  assert.ok(line.includes('Vancouver Whitecaps leads FC Dallas 1-0 in the series') === false && line.includes('Vancouver Whitecaps lead FC Dallas 1-0 in the series'), line);
 });
 
 test('WHERE THINGS STAND: one-game rounds state the match, and a game not yet completed says so', () => {

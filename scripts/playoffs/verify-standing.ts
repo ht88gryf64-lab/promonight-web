@@ -17,6 +17,9 @@
 // and refetches, up to three minutes.
 import { db } from '../../src/lib/firebase';
 import { getAllTeams } from '../../src/lib/data';
+// MLS names: the short-name table (data) and the display-name rule are the
+// page's; every MLS sentence below is written again here from the brief.
+import { MLS_SHORT_NAMES, teamDisplayName } from '../../src/lib/team-display-name';
 
 const BASE = (process.env.BASE || '').replace(/\/$/, '');
 const BYPASS = process.env.BYPASS || '';
@@ -28,7 +31,7 @@ const SEASON = 2026;
 const ET = 'America/New_York';
 
 type Doc = Record<string, any>;
-type Team = { name: string; full: string; abbr: string | null };
+type Team = { name: string; full: string; abbr: string | null; mlsPlural?: boolean };
 
 const fmt = (d: Date, o: Intl.DateTimeFormatOptions) => Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: ET, ...o }).formatToParts(d).map((p) => [p.type, p.value]));
 const ymd = (d: Date) => { const p = fmt(d, { year: 'numeric', month: '2-digit', day: '2-digit' }); return `${p.year}-${p.month}-${p.day}`; };
@@ -44,10 +47,27 @@ const isInstant = (v: unknown): v is string => typeof v === 'string' && /^\d{4}-
 const asDate = (v: any): Date | null => (v == null ? null : typeof v === 'string' ? new Date(v) : typeof v.toDate === 'function' ? v.toDate() : null);
 // The pipeline's series keys ("AL-WC-B", "NL-CS", "R1-1v8", "SF-A"). A stored
 // label holding one is never shown; the page says "To be decided".
-const SERIES_KEY = [/\b(?:AL|NL)-(?:WC|DS)-[A-Z]\b/, /\b(?:AL|NL)-CS\b/, /\bR\d-\dv\d\b/, /\bSF-[A-Z]\b/];
+const SERIES_KEY = [/\b(?:AL|NL)-(?:WC|DS)-[A-Z]\b/, /\b(?:AL|NL)-CS\b/, /\bR\d-\dv\d\b/, /\bSF-[A-Z]\b/, /\b[EW]-(?:WC|CF|R1-[1-4]|SF-[AB])\b/];
 const ONE = new Set(['Liberty', 'Dream', 'Fever', 'Lynx', 'Mercury', 'Sky', 'Storm', 'Sun', 'Tempo', 'Fire']);
 
+/** An MLS one-game result from the winner's side, from the row: "2-1", "2-1
+ *  after extra time", "4-3 on penalties after a 1-1 draw". */
+function mlsScore(s: Doc, winner: 'higher' | 'lower'): string | null {
+  const g = (s.games as Doc[]).find((x) => x.status === 'final' && x.winnerSide === winner);
+  if (!g || (g.homeSide !== 'higher' && g.homeSide !== 'lower') || g.homeScore == null || g.awayScore == null) return null;
+  const home = g.homeSide === winner;
+  const [w, l] = home ? [g.homeScore, g.awayScore] : [g.awayScore, g.homeScore];
+  if (g.decidedBy === 'penalties') return `${home ? g.homeShootout : g.awayShootout}-${home ? g.awayShootout : g.homeShootout} on penalties after a ${w}-${l} draw`;
+  return g.decidedBy === 'extra_time' ? `${w}-${l} after extra time` : `${w}-${l}`;
+}
+
 function expectedLine(doc: Doc, teams: Map<string, Team>, now: Date): string | null {
+  const mls = doc.league === 'MLS';
+  // MLS: a game under way is shown as its scheduled game.
+  if (mls) doc = { ...doc, series: (doc.series as Doc[]).map((s) => ({ ...s, games: s.games.map((g: Doc) => (g.status === 'live' ? { ...g, status: 'scheduled' } : g)) })) };
+  const the = (n: string) => (mls ? n : `the ${n}`);
+  const one = (s: Doc) => mls && s.bestOf === 1;
+  const plural = (t: Team | null) => !!(t && t.mlsPlural);
   const series: Doc[] = doc.series;
   const winnerSlug = (s: Doc): string | null => (s.winner === 'higher' || s.winner === 'lower' ? s[s.winner]?.slug ?? null : s.winner ?? null);
   // A slot as the page names it: a club, a resolved feeder winner, "A / B
@@ -102,10 +122,14 @@ function expectedLine(doc: Doc, teams: Map<string, Team>, now: Date): string | n
     const W = teams.get(s[side].slug);
     const L = teams.get(s[other].slug);
     if (!W || !L || s.wins[side] <= s.wins[other]) return null;
+    if (mls) {
+      const score = one(s) ? mlsScore(s, side) : `${s.wins[side]}-${s.wins[other]}`;
+      return `${W.full} won the ${doc.season} ${labelOf(rounds[rounds.length - 1])}, beating ${L.full}${score ? ` ${score}` : ''}.`;
+    }
     return `The ${W.full} won the ${doc.season} ${labelOf(rounds[rounds.length - 1])}, beating the ${L.full} ${s.wins[side]}-${s.wins[other]}.`;
   }
 
-  const begun = (s: Doc) => s.status !== 'upcoming' || s.wins.higher + s.wins.lower > 0 || s.games.some((g: Doc) => g.status === 'final' || g.status === 'live');
+  const begun = (s: Doc) => (mls ? s.wins.higher + s.wins.lower > 0 || s.games.some((g: Doc) => g.status === 'final') : s.status !== 'upcoming' || s.wins.higher + s.wins.lower > 0 || s.games.some((g: Doc) => g.status === 'final' || g.status === 'live'));
   const playing = rounds.filter((r, i) => i >= open && inRound(r).some(begun));
 
   // The next game: one ordered list of every unplayed game.
@@ -150,7 +174,7 @@ function expectedLine(doc: Doc, teams: Map<string, Team>, now: Date): string | n
     const lo = slot(s.lower).text;
     const hs = host(s, g);
     const matchup = hs === 'higher' ? `${lo} at ${hi}` : hs === 'lower' ? `${hi} at ${lo}` : `${lo} vs ${hi}`;
-    return `Game ${g.gameNumber}, ${matchup}, ${shortWhen(new Date(g.start))}`;
+    return `${one(s) ? '' : `Game ${g.gameNumber}, `}${matchup}, ${shortWhen(new Date(g.start))}`;
   };
 
   if (!playing.length) {
@@ -171,7 +195,27 @@ function expectedLine(doc: Doc, teams: Map<string, Team>, now: Date): string | n
         if (wa + wb > 0 || s.status === 'final') return null;
         const c = (A.team ? A : B).text;
         const o = (A.team ? B : A).text;
-        said.push(`the ${c} ${ONE.has(c) ? 'awaits' : 'await'} ${o.endsWith(' winner') ? `the ${o}` : 'an opponent'}`);
+        const sing = mls ? !plural((A.team ? A : B).team) : ONE.has(c);
+        said.push(`${the(c)} ${sing ? 'awaits' : 'await'} ${o.endsWith(' winner') ? `the ${o}` : 'an opponent'}`);
+        continue;
+      }
+      if (mls) {
+        if (s.status === 'final') {
+          const w = winnerSlug(s);
+          const side = w === s.higher.slug ? 'higher' : w === s.lower.slug ? 'lower' : null;
+          if (!side) return null;
+          const [W, L] = side === 'higher' ? [A.text, B.text] : [B.text, A.text];
+          if (one(s)) { const sc = mlsScore(s, side); said.push(`${W} beat ${L}${sc ? ` ${sc}` : ''}`); }
+          else { const [x, y] = side === 'higher' ? [wa, wb] : [wb, wa]; if (x <= y) return null; said.push(`${W} beat ${L} ${x}-${y} in the series`); }
+        } else if (wa === wb) {
+          if (wa === 0) said.push(`${A.text} and ${B.text} have not completed ${one(s) ? 'their game' : 'a game'}`);
+          else if (one(s)) return null;
+          else said.push(`${A.text} and ${B.text} are tied ${wa}-${wb} in the series`);
+        } else {
+          if (one(s)) return null;
+          const [w, l, x, y, t] = wa > wb ? [A.text, B.text, wa, wb, A.team] : [B.text, A.text, wb, wa, B.team];
+          said.push(`${w} ${plural(t) ? 'lead' : 'leads'} ${l} ${x}-${y} in the series`);
+        }
         continue;
       }
       if (s.status === 'final') {
@@ -206,15 +250,26 @@ function textOfElement(html: string, marker: string): string | null {
 }
 
 async function main() {
-  const teams = new Map<string, Team>((await getAllTeams()).map((t) => [t.id, { name: t.name, full: `${t.city} ${t.name}`, abbr: (t as { abbreviation?: string }).abbreviation ?? null }]));
+  const teams = new Map<string, Team>(
+    (await getAllTeams()).map((t) => {
+      const m = MLS_SHORT_NAMES[t.id];
+      return [t.id, m ? { name: m.name, full: teamDisplayName(t), abbr: null, mlsPlural: m.plural } : { name: t.name, full: `${t.city} ${t.name}`, abbr: (t as { abbreviation?: string }).abbreviation ?? null }];
+    }),
+  );
   let failed = 0;
-  for (const league of ['MLB', 'WNBA'] as const) {
+  let checks = 0;
+  // MLS once its document exists (or always, with EXPECT_MLS=1). MLS has no
+  // PromoNight Predicts, so its page must carry no methodology summary.
+  const mlsDoc = (await db.collection('postseasonBrackets').doc(`MLS_${SEASON}`).get()).exists;
+  const leagues = ['MLB', 'WNBA', ...(mlsDoc || process.env.EXPECT_MLS === '1' ? ['MLS' as const] : [])] as const;
+  if (!leagues.includes('MLS' as never)) console.log('NOTE  no MLS_2026 document: MLS not checked');
+  for (const league of leagues) {
     const path = `/playoffs/${league.toLowerCase()}`;
     let attempt = 0;
     for (;;) {
       attempt++;
       const bracket = (await db.collection('postseasonBrackets').doc(`${league}_${SEASON}`).get()).data() as Doc;
-      const predicted = (await db.collection('predictedBrackets').doc(`${league}_${SEASON}`).get()).data() as Doc;
+      const predicted = league === 'MLS' ? null : ((await db.collection('predictedBrackets').doc(`${league}_${SEASON}`).get()).data() as Doc);
       const res = await fetch(`${BASE}${path}`, { headers: { 'user-agent': 'Mozilla/5.0 (standing check)', ...(BYPASS ? { 'x-vercel-protection-bypass': BYPASS } : {}) } });
       const html = await res.text();
       const now = new Date();
@@ -258,12 +313,13 @@ async function main() {
       console.log(`${okSummary ? 'PASS' : 'FAIL'}  ${path} methodology summary`);
       console.log(`      served:   ${JSON.stringify(summary)}`);
       console.log(`      expected: ${JSON.stringify(wantSummary)}`);
+      checks += 2;
       if (!okLine) failed++;
       if (!okSummary) failed++;
       break;
     }
   }
-  console.log(failed ? `\n${failed} of 4 checks FAIL` : '\n4 of 4 checks pass');
+  console.log(failed ? `\n${failed} of ${checks} checks FAIL` : `\n${checks} of ${checks} checks pass`);
   process.exit(failed ? 1 : 0);
 }
 

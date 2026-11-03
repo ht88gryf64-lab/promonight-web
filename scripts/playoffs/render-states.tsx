@@ -24,7 +24,8 @@ import { PlayoffsLeague, type LeagueBody } from '../../src/components/playoffs/P
 import { seriesTickets, ticketButtons } from '../../src/components/playoffs/tickets';
 import { mapBracketDoc } from '../../src/lib/postseason/map';
 import { buildLeagueView, homeGamesWindow, type LeagueView } from '../../src/lib/postseason/view';
-import { FIXTURE, buildWithPredictions, capturedTeams, clubs, decidedMlb, decidedWnba, loadDoc, parks, PREDICTED } from '../../src/lib/postseason/__tests__/helpers';
+import { gameStarts, standingLine } from '../../src/lib/postseason/standing';
+import { FIXTURE, MLS_FIXTURE, allClubs, allParks, buildWithPredictions, capturedTeams, decidedMlb, decidedWnba, loadDoc, mlsTeams, PREDICTED } from '../../src/lib/postseason/__tests__/helpers';
 import type { LeaguePredictions } from '../../src/lib/postseason/predictions';
 import type { Team } from '../../src/lib/types';
 
@@ -41,14 +42,28 @@ export const ARTICLE_FLOOR_PX = 1000;
 
 // A doc is a fixture file, or one of the two brackets decided to the end
 // from the 2026-10-01 captures (helpers.decidedWnba, helpers.decidedMlb).
-const DECIDED: Record<string, () => Record<string, unknown>> = { 'decided:WNBA': decidedWnba, 'decided:MLB': decidedMlb };
+// The 2025 finals restamped 2026 stand in for the finished MLB and WNBA
+// brackets beside a live MLS one (the November 2026 hub).
+const DECIDED: Record<string, () => Record<string, unknown>> = {
+  'decided:WNBA': decidedWnba,
+  'decided:MLB': decidedMlb,
+  'final2026:MLB': () => ({ ...loadDoc(FIXTURE.mlbFinal), season: 2026 }),
+  'final2026:WNBA': () => ({ ...loadDoc(FIXTURE.wnbaFinal), season: 2026 }),
+};
 const docOf = (name: string) => (DECIDED[name] ? DECIDED[name]() : loadDoc(name));
+
+function bracketOf(name: string) {
+  const d = docOf(name);
+  const b = mapBracketDoc(d, { league: d.league as 'MLB' | 'WNBA' | 'MLS', season: d.season as number });
+  if (!b) throw new Error(`${name} does not map`);
+  return b;
+}
 
 function view(name: string, now: Date): LeagueView {
   const d = docOf(name);
-  const b = mapBracketDoc(d, { league: d.league as 'MLB' | 'WNBA', season: d.season as number });
+  const b = mapBracketDoc(d, { league: d.league as 'MLB' | 'WNBA' | 'MLS', season: d.season as number });
   if (!b) throw new Error(`${name} does not map`);
-  const v = buildLeagueView(b, clubs(), parks(), now);
+  const v = buildLeagueView(b, allClubs(), allParks(), now);
   if (!v) throw new Error(`${name} does not build`);
   return v;
 }
@@ -99,12 +114,25 @@ export const STATES: State[] = [
   // constant is bumped and before the new documents are created.
   { name: 'hub-one-bracket-between-rounds', what: 'hub with one bracket only, WNBA between rounds with no home game in the window (not reachable this season)', kind: 'hub', docs: ['WNBA_2025.replay-step-11.json'], now: '2025-09-19T06:00:00Z', gated: false },
   { name: 'hub-empty', what: 'hub with no bracket at all, the offseason (not reachable this season)', kind: 'hub', docs: [], now: '2026-01-15T12:00:00Z', gated: false },
+  // MLS (2026-11-03). No predictions and no promotions. Informational until
+  // OPS confirms them on the preview with a real or seeded document: a page
+  // under 1,000px simply places no in-content unit.
+  { name: 'league-mls-early', what: 'MLS, Wild Card set, nothing played (only the Wild Card and Round One known)', kind: 'league', docs: [MLS_FIXTURE.early], now: '2026-10-20T12:00:00Z', gated: false },
+  { name: 'league-mls-round-one', what: 'MLS, Round One part played (three series 2-0, four 1-1, one 1-0)', kind: 'league', docs: [MLS_FIXTURE.roundOne], now: '2026-11-02T12:00:00Z', gated: false },
+  { name: 'league-mls-semis-done', what: 'MLS, Conference Semifinals done, Conference Finals ahead', kind: 'league', docs: [MLS_FIXTURE.semisDone], now: '2026-11-25T12:00:00Z', gated: false },
+  { name: 'league-mls-final', what: 'MLS, champion crowned', kind: 'league', docs: [MLS_FIXTURE.final], now: '2026-12-07T12:00:00Z', gated: false },
+  { name: 'hub-mls-early', what: 'hub, MLB and WNBA finished, MLS Wild Card set', kind: 'hub', docs: ['final2026:MLB', 'final2026:WNBA', MLS_FIXTURE.early], now: '2026-10-20T12:00:00Z', gated: false },
+  { name: 'hub-mls-round-one', what: 'hub, MLB and WNBA finished, MLS in Round One', kind: 'hub', docs: ['final2026:MLB', 'final2026:WNBA', MLS_FIXTURE.roundOne], now: '2026-11-02T12:00:00Z', gated: false },
+  { name: 'hub-mls-only-final', what: 'hub, MLS champion window, MLB and WNBA finished', kind: 'hub', docs: ['final2026:MLB', 'final2026:WNBA', MLS_FIXTURE.final], now: '2026-12-07T12:00:00Z', gated: false },
 ];
 
 function leagueArticle(s: State, teams: Map<string, Team>): string {
   const v = view(s.docs[0], new Date(s.now));
   const homeGames = v.phase.kind === 'active' ? homeGamesWindow([v], new Date(s.now)) : { primary: [], rest: [] };
-  const body: LeagueBody = { state: 'ok', view: v, predictions: predictionsFor(s, s.docs[0]), homeGames };
+  // The MLS states carry their standing line, as the page does; the older
+  // states are measured as they always were.
+  const standing = v.league === 'MLS' ? standingLine(v, gameStarts(bracketOf(s.docs[0])), new Date(s.now)) : undefined;
+  const body: LeagueBody = { state: 'ok', view: v, predictions: predictionsFor(s, s.docs[0]), homeGames, ...(standing !== undefined ? { standing } : {}) };
   const tickets = ticketButtons([...homeGames.primary, ...homeGames.rest].map((g) => g.hostTeamId), teams, 'web_playoffs_league', 'playoffs_league');
   const upcoming = v.rounds.flatMap((r) => r.groups.flatMap((g) => g.series.map((x) => ({ id: x.id, hostTeamId: x.next && x.next.state === 'scheduled' ? x.next.hostTeamId : null }))));
   const panelTickets = seriesTickets(upcoming, teams, 'web_playoffs_league', 'playoffs_league');
@@ -115,7 +143,7 @@ function hubArticle(s: State, teams: Map<string, Team>): string {
   const now = new Date(s.now);
   const leagues: HubLeague[] = s.docs.map((d) => {
     const v = view(d, now);
-    const predicted = s.predicted ? (v.league === 'MLB' ? P_MLB : P_WNBA) : null;
+    const predicted = s.predicted && v.league !== 'MLS' ? (v.league === 'MLB' ? P_MLB : P_WNBA) : null;
     const line = predicted ? buildWithPredictions(docOf(d), predicted, now).predictions.hub : null;
     return { state: 'ok', league: v.league, href: `/playoffs/${v.league.toLowerCase()}`, view: v, predictions: line };
   });
@@ -152,7 +180,7 @@ async function main() {
     if (res.status !== 200) throw new Error(`${path} answered ${res.status}`);
     shells[kind] = await res.text();
   }
-  const teams = new Map(capturedTeams().map((t) => [t.id, t]));
+  const teams = new Map([...capturedTeams(), ...mlsTeams()].map((t) => [t.id, t]));
   const index: { name: string; what: string; kind: string; file: string; gated: boolean; floor: number }[] = [];
   for (const s of STATES) {
     const article = s.kind === 'league' ? leagueArticle(s, teams) : hubArticle(s, teams);
