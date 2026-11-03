@@ -133,18 +133,27 @@ export function wordsFit(text: string, size: number, width: number, face: 'extra
 }
 
 /** The game line's layout: one line when "{lead} · {tail}" fits the column,
- *  else lead and tail on lines of their own. */
-export function gameLayout(game: { lead: string; tail: string }, width: number): string[] {
-  if (!game.tail) return game.lead ? [game.lead] : [];
+ *  else lead and tail on lines of their own. Each line must fit whole (a
+ *  clamped series range read "Nov 8, 2026 to Apr 2..." in Gate B), so the
+ *  size steps down from 36 until every line fits; at the floor lineClamp is
+ *  the last resort. */
+const GAME_SIZES = [36, 33, 30, 28];
+export function gameLayout(game: { lead: string; tail: string }, width: number): { lines: string[]; size: number } {
+  if (!game.tail) return { lines: game.lead ? [game.lead] : [], size: GAME_SIZE };
   const one = `${game.lead} \u00b7 ${game.tail}`;
-  return textWidth(one, GAME_SIZE, 'semibold') <= width ? [one] : [game.lead, game.tail];
+  if (textWidth(one, GAME_SIZE, 'semibold') <= width) return { lines: [one], size: GAME_SIZE };
+  const two = [game.lead, game.tail];
+  for (const size of GAME_SIZES) {
+    if (two.every((l) => textWidth(l, size, 'semibold') <= width)) return { lines: two, size };
+  }
+  return { lines: two, size: GAME_SIZES[GAME_SIZES.length - 1] };
 }
 
 /** The largest name size whose wrap is at most 3 lines AND whose stack
  *  (badge, name, game line) fits the height between the wordmark and the
  *  footer. At the floor it takes 4 lines and lineClamp has the last word. */
-export function titleFit(title: string, width: number, gameLines = 1): { size: number; lines: number } {
-  const game = gameLines ? STACK_GAP + gameLines * GAME_SIZE * GAME_LH : 0;
+export function titleFit(title: string, width: number, gameLines = 1, gameSize = GAME_SIZE): { size: number; lines: number } {
+  const game = gameLines ? STACK_GAP + gameLines * gameSize * GAME_LH : 0;
   const upper = title.toUpperCase();
   for (const size of TITLE_SIZES) {
     if (!wordsFit(upper, size, width, 'extrabold', TITLE_LS)) continue;
@@ -210,8 +219,9 @@ export function accentFor(primary: string | null | undefined, secondary: string 
 export async function renderShareCard(model: ShareCardModel, headers?: Record<string, string>): Promise<ImageResponse> {
   const [semi, bold, extra] = await loadShareCardFonts();
   const col = columnWidth(model.panel);
-  const gameLines = gameLayout(model.game, col);
-  const fit = titleFit(model.title, col, gameLines.length);
+  const game = gameLayout(model.game, col);
+  const gameLines = game.lines;
+  const fit = titleFit(model.title, col, gameLines.length, game.size);
   const credit = model.panel?.kind === 'photo' ? model.panel.credit : '';
   const panelH = INNER_H - PAD_TOP - PAD_BOTTOM;
   const box = model.panel?.kind === 'photo' ? photoBox(model.panel.width, model.panel.height, panelH) : { w: 0, h: 0 };
@@ -236,7 +246,7 @@ export async function renderShareCard(model: ShareCardModel, headers?: Record<st
                 </div>
                 <div style={{ display: 'block', overflowWrap: 'break-word', fontSize: fit.size, fontWeight: 800, lineHeight: TITLE_LH, letterSpacing: TITLE_LS, textTransform: 'uppercase', lineClamp: fit.lines }}>{model.title}</div>
                 {gameLines.length ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', fontSize: GAME_SIZE, fontWeight: 600, lineHeight: GAME_LH, color: 'rgba(255,255,255,0.86)' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', fontSize: game.size, fontWeight: 600, lineHeight: GAME_LH, color: 'rgba(255,255,255,0.86)' }}>
                     {gameLines.map((l) => (
                       <div key={l} style={{ display: 'block', lineClamp: 1 }}>{l}</div>
                     ))}

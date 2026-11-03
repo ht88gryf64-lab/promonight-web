@@ -117,9 +117,14 @@ test('the card: measured widths, the name fits width and height, the game line s
   const long = titleFit('10th Anniversary Celebration & 2016 Championship Mini Banner Giveaway', 582, 2);
   assert.ok(long.size >= 50 && long.lines <= 4, JSON.stringify(long));
   assert.deepEqual(titleFit('Anime Night', 582, 1).size, 96);
-  assert.deepEqual(gameLayout({ lead: 'Dallas Stars vs Panthers', tail: 'Sun Nov 15' }, 622), ['Dallas Stars vs Panthers \u00b7 Sun Nov 15']);
-  assert.deepEqual(gameLayout({ lead: 'Los Angeles Lakers vs Clippers', tail: 'Fri Dec 4' }, 622), ['Los Angeles Lakers vs Clippers', 'Fri Dec 4']);
-  assert.deepEqual(gameLayout({ lead: 'Dallas Stars', tail: '' }, 622), ['Dallas Stars']);
+  assert.deepEqual(gameLayout({ lead: 'Dallas Stars vs Panthers', tail: 'Sun Nov 15' }, 622), { lines: ['Dallas Stars vs Panthers \u00b7 Sun Nov 15'], size: 36 });
+  assert.deepEqual(gameLayout({ lead: 'Los Angeles Lakers vs Clippers', tail: 'Fri Dec 4' }, 622), { lines: ['Los Angeles Lakers vs Clippers', 'Fri Dec 4'], size: 36 });
+  assert.deepEqual(gameLayout({ lead: 'Dallas Stars', tail: '' }, 622), { lines: ['Dallas Stars'], size: 36 });
+  // Gate B F2: a series range is never clamped mid-token; the size steps down until it fits.
+  for (const tail of ['5 home games \u00b7 Nov 8, 2026 to Apr 2, 2027', '41 home games \u00b7 Mar 27, 2026 to Sep 25, 2026']) {
+    const g = gameLayout({ lead: 'Minnesota Timberwolves', tail }, 622);
+    assert.ok(g.lines.every((l) => textWidth(l, g.size, 'semibold') <= 622), `${tail} at ${g.size}`);
+  }
   assert.deepEqual(photoBox(624, 351, 518), { w: 400, h: 225 });
   assert.deepEqual(photoBox(800, 1200, 518), { w: 345, h: 518 });
   assert.equal(accentFor('#006847', '#8f8f8c'), '#006847');

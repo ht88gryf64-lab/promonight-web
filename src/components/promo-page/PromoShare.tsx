@@ -27,7 +27,8 @@ import { isSelfOpen, recordCreatedShare, setShareSession } from '@/lib/promo-sha
 // COLOUR (ruling 2026-11-03): the outline is the house ink, rd-ink #211d18,
 // on white. Not brand red, and no new colour. The 1.5px outline is an inset
 // box-shadow, not a border: Chrome floors a 1.5px border width to 1px (seen
-// on the Gate A preview), a shadow's spread is drawn as given.
+// on the Gate A preview), a shadow's spread is drawn as given. Forced-colors
+// mode drops shadows, so there the outline is a real border in ButtonText.
 //
 // Both controls render on the server, at their final size, so nothing shifts
 // when the bundle hydrates. Nothing here is sticky or fixed.
@@ -44,7 +45,7 @@ export interface PromoShareProps {
 
 type Placement = PromoShareEventProperties['placement'];
 
-type PostHogLike = { get_distinct_id?: () => string; register_for_session?: (p: Record<string, unknown>) => void };
+type PostHogLike = { get_distinct_id?: () => string; get_session_id?: () => string; register_for_session?: (p: Record<string, unknown>) => void };
 const posthog = (): PostHogLike | undefined => (typeof window === 'undefined' ? undefined : (window as unknown as { posthog?: PostHogLike }).posthog);
 const distinctId = (): string | null => {
   try {
@@ -187,13 +188,22 @@ function SharePopover({ id, copied, onChoose, onClose, anchor }: { id: string; c
       if (anchor.current && !anchor.current.contains(e.target as Node)) onClose();
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key !== 'Escape') return;
+      onClose();
+      // Back to the Share button, so a keyboard user keeps their place.
+      anchor.current?.querySelector('button')?.focus();
+    };
+    // Tabbing out of the popover closes it.
+    const onFocusIn = (e: FocusEvent) => {
+      if (anchor.current && !anchor.current.contains(e.target as Node)) onClose();
     };
     document.addEventListener('pointerdown', onDown);
     document.addEventListener('keydown', onKey);
+    document.addEventListener('focusin', onFocusIn);
     return () => {
       document.removeEventListener('pointerdown', onDown);
       document.removeEventListener('keydown', onKey);
+      document.removeEventListener('focusin', onFocusIn);
     };
   }, [anchor, onClose]);
   return (
@@ -237,7 +247,7 @@ export function PromoShareRowButton(props: PromoShareProps) {
     <ShareControl
       props={props}
       placement="cta_row"
-      buttonClass="flex h-[52px] items-center justify-center gap-2 rounded-[14px] bg-white px-4 font-rd text-[16px] font-semibold text-rd-ink shadow-[inset_0_0_0_1.5px_var(--color-rd-ink)] hover:bg-rd-cream max-[339px]:px-3.5"
+      buttonClass="flex h-[52px] items-center justify-center gap-2 rounded-[14px] bg-white px-4 font-rd text-[16px] font-semibold text-rd-ink shadow-[inset_0_0_0_1.5px_var(--color-rd-ink)] hover:bg-rd-cream forced-colors:border-[1.5px] forced-colors:border-[color:ButtonText] max-[339px]:px-3.5"
       iconClass="h-[18px] w-[18px]"
       label={<span className="max-[339px]:sr-only">Share</span>}
     />
@@ -251,7 +261,7 @@ export function PromoShareImageButton(props: PromoShareProps) {
     <ShareControl
       props={props}
       placement="image"
-      buttonClass="flex h-10 w-10 items-center justify-center rounded-full bg-white text-rd-ink shadow-[inset_0_0_0_1.5px_var(--color-rd-ink),0_1px_2px_0_rgb(0_0_0/0.05)] hover:bg-rd-cream"
+      buttonClass="flex h-10 w-10 items-center justify-center rounded-full bg-white text-rd-ink shadow-[inset_0_0_0_1.5px_var(--color-rd-ink),0_1px_2px_0_rgb(0_0_0/0.05)] hover:bg-rd-cream forced-colors:border-[1.5px] forced-colors:border-[color:ButtonText]"
       iconClass="h-[18px] w-[18px]"
       label={null}
     />
@@ -266,15 +276,23 @@ export function ShareLandingCapture({ promoId, team, league, pageSlug }: { promo
   useEffect(() => {
     const landing = parseShareLanding(window.location.search);
     if (!landing) return;
-    const session = (selfOpen: boolean) => ({ shareId: landing.shareId, channel: landing.channel, promoId, selfOpen });
+    const at = Date.now();
+    const sessionId = () => {
+      try {
+        return posthog()?.get_session_id?.() ?? '';
+      } catch {
+        return '';
+      }
+    };
+    const session = (selfOpen: boolean, sid: string) => ({ shareId: landing.shareId, channel: landing.channel, promoId, selfOpen, at, sid });
     // At once, so a click in the first second still carries subId2; refined
     // below once PostHog's distinct_id is known.
-    setShareSession(session(isSelfOpen(landing.shareId, null)));
+    setShareSession(session(isSelfOpen(landing.shareId, null), ''));
     let timer: number | undefined;
     let tries = 0;
     const finish = () => {
       const selfOpen = isSelfOpen(landing.shareId, distinctId());
-      setShareSession(session(selfOpen));
+      setShareSession(session(selfOpen, sessionId()));
       const props = { share_id: landing.shareId, share_channel: landing.channel, share_promo_id: promoId, share_self_open: selfOpen };
       try {
         posthog()?.register_for_session?.(props);

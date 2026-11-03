@@ -13,6 +13,8 @@
 //     id found here under the visitor's own distinct_id is a self-open. Only
 //     ids and distinct_ids, capped at the newest 50.
 //
+// The session ends with the PostHog session it landed in (see LIFETIME).
+//
 // HYDRATION. useShareSession is a useSyncExternalStore whose server snapshot
 // is null, so the server render and the hydration render agree (no subId2)
 // and the client re-renders with the session after hydration.
@@ -27,21 +29,37 @@ export interface ShareSession {
   /** True when the visitor opened their own share; such a session adds no
    *  subId2 and is excluded from share metrics. */
   selfOpen: boolean;
+  /** Landing time, ms. */
+  at: number;
+  /** The PostHog session id at landing, '' when PostHog was not loaded. */
+  sid: string;
 }
 
 const SESSION_KEY = 'pn_share_session';
 const CREATED_KEY = 'pn_share_created';
 const CREATED_MAX = 50;
 
+// LIFETIME (Gate B F3). The share session is the PostHog session it landed
+// in, so subId2 on partner links and share_id on PostHog events end
+// together: once PostHog's session id moves on (30 minutes idle, or its 24h
+// cap), the share session is over. Without a PostHog id it lasts 30 minutes
+// from landing. 24 hours is the hard cap either way. sessionStorage alone
+// lives as long as the tab, which a restored mobile tab stretches to days.
+export const SHARE_SESSION_IDLE_MS = 30 * 60 * 1000;
+export const SHARE_SESSION_MAX_MS = 24 * 60 * 60 * 1000;
+const RECHECK_MS = 60 * 1000;
+
 const listeners = new Set<() => void>();
 let cachedRaw: string | null | undefined;
 let cachedValue: ShareSession | null = null;
+// Storage blocked (Gate B F4): the session lives in memory for this page.
+let memoryRaw: string | null = null;
 
 function readRaw(): string | null {
   try {
-    return window.sessionStorage.getItem(SESSION_KEY);
+    return window.sessionStorage.getItem(SESSION_KEY) ?? memoryRaw;
   } catch {
-    return null;
+    return memoryRaw;
   }
 }
 
@@ -50,14 +68,31 @@ function parseSession(raw: string | null): ShareSession | null {
   try {
     const v = JSON.parse(raw) as Partial<ShareSession>;
     if (!v || typeof v.shareId !== 'string' || !SHARE_ID_RE.test(v.shareId)) return null;
-    return { shareId: v.shareId, channel: v.channel as PromoShareChannel, promoId: String(v.promoId ?? ''), selfOpen: v.selfOpen === true };
+    if (typeof v.at !== 'number' || !Number.isFinite(v.at)) return null;
+    return { shareId: v.shareId, channel: v.channel as PromoShareChannel, promoId: String(v.promoId ?? ''), selfOpen: v.selfOpen === true, at: v.at, sid: typeof v.sid === 'string' ? v.sid : '' };
   } catch {
     return null;
   }
 }
 
+function currentPostHogSessionId(): string | null {
+  try {
+    const ph = (window as unknown as { posthog?: { get_session_id?: () => string } }).posthog;
+    return ph?.get_session_id?.() || null;
+  } catch {
+    return null;
+  }
+}
+
+/** Whether a stored session is still live at `now`. Pure, for tests. */
+export function shareSessionLive(s: Pick<ShareSession, 'at' | 'sid'>, now: number, postHogSessionId: string | null): boolean {
+  if (now - s.at > SHARE_SESSION_MAX_MS || now < s.at - 60_000) return false;
+  if (s.sid) return postHogSessionId ? postHogSessionId === s.sid : now - s.at <= SHARE_SESSION_MAX_MS;
+  return now - s.at <= SHARE_SESSION_IDLE_MS;
+}
+
 /** The current shared-link session, or null. Stable identity between writes
- *  (useSyncExternalStore requires it). */
+ *  (useSyncExternalStore requires it); null once the session has ended. */
 export function getShareSession(): ShareSession | null {
   if (typeof window === 'undefined') return null;
   const raw = readRaw();
@@ -65,24 +100,60 @@ export function getShareSession(): ShareSession | null {
     cachedRaw = raw;
     cachedValue = parseSession(raw);
   }
+  if (cachedValue && !shareSessionLive(cachedValue, Date.now(), currentPostHogSessionId())) {
+    clearShareSession();
+    return null;
+  }
   return cachedValue;
 }
 
-export function setShareSession(s: ShareSession): void {
+function write(raw: string | null): void {
   try {
-    window.sessionStorage.setItem(SESSION_KEY, JSON.stringify(s));
+    if (raw === null) window.sessionStorage.removeItem(SESSION_KEY);
+    else window.sessionStorage.setItem(SESSION_KEY, raw);
+    memoryRaw = null;
   } catch {
-    // Storage blocked: the session lives for this page only.
-    cachedRaw = JSON.stringify(s);
-    cachedValue = s;
+    memoryRaw = raw;
   }
+  cachedRaw = undefined;
+}
+
+export function setShareSession(s: ShareSession): void {
+  write(JSON.stringify(s));
   for (const fn of listeners) fn();
 }
 
+export function clearShareSession(): void {
+  write(null);
+  cachedValue = null;
+  cachedRaw = null;
+}
+
+// Expiry is checked on every read, and every minute (and when the tab comes
+// back) while anything is subscribed, so open links lose subId2 when the
+// session ends rather than at the next render.
+let timer: number | undefined;
+let lastLive: string | null = null;
+function recheck(): void {
+  const now = getShareSession()?.shareId ?? null;
+  if (now !== lastLive) {
+    lastLive = now;
+    for (const fn of listeners) fn();
+  }
+}
 function subscribe(fn: () => void): () => void {
   listeners.add(fn);
+  if (listeners.size === 1) {
+    lastLive = getShareSession()?.shareId ?? null;
+    timer = window.setInterval(recheck, RECHECK_MS);
+    document.addEventListener('visibilitychange', recheck);
+  }
   return () => {
     listeners.delete(fn);
+    if (listeners.size === 0) {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', recheck);
+    }
   };
 }
 

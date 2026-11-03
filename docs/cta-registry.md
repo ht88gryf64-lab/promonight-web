@@ -72,6 +72,11 @@ Both Share controls (`share_promo_page_row`, `share_promo_page_image`) live in
   `share_channel`, `share_promo_id`, `share_self_open`, fires one
   `share_landing`, then strips `s` and every `utm_*` with
   `history.replaceState`.
+- **Lifetime.** The share session is the PostHog session it landed in: when
+  PostHog's session id changes (30 minutes idle, or its 24h cap) subId2 and
+  share_id stop. Without PostHog it lasts 30 minutes from landing; 24 hours is
+  the hard cap. Stored per tab (sessionStorage `pn_share_session`), in memory
+  when storage is blocked.
 - **Self-open.** A share id this browser minted (localStorage
   `pn_share_created`, id to distinct_id) opened under the same distinct_id is
   `share_self_open=true`: no subId2, and excluded from the "Promo sharing"
