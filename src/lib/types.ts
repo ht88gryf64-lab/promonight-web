@@ -34,9 +34,10 @@ export interface Team {
   // building shows no events: Scotiabank Arena, Canadian Tire Centre). NOT a
   // teams-doc field: loadTeams copies it from the pipeline's club mapping,
   // tnTeamMap/{id}.tnHomeUnavailable, the one stored source. A ticket link for
-  // a home game of such a club is Ticketmaster only (ticketNetworkForGame);
-  // team-level links and the club's away games are unchanged. Absent on every
-  // other club, so their payloads are unchanged.
+  // a home game of such a club (neutral sites included) and its team-level
+  // links are Ticketmaster only (ticketNetworkForGame); its away games at
+  // other buildings are unchanged. Absent on every other club, so their
+  // payloads are unchanged.
   tnHomeUnavailable?: true;
   // Fully-qualified canonical Fanatics team-store URL —
   // `https://www.fanatics.com/{league}/{slug}/o-N+t-N+z-N-N`. This is the

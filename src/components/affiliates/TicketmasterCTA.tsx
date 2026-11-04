@@ -73,9 +73,9 @@ type Props = {
    *  without it, on the team performer page as before. Ticketmaster stays
    *  team-level either way. */
   eventUrl?: string | null;
-  /** false: no TicketNetwork button, Ticketmaster alone. Set by a one-game
-   *  caller when the game's home club is flagged tnHomeUnavailable
-   *  (ticketNetworkForGame). Default true: every other caller unchanged. */
+  /** false: no TicketNetwork button, Ticketmaster alone. Set by a caller
+   *  whose home club (or, team-level, whose club) is flagged
+   *  tnHomeUnavailable (ticketNetworkForGame). Default true. */
   ticketNetwork?: boolean;
 };
 
