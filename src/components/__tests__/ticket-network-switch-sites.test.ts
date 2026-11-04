@@ -1,7 +1,8 @@
 // Every TicketmasterCTA / TicketsBlock call site either passes the
 // tnHomeUnavailable switch (ticketNetwork={ticketNetworkForGame(...)}) or is a
-// listed exception that can never show TicketNetwork for a flagged club's
-// building (Ticketmaster-only buttons, CFB schools). Since 2026-11-03 the
+// listed exception: the playoffs primaryOnly button (Ticketmaster, falling back
+// to TicketNetwork only if the Ticketmaster link cannot be built; the flagged
+// clubs all have Ticketmaster ids) and CFB schools (never in tnTeamMap). Since 2026-11-03 the
 // team-page hero and sidebar are switched too (Matt: Ticketmaster only there
 // for a flagged club). A new call site fails here until it is put on one list or the
 // other (review M1, 2026-11-03).

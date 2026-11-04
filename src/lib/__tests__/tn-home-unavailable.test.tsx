@@ -6,8 +6,8 @@
 //     no club and still loads every team.
 //  2. ticketNetworkForGame keys on the game's HOME club: a flagged club's
 //     home game drops TicketNetwork, its away game at a US building keeps it,
-//     another club's game at a flagged building drops it, a neutral-site game
-//     keeps it.
+//     another club's game at a flagged building drops it, and so does the
+//     flagged club's neutral-site home game (still its home game).
 //  3. The team-page game cards (GameExpand, GameDayDetail) follow it: the
 //     Ticketmaster button stays, unchanged, and the TicketNetwork button goes.
 //  4. Team-level CTAs (hero, sidebar) are Ticketmaster only for a flagged club
@@ -104,12 +104,13 @@ const game = (home: string, away: string, over: Partial<Game> = {}): Game =>
   ({ id: `${home}-${away}`, league: 'nhl', date: '2026-11-21', gameTime: '00:00', gameTimeTz: 'America/New_York', homeTeamSlug: home, awayTeamSlug: away, venueName: 'Arena', status: 'scheduled', ...over }) as Game;
 const ctx = (g: Game, isHome: boolean, opponentTeam: Team): GameContext => ({ game: g, isHome, opponentTeam, opponentVenue: null, promos: [] });
 
-test('ticketNetworkForGame keys on the home club and spares neutral sites', async () => {
+test('ticketNetworkForGame keys on the home club, neutral-site home games included', async () => {
   const { ticketNetworkForGame } = await import('../affiliates');
   assert.equal(ticketNetworkForGame(game('toronto-maple-leafs', 'boston-bruins'), LEAFS), false);
   assert.equal(ticketNetworkForGame(game('boston-bruins', 'toronto-maple-leafs'), BRUINS), true);
-  assert.equal(ticketNetworkForGame(game('toronto-maple-leafs', 'boston-bruins', { neutralSite: true }), LEAFS), true);
-  assert.equal(ticketNetworkForGame(game('toronto-maple-leafs', 'boston-bruins', { isInternational: true }), LEAFS), true);
+  // A flagged club's neutral-site or international home game is still its home game (review H1).
+  assert.equal(ticketNetworkForGame(game('toronto-maple-leafs', 'boston-bruins', { neutralSite: true }), LEAFS), false);
+  assert.equal(ticketNetworkForGame(game('toronto-maple-leafs', 'boston-bruins', { isInternational: true }), LEAFS), false);
   assert.equal(ticketNetworkForGame(null, LEAFS), false);
   assert.equal(ticketNetworkForGame(null, BRUINS), true);
   assert.equal(ticketNetworkForGame(null, null), true);
@@ -120,7 +121,7 @@ const cardCases: [string, Team, GameContext, boolean][] = [
   ['Leafs page, away game at a US building, event matched', LEAFS, ctx(game('boston-bruins', 'toronto-maple-leafs', { tnEventUrl: EVENT }), false, BRUINS), true],
   ['Bruins page, away game at the Leafs building', BRUINS, ctx(game('toronto-maple-leafs', 'boston-bruins'), false, LEAFS), false],
   ['Bruins page, home game vs the Leafs, event matched', BRUINS, ctx(game('boston-bruins', 'toronto-maple-leafs', { tnEventUrl: EVENT }), true, LEAFS), true],
-  ['Leafs page, neutral-site game', LEAFS, ctx(game('toronto-maple-leafs', 'boston-bruins', { neutralSite: true, venueName: 'Avicii Arena' }), true, BRUINS), true],
+  ['Leafs page, neutral-site home game', LEAFS, ctx(game('toronto-maple-leafs', 'boston-bruins', { neutralSite: true, venueName: 'Avicii Arena' }), true, BRUINS), false],
 ];
 
 for (const [name, pageTeam, c, tnExpected] of cardCases) {
