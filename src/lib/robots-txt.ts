@@ -7,7 +7,8 @@
 // first-match parser stops at `Allow: /` and never sees `Disallow: /api/`.
 // In this order both kinds of parser reach the same verdicts:
 //
-//   Allow: /api/promo-card/   the promo pages' image (og:image, Event JSON-LD)
+//   Allow: /api/promo-card/   the promo pages' Event JSON-LD image
+//   Allow: /api/share-card/   the promo pages' og:image and twitter:image
 //   Disallow: /api/           everything else under /api/
 //   Allow: /                  every page, /ads.txt and /app-ads.txt
 //
@@ -16,7 +17,17 @@
 // /api/ even though `*` disallowed it; ClaudeBot and PerplexityBot were
 // crawling /api/ for that reason.
 
-export const ROBOTS_GROUP_LINES = ['Allow: /api/promo-card/', 'Disallow: /api/', 'Allow: /'] as const;
+// Every image route a page names in og:image, twitter:image or JSON-LD needs
+// an Allow here: Twitterbot and the other card fetchers obey robots.txt for
+// the image too (fix/robots-share-card, 2026-11-04). The live guard
+// "every page image is allowed" in scripts/live/team-pages.live.test.ts
+// catches a new one.
+export const ROBOTS_GROUP_LINES = [
+  'Allow: /api/promo-card/',
+  'Allow: /api/share-card/',
+  'Disallow: /api/',
+  'Allow: /',
+] as const;
 
 export const ROBOTS_AGENTS = [
   'GPTBot',

@@ -25,11 +25,21 @@
 // 5. Every always-allow agent's user agent gets 200 on a promo page and an
 //    image from its /api/promo-card card (ops/firewall/PROPOSAL.md).
 // 6. Every /download? anchor on a sitemap team or promo page is rel="nofollow".
+// 7. Every og:image, twitter:image and JSON-LD image on our domain, across a
+//    sample of promo, team, venue and aggregator pages, is allowed by
+//    robots.txt for Googlebot, Twitterbot, facebookexternalhit and `*`
+//    (longest match). Card fetchers obey robots.txt for the image, so a new
+//    image route under /api/ needs its own Allow (fix/robots-share-card,
+//    2026-11-04: /api/share-card/ shipped Disallowed). ROBOTS_SOURCE=local
+//    checks the checkout's src/lib/robots-txt.ts instead of the served file,
+//    so a branch can be checked against production pages before it deploys.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import robotsParser from 'robots-parser';
+import { robotsTxt } from '../../src/lib/robots-txt';
 
 const HOST = (process.env.LIVE_HOST || 'https://www.getpromonight.com').replace(/\/$/, '');
 const VIA_CLI = /\.vercel\.app$/.test(new URL(HOST).hostname);
@@ -173,6 +183,41 @@ test(`every sitemap promo page's meta description is 100 to 155, under 120 only 
 // Sent from this machine they are not Vercel-verified, so a 200 here proves no
 // rule of ours keys on these agents' user agents; it cannot prove what the
 // firewall does for the vendors' own IPs.
+const ORIGIN = 'https://www.getpromonight.com';
+const OUR_HOSTS = new Set(['www.getpromonight.com', 'getpromonight.com', new URL(HOST).hostname]);
+
+/** Every og:image, twitter:image and JSON-LD `image` URL in the HTML, as
+ *  written (absolute or root-relative). */
+function pageImages(html: string): string[] {
+  const out: string[] = [];
+  for (const m of html.matchAll(/<meta (?:property="og:image"|name="twitter:image") content="([^"]+)"/g)) out.push(m[1].replace(/&amp;/g, '&'));
+  const walk = (v: unknown): void => {
+    if (Array.isArray(v)) return v.forEach(walk);
+    if (v && typeof v === 'object') {
+      for (const [k, x] of Object.entries(v)) {
+        if (k === 'image') walkImage(x);
+        else walk(x);
+      }
+    }
+  };
+  const walkImage = (x: unknown): void => {
+    if (typeof x === 'string') out.push(x);
+    else if (Array.isArray(x)) x.forEach(walkImage);
+    else if (x && typeof x === 'object') {
+      const o = x as Record<string, unknown>;
+      if (typeof o.url === 'string') out.push(o.url);
+      if (typeof o.contentUrl === 'string') out.push(o.contentUrl);
+      walk(o);
+    }
+  };
+  for (const m of html.matchAll(/<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g)) walk(JSON.parse(m[1]));
+  return out;
+}
+
+/** `count` paths spread evenly through `paths`. */
+const spread = (paths: string[], count: number) =>
+  paths.length <= count ? paths : Array.from({ length: count }, (_, i) => paths[Math.floor((i * paths.length) / count)]);
+
 const ALLOW_LIST_AGENTS = [
   'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
   'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm) Chrome/116.0.1938.76 Safari/537.36',
@@ -240,17 +285,21 @@ test(`/ads.txt and /app-ads.txt answer 200 text/plain to every client (${HOST})`
 test(`every always-allow agent gets 200 on a promo page and an image from its card (${HOST})`, async () => {
   const promo = (await sitemap()).find((p) => PROMO_RE.test(p));
   assert.ok(promo, 'a promo page in the sitemap');
-  const card = /<meta property="og:image" content="https?:\/\/[^/"]+(\/api\/promo-card\/[^"]+)"/.exec(await promoPage(promo))?.[1]?.replace(/&amp;/g, '&');
+  const html = await promoPage(promo);
+  // Every image route the page names (og:image is the share card since
+  // 2026-11-03, the JSON-LD image is still the promo card).
+  const cards = [...new Set(pageImages(html).map((u) => new URL(u, ORIGIN)).filter((u) => u.pathname.startsWith('/api/')).map((u) => u.pathname + u.search))];
+  assert.ok(cards.length > 0, `an /api/ image on ${promo}`);
   const bad: string[] = [];
   for (const ua of [...ALLOW_LIST_AGENTS, 'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; ClaudeBot/1.0; +claudebot@anthropic.com)']) {
     const page = await probe(promo, ua);
     if (!/^200 text\/html/.test(page)) bad.push(`${promo} [${ua}] -> ${page}`);
-    if (card) {
+    for (const card of cards) {
       const img = await probe(card, ua);
       if (!/^200 image\//.test(img)) bad.push(`${card} [${ua}] -> ${img}`);
     }
   }
-  console.log(`agents ${ALLOW_LIST_AGENTS.length + 1}, promo ${promo}, card ${card ?? 'none (page uses another image)'}`);
+  console.log(`agents ${ALLOW_LIST_AGENTS.length + 1}, promo ${promo}, cards ${cards.join(' ')}`);
   assert.deepEqual(bad, []);
 });
 
@@ -266,4 +315,45 @@ test(`every /download? anchor on sitemap pages is rel="nofollow" (${HOST})`, asy
   console.log(`pages ${rows.length}, /download? anchors ${total}, without nofollow ${bad.length}`);
   assert.ok(total > 0, 'found /download? anchors');
   assert.deepEqual(bad, [], `${bad.length} /download? anchors lack rel="nofollow":\n${bad.slice(0, 20).join('\n')}`);
+});
+
+test(`every page image on our domain is allowed by robots.txt for card fetchers and crawlers (${HOST})`, async () => {
+  const local = process.env.ROBOTS_SOURCE === 'local';
+  const robots = robotsParser(`${ORIGIN}/robots.txt`, local ? robotsTxt() : await get('/robots.txt'));
+  const all = await sitemap();
+  const promo = all.filter((p) => PROMO_RE.test(p));
+  const team = all.filter((p) => TEAM_RE.test(p));
+  const venue = all.filter((p) => p.startsWith('/venues/'));
+  const aggregator = all.filter((p) => !PROMO_RE.test(p) && !TEAM_RE.test(p) && !p.startsWith('/venues/'));
+  const sample = {
+    promo: spread(promo, 20),
+    team: spread(team, 10),
+    venue: spread(venue, 8),
+    // Hubs, /teams, /venues, /playoffs, the /promos and /best-promos boards,
+    // the homepage, and a few rivalry pages.
+    aggregator: [...new Set(['/', ...aggregator.filter((p) => !p.startsWith('/cfb/rivalries/')), ...spread(aggregator.filter((p) => p.startsWith('/cfb/rivalries/')), 3)])],
+  };
+  const pages = Object.entries(sample).flatMap(([kind, paths]) => paths.map((p) => ({ kind, p })));
+  const rows = await pool(pages, async ({ kind, p }) => ({ kind, p, images: pageImages(PROMO_RE.test(p) ? await promoPage(p) : await get(p)) }));
+  const agents = ['Googlebot', 'Twitterbot', 'facebookexternalhit', '*'];
+  const bad: string[] = [];
+  const routes = new Map<string, number>();
+  let checked = 0;
+  for (const { kind, p, images } of rows) {
+    for (const raw of images) {
+      const u = new URL(raw, ORIGIN);
+      if (!OUR_HOSTS.has(u.hostname)) continue;
+      checked++;
+      const route = u.pathname.split('/').slice(0, 3).join('/');
+      routes.set(route, (routes.get(route) ?? 0) + 1);
+      for (const ua of agents) {
+        if (robots.isAllowed(`${ORIGIN}${u.pathname}${u.search}`, ua) !== true) bad.push(`${kind} ${p}: ${u.pathname} disallowed for ${ua}`);
+      }
+    }
+  }
+  const counts = Object.entries(sample).map(([k, v]) => `${k} ${v.length}`).join(', ');
+  console.log(`robots ${local ? 'local src/lib/robots-txt.ts' : 'served'}; pages ${counts}; images on our domain ${checked}; routes ${[...routes].map(([r, n]) => `${r} ${n}`).join(', ')}`);
+  for (const [kind, paths] of Object.entries(sample)) assert.ok(paths.length > 0, `sampled ${kind} pages`);
+  assert.ok(checked > 0, 'found images on our domain');
+  assert.deepEqual(bad, [], `${bad.length} page images are disallowed:\n${[...new Set(bad)].slice(0, 20).join('\n')}`);
 });
