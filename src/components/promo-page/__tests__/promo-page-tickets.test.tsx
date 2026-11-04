@@ -18,7 +18,8 @@ const EV = (id: number, slug: string) => `https://www.ticketnetwork.com/tickets/
 const BRUINS = EV(8138650, 'detroit-red-wings-vs-boston-bruins-tickets-wed-nov-18-2026-little-caesars-arena');
 const HAWKS = EV(8138700, 'detroit-red-wings-vs-chicago-blackhawks-tickets-sat-dec-12-2026-little-caesars-arena');
 const PREFIX = 'https://ticketnetwork.lusg.net/c/7236189/120057/2322';
-const tn = (landing: string, sub = 'web_promo_page_detroit-red-wings') => `${PREFIX}?u=${encodeURIComponent(landing)}&partnerpropertyid=8313917&MediaPartnerPropertyId=8313917&subId1=${sub}`;
+// subId3 is the page slug (ruling 2026-11-04); every fixture below is original-six-matchup.
+const tn = (landing: string, sub = 'web_promo_page_detroit-red-wings', slug = 'original-six-matchup') => `${PREFIX}?u=${encodeURIComponent(landing)}&partnerpropertyid=8313917&MediaPartnerPropertyId=8313917&subId1=${sub}&subId3=${slug}`;
 const tnDate = (landing: string) => tn(landing, 'web_promo_date_detroit-red-wings');
 const PERFORMER = 'https://www.ticketnetwork.com/e/performers/detroit-red-wings-tickets';
 
@@ -111,11 +112,16 @@ for (const [name, team, rows] of FIXTURES) {
       assert.ok(sub, `subId1 present: ${h}`);
       assert.match(sub as string, SUBID_RE, h);
       assert.ok(sub === `web_promo_page_${team.id}` || sub === `web_promo_date_${team.id}`, sub as string);
+      // subId3 = the page slug on every one (ruling 2026-11-04); never subId2 server-side.
+      assert.equal(new URL(h).searchParams.get('subId3'), rows[0].pageSlug, h);
+      assert.equal(new URL(h).searchParams.get('subId2'), null, h);
     }
     assert.equal(new URL(anchor(html, 'Get tickets')).searchParams.get('subId1'), `web_promo_page_${team.id}`);
     for (const m of html.matchAll(/<a [^>]*href="([^"]+)"[^>]*>Tickets<\/a>/g)) assert.equal(new URL(m[1]).searchParams.get('subId1'), `web_promo_date_${team.id}`);
     // The Ticketmaster secondary link is still there, untouched.
     assert.match(anchor(html, 'Also on Ticketmaster'), /^https:\/\/www\.ticketmaster\.com\//);
+    // Without the Impact wrap it is a bare link, so no subId3 (not an Impact link).
+    assert.ok(!anchor(html, 'Also on Ticketmaster').includes('subId3'));
   });
 }
 

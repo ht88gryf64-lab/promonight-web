@@ -169,6 +169,9 @@ export type TicketmasterOpts = {
    *  takes precedence; promo-level attribution rides PostHog's
    *  `affiliate_click` event, not the wrap. */
   promoId?: string | null;
+  /** Promo pages only: page.slug, appended to the Impact wrap as subId3
+   *  (withPageSubId3). Ignored when the wrap is unset. */
+  pageSlug?: string | null;
 };
 
 // Builds the outbound Ticketmaster URL. When NEXT_PUBLIC_TICKETMASTER_IMPACT_WRAP
@@ -208,9 +211,14 @@ export function buildTicketmasterUrl(opts: TicketmasterOpts): string {
     opts.subKey ??
     (opts.venueSlug ? `${opts.surface}_${opts.venueSlug}` : `${opts.surface}_${opts.teamSlug}`);
 
-  return TICKETMASTER_IMPACT_WRAP
-    .replace('{TARGET}', encodeURIComponent(directUrl))
-    .replace('{SHARED_ID}', encodeURIComponent(sharedId));
+  // subId3 (promo pages) is appended to the wrap; sharedid is never touched.
+  // The bare-URL branch above gets none: it is not an Impact link.
+  return withPageSubId3(
+    TICKETMASTER_IMPACT_WRAP
+      .replace('{TARGET}', encodeURIComponent(directUrl))
+      .replace('{SHARED_ID}', encodeURIComponent(sharedId)),
+    opts.pageSlug,
+  );
 }
 
 // ── TicketNetwork (Impact) ───────────────────────────────────────────────
@@ -347,6 +355,46 @@ function tnSubIdToken(token: string): string {
   return subIdPart(token).slice(0, TN_SUBID_MAX).replace(/[-_]+$/, '');
 }
 
+// ── subId3: the page (ruling 2026-11-04) ─────────────────────────────────
+// The ONE helper that adds the page-level sub ID. Impact links have three
+// slots and each has one owner:
+//   subId1  {surface}_{slug}, server-rendered (Ticketmaster: the wrap's
+//           sharedid). Never changed here, so existing reports stay comparable.
+//   subId2  `share`, added on the client in a shared-link session only
+//           (withShareSubId2, src/lib/promo-share.ts). Never in served HTML.
+//   subId3  the promo page's slug (page.slug, the URL the visitor is on),
+//           server-rendered on every promo-page Impact link: the primary
+//           TicketNetwork CTA, the per-date "Tickets" links, the JSON-LD
+//           offers, and the Ticketmaster wrap (appended to the wrap, never
+//           folded into sharedid). Fanatics accepts it through the same
+//           builder option, though promo pages render no Fanatics link today.
+// Cleaned exactly like subId1 ([a-z0-9_-], lowercase, at most 64 characters).
+//
+// NOT SpotHero or Expedia, by ruling. SpotHero runs on HasOffers, and the
+// aff_c format=json echo showed it records aff_sub only (aff_sub2, aff_sub3
+// and sub_aff are dropped). Expedia's in-house program has one sub-tracking
+// field, pubref. On both, the page slug could only ride the subId1-equivalent
+// field, which would break comparability; page-level detail for those clicks
+// lives in PostHog affiliate_click (promo_id, placement) instead.
+
+/** The page's subId3 value, or null when the slug cleans to nothing. */
+export function pageSubId3(pageSlug: string | null | undefined): string | null {
+  const v = pageSlug ? tnSubIdToken(pageSlug) : '';
+  return v && TN_SUBID_RE.test(v) ? v : null;
+}
+
+/** The href with subId3={cleaned pageSlug} appended (before any #fragment).
+ *  No slug, or a slug that cleans to nothing, returns the href unchanged.
+ *  Callers are the Impact builders below; nothing else appends subId3. */
+export function withPageSubId3(href: string, pageSlug: string | null | undefined): string {
+  const v = pageSubId3(pageSlug);
+  if (!v || /[?&]subId3=/i.test(href)) return href;
+  const hashAt = href.indexOf('#');
+  const head = hashAt >= 0 ? href.slice(0, hashAt) : href;
+  const hash = hashAt >= 0 ? href.slice(hashAt) : '';
+  return `${head}${head.includes('?') ? '&' : '?'}subId3=${v}${hash}`;
+}
+
 // Gate B2 PREVIEW HOOK (2026-11-02). On a Vercel PREVIEW build only, a
 // NEXT_PUBLIC_TN_SUBID_OVERRIDE value replaces every TicketNetwork subId1 so
 // test clicks are identifiable in Impact (preview_tn_test). Inert in
@@ -381,6 +429,8 @@ export type TicketNetworkLinkOpts = {
    *  event URL the link wraps it unchanged; otherwise, or when absent, the
    *  team performer page as before. */
   eventUrl?: string | null;
+  /** Promo pages only: page.slug, carried as subId3 (withPageSubId3). */
+  pageSlug?: string | null;
 };
 
 // Assembles the full tracked TicketNetwork link. Returns null when the landing
@@ -396,7 +446,7 @@ export function buildTicketNetworkLink(opts: TicketNetworkLinkOpts): string | nu
     TN_SUBID_OVERRIDE ??
     (opts.subKey ? tnSubIdToken(opts.subKey) : null) ??
     tnSubId(opts.surface, opts.venueSlug || opts.team.id);
-  return (
+  return withPageSubId3(
     `${TICKETNETWORK.prefix}?u=${encodeURIComponent(landing)}` +
     `&partnerpropertyid=${TICKETNETWORK.partnerPropertyId}` +
     // Venue hub keys on the BUILDING, not the tenant: a hub does not know which
@@ -404,7 +454,8 @@ export function buildTicketNetworkLink(opts: TicketNetworkLinkOpts): string | nu
     // the subId is web_venue_{slug} with NO team suffix. Team-keyed attribution
     // (surface_team.id) is for the team-page block, where the team is known.
     `&MediaPartnerPropertyId=${TICKETNETWORK.partnerPropertyId}` +
-    `&subId1=${subId1}`
+    `&subId1=${subId1}`,
+    opts.pageSlug,
   );
 }
 
@@ -495,6 +546,8 @@ export interface FanaticsOpts {
    *  CTA (buildTicketNetworkLink). The store `u` + adId stay tenant-resolved.
    *  Omitted by every other surface. */
   venueSlug?: string;
+  /** Promo pages only: page.slug, carried as subId3 (withPageSubId3). */
+  pageSlug?: string | null;
 }
 
 // Assembles the full tracked Fanatics link.
@@ -523,10 +576,11 @@ export function buildFanaticsUrl(opts: FanaticsOpts): string {
     ? `${opts.surface}_${opts.venueSlug}`
     : `${opts.surface}_${opts.team.id}`;
 
-  return (
+  return withPageSubId3(
     `${FANATICS.origin}/c/${FANATICS.account}/${adId}/${FANATICS.campaignId}` +
     `?subId1=${subId1}` +
-    `&u=${encodeURIComponent(destination)}`
+    `&u=${encodeURIComponent(destination)}`,
+    opts.pageSlug,
   );
 }
 

@@ -370,7 +370,7 @@ test('tier 1 single-date NHL page: H1, the stored photo, the head, the schema an
   // offers.url follows the primary "Get tickets": TicketNetwork since the
   // event-link rulings of 2026-11-02 (performer page here: no game doc carries
   // a tnEventUrl in this fixture).
-  assert.equal(ld[1].offers.url, 'https://ticketnetwork.lusg.net/c/7236189/120057/2322?u=https%3A%2F%2Fwww.ticketnetwork.com%2Fe%2Fperformers%2Fminnesota-wild-tickets&partnerpropertyid=8313917&MediaPartnerPropertyId=8313917&subId1=web_promo_page_minnesota-wild');
+  assert.equal(ld[1].offers.url, 'https://ticketnetwork.lusg.net/c/7236189/120057/2322?u=https%3A%2F%2Fwww.ticketnetwork.com%2Fe%2Fperformers%2Fminnesota-wild-tickets&partnerpropertyid=8313917&MediaPartnerPropertyId=8313917&subId1=web_promo_page_minnesota-wild&subId3=blaze-orange-hat');
   assert.match(h, />Also on Ticketmaster<\/a>/);
   assert.equal(ld[1].eventStatus, 'https://schema.org/EventScheduled');
   // The Event image stays the stored photo, unchanged by the share card.
@@ -600,7 +600,7 @@ async function teamPageHtml(teamId: string): Promise<{ html: string; upcoming: n
   return { html: out, upcoming: upcoming.length, packagesAhead: packagesAhead.length };
 }
 
-test('share (2026-11-03): the share card on og:image and twitter:image on every variant; Share beside Get tickets and on the image; no subId2 in served HTML', async () => {
+test('share (2026-11-03): the share card on og:image and twitter:image on every variant; Share beside Get tickets and on the image; no subId2 in served HTML; Impact links carry subId1 + subId3', async () => {
   process.env.PROMO_PAGES_LIVE = 'true';
   const CARD = /^https:\/\/www\.getpromonight\.com\/api\/share-card\/[A-Za-z0-9_-]+\?team=[a-z0-9-]+&v=\d+$/;
   const variants: [string, string, string, 'live' | 'removed'][] = [
@@ -626,6 +626,14 @@ test('share (2026-11-03): the share card on og:image and twitter:image on every 
     for (const e of jsonLd(h).filter((x) => x['@type'] === 'Event')) assert.ok(!JSON.stringify(e.image ?? '').includes('/api/share-card/'), `${slug}: Event image`);
     // Never subId2 in served HTML: it is added on the client, in a shared session only.
     assert.ok(!/subId2/i.test(h), `${slug}: no subId2 in the served HTML`);
+    // subId3 (ruling 2026-11-04): every Impact link in the served HTML carries
+    // subId1 unchanged and subId3 = the page slug, side by side.
+    const impact = [...h.replace(/&amp;/g, '&').matchAll(/https:\/\/[a-z0-9.-]+\/c\/\d+\/\d+\/\d+\?[^"\s\\]+/g)].map((m) => m[0]);
+    if (kind === 'live') assert.ok(impact.length >= 2, `${slug}: the Get tickets anchor and its JSON-LD offer at least`);
+    for (const u of impact) {
+      assert.match(new URL(u).searchParams.get('subId1') ?? '', /^web_promo_(page|date)_[a-z0-9-]+$/, `${slug}: subId1 ${u}`);
+      assert.equal(new URL(u).searchParams.get('subId3'), slug, `${slug}: subId3 ${u}`);
+    }
     const shares = (h.match(/aria-label="Share this promo"/g) ?? []).length;
     if (kind === 'removed') {
       assert.equal(shares, 0, `${slug}: no Share on a removed page`);
