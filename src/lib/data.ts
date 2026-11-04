@@ -194,17 +194,32 @@ function linkPromoPages<T extends PromoWithTeam>(rows: T[]): T[] {
  *  pipeline's club mapping (tnTeamMap/{id}.tnHomeUnavailable === true, set by
  *  promo-pipeline scripts/tn-home-unavailable.js). Only the ids leave this
  *  function: the mapping's performer ids and venue paths are never read into a
- *  Team. A failed read logs and returns no ids, so every club keeps the
- *  TicketNetwork links it has today (the safe direction: a dead-end link, not
- *  a broken page). */
+ *  Team.
+ *
+ *  A failed read is retried once. If it fails again the last good set this
+ *  process read is used; with none (a cold instance or a build), the read
+ *  THROWS, so loadTeams fails and is retried on the next call (its finally),
+ *  instead of caching a generation with no club flagged: that generation would
+ *  bake TicketNetwork links into SSG and ISR pages for up to 24 hours (review
+ *  M2). A failed ISR regeneration keeps serving the previous page. */
+let lastTnHomeUnavailable: Set<string> | null = null;
 async function readTnHomeUnavailable(): Promise<Set<string>> {
-  try {
-    const snap = await db.collection('tnTeamMap').where('tnHomeUnavailable', '==', true).get();
-    return new Set(snap.docs.map((d) => d.id));
-  } catch (err) {
-    console.error('[data] tnTeamMap tnHomeUnavailable read failed; no club flagged this generation', err);
-    return new Set();
+  let lastErr: unknown = null;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const snap = await db.collection('tnTeamMap').where('tnHomeUnavailable', '==', true).get();
+      lastTnHomeUnavailable = new Set(snap.docs.map((d) => d.id));
+      return lastTnHomeUnavailable;
+    } catch (err) {
+      lastErr = err;
+    }
   }
+  if (lastTnHomeUnavailable) {
+    console.error('[data] tnTeamMap tnHomeUnavailable read failed twice; using the last good set', lastErr);
+    return lastTnHomeUnavailable;
+  }
+  console.error('[data] tnTeamMap tnHomeUnavailable read failed twice with no good set; failing the teams read', lastErr);
+  throw lastErr instanceof Error ? lastErr : new Error('tnTeamMap tnHomeUnavailable read failed');
 }
 
 /** `list` is sorted exactly as the old getAllTeams sorted (league, then city),

@@ -79,16 +79,20 @@ test('loadTeams: the flag rides on flagged clubs only, nothing else from the map
   assert.deepEqual(mapReads, ['tnHomeUnavailable == true']);
 });
 
-test('loadTeams: a failed mapping read flags no club and still loads every team', async () => {
+test('loadTeams: a failed mapping read keeps the last good flags, after one retry', async () => {
   mapReadFails = true;
+  mapReads.length = 0;
   mock.timers.tick(6 * 60 * 1000); // past the 5-minute collection TTL
   const { getAllTeams } = await import('../data');
   const teams = await getAllTeams();
   assert.equal(teams.length, 3);
-  assert.equal(teams.some((t) => 'tnHomeUnavailable' in t), false);
-  assert.ok(quiet.mock.calls.some((c) => String(c.arguments[0]).includes('tnTeamMap')), 'the failure is logged');
+  assert.equal(teams.find((t) => t.id === 'toronto-maple-leafs')?.tnHomeUnavailable, true, 'the last good set');
+  assert.equal(mapReads.length, 2, 'read, then one retry');
+  assert.ok(quiet.mock.calls.some((c) => String(c.arguments[0]).includes('last good set')), 'the failure is logged');
   mapReadFails = false;
 });
+
+// The cold-process case (no good set yet) is tn-home-unavailable-cold.test.ts.
 
 const team = (id: string, flagged = false): Team =>
   ({ id, name: id, city: id, league: 'NHL', sportSlug: 'nhl', abbreviation: 'X', primaryColor: '#000', secondaryColor: '#fff', division: 'A', ticketmasterSlug: id, ticketmasterAttractionId: '805974', ...(flagged ? { tnHomeUnavailable: true } : {}) }) as unknown as Team;

@@ -113,7 +113,7 @@ export function TicketsBlock({
             promoId={promoId}
             subKey={subKey}
             eventUrl={eventUrl}
-          ticketNetwork={ticketNetwork}
+            ticketNetwork={ticketNetwork}
             size="full"
           />
         </div>

@@ -48,6 +48,7 @@ import {
   stripTrailingPeriod,
 } from '@/lib/venue-hub';
 import { indefiniteArticleFor } from '@/lib/indefinite-article';
+import { ticketNetworkForGame } from '@/lib/affiliates';
 
 // House Light venue logistics hub. Server component (the photo hero's onError
 // degrade is the only client leaf, VenuePhotoHero). Reads only the VenueHub it
@@ -390,7 +391,9 @@ export function VenueHubView({
   const ticketsCard = verified && ticketTeam ? (
     <Card>
       <CardLabel>Tickets &amp; gear</CardLabel>
-      <TicketmasterCTA team={ticketTeam} surface="web_venue" placement="venue_hub" venueSlug={hub.slug} promoId={hub.slug} />
+      {/* A building TicketNetwork lists no events for (its tenant is flagged
+          tnHomeUnavailable): Ticketmaster only. */}
+      <TicketmasterCTA team={ticketTeam} surface="web_venue" placement="venue_hub" venueSlug={hub.slug} promoId={hub.slug} ticketNetwork={ticketNetworkForGame(null, ticketTeam)} />
       <div className="mt-2">
         <FanaticsCTA team={ticketTeam} surface="web_venue" placement="venue_hub" venueSlug={hub.slug} />
       </div>
