@@ -30,6 +30,14 @@ export interface Team {
   // performer is the full team slug ("minnesota-golden-gophers"). Pro teams
   // leave it unset and fall through to the id-based default rule.
   ticketNetworkSlug?: string;
+  // True when TicketNetwork lists none of this club's home games (its home
+  // building shows no events: Scotiabank Arena, Canadian Tire Centre). NOT a
+  // teams-doc field: loadTeams copies it from the pipeline's club mapping,
+  // tnTeamMap/{id}.tnHomeUnavailable, the one stored source. A ticket link for
+  // a home game of such a club is Ticketmaster only (ticketNetworkForGame);
+  // team-level links and the club's away games are unchanged. Absent on every
+  // other club, so their payloads are unchanged.
+  tnHomeUnavailable?: true;
   // Fully-qualified canonical Fanatics team-store URL —
   // `https://www.fanatics.com/{league}/{slug}/o-N+t-N+z-N-N`. This is the
   // field FanaticsCTA renders. Stored as a full URL (not a path) on purpose:

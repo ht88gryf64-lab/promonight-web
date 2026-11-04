@@ -5,7 +5,7 @@ import { ShareButton, formatShareDate, type ShareItem } from '@/components/share
 import { TicketsBlock } from '@/components/affiliates/TicketsBlock';
 import { ParkingCTA } from '@/components/affiliates/ParkingCTA';
 import { HotelsCTA } from '@/components/affiliates/HotelsCTA';
-import { awayGameSubKey } from '@/lib/affiliates';
+import { awayGameSubKey, ticketNetworkForGame } from '@/lib/affiliates';
 import { teamDisplayName, promoDisplayOpponent, promoDisplayTime } from '@/lib/promo-helpers';
 import type { GameContext } from '@/lib/data';
 import { formatGameTime } from '@/lib/format-game-time';
@@ -239,6 +239,7 @@ export function GameDetailRow({
             promoId={teamSlug ? `${teamSlug}:${game.date}:${game.id}` : undefined}
             subKey={awaySubKey}
             eventUrl={game.tnEventUrl ?? null}
+            ticketNetwork={ticketNetworkForGame(game, isHome ? team : opponentTeam)}
             variant="card"
           />
         )}
@@ -338,6 +339,7 @@ export function LegacyPromoDetail({
                     surface={surface}
                     placement="promo_card"
                     promoId={`${teamSlug}:${p.date}:${p.title}`}
+                    ticketNetwork={ticketNetworkForGame(null, team)}
                     variant="card"
                   />
                 </div>

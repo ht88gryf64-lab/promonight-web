@@ -5,7 +5,7 @@ import { TrackedAppLink } from '@/components/analytics-events';
 import { PromoShareImageButton, PromoShareRowButton, ShareLandingCapture, type PromoShareProps } from '@/components/promo-page/PromoShare';
 import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
 import { getLeagueHub } from '@/lib/league-hubs';
-import { buildSpotHeroUrl, buildTicketmasterUrl, buildTicketNetworkLink, ticketNetworkLinkLevel } from '@/lib/affiliates';
+import { buildSpotHeroUrl, buildTicketmasterUrl, buildTicketNetworkLink, ticketNetworkForGame, ticketNetworkLinkLevel } from '@/lib/affiliates';
 import { resolveHotelLink } from '@/lib/hotel-link';
 import { promoDownloadHref } from '@/lib/app-link';
 import { promoAnchorId, teamDisplayName } from '@/lib/promo-helpers';
@@ -207,7 +207,12 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
   // played game's event page has expired.
   const eventUrlOf = (r: { date: string; tnEventUrl?: string | null }) => (r.date >= today ? r.tnEventUrl ?? null : null);
   const primaryEventUrl = eventUrlOf(primary);
-  const ticketNetwork = buildTicketNetworkLink({ team, surface: PROMO_PAGE_SURFACE, eventUrl: primaryEventUrl });
+  // A club whose building TicketNetwork lists no events for (tnHomeUnavailable,
+  // 2026-11-03: Maple Leafs, Raptors, Senators): Ticketmaster is the primary,
+  // there is no "Also on" line, no per-date TicketNetwork link, and every
+  // Event offers the Ticketmaster href. Ticketmaster tagging is unchanged.
+  const tnAllowed = ticketNetworkForGame(null, team);
+  const ticketNetwork = tnAllowed ? buildTicketNetworkLink({ team, surface: PROMO_PAGE_SURFACE, eventUrl: primaryEventUrl }) : null;
   const tickets = ticketNetwork ?? ticketmaster;
   const ticketsPartner = ticketNetwork ? 'ticketnetwork' : 'ticketmaster';
   const ticketsLevel = ticketNetwork ? ticketNetworkLinkLevel(primaryEventUrl) : 'team';
@@ -256,7 +261,7 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
     // this is the primary href (rulings 2026-11-02); on a series it keeps the
     // Dec 11 Event from offering the Nov 18 game. Falls back to the primary
     // href only if TicketNetwork cannot be built at all.
-    ticketUrlFor: (r) => buildTicketNetworkLink({ team, surface: PROMO_PAGE_SURFACE, eventUrl: eventUrlOf(r) }),
+    ticketUrlFor: (r) => (tnAllowed ? buildTicketNetworkLink({ team, surface: PROMO_PAGE_SURFACE, eventUrl: eventUrlOf(r) }) : ticketmaster),
     dateModified: page.updatedAt,
     faqs,
     // The visible trail, item for item (Google asks the markup to reflect it):
@@ -275,7 +280,7 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
   const gameLine = (date: string, row: { displayTime: string; displayOpponent: string; promoId: string; tnEventUrl?: string | null }, key: string, withOpponent: boolean) => {
     // subId1 web_promo_date_{team}: the per-date link, told apart from the
     // primary CTA partner-side (the click event keeps surface web_promo_page).
-    const rowTickets = withOpponent && !removed && date >= today ? buildTicketNetworkLink({ team, surface: PROMO_DATE_SUBID_SURFACE, eventUrl: row.tnEventUrl ?? null }) : null;
+    const rowTickets = tnAllowed && withOpponent && !removed && date >= today ? buildTicketNetworkLink({ team, surface: PROMO_DATE_SUBID_SURFACE, eventUrl: row.tnEventUrl ?? null }) : null;
     return (
       <li key={key} className="m-0 list-none text-[15px] leading-[1.45] text-rd-ink-soft">
         <strong className="text-rd-ink">{`${formatLongDate(date)}${row.displayTime ? ` · ${row.displayTime}` : ''}`}</strong>

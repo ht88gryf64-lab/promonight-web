@@ -73,6 +73,10 @@ type Props = {
    *  without it, on the team performer page as before. Ticketmaster stays
    *  team-level either way. */
   eventUrl?: string | null;
+  /** false: no TicketNetwork button, Ticketmaster alone. Set by a one-game
+   *  caller when the game's home club is flagged tnHomeUnavailable
+   *  (ticketNetworkForGame). Default true: every other caller unchanged. */
+  ticketNetwork?: boolean;
 };
 
 export function TicketmasterCTA({
@@ -86,6 +90,7 @@ export function TicketmasterCTA({
   layout = 'stacked',
   primaryOnly = false,
   eventUrl = null,
+  ticketNetwork = true,
 }: Props) {
   // Both vendors receive the identical sub-ID: subKey verbatim when the call
   // site provides one (away rows pass the shared awayGameSubKey compound
@@ -101,7 +106,7 @@ export function TicketmasterCTA({
     surface,
     promoId,
   });
-  const ticketNetworkHref = buildTicketNetworkLink({ team, surface, venueSlug, subKey, eventUrl });
+  const ticketNetworkHref = ticketNetwork ? buildTicketNetworkLink({ team, surface, venueSlug, subKey, eventUrl }) : null;
   const tnLevel = ticketNetworkLinkLevel(eventUrl);
 
   // Graceful fallback — never render a broken ticket link. If neither vendor

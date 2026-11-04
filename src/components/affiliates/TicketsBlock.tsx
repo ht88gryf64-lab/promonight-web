@@ -25,6 +25,9 @@ type TicketsBlockProps = {
   /** The game's TicketNetwork event page (Game.tnEventUrl), forwarded to the
    *  TicketNetwork button. Every caller that renders one game passes it. */
   eventUrl?: string | null;
+  /** false: Ticketmaster only (the game's home club is flagged
+   *  tnHomeUnavailable; ticketNetworkForGame). Default true. */
+  ticketNetwork?: boolean;
   /** 'section' (default): full team-page section with eyebrow + h2 + CTA.
    *  'card': modal/playoffs row look — eyebrow + CTA only, no h2; matchup
    *  context is supplied by the surrounding card. */
@@ -63,6 +66,7 @@ export function TicketsBlock({
   promoId,
   subKey,
   eventUrl = null,
+  ticketNetwork = true,
   variant = 'section',
 }: TicketsBlockProps) {
   if (variant === 'card') {
@@ -79,6 +83,7 @@ export function TicketsBlock({
           promoId={promoId}
           subKey={subKey}
           eventUrl={eventUrl}
+          ticketNetwork={ticketNetwork}
           size="compact"
         />
       </div>
@@ -108,6 +113,7 @@ export function TicketsBlock({
             promoId={promoId}
             subKey={subKey}
             eventUrl={eventUrl}
+          ticketNetwork={ticketNetwork}
             size="full"
           />
         </div>

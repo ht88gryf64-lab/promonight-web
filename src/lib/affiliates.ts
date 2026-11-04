@@ -286,6 +286,23 @@ export function ticketNetworkEventUrlFor(u: unknown, gameDate: string): string |
   return isTicketNetworkEventUrl(u) && ticketNetworkEventDate(u) === gameDate ? u : null;
 }
 
+/** Whether a ticket link for ONE game may carry TicketNetwork: false when the
+ *  game's home club is flagged tnHomeUnavailable (TicketNetwork lists no
+ *  events at its building, so the link could only be the performer-page
+ *  fallback, a dead end for that game). Keyed on the HOME club, so a flagged
+ *  club's away game at a US building keeps TicketNetwork, and another club's
+ *  game at a flagged building drops it. A neutral-site or international game
+ *  is not at the flagged building and keeps TicketNetwork. `game` null means a
+ *  home date at the club's own building (a promo row with no game doc). An
+ *  unknown home club (null) keeps TicketNetwork, as today. */
+export function ticketNetworkForGame(
+  game: { neutralSite?: boolean; isInternational?: boolean } | null,
+  homeClub: Pick<Team, 'tnHomeUnavailable'> | null | undefined,
+): boolean {
+  if (homeClub?.tnHomeUnavailable !== true) return true;
+  return game?.neutralSite === true || game?.isInternational === true;
+}
+
 /** 'event' when the TicketNetwork link lands on the game's own event page,
  *  'team' when it lands on the team performer page. The affiliate_click
  *  property ticket_link_level carries it. */
