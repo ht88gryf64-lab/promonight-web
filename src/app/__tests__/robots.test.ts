@@ -21,6 +21,7 @@ const NAMED_GROUPS = ['GPTBot', 'ChatGPT-User', 'PerplexityBot', 'Google-Extende
 // Agents with no group of their own, so `*` decides for them.
 const STAR_AGENTS = ['Googlebot', 'OAI-SearchBot', 'Claude-SearchBot', 'Claude-User', 'Bingbot', 'SomeUnlistedBot'];
 const PROMO_CARD = '/api/promo-card/c42db7fce52ee28c?team=boston-bruins&v=1793373766552';
+const SHARE_CARD = '/api/share-card/c42db7fce52ee28c?team=boston-bruins&v=1793373766552';
 const PROMO_PAGE = '/nhl/boston-bruins/promos/military-appreciation-night';
 const PAGES = ['/', PROMO_PAGE, '/download', '/ads.txt', '/app-ads.txt', '/sitemap.xml'];
 
@@ -64,12 +65,12 @@ describe('robots.txt', async () => {
     assert.equal(existsSync(join(__dirname, '..', 'robots.ts')), false);
   });
 
-  it('every group, in order, reads Allow: /api/promo-card/, Disallow: /api/, Allow: /', () => {
+  it('every group, in order, reads Allow: /api/promo-card/, Allow: /api/share-card/, Disallow: /api/, Allow: /', () => {
     const g = groups(text);
     assert.deepEqual(g.map(([a]) => a), [...NAMED_GROUPS, '*']);
     assert.deepEqual(g.map(([a]) => a), [...ROBOTS_AGENTS]);
     for (const [agent, lines] of g) {
-      assert.deepEqual(lines, ['Allow: /api/promo-card/', 'Disallow: /api/', 'Allow: /'], agent);
+      assert.deepEqual(lines, ['Allow: /api/promo-card/', 'Allow: /api/share-card/', 'Disallow: /api/', 'Allow: /'], agent);
     }
   });
 
@@ -78,11 +79,13 @@ describe('robots.txt', async () => {
     assert.deepEqual(parsed.getSitemaps(), [`${ORIGIN}/sitemap.xml`]);
   });
 
-  for (const ua of ['Googlebot', 'ClaudeBot', 'OAI-SearchBot', 'PerplexityBot', 'SomeUnlistedBot']) {
-    it(`${ua}: /api/promo-card/<id> allowed, /api/subscribe and /api/ disallowed, under longest match and first match`, () => {
+  for (const ua of ['Googlebot', 'Twitterbot', 'facebookexternalhit', 'ClaudeBot', 'OAI-SearchBot', 'PerplexityBot', 'SomeUnlistedBot']) {
+    it(`${ua}: /api/promo-card/<id> and /api/share-card/<id> allowed, /api/subscribe and /api/ disallowed, under longest match and first match`, () => {
       for (const read of [longest, (p: string, a: string) => firstMatch(text, p, a)]) {
         assert.equal(read(PROMO_CARD, ua), true);
         assert.equal(read('/api/promo-card/c42db7fce52ee28c', ua), true);
+        assert.equal(read(SHARE_CARD, ua), true);
+        assert.equal(read('/api/share-card/c42db7fce52ee28c', ua), true);
         assert.equal(read('/api/subscribe', ua), false);
         assert.equal(read('/api/revalidate', ua), false);
         assert.equal(read('/api/', ua), false);
@@ -92,7 +95,7 @@ describe('robots.txt', async () => {
 
   it('the two readings agree for every agent on every path', () => {
     for (const ua of [...NAMED_GROUPS, ...STAR_AGENTS]) {
-      for (const path of [...PAGES, PROMO_CARD, '/api/subscribe', '/api/geo-region', '/api/']) {
+      for (const path of [...PAGES, PROMO_CARD, SHARE_CARD, '/api/subscribe', '/api/geo-region', '/api/']) {
         assert.equal(firstMatch(text, path, ua), longest(path, ua), `${ua} ${path}`);
       }
     }
