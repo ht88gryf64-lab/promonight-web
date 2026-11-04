@@ -1,8 +1,9 @@
 // Every TicketmasterCTA / TicketsBlock call site either passes the
 // tnHomeUnavailable switch (ticketNetwork={ticketNetworkForGame(...)}) or is a
-// listed TEAM-LEVEL site, where a flagged club keeps both buttons on purpose
-// (Ticketmaster already leads; TicketNetwork's team page can still list its
-// road games). A new call site fails here until it is put on one list or the
+// listed exception that can never show TicketNetwork for a flagged club's
+// building (Ticketmaster-only buttons, CFB schools). Since 2026-11-03 the
+// team-page hero and sidebar are switched too (Matt: Ticketmaster only there
+// for a flagged club). A new call site fails here until it is put on one list or the
 // other (review M1, 2026-11-03).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -12,8 +13,6 @@ import { join, relative } from 'node:path';
 const ROOT = join(process.cwd(), 'src');
 // file -> number of call sites that are team-level by design.
 const TEAM_LEVEL: Record<string, number> = {
-  'app/[sport]/[team]/page.tsx': 1, // legacy template hero
-  'components/redesign/AffiliateRail.tsx': 1, // team-page sidebar
   'components/playoffs/tickets.tsx': 1, // primaryOnly: Ticketmaster is the only button rendered
   'components/cfb/CfbSchedule.tsx': 1, // CFB schools are not in tnTeamMap
   'components/cfb/CfbSchoolPage.tsx': 2,

@@ -10,7 +10,8 @@
 //     keeps it.
 //  3. The team-page game cards (GameExpand, GameDayDetail) follow it: the
 //     Ticketmaster button stays, unchanged, and the TicketNetwork button goes.
-//  4. Team-level CTAs (no game) are unchanged.
+//  4. Team-level CTAs (hero, sidebar) are Ticketmaster only for a flagged club
+//     (Matt 2026-11-03); the call-site guard test holds every site to it.
 //
 // Run with: TSX_TSCONFIG_PATH=tsconfig.test.json node --import tsx --experimental-test-module-mocks --test src/lib/__tests__/tn-home-unavailable.test.tsx
 import { test, mock } from 'node:test';
@@ -159,12 +160,17 @@ test('legacy promo-only cards: the flagged club drops TicketNetwork, another clu
   }
 });
 
-test('team-level CTA (no game) is unchanged for a flagged club: both buttons', async () => {
+test('team-level CTA (hero, sidebar; Matt 2026-11-03): Ticketmaster only for a flagged club, both buttons for any other', async () => {
   const { TicketmasterCTA } = await import('../../components/affiliates/TicketmasterCTA');
-  const html = renderToStaticMarkup(<TicketmasterCTA team={LEAFS} surface="web_team_page" placement="team_page_hero" />);
-  assert.equal(tmHrefs(html).length, 1);
-  assert.equal(tnHrefs(html).length, 1);
-  const off = renderToStaticMarkup(<TicketmasterCTA team={LEAFS} surface="web_team_page" placement="team_page_hero" ticketNetwork={false} />);
-  assert.equal(tnHrefs(off).length, 0);
-  assert.equal(tmHrefs(off).length, 1);
+  const { ticketNetworkForGame } = await import('../affiliates');
+  const leafs = renderToStaticMarkup(<TicketmasterCTA team={LEAFS} surface="web_team_page" placement="team_page_sidebar" ticketNetwork={ticketNetworkForGame(null, LEAFS)} />);
+  assert.deepEqual(tnHrefs(leafs), []);
+  assert.equal(leafs.includes('TicketNetwork'), false);
+  assert.equal(tmHrefs(leafs).length, 1);
+  const bruins = renderToStaticMarkup(<TicketmasterCTA team={BRUINS} surface="web_team_page" placement="team_page_sidebar" ticketNetwork={ticketNetworkForGame(null, BRUINS)} />);
+  assert.equal(tnHrefs(bruins).length, 1);
+  assert.equal(tmHrefs(bruins).length, 1);
+  // The Ticketmaster href is the one an unflagged render gives.
+  const plain = renderToStaticMarkup(<TicketmasterCTA team={{ ...LEAFS, tnHomeUnavailable: undefined } as Team} surface="web_team_page" placement="team_page_sidebar" />);
+  assert.deepEqual(tmHrefs(leafs), tmHrefs(plain));
 });
