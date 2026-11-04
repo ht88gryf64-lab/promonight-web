@@ -10,6 +10,7 @@ import { StarToggle } from './star-toggle';
 import { track } from '@/lib/analytics';
 import { getInStateTeamSlugs } from '@/lib/geo/state-to-teams';
 import { TicketmasterCTA } from './affiliates/TicketmasterCTA';
+import { ticketNetworkForGame } from '@/lib/affiliates';
 import { FanaticsCTA } from './affiliates/FanaticsCTA';
 import { SpotHeroCTA } from './affiliates/SpotHeroCTA';
 import { ExpediaCTA } from './affiliates/ExpediaCTA';
@@ -1682,6 +1683,7 @@ function AffiliateClusterSection({
             surface="web_my_teams"
             placement="my_teams_tonight"
             size="full"
+            ticketNetwork={ticketNetworkForGame(null, team)}
           />
         </section>
 
@@ -1731,6 +1733,7 @@ function AffiliateClusterSection({
           surface="web_my_teams"
           placement="my_teams_tonight"
           size="full"
+          ticketNetwork={ticketNetworkForGame(null, team)}
         />
       </section>
 

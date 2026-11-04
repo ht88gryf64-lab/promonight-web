@@ -206,6 +206,7 @@ let lastTnHomeUnavailable: Set<string> | null = null;
 async function readTnHomeUnavailable(): Promise<Set<string>> {
   let lastErr: unknown = null;
   for (let attempt = 0; attempt < 2; attempt += 1) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, 300)); // a short pause before the retry
     try {
       const snap = await db.collection('tnTeamMap').where('tnHomeUnavailable', '==', true).get();
       lastTnHomeUnavailable = new Set(snap.docs.map((d) => d.id));

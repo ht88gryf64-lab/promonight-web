@@ -14,7 +14,6 @@ const ROOT = join(process.cwd(), 'src');
 const TEAM_LEVEL: Record<string, number> = {
   'app/[sport]/[team]/page.tsx': 1, // legacy template hero
   'components/redesign/AffiliateRail.tsx': 1, // team-page sidebar
-  'components/my-teams-view.tsx': 2, // "tonight" card: home or away, not keyed to a building
   'components/playoffs/tickets.tsx': 1, // primaryOnly: Ticketmaster is the only button rendered
   'components/cfb/CfbSchedule.tsx': 1, // CFB schools are not in tnTeamMap
   'components/cfb/CfbSchoolPage.tsx': 2,
