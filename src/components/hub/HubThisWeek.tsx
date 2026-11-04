@@ -7,6 +7,7 @@ import { TicketsBlock } from '@/components/affiliates/TicketsBlock';
 import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
 import { IconFlame, IconArrowRight } from '@tabler/icons-react';
 import { siteTodayYmd } from '@/lib/site-today';
+import { ticketNetworkForGame } from '@/lib/affiliates';
 
 // Cap the rail so it stays a focused lead-in. getMlbSlate is already one promo
 // per team, date-sorted, so this is the soonest teams. Exhaustive, crawlable
@@ -138,6 +139,7 @@ export function HubThisWeek({
                         surface={surface}
                         placement="promo_card"
                         promoId={`${p.team.id}:${p.date}:${p.title}`}
+                        ticketNetwork={ticketNetworkForGame(null, p.team)}
                         variant="card"
                       />
                     </div>

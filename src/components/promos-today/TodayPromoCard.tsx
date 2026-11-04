@@ -5,6 +5,7 @@ import { promoPageHref } from '@/lib/promo-page-href';
 import { RedesignPromoRow, type PromoRowShare } from '@/components/redesign/RedesignPromoRow';
 import { TicketmasterCTA } from '@/components/affiliates/TicketmasterCTA';
 import { SpotHeroCTA } from '@/components/affiliates/SpotHeroCTA';
+import { ticketNetworkForGame } from '@/lib/affiliates';
 
 // One /promos/today promo unit. Reuses the EXACT team-page promo row
 // (RedesignPromoRow) so the visual — date stamp, category icon, Giveaways + HOT
@@ -55,6 +56,7 @@ export function TodayPromoCard({
           promoId={promoKey}
           size="compact"
           layout="inline"
+          ticketNetwork={ticketNetworkForGame(null, p.team)}
         />
         <SpotHeroCTA
           team={p.team}

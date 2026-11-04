@@ -10,6 +10,7 @@ import { TicketsBlock, type TicketsBlockPlacement } from '../affiliates/TicketsB
 import { categoryForPromo } from '../redesign/categories';
 import { ScoreBadge } from './score-badge';
 import { isPurchaseGated } from '@/lib/promo-helpers';
+import { ticketNetworkForGame } from '@/lib/affiliates';
 
 type ScoredPromoCardProps = {
   promo: ScoredPromoWithTeam;
@@ -147,7 +148,7 @@ export function ScoredPromoCard({
         </TrackedTapLink>
         {showTickets && (
           <div className="border-t border-rd-line px-4 pb-4 pt-3">
-            <TicketsBlock team={team} surface={ticketsSurface} placement={ticketsPlacement} variant="card" />
+            <TicketsBlock team={team} surface={ticketsSurface} placement={ticketsPlacement} ticketNetwork={ticketNetworkForGame(null, team)} variant="card" />
           </div>
         )}
       </article>
@@ -227,6 +228,7 @@ export function ScoredPromoCard({
             team={team}
             surface={ticketsSurface}
             placement={ticketsPlacement}
+            ticketNetwork={ticketNetworkForGame(null, team)}
             variant="card"
           />
         </div>

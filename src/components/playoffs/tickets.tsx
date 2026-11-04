@@ -3,6 +3,7 @@ import type { Team } from '@/lib/types';
 import type { AnalyticsSurface } from '@/lib/analytics';
 import { TicketsBlock, type TicketsBlockPlacement } from '@/components/affiliates/TicketsBlock';
 import { TicketmasterCTA } from '@/components/affiliates/TicketmasterCTA';
+import { ticketNetworkForGame } from '@/lib/affiliates';
 
 /**
  * One ticket button for each host club, rendered once per club on the server
@@ -49,7 +50,7 @@ export function seriesTickets(
     if (!team) continue;
     out[s.id] = (
       <div data-tickets-for={s.hostTeamId}>
-        <TicketsBlock team={team} surface={surface} placement={placement} variant="card" />
+        <TicketsBlock team={team} surface={surface} placement={placement} ticketNetwork={ticketNetworkForGame(null, team)} variant="card" />
       </div>
     );
   }

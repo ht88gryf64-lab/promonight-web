@@ -190,12 +190,47 @@ function linkPromoPages<T extends PromoWithTeam>(rows: T[]): T[] {
 // two different versions of the same club on one page. Returning both views
 // from one read makes them the same generation by construction.
 
+/** Club ids whose home building TicketNetwork lists no events for, from the
+ *  pipeline's club mapping (tnTeamMap/{id}.tnHomeUnavailable === true, set by
+ *  promo-pipeline scripts/tn-home-unavailable.js). Only the ids leave this
+ *  function: the mapping's performer ids and venue paths are never read into a
+ *  Team.
+ *
+ *  A failed read is retried once. If it fails again the last good set this
+ *  process read is used; with none (a cold instance or a build), the read
+ *  THROWS, so loadTeams fails and is retried on the next call (its finally),
+ *  instead of caching a generation with no club flagged: that generation would
+ *  bake TicketNetwork links into SSG and ISR pages for up to 24 hours (review
+ *  M2). A failed ISR regeneration keeps serving the previous page. */
+let lastTnHomeUnavailable: Set<string> | null = null;
+async function readTnHomeUnavailable(): Promise<Set<string>> {
+  let lastErr: unknown = null;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, 300)); // a short pause before the retry
+    try {
+      const snap = await db.collection('tnTeamMap').where('tnHomeUnavailable', '==', true).get();
+      lastTnHomeUnavailable = new Set(snap.docs.map((d) => d.id));
+      return lastTnHomeUnavailable;
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  if (lastTnHomeUnavailable) {
+    console.error('[data] tnTeamMap tnHomeUnavailable read failed twice; using the last good set', lastErr);
+    return lastTnHomeUnavailable;
+  }
+  console.error('[data] tnTeamMap tnHomeUnavailable read failed twice with no good set; failing the teams read', lastErr);
+  throw lastErr instanceof Error ? lastErr : new Error('tnTeamMap tnHomeUnavailable read failed');
+}
+
 /** `list` is sorted exactly as the old getAllTeams sorted (league, then city),
  *  so every caller that relies on the shipped order — the team grid's index
  *  math in teams-browser.tsx, the sitemap's URL order — sees no change. */
 const loadTeams = makeCollectionLoader<{ list: Team[]; byId: Map<string, Team> }>(async () => {
-  const snapshot = await db.collection('teams').get();
+  const [snapshot, tnHomeUnavailable] = await Promise.all([db.collection('teams').get(), readTnHomeUnavailable()]);
   const list = snapshot.docs.map(mapTeamDoc);
+  // In the same loader, so a club and its flag are one generation.
+  for (const t of list) if (tnHomeUnavailable.has(t.id)) t.tnHomeUnavailable = true;
   list.sort((a, b) => a.league.localeCompare(b.league) || a.city.localeCompare(b.city));
   return { list, byId: new Map(list.map((t) => [t.id, t])) };
 });

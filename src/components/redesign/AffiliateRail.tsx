@@ -6,6 +6,7 @@ import { FanaticsCTA } from '@/components/affiliates/FanaticsCTA';
 import { VenueHubLink } from '@/components/venue-hub/VenueHubLink';
 import { getVenueHub, getVenueHubForTeam } from '@/lib/venue-hub';
 import { TeamVenueFacts } from '@/components/venue-hub/TeamVenueFacts';
+import { ticketNetworkForGame } from '@/lib/affiliates';
 
 // AffiliateRail — the "plan your visit" module. The single tickets CTA lives
 // here now (the hero Get Tickets button was removed), so this is the one place
@@ -40,8 +41,10 @@ export async function AffiliateRail({ team, venue, className }: AffiliateRailPro
       </h2>
 
       <div className="flex flex-col gap-2.5">
-        {/* Tickets — the single tickets CTA (locked team_page_sidebar placement) */}
-        <TicketmasterCTA team={team} surface="web_team_page" placement="team_page_sidebar" size="full" />
+        {/* Tickets — the single tickets CTA (locked team_page_sidebar placement).
+            Ticketmaster only for a club TicketNetwork lists no home events for
+            (tnHomeUnavailable; Matt 2026-11-03). */}
+        <TicketmasterCTA team={team} surface="web_team_page" placement="team_page_sidebar" size="full" ticketNetwork={ticketNetworkForGame(null, team)} />
         {/* Parking */}
         <SpotHeroCTA team={team} venue={venue} surface="web_team_page" placement="team_page_prepare" />
         {/* Hotels */}

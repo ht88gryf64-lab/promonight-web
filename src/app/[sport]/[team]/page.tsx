@@ -49,6 +49,7 @@ import { isSeasonScopeLive, resolveClaimMode } from '@/lib/season-scope';
 import { currentSeasonLabel, isSplitSeasonLeague } from '@/lib/season-label';
 import { partitionTicketPackages, upcomingTicketPackages } from '@/lib/ticket-packages';
 import { RedesignTeamPage } from '@/components/redesign/RedesignTeamPage';
+import { ticketNetworkForGame } from '@/lib/affiliates';
 
 export const revalidate = 86400;
 
@@ -517,6 +518,7 @@ export default async function TeamPage({
               surface="web_team_page"
               placement="team_page_hero"
               size="full"
+              ticketNetwork={ticketNetworkForGame(null, team)}
             />
           </div>
         </div>

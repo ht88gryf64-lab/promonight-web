@@ -131,3 +131,47 @@ test('a series links no played date in its JSON-LD offers', () => {
   const html = render([row({ promoId: 'a', date: '2026-10-20', tnEventUrl: EV(1, 'played') }), row({ promoId: 'b', date: '2026-11-18', tnEventUrl: BRUINS })]);
   assert.deepEqual(eventOffers(html), [['2026-10-20', tn(PERFORMER)], ['2026-11-18', tn(BRUINS)]]);
 });
+
+// ── tnHomeUnavailable (2026-11-03): TicketNetwork lists no events at the
+// club's building (Maple Leafs, Raptors, Senators). Ticketmaster is the
+// primary, with the tagging an unflagged page gives its secondary link; no
+// "Also on" line, no per-date link, no TicketNetwork href anywhere (JSON-LD
+// included). The flag wins over a stored event link.
+
+const LEAFS = { ...TEAM, id: 'toronto-maple-leafs', name: 'Maple Leafs', city: 'Toronto', abbreviation: 'TOR', tnHomeUnavailable: true } as unknown as Team;
+const LEAFS_PLAIN = { ...LEAFS, tnHomeUnavailable: undefined } as unknown as Team;
+const leafsRow = (over: Partial<PromoPageRow>) => row({ displayOpponent: 'Bruins', pageSlug: 'hockey-fights-cancer', title: 'Hockey Fights Cancer', ...over });
+
+test('flagged club, single date: Ticketmaster is the primary with the unflagged secondary tagging, no TicketNetwork anywhere', () => {
+  const rows = [leafsRow({ date: '2026-11-21' })];
+  const html = render(rows, '2026-11-02', LEAFS);
+  const plain = render(rows, '2026-11-02', LEAFS_PLAIN);
+  const tm = anchor(plain, 'Also on Ticketmaster');
+  assert.match(tm, /^https:\/\/www\.ticketmaster\.com\//);
+  assert.equal(anchor(html, 'Get tickets'), tm);
+  assert.equal(anchors(html, 'Also on Ticketmaster'), 0);
+  assert.equal(anchors(html, 'Tickets'), 0);
+  assert.equal(offersUrl(html), tm);
+  assert.ok(!/ticketnetwork/i.test(html), 'no TicketNetwork href, label or offer');
+  assert.ok(html.includes('on Ticketmaster"'), 'the primary is labelled for Ticketmaster');
+});
+
+test('flagged club, series: no per-date links, every Event offers Ticketmaster', () => {
+  const rows = [
+    leafsRow({ promoId: 'a', date: '2026-10-20', displayOpponent: 'Rangers' }),
+    leafsRow({ promoId: 'b', date: '2026-11-21' }),
+    leafsRow({ promoId: 'c', date: '2026-12-12', displayOpponent: 'Blackhawks' }),
+  ];
+  const html = render(rows, '2026-11-02', LEAFS);
+  const tm = anchor(render(rows, '2026-11-02', LEAFS_PLAIN), 'Also on Ticketmaster');
+  assert.equal(anchor(html, 'Get tickets'), tm);
+  assert.equal(anchors(html, 'Tickets'), 0);
+  assert.deepEqual(eventOffers(html), [['2026-10-20', tm], ['2026-11-21', tm], ['2026-12-12', tm]]);
+  assert.ok(!/ticketnetwork/i.test(html));
+});
+
+test('flagged club with a stored event link: the flag wins, Ticketmaster stays primary', () => {
+  const html = render([leafsRow({ date: '2026-11-21', tnEventUrl: EV(9000001, 'toronto-maple-leafs-vs-boston-bruins-tickets-sat-nov-21-2026-scotiabank-arena') })], '2026-11-02', LEAFS);
+  assert.match(anchor(html, 'Get tickets'), /^https:\/\/www\.ticketmaster\.com\//);
+  assert.ok(!/ticketnetwork/i.test(html));
+});
