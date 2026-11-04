@@ -88,10 +88,44 @@ Both Share controls (`share_promo_page_row`, `share_promo_page_image`) live in
   sharedid are untouched. SpotHero (HasOffers) and Expedia (in-house) are not
   Impact and are never touched. Added on the client after hydration, so no
   served HTML ever carries subId2. `affiliate_click` in a shared session
-  carries `share_id` and `share_self_open`.
+  carries `share_id` and `share_self_open`. On a promo page the share's
+  `subId2=share` sits beside the server-rendered `subId3={pageSlug}` (next
+  section); neither touches the other.
 - **og:image.** The share card, `/api/share-card/{promoId}?team={teamId}&v={page
   stamp ms}`, on every promo page variant; the Event JSON-LD image is still the
   tier image.
+
+## Impact subId3: the promo page (ruling 2026-11-04)
+
+Every Impact link on a promo page carries `subId3={pageSlug}`: `page.slug`, the
+URL the visitor is on (not the canonical slug), cleaned like subId1
+(`[a-z0-9_-]`, lowercase, at most 64 characters). One helper adds it,
+`withPageSubId3` in `src/lib/affiliates.ts`, called by the Impact builders
+when the caller passes `pageSlug`; only `PromoPageView` passes it, so every
+other surface is byte-identical.
+
+| slot | owner | on a promo page |
+|---|---|---|
+| subId1 (Ticketmaster: the wrap's `sharedid`) | `{surface}_{team}`, server-rendered | unchanged: `web_promo_page_{team}`, or `web_promo_date_{team}` on the per-date links |
+| subId2 | `share`, client-side, shared-link sessions only | unchanged; never in served HTML |
+| subId3 | the page slug, server-rendered | the primary "Get tickets", the per-date "Tickets" links, every JSON-LD `offers.url`, and the Ticketmaster wrap (appended to the wrap, never folded into `sharedid`) |
+
+- **Ticketmaster.** Only the Impact wrap gets subId3. Without
+  `NEXT_PUBLIC_TICKETMASTER_IMPACT_WRAP` the link is a bare ticketmaster.com
+  URL, not an Impact link, and carries nothing.
+- **Fanatics.** `buildFanaticsUrl` takes the same `pageSlug` option, but promo
+  pages render no Fanatics link today.
+- **SpotHero and Expedia: unchanged, by ruling.** SpotHero runs on HasOffers,
+  and the `aff_c` format=json echo showed it records `aff_sub` only
+  (`aff_sub2`, `aff_sub3` and `sub_aff` are dropped). Expedia's in-house
+  program has one sub-tracking field, `pubref`. On both, the slug could only
+  ride the subId1-equivalent field, which would break report comparability.
+  Page-level detail for those clicks is in PostHog `affiliate_click`
+  (`promo_id`, `placement`).
+- **Tests.** `src/components/promo-page/__tests__/promo-page-subid3.test.tsx`
+  (served HTML, the Ticketmaster wrap, a simulated share-session click with
+  subId1 + subId2=share + subId3 together) and the route test's served-HTML
+  check in `src/app/[sport]/[team]/promos/[slug]/__tests__/promo-page.test.tsx`.
 
 ## TicketNetwork subId1 (ruling 2026-11-02)
 

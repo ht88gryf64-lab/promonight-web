@@ -138,6 +138,7 @@ function ticketHref(page: PromoPage): string {
     ticketmasterAttractionId: team.ticketmasterAttractionId,
     surface: PROMO_PAGE_SURFACE,
     promoId: primary.promoId,
+    pageSlug: page.slug,
   });
 }
 
@@ -201,6 +202,8 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
   // (primary is the next upcoming date, so a series links its next game),
   // else the team performer page; subId1 web_promo_page_{team}. Ticketmaster
   // is the secondary text link. JSON-LD offers.url follows the primary href.
+  // subId3 (ruling 2026-11-04) is page.slug on every Impact link here, the
+  // per-date links and the Ticketmaster wrap included (withPageSubId3).
   const ticketmaster = ticketHref(page);
   // Only a date still to be played links its event (review round 2, H2): a
   // page whose dates have all been played keeps a live row as primary, and a
@@ -212,7 +215,7 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
   // there is no "Also on" line, no per-date TicketNetwork link, and every
   // Event offers the Ticketmaster href. Ticketmaster tagging is unchanged.
   const tnAllowed = ticketNetworkForGame(null, team);
-  const ticketNetwork = tnAllowed ? buildTicketNetworkLink({ team, surface: PROMO_PAGE_SURFACE, eventUrl: primaryEventUrl }) : null;
+  const ticketNetwork = tnAllowed ? buildTicketNetworkLink({ team, surface: PROMO_PAGE_SURFACE, eventUrl: primaryEventUrl, pageSlug: page.slug }) : null;
   const tickets = ticketNetwork ?? ticketmaster;
   const ticketsPartner = ticketNetwork ? 'ticketnetwork' : 'ticketmaster';
   const ticketsLevel = ticketNetwork ? ticketNetworkLinkLevel(primaryEventUrl) : 'team';
@@ -261,7 +264,7 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
     // this is the primary href (rulings 2026-11-02); on a series it keeps the
     // Dec 11 Event from offering the Nov 18 game. Falls back to the primary
     // href only if TicketNetwork cannot be built at all.
-    ticketUrlFor: (r) => (tnAllowed ? buildTicketNetworkLink({ team, surface: PROMO_PAGE_SURFACE, eventUrl: eventUrlOf(r) }) : ticketmaster),
+    ticketUrlFor: (r) => (tnAllowed ? buildTicketNetworkLink({ team, surface: PROMO_PAGE_SURFACE, eventUrl: eventUrlOf(r), pageSlug: page.slug }) : ticketmaster),
     dateModified: page.updatedAt,
     faqs,
     // The visible trail, item for item (Google asks the markup to reflect it):
@@ -280,7 +283,7 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
   const gameLine = (date: string, row: { displayTime: string; displayOpponent: string; promoId: string; tnEventUrl?: string | null }, key: string, withOpponent: boolean) => {
     // subId1 web_promo_date_{team}: the per-date link, told apart from the
     // primary CTA partner-side (the click event keeps surface web_promo_page).
-    const rowTickets = tnAllowed && withOpponent && !removed && date >= today ? buildTicketNetworkLink({ team, surface: PROMO_DATE_SUBID_SURFACE, eventUrl: row.tnEventUrl ?? null }) : null;
+    const rowTickets = tnAllowed && withOpponent && !removed && date >= today ? buildTicketNetworkLink({ team, surface: PROMO_DATE_SUBID_SURFACE, eventUrl: row.tnEventUrl ?? null, pageSlug: page.slug }) : null;
     return (
       <li key={key} className="m-0 list-none text-[15px] leading-[1.45] text-rd-ink-soft">
         <strong className="text-rd-ink">{`${formatLongDate(date)}${row.displayTime ? ` · ${row.displayTime}` : ''}`}</strong>
