@@ -23,6 +23,7 @@ import type { VenueHub } from './venue-hub';
 import { dimsString, displayVenueName, SEASON_YEAR, venueHubTopics } from './venue-hub';
 import { fieldExcluded, subFieldExcluded, hasProvenance, isReachableUrl } from './venue-field-exclusions';
 import { claimSourceUrl, claimSourceReadOn } from './venue-claim';
+import { bagFieldHeld } from './venue-bag-holds';
 
 type Hub = VenueHub;
 
@@ -319,7 +320,8 @@ export interface BagTopicQuestion {
   topics: BagTopic[];
   question: string;
   answer: string;
-  sourceUrl: string;
+  /** Absent when a hold withdraws the link (venue-bag-holds, storageAnswerLink). */
+  sourceUrl?: string;
   quote: Quote;
 }
 
@@ -349,7 +351,9 @@ export function bagTopicQuestions(hub: Hub): BagTopicQuestion[] {
       g.topics.length === 1 && g.topics[0] === 'storage'
         ? `Is there bag storage at ${v}?`
         : `What is the ${joinList(g.topics.map((k) => TOPIC_BY_KEY[k].noun))} policy at ${v}?`;
-    return { topics: g.topics, question, answer: g.quote.text, sourceUrl: g.quote.sourceUrl, quote: g.quote };
+    // t-mobile-park: the storage sentence cites a page that does not carry it.
+    const linkHeld = g.topics.includes('storage') && bagFieldHeld(hub.slug, 'storageAnswerLink');
+    return { topics: g.topics, question, answer: g.quote.text, sourceUrl: linkHeld ? undefined : g.quote.sourceUrl, quote: g.quote };
   });
 }
 

@@ -13,6 +13,7 @@ import { collectVenueLinksForTeams, type HubVenueLink, type VenueIndexEntry } fr
 import { transitSuppressed } from './venue-transit-suppression';
 import { rendersBag, rendersParking, rendersFood, rendersGates, fieldExcluded, hasProvenance, hasSubProvenance } from './venue-field-exclusions';
 import { makeCollectionLoader, type CachedDoc, type CachedGroupDoc } from './collection-cache';
+import { withBagHolds } from './venue-bag-holds';
 import { toVenueVendor, visibleVendors, type VenueVendor } from './venue-vendors';
 
 // Read layer for the venue logistics hub (/venues/[slug]). Reads the venueHubs
@@ -260,6 +261,11 @@ export function toVenueHub(
   d: FirebaseFirestore.DocumentData,
   tenantOverlays: VenueHubTenantOverlay[],
 ): VenueHub {
+  // Render-level bag holds (src/lib/venue-bag-holds.ts): held fields are
+  // removed from the raw doc, value and provenance, before anything maps it,
+  // so the ungated CFB view inherits the hold too. A building with no hold
+  // gets the same object back.
+  d = withBagHolds(slug, d);
   return applyFieldStates({
     // Sub-ID slug: doc.id (the `slug` argument that fetched this doc) is the
     // routing-truth key — the URL, the /venues index and the sitemap all key on
@@ -1078,8 +1084,13 @@ export interface BagCapsule {
  *  clearBagRequired:false ("a clear bag is not required") NEVER produces a
  *  no-bag label — that mapping was the Target Field bug. */
 export function bagCapsule(hub: Pick<VenueHub, 'bagMaxDimensions' | 'clearBagRequired' | 'bagsProhibited'>): BagCapsule {
-  const dims = dimsString(hub.bagMaxDimensions);
   const prohibited = hub.bagsProhibited === true;
+  // Ruling 6, site-wide (2026-11-05): on a no-bag building the stored size is
+  // an exception size, never a limit, so the capsule carries no figure. The
+  // size can still appear, inside the quoted exception text. This capsule feeds
+  // the venue bag card and the team-page bag line ("No bags allowed: 5" x 9""
+  // on the Braves page before this).
+  const dims = prohibited ? null : dimsString(hub.bagMaxDimensions);
   const label = prohibited
     ? 'NO BAGS ALLOWED'
     : hub.clearBagRequired === true

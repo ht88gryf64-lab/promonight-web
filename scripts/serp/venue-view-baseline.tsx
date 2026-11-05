@@ -17,6 +17,10 @@
 //
 // Re-running it on a later commit overwrites the baseline with THAT commit's
 // render, which defeats the test. Regenerate only from main, deliberately.
+//
+// BASELINE_OUT=<name.json> writes ONLY a baseline under that name and leaves
+// both default fixtures alone. fix/venue-bag-holds uses it for
+// venue-view-baseline-76579e7.json, main's render the day the holds were added.
 import { mock } from 'node:test';
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
@@ -59,8 +63,13 @@ async function main() {
     };
   }
   mkdirSync(dirname(new URL('x', FIXTURE_DIR).pathname), { recursive: true });
-  writeFileSync(new URL('venue-hubs-published.json', FIXTURE_DIR), JSON.stringify(published, null, 1) + '\n');
-  writeFileSync(new URL('venue-view-baseline.json', FIXTURE_DIR), JSON.stringify(baseline, null, 1) + '\n');
+  if (process.env.BASELINE_OUT) {
+    writeFileSync(new URL(process.env.BASELINE_OUT, FIXTURE_DIR), JSON.stringify(baseline, null, 1) + '\n');
+    console.log(`baseline only -> ${process.env.BASELINE_OUT}`);
+  } else {
+    writeFileSync(new URL('venue-hubs-published.json', FIXTURE_DIR), JSON.stringify(published, null, 1) + '\n');
+    writeFileSync(new URL('venue-view-baseline.json', FIXTURE_DIR), JSON.stringify(baseline, null, 1) + '\n');
+  }
   console.log(`buildings ${published.length}`);
 }
 

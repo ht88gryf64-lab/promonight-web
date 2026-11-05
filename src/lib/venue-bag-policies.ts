@@ -12,6 +12,7 @@
 // loader lives in venue-bag-policies-data.ts.
 import type { BagMaxDimensions } from '@/lib/venue-hub';
 import { fieldExcluded, hasProvenance, isReachableUrl } from './venue-field-exclusions';
+import { withBagHolds } from './venue-bag-holds';
 
 export const BAG_SEASON = 2026; // hardcoded by house rule, never getFullYear()
 
@@ -272,6 +273,8 @@ export function bagRowFromDoc(
   d: Record<string, unknown>,
   opts: { venueName?: string; teamName?: string; teamColor?: string | null; overlayException?: string | null } = {},
 ): BagPolicyRow {
+  // The same render-level holds toVenueHub applies, on the same raw doc.
+  d = withBagHolds(slug, d);
   // The SHARED rules, not a second private list: this page publishes the same
   // facts as /venues/[slug] from the same docs, so two exclusion lists over one
   // set of facts would drift by construction. SOURCES_CONFLICT_SLUGS is kept as
@@ -286,7 +289,11 @@ export function bagRowFromDoc(
   const excluded = fieldExcluded(slug, 'bag');
   const sourcesConflict = SOURCES_CONFLICT_SLUGS.includes(slug) || excluded;
   const sourced = (k: string) => !sourcesConflict && hasProvenance(sources, k);
-  const dims = (sourced('bagMaxDimensions') ? ((d.bagMaxDimensions ?? null) as BagPolicyRow['dims']) : null);
+  // Ruling 6, site-wide (2026-11-05): a sourced bag prohibition means the
+  // stored size is an exception size, so the row carries no size at all and no
+  // chip can print one. Gated here, at the row mapper, not at the chip.
+  const prohibitedRow = sourced('bagsProhibited') && d.bagsProhibited === true;
+  const dims = (!prohibitedRow && sourced('bagMaxDimensions') ? ((d.bagMaxDimensions ?? null) as BagPolicyRow['dims']) : null);
   const dimsText = dims ? prettyDimsPure(dims) : null;
   return {
     slug,

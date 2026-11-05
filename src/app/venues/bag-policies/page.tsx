@@ -91,9 +91,10 @@ function rowChips(group: BagPolicyGroup['key'], r: BagPolicyRow) {
     return chips;
   }
   if (group === 'no-bags') {
-    // The stored cap is the CLUTCH cap; an ordinary max-bag label would imply
-    // a bag allowance the park does not offer.
-    if (r.dimsText) chips.push(<Chip key="clutch" k="Clutch" v={`up to ${r.dimsText}`} tone="gold" />);
+    // No size chip on a no-bag park (ruling 6, site-wide, 2026-11-05): the
+    // row mapper carries no size for one (bagRowFromDoc), because the stored
+    // cap is the exception size and a size may appear only inside the
+    // exception text, which the park's own page carries.
     return chips;
   }
   if (group === 'clear-required' && r.dimsText) chips.push(<Chip key="clear" k="Clear bag" v={r.dimsText} />);
