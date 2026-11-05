@@ -3,7 +3,7 @@ import { getTeamBySlug } from '@/lib/data';
 import { todayYmd } from '@/lib/promo-helpers';
 import { promoPagePath } from '@/lib/promo-page-copy';
 import { getUpcomingPromoIndex, isPromoPagesLive } from '@/lib/promo-pages';
-import { PROMO_FALLBACK_PATH, resolvePromoCode, withSearch } from '@/lib/social-bridge';
+import { NOINDEX_HEADER, PROMO_FALLBACK_PATH, resolvePromoCode, withSearch } from '@/lib/social-bridge';
 
 // The social bridge's promo link (2026-11-05): /p/{code}?utm_... from a Reel
 // or TikTok caption, redirected to the promo's page. The rule is in
@@ -29,6 +29,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }
   return NextResponse.redirect(new URL(withSearch(target, search), request.nextUrl.origin), {
     status: 307,
-    headers: { 'x-robots-tag': 'noindex', 'cache-control': 'private, no-store' },
+    headers: { ...NOINDEX_HEADER, 'cache-control': 'private, no-store' },
   });
 }

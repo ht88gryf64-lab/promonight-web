@@ -389,6 +389,7 @@ const CLOCK_AND_FORMATTER = new Map<string, [number, string]>([
   ['lib/site-today.ts', [2, 'the site day itself']],
   ['lib/cfb/clock.ts', [1, "todayYMD(zone): a venue's day for CFB played/upcoming"]],
   ['lib/nightly-refresh.ts', [4, 'Date.now() defaults for the budget clocks (fan-out, warm, retry, verify); the hour it formats is SITE_TIME_ZONE (the 00:00 window)']],
+  ['lib/youtube-shorts-sync.ts', [1, 'a syncedAt timestamp on the Shorts map; the day its pages are looked up on is siteTodayYmd()']],
   ['components/my-teams-view.tsx', [2, 'Date.now() stamps the geo cache; the day is siteTodayYmd()']],
   ['components/team-hero.tsx', [2, 'legacy hero: the year label and an Eastern "Last updated"']],
   ['components/browse-collections.tsx', [1, 'the year suffix, formatted in SITE_TIME_ZONE']],

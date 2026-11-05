@@ -11,7 +11,7 @@
 // are preserved so existing dashboards keep getting data — they now also feed
 // through `track()` so the canonical events start flowing immediately.
 
-import { flattenUTMsForEvent, getStoredUTMs } from './utm-capture';
+import { flattenUTMsForEvent, getStoredUTMs, utmTriplet, type UtmTriplet } from './utm-capture';
 // Type-only, so there is no runtime dependency and no cycle: the capture
 // modules do not import analytics. One definition each, shared.
 import type { ChipSource } from './capture/chips';
@@ -440,13 +440,15 @@ export type AppDownloadClickProperties = {
   // 'desktop'. Not named `platform`: the legacy GA events (app_store_click,
   // app_install_click) already send `platform` meaning the store.
   device_platform: ClientPlatform;
-};
+  // The session's first-touch UTMs (social bridge, 2026-11-05), the same
+  // three the /download store links carry into ct and the Play referrer.
+} & UtmTriplet;
 
 // web_app_cta_click: an in-page app CTA that names what it was pitching. Only
 // the promo page's "Remind me" fires it today (surface promo_cta); promo_id is
 // the stored document id, page_slug the promo page's slug, so the click joins
 // to the /download store links' ct / utm_content, which carry the same two.
-export type WebAppCtaClickProperties = {
+export type WebAppCtaClickProperties = UtmTriplet & {
   surface: Extract<AppLinkSurface, 'promo_cta'>;
   team_slug: string;
   promo_id: string;
@@ -470,7 +472,10 @@ export type PromoCardTapProperties = {
 // carry, src/lib/promo-helpers.ts synthPromoId, so the three join);
 // destination_url is the promo page path. Pages-per-session reads pair it
 // with page_view rows whose surface is web_promo_page.
-export type PromoLinkClickProperties = {
+// Since the social bridge (2026-11-05) it also carries the session's
+// first-touch utm_source, utm_campaign and utm_content (src/lib/utm-capture.ts
+// utmTriplet), so a click that started on a Short's caption link reads as one.
+export type PromoLinkClickProperties = UtmTriplet & {
   surface: AnalyticsSurface;
   team_slug: string;
   promo_id: string;
@@ -1484,6 +1489,7 @@ export const trackInstallClick = (payload: InstallClickPayload) => {
     team_slug: payload.teamSlug,
     page_type: pageType,
     device_platform: currentClientPlatform(),
+    ...utmTriplet(),
   });
 };
 
@@ -1503,6 +1509,7 @@ export const trackAppCtaClick = (payload: {
     destination_url: payload.href,
     page_type: inferSurfaceFromPath(sourcePage),
     device_platform: currentClientPlatform(),
+    ...utmTriplet(),
   });
 };
 

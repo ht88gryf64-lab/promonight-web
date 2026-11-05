@@ -5,7 +5,8 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 import { QrCode } from '@/components/qr-code';
 import { TrackedAppLink } from '@/components/analytics-events';
-import { appStoreUrl, downloadOrigin, playStoreUrl, promoFromDownloadParams, teamFromDownloadSrc, type AppLinkOptions } from '@/lib/app-link';
+import { appStoreUrl, downloadOrigin, playStoreUrl, promoFromDownloadParams, teamFromDownloadSrc, utmFromParams, type AppLinkOptions } from '@/lib/app-link';
+import { DownloadSessionUtm } from '@/components/download-session-utm';
 import { isRedesignEnabled } from '@/lib/redesign';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 
@@ -23,7 +24,7 @@ import { archivoHouse } from '@/components/redesign/fonts-house';
 // ?src=promo_cta_{teamId}&promoId=…&pageSlug=… is a promo page's "Remind me"
 // link (hotfix 2026-10-31). The team rides in as above; the promo id and page
 // slug follow it into Play's utm_content (src/lib/app-link.ts).
-function storeLinks(teamId: string | undefined, visit: Pick<AppLinkOptions, 'promoId' | 'pageSlug' | 'from'> = {}) {
+function storeLinks(teamId: string | undefined, visit: Pick<AppLinkOptions, 'promoId' | 'pageSlug' | 'from' | 'utm'> = {}) {
   return {
     iosButton: appStoreUrl({ surface: 'download', teamId, ...visit }),
     androidButton: playStoreUrl({ surface: 'download', teamId, ...visit }),
@@ -51,13 +52,20 @@ export default async function DownloadPage({
 }) {
   const params = await searchParams;
   const teamId = teamFromDownloadSrc(params.src);
-  const links = storeLinks(teamId, { ...promoFromDownloadParams(params), from: downloadOrigin(params.src) });
+  // A social visitor's UTMs (the social bridge, 2026-11-05): in the query
+  // when the session's first touch is carried here by DownloadSessionUtm, or
+  // when a link brought them directly. They set the App Store ct and the Play
+  // referrer on the buttons and the QR codes alike.
+  const utm = utmFromParams(params);
+  const links = storeLinks(teamId, { ...promoFromDownloadParams(params), from: downloadOrigin(params.src), utm });
+  const sessionUtm = <DownloadSessionUtm hasUtm={utm !== undefined} />;
   const pushScreenshotExists = existsSync(
     join(process.cwd(), 'public', 'screenshots', 'push.png'),
   );
   if (isRedesignEnabled()) {
     return (
       <div className={`${archivoHouse.variable} rd-root min-h-screen pt-16 pb-24 px-6 font-rd`}>
+        {sessionUtm}
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
             <span className="font-rd text-[11px] tracking-[0.14em] uppercase text-rd-ink-faint">Download</span>
@@ -148,6 +156,7 @@ export default async function DownloadPage({
 
   return (
     <div className="pt-28 pb-24 px-6">
+      {sessionUtm}
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-12">
           <span className="font-mono text-[10px] tracking-[1.5px] uppercase text-accent-red">
