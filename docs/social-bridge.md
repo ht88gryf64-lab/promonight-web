@@ -74,7 +74,11 @@ without it the route refuses to guess. A code that matches nothing upcoming
   verified with the rest.
 - **`YOUTUBE_API_KEY`** must be set in Vercel (a read-only Data API key).
   Without it the sync logs `skipped` and the map stays as it is. The key is
-  never logged.
+  never logged. To run the sync once by hand, with the key in the shell's
+  environment (never in a file that is committed):
+  `npx tsx --env-file=.env.local --require ./scripts/stub-server-only.cjs scripts/sync-youtube-shorts.ts --dry-run`
+  reports the match count and writes nothing; without `--dry-run` it writes
+  the map. Pages are not revalidated by the hand run.
 - A promo page whose id (the primary's or any row's) is in the map renders
   the Short below the hero image as a click-to-load box
   (`src/components/promo-page/PromoShort.tsx`): a fixed 236x420 thumbnail
