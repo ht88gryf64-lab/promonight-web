@@ -46,6 +46,32 @@
       "provisional": "End is a placeholder: the 2027 Stanley Cup Final dates are not published. NHL has no postseasonBrackets document, so this fixed end is the one used."
     }
   },
+  "NFL": {
+    "2026": {
+      "start": "2026-09-09",
+      "end": "2027-02-14",
+      "source": "Start: kickoff, Patriots at Seahawks, Wednesday 2026-09-09 (nfl.com/news/seahawks-to-kick-off-2026-nfl-regular-season-on-wednesday-sept-9-in-seattle). End: Super Bowl LXI, SoFi Stadium, 2027-02-14 (foxla.com/news/2027-super-bowl-lxi-sofi-staduim-los-angeles)."
+    },
+    "2027": {
+      "start": "2027-09-09",
+      "end": "2028-02-13",
+      "source": "End: Super Bowl LXII, Mercedes-Benz Stadium, 2028-02-13 (foxla.com/news/2027-super-bowl-lxi-sofi-staduim-los-angeles).",
+      "provisional": "Start is a placeholder: the 2027 schedule is not published. 2027-09-09 is the Thursday after Labor Day, the usual kickoff. Replace it when the NFL releases the 2027 schedule (May 2027)."
+    }
+  },
+  "CFB": {
+    "2026": {
+      "start": "2026-08-29",
+      "end": "2027-01-25",
+      "source": "Start: Week 0, Saturday 2026-08-29 (ncaa.com/news/football/article/2026-08-24/college-football-schedule-when-does-2026-college-football-season-start). End: CFP National Championship, Allegiant Stadium, 2027-01-25 (allegiantstadium.com/events/detail/2027-college-football-playoff-national-championship)."
+    },
+    "2027": {
+      "start": "2027-08-26",
+      "end": "2028-01-24",
+      "source": "Start: from 2027 the FBS season opens on the Thursday of Week 0 (espn.com/college-football/story/_/id/48507083/ncaa-recommends-earlier-start-football-season-2027); Week 0 games are scheduled for Saturday 2027-08-28 (fbschedules.com/2027-ohio-at-west-virginia-football-game-moved-to-week-zero), so the Thursday is 2027-08-26.",
+      "provisional": "End is a placeholder: the 2027-28 CFP title-game date is not confirmed (earlier reporting said 2028-01-24, before the calendar change)."
+    }
+  },
   "NBA": {
     "2026": {
       "start": "2026-10-20",

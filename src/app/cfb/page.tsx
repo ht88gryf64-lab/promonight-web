@@ -9,6 +9,7 @@ import { NationalBlock, WeekCard } from '@/components/cfb/hub/blocks';
 import { CfbHubBrowse } from '@/components/cfb/hub/CfbHubBrowse';
 import { CfbHubSearch } from '@/components/cfb/hub/CfbHubSearch';
 import { CfbTodaySlot } from '@/components/cfb/hub/CfbTodaySlot';
+import { cfbSeasonLabel } from '@/lib/cfb/season';
 
 // ISR — same 21600s window the homepage/playoffs use for date-rollover safety;
 // the §14a Monday-AM weekly-rail cutover lands overnight within this window.
@@ -68,7 +69,7 @@ export default async function CfbHub() {
         <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[360px]" style={{ background: `radial-gradient(ellipse 60% 60% at 90% 0%, ${RED}18 0%, transparent 55%)` }} />
         <div className="relative mx-auto max-w-6xl px-5 pb-8 pt-12 sm:px-10 sm:pt-14">
           <div className="mb-5 flex items-center gap-2.5 text-[12px] tracking-[0.2em]" style={{ fontFamily: MONO, color: GOLD }}>
-            <span className="inline-block h-px w-7" style={{ background: GOLD }} /> COLLEGE FOOTBALL · 2026
+            <span className="inline-block h-px w-7" style={{ background: GOLD }} />{` COLLEGE FOOTBALL · ${cfbSeasonLabel()}`}
           </div>
           <h1 className="max-w-3xl italic text-white" style={{ fontFamily: SERIF, fontSize: 'clamp(2.6rem, 6.5vw, 4.4rem)', lineHeight: 0.98, letterSpacing: '-0.02em', textShadow: '0 2px 12px rgba(0,0,0,0.5)' }}>
             The rivalries, the road trips,<br className="hidden sm:block" /> and every Saturday that matters.

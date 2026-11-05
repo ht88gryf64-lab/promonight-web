@@ -8,6 +8,7 @@ import type { CfbSchool, CfbVenue } from '@/lib/cfb/types';
 import type { CfbSchoolPage } from '@/lib/cfb/data';
 import { slugifySchool } from '@/lib/cfb/rules';
 import { CFB_FANATICS_STORES } from '@/lib/cfb/fanatics-stores';
+import { conferenceForNamedSeason } from './season';
 
 // Prose date for the rivalry sentences — em-dash-free (house rule), comma only:
 // "Saturday, November 28".
@@ -92,7 +93,7 @@ export function toAffiliateTeam(school: CfbSchool, city?: string | null): Team {
     secondaryColor: school.secondaryColor || '#FFFFFF',
     league: 'ncaaf',
     sportSlug: 'cfb',
-    division: school.conferenceBySeason?.['2026'] || '',
+    division: conferenceForNamedSeason(school.conferenceBySeason) || '',
     // Both ticket vendors resolve to the FULL football slug ("minnesota-golden-
     // gophers"), not the short school id — so TM and TicketNetwork both land on
     // the team, not the pro club / an ambiguous performer.

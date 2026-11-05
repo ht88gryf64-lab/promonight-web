@@ -23,6 +23,16 @@
  * branch's showed the app-copy sentences and nothing else moved. The RULED
  * PromoList keys were left as recorded.
  *
+ * 2026-11-05, feature/season-rollover-2027: hashes moved ON A BRANCH, by
+ * ruling (season rollover: a season is its window in src/lib/seasons/
+ * windows.json, lead-in through end, not a calendar year). Only keys whose
+ * sentence diff against main's HTML showed season-membership changes and
+ * nothing else were updated: rows outside a league's window leaving the
+ * season counts, and the two multi-year shapes ("crossing",
+ * "remainingWithUpcoming") resolving to their named season where the
+ * calendar-year guard fell back. The RULED PromoList keys were left as
+ * recorded.
+ *
  * Re-record ONLY from main, never from a branch:
  *   GOLDEN_RECORD=<file> node --import tsx --experimental-test-module-mocks --test <this file>
  */

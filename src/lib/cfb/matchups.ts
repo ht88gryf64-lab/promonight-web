@@ -23,6 +23,7 @@ import { resolveVenueZone } from '@/lib/cfb/venue-timezones';
 import { MATCHUP_REGISTRY, type MatchupRegistryEntry } from '@/lib/cfb/matchup-registry';
 import { resolveMatchupDisplayName, findDisplayNameCollisions } from '@/lib/cfb/display-name';
 import type { RivalryIndexRow } from '@/lib/cfb/rivalry-index';
+import { conferenceForNamedSeason } from './season';
 
 // Re-exported so existing importers keep one entry point.
 export { MATCHUP_REGISTRY, resolveMatchupDisplayName, findDisplayNameCollisions };
@@ -145,7 +146,7 @@ export const getMatchupIndex = cache(async (): Promise<Array<{ slug: string; nam
       // the same string the destination page leads with.
       name: resolveMatchupDisplayName(e, rivalry.name),
       date: game?.data.date ?? null,
-      conference: first?.conferenceBySeason?.['2026'] ?? null,
+      conference: conferenceForNamedSeason(first?.conferenceBySeason) ?? null,
       schoolIds: rivalry.schoolIds,
       colors: [colorA ?? null, colorB ?? null] as [string | null, string | null],
     });
@@ -315,7 +316,7 @@ export const getMatchupPage = cache(async (slug: string): Promise<MatchupPage | 
       neutralHubTimezone,
       internationalTimezone: game.data.internationalVenue?.timezone ?? null,
     }) : null,
-    conference: (schoolA ?? schoolB)?.conferenceBySeason?.['2026'] ?? null,
+    conference: conferenceForNamedSeason((schoolA ?? schoolB)?.conferenceBySeason) ?? null,
     rivalrySentence,
     siblings: siblings.map((s) => ({ slug: s.slug, name: s.name, date: s.date, colors: s.colors })),
     siblingsAreSameWeek,

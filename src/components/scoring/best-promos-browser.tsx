@@ -49,6 +49,9 @@ type BestPromosBrowserProps = {
    *  Driven by a real emptiness condition, never a date literal, so it
    *  switches back on its own the day new data lands. */
   retrospective?: boolean;
+  /** The season the off-season list ranks, from the page's loader
+   *  (src/lib/seasons/ranked-rows.ts). Only read in retrospective mode. */
+  seasonLabel?: number | string;
 };
 
 const PAGE_SIZE = 50;
@@ -94,6 +97,7 @@ export function BestPromosBrowser({
   inlineAnswers = [],
   variant = 'dark',
   retrospective = false,
+  seasonLabel,
 }: BestPromosBrowserProps) {
   const light = variant === 'light';
   const labelClass = light
@@ -273,7 +277,7 @@ export function BestPromosBrowser({
         <div className={light ? 'bg-rd-card border border-rd-line rounded-2xl p-10 text-center' : 'bg-bg-card border border-border-subtle rounded-2xl p-10 text-center'}>
           <p className={light ? 'text-rd-ink-soft' : 'text-text-secondary'}>
             {retrospective
-              ? 'No scored promos in this league for the 2026 season.'
+              ? `No scored promos in this league for the ${seasonLabel} season.`
               : 'No scored promos match this filter. Try a wider date range or a different league.'}
           </p>
         </div>

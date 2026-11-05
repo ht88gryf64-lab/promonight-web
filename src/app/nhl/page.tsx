@@ -22,7 +22,7 @@ import { HubTeamGrid } from '@/components/hub/HubTeamGrid';
 import { HubVenueLinks } from '@/components/hub/HubVenueLinks';
 import { HubFaq, type HubFaqItem } from '@/components/hub/HubFaq';
 import { getVenueLinksForTeams } from '@/lib/venue-hub';
-import { splitSeasonLabel, SPLIT_SEASON_START_YEAR } from '@/lib/season-label';
+import { seasonLabel } from '@/lib/seasons/season-window';
 
 // HELD ROUTE. This page exists on the feature/nhl-hub-held branch and is not
 // linked from anywhere: LEAGUE_HUB_REGISTRY keeps NHL live:false, so the nav,
@@ -48,22 +48,31 @@ const BROWSE_TILES: HubBrowseTile[] = [
 // real freshness path when the pipeline writes new NHL promos.
 export const revalidate = 21600;
 
-// The NHL season straddles the calendar year, so the label is the two-year
-// form. Hardcoded, never derived from the clock: an auto-rolling label would
-// flip mid-season before any 2027-28 data exists.
-// From the NHL/NBA season constant, so the hub cannot drift from the team
-// pages at the July 1 bump (known-issues 69).
-const SEASON = splitSeasonLabel(SPLIT_SEASON_START_YEAR);
 const HUB_URL = 'https://www.getpromonight.com/nhl';
-const TITLE = `NHL Promotions & Giveaways ${SEASON}`;
-const DESCRIPTION = `Every NHL club's ${SEASON} promo schedule in one place: theme nights, giveaways, bobblehead nights, and kids days across all 32 teams, grouped by division and refreshed through the season.`;
 
-export const metadata: Metadata = {
-  title: TITLE,
-  description: DESCRIPTION,
-  alternates: { canonical: HUB_URL },
-  openGraph: pageOpenGraph('/nhl'),
-};
+// The season this hub names, from src/lib/seasons/windows.json (season
+// rollover, ruling 2026-11-05): computed per render, never at module load, so
+// it moves on the first day of the next season's lead-in without a deploy.
+// Never new Date().getFullYear(), which would flip the copy at midnight on
+// Jan 1, before the new season's data exists.
+function hubCopy() {
+  const SEASON = seasonLabel('NHL');
+  return {
+    SEASON,
+    TITLE: `NHL Promotions & Giveaways ${SEASON}`,
+    DESCRIPTION: `Every NHL club's ${SEASON} promo schedule in one place: theme nights, giveaways, bobblehead nights, and kids days across all 32 teams, grouped by division and refreshed through the season.`,
+  };
+}
+
+export function generateMetadata(): Metadata {
+  const { TITLE, DESCRIPTION } = hubCopy();
+  return {
+    title: TITLE,
+    description: DESCRIPTION,
+    alternates: { canonical: HUB_URL },
+    openGraph: pageOpenGraph('/nhl'),
+  };
+}
 
 const FAQS: HubFaqItem[] = [
   {
@@ -90,6 +99,7 @@ const FAQS: HubFaqItem[] = [
 
 
 export default async function NhlHubPage() {
+  const { SEASON, TITLE, DESCRIPTION } = hubCopy();
   const [slate, stats, divisions, today, upcomingCounts] = await Promise.all([
     getLeagueSlate('NHL'),
     getLeagueHubStats('NHL'),

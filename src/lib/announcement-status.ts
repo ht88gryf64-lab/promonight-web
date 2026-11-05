@@ -24,7 +24,8 @@
 // page falls back to the safe sentence on its own, at render. Re-verifying is
 // a dated edit to this table, with the evidence saved beside the previous
 // pass (audit-archive/web6-announce/ for this one).
-import { isSplitSeasonLeague, splitSeasonLabel, SPLIT_SEASON_START_YEAR } from './season-label';
+import { isSplitSeasonLeague } from './season-label';
+import { seasonLabel } from './seasons/season-window';
 
 /** Days a "haven't announced" verification stays good. */
 export const VERIFIED_FOR_DAYS = 14;
@@ -95,9 +96,10 @@ export function announcementLine(
   teamId: string,
   displayName: string,
   today: string,
+  league: string,
   opts: { hasTicketPackages?: boolean } = {},
 ): string {
-  const season = splitSeasonLabel(SPLIT_SEASON_START_YEAR);
+  const season = seasonLabel(league, today);
   // A club whose page lists special-ticket packages HAS published something
   // for the season, so "haven't announced" would sit above its own "Ticket
   // packages (N)" group. Only the sentence about our record is safe there.
@@ -149,5 +151,5 @@ export function statusLineSaysNothingAnnounced(opts: StatusLineOpts): boolean {
 export function scheduleStatusLine(opts: StatusLineOpts): string | null {
   if (!opts.showSchedule || opts.seasonResolved || !isSplitSeasonLeague(opts.league)) return null;
   if (opts.hasOtherPromos) return null;
-  return announcementLine(opts.teamId, opts.displayName, opts.today, { hasTicketPackages: opts.hasTicketPackages });
+  return announcementLine(opts.teamId, opts.displayName, opts.today, opts.league, { hasTicketPackages: opts.hasTicketPackages });
 }

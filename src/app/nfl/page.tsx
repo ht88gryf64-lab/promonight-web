@@ -27,6 +27,7 @@ import { getVenueLinksForTeams, getTeamVenueHubMap, getVenueHub } from '@/lib/ve
 import { transitSuppressed } from '@/lib/venue-transit-suppression';
 import { fieldExcluded, subFieldExcluded, hasProvenance, hasSubProvenance } from '@/lib/venue-field-exclusions';
 import { verifiedGateTenants } from '@/components/venue-hub/venue-logistics';
+import { seasonLabel } from '@/lib/seasons/season-window';
 
 // League hub accent (house palette, mirrors LEAGUE_HUB_REGISTRY NFL entry).
 const ACCENT = '#5f6b57';
@@ -46,20 +47,31 @@ const BROWSE_TILES: HubBrowseTile[] = [
 // real freshness path when the pipeline writes new NFL promos.
 export const revalidate = 21600;
 
-// Season year is hardcoded, never new Date().getFullYear(): an auto-rolling
-// year would flip the copy to 2027 at midnight on Jan 1, mid-playoffs, before
-// any 2027 data exists.
-const YEAR = 2026;
 const HUB_URL = 'https://www.getpromonight.com/nfl';
-const TITLE = `NFL Promotions & Giveaways ${YEAR}`;
-const DESCRIPTION = `Every NFL club's ${YEAR} promo schedule, week by week: theme nights, giveaways, and kids days across all 32 teams, plus stadium guides for each week's home slate.`;
 
-export const metadata: Metadata = {
-  title: TITLE,
-  description: DESCRIPTION,
-  alternates: { canonical: HUB_URL },
-  openGraph: pageOpenGraph('/nfl'),
-};
+// The season this hub names, from src/lib/seasons/windows.json (season
+// rollover, ruling 2026-11-05): computed per render, never at module load, so
+// it moves on the first day of the next season's lead-in without a deploy.
+// Never new Date().getFullYear(), which would flip the copy at midnight on
+// Jan 1, before the new season's data exists.
+function hubCopy() {
+  const YEAR = seasonLabel('NFL');
+  return {
+    YEAR,
+    TITLE: `NFL Promotions & Giveaways ${YEAR}`,
+    DESCRIPTION: `Every NFL club's ${YEAR} promo schedule, week by week: theme nights, giveaways, and kids days across all 32 teams, plus stadium guides for each week's home slate.`,
+  };
+}
+
+export function generateMetadata(): Metadata {
+  const { TITLE, DESCRIPTION } = hubCopy();
+  return {
+    title: TITLE,
+    description: DESCRIPTION,
+    alternates: { canonical: HUB_URL },
+    openGraph: pageOpenGraph('/nfl'),
+  };
+}
 
 const FAQS: HubFaqItem[] = [
   {
@@ -86,6 +98,7 @@ const FAQS: HubFaqItem[] = [
 
 
 export default async function NflHubPage() {
+  const { YEAR, TITLE, DESCRIPTION } = hubCopy();
   const [slate, counts, divisions, today, teams, venueMap] = await Promise.all([
     getNflWeekSlate(),
     getNflClubCounts(),
@@ -238,7 +251,7 @@ export default async function NflHubPage() {
           sectionId="nfl-browse-team"
           surface="web_nfl_hub_team_card"
           collection="nfl_hub"
-          intro="All 32 NFL clubs by division. Open any team for its full 2026 schedule and the promotions announced so far."
+          intro={`All 32 NFL clubs by division. Open any team for its full ${YEAR} schedule and the promotions announced so far.`}
           selectorLabel="Filter teams by division"
           allLabel="All divisions"
           subtitleByTeamId={subtitleByTeamId}

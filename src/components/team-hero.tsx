@@ -4,6 +4,7 @@ import { SPORT_ICONS, PROMO_TYPE_LABELS } from '@/lib/types';
 import { teamDisplayName } from '@/lib/promo-helpers';
 import { StarToggle } from './star-toggle';
 import { SITE_TIME_ZONE } from '@/lib/site-today';
+import { currentSeasonLabel } from '@/lib/season-label';
 
 interface TeamHeroProps {
   team: Team;
@@ -77,7 +78,7 @@ export function TeamHero({ team, venue, promoCount, promoCounts }: TeamHeroProps
           </div>
         </div>
         <p className="font-display text-2xl md:text-3xl tracking-[1px] text-text-secondary mb-2">
-          {new Date().getFullYear()} PROMO SCHEDULE
+          {`${currentSeasonLabel(team.league)} PROMO SCHEDULE`}
         </p>
         <p className="text-text-muted text-xs font-mono tracking-[0.5px] mb-6">
           Last updated {new Date().toLocaleDateString('en-US', { timeZone: SITE_TIME_ZONE, month: 'long', day: 'numeric', year: 'numeric' })}

@@ -46,7 +46,7 @@ import { teamShortName } from '@/lib/team-display-name';
 import { isTitleTreatmentTeam, teamMetaTitle } from '@/lib/title-treatment';
 import { getCoverageCounts } from '@/lib/get-coverage-counts';
 import { isSeasonScopeLive, resolveClaimMode } from '@/lib/season-scope';
-import { currentSeasonLabel, isSplitSeasonLeague } from '@/lib/season-label';
+import { currentSeasonLabel } from '@/lib/season-label';
 import { partitionTicketPackages, upcomingTicketPackages } from '@/lib/ticket-packages';
 import { RedesignTeamPage } from '@/components/redesign/RedesignTeamPage';
 import { ticketNetworkForGame } from '@/lib/affiliates';
@@ -89,11 +89,12 @@ export async function generateMetadata({
   // The same array everywhere else (src/lib/ticket-packages.ts).
   const { promos } = partitionTicketPackages(allPromos, isTicketPackagePromo, team.league);
 
-  // Hardcoded, NOT new Date().getFullYear(): an auto-rolling year would flip
-  // every title to "...2027" at midnight on Jan 1 — before the 2027 promo data
-  // exists and before the season starts — misleading users and search engines.
-  // Bumping the season year is a deliberate edit made when 2027 content is ready.
-  const year = 2026;
+  // The season this page names, from src/lib/seasons/windows.json (season
+  // rollover, ruling 2026-11-05): "2026", or "2026-27" on NHL and NBA. NOT the
+  // clock's year, which would flip every title at midnight on Jan 1 before the
+  // new season's data exists; the label moves on the first day of the next
+  // season's lead-in instead, by data, with no deploy.
+  const seasonWord = currentSeasonLabel(team.league);
   const displayName = teamDisplayName(team);
 
   // The promotional-schedule title (serp-targeting, ruling 2026-11-05), for all
@@ -117,8 +118,8 @@ export async function generateMetadata({
   // that ran 156 to 160 drop their last whole clause instead; the
   // "See the full schedule" closer
   // is appended only when it fits, and a promo is dropped rather than cut
-  // mid-title (two clean names beat three with the third truncated). `year`
-  // stays hardcoded (never getFullYear()) — same rationale as the title above.
+  // mid-title (two clean names beat three with the third truncated). The
+  // season word comes from the windows, never getFullYear(), as above.
   // Falls back to an evergreen sentence when there are no upcoming promos (or,
   // defensively, when not even the first promo fits the budget).
   const DESC_MAX = 155;
@@ -144,10 +145,6 @@ export async function generateMetadata({
   const freshnessTail = ['MLB', 'WNBA', 'MLS', 'NHL'].includes(team.league)
     ? 'Rechecked weekly in season.'
     : 'From official team announcements.';
-  // NHL and NBA name their two-year season ("2026-27"), as the page body does;
-  // the number stays the number everywhere else (review round 1). The <title>
-  // is not touched here: it is the title-treatment flip point.
-  const seasonWord: string | number = isSplitSeasonLeague(team.league) ? currentSeasonLabel(team.league) : year;
   // Whole-clause candidates, first that fits DESC_MAX. Until the 155 cap the
   // first one always fit under 160, and it still does for every team whose
   // fallback was 155 or shorter, which therefore stays byte-identical. A longer

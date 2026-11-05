@@ -206,6 +206,15 @@ export interface TeamScore {
   varietyCount: number;
   bonuses: { variety: number; hot: number };
   computedAt: string;
+  /** The team score over the CURRENT season's rows only (the season that has
+   *  started, else the most recently ended; lead-ins never feed it), written
+   *  by the pipeline's scorer beside the all-time fields above (ruling
+   *  2026-11-05). /team-rankings orders on these; the hub stat bars keep the
+   *  all-time fields. Absent until the pipeline has written them. */
+  seasonScore?: number;
+  seasonPromoCount?: number;
+  /** The windows.json key of the season those two describe, e.g. "2026". */
+  seasonKey?: string;
 }
 
 export interface TeamScoreWithTeam extends TeamScore {

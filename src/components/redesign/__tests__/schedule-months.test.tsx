@@ -16,7 +16,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { ScheduleBlock } from '../ScheduleBlock';
 import { GameExpand } from '../GameExpand';
 import { regularSeasonContexts } from '@/lib/schedule-months';
-import { TITLE_SEASON_YEAR } from '@/lib/title-treatment';
+import { seasonLabel } from '@/lib/seasons/season-window';
 import type { GameContext } from '@/lib/data';
 import { BRAVES, LIONS, METS, NFL_CONTEXTS, PHILLIES, mlbCtx, mlbGame } from './fixtures/schedule-fixtures';
 
@@ -202,7 +202,8 @@ test('month sections are MLB only: an NFL slate missing a week keeps main\'s fla
 });
 
 test('the MLB copy and the population share one season constant', () => {
-  assert.equal(TITLE_SEASON_YEAR, 2026, 'bump this test with the constant, deliberately');
+  // The season comes from src/lib/seasons/windows.json, as the page renders it.
+  const TITLE_SEASON_YEAR = seasonLabel('MLB');
   assert.match(OVER, new RegExp(`${TITLE_SEASON_YEAR} season</div>`));
   assert.match(OVER, new RegExp(`Atlanta Braves ${TITLE_SEASON_YEAR} Game Schedule</h2>`));
   const src = readFileSync('src/components/redesign/ScheduleBlock.tsx', 'utf8');

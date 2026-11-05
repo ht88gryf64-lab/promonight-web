@@ -1,6 +1,5 @@
-import { isSplitSeasonLeague, seasonSpan, splitSeasonLabel, splitSeasonStartYear, SPLIT_SEASON_START_YEAR } from './season-label';
 import { countPromosByType, isPurchaseGated, isUpcomingPromo, todayYmd } from './promo-helpers';
-import { TITLE_SEASON_YEAR } from './title-treatment';
+import { labeledSeason, seasonName, seasonOfDate } from './seasons/season-window';
 import type { Promo, PromoType } from './types';
 
 // ── Season scope ─────────────────────────────────────────────────────────────
@@ -16,32 +15,18 @@ import type { Promo, PromoType } from './types';
 // support a season claim. Everything else falls back to the upcoming-only
 // claim the page made before, because absence beats a wrong season total.
 //
-// ── Why the resolution is this conservative ──────────────────────────────────
+// ── How the season is resolved (season rollover, ruling 2026-11-05) ─────────
 //
-// `Promo` carries a `date` and NO season field (src/lib/types.ts). A season is
-// therefore not representable, and no season model is invented here: the same
-// reasoning as src/lib/season-label.ts, which this reuses rather than
-// duplicating. What IS knowable is the calendar-year span of the rows in hand.
-//
-// Measured on the live corpus 2026-09-04, all 169 teams, 5,056 dated rows:
-//
-//   single calendar year, == 2026   90 teams   season claim resolves
-//   spans calendar years            52 teams   falls back  (29 of 32 NHL clubs)
-//   single year, != 2026             4 teams   falls back  (NBA, 2025-only rows)
-//   no dated rows                   23 teams   falls back
-//
-// The multi-year clubs are the reason for the guard. Detroit's archive holds 16
-// rows from the finished 2025-26 season and 123 from the 2026-27 season ahead.
-// Summing them produces a number that describes NO season, which is worse than
-// the understatement it would replace. Six NFL clubs whose one season straddles
-// New Year fall back too: that is a known false negative, accepted because the
-// alternative is a month-window heuristic, which is exactly the invented season
-// model season-label.ts refuses to build.
-//
-// The `year === TITLE_SEASON_YEAR` guard covers the last case: four NBA clubs
-// carry only 2025 rows under a page title that says 2026. Claiming "the 2025
-// season" in the body of a page titled 2026 is honest but incoherent, so those
-// pages keep the claim they have.
+// `Promo` carries a `date` and no season field, so the season comes from
+// src/lib/seasons/windows.json: explicit, sourced start and end dates per
+// league and season. A row belongs to a season from its lead-in through its
+// end, and the page counts only the rows of the season it names
+// (labeledSeason). This retired the calendar-year span model, which measured
+// 2026-09-04 fell back on 52 of 169 teams (29 of 32 NHL clubs, six NFL clubs
+// whose one season straddles New Year) because summing two calendar years
+// describes no season. Window membership answers that directly: Detroit's
+// 2025-26 rows and 2026-27 rows sit in different windows, so only the named
+// season is ever counted.
 
 /**
  * The date the MLB slice of this change goes live.
@@ -204,48 +189,26 @@ export function resolveSeasonScope(
   // Dateless rows (recurring deals, the date-in-image clubs) belong to no
   // season and no archive, exactly as splitPromosByDate treats them.
   //
-  // The predicate is the FULL YMD shape, not merely a non-empty string, so this
-  // population is the same set seasonSpan measures below. A looser filter here
-  // would let a malformed date into `total` and `counts` while seasonSpan
-  // discarded it, so a row could be counted in a season it was not allowed to
-  // push into the multi-year fallback. Zero such rows exist today; the point is
-  // that the guard and the count can never see different sets.
+  // The predicate is the FULL YMD shape, the same shape seasonOfDate accepts,
+  // so a malformed date can never be counted in a season.
   const dated = promos.filter(
     (p) => typeof p.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(p.date),
   );
   if (dated.length === 0) return null;
 
-  // NHL AND NBA: the season is the two-year season the page names, 2026-27,
-  // and ONLY its rows are counted. Rows from 2025-26 are last season: they
-  // stay in the archive under their own heading (promo-list.tsx) and are never
-  // a "2026 season". This is the whole fix for the Heat, Raptors and Wizards
-  // pages, whose only rows were Jan to Apr 2026: no 2026-27 row, no season
-  // claim, so the page falls back to what is still to come (nothing) and the
-  // archive says "LAST SEASON (2025-26)". The calendar-year path below never
-  // sees these leagues, so a one-year population can never be read as their
-  // season.
-  if (isSplitSeasonLeague(league)) {
-    const inSeason = dated.filter((p) => splitSeasonStartYear(p.date) === SPLIT_SEASON_START_YEAR);
-    if (inSeason.length === 0) return null;
-    return buildScope(inSeason, SPLIT_SEASON_START_YEAR, splitSeasonLabel(SPLIT_SEASON_START_YEAR), today);
-  }
-
-  const span = seasonSpan(dated.map((p) => p.date));
-  // DATED FAILURE, 2027-01-15: this line switches the season display off, and
-  // it does so silently. MLB bobblehead calendars publish January to February,
-  // so the first 2027 row landing beside the retained 2026 archive makes
-  // spansYears true and every affected page reverts to the upcoming-only
-  // wording, in the highest-value MLB publishing window of the year. Falling
-  // back is correct (summing two seasons describes neither), but it is a bad
-  // resting state. The proposed two-season resolver and, more importantly, the
-  // measurement it must be built from are in
-  // docs/runbook-2027-01-15-spansyears-season-switchoff.md.
-  if (!span || span.spansYears) return null;
-
-  const year = span.years[0];
-  if (year !== TITLE_SEASON_YEAR) return null;
-
-  return buildScope(dated, year, String(year), today);
+  // THE SEASON IS THE ONE THE PAGE NAMES (season rollover, ruling 2026-11-05):
+  // labeledSeason(league, today) from src/lib/seasons/windows.json, and a row
+  // counts when it belongs to that season, from the season's lead-in through
+  // its end, so spring-training and preseason rows are season rows. This one
+  // rule replaces two: the NHL/NBA July 1 split, and the calendar-year guard
+  // that switched the claim off the moment a 2027 row landed beside the 2026
+  // archive (the retired runbook-2027-01-15). Rows of another season stay in
+  // the archive under their own heading and are never counted here, so a
+  // finished 2026 season plus a fresh 2027 one can never be summed.
+  const season = labeledSeason(league, today);
+  const inSeason = dated.filter((p) => seasonOfDate(league, p.date)?.season === season.season);
+  if (inSeason.length === 0) return null;
+  return buildScope(inSeason, Number(season.season.slice(0, 4)), seasonName(season), today);
 }
 
 /** The scope over a population already known to be one season. */

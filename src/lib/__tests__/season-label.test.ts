@@ -58,15 +58,15 @@ describe('completedHeading and completedSubline', () => {
   test('single year is byte-identical to the old SEASON_YEAR output', () => {
     const s = seasonSpan(['2026-04-09', '2026-08-22']);
     assert.equal(completedHeading(s), 'COMPLETED 2026 PROMOS');
-    assert.equal(completedSubline(74, s), '74 completed events this season');
-    assert.equal(completedSubline(1, s), '1 completed event this season');
+    assert.equal(completedSubline(74, s, 2026), '74 completed events this season');
+    assert.equal(completedSubline(1, s, 2026), '1 completed event this season');
   });
 
   test('a multi-year archive names its span and stops calling itself one season', () => {
     const s = seasonSpan(['2025-11-07', '2026-04-09']);
     assert.equal(completedHeading(s), 'COMPLETED 2025 TO 2026 PROMOS');
-    assert.equal(completedSubline(30, s), '30 completed events, November 2025 to April 2026');
-    assert.ok(!completedSubline(30, s).includes('this season'));
+    assert.equal(completedSubline(30, s, 2026), '30 completed events, November 2025 to April 2026');
+    assert.ok(!completedSubline(30, s, 2026).includes('this season'));
   });
 
   test('the predicate is the data, not the league: an MLS page that crosses a year gets the span label', () => {

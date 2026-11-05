@@ -17,16 +17,14 @@ export const revalidate = 86400;
 // promo-type list) so the metadata three-variable rule holds without
 // reusing copy from another page. The count AND the league set are DERIVED
 // from getCoverageCounts() (never hardcoded) so they can't go stale; the
-// season year is hardcoded deliberately (never getFullYear() in SEO copy).
 const PROMO_TYPES =
   'bobblehead nights, jersey giveaways, theme nights, and food deals';
-const SEASON_YEAR = 2026;
 
 export async function generateMetadata(): Promise<Metadata> {
   const c = await getCoverageCounts();
   return {
     title: `All ${c.teamCount} Pro Sports Teams · Promo Calendars by League`,
-    description: `Browse all ${c.teamCount} pro sports teams across ${c.leagueList} in ${SEASON_YEAR}. Star your teams and get one weekly email with their ${PROMO_TYPES}.`,
+    description: `Browse all ${c.teamCount} pro sports teams across ${c.leagueList}. Star your teams and get one weekly email with their ${PROMO_TYPES}.`,
     alternates: { canonical: 'https://www.getpromonight.com/teams' },
     openGraph: pageOpenGraph('/teams'),
   };

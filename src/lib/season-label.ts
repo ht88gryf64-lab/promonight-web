@@ -40,23 +40,17 @@
 // or after July 1, and to the season that started the year before otherwise.
 // July 1 sits between the last Finals game (June) and the first preseason game
 // (late September) in both leagues, so no real game straddles it.
-import { TITLE_SEASON_YEAR } from './title-treatment';
+import { seasonLabel } from './seasons/season-window';
+import { siteTodayYmd } from './site-today';
 
-/**
- * The NHL and NBA season this site names: 2026 means 2026-27. ITS OWN CONSTANT,
- * deliberately NOT TITLE_SEASON_YEAR. That one is the MLB-paced title year, and
- * its runbook bumps it to 2027 when the 2027 MLB content is ready, in January or
- * February 2027, in the middle of the 2026-27 NHL and NBA seasons. Tied to it,
- * that bump would drop every 2026-27 row out of season scope, head the live
- * season "LAST SEASON (2026-27)" and title the schedule "2027-28". Bump this
- * one in July, when the next NHL and NBA season opens (review round 1, WEB6).
- *
- * IT GOES STALE SILENTLY on 2027-07-01 (review round 3): every NHL and NBA page
- * would keep calling 2026-27 "this season" through 2027-28. Known-issues 69 is
- * the bump procedure (bump on July 1), and a test fails on the real clock from
- * that day if it has not happened (season-labels-by-league.test.ts).
- */
-export const SPLIT_SEASON_START_YEAR = 2026;
+// SEASON NAMES COME FROM src/lib/seasons/windows.json (season rollover,
+// ruling 2026-11-05). The constants this file used to carry
+// (SPLIT_SEASON_START_YEAR, bumped every July 1, and TITLE_SEASON_YEAR in
+// title-treatment.ts, bumped "when 2027 content is ready") are gone: the season
+// a page names is seasonLabel(league, today), which moves on the first day of
+// the next season's lead-in by data. The July 1 grouping rule below is kept
+// for one job only, sorting a split-season ARCHIVE into seasons; which season
+// is "current" comes from the windows.
 
 /** Leagues whose season spans two calendar years and is named "2026-27". */
 const SPLIT_SEASON_LEAGUES = new Set(['NHL', 'NBA']);
@@ -89,24 +83,12 @@ export function splitSeasonLabel(startYear: number): string {
 }
 
 /**
- * The season label a page names for its league: "2026-27" on NHL and NBA, the
- * plain TITLE_SEASON_YEAR everywhere else. Hardcoded through those two
- * constants, never derived from the clock (see title-treatment.ts).
+ * The season label a page names for its league: "2026-27" on NHL and NBA,
+ * "2026" everywhere else, from the windows (seasonLabel). Kept as the one seam
+ * every team-page surface already calls.
  */
-export function currentSeasonLabel(league: string | null | undefined): string {
-  return isSplitSeasonLeague(league) ? splitSeasonLabel(SPLIT_SEASON_START_YEAR) : String(TITLE_SEASON_YEAR);
-}
-
-/**
- * The year label for a page that lists every league at once (the /promos
- * category pages): "2026-27". Those pages carried a bare "2026" in the title,
- * heading and lead until 2026-10-06 while listing NHL and NBA nights into
- * April 2027 (OPS, ruling of 2026-10-06: no single year over a two-year
- * season). The label follows SPLIT_SEASON_START_YEAR, so the July 1 bump in
- * known-issues 69 moves it too.
- */
-export function crossLeagueSeasonLabel(): string {
-  return splitSeasonLabel(SPLIT_SEASON_START_YEAR);
+export function currentSeasonLabel(league: string, today: string = siteTodayYmd()): string {
+  return seasonLabel(league, today);
 }
 
 export interface SeasonSpan {
@@ -170,7 +152,7 @@ export function completedHeading(span: SeasonSpan | null): string {
  * The line under that heading, for a calendar-year league.
  *
  * "this season" is said ONLY for a single-year archive of the CURRENT season,
- * TITLE_SEASON_YEAR. Every MLB, NFL, MLS and WNBA archive on production
+ * `currentYear` (the start year of the season the page names). Every MLB, NFL, MLS and WNBA archive on production
  * 2026-10-05 is exactly that, so their output is unchanged. A single-year
  * archive of an earlier year (a club whose only rows are from 2025) is not
  * "this season" by any reckoning, so it states its count and its months
@@ -179,10 +161,10 @@ export function completedHeading(span: SeasonSpan | null): string {
  * dropping the phrase. Split-season leagues do not come here: their archive
  * is grouped by season in promo-list.tsx with archiveGroups().
  */
-export function completedSubline(count: number, span: SeasonSpan | null): string {
+export function completedSubline(count: number, span: SeasonSpan | null, currentYear: number): string {
   const events = count === 1 ? 'event' : 'events';
   if (!span) return `${count} completed ${events} this season`;
-  if (!span.spansYears && span.years[0] === TITLE_SEASON_YEAR) return `${count} completed ${events} this season`;
+  if (!span.spansYears && span.years[0] === currentYear) return `${count} completed ${events} this season`;
   return span.monthRangeLabel
     ? `${count} completed ${events}, ${span.monthRangeLabel}`
     : `${count} completed ${events}`;
@@ -195,7 +177,7 @@ export interface ArchiveGroup {
   startYear: number | null;
   /** "2025-26". */
   label: string;
-  /** True for the season the page names (SPLIT_SEASON_START_YEAR). */
+  /** True for the season the page names (`currentStartYear`). */
   isCurrent: boolean;
   /** "COMPLETED 2026-27 PROMOS", "LAST SEASON (2025-26)", "2024-25 SEASON". */
   heading: string;
@@ -213,7 +195,7 @@ export interface ArchiveGroup {
  * stored "2026-1-05" passes splitPromosByDate's empty-date check and lands in
  * `past`) goes in a last group of its own, so it is never silently dropped.
  */
-export function archiveGroups(dates: readonly string[]): ArchiveGroup[] {
+export function archiveGroups(dates: readonly string[], currentStartYear: number): ArchiveGroup[] {
   const bySeason = new Map<number, number[]>();
   const unplaced: number[] = [];
   dates.forEach((d, i) => {
@@ -231,13 +213,13 @@ export function archiveGroups(dates: readonly string[]): ArchiveGroup[] {
     .map((startYear) => {
       const indexes = bySeason.get(startYear)!;
       const label = splitSeasonLabel(startYear);
-      const isCurrent = startYear === SPLIT_SEASON_START_YEAR;
+      const isCurrent = startYear === currentStartYear;
       const n = indexes.length;
       const events = n === 1 ? 'event' : 'events';
       const span = seasonSpan(indexes.map((i) => dates[i]));
       const heading = isCurrent
         ? `COMPLETED ${label} PROMOS`
-        : startYear === SPLIT_SEASON_START_YEAR - 1
+        : startYear === currentStartYear - 1
           ? `LAST SEASON (${label})`
           : `${label} SEASON`;
       const subline = isCurrent

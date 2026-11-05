@@ -29,11 +29,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Team } from "../types";
 import { teamDisplayName } from "../promo-helpers";
+import { seasonLabel } from '../seasons/season-window';
 import {
   NFL_SCHEDULE_TITLE_SLUGS,
   NFL_SCHEDULE_TITLE_CONTROL_SLUGS,
-  NFL_TITLE_SEASON_YEAR,
-  TITLE_SEASON_YEAR,
   TREATMENT_SLUGS,
   isNflScheduleTitleTeam,
   isTitleTreatmentTeam,
@@ -48,8 +47,11 @@ const TITLE_MAX = 60;
 interface Frozen { id: string; city: string; name: string; title: string }
 
 // The team shape the title path actually touches: id decides the arm, city+name
-// feed teamDisplayName. Nothing else in Team reaches a title.
-const asTeam = (r: Frozen) => ({ id: r.id, city: r.city, name: r.name }) as Team;
+// feed teamDisplayName, and league picks the season the year token names
+// (seasonLabel, src/lib/seasons/windows.json, since the 2026-11-05 rollover).
+// Every frozen club is an NFL arm club or an MLB one.
+const leagueOf = (id: string) => (NFL_SCHEDULE_TITLE_SLUGS.has(id) || NFL_SCHEDULE_TITLE_CONTROL_SLUGS.has(id) ? "NFL" : "MLB");
+const asTeam = (r: Frozen) => ({ id: r.id, city: r.city, name: r.name, league: leagueOf(r.id) }) as Team;
 // The team title is emitted with title.absolute since 2026-11-05, so the layout
 // suffix no longer applies. SUFFIX stays to read the frozen tables.
 const rendered = (r: Frozen) => teamMetaTitle(asTeam(r), teamDisplayName(asTeam(r)));
@@ -178,9 +180,12 @@ test("the arms are disjoint and correctly labelled", () => {
 // midnight on Jan 1, months before that season data exists; scripts/audit-title-lengths.ts
 // and scripts/check-metadata-dedupe.ts both already drifted, so this is a demonstrated
 // failure mode. Em dashes are banned in user-facing copy.
-test("the year is hardcoded and no title carries an em dash", () => {
-  assert.equal(NFL_TITLE_SEASON_YEAR, 2026);
-  assert.equal(TITLE_SEASON_YEAR, 2026);
+test("the year comes from the windows, never the clock, and no title carries an em dash", () => {
+  // Season rollover (ruling 2026-11-05): the year token is seasonLabel(league),
+  // from src/lib/seasons/windows.json, the same for both arms on a given day.
+  assert.equal(seasonLabel('NFL', '2026-11-05'), '2026');
+  assert.equal(seasonLabel('MLB', '2026-11-05'), '2026');
+  assert.equal(seasonLabel('MLB', '2027-02-07'), '2027', 'MLB names 2027 from the first day of its lead-in');
   const src = fs.readFileSync(
     path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "title-treatment.ts"),
     "utf8",

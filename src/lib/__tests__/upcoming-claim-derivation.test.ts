@@ -132,9 +132,10 @@ test('with no season resolved, FAQ counts describe the upcoming half and say so'
 
 test('with a season resolved, FAQ counts describe the season and name the remainder', () => {
   const { upcoming } = splitPromosByDate(MIXED, TODAY);
-  // MIXED spans one calendar year in this fixture's own terms; resolve against a
-  // league with no rollout hold so the test pins the wording, not the date gate.
-  const season = resolveSeasonScope(MIXED, 'WNBA', TODAY);
+  // Resolve against a league with no rollout hold whose 2026 window holds every
+  // MIXED row (MLS: lead-in 2026-01-07 through 2026-12-18, windows.json), so
+  // the test pins the wording, not the date gate.
+  const season = resolveSeasonScope(MIXED, 'MLS', TODAY);
   void resolveClaimMode;
   assert.ok(season, 'fixture should resolve; if it stops, the fixture changed');
   const faqs = generateTeamFAQs(

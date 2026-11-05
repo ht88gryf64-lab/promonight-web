@@ -18,6 +18,7 @@ import type { CfbSchoolPage } from '@/lib/cfb/data';
 import type { MatchupPage } from '@/lib/cfb/matchups';
 import { buildMatchupDescription, prettySchoolId } from '@/lib/cfb/matchup-description';
 import { venueLocalKickoff } from '@/lib/cfb/kickoff';
+import { cfbSeasonLabel } from './season';
 
 // The root layout title template appends ' | PromoNight' (13 chars) to every
 // page title. The house standard keeps the RENDERED <title> (field + brand) ≤60
@@ -25,7 +26,6 @@ import { venueLocalKickoff } from '@/lib/cfb/kickoff';
 const BRAND_SUFFIX = ' | PromoNight';
 const TITLE_MAX = 60 - BRAND_SUFFIX.length; // 47 → rendered ≤60
 const DESC_MAX = 155; // hard cap (Google truncates ~155); every school verified ≤155
-const YEAR = 2026;
 const BASE = 'https://www.getpromonight.com';
 const OG_IMAGE = { url: '/og-image.png', width: 1200, height: 630, alt: OG_IMAGE_ALT };
 
@@ -144,10 +144,10 @@ export function buildCfbTeamMetadata(data: CfbSchoolPage): Metadata {
   //    school name alone, same two shapes, rather than letting firstFit trim
   //    the year off the end. ──
   const titleCands = [
-    `${fullName} Football Schedule ${YEAR} & Gameday`,
-    `${fullName} Football Schedule ${YEAR}`,
-    `${s.name} Football Schedule ${YEAR} & Gameday`,
-    `${s.name} Football Schedule ${YEAR}`,
+    `${fullName} Football Schedule ${cfbSeasonLabel()} & Gameday`,
+    `${fullName} Football Schedule ${cfbSeasonLabel()}`,
+    `${s.name} Football Schedule ${cfbSeasonLabel()} & Gameday`,
+    `${s.name} Football Schedule ${cfbSeasonLabel()}`,
   ];
   const title = firstFit(titleCands, TITLE_MAX);
 
@@ -170,12 +170,12 @@ export function buildCfbTeamMetadata(data: CfbSchoolPage): Metadata {
       ? `${feat.name} vs ${rival}, `
       : `the ${rival} rivalry, `;
   const descCands = [
-        `${fullName} ${YEAR} football schedule, ${rivalClause}plus tickets, ${stadClause} and hotels for every home game.`,
-        `${fullName} ${YEAR} football schedule, ${rivalClause}plus tickets, ${stadClause} and hotels.`,
-        `${s.name} ${YEAR} football schedule, ${rivalClause}plus tickets, ${stadClause} and hotels.`,
-        `${s.name} ${YEAR} football schedule, ${rivalClause}plus tickets, parking and hotels.`,
-        `${s.name} ${YEAR} football schedule, plus tickets, ${stadClause} and hotels for every home game.`,
-        `${s.name} ${YEAR} football schedule, plus tickets, parking and hotels.`,
+        `${fullName} ${cfbSeasonLabel()} football schedule, ${rivalClause}plus tickets, ${stadClause} and hotels for every home game.`,
+        `${fullName} ${cfbSeasonLabel()} football schedule, ${rivalClause}plus tickets, ${stadClause} and hotels.`,
+        `${s.name} ${cfbSeasonLabel()} football schedule, ${rivalClause}plus tickets, ${stadClause} and hotels.`,
+        `${s.name} ${cfbSeasonLabel()} football schedule, ${rivalClause}plus tickets, parking and hotels.`,
+        `${s.name} ${cfbSeasonLabel()} football schedule, plus tickets, ${stadClause} and hotels for every home game.`,
+        `${s.name} ${cfbSeasonLabel()} football schedule, plus tickets, parking and hotels.`,
       ];
   const description = firstFit(descCands, DESC_MAX);
 
@@ -195,7 +195,7 @@ export function buildCfbTeamMetadata(data: CfbSchoolPage): Metadata {
 export function buildCfbHubMetadata(): Metadata {
   // Lead with the exact §13 winnable phrase "college football rivalries"; ≤47 so
   // the rendered <title> (+ ' | PromoNight') stays ≤60. Avoids the schedule head term.
-  const title = 'College Football Rivalries & Gameday 2026'; // 41 field → 54 rendered
+  const title = `College Football Rivalries & Gameday ${cfbSeasonLabel()}`; // 41 field → 54 rendered
   // Em-dash-free (house rule: avoid em dashes in user-facing copy); colon + commas.
   // No team count: this is a static module-level export, so a numeric claim
   // cannot derive from the schools collection and drifts the moment the corpus
@@ -204,7 +204,7 @@ export function buildCfbHubMetadata(): Metadata {
   // rivalries. cfbTraditions has two docs that nothing reads, which is not
   // backing for a claim in the head of the hub.
   const description =
-    'College football rivalries and trophy games for 2026: The Game, Iron Bowl, Red River, plus schedules, stadiums and gameday plans for every team.'; // 141 <= 155
+    `College football rivalries and trophy games for ${cfbSeasonLabel()}: The Game, Iron Bowl, Red River, plus schedules, stadiums and gameday plans for every team.`; // 141 <= 155
   const socialTitle = `${title} | PromoNight`;
   const url = `${BASE}/cfb`;
   return {
@@ -250,7 +250,7 @@ export function renderedKickoff(game: MatchupPage['game'], venueZone: string | n
 
 export function buildCfbMatchupMetadata(data: MatchupPage): Metadata {
   // displayName, never rivalry.name, so title, H1 and description agree.
-  const title = `${data.displayName} ${YEAR}`;
+  const title = `${data.displayName} ${cfbSeasonLabel()}`;
   const [a, b] = data.schools;
   const [aId, bId] = data.rivalry.schoolIds;
 
@@ -279,18 +279,21 @@ export function buildCfbMatchupMetadata(data: MatchupPage): Metadata {
 
 // Exported so the index JSON-LD (rivalry-jsonld.ts) reuses the exact strings
 // the <head> ships — CollectionPage name/description and meta cannot drift.
-export const RIVALRY_INDEX_TITLE = 'College Football Rivalries 2026';
+export function rivalryIndexTitle(): string {
+  return `College Football Rivalries ${cfbSeasonLabel()}`;
+}
 // Promises only what the index renders: date, stadium, trip planning. Kickoffs
 // live on the matchup pages once announced, so they are named there, not here.
 // No count: the registry is curated and a literal would drift.
-export const RIVALRY_INDEX_DESCRIPTION =
-  'Named college football rivalries in 2026: the date, the stadium and how to plan the trip. Kickoff times appear on each rivalry page once announced.';
+export function rivalryIndexDescription(): string {
+  return `Named college football rivalries in ${cfbSeasonLabel()}: the date, the stadium and how to plan the trip. Kickoff times appear on each rivalry page once announced.`;
+}
 
 export function buildCfbRivalryIndexMetadata(): Metadata {
   // Description unchanged from what the route already shipped; this builder only
   // adds the canonical and the self-referencing og:url it was missing.
-  const title = RIVALRY_INDEX_TITLE;
-  const description = RIVALRY_INDEX_DESCRIPTION;
+  const title = rivalryIndexTitle();
+  const description = rivalryIndexDescription();
   const socialTitle = `${title} | PromoNight`;
   const url = `${BASE}/cfb/rivalries`;
   return {

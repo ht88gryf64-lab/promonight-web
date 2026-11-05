@@ -276,7 +276,9 @@ test('the feed fallback path keeps the team page order (twins never selected)', 
   }
 });
 
-test('the /nhl hub season comes from the NHL/NBA constant', async () => {
+test('the /nhl hub season comes from the windows, per render', async () => {
   const { readFileSync } = await import('node:fs');
-  assert.match(readFileSync(new URL('../../app/nhl/page.tsx', import.meta.url), 'utf8'), /\nconst SEASON = splitSeasonLabel\(SPLIT_SEASON_START_YEAR\);/);
+  const src = readFileSync(new URL('../../app/nhl/page.tsx', import.meta.url), 'utf8');
+  assert.match(src, /const SEASON = seasonLabel\('NHL'\);/);
+  assert.match(src, /export function generateMetadata\(\): Metadata \{/, 'computed per render, not at module load');
 });

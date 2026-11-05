@@ -8,6 +8,7 @@ import Link from 'next/link';
 import type { CSSProperties } from 'react';
 import type { HubRivalryGame, HubNationalBlock, HubTeam } from '@/lib/cfb/hub-data';
 import { rivalryBlockColors, orderRivalrySides } from '@/lib/cfb/hub-theme';
+import { cfbSeasonLabel } from '@/lib/cfb/season';
 
 const GOLD = '#FFB71E';
 const RED = '#e0492e';
@@ -61,13 +62,13 @@ export function NationalBlock({ block }: { block: HubNationalBlock }) {
       <Link
         href={`/cfb/rivalries/${block.matchupSlug}`}
         className="absolute inset-0 z-[1]"
-        aria-label={`${block.name} 2026`}
+        aria-label={`${block.name} ${cfbSeasonLabel()}`}
       >
         {/* The name renders visibly in the caption below, but that caption is a
             SIBLING of this anchor, so the link itself carried no text. Repeat it
             here for crawlers. aria-label wins for assistive tech, so this does
             not double-announce. */}
-        <span className="sr-only">{block.name} 2026</span>
+        <span className="sr-only">{block.name}{` ${cfbSeasonLabel()}`}</span>
       </Link>
       <CornerName team={home} side="left" />
       <CornerName team={away} side="right" />

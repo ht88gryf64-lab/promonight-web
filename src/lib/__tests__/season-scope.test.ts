@@ -64,7 +64,7 @@ describe('resolveSeasonScope', () => {
     const rows = [
       promo('2026-04-10'),
       promo('2026-05-11', { type: 'theme' }),
-      promo('2026-12-20'),
+      promo('2026-10-20'),
     ];
     const scope = resolveSeasonScope(rows, 'WNBA', TODAY);
     assert.ok(scope);
@@ -93,9 +93,13 @@ describe('resolveSeasonScope', () => {
     assert.deepEqual(scope.promos.map((p) => p.date), ['2026-10-08', '2027-01-08']);
   });
 
-  it('a calendar-year league still refuses a multi-year archive', () => {
+  it('a calendar-year league counts only the season it names, never a prior year (windows)', () => {
+    // The calendar-year model refused this archive outright. Window membership
+    // counts the 2026 row and leaves the 2025 row in the archive.
     const rows = [promo('2025-11-02'), promo('2026-03-14')];
-    assert.equal(resolveSeasonScope(rows, 'MLS', TODAY), null);
+    const scope = resolveSeasonScope(rows, 'MLS', TODAY)!;
+    assert.equal(scope.label, '2026');
+    assert.deepEqual(scope.promos.map((p) => p.date), ['2026-03-14']);
   });
 
   it('refuses an NBA archive holding only last season (the Heat, Raptors and Wizards shape)', () => {
@@ -149,7 +153,7 @@ describe('seasonClaimSentence', () => {
 
   it('states both halves so neither number stands alone', () => {
     assert.equal(
-      seasonClaimSentence(build(['2026-04-01', '2026-12-01'])),
+      seasonClaimSentence(build(['2026-04-01', '2026-10-15'])),
       '2 promotions in the 2026 season, 1 still to come',
     );
   });
@@ -173,20 +177,20 @@ describe('seasonClaimSentence', () => {
 
   it('isSeasonComplete marks exactly the zero-remaining state', () => {
     assert.equal(isSeasonComplete(build(['2026-04-01'])), true);
-    assert.equal(isSeasonComplete(build(['2026-12-01'])), false);
-    assert.equal(isSeasonComplete(build(['2026-04-01', '2026-12-01'])), false);
+    assert.equal(isSeasonComplete(build(['2026-10-15'])), false);
+    assert.equal(isSeasonComplete(build(['2026-04-01', '2026-10-15'])), false);
   });
 
   it('says all still to come when nothing has happened', () => {
     assert.equal(
-      seasonClaimSentence(build(['2026-12-01', '2026-12-02'])),
+      seasonClaimSentence(build(['2026-10-15', '2026-10-16'])),
       '2 promotions in the 2026 season, all still to come',
     );
   });
 });
 
 describe('generateTeamFAQs scope labelling', () => {
-  const rows = [promo('2026-04-01'), promo('2026-05-01'), promo('2026-12-01')];
+  const rows = [promo('2026-04-01'), promo('2026-05-01'), promo('2026-10-15')];
 
   it('names the season and both numbers when the season resolves', () => {
     const scope = resolveSeasonScope(rows, 'WNBA', TODAY)!;
@@ -230,7 +234,7 @@ describe('generateTeamFAQs scope labelling', () => {
 });
 
 describe('resolveClaimMode', () => {
-  const rows = [promo('2026-04-01'), promo('2026-12-01')];
+  const rows = [promo('2026-04-01'), promo('2026-10-15')];
 
   it('reports held for MLB inside the rollout hold, whatever the rows say', () => {
     assert.deepEqual(resolveClaimMode(rows, 'MLB', '2026-09-30'), { kind: 'held' });
@@ -241,7 +245,9 @@ describe('resolveClaimMode', () => {
   });
 
   it('reports remaining when the rows cannot support a season claim', () => {
-    const multiYear = [promo('2026-12-01'), promo('2027-01-05')];
+    // Between MLS 2026's end (Dec 18) and the 2027 lead-in (Jan 5): rows of
+    // no MLS season, so no season claim.
+    const multiYear = [promo('2026-12-25'), promo('2027-01-02')];
     assert.deepEqual(resolveClaimMode(multiYear, 'MLS', TODAY), { kind: 'remaining' });
     // On NHL the same rows ARE one season, 2026-27.
     assert.equal(resolveClaimMode(multiYear, 'NHL', TODAY).kind, 'season');
@@ -258,7 +264,7 @@ describe('the hold is total, not partial', () => {
   // moves the experiment, so 'held' must reproduce the PRE-CHANGE strings.
   const rows = [
     promo('2026-04-01', { type: 'theme' }),
-    promo('2026-12-01', { type: 'theme' }),
+    promo('2026-10-15', { type: 'theme' }),
   ];
   const upcoming = [rows[1]];
   const counts = { giveaway: 0, theme: 1, food: 0, kids: 0 };
@@ -300,7 +306,7 @@ describe('defects found in adversarial review, pinned', () => {
     // giveaway LIST used strict type membership it would be empty, and the
     // section would report the category finished while the kids section on the
     // same page listed the very same row as still to come.
-    const row = promo('2026-12-01', { type: 'kids', isGiveaway: true, title: 'Kids Backpack' });
+    const row = promo('2026-10-15', { type: 'kids', isGiveaway: true, title: 'Kids Backpack' });
     const scope = resolveSeasonScope([row], 'WNBA', TODAY)!;
     assert.equal(scope.counts.giveaway, 1, 'counted as a giveaway');
     assert.equal(scope.counts.kids, 1, 'and still counted as kids');
@@ -337,7 +343,7 @@ describe('defects found in adversarial review, pinned', () => {
     const rows = [
       promo('2026-04-01', { type: 'kids' }),
       promo('2026-05-01', { type: 'kids' }),
-      promo('2026-12-01', { type: 'kids' }),
+      promo('2026-10-15', { type: 'kids' }),
     ];
     const scope = resolveSeasonScope(rows, 'WNBA', TODAY)!;
     const faqs = generateTeamFAQs(
@@ -353,7 +359,7 @@ describe('defects found in adversarial review, pinned', () => {
   });
 
   it('never emits "1 promotional events" or a dangling "including ."', () => {
-    const scope = resolveSeasonScope([promo('2026-12-01')], 'WNBA', TODAY)!;
+    const scope = resolveSeasonScope([promo('2026-10-15')], 'WNBA', TODAY)!;
     const faqs = generateTeamFAQs(
       team(), scope.upcoming, venue, counts({ giveaway: 1 }), coverage,
       undefined, { kind: 'season', scope },
@@ -367,7 +373,7 @@ describe('defects found in adversarial review, pinned', () => {
   it('the gating disclosure has a shape for every degenerate count', () => {
     const gated = (n: number, total: number) => {
       const rows = Array.from({ length: total }, (_, i) =>
-        promo(`2026-12-${String(i + 1).padStart(2, '0')}`, {
+        promo(`2026-10-${String(i + 1).padStart(2, '0')}`, {
           title: `G${i}`,
           description: i < n ? 'Included with the ticket package.' : '',
         }),

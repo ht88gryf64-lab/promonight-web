@@ -1,12 +1,7 @@
 import type { Team, Venue } from '@/lib/types';
-import { isSplitSeasonLeague, splitSeasonLabel, SPLIT_SEASON_START_YEAR } from '@/lib/season-label';
+import { isSplitSeasonLeague } from '@/lib/season-label';
+import { seasonLabel, seasonStartYear } from '@/lib/seasons/season-window';
 import { teamDisplayName } from '@/lib/team-display-name';
-
-// Hardcoded, never derived from the clock. A page that renders "2027 promo
-// schedule" on 2027-01-01 while its own title, FAQ and JSON-LD still say 2026 is
-// worse than one that is deliberately a season behind. Bump this when next
-// season's content is ready.
-const SEASON_YEAR = 2026;
 
 type LeagueCopy = {
   cadence: string;
@@ -137,10 +132,10 @@ export function ZeroPromoFallback({
   // number always rendered as), "2026-27" on NHL and NBA.
   // The NUMBER stays a number on those leagues: it is a JSX child in the H2
   // below, and the RSC payload serializes 2026 and "2026" differently.
-  const seasonName: string | number = isSplitSeasonLeague(team.league) ? splitSeasonLabel(SPLIT_SEASON_START_YEAR) : SEASON_YEAR;
+  const seasonName: string | number = isSplitSeasonLeague(team.league) ? seasonLabel(team.league) : seasonStartYear(team.league);
   const paragraphs = copy
     ? copy.paragraphs({ teamName, venueName, city, year: String(seasonName) })
-    : [`No ${teamName} promotions are listed for ${SEASON_YEAR} yet.`];
+    : [`No ${teamName} promotions are listed for ${seasonName} yet.`];
 
   if (variant === 'light') {
     return (

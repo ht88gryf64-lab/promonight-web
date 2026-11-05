@@ -10,7 +10,8 @@
 import type { MatchupPage } from '@/lib/cfb/matchups';
 import type { CfbGame } from '@/lib/cfb/types';
 import { buildMatchupDescription, prettySchoolId } from '@/lib/cfb/matchup-description';
-import { renderedKickoff, RIVALRY_INDEX_TITLE, RIVALRY_INDEX_DESCRIPTION } from '@/lib/cfb/metadata';
+import { renderedKickoff, rivalryIndexTitle, rivalryIndexDescription } from '@/lib/cfb/metadata';
+import { cfbSeasonLabel } from '@/lib/cfb/season';
 import type { RivalryFaq, RivalryIndexRow } from '@/lib/cfb/rivalry-index';
 // The pipeline's single time parser + tz tools (guards.ts). One parser
 // everywhere — the display layer and JSON-LD cannot drift (see data.ts:12-16).
@@ -18,7 +19,6 @@ import { normTime, IANA, ianaOffsetMinutes } from '../../../scripts/cfb/lib/guar
 import { venueLocalKickoff } from '@/lib/cfb/kickoff';
 
 const BASE = 'https://www.getpromonight.com';
-const YEAR = 2026; // hardcoded by house rule, never getFullYear() in SEO copy
 // Site default OG image as the SportsEvent image — same trade-off as
 // scored-jsonld.tsx:23-27 (satisfies the recommended field without a new
 // image-resolution path).
@@ -36,8 +36,8 @@ export function buildRivalryIndexJsonLd(rows: RivalryIndexRow[], faqs: RivalryFa
     {
       '@context': 'https://schema.org',
       '@type': 'CollectionPage',
-      name: RIVALRY_INDEX_TITLE,
-      description: RIVALRY_INDEX_DESCRIPTION,
+      name: rivalryIndexTitle(),
+      description: rivalryIndexDescription(),
       url,
       isPartOf: {
         '@type': 'WebSite',
@@ -48,12 +48,12 @@ export function buildRivalryIndexJsonLd(rows: RivalryIndexRow[], faqs: RivalryFa
     {
       '@context': 'https://schema.org',
       '@type': 'ItemList',
-      name: RIVALRY_INDEX_TITLE,
+      name: rivalryIndexTitle(),
       numberOfItems: rows.length,
       itemListElement: rows.map((r, i) => ({
         '@type': 'ListItem',
         position: i + 1,
-        name: `${r.name} ${YEAR}`,
+        name: `${r.name} ${cfbSeasonLabel()}`,
         url: `${BASE}/cfb/rivalries/${r.slug}`,
       })),
     },
@@ -122,7 +122,7 @@ export function buildRivalryMatchupJsonLd(data: MatchupPage): Schema[] {
         { '@type': 'ListItem', position: 1, name: 'College Football', item: `${BASE}/cfb` },
         { '@type': 'ListItem', position: 2, name: 'Rivalries', item: `${BASE}/cfb/rivalries` },
         // Final crumb is the page itself; no item URL by Google's own pattern.
-        { '@type': 'ListItem', position: 3, name: `${data.displayName} ${YEAR}` },
+        { '@type': 'ListItem', position: 3, name: `${data.displayName} ${cfbSeasonLabel()}` },
       ],
     },
   ];
@@ -136,7 +136,7 @@ export function buildRivalryMatchupJsonLd(data: MatchupPage): Schema[] {
     const event: Schema = {
       '@context': 'https://schema.org',
       '@type': 'SportsEvent',
-      name: `${data.displayName} ${YEAR}`,
+      name: `${data.displayName} ${cfbSeasonLabel()}`,
       // Same builder and inputs as the meta description and the visible lede,
       // so the schema description can never claim what the page does not show.
       description: buildMatchupDescription({

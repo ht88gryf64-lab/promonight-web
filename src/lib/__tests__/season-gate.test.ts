@@ -14,6 +14,11 @@ import { readFileSync } from 'node:fs';
 import {
   BRACKET_LEAGUES,
   LEAD_IN_DAYS,
+  labeledSeason,
+  leadInStart,
+  mostRecentlyEndedWindow,
+  seasonLabel,
+  seasonOfDate,
   SEASON_TABLE,
   STALE_WARNING_DAYS,
   bracketFinalYmd,
@@ -73,7 +78,7 @@ test('every window: the lead-in opens exactly LEAD_IN_DAYS before the start', ()
   }
 });
 
-test('every window: in through its fixed end, out the day after; nothing dated before its start', () => {
+test('every window: in through its fixed end, out the day after; lead-in rows in, rows before the lead-in out', () => {
   for (const league of Object.keys(SEASON_TABLE)) {
     for (const w of leagueWindows(league)) {
       assert.equal(isInCurrentSeason(league, w.end, w.end), true, `${league} ${w.season}: the end day is in`);
@@ -83,8 +88,11 @@ test('every window: in through its fixed end, out the day after; nothing dated b
         false,
         `${league} ${w.season}: not current after its end`,
       );
-      // A preseason row dated the day before the opener, seen mid-season.
-      assert.equal(isInCurrentSeason(league, addDaysYmd(w.start, -1), w.start), false, `${league} ${w.season}: the day before the start is out`);
+      // Ruling 2026-11-05, point 3: spring-training and preseason rows are
+      // season rows; the lead-in covers them. A row before the lead-in is not.
+      assert.equal(isInCurrentSeason(league, addDaysYmd(w.start, -1), w.start), true, `${league} ${w.season}: a preseason row the day before the opener is in`);
+      assert.equal(isInCurrentSeason(league, leadInStart(w), w.start), true, `${league} ${w.season}: the lead-in's first day is in`);
+      assert.equal(isInCurrentSeason(league, addDaysYmd(leadInStart(w), -1), w.start), false, `${league} ${w.season}: the day before the lead-in is out`);
     }
   }
 });
@@ -101,7 +109,7 @@ test('a final bracket ends MLB and WNBA on the last game; MLS ignores its bracke
 });
 
 test('fails closed: no windows, no admission; malformed dates out; league case ignored', () => {
-  assert.equal(isInCurrentSeason('NFL', '2026-11-08', '2026-11-05'), false);
+  assert.equal(isInCurrentSeason('XFL', '2026-11-08', '2026-11-05'), false);
   assert.equal(isInCurrentSeason('', '2026-11-08', '2026-11-05'), false);
   assert.equal(isInCurrentSeason('MLS', '', '2026-11-05'), false);
   assert.equal(isInCurrentSeason('MLS', 'TBD', '2026-11-05'), false);
@@ -303,10 +311,16 @@ test('homepage best rail: gated before the cut, so it fills from in-season rows'
 
 test('the four ranked call sites pass the season gate', () => {
   const src = (p: string) => readFileSync(new URL(`../../${p}`, import.meta.url), 'utf-8');
+  // The two score-ranked pages read through one loader (ruling 2026-11-05,
+  // point 4), and the loader is what passes the gate.
+  const loader = src('lib/seasons/ranked-rows.ts');
+  assert.match(loader, /getScoredPromosInDateRange\(todayYMD, endYMD, SERVER_FETCH_CAP, gate\)/);
+  assert.match(loader, /getScoredPromosByItemType\(todayYMD, endYMD, itemType, SERVER_FETCH_CAP, gate\)/);
+  assert.match(loader, /const gate = await getCurrentSeasonPredicate\(now\);/);
+  assert.match(src('app/best-promos/page.tsx'), /await loadRankedRows\(null\)/);
+  assert.match(src('app/best-promos/bobbleheads/page.tsx'), /await loadRankedRows\('bobblehead'\)/);
   const SITES: [string, RegExp][] = [
     ['app/page.tsx', /pickBestStubPromos\(allFuture, 8, inCurrentSeason\)/],
-    ['app/best-promos/page.tsx', /getScoredPromosInDateRange\(todayYMD, endYMD, SERVER_FETCH_CAP, inCurrentSeason\)/],
-    ['app/best-promos/bobbleheads/page.tsx', /getScoredPromosByItemType\(todayYMD, endYMD, 'bobblehead', SERVER_FETCH_CAP, inCurrentSeason\)/],
     ['app/team-rankings/page.tsx', /getTopPromosPerTeam\(todayYMD, inCurrentSeason\)/],
   ];
   for (const [file, call] of SITES) {
@@ -316,4 +330,60 @@ test('the four ranked call sites pass the season gate', () => {
   }
   // Ruling point 6: the 7-day surfaces are not gated.
   assert.doesNotMatch(src('lib/social-feed/feed.ts'), /getCurrentSeasonPredicate|seasons\//, 'social feed untouched');
+});
+
+// ── The season a page names (ruling 2026-11-05, point 3) ───────────────────
+
+test('seasonLabel: during a lead-in it names the NEXT season; between seasons, the one just ended', () => {
+  // MLB 2027 opens 2027-03-24, so its lead-in starts 2027-02-07.
+  assert.equal(seasonLabel('MLB', '2026-11-05'), '2026', 'between seasons: the 2026 season just ended');
+  assert.equal(seasonLabel('MLB', '2027-02-06'), '2026');
+  assert.equal(seasonLabel('MLB', '2027-02-07'), '2027', 'the first day of the lead-in');
+  // MLS: 2026 runs to MLS Cup 2026-12-18; the 2027 Sprint lead-in opens 2027-01-05.
+  assert.equal(seasonLabel('MLS', '2026-12-18'), '2026');
+  assert.equal(seasonLabel('MLS', '2026-12-19'), '2026', 'ended, lead-in not yet open');
+  assert.equal(seasonLabel('MLS', '2027-01-05'), '2027');
+  // NHL and NBA print the two-year name.
+  assert.equal(seasonLabel('NHL', '2026-11-05'), '2026-27');
+  assert.equal(seasonLabel('NBA', '2027-07-15'), '2026-27', 'no 2027-28 window yet: the most recently ended season');
+  // NFL and CFB (ruling point 2) cross New Year inside one season.
+  assert.equal(seasonLabel('NFL', '2027-01-10'), '2026');
+  assert.equal(seasonLabel('NFL', '2027-07-26'), '2027', 'NFL 2027 lead-in: 45 days before 2027-09-09');
+  assert.equal(seasonLabel('CFB', '2027-01-20'), '2026', 'bowl season is still 2026');
+  assert.equal(seasonLabel('CFB', '2027-07-12'), '2027', 'CFB 2027 lead-in: 45 days before 2027-08-26');
+  assert.throws(() => seasonLabel('XFL', '2026-11-05'), /no windows/);
+});
+
+test('seasonOfDate: spring training belongs to the season the lead-in opens', () => {
+  assert.equal(seasonOfDate('MLB', '2027-03-01')?.season, '2027', 'a spring-training row');
+  assert.equal(seasonOfDate('MLB', '2027-02-06'), null, 'before the lead-in: no season');
+  assert.equal(seasonOfDate('MLB', '2026-12-10'), null, 'between seasons: no season');
+  assert.equal(seasonOfDate('NHL', '2027-01-08')?.season, '2026');
+  assert.equal(labeledSeason('WNBA', '2026-11-05').season, '2026');
+});
+
+test('mostRecentlyEndedWindow: the off-season range of the ranked pages', () => {
+  const w = mostRecentlyEndedWindow(['MLB', 'MLS', 'WNBA'], '2026-12-20', REAL_FINALS);
+  assert.equal(w?.league, 'MLS', 'MLS Cup 2026-12-18 is the latest end on 2026-12-20');
+  assert.equal(w?.season, '2026');
+  assert.equal(mostRecentlyEndedWindow(['MLB', 'MLS', 'WNBA'], '2026-11-05', REAL_FINALS)?.league, 'WNBA', 'MLS still running on 11-05');
+});
+
+test('offSeasonRange: the most recently ended season across the scored leagues, capped at today', async () => {
+  const { offSeasonRange } = await import('../seasons/ranked-rows');
+  // 2026-12-20: every scored league's 2026 window has ended; the range runs from
+  // the earliest 2026 lead-in (MLS, 2026-01-07) to the latest end (MLS Cup).
+  assert.deepEqual(offSeasonRange('2026-12-20', REAL_FINALS), { season: '2026', label: '2026', start: '2026-01-07', end: '2026-12-18' });
+  // 2026-11-05: WNBA ended (bracket final 10-31) while MLS runs on; the range is
+  // still the whole 2026 season, capped at today.
+  assert.deepEqual(offSeasonRange('2026-11-05', REAL_FINALS), { season: '2026', label: '2026', start: '2026-01-07', end: '2026-11-05' });
+});
+
+test('conferenceForNamedSeason: the named season, else the latest earlier one, never a later one', async () => {
+  const { conferenceForNamedSeason } = await import('../cfb/season');
+  const map = { '2025': 'Pac-12', '2026': 'Big 12' };
+  assert.equal(conferenceForNamedSeason(map, '2026-11-05'), 'Big 12');
+  assert.equal(conferenceForNamedSeason(map, '2027-07-12'), 'Big 12', 'CFB 2027 lead-in, no 2027 entry yet: the 2026 conference');
+  assert.equal(conferenceForNamedSeason({ '2027': 'SEC' }, '2026-11-05'), undefined, 'a later season never stands in');
+  assert.equal(conferenceForNamedSeason(null, '2026-11-05'), undefined);
 });

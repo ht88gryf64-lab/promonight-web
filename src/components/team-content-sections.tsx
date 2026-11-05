@@ -13,13 +13,7 @@ import {
 import { RD_CATEGORIES } from '@/components/redesign/categories';
 import type { ClaimMode } from '@/lib/season-scope';
 import { currentSeasonLabel, isSplitSeasonLeague } from '@/lib/season-label';
-
-// Hardcoded, never derived from the clock. See the same rule at
-// generateTeamFAQs in promo-helpers.ts: the page title and meta description
-// already hardcode 2026, so a getFullYear() here flips this copy to the next
-// season at midnight on Jan 1, months before that season's data exists, and
-// leaves one page asserting two different years.
-const SEASON_YEAR = 2026;
+import { seasonStartYear } from '@/lib/seasons/season-window';
 
 // "Sep 12". Deliberately shorter than formatDateReadable's "September 12": the
 // theme-night paragraph carries up to three of these inside one snippet-length
@@ -97,7 +91,7 @@ export function TeamContentSections({
       : currentSeasonLabel(team.league)
     : season
       ? season.year
-      : SEASON_YEAR;
+      : seasonStartYear(team.league);
   const fullName = teamDisplayName(team);
   const venueName = venue?.name || 'their home stadium';
 
