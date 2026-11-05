@@ -133,7 +133,8 @@ notes mention a non-game distinction. It is not proposed as a field.
 ## 6. Defects in stored bag values found by the pre-merge review (2026-11-05)
 
 **Held on the web since fix/venue-bag-holds (2026-11-05).** Items 6.1 (q2-stadium,
-nationwide-arena size), 6.2 (audi-field, footprint-center clear bag), 6.4
+nationwide-arena size; q2-stadium clearBagRequired too, since with the size
+held "a clear bag is not required" became its bag answer), 6.2 (audi-field, footprint-center clear bag), 6.4
 (truist-park, gainbridge-fieldhouse notes) and 6.5 (t-mobile-park storage link)
 are withheld from every surface by `src/lib/venue-bag-holds.ts`. When the stored
 value is corrected, delete the matching entry there, or the corrected value stays

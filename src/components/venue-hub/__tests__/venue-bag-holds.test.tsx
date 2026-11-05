@@ -48,7 +48,7 @@ async function surfaces(s: string) {
 }
 
 test('the hold list: every entry is a real building with a reason and an ops-ticket item', () => {
-  assert.equal(BAG_HOLDS.length, 7);
+  assert.equal(BAG_HOLDS.length, 8);
   const seen = new Set<string>();
   for (const h of BAG_HOLDS) {
     assert.ok(HUBS.some((x) => x.slug === h.hub), `${h.hub} is a venueHubs doc`);
@@ -73,6 +73,25 @@ test('HOLD q2-stadium, nationwide-arena: no size limit, no MAX BAG chip, no answ
     assert.equal(r.title, venueHubTitle(r.h, { hasVendors: false }), `${s}: the previous title template`);
     assert.doesNotMatch(r.title, /Bag Size|What's Allowed|No Bags Allowed/);
   }
+});
+
+test('HOLD q2-stadium clearBagRequired: no "clear bag not required" anywhere, Austin FC lines included', async () => {
+  const r = await surfaces('q2-stadium');
+  assert.equal(r.h.clearBagRequired, null);
+  const CLAIM = /clear bag (is )?not required|not require a clear bag|do not have to be clear|require a clear bag\?/i;
+  for (const [name, surface] of [['markup', r.html], ['JSON-LD', r.ld], ['title', r.title], ['description', r.description]] as const) {
+    assert.doesNotMatch(surface, CLAIM, `q2-stadium ${name}`);
+  }
+  const { teamVenueRows } = await import('../TeamVenueFacts');
+  const { renderToStaticMarkup } = await import('react-dom/server');
+  const { buildCondensedLogistics } = await import('../../../lib/venue-hub-condensed');
+  for (const t of r.h.tenants) {
+    const bag = teamVenueRows(r.h, t.teamId).find((x) => x.label === 'Bag policy');
+    if (bag) assert.doesNotMatch(decode(renderToStaticMarkup(<>{bag.body}</>)), CLAIM, `team ${t.teamId}`);
+    const line = buildCondensedLogistics(r.h, t.teamId).find((l) => l.key === 'bag');
+    if (line) assert.doesNotMatch(line.text, CLAIM, `promo/condensed ${t.teamId}`);
+  }
+  assert.ok(r.h.tenants.some((t) => t.teamId === 'austin-fc'), 'Austin FC is the tenant checked');
 });
 
 test('HOLD audi-field, footprint-center: no clear-bag line, no clear-bag question', async () => {
@@ -144,7 +163,7 @@ test('UNCHANGED: every building without a hold renders byte-identically to main 
     assert.equal(createHash('sha256').update(html).digest('hex'), b.htmlSha256, `${h.slug}: markup moved`);
     n++;
   }
-  assert.equal(n, 216, '223 buildings less the 7 held');
+  assert.equal(n, 216, '223 buildings less the 7 held buildings (8 holds)');
 });
 
 test('UNCHANGED: the check is live, every held building DOES differ from main', async () => {

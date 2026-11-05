@@ -289,7 +289,11 @@ export function bagRowFromDoc(
   const excluded = fieldExcluded(slug, 'bag');
   const sourcesConflict = SOURCES_CONFLICT_SLUGS.includes(slug) || excluded;
   const sourced = (k: string) => !sourcesConflict && hasProvenance(sources, k);
-  const dims = (sourced('bagMaxDimensions') ? ((d.bagMaxDimensions ?? null) as BagPolicyRow['dims']) : null);
+  // Ruling 6, site-wide (2026-11-05): a sourced bag prohibition means the
+  // stored size is an exception size, so the row carries no size at all and no
+  // chip can print one. Gated here, at the row mapper, not at the chip.
+  const prohibitedRow = sourced('bagsProhibited') && d.bagsProhibited === true;
+  const dims = (!prohibitedRow && sourced('bagMaxDimensions') ? ((d.bagMaxDimensions ?? null) as BagPolicyRow['dims']) : null);
   const dimsText = dims ? prettyDimsPure(dims) : null;
   return {
     slug,

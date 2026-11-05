@@ -51,6 +51,12 @@ export const BAG_HOLDS: ReadonlyArray<BagHold> = [
     ticket: `${TICKET} item 6.1`,
   },
   {
+    hub: 'q2-stadium',
+    field: 'clearBagRequired',
+    reason: 'Stored false on a building that bans bags. With the size held, "a clear bag is not required" became the bag answer on the venue page, its FAQ and JSON-LD, and every Austin FC promo page, and reads as permission to bring one.',
+    ticket: `${TICKET} item 6.1`,
+  },
+  {
     hub: 'audi-field',
     field: 'clearBagRequired',
     reason: 'Stored false, but the cited page (dcunited.com/matchday/bags) never states whether a clear bag is required. Rule 1.6: a page silent on clarity is null.',
