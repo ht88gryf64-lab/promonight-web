@@ -109,7 +109,7 @@ export function windowLabel(w: { start: string; end: string }): string {
   return `${monthDay(w.start)} to ${monthDay(w.end)}`;
 }
 
-/** "the A", "A and B", "A, B, and C", or "A, B, C, and 2 more". */
+/** "A", "A and B", "A, B, and C", or "A, B, C, and 2 more". */
 export function teamListLabel(names: string[], max = 3): string {
   if (names.length === 0) return '';
   if (names.length === 1) return names[0];
@@ -244,7 +244,7 @@ function heroHtml(input: DigestEmailInput, hero: DigestPromo): string {
     `<div style="font-size:19px;font-weight:600;line-height:1.25;color:${DIGEST_INK};">${esc(hero.title)}</div>` +
     `<div style="margin-top:5px;font-size:13px;line-height:1.4;color:${DIGEST_MUTED};">${esc([hero.teamName, weekdayMonthDay(hero.date), ...gameLine(hero)].join(' · '))}</div>`));
   const card = table(
-    row(`<td style="padding:0;line-height:0;font-size:0;"><a href="${esc(page)}" style="display:block;"><img src="${esc(img)}" width="${HERO_W}" height="${HERO_H}" alt="${esc(alt)}" style="display:block;width:100%;max-width:${HERO_W}px;height:auto;border:0;outline:none;text-decoration:none;"></a></td>`) +
+    row(`<td bgcolor="${DIGEST_WHITE}" style="padding:0;background:${DIGEST_WHITE};font-family:${FONT};font-size:13px;line-height:18px;color:${DIGEST_MUTED};"><a href="${esc(page)}" style="display:block;"><img src="${esc(img)}" width="${HERO_W}" height="${HERO_H}" alt="${esc(alt)}" style="display:block;width:100%;max-width:${HERO_W}px;height:auto;border:0;outline:none;text-decoration:none;"></a></td>`) +
     titleBelow +
     row(cell('padding:18px 24px 22px;', table(row(
       cell('', button, DIGEST_WHITE, ' align="left" valign="middle"') +
@@ -268,18 +268,23 @@ function promoRowHtml(input: DigestEmailInput, p: DigestPromo, showDate: boolean
   const eyebrow = `${p.teamShort || p.teamName} · ${p.typeLabel}`.toUpperCase();
   const thumb = cardUrl(input, p);
   const game = gameLine(p);
+  // The whole row links to the promo page, as one anchor PER CELL to the same
+  // href rather than one anchor around the table: Outlook's Word engine does
+  // not carry a link across a block-level table, so a wrapping anchor leaves
+  // the row dead there. Anchors are never nested.
+  const link = (inner: string) => `<a href="${esc(href)}" style="display:block;color:${DIGEST_INK};text-decoration:none;">${inner}</a>`;
   const inner = table(row(
-    cell(`width:54px;padding:22px 0;`, rail, DIGEST_WHITE, ' width="54" valign="top"') +
-    cell('padding:22px 16px 22px 20px;',
+    cell(`width:54px;padding:22px 0;`, showDate ? link(rail) : rail, DIGEST_WHITE, ' width="54" valign="top"') +
+    cell('padding:22px 16px 22px 20px;', link(
       `<div style="font-size:11px;font-weight:600;letter-spacing:0.06em;line-height:14px;color:${DIGEST_ACCENT};">${esc(eyebrow)}</div>` +
       `<div style="margin-top:5px;font-size:19px;font-weight:600;line-height:1.25;color:${DIGEST_INK};">${esc(p.title)}</div>` +
-      (game.length ? `<div style="margin-top:5px;font-size:13px;line-height:1.4;color:${DIGEST_MUTED};">${esc(game.join(' · '))}</div>` : ''),
+      (game.length ? `<div style="margin-top:5px;font-size:13px;line-height:1.4;color:${DIGEST_MUTED};">${esc(game.join(' · '))}</div>` : '')),
       DIGEST_WHITE, ' valign="top"') +
     cell(`width:${THUMB_W}px;padding:22px 0;`,
-      thumb ? `<img src="${esc(thumb)}" width="${THUMB_W}" height="${THUMB_H}" alt="" style="display:block;width:${THUMB_W}px;height:${THUMB_H}px;border:0;border-radius:6px;">` : '&nbsp;',
+      thumb ? link(`<img src="${esc(thumb)}" width="${THUMB_W}" height="${THUMB_H}" alt="" style="display:block;width:${THUMB_W}px;height:${THUMB_H}px;border:0;border-radius:6px;">`) : '&nbsp;',
       DIGEST_WHITE, ` width="${THUMB_W}" valign="top"`),
   ), `border-bottom:1px solid ${DIGEST_RULE};`);
-  return row(cell(`padding:0 ${SIDE}px;`, `<a href="${esc(href)}" style="display:block;color:${DIGEST_INK};text-decoration:none;">${inner}</a>`));
+  return row(cell(`padding:0 ${SIDE}px;`, inner));
 }
 
 function rowsHtml(input: DigestEmailInput, rows: DigestPromo[]): string {

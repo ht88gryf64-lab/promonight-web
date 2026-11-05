@@ -194,7 +194,11 @@ test('golden: personalized-hero-card', async () => {
 
 // ── links ───────────────────────────────────────────────────────────────────
 
-test('every promo link is a promoPageHref path, tagged with the surface subId1', async () => {
+// The renderer side of the rule: it builds no promo path of its own, only
+// makes the producers' hrefs absolute. The producers themselves (the window
+// join and upcomingLinks) are tested against promoPageHref in
+// digest-data.test.ts.
+test('the renderer emits only the hrefs it was given, tagged with the surface subId1', async () => {
   for (const c of CASES) {
     const { html } = await c.build();
     const surface = c.name.startsWith('personalized') ? 'web_email_personalized' : c.name.startsWith('generic') ? 'web_email_generic' : 'web_email_empty';
@@ -275,6 +279,41 @@ test('HTML stays under 102KB with 12 promos', async () => {
     const bytes = Buffer.byteLength(b.html, 'utf8');
     assert.ok(bytes < GMAIL_CLIP_BYTES, `${bytes} bytes is over the Gmail clip`);
   }
+});
+
+test('HTML stays under 102KB at the personalized cap of 40 rows', async () => {
+  const { buildPersonalizedDigest } = await builders();
+  const { GMAIL_CLIP_BYTES } = await import('../digest-email');
+  seq = 0;
+  const forty = Array.from({ length: 40 }, (_, i) =>
+    promo(i % 2 ? 'miami-heat' : 'florida-panthers', `2026-11-0${3 + (i % 7)}`, `Promo night number ${i + 1} with a longer title than most`, { quantity: 'First 10,000 fans', venueName: 'Amerant Bank Arena' }),
+  ).sort((a, b) => a.date.localeCompare(b.date));
+  const b = buildPersonalizedDigest({ email: 'a@example.com', manageToken: TOKEN, promos: forty, total: 55, teamIds: ['florida-panthers', 'miami-heat'], context: context() });
+  const bytes = Buffer.byteLength(b.html, 'utf8');
+  assert.ok(bytes < GMAIL_CLIP_BYTES, `${bytes} bytes at 40 rows is over the Gmail clip`);
+});
+
+test('Outlook: no anchor wraps a table and no anchor nests inside another', async () => {
+  for (const c of CASES) {
+    const { html } = await c.build();
+    let depth = 0;
+    for (const m of html.matchAll(/<(\/?)(a|table)\b/g)) {
+      if (m[2] === 'a') {
+        depth += m[1] ? -1 : 1;
+        assert.ok(depth <= 1, `${c.name}: nested anchor`);
+      } else if (!m[1]) {
+        assert.strictEqual(depth, 0, `${c.name}: a <table> opens inside an <a>`);
+      }
+    }
+    assert.strictEqual(depth, 0, `${c.name}: unbalanced anchors`);
+  }
+});
+
+test('every row links all three cells to its promo page', async () => {
+  const { html } = await CASES[1].build();
+  const href = 'https://www.getpromonight.com/nba/miami-heat/promos/heat-culture-tee-night?subId1=web_email_personalized_miami-heat';
+  // date rail, text block, thumbnail
+  assert.strictEqual(count(html, `href="${href}"`), 3);
 });
 
 test('the plain-text part lists every promo, the hero included', async () => {
