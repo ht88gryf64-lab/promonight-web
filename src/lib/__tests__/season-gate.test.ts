@@ -158,7 +158,7 @@ test('windows.json: valid dates, start before end, a source, no overlap within a
       assert.ok(w.source.trim().length > 0, `${league} ${w.season}: source stated`);
     }
     for (let i = 1; i < ws.length; i++) {
-      assert.ok(ws[i - 1].end < ws[i].start, `${league}: ${ws[i - 1].season} ends before ${ws[i].season} starts`);
+      assert.ok(ws[i - 1].end < leadInStart(ws[i]), `${league}: ${ws[i - 1].season} ends before ${ws[i].season}'s lead-in opens (a row must belong to one season)`);
     }
   }
   for (const l of BRACKET_LEAGUES) assert.ok(SEASON_TABLE[l], `${l} reads a bracket, so it has windows`);
@@ -315,7 +315,7 @@ test('the four ranked call sites pass the season gate', () => {
   // point 4), and the loader is what passes the gate.
   const loader = src('lib/seasons/ranked-rows.ts');
   assert.match(loader, /getScoredPromosInDateRange\(todayYMD, endYMD, SERVER_FETCH_CAP, gate\)/);
-  assert.match(loader, /getScoredPromosByItemType\(todayYMD, endYMD, itemType, SERVER_FETCH_CAP, gate\)/);
+  assert.match(loader, /getScoredPromosByItemType\(todayYMD, endYMD, itemType, BOBBLEHEAD_FETCH_CAP, gate\)/);
   assert.match(loader, /const gate = await getCurrentSeasonPredicate\(now\);/);
   assert.match(src('app/best-promos/page.tsx'), /await loadRankedRows\(null\)/);
   assert.match(src('app/best-promos/bobbleheads/page.tsx'), /await loadRankedRows\('bobblehead'\)/);

@@ -308,7 +308,9 @@ export function PromoList({
   const pastHeading = completedHeading(pastSpan);
   // The season the page names, from the windows (season rollover, 2026-11-05).
   const namedStartYear = seasonStartYear(league, today);
-  const pastCount = completedSubline(past.length, pastSpan, namedStartYear);
+  const namedSeason = labeledSeason(league, today).season;
+  const inNamedSeason = (d: string) => seasonOfDate(league, d)?.season === namedSeason;
+  const pastCount = completedSubline(past.length, pastSpan, namedStartYear, past.every((p) => inNamedSeason(p.date)));
   // Byte-identical to "See completed 2026 promos below." on a single-year
   // archive. This line renders when a club has run out of upcoming promos, so
   // it IS an MLB surface at season end, not an NHL-only one.
@@ -319,7 +321,7 @@ export function PromoList({
   // heading over both. `splitGroups` is null on every other league, and every
   // line below that reads it leaves those leagues' output exactly as it was.
   const splitGroups = isSplitSeasonLeague(league)
-    ? archiveGroups(past.map((p) => p.date), namedStartYear).map((g) => ({ ...g, rows: g.indexes.map((i) => past[i]) }))
+    ? archiveGroups(past.map((p) => p.date), namedStartYear, inNamedSeason).map((g) => ({ ...g, rows: g.indexes.map((i) => past[i]) }))
     : null;
   const currentSeasonPast = splitGroups ? splitGroups.find((g) => g.isCurrent)?.rows ?? [] : past;
   const pastPointerYears = splitGroups

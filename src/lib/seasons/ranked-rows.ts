@@ -23,6 +23,8 @@ import { effectiveEnd, leadInStart, leagueWindows, mostRecentlyEndedWindow, seas
 
 export const RANKED_LEAGUES = ['MLB', 'MLS', 'WNBA'] as const;
 export const SERVER_FETCH_CAP = 300;
+/** /best-promos/bobbleheads fetched up to 500 before the shared loader. */
+export const BOBBLEHEAD_FETCH_CAP = 500;
 export const SERVER_FETCH_DAYS = 180;
 
 export interface RankedRows {
@@ -56,7 +58,7 @@ export const loadRankedRows = cache(async (itemType: string | null): Promise<Ran
   const endYMD = addDaysYmd(todayYMD, SERVER_FETCH_DAYS);
   const gate = await getCurrentSeasonPredicate(now);
   const forward = itemType
-    ? await getScoredPromosByItemType(todayYMD, endYMD, itemType, SERVER_FETCH_CAP, gate)
+    ? await getScoredPromosByItemType(todayYMD, endYMD, itemType, BOBBLEHEAD_FETCH_CAP, gate)
     : await getScoredPromosInDateRange(todayYMD, endYMD, SERVER_FETCH_CAP, gate);
   if (forward.length > 0) {
     const earliest = forward.reduce((acc, p) => (p.date < acc ? p.date : acc), forward[0].date);
@@ -65,7 +67,7 @@ export const loadRankedRows = cache(async (itemType: string | null): Promise<Ran
   const range = offSeasonRange(todayYMD, await getSeasonFinals());
   if (!range) return { promos: [], retrospective: true, label: '', todayYMD };
   const promos = itemType
-    ? await getScoredPromosByItemType(range.start, range.end, itemType, SERVER_FETCH_CAP)
+    ? await getScoredPromosByItemType(range.start, range.end, itemType, BOBBLEHEAD_FETCH_CAP)
     : await getScoredPromosInDateRange(range.start, range.end, SERVER_FETCH_CAP);
   return { promos, retrospective: true, label: asLabel(range.label), todayYMD };
 });

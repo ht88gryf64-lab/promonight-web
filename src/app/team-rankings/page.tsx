@@ -6,7 +6,7 @@ import { getAllTeamScores, getTopPromosPerTeam } from '@/lib/data';
 import { getCurrentSeasonPredicate } from '@/lib/seasons/finals';
 import type { ScoredPromoWithTeam, TeamScoreWithTeam } from '@/lib/types';
 import { RANKED_LEAGUES } from '@/lib/seasons/ranked-rows';
-import { seasonStartYear } from '@/lib/seasons/season-window';
+import { startedSeason } from '@/lib/seasons/season-window';
 import { TeamRankingsList } from '@/components/scoring/team-rankings-list';
 import { ScoringPageViewTracker } from '@/components/scoring/scoring-page-view-tracker';
 import { teamDisplayName } from '@/lib/promo-helpers';
@@ -24,10 +24,13 @@ const PAGE_URL = 'https://www.getpromonight.com/team-rankings';
 // title, H1, meta and JSON-LD is the calendar year of the earliest season
 // shown. React cache() so generateMetadata and the page read one result.
 //
-// BEFORE THE PIPELINE HAS WRITTEN THE SEASON FIELDS (deploy order: pipeline
-// first), the page keeps ranking on the all-time fields exactly as it did, and
-// logs it. It switches only when EVERY scored team carries them, so a scoring
-// run in progress can never render a ranking that mixes the two.
+// BEFORE THE PIPELINE HAS WRITTEN THE SEASON FIELDS the page keeps ranking on
+// the all-time fields exactly as it did, and logs it. It switches only when
+// EVERY scored team carries them, so a scoring run in progress can never
+// render a ranking that mixes the two. Deploy order: this web change first
+// (the pipeline's windows drift check reads web main), then the pipeline, then
+// one backfill-scoring run per scored league so every team carries the fields
+// (WNBA's weekly scan does not run again until May).
 const rankingsView = cache(async () => {
   const scores = await getAllTeamScores();
   const seasonal =
@@ -38,7 +41,9 @@ const rankingsView = cache(async () => {
     return {
       rows: scores,
       seasonal,
-      label: Math.min(...RANKED_LEAGUES.map((l) => seasonStartYear(l))),
+      // The season the all-time numbers were last built on: the latest one that
+      // has STARTED, never a lead-in's next season.
+      label: Math.min(...RANKED_LEAGUES.map((l) => Number(startedSeason(l).season.slice(0, 4)))),
     };
   }
   const rows: TeamScoreWithTeam[] = scores

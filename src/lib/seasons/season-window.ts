@@ -192,6 +192,16 @@ export function seasonStartYear(league: string, today: string = siteTodayYmd(), 
   return Number(labeledSeason(league, today, table).season.slice(0, 4));
 }
 
+/** The latest window that has STARTED on `today` (the season in play, or
+ *  between seasons the one just played); before a league's first window,
+ *  that window. A lead-in never moves it: the team score's season rule. */
+export function startedSeason(league: string, today: string = siteTodayYmd(), table: SeasonTable = SEASON_TABLE): SeasonWindow {
+  const ws = leagueWindows(league, table);
+  if (ws.length === 0) throw new Error(`[seasons] no windows for league "${league}" (src/lib/seasons/windows.json)`);
+  const started = ws.filter((w) => w.start <= today);
+  return started.length > 0 ? started[started.length - 1] : ws[0];
+}
+
 /** The most recently ENDED window across the given leagues on `today` (the
  *  off-season range of the ranked pages, ruling point 4): null when none has
  *  ended. Fixed ends, or a bracket final when supplied. */

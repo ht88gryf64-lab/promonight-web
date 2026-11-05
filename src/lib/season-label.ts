@@ -161,10 +161,14 @@ export function completedHeading(span: SeasonSpan | null): string {
  * dropping the phrase. Split-season leagues do not come here: their archive
  * is grouped by season in promo-list.tsx with archiveGroups().
  */
-export function completedSubline(count: number, span: SeasonSpan | null, currentYear: number): string {
+export function completedSubline(count: number, span: SeasonSpan | null, currentYear: number, allInNamedSeason = true): string {
   const events = count === 1 ? 'event' : 'events';
+  // "this season" only when every row counted is a row of the season the page
+  // names (windows.json, lead-in through end): an April NFL row or a January
+  // MLB row is in the calendar year but not the season, and the hero, which
+  // counts the season, would then disagree with this line (review 2026-11-05).
   if (!span) return `${count} completed ${events} this season`;
-  if (!span.spansYears && span.years[0] === currentYear) return `${count} completed ${events} this season`;
+  if (!span.spansYears && span.years[0] === currentYear && allInNamedSeason) return `${count} completed ${events} this season`;
   return span.monthRangeLabel
     ? `${count} completed ${events}, ${span.monthRangeLabel}`
     : `${count} completed ${events}`;
@@ -195,7 +199,11 @@ export interface ArchiveGroup {
  * stored "2026-1-05" passes splitPromosByDate's empty-date check and lands in
  * `past`) goes in a last group of its own, so it is never silently dropped.
  */
-export function archiveGroups(dates: readonly string[], currentStartYear: number): ArchiveGroup[] {
+export function archiveGroups(
+  dates: readonly string[],
+  currentStartYear: number,
+  inNamedSeason: (ymd: string) => boolean = () => true,
+): ArchiveGroup[] {
   const bySeason = new Map<number, number[]>();
   const unplaced: number[] = [];
   dates.forEach((d, i) => {
@@ -222,7 +230,9 @@ export function archiveGroups(dates: readonly string[], currentStartYear: number
         : startYear === currentStartYear - 1
           ? `LAST SEASON (${label})`
           : `${label} SEASON`;
-      const subline = isCurrent
+      // "this season" only when the whole group is the named season's rows
+      // (a July or August row sits in the July 1 group but before the lead-in).
+      const subline = isCurrent && indexes.every((i) => inNamedSeason(dates[i]))
         ? `${n} completed ${events} this season`
         : span?.monthRangeLabel
           ? `${n} completed ${events}, ${span.monthRangeLabel}`

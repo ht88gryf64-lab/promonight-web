@@ -33,7 +33,11 @@
  * falling back to the upcoming-only wording because its upcoming rows sit past
  * those windows' ends (a season claim needs every upcoming row inside the
  * named season); NFL "seasonComplete2026" counting only rows from its lead-in.
- * The RULED PromoList keys were left as recorded.
+ * Review round 1 (14 more keys): the remaining-mode kids question names the
+ * period of its rows when they are not in the named season ("between October
+ * 2026 and January 2027", as its answer already did, not "in 2026"), and the
+ * NFL "seasonComplete2026" archive line drops "this season" because its April
+ * rows sit before the lead-in. The RULED PromoList keys were left as recorded.
  *
  * Re-record ONLY from main, never from a branch:
  *   GOLDEN_RECORD=<file> node --import tsx --experimental-test-module-mocks --test <this file>

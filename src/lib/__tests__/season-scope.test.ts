@@ -421,3 +421,29 @@ describe('state (b) reads as a record, not an empty page', () => {
     assert.doesNotMatch(a, /\.\s*\./, 'nor a doubled period');
   });
 });
+
+describe('review 2026-11-05: counts and labels agree with the named season', () => {
+  it('the archive line says "this season" only when every row is in the named season', async () => {
+    const { completedSubline, archiveGroups, seasonSpan } = await import('../season-label');
+    const s = seasonSpan(['2026-04-25', '2026-09-13', '2026-10-04'])!;
+    assert.equal(completedSubline(3, s, 2026, false), '3 completed events, April 2026 to October 2026', 'an April NFL row is not a 2026-season row');
+    assert.equal(completedSubline(3, s, 2026, true), '3 completed events this season');
+    const g = archiveGroups(['2026-07-20', '2026-10-10'], 2026, (d) => d >= '2026-08-15');
+    assert.doesNotMatch(g[0].subline, /this season/, 'a July row sits before the NHL lead-in');
+  });
+
+  it('the kids FAQ question names the period of the rows it counts, not the label', () => {
+    const kids = [promo('2027-04-11', { type: 'kids', title: 'Youth Baseball Day' })];
+    const faqs = generateTeamFAQs(team({ league: 'MLB' }), kids, null, { giveaway: 0, theme: 0, food: 0, kids: 1 }, coverage, undefined, { kind: 'remaining' });
+    const q = faqs.find((f) => /kids and family events/.test(f.question))!;
+    assert.match(q.question, /in 2027\?$/);
+    assert.doesNotMatch(q.question, /2026/);
+  });
+
+  it('startedSeason: a lead-in never moves it', async () => {
+    const { startedSeason } = await import('../seasons/season-window');
+    assert.equal(startedSeason('MLB', '2027-02-10').season, '2026');
+    assert.equal(startedSeason('WNBA', '2027-02-15').season, '2026', 'the provisional WNBA 2027 lead-in opens here; the started season does not move');
+    assert.equal(startedSeason('MLB', '2027-03-24').season, '2027');
+  });
+});
