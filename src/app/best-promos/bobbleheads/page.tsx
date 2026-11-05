@@ -12,6 +12,8 @@ import { ScoringPageViewTracker } from '@/components/scoring/scoring-page-view-t
 import { isRedesignEnabled } from '@/lib/redesign';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 import { addDaysYmd, siteYmd } from '@/lib/site-today';
+import { getCurrentSeasonPredicate } from '@/lib/seasons/finals';
+import { LEAD_IN_DAYS } from '@/lib/seasons/season-window';
 
 export const revalidate = 86400;
 
@@ -124,15 +126,18 @@ export default async function BobbleheadsPage() {
   const todayYMD = localYMD(now);
   const endYMD = addDaysYMD(now, SERVER_FETCH_DAYS);
 
+  // Season-gated like /best-promos (src/lib/seasons/season-window.ts).
+  const inCurrentSeason = await getCurrentSeasonPredicate(now);
   const [forwardPromos, teamScores] = await Promise.all([
-    getScoredPromosByItemType(todayYMD, endYMD, 'bobblehead', SERVER_FETCH_CAP),
+    getScoredPromosByItemType(todayYMD, endYMD, 'bobblehead', SERVER_FETCH_CAP, inCurrentSeason),
     getAllTeamScores(),
   ]);
 
   // RETROSPECTIVE MODE, same contract as /best-promos: when the forward window
   // is empty the page ranks the completed season instead of serving a ranking
-  // header over nothing. Triggered by real emptiness, never a date literal, so
-  // it flips back on its own when new schedules land.
+  // header over nothing. Triggered by the emptiness of the season-gated
+  // forward window, so it flips back on its own when a scored league's
+  // lead-in opens (LEAD_IN_DAYS before its season starts).
   const retrospective = forwardPromos.length === 0;
   const promos = retrospective
     ? await getScoredPromosByItemType(`${SEASON_YEAR}-01-01`, todayYMD, 'bobblehead', SERVER_FETCH_CAP)
@@ -185,12 +190,12 @@ export default async function BobbleheadsPage() {
   const jsonLdLastUpdated = rankedContentDate || latestComputedAt;
 
   const jsonLdDescription = retrospective
-    ? `Bobblehead giveaways of the completed ${SEASON_YEAR} season across MLB, MLS, and WNBA, ranked by score.`
+    ? `Bobblehead giveaways of the ${SEASON_YEAR} season across MLB, MLS, and WNBA, ranked by score.`
     : `Bobblehead giveaways across MLB, MLS, and WNBA in ${SEASON_YEAR}, ranked by score.`;
   const stampLine = retrospective
-    ? `${SEASON_YEAR} season complete${lastUpdatedDisplay ? ` · scores last computed ${lastUpdatedDisplay}` : ''} · ${promos.length} bobbleheads ranked`
+    ? `${SEASON_YEAR} season · no ranked bobbleheads ahead${lastUpdatedDisplay ? ` · scores last computed ${lastUpdatedDisplay}` : ''} · ${promos.length} bobbleheads ranked`
     : null;
-  const capsuleRetro = `The ${SEASON_YEAR} season is complete, and these are its ${promos.length} top-scored bobblehead giveaways across MLB, MLS, and WNBA. Nothing here is upcoming: the three leagues we score are between seasons, so this is the finished year ranked rather than a list of what is on next. MLB clubs run the majority of bobblehead programs. Each listed event is scored on attendance cap, item value, sponsor presence, and highlight tier. Upcoming bobbleheads return here automatically when ${SEASON_YEAR + 1} schedules are published.`;
+  const capsuleRetro = `These are the ${promos.length} top-scored bobblehead giveaways of the ${SEASON_YEAR} season across MLB, MLS, and WNBA. Nothing here is upcoming: none of the three leagues we score has a ranked bobblehead still to come this season, so this is the year ranked rather than a list of what is on next. MLB clubs run the majority of bobblehead programs. Each listed event is scored on attendance cap, item value, sponsor presence, and highlight tier. Upcoming bobbleheads return here from ${LEAD_IN_DAYS} days before each league's Opening Day, as clubs announce them.`;
 
   if (isRedesignEnabled()) {
     return (

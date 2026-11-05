@@ -9,7 +9,6 @@
 //
 //   getTeamPromos                 mapPromoDoc + isVisiblePromo
 //   getPromosForDate              mapPromoDoc + isVisiblePromo (both branches)
-//   getHighlightedPromos          mapPromoDoc + isVisiblePromo (both branches)
 //   getPromosInDateRange          mapPromoDoc + isVisiblePromo (both branches)
 //   getPromosFromDate             mapPromoDoc + isVisiblePromo (both branches)
 //   getTeamPromosOnDates          mapPromoDoc + isVisiblePromo, through getGamesForTeam's away promos
@@ -80,7 +79,7 @@ mock.module('server-only', { namedExports: {} });
 mock.module(new URL('../firebase.ts', import.meta.url).href, { namedExports: { db: fakeDb } });
 
 // The clock is pinned for the whole file. Some readers keep only rows dated
-// today or later (getHighlightedPromos' fallback reads new Date() in UTC), and
+// today or later (the date-window readers compare against today), and
 // the fixture rows are dated 2026-10-01 to 2026-10-03, so on the real clock
 // this file started failing at midnight UTC on 2026-10-02. NOW sits before
 // every fixture row in every US zone; only Date is mocked, timers run as usual.
@@ -112,12 +111,11 @@ test('getTeamPromos', async () => {
   assert.deepEqual(titles(await getTeamPromos('test-team')), REGULAR);
 });
 
-test('getPromosForDate, getPromosInDateRange, getPromosFromDate, getHighlightedPromos', async () => {
+test('getPromosForDate, getPromosInDateRange, getPromosFromDate', async () => {
   const d = await import('../data');
   assert.deepEqual(titles(await d.getPromosForDate('2026-10-03')), REGULAR, 'getPromosForDate');
   assert.deepEqual(titles(await d.getPromosInDateRange('2026-01-01', '2026-12-31')), REGULAR, 'getPromosInDateRange');
   assert.deepEqual(titles(await d.getPromosFromDate('2026-01-01')), REGULAR, 'getPromosFromDate');
-  assert.deepEqual(titles(await d.getHighlightedPromos(10)), REGULAR, 'getHighlightedPromos');
 });
 
 test('getScoredPromosInDateRange and getTopPromosPerTeam: the raw guards', async () => {

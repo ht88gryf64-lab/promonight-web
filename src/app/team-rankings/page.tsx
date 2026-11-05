@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { getAllTeamScores, getTopPromosPerTeam } from '@/lib/data';
+import { getCurrentSeasonPredicate } from '@/lib/seasons/finals';
 import type { ScoredPromoWithTeam } from '@/lib/types';
 import { TeamRankingsList } from '@/components/scoring/team-rankings-list';
 import { ScoringPageViewTracker } from '@/components/scoring/scoring-page-view-tracker';
@@ -98,9 +99,12 @@ export default async function TeamRankingsPage() {
   const now = new Date();
   const todayYMD = localYMD(now);
 
+  // Each row's tease is that team's best promo inside its league's current
+  // season (src/lib/seasons/season-window.ts), never next season's.
+  const inCurrentSeason = await getCurrentSeasonPredicate();
   const [teamScores, topPromosMap] = await Promise.all([
     getAllTeamScores(),
-    getTopPromosPerTeam(todayYMD),
+    getTopPromosPerTeam(todayYMD, inCurrentSeason),
   ]);
 
   // Flatten the Map<string, ScoredPromoWithTeam> into a plain Record so it
@@ -195,11 +199,14 @@ export default async function TeamRankingsPage() {
   // valid: they score a completed season, and the score, promo count and
   // highlight count on every row are all-time figures that do not go stale.
   //
-  // Condition, not a date: it self-heals when new scored promos land.
+  // Condition, not a date: it self-heals when any scored league has an
+  // in-season promo again (the tease is season-gated, see getTopPromosPerTeam).
+  // The note says only that: MLS can still be in its postseason with no
+  // ranked promo left, so it does not claim the leagues are between seasons.
   const teasesPresent = Object.keys(topPromos).length > 0;
   const offseasonNote = teasesPresent
     ? null
-    : ` These are final ${YEAR} standings: the leagues we score are between seasons, so no upcoming promo is shown on any row. The scores, promo counts and highlight counts are all-time figures and do not change while the schedules are quiet.`;
+    : ` No upcoming promo is shown on any row: none of the leagues we score has a ranked promo still to come this season. The scores, promo counts and highlight counts are all-time figures and do not change while the schedules are quiet.`;
 
   if (isRedesignEnabled()) {
     return (

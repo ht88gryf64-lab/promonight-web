@@ -4194,3 +4194,17 @@ and tighten the header block on long names.
 
 **Where.** `src/components/promo-page/PromoPageView.tsx` (the header block
 and the CTA section above the image).
+
+## 75. The ranked surfaces' season windows go stale on the calendar (src/lib/seasons/windows.json)
+
+**Status: OPEN, DATED (ruling 2026-11-05). First alarm 2027-04-01 (MLS); NHL and NBA 2027-05-01. A test fails from those days.**
+
+**What it is.** The homepage best rail, /best-promos, /best-promos/bobbleheads and the /team-rankings tease admit a promo only when its date is inside its league's current season window: from 45 days before the season starts (the lead-in) through its end (`src/lib/seasons/season-window.ts`). The windows are explicit dates in `src/lib/seasons/windows.json`, keyed league then season. MLB and WNBA end on the last final game in `postseasonBrackets` once their bracket is final; MLS and everything else end on the fixed date. A league with no windows is excluded (fails closed).
+
+**Why it exists.** On 2026-11-05 the scanner had ingested the Giants' Mar-Jun 2027 giveaways and the Galaxy's 2027 Sprint Season items. With no gate, 7 of the 8 homepage best picks, 17 of 30 /best-promos rows, the only /best-promos/bobbleheads row and 2 of 14 /team-rankings teases were next-season rows ranked as if they were on now, and both /best-promos pages had left their off-season mode because a forward row existed.
+
+**What breaks if it is not maintained.** When a league's last window ends, none of its promos can rank anywhere until a new entry exists, including the next season's lead-in. Nothing derives the next season from the clock, by the same rule as every season year on the site.
+
+**How it is caught.** `season-gate.test.ts` ("real clock: no league's last window ends within 60 days of today") fails once today is within 60 days of any league's last end. It reads the wall clock (`performance.timeOrigin`), so `npm run test:future` does not trip it early. Same LIMIT as entry 69: nothing runs the tests on a schedule, so it fires only when someone runs `npm test`.
+
+**The fix when it fires.** Add the league's next season to `windows.json` from its published schedule, with a `source`. A date that is not published yet goes in with a `provisional` note saying so. Entries marked provisional on 2026-11-05: MLB 2027 end (postseason not scheduled; the CBA expires 2026-12-01), MLS 2027 end (MLS Cup "Memorial Day Weekend"), WNBA 2027 both dates (CBA outer limits 2027-04-01 to 2027-11-21; no schedule yet), NHL and NBA 2026 ends (Finals dates not published). MLS's 2027-28 season (July 2027 to May 2028) is a second season starting in 2027; key it "2027-28".

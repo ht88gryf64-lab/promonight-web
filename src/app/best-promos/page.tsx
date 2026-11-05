@@ -14,6 +14,8 @@ import { numberWord } from '@/lib/coverage-counts';
 import { SCORED_LEAGUES } from '@/lib/types';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 import { addDaysYmd, siteYmd } from '@/lib/site-today';
+import { getCurrentSeasonPredicate } from '@/lib/seasons/finals';
+import { LEAD_IN_DAYS } from '@/lib/seasons/season-window';
 
 // Server-side fetch runs once per ISR revalidate window. Scoring rides
 // each league's weekly scan (MLB Tue year-round; WNBA Wed and MLS Thu in
@@ -137,8 +139,12 @@ export default async function BestPromosPage() {
   const todayYMD = localYMD(now);
   const endYMD = addDaysYMD(now, SERVER_FETCH_DAYS);
 
+  // The forward window admits only rows inside their league's current season
+  // (src/lib/seasons/season-window.ts): a club's next-season schedule is
+  // ingested months early and must not rank as if it were on now.
+  const inCurrentSeason = await getCurrentSeasonPredicate(now);
   const [forwardPromos, teamScores] = await Promise.all([
-    getScoredPromosInDateRange(todayYMD, endYMD, SERVER_FETCH_CAP),
+    getScoredPromosInDateRange(todayYMD, endYMD, SERVER_FETCH_CAP, inCurrentSeason),
     getAllTeamScores(),
   ]);
 
@@ -148,9 +154,12 @@ export default async function BestPromosPage() {
   // season, which keeps the content, the internal links, the ItemList and the
   // page's search value through the winter.
   //
-  // The trigger is the real emptiness of the forward window, never a date
-  // literal, so the page flips back to upcoming on its own the day 2027
-  // schedules land. No deploy, no flag.
+  // The trigger is the emptiness of the season-gated forward window, never a
+  // date literal in this file, so the page flips back to upcoming on its own
+  // when the first scored league's lead-in opens (LEAD_IN_DAYS before its
+  // season starts, src/lib/seasons/windows.json). No deploy, no flag. Before
+  // the gate it flipped the day any 2027 row was ingested, which is how the
+  // Giants' 2027 giveaways ranked here in November 2026.
   const retrospective = forwardPromos.length === 0;
   const promos = retrospective
     ? await getScoredPromosInDateRange(`${SEASON_YEAR}-01-01`, todayYMD, SERVER_FETCH_CAP)
@@ -218,14 +227,14 @@ export default async function BestPromosPage() {
   const jsonLdLastUpdated = rankedContentDate || latestComputedAt;
 
   const jsonLdDescription = retrospective
-    ? `Score-ranked list of the ${promos.length} best promotional events of the completed ${SEASON_YEAR} season across MLB, MLS, and WNBA.`
+    ? `Score-ranked list of the ${promos.length} best promotional events of the ${SEASON_YEAR} season across MLB, MLS, and WNBA.`
     : `Score-ranked list of ${promos.length} top promotional events across MLB, MLS, and WNBA in ${SEASON_YEAR}.`;
   // In retrospective mode the stamp says what the date actually is, the last
   // time SCORES were computed, rather than implying the content is fresh.
   const stampLine = retrospective
-    ? `${SEASON_YEAR} season complete${lastUpdatedDisplay ? ` · scores last computed ${lastUpdatedDisplay}` : ''} · ${promos.length} promos ranked`
+    ? `${SEASON_YEAR} season · no ranked promos ahead${lastUpdatedDisplay ? ` · scores last computed ${lastUpdatedDisplay}` : ''} · ${promos.length} promos ranked`
     : null;
-  const capsuleRetro = `The ${SEASON_YEAR} season is complete, and these are its ${promos.length} best-scored promo nights across MLB, MLS, and WNBA. Nothing here is upcoming: the three leagues we score are between seasons, so this is the finished year ranked from 100 down rather than a list of what is on next. Every entry pulls from official team-promotion announcements and is scored 0 to 100 on attendance cap, item value, sponsor presence, and highlight tier. Upcoming rankings return here automatically when ${SEASON_YEAR + 1} schedules are published.`;
+  const capsuleRetro = `These are the ${promos.length} best-scored promo nights of the ${SEASON_YEAR} season across MLB, MLS, and WNBA. Nothing here is upcoming: none of the three leagues we score has a ranked promo still to come this season, so this is the year ranked from 100 down rather than a list of what is on next. Every entry pulls from official team-promotion announcements and is scored 0 to 100 on attendance cap, item value, sponsor presence, and highlight tier. Upcoming rankings return here from ${LEAD_IN_DAYS} days before each league's Opening Day, as clubs announce them.`;
 
   if (isRedesignEnabled()) {
     return (
