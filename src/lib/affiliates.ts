@@ -333,7 +333,13 @@ const TN_SUBID_MAX = 64;
  *  surface, plus web_promo_date for the promo page's per-date "Tickets"
  *  links (their clicks still report surface web_promo_page; only the
  *  partner-side sub ID tells the two promo-page placements apart). */
-export type TnSubIdSurface = AnalyticsSurface | 'web_promo_date';
+export type TnSubIdSurface = AnalyticsSurface | 'web_promo_date' | EmailTnSubIdSurface;
+
+/** The weekly digest's three surfaces (src/lib/email.ts EMAIL_SURFACE_*).
+ *  Only the hero's gated "Get tickets" link uses them, and only while
+ *  TICKETNETWORK_EMAIL_APPROVED is "true" (docs/digest-redesign). They are
+ *  not analytics surfaces: an email click fires no PostHog event. */
+export type EmailTnSubIdSurface = 'web_email_personalized' | 'web_email_generic' | 'web_email_empty';
 
 function subIdPart(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^[-_]+|[-_]+$/g, '');

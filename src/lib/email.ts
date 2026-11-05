@@ -1,5 +1,7 @@
 import 'server-only';
-import type { DigestPromo, DigestCollection } from './digest';
+import type { DigestContext, DigestPromo } from './digest';
+import { renderDigest, teamListLabel, windowLabel, type DigestEmailInput } from './digest-email';
+import type { CascadeLevel } from './geo/local-promos';
 
 // Transactional email via the Resend REST API. Intentionally dependency-free
 // (a single POST), so there is no SDK to add. RESEND_API_KEY is piped to Vercel
@@ -243,13 +245,15 @@ export async function sendConfirmationEmail(sub: {
 }
 
 // ── Weekly digest emails ────────────────────────────────────────────────────
-// Both the personalized and generic digests are bulk sends, so each one carries
-// the RFC 8058 one-click List-Unsubscribe headers with the RECIPIENT'S OWN
-// manage token (Gmail/Yahoo bulk-sender rules require this). The visible
-// unsubscribe + manage links use the same token, pointing at the safe
-// preferences flow. Both digests point their footer link at the preferences
-// page (preferencesUrl), framed "Manage your teams" (personalized) or "Star your
-// teams to personalize" (generic) per the settled architecture.
+// Redesigned 2026-11-05 (docs/digest-redesign/digest-redesign-spec.md). The
+// markup lives in src/lib/digest-email.ts, ONE renderer for all three
+// variants; these senders build its input, keep the subjects and headers they
+// always had, and send.
+//
+// Every digest is a bulk send, so each carries the RFC 8058 one-click
+// List-Unsubscribe headers with the RECIPIENT'S OWN manage token (Gmail/Yahoo
+// bulk-sender rules require this). The visible manage and unsubscribe links use
+// the same token and point at the preferences flow.
 
 function listUnsubHeaders(manageToken: string): Record<string, string> {
   const unsub = unsubscribeUrl(manageToken);
@@ -259,250 +263,120 @@ function listUnsubHeaders(manageToken: string): Record<string, string> {
   };
 }
 
-function formatDigestDate(ymd: string): string {
-  const [y, m, d] = ymd.split('-').map(Number);
-  // Format in UTC from the bare Y-M-D so the weekday/label never shifts by tz.
-  const date = new Date(Date.UTC(y, m - 1, d));
-  return date.toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    timeZone: 'UTC',
-  });
-}
-
 // ── Email attribution surfaces ──────────────────────────────────────────────
-// Per-promo links land on the team page. They carry the affiliate subId1
-// convention (`${surface}_${team.id}`, see lib/affiliates.ts) as a query param
-// so email-driven sessions are sliceable in PostHog on the same join key the
-// on-page ticket / gear CTAs stamp onto their outbound partner URLs. The two
-// digests use distinct surfaces so personalized and generic traffic separate.
-// (The team page is statically generated and stamps its own web_team_page
-// subId1 onto the partner links, so this tag reaches PostHog, not the partner
-// reports; forwarding it into the on-page CTAs would be a separate page change.)
+// Per-promo links land on the promo page (or the team page when the promo has
+// none). They carry the affiliate subId1 convention (`${surface}_${team.id}`,
+// see lib/affiliates.ts) as a query param so email-driven sessions are
+// sliceable in PostHog on the same join key the on-page CTAs stamp onto their
+// outbound partner URLs. The three variants use distinct surfaces.
 export const EMAIL_SURFACE_PERSONALIZED = 'web_email_personalized';
 export const EMAIL_SURFACE_GENERIC = 'web_email_generic';
-// The empty-window variant (a personalized subscriber whose teams are quiet):
-// its promo links, whether the local section or the national fallback, carry
-// this surface so its ticket clicks separate from the other two variants.
+// The empty-window variant (a personalized subscriber whose teams are quiet).
 export const EMAIL_SURFACE_EMPTY = 'web_email_empty';
 
-// The row's URL: the promo's own page when it has one, else the team page
-// (DigestPromo.href, Phase 3c), tagged with the email surface via the subId1
-// `${surface}_${team.id}` convention. team.id already sits in the path; keeping
-// it in the subId1 value too makes the token byte-identical to the affiliate
-// subId1 so both join on one key. Sport slugs, team ids and page slugs are
-// lowercase-hyphen, so the value is already URL-safe.
-function teamPromoUrl(p: DigestPromo, surface: string): string {
-  return `${SITE_URL}${p.href}?subId1=${surface}_${p.teamId}`;
+/** The direct ticket link on the hero is held until TicketNetwork approves
+ *  email marketing (decided 2026-11-05). Read per send, so the switch is the
+ *  env var alone. Anything but the exact string "true" is off. */
+export function isTicketNetworkEmailApproved(env: NodeJS.ProcessEnv = process.env): boolean {
+  return env.TICKETNETWORK_EMAIL_APPROVED === 'true';
 }
 
-function promoRowHtml(p: DigestPromo, surface: string): string {
-  const teamUrl = teamPromoUrl(p, surface);
-  const meta = [p.opponent ? `vs ${esc(p.opponent)}` : '', p.time ? esc(p.time) : '']
-    .filter(Boolean)
-    .join(' &middot; ');
-  return `
-          <tr><td style="padding:12px 0;border-bottom:1px solid #efe9dd;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-              <td width="64" valign="top" style="font-size:12px;color:${EMAIL_INK_FAINT};line-height:1.35;">${esc(formatDigestDate(p.date))}</td>
-              <td valign="top">
-                <a href="${teamUrl}" style="color:${EMAIL_INK};text-decoration:none;font-weight:600;font-size:15px;">${esc(p.icon)} ${esc(p.title)}</a>
-                <div style="font-size:12px;color:${EMAIL_INK_FAINT};margin-top:3px;">${esc(p.leagueIcon)} ${esc(p.teamName)}${meta ? ` &middot; ${meta}` : ''}${p.highlight ? ' &middot; <span style="color:${EMAIL_RED};font-weight:600;">Hot</span>' : ''}</div>
-              </td>
-            </tr></table>
-          </td></tr>`;
+export interface BuiltDigest {
+  subject: string;
+  html: string;
+  text: string;
+  headers: Record<string, string>;
+  hero: DigestPromo | null;
 }
 
-// The digest is a white rounded card floating on a beige field. The dark brand
-// header is the top of that card (rounded via the card's overflow:hidden), not
-// a separate band. The card is WIDENED to dominate: it caps at DIGEST_MAX_WIDTH
-// (~700px, up from the old 520 inset) and the beige is reduced to a thin, even
-// frame (DIGEST_FRAME_PAD) so it reads as a slim border rather than a wide band.
-const DIGEST_PAGE_BG = '#f4f1ea'; // beige outer frame
-const DIGEST_CARD_BG = '#ffffff'; // white card
-const DIGEST_BAR_BG = '#1d1714'; // dark header, top of the card
-const DIGEST_MAX_WIDTH = 700; // card cap on wide desktop
-const DIGEST_FRAME_PAD = '12px'; // thin even beige gutter around the card
-
-/**
- * White rounded card on a beige field:
- *
- *   card top  brand header  background #1d1714, rounded via overflow:hidden
- *   card body heading / promo body / footer  on white
- *
- * The beige page shows only as a thin even DIGEST_FRAME_PAD gutter around the
- * card, so the card dominates. The card fills its container (width:100%) and
- * caps + centers at DIGEST_MAX_WIDTH on wide desktop (max-width + margin:0 auto
- * + the outer cell's align="center"); on mobile it fills the screen with the
- * beige frame collapsing to a minimal DIGEST_FRAME_PAD edge. header and card
- * share one width because the header is the card's first row.
- *
- * Outlook on Windows (the Word engine) honors `width` but IGNORES `max-width`,
- * so the card is wrapped in an mso-conditional "ghost table" fixed at
- * DIGEST_MAX_WIDTH; only Outlook reads the `[if mso]` comments, so it caps +
- * centers the card there while every other client renders the fluid card.
- * bgcolor mirrors each background as an attribute for older clients.
- */
-function digestShellHtml(opts: {
-  heading: string;
-  sub: string;
-  bodyHtml: string;
-  footerHtml: string;
-}): string {
-  const msoOpen = `<!--[if mso]><table role="presentation" align="center" width="${DIGEST_MAX_WIDTH}" cellpadding="0" cellspacing="0" border="0"><tr><td width="${DIGEST_MAX_WIDTH}"><![endif]-->`;
-  const msoClose = `<!--[if mso]></td></tr></table><![endif]-->`;
-  return `<!doctype html>
-<html lang="en">
-<body style="margin:0;padding:0;width:100%;background:${DIGEST_PAGE_BG};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${DIGEST_PAGE_BG}" style="width:100%;background:${DIGEST_PAGE_BG};">
-    <tr><td align="center" style="padding:${DIGEST_FRAME_PAD};">
-      ${msoOpen}
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="${DIGEST_CARD_BG}" style="width:100%;max-width:${DIGEST_MAX_WIDTH}px;margin:0 auto;background:${DIGEST_CARD_BG};border-radius:16px;overflow:hidden;border:1px solid #e6e1d6;">
-        <tr><td bgcolor="${DIGEST_BAR_BG}" style="background:${DIGEST_BAR_BG};padding:24px 32px;">
-          <span style="font-size:20px;font-weight:800;letter-spacing:-0.5px;color:${EMAIL_ON_DARK};">PROMO<span style="color:${EMAIL_ACCENT_ON_DARK};">NIGHT</span></span>
-        </td></tr>
-        <tr><td style="padding:28px 32px 6px;">
-          <h1 style="margin:0 0 4px;font-size:20px;line-height:1.25;color:${EMAIL_INK};">${esc(opts.heading)}</h1>
-          <p style="margin:0;font-size:14px;color:${EMAIL_INK_SOFT};">${esc(opts.sub)}</p>
-        </td></tr>
-        <tr><td style="padding:6px 32px 24px;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${opts.bodyHtml}</table>
-        </td></tr>
-        <tr><td style="padding:20px 32px;border-top:1px solid #e6e1d6;">${opts.footerHtml}</td></tr>
-      </table>
-      ${msoClose}
-    </td></tr>
-  </table>
-</body>
-</html>`;
+function baseInput(manageToken: string, context: DigestContext) {
+  return {
+    siteUrl: SITE_URL,
+    manageToken,
+    context,
+    ticketsApproved: isTicketNetworkEmailApproved(),
+    postalAddress: SENDER_POSTAL_ADDRESS,
+  };
 }
 
-function personalizedFooterHtml(manageToken: string): string {
-  const manage = preferencesUrl(manageToken);
-  const unsub = `${manage}&unsub=1`;
-  return `<p style="margin:0;font-size:12px;line-height:1.6;color:${EMAIL_INK_FAINT};">You are getting this because you follow these teams on PromoNight. <a href="${manage}" style="color:${EMAIL_INK_FAINT};">Manage your teams</a> &middot; <a href="${unsub}" style="color:${EMAIL_INK_FAINT};">Unsubscribe</a></p>${postalHtml()}`;
+function teamNamesFor(teamIds: string[], context: DigestContext): string[] {
+  return teamIds.map((id) => context.teams.get(id)?.name ?? id);
 }
 
-function genericFooterHtml(manageToken: string): string {
-  const manage = preferencesUrl(manageToken);
-  const unsub = `${manage}&unsub=1`;
-  return `<p style="margin:0;font-size:12px;line-height:1.6;color:${EMAIL_INK_FAINT};"><a href="${manage}" style="color:${EMAIL_RED};font-weight:600;">Star your teams to personalize</a> this email. &middot; <a href="${unsub}" style="color:${EMAIL_INK_FAINT};">Unsubscribe</a></p>${postalHtml()}`;
+function built(subject: string, manageToken: string, input: DigestEmailInput): BuiltDigest {
+  const { html, text, hero } = renderDigest(input);
+  return { subject, html, text, headers: listUnsubHeaders(manageToken), hero };
 }
 
-export async function sendPersonalizedDigest(args: {
+export interface PersonalizedDigestArgs {
   email: string;
   manageToken: string;
   promos: DigestPromo[];
-  // True pre-cap count, so the heading is honest and an overflow note shows
-  // when the list was truncated rather than silently dropping later promos.
+  // True pre-cap count, so the overflow note shows when the list was
+  // truncated rather than silently dropping later promos.
   total: number;
-}): Promise<SendResult> {
-  const overflow = Math.max(0, args.total - args.promos.length);
-  const overflowHtml =
-    overflow > 0
-      ? `<tr><td style="padding:14px 0 0;font-size:13px;color:${EMAIL_INK_SOFT};">and ${overflow} more this week. <a href="${SITE_URL}" style="color:${EMAIL_RED};text-decoration:none;">See all on PromoNight</a></td></tr>`
-      : '';
-  const html = digestShellHtml({
-    heading: 'Your teams this week',
-    sub: `${args.total} promo${args.total === 1 ? '' : 's'} coming up for the teams you follow.`,
-    bodyHtml:
-      args.promos.map((p) => promoRowHtml(p, EMAIL_SURFACE_PERSONALIZED)).join('') + overflowHtml,
-    footerHtml: personalizedFooterHtml(args.manageToken),
-  });
-  const manage = preferencesUrl(args.manageToken);
-  const text = [
-    'Your teams this week on PromoNight',
-    '',
-    ...args.promos.map(
-      (p) => `- ${formatDigestDate(p.date)}: ${p.title} (${p.teamName}) ${teamPromoUrl(p, EMAIL_SURFACE_PERSONALIZED)}`,
-    ),
-    ...(overflow > 0 ? [`...and ${overflow} more this week: ${SITE_URL}`] : []),
-    '',
-    `Manage your teams: ${manage}`,
-    `Unsubscribe: ${manage}&unsub=1`,
-    '',
-    SENDER_POSTAL_ADDRESS,
-  ].join('\n');
+  /** The subscriber's followed teams: the subline names them and "Coming up"
+   *  reads their next promos past the window. */
+  teamIds: string[];
+  context: DigestContext;
+}
 
-  return sendEmail({
-    to: args.email,
-    subject: "Your teams' promos this week on PromoNight",
-    html,
-    text,
-    headers: listUnsubHeaders(args.manageToken),
+export function buildPersonalizedDigest(args: PersonalizedDigestArgs): BuiltDigest {
+  return built("Your teams' promos this week on PromoNight", args.manageToken, {
+    ...baseInput(args.manageToken, args.context),
+    variant: 'personalized',
+    surface: EMAIL_SURFACE_PERSONALIZED,
+    title: 'This week for your teams',
+    subline: [windowLabel(args.context.window), teamListLabel(teamNamesFor(args.teamIds, args.context))].filter(Boolean).join(' · '),
+    promos: args.promos,
+    overflow: Math.max(0, args.total - args.promos.length),
+    followedTeamIds: args.teamIds,
+    heroAllowed: true,
+    leadIn: null,
   });
 }
 
-// ── Shared hot-promos body ───────────────────────────────────────────────────
-// The national "hottest promos" body: featured promo rows plus the aggregator
-// collection pills. Extracted so the generic digest AND the empty-window
-// fallback render an identical body from one source (surface differs so ticket
-// clicks attribute to the right variant).
-function hotPromosBodyHtml(
-  featured: DigestPromo[],
-  collections: DigestCollection[],
-  surface: string,
-): string {
-  const collectionsHtml =
-    `<tr><td style="padding:16px 0 0;">` +
-    collections
-      .map(
-        (c) =>
-          `<a href="${SITE_URL}${c.href}" style="display:inline-block;margin:0 8px 8px 0;padding:7px 12px;border:1px solid #e6e1d6;border-radius:999px;color:${EMAIL_INK};text-decoration:none;font-size:13px;">${esc(c.label)}</a>`,
-      )
-      .join('') +
-    `</td></tr>`;
-  return featured.map((p) => promoRowHtml(p, surface)).join('') + collectionsHtml;
+export async function sendPersonalizedDigest(args: PersonalizedDigestArgs & { email: string }): Promise<SendResult> {
+  const b = buildPersonalizedDigest(args);
+  return sendEmail({ to: args.email, subject: b.subject, html: b.html, text: b.text, headers: b.headers });
 }
 
-function hotPromosBodyText(featured: DigestPromo[], collections: DigestCollection[]): string[] {
-  return [
-    ...featured.map((p) => `- ${formatDigestDate(p.date)}: ${p.title} (${p.teamName})`),
-    '',
-    'Browse:',
-    ...collections.map((c) => `- ${c.label}: ${SITE_URL}${c.href}`),
-  ];
-}
-
-export async function sendGenericDigest(args: {
+export interface GenericDigestArgs {
   email: string;
   manageToken: string;
   featured: DigestPromo[];
-  collections: DigestCollection[];
-}): Promise<SendResult> {
-  const html = digestShellHtml({
-    heading: "This week's hottest promos",
-    sub: 'The biggest giveaways, theme nights, and food deals across the leagues this week.',
-    bodyHtml: hotPromosBodyHtml(args.featured, args.collections, EMAIL_SURFACE_GENERIC),
-    footerHtml: genericFooterHtml(args.manageToken),
-  });
-  const manage = preferencesUrl(args.manageToken);
-  const text = [
-    "This week's hottest promos on PromoNight",
-    '',
-    ...hotPromosBodyText(args.featured, args.collections),
-    '',
-    `Star your teams to personalize: ${manage}`,
-    `Unsubscribe: ${manage}&unsub=1`,
-    '',
-    SENDER_POSTAL_ADDRESS,
-  ].join('\n');
+  context: DigestContext;
+}
 
-  return sendEmail({
-    to: args.email,
-    subject: "This week's hottest pro sports promos",
-    html,
-    text,
-    headers: listUnsubHeaders(args.manageToken),
+export function buildGenericDigest(args: GenericDigestArgs): BuiltDigest {
+  return built("This week's hottest pro sports promos", args.manageToken, {
+    ...baseInput(args.manageToken, args.context),
+    variant: 'generic',
+    surface: EMAIL_SURFACE_GENERIC,
+    title: 'Hot promos this week',
+    subline: windowLabel(args.context.window),
+    promos: args.featured,
+    overflow: 0,
+    followedTeamIds: [],
+    heroAllowed: true,
+    leadIn: null,
   });
 }
 
+export async function sendGenericDigest(args: GenericDigestArgs): Promise<SendResult> {
+  const b = buildGenericDigest(args);
+  return sendEmail({ to: args.email, subject: b.subject, html: b.html, text: b.text, headers: b.headers });
+}
+
 // ── Empty-window variant ─────────────────────────────────────────────────────
-// A personalized subscriber whose followed teams have NOTHING in the window.
-// Instead of skipping, send a personalized opener naming their team(s), then a
-// LOCAL section of nearby promos when the geo cascade found any, else the same
-// national hot-promos body the generic digest uses (reused, not duplicated).
+// A personalized subscriber whose followed teams have NOTHING in the window
+// (spec v2, "Empty-window variant"). The title names their team(s) and the
+// subline carries the window and those teams, as the personalized email's
+// does. The rows are the cascade's content: nearby promos on team-proxy, the
+// national featured set on national-fallback, under a muted lead-in that says
+// which. The hero fires on team-proxy content only: a subscriber whose team is
+// dark gets no big card for a club across the country. "Coming up" still
+// reads the subscriber's OWN teams.
 
 // "the Minnesota Twins" / "the A and B" / "the A, B, and C". One leading "the".
 function naturalTeamList(names: string[]): string {
@@ -514,72 +388,48 @@ function naturalTeamList(names: string[]): string {
   return `the ${joined}`;
 }
 
-// Local section: a place-headed sub-header ("Happening around Minneapolis this
-// week") over the nearby promo rows.
-function localSectionHtml(city: string | null, promos: DigestPromo[], surface: string): string {
-  const label = city ? `Happening around ${esc(city)} this week` : 'Happening near you this week';
-  const header = `<tr><td style="padding:2px 0 10px;font-size:13px;font-weight:700;color:${EMAIL_INK};">${label}</td></tr>`;
-  return header + promos.map((p) => promoRowHtml(p, surface)).join('');
-}
+/** The lead-in per cascade level (spec v2). */
+export const EMPTY_WINDOW_LEAD_IN: Record<CascadeLevel, string> = {
+  'team-proxy': 'Nearby this week',
+  'national-fallback': 'Around the league this week',
+};
 
-export async function sendEmptyWindowDigest(args: {
+export interface EmptyWindowDigestArgs {
   email: string;
   manageToken: string;
-  // Display names of the followed teams, for the opener.
+  /** The followed teams' ids, for the subline and "Coming up". */
+  teamIds: string[];
+  // Display names of the followed teams, for the title.
   teamNames: string[];
-  // City label for the local section heading (null falls back to "near you").
-  anchorCity: string | null;
-  // Nearby promos from the geo cascade. Empty => render the national fallback.
+  /** Which cascade level produced the rows (resolveLocalAnchor). */
+  level: CascadeLevel;
+  // Nearby promos from the geo cascade (team-proxy).
   localPromos: DigestPromo[];
-  // National hot-promos, used as the fallback body when localPromos is empty.
+  // National featured promos, the national-fallback rows.
   featured: DigestPromo[];
-  collections: DigestCollection[];
-}): Promise<SendResult> {
-  const surface = EMAIL_SURFACE_EMPTY;
-  const teamList = naturalTeamList(args.teamNames);
-  const hasLocal = args.localPromos.length > 0;
-  const heading = `Nothing on the calendar for ${teamList} this week`;
-  const sub = hasLocal
-    ? args.anchorCity
-      ? `But there is plenty happening around ${args.anchorCity}.`
-      : 'But there is plenty happening near you.'
-    : "Here are this week's hottest promos across the leagues instead.";
+  context: DigestContext;
+}
 
-  const bodyHtml = hasLocal
-    ? localSectionHtml(args.anchorCity, args.localPromos, surface)
-    : hotPromosBodyHtml(args.featured, args.collections, surface);
-  const html = digestShellHtml({
-    heading,
-    sub,
-    bodyHtml,
-    footerHtml: personalizedFooterHtml(args.manageToken),
+export function buildEmptyWindowDigest(args: EmptyWindowDigestArgs): BuiltDigest {
+  // team-proxy always carries local promos (resolveLocalAnchor); a proxy with
+  // none would be national content, so it is treated as national here too.
+  const proxy = args.level === 'team-proxy' && args.localPromos.length > 0;
+  const level: CascadeLevel = proxy ? 'team-proxy' : 'national-fallback';
+  return built('Your teams are quiet this week on PromoNight', args.manageToken, {
+    ...baseInput(args.manageToken, args.context),
+    variant: 'empty',
+    surface: EMAIL_SURFACE_EMPTY,
+    title: `Nothing on the calendar for ${naturalTeamList(args.teamNames)} this week`,
+    subline: [windowLabel(args.context.window), teamListLabel(args.teamNames)].filter(Boolean).join(' · '),
+    promos: proxy ? args.localPromos : args.featured,
+    overflow: 0,
+    followedTeamIds: args.teamIds,
+    heroAllowed: proxy,
+    leadIn: EMPTY_WINDOW_LEAD_IN[level],
   });
+}
 
-  const manage = preferencesUrl(args.manageToken);
-  const bodyText = hasLocal
-    ? [
-        `Happening around ${args.anchorCity ?? 'you'} this week:`,
-        ...args.localPromos.map(
-          (p) => `- ${formatDigestDate(p.date)}: ${p.title} (${p.teamName}) ${teamPromoUrl(p, surface)}`,
-        ),
-      ]
-    : ["This week's hottest promos across the leagues:", ...hotPromosBodyText(args.featured, args.collections)];
-  const text = [
-    `Nothing on the calendar for ${teamList} this week.`,
-    '',
-    ...bodyText,
-    '',
-    `Manage your teams: ${manage}`,
-    `Unsubscribe: ${manage}&unsub=1`,
-    '',
-    SENDER_POSTAL_ADDRESS,
-  ].join('\n');
-
-  return sendEmail({
-    to: args.email,
-    subject: 'Your teams are quiet this week on PromoNight',
-    html,
-    text,
-    headers: listUnsubHeaders(args.manageToken),
-  });
+export async function sendEmptyWindowDigest(args: EmptyWindowDigestArgs): Promise<SendResult> {
+  const b = buildEmptyWindowDigest(args);
+  return sendEmail({ to: args.email, subject: b.subject, html: b.html, text: b.text, headers: b.headers });
 }

@@ -1,5 +1,7 @@
 /**
- * One-off test send of BOTH digest emails to a single address.
+ * One-off test send of the weekly digest to a single address: all three
+ * variants (personalized, generic, empty-window), each with and without a
+ * hero, six sends (redesign 2026-11-05, docs/digest-redesign).
  *
  *   node scripts/send-test-digest.js you@example.com
  *
@@ -8,17 +10,24 @@
  *     src/lib/subscribers.ts, so it cannot read a real subscriber, cannot
  *     write one, and cannot claim a digest run in `digestRuns`. A post-send
  *     assertion re-checks that nothing pulled that module in transitively.
- *   - It does not change the cron route or its schedule. The Vercel cron stays
- *     on the dry-run bare path.
+ *   - It does not change the cron route or its schedule.
  *   - The recipient comes from a REQUIRED CLI arg. There is no default and no
  *     fallback to the real list, so a bare invocation sends nothing.
  *
- * What it does send, to the CLI address only:
- *   1. The PERSONALIZED digest, seeded with teams = ["minnesota-twins"], built
- *      from real getPromosInDateRange data over the live 7-day window.
- *   2. The GENERIC hot-promos digest, built from the same window data.
- * Both go through the exact builders the cron uses (sendPersonalizedDigest and
- * sendGenericDigest), so what lands in the inbox is what subscribers would get.
+ * Every message is built by the exact builders the cron uses
+ * (buildPersonalizedDigest, buildGenericDigest, buildEmptyWindowDigest) over
+ * the live window, so what lands is what subscribers would get. Only the
+ * PROMO SET per case is chosen here, from the real window rows, so each case
+ * shows what it is named for:
+ *   personalized/hero     a team whose window has a tier 1 photo or exactly one promo
+ *   personalized/no-hero  a team with two or more promos and no tier 1 photo
+ *   generic/hero          the real featured set, a tier 1 row swapped in if it has none
+ *   generic/no-hero       the real featured set without its tier 1 rows
+ *   empty/hero            a quiet team the cascade resolves to team-proxy with a hero
+ *   empty/no-hero         a quiet team on national-fallback (the hero never fires there)
+ * The subject is the real one with a "[test: variant, hero]" prefix so the six
+ * are told apart in the inbox. TICKETNETWORK_EMAIL_APPROVED is forced off, and
+ * the script refuses to send a message carrying any partner domain.
  *
  * Requires RESEND_API_KEY and FIREBASE_SERVICE_ACCOUNT_KEY in .env.local.
  */
@@ -28,7 +37,6 @@ const crypto = require('crypto');
 const { createRequire } = require('module');
 
 const ROOT = path.join(__dirname, '..');
-const SEED_TEAM = 'minnesota-twins';
 
 // ── Recipient: required, no default ─────────────────────────────────────────
 // Parsed and validated BEFORE any module loading or Firestore connection, so a
@@ -89,14 +97,35 @@ require('./stub-server-only.cjs');
 const projectRequire = createRequire(path.join(ROOT, 'package.json'));
 projectRequire('tsx/cjs/api').register();
 
+// The ticket gate stays off for a test send whatever .env.local says.
+delete process.env.TICKETNETWORK_EMAIL_APPROVED;
+// Promo pages are live in Production (PROMO_PAGES_LIVE, 2026-10-30) but the
+// flag is absent from .env.local. Without it no promo carries a page slug, so
+// every row falls back to its team page with no card, no hero and no "Coming
+// up": not what subscribers receive. Mirror Production. Set before any module
+// loads, since the mapper reads it per row.
+process.env.PROMO_PAGES_LIVE = 'true';
+
 const {
   digestWindow,
   fetchWindowPromos,
+  fetchDigestContext,
   personalizedFor,
   genericFeatured,
-  DIGEST_COLLECTIONS,
 } = require('../src/lib/digest.ts');
-const { isSenderConfigured, sendGenericDigest, sendPersonalizedDigest } = require('../src/lib/email.ts');
+const {
+  isSenderConfigured,
+  sendEmail,
+  buildPersonalizedDigest,
+  buildGenericDigest,
+  buildEmptyWindowDigest,
+} = require('../src/lib/email.ts');
+const { pickHero } = require('../src/lib/digest-email.ts');
+const { getAllTeams, getTeamVenueCoords, getSchemaLocationsForTeams } = require('../src/lib/data.ts');
+const { resolveLocalAnchor, buildTeamCityMap } = require('../src/lib/geo/local-promos.ts');
+const { teamDisplayName } = require('../src/lib/team-display-name.ts');
+
+const PARTNER_DOMAINS = ['lusg.net', 'evyy.net', 'spothero.com', 'expedia.com'];
 
 // ── Throwaway token ─────────────────────────────────────────────────────────
 // Both digest builders take a single manageToken and derive every recipient
@@ -126,6 +155,65 @@ function describe(label, result) {
   return `${label}: SENT (resend id ${result.id ?? 'none returned'})`;
 }
 
+function byTeam(rows) {
+  const m = new Map();
+  for (const p of rows) m.set(p.teamId, [...(m.get(p.teamId) ?? []), p]);
+  return m;
+}
+
+/** The six cases, each chosen from the live window so it shows its name. */
+async function planCases(windowPromos, context) {
+  const cases = [];
+  const teams = byTeam(windowPromos);
+  const ids = [...teams.keys()].sort();
+
+  const heroTeam = ids.find((id) => pickHero(personalizedFor(windowPromos, [id]).promos));
+  const plainTeam = ids.find((id) => {
+    const { promos } = personalizedFor(windowPromos, [id]);
+    return promos.length >= 2 && !pickHero(promos);
+  });
+  for (const [hero, id] of [[true, heroTeam], [false, plainTeam]]) {
+    if (!id) { cases.push({ label: `personalized/${hero ? 'hero' : 'no-hero'}`, missing: 'no team in this window fits' }); continue; }
+    const { promos, total } = personalizedFor(windowPromos, [id]);
+    cases.push({ label: `personalized/${hero ? 'hero' : 'no-hero'}`, note: `seed team ${id}, ${total} promo(s)`, build: (token) => buildPersonalizedDigest({ email: TO, manageToken: token, promos, total, teamIds: [id], context }) });
+  }
+
+  const featured = genericFeatured(windowPromos);
+  const tier1 = windowPromos.find((p) => p.imageTier === 1 && p.hasPage && p.promoId);
+  let heroSet = featured;
+  let heroNote = 'the real featured set';
+  if (!pickHero(featured) && tier1) {
+    heroSet = [...featured.slice(0, -1), tier1].sort((a, b) => a.date.localeCompare(b.date));
+    heroNote = `featured set with tier 1 "${tier1.title}" (${tier1.teamId}) swapped in`;
+  }
+  const plainSet = featured.filter((p) => p.imageTier !== 1);
+  cases.push(pickHero(heroSet)
+    ? { label: 'generic/hero', note: heroNote, build: (token) => buildGenericDigest({ email: TO, manageToken: token, featured: heroSet, context }) }
+    : { label: 'generic/hero', missing: 'no tier 1 promo with a page in this window' });
+  cases.push({ label: 'generic/no-hero', note: `featured set without tier 1 rows, ${plainSet.length} promo(s)`, build: (token) => buildGenericDigest({ email: TO, manageToken: token, featured: plainSet, context }) });
+
+  // Empty-window: quiet teams through the real cascade.
+  const allTeams = await getAllTeams();
+  const coords = await getTeamVenueCoords(allTeams);
+  const cityByTeamId = buildTeamCityMap(allTeams, await getSchemaLocationsForTeams(allTeams));
+  const quiet = allTeams.filter((t) => !teams.has(t.id)).sort((a, b) => a.id.localeCompare(b.id));
+  let proxyPick = null;
+  let nationalPick = null;
+  for (const t of quiet) {
+    const r = resolveLocalAnchor({ followedTeamIds: [t.id], windowPromos, coords, cityByTeamId });
+    if (!proxyPick && r.level === 'team-proxy' && pickHero(r.localPromos)) proxyPick = { t, r };
+    if (!nationalPick && r.level === 'national-fallback') nationalPick = { t, r };
+    if (proxyPick && nationalPick) break;
+  }
+  for (const [hero, pick] of [[true, proxyPick], [false, nationalPick]]) {
+    const label = `empty/${hero ? 'hero' : 'no-hero'}`;
+    if (!pick) { cases.push({ label, missing: `no quiet team resolves to ${hero ? 'team-proxy with a hero' : 'national-fallback'}` }); continue; }
+    const { t, r } = pick;
+    cases.push({ label, note: `quiet team ${t.id}, ${r.level}, ${r.level === 'team-proxy' ? r.localPromos.length : featured.length} row(s)`, build: (token) => buildEmptyWindowDigest({ email: TO, manageToken: token, teamIds: [t.id], teamNames: [teamDisplayName(t)], level: r.level, localPromos: r.localPromos, featured, context }) });
+  }
+  return cases;
+}
+
 async function main() {
   if (!isSenderConfigured()) {
     console.error('[send-test-digest] SENDER_FROM is still a placeholder. Nothing was sent.');
@@ -134,46 +222,33 @@ async function main() {
 
   const { start, end } = digestWindow(new Date());
   const windowPromos = await fetchWindowPromos(start, end);
-
-  const { promos, total } = personalizedFor(windowPromos, [SEED_TEAM]);
-  const featured = genericFeatured(windowPromos);
+  const context = await fetchDigestContext({ start, end });
+  const cases = await planCases(windowPromos, context);
 
   assertSubscribersUntouched();
 
   console.log('[send-test-digest] ---------------- plan ----------------');
   console.log(`[send-test-digest] recipient:      ${TO}`);
   console.log(`[send-test-digest] window:         ${start} to ${end} (7 days, inclusive)`);
-  console.log(`[send-test-digest] window promos:  ${windowPromos.length}`);
-  console.log(`[send-test-digest] personalized:   seed team "${SEED_TEAM}", ${total} promo(s), ${promos.length} rendered`);
-  console.log(`[send-test-digest] generic:        ${featured.length} featured promo(s), ${DIGEST_COLLECTIONS.length} collection links`);
-  if (total === 0) {
-    // The cron SKIPS a subscriber whose window is empty rather than sending a
-    // hollow email. Surfaced here because the test send does not skip.
-    console.warn(`[send-test-digest] WARNING: "${SEED_TEAM}" has no promos in this window. The cron would skip this subscriber; this test will send an empty personalized digest anyway.`);
-  }
+  console.log(`[send-test-digest] window promos:  ${windowPromos.length} (${windowPromos.filter((p) => p.promoId).length} with a card, ${windowPromos.filter((p) => p.imageTier === 1).length} tier 1, ${windowPromos.filter((p) => p.venueName).length} with a building)`);
+  console.log(`[send-test-digest] upcoming links: ${context.upcoming.length}`);
+  for (const c of cases) console.log(`[send-test-digest] ${c.label.padEnd(22)} ${c.missing ? `NOT POSSIBLE: ${c.missing}` : c.note}`);
   console.log('[send-test-digest] --------------------------------------');
 
   const results = [];
-
-  const personalizedToken = throwawayManageToken();
-  console.log(`[send-test-digest] sending personalized digest (throwaway token ${personalizedToken.slice(0, 8)}...)`);
-  const personalizedResult = await sendPersonalizedDigest({
-    email: TO,
-    manageToken: personalizedToken,
-    promos,
-    total,
-  });
-  results.push({ label: 'personalized', result: personalizedResult });
-
-  const genericToken = throwawayManageToken();
-  console.log(`[send-test-digest] sending generic digest (throwaway token ${genericToken.slice(0, 8)}...)`);
-  const genericResult = await sendGenericDigest({
-    email: TO,
-    manageToken: genericToken,
-    featured,
-    collections: DIGEST_COLLECTIONS,
-  });
-  results.push({ label: 'generic', result: genericResult });
+  for (const c of cases) {
+    if (c.missing) { results.push({ label: c.label, result: { ok: false, error: `not sent: ${c.missing}` } }); continue; }
+    const token = throwawayManageToken();
+    const b = c.build(token);
+    const leaked = PARTNER_DOMAINS.filter((d) => b.html.includes(d) || b.text.includes(d));
+    if (leaked.length) throw new Error(`${c.label} carries partner domain(s) ${leaked.join(', ')}; refusing to send`);
+    const expectHero = c.label.endsWith('/hero');
+    if (!!b.hero !== expectHero) throw new Error(`${c.label} rendered ${b.hero ? 'a' : 'no'} hero; the case is mislabelled`);
+    const bytes = Buffer.byteLength(b.html, 'utf8');
+    console.log(`[send-test-digest] sending ${c.label} (${bytes} bytes HTML, ${Buffer.byteLength(b.text, 'utf8')} bytes text${b.hero ? `, hero "${b.hero.title}"` : ''})`);
+    const result = await sendEmail({ to: TO, subject: `[test: ${c.label.replace('/', ', ')}] ${b.subject}`, html: b.html, text: b.text, headers: b.headers });
+    results.push({ label: c.label, result, bytes });
+  }
 
   assertSubscribersUntouched();
 
@@ -182,9 +257,7 @@ async function main() {
 
   console.log('[send-test-digest] ---------------- sent ----------------');
   console.log(`[send-test-digest] to: ${TO}`);
-  for (const { label, result } of results) {
-    console.log(`[send-test-digest] ${describe(label, result)}`);
-  }
+  for (const { label, result } of results) console.log(`[send-test-digest] ${describe(label, result)}`);
   console.log(`[send-test-digest] ${sent} sent, ${failed} failed`);
   console.log('[send-test-digest] subscribers collection: not read, not written');
   console.log('[send-test-digest] --------------------------------------');

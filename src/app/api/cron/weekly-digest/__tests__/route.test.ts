@@ -64,6 +64,7 @@ mock.module(new URL('../../../../../lib/digest.ts', import.meta.url).href, {
     personalizedFor: () => ({ promos: [], total: 0 }),
     genericFeatured: () => [],
     DIGEST_COLLECTIONS: [],
+    fetchDigestContext: async (window: { start: string; end: string }) => ({ window, teams: new Map(), upcoming: [] }),
   },
 });
 mock.module(new URL('../../../../../lib/data.ts', import.meta.url).href, {
