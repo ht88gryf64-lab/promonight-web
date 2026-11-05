@@ -37,7 +37,9 @@ export interface SendResult {
 interface SendArgs {
   to: string;
   subject: string;
-  html: string;
+  // Optional so ops notices (lib/digest-alert.ts) can go out as plain text.
+  // Resend accepts a text-only send; an undefined html drops out of the JSON.
+  html?: string;
   text: string;
   headers?: Record<string, string>;
   // Resend takes Reply-To as a top-level `reply_to` field and IGNORES it when
