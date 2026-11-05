@@ -148,7 +148,11 @@ export function venueBagDescription(hub: Hub): string {
     () => {
       // Drop nouns from the end until the clause fits.
       for (let n = topicNouns.length; n >= 1; n--) {
-        const clause = ` ${capitalize(joinList(topicNouns.slice(0, n)))} rules quoted from the published policy.`;
+        // "Covers", not "quoted from the published policy": the quotes are
+        // slices of OUR stored notes, which are the extractor's wording of the
+        // source, not the operator's own text (pre-merge review 2026-11-05).
+        // What is true by construction is that the page answers these.
+        const clause = ` Covers ${joinList(topicNouns.slice(0, n))} rules.`;
         if ((out + clause).length <= VENUE_BAG_DESC_MAX) return clause;
       }
       return null;
@@ -192,7 +196,7 @@ export interface Span { start: number; end: number }
  * "a.m." never split.
  */
 export function sentenceSpans(text: string): Span[] {
-  const ABBREV = /\b(a\.m|p\.m|A\.M|P\.M|St|Ave|Blvd|Rd|Dr|Ste|Mt|Ft|No|approx|vs|Jr|Sr|Inc|Co|Corp|U\.S|N\.W|S\.W|N\.E|S\.E|e\.g|i\.e)\.(?=\s|$)/g;
+  const ABBREV = /\b(a\.m|p\.m|A\.M|P\.M|St|Ave|Blvd|Rd|Dr|Ste|Mt|Ft|No|approx|vs|Jr|Sr|Inc|Co|Corp|U\.S|N\.W|S\.W|N\.E|S\.E|e\.g|i\.e|[NSEW])\.(?=\s|$)/g;
   // Same-length mask, so offsets in the masked string are offsets in `text`.
   const masked = text.replace(ABBREV, (m) => m.replace(/\./g, '\u0000'));
   const spans: Span[] = [];
@@ -292,7 +296,9 @@ export type BagTopic = 'clutch' | 'purse' | 'backpack' | 'diaper' | 'medical' | 
 
 export const BAG_TOPICS: ReadonlyArray<{ key: BagTopic; noun: string; re: RegExp }> = [
   { key: 'clutch', noun: 'clutch', re: /\b(clutch(es)?|wristlets?)\b/i },
-  { key: 'purse', noun: 'purse', re: /\b(purses?|handbags?)\b/i },
+  // "clutch purse" is a clutch: matched on its own it filed seven buildings'
+  // clutch sentence under a purse question that reads as permitting purses.
+  { key: 'purse', noun: 'purse', re: /(?<!clutch[- ])\b(purses?|handbags?)\b/i },
   { key: 'backpack', noun: 'backpack', re: /\bback-?\s?packs?\b/i },
   { key: 'diaper', noun: 'diaper bag', re: /\bdiaper/i },
   { key: 'medical', noun: 'medical bag', re: /\bmedical\b/i },
@@ -302,7 +308,10 @@ export const BAG_TOPICS: ReadonlyArray<{ key: BagTopic; noun: string; re: RegExp
   // rule. Measured on the 2026-11-05 fixture, both read as storage answers
   // under the bare word. A possessive before "Locker" is a shop name
   // (kidd-brewer-stadium's "Yosef's Locker" sells clear bags), not storage.
-  { key: 'storage', noun: 'bag storage', re: /\bstorage\b(?!\s+(bags?|features)\b)|(?<!['\u2019]s )\b(lockers?|bag[- ]check|coat check|bag valet|stored?)\b|\b(may|can) be checked\b/i },
+  // Bare "store" is a shop too (energizer-park's "team store shopping bag"),
+  // so only the verb forms count, and a "bag-check line" is a screening line
+  // (donald-w-reynolds-razorback-stadium), not a place to leave a bag.
+  { key: 'storage', noun: 'bag storage', re: /\bstorage\b(?!\s+(bags?|features)\b)|(?<!['\u2019]s )\b(lockers?|coat check|bag valet)\b|\bbag[- ]check\b(?![- ]line)|\b(be|are|is) stored\b|\bstore (it|them|your|their|bags?|items)\b|\b(may|can) be checked\b/i },
 ];
 const TOPIC_BY_KEY = Object.fromEntries(BAG_TOPICS.map((t) => [t.key, t])) as Record<BagTopic, (typeof BAG_TOPICS)[number]>;
 
@@ -326,7 +335,10 @@ export function bagTopicQuestions(hub: Hub): BagTopicQuestion[] {
   const prose = sourcedBagProse(hub);
   const groups: Array<{ topics: BagTopic[]; quote: Quote }> = [];
   for (const t of BAG_TOPICS) {
-    const q = quoteMatching(prose, t.re);
+    // ONE sentence per topic. Extending to an adjacent matching sentence
+    // pulled bc-place's "Bicycles can be stored at the Bike Valet" into its
+    // bag-storage answer.
+    const q = quoteMatching(prose, t.re, 1);
     if (!q) continue;
     const same = groups.find((g) => g.quote.text === q.text && g.quote.sourceUrl === q.sourceUrl);
     if (same) same.topics.push(t.key);

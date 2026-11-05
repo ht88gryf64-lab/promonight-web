@@ -136,6 +136,40 @@ test('"plastic storage bag" is an approved bag, not bag storage', async () => {
   assert.equal(storage.answer, 'Bag lockers are available outside Gate 1 for $10.');
 });
 
+// Pre-merge review 2026-11-05, findings 5 and 6: each case is a real building's
+// sentence shape that the first matcher filed under the wrong question.
+test('REVIEW: incidental words do not open a topic question', async () => {
+  const A = await load();
+  const topics = (notes: string) => A.bagTopicQuestions(hub({ bagPolicyNotes: notes })).flatMap((q) => q.topics);
+  // energizer-park: a team store is a shop, not storage
+  assert.deepEqual(topics('Guests may enter with a team store shopping bag after a search.'), []);
+  // razorback: a bag-check line is screening, not storage
+  assert.ok(!topics('Medical bags must use the bag-check line at Gate 1.').includes('storage'));
+  // seven buildings: a clutch purse is a clutch
+  assert.deepEqual(topics('Each guest may carry an approved clear bag and a clutch purse.'), ['clutch']);
+  // the verb still counts
+  assert.deepEqual(topics('Oversized bags may be stored for a fee at the hotel desk.'), ['storage']);
+});
+
+test('REVIEW: one sentence per topic, and a compass abbreviation is not a boundary', async () => {
+  const A = await load();
+  // bc-place: the bicycle sentence after the storage sentence stays out
+  const bc = A.bagTopicQuestions(hub({ bagPolicyNotes: 'Bags that do not meet the guidelines can be checked at Gate C for $10. Bicycles can be stored at the Bike Valet at Gate C.' }));
+  assert.equal(bc.find((q) => q.topics.includes('storage'))!.answer, 'Bags that do not meet the guidelines can be checked at Gate C for $10.');
+  // gainbridge-fieldhouse: "(130 S. Pennsylvania St.)" stays whole
+  const g = A.bagTopicQuestions(hub({ bagPolicyNotes: 'Oversized bags may be stored for a fee at the Valet Bell Services Desk (130 S. Pennsylvania St.). All guests are screened.' }));
+  assert.equal(g.find((q) => q.topics.includes('storage'))!.answer, 'Oversized bags may be stored for a fee at the Valet Bell Services Desk (130 S. Pennsylvania St.).');
+});
+
+test('REVIEW: the description never claims the operator\'s own wording', async () => {
+  const A = await load();
+  // The stored notes are the extractor's wording of the source; "quoted from
+  // the published policy" was false on most buildings (finding 1).
+  for (const h of HUBS.filter(A.isBagAnswerEligible)) {
+    assert.doesNotMatch(A.venueBagDescription(h), /quot|verbatim|published policy|official/i, h.slug);
+  }
+});
+
 test('two topics quoting the same sentence share one question', async () => {
   const A = await load();
   const h = hub({ bagPolicyNotes: 'Clutches and purses up to 4.5 x 6.5 inches are allowed.' });
@@ -206,7 +240,7 @@ test('REAL DATA: every quoted string is an exact substring of a sourced field', 
     }
   }
   // Measured 2026-11-05; the Gate 2 report quotes this number.
-  assert.equal(checked, 474);
+  assert.equal(checked, 457);
 });
 
 test('REAL DATA: every bag title fits 60 and every description is 120 to 155', async () => {

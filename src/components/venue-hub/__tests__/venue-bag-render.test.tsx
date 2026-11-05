@@ -85,7 +85,7 @@ test('FAQPage JSON-LD equals the on-page Common questions exactly, on every elig
     }
   }
   // Measured 2026-11-05 on the published fixture; the Gate 2 report quotes it.
-  assert.equal(topicQs, 323);
+  assert.equal(topicQs, 306);
 });
 
 test('the answer block is the first thing in page-content, above the fact band and Next giveaways', async () => {

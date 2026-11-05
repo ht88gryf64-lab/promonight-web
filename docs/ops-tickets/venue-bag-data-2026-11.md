@@ -116,10 +116,61 @@ and an `observedAtByField` stamp:
 | `cameraBagRule` | short string | as above |
 | `bagStorage` | `{available: boolean, text: string}` or null | where an oversized bag can go |
 
-The strings should be the operator's own sentence, as the notes are now, so the
-web can keep the substring guarantee. When these exist, the web switches the
+The strings should be the operator's own sentence, so the web can keep the
+substring guarantee AND the guarantee means something. Today it does not: the
+pre-merge review (2026-11-05) compared stored `bagPolicyNotes` against the live
+source pages on ten random buildings and found them to be the extractor's
+summary, not the operator's text (soldier-field 0 of 5 sentences on the page,
+audi-field 0 of 9, footprint-center 0 of 6, bc-place 2 of 8; only bmo-stadium and
+t-mobile-park near verbatim). The web quotes our field exactly; it cannot quote the
+operator until the field holds the operator's words. See item 6. When these exist, the web switches the
 topic answers from sentence matching to the field and keeps the quote as the
 fallback.
 
 Concerts vs games was dropped from the web build (ruling 2026-11-05): one building's
 notes mention a non-game distinction. It is not proposed as a field.
+
+## 6. Defects in stored bag values found by the pre-merge review (2026-11-05)
+
+All of these were ALREADY live on production before the bag template (in the
+chip, the meta description or the existing bag FAQ answer). The template shows
+the same stored values in more places, so they matter more now. Each needs a
+read of the cited page under rule 2.2 and section 3, and a correction or a null.
+
+1. **Bag bans stored as a size limit.** These buildings' own notes say bags are
+   prohibited with a sized exception, but `bagsProhibited` is not true, so the
+   exception size renders as "Max bag size" and the description says "bags up to
+   ... are allowed":
+   - q2-stadium: "Q2 Stadium prohibits all bags ... including clear bags",
+     exemptions for clutch-size purses about 8 x 5 x 1.
+   - nationwide-arena: "Bags are generally not permitted ... clutches no larger
+     than 8x5x1 are exceptions".
+   - Same shape, borderline: crypto-com-arena, entertainment-sports-arena,
+     ball-arena (item 2).
+   Setting `bagsProhibited: true` with its source is enough: the web then renders
+   "No bags allowed", keeps the size only inside the exception sentence, and the
+   chip reads BAGS: Not allowed (the truist-park handling).
+2. **`clearBagRequired: false` the source does not support (rule 1.6).**
+   audi-field (dcunited.com/matchday/bags never says "clear" of bags) and
+   footprint-center (the current Mortgage Matchup Center policies page has no
+   clear-bag term). A page silent on clarity is null, not false.
+3. **Stored notes that say more than the source.** audi-field: "and clear bags
+   that fit the size restriction are permitted" (the source says cinch bags).
+   footprint-center: "Small clutches, crossbody bags, and clear bags are
+   permitted" (no clear bags on the source) and "Purses, medical bags, and diaper
+   bags are allowed ... subject to additional screening" (no medical bags, no
+   screening on the source; the page now answers its diaper and medical
+   questions with this sentence).
+4. **Extractor reasoning stored as policy text.** truist-park: "(opaque clutches
+   are permitted, so clear bags are not strictly required)". gainbridge-fieldhouse:
+   "there is no clear-bag requirement stated." Both render as answer text.
+5. **A citation that does not carry the value (rule 2.2).** t-mobile-park: the
+   storage sentence ("... the Mariners do not offer bag/coat storage") cites
+   mlb.com/mariners/ballpark/gate-bag-policy-faq, which contains neither "16" nor
+   "storage". It comes from /ballpark/information/guide.
+6. **Dimension order differs from the source** on nine buildings (stored as
+   12 x 12 x 6 where the source says 12 x 6 x 12): allegiant-stadium,
+   caesars-superdome, chase-stadium, college-park-center, empower-field,
+   levis-stadium, mercedes-benz-stadium, metlife-stadium, rose-bowl-stadium.
+7. **An em dash inside stored notes** (williams-brice-stadium). The web quotes the
+   field exactly, so the fix is in the stored text.
