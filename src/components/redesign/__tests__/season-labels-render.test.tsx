@@ -245,8 +245,8 @@ describe('what the zero-promo pages may claim', () => {
   test('"haven\'t announced" only for a verified club, inside its window; otherwise "hasn\'t recorded"', () => {
     // The check date rides in the sentence, so a page served stale long after
     // the window (ISR is stale-while-revalidate) still states a true, dated fact.
-    assert.equal(announcementLine('new-york-knicks', 'New York Knicks', '2026-10-05'), "The New York Knicks haven't announced 2026-27 promotions yet (checked October 5).");
-    assert.equal(announcementLine('golden-state-warriors', 'Golden State Warriors', '2026-10-05'), "PromoNight hasn't recorded any Golden State Warriors 2026-27 promotions yet.");
+    assert.equal(announcementLine('new-york-knicks', 'New York Knicks', '2026-10-05', 'NBA'), "The New York Knicks haven't announced 2026-27 promotions yet (checked October 5).");
+    assert.equal(announcementLine('golden-state-warriors', 'Golden State Warriors', '2026-10-05', 'NBA'), "PromoNight hasn't recorded any Golden State Warriors 2026-27 promotions yet.");
     // The window: verified 2026-10-05, good for VERIFIED_FOR_DAYS days.
     assert.equal(VERIFIED_FOR_DAYS, 14);
     // Rendered through 10-17; with the one-day ISR window a visitor can see it
@@ -255,7 +255,7 @@ describe('what the zero-promo pages may claim', () => {
     assert.equal(nothingPublishedVerified('new-york-knicks', '2026-10-18'), false, 'not rendered on the 14th day, it may be served stale through it');
     assert.equal(nothingPublishedVerified('new-york-knicks', '2026-10-04'), false, 'not before the check');
     assert.equal(nothingPublishedVerified('new-york-knicks', 'garbage'), false);
-    assert.match(announcementLine('new-york-knicks', 'New York Knicks', '2026-10-19'), /^PromoNight hasn't recorded/);
+    assert.match(announcementLine('new-york-knicks', 'New York Knicks', '2026-10-19', 'NBA'), /^PromoNight hasn't recorded/);
   });
 
   test('the line shows only on an NHL or NBA schedule page with no season rows', () => {

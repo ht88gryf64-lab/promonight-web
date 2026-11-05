@@ -72,31 +72,33 @@ async function teamPage(team: Team, promos: Promo[], gameContexts?: GameContext[
   );
 }
 
-describe('HIGH: the NHL/NBA season is its own constant', () => {
-  test('SPLIT_SEASON_START_YEAR is a literal 2026, not derived from TITLE_SEASON_YEAR', async () => {
-    const src = readFileSync('src/lib/season-label.ts', 'utf8');
-    assert.match(src, /export const SPLIT_SEASON_START_YEAR = 2026;/);
+describe('HIGH: every season the page names comes from the windows (season rollover, 2026-11-05)', () => {
+  test('no season constant is left: SPLIT_SEASON_START_YEAR and TITLE_SEASON_YEAR are gone', () => {
+    for (const f of ['src/lib/season-label.ts', 'src/lib/title-treatment.ts']) {
+      const src = readFileSync(f, 'utf8').replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
+      assert.doesNotMatch(src, /export const (SPLIT_SEASON_START_YEAR|TITLE_SEASON_YEAR|NFL_TITLE_SEASON_YEAR)\b/, f);
+    }
   });
 
-  test('every split-season path reads SPLIT_SEASON_START_YEAR, none reads TITLE_SEASON_YEAR', () => {
+  test('every split-season path reads the windows', () => {
     const label = readFileSync('src/lib/season-label.ts', 'utf8');
     const scope = readFileSync('src/lib/season-scope.ts', 'utf8');
     const status = readFileSync('src/lib/announcement-status.ts', 'utf8');
     const fallback = readFileSync('src/components/zero-promo-fallback.tsx', 'utf8');
     const months = readFileSync('src/lib/schedule-months.ts', 'utf8');
-    assert.match(label, /isSplitSeasonLeague\(league\) \? splitSeasonLabel\(SPLIT_SEASON_START_YEAR\)/);
-    assert.match(label, /const isCurrent = startYear === SPLIT_SEASON_START_YEAR;/);
-    assert.match(label, /: startYear === SPLIT_SEASON_START_YEAR - 1/);
-    assert.match(scope, /splitSeasonStartYear\(p\.date\) === SPLIT_SEASON_START_YEAR\)/);
-    assert.match(scope, /buildScope\(inSeason, SPLIT_SEASON_START_YEAR, splitSeasonLabel\(SPLIT_SEASON_START_YEAR\), today\)/);
-    assert.match(status, /splitSeasonLabel\(SPLIT_SEASON_START_YEAR\)/);
-    assert.doesNotMatch(status, /TITLE_SEASON_YEAR\b(?! names)/);
-    assert.match(fallback, /isSplitSeasonLeague\(team\.league\) \? splitSeasonLabel\(SPLIT_SEASON_START_YEAR\)/);
-    assert.match(months, /splitSeasonStartYear\(c\.game\.date\) === SPLIT_SEASON_START_YEAR/);
-    const archive = label.slice(label.indexOf('export function archiveGroups'));
-    assert.doesNotMatch(archive, /TITLE_SEASON_YEAR/);
-    const scopeSplit = scope.slice(scope.indexOf('if (isSplitSeasonLeague(league)) {'), scope.indexOf('const span = seasonSpan'));
-    assert.doesNotMatch(scopeSplit, /TITLE_SEASON_YEAR/);
+    assert.match(label, /return seasonLabel\(league, today\);/);
+    assert.match(label, /const isCurrent = startYear === currentStartYear;/);
+    assert.match(scope, /const season = labeledSeason\(league, today\);/);
+    assert.match(scope, /seasonOfDate\(league, p\.date\)\?\.season === season\.season/);
+    assert.match(status, /const season = upcomingSeasonLabel\(league, today\);/);
+    assert.match(fallback, /const upcoming = upcomingSeasonLabel\(team\.league\);/);
+    assert.match(months, /seasonOfDate\(L, date\)\?\.season === season/);
+  });
+
+  test('the NHL/NBA label is the two-year name of the window the date sits in', async () => {
+    const { seasonLabel } = await import('@/lib/seasons/season-window');
+    assert.equal(seasonLabel('NHL', '2026-11-05'), '2026-27');
+    assert.equal(seasonLabel('NBA', '2027-03-01'), '2026-27');
   });
 });
 
@@ -212,7 +214,7 @@ describe('MED: "THE FULL SEASON" waits for the last game', () => {
 describe('MED: the meta description names 2026-27 on NHL and NBA', () => {
   test('fallback and closer use the season word; MLB keeps the number', () => {
     const src = readFileSync('src/app/[sport]/[team]/page.tsx', 'utf8');
-    assert.match(src, /const seasonWord: string \| number = isSplitSeasonLeague\(team\.league\) \? currentSeasonLabel\(team\.league\) : year;/);
+    assert.match(src, /const seasonWord = currentSeasonLabel\(team\.league\);/);
     // One occurrence since 2026-11-05: the fallback is built from one shared
     // base (whole-clause candidates under the 155 cap), not two literals.
     assert.equal(src.match(/\$\{displayName\} \$\{seasonWord\} promotional schedule/g)?.length, 1);
@@ -224,7 +226,7 @@ describe('MED: the meta description names 2026-27 on NHL and NBA', () => {
 describe('LOW: an archive row with an unplaceable date is kept', () => {
   test('archiveGroups puts it in a last group of its own', async () => {
     const { archiveGroups } = await import('@/lib/season-label');
-    const g = archiveGroups(['2026-10-02', '2026-1-05', '2026-04-11']);
+    const g = archiveGroups(['2026-10-02', '2026-1-05', '2026-04-11'], 2026);
     assert.deepEqual(g.map((x) => [x.heading, x.indexes]), [
       ['COMPLETED 2026-27 PROMOS', [0]],
       ['LAST SEASON (2025-26)', [2]],

@@ -5,7 +5,7 @@ import { pageOpenGraph } from '@/lib/og';
 import { getPromosFromDate } from '@/lib/data';
 import { AggregatorPage, AggregatorJsonLd, type AggregatorGroup } from '@/components/aggregator-layout';
 import { siteTodayYmd } from '@/lib/site-today';
-import { crossLeagueSeasonLabel, scheduledPeriodPhrase, seasonSpan } from '@/lib/season-label';
+import { scheduledPeriodPhrase, seasonSpan } from '@/lib/season-label';
 
 export const revalidate = 21600;
 
@@ -23,19 +23,16 @@ function monthLabel(dateStr: string): string {
   });
 }
 
-// The season label in the title, heading, description and JSON-LD: "2026-27",
-// from crossLeagueSeasonLabel() (src/lib/season-label.ts), never the clock.
-// This page lists every league, and the NHL and NBA seasons run into 2027, so
-// a bare "2026" here was false (ruling 2026-10-06). The label moves with the
-// July 1 bump in known-issues 69. The lead names the months the listed rows
-// actually span (scheduledPeriodPhrase), not a label.
-const SEASON = crossLeagueSeasonLabel();
+// NO YEAR ON THIS PAGE (season rollover, ruling 2026-11-05, point 1): it lists
+// every league, whose seasons do not share a year, so the heading is
+// "Upcoming {category}" and any period the copy names comes from the dates of
+// the rows on the page (scheduledPeriodPhrase).
 
 export async function generateMetadata(): Promise<Metadata> {
   const c = await getCoverageCounts();
   return {
-    title: `${SEASON} Ballpark Food Deals: Discount Concession Nights`,
-    description: `${SEASON} food-deal promos across ${c.leagueList}. Dollar dogs, half-price concessions, and value menus by month with team, date, and opponent. From official team announcements.`,
+    title: 'Upcoming Ballpark Food Deals: Discount Concession Nights',
+    description: `Upcoming food-deal promos across ${c.leagueList}. Dollar dogs, half-price concessions, and value menus by month with team, date, and opponent. From official team announcements.`,
     alternates: { canonical: 'https://www.getpromonight.com/promos/food-deals' },
     openGraph: pageOpenGraph('/promos/food-deals'),
   };
@@ -61,7 +58,7 @@ export default async function FoodDealsPage() {
     }));
 
   const c = await getCoverageCounts();
-  const period = scheduledPeriodPhrase(seasonSpan(foods.map((p) => p.date))) || `in ${SEASON}`;
+  const period = scheduledPeriodPhrase(seasonSpan(foods.map((p) => p.date))) || 'on the calendar';
   const lead = `Food-deal promotions scheduled across ${c.leagueList} ${period}. Dollar-dog nights, half-price concessions, and value menus with the team, date, and opponent for each, grouped by month. ${foods.length} food deal${foods.length !== 1 ? 's' : ''} currently tracked across ${c.teamCount} teams.`;
 
   const faqs = [
@@ -85,14 +82,14 @@ export default async function FoodDealsPage() {
     <>
       <AggregatorJsonLd
         url="https://www.getpromonight.com/promos/food-deals"
-        title={`Ballpark Food Deals in Pro Sports ${SEASON}`}
+        title="Upcoming Ballpark Food Deals in Pro Sports"
         description={lead}
         faqs={faqs}
         groups={groups}
       />
       <AggregatorPage
         eyebrow="Food deals"
-        title={`FOOD DEALS IN ${SEASON}`}
+        title="UPCOMING FOOD DEALS"
         lead={lead}
         groups={groups}
         faqs={faqs}

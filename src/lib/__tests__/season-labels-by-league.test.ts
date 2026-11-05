@@ -22,7 +22,6 @@ import {
   seasonSpan,
   splitSeasonLabel,
   splitSeasonStartYear,
-  SPLIT_SEASON_START_YEAR,
 } from '../season-label';
 import { resolveClaimMode, resolveSeasonScope, seasonClaimSentence } from '../season-scope';
 import { generateTeamFAQs } from '../promo-helpers';
@@ -108,14 +107,16 @@ describe('season scope by league', () => {
 
   test('NFL: unchanged, a calendar-year league here (its single-year rows resolve, a crossing archive falls back)', () => {
     assert.equal(resolveSeasonScope([promo('2026-09-13'), promo('2026-12-20')], 'NFL', TODAY)!.label, '2026');
-    assert.equal(resolveSeasonScope([promo('2026-09-13'), promo('2027-01-03')], 'NFL', TODAY), null);
+    // An NFL season straddles New Year: both rows are 2026-season rows in the
+    // windows, so the season resolves (the calendar-year model fell back here).
+    assert.equal(resolveSeasonScope([promo('2026-09-13'), promo('2027-01-03')], 'NFL', TODAY)!.total, 2);
   });
 });
 
 describe('archive headings', () => {
   test('NHL/NBA: current season first, then LAST SEASON (2025-26), then older seasons by label', () => {
     const dates = ['2026-10-04', '2026-10-02', '2026-04-11', '2025-11-01', '2025-04-05'];
-    const g = archiveGroups(dates);
+    const g = archiveGroups(dates, 2026);
     assert.deepEqual(g.map((x) => x.heading), ['COMPLETED 2026-27 PROMOS', 'LAST SEASON (2025-26)', '2024-25 SEASON']);
     assert.deepEqual(g.map((x) => x.subline), [
       '2 completed events this season',
@@ -126,7 +127,7 @@ describe('archive headings', () => {
   });
 
   test('NHL/NBA: "this season" never sits over a past season', () => {
-    const g = archiveGroups(['2026-04-29', '2026-04-22', '2025-10-30']);
+    const g = archiveGroups(['2026-04-29', '2026-04-22', '2025-10-30'], 2026);
     assert.equal(g.length, 1);
     assert.equal(g[0].heading, 'LAST SEASON (2025-26)');
     assert.ok(!g[0].subline.includes('this season'));
@@ -134,23 +135,23 @@ describe('archive headings', () => {
   });
 
   test('the current season only, mid-season: the existing wording for the named season', () => {
-    const g = archiveGroups(['2026-10-04']);
+    const g = archiveGroups(['2026-10-04'], 2026);
     assert.deepEqual(g.map((x) => [x.heading, x.subline]), [['COMPLETED 2026-27 PROMOS', '1 completed event this season']]);
   });
 
   test('calendar-year leagues: the current-year archive is unchanged, byte for byte', () => {
     const s = seasonSpan(['2026-04-09', '2026-09-27'])!;
     assert.equal(completedHeading(s), 'COMPLETED 2026 PROMOS');
-    assert.equal(completedSubline(74, s), '74 completed events this season');
-    assert.equal(completedSubline(1, s), '1 completed event this season');
+    assert.equal(completedSubline(74, s, 2026), '74 completed events this season');
+    assert.equal(completedSubline(1, s, 2026), '1 completed event this season');
   });
 
   test('calendar-year leagues: an archive of an EARLIER single year no longer says "this season"', () => {
     const s = seasonSpan(['2025-04-09', '2025-09-27'])!;
     assert.equal(completedHeading(s), 'COMPLETED 2025 PROMOS');
-    assert.equal(completedSubline(12, s), '12 completed events, April 2025 to September 2025');
+    assert.equal(completedSubline(12, s, 2026), '12 completed events, April 2025 to September 2025');
     const one = seasonSpan(['2025-08-01'])!;
-    assert.equal(completedSubline(1, one), '1 completed event');
+    assert.equal(completedSubline(1, one, 2026), '1 completed event');
   });
 });
 
@@ -180,18 +181,7 @@ describe('FAQ counts only the season it names', () => {
   });
 });
 
-describe('the NHL/NBA season constant is current (known-issues 69)', () => {
-  // Reads the WALL clock on purpose: it fails on July 1, the day the bump is due
-  // (known-issues 69), and not before. A June alarm turned the suite red for a
-  // month with only one way to green it early, the forbidden early bump.
-  // performance.timeOrigin + performance.now() is not moved by test:future's
-  // Date shift or by mock.timers, so it fires on the real date in every run.
-  const wall = performance.timeOrigin + performance.now();
-  test('fails from July 1 of the year the season ends: bump SPLIT_SEASON_START_YEAR', () => {
-    const due = Date.UTC(SPLIT_SEASON_START_YEAR + 1, 6, 1);
-    assert.ok(
-      wall < due,
-      `SPLIT_SEASON_START_YEAR is ${SPLIT_SEASON_START_YEAR} and the ${splitSeasonLabel(SPLIT_SEASON_START_YEAR)} season is over: bump it today (docs/known-issues.md entry 69; re-pin the 2026-27 fixtures with it)`,
-    );
-  });
-});
+// The NHL/NBA season constant (SPLIT_SEASON_START_YEAR) and its July 1 wall-
+// clock alarm (known-issues 69) are retired: the season comes from
+// src/lib/seasons/windows.json, whose staleness test (season-gate.test.ts)
+// fires 60 days before a league's last window ends.

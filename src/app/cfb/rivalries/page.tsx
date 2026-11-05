@@ -14,6 +14,7 @@ import {
 import { buildRivalryIndexJsonLd } from '@/lib/cfb/rivalry-jsonld';
 import { barlowCondensed } from '@/components/cfb/rivalry/fonts';
 import { Spine, RivalryWash, spineVars, CONDENSED, GOLD, RED } from '@/components/cfb/rivalry/spine';
+import { cfbSeasonLabel } from '@/lib/cfb/season';
 
 export const revalidate = 21600; // ISR, same cadence as the CFB hub
 
@@ -62,7 +63,7 @@ function RivalryRow({ r, variant }: { r: RivalryIndexRow; variant: 'week' | 'lis
               {r.name}
             </span>
             <span className="shrink-0 text-[15px] font-semibold tracking-[0.06em] text-white/45" style={{ fontFamily: CONDENSED }}>
-              {r.date ? monthDay(r.date) : 'Not in 2026'}
+              {r.date ? monthDay(r.date) : `Not in ${cfbSeasonLabel()}`}
             </span>
           </span>
           <span className="mt-[3px] block text-[13.5px] text-white/50">
@@ -168,7 +169,7 @@ export default async function Page() {
           className="mt-1.5 font-extrabold uppercase leading-[0.98] tracking-[0.01em]"
           style={{ fontFamily: CONDENSED, fontSize: 'clamp(38px, 9vw, 56px)' }}
         >
-          College Football Rivalries <span style={{ color: RED }}>2026</span>
+          College Football Rivalries <span style={{ color: RED }}>{cfbSeasonLabel()}</span>
         </h1>
         <p className="mt-2.5 max-w-[46ch] text-sm text-white/60">
           The date, the kickoff and the stadium for every rivalry we cover, in the order they are played.
@@ -183,7 +184,7 @@ export default async function Page() {
               style={{ borderColor: 'rgba(224, 73, 46, 0.6)' }}
             >
               <h2 className="text-[30px] font-extrabold uppercase tracking-[0.02em]" style={{ fontFamily: CONDENSED }}>
-                Rivalry Week 2026
+                {`Rivalry Week ${cfbSeasonLabel()}`}
               </h2>
               <span
                 className="shrink-0 text-sm font-semibold uppercase tracking-[0.08em] text-white/45"

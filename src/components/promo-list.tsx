@@ -17,9 +17,8 @@ import {
   archiveGroups,
   currentSeasonLabel,
   isSplitSeasonLeague,
-  splitSeasonStartYear,
-  SPLIT_SEASON_START_YEAR,
 } from '@/lib/season-label';
+import { labeledSeason, seasonOfDate, seasonStartYear } from '@/lib/seasons/season-window';
 import type { Promo, PromoType, Team } from '@/lib/types';
 import type { GameContext } from '@/lib/data';
 import { isPurchaseGated } from '@/lib/promo-helpers';
@@ -307,7 +306,11 @@ export function PromoList({
   // `p.date >= today` is correct on all 169 teams and is not what was wrong.
   const pastSpan = seasonSpan(past.map((p) => p.date));
   const pastHeading = completedHeading(pastSpan);
-  const pastCount = completedSubline(past.length, pastSpan);
+  // The season the page names, from the windows (season rollover, 2026-11-05).
+  const namedStartYear = seasonStartYear(league, today);
+  const namedSeason = labeledSeason(league, today).season;
+  const inNamedSeason = (d: string) => seasonOfDate(league, d)?.season === namedSeason;
+  const pastCount = completedSubline(past.length, pastSpan, namedStartYear, past.every((p) => inNamedSeason(p.date)));
   // Byte-identical to "See completed 2026 promos below." on a single-year
   // archive. This line renders when a club has run out of upcoming promos, so
   // it IS an MLB surface at season end, not an NHL-only one.
@@ -318,7 +321,7 @@ export function PromoList({
   // heading over both. `splitGroups` is null on every other league, and every
   // line below that reads it leaves those leagues' output exactly as it was.
   const splitGroups = isSplitSeasonLeague(league)
-    ? archiveGroups(past.map((p) => p.date)).map((g) => ({ ...g, rows: g.indexes.map((i) => past[i]) }))
+    ? archiveGroups(past.map((p) => p.date), namedStartYear, inNamedSeason).map((g) => ({ ...g, rows: g.indexes.map((i) => past[i]) }))
     : null;
   const currentSeasonPast = splitGroups ? splitGroups.find((g) => g.isCurrent)?.rows ?? [] : past;
   const pastPointerYears = splitGroups
@@ -346,11 +349,11 @@ export function PromoList({
         c.game.seasonType !== 'preseason' &&
         c.game.status === 'scheduled' &&
         c.game.date >= today &&
-        splitSeasonStartYear(c.game.date) === SPLIT_SEASON_START_YEAR,
+        seasonOfDate(league, c.game.date)?.season === labeledSeason(league, today).season,
     );
   const seasonComplete =
     seasonScoped && upcoming.length === 0 && currentSeasonPast.length > 0 && !splitSeasonStillPlaying;
-  const seasonCompleteLabel = splitGroups ? currentSeasonLabel(league) : pastSpan?.yearLabel ?? '';
+  const seasonCompleteLabel = splitGroups ? currentSeasonLabel(league, today) : pastSpan?.yearLabel ?? '';
 
   const upcomingVisible = upcoming.slice(0, UPCOMING_VISIBLE);
   const upcomingHidden = upcoming.slice(UPCOMING_VISIBLE);

@@ -1452,6 +1452,11 @@ export async function getAllTeamScores(): Promise<TeamScoreWithTeam[]> {
       varietyCount: typeof data.varietyCount === 'number' ? data.varietyCount : 0,
       bonuses: data.bonuses || { variety: 0, hot: 0 },
       computedAt: computedAtIso,
+      // Season fields (ruling 2026-11-05): carried only when the pipeline wrote
+      // them, so /team-rankings can tell "not yet written" from zero.
+      ...(typeof data.seasonScore === 'number' ? { seasonScore: data.seasonScore } : {}),
+      ...(typeof data.seasonPromoCount === 'number' ? { seasonPromoCount: data.seasonPromoCount } : {}),
+      ...(typeof data.seasonKey === 'string' ? { seasonKey: data.seasonKey } : {}),
       team,
     });
   }

@@ -17,6 +17,7 @@ import { HubTeamGrid } from '@/components/hub/HubTeamGrid';
 import { HubVenueLinks } from '@/components/hub/HubVenueLinks';
 import { HubFaq, type HubFaqItem } from '@/components/hub/HubFaq';
 import { getVenueLinksForTeams } from '@/lib/venue-hub';
+import { seasonLabel } from '@/lib/seasons/season-window';
 
 // League hub accent (house palette, mirrors LEAGUE_HUB_REGISTRY MLS entry).
 const ACCENT = '#3f7d5a';
@@ -33,19 +34,31 @@ const BROWSE_TILES: HubBrowseTile[] = [
 // the real freshness path when the pipeline writes new MLS promos.
 export const revalidate = 21600;
 
-// Season year is hardcoded, never new Date().getFullYear(): an auto-rolling year
-// would flip the copy to 2027 at midnight on Jan 1, before the 2027 data exists.
-const YEAR = 2026;
 const HUB_URL = 'https://www.getpromonight.com/mls';
-const TITLE = `MLS Promotions & Giveaways ${YEAR}`;
-const DESCRIPTION = `Every MLS club's ${YEAR} promo schedule in one place: jersey and kit giveaways, scarf nights, theme nights, and more across all 30 clubs, grouped by conference and refreshed through the season.`;
 
-export const metadata: Metadata = {
-  title: TITLE,
-  description: DESCRIPTION,
-  alternates: { canonical: HUB_URL },
-  openGraph: pageOpenGraph('/mls'),
-};
+// The season this hub names, from src/lib/seasons/windows.json (season
+// rollover, ruling 2026-11-05): computed per render, never at module load, so
+// it moves on the first day of the next season's lead-in without a deploy.
+// Never new Date().getFullYear(), which would flip the copy at midnight on
+// Jan 1, before the new season's data exists.
+function hubCopy() {
+  const YEAR = seasonLabel('MLS');
+  return {
+    YEAR,
+    TITLE: `MLS Promotions & Giveaways ${YEAR}`,
+    DESCRIPTION: `Every MLS club's ${YEAR} promo schedule in one place: jersey and kit giveaways, scarf nights, theme nights, and more across all 30 clubs, grouped by conference and refreshed through the season.`,
+  };
+}
+
+export function generateMetadata(): Metadata {
+  const { TITLE, DESCRIPTION } = hubCopy();
+  return {
+    title: TITLE,
+    description: DESCRIPTION,
+    alternates: { canonical: HUB_URL },
+    openGraph: pageOpenGraph('/mls'),
+  };
+}
 
 const FAQS: HubFaqItem[] = [
   {
@@ -77,6 +90,7 @@ const FAQS: HubFaqItem[] = [
 
 
 export default async function MlsHubPage() {
+  const { YEAR, TITLE, DESCRIPTION } = hubCopy();
   const [slate, stats, conferences, today] = await Promise.all([
     getLeagueSlate('MLS'),
     getLeagueHubStats('MLS'),
@@ -170,7 +184,7 @@ export default async function MlsHubPage() {
           sectionId="mls-browse-team"
           surface="web_mls_hub_team_card"
           collection="mls_hub"
-          intro="All 30 MLS clubs by conference. Open any club for its full 2026 promotional schedule."
+          intro={`All 30 MLS clubs by conference. Open any club for its full ${YEAR} promotional schedule.`}
           selectorLabel="Filter teams by conference"
           allLabel="All clubs"
         />

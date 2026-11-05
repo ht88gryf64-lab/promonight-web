@@ -19,6 +19,7 @@ import { resolveMatchupDisplayName } from '@/lib/cfb/display-name';
 import { CFB_COLLECTIONS, type CfbSchool, type CfbGame, type CfbRivalry } from '@/lib/cfb/types';
 import { CFB_CONF_BUCKET_ORDER, type CfbConfBucket } from '@/lib/cfb/conferences';
 import { siteTodayYMD, dateRangeLabel } from '@/lib/cfb/clock';
+import { conferenceForNamedSeason } from './season';
 
 // ── Date helpers on the site's day (same anchor as the homepage; no scrape).
 //    siteTodayYMD lives in clock.ts, shared with the school pages. ──
@@ -190,7 +191,7 @@ export async function getCfbHubData(): Promise<CfbHubData> {
   for (const b of CONF_BUCKET_ORDER) byBucket.set(b, []);
   for (const d of schoolsSnap.docs) {
     const s = d.data() as CfbSchool;
-    byBucket.get(bucketFor(s.conferenceBySeason?.['2026'] || ''))!.push(toHubTeam(s));
+    byBucket.get(bucketFor(conferenceForNamedSeason(s.conferenceBySeason) || ''))!.push(toHubTeam(s));
   }
   const browse = CONF_BUCKET_ORDER.map((b) => ({ bucket: b, teams: byBucket.get(b)!.sort((x, y) => x.name.localeCompare(y.name)) })).filter((b) => b.teams.length > 0);
 

@@ -4,7 +4,6 @@ import { teamDisplayName } from '@/lib/promo-helpers';
 import { formatGameTime } from '@/lib/format-game-time';
 import { gamesLabel, groupByMonth, regularSeasonContexts, type ScheduleMonth } from '@/lib/schedule-months';
 import { doubleheaderLabels } from '@/lib/doubleheader-labels';
-import { TITLE_SEASON_YEAR } from '@/lib/title-treatment';
 import { currentSeasonLabel, isSplitSeasonLeague } from '@/lib/season-label';
 import { IconChevronDown } from '@tabler/icons-react';
 import { ScheduleRow } from './ScheduleRow';
@@ -126,6 +125,9 @@ export interface ScheduleBlockProps {
 }
 
 export function ScheduleBlock({ contexts, team, teamName, today, statusLine }: ScheduleBlockProps) {
+  // The season every heading in this block names: from the windows (season
+  // rollover, ruling 2026-11-05), never a hardcoded year.
+  const seasonName = currentSeasonLabel(team.league, today);
   // Regular season only, one entry per game; see src/lib/schedule-months.ts.
   // The identity on NFL, which the NFL golden test holds byte for byte.
   const regular = regularSeasonContexts(contexts, today);
@@ -152,6 +154,7 @@ export function ScheduleBlock({ contexts, team, teamName, today, statusLine }: S
         teamName={teamName}
         remaining={remaining}
         renderRow={(row) => renderGameRow(row, team, teamName, { showPostponed: true, gameLabels })}
+        seasonName={seasonName}
       />
     );
   }
@@ -175,7 +178,7 @@ export function ScheduleBlock({ contexts, team, teamName, today, statusLine }: S
         teamName={teamName}
         remaining={splitRemaining}
         renderRow={(row) => renderGameRow(row, team, teamName, { hideVenue: true, gameLabels })}
-        seasonName={currentSeasonLabel(team.league)}
+        seasonName={seasonName}
         scheduledOnly
         tightTop={!!statusLine}
       />
@@ -226,7 +229,7 @@ export function ScheduleBlock({ contexts, team, teamName, today, statusLine }: S
     <section className="py-12 px-6">
       <div className="mx-auto max-w-5xl">
         <div className="font-rd text-[11px] uppercase tracking-[0.14em] text-rd-ink-faint">
-          2026 season
+          {`${seasonName} season`}
         </div>
         {/* "Game Schedule", not "Schedule". The zero-promo copy block below
             carries a shared H2 reading "{YEAR} {TEAM} PROMO SCHEDULE", and two
@@ -235,11 +238,10 @@ export function ScheduleBlock({ contexts, team, teamName, today, statusLine }: S
             also renders on 6 non-NFL pages, and "PROMO SCHEDULE" is the closest
             on-page string to the query this page already ranks for. */}
         <h2 className="rd-display mt-1 text-2xl text-rd-ink md:text-3xl">
-          {teamName} 2026 Game Schedule
+          {teamName}{` ${seasonName} Game Schedule`}
         </h2>
         <p className="mt-2 max-w-2xl font-rd text-sm leading-relaxed text-rd-ink-soft">
-          Every game of the 2026 regular season, week by week. Open a row for tickets, and for
-          parking and hotels on the road.
+          {`Every game of the ${seasonName} regular season, week by week. Open a row for tickets, and for parking and hotels on the road.`}
         </p>
 
         <ul className="mt-6 space-y-2">
@@ -379,7 +381,7 @@ function DateListSchedule({
   teamName,
   remaining,
   renderRow,
-  seasonName = TITLE_SEASON_YEAR,
+  seasonName,
   scheduledOnly = false,
   tightTop = false,
 }: {
@@ -387,9 +389,9 @@ function DateListSchedule({
   teamName: string;
   remaining: boolean;
   renderRow: (row: GameRow) => React.ReactNode;
-  /** The printed season. TITLE_SEASON_YEAR on MLB (the number, as before),
-   *  the two-year label from currentSeasonLabel on NHL and NBA. */
-  seasonName?: string | number;
+  /** The printed season, from currentSeasonLabel: a plain year on MLB, the
+   *  two-year label on NHL and NBA. */
+  seasonName: string;
   /** "Every scheduled game" instead of "Every game" (NHL and NBA). */
   scheduledOnly?: boolean;
   /** A status line sits directly above: halve the top padding. The class

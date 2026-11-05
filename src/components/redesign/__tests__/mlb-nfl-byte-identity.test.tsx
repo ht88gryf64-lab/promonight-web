@@ -23,6 +23,22 @@
  * branch's showed the app-copy sentences and nothing else moved. The RULED
  * PromoList keys were left as recorded.
  *
+ * 2026-11-05, feature/season-rollover-2027: hashes moved ON A BRANCH, by
+ * ruling (season rollover: a season is its window in src/lib/seasons/
+ * windows.json, lead-in through end, not a calendar year). Only keys whose
+ * sentence diff against main's HTML showed season-membership changes and
+ * nothing else were updated (78 keys): the multi-year shapes ("crossing", and
+ * NFL "remainingWithUpcoming") resolving to their named season where the
+ * calendar-year guard fell back; "upcomingPlusPast2026" on MLB, MLS and WNBA
+ * falling back to the upcoming-only wording because its upcoming rows sit past
+ * those windows' ends (a season claim needs every upcoming row inside the
+ * named season); NFL "seasonComplete2026" counting only rows from its lead-in.
+ * Review round 1 (14 more keys): the remaining-mode kids question names the
+ * period of its rows when they are not in the named season ("between October
+ * 2026 and January 2027", as its answer already did, not "in 2026"), and the
+ * NFL "seasonComplete2026" archive line drops "this season" because its April
+ * rows sit before the lead-in. The RULED PromoList keys were left as recorded.
+ *
  * Re-record ONLY from main, never from a branch:
  *   GOLDEN_RECORD=<file> node --import tsx --experimental-test-module-mocks --test <this file>
  */

@@ -32,14 +32,14 @@ function longDate(dateStr: string): string {
 }
 
 export const metadata: Metadata = {
-  title: 'Soccer Jersey Nights 2026: MLB, WNBA & MLS Giveaways',
+  title: 'Upcoming Soccer Jersey Nights: MLB, WNBA & MLS Giveaways',
   description:
-    'Every upcoming soccer jersey night across pro sports in 2026. MLB, WNBA, and MLS games giving away soccer-style jerseys, many during the World Cup. Dates, teams, and how to get one.',
+    'Every upcoming soccer jersey night across pro sports. MLB, WNBA, and MLS games giving away soccer-style jerseys. Dates, teams, and how to get one.',
   alternates: { canonical: PAGE_URL },
   openGraph: {
-    title: 'Soccer Jersey Nights 2026: MLB, WNBA & MLS Giveaways',
+    title: 'Upcoming Soccer Jersey Nights: MLB, WNBA & MLS Giveaways',
     description:
-      'Every upcoming soccer jersey giveaway across MLB, WNBA, and MLS in 2026, many during the World Cup.',
+      'Every upcoming soccer jersey giveaway across MLB, WNBA, and MLS.',
     url: PAGE_URL,
     siteName: 'PromoNight',
     type: 'website',
@@ -58,17 +58,17 @@ const FAQS: { question: string; answer: string }[] = [
   {
     question: 'What is a soccer jersey night?',
     answer:
-      'A soccer jersey night is a pro sports game where the giveaway is a soccer-style jersey rather than the usual baseball or basketball jersey. In 2026 many MLB, WNBA, and MLS teams are running them as a tie-in with the World Cup, which the United States co-hosts from June 11 to July 19.',
+      'A soccer jersey night is a pro sports game where the giveaway is a soccer-style jersey rather than the usual baseball or basketball jersey. Many MLB, WNBA, and MLS teams ran them as a tie-in with the 2026 World Cup, which the United States co-hosted from June 11 to July 19, 2026.',
   },
   {
-    question: 'Which MLB teams have soccer jersey giveaways in 2026?',
+    question: 'Which MLB teams have run soccer jersey giveaways?',
     answer:
-      'A large share of the league is in, more than a dozen teams in all. Confirmed soccer jersey nights include the Yankees, Mets, Dodgers, Red Sox, Cubs, Braves, Astros, Mariners, Giants, Angels, Orioles, and Blue Jays. The full upcoming list, with exact dates, is above and updates as more teams are announced.',
+      'For the 2026 World Cup more than a dozen MLB teams ran one, including the Yankees, Mets, Dodgers, Red Sox, Cubs, Braves, Astros, Mariners, Giants, Angels, Orioles, and Blue Jays. The list above shows every soccer jersey night still on the calendar, with exact dates, and updates as teams announce more.',
   },
   {
-    question: 'When are the soccer jersey nights during the World Cup?',
+    question: 'When were the soccer jersey nights during the World Cup?',
     answer:
-      'Most of them. Nearly every soccer jersey night on the calendar falls between June 11 and July 19, 2026, the World Cup window, since teams are timing the giveaway to the tournament. A handful of WNBA and MLS dates land later in the season. Check each row for the exact date.',
+      'Nearly every one fell between June 11 and July 19, 2026, the 2026 World Cup window, since teams timed the giveaway to the tournament. Any still on the calendar are listed above; check each row for the exact date.',
   },
   {
     question: 'How do I get the soccer jersey at the game?',
@@ -100,15 +100,15 @@ export default async function SoccerJerseyNightsPage() {
   // stored timestamp exists for this collection, so dateModified is omitted.
 
   const lead =
-    `A soccer jersey night is a pro sports game where the giveaway is a soccer-style jersey, and ${total} ${total === 1 ? 'is' : 'are'} on the upcoming calendar across MLB, WNBA, and MLS in 2026, ${wcCount} of them during the World Cup. ` +
-    'United States teams are timing these giveaways to the tournament the country co-hosts from June 11 to July 19. Arrive early: apparel nights are usually capped at the first 10,000 to 25,000 fans.';
+    `A soccer jersey night is a pro sports game where the giveaway is a soccer-style jersey, and ${total} ${total === 1 ? 'is' : 'are'} on the upcoming calendar across MLB, WNBA, and MLS${wcCount > 0 ? `, ${wcCount} of them during the World Cup` : ''}. ` +
+    'United States teams timed most of these giveaways to the 2026 World Cup, which the country co-hosted from June 11 to July 19, 2026. Arrive early: apparel nights are usually capped at the first 10,000 to 25,000 fans.';
 
   const collectionSchema = {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
-    name: 'Soccer Jersey Nights 2026',
+    name: 'Upcoming Soccer Jersey Nights',
     description:
-      'Every upcoming soccer jersey giveaway across MLB, WNBA, and MLS in 2026, many during the World Cup.',
+      'Every upcoming soccer jersey giveaway across MLB, WNBA, and MLS.',
     url: PAGE_URL,
     isPartOf: { '@type': 'WebSite', name: 'PromoNight', url: 'https://www.getpromonight.com' },
   };
@@ -116,7 +116,7 @@ export default async function SoccerJerseyNightsPage() {
   const itemListSchema = {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
-    name: 'Soccer Jersey Nights 2026',
+    name: 'Upcoming Soccer Jersey Nights',
     numberOfItems: total,
     itemListElement: hits.map((p, i) => ({
       '@type': 'ListItem',
@@ -150,7 +150,7 @@ export default async function SoccerJerseyNightsPage() {
       </span>
       <div className="min-w-0 flex-1">
         <div className="font-rd text-sm font-semibold text-rd-ink">
-          {wcCount} of these land during the World Cup
+          {wcCount > 0 ? `${wcCount} of these land during the World Cup` : 'The 2026 World Cup host-city guide'}
         </div>
         <div className="font-rd text-[13px] leading-relaxed text-rd-ink-soft">
           See the host-city fan guide: local games and promos in all 11 US host cities.
@@ -172,11 +172,11 @@ export default async function SoccerJerseyNightsPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       <AggregatorPage
         eyebrow="Soccer jersey giveaways"
-        title="Soccer Jersey Nights"
+        title="Upcoming Soccer Jersey Nights"
         lead={lead}
         groups={groups}
         faqs={FAQS}
-        emptyMessage="No upcoming soccer jersey nights are currently tracked. Check back as teams announce World Cup tie-ins."
+        emptyMessage="No upcoming soccer jersey nights are currently tracked. Check back as teams announce them."
         accentKey="giveaway"
         collection="soccer-jersey-nights"
         afterIntro={worldCupCallout}

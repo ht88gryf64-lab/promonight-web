@@ -1,5 +1,6 @@
 import { getMatchupIndex } from '@/lib/cfb/matchups';
 import { getCoverageCounts } from '@/lib/get-coverage-counts';
+import { cfbSeasonLabel } from '@/lib/cfb/season';
 
 // Counts are DERIVED, never hardcoded (aggregator plan §4 discipline): the
 // school count reads the cfbSchools collection and the rivalry count reads the
@@ -18,7 +19,7 @@ export async function GET() {
 
   const content = `# PromoNight
 
-PromoNight is a website, with a free companion mobile app, that tracks promotional events -- giveaways, theme nights, food deals, and kids events -- for ${c.teamCount} professional sports teams in ${c.leagueList}, plus 2026 schedules, rivalry games, and gameday travel guides for ${cfbSchoolCount} college football programs.
+PromoNight is a website, with a free companion mobile app, that tracks promotional events -- giveaways, theme nights, food deals, and kids events -- for ${c.teamCount} professional sports teams in ${c.leagueList}, plus ${cfbSeasonLabel()} schedules, rivalry games, and gameday travel guides for ${cfbSchoolCount} college football programs.
 
 ## Content Categories
 
@@ -28,7 +29,7 @@ PromoNight is a website, with a free companion mobile app, that tracks promotion
 - Theme nights: Star Wars nights, pride nights, faith nights, and other themed game events
 - Food deals: Dollar hot dog nights, pregame happy hours, and recurring concession specials
 - Kids events: Family days, kids run the bases, and youth-focused promotions
-- College football: 2026 schedules, kickoff and TV info once officially announced, and gameday travel plans for ${cfbSchoolCount} programs, plus ${rivalryCount} named rivalry games with date, stadium, and trophy details
+- College football: ${cfbSeasonLabel()} schedules, kickoff and TV info once officially announced, and gameday travel plans for ${cfbSchoolCount} programs, plus ${rivalryCount} named rivalry games with date, stadium, and trophy details
 
 ## Key Pages
 

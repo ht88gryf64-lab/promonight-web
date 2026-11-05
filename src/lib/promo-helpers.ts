@@ -3,7 +3,8 @@ import type { Team, Promo, PromoType, Venue, PlayoffPromo } from './types';
 import { PROMO_TYPE_LABELS } from './types';
 import { indefiniteArticleFor } from './indefinite-article';
 import { siteTodayYmd } from './site-today';
-import { currentSeasonLabel, isSplitSeasonLeague, remainingPeriodPhrase } from './season-label';
+import { currentSeasonLabel, remainingPeriodPhrase } from './season-label';
+import { labeledSeason, seasonOfDate } from './seasons/season-window';
 // TYPE-ONLY, and it has to stay that way: season-scope.ts imports this module
 // for countPromosByType / isUpcomingPromo, so a value import here would close a
 // runtime cycle. The one string this file needs off the object is precomputed
@@ -480,12 +481,11 @@ export function generateTeamFAQs(
   // been updated keeps shipping exactly what it shipped before.
   claim: ClaimMode = { kind: 'held' },
 ): FAQItem[] {
-  // Hardcoded 2026 season year, NOT getCurrentYear(): the page title and meta
-  // description already hardcode 2026, and an auto-rolling getFullYear() would
-  // flip every FAQ "{year} season" string to the next year at midnight on Jan 1,
-  // before that season's promo data exists. Keep these FAQs consistent with the
-  // title; bump deliberately when 2027 content is ready.
-  const year = 2026;
+  // The season the page names, from the windows (season rollover, ruling
+  // 2026-11-05), the same word the title and meta description carry. NOT
+  // getFullYear(), which would flip every FAQ "{year} season" string at
+  // midnight on Jan 1, before that season's promo data exists.
+  const year = currentSeasonLabel(team.league);
   const fullName = teamDisplayName(team);
   const venueName = venue?.name || 'their home stadium';
   const faqs: FAQItem[] = [];
@@ -606,14 +606,21 @@ export function generateTeamFAQs(
         question: `When are ${team.name} kids and family events in the ${claim.scope.label} season?`,
         answer: `The ${fullName} have ${kidsSeasonCount} kids and family ${kidsSeasonCount === 1 ? 'event' : 'events'} at ${venueName} in the ${claim.scope.label} season.${aheadClause ? ` ${aheadClause}` : ''} These events are designed for young fans and families attending games at ${venueName}.`,
       });
-    } else
+    } else {
+    const named = labeledSeason(team.league).season;
+    const kidsInNamedSeason = kidsPromos.every((p) => seasonOfDate(team.league, p.date)?.season === named);
     faqs.push({
-      question: `When are ${team.name} kids and family events in ${isSplitSeasonLeague(team.league) ? currentSeasonLabel(team.league) : year}?`,
+      // The question names the season label when every row it asks about is a
+      // row of that season, and otherwise the period of the rows, as the answer
+      // does: "in 2026" over a list of 2027 rows was false (review 2026-11-05,
+      // the Giants page between seasons). Held keeps its wording.
+      question: `When are ${team.name} kids and family events${claim.kind === 'held' || kidsInNamedSeason ? ` in ${year}` : remainingPeriodPhrase(kidsPromos.map((p) => p.date)) || ` in ${year}`}?`,
       // "still to come in 2026" was wrong on every club whose remaining rows
       // cross a New Year (29 of 32 NHL clubs on 2026-09-04). The period comes
       // from the rows being counted.
       answer: `The ${fullName} have ${upcomingCounts.kids} kids and family event${upcomingCounts.kids !== 1 ? 's' : ''} still to come${claim.kind === 'held' ? ` in ${year}` : remainingPeriodPhrase(kidsPromos.map((p) => p.date))}. Upcoming family events include ${kidsList}${kidsPromos.length > 3 ? `, and ${kidsPromos.length - 3} more throughout the season` : ''}. These events are designed for young fans and families attending games at ${venueName}.`,
     });
+    }
   }
 
   // 5. How to track (always shown). APP_LEAGUES routes the answer: the app on

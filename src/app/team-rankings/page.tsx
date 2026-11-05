@@ -1,10 +1,12 @@
 import { OG_IMAGE_ALT } from '@/lib/og';
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Suspense } from 'react';
+import { Suspense, cache } from 'react';
 import { getAllTeamScores, getTopPromosPerTeam } from '@/lib/data';
 import { getCurrentSeasonPredicate } from '@/lib/seasons/finals';
-import type { ScoredPromoWithTeam } from '@/lib/types';
+import type { ScoredPromoWithTeam, TeamScoreWithTeam } from '@/lib/types';
+import { RANKED_LEAGUES } from '@/lib/seasons/ranked-rows';
+import { startedSeason } from '@/lib/seasons/season-window';
 import { TeamRankingsList } from '@/components/scoring/team-rankings-list';
 import { ScoringPageViewTracker } from '@/components/scoring/scoring-page-view-tracker';
 import { teamDisplayName } from '@/lib/promo-helpers';
@@ -15,9 +17,41 @@ import { siteYmd } from '@/lib/site-today';
 export const revalidate = 86400;
 
 const PAGE_URL = 'https://www.getpromonight.com/team-rankings';
-// Hardcoded season year in SEO copy per house rule (never getFullYear();
-// bump deliberately when next-season content is ready).
-const YEAR = 2026;
+
+// THE ROWS AND THE YEAR THIS PAGE NAMES (season rollover, ruling 2026-11-05).
+// The ranking orders on the pipeline's SEASON fields (seasonScore,
+// seasonPromoCount: the current season's rows only), and the year in the
+// title, H1, meta and JSON-LD is the calendar year of the earliest season
+// shown. React cache() so generateMetadata and the page read one result.
+//
+// BEFORE THE PIPELINE HAS WRITTEN THE SEASON FIELDS the page keeps ranking on
+// the all-time fields exactly as it did, and logs it. It switches only when
+// EVERY scored team carries them, so a scoring run in progress can never
+// render a ranking that mixes the two. Deploy order: this web change first
+// (the pipeline's windows drift check reads web main), then the pipeline, then
+// one backfill-scoring run per scored league so every team carries the fields
+// (WNBA's weekly scan does not run again until May).
+const rankingsView = cache(async () => {
+  const scores = await getAllTeamScores();
+  const seasonal =
+    scores.length > 0 &&
+    scores.every((t) => typeof t.seasonScore === 'number' && typeof t.seasonPromoCount === 'number' && typeof t.seasonKey === 'string');
+  if (!seasonal) {
+    console.error('[team-rankings] teamScores lack seasonScore/seasonPromoCount/seasonKey on some team; ranking on the all-time fields');
+    return {
+      rows: scores,
+      seasonal,
+      // The season the all-time numbers were last built on: the latest one that
+      // has STARTED, never a lead-in's next season.
+      label: Math.min(...RANKED_LEAGUES.map((l) => Number(startedSeason(l).season.slice(0, 4)))),
+    };
+  }
+  const rows: TeamScoreWithTeam[] = scores
+    .map((t) => ({ ...t, teamScore: t.seasonScore as number, promoCount: t.seasonPromoCount as number }))
+    .sort((a, b) => b.teamScore - a.teamScore);
+  const label = Math.min(...rows.map((t) => Number((t.seasonKey as string).slice(0, 4))));
+  return { rows, seasonal, label };
+});
 
 // The site's calendar day, America/New_York (src/lib/site-today.ts). It was the
 // server's local day (UTC on Vercel) until WEB6 G3 (2026-10-06).
@@ -30,14 +64,15 @@ function localYMD(d: Date): string {
 // in the meta: a derived leader drifts every scoring run, and a frozen one
 // goes false the same way the pre-rescore copy did.
 export async function generateMetadata(): Promise<Metadata> {
-  const teamCount = (await getAllTeamScores()).length;
+  const { rows, label } = await rankingsView();
+  const teamCount = rows.length;
   return {
-    title: `Best Sports Promo Schedules of ${YEAR}: Team Rankings`,
-    description: `All ${teamCount} MLB, MLS, and WNBA teams ranked by ${YEAR} promo schedule strength. Each ranking factors variety, highlights, and the share of major giveaways. MLB rescored weekly; WNBA and MLS in season.`,
+    title: `Best Sports Promo Schedules of ${label}: Team Rankings`,
+    description: `All ${teamCount} MLB, MLS, and WNBA teams ranked by ${label} promo schedule strength. Each ranking factors variety, highlights, and the share of major giveaways. MLB rescored weekly; WNBA and MLS in season.`,
     alternates: { canonical: PAGE_URL },
     openGraph: {
-      title: `Best Sports Promo Schedules of ${YEAR}`,
-      description: `All ${teamCount} MLB, MLS, and WNBA teams ranked by ${YEAR} promo schedule strength. MLB rescored weekly; WNBA and MLS in season.`,
+      title: `Best Sports Promo Schedules of ${label}`,
+      description: `All ${teamCount} MLB, MLS, and WNBA teams ranked by ${label} promo schedule strength. MLB rescored weekly; WNBA and MLS in season.`,
       url: PAGE_URL,
       type: 'website',
       images: [
@@ -102,8 +137,8 @@ export default async function TeamRankingsPage() {
   // Each row's tease is that team's best promo inside its league's current
   // season (src/lib/seasons/season-window.ts), never next season's.
   const inCurrentSeason = await getCurrentSeasonPredicate();
-  const [teamScores, topPromosMap] = await Promise.all([
-    getAllTeamScores(),
+  const [{ rows: teamScores, seasonal, label }, topPromosMap] = await Promise.all([
+    rankingsView(),
     getTopPromosPerTeam(todayYMD, inCurrentSeason),
   ]);
 
@@ -137,8 +172,8 @@ export default async function TeamRankingsPage() {
   const articleSchema = {
     '@context': 'https://schema.org',
     '@type': 'Article',
-    headline: `Best Sports Promo Schedules of ${YEAR}: Team-by-Team Rankings`,
-    description: `All ${teamScores.length} MLB, MLS, and WNBA teams ranked by ${YEAR} promo schedule strength.`,
+    headline: `Best Sports Promo Schedules of ${label}: Team-by-Team Rankings`,
+    description: `All ${teamScores.length} MLB, MLS, and WNBA teams ranked by ${label} promo schedule strength.`,
     url: PAGE_URL,
     ...(latestComputedAt ? { dateModified: latestComputedAt } : {}),
     author: {
@@ -179,7 +214,9 @@ export default async function TeamRankingsPage() {
         // non-recurring lifetime array, so one scope word covers both, and
         // "of them" pins the highlight figure to that same population rather
         // than leaving it readable as a separate current-state number.
-        description: `Team promo score ${t.teamScore}. ${t.promoCount} all-time promos scored, ${t.highlightCount} of them highlighted.`.slice(0, 280),
+        description: (seasonal
+          ? `Team promo score ${t.teamScore} for the ${t.seasonKey} season, from ${t.promoCount} scored ${t.promoCount === 1 ? 'promo' : 'promos'}.`
+          : `Team promo score ${t.teamScore}. ${t.promoCount} all-time promos scored, ${t.highlightCount} of them highlighted.`).slice(0, 280),
       },
     })),
   };
@@ -206,7 +243,9 @@ export default async function TeamRankingsPage() {
   const teasesPresent = Object.keys(topPromos).length > 0;
   const offseasonNote = teasesPresent
     ? null
-    : ` No upcoming promo is shown on any row: none of the leagues we score has a ranked promo still to come this season. The scores, promo counts and highlight counts are all-time figures and do not change while the schedules are quiet.`;
+    : seasonal
+      ? ` No upcoming promo is shown on any row: none of the leagues we score has a ranked promo still to come this season. The scores and promo counts describe each team's ${label} season.`
+      : ` No upcoming promo is shown on any row: none of the leagues we score has a ranked promo still to come this season. The scores, promo counts and highlight counts are all-time figures and do not change while the schedules are quiet.`;
 
   if (isRedesignEnabled()) {
     return (
@@ -221,8 +260,8 @@ export default async function TeamRankingsPage() {
                 <span>/</span>
                 <span className="text-white/60">Team rankings</span>
               </div>
-              <p className="font-rd text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: '#ff5a78' }}>Team rankings {YEAR}</p>
-              <h1 className="rd-display mt-1 text-4xl uppercase leading-[0.95] text-white md:text-6xl">BEST SPORTS PROMO SCHEDULES OF {YEAR}</h1>
+              <p className="font-rd text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: '#ff5a78' }}>Team rankings {label}</p>
+              <h1 className="rd-display mt-1 text-4xl uppercase leading-[0.95] text-white md:text-6xl">BEST SPORTS PROMO SCHEDULES OF {label}</h1>
               <p className="mt-3 font-rd text-[11px] uppercase tracking-[0.12em] text-white/45">{lastUpdatedDisplay ? <>Last updated {lastUpdatedDisplay} · </> : null}{teamScores.length} teams ranked</p>
             </div>
           </section>
@@ -279,10 +318,10 @@ export default async function TeamRankingsPage() {
           </div>
 
           <span className="font-mono text-[10px] tracking-[1.5px] uppercase text-accent-red">
-            Team rankings {YEAR}
+            Team rankings {label}
           </span>
           <h1 className="font-display text-4xl md:text-6xl tracking-[1px] mt-2">
-            BEST SPORTS PROMO SCHEDULES OF {YEAR}
+            BEST SPORTS PROMO SCHEDULES OF {label}
           </h1>
           <p className="font-mono text-[10px] tracking-[1.5px] uppercase text-text-muted mt-3">
             {lastUpdatedDisplay ? <>Last updated {lastUpdatedDisplay} · </> : null}{teamScores.length} teams

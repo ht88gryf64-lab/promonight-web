@@ -14,9 +14,9 @@ import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure
 import { barlowCondensed } from '@/components/cfb/rivalry/fonts';
 import { Spine, spineVars, CONDENSED } from '@/components/cfb/rivalry/spine';
 import type { Team, Venue } from '@/lib/types';
+import { cfbSeasonLabel } from '@/lib/cfb/season';
 
 const PAGE_BG = '#08070d';
-const SEASON = 2026; // hardcoded by house rule, never getFullYear() in SEO copy
 
 // Generic by design and identical on all 32 pages. The trip is the same trip;
 // per-rivalry variants would be 32 pieces of copy to maintain for no gain.
@@ -213,7 +213,7 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
           className="mt-3 font-extrabold uppercase leading-[0.98] tracking-[0.01em]"
           style={{ fontFamily: CONDENSED, fontSize: 'clamp(34px, 8vw, 48px)' }}
         >
-          {data.displayName} {SEASON}
+          {data.displayName} {Number(cfbSeasonLabel())}
         </h1>
 
         {/* 3. matchup line */}
@@ -235,7 +235,7 @@ export function RivalryMatchupPage({ data }: { data: MatchupPage }) {
               <span className="text-sm text-white/60">{date.weekday}</span>
             </div>
           ) : (
-            <div className="text-xl font-bold text-white/70">Not scheduled in {SEASON}</div>
+            <div className="text-xl font-bold text-white/70">Not scheduled in {Number(cfbSeasonLabel())}</div>
           )}
           <div className="mt-2 text-sm text-white/80">{kickoff}</div>
           {resolvedVenue && (

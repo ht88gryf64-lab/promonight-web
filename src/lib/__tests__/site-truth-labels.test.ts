@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import type { AggregatorGroup } from '@/components/aggregator-layout';
 import { distinctPromoCount } from '@/lib/aggregator-count';
-import { crossLeagueSeasonLabel, pastHeading, splitSeasonLabel, SPLIT_SEASON_START_YEAR } from '@/lib/season-label';
+import { pastHeading } from '@/lib/season-label';
 
 /**
  * Three labels that were false or inconsistent on production 2026-10-06 (OPS,
@@ -47,20 +47,17 @@ describe('aggregator header count', () => {
   });
 });
 
-describe('cross-league category pages name the two-year season', () => {
-  it('labels them with the split-season label, not a calendar year', () => {
-    assert.equal(crossLeagueSeasonLabel(), splitSeasonLabel(SPLIT_SEASON_START_YEAR));
-    assert.match(crossLeagueSeasonLabel(), /^\d{4}-\d{2}$/);
-  });
+describe('cross-league category pages name no year (season rollover, ruling 2026-11-05)', () => {
 
   for (const page of ['theme-nights', 'jersey-giveaways', 'food-deals', 'bobbleheads']) {
     it(`/promos/${page} carries no bare year in its copy`, () => {
       const code = strip(readFileSync(`src/app/promos/${page}/page.tsx`, 'utf8'));
-      assert.match(code, /const SEASON = crossLeagueSeasonLabel\(\);/);
+      assert.doesNotMatch(code, /crossLeagueSeasonLabel|\bSEASON\b/);
+      assert.match(code, /UPCOMING /, 'the heading is "Upcoming {category}"');
       assert.doesNotMatch(code, /\bYEAR\b/);
       assert.doesNotMatch(code, /\b(?:in|of) 20\d\d\b/);
       assert.match(code, /scheduledPeriodPhrase\(seasonSpan\(/, 'the lead names the span the rows cover');
-      const literals = code.replace(/^const LIST_FROM = '\d{4}-\d{2}-\d{2}';$/m, '').match(/`[^`]*`|'[^'\n]*'|"[^"\n]*"/g) ?? [];
+      const literals = code.match(/`[^`]*`|'[^'\n]*'|"[^"\n]*"/g) ?? [];
       assert.deepEqual(literals.filter((l) => /\b20\d\d\b/.test(l)), [], 'no year typed into copy');
     });
   }

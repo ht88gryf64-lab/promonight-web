@@ -7,7 +7,7 @@ import { getPromosFromDate } from '@/lib/data';
 import { AggregatorPage, AggregatorJsonLd, type AggregatorGroup } from '@/components/aggregator-layout';
 import { PastBobbleheadsSection } from '@/components/redesign/PastBobbleheadsSection';
 import { siteTodayYmd } from '@/lib/site-today';
-import { crossLeagueSeasonLabel, scheduledPeriodPhrase, seasonSpan } from '@/lib/season-label';
+import { scheduledPeriodPhrase, seasonSpan } from '@/lib/season-label';
 
 export const revalidate = 21600;
 
@@ -25,34 +25,28 @@ function monthLabel(dateStr: string): string {
   });
 }
 
-// The list starts on Jan 1 of the 2026 calendar year: completed bobbleheads feed
-// the resale section. Bump it with SPLIT_SEASON_START_YEAR on July 1
-// (known-issues 69), or the page heads 2027-28 over rows from January 2026.
-const LIST_FROM = '2026-01-01';
 
-// The season label in the title, heading, description and JSON-LD: "2026-27",
-// from crossLeagueSeasonLabel() (src/lib/season-label.ts), never the clock.
-// This page lists every league, and the NHL and NBA seasons run into 2027, so
-// a bare "2026" here was false (ruling 2026-10-06). The label moves with the
-// July 1 bump in known-issues 69. The lead names the months the listed rows
-// actually span (scheduledPeriodPhrase), not a label.
-const SEASON = crossLeagueSeasonLabel();
+
+// NO YEAR ON THIS PAGE (season rollover, ruling 2026-11-05, point 1): it lists
+// every league, whose seasons do not share a year, so the heading is
+// "Upcoming {category}" and any period the copy names comes from the dates of
+// the rows on the page (scheduledPeriodPhrase).
 
 export async function generateMetadata(): Promise<Metadata> {
   const c = await getCoverageCounts();
   return {
-    title: `${SEASON} Bobblehead Giveaways: Player Figurine Nights`,
-    description: `${SEASON} bobblehead giveaways across ${c.leagueList}. Player figurines by month with team, date, and opponent. From official team announcements.`,
+    title: 'Upcoming Bobblehead Giveaways: Player Figurine Nights',
+    description: `Upcoming bobblehead giveaways across ${c.leagueList}. Player figurines by month with team, date, and opponent. From official team announcements.`,
     alternates: { canonical: 'https://www.getpromonight.com/promos/bobbleheads' },
     openGraph: pageOpenGraph('/promos/bobbleheads'),
   };
 }
 
 export default async function BobbleheadsPage() {
-  // Fetch the whole season (Jan 1 forward), not just today forward: completed
-  // bobbleheads feed the past ("Already happened") resale section while upcoming
-  // ones drive the month groups exactly as before.
-  const all = await getPromosFromDate(LIST_FROM);
+  // From today (ruling 2026-11-05, point 1: no hardcoded list start). The
+  // "Already happened" resale section renders only when past rows exist, so it
+  // is simply absent; completed bobbleheads stay on each team's page.
+  const all = await getPromosFromDate(siteTodayYmd());
   // GIVEAWAY ROWS ONLY (2026-10-21, Matt). The list used to be deliberately
   // loose, showing theme nights whose description names a bobblehead, on a page
   // titled bobblehead giveaways. It now requires type giveaway as well; on
@@ -95,8 +89,8 @@ export default async function BobbleheadsPage() {
     }));
 
   const c = await getCoverageCounts();
-  const period = scheduledPeriodPhrase(seasonSpan(bobbleheads.map((p) => p.date))) || `in ${SEASON}`;
-  const strictPeriod = scheduledPeriodPhrase(seasonSpan(strict.map((p) => p.date))) || `in ${SEASON}`;
+  const period = scheduledPeriodPhrase(seasonSpan(bobbleheads.map((p) => p.date))) || 'on the calendar';
+  const strictPeriod = scheduledPeriodPhrase(seasonSpan(strict.map((p) => p.date))) || 'on the calendar';
   const lead = `Bobblehead giveaways scheduled across ${c.leagueList} ${period}. Player name, team, date, and opponent for each bobblehead night, grouped by month. Pulled from official team sources, with MLB, WNBA, MLS, and NHL rechecked weekly in season.`;
 
   const faqs = [
@@ -123,7 +117,7 @@ export default async function BobbleheadsPage() {
       // asserted market behaviour this system has never measured. What is left
       // is only what is true: we link, the reader looks.
       answer:
-        "Completed bobblehead nights stay listed on this page and on each team's schedule page, with a link through to current eBay listings for that giveaway so you can see what is available. We do not track resale prices, so check the listings for what a given bobblehead is going for.",
+        "Completed bobblehead nights stay listed on each team's schedule page, with a link through to current eBay listings for that giveaway so you can see what is available. We do not track resale prices, so check the listings for what a given bobblehead is going for.",
     },
   ];
 
@@ -131,14 +125,14 @@ export default async function BobbleheadsPage() {
     <>
       <AggregatorJsonLd
         url="https://www.getpromonight.com/promos/bobbleheads"
-        title={`Bobblehead Giveaways in Pro Sports ${SEASON}`}
+        title="Upcoming Bobblehead Giveaways in Pro Sports"
         description={lead}
         faqs={faqs}
         groups={groups}
       />
       <AggregatorPage
         eyebrow="Bobbleheads"
-        title={`BOBBLEHEADS IN ${SEASON}`}
+        title="UPCOMING BOBBLEHEADS"
         lead={lead}
         groups={groups}
         faqs={faqs}

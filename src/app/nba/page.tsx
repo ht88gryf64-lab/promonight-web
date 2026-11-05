@@ -22,7 +22,7 @@ import { HubTeamGrid } from '@/components/hub/HubTeamGrid';
 import { HubVenueLinks } from '@/components/hub/HubVenueLinks';
 import { HubFaq, type HubFaqItem } from '@/components/hub/HubFaq';
 import { getVenueLinksForTeams } from '@/lib/venue-hub';
-import { splitSeasonLabel, SPLIT_SEASON_START_YEAR } from '@/lib/season-label';
+import { seasonLabel } from '@/lib/seasons/season-window';
 
 // League hub accent (house palette, mirrors LEAGUE_HUB_REGISTRY NBA entry).
 const ACCENT = '#b5642e';
@@ -42,20 +42,31 @@ const BROWSE_TILES: HubBrowseTile[] = [
 // real freshness path when the pipeline writes new NBA promos.
 export const revalidate = 21600;
 
-// The NBA season straddles the calendar year, so the label is the two-year
-// form, from the shared NHL/NBA season constant so the hub cannot drift from
-// the team pages at the July 1 bump (known-issues 69). Never from the clock.
-const SEASON = splitSeasonLabel(SPLIT_SEASON_START_YEAR);
 const HUB_URL = 'https://www.getpromonight.com/nba';
-const TITLE = `NBA Promotions & Giveaways ${SEASON}`;
-const DESCRIPTION = `NBA promo schedules for the ${SEASON} season in one place: theme nights, giveaways, and fan nights, with every team grouped by division and schedules refreshed through the season.`;
 
-export const metadata: Metadata = {
-  title: TITLE,
-  description: DESCRIPTION,
-  alternates: { canonical: HUB_URL },
-  openGraph: pageOpenGraph('/nba'),
-};
+// The season this hub names, from src/lib/seasons/windows.json (season
+// rollover, ruling 2026-11-05): computed per render, never at module load, so
+// it moves on the first day of the next season's lead-in without a deploy.
+// Never new Date().getFullYear(), which would flip the copy at midnight on
+// Jan 1, before the new season's data exists.
+function hubCopy() {
+  const SEASON = seasonLabel('NBA');
+  return {
+    SEASON,
+    TITLE: `NBA Promotions & Giveaways ${SEASON}`,
+    DESCRIPTION: `NBA promo schedules for the ${SEASON} season in one place: theme nights, giveaways, and fan nights, with every team grouped by division and schedules refreshed through the season.`,
+  };
+}
+
+export function generateMetadata(): Metadata {
+  const { TITLE, DESCRIPTION } = hubCopy();
+  return {
+    title: TITLE,
+    description: DESCRIPTION,
+    alternates: { canonical: HUB_URL },
+    openGraph: pageOpenGraph('/nba'),
+  };
+}
 
 const FAQS: HubFaqItem[] = [
   {
@@ -82,6 +93,7 @@ const FAQS: HubFaqItem[] = [
 
 
 export default async function NbaHubPage() {
+  const { SEASON, TITLE, DESCRIPTION } = hubCopy();
   const [slate, stats, divisions, today, upcomingCounts] = await Promise.all([
     getLeagueSlate('NBA'),
     getLeagueHubStats('NBA'),

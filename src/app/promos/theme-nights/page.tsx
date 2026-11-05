@@ -5,7 +5,7 @@ import { getPromosFromDate } from '@/lib/data';
 import { AggregatorPage, AggregatorJsonLd, type AggregatorGroup } from '@/components/aggregator-layout';
 import type { PromoWithTeam } from '@/lib/types';
 import { siteTodayYmd } from '@/lib/site-today';
-import { crossLeagueSeasonLabel, scheduledPeriodPhrase, seasonSpan } from '@/lib/season-label';
+import { scheduledPeriodPhrase, seasonSpan } from '@/lib/season-label';
 
 export const revalidate = 21600;
 
@@ -16,13 +16,10 @@ function todayYMD(): string {
   return siteTodayYmd();
 }
 
-// The season label in the title, heading, description and JSON-LD: "2026-27",
-// from crossLeagueSeasonLabel() (src/lib/season-label.ts), never the clock.
-// This page lists every league, and the NHL and NBA seasons run into 2027, so
-// a bare "2026" here was false (ruling 2026-10-06). The label moves with the
-// July 1 bump in known-issues 69. The lead names the months the listed rows
-// actually span (scheduledPeriodPhrase), not a label.
-const SEASON = crossLeagueSeasonLabel();
+// NO YEAR ON THIS PAGE (season rollover, ruling 2026-11-05, point 1): it lists
+// every league, whose seasons do not share a year, so the heading is
+// "Upcoming {category}" and any period the copy names comes from the dates of
+// the rows on the page (scheduledPeriodPhrase).
 
 interface ThemeCategory {
   label: string;
@@ -65,8 +62,8 @@ const CATEGORIES: ThemeCategory[] = [
 ];
 
 export const metadata: Metadata = {
-  title: `${SEASON} Theme Nights: Star Wars, Heritage & Fireworks`,
-  description: `${SEASON} theme nights across pro sports by category: Star Wars, heritage, fireworks, faith and community, and pop culture tie-ins. From official team announcements.`,
+  title: 'Upcoming Theme Nights: Star Wars, Heritage & Fireworks',
+  description: `Upcoming theme nights across pro sports by category: Star Wars, heritage, fireworks, faith and community, and pop culture tie-ins. From official team announcements.`,
   alternates: { canonical: 'https://www.getpromonight.com/promos/theme-nights' },
   openGraph: pageOpenGraph('/promos/theme-nights'),
 };
@@ -108,7 +105,7 @@ export default async function ThemeNightsPage() {
   }
 
   const c = await getCoverageCounts();
-  const period = scheduledPeriodPhrase(seasonSpan(themes.map((p) => p.date))) || `in ${SEASON}`;
+  const period = scheduledPeriodPhrase(seasonSpan(themes.map((p) => p.date))) || 'on the calendar';
   const lead = `Theme nights scheduled across ${c.leagueList} ${period}. Grouped by theme category, from Star Wars nights and fireworks spectaculars to heritage and community celebrations. ${themes.length} theme nights currently tracked across ${c.teamCount} teams.`;
 
   const faqs = [
@@ -133,14 +130,14 @@ export default async function ThemeNightsPage() {
     <>
       <AggregatorJsonLd
         url="https://www.getpromonight.com/promos/theme-nights"
-        title={`Theme Nights in Pro Sports ${SEASON}`}
+        title="Upcoming Theme Nights in Pro Sports"
         description={lead}
         faqs={faqs}
         groups={groups}
       />
       <AggregatorPage
         eyebrow="Theme nights"
-        title={`THEME NIGHTS IN ${SEASON}`}
+        title="UPCOMING THEME NIGHTS"
         lead={lead}
         groups={groups}
         faqs={faqs}

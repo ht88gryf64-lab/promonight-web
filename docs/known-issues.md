@@ -3921,7 +3921,9 @@ added since.
 
 ## 69. The NHL and NBA season constant must be bumped every July
 
-**Status: OPEN, DATED (WEB6, 2026-10-05). Severity: High on 2027-07-01 if missed. Bump on 2027-07-01; a test fails from that day.**
+**Status: RESOLVED 2026-11-05 (season rollover). `SPLIT_SEASON_START_YEAR` is gone: every season the site names comes from `src/lib/seasons/windows.json` through `seasonLabel(league, date)`, and the July 1 wall-clock alarm is replaced by the windows staleness test (entry 75). Kept for the record.**
+
+~~Status: OPEN, DATED (WEB6, 2026-10-05). Severity: High on 2027-07-01 if missed. Bump on 2027-07-01; a test fails from that day.~~
 
 **What it is.** `SPLIT_SEASON_START_YEAR` in `src/lib/season-label.ts` names the NHL and NBA season every team page speaks about (2026 means 2026-27). It is deliberately its own constant, not `TITLE_SEASON_YEAR`: that one follows MLB and is bumped in January or February (docs/runbook-2027-01-15-spansyears-season-switchoff.md), in the middle of an NHL and NBA season. Nothing derives this one from the clock, by the same rule as every season year on the site.
 
@@ -4197,7 +4199,9 @@ and the CTA section above the image).
 
 ## 75. The ranked surfaces' season windows go stale on the calendar (src/lib/seasons/windows.json)
 
-**Status: OPEN, DATED (ruling 2026-11-05). First alarm 2027-04-01 (MLS); NHL and NBA 2027-05-01. A test fails from those days.**
+**Status: OPEN, DATED (ruling 2026-11-05). Alarms: MLS 2027-04-01 (needs the 2027-28 entry, keyed "2027-28"); NHL and NBA 2027-05-01; MLB 2027-09-08; WNBA 2027-09-22; CFB 2027-11-25; NFL 2027-12-15. A test fails from those days.**
+
+**Since 2026-11-05 (season rollover) the windows also name every season the site prints.** `seasonLabel(league, date)` (season-window.ts) is the season whose lead-in-to-end range contains the date, else the most recently ended one; team-page titles (both experiment arms), schedule headings, season counts (`resolveSeasonScope`), the six hubs, CFB titles and FAQs, and the ranked pages all read it. NFL and CFB have windows for that reason. When a league's windows go stale, its labels freeze on its last season, which is the second reason the alarm below matters. A source test (`no-literal-years.test.ts`) fails on any literal year in `src/` outside fixtures, tests and a named allowlist with reasons.
 
 **What it is.** The homepage best rail, /best-promos, /best-promos/bobbleheads and the /team-rankings tease admit a promo only when its date is inside its league's current season window: from 45 days before the season starts (the lead-in) through its end (`src/lib/seasons/season-window.ts`). The windows are explicit dates in `src/lib/seasons/windows.json`, keyed league then season. MLB and WNBA end on the last final game in `postseasonBrackets` once their bracket is final; MLS and everything else end on the fixed date. A league with no windows is excluded (fails closed).
 
@@ -4208,3 +4212,11 @@ and the CTA section above the image).
 **How it is caught.** `season-gate.test.ts` ("real clock: no league's last window ends within 60 days of today") fails once today is within 60 days of any league's last end. It reads the wall clock (`performance.timeOrigin`), so `npm run test:future` does not trip it early. Same LIMIT as entry 69: nothing runs the tests on a schedule, so it fires only when someone runs `npm test`.
 
 **The fix when it fires.** Add the league's next season to `windows.json` from its published schedule, with a `source`. A date that is not published yet goes in with a `provisional` note saying so. Entries marked provisional on 2026-11-05: MLB 2027 end (postseason not scheduled; the CBA expires 2026-12-01), MLS 2027 end (MLS Cup "Memorial Day Weekend"), WNBA 2027 both dates (CBA outer limits 2027-04-01 to 2027-11-21; no schedule yet), NHL and NBA 2026 ends (Finals dates not published). MLS's 2027-28 season (July 2027 to May 2028) is a second season starting in 2027; key it "2027-28".
+
+## 76. CFB game reads carry no season filter at the July 2027 lead-in (deferred)
+
+**Status: OPEN, DEFERRED (ruling 2026-11-05). Date: 2027-07-12, the CFB 2027 lead-in (windows.json: 2027-08-26 minus 45 days).**
+
+**What happens.** From 2027-07-12 `cfbSeasonLabel()` names 2027, so every CFB title, H1, eyebrow and FAQ says 2027. The CFB game reads (`cfbGames`, the school pages, the rivalry pages and the hub) are not filtered to a season: if the 2027 schedules are not loaded by then, or the 2026 games are still stored beside them, a page titled 2027 can list 2026 games. The Rivalry Week bounds have their own alarm (season-gate.test.ts, from 2027-05-13).
+
+**The fix when it is picked up.** Filter the CFB game reads to `seasonOfDate('CFB', game.date)?.season === labeledSeason('CFB').season` (src/lib/seasons/season-window.ts), and check the 2027 schedule load before 2027-07-12.

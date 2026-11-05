@@ -4,7 +4,6 @@ import { Suspense } from 'react';
 import {
   getAllTeamScores,
   getSchemaLocationsForTeams,
-  getScoredPromosInDateRange,
 } from '@/lib/data';
 import { BestPromosBrowser } from '@/components/scoring/best-promos-browser';
 import { ScoredJsonLd } from '@/components/scoring/scored-jsonld';
@@ -14,7 +13,7 @@ import { numberWord } from '@/lib/coverage-counts';
 import { SCORED_LEAGUES } from '@/lib/types';
 import { archivoHouse } from '@/components/redesign/fonts-house';
 import { addDaysYmd, siteYmd } from '@/lib/site-today';
-import { getCurrentSeasonPredicate } from '@/lib/seasons/finals';
+import { loadRankedRows } from '@/lib/seasons/ranked-rows';
 import { LEAD_IN_DAYS } from '@/lib/seasons/season-window';
 
 // Server-side fetch runs once per ISR revalidate window. Scoring rides
@@ -24,12 +23,6 @@ import { LEAD_IN_DAYS } from '@/lib/seasons/season-window';
 export const revalidate = 86400;
 
 const PAGE_URL = 'https://www.getpromonight.com/best-promos';
-// Season year is hardcoded deliberately (house SEO-copy rule: never
-// getFullYear() in titles or descriptions); bump when next-season content
-// is ready so the whole page flips at once.
-const SEASON_YEAR = 2026;
-const SERVER_FETCH_CAP = 300;
-const SERVER_FETCH_DAYS = 180;
 // The crawlable default view: the browser mounts with range '90d' and
 // server-renders its first PAGE_SIZE (50) cards. ITEMLIST_SCHEMA_CAP and
 // DEFAULT_VIEW_DAYS mirror those two values so the ItemList entries are
@@ -38,11 +31,6 @@ const SERVER_FETCH_DAYS = 180;
 const ITEMLIST_SCHEMA_CAP = 50;
 const DEFAULT_VIEW_DAYS = 90;
 
-// The site's calendar day, America/New_York (src/lib/site-today.ts). It was the
-// server's local day (UTC on Vercel) until WEB6 G3 (2026-10-06).
-function localYMD(d: Date): string {
-  return siteYmd(d);
-}
 function addDaysYMD(base: Date, days: number): string {
   return addDaysYmd(siteYmd(base), days);
 }
@@ -52,25 +40,31 @@ function addDaysYMD(base: Date, days: number): string {
 // churn the title every regeneration. Distinctness vs
 // /best-promos/bobbleheads and /team-rankings comes from the league set,
 // the score mechanics, and the phrasing.
-export const metadata: Metadata = {
-  title: `Best Sports Promo Nights of ${SEASON_YEAR}: Score-Ranked Giveaways`,
-  description: `Score-ranked promo nights across MLB, MLS, and WNBA in ${SEASON_YEAR}. Bobbleheads, jerseys, and theme nights ranked 0 to 100 by attendance cap, item value, sponsor presence, and highlight tier. MLB rescored weekly; WNBA and MLS in season.`,
-  alternates: { canonical: PAGE_URL },
-  openGraph: {
-    title: `Best Sports Promo Nights of ${SEASON_YEAR}`,
-    description: `Score-ranked promo nights across MLB, MLS, and WNBA. MLB rescored weekly; WNBA and MLS in season.`,
-    url: PAGE_URL,
-    type: 'website',
-    images: [
-      {
-        url: '/og-image.png',
-        width: 1200,
-        height: 630,
-        alt: 'PromoNight: score-ranked sports promos',
-      },
-    ],
-  },
-};
+// generateMetadata, not a static object: the year in the title is the one
+// the rows on the page carry (loadRankedRows, src/lib/seasons/ranked-rows.ts),
+// read from the same cached fetch as the page body.
+export async function generateMetadata(): Promise<Metadata> {
+  const { label } = await loadRankedRows(null);
+  return {
+    title: `Best Sports Promo Nights of ${label}: Score-Ranked Giveaways`,
+    description: `Score-ranked promo nights across MLB, MLS, and WNBA in ${label}. Bobbleheads, jerseys, and theme nights ranked 0 to 100 by attendance cap, item value, sponsor presence, and highlight tier. MLB rescored weekly; WNBA and MLS in season.`,
+    alternates: { canonical: PAGE_URL },
+    openGraph: {
+      title: `Best Sports Promo Nights of ${label}`,
+      description: `Score-ranked promo nights across MLB, MLS, and WNBA. MLB rescored weekly; WNBA and MLS in season.`,
+      url: PAGE_URL,
+      type: 'website',
+      images: [
+        {
+          url: '/og-image.png',
+          width: 1200,
+          height: 630,
+          alt: 'PromoNight: score-ranked sports promos',
+        },
+      ],
+    },
+  };
+}
 
 const FAQS = [
   {
@@ -136,34 +130,10 @@ const INLINE_ANSWERS = [
 
 export default async function BestPromosPage() {
   const now = new Date();
-  const todayYMD = localYMD(now);
-  const endYMD = addDaysYMD(now, SERVER_FETCH_DAYS);
-
-  // The forward window admits only rows inside their league's current season
-  // (src/lib/seasons/season-window.ts): a club's next-season schedule is
-  // ingested months early and must not rank as if it were on now.
-  const inCurrentSeason = await getCurrentSeasonPredicate(now);
-  const [forwardPromos, teamScores] = await Promise.all([
-    getScoredPromosInDateRange(todayYMD, endYMD, SERVER_FETCH_CAP, inCurrentSeason),
-    getAllTeamScores(),
-  ]);
-
-  // RETROSPECTIVE MODE. Scoring covers MLB, MLS and WNBA; when all three are
-  // between seasons the forward window is empty and this page would otherwise
-  // serve a ranking header over nothing. Instead it ranks the completed
-  // season, which keeps the content, the internal links, the ItemList and the
-  // page's search value through the winter.
-  //
-  // The trigger is the emptiness of the season-gated forward window, never a
-  // date literal in this file, so the page flips back to upcoming on its own
-  // when the first scored league's lead-in opens (LEAD_IN_DAYS before its
-  // season starts, src/lib/seasons/windows.json). No deploy, no flag. Before
-  // the gate it flipped the day any 2027 row was ingested, which is how the
-  // Giants' 2027 giveaways ranked here in November 2026.
-  const retrospective = forwardPromos.length === 0;
-  const promos = retrospective
-    ? await getScoredPromosInDateRange(`${SEASON_YEAR}-01-01`, todayYMD, SERVER_FETCH_CAP)
-    : forwardPromos;
+  // The season-gated rows, the mode and the year label, from the one cached
+  // loader generateMetadata also reads (src/lib/seasons/ranked-rows.ts).
+  const { promos, retrospective, label, todayYMD } = await loadRankedRows(null);
+  const teamScores = await getAllTeamScores();
 
   // Resolve PostalAddress data for the unique teams in the ItemList
   // payload (ITEMLIST_SCHEMA_CAP cards). Done after the promo fetch so we
@@ -227,21 +197,21 @@ export default async function BestPromosPage() {
   const jsonLdLastUpdated = rankedContentDate || latestComputedAt;
 
   const jsonLdDescription = retrospective
-    ? `Score-ranked list of the ${promos.length} best promotional events of the ${SEASON_YEAR} season across MLB, MLS, and WNBA.`
-    : `Score-ranked list of ${promos.length} top promotional events across MLB, MLS, and WNBA in ${SEASON_YEAR}.`;
+    ? `Score-ranked list of the ${promos.length} best promotional events of the ${label} season across MLB, MLS, and WNBA.`
+    : `Score-ranked list of ${promos.length} top promotional events across MLB, MLS, and WNBA in ${label}.`;
   // In retrospective mode the stamp says what the date actually is, the last
   // time SCORES were computed, rather than implying the content is fresh.
   const stampLine = retrospective
-    ? `${SEASON_YEAR} season · no ranked promos ahead${lastUpdatedDisplay ? ` · scores last computed ${lastUpdatedDisplay}` : ''} · ${promos.length} promos ranked`
+    ? `${label} season · no ranked promos ahead${lastUpdatedDisplay ? ` · scores last computed ${lastUpdatedDisplay}` : ''} · ${promos.length} promos ranked`
     : null;
-  const capsuleRetro = `These are the ${promos.length} best-scored promo nights of the ${SEASON_YEAR} season across MLB, MLS, and WNBA. Nothing here is upcoming: none of the three leagues we score has a ranked promo still to come this season, so this is the year ranked from 100 down rather than a list of what is on next. Every entry pulls from official team-promotion announcements and is scored 0 to 100 on attendance cap, item value, sponsor presence, and highlight tier. Upcoming rankings return here from ${LEAD_IN_DAYS} days before each league's Opening Day, as clubs announce them.`;
+  const capsuleRetro = `These are the ${promos.length} best-scored promo nights of the ${label} season across MLB, MLS, and WNBA. Nothing here is upcoming: none of the three leagues we score has a ranked promo still to come this season, so this is the year ranked from 100 down rather than a list of what is on next. Every entry pulls from official team-promotion announcements and is scored 0 to 100 on attendance cap, item value, sponsor presence, and highlight tier. Upcoming rankings return here from ${LEAD_IN_DAYS} days before each league's Opening Day, as clubs announce them.`;
 
   if (isRedesignEnabled()) {
     return (
       <>
         <ScoredJsonLd
           url={PAGE_URL}
-          title={`Best Sports Promo Nights of ${SEASON_YEAR}`}
+          title={`Best Sports Promo Nights of ${label}`}
           description={jsonLdDescription}
           lastUpdated={jsonLdLastUpdated}
           faqs={FAQS}
@@ -257,8 +227,8 @@ export default async function BestPromosPage() {
                 <span>/</span>
                 <span className="text-white/60">Best promos</span>
               </div>
-              <p className="font-rd text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: '#ff5a78' }}>Best of {SEASON_YEAR}</p>
-              <h1 className="rd-display mt-1 text-4xl uppercase leading-[0.95] text-white md:text-6xl">BEST SPORTS PROMO NIGHTS OF {SEASON_YEAR}</h1>
+              <p className="font-rd text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: '#ff5a78' }}>Best of {label}</p>
+              <h1 className="rd-display mt-1 text-4xl uppercase leading-[0.95] text-white md:text-6xl">BEST SPORTS PROMO NIGHTS OF {label}</h1>
               <p className="mt-3 font-rd text-[11px] uppercase tracking-[0.12em] text-white/45">{stampLine ?? <>{lastUpdatedDisplay ? <>Last updated {lastUpdatedDisplay} · </> : null}{promos.length} promos ranked</>}</p>
             </div>
           </section>
@@ -266,7 +236,7 @@ export default async function BestPromosPage() {
           <div className="mx-auto max-w-4xl px-6 pb-20 pt-10">
             <p className="rounded-2xl border border-rd-line bg-rd-card p-5 font-rd text-[15px] leading-relaxed text-rd-ink-soft">
               {retrospective ? capsuleRetro : (
-                <>The {promos.length} best-scored sports promo nights of {SEASON_YEAR} are ranked below from 100 down. Every entry pulls from official MLB, MLS, and WNBA team-promotion announcements and is scored 0 to 100 on attendance cap, item value, sponsor presence, and highlight tier. The list refreshes with each league&apos;s weekly scan: MLB year-round, WNBA and MLS in season.</>
+                <>The {promos.length} best-scored sports promo nights of {label} are ranked below from 100 down. Every entry pulls from official MLB, MLS, and WNBA team-promotion announcements and is scored 0 to 100 on attendance cap, item value, sponsor presence, and highlight tier. The list refreshes with each league&apos;s weekly scan: MLB year-round, WNBA and MLS in season.</>
               )}
             </p>
 
@@ -283,7 +253,7 @@ export default async function BestPromosPage() {
             </Suspense>
 
             <div className="mt-8">
-              <BestPromosBrowser initialPromos={promos} serverTodayYMD={todayYMD} ticketsPlacement="best_promos_card" trackingSurface="best_promos" ticketsSurface="web_best_promos" inlineAnswers={INLINE_ANSWERS} variant="light" retrospective={retrospective} />
+              <BestPromosBrowser initialPromos={promos} serverTodayYMD={todayYMD} ticketsPlacement="best_promos_card" trackingSurface="best_promos" ticketsSurface="web_best_promos" inlineAnswers={INLINE_ANSWERS} variant="light" retrospective={retrospective} seasonLabel={label} />
             </div>
 
             <section className="mt-16">
@@ -307,7 +277,7 @@ export default async function BestPromosPage() {
     <>
       <ScoredJsonLd
         url={PAGE_URL}
-        title={`Best Sports Promo Nights of ${SEASON_YEAR}`}
+        title={`Best Sports Promo Nights of ${label}`}
         description={jsonLdDescription}
         lastUpdated={jsonLdLastUpdated}
         faqs={FAQS}
@@ -326,17 +296,17 @@ export default async function BestPromosPage() {
           </div>
 
           <span className="font-mono text-[10px] tracking-[1.5px] uppercase text-accent-red">
-            Best of {SEASON_YEAR}
+            Best of {label}
           </span>
           <h1 className="font-display text-4xl md:text-6xl tracking-[1px] mt-2">
-            BEST SPORTS PROMO NIGHTS OF {SEASON_YEAR}
+            BEST SPORTS PROMO NIGHTS OF {label}
           </h1>
           <p className="font-mono text-[10px] tracking-[1.5px] uppercase text-text-muted mt-3">
             {stampLine ?? <>{lastUpdatedDisplay ? <>Last updated {lastUpdatedDisplay} · </> : null}{promos.length} promos ranked</>}
           </p>
           <p className="mt-5 text-text-secondary text-base leading-relaxed max-w-3xl">
             {retrospective ? capsuleRetro : (
-              <>The {promos.length} best-scored sports promo nights of {SEASON_YEAR} are
+              <>The {promos.length} best-scored sports promo nights of {label} are
               ranked below from 100 down. Every entry pulls from official MLB,
               MLS, and WNBA team-promotion announcements and is scored 0 to 100
               on attendance cap, item value, sponsor presence, and highlight
@@ -366,7 +336,7 @@ export default async function BestPromosPage() {
               trackingSurface="best_promos"
               ticketsSurface="web_best_promos"
               inlineAnswers={INLINE_ANSWERS}
-              retrospective={retrospective}
+              retrospective={retrospective} seasonLabel={label}
             />
           </div>
 

@@ -1,5 +1,18 @@
 # RUNBOOK: 2027-01-15, the season display switches itself off
 
+> **RETIRED 2026-11-05 (season rollover, feature/season-rollover-2027; Matt's
+> ruling, point 4).** Nothing to do on 2027-01-15. `resolveSeasonScope` no longer
+> reads a calendar-year span or `TITLE_SEASON_YEAR`: a row belongs to a season by
+> its window in `src/lib/seasons/windows.json` (lead-in through end), and the page
+> counts the season `labeledSeason(league, today)` names, and claims it only when
+> every upcoming row belongs to it. Between seasons a club that already lists
+> next season's dates keeps its upcoming-only wording; from the first day of
+> that season's lead-in (MLB: 2027-02-07) those rows ARE the named season and
+> the page claims it, spring training included. So the January switch-off this
+> runbook described still exists, but it ends on a known date by data, not on a
+> census, and nothing needs doing on 2027-01-15. `TITLE_SEASON_YEAR` is gone too:
+> the year token comes from `seasonLabel`. Kept for the record below.
+
 **Trigger date: 2027-01-15.** Check before then. The failure is silent, and it
 lands in the highest-value MLB publishing moment of the year.
 

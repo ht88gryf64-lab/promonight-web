@@ -4,8 +4,10 @@ import { IconExternalLink } from '@tabler/icons-react';
 import { track } from '@/lib/analytics';
 import type { ScheduleReleaseVideo } from '@/lib/types';
 
-// Top-of-schedule-section card linking to the team's official 2026 NFL
-// schedule release video on YouTube. Static thumbnail + external link
+// Top-of-schedule-section card linking to the team's official NFL schedule
+// release video on YouTube. The season it names comes from the video's own
+// upload date (a May 2026 release is the 2026 schedule), never a hardcoded
+// year (season rollover, ruling 2026-11-05). Static thumbnail + external link
 // only; intentionally no iframe player or YouTube IFrame API JS. If we
 // want inline playback later, lite-youtube-embed is the upgrade path,
 // not the full YouTube SDK.
@@ -25,6 +27,13 @@ interface ScheduleReleaseVideoCardProps {
 
 // Pulls the 11-char YouTube video id out of standard watch URLs and
 // short-form youtu.be URLs. Returns null on anything we don't recognize.
+/** "2026 ": the season of the release, from the upload year, with its
+ *  trailing space; empty when the upload date is unreadable. */
+function releaseSeasonPrefix(video: ScheduleReleaseVideo): string {
+  const m = /^(\d{4})-\d{2}-\d{2}/.exec(video.publishedAt ?? '');
+  return m ? `${m[1]} ` : '';
+}
+
 function extractVideoId(url: string): string | null {
   try {
     const u = new URL(url);
@@ -83,7 +92,7 @@ export function ScheduleReleaseVideoCard({ video, teamSlug, variant = 'dark' }: 
     track('cta_click', {
       surface: 'web_team_page',
       cta_id: 'schedule_release_video',
-      cta_label: 'Watch the 2026 schedule release',
+      cta_label: `Watch the ${releaseSeasonPrefix(video)}schedule release`,
       cta_destination: 'youtube',
       team_slug: teamSlug,
       sport: 'nfl',
@@ -99,7 +108,7 @@ export function ScheduleReleaseVideoCard({ video, teamSlug, variant = 'dark' }: 
               Schedule Release
             </span>
             <h2 className="rd-display text-2xl md:text-3xl text-rd-ink mt-1">
-              2026 SEASON REVEAL
+              {`${releaseSeasonPrefix(video)}SEASON REVEAL`}
             </h2>
           </div>
 
@@ -134,7 +143,7 @@ export function ScheduleReleaseVideoCard({ video, teamSlug, variant = 'dark' }: 
                   {video.title}
                 </h3>
                 <span className="inline-flex items-center gap-1.5 mt-3 text-sm font-rd font-medium text-rd-red">
-                  Watch the 2026 schedule release
+                  {`Watch the ${releaseSeasonPrefix(video)}schedule release`}
                   <IconExternalLink size={15} stroke={2} />
                 </span>
               </div>
@@ -153,7 +162,7 @@ export function ScheduleReleaseVideoCard({ video, teamSlug, variant = 'dark' }: 
             Schedule Release
           </span>
           <h2 className="font-display text-2xl md:text-3xl tracking-[1px] mt-1">
-            2026 SEASON REVEAL
+            {`${releaseSeasonPrefix(video)}SEASON REVEAL`}
           </h2>
         </div>
 
@@ -188,7 +197,7 @@ export function ScheduleReleaseVideoCard({ video, teamSlug, variant = 'dark' }: 
                 {video.title}
               </h3>
               <span className="inline-flex items-center gap-1.5 mt-3 font-mono text-[11px] tracking-[1px] uppercase text-accent-red group-hover:text-white transition-colors">
-                Watch the 2026 schedule release
+                {`Watch the ${releaseSeasonPrefix(video)}schedule release`}
                 <ExternalLinkIcon />
               </span>
             </div>

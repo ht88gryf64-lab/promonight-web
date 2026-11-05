@@ -120,7 +120,7 @@ export async function Footer({ year }: FooterProps) {
         {/* Bottom row */}
         <div className="mt-12 border-t border-white/10 pt-6">
           <p className="font-rd text-[12px] tracking-[0.04em] text-white/40">
-            © {year ?? 2026} PromoNight. All rights reserved.
+            © {year ?? new Date().getFullYear()} PromoNight. All rights reserved.
           </p>
         </div>
       </div>

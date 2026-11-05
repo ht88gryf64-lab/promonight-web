@@ -4,6 +4,7 @@
 // (aggregator plan §4: declared counts must match served DOM counts; no
 // hardcoded numbers in copy).
 
+import { cfbSeasonLabel } from './season';
 export interface RivalryIndexRow {
   slug: string;
   name: string;
@@ -29,6 +30,14 @@ export interface RivalryIndexRow {
 // from live rows at render time.
 export const RIVALRY_WEEK_START = '2026-11-21';
 export const RIVALRY_WEEK_END = '2026-11-29';
+
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+/** "November 21 and November 29, 2026": the Rivalry Week bounds above, printed
+ *  from the dates themselves so the copy can never name another year. */
+function rivalryWeekPhrase(): string {
+  const md = (ymd: string) => `${MONTH_NAMES[Number(ymd.slice(5, 7)) - 1]} ${Number(ymd.slice(8, 10))}`;
+  return `${md(RIVALRY_WEEK_START)} and ${md(RIVALRY_WEEK_END)}, ${RIVALRY_WEEK_END.slice(0, 4)}`;
+}
 
 /** Dated rows soonest-first, then undated. THE display order: the full DOM
  *  list and the ItemList JSON-LD both consume this exact array. */
@@ -62,14 +71,14 @@ export function buildRivalryIndexFaqs(rows: RivalryIndexRow[]): RivalryFaq[] {
   const faqs: RivalryFaq[] = [];
   if (total > 0) {
     faqs.push({
-      question: 'How many college football rivalries does this page track for 2026?',
-      answer: `This page tracks ${total} named college football rivalries. ${dated} of them have a scheduled 2026 meeting, and every rivalry links to a page with the date, the stadium and how to plan the trip.`,
+      question: `How many college football rivalries does this page track for ${cfbSeasonLabel()}?`,
+      answer: `This page tracks ${total} named college football rivalries. ${dated} of them have a scheduled ${cfbSeasonLabel()} meeting, and every rivalry links to a page with the date, the stadium and how to plan the trip.`,
     });
   }
   if (week > 0) {
     faqs.push({
-      question: 'When is college football Rivalry Week in 2026?',
-      answer: `Rivalry Week is the final weekend of the regular season. ${week} of the ${total} rivalries tracked here are played between November 21 and November 29, 2026, most of them over Thanksgiving weekend.`,
+      question: `When is college football Rivalry Week in ${cfbSeasonLabel()}?`,
+      answer: `Rivalry Week is the final weekend of the regular season. ${week} of the ${total} rivalries tracked here are played between ${rivalryWeekPhrase()}, most of them over Thanksgiving weekend.`,
     });
   }
   if (trophies > 0) {

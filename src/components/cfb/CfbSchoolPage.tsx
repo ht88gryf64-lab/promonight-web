@@ -44,6 +44,7 @@ import { buildCondensedLogistics, CONDENSED_MIN_FIELDS } from '@/lib/venue-hub-c
 import { displayVenueName, type TeamVenueHubLink, type VenueHub } from '@/lib/venue-hub';
 import { SERIF, MONO, SANS, fmtMonthDay, fmtDayLong, Eyebrow, Byline, TAP_TARGET_24 } from './cfb-bits';
 import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
+import { cfbSeasonLabel, conferenceForNamedSeason } from '@/lib/cfb/season';
 
 export function CfbSchoolPage({ data, venueHubLink, venueHub }: { data: CfbSchoolPageData; venueHubLink: TeamVenueHubLink | null; venueHub: VenueHub | null }) {
   const { school, venue, games, editorial } = data;
@@ -51,7 +52,7 @@ export function CfbSchoolPage({ data, venueHubLink, venueHub }: { data: CfbSchoo
   const homeCount = games.filter((g) => g.isHome && !g.neutralSite).length;
   const roadCount = games.filter((g) => !g.isHome && !g.neutralSite).length;
   const kicker = getKicker(school.id);
-  const conf = school.conferenceBySeason?.['2026'] || '';
+  const conf = conferenceForNamedSeason(school.conferenceBySeason) || '';
 
   // Rivalry-section prose (pure, data-derived; see buildRivalrySentences). Closes
   // Google's "Missing: rivalry" gap: each sentence uses "rivalry" and names the rival.
@@ -327,7 +328,7 @@ export function CfbSchoolPage({ data, venueHubLink, venueHub }: { data: CfbSchoo
             never stacked inline. Each row also carries a server-rendered second
             line (venue, city, home/away/neutral), so the detail exists in the HTML. ── */}
         <section data-ad-item="cfb-section" className="mt-11">
-          <Eyebrow>2026 Schedule</Eyebrow>
+          <Eyebrow>{`${cfbSeasonLabel()} Schedule`}</Eyebrow>
           <CfbSchedule games={games} school={school} venue={venue} />
           <p className="mt-2.5 text-[11px] text-white/55" style={{ fontFamily: MONO }}>Tap an upcoming game for its gameday links. Kickoff times are shown in the stadium's local time once announced and confirmed on a second source; until then, Kickoff TBA. Played games show no score.</p>
         </section>

@@ -18,6 +18,7 @@
 // buildings' real names and pass through untouched.
 
 import { schoolIdDisplayName } from '@/lib/cfb/display-name';
+import { cfbSeasonLabel } from './season';
 
 /** Google truncates around 160. The brief's window is 140 to 160. */
 export const DESC_MAX = 160;
@@ -102,10 +103,10 @@ export function buildMatchupDescription(input: MatchupDescriptionInput): string 
   if (!when) {
     return longestFit(
       [
-        `${matchup}. The rivalry has no scheduled 2026 meeting. The year the series began, and how to plan the trip when the game returns.`,
-        `${matchup}. No 2026 meeting is scheduled. When the series began, and how to plan the trip when the game returns.`,
-        `${matchup}. No 2026 meeting is scheduled.`,
-        `${displayName}. No 2026 meeting is scheduled.`,
+        `${matchup}. The rivalry has no scheduled ${cfbSeasonLabel()} meeting. The year the series began, and how to plan the trip when the game returns.`,
+        `${matchup}. No ${cfbSeasonLabel()} meeting is scheduled. When the series began, and how to plan the trip when the game returns.`,
+        `${matchup}. No ${cfbSeasonLabel()} meeting is scheduled.`,
+        `${displayName}. No ${cfbSeasonLabel()} meeting is scheduled.`,
       ],
       DESC_MAX,
     );

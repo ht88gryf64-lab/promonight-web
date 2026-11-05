@@ -42,12 +42,11 @@ import { currentSeasonLabel } from './season-label';
  * families this experiment measures.
  */
 
-// Hardcoded, never new Date().getFullYear(). Same standing rule as the title
-// and description in the team route and the FAQ copy in promo-helpers: an
-// auto-rolling year flips every title to the next season at midnight on Jan 1,
-// months before that season's data exists. Bump deliberately when 2027 content
-// is ready, and bump it in lockstep with the other hardcoded 2026 season years.
-export const TITLE_SEASON_YEAR = 2026;
+// THE YEAR TOKEN comes from the windows (season rollover, ruling 2026-11-05):
+// currentSeasonLabel(team.league), the season the page names, never the clock's
+// year and never a hardcoded constant. Both arms stay structurally identical;
+// only the token moves, and it moves on the first day of the next season's
+// lead-in (src/lib/seasons/windows.json), the same day for both arms.
 
 /**
  * The ten treatment teams, by team slug (Firestore doc id). Slugs are unique
@@ -80,14 +79,13 @@ export function isTitleTreatmentTeam(team: Pick<Team, 'id'>): boolean {
  */
 export function teamTitleSubtitle(team: Pick<Team, 'id' | 'league'>): string {
   return isTitleTreatmentTeam(team)
-    ? `Giveaways & Theme Nights ${TITLE_SEASON_YEAR}`
+    ? `Giveaways & Theme Nights ${currentSeasonLabel(team.league)}`
     : `Promos & Giveaways ${titleSeasonWord(team)}`;
 }
 
 /**
  * The season the title names: "2026-27" on NHL and NBA, whose seasons span two
- * calendar years (SPLIT_SEASON_START_YEAR, bumped every July 1, known-issues
- * 69), and TITLE_SEASON_YEAR everywhere else, unchanged (WEB6 G2). The title
+ * calendar years, and "2026" everywhere else, both from the windows. The title
  * experiments never touch NHL or NBA: both arms are MLB and NFL clubs.
  */
 function titleSeasonWord(team: Pick<Team, 'league'>): string {
@@ -143,12 +141,9 @@ export function teamBareTitle(team: Pick<Team, 'id' | 'league'>, displayName: st
  * treatment title is close to a pure ADD of "Schedule" rather than a swap.
  * ──────────────────────────────────────────────────────────────────────────── */
 
-// Deliberately NOT TITLE_SEASON_YEAR. That constant stopped being a title-only
-// value when src/lib/season-scope.ts:225 began gating the visible season claim
-// on `year === TITLE_SEASON_YEAR`, so reusing it here would couple a title
-// experiment to body copy. Hardcoded, never new Date().getFullYear(): the same
-// standing rule as TITLE_SEASON_YEAR, and for the same reason.
-export const NFL_TITLE_SEASON_YEAR = 2026;
+// The NFL arms take their year token from currentSeasonLabel(team.league) like
+// every other title (season rollover, ruling 2026-11-05); the old
+// NFL_TITLE_SEASON_YEAR constant had no reader left and is gone.
 
 /** The ten treatment clubs, by team slug (Firestore doc id). */
 export const NFL_SCHEDULE_TITLE_SLUGS: ReadonlySet<string> = new Set([

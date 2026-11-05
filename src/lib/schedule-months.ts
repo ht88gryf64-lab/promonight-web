@@ -2,8 +2,9 @@
 // Games tile. Pure, so both are tested as arithmetic, and shared, so the list
 // and the tile can never count two different populations.
 import type { GameContext } from './data';
-import { TITLE_SEASON_YEAR } from './title-treatment';
-import { isSplitSeasonLeague, splitSeasonStartYear, SPLIT_SEASON_START_YEAR } from './season-label';
+import { isSplitSeasonLeague } from './season-label';
+import { labeledSeason, seasonOfDate } from './seasons/season-window';
+import { siteTodayYmd } from './site-today';
 
 /**
  * The regular season, one entry per game actually on the schedule.
@@ -37,7 +38,7 @@ import { isSplitSeasonLeague, splitSeasonStartYear, SPLIT_SEASON_START_YEAR } fr
  * 5. NHL AND NBA PRESEASON, AND ANOTHER NHL OR NBA SEASON. getGamesForTeam
  *    keeps those two leagues' preseason games for the calendar (a promo can sit
  *    on one), so they are dropped here; and a game counts only when its date
- *    falls in the season the page names (SPLIT_SEASON_START_YEAR), so a
+ *    falls in the season the page names (labeledSeason, windows.json), so a
  *    2027-28 spine written early cannot join the 2026-27 list (review round 1;
  *    none on production 2026-10-05, every NHL and NBA doc is season 2026).
  *
@@ -59,12 +60,28 @@ import { isSplitSeasonLeague, splitSeasonStartYear, SPLIT_SEASON_START_YEAR } fr
  */
 export function regularSeasonContexts(contexts: readonly GameContext[], today?: string): GameContext[] {
   const isMlb = (c: GameContext) => c.game.league === 'mlb';
+  // The season the page names, per league, from the windows (season rollover,
+  // ruling 2026-11-05). A game belongs to it when its date sits in that
+  // season's window; MLB and the split-season leagues are filtered on it.
+  const day = today ?? siteTodayYmd();
+  const named = new Map<string, string>();
+  const inNamedSeason = (league: string, date: string): boolean => {
+    const L = league.toUpperCase();
+    if (!named.has(L)) named.set(L, labeledSeason(L, day).season);
+    const season = named.get(L) as string;
+    // A date that does not parse ("2026-09-2x") cannot be placed in a window.
+    // It is kept on the season's year prefix, as the calendar-year filter kept
+    // it, so the schedule's flat-list fallback still shows the game rather
+    // than dropping it silently.
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return date.startsWith(`${season.slice(0, 4)}-`);
+    return seasonOfDate(L, date)?.season === season;
+  };
   const regular = contexts.filter(
     (c) =>
       c.game.isPostseason !== true &&
-      (!isMlb(c) || c.game.date.startsWith(`${TITLE_SEASON_YEAR}-`)) &&
+      (!isMlb(c) || inNamedSeason('MLB', c.game.date)) &&
       (!isSplitSeasonLeague(c.game.league) ||
-        (c.game.seasonType !== 'preseason' && splitSeasonStartYear(c.game.date) === SPLIT_SEASON_START_YEAR)),
+        (c.game.seasonType !== 'preseason' && inNamedSeason(c.game.league, c.game.date))),
   );
   const bestById = new Map<number, GameContext>();
   for (const c of regular) {
