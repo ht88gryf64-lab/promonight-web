@@ -74,24 +74,29 @@ describe('NHL and NBA titles name 2026-27', () => {
     const KNICKS = mk('new-york-knicks', 'NBA', 'New York', 'Knicks');
     assert.equal(t.teamTitleSubtitle(DET), 'Promos & Giveaways 2026-27');
     assert.equal(t.teamBareTitle(KNICKS, 'New York Knicks'), 'New York Knicks Promos & Giveaways 2026-27');
-    assert.equal(t.teamMetaTitle(DET, 'Detroit Red Wings'), 'Detroit Red Wings Promos & Giveaways 2026-27');
+    // The <title> is the promotional-schedule cascade since 2026-11-05: the
+    // full form runs 58 here, inside the 60 ceiling with no suffix.
+    assert.equal(t.teamMetaTitle(DET, 'Detroit Red Wings'), 'Detroit Red Wings Promotional Schedule & Giveaways 2026-27');
   });
 
-  test('MLB and NFL titles are unchanged, both experiment arms included', async () => {
+  // The hero SUBTITLE keeps both arms' text (ruling 2026-11-05, item 7); the
+  // <title> left both experiments for the promotional-schedule cascade.
+  test('MLB and NFL subtitles are unchanged; the titles left both experiments', async () => {
     const t = await import('@/lib/title-treatment');
     assert.equal(t.teamTitleSubtitle({ id: 'not-in-an-experiment', league: 'MLB' }), 'Promos & Giveaways 2026');
     const treated = [...t.TREATMENT_SLUGS][0];
     assert.equal(t.teamTitleSubtitle({ id: treated, league: 'MLB' }), 'Giveaways & Theme Nights 2026');
     const nfl = [...t.NFL_SCHEDULE_TITLE_SLUGS][0];
-    assert.equal(t.teamMetaTitle({ id: nfl, league: 'NFL' }, 'X'), 'X 2026 Schedule & Giveaways');
-    assert.equal(t.teamMetaTitle({ id: 'some-nfl-control', league: 'NFL' }, 'Y'), 'Y Promos & Giveaways 2026');
+    assert.equal(t.teamMetaTitle({ id: nfl, league: 'NFL', name: 'X' }, 'X'), 'X Promotional Schedule & Giveaways 2026');
+    assert.equal(t.teamMetaTitle({ id: 'some-nfl-control', league: 'NFL', name: 'Y' }, 'Y'), 'Y Promotional Schedule & Giveaways 2026');
     for (const lg of ['MLS', 'WNBA']) assert.equal(t.teamTitleSubtitle({ id: 'z', league: lg }), 'Promos & Giveaways 2026', lg);
   });
 
   test('the rendered hero and the JSON-LD WebPage name say 2026-27 on NHL', async () => {
     const out = await teamPage(WILD, [promo('2026-11-02', 'Night')]);
+    // Hero subtitle: unchanged text. WebPage name: follows the <title>.
     assert.match(text(out), /Promos & Giveaways 2026-27/);
-    assert.match(out, /"@type":"WebPage"[^}]*"name":"Minnesota Wild Promos & Giveaways 2026-27"|"name":"Minnesota Wild Promos & Giveaways 2026-27"[^}]*"@type":"WebPage"/);
+    assert.match(out, /"@type":"WebPage"[^}]*"name":"Minnesota Wild Promotional Schedule & Giveaways 2026-27"|"name":"Minnesota Wild Promotional Schedule & Giveaways 2026-27"[^}]*"@type":"WebPage"/);
     assert.doesNotMatch(text(out), /Promos & Giveaways 2026(?!-)/);
   });
 });

@@ -513,13 +513,17 @@ export function BagCard({ hub, hasBagFaq }: { hub: VenueHub; hasBagFaq: boolean 
 export function bagChipFor(hub: VenueHub): { k: string; v: string } | null {
   if (!hub.verified || fieldExcluded(hub.slug, 'bag')) return null;
   const s = hub.sources;
+  // A sourced prohibition is checked FIRST. On a no-bag building the stored
+  // dimensions are an exception size (truist-park stores its 5 x 9 clutch
+  // exception), and the dimensions-first order published "MAX BAG 5" x 9""
+  // beside "NO BAGS ALLOWED" (ruling 2026-11-05, item 6).
+  if (hasProvenance(s, 'bagsProhibited') && hub.bagsProhibited === true) {
+    return { k: 'BAGS', v: 'Not allowed' };
+  }
   const dims = hasProvenance(s, 'bagMaxDimensions') ? dimsString(hub.bagMaxDimensions) : null;
   if (dims) {
     const clear = hasProvenance(s, 'clearBagRequired') && hub.clearBagRequired === true;
     return { k: clear ? 'CLEAR BAG' : 'MAX BAG', v: dims };
-  }
-  if (hasProvenance(s, 'bagsProhibited') && hub.bagsProhibited === true) {
-    return { k: 'BAGS', v: 'Not allowed' };
   }
   return null;
 }

@@ -213,7 +213,9 @@ describe('MED: the meta description names 2026-27 on NHL and NBA', () => {
   test('fallback and closer use the season word; MLB keeps the number', () => {
     const src = readFileSync('src/app/[sport]/[team]/page.tsx', 'utf8');
     assert.match(src, /const seasonWord: string \| number = isSplitSeasonLeague\(team\.league\) \? currentSeasonLabel\(team\.league\) : year;/);
-    assert.equal(src.match(/\$\{displayName\} \$\{seasonWord\} promotional schedule/g)?.length, 2);
+    // One occurrence since 2026-11-05: the fallback is built from one shared
+    // base (whole-clause candidates under the 155 cap), not two literals.
+    assert.equal(src.match(/\$\{displayName\} \$\{seasonWord\} promotional schedule/g)?.length, 1);
     assert.match(src, /const closer = ` See the full \$\{seasonWord\} schedule at PromoNight\.`;/);
     assert.doesNotMatch(src, /\$\{displayName\} \$\{year\} promotional schedule/);
   });

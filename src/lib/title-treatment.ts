@@ -197,23 +197,56 @@ export function isNflScheduleTitleTeam(team: Pick<Team, 'id'>): boolean {
   return NFL_SCHEDULE_TITLE_SLUGS.has(team.id);
 }
 
-/**
- * The BARE <title> value, with no brand suffix. The ONLY export whose result
- * may differ between arms of the NFL test, and the only one generateMetadata
- * calls for the <title>.
+/* ────────────────────────────────────────────────────────────────────────────
+ * THE PROMOTIONAL-SCHEDULE TITLE (serp-targeting, ruling 2026-11-05). LIVE for
+ * all 169 team pages, and it RETIRES both experiments above as far as the
+ * <title> is concerned: ctr-diagnostic-sep2026 and nfl-schedule-title-sep2026
+ * ended in 2026-11 without a recorded read (SITE-AUDIT section 2).
  *
- * BYTE-IDENTITY IS STRUCTURAL, NOT INSPECTED: for every team outside
- * NFL_SCHEDULE_TITLE_SLUGS this DELEGATES to teamBareTitle and returns its
- * result verbatim. It does not re-derive the control string, so all 30 MLB
- * clubs (both ctr-diagnostic-sep2026 arms), the 10 NFL control clubs and the
- * other 12 NFL clubs cannot move even if this function is edited carelessly
- * later. There is no second copy of the control template to drift.
+ * WHY: "promotional schedule" is the dominant phrasing in measured demand
+ * (capitals 350/mo vs "capitals giveaways" 100; bulls 250 vs 80; penguins 300
+ * vs 40), and no title used it.
+ *
+ * The title is emitted with title.absolute, so there is NO " | PromoNight"
+ * suffix and TEAM_TITLE_MAX is the whole rendered string. The cascade, first
+ * that fits:
+ *   1. {Full name} Promotional Schedule & Giveaways {season}
+ *   2. {Nickname} Promotional Schedule & Giveaways {season}
+ *   3. {Full name} Promo Schedule & Giveaways {season}
+ *   4. {Nickname} Promo Schedule & Giveaways {season}
+ * Whole-phrase candidates only, so nothing is ever cut mid-word. A team that
+ * fits no tier takes tier 4 and is reported by the tests, never truncated.
+ *
+ * WHAT STILL READS THE EXPERIMENT SETS. TREATMENT_SLUGS still drives the hero
+ * subtitle (teamTitleSubtitle, kept as it is by the same ruling) and the
+ * theme-night lead of the meta description (page.tsx), which the ruling also
+ * leaves unchanged. The NFL sets now feed titleExperimentArm only, which is
+ * reporting.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+export const TEAM_TITLE_MAX = 60;
+
+/** The four candidates, in cascade order. `name` is the stored nickname
+ *  ("Capitals"); a team with none skips the nickname tiers. */
+export function teamTitleCandidates(team: Pick<Team, 'league' | 'name'>, displayName: string): string[] {
+  const season = currentSeasonLabel(team.league);
+  const nick = team.name?.trim() ?? '';
+  const out: string[] = [];
+  out.push(`${displayName} Promotional Schedule & Giveaways ${season}`);
+  if (nick && nick !== displayName) out.push(`${nick} Promotional Schedule & Giveaways ${season}`);
+  out.push(`${displayName} Promo Schedule & Giveaways ${season}`);
+  if (nick && nick !== displayName) out.push(`${nick} Promo Schedule & Giveaways ${season}`);
+  return out;
+}
+
+/**
+ * The <title> value, rendered as-is (title.absolute, no brand suffix). Also
+ * the og:title, twitter:title and the JSON-LD WebPage name, which follow it
+ * by the same ruling.
  */
-export function teamMetaTitle(team: Pick<Team, 'id' | 'league'>, displayName: string): string {
-  if (isNflScheduleTitleTeam(team)) {
-    return `${displayName} ${NFL_TITLE_SEASON_YEAR} Schedule & Giveaways`;
-  }
-  return teamBareTitle(team, displayName);
+export function teamMetaTitle(team: Pick<Team, 'id' | 'league' | 'name'>, displayName: string): string {
+  const c = teamTitleCandidates(team, displayName);
+  return c.find((t) => t.length <= TEAM_TITLE_MAX) ?? c[c.length - 1];
 }
 
 /** Which arm of which title experiment a team is in. REPORTING ONLY: no render

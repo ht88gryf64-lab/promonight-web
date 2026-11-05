@@ -96,43 +96,32 @@ export async function generateMetadata({
   const year = 2026;
   const displayName = teamDisplayName(team);
 
-  // The root layout's title.template ("%s | PromoNight") appends the brand to
-  // every string title, so this bare value renders as
-  // `${displayName} Promos & Giveaways ${year} | PromoNight`, the 60-char SEO
-  // target. Do NOT add "| PromoNight" here or it doubles.
-  //
-  // The string itself now comes from src/lib/title-treatment.ts, the flip point
-  // for both live title experiments. teamMetaTitle is the <title> accessor:
-  // ten MLB teams render "{Display Name} Giveaways & Theme Nights 2026"
-  // (ctr-diagnostic-sep2026), ten NFL teams render
-  // "{Display Name} 2026 Schedule & Giveaways" (nfl-schedule-title-sep2026),
-  // and every other team delegates to teamBareTitle and is byte-identical to
-  // the line this replaced. Four of the ten MLB treatment titles knowingly
-  // exceed 60 rendered characters; all ten NFL treatment titles fit. See the
-  // length notes in that file.
-  //
-  // This is the ONLY call site that moves for the NFL arm. The JSON-LD WebPage
-  // name (json-ld.tsx) and the visible hero subtitle (RedesignTeamPage.tsx)
-  // still call teamBareTitle / teamTitleSubtitle, so on those ten pages the
-  // <title> deliberately diverges from both. That is the brief's "title only"
-  // ruling, not an oversight.
+  // The promotional-schedule title (serp-targeting, ruling 2026-11-05), for all
+  // 169 teams. Emitted with title.absolute below, so the root layout's
+  // "%s | PromoNight" template does NOT apply: the string is the whole
+  // rendered <title>, within TEAM_TITLE_MAX (60). The cascade lives in
+  // src/lib/title-treatment.ts. It retires the two title experiments for the
+  // <title>; the hero subtitle (teamTitleSubtitle) and the theme-night lead of
+  // the description below are unchanged by the same ruling.
   const title = teamMetaTitle(team, displayName);
 
-  // OG/Twitter titles are NOT processed by the layout title.template, so spell
-  // the "| PromoNight" suffix out here to match the rendered <title> byte-for-
-  // byte and keep the brand on shared social cards.
-  const socialTitle = `${title} | PromoNight`;
+  // OG/Twitter titles match the rendered <title> byte for byte. The title no
+  // longer carries the brand suffix, so neither do they.
+  const socialTitle = title;
 
   // Meta description: front-load the next upcoming promos so the Google
   // snippet stays fresh on every ISR revalidation. Built from getTeamPromos
-  // (date-ascending). Capped at 160 chars to fit Google's snippet width; the
+  // (date-ascending). Capped at 155 chars (serp-targeting ruling 2026-11-05;
+  // was 160). The builder is greedy and adds whole clauses only, so every
+  // description that was already 155 or under is byte-identical, and the ones
+  // that ran 156 to 160 drop their last whole clause instead; the
   // "See the full schedule" closer
   // is appended only when it fits, and a promo is dropped rather than cut
   // mid-title (two clean names beat three with the third truncated). `year`
   // stays hardcoded (never getFullYear()) — same rationale as the title above.
   // Falls back to an evergreen sentence when there are no upcoming promos (or,
   // defensively, when not even the first promo fits the budget).
-  const DESC_MAX = 160;
+  const DESC_MAX = 155;
   const todayStr = todayYmd();
   // The snippet is the ONE surface the ctr-diagnostic-sep2026 read measures
   // directly, and the rows this filter removes are all on los-angeles-dodgers,
@@ -159,9 +148,16 @@ export async function generateMetadata({
   // the number stays the number everywhere else (review round 1). The <title>
   // is not touched here: it is the title-treatment flip point.
   const seasonWord: string | number = isSplitSeasonLeague(team.league) ? currentSeasonLabel(team.league) : year;
-  const fallbackDescription = venue
-    ? `${displayName} ${seasonWord} promotional schedule - bobbleheads, giveaways, theme nights, and food deals at ${venue.name}. ${freshnessTail}`
-    : `${displayName} ${seasonWord} promotional schedule - bobbleheads, giveaways, theme nights, and food deals. ${freshnessTail}`;
+  // Whole-clause candidates, first that fits DESC_MAX. Until the 155 cap the
+  // first one always fit under 160, and it still does for every team whose
+  // fallback was 155 or shorter, which therefore stays byte-identical. A longer
+  // one drops its freshness tail, then the venue, rather than reaching
+  // truncateAtWord below and ending on "From official team".
+  const fallbackBase = `${displayName} ${seasonWord} promotional schedule - bobbleheads, giveaways, theme nights, and food deals`;
+  const fallbackCandidates = venue
+    ? [`${fallbackBase} at ${venue.name}. ${freshnessTail}`, `${fallbackBase} at ${venue.name}.`, `${fallbackBase}. ${freshnessTail}`, `${fallbackBase}.`]
+    : [`${fallbackBase}. ${freshnessTail}`, `${fallbackBase}.`];
+  const fallbackDescription = fallbackCandidates.find((d) => d.length <= DESC_MAX) ?? fallbackCandidates[fallbackCandidates.length - 1];
 
   // CTR diagnostic (ctr-diagnostic-sep2026, see src/lib/title-treatment.ts).
   // A treatment title promises "Theme Nights", so the snippet under it has to
@@ -242,7 +238,7 @@ export async function generateMetadata({
   const description = truncateAtWord(rawDescription, DESC_MAX);
 
   return {
-    title,
+    title: { absolute: title },
     description,
     alternates: {
       canonical: `https://www.getpromonight.com/${team.sportSlug}/${team.id}`,

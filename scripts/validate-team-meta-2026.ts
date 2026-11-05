@@ -61,9 +61,11 @@ function truncateAtWord(s: string, max: number): string {
 // `{Display} Promos & Giveaways 2026` and, for the ten ctr-diagnostic-sep2026
 // treatment teams, `{Display} Giveaways & Theme Nights 2026`.
 //
-// What actually renders in <title> once the layout template is applied.
+// What actually renders in <title>. Since serp-targeting (2026-11-05) the team
+// title is emitted with title.absolute, so the layout template does not apply
+// and there is no suffix to add.
 function renderedTitle(team: Team, display: string): string {
-  return `${teamMetaTitle(team, display)}${TITLE_SUFFIX}`;
+  return teamMetaTitle(team, display);
 }
 // KNOWN STALE, and deliberately left alone by the ctr-diagnostic-sep2026
 // change: the production description has not been this string for some time

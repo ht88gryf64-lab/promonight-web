@@ -88,3 +88,18 @@ test('the VIEW uses the gated helper and holds no raw read of its own', () => {
     'the raw prohibition read is back',
   );
 });
+
+// Ruling 2026-11-05, item 6. truist-park stores bagsProhibited:true AND a 5 x 9
+// size, which is its clutch exception. Dimensions-first published "MAX BAG
+// 5" x 9"" beside "NO BAGS ALLOWED". A sourced prohibition now decides first.
+test('a SOURCED prohibition never renders MAX BAG, even with sourced dimensions', async () => {
+  const { bagChipFor } = await load();
+  const truistShape = hub({
+    bagMaxDimensions: { w: 5, h: 9, d: null, unit: 'in' }, bagsProhibited: true, clearBagRequired: false,
+    sources: { bagMaxDimensions: SRC, bagsProhibited: SRC, clearBagRequired: SRC },
+  });
+  assert.deepEqual(bagChipFor(truistShape), { k: 'BAGS', v: 'Not allowed' });
+  // an UNSOURCED prohibition still cannot take the chip over from sourced dimensions
+  const unsourced = hub({ bagsProhibited: true, sources: { bagMaxDimensions: SRC } });
+  assert.equal(bagChipFor(unsourced)!.k, 'MAX BAG');
+});

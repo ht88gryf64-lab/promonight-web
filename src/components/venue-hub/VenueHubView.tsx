@@ -17,6 +17,14 @@ import { HubPromosThisWeek } from './HubPromosThisWeek';
 import { HubNextGiveaways } from './HubNextGiveaways';
 import type { VenueHubNextGiveaway } from '@/lib/venue-hub';
 import { VendorsCard } from './VendorsCard';
+import { BagAnswerBlock } from './BagAnswerBlock';
+import {
+  isBagAnswerEligible,
+  bagAnswerModel,
+  bagTopicQuestions,
+  venueBagHeading,
+  venueBagDescription,
+} from '@/lib/venue-bag-answer';
 import type { VenueVendor } from '@/lib/venue-vendors';
 import {
   Card,
@@ -105,9 +113,15 @@ export function VenueHubView({
   postseason?: ReactNode;
 }) {
   const short = displayVenueName(hub.name);
+  // The bag-policy template (serp-targeting, rulings 2026-11-05): a verified
+  // building with a sourced size limit or a sourced prohibition. EVERY change
+  // below is gated on this, so an ineligible building takes main's exact path
+  // and renders byte-identically (venue-bag-byte-identity.test.tsx).
+  const bagEligible = isBagAnswerEligible(hub);
+  const bagAnswer = bagEligible ? bagAnswerModel(hub) : null;
   // H1 only: "(formerly X)" on a renamed building. Everything else on the page
   // (FAQ, chips, cards) names the building by its current name, `short`.
-  const heading = venueHubHeading(hub);
+  const heading = bagEligible ? venueBagHeading(hub) : venueHubHeading(hub);
   const loc = cityState(hub);
   // The overlay's stored displayName is the raw slug on 73 of 186 verified
   // tenants, nearly all CFB ("penn-state", "unlv", "purdue"), because
@@ -168,6 +182,13 @@ export function VenueHubView({
     // Emitted ONLY when clearBagRequired is a boolean. On null the question is
     // dropped rather than answered, because the source said neither.
     if (bag.clarity) faqs.push({ question: `Does ${short} require a clear bag?`, answer: bag.clarity });
+  }
+  // The quoted bag questions (ruling 3): one per topic a sourced sentence
+  // covers, the answer a verbatim slice of that sentence, linked to its page.
+  // They join the existing questions in ONE section, and the FAQPage JSON-LD
+  // is built from this same array, so the two cannot differ (ruling 8).
+  if (bagEligible) {
+    for (const q of bagTopicQuestions(hub)) faqs.push({ question: q.question, answer: q.answer, sourceUrl: q.sourceUrl });
   }
   const outsideFoodOk =
     verified && !fieldExcluded(hub.slug, 'outsideFood') &&
@@ -268,7 +289,7 @@ export function VenueHubView({
   }
   const showFactBand = chips.length >= 2;
 
-  const metaDescription = venueHubDescription(hub);
+  const metaDescription = bagEligible ? venueBagDescription(hub) : venueHubDescription(hub);
 
   // ── reusable cards (rail on desktop, inline on mobile — rendered once each,
   //    the DOM copy visible at each breakpoint is toggled with lg: utilities) ──
@@ -278,7 +299,7 @@ export function VenueHubView({
   // empty state. bagCapsule returns the neutral BAG POLICY label with no size and
   // no clarity claim when the three fact fields are null, so widening the gate
   // asserts nothing new.
-  const bagCard = <BagCard hub={hub} hasBagFaq={hasBagFaq} />;
+  const bagCard = bagAnswer ? <BagAnswerBlock hub={hub} model={bagAnswer} /> : <BagCard hub={hub} hasBagFaq={hasBagFaq} />;
 
   // Teams that play here: the RETURN internal links (hub -> team pages), closing
   // the loop the hub otherwise leaves open. Building-agnostic (renders on held
@@ -404,9 +425,31 @@ export function VenueHubView({
   // gated on hub.verified, so this is false on every held building.
   const hasRail = Boolean(planCard || ticketsCard);
 
+  // Fact band: full-width dark strip of scan chips, each conditional. Omitted
+  // entirely below 2 chips (a one-chip band reads as broken). Scrolls
+  // horizontally on narrow screens.
+  const factBand = showFactBand ? (
+    <div className="w-full overflow-x-auto border-t border-[#3a342c] bg-[#2b2620]">
+      <div className="mx-auto flex max-w-[1160px] gap-7 px-4 py-3 md:gap-11 md:px-8">
+        {chips.map((c) => (
+          <div key={c.k} className="whitespace-nowrap">
+            <div className="font-rd text-[10px] font-bold uppercase tracking-[0.12em] text-[#a79f90]">{c.k}</div>
+            <div className="mt-0.5 font-rd text-[14px] font-extrabold text-white md:text-[16px]">{c.v}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  ) : null;
+
+  // Next giveaways here (Phase 3c): after the quick facts, before the content
+  // grid, so it is not a child of page-content and takes no ad anchor. Omitted
+  // with nothing to show. On an eligible building it sits inside the answer
+  // block's slot instead, which is still one anchor, not a new one.
+  const nextGiveawaysBlock = <HubNextGiveaways items={nextGiveaways} buildingName={short} />;
+
   const faqCard = faqs.length ? (
     <Card tint>
-      <HubFaq faqs={faqs} />
+      {bagEligible ? <HubFaq faqs={faqs} heading="Common questions" /> : <HubFaq faqs={faqs} />}
     </Card>
   ) : null;
 
@@ -458,26 +501,10 @@ export function VenueHubView({
         </section>
       )}
 
-      {/* Fact band: full-width dark strip of scan chips, each conditional. Omitted
-          entirely below 2 chips (a one-chip band reads as broken). Scrolls
-          horizontally on narrow screens. */}
-      {showFactBand ? (
-        <div className="w-full overflow-x-auto border-t border-[#3a342c] bg-[#2b2620]">
-          <div className="mx-auto flex max-w-[1160px] gap-7 px-4 py-3 md:gap-11 md:px-8">
-            {chips.map((c) => (
-              <div key={c.k} className="whitespace-nowrap">
-                <div className="font-rd text-[10px] font-bold uppercase tracking-[0.12em] text-[#a79f90]">{c.k}</div>
-                <div className="mt-0.5 font-rd text-[14px] font-extrabold text-white md:text-[16px]">{c.v}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      {/* Next giveaways here (Phase 3c): after the quick facts, before the
-          content grid, so it is not a child of page-content and takes no ad
-          anchor. Omitted with nothing to show. */}
-      <HubNextGiveaways items={nextGiveaways} buildingName={short} />
+      {/* On an eligible building the fact band and Next giveaways move BELOW the
+          answer block, inside its slot in page-content (ruling 9). */}
+      {bagEligible ? null : factBand}
+      {bagEligible ? null : nextGiveawaysBlock}
 
       {/* Content: single stack on mobile, two columns + sticky rail from lg up.
           The rail cards (planCard, ticketsCard) render inline on mobile and in
@@ -499,7 +526,16 @@ export function VenueHubView({
                 (A building with no bag capsule has nothing to share with, and
                 there the module is the first child.) With nothing to show,
                 this renders the bag capsule alone, as it always has. */}
-            {postseason ? (
+            {bagEligible ? (
+              // ONE direct child, so the ad placer sees the same number of
+              // anchors it saw when the bag card stood here alone.
+              <div data-bag-answer-top>
+                {bagCard}
+                {factBand ? <div className="mb-3 overflow-hidden rounded-xl">{factBand}</div> : null}
+                {nextGiveawaysBlock}
+                {postseason}
+              </div>
+            ) : postseason ? (
               <div data-playoffs-top>
                 {bagCard}
                 {postseason}

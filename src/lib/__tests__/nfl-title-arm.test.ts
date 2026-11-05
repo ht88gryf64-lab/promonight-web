@@ -1,6 +1,13 @@
 // nfl-schedule-title-sep2026 (see src/lib/title-treatment.ts), the guard for a
 // title experiment that must move exactly ten <title> strings and nothing else.
 //
+// RETIRED 2026-11-05 (serp-targeting ruling 7). Both title experiments ended
+// without a recorded read, and every team page now serves the promotional-
+// schedule title. The frozen tables stay as the record of what each arm served;
+// the tests that pinned them byte-identical now assert that all fifty clubs left
+// their experiment title for the new one. The frozen-surface and disjointness
+// tests still hold: the hero subtitle and the description lead did not move.
+//
 // THE TABLES BELOW ARE FROZEN LITERALS, captured 2026-09-05 from the module as it
 // stood before the NFL arm was added, on the same day, against live Firestore
 // display names. They are written out rather than re-derived so that an edit to
@@ -43,8 +50,9 @@ interface Frozen { id: string; city: string; name: string; title: string }
 // The team shape the title path actually touches: id decides the arm, city+name
 // feed teamDisplayName. Nothing else in Team reaches a title.
 const asTeam = (r: Frozen) => ({ id: r.id, city: r.city, name: r.name }) as Team;
-const rendered = (r: Frozen) =>
-  `${teamMetaTitle(asTeam(r), teamDisplayName(asTeam(r)))}${SUFFIX}`;
+// The team title is emitted with title.absolute since 2026-11-05, so the layout
+// suffix no longer applies. SUFFIX stays to read the frozen tables.
+const rendered = (r: Frozen) => teamMetaTitle(asTeam(r), teamDisplayName(asTeam(r)));
 
 /** The ten treatment clubs and the exact <title> each must now serve. */
 const NFL_TREATMENT: Frozen[] = [
@@ -108,39 +116,32 @@ const MLB_FROZEN: Frozen[] = [
   { id: "washington-nationals", city: "Washington", name: "Nationals", title: "Washington Nationals Promos & Giveaways 2026 | PromoNight" },
 ];
 
-test("the ten NFL treatment clubs serve the schedule title", () => {
+// Every club in either experiment, both arms, now serves the cascade title:
+// "{Full name} Promotional Schedule & Giveaways 2026", the nickname or the
+// short "Promo Schedule" form only when the full form runs past 60.
+const RETIRED = () => [...NFL_TREATMENT, ...NFL_CONTROL, ...MLB_FROZEN];
+const PROMOTIONAL = /^(.+) (Promotional|Promo) Schedule & Giveaways 2026$/;
+
+test("RETIRED: all fifty experiment clubs, both arms, left their experiment title", () => {
   assert.equal(NFL_TREATMENT.length, 10);
-  for (const r of NFL_TREATMENT) {
-    assert.ok(isNflScheduleTitleTeam(asTeam(r)), r.id);
-    assert.equal(rendered(r), r.title, r.id);
+  assert.equal(NFL_CONTROL.length, 10);
+  assert.equal(MLB_FROZEN.length, 30);
+  for (const r of RETIRED()) {
+    const t = rendered(r);
+    assert.notEqual(`${t}${SUFFIX}`, r.title, `${r.id} still serves its experiment title`);
+    const m = t.match(PROMOTIONAL);
+    assert.ok(m, `${r.id}: ${t}`);
+    const display = teamDisplayName(asTeam(r));
+    assert.ok(m![1] === display || m![1] === r.name, `${r.id}: the name is the full name or the nickname, never cut: ${t}`);
   }
 });
 
-// 153 of this site titles are already flagged too long and Google is rewriting 52.
-// A title Google rewrites measures nothing, so fitting the budget is not a nicety
-// here, it is the precondition for the read being worth anything. Headroom is thin:
-// the three 19-character display names land on 58.
-test("every NFL treatment title fits the 60-character budget", () => {
-  for (const r of NFL_TREATMENT) {
+test("RETIRED: every one of the fifty fits 60 rendered characters with no suffix", () => {
+  for (const r of RETIRED()) {
     const t = rendered(r);
     assert.ok(t.length <= TITLE_MAX, `${r.id} is ${t.length}: ${t}`);
+    assert.ok(!t.endsWith(SUFFIX), r.id);
   }
-});
-
-test("the ten NFL control clubs are byte-identical", () => {
-  assert.equal(NFL_CONTROL.length, 10);
-  for (const r of NFL_CONTROL) {
-    assert.equal(isNflScheduleTitleTeam(asTeam(r)), false, r.id);
-    assert.equal(rendered(r), r.title, r.id);
-  }
-});
-
-// The overlapping MLB experiment reads on 2026-10-01. If any of these thirty moved,
-// that read is spoiled and this change is the reason.
-test("all thirty MLB titles are byte-identical, both arms", () => {
-  assert.equal(MLB_FROZEN.length, 30);
-  assert.equal(MLB_FROZEN.filter((r) => TREATMENT_SLUGS.has(r.id)).length, 10);
-  for (const r of MLB_FROZEN) assert.equal(rendered(r), r.title, r.id);
 });
 
 // Gated at the mapper, not at a render path: an exclusion on one render path is not

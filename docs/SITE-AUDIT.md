@@ -396,6 +396,8 @@ costed as one. Any FAQ work is a PAA capture and relevance play only.
 
 #### Live experiment: ctr-diagnostic-sep2026
 
+**ENDED 2026-11 without a recorded read.** The promotional-schedule title (feature/serp-targeting, ruling 2026-11-05) replaced this experiment's titles on all 169 team pages before any read was written up, so neither arm's result is on record. The hero subtitle and the description lead it controlled are unchanged.
+
 | | |
 |---|---|
 | **Start** | **2026-09-03T20:01:32Z** (www alias serving the new build, confirmed by polling the alias) |
@@ -415,6 +417,8 @@ the theme-night boilerplate sentence was replaced by the next three dated theme
 nights.
 
 #### Live experiment: nfl-schedule-title-sep2026
+
+**ENDED 2026-11 without a recorded read.** The promotional-schedule title (feature/serp-targeting, ruling 2026-11-05) replaced both arms' titles on all 169 team pages before any read was written up, so neither arm's result is on record. This experiment's scope was the `<title>` alone, so nothing else it set is affected.
 
 | | |
 |---|---|
