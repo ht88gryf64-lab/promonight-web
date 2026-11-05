@@ -233,6 +233,23 @@ describe('generateTeamFAQs scope labelling', () => {
   });
 });
 
+describe('the named season must hold every upcoming row (review 2026-11-05)', () => {
+  // The Giants shape: a finished 2026 season and published 2027 giveaways.
+  const giants = [promo('2026-05-01'), promo('2026-09-20'), promo('2027-03-27'), promo('2027-04-11', { type: 'kids' })];
+  it('between seasons, with next season already listed: no season claim', () => {
+    assert.equal(resolveSeasonScope(giants, 'MLB', '2026-11-05'), null);
+    assert.deepEqual(resolveClaimMode(giants, 'MLB', '2026-11-05'), { kind: 'remaining' });
+  });
+  it('from the first day of the lead-in the listed rows ARE the named season', () => {
+    const scope = resolveSeasonScope(giants, 'MLB', '2027-02-07')!;
+    assert.equal(scope.label, '2027');
+    assert.deepEqual(scope.promos.map((p) => p.date), ['2027-03-27', '2027-04-11']);
+  });
+  it('an NFL season across New Year still resolves (every upcoming row is in it)', () => {
+    assert.equal(resolveSeasonScope([promo('2026-09-13'), promo('2027-01-03')], 'NFL', '2026-11-05')!.total, 2);
+  });
+});
+
 describe('resolveClaimMode', () => {
   const rows = [promo('2026-04-01'), promo('2026-10-15')];
 

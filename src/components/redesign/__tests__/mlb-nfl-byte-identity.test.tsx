@@ -27,11 +27,13 @@
  * ruling (season rollover: a season is its window in src/lib/seasons/
  * windows.json, lead-in through end, not a calendar year). Only keys whose
  * sentence diff against main's HTML showed season-membership changes and
- * nothing else were updated: rows outside a league's window leaving the
- * season counts, and the two multi-year shapes ("crossing",
- * "remainingWithUpcoming") resolving to their named season where the
- * calendar-year guard fell back. The RULED PromoList keys were left as
- * recorded.
+ * nothing else were updated (78 keys): the multi-year shapes ("crossing", and
+ * NFL "remainingWithUpcoming") resolving to their named season where the
+ * calendar-year guard fell back; "upcomingPlusPast2026" on MLB, MLS and WNBA
+ * falling back to the upcoming-only wording because its upcoming rows sit past
+ * those windows' ends (a season claim needs every upcoming row inside the
+ * named season); NFL "seasonComplete2026" counting only rows from its lead-in.
+ * The RULED PromoList keys were left as recorded.
  *
  * Re-record ONLY from main, never from a branch:
  *   GOLDEN_RECORD=<file> node --import tsx --experimental-test-module-mocks --test <this file>

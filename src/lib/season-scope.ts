@@ -208,6 +208,15 @@ export function resolveSeasonScope(
   const season = labeledSeason(league, today);
   const inSeason = dated.filter((p) => seasonOfDate(league, p.date)?.season === season.season);
   if (inSeason.length === 0) return null;
+  // EVERY UPCOMING ROW MUST BE A ROW OF THE NAMED SEASON, or the page makes no
+  // season claim. Between seasons the page names the season just played, while
+  // a club may already list next season's dates (the Giants' 2027 giveaways in
+  // November 2026). A 2026 claim beside them would pair "the 2026 season" with
+  // a list of 2027 rows still to come, so the page keeps its upcoming-only
+  // wording until the next season's lead-in opens and those rows join the
+  // season it names (review 2026-11-05, served Giants page).
+  const ahead = dated.filter((p) => isUpcomingPromo(p, today));
+  if (ahead.some((p) => seasonOfDate(league, p.date)?.season !== season.season)) return null;
   return buildScope(inSeason, Number(season.season.slice(0, 4)), seasonName(season), today);
 }
 
