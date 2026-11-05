@@ -305,6 +305,29 @@ function rowsHtml(input: DigestEmailInput, rows: DigestPromo[]): string {
   return html;
 }
 
+// No-promo week (ruling 2026-11-05): send, never skip. One muted line, then
+// three collection pages in the Coming up panel's style. The generic variant
+// follows no teams, so its line does not say "your teams".
+export const NO_PROMOS_LINE = 'Nothing announced yet for your teams. Here is what is on the calendar.';
+export const NO_PROMOS_LINE_GENERIC = 'Nothing announced yet this week. Here is what is on the calendar.';
+export const NO_PROMOS_LINKS: readonly { label: string; href: string }[] = [
+  { label: 'Hot this week', href: '/promos/this-week' },
+  { label: 'Bobbleheads', href: '/promos/bobbleheads' },
+  { label: 'Theme nights', href: '/promos/theme-nights' },
+];
+const noPromosLine = (input: DigestEmailInput) => (input.variant === 'generic' ? NO_PROMOS_LINE_GENERIC : NO_PROMOS_LINE);
+
+function noPromosHtml(input: DigestEmailInput): string {
+  const links = NO_PROMOS_LINKS.map((l, i) => row(
+    cell(`padding-top:${i === 0 ? '0' : '10px'};font-size:14px;line-height:1.4;color:${DIGEST_INK};`,
+      `<a href="${esc(input.siteUrl + l.href)}" style="color:${DIGEST_INK};font-weight:500;text-decoration:none;">${esc(l.label)}</a>`, DIGEST_PANEL, ' align="left"'),
+  )).join('');
+  const panel = table(row(cell('padding:18px 20px;', table(links), DIGEST_PANEL)),
+    'border-collapse:separate;border-radius:10px;', ` bgcolor="${DIGEST_PANEL}"`);
+  return row(cell(`padding:28px ${SIDE}px 0;font-size:13px;line-height:1.4;color:${DIGEST_MUTED};`, esc(noPromosLine(input)))) +
+    row(cell(`padding:14px ${SIDE}px 0;`, panel));
+}
+
 // 5 and 6. Two small lists of "left link, right muted" lines.
 function listRow(href: string, left: string, right: string, bg: string, first: boolean): string {
   const pad = first ? '10px' : '8px';
@@ -369,6 +392,9 @@ function textPromo(input: DigestEmailInput, p: DigestPromo): string[] {
 function renderText(input: DigestEmailInput, hero: DigestPromo | null, rows: DigestPromo[], next: DigestUpcoming[], siblings: DigestUpcoming[]): string {
   const manage = preferencesUrl(input);
   const out: string[] = ['PROMONIGHT', '', input.title, input.subline, ''];
+  if (!hero && rows.length === 0) {
+    out.push(noPromosLine(input), ...NO_PROMOS_LINKS.map((l) => `- ${l.label}: ${input.siteUrl}${l.href}`));
+  }
   if (hero) out.push(...textPromo(input, hero), '');
   if (input.leadIn && rows.length) out.push(input.leadIn);
   for (const p of rows) out.push(...textPromo(input, p));
@@ -399,7 +425,7 @@ export function renderDigest(input: DigestEmailInput): RenderedDigest {
     headerHtml(input) +
     titleHtml(input) +
     (hero ? heroHtml(input, hero) : '') +
-    rowsHtml(input, rows) +
+    (!hero && rows.length === 0 ? noPromosHtml(input) : rowsHtml(input, rows)) +
     comingUpHtml(input, next) +
     (hero ? siblingsHtml(input, hero, siblings) : '') +
     appBandHtml(input) +

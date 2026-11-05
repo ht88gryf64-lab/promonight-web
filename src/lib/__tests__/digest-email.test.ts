@@ -192,6 +192,63 @@ test('golden: personalized-hero-card', async () => {
   assert.strictEqual(html, readFileSync(file, 'utf8'), 'personalized-hero-card drifted from its golden file');
 });
 
+// ── no-promo week (ruling 2026-11-05: send, never skip) ────────────────────
+
+async function noPromoBuilds() {
+  const { buildGenericDigest, buildEmptyWindowDigest } = await builders();
+  return {
+    generic: buildGenericDigest({ email: 'a@example.com', manageToken: TOKEN, featured: [], context: context() }),
+    empty: buildEmptyWindowDigest({ email: 'a@example.com', manageToken: TOKEN, teamIds: PROXY_TEAM, teamNames: PROXY_NAMES, level: 'national-fallback', localPromos: [], featured: [], context: context() }),
+  };
+}
+
+test('golden: generic-nopromos', async () => {
+  const { generic } = await noPromoBuilds();
+  const file = join(FIXTURES, 'digest-generic-nopromos.html');
+  if (process.env.UPDATE_DIGEST_GOLDEN === '1' || !existsSync(file)) {
+    writeFileSync(file, generic.html);
+    if (process.env.UPDATE_DIGEST_GOLDEN !== '1') assert.fail(`wrote missing golden ${file}; review it and re-run`);
+    return;
+  }
+  assert.strictEqual(generic.html, readFileSync(file, 'utf8'), 'generic-nopromos drifted from its golden file');
+});
+
+test('a no-promo week sends the line and three collection links, and no rows, hero or lead-in', async () => {
+  const { NO_PROMOS_LINE, NO_PROMOS_LINE_GENERIC } = await import('../digest-email');
+  const { generic, empty } = await noPromoBuilds();
+  for (const [name, b, line] of [['generic', generic, NO_PROMOS_LINE_GENERIC], ['empty', empty, NO_PROMOS_LINE]] as const) {
+    assert.strictEqual(b.hero, null, `${name}: no hero`);
+    assert.ok(b.html.includes(`>${line}</td>`), `${name}: the line`);
+    assert.ok(b.text.includes(line), `${name}: the line in text`);
+    for (const [label, path] of [['Hot this week', '/promos/this-week'], ['Bobbleheads', '/promos/bobbleheads'], ['Theme nights', '/promos/theme-nights']]) {
+      assert.ok(b.html.includes(`href="${SITE}${path}"`) && b.html.includes(`>${label}</a>`), `${name}: ${label} link`);
+      assert.ok(b.text.includes(`${label}: ${SITE}${path}`), `${name}: ${label} in text`);
+    }
+    assert.ok(b.html.includes('bgcolor="#F3F2EE"'), `${name}: the Coming up panel style`);
+    assert.ok(!b.html.includes('Around the league this week') && !b.html.includes('Nearby this week'), `${name}: no lead-in without rows`);
+    assert.ok(!/subId1=web_email_(generic|empty)_/.test(b.html), `${name}: no promo rows`);
+    assert.ok(b.html.includes('Get the app') && b.html.includes('Unsubscribe'), `${name}: the rest of the email still renders`);
+  }
+  assert.ok(!generic.html.includes('for your teams'), 'generic follows no teams');
+});
+
+test('the no-promo block is absent whenever any promo renders', async () => {
+  const { NO_PROMOS_LINE, NO_PROMOS_LINE_GENERIC } = await import('../digest-email');
+  for (const c of CASES) {
+    const { html, text } = await c.build();
+    for (const l of [NO_PROMOS_LINE, NO_PROMOS_LINE_GENERIC]) {
+      assert.ok(!html.includes(l) && !text.includes(l), `${c.name}: no-promo line with promos present`);
+    }
+    assert.ok(!html.includes(`href="${SITE}/promos/bobbleheads"`), `${c.name}: collection links with promos present`);
+  }
+  // A lone tier 3 promo that heroes: no rows below it, still not a no-promo week.
+  const { buildPersonalizedDigest } = await builders();
+  seq = 0;
+  const lone = promo('florida-panthers', '2026-11-04', 'Hockey Night');
+  const b = buildPersonalizedDigest({ email: 'a@example.com', manageToken: TOKEN, promos: [lone], total: 1, teamIds: ['florida-panthers'], context: context() });
+  assert.ok(b.hero && !b.html.includes(NO_PROMOS_LINE));
+});
+
 // ── links ───────────────────────────────────────────────────────────────────
 
 // The renderer side of the rule: it builds no promo path of its own, only
