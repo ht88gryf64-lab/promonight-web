@@ -56,7 +56,7 @@ const shortsCache = makeKeyedTtlCache<ShortsMap>(STATIC_TTL_MS);
  *  over the stored map on every deployment but production, so a preview can
  *  show a page's Short without a write to Firestore. Ignored in production
  *  whatever is set. */
-export function fixtureShortsMap(env: { VERCEL_ENV?: string; SOCIAL_VIDEOS_FIXTURE?: string } = process.env): ShortsMap {
+export function fixtureShortsMap(env: Record<string, string | undefined> = process.env): ShortsMap {
   if (env.VERCEL_ENV === 'production' || !env.SOCIAL_VIDEOS_FIXTURE) return {};
   try {
     return readMap({ byPromo: JSON.parse(env.SOCIAL_VIDEOS_FIXTURE) });
