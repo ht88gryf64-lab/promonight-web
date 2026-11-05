@@ -3,7 +3,8 @@
 //
 // Supports exactly the surface those two paths use: collection().doc(),
 // runTransaction with tx.get/set/update, ref.update(), and
-// where().limit().get() for the token lookups.
+// where().limit().get() for the token lookups; plus ref.get() and ref.set()
+// for the one-document readers and writers (the Shorts map, 2026-11-05).
 //
 // FIDELITY CAVEAT: writes apply immediately rather than buffering to commit.
 // upsertSubscriber and checkSubscribeRateLimit each perform a single read at the
@@ -17,6 +18,8 @@ export type DocRef = {
   __id: string;
   id: string;
   update(data: Data): Promise<void>;
+  set(data: Data): Promise<void>;
+  get(): Promise<ReturnType<typeof snapFor>>;
 };
 
 export const state = {
@@ -69,6 +72,12 @@ function makeRef(collection: string, id: string): DocRef {
         throw e;
       }
       applyWrite('update', collection, id, data);
+    },
+    async set(data: Data) {
+      applyWrite('set', collection, id, data);
+    },
+    async get() {
+      return snapFor(collection, id);
     },
   };
 }

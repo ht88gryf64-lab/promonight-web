@@ -32,6 +32,8 @@ import { getVenueHub, getVenueHubForTeam, type TeamVenueHubLink } from './venue-
 import { buildCondensedLogistics, type CondensedLine } from './venue-hub-condensed';
 import { isTicketPackageDoc, isTicketPackageLeague } from './ticket-packages';
 import { isVisiblePromo, promoDisplayOpponent, promoDisplayTime, teamDisplayName } from './promo-helpers';
+import { getShortForPromos } from './youtube-shorts-store';
+import type { PromoShortVideo } from './youtube-shorts';
 import type { Promo, PromoType, PromoWithTeam, Team, Venue } from './types';
 import {
   baseSlugOf,
@@ -277,6 +279,9 @@ export interface PromoPageContext {
   crossTeam: { kind: 'theme' | 'league-type' | 'league' | 'type'; links: LinkedPromo[] } | null;
   /** The prior season's page under the same base slug, when one exists. */
   previousEdition: { href: string; season: string; date: string } | null;
+  /** The PromoNight Short for one of the page's promo ids (the social
+   *  bridge, 2026-11-05: socialVideos/youtube), or null. */
+  short: PromoShortVideo | null;
 }
 
 const link = (team: Team, r: Pick<PromoPageRow, 'pageSlug' | 'title' | 'date' | 'type' | 'displayTime' | 'displayOpponent'>): LinkedPromo => ({
@@ -397,11 +402,12 @@ const QUICK_FACT_KEYS: readonly CondensedLine['key'][] = ['bag', 'transit', 'par
 /** Everything the page links to and the building it names. */
 export const loadPromoPageContext = cache(async (page: PromoPage, today: string): Promise<PromoPageContext> => {
   const { team } = page;
-  const [teamRows, venue, hub, scanStamp] = await Promise.all([
+  const [teamRows, venue, hub, scanStamp, short] = await Promise.all([
     loadTeamPageRows(team),
     getVenueForTeam(team.id),
     getVenueHubForTeam(team.id),
     loadTeamScanStamp(team.league, team.id),
+    getShortForPromos([page.primary.promoId, ...page.rows.map((r) => r.promoId)]),
   ]);
   const building = hub ? await getVenueHub(hub.slug) : null;
 
@@ -491,6 +497,7 @@ export const loadPromoPageContext = cache(async (page: PromoPage, today: string)
     nextTeamPromos,
     crossTeam,
     previousEdition,
+    short,
   };
 });
 

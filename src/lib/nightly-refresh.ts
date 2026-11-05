@@ -123,6 +123,10 @@ export interface NightlyLoaders {
    *  day (review round 2, M1). Optional, and a failure adds nothing: it can
    *  never stop the site batch. */
   promoPagesDatedYesterday?: () => Promise<string[]>;
+  /** Site batch only: the nightly Shorts sync (src/lib/youtube-shorts-sync.ts)
+   *  and the promo pages whose Short changed. Optional, and a failure adds
+   *  nothing. */
+  promoPagesWithNewShorts?: () => Promise<string[]>;
 }
 
 /** Every path a batch revalidates and warms, deduped, each one checked
@@ -139,10 +143,11 @@ export async function nightlyRefreshPaths(
     const [schools, matchups] = await Promise.all([loaders.cfbSchoolIds(), loaders.cfbMatchupSlugs()]);
     all = [...schools.map((id) => `/cfb/${id}`), ...matchups.map((slug) => `/cfb/rivalries/${slug}`)];
   } else {
-    const [teams, hubs, yesterdayPromoPages] = await Promise.all([
+    const [teams, hubs, yesterdayPromoPages, newShortPages] = await Promise.all([
       loaders.teams(),
       loaders.venueHubSlugs(),
       loaders.promoPagesDatedYesterday ? loaders.promoPagesDatedYesterday().catch(() => [] as string[]) : Promise.resolve([] as string[]),
+      loaders.promoPagesWithNewShorts ? loaders.promoPagesWithNewShorts().catch(() => [] as string[]) : Promise.resolve([] as string[]),
     ]);
     // The fixed cross-team pages first: they are the slowest to render (each
     // reads every upcoming promo) and the most visible, so they get the most time.
@@ -151,6 +156,7 @@ export async function nightlyRefreshPaths(
       ...teams.map((t) => `/${t.sportSlug}/${t.id}`),
       ...hubs.map((slug) => `/venues/${slug}`),
       ...yesterdayPromoPages,
+      ...newShortPages,
     ];
   }
   const out: string[] = [];

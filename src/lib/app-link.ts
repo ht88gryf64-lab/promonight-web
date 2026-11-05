@@ -47,7 +47,43 @@ export type AppLinkOptions = {
   /** The promo page the visitor came from, with pageSlug (both or neither). */
   promoId?: string;
   pageSlug?: string;
+  /** The session's first-touch UTMs when the visitor came in through the
+   *  social bridge (a Short's link, a bio link): the App Store ct becomes
+   *  {utm_source}_{utm_campaign} and the Play referrer utm_source and
+   *  utm_campaign, in place of the surface tokens (2026-11-05). */
+  utm?: StoreUtm | null;
 };
+
+/** The UTMs a store link carries: utm_source (always), utm_campaign and
+ *  utm_content when the visit had them. */
+export type StoreUtm = { source: string; campaign: string | null; content: string | null };
+
+const UTM_VALUE_RE = /^[A-Za-z0-9_.:-]{1,64}$/;
+const first = (v: unknown): string | undefined => (Array.isArray(v) ? v[0] : typeof v === 'string' ? v : undefined);
+
+/** The store UTMs in /download's query (DownloadSessionUtm puts the session's
+ *  first touch there when the visitor arrived without them). utm_source is
+ *  required; every value is checked against a plain token alphabet before it
+ *  is copied into a store link. */
+export function utmFromParams(params: Record<string, string | string[] | undefined>): StoreUtm | undefined {
+  const source = first(params.utm_source);
+  if (!source || !UTM_VALUE_RE.test(source)) return undefined;
+  const campaign = first(params.utm_campaign);
+  const content = first(params.utm_content);
+  return {
+    source,
+    campaign: campaign && UTM_VALUE_RE.test(campaign) ? campaign : null,
+    content: content && UTM_VALUE_RE.test(content) ? content : null,
+  };
+}
+
+/** The App Store ct for a social visit: {utm_source}_{utm_campaign} (the
+ *  source alone without a campaign), lowercased, anything outside letters,
+ *  digits, `_` and `-` replaced, cut to Apple's 30 characters. */
+export function utmCampaignToken(utm: StoreUtm): string {
+  const raw = utm.campaign ? `${utm.source}_${utm.campaign}` : utm.source;
+  return raw.toLowerCase().replace(/[^a-z0-9_-]+/g, '-').slice(0, APP_STORE_CAMPAIGN_MAX);
+}
 
 /** App Store Connect caps a campaign token at 30 characters. */
 export const APP_STORE_CAMPAIGN_MAX = 30;
@@ -75,6 +111,18 @@ export function appStoreCampaign({ surface, from }: AppLinkOptions): string {
 }
 
 export function appStoreUrl(opts: AppLinkOptions): string {
+  if (opts.utm) {
+    // A social visit: ct names the source and campaign; pt rides along when a
+    // provider token is set (APPLE_PROVIDER_TOKEN on the server, which builds
+    // every /download link, else the public token). Without one the link
+    // still carries ct, as asked (2026-11-05).
+    const providerToken = process.env.APPLE_PROVIDER_TOKEN || process.env.NEXT_PUBLIC_APPSTORE_PROVIDER_TOKEN;
+    const q = new URLSearchParams();
+    if (providerToken) q.set('pt', providerToken);
+    q.set('ct', utmCampaignToken(opts.utm));
+    q.set('mt', '8');
+    return `${IOS_APP_URL}?${q.toString()}`;
+  }
   const token = process.env.NEXT_PUBLIC_APPSTORE_PROVIDER_TOKEN;
   if (!token) return IOS_APP_URL;
   const q = new URLSearchParams({ pt: token, ct: appStoreCampaign(opts), mt: '8' });
@@ -82,7 +130,14 @@ export function appStoreUrl(opts: AppLinkOptions): string {
 }
 
 /** The decoded Play install referrer: utm pairs, in a fixed order. */
-export function playReferrer({ surface, teamId, placement, promoId, pageSlug }: AppLinkOptions): string {
+export function playReferrer({ surface, teamId, placement, promoId, pageSlug, utm }: AppLinkOptions): string {
+  if (utm) {
+    // A social visit: utm_source and utm_campaign as the visitor carried them
+    // (encoded once more into the referrer by playStoreUrl).
+    const q = new URLSearchParams({ utm_source: utm.source });
+    if (utm.campaign) q.set('utm_campaign', utm.campaign);
+    return q.toString();
+  }
   const q = new URLSearchParams({ utm_source: 'web', utm_medium: surface });
   const content = [teamId, promoId, pageSlug].filter(Boolean).join('_');
   if (content) q.set('utm_content', content);

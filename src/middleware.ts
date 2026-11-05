@@ -9,6 +9,7 @@ import {
   MANAGE_TOKEN_RE,
   manageCookieOptions,
 } from '@/lib/manage-session';
+import { NOINDEX_HEADER, shortLinkRedirect } from '@/lib/social-bridge';
 
 /**
  * Pages whose ?token= is exchanged for a cookie before any HTML is produced.
@@ -175,6 +176,18 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
   // journey the footer link depends on.
   const exchange = maybeExchangeManageToken(request);
   if (exchange) return exchange;
+
+  // THE SOCIAL BRIDGE (2026-11-05): /{teamShort} from the videos' end cards
+  // and /yt /tt /ig /fb from the profile bios hop to their pages with the
+  // query string, noindex. Before the counter on purpose: a hop is not a
+  // visit, and the destination it lands on is the request that gets counted.
+  // /p/{code} is a route of its own (src/app/p/[code]/route.ts) and is
+  // skipped by the counter for the same reason. See src/lib/social-bridge.ts.
+  const hop = shortLinkRedirect(request.nextUrl.pathname, request.nextUrl.searchParams);
+  if (hop) {
+    return NextResponse.redirect(new URL(hop.location, request.nextUrl.origin), { status: 307, headers: NOINDEX_HEADER });
+  }
+  if (request.nextUrl.pathname.startsWith('/p/')) return NextResponse.next();
 
   if (FANATICS_LEAK_PATH.test(request.nextUrl.pathname)) {
     return new NextResponse(GONE_HTML, {

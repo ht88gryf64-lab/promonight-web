@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import type { ComponentProps, MouseEventHandler } from 'react';
 import { track, type AnalyticsSurface } from '@/lib/analytics';
+import { utmTriplet } from '@/lib/utm-capture';
 
 // The anchor every inbound surface renders around a promo name (Phase 3c).
 // A client leaf so the server-rendered surfaces (the aggregator rows, the
@@ -21,7 +22,7 @@ export type PromoPageLinkProps = Omit<ComponentProps<typeof Link>, 'href' | 'onC
 
 export function PromoPageLink({ href, surface, teamSlug, promoId, onClick, children, ...rest }: PromoPageLinkProps) {
   const handleClick: MouseEventHandler<HTMLAnchorElement> = (e) => {
-    track('promo_link_click', { surface, team_slug: teamSlug, promo_id: promoId, destination_url: href });
+    track('promo_link_click', { surface, team_slug: teamSlug, promo_id: promoId, destination_url: href, ...utmTriplet() });
     onClick?.(e);
   };
   return (

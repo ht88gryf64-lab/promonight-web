@@ -48,6 +48,13 @@ async function promoPagesDatedYesterday(): Promise<string[]> {
   }
   return [...out];
 }
+/** The nightly Shorts sync and the promo pages whose Short changed (the
+ *  social bridge, 2026-11-05; src/lib/youtube-shorts-sync.ts). Loaded on the
+ *  call, as the promo pages are, so the route itself never opens Firestore. */
+async function promoPagesWithNewShorts(): Promise<string[]> {
+  const { promoPagesWithNewShorts: sync } = await import('@/lib/youtube-shorts-sync');
+  return sync();
+}
 import {
   isNightlyRefreshWindow,
   nightlyRefreshPaths,
@@ -114,6 +121,7 @@ export async function GET(request: Request) {
       cfbSchoolIds: getAllCfbSchoolIds,
       cfbMatchupSlugs: getAllMatchupSlugs,
       promoPagesDatedYesterday,
+      promoPagesWithNewShorts,
     },
     batch,
   );

@@ -3,6 +3,8 @@ import type { ReactNode } from 'react';
 import { TrackedAffiliateLink } from '@/components/tracked-affiliate-link';
 import { TrackedAppLink } from '@/components/analytics-events';
 import { PromoShareImageButton, PromoShareRowButton, ShareLandingCapture, type PromoShareProps } from '@/components/promo-page/PromoShare';
+import { PromoShort } from '@/components/promo-page/PromoShort';
+import { shortJsonLd } from '@/lib/youtube-shorts';
 import { AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
 import { getLeagueHub } from '@/lib/league-hubs';
 import { buildSpotHeroUrl, buildTicketmasterUrl, buildTicketNetworkLink, ticketNetworkForGame, ticketNetworkLinkLevel } from '@/lib/affiliates';
@@ -337,6 +339,9 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
         // eslint-disable-next-line react/no-array-index-key
         <script key={i} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(s) }} />
       ))}
+      {ctx.short && !removed ? (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(shortJsonLd(ctx.short, { name: cleanText(primary.title), description: head.description, url: canonical })) }} />
+      ) : null}
       {/* Renders nothing: on a shared-link landing it records the share
           session, then cleans the address bar. Outside the article, so the
           article's children (the ad anchors) are unchanged. */}
@@ -519,6 +524,11 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
             </figcaption>
           ) : null}
         </figure>
+
+        {/* The promo's Short (the social bridge, 2026-11-05): click to load,
+            fixed size, its own direct child of the article under the image,
+            so the CTA row and the image above it keep their places. */}
+        {ctx.short && !removed ? <PromoShort videoId={ctx.short.videoId} title={ctx.short.title} /> : null}
 
         {tiles.length ? (
           <section className={`mt-4 grid gap-2 ${tiles.length === 3 ? 'grid-cols-3' : tiles.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
