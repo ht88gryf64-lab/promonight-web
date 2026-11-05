@@ -4212,3 +4212,11 @@ and the CTA section above the image).
 **How it is caught.** `season-gate.test.ts` ("real clock: no league's last window ends within 60 days of today") fails once today is within 60 days of any league's last end. It reads the wall clock (`performance.timeOrigin`), so `npm run test:future` does not trip it early. Same LIMIT as entry 69: nothing runs the tests on a schedule, so it fires only when someone runs `npm test`.
 
 **The fix when it fires.** Add the league's next season to `windows.json` from its published schedule, with a `source`. A date that is not published yet goes in with a `provisional` note saying so. Entries marked provisional on 2026-11-05: MLB 2027 end (postseason not scheduled; the CBA expires 2026-12-01), MLS 2027 end (MLS Cup "Memorial Day Weekend"), WNBA 2027 both dates (CBA outer limits 2027-04-01 to 2027-11-21; no schedule yet), NHL and NBA 2026 ends (Finals dates not published). MLS's 2027-28 season (July 2027 to May 2028) is a second season starting in 2027; key it "2027-28".
+
+## 76. CFB game reads carry no season filter at the July 2027 lead-in (deferred)
+
+**Status: OPEN, DEFERRED (ruling 2026-11-05). Date: 2027-07-12, the CFB 2027 lead-in (windows.json: 2027-08-26 minus 45 days).**
+
+**What happens.** From 2027-07-12 `cfbSeasonLabel()` names 2027, so every CFB title, H1, eyebrow and FAQ says 2027. The CFB game reads (`cfbGames`, the school pages, the rivalry pages and the hub) are not filtered to a season: if the 2027 schedules are not loaded by then, or the 2026 games are still stored beside them, a page titled 2027 can list 2026 games. The Rivalry Week bounds have their own alarm (season-gate.test.ts, from 2027-05-13).
+
+**The fix when it is picked up.** Filter the CFB game reads to `seasonOfDate('CFB', game.date)?.season === labeledSeason('CFB').season` (src/lib/seasons/season-window.ts), and check the 2027 schedule load before 2027-07-12.

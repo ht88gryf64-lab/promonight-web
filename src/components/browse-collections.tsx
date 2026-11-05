@@ -1,6 +1,5 @@
 import { TrackedTapLink } from './analytics/TrackedTapLink';
 import type { CollectionTileTapProperties } from '@/lib/analytics';
-import { SITE_TIME_ZONE } from '@/lib/site-today';
 
 export interface CollectionTile {
   href: string;
@@ -25,11 +24,6 @@ function summary(tile: CollectionTile): string {
 export function BrowseCollections({ tiles }: { tiles: CollectionTile[] }) {
   if (tiles.length === 0) return null;
 
-  const yearSuffix = new Date().toLocaleDateString('en-US', {
-    timeZone: SITE_TIME_ZONE,
-    year: 'numeric',
-  });
-
   return (
     <section className="py-16 px-6 border-t border-border-subtle">
       <div className="max-w-5xl mx-auto">
@@ -42,7 +36,7 @@ export function BrowseCollections({ tiles }: { tiles: CollectionTile[] }) {
           </h2>
           <p className="text-text-secondary text-sm md:text-base mt-3 max-w-2xl">
             Promos across pro sports, sliced by what they are. Pick a category
-            to see the full {yearSuffix} list.
+            to see the full list.
           </p>
         </div>
 
@@ -72,7 +66,7 @@ export function BrowseCollections({ tiles }: { tiles: CollectionTile[] }) {
                     border: `1px solid ${tile.accentColor}30`,
                   }}
                 >
-                  {tile.count.toLocaleString()} in {yearSuffix}
+                  {tile.count.toLocaleString()} upcoming
                 </span>
               </div>
 

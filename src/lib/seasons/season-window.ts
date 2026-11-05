@@ -192,6 +192,23 @@ export function seasonStartYear(league: string, today: string = siteTodayYmd(), 
   return Number(labeledSeason(league, today, table).season.slice(0, 4));
 }
 
+/** The season a page with NOTHING listed looks ahead to (ruling 2026-11-05,
+ *  zero-promo pages): the season in play (lead-in through end), else, once the
+ *  prior season has ended, the next one; with no next window in the table
+ *  (stale), the last one. */
+export function upcomingSeason(league: string, today: string = siteTodayYmd(), table: SeasonTable = SEASON_TABLE): SeasonWindow {
+  const ws = leagueWindows(league, table);
+  if (ws.length === 0) throw new Error(`[seasons] no windows for league "${league}" (src/lib/seasons/windows.json)`);
+  const current = ws.filter((w) => leadInStart(w) <= today && today <= w.end);
+  if (current.length > 0) return current[current.length - 1];
+  return ws.find((w) => w.start > today) ?? ws[ws.length - 1];
+}
+
+/** "2027", "2026-27": the season a zero-promo page names. */
+export function upcomingSeasonLabel(league: string, today: string = siteTodayYmd(), table: SeasonTable = SEASON_TABLE): string {
+  return seasonName(upcomingSeason(league, today, table));
+}
+
 /** The latest window that has STARTED on `today` (the season in play, or
  *  between seasons the one just played); before a league's first window,
  *  that window. A lead-in never moves it: the team score's season rule. */

@@ -1,6 +1,6 @@
 import type { Team, Venue } from '@/lib/types';
 import { isSplitSeasonLeague } from '@/lib/season-label';
-import { seasonLabel, seasonStartYear } from '@/lib/seasons/season-window';
+import { upcomingSeasonLabel } from '@/lib/seasons/season-window';
 import { teamDisplayName } from '@/lib/team-display-name';
 
 type LeagueCopy = {
@@ -30,13 +30,13 @@ const LEAGUE_COPY: Record<string, LeagueCopy> = {
   NFL: {
     cadence: 'preseason to September',
     paragraphs: ({ teamName, year }) => [
-      `PromoNight has no confirmed ${year} ${teamName} promotions listed yet. NFL teams typically announce giveaways, theme nights, and kids events close to the September opener, then keep adding dates through the season. Confirmed ${teamName} promos will appear here, with the home date each one runs on.`,
+      `Nothing announced yet for the ${year} season. NFL teams typically announce giveaways, theme nights, and kids events close to the September opener, then keep adding dates through the season. Confirmed ${teamName} promos will appear here, with the home date each one runs on.`,
     ],
   },
   WNBA: {
     cadence: 'May start',
     paragraphs: ({ teamName, venueName, year }) => [
-      `The WNBA regular season runs May through September. ${teamName} ${year} promotional schedules are typically released in April or early May, so this page fills out as the season gets closer.`,
+      `Nothing announced yet for the ${year} season. The WNBA regular season runs May through September. ${teamName} ${year} promotional schedules are typically released in April or early May, so this page fills out as the season gets closer.`,
       `When promos are announced, you'll see every giveaway, theme night, ticket pack, and family event here at ${venueName}. Check back closer to the season opener, or star the ${teamName} here to get one weekly email once dates are confirmed.`,
     ],
   },
@@ -67,14 +67,14 @@ const LEAGUE_COPY: Record<string, LeagueCopy> = {
   MLS: {
     cadence: 'February–October regular season',
     paragraphs: ({ teamName, venueName, year }) => [
-      `MLS regular season runs February through October. ${teamName} ${year} promo schedules are released throughout the season rather than all at once, so this page grows as new events are confirmed.`,
+      `Nothing announced yet for the ${year} season. MLS regular season runs February through October. ${teamName} ${year} promo schedules are released throughout the season rather than all at once, so this page grows as new events are confirmed.`,
       `Check back as the season progresses for giveaways, theme matches, and family events at ${venueName}, or browse the same calendar in the free PromoNight app.`,
     ],
   },
   MLB: {
     cadence: 'March–October regular season',
     paragraphs: ({ teamName, venueName, year }) => [
-      `The ${teamName} haven't released a full ${year} promotional schedule yet. MLB teams typically publish promo calendars in late January or early February for the full season.`,
+      `Nothing announced yet for the ${year} season. MLB teams typically publish promo calendars in late January or early February for the full season.`,
       `When ${teamName} ${year} giveaways, theme nights, and fireworks dates are announced for ${venueName}, every event will appear here. The free PromoNight app carries the same calendar once the schedule is posted.`,
     ],
   },
@@ -128,14 +128,17 @@ export function ZeroPromoFallback({
   const copy = LEAGUE_COPY[team.league];
   const venueName = venue?.name ?? `${teamDisplayName(team)} home venues`;
   const city = extractCity(venue?.address) || team.city;
-  // The printed season: "2026" on calendar-year leagues (the same text the
-  // number always rendered as), "2026-27" on NHL and NBA.
-  // The NUMBER stays a number on those leagues: it is a JSX child in the H2
-  // below, and the RSC payload serializes 2026 and "2026" differently.
-  const seasonName: string | number = isSplitSeasonLeague(team.league) ? seasonLabel(team.league) : seasonStartYear(team.league);
+  // The season a page with nothing listed looks ahead to (ruling 2026-11-05):
+  // the season in play, else, once the prior has ended, the next one, so the
+  // copy never says "nothing announced yet" about a season already played.
+  // "2027" on calendar-year leagues, "2026-27" on NHL and NBA. The NUMBER
+  // stays a number on calendar-year leagues: it is a JSX child in the H2 below,
+  // and the RSC payload serializes 2026 and "2026" differently.
+  const upcoming = upcomingSeasonLabel(team.league);
+  const seasonName: string | number = isSplitSeasonLeague(team.league) || !/^\d{4}$/.test(upcoming) ? upcoming : Number(upcoming);
   const paragraphs = copy
     ? copy.paragraphs({ teamName, venueName, city, year: String(seasonName) })
-    : [`No ${teamName} promotions are listed for ${seasonName} yet.`];
+    : [`Nothing announced yet for the ${seasonName} season.`];
 
   if (variant === 'light') {
     return (

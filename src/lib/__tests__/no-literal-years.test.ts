@@ -59,7 +59,7 @@ const ALLOW: Record<string, { years: RegExp; reason: string }> = {
   'src/lib/venue-field-exclusions.ts': { years: /^20[12]\d/, reason: 'dated provenance facts: the year each excluded source was published' },
   'src/lib/venue-locations.ts': { years: /^20[12]\d/, reason: 'dated facts: stadium rename years and a planned opening' },
   'src/lib/venue-transit-suppression.ts': { years: /^20[12]\d/, reason: 'dated facts: transit notices and the dates they took effect' },
-  'src/lib/cfb/rivalry-index.ts': { years: /^2026-11-(21|29)$/, reason: 'the 2026 Rivalry Week bounds, a dated config the copy prints from; ROLLOVER ITEM: needs the 2027 bounds before 2027-07-12 (the CFB 2027 lead-in)' },
+  'src/lib/cfb/rivalry-index.ts': { years: /^2026-11-(21|29)$/, reason: 'the 2026 Rivalry Week bounds, a dated config the copy prints from; season-gate.test.ts fails from 60 days before the next CFB lead-in until they move' },
   // Not a label: keys and references.
   'src/app/dev/affiliate-check/page.tsx': { years: /^2026-05-03$/, reason: 'internal dev page: the date the SeatGeek and StubHub columns were retired, a past fact' },
   'src/lib/format-game-time.ts': { years: /^2026$/, reason: 'a fixed reference date used only to format a clock time; no year is rendered' },

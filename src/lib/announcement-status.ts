@@ -25,7 +25,7 @@
 // a dated edit to this table, with the evidence saved beside the previous
 // pass (audit-archive/web6-announce/ for this one).
 import { isSplitSeasonLeague } from './season-label';
-import { seasonLabel } from './seasons/season-window';
+import { upcomingSeasonLabel } from './seasons/season-window';
 
 /** Days a "haven't announced" verification stays good. */
 export const VERIFIED_FOR_DAYS = 14;
@@ -99,7 +99,9 @@ export function announcementLine(
   league: string,
   opts: { hasTicketPackages?: boolean } = {},
 ): string {
-  const season = seasonLabel(league, today);
+  // The season a page with nothing listed looks ahead to (zero-promo ruling,
+  // 2026-11-05): never the season already played.
+  const season = upcomingSeasonLabel(league, today);
   // A club whose page lists special-ticket packages HAS published something
   // for the season, so "haven't announced" would sit above its own "Ticket
   // packages (N)" group. Only the sentence about our record is safe there.

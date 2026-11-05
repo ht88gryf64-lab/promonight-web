@@ -387,3 +387,28 @@ test('conferenceForNamedSeason: the named season, else the latest earlier one, n
   assert.equal(conferenceForNamedSeason({ '2027': 'SEC' }, '2026-11-05'), undefined, 'a later season never stands in');
   assert.equal(conferenceForNamedSeason(null, '2026-11-05'), undefined);
 });
+
+// REAL CLOCK, ruling 2026-11-05: the Rivalry Week bounds (src/lib/cfb/rivalry-
+// index.ts) are a dated config for one CFB season. They must be moved to the
+// next season's dates before that season's lead-in opens; this fails from 60
+// days before it (2027-05-13 for the 2027 bounds, lead-in 2027-07-12). Same
+// wall-clock read as the windows staleness test above.
+test('real clock: the Rivalry Week bounds are not 60 days from going stale', async () => {
+  const { RIVALRY_WEEK_START, RIVALRY_WEEK_END } = await import('../cfb/rivalry-index');
+  const season = seasonOfDate('CFB', RIVALRY_WEEK_START);
+  assert.ok(season, `RIVALRY_WEEK_START ${RIVALRY_WEEK_START} sits in no CFB window`);
+  assert.equal(seasonOfDate('CFB', RIVALRY_WEEK_END)?.season, season!.season, 'both bounds in one season');
+  const next = leagueWindows('CFB').find((w) => w.start > season!.end);
+  assert.ok(next, `windows.json has no CFB season after ${season!.season}: add it before updating Rivalry Week`);
+  const alarm = addDaysYmd(leadInStart(next!), -STALE_WARNING_DAYS);
+  const today = siteYmd(new Date(performance.timeOrigin + performance.now()));
+  assert.ok(today < alarm, `Rivalry Week is still ${RIVALRY_WEEK_START}..${RIVALRY_WEEK_END} (the ${season!.season} season) and the ${next!.season} lead-in opens ${leadInStart(next!)}: set the ${next!.season} bounds in src/lib/cfb/rivalry-index.ts`);
+});
+
+test('upcomingSeasonLabel: the season in play, else the next one once the prior has ended', async () => {
+  const { upcomingSeasonLabel } = await import('../seasons/season-window');
+  assert.equal(upcomingSeasonLabel('MLB', '2026-11-05'), '2027', 'MLB 2026 ended 10-31: a page with nothing listed looks to 2027');
+  assert.equal(upcomingSeasonLabel('MLS', '2026-11-05'), '2026', 'MLS 2026 still in play');
+  assert.equal(upcomingSeasonLabel('NHL', '2026-11-05'), '2026-27');
+  assert.equal(upcomingSeasonLabel('NFL', '2027-03-01'), '2027', 'after the Super Bowl');
+});

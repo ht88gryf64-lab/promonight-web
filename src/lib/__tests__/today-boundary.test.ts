@@ -392,7 +392,6 @@ const CLOCK_AND_FORMATTER = new Map<string, [number, string]>([
   ['lib/youtube-shorts-sync.ts', [1, 'a syncedAt timestamp on the Shorts map; the day its pages are looked up on is siteTodayYmd()']],
   ['components/my-teams-view.tsx', [2, 'Date.now() stamps the geo cache; the day is siteTodayYmd()']],
   ['components/team-hero.tsx', [1, 'legacy hero: an Eastern "Last updated" (the season label reads the windows since 2026-11-05)']],
-  ['components/browse-collections.tsx', [1, 'the year suffix, formatted in SITE_TIME_ZONE']],
   ['components/footer.tsx', [1, 'the copyright year']],
   ['components/redesign/Footer.tsx', [1, 'the copyright year, from the clock by ruling (season rollover, 2026-11-05)']],
   ['app/team-rankings/page.tsx', [1, 'now passed to localYMD, which is siteYmd']],

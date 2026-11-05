@@ -90,8 +90,8 @@ describe('HIGH: every season the page names comes from the windows (season rollo
     assert.match(label, /const isCurrent = startYear === currentStartYear;/);
     assert.match(scope, /const season = labeledSeason\(league, today\);/);
     assert.match(scope, /seasonOfDate\(league, p\.date\)\?\.season === season\.season/);
-    assert.match(status, /const season = seasonLabel\(league, today\);/);
-    assert.match(fallback, /isSplitSeasonLeague\(team\.league\) \? seasonLabel\(team\.league\)/);
+    assert.match(status, /const season = upcomingSeasonLabel\(league, today\);/);
+    assert.match(fallback, /const upcoming = upcomingSeasonLabel\(team\.league\);/);
     assert.match(months, /seasonOfDate\(L, date\)\?\.season === season/);
   });
 
