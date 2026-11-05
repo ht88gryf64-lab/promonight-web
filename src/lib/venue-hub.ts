@@ -13,6 +13,7 @@ import { collectVenueLinksForTeams, type HubVenueLink, type VenueIndexEntry } fr
 import { transitSuppressed } from './venue-transit-suppression';
 import { rendersBag, rendersParking, rendersFood, rendersGates, fieldExcluded, hasProvenance, hasSubProvenance } from './venue-field-exclusions';
 import { makeCollectionLoader, type CachedDoc, type CachedGroupDoc } from './collection-cache';
+import { withBagHolds } from './venue-bag-holds';
 import { toVenueVendor, visibleVendors, type VenueVendor } from './venue-vendors';
 
 // Read layer for the venue logistics hub (/venues/[slug]). Reads the venueHubs
@@ -260,6 +261,11 @@ export function toVenueHub(
   d: FirebaseFirestore.DocumentData,
   tenantOverlays: VenueHubTenantOverlay[],
 ): VenueHub {
+  // Render-level bag holds (src/lib/venue-bag-holds.ts): held fields are
+  // removed from the raw doc, value and provenance, before anything maps it,
+  // so the ungated CFB view inherits the hold too. A building with no hold
+  // gets the same object back.
+  d = withBagHolds(slug, d);
   return applyFieldStates({
     // Sub-ID slug: doc.id (the `slug` argument that fetched this doc) is the
     // routing-truth key — the URL, the /venues index and the sitemap all key on

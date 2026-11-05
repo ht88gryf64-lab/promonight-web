@@ -12,6 +12,7 @@
 // loader lives in venue-bag-policies-data.ts.
 import type { BagMaxDimensions } from '@/lib/venue-hub';
 import { fieldExcluded, hasProvenance, isReachableUrl } from './venue-field-exclusions';
+import { withBagHolds } from './venue-bag-holds';
 
 export const BAG_SEASON = 2026; // hardcoded by house rule, never getFullYear()
 
@@ -272,6 +273,8 @@ export function bagRowFromDoc(
   d: Record<string, unknown>,
   opts: { venueName?: string; teamName?: string; teamColor?: string | null; overlayException?: string | null } = {},
 ): BagPolicyRow {
+  // The same render-level holds toVenueHub applies, on the same raw doc.
+  d = withBagHolds(slug, d);
   // The SHARED rules, not a second private list: this page publishes the same
   // facts as /venues/[slug] from the same docs, so two exclusion lists over one
   // set of facts would drift by construction. SOURCES_CONFLICT_SLUGS is kept as
