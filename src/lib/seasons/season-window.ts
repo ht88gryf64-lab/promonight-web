@@ -131,9 +131,11 @@ export function currentSeasonPredicate(
 }
 
 /** The Eastern day of a bracket's last final game, or null while any series
- *  is unfinished (or the bracket names no final game it can date). The game's
- *  official date wins; an undated game falls back to the Eastern day of its
- *  start, since an 8 PM Eastern start is stored as the next day in UTC. */
+ *  is unfinished. The game's official date wins; an undated game falls back
+ *  to the Eastern day of its start, since an 8 PM Eastern start is stored as
+ *  the next day in UTC. A final game with neither makes the whole answer null
+ *  (the fixed end applies): it could be the last game, and taking an earlier
+ *  game's day would end the season early. */
 export function bracketFinalYmd(bracket: Pick<Bracket, 'series'>): string | null {
   if (bracket.series.length === 0) return null;
   if (!bracket.series.every((s) => s.status === 'final')) return null;
@@ -146,7 +148,8 @@ export function bracketFinalYmd(bracket: Pick<Bracket, 'series'>): string | null
         const ms = Date.parse(g.start);
         if (!Number.isNaN(ms)) day = siteYmd(new Date(ms));
       }
-      if (day && (last === null || day > last)) last = day;
+      if (!day) return null;
+      if (last === null || day > last) last = day;
     }
   }
   return last;

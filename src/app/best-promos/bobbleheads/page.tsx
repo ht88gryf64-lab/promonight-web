@@ -195,7 +195,7 @@ export default async function BobbleheadsPage() {
   const stampLine = retrospective
     ? `${SEASON_YEAR} season · no ranked bobbleheads ahead${lastUpdatedDisplay ? ` · scores last computed ${lastUpdatedDisplay}` : ''} · ${promos.length} bobbleheads ranked`
     : null;
-  const capsuleRetro = `These are the ${promos.length} top-scored bobblehead giveaways of the ${SEASON_YEAR} season across MLB, MLS, and WNBA. Nothing here is upcoming: none of the three leagues we score has a ranked bobblehead still to come this season, so this is the year ranked rather than a list of what is on next. MLB clubs run the majority of bobblehead programs. Each listed event is scored on attendance cap, item value, sponsor presence, and highlight tier. Upcoming bobbleheads return here ${LEAD_IN_DAYS} days before each league's Opening Day.`;
+  const capsuleRetro = `These are the ${promos.length} top-scored bobblehead giveaways of the ${SEASON_YEAR} season across MLB, MLS, and WNBA. Nothing here is upcoming: none of the three leagues we score has a ranked bobblehead still to come this season, so this is the year ranked rather than a list of what is on next. MLB clubs run the majority of bobblehead programs. Each listed event is scored on attendance cap, item value, sponsor presence, and highlight tier. Upcoming bobbleheads return here from ${LEAD_IN_DAYS} days before each league's Opening Day, as clubs announce them.`;
 
   if (isRedesignEnabled()) {
     return (

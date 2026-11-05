@@ -234,7 +234,7 @@ export default async function BestPromosPage() {
   const stampLine = retrospective
     ? `${SEASON_YEAR} season · no ranked promos ahead${lastUpdatedDisplay ? ` · scores last computed ${lastUpdatedDisplay}` : ''} · ${promos.length} promos ranked`
     : null;
-  const capsuleRetro = `These are the ${promos.length} best-scored promo nights of the ${SEASON_YEAR} season across MLB, MLS, and WNBA. Nothing here is upcoming: none of the three leagues we score has a ranked promo still to come this season, so this is the year ranked from 100 down rather than a list of what is on next. Every entry pulls from official team-promotion announcements and is scored 0 to 100 on attendance cap, item value, sponsor presence, and highlight tier. Upcoming rankings return here ${LEAD_IN_DAYS} days before each league's Opening Day.`;
+  const capsuleRetro = `These are the ${promos.length} best-scored promo nights of the ${SEASON_YEAR} season across MLB, MLS, and WNBA. Nothing here is upcoming: none of the three leagues we score has a ranked promo still to come this season, so this is the year ranked from 100 down rather than a list of what is on next. Every entry pulls from official team-promotion announcements and is scored 0 to 100 on attendance cap, item value, sponsor presence, and highlight tier. Upcoming rankings return here from ${LEAD_IN_DAYS} days before each league's Opening Day, as clubs announce them.`;
 
   if (isRedesignEnabled()) {
     return (

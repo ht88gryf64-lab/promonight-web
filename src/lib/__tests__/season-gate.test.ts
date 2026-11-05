@@ -125,6 +125,13 @@ test('bracketFinalYmd: the official date of the last final game; null while any 
     series: [{ status: 'final', games: [{ status: 'final', date: null, start: '2026-10-29T00:00:00Z' }] }],
   } as unknown as Bracket;
   assert.equal(bracketFinalYmd(undated), '2026-10-28', 'an 8 PM Eastern start stored as the next UTC day is the Eastern day');
+  const undatable = {
+    series: [
+      { status: 'final', games: [{ status: 'final', date: '2026-10-24', start: null }] },
+      { status: 'final', games: [{ status: 'final', date: null, start: null }] },
+    ],
+  } as unknown as Bracket;
+  assert.equal(bracketFinalYmd(undatable), null, 'a final game it cannot date: fixed end, never an earlier game\'s day');
 });
 
 // ── The table ──────────────────────────────────────────────────────────────
