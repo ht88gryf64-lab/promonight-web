@@ -162,11 +162,15 @@ test('HOME: the module rides inside the Tonight section, the first child of page
 
 test('VENUE: the module follows the bag capsule inside page-content and shares its place, and the rail is still the only aside', () => {
   const c = code(VENUE);
+  // Two shapes since serp-targeting (2026-11-05): on a bag-eligible building the
+  // module shares the ANSWER BLOCK's slot (with the fact band and Next
+  // giveaways), otherwise the bag capsule's, exactly as before. Either way it
+  // is one direct child of page-content, ahead of HubPromosThisWeek.
   assert.match(
     c,
-    /<div className="min-w-0 page-content">\s*\{postseason \? \(\s*<div data-playoffs-top>\s*\{bagCard\}\s*\{postseason\}\s*<\/div>\s*\) : \(\s*bagCard\s*\)\}\s*<HubPromosThisWeek/,
+    /<div className="min-w-0 page-content">\s*\{bagEligible \? \([\s\S]*?<div data-bag-answer-top>\s*\{bagCard\}[\s\S]*?\{postseason\}\s*<\/div>\s*\) : postseason \? \(\s*<div data-playoffs-top>\s*\{bagCard\}\s*\{postseason\}\s*<\/div>\s*\) : \(\s*bagCard\s*\)\}\s*<HubPromosThisWeek/,
   );
-  assert.equal((c.match(/\{postseason\}/g) ?? []).length, 1);
+  assert.equal((c.match(/\{postseason\}/g) ?? []).length, 2);
   assert.equal((c.match(/<aside\b/g) ?? []).length, 1);
   const r = code(VENUE_ROUTE);
   assert.match(r, /venueGames\(await getPlayoffsInboundOrNone\(`\/venues\/\$\{slug\}`\), tenantIds\)/);

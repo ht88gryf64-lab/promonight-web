@@ -18,6 +18,7 @@ import { getPlayoffsInboundOrNone } from '@/lib/postseason/data';
 import { venueGames } from '@/lib/postseason/inbound';
 import { VenuePostseasonGames } from '@/components/playoffs/inbound/VenuePostseasonGames';
 import { canonicalOpenGraph } from '@/lib/og';
+import { isBagAnswerEligible, venueBagTitle, venueBagDescription } from '@/lib/venue-bag-answer';
 
 // SSG/ISR, same pattern as the team pages. 24h ISR; on-demand revalidate stays
 // the real freshness path when the sweep writes new venue facts.
@@ -43,13 +44,18 @@ export async function generateMetadata({
   // emits noindex (follow, so outbound links are still crawled).
   const indexable = venueHubIsIndexable(hub);
   const vendors = await getVenueHubVendors(hub.slug, hub.verified);
+  // The bag-policy template (serp-targeting, rulings 2026-11-05) on a verified
+  // building with a sourced size limit or prohibition: an ABSOLUTE title, with
+  // no " | PromoNight" suffix, so the 60-character ceiling is the whole
+  // rendered string. Every other building keeps main's title and description.
+  const bagEligible = isBagAnswerEligible(hub);
   return {
     // League-split, query-led title (bare value; the root layout's
     // title.template appends " | PromoNight"). Season year is a deliberate
     // constant, never getFullYear() — see SEASON_YEAR in lib/venue-hub.
-    title: venueHubTitle(hub, { hasVendors: vendors.length > 0 }),
+    title: bagEligible ? { absolute: venueBagTitle(hub) } : venueHubTitle(hub, { hasVendors: vendors.length > 0 }),
     // Per-building answer-first description generated from verified facts.
-    description: venueHubDescription(hub),
+    description: bagEligible ? venueBagDescription(hub) : venueHubDescription(hub),
     alternates: { canonical },
     // Without this the page inherits the root layout's openGraph wholesale and
     // every one of the 222 buildings shares the homepage og:url.

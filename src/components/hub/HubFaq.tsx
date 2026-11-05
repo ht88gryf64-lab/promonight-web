@@ -5,6 +5,18 @@
 export interface HubFaqItem {
   question: string;
   answer: string;
+  /** The page the answer quotes, linked under it on the page. NEVER part of
+   *  the FAQPage answer text: JSON-LD carries `answer` alone, so the on-page
+   *  answer and the structured one stay the same string. */
+  sourceUrl?: string;
+}
+
+function sourceHost(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
 }
 
 export function HubFaq({
@@ -13,8 +25,11 @@ export function HubFaq({
   // unchanged; the league hubs pass their own per-league id.
   sectionId = 'mlb-hub-faq',
   adItem,
+  heading = 'Frequently asked',
 }: {
   faqs: HubFaqItem[];
+  /** The section eyebrow. The venue bag template passes "Common questions". */
+  heading?: string;
   sectionId?: string;
   /** Ad-placement item type, supplied by the host page. Omitted on hosts
    * outside the selector-hook scope so no page gets an item without a
@@ -28,7 +43,7 @@ export function HubFaq({
         id={sectionId}
         className="font-rd text-[11px] font-semibold uppercase tracking-[0.14em] text-rd-ink-faint"
       >
-        Frequently asked
+        {heading}
       </p>
       <div className="mt-6 space-y-8">
         {faqs.map((f) => (
@@ -37,6 +52,13 @@ export function HubFaq({
             <p className="mt-2 max-w-2xl font-rd text-[15px] leading-relaxed text-rd-ink-soft">
               {f.answer}
             </p>
+            {f.sourceUrl ? (
+              <p className="mt-1 font-rd text-[12px]">
+                <a href={f.sourceUrl} className="font-semibold text-rd-red" target="_blank" rel="noopener noreferrer">
+                  {sourceHost(f.sourceUrl)} &rsaquo;
+                </a>
+              </p>
+            ) : null}
           </div>
         ))}
       </div>
