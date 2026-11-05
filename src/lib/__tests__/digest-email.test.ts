@@ -175,6 +175,23 @@ for (const c of CASES) {
   });
 }
 
+// A tier 3 hero (the generated card, the single-promo rule): the case where the
+// below-image block was missing before the 2026-11-05 ruling.
+test('golden: personalized-hero-card', async () => {
+  const { buildPersonalizedDigest } = await builders();
+  seq = 0;
+  const lone = promo('florida-panthers', '2026-11-04', 'Hockey Night', { imageTier: 3 });
+  const { html, hero } = buildPersonalizedDigest({ email: 'a@example.com', manageToken: TOKEN, promos: [lone], total: 1, teamIds: ['florida-panthers', 'miami-heat'], context: context() });
+  assert.strictEqual(hero, lone);
+  const file = join(FIXTURES, 'digest-personalized-hero-card.html');
+  if (process.env.UPDATE_DIGEST_GOLDEN === '1' || !existsSync(file)) {
+    writeFileSync(file, html);
+    if (process.env.UPDATE_DIGEST_GOLDEN !== '1') assert.fail(`wrote missing golden ${file}; review it and re-run`);
+    return;
+  }
+  assert.strictEqual(html, readFileSync(file, 'utf8'), 'personalized-hero-card drifted from its golden file');
+});
+
 // ── links ───────────────────────────────────────────────────────────────────
 
 test('every promo link is a promoPageHref path, tagged with the surface subId1', async () => {
@@ -282,6 +299,28 @@ test('the hero is removed from the rows below it', async () => {
   assert.strictEqual(count(html, '>PANTHERS · THEME NIGHT<'), 0, 'the hero promo has no row');
   const { html: noHero } = await CASES[1].build();
   assert.strictEqual(count(noHero, '>PANTHERS · THEME NIGHT<'), 1);
+});
+
+test('images off: the hero with its img stripped still names the promo, team, date, game and building', async () => {
+  for (const c of CASES) {
+    const { html, hero } = await c.build();
+    if (!hero) continue;
+    const imagesOff = html.replace(/<img\b[^>]*>/g, '');
+    assert.ok(!imagesOff.includes('<img'), `${c.name}: an img survived the strip`);
+    assert.ok(!imagesOff.includes('alt="'), `${c.name}: the check must not lean on alt text`);
+    for (const piece of [hero.title, hero.teamName, 'Wed Nov 4', 'vs Blackhawks', '7:30 PM', 'Amerant Bank Arena']) {
+      assert.ok(imagesOff.includes(`${piece}`), `${c.name}: "${piece}" is gone with images off`);
+    }
+  }
+  // A tier 3 hero (the generated card) gets the same block: single-promo week.
+  const { buildPersonalizedDigest } = await builders();
+  seq = 0;
+  const lone = promo('florida-panthers', '2026-11-04', 'Hockey Night', { imageTier: 3 });
+  const b = buildPersonalizedDigest({ email: 'a@example.com', manageToken: TOKEN, promos: [lone], total: 1, teamIds: ['florida-panthers'], context: context() });
+  assert.strictEqual(b.hero, lone);
+  const off = b.html.replace(/<img\b[^>]*>/g, '');
+  assert.ok(off.includes('>Hockey Night</div>'), 'tier 3 hero title block');
+  assert.ok(off.includes('Florida Panthers · Wed Nov 4 · vs Blackhawks · 7:30 PM · Amerant Bank Arena'), 'tier 3 hero meta line');
 });
 
 test('hero rule: exactly one promo, else the earliest tier 1 photo, else none', async () => {

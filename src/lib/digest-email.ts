@@ -237,13 +237,12 @@ function heroHtml(input: DigestEmailInput, hero: DigestPromo): string {
   const ticketUrl = heroTicketUrl(input, hero, team);
   const button = ticketUrl ? solidButton(ticketUrl, 'Get tickets') : solidButton(page, 'See this game');
   const sideLink = (label: string) => `<a href="${esc(page)}" style="color:${DIGEST_MUTED};text-decoration:underline;">${label}</a>`;
-  // A tier 1 photo carries no text over it, so the title block sits below the
-  // image; the generated card already draws team, badge, title and date.
-  const titleBelow = hero.imageTier === 1
-    ? row(cell('padding:18px 24px 0;',
-        `<div style="font-size:19px;font-weight:600;line-height:1.25;color:${DIGEST_INK};">${esc(hero.title)}</div>` +
-        `<div style="margin-top:5px;font-size:13px;line-height:1.4;color:${DIGEST_MUTED};">${esc([hero.teamName, weekdayMonthDay(hero.date), ...gameLine(hero)].join(' · '))}</div>`))
-    : '';
+  // The title block sits below the image on EVERY hero (ruling 2026-11-05):
+  // with images off, the card's drawn text is gone and the email must still
+  // read whole. No text is ever laid over the image itself.
+  const titleBelow = row(cell('padding:18px 24px 0;',
+    `<div style="font-size:19px;font-weight:600;line-height:1.25;color:${DIGEST_INK};">${esc(hero.title)}</div>` +
+    `<div style="margin-top:5px;font-size:13px;line-height:1.4;color:${DIGEST_MUTED};">${esc([hero.teamName, weekdayMonthDay(hero.date), ...gameLine(hero)].join(' · '))}</div>`));
   const card = table(
     row(`<td style="padding:0;line-height:0;font-size:0;"><a href="${esc(page)}" style="display:block;"><img src="${esc(img)}" width="${HERO_W}" height="${HERO_H}" alt="${esc(alt)}" style="display:block;width:100%;max-width:${HERO_W}px;height:auto;border:0;outline:none;text-decoration:none;"></a></td>`) +
     titleBelow +
