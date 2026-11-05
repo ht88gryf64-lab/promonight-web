@@ -60,7 +60,15 @@ Only when a hero rendered and its themeKey cascade returns at least two siblings
 Unchanged content: Manage teams, Unsubscribe, affiliate disclosure, CAN-SPAM address. 12px muted.
 
 ## Empty-window variant
-Same renderer over the existing team-proxy / national-fallback content. Title block uses the named-team empty line. Hero rule applies to the proxy set. Footer keeps the personalized manage link.
+Same renderer over the existing team-proxy / national-fallback content. Title block uses the named-team empty line. Footer keeps the personalized manage link. Two additions:
+
+- A muted lead-in line (13px, `#6B6861`) directly above the first row, matching the cascade level: `Nearby this week` for team-proxy, `Around the league this week` for national-fallback. This tells the reader the rows are not their teams, so a "Heat · Giveaway" row under a Panthers subline reads as intended rather than as a mistake.
+- Hero fires on team-proxy content only. Never on national-fallback. A subscriber whose team is dark should not get a big hero card for a club across the country.
+
+"Coming up" still shows the subscriber's OWN teams' next two promos beyond the window. That section is what keeps this email personal.
+
+## Generic variant
+Title "Hot promos this week". Same rows over the national hot-promos set. Hero rule as in section 3. No "Coming up" section, since there are no followed teams. Footer uses the existing generic star-your-teams CTA.
 
 ## Analytics
 Email subId surfaces unchanged: `web_email_personalized`, `web_email_generic`, `web_email_empty`. Promo links carry the surface exactly as today.
