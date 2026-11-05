@@ -32,6 +32,18 @@ async function main() {
   console.log('quoted strings', answers, 'not a substring', bad);
   console.log('topic coverage', topicCount, 'questions', elig.reduce((n: number, h: any) => n + A.bagTopicQuestions(h).length, 0));
   console.log('last verified shown on', elig.filter((h: any) => A.bagAnswerModel(h)!.lastVerified).map((h: any) => h.slug));
+  // HOLDS=1 prints the condensed bag line (promo pages, CFB block) for each held
+  // building before and after its holds, since promo pages cannot be previewed
+  // (PROMO_PAGES_LIVE is production-only).
+  if (process.env.HOLDS) {
+    const { buildCondensedLogistics } = await import('../../src/lib/venue-hub-condensed');
+    const { BAG_HOLDS, withBagHolds } = await import('../../src/lib/venue-bag-holds');
+    for (const slug of [...new Set(BAG_HOLDS.map((x) => x.hub))]) {
+      const h = hubs.find((x: any) => x.slug === slug);
+      const line = (x: any) => buildCondensedLogistics(x, x.tenantOverlays?.[0]?.teamId ?? '').find((l: any) => l.key === 'bag')?.text ?? '(none)';
+      console.log(`HOLD ${slug}\n  before: ${line(h)}\n  after:  ${line(withBagHolds(slug, h))}`);
+    }
+  }
   // TOPIC=storage prints every answer filed under that topic, for eyeballing.
   if (process.env.TOPIC) {
     for (const h of elig) for (const q of A.bagTopicQuestions(h)) if (q.topics.includes(process.env.TOPIC as never)) console.log(`${h.slug} [${q.topics}] ${q.answer}`);

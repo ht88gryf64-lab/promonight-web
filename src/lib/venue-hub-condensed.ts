@@ -113,8 +113,11 @@ export function buildCondensedLogistics(gatedHub: VenueHub, tenantId: string): C
   if (!excluded(hub.slug, 'bag')) {
     const dims = dimsString(hub.bagMaxDimensions);
     let text: string | null = null;
-    if (dims && prov(s, 'bagMaxDimensions')) text = `${hub.clearBagRequired === true && prov(s, 'clearBagRequired') ? 'Clear bag' : 'Max bag'} ${dims}.`;
-    else if (hub.bagsProhibited === true && prov(s, 'bagsProhibited')) text = 'Bags are not allowed.';
+    // A sourced prohibition decides FIRST (ruling 6, site-wide, 2026-11-05):
+    // dimensions-first printed "Max bag 5" x 9"." on every truist-park promo
+    // page, which is its clutch exception size, not a limit.
+    if (hub.bagsProhibited === true && prov(s, 'bagsProhibited')) text = 'Bags are not allowed.';
+    else if (dims && prov(s, 'bagMaxDimensions')) text = `${hub.clearBagRequired === true && prov(s, 'clearBagRequired') ? 'Clear bag' : 'Max bag'} ${dims}.`;
     else if (typeof hub.clearBagRequired === 'boolean' && prov(s, 'clearBagRequired')) text = hub.clearBagRequired ? 'Clear bag required.' : 'Clear bag not required.';
     else if (has(hub.bagPolicyNotes) && prov(s, 'bagPolicyNotes') && !excludedSub(hub.slug, 'bag', 'notes')) text = sentence(hub.bagPolicyNotes);
     // POINTER: reachability, not provenance (see venue-field-exclusions).

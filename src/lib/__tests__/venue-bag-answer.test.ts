@@ -236,6 +236,8 @@ test('REAL DATA: every quoted string is an exact substring of a sourced field', 
       assert.ok(sourced.some((f) => f.includes(q)), `${h.slug}: not a substring of a sourced field: ${q}`);
     }
     for (const q of A.bagTopicQuestions(h)) {
+      // A held link (venue-bag-holds) is absent, never replaced with another.
+      if (!q.sourceUrl) continue;
       assert.ok(Object.values(h.sources).includes(q.sourceUrl) || h.tenantOverlays.some((t) => t.sources.bagPolicyException === q.sourceUrl), `${h.slug}: the link is the field's own source`);
     }
   }
