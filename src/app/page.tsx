@@ -25,6 +25,7 @@ import { HomepageJsonLd } from '@/components/homepage-json-ld';
 import { getCoverageCounts } from '@/lib/get-coverage-counts';
 import { getVenueUtilityCounts } from '@/lib/venue-hub';
 import { pickBestStubPromos } from '@/components/redesign/pick-best-stub-promos';
+import { getCurrentSeasonPredicate } from '@/lib/seasons/finals';
 import { buildHomeCategoryTiles } from '@/components/redesign/home-category-tiles';
 import { deriveLeagueOrder } from '@/components/redesign/derive-league-order';
 import { TrackedTapLink } from '@/components/analytics/TrackedTapLink';
@@ -308,12 +309,16 @@ export default async function HomePage() {
       ...weekPromos,
     ], today);
     const playoffs = homePlayoffs(await getPlayoffsInboundOrNone('/'));
+    // The ranked rail admits only rows inside their league's current season
+    // (src/lib/seasons/season-window.ts). Read here, in the redesign branch
+    // that renders the rail, so the gate-off path adds no read.
+    const inCurrentSeason = await getCurrentSeasonPredicate();
     return (
       <HomePageV2
         playoffs={playoffs ? <HomePlayoffsModule season={playoffs.season} leagues={playoffs.leagues} /> : null}
         heroBuckets={heroBuckets}
         weekPromos={weekPromos}
-        bestPromos={pickBestStubPromos(allFuture, 8)}
+        bestPromos={pickBestStubPromos(allFuture, 8, inCurrentSeason)}
         categoryTiles={buildHomeCategoryTiles(allFuture, today)}
         teamsForGrid={teamsForGrid}
         teamPromoCounts={teamPromoCounts}

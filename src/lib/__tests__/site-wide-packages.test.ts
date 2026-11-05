@@ -7,7 +7,7 @@
 //   getPromosForDate (/promos/today, hub today modules), getPromosInDateRange
 //   (/promos/this-week, the homepage tonight window, hub slates, the digest),
 //   getPromosFromDate (/promos/theme-nights, food-deals, bobbleheads, the
-//   homepage), getHighlightedPromos, the venue-hub week scroller, the social
+//   homepage), the venue-hub week scroller, the social
 //   feed and its image cards, and My Teams.
 // The MLB flag is the extractor's raw guess and is ignored everywhere.
 //
@@ -150,13 +150,6 @@ test('getPromosInDateRange and getPromosFromDate: packages out, MLB untouched', 
   assert.deepEqual(titles(await getPromosFromDate(D1)), COUNTED);
 });
 
-test('getHighlightedPromos: packages out', async () => {
-  const { getHighlightedPromos } = await import('../data');
-  // This reader resolves teams by their doc, so the club absent from the
-  // cached list (ghost-nhl) is read too: its counted row in, its package out.
-  assert.deepEqual(titles(await getHighlightedPromos(10)), [...COUNTED, 'Ghost Night'].sort());
-});
-
 test('dropTicketPackageRows leaves an unflagged NHL row and every MLB row', async () => {
   const { getPromosFromDate } = await import('../data');
   const rows = await getPromosFromDate(D1);
@@ -191,13 +184,12 @@ test('My Teams: neither listed nor counted', async () => {
 });
 
 test('the per-team fallback paths drop packages too (collection-group query unavailable)', async () => {
-  const { getPromosForDate, getPromosInDateRange, getPromosFromDate, getHighlightedPromos } = await import('../data');
+  const { getPromosForDate, getPromosInDateRange, getPromosFromDate } = await import('../data');
   groupThrows = true;
   try {
     assert.deepEqual(titles(await getPromosForDate(D1)), ['Dup Night', 'Fireworks', 'Free Night']);
     assert.deepEqual(titles(await getPromosInDateRange(D1, D2)), COUNTED);
     assert.deepEqual(titles(await getPromosFromDate(D1)), COUNTED);
-    assert.deepEqual(titles(await getHighlightedPromos(10)), COUNTED);
   } finally {
     groupThrows = false;
   }

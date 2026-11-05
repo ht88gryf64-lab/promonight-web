@@ -238,7 +238,7 @@ export function BestPromosBrowser({
 
       <p className={light ? 'font-rd text-[11px] text-rd-ink-faint mb-4' : 'font-mono text-[11px] text-text-dim mb-4'}>
         {filtered.length} promo{filtered.length === 1 ? '' : 's'}{' '}
-        {retrospective ? 'ranked from the completed season' : 'match this filter'}
+        {retrospective ? 'ranked from past dates' : 'match this filter'}
       </p>
 
       <div className="space-y-3">

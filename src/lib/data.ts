@@ -41,6 +41,7 @@ import { gameZoneAbbrev } from './format-game-time';
 import { applyGameDisplay, buildGameIndex, gameEventLinkUrl, needsGameDisplay } from './promo-game-join';
 import { attachPromoPageFields, stampPromoPageCanonical } from './promo-page-stamp';
 import { isSplitSeasonLeague } from './season-label';
+import type { SeasonEligible } from './seasons/season-window';
 import { groupLeagueTeams, leagueSuperGroups, type HubSuperGroup, type HubTeamGroup } from './hub-grouping';
 import { isTicketPackageDoc, isTicketPackageLeague, partitionTicketPackages } from './ticket-packages';
 import { ticketNetworkEventUrlFor } from './affiliates';
@@ -164,11 +165,7 @@ export function mapPromoDoc(doc: FirebaseFirestore.DocumentSnapshot): Promo {
 
 /** The canonical stamp over a cross-team reader's finished rows (Phase 3c).
  *  The date-window readers read every team's rows on each date, so the
- *  losers are known here. getHighlightedPromos reads highlighted rows only:
- *  a highlighted loser whose winner is not highlighted keeps its own slug
- *  there, and its page points rel=canonical at the winner (the scored
- *  loader's caveat, src/lib/promo-page-stamp.ts). A no-op while the flag is
- *  off. */
+ *  losers are known here. A no-op while the flag is off. */
 function linkPromoPages<T extends PromoWithTeam>(rows: T[]): T[] {
   return stampPromoPageCanonical(rows, (p) => p.team);
 }
@@ -414,57 +411,6 @@ export const getTomorrowPromos = cache(async (): Promise<PromoWithTeam[]> => {
 // data with a today-dated promo flows through with no per-league code.
 export async function getLeagueTodayPromos(league: string): Promise<PromoWithTeam[]> {
   return (await getTodayPromos()).filter((p) => p.team.league === league);
-}
-
-export async function getHighlightedPromos(limit: number = 6): Promise<PromoWithTeam[]> {
-  const today = todayYmd();
-
-  // Try collection group query first (requires composite index).
-  // Fall back to per-team sampling if the index doesn't exist yet.
-  try {
-    const snapshot = await db
-      .collectionGroup('promos')
-      .where('highlight', '==', true)
-      .where('date', '>=', today)
-      .orderBy('date', 'asc')
-      .limit(limit)
-      .get();
-
-    const results: PromoWithTeam[] = [];
-    for (const doc of snapshot.docs) {
-      const teamRef = doc.ref.parent.parent!;
-      const teamDoc = await teamRef.get();
-      if (teamDoc.exists) {
-        results.push(promoWithTeam(doc, mapTeamDoc(teamDoc)));
-      }
-    }
-    return withGameDisplay(linkPromoPages(dropTicketPackageRows(dedupePromos(results.filter(isVisiblePromo), (p) => p.team.id))));
-  } catch {
-    // Fallback: sample highlighted promos from a few teams
-    const teams = await getAllTeams();
-    const sampleTeams = teams.slice(0, 30);
-    const allHighlighted: PromoWithTeam[] = [];
-
-    await Promise.all(
-      sampleTeams.map(async (team) => {
-        const snapshot = await db
-          .collection('teams')
-          .doc(team.id)
-          .collection('promos')
-          .where('highlight', '==', true)
-          .get();
-        for (const doc of snapshot.docs) {
-          const row = promoWithTeam(doc, team);
-          if (isUpcomingPromo(row, today)) {
-            allHighlighted.push(row);
-          }
-        }
-      })
-    );
-
-    allHighlighted.sort((a, b) => a.date.localeCompare(b.date));
-    return withGameDisplay(linkPromoPages(dropTicketPackageRows(dedupePromos(allHighlighted.filter(isVisiblePromo), (p) => p.team.id))).slice(0, limit));
-  }
 }
 
 // Returns every promo (across all teams) within [startDate, endDate], inclusive.
@@ -1331,6 +1277,7 @@ async function fetchScoredPromos(
   startDate: string,
   endDate: string,
   itemTypeFilter?: string,
+  eligible?: SeasonEligible,
 ): Promise<ScoredPromoWithTeam[]> {
   const teams = await getAllTeams();
   const teamById = new Map(teams.map((t) => [t.id, t]));
@@ -1381,6 +1328,11 @@ async function fetchScoredPromos(
     if (data.isPostseason === true) continue;
     if (typeof data.score !== 'number') continue;
     if (!data.scoreBreakdown || !data.derivedSignals) continue;
+    // The ranked surfaces' season gate (src/lib/seasons/season-window.ts),
+    // applied before the sort and the caller's cap so an out-of-season row
+    // never takes an in-season row's slot. Absent: ungated (the social feed's
+    // 7-day window and /best-promos' retrospective read).
+    if (eligible && !eligible(team.league, data.date)) continue;
 
     if (itemTypeFilter) {
       const itemType = data.derivedSignals.itemType;
@@ -1444,8 +1396,9 @@ export async function getScoredPromosInDateRange(
   startDate: string,
   endDate: string,
   limit: number = 300,
+  eligible?: SeasonEligible,
 ): Promise<ScoredPromoWithTeam[]> {
-  const all = await fetchScoredPromos(startDate, endDate);
+  const all = await fetchScoredPromos(startDate, endDate, undefined, eligible);
   return all.slice(0, limit);
 }
 
@@ -1457,8 +1410,9 @@ export async function getScoredPromosByItemType(
   endDate: string,
   itemType: string,
   limit: number = 500,
+  eligible?: SeasonEligible,
 ): Promise<ScoredPromoWithTeam[]> {
-  const all = await fetchScoredPromos(startDate, endDate, itemType);
+  const all = await fetchScoredPromos(startDate, endDate, itemType, eligible);
   return all.slice(0, limit);
 }
 
@@ -1509,9 +1463,11 @@ export async function getAllTeamScores(): Promise<TeamScoreWithTeam[]> {
 // Returns the top upcoming scored promo per team across MLB / MLS / WNBA,
 // keyed by team slug. One collectionGroup query, bucketed in memory, vs the
 // 73 separate queries the rankings tease would otherwise require. Used by
-// /team-rankings for the "Top promo: X, score Y" line on each row.
+// /team-rankings for the "Top promo: X, score Y" line on each row, which
+// passes the season gate as `eligible` (src/lib/seasons/season-window.ts).
 export async function getTopPromosPerTeam(
   fromDate: string,
+  eligible?: SeasonEligible,
 ): Promise<Map<string, ScoredPromoWithTeam>> {
   const teams = await getAllTeams();
   const teamById = new Map(teams.map((t) => [t.id, t]));
@@ -1544,6 +1500,10 @@ export async function getTopPromosPerTeam(
     if (data.isPostseason === true) continue;
     if (typeof data.score !== 'number') continue;
     if (!data.scoreBreakdown || !data.derivedSignals) continue;
+    // The ranked surfaces' season gate (src/lib/seasons/season-window.ts),
+    // applied BEFORE the per-team best is chosen: a team whose best row is
+    // next season's still shows its best in-season row, not nothing.
+    if (eligible && !eligible(team.league, data.date)) continue;
 
     const existing = topByTeam.get(team.id);
     if (existing && existing.score >= data.score) continue;

@@ -1,0 +1,57 @@
+{
+  "MLB": {
+    "2026": {
+      "start": "2026-03-25",
+      "end": "2026-10-31",
+      "source": "Start: Opening Night, Yankees at Giants, 2026-03-25 (mlb.com/news/when-is-mlb-opening-day-2026-date-times-matchups). End: World Series Game 7 as scheduled, 2026-10-31 (mlb.com/news/2026-mlb-world-series-faq-schedule-times-teams-and-more). The postseasonBrackets final game replaces the end once the bracket is final."
+    },
+    "2027": {
+      "start": "2027-03-24",
+      "end": "2027-11-07",
+      "source": "Start: Opening Night 2027-03-24 per the 2027 schedule release (mlb.com/news/mlb-2027-schedule-released); regular season ends 2027-09-26.",
+      "provisional": "End is a placeholder: the 2027 postseason schedule is not published, and the CBA expires 2026-12-01 with a lockout expected, so both dates may move. The postseasonBrackets final game replaces the end once MLB_2027 is final."
+    }
+  },
+  "MLS": {
+    "2026": {
+      "start": "2026-02-21",
+      "end": "2026-12-18",
+      "source": "Start: MLS is Back weekend 2026-02-21 (mlssoccer.com/news/a-letter-from-commissioner-don-garber). End: MLS Cup 2026-12-18 (mlssoccer.com/news/audi-2026-mls-cup-playoffs-key-dates-schedule-information). MLS ends on this fixed date by ruling, not on a bracket."
+    },
+    "2027": {
+      "start": "2027-02-19",
+      "end": "2027-05-31",
+      "source": "The 2027 Sprint Season: opener Inter Miami v FC Cincinnati 2027-02-19, regular season to 2027-05-08, MLS Cup on Memorial Day Weekend (mlssoccer.com/news/major-league-soccer-announces-2027-sprint-season-schedule).",
+      "provisional": "End is Memorial Day 2027-05-31, the last day of the weekend MLS named; the postseason schedule is not published. The 2027-28 season (July 2027 to May 2028) needs its own entry, keyed \"2027-28\"."
+    }
+  },
+  "WNBA": {
+    "2026": {
+      "start": "2026-05-08",
+      "end": "2026-10-31",
+      "source": "Start: tip-off 2026-05-08 (wnba.com/news/2026-schedule-release). End: the last Finals game in postseasonBrackets WNBA_2026 (2026-10-31 Eastern), which the runtime read supplies anyway."
+    },
+    "2027": {
+      "start": "2027-04-01",
+      "end": "2027-11-21",
+      "source": "The 2027 schedule is not published. These are the CBA's outer limits: training camps no earlier than 2027-04-01, season over no later than 2027-11-21 (pr.nba.com/wnba-50-game-season-2027).",
+      "provisional": "Replace both dates when the 2027 schedule is released. The early start opens the lead-in about five weeks before it would on a real May opener."
+    }
+  },
+  "NHL": {
+    "2026": {
+      "start": "2026-09-29",
+      "end": "2027-06-30",
+      "source": "Start: opening night 2026-09-29; regular season ends 2027-04-10 (thescore.com/nhl/news/3566950).",
+      "provisional": "End is a placeholder: the 2027 Stanley Cup Final dates are not published. NHL has no postseasonBrackets document, so this fixed end is the one used."
+    }
+  },
+  "NBA": {
+    "2026": {
+      "start": "2026-10-20",
+      "end": "2027-06-30",
+      "source": "Start: opening night 2026-10-20; regular season ends 2027-04-11; Finals in June (nbcnewyork.com/nba/nba-key-dates-2026-27-opening-night-trade-deadline-finals/6535379).",
+      "provisional": "End is a placeholder: the 2027 Finals dates are not published. NBA has no postseasonBrackets document, so this fixed end is the one used."
+    }
+  }
+}
