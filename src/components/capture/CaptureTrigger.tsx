@@ -90,8 +90,8 @@ interface OpenSheet {
 const TICK_MS = 5_000;
 
 // NO BOT FILTERING, DELIBERATELY DEFERRED. The repo has a classifyTraffic
-// classifier, but it lives in middleware.ts and api/log-request and is not
-// reachable from client code, so using it here would mean new plumbing.
+// classifier (src/lib/analytics/traffic-classifier.ts), but it is a server-side
+// UA classifier with no client wiring, so using it here would mean new plumbing.
 //
 // More importantly, filtering now would be guessing at a problem this phase
 // exists to reveal. The engine still demands 45 seconds of VISIBLE engaged time

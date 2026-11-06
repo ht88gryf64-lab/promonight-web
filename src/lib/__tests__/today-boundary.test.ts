@@ -398,7 +398,6 @@ const CLOCK_AND_FORMATTER = new Map<string, [number, string]>([
   ['app/best-promos/page.tsx', [1, 'now passed to addDaysYMD, which is siteYmd; the rows and today come from loadRankedRows']],
   ['app/best-promos/bobbleheads/page.tsx', [1, 'now passed to addDaysYMD, which is siteYmd; the rows and today come from loadRankedRows']],
   ['app/ads.txt/route.ts', [1, 'a resolved-at timestamp header']],
-  ['app/api/log-request/route.ts', [1, 'a log timestamp']],
   ['app/api/cfb/contribute/route.ts', [1, 'a submittedAt timestamp']],
   ['lib/subscribers.ts', [1, 'a resend cooldown in milliseconds']],
   ['lib/attribution.ts', [1, 'a landed_at timestamp']],

@@ -378,14 +378,13 @@ test('budgets: each pass stops in time, and a request never outlives its pass', 
   assert.equal(late.ok, 0);
 });
 
-test('the middleware does not count the job\'s own requests', async () => {
+test('the middleware counts no requests at all, the job\'s included (counter removed 2026-11-05)', async () => {
   const { isNightlyRefreshRequest, REFRESH_USER_AGENT } = await import('../refresh-agent');
   assert.equal(isNightlyRefreshRequest(REFRESH_USER_AGENT), true);
   assert.equal(isNightlyRefreshRequest('Mozilla/5.0'), false);
   assert.equal(isNightlyRefreshRequest(null), false);
   const mw = readFileSync(new URL('../../middleware.ts', import.meta.url), 'utf8');
-  assert.match(mw, /if \(!isNightlyRefreshRequest\(userAgent\)\) countRequest\(request, event, userAgent\);/);
-  assert.equal(mw.split('countRequest(request, event, userAgent)').length - 1, 1, 'no unguarded call');
+  assert.doesNotMatch(mw, /countRequest|log-request|requestCounters/, 'the request counter and its route are gone');
 });
 
 test('the origin: always www in production (cron calls the login-protected deployment host), the request origin locally', async () => {
