@@ -1,0 +1,87 @@
+venue_name,city,state,lat,lng,school,source,coord_confidence,coord_flag
+Falcon Stadium,Colorado Springs,CO,38.997,-104.843,Air Force,cfb,UNVERIFIED,OK
+Saban Field at Bryant–Denny Stadium,Tuscaloosa,AL,,,Alabama,cfb,UNVERIFIED,NO_COORDS
+Kidd Brewer Stadium,Boone,NC,36.21167,-81.68556,App State,cfb,UNVERIFIED,OK
+Casino Del Sol Stadium,Tucson,AZ,32.229,-110.949,Arizona,cfb,UNVERIFIED,OK
+Mountain America Stadium,Tempe,AZ,33.42639,-111.9325,Arizona State,cfb,UNVERIFIED,OK
+Donald W. Reynolds Razorback Stadium,Fayetteville,AR,36.06806,-94.17889,Arkansas,cfb,UNVERIFIED,OK
+Michie Stadium,West Point,NY,41.3875,-73.96417,Army,cfb,UNVERIFIED,OK
+Jordan–Hare Stadium,Auburn,AL,32.60222,-85.48917,Auburn,cfb,UNVERIFIED,OK
+McLane Stadium,Waco,TX,31.5582,-97.1157,Baylor,cfb,UNVERIFIED,OK
+Albertsons Stadium,Boise,ID,43.603,-116.196,Boise State,cfb,UNVERIFIED,OK
+Alumni Stadium,Chestnut Hill,MA,42.335,-71.16639,Boston College,cfb,UNVERIFIED,OK
+LaVell Edwards Stadium,Provo,UT,40.258,-111.655,BYU,cfb,UNVERIFIED,OK
+California Memorial Stadium,Berkeley,CA,37.87111,-122.25083,California,cfb,UNVERIFIED,OK
+Nippert Stadium,Cincinnati,OH,39.1312,-84.5162,Cincinnati,cfb,UNVERIFIED,OK
+Memorial Stadium,Clemson,SC,34.67861,-82.84306,Clemson,cfb,UNVERIFIED,OK
+Brooks Stadium,Conway,SC,33.7929,-79.0175,Coastal Carolina,cfb,UNVERIFIED,OK
+Folsom Field,Boulder,CO,40.009,-105.267,Colorado,cfb,UNVERIFIED,OK
+Wallace Wade Stadium,Durham,NC,35.99528,-78.94167,Duke,cfb,UNVERIFIED,OK
+Ben Hill Griffin Stadium,Gainesville,FL,,,Florida,cfb,UNVERIFIED,NO_COORDS
+Doak Campbell Stadium,Tallahassee,FL,30.43806,-84.30444,Florida State,cfb,UNVERIFIED,OK
+Valley Children's Stadium,Fresno,CA,36.814,-119.758,Fresno State,cfb,UNVERIFIED,OK
+Sanford Stadium,Athens,GA,,,Georgia,cfb,UNVERIFIED,NO_COORDS
+Bobby Dodd Stadium,Atlanta,GA,33.7725,-84.39278,Georgia Tech,cfb,UNVERIFIED,OK
+Space City Financial Stadium,Houston,TX,,,Houston,cfb,UNVERIFIED,NO_COORDS
+Gies Memorial Stadium,Champaign,IL,40.09917,-88.23583,Illinois,cfb,UNVERIFIED,OK
+Memorial Stadium,Bloomington,IN,39.18083,-86.52556,Indiana,cfb,UNVERIFIED,OK
+Kinnick Stadium,Iowa City,IA,41.65861,-91.55111,Iowa,cfb,UNVERIFIED,OK
+Jack Trice Stadium,Ames,IA,42.01417,-93.63583,Iowa State,cfb,UNVERIFIED,OK
+Bridgeforth Stadium,Harrisonburg,VA,,,James Madison,cfb,UNVERIFIED,NO_COORDS
+David Booth Kansas Memorial Stadium,Lawrence,KS,38.96333,-95.24639,Kansas,cfb,UNVERIFIED,OK
+Bill Snyder Family Football Stadium,Manhattan,KS,39.20194,-96.59389,Kansas State,cfb,UNVERIFIED,OK
+Kroger Field,Lexington,KY,38.02278,-84.50528,Kentucky,cfb,UNVERIFIED,OK
+Williams Stadium,Lynchburg,VA,37.354,-79.175,Liberty,cfb,UNVERIFIED,OK
+L&N Federal Credit Union Stadium,Louisville,KY,38.20583,-85.75889,Louisville,cfb,UNVERIFIED,OK
+Tiger Stadium,Baton Rouge,LA,30.41222,-91.18389,LSU,cfb,UNVERIFIED,OK
+Joan C. Edwards Stadium,Huntington,WV,38.425,-82.42083,Marshall,cfb,UNVERIFIED,OK
+SECU Stadium,College Park,MD,38.99028,-76.94722,Maryland,cfb,UNVERIFIED,OK
+Simmons Bank Liberty Stadium,Memphis,TN,35.121,-89.9774,Memphis,cfb,UNVERIFIED,OK
+Hard Rock Stadium,Miami Gardens,FL,25.95806,-80.23889,Miami,cfb,UNVERIFIED,OK
+Michigan Stadium,Ann Arbor,MI,42.26589,-83.74875,Michigan,cfb,UNVERIFIED,OK
+Spartan Stadium,East Lansing,MI,42.72806,-84.48472,Michigan State,cfb,UNVERIFIED,OK
+Huntington Bank Stadium,Minneapolis,MN,44.976,-93.225,Minnesota,cfb,UNVERIFIED,OK
+Davis Wade Stadium,Starkville,MS,33.45639,-88.79361,Mississippi State,cfb,UNVERIFIED,OK
+Faurot Field,Columbia,MO,38.93583,-92.33306,Missouri,cfb,UNVERIFIED,OK
+Navy–Marine Corps Memorial Stadium,Annapolis,MD,38.985,-76.507,Navy,cfb,UNVERIFIED,OK
+Carter–Finley Stadium,Raleigh,NC,35.80083,-78.71944,NC State,cfb,UNVERIFIED,OK
+Memorial Stadium,Lincoln,NE,,,Nebraska,cfb,UNVERIFIED,NO_COORDS
+Kenan Stadium,Chapel Hill,NC,35.90694,-79.04778,North Carolina,cfb,UNVERIFIED,OK
+Huskie Stadium,DeKalb,IL,41.934,-88.778,Northern Illinois,cfb,UNVERIFIED,OK
+Martin Stadium,Evanston,IL,,,Northwestern,cfb,UNVERIFIED,NO_COORDS
+Notre Dame Stadium,Notre Dame,IN,41.69833,-86.23389,Notre Dame,cfb,UNVERIFIED,OK
+Ohio Stadium,Columbus,OH,40.00167,-83.01972,Ohio State,cfb,UNVERIFIED,OK
+Gaylord Family Oklahoma Memorial Stadium,Norman,OK,35.20583,-97.4425,Oklahoma,cfb,UNVERIFIED,OK
+Boone Pickens Stadium,Stillwater,OK,36.12583,-97.06639,Oklahoma State,cfb,UNVERIFIED,OK
+Vaught–Hemingway Stadium,Oxford,MS,34.36194,-89.53417,Ole Miss,cfb,UNVERIFIED,OK
+Autzen Stadium,Eugene,OR,44.05833,-123.06861,Oregon,cfb,UNVERIFIED,OK
+Beaver Stadium,University Park,PA,40.8121,-77.856,Penn State,cfb,UNVERIFIED,OK
+Acrisure Stadium,Pittsburgh,PA,40.44667,-80.01583,Pittsburgh,cfb,UNVERIFIED,OK
+Ross–Ade Stadium,West Lafayette,IN,40.43444,-86.91833,Purdue,cfb,UNVERIFIED,OK
+SHI Stadium,Piscataway,NJ,40.51361,-74.46528,Rutgers,cfb,UNVERIFIED,OK
+Snapdragon Stadium,San Diego,CA,32.78444,-117.12278,San Diego State,cfb,UNVERIFIED,OK
+Gerald J. Ford Stadium,Dallas,TX,32.83664,-96.78399,SMU,cfb,UNVERIFIED,OK
+Williams–Brice Stadium,Columbia,SC,33.97306,-81.01917,South Carolina,cfb,UNVERIFIED,OK
+Stanford Stadium,Stanford,CA,37.43444,-122.16111,Stanford,cfb,UNVERIFIED,OK
+JMA Wireless Dome,Syracuse,NY,43.03611,-76.13639,Syracuse,cfb,UNVERIFIED,OK
+Amon G. Carter Stadium,Fort Worth,TX,32.70972,-97.36806,TCU,cfb,UNVERIFIED,OK
+Neyland Stadium,Knoxville,TN,35.955,-83.925,Tennessee,cfb,UNVERIFIED,OK
+Darrell K Royal–Texas Memorial Stadium,Austin,TX,,,Texas,cfb,UNVERIFIED,NO_COORDS
+Kyle Field,College Station,TX,30.6099,-96.3405,Texas A&M,cfb,UNVERIFIED,OK
+Jones Stadium,Lubbock,TX,33.59111,-101.87278,Texas Tech,cfb,UNVERIFIED,OK
+Glass Bowl,Toledo,OH,41.65694,-83.61361,Toledo,cfb,UNVERIFIED,OK
+Yulman Stadium,New Orleans,LA,29.94482,-90.11682,Tulane,cfb,UNVERIFIED,OK
+Acrisure Bounce House,Orlando,FL,28.6091,-81.1924,UCF,cfb,UNVERIFIED,OK
+Rose Bowl,Pasadena,CA,34.161,-118.168,UCLA,cfb,UNVERIFIED,OK
+Pratt & Whitney Stadium at Rentschler Field,East Hartford,CT,41.75972,-72.61889,UConn,cfb,UNVERIFIED,OK
+Allegiant Stadium,Las Vegas,NV,36.09056,-115.18389,UNLV,cfb,UNVERIFIED,OK
+Los Angeles Memorial Coliseum,Los Angeles,CA,34.01417,-118.28778,USC,cfb,UNVERIFIED,OK
+Raymond James Stadium,Tampa,FL,27.97583,-82.50333,USF,cfb,UNVERIFIED,OK
+Rice–Eccles Stadium,Salt Lake City,UT,40.75997,-111.84885,Utah,cfb,UNVERIFIED,OK
+FirstBank Stadium,Nashville,TN,36.14417,-86.80889,Vanderbilt,cfb,UNVERIFIED,OK
+Scott Stadium,Charlottesville,VA,38.03111,-78.51361,Virginia,cfb,UNVERIFIED,OK
+Lane Stadium,Blacksburg,VA,37.22,-80.41806,Virginia Tech,cfb,UNVERIFIED,OK
+Allegacy Federal Credit Union Stadium,Winston-Salem,NC,36.13056,-80.25472,Wake Forest,cfb,UNVERIFIED,OK
+Husky Stadium,Seattle,WA,47.6503,-122.3016,Washington,cfb,UNVERIFIED,OK
+Milan Puskar Stadium,Morgantown,WV,39.6502,-79.9551,West Virginia,cfb,UNVERIFIED,OK
+Camp Randall Stadium,Madison,WI,43.07,-89.41278,Wisconsin,cfb,UNVERIFIED,OK
