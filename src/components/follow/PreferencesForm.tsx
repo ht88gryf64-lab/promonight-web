@@ -166,8 +166,15 @@ export function PreferencesForm({
     return (
       <div className="rounded-2xl border border-rd-line bg-rd-card p-8 text-center">
         <h2 className="rd-display text-2xl uppercase text-rd-ink">You&apos;re unsubscribed</h2>
+        {/* ph-no-capture on the address only, not the paragraph: session replay
+            masks form inputs and not rendered text, so this echo was captured
+            verbatim. The class goes on the smallest element wrapping the value
+            so the "Re-subscribe" link beside it stays legible in a recording —
+            that is the one thing worth watching on this card. Full rule in
+            follow/FollowForm.tsx. */}
         <p className="mx-auto mt-2 max-w-md font-rd text-rd-ink-soft">
-          {email} will no longer receive PromoNight emails. Changed your mind?{' '}
+          <span className="ph-no-capture">{email}</span> will no longer receive
+          PromoNight emails. Changed your mind?{' '}
           <a href="/follow" className="font-semibold text-rd-red underline">
             Re-subscribe
           </a>
@@ -236,8 +243,16 @@ export function PreferencesForm({
             role="group"
             aria-label="Confirm unsubscribe"
           >
+            {/* THE WORST OF THE FIVE, AND THE REASON IS THE AUTO-OPEN.
+                confirmingUnsub initialises from autoConfirmUnsub, which
+                preferences/page.tsx sets from `?unsub=1` — the unsubscribe link
+                in every email footer. So this prompt renders the address on page
+                load with no interaction at all, and every such visit produced a
+                recording with a legible plaintext email in it. Full rule in
+                follow/FollowForm.tsx. */}
             <p className="font-rd text-[13px] text-rd-ink-soft" role="alert">
-              Unsubscribe {email} from all PromoNight emails?
+              Unsubscribe <span className="ph-no-capture">{email}</span> from all
+              PromoNight emails?
             </p>
             <div className="flex gap-2">
               <button
