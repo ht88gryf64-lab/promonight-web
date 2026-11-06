@@ -1,9 +1,7 @@
 import Link from 'next/link';
 import { IconChevronRight } from '@tabler/icons-react';
 import type { Promo } from '@/lib/types';
-
-const BOBBLEHEAD_RE = /bobblehead/i;
-const JERSEY_RE = /\b(jersey|cap|hat|jacket|shirt|hoodie)\b/i;
+import { isBobbleheadHubRow, isJerseyHubRow } from '@/lib/promo-helpers';
 
 export function TeamRelatedAggregators({
   promos,
@@ -12,12 +10,10 @@ export function TeamRelatedAggregators({
   promos: Promo[];
   variant?: 'dark' | 'light';
 }) {
-  const bobbleheads = promos.filter(
-    (p) => BOBBLEHEAD_RE.test(p.title) || BOBBLEHEAD_RE.test(p.description),
-  ).length;
-  const jerseys = promos.filter(
-    (p) => JERSEY_RE.test(p.title) || JERSEY_RE.test(p.description),
-  ).length;
+  // "N on this team" is a promise about the linked hub, so count with the
+  // hub's own row filter.
+  const bobbleheads = promos.filter(isBobbleheadHubRow).length;
+  const jerseys = promos.filter(isJerseyHubRow).length;
   const themes = promos.filter((p) => p.type === 'theme').length;
 
   const items: { label: string; href: string; hint: string }[] = [];
