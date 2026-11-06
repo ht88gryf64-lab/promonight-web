@@ -91,11 +91,11 @@ describe('the middleware hop', () => {
     }
   });
 
-  it('is wired in before the request counter, and answers noindex', () => {
+  it('is wired in before the crawler logger, and answers noindex', () => {
     const mw = readFileSync('src/middleware.ts', 'utf8');
     const hop = mw.indexOf('shortLinkRedirect(request.nextUrl.pathname');
-    const counter = mw.indexOf('countRequest(request, event, userAgent)');
-    assert.ok(hop > 0 && counter > hop, 'the hop is answered before the counter runs');
+    const logger = mw.indexOf('detectBot(userAgent)');
+    assert.ok(hop > 0 && logger > hop, 'the hop is answered before the crawler logger runs');
     assert.match(mw, /status: 307, headers: NOINDEX_HEADER/);
     assert.deepEqual(NOINDEX_HEADER, { 'x-robots-tag': 'noindex' });
     assert.match(readFileSync('src/app/p/[code]/route.ts', 'utf8'), /\.\.\.NOINDEX_HEADER/);

@@ -114,7 +114,6 @@ const CASES = [
   ['a request outlives its pass (no clamp)', LIB, '          signal: AbortSignal.timeout(Math.max(1, Math.min(FETCH_TIMEOUT_MS, left))),', '          signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),', [T]],
   ['the route runs to Vercel\'s 300s default', ROUTE, 'export const maxDuration = 800;', 'export const maxDuration = 300;', [T]],
   ['a dropped slug stays green', ROUTE, '    dropped.length === 0 &&\n', '', [T]],
-  ['the middleware counts the job\'s requests', 'src/middleware.ts', '  if (!isNightlyRefreshRequest(userAgent)) countRequest(request, event, userAgent);', '  countRequest(request, event, userAgent);', [T]],
   ['no deadline (the run can outlive maxDuration)', LIB, '      if (opts.deadline !== undefined && now() > opts.deadline) {', '      if (false) {', [T]],
   ['/best-promos left out', LIB, "  '/best-promos',\n", '', [T]],
   ['runs without the fan-out secret', ROUTE, "  if (!fanOutSecret) {\n    return NextResponse.json({ ok: false, reason: 'fanout_not_configured' }, { status: 503 });\n  }", '', [T]],

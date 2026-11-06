@@ -1,9 +1,4 @@
 import { NextRequest, NextResponse, type NextFetchEvent } from 'next/server';
-import { isNightlyRefreshRequest } from '@/lib/refresh-agent';
-import {
-  classifyRequestType,
-  classifyTraffic,
-} from '@/lib/analytics/traffic-classifier';
 import {
   MANAGE_COOKIE,
   MANAGE_TOKEN_RE,
@@ -84,78 +79,6 @@ function detectBot(userAgent: string | null): string | null {
   return null;
 }
 
-// Fraction of unknown-class requests whose raw user agent is sampled into
-// unknownUserAgents. The counter itself is full rate; only this diagnostic
-// side-channel is sampled. It is the only way a classifier gap gets FOUND
-// rather than guessed at, which is not academic: the legacy detectBot() list
-// above misses Googlebot entirely and nothing surfaced that for months.
-const UNKNOWN_UA_SAMPLE_RATE = 0.01;
-
-/**
- * Server-truth request counter. Fires for EVERY matched request, human and
- * crawler alike, at FULL RATE with no sampling, into requestCounters.
- *
- * Independent of the crawler logger below it in every way: separate secret,
- * separate route, separate collection, no sampling, and a different classifier.
- * A crawler request is counted in BOTH, by design.
- *
- * Never throws and never awaits. The fetch is handed to event.waitUntil so the
- * response is not held on our own bookkeeping, and every failure path logs and
- * swallows. A logging outage must not become a site outage.
- */
-function countRequest(
-  request: NextRequest,
-  event: NextFetchEvent,
-  userAgent: string | null,
-): void {
-  try {
-    const secret = process.env.REQUEST_LOG_SECRET;
-    // Not configured. Skip rather than fire an unauthenticated request that the
-    // route would only reject anyway.
-    if (!secret) return;
-
-    const trafficClass = classifyTraffic(userAgent);
-    const requestType = classifyRequestType(request.headers);
-
-    const payload: Record<string, string> = {
-      traffic_class: trafficClass,
-      request_type: requestType,
-    };
-
-    // Unknown-class only. Deliberately never sampled for `human`: this is a
-    // classifier-gap diagnostic, not a log of visitors' user agents.
-    if (trafficClass === 'unknown' && Math.random() < UNKNOWN_UA_SAMPLE_RATE) {
-      payload.userAgent = userAgent ?? '';
-      payload.path = request.nextUrl.pathname;
-    }
-
-    const write = fetch(`${request.nextUrl.origin}/api/log-request`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-request-log-secret': secret,
-      },
-      body: JSON.stringify(payload),
-    }).catch((err) => {
-      console.error('REQUEST_COUNTER_FETCH_ERR', {
-        message: err?.message,
-        name: err?.name,
-        trafficClass,
-        requestType,
-        path: request.nextUrl.pathname,
-      });
-    });
-
-    event.waitUntil(write);
-  } catch (err) {
-    console.error('REQUEST_COUNTER_ERR', {
-      message: (err as Error)?.message,
-      name: (err as Error)?.name,
-      path: request.nextUrl.pathname,
-    });
-  }
-}
-
 export async function middleware(request: NextRequest, event: NextFetchEvent) {
   // TOKEN EXCHANGE, FIRST AND BEFORE THE COUNTER.
   //
@@ -166,10 +89,6 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
   // snapshots, and that page_path reports to PostHog and GA4) carries no
   // credential. See src/lib/manage-session.ts for why this cannot live in the
   // page or on the client.
-  //
-  // Ahead of countRequest deliberately: this request is immediately redirected
-  // and the visitor's real page request arrives a moment later, so counting both
-  // would double-count one visit.
   //
   // The non-secret params are preserved. `confirmed` and `unsub` are UI intent,
   // not credentials, and dropping `unsub` would break the one-click unsubscribe
@@ -200,21 +119,6 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
   }
 
   const userAgent = request.headers.get('user-agent');
-
-  // Server-truth request counter, FIRST and unconditional. This must run before
-  // the non-crawler early return below, which is where every human request used
-  // to leave the function untouched. Placement here is the whole point of the
-  // counter: it is the only code path that sees human traffic.
-  //
-  // Placed after the 410 trap above on purpose: a leaked Fanatics catalog path
-  // is not a page request, so counting it would put non-pages in the tally.
-  // The cost is that `total` runs a hair below Vercel's middleware invocation
-  // count by the 410 volume (1 in the last 24h) and, since WEB6 G4, by the
-  // nightly refresh's own page requests (about 800 a night, between 04:15 and
-  // 05:30 UTC). Recorded for the Phase 3 reconciliation in
-  // docs/request-counter-notes.md. The refresh's requests are not visits, and
-  // each counted one would be a write to the hour's single counter doc.
-  if (!isNightlyRefreshRequest(userAgent)) countRequest(request, event, userAgent);
 
   const bot = detectBot(userAgent);
   if (!bot) return NextResponse.next();
