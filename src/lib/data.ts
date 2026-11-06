@@ -945,6 +945,13 @@ const loadGamesInDateRange = cache(async (startDate: string, endDate: string): P
   return snap.docs.map(mapGameDoc);
 });
 
+/** Every game in [startDate, endDate], the same one read the join makes. The
+ *  weekly digest reads it to name each row's building from the promo's own
+ *  home game (src/lib/digest.ts), never from the team's default venue. */
+export function getGamesInDateRange(startDate: string, endDate: string): Promise<Game[]> {
+  return loadGamesInDateRange(startDate, endDate);
+}
+
 // Process-local TTL copy of a games window, for the one caller that is not an
 // ISR render: /api/my-teams/promos answers a client fetch per visit, so without
 // this every /my-teams view paid the window read again (B7, 2026-10-29).

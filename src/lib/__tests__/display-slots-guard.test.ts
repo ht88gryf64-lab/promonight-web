@@ -35,6 +35,7 @@ const MAPPER_FILES = new Set([
 const NON_PROMO_RECEIVERS = /\b(kickoff\??|k|club|item|p: DigestPromo)\.(time|opponent)\b/;
 const NON_PROMO_FILES = new Set([
   'src/lib/email.ts', // DigestPromo rows, display values set in digest.ts
+  'src/lib/digest-email.ts', // the digest renderer (2026-11-05): same DigestPromo rows
   'src/lib/social-feed/rss.ts', // FeedItem rows, display values set in feed.ts
 ]);
 

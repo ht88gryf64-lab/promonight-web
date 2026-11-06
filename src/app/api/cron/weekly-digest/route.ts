@@ -50,7 +50,7 @@ import {
   fetchWindowPromos,
   personalizedFor,
   genericFeatured,
-  DIGEST_COLLECTIONS,
+  fetchDigestContext,
   type DigestPromo,
 } from '@/lib/digest';
 import { getAllTeams, getTeamVenueCoords, getSchemaLocationsForTeams } from '@/lib/data';
@@ -88,6 +88,7 @@ interface PlanItem {
 interface EmptyPlanItem {
   email: string;
   manageToken: string;
+  teamIds: string[];
   teamNames: string[];
   anchorCity: string | null;
   localPromos: DigestPromo[];
@@ -162,6 +163,7 @@ async function runDigest(url: URL, execute: boolean, ctx: RunContext, alert: Ale
     manageToken: string;
     promos: DigestPromo[];
     total: number;
+    teamIds: string[];
   }[] = [];
   const emptyWindowSubs: Subscriber[] = [];
 
@@ -174,7 +176,7 @@ async function runDigest(url: URL, execute: boolean, ctx: RunContext, alert: Ale
         emptyWindowSubs.push(sub);
         continue;
       }
-      personalizedPlan.push({ email: sub.email, manageToken: sub.manageToken, promos, total: promoTotal });
+      personalizedPlan.push({ email: sub.email, manageToken: sub.manageToken, promos, total: promoTotal, teamIds: sub.teams });
       plan.push({ email: sub.email, manageToken: sub.manageToken, type: 'personalized', promoCount: promoTotal });
     } else {
       plan.push({ email: sub.email, manageToken: sub.manageToken, type: 'generic', promoCount: generic.length });
@@ -200,6 +202,7 @@ async function runDigest(url: URL, execute: boolean, ctx: RunContext, alert: Ale
       emptyPlan.push({
         email: sub.email,
         manageToken: sub.manageToken,
+        teamIds: sub.teams,
         teamNames: sub.teams.map((id) => nameById.get(id) ?? id),
         anchorCity: anchor.city,
         localPromos,
@@ -312,6 +315,11 @@ async function runDigest(url: URL, execute: boolean, ctx: RunContext, alert: Ale
     return NextResponse.json({ ok: false, reason: 'exceeds_send_ceiling', detail, ...summary }, { status: 409 });
   }
 
+  // What every email shares beyond the window rows (team names, the upcoming
+  // promo links for "Coming up" and "at other clubs"). Read BEFORE the claim,
+  // so a failed read aborts with the window still unclaimed.
+  const context = await fetchDigestContext({ start, end }, windowPromos);
+
   // Idempotency: claim this window so an accidental second execute is a no-op.
   // &force=true overrides for a deliberate re-run.
   const claimed = await claimDigestRun(start, force);
@@ -331,7 +339,7 @@ async function runDigest(url: URL, execute: boolean, ctx: RunContext, alert: Ale
   // recipient/row fails locally instead of aborting the whole batch.
   for (const item of personalizedPlan) {
     try {
-      const res = await sendPersonalizedDigest(item);
+      const res = await sendPersonalizedDigest({ ...item, context });
       if (res.ok) sent++;
       else {
         failed++;
@@ -348,7 +356,7 @@ async function runDigest(url: URL, execute: boolean, ctx: RunContext, alert: Ale
         email: p.email,
         manageToken: p.manageToken,
         featured: generic,
-        collections: DIGEST_COLLECTIONS,
+        context,
       });
       if (res.ok) sent++;
       else {
@@ -365,11 +373,12 @@ async function runDigest(url: URL, execute: boolean, ctx: RunContext, alert: Ale
       const res = await sendEmptyWindowDigest({
         email: e.email,
         manageToken: e.manageToken,
+        teamIds: e.teamIds,
         teamNames: e.teamNames,
-        anchorCity: e.anchorCity,
+        level: e.level,
         localPromos: e.localPromos,
         featured: generic,
-        collections: DIGEST_COLLECTIONS,
+        context,
       });
       if (res.ok) sent++;
       else {
