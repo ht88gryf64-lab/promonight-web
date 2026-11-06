@@ -74,6 +74,9 @@ export interface DigestEmailInput {
   /** Muted line directly above the first row (empty-window only, spec v2):
    *  tells the reader the rows are not their teams. Null renders nothing. */
   leadIn: string | null;
+  /** Inbox preview text (digestPreheader): hidden at the top of the body, so
+   *  the preview never falls through to the hero image's alt text. */
+  preheader: string;
   postalAddress: string;
 }
 
@@ -262,6 +265,26 @@ export type SubjectInput =
   | { variant: 'generic'; windowEntries: number; windowGiveawayEntries: number }
   | { variant: 'empty'; teams: Pick<DigestTeam, 'id' | 'short'>[]; level: CascadeLevel }
   | { variant: 'no-promos'; generic: boolean };
+
+/** The subject's second clause, as the inbox preview line (2026-11-05):
+ *  "Here is what is nearby", "22 giveaways this week", "1 promo night". The
+ *  no-promo subject has no second clause, so it carries the no-promo line's. */
+export function digestPreheader(s: SubjectInput): string {
+  switch (s.variant) {
+    case 'no-promos':
+      return 'Here is what is on the calendar';
+    case 'personalized': {
+      const subject = digestSubject(s);
+      return subject.slice(subject.indexOf(': ') + 2);
+    }
+    case 'generic':
+      return s.windowGiveawayEntries > 0
+        ? `${plural(s.windowGiveawayEntries, 'giveaway', 'giveaways')} this week`
+        : `${plural(s.windowEntries, 'promo night', 'promo nights')} this week`;
+    case 'empty':
+      return s.level === 'team-proxy' ? 'Here is what is nearby' : 'Here is what is on around the league';
+  }
+}
 
 export function digestSubject(s: SubjectInput): string {
   switch (s.variant) {
@@ -541,6 +564,14 @@ function renderText(input: DigestEmailInput, hero: DigestEntry | null, rows: Dig
   return out.join('\n');
 }
 
+/** Hidden preview text, first thing in the body. The run of zero-width
+ *  joiners after it keeps clients from pulling body text (or the hero's alt
+ *  text) into the rest of the preview line. mso-hide covers Outlook. */
+function preheaderHtml(text: string): string {
+  const filler = '&#847;&zwnj;&nbsp;'.repeat(60);
+  return `<div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;color:${DIGEST_WHITE};">${esc(text)}${filler}</div>`;
+}
+
 // ── the document ─────────────────────────────────────────────────────────────
 
 export function renderDigest(input: DigestEmailInput): RenderedDigest {
@@ -573,6 +604,7 @@ export function renderDigest(input: DigestEmailInput): RenderedDigest {
 <title>${esc(input.title)}</title>
 </head>
 <body bgcolor="${DIGEST_WHITE}" style="margin:0;padding:0;width:100%;background:${DIGEST_WHITE};">
+${preheaderHtml(input.preheader)}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${DIGEST_WHITE}" style="width:100%;background:${DIGEST_WHITE};"><tr><td align="center" bgcolor="${DIGEST_WHITE}" style="padding:0;background:${DIGEST_WHITE};">
 ${msoOpen}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="${DIGEST_WHITE}" style="width:100%;max-width:${CONTAINER}px;margin:0 auto;background:${DIGEST_WHITE};border-collapse:collapse;">

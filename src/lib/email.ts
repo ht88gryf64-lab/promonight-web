@@ -1,6 +1,6 @@
 import 'server-only';
 import type { DigestContext, DigestPromo } from './digest';
-import { collapseEntries, digestSubject, giveawayEntryCount, renderDigest, teamListLabel, windowLabel, type DigestEmailInput, type SubjectInput } from './digest-email';
+import { collapseEntries, digestPreheader, digestSubject, giveawayEntryCount, renderDigest, teamListLabel, windowLabel, type DigestEmailInput, type SubjectInput } from './digest-email';
 import type { CascadeLevel } from './geo/local-promos';
 
 // Transactional email via the Resend REST API. Intentionally dependency-free
@@ -307,10 +307,13 @@ function teamNamesFor(teamIds: string[], context: DigestContext): string[] {
 // count says how many games, and consecutive weeks never share a subject (the
 // old static three threaded every send into one Gmail conversation). A send
 // that renders no entries takes the no-promo subject whatever its variant.
-function built(subject: SubjectInput, manageToken: string, input: DigestEmailInput): BuiltDigest {
-  const { html, text, hero, entryCount } = renderDigest(input);
-  const line = digestSubject(entryCount === 0 ? { variant: 'no-promos', generic: input.variant === 'generic' } : subject);
-  return { subject: line, html, text, headers: listUnsubHeaders(manageToken), hero };
+// The preheader is the subject's second clause, from the same input, so the
+// two never disagree.
+function built(subject: SubjectInput, manageToken: string, input: Omit<DigestEmailInput, 'preheader'>): BuiltDigest {
+  const noPromos = collapseEntries(input.promos).length === 0;
+  const s: SubjectInput = noPromos ? { variant: 'no-promos', generic: input.variant === 'generic' } : subject;
+  const { html, text, hero } = renderDigest({ ...input, preheader: digestPreheader(s) });
+  return { subject: digestSubject(s), html, text, headers: listUnsubHeaders(manageToken), hero };
 }
 
 function subjectTeams(teamIds: string[], context: DigestContext): { id: string; short: string }[] {

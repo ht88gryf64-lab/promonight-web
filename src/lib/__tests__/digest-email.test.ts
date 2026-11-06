@@ -668,6 +668,39 @@ test('footer keeps its content and adds the disclosure; buttons meet 44px', asyn
   }
 });
 
+test('preheader: the subject\'s second clause, hidden, first in the body, never the hero alt text', async () => {
+  const { buildGenericDigest, buildEmptyWindowDigest } = await builders();
+  const builtAll = [
+    ...(await Promise.all(CASES.map(async (c) => [c.name, await c.build()] as const))),
+    ['generic-nopromos', buildGenericDigest({ email: 'a@example.com', manageToken: TOKEN, featured: [], context: context() })] as const,
+    ['empty-nopromos', buildEmptyWindowDigest({ email: 'a@example.com', manageToken: TOKEN, teamIds: PROXY_TEAM, teamNames: PROXY_NAMES, level: 'national-fallback', localPromos: [], featured: [], context: context() })] as const,
+  ];
+  const want: Record<string, string> = {
+    'personalized-hero': '3 promo nights',
+    'personalized-nohero': '3 promo nights',
+    'generic-hero': '17 giveaways this week',
+    'generic-nohero': '17 giveaways this week',
+    'empty-hero': 'Here is what is nearby',
+    'empty-nohero': 'Here is what is on around the league',
+    'generic-nopromos': 'Here is what is on the calendar',
+    'empty-nopromos': 'Here is what is on the calendar',
+  };
+  for (const [name, b] of builtAll) {
+    const { html, subject, hero } = b as unknown as { html: string; subject: string; hero: DigestPromo | null };
+    const body = html.slice(html.indexOf('<body'));
+    const first = body.slice(body.indexOf('>') + 1).trimStart();
+    assert.ok(first.startsWith('<div style="display:none;'), `${name}: the preheader is the first thing in the body`);
+    const m = /^<div style="([^"]+)">([^&<]+)&#847;/.exec(first);
+    assert.ok(m, `${name}: preheader shape`);
+    for (const rule of ['display:none', 'max-height:0', 'opacity:0', 'overflow:hidden', 'mso-hide:all']) assert.ok(m![1].includes(rule), `${name}: ${rule}`);
+    assert.strictEqual(m![2], want[name], `${name}: preheader text`);
+    if (name !== 'generic-hero' && name !== 'generic-nohero' && !name.endsWith('nopromos')) {
+      assert.ok(subject.endsWith(m![2]), `${name}: the preheader is the subject's second clause`);
+    }
+    if (hero) assert.ok(!m![2].includes(hero.title), `${name}: not the hero alt text`);
+  }
+});
+
 test('List-Unsubscribe headers carry the recipient token on every variant', async () => {
   for (const c of CASES) {
     const b = (await c.build()) as unknown as { headers: Record<string, string> };
