@@ -47,10 +47,13 @@ const FILES = [
   'src/components/follow/FollowForm.tsx',
   'src/components/follow/PreferencesForm.tsx',
   'src/app/preferences/page.tsx',
+  // Added after this rule was written (2026-11-05 rebase): the confirm page
+  // renders the candidate's address as text.
+  'src/app/confirm/page.tsx',
 ];
 
 /** `{email}` or `{subscriber.email}`, anywhere. */
-const INTERPOLATION = /\{\s*(?:subscriber\.)?email\s*\}/g;
+const INTERPOLATION = /\{\s*(?:subscriber\.|candidate\.)?email(?:\s*\?\?[^}]*)?\s*\}/g;
 
 /**
  * The ONLY two attributes that make an occurrence safe, and the reason is narrow:
@@ -170,4 +173,18 @@ test('the capture sheet still carries ph-no-capture in a className, not just in 
       'names the address deliberately, so the class is load-bearing there. See ' +
       'src/lib/capture/sheet-copy.ts and its test before removing it.',
   );
+});
+
+test('both email INPUTS are form fields masked by maskAllInputs, with no opt-out anywhere', () => {
+  // The follow form and the capture sheet (rebased 2026-11-05; the sheet's input
+  // is covered the same way). maskAllInputs masks a field's VALUE as it is typed,
+  // so each address input must be a real <input>, and nothing may switch the
+  // masking off or opt an element back into capture.
+  const provider = readFileSync(join(ROOT, 'src/components/analytics/AnalyticsProvider.tsx'), 'utf8');
+  assert.match(provider, /session_recording:\s*\{\s*maskAllInputs:\s*true/);
+  for (const rel of ['src/components/follow/FollowForm.tsx', 'src/components/capture/CaptureCard.tsx']) {
+    const src = readFileSync(join(ROOT, rel), 'utf8');
+    assert.match(src, /<input[\s\S]{0,200}?type="email"/, `${rel}: the address is entered in an <input type="email">`);
+    assert.doesNotMatch(src, /ph-capture|data-ph-unmask|ph-unmask|contentEditable/, `${rel}: no opt-out from input masking`);
+  }
 });
