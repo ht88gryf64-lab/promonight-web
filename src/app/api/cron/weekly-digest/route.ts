@@ -318,7 +318,7 @@ async function runDigest(url: URL, execute: boolean, ctx: RunContext, alert: Ale
   // What every email shares beyond the window rows (team names, the upcoming
   // promo links for "Coming up" and "at other clubs"). Read BEFORE the claim,
   // so a failed read aborts with the window still unclaimed.
-  const context = await fetchDigestContext({ start, end });
+  const context = await fetchDigestContext({ start, end }, windowPromos);
 
   // Idempotency: claim this window so an accidental second execute is a no-op.
   // &force=true overrides for a deliberate re-run.

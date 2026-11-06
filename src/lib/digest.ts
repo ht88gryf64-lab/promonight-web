@@ -1,6 +1,6 @@
 import 'server-only';
 import { getAllTeams, getGamesInDateRange, getPromosInDateRange } from './data';
-import { PROMO_TYPE_LABELS, SPORT_ICONS, type Promo, type PromoWithTeam, type Team } from './types';
+import { PROMO_TYPE_LABELS, SPORT_ICONS, type Promo, type PromoType, type PromoWithTeam, type Team } from './types';
 import { addDaysYmd, siteYmd } from './site-today';
 import { promoDisplayOpponent, promoDisplayTime } from './promo-helpers';
 import { promoPageHref } from './promo-page-href';
@@ -9,6 +9,7 @@ import { getUpcomingPromoIndex, type IndexedPromo } from './promo-pages';
 import { quantityLine, type ImageTier } from './promo-page-copy';
 import { attachPromoPageFields, stampPromoPageCanonical } from './promo-page-stamp';
 import { buildGameIndex, resolveGameForPromo } from './promo-game-join';
+import { collapseEntries, giveawayEntryCount } from './digest-email';
 
 // Weekly-digest assembly. The window's promos are fetched ONCE per run via
 // getPromosInDateRange (a single deduped collection-group query, deduped by
@@ -24,6 +25,8 @@ const PERSONALIZED_CAP = 40;
 export interface DigestPromo {
   date: string; // YYYY-MM-DD
   title: string;
+  /** The raw type, for the collapsed entry's lead (giveaway first). */
+  type: PromoType;
   typeLabel: string;
   icon: string;
   highlight: boolean;
@@ -82,6 +85,7 @@ export interface DigestUpcoming {
   teamId: string;
   date: string;
   title: string;
+  type: PromoType;
   themeKey: string | null;
   /** Root-relative promo page, through promoPageHref (canonical stamped). */
   href: string;
@@ -95,6 +99,11 @@ export interface DigestContext {
   /** Every visible upcoming promo with a page, from the window start on,
    *  date-ascending. Empty when the index read failed (both sections omit). */
   upcoming: readonly DigestUpcoming[];
+  /** The whole window, collapsed to one entry per team per date, for the
+   *  generic subject's count. */
+  windowEntries: number;
+  /** Of those, the entries with a giveaway. */
+  windowGiveawayEntries: number;
 }
 
 export interface DigestCollection {
@@ -180,6 +189,7 @@ function toDigestPromo(p: PromoWithTeam, meta?: RowMeta, venueName?: string): Di
   return {
     date: p.date,
     title: p.title,
+    type: p.type,
     typeLabel: PROMO_TYPE_LABELS[p.type] ?? 'Promo',
     icon: p.icon,
     highlight: p.highlight,
@@ -254,17 +264,19 @@ export function upcomingLinks(index: readonly IndexedPromo[], teams: ReadonlyMap
     const href = promoPageHref(promo, team);
     if (!href || seen.has(href)) continue; // canonical twins collapse to one link
     seen.add(href);
-    out.push({ teamId: team.id, date: src.date, title: src.title, themeKey: src.themeKey, href, pageSlug: promo.pageCanonicalSlug || promo.pageSlug! });
+    out.push({ teamId: team.id, date: src.date, title: src.title, type: src.type, themeKey: src.themeKey, href, pageSlug: promo.pageCanonicalSlug || promo.pageSlug! });
   }
   return out.sort((a, b) => a.date.localeCompare(b.date));
 }
 
-/** Teams and upcoming links shared by every email in a run. */
-export async function fetchDigestContext(window: { start: string; end: string }): Promise<DigestContext> {
+/** Teams, upcoming links and the window's collapsed counts, shared by every
+ *  email in a run. `windowPromos` is the run's fetchWindowPromos result. */
+export async function fetchDigestContext(window: { start: string; end: string }, windowPromos: readonly DigestPromo[]): Promise<DigestContext> {
   const allTeams = await getAllTeams();
   const teams = new Map(allTeams.map((t) => [t.id, toDigestTeam(t)]));
   const index = await readIndex(window.start);
-  return { window, teams, upcoming: upcomingLinks(index, teams) };
+  const entries = collapseEntries(windowPromos);
+  return { window, teams, upcoming: upcomingLinks(index, teams), windowEntries: entries.length, windowGiveawayEntries: giveawayEntryCount(entries) };
 }
 
 // Promos in the window for a personalized subscriber's followed teams. Returns

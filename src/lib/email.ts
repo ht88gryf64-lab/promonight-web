@@ -1,6 +1,6 @@
 import 'server-only';
 import type { DigestContext, DigestPromo } from './digest';
-import { renderDigest, teamListLabel, windowLabel, type DigestEmailInput } from './digest-email';
+import { collapseEntries, digestSubject, giveawayEntryCount, renderDigest, teamListLabel, windowLabel, type DigestEmailInput, type SubjectInput } from './digest-email';
 import type { CascadeLevel } from './geo/local-promos';
 
 // Transactional email via the Resend REST API. Intentionally dependency-free
@@ -303,9 +303,21 @@ function teamNamesFor(teamIds: string[], context: DigestContext): string[] {
   return teamIds.map((id) => context.teams.get(id)?.name ?? id);
 }
 
-function built(subject: string, manageToken: string, input: DigestEmailInput): BuiltDigest {
-  const { html, text, hero } = renderDigest(input);
-  return { subject, html, text, headers: listUnsubHeaders(manageToken), hero };
+// SUBJECTS (review fix 2026-11-05). Built from the collapsed entries, so the
+// count says how many games, and consecutive weeks never share a subject (the
+// old static three threaded every send into one Gmail conversation). A send
+// that renders no entries takes the no-promo subject whatever its variant.
+function built(subject: SubjectInput, manageToken: string, input: DigestEmailInput): BuiltDigest {
+  const { html, text, hero, entryCount } = renderDigest(input);
+  const line = digestSubject(entryCount === 0 ? { variant: 'no-promos', generic: input.variant === 'generic' } : subject);
+  return { subject: line, html, text, headers: listUnsubHeaders(manageToken), hero };
+}
+
+function subjectTeams(teamIds: string[], context: DigestContext): { id: string; short: string }[] {
+  return teamIds.map((id) => {
+    const t = context.teams.get(id);
+    return { id, short: t?.short || t?.name || id };
+  });
 }
 
 export interface PersonalizedDigestArgs {
@@ -322,7 +334,16 @@ export interface PersonalizedDigestArgs {
 }
 
 export function buildPersonalizedDigest(args: PersonalizedDigestArgs): BuiltDigest {
-  return built("Your teams' promos this week on PromoNight", args.manageToken, {
+  const entries = collapseEntries(args.promos);
+  // The count is the rendered entries plus any raw promos past the 40 cap
+  // (exact below the cap, which is every real subscriber today).
+  const overflow = Math.max(0, args.total - args.promos.length);
+  return built({
+    variant: 'personalized',
+    teams: subjectTeams(args.teamIds, args.context),
+    entries: entries.length + overflow,
+    giveawayEntries: giveawayEntryCount(entries),
+  }, args.manageToken, {
     ...baseInput(args.manageToken, args.context),
     variant: 'personalized',
     surface: EMAIL_SURFACE_PERSONALIZED,
@@ -349,7 +370,11 @@ export interface GenericDigestArgs {
 }
 
 export function buildGenericDigest(args: GenericDigestArgs): BuiltDigest {
-  return built("This week's hottest pro sports promos", args.manageToken, {
+  return built({
+    variant: 'generic',
+    windowEntries: args.context.windowEntries,
+    windowGiveawayEntries: args.context.windowGiveawayEntries,
+  }, args.manageToken, {
     ...baseInput(args.manageToken, args.context),
     variant: 'generic',
     surface: EMAIL_SURFACE_GENERIC,
@@ -415,7 +440,7 @@ export function buildEmptyWindowDigest(args: EmptyWindowDigestArgs): BuiltDigest
   // none would be national content, so it is treated as national here too.
   const proxy = args.level === 'team-proxy' && args.localPromos.length > 0;
   const level: CascadeLevel = proxy ? 'team-proxy' : 'national-fallback';
-  return built('Your teams are quiet this week on PromoNight', args.manageToken, {
+  return built({ variant: 'empty', teams: subjectTeams(args.teamIds, args.context), level }, args.manageToken, {
     ...baseInput(args.manageToken, args.context),
     variant: 'empty',
     surface: EMAIL_SURFACE_EMPTY,

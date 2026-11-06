@@ -29,6 +29,11 @@
  * are told apart in the inbox. TICKETNETWORK_EMAIL_APPROVED is forced off, and
  * the script refuses to send a message carrying any partner domain.
  *
+ * DIGEST_TEST_ONLY=empty/hero,generic/no-hero limits the SENDS to those
+ * labels; every case is still built and its subject printed. empty/hero
+ * prefers a quiet team whose proxy set holds a same-team same-date pair
+ * (the collapse case), the Cardinals first.
+ *
  * Requires RESEND_API_KEY and FIREBASE_SERVICE_ACCOUNT_KEY in .env.local.
  */
 
@@ -120,7 +125,10 @@ const {
   buildGenericDigest,
   buildEmptyWindowDigest,
 } = require('../src/lib/email.ts');
-const { pickHero } = require('../src/lib/digest-email.ts');
+const { pickHero: pickHeroEntries, collapseEntries } = require('../src/lib/digest-email.ts');
+// The hero rule runs on collapsed entries (one per team per date).
+const pickHero = (promos) => pickHeroEntries(collapseEntries(promos));
+const ONLY = (process.env.DIGEST_TEST_ONLY || '').split(',').map((x) => x.trim()).filter(Boolean);
 const { getAllTeams, getTeamVenueCoords, getSchemaLocationsForTeams } = require('../src/lib/data.ts');
 const { resolveLocalAnchor, buildTeamCityMap } = require('../src/lib/geo/local-promos.ts');
 const { teamDisplayName } = require('../src/lib/team-display-name.ts');
@@ -196,20 +204,28 @@ async function planCases(windowPromos, context) {
   const allTeams = await getAllTeams();
   const coords = await getTeamVenueCoords(allTeams);
   const cityByTeamId = buildTeamCityMap(allTeams, await getSchemaLocationsForTeams(allTeams));
-  const quiet = allTeams.filter((t) => !teams.has(t.id)).sort((a, b) => a.id.localeCompare(b.id));
+  // Cardinals first (the review case), then alphabetical.
+  const quiet = allTeams.filter((t) => !teams.has(t.id)).sort((a, b) => (a.id === 'arizona-cardinals' ? -1 : b.id === 'arizona-cardinals' ? 1 : a.id.localeCompare(b.id)));
+  const hasPair = (rows) => collapseEntries(rows).length < rows.length;
   let proxyPick = null;
+  let proxyPairPick = null;
   let nationalPick = null;
   for (const t of quiet) {
     const r = resolveLocalAnchor({ followedTeamIds: [t.id], windowPromos, coords, cityByTeamId });
-    if (!proxyPick && r.level === 'team-proxy' && pickHero(r.localPromos)) proxyPick = { t, r };
+    if (r.level === 'team-proxy' && pickHero(r.localPromos)) {
+      if (!proxyPick) proxyPick = { t, r };
+      if (!proxyPairPick && hasPair(r.localPromos)) proxyPairPick = { t, r };
+    }
     if (!nationalPick && r.level === 'national-fallback') nationalPick = { t, r };
-    if (proxyPick && nationalPick) break;
+    if (proxyPairPick && nationalPick) break;
   }
+  proxyPick = proxyPairPick || proxyPick;
   for (const [hero, pick] of [[true, proxyPick], [false, nationalPick]]) {
     const label = `empty/${hero ? 'hero' : 'no-hero'}`;
     if (!pick) { cases.push({ label, missing: `no quiet team resolves to ${hero ? 'team-proxy with a hero' : 'national-fallback'}` }); continue; }
     const { t, r } = pick;
-    cases.push({ label, note: `quiet team ${t.id}, ${r.level}, ${r.level === 'team-proxy' ? r.localPromos.length : featured.length} row(s)`, build: (token) => buildEmptyWindowDigest({ email: TO, manageToken: token, teamIds: [t.id], teamNames: [teamDisplayName(t)], level: r.level, localPromos: r.localPromos, featured, context }) });
+    const pair = r.level === 'team-proxy' && hasPair(r.localPromos) ? ', has a same-team same-date pair' : '';
+    cases.push({ label, note: `quiet team ${t.id}, ${r.level}, ${r.level === 'team-proxy' ? r.localPromos.length : featured.length} promo(s) in ${collapseEntries(r.level === 'team-proxy' ? r.localPromos : featured).length} entr(ies)${pair}`, build: (token) => buildEmptyWindowDigest({ email: TO, manageToken: token, teamIds: [t.id], teamNames: [teamDisplayName(t)], level: r.level, localPromos: r.localPromos, featured, context }) });
   }
   return cases;
 }
@@ -222,7 +238,7 @@ async function main() {
 
   const { start, end } = digestWindow(new Date());
   const windowPromos = await fetchWindowPromos(start, end);
-  const context = await fetchDigestContext({ start, end });
+  const context = await fetchDigestContext({ start, end }, windowPromos);
   const cases = await planCases(windowPromos, context);
 
   assertSubscribersUntouched();
@@ -233,13 +249,26 @@ async function main() {
   console.log(`[send-test-digest] window promos:  ${windowPromos.length} (${windowPromos.filter((p) => p.promoId).length} with a card, ${windowPromos.filter((p) => p.imageTier === 1).length} tier 1, ${windowPromos.filter((p) => p.venueName).length} with a building)`);
   console.log(`[send-test-digest] upcoming links: ${context.upcoming.length}`);
   for (const c of cases) console.log(`[send-test-digest] ${c.label.padEnd(22)} ${c.missing ? `NOT POSSIBLE: ${c.missing}` : c.note}`);
+  console.log('[send-test-digest] ---------------- subjects ----------------');
+  const builtByLabel = new Map();
+  for (const c of cases) {
+    if (c.missing) continue;
+    const b = c.build(throwawayManageToken());
+    builtByLabel.set(c.label, b);
+    console.log(`[send-test-digest] ${c.label.padEnd(22)} "${b.subject}"`);
+  }
+  // Two shapes no single-team case shows, from the same live window.
+  const twoTeams = [...teams.keys()].sort().slice(0, 2);
+  const two = personalizedFor(windowPromos, twoTeams);
+  console.log(`[send-test-digest] ${'personalized/2 teams'.padEnd(22)} "${buildPersonalizedDigest({ email: TO, manageToken: 'x', promos: two.promos, total: two.total, teamIds: twoTeams, context }).subject}" (${twoTeams.join(' + ')})`);
+  console.log(`[send-test-digest] ${'no-promo week'.padEnd(22)} "${buildEmptyWindowDigest({ email: TO, manageToken: 'x', teamIds: ['x'], teamNames: [], level: 'national-fallback', localPromos: [], featured: [], context }).subject}" / generic "${buildGenericDigest({ email: TO, manageToken: 'x', featured: [], context }).subject}"`);
   console.log('[send-test-digest] --------------------------------------');
 
   const results = [];
   for (const c of cases) {
+    if (ONLY.length && !ONLY.includes(c.label)) continue;
     if (c.missing) { results.push({ label: c.label, result: { ok: false, error: `not sent: ${c.missing}` } }); continue; }
-    const token = throwawayManageToken();
-    const b = c.build(token);
+    const b = builtByLabel.get(c.label);
     const leaked = PARTNER_DOMAINS.filter((d) => b.html.includes(d) || b.text.includes(d));
     if (leaked.length) throw new Error(`${c.label} carries partner domain(s) ${leaked.join(', ')}; refusing to send`);
     const expectHero = c.label.endsWith('/hero');

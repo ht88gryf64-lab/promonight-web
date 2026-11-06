@@ -21,6 +21,9 @@
 import type { DigestContext, DigestPromo, DigestTeam, DigestUpcoming } from './digest';
 import { buildTicketNetworkLink, ticketNetworkForGame, type EmailTnSubIdSurface } from './affiliates';
 import { shareCardPath, themeLabel } from './promo-page-copy';
+import { MLS_SHORT_NAMES } from './team-display-name';
+import type { CascadeLevel } from './geo/local-promos';
+import type { PromoType } from './types';
 
 // ── Palette (spec "Container"). Every text tone clears 4.5:1 on the ground it
 // renders on; guarded by src/lib/__tests__/digest-email-contrast.test.ts. ──
@@ -77,7 +80,10 @@ export interface DigestEmailInput {
 export interface RenderedDigest {
   html: string;
   text: string;
+  /** The hero entry's lead promo. */
   hero: DigestPromo | null;
+  /** Collapsed entries rendered (hero included). 0 is the no-promo week. */
+  entryCount: number;
 }
 
 // ── small helpers ────────────────────────────────────────────────────────────
@@ -134,48 +140,156 @@ function preferencesUrl(input: DigestEmailInput): string {
 function downloadUrl(input: DigestEmailInput): string {
   return `${input.siteUrl}/download?utm_source=email&utm_campaign=weekly_digest&utm_content=${input.surface}`;
 }
+// ── collapsed entries (review fix 2026-11-05) ────────────────────────────────
+// One entry per team per date: to a reader a giveaway and a theme night at the
+// same game are one event, never a hero plus a row. The entry's LEAD promo
+// gives the title, link, card and type label; the others' names append to the
+// game line. Everything that renders a set (hero rule, rows, Coming up, the
+// text part, the subject counts) works on entries.
+
+/** The site's category order (src/components/redesign/categories.ts
+ *  RD_CATEGORY_ORDER, guarded equal by the digest tests): a giveaway leads,
+ *  then a theme night, a food deal, a kids promo. */
+export const DIGEST_TYPE_ORDER: readonly PromoType[] = ['giveaway', 'theme', 'food', 'kids'];
+const typeRank = (t: PromoType | undefined) => {
+  const i = DIGEST_TYPE_ORDER.indexOf(t as PromoType);
+  return i < 0 ? DIGEST_TYPE_ORDER.length : i;
+};
+
+export interface Entry<T> {
+  lead: T;
+  /** The same team's other promos on that date, in lead order. */
+  others: T[];
+}
+export type DigestEntry = Entry<DigestPromo>;
+export type UpcomingEntry = Entry<DigestUpcoming>;
+
+/** Group by team + date (first appearance order, so a date-sorted set stays
+ *  date-sorted). The lead is the first by type order; within a type a tier 1
+ *  photo first (the rule canonicalWinner uses), then set order. */
+export function collapseEntries<T extends { teamId: string; date: string; type: PromoType; imageTier?: number | null }>(items: readonly T[]): Entry<T>[] {
+  const groups = new Map<string, { item: T; i: number }[]>();
+  items.forEach((item, i) => {
+    const k = `${item.teamId}|${item.date}`;
+    const g = groups.get(k);
+    if (g) g.push({ item, i });
+    else groups.set(k, [{ item, i }]);
+  });
+  return [...groups.values()].map((g) => {
+    const sorted = [...g].sort((a, b) =>
+      typeRank(a.item.type) - typeRank(b.item.type) ||
+      (b.item.imageTier === 1 ? 1 : 0) - (a.item.imageTier === 1 ? 1 : 0) ||
+      a.i - b.i);
+    return { lead: sorted[0].item, others: sorted.slice(1).map((x) => x.item) };
+  });
+}
+
+const hasGiveaway = (e: Entry<{ type: PromoType }>) => e.lead.type === 'giveaway';
+/** Entries with a giveaway (the lead is one whenever the game has one). */
+export function giveawayEntryCount(entries: readonly Entry<{ type: PromoType }>[]): number {
+  return entries.filter(hasGiveaway).length;
+}
+
 function gameLine(p: DigestPromo): string[] {
   return [p.opponent ? `vs ${p.opponent}` : '', p.time, p.venueName ?? '', p.quantity ?? ''].filter(Boolean);
 }
+/** The lead's game line, then the other promos' names. */
+function entryGameLine(e: DigestEntry): string[] {
+  return [...gameLine(e.lead), ...e.others.map((o) => o.title)];
+}
+/** The entry's theme: the lead's, else the first other promo's. */
+function entryThemeKey(e: DigestEntry): string | null {
+  return [e.lead, ...e.others].map((p) => p.themeKey).find((k) => themeLabel(k ?? null)) ?? null;
+}
 
-// ── the hero rule (spec section 3) ───────────────────────────────────────────
+// ── the hero rule (spec section 3), on entries ───────────────────────────────
 
-/** A promo can be the hero only when it has a page (the button's target and
- *  the card's key). */
+/** An entry can be the hero only when its lead has a page (the button's
+ *  target and the card's key). */
 const cardable = (p: DigestPromo) => p.hasPage && !!p.promoId;
 
-/** Exactly one promo in the set, or else the earliest tier 1 photo.
- *  Deterministic on purpose (spec "Open decision"). */
-export function pickHero(promos: DigestPromo[], overflow = 0): DigestPromo | null {
-  if (promos.length === 1 && overflow === 0) return cardable(promos[0]) ? promos[0] : null;
-  let pick: DigestPromo | null = null;
-  for (const p of promos) {
-    if (p.imageTier !== 1 || !cardable(p)) continue;
-    if (!pick || p.date < pick.date) pick = p;
+/** Exactly one entry in the set, or else the earliest entry whose lead is a
+ *  tier 1 photo. Deterministic on purpose (spec "Open decision"). */
+export function pickHero(entries: DigestEntry[], overflow = 0): DigestEntry | null {
+  if (entries.length === 1 && overflow === 0) return cardable(entries[0].lead) ? entries[0] : null;
+  let pick: DigestEntry | null = null;
+  for (const e of entries) {
+    if (e.lead.imageTier !== 1 || !cardable(e.lead)) continue;
+    if (!pick || e.lead.date < pick.lead.date) pick = e;
   }
   return pick;
 }
 
-/** "Coming up": the next two promos for the followed teams past the window. */
-export function comingUp(ctx: DigestContext, teamIds: string[], n = 2): DigestUpcoming[] {
+/** "Coming up": the next two entries for the followed teams past the window. */
+export function comingUp(ctx: DigestContext, teamIds: string[], n = 2): UpcomingEntry[] {
   if (teamIds.length === 0) return [];
   const set = new Set(teamIds);
-  return ctx.upcoming.filter((u) => set.has(u.teamId) && u.date > ctx.window.end).slice(0, n);
+  return collapseEntries(ctx.upcoming.filter((u) => set.has(u.teamId) && u.date > ctx.window.end)).slice(0, n);
 }
 
 /** "{Theme} at other clubs": the hero's theme at up to three other clubs, one
- *  row per club, rendered only with at least two. */
-export function themeSiblings(ctx: DigestContext, hero: DigestPromo | null, n = 3): DigestUpcoming[] {
-  if (!hero || !themeLabel(hero.themeKey)) return [];
+ *  row per club (so one per club and date by construction), rendered only
+ *  with at least two. */
+export function themeSiblings(ctx: DigestContext, hero: DigestEntry | null, n = 3): DigestUpcoming[] {
+  const themeKey = hero ? entryThemeKey(hero) : null;
+  if (!hero || !themeKey) return [];
   const seen = new Set<string>();
   const out: DigestUpcoming[] = [];
   for (const u of ctx.upcoming) {
-    if (u.themeKey !== hero.themeKey || u.teamId === hero.teamId || seen.has(u.teamId)) continue;
+    if (u.themeKey !== themeKey || u.teamId === hero.lead.teamId || seen.has(u.teamId)) continue;
     seen.add(u.teamId);
     out.push(u);
     if (out.length === n) break;
   }
   return out.length >= 2 ? out : [];
+}
+
+// ── subject lines (review fix 2026-11-05) ────────────────────────────────────
+// Specific and count-bearing, so consecutive weeks never thread and the line
+// reads like a schedule note. Never "hottest", "hot", "promos" or "deal".
+
+/** "Panthers are", "Heat is": the MLS short brands say so by hand; every
+ *  other nickname is plural when it ends in s or Sox. */
+export function nicknameIsPlural(team: Pick<DigestTeam, 'id' | 'short'>): boolean {
+  const mls = MLS_SHORT_NAMES[team.id];
+  if (mls) return mls.plural;
+  return /(s|sox)$/i.test(team.short.trim());
+}
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+export type SubjectInput =
+  | { variant: 'personalized'; teams: Pick<DigestTeam, 'id' | 'short'>[]; entries: number; giveawayEntries: number }
+  | { variant: 'generic'; windowEntries: number; windowGiveawayEntries: number }
+  | { variant: 'empty'; teams: Pick<DigestTeam, 'id' | 'short'>[]; level: CascadeLevel }
+  | { variant: 'no-promos'; generic: boolean };
+
+export function digestSubject(s: SubjectInput): string {
+  switch (s.variant) {
+    case 'no-promos':
+      return s.generic ? 'Nothing announced yet this week' : 'Nothing announced yet for your teams';
+    case 'personalized': {
+      if (s.teams.length === 1) {
+        const nick = s.teams[0].short;
+        // "games with giveaways" only counts games that have one; a week of
+        // theme nights says so instead of claiming giveaways.
+        return s.giveawayEntries > 0
+          ? `Your ${nick} week: ${plural(s.giveawayEntries, 'game with a giveaway', 'games with giveaways')}`
+          : `Your ${nick} week: ${plural(s.entries, 'promo night', 'promo nights')}`;
+      }
+      return `Your teams this week: ${plural(s.entries, 'promo night', 'promo nights')}`;
+    }
+    case 'generic':
+      return s.windowGiveawayEntries > 0
+        ? `${plural(s.windowGiveawayEntries, 'giveaway', 'giveaways')} across pro sports this week`
+        : `${plural(s.windowEntries, 'promo night', 'promo nights')} across pro sports this week`;
+    case 'empty': {
+      const where = s.level === 'team-proxy' ? 'Here is what is nearby' : 'Here is what is on around the league';
+      const who = s.teams.length === 1
+        ? `${s.teams[0].short} ${nicknameIsPlural(s.teams[0]) ? 'are' : 'is'}`
+        : 'Your teams are';
+      return `${who} quiet this week. ${where}`;
+    }
+  }
 }
 
 /** The gated ticket link: only with approval, a page slug, and a home club
@@ -229,7 +343,8 @@ function titleHtml(input: DigestEmailInput): string {
 }
 
 // 3. Hero
-function heroHtml(input: DigestEmailInput, hero: DigestPromo): string {
+function heroHtml(input: DigestEmailInput, entry: DigestEntry): string {
+  const hero = entry.lead;
   const team = input.context.teams.get(hero.teamId);
   const page = promoUrl(input, hero.href, hero.teamId);
   const img = cardUrl(input, hero)!;
@@ -240,9 +355,12 @@ function heroHtml(input: DigestEmailInput, hero: DigestPromo): string {
   // The title block sits below the image on EVERY hero (ruling 2026-11-05):
   // with images off, the card's drawn text is gone and the email must still
   // read whole. No text is ever laid over the image itself.
+  // The team + type label sits above the title, as on the rows: on a proxy or
+  // generic send the hero is often another club's, and the label says whose.
   const titleBelow = row(cell('padding:18px 24px 0;',
-    `<div style="font-size:19px;font-weight:600;line-height:1.25;color:${DIGEST_INK};">${esc(hero.title)}</div>` +
-    `<div style="margin-top:5px;font-size:13px;line-height:1.4;color:${DIGEST_MUTED};">${esc([hero.teamName, weekdayMonthDay(hero.date), ...gameLine(hero)].join(' · '))}</div>`));
+    eyebrowHtml(hero) +
+    `<div style="margin-top:5px;font-size:19px;font-weight:600;line-height:1.25;color:${DIGEST_INK};">${esc(hero.title)}</div>` +
+    `<div style="margin-top:5px;font-size:13px;line-height:1.4;color:${DIGEST_MUTED};">${esc([hero.teamName, weekdayMonthDay(hero.date), ...entryGameLine(entry)].join(' · '))}</div>`));
   const card = table(
     row(`<td bgcolor="${DIGEST_WHITE}" style="padding:0;background:${DIGEST_WHITE};font-family:${FONT};font-size:13px;line-height:18px;color:${DIGEST_MUTED};"><a href="${esc(page)}" style="display:block;"><img src="${esc(img)}" width="${HERO_W}" height="${HERO_H}" alt="${esc(alt)}" style="display:block;width:100%;max-width:${HERO_W}px;height:auto;border:0;outline:none;text-decoration:none;"></a></td>`) +
     titleBelow +
@@ -257,17 +375,23 @@ function heroHtml(input: DigestEmailInput, hero: DigestPromo): string {
   return row(cell('padding:28px 23px 0;', card));
 }
 
-// 4. Rows, grouped by date
-function promoRowHtml(input: DigestEmailInput, p: DigestPromo, showDate: boolean): string {
+/** "SUNS · GIVEAWAY": the row and hero label. */
+function eyebrowHtml(p: DigestPromo): string {
+  const eyebrow = `${p.teamShort || p.teamName} · ${p.typeLabel}`.toUpperCase();
+  return `<div style="font-size:11px;font-weight:600;letter-spacing:0.06em;line-height:14px;color:${DIGEST_ACCENT};">${esc(eyebrow)}</div>`;
+}
+
+// 4. Rows, grouped by date, one per entry
+function promoRowHtml(input: DigestEmailInput, entry: DigestEntry, showDate: boolean): string {
+  const p = entry.lead;
   const href = promoUrl(input, p.href, p.teamId);
   const d = ymdParts(p.date);
   const rail = showDate
     ? `<div style="font-size:11px;font-weight:600;letter-spacing:0.08em;line-height:14px;color:${DIGEST_MUTED};">${d.weekday.toUpperCase()}</div>` +
       `<div style="font-size:36px;font-weight:700;line-height:36px;color:${DIGEST_INK};">${d.day}</div>`
     : '&nbsp;';
-  const eyebrow = `${p.teamShort || p.teamName} · ${p.typeLabel}`.toUpperCase();
   const thumb = cardUrl(input, p);
-  const game = gameLine(p);
+  const game = entryGameLine(entry);
   // The whole row links to the promo page, as one anchor PER CELL to the same
   // href rather than one anchor around the table: Outlook's Word engine does
   // not carry a link across a block-level table, so a wrapping anchor leaves
@@ -276,7 +400,7 @@ function promoRowHtml(input: DigestEmailInput, p: DigestPromo, showDate: boolean
   const inner = table(row(
     cell(`width:54px;padding:22px 0;`, showDate ? link(rail) : rail, DIGEST_WHITE, ' width="54" valign="top"') +
     cell('padding:22px 16px 22px 20px;', link(
-      `<div style="font-size:11px;font-weight:600;letter-spacing:0.06em;line-height:14px;color:${DIGEST_ACCENT};">${esc(eyebrow)}</div>` +
+      eyebrowHtml(p) +
       `<div style="margin-top:5px;font-size:19px;font-weight:600;line-height:1.25;color:${DIGEST_INK};">${esc(p.title)}</div>` +
       (game.length ? `<div style="margin-top:5px;font-size:13px;line-height:1.4;color:${DIGEST_MUTED};">${esc(game.join(' · '))}</div>` : '')),
       DIGEST_WHITE, ' valign="top"') +
@@ -287,16 +411,17 @@ function promoRowHtml(input: DigestEmailInput, p: DigestPromo, showDate: boolean
   return row(cell(`padding:0 ${SIDE}px;`, inner));
 }
 
-function rowsHtml(input: DigestEmailInput, rows: DigestPromo[]): string {
+function rowsHtml(input: DigestEmailInput, rows: DigestEntry[]): string {
   if (rows.length === 0) return '';
   let html = row(cell(`padding:32px ${SIDE}px 0;`, rule(DIGEST_INK)));
   if (input.leadIn) {
-    html += row(cell(`padding:16px ${SIDE}px 0;font-size:13px;line-height:1.4;color:${DIGEST_MUTED};`, esc(input.leadIn)));
+    // A section label in the COMING UP style, not a caption sentence.
+    html += row(cell(`padding:16px ${SIDE}px 0;`, labelHtml(input.leadIn, DIGEST_WHITE)));
   }
   let prev = '';
-  for (const p of rows) {
-    html += promoRowHtml(input, p, p.date !== prev);
-    prev = p.date;
+  for (const e of rows) {
+    html += promoRowHtml(input, e, e.lead.date !== prev);
+    prev = e.lead.date;
   }
   if (input.overflow > 0) {
     html += row(cell(`padding:14px ${SIDE}px 0;font-size:13px;line-height:1.4;color:${DIGEST_MUTED};`,
@@ -340,24 +465,26 @@ function labelHtml(text: string, bg: string): string {
   return `<div style="font-size:11px;font-weight:600;letter-spacing:0.08em;line-height:14px;color:${DIGEST_MUTED};background:${bg};">${esc(text.toUpperCase())}</div>`;
 }
 
-function comingUpHtml(input: DigestEmailInput, items: DigestUpcoming[]): string {
+const upcomingLine = (e: UpcomingEntry) => [`${monthDay(e.lead.date)}`, e.lead.title, ...e.others.map((o) => o.title)].join(' · ');
+
+function comingUpHtml(input: DigestEmailInput, items: UpcomingEntry[]): string {
   if (items.length === 0) return '';
-  const lines = items.map((u, i) => {
-    const team = input.context.teams.get(u.teamId);
-    return listRow(promoUrl(input, u.href, u.teamId), `${monthDay(u.date)} · ${u.title}`, team?.short || team?.name || '', DIGEST_PANEL, i === 0);
+  const lines = items.map((e, i) => {
+    const team = input.context.teams.get(e.lead.teamId);
+    return listRow(promoUrl(input, e.lead.href, e.lead.teamId), upcomingLine(e), team?.short || team?.name || '', DIGEST_PANEL, i === 0);
   }).join('');
   const panel = table(row(cell('padding:18px 20px;', labelHtml('Coming up', DIGEST_PANEL) + table(lines), DIGEST_PANEL)),
     'border-collapse:separate;border-radius:10px;', ` bgcolor="${DIGEST_PANEL}"`);
   return row(cell(`padding:24px ${SIDE}px 0;`, panel));
 }
 
-function siblingsHtml(input: DigestEmailInput, hero: DigestPromo, items: DigestUpcoming[]): string {
+function siblingsHtml(input: DigestEmailInput, hero: DigestEntry, items: DigestUpcoming[]): string {
   if (items.length === 0) return '';
   const lines = items.map((u, i) => {
     const team = input.context.teams.get(u.teamId);
     return listRow(promoUrl(input, u.href, u.teamId), team?.name || u.teamId, monthDay(u.date), DIGEST_WHITE, i === 0);
   }).join('');
-  return row(cell(`padding:28px ${SIDE}px 0;`, labelHtml(`${themeLabel(hero.themeKey)} at other clubs`, DIGEST_WHITE) + table(lines)));
+  return row(cell(`padding:28px ${SIDE}px 0;`, labelHtml(`${themeLabel(entryThemeKey(hero))} at other clubs`, DIGEST_WHITE) + table(lines)));
 }
 
 // 7. App band
@@ -384,12 +511,13 @@ function footerHtml(input: DigestEmailInput): string {
 
 // ── plain text, from the same data ──────────────────────────────────────────
 
-function textPromo(input: DigestEmailInput, p: DigestPromo): string[] {
-  const line = [`${weekdayMonthDay(p.date)}: ${p.title} (${p.teamName})`, ...gameLine(p)].join(' · ');
+function textPromo(input: DigestEmailInput, e: DigestEntry): string[] {
+  const p = e.lead;
+  const line = [`${weekdayMonthDay(p.date)}: ${p.title} (${p.teamName})`, ...entryGameLine(e)].join(' · ');
   return [`- ${line}`, `  ${promoUrl(input, p.href, p.teamId)}`];
 }
 
-function renderText(input: DigestEmailInput, hero: DigestPromo | null, rows: DigestPromo[], next: DigestUpcoming[], siblings: DigestUpcoming[]): string {
+function renderText(input: DigestEmailInput, hero: DigestEntry | null, rows: DigestEntry[], next: UpcomingEntry[], siblings: DigestUpcoming[]): string {
   const manage = preferencesUrl(input);
   const out: string[] = ['PROMONIGHT', '', input.title, input.subline, ''];
   if (!hero && rows.length === 0) {
@@ -401,10 +529,10 @@ function renderText(input: DigestEmailInput, hero: DigestPromo | null, rows: Dig
   if (input.overflow > 0) out.push(`...and ${input.overflow} more this week: ${input.siteUrl}`);
   if (next.length) {
     out.push('', 'Coming up:');
-    for (const u of next) out.push(`- ${monthDay(u.date)}: ${u.title} (${input.context.teams.get(u.teamId)?.name ?? u.teamId})`, `  ${promoUrl(input, u.href, u.teamId)}`);
+    for (const e of next) out.push(`- ${upcomingLine(e)} (${input.context.teams.get(e.lead.teamId)?.name ?? e.lead.teamId})`, `  ${promoUrl(input, e.lead.href, e.lead.teamId)}`);
   }
   if (hero && siblings.length) {
-    out.push('', `${themeLabel(hero.themeKey)} at other clubs:`);
+    out.push('', `${themeLabel(entryThemeKey(hero))} at other clubs:`);
     for (const u of siblings) out.push(`- ${input.context.teams.get(u.teamId)?.name ?? u.teamId}, ${monthDay(u.date)}`, `  ${promoUrl(input, u.href, u.teamId)}`);
   }
   out.push('', `${APP_COPY} Get the app: ${downloadUrl(input)}`, '');
@@ -416,8 +544,9 @@ function renderText(input: DigestEmailInput, hero: DigestPromo | null, rows: Dig
 // ── the document ─────────────────────────────────────────────────────────────
 
 export function renderDigest(input: DigestEmailInput): RenderedDigest {
-  const hero = input.heroAllowed ? pickHero(input.promos, input.overflow) : null;
-  const rows = hero ? input.promos.filter((p) => p !== hero) : input.promos;
+  const entries = collapseEntries(input.promos);
+  const hero = input.heroAllowed ? pickHero(entries, input.overflow) : null;
+  const rows = hero ? entries.filter((e) => e !== hero) : entries;
   const next = comingUp(input.context, input.followedTeamIds);
   const siblings = themeSiblings(input.context, hero);
 
@@ -454,5 +583,5 @@ ${msoClose}
 </body>
 </html>`;
 
-  return { html, text: renderText(input, hero, rows, next, siblings), hero };
+  return { html, text: renderText(input, hero, rows, next, siblings), hero: hero?.lead ?? null, entryCount: entries.length };
 }

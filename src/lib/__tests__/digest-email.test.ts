@@ -59,6 +59,7 @@ function promo(teamId: string, date: string, title: string, over: Partial<Digest
   return {
     date,
     title,
+    type: 'theme',
     typeLabel: 'Theme Night',
     icon: '',
     highlight: false,
@@ -82,9 +83,9 @@ function promo(teamId: string, date: string, title: string, over: Partial<Digest
     ...over,
   };
 }
-function upcoming(teamId: string, date: string, title: string, themeKey: string | null = null): DigestUpcoming {
+function upcoming(teamId: string, date: string, title: string, themeKey: string | null = null, type: DigestUpcoming['type'] = 'theme'): DigestUpcoming {
   const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-  return { teamId, date, title, themeKey, href: pageHref(teamId, date, title, slug), pageSlug: slug };
+  return { teamId, date, title, type, themeKey, href: pageHref(teamId, date, title, slug), pageSlug: slug };
 }
 
 function context(): DigestContext {
@@ -98,6 +99,8 @@ function context(): DigestContext {
       upcoming('charlotte-hornets', '2027-01-25', 'Star Wars Night', 'star-wars'),
       upcoming('washington-capitals', '2027-02-16', 'Star Wars Night', 'star-wars'),
     ].sort((a, b) => a.date.localeCompare(b.date)),
+    windowEntries: 41,
+    windowGiveawayEntries: 17,
   };
 }
 
@@ -106,9 +109,10 @@ function week(withHero: boolean): DigestPromo[] {
   seq = 0;
   return [
     promo('florida-panthers', '2026-11-04', 'Star Wars Night', { imageTier: withHero ? 1 : 3, themeKey: 'star-wars', quantity: 'First 10,000 fans' }),
-    promo('miami-heat', '2026-11-06', 'Heat Culture Tee Night', { typeLabel: 'Giveaway', opponent: 'Hornets', venueName: 'Kaseya Center', quantity: 'First 5,000 fans' }),
-    promo('florida-panthers', '2026-11-08', 'Family Sunday: $2 hot dogs', { typeLabel: 'Food Deal', opponent: 'Bruins', time: '5:00 PM' }),
-    promo('florida-panthers', '2026-11-08', 'Kids Club Skate', { typeLabel: 'Kids', opponent: 'Bruins', time: '5:00 PM' }),
+    promo('miami-heat', '2026-11-06', 'Heat Culture Tee Night', { type: 'giveaway', typeLabel: 'Giveaway', opponent: 'Hornets', venueName: 'Kaseya Center', quantity: 'First 5,000 fans' }),
+    // Same team, same date: one entry, the food deal leading (type order).
+    promo('florida-panthers', '2026-11-08', 'Family Sunday: $2 hot dogs', { type: 'food', typeLabel: 'Food Deal', opponent: 'Bruins', time: '5:00 PM' }),
+    promo('florida-panthers', '2026-11-08', 'Kids Club Skate', { type: 'kids', typeLabel: 'Kids', opponent: 'Bruins', time: '5:00 PM' }),
   ];
 }
 
@@ -377,10 +381,9 @@ test('the plain-text part lists every promo, the hero included', async () => {
   for (const c of CASES) {
     const { text, hero } = await c.build();
     const set = c.name === 'empty-nohero' ? week(true) : week(c.name.endsWith('-hero'));
-    for (const p of set) {
-      assert.ok(text.includes(p.title), `${c.name}: ${p.title} missing from text`);
-      assert.ok(text.includes(`${SITE}${p.href}?subId1=`), `${c.name}: ${p.title} link missing from text`);
-    }
+    const { collapseEntries } = await import('../digest-email');
+    for (const p of set) assert.ok(text.includes(p.title), `${c.name}: ${p.title} missing from text`);
+    for (const e of collapseEntries(set)) assert.ok(text.includes(`${SITE}${e.lead.href}?subId1=`), `${c.name}: ${e.lead.title} link missing from text`);
     if (hero) assert.ok(text.indexOf(hero.title) < text.indexOf(set.find((p) => p.title !== hero.title)!.title));
   }
 });
@@ -390,11 +393,143 @@ test('the plain-text part lists every promo, the hero included', async () => {
 test('the hero is removed from the rows below it', async () => {
   const { html, hero } = await CASES[0].build();
   assert.ok(hero);
-  // The hero's row eyebrow would be "PANTHERS · THEME NIGHT"; the no-hero
-  // render of the same week has exactly that row.
-  assert.strictEqual(count(html, '>PANTHERS · THEME NIGHT<'), 0, 'the hero promo has no row');
+  // The hero links its page four times (image, button, Parking, Remind me);
+  // a row for it would add three more (rail, text, thumbnail).
+  const heroHref = `href="${SITE}${hero!.href}?subId1=web_email_personalized_florida-panthers"`;
+  assert.strictEqual(count(html, heroHref), 4, 'the hero promo has no row');
   const { html: noHero } = await CASES[1].build();
-  assert.strictEqual(count(noHero, '>PANTHERS · THEME NIGHT<'), 1);
+  assert.strictEqual(count(noHero, heroHref), 3, 'without a hero it is an ordinary row');
+});
+
+test('the hero carries the team + type label above its title, in the row label style', async () => {
+  for (const c of CASES) {
+    const { html, hero } = await c.build();
+    if (!hero) continue;
+    const label = `>${`${hero.teamShort} · ${hero.typeLabel}`.toUpperCase()}</div>`;
+    const at = html.indexOf(label);
+    const titleAt = html.indexOf(`>${hero.title}</div>`);
+    assert.ok(at > 0 && titleAt > at, `${c.name}: label sits above the hero title`);
+    assert.ok(html.slice(html.lastIndexOf('<div', at), at).includes('font-size:11px;font-weight:600;letter-spacing:0.06em'), `${c.name}: row label style`);
+  }
+});
+
+// ── same team, same date: one entry (review fix 2026-11-05) ───────────────
+
+test('a giveaway and a theme night at one game are one entry with both names, never hero plus row', async () => {
+  const { buildEmptyWindowDigest, buildPersonalizedDigest } = await builders();
+  seq = 0;
+  // The Cardinals send: the Suns' theme night and jersey giveaway, Nov 7.
+  const theme = promo('florida-panthers', '2026-11-07', 'ORIGINATIV Night', { type: 'theme', typeLabel: 'Theme Night', opponent: 'Rockets', venueName: 'Amerant Bank Arena' });
+  const jersey = promo('florida-panthers', '2026-11-07', 'Artist Collaboration Originativ Replica Jersey', { type: 'giveaway', typeLabel: 'Giveaway', imageTier: 1, opponent: 'Rockets', venueName: 'Amerant Bank Arena', quantity: 'First 5,000 fans' });
+  for (const set of [[theme, jersey], [jersey, theme]]) {
+    const b = buildEmptyWindowDigest({ email: 'a@example.com', manageToken: TOKEN, teamIds: PROXY_TEAM, teamNames: PROXY_NAMES, level: 'team-proxy', localPromos: set, featured: [], context: context() });
+    assert.strictEqual(b.hero, jersey, 'the giveaway leads and heroes');
+    assert.ok(b.html.includes('>Artist Collaboration Originativ Replica Jersey</div>'), 'giveaway is the title');
+    assert.ok(b.html.includes('vs Rockets · 7:30 PM · Amerant Bank Arena · First 5,000 fans · ORIGINATIV Night'), 'the theme night appends to the game line');
+    assert.ok(!b.html.includes('>ORIGINATIV Night</div>'), 'the theme night is not a row of its own');
+    assert.ok(!b.html.includes(`${SITE}${theme.href}`), 'the entry links to the title promo only');
+    assert.ok(!b.html.includes('Around the league') && !b.html.includes('NEARBY THIS WEEK'), 'one entry heroes, so no rows and no lead-in');
+    assert.ok(b.text.includes('ORIGINATIV Night') && b.text.includes('Artist Collaboration Originativ Replica Jersey'));
+  }
+  // As a row (no tier 1 to hero, two entries): one row, both names.
+  const t3 = { ...jersey, imageTier: 3 as const };
+  const other = promo('miami-heat', '2026-11-09', 'Heat Culture Tee Night', { type: 'giveaway', typeLabel: 'Giveaway' });
+  const r = buildPersonalizedDigest({ email: 'a@example.com', manageToken: TOKEN, promos: [theme, t3, other], total: 3, teamIds: ['florida-panthers', 'miami-heat'], context: context() });
+  assert.strictEqual(r.hero, null);
+  assert.strictEqual(count(r.html, '>PANTHERS · GIVEAWAY</div>'), 1, 'one row for the game');
+  assert.ok(r.html.includes('First 5,000 fans · ORIGINATIV Night'));
+  assert.strictEqual(r.subject, 'Your teams this week: 2 promo nights', 'the count is entries, not promos');
+});
+
+test('the lead type order is the site category order', async () => {
+  const { DIGEST_TYPE_ORDER, collapseEntries } = await import('../digest-email');
+  const { RD_CATEGORY_ORDER } = await import('../../components/redesign/categories');
+  assert.deepStrictEqual([...DIGEST_TYPE_ORDER], [...RD_CATEGORY_ORDER]);
+  seq = 0;
+  const kids = promo('florida-panthers', '2026-11-08', 'K', { type: 'kids' });
+  const food = promo('florida-panthers', '2026-11-08', 'F', { type: 'food' });
+  const theme = promo('florida-panthers', '2026-11-08', 'T', { type: 'theme' });
+  const [e] = collapseEntries([kids, food, theme]);
+  assert.strictEqual(e.lead, theme);
+  assert.deepStrictEqual(e.others, [food, kids]);
+  // Two giveaways: the tier 1 photo leads.
+  const g1 = promo('florida-panthers', '2026-11-08', 'G1', { type: 'giveaway', imageTier: 3 });
+  const g2 = promo('florida-panthers', '2026-11-08', 'G2', { type: 'giveaway', imageTier: 1 });
+  assert.strictEqual(collapseEntries([g1, g2])[0].lead, g2);
+  // Different team or different date stays apart.
+  assert.strictEqual(collapseEntries([kids, promo('miami-heat', '2026-11-08', 'H'), promo('florida-panthers', '2026-11-09', 'N')]).length, 3);
+});
+
+test('"Coming up" collapses a game to one line with both names', async () => {
+  const { buildPersonalizedDigest } = await builders();
+  const ctx = context();
+  ctx.upcoming = [...ctx.upcoming, upcoming('florida-panthers', '2026-11-12', 'Military Hat', null, 'giveaway')].sort((a, b) => a.date.localeCompare(b.date));
+  const b = buildPersonalizedDigest({ email: 'a@example.com', manageToken: TOKEN, promos: week(false), total: 4, teamIds: ['florida-panthers'], context: ctx });
+  assert.ok(b.html.includes('Nov 12 · Military Hat · Military Appreciation Night'), 'giveaway leads, theme appended');
+  assert.ok(b.html.includes('Nov 21 · Hockey Fights Cancer Night'), 'the second line is the next game, not the same one');
+});
+
+// ── subject lines (review fix 2026-11-05) ───────────────────────────────────
+
+const BANNED = /\b(hottest|hot|promos|deal)\b/i;
+
+test('subjects: the four shapes, singular and plural, no banned words', async () => {
+  const { digestSubject } = await import('../digest-email');
+  const panthers = { id: 'florida-panthers', short: 'Panthers' };
+  const heat = { id: 'miami-heat', short: 'Heat' };
+  const cases: [Parameters<typeof digestSubject>[0], string][] = [
+    [{ variant: 'personalized', teams: [panthers], entries: 3, giveawayEntries: 2 }, 'Your Panthers week: 2 games with giveaways'],
+    [{ variant: 'personalized', teams: [panthers], entries: 1, giveawayEntries: 1 }, 'Your Panthers week: 1 game with a giveaway'],
+    [{ variant: 'personalized', teams: [panthers], entries: 2, giveawayEntries: 0 }, 'Your Panthers week: 2 promo nights'],
+    [{ variant: 'personalized', teams: [panthers, heat], entries: 5, giveawayEntries: 3 }, 'Your teams this week: 5 promo nights'],
+    [{ variant: 'personalized', teams: [panthers, heat], entries: 1, giveawayEntries: 1 }, 'Your teams this week: 1 promo night'],
+    [{ variant: 'generic', windowEntries: 41, windowGiveawayEntries: 17 }, '17 giveaways across pro sports this week'],
+    [{ variant: 'generic', windowEntries: 41, windowGiveawayEntries: 1 }, '1 giveaway across pro sports this week'],
+    [{ variant: 'generic', windowEntries: 4, windowGiveawayEntries: 0 }, '4 promo nights across pro sports this week'],
+    [{ variant: 'empty', teams: [panthers], level: 'team-proxy' }, 'Panthers are quiet this week. Here is what is nearby'],
+    [{ variant: 'empty', teams: [heat], level: 'national-fallback' }, 'Heat is quiet this week. Here is what is on around the league'],
+    [{ variant: 'empty', teams: [{ id: 'seattle-sounders', short: 'Seattle Sounders' }], level: 'team-proxy' }, 'Seattle Sounders are quiet this week. Here is what is nearby'],
+    [{ variant: 'empty', teams: [{ id: 'inter-miami', short: 'Inter Miami' }], level: 'team-proxy' }, 'Inter Miami is quiet this week. Here is what is nearby'],
+    [{ variant: 'empty', teams: [panthers, heat], level: 'national-fallback' }, 'Your teams are quiet this week. Here is what is on around the league'],
+    [{ variant: 'no-promos', generic: false }, 'Nothing announced yet for your teams'],
+    [{ variant: 'no-promos', generic: true }, 'Nothing announced yet this week'],
+  ];
+  for (const [input, want] of cases) {
+    const got = digestSubject(input);
+    assert.strictEqual(got, want);
+    assert.ok(!BANNED.test(got), `banned word in "${got}"`);
+    assert.ok(!got.includes('\u2014'), `em dash in "${got}"`);
+  }
+});
+
+test('subjects: two consecutive windows with different counts never share a subject', async () => {
+  const { buildPersonalizedDigest, buildGenericDigest } = await builders();
+  seq = 0;
+  const thisWeek = week(false);
+  const nextWeek = [...week(false), promo('florida-panthers', '2026-11-09', 'Bobblehead Night', { type: 'giveaway' })];
+  const one = (promos: DigestPromo[]) => buildPersonalizedDigest({ email: 'a@example.com', manageToken: TOKEN, promos, total: promos.length, teamIds: ['florida-panthers'], context: context() }).subject;
+  assert.notStrictEqual(one(thisWeek), one(nextWeek));
+  assert.strictEqual(one(nextWeek), 'Your Panthers week: 2 games with giveaways');
+  const gen = (n: number) => buildGenericDigest({ email: 'a@example.com', manageToken: TOKEN, featured: week(false), context: { ...context(), windowGiveawayEntries: n } }).subject;
+  assert.notStrictEqual(gen(17), gen(12));
+});
+
+test('subjects: every built variant, including the no-promo week, is free of banned words', async () => {
+  const { buildGenericDigest, buildEmptyWindowDigest } = await builders();
+  const subjects = (await Promise.all(CASES.map(async (c) => ((await c.build()) as unknown as { subject: string }).subject)));
+  subjects.push(buildGenericDigest({ email: 'a@example.com', manageToken: TOKEN, featured: [], context: context() }).subject);
+  subjects.push(buildEmptyWindowDigest({ email: 'a@example.com', manageToken: TOKEN, teamIds: PROXY_TEAM, teamNames: PROXY_NAMES, level: 'national-fallback', localPromos: [], featured: [], context: context() }).subject);
+  assert.deepStrictEqual(subjects, [
+    'Your teams this week: 3 promo nights',
+    'Your teams this week: 3 promo nights',
+    '17 giveaways across pro sports this week',
+    '17 giveaways across pro sports this week',
+    'Lightning is quiet this week. Here is what is nearby',
+    'Lightning is quiet this week. Here is what is on around the league',
+    'Nothing announced yet this week',
+    'Nothing announced yet for your teams',
+  ]);
+  for (const s of subjects) assert.ok(!BANNED.test(s), `banned word in "${s}"`);
 });
 
 test('images off: the hero with its img stripped still names the promo, team, date, game and building', async () => {
@@ -419,17 +554,21 @@ test('images off: the hero with its img stripped still names the promo, team, da
   assert.ok(off.includes('Florida Panthers · Wed Nov 4 · vs Blackhawks · 7:30 PM · Amerant Bank Arena'), 'tier 3 hero meta line');
 });
 
-test('hero rule: exactly one promo, else the earliest tier 1 photo, else none', async () => {
-  const { pickHero } = await import('../digest-email');
+test('hero rule on entries: exactly one entry, else the earliest tier 1 lead, else none', async () => {
+  const { pickHero, collapseEntries } = await import('../digest-email');
+  const lead = (es: ReturnType<typeof collapseEntries<DigestPromo>>, set: DigestPromo[]) => pickHero(es) ? pickHero(collapseEntries(set))!.lead : null;
   seq = 0;
   const a = promo('florida-panthers', '2026-11-05', 'A');
   const b = promo('miami-heat', '2026-11-04', 'B', { imageTier: 1 });
   const c = promo('miami-heat', '2026-11-06', 'C', { imageTier: 1 });
-  assert.strictEqual(pickHero([a]), a, 'a single promo is the hero');
-  assert.strictEqual(pickHero([a, c, b]), b, 'earliest tier 1 wins');
-  assert.strictEqual(pickHero([a, promo('miami-heat', '2026-11-07', 'D')]), null, 'no tier 1, no hero');
-  assert.strictEqual(pickHero([a], 3), null, 'one shown of four is not "exactly one"');
-  assert.strictEqual(pickHero([{ ...a, hasPage: false, promoId: null }]), null, 'no page, no hero');
+  assert.strictEqual(lead(collapseEntries([a]), [a]), a, 'a single entry is the hero');
+  assert.strictEqual(lead(collapseEntries([a, c, b]), [a, c, b]), b, 'earliest tier 1 wins');
+  assert.strictEqual(pickHero(collapseEntries([a, promo('miami-heat', '2026-11-07', 'D')])), null, 'no tier 1, no hero');
+  assert.strictEqual(pickHero(collapseEntries([a]), 3), null, 'one shown of four is not "exactly one"');
+  assert.strictEqual(pickHero(collapseEntries([{ ...a, hasPage: false, promoId: null }])), null, 'no page, no hero');
+  // Two promos at ONE game are one entry, so "exactly one" holds.
+  const g = promo('florida-panthers', '2026-11-05', 'G', { type: 'giveaway' });
+  assert.strictEqual(pickHero(collapseEntries([a, g]))!.lead, g, 'one game, two promos: the giveaway heroes');
 });
 
 test('no hero renders on national-fallback content, even a single tier 1 promo', async () => {
@@ -446,28 +585,38 @@ test('no hero renders on national-fallback content, even a single tier 1 promo',
 
 test('the empty-window lead-in matches the cascade level and appears nowhere else', async () => {
   const lead = { proxy: 'Nearby this week', national: 'Around the league this week' };
+  const up = (l: string) => l.toUpperCase();
   for (const c of CASES) {
     const { html, text } = await c.build();
     if (c.name === 'empty-hero') {
-      assert.ok(html.includes(`>${lead.proxy}</td>`), 'team-proxy lead-in in the HTML');
+      assert.ok(html.includes(`>${up(lead.proxy)}</div>`), 'team-proxy lead-in in the HTML');
       assert.ok(text.includes(lead.proxy));
-      assert.ok(!html.includes(lead.national));
+      assert.ok(!html.includes(up(lead.national)));
     } else if (c.name === 'empty-nohero') {
-      assert.ok(html.includes(`>${lead.national}</td>`), 'national-fallback lead-in in the HTML');
+      assert.ok(html.includes(`>${up(lead.national)}</div>`), 'national-fallback lead-in in the HTML');
       assert.ok(text.includes(lead.national));
-      assert.ok(!html.includes(lead.proxy));
+      assert.ok(!html.includes(up(lead.proxy)));
     } else {
       for (const l of Object.values(lead)) {
-        assert.ok(!html.includes(l), `${c.name}: lead-in "${l}" leaked`);
+        assert.ok(!html.includes(up(l)) && !html.includes(l), `${c.name}: lead-in "${l}" leaked`);
         assert.ok(!text.includes(l), `${c.name}: lead-in "${l}" leaked into text`);
       }
     }
   }
 });
 
+test('the lead-in is a section label in the COMING UP style, not a caption', async () => {
+  const { html } = await CASES[5].build();
+  const at = html.indexOf('>AROUND THE LEAGUE THIS WEEK</div>');
+  assert.ok(at > 0);
+  const tag = html.slice(html.lastIndexOf('<div', at), at);
+  assert.ok(tag.includes('font-size:11px;font-weight:600;letter-spacing:0.08em') && tag.includes('color:#6B6861'), tag);
+  assert.ok(!html.includes('font-size:13px;line-height:1.4;color:#6B6861;">Around the league'), 'not the old 13px sentence');
+});
+
 test('the lead-in sits after the ink rule, directly above the first row', async () => {
   const { html } = await CASES[5].build();
-  const leadAt = html.indexOf('Around the league this week');
+  const leadAt = html.indexOf('AROUND THE LEAGUE THIS WEEK');
   const firstRow = html.indexOf('HEAT · GIVEAWAY');
   assert.ok(leadAt > 0 && firstRow > leadAt);
 });
@@ -492,7 +641,7 @@ test('"at other clubs" needs a hero and two siblings', async () => {
   const { themeSiblings } = await import('../digest-email');
   const ctx = context();
   const one = { ...ctx, upcoming: ctx.upcoming.filter((u) => u.teamId !== 'charlotte-hornets' && u.teamId !== 'washington-capitals') };
-  assert.deepStrictEqual(themeSiblings(one, withHero.hero), [], 'one sibling is not enough');
+  assert.deepStrictEqual(themeSiblings(one, { lead: withHero.hero!, others: [] }), [], 'one sibling is not enough');
 });
 
 test('copy: no em dashes, no superlatives, the spec titles', async () => {
@@ -517,14 +666,6 @@ test('footer keeps its content and adds the disclosure; buttons meet 44px', asyn
     assert.match(html, /padding:13px 16px;[^"]*line-height:18px;[^"]*">Get the app</, 'app button tap height');
     if (c.name.endsWith('-hero')) assert.match(html, /padding:13px 22px;[^"]*line-height:18px;[^"]*">See this game</, 'hero button tap height');
   }
-});
-
-test('the subject lines are unchanged', async () => {
-  const { buildPersonalizedDigest, buildGenericDigest, buildEmptyWindowDigest } = await builders();
-  const ctx = context();
-  assert.strictEqual(buildPersonalizedDigest({ email: 'a@example.com', manageToken: TOKEN, promos: week(false), total: 4, teamIds: [], context: ctx }).subject, "Your teams' promos this week on PromoNight");
-  assert.strictEqual(buildGenericDigest({ email: 'a@example.com', manageToken: TOKEN, featured: [], context: ctx }).subject, "This week's hottest pro sports promos");
-  assert.strictEqual(buildEmptyWindowDigest({ email: 'a@example.com', manageToken: TOKEN, teamIds: [], teamNames: [], level: 'national-fallback', localPromos: [], featured: [], context: ctx }).subject, 'Your teams are quiet this week on PromoNight');
 });
 
 test('List-Unsubscribe headers carry the recipient token on every variant', async () => {

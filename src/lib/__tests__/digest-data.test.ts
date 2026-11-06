@@ -179,12 +179,19 @@ test('upcoming links leave out special-ticket rows, unknown teams and sort by da
 test('fetchDigestContext: names every team and survives a failed index read', async () => {
   const { fetchDigestContext } = await import('../digest');
   index = [idx(PANTHERS, '2026-11-12', 'Military Appreciation Night', 'military-appreciation-night')];
-  const ok = await fetchDigestContext({ start: '2026-11-03', end: '2026-11-09' });
+  windowRows = [
+    row(PANTHERS, '2026-11-04', 'Star Wars Night', 'star-wars-night'),
+    row(PANTHERS, '2026-11-04', 'Star Wars Bobblehead', 'star-wars-bobblehead', { type: 'giveaway' }),
+    row(HEAT, '2026-11-06', 'Heat Night', 'heat-night'),
+  ];
+  const ok = await fetchDigestContext({ start: '2026-11-03', end: '2026-11-09' }, await (await import('../digest')).fetchWindowPromos('2026-11-03', '2026-11-09'));
+  assert.strictEqual(ok.windowEntries, 2, 'one entry per team per date');
+  assert.strictEqual(ok.windowGiveawayEntries, 1);
   assert.strictEqual(ok.teams.get('florida-panthers')?.name, 'Florida Panthers');
   assert.strictEqual(ok.teams.get('florida-panthers')?.short, 'Panthers');
   assert.deepStrictEqual(ok.upcoming.map((u) => u.href), ['/nhl/florida-panthers/promos/military-appreciation-night']);
   indexThrows = true;
-  const down = await fetchDigestContext({ start: '2026-11-03', end: '2026-11-09' });
+  const down = await fetchDigestContext({ start: '2026-11-03', end: '2026-11-09' }, []);
   assert.deepStrictEqual(down.upcoming, []);
   assert.strictEqual(down.teams.size, 2);
 });
