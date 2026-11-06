@@ -1,0 +1,7184 @@
+{
+  "meta": {
+    "purpose": "Phase 0 venue logistics hub discovery manifest (READ-ONLY).",
+    "generatedAt": "2026-07-12T12:16:56.580Z",
+    "counts": {
+      "venuesDocs": 148,
+      "cfbVenuesDocs": 86,
+      "teamsDocs": 169,
+      "uniqueProBuildings": 148,
+      "uniqueCfbBuildings": 86,
+      "proBuildingsWithTenants": 148,
+      "proBuildingsOrphan": 0,
+      "teamsWithNoBuilding": 0
+    }
+  },
+  "schema": {
+    "venues": {
+      "__id": {
+        "presentInDocs": 148,
+        "populated": 148,
+        "empty": 0
+      },
+      "accentColor": {
+        "presentInDocs": 148,
+        "populated": 148,
+        "empty": 0
+      },
+      "accessibility": {
+        "presentInDocs": 86,
+        "populated": 86,
+        "empty": 0
+      },
+      "address": {
+        "presentInDocs": 148,
+        "populated": 148,
+        "empty": 0
+      },
+      "amenityCount": {
+        "presentInDocs": 148,
+        "populated": 148,
+        "empty": 0
+      },
+      "bagPolicyUrl": {
+        "presentInDocs": 86,
+        "populated": 86,
+        "empty": 0
+      },
+      "gatesOpen": {
+        "presentInDocs": 77,
+        "populated": 77,
+        "empty": 0
+      },
+      "hasAmenityData": {
+        "presentInDocs": 148,
+        "populated": 148,
+        "empty": 0
+      },
+      "lat": {
+        "presentInDocs": 148,
+        "populated": 148,
+        "empty": 0
+      },
+      "league": {
+        "presentInDocs": 148,
+        "populated": 148,
+        "empty": 0
+      },
+      "lng": {
+        "presentInDocs": 148,
+        "populated": 148,
+        "empty": 0
+      },
+      "name": {
+        "presentInDocs": 148,
+        "populated": 148,
+        "empty": 0
+      },
+      "nearby": {
+        "presentInDocs": 86,
+        "populated": 86,
+        "empty": 0
+      },
+      "parkingInfo": {
+        "presentInDocs": 86,
+        "populated": 86,
+        "empty": 0
+      },
+      "primaryColor": {
+        "presentInDocs": 148,
+        "populated": 148,
+        "empty": 0
+      },
+      "publicTransit": {
+        "presentInDocs": 86,
+        "populated": 86,
+        "empty": 0
+      },
+      "sharedTeams": {
+        "presentInDocs": 27,
+        "populated": 27,
+        "empty": 0
+      },
+      "sport": {
+        "presentInDocs": 148,
+        "populated": 148,
+        "empty": 0
+      },
+      "sportIcon": {
+        "presentInDocs": 148,
+        "populated": 148,
+        "empty": 0
+      },
+      "team": {
+        "presentInDocs": 148,
+        "populated": 148,
+        "empty": 0
+      },
+      "teamId": {
+        "presentInDocs": 148,
+        "populated": 148,
+        "empty": 0
+      }
+    },
+    "cfbVenues": {
+      "__id": {
+        "presentInDocs": 86,
+        "populated": 86,
+        "empty": 0
+      },
+      "capacity": {
+        "presentInDocs": 86,
+        "populated": 73,
+        "empty": 13
+      },
+      "capacitySources": {
+        "presentInDocs": 64,
+        "populated": 64,
+        "empty": 0
+      },
+      "capacityVerified": {
+        "presentInDocs": 64,
+        "populated": 64,
+        "empty": 0
+      },
+      "capacityVerifiedAt": {
+        "presentInDocs": 64,
+        "populated": 64,
+        "empty": 0
+      },
+      "city": {
+        "presentInDocs": 86,
+        "populated": 79,
+        "empty": 7
+      },
+      "coordsSources": {
+        "presentInDocs": 8,
+        "populated": 8,
+        "empty": 0
+      },
+      "coordsVerified": {
+        "presentInDocs": 8,
+        "populated": 8,
+        "empty": 0
+      },
+      "coordsVerifiedAt": {
+        "presentInDocs": 8,
+        "populated": 8,
+        "empty": 0
+      },
+      "homeSchoolId": {
+        "presentInDocs": 86,
+        "populated": 86,
+        "empty": 0
+      },
+      "humanConfirmed": {
+        "presentInDocs": 86,
+        "populated": 86,
+        "empty": 0
+      },
+      "id": {
+        "presentInDocs": 86,
+        "populated": 86,
+        "empty": 0
+      },
+      "lat": {
+        "presentInDocs": 86,
+        "populated": 86,
+        "empty": 0
+      },
+      "lng": {
+        "presentInDocs": 86,
+        "populated": 86,
+        "empty": 0
+      },
+      "name": {
+        "presentInDocs": 86,
+        "populated": 86,
+        "empty": 0
+      },
+      "proposedFrom": {
+        "presentInDocs": 86,
+        "populated": 86,
+        "empty": 0
+      },
+      "sharedSchoolIds": {
+        "presentInDocs": 86,
+        "populated": 0,
+        "empty": 86
+      },
+      "source": {
+        "presentInDocs": 86,
+        "populated": 86,
+        "empty": 0
+      },
+      "state": {
+        "presentInDocs": 86,
+        "populated": 72,
+        "empty": 14
+      },
+      "updatedAt": {
+        "presentInDocs": 86,
+        "populated": 86,
+        "empty": 0
+      }
+    }
+  },
+  "coverageByLeague": {
+    "NFL": {
+      "buildings": 32,
+      "fieldCoverage": {
+        "gatesOpen": 0,
+        "parkingInfo": 1,
+        "publicTransit": 1,
+        "accessibility": 1,
+        "bagPolicyUrl": 1,
+        "nearby": 1
+      }
+    },
+    "MLS": {
+      "buildings": 30,
+      "fieldCoverage": {
+        "gatesOpen": 25,
+        "parkingInfo": 30,
+        "publicTransit": 30,
+        "accessibility": 30,
+        "bagPolicyUrl": 30,
+        "nearby": 30
+      }
+    },
+    "NHL": {
+      "buildings": 32,
+      "fieldCoverage": {
+        "gatesOpen": 7,
+        "parkingInfo": 11,
+        "publicTransit": 11,
+        "accessibility": 11,
+        "bagPolicyUrl": 11,
+        "nearby": 11
+      }
+    },
+    "NBA": {
+      "buildings": 30,
+      "fieldCoverage": {
+        "gatesOpen": 9,
+        "parkingInfo": 12,
+        "publicTransit": 12,
+        "accessibility": 12,
+        "bagPolicyUrl": 12,
+        "nearby": 12
+      }
+    },
+    "MLB": {
+      "buildings": 30,
+      "fieldCoverage": {
+        "gatesOpen": 30,
+        "parkingInfo": 30,
+        "publicTransit": 30,
+        "accessibility": 30,
+        "bagPolicyUrl": 30,
+        "nearby": 30
+      }
+    },
+    "WNBA": {
+      "buildings": 15,
+      "fieldCoverage": {
+        "gatesOpen": 13,
+        "parkingInfo": 15,
+        "publicTransit": 15,
+        "accessibility": 15,
+        "bagPolicyUrl": 15,
+        "nearby": 15
+      }
+    },
+    "CFB": {
+      "buildings": 86,
+      "fieldCoverage": {
+        "tailgating": 0,
+        "parking": 0,
+        "transit": 0,
+        "gatesOpenRule": 0
+      }
+    }
+  },
+  "dataQuality": {
+    "missingCoords": [],
+    "pipeLeakage": [
+      {
+        "collection": "cfbVenues",
+        "slug": "alumni-stadium",
+        "field": "city",
+        "value": "| coordinates        ="
+      },
+      {
+        "collection": "cfbVenues",
+        "slug": "bill-snyder-family-football-stadium",
+        "field": "state",
+        "value": "Kansas|Manhattan"
+      },
+      {
+        "collection": "cfbVenues",
+        "slug": "bobby-dodd-stadium",
+        "field": "city",
+        "value": "Georgia Institute of Technology|date=August 18"
+      },
+      {
+        "collection": "cfbVenues",
+        "slug": "bobby-dodd-stadium",
+        "field": "state",
+        "value": "2011|access-date=August 18"
+      },
+      {
+        "collection": "cfbVenues",
+        "slug": "california-memorial-stadium",
+        "field": "state",
+        "value": "Berkeley|University of CaliforniaBerkeley"
+      },
+      {
+        "collection": "cfbVenues",
+        "slug": "camp-randall-stadium",
+        "field": "city",
+        "value": "1440 Monroe StreetUniversity of Wisconsin–Madison|University of WisconsinMadison"
+      },
+      {
+        "collection": "cfbVenues",
+        "slug": "falcon-stadium",
+        "field": "city",
+        "value": "United States Air Force Academy|U.S. Air Force Academy"
+      },
+      {
+        "collection": "cfbVenues",
+        "slug": "folsom-field",
+        "field": "city",
+        "value": "University of Colorado Boulder|University of Colorado"
+      },
+      {
+        "collection": "cfbVenues",
+        "slug": "gerald-j-ford-stadium",
+        "field": "state",
+        "value": "Texas|Dallas"
+      },
+      {
+        "collection": "cfbVenues",
+        "slug": "jma-wireless-dome",
+        "field": "state",
+        "value": "New York|Syracuse"
+      },
+      {
+        "collection": "cfbVenues",
+        "slug": "lavell-edwards-stadium",
+        "field": "state",
+        "value": "Utah|Provo"
+      },
+      {
+        "collection": "cfbVenues",
+        "slug": "memorial-stadium-lincoln",
+        "field": "city",
+        "value": "| elevation ="
+      },
+      {
+        "collection": "cfbVenues",
+        "slug": "notre-dame-stadium",
+        "field": "city",
+        "value": "| coordinates         ="
+      },
+      {
+        "collection": "cfbVenues",
+        "slug": "scott-stadium",
+        "field": "city",
+        "value": "| coordinates       ="
+      },
+      {
+        "collection": "cfbVenues",
+        "slug": "yulman-stadium",
+        "field": "state",
+        "value": "Louisiana|LA 70118"
+      }
+    ],
+    "zeroLogistics": {
+      "venues": [
+        "acrisure-stadium",
+        "allegiant-stadium",
+        "american-airlines-center",
+        "arrowhead-stadium",
+        "att-stadium",
+        "bank-of-america-stadium-panthers",
+        "caesars-superdome",
+        "canada-life-centre",
+        "canadian-tire-centre",
+        "capital-one-arena",
+        "delta-center",
+        "empower-field",
+        "everbank-stadium",
+        "fedexforum",
+        "fiserv-forum",
+        "ford-field",
+        "gillette-stadium-patriots",
+        "golden-1-center",
+        "hard-rock-stadium",
+        "highmark-stadium",
+        "honda-center",
+        "huntington-bank-field",
+        "intuit-dome",
+        "kaseya-center",
+        "keybank-center",
+        "kia-center",
+        "lambeau-field",
+        "levis-stadium",
+        "lincoln-financial-field",
+        "little-caesars-arena",
+        "lucas-oil-stadium",
+        "lumen-field-seahawks",
+        "metlife-stadium",
+        "metlife-stadium-jets",
+        "moda-center",
+        "mt-bank-stadium",
+        "nationwide-arena",
+        "nissan-stadium",
+        "northwest-stadium",
+        "nrg-stadium",
+        "paycor-stadium",
+        "ppg-paints-arena",
+        "prudential-center",
+        "raymond-james-stadium",
+        "rogers-arena",
+        "rogers-place",
+        "sap-center",
+        "scotiabank-arena",
+        "scotiabank-saddledome",
+        "smoothie-king-center",
+        "sofi-stadium",
+        "sofi-stadium-chargers",
+        "soldier-field-bears",
+        "spectrum-center",
+        "state-farm-stadium",
+        "td-garden",
+        "toyota-center",
+        "ubs-arena",
+        "united-center",
+        "us-bank-stadium",
+        "wells-fargo-center",
+        "xcel-energy-center"
+      ],
+      "cfbVenues": [
+        "acrisure-bounce-house",
+        "acrisure-stadium",
+        "albertsons-stadium",
+        "allegacy-federal-credit-union-stadium",
+        "allegiant-stadium",
+        "alumni-stadium",
+        "amon-g-carter-stadium",
+        "autzen-stadium",
+        "beaver-stadium",
+        "ben-hill-griffin-stadium",
+        "bill-snyder-family-football-stadium",
+        "bobby-dodd-stadium",
+        "boone-pickens-stadium",
+        "bridgeforth-stadium-and-zane-showker-field",
+        "brooks-stadium",
+        "california-memorial-stadium",
+        "camp-randall-stadium",
+        "carter-finley-stadium",
+        "casino-del-sol-stadium",
+        "darrell-k-royal-texas-memorial-stadium",
+        "david-booth-kansas-memorial-stadium",
+        "davis-wade-stadium",
+        "doak-campbell-stadium",
+        "donald-w-reynolds-razorback-stadium",
+        "falcon-stadium",
+        "faurot-field",
+        "firstbank-stadium",
+        "folsom-field",
+        "gaylord-family-oklahoma-memorial-stadium",
+        "gerald-j-ford-stadium",
+        "gies-memorial-stadium",
+        "glass-bowl",
+        "hard-rock-stadium",
+        "huntington-bank-stadium",
+        "huskie-stadium",
+        "husky-stadium",
+        "jack-trice-stadium",
+        "jma-wireless-dome",
+        "joan-c-edwards-stadium",
+        "jones-stadium",
+        "jordan-hare-stadium",
+        "kenan-stadium",
+        "kidd-brewer-stadium",
+        "kinnick-stadium",
+        "kroger-field",
+        "kyle-field",
+        "lane-stadium",
+        "lavell-edwards-stadium",
+        "ln-federal-credit-union-stadium",
+        "los-angeles-memorial-coliseum",
+        "martin-stadium-northwestern-university",
+        "mclane-stadium",
+        "memorial-stadium-clemson",
+        "memorial-stadium-indiana-university",
+        "memorial-stadium-lincoln",
+        "michie-stadium",
+        "michigan-stadium",
+        "milan-puskar-stadium",
+        "mountain-america-stadium",
+        "navy-marine-corps-memorial-stadium",
+        "neyland-stadium",
+        "nippert-stadium",
+        "notre-dame-stadium",
+        "ohio-stadium",
+        "pratt-whitney-stadium-at-rentschler-field",
+        "raymond-james-stadium",
+        "rice-eccles-stadium",
+        "rose-bowl-stadium",
+        "ross-ade-stadium",
+        "saban-field-at-bryant-denny-stadium",
+        "sanford-stadium",
+        "scott-stadium",
+        "secu-stadium",
+        "shi-stadium",
+        "simmons-bank-liberty-stadium",
+        "snapdragon-stadium",
+        "space-city-financial-stadium",
+        "spartan-stadium-east-lansing-michigan",
+        "stanford-stadium",
+        "tiger-stadium-louisiana",
+        "valley-childrens-stadium",
+        "vaught-hemingway-stadium",
+        "wallace-wade-stadium",
+        "williams-brice-stadium",
+        "williams-stadium",
+        "yulman-stadium"
+      ]
+    },
+    "duplicateCandidates": [
+      {
+        "basis": "name",
+        "key": "acrisurestadium",
+        "docs": [
+          "venues/acrisure-stadium",
+          "cfbVenues/acrisure-stadium"
+        ]
+      },
+      {
+        "basis": "name",
+        "key": "allegiantstadium",
+        "docs": [
+          "venues/allegiant-stadium",
+          "cfbVenues/allegiant-stadium"
+        ]
+      },
+      {
+        "basis": "name",
+        "key": "bankofamericastadium",
+        "docs": [
+          "venues/bank-of-america-stadium",
+          "venues/bank-of-america-stadium-panthers"
+        ]
+      },
+      {
+        "basis": "name",
+        "key": "gillettestadium",
+        "docs": [
+          "venues/gillette-stadium",
+          "venues/gillette-stadium-patriots"
+        ]
+      },
+      {
+        "basis": "name",
+        "key": "hardrockstadium",
+        "docs": [
+          "venues/hard-rock-stadium",
+          "cfbVenues/hard-rock-stadium"
+        ]
+      },
+      {
+        "basis": "name",
+        "key": "lumenfield",
+        "docs": [
+          "venues/lumen-field",
+          "venues/lumen-field-seahawks"
+        ]
+      },
+      {
+        "basis": "name",
+        "key": "metlifestadium",
+        "docs": [
+          "venues/metlife-stadium",
+          "venues/metlife-stadium-jets"
+        ]
+      },
+      {
+        "basis": "name",
+        "key": "modacenter",
+        "docs": [
+          "venues/moda-center",
+          "venues/moda-center-portland-fire"
+        ]
+      },
+      {
+        "basis": "name",
+        "key": "raymondjamesstadium",
+        "docs": [
+          "venues/raymond-james-stadium",
+          "cfbVenues/raymond-james-stadium"
+        ]
+      },
+      {
+        "basis": "name",
+        "key": "snapdragonstadium",
+        "docs": [
+          "venues/snapdragon-stadium",
+          "cfbVenues/snapdragon-stadium"
+        ]
+      },
+      {
+        "basis": "name",
+        "key": "sofistadium",
+        "docs": [
+          "venues/sofi-stadium",
+          "venues/sofi-stadium-chargers"
+        ]
+      },
+      {
+        "basis": "name",
+        "key": "soldierfield",
+        "docs": [
+          "venues/soldier-field",
+          "venues/soldier-field-bears"
+        ]
+      },
+      {
+        "basis": "name",
+        "key": "memorialstadium",
+        "docs": [
+          "cfbVenues/memorial-stadium-clemson",
+          "cfbVenues/memorial-stadium-indiana-university",
+          "cfbVenues/memorial-stadium-lincoln"
+        ]
+      },
+      {
+        "basis": "coords",
+        "key": "40.447,-80.016",
+        "docs": [
+          "venues/acrisure-stadium",
+          "cfbVenues/acrisure-stadium"
+        ]
+      },
+      {
+        "basis": "coords",
+        "key": "35.226,-80.853",
+        "docs": [
+          "venues/bank-of-america-stadium",
+          "venues/bank-of-america-stadium-panthers"
+        ]
+      },
+      {
+        "basis": "coords",
+        "key": "42.091,-71.264",
+        "docs": [
+          "venues/gillette-stadium",
+          "venues/gillette-stadium-patriots"
+        ]
+      },
+      {
+        "basis": "coords",
+        "key": "25.958,-80.239",
+        "docs": [
+          "venues/hard-rock-stadium",
+          "cfbVenues/hard-rock-stadium"
+        ]
+      },
+      {
+        "basis": "coords",
+        "key": "47.595,-122.332",
+        "docs": [
+          "venues/lumen-field",
+          "venues/lumen-field-seahawks"
+        ]
+      },
+      {
+        "basis": "coords",
+        "key": "40.813,-74.075",
+        "docs": [
+          "venues/metlife-stadium",
+          "venues/metlife-stadium-jets"
+        ]
+      },
+      {
+        "basis": "coords",
+        "key": "45.532,-122.667",
+        "docs": [
+          "venues/moda-center",
+          "venues/moda-center-portland-fire"
+        ]
+      },
+      {
+        "basis": "coords",
+        "key": "27.976,-82.503",
+        "docs": [
+          "venues/raymond-james-stadium",
+          "cfbVenues/raymond-james-stadium"
+        ]
+      },
+      {
+        "basis": "coords",
+        "key": "33.953,-118.339",
+        "docs": [
+          "venues/sofi-stadium",
+          "venues/sofi-stadium-chargers"
+        ]
+      },
+      {
+        "basis": "coords",
+        "key": "41.862,-87.617",
+        "docs": [
+          "venues/soldier-field",
+          "venues/soldier-field-bears"
+        ]
+      }
+    ],
+    "orphanVenues": [],
+    "teamsWithNoBuilding": []
+  },
+  "proBuildings": [
+    {
+      "slug": "acrisure-stadium",
+      "name": "Acrisure Stadium",
+      "team": "Pittsburgh Steelers",
+      "league": "NFL",
+      "tenants": [
+        {
+          "slug": "pittsburgh-steelers",
+          "team": "Pittsburgh Steelers",
+          "league": "NFL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 40.4468,
+      "lng": -80.0158,
+      "address": "100 Art Rooney Ave, Pittsburgh, PA 15212",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "allegiant-stadium",
+      "name": "Allegiant Stadium",
+      "team": "Las Vegas Raiders",
+      "league": "NFL",
+      "tenants": [
+        {
+          "slug": "las-vegas-raiders",
+          "team": "Las Vegas Raiders",
+          "league": "NFL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 36.0909,
+      "lng": -115.1833,
+      "address": "3333 Al Davis Way, Las Vegas, NV 89118",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "allianz-field",
+      "name": "Allianz Field",
+      "team": "Minnesota United FC",
+      "league": "MLS",
+      "tenants": [
+        {
+          "slug": "minnesota-united",
+          "team": "Minnesota United FC",
+          "league": "MLS"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 44.9531,
+      "lng": -93.165,
+      "address": "400 Snelling Ave N, St Paul, MN 55104",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "amalie-arena",
+      "name": "Benchmark International Arena",
+      "team": "Tampa Bay Lightning",
+      "league": "NHL",
+      "tenants": [
+        {
+          "slug": "tampa-bay-lightning",
+          "team": "Tampa Bay Lightning",
+          "league": "NHL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 27.9427,
+      "lng": -82.4519,
+      "address": "401 Channelside Dr, Tampa, FL 33602",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "amerant-bank-arena",
+      "name": "Amerant Bank Arena",
+      "team": "Florida Panthers",
+      "league": "NHL",
+      "tenants": [
+        {
+          "slug": "florida-panthers",
+          "team": "Florida Panthers",
+          "league": "NHL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 26.1584,
+      "lng": -80.3256,
+      "address": "1 Panther Pkwy, Sunrise, FL 33323",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "american-airlines-center",
+      "name": "American Airlines Center",
+      "team": "Dallas Stars",
+      "league": "NHL",
+      "tenants": [
+        {
+          "slug": "dallas-mavericks",
+          "team": "Dallas Mavericks",
+          "league": "NBA"
+        },
+        {
+          "slug": "dallas-stars",
+          "team": "Dallas Stars",
+          "league": "NHL"
+        }
+      ],
+      "tenantCount": 2,
+      "lat": 32.7905,
+      "lng": -96.8103,
+      "address": "2500 Victory Ave, Dallas, TX 75219",
+      "city": null,
+      "state": null,
+      "sharedTeams": [
+        "dal-nba"
+      ],
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "american-family-field",
+      "name": "American Family Field",
+      "team": "Milwaukee Brewers",
+      "league": "MLB",
+      "tenants": [
+        {
+          "slug": "milwaukee-brewers",
+          "team": "Milwaukee Brewers",
+          "league": "MLB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 43.028,
+      "lng": -87.9712,
+      "address": "1 Brewers Way, Milwaukee, WI 53214",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "americas-first-field",
+      "name": "America First Field",
+      "team": "Real Salt Lake",
+      "league": "MLS",
+      "tenants": [
+        {
+          "slug": "real-salt-lake",
+          "team": "Salt Lake Real",
+          "league": "MLS"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 40.583,
+      "lng": -111.8933,
+      "address": "9256 S State St, Sandy, UT 84070",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "angel-stadium",
+      "name": "Angel Stadium",
+      "team": "Los Angeles Angels",
+      "league": "MLB",
+      "tenants": [
+        {
+          "slug": "los-angeles-angels",
+          "team": "Los Angeles Angels",
+          "league": "MLB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 33.8003,
+      "lng": -117.8827,
+      "address": "2000 E Gene Autry Way, Anaheim, CA 92806",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "arrowhead-stadium",
+      "name": "GEHA Field at Arrowhead Stadium",
+      "team": "Kansas City Chiefs",
+      "league": "NFL",
+      "tenants": [
+        {
+          "slug": "kansas-city-chiefs",
+          "team": "Kansas City Chiefs",
+          "league": "NFL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 39.0489,
+      "lng": -94.4839,
+      "address": "1 Arrowhead Dr, Kansas City, MO 64129",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "att-stadium",
+      "name": "AT&T Stadium",
+      "team": "Dallas Cowboys",
+      "league": "NFL",
+      "tenants": [
+        {
+          "slug": "dallas-cowboys",
+          "team": "Dallas Cowboys",
+          "league": "NFL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 32.7473,
+      "lng": -97.0945,
+      "address": "1 AT&T Way, Arlington, TX 76011",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "audi-field",
+      "name": "Audi Field",
+      "team": "D.C. United",
+      "league": "MLS",
+      "tenants": [
+        {
+          "slug": "dc-united",
+          "team": "D.C. United",
+          "league": "MLS"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 38.8687,
+      "lng": -77.0129,
+      "address": "100 Potomac Ave SW, Washington, DC 20024",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "ball-arena",
+      "name": "Ball Arena",
+      "team": "Colorado Avalanche",
+      "league": "NHL",
+      "tenants": [
+        {
+          "slug": "colorado-avalanche",
+          "team": "Colorado Avalanche",
+          "league": "NHL"
+        },
+        {
+          "slug": "denver-nuggets",
+          "team": "Denver Nuggets",
+          "league": "NBA"
+        }
+      ],
+      "tenantCount": 2,
+      "lat": 39.7487,
+      "lng": -105.0077,
+      "address": "1000 Chopper Cir, Denver, CO 80204",
+      "city": null,
+      "state": null,
+      "sharedTeams": [
+        "den-nba"
+      ],
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 5
+    },
+    {
+      "slug": "bank-of-america-stadium",
+      "name": "Bank of America Stadium",
+      "team": "Charlotte FC",
+      "league": "MLS",
+      "tenants": [
+        {
+          "slug": "charlotte-fc",
+          "team": "Charlotte Charlotte FC",
+          "league": "MLS"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 35.2258,
+      "lng": -80.8528,
+      "address": "800 S Mint St, Charlotte, NC 28202",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 5
+    },
+    {
+      "slug": "bank-of-america-stadium-panthers",
+      "name": "Bank of America Stadium",
+      "team": "Carolina Panthers",
+      "league": "NFL",
+      "tenants": [
+        {
+          "slug": "carolina-panthers",
+          "team": "Carolina Panthers",
+          "league": "NFL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 35.2258,
+      "lng": -80.8528,
+      "address": "800 S Mint St, Charlotte, NC 28202",
+      "city": null,
+      "state": null,
+      "sharedTeams": [
+        "clt-mls"
+      ],
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "barclays-center",
+      "name": "Barclays Center",
+      "team": "Brooklyn Nets",
+      "league": "NBA",
+      "tenants": [
+        {
+          "slug": "brooklyn-nets",
+          "team": "Brooklyn Nets",
+          "league": "NBA"
+        },
+        {
+          "slug": "new-york-liberty",
+          "team": "New York Liberty",
+          "league": "WNBA"
+        }
+      ],
+      "tenantCount": 2,
+      "lat": 40.6826,
+      "lng": -73.9754,
+      "address": "620 Atlantic Ave, Brooklyn, NY 11217",
+      "city": null,
+      "state": null,
+      "sharedTeams": [
+        "nyl-wnba"
+      ],
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "bc-place",
+      "name": "BC Place",
+      "team": "Vancouver Whitecaps FC",
+      "league": "MLS",
+      "tenants": [
+        {
+          "slug": "vancouver-whitecaps",
+          "team": "Vancouver Whitecaps FC",
+          "league": "MLS"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 49.2768,
+      "lng": -123.1118,
+      "address": "777 Pacific Blvd, Vancouver, BC V6B 4Y8",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "bmo-field",
+      "name": "BMO Field",
+      "team": "Toronto FC",
+      "league": "MLS",
+      "tenants": [
+        {
+          "slug": "toronto-fc",
+          "team": "Toronto Toronto FC",
+          "league": "MLS"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 43.6332,
+      "lng": -79.4186,
+      "address": "170 Princes Blvd, Toronto, ON M6K 3C3",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "bmo-stadium",
+      "name": "BMO Stadium",
+      "team": "Los Angeles FC",
+      "league": "MLS",
+      "tenants": [
+        {
+          "slug": "lafc",
+          "team": "Los Angeles LAFC",
+          "league": "MLS"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 34.0128,
+      "lng": -118.2841,
+      "address": "3939 S Figueroa St, Los Angeles, CA 90037",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "bridgestone-arena",
+      "name": "Bridgestone Arena",
+      "team": "Nashville Predators",
+      "league": "NHL",
+      "tenants": [
+        {
+          "slug": "nashville-predators",
+          "team": "Nashville Predators",
+          "league": "NHL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 36.1592,
+      "lng": -86.7785,
+      "address": "501 Broadway, Nashville, TN 37203",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "busch-stadium",
+      "name": "Busch Stadium",
+      "team": "St. Louis Cardinals",
+      "league": "MLB",
+      "tenants": [
+        {
+          "slug": "st-louis-cardinals",
+          "team": "St. Louis Cardinals",
+          "league": "MLB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 38.6226,
+      "lng": -90.1928,
+      "address": "700 Clark Ave, St. Louis, MO 63102",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "caesars-superdome",
+      "name": "Caesars Superdome",
+      "team": "New Orleans Saints",
+      "league": "NFL",
+      "tenants": [
+        {
+          "slug": "new-orleans-saints",
+          "team": "New Orleans Saints",
+          "league": "NFL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 29.9511,
+      "lng": -90.0812,
+      "address": "1500 Sugar Bowl Dr, New Orleans, LA 70112",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "camden-yards",
+      "name": "Oriole Park at Camden Yards",
+      "team": "Baltimore Orioles",
+      "league": "MLB",
+      "tenants": [
+        {
+          "slug": "baltimore-orioles",
+          "team": "Baltimore Orioles",
+          "league": "MLB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 39.2838,
+      "lng": -76.6217,
+      "address": "333 W Camden St, Baltimore, MD 21201",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "canada-life-centre",
+      "name": "Canada Life Centre",
+      "team": "Winnipeg Jets",
+      "league": "NHL",
+      "tenants": [
+        {
+          "slug": "winnipeg-jets",
+          "team": "Winnipeg Jets",
+          "league": "NHL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 49.8928,
+      "lng": -97.1438,
+      "address": "345 Portage Ave, Winnipeg, MB R3C 5S4",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "canadian-tire-centre",
+      "name": "Canadian Tire Centre",
+      "team": "Ottawa Senators",
+      "league": "NHL",
+      "tenants": [
+        {
+          "slug": "ottawa-senators",
+          "team": "Ottawa Senators",
+          "league": "NHL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 45.2969,
+      "lng": -75.9272,
+      "address": "1000 Palladium Dr, Ottawa, ON K2V 1A5",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "capital-one-arena",
+      "name": "Capital One Arena",
+      "team": "Washington Capitals",
+      "league": "NHL",
+      "tenants": [
+        {
+          "slug": "washington-capitals",
+          "team": "Washington Capitals",
+          "league": "NHL"
+        },
+        {
+          "slug": "washington-wizards",
+          "team": "Washington Wizards",
+          "league": "NBA"
+        }
+      ],
+      "tenantCount": 2,
+      "lat": 38.8981,
+      "lng": -77.0209,
+      "address": "601 F St NW, Washington, DC 20004",
+      "city": null,
+      "state": null,
+      "sharedTeams": [
+        "wsh-nba"
+      ],
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "centre-bell",
+      "name": "Centre Bell",
+      "team": "Montreal Canadiens",
+      "league": "NHL",
+      "tenants": [
+        {
+          "slug": "montreal-canadiens",
+          "team": "Montreal Canadiens",
+          "league": "NHL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 45.4961,
+      "lng": -73.5693,
+      "address": "1909 Avenue des Canadiens-de-Montréal, Montreal, QC H4B 5G0",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "chase-center",
+      "name": "Chase Center",
+      "team": "Golden State Warriors",
+      "league": "NBA",
+      "tenants": [
+        {
+          "slug": "golden-state-valkyries",
+          "team": "Golden State Valkyries",
+          "league": "WNBA"
+        },
+        {
+          "slug": "golden-state-warriors",
+          "team": "Golden State Warriors",
+          "league": "NBA"
+        }
+      ],
+      "tenantCount": 2,
+      "lat": 37.768,
+      "lng": -122.3877,
+      "address": "1 Warriors Way, San Francisco, CA 94158",
+      "city": null,
+      "state": null,
+      "sharedTeams": [
+        "gsv-wnba"
+      ],
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "chase-field",
+      "name": "Chase Field",
+      "team": "Arizona Diamondbacks",
+      "league": "MLB",
+      "tenants": [
+        {
+          "slug": "arizona-diamondbacks",
+          "team": "Arizona Diamondbacks",
+          "league": "MLB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 33.4455,
+      "lng": -112.0667,
+      "address": "401 E Jefferson St, Phoenix, AZ 85004",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "chase-stadium",
+      "name": "Nu Stadium",
+      "team": "Inter Miami CF",
+      "league": "MLS",
+      "tenants": [
+        {
+          "slug": "inter-miami",
+          "team": "Miami Inter CF",
+          "league": "MLS"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 25.7965,
+      "lng": -80.2178,
+      "address": "1900 NW 37th Ave, Miami, FL 33125",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "childrens-mercy-park",
+      "name": "Children's Mercy Park",
+      "team": "Sporting Kansas City",
+      "league": "MLS",
+      "tenants": [
+        {
+          "slug": "sporting-kansas-city",
+          "team": "Kansas City Sporting",
+          "league": "MLS"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 39.1218,
+      "lng": -94.8233,
+      "address": "1 Sporting Way, Kansas City, KS 66111",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "citi-field",
+      "name": "Citi Field",
+      "team": "New York Mets",
+      "league": "MLB",
+      "tenants": [
+        {
+          "slug": "new-york-mets",
+          "team": "New York Mets",
+          "league": "MLB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 40.7571,
+      "lng": -73.8458,
+      "address": "41 Seaver Way, Queens, NY 11368",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "citizens-bank-park",
+      "name": "Citizens Bank Park",
+      "team": "Philadelphia Phillies",
+      "league": "MLB",
+      "tenants": [
+        {
+          "slug": "philadelphia-phillies",
+          "team": "Philadelphia Phillies",
+          "league": "MLB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 39.9061,
+      "lng": -75.1665,
+      "address": "1 Citizens Bank Way, Philadelphia, PA 19148",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "climate-pledge-arena",
+      "name": "Climate Pledge Arena",
+      "team": "Seattle Kraken",
+      "league": "NHL",
+      "tenants": [
+        {
+          "slug": "seattle-kraken",
+          "team": "Seattle Kraken",
+          "league": "NHL"
+        },
+        {
+          "slug": "seattle-storm",
+          "team": "Seattle Storm",
+          "league": "WNBA"
+        }
+      ],
+      "tenantCount": 2,
+      "lat": 47.6221,
+      "lng": -122.354,
+      "address": "334 1st Ave N, Seattle, WA 98109",
+      "city": null,
+      "state": null,
+      "sharedTeams": [
+        "sea-wnba"
+      ],
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 5
+    },
+    {
+      "slug": "coca-cola-coliseum",
+      "name": "Coca-Cola Coliseum",
+      "team": "Toronto Tempo",
+      "league": "WNBA",
+      "tenants": [
+        {
+          "slug": "toronto-tempo",
+          "team": "Toronto Tempo",
+          "league": "WNBA"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 43.6356495,
+      "lng": -79.4148366,
+      "address": "45 Manitoba Dr, Toronto, ON M6K 3C3, Canada",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "college-park-center",
+      "name": "College Park Center",
+      "team": "Dallas Wings",
+      "league": "WNBA",
+      "tenants": [
+        {
+          "slug": "dallas-wings",
+          "team": "Dallas Wings",
+          "league": "WNBA"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 32.7309,
+      "lng": -97.1078,
+      "address": "600 S Center St, Arlington, TX 76010",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "comerica-park",
+      "name": "Comerica Park",
+      "team": "Detroit Tigers",
+      "league": "MLB",
+      "tenants": [
+        {
+          "slug": "detroit-tigers",
+          "team": "Detroit Tigers",
+          "league": "MLB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 42.339,
+      "lng": -83.0485,
+      "address": "2100 Woodward Ave, Detroit, MI 48201",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "coors-field",
+      "name": "Coors Field",
+      "team": "Colorado Rockies",
+      "league": "MLB",
+      "tenants": [
+        {
+          "slug": "colorado-rockies",
+          "team": "Colorado Rockies",
+          "league": "MLB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 39.7559,
+      "lng": -104.9942,
+      "address": "2001 Blake St, Denver, CO 80205",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "crypto-com-arena",
+      "name": "Crypto.com Arena",
+      "team": "Los Angeles Kings",
+      "league": "NHL",
+      "tenants": [
+        {
+          "slug": "los-angeles-kings",
+          "team": "Los Angeles Kings",
+          "league": "NHL"
+        },
+        {
+          "slug": "los-angeles-lakers",
+          "team": "Los Angeles Lakers",
+          "league": "NBA"
+        },
+        {
+          "slug": "los-angeles-sparks",
+          "team": "Los Angeles Sparks",
+          "league": "WNBA"
+        }
+      ],
+      "tenantCount": 3,
+      "lat": 34.043,
+      "lng": -118.2673,
+      "address": "1111 S Figueroa St, Los Angeles, CA 90015",
+      "city": null,
+      "state": null,
+      "sharedTeams": [
+        "lal-nba",
+        "las-wnba"
+      ],
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 5
+    },
+    {
+      "slug": "daikin-park",
+      "name": "Daikin Park",
+      "team": "Houston Astros",
+      "league": "MLB",
+      "tenants": [
+        {
+          "slug": "houston-astros",
+          "team": "Houston Astros",
+          "league": "MLB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 29.7573,
+      "lng": -95.3555,
+      "address": "501 Crawford St, Houston, TX 77002",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "delta-center",
+      "name": "Delta Center",
+      "team": "Utah Mammoth",
+      "league": "NHL",
+      "tenants": [
+        {
+          "slug": "utah-hockey-club",
+          "team": "Utah Mammoth",
+          "league": "NHL"
+        },
+        {
+          "slug": "utah-jazz",
+          "team": "Utah Jazz",
+          "league": "NBA"
+        }
+      ],
+      "tenantCount": 2,
+      "lat": 40.7683,
+      "lng": -111.9011,
+      "address": "301 S Temple, Salt Lake City, UT 84101",
+      "city": null,
+      "state": null,
+      "sharedTeams": [
+        "uta-nba"
+      ],
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "dicks-sporting-goods-park",
+      "name": "Dick's Sporting Goods Park",
+      "team": "Colorado Rapids",
+      "league": "MLS",
+      "tenants": [
+        {
+          "slug": "colorado-rapids",
+          "team": "Colorado Rapids",
+          "league": "MLS"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 39.8054,
+      "lng": -104.892,
+      "address": "6000 Victory Way, Commerce City, CO 80022",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "dignity-health-sports-park",
+      "name": "Dignity Health Sports Park",
+      "team": "LA Galaxy",
+      "league": "MLS",
+      "tenants": [
+        {
+          "slug": "la-galaxy",
+          "team": "Los Angeles Galaxy",
+          "league": "MLS"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 33.8644,
+      "lng": -118.2611,
+      "address": "18400 S Avalon Blvd, Carson, CA 90746",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "dodger-stadium",
+      "name": "Dodger Stadium",
+      "team": "Los Angeles Dodgers",
+      "league": "MLB",
+      "tenants": [
+        {
+          "slug": "los-angeles-dodgers",
+          "team": "Los Angeles Dodgers",
+          "league": "MLB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 34.0739,
+      "lng": -118.24,
+      "address": "1000 Vin Scully Ave, Los Angeles, CA 90012",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "empower-field",
+      "name": "Empower Field at Mile High",
+      "team": "Denver Broncos",
+      "league": "NFL",
+      "tenants": [
+        {
+          "slug": "denver-broncos",
+          "team": "Denver Broncos",
+          "league": "NFL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 39.7439,
+      "lng": -105.0201,
+      "address": "1701 Bryant St, Denver, CO 80204",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "energizer-park",
+      "name": "Energizer Park",
+      "team": "St. Louis CITY SC",
+      "league": "MLS",
+      "tenants": [
+        {
+          "slug": "st-louis-city-sc",
+          "team": "St. Louis City SC",
+          "league": "MLS"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 38.631,
+      "lng": -90.207,
+      "address": "2100 Market St, St. Louis, MO 63103",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "enterprise-center",
+      "name": "Enterprise Center",
+      "team": "St. Louis Blues",
+      "league": "NHL",
+      "tenants": [
+        {
+          "slug": "st-louis-blues",
+          "team": "St. Louis Blues",
+          "league": "NHL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 38.6268,
+      "lng": -90.2025,
+      "address": "1401 Clark Ave, St. Louis, MO 63103",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "entertainment-sports-arena",
+      "name": "CareFirst Arena",
+      "team": "Washington Mystics",
+      "league": "WNBA",
+      "tenants": [
+        {
+          "slug": "washington-mystics",
+          "team": "Washington Mystics",
+          "league": "WNBA"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 38.869,
+      "lng": -76.973,
+      "address": "1100 Oak Dr SE, Washington, DC 20032",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "everbank-stadium",
+      "name": "EverBank Stadium",
+      "team": "Jacksonville Jaguars",
+      "league": "NFL",
+      "tenants": [
+        {
+          "slug": "jacksonville-jaguars",
+          "team": "Jacksonville Jaguars",
+          "league": "NFL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 30.3239,
+      "lng": -81.6373,
+      "address": "1 EverBank Field Dr, Jacksonville, FL 32202",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "exploria-stadium",
+      "name": "Inter&Co Stadium",
+      "team": "Orlando City SC",
+      "league": "MLS",
+      "tenants": [
+        {
+          "slug": "orlando-city",
+          "team": "Orlando City SC",
+          "league": "MLS"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 28.5412,
+      "lng": -81.3892,
+      "address": "655 W Church St, Orlando, FL 32805",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "fedexforum",
+      "name": "FedExForum",
+      "team": "Memphis Grizzlies",
+      "league": "NBA",
+      "tenants": [
+        {
+          "slug": "memphis-grizzlies",
+          "team": "Memphis Grizzlies",
+          "league": "NBA"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 35.1382,
+      "lng": -90.0506,
+      "address": "191 Beale St, Memphis, TN 38103",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "fenway-park",
+      "name": "Fenway Park",
+      "team": "Boston Red Sox",
+      "league": "MLB",
+      "tenants": [
+        {
+          "slug": "boston-red-sox",
+          "team": "Boston Red Sox",
+          "league": "MLB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 42.3467,
+      "lng": -71.0972,
+      "address": "4 Jersey St, Boston, MA 02215",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "fiserv-forum",
+      "name": "Fiserv Forum",
+      "team": "Milwaukee Bucks",
+      "league": "NBA",
+      "tenants": [
+        {
+          "slug": "milwaukee-bucks",
+          "team": "Milwaukee Bucks",
+          "league": "NBA"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 43.0451,
+      "lng": -87.9175,
+      "address": "1111 Vel R. Phillips Ave, Milwaukee, WI 53203",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "footprint-center",
+      "name": "Mortgage Matchup Center",
+      "team": "Phoenix Suns",
+      "league": "NBA",
+      "tenants": [
+        {
+          "slug": "phoenix-mercury",
+          "team": "Phoenix Mercury",
+          "league": "WNBA"
+        },
+        {
+          "slug": "phoenix-suns",
+          "team": "Phoenix Suns",
+          "league": "NBA"
+        }
+      ],
+      "tenantCount": 2,
+      "lat": 33.4457,
+      "lng": -112.0712,
+      "address": "201 E Jefferson St, Phoenix, AZ 85004",
+      "city": null,
+      "state": null,
+      "sharedTeams": [
+        "phx-wnba"
+      ],
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "ford-field",
+      "name": "Ford Field",
+      "team": "Detroit Lions",
+      "league": "NFL",
+      "tenants": [
+        {
+          "slug": "detroit-lions",
+          "team": "Detroit Lions",
+          "league": "NFL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 42.34,
+      "lng": -83.0456,
+      "address": "2000 Brush St, Detroit, MI 48226",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "frost-bank-center",
+      "name": "Frost Bank Center",
+      "team": "San Antonio Spurs",
+      "league": "NBA",
+      "tenants": [
+        {
+          "slug": "san-antonio-spurs",
+          "team": "San Antonio Spurs",
+          "league": "NBA"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 29.427,
+      "lng": -98.4375,
+      "address": "1 AT&T Center Pkwy, San Antonio, TX 78219",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "gainbridge-fieldhouse",
+      "name": "Gainbridge Fieldhouse",
+      "team": "Indiana Pacers",
+      "league": "NBA",
+      "tenants": [
+        {
+          "slug": "indiana-fever",
+          "team": "Indiana Fever",
+          "league": "WNBA"
+        },
+        {
+          "slug": "indiana-pacers",
+          "team": "Indiana Pacers",
+          "league": "NBA"
+        }
+      ],
+      "tenantCount": 2,
+      "lat": 39.764,
+      "lng": -86.1555,
+      "address": "125 S Pennsylvania St, Indianapolis, IN 46204",
+      "city": null,
+      "state": null,
+      "sharedTeams": [
+        "ind-wnba"
+      ],
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "geodis-park",
+      "name": "Geodis Park",
+      "team": "Nashville SC",
+      "league": "MLS",
+      "tenants": [
+        {
+          "slug": "nashville-sc",
+          "team": "Nashville Nashville SC",
+          "league": "MLS"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 36.1305,
+      "lng": -86.7654,
+      "address": "501 Benton Ave, Nashville, TN 37204",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "gillette-stadium",
+      "name": "Gillette Stadium",
+      "team": "New England Revolution",
+      "league": "MLS",
+      "tenants": [
+        {
+          "slug": "new-england-revolution",
+          "team": "New England Revolution",
+          "league": "MLS"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 42.0909,
+      "lng": -71.2643,
+      "address": "1 Patriot Pl, Foxborough, MA 02035",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 5
+    },
+    {
+      "slug": "gillette-stadium-patriots",
+      "name": "Gillette Stadium",
+      "team": "New England Patriots",
+      "league": "NFL",
+      "tenants": [
+        {
+          "slug": "new-england-patriots",
+          "team": "New England Patriots",
+          "league": "NFL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 42.0909,
+      "lng": -71.2643,
+      "address": "1 Patriot Pl, Foxborough, MA 02035",
+      "city": null,
+      "state": null,
+      "sharedTeams": [
+        "ne-mls"
+      ],
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "globe-life-field",
+      "name": "Globe Life Field",
+      "team": "Texas Rangers",
+      "league": "MLB",
+      "tenants": [
+        {
+          "slug": "texas-rangers",
+          "team": "Texas Rangers",
+          "league": "MLB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 32.7512,
+      "lng": -97.0832,
+      "address": "734 Stadium Dr, Arlington, TX 76011",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "golden-1-center",
+      "name": "Golden 1 Center",
+      "team": "Sacramento Kings",
+      "league": "NBA",
+      "tenants": [
+        {
+          "slug": "sacramento-kings",
+          "team": "Sacramento Kings",
+          "league": "NBA"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 38.5802,
+      "lng": -121.4997,
+      "address": "500 David J Stern Walk, Sacramento, CA 95814",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "great-american-ball-park",
+      "name": "Great American Ball Park",
+      "team": "Cincinnati Reds",
+      "league": "MLB",
+      "tenants": [
+        {
+          "slug": "cincinnati-reds",
+          "team": "Cincinnati Reds",
+          "league": "MLB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 39.0974,
+      "lng": -84.5065,
+      "address": "100 Joe Nuxhall Way, Cincinnati, OH 45202",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "guaranteed-rate-field",
+      "name": "Rate Field",
+      "team": "Chicago White Sox",
+      "league": "MLB",
+      "tenants": [
+        {
+          "slug": "chicago-white-sox",
+          "team": "Chicago White Sox",
+          "league": "MLB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 41.8299,
+      "lng": -87.6338,
+      "address": "333 W 35th St, Chicago, IL 60616",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "hard-rock-stadium",
+      "name": "Hard Rock Stadium",
+      "team": "Miami Dolphins",
+      "league": "NFL",
+      "tenants": [
+        {
+          "slug": "miami-dolphins",
+          "team": "Miami Dolphins",
+          "league": "NFL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 25.958,
+      "lng": -80.2389,
+      "address": "347 Don Shula Dr, Miami Gardens, FL 33056",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "highmark-stadium",
+      "name": "Highmark Stadium",
+      "team": "Buffalo Bills",
+      "league": "NFL",
+      "tenants": [
+        {
+          "slug": "buffalo-bills",
+          "team": "Buffalo Bills",
+          "league": "NFL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 42.7738,
+      "lng": -78.787,
+      "address": "1 Bills Dr, Orchard Park, NY 14127",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "honda-center",
+      "name": "Honda Center",
+      "team": "Anaheim Ducks",
+      "league": "NHL",
+      "tenants": [
+        {
+          "slug": "anaheim-ducks",
+          "team": "Anaheim Ducks",
+          "league": "NHL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 33.8078,
+      "lng": -117.8764,
+      "address": "2695 E Katella Ave, Anaheim, CA 92806",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "huntington-bank-field",
+      "name": "Huntington Bank Field",
+      "team": "Cleveland Browns",
+      "league": "NFL",
+      "tenants": [
+        {
+          "slug": "cleveland-browns",
+          "team": "Cleveland Browns",
+          "league": "NFL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 41.5061,
+      "lng": -81.6995,
+      "address": "100 Alfred Lerner Way, Cleveland, OH 44114",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "intuit-dome",
+      "name": "Intuit Dome",
+      "team": "LA Clippers",
+      "league": "NBA",
+      "tenants": [
+        {
+          "slug": "los-angeles-clippers",
+          "team": "Los Angeles Clippers",
+          "league": "NBA"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 33.9193,
+      "lng": -118.3423,
+      "address": "3930 W Century Blvd, Inglewood, CA 90303",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "kaseya-center",
+      "name": "Kaseya Center",
+      "team": "Miami Heat",
+      "league": "NBA",
+      "tenants": [
+        {
+          "slug": "miami-heat",
+          "team": "Miami Heat",
+          "league": "NBA"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 25.7814,
+      "lng": -80.187,
+      "address": "601 Biscayne Blvd, Miami, FL 33132",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "kauffman-stadium",
+      "name": "Kauffman Stadium",
+      "team": "Kansas City Royals",
+      "league": "MLB",
+      "tenants": [
+        {
+          "slug": "kansas-city-royals",
+          "team": "Kansas City Royals",
+          "league": "MLB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 39.0517,
+      "lng": -94.4803,
+      "address": "1 Royal Way, Kansas City, MO 64129",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "keybank-center",
+      "name": "KeyBank Center",
+      "team": "Buffalo Sabres",
+      "league": "NHL",
+      "tenants": [
+        {
+          "slug": "buffalo-sabres",
+          "team": "Buffalo Sabres",
+          "league": "NHL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 42.875,
+      "lng": -78.8764,
+      "address": "1 Seymour H Knox III Plaza, Buffalo, NY 14203",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "kia-center",
+      "name": "Kia Center",
+      "team": "Orlando Magic",
+      "league": "NBA",
+      "tenants": [
+        {
+          "slug": "orlando-magic",
+          "team": "Orlando Magic",
+          "league": "NBA"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 28.5392,
+      "lng": -81.3839,
+      "address": "400 W Church St, Orlando, FL 32801",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "lambeau-field",
+      "name": "Lambeau Field",
+      "team": "Green Bay Packers",
+      "league": "NFL",
+      "tenants": [
+        {
+          "slug": "green-bay-packers",
+          "team": "Green Bay Packers",
+          "league": "NFL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 44.5013,
+      "lng": -88.0622,
+      "address": "1265 Lombardi Ave, Green Bay, WI 54304",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "lenovo-center",
+      "name": "Lenovo Center",
+      "team": "Carolina Hurricanes",
+      "league": "NHL",
+      "tenants": [
+        {
+          "slug": "carolina-hurricanes",
+          "team": "Carolina Hurricanes",
+          "league": "NHL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 35.8034,
+      "lng": -78.722,
+      "address": "1400 Edwards Mill Rd, Raleigh, NC 27607",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "levis-stadium",
+      "name": "Levi's Stadium",
+      "team": "San Francisco 49ers",
+      "league": "NFL",
+      "tenants": [
+        {
+          "slug": "san-francisco-49ers",
+          "team": "San Francisco 49ers",
+          "league": "NFL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 37.4033,
+      "lng": -121.9695,
+      "address": "4900 Marie P DeBartolo Way, Santa Clara, CA 95054",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "lincoln-financial-field",
+      "name": "Lincoln Financial Field",
+      "team": "Philadelphia Eagles",
+      "league": "NFL",
+      "tenants": [
+        {
+          "slug": "philadelphia-eagles",
+          "team": "Philadelphia Eagles",
+          "league": "NFL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 39.9008,
+      "lng": -75.1675,
+      "address": "1 Lincoln Financial Field Way, Philadelphia, PA 19148",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "little-caesars-arena",
+      "name": "Little Caesars Arena",
+      "team": "Detroit Red Wings",
+      "league": "NHL",
+      "tenants": [
+        {
+          "slug": "detroit-pistons",
+          "team": "Detroit Pistons",
+          "league": "NBA"
+        },
+        {
+          "slug": "detroit-red-wings",
+          "team": "Detroit Red Wings",
+          "league": "NHL"
+        }
+      ],
+      "tenantCount": 2,
+      "lat": 42.3411,
+      "lng": -83.0553,
+      "address": "2645 Woodward Ave, Detroit, MI 48201",
+      "city": null,
+      "state": null,
+      "sharedTeams": [
+        "det-nba"
+      ],
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "loandepot-park",
+      "name": "loanDepot Park",
+      "team": "Miami Marlins",
+      "league": "MLB",
+      "tenants": [
+        {
+          "slug": "miami-marlins",
+          "team": "Miami Marlins",
+          "league": "MLB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 25.7781,
+      "lng": -80.2196,
+      "address": "501 Marlins Way, Miami, FL 33125",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "lower-com-field",
+      "name": "ScottsMiracle-Gro Field",
+      "team": "Columbus Crew",
+      "league": "MLS",
+      "tenants": [
+        {
+          "slug": "columbus-crew",
+          "team": "Columbus Crew",
+          "league": "MLS"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 39.9685,
+      "lng": -82.983,
+      "address": "96 Columbus Crew Way, Columbus, OH 43215",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "lucas-oil-stadium",
+      "name": "Lucas Oil Stadium",
+      "team": "Indianapolis Colts",
+      "league": "NFL",
+      "tenants": [
+        {
+          "slug": "indianapolis-colts",
+          "team": "Indianapolis Colts",
+          "league": "NFL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 39.7601,
+      "lng": -86.1639,
+      "address": "500 S Capitol Ave, Indianapolis, IN 46225",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "lumen-field",
+      "name": "Lumen Field",
+      "team": "Seattle Sounders FC",
+      "league": "MLS",
+      "tenants": [
+        {
+          "slug": "seattle-sounders",
+          "team": "Seattle Sounders FC",
+          "league": "MLS"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 47.5952,
+      "lng": -122.3316,
+      "address": "800 Occidental Ave S, Seattle, WA 98134",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 5
+    },
+    {
+      "slug": "lumen-field-seahawks",
+      "name": "Lumen Field",
+      "team": "Seattle Seahawks",
+      "league": "NFL",
+      "tenants": [
+        {
+          "slug": "seattle-seahawks",
+          "team": "Seattle Seahawks",
+          "league": "NFL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 47.5952,
+      "lng": -122.3316,
+      "address": "800 Occidental Ave S, Seattle, WA 98134",
+      "city": null,
+      "state": null,
+      "sharedTeams": [
+        "sea-mls"
+      ],
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "madison-square-garden",
+      "name": "Madison Square Garden",
+      "team": "New York Rangers",
+      "league": "NHL",
+      "tenants": [
+        {
+          "slug": "new-york-knicks",
+          "team": "New York Knicks",
+          "league": "NBA"
+        },
+        {
+          "slug": "new-york-rangers",
+          "team": "New York Rangers",
+          "league": "NHL"
+        }
+      ],
+      "tenantCount": 2,
+      "lat": 40.7505,
+      "lng": -73.9934,
+      "address": "4 Pennsylvania Plaza, New York, NY 10001",
+      "city": null,
+      "state": null,
+      "sharedTeams": [
+        "nyk-nba"
+      ],
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 5
+    },
+    {
+      "slug": "mercedes-benz-stadium",
+      "name": "Mercedes-Benz Stadium",
+      "team": "Atlanta Falcons",
+      "league": "NFL",
+      "tenants": [
+        {
+          "slug": "atlanta-falcons",
+          "team": "Atlanta Falcons",
+          "league": "NFL"
+        },
+        {
+          "slug": "atlanta-united",
+          "team": "Atlanta United FC",
+          "league": "MLS"
+        }
+      ],
+      "tenantCount": 2,
+      "lat": 33.7554,
+      "lng": -84.401,
+      "address": "1 AMB Dr NW, Atlanta, GA 30313",
+      "city": null,
+      "state": null,
+      "sharedTeams": [
+        "atl-mls"
+      ],
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 5
+    },
+    {
+      "slug": "metlife-stadium",
+      "name": "MetLife Stadium",
+      "team": "New York Giants",
+      "league": "NFL",
+      "tenants": [
+        {
+          "slug": "new-york-giants",
+          "team": "New York Giants",
+          "league": "NFL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 40.8135,
+      "lng": -74.0745,
+      "address": "1 MetLife Stadium Dr, East Rutherford, NJ 07073",
+      "city": null,
+      "state": null,
+      "sharedTeams": [
+        "nyj-nfl"
+      ],
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "metlife-stadium-jets",
+      "name": "MetLife Stadium",
+      "team": "New York Jets",
+      "league": "NFL",
+      "tenants": [
+        {
+          "slug": "new-york-jets",
+          "team": "New York Jets",
+          "league": "NFL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 40.8135,
+      "lng": -74.0745,
+      "address": "1 MetLife Stadium Dr, East Rutherford, NJ 07073",
+      "city": null,
+      "state": null,
+      "sharedTeams": [
+        "nyg-nfl"
+      ],
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "michelob-ultra-arena",
+      "name": "Michelob Ultra Arena",
+      "team": "Las Vegas Aces",
+      "league": "WNBA",
+      "tenants": [
+        {
+          "slug": "las-vegas-aces",
+          "team": "Las Vegas Aces",
+          "league": "WNBA"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 36.0944,
+      "lng": -115.1746,
+      "address": "3950 S Las Vegas Blvd, Las Vegas, NV 89119",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "moda-center",
+      "name": "Moda Center",
+      "team": "Portland Trail Blazers",
+      "league": "NBA",
+      "tenants": [
+        {
+          "slug": "portland-trail-blazers",
+          "team": "Portland Trail Blazers",
+          "league": "NBA"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 45.5316,
+      "lng": -122.6668,
+      "address": "1 N Center Ct St, Portland, OR 97227",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "moda-center-portland-fire",
+      "name": "Moda Center",
+      "team": "Portland Fire",
+      "league": "WNBA",
+      "tenants": [
+        {
+          "slug": "portland-fire",
+          "team": "Portland Fire",
+          "league": "WNBA"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 45.531788,
+      "lng": -122.666765,
+      "address": "1 N Center Court St, Portland, OR 97227, USA",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "mohegan-sun-arena",
+      "name": "Mohegan Sun Arena",
+      "team": "Connecticut Sun",
+      "league": "WNBA",
+      "tenants": [
+        {
+          "slug": "connecticut-sun",
+          "team": "Connecticut Sun",
+          "league": "WNBA"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 41.4934,
+      "lng": -72.0893,
+      "address": "1 Mohegan Sun Blvd, Uncasville, CT 06382",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "mt-bank-stadium",
+      "name": "M&T Bank Stadium",
+      "team": "Baltimore Ravens",
+      "league": "NFL",
+      "tenants": [
+        {
+          "slug": "baltimore-ravens",
+          "team": "Baltimore Ravens",
+          "league": "NFL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 39.278,
+      "lng": -76.6227,
+      "address": "1101 Russell St, Baltimore, MD 21230",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "nationals-park",
+      "name": "Nationals Park",
+      "team": "Washington Nationals",
+      "league": "MLB",
+      "tenants": [
+        {
+          "slug": "washington-nationals",
+          "team": "Washington Nationals",
+          "league": "MLB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 38.873,
+      "lng": -77.0074,
+      "address": "1500 S Capitol St SE, Washington, DC 20003",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "nationwide-arena",
+      "name": "Nationwide Arena",
+      "team": "Columbus Blue Jackets",
+      "league": "NHL",
+      "tenants": [
+        {
+          "slug": "columbus-blue-jackets",
+          "team": "Columbus Blue Jackets",
+          "league": "NHL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 39.9691,
+      "lng": -83.0061,
+      "address": "200 W Nationwide Blvd, Columbus, OH 43215",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "nissan-stadium",
+      "name": "Nissan Stadium",
+      "team": "Tennessee Titans",
+      "league": "NFL",
+      "tenants": [
+        {
+          "slug": "tennessee-titans",
+          "team": "Tennessee Titans",
+          "league": "NFL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 36.1665,
+      "lng": -86.7713,
+      "address": "1 Titans Way, Nashville, TN 37213",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "northwest-stadium",
+      "name": "Northwest Stadium",
+      "team": "Washington Commanders",
+      "league": "NFL",
+      "tenants": [
+        {
+          "slug": "washington-commanders",
+          "team": "Washington Commanders",
+          "league": "NFL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 38.9076,
+      "lng": -76.8645,
+      "address": "1600 FedEx Way, Landover, MD 20785",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "nrg-stadium",
+      "name": "NRG Stadium",
+      "team": "Houston Texans",
+      "league": "NFL",
+      "tenants": [
+        {
+          "slug": "houston-texans",
+          "team": "Houston Texans",
+          "league": "NFL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 29.6847,
+      "lng": -95.4107,
+      "address": "1 NRG Pkwy, Houston, TX 77054",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "oracle-park",
+      "name": "Oracle Park",
+      "team": "San Francisco Giants",
+      "league": "MLB",
+      "tenants": [
+        {
+          "slug": "san-francisco-giants",
+          "team": "San Francisco Giants",
+          "league": "MLB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 37.7786,
+      "lng": -122.3893,
+      "address": "24 Willie Mays Plaza, San Francisco, CA 94107",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "paycom-center",
+      "name": "Paycom Center",
+      "team": "Oklahoma City Thunder",
+      "league": "NBA",
+      "tenants": [
+        {
+          "slug": "oklahoma-city-thunder",
+          "team": "Oklahoma City Thunder",
+          "league": "NBA"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 35.4634,
+      "lng": -97.5151,
+      "address": "100 W Reno Ave, Oklahoma City, OK 73102",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "paycor-stadium",
+      "name": "Paycor Stadium",
+      "team": "Cincinnati Bengals",
+      "league": "NFL",
+      "tenants": [
+        {
+          "slug": "cincinnati-bengals",
+          "team": "Cincinnati Bengals",
+          "league": "NFL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 39.0955,
+      "lng": -84.516,
+      "address": "1 Paul Brown Stadium, Cincinnati, OH 45202",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "paypal-park",
+      "name": "PayPal Park",
+      "team": "San Jose Earthquakes",
+      "league": "MLS",
+      "tenants": [
+        {
+          "slug": "san-jose-earthquakes",
+          "team": "San Jose Earthquakes",
+          "league": "MLS"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 37.3516,
+      "lng": -121.925,
+      "address": "1123 Coleman Ave, San Jose, CA 95110",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "petco-park",
+      "name": "Petco Park",
+      "team": "San Diego Padres",
+      "league": "MLB",
+      "tenants": [
+        {
+          "slug": "san-diego-padres",
+          "team": "San Diego Padres",
+          "league": "MLB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 32.7076,
+      "lng": -117.157,
+      "address": "100 Park Blvd, San Diego, CA 92101",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "pnc-park",
+      "name": "PNC Park",
+      "team": "Pittsburgh Pirates",
+      "league": "MLB",
+      "tenants": [
+        {
+          "slug": "pittsburgh-pirates",
+          "team": "Pittsburgh Pirates",
+          "league": "MLB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 40.4469,
+      "lng": -80.0058,
+      "address": "115 Federal St, Pittsburgh, PA 15212",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "ppg-paints-arena",
+      "name": "PPG Paints Arena",
+      "team": "Pittsburgh Penguins",
+      "league": "NHL",
+      "tenants": [
+        {
+          "slug": "pittsburgh-penguins",
+          "team": "Pittsburgh Penguins",
+          "league": "NHL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 40.4395,
+      "lng": -79.989,
+      "address": "1001 Fifth Ave, Pittsburgh, PA 15219",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "progressive-field",
+      "name": "Progressive Field",
+      "team": "Cleveland Guardians",
+      "league": "MLB",
+      "tenants": [
+        {
+          "slug": "cleveland-guardians",
+          "team": "Cleveland Guardians",
+          "league": "MLB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 41.4962,
+      "lng": -81.6852,
+      "address": "2401 Ontario St, Cleveland, OH 44115",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "providence-park",
+      "name": "Providence Park",
+      "team": "Portland Timbers",
+      "league": "MLS",
+      "tenants": [
+        {
+          "slug": "portland-timbers",
+          "team": "Portland Timbers",
+          "league": "MLS"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 45.5217,
+      "lng": -122.6917,
+      "address": "1844 SW Morrison St, Portland, OR 97205",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "prudential-center",
+      "name": "Prudential Center",
+      "team": "New Jersey Devils",
+      "league": "NHL",
+      "tenants": [
+        {
+          "slug": "new-jersey-devils",
+          "team": "New Jersey Devils",
+          "league": "NHL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 40.7335,
+      "lng": -74.1711,
+      "address": "25 Lafayette St, Newark, NJ 07102",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "q2-stadium",
+      "name": "Q2 Stadium",
+      "team": "Austin FC",
+      "league": "MLS",
+      "tenants": [
+        {
+          "slug": "austin-fc",
+          "team": "Austin Austin FC",
+          "league": "MLS"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 30.3882,
+      "lng": -97.7195,
+      "address": "10414 McKalla Pl, Austin, TX 78758",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "raymond-james-stadium",
+      "name": "Raymond James Stadium",
+      "team": "Tampa Bay Buccaneers",
+      "league": "NFL",
+      "tenants": [
+        {
+          "slug": "tampa-bay-buccaneers",
+          "team": "Tampa Bay Buccaneers",
+          "league": "NFL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 27.9759,
+      "lng": -82.5033,
+      "address": "4201 N Dale Mabry Hwy, Tampa, FL 33607",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "red-bull-arena",
+      "name": "Sports Illustrated Stadium",
+      "team": "New York Red Bulls",
+      "league": "MLS",
+      "tenants": [
+        {
+          "slug": "new-york-red-bulls",
+          "team": "New York Red Bulls",
+          "league": "MLS"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 40.7369,
+      "lng": -74.1503,
+      "address": "600 Cape May St, Harrison, NJ 07029",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "rocket-arena",
+      "name": "Rocket Arena",
+      "team": "Cleveland Cavaliers",
+      "league": "NBA",
+      "tenants": [
+        {
+          "slug": "cleveland-cavaliers",
+          "team": "Cleveland Cavaliers",
+          "league": "NBA"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 41.4965,
+      "lng": -81.6882,
+      "address": "1 Center Court, Cleveland, OH 44115",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "rogers-arena",
+      "name": "Rogers Arena",
+      "team": "Vancouver Canucks",
+      "league": "NHL",
+      "tenants": [
+        {
+          "slug": "vancouver-canucks",
+          "team": "Vancouver Canucks",
+          "league": "NHL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 49.2778,
+      "lng": -123.1089,
+      "address": "800 Griffiths Way, Vancouver, BC V6B 6G1",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "rogers-centre",
+      "name": "Rogers Centre",
+      "team": "Toronto Blue Jays",
+      "league": "MLB",
+      "tenants": [
+        {
+          "slug": "toronto-blue-jays",
+          "team": "Toronto Blue Jays",
+          "league": "MLB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 43.6414,
+      "lng": -79.3894,
+      "address": "1 Blue Jays Way, Toronto, ON M5V 1J1",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "rogers-place",
+      "name": "Rogers Place",
+      "team": "Edmonton Oilers",
+      "league": "NHL",
+      "tenants": [
+        {
+          "slug": "edmonton-oilers",
+          "team": "Edmonton Oilers",
+          "league": "NHL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 53.5469,
+      "lng": -113.4979,
+      "address": "10220 104 Ave NW, Edmonton, AB T5J 0H6",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "sac-ballpark",
+      "name": "Sutter Health Park",
+      "team": "Oakland Athletics",
+      "league": "MLB",
+      "tenants": [
+        {
+          "slug": "oakland-athletics",
+          "team": "Oakland Athletics",
+          "league": "MLB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 38.5802,
+      "lng": -121.5064,
+      "address": "400 Ballpark Dr, West Sacramento, CA 95691",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "sap-center",
+      "name": "SAP Center",
+      "team": "San Jose Sharks",
+      "league": "NHL",
+      "tenants": [
+        {
+          "slug": "san-jose-sharks",
+          "team": "San Jose Sharks",
+          "league": "NHL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 37.3328,
+      "lng": -121.901,
+      "address": "525 W Santa Clara St, San Jose, CA 95113",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "saputo-stadium",
+      "name": "Saputo Stadium",
+      "team": "CF Montréal",
+      "league": "MLS",
+      "tenants": [
+        {
+          "slug": "cf-montreal",
+          "team": "Montreal CF Montréal",
+          "league": "MLS"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 45.563,
+      "lng": -73.5528,
+      "address": "4750 Rue Sherbrooke E, Montreal, QC H1V 3S8",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "scotiabank-arena",
+      "name": "Scotiabank Arena",
+      "team": "Toronto Maple Leafs",
+      "league": "NHL",
+      "tenants": [
+        {
+          "slug": "toronto-maple-leafs",
+          "team": "Toronto Maple Leafs",
+          "league": "NHL"
+        },
+        {
+          "slug": "toronto-raptors",
+          "team": "Toronto Raptors",
+          "league": "NBA"
+        }
+      ],
+      "tenantCount": 2,
+      "lat": 43.6435,
+      "lng": -79.3791,
+      "address": "40 Bay St, Toronto, ON M5J 2X2",
+      "city": null,
+      "state": null,
+      "sharedTeams": [
+        "tor-nba"
+      ],
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "scotiabank-saddledome",
+      "name": "Scotiabank Saddledome",
+      "team": "Calgary Flames",
+      "league": "NHL",
+      "tenants": [
+        {
+          "slug": "calgary-flames",
+          "team": "Calgary Flames",
+          "league": "NHL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 51.0374,
+      "lng": -114.0519,
+      "address": "555 Saddledome Rise SE, Calgary, AB T2G 2W1",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "shell-energy-stadium",
+      "name": "Shell Energy Stadium",
+      "team": "Houston Dynamo FC",
+      "league": "MLS",
+      "tenants": [
+        {
+          "slug": "houston-dynamo",
+          "team": "Houston Dynamo FC",
+          "league": "MLS"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 29.7522,
+      "lng": -95.3524,
+      "address": "2200 Texas Ave, Houston, TX 77003",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "smoothie-king-center",
+      "name": "Smoothie King Center",
+      "team": "New Orleans Pelicans",
+      "league": "NBA",
+      "tenants": [
+        {
+          "slug": "new-orleans-pelicans",
+          "team": "New Orleans Pelicans",
+          "league": "NBA"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 29.949,
+      "lng": -90.0821,
+      "address": "1501 Dave Dixon Dr, New Orleans, LA 70113",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "snapdragon-stadium",
+      "name": "Snapdragon Stadium",
+      "team": "San Diego FC",
+      "league": "MLS",
+      "tenants": [
+        {
+          "slug": "san-diego-fc",
+          "team": "San Diego San Diego FC",
+          "league": "MLS"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 32.7832,
+      "lng": -117.1197,
+      "address": "5500 Canyon Crest Dr, San Diego, CA 92120",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "sofi-stadium",
+      "name": "SoFi Stadium",
+      "team": "Los Angeles Rams",
+      "league": "NFL",
+      "tenants": [
+        {
+          "slug": "los-angeles-rams",
+          "team": "Los Angeles Rams",
+          "league": "NFL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 33.9535,
+      "lng": -118.3392,
+      "address": "1001 S Stadium Dr, Inglewood, CA 90301",
+      "city": null,
+      "state": null,
+      "sharedTeams": [
+        "lac-nfl"
+      ],
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "sofi-stadium-chargers",
+      "name": "SoFi Stadium",
+      "team": "Los Angeles Chargers",
+      "league": "NFL",
+      "tenants": [
+        {
+          "slug": "los-angeles-chargers",
+          "team": "Los Angeles Chargers",
+          "league": "NFL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 33.9535,
+      "lng": -118.3392,
+      "address": "1001 S Stadium Dr, Inglewood, CA 90301",
+      "city": null,
+      "state": null,
+      "sharedTeams": [
+        "lar-nfl"
+      ],
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "soldier-field",
+      "name": "Soldier Field",
+      "team": "Chicago Fire FC",
+      "league": "MLS",
+      "tenants": [
+        {
+          "slug": "chicago-fire",
+          "team": "Chicago Fire FC",
+          "league": "MLS"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 41.8623,
+      "lng": -87.6167,
+      "address": "1410 Special Olympics Dr, Chicago, IL 60605",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 5
+    },
+    {
+      "slug": "soldier-field-bears",
+      "name": "Soldier Field",
+      "team": "Chicago Bears",
+      "league": "NFL",
+      "tenants": [
+        {
+          "slug": "chicago-bears",
+          "team": "Chicago Bears",
+          "league": "NFL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 41.8623,
+      "lng": -87.6167,
+      "address": "1410 Special Olympics Dr, Chicago, IL 60605",
+      "city": null,
+      "state": null,
+      "sharedTeams": [
+        "chi-mls"
+      ],
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "spectrum-center",
+      "name": "Spectrum Center",
+      "team": "Charlotte Hornets",
+      "league": "NBA",
+      "tenants": [
+        {
+          "slug": "charlotte-hornets",
+          "team": "Charlotte Hornets",
+          "league": "NBA"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 35.2251,
+      "lng": -80.8392,
+      "address": "333 E Trade St, Charlotte, NC 28202",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "state-farm-arena",
+      "name": "State Farm Arena",
+      "team": "Atlanta Hawks",
+      "league": "NBA",
+      "tenants": [
+        {
+          "slug": "atlanta-dream",
+          "team": "Atlanta Dream",
+          "league": "WNBA"
+        },
+        {
+          "slug": "atlanta-hawks",
+          "team": "Atlanta Hawks",
+          "league": "NBA"
+        }
+      ],
+      "tenantCount": 2,
+      "lat": 33.7573,
+      "lng": -84.3963,
+      "address": "1 State Farm Dr, Atlanta, GA 30303",
+      "city": null,
+      "state": null,
+      "sharedTeams": [
+        "atl-wnba"
+      ],
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "state-farm-stadium",
+      "name": "State Farm Stadium",
+      "team": "Arizona Cardinals",
+      "league": "NFL",
+      "tenants": [
+        {
+          "slug": "arizona-cardinals",
+          "team": "Arizona Cardinals",
+          "league": "NFL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 33.5276,
+      "lng": -112.2626,
+      "address": "1 Cardinals Dr, Glendale, AZ 85305",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "subaru-park",
+      "name": "Subaru Park",
+      "team": "Philadelphia Union",
+      "league": "MLS",
+      "tenants": [
+        {
+          "slug": "philadelphia-union",
+          "team": "Philadelphia Union",
+          "league": "MLS"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 39.8328,
+      "lng": -75.3788,
+      "address": "1 Stadium Dr, Chester, PA 19013",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "t-mobile-arena",
+      "name": "T-Mobile Arena",
+      "team": "Vegas Golden Knights",
+      "league": "NHL",
+      "tenants": [
+        {
+          "slug": "vegas-golden-knights",
+          "team": "Vegas Golden Knights",
+          "league": "NHL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 36.1029,
+      "lng": -115.1785,
+      "address": "3780 S Las Vegas Blvd, Las Vegas, NV 89158",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "t-mobile-park",
+      "name": "T-Mobile Park",
+      "team": "Seattle Mariners",
+      "league": "MLB",
+      "tenants": [
+        {
+          "slug": "seattle-mariners",
+          "team": "Seattle Mariners",
+          "league": "MLB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 47.5914,
+      "lng": -122.3325,
+      "address": "1250 1st Ave S, Seattle, WA 98134",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "target-center",
+      "name": "Target Center",
+      "team": "Minnesota Timberwolves",
+      "league": "NBA",
+      "tenants": [
+        {
+          "slug": "minnesota-lynx",
+          "team": "Minnesota Lynx",
+          "league": "WNBA"
+        },
+        {
+          "slug": "minnesota-timberwolves",
+          "team": "Minnesota Timberwolves",
+          "league": "NBA"
+        }
+      ],
+      "tenantCount": 2,
+      "lat": 44.9795,
+      "lng": -93.2761,
+      "address": "600 1st Ave N, Minneapolis, MN 55403",
+      "city": null,
+      "state": null,
+      "sharedTeams": [
+        "min-wnba"
+      ],
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "target-field",
+      "name": "Target Field",
+      "team": "Minnesota Twins",
+      "league": "MLB",
+      "tenants": [
+        {
+          "slug": "minnesota-twins",
+          "team": "Minnesota Twins",
+          "league": "MLB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 44.9817,
+      "lng": -93.2776,
+      "address": "1 Twins Way, Minneapolis, MN 55403",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "td-garden",
+      "name": "TD Garden",
+      "team": "Boston Bruins",
+      "league": "NHL",
+      "tenants": [
+        {
+          "slug": "boston-bruins",
+          "team": "Boston Bruins",
+          "league": "NHL"
+        },
+        {
+          "slug": "boston-celtics",
+          "team": "Boston Celtics",
+          "league": "NBA"
+        }
+      ],
+      "tenantCount": 2,
+      "lat": 42.3662,
+      "lng": -71.0621,
+      "address": "100 Legends Way, Boston, MA 02114",
+      "city": null,
+      "state": null,
+      "sharedTeams": [
+        "bos-nba"
+      ],
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "toyota-center",
+      "name": "Toyota Center",
+      "team": "Houston Rockets",
+      "league": "NBA",
+      "tenants": [
+        {
+          "slug": "houston-rockets",
+          "team": "Houston Rockets",
+          "league": "NBA"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 29.7508,
+      "lng": -95.3621,
+      "address": "1510 Polk St, Houston, TX 77002",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "toyota-stadium",
+      "name": "Toyota Stadium",
+      "team": "FC Dallas",
+      "league": "MLS",
+      "tenants": [
+        {
+          "slug": "fc-dallas",
+          "team": "Dallas FC Dallas",
+          "league": "MLS"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 33.1543,
+      "lng": -96.8353,
+      "address": "9200 World Cup Way, Frisco, TX 75033",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "tql-stadium",
+      "name": "TQL Stadium",
+      "team": "FC Cincinnati",
+      "league": "MLS",
+      "tenants": [
+        {
+          "slug": "fc-cincinnati",
+          "team": "Cincinnati FC Cincinnati",
+          "league": "MLS"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 39.1116,
+      "lng": -84.5231,
+      "address": "1501 Central Pkwy, Cincinnati, OH 45214",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "tropicana-field",
+      "name": "Tropicana Field",
+      "team": "Tampa Bay Rays",
+      "league": "MLB",
+      "tenants": [
+        {
+          "slug": "tampa-bay-rays",
+          "team": "Tampa Bay Rays",
+          "league": "MLB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 27.7682,
+      "lng": -82.6534,
+      "address": "1 Tropicana Dr, St. Petersburg, FL 33705",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "truist-park",
+      "name": "Truist Park",
+      "team": "Atlanta Braves",
+      "league": "MLB",
+      "tenants": [
+        {
+          "slug": "atlanta-braves",
+          "team": "Atlanta Braves",
+          "league": "MLB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 33.8908,
+      "lng": -84.4678,
+      "address": "755 Battery Ave SE, Atlanta, GA 30339",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "ubs-arena",
+      "name": "UBS Arena",
+      "team": "New York Islanders",
+      "league": "NHL",
+      "tenants": [
+        {
+          "slug": "new-york-islanders",
+          "team": "New York Islanders",
+          "league": "NHL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 40.6895,
+      "lng": -73.7257,
+      "address": "2400 Hempstead Tpke, Elmont, NY 11003",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "united-center",
+      "name": "United Center",
+      "team": "Chicago Blackhawks",
+      "league": "NHL",
+      "tenants": [
+        {
+          "slug": "chicago-blackhawks",
+          "team": "Chicago Blackhawks",
+          "league": "NHL"
+        },
+        {
+          "slug": "chicago-bulls",
+          "team": "Chicago Bulls",
+          "league": "NBA"
+        }
+      ],
+      "tenantCount": 2,
+      "lat": 41.8807,
+      "lng": -87.6742,
+      "address": "1901 W Madison St, Chicago, IL 60612",
+      "city": null,
+      "state": null,
+      "sharedTeams": [
+        "chi-nba"
+      ],
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "us-bank-stadium",
+      "name": "U.S. Bank Stadium",
+      "team": "Minnesota Vikings",
+      "league": "NFL",
+      "tenants": [
+        {
+          "slug": "minnesota-vikings",
+          "team": "Minnesota Vikings",
+          "league": "NFL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 44.9736,
+      "lng": -93.2575,
+      "address": "401 Chicago Ave, Minneapolis, MN 55415",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "wells-fargo-center",
+      "name": "Xfinity Mobile Arena",
+      "team": "Philadelphia Flyers",
+      "league": "NHL",
+      "tenants": [
+        {
+          "slug": "philadelphia-76ers",
+          "team": "Philadelphia 76ers",
+          "league": "NBA"
+        },
+        {
+          "slug": "philadelphia-flyers",
+          "team": "Philadelphia Flyers",
+          "league": "NHL"
+        }
+      ],
+      "tenantCount": 2,
+      "lat": 39.9012,
+      "lng": -75.172,
+      "address": "3601 S Broad St, Philadelphia, PA 19148",
+      "city": null,
+      "state": null,
+      "sharedTeams": [
+        "phi-nba"
+      ],
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "wintrust-arena",
+      "name": "Wintrust Arena",
+      "team": "Chicago Sky",
+      "league": "WNBA",
+      "tenants": [
+        {
+          "slug": "chicago-sky",
+          "team": "Chicago Sky",
+          "league": "WNBA"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 41.8607,
+      "lng": -87.6166,
+      "address": "200 E Cermak Rd, Chicago, IL 60616",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "wrigley-field",
+      "name": "Wrigley Field",
+      "team": "Chicago Cubs",
+      "league": "MLB",
+      "tenants": [
+        {
+          "slug": "chicago-cubs",
+          "team": "Chicago Cubs",
+          "league": "MLB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 41.9484,
+      "lng": -87.6553,
+      "address": "1060 W Addison St, Chicago, IL 60613",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    },
+    {
+      "slug": "xcel-energy-center",
+      "name": "Grand Casino Arena",
+      "team": "Minnesota Wild",
+      "league": "NHL",
+      "tenants": [
+        {
+          "slug": "minnesota-wild",
+          "team": "Minnesota Wild",
+          "league": "NHL"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 44.9448,
+      "lng": -93.101,
+      "address": "199 W Kellogg Blvd, St Paul, MN 55102",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": false,
+        "parkingInfo": false,
+        "publicTransit": false,
+        "accessibility": false,
+        "bagPolicyUrl": false,
+        "nearby": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "yankee-stadium",
+      "name": "Yankee Stadium",
+      "team": "New York Yankees",
+      "league": "MLB",
+      "tenants": [
+        {
+          "slug": "new-york-city-fc",
+          "team": "New York City FC",
+          "league": "MLS"
+        },
+        {
+          "slug": "new-york-yankees",
+          "team": "New York Yankees",
+          "league": "MLB"
+        }
+      ],
+      "tenantCount": 2,
+      "lat": 40.8296,
+      "lng": -73.9262,
+      "address": "1 E 161st St, Bronx, NY 10451",
+      "city": null,
+      "state": null,
+      "logistics": {
+        "gatesOpen": true,
+        "parkingInfo": true,
+        "publicTransit": true,
+        "accessibility": true,
+        "bagPolicyUrl": true,
+        "nearby": true
+      },
+      "logisticsPopulatedCount": 6
+    }
+  ],
+  "cfbBuildings": [
+    {
+      "slug": "acrisure-bounce-house",
+      "name": "Acrisure Bounce House",
+      "tenants": [
+        {
+          "slug": "ucf",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 28.6091,
+      "lng": -81.1924,
+      "city": "4465 Knights Victory WayOrlando",
+      "state": "Florida 32816  United States",
+      "capacity": 44206,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "acrisure-stadium",
+      "name": "Acrisure Stadium",
+      "tenants": [
+        {
+          "slug": "pittsburgh",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 40.44667,
+      "lng": -80.01583,
+      "city": "Pittsburgh",
+      "state": "Pennsylvania",
+      "capacity": 68400,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "albertsons-stadium",
+      "name": "Albertsons Stadium",
+      "tenants": [
+        {
+          "slug": "boise-state",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 43.603,
+      "lng": -116.196,
+      "city": "Boise State UniversityBoise",
+      "state": "Idaho",
+      "capacity": 36387,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "allegacy-federal-credit-union-stadium",
+      "name": "Allegacy Federal Credit Union Stadium",
+      "tenants": [
+        {
+          "slug": "wake-forest",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 36.13056,
+      "lng": -80.25472,
+      "city": "411 Deacon Blvd",
+      "state": "Winston-Salem",
+      "capacity": 31500,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "allegiant-stadium",
+      "name": "Allegiant Stadium",
+      "tenants": [
+        {
+          "slug": "unlv",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 36.09056,
+      "lng": -115.18389,
+      "city": "Paradise",
+      "state": "Nevada",
+      "capacity": 65000,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "alumni-stadium",
+      "name": "Alumni Stadium",
+      "tenants": [
+        {
+          "slug": "boston-college",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 42.335,
+      "lng": -71.16639,
+      "city": "| coordinates        =",
+      "state": null,
+      "capacity": 44500,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "amon-g-carter-stadium",
+      "name": "Amon G. Carter Stadium",
+      "tenants": [
+        {
+          "slug": "tcu",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 32.70972,
+      "lng": -97.36806,
+      "city": "2850 Stadium DriveFort Worth",
+      "state": "Texas 76129",
+      "capacity": 47000,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "autzen-stadium",
+      "name": "Autzen Stadium",
+      "tenants": [
+        {
+          "slug": "oregon",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 44.05833,
+      "lng": -123.06861,
+      "city": "2727 Leo Harris ParkwayEugene",
+      "state": "Oregon",
+      "capacity": 54000,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "beaver-stadium",
+      "name": "Beaver Stadium",
+      "tenants": [
+        {
+          "slug": "penn-state",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 40.8121,
+      "lng": -77.856,
+      "city": "Pennsylvania State University",
+      "state": null,
+      "capacity": 106304,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "ben-hill-griffin-stadium",
+      "name": "Ben Hill Griffin Stadium",
+      "tenants": [
+        {
+          "slug": "florida",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 29.65,
+      "lng": -82.3486,
+      "city": "157 Gale Lemerand Drive",
+      "state": "Gainesville",
+      "capacity": 88548,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "bill-snyder-family-football-stadium",
+      "name": "Bill Snyder Family Football Stadium",
+      "tenants": [
+        {
+          "slug": "kansas-state",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 39.20194,
+      "lng": -96.59389,
+      "city": "1800 College AvenueManhattan",
+      "state": "Kansas|Manhattan",
+      "capacity": 50000,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "bobby-dodd-stadium",
+      "name": "Bobby Dodd Stadium",
+      "tenants": [
+        {
+          "slug": "georgia-tech",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 33.7725,
+      "lng": -84.39278,
+      "city": "Georgia Institute of Technology|date=August 18",
+      "state": "2011|access-date=August 18",
+      "capacity": 51913,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "boone-pickens-stadium",
+      "name": "Boone Pickens Stadium",
+      "tenants": [
+        {
+          "slug": "oklahoma-state",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 36.12583,
+      "lng": -97.06639,
+      "city": "700 West Hall of Fame Avenue",
+      "state": "Stillwater",
+      "capacity": 52305,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "bridgeforth-stadium-and-zane-showker-field",
+      "name": "Bridgeforth Stadium",
+      "tenants": [
+        {
+          "slug": "james-madison",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 38.43528,
+      "lng": -78.87306,
+      "city": null,
+      "state": null,
+      "capacity": 24877,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "brooks-stadium",
+      "name": "Brooks Stadium",
+      "tenants": [
+        {
+          "slug": "coastal-carolina",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 33.7929,
+      "lng": -79.0175,
+      "city": "Conway",
+      "state": "South Carolina",
+      "capacity": null,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "california-memorial-stadium",
+      "name": "California Memorial Stadium",
+      "tenants": [
+        {
+          "slug": "california",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 37.87111,
+      "lng": -122.25083,
+      "city": "University of California",
+      "state": "Berkeley|University of CaliforniaBerkeley",
+      "capacity": null,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "camp-randall-stadium",
+      "name": "Camp Randall Stadium",
+      "tenants": [
+        {
+          "slug": "wisconsin",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 43.07,
+      "lng": -89.41278,
+      "city": "1440 Monroe StreetUniversity of Wisconsin–Madison|University of WisconsinMadison",
+      "state": "Wisconsin",
+      "capacity": 76057,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "carter-finley-stadium",
+      "name": "Carter–Finley Stadium",
+      "tenants": [
+        {
+          "slug": "nc-state",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 35.80083,
+      "lng": -78.71944,
+      "city": "4600 Trinity RoadRaleigh",
+      "state": "North Carolina 27607",
+      "capacity": 56919,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "casino-del-sol-stadium",
+      "name": "Casino Del Sol Stadium",
+      "tenants": [
+        {
+          "slug": "arizona",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 32.229,
+      "lng": -110.949,
+      "city": "University of ArizonaTucson",
+      "state": "Arizona",
+      "capacity": 50782,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "darrell-k-royal-texas-memorial-stadium",
+      "name": "Darrell K Royal–Texas Memorial Stadium",
+      "tenants": [
+        {
+          "slug": "texas",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 30.28367,
+      "lng": -97.73256,
+      "city": "405 East 23rd Street Austin",
+      "state": "Texas 78712",
+      "capacity": 100119,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "david-booth-kansas-memorial-stadium",
+      "name": "David Booth Kansas Memorial Stadium",
+      "tenants": [
+        {
+          "slug": "kansas",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 38.96333,
+      "lng": -95.24639,
+      "city": "1101 Mississippi StreetLawrence",
+      "state": "Kansas",
+      "capacity": 41525,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "davis-wade-stadium",
+      "name": "Davis Wade Stadium",
+      "tenants": [
+        {
+          "slug": "mississippi-state",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 33.45639,
+      "lng": -88.79361,
+      "city": "90 BS Hood Drive",
+      "state": "Mississippi State",
+      "capacity": 60311,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "doak-campbell-stadium",
+      "name": "Doak Campbell Stadium",
+      "tenants": [
+        {
+          "slug": "florida-state",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 30.43806,
+      "lng": -84.30444,
+      "city": null,
+      "state": null,
+      "capacity": 67277,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "donald-w-reynolds-razorback-stadium",
+      "name": "Donald W. Reynolds Razorback Stadium",
+      "tenants": [
+        {
+          "slug": "arkansas",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 36.06806,
+      "lng": -94.17889,
+      "city": "350 North Razorback Road",
+      "state": "Fayetteville",
+      "capacity": null,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "falcon-stadium",
+      "name": "Falcon Stadium",
+      "tenants": [
+        {
+          "slug": "air-force",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 38.997,
+      "lng": -104.843,
+      "city": "United States Air Force Academy|U.S. Air Force Academy",
+      "state": "Colorado",
+      "capacity": 39441,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "faurot-field",
+      "name": "Faurot Field",
+      "tenants": [
+        {
+          "slug": "missouri",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 38.93583,
+      "lng": -92.33306,
+      "city": "600 East Stadium BoulevardColumbia",
+      "state": "Missouri 65201",
+      "capacity": 57321,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "firstbank-stadium",
+      "name": "FirstBank Stadium",
+      "tenants": [
+        {
+          "slug": "vanderbilt",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 36.14417,
+      "lng": -86.80889,
+      "city": "Vanderbilt University",
+      "state": "Nashville",
+      "capacity": null,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "folsom-field",
+      "name": "Folsom Field",
+      "tenants": [
+        {
+          "slug": "colorado",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 40.009,
+      "lng": -105.267,
+      "city": "University of Colorado Boulder|University of Colorado",
+      "state": null,
+      "capacity": 50183,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "gaylord-family-oklahoma-memorial-stadium",
+      "name": "Gaylord Family Oklahoma Memorial Stadium",
+      "tenants": [
+        {
+          "slug": "oklahoma",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 35.20583,
+      "lng": -97.4425,
+      "city": "Norman",
+      "state": "Oklahoma",
+      "capacity": 80126,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "gerald-j-ford-stadium",
+      "name": "Gerald J. Ford Stadium",
+      "tenants": [
+        {
+          "slug": "smu",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 32.83664,
+      "lng": -96.78399,
+      "city": "5801 Bush AvenueDallas",
+      "state": "Texas|Dallas",
+      "capacity": 33200,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "gies-memorial-stadium",
+      "name": "Gies Memorial Stadium",
+      "tenants": [
+        {
+          "slug": "illinois",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 40.09917,
+      "lng": -88.23583,
+      "city": "Champaign",
+      "state": "Illinois",
+      "capacity": 60670,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "glass-bowl",
+      "name": "Glass Bowl",
+      "tenants": [
+        {
+          "slug": "toledo",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 41.65694,
+      "lng": -83.61361,
+      "city": "3044 N. Glass Bowl Dr.Toledo",
+      "state": "Ohio 43606",
+      "capacity": 26038,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "hard-rock-stadium",
+      "name": "Hard Rock Stadium",
+      "tenants": [
+        {
+          "slug": "miami",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 25.95806,
+      "lng": -80.23889,
+      "city": "Miami Gardens",
+      "state": "Florida",
+      "capacity": 64767,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "huntington-bank-stadium",
+      "name": "Huntington Bank Stadium",
+      "tenants": [
+        {
+          "slug": "minnesota",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 44.976,
+      "lng": -93.225,
+      "city": "Minneapolis",
+      "state": "Minnesota",
+      "capacity": 50805,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "huskie-stadium",
+      "name": "Huskie Stadium",
+      "tenants": [
+        {
+          "slug": "northern-illinois",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 41.934,
+      "lng": -88.778,
+      "city": "Northern Illinois University1245 Stadium Drive SouthDeKalb",
+      "state": "Illinois",
+      "capacity": null,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "husky-stadium",
+      "name": "Husky Stadium",
+      "tenants": [
+        {
+          "slug": "washington",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 47.6503,
+      "lng": -122.3016,
+      "city": "University of WashingtonSeattle",
+      "state": "Washington",
+      "capacity": 70083,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "jack-trice-stadium",
+      "name": "Jack Trice Stadium",
+      "tenants": [
+        {
+          "slug": "iowa-state",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 42.01417,
+      "lng": -93.63583,
+      "city": "1798 South 4th StreetAmes",
+      "state": "Iowa 50010",
+      "capacity": 61500,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "jma-wireless-dome",
+      "name": "JMA Wireless Dome",
+      "tenants": [
+        {
+          "slug": "syracuse",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 43.03611,
+      "lng": -76.13639,
+      "city": "Syracuse",
+      "state": "New York|Syracuse",
+      "capacity": null,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "joan-c-edwards-stadium",
+      "name": "Joan C. Edwards Stadium",
+      "tenants": [
+        {
+          "slug": "marshall",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 38.425,
+      "lng": -82.42083,
+      "city": "2001 3rd AvenueHuntington",
+      "state": "West Virginia 25755 U.S",
+      "capacity": null,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "jones-stadium",
+      "name": "Jones Stadium",
+      "tenants": [
+        {
+          "slug": "texas-tech",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 33.59111,
+      "lng": -101.87278,
+      "city": "Texas Tech UniversityLubbock",
+      "state": "Texas",
+      "capacity": null,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "jordan-hare-stadium",
+      "name": "Jordan–Hare Stadium",
+      "tenants": [
+        {
+          "slug": "auburn",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 32.60222,
+      "lng": -85.48917,
+      "city": "Auburn",
+      "state": "Alabama",
+      "capacity": 88043,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "kenan-stadium",
+      "name": "Kenan Stadium",
+      "tenants": [
+        {
+          "slug": "north-carolina",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 35.90694,
+      "lng": -79.04778,
+      "city": "78 Stadium Drive",
+      "state": "Chapel Hill",
+      "capacity": 50500,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "kidd-brewer-stadium",
+      "name": "Kidd Brewer Stadium",
+      "tenants": [
+        {
+          "slug": "appalachian-state",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 36.21167,
+      "lng": -81.68556,
+      "city": "270 Stadium DrBoone",
+      "state": "North Carolina 28608",
+      "capacity": 30000,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "kinnick-stadium",
+      "name": "Kinnick Stadium",
+      "tenants": [
+        {
+          "slug": "iowa",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 41.65861,
+      "lng": -91.55111,
+      "city": "Iowa City",
+      "state": "Iowa",
+      "capacity": 69250,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "kroger-field",
+      "name": "Kroger Field",
+      "tenants": [
+        {
+          "slug": "kentucky",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 38.02278,
+      "lng": -84.50528,
+      "city": "1540 University DriveLexington",
+      "state": "Kentucky 40506",
+      "capacity": 61000,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "kyle-field",
+      "name": "Kyle Field",
+      "tenants": [
+        {
+          "slug": "texas-am",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 30.6099,
+      "lng": -96.3405,
+      "city": "756 Houston Street",
+      "state": "College Station",
+      "capacity": 102733,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "lane-stadium",
+      "name": "Lane Stadium",
+      "tenants": [
+        {
+          "slug": "virginia-tech",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 37.22,
+      "lng": -80.41806,
+      "city": "285 Beamer WayBlacksburg",
+      "state": "Virginia",
+      "capacity": 65632,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "lavell-edwards-stadium",
+      "name": "LaVell Edwards Stadium",
+      "tenants": [
+        {
+          "slug": "byu",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 40.258,
+      "lng": -111.655,
+      "city": "Brigham Young UniversityProvo",
+      "state": "Utah|Provo",
+      "capacity": 62073,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "ln-federal-credit-union-stadium",
+      "name": "L&N Federal Credit Union Stadium",
+      "tenants": [
+        {
+          "slug": "louisville",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 38.20583,
+      "lng": -85.75889,
+      "city": "2800 South Floyd StreetLouisville",
+      "state": "Kentucky 40209",
+      "capacity": 60800,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "los-angeles-memorial-coliseum",
+      "name": "Los Angeles Memorial Coliseum",
+      "tenants": [
+        {
+          "slug": "usc",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 34.01417,
+      "lng": -118.28778,
+      "city": "Los Angeles",
+      "state": "California",
+      "capacity": 77500,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "martin-stadium-northwestern-university",
+      "name": "Martin Stadium",
+      "tenants": [
+        {
+          "slug": "northwestern",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 42.06556,
+      "lng": -87.6925,
+      "city": "Evanston",
+      "state": "Illinois",
+      "capacity": 12023,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "mclane-stadium",
+      "name": "McLane Stadium",
+      "tenants": [
+        {
+          "slug": "baylor",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 31.5582,
+      "lng": -97.1157,
+      "city": "1001 S M.L.K. Jr Blvd. Waco",
+      "state": "Texas 76704",
+      "capacity": 45140,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "memorial-stadium-clemson",
+      "name": "Memorial Stadium",
+      "tenants": [
+        {
+          "slug": "clemson",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 34.67861,
+      "lng": -82.84306,
+      "city": "Clemson",
+      "state": "South Carolina",
+      "capacity": 81500,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "memorial-stadium-indiana-university",
+      "name": "Memorial Stadium",
+      "tenants": [
+        {
+          "slug": "indiana",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 39.18083,
+      "lng": -86.52556,
+      "city": "701 East 17th StreetBloomington",
+      "state": "Indiana",
+      "capacity": 53524,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "memorial-stadium-lincoln",
+      "name": "Memorial Stadium",
+      "tenants": [
+        {
+          "slug": "nebraska",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 40.82056,
+      "lng": -96.70556,
+      "city": "| elevation =",
+      "state": null,
+      "capacity": null,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "michie-stadium",
+      "name": "Michie Stadium",
+      "tenants": [
+        {
+          "slug": "army",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 41.3875,
+      "lng": -73.96417,
+      "city": "700 Mills RoadWest Point",
+      "state": "New York",
+      "capacity": null,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "michigan-stadium",
+      "name": "Michigan Stadium",
+      "tenants": [
+        {
+          "slug": "michigan",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 42.26589,
+      "lng": -83.74875,
+      "city": "1201 South Main StreetAnn Arbor",
+      "state": "Michigan 48104-3722",
+      "capacity": 107600,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "milan-puskar-stadium",
+      "name": "Milan Puskar Stadium",
+      "tenants": [
+        {
+          "slug": "west-virginia",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 39.6502,
+      "lng": -79.9551,
+      "city": "900 Willowdale RoadMorgantown",
+      "state": "West Virginia 26505",
+      "capacity": 60000,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "mountain-america-stadium",
+      "name": "Mountain America Stadium",
+      "tenants": [
+        {
+          "slug": "arizona-state",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 33.42639,
+      "lng": -111.9325,
+      "city": "Arizona State UniversityTempe",
+      "state": "Arizona",
+      "capacity": 53599,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "navy-marine-corps-memorial-stadium",
+      "name": "Navy–Marine Corps Memorial Stadium",
+      "tenants": [
+        {
+          "slug": "navy",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 38.985,
+      "lng": -76.507,
+      "city": null,
+      "state": null,
+      "capacity": 34000,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "neyland-stadium",
+      "name": "Neyland Stadium",
+      "tenants": [
+        {
+          "slug": "tennessee",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 35.955,
+      "lng": -83.925,
+      "city": null,
+      "state": null,
+      "capacity": 101915,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "nippert-stadium",
+      "name": "Nippert Stadium",
+      "tenants": [
+        {
+          "slug": "cincinnati",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 39.1312,
+      "lng": -84.5162,
+      "city": "2700 Bearcats Way(174 West Corry Street)Cincinnati",
+      "state": "Ohio",
+      "capacity": 38088,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "notre-dame-stadium",
+      "name": "Notre Dame Stadium",
+      "tenants": [
+        {
+          "slug": "notre-dame",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 41.69833,
+      "lng": -86.23389,
+      "city": "| coordinates         =",
+      "state": null,
+      "capacity": null,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "ohio-stadium",
+      "name": "Ohio Stadium",
+      "tenants": [
+        {
+          "slug": "ohio-state",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 40.00167,
+      "lng": -83.01972,
+      "city": "Columbus",
+      "state": "Ohio",
+      "capacity": 102780,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "pratt-whitney-stadium-at-rentschler-field",
+      "name": "Pratt & Whitney Stadium at Rentschler Field",
+      "tenants": [
+        {
+          "slug": "uconn",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 41.75972,
+      "lng": -72.61889,
+      "city": "615 Silver Lane",
+      "state": "East Hartford",
+      "capacity": 36000,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "raymond-james-stadium",
+      "name": "Raymond James Stadium",
+      "tenants": [
+        {
+          "slug": "south-florida",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 27.97583,
+      "lng": -82.50333,
+      "city": "Tampa",
+      "state": "Florida",
+      "capacity": null,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "rice-eccles-stadium",
+      "name": "Rice–Eccles Stadium",
+      "tenants": [
+        {
+          "slug": "utah",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 40.759974576198005,
+      "lng": -111.84885323661989,
+      "city": "University of Utah",
+      "state": null,
+      "capacity": 51444,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "rose-bowl-stadium",
+      "name": "Rose Bowl",
+      "tenants": [
+        {
+          "slug": "ucla",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 34.161,
+      "lng": -118.168,
+      "city": "Pasadena",
+      "state": "California",
+      "capacity": 89702,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "ross-ade-stadium",
+      "name": "Ross–Ade Stadium",
+      "tenants": [
+        {
+          "slug": "purdue",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 40.43444,
+      "lng": -86.91833,
+      "city": "850 Steven Beering Drive[https://www2.itap.purdue.edu/printsvc/mds/search/search.cfm Find Campus Address]",
+      "state": "Materials Distribution Services",
+      "capacity": 61441,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "saban-field-at-bryant-denny-stadium",
+      "name": "Saban Field at Bryant–Denny Stadium",
+      "tenants": [
+        {
+          "slug": "alabama",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 33.20833,
+      "lng": -87.55028,
+      "city": null,
+      "state": null,
+      "capacity": 100077,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "sanford-stadium",
+      "name": "Sanford Stadium",
+      "tenants": [
+        {
+          "slug": "georgia",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 33.9498,
+      "lng": -83.37336,
+      "city": "Sanford Dr and Field St",
+      "state": "Athens",
+      "capacity": 93033,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "scott-stadium",
+      "name": "Scott Stadium",
+      "tenants": [
+        {
+          "slug": "virginia",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 38.03111,
+      "lng": -78.51361,
+      "city": "| coordinates       =",
+      "state": null,
+      "capacity": 61500,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "secu-stadium",
+      "name": "SECU Stadium",
+      "tenants": [
+        {
+          "slug": "maryland",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 38.99028,
+      "lng": -76.94722,
+      "city": null,
+      "state": null,
+      "capacity": 46185,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "shi-stadium",
+      "name": "SHI Stadium",
+      "tenants": [
+        {
+          "slug": "rutgers",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 40.51361,
+      "lng": -74.46528,
+      "city": "Piscataway",
+      "state": "New Jersey",
+      "capacity": 52454,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "simmons-bank-liberty-stadium",
+      "name": "Simmons Bank Liberty Stadium",
+      "tenants": [
+        {
+          "slug": "memphis",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 35.121,
+      "lng": -89.9774,
+      "city": "Memphis",
+      "state": "Tennessee",
+      "capacity": null,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "snapdragon-stadium",
+      "name": "Snapdragon Stadium",
+      "tenants": [
+        {
+          "slug": "san-diego-state",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 32.78444,
+      "lng": -117.12278,
+      "city": "San Diego",
+      "state": "California",
+      "capacity": 35000,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "space-city-financial-stadium",
+      "name": "Space City Financial Stadium",
+      "tenants": [
+        {
+          "slug": "houston",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 29.72194,
+      "lng": -95.34917,
+      "city": null,
+      "state": null,
+      "capacity": 39700,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "spartan-stadium-east-lansing-michigan",
+      "name": "Spartan Stadium",
+      "tenants": [
+        {
+          "slug": "michigan-state",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 42.72806,
+      "lng": -84.48472,
+      "city": "East Lansing",
+      "state": "Michigan",
+      "capacity": 74866,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "stanford-stadium",
+      "name": "Stanford Stadium",
+      "tenants": [
+        {
+          "slug": "stanford",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 37.43444,
+      "lng": -122.16111,
+      "city": "Stanford UniversityStanford",
+      "state": "California",
+      "capacity": 50424,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "tiger-stadium-louisiana",
+      "name": "Tiger Stadium",
+      "tenants": [
+        {
+          "slug": "lsu",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 30.41222,
+      "lng": -91.18389,
+      "city": "Baton Rouge",
+      "state": "Louisiana",
+      "capacity": 102321,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "valley-childrens-stadium",
+      "name": "Valley Children's Stadium",
+      "tenants": [
+        {
+          "slug": "fresno-state",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 36.814,
+      "lng": -119.758,
+      "city": "Fresno",
+      "state": "California",
+      "capacity": 40727,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "vaught-hemingway-stadium",
+      "name": "Vaught–Hemingway Stadium",
+      "tenants": [
+        {
+          "slug": "ole-miss",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 34.36194,
+      "lng": -89.53417,
+      "city": "6 All American DriveOxford",
+      "state": "Mississippi 38655",
+      "capacity": 24000,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "wallace-wade-stadium",
+      "name": "Wallace Wade Stadium",
+      "tenants": [
+        {
+          "slug": "duke",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 35.99528,
+      "lng": -78.94167,
+      "city": "Frank Bassett DriveDurham",
+      "state": "North Carolina",
+      "capacity": 35018,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "williams-brice-stadium",
+      "name": "Williams–Brice Stadium",
+      "tenants": [
+        {
+          "slug": "south-carolina",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 33.97306,
+      "lng": -81.01917,
+      "city": "1174 George Rogers BoulevardColumbia",
+      "state": "South Carolina 29201",
+      "capacity": 77559,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "williams-stadium",
+      "name": "Williams Stadium",
+      "tenants": [
+        {
+          "slug": "liberty",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 37.354,
+      "lng": -79.175,
+      "city": "1972 University Boulevard",
+      "state": "Lynchburg",
+      "capacity": 25000,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    },
+    {
+      "slug": "yulman-stadium",
+      "name": "Yulman Stadium",
+      "tenants": [
+        {
+          "slug": "tulane",
+          "league": "CFB"
+        }
+      ],
+      "tenantCount": 1,
+      "lat": 29.94482,
+      "lng": -90.116816,
+      "city": "Ben Weiner DriveNew Orleans",
+      "state": "Louisiana|LA 70118",
+      "capacity": 30000,
+      "logistics": {
+        "tailgating": false,
+        "parking": false,
+        "transit": false,
+        "gatesOpenRule": false
+      },
+      "logisticsPopulatedCount": 0
+    }
+  ],
+  "dedupAnalysis": {
+    "note": "Raw doc counts are NOT unique buildings. Two dedup layers apply.",
+    "rawProDocs": 148,
+    "rawCfbDocs": 86,
+    "intraProDuplicatePairs": [
+      {
+        "building": "Bank of America Stadium",
+        "docs": [
+          "bank-of-america-stadium (MLS/Charlotte FC, logistics=5)",
+          "bank-of-america-stadium-panthers (NFL/Panthers, logistics=0)"
+        ]
+      },
+      {
+        "building": "Gillette Stadium",
+        "docs": [
+          "gillette-stadium (MLS/Revolution, logistics=5)",
+          "gillette-stadium-patriots (NFL/Patriots, logistics=0)"
+        ]
+      },
+      {
+        "building": "Lumen Field",
+        "docs": [
+          "lumen-field (MLS/Sounders, logistics=5)",
+          "lumen-field-seahawks (NFL/Seahawks, logistics=0)"
+        ]
+      },
+      {
+        "building": "MetLife Stadium",
+        "docs": [
+          "metlife-stadium (NFL/Giants, logistics=0)",
+          "metlife-stadium-jets (NFL/Jets, logistics=0)"
+        ]
+      },
+      {
+        "building": "Moda Center",
+        "docs": [
+          "moda-center (NBA/Trail Blazers, logistics=0)",
+          "moda-center-portland-fire (WNBA/Portland Fire, logistics=6)"
+        ]
+      },
+      {
+        "building": "SoFi Stadium",
+        "docs": [
+          "sofi-stadium (NFL/Rams, logistics=0)",
+          "sofi-stadium-chargers (NFL/Chargers, logistics=0)"
+        ]
+      },
+      {
+        "building": "Soldier Field",
+        "docs": [
+          "soldier-field (MLS/Chicago Fire, logistics=5)",
+          "soldier-field-bears (NFL/Bears, logistics=0)"
+        ]
+      }
+    ],
+    "intraProRedundantDocs": 7,
+    "uniqueProBuildingsAfterIntraDedup": 141,
+    "crossCollectionSharedBuildings": [
+      {
+        "building": "Acrisure Stadium",
+        "venues": "NFL/Steelers (logistics=0)",
+        "cfbVenues": "pittsburgh"
+      },
+      {
+        "building": "Allegiant Stadium",
+        "venues": "NFL/Raiders (logistics=0)",
+        "cfbVenues": "unlv"
+      },
+      {
+        "building": "Hard Rock Stadium",
+        "venues": "NFL/Dolphins (logistics=0)",
+        "cfbVenues": "miami"
+      },
+      {
+        "building": "Raymond James Stadium",
+        "venues": "NFL/Buccaneers (logistics=0)",
+        "cfbVenues": "south-florida"
+      },
+      {
+        "building": "Snapdragon Stadium",
+        "venues": "MLS/San Diego FC (logistics=6)",
+        "cfbVenues": "san-diego-state"
+      }
+    ],
+    "crossCollectionSharedCount": 5,
+    "distinctPhysicalBuildingsTotal": 222,
+    "nameCollisionsNotDuplicates": [
+      {
+        "name": "Memorial Stadium",
+        "distinctBuildings": [
+          "memorial-stadium-clemson",
+          "memorial-stadium-indiana-university",
+          "memorial-stadium-lincoln"
+        ],
+        "reason": "3 different schools, different coordinates; correctly distinct"
+      }
+    ]
+  },
+  "renderPath": {
+    "pro": {
+      "resolver": "src/lib/data.ts getVenueForTeam(teamId)",
+      "strategy": "query venues where team==`${city} ${name}`, else VENUE_RESOLUTION_MAP[teamSlug] -> venues/{id}",
+      "component": "src/components/venue-info-block.tsx",
+      "overridesShadow": "src/lib/venue-overrides.ts STILL ACTIVE: getVenueOverride() merged with `data.field ?? override?.field` (Firestore wins, override fills gaps). 3 team keys only: kansas-city-royals, toronto-blue-jays, dallas-cowboys",
+      "renderedFields": [
+        "gatesOpen (fallback gateTimesFallback(league))",
+        "parkingInfo",
+        "publicTransit",
+        "accessibility",
+        "bagPolicyUrl",
+        "nearby"
+      ]
+    },
+    "cfb": {
+      "component": "src/components/cfb/CfbSchoolPage.tsx",
+      "renderedFields": [
+        "name",
+        "capacity",
+        "editorial.gamedayCulture (prose)"
+      ],
+      "NOT_RENDERED": [
+        "tailgating",
+        "parking",
+        "transit",
+        "gatesOpenRule"
+      ],
+      "note": "cfbVenues logistics fields exist on schema but NO component reads them; only name+capacity+editorial prose render"
+    }
+  }
+}

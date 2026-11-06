@@ -76,3 +76,8 @@ audit/raptive-snapshot-*.json
 # Firewall working files: raw configs, payloads, IPs and the exclusion regex.
 # Only ops/firewall/RUNBOOK.md is tracked (chore/bot-firewall, 2026-11-02).
 ops/firewall/private/
+
+# Dry-run renders (promo/share card previews). Regenerable, never deliverables.
+dry-run-output/
+# Generated data dumps in outputs/. The CSV and MD reports there stay committable.
+outputs/*.json
