@@ -258,7 +258,7 @@ async function main() {
     console.log(`[send-test-digest] ${c.label.padEnd(22)} "${b.subject}"`);
   }
   // Two shapes no single-team case shows, from the same live window.
-  const twoTeams = [...teams.keys()].sort().slice(0, 2);
+  const twoTeams = [...byTeam(windowPromos).keys()].sort().slice(0, 2);
   const two = personalizedFor(windowPromos, twoTeams);
   console.log(`[send-test-digest] ${'personalized/2 teams'.padEnd(22)} "${buildPersonalizedDigest({ email: TO, manageToken: 'x', promos: two.promos, total: two.total, teamIds: twoTeams, context }).subject}" (${twoTeams.join(' + ')})`);
   console.log(`[send-test-digest] ${'no-promo week'.padEnd(22)} "${buildEmptyWindowDigest({ email: TO, manageToken: 'x', teamIds: ['x'], teamNames: [], level: 'national-fallback', localPromos: [], featured: [], context }).subject}" / generic "${buildGenericDigest({ email: TO, manageToken: 'x', featured: [], context }).subject}"`);
