@@ -35,9 +35,9 @@ Rule: **row click navigates; the ticket modal opens only from an explicit Ticket
 2. **Date tile** (see Visuals) beside or above the CTA row
 3. CTA row (unchanged; TicketNetwork primary per 2026-11-02)
 4. **Image: tier 1 photos only.** Tier 3 generated card stays as og:image and leaves the body. (Ships with the prerequisite, it is a one-line change.) Bobblehead pages without tier 1 use the eBay product image block instead.
-5. **About this promo** (sourced, unchanged) with sponsor folded into the same block as a line, not a separate tile.
-6. **What to expect at a {type/theme}** (authored library, see below)
-7. **This game** (derived): opponent with link, kickoff day and time, doors when stored, position in the home schedule ("3rd-to-last home match of 2026") with the season timeline graphic, every other promo on this date for this team listed with links (the canonical-group losers finally get a visible home), "N more giveaways at {venue} this month" linking to the venue page.
+5. **About this promo** (sourced) with sponsor folded in as a line. Renders only when there is sourced prose (a description, or the package sentence per the 2026-10-24 ruling); otherwise the source credit, read date and sponsor move to a meta line under the venue line in the header.
+6. **This game** (derived): opponent with link, kickoff day and time, doors when stored, position in the home schedule ("3rd-to-last home match of 2026") with the season timeline graphic, every other promo on this date for this team listed with links (the canonical-group losers finally get a visible home), "N more giveaways at {venue} this month" linking to the venue page. Specific facts sit above the general guide on purpose.
+7. **What to expect at a {type/theme}** (authored library, see below)
 8. **Before you go** (provenance DB): bag policy, parking, gates, transit, each with observed date, plus forecast and map tile when available. Replaces the thin venue quick facts.
 9. **Previous editions** (archive): same team + themeKey in prior seasons, date, opponent, link to archived page, past tier 1 photo when one exists. Requires rollout step 3 (archive pass).
 10. **{Theme} nights across {league}, {season}** (derived table): team, date, giveaway or sponsor, link. Replaces the current Same promo other teams list.
@@ -86,6 +86,10 @@ Repo files, versioned, reviewed by Matt before merge: `content/promo-explainers/
 - Previous edition links both directions (past page links forward to the current edition).
 - eBay tier 2 block on past bobbleheads.
 - Completed promos behind the team page "Show N more" toggle must be in the served markup so the links are crawlable.
+
+## Status
+
+- Content floor (build order step 2) built 2026-11-07 on feature/promo-pages-v2-content-floor. Team colors: single source confirmed (teams/{id} ARGB via mapTeamDoc), 169/169 stored; contrast gate sends Ducks-type palettes to house red. Opponent links resolve on 96.9% of upcoming pages; the rest are MLB 2027 and MLS dates with no games spine yet. A second, unreconciled color copy lives on venues/{slug} (primaryColor/accentColor); nothing reads it, ticket if venue hubs ever theme.
 
 ## Build order
 

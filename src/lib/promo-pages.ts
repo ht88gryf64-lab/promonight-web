@@ -25,12 +25,12 @@ import 'server-only';
 import { cache } from 'react';
 import { Timestamp } from 'firebase-admin/firestore';
 import { db } from './firebase';
-import { getAllTeams, getGamesForTeam, getVenueForTeam, mapPromoDoc } from './data';
+import { getAllTeams, getGamesForTeam, getTeamPromos, getVenueForTeam, isTicketPackagePromo, mapPromoDoc } from './data';
 import { applyGameDisplay, buildGameIndex, resolveTnEventUrl } from './promo-game-join';
 import { makeKeyedTtlCache, STATIC_TTL_MS } from './collection-cache';
 import { getVenueHub, getVenueHubForTeam, type TeamVenueHubLink } from './venue-hub';
 import { buildCondensedLogistics, type CondensedLine } from './venue-hub-condensed';
-import { isTicketPackageDoc, isTicketPackageLeague } from './ticket-packages';
+import { isTicketPackageDoc, isTicketPackageLeague, partitionTicketPackages } from './ticket-packages';
 import { isVisiblePromo, promoDisplayOpponent, promoDisplayTime, teamDisplayName } from './promo-helpers';
 import { getShortForPromos } from './youtube-shorts-store';
 import type { PromoShortVideo } from './youtube-shorts';
@@ -39,6 +39,7 @@ import {
   baseSlugOf,
   canonicalGroups,
   canonicalSlugFor,
+  cleanText,
   isPromoPagesLive,
   laterSeason,
   promoPagePath,
@@ -246,7 +247,43 @@ export interface LinkedPromo {
   displayOpponent: string;
 }
 
+/** The home game behind the page's primary date, as the games spine has it
+ *  (docs/per-promo-pages-v2-spec.md, "This game"). Derived only: every field
+ *  is a stored game or a count over the team's stored home games. Null when
+ *  the spine has no game on the date (MLS and WNBA have no spine; a date the
+ *  pipeline has not matched). */
+export interface PromoPageGame {
+  date: string;
+  /** The visiting club, when every game on the date (a doubleheader aside)
+   *  names the same one and its team doc exists; its page is the link. */
+  opponentId: string | null;
+  opponentName: string | null;
+  opponentHref: string | null;
+  /** The game's IANA zone (the building's when the spine lacks one), for the
+   *  date tile's "today" (src/lib/promo-date-tile.ts). */
+  timeZone: string | null;
+  /** 1-based position among the team's home games of this season (regular
+   *  season, scheduled), and the count. Null when the spine has no game. */
+  homeGameNumber: number | null;
+  homeGamesTotal: number | null;
+  /** The season label the count is over ("2026-27", "2026"). */
+  seasonLabel: string | null;
+}
+
+/** Other giveaways at the same building in the primary date's month, still
+ *  to come, every pro tenant counted, this page's own rows and its same-date
+ *  siblings left out. Null when none, so the line is not rendered. */
+export interface PromoPageVenueGiveaways {
+  count: number;
+  /** YYYY-MM of the page's primary date. */
+  month: string;
+}
+
 export interface PromoPageContext {
+  /** The home game behind the primary date, or null. */
+  game: PromoPageGame | null;
+  /** Other giveaways at the building in the month, or null. */
+  venueGiveaways: PromoPageVenueGiveaways | null;
   /** The team's `venues` record (street address, coordinates for parking and hotels). */
   venue: Venue | null;
   /** The building hub link (slug, display name, index floor) the team page uses. */
@@ -402,14 +439,77 @@ const QUICK_FACT_KEYS: readonly CondensedLine['key'][] = ['bag', 'transit', 'par
 /** Everything the page links to and the building it names. */
 export const loadPromoPageContext = cache(async (page: PromoPage, today: string): Promise<PromoPageContext> => {
   const { team } = page;
-  const [teamRows, venue, hub, scanStamp, short] = await Promise.all([
+  const [teamRows, venue, hub, scanStamp, short, games, allTeams] = await Promise.all([
     loadTeamPageRows(team),
     getVenueForTeam(team.id),
     getVenueHubForTeam(team.id),
     loadTeamScanStamp(team.league, team.id),
     getShortForPromos([page.primary.promoId, ...page.rows.map((r) => r.promoId)]),
+    // The same request-cached read the display join made; [] outside the
+    // spine leagues.
+    getGamesForTeam(team.id, team.sportSlug),
+    getAllTeams(),
   ]);
   const building = hub ? await getVenueHub(hub.slug) : null;
+  const teamById = new Map(allTeams.map((t) => [t.id, t]));
+  const primaryDate = page.primary.date;
+  const pageDates = new Set(page.dates);
+
+  // This game (spec item 7), derived from the spine. A postponed or canceled
+  // game is no game, as the display join treats it; preseason is out of the
+  // home-schedule count (the team page's schedule list counts the regular
+  // season only) and so is any game outside the primary date's season.
+  let game: PromoPageGame | null = null;
+  if (YMD_RE.test(primaryDate)) {
+    const scheduled = (g: (typeof games)[number]) => g.homeTeamSlug === team.id && g.status !== 'postponed' && g.status !== 'canceled';
+    const onDate = games.filter((g) => scheduled(g) && g.date === primaryDate);
+    const seasonLabel = seasonLabelFor(team.league, primaryDate);
+    const homeSeason = games.filter((g) => scheduled(g) && g.seasonType !== 'preseason' && seasonLabelFor(team.league, g.date) === seasonLabel);
+    const zone = onDate.find((g) => g.gameTimeTz && g.gameTimeTz.includes('/'))?.gameTimeTz ?? building?.timezone ?? null;
+    const awaySlugs = new Set(onDate.map((g) => g.awayTeamSlug));
+    const opponent = awaySlugs.size === 1 ? teamById.get([...awaySlugs][0]) ?? null : null;
+    const number = onDate.length ? homeSeason.findIndex((g) => g.date === primaryDate) + 1 : 0;
+    if (onDate.length || zone) {
+      game = {
+        date: primaryDate,
+        opponentId: opponent?.id ?? null,
+        opponentName: opponent ? teamDisplayName(opponent) : null,
+        opponentHref: opponent ? `/${opponent.sportSlug}/${opponent.id}` : null,
+        timeZone: zone,
+        homeGameNumber: number > 0 ? number : null,
+        homeGamesTotal: number > 0 ? homeSeason.length : null,
+        seasonLabel: number > 0 ? seasonLabel : null,
+      };
+    }
+  }
+
+  // "N more giveaways at {venue} this month": every pro tenant of the
+  // building (the venue hub's own per-tenant read, request-cached), giveaways
+  // only, dated in the primary date's month and still to come, this page and
+  // its same-date siblings left out (they are "Also at this game"). NHL and
+  // NBA special-ticket rows are not promotions (WEB6 G2) and are left out as
+  // the venue scroller leaves them out.
+  let venueGiveaways: PromoPageVenueGiveaways | null = null;
+  if (building && YMD_RE.test(primaryDate)) {
+    const month = primaryDate.slice(0, 7);
+    const seen = new Set<string>();
+    let count = 0;
+    for (const t of building.tenants) {
+      if (!t?.teamId || t.league === 'CFB' || seen.has(t.teamId)) continue;
+      seen.add(t.teamId);
+      const tenant = teamById.get(t.teamId);
+      if (!tenant) continue;
+      const { promos } = partitionTicketPackages(await getTeamPromos(tenant.id), isTicketPackagePromo, tenant.league);
+      for (const p of promos) {
+        if (!(p.type === 'giveaway' || p.isGiveaway === true)) continue;
+        if (typeof p.date !== 'string' || !YMD_RE.test(p.date) || p.date.slice(0, 7) !== month || p.date < today) continue;
+        if (!cleanText(p.title)) continue;
+        if (tenant.id === team.id && (p.pageSlug === page.slug || pageDates.has(p.date))) continue;
+        count++;
+      }
+    }
+    if (count > 0) venueGiveaways = { count, month };
+  }
 
   // Quick facts: only for a verified building, through its published view
   // (the condensed builder waives the verified flag for the college corpus by
@@ -424,7 +524,6 @@ export const loadPromoPageContext = cache(async (page: PromoPage, today: string)
       ? { name: venue.name, streetAddress: venue.address ?? null, locality: null, region: null }
       : null;
 
-  const pageDates = new Set(page.dates);
   const others = teamRows.filter((r) => r.pageSlug !== page.slug && linkable(r, team.league)).sort(byDate);
   const alsoAtGame = onePerKey(others.filter((r) => pageDates.has(r.date)), (r) => r.pageSlug).map((r) => link(team, r));
   // The next two by date, after this page's own game(s): a same-date sibling
@@ -454,8 +553,6 @@ export const loadPromoPageContext = cache(async (page: PromoPage, today: string)
   {
     const themeKey = page.primary.themeKey && page.primary.themeKey !== 'none' ? page.primary.themeKey : null;
     const index = await getUpcomingPromoIndex(today);
-    const teams = await getAllTeams();
-    const teamById = new Map(teams.map((t) => [t.id, t]));
     const toLink = (r: IndexedPromo): LinkedPromo | null => {
       const t = teamById.get(r.teamId);
       return t ? link(t, { pageSlug: r.pageSlug, title: r.title, date: r.date, type: r.type, displayTime: '', displayOpponent: '' }) : null;
@@ -486,6 +583,8 @@ export const loadPromoPageContext = cache(async (page: PromoPage, today: string)
         : null;
 
   return {
+    game,
+    venueGiveaways,
     venue,
     hub,
     quickFacts,

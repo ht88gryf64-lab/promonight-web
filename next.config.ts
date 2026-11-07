@@ -1,6 +1,12 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  // The explainer library (content/promo-explainers/*.md) is read with fs at
+  // request time by the promo page; the tracer cannot see a directory read,
+  // so the files are named here or the serverless bundle ships without them.
+  outputFileTracingIncludes: {
+    '/[sport]/[team]/promos/[slug]': ['./content/promo-explainers/*.md'],
+  },
   env: {
     // Mirror the server-only VERCEL_ENV into a client-readable variable so the
     // redesign gate (lib/redesign.ts) computes the SAME result on the client

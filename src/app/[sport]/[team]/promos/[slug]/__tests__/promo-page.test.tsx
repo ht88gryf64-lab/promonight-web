@@ -129,6 +129,20 @@ team('dallas-stars', 'Dallas', 'Stars');
 team('houston-dynamo', 'Houston', 'Dynamo', 'MLS');
 team('phoenix-suns', 'Phoenix', 'Suns', 'NBA');
 team('nashville-predators', 'Nashville', 'Predators');
+team('new-york-islanders', 'New York', 'Islanders');
+// A club whose colours both fail the theme gate (content floor, 2026-11-07):
+// a mid-gray primary (neither white nor the ink clears 4.5:1 on it) and a
+// white secondary (invisible on the cream ground). The page takes the house red.
+put('teams/gray-club', { league: 'NHL', city: 'Gray', name: 'Club', abbreviation: 'GRY', primaryColor: 4286611584, secondaryColor: 4294967295, division: 'Central', sportSlug: 'nhl', ticketmasterSlug: 'gray-club', ticketmasterAttractionId: '805974' });
+// The Wild's home games on the spine (content floor, "This game"): the game
+// behind the Blaze Orange Hat, one before it and one after, so the position
+// in the home schedule is 2 of 3. The stored promo time and opponent stay
+// the display values (the join fills empty slots only).
+const game = (id: string, date: string, away: string) =>
+  put(`games/${id}`, { id, league: 'nhl', date, gameTime: '00:00', gameTimeTz: 'America/Chicago', homeTeamSlug: 'minnesota-wild', awayTeamSlug: away, venueName: 'Grand Casino Arena', status: 'scheduled', seasonType: 'regular' });
+game('nhl-min-1', '2026-10-20', 'dallas-stars');
+game('nhl-min-2', '2026-10-29', 'new-york-islanders');
+game('nhl-min-3', '2026-12-28', 'detroit-red-wings');
 put('venues/xcel-energy-center', { name: 'Grand Casino Arena', address: '199 W Kellogg Blvd, St Paul, MN 55102', lat: 44.9448, lng: -93.101, team: 'Minnesota Wild', sport: 'NHL', league: 'NHL', teamId: 'min' });
 put('scannerState/NHL/hashes/minnesota-wild', { updatedAt: ts('2026-10-23T13:38:09.000Z') });
 
@@ -142,9 +156,13 @@ const promo = (teamId: string, id: string, over: Data) =>
 // The tier 1 single-date page, as stored on 2026-10-29.
 promo('minnesota-wild', 'c7057219198efd77', { title: 'Blaze Orange Hat', pageSlug: 'blaze-orange-hat', description: 'All fans receive a blaze orange hat. Presented by Federal Ammunition.', presentedBy: 'Federal Ammunition', imageTier: 1, imageRef: 'promo-images/c7057219198efd77.png', imageSourceUrl: 'https://www.nhl.com/wild/fans/giveaway-schedule', imageCredit: 'Image: Minnesota Wild' });
 // Siblings and traps on the Wild.
-promo('minnesota-wild', 'a1', { title: 'Pride Night', pageSlug: 'pride-night', type: 'theme', themeKey: 'pride', description: 'Pride Night at the arena.' });
+promo('minnesota-wild', 'a1', { title: 'Pride Night', pageSlug: 'pride-night', type: 'theme', themeKey: 'pride', description: 'Pride Night at the arena.', gateOpenTime: '5:30 PM' });
 promo('minnesota-wild', 'a2', { title: 'Hockey Fights Cancer Night', pageSlug: 'hockey-fights-cancer-night', type: 'theme', themeKey: 'hockey-fights-cancer', date: '2026-11-20', opponent: 'Bruins' });
-promo('minnesota-wild', 'a3', { title: 'Winter Beanie', pageSlug: 'winter-beanie', date: '2026-12-05', opponent: 'Blackhawks', attendanceCap: 10000 });
+promo('minnesota-wild', 'a3', { title: 'Winter Beanie', pageSlug: 'winter-beanie', date: '2026-12-05', opponent: 'Blackhawks', attendanceCap: 10000, presentedBy: 'Great Clips', description: 'All fans receive a winter beanie.' });
+// A second Wild giveaway in December (content floor: the building's other giveaways in the month).
+promo('minnesota-wild', 'a10', { title: 'Holiday Scarf', pageSlug: 'holiday-scarf', date: '2026-12-18', opponent: 'Jets' });
+// The gray club's one page (the house-red fallback).
+promo('gray-club', 'gc1', { title: 'Gray Towel', pageSlug: 'gray-towel', date: '2026-11-09', opponent: 'Wild', description: 'All fans receive a gray towel.' });
 promo('minnesota-wild', 'a4', { title: 'Tombstoned Past Hat', pageSlug: 'tombstoned-past-hat', date: '2026-10-20', tombstoned: true, tombstonedAt: ts('2026-10-21T12:00:00Z') });
 promo('minnesota-wild', 'a5', { title: 'Removed Future Poster', pageSlug: 'removed-future-poster', date: '2026-11-30', tombstoned: true, tombstonedAt: ts('2026-10-05T21:46:46Z'), attendanceCap: 5000, description: 'First 5,000 fans receive a poster.' });
 promo('minnesota-wild', 'a6', { title: 'Pride Night', pageSlug: 'pride-night-2025-26', pageSeason: '2025-26', type: 'theme', themeKey: 'pride', date: '2026-03-10', updatedAt: ts('2026-03-01T00:00:00Z') });
@@ -160,7 +178,7 @@ promo('minnesota-wild', 'a9', { title: 'Postseason Row', pageSlug: 'postseason-r
 promo('minnesota-wild', 't1', { title: 'Twin Night', pageSlug: 'twin-night', type: 'theme', date: '2026-12-20', opponent: 'Flames' });
 promo('minnesota-wild', 't2', { title: 'Twin Night', pageSlug: 'twin-night', type: 'theme', date: '2026-12-20', opponent: 'Flames' });
 // Outside NHL and NBA the stored flag is the extractor's guess: never a package.
-promo('houston-dynamo', 'm1', { title: 'Family 4-Pack', pageSlug: 'family-4-pack', type: 'kids', date: '2026-11-07', opponent: 'Austin FC', ticketPackageRequired: true, ticketPackageName: 'Family Pack', sourceUrl: 'https://www.houstondynamofc.com/promos' });
+promo('houston-dynamo', 'm1', { title: 'Family 4-Pack', pageSlug: 'family-4-pack', type: 'kids', date: '2026-11-07', opponent: 'Austin FC', ticketPackageRequired: true, ticketPackageName: 'Family Pack', sourceUrl: 'https://www.houstondynamofc.com/promos', description: 'Four tickets, four hot dogs and four drinks.' });
 // The multi-date series on the Red Wings, and a Pride Night there.
 for (const [id, date, opp] of [['o1', '2026-10-29', 'Blackhawks'], ['o2', '2026-11-18', 'Bruins'], ['o3', '2026-12-11', 'NY Rangers']] as const) {
   promo('detroit-red-wings', id, { title: 'Original Six Matchup', pageSlug: 'original-six-matchup', type: 'theme', date, opponent: opp, description: 'Original Six matchup theme night.', updatedAt: ts(id === 'o2' ? '2026-10-30T09:00:00.000Z' : UPDATED) });
@@ -266,7 +284,7 @@ function guard(h: string, name: string) {
   for (const bad of NEVER_LINKED) assert.ok(!links.includes(bad), `${name} links to ${bad}`);
   // One article, page-content, the ad region; no display:contents between it and the sections.
   assert.equal((h.match(/<article /g) ?? []).length, 1, `${name}: one article`);
-  assert.match(h, /<article class="page-content[^"]*" data-ad-region="content">/);
+  assert.match(h, /<article class="page-content[^"]*" data-ad-region="content" style="--pp-accent:#[0-9a-f]{6};[^"]*">/);
   const kids = articleChildren(h);
   assert.ok(kids.length >= 6, `${name}: ${kids.length} direct children`);
   for (const k of kids) assert.ok(!/class="[^"]*\bcontents\b/.test(k) && !/display:\s*contents/.test(k), `${name}: display:contents child ${k}`);
@@ -320,7 +338,10 @@ test('tier 1 single-date NHL page: H1, the stored photo, the head, the schema an
   assert.match(h, /Minnesota Wild vs Islanders/);
   assert.match(h, /Thursday, Oct 29, 2026 · 7:00 PM/);
   assert.match(h, /href="\/venues\/xcel-energy-center"[^>]*>Grand Casino Arena</);
-  assert.match(h, /Presented by<\/span><span class="font-rd[^"]*">Federal Ammunition</);
+  // The sponsor is a line inside About, never a tile (content floor, 2026-11-07);
+  // this description already names it, so the name appears once in the body.
+  assert.ok(!/Presented by<\/span>/.test(h), 'no Presented-by tile');
+  assert.equal((h.slice(h.indexOf('<article'), h.lastIndexOf('</article>')).match(/Presented by Federal Ammunition\./g) ?? []).length, 1, 'once in the body (the schema descriptions aside)');
   assert.match(h, /Get tickets<\/a>/);
   // "Remind me" is the promo_cta surface (hotfix 2026-10-31): the team in src,
   // the promo id and page slug as their own params, never team_cta.
@@ -375,9 +396,9 @@ test('tier 1 single-date NHL page: H1, the stored photo, the head, the schema an
   assert.equal(ld[1].eventStatus, 'https://schema.org/EventScheduled');
   // The Event image stays the stored photo, unchanged by the share card.
   assert.deepEqual(ld[1].image, ['https://firebasestorage.googleapis.com/v0/b/promonight.firebasestorage.app/o/promo-images%2Fc7057219198efd77.png?alt=media']);
-  // One FAQ: no door time is stored, so "What time should I arrive?" does not exist.
-  assert.equal(ld[2].mainEntity.length, 1);
-  assert.equal(ld[2].mainEntity[0].name, 'Who presents the Blaze Orange Hat?');
+  // One stored-field FAQ in the schema (no door time, so no arrival question);
+  // the hat library's two are in the visible block only (ruling 2026-11-07).
+  assert.deepEqual(ld[2].mainEntity.map((q: any) => q.name), ['Who presents the Blaze Orange Hat?']);
   assert.equal(ld[3].itemListElement.length, 3);
   assert.deepEqual(ld[3].itemListElement.map((i: any) => i.name), ['NHL', 'Minnesota Wild', 'Promos']);
   assert.equal(ld[3].itemListElement[2].item, 'https://www.getpromonight.com/nhl/minnesota-wild#promo-2026-10-29-blaze-orange-hat');
@@ -401,7 +422,7 @@ test('a series with more than three dates shows the next three and folds the res
   assert.ok(faq, 'a FAQPage');
   assert.match(faq!.mainEntity[0].acceptedAnswer.text, /^5 Anaheim Ducks home games this season: Nov 1, 2026, Nov 8, 2026, Nov 15, 2026, Nov 22, 2026, Nov 29, 2026\.$/);
   // The CTA row follows the header directly.
-  assert.match(h, /<\/header><section class="[^"]*"><div class="flex gap-2"><a href="https:\/\/ticketnetwork\.lusg\.net\/[^"]*"[^>]*aria-label="Get Anaheim Ducks tickets on TicketNetwork"/);
+  assert.match(h, /<\/header><section class="[^"]*">(?:<div class="flex shrink-0 flex-col gap-1\.5">[\s\S]*?<\/div>)?<div class="flex min-w-0 flex-1 flex-col gap-2\.5"><div class="flex gap-2"><a href="https:\/\/ticketnetwork\.lusg\.net\/[^"]*"[^>]*aria-label="Get Anaheim Ducks tickets on TicketNetwork"/);
 });
 
 test('a series pads the open list to three with played dates, and a fold of played dates says "earlier"', async () => {
@@ -534,7 +555,9 @@ test('a same-date twin is one date, and a flagged row outside NHL and NBA is not
   process.env.PROMO_PAGES_LIVE = 'true';
   const twin = await render('nhl', 'minnesota-wild', 'twin-night');
   assert.equal((twin.h.slice(twin.h.indexOf('<header'), twin.h.indexOf('</header>')).match(/<li /g) ?? []).length, 1, 'one game line');
+  // A theme night with no themeKey takes the theme-night library entry; its FAQs are visible, never structured data.
   assert.deepEqual(jsonLd(twin.h).map((s) => s['@type']), ['WebPage', 'Event', 'BreadcrumbList']);
+  assert.ok(twin.h.includes('General guide'), 'the guide renders');
   assert.equal(twin.meta.title, 'Twin Night | Minnesota Wild Dec 20, 2026');
   const mls = await render('mls', 'houston-dynamo', 'family-4-pack');
   assert.match(mls.h, />Kids</);
@@ -552,6 +575,7 @@ test('tombstoned past its date: noindex; a row with no date: noindex', async () 
   const dateless = await render('nhl', 'minnesota-wild', 'dateless-deal');
   assert.deepEqual(dateless.meta.robots, { index: false, follow: true });
   assert.equal(dateless.meta.title, 'Dateless Deal | Minnesota Wild');
+  // No Event without a date, no FAQPage without a stored-field FAQ: the food-deal library's FAQs stay out of the schema.
   assert.deepEqual(jsonLd(dateless.h).map((s) => s['@type']), ['WebPage', 'BreadcrumbList'], 'no Event without a date, no FAQ without a door time');
 });
 
@@ -649,7 +673,7 @@ test('share (2026-11-03): the share card on og:image and twitter:image on every 
     } else {
       assert.equal(shares, body === 'photo' ? 2 : 1, `${slug}: the row Share${body === 'photo' ? ' and the image icon' : ' only (no image block without a tier 1 photo)'}`);
       // Tickets and Share on one row, tickets first and filling the width.
-      assert.match(h, /<div class="flex gap-2"><a href="[^"]*"[^>]*class="flex h-\[52px\] min-w-0 flex-1 [^"]*bg-rd-red[^"]*"[^>]*>Get tickets<\/a><div class="relative shrink-0"><button type="button" aria-label="Share this promo"[^>]*class="flex h-\[52px\] [^"]*bg-white[^"]*text-rd-ink shadow-\[inset_0_0_0_1\.5px_var\(--color-rd-ink\)\][^"]*">/, `${slug}: the tickets + Share row (1.5px ink outline as an inset shadow)`);
+      assert.match(h, /<div class="flex gap-2"><a href="[^"]*"[^>]*class="flex h-\[52px\] min-w-0 flex-1 [^"]*bg-\[var\(--pp-accent\)\][^"]*"[^>]*>Get tickets<\/a><div class="relative shrink-0"><button type="button" aria-label="Share this promo"[^>]*class="flex h-\[52px\] [^"]*bg-white[^"]*text-rd-ink shadow-\[inset_0_0_0_1\.5px_var\(--color-rd-ink\)\][^"]*">/, `${slug}: the tickets + Share row (1.5px ink outline as an inset shadow)`);
       assert.match(h, /<span class="max-\[339px\]:sr-only">Share<\/span>/, `${slug}: the label hides at very narrow widths`);
       // The image icon: absolutely placed in the (now relative) figure, on a tier 1 photo only.
       if (body === 'photo') {
@@ -817,11 +841,178 @@ test('the route layout wraps the page in div.pn-promo-page, the direct parent of
   const h = await html(Layout({ children: await Page(params('nhl', 'minnesota-wild', 'blaze-orange-hat')) }));
   assert.equal((h.match(/pn-promo-page/g) ?? []).length, 1, 'one wrapper');
   // The wrapper opens, the JSON-LD scripts follow as earlier children, then the article: no other element between.
-  assert.match(h, /<div class="[^"]*\brd-root\b[^"]*\bpn-promo-page\b[^"]*">(?:<script type="application\/ld\+json">[^<]*<\/script>)*<article class="page-content[^"]*" data-ad-region="content">/, 'the wrapper is the article\'s parent');
+  assert.match(h, /<div class="[^"]*\brd-root\b[^"]*\bpn-promo-page\b[^"]*">(?:<script type="application\/ld\+json">[^<]*<\/script>)*<article class="page-content[^"]*" data-ad-region="content" style="[^"]*">/, 'the wrapper is the article\'s parent');
   assert.ok(h.trimEnd().endsWith('</article></div>'), 'the wrapper closes right after the article');
   // The house wrapper and the hook are the layout's; the view renders no wrapper of its own.
   const { readFileSync } = await import('node:fs');
   const src = readFileSync(new URL('../layout.tsx', import.meta.url), 'utf8');
   assert.match(src, /rd-root min-h-screen pn-promo-page/);
   assert.doesNotMatch(readFileSync(new URL('../../../../../../components/promo-page/PromoPageView.tsx', import.meta.url), 'utf8'), /rd-root min-h-screen/);
+});
+
+// ── the content floor (docs/per-promo-pages-v2-spec.md build order 2, 2026-11-07) ──
+
+test('content floor: the team colour on the article, the band, the badge and the CTA; the house red when both colours fail AA', async () => {
+  process.env.PROMO_PAGES_LIVE = 'true';
+  const wild = await render('nhl', 'minnesota-wild', 'blaze-orange-hat');
+  // One source: the team doc's ARGB colours as mapTeamDoc turns them to hex,
+  // the same two the tier 3 card route reads. Dark green takes white ink and
+  // reads on the cream ground, so the numeral is the colour too.
+  assert.match(wild.h, /<article class="page-content[^"]*" data-ad-region="content" style="--pp-accent:#154734;--pp-accent-ink:#ffffff;--pp-accent-text:#154734">/);
+  assert.match(wild.h, /<header class="[^"]*"><div aria-hidden="true" class="h-\[3px\] w-full rounded-full bg-\[var\(--pp-accent\)\]"><\/div>/, 'the band under the breadcrumb, inside the header');
+  assert.match(wild.h, /class="rounded-md px-2 py-1 [^"]*bg-\[var\(--pp-accent\)\] text-\[var\(--pp-accent-ink\)\]">Giveaway<\/span>/, 'the badge');
+  assert.match(wild.h, /class="flex h-\[52px\] min-w-0 flex-1 [^"]*bg-\[var\(--pp-accent\)\][^"]*text-\[var\(--pp-accent-ink\)\][^"]*"[^>]*>Get tickets<\/a>/, 'the CTA');
+  assert.match(wild.h, /<h2 class="rd-display[^"]*"><span aria-hidden="true" class="[^"]*bg-\[var\(--pp-accent\)\]"><\/span>About this giveaway<\/h2>/, 'the section rule');
+  // Mid-gray primary, white secondary: neither clears the gate, so the house red, with white ink.
+  const gray = await render('nhl', 'gray-club', 'gray-towel');
+  assert.match(gray.h, /style="--pp-accent:#da2d20;--pp-accent-ink:#ffffff;--pp-accent-text:#[0-9a-f]{6}"/);
+  assert.ok(!gray.h.includes('#808080') && !gray.h.includes('--pp-accent:#ffffff'), 'the failing colours never reach the page');
+  // The article's direct children are unchanged in kind: the band adds no ad anchor.
+  const kids = articleChildren(wild.h);
+  assert.ok(kids[0].startsWith('<nav') && kids[1].startsWith('<header'), kids.slice(0, 2).join('\n'));
+});
+
+test('content floor: the date tile reads the venue day; tonight with doors, tonight without, days inside two weeks, the weekday beyond; a series stacks shrunk tiles', async () => {
+  process.env.PROMO_PAGES_LIVE = 'true';
+  // Today in Chicago (the game's zone), no door time: "Tonight", no arrival line, no Doors row.
+  const blaze = await render('nhl', 'minnesota-wild', 'blaze-orange-hat');
+  assert.match(blaze.h, /<span class="rd-numerals leading-none text-\[var\(--pp-accent-text\)\] text-\[38px\]">29<\/span><span class="[^"]*">OCT<\/span>/);
+  assert.match(blaze.h, />Tonight<\/span>/);
+  assert.ok(!/Tonight · gates/.test(blaze.h), 'no arrival line without a stored door time');
+  assert.ok(!/>Doors</.test(blaze.h), 'no Doors row without a stored door time');
+  // Today with a door time.
+  const pride = await render('nhl', 'minnesota-wild', 'pride-night');
+  assert.match(pride.h, />Tonight · gates 5:30 PM<\/span>/);
+  assert.match(pride.h, /<dt class="[^"]*">Doors<\/dt><dd class="[^"]*">5:30 PM<\/dd>/);
+  // Inside two weeks: the count; beyond: the weekday.
+  const lapel = await render('nhl', 'pittsburgh-penguins', 'lapel-pin-set');
+  assert.match(lapel.h, />In 7 days<\/span>/);
+  const beanie = await render('nhl', 'minnesota-wild', 'winter-beanie');
+  assert.match(beanie.h, />Saturday<\/span>/);
+  // A series: the next three dates as shrunk tiles beside the CTA column, the state line on the next one only.
+  const series = await render('nhl', 'pittsburgh-penguins', 'community-night');
+  const minis = series.h.match(/<span class="rd-numerals leading-none text-\[var\(--pp-accent-text\)\] text-\[22px\]">(\d+)<\/span>/g) ?? [];
+  assert.equal(minis.length, 3, 'three shrunk tiles');
+  assert.equal((series.h.match(/>In 7 days<\/span>/g) ?? []).length, 1, 'Nov 5 is in 7 days; one state line');
+  // The CTA row still opens the column beside the tile(s): CTA above the first in-content unit.
+  for (const page of [blaze, series]) assert.ok(page.h.indexOf('Get tickets</a>') < page.h.search(/>(This|Next) game<\/h2>/), 'CTA before the first in-content unit');
+});
+
+test('content floor: the general guide is the themeKey entry, else the type entry, else absent; it sits after This game', async () => {
+  process.env.PROMO_PAGES_LIVE = 'true';
+  const { loadExplainers } = await import('@/lib/promo-explainers');
+  const lib = loadExplainers();
+  // Type entry: a hat giveaway.
+  const blaze = await render('nhl', 'minnesota-wild', 'blaze-orange-hat');
+  assert.match(blaze.h, /<p class="[^"]*">General guide<\/p><h2 class="rd-display[^"]*"><span[^>]*><\/span>What to expect at a hat giveaway<\/h2>/);
+  for (const para of lib.get('hat')!.paragraphs) assert.ok(blaze.h.includes(para), 'every paragraph of the entry, verbatim');
+  // Specific facts first, the general guide second (ruling 2026-11-07).
+  assert.ok(blaze.h.indexOf('About this giveaway') < blaze.h.indexOf('>This game</h2>') && blaze.h.indexOf('>This game</h2>') < blaze.h.indexOf('General guide'), 'About, This game, guide');
+  // Theme entry wins over the type.
+  const pride = await render('nhl', 'anaheim-ducks', 'pride-night');
+  assert.ok(pride.h.includes(lib.get('pride')!.title), 'the pride entry');
+  assert.ok(!pride.h.includes(lib.get('theme-night')!.title), 'not the theme-night entry');
+  // No themeKey and no item in the title: no block at all, no label.
+  const lapel = await render('nhl', 'pittsburgh-penguins', 'lapel-pin-set');
+  assert.ok(!lapel.h.includes('General guide'), 'no General guide block');
+  assert.ok(!lapel.h.includes('What to expect'), 'no explainer title');
+  // A removed page carries no guide.
+  const removed = await render('nhl', 'minnesota-wild', 'removed-future-poster');
+  assert.ok(!removed.h.includes('General guide'));
+});
+
+test('content floor: This game is derived only: the opponent link and the home-schedule position from the spine, the date siblings, the building count; no row without data', async () => {
+  process.env.PROMO_PAGES_LIVE = 'true';
+  const blaze = await render('nhl', 'minnesota-wild', 'blaze-orange-hat');
+  assert.match(blaze.h, /<dt class="[^"]*">Opponent<\/dt><dd class="[^"]*"><a [^>]*href="\/nhl\/new-york-islanders"[^>]*>New York Islanders<\/a><\/dd>/);
+  assert.match(blaze.h, /<dt class="[^"]*">Game<\/dt><dd class="[^"]*">Thursday, Oct 29, 2026 · 7:00 PM<\/dd>/);
+  // The season is this one (2026-27 on 2026-10-29), so it is not named.
+  assert.match(blaze.h, /<dt class="[^"]*">Home schedule<\/dt><dd class="[^"]*">Home game 2 of 3<\/dd>/);
+  assert.match(blaze.h, /<dt class="[^"]*">Also at this game<\/dt><dd class="[^"]*"><ul[^>]*><li[^>]*><a [^>]*href="\/nhl\/minnesota-wild\/promos\/pride-night"/);
+  assert.ok(!/This month<\/dt>/.test(blaze.h), 'no other giveaways at the building in October');
+  // No game on the spine for Dec 5: the stored opponent, unlinked; no position.
+  const beanie = await render('nhl', 'minnesota-wild', 'winter-beanie');
+  assert.match(beanie.h, /<dt class="[^"]*">Opponent<\/dt><dd class="[^"]*">Blackhawks<\/dd>/);
+  assert.ok(!/Home schedule/.test(beanie.h));
+  // The building's other giveaway in December, linking to the building page.
+  assert.match(beanie.h, /<dt class="[^"]*">In December<\/dt><dd class="[^"]*"><a [^>]*href="\/venues\/xcel-energy-center"[^>]*>1 more giveaway at Grand Casino Arena<\/a><\/dd>/);
+  // The sponsor line inside About when the description does not name it; no tile anywhere.
+  assert.match(beanie.h, /<p class="m-0 text-\[15px\] leading-\[1\.55\] text-rd-ink-soft">All fans receive a winter beanie\.<\/p><p class="m-0 text-\[15px\] leading-\[1\.55\] text-rd-ink-soft">Presented by Great Clips\.<\/p>/);
+  assert.ok(!/Presented by<\/span>/.test(beanie.h));
+  // The fact tiles are gone: quantity stays in the header line, doors in This game.
+  assert.ok(!/>Quantity<\/span>/.test(beanie.h));
+  assert.match(beanie.h, /First 10,000 fans/);
+  // A removed page has no This game block.
+  const removed = await render('nhl', 'minnesota-wild', 'removed-future-poster');
+  assert.ok(!removed.h.includes('>This game</h2>'));
+});
+
+test('content floor: 390px HTML snapshots when PROMO_PAGE_SNAPSHOT_DIR is set', async () => {
+  const dir = process.env.PROMO_PAGE_SNAPSHOT_DIR;
+  if (!dir) return;
+  process.env.PROMO_PAGES_LIVE = 'true';
+  const { writeFileSync, mkdirSync } = await import('node:fs');
+  mkdirSync(dir, { recursive: true });
+  const pages: [string, string, string, string][] = [
+    ['nhl', 'dallas-stars', 'esa-lindell-bobblehead', 'bobblehead'],
+    ['nhl', 'anaheim-ducks', 'pride-night', 'theme-night-pride'],
+    ['nhl', 'pittsburgh-penguins', 'lapel-pin-set', 'no-library-match'],
+    ['nhl', 'minnesota-wild', 'blaze-orange-hat', 'hat-giveaway-this-game'],
+  ];
+  for (const [sport, team, slug, name] of pages) {
+    const { h } = await render(sport, team, slug);
+    writeFileSync(`${dir}/${name}.html`, `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${name}</title><link rel="stylesheet" href="promo-page.css"></head><body style="margin:0"><div class="rd-root min-h-screen pn-promo-page">${h}</div></body></html>`);
+  }
+});
+
+test('content floor: a library FAQ is in the visible block and never in the FAQPage schema; the schedule season is named only when it is not the current one, and never wraps', async () => {
+  process.env.PROMO_PAGES_LIVE = 'true';
+  const { loadExplainers } = await import('@/lib/promo-explainers');
+  const hat = loadExplainers().get('hat')!;
+  const { h } = await render('nhl', 'minnesota-wild', 'blaze-orange-hat');
+  const schema = jsonLd(h);
+  const faqPage = schema.find((x) => x['@type'] === 'FAQPage');
+  assert.ok(faqPage, 'the stored-field FAQ keeps the FAQPage');
+  const schemaText = JSON.stringify(schema);
+  for (const f of hat.faqs) {
+    assert.ok(h.includes(`<summary class="cursor-pointer text-[14px] font-semibold text-rd-ink">${f.q}</summary>`), `${f.q}: in the visible block`);
+    assert.ok(!schemaText.includes(f.q), `${f.q}: not in any schema`);
+  }
+  // The visible block: stored first, then the library's, in the library's order.
+  const summaries = [...h.matchAll(/<summary class="[^"]*">([^<]+)<\/summary>/g)].map((m) => decode(m[1]));
+  assert.deepEqual(summaries, ['Who presents the Blaze Orange Hat?', ...hat.faqs.map((f) => f.q)]);
+  // The schedule line names no season for this season's game; a label that
+  // does name one keeps it on one line.
+  assert.match(h, /Home game 2 of 3<\/dd>/);
+  assert.ok(!/Home game 2 of 3, 2026-27/.test(h));
+  // Next season's opener on the Dallas Stars' spine: dated inside 2027-28, the
+  // season is named, inside a nowrap span.
+  put('games/nhl-dal-next', { id: 'nhl-dal-next', league: 'nhl', date: '2027-10-09', gameTime: '00:00', gameTimeTz: 'America/Chicago', homeTeamSlug: 'dallas-stars', awayTeamSlug: 'minnesota-wild', venueName: 'American Airlines Center', status: 'scheduled', seasonType: 'regular' });
+  promo('dallas-stars', 'next1', { title: 'Opening Night Magnet', pageSlug: 'opening-night-magnet', date: '2027-10-09', pageSeason: '2027-28', opponent: 'Wild' });
+  const next = await render('nhl', 'dallas-stars', 'opening-night-magnet');
+  assert.match(next.h, /<dt class="[^"]*">Home schedule<\/dt><dd class="[^"]*">Home game 1 of 1<span class="whitespace-nowrap">, 2027-28<\/span><\/dd>/);
+});
+
+test('about (ruling 2026-11-07): no description and no package, no About block; the source credit is a meta line under the venue line in the header', async () => {
+  process.env.PROMO_PAGES_LIVE = 'true';
+  // No description, no package, no sponsor: no "About this" heading at all.
+  const lapel = await render('nhl', 'pittsburgh-penguins', 'lapel-pin-set');
+  assert.ok(!/About this /.test(lapel.h), 'no About heading');
+  const header = lapel.h.slice(lapel.h.indexOf('<header'), lapel.h.indexOf('</header>'));
+  assert.match(header, /<p class="m-0 font-rd text-\[12px\] text-rd-ink-faint">Source: <a href="https:\/\/www\.nhl\.com\/wild\/fans\/giveaway-schedule"[^>]*>nhl\.com<\/a><\/p>/, 'the source meta line in the header');
+  assert.equal((lapel.h.match(/Source: /g) ?? []).length, 1, 'the credit appears once');
+  // With a description the block stays, source line inside it, nothing in the header.
+  const blaze = await render('nhl', 'minnesota-wild', 'blaze-orange-hat');
+  const about = blaze.h.indexOf('About this giveaway');
+  assert.ok(about > 0 && about < blaze.h.indexOf('Source: '), 'the source line sits inside About');
+  assert.ok(!blaze.h.slice(blaze.h.indexOf('<header'), blaze.h.indexOf('</header>')).includes('Source: '), 'no source line in the header');
+  // A package row with no description keeps the block for its package sentence (ruling 2026-10-24).
+  const pack = await render('nhl', 'minnesota-wild', 'scout-pack');
+  assert.match(pack.h, /About this ticket package/);
+  assert.match(pack.h, /Comes with a special ticket package\./);
+  // A sponsor on a description-less page goes to the header meta with the credit.
+  put('teams/pittsburgh-penguins/promos/g9', { ...(store.get('teams/pittsburgh-penguins/promos/g3') as Data), title: 'Puck Light', pageSlug: 'puck-light', date: '2026-11-25', presentedBy: 'Duquesne Light', attendanceCap: null });
+  const puck = await render('nhl', 'pittsburgh-penguins', 'puck-light');
+  assert.ok(!/About this /.test(puck.h));
+  assert.match(puck.h.slice(puck.h.indexOf('<header'), puck.h.indexOf('</header>')), /<p class="m-0 font-rd text-\[12px\] text-rd-ink-faint">Presented by Duquesne Light\.<\/p><p class="m-0 font-rd text-\[12px\] text-rd-ink-faint">Source: /);
 });
