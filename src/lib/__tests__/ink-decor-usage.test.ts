@@ -53,7 +53,8 @@ const GLYPH_ALLOWLIST = new Set([
   'components/hub/HubBrowseByType.tsx',
   'components/my-teams-view.tsx',
   'components/redesign/ExploreCard.tsx',
-  'components/redesign/RedesignPromoRow.tsx',
+  // components/redesign/RedesignPromoRow.tsx left the list 2026-11-07: its share
+  // glyph's ink moved into globals.css (.rd-root .rd-row-share, the row byte budget).
   'components/redesign/ScheduleBlock.tsx',
   'components/redesign/ScheduleRow.tsx',
   'components/team-related-aggregators.tsx',

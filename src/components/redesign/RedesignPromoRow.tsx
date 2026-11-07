@@ -47,8 +47,10 @@ function formatPromoDate(dateStr: string): { day: string; weekday: string; month
   };
 }
 
-const LINK_CLASS =
-  'flex gap-4 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rd-red focus-visible:ring-offset-2';
+// The row's long utility strings are scoped classes in globals.css ("Promo
+// row byte budget"): a team page repeats this markup per row and sits under
+// a 950,000-byte cap, held by __tests__/promo-row-bytes.test.tsx.
+const LINK_CLASS = 'rd-row-link';
 
 export function RedesignPromoRow({
   promo,
@@ -149,9 +151,9 @@ export function RedesignPromoRow({
   const content = (
     <>
       <div className="w-14 flex-shrink-0 text-center">
-        <div className="font-rd text-[10px] uppercase tracking-[0.1em] text-rd-ink-faint">{month}</div>
+        <div className="rd-row-eyebrow">{month}</div>
         <div className="rd-numerals text-3xl leading-none text-rd-ink">{day}</div>
-        <div className="font-rd text-[10px] uppercase tracking-[0.1em] text-rd-ink-faint">{weekday}</div>
+        <div className="rd-row-eyebrow">{weekday}</div>
       </div>
 
       <div className="min-w-0 flex-1 pr-8">
@@ -165,9 +167,7 @@ export function RedesignPromoRow({
             <span>{label}</span>
           </span>
           {completed && (
-            <span className="inline-flex items-center gap-1 rounded-full border border-rd-line px-2 py-0.5 font-rd text-[10px] uppercase tracking-[0.05em] text-rd-ink-faint">
-              Completed
-            </span>
+            <span className="rd-row-chip">Completed</span>
           )}
           {!completed && promo.highlight && !isPurchaseGated(promo) && (
             <span className="inline-flex items-center gap-0.5 font-rd text-[10px] font-semibold uppercase tracking-[0.05em] text-rd-red">
@@ -233,7 +233,7 @@ export function RedesignPromoRow({
       <ShareButton
         item={shareItem}
         placement="promo_card"
-        className="absolute right-2.5 top-2.5 inline-flex h-8 w-8 items-center justify-center rounded-full text-rd-ink-decor transition-colors hover:bg-rd-cream hover:text-rd-ink active:bg-rd-line"
+        className="rd-row-share"
         label={`Share ${promo.title}`}
       />
 
@@ -246,7 +246,7 @@ export function RedesignPromoRow({
             <button
               type="button"
               onClick={openTickets}
-              className="inline-flex items-center gap-1 rounded-full border border-rd-line bg-rd-card px-2.5 py-1 font-rd text-[11px] font-semibold uppercase tracking-[0.08em] text-rd-ink-soft transition-colors hover:border-rd-line-strong hover:text-rd-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rd-red focus-visible:ring-offset-2"
+              className="rd-row-tickets"
             >
               <IconTicket size={13} stroke={2} aria-hidden />
               Tickets

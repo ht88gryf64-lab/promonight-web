@@ -362,6 +362,33 @@ body::before {
   letter-spacing: -0.01em;
 }
 
+/* ── Promo row byte budget (2026-11-07) ──────────────────────────────────
+ * The team page's server HTML sits under a 950,000-byte cap (live guard 2,
+ * headroom under Bing's 1 MB ceiling), and the Twins page crossed it by 470
+ * bytes when the promo row became a whole-row Link. Each row repeated four
+ * long utility strings; they are one short class each here, applied with
+ * @apply so the rendering is byte-for-byte the utilities they replace. The
+ * budget itself is held by src/components/redesign/__tests__/promo-row-bytes.test.tsx.
+ * Scoped under .rd-root like every redesign class; every host of the row
+ * (team page, homepage, /promos/today, the venue hubs) mounts it.
+ * text-rd-ink-decor on .rd-row-share colours an aria-hidden glyph only, the
+ * same use the ink-decor guard allows on the row's file. */
+.rd-root .rd-row-link {
+  @apply flex gap-4 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rd-red focus-visible:ring-offset-2;
+}
+.rd-root .rd-row-share {
+  @apply absolute right-2.5 top-2.5 inline-flex h-8 w-8 items-center justify-center rounded-full text-rd-ink-decor transition-colors hover:bg-rd-cream hover:text-rd-ink active:bg-rd-line;
+}
+.rd-root .rd-row-eyebrow {
+  @apply font-rd text-[10px] uppercase tracking-[0.1em] text-rd-ink-faint;
+}
+.rd-root .rd-row-chip {
+  @apply inline-flex items-center gap-1 rounded-full border border-rd-line px-2 py-0.5 font-rd text-[10px] uppercase tracking-[0.05em] text-rd-ink-faint;
+}
+.rd-root .rd-row-tickets {
+  @apply inline-flex items-center gap-1 rounded-full border border-rd-line bg-rd-card px-2.5 py-1 font-rd text-[11px] font-semibold uppercase tracking-[0.08em] text-rd-ink-soft transition-colors hover:border-rd-line-strong hover:text-rd-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rd-red focus-visible:ring-offset-2;
+}
+
 /* ── Tonight ribbon ticker (redesign) ─────────────────────────────────────
  * Layout lives here rather than in Tailwind utilities because the
  * reduced-motion rule at the end of this block has to be able to suppress the
