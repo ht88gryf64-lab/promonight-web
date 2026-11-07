@@ -298,6 +298,7 @@ const ALLOWED_YMD_FORMATTERS = new Map<string, string>([
   ['lib/site-today.ts', 'the site day itself'],
   ['lib/nfl-week.ts', "a game's Eastern day (gameEtYmd)"],
   ['lib/cfb/clock.ts', "todayYMD(zone): a venue's day for CFB played/upcoming"],
+  ['lib/promo-date-tile.ts', "ymdInZone: the venue's day for the promo page date tile, from the route's one instant"],
 ]);
 // A UTC cut of a timestamp is fine in pure date math (Date.UTC(...)) and in
 // game-time ingest; in a file that also reads the clock it is a UTC today.

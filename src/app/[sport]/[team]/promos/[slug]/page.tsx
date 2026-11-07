@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { cache } from 'react';
 import { notFound, permanentRedirect } from 'next/navigation';
 import { getTeamBySlug } from '@/lib/data';
-import { todayYmd } from '@/lib/promo-helpers';
+import { siteTodayYmd } from '@/lib/site-today';
 import { isPromoPagesLive, loadPromoPageContext, resolvePreviousSlug, resolvePromoPage, type PromoPage, type PromoPageContext } from '@/lib/promo-pages';
 import { promoPagePath } from '@/lib/promo-page-copy';
 import { PromoPageView, heroImage, promoPageHead } from '@/components/promo-page/PromoPageView';
@@ -37,12 +37,16 @@ export async function generateStaticParams(): Promise<{ sport: string; team: str
 
 type Params = Promise<{ sport: string; team: string; slug: string }>;
 
-// The route's ONE clock read per request: the site's day (America/New_York),
-// shared by generateMetadata and the body through React's request cache, so
-// the noindex decision and the page cannot straddle Eastern midnight.
-const todayForRequest = cache(() => todayYmd());
+// The route's ONE clock read per request: the instant, and from it the site's
+// day (America/New_York), shared by generateMetadata and the body through
+// React's request cache, so the noindex decision and the page cannot
+// straddle Eastern midnight. The instant itself reaches the view for the date
+// tile's state line, which is read in the venue's zone (content floor,
+// 2026-11-07); it is the same read, not a second one.
+const nowForRequest = cache(() => new Date());
+const todayForRequest = cache(() => siteTodayYmd(nowForRequest()));
 
-type Resolved = { kind: 'page'; page: PromoPage; ctx: PromoPageContext; today: string; imageSize: ImageSize | null } | { kind: 'redirect'; to: string } | null;
+type Resolved = { kind: 'page'; page: PromoPage; ctx: PromoPageContext; today: string; now: Date; imageSize: ImageSize | null } | { kind: 'redirect'; to: string } | null;
 
 async function resolve(params: Params): Promise<Resolved> {
   const { sport, team: teamSlug, slug } = await params;
@@ -61,7 +65,7 @@ async function resolve(params: Params): Promise<Resolved> {
   // read from its own header (src/lib/image-dimensions.ts), once per request.
   const hero = heroImage(page);
   const imageSize = hero.kind === 'photo' ? await storedImageSize(hero.url) : null;
-  return { kind: 'page', page, ctx, today, imageSize };
+  return { kind: 'page', page, ctx, today, now: nowForRequest(), imageSize };
 }
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
@@ -106,5 +110,5 @@ export default async function PromoPage({ params }: { params: Params }) {
   // 308, the permanent redirect the App Router issues (a 301 is not
   // available to a page); search engines treat the two alike.
   if (r.kind === 'redirect') permanentRedirect(r.to);
-  return <PromoPageView page={r.page} ctx={r.ctx} today={r.today} imageSize={r.imageSize} />;
+  return <PromoPageView page={r.page} ctx={r.ctx} today={r.today} now={r.now} imageSize={r.imageSize} />;
 }

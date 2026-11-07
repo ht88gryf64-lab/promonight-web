@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import type { ReactNode } from 'react';
+import { Fragment, type CSSProperties, type ReactNode } from 'react';
 import { TrackedAffiliateLink } from '@/components/tracked-affiliate-link';
 import { TrackedAppLink } from '@/components/analytics-events';
 import { PromoShareImageButton, PromoShareRowButton, ShareLandingCapture, type PromoShareProps } from '@/components/promo-page/PromoShare';
@@ -14,6 +14,9 @@ import { promoAnchorId, teamDisplayName } from '@/lib/promo-helpers';
 import { PROMO_TYPE_LABELS } from '@/lib/types';
 import { TICKET_PACKAGE_ROW_NOTE } from '@/lib/ticket-packages';
 import type { LinkedPromo, PromoPage, PromoPageContext } from '@/lib/promo-pages';
+import { EXPLAINER_LABEL, explainerFor } from '@/lib/promo-explainers';
+import { promoPageTheme, themeStyle } from '@/lib/promo-page-theme';
+import { dateTileState, ymdInZone, type DateTileState } from '@/lib/promo-date-tile';
 import type { ImageSize } from '@/lib/image-dimensions';
 import {
   SITE_URL,
@@ -23,7 +26,6 @@ import {
   categoryAggregatorFor,
   cleanText,
   dateBlock,
-  factTiles,
   formatInstantDate,
   formatLongDate,
   formatMonDay,
@@ -36,6 +38,7 @@ import {
   promoPagePath,
   promoPageTitle,
   quantityLine,
+  seasonLabelFor,
   shareCardOrigin,
   shareCardPath,
   YMD_RE,
@@ -62,6 +65,17 @@ import {
 // height; a section that would be empty is not rendered rather than rendered
 // empty. No manual ad slots, no video: Raptive places the units.
 //
+// THE CONTENT FLOOR (docs/per-promo-pages-v2-spec.md, build order 2,
+// 2026-11-07). Team colour on the badge, the CTA, the band under the crumbs
+// and the section rules (src/lib/promo-page-theme.ts, house red when a colour
+// fails AA); the date tile beside the CTA column with its state line in the
+// venue's zone (src/lib/promo-date-tile.ts); the sponsor as a line inside
+// About (no tile); the authored explainer under "General guide"
+// (src/lib/promo-explainers.ts, a themeKey entry, else a type entry, else no
+// block); "This game", derived only, with every row optional; the library's
+// FAQs after the stored-field FAQs. Still no sentence anywhere that is not a
+// stored field, a count over stored fields, or a reviewed explainer file.
+//
 // LINKS. Every internal anchor is the promo's name, the team's name or the
 // building's name, never "View promo". The fixed set (breadcrumb, venue,
 // category aggregator, the team's next promos and its page, the cross-team
@@ -76,6 +90,9 @@ export interface PromoPageViewProps {
   ctx: PromoPageContext;
   /** The site's day, the route's one clock read. */
   today: string;
+  /** The same read as an instant, for the date tile's state line in the
+   *  venue's zone. Absent, the tile reads the site's day. */
+  now?: Date;
   /** The stored photo's pixel size, read by the route (storedImageSize);
    *  the card's is fixed. */
   imageSize?: ImageSize | null;
@@ -153,7 +170,39 @@ function hostOf(url: string | null): string | null {
   }
 }
 
-const H2 = ({ children }: { children: ReactNode }) => <h2 className="rd-display m-0 text-[22px] uppercase text-rd-ink">{children}</h2>;
+// Every section heading carries a short rule in the team colour above it
+// (spec Visuals 1, "section rules"); the rule is decoration, the text is the
+// heading.
+const H2 = ({ children }: { children: ReactNode }) => (
+  <h2 className="rd-display m-0 text-[22px] uppercase text-rd-ink">
+    <span aria-hidden="true" className="mb-1.5 block h-[3px] w-10 rounded-full bg-[var(--pp-accent)]" />
+    {children}
+  </h2>
+);
+
+/** The date tile (spec Visuals 2): weekday, the day large, the month, and the
+ *  state line when the caller has one. `mini` is the series rail's shrunk
+ *  tile. The numeral takes the accent only where it clears AA on the ground
+ *  (--pp-accent-text is the ink otherwise). */
+function DateTile({ ymd, state, size }: { ymd: string; state: DateTileState | null; size: 'full' | 'mini' }) {
+  const d = dateBlock(ymd);
+  const full = size === 'full';
+  return (
+    <div className={`flex shrink-0 flex-col items-center justify-center text-center ${full ? 'w-[92px] gap-0.5 rounded-2xl border border-rd-line bg-rd-card px-2 py-2.5' : 'w-[72px] rounded-xl border border-rd-line bg-rd-card px-1.5 py-1.5'}`}>
+      <span className="font-rd text-[10px] uppercase tracking-[0.12em] text-rd-ink-faint">{d.weekday}</span>
+      <span className={`rd-numerals leading-none text-[var(--pp-accent-text)] ${full ? 'text-[38px]' : 'text-[22px]'}`}>{String(Number(d.day))}</span>
+      <span className="font-rd text-[10px] uppercase tracking-[0.12em] text-rd-ink-faint">{d.month}</span>
+      {state ? (
+        <span className={`mt-1 font-rd text-[10px] font-semibold uppercase leading-[1.3] tracking-[0.08em] ${state.kind === 'tonight' ? 'text-[var(--pp-accent-text)]' : 'text-rd-ink-soft'}`}>{state.label}</span>
+      ) : null}
+    </div>
+  );
+}
+
+/** "2026-12" -> "December". */
+function monthName(ym: string): string {
+  return new Date(Date.UTC(Number(ym.slice(0, 4)), Number(ym.slice(5, 7)) - 1, 1)).toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' });
+}
 
 // The date is the tile; the subtitle never repeats it. A cross-team card
 // names the club, a same-team card the opponent and the time (ruling
@@ -175,7 +224,7 @@ function PromoCard({ p, showTeam }: { p: LinkedPromo; showTeam: boolean }) {
   );
 }
 
-export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProps) {
+export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageViewProps) {
   const { team, primary, dates } = page;
   const removed = page.state === 'removed';
   const head = promoPageHead(page, ctx, today, imageSize);
@@ -191,13 +240,54 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
 
   const badge = badgeLabel({ type: primary.type, tombstoned: removed, ticketPackageRequired: primary.ticketPackageRequired });
   const quantity = removed ? null : quantityLine(primary);
-  const tiles = removed ? [] : factTiles(primary);
+  // The team colour (one source: the team doc, as the card reads it), or the
+  // house red when neither colour clears AA.
+  const palette = promoPageTheme(team);
+  // The authored guide for this kind of night, or null: themeKey, else type.
+  const explainer = removed ? null : explainerFor({ themeKey: primary.themeKey, type: primary.type, title: primary.title, ticketPackageRequired: primary.ticketPackageRequired });
+  const doors = cleanText(primary.gateOpenTime) || null;
+  // The tile's "today" is the venue's day: the game's zone, else the
+  // building's, else the site's (src/lib/promo-date-tile.ts). Only the
+  // primary date's tile carries the door time.
+  const venueToday = now ? ymdInZone(now, ctx.game?.timeZone) : today;
+  const tileState = (d: string) => dateTileState(d, venueToday, d === primary.date ? doors : null);
   const aggregator = categoryAggregatorFor(primary, team.league);
   const removedOn = formatInstantDate(page.removedAt);
-  const faqs = promoFaqs({ row: primary, teamName, dates, removed, removedOn });
+  // Stored-field FAQs first, the library's after, in the visible block. The
+  // FAQPage schema carries the stored-field FAQs ONLY (ruling 2026-11-07):
+  // structured data states facts about this promotion, and a library FAQ is
+  // general knowledge about its kind.
+  const storedFaqs = promoFaqs({ row: primary, teamName, dates, removed, removedOn });
+  const faqs = [...storedFaqs, ...(explainer?.faqs.map((f) => ({ question: f.q, answer: f.a })) ?? [])];
   const sourceHost = hostOf(primary.sourceUrl);
   const readOn = formatInstantDate(ctx.observedAt);
   const description = cleanText(primary.description);
+  // The sponsor is a line inside About (spec item 5), unless the sourced
+  // description already names it: never the same name twice in one block.
+  const sponsor = cleanText(primary.presentedBy);
+  const sponsorLine = sponsor && !description.toLowerCase().includes(sponsor.toLowerCase()) ? `Presented by ${sponsor}.` : null;
+  // ABOUT (ruling 2026-11-07): the block renders only when it has sourced
+  // prose to hold, the stored description or the package sentence every
+  // package row carries (ruling 2026-10-24). Without either there is no
+  // "About this" heading over a lone source line; the source credit (and the
+  // sponsor line, when there is one) moves to a meta line under the venue
+  // line in the header instead.
+  const showAbout = !!description || primary.ticketPackageRequired === true;
+  const sourceLine = (
+    <p className="m-0 font-rd text-[12px] text-rd-ink-faint">
+      {primary.sourceUrl && sourceHost ? (
+        <>
+          {'Source: '}
+          <a href={primary.sourceUrl} target="_blank" rel="noopener nofollow" className="text-rd-red">
+            {sourceHost}
+          </a>
+        </>
+      ) : (
+        <>Source: the team&rsquo;s published schedule</>
+      )}
+      {readOn ? <span>{` · read ${readOn}`}</span> : null}
+    </p>
+  );
 
   // TICKETS (rulings 2026-11-02). The primary "Get tickets" is TicketNetwork:
   // the event page of the primary row's game when the pipeline matched it
@@ -268,7 +358,7 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
     // href only if TicketNetwork cannot be built at all.
     ticketUrlFor: (r) => (tnAllowed ? buildTicketNetworkLink({ team, surface: PROMO_PAGE_SURFACE, eventUrl: eventUrlOf(r), pageSlug: page.slug }) : ticketmaster),
     dateModified: page.updatedAt,
-    faqs,
+    faqs: storedFaqs,
     // The visible trail, item for item (Google asks the markup to reflect it):
     // league hub, team page, the team's promos (its anchor on the team page).
     breadcrumbs: [
@@ -330,6 +420,62 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
   const foldedAllPlayed = foldedRows.length > 0 && foldedRows.every((r) => r.date < today);
   const foldLabel = `+${foldedRows.length} ${foldedAllPlayed ? 'earlier' : 'more'} date${foldedRows.length === 1 ? '' : 's'}`;
 
+  // THIS GAME (spec item 7). Every row is a stored field, a stored game or a
+  // count over stored rows, and a row without data is not a row. The other
+  // promos on the date moved in here from their own section ("Also at this
+  // game" is now a row); the building's other giveaways in the month link to
+  // its page.
+  const g = ctx.game;
+  const thisGame: { label: string; value: ReactNode }[] = [];
+  if (!removed) {
+    const opponentName = g?.opponentName ?? cleanText(primary.displayOpponent);
+    if (opponentName) {
+      thisGame.push({
+        label: 'Opponent',
+        value: g?.opponentHref ? <Link href={g.opponentHref} className="font-medium text-rd-red no-underline hover:underline">{opponentName}</Link> : opponentName,
+      });
+    }
+    if (YMD_RE.test(primary.date)) thisGame.push({ label: multi ? 'Next date' : 'Game', value: `${formatLongDate(primary.date)}${primary.displayTime ? ` · ${primary.displayTime}` : ''}` });
+    if (doors) thisGame.push({ label: 'Doors', value: doors });
+    if (g?.homeGameNumber && g.homeGamesTotal) {
+      // The season is named only when it is not the current one (a page for
+      // next season's opener says so; this season's games do not), and never
+      // wraps mid-label.
+      const season = g.seasonLabel && g.seasonLabel !== seasonLabelFor(team.league, today) ? g.seasonLabel : null;
+      thisGame.push({
+        label: 'Home schedule',
+        value: (
+          <>
+            {`Home game ${g.homeGameNumber} of ${g.homeGamesTotal}`}
+            {season ? <span className="whitespace-nowrap">{`, ${season}`}</span> : null}
+          </>
+        ),
+      });
+    }
+    if (ctx.alsoAtGame.length) {
+      thisGame.push({
+        label: multi ? 'Also at these games' : 'Also at this game',
+        value: (
+          <ul className="m-0 flex flex-col gap-1 p-0">
+            {ctx.alsoAtGame.map((p) => (
+              <li key={p.href} className="list-none">
+                <Link href={p.href} className="font-medium text-rd-red no-underline hover:underline">{p.title}</Link>
+                <span className="font-rd text-[12px] text-rd-ink-faint">{` · ${multi ? formatMonDay(p.date) : (PROMO_TYPE_LABELS[p.type] ?? '')}`}</span>
+              </li>
+            ))}
+          </ul>
+        ),
+      });
+    }
+    if (ctx.venueGiveaways && venueHref && venueName) {
+      const n = ctx.venueGiveaways.count;
+      thisGame.push({
+        label: ctx.venueGiveaways.month === today.slice(0, 7) ? 'This month' : `In ${monthName(ctx.venueGiveaways.month)}`,
+        value: <Link href={venueHref} className="font-medium text-rd-red no-underline hover:underline">{`${n} more giveaway${n === 1 ? '' : 's'} at ${venueName}`}</Link>,
+      });
+    }
+  }
+
   // No wrapper of its own since the hotfix of 2026-10-30: the route's layout
   // (src/app/[sport]/[team]/promos/[slug]/layout.tsx) renders the rd-root
   // wrapper, with the pn-promo-page hook, as the article's parent.
@@ -346,7 +492,7 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
           session, then cleans the address bar. Outside the article, so the
           article's children (the ad anchors) are unchanged. */}
       <ShareLandingCapture promoId={primary.promoId} team={team.id} league={team.league} pageSlug={page.slug} />
-      <article className="page-content mx-auto w-full max-w-[640px] px-4 pb-10 lg:max-w-3xl" data-ad-region="content">
+      <article className="page-content mx-auto w-full max-w-[640px] px-4 pb-10 lg:max-w-3xl" data-ad-region="content" style={themeStyle(palette) as CSSProperties}>
         <nav aria-label="Breadcrumb" className="flex flex-wrap gap-1.5 pt-3.5 text-[12px] text-rd-ink-faint">
           {leagueHref ? (
             <Link href={leagueHref} className="no-underline hover:text-rd-ink">{team.league}</Link>
@@ -360,8 +506,12 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
         </nav>
 
         <header className="flex flex-col gap-2.5 pt-3">
+          {/* The thin team-colour band under the breadcrumb (spec Visuals 1).
+              Inside the header, not a child of the article: an extra direct
+              child would move the ad anchors (".page-content > *", skip 2). */}
+          <div aria-hidden="true" className="h-[3px] w-full rounded-full bg-[var(--pp-accent)]" />
           <div className="flex items-center gap-2">
-            <span className={`rounded-md px-2 py-1 font-rd text-[11px] font-semibold uppercase tracking-[0.12em] text-white ${removed ? 'bg-rd-ink-soft' : 'bg-rd-red'}`}>{badge}</span>
+            <span className={`rounded-md px-2 py-1 font-rd text-[11px] font-semibold uppercase tracking-[0.12em] ${removed ? 'bg-rd-ink-soft text-white' : 'bg-[var(--pp-accent)] text-[var(--pp-accent-ink)]'}`}>{badge}</span>
             {quantity ? <span className="font-rd text-[11px] font-semibold uppercase tracking-[0.12em] text-rd-ink-faint">{quantity}</span> : null}
           </div>
           <h1 className="rd-display m-0 text-[40px] uppercase leading-[0.95] tracking-[-0.01em] text-rd-ink">{cleanText(primary.title) || 'Untitled promotion'}</h1>
@@ -397,10 +547,32 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
               {ctx.formerNames.length && !ctx.quickFacts.length ? <span>{` · formerly ${ctx.formerNames.join(', ')}`}</span> : null}
             </p>
           ) : null}
+          {!showAbout ? (
+            <div className="flex flex-col gap-0.5">
+              {sponsorLine ? <p className="m-0 font-rd text-[12px] text-rd-ink-faint">{sponsorLine}</p> : null}
+              {sourceLine}
+            </div>
+          ) : null}
         </header>
 
         {!removed ? (
-          <section className="mt-4 flex flex-col gap-2.5">
+          <section className="mt-4 flex items-stretch gap-3">
+            {/* The date tile (spec Visuals 2) beside the CTA column, so the
+                CTA stays above the first in-content unit. A series stacks its
+                next dates as shrunk tiles; only the next one carries the
+                state line. */}
+            {multi ? (
+              nextRows.length ? (
+                <div className="flex shrink-0 flex-col gap-1.5">
+                  {nextRows.map((r, i) => (
+                    <DateTile key={r.promoId} ymd={r.date} state={i === 0 ? tileState(r.date) : null} size="mini" />
+                  ))}
+                </div>
+              ) : null
+            ) : YMD_RE.test(primary.date) ? (
+              <DateTile ymd={primary.date} state={tileState(primary.date)} size="full" />
+            ) : null}
+            <div className="flex min-w-0 flex-1 flex-col gap-2.5">
             {/* Get tickets and Share on ONE row (2026-11-03): tickets fills the
                 width, Share is the compact outline at the right, same 52px.
                 The row's height is the button's, so the section is as tall as
@@ -418,7 +590,7 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
                 target="_blank"
                 rel="noopener noreferrer sponsored"
                 ariaLabel={ticketsLevel === 'event' || !multi ? `Get tickets for ${teamName}${primary.displayOpponent ? ` vs ${primary.displayOpponent}` : ''} on ${ticketsBrand}` : `Get ${teamName} tickets on ${ticketsBrand}`}
-                className="flex h-[52px] min-w-0 flex-1 items-center justify-center rounded-[14px] bg-rd-red font-rd text-[16px] font-semibold text-white no-underline hover:bg-rd-red-dark"
+                className="flex h-[52px] min-w-0 flex-1 items-center justify-center rounded-[14px] bg-[var(--pp-accent)] font-rd text-[16px] font-semibold text-[var(--pp-accent-ink)] no-underline hover:brightness-95"
               >
                 Get tickets
               </TrackedAffiliateLink>
@@ -490,6 +662,7 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
                 Remind me
               </TrackedAppLink>
             </div>
+            </div>
           </section>
         ) : null}
 
@@ -534,17 +707,7 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
             so the CTA row and the image above it keep their places. */}
         {ctx.short && !removed ? <PromoShort videoId={ctx.short.videoId} title={ctx.short.title} /> : null}
 
-        {tiles.length ? (
-          <section className={`mt-4 grid gap-2 ${tiles.length === 3 ? 'grid-cols-3' : tiles.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-            {tiles.map((t) => (
-              <div key={t.label} className="flex flex-col gap-0.5 rounded-xl border border-rd-line bg-rd-card p-2.5">
-                <span className="font-rd text-[10px] uppercase tracking-[0.12em] text-rd-ink-faint">{t.label}</span>
-                <span className={t.numeral ? 'rd-numerals text-[20px] text-rd-ink' : 'font-rd text-[16px] font-bold leading-[1.1] text-rd-ink'}>{t.value}</span>
-              </div>
-            ))}
-          </section>
-        ) : null}
-
+        {showAbout ? (
         <section className="mt-6 flex flex-col gap-2">
           {/* A package row is not a theme night or a giveaway (the team page's
               package group says so): its heading names the package. */}
@@ -562,34 +725,35 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
           {primary.ticketPackageRequired === true && cleanText(primary.ticketPackageName) ? (
             <p className="m-0 text-[15px] leading-[1.55] text-rd-ink-soft">{`Package: ${cleanText(primary.ticketPackageName)}`}</p>
           ) : null}
-          <p className="m-0 font-rd text-[12px] text-rd-ink-faint">
-            {primary.sourceUrl && sourceHost ? (
-              <>
-                {'Source: '}
-                <a href={primary.sourceUrl} target="_blank" rel="noopener nofollow" className="text-rd-red">
-                  {sourceHost}
-                </a>
-              </>
-            ) : (
-              <>Source: the team&rsquo;s published schedule</>
-            )}
-            {readOn ? <span>{` · read ${readOn}`}</span> : null}
-          </p>
+          {sponsorLine ? <p className="m-0 text-[15px] leading-[1.55] text-rd-ink-soft">{sponsorLine}</p> : null}
+          {sourceLine}
         </section>
+        ) : null}
 
-        {ctx.alsoAtGame.length ? (
+        {thisGame.length ? (
           <section className="mt-6 flex flex-col gap-2.5 rounded-2xl border border-rd-line bg-rd-card p-3.5">
-            <H2>{`Also at ${multi ? 'these games' : 'this game'}`}</H2>
-            <ul className="m-0 flex flex-col p-0">
-              {ctx.alsoAtGame.map((p) => (
-                <li key={p.href} className="list-none border-t border-rd-line">
-                  <Link href={p.href} className="flex items-center justify-between gap-3 py-2 text-[15px] text-rd-ink no-underline hover:text-rd-red">
-                    <span>{p.title}</span>
-                    <span className="shrink-0 font-rd text-[12px] text-rd-ink-faint">{multi ? formatMonDay(p.date) : (PROMO_TYPE_LABELS[p.type] ?? '')}</span>
-                  </Link>
-                </li>
+            <H2>{multi ? 'Next game' : 'This game'}</H2>
+            <dl className="m-0 grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-[15px] leading-[1.45]">
+              {thisGame.map((r) => (
+                <Fragment key={r.label}>
+                  <dt className="pt-0.5 font-rd text-[10px] uppercase tracking-[0.12em] text-rd-ink-faint">{r.label}</dt>
+                  <dd className="m-0 min-w-0 text-rd-ink">{r.value}</dd>
+                </Fragment>
               ))}
-            </ul>
+            </dl>
+          </section>
+        ) : null}
+
+        {explainer ? (
+          <section className="mt-6 flex flex-col gap-2.5 rounded-2xl border border-rd-line bg-rd-card p-3.5">
+            {/* The authored library (spec item 6): its own card, the
+                small-caps label first, so it reads as a general guide and
+                never as a claim about this game. */}
+            <p className="m-0 font-rd text-[10px] font-semibold uppercase tracking-[0.14em] text-rd-ink-faint">{EXPLAINER_LABEL}</p>
+            <H2>{explainer.title}</H2>
+            {explainer.paragraphs.map((text) => (
+              <p key={text.slice(0, 48)} className="m-0 text-[15px] leading-[1.55] text-rd-ink-soft">{text}</p>
+            ))}
           </section>
         ) : null}
 

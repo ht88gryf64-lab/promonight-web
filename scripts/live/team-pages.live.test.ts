@@ -33,6 +33,14 @@
 //    2026-11-04: /api/share-card/ shipped Disallowed). ROBOTS_SOURCE=local
 //    checks the checkout's src/lib/robots-txt.ts instead of the served file,
 //    so a branch can be checked against production pages before it deploys.
+// 8. A live promo page whose themeKey has an explainer entry renders the
+//    "General guide" block (per-promo pages v2 content floor, 2026-11-07).
+//    The explainer files are read with fs at request time and reach the
+//    serverless bundle only through next.config.ts outputFileTracingIncludes;
+//    if they ever fall out, every page silently renders no guide, and this is
+//    what catches it. The candidates are far-dated pages; when all of them
+//    are gone the sitemap's promo pages are sampled instead, and at least one
+//    must carry the guide.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -356,4 +364,37 @@ test(`every page image on our domain is allowed by robots.txt for card fetchers 
   for (const [kind, paths] of Object.entries(sample)) assert.ok(paths.length > 0, `sampled ${kind} pages`);
   assert.ok(checked > 0, 'found images on our domain');
   assert.deepEqual(bad, [], `${bad.length} page images are disallowed:\n${[...new Set(bad)].slice(0, 20).join('\n')}`);
+});
+
+// ── 8. the explainer library reaches the deployed page ───────────────────────
+
+/** Live pages whose themeKey has a library entry (pride, star-wars,
+ *  fan-appreciation), chosen far out so the list stays valid; refresh it from
+ *  the data when they pass (scripts/audit-team-colors.ts shows the query
+ *  shape). A 404 here means the page is gone, not that the guide is. */
+const GUIDE_PAGES = [
+  '/mlb/san-francisco-giants/promos/pride-night',
+  '/mlb/san-francisco-giants/promos/star-wars-day',
+  '/nba/san-antonio-spurs/promos/fan-appreciation-night',
+];
+const GUIDE_LABEL = 'General guide';
+const GUIDE_TITLE_RE = /<h2 class="rd-display[^"]*">(?:<span[^>]*><\/span>)?What to expect /;
+
+test(`a promo page with an explainer match renders the General guide block (${HOST})`, async () => {
+  for (const path of GUIDE_PAGES) {
+    let html: string;
+    try {
+      html = await promoPage(path);
+    } catch (err) {
+      if (/^404 /.test(String((err as Error).message))) continue;
+      throw err;
+    }
+    assert.ok(html.includes(GUIDE_LABEL), `${path}: no "${GUIDE_LABEL}" block. The explainer files are not reaching the serverless bundle (next.config.ts outputFileTracingIncludes for the promo route), or the page lost its themeKey.`);
+    assert.match(html, GUIDE_TITLE_RE, `${path}: the guide's title`);
+    return;
+  }
+  // Every candidate is gone: sample the sitemap's promo pages, newest first.
+  const paths = (await sitemap()).filter((p) => PROMO_RE.test(p)).slice(-40).reverse();
+  const hits = await pool(paths, async (p) => ((await promoPage(p)).includes(GUIDE_LABEL) ? p : null));
+  assert.ok(hits.some(Boolean), `none of ${paths.length} sitemap promo pages carries a "${GUIDE_LABEL}" block; refresh GUIDE_PAGES, and check next.config.ts outputFileTracingIncludes`);
 });
