@@ -225,6 +225,12 @@ export function strictBobbleheadGiveaways<T extends Pick<Promo, 'type' | 'title'
 
 /** The apparel keyword behind /promos/jersey-giveaways, plural forms included. */
 export const APPAREL_RE = /\b(jersey|jerseys|cap|caps|hat|hats|jacket|jackets|shirt|shirts|hoodie|hoodies)\b/i;
+/** The item of a gate giveaway, read from its title: the explainer library
+ *  and the type icon set key on these (src/lib/promo-explainers.ts,
+ *  src/lib/promo-type-icons.ts). Plain module, client-safe. */
+export const JERSEY_RE = /\bjerseys?\b/i;
+export const HAT_RE = /\b(hats?|caps?|beanies?|visors?)\b/i;
+export const FIREWORKS_RE = /\bfireworks?\b/i;
 
 type HubRow = Pick<Promo, 'type' | 'title' | 'description'>;
 

@@ -4220,3 +4220,7 @@ and the CTA section above the image).
 **What happens.** From 2027-07-12 `cfbSeasonLabel()` names 2027, so every CFB title, H1, eyebrow and FAQ says 2027. The CFB game reads (`cfbGames`, the school pages, the rivalry pages and the hub) are not filtered to a season: if the 2027 schedules are not loaded by then, or the 2026 games are still stored beside them, a page titled 2027 can list 2026 games. The Rivalry Week bounds have their own alarm (season-gate.test.ts, from 2027-05-13).
 
 **The fix when it is picked up.** Filter the CFB game reads to `seasonOfDate('CFB', game.date)?.season === labeledSeason('CFB').season` (src/lib/seasons/season-window.ts), and check the 2027 schedule load before 2027-07-12.
+
+## 77. The hat glyph in the promo type icon set is weak at 16px (open follow-up, logged 2026-11-07)
+
+The side-profile cap in `src/lib/promo-type-icons.ts` reads at 24px and above but loses its bill at 16px, where it is a small arc with a tail. Redraw it when the icon set reaches the aggregators at 24px (spec Visuals 5); the rail is its only 16px consumer today.

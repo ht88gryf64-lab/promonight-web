@@ -23,7 +23,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import type { PromoType } from './types';
-import { BOBBLEHEAD_RE } from './promo-helpers';
+import { BOBBLEHEAD_RE, FIREWORKS_RE, HAT_RE, JERSEY_RE } from './promo-helpers';
 
 export interface PromoExplainerFaq {
   q: string;
@@ -137,10 +137,6 @@ export interface ExplainerSubject {
   title: string;
   ticketPackageRequired: boolean | null;
 }
-
-const JERSEY_RE = /\bjerseys?\b/i;
-const HAT_RE = /\b(hats?|caps?|beanies?|visors?)\b/i;
-const FIREWORKS_RE = /\bfireworks?\b/i;
 
 /** The library's type key for a row: the item of a gate giveaway (the title
  *  names it), fireworks on any kind of night, the special-ticket package,

@@ -245,6 +245,10 @@ export interface LinkedPromo {
   teamName: string;
   displayTime: string;
   displayOpponent: string;
+  /** For the type icon (src/lib/promo-type-icons.ts promoIconKey): the
+   *  pipeline's theme key and the special-ticket flag. */
+  themeKey: string | null;
+  ticketPackage: boolean;
 }
 
 /** The home game behind the page's primary date, as the games spine has it
@@ -270,6 +274,14 @@ export interface PromoPageGame {
   seasonLabel: string | null;
 }
 
+/** The season timeline (spec Visuals 4): the team's home games of the
+ *  primary date's season, in order, and the team's page-linked promos on
+ *  those dates. Null below three home games, so the bar is never a stub. */
+export interface PromoPageTimeline {
+  games: { date: string }[];
+  promos: { date: string; title: string; href: string; type: PromoType }[];
+}
+
 /** Other giveaways at the same building in the primary date's month, still
  *  to come, every pro tenant counted, this page's own rows and its same-date
  *  siblings left out. Null when none, so the line is not rendered. */
@@ -282,6 +294,8 @@ export interface PromoPageVenueGiveaways {
 export interface PromoPageContext {
   /** The home game behind the primary date, or null. */
   game: PromoPageGame | null;
+  /** The season timeline's data, or null below three home games. */
+  timeline: PromoPageTimeline | null;
   /** Other giveaways at the building in the month, or null. */
   venueGiveaways: PromoPageVenueGiveaways | null;
   /** The team's `venues` record (street address, coordinates for parking and hotels). */
@@ -305,7 +319,7 @@ export interface PromoPageContext {
   observedAt: string | null;
   /** Other promos on the same team and date(s), one per slug. */
   alsoAtGame: LinkedPromo[];
-  /** The team's next two upcoming promos under other slugs. */
+  /** The team's next five upcoming promos under other slugs (the rail). */
   nextTeamPromos: LinkedPromo[];
   /** The section 10 block: the same theme at other clubs (3 to 5), else the
    *  league's other clubs with the same kind of promo, else the league's other
@@ -321,7 +335,7 @@ export interface PromoPageContext {
   short: PromoShortVideo | null;
 }
 
-const link = (team: Team, r: Pick<PromoPageRow, 'pageSlug' | 'title' | 'date' | 'type' | 'displayTime' | 'displayOpponent'>): LinkedPromo => ({
+const link = (team: Team, r: Pick<PromoPageRow, 'pageSlug' | 'title' | 'date' | 'type' | 'displayTime' | 'displayOpponent'> & { themeKey?: string | null; ticketPackageRequired?: boolean | null }): LinkedPromo => ({
   href: promoPagePath(team.sportSlug, team.id, r.pageSlug),
   title: r.title,
   date: r.date,
@@ -330,6 +344,8 @@ const link = (team: Team, r: Pick<PromoPageRow, 'pageSlug' | 'title' | 'date' | 
   teamName: teamDisplayName(team),
   displayTime: r.displayTime,
   displayOpponent: r.displayOpponent,
+  themeKey: r.themeKey ?? null,
+  ticketPackage: r.ticketPackageRequired === true,
 });
 
 /** A row another page may link to: live, dated, named, with a slug, and not
@@ -460,6 +476,7 @@ export const loadPromoPageContext = cache(async (page: PromoPage, today: string)
   // home-schedule count (the team page's schedule list counts the regular
   // season only) and so is any game outside the primary date's season.
   let game: PromoPageGame | null = null;
+  let timeline: PromoPageTimeline | null = null;
   if (YMD_RE.test(primaryDate)) {
     const scheduled = (g: (typeof games)[number]) => g.homeTeamSlug === team.id && g.status !== 'postponed' && g.status !== 'canceled';
     const onDate = games.filter((g) => scheduled(g) && g.date === primaryDate);
@@ -469,6 +486,16 @@ export const loadPromoPageContext = cache(async (page: PromoPage, today: string)
     const awaySlugs = new Set(onDate.map((g) => g.awayTeamSlug));
     const opponent = awaySlugs.size === 1 ? teamById.get([...awaySlugs][0]) ?? null : null;
     const number = onDate.length ? homeSeason.findIndex((g) => g.date === primaryDate) + 1 : 0;
+    // The timeline: the season's home games as the bar, the team's linked
+    // rows on those dates as the dots. Nothing below three games.
+    if (homeSeason.length >= 3) {
+      const gameDates = new Set(homeSeason.map((g) => g.date));
+      const onBar = teamRows.filter((r) => linkable(r, team.league) && gameDates.has(r.date)).sort(byDate);
+      timeline = {
+        games: [...gameDates].sort().map((date) => ({ date })),
+        promos: onePerKey(onBar, (r) => `${r.date}|${r.pageSlug}`).map((r) => ({ date: r.date, title: r.title, href: promoPagePath(team.sportSlug, team.id, r.pageSlug), type: r.type })),
+      };
+    }
     if (onDate.length || zone) {
       game = {
         date: primaryDate,
@@ -528,7 +555,7 @@ export const loadPromoPageContext = cache(async (page: PromoPage, today: string)
   const alsoAtGame = onePerKey(others.filter((r) => pageDates.has(r.date)), (r) => r.pageSlug).map((r) => link(team, r));
   // The next two by date, after this page's own game(s): a same-date sibling
   // is already in "Also at this game", so it is not the next one.
-  const nextTeamPromos = onePerKey(others.filter((r) => r.date >= today && !pageDates.has(r.date)), (r) => r.pageSlug).slice(0, 2).map((r) => link(team, r));
+  const nextTeamPromos = onePerKey(others.filter((r) => r.date >= today && !pageDates.has(r.date)), (r) => r.pageSlug).slice(0, 5).map((r) => link(team, r));
 
   // Previous edition: the same base slug in an earlier season, bare or
   // carrying that season's suffix (the collision rule, promo-page-fields.js).
@@ -555,7 +582,7 @@ export const loadPromoPageContext = cache(async (page: PromoPage, today: string)
     const index = await getUpcomingPromoIndex(today);
     const toLink = (r: IndexedPromo): LinkedPromo | null => {
       const t = teamById.get(r.teamId);
-      return t ? link(t, { pageSlug: r.pageSlug, title: r.title, date: r.date, type: r.type, displayTime: '', displayOpponent: '' }) : null;
+      return t ? link(t, { pageSlug: r.pageSlug, title: r.title, date: r.date, type: r.type, displayTime: '', displayOpponent: '', themeKey: r.themeKey, ticketPackageRequired: r.ticketPackage }) : null;
     };
     const elsewhere = index.filter((r) => r.teamId !== team.id && !r.ticketPackage);
     const sameLeague = (r: IndexedPromo) => teamById.get(r.teamId)?.league === team.league;
@@ -584,6 +611,7 @@ export const loadPromoPageContext = cache(async (page: PromoPage, today: string)
 
   return {
     game,
+    timeline,
     venueGiveaways,
     venue,
     hub,
