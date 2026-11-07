@@ -41,6 +41,13 @@ failure modes and both runnable checks. Counting occurrences needs
 `grep -o <pattern> file | wc -l` — the served HTML is effectively one line, so
 `grep -c` reports 1 for "present" and hides the real count.
 
+**`npm run test:live` runs after every production deploy, no exceptions.** It
+is the live battery (sitemap-to-team-page links, the 950,000-byte team-page
+cap, meta descriptions, ads.txt, bot agents, nofollow, robots on images, the
+General guide tripwire). On 2026-11-07 a row-markup change took the Twins
+page 470 bytes over the cap and it was found only after the next deploy,
+because the battery was not run after the first one.
+
 ## Anything on a Firestore doc that reaches a client component is published
 
 A server component passing a doc to a client component serializes **every**
