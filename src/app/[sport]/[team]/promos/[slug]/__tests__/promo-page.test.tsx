@@ -322,8 +322,10 @@ test('tier 1 single-date NHL page: H1, the stored photo, the head, the schema an
   assert.match(h, /href="\/nhl\/minnesota-wild#promo-2026-10-29-blaze-orange-hat">Promos<\/a>/);
   assert.ok(!h.slice(h.indexOf('<header'), h.indexOf('</header>')).includes('<span class="block">vs Islanders</span>'), 'no repeated opponent line');
   assert.match(h, /<div class="[^"]*\bflex-wrap\b[^"]*"><a href="https:\/\/tracking\.spothero\.com[^"]*" class="[^"]*\bmin-w-\[104px\][^"]*"[^>]*aria-label="Reserve parking near Grand Casino Arena on SpotHero">Parking<\/a>/);
-  // Same-team cards: the opponent and the time, never the tile date.
-  assert.match(h, /<span class="block font-semibold">Hockey Fights Cancer Night<\/span><span class="block text-\[12px\] text-rd-ink-faint">vs Bruins · 7:00 PM<\/span>/);
+  // Same-team promos are the rail (step 3, 2026-11-07): a card per promo, the
+  // mini date tile, the type icon through the sprite, the name; never the
+  // opponent line and never the tile date twice.
+  assert.match(h, /<a role="listitem" class="[^"]*" href="\/nhl\/minnesota-wild\/promos\/hockey-fights-cancer-night">[\s\S]*?FRI NOV<\/span><span class="rd-numerals[^"]*">20<\/span>[\s\S]*?<use href="#pn-icon-theme-night"><\/use>[\s\S]*?Hockey Fights Cancer Night<\/span><\/a>/);
   assert.match(h, /Formerly Xcel Energy Center\./);
   assert.ok(!/Dallas Stars · Nov 15/.test(h), 'cross-team card subtitle never repeats the tile date');
   assert.match(h, /<img src="https:\/\/firebasestorage\.googleapis\.com\/v0\/b\/promonight\.firebasestorage\.app\/o\/promo-images%2Fc7057219198efd77\.png\?alt=media" alt="Blaze Orange Hat, the Minnesota Wild giveaway item"/);
@@ -355,9 +357,11 @@ test('tier 1 single-date NHL page: H1, the stored photo, the head, the schema an
   // Also at this game: Pride Night, never the special-ticket row.
   assert.match(h, /Also at this game/);
   assert.match(h, /href="\/nhl\/minnesota-wild\/promos\/pride-night"/);
-  // Next two: Nov 20 and Dec 5.
+  // The rail: the next five by date (Nov 20, Dec 5, Dec 18, Dec 20 here), one sprite on the page.
   assert.match(h, /href="\/nhl\/minnesota-wild\/promos\/hockey-fights-cancer-night"/);
   assert.match(h, /href="\/nhl\/minnesota-wild\/promos\/winter-beanie"/);
+  assert.equal((h.match(/role="listitem"/g) ?? []).length, 4, 'four rail cards');
+  assert.equal((h.match(/<symbol id="pn-icon-/g) ?? []).length, 11, 'the sprite, once');
   // No theme: the league's other giveaways coming up (3), in the section 10 slot.
   assert.match(h, /More NHL giveaways coming up/);
   assert.match(h, /href="\/nhl\/dallas-stars\/promos\/esa-lindell-bobblehead"/);
@@ -1015,4 +1019,36 @@ test('about (ruling 2026-11-07): no description and no package, no About block; 
   const puck = await render('nhl', 'pittsburgh-penguins', 'puck-light');
   assert.ok(!/About this /.test(puck.h));
   assert.match(puck.h.slice(puck.h.indexOf('<header'), puck.h.indexOf('</header>')), /<p class="m-0 font-rd text-\[12px\] text-rd-ink-faint">Presented by Duquesne Light\.<\/p><p class="m-0 font-rd text-\[12px\] text-rd-ink-faint">Source: /);
+});
+
+test('step 3: the rail replaces the same-team list (nothing below two cards), the timeline sits in This game and needs three home games', async () => {
+  process.env.PROMO_PAGES_LIVE = 'true';
+  // The Wild: four upcoming others -> a rail; three home games on the spine -> a timeline with a dot per linked promo on those dates.
+  const blaze = await render('nhl', 'minnesota-wild', 'blaze-orange-hat');
+  assert.equal((blaze.h.match(/role="listitem"/g) ?? []).length, 4);
+  assert.ok(!/<span class="block font-semibold">Hockey Fights Cancer Night<\/span>/.test(blaze.h), 'no PromoCard for the same team');
+  const thisGame = blaze.h.slice(blaze.h.indexOf('>This game</h2>'), blaze.h.indexOf('</section>', blaze.h.indexOf('>This game</h2>')));
+  assert.match(thisGame, /<svg viewBox="0 0 600 40"[^>]*aria-label="Minnesota Wild home schedule, 3 games, 2 promos">/);
+  assert.equal((thisGame.match(/<g role="button"/g) ?? []).length, 2, 'the hat and Pride Night on Oct 29; nothing on Oct 20 or Dec 28');
+  assert.equal((thisGame.match(/<circle cx="[0-9.]+" cy="22" r="9" fill="none" stroke="var\(--pp-accent\)"/g) ?? []).length, 1, 'this game ringed, once');
+  assert.equal((thisGame.match(/<circle [^>]*fill="var\(--color-rd-ink\)" fill-opacity="0\.[47]"/g) ?? []).length, 2, 'every dot the muted ink');
+  assert.ok(!/#(f97316|7c3aed|16a34a|2563eb)/i.test(thisGame), 'no category colour on the bar');
+  assert.match(thisGame, /Oct 29 · <\/span><span class="font-semibold text-rd-ink">Blaze Orange Hat<\/span><span class="text-rd-ink-faint"> · home game 2 of 3<\/span>/);
+  // The Stars: one game on the spine -> no timeline; several other upcoming promos -> a rail.
+  const stars = await render('nhl', 'dallas-stars', 'esa-lindell-bobblehead');
+  assert.ok(!stars.h.includes('home schedule,'), 'no timeline below three home games');
+  assert.ok((stars.h.match(/role="listitem"/g) ?? []).length >= 2, 'a rail');
+  // The gray club: its one promo has no siblings and no spine -> no rail, no card, no timeline, the links row still there.
+  const gray = await render('nhl', 'gray-club', 'gray-towel');
+  assert.equal((gray.h.match(/role="listitem"/g) ?? []).length, 0, 'no rail below two cards');
+  assert.ok(!gray.h.includes('home schedule,'));
+  assert.match(gray.h, /All Gray Club promos<\/a>/);
+  // Every rail card is a plain anchor: no role=button, no nested control.
+  let cards = 0;
+  for (const m of blaze.h.matchAll(/<a role="listitem"[^>]*>([\s\S]*?)<\/a>/g)) {
+    cards++;
+    assert.ok(!/<(button|a) /.test(m[1]), 'nothing interactive inside a card');
+  }
+  assert.equal(cards, 4);
+  assert.ok(!/role="listitem"[^>]*onclick/i.test(blaze.h));
 });

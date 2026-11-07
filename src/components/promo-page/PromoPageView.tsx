@@ -17,6 +17,10 @@ import type { LinkedPromo, PromoPage, PromoPageContext } from '@/lib/promo-pages
 import { EXPLAINER_LABEL, explainerFor } from '@/lib/promo-explainers';
 import { promoPageTheme, themeStyle } from '@/lib/promo-page-theme';
 import { dateTileState, ymdInZone, type DateTileState } from '@/lib/promo-date-tile';
+import { promoRailItems } from '@/lib/promo-rail';
+import { PromoRail } from '@/components/promo-rail/PromoRail';
+import { PromoTypeSprite } from '@/components/promo-icons/PromoTypeIcon';
+import { SeasonTimeline } from '@/components/promo-page/SeasonTimeline';
 import type { ImageSize } from '@/lib/image-dimensions';
 import {
   SITE_URL,
@@ -420,6 +424,11 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
   const foldedAllPlayed = foldedRows.length > 0 && foldedRows.every((r) => r.date < today);
   const foldLabel = `+${foldedRows.length} ${foldedAllPlayed ? 'earlier' : 'more'} date${foldedRows.length === 1 ? '' : 's'}`;
 
+  // THE RAIL (spec Visuals 3): the team's next promos as cards, through the
+  // one shaper the email digest uses. Below two cards the shaper returns
+  // nothing and the section keeps a single card.
+  const railItems = promoRailItems(ctx.nextTeamPromos.map((p) => ({ href: p.href, title: p.title, date: p.date, type: p.type, themeKey: p.themeKey, ticketPackage: p.ticketPackage })));
+
   // THIS GAME (spec item 7). Every row is a stored field, a stored game or a
   // count over stored rows, and a row without data is not a row. The other
   // promos on the date moved in here from their own section ("Also at this
@@ -741,6 +750,9 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
                 </Fragment>
               ))}
             </dl>
+            {/* The season timeline (spec Visuals 4), derived from the spine:
+                null below three home games, so nothing renders. */}
+            {ctx.timeline ? <SeasonTimeline games={ctx.timeline.games} promos={ctx.timeline.promos} thisDate={primary.date} thisHref={promoPagePath(team.sportSlug, team.id, page.slug)} teamName={teamName} /> : null}
           </section>
         ) : null}
 
@@ -785,9 +797,14 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
 
         <section className="mt-6 flex flex-col gap-2.5">
           <H2>{`More ${teamDisplayName(team)} ${ctx.nextTeamPromos.length && ctx.nextTeamPromos.every((p) => p.type === 'giveaway') ? 'giveaways' : 'promos'}`}</H2>
-          {ctx.nextTeamPromos.map((p) => (
-            <PromoCard key={p.href} p={p} showTeam={false} />
-          ))}
+          {/* The sprite once per page, inside this section (never a direct
+              child of the article: that would be an ad anchor). */}
+          <PromoTypeSprite />
+          {railItems.length ? (
+            <PromoRail items={railItems} label={`More ${teamDisplayName(team)} promos`} />
+          ) : (
+            ctx.nextTeamPromos.slice(0, 1).map((p) => <PromoCard key={p.href} p={p} showTeam={false} />)
+          )}
           <p className="m-0 flex flex-wrap gap-x-4 gap-y-1 font-rd text-[14px] font-medium">
             <Link href={teamHref} className="text-rd-red no-underline hover:underline">{`All ${teamName} promos`}</Link>
             <Link href={aggregator.href} className="text-rd-red no-underline hover:underline">{aggregator.label}</Link>
