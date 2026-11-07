@@ -493,37 +493,41 @@ export function PromoPageView({ page, ctx, today, imageSize }: PromoPageViewProp
           </section>
         ) : null}
 
-        {/* relative, and the clipping moved from the figure to the image
+        {/* Tier 1 photos only (docs/per-promo-pages-v2-spec.md, 2026-11-07).
+            The generated card (tier 3, and rows with no tier) left the body:
+            it restated the H1 in a picture. It stays the Event schema image
+            (imageUrl, above) and the og:image stays the share card, both
+            unchanged. Without a photo there is no figure and no image share
+            icon; the row Share beside Get tickets remains.
+
+            relative, and the clipping moved from the figure to the image
             (2026-11-03): the share icon sits on the image's corner and its
             desktop popover must not be clipped by the figure. */}
-        <figure className="relative m-0 mt-4 rounded-2xl border border-rd-line bg-rd-card">
-          {/* object-contain for BOTH kinds (hotfix 2026-10-30): the generated
-              card is 1200x630 and the box is 390x220 on a phone, so object-cover
-              cropped its edges and cut the team wordmark; contained on a cream
-              ground, the whole card shows with a thin band above and below.
-              It is the page's largest paint (follow-up 2026-10-31): never lazy,
-              fetched at high priority, and its width and height are the
-              source's (1200x630 for the card, the stored photo's own size
-              read by the route), so the browser knows its shape up front. */}
-          {/* eslint-disable-next-line @next/next/no-img-element -- the tier 1 photo is a stored object whose dimensions are not on the row, and the card is served by our own route; next/image would add a second request and a remote-pattern entry for nothing. */}
-          <img
-            src={image.url}
-            alt={image.alt}
-            width={image.width ?? undefined}
-            height={image.height ?? undefined}
-            loading="eager"
-            fetchPriority="high"
-            decoding="async"
-            className={`block h-[220px] w-full object-contain ${image.kind === 'photo' ? 'rounded-t-[15px] bg-[#ebe4d6]' : 'rounded-[15px] bg-rd-cream'}`}
-          />
-          {!removed ? <PromoShareImageButton {...shareProps} /> : null}
-          {image.kind === 'photo' ? (
+        {image.kind === 'photo' ? (
+          <figure className="relative m-0 mt-4 rounded-2xl border border-rd-line bg-rd-card">
+            {/* object-contain on a cream ground (hotfix 2026-10-30), so a
+                photo of any shape shows whole. It is the page's largest paint
+                (follow-up 2026-10-31): never lazy, fetched at high priority,
+                and its width and height are the stored photo's own, read by
+                the route, so the browser knows its shape up front. */}
+            {/* eslint-disable-next-line @next/next/no-img-element -- the tier 1 photo is a stored object whose dimensions are not on the row; next/image would add a second request and a remote-pattern entry for nothing. */}
+            <img
+              src={image.url}
+              alt={image.alt}
+              width={image.width ?? undefined}
+              height={image.height ?? undefined}
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
+              className="block h-[220px] w-full rounded-t-[15px] bg-[#ebe4d6] object-contain"
+            />
+            {!removed ? <PromoShareImageButton {...shareProps} /> : null}
             <figcaption className="px-3 py-2 font-rd text-[11px] text-rd-ink-faint">
               <span>{`${image.credit ?? `Image: ${teamName}`}${image.sourceUrl ? ' · ' : ''}`}</span>
               {image.sourceUrl ? <a href={image.sourceUrl} target="_blank" rel="noopener nofollow" className="text-rd-red">source</a> : null}
             </figcaption>
-          ) : null}
-        </figure>
+          </figure>
+        ) : null}
 
         {/* The promo's Short (the social bridge, 2026-11-05): click to load,
             fixed size, its own direct child of the article under the image,

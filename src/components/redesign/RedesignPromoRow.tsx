@@ -1,8 +1,8 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
 import Link from 'next/link';
-import { IconFlame } from '@tabler/icons-react';
+import { IconFlame, IconTicket } from '@tabler/icons-react';
 import { ShareButton, formatShareDate, type ShareItem } from '@/components/share';
 import { categoryForPromo } from './categories';
 import type { Promo, Team } from '@/lib/types';
@@ -14,14 +14,22 @@ import { PromoPageLink } from '@/components/promo-page-link';
 import type { AnalyticsSurface } from '@/lib/analytics';
 
 // One light-theme promo row (used by the gate-on PromoList for both the
-// server-rendered visible rows and the client lazy-mounted hidden rows). Keeps
-// the promo_card ShareButton so share_initiated is preserved on every rendered
+// server-rendered visible rows and the client lazy-mounted hidden rows, and
+// reused as-is by /promos/today and the venue hub in `href` mode). Keeps the
+// promo_card ShareButton so share_initiated is preserved on every rendered
 // row.
 //
-// When `interactive` (the upcoming-promos list, wired with a `team`), the whole
-// row opens the shared game modal — same body the calendar uses inline. The
-// ShareButton stops propagation, so it never opens the modal. Non-interactive
-// rows (completed list) render exactly as before.
+// THE CLICK RULE (docs/per-promo-pages-v2-spec.md, Prerequisite, 2026-11-07):
+// the row navigates; the ticket modal opens only from the explicit Tickets
+// button. The date block and the body (category, title, description,
+// opponent) are the children of ONE Link to the promo's page, with no onClick
+// of their own, so a tap anywhere a thumb lands is a navigation, for a human
+// exactly as for a crawler. The controls that must not navigate (Share, the
+// eBay resale link, Tickets) are siblings of that Link, never its children: an
+// <a> or a <button> may not nest in an <a>. Before this the row was a
+// role=button whose onClick opened the modal, with only the title text itself
+// an anchor, which is why team page to promo page produced no pageviews
+// (src/components/redesign/__tests__/promo-row-click.test.tsx holds the rule).
 export type PromoRowShare = {
   teamName: string;
   teamSlug: string;
@@ -38,6 +46,9 @@ function formatPromoDate(dateStr: string): { day: string; weekday: string; month
     month: date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
   };
 }
+
+const LINK_CLASS =
+  'flex gap-4 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rd-red focus-visible:ring-offset-2';
 
 export function RedesignPromoRow({
   promo,
@@ -57,31 +68,32 @@ export function RedesignPromoRow({
   share: PromoRowShare;
   completed?: boolean;
   /** Optional trailing CTA (e.g. the eBay resale link on lifted completed
-   *  bobblehead rows). Rendered after the opponent line; undefined leaves the
-   *  row byte-identical to before the slot existed. */
+   *  bobblehead rows). Rendered under the body, outside the row's link (it is
+   *  an anchor of its own); undefined adds nothing. */
   resaleSlot?: ReactNode;
-  /** Full team object — required for the modal opener (the shared body's
-   *  ticket CTA). Present only on the interactive upcoming rows. */
+  /** Full team object — required for the Tickets button (the shared modal
+   *  body's ticket CTA). Present only on the interactive upcoming rows. */
   team?: Team;
   /** Resolved home-game context(s) for this row's date; null/absent → the modal
    *  renders the legacy promo body (game-less leagues / no home game). */
   contexts?: GameContext[] | null;
-  /** When true (and `team` present), the whole row opens the shared game modal. */
+  /** When true (and `team` present), the row carries the Tickets button that
+   *  opens the shared game modal. The row body never opens it. */
   interactive?: boolean;
   surface?: UpcomingPromoSurface;
   /** DOM id for deep-linking (e.g. "promo-2026-07-18-slider-bobblehead"). When a
    *  /promos/today card links to /[sport]/[team]#promo-…, the arrival highlighter
    *  scrolls to and flashes this row. Undefined leaves the row id-less as before. */
   anchorId?: string;
-  /** When set, the whole row becomes a link to this href via a stretched
-   *  pseudo-overlay (used by /promos/today to deep-link each card to its team
-   *  page promo anchor). Takes precedence over `interactive` (no modal). The
-   *  ShareButton stays above the overlay, so sharing still works; any appended
-   *  CTA row is rendered outside the row and is unaffected. */
+  /** When set, the row links here instead of to the promo's page (used by
+   *  /promos/today and the venue hub, which pass the page href when the promo
+   *  has one and their team-page anchor fallback otherwise). The ShareButton
+   *  stays outside the link, so sharing still works; any appended CTA row is
+   *  rendered outside the row and is unaffected. */
   href?: string;
-  /** The surface promo_link_click reports when the title (or, in `href` mode,
-   *  the overlay) leads to the promo's own page (Phase 3c). Defaults to
-   *  `surface`, the team-page list; the cross-team hosts name their own. */
+  /** The surface promo_link_click reports when the row leads to the promo's
+   *  own page (Phase 3c). Defaults to `surface`, the team-page list; the
+   *  cross-team hosts name their own. */
   linkSurface?: AnalyticsSurface;
   /** Ad-placement item type, supplied by the host page. Only the hosts inside
    * the selector-hook scope pass it (team page promo list, /promos/today), so
@@ -109,90 +121,33 @@ export function RedesignPromoRow({
     primaryColor: share.primaryColor ?? null,
   };
 
-  // `href` (deep-link) takes precedence over the modal: a linked row navigates
-  // instead of opening the game modal.
-  const openable = interactive && !!team && !href;
-  const open = () => {
-    if (team) openModal({ promo: { ...promo, team }, contexts: contexts ?? null, surface });
-  };
-
   // The promo's own page (Phase 3c), through the one helper. Null while the
-  // flag is off or the row may not be linked, and then nothing below changes.
-  // In `href` mode the host passes the same value as `href` (or its team
-  // anchor fallback), so the overlay is the page link; otherwise the title is.
+  // flag is off or the row may not be linked.
   const pageHref = promoPageHref(promo, { id: share.teamSlug, sportSlug: share.sport });
-  const overlayIsPage = !!href && href === pageHref;
-  const titleIsPage = !href && !!pageHref;
+  // Where the row goes: the host's `href` when it passes one, else the page.
+  // Null leaves the row inert: nowhere to go, and a body tap never opens the
+  // modal either way.
+  const linkHref = href ?? pageHref;
+  const linkIsPage = !!linkHref && linkHref === pageHref;
   const clickSurface: AnalyticsSurface = linkSurface ?? surface;
   const promoKey = synthPromoId(share.teamSlug, promo);
 
-  const interactiveProps = openable
-    ? {
-        role: 'button' as const,
-        tabIndex: 0,
-        onClick: open,
-        onKeyDown: (e: React.KeyboardEvent) => {
-          // Keydowns from the title link bubble here; Enter on it must follow
-          // the link, not open the modal (LightHomePromoCard's guard).
-          if (e.target !== e.currentTarget) return;
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            open();
-          }
-        },
-      }
-    : {};
+  // The Tickets button: the ONE opener of the shared game modal, on the
+  // interactive upcoming rows (wired with a `team`). It is a sibling of the
+  // row's link, so it stops nothing of the row's own; stopPropagation keeps a
+  // host wrapper's click handler (VenueHubPromoCard counts anchor taps from
+  // its wrapper) from reading a Tickets tap as a row tap.
+  const showTickets = interactive && !!team;
+  const openTickets = (e: MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (team) openModal({ promo: { ...promo, team }, contexts: contexts ?? null, surface });
+  };
 
-  return (
-    <div
-      {...interactiveProps}
-      id={anchorId}
-      data-ad-item={adItem}
-      className={[
-        'group relative flex scroll-mt-24 gap-4 rounded-2xl border border-rd-line bg-rd-card p-4 transition-colors md:p-5',
-        // No opacity on completed rows. The completed state is already
-        // signalled three ways: position under its own heading, an explicit
-        // Completed chip, and the muted tokens. The fade was the only one that
-        // cost contrast and the only one not machine-readable, and it dragged
-        // the whole row under AA: body 2.92:1, meta 1.89:1, and the Completed
-        // chip itself 1.89:1, which is the element carrying the meaning.
-        completed ? '' : 'hover:border-rd-line-strong',
-        openable ? 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rd-red focus-visible:ring-offset-2' : '',
-        href ? 'cursor-pointer' : '',
-      ]
-        .filter(Boolean)
-        .join(' ')}
-      style={{ borderLeftWidth: '3px', borderLeftColor: color }}
-    >
-      {/* Stretched deep-link overlay. Positioned first in DOM so the ShareButton
-          (a later positioned sibling) paints above it and stays clickable; the
-          static row content sits below it, so a body tap navigates. */}
-      {href && overlayIsPage ? (
-        <PromoPageLink
-          href={href}
-          surface={clickSurface}
-          teamSlug={share.teamSlug}
-          promoId={promoKey}
-          className="absolute inset-0 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rd-red focus-visible:ring-offset-2"
-        >
-          {/* The promo name as the anchor text (the inbound-link rule), read
-              by crawlers and by assistive tech alike; visually the overlay
-              stays empty. */}
-          <span className="sr-only">{promo.title}</span>
-        </PromoPageLink>
-      ) : href ? (
-        <Link
-          href={href}
-          aria-label={promo.title}
-          className="absolute inset-0 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rd-red focus-visible:ring-offset-2"
-        />
-      ) : null}
-      <ShareButton
-        item={shareItem}
-        placement="promo_card"
-        className="absolute right-2.5 top-2.5 inline-flex h-8 w-8 items-center justify-center rounded-full text-rd-ink-decor transition-colors hover:bg-rd-cream hover:text-rd-ink active:bg-rd-line"
-        label={`Share ${promo.title}`}
-      />
+  // The link's children: the date block and the body. Strings and glyphs
+  // only, no handlers, no controls.
+  const content = (
+    <>
       <div className="w-14 flex-shrink-0 text-center">
         <div className="font-rd text-[10px] uppercase tracking-[0.1em] text-rd-ink-faint">{month}</div>
         <div className="rd-numerals text-3xl leading-none text-rd-ink">{day}</div>
@@ -224,24 +179,11 @@ export function RedesignPromoRow({
             <span className="font-rd text-[10px] text-rd-ink-faint">{displayTime}</span>
           )}
         </div>
-        {titleIsPage ? (
-          <div className="text-sm font-semibold text-rd-ink md:text-base">
-            {/* The title is the link (anchor text = the promo name); the
-                click stops here so the row's modal does not open under it. */}
-            <PromoPageLink
-              href={pageHref}
-              surface={clickSurface}
-              teamSlug={share.teamSlug}
-              promoId={promoKey}
-              onClick={(e) => e.stopPropagation()}
-              className="transition-colors hover:text-rd-red focus-visible:outline-none focus-visible:underline"
-            >
-              {promo.title}
-            </PromoPageLink>
-          </div>
-        ) : (
-          <div className="text-sm font-semibold text-rd-ink md:text-base">{promo.title}</div>
-        )}
+        {/* The title reddens on hover of the whole row, since the whole row is
+            the link (LightHomePromoCard's pattern). */}
+        <div className={`text-sm font-semibold text-rd-ink md:text-base ${linkHref ? 'transition-colors group-hover:text-rd-red' : ''}`}>
+          {promo.title}
+        </div>
         {promo.description && (
           <p className="mt-1 text-xs text-rd-ink-soft md:text-sm">{promo.description}</p>
         )}
@@ -250,8 +192,68 @@ export function RedesignPromoRow({
             vs {displayOpponent}
           </div>
         )}
-        {resaleSlot && <div>{resaleSlot}</div>}
       </div>
+    </>
+  );
+
+  return (
+    <div
+      id={anchorId}
+      data-ad-item={adItem}
+      className={[
+        'group relative scroll-mt-24 rounded-2xl border border-rd-line bg-rd-card p-4 transition-colors md:p-5',
+        // No opacity on completed rows. The completed state is already
+        // signalled three ways: position under its own heading, an explicit
+        // Completed chip, and the muted tokens. The fade was the only one that
+        // cost contrast and the only one not machine-readable, and it dragged
+        // the whole row under AA: body 2.92:1, meta 1.89:1, and the Completed
+        // chip itself 1.89:1, which is the element carrying the meaning.
+        completed ? '' : 'hover:border-rd-line-strong',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      style={{ borderLeftWidth: '3px', borderLeftColor: color }}
+    >
+      {linkHref && linkIsPage ? (
+        // The promo name is inside the anchor (the inbound-link rule), with
+        // the date and the rest of the row beside it.
+        <PromoPageLink href={linkHref} surface={clickSurface} teamSlug={share.teamSlug} promoId={promoKey} className={LINK_CLASS}>
+          {content}
+        </PromoPageLink>
+      ) : linkHref ? (
+        <Link href={linkHref} className={LINK_CLASS}>
+          {content}
+        </Link>
+      ) : (
+        <div className="flex gap-4">{content}</div>
+      )}
+
+      {/* A positioned sibling of the link, so it paints above it and a tap on
+          it is never a tap on the row. Its own handler stops propagation. */}
+      <ShareButton
+        item={shareItem}
+        placement="promo_card"
+        className="absolute right-2.5 top-2.5 inline-flex h-8 w-8 items-center justify-center rounded-full text-rd-ink-decor transition-colors hover:bg-rd-cream hover:text-rd-ink active:bg-rd-line"
+        label={`Share ${promo.title}`}
+      />
+
+      {/* Under the body, aligned with it (the date column is w-14 + gap-4 =
+          72px): the controls that are anchors or buttons of their own. */}
+      {(resaleSlot || showTickets) && (
+        <div className="mt-2 flex flex-wrap items-center gap-2 pl-[72px]">
+          {resaleSlot}
+          {showTickets && (
+            <button
+              type="button"
+              onClick={openTickets}
+              className="inline-flex items-center gap-1 rounded-full border border-rd-line bg-rd-card px-2.5 py-1 font-rd text-[11px] font-semibold uppercase tracking-[0.08em] text-rd-ink-soft transition-colors hover:border-rd-line-strong hover:text-rd-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rd-red focus-visible:ring-offset-2"
+            >
+              <IconTicket size={13} stroke={2} aria-hidden />
+              Tickets
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

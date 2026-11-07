@@ -429,7 +429,9 @@ test('the card stamp is the page stamp: the newest row under the slug, tombstone
   assert.equal(card!.updatedAt, '2026-10-31T10:00:00.000Z');
   assert.deepEqual(card!.seriesDates, ['2026-10-29', '2026-11-18', '2026-12-11'], 'live dates only');
   const { h } = await render('nhl', 'detroit-red-wings', 'original-six-matchup');
-  assert.ok(h.includes(`/api/promo-card/o1?team=detroit-red-wings&amp;v=${Date.parse('2026-10-31T10:00:00.000Z')}"`), 'the page keys the card on the same stamp');
+  // The card left the body (v2 prerequisite, 2026-11-07); the Event schema still carries it, on the same stamp.
+  const events = jsonLd(h).filter((x) => x['@type'] === 'Event');
+  assert.ok(events.length > 0 && events.every((e) => JSON.stringify(e.image).includes(`/api/promo-card/o1?team=detroit-red-wings&v=${Date.parse('2026-10-31T10:00:00.000Z')}`)), 'the Event schema keys the card on the same stamp');
 });
 
 test('multi-date series: a dates list in place of the game line, one Event per date, the season in the title, dateModified the latest row', async () => {
@@ -439,8 +441,11 @@ test('multi-date series: a dates list in place of the game line, one Event per d
   for (const d of ['Thursday, Oct 29, 2026', 'Wednesday, Nov 18, 2026', 'Friday, Dec 11, 2026']) assert.ok(h.includes(d), d);
   assert.ok(!h.includes('Detroit Red Wings vs Blackhawks</p>'), 'no single game line');
   assert.equal((h.slice(h.indexOf('<header'), h.indexOf('</header>')).match(/<li /g) ?? []).length, 3, 'three dates in the header');
-  // The card is keyed on the page's latest stamp (the tombstoned o4, 2026-10-31T10:00Z), not the primary row's.
-  assert.match(h, /<img src="\/api\/promo-card\/o1\?team=detroit-red-wings&amp;v=1793440800000" alt="Original Six Matchup: Detroit Red Wings, Oct 29, 2026" width="1200" height="630" loading="eager" fetchPriority="high" decoding="async"/);
+  // Tier 3 (v2 prerequisite, 2026-11-07): the generated card is NOT in the body, so no image block at all;
+  // it stays the Event image, keyed on the page's latest stamp (the tombstoned o4, 2026-10-31T10:00Z), not the primary row's.
+  assert.ok(!h.includes('<figure'), 'no image block without a tier 1 photo');
+  assert.ok(!h.includes('/api/promo-card/o1?team=detroit-red-wings&amp;v='), 'no card <img> in the body');
+  for (const e of jsonLd(h).filter((x) => x['@type'] === 'Event')) assert.ok(JSON.stringify(e.image).includes('/api/promo-card/o1?team=detroit-red-wings&v=1793440800000'), 'Event image is the card on the page stamp');
   // The title cascade (ruling 2026-10-30): with the season the bare title is
   // 48, 61 rendered, so the full name alone is the shape taken.
   assert.equal(meta.title, 'Original Six Matchup | Detroit Red Wings');
@@ -483,7 +488,9 @@ test('tombstoned before its date: the removed page, indexable, cancelled in the 
   assert.match(h, /Removed from the Minnesota Wild schedule on Oct 5, 2026\./);
   assert.match(h, />Removed</);
   assert.ok(!h.includes('Get tickets'), 'no ticket CTA on a removed page');
-  assert.match(h, /<img src="\/api\/promo-card\/a5\?team=minnesota-wild&amp;v=/);
+  // No tier 1 photo, so no image block (v2 prerequisite); the card stays the schema image.
+  assert.ok(!h.includes('<figure'), 'no image block on a removed page without a photo');
+  assert.ok(JSON.stringify(jsonLd(h)).includes('/api/promo-card/a5?team=minnesota-wild&v='), 'the card stays in the schema');
   assert.match(h, /First 5,000 fans receive a poster\./);
   assert.equal(meta.robots, undefined);
   assert.equal(meta.description, 'Removed from the Minnesota Wild schedule: Removed Future Poster vs Islanders, Nov 30, 2026 at Grand Casino Arena. First 5,000 fans receive a poster.');
@@ -603,14 +610,16 @@ async function teamPageHtml(teamId: string): Promise<{ html: string; upcoming: n
 test('share (2026-11-03): the share card on og:image and twitter:image on every variant; Share beside Get tickets and on the image; no subId2 in served HTML; Impact links carry subId1 + subId3', async () => {
   process.env.PROMO_PAGES_LIVE = 'true';
   const CARD = /^https:\/\/www\.getpromonight\.com\/api\/share-card\/[A-Za-z0-9_-]+\?team=[a-z0-9-]+&v=\d+$/;
-  const variants: [string, string, string, 'live' | 'removed'][] = [
-    ['nhl', 'minnesota-wild', 'blaze-orange-hat', 'live'], // tier 1, single date
-    ['nhl', 'detroit-red-wings', 'original-six-matchup', 'live'], // series, tier 3
-    ['nhl', 'pittsburgh-penguins', 'community-night', 'live'], // series with played dates
-    ['nhl', 'minnesota-wild', 'removed-future-poster', 'removed'], // tombstoned before its date
-    ['nhl', 'minnesota-wild', 'tombstoned-past-hat', 'removed'], // tombstoned and played
+  // The fifth column: whether the body carries the tier 1 photo (v2
+  // prerequisite, 2026-11-07: without one there is no figure and no image icon).
+  const variants: [string, string, string, 'live' | 'removed', 'photo' | 'none'][] = [
+    ['nhl', 'minnesota-wild', 'blaze-orange-hat', 'live', 'photo'], // tier 1, single date
+    ['nhl', 'detroit-red-wings', 'original-six-matchup', 'live', 'none'], // series, tier 3
+    ['nhl', 'pittsburgh-penguins', 'community-night', 'live', 'none'], // series with played dates
+    ['nhl', 'minnesota-wild', 'removed-future-poster', 'removed', 'none'], // tombstoned before its date
+    ['nhl', 'minnesota-wild', 'tombstoned-past-hat', 'removed', 'none'], // tombstoned and played
   ];
-  for (const [sport, team, slug, kind] of variants) {
+  for (const [sport, team, slug, kind, body] of variants) {
     const { h, meta } = await render(sport, team, slug);
     const og = meta.openGraph as any;
     const tw = meta.twitter as any;
@@ -638,12 +647,16 @@ test('share (2026-11-03): the share card on og:image and twitter:image on every 
     if (kind === 'removed') {
       assert.equal(shares, 0, `${slug}: no Share on a removed page`);
     } else {
-      assert.equal(shares, 2, `${slug}: the row Share and the image icon`);
+      assert.equal(shares, body === 'photo' ? 2 : 1, `${slug}: the row Share${body === 'photo' ? ' and the image icon' : ' only (no image block without a tier 1 photo)'}`);
       // Tickets and Share on one row, tickets first and filling the width.
       assert.match(h, /<div class="flex gap-2"><a href="[^"]*"[^>]*class="flex h-\[52px\] min-w-0 flex-1 [^"]*bg-rd-red[^"]*"[^>]*>Get tickets<\/a><div class="relative shrink-0"><button type="button" aria-label="Share this promo"[^>]*class="flex h-\[52px\] [^"]*bg-white[^"]*text-rd-ink shadow-\[inset_0_0_0_1\.5px_var\(--color-rd-ink\)\][^"]*">/, `${slug}: the tickets + Share row (1.5px ink outline as an inset shadow)`);
       assert.match(h, /<span class="max-\[339px\]:sr-only">Share<\/span>/, `${slug}: the label hides at very narrow widths`);
-      // The image icon: absolutely placed in the (now relative) figure.
-      assert.match(h, /<figure class="relative [^"]*">[\s\S]*?<div class="absolute right-2\.5 top-2\.5 z-10"><button type="button" aria-label="Share this promo"[^>]*class="flex h-10 w-10 [^"]*bg-white text-rd-ink shadow-\[inset_0_0_0_1\.5px_var\(--color-rd-ink\)/, `${slug}: the image icon`);
+      // The image icon: absolutely placed in the (now relative) figure, on a tier 1 photo only.
+      if (body === 'photo') {
+        assert.match(h, /<figure class="relative [^"]*">[\s\S]*?<div class="absolute right-2\.5 top-2\.5 z-10"><button type="button" aria-label="Share this promo"[^>]*class="flex h-10 w-10 [^"]*bg-white text-rd-ink shadow-\[inset_0_0_0_1\.5px_var\(--color-rd-ink\)/, `${slug}: the image icon`);
+      } else {
+        assert.ok(!h.includes('<figure'), `${slug}: no image block without a tier 1 photo`);
+      }
       // Share is never brand red, and nothing about it is fixed or sticky.
       const shareMarkup = h.match(/<button type="button" aria-label="Share this promo"[^>]*>/g) ?? [];
       for (const b of shareMarkup) assert.ok(!/rd-red|\bfixed\b|\bsticky\b/.test(b), `${slug}: ${b}`);

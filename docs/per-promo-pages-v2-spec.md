@@ -1,0 +1,110 @@
+# Per-promo pages v2: content depth
+
+Decided 2026-11-07. Builds on promo-pipeline/docs/per-promo-pages-spec.md (v1, live 2026-10-30). v1 proved the page type indexes and ranks; v2 gives the page enough on it to deserve the position and to earn a second pageview. First 10 explainer entries approved 2026-11-07, files in content/promo-explainers/.
+
+## The problem (observed 2026-11-07, Minnesota United Fan Appreciation)
+
+Above the fold: H1, game line, CTAs. Below: a generated card restating the H1, a sponsor tile restating the About, an About that is one sourced sentence. Three screens, six distinct words. Nothing to read, nothing to click except out.
+
+## Prerequisite: fix row-click interception (ship first, separately)
+
+Team-page schedule rows carried the correct promoPageHref in markup, but only the title text was an anchor; the row itself was a role="button" whose onClick opened the shared ticket modal. The two homepage card components had the identical pattern. Crawlers got a link, a thumb anywhere but the title text got a modal, team page to promo page produced near-zero pageviews. (Earlier draft blamed a GameExpand ssr:false handler; that was wrong, the mechanism above is what shipped. Fixed 2026-11-07: RedesignPromoRow, LightHomePromoCard, TicketStubCard; test in src/components/redesign/__tests__/promo-row-click.test.tsx.)
+
+Rule: **row click navigates; the ticket modal opens only from an explicit Tickets button.**
+
+- Card body, title, date block render as a Link with no onClick.
+- Tickets button inside the row opens the modal with stopPropagation.
+- Test: render the row, click the title, assert navigation and no modal. This is the known-bad input the existing promoPageHref test cannot see.
+- Audit every surface that reuses the row component: homepage ribbon / Tonight / This Week / Best Promos, 9 aggregators, venue Next giveaways here, my-teams.
+- Verify after: PostHog promo_link_click by surface, team_page should go from ~0 to the largest surface within a week.
+- Post-merge: re-record mlb-nfl-byte-identity goldens on main as a separate commit (PromoList HTML changed by design).
+- Follow-up: my-teams rows link to the team page and never read promoPageHref from the API. Separate ticket.
+
+## Doctrine (unchanged, restated for this build)
+
+- Every sentence on the page is a stored field, derived from stored fields by a query, or comes from the authored explainer library. No model-generated prose at render time, ever.
+- Authored library copy is general knowledge about a promo type or theme, phrased as general ("typically", "many clubs"), and visually separated from the sourced About block. It never asserts a fact about this specific game.
+- A block with no data renders nothing. No placeholders, no "check back later".
+- No completeness claims, no hardcoded counts.
+- Venue facts render only from provenance DB fields in state `rendered`, with the observed date shown.
+- Imagery: never stock, never model-generated, never hotlinked, no team or sponsor logos. Real photos only where a confirming token exists (v1 image rules) or where an affiliate API supplies them.
+
+## Page order, mobile first (390px)
+
+1. Breadcrumb, team color band, type badge, H1, game line, venue line
+2. **Date tile** (see Visuals) beside or above the CTA row
+3. CTA row (unchanged; TicketNetwork primary per 2026-11-02)
+4. **Image: tier 1 photos only.** Tier 3 generated card stays as og:image and leaves the body. (Ships with the prerequisite, it is a one-line change.) Bobblehead pages without tier 1 use the eBay product image block instead.
+5. **About this promo** (sourced, unchanged) with sponsor folded into the same block as a line, not a separate tile.
+6. **What to expect at a {type/theme}** (authored library, see below)
+7. **This game** (derived): opponent with link, kickoff day and time, doors when stored, position in the home schedule ("3rd-to-last home match of 2026") with the season timeline graphic, every other promo on this date for this team listed with links (the canonical-group losers finally get a visible home), "N more giveaways at {venue} this month" linking to the venue page.
+8. **Before you go** (provenance DB): bag policy, parking, gates, transit, each with observed date, plus forecast and map tile when available. Replaces the thin venue quick facts.
+9. **Previous editions** (archive): same team + themeKey in prior seasons, date, opponent, link to archived page, past tier 1 photo when one exists. Requires rollout step 3 (archive pass).
+10. **{Theme} nights across {league}, {season}** (derived table): team, date, giveaway or sponsor, link. Replaces the current Same promo other teams list.
+11. **Promo rail**: the team's next 5 promos as a horizontal card rail. Replaces More team promos text links.
+12. **Presented by {sponsor}** linking to /sponsors/{sponsorSlug} (new page family, below)
+13. FAQs from stored fields plus library FAQ entries keyed by type/theme.
+
+Whole body stays in one article for Raptive density. CTA stays above the first in-content unit.
+
+## Visuals (decided 2026-11-07)
+
+Ranked by life-per-effort. All data-driven, all inside the imagery doctrine.
+
+1. **Team-color theming.** Team primary/secondary (already stored for the tier 3 card) drive the type badge, CTA, section rules, a thin band under the breadcrumb and the date tile. Contrast-checked against the page ground; fall back to house red when a team color fails WCAG AA on text. Ships with the content floor.
+2. **Date tile with live state.** Day-of-week, large day number, month, and a state line: "Tonight · gates 5:30" (doors when stored), "In 3 days", else the weekday. Series pages render a stacked date rail with the same tile shrunk. State line computed at request time in the venue timezone. Ships with the content floor.
+3. **Promo rail.** Horizontal scroll, next 5 team promos, each card: type icon, name, date tile mini. Links through promoPageHref. Also the component the email digest redesign uses.
+4. **Season timeline.** One SVG bar across the team's home schedule, a dot per promo colored by type, this game marked, hover/tap shows the promo name. Derived from schedule data only.
+5. **Type icon set.** Full set covering every promo type (bobblehead, jersey, hat, fireworks, food deal, kids, heritage, fan appreciation, ticket package, theme night). Single SVG sprite, used in badge, rail, timeline, aggregators, email, social cards.
+6. **eBay product images on bobblehead pages.** EPN Browse API, same query the tier 2 block already runs; render up to 3 listing images with price and affiliate link. Real photos of the item, affiliate-sanctioned. Applies to upcoming bobbleheads without a tier 1 image and to all archived bobbleheads. Image URLs come from the API response at render time; cache per ISR window, never store.
+7. **Forecast.** NWS API (api.weather.gov, free, no key) for outdoor venues within 7 days of the game: high/low, precip chance, one condition icon in the type icon style, not NWS icons. Renders inside Before you go. Needs venue lat/lng and an indoor/outdoor flag on the venue doc.
+8. **Map tile.** Static map with a venue pin (Mapbox Static or self-rendered OSM tiles) inside Before you go, linking to directions. Last in order; only worth it once the block has real facts next to it.
+
+Explicitly out: team logos, sponsor logos, hero photography without a confirming source, any decorative stock.
+
+## The explainer library
+
+Repo files, versioned, reviewed by Matt before merge: `content/promo-explainers/{key}.md`. Frontmatter `{ key, kind: type|theme, title, faqs: [{q, a}] }`, body is the explainer prose.
+
+- Keys: every promo type (bobblehead, jersey, hat, theme night, fireworks, food deal, ticket package, kids run the bases, etc.) plus the top ~35 themeKeys by page count (pride, star wars, fan appreciation, heritage nights by group, dog day, faith and family, 90s night, etc.).
+- Length: 80 to 160 words body, 2 to 4 FAQs each. Short and specific beats long and generic.
+- Voice: PromoNight house voice, plain, second person, no hype. No em dashes.
+- Phrasing rule: general claims only. "Fan Appreciation nights typically bundle concession discounts, on-field recognition for season-ticket members and a giveaway at the gates." Never "this game includes".
+- Fallback cascade: themeKey entry, else type entry, else nothing.
+- Rendered under a small-caps "General guide" label.
+- Library FAQs merge into the page FAQ block after the stored-field FAQs.
+- Target: ~50 entries covers roughly 90% of upcoming pages. First 10 approved 2026-11-07 (bobblehead, jersey, hat, fireworks, food-deal, theme-night, fan-appreciation, pride, star-wars, hispanic-heritage).
+- Next 10 by likely page count: kids-run-the-bases, dog-day, faith-and-family, 90s-night, black-heritage, aapi-heritage, irish-heritage, military-appreciation, college-night, halloween.
+
+## Sponsor pages
+
+`/sponsors/{sponsorSlug}`: every upcoming promo with presentedBy matching, grouped by league, plus past editions once the archive exists. Slug minted once from the normalized sponsor name, same rules as pageSlug. Noindex until a sponsor has 3+ upcoming promos, then in the sitemap. Normalize sponsor strings in the pipeline first (Target vs Target Corporation vs Target Stores) or the index fragments.
+
+## Archive pass (rollout step 3, now in scope)
+
+- Past pages stay indexable for two seasons back, noindex after.
+- Previous edition links both directions (past page links forward to the current edition).
+- eBay tier 2 block on past bobbleheads.
+- Completed promos behind the team page "Show N more" toggle must be in the served markup so the links are crawlable.
+
+## Build order
+
+1. Prerequisite row-click fix + drop tier 3 card from body. Same day.
+2. Content floor: About merge, library (first 10 entries), This game, team-color theming, date tile. One build.
+3. Promo rail, season timeline, type icon set.
+4. Before you go from provenance fields (NHL arenas have data now; MLS and MLB venues are the next provenance wave, promo pages are the reason).
+5. eBay product images on bobblehead pages; NWS forecast.
+6. Archive pass + Previous editions.
+7. League-wide theme table + sponsor pages.
+8. Map tile. Library to 50 entries, ongoing.
+
+## Measurement
+
+- Read 2026-11-21: promo-page pages-per-session and promo_link_click by surface (PostHog), promo-page impressions and average position on the /promos/ family (GSC export, not Ahrefs), Raptive per-page RPM promo pages vs team pages (Creator API).
+- Success: promo pages carry a second pageview at a higher rate than team pages, and the four early bobblehead pages hold or improve position after the content lands.
+
+## Open
+
+- "General guide" label: decided yes.
+- Archive depth: two seasons is the default, revisit if the eBay block earns.
+- Team colors: confirm every team doc has both primary and secondary stored and that the values are the ones used on the tier 3 card, not a second copy.
