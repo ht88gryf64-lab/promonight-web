@@ -46,9 +46,9 @@ export function periodsOn(periods: readonly NwsPeriod[], gameDate: string): NwsP
 }
 
 /** The forecast for the game's date out of the periods, or null when the
- *  date has no period or a chosen period lacks a field. With a game time the
- *  period containing it names the condition; else the night's, else the
- *  day's. The high and low are the day and night temperatures when the date
+ *  date has no period, the game's hour has already left the forecast, or a
+ *  chosen period lacks a field. With a game time the period containing it
+ *  names the condition; without one the night's, else the day's. The high and low are the day and night temperatures when the date
  *  has both; a single period gives its own temperature. The chance of
  *  precipitation is the highest over the date's periods, and every period
  *  must carry one. */
@@ -65,6 +65,11 @@ export function forecastFromPeriods(periods: readonly NwsPeriod[], gameDate: str
         return Number.isFinite(sh) && Number.isFinite(eh) && t.h >= sh && t.h < eh;
       })
     : undefined;
+  // A known game hour that no remaining period covers (NWS drops a period
+  // once it has passed; a 1 PM kickoff read at 5 PM) is a game the forecast
+  // no longer describes: no row, rather than tonight's weather under a
+  // "game-time" label (ux-review D1, 2026-11-08).
+  if (t && !containing) return null;
   const night = day.find((p) => p.isDaytime === false);
   const light = day.find((p) => p.isDaytime === true);
   const named = containing ?? night ?? light ?? day[0];

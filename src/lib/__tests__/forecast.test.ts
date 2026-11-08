@@ -71,11 +71,19 @@ test('the selection: the game date’s day and night give high and low, the peri
   assert.equal(matinee?.icon, 'cloud-sun');
   const noTime = forecastFromPeriods(PERIODS, '2026-11-09', null, UPDATED);
   assert.equal(noTime?.condition, 'Mostly Clear', 'no time: the night period, most games are evenings');
-  // One period only (the last day of the range): its own temperature.
-  const single = forecastFromPeriods(PERIODS, '2026-11-14', '7:00 PM', UPDATED);
+  // One period only (the last day of the range, the day period): its own
+  // temperature for a game inside it; an evening game that day has no
+  // period yet, so no row.
+  const single = forecastFromPeriods(PERIODS, '2026-11-14', '1:00 PM', UPDATED);
   assert.deepEqual([single?.condition, single?.high, single?.low, single?.temperature, single?.precipChance], ['Chance Rain', null, null, 48, 30]);
-  assert.equal(forecastSummary(evening!), 'Mostly Clear, high 60° low 37°, 10% chance of precipitation');
-  assert.equal(forecastSummary(single!), 'Chance Rain, 48°, 30% chance of precipitation');
+  assert.equal(forecastFromPeriods(PERIODS, '2026-11-14', '7:00 PM', UPDATED), null, 'the evening of the last day is not forecast yet');
+  assert.equal(forecastSummary(evening!), 'Mostly clear, high 60°, low 37°, 10% chance of precipitation');
+  assert.equal(forecastSummary(single!), 'Chance rain, 48°, 30% chance of precipitation');
+  // A known game hour no period covers any more (a 10 AM game read in the
+  // afternoon, the morning period gone): no row, never tonight's weather
+  // under a game-time label (ux-review D1).
+  assert.equal(forecastFromPeriods([period('2026-11-09T13:00:00-06:00', '2026-11-09T18:00:00-06:00', true, 60, 2), period('2026-11-09T18:00:00-06:00', '2026-11-10T06:00:00-06:00', false, 37, 10)], '2026-11-09', '10:00 AM', UPDATED), null);
+  assert.equal(forecastFromPeriods([period('2026-11-09T13:00:00-06:00', '2026-11-09T18:00:00-06:00', true, 60, 2), period('2026-11-09T18:00:00-06:00', '2026-11-10T06:00:00-06:00', false, 37, 10)], '2026-11-09', '1:00 PM', UPDATED)?.condition, 'Sunny', 'the afternoon period still covers 1 PM');
   // No period on the date: nothing. A missing field: nothing.
   assert.equal(forecastFromPeriods(PERIODS, '2026-11-20', '7:00 PM', UPDATED), null);
   assert.equal(forecastFromPeriods([period('2026-11-09T06:00:00-06:00', '2026-11-09T18:00:00-06:00', true, 60, null)], '2026-11-09', null, UPDATED), null, 'no chance of precipitation, no row');

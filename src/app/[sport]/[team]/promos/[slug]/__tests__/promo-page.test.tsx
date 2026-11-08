@@ -1439,7 +1439,7 @@ test('the forecast row: a failed NWS call renders the page without it and does n
   assert.ok(ok.h.indexOf('id="before-you-go"') < at && at < ok.h.indexOf('gameday guide'), 'inside Before you go, after the provenance rows');
   const row = ok.h.slice(at, ok.h.indexOf('</dd>', at));
   assert.match(row, /<dt[^>]*>Outside at puck drop<\/dt>/, 'a fixed roof on an NHL club');
-  assert.ok(row.includes('Partly Cloudy, high 52° low 36°, 20% chance of precipitation'), row);
+  assert.ok(row.includes('Partly cloudy, high 52°, low 36°, 20% chance of precipitation'), row);
   assert.match(row, /data-forecast-icon="cloud-moon"/);
   assert.ok(row.includes('Forecast from weather.gov, updated Oct 29, 9:06 AM CT'), row);
   assert.ok(!ok.h.includes('roof-source-never-shipped'), 'sources.roof is not in the served HTML or the flight payload');

@@ -41,7 +41,7 @@ test('the row sits inside Before you go after the provenance rows: label, glyph,
   assert.ok(html.indexOf('Bag policy') < html.indexOf('data-forecast-row'), 'after the bag row');
   assert.match(r, /<dt[^>]*>Forecast<\/dt>/, 'no roof flag: the generic label');
   assert.match(r, /data-forecast-icon="moon"/);
-  assert.ok(r.includes('Mostly Clear, high 41° low 28°, 10% chance of precipitation'), r);
+  assert.ok(r.includes('Mostly clear, high 41°, low 28°, 10% chance of precipitation'), r);
   assert.ok(!r.includes('retractable'));
   assert.ok(r.includes('Forecast from weather.gov, updated Nov 8, 1:06 PM CT'), r);
 });
@@ -65,7 +65,7 @@ test('the label by roof: open and retractable say Game-time forecast, retractabl
 test('no forecast in the context, no row; a single-period forecast prints its one temperature; the quick-facts fallback carries the row too', () => {
   assert.ok(!render(ctx({ forecast: null })).includes('data-forecast-row'));
   const single = forecastRow(render(ctx({ forecast: { ...FORECAST, high: null, low: null, temperature: 48, condition: 'Chance Rain', icon: 'rain' } })));
-  assert.ok(single.includes('Chance Rain, 48°, 10% chance of precipitation'));
+  assert.ok(single.includes('Chance rain, 48°, 10% chance of precipitation'));
   assert.match(single, /data-forecast-icon="rain"/);
   const fallback = render(ctx({ beforeYouGo: [], quickFacts: [{ key: 'bag', label: 'Bags', text: 'Up to 12" x 12" x 6".', href: null, hrefLabel: null } as PromoPageContext['quickFacts'][number]] }));
   assert.ok(!fallback.includes('id="before-you-go"'), 'no Before you go block');

@@ -87,10 +87,17 @@ export interface GameForecast {
   updatedAt: string;
 }
 
-/** "Partly cloudy, high 57° low 39°, 10% chance of precipitation". */
+/** NWS's title case as a sentence: "Chance Rain Showers" -> "Chance rain showers". */
+export function sentenceCase(s: string): string {
+  const t = s.trim();
+  return t ? t[0].toUpperCase() + t.slice(1).toLowerCase() : t;
+}
+
+/** "Partly cloudy, high 57°, low 39°, 10% chance of precipitation" (the
+ *  chance of precipitation is the brief's third field, kept at 0% too). */
 export function forecastSummary(f: GameForecast): string {
-  const temps = f.high !== null && f.low !== null ? `high ${f.high}° low ${f.low}°` : `${f.temperature}°`;
-  return `${f.condition}, ${temps}, ${f.precipChance}% chance of precipitation`;
+  const temps = f.high !== null && f.low !== null ? `high ${f.high}°, low ${f.low}°` : `${f.temperature}°`;
+  return `${sentenceCase(f.condition)}, ${temps}, ${f.precipChance}% chance of precipitation`;
 }
 
 /** "Nov 8, 1:06 PM CT" in the venue's zone, for "updated {time}". */
