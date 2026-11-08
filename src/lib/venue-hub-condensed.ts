@@ -116,7 +116,10 @@ export function buildCondensedLogistics(gatedHub: VenueHub, tenantId: string): C
     // A sourced prohibition decides FIRST (ruling 6, site-wide, 2026-11-05):
     // dimensions-first printed "Max bag 5" x 9"." on every truist-park promo
     // page, which is its clutch exception size, not a limit.
-    if (hub.bagsProhibited === true && prov(s, 'bagsProhibited')) text = 'Bags are not allowed.';
+    // Ruling 2026-11-08 (pipeline EXTRACTION-RULES 1.8): a no-bag building that
+    // allows clutches names the clutch size as the exception, never as a limit;
+    // the same sentence as the Before you go bag row (before-you-go-rows.ts).
+    if (hub.bagsProhibited === true && prov(s, 'bagsProhibited')) text = dims && prov(s, 'bagMaxDimensions') ? `No bags, except clutches up to ${dims}.` : 'Bags are not allowed.';
     else if (dims && prov(s, 'bagMaxDimensions')) text = `${hub.clearBagRequired === true && prov(s, 'clearBagRequired') ? 'Clear bag' : 'Max bag'} ${dims}.`;
     else if (typeof hub.clearBagRequired === 'boolean' && prov(s, 'clearBagRequired')) text = hub.clearBagRequired ? 'Clear bag required.' : 'Clear bag not required.';
     else if (has(hub.bagPolicyNotes) && prov(s, 'bagPolicyNotes') && !excludedSub(hub.slug, 'bag', 'notes')) text = sentence(hub.bagPolicyNotes);
