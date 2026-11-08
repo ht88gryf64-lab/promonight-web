@@ -38,7 +38,7 @@ const listing = (n: number): EbayListing => ({
   price: `$${(50 + n).toFixed(2)}`,
   href: `https://www.ebay.com/itm/${n}?mkevt=1&mkcid=1&mkrid=711-53200-19255-0&campid=5339000000&customid=web_promo_page_x&toolid=10001`,
 });
-const ctx = (listings: EbayListing[]): PromoPageContext => ({ game: null, timeline: null, venueGiveaways: null, venue: null, hub: null, beforeYouGo: [], quickFacts: [], location: null, coords: null, formerNames: [], observedAt: null, alsoAtGame: [], nextTeamPromos: [], crossTeam: null, previousEditions: [], previousEdition: null, nextEdition: null, short: null, ebayListings: listings });
+const ctx = (listings: EbayListing[]): PromoPageContext => ({ game: null, timeline: null, venueGiveaways: null, venue: null, hub: null, beforeYouGo: [], quickFacts: [], location: null, coords: null, roof: null, forecast: null, formerNames: [], observedAt: null, alsoAtGame: [], nextTeamPromos: [], crossTeam: null, previousEditions: [], previousEdition: null, nextEdition: null, short: null, ebayListings: listings });
 const render = (rows: PromoPageRow[], listings: EbayListing[], today = TODAY, state: PromoPage['state'] = 'live') =>
   renderToStaticMarkup(<PromoPageView page={page(rows, today, state)} ctx={ctx(listings)} today={today} now={new Date(`${today}T16:00:00Z`)} />).replace(/&amp;/g, '&');
 

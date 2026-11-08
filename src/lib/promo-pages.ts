@@ -32,6 +32,8 @@ import { getVenueHub, getVenueHubForTeam, type TeamVenueHubLink } from './venue-
 import { beforeYouGoUnion } from './before-you-go-rows';
 import { ebayListingsFor, type EbayListing } from './ebay-browse';
 import { archiveSeasons, nextEditionFor, playedDateIndexable, previousEditionsFor, type ArchiveSeason, type PromoEdition } from './promo-editions';
+import { fetchGameForecast } from './forecast';
+import { withinForecastWindow, type GameForecast, type VenueRoof } from './forecast-label';
 import { isBobbleheadGiveaway } from './ebay';
 import type { BeforeYouGoRow } from './before-you-go';
 import { buildCondensedLogistics, type CondensedLine } from './venue-hub-condensed';
@@ -353,6 +355,15 @@ export interface PromoPageContext {
   /** The PromoNight Short for one of the page's promo ids (the social
    *  bridge, 2026-11-05: socialVideos/youtube), or null. */
   short: PromoShortVideo | null;
+  /** The building's roof (step 5b): sets the forecast row's label only.
+   *  Null when the hub has no flag; never its provenance. */
+  roof: VenueRoof | null;
+  /** The game-time forecast (spec Visuals 7, step 5b, 2026-11-08): the
+   *  NWS periods of the primary date, when the game is within seven days
+   *  and the venue has coordinates inside the NWS grid; null otherwise and
+   *  on any failure (src/lib/forecast.ts). Rendered as a row of Before you
+   *  go (or of the quick-facts fallback). */
+  forecast: GameForecast | null;
   /** eBay listings for a bobblehead (spec Visuals 6, step 5a, 2026-11-08):
    *  up to three confirmed listings from the Browse API at request time, held
    *  only as long as the page's ISR window. Filled for a bobblehead giveaway
@@ -651,6 +662,14 @@ export const loadPromoPageContext = cache(async (page: PromoPage, today: string)
         ? { lat: venue.lat, lng: venue.lng }
         : null;
 
+  // The forecast (step 5b): the primary date within seven days of the
+  // site's day and a venue with coordinates; the points call decides whether
+  // the coordinates are inside the NWS grid. Capped at 800ms, never throws.
+  const forecastPending: Promise<GameForecast | null> =
+    page.state === 'live' && YMD_RE.test(primaryDate) && withinForecastWindow(today, primaryDate) && coords
+      ? fetchGameForecast({ lat: coords.lat, lng: coords.lng, gameDate: primaryDate, displayTime: page.primary.displayTime, pageKey: promoPagePath(team.sportSlug, team.id, page.slug) })
+      : Promise.resolve(null);
+
   return {
     game,
     timeline,
@@ -661,6 +680,8 @@ export const loadPromoPageContext = cache(async (page: PromoPage, today: string)
     quickFacts,
     location,
     coords,
+    roof: building?.roof ?? null,
+    forecast: await forecastPending,
     formerNames: building?.formerNames ?? [],
     observedAt: scanStamp,
     alsoAtGame,

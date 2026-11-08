@@ -111,11 +111,20 @@ const realFetch = globalThis.fetch;
 // here proves a failed call never throws; the eBay test swaps the handler.
 let ebayHandler: (url: string, init?: RequestInit) => Response | Promise<Response> = () => new Response('', { status: 500 });
 const ebayCalls: string[] = [];
+let nwsHandler: (url: string, init?: RequestInit) => Response | Promise<Response> = () => new Response('', { status: 500 });
+const nwsCalls: string[] = [];
 globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   const url = String(input instanceof Request ? input.url : input);
   if (url.startsWith('https://api.ebay.com/')) {
     ebayCalls.push(url);
     return ebayHandler(url, init);
+  }
+  // The NWS (step 5b): failing by default, so every page within the forecast
+  // window rendered here proves a failed call never throws; the forecast test
+  // swaps the handler. Never the real network.
+  if (url.startsWith('https://api.weather.gov/')) {
+    nwsCalls.push(url);
+    return nwsHandler(url, init);
   }
   if (!url.startsWith('https://firebasestorage.googleapis.com/')) return realFetch(input, init);
   photoFetches.push(`${url} ${new Headers(init?.headers).get('range')}`);
@@ -127,9 +136,10 @@ globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
 // venue-hub loaders read it from the fake, through the published view.
 put('venueHubs/xcel-energy-center', {
   slug: 'xcel-energy-center', name: 'Grand Casino Arena', formerNames: [{ name: 'Xcel Energy Center', sourceUrl: 'https://x/rename' }], city: 'St Paul', state: 'Minnesota', lat: 44.9448, lng: -93.101, verified: true,
+  roof: 'fixed', roofDraft: true,
   tenants: [{ teamId: 'minnesota-wild', league: 'NHL' }], parkingLots: [{ name: 'RiverCentre Ramp' }, { name: 'Lawson Ramp' }], publicTransit: { lines: ['Green Line'], notes: 'Green Line to Central Station, two blocks east.' },
   bagMaxDimensions: { unit: 'in', d: 6, w: 12, h: 12 }, clearBagRequired: false, outsideFoodAllowed: false,
-  sources: { bagMaxDimensions: 'https://x/bag', clearBagRequired: 'https://x/bag', parkingLots: 'https://x/parking', 'publicTransit.notes': 'https://x/transit', 'publicTransit.lines': 'https://x/transit', outsideFoodAllowed: 'https://x/food' },
+  sources: { bagMaxDimensions: 'https://x/bag', clearBagRequired: 'https://x/bag', parkingLots: 'https://x/parking', 'publicTransit.notes': 'https://x/transit', 'publicTransit.lines': 'https://x/transit', outsideFoodAllowed: 'https://x/food', roof: 'https://x/roof-source-never-shipped' },
   // Step 4 (Before you go): the per-field state and read time the pipeline
   // writes. Bag and parking rendered and dated (provenance rows); transit
   // sourced with no state and outside food rendered but not a provenance
@@ -1402,4 +1412,41 @@ test('team page: the server HTML carries the five most recent completed rows, th
   // The five are the most recent: Rally Towel (Oct 13) in, Ring Night (Oct 1) out.
   assert.ok(suns.includes('href="/nba/phoenix-suns/promos/rally-towel"'), 'the newest played row is in the HTML');
   assert.ok(!suns.includes('href="/nba/phoenix-suns/promos/ring-night"'), 'the oldest is behind the expander');
+});
+
+
+// ── the forecast (step 5b, rulings 2026-11-08) ──────────────────────────────
+test('the forecast row: a failed NWS call renders the page without it and does not throw; a good call renders it inside Before you go with the label by roof; the roof\u2019s source never reaches the page', async () => {
+  process.env.PROMO_PAGES_LIVE = 'true';
+  const { _resetForecastForTests } = await import('@/lib/forecast');
+  _resetForecastForTests();
+  nwsCalls.length = 0;
+  // The hat is today (within the window), the Wild's building has coordinates.
+  const failed = await render('nhl', 'minnesota-wild', 'blaze-orange-hat');
+  assert.ok(!failed.h.includes('data-forecast-row'), 'no row on a failed call');
+  assert.ok(nwsCalls.some((u) => u.startsWith('https://api.weather.gov/points/44.9448,-93.1010')), `the page asked NWS: ${nwsCalls.join(' ')}`);
+  assert.match(failed.h, /id="before-you-go"/, 'the block still renders its other rows');
+
+  const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/geo+json' } });
+  const period = (startTime: string, endTime: string, isDaytime: boolean, temperature: number, pop: number, shortForecast: string) => ({ startTime, endTime, isDaytime, temperature, temperatureUnit: 'F', probabilityOfPrecipitation: { value: pop }, shortForecast });
+  nwsHandler = (url) => (url.startsWith('https://api.weather.gov/points/')
+    ? json({ properties: { forecast: 'https://api.weather.gov/gridpoints/MPX/108,72/forecast' } })
+    : json({ properties: { updateTime: '2026-10-29T14:06:00+00:00', periods: [period('2026-10-29T06:00:00-05:00', '2026-10-29T18:00:00-05:00', true, 52, 5, 'Sunny'), period('2026-10-29T18:00:00-05:00', '2026-10-30T06:00:00-05:00', false, 36, 20, 'Partly Cloudy')] } }));
+  _resetForecastForTests();
+  const ok = await render('nhl', 'minnesota-wild', 'blaze-orange-hat');
+  const at = ok.h.indexOf('data-forecast-row');
+  assert.ok(at > 0, 'the row renders');
+  assert.ok(ok.h.indexOf('id="before-you-go"') < at && at < ok.h.indexOf('gameday guide'), 'inside Before you go, after the provenance rows');
+  const row = ok.h.slice(at, ok.h.indexOf('</dd>', at));
+  assert.match(row, /<dt[^>]*>Outside at puck drop<\/dt>/, 'a fixed roof on an NHL club');
+  assert.ok(row.includes('Partly Cloudy, high 52° low 36°, 20% chance of precipitation'), row);
+  assert.match(row, /data-forecast-icon="cloud-moon"/);
+  assert.ok(row.includes('Forecast from weather.gov, updated Oct 29, 9:06 AM CT'), row);
+  assert.ok(!ok.h.includes('roof-source-never-shipped'), 'sources.roof is not in the served HTML or the flight payload');
+  // Eight days out: the page asks nothing.
+  nwsCalls.length = 0;
+  const far = await render('nhl', 'minnesota-wild', 'winter-beanie'); // 2026-12-05, 37 days out
+  assert.ok(!far.h.includes('data-forecast-row'));
+  assert.equal(nwsCalls.length, 0, 'no call outside the window');
+  nwsHandler = () => new Response('', { status: 500 });
 });

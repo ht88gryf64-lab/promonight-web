@@ -1,3 +1,4 @@
+import { parseRoof, type VenueRoof } from './forecast-label';
 import { parseParkingNotes, type ParkingNotes } from './parking-vendor';
 import { redactClause } from '@/lib/venue-corpus-silence';
 import { publishedView } from '@/lib/venue-published-view';
@@ -157,6 +158,12 @@ export interface VenueHub {
   fieldStates: Record<string, VenueFieldState>;
   // per-tenant overlays (gate times etc.)
   tenantOverlays: VenueHubTenantOverlay[];
+  /** The roof (step 5b, 2026-11-08; pipeline 9b8855c9): open, fixed or
+   *  retractable, null when the doc has none. A draft default counts as its
+   *  value (a draft fixed is fixed). It sets the forecast row's label only;
+   *  its provenance (sources.roof) is dropped by the mapper and never
+   *  reaches a client component. */
+  roof?: VenueRoof | null;
   /** Per-field provenance URLs keyed by field (parkingLots, publicTransit,
    *  tailgating, accessibility, bagPolicyUrl, food, nearby, ...). {} when the
    *  doc has none. The venue page does not read it; the condensed logistics
@@ -342,7 +349,11 @@ export function toVenueHub(
     // and it is the lock that survives a new render path being added later.
     fieldStates: fieldStateMap(d.fieldStates),
     tenantOverlays,
-    sources: stringMap(d.sources),
+    roof: parseRoof(d.roof),
+    // sources.roof stays server-side (ruling 2026-11-08): the hub reaches
+    // client components, and the roof's source is a label's provenance, not
+    // a claim the page prints.
+    sources: Object.fromEntries(Object.entries(stringMap(d.sources)).filter(([k]) => k !== 'roof')),
   });
 }
 

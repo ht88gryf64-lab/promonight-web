@@ -18,6 +18,8 @@ import { TICKET_PACKAGE_ROW_NOTE } from '@/lib/ticket-packages';
 import type { LinkedPromo, PromoPage, PromoPageContext } from '@/lib/promo-pages';
 import { EXPLAINER_LABEL, explainerFor } from '@/lib/promo-explainers';
 import { BEFORE_YOU_GO_LABEL } from '@/lib/before-you-go';
+import { ForecastIcon } from '@/components/promo-page/ForecastIcon';
+import { forecastLabel, forecastSummary, formatForecastTime, roofNote } from '@/lib/forecast-label';
 import { promoPageTheme, themeStyle } from '@/lib/promo-page-theme';
 import { dateTileState, ymdInZone, type DateTileState } from '@/lib/promo-date-tile';
 import { gameTimeMarkup } from '@/lib/promo-page-time';
@@ -317,6 +319,26 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
   const hotels = resolveHotelLink({ team, venue: ctx.venue, surface: PROMO_PAGE_SURFACE, gameDate: multi ? null : primary.date || null });
 
   const theme = themeLabel(primary.themeKey);
+  // THE FORECAST ROW (spec Visuals 7, step 5b, rulings 2026-11-08): a row of
+  // Before you go (or of the quick-facts fallback), on every page whose game
+  // is within seven days at a US venue; the roof flag sets the label only
+  // (open or retractable "Game-time forecast", fixed "Outside at puck drop",
+  // absent "Forecast"), a retractable roof adds its note after the summary.
+  // No row without a condition, a temperature and a chance of precipitation:
+  // the loader returns null short of all three.
+  const forecastUpdated = ctx.forecast ? formatForecastTime(ctx.forecast.updatedAt, ctx.game?.timeZone ?? null) : null;
+  const forecastRow = ctx.forecast ? (
+    <div key="forecast" data-forecast-row>
+      <dt className="font-rd text-[10px] uppercase tracking-[0.12em] text-rd-ink-faint">{forecastLabel(ctx.roof, team.league)}</dt>
+      <dd className="m-0">
+        <span className="flex items-start gap-2">
+          <ForecastIcon icon={ctx.forecast.icon} size={18} className="mt-0.5 shrink-0 text-[var(--pp-accent-text)]" />
+          <span>{`${forecastSummary(ctx.forecast)}${roofNote(ctx.roof) ? ` · ${roofNote(ctx.roof)}` : ''}`}</span>
+        </span>
+        <span className="block font-rd text-[11px] text-rd-ink-faint">{`Forecast from weather.gov${forecastUpdated ? `, updated ${forecastUpdated}` : ''}`}</span>
+      </dd>
+    </div>
+  ) : null;
   const crossTeam = ctx.crossTeam?.links ?? [];
   const crossHeading =
     ctx.crossTeam?.kind === 'theme'
@@ -893,6 +915,7 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
                   </dd>
                 </div>
               ))}
+              {forecastRow}
             </dl>
             {venueHref ? (
               <Link href={venueHref} className="font-rd text-[14px] font-medium text-rd-link no-underline hover:underline">{`${venueName} gameday guide`}</Link>
@@ -925,6 +948,7 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
                   </dd>
                 </div>
               ))}
+              {forecastRow ? <div className="col-span-2">{forecastRow}</div> : null}
             </dl>
             {venueHref ? (
               <Link href={venueHref} className="font-rd text-[14px] font-medium text-rd-link no-underline hover:underline">{`${venueName} gameday guide`}</Link>
