@@ -1,3 +1,4 @@
+import { parseParkingNotes, type ParkingNotes } from './parking-vendor';
 import { redactClause } from '@/lib/venue-corpus-silence';
 import { publishedView } from '@/lib/venue-published-view';
 import 'server-only';
@@ -112,6 +113,8 @@ export interface VenueHub {
   tenants: VenueHubTenantRef[];
   // building facts
   parkingLots: ParkingLot[];
+  /** Vendor direction where the operator names no lots (ruling 2026-11-08), src/lib/parking-vendor.ts. */
+  parkingNotes?: ParkingNotes | null;
   parkingLotMapUrl: string | null;
   /** Official parking info pages (team/venue sites). Harvested + verified like
    *  every other hub fact; rendered as outbound links in the parking lots card. */
@@ -233,7 +236,7 @@ export function fieldStateMap(v: unknown): Record<string, VenueFieldState> {
 /** The claim fields the state map can switch off. Pointer fields are excluded:
  *  a pointer is not a claim, and an operator-conflict row keeps its pointer. */
 const STATE_GATED_FIELDS = [
-  'parkingLots', 'publicTransit', 'rideshareDropoff', 'accessibility', 'bagMaxDimensions',
+  'parkingLots', 'parkingNotes', 'publicTransit', 'rideshareDropoff', 'accessibility', 'bagMaxDimensions',
   'clearBagRequired', 'bagsProhibited', 'bagPolicyNotes', 'tailgating', 'venueAccessRestrictions',
   'nearby', 'outsideFoodAllowed', 'outsideFoodRules', 'food',
 ] as const;
@@ -298,6 +301,7 @@ export function toVenueHub(
         ? { ...lot, notes: redactClause(slug, 'parkingLots', lot.notes, 'venueHubs') }
         : lot,
     ),
+    parkingNotes: parseParkingNotes(d.parkingNotes),
     parkingLotMapUrl: d.parkingLotMapUrl ?? null,
     officialParkingUrls: Array.isArray(d.officialParkingUrls)
       ? d.officialParkingUrls.filter(
