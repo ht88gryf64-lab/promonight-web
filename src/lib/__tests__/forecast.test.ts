@@ -61,11 +61,24 @@ const PERIODS = [
   period('2026-11-14T06:00:00-06:00', '2026-11-14T18:00:00-06:00', true, 48, 30, 'Chance Rain'),
 ];
 const UPDATED = '2026-11-08T19:06:26+00:00';
+// The hourly grid: 21:00 Nov 8 through 20:00 Nov 9 local (a short run for the tests).
+const hour = (start: string, temperature: number, pop: number, shortForecast: string, isDaytime = false) => ({
+  startTime: start, endTime: start.replace(/T(\d{2})/, (_m, h: string) => `T${String(Number(h) + 1).padStart(2, '0')}`), isDaytime, temperature, temperatureUnit: 'F', probabilityOfPrecipitation: { unitCode: 'wmoUnit:percent', value: pop }, shortForecast,
+});
+const HOURLY = [
+  hour('2026-11-08T21:00:00-06:00', 44, 0, 'Clear'),
+  hour('2026-11-09T06:00:00-06:00', 40, 2, 'Partly Sunny', true),
+  hour('2026-11-09T13:00:00-06:00', 58, 2, 'Sunny', true),
+  hour('2026-11-09T18:00:00-06:00', 49, 10, 'Mostly Clear'),
+  hour('2026-11-09T19:00:00-06:00', 46, 10, 'Mostly Clear'),
+  hour('2026-11-09T20:00:00-06:00', 44, 15, 'Partly Cloudy'),
+];
+const HOURLY_UPDATED = '2026-11-08T19:10:00+00:00';
 
 test('the selection: the game date’s day and night give high and low, the period containing the game time names the condition, the chance is the date’s highest', async () => {
   const { forecastFromPeriods } = await load();
   const evening = forecastFromPeriods(PERIODS, '2026-11-09', '7:00 PM', UPDATED);
-  assert.deepEqual(evening, { condition: 'Mostly Clear', icon: 'cloud-moon', high: 60, low: 37, temperature: null, unit: 'F', precipChance: 10, updatedAt: UPDATED });
+  assert.deepEqual(evening, { condition: 'Mostly Clear', icon: 'cloud-moon', high: 60, low: 37, temperature: null, unit: 'F', precipChance: 10, updatedAt: UPDATED, atTime: null, source: 'daily' });
   const matinee = forecastFromPeriods(PERIODS, '2026-11-09', '1:00 PM', UPDATED);
   assert.equal(matinee?.condition, 'Partly Sunny');
   assert.equal(matinee?.icon, 'cloud-sun');
@@ -93,6 +106,21 @@ test('the selection: the game date’s day and night give high and low, the peri
   assert.equal(formatForecastTime('garbage', 'America/Chicago'), null);
 });
 
+test('the start hour from the hourly grid: the covering period, past once the hour has left the grid, beyond past its end, null without a time; the hourly row’s fields', async () => {
+  const { hourlyAt, forecastFromHour } = await load();
+  const at = hourlyAt(HOURLY, '2026-11-09', '7:20 PM');
+  assert.equal((at as { temperature: number }).temperature, 46, 'the 19:00 period covers 7:20 PM');
+  assert.equal(hourlyAt(HOURLY, '2026-11-08', '1:00 PM'), 'past', 'a 1 PM kickoff read after 9 PM: the hour has left the grid');
+  assert.equal(hourlyAt(HOURLY, '2026-11-12', '7:00 PM'), 'beyond', 'beyond the grid: the daily fallback');
+  assert.equal(hourlyAt(HOURLY, '2026-11-09', null), null, 'no time, no hour');
+  assert.equal(hourlyAt([], '2026-11-09', '7:00 PM'), 'beyond', 'an empty grid reaches nothing');
+  const row = forecastFromHour(at as (typeof HOURLY)[number], '7:20 PM', HOURLY_UPDATED);
+  assert.deepEqual(row, { condition: 'Mostly Clear', icon: 'cloud-moon', high: null, low: null, temperature: 46, unit: 'F', precipChance: 10, updatedAt: HOURLY_UPDATED, atTime: '7:20 PM', source: 'hourly' });
+  assert.equal(forecastSummary(row!), 'Mostly clear, 46° at 7:20 PM, 10% chance of precipitation');
+  assert.equal(forecastFromHour({ ...HOURLY[4], probabilityOfPrecipitation: { value: null } }, '7:20 PM', HOURLY_UPDATED), null, 'no chance, no row');
+  assert.equal(forecastFromHour({ ...HOURLY[4], temperature: null as unknown as number }, '7:20 PM', HOURLY_UPDATED), null, 'no temperature, no row');
+});
+
 // ── the call ─────────────────────────────────────────────────────────────────
 type Handler = (url: string, init?: RequestInit) => Promise<Response> | Response;
 let handler: Handler = () => new Response('', { status: 500 });
@@ -105,10 +133,13 @@ globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/geo+json' } });
 const NOW = new Date('2026-11-08T20:00:00Z');
 const okHandler: Handler = (url) => {
-  if (url.startsWith('https://api.weather.gov/points/')) return json({ properties: { forecast: 'https://api.weather.gov/gridpoints/MPX/108,72/forecast', timeZone: 'America/Chicago' } });
+  if (url.startsWith('https://api.weather.gov/points/')) return json({ properties: { forecast: 'https://api.weather.gov/gridpoints/MPX/108,72/forecast', forecastHourly: 'https://api.weather.gov/gridpoints/MPX/108,72/forecast/hourly', timeZone: 'America/Chicago' } });
   if (url === 'https://api.weather.gov/gridpoints/MPX/108,72/forecast') return json({ properties: { updateTime: UPDATED, periods: PERIODS } });
+  if (url === 'https://api.weather.gov/gridpoints/MPX/108,72/forecast/hourly') return json({ properties: { updateTime: HOURLY_UPDATED, periods: HOURLY } });
   return new Response('', { status: 404 });
 };
+/** The points answer without an hourly URL: the daily grid alone. */
+const dailyOnlyHandler: Handler = (url) => (url.startsWith('https://api.weather.gov/points/') ? json({ properties: { forecast: 'https://api.weather.gov/gridpoints/MPX/108,72/forecast' } }) : okHandler(url));
 let warns: string[] = [];
 beforeEach(async () => {
   (await load())._resetForecastForTests();
@@ -118,12 +149,25 @@ beforeEach(async () => {
 });
 const input = { lat: 44.9817, lng: -93.2776, gameDate: '2026-11-09', displayTime: '7:00 PM', pageKey: '/mlb/minnesota-twins/promos/x', now: NOW };
 
-test('a good call: points, then the grid forecast, both with the hour cache; the game date’s forecast back', async () => {
+test('a good call: points, then the hourly and daily grids together; the start hour’s row from the hourly grid (ruling 2026-11-08)', async () => {
   const { fetchGameForecast } = await load();
   handler = okHandler;
   const f = await fetchGameForecast(input);
-  assert.deepEqual([f?.condition, f?.high, f?.low, f?.precipChance], ['Mostly Clear', 60, 37, 10]);
-  assert.deepEqual(calls, ['https://api.weather.gov/points/44.9817,-93.2776', 'https://api.weather.gov/gridpoints/MPX/108,72/forecast']);
+  assert.deepEqual([f?.source, f?.condition, f?.temperature, f?.precipChance, f?.atTime, f?.high], ['hourly', 'Mostly Clear', 46, 10, '7:00 PM', null]);
+  assert.deepEqual([...calls].sort(), ['https://api.weather.gov/gridpoints/MPX/108,72/forecast', 'https://api.weather.gov/gridpoints/MPX/108,72/forecast/hourly', 'https://api.weather.gov/points/44.9817,-93.2776']);
+  assert.deepEqual(warns, []);
+});
+
+test('the daily period is the fallback: no hourly URL, or a start hour beyond the hourly grid; a start hour that has left the hourly grid is no row', async () => {
+  const { fetchGameForecast } = await load();
+  handler = dailyOnlyHandler;
+  const daily = await fetchGameForecast(input);
+  assert.deepEqual([daily?.source, daily?.high, daily?.low, daily?.atTime], ['daily', 60, 37, null], 'no hourly URL: the daily period');
+  handler = okHandler;
+  const beyond = await fetchGameForecast({ ...input, gameDate: '2026-11-14', displayTime: '1:00 PM' });
+  assert.deepEqual([beyond?.source, beyond?.temperature, beyond?.condition], ['daily', 48, 'Chance Rain'], 'beyond the hourly grid: the daily period');
+  const past = await fetchGameForecast({ ...input, gameDate: '2026-11-08', displayTime: '1:00 PM' });
+  assert.equal(past, null, 'the hour has left the hourly grid: nothing, not tonight’s weather');
   assert.deepEqual(warns, []);
 });
 
@@ -141,7 +185,7 @@ test('an NWS 500, a stale response, bad JSON and a thrown fetch each render noth
   assert.equal(await fetchGameForecast(input), null);
   assert.equal(await fetchGameForecast(input), null);
   assert.equal(warns.length, 1, 'once for the page');
-  assert.match(warns[0], /\/mlb\/minnesota-twins\/promos\/x: no row \(forecast HTTP 500\)/);
+  assert.match(warns[0], /\/mlb\/minnesota-twins\/promos\/x: no row \((forecast|hourly) HTTP 500\)/);
   assert.equal(await fetchGameForecast({ ...input, pageKey: '/other' }), null);
   assert.equal(warns.length, 2);
   _resetForecastForTests();

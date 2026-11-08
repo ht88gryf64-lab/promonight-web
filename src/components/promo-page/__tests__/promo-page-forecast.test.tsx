@@ -21,7 +21,8 @@ const row = (over: Partial<PromoPageRow> = {}): PromoPageRow => ({
   imageTier: null, imageRef: null, imageSourceUrl: null, imageCredit: null, updatedAt: null, tombstoned: false, tombstonedAt: null, tnEventUrl: null, ...over,
 });
 const page = (r: PromoPageRow): PromoPage => ({ team: WILD, slug: r.pageSlug, season: '2026-27', rows: [r], removedRows: [], removedDates: [], state: 'live', primary: r, dates: [r.date], updatedAt: null, removedAt: null, canonicalSlug: null });
-const FORECAST: GameForecast = { condition: 'Mostly Clear', icon: 'moon', high: 41, low: 28, temperature: null, unit: 'F', precipChance: 10, updatedAt: '2026-11-08T19:06:26+00:00' };
+const FORECAST: GameForecast = { condition: 'Mostly Clear', icon: 'moon', high: 41, low: 28, temperature: null, unit: 'F', precipChance: 10, updatedAt: '2026-11-08T19:06:26+00:00', atTime: null, source: 'daily' };
+const HOURLY: GameForecast = { condition: 'Mostly Clear', icon: 'cloud-moon', high: null, low: null, temperature: 53, unit: 'F', precipChance: 0, updatedAt: '2026-11-08T21:46:06+00:00', atTime: '7:20 PM', source: 'hourly' };
 const BAG: BeforeYouGoRow = { key: 'bag', label: 'Bag policy', text: 'Bags up to 12" x 12" x 6".', observedAt: '2026-10-07T14:30:16.621Z', observedOn: 'Oct 7, 2026', sourceUrl: 'https://x/bag', sourceHost: 'x' };
 const ctx = (over: Partial<PromoPageContext>): PromoPageContext => ({
   game: { date: '2026-11-12', opponentId: null, opponentName: 'Chicago Blackhawks', opponentHref: null, timeZone: 'America/Chicago', homeGameNumber: 5, homeGamesTotal: 41, seasonLabel: '2026-27' } as PromoPageContext['game'],
@@ -60,6 +61,14 @@ test('the label by roof: open and retractable say Game-time forecast, retractabl
   const suns = { ...WILD, id: 'phoenix-suns', league: 'NBA', sportSlug: 'nba', name: 'Suns', city: 'Phoenix' } as unknown as Team;
   const html = renderToStaticMarkup(<PromoPageView page={{ ...page(row()), team: suns }} ctx={ctx({ roof: 'fixed' })} today={TODAY} />);
   assert.match(forecastRow(html), /<dt[^>]*>Outside at tip-off<\/dt>/);
+});
+
+test('the hourly row names the kickoff hour: "{condition}, {temp}° at {time}, {precip}% chance of precipitation" (ruling 2026-11-08)', () => {
+  const r = forecastRow(render(ctx({ forecast: HOURLY, roof: 'open' })));
+  assert.match(r, /<dt[^>]*>Game-time forecast<\/dt>/);
+  assert.ok(r.includes('Mostly clear, 53° at 7:20 PM, 0% chance of precipitation'), r);
+  assert.ok(!r.includes('high'), 'no high/low on an hourly row');
+  assert.match(r, /data-forecast-icon="cloud-moon"/);
 });
 
 test('no forecast in the context, no row; a single-period forecast prints its one temperature; the quick-facts fallback carries the row too', () => {
