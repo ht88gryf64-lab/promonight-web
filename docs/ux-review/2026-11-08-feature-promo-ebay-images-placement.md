@@ -161,3 +161,5 @@ New since the first review and not in D1 to D10: the dev server now gets partial
 | P8 Ticketmaster wrap unwrapped on the dev server (carried D10) | **Waived** | Environment. |
 
 Merge note acted on: main's known-issues 86 and 87 (the vendor-parking review) stay; this branch's entries are 88 and 89, and the first report's dispositions cite those numbers.
+
+Post-merge (ruling 2026-11-08, after this report): the block's heading changed from "On eBay" with the lead "Current listings for this bobblehead." to "{word} bobbleheads on eBay", where the word is the token the guard confirmed the listings on, as the promo title spells it ("Erving bobbleheads on eBay"); the lead line left. This answers P1's claim problem without touching the guard. ux-review waived for a heading string, by ruling. P2 is tracked as known-issues 90 with a 2026-11-21 read.

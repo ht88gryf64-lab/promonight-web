@@ -7,6 +7,7 @@ import { PromoShort } from '@/components/promo-page/PromoShort';
 import { shortJsonLd } from '@/lib/youtube-shorts';
 import { AFFILIATE_DISCLOSURE_TEXT, AffiliateDisclosure } from '@/components/affiliates/AffiliateDisclosure';
 import { EbayListingLink } from '@/components/promo-page/EbayListingLink';
+import { ebayHeading, ebayHeadingWord } from '@/lib/ebay-guard';
 import { getLeagueHub } from '@/lib/league-hubs';
 import { buildSpotHeroUrl, buildTicketmasterUrl, buildTicketNetworkLink, ticketNetworkForGame, ticketNetworkLinkLevel } from '@/lib/affiliates';
 import { resolveHotelLink } from '@/lib/hotel-link';
@@ -813,8 +814,10 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
           // sponsored external anchor firing promo_link_click with
           // destination 'ebay'; the disclosure line is the site's own words.
           <section className="mt-6 flex flex-col gap-2.5 rounded-2xl border border-rd-line bg-rd-card p-3.5">
-            <H2>On eBay</H2>
-            <p className="m-0 font-rd text-[12px] text-rd-ink-faint">{past ? 'Missed it? Resale listings for this bobblehead.' : 'Current listings for this bobblehead.'}</p>
+            {/* "{word} bobbleheads on eBay" (ruling 2026-11-08): the word is
+                the token the guard confirmed the listings on, as the promo
+                title spells it; never a claim that these are this item. */}
+            <H2>{ebayHeading(ebayHeadingWord(primary.title, team, ebayListings.map((l) => l.title)))}</H2>
             <ul className="m-0 grid list-none grid-cols-3 gap-2.5 p-0">
               {ebayListings.map((l) => (
                 <li key={l.itemId} className="min-w-0">

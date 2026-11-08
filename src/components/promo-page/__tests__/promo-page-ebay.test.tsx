@@ -42,7 +42,7 @@ const ctx = (listings: EbayListing[]): PromoPageContext => ({ game: null, timeli
 const render = (rows: PromoPageRow[], listings: EbayListing[], today = TODAY, state: PromoPage['state'] = 'live') =>
   renderToStaticMarkup(<PromoPageView page={page(rows, today, state)} ctx={ctx(listings)} today={today} now={new Date(`${today}T16:00:00Z`)} />).replace(/&amp;/g, '&');
 
-const BLOCK = />On eBay<\/h2>/;
+const BLOCK = />Erving bobbleheads on eBay<\/h2>/;
 const ebayAnchors = (html: string) => [...html.matchAll(/<a href="(https:\/\/www\.ebay\.com\/itm\/[^"]+)" target="_blank" rel="sponsored noopener"/g)].map((m) => m[1]);
 const section = (html: string) => {
   const h2 = html.search(BLOCK);
@@ -82,7 +82,7 @@ test('an upcoming bobblehead page without a photo: the block after This game wit
       assert.ok(s.includes(`>${l.price}</span>`), l.price);
       assert.ok(s.includes(`href="${l.href}"`));
     }
-    assert.ok(s.includes('Current listings for this bobblehead.'));
+    assert.ok(!html.includes('Current listings for this bobblehead'), 'the old lead line is gone');
     assert.ok(s.endsWith(`${AFFILIATE_DISCLOSURE_TEXT}</p></section>`), 'the disclosure line closes the block');
     // After This game, before the Fan guide and the rest (ruling 2026-11-08).
     const thisGame = html.indexOf('>This game</h2>');
@@ -102,7 +102,7 @@ test('a played bobblehead page gets the block even with a tier 1 photo, with the
   assert.ok(html.includes('<figure'), 'the photo stays on a played page');
   const s = section(html);
   assert.equal(ebayAnchors(s).length, 2);
-  assert.ok(s.includes('Missed it? Resale listings for this bobblehead.'));
+  assert.ok(!html.includes('Resale listings for this bobblehead'), 'no lead line on a played page either');
   assert.ok(!html.includes('>Get tickets</a>'));
   assert.ok(!html.includes('ticketnetwork.lusg.net'));
   // The listing links are the only sponsored anchors on the page.
