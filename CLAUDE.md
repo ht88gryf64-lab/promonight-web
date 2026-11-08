@@ -75,6 +75,23 @@ The agent is `.claude/agents/ux-review.md`. It takes URLs or a page type
 path recorded in the agent file; baseline mode needs the branch dev
 server (`PROMO_PAGES_LIVE=true PORT=3100 npm run dev`) and production.
 
+## Deploy rules
+
+**A push that changes only `docs/`, Markdown files or `.claude/` does not
+deploy.** `vercel.json` carries an `ignoreCommand`
+(`git diff --quiet HEAD^ HEAD -- . ':(exclude)docs' ':(exclude)*.md' ':(exclude).claude'`):
+Vercel skips the build when that command exits 0, which it does when the
+pushed commit (for a merge, the whole merge against main's previous tip)
+touches nothing outside those paths. Any other file, `vercel.json` and
+`package.json` included, deploys as before. Set on 2026-11-08 after a day
+of CLAUDE.md-only and report-only pushes each cost a production build and
+a live battery run.
+
+**`npm run test:live` runs after every production deploy, no exceptions**
+(the rule above under served HTML). A skipped build is not a deploy and
+needs no battery; check the deployments list, not the push, to know which
+happened.
+
 ## Anything on a Firestore doc that reaches a client component is published
 
 A server component passing a doc to a client component serializes **every**
