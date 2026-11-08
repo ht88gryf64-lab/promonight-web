@@ -81,10 +81,18 @@ export interface GameForecast {
   /** The single period's temperature when the date has one period only. */
   temperature: number | null;
   unit: 'F' | 'C';
-  /** Chance of precipitation, percent, the highest over the date's periods. */
+  /** Chance of precipitation, percent: the start hour's from the hourly
+   *  grid, else the highest over the date's daily periods. */
   precipChance: number;
   /** NWS updateTime, ISO. */
   updatedAt: string;
+  /** The game's start time as printed ("7:20 PM") when the row describes
+   *  that hour from the hourly grid; null on the daily fallback. */
+  atTime: string | null;
+  /** Which NWS product the row came from (ruling 2026-11-08: the hourly
+   *  grid for the start hour; the daily period only when the hourly grid
+   *  does not reach it). */
+  source: 'hourly' | 'daily';
 }
 
 /** NWS's title case as a sentence: "Chance Rain Showers" -> "Chance rain showers". */
@@ -93,10 +101,12 @@ export function sentenceCase(s: string): string {
   return t ? t[0].toUpperCase() + t.slice(1).toLowerCase() : t;
 }
 
-/** "Partly cloudy, high 57°, low 39°, 10% chance of precipitation" (the
- *  chance of precipitation is the brief's third field, kept at 0% too). */
+/** "Mostly clear, 53° at 7:20 PM, 0% chance of precipitation" from the
+ *  hourly grid; "Partly cloudy, high 57°, low 39°, 10% chance of
+ *  precipitation" on the daily fallback (the chance of precipitation is the
+ *  brief's third field, kept at 0% too). */
 export function forecastSummary(f: GameForecast): string {
-  const temps = f.high !== null && f.low !== null ? `high ${f.high}°, low ${f.low}°` : `${f.temperature}°`;
+  const temps = f.atTime && f.temperature !== null ? `${f.temperature}° at ${f.atTime}` : f.high !== null && f.low !== null ? `high ${f.high}°, low ${f.low}°` : `${f.temperature}°`;
   return `${sentenceCase(f.condition)}, ${temps}, ${f.precipChance}% chance of precipitation`;
 }
 

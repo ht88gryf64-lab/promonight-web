@@ -1,7 +1,10 @@
 // The game-time forecast (docs/per-promo-pages-v2-spec.md, Visuals 7, step
 // 5b, rulings 2026-11-08): api.weather.gov, free, no key. The points call
-// names the grid's forecast URL, the forecast call gives fourteen half-day
-// periods; both are fetched with Next's one-hour cache. The row shows on a
+// names the grid's two forecast URLs; the hourly one gives the start hour's
+// temperature, chance of precipitation and condition (ruling 2026-11-08,
+// after the first review), the daily one gives fourteen half-day periods
+// and is the fallback when the hourly grid does not reach the start hour.
+// All three are fetched with Next's one-hour cache. The row shows on a
 // promo page whose game is within seven days at a US venue with coordinates;
 // the points call answering 404 is a venue outside the US (every Canadian
 // building) and renders nothing, quietly.
@@ -83,11 +86,37 @@ export function forecastFromPeriods(periods: readonly NwsPeriod[], gameDate: str
     const high = num(light.temperature);
     const low = num(night.temperature);
     if (high === null || low === null) return null;
-    return { condition, icon: forecastIconKey(condition, named.isDaytime !== false), high, low, temperature: null, unit, precipChance, updatedAt };
+    return { condition, icon: forecastIconKey(condition, named.isDaytime !== false), high, low, temperature: null, unit, precipChance, updatedAt, atTime: null, source: 'daily' };
   }
   const temperature = num(named.temperature);
   if (temperature === null) return null;
-  return { condition, icon: forecastIconKey(condition, named.isDaytime !== false), high: null, low: null, temperature, unit, precipChance, updatedAt };
+  return { condition, icon: forecastIconKey(condition, named.isDaytime !== false), high: null, low: null, temperature, unit, precipChance, updatedAt, atTime: null, source: 'daily' };
+}
+
+/** The hourly period covering the game's start hour on its date, by the
+ *  period's own local clock; 'past' when the hour is before the grid's
+ *  first period (the hour has left the grid: no row, ruling 2026-11-08);
+ *  'beyond' when it is after the grid's last period (the daily fallback);
+ *  null when the game has no time. */
+export function hourlyAt(periods: readonly NwsPeriod[], gameDate: string, displayTime: string | null | undefined): NwsPeriod | 'past' | 'beyond' | null {
+  const t = parseDisplayTime(displayTime);
+  if (!t) return null;
+  const want = `${gameDate}T${String(t.h).padStart(2, '0')}`;
+  const starts = periods.map((p) => str(p.startTime).slice(0, 13)).filter(Boolean).sort();
+  if (!starts.length) return 'beyond';
+  const hit = periods.find((p) => str(p.startTime).slice(0, 13) === want);
+  if (hit) return hit;
+  return want < starts[0] ? 'past' : 'beyond';
+}
+
+/** The row from the start hour's period, or null when a field is missing. */
+export function forecastFromHour(period: NwsPeriod, displayTime: string, updatedAt: string): GameForecast | null {
+  const condition = str(period.shortForecast);
+  const temperature = num(period.temperature);
+  const pop = num(period.probabilityOfPrecipitation?.value);
+  if (!condition || temperature === null || pop === null) return null;
+  const unit = str(period.temperatureUnit) === 'C' ? 'C' : 'F';
+  return { condition, icon: forecastIconKey(condition, period.isDaytime !== false), high: null, low: null, temperature, unit, precipChance: pop, updatedAt, atTime: displayTime.trim(), source: 'hourly' };
 }
 
 export function isFresh(updateTime: string, now: Date): boolean {
@@ -131,16 +160,31 @@ export async function fetchGameForecast(input: GameForecastInput): Promise<GameF
     // Outside the NWS grid (a Canadian building): not a failure, nothing to show.
     if (points.status === 404) return null;
     if (!points.ok) throw new ForecastFailure(`points HTTP ${points.status}`);
-    const pointsBody = (await points.json()) as { properties?: { forecast?: unknown } };
+    const pointsBody = (await points.json()) as { properties?: { forecast?: unknown; forecastHourly?: unknown } };
     const forecastUrl = str(pointsBody.properties?.forecast);
-    if (!/^https:\/\/api\.weather\.gov\//.test(forecastUrl)) return null;
-    const res = await fetch(forecastUrl, { headers: HEADERS, next: { revalidate: FORECAST_CACHE_SECONDS }, signal: controller.signal } as RequestInit);
-    if (!res.ok) throw new ForecastFailure(`forecast HTTP ${res.status}`);
-    const body = (await res.json()) as { properties?: { updateTime?: unknown; generatedAt?: unknown; periods?: unknown } };
-    const updatedAt = str(body.properties?.updateTime) || str(body.properties?.generatedAt);
-    if (!updatedAt || !isFresh(updatedAt, now)) throw new ForecastFailure(updatedAt ? `stale (updated ${updatedAt})` : 'no update time');
-    const periods = Array.isArray(body.properties?.periods) ? (body.properties!.periods as NwsPeriod[]) : [];
-    return forecastFromPeriods(periods, gameDate, displayTime, updatedAt);
+    const hourlyUrl = str(pointsBody.properties?.forecastHourly);
+    const ok = (u: string) => /^https:\/\/api\.weather\.gov\//.test(u);
+    if (!ok(forecastUrl)) return null;
+    const grid = async (url: string, name: string) => {
+      const res = await fetch(url, { headers: HEADERS, next: { revalidate: FORECAST_CACHE_SECONDS }, signal: controller.signal } as RequestInit);
+      if (!res.ok) throw new ForecastFailure(`${name} HTTP ${res.status}`);
+      const body = (await res.json()) as { properties?: { updateTime?: unknown; generatedAt?: unknown; periods?: unknown } };
+      const updatedAt = str(body.properties?.updateTime) || str(body.properties?.generatedAt);
+      if (!updatedAt || !isFresh(updatedAt, now)) throw new ForecastFailure(updatedAt ? `${name} stale (updated ${updatedAt})` : `${name} has no update time`);
+      const periods = Array.isArray(body.properties?.periods) ? (body.properties!.periods as NwsPeriod[]) : [];
+      return { periods, updatedAt };
+    };
+    // The start hour from the hourly grid (ruling 2026-11-08); the daily
+    // period only when the hourly grid does not reach the hour. Both are
+    // asked for together so the deadline covers them as one.
+    const wantHourly = ok(hourlyUrl) && !!parseDisplayTime(displayTime);
+    const [hourly, daily] = await Promise.all([wantHourly ? grid(hourlyUrl, 'hourly') : Promise.resolve(null), grid(forecastUrl, 'forecast')]);
+    if (hourly) {
+      const at = hourlyAt(hourly.periods, gameDate, displayTime);
+      if (at === 'past') return null;
+      if (at && at !== 'beyond') return forecastFromHour(at, displayTime as string, hourly.updatedAt);
+    }
+    return forecastFromPeriods(daily.periods, gameDate, displayTime, daily.updatedAt);
   } catch (e) {
     const reason = controller.signal.aborted ? `timeout past ${FORECAST_TIMEOUT_MS}ms` : e instanceof Error ? e.message : String(e);
     logFailureOnce(pageKey, reason, now.getTime());
