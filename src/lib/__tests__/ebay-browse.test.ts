@@ -60,6 +60,19 @@ test('a listing is confirmed by a whole-word match on a product token, never by 
   assert.deepEqual(titleYears('2012-13 Julius Erving Bobblehead Philadelphia 76ers 11/18'), [2012, 2013]);
   assert.deepEqual(titleYears('2026 Dr. J Nets SGA'), [2026]);
   assert.deepEqual(titleYears("80's ABA 11/18"), []);
+  // The heading word (ruling 2026-11-08): the token the most listings matched
+  // on, a tie to the later token, spelled as the promo title spells it.
+  const { ebayHeading, ebayHeadingWord } = await load();
+  const nets = { city: 'Brooklyn', name: 'Nets' };
+  assert.equal(ebayHeadingWord('Julius Erving Bobblehead', nets, ['PRESALE 2026 Dr. J Julius Erving Brooklyn Nets SGA Bobblehead', '2026 Dr. J Julius Erving Nets Bobblehead', "Dr J Black Panther Bobblehead Marvel's Brooklyn Nets Julius Erving SGA"]), 'Erving');
+  assert.equal(ebayHeadingWord('Julius Erving Bobblehead', nets, ['Julius bobblehead', 'Julius again']), 'Julius', 'the token the listings matched on');
+  assert.equal(ebayHeadingWord('Peanuts Snoopy Bobblehead', { city: 'Pittsburgh', name: 'Penguins' }, ['Snoopy Penguins bobblehead 2026']), 'Snoopy');
+  assert.equal(ebayHeadingWord('R2-D2 Bobblehead', { city: 'San Francisco', name: 'Giants' }, ['2026 Giants R2-D2 bobblehead SGA']), 'R2-D2', 'the hyphenated word as the title spells it');
+  assert.equal(ebayHeadingWord("Ovechkin's Hometown Remix Bobblehead", { city: 'Washington', name: 'Capitals' }, ["Ovechkin's bobblehead"]), 'Ovechkin', 'the possessive dropped');
+  assert.equal(ebayHeadingWord('Mystery Bobblehead', { city: 'Ottawa', name: 'Senators' }, ['Senators mystery bobblehead']), null);
+  assert.equal(ebayHeadingWord('Julius Erving Bobblehead', nets, []), null, 'no listings, no word');
+  assert.equal(ebayHeading('Erving'), 'Erving bobbleheads on eBay');
+  assert.equal(ebayHeading(null), 'Bobbleheads on eBay');
   assert.deepEqual(tokenize("Dr. J's Nets Bobblehead (NIB)"), ['dr', 'j', 'nets', 'bobblehead', 'nib']);
 });
 

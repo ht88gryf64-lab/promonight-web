@@ -47,85 +47,9 @@ const OAUTH_SCOPE = 'https://api.ebay.com/oauth/api_scope';
 /** How many the API is asked for, so the guard has something to filter. */
 const SEARCH_LIMIT = 12;
 
-// ── the guard ────────────────────────────────────────────────────────────────
-
-/** Words that describe the KIND of thing and so can never confirm that a
- *  listing is this promo's item. The promo type's own nouns, the giveaway
- *  boilerplate, product modifiers, the leagues and the sports, and the
- *  function words a title carries. Lowercase, singular and plural both. */
-export const IMAGE_TOKEN_STOPLIST: ReadonlySet<string> = new Set([
-  // the kind
-  'bobblehead', 'bobbleheads', 'bobble', 'head', 'heads', 'figure', 'figures', 'figurine', 'figurines', 'statue', 'doll', 'collectible', 'collectibles', 'replica',
-  // the giveaway boilerplate
-  'giveaway', 'giveaways', 'night', 'nights', 'game', 'games', 'gameday', 'promo', 'promotion', 'promotions', 'sga', 'stadium', 'arena', 'center', 'centre', 'presented', 'sponsored', 'fans', 'fan', 'first', 'free', 'all', 'ticket', 'tickets', 'package', 'holder', 'holders',
-  // modifiers that name an edition, not an item
-  'edition', 'editions', 'statement', 'limited', 'special', 'exclusive', 'premium', 'official', 'licensed', 'commemorative', 'anniversary', 'celebration', 'tribute', 'legends', 'legend', 'series', 'mini', 'talking', 'singing', 'dancing', 'light', 'up', 'mystery', 'blind', 'box', 'remix', 'hometown', 'alumni', 'retro', 'throwback', 'classic', 'vintage', 'new', 'sealed', 'nib', 'mint', 'rare', 'lot',
-  // leagues, sports and the words around them
-  'nhl', 'nba', 'mlb', 'nfl', 'mls', 'wnba', 'hockey', 'basketball', 'baseball', 'football', 'soccer', 'team', 'teams', 'club', 'league', 'home', 'season', 'player', 'players', 'coach', 'star', 'stars', 'hall', 'fame', 'hof', 'captain', 'goalie', 'mascot',
-  // function words
-  'the', 'and', 'of', 'with', 'for', 'from', 'vs', 'at', 'in', 'on', 'to', 'by', 'a', 'an', 'his', 'her', 'their', 'your', 'our',
-]);
-
-/** Lowercase word tokens: letters and digits only, possessives dropped. */
-export function tokenize(text: string): string[] {
-  return text
-    .toLowerCase()
-    .replace(/[’']s\b/g, '')
-    .split(/[^a-z0-9]+/)
-    .filter(Boolean);
-}
-
-/** The promo name's confirming tokens: three letters or more (or a letter
- *  and digit mix such as "r2" and "d2"), not a bare number, not in the
- *  stoplist, not one of the club's own words (city, nickname, abbreviation).
- *  Empty means nothing can confirm a listing. */
-export function productTokens(title: string, team: { city: string; name: string; abbreviation?: string }): string[] {
-  // Each club word on its own (never a city + name join: teamDisplayName owns that).
-  const club = new Set([...tokenize(team.city), ...tokenize(team.name), ...tokenize(team.abbreviation ?? '')]);
-  const out = new Set<string>();
-  for (const t of tokenize(title)) {
-    const short = t.length < 3 && !(/\d/.test(t) && /[a-z]/.test(t));
-    if (short || /^\d+$/.test(t) || IMAGE_TOKEN_STOPLIST.has(t) || club.has(t)) continue;
-    out.add(t);
-  }
-  return [...out];
-}
-
-/** What a listing must satisfy: a confirming token, and no year that says
- *  it is another edition. */
-export interface ListingGuard {
-  tokens: readonly string[];
-  /** The promo's year (from its date), or null when the date is unusable. */
-  year: number | null;
-}
-
-/** The four-digit years a listing title names ("2012-13" names 2012 and
- *  2013; "76ers", "11/18" and "80's" name none). */
-export function titleYears(title: string): number[] {
-  const out = new Set<number>();
-  for (const m of title.matchAll(/\b((?:19|20)\d{2})(?:[-\u2013/](\d{2}))?\b/g)) {
-    const y = Number(m[1]);
-    out.add(y);
-    if (m[2]) out.add(Math.floor(y / 100) * 100 + Number(m[2]));
-  }
-  return [...out];
-}
-
-/** Whether a listing title carries one of the confirming tokens, as a whole
- *  word ("Ovechkin's" confirms "ovechkin"; "Sorokin" never confirms "soro"),
- *  and names no year outside the promo's own (the season spans two, so the
- *  year before and after pass; "2012-13 Julius Erving ... 76ers" against a
- *  2026 giveaway is another edition and is out, ux-review D2, 2026-11-08). */
-export function listingConfirmed(listingTitle: string, guard: ListingGuard): boolean {
-  if (!guard.tokens.length) return false;
-  const words = new Set(tokenize(listingTitle));
-  if (!guard.tokens.some((t) => words.has(t))) return false;
-  if (guard.year !== null) {
-    const years = titleYears(listingTitle);
-    if (years.length && !years.some((y) => Math.abs(y - (guard.year as number)) <= 1)) return false;
-  }
-  return true;
-}
+// ── the guard: src/lib/ebay-guard.ts (pure), re-exported for the callers ────
+export { IMAGE_TOKEN_STOPLIST, ebayHeading, ebayHeadingWord, listingConfirmed, productTokens, titleYears, tokenize, type ListingGuard } from './ebay-guard';
+import { listingConfirmed, productTokens, type ListingGuard } from './ebay-guard';
 
 // ── the response ─────────────────────────────────────────────────────────────
 

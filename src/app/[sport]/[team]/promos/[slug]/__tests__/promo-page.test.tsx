@@ -1260,7 +1260,7 @@ test('eBay listings: a failed call renders the page with no block and does not t
   _resetEbayBrowseForTests();
   ebayCalls.length = 0;
   const failed = await render('nba', 'phoenix-suns', 'devin-booker-bobblehead');
-  assert.doesNotMatch(failed.h, />On eBay<\/h2>/);
+  assert.doesNotMatch(failed.h, /bobbleheads on eBay<\/h2>/);
   assert.ok(!failed.h.includes('i.ebayimg.com'));
   assert.ok(ebayCalls.length >= 1, 'the page asked eBay');
   assert.match(failed.h, />About this giveaway<\/h2>/);
@@ -1272,10 +1272,10 @@ test('eBay listings: a failed call renders the page with no block and does not t
   _resetEbayBrowseForTests();
   ebayCalls.length = 0;
   const ok = await render('nba', 'phoenix-suns', 'devin-booker-bobblehead');
-  assert.match(ok.h, />On eBay<\/h2>/);
+  assert.match(ok.h, />Booker bobbleheads on eBay<\/h2>/);
   const q = new URL(ebayCalls.find((u) => u.includes('/item_summary/search')) as string).searchParams.get('q');
   assert.equal(q, '2026 Suns Devin Booker bobblehead', 'the tier 2 search link’s query');
-  const block = ok.h.slice(ok.h.lastIndexOf('<section', ok.h.search(/>On eBay<\/h2>/)), ok.h.indexOf('</section>', ok.h.search(/>On eBay<\/h2>/)));
+  const block = ok.h.slice(ok.h.lastIndexOf('<section', ok.h.search(/>Booker bobbleheads on eBay<\/h2>/)), ok.h.indexOf('</section>', ok.h.search(/>Booker bobbleheads on eBay<\/h2>/)));
   const hrefs = [...block.matchAll(/<a href="([^"]+)" target="_blank" rel="sponsored noopener"/g)].map((m) => decode(m[1]));
   assert.deepEqual(hrefs.map((h) => new URL(h).pathname), ['/itm/1', '/itm/3', '/itm/4'], 'three confirmed listings, the club-and-kind title left out');
   assert.equal((block.match(/<img src="https:\/\/i\.ebayimg\.com\/images\/g\/\d\/s-l400\.webp"/g) ?? []).length, 3);
@@ -1284,7 +1284,7 @@ test('eBay listings: a failed call renders the page with no block and does not t
   // After This game (ruling 2026-11-08): the next section after it, with no
   // other heading between, and the Fan guide after the block.
   const thisGameAt = ok.h.indexOf('>This game</h2>');
-  const ebayAt = ok.h.search(/>On eBay<\/h2>/);
+  const ebayAt = ok.h.search(/>Booker bobbleheads on eBay<\/h2>/);
   assert.ok(thisGameAt > 0 && thisGameAt < ebayAt, 'This game first');
   const between = ok.h.slice(thisGameAt, ebayAt);
   assert.equal((between.match(/<h2/g) ?? []).length, 1, 'no heading between This game and the block');
@@ -1295,7 +1295,7 @@ test('eBay listings: a failed call renders the page with no block and does not t
   // The tier 1 Lindell page never asks.
   ebayCalls.length = 0;
   const lindell = await render('nhl', 'dallas-stars', 'esa-lindell-bobblehead');
-  assert.doesNotMatch(lindell.h, />On eBay<\/h2>/);
+  assert.doesNotMatch(lindell.h, /bobbleheads on eBay<\/h2>/);
   assert.equal(ebayCalls.length, 0, 'no call for a tier 1 upcoming page');
   ebayHandler = () => new Response('', { status: 500 });
 });
