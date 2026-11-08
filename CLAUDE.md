@@ -1,5 +1,13 @@
 # Working rules for this repo
 
+## Worktrees: every session in its own. The shared checkout stays on main.
+
+Every Claude Code session works in its own git worktree (`git worktree add <scratch>/<name> -b <branch> origin/main`), builds and tests there, and merges to main from a worktree too. The shared checkout at `~/promonight-web` is **never switched off main**, not for a feature branch, not for a quick look, not for a merge.
+
+**Why.** On 2026-11-08 one session switched the shared checkout to its feature branch (with uncommitted work) between another session's steps. The second session's `git merge --no-ff` then landed on the first session's branch, and its `git push origin main` reported "up-to-date" because main had not moved. It was caught and undone (`git reset --keep` to that branch's own tip, after confirming from its reflog that the merge was the only commit and no file overlapped), but two sessions sharing one checkout means each one's `git` commands act on the other's state.
+
+**How.** Before any merge, `git branch --show-current` in the directory you are in. Merge from a worktree that checks out main itself (main can be checked out in only one worktree at a time, so remove that worktree, or detach it, as soon as the push is done). If the shared checkout is on a branch that is not main, leave it alone and tell the owner; do not switch it back over someone's uncommitted work.
+
 ## Staging: explicit paths only. Never `git add -A`.
 
 `git add -A` / `git add .` / `git commit -a` are **banned in this repo**, in

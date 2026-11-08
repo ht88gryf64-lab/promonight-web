@@ -4257,6 +4257,14 @@ The 2026-11-08 ruling (promo-pipeline EXTRACTION-RULES 1.8) puts "No bags, excep
 
 axe at 390 on `/mlb/atlanta-braves/promos/austin-riley-short-sleeve-hoodie-giveaway` flags "Official bag policy" and "Official lot map" as serious (link-in-text-block): the #c62a1e link red is 2.99:1 against the surrounding text, and these links carry no underline, unlike the in-text links underlined in b908cb6. Present on production. Deferred: it belongs to the link-token pass that underlined the other in-text links.
 
+## 86. Browser back does not restore the scroll position on venue pages past the first ad (deferred, logged 2026-11-08)
+
+ux-review of `feature/byg-vendor-parking` (docs/ux-review/2026-11-08-feature-byg-vendor-parking.md, V1). On `/venues/xcel-energy-center`, back from the parking lots card lands 260 px lower, heading off screen; back from a footer link lands 707 px lower. `main` and `body` compute `overflow-anchor: auto`. Both environments. The promo page fixed the same shape with `overflow-anchor` on the article and live guard 9; the venue page needs the equivalent and its own guard.
+
+## 87. Venue page cards whose accessible name does not contain their visible text (deferred, logged 2026-11-08)
+
+axe at 390 on `/venues/xcel-energy-center` flags label-content-name-mismatch (serious) on two cards: "SpotHero Reserve Parking" is named "Reserve parking on SpotHero", and the Ticketmaster card's visible text is not in its name. Both environments. The fix is aligning each card's aria-label with its visible text, a pass on the booking cards together.
+
 ## 88. eBay listing thumbnails on bobblehead promo pages are letterboxed (deferred, logged 2026-11-08)
 
 ux-review of `feature/promo-ebay-images` (docs/ux-review/2026-11-08-feature-promo-ebay-images.md, D4). eBay's `s-l400` thumbnails are not square (146x400, 231x400 and 400x300 on the Nets' Julius Erving page), and the block's square tiles use `object-contain` on #ebe4d6, so a tall product photo shows as a 38 px strip in a 103 px tile at 390 and the price becomes the block's strongest visual. A cropping fit would cut the product; a per-image aspect would break the three-up grid. Needs a design decision (a taller tile, a two-up grid, or eBay's larger image with a cropping fit chosen per aspect).

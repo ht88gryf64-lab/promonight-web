@@ -20,6 +20,7 @@ import { type VenueHub, type VenueHubTenantOverlay, dimsString } from './venue-h
 import { claimPointerUrl, claimSourceHost, claimSourceUrl, formatReadOn, type ClaimField } from './venue-claim';
 import { hasSubProvenance, isReachableUrl } from './venue-field-exclusions';
 import { sentence, stripEmDashes, type CondensedLine } from './venue-hub-condensed';
+import { vendorParkingSentence } from './parking-vendor';
 import { BEFORE_YOU_GO_LABELS, BEFORE_YOU_GO_ORDER, renderedReadTime, type BeforeYouGoKey, type BeforeYouGoRow } from './before-you-go';
 
 const has = (s: unknown): s is string => typeof s === 'string' && s.trim().length > 0;
@@ -107,7 +108,14 @@ function transitRow(hub: VenueHub): BeforeYouGoRow | null {
 
 function parkingRow(hub: VenueHub): BeforeYouGoRow | null {
   const lots = hub.parkingLots.map((l) => l.name).filter(has).slice(0, 4).map(stripEmDashes);
-  if (!lots.length) return null;
+  if (!lots.length) {
+    // Vendor direction (ruling 2026-11-08): no lots, and the operator sends fans to a
+    // vendor. Lots always win; this row exists only where there are none.
+    const v = hub.parkingNotes;
+    const at = v ? renderedReadTime(hub.fieldStates, hub.observedAtByField, 'parkingNotes') : null;
+    if (!v || !at) return null;
+    return row('parking', vendorParkingSentence(hub.name, v.vendor), at, claimSourceUrl(hub, 'parkingNotes'));
+  }
   const at = renderedReadTime(hub.fieldStates, hub.observedAtByField, 'parkingLots');
   if (!at) return null;
   return row('parking', `Lots: ${lots.join(', ')}.`, at, claimLink(hub, 'parkingLots'));

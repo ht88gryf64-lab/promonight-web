@@ -56,6 +56,7 @@ export const UNGATED_CONSUMERS = ['buildCondensedLogistics'] as const;
 const CLAIMS: ReadonlyArray<{ field: keyof VenueHub; exclusion: Parameters<typeof fieldExcluded>[1] | null; sub?: string }> = [
   { field: 'publicTransit', exclusion: 'transit' },
   { field: 'parkingLots', exclusion: 'parking', sub: 'parkingLots' },
+  { field: 'parkingNotes', exclusion: 'parking' },
   { field: 'bagMaxDimensions', exclusion: 'bag' },
   { field: 'clearBagRequired', exclusion: 'bag' },
   { field: 'bagsProhibited', exclusion: 'bag' },
