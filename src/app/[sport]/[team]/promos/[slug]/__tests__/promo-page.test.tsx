@@ -1254,8 +1254,8 @@ test('played (ruling 2026-11-08): every date before today in the venue zone; the
 // ── eBay listings (spec Visuals 6, step 5a, 2026-11-08) ─────────────────────
 // The Booker page: a bobblehead giveaway with no stored image, the block's
 // case. The fake API fails by default (every render above went through that),
-// then answers, and the served HTML carries the block under About.
-test('eBay listings: a failed call renders the page with no block and does not throw; a good call renders up to three confirmed listings under About; a tier 1 page asks nothing', async () => {
+// then answers, and the served HTML carries the block after This game.
+test('eBay listings: a failed call renders the page with no block and does not throw; a good call renders up to three confirmed listings after This game; a tier 1 page asks nothing', async () => {
   const { _resetEbayBrowseForTests } = await import('@/lib/ebay-browse');
   _resetEbayBrowseForTests();
   ebayCalls.length = 0;
@@ -1281,13 +1281,15 @@ test('eBay listings: a failed call renders the page with no block and does not t
   assert.equal((block.match(/<img src="https:\/\/i\.ebayimg\.com\/images\/g\/\d\/s-l400\.webp"/g) ?? []).length, 3);
   assert.equal((block.match(/>\$34\.99<\/span>/g) ?? []).length, 3);
   assert.ok(block.includes('PromoNight may earn a commission on purchases made through links on this page.'));
-  // Under About: the next section after it, with no other heading between.
-  const aboutAt = ok.h.indexOf('>About this giveaway</h2>');
+  // After This game (ruling 2026-11-08): the next section after it, with no
+  // other heading between, and the Fan guide after the block.
+  const thisGameAt = ok.h.indexOf('>This game</h2>');
   const ebayAt = ok.h.search(/>On eBay<\/h2>/);
-  assert.ok(aboutAt > 0 && aboutAt < ebayAt, 'About first');
-  const between = ok.h.slice(aboutAt, ebayAt);
-  assert.equal((between.match(/<h2/g) ?? []).length, 1, 'no heading between About and the block');
-  assert.equal((between.match(/<\/section><section /g) ?? []).length, 1, 'the block is the section after About');
+  assert.ok(thisGameAt > 0 && thisGameAt < ebayAt, 'This game first');
+  const between = ok.h.slice(thisGameAt, ebayAt);
+  assert.equal((between.match(/<h2/g) ?? []).length, 1, 'no heading between This game and the block');
+  assert.equal((between.match(/<\/section><section /g) ?? []).length, 1, 'the block is the section after This game');
+  assert.ok(ok.h.indexOf('>Fan guide</p>') > ebayAt, 'the Fan guide follows the block');
   guard(ok.h, 'Booker, eBay ok');
 
   // The tier 1 Lindell page never asks.

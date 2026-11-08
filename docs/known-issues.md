@@ -4257,10 +4257,10 @@ The 2026-11-08 ruling (promo-pipeline EXTRACTION-RULES 1.8) puts "No bags, excep
 
 axe at 390 on `/mlb/atlanta-braves/promos/austin-riley-short-sleeve-hoodie-giveaway` flags "Official bag policy" and "Official lot map" as serious (link-in-text-block): the #c62a1e link red is 2.99:1 against the surrounding text, and these links carry no underline, unlike the in-text links underlined in b908cb6. Present on production. Deferred: it belongs to the link-token pass that underlined the other in-text links.
 
-## 86. eBay listing thumbnails on bobblehead promo pages are letterboxed (deferred, logged 2026-11-08)
+## 88. eBay listing thumbnails on bobblehead promo pages are letterboxed (deferred, logged 2026-11-08)
 
 ux-review of `feature/promo-ebay-images` (docs/ux-review/2026-11-08-feature-promo-ebay-images.md, D4). eBay's `s-l400` thumbnails are not square (146x400, 231x400 and 400x300 on the Nets' Julius Erving page), and the block's square tiles use `object-contain` on #ebe4d6, so a tall product photo shows as a 38 px strip in a 103 px tile at 390 and the price becomes the block's strongest visual. A cropping fit would cut the product; a per-image aspect would break the three-up grid. Needs a design decision (a taller tile, a two-up grid, or eBay's larger image with a cropping fit chosen per aspect).
 
-## 87. Promo pages with no stored game time still tell the fan to arrive before "game time" (deferred, logged 2026-11-08)
+## 89. Promo pages with no stored game time still tell the fan to arrive before "game time" (deferred, logged 2026-11-08)
 
 ux-review of `feature/promo-ebay-images` (D8, carried: production behaviour). On `/nba/brooklyn-nets/promos/julius-erving-bobblehead` the row has no time, so the game line and the Event `startDate` carry the date alone and nothing says the time is unannounced; yet the fan guide says "Plan to arrive when gates open rather than at game time" and the quick facts say "doors open 90 minutes prior to the scheduled start time". Either the page states that the tip-off time is not yet announced, or the arrival sentences are withheld when the row has no time. Pipeline side: the time join (promo-game-join) fills the slot once the spine has the game time.

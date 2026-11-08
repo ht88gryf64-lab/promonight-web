@@ -1,5 +1,6 @@
 // The eBay listings block on a bobblehead's page (spec Visuals 6, step 5a,
-// 2026-11-08), in the server HTML: under About, on a bobblehead page with no
+// 2026-11-08), in the server HTML: after This game, before the Fan guide (ruling
+// 2026-11-08), on a bobblehead page with no
 // tier 1 photo and on every played bobblehead page; never beside a tier 1
 // photo on an upcoming page; nothing when the context holds no listing.
 import { test } from 'node:test';
@@ -65,7 +66,7 @@ test('no block when no listing passed the guard (an empty context), on an upcomi
   }
 });
 
-test('an upcoming bobblehead page without a photo: the block under About with one, two or three listings, image, price and sponsored link each, the disclosure under it', () => {
+test('an upcoming bobblehead page without a photo: the block after This game with one, two or three listings, image, price and sponsored link each, the disclosure under it', () => {
   for (const n of [1, 2, 3]) {
     const listings = Array.from({ length: n }, (_, i) => listing(i + 1));
     const html = render([row({})], listings);
@@ -83,10 +84,14 @@ test('an upcoming bobblehead page without a photo: the block under About with on
     }
     assert.ok(s.includes('Current listings for this bobblehead.'));
     assert.ok(s.endsWith(`${AFFILIATE_DISCLOSURE_TEXT}</p></section>`), 'the disclosure line closes the block');
-    // Under About, above the rest.
-    const about = html.indexOf('>About this giveaway</h2>');
-    assert.ok(about > 0 && about < html.search(BLOCK), 'About first');
-    assert.ok(html.search(BLOCK) < html.indexOf('>Questions</h2>'));
+    // After This game, before the Fan guide and the rest (ruling 2026-11-08).
+    const thisGame = html.indexOf('>This game</h2>');
+    const at = html.search(BLOCK);
+    assert.ok(thisGame > 0 && thisGame < at, 'This game first');
+    const guide = html.indexOf('>Fan guide</p>');
+    assert.ok(guide > at, 'the Fan guide follows the block');
+    assert.ok(at < html.indexOf('>Questions</h2>'));
+    assert.equal((html.slice(thisGame, at).match(/<h2/g) ?? []).length, 1, 'no heading between This game and the block');
   }
 });
 

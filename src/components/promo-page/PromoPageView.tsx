@@ -784,10 +784,29 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
         </section>
         ) : null}
 
+        {thisGame.length ? (
+          <section className="mt-6 flex flex-col gap-2.5 rounded-2xl border border-rd-line bg-rd-card p-3.5">
+            <H2>{multi ? 'Next game' : 'This game'}</H2>
+            <dl className="m-0 grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-[15px] leading-[1.45]">
+              {thisGame.map((r) => (
+                <Fragment key={r.label}>
+                  <dt className="pt-0.5 font-rd text-[10px] uppercase tracking-[0.12em] text-rd-ink-faint">{r.label}</dt>
+                  <dd className="m-0 min-w-0 text-rd-ink">{r.value}</dd>
+                </Fragment>
+              ))}
+            </dl>
+            {/* The season timeline (spec Visuals 4), derived from the spine:
+                null below three home games, so nothing renders. */}
+            {ctx.timeline ? <SeasonTimeline games={ctx.timeline.games} promos={ctx.timeline.promos} thisDate={primary.date} thisHref={promoPagePath(team.sportSlug, team.id, page.slug)} teamName={teamName} /> : null}
+          </section>
+        ) : null}
+
         {ebayListings.length ? (
           // eBay listings (spec Visuals 6, step 5a, 2026-11-08): real photos
-          // of the item, under About, on a bobblehead page with no tier 1
-          // photo and on every played bobblehead page. The loader asked eBay
+          // of the item, after This game and before the Fan guide (ruling
+          // 2026-11-08: the facts of the night before the resale prices; the
+          // block sat under About in the first review), on a bobblehead page
+          // with no tier 1 photo and on every played bobblehead page. The loader asked eBay
           // only for those pages (src/lib/ebay-browse.ts); `ebayListings`
           // above re-applies the rule, so a tier 1 upcoming page renders
           // nothing from eBay whatever the context holds. Each listing is a
@@ -814,23 +833,6 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
               ))}
             </ul>
             <p className="m-0 font-rd text-[11px] text-rd-ink-faint">{AFFILIATE_DISCLOSURE_TEXT}</p>
-          </section>
-        ) : null}
-
-        {thisGame.length ? (
-          <section className="mt-6 flex flex-col gap-2.5 rounded-2xl border border-rd-line bg-rd-card p-3.5">
-            <H2>{multi ? 'Next game' : 'This game'}</H2>
-            <dl className="m-0 grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-[15px] leading-[1.45]">
-              {thisGame.map((r) => (
-                <Fragment key={r.label}>
-                  <dt className="pt-0.5 font-rd text-[10px] uppercase tracking-[0.12em] text-rd-ink-faint">{r.label}</dt>
-                  <dd className="m-0 min-w-0 text-rd-ink">{r.value}</dd>
-                </Fragment>
-              ))}
-            </dl>
-            {/* The season timeline (spec Visuals 4), derived from the spine:
-                null below three home games, so nothing renders. */}
-            {ctx.timeline ? <SeasonTimeline games={ctx.timeline.games} promos={ctx.timeline.promos} thisDate={primary.date} thisHref={promoPagePath(team.sportSlug, team.id, page.slug)} teamName={teamName} /> : null}
           </section>
         ) : null}
 
