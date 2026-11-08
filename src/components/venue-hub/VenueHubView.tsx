@@ -234,9 +234,13 @@ export function VenueHubView({
   // fact was a lot map, and beside a vendor direction it would contradict the card.
   const lotsShown = hub.parkingLots.length > 0 && lotsUsable;
   const vendorParking = !lotsShown && hub.parkingNotes && hasProvenance(hub.sources, 'parkingNotes') ? hub.parkingNotes : null;
+  // Held lots (pipeline drift hold, owner rule 2026-11-08): the operator's page no
+  // longer carries the stored lots, so no surface claims lots, this FAQ included; a
+  // lot-map link alone does not bring the "has on-site lots" answer back.
+  const lotsHeld = hub.fieldStates?.parkingLots === 'held';
   const parkingFactsOk =
     verified && !fieldExcluded(hub.slug, 'parking') &&
-    (lotsShown || isReachableUrl(hub.parkingLotMapUrl) || !!vendorParking);
+    (lotsShown || (!lotsHeld && isReachableUrl(hub.parkingLotMapUrl)) || !!vendorParking);
   if (parkingFactsOk) {
     const lotNames = lotsUsable ? hub.parkingLots.slice(0, 8).map((l) => l.name).join(', ') : '';
     faqs.push({
