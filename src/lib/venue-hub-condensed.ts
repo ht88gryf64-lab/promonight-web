@@ -82,7 +82,7 @@ export function stripEmDashes(t: string): string {
 // First stored sentence, verbatim. A lead that already ends in a terminator
 // keeps it ("Sodexo Live!" stays "Sodexo Live!", never "Sodexo Live!."); one
 // that does not (a fragment, or a value stored without its period) gets one.
-const sentence = (t: string): string => { const lead = stripEmDashes(leadSentences(t, 1).lead); return /[.!?]$/.test(lead) ? lead : `${stripTrailingPeriod(lead)}.`; };
+export const sentence = (t: string): string => { const lead = stripEmDashes(leadSentences(t, 1).lead); return /[.!?]$/.test(lead) ? lead : `${stripTrailingPeriod(lead)}.`; };
 
 /** Build the lines for one tenant of a hub. `tenantId` selects the overlay whose
  *  gates rule applies (a shared NFL/CFB building has one per tenant). */

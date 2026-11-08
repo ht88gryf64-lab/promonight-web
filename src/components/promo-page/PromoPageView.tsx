@@ -15,6 +15,7 @@ import { PROMO_TYPE_LABELS } from '@/lib/types';
 import { TICKET_PACKAGE_ROW_NOTE } from '@/lib/ticket-packages';
 import type { LinkedPromo, PromoPage, PromoPageContext } from '@/lib/promo-pages';
 import { EXPLAINER_LABEL, explainerFor } from '@/lib/promo-explainers';
+import { BEFORE_YOU_GO_LABEL } from '@/lib/before-you-go';
 import { promoPageTheme, themeStyle } from '@/lib/promo-page-theme';
 import { dateTileState, ymdInZone, type DateTileState } from '@/lib/promo-date-tile';
 import { promoRailItems } from '@/lib/promo-rail';
@@ -551,9 +552,10 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
             <p className="m-0 text-[15px] leading-[1.45] text-rd-ink-soft">
               {venueHref ? <Link href={venueHref} className="text-rd-red no-underline hover:underline">{venueName}</Link> : venueName}
               {ctx.hub?.city ? <span>{`, ${ctx.hub.city}`}</span> : null}
-              {/* A renamed building names its former name in the quick-facts
-                  block; when that block has nothing to show, here instead. */}
-              {ctx.formerNames.length && !ctx.quickFacts.length ? <span>{` · formerly ${ctx.formerNames.join(', ')}`}</span> : null}
+              {/* A renamed building names its former name in the Before you
+                  go block, or in the quick facts card it falls back to; when
+                  neither has anything to show, here instead. */}
+              {ctx.formerNames.length && !ctx.beforeYouGo.length && !ctx.quickFacts.length ? <span>{` · formerly ${ctx.formerNames.join(', ')}`}</span> : null}
             </p>
           ) : null}
           {!showAbout ? (
@@ -769,7 +771,52 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
           </section>
         ) : null}
 
-        {ctx.quickFacts.length && venueName ? (
+        {ctx.beforeYouGo.length && venueName ? (
+          // Spec item 8 (step 4, 2026-11-08): the building's facts from the
+          // provenance record. Each row is a field in state `rendered`, with
+          // the date its source was read and the operator page when the record
+          // names one (src/lib/before-you-go.ts). Nothing rendered, no block.
+          <section id="before-you-go" className="mt-6 flex flex-col gap-2.5 rounded-2xl border border-rd-line bg-rd-card p-3.5">
+            <H2>{BEFORE_YOU_GO_LABEL}</H2>
+            <p className="m-0 font-rd text-[12px] text-rd-ink-faint">
+              {venueName}
+              {ctx.formerNames.length ? <span>{`, formerly ${ctx.formerNames.join(', ')}`}</span> : null}
+            </p>
+            <dl className="m-0 flex flex-col gap-2.5 text-[14px] text-rd-ink">
+              {ctx.beforeYouGo.map((r) => (
+                <div key={r.key}>
+                  <dt className="font-rd text-[10px] uppercase tracking-[0.12em] text-rd-ink-faint">{r.label}</dt>
+                  <dd className="m-0">
+                    {r.text}
+                    {/* The provenance line, the venue page's words: the operator
+                        host as the link, then the read date. A union row (a
+                        class the quick facts card would have shown, undated)
+                        keeps the link and has no "Source read". */}
+                    {r.sourceUrl || r.observedOn ? (
+                      <span className="block font-rd text-[11px] text-rd-ink-faint">
+                        {r.sourceUrl && r.sourceHost ? (
+                          <a href={r.sourceUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-rd-red">{`${r.sourceHost} ›`}</a>
+                        ) : null}
+                        {r.observedOn ? `${r.sourceUrl ? ' · ' : ''}Source read ${r.observedOn}` : null}
+                      </span>
+                    ) : null}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            {venueHref ? (
+              <Link href={venueHref} className="font-rd text-[14px] font-medium text-rd-red no-underline hover:underline">{`${venueName} gameday guide`}</Link>
+            ) : null}
+          </section>
+        ) : ctx.quickFacts.length && venueName ? (
+          // THE FALLBACK (ruling 2026-11-08): when Before you go has zero rows,
+          // the venue quick facts card renders exactly as it did before step 4
+          // (any sourced field through the published view, no state or date
+          // required). One or more rows and Before you go replaces it; never
+          // both. REMOVE THIS BRANCH, the `quickFacts` context field and its
+          // loader when provenance coverage (pages whose building has at least
+          // one verified, rendered, dated field) reaches 90% of upcoming promo
+          // pages; on 2026-11-08 it is 475 of 1,152 (scripts/audit-before-you-go.ts).
           <section className="mt-6 flex flex-col gap-2.5 rounded-2xl border border-rd-line bg-rd-card p-3.5">
             <H2>{`${venueName}, quick facts`}</H2>
             {ctx.formerNames.length ? <p className="m-0 font-rd text-[12px] text-rd-ink-faint">{`Formerly ${ctx.formerNames.join(', ')}.`}</p> : null}

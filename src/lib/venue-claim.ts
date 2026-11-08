@@ -98,7 +98,14 @@ export function claimSourceHost(url: string): string {
  * written before the cutover, so those simply show no date.
  */
 export function claimSourceReadOn(hub: ClaimFacts, field: ClaimField): string | null {
-  const iso = hub.observedAtByField?.[field];
+  return formatReadOn(hub.observedAtByField?.[field]);
+}
+
+/** "Sep 3, 2026" for one ISO read time, in UTC; null for anything that is not
+ *  a parseable string. The one formatter behind every "Source read" line, so
+ *  the venue page, the team page and the promo page print one date the same
+ *  way. */
+export function formatReadOn(iso: unknown): string | null {
   if (typeof iso !== 'string') return null;
   const t = Date.parse(iso);
   if (Number.isNaN(t)) return null;

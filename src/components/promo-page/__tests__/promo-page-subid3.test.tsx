@@ -73,7 +73,7 @@ const ROWS = [
 ];
 const TODAY = '2026-11-02';
 const PAGE: PromoPage = { team: TEAM, slug: SLUG, season: '2026-27', rows: ROWS, removedRows: [], removedDates: [], state: 'live', primary: ROWS[0], dates: ROWS.map((r) => r.date), updatedAt: null, removedAt: null, canonicalSlug: null };
-const CTX: PromoPageContext = { game: null, timeline: null, venueGiveaways: null, venue: { name: 'Little Caesars Arena', city: 'Detroit' } as never, hub: null, quickFacts: [], location: null, coords: { lat: 42.341, lng: -83.055 }, formerNames: [], observedAt: null, alsoAtGame: [], nextTeamPromos: [], crossTeam: null, previousEdition: null, short: null };
+const CTX: PromoPageContext = { game: null, timeline: null, venueGiveaways: null, venue: { name: 'Little Caesars Arena', city: 'Detroit' } as never, hub: null, beforeYouGo: [], quickFacts: [], location: null, coords: { lat: 42.341, lng: -83.055 }, formerNames: [], observedAt: null, alsoAtGame: [], nextTeamPromos: [], crossTeam: null, previousEdition: null, short: null };
 
 const render = () => renderToStaticMarkup(<view.PromoPageView page={PAGE} ctx={CTX} today={TODAY} />).replace(/&amp;/g, '&');
 function anchor(html: string, text: string): string {
