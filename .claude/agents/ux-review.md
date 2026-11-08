@@ -26,7 +26,13 @@ same path is used on both.
 | team       | /nhl/minnesota-wild                                              |
 | venue      | /venues/xcel-energy-center                                       |
 | aggregator | /promos/bobbleheads                                              |
+| archive    | /nhl/minnesota-wild/promos/past                                  |
 | home       | /                                                                |
+
+**The archive sample** is a team's past-promos page (step 6, 2026-11-08):
+`/{league}/{team}/promos/past`, grouped by season. It answers 404 for a
+team with no played promo, so change the sample only to another club with
+a played season.
 
 **The promo sample** is the first upcoming promo page in
 https://www.getpromonight.com/sitemap.xml whose game date is at least 7

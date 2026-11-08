@@ -38,7 +38,7 @@ const listing = (n: number): EbayListing => ({
   price: `$${(50 + n).toFixed(2)}`,
   href: `https://www.ebay.com/itm/${n}?mkevt=1&mkcid=1&mkrid=711-53200-19255-0&campid=5339000000&customid=web_promo_page_x&toolid=10001`,
 });
-const ctx = (listings: EbayListing[]): PromoPageContext => ({ game: null, timeline: null, venueGiveaways: null, venue: null, hub: null, beforeYouGo: [], quickFacts: [], location: null, coords: null, formerNames: [], observedAt: null, alsoAtGame: [], nextTeamPromos: [], crossTeam: null, previousEdition: null, nextEdition: null, short: null, ebayListings: listings });
+const ctx = (listings: EbayListing[]): PromoPageContext => ({ game: null, timeline: null, venueGiveaways: null, venue: null, hub: null, beforeYouGo: [], quickFacts: [], location: null, coords: null, formerNames: [], observedAt: null, alsoAtGame: [], nextTeamPromos: [], crossTeam: null, previousEditions: [], previousEdition: null, nextEdition: null, short: null, ebayListings: listings });
 const render = (rows: PromoPageRow[], listings: EbayListing[], today = TODAY, state: PromoPage['state'] = 'live') =>
   renderToStaticMarkup(<PromoPageView page={page(rows, today, state)} ctx={ctx(listings)} today={today} now={new Date(`${today}T16:00:00Z`)} />).replace(/&amp;/g, '&');
 
@@ -112,4 +112,15 @@ test('a played bobblehead page gets the block even with a tier 1 photo, with the
 test('a removed page renders no eBay block', () => {
   const html = render([row({ date: '2026-10-20', tombstoned: true, tombstonedAt: '2026-11-01T00:00:00.000Z' })], [listing(1)], TODAY, 'removed');
   assert.doesNotMatch(html, BLOCK);
+});
+
+test('a played bobblehead with prior editions: the editions block sits above the eBay block (archive pass, step 6)', () => {
+  const editions = [{ href: '/nba/brooklyn-nets/promos/julius-erving-bobblehead-2025-26', title: 'Julius Erving Bobblehead', season: '2025-26', date: '2026-02-10', displayOpponent: 'Celtics', type: 'giveaway' as const, themeKey: null, thumbnailUrl: 'https://firebasestorage.googleapis.com/v0/b/x/o/promo-images%2Fe0.png?alt=media' }];
+  const html = renderToStaticMarkup(<PromoPageView page={page([row({ ...TIER1, date: '2026-10-20' })], TODAY)} ctx={{ ...ctx([listing(1)]), previousEditions: editions, previousEdition: editions[0] }} today={TODAY} now={new Date(`${TODAY}T16:00:00Z`)} />).replace(/&amp;/g, '&');
+  const thisGame = html.indexOf('>This game</h2>');
+  const editionsAt = html.search(/>Previous editions<\/h2>/);
+  const ebayAt = html.search(BLOCK);
+  assert.ok(thisGame > 0 && thisGame < editionsAt && editionsAt < ebayAt, `order: This game ${thisGame}, editions ${editionsAt}, eBay ${ebayAt}`);
+  assert.match(html, /<img src="https:\/\/firebasestorage\.googleapis\.com\/[^"]+" alt="" width="56" height="56" loading="lazy"/, 'the tier 1 thumbnail');
+  assert.match(html, /href="\/nba\/brooklyn-nets\/promos\/julius-erving-bobblehead-2025-26"[^>]*>(?:<img[^>]*>)<span[^>]*><span[^>]*>Julius Erving Bobblehead 2025-26<\/span><span[^>]*>Tuesday, Feb 10, 2026 · vs Celtics/);
 });

@@ -283,14 +283,28 @@ test('FAQs come only from stored fields, two at most, in pool order', () => {
 
 test('indexability: noindex without a name or a date, and on a removed page once its last date has passed', () => {
   const today = '2026-10-29';
-  assert.equal(promoPageIndexable({ title: 'X', dates: ['2026-11-01'], removed: false, today }), true);
-  assert.equal(promoPageIndexable({ title: 'X', dates: ['2026-01-01'], removed: false, today }), true);
-  assert.equal(promoPageIndexable({ title: ' ', dates: ['2026-11-01'], removed: false, today }), false);
-  assert.equal(promoPageIndexable({ title: 'X', dates: [], removed: false, today }), false);
-  assert.equal(promoPageIndexable({ title: 'X', dates: ['nope'], removed: false, today }), false);
-  assert.equal(promoPageIndexable({ title: 'X', dates: ['2026-11-01'], removed: true, today }), true);
-  assert.equal(promoPageIndexable({ title: 'X', dates: ['2026-10-28'], removed: true, today }), false);
-  assert.equal(promoPageIndexable({ title: 'X', dates: ['2026-10-29'], removed: true, today }), true);
+  assert.equal(promoPageIndexable({ title: 'X', dates: ['2026-11-01'], removed: false, today, league: 'NHL' }), true);
+  assert.equal(promoPageIndexable({ title: 'X', dates: ['2026-01-01'], removed: false, today, league: 'NHL' }), true);
+  assert.equal(promoPageIndexable({ title: ' ', dates: ['2026-11-01'], removed: false, today, league: 'NHL' }), false);
+  assert.equal(promoPageIndexable({ title: 'X', dates: [], removed: false, today, league: 'NHL' }), false);
+  assert.equal(promoPageIndexable({ title: 'X', dates: ['nope'], removed: false, today, league: 'NHL' }), false);
+  assert.equal(promoPageIndexable({ title: 'X', dates: ['2026-11-01'], removed: true, today, league: 'NHL' }), true);
+  assert.equal(promoPageIndexable({ title: 'X', dates: ['2026-10-28'], removed: true, today, league: 'NHL' }), false);
+  assert.equal(promoPageIndexable({ title: 'X', dates: ['2026-10-29'], removed: true, today, league: 'NHL' }), true);
+  // THE INDEX WINDOW (archive pass, ruling 2026-11-08): a played page stays
+  // indexable through the current and the previous season of its league;
+  // older, noindex. NHL on 2026-10-29 is in 2026-27: 2025-26 (July 2025 to
+  // June 2026) is in, 2024-25 is out, and the edge is July 1.
+  assert.equal(promoPageIndexable({ title: 'X', dates: ['2026-10-20'], removed: false, today, league: 'NHL' }), true, 'this season, played');
+  assert.equal(promoPageIndexable({ title: 'X', dates: ['2026-03-01'], removed: false, today, league: 'NHL' }), true, 'last season');
+  assert.equal(promoPageIndexable({ title: 'X', dates: ['2025-07-01'], removed: false, today, league: 'NHL' }), true, 'the first day of last season');
+  assert.equal(promoPageIndexable({ title: 'X', dates: ['2025-06-30'], removed: false, today, league: 'NHL' }), false, 'the last day of the season before: noindex');
+  assert.equal(promoPageIndexable({ title: 'X', dates: ['2025-01-15', '2025-06-30'], removed: false, today, league: 'NBA' }), false, 'a series: its last date decides');
+  // MLB seasons are calendar years: 2025 is in, 2024 is out.
+  assert.equal(promoPageIndexable({ title: 'X', dates: ['2025-01-01'], removed: false, today, league: 'MLB' }), true);
+  assert.equal(promoPageIndexable({ title: 'X', dates: ['2024-12-31'], removed: false, today, league: 'MLB' }), false);
+  // A removed page keeps its own rule: indexable until its date.
+  assert.equal(promoPageIndexable({ title: 'X', dates: ['2026-03-01'], removed: true, today, league: 'NHL' }), false);
 });
 
 test('category aggregator by type and title; theme labels', () => {

@@ -74,9 +74,9 @@ describe('robots.txt', async () => {
     }
   });
 
-  it('ends with the sitemap line', () => {
-    assert.match(text, /\n\nSitemap: https:\/\/www\.getpromonight\.com\/sitemap\.xml\n$/);
-    assert.deepEqual(parsed.getSitemaps(), [`${ORIGIN}/sitemap.xml`]);
+  it('ends with the sitemap lines: the live sitemap, then the index that also names the played pages (step 6, 2026-11-08)', () => {
+    assert.match(text, /\n\nSitemap: https:\/\/www\.getpromonight\.com\/sitemap\.xml\nSitemap: https:\/\/www\.getpromonight\.com\/sitemap-index\.xml\n$/);
+    assert.deepEqual(parsed.getSitemaps(), [`${ORIGIN}/sitemap.xml`, `${ORIGIN}/sitemap-index.xml`]);
   });
 
   for (const ua of ['Googlebot', 'Twitterbot', 'facebookexternalhit', 'ClaudeBot', 'OAI-SearchBot', 'PerplexityBot', 'SomeUnlistedBot']) {

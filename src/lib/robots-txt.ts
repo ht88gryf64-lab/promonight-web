@@ -40,8 +40,11 @@ export const ROBOTS_AGENTS = [
 ] as const;
 
 export const ROBOTS_SITEMAP = 'https://www.getpromonight.com/sitemap.xml';
+/** The index (archive pass, step 6, 2026-11-08): /sitemap.xml plus
+ *  /sitemap-past.xml, the played promo pages inside the index window. */
+export const ROBOTS_SITEMAP_INDEX = 'https://www.getpromonight.com/sitemap-index.xml';
 
 export function robotsTxt(): string {
   const groups = ROBOTS_AGENTS.map((ua) => [`User-Agent: ${ua}`, ...ROBOTS_GROUP_LINES].join('\n'));
-  return `${groups.join('\n\n')}\n\nSitemap: ${ROBOTS_SITEMAP}\n`;
+  return `${groups.join('\n\n')}\n\nSitemap: ${ROBOTS_SITEMAP}\nSitemap: ${ROBOTS_SITEMAP_INDEX}\n`;
 }

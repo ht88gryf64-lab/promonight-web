@@ -4288,3 +4288,11 @@ ux-review M2: "Promos this week" on `/venues/metlife-stadium` shows "Light Bands
 ## 93. Team page hero counts disagree with the filter chips, and zero chips stay tappable (deferred, logged 2026-11-08)
 
 ux-review (P3): on `/nhl/minnesota-wild` the hero tile reads "6 GIVEAWAYS" while the chip reads "Giveaways 4", three of five tiles read 0, and the zero-count chips still respond to taps. Present on production. The two counts should come from one count of the same set.
+
+## 94. Browser back from the team page's completed section lands about 180 px low (deferred, logged 2026-11-08)
+
+ux-review of `feature/promo-archive` (docs/ux-review/2026-11-08-feature-promo-archive.md, D5). At 390, after tapping a completed row on `/nhl/minnesota-wild` the page comes back at 4,315 from 4,133 (182 px low) on production and on the branch, and after tapping the new "All 8 past promos" link at 5,395 from 5,212 (183 px). The collapsed completed rows lazy-mount on return, which is the likely 182 px; the promo pages fixed their own jump with `overflow-anchor: none` on the article (guard 9), and the team page has no equivalent. Pre-existing; the archive link adds a second way into it.
+
+## 95. Opponent naming differs between seasons on the same team's rows (deferred, logged 2026-11-08)
+
+ux-review of `feature/promo-archive` (D8). On the Wild's archive page the 2026-27 rows say "vs Lightning", "vs Sharks", "vs Islanders" and the 2025-26 rows say "vs Florida Panthers", "vs Colorado Avalanche", "vs Nashville Predators"; one row (Xcel Energy LED Night Light, Dec 11) has no opponent and says "TBD" for the time. The same strings show on the team page's completed rows and in a promo page's Previous editions line, so the inconsistency is in the stored rows and the game join (promo-game-join fills empty slots from the spine with the display names the spine carries), not in the archive. Pipeline: settle one form of the opponent on every row, and fill the Dec 11 row's time and opponent from the spine.
