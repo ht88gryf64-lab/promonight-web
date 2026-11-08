@@ -139,6 +139,10 @@ export type AnalyticsSurface =
   // page is never counted as a team-page click; the sub-ID is
   // web_promo_page_{teamId} and the promo rides in promo_id.
   | 'web_promo_page'
+  // The eBay listings block on a bobblehead's page (step 5a, 2026-11-08):
+  // its promo_link_click rows carry destination 'ebay'. Its own surface so a
+  // listing click is never read as a click into a promo page.
+  | 'web_promo_page_ebay'
   | 'web_playoffs'
   // A league's bracket page (/playoffs/mlb, /playoffs/wnba). Split from
   // web_playoffs, the hub, so a ticket click from inside a bracket is not
@@ -475,11 +479,15 @@ export type PromoCardTapProperties = {
 // Since the social bridge (2026-11-05) it also carries the session's
 // first-touch utm_source, utm_campaign and utm_content (src/lib/utm-capture.ts
 // utmTriplet), so a click that started on a Short's caption link reads as one.
+// The eBay listings block (surface web_promo_page_ebay, step 5a) fires the
+// same event with destination 'ebay' and the listing's affiliate URL, so the
+// pages-per-session read can leave those rows out.
 export type PromoLinkClickProperties = UtmTriplet & {
   surface: AnalyticsSurface;
   team_slug: string;
   promo_id: string;
   destination_url: string;
+  destination?: 'ebay';
 };
 
 // Hero "Tonight" rail — fires when a tonight/tonight+tomorrow/coming-up card
@@ -1585,6 +1593,7 @@ export const KNOWN_SURFACE_VALUES = [
   'web_team_page_partner',
   'web_promo_detail',
   'web_promo_page',
+  'web_promo_page_ebay',
   'web_playoffs',
   'web_playoffs_league',
   'web_league_index',

@@ -15,6 +15,11 @@ import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
 
 process.env.TZ = 'UTC';
+// The eBay block (step 5a) needs the EPN campaign and a Browse API keyset to
+// make its call; the call itself goes to the fake below (api.ebay.com).
+process.env.NEXT_PUBLIC_EBAY_CAMPID = '5339000000';
+process.env.EBAY_CLIENT_ID = 'app-id';
+process.env.EBAY_CLIENT_SECRET = 'cert-id';
 mock.timers.enable({ apis: ['Date'], now: new Date('2026-10-29T16:00:00Z') });
 const TODAY = '2026-10-29';
 
@@ -101,8 +106,16 @@ mock.module(new URL('../../../../../../components/redesign/fonts.ts', import.met
 const PNG_800x600 = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52, 0, 0, 0x03, 0x20, 0, 0, 0x02, 0x58, 8, 6, 0, 0, 0]);
 const photoFetches: string[] = [];
 const realFetch = globalThis.fetch;
+// The eBay Browse API (step 5a): failing by default, so every page rendered
+// here proves a failed call never throws; the eBay test swaps the handler.
+let ebayHandler: (url: string, init?: RequestInit) => Response | Promise<Response> = () => new Response('', { status: 500 });
+const ebayCalls: string[] = [];
 globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   const url = String(input instanceof Request ? input.url : input);
+  if (url.startsWith('https://api.ebay.com/')) {
+    ebayCalls.push(url);
+    return ebayHandler(url, init);
+  }
   if (!url.startsWith('https://firebasestorage.googleapis.com/')) return realFetch(input, init);
   photoFetches.push(`${url} ${new Headers(init?.headers).get('range')}`);
   return new Response(PNG_800x600, { status: 206, headers: { 'content-type': 'image/png' } });
@@ -270,6 +283,9 @@ for (const [i, [title, date]] of ([
 ] as const).entries()) {
   suns(`sx${i}`, { title, pageSlug: title.toLowerCase().replace(/[^a-z0-9]+/g, '-'), type: 'theme', date, opponent: 'Spurs' });
 }
+// A Suns bobblehead with no stored image (step 5a, 2026-11-08): the eBay
+// block's page. Its own date, so the canonical rule leaves it alone.
+suns('s9', { title: 'Devin Booker Bobblehead', pageSlug: 'devin-booker-bobblehead', date: '2026-12-20', opponent: 'Mavericks', attendanceCap: 5000, description: 'The first 5,000 fans receive a Devin Booker bobblehead.' });
 // Predators Nov 7: a theme night whose title contains the tier 1 giveaway's;
 // the giveaway is the canonical.
 promo('nashville-predators', 'n1', { title: 'Hometown Remix & Catfish Gravy Boat', pageSlug: 'hometown-remix-catfish-gravy-boat', type: 'theme', date: '2026-11-07', opponent: 'Blues', sourceUrl: 'https://www.nhl.com/predators/fans/promotions' });
@@ -791,7 +807,7 @@ test('team page: the extra upcoming rows and packages sit in closed <details>, r
   const details = suns.slice(suns.indexOf('<details class="group/upcoming'), suns.indexOf('</details>', suns.indexOf('<details class="group/upcoming')));
   assert.ok(details.length > 0, 'the upcoming <details>');
   assert.ok(!/<details[^>]*\bopen\b/.test(details.slice(0, 200)), 'closed by default');
-  assert.match(details.replace(/<!-- -->/g, ''), /Show all 15 upcoming promos/);
+  assert.match(details.replace(/<!-- -->/g, ''), /Show all 16 upcoming promos/);
   assert.match(details, /href="\/nba\/phoenix-suns\/promos\/fireworks-night"/, 'the last row is in the HTML');
   assert.match(details, /id="promo-2027-04-10-fireworks-night"/, 'with its deep-link anchor');
   assert.ok(!suns.includes('aria-expanded="false"'), 'no click-to-mount expander for upcoming rows');
@@ -1233,4 +1249,53 @@ test('played (ruling 2026-11-08): every date before today in the venue zone; the
   assert.ok(!todayPage.h.includes('This game has been played'));
   // The article opts out of scroll anchoring (ux-review 2026-11-08, D1; live guard 9).
   assert.match(todayPage.h, /<article class="page-content[^"]*" data-ad-region="content" style="[^"]*overflow-anchor:none[^"]*">/);
+});
+
+// ── eBay listings (spec Visuals 6, step 5a, 2026-11-08) ─────────────────────
+// The Booker page: a bobblehead giveaway with no stored image, the block's
+// case. The fake API fails by default (every render above went through that),
+// then answers, and the served HTML carries the block after This game.
+test('eBay listings: a failed call renders the page with no block and does not throw; a good call renders up to three confirmed listings after This game; a tier 1 page asks nothing', async () => {
+  const { _resetEbayBrowseForTests } = await import('@/lib/ebay-browse');
+  _resetEbayBrowseForTests();
+  ebayCalls.length = 0;
+  const failed = await render('nba', 'phoenix-suns', 'devin-booker-bobblehead');
+  assert.doesNotMatch(failed.h, />On eBay<\/h2>/);
+  assert.ok(!failed.h.includes('i.ebayimg.com'));
+  assert.ok(ebayCalls.length >= 1, 'the page asked eBay');
+  assert.match(failed.h, />About this giveaway<\/h2>/);
+  guard(failed.h, 'Booker, eBay failed');
+
+  const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
+  const item = (id: string, title: string) => ({ itemId: `v1|${id}|0`, title, image: { imageUrl: `https://i.ebayimg.com/images/g/${id}/s-l500.webp` }, price: { value: '34.99', currency: 'USD' }, itemWebUrl: `https://www.ebay.com/itm/${id}`, itemAffiliateWebUrl: `https://www.ebay.com/itm/${id}?mkevt=1&mkcid=1&campid=5339000000&customid=web_promo_page_phoenix_suns&toolid=10001` });
+  ebayHandler = (url) => (url.includes('/oauth2/token') ? json({ access_token: 'tok', expires_in: 7200 }) : json({ itemSummaries: [item('1', '2026 Devin Booker Phoenix Suns Bobblehead SGA 12/20'), item('2', 'Phoenix Suns 2026 Bobblehead Night SGA'), item('3', 'Booker Suns bobblehead sealed'), item('4', 'Devin Booker bobble 2026'), item('5', 'Devin Booker bobblehead, fifth')] }));
+  _resetEbayBrowseForTests();
+  ebayCalls.length = 0;
+  const ok = await render('nba', 'phoenix-suns', 'devin-booker-bobblehead');
+  assert.match(ok.h, />On eBay<\/h2>/);
+  const q = new URL(ebayCalls.find((u) => u.includes('/item_summary/search')) as string).searchParams.get('q');
+  assert.equal(q, '2026 Suns Devin Booker bobblehead', 'the tier 2 search link’s query');
+  const block = ok.h.slice(ok.h.lastIndexOf('<section', ok.h.search(/>On eBay<\/h2>/)), ok.h.indexOf('</section>', ok.h.search(/>On eBay<\/h2>/)));
+  const hrefs = [...block.matchAll(/<a href="([^"]+)" target="_blank" rel="sponsored noopener"/g)].map((m) => decode(m[1]));
+  assert.deepEqual(hrefs.map((h) => new URL(h).pathname), ['/itm/1', '/itm/3', '/itm/4'], 'three confirmed listings, the club-and-kind title left out');
+  assert.equal((block.match(/<img src="https:\/\/i\.ebayimg\.com\/images\/g\/\d\/s-l400\.webp"/g) ?? []).length, 3);
+  assert.equal((block.match(/>\$34\.99<\/span>/g) ?? []).length, 3);
+  assert.ok(block.includes('PromoNight may earn a commission on purchases made through links on this page.'));
+  // After This game (ruling 2026-11-08): the next section after it, with no
+  // other heading between, and the Fan guide after the block.
+  const thisGameAt = ok.h.indexOf('>This game</h2>');
+  const ebayAt = ok.h.search(/>On eBay<\/h2>/);
+  assert.ok(thisGameAt > 0 && thisGameAt < ebayAt, 'This game first');
+  const between = ok.h.slice(thisGameAt, ebayAt);
+  assert.equal((between.match(/<h2/g) ?? []).length, 1, 'no heading between This game and the block');
+  assert.equal((between.match(/<\/section><section /g) ?? []).length, 1, 'the block is the section after This game');
+  assert.ok(ok.h.indexOf('>Fan guide</p>') > ebayAt, 'the Fan guide follows the block');
+  guard(ok.h, 'Booker, eBay ok');
+
+  // The tier 1 Lindell page never asks.
+  ebayCalls.length = 0;
+  const lindell = await render('nhl', 'dallas-stars', 'esa-lindell-bobblehead');
+  assert.doesNotMatch(lindell.h, />On eBay<\/h2>/);
+  assert.equal(ebayCalls.length, 0, 'no call for a tier 1 upcoming page');
+  ebayHandler = () => new Response('', { status: 500 });
 });

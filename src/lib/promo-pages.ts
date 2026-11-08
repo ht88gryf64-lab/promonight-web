@@ -30,6 +30,8 @@ import { applyGameDisplay, buildGameIndex, resolveTnEventUrl } from './promo-gam
 import { makeKeyedTtlCache, STATIC_TTL_MS } from './collection-cache';
 import { getVenueHub, getVenueHubForTeam, type TeamVenueHubLink } from './venue-hub';
 import { beforeYouGoUnion } from './before-you-go-rows';
+import { ebayListingsFor, type EbayListing } from './ebay-browse';
+import { isBobbleheadGiveaway } from './ebay';
 import type { BeforeYouGoRow } from './before-you-go';
 import { buildCondensedLogistics, type CondensedLine } from './venue-hub-condensed';
 import { isTicketPackageDoc, isTicketPackageLeague, partitionTicketPackages } from './ticket-packages';
@@ -346,6 +348,13 @@ export interface PromoPageContext {
   /** The PromoNight Short for one of the page's promo ids (the social
    *  bridge, 2026-11-05: socialVideos/youtube), or null. */
   short: PromoShortVideo | null;
+  /** eBay listings for a bobblehead (spec Visuals 6, step 5a, 2026-11-08):
+   *  up to three confirmed listings from the Browse API at request time, held
+   *  only as long as the page's ISR window. Filled for a bobblehead giveaway
+   *  with no tier 1 photo, or one whose dates have all been played; empty
+   *  otherwise, and on any failure (src/lib/ebay-browse.ts). The view
+   *  re-checks the photo and played rules before rendering. */
+  ebayListings: EbayListing[];
 }
 
 const link = (team: Team, r: Pick<PromoPageRow, 'pageSlug' | 'title' | 'date' | 'type' | 'displayTime' | 'displayOpponent'> & { themeKey?: string | null; ticketPackageRequired?: boolean | null }): LinkedPromo => ({
@@ -468,6 +477,17 @@ const QUICK_FACT_KEYS: readonly CondensedLine['key'][] = ['bag', 'transit', 'par
 /** Everything the page links to and the building it names. */
 export const loadPromoPageContext = cache(async (page: PromoPage, today: string): Promise<PromoPageContext> => {
   const { team } = page;
+  // eBay listings (step 5a): started first so the call (capped at 800ms,
+  // never throwing) overlaps the reads below. A live bobblehead giveaway
+  // whose primary row has no tier 1 photo, or whose dates have all been
+  // played by the site's day; a tier 1 upcoming page asks eBay nothing.
+  const primaryRow = page.primary;
+  const hasPhoto = primaryRow.imageTier === 1 && !!primaryRow.imageRef && !primaryRow.tombstoned;
+  const played = page.dates.length > 0 && page.dates.every((d) => d < today);
+  const ebayPending: Promise<EbayListing[]> =
+    page.state === 'live' && isBobbleheadGiveaway(primaryRow) && (!hasPhoto || played)
+      ? ebayListingsFor({ promo: primaryRow, team, pageKey: promoPagePath(team.sportSlug, team.id, page.slug) })
+      : Promise.resolve([]);
   const [teamRows, venue, hub, scanStamp, short, games, allTeams] = await Promise.all([
     loadTeamPageRows(team),
     getVenueForTeam(team.id),
@@ -663,6 +683,7 @@ export const loadPromoPageContext = cache(async (page: PromoPage, today: string)
     previousEdition,
     nextEdition,
     short,
+    ebayListings: await ebayPending,
   };
 });
 

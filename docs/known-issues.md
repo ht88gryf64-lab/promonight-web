@@ -4264,3 +4264,11 @@ ux-review of `feature/byg-vendor-parking` (docs/ux-review/2026-11-08-feature-byg
 ## 87. Venue page cards whose accessible name does not contain their visible text (deferred, logged 2026-11-08)
 
 axe at 390 on `/venues/xcel-energy-center` flags label-content-name-mismatch (serious) on two cards: "SpotHero Reserve Parking" is named "Reserve parking on SpotHero", and the Ticketmaster card's visible text is not in its name. Both environments. The fix is aligning each card's aria-label with its visible text, a pass on the booking cards together.
+
+## 88. eBay listing thumbnails on bobblehead promo pages are letterboxed (deferred, logged 2026-11-08)
+
+ux-review of `feature/promo-ebay-images` (docs/ux-review/2026-11-08-feature-promo-ebay-images.md, D4). eBay's `s-l400` thumbnails are not square (146x400, 231x400 and 400x300 on the Nets' Julius Erving page), and the block's square tiles use `object-contain` on #ebe4d6, so a tall product photo shows as a 38 px strip in a 103 px tile at 390 and the price becomes the block's strongest visual. A cropping fit would cut the product; a per-image aspect would break the three-up grid. Needs a design decision (a taller tile, a two-up grid, or eBay's larger image with a cropping fit chosen per aspect).
+
+## 89. Promo pages with no stored game time still tell the fan to arrive before "game time" (deferred, logged 2026-11-08)
+
+ux-review of `feature/promo-ebay-images` (D8, carried: production behaviour). On `/nba/brooklyn-nets/promos/julius-erving-bobblehead` the row has no time, so the game line and the Event `startDate` carry the date alone and nothing says the time is unannounced; yet the fan guide says "Plan to arrive when gates open rather than at game time" and the quick facts say "doors open 90 minutes prior to the scheduled start time". Either the page states that the tip-off time is not yet announced, or the arrival sentences are withheld when the row has no time. Pipeline side: the time join (promo-game-join) fills the slot once the spine has the game time.
