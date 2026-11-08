@@ -36,7 +36,7 @@ function page(rows: PromoPageRow[], today: string, team: Team = TEAM): PromoPage
   const primary = rows.find((r) => r.date >= today) ?? rows[rows.length - 1];
   return { team, slug: rows[0].pageSlug, season: '2026-27', rows, removedRows: [], removedDates: [], state: 'live', primary, dates: rows.map((r) => r.date), updatedAt: null, removedAt: null, canonicalSlug: null };
 }
-const CTX: PromoPageContext = { game: null, timeline: null, venueGiveaways: null, venue: null, hub: null, beforeYouGo: [], quickFacts: [], location: null, coords: null, formerNames: [], observedAt: null, alsoAtGame: [], nextTeamPromos: [], crossTeam: null, previousEdition: null, short: null };
+const CTX: PromoPageContext = { game: null, timeline: null, venueGiveaways: null, venue: null, hub: null, beforeYouGo: [], quickFacts: [], location: null, coords: null, formerNames: [], observedAt: null, alsoAtGame: [], nextTeamPromos: [], crossTeam: null, previousEdition: null, nextEdition: null, short: null };
 const render = (rows: PromoPageRow[], today = '2026-11-02', team: Team = TEAM) => renderToStaticMarkup(<PromoPageView page={page(rows, today, team)} ctx={CTX} today={today} />).replace(/&amp;/g, '&');
 
 function anchor(html: string, text: string): string {
@@ -125,12 +125,16 @@ for (const [name, team, rows] of FIXTURES) {
   });
 }
 
-test('a page whose dates have all been played links no event: primary and offers fall back to the performer page', () => {
+test('a page whose dates have all been played sells nothing (ruling 2026-11-08): no ticket anchor, no TicketNetwork href, no offers; the way forward is the team page', () => {
   const html = render([row({ date: '2026-10-20', tnEventUrl: EV(2, 'detroit-red-wings-vs-x-tickets-tue-oct-20-2026-little-caesars-arena') })], '2026-11-02');
-  assert.equal(anchor(html, 'Get tickets'), tn(PERFORMER));
-  assert.equal(offersUrl(html), tn(PERFORMER));
-  assert.ok(!html.includes(encodeURIComponent('tue-oct-20-2026')));
-  assert.equal(anchors(html, 'Also on Ticketmaster'), 1);
+  assert.equal(anchors(html, 'Get tickets'), 0);
+  assert.equal(anchors(html, 'Also on Ticketmaster'), 0);
+  assert.equal(anchors(html, 'Tickets'), 0);
+  assert.ok(!html.includes(PREFIX), 'no TicketNetwork href anywhere, JSON-LD included');
+  assert.equal(offersUrl(html), null);
+  assert.ok(html.includes('This game has been played'));
+  // No next promo in this context, so the team page.
+  assert.match(html, /<a [^>]*href="\/nhl\/detroit-red-wings"[^>]*>Next Detroit Red Wings promo<\/a>/);
 });
 
 test('a series links no played date in its JSON-LD offers', () => {

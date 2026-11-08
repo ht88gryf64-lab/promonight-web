@@ -256,13 +256,21 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
   // primary date's tile carries the door time.
   const venueToday = now ? ymdInZone(now, ctx.game?.timeZone) : today;
   const tileState = (d: string) => dateTileState(d, venueToday, d === primary.date ? doors : null);
+  // PLAYED (ruling 2026-11-08): every date on the page is before today in
+  // the venue's zone. A series with any date still to come is not played; a
+  // removed page keeps its own state. The header says so, the ticket row
+  // becomes the way forward (the team's next promo, the other editions),
+  // the affiliate links go, the Events keep EventScheduled and drop their
+  // offers, and the arrival question leaves the FAQ.
+  const past = !removed && dates.length > 0 && dates.every((d) => d < venueToday);
+  const nextPromoHref = ctx.nextTeamPromos[0]?.href ?? teamHref;
   const aggregator = categoryAggregatorFor(primary, team.league);
   const removedOn = formatInstantDate(page.removedAt);
   // Stored-field FAQs first, the library's after, in the visible block. The
   // FAQPage schema carries the stored-field FAQs ONLY (ruling 2026-11-07):
   // structured data states facts about this promotion, and a library FAQ is
   // general knowledge about its kind.
-  const storedFaqs = promoFaqs({ row: primary, teamName, dates, removed, removedOn });
+  const storedFaqs = promoFaqs({ row: primary, teamName, dates, removed, removedOn, past });
   const faqs = [...storedFaqs, ...(explainer?.faqs.map((f) => ({ question: f.q, answer: f.a })) ?? [])];
   const sourceHost = hostOf(primary.sourceUrl);
   const readOn = formatInstantDate(ctx.observedAt);
@@ -352,6 +360,7 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
     teamName,
     rows: removed ? page.removedRows : page.rows,
     removed,
+    past,
     imageUrl: head.imageUrl,
     location: ctx.location,
     ticketUrl: tickets,
@@ -502,7 +511,11 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
           session, then cleans the address bar. Outside the article, so the
           article's children (the ad anchors) are unchanged. */}
       <ShareLandingCapture promoId={primary.promoId} team={team.id} league={team.league} pageSlug={page.slug} />
-      <article className="page-content mx-auto w-full max-w-[640px] px-4 pb-10 lg:max-w-3xl" data-ad-region="content" style={themeStyle(palette) as CSSProperties}>
+      {/* overflow-anchor: none (ux-review 2026-11-08, D1): after browser back
+          the Raptive script tears its slots down and re-inserts them inside
+          this article, and Chromium's scroll anchoring moved the restored
+          scroll position by a full screen. Live guard 9 measures it. */}
+      <article className="page-content mx-auto w-full max-w-[640px] px-4 pb-10 lg:max-w-3xl" data-ad-region="content" style={{ ...themeStyle(palette), overflowAnchor: 'none' } as CSSProperties}>
         <nav aria-label="Breadcrumb" className="flex flex-wrap gap-1.5 pt-3.5 text-[12px] text-rd-ink-faint">
           {leagueHref ? (
             <Link href={leagueHref} className="no-underline hover:text-rd-ink">{team.league}</Link>
@@ -548,6 +561,11 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
               </ul>
             </details>
           ) : null}
+          {past ? (
+            <p className="m-0 text-[15px] leading-[1.45] text-rd-ink-soft">
+              <strong className="text-rd-ink">{multi ? 'These games have been played' : 'This game has been played'}</strong>
+            </p>
+          ) : null}
           {venueLine ? (
             <p className="m-0 text-[15px] leading-[1.45] text-rd-ink-soft">
               {venueHref ? <Link href={venueHref} className="text-rd-red no-underline hover:underline">{venueName}</Link> : venueName}
@@ -566,7 +584,35 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
           ) : null}
         </header>
 
-        {!removed ? (
+        {!removed && past ? (
+          // The played row (ruling 2026-11-08): the tile, then the way
+          // forward in place of the tickets. "Next {team} promo" is the
+          // team's next upcoming promo page, else the team page; the other
+          // editions of this promotion follow when they exist. Share stays.
+          // Parking, hotels, the reminder and every affiliate ticket link
+          // do not render.
+          <section className="mt-4 flex items-stretch gap-3">
+            {!multi && YMD_RE.test(primary.date) ? <DateTile ymd={primary.date} state={tileState(primary.date)} size="full" /> : null}
+            <div className="flex min-w-0 flex-1 flex-col gap-2.5">
+              <div className="flex gap-2">
+                <Link href={nextPromoHref} className="flex h-[52px] min-w-0 flex-1 items-center justify-center rounded-[14px] bg-[var(--pp-accent)] font-rd text-[16px] font-semibold text-[var(--pp-accent-ink)] no-underline hover:brightness-95">
+                  {`Next ${teamName} promo`}
+                </Link>
+                <PromoShareRowButton {...shareProps} />
+              </div>
+              {ctx.previousEdition || ctx.nextEdition ? (
+                <div className="flex flex-col gap-1 font-rd text-[14px]">
+                  {ctx.previousEdition ? (
+                    <Link href={ctx.previousEdition.href} className="font-medium text-rd-red no-underline hover:underline">{`Previous edition: ${cleanText(primary.title)} ${ctx.previousEdition.season} · ${formatLongDate(ctx.previousEdition.date)}`}</Link>
+                  ) : null}
+                  {ctx.nextEdition ? (
+                    <Link href={ctx.nextEdition.href} className="font-medium text-rd-red no-underline hover:underline">{`Next edition: ${cleanText(primary.title)} ${ctx.nextEdition.season} · ${formatLongDate(ctx.nextEdition.date)}`}</Link>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          </section>
+        ) : !removed ? (
           <section className="mt-4 flex items-stretch gap-3">
             {/* The date tile (spec Visuals 2) beside the CTA column, so the
                 CTA stays above the first in-content unit. A series stacks its

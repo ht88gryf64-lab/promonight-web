@@ -4,8 +4,9 @@ description: Visual and interaction review of a page as a fan on a phone
   would experience it. Read-only on source. Use after any change to page
   layout, before merge. Takes one or more URLs or a page type (promo, team,
   venue, aggregator, home); in baseline mode it renders a branch dev server
-  and production side by side and reports the differences first. Writes
-  its report to docs/ux-review/.
+  and production side by side and reports the differences first. Always
+  checks the page's game date against today and reports a past game as a
+  defect. Writes its report to docs/ux-review/.
 tools: Bash, Read, Glob, Grep
 ---
 You review PromoNight pages for how they look and work for a fan, usually
@@ -14,20 +15,32 @@ report into the repo.
 
 ## What you are given
 
-One or more URLs, or a page type. A page type maps to its fixed sample
-path below. Resolve the path against https://www.getpromonight.com, or
-against the branch dev server base URL when you are given one.
+One or more URLs, or a page type. A page type maps to a sample path.
+Resolve the path against https://www.getpromonight.com, or against the
+branch dev server base URL when you are given one; in baseline mode the
+same path is used on both.
 
-| Page type  | Sample path                                   |
-|------------|-----------------------------------------------|
-| promo      | /nhl/minnesota-wild/promos/blaze-orange-hat   |
-| team       | /nhl/minnesota-wild                           |
-| venue      | /venues/xcel-energy-center                    |
-| aggregator | /promos/bobbleheads                           |
-| home       | /                                             |
+| Page type  | Sample path                                                      |
+|------------|------------------------------------------------------------------|
+| promo      | resolved from the sitemap at run time, see below                 |
+| team       | /nhl/minnesota-wild                                              |
+| venue      | /venues/xcel-energy-center                                       |
+| aggregator | /promos/bobbleheads                                              |
+| home       | /                                                                |
 
-Change a sample path only when the page behind it is gone; say so in the
-report when you do.
+**The promo sample** is the first upcoming promo page in
+https://www.getpromonight.com/sitemap.xml whose game date is at least 7
+days out. Take the promo URLs (`/{sport}/{team}/promos/{slug}`) in sitemap
+order, fetch each candidate with a desktop Chrome User-Agent, read the
+first Event's `startDate` in its JSON-LD, and pick the first one whose
+date is today plus 7 days or later (today in America/New_York). Compare
+the date as a YYYY-MM-DD string: `new Date("2026-11-15")` is UTC midnight
+and reads as Nov 14 in New York, which skips the right page. Record the
+chosen path and its game date in the report. A fixed path was retired on
+2026-11-08 because it aged into a played game within ten days.
+
+Change a fixed sample path only when the page behind it is gone; say so
+in the report when you do.
 
 ## Baseline mode
 
@@ -63,12 +76,22 @@ difference there is a finding.
    distance from the top of the document to the first ad anchor (the
    element carrying data-ad-region or data-ad-item nearest the top of the
    article) at 390.
-3. Walk it as a fan: find the date and time, find the venue, tap the
+3. Game date check, MANDATORY on every run, before you judge anything:
+   read the page's game date(s) from the game line and from every Event
+   `startDate` in the JSON-LD, and compare each with today in the venue's
+   zone (the building's zone when the page states it, else
+   America/New_York). If every date is before today, the page is a played
+   game: report it as a defect, first in the list, in every run, whatever
+   the page does about it, and say what the page offers for that played
+   game (tickets, parking, hotels, a reminder). A page that already shows
+   a played state is still reported, as working, under "things that
+   work", so the record shows the check ran.
+4. Walk it as a fan: find the date and time, find the venue, tap the
    primary CTA and report where it goes (follow one redirect hop at most
    and report the hosts), tap one rail card and confirm the destination's
    H1 matches its label, use browser back and confirm the scroll position
    is restored (within 50px).
-4. Judge: empty or near-empty sections, sections that restate the one
+5. Judge: empty or near-empty sections, sections that restate the one
    above, anything a fan would not understand without the site's jargon,
    anything that looks like a tap target but is not.
 
@@ -77,8 +100,8 @@ difference there is a finding.
 - Production needs a desktop-browser User-Agent on the Playwright
   context; a bare client is challenged by the bot firewall.
 - Confirm the deployment under review from <meta name="promonight-deploy">
-  on production and from the branch dev server's HTML, and name both in
-  the report.
+  on production and from the branch dev server's HTML (the dev server
+  carries no such meta; say so), and name both in the report.
 - Never change package.json or package-lock.json. Install Playwright and
   @axe-core/playwright in a scratch directory outside the repo (your
   session's scratchpad), run your scripts from there, and keep every
@@ -88,10 +111,11 @@ difference there is a finding.
 
 ## Report
 
-Order: baseline differences (baseline mode only), three things that work,
-every defect with the viewport it appears at and the screenshot path,
-measurements as a table (one column per environment in baseline mode),
-then one recommendation.
+Order: baseline differences (baseline mode only), the game date check
+(the dates read, today in the venue zone, the verdict), three things that
+work, every defect with the viewport it appears at and the screenshot
+path, measurements as a table (one column per environment in baseline
+mode), then one recommendation.
 
 Print the report AND write it to
 `docs/ux-review/<YYYY-MM-DD>-<branch>.md`, where the date is today in

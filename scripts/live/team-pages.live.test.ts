@@ -398,3 +398,89 @@ test(`a promo page with an explainer match renders the General guide block (${HO
   const hits = await pool(paths, async (p) => ((await promoPage(p)).includes(GUIDE_LABEL) ? p : null));
   assert.ok(hits.some(Boolean), `none of ${paths.length} sitemap promo pages carries a "${GUIDE_LABEL}" block; refresh GUIDE_PAGES, and check next.config.ts outputFileTracingIncludes`);
 });
+
+// ── guard 9: browser back returns the fan to the rail (ux-review 2026-11-08, D1) ──
+// After a tap on a rail card and browser back, Chromium restored the scroll
+// position and then, when the Raptive script tore its slots down and
+// re-inserted them inside the article, scroll anchoring moved the window a
+// full screen past where the fan left (+780 to +1,040px, every run, both
+// environments). The fix is overflow-anchor: none on the promo page article.
+// A served-HTML check cannot see this; it needs a browser with the ad script
+// running, so this guard drives one (Playwright, a devDependency since
+// 2026-11-08; `npx playwright install chromium` once per machine).
+const BACK_TOLERANCE_PX = 50;
+const BROWSER_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36';
+
+test(`browser back from a rail card restores the scroll position within ${BACK_TOLERANCE_PX}px with the Raptive script running (${HOST})`, { timeout: 600_000 }, async (t) => {
+  // A promo page with a rail AND ad slots above it: the jump is the height
+  // of the slots Raptive re-inserts above the rail after back, so a short
+  // page with one slot above its rail barely moves (the Ducks' kids socks
+  // page: +310px) while a long one moves a full screen (the Flames' Hockey
+  // Fights Cancer page: +1,190px, four slots). The guard takes the sitemap's
+  // promo pages with a rail in order, opens up to six, and uses the first
+  // with three or more filled slots above the rail, else the one with the
+  // most, so it measures where the defect is largest.
+  const promos = (await sitemap()).filter((p) => PROMO_RE.test(p));
+  const withRail: string[] = [];
+  for (const p of promos.slice(0, 40)) {
+    if (((await promoPage(p)).match(/role="listitem"/g) ?? []).length >= 2) withRail.push(p);
+    if (withRail.length >= 6) break;
+  }
+  assert.ok(withRail.length, 'no sitemap promo page with a rail among the first 40');
+  const { chromium } = await import('playwright');
+  const browser = await chromium.launch();
+  try {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, userAgent: BROWSER_UA, deviceScaleFactor: 1 });
+    const page = await context.newPage();
+    const slotsAbove = () => page.evaluate(() => {
+      const card = document.querySelector('a[role="listitem"]');
+      const section = card?.closest('section');
+      const heading = section?.querySelector('h2') ?? section;
+      if (!heading) return -1;
+      const railTop = heading.getBoundingClientRect().top + window.scrollY;
+      return [...document.querySelectorAll('.adthrive-ad')].filter((e) => { const r = e.getBoundingClientRect(); return r.height > 0 && r.top + window.scrollY < railTop; }).length;
+    });
+    let path = withRail[0];
+    let best = -1;
+    for (const p of withRail) {
+      await page.goto(`${HOST}${p}`, { waitUntil: 'load', timeout: 180_000 });
+      await page.waitForTimeout(5_000);
+      const n = await slotsAbove();
+      if (n > best) { best = n; path = p; }
+      if (n >= 3) break;
+    }
+    const start = `${HOST}${path}`;
+    if (page.url() !== start) {
+      await page.goto(start, { waitUntil: 'load', timeout: 180_000 });
+      await page.waitForTimeout(5_000);
+    }
+    const raptive = await page.evaluate(() => [...document.body.classList].some((c) => c.startsWith('adthrive-')) || 'adthrive' in window);
+    assert.ok(raptive, `${path}: the Raptive script is not running (no adthrive- body class, no window.adthrive), so the guard cannot measure the jump it exists to catch`);
+    assert.ok(best >= 1, `${path}: no filled ad slot above the rail on any of ${withRail.length} candidate pages; the guard has nothing to measure against`);
+    // The rail heading to the top of the viewport, then settle.
+    await page.evaluate(() => {
+      const card = document.querySelector('a[role="listitem"]');
+      const section = card?.closest('section');
+      (section?.querySelector('h2') ?? section)?.scrollIntoView({ block: 'start' });
+    });
+    await page.waitForTimeout(2_000);
+    const pre = await page.evaluate(() => window.scrollY);
+    assert.ok(pre > 500, `${path}: the rail heading did not scroll into place (scrollY ${pre})`);
+    await Promise.all([
+      page.waitForURL((u) => u.toString() !== start, { waitUntil: 'load', timeout: 180_000 }),
+      page.click('a[role="listitem"]'),
+    ]);
+    await page.waitForTimeout(1_500);
+    await page.goBack({ waitUntil: 'load', timeout: 180_000 });
+    await page.waitForTimeout(5_000);
+    const post = await page.evaluate(() => window.scrollY);
+    const delta = post - pre;
+    t.diagnostic(`${path}: ${best} ad slots above the rail; scrollY ${pre} before the tap, ${post} five seconds after back (${delta > 0 ? '+' : ''}${delta}px)`);
+    assert.ok(
+      Math.abs(delta) <= BACK_TOLERANCE_PX,
+      `${path} (${best} ad slots above the rail): scrollY ${pre} before the tap, ${post} five seconds after back (${delta > 0 ? '+' : ''}${delta}px). The fan lost their place. overflow-anchor: none on the promo page article is the fix (ux-review 2026-11-08, D1).`,
+    );
+  } finally {
+    await browser.close();
+  }
+});

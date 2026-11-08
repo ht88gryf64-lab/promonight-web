@@ -338,6 +338,11 @@ export interface PromoPageContext {
   crossTeam: { kind: 'theme' | 'league-type' | 'league' | 'type'; links: LinkedPromo[] } | null;
   /** The prior season's page under the same base slug, when one exists. */
   previousEdition: { href: string; season: string; date: string } | null;
+  /** The next season's page under the same base slug, when one exists (the
+   *  earliest later season; within it, the earliest date). A played page
+   *  (ruling 2026-11-08) offers it beside the previous edition in place of
+   *  the ticket row. */
+  nextEdition: { href: string; season: string; date: string } | null;
   /** The PromoNight Short for one of the page's promo ids (the social
    *  bridge, 2026-11-05: socialVideos/youtube), or null. */
   short: PromoShortVideo | null;
@@ -589,6 +594,20 @@ export const loadPromoPageContext = cache(async (page: PromoPage, today: string)
     prevSeason = r.pageSeason;
     previousEdition = { href: promoPagePath(team.sportSlug, team.id, r.pageSlug), season: r.pageSeason, date: r.date };
   }
+  // Next edition: the same base slug in a later season. The earliest later
+  // season wins; within it, the earliest date (the mirror of the previous
+  // edition's rule).
+  let nextEdition: PromoPageContext['nextEdition'] = null;
+  let nextSeason: string | null = null;
+  for (const r of teamRows) {
+    if (r.tombstoned || !r.pageSeason || !page.season || r.pageSeason <= page.season) continue;
+    if (baseSlugOf(r.pageSlug, r.pageSeason) !== base) continue;
+    if (!YMD_RE.test(r.date) || !r.title.trim()) continue;
+    if (nextSeason !== null && laterSeason(nextSeason, r.pageSeason) !== nextSeason) continue;
+    if (nextSeason === r.pageSeason && nextEdition && nextEdition.date <= r.date) continue;
+    nextSeason = r.pageSeason;
+    nextEdition = { href: promoPagePath(team.sportSlug, team.id, r.pageSlug), season: r.pageSeason, date: r.date };
+  }
 
   // Cross-team (section 10): the same theme at other clubs, else the cascade
   // documented on PromoPageContext. On a removed page too: a reader who came
@@ -642,6 +661,7 @@ export const loadPromoPageContext = cache(async (page: PromoPage, today: string)
     nextTeamPromos,
     crossTeam,
     previousEdition,
+    nextEdition,
     short,
   };
 });
