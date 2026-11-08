@@ -219,6 +219,9 @@ promo('past-club', 'y1', { title: 'Yesterday Towel', pageSlug: 'yesterday-towel'
 promo('past-club', 'y0', { title: 'Yesterday Towel', pageSlug: 'yesterday-towel-2025-26', pageSeason: '2025-26', type: 'food', date: '2026-03-02', opponent: 'Wild', updatedAt: ts('2026-02-01T00:00:00Z') });
 promo('past-club', 'y2', { title: 'Yesterday Towel', pageSlug: 'yesterday-towel-2027-28', pageSeason: '2027-28', type: 'food', date: '2027-10-20', opponent: 'Wild' });
 promo('past-club', 't1', { title: 'Tomorrow Towel', pageSlug: 'tomorrow-towel', type: 'food', date: '2026-10-30', opponent: 'Stars', gateOpenTime: '5:30 PM', presentedBy: 'Towel Co', description: 'Dollar dogs and a towel.' });
+// An all-played series: two dates under one slug, both before today.
+promo('past-club', 's1', { title: 'Two Nights', pageSlug: 'two-nights', type: 'food', date: '2026-10-20', opponent: 'Wild' });
+promo('past-club', 's2', { title: 'Two Nights', pageSlug: 'two-nights', type: 'food', date: '2026-10-27', opponent: 'Stars' });
 // Outside NHL and NBA the stored flag is the extractor's guess: never a package.
 promo('houston-dynamo', 'm1', { title: 'Family 4-Pack', pageSlug: 'family-4-pack', type: 'kids', date: '2026-11-07', opponent: 'Austin FC', ticketPackageRequired: true, ticketPackageName: 'Family Pack', sourceUrl: 'https://www.houstondynamofc.com/promos', description: 'Four tickets, four hot dogs and four drinks.' });
 // The multi-date series on the Red Wings, and a Pride Night there.
@@ -1197,6 +1200,13 @@ test('played (ruling 2026-11-08): every date before today in the venue zone; the
   const nextEvents = jsonLd(next.h).filter((s) => s['@type'] === 'Event');
   assert.ok(nextEvents[0].offers?.url, 'offers on an upcoming Event');
   assert.match(next.h, /What time should I arrive\?/);
+
+  // An all-played series: the plural line, and the same way forward.
+  const series2 = await render('nhl', 'past-club', 'two-nights');
+  assert.match(series2.h, /<strong class="text-rd-ink">These games have been played<\/strong>/);
+  assert.ok(!series2.h.includes('This game has been played'));
+  assert.match(series2.h, /<a [^>]*href="\/nhl\/past-club\/promos\/tomorrow-towel"[^>]*>Next Past Club promo<\/a>/);
+  assert.ok(!series2.h.includes('>Get tickets<') && !series2.h.includes('rel="noopener noreferrer sponsored"'));
 
   // A series with two played dates and three to come is not played; a page
   // dated today is not played.

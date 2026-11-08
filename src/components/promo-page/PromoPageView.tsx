@@ -563,7 +563,7 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
           ) : null}
           {past ? (
             <p className="m-0 text-[15px] leading-[1.45] text-rd-ink-soft">
-              <strong className="text-rd-ink">This game has been played</strong>
+              <strong className="text-rd-ink">{multi ? 'These games have been played' : 'This game has been played'}</strong>
             </p>
           ) : null}
           {venueLine ? (
