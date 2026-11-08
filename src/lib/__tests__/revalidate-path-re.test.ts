@@ -1,6 +1,7 @@
-import { test } from 'node:test';
+import { test, type TestContext } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 // The validator is a module-level constant shared by the route and the nightly
 // refresh (src/lib/revalidate-paths.ts, which imports next/cache). Read the
@@ -16,7 +17,22 @@ function extractPathRe(file: string): RegExp {
 
 const ROUTE = 'src/lib/revalidate-paths.ts';
 const ENDPOINT = 'src/app/api/revalidate/route.ts';
-const PIPELINE = '../promonight/promo-pipeline/lib/revalidate-notify.js';
+// The pipeline checkout: PROMO_PIPELINE_DIR, else the sibling of the shared
+// checkout (CLAUDE.md, worktrees). A scratch worktree under /private/tmp has
+// no such sibling, so the three pipeline-copy tests below skip, in red,
+// rather than fail or pass, when the directory is absent.
+const PIPELINE_DIR = process.env.PROMO_PIPELINE_DIR || '../promonight/promo-pipeline';
+const PIPELINE = join(PIPELINE_DIR, 'lib/revalidate-notify.js');
+let pipelineWarned = false;
+function pipelinePresent(t: TestContext): boolean {
+  if (existsSync(PIPELINE_DIR)) return true;
+  if (!pipelineWarned) {
+    pipelineWarned = true;
+    process.stderr.write(`\x1b[31mSKIPPED pipeline-copy tests: ${PIPELINE_DIR} is absent; set PROMO_PIPELINE_DIR to the promo-pipeline checkout (CLAUDE.md, worktrees)\x1b[0m\n`);
+  }
+  t.skip(`PROMO_PIPELINE_DIR absent (${PIPELINE_DIR})`);
+  return false;
+}
 
 const ACCEPT = [
   '/cfb',
@@ -51,7 +67,8 @@ test('the endpoint PATH_RE still rejects everything it rejected before', () => {
   for (const p of REJECT) assert.equal(re.test(p), false, `${p} should be REJECTED`);
 });
 
-test('the pipeline copy is byte-identical to the endpoint pattern', () => {
+test('the pipeline copy is byte-identical to the endpoint pattern', (t) => {
+  if (!pipelinePresent(t)) return;
   // Divergence is the dangerous failure: a narrower client silently drops paths
   // the endpoint would accept, and the only symptom is a warn line in a log.
   const routeSrc = readFileSync(ROUTE, 'utf8').match(/^export const PATH_RE = (\/.*\/);$/m);
@@ -60,7 +77,8 @@ test('the pipeline copy is byte-identical to the endpoint pattern', () => {
   assert.equal(pipeSrc![1], routeSrc![1]);
 });
 
-test('the pipeline copy behaves identically on every case', () => {
+test('the pipeline copy behaves identically on every case', (t) => {
+  if (!pipelinePresent(t)) return;
   const a = extractPathRe(ROUTE);
   const b = extractPathRe(PIPELINE);
   for (const p of [...ACCEPT, ...REJECT]) {
@@ -78,7 +96,7 @@ test('MAX_PATHS is still 100, and the endpoint validates with the shared pattern
 // ── Phase 3b: the four-segment promo page path, its own pattern ──────────────
 // PATH_RE itself is unchanged (the byte-identity test above still holds), so
 // the only four-segment paths let in are /{league}/{team}/promos/{slug}.
-const PROMO_PIPELINE = '../promonight/promo-pipeline/lib/promo-pages-notify.js';
+const PROMO_PIPELINE = join(PIPELINE_DIR, 'lib/promo-pages-notify.js');
 
 function extractPromoPathRe(file: string): RegExp {
   const src = readFileSync(file, 'utf8');
@@ -99,7 +117,8 @@ test('PROMO_PATH_RE accepts exactly the promo page shape and nothing else four s
   for (const p of ACCEPT) assert.equal(re.test(p), false, `${p} is PATH_RE's`);
 });
 
-test('the pipeline promo-pages copy is byte-identical and judges every case the same', () => {
+test('the pipeline promo-pages copy is byte-identical and judges every case the same', (t) => {
+  if (!pipelinePresent(t)) return;
   const routeSrc = readFileSync(ROUTE, 'utf8').match(/^export const PROMO_PATH_RE = (\/.*\/);$/m);
   const pipeSrc = readFileSync(PROMO_PIPELINE, 'utf8').match(/^const PROMO_PATH_RE = (\/.*\/);$/m);
   assert.ok(routeSrc && pipeSrc);

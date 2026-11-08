@@ -8,6 +8,8 @@ Every Claude Code session works in its own git worktree (`git worktree add <scra
 
 **How.** Before any merge, `git branch --show-current` in the directory you are in. Merge from a worktree that checks out main itself (main can be checked out in only one worktree at a time, so remove that worktree, or detach it, as soon as the push is done). If the shared checkout is on a branch that is not main, leave it alone and tell the owner; do not switch it back over someone's uncommitted work.
 
+**PROMO_PIPELINE_DIR.** The pipeline-copy tests (`src/lib/__tests__/revalidate-path-re.test.ts`) read the pipeline's `lib/revalidate-notify.js` and `lib/promo-pages-notify.js` from `../promonight/promo-pipeline`, a sibling of the shared checkout that a scratch worktree does not have. Run the suite from a worktree as `PROMO_PIPELINE_DIR=/Users/mattkovalik/promonight/promo-pipeline npm test` (an absolute path). Without the directory those tests print SKIPPED in red and skip; they never pass by default.
+
 ## Staging: explicit paths only. Never `git add -A`.
 
 `git add -A` / `git add .` / `git commit -a` are **banned in this repo**, in
