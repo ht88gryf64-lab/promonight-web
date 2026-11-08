@@ -42,7 +42,20 @@ function bagRow(hub: VenueHub): BeforeYouGoRow | null {
   // A prohibition decides first (ruling 2026-11-05, item 6): on a no-bag
   // building the stored dimensions are the exception size, not a limit.
   const prohibitedAt = hub.bagsProhibited === true ? renderedReadTime(st, ob, 'bagsProhibited') : null;
-  if (prohibitedAt) return row('bag', 'Bags are not allowed.', prohibitedAt, claimLink(hub, 'bagsProhibited'));
+  if (prohibitedAt) {
+    // Ruling 2026-11-08 (pipeline EXTRACTION-RULES 1.8): a no-bag building that
+    // allows clutches stores the clutch size, and the row names it. Two numbers
+    // when only two are stored (dimsString omits a missing depth). The size needs
+    // its own rendered state and read time; the row carries the OLDER of the two
+    // reads, because a joint claim is only as current as its stalest leg.
+    const exception = dimsString(hub.bagMaxDimensions);
+    const exceptionAt = exception ? renderedReadTime(st, ob, 'bagMaxDimensions') : null;
+    if (exception && exceptionAt) {
+      const at = Date.parse(exceptionAt) < Date.parse(prohibitedAt) ? exceptionAt : prohibitedAt;
+      return row('bag', `No bags, except clutches up to ${exception}.`, at, claimLink(hub, 'bagsProhibited'));
+    }
+    return row('bag', 'Bags are not allowed.', prohibitedAt, claimLink(hub, 'bagsProhibited'));
+  }
   const dims = dimsString(hub.bagMaxDimensions);
   const dimsAt = dims ? renderedReadTime(st, ob, 'bagMaxDimensions') : null;
   if (dims && dimsAt) {

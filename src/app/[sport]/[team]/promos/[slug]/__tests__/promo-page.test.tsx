@@ -1149,11 +1149,17 @@ test('step 4: Before you go is the union: provenance rows (rendered, dated) firs
   const gblock = gray.h.slice(gs, gray.h.indexOf('</section>', gs));
   const grows = [...gblock.matchAll(/<dd class="m-0">([\s\S]*?)<\/dd>/g)].map((m) => m[1]);
   assert.deepEqual([...gblock.matchAll(/<dt [^>]*>([^<]+)<\/dt>/g)].map((m) => m[1]), ['Bag policy', 'Gates', 'Parking']);
-  assert.match(grows[0], /^Bags are not allowed\.<span class="[^"]*"><a href="https:\/\/x\/gray-bag"[^>]*>x ›<\/a> · Checked Oct 1, 2026<\/span>$/, 'gray bag');
+  // Ruling 2026-11-08: a prohibition with a rendered, dated size names the clutch
+  // exception (this read "Bags are not allowed." before the ruling).
+  assert.match(grows[0], /^No bags, except clutches up to 5(?:"|&quot;) x 9(?:"|&quot;) x 3(?:"|&quot;)\.<span class="[^"]*"><a href="https:\/\/x\/gray-bag"[^>]*>x ›<\/a> · Checked Oct 1, 2026<\/span>$/, 'gray bag');
   assert.match(grows[1], /^Doors open 90 minutes before puck drop\.<span class="[^"]*"><a href="https:\/\/x\/gates"[^>]*>x ›<\/a> · Checked Oct 10, 2026<\/span>$/, 'gray gates');
   assert.match(grows[2], /^Lots: Gray Lot A\.<span class="[^"]*"><a href="https:\/\/x\/gray-parking"[^>]*>x ›<\/a><\/span>$/, 'gray parking, undated');
   assert.equal((gblock.match(/Checked/g) ?? []).length, 2);
-  for (const withheld of ['5&quot; x 9&quot;', 'Clear bag', 'Light rail to Gray Station', 'Gray Line', 'operator', 'conflicting']) {
+  // Ruling 2026-11-08: the clutch size now prints, once, inside the bag row and
+  // never as a limit ('5&quot; x 9&quot;' was in the withheld list before the ruling).
+  assert.equal((gray.h.match(/5&quot; x 9&quot; x 3&quot;/g) ?? []).length, 1, 'the clutch size once, in the bag row');
+  assert.ok(!gray.h.includes('Max bag 5'), 'never as a limit');
+  for (const withheld of ['Clear bag', 'Light rail to Gray Station', 'Gray Line', 'operator', 'conflicting']) {
     assert.ok(!gray.h.includes(withheld), `withheld: ${withheld}`);
   }
 

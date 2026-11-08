@@ -133,8 +133,18 @@ test('PROMO PAGES and CFB block: the condensed bag line', async () => {
     for (const t of h.tenants) {
       const line = buildCondensedLogistics(h, t.teamId).find((l) => l.key === 'bag');
       assert.ok(line, `${h.slug}/${t.teamId}: a bag line`);
-      assertNoSizeOutsideExceptions(h, `condensed ${t.teamId}`, line!.text);
-      assert.equal(line!.text, 'Bags are not allowed.', `${h.slug}/${t.teamId}`);
+      // Ruling 2026-11-08 (pipeline EXTRACTION-RULES 1.8): a sourced size on a
+      // no-bag building prints as the clutch EXCEPTION, in one sentence, never as
+      // a limit. That sentence is exception text; anything else in the line is
+      // held to the rule above. (Before the ruling this line was exactly
+      // "Bags are not allowed.")
+      const PREFIX = 'No bags, except clutches up to ';
+      assert.ok(line!.text.startsWith(PREFIX) && line!.text.endsWith('.'), `${h.slug}/${t.teamId}: the clutch sentence, got ${line!.text}`);
+      assert.doesNotMatch(line!.text, /max bag/i, `${h.slug}/${t.teamId}: never "Max bag"`);
+      assertNoSizeOutsideExceptions(h, `condensed ${t.teamId}`, line!.text.slice(PREFIX.length, -1).replace(/^[\d.]+(?:"|cm)(?: x [\d.]+(?:"|cm)){1,2}$/, ''));
+      // Without a sourced size, the plain prohibition.
+      const noSize = buildCondensedLogistics({ ...h, bagMaxDimensions: null }, t.teamId).find((l) => l.key === 'bag');
+      assert.equal(noSize!.text, 'Bags are not allowed.', `${h.slug}/${t.teamId}: no size`);
     }
   }
 });

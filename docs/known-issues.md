@@ -4244,3 +4244,15 @@ The promo page's Before you go rows and its header provenance line say "Checked 
 ## 82. Promo pages reserve no height for the Raptive containers (logged 2026-11-08)
 
 The page's markup leaves no room for the ad containers Raptive inserts after load, so each insertion pushes everything below it. At 768 the whole measured layout shift is the first container's insertion (0.0265 on production, 0.0383 on the polish branch, inside budget but entirely that one event); at 390 the shift is small only because the slot fills at its placeholder height. Reserving the container heights in the page's own markup is a layout change to take with Raptive's placement rules in hand, not a promo-page tweak.
+
+## 83. A played promo page's only button leads to a team page with nothing upcoming (deferred, logged 2026-11-08)
+
+ux-review of `fix/byg-clutch-row` (docs/ux-review/2026-11-08-fix-byg-clutch-row.md, D2 and D3). On a played game in the offseason (`/mlb/atlanta-braves/promos/austin-riley-short-sleeve-hoodie-giveaway`), the way forward is one button, "Next Atlanta Braves promo", and it links to the team page, which lists 0 upcoming promos. At 390 the button's label wraps to two lines flush against its top-left edge (no padding, left-aligned). Both environments. Deferred: the fix is a decision about where a played page points when the club has nothing upcoming (another team, the league hub, or the button hidden), not a style tweak.
+
+## 84. The clutch sentence is on the promo page only; the team and venue bag surfaces still say "No bags." (deferred, logged 2026-11-08)
+
+The 2026-11-08 ruling (promo-pipeline EXTRACTION-RULES 1.8) puts "No bags, except clutches up to W" x H" x D"" on the Before you go row and the quick-facts fallback (`fix/byg-clutch-row`). The team page's game-day bag line (TeamVenueFacts) and the venue page answer still lead with "No bags." without the clutch size, so a fan one tap from a Truist Park promo page reads two different answers (ux-review D7). The venue page lists the building's other exceptions in its notes, which the one-sentence row does not (D5). Deferred: extending the sentence to those surfaces touches the ruling 6 site-wide test and needs the owner's word on each surface's wording.
+
+## 85. Red links in the quick-facts card are 2.99:1 against body text with no underline (deferred, logged 2026-11-08)
+
+axe at 390 on `/mlb/atlanta-braves/promos/austin-riley-short-sleeve-hoodie-giveaway` flags "Official bag policy" and "Official lot map" as serious (link-in-text-block): the #c62a1e link red is 2.99:1 against the surrounding text, and these links carry no underline, unlike the in-text links underlined in b908cb6. Present on production. Deferred: it belongs to the link-token pass that underlined the other in-text links.
