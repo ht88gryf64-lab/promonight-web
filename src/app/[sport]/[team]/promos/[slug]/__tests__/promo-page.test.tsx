@@ -399,7 +399,7 @@ test('tier 1 single-date NHL page: H1, the stored photo, the head, the schema an
   assert.match(h, /<a href="\/download\?src=promo_cta_minnesota-wild&amp;promoId=[A-Za-z0-9]+&amp;pageSlug=blaze-orange-hat"[^>]*>Remind me<\/a>/);
   assert.ok(!h.includes('team_cta_'), 'no team_cta link on a promo page');
   // The read date is the team's scan stamp, never the row's updatedAt.
-  assert.match(h, /Source: <a href="https:\/\/www\.nhl\.com\/wild\/fans\/giveaway-schedule"[^>]*>nhl\.com<\/a><span> · read Oct 23, 2026<\/span>/);
+  assert.match(h, /Source: <a href="https:\/\/www\.nhl\.com\/wild\/fans\/giveaway-schedule"[^>]*>nhl\.com<\/a><span> · checked Oct 23, 2026<\/span>/);
   // Before you go (step 4): the dated provenance rows plus the card's other
   // classes (the union, ruling 2026-11-08); the card itself is gone from
   // this page.
@@ -620,7 +620,7 @@ test('a same-date twin is one date, and a flagged row outside NHL and NBA is not
   assert.ok(!mls.h.includes('Ticket package') && !mls.h.includes('ticket package'), 'no package copy outside NHL and NBA');
   assert.match(mls.h, /About this promotion/);
   // No scan stamp for the Dynamo in the fixture: no read date is claimed.
-  assert.ok(!/· read /.test(mls.h), 'no read date without a scan stamp');
+  assert.ok(!/· checked /.test(mls.h), 'no read date without a scan stamp');
 });
 
 test('tombstoned past its date: noindex; a row with no date: noindex', async () => {

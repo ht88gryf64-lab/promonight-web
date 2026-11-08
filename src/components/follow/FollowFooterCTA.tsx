@@ -19,7 +19,7 @@ export function FollowFooterCTA() {
 
   return (
     <div className="mt-6">
-      <p className="font-rd text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">
+      <p className="font-rd text-[11px] font-semibold uppercase tracking-[0.14em] text-white/60">
         Free weekly email
       </p>
       <EmailCtaLink

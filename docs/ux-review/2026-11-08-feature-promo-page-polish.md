@@ -140,3 +140,20 @@ Not a defect: the black "N" button at bottom-left of every branch screenshot is 
 ## 6. One recommendation
 
 Merge; the served HTML differs from production in exactly the nine places the branch set out to change and the pixels follow them. Then take the wordmark off the list the way it was measured here, not from the token sheet: the header band renders #d3d0ca on every page because the cream wrapper is `display: contents` and the body's near-black shows through the 85% header, so "NIGHT" sits at 3.12:1 where the ruling assumed 4.33:1, and it is now the only red text on the page below 4.5:1. Painting the intended cream behind the header is a layout fact to check in a screenshot pixel, as above, not in a source grep.
+
+## Addendum, 2026-11-08: five additions before ship, re-measured on the branch dev server
+
+Same sample page (`/nhl/anaheim-ducks/promos/hockey-fights-cancer-night`), same tooling (Playwright 1.65, desktop Chrome User-Agent, 390x844, 5 s settle, @axe-core/playwright). The additions: an opaque cream site header (`bg-rd-cream`, was `bg-rd-cream/85 backdrop-blur`; `div.rd-root` untouched), the timeline caption above the bar, footer eyebrows and copyright at `text-white/60` (were `/40`), underlines on the links that sit inside running text (the source line's domain link and the figcaption's "source"), and "checked <date>" for "read <date>" in the header provenance line.
+
+| Measurement | Before (this report above) | After |
+|---|---|---|
+| Header pixel sampled at (300,10) in the 390 screenshot | #d3d0ca (the dark body through the 85% header) | **#f7f3ea**; (370,50) also #f7f3ea; computed header background rgb(247,243,234) |
+| Wordmark "NIGHT" #da2d20 against the sampled header | 3.12:1 | **4.33:1** |
+| Footer eyebrows and copyright on #211d18 | `text-white/40` = #7a7774, 3.76:1 | `text-white/60` = #a6a5a3, **6.81:1** (white composited at 60% over the ink; the browser reports the colour in oklab with alpha 0.6, so the composite is computed, not sampled) |
+| axe `color-contrast` nodes, whole page | 6 (wordmark, five footer texts) | **0** |
+| axe `link-in-text-block` nodes | 1 ("nhl.com") | **0** (the link is underlined: `text-decoration-line: underline`) |
+| axe serious + critical, first party | 2 rules | **none** |
+| Timeline caption | below the bar; at 390 the bar sat at the fold with the caption under it (D2) | **above the bar** (the `<p>` precedes the `<svg>` in the DOM and on screen) |
+| Header provenance line | "Source: nhl.com · read Oct 2, 2026" | "Source: nhl.com · **checked** Oct 2, 2026" |
+
+D1, D2, D3 and D9 above are closed by these additions. D4 to D8 stand.

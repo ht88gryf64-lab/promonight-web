@@ -61,7 +61,7 @@ const DISCOVER_LINKS: FooterLink[] = [
 function FooterColumn({ heading, links }: { heading: string; links: FooterLink[] }) {
   return (
     <div>
-      <h2 className="font-rd uppercase text-[11px] tracking-[0.14em] text-white/40">
+      <h2 className="font-rd uppercase text-[11px] tracking-[0.14em] text-white/60">
         {heading}
       </h2>
       <ul className="mt-4 space-y-2.5">
@@ -119,7 +119,7 @@ export async function Footer({ year }: FooterProps) {
 
         {/* Bottom row */}
         <div className="mt-12 border-t border-white/10 pt-6">
-          <p className="font-rd text-[12px] tracking-[0.04em] text-white/40">
+          <p className="font-rd text-[12px] tracking-[0.04em] text-white/60">
             © {year ?? new Date().getFullYear()} PromoNight. All rights reserved.
           </p>
         </div>

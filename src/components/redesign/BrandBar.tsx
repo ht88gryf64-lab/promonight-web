@@ -37,8 +37,12 @@ export function BrandBar({ playoffsActive = false, worldCupActive = false }: Bra
     ...(playoffsActive ? [{ label: 'Playoffs', href: '/playoffs' }] : []),
   ];
 
+  // Opaque cream (ruling 2026-11-08, ux-review D1): at 85% the dark body
+  // showed through, because div.rd-root is display: contents and paints
+  // nothing behind the header, and the wordmark measured 3.12:1 against
+  // the band a fan actually sees. On #f7f3ea it is 4.33:1.
   return (
-    <header className="sticky top-0 z-40 border-b border-rd-line bg-rd-cream/85 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-rd-line bg-rd-cream">
       <nav className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
         <Link
           href="/"

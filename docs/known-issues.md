@@ -4236,3 +4236,11 @@ The article is one 640px column (768px from lg) at every width; at 1280 there is
 ## 80. The image Share button on promo pages is 40x40 (deferred, logged 2026-11-08)
 
 The share control on the tier 1 photo's corner is 40x40 at every width, under the 44x44 target. Deferred: enlarging it where it sits over the photo needs a visual pass together with #78.
+
+## 81. "Source read" is "Checked" on promo pages but not on venue and team pages (logged 2026-11-08)
+
+The promo page's Before you go rows and its header provenance line say "Checked <date>" (ruling 2026-11-08); the venue page's ClaimLine and the team page's game-day facts, which share `src/components/venue-hub/venue-logistics.tsx`, still say "Source read <date>". Bringing them in line touches the venue and team page byte-identity goldens, so it is its own change: re-record the goldens on main the same day, as the row-markup change of 2026-11-07 did.
+
+## 82. Promo pages reserve no height for the Raptive containers (logged 2026-11-08)
+
+The page's markup leaves no room for the ad containers Raptive inserts after load, so each insertion pushes everything below it. At 768 the whole measured layout shift is the first container's insertion (0.0265 on production, 0.0383 on the polish branch, inside budget but entirely that one event); at 390 the shift is small only because the slot fills at its placeholder height. Reserving the container heights in the page's own markup is a layout change to take with Raptive's placement rules in hand, not a promo-page tweak.

@@ -290,14 +290,14 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
       {primary.sourceUrl && sourceHost ? (
         <>
           {'Source: '}
-          <a href={primary.sourceUrl} target="_blank" rel="noopener nofollow" className="text-rd-link">
+          <a href={primary.sourceUrl} target="_blank" rel="noopener nofollow" className="text-rd-link underline underline-offset-2">
             {sourceHost}
           </a>
         </>
       ) : (
         <>Source: the team&rsquo;s published schedule</>
       )}
-      {readOn ? <span>{` · read ${readOn}`}</span> : null}
+      {readOn ? <span>{` · checked ${readOn}`}</span> : null}
     </p>
   );
 
@@ -747,7 +747,7 @@ export function PromoPageView({ page, ctx, today, now, imageSize }: PromoPageVie
             {!removed ? <PromoShareImageButton {...shareProps} /> : null}
             <figcaption className="px-3 py-2 font-rd text-[11px] text-rd-ink-faint">
               <span>{`${image.credit ?? `Image: ${teamName}`}${image.sourceUrl ? ' · ' : ''}`}</span>
-              {image.sourceUrl ? <a href={image.sourceUrl} target="_blank" rel="noopener nofollow" className="text-rd-link">source</a> : null}
+              {image.sourceUrl ? <a href={image.sourceUrl} target="_blank" rel="noopener nofollow" className="text-rd-link underline underline-offset-2">source</a> : null}
             </figcaption>
           </figure>
         ) : null}

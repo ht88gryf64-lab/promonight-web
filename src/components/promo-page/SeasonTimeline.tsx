@@ -8,7 +8,7 @@ import { formatMonDay } from '@/lib/promo-page-copy';
 // The season timeline (docs/per-promo-pages-v2-spec.md, Visuals 4): one bar
 // across the team's home schedule, a tick per home game, a dot per promo in
 // one muted ink tone (ruling 2026-11-07: no category colours), this game
-// ringed in the team accent. The line under the bar names this game's promo.
+// ringed in the team accent. The line above the bar names this game's promo.
 // On a pointer device, hovering a dot names that promo instead and links to
 // its page; leaving the bar names this game again. The dots are NOT
 // controls (ruling 2026-11-08, ux-review D2/D3: 5px targets with role=button
@@ -71,6 +71,16 @@ export function SeasonTimeline({ games, promos, thisDate, thisHref, teamName }: 
   const thisX = xOf(thisDate);
   return (
     <div className="mt-1" onMouseLeave={pointer ? () => setHovered(null) : undefined}>
+      {/* The caption above the bar (ruling 2026-11-08): at 390 the bar can
+          sit at the fold, and the line that names the dots must not be the
+          thing below it. */}
+      {current ? (
+        <p className="m-0 mb-1 font-rd text-[12px] text-rd-ink-soft">
+          <span className="text-rd-ink-faint">{`${formatMonDay(current.date)} · `}</span>
+          {current.href === thisHref ? <span className="font-semibold text-rd-ink">{current.title}</span> : <Link href={current.href} className="font-semibold text-rd-link no-underline hover:underline">{current.title}</Link>}
+          <span className="text-rd-ink-faint">{` · home game ${games.findIndex((g) => g.date === current.date) + 1} of ${games.length}`}</span>
+        </p>
+      ) : null}
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} className="block" role="img" aria-label={`${teamName} home schedule, ${games.length} games, ${onBar.length} promos`}>
         <line x1={PAD} y1={BAR_Y} x2={W - PAD} y2={BAR_Y} stroke="var(--color-rd-line-strong)" strokeWidth="2" strokeLinecap="round" />
         {games.map((g, i) => (
@@ -93,13 +103,6 @@ export function SeasonTimeline({ games, promos, thisDate, thisHref, teamName }: 
           </circle>
         ))}
       </svg>
-      {current ? (
-        <p className="m-0 mt-1 font-rd text-[12px] text-rd-ink-soft">
-          <span className="text-rd-ink-faint">{`${formatMonDay(current.date)} · `}</span>
-          {current.href === thisHref ? <span className="font-semibold text-rd-ink">{current.title}</span> : <Link href={current.href} className="font-semibold text-rd-link no-underline hover:underline">{current.title}</Link>}
-          <span className="text-rd-ink-faint">{` · home game ${games.findIndex((g) => g.date === current.date) + 1} of ${games.length}`}</span>
-        </p>
-      ) : null}
     </div>
   );
 }
