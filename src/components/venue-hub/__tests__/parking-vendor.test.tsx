@@ -105,3 +105,17 @@ test('PUBLISHED VIEW: the doc-level verified flag and provenance null the direct
   assert.equal(publishedView(hub({ verified: false })).parkingNotes, null);
   assert.equal(publishedView(hub({ sources: { bagMaxDimensions: 'https://www.golden1center.com/faqs' } as VenueHub['sources'] })).parkingNotes, null);
 });
+
+test('VENUE FAQ (ux-review 2026-11-08): a vendor-only building never says "has on-site lots", in markup or FAQPage JSON-LD, even with a lot map', async () => {
+  const { renderVenueView } = await import('./fixtures/render-venue-view');
+  for (const h of [hub(), hub({ parkingLotMapUrl: 'https://www.golden1center.com/parking-map.pdf' })]) {
+    const html = decode(renderVenueView(h));
+    assert.ok(!html.includes('has on-site lots'), `no on-site lots claim (map: ${h.parkingLotMapUrl})`);
+    assert.ok(html.includes(SENTENCE), 'the FAQ answer carries the sentence');
+    const ld = [...html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)].map((m) => m[1]).join(' ');
+    assert.ok(ld.includes(SENTENCE) && !ld.includes('has on-site lots'), 'the FAQPage JSON-LD says the same');
+  }
+  // With lots, the FAQ keeps its lots answer and no vendor sentence.
+  const lots = decode(renderVenueView(hub(withLots())));
+  assert.ok(lots.includes('has on-site lots including Lot A') && !lots.includes('directs fans to'));
+});
